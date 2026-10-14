@@ -58,7 +58,14 @@ pub(super) fn format_css_doc<'a>(
             return false;
         };
 
-        write!(f, ["`", block_indent(&format_once(|f| f.write_elements(ir))), "`"]);
+        write!(
+            f,
+            [
+                "`",
+                block_indent(&format_once(|f| f.write_elements(ir))),
+                "`"
+            ]
+        );
         return true;
     }
 

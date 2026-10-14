@@ -213,7 +213,12 @@ impl From<FileExtension> for SourceType {
             Js | Mjs | Cjs | Ts | Mts | Cts => LanguageVariant::Standard,
         };
 
-        SourceType { language, module_kind, variant, extension: Some(file_ext) }
+        SourceType {
+            language,
+            module_kind,
+            variant,
+            extension: Some(file_ext),
+        }
     }
 }
 
@@ -428,7 +433,10 @@ impl SourceType {
     ///
     /// I.e., `true` for `.ts`, `.cts`, `.mts`, `.tsx`, and `.d.ts` files.
     pub fn is_typescript(self) -> bool {
-        matches!(self.language, Language::TypeScript | Language::TypeScriptDefinition)
+        matches!(
+            self.language,
+            Language::TypeScript | Language::TypeScriptDefinition
+        )
     }
 
     /// Returns `true` if this is a TypeScript definition file (e.g. `.d.ts`).

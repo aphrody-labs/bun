@@ -75,8 +75,10 @@ fn main() -> std::io::Result<()> {
     std::fs::write(ast_file_path, format!("{program:#?}"))?;
     println!("Wrote AST to: {ast_file_name}");
 
-    let semantic =
-        SemanticBuilder::new_compiler().with_build_nodes(true).with_cfg(true).build(&program);
+    let semantic = SemanticBuilder::new_compiler()
+        .with_build_nodes(true)
+        .with_cfg(true)
+        .build(&program);
 
     if !semantic.diagnostics.is_empty() {
         let error_message: String = semantic
@@ -112,7 +114,10 @@ fn main() -> std::io::Result<()> {
                 ast_nodes_by_block
                     .get(&i)
                     .map(|nodes| {
-                        nodes.iter().map(|node| format!("{}", node.kind().debug_name())).join("\n")
+                        nodes
+                            .iter()
+                            .map(|node| format!("{}", node.kind().debug_name()))
+                            .join("\n")
                     })
                     .unwrap_or_default()
             )
@@ -139,25 +144,32 @@ fn main() -> std::io::Result<()> {
                 }
             },
             &|_graph, node| {
-                let nodes = ast_nodes_by_block.get(node.1).map_or("None".to_string(), |nodes| {
-                    if nodes.len() > 1 {
-                        format!(
-                            "{}\\l",
+                let nodes = ast_nodes_by_block
+                    .get(node.1)
+                    .map_or("None".to_string(), |nodes| {
+                        if nodes.len() > 1 {
+                            format!(
+                                "{}\\l",
+                                nodes
+                                    .iter()
+                                    .map(|node| format!("\\l    {}", node.kind().debug_name()))
+                                    .join("")
+                            )
+                        } else {
                             nodes
                                 .iter()
-                                .map(|node| format!("\\l    {}", node.kind().debug_name()))
+                                .map(|node| format!("{}", node.kind().debug_name()))
                                 .join("")
-                        )
-                    } else {
-                        nodes.iter().map(|node| format!("{}", node.kind().debug_name())).join("")
-                    }
-                });
+                        }
+                    });
                 format!(
                     "xlabel = \"nodes{} [{}]\\l\", label = \"bb{}\n{}\"",
                     node.1,
                     nodes,
                     node.1,
-                    cfg.basic_blocks[*node.1].debug_dot(semantic.semantic.nodes().into()).trim()
+                    cfg.basic_blocks[*node.1]
+                        .debug_dot(semantic.semantic.nodes().into())
+                        .trim()
                 )
             }
         )

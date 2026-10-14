@@ -73,7 +73,9 @@ pub fn run(
         Err(err) => {
             return ApiFormatResult {
                 code: source_text,
-                errors: vec![OxcError::new(format!("Failed to parse configuration: {err}"))],
+                errors: vec![OxcError::new(format!(
+                    "Failed to parse configuration: {err}"
+                ))],
             };
         }
     };
@@ -84,10 +86,16 @@ pub fn run(
 
     // Use `block_in_place()` to avoid nested async runtime access
     match tokio::task::block_in_place(|| formatter.format(&source_text, strategy)) {
-        FormatResult::Success { code, .. } => ApiFormatResult { code, errors: vec![] },
+        FormatResult::Success { code, .. } => ApiFormatResult {
+            code,
+            errors: vec![],
+        },
         FormatResult::Error(diagnostics) => {
             let errors = OxcError::from_diagnostics(filename, &source_text, diagnostics);
-            ApiFormatResult { code: source_text, errors }
+            ApiFormatResult {
+                code: source_text,
+                errors,
+            }
         }
     }
 }

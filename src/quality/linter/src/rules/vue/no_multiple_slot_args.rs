@@ -71,7 +71,7 @@ declare_oxc_lint!(
     NoMultipleSlotArgs,
     vue,
     restriction,
-    pending,  // TODO: Remove second argument, Spread argument is possible not supported
+    pending, // TODO: Remove second argument, Spread argument is possible not supported
     version = "1.15.0",
     short_description = "Disallow passing multiple arguments to scoped slots.",
 );
@@ -172,7 +172,12 @@ fn get_identifier_resolved_reference<'a>(
         return declarator.init.as_ref();
     }
 
-    find_latest_assignment(&identifier.name, declarator.span.end, identifier.span.start, ctx)
+    find_latest_assignment(
+        &identifier.name,
+        declarator.span.end,
+        identifier.span.start,
+        ctx,
+    )
 }
 
 fn find_latest_assignment<'a>(
@@ -396,6 +401,11 @@ fn test() {
         ),
     ];
 
-    Tester::new(NoMultipleSlotArgs::NAME, NoMultipleSlotArgs::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        NoMultipleSlotArgs::NAME,
+        NoMultipleSlotArgs::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

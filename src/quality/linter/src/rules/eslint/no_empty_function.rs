@@ -30,7 +30,9 @@ fn no_empty_function_diagnostic<S: AsRef<str>>(
         None => Cow::Borrowed("Unexpected empty function"),
     };
     OxcDiagnostic::warn(message)
-        .with_help(format!("Consider removing this {fn_kind} or adding logic to it."))
+        .with_help(format!(
+            "Consider removing this {fn_kind} or adding logic to it."
+        ))
         .with_label(span)
 }
 
@@ -328,7 +330,10 @@ impl Rule for NoEmptyFunction {
             no_empty_function_diagnostic(fb.span, kind, fn_name),
             |fixer| {
                 fixer
-                    .replace(Span::new(fb.span.start + 1, fb.span.end - 1), " /* empty */ ")
+                    .replace(
+                        Span::new(fb.span.start + 1, fb.span.end - 1),
+                        " /* empty */ ",
+                    )
                     .with_message(format!("Add comment inside empty {kind}."))
             },
         );
@@ -460,7 +465,13 @@ impl NoEmptyFunction {
                 }
                 // `constructor(private name: string) {}` is allowed b/c it declares
                 // a private property
-                if method.value.params.items.iter().any(FormalParameter::has_modifier) {
+                if method
+                    .value
+                    .params
+                    .items
+                    .iter()
+                    .any(FormalParameter::has_modifier)
+                {
                     return true;
                 }
                 match method.accessibility {
@@ -621,7 +632,10 @@ fn test() {
             ",
             None,
         ),
-        ("class Person { constructor(private name: string) {} }", None),
+        (
+            "class Person { constructor(private name: string) {} }",
+            None,
+        ),
         (
             "class Person { constructor(name: string) {} }",
             Some(serde_json::json!([{ "allow": ["constructors"] }])),
@@ -658,12 +672,18 @@ fn test() {
             Some(serde_json::json!([{ "allow": ["overrideMethods"] }])),
         ),
         // Test allow option for functions and arrow functions
-        ("function foo() {}", Some(serde_json::json!([{ "allow": ["functions"] }]))),
+        (
+            "function foo() {}",
+            Some(serde_json::json!([{ "allow": ["functions"] }])),
+        ),
         (
             "const obj = { foo: function() {} };",
             Some(serde_json::json!([{ "allow": ["functions"] }])),
         ),
-        ("const bar = () => {};", Some(serde_json::json!([{ "allow": ["arrowFunctions"] }]))),
+        (
+            "const bar = () => {};",
+            Some(serde_json::json!([{ "allow": ["arrowFunctions"] }])),
+        ),
         (
             "const obj = { foo: () => {} };",
             Some(serde_json::json!([{ "allow": ["arrowFunctions"] }])),
@@ -672,18 +692,30 @@ fn test() {
             "const foo = () => {}; function bar() {}",
             Some(serde_json::json!([{ "allow": ["arrowFunctions", "functions"] }])),
         ),
-        ("function* gen() {}", Some(serde_json::json!([{ "allow": ["generatorFunctions"] }]))),
+        (
+            "function* gen() {}",
+            Some(serde_json::json!([{ "allow": ["generatorFunctions"] }])),
+        ),
         (
             "const obj = { foo: function*() {} };",
             Some(serde_json::json!([{ "allow": ["generatorFunctions"] }])),
         ),
-        ("function* gen() {}", Some(serde_json::json!([{ "allow": ["generator-functions"] }]))),
-        ("async function foo() {}", Some(serde_json::json!([{ "allow": ["asyncFunctions"] }]))),
+        (
+            "function* gen() {}",
+            Some(serde_json::json!([{ "allow": ["generator-functions"] }])),
+        ),
+        (
+            "async function foo() {}",
+            Some(serde_json::json!([{ "allow": ["asyncFunctions"] }])),
+        ),
         (
             "const obj = { foo: async function() {} };",
             Some(serde_json::json!([{ "allow": ["asyncFunctions"] }])),
         ),
-        ("async function foo() {}", Some(serde_json::json!([{ "allow": ["async-functions"] }]))),
+        (
+            "async function foo() {}",
+            Some(serde_json::json!([{ "allow": ["async-functions"] }])),
+        ),
         ("async function foo() {/* Foo */}", None),
         (
             "async function foo() {
@@ -691,27 +723,84 @@ fn test() {
              }",
             None,
         ),
-        ("const foo = async () => {};", Some(serde_json::json!([{ "allow": ["asyncFunctions"] }]))),
-        ("class Foo { async bar() {} }", Some(serde_json::json!([{ "allow": ["asyncMethods"] }]))),
-        ("class Foo { async bar() {} }", Some(serde_json::json!([{ "allow": ["async-methods"] }]))),
-        ("class Foo { *gen() {} }", Some(serde_json::json!([{ "allow": ["generatorMethods"] }]))),
-        ("class Foo { *gen() {} }", Some(serde_json::json!([{ "allow": ["generator-methods"] }]))),
+        (
+            "const foo = async () => {};",
+            Some(serde_json::json!([{ "allow": ["asyncFunctions"] }])),
+        ),
+        (
+            "class Foo { async bar() {} }",
+            Some(serde_json::json!([{ "allow": ["asyncMethods"] }])),
+        ),
+        (
+            "class Foo { async bar() {} }",
+            Some(serde_json::json!([{ "allow": ["async-methods"] }])),
+        ),
+        (
+            "class Foo { *gen() {} }",
+            Some(serde_json::json!([{ "allow": ["generatorMethods"] }])),
+        ),
+        (
+            "class Foo { *gen() {} }",
+            Some(serde_json::json!([{ "allow": ["generator-methods"] }])),
+        ),
         // getters
-        ("var obj = {get foo() {}};", Some(serde_json::json!([{ "allow": ["getters"] }]))),
-        ("var obj = {get foo() {}};", Some(serde_json::json!([{ "allow": ["getter"] }]))),
-        ("class A {get foo() {}}", Some(serde_json::json!([{ "allow": ["getters"] }]))),
-        ("class A {get foo() {}}", Some(serde_json::json!([{ "allow": ["getter"] }]))),
-        ("class A {static get foo() {}}", Some(serde_json::json!([{ "allow": ["getters"] }]))),
-        ("class A {static get foo() {}}", Some(serde_json::json!([{ "allow": ["getter"] }]))),
+        (
+            "var obj = {get foo() {}};",
+            Some(serde_json::json!([{ "allow": ["getters"] }])),
+        ),
+        (
+            "var obj = {get foo() {}};",
+            Some(serde_json::json!([{ "allow": ["getter"] }])),
+        ),
+        (
+            "class A {get foo() {}}",
+            Some(serde_json::json!([{ "allow": ["getters"] }])),
+        ),
+        (
+            "class A {get foo() {}}",
+            Some(serde_json::json!([{ "allow": ["getter"] }])),
+        ),
+        (
+            "class A {static get foo() {}}",
+            Some(serde_json::json!([{ "allow": ["getters"] }])),
+        ),
+        (
+            "class A {static get foo() {}}",
+            Some(serde_json::json!([{ "allow": ["getter"] }])),
+        ),
         // setters
-        ("var obj = {set foo(value) {}};", Some(serde_json::json!([{ "allow": ["setters"] }]))),
-        ("var obj = {set foo(value) {}};", Some(serde_json::json!([{ "allow": ["setter"] }]))),
-        ("class A {set foo(value) {}}", Some(serde_json::json!([{ "allow": ["setters"] }]))),
-        ("class A {set foo(value) {}}", Some(serde_json::json!([{ "allow": ["setter"] }]))),
-        ("class A {static set foo(value) {}}", Some(serde_json::json!([{ "allow": ["setters"] }]))),
-        ("class A {static set foo(value) {}}", Some(serde_json::json!([{ "allow": ["setter"] }]))),
-        ("var A = class {set foo(value) {}};", Some(serde_json::json!([{ "allow": ["setters"] }]))),
-        ("var A = class {set foo(value) {}};", Some(serde_json::json!([{ "allow": ["setter"] }]))),
+        (
+            "var obj = {set foo(value) {}};",
+            Some(serde_json::json!([{ "allow": ["setters"] }])),
+        ),
+        (
+            "var obj = {set foo(value) {}};",
+            Some(serde_json::json!([{ "allow": ["setter"] }])),
+        ),
+        (
+            "class A {set foo(value) {}}",
+            Some(serde_json::json!([{ "allow": ["setters"] }])),
+        ),
+        (
+            "class A {set foo(value) {}}",
+            Some(serde_json::json!([{ "allow": ["setter"] }])),
+        ),
+        (
+            "class A {static set foo(value) {}}",
+            Some(serde_json::json!([{ "allow": ["setters"] }])),
+        ),
+        (
+            "class A {static set foo(value) {}}",
+            Some(serde_json::json!([{ "allow": ["setter"] }])),
+        ),
+        (
+            "var A = class {set foo(value) {}};",
+            Some(serde_json::json!([{ "allow": ["setters"] }])),
+        ),
+        (
+            "var A = class {set foo(value) {}};",
+            Some(serde_json::json!([{ "allow": ["setter"] }])),
+        ),
         (
             "var A = class {static set foo(value) {}};",
             Some(serde_json::json!([{ "allow": ["setters"] }])),
@@ -743,9 +832,18 @@ fn test() {
             "const obj = {foo(param: string) {}};",
             Some(serde_json::json!([{ "allow": ["methods"] }])),
         ),
-        ("class A { foo(param: string) {} }", Some(serde_json::json!([{ "allow": ["methods"] }]))),
-        ("class A { private foo() {} }", Some(serde_json::json!([{ "allow": ["methods"] }]))),
-        ("class A { protected foo() {} }", Some(serde_json::json!([{ "allow": ["methods"] }]))),
+        (
+            "class A { foo(param: string) {} }",
+            Some(serde_json::json!([{ "allow": ["methods"] }])),
+        ),
+        (
+            "class A { private foo() {} }",
+            Some(serde_json::json!([{ "allow": ["methods"] }])),
+        ),
+        (
+            "class A { protected foo() {} }",
+            Some(serde_json::json!([{ "allow": ["methods"] }])),
+        ),
         (
             "class A { static foo(param: string) {} }",
             Some(serde_json::json!([{ "allow": ["methods"] }])),
@@ -824,7 +922,10 @@ fn test() {
             "const obj = {get foo(): string {}};",
             Some(serde_json::json!([{ "allow": ["getters"] }])),
         ),
-        ("class A {get foo(): string {}}", Some(serde_json::json!([{ "allow": ["getters"] }]))),
+        (
+            "class A {get foo(): string {}}",
+            Some(serde_json::json!([{ "allow": ["getters"] }])),
+        ),
         (
             "class A {static get foo(): string {}}",
             Some(serde_json::json!([{ "allow": ["getters"] }])),
@@ -1168,7 +1269,10 @@ fn test() {
             "const obj = { foo: async function() {} };",
             Some(serde_json::json!([{ "allow": ["functions"] }])),
         ),
-        ("const obj = { foo: () => {} };", Some(serde_json::json!([{ "allow": ["functions"] }]))),
+        (
+            "const obj = { foo: () => {} };",
+            Some(serde_json::json!([{ "allow": ["functions"] }])),
+        ),
         ("class A { foo(param: string) {} }", None),
         ("class A { private foo() {} }", None),
         ("class A { protected foo() {} }", None),
@@ -1198,24 +1302,57 @@ fn test() {
         ("class A {@decorator() get foo(): string {}}", None),
         ("class A {@decorator() static get foo(): string {}}", None),
         ("const A = class {@decorator() get foo(): string {}};", None),
-        ("const A = class {@decorator() static get foo(): string {}};", None),
+        (
+            "const A = class {@decorator() static get foo(): string {}};",
+            None,
+        ),
         ("class A extends B {override get foo(): string {}}", None),
-        ("class A extends B {static override get foo(): string {}}", None),
-        ("const A = class extends B {override get foo(): string {}};", None),
-        ("const A = class extends B {static override get foo(): string {}};", None),
+        (
+            "class A extends B {static override get foo(): string {}}",
+            None,
+        ),
+        (
+            "const A = class extends B {override get foo(): string {}};",
+            None,
+        ),
+        (
+            "const A = class extends B {static override get foo(): string {}};",
+            None,
+        ),
         ("const obj = {set foo(value: string) {}};", None),
         ("class A {set foo(value: string) {}}", None),
         ("class A {static set foo(value: string) {}}", None),
         ("const A = class {set foo(value: string) {}};", None),
         ("const A = class {static set foo(value: string) {}};", None),
         ("class A {@decorator() set foo(value: string) {}}", None),
-        ("class A {@decorator() static set foo(value: string) {}}", None),
-        ("const A = class {@decorator() set foo(value: string) {}};", None),
-        ("const A = class {@decorator() static set foo(value: string) {}};", None),
-        ("class A extends B {override set foo(value: string) {}}", None),
-        ("class A extends B {static override set foo(value: string) {}}", None),
-        ("const A = class extends B {override set foo(value: string) {}};", None),
-        ("const A = class extends B {static override set foo(value: string) {}};", None),
+        (
+            "class A {@decorator() static set foo(value: string) {}}",
+            None,
+        ),
+        (
+            "const A = class {@decorator() set foo(value: string) {}};",
+            None,
+        ),
+        (
+            "const A = class {@decorator() static set foo(value: string) {}};",
+            None,
+        ),
+        (
+            "class A extends B {override set foo(value: string) {}}",
+            None,
+        ),
+        (
+            "class A extends B {static override set foo(value: string) {}}",
+            None,
+        ),
+        (
+            "const A = class extends B {override set foo(value: string) {}};",
+            None,
+        ),
+        (
+            "const A = class extends B {static override set foo(value: string) {}};",
+            None,
+        ),
         ("class A { constructor(param: string) {} }", None),
         ("class B { private constructor() {} }", None),
         ("class B { protected constructor() {} }", None),
@@ -1227,7 +1364,10 @@ fn test() {
         ("const foo = async function(param: string) {}", None),
         ("class A { async foo(param: string) {} }", None),
         ("class A { @decorator() async foo(param: string) {} }", None),
-        ("class A extends B { override async foo(param: string) {} }", None),
+        (
+            "class A extends B { override async foo(param: string) {} }",
+            None,
+        ),
         ("const foo = async (): Promise<void> => {};", None),
         ("class A { private constructor() {} }", None),
         ("const A = class { private constructor() {} };", None),
@@ -1238,41 +1378,109 @@ fn test() {
         ("class B {@decorator() get foo(): string {}}", None),
         ("class B {@decorator() static get foo(): string {}}", None),
         ("const B = class {@decorator() get foo(): string {}};", None),
-        ("const B = class {@decorator() static get foo(): string {}};", None),
+        (
+            "const B = class {@decorator() static get foo(): string {}};",
+            None,
+        ),
         ("class B {@decorator() set foo(value: string) {}}", None),
-        ("class B {@decorator() static set foo(value: string) {}}", None),
-        ("const B = class {@decorator() set foo(value: string) {}};", None),
-        ("const B = class {@decorator() static set foo(value: string) {}};", None),
+        (
+            "class B {@decorator() static set foo(value: string) {}}",
+            None,
+        ),
+        (
+            "const B = class {@decorator() set foo(value: string) {}};",
+            None,
+        ),
+        (
+            "const B = class {@decorator() static set foo(value: string) {}};",
+            None,
+        ),
         ("class B { @decorator() async foo(param: string) {} }", None),
         ("class A extends B { @decorator() override foo() {} }", None),
         ("class B extends C {override get foo(): string {}}", None),
-        ("class B extends C {static override get foo(): string {}}", None),
-        ("const B = class extends C {override get foo(): string {}};", None),
-        ("const B = class extends C {static override get foo(): string {}};", None),
-        ("class B extends C {override set foo(value: string) {}}", None),
-        ("class B extends C {static override set foo(value: string) {}}", None),
-        ("const B = class extends C {override set foo(value: string) {}};", None),
-        ("const B = class extends C {static override set foo(value: string) {}};", None),
-        ("class B extends C { override async foo(param: string) {} }", None),
+        (
+            "class B extends C {static override get foo(): string {}}",
+            None,
+        ),
+        (
+            "const B = class extends C {override get foo(): string {}};",
+            None,
+        ),
+        (
+            "const B = class extends C {static override get foo(): string {}};",
+            None,
+        ),
+        (
+            "class B extends C {override set foo(value: string) {}}",
+            None,
+        ),
+        (
+            "class B extends C {static override set foo(value: string) {}}",
+            None,
+        ),
+        (
+            "const B = class extends C {override set foo(value: string) {}};",
+            None,
+        ),
+        (
+            "const B = class extends C {static override set foo(value: string) {}};",
+            None,
+        ),
+        (
+            "class B extends C { override async foo(param: string) {} }",
+            None,
+        ),
         ("class C extends D { @decorator() override foo() {} }", None),
         ("class A extends B { override foo() {} }", None),
     ];
 
     let fix = vec![
         ("function foo() {}", "function foo() { /* empty */ }", None),
-        ("var foo = function () {};", "var foo = function () { /* empty */ };", None),
+        (
+            "var foo = function () {};",
+            "var foo = function () { /* empty */ };",
+            None,
+        ),
         (
             "var obj = { foo: function() {} };",
             "var obj = { foo: function() { /* empty */ } };",
             None,
         ),
-        ("var foo = () => { \n\n  }", "var foo = () => { /* empty */ }", None),
-        ("function* gen() {}", "function* gen() { /* empty */ }", None),
-        ("async function foo() {}", "async function foo() { /* empty */ }", None),
-        ("var obj = { foo() {} }", "var obj = { foo() { /* empty */ } }", None),
-        ("var obj = { *foo() {} }", "var obj = { *foo() { /* empty */ } }", None),
-        ("var obj = { async foo() {} }", "var obj = { async foo() { /* empty */ } }", None),
-        ("class A { constructor() { } }", "class A { constructor() { /* empty */ } }", None),
+        (
+            "var foo = () => { \n\n  }",
+            "var foo = () => { /* empty */ }",
+            None,
+        ),
+        (
+            "function* gen() {}",
+            "function* gen() { /* empty */ }",
+            None,
+        ),
+        (
+            "async function foo() {}",
+            "async function foo() { /* empty */ }",
+            None,
+        ),
+        (
+            "var obj = { foo() {} }",
+            "var obj = { foo() { /* empty */ } }",
+            None,
+        ),
+        (
+            "var obj = { *foo() {} }",
+            "var obj = { *foo() { /* empty */ } }",
+            None,
+        ),
+        (
+            "var obj = { async foo() {} }",
+            "var obj = { async foo() { /* empty */ } }",
+            None,
+        ),
+        (
+            "class A { constructor() { } }",
+            "class A { constructor() { /* empty */ } }",
+            None,
+        ),
         (
             "class A { private constructor() {} }",
             "class A { private constructor() { /* empty */ } }",
@@ -1283,10 +1491,26 @@ fn test() {
             "class A { protected constructor() { /* empty */ } }",
             None,
         ),
-        ("class A { foo() { } }", "class A { foo() { /* empty */ } }", None),
-        ("class A { static foo() {} }", "class A { static foo() { /* empty */ } }", None),
-        ("class A { get foo() {} }", "class A { get foo() { /* empty */ } }", None),
-        ("class A { set foo(value) {} }", "class A { set foo(value) { /* empty */ } }", None),
+        (
+            "class A { foo() { } }",
+            "class A { foo() { /* empty */ } }",
+            None,
+        ),
+        (
+            "class A { static foo() {} }",
+            "class A { static foo() { /* empty */ } }",
+            None,
+        ),
+        (
+            "class A { get foo() {} }",
+            "class A { get foo() { /* empty */ } }",
+            None,
+        ),
+        (
+            "class A { set foo(value) {} }",
+            "class A { set foo(value) { /* empty */ } }",
+            None,
+        ),
         (
             "class A extends B { override foo() {} }",
             "class A extends B { override foo() { /* empty */ } }",

@@ -78,7 +78,9 @@ pub struct AsyncToGenerator<'a> {
 
 impl AsyncToGenerator<'_> {
     pub fn new() -> Self {
-        Self { executor: AsyncGeneratorExecutor::new(Helper::AsyncToGenerator) }
+        Self {
+            executor: AsyncGeneratorExecutor::new(Helper::AsyncToGenerator),
+        }
     }
 }
 
@@ -138,7 +140,9 @@ impl<'a> Traverse<'a, TransformState<'a>> for AsyncToGenerator<'a> {
             && !function.is_typescript_syntax()
         {
             let new_statement = self.executor.transform_function_declaration(function, ctx);
-            ctx.state.statement_injector.insert_after(stmt, new_statement);
+            ctx.state
+                .statement_injector
+                .insert_after(stmt, new_statement);
         }
     }
 
@@ -147,7 +151,8 @@ impl<'a> Traverse<'a, TransformState<'a>> for AsyncToGenerator<'a> {
             && !func.is_typescript_syntax()
             && AsyncGeneratorExecutor::is_class_method_like_ancestor(ctx.parent())
         {
-            self.executor.transform_function_for_method_definition(func, ctx);
+            self.executor
+                .transform_function_for_method_definition(func, ctx);
         }
     }
 }
@@ -199,7 +204,10 @@ pub struct AsyncGeneratorExecutor<'a> {
 
 impl<'a> AsyncGeneratorExecutor<'a> {
     pub fn new(helper: Helper) -> Self {
-        Self { helper, _marker: std::marker::PhantomData }
+        Self {
+            helper,
+            _marker: std::marker::PhantomData,
+        }
     }
 
     /// Transforms async method definitions to generator functions wrapped in asyncToGenerator.
@@ -286,7 +294,10 @@ impl<'a> AsyncGeneratorExecutor<'a> {
                 static_ident!("arguments"),
                 ReferenceFlags::Read,
             ));
-            (callee, ArenaVec::from_array_in([this_argument, arguments_argument], ctx))
+            (
+                callee,
+                ArenaVec::from_array_in([this_argument, arguments_argument], ctx),
+            )
         } else {
             // callee()
             (callee, ArenaVec::new_in(ctx))
@@ -328,7 +339,10 @@ impl<'a> AsyncGeneratorExecutor<'a> {
         let (generator_scope_id, wrapper_scope_id) = {
             let wrapper_scope_id =
                 ctx.create_child_scope(ctx.current_scope_id(), ScopeFlags::Function);
-            let scope_id = wrapper_function.scope_id.replace(Some(wrapper_scope_id)).unwrap();
+            let scope_id = wrapper_function
+                .scope_id
+                .replace(Some(wrapper_scope_id))
+                .unwrap();
             // Change the parent scope of the function scope with the current scope.
             Self::change_scope_parent_id(scope_id, wrapper_scope_id, ctx);
             // If there is an id, then we will use it as the name of caller_function,
@@ -406,7 +420,9 @@ impl<'a> AsyncGeneratorExecutor<'a> {
             debug_assert!(wrapper_function.body.is_none());
             wrapper_function.r#async = false;
             wrapper_function.generator = false;
-            wrapper_function.body.replace(FunctionBody::boxed(SPAN, [], statements, ctx));
+            wrapper_function
+                .body
+                .replace(FunctionBody::boxed(SPAN, [], statements, ctx));
         }
 
         // Construct the IIFE
@@ -423,9 +439,13 @@ impl<'a> AsyncGeneratorExecutor<'a> {
         let (generator_scope_id, wrapper_scope_id) = {
             let wrapper_scope_id =
                 ctx.create_child_scope(ctx.current_scope_id(), ScopeFlags::Function);
-            let scope_id = wrapper_function.scope_id.replace(Some(wrapper_scope_id)).unwrap();
+            let scope_id = wrapper_function
+                .scope_id
+                .replace(Some(wrapper_scope_id))
+                .unwrap();
             // Change the parent scope of the function scope with the current scope.
-            ctx.scoping_mut().change_scope_parent_id(scope_id, Some(wrapper_scope_id));
+            ctx.scoping_mut()
+                .change_scope_parent_id(scope_id, Some(wrapper_scope_id));
             (scope_id, wrapper_scope_id)
         };
         let body = wrapper_function.body.take().unwrap();
@@ -456,7 +476,9 @@ impl<'a> AsyncGeneratorExecutor<'a> {
             let statements =
                 ArenaVec::from_value_in(Self::create_apply_call_statement(&bound_ident, ctx), ctx);
             debug_assert!(wrapper_function.body.is_none());
-            wrapper_function.body.replace(FunctionBody::boxed(SPAN, [], statements, ctx));
+            wrapper_function
+                .body
+                .replace(FunctionBody::boxed(SPAN, [], statements, ctx));
         }
 
         // function _name() { _ref.apply(this, arguments); }
@@ -531,7 +553,9 @@ impl<'a> AsyncGeneratorExecutor<'a> {
 
         let params = arrow.params.take_in_box(ctx);
         let generator_function_id = arrow.scope_id();
-        ctx.scoping_mut().scope_flags_mut(generator_function_id).remove(ScopeFlags::Arrow);
+        ctx.scoping_mut()
+            .scope_flags_mut(generator_function_id)
+            .remove(ScopeFlags::Arrow);
         let function_name = Self::infer_function_name_from_parent_node(ctx);
 
         if function_name.is_none() && !Self::is_function_length_affected(&params) {
@@ -618,9 +642,10 @@ impl<'a> AsyncGeneratorExecutor<'a> {
                 declarator.id().get_binding_identifier().map(|id| id.name)
             }
             // infer `foo` from `({ foo: async function() {} })`
-            Ancestor::ObjectPropertyValue(property) if !*property.method() => {
-                property.key().static_name().map(|key| Self::normalize_function_name(&key, ctx))
-            }
+            Ancestor::ObjectPropertyValue(property) if !*property.method() => property
+                .key()
+                .static_name()
+                .map(|key| Self::normalize_function_name(&key, ctx)),
             _ => None,
         }
     }
@@ -711,9 +736,12 @@ impl<'a> AsyncGeneratorExecutor<'a> {
         ctx: &mut TraverseCtx<'a>,
     ) {
         let has_direct_eval = ctx.scoping().scope_flags(scope_id).contains_direct_eval();
-        ctx.scoping_mut().change_scope_parent_id(scope_id, Some(parent_scope_id));
+        ctx.scoping_mut()
+            .change_scope_parent_id(scope_id, Some(parent_scope_id));
         if has_direct_eval {
-            ctx.scoping_mut().scope_flags_mut(parent_scope_id).insert(ScopeFlags::DirectEval);
+            ctx.scoping_mut()
+                .scope_flags_mut(parent_scope_id)
+                .insert(ScopeFlags::DirectEval);
         }
     }
 
@@ -728,7 +756,9 @@ impl<'a> AsyncGeneratorExecutor<'a> {
         ctx: &mut TraverseCtx<'a>,
     ) -> Statement<'a> {
         let arguments = static_ident!("arguments");
-        let symbol_id = ctx.scoping().find_binding(ctx.current_scope_id(), arguments);
+        let symbol_id = ctx
+            .scoping()
+            .find_binding(ctx.current_scope_id(), arguments);
         let arguments_ident =
             Argument::from(ctx.create_ident_expr(SPAN, arguments, symbol_id, ReferenceFlags::Read));
 
@@ -862,7 +892,13 @@ impl<'a> AsyncGeneratorExecutor<'a> {
             ));
         }
 
-        FormalParameters::boxed(SPAN, FormalParameterKind::FormalParameter, parameters, None, ctx)
+        FormalParameters::boxed(
+            SPAN,
+            FormalParameterKind::FormalParameter,
+            parameters,
+            None,
+            ctx,
+        )
     }
 
     /// Creates an empty [FormalParameters] with [FormalParameterKind::FormalParameter].
@@ -879,7 +915,11 @@ impl<'a> AsyncGeneratorExecutor<'a> {
         flags: SymbolFlags,
         ctx: &mut TraverseCtx<'a>,
     ) -> BoundIdentifier<'a> {
-        ctx.generate_uid(id.as_ref().map_or_else(|| "ref", |id| id.name.as_str()), scope_id, flags)
+        ctx.generate_uid(
+            id.as_ref().map_or_else(|| "ref", |id| id.name.as_str()),
+            scope_id,
+            flags,
+        )
     }
 
     /// Check whether the given [`Ancestor`] is a class method-like node.
@@ -900,7 +940,10 @@ impl<'a> AsyncGeneratorExecutor<'a> {
     // <https://github.com/babel/babel/blob/3bcfee232506a4cebe410f02042fb0f0adeeb0b1/packages/babel-helper-wrap-function/src/index.ts#L164>
     #[inline]
     fn is_function_length_affected(params: &FormalParameters<'_>) -> bool {
-        params.items.first().is_some_and(|param| param.initializer.is_none())
+        params
+            .items
+            .first()
+            .is_some_and(|param| param.initializer.is_none())
     }
 
     /// Check whether the function parameters could throw errors.
@@ -956,11 +999,16 @@ struct BindingMover<'a, 'ctx> {
 
 impl<'a, 'ctx> BindingMover<'a, 'ctx> {
     fn new(target_scope_id: ScopeId, ctx: &'ctx mut TraverseCtx<'a>) -> Self {
-        Self { ctx, target_scope_id }
+        Self {
+            ctx,
+            target_scope_id,
+        }
     }
 
     fn move_scope_to_target(&mut self, scope_id: ScopeId) {
-        self.ctx.scoping_mut().change_scope_parent_id(scope_id, Some(self.target_scope_id));
+        self.ctx
+            .scoping_mut()
+            .change_scope_parent_id(scope_id, Some(self.target_scope_id));
     }
 }
 

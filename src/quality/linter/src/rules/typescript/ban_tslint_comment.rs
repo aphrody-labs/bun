@@ -43,12 +43,19 @@ declare_oxc_lint!(
 
 /// `^\s*tslint:(enable|disable)(?:-(line|next-line))?(:|\s|$)`
 fn is_tslint_enable_disable_comment(raw: &str) -> bool {
-    let Some(rest) = raw.trim_start().strip_prefix("tslint:") else { return false };
-    let Some(rest) = rest.strip_prefix("enable").or_else(|| rest.strip_prefix("disable")) else {
+    let Some(rest) = raw.trim_start().strip_prefix("tslint:") else {
         return false;
     };
-    let rest =
-        rest.strip_prefix("-line").or_else(|| rest.strip_prefix("-next-line")).unwrap_or(rest);
+    let Some(rest) = rest
+        .strip_prefix("enable")
+        .or_else(|| rest.strip_prefix("disable"))
+    else {
+        return false;
+    };
+    let rest = rest
+        .strip_prefix("-line")
+        .or_else(|| rest.strip_prefix("-next-line"))
+        .unwrap_or(rest);
     rest.is_empty() || rest.starts_with(':') || rest.starts_with(char::is_whitespace)
 }
 

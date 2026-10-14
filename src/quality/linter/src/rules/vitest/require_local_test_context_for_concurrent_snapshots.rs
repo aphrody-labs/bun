@@ -107,16 +107,22 @@ impl RequireLocalTestContextForConcurrentSnapshots {
                 return;
             }
 
-            let Some(member_expr) = call_expr.callee.as_member_expression() else { return };
+            let Some(member_expr) = call_expr.callee.as_member_expression() else {
+                return;
+            };
 
-            let Some(property_name) = member_expr.static_property_name() else { return };
+            let Some(property_name) = member_expr.static_property_name() else {
+                return;
+            };
 
             if !is_snapshot_method(property_name) {
                 return;
             }
 
-            let test_or_describe_node_found =
-                ctx.nodes().ancestors(possible_jest_node.node.id()).any(|node| {
+            let test_or_describe_node_found = ctx
+                .nodes()
+                .ancestors(possible_jest_node.node.id())
+                .any(|node| {
                     node.kind()
                         .as_call_expression()
                         .and_then(|call_expr| call_expr.callee.as_member_expression())
@@ -124,9 +130,11 @@ impl RequireLocalTestContextForConcurrentSnapshots {
                 });
 
             if test_or_describe_node_found {
-                ctx.diagnostic(require_local_test_context_for_concurrent_snapshots_diagnostic(
-                    call_expr.span(),
-                ));
+                ctx.diagnostic(
+                    require_local_test_context_for_concurrent_snapshots_diagnostic(
+                        call_expr.span(),
+                    ),
+                );
             }
         }
     }

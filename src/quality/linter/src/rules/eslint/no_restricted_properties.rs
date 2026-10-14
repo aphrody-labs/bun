@@ -108,7 +108,9 @@ impl PropertyDetails {
         }
 
         if self.object.is_some() && self.allow_objects.is_some() {
-            return Err(de::Error::custom("`allowObjects` cannot be used with `object`"));
+            return Err(de::Error::custom(
+                "`allowObjects` cannot be used with `object`",
+            ));
         }
 
         if self.allow_properties.is_some() && self.object.is_none() {
@@ -116,7 +118,9 @@ impl PropertyDetails {
         }
 
         if self.property.is_some() && self.allow_properties.is_some() {
-            return Err(de::Error::custom("`allowProperties` cannot be used with `property`"));
+            return Err(de::Error::custom(
+                "`allowProperties` cannot be used with `property`",
+            ));
         }
 
         Ok(())
@@ -238,7 +242,8 @@ declare_oxc_lint!(
     none,
     config = PropertyDetailsList,
     version = "1.63.0",
-    short_description = "This rule allows you to disallow access to certain properties on certain objects.",
+    short_description =
+        "This rule allows you to disallow access to certain properties on certain objects.",
 );
 
 impl Rule for NoRestrictedProperties {
@@ -259,7 +264,9 @@ impl Rule for NoRestrictedProperties {
                 )));
             }
         }
-        Ok(Self { restricted_properties: Box::new(PropertyDetailsList(properties)) })
+        Ok(Self {
+            restricted_properties: Box::new(PropertyDetailsList(properties)),
+        })
     }
 
     fn should_run(&self, _ctx: &ContextHost) -> bool {
@@ -269,8 +276,10 @@ impl Rule for NoRestrictedProperties {
     fn run<'a>(&self, node: &AstNode<'a>, ctx: &LintContext<'a>) {
         match node.kind() {
             AstKind::StaticMemberExpression(expression) => {
-                let object_name =
-                    expression.object.get_identifier_reference().map(|ident| ident.name.as_str());
+                let object_name = expression
+                    .object
+                    .get_identifier_reference()
+                    .map(|ident| ident.name.as_str());
                 self.check_property_access(
                     object_name,
                     Some(expression.property.name.as_str()),
@@ -283,8 +292,10 @@ impl Rule for NoRestrictedProperties {
                 );
             }
             AstKind::ComputedMemberExpression(expression) => {
-                let object_name =
-                    expression.object.get_identifier_reference().map(|ident| ident.name.as_str());
+                let object_name = expression
+                    .object
+                    .get_identifier_reference()
+                    .map(|ident| ident.name.as_str());
                 let property_name = expression_property_name(&expression.expression);
                 self.check_property_access(
                     object_name,
@@ -301,16 +312,18 @@ impl Rule for NoRestrictedProperties {
                 let parent_node = ctx.nodes().parent_node(target.node_id());
 
                 let object_name = match parent_node.kind() {
-                    AstKind::AssignmentExpression(expression) => {
-                        expression.right.get_identifier_reference().map(|ident| ident.name.as_str())
-                    }
+                    AstKind::AssignmentExpression(expression) => expression
+                        .right
+                        .get_identifier_reference()
+                        .map(|ident| ident.name.as_str()),
                     _ => None,
                 };
                 let properties = target.properties.iter().filter_map(|p| {
                     let (property_name, span) = match p {
-                        AssignmentTargetProperty::AssignmentTargetPropertyIdentifier(ident) => {
-                            (Cow::Borrowed(ident.binding.name.as_str()), ident.binding.span)
-                        }
+                        AssignmentTargetProperty::AssignmentTargetPropertyIdentifier(ident) => (
+                            Cow::Borrowed(ident.binding.name.as_str()),
+                            ident.binding.span,
+                        ),
                         AssignmentTargetProperty::AssignmentTargetPropertyProperty(prop) => {
                             property_key_name_and_span(&prop.name)?
                         }
@@ -323,7 +336,11 @@ impl Rule for NoRestrictedProperties {
                     self.check_property_access(
                         object_name,
                         Some(property_name.as_ref()),
-                        PropertyAccessSpans { object: None, property: span, access: span },
+                        PropertyAccessSpans {
+                            object: None,
+                            property: span,
+                            access: span,
+                        },
                         ctx,
                     );
                 }
@@ -337,16 +354,19 @@ impl Rule for NoRestrictedProperties {
                         .as_ref()
                         .and_then(|init| init.get_identifier_reference())
                         .map(|ident| ident.name.as_str()),
-                    AstKind::AssignmentExpression(expression) => {
-                        expression.right.get_identifier_reference().map(|ident| ident.name.as_str())
-                    }
+                    AstKind::AssignmentExpression(expression) => expression
+                        .right
+                        .get_identifier_reference()
+                        .map(|ident| ident.name.as_str()),
                     AstKind::AssignmentPattern(assignment_pattern) => assignment_pattern
                         .right
                         .get_identifier_reference()
                         .map(|ident| ident.name.as_str()),
                     AstKind::FormalParameter(parameter) => {
                         parameter.initializer.as_deref().and_then(|initializer| {
-                            initializer.get_identifier_reference().map(|ident| ident.name.as_str())
+                            initializer
+                                .get_identifier_reference()
+                                .map(|ident| ident.name.as_str())
                         })
                     }
                     _ => None,
@@ -361,7 +381,11 @@ impl Rule for NoRestrictedProperties {
                     self.check_property_access(
                         object_name,
                         Some(property_name.as_ref()),
-                        PropertyAccessSpans { object: None, property: span, access: span },
+                        PropertyAccessSpans {
+                            object: None,
+                            property: span,
+                            access: span,
+                        },
                         ctx,
                     );
                 }
@@ -380,8 +404,10 @@ impl NoRestrictedProperties {
         ctx: &LintContext<'_>,
     ) {
         for property in &self.restricted_properties.0 {
-            let object_matches =
-                property.object.as_deref().is_none_or(|name| object_name == Some(name));
+            let object_matches = property
+                .object
+                .as_deref()
+                .is_none_or(|name| object_name == Some(name));
             let property_matches = match property.property.as_deref() {
                 Some(name) => Some(name) == property_name,
                 None if property.allow_properties.is_some() => property_name.is_some(),
@@ -392,7 +418,9 @@ impl NoRestrictedProperties {
                     .is_some_and(|obj_name| allow.iter().any(|check| check.as_str() == obj_name))
             });
             let property_allowed = property.allow_properties.as_deref().is_some_and(|allow| {
-                allow.iter().any(|check| Some(check.as_str()) == property_name)
+                allow
+                    .iter()
+                    .any(|check| Some(check.as_str()) == property_name)
             });
 
             if object_matches && property_matches && !object_allowed && !property_allowed {
@@ -417,9 +445,10 @@ fn expression_property_name<'a>(expression: &'a Expression<'a>) -> Option<Cow<'a
             Some(Cow::Borrowed(if literal.value { "true" } else { "false" }))
         }
         Expression::NullLiteral(_) => Some(Cow::Borrowed("null")),
-        Expression::TemplateLiteral(literal) if literal.quasis.len() == 1 => {
-            literal.quasis[0].value.cooked.map(|cooked| Cow::Borrowed(cooked.as_str()))
-        }
+        Expression::TemplateLiteral(literal) if literal.quasis.len() == 1 => literal.quasis[0]
+            .value
+            .cooked
+            .map(|cooked| Cow::Borrowed(cooked.as_str())),
         _ => None,
     }
 }
@@ -488,13 +517,28 @@ fn test() {
             "toString.toString",
             Some(serde_json::json!([ { "object": "obj", "property": "foo", }, ])),
         ),
-        ("obj.toString", Some(serde_json::json!([ { "object": "obj", "property": "foo", }, ]))),
-        ("foo.bar", Some(serde_json::json!([ { "property": "baz", }, ]))),
-        ("foo.bar", Some(serde_json::json!([ { "object": "baz", }, ]))),
+        (
+            "obj.toString",
+            Some(serde_json::json!([ { "object": "obj", "property": "foo", }, ])),
+        ),
+        (
+            "foo.bar",
+            Some(serde_json::json!([ { "property": "baz", }, ])),
+        ),
+        (
+            "foo.bar",
+            Some(serde_json::json!([ { "object": "baz", }, ])),
+        ),
         ("foo()", Some(serde_json::json!([ { "object": "foo", }, ]))),
         ("foo;", Some(serde_json::json!([ { "object": "foo", }, ]))),
-        ("foo[/(?<zero>0)/]", Some(serde_json::json!([ { "property": "null", }, ]))), // { "ecmaVersion": 2018 },
-        ("let bar = foo;", Some(serde_json::json!([{ "object": "foo", "property": "bar" }]))), // { "ecmaVersion": 6 },
+        (
+            "foo[/(?<zero>0)/]",
+            Some(serde_json::json!([ { "property": "null", }, ])),
+        ), // { "ecmaVersion": 2018 },
+        (
+            "let bar = foo;",
+            Some(serde_json::json!([{ "object": "foo", "property": "bar" }])),
+        ), // { "ecmaVersion": 6 },
         (
             "let {baz: bar} = foo;",
             Some(serde_json::json!([{ "object": "foo", "property": "bar" }])),
@@ -507,13 +551,22 @@ fn test() {
             "let {baz: {bar: qux}} = foo;",
             Some(serde_json::json!([{ "object": "foo", "property": "bar" }])),
         ), // { "ecmaVersion": 6 },
-        ("let {bar} = foo.baz;", Some(serde_json::json!([{ "object": "foo", "property": "bar" }]))), // { "ecmaVersion": 6 },
-        ("let {baz: bar} = foo;", Some(serde_json::json!([{ "property": "bar" }]))), // { "ecmaVersion": 6 },
+        (
+            "let {bar} = foo.baz;",
+            Some(serde_json::json!([{ "object": "foo", "property": "bar" }])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "let {baz: bar} = foo;",
+            Some(serde_json::json!([{ "property": "bar" }])),
+        ), // { "ecmaVersion": 6 },
         (
             "let baz; ({baz: bar} = foo)",
             Some(serde_json::json!([{ "object": "foo", "property": "bar" }])),
         ), // { "ecmaVersion": 6 },
-        ("let bar;", Some(serde_json::json!([{ "object": "foo", "property": "bar" }]))), // { "ecmaVersion": 6 },
+        (
+            "let bar;",
+            Some(serde_json::json!([{ "object": "foo", "property": "bar" }])),
+        ), // { "ecmaVersion": 6 },
         (
             "let bar; ([bar = 5] = foo);",
             Some(serde_json::json!([{ "object": "foo", "property": "1" }])),
@@ -522,9 +575,18 @@ fn test() {
             "function qux({baz: bar} = foo) {}",
             Some(serde_json::json!([{ "object": "foo", "property": "bar" }])),
         ), // { "ecmaVersion": 6 },
-        ("let [bar, baz] = foo;", Some(serde_json::json!([{ "object": "foo", "property": "1" }]))), // { "ecmaVersion": 6 },
-        ("let [, bar] = foo;", Some(serde_json::json!([{ "object": "foo", "property": "0" }]))), // { "ecmaVersion": 6 },
-        ("let [, bar = 5] = foo;", Some(serde_json::json!([{ "object": "foo", "property": "1" }]))), // { "ecmaVersion": 6 },
+        (
+            "let [bar, baz] = foo;",
+            Some(serde_json::json!([{ "object": "foo", "property": "1" }])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "let [, bar] = foo;",
+            Some(serde_json::json!([{ "object": "foo", "property": "0" }])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "let [, bar = 5] = foo;",
+            Some(serde_json::json!([{ "object": "foo", "property": "1" }])),
+        ), // { "ecmaVersion": 6 },
         (
             "let bar; ([bar = 5] = foo);",
             Some(serde_json::json!([{ "object": "foo", "property": "0" }])),
@@ -609,7 +671,10 @@ fn test() {
             "let {baz: bar} = foo;",
             Some(serde_json::json!([ { "object": "foo", "allowProperties": ["baz"], }, ])),
         ), // { "ecmaVersion": 6 }
-        ("(foo || bar).baz", Some(serde_json::json!([{ "object": "foo", "property": "baz" }]))),
+        (
+            "(foo || bar).baz",
+            Some(serde_json::json!([{ "object": "foo", "property": "baz" }])),
+        ),
         (
             "legacyApi[method]",
             Some(serde_json::json!([ { "object": "legacyApi", "allowProperties": ["safe"], }, ])),
@@ -647,26 +712,59 @@ fn test() {
                 serde_json::json!([ { "property": "__proto__", "message": "Please use Object.getPrototypeOf instead.", }, ]),
             ),
         ),
-        ("foo.bar.baz;", Some(serde_json::json!([{ "object": "foo" }]))),
+        (
+            "foo.bar.baz;",
+            Some(serde_json::json!([{ "object": "foo" }])),
+        ),
         ("foo.bar();", Some(serde_json::json!([{ "object": "foo" }]))),
-        ("foo.bar.baz();", Some(serde_json::json!([{ "object": "foo" }]))),
-        ("foo.bar.baz;", Some(serde_json::json!([{ "property": "bar" }]))),
-        ("foo.bar();", Some(serde_json::json!([{ "property": "bar" }]))),
-        ("foo.bar.baz();", Some(serde_json::json!([{ "property": "bar" }]))),
-        ("foo[/(?<zero>0)/]", Some(serde_json::json!([{ "property": "/(?<zero>0)/" }]))), // { "ecmaVersion": 2018 },
+        (
+            "foo.bar.baz();",
+            Some(serde_json::json!([{ "object": "foo" }])),
+        ),
+        (
+            "foo.bar.baz;",
+            Some(serde_json::json!([{ "property": "bar" }])),
+        ),
+        (
+            "foo.bar();",
+            Some(serde_json::json!([{ "property": "bar" }])),
+        ),
+        (
+            "foo.bar.baz();",
+            Some(serde_json::json!([{ "property": "bar" }])),
+        ),
+        (
+            "foo[/(?<zero>0)/]",
+            Some(serde_json::json!([{ "property": "/(?<zero>0)/" }])),
+        ), // { "ecmaVersion": 2018 },
         ("obj[0]", Some(serde_json::json!([{ "property": "0" }]))),
         ("obj[1n]", Some(serde_json::json!([{ "property": "1" }]))),
-        ("obj[true]", Some(serde_json::json!([{ "property": "true" }]))),
-        ("obj[null]", Some(serde_json::json!([{ "property": "null" }]))),
-        ("obj[`foo`]", Some(serde_json::json!([{ "property": "foo" }]))),
+        (
+            "obj[true]",
+            Some(serde_json::json!([{ "property": "true" }])),
+        ),
+        (
+            "obj[null]",
+            Some(serde_json::json!([{ "property": "null" }])),
+        ),
+        (
+            "obj[`foo`]",
+            Some(serde_json::json!([{ "property": "foo" }])),
+        ),
         (
             "require.call({}, 'foo')",
             Some(
                 serde_json::json!([ { "object": "require", "message": "Please call require() directly.", }, ]),
             ),
         ),
-        ("require['resolve']", Some(serde_json::json!([ { "object": "require", }, ]))),
-        ("let {bar} = foo;", Some(serde_json::json!([{ "object": "foo", "property": "bar" }]))), // { "ecmaVersion": 6 },
+        (
+            "require['resolve']",
+            Some(serde_json::json!([ { "object": "require", }, ])),
+        ),
+        (
+            "let {bar} = foo;",
+            Some(serde_json::json!([{ "object": "foo", "property": "bar" }])),
+        ), // { "ecmaVersion": 6 },
         (
             "let {bar: baz} = foo;",
             Some(serde_json::json!([{ "object": "foo", "property": "bar" }])),
@@ -679,9 +777,18 @@ fn test() {
             "let {bar: {baz: qux}} = foo;",
             Some(serde_json::json!([{ "object": "foo", "property": "bar" }])),
         ), // { "ecmaVersion": 6 },
-        ("let {bar} = foo;", Some(serde_json::json!([{ "object": "foo" }]))), // { "ecmaVersion": 6 },
-        ("let {bar: baz} = foo;", Some(serde_json::json!([{ "object": "foo" }]))), // { "ecmaVersion": 6 },
-        ("let {bar} = foo;", Some(serde_json::json!([{ "property": "bar" }]))), // { "ecmaVersion": 6 },
+        (
+            "let {bar} = foo;",
+            Some(serde_json::json!([{ "object": "foo" }])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "let {bar: baz} = foo;",
+            Some(serde_json::json!([{ "object": "foo" }])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "let {bar} = foo;",
+            Some(serde_json::json!([{ "property": "bar" }])),
+        ), // { "ecmaVersion": 6 },
         (
             "let bar; ({bar} = foo);",
             Some(serde_json::json!([{ "object": "foo", "property": "bar" }])),
@@ -714,19 +821,58 @@ fn test() {
             "({ [100]: x } = obj);",
             Some(serde_json::json!([{ "object": "obj", "property": "100" }])),
         ), // { "ecmaVersion": 6 },
-        ("obj['#foo']", Some(serde_json::json!([{ "property": "#foo" }]))),
-        ("const { bar: { bad } = {} } = foo;", Some(serde_json::json!([{ "property": "bad" }]))), // { "ecmaVersion": 6 },
-        ("const { bar: { bad } } = foo;", Some(serde_json::json!([{ "property": "bad" }]))), // { "ecmaVersion": 6 },
-        ("const { bad } = foo();", Some(serde_json::json!([{ "property": "bad" }]))), // { "ecmaVersion": 6 },
-        ("({ bad } = foo());", Some(serde_json::json!([{ "property": "bad" }]))), // { "ecmaVersion": 6 },
-        ("({ bar: { bad } } = foo);", Some(serde_json::json!([{ "property": "bad" }]))), // { "ecmaVersion": 6 },
-        ("({ bar: { bad } = {} } = foo);", Some(serde_json::json!([{ "property": "bad" }]))), // { "ecmaVersion": 6 },
-        ("({ bad }) => {};", Some(serde_json::json!([{ "property": "bad" }]))), // { "ecmaVersion": 6 },
-        ("({ bad } = {}) => {};", Some(serde_json::json!([{ "property": "bad" }]))), // { "ecmaVersion": 6 },
-        ("({ bad: bar }) => {};", Some(serde_json::json!([{ "property": "bad" }]))), // { "ecmaVersion": 6 },
-        ("({ bar: { bad } = {} }) => {};", Some(serde_json::json!([{ "property": "bad" }]))), // { "ecmaVersion": 6 },
-        ("[{ bad }] = foo;", Some(serde_json::json!([{ "property": "bad" }]))), // { "ecmaVersion": 6 },
-        ("const [{ bad }] = foo;", Some(serde_json::json!([{ "property": "bad" }]))), // { "ecmaVersion": 6 },
+        (
+            "obj['#foo']",
+            Some(serde_json::json!([{ "property": "#foo" }])),
+        ),
+        (
+            "const { bar: { bad } = {} } = foo;",
+            Some(serde_json::json!([{ "property": "bad" }])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "const { bar: { bad } } = foo;",
+            Some(serde_json::json!([{ "property": "bad" }])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "const { bad } = foo();",
+            Some(serde_json::json!([{ "property": "bad" }])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "({ bad } = foo());",
+            Some(serde_json::json!([{ "property": "bad" }])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "({ bar: { bad } } = foo);",
+            Some(serde_json::json!([{ "property": "bad" }])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "({ bar: { bad } = {} } = foo);",
+            Some(serde_json::json!([{ "property": "bad" }])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "({ bad }) => {};",
+            Some(serde_json::json!([{ "property": "bad" }])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "({ bad } = {}) => {};",
+            Some(serde_json::json!([{ "property": "bad" }])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "({ bad: bar }) => {};",
+            Some(serde_json::json!([{ "property": "bad" }])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "({ bar: { bad } = {} }) => {};",
+            Some(serde_json::json!([{ "property": "bad" }])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "[{ bad }] = foo;",
+            Some(serde_json::json!([{ "property": "bad" }])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "const [{ bad }] = foo;",
+            Some(serde_json::json!([{ "property": "bad" }])),
+        ), // { "ecmaVersion": 6 },
         (
             "someObject.disallowedProperty",
             Some(
@@ -763,11 +909,19 @@ fn test() {
                 serde_json::json!([ { "object": "someObject", "allowProperties": ["anotherDisallowedProperty"], }, { "object": "anotherObject", "allowProperties": ["disallowedProperty"], }, ]),
             ),
         ),
-        ("legacyApi[method]", Some(serde_json::json!([ { "object": "legacyApi", }, ]))),
+        (
+            "legacyApi[method]",
+            Some(serde_json::json!([ { "object": "legacyApi", }, ])),
+        ),
     ];
 
-    Tester::new(NoRestrictedProperties::NAME, NoRestrictedProperties::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        NoRestrictedProperties::NAME,
+        NoRestrictedProperties::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }
 
 #[test]

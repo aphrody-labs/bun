@@ -63,7 +63,10 @@ impl Rule for NoUnnecessaryAwait {
                     |fixer| fixer.replace_with(expr, &expr.argument),
                 );
             } else {
-                ctx.diagnostic(no_unnecessary_await_diagnostic(Span::sized(expr.span.start, 5)));
+                ctx.diagnostic(no_unnecessary_await_diagnostic(Span::sized(
+                    expr.span.start,
+                    5,
+                )));
             }
         }
     }
@@ -96,7 +99,10 @@ fn not_promise(expr: &Expression) -> bool {
 
 fn is_fixable(expr: &AwaitExpression, nodes: &AstNodes<'_>) -> bool {
     // Removing `await` may change them to a declaration, if there is no `id` will cause SyntaxError
-    if matches!(expr.argument, Expression::FunctionExpression(_) | Expression::ClassExpression(_)) {
+    if matches!(
+        expr.argument,
+        Expression::FunctionExpression(_) | Expression::ClassExpression(_)
+    ) {
         return false;
     }
 
@@ -194,8 +200,13 @@ fn test() {
         ("-await ++a", "-++a"),       // safe: `-++a` parses as `-(++a)`
     ];
 
-    Tester::new(NoUnnecessaryAwait::NAME, NoUnnecessaryAwait::PLUGIN, pass, fail)
-        .change_rule_path_extension("mjs")
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        NoUnnecessaryAwait::NAME,
+        NoUnnecessaryAwait::PLUGIN,
+        pass,
+        fail,
+    )
+    .change_rule_path_extension("mjs")
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

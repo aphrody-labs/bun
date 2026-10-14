@@ -128,7 +128,10 @@ pub struct HelperLoaderOptions {
 
 impl Default for HelperLoaderOptions {
     fn default() -> Self {
-        Self { module_name: default_as_module_name(), mode: HelperLoaderMode::default() }
+        Self {
+            module_name: default_as_module_name(),
+            mode: HelperLoaderMode::default(),
+        }
     }
 }
 
@@ -294,7 +297,11 @@ pub fn helper_call_expr<'a>(
 /// This is a free function to avoid borrow conflicts when accessing state through `ctx.state`.
 pub fn helper_load<'a>(helper: Helper, ctx: &mut TraverseCtx<'a>) -> Expression<'a> {
     let source = ctx.state.helper_loader.get_runtime_source(helper, ctx);
-    ctx.state.helper_loader.used_helpers.entry(helper).or_insert_with(|| source.to_string());
+    ctx.state
+        .helper_loader
+        .used_helpers
+        .entry(helper)
+        .or_insert_with(|| source.to_string());
 
     let mode = ctx.state.helper_loader.mode;
     match mode {
@@ -307,12 +314,20 @@ pub fn helper_load<'a>(helper: Helper, ctx: &mut TraverseCtx<'a>) -> Expression<
 
             // Generate new binding
             let is_module = ctx.state.source_type.is_module();
-            let flag =
-                if is_module { SymbolFlags::Import } else { SymbolFlags::FunctionScopedVariable };
+            let flag = if is_module {
+                SymbolFlags::Import
+            } else {
+                SymbolFlags::FunctionScopedVariable
+            };
             let binding = ctx.generate_uid_in_root_scope(helper.name(), flag);
 
-            ctx.state.module_imports.add_default_import(source, binding.clone(), false);
-            ctx.state.helper_loader.loaded_helpers.insert(helper, binding.clone());
+            ctx.state
+                .module_imports
+                .add_default_import(source, binding.clone(), false);
+            ctx.state
+                .helper_loader
+                .loaded_helpers
+                .insert(helper, binding.clone());
 
             binding.create_read_expression(ctx)
         }
@@ -332,7 +347,9 @@ impl<'a> HelperLoaderStore<'a> {
 
     fn transform_for_external_helper(helper: Helper, ctx: &mut TraverseCtx<'a>) -> Expression<'a> {
         let helper_var = static_ident!("babelHelpers");
-        let symbol_id = ctx.scoping().find_binding(ctx.current_scope_id(), helper_var);
+        let symbol_id = ctx
+            .scoping()
+            .find_binding(ctx.current_scope_id(), helper_var);
         let object = ctx.create_ident_expr(SPAN, helper_var, symbol_id, ReferenceFlags::Read);
         let property = IdentifierName::new(SPAN, helper.name(), ctx);
         Expression::new_static_member_expression(SPAN, object, property, false, ctx)

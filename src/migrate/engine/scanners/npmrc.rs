@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::util::make_finding;
 use crate::types::{Finding, MakeFindingOpts, Severity};
+use crate::util::make_finding;
 
 /// Scanner `.npmrc` / `.yarnrc` / `.yarnrc.yml` / `.pnpmrc`.
 /// Ces fichiers configurent npm/pnpm/yarn. La plupart des directives

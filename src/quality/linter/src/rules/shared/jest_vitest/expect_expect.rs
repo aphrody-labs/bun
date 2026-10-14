@@ -91,7 +91,12 @@ fn default_assert_function_names_jest() -> Vec<CompactStr> {
 }
 
 fn default_assert_function_names_vitest() -> Vec<CompactStr> {
-    vec!["expect".into(), "expectTypeOf".into(), "assert".into(), "assertType".into()]
+    vec![
+        "expect".into(),
+        "expectTypeOf".into(),
+        "assert".into(),
+        "assertType".into(),
+    ]
 }
 
 #[derive(Debug, Clone)]
@@ -120,7 +125,8 @@ impl AssertFunctionMatcher {
 }
 
 fn is_exact_assert_function_name(name: &str) -> bool {
-    name.bytes().all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'_' | b'.'))
+    name.bytes()
+        .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'_' | b'.'))
 }
 
 fn is_exact_assert_function_match(name: &str, expected: &str) -> bool {
@@ -128,14 +134,21 @@ fn is_exact_assert_function_match(name: &str, expected: &str) -> bool {
         return name.eq_ignore_ascii_case(expected);
     }
 
-    name.as_bytes().get(expected.len()).is_some_and(|byte| *byte == b'.')
-        && name.get(..expected.len()).is_some_and(|prefix| prefix.eq_ignore_ascii_case(expected))
+    name.as_bytes()
+        .get(expected.len())
+        .is_some_and(|byte| *byte == b'.')
+        && name
+            .get(..expected.len())
+            .is_some_and(|prefix| prefix.eq_ignore_ascii_case(expected))
 }
 
 fn compile_assert_function_matchers(
     assert_function_names: &[CompactStr],
 ) -> Result<Vec<AssertFunctionMatcher>, String> {
-    assert_function_names.iter().map(AssertFunctionMatcher::new).collect()
+    assert_function_names
+        .iter()
+        .map(AssertFunctionMatcher::new)
+        .collect()
 }
 
 impl ExpectExpectConfig {
@@ -154,8 +167,9 @@ impl ExpectExpectConfig {
                     .collect::<Vec<_>>()
             });
 
-        let assert_function_names_jest =
-            assert_function_names.clone().unwrap_or(default_assert_function_names_jest);
+        let assert_function_names_jest = assert_function_names
+            .clone()
+            .unwrap_or(default_assert_function_names_jest);
         let assert_function_names_vitest =
             assert_function_names.unwrap_or(default_assert_function_names_vitest);
 
@@ -169,7 +183,12 @@ impl ExpectExpectConfig {
         let additional_test_block_functions = config
             .and_then(|config| config.get("additionalTestBlockFunctions"))
             .and_then(serde_json::Value::as_array)
-            .map(|v| v.iter().filter_map(serde_json::Value::as_str).map(CompactStr::from).collect())
+            .map(|v| {
+                v.iter()
+                    .filter_map(serde_json::Value::as_str)
+                    .map(CompactStr::from)
+                    .collect()
+            })
             .unwrap_or_default();
 
         Ok(ExpectExpectConfig {
@@ -324,7 +343,11 @@ impl<'a, 'b> AssertionVisitor<'a, 'b> {
 impl<'a> VisitJs<'a> for AssertionVisitor<'a, '_> {
     fn visit_call_expression(&mut self, call_expr: &CallExpression<'a>) {
         let name = get_node_name(&call_expr.callee);
-        if self.assert_function_matchers.iter().any(|matcher| matcher.is_match(&name)) {
+        if self
+            .assert_function_matchers
+            .iter()
+            .any(|matcher| matcher.is_match(&name))
+        {
             self.found_assertion = true;
             return;
         }

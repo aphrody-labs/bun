@@ -218,7 +218,9 @@ impl SuperCallState {
 
 impl Rule for ConstructorSuper {
     fn run<'a>(&self, node: &AstNode<'a>, ctx: &LintContext<'a>) {
-        let AstKind::Class(class) = node.kind() else { return };
+        let AstKind::Class(class) = node.kind() else {
+            return;
+        };
 
         let super_class_type = Self::classify_super_class(class.heritage_expression());
         let super_class_context =
@@ -235,7 +237,9 @@ impl Rule for ConstructorSuper {
             return;
         };
 
-        let Some(body) = &constructor.value.body else { return };
+        let Some(body) = &constructor.value.body else {
+            return;
+        };
 
         let cfg = ctx.cfg();
 
@@ -290,16 +294,19 @@ impl Rule for ConstructorSuper {
                         .any(|r| matches!(r, PathResult::CalledOnce | PathResult::CalledMultiple));
 
                     // Check if super() is missing on some paths
-                    let some_missing =
-                        path_results.iter().any(|r| matches!(r, PathResult::NoSuper));
+                    let some_missing = path_results
+                        .iter()
+                        .any(|r| matches!(r, PathResult::NoSuper));
 
                     // Check if ALL paths exit early (no normal completion)
-                    let all_paths_exit =
-                        path_results.iter().all(|r| matches!(r, PathResult::ExitedWithoutSuper));
+                    let all_paths_exit = path_results
+                        .iter()
+                        .all(|r| matches!(r, PathResult::ExitedWithoutSuper));
 
                     // Check for duplicate super() calls
-                    let has_duplicate =
-                        path_results.iter().any(|r| matches!(r, PathResult::CalledMultiple));
+                    let has_duplicate = path_results
+                        .iter()
+                        .any(|r| matches!(r, PathResult::CalledMultiple));
 
                     if !has_super_on_any_path && all_paths_exit {
                         // super() was never called and all paths exit early (like "return; super();")
@@ -368,7 +375,13 @@ impl ConstructorSuper {
         neighbors_filtered_by_edge_weight(
             &cfg.graph,
             constructor_block,
-            &|edge| if matches!(edge, EdgeType::NewFunction) { Some(()) } else { None },
+            &|edge| {
+                if matches!(edge, EdgeType::NewFunction) {
+                    Some(())
+                } else {
+                    None
+                }
+            },
             &mut |block_id, (): ()| {
                 let block = cfg.basic_block(*block_id);
 
@@ -395,7 +408,9 @@ impl ConstructorSuper {
                         continue;
                     }
 
-                    let Some(node_id) = instruction.node_id else { continue };
+                    let Some(node_id) = instruction.node_id else {
+                        continue;
+                    };
 
                     if Self::is_in_nested_scope_cfg(node_id, ctx, class_node_id) {
                         continue;
@@ -507,8 +522,10 @@ impl ConstructorSuper {
         worklist.push_back(constructor_block);
 
         while let Some(block_id) = worklist.pop_front() {
-            let current_state =
-                block_states.get(&block_id).copied().unwrap_or(SuperCallState::Unreached);
+            let current_state = block_states
+                .get(&block_id)
+                .copied()
+                .unwrap_or(SuperCallState::Unreached);
 
             if current_state == SuperCallState::Unreached {
                 continue;
@@ -571,8 +588,10 @@ impl ConstructorSuper {
                         // But if state_after_block is Mixed or Multiple when header was Once,
                         // or if state_after_block is Once/Mixed/Multiple when header was Never,
                         // then super() must be in the loop body.
-                        let loop_header_state =
-                            block_states.get(&target).copied().unwrap_or(SuperCallState::Unreached);
+                        let loop_header_state = block_states
+                            .get(&target)
+                            .copied()
+                            .unwrap_or(SuperCallState::Unreached);
 
                         // Detect super() in loop body by checking if state increased from
                         // loop header to backedge:
@@ -603,8 +622,10 @@ impl ConstructorSuper {
                         // This is conservative in the "report more errors" direction, which is
                         // correct for a linter: if super() is only in a try block, we report
                         // that some paths may not call it (if an exception occurs first).
-                        let old_state =
-                            block_states.get(&target).copied().unwrap_or(SuperCallState::Unreached);
+                        let old_state = block_states
+                            .get(&target)
+                            .copied()
+                            .unwrap_or(SuperCallState::Unreached);
                         let new_state = old_state.merge(current_state);
                         if new_state != old_state {
                             block_states.insert(target, new_state);
@@ -617,8 +638,10 @@ impl ConstructorSuper {
                     | EdgeType::Error(oxc_cfg::ErrorEdgeKind::Implicit) => {}
 
                     EdgeType::Jump | EdgeType::Normal | EdgeType::Join | EdgeType::Finalize => {
-                        let old_state =
-                            block_states.get(&target).copied().unwrap_or(SuperCallState::Unreached);
+                        let old_state = block_states
+                            .get(&target)
+                            .copied()
+                            .unwrap_or(SuperCallState::Unreached);
                         let new_state = old_state.merge(state_after_block);
                         if new_state != old_state {
                             block_states.insert(target, new_state);
@@ -709,9 +732,10 @@ impl ConstructorSuper {
             }
 
             // Sequence: result is last expression
-            Expression::SequenceExpression(seq) => {
-                seq.expressions.last().is_none_or(|e| Self::is_invalid_super_class(e))
-            }
+            Expression::SequenceExpression(seq) => seq
+                .expressions
+                .last()
+                .is_none_or(|e| Self::is_invalid_super_class(e)),
 
             // Literals and binary expressions are invalid
             Expression::NumericLiteral(_)
@@ -734,8 +758,11 @@ impl ConstructorSuper {
             match ancestor.kind() {
                 AstKind::Function(_) | AstKind::ArrowFunctionExpression(_) => {
                     // Skip if this function is the constructor itself
-                    if let Some(parent) =
-                        ctx.nodes().parent_node(ancestor.id()).kind().as_method_definition()
+                    if let Some(parent) = ctx
+                        .nodes()
+                        .parent_node(ancestor.id())
+                        .kind()
+                        .as_method_definition()
                         && matches!(parent.kind, MethodDefinitionKind::Constructor)
                     {
                         continue;
@@ -751,7 +778,9 @@ impl ConstructorSuper {
 
     /// Check if statements contain a return with value
     fn has_return_with_value(statements: &[Statement]) -> bool {
-        statements.iter().any(|stmt| Self::statement_returns_value(stmt))
+        statements
+            .iter()
+            .any(|stmt| Self::statement_returns_value(stmt))
     }
 
     /// Recursively check if statement contains return with value
@@ -766,9 +795,10 @@ impl ConstructorSuper {
                         .as_ref()
                         .is_some_and(|alt| Self::statement_returns_value(alt))
             }
-            Statement::SwitchStatement(switch) => {
-                switch.cases.iter().any(|case| Self::has_return_with_value(&case.consequent))
-            }
+            Statement::SwitchStatement(switch) => switch
+                .cases
+                .iter()
+                .any(|case| Self::has_return_with_value(&case.consequent)),
             Statement::TryStatement(try_stmt) => {
                 Self::has_return_with_value(&try_stmt.block.body)
                     || try_stmt

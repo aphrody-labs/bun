@@ -59,8 +59,9 @@ pub fn parse_json<'a>(
         enable_ident_hashes: false, // the JSON formatter does not use `Ident` hashes
         ..ParseOptions::default()
     };
-    let ret =
-        Parser::new(allocator, wrapped_source, SourceType::default()).with_options(options).parse();
+    let ret = Parser::new(allocator, wrapped_source, SourceType::default())
+        .with_options(options)
+        .parse();
 
     // If the wrapped parse fails,
     // we retry without the wrap and accept the result only when it contains no statements.
@@ -98,9 +99,13 @@ pub fn parse_json<'a>(
         std::mem::replace(&mut program.body, ArenaVec::new_in(&allocator)).into_arena_slice();
 
     // The wrap source guarantees exactly one top-level `ExpressionStatement`
-    let stmt = body.first().ok_or_else(|| OxcDiagnostic::error("Empty JSON source"))?;
+    let stmt = body
+        .first()
+        .ok_or_else(|| OxcDiagnostic::error("Empty JSON source"))?;
     let Statement::ExpressionStatement(expr_stmt) = stmt else {
-        return Err(OxcDiagnostic::error("Expected a single expression at the top level"));
+        return Err(OxcDiagnostic::error(
+            "Expected a single expression at the top level",
+        ));
     };
 
     Ok(ParsedExpression {
@@ -122,7 +127,9 @@ fn remap_error_to_user_source(mut err: OxcDiagnostic, source_len: u32) -> OxcDia
     const SOURCE_OFFSET: u32 = 1;
     for label in err.labels.as_mut_slice() {
         let start = label.offset().saturating_sub(SOURCE_OFFSET).min(source_len);
-        let end = (label.offset() + label.len()).saturating_sub(SOURCE_OFFSET).min(source_len);
+        let end = (label.offset() + label.len())
+            .saturating_sub(SOURCE_OFFSET)
+            .min(source_len);
         let text = label.label().map(ToString::to_string);
         *label = if label.primary() {
             LabeledSpan::new_primary_with_span(text, start..end)
@@ -145,8 +152,9 @@ fn try_parse_comments_only<'a>(
     // Copy `source` into the arena so the resulting comment spans index into a string that outlives `ret`.
     let bare_source: &'a str = allocator.alloc_str(source);
 
-    let ret =
-        Parser::new(allocator, bare_source, SourceType::default()).with_options(options).parse();
+    let ret = Parser::new(allocator, bare_source, SourceType::default())
+        .with_options(options)
+        .parse();
     if !ret.diagnostics.is_empty() || ret.fatal_error || !ret.program.body.is_empty() {
         return None;
     }
@@ -183,14 +191,18 @@ fn validate_comments_for_variant(
             if has_expression {
                 Ok(())
             } else {
-                Err(OxcDiagnostic::error("The input is empty or contains only comments"))
+                Err(OxcDiagnostic::error(
+                    "The input is empty or contains only comments",
+                ))
             }
         }
         JsonVariant::JsonStringify => {
             if has_expression {
                 Err(OxcDiagnostic::error("Comment is not allowed in JSON"))
             } else {
-                Err(OxcDiagnostic::error("The input is empty or contains only comments"))
+                Err(OxcDiagnostic::error(
+                    "The input is empty or contains only comments",
+                ))
             }
         }
     }
@@ -231,7 +243,11 @@ mod tests {
         for (src, variant, should_succeed) in cases {
             let allocator = Allocator::default();
             let result = parse_json(&allocator, src, variant);
-            assert_eq!(result.is_ok(), should_succeed, "src={src:?} variant={variant:?}");
+            assert_eq!(
+                result.is_ok(),
+                should_succeed,
+                "src={src:?} variant={variant:?}"
+            );
         }
     }
 

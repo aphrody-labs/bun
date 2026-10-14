@@ -40,7 +40,9 @@ fn no_unstable_nested_components_diagnostic(
         help.push_str(COMPONENT_AS_PROPS_INFO);
     }
 
-    OxcDiagnostic::warn("Do not define components during render.").with_help(help).with_label(span)
+    OxcDiagnostic::warn("Do not define components during render.")
+        .with_help(help)
+        .with_label(span)
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
@@ -194,14 +196,20 @@ impl NoUnstableNestedComponents {
         let is_component_in_prop = is_component_declared_in_prop(node, ctx);
         if is_component_in_prop {
             if function_contains_jsx(func) {
-                return Some(ComponentCandidate { span: func.span, is_component_in_prop });
+                return Some(ComponentCandidate {
+                    span: func.span,
+                    is_component_in_prop,
+                });
             }
             return None;
         }
 
         let name = function_name(func, node, ctx)?;
         if is_react_component_name(&name) && function_contains_jsx(func) {
-            Some(ComponentCandidate { span: func.span, is_component_in_prop: false })
+            Some(ComponentCandidate {
+                span: func.span,
+                is_component_in_prop: false,
+            })
         } else {
             None
         }
@@ -223,12 +231,18 @@ impl NoUnstableNestedComponents {
 
         let is_component_in_prop = is_component_declared_in_prop(node, ctx);
         if is_component_in_prop {
-            return Some(ComponentCandidate { span: arrow.span, is_component_in_prop });
+            return Some(ComponentCandidate {
+                span: arrow.span,
+                is_component_in_prop,
+            });
         }
 
         let name = function_like_name(node, ctx)?;
         if is_react_component_name(&name) {
-            Some(ComponentCandidate { span: arrow.span, is_component_in_prop: false })
+            Some(ComponentCandidate {
+                span: arrow.span,
+                is_component_in_prop: false,
+            })
         } else {
             None
         }
@@ -258,12 +272,18 @@ fn class_candidate<'a>(
 
     let is_component_in_prop = is_component_declared_in_prop(node, ctx);
     if is_component_in_prop {
-        return Some(ComponentCandidate { span: class.span, is_component_in_prop });
+        return Some(ComponentCandidate {
+            span: class.span,
+            is_component_in_prop,
+        });
     }
 
     let name = class_name(class, node, ctx)?;
     if is_react_component_name(&name) {
-        Some(ComponentCandidate { span: class.span, is_component_in_prop: false })
+        Some(ComponentCandidate {
+            span: class.span,
+            is_component_in_prop: false,
+        })
     } else {
         None
     }
@@ -302,7 +322,11 @@ fn find_parent_component_name(
     node: &AstNode<'_>,
     ctx: &LintContext<'_>,
 ) -> Option<ParentComponentName> {
-    for ancestor_id in ctx.nodes().ancestor_ids(node.id()).filter(|&id| id != node.id()) {
+    for ancestor_id in ctx
+        .nodes()
+        .ancestor_ids(node.id())
+        .filter(|&id| id != node.id())
+    {
         let ancestor = ctx.nodes().get_node(ancestor_id);
         match ancestor.kind() {
             AstKind::Function(func) => {
@@ -377,7 +401,9 @@ fn find_parent_component_name(
 }
 
 fn function_name(func: &Function<'_>, node: &AstNode<'_>, ctx: &LintContext<'_>) -> Option<String> {
-    func.name().map(|name| name.to_string()).or_else(|| function_like_name(node, ctx))
+    func.name()
+        .map(|name| name.to_string())
+        .or_else(|| function_like_name(node, ctx))
 }
 
 fn function_like_name(node: &AstNode<'_>, ctx: &LintContext<'_>) -> Option<String> {
@@ -404,11 +430,17 @@ fn hoc_first_argument_name(call: &CallExpression<'_>) -> Option<String> {
 }
 
 fn class_name(class: &Class<'_>, node: &AstNode<'_>, ctx: &LintContext<'_>) -> Option<String> {
-    class.name().map(|name| name.to_string()).or_else(|| function_like_name(node, ctx))
+    class
+        .name()
+        .map(|name| name.to_string())
+        .or_else(|| function_like_name(node, ctx))
 }
 
 fn is_anonymous_default_export(node: &AstNode<'_>, ctx: &LintContext<'_>) -> bool {
-    matches!(ctx.nodes().parent_node(node.id()).kind(), AstKind::ExportDefaultDeclaration(_))
+    matches!(
+        ctx.nodes().parent_node(node.id()).kind(),
+        AstKind::ExportDefaultDeclaration(_)
+    )
 }
 
 fn is_component_declared_in_prop(node: &AstNode<'_>, ctx: &LintContext<'_>) -> bool {
@@ -427,7 +459,11 @@ fn is_component_declared_in_prop(node: &AstNode<'_>, ctx: &LintContext<'_>) -> b
 
 fn is_in_jsx_attribute_expression(node: &AstNode<'_>, ctx: &LintContext<'_>) -> bool {
     let mut previous_id = node.id();
-    for ancestor_id in ctx.nodes().ancestor_ids(node.id()).filter(|&id| id != node.id()) {
+    for ancestor_id in ctx
+        .nodes()
+        .ancestor_ids(node.id())
+        .filter(|&id| id != node.id())
+    {
         let ancestor = ctx.nodes().get_node(ancestor_id);
         match ancestor.kind() {
             AstKind::JSXExpressionContainer(_) => {
@@ -448,7 +484,11 @@ fn is_in_jsx_attribute_expression(node: &AstNode<'_>, ctx: &LintContext<'_>) -> 
 }
 
 fn is_inside_create_element_props_object(node: &AstNode<'_>, ctx: &LintContext<'_>) -> bool {
-    for ancestor_id in ctx.nodes().ancestor_ids(node.id()).filter(|&id| id != node.id()) {
+    for ancestor_id in ctx
+        .nodes()
+        .ancestor_ids(node.id())
+        .filter(|&id| id != node.id())
+    {
         let ancestor = ctx.nodes().get_node(ancestor_id);
         if let AstKind::ObjectExpression(obj) = ancestor.kind() {
             let parent = ctx.nodes().parent_node(ancestor.id());
@@ -486,7 +526,11 @@ fn is_allowed_render_prop(node: &AstNode<'_>, ctx: &LintContext<'_>, pattern: &s
 }
 
 fn nearest_jsx_attribute_name(node: &AstNode<'_>, ctx: &LintContext<'_>) -> Option<String> {
-    for ancestor_id in ctx.nodes().ancestor_ids(node.id()).filter(|&id| id != node.id()) {
+    for ancestor_id in ctx
+        .nodes()
+        .ancestor_ids(node.id())
+        .filter(|&id| id != node.id())
+    {
         let ancestor = ctx.nodes().get_node(ancestor_id);
         if let AstKind::JSXExpressionContainer(_) = ancestor.kind() {
             let parent = ctx.nodes().parent_node(ancestor.id());
@@ -498,7 +542,10 @@ fn nearest_jsx_attribute_name(node: &AstNode<'_>, ctx: &LintContext<'_>) -> Opti
                 JSXAttributeName::NamespacedName(_) => None,
             };
         }
-        if matches!(ancestor.kind(), AstKind::JSXElement(_) | AstKind::JSXFragment(_)) {
+        if matches!(
+            ancestor.kind(),
+            AstKind::JSXElement(_) | AstKind::JSXFragment(_)
+        ) {
             return None;
         }
     }
@@ -524,7 +571,10 @@ fn is_direct_jsx_child_render_prop(node: &AstNode<'_>, ctx: &LintContext<'_>) ->
         return false;
     }
 
-    matches!(ctx.nodes().parent_node(parent.id()).kind(), AstKind::JSXElement(_))
+    matches!(
+        ctx.nodes().parent_node(parent.id()).kind(),
+        AstKind::JSXElement(_)
+    )
 }
 
 fn jsx_expression_matches_node(expression: &JSXExpression<'_>, span: Span) -> bool {
@@ -550,7 +600,9 @@ fn is_map_callback(node: &AstNode<'_>, ctx: &LintContext<'_>) -> bool {
         return false;
     }
 
-    call.arguments.first().is_some_and(|arg| arg.span() == node.kind().span())
+    call.arguments
+        .first()
+        .is_some_and(|arg| arg.span() == node.kind().span())
 }
 
 fn is_return_statement_of_hook(node: &AstNode<'_>, ctx: &LintContext<'_>) -> bool {
@@ -559,7 +611,11 @@ fn is_return_statement_of_hook(node: &AstNode<'_>, ctx: &LintContext<'_>) -> boo
         return false;
     }
 
-    for ancestor_id in ctx.nodes().ancestor_ids(node.id()).filter(|&id| id != node.id()) {
+    for ancestor_id in ctx
+        .nodes()
+        .ancestor_ids(node.id())
+        .filter(|&id| id != node.id())
+    {
         let ancestor = ctx.nodes().get_node(ancestor_id);
         if let AstKind::CallExpression(call) = ancestor.kind() {
             return is_react_hook(&call.callee);
@@ -574,12 +630,19 @@ fn is_first_argument_of_hoc_call(node: &AstNode<'_>, ctx: &LintContext<'_>) -> b
         return false;
     };
     is_hoc_component_call(call, ctx)
-        && call.arguments.first().is_some_and(|arg| arg.span() == node.kind().span())
+        && call
+            .arguments
+            .first()
+            .is_some_and(|arg| arg.span() == node.kind().span())
 }
 
 fn is_hoc_component_call(call: &CallExpression<'_>, ctx: &LintContext<'_>) -> bool {
-    call.callee_name().is_some_and(|name| is_hoc_call(name, ctx))
-        && call.arguments.first().is_some_and(|arg| argument_contains_jsx(arg, ctx))
+    call.callee_name()
+        .is_some_and(|name| is_hoc_call(name, ctx))
+        && call
+            .arguments
+            .first()
+            .is_some_and(|arg| argument_contains_jsx(arg, ctx))
 }
 
 fn argument_contains_jsx(arg: &Argument<'_>, ctx: &LintContext<'_>) -> bool {
@@ -1903,6 +1966,11 @@ fn test() {
         ),
     ];
 
-    Tester::new(NoUnstableNestedComponents::NAME, NoUnstableNestedComponents::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        NoUnstableNestedComponents::NAME,
+        NoUnstableNestedComponents::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

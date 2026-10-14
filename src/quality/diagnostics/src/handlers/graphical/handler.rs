@@ -30,7 +30,11 @@ impl GraphicalReportHandler {
     pub fn new() -> Self {
         let is_terminal = io::stdout().is_terminal() && io::stderr().is_terminal();
         Self {
-            links: if is_terminal { LinkStyle::Link } else { LinkStyle::Text },
+            links: if is_terminal {
+                LinkStyle::Link
+            } else {
+                LinkStyle::Text
+            },
             termwidth: 400,
             theme: GraphicalTheme::new(is_terminal),
         }
@@ -39,13 +43,21 @@ impl GraphicalReportHandler {
     /// Create a new `GraphicalReportHandler` with a given [`GraphicalTheme`].
     #[must_use]
     pub fn new_themed(theme: GraphicalTheme) -> Self {
-        Self { links: LinkStyle::Link, termwidth: 200, theme }
+        Self {
+            links: LinkStyle::Link,
+            termwidth: 200,
+            theme,
+        }
     }
 
     /// Whether to enable error code linkification using [`Diagnostic::url()`](crate::Diagnostic::url).
     #[must_use]
     pub fn with_links(mut self, links: bool) -> Self {
-        self.links = if links { LinkStyle::Link } else { LinkStyle::Text };
+        self.links = if links {
+            LinkStyle::Link
+        } else {
+            LinkStyle::Text
+        };
         self
     }
 

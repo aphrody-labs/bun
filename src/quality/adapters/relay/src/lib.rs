@@ -58,9 +58,14 @@ fn transform_impl(
     let source_type = get_source_type(
         filename,
         options.as_ref().and_then(|options| options.lang.as_deref()),
-        options.as_ref().and_then(|options| options.source_type.as_deref()),
+        options
+            .as_ref()
+            .and_then(|options| options.source_type.as_deref()),
     );
-    let sourcemap = options.as_ref().and_then(|options| options.sourcemap).unwrap_or(false);
+    let sourcemap = options
+        .as_ref()
+        .and_then(|options| options.sourcemap)
+        .unwrap_or(false);
 
     let relay_options = match options.unwrap_or_default().resolve() {
         Ok(options) => options,
@@ -140,7 +145,11 @@ impl Task for TransformTask {
     type Output = TransformResult;
 
     fn compute(&mut self) -> napi::Result<Self::Output> {
-        Ok(transform_impl(&self.filename, &self.source_text, self.options.take()))
+        Ok(transform_impl(
+            &self.filename,
+            &self.source_text,
+            self.options.take(),
+        ))
     }
 
     fn resolve(&mut self, _: napi::Env, result: Self::Output) -> napi::Result<Self::JsValue> {
@@ -158,5 +167,9 @@ pub fn transform(
     source_text: String,
     options: Option<TransformOptions>,
 ) -> AsyncTask<TransformTask> {
-    AsyncTask::new(TransformTask { filename, source_text, options })
+    AsyncTask::new(TransformTask {
+        filename,
+        source_text,
+        options,
+    })
 }

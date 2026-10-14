@@ -43,8 +43,15 @@ fn pack(name: &str, roots: &[PathBuf], ext: &str) {
         println!("cargo:rerun-if-changed={}", root.display());
         let mut found = Vec::new();
         collect(root, root, ext, &mut found);
-        let top = |p: &str| p.split('/').next().unwrap_or(p).trim_end_matches(".md").to_owned();
-        let replaced: std::collections::HashSet<String> = found.iter().map(|(p, _)| top(p)).collect();
+        let top = |p: &str| {
+            p.split('/')
+                .next()
+                .unwrap_or(p)
+                .trim_end_matches(".md")
+                .to_owned()
+        };
+        let replaced: std::collections::HashSet<String> =
+            found.iter().map(|(p, _)| top(p)).collect();
         files.retain(|(p, _)| !replaced.contains(&top(p)));
         files.extend(found);
     }

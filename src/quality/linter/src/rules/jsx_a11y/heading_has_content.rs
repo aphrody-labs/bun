@@ -70,7 +70,8 @@ declare_oxc_lint!(
     correctness,
     config = HeadingHasContentConfig,
     version = "0.0.19",
-    short_description = "Enforce that heading elements have content that is accessible to screen readers.",
+    short_description =
+        "Enforce that heading elements have content that is accessible to screen readers.",
 );
 
 // always including <h1> thru <h6>
@@ -146,7 +147,11 @@ fn test() {
         (r"<h1><Bar /></h1>", None, None),
         (r"<h1>{foo}</h1>", None, None),
         (r"<h1>{foo.bar}</h1>", None, None),
-        (r#"<h1 dangerouslySetInnerHTML={{ __html: "foo" }} />"#, None, None),
+        (
+            r#"<h1 dangerouslySetInnerHTML={{ __html: "foo" }} />"#,
+            None,
+            None,
+        ),
         (r"<h1 children={children} />", None, None),
         // CUSTOM ELEMENT TESTS FOR COMPONENTS OPTION
         (r"<Heading>Foo</Heading>", Some(components()), None),
@@ -154,7 +159,11 @@ fn test() {
         (r"<Heading><Bar /></Heading>", Some(components()), None),
         (r"<Heading>{foo}</Heading>", Some(components()), None),
         (r"<Heading>{foo.bar}</Heading>", Some(components()), None),
-        (r#"<Heading dangerouslySetInnerHTML={{ __html: "foo" }} />"#, Some(components()), None),
+        (
+            r#"<Heading dangerouslySetInnerHTML={{ __html: "foo" }} />"#,
+            Some(components()),
+            None,
+        ),
         (r"<Heading children={children} />", Some(components()), None),
         (r"<h1 aria-hidden />", Some(components()), None),
         // CUSTOM ELEMENT TESTS FOR COMPONENTS SETTINGS
@@ -171,14 +180,28 @@ fn test() {
         (r#"<h1><input type="hidden" /></h1>"#, None, None),
         // CUSTOM ELEMENT TESTS FOR COMPONENTS OPTION
         (r"<Heading />", Some(components()), None),
-        (r"<Heading><Bar aria-hidden /></Heading>", Some(components()), None),
+        (
+            r"<Heading><Bar aria-hidden /></Heading>",
+            Some(components()),
+            None,
+        ),
         (r"<Heading>{undefined}</Heading>", Some(components()), None),
         // CUSTOM ELEMENT TESTS FOR COMPONENTS SETTINGS
         (r"<Heading />", None, Some(settings())),
-        (r#"<h1><CustomInput type="hidden" /></h1>"#, None, Some(settings())),
+        (
+            r#"<h1><CustomInput type="hidden" /></h1>"#,
+            None,
+            Some(settings()),
+        ),
     ];
 
-    Tester::new(HeadingHasContent::NAME, HeadingHasContent::PLUGIN, pass, fail).test_and_snapshot();
+    Tester::new(
+        HeadingHasContent::NAME,
+        HeadingHasContent::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }
 
 #[test]

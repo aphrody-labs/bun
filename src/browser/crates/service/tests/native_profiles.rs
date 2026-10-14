@@ -39,9 +39,19 @@ async fn fast_profile_uses_in_process_browser() {
     let page = fetch(&request).await.unwrap();
     server.abort();
 
-    assert!(matches!(page.transport, Transport::Browser { profile: Profile::Fast, .. }));
+    assert!(matches!(
+        page.transport,
+        Transport::Browser {
+            profile: Profile::Fast,
+            ..
+        }
+    ));
     assert!(page.body.contains("Shared Browser"), "{}", page.body);
-    assert!(page.path_taken.iter().any(|step| step.contains("bun_browser V8")));
+    assert!(
+        page.path_taken
+            .iter()
+            .any(|step| step.contains("bun_browser V8"))
+    );
     assert!(!page.truncated);
 }
 
@@ -52,7 +62,10 @@ async fn static_profile_uses_local_http_client() {
     let page = fetch(&request).await.unwrap();
     server.abort();
 
-    assert!(matches!(page.transport, Transport::Direct { status: 200, .. }));
+    assert!(matches!(
+        page.transport,
+        Transport::Direct { status: 200, .. }
+    ));
     assert!(page.body.contains("Local Rust page"));
 }
 

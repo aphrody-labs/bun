@@ -61,7 +61,10 @@ pub fn trailing_comments_to_move_behind_semicolon<'a>(
         return None;
     }
     let trailing_comments = comments.end_of_line_comments_after(content_end);
-    if trailing_comments.iter().any(|comment| comments.is_suppression_comment(comment)) {
+    if trailing_comments
+        .iter()
+        .any(|comment| comments.is_suppression_comment(comment))
+    {
         return None;
     }
     Some(trailing_comments)
@@ -151,7 +154,9 @@ pub fn semicolon_terminated_expression_content_end(
     gated: bool,
 ) -> u32 {
     if keeps_trailing_comment_inside_parens(expr, gated) {
-        f.context().comments().end_including_source_parens(paren_scan_start, node_end)
+        f.context()
+            .comments()
+            .end_including_source_parens(paren_scan_start, node_end)
     } else {
         assignment_chain_leaf_end(expr, f)
     }
@@ -237,7 +242,11 @@ pub struct FormatContentWithSemicolon<'b, T> {
 
 impl<'b, T> FormatContentWithSemicolon<'b, T> {
     pub fn new(content: &'b T, content_end: u32, node_end: u32) -> Self {
-        Self { content, content_end, node_end }
+        Self {
+            content,
+            content_end,
+            node_end,
+        }
     }
 }
 
@@ -257,7 +266,13 @@ where
         // So they are not printed before the semicolon.
         format_content_without_comments_after(self.content, self.content_end, f);
 
-        write!(f, [OptionalSemicolon, FormatTrailingComments::Comments(trailing_comments)]);
+        write!(
+            f,
+            [
+                OptionalSemicolon,
+                FormatTrailingComments::Comments(trailing_comments)
+            ]
+        );
     }
 }
 
@@ -275,7 +290,9 @@ pub fn write_suppressed_statement<'a>(
     f: &mut JsFormatter<'_, 'a>,
 ) -> bool {
     let span = statement_span(stmt.as_ref());
-    if !f.comments().is_node_suppressed(span, || suppressed_statement_content_end(stmt.as_ref(), f))
+    if !f
+        .comments()
+        .is_node_suppressed(span, || suppressed_statement_content_end(stmt.as_ref(), f))
     {
         return false;
     }
@@ -318,17 +335,23 @@ pub fn suppressed_statement_content_end(
         Statement::ReturnStatement(s) => Some(
             s.argument
                 .as_ref()
-                .map_or(span.start + RETURN_KEYWORD_LEN, |argument| argument.span().end),
+                .map_or(span.start + RETURN_KEYWORD_LEN, |argument| {
+                    argument.span().end
+                }),
         ),
         Statement::ThrowStatement(s) => Some(s.argument.span().end),
         Statement::DoWhileStatement(s) => Some(s.test.span().end),
         Statement::DebuggerStatement(_) => Some(span.start + DEBUGGER_KEYWORD_LEN),
-        Statement::BreakStatement(s) => {
-            Some(s.label.as_ref().map_or(span.start + BREAK_KEYWORD_LEN, |label| label.span.end))
-        }
-        Statement::ContinueStatement(s) => {
-            Some(s.label.as_ref().map_or(span.start + CONTINUE_KEYWORD_LEN, |label| label.span.end))
-        }
+        Statement::BreakStatement(s) => Some(
+            s.label
+                .as_ref()
+                .map_or(span.start + BREAK_KEYWORD_LEN, |label| label.span.end),
+        ),
+        Statement::ContinueStatement(s) => Some(
+            s.label
+                .as_ref()
+                .map_or(span.start + CONTINUE_KEYWORD_LEN, |label| label.span.end),
+        ),
         Statement::ImportDeclaration(s) => {
             Some(module_source_end(&s.source, s.with_clause.as_deref()))
         }
@@ -340,7 +363,10 @@ pub fn suppressed_statement_content_end(
         }
         Statement::ExportNamedDeclaration(s) => {
             // `export { a }`: the `}` after the last specifier (or the `{`)
-            let from = s.specifiers.last().map_or(span.start, |specifier| specifier.span.end);
+            let from = s
+                .specifiers
+                .last()
+                .map_or(span.start, |specifier| specifier.span.end);
             Some(f.comments().position_after_character(from, b'}'))
         }
         Statement::ExportDefaultDeclaration(s) => match &s.declaration {
@@ -363,7 +389,9 @@ pub fn suppressed_statement_content_end(
         Statement::ForInStatement(s) => suppressed_statement_content_end(&s.body, f),
         Statement::ForOfStatement(s) => suppressed_statement_content_end(&s.body, f),
         Statement::LabeledStatement(s) => suppressed_statement_content_end(&s.body, f),
-        _ => stmt.as_declaration().and_then(|declaration| declaration_content_end(declaration, f)),
+        _ => stmt
+            .as_declaration()
+            .and_then(|declaration| declaration_content_end(declaration, f)),
     };
     // Extended once here for every kind (a no-op where no `)` can follow the content),
     // so no arm has to remember it.

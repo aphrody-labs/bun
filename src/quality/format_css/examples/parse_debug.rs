@@ -13,13 +13,16 @@ use oxc_css_parser::{ParserBuilder, Syntax, ast::Stylesheet};
 
 fn main() {
     let mut args = pico_args::Arguments::from_env();
-    let syntax =
-        match args.opt_value_from_str::<_, String>("--syntax").unwrap().as_deref().unwrap_or("css")
-        {
-            "scss" => Syntax::Scss,
-            "less" => Syntax::Less,
-            _ => Syntax::Css,
-        };
+    let syntax = match args
+        .opt_value_from_str::<_, String>("--syntax")
+        .unwrap()
+        .as_deref()
+        .unwrap_or("css")
+    {
+        "scss" => Syntax::Scss,
+        "less" => Syntax::Less,
+        _ => Syntax::Css,
+    };
     let name: String = args.free_from_str().unwrap_or_else(|_| "-".to_string());
 
     let source = if name == "-" {
@@ -31,7 +34,10 @@ fn main() {
     };
 
     let allocator = Allocator::default();
-    let mut parser = ParserBuilder::new(&allocator, &source).syntax(syntax).comments().build();
+    let mut parser = ParserBuilder::new(&allocator, &source)
+        .syntax(syntax)
+        .comments()
+        .build();
     let result = parser.parse::<Stylesheet>();
     let errors = parser.recoverable_errors().to_vec();
     let comments = parser.comments().to_vec();

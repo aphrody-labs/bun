@@ -121,7 +121,9 @@ impl<'a> Reader<'a> {
     /// This is used to preserve information about how the character was
     /// written in source code (e.g., as `\u0301` vs literal character).
     pub fn peek_escape_kind(&self) -> EscapeKind {
-        self.units.get(self.index).map_or(EscapeKind::None, |cp| cp.escape_kind)
+        self.units
+            .get(self.index)
+            .map_or(EscapeKind::None, |cp| cp.escape_kind)
     }
 
     pub fn eat(&mut self, ch: char) -> bool {

@@ -32,7 +32,7 @@ impl Visited {
             Some(tag) if *tag != self.epoch => {
                 *tag = self.epoch;
                 true
-            },
+            }
             _ => false,
         }
     }

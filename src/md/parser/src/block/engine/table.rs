@@ -50,8 +50,16 @@ impl<'s> Engine<'s> {
     /// (1–6 would have interrupted; setext and the delimiter row itself can't be a header).
     /// `row` is the delimiter row's line (indent included).
     pub(super) fn try_start_table(&mut self, align: Vec<TableAlign>, row: Segment) -> bool {
-        let Some(Leaf::Paragraph { segments, last_deep }) = &self.leaf else { return false };
-        let Some(last) = segments.last() else { return false };
+        let Some(Leaf::Paragraph {
+            segments,
+            last_deep,
+        }) = &self.leaf
+        else {
+            return false;
+        };
+        let Some(last) = segments.last() else {
+            return false;
+        };
         if last.lazy || *last_deep {
             return false;
         }
@@ -61,7 +69,10 @@ impl<'s> Engine<'s> {
             return false;
         }
         // Not deep, so the ≤3-column indent is exactly the leading spaces/tabs
-        let tail = header.span.slice(self.source).trim_start_matches([' ', '\t']);
+        let tail = header
+            .span
+            .slice(self.source)
+            .trim_start_matches([' ', '\t']);
         let html7 = matches!(self.probe(tail, false), Some(Start::Html { kind: 7 }));
         if let Some(Leaf::Paragraph { segments, .. }) = &mut self.leaf {
             segments.pop();
@@ -79,7 +90,10 @@ impl<'s> Engine<'s> {
         } else {
             Leaf::Table {
                 align,
-                rows: vec![IrRow { span: header.span, cells }],
+                rows: vec![IrRow {
+                    span: header.span,
+                    cells,
+                }],
                 start: header.span.start,
                 end: row.span.end,
             }

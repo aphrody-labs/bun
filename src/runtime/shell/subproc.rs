@@ -14,9 +14,9 @@ use crate::shell::{self as sh, Yield};
 use crate::webcore::{self, FileSink};
 use bun_alloc::Arena;
 use bun_collections::VecExt;
+use bun_io::Loop as AsyncLoop;
 #[cfg(windows)]
 use bun_io::pipe_writer::BaseWindowsPipeWriter as _;
-use bun_io::Loop as AsyncLoop;
 use bun_io::{BufferedReader, ReadState};
 use bun_jsc::{self as jsc, EventLoopHandle};
 use bun_ptr::RefPtr;

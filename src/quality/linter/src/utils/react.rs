@@ -48,7 +48,9 @@ pub fn is_create_element_call(call_expr: &CallExpression) -> bool {
                 return false;
             }
 
-            member_expr.static_property_name().is_some_and(|name| name == "createElement")
+            member_expr
+                .static_property_name()
+                .is_some_and(|name| name == "createElement")
         }
         Expression::Identifier(ident) => ident.name == "createElement",
         _ => false,
@@ -59,9 +61,10 @@ pub fn has_jsx_prop<'a, 'b>(
     node: &'b JSXOpeningElement<'a>,
     target_prop: &'b str,
 ) -> Option<&'b JSXAttributeItem<'a>> {
-    node.attributes
-        .iter()
-        .find(|attr| attr.as_attribute().is_some_and(|attr| attr.is_identifier(target_prop)))
+    node.attributes.iter().find(|attr| {
+        attr.as_attribute()
+            .is_some_and(|attr| attr.is_identifier(target_prop))
+    })
 }
 
 pub fn has_jsx_prop_ignore_case<'a, 'b>(
@@ -69,7 +72,8 @@ pub fn has_jsx_prop_ignore_case<'a, 'b>(
     target_prop: &'b str,
 ) -> Option<&'b JSXAttributeItem<'a>> {
     node.attributes.iter().find(|attr| {
-        attr.as_attribute().is_some_and(|attr| attr.is_identifier_ignore_case(target_prop))
+        attr.as_attribute()
+            .is_some_and(|attr| attr.is_identifier_ignore_case(target_prop))
     })
 }
 
@@ -87,7 +91,9 @@ pub fn get_jsx_attribute_name<'a>(attr: &JSXAttributeName<'a>) -> Cow<'a, str> {
 }
 
 pub fn get_string_literal_prop_value<'a>(item: &'a JSXAttributeItem<'_>) -> Option<&'a str> {
-    get_prop_value(item).and_then(JSXAttributeValue::as_string_literal).map(|s| s.value.as_str())
+    get_prop_value(item)
+        .and_then(JSXAttributeValue::as_string_literal)
+        .map(|s| s.value.as_str())
 }
 
 // TODO: Move the a11y methods to their own util for jsx-a11y?
@@ -113,7 +119,8 @@ pub fn is_hidden_from_screen_reader<'a>(
         Some(JSXAttributeValue::StringLiteral(s)) if s.value == "true" => true,
         Some(JSXAttributeValue::ExpressionContainer(container)) => {
             if let Some(expr) = container.expression.as_expression() {
-                expr.to_boolean(&WithoutGlobalReferenceInformation {}).unwrap_or(false)
+                expr.to_boolean(&WithoutGlobalReferenceInformation {})
+                    .unwrap_or(false)
             } else {
                 false
             }
@@ -162,7 +169,10 @@ pub fn is_presentation_role(jsx_opening_el: &JSXOpeningElement) -> bool {
         return false;
     };
 
-    matches!(get_string_literal_prop_value(role), Some("presentation" | "none"))
+    matches!(
+        get_string_literal_prop_value(role),
+        Some("presentation" | "none")
+    )
 }
 
 // ref: https://github.com/jsx-eslint/eslint-plugin-jsx-a11y/blob/8f75961d965e47afb88854d324bd32fafde7acfe/src/util/isAbstractRole.js
@@ -600,7 +610,9 @@ pub fn get_parent_component<'a, 'b>(
     node: &'b AstNode<'a>,
     ctx: &'b LintContext<'a>,
 ) -> Option<&'b AstNode<'a>> {
-    ctx.nodes().ancestors(node.id()).find(|node| is_es5_component(node) || is_es6_component(node))
+    ctx.nodes()
+        .ancestors(node.id())
+        .find(|node| is_es5_component(node) || is_es6_component(node))
 }
 
 pub fn function_count_before_lifecycle_component(
@@ -633,15 +645,18 @@ pub fn function_count_before_lifecycle_component(
 
 fn is_lifecycle_component_method(node: &AstNode, lifecycle_method_name: &str) -> bool {
     match node.kind() {
-        AstKind::ObjectProperty(prop) => {
-            prop.key.static_name().is_some_and(|key| key == lifecycle_method_name)
-        }
-        AstKind::MethodDefinition(method) => {
-            method.key.static_name().is_some_and(|name| name == lifecycle_method_name)
-        }
-        AstKind::PropertyDefinition(prop) => {
-            prop.key.static_name().is_some_and(|name| name == lifecycle_method_name)
-        }
+        AstKind::ObjectProperty(prop) => prop
+            .key
+            .static_name()
+            .is_some_and(|key| key == lifecycle_method_name),
+        AstKind::MethodDefinition(method) => method
+            .key
+            .static_name()
+            .is_some_and(|name| name == lifecycle_method_name),
+        AstKind::PropertyDefinition(prop) => prop
+            .key
+            .static_name()
+            .is_some_and(|name| name == lifecycle_method_name),
         _ => false,
     }
 }
@@ -666,9 +681,10 @@ pub fn get_jsx_element_name<'a>(name: &JSXElementName<'a>) -> Cow<'a, str> {
     match &name {
         JSXElementName::Identifier(id) => Cow::Borrowed(id.as_ref().name.as_str()),
         JSXElementName::IdentifierReference(id) => Cow::Borrowed(id.as_ref().name.as_str()),
-        JSXElementName::NamespacedName(namespaced) => {
-            Cow::Owned(format!("{}:{}", namespaced.namespace.name, namespaced.name.name))
-        }
+        JSXElementName::NamespacedName(namespaced) => Cow::Owned(format!(
+            "{}:{}",
+            namespaced.namespace.name, namespaced.name.name
+        )),
         JSXElementName::MemberExpression(jsx_mem_expr) => get_jsx_mem_expr_name(jsx_mem_expr),
         JSXElementName::ThisExpression(_) => Cow::Borrowed("this"),
     }
@@ -739,7 +755,11 @@ fn parse_expression(expression: &Expression) -> Result<f64, ()> {
             }
         }
         Expression::ConditionalExpression(expr) => {
-            if expr.test.to_boolean(&WithoutGlobalReferenceInformation {}).unwrap_or(true) {
+            if expr
+                .test
+                .to_boolean(&WithoutGlobalReferenceInformation {})
+                .unwrap_or(true)
+            {
                 parse_expression(&expr.consequent)
             } else {
                 parse_expression(&expr.alternate)
@@ -758,7 +778,10 @@ fn parse_expression(expression: &Expression) -> Result<f64, ()> {
 /// Matches ESLint's `/^use[A-Z0-9]/`.
 pub fn is_react_hook_name(name: &str) -> bool {
     name.starts_with("use")
-        && name.chars().nth(3).is_none_or(|c| c.is_uppercase() || c.is_ascii_digit())
+        && name
+            .chars()
+            .nth(3)
+            .is_none_or(|c| c.is_uppercase() || c.is_ascii_digit())
 }
 
 /// Checks whether the `name` follows the official conventions of React Hooks.
@@ -792,7 +815,9 @@ pub fn is_react_component_or_hook_name(name: &str) -> bool {
 }
 
 pub fn is_react_function_call(call: &CallExpression, expected_call: &str) -> bool {
-    let Some(subject) = call.callee_name() else { return false };
+    let Some(subject) = call.callee_name() else {
+        return false;
+    };
 
     if subject != expected_call {
         return false;
@@ -839,12 +864,17 @@ pub fn is_state_member_expression(expression: &StaticMemberExpression<'_>) -> bo
 pub fn is_hoc_call(callee_name: &str, ctx: &LintContext) -> bool {
     // Check built-in HOCs with exact matching (matches ESLint behavior)
     // Matches: memo, forwardRef, React.memo, React.forwardRef
-    if matches!(callee_name, "memo" | "forwardRef" | "React.memo" | "React.forwardRef") {
+    if matches!(
+        callee_name,
+        "memo" | "forwardRef" | "React.memo" | "React.forwardRef"
+    ) {
         return true;
     }
 
     // Check component wrapper functions from settings
-    ctx.settings().react.is_component_wrapper_function(callee_name)
+    ctx.settings()
+        .react
+        .is_component_wrapper_function(callee_name)
 }
 
 #[derive(Debug, Default, Clone, Copy)]
@@ -886,15 +916,19 @@ impl FunctionReturns {
                 }
             }
             Expression::Identifier(identifier) => {
-                let Some(symbol_id) =
-                    ctx.scoping().get_reference(identifier.reference_id()).symbol_id()
+                let Some(symbol_id) = ctx
+                    .scoping()
+                    .get_reference(identifier.reference_id())
+                    .symbol_id()
                 else {
                     return;
                 };
                 if !visited.insert(symbol_id) {
                     return;
                 }
-                let declaration = ctx.nodes().get_node(ctx.scoping().symbol_declaration(symbol_id));
+                let declaration = ctx
+                    .nodes()
+                    .get_node(ctx.scoping().symbol_declaration(symbol_id));
                 if let AstKind::VariableDeclarator(declaration) = declaration.kind()
                     && let Some(initializer) = &declaration.init
                 {
@@ -1208,9 +1242,13 @@ mod test {
             let allocator = Allocator::default();
             let source_type = SourceType::jsx();
             let parser_ret = Parser::new(&allocator, source, source_type).parse();
-            assert!(parser_ret.diagnostics.is_empty(), "Parse error in: {source}");
-            let semantic =
-                SemanticBuilder::new_linter().build(allocator.alloc(parser_ret.program)).semantic;
+            assert!(
+                parser_ret.diagnostics.is_empty(),
+                "Parse error in: {source}"
+            );
+            let semantic = SemanticBuilder::new_linter()
+                .build(allocator.alloc(parser_ret.program))
+                .semantic;
 
             let found = semantic.nodes().iter().any(|node| is_es5_component(node));
             assert_eq!(found, expected, "Failed for: {source}");
@@ -1226,7 +1264,10 @@ mod test {
         let cases: Vec<(&str, &str)> = vec![
             ("const App = () => <div />", "div"),
             ("const App = () => <Foo />", "Foo"),
-            ("const App = () => <AntdLayout.Content />", "AntdLayout.Content"),
+            (
+                "const App = () => <AntdLayout.Content />",
+                "AntdLayout.Content",
+            ),
             (
                 "class App extends React.Component { render() { return <this.Modal />; } }",
                 "this.Modal",
@@ -1238,10 +1279,14 @@ mod test {
         for (source, expected) in cases {
             let allocator = Allocator::default();
             let parser_ret = Parser::new(&allocator, source, SourceType::tsx()).parse();
-            assert!(parser_ret.diagnostics.is_empty(), "Parse error in: {source}");
+            assert!(
+                parser_ret.diagnostics.is_empty(),
+                "Parse error in: {source}"
+            );
 
-            let semantic =
-                SemanticBuilder::new_linter().build(allocator.alloc(parser_ret.program)).semantic;
+            let semantic = SemanticBuilder::new_linter()
+                .build(allocator.alloc(parser_ret.program))
+                .semantic;
             let found = semantic.nodes().iter().find_map(|node| {
                 if let super::AstKind::JSXOpeningElement(opening) = node.kind() {
                     Some(get_jsx_element_name(&opening.name).into_owned())
@@ -1303,9 +1348,13 @@ mod test {
             let allocator = Allocator::default();
             let source_type = SourceType::tsx();
             let parser_ret = Parser::new(&allocator, source, source_type).parse();
-            assert!(parser_ret.diagnostics.is_empty(), "Parse error in: {source}");
-            let semantic =
-                SemanticBuilder::new_linter().build(allocator.alloc(parser_ret.program)).semantic;
+            assert!(
+                parser_ret.diagnostics.is_empty(),
+                "Parse error in: {source}"
+            );
+            let semantic = SemanticBuilder::new_linter()
+                .build(allocator.alloc(parser_ret.program))
+                .semantic;
 
             let found = semantic.nodes().iter().any(|node| is_es6_component(node));
             assert_eq!(found, expected, "Failed for: {source}");

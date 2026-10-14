@@ -55,7 +55,10 @@ impl ImportMap {
                     continue;
                 };
                 let scope_imports = scope_imports.as_object().ok_or_else(|| {
-                    format!("Import map scope \"{}\" must contain an object", scope_prefix)
+                    format!(
+                        "Import map scope \"{}\" must contain an object",
+                        scope_prefix
+                    )
                 })?;
                 scopes.push((
                     normalized_scope.to_string(),
@@ -76,7 +79,11 @@ impl ImportMap {
                 .ok_or_else(|| "Import map \"integrity\" must be an object".to_string())?;
         }
 
-        Ok(Self { imports, scopes, resolved_modules: Vec::new() })
+        Ok(Self {
+            imports,
+            scopes,
+            resolved_modules: Vec::new(),
+        })
     }
 
     pub(crate) fn merge(&mut self, mut new_map: Self) {
@@ -85,7 +92,9 @@ impl ImportMap {
         // (referrer, specifier) resolution are removed first; unrelated rules
         // remain available to later graphs.
         for record in &self.resolved_modules {
-            new_map.imports.remove_rules_affecting(&record.specifier, record.as_url_is_special);
+            new_map
+                .imports
+                .remove_rules_affecting(&record.specifier, record.as_url_is_special);
             for (scope_prefix, scope_imports) in &mut new_map.scopes {
                 if scope_applies(scope_prefix, &record.referrer) {
                     scope_imports
@@ -96,8 +105,10 @@ impl ImportMap {
 
         self.imports.merge(new_map.imports);
         for (scope_prefix, new_imports) in new_map.scopes {
-            if let Some((_, imports)) =
-                self.scopes.iter_mut().find(|(existing, _)| existing == &scope_prefix)
+            if let Some((_, imports)) = self
+                .scopes
+                .iter_mut()
+                .find(|(existing, _)| existing == &scope_prefix)
             {
                 imports.merge(new_imports);
             } else {
@@ -113,8 +124,10 @@ impl ImportMap {
         referrer: &ModuleSpecifier,
     ) -> Result<ModuleSpecifier, String> {
         let as_url = resolve_url_like(specifier, referrer);
-        let normalized =
-            as_url.as_ref().map(ToString::to_string).unwrap_or_else(|| specifier.to_string());
+        let normalized = as_url
+            .as_ref()
+            .map(ToString::to_string)
+            .unwrap_or_else(|| specifier.to_string());
         let serialized_referrer = referrer.to_string();
 
         for (scope_prefix, scope_imports) in &self.scopes {
@@ -134,7 +147,7 @@ impl ImportMap {
             Some(resolved) => {
                 self.remember_resolution(serialized_referrer, normalized, Some(&resolved));
                 Ok(resolved)
-            },
+            }
             None => Err(format!(
                 "Bare module specifier \"{}\" was not remapped by the import map",
                 specifier
@@ -197,7 +210,8 @@ impl SpecifierMap {
             key != resolved
                 && !(as_url_is_special && key.ends_with('/') && resolved.starts_with(key.as_str()))
         });
-        self.prefixes.retain(|key| self.entries.contains_key(key.as_str()));
+        self.prefixes
+            .retain(|key| self.entries.contains_key(key.as_str()));
     }
 
     fn resolve_match(
@@ -218,7 +232,11 @@ impl SpecifierMap {
             return Ok(None);
         }
 
-        for key in self.prefixes.iter().filter(|key| normalized.starts_with(key.as_str())) {
+        for key in self
+            .prefixes
+            .iter()
+            .filter(|key| normalized.starts_with(key.as_str()))
+        {
             let address = self
                 .entries
                 .get(key)
@@ -253,7 +271,11 @@ fn normalize_key(key: &str, base: &ModuleSpecifier) -> Option<String> {
     if key.is_empty() {
         return None;
     }
-    Some(resolve_url_like(key, base).map(|url| url.to_string()).unwrap_or_else(|| key.to_string()))
+    Some(
+        resolve_url_like(key, base)
+            .map(|url| url.to_string())
+            .unwrap_or_else(|| key.to_string()),
+    )
 }
 
 fn resolve_url_like(specifier: &str, base: &ModuleSpecifier) -> Option<ModuleSpecifier> {
@@ -269,7 +291,10 @@ fn scope_applies(scope_prefix: &str, referrer: &str) -> bool {
 }
 
 fn is_special_url(url: &ModuleSpecifier) -> bool {
-    matches!(url.scheme(), "ftp" | "file" | "http" | "https" | "ws" | "wss")
+    matches!(
+        url.scheme(),
+        "ftp" | "file" | "http" | "https" | "ws" | "wss"
+    )
 }
 
 #[cfg(test)]
@@ -297,11 +322,15 @@ mod tests {
             "https://example.test/app/vendor/pkg.js",
         );
         assert_eq!(
-            map.resolve("pkg/features/a.js", &referrer).unwrap().as_str(),
+            map.resolve("pkg/features/a.js", &referrer)
+                .unwrap()
+                .as_str(),
             "https://example.test/app/vendor/pkg/features/a.js",
         );
         assert_eq!(
-            map.resolve("./maps/dir/../local.js", &referrer).unwrap().as_str(),
+            map.resolve("./maps/dir/../local.js", &referrer)
+                .unwrap()
+                .as_str(),
             "https://example.test/app/vendor/local.js",
         );
     }
@@ -413,19 +442,15 @@ mod tests {
 
     #[test]
     fn malformed_scope_or_integrity_member_invalidates_the_complete_map() {
-        assert!(
-            ImportMap::parse(
-                r#"{"imports":{"pkg":"/pkg.js"},"scopes":{"/app/":[]}}"#,
-                "https://example.test/index.html",
-            )
-            .is_err()
-        );
-        assert!(
-            ImportMap::parse(
-                r#"{"imports":{"pkg":"/pkg.js"},"integrity":[]}"#,
-                "https://example.test/index.html",
-            )
-            .is_err()
-        );
+        assert!(ImportMap::parse(
+            r#"{"imports":{"pkg":"/pkg.js"},"scopes":{"/app/":[]}}"#,
+            "https://example.test/index.html",
+        )
+        .is_err());
+        assert!(ImportMap::parse(
+            r#"{"imports":{"pkg":"/pkg.js"},"integrity":[]}"#,
+            "https://example.test/index.html",
+        )
+        .is_err());
     }
 }

@@ -14,6 +14,17 @@ const env = {
   BUN_CREATE_APHRODY_DIR: undefined,
 };
 
+const formatSummary = (written: number, unchanged: number) =>
+  expect.stringMatching(
+    new RegExp(
+      `^Formatted ${written} ${written === 1 ? "file" : "files"}, ${unchanged} unchanged \\[\\d+(?:\\.\\d+)?(?:ms|s)\\]\\n$`,
+    ),
+  );
+const lintSummary = (files: number) =>
+  expect.stringMatching(
+    new RegExp(`^✓ No problems in ${files} ${files === 1 ? "file" : "files"} \\[\\d+(?:\\.\\d+)?(?:ms|s)\\]\\n$`),
+  );
+
 async function run(args: string[], cwd?: string, extraEnv: Record<string, string | undefined> = {}) {
   await using proc = Bun.spawn({
     cmd: [bunExe(), ...args],
@@ -33,10 +44,13 @@ describe("embedded quality backend", () => {
       "z-valid.ts": "export const value={a:1};",
     });
     const result = await run(["fmt", "--write", "."], String(dir));
-    expect(result).toMatchObject({ exitCode: 2, stderr: "" });
+    expect(result.exitCode).toBe(2);
+    expect(result.stdout).toBe("z-valid.ts\n");
+    expect(result.stderr).toContain("error: Variable declaration expected.");
+    expect(result.stderr).toContain("at a-invalid.ts:1:14");
     expect(await Bun.file(join(String(dir), "a-invalid.ts")).text()).toBe("export const = ;");
     expect(await Bun.file(join(String(dir), "z-valid.ts")).text()).toBe("export const value = { a: 1 };\n");
-    expect(result.stdout).toMatch(/^a-invalid\.ts: error: .+/m);
+    expect(result.stderr).toMatch(/Formatted 1 file, 0 unchanged \[\d+(?:\.\d+)?(?:ms|s)\]\n$/);
   });
 
   test.each(["fmt", "lint"])("%s prunes generated Python caches before reading or rewriting files", async command => {
@@ -56,7 +70,11 @@ describe("embedded quality backend", () => {
       ),
     });
     const flags = command === "fmt" ? ["--write"] : ["--fix"];
-    expect(await run([command, ...flags, "."], String(dir))).toEqual({ stdout: "", stderr: "", exitCode: 0 });
+    expect(await run([command, ...flags, "."], String(dir))).toEqual({
+      stdout: "",
+      stderr: command === "fmt" ? formatSummary(0, 1) : lintSummary(1),
+      exitCode: 0,
+    });
     for (const path of paths) {
       expect(await Bun.file(join(String(dir), path, "invalid.ts")).text()).toBe(invalid);
       expect(await Bun.file(join(String(dir), path, "unformatted.ts")).text()).toBe(unformatted);
@@ -81,7 +99,11 @@ describe("embedded quality backend", () => {
       "node_modules/fixture.ts": ignored,
       "target/fixture.ts": ignored,
     });
-    expect(await run(["fmt", "--write", "."], String(dir))).toEqual({ stdout: "", stderr: "", exitCode: 0 });
+    expect(await run(["fmt", "--write", "."], String(dir))).toEqual({
+      stdout: "active.ts\n",
+      stderr: formatSummary(1, 0),
+      exitCode: 0,
+    });
     expect(await Bun.file(join(String(dir), "active.ts")).text()).toBe("export const value = { a: 1 };\n");
     for (const path of [
       "generated/secrets",
@@ -99,7 +121,11 @@ describe("embedded quality backend", () => {
       const filename = path === "generated" ? "invalid.ts" : "fixture.ts";
       expect(await Bun.file(join(String(dir), path, filename)).text()).toBe(ignored);
     }
-    expect(await run(["fmt", "--write", "generated"], String(dir))).toEqual({ stdout: "", stderr: "", exitCode: 0 });
+    expect(await run(["fmt", "--write", "generated"], String(dir))).toEqual({
+      stdout: "",
+      stderr: formatSummary(0, 0),
+      exitCode: 0,
+    });
   });
 
   test("recursive formatting preserves nested Gitignore negation", async () => {
@@ -110,7 +136,11 @@ describe("embedded quality backend", () => {
       "nested/kept.ts": "export const kept=2;",
       "nested/ignored.ts": "let = invalid",
     });
-    expect(await run(["fmt", "--write", "."], String(dir))).toEqual({ stdout: "", stderr: "", exitCode: 0 });
+    expect(await run(["fmt", "--write", "."], String(dir))).toEqual({
+      stdout: "active.ts\nnested/kept.ts\n",
+      stderr: formatSummary(2, 0),
+      exitCode: 0,
+    });
     expect(await Bun.file(join(String(dir), "active.ts")).text()).toBe("export const active = 1;\n");
     expect(await Bun.file(join(String(dir), "nested/kept.ts")).text()).toBe("export const kept = 2;\n");
     expect(await Bun.file(join(String(dir), "nested/ignored.ts")).text()).toBe("let = invalid");
@@ -126,34 +156,54 @@ describe("embedded quality backend", () => {
     });
     for (const root of [".", "./"]) {
       expect(await run([command, "--ignore-pattern", "cli-ignored/**", root], String(dir))).toEqual({
-        stdout: "",
+        stdout:
+          command === "fmt"
+            ? expect.stringMatching(/^Finished in \d+ms on 2 files using \d+ threads\.\n$/)
+            : lintSummary(1),
         stderr: "",
         exitCode: 0,
       });
     }
     expect(await Bun.file(join(String(dir), "generated/invalid.ts")).text()).toBe("let = invalid");
     expect(await Bun.file(join(String(dir), "cli-ignored/invalid.ts")).text()).toBe("let = invalid");
-    expect(await run([command, "generated/invalid.ts"], String(dir))).toEqual({ stdout: "", stderr: "", exitCode: 0 });
-    expect(await run([command, "--ignore-pattern", "cli-ignored/**", "cli-ignored"], String(dir))).toEqual({
-      stdout: "",
-      stderr: "",
-      exitCode: 0,
-    });
+    const ignored = await run([command, "generated/invalid.ts"], String(dir));
+    const noTargets =
+      command === "fmt"
+        ? {
+            stdout: "",
+            stderr:
+              "error: Expected at least one target file. All matched files may have been excluded by ignore rules.\n",
+            exitCode: 2,
+          }
+        : {
+            stdout: "error: No files found to lint. Please check your paths and ignore patterns.\n",
+            stderr: "",
+            exitCode: 1,
+          };
+    expect(ignored).toEqual(noTargets);
+    expect(await run([command, "--ignore-pattern", "cli-ignored/**", "cli-ignored"], String(dir))).toEqual(noTargets);
+    expect(await Bun.file(join(String(dir), "generated/invalid.ts")).text()).toBe("let = invalid");
+    expect(await Bun.file(join(String(dir), "cli-ignored/invalid.ts")).text()).toBe("let = invalid");
   });
 
   test("fmt does not follow a symbolic link passed as an explicit root", async () => {
     using dir = tempDir("native-fmt-root-symlink", { "real/active.ts": "export const value={a:1};" });
     symlinkSync(join(String(dir), "real"), join(String(dir), "linked"), "junction");
-    expect(await run(["fmt", "--write", "linked"], String(dir))).toEqual({ stdout: "", stderr: "", exitCode: 0 });
+    const result = await run(["fmt", "--write", "linked"], String(dir));
+    expect(result.stdout).toBe("");
+    expect(result.stderr).toMatch(
+      /^error: Explicitly specified pattern "linked" is a symbolic link\.\nFormatted 0 files, 0 unchanged \[\d+(?:\.\d+)?(?:ms|s)\]\n$/,
+    );
+    expect(result.exitCode).toBe(2);
     expect(await Bun.file(join(String(dir), "real/active.ts")).text()).toBe("export const value={a:1};");
   });
 
   test.each(["--help", "-h"])("fmt treats %s after -- as a literal directory", async path => {
     using dir = tempDir("native-fmt-literal-help", { [`${path}/active.ts`]: "export const value={a:1};" });
     const result = await run(["fmt", "--check", "--", path], String(dir));
-    expect(result.stdout).toContain("formatting differs");
+    expect(result.stdout).toBe(`${path}/active.ts\n`);
     expect(result.stdout).not.toContain("Usage:");
-    expect(result.stderr).toBe("");
+    expect(result.stderr).toBe("1 file needs formatting. Run bun fmt to fix it.\n");
     expect(result.exitCode).toBe(1);
   });
 
@@ -162,8 +212,8 @@ describe("embedded quality backend", () => {
     using dir = tempDir("native-fmt-global-command-value", { fmt: "FMT_TEST_FIXTURE=1\n", "a.ts": source });
     const result = await run(["--env-file", "fmt", "fmt", "--check"], String(dir));
     expect(result.stdout).toContain("a.ts");
-    expect(result.stdout).toContain("formatting differs");
-    expect(result.stderr).toBe("");
+    expect(result.stdout).toBe("a.ts\n");
+    expect(result.stderr).toBe("1 file needs formatting. Run bun fmt to fix it.\n");
     expect(result.exitCode).toBe(1);
     expect(await Bun.file(join(String(dir), "a.ts")).text()).toBe(source);
   });
@@ -202,9 +252,10 @@ describe("embedded quality backend", () => {
     const input = 'const value="hello"';
     const result = await format(input, ["--config", "config.json"]);
     expect(result).toEqual({ stdout: "const value = 'hello';\n", stderr: "", exitCode: 0 });
-    expect(await format(input, ["--check"])).toEqual({ stdout: "", stderr: "", exitCode: 1 });
+    expect(await format(input, ["--check"])).toEqual({ stdout: "(stdin)\n", stderr: "", exitCode: 1 });
     expect(await format('const value = "hello";\n', ["--check"])).toEqual({ stdout: "", stderr: "", exitCode: 0 });
-    for (const args of [["--write"], ["virtual.ts"], ["--stdin-filepath", "other.ts"]]) {
+    expect(await format(input, ["--write"])).toEqual({ stdout: 'const value = "hello";\n', stderr: "", exitCode: 0 });
+    for (const args of [["virtual.ts"], ["--stdin-filepath", "other.ts"]]) {
       const invalid = await format(input, args);
       expect(invalid.stdout).toBe("");
       expect(invalid.exitCode).toBe(2);
@@ -228,11 +279,12 @@ describe("embedded quality backend", () => {
     });
     const valid = await run(["lint", "--config", "lint.json", "a.ts"], String(dir));
     expect(valid.stderr).toBe("");
-    expect(valid.stdout).toBe("");
+    expect(valid.stdout).toEqual(lintSummary(1));
     expect(valid.exitCode).toBe(0);
     const invalid = await run(["lint", "--config", "invalid.json", "a.ts"], String(dir));
-    expect(invalid.stderr).toContain("Invalid 'vars' option for no-unused-vars");
-    expect(invalid.exitCode).toBe(2);
+    expect(invalid.stdout).toContain("Invalid 'vars' option for no-unused-vars: Expected a string or an object");
+    expect(invalid.stderr).toBe("");
+    expect(invalid.exitCode).toBe(1);
   });
 
   test("compiler markers remain source protocol only inside builtin functions", async () => {
@@ -270,7 +322,11 @@ describe("embedded quality backend", () => {
     });
     const result = await run(["lint", "--config", "lint.json", "--format=json", "a.ts"], String(dir));
     expect(result.stderr).toBe("");
-    expect(JSON.parse(result.stdout).diagnostics.filter((item: any) => item.code === rule)).toHaveLength(3);
+    expect(
+      JSON.parse(result.stdout).diagnostics.filter(
+        (item: any) => item.code === "bun(no-duplicate-conditional-property-access)",
+      ),
+    ).toHaveLength(3);
     expect(result.exitCode).toBe(1);
   });
   test("compiled Bun getter rule preserves caching, writes and receiver semantics", async () => {
@@ -286,7 +342,7 @@ describe("embedded quality backend", () => {
     const checked = await run(["lint", "--config", "lint.json", "--format=json", "a.ts"], String(dir));
     expect(checked.stderr).toBe("");
     const findings = JSON.parse(checked.stdout).diagnostics.filter(
-      (diagnostic: any) => diagnostic.code === "bun/no-duplicate-conditional-property-access",
+      (diagnostic: any) => diagnostic.code === "bun(no-duplicate-conditional-property-access)",
     );
     expect(findings).toHaveLength(1);
     expect(findings[0].message).toContain("`obj.x` is read");
@@ -318,13 +374,14 @@ describe("embedded quality backend", () => {
       "format.json": JSON.stringify({ printWidth: 120 }),
     });
     const checked = await run(["fmt", "--check", "--config", "format.json", "a.ts"], String(dir));
-    expect(checked.stdout).toContain("formatting differs");
+    expect(checked.stdout).toBe("Checking formatting...\n");
+    expect(checked.stderr).toContain("[warn] a.ts");
     expect(checked.exitCode).toBe(1);
     const written = await run(["fmt", "--write", "--config", "format.json", "a.ts"], String(dir));
-    expect(written.stdout).toBe("");
+    expect(written.stdout).toBe("a.ts\n");
     expect(written.exitCode).toBe(0);
     const clean = await run(["fmt", "--check", "--config", "format.json", "a.ts"], String(dir));
-    expect(clean.stdout).toBe("");
+    expect(clean.stdout).toBe("Checking formatting...\nAll matched files use Prettier code style!\n");
     expect(clean.exitCode).toBe(0);
   });
 
@@ -336,9 +393,9 @@ describe("embedded quality backend", () => {
     });
     const ignored = await run(["lint", "--config", "lint.json", "--format=json", "."], String(dir));
     expect(JSON.parse(ignored.stdout).diagnostics).toEqual([]);
-    expect(ignored.exitCode).toBe(0);
+    expect(ignored.exitCode).toBe(1);
     const unsupported = await run(["lint", "--unknown-native-option"], String(dir));
-    expect(unsupported.stderr).toContain("unsupported native option");
+    expect(unsupported.stderr).toContain("Invalid option '--unknown-native-option'");
     expect(unsupported.exitCode).toBe(2);
   });
 });
@@ -366,9 +423,12 @@ describe("routing", () => {
       BUN_OXFMT: join(String(dir), "external.ts"),
       BUN_N2B: join(String(dir), "external.ts"),
     });
-    if (command === "lint") expect(JSON.parse(result.stdout).diagnostics).toEqual([]);
-    else expect(result.stdout).toBe("");
-    expect(result.stderr).toBe("");
+    if (command === "lint") {
+      const report = JSON.parse(result.stdout);
+      expect(report).toHaveLength(1);
+      expect(report[0].messages).toEqual([]);
+    } else expect(result.stdout).toBe("");
+    expect(result.stderr).toEqual(command === "fmt" ? "1 file is formatted.\n" : lintSummary(1));
     expect(await Bun.file(join(String(dir), "invoked")).exists()).toBe(false);
     expect(result.exitCode).toBe(0);
   });
@@ -390,9 +450,12 @@ describe("routing", () => {
       BUN_OXLINT: join(String(dir), "external.ts"),
       BUN_OXFMT: join(String(dir), "external.ts"),
     });
-    if (command === "lint") expect(JSON.parse(result.stdout).diagnostics).toEqual([]);
-    else expect(result.stdout).toBe("");
-    expect(result.stderr).toBe("");
+    if (command === "lint") {
+      const report = JSON.parse(result.stdout);
+      expect(report).toHaveLength(1);
+      expect(report[0].messages).toEqual([]);
+    } else expect(result.stdout).toBe("");
+    expect(result.stderr).toEqual(command === "fmt" ? "1 file is formatted.\n" : lintSummary(1));
     expect(result.exitCode).toBe(0);
   });
 
@@ -420,8 +483,8 @@ describe("routing", () => {
     });
     const nativeLint = await run(["lint", "--help"], String(dir));
     const nativeFmt = await run(["fmt", "--help"], String(dir));
-    expect(nativeLint.stdout).toContain("Embedded OXC");
-    expect(nativeFmt.stdout).toContain("Embedded OXC");
+    expect(nativeLint.stdout).toContain("Usage: bun lint");
+    expect(nativeFmt.stdout).toContain("Usage: bun fmt");
     expect(nativeLint.exitCode).toBe(0);
     expect(nativeFmt.exitCode).toBe(0);
     const lint = await run(["run", "lint"], String(dir));

@@ -125,6 +125,11 @@ fn test() {
                   ",
     ];
 
-    Tester::new(NoUnsafeFunctionType::NAME, NoUnsafeFunctionType::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        NoUnsafeFunctionType::NAME,
+        NoUnsafeFunctionType::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

@@ -108,7 +108,10 @@ impl<const MIN_ALIGN: usize> Arena<MIN_ALIGN> {
     ) -> Option<NonNull<u8>> {
         #[cfg(debug_assertions)]
         {
-            let footer_ptr = self.current_chunk_footer_ptr.get().expect("Arena has no chunks");
+            let footer_ptr = self
+                .current_chunk_footer_ptr
+                .get()
+                .expect("Arena has no chunks");
             // SAFETY: `footer_ptr` always points to a valid `ChunkFooter`
             let footer = unsafe { footer_ptr.as_ref() };
             assert!(
@@ -137,7 +140,11 @@ pub unsafe fn dealloc_fixed_size_arena_chunk(footer_ptr: NonNull<ChunkFooter>) {
     let (backing_alloc_ptr, layout, is_fixed_size) = {
         // SAFETY: Caller guarantees that `footer_ptr` points to a valid `ChunkFooter`
         let footer = unsafe { footer_ptr.as_ref() };
-        (footer.backing_alloc_ptr, footer.layout, footer.is_fixed_size)
+        (
+            footer.backing_alloc_ptr,
+            footer.layout,
+            footer.is_fixed_size,
+        )
     };
 
     debug_assert!(

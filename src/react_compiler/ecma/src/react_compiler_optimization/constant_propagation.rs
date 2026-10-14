@@ -62,8 +62,14 @@ use crate::react_compiler_optimization::merge_consecutive_blocks::merge_consecut
 
 #[derive(Debug, Clone)]
 enum Constant<'a> {
-    Primitive { value: PrimitiveValue<'a>, span: Option<Span> },
-    LoadGlobal { binding: NonLocalBinding<'a>, span: Option<Span> },
+    Primitive {
+        value: PrimitiveValue<'a>,
+        span: Option<Span>,
+    },
+    LoadGlobal {
+        binding: NonLocalBinding<'a>,
+        span: Option<Span>,
+    },
 }
 
 impl<'a> Constant<'a> {
@@ -117,7 +123,8 @@ fn constant_propagation_impl<'a>(
         // Now that predecessors are updated, prune phi operands that can never be reached
         for (_block_id, block) in func.body.blocks.iter_mut() {
             for phi in &mut block.phis {
-                phi.operands.retain(|pred, _operand| block.preds.contains(pred));
+                phi.operands
+                    .retain(|pred, _operand| block.preds.contains(pred));
             }
         }
 
@@ -194,11 +201,25 @@ fn apply_constant_propagation<'a>(
 
         let block = &func.body.blocks[&block_id];
         match &block.terminal {
-            Terminal::If { test, consequent, alternate, id, span, .. } => {
+            Terminal::If {
+                test,
+                consequent,
+                alternate,
+                id,
+                span,
+                ..
+            } => {
                 let test_value = read(constants, test);
-                if let Some(Constant::Primitive { value: ref prim, .. }) = test_value {
+                if let Some(Constant::Primitive {
+                    value: ref prim, ..
+                }) = test_value
+                {
                     has_changes = true;
-                    let target_block_id = if is_truthy(prim) { *consequent } else { *alternate };
+                    let target_block_id = if is_truthy(prim) {
+                        *consequent
+                    } else {
+                        *alternate
+                    };
                     let terminal = Terminal::Goto {
                         variant: GotoVariant::Break,
                         block: target_block_id,
@@ -290,15 +311,24 @@ fn evaluate_instruction<'a>(
 ) -> Option<Constant<'a>> {
     let instr = &func.instructions[instr_id.index()];
     match &instr.value {
-        InstructionValue::Primitive { value, span } => {
-            Some(Constant::Primitive { value: *value, span: *span })
-        }
-        InstructionValue::LoadGlobal { binding, span } => {
-            Some(Constant::LoadGlobal { binding: *binding, span: *span })
-        }
-        InstructionValue::ComputedLoad { object, property, span } => {
+        InstructionValue::Primitive { value, span } => Some(Constant::Primitive {
+            value: *value,
+            span: *span,
+        }),
+        InstructionValue::LoadGlobal { binding, span } => Some(Constant::LoadGlobal {
+            binding: *binding,
+            span: *span,
+        }),
+        InstructionValue::ComputedLoad {
+            object,
+            property,
+            span,
+        } => {
             let prop_value = read(constants, property);
-            if let Some(Constant::Primitive { value: ref prim, .. }) = prop_value {
+            if let Some(Constant::Primitive {
+                value: ref prim, ..
+            }) = prop_value
+            {
                 match prim {
                     PrimitiveValue::String(s) if is_valid_identifier(s.as_str()) => {
                         let object = *object;
@@ -336,9 +366,17 @@ fn evaluate_instruction<'a>(
             }
             None
         }
-        InstructionValue::ComputedStore { object, property, value, span } => {
+        InstructionValue::ComputedStore {
+            object,
+            property,
+            value,
+            span,
+        } => {
             let prop_value = read(constants, property);
-            if let Some(Constant::Primitive { value: ref prim, .. }) = prop_value {
+            if let Some(Constant::Primitive {
+                value: ref prim, ..
+            }) = prop_value
+            {
                 match prim {
                     PrimitiveValue::String(s) if is_valid_identifier(s.as_str()) => {
                         let object = *object;
@@ -380,10 +418,17 @@ fn evaluate_instruction<'a>(
             }
             None
         }
-        InstructionValue::PostfixUpdate { lvalue, operation, value, span } => {
+        InstructionValue::PostfixUpdate {
+            lvalue,
+            operation,
+            value,
+            span,
+        } => {
             let previous = read(constants, value);
-            if let Some(Constant::Primitive { value: PrimitiveValue::Number(n), span: prev_span }) =
-                previous
+            if let Some(Constant::Primitive {
+                value: PrimitiveValue::Number(n),
+                span: prev_span,
+            }) = previous
             {
                 let prev_val = n.value();
                 let next_val = match operation {
@@ -407,9 +452,18 @@ fn evaluate_instruction<'a>(
             }
             None
         }
-        InstructionValue::PrefixUpdate { lvalue, operation, value, span } => {
+        InstructionValue::PrefixUpdate {
+            lvalue,
+            operation,
+            value,
+            span,
+        } => {
             let previous = read(constants, value);
-            if let Some(Constant::Primitive { value: PrimitiveValue::Number(n), .. }) = previous {
+            if let Some(Constant::Primitive {
+                value: PrimitiveValue::Number(n),
+                ..
+            }) = previous
+            {
                 let prev_val = n.value();
                 let next_val = match operation {
                     UpdateOperator::Increment => prev_val + 1.0,
@@ -426,14 +480,23 @@ fn evaluate_instruction<'a>(
             }
             None
         }
-        InstructionValue::UnaryExpression { operator, value, span } => match operator {
+        InstructionValue::UnaryExpression {
+            operator,
+            value,
+            span,
+        } => match operator {
             UnaryOperator::Not => {
                 let operand = read(constants, value);
-                if let Some(Constant::Primitive { value: ref prim, .. }) = operand {
+                if let Some(Constant::Primitive {
+                    value: ref prim, ..
+                }) = operand
+                {
                     let negated = !is_truthy(prim);
                     let span = *span;
-                    let result =
-                        Constant::Primitive { value: PrimitiveValue::Boolean(negated), span };
+                    let result = Constant::Primitive {
+                        value: PrimitiveValue::Boolean(negated),
+                        span,
+                    };
                     func.instructions[instr_id.index()].value = InstructionValue::Primitive {
                         value: PrimitiveValue::Boolean(negated),
                         span,
@@ -444,7 +507,10 @@ fn evaluate_instruction<'a>(
             }
             UnaryOperator::Minus => {
                 let operand = read(constants, value);
-                if let Some(Constant::Primitive { value: PrimitiveValue::Number(n), .. }) = operand
+                if let Some(Constant::Primitive {
+                    value: PrimitiveValue::Number(n),
+                    ..
+                }) = operand
                 {
                     let negated = -n.value();
                     let span = *span;
@@ -465,7 +531,12 @@ fn evaluate_instruction<'a>(
             | UnaryOperator::TypeOf
             | UnaryOperator::Void => None,
         },
-        InstructionValue::BinaryExpression { operator, left, right, span } => {
+        InstructionValue::BinaryExpression {
+            operator,
+            left,
+            right,
+            span,
+        } => {
             let lhs_value = read(constants, left);
             let rhs_value = read(constants, right);
             if let (
@@ -483,10 +554,17 @@ fn evaluate_instruction<'a>(
             }
             None
         }
-        InstructionValue::PropertyLoad { object, property, span, .. } => {
+        InstructionValue::PropertyLoad {
+            object,
+            property,
+            span,
+            ..
+        } => {
             let object_value = read(constants, object);
-            if let Some(Constant::Primitive { value: PrimitiveValue::String(ref s), .. }) =
-                object_value
+            if let Some(Constant::Primitive {
+                value: PrimitiveValue::String(ref s),
+                ..
+            }) = object_value
                 && let PropertyLiteral::String(prop_name) = property
                 && prop_name == "length"
             {
@@ -505,7 +583,11 @@ fn evaluate_instruction<'a>(
             }
             None
         }
-        InstructionValue::TemplateLiteral { subexprs, quasis, span } => {
+        InstructionValue::TemplateLiteral {
+            subexprs,
+            quasis,
+            span,
+        } => {
             if subexprs.is_empty() {
                 // No subexpressions: join all cooked quasis
                 let mut result_string = String::new();
@@ -530,8 +612,12 @@ fn evaluate_instruction<'a>(
             }
 
             let mut quasi_index = 0usize;
-            let mut result_string =
-                quasis[quasi_index].cooked.as_ref().unwrap().as_str().to_string();
+            let mut result_string = quasis[quasi_index]
+                .cooked
+                .as_ref()
+                .unwrap()
+                .as_str()
+                .to_string();
             quasi_index += 1;
 
             for sub_expr in subexprs {
@@ -597,8 +683,10 @@ fn evaluate_instruction<'a>(
                     })
                     .collect();
                 for idx in const_dep_indices {
-                    if let InstructionValue::StartMemoize { deps: Some(ref mut deps), .. } =
-                        func.instructions[instr_id.index()].value
+                    if let InstructionValue::StartMemoize {
+                        deps: Some(ref mut deps),
+                        ..
+                    } = func.instructions[instr_id.index()].value
                         && let ManualMemoDependencyRoot::NamedLocal { constant, .. } =
                             &mut deps[idx].root
                     {
@@ -651,7 +739,10 @@ fn process_inner_function<'a>(
     env: &mut Environment<'a>,
     constants: &mut Constants<'a>,
 ) -> Result<(), OxcDiagnostic> {
-    let mut inner = replace(&mut env.functions[func_id], placeholder_function(env.allocator));
+    let mut inner = replace(
+        &mut env.functions[func_id],
+        placeholder_function(env.allocator),
+    );
     let result = constant_propagation_impl(&mut inner, env, constants);
     env.functions[func_id] = inner;
     result
@@ -704,42 +795,42 @@ fn evaluate_binary_op<'a>(
 ) -> Option<PrimitiveValue<'a>> {
     match operator {
         BinaryOperator::Addition => match (lhs, rhs) {
-            (PrimitiveValue::Number(l), PrimitiveValue::Number(r)) => {
-                Some(PrimitiveValue::Number(FloatValue::new(l.value() + r.value())))
-            }
+            (PrimitiveValue::Number(l), PrimitiveValue::Number(r)) => Some(PrimitiveValue::Number(
+                FloatValue::new(l.value() + r.value()),
+            )),
             (PrimitiveValue::String(l), PrimitiveValue::String(r)) => Some(PrimitiveValue::String(
                 Str::from_strs_array_in([l.as_str(), r.as_str()], &allocator),
             )),
             _ => None,
         },
         BinaryOperator::Subtraction => match (lhs, rhs) {
-            (PrimitiveValue::Number(l), PrimitiveValue::Number(r)) => {
-                Some(PrimitiveValue::Number(FloatValue::new(l.value() - r.value())))
-            }
+            (PrimitiveValue::Number(l), PrimitiveValue::Number(r)) => Some(PrimitiveValue::Number(
+                FloatValue::new(l.value() - r.value()),
+            )),
             _ => None,
         },
         BinaryOperator::Multiplication => match (lhs, rhs) {
-            (PrimitiveValue::Number(l), PrimitiveValue::Number(r)) => {
-                Some(PrimitiveValue::Number(FloatValue::new(l.value() * r.value())))
-            }
+            (PrimitiveValue::Number(l), PrimitiveValue::Number(r)) => Some(PrimitiveValue::Number(
+                FloatValue::new(l.value() * r.value()),
+            )),
             _ => None,
         },
         BinaryOperator::Division => match (lhs, rhs) {
-            (PrimitiveValue::Number(l), PrimitiveValue::Number(r)) => {
-                Some(PrimitiveValue::Number(FloatValue::new(l.value() / r.value())))
-            }
+            (PrimitiveValue::Number(l), PrimitiveValue::Number(r)) => Some(PrimitiveValue::Number(
+                FloatValue::new(l.value() / r.value()),
+            )),
             _ => None,
         },
         BinaryOperator::Remainder => match (lhs, rhs) {
-            (PrimitiveValue::Number(l), PrimitiveValue::Number(r)) => {
-                Some(PrimitiveValue::Number(FloatValue::new(l.value() % r.value())))
-            }
+            (PrimitiveValue::Number(l), PrimitiveValue::Number(r)) => Some(PrimitiveValue::Number(
+                FloatValue::new(l.value() % r.value()),
+            )),
             _ => None,
         },
         BinaryOperator::Exponential => match (lhs, rhs) {
-            (PrimitiveValue::Number(l), PrimitiveValue::Number(r)) => {
-                Some(PrimitiveValue::Number(FloatValue::new(js_exponentiate(l.value(), r.value()))))
-            }
+            (PrimitiveValue::Number(l), PrimitiveValue::Number(r)) => Some(PrimitiveValue::Number(
+                FloatValue::new(js_exponentiate(l.value(), r.value())),
+            )),
             _ => None,
         },
         BinaryOperator::BitwiseOR => match (lhs, rhs) {
@@ -873,7 +964,11 @@ fn js_abstract_equal(lhs: &PrimitiveValue, rhs: &PrimitiveValue) -> bool {
             // String is coerced to number using JS ToNumber semantics.
             let sv = s.as_str().string_to_number();
             let nv = n.value();
-            if nv.is_nan() || sv.is_nan() { false } else { nv == sv }
+            if nv.is_nan() || sv.is_nan() {
+                false
+            } else {
+                nv == sv
+            }
         }
         (PrimitiveValue::Boolean(b), other) => {
             let num = if *b { 1.0 } else { 0.0 };

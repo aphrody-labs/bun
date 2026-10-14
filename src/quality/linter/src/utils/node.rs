@@ -18,12 +18,17 @@ pub fn is_global_exports_assignment_target(node: &AssignmentTarget, ctx: &LintCo
         return false;
     };
     id.is_global_reference_name(static_ident!("exports"), ctx.scoping())
-        && !ctx.globals().get("exports").is_some_and(|value| *value == GlobalValue::Off)
+        && !ctx
+            .globals()
+            .get("exports")
+            .is_some_and(|value| *value == GlobalValue::Off)
 }
 
 /// Returns whether `member_expr` is a `module.exports` access on the global CommonJS `module`.
 pub fn is_global_module_exports(member_expr: &MemberExpression, ctx: &LintContext) -> bool {
-    member_expr.static_property_name().is_some_and(|name| name == "exports")
+    member_expr
+        .static_property_name()
+        .is_some_and(|name| name == "exports")
         && member_expr
             .object()
             .get_identifier_reference()

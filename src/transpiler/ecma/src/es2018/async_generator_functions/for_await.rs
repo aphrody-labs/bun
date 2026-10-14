@@ -81,7 +81,9 @@ impl<'a> AsyncGeneratorFunctions<'a> {
                 ctx,
             ));
         }
-        ctx.state.statement_injector.insert_many_before(&new_stmt, statements);
+        ctx.state
+            .statement_injector
+            .insert_many_before(&new_stmt, statements);
 
         // If the parent node doesn't allow multiple statements, we need to wrap the new statement
         // with a block statement, this way we can ensure can insert statement correctly.
@@ -213,15 +215,21 @@ impl<'a> AsyncGeneratorFunctions<'a> {
     ) -> ArenaVec<'a, Statement<'a>> {
         let var_scope_id = ctx.current_hoist_scope_id();
 
-        let iterator_had_error_key =
-            ctx.generate_uid("didIteratorError", var_scope_id, SymbolFlags::FunctionScopedVariable);
+        let iterator_had_error_key = ctx.generate_uid(
+            "didIteratorError",
+            var_scope_id,
+            SymbolFlags::FunctionScopedVariable,
+        );
         let iterator_abrupt_completion = ctx.generate_uid(
             "iteratorAbruptCompletion",
             var_scope_id,
             SymbolFlags::FunctionScopedVariable,
         );
-        let iterator_error_key =
-            ctx.generate_uid("iteratorError", var_scope_id, SymbolFlags::FunctionScopedVariable);
+        let iterator_error_key = ctx.generate_uid(
+            "iteratorError",
+            var_scope_id,
+            SymbolFlags::FunctionScopedVariable,
+        );
 
         let mut items = ArenaVec::with_capacity_in(4, ctx);
         items.push(Statement::new_variable_declaration(
@@ -267,8 +275,11 @@ impl<'a> AsyncGeneratorFunctions<'a> {
             ctx,
         ));
 
-        let iterator_key =
-            ctx.generate_uid("iterator", var_scope_id, SymbolFlags::FunctionScopedVariable);
+        let iterator_key = ctx.generate_uid(
+            "iterator",
+            var_scope_id,
+            SymbolFlags::FunctionScopedVariable,
+        );
         let block = {
             let block_scope_id = ctx.create_child_scope(parent_scope_id, ScopeFlags::empty());
             let for_statement_scope_id =
@@ -381,7 +392,12 @@ impl<'a> AsyncGeneratorFunctions<'a> {
             );
             Some(CatchClause::boxed_with_scope_id(
                 SPAN,
-                Some(CatchParameter::new(SPAN, err_ident.create_binding_pattern(ctx), None, ctx)),
+                Some(CatchParameter::new(
+                    SPAN,
+                    err_ident.create_binding_pattern(ctx),
+                    None,
+                    ctx,
+                )),
                 {
                     BlockStatement::boxed_with_scope_id(
                         SPAN,

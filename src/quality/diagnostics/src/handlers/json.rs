@@ -73,7 +73,11 @@ impl JSONReportHandler {
         }
         let source = diagnostic.source_code();
         if let Some(source) = source {
-            write!(f, r#""filename": "{}","#, escape(source.name().unwrap_or_default()))?;
+            write!(
+                f,
+                r#""filename": "{}","#,
+                escape(source.name().unwrap_or_default())
+            )?;
         }
         f.write_str(r#""labels": ["#)?;
         let mut scanner = source.map(|source| SpanScanner::new(source.data(), 0, 0));
@@ -89,8 +93,9 @@ impl JSONReportHandler {
             write!(f, r#""offset": {},"#, label.offset())?;
             write!(f, r#""length": {},"#, label.len())?;
 
-            if let Some(location) =
-                scanner.as_mut().and_then(|scanner| scanner.read_span(label.span()))
+            if let Some(location) = scanner
+                .as_mut()
+                .and_then(|scanner| scanner.read_span(label.span()))
             {
                 write!(f, r#""line": {},"#, location.line() + 1)?;
                 write!(f, r#""column": {}"#, location.column() + 1)?;

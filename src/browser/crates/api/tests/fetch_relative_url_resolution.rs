@@ -22,8 +22,11 @@ fn spawn_server() -> String {
                 let mut buf = [0u8; 4096];
                 let n = stream.read(&mut buf).unwrap_or(0);
                 let request = String::from_utf8_lossy(&buf[..n]);
-                let target =
-                    request.split_whitespace().nth(1).map(str::to_string).unwrap_or_default();
+                let target = request
+                    .split_whitespace()
+                    .nth(1)
+                    .map(str::to_string)
+                    .unwrap_or_default();
                 let (content_type, body) =
                     if target.starts_with("/api") || target.starts_with("/deep/api") {
                         ("application/json", format!("{{\"path\":\"{}\"}}", target))

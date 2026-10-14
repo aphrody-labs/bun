@@ -95,7 +95,11 @@ impl CodeBuffer {
     /// ```
     #[inline]
     pub fn with_indent(indent_char: IndentChar, indent_width: usize) -> Self {
-        Self { buf: Vec::new(), indent_char, indent_width }
+        Self {
+            buf: Vec::new(),
+            indent_char,
+            indent_width,
+        }
     }
 
     /// Create a new [`CodeBuffer`] with the specified capacity.
@@ -135,7 +139,11 @@ impl CodeBuffer {
         indent_char: IndentChar,
         indent_width: usize,
     ) -> Self {
-        Self { buf: Vec::with_capacity(capacity), indent_char, indent_width }
+        Self {
+            buf: Vec::with_capacity(capacity),
+            indent_char,
+            indent_width,
+        }
     }
 
     /// Returns the number of bytes in the buffer.
@@ -240,7 +248,11 @@ impl CodeBuffer {
     #[must_use = "Peeking is pointless if the peeked char isn't used"]
     pub fn peek_nth_byte_back(&self, n: usize) -> Option<u8> {
         let len = self.len();
-        if n < len { Some(self.buf[len - 1 - n]) } else { None }
+        if n < len {
+            Some(self.buf[len - 1 - n])
+        } else {
+            None
+        }
     }
 
     /// Peek the last byte from the end of the buffer.
@@ -379,7 +391,8 @@ impl CodeBuffer {
     #[inline]
     pub fn print_char(&mut self, ch: char) {
         let mut b = [0; 4];
-        self.buf.extend_from_slice(ch.encode_utf8(&mut b).as_bytes());
+        self.buf
+            .extend_from_slice(ch.encode_utf8(&mut b).as_bytes());
     }
 
     /// Push a string into the buffer.
@@ -646,7 +659,9 @@ impl CodeBuffer {
         #[cold]
         #[inline(never)]
         fn write_slow(code_buffer: &mut CodeBuffer, bytes: usize) {
-            code_buffer.buf.extend(iter::repeat_n(code_buffer.indent_char as u8, bytes));
+            code_buffer
+                .buf
+                .extend(iter::repeat_n(code_buffer.indent_char as u8, bytes));
         }
 
         let bytes = depth * self.indent_width;

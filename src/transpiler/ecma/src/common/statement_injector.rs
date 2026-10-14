@@ -41,7 +41,9 @@ struct AdjacentStatement<'a> {
 impl StatementInjectorStore<'_> {
     /// Create new `StatementInjectorStore`.
     pub fn new() -> Self {
-        Self { insertions: FxHashMap::default() }
+        Self {
+            insertions: FxHashMap::default(),
+        }
     }
 }
 
@@ -67,7 +69,13 @@ impl<'a> StatementInjectorStore<'a> {
             .iter()
             .position(|s| matches!(s.direction, Direction::After))
             .unwrap_or(adjacent_stmts.len());
-        adjacent_stmts.insert(index, AdjacentStatement { stmt, direction: Direction::Before });
+        adjacent_stmts.insert(
+            index,
+            AdjacentStatement {
+                stmt,
+                direction: Direction::Before,
+            },
+        );
     }
 
     /// Add a statement to be inserted immediately after the target statement.
@@ -78,7 +86,10 @@ impl<'a> StatementInjectorStore<'a> {
 
     fn insert_after_address(&mut self, target: Address, stmt: Statement<'a>) {
         let adjacent_stmts = self.insertions.entry(target).or_default();
-        adjacent_stmts.push(AdjacentStatement { stmt, direction: Direction::After });
+        adjacent_stmts.push(AdjacentStatement {
+            stmt,
+            direction: Direction::After,
+        });
     }
 
     /// Add multiple statements to be inserted immediately before the target statement.
@@ -98,7 +109,10 @@ impl<'a> StatementInjectorStore<'a> {
         let adjacent_stmts = self.insertions.entry(target).or_default();
         adjacent_stmts.splice(
             0..0,
-            stmts.into_iter().map(|stmt| AdjacentStatement { stmt, direction: Direction::Before }),
+            stmts.into_iter().map(|stmt| AdjacentStatement {
+                stmt,
+                direction: Direction::Before,
+            }),
         );
     }
 
@@ -117,9 +131,10 @@ impl<'a> StatementInjectorStore<'a> {
         S: IntoIterator<Item = Statement<'a>>,
     {
         let adjacent_stmts = self.insertions.entry(target).or_default();
-        adjacent_stmts.extend(
-            stmts.into_iter().map(|stmt| AdjacentStatement { stmt, direction: Direction::After }),
-        );
+        adjacent_stmts.extend(stmts.into_iter().map(|stmt| AdjacentStatement {
+            stmt,
+            direction: Direction::After,
+        }));
     }
 
     /// Move insertions from one [`Address`] to another.
@@ -136,7 +151,9 @@ impl<'a> StatementInjectorStore<'a> {
     }
 
     fn move_insertions_address(&mut self, old_address: Address, new_address: Address) {
-        let Some(mut adjacent_stmts) = self.insertions.remove(&old_address) else { return };
+        let Some(mut adjacent_stmts) = self.insertions.remove(&old_address) else {
+            return;
+        };
 
         match self.insertions.entry(new_address) {
             Entry::Occupied(entry) => {

@@ -21,10 +21,15 @@ fn run_with_iterations(
 ) -> (String, u8) {
     let allocator = Allocator::default();
     let mut ret = Parser::new(&allocator, source_text, source_type).parse();
-    assert!(ret.diagnostics.is_empty(), "Parser errors: {:?}", ret.diagnostics);
+    assert!(
+        ret.diagnostics.is_empty(),
+        "Parser errors: {:?}",
+        ret.diagnostics
+    );
     let program = &mut ret.program;
-    let iterations = options
-        .map_or(0, |options| Compressor::new(&allocator).dead_code_elimination(program, options));
+    let iterations = options.map_or(0, |options| {
+        Compressor::new(&allocator).dead_code_elimination(program, options)
+    });
     (Codegen::new().build(program).code, iterations)
 }
 
@@ -107,7 +112,10 @@ fn test_with_options_source_type(
 ) -> u8 {
     let (result, iterations) = run_with_iterations(source_text, source_type, Some(options.clone()));
     let expected = run(expected, source_type, None);
-    assert_eq!(result, expected, "\nfor source\n{source_text}\nexpect\n{expected}\ngot\n{result}");
+    assert_eq!(
+        result, expected,
+        "\nfor source\n{source_text}\nexpect\n{expected}\ngot\n{result}"
+    );
 
     // Check idempotency.
     let second = run(&result, source_type, Some(options));
@@ -125,8 +133,14 @@ fn dce_if_statement() {
     test("if (false) { foo } else { bar }", "bar");
 
     test("if (xxx) { foo } else if (false) { bar }", "if (xxx) foo");
-    test("if (xxx) { foo } else if (false) { bar } else { baz }", "if (xxx) foo; else baz");
-    test("if (xxx) { foo } else if (false) { bar } else if (false) { baz }", "if (xxx) foo");
+    test(
+        "if (xxx) { foo } else if (false) { bar } else { baz }",
+        "if (xxx) foo; else baz",
+    );
+    test(
+        "if (xxx) { foo } else if (false) { bar } else if (false) { baz }",
+        "if (xxx) foo",
+    );
     test(
         "if (xxx) { foo } else if (false) { bar } else if (false) { baz } else { quaz }",
         "if (xxx) foo; else quaz",
@@ -153,17 +167,35 @@ fn dce_if_statement() {
 
     test("if (!false && xxx) { foo }", "if (xxx) foo");
     test("if (!true && yyy) { foo } else { bar }", "bar");
-    test("if (xxx && false) { foo } else { bar }", "if (xxx && false); else bar");
+    test(
+        "if (xxx && false) { foo } else { bar }",
+        "if (xxx && false); else bar",
+    );
 
     test("if (true || xxx) { foo }", "foo");
     test("if (false || xxx) { foo }", "if (xxx) foo");
-    test("if (xxx || true) { foo } else { bar }", "if (xxx || true) foo");
+    test(
+        "if (xxx || true) { foo } else { bar }",
+        "if (xxx || true) foo",
+    );
 
-    test("if ('production' == 'production') { foo } else { bar }", "foo");
-    test("if ('development' == 'production') { foo } else { bar }", "bar");
+    test(
+        "if ('production' == 'production') { foo } else { bar }",
+        "foo",
+    );
+    test(
+        "if ('development' == 'production') { foo } else { bar }",
+        "bar",
+    );
 
-    test("if ('production' === 'production') { foo } else { bar }", "foo");
-    test("if ('development' === 'production') { foo } else { bar }", "bar");
+    test(
+        "if ('production' === 'production') { foo } else { bar }",
+        "foo",
+    );
+    test(
+        "if ('development' === 'production') { foo } else { bar }",
+        "bar",
+    );
 
     // Shadowed `undefined` as a variable should not be erased.
     // This is a rollup test.
@@ -171,7 +203,10 @@ fn dce_if_statement() {
     test_same("function foo(undefined) { if (!undefined) throw Error('') } foo()");
 
     test("function foo() { if (undefined) { bar } } foo()", "");
-    test("function foo() { { bar } } foo()", "function foo() { bar } foo()");
+    test(
+        "function foo() { { bar } } foo()",
+        "function foo() { bar } foo()",
+    );
 
     test("if (true) { foo; } if (true) { foo; }", "foo; foo;");
     test(
@@ -233,7 +268,10 @@ fn dce_logical_expression() {
     test("true && bar()", "bar()");
 
     test("var foo = false && bar(); baz(foo)", "baz(false)");
-    test("var foo = true && bar(); baz(foo)", "var foo = bar(); baz(foo)");
+    test(
+        "var foo = true && bar(); baz(foo)",
+        "var foo = bar(); baz(foo)",
+    );
 
     test("foo = false && bar()", "foo = false");
     test("foo = true && bar()", "foo = bar()");
@@ -297,13 +335,22 @@ fn dead_after_throw_drop_triggers_unused_declarator_removal() {
 
 #[test]
 fn pure_comment_for_pure_global_constructors() {
-    test("var x = new WeakSet; foo(x)", "var x = /* @__PURE__ */ new WeakSet();\nfoo(x)");
-    test("var x = new WeakSet(null); foo(x)", "var x = /* @__PURE__ */ new WeakSet(null);\nfoo(x)");
+    test(
+        "var x = new WeakSet; foo(x)",
+        "var x = /* @__PURE__ */ new WeakSet();\nfoo(x)",
+    );
+    test(
+        "var x = new WeakSet(null); foo(x)",
+        "var x = /* @__PURE__ */ new WeakSet(null);\nfoo(x)",
+    );
     test(
         "var x = new WeakSet(undefined); foo(x)",
         "var x = /* @__PURE__ */ new WeakSet(void 0);\nfoo(x)",
     );
-    test("var x = new WeakSet([]); foo(x)", "var x = /* @__PURE__ */ new WeakSet([]);\nfoo(x)");
+    test(
+        "var x = new WeakSet([]); foo(x)",
+        "var x = /* @__PURE__ */ new WeakSet([]);\nfoo(x)",
+    );
 }
 
 // `Normalize` sets pure flags before the peephole loop runs, so it misses
@@ -687,7 +734,10 @@ fn preserve_legal_comment_when_dce_removes_anchor() {
         let result = run(source, SourceType::default(), Some(CompressOptions::dce()));
         let case_pos = result.find("//! case").expect("comment preserved");
         let close_pos = result.find("\n}").expect("switch close");
-        assert!(case_pos < close_pos, "legal comment escaped the case scope: {result}");
+        assert!(
+            case_pos < close_pos,
+            "legal comment escaped the case scope: {result}"
+        );
     }
 }
 
@@ -781,7 +831,10 @@ fn preserve_iife_in_dce_mode() {
     test_same("(function () { return 1 })();");
     // The unused binding is still dropped, but its side-effect-free IIFE
     // initializer survives as a statement (structure preserved).
-    test("var u = (function () { return 1 })();", "(function () { return 1 })();");
+    test(
+        "var u = (function () { return 1 })();",
+        "(function () { return 1 })();",
+    );
     // Nested in a sequence — still preserved (routes through the same path).
     test_same("(function () { return 1 })(), foo();");
     // `for`-init declarator removal must preserve the IIFE too.
@@ -795,11 +848,17 @@ fn drop_optional_chain_on_non_nullish_base() {
     // already handles that, so the fold is safe in statement position.
     test("({})?.foo;", "({}).foo;");
     // Side effects on the base are preserved when the `?.` is dropped.
-    test("export const v = (foo(), {})?.bar", "export const v = (foo(), {}).bar");
+    test(
+        "export const v = (foo(), {})?.bar",
+        "export const v = (foo(), {}).bar",
+    );
     // Nested: the optional is on the inner access, the outer access is
     // non-optional. Both folds (collapse + drop) reach the deepest `?.`.
     test("export const v = null?.foo.bar", "export const v = void 0");
-    test("export const v = []?.foo.bar", "export const v = [].foo.bar");
+    test(
+        "export const v = []?.foo.bar",
+        "export const v = [].foo.bar",
+    );
 }
 
 #[test]
@@ -807,9 +866,18 @@ fn fold_optional_chain_on_undefined_let_binding() {
     // https://github.com/rolldown/rolldown/issues/9281
     // A `let` binding with no writes is statically known to be `undefined`,
     // so optional calls / member accesses on it should fold to `void 0`.
-    test("let slot; export function call() { slot?.() }", "export function call() {}");
-    test("let slot; export function call() { slot?.foo }", "export function call() {}");
-    test("let slot; export function call() { slot?.[foo()] }", "export function call() {}");
+    test(
+        "let slot; export function call() { slot?.() }",
+        "export function call() {}",
+    );
+    test(
+        "let slot; export function call() { slot?.foo }",
+        "export function call() {}",
+    );
+    test(
+        "let slot; export function call() { slot?.[foo()] }",
+        "export function call() {}",
+    );
     // A binding that is written somewhere is not nullish-known: leave it alone.
     test_same(
         "let slot; export function setSlot(v) { slot = v } export function call() { slot?.() }",
@@ -829,18 +897,27 @@ fn fold_optional_chain_on_undefined_var_binding() {
         "var slot; function make(v) { slot?.(v); return v } console.log(make(1))",
         "function make(v) { return v } console.log(make(1))",
     );
-    test("var slot; export function call() { slot?.foo }", "export function call() {}");
+    test(
+        "var slot; export function call() { slot?.foo }",
+        "export function call() {}",
+    );
 
     // Constant-driven folds consume the same general `undefined` value. The
     // provenance flag only prevents textual substitution with `void 0`.
-    test("var slot; export function read() { return slot }", "export function read() {}");
+    test(
+        "var slot; export function read() { return slot }",
+        "export function read() {}",
+    );
 
     // A resolved write means the binding is not statically undefined.
     test_same(
         "var slot; export function setSlot(v) { slot = v } export function call() { slot?.() }",
     );
     // Script-root `var`s are observable and mutable through the global object.
-    test_same_source_type("var slot; function call() { slot?.() } call()", SourceType::script());
+    test_same_source_type(
+        "var slot; function call() { slot?.() } call()",
+        SourceType::script(),
+    );
     // Function-scoped vars are outside this optimization.
     test_same("export function call() { var slot; slot?.() }");
     // A name inside `with` may resolve to a property instead of a local binding.
@@ -856,8 +933,14 @@ fn fold_optional_chain_on_undefined_var_binding() {
 fn fold_optional_chain_on_null_const_binding() {
     // A `const` initialized to `null` resolves to `ValueType::Null`, so the
     // optional chain folds the same way the `undefined` case does.
-    test("const slot = null; export function call() { slot?.() }", "export function call() {}");
-    test("const slot = null; export function call() { slot?.foo }", "export function call() {}");
+    test(
+        "const slot = null; export function call() { slot?.() }",
+        "export function call() {}",
+    );
+    test(
+        "const slot = null; export function call() { slot?.foo }",
+        "export function call() {}",
+    );
 }
 
 #[test]
@@ -999,7 +1082,10 @@ fn dce_recursive_unused_functions() {
     test("const f = () => f()", "");
     // Cycle whose only external reference sits in dead code: needs the mid-loop
     // recompute trigger (pass 2), not just the initial compute.
-    test("if (false) c(); function c() { d() } function d() { c() }", "");
+    test(
+        "if (false) c(); function c() { d() } function d() { c() }",
+        "",
+    );
     // Declarator and class cycles are kept (functions-only candidacy).
     test_same("const a = () => b();\nconst b = () => a();");
     test_same("class A {\n\tm() {\n\t\tnew B();\n\t}\n}\nclass B {\n\tm() {\n\t\tnew A();\n\t}\n}");
@@ -1046,7 +1132,10 @@ fn dce_keeps_inferred_class_name_for_executing_class() {
 #[ignore = "TODO: extend recursive reachability to mutual declarators and classes"]
 fn dce_recursive_unused_mutual_declarators_and_classes() {
     test("const a = () => b(); const b = () => a();", "");
-    test("class A { m() { new B() } } class B { m() { new A() } }", "");
+    test(
+        "class A { m() { new B() } } class B { m() { new A() } }",
+        "",
+    );
 }
 
 #[test]
@@ -1077,7 +1166,10 @@ fn dce_recursive_unused_functions_in_commonjs_and_script() {
     test_same_source_type("function f() { f() }", SourceType::script());
     test_same_source_type("var f = () => f()", SourceType::script());
     test_same_source_type("{ function f() { f() } }", SourceType::script());
-    test_same_source_type("function f() { f() } module.exports = f;", SourceType::cjs());
+    test_same_source_type(
+        "function f() { f() } module.exports = f;",
+        SourceType::cjs(),
+    );
 }
 
 #[test]
@@ -1093,7 +1185,11 @@ fn dce_keeps_sloppy_duplicate_block_functions() {
     );
 
     // Strict block functions have no Annex B var alias and remain removable.
-    test_source_type("'use strict'; { function f() { f() } }", "'use strict';", SourceType::cjs());
+    test_source_type(
+        "'use strict'; { function f() { f() } }",
+        "'use strict';",
+        SourceType::cjs(),
+    );
     test_source_type(
         "'use strict'; { function f() { f() } }",
         "'use strict';",

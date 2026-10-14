@@ -520,7 +520,8 @@ impl Cmd {
                 }
                 #[cfg(feature = "coreutils")]
                 None if !sudo_wrap
-                    && bun_coreutils::applet_name(&first_arg).is_some_and(|name| name.len() == first_arg.len()) =>
+                    && bun_coreutils::applet_name(&first_arg)
+                        .is_some_and(|name| name.len() == first_arg.len()) =>
                 {
                     spawn_args.argv0 = bun_core::self_exe_path().ok().map(|z| {
                         let mut exe = z.as_bytes().to_vec();
@@ -549,17 +550,22 @@ impl Cmd {
         if !applet && crate::shell::cmd_compat::is_powershell_script(&resolved) {
             let host = {
                 let mut path_buf = bun_paths::path_buffer_pool::get();
-                crate::shell::cmd_compat::POWERSHELL_HOSTS.iter().find_map(|host| {
-                    bun_which::which(&mut *path_buf, spawn_args.path, spawn_args.cwd, host)
-                        .map(|z| z.as_bytes().to_vec())
-                })
+                crate::shell::cmd_compat::POWERSHELL_HOSTS
+                    .iter()
+                    .find_map(|host| {
+                        bun_which::which(&mut *path_buf, spawn_args.path, spawn_args.cwd, host)
+                            .map(|z| z.as_bytes().to_vec())
+                    })
             };
             let Some(host) = host else {
                 drop(spawn_args);
                 return Builtin::cmd_write_failing_error(
                     interp,
                     this,
-                    format_args!("bun: PowerShell (pwsh) not found to run {}\n", bstr::BStr::new(&resolved)),
+                    format_args!(
+                        "bun: PowerShell (pwsh) not found to run {}\n",
+                        bstr::BStr::new(&resolved)
+                    ),
                 );
             };
             let script = core::mem::replace(&mut resolved, host);

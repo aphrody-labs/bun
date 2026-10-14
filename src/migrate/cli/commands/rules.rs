@@ -15,8 +15,8 @@
 /// Commande `n2b rules` — liste toutes les règles connues.
 use std::process::ExitCode;
 
-use anyhow::Result;
 use crate::types::Report;
+use anyhow::Result;
 use colored::Colorize;
 use serde_json::json;
 
@@ -31,11 +31,20 @@ fn known_rules() -> &'static [(&'static str, &'static str)] {
         ("cli/npm-run", "npm run → bun run"),
         ("cli/npx", "npx → bunx"),
         ("cli/native-check-no-emit", "tsc/tsgo --noEmit → bun check"),
-        ("cli/native-check-manual", "émission, déclarations et watch TypeScript : migration manuelle"),
+        (
+            "cli/native-check-manual",
+            "émission, déclarations et watch TypeScript : migration manuelle",
+        ),
         ("cli/native-lint", "oxlint → bun lint natif"),
-        ("cli/native-lint-manual", "ESLint : migration manuelle de la configuration et des plugins"),
+        (
+            "cli/native-lint-manual",
+            "ESLint : migration manuelle de la configuration et des plugins",
+        ),
         ("cli/native-fmt", "oxfmt → bun fmt natif"),
-        ("cli/native-fmt-manual", "Prettier : migration manuelle de la configuration et des plugins"),
+        (
+            "cli/native-fmt-manual",
+            "Prettier : migration manuelle de la configuration et des plugins",
+        ),
         ("cli/native-n2b", "n2b → bun n2b natif"),
         ("cli/pnpm-install", "pnpm install → bun install"),
         ("cli/pnpm-add", "pnpm add → bun add"),

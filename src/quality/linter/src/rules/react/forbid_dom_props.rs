@@ -78,7 +78,9 @@ impl From<ForbidDomPropsConfig> for ForbidDomProps {
                 }
             }
         }
-        Self { forbid: Box::new(forbid) }
+        Self {
+            forbid: Box::new(forbid),
+        }
     }
 }
 

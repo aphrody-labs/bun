@@ -37,7 +37,9 @@ impl FixtureFormatter for GraphqlHarness {
     fn fingerprint(source: &str, _path: &Path, _options: &Self::Options) -> Fingerprint {
         let allocator = Allocator::default();
         let parsed = parse_for_format(&allocator, source).expect("source should parse");
-        Fingerprint { comments: parsed.comments.len() }
+        Fingerprint {
+            comments: parsed.comments.len(),
+        }
     }
 }
 

@@ -67,8 +67,11 @@ fn parse_iso(s: &str) -> Option<String> {
         Some(v) => v,
         None => return Some(date),
     };
-    let mm =
-        if b.get(pos + 2) == Some(&b':') { digits(b, pos + 3, 2) } else { digits(b, pos + 2, 2) };
+    let mm = if b.get(pos + 2) == Some(&b':') {
+        digits(b, pos + 3, 2)
+    } else {
+        digits(b, pos + 2, 2)
+    };
     let Some(mm) = mm else { return Some(date) };
     pos += if b.get(pos + 2) == Some(&b':') { 5 } else { 4 };
     let mut ss = 0;
@@ -92,7 +95,10 @@ fn parse_iso(s: &str) -> Option<String> {
         pos += 1;
     }
     let tz = parse_tz(&s[pos.min(s.len())..]);
-    Some(format!("{date}T{hh:02}:{mm:02}:{ss:02}{}", tz.unwrap_or_default()))
+    Some(format!(
+        "{date}T{hh:02}:{mm:02}:{ss:02}{}",
+        tz.unwrap_or_default()
+    ))
 }
 
 fn parse_tz(rest: &str) -> Option<String> {
@@ -102,7 +108,10 @@ fn parse_tz(rest: &str) -> Option<String> {
     }
     let upper = r.to_ascii_uppercase();
     if upper.starts_with('Z') || upper.starts_with("UTC") || upper.starts_with("GMT") {
-        let tail = r.get(if upper.starts_with('Z') { 1 } else { 3 }..).unwrap_or("").trim();
+        let tail = r
+            .get(if upper.starts_with('Z') { 1 } else { 3 }..)
+            .unwrap_or("")
+            .trim();
         if tail.starts_with('+') || tail.starts_with('-') {
             return parse_tz(tail);
         }
@@ -142,8 +151,11 @@ fn parse_clock(words: &[&str]) -> Option<(u32, u32, u32, Option<String>)> {
         {
             let hh: u32 = parts[0].parse().ok()?;
             let mm: u32 = parts[1].parse().ok()?;
-            let ss: u32 =
-                parts.get(2).and_then(|p| p.get(..2)).and_then(|p| p.parse().ok()).unwrap_or(0);
+            let ss: u32 = parts
+                .get(2)
+                .and_then(|p| p.get(..2))
+                .and_then(|p| p.parse().ok())
+                .unwrap_or(0);
             if hh > 23 || mm > 59 || ss > 60 {
                 return None;
             }
@@ -155,8 +167,10 @@ fn parse_clock(words: &[&str]) -> Option<(u32, u32, u32, Option<String>)> {
 }
 
 fn parse_words(s: &str) -> Option<String> {
-    let words: Vec<&str> =
-        s.split(|c: char| c.is_whitespace() || c == ',').filter(|w| !w.is_empty()).collect();
+    let words: Vec<&str> = s
+        .split(|c: char| c.is_whitespace() || c == ',')
+        .filter(|w| !w.is_empty())
+        .collect();
     let mut day: Option<u32> = None;
     let mut month: Option<u32> = None;
     let mut year: Option<i64> = None;
@@ -188,9 +202,10 @@ fn parse_words(s: &str) -> Option<String> {
     }
     let date = format!("{y:04}-{m:02}-{d:02}");
     match parse_clock(&words) {
-        Some((hh, mm, ss, tz)) => {
-            Some(format!("{date}T{hh:02}:{mm:02}:{ss:02}{}", tz.unwrap_or_default()))
-        },
+        Some((hh, mm, ss, tz)) => Some(format!(
+            "{date}T{hh:02}:{mm:02}:{ss:02}{}",
+            tz.unwrap_or_default()
+        )),
         None => Some(date),
     }
 }
@@ -227,7 +242,12 @@ fn unix_to_iso(secs: i64) -> String {
     let d = doy - (153 * mp + 2) / 5 + 1;
     let m = if mp < 10 { mp + 3 } else { mp - 9 };
     let y = if m <= 2 { y + 1 } else { y };
-    format!("{y:04}-{m:02}-{d:02}T{:02}:{:02}:{:02}Z", rem / 3600, (rem % 3600) / 60, rem % 60)
+    format!(
+        "{y:04}-{m:02}-{d:02}T{:02}:{:02}:{:02}Z",
+        rem / 3600,
+        (rem % 3600) / 60,
+        rem % 60
+    )
 }
 
 #[cfg(test)]
@@ -241,7 +261,10 @@ mod tests {
             normalize_date("2025-06-10T08:30:12.123+02:00").as_deref(),
             Some("2025-06-10T08:30:12+02:00")
         );
-        assert_eq!(normalize_date("2025-06-10T08:30Z").as_deref(), Some("2025-06-10T08:30:00Z"));
+        assert_eq!(
+            normalize_date("2025-06-10T08:30Z").as_deref(),
+            Some("2025-06-10T08:30:00Z")
+        );
         assert_eq!(normalize_date("2025/06/10").as_deref(), Some("2025-06-10"));
         assert_eq!(
             normalize_date("2025-06-10 08:30:00 +0000").as_deref(),
@@ -256,11 +279,26 @@ mod tests {
             normalize_date("Tue, 10 Jun 2025 08:30:00 GMT").as_deref(),
             Some("2025-06-10T08:30:00Z")
         );
-        assert_eq!(normalize_date("June 10, 2025").as_deref(), Some("2025-06-10"));
-        assert_eq!(normalize_date("10th June 2025").as_deref(), Some("2025-06-10"));
-        assert_eq!(normalize_date("10 juin 2025").as_deref(), Some("2025-06-10"));
-        assert_eq!(normalize_date("1er mars 2024 à 14h05").as_deref(), Some("2024-03-01T14:05:00"));
-        assert_eq!(normalize_date("1700000000").as_deref(), Some("2023-11-14T22:13:20Z"));
+        assert_eq!(
+            normalize_date("June 10, 2025").as_deref(),
+            Some("2025-06-10")
+        );
+        assert_eq!(
+            normalize_date("10th June 2025").as_deref(),
+            Some("2025-06-10")
+        );
+        assert_eq!(
+            normalize_date("10 juin 2025").as_deref(),
+            Some("2025-06-10")
+        );
+        assert_eq!(
+            normalize_date("1er mars 2024 à 14h05").as_deref(),
+            Some("2024-03-01T14:05:00")
+        );
+        assert_eq!(
+            normalize_date("1700000000").as_deref(),
+            Some("2023-11-14T22:13:20Z")
+        );
     }
 
     #[test]

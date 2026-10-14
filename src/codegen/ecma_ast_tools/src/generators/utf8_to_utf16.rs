@@ -75,7 +75,10 @@ fn generate(schema: &Schema, codegen: &Codegen) -> TokenStream {
         }
 
         // Skip types in `oxc_syntax` and `napi/parser` crates. They don't appear in ESTree AST.
-        if matches!(struct_def.file(schema).krate(), "oxc_syntax" | "src/quality/adapters/parser") {
+        if matches!(
+            struct_def.file(schema).krate(),
+            "oxc_syntax" | "src/quality/adapters/parser"
+        ) {
             return None;
         }
 
@@ -126,7 +129,10 @@ fn generate_visitor(
         .map(|(arg_name, arg_type_name)| {
             let param_ident = create_ident(arg_name);
             let arg_type_ident = create_ident(arg_type_name);
-            (quote!( , #param_ident: #arg_type_ident ), quote!( , #param_ident ))
+            (
+                quote!( , #param_ident: #arg_type_ident ),
+                quote!( , #param_ident ),
+            )
         })
         .unzip();
 

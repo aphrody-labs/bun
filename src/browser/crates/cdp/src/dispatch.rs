@@ -233,8 +233,12 @@ impl CdpContext {
     /// Claim the next isolated-world execution context id and register it as
     /// valid for `Runtime.evaluate`/`callFunctionOn`. Issue #192.
     pub fn next_isolated_context(&mut self) -> i64 {
-        while self.valid_context_ids.contains(&self.next_isolated_context_id)
-            || self.execution_contexts.contains_key(&self.next_isolated_context_id)
+        while self
+            .valid_context_ids
+            .contains(&self.next_isolated_context_id)
+            || self
+                .execution_contexts
+                .contains_key(&self.next_isolated_context_id)
         {
             self.next_isolated_context_id = self
                 .next_isolated_context_id
@@ -242,14 +246,16 @@ impl CdpContext {
                 .expect("execution context id space exhausted");
         }
         let id = self.next_isolated_context_id;
-        self.next_isolated_context_id =
-            id.checked_add(1).expect("execution context id space exhausted");
+        self.next_isolated_context_id = id
+            .checked_add(1)
+            .expect("execution context id space exhausted");
         self.valid_context_ids.insert(id);
         id
     }
 
     pub fn create_page(&mut self) -> String {
-        self.create_page_in_context(None).expect("default browser context must exist")
+        self.create_page_in_context(None)
+            .expect("default browser context must exist")
     }
 
     pub fn create_page_in_context(&mut self, context_id: Option<&str>) -> Result<String, String> {
@@ -265,7 +271,8 @@ impl CdpContext {
         let mut page = Page::new(page_id.clone(), context);
         page.navigate_blank();
         self.pages.push(page);
-        self.current_loader_ids.insert(page_id.clone(), format!("loader-blank-{page_id}"));
+        self.current_loader_ids
+            .insert(page_id.clone(), format!("loader-blank-{page_id}"));
         Ok(page_id)
     }
 
@@ -324,10 +331,11 @@ impl CdpContext {
     }
 
     pub(crate) fn refresh_runtime_event_collection(&self, page_id: &str) {
-        let enabled = self
-            .runtime_enabled_sessions
-            .iter()
-            .any(|session_id| self.sessions.get(session_id).is_some_and(|owner| owner == page_id));
+        let enabled = self.runtime_enabled_sessions.iter().any(|session_id| {
+            self.sessions
+                .get(session_id)
+                .is_some_and(|owner| owner == page_id)
+        });
         if let Some(page) = self.get_page(page_id) {
             page.set_runtime_events_enabled(enabled);
         }
@@ -376,8 +384,12 @@ impl CdpContext {
         world_name: &str,
         is_default: bool,
     ) -> ExecutionContextRecord {
-        while self.valid_context_ids.contains(&self.next_default_context_id)
-            || self.execution_contexts.contains_key(&self.next_default_context_id)
+        while self
+            .valid_context_ids
+            .contains(&self.next_default_context_id)
+            || self
+                .execution_contexts
+                .contains_key(&self.next_default_context_id)
         {
             self.next_default_context_id = self
                 .next_default_context_id
@@ -385,8 +397,9 @@ impl CdpContext {
                 .expect("execution context id space exhausted");
         }
         let id = self.next_default_context_id;
-        self.next_default_context_id =
-            id.checked_add(1).expect("execution context id space exhausted");
+        self.next_default_context_id = id
+            .checked_add(1)
+            .expect("execution context id space exhausted");
         let context = ExecutionContextRecord {
             id,
             unique_id: format!("bun_browser-context-{}", uuid::Uuid::new_v4()),
@@ -398,7 +411,10 @@ impl CdpContext {
         };
         self.valid_context_ids.insert(id);
         self.execution_contexts.insert(id, context.clone());
-        self.page_contexts.entry(page_id.to_string()).or_default().push(id);
+        self.page_contexts
+            .entry(page_id.to_string())
+            .or_default()
+            .push(id);
         context
     }
 
@@ -406,8 +422,10 @@ impl CdpContext {
         &mut self,
         page_id: &str,
     ) -> Option<ExecutionContextRecord> {
-        if let Some(context) =
-            self.contexts_for_page(page_id).into_iter().find(|context| context.is_default)
+        if let Some(context) = self
+            .contexts_for_page(page_id)
+            .into_iter()
+            .find(|context| context.is_default)
         {
             return Some(context.clone());
         }
@@ -453,7 +471,9 @@ impl CdpContext {
     }
 
     pub(crate) fn context_by_unique_id(&self, unique_id: &str) -> Option<&ExecutionContextRecord> {
-        self.execution_contexts.values().find(|context| context.unique_id == unique_id)
+        self.execution_contexts
+            .values()
+            .find(|context| context.unique_id == unique_id)
     }
 
     pub(crate) fn contexts_for_page(
@@ -484,17 +504,25 @@ impl CdpContext {
                 return (existing.clone(), false);
             }
             if persist_across_navigation {
-                let worlds = self.page_isolated_worlds.entry(page_id.to_string()).or_default();
+                let worlds = self
+                    .page_isolated_worlds
+                    .entry(page_id.to_string())
+                    .or_default();
                 if !worlds.iter().any(|world| world == world_name) {
                     worlds.push(world_name.to_string());
                 }
             }
         }
-        (self.allocate_context(page_id, frame_id, origin, world_name, false), true)
+        (
+            self.allocate_context(page_id, frame_id, origin, world_name, false),
+            true,
+        )
     }
 
     pub(crate) fn default_context_id(&self, page_id: &str) -> Option<i64> {
-        self.contexts_for_page(page_id).find(|context| context.is_default).map(|context| context.id)
+        self.contexts_for_page(page_id)
+            .find(|context| context.is_default)
+            .map(|context| context.id)
     }
 
     fn remove_frame_contexts(
@@ -509,7 +537,9 @@ impl CdpContext {
             .flatten()
             .copied()
             .filter(|id| {
-                self.execution_contexts.get(id).is_some_and(|context| context.frame_id == frame_id)
+                self.execution_contexts
+                    .get(id)
+                    .is_some_and(|context| context.frame_id == frame_id)
             })
             .collect::<Vec<_>>();
         if let Some(contexts) = self.page_contexts.get_mut(page_id) {
@@ -528,7 +558,11 @@ impl CdpContext {
         let mut sessions = self
             .runtime_enabled_sessions
             .iter()
-            .filter(|session| self.sessions.get(*session).is_some_and(|owner| owner == page_id))
+            .filter(|session| {
+                self.sessions
+                    .get(*session)
+                    .is_some_and(|owner| owner == page_id)
+            })
             .cloned()
             .collect::<Vec<_>>();
         sessions.sort_unstable();
@@ -555,7 +589,10 @@ impl CdpContext {
         // no longer needs to tear down another's isolate. Tearing them down is
         // exactly what silently destroyed a concurrent page's JS heap and
         // object handles (#872); a page resumed here now simply stays live.
-        let page_id = session_id.as_ref().and_then(|sid| self.sessions.get(sid)).cloned()?;
+        let page_id = session_id
+            .as_ref()
+            .and_then(|sid| self.sessions.get(sid))
+            .cloned()?;
         if let Some(target) = self.pages.iter_mut().find(|p| p.id == page_id) {
             if !target.has_js() {
                 target.resume_js();
@@ -610,7 +647,8 @@ mod context_ownership_tests {
         let mut ids = HashSet::new();
         for index in 0..1_200 {
             let id = if index % 2 == 0 {
-                ctx.allocate_context("page", "frame", "about:blank", "", true).id
+                ctx.allocate_context("page", "frame", "about:blank", "", true)
+                    .id
             } else {
                 ctx.next_isolated_context()
             };
@@ -666,7 +704,10 @@ mod context_ownership_tests {
 
         let removed = ctx.remove_frame_contexts(&page, "child-frame");
 
-        assert_eq!(removed.iter().map(|context| context.id).collect::<Vec<_>>(), vec![child.id]);
+        assert_eq!(
+            removed.iter().map(|context| context.id).collect::<Vec<_>>(),
+            vec![child.id]
+        );
         assert!(ctx.context_by_id(child.id).is_none());
         assert!(ctx.context_by_id(main.id).is_some());
         assert!(ctx.context_by_id(sibling.id).is_some());
@@ -800,9 +841,14 @@ pub async fn dispatch(req: &CdpRequest, ctx: &mut CdpContext) -> CdpResponse {
     let cmd_watchdog = if cmd_budget_ms == 0 || is_v8_free_method(&req.method) {
         None
     } else {
-        ctx.get_session_page(&req.session_id).and_then(|p| p.isolate_handle()).map(|h| {
-            bun_browser_js::cdp_watchdog::arm(h, std::time::Duration::from_millis(cmd_budget_ms))
-        })
+        ctx.get_session_page(&req.session_id)
+            .and_then(|p| p.isolate_handle())
+            .map(|h| {
+                bun_browser_js::cdp_watchdog::arm(
+                    h,
+                    std::time::Duration::from_millis(cmd_budget_ms),
+                )
+            })
     };
 
     let (domain, method) = match req.method.split_once('.') {
@@ -814,7 +860,7 @@ pub async fn dispatch(req: &CdpRequest, ctx: &mut CdpContext) -> CdpResponse {
                 format!("Invalid method format: {}", req.method),
                 req.session_id.clone(),
             );
-        },
+        }
     };
 
     let result = match domain {
@@ -824,7 +870,7 @@ pub async fn dispatch(req: &CdpRequest, ctx: &mut CdpContext) -> CdpResponse {
         "DOM" => domains::dom::handle(method, &req.params, ctx, &req.session_id).await,
         "DOMSnapshot" => {
             domains::domsnapshot::handle(method, &req.params, ctx, &req.session_id).await
-        },
+        }
         "Runtime" => domains::runtime::handle(method, &req.params, ctx, &req.session_id).await,
         "Network" => domains::network::handle(method, &req.params, ctx, &req.session_id).await,
         "Fetch" => domains::fetch::handle(method, &req.params, ctx, &req.session_id).await,
@@ -835,16 +881,19 @@ pub async fn dispatch(req: &CdpRequest, ctx: &mut CdpContext) -> CdpResponse {
         "LP" => domains::lp::handle(method, &req.params, ctx, &req.session_id).await,
         "Accessibility" => {
             domains::accessibility::handle(method, &req.params, ctx, &req.session_id).await
-        },
+        }
         "HeapProfiler" if method == "collectGarbage" => {
-            match ctx.get_session_page_mut(&req.session_id).and_then(|page| page.js.as_mut()) {
+            match ctx
+                .get_session_page_mut(&req.session_id)
+                .and_then(|page| page.js.as_mut())
+            {
                 Some(js) => {
                     js.collect_garbage();
                     Ok(json!({}))
-                },
+                }
                 None => Err("No JavaScript runtime".to_string()),
             }
-        },
+        }
         // Accepted but no-op. Puppeteer's FrameManager.initialize calls
         // Audits.enable on connect — refusing it breaks puppeteer.connect()
         // before any user code runs.
@@ -883,7 +932,7 @@ pub async fn dispatch(req: &CdpRequest, ctx: &mut CdpContext) -> CdpResponse {
         Err(msg) => {
             tracing::warn!("CDP error for {}: {}", req.method, msg);
             CdpResponse::error(req.id, -32601, msg, req.session_id.clone())
-        },
+        }
     }
 }
 
@@ -900,9 +949,15 @@ pub(crate) fn drain_runtime_events(ctx: &mut CdpContext) {
     }
 
     let mut page_to_sessions: HashMap<&str, Vec<&str>> = HashMap::new();
-    for session_id in ctx.runtime_enabled_sessions.union(&ctx.lifecycle_enabled_sessions) {
+    for session_id in ctx
+        .runtime_enabled_sessions
+        .union(&ctx.lifecycle_enabled_sessions)
+    {
         if let Some(page_id) = ctx.sessions.get(session_id) {
-            page_to_sessions.entry(page_id.as_str()).or_default().push(session_id.as_str());
+            page_to_sessions
+                .entry(page_id.as_str())
+                .or_default()
+                .push(session_id.as_str());
         }
     }
     for sessions in page_to_sessions.values_mut() {
@@ -1004,7 +1059,10 @@ pub(crate) fn drain_binding_calls(ctx: &mut CdpContext) {
     // holds two and uses the second.
     let mut page_to_sessions: HashMap<&str, Vec<&str>> = HashMap::new();
     for (session_id, page_id) in &ctx.sessions {
-        page_to_sessions.entry(page_id.as_str()).or_default().push(session_id.as_str());
+        page_to_sessions
+            .entry(page_id.as_str())
+            .or_default()
+            .push(session_id.as_str());
     }
     // ctx.sessions is a HashMap, so fix an order the events can be asserted in.
     for sessions in page_to_sessions.values_mut() {
@@ -1031,7 +1089,11 @@ pub(crate) fn drain_binding_calls(ctx: &mut CdpContext) {
                     registered.is_none_or(|owners| owners.iter().any(|owner| owner == session))
                 })
                 .collect();
-            let targets = if targets.is_empty() { page_sessions.clone() } else { targets };
+            let targets = if targets.is_empty() {
+                page_sessions.clone()
+            } else {
+                targets
+            };
             for session_id in targets {
                 events.push(CdpEvent {
                     method: "Runtime.bindingCalled".into(),
@@ -1064,7 +1126,10 @@ pub(crate) fn drain_frame_events(ctx: &mut CdpContext) {
     // so announcing to an arbitrary session is the same as not announcing.
     let mut page_to_sessions: HashMap<String, Vec<String>> = HashMap::new();
     for (session_id, page_id) in &ctx.sessions {
-        page_to_sessions.entry(page_id.clone()).or_default().push(session_id.clone());
+        page_to_sessions
+            .entry(page_id.clone())
+            .or_default()
+            .push(session_id.clone());
     }
     // ctx.sessions is a HashMap, so fix an order the events can be asserted in.
     for sessions in page_to_sessions.values_mut() {
@@ -1080,8 +1145,10 @@ pub(crate) fn drain_frame_events(ctx: &mut CdpContext) {
         };
         let live = crate::domains::page::child_frame_values(page);
         let known = ctx.announced_frames.get(&page.id);
-        let live_ids: Vec<String> =
-            live.iter().map(|frame| frame["id"].as_str().unwrap_or_default().to_string()).collect();
+        let live_ids: Vec<String> = live
+            .iter()
+            .map(|frame| frame["id"].as_str().unwrap_or_default().to_string())
+            .collect();
 
         for frame in &live {
             let id = frame["id"].as_str().unwrap_or_default();
@@ -1152,7 +1219,11 @@ pub(crate) fn drain_frame_events(ctx: &mut CdpContext) {
 }
 
 async fn dispatch_send_message_to_target(req: &CdpRequest, ctx: &mut CdpContext) -> CdpResponse {
-    let session_id = req.params.get("sessionId").and_then(|v| v.as_str()).map(str::to_string);
+    let session_id = req
+        .params
+        .get("sessionId")
+        .and_then(|v| v.as_str())
+        .map(str::to_string);
     let message = match req.params.get("message").and_then(|v| v.as_str()) {
         Some(m) => m,
         None => {
@@ -1162,7 +1233,7 @@ async fn dispatch_send_message_to_target(req: &CdpRequest, ctx: &mut CdpContext)
                 "sendMessageToTarget requires a message string".into(),
                 req.session_id.clone(),
             );
-        },
+        }
     };
 
     let inner: CdpRequest = match serde_json::from_str(message) {
@@ -1174,7 +1245,7 @@ async fn dispatch_send_message_to_target(req: &CdpRequest, ctx: &mut CdpContext)
                 format!("sendMessageToTarget message is not a valid CDP request: {e}"),
                 req.session_id.clone(),
             );
-        },
+        }
     };
 
     // Override the inner session with the one supplied by the wrapper so
@@ -1210,7 +1281,12 @@ mod tests {
     use crate::types::CdpRequest;
 
     fn req(method: &str) -> CdpRequest {
-        CdpRequest { id: 1, method: method.into(), params: json!({}), session_id: None }
+        CdpRequest {
+            id: 1,
+            method: method.into(),
+            params: json!({}),
+            session_id: None,
+        }
     }
 
     #[tokio::test(flavor = "current_thread")]
@@ -1219,8 +1295,10 @@ mod tests {
         let page_id = ctx.create_page();
         ctx.sessions.insert("s1".into(), page_id.clone());
         ctx.nav_events_emitted.insert(page_id.clone());
-        ctx.binding_sessions.insert("only".into(), vec!["s1".into()]);
-        ctx.binding_sessions.insert("shared".into(), vec!["s1".into(), "other".into()]);
+        ctx.binding_sessions
+            .insert("only".into(), vec!["s1".into()]);
+        ctx.binding_sessions
+            .insert("shared".into(), vec!["s1".into(), "other".into()]);
         ctx.remove_page(&page_id);
         assert!(ctx.nav_events_emitted.is_empty());
         assert!(!ctx.binding_sessions.contains_key("only"));
@@ -1248,13 +1326,22 @@ mod tests {
             .unwrap()["usedSize"]
             .as_u64()
             .unwrap();
-        ctx.get_session_page_mut(&session).unwrap().evaluate("globalThis.garbage = null");
+        ctx.get_session_page_mut(&session)
+            .unwrap()
+            .evaluate("globalThis.garbage = null");
         let response = dispatch(
-            &CdpRequest { session_id: session.clone(), ..req("HeapProfiler.collectGarbage") },
+            &CdpRequest {
+                session_id: session.clone(),
+                ..req("HeapProfiler.collectGarbage")
+            },
             &mut ctx,
         )
         .await;
-        assert!(response.error.is_none(), "GC request failed: {:?}", response.error);
+        assert!(
+            response.error.is_none(),
+            "GC request failed: {:?}",
+            response.error
+        );
         let after = domains::runtime::handle("getHeapUsage", &json!({}), &mut ctx, &session)
             .await
             .unwrap()["usedSize"]
@@ -1270,7 +1357,11 @@ mod tests {
     async fn audits_enable_returns_empty_success() {
         let mut ctx = CdpContext::new();
         let resp = dispatch(&req("Audits.enable"), &mut ctx).await;
-        assert!(resp.error.is_none(), "Audits.enable should not error: {:?}", resp.error);
+        assert!(
+            resp.error.is_none(),
+            "Audits.enable should not error: {:?}",
+            resp.error
+        );
         assert_eq!(resp.result, Some(json!({})));
     }
 
@@ -1324,7 +1415,11 @@ mod tests {
             session_id: Some(session_id.clone()),
         };
         let response = dispatch(&start, &mut ctx).await;
-        assert!(response.error.is_none(), "start failed: {:?}", response.error);
+        assert!(
+            response.error.is_none(),
+            "start failed: {:?}",
+            response.error
+        );
         ctx.pending_events.clear();
 
         let evaluate = CdpRequest {
@@ -1334,9 +1429,15 @@ mod tests {
             session_id: Some(session_id),
         };
         let response = dispatch(&evaluate, &mut ctx).await;
-        assert!(response.error.is_none(), "evaluate failed: {:?}", response.error);
         assert!(
-            ctx.pending_events.iter().all(|event| event.method != "Page.screencastFrame"),
+            response.error.is_none(),
+            "evaluate failed: {:?}",
+            response.error
+        );
+        assert!(
+            ctx.pending_events
+                .iter()
+                .all(|event| event.method != "Page.screencastFrame"),
             "a read-only runtime call must not synchronously rasterize a frame"
         );
     }
@@ -1360,7 +1461,11 @@ mod tests {
             &mut ctx,
         )
         .await;
-        assert!(response.error.is_none(), "start failed: {:?}", response.error);
+        assert!(
+            response.error.is_none(),
+            "start failed: {:?}",
+            response.error
+        );
         ctx.pending_events.clear();
 
         let response = dispatch(
@@ -1373,12 +1478,22 @@ mod tests {
             &mut ctx,
         )
         .await;
-        assert!(response.error.is_none(), "override failed: {:?}", response.error);
-        assert!(ctx.pending_events.is_empty(), "frame must not delay the command response");
+        assert!(
+            response.error.is_none(),
+            "override failed: {:?}",
+            response.error
+        );
+        assert!(
+            ctx.pending_events.is_empty(),
+            "frame must not delay the command response"
+        );
         assert!(ctx.screencasts[&session_id].autonomous_frame_pending);
 
         crate::domains::page::pump_screencast_frames(&mut ctx).await;
-        assert!(ctx.pending_events.iter().any(|event| event.method == "Page.screencastFrame"));
+        assert!(ctx
+            .pending_events
+            .iter()
+            .any(|event| event.method == "Page.screencastFrame"));
     }
 
     #[tokio::test]
@@ -1400,7 +1515,11 @@ mod tests {
         };
 
         let resp = dispatch(&outer, &mut ctx).await;
-        assert!(resp.error.is_none(), "wrapper must succeed: {:?}", resp.error);
+        assert!(
+            resp.error.is_none(),
+            "wrapper must succeed: {:?}",
+            resp.error
+        );
         assert_eq!(resp.id, 99);
         assert_eq!(resp.result, Some(json!({})));
 
@@ -1416,8 +1535,14 @@ mod tests {
         let parsed: serde_json::Value = serde_json::from_str(inner_msg).unwrap();
         assert_eq!(parsed["id"], 42);
         // Browser.getVersion returns a populated result object, not an error.
-        assert!(parsed.get("result").is_some(), "inner response carries result");
-        assert!(parsed.get("error").is_none(), "inner response is not an error");
+        assert!(
+            parsed.get("result").is_some(),
+            "inner response carries result"
+        );
+        assert!(
+            parsed.get("error").is_none(),
+            "inner response is not an error"
+        );
     }
 
     #[tokio::test]

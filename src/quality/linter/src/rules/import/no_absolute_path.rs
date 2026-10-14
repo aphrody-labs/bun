@@ -54,7 +54,11 @@ pub struct NoAbsolutePath {
 
 impl Default for NoAbsolutePath {
     fn default() -> Self {
-        Self { esmodule: true, commonjs: true, amd: false }
+        Self {
+            esmodule: true,
+            commonjs: true,
+            amd: false,
+        }
     }
 }
 
@@ -168,7 +172,10 @@ fn test() {
 
     let pass = vec![
         (r"import _ from 'lodash'", None),
-        (r"import _ from '/lodash'", Some(json!([{ "esmodule": false }]))),
+        (
+            r"import _ from '/lodash'",
+            Some(json!([{ "esmodule": false }])),
+        ),
         (r"import _ from './lodash'", None),
         (r"import find from 'lodash.find'", None),
         (r"import foo from './foo'", None),
@@ -177,7 +184,10 @@ fn test() {
         (r"import foo from '@scope/foo'", None),
         (r"var _ = require('lodash')", None),
         (r"var find = require('lodash.find')", None),
-        (r"var foo = require('/foo')", Some(json!([{ "commonjs": false }]))),
+        (
+            r"var foo = require('/foo')",
+            Some(json!([{ "commonjs": false }])),
+        ),
         (r"var foo = require('foo')", None),
         (r"var foo = require('./foo')", None),
         (r"var foo = require('../foo')", None),
@@ -202,10 +212,22 @@ fn test() {
             Some(json!([{ "commonjs": false }])),
         ),
         (r"require(['/foo'], function(){})", None),
-        (r"require(['/foo'], function(){})", Some(json!([{ "amd": false }]))),
-        (r"require(['./foo'], function(){})", Some(json!([{ "amd": true }]))),
-        (r"require(['./foo', 'boo'], function(){})", Some(json!([{ "amd": true }]))),
-        (r"define(['./foo'], function(){})", Some(json!([{ "amd": true }]))),
+        (
+            r"require(['/foo'], function(){})",
+            Some(json!([{ "amd": false }])),
+        ),
+        (
+            r"require(['./foo'], function(){})",
+            Some(json!([{ "amd": true }])),
+        ),
+        (
+            r"require(['./foo', 'boo'], function(){})",
+            Some(json!([{ "amd": true }])),
+        ),
+        (
+            r"define(['./foo'], function(){})",
+            Some(json!([{ "amd": true }])),
+        ),
         (r"define(['./foo'])", Some(json!([{ "amd": true }]))),
         (r"define([...['/12323']])", Some(json!([{ "amd": true }]))),
         (r"var foo = require()", None),
@@ -213,16 +235,34 @@ fn test() {
 
     let fail = vec![
         (r"import _ from '/lodash'", None),
-        (r"import _ from '/lodash'", Some(json!([{ "esmodule": true }]))),
+        (
+            r"import _ from '/lodash'",
+            Some(json!([{ "esmodule": true }])),
+        ),
         (r"import f from '/foo/path'", None),
         (r"import f from '/foo/bar/baz.js'", None),
         (r"var foo = require('/foo')", None),
         (r"var f = require('/foo/some')", None),
-        (r"var f = require('/foo/some/add')", Some(json!([{ "commonjs": true }]))),
-        (r"require(['/foo'], function(){})", Some(json!([{ "amd": true }]))),
-        (r"require(['./foo', '/boo'], function(){})", Some(json!([{ "amd": true }]))),
-        (r"require(['/foo', '/boo'], function(){})", Some(json!([{ "amd": true }]))),
-        (r"define(['/foo'], function(){})", Some(json!([{ "amd": true }]))),
+        (
+            r"var f = require('/foo/some/add')",
+            Some(json!([{ "commonjs": true }])),
+        ),
+        (
+            r"require(['/foo'], function(){})",
+            Some(json!([{ "amd": true }])),
+        ),
+        (
+            r"require(['./foo', '/boo'], function(){})",
+            Some(json!([{ "amd": true }])),
+        ),
+        (
+            r"require(['/foo', '/boo'], function(){})",
+            Some(json!([{ "amd": true }])),
+        ),
+        (
+            r"define(['/foo'], function(){})",
+            Some(json!([{ "amd": true }])),
+        ),
     ];
 
     Tester::new(NoAbsolutePath::NAME, NoAbsolutePath::PLUGIN, pass, fail)

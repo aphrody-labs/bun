@@ -60,6 +60,8 @@ fn format_yaml(_path: &Path, source_text: &str, spec: &OptionSet) -> Option<Stri
 
 #[test]
 fn prettier_conformance() {
-    let Some(report) = run_conformance(&CONFIG, format_yaml) else { return };
+    let Some(report) = run_conformance(&CONFIG, format_yaml) else {
+        return;
+    };
     insta::assert_snapshot!("prettier-yaml", report);
 }

@@ -56,7 +56,9 @@ pub struct NoElseReturn {
 
 impl Default for NoElseReturn {
     fn default() -> Self {
-        Self { allow_else_if: true }
+        Self {
+            allow_else_if: true,
+        }
     }
 }
 
@@ -280,7 +282,10 @@ fn needs_trailing_statement_separator(
     target_end: u32,
 ) -> bool {
     if let Some(last_stmt) = last_statement(else_stmt)
-        && !ctx.source_range(last_stmt.span()).trim_end().ends_with([';', '}'])
+        && !ctx
+            .source_range(last_stmt.span())
+            .trim_end()
+            .ends_with([';', '}'])
     {
         for ch in ctx.source_text()[target_end as usize..].chars() {
             if is_line_terminator(ch) || ch == '}' || ch == ';' {
@@ -306,7 +311,11 @@ fn naive_has_return(node: &Statement) -> Option<Span> {
     match node {
         Statement::BlockStatement(block) => {
             let last_child = block.body.last()?;
-            if let Statement::ReturnStatement(r) = last_child { Some(r.span) } else { None }
+            if let Statement::ReturnStatement(r) = last_child {
+                Some(r.span)
+            } else {
+                None
+            }
         }
         Statement::ReturnStatement(r) => Some(r.span),
         _ => None,
@@ -377,7 +386,13 @@ fn check_if_without_else(ctx: &LintContext, node: &AstNode) {
         }
     }
 
-    no_else_return_diagnostic_fix(ctx, last_return_span, last_alternate_prev, last_alternate, node);
+    no_else_return_diagnostic_fix(
+        ctx,
+        last_return_span,
+        last_alternate_prev,
+        last_alternate,
+        node,
+    );
 }
 
 impl Rule for NoElseReturn {
@@ -413,14 +428,23 @@ fn test() {
     use crate::tester::Tester;
 
     let pass = vec![
-        ("function foo() { if (true) { if (false) { return x; } } else { return y; } }", None),
+        (
+            "function foo() { if (true) { if (false) { return x; } } else { return y; } }",
+            None,
+        ),
         ("function foo() { if (true) { return x; } return y; }", None),
-        ("function foo() { if (true) { for (;;) { return x; } } else { return y; } }", None),
+        (
+            "function foo() { if (true) { for (;;) { return x; } } else { return y; } }",
+            None,
+        ),
         (
             "function foo() { var x = true; if (x) { return x; } else if (x === false) { return false; } }",
             None,
         ),
-        ("function foo() { if (true) notAReturn(); else return y; }", None),
+        (
+            "function foo() { if (true) notAReturn(); else return y; }",
+            None,
+        ),
         (
             "function foo() {if (x) { notAReturn(); } else if (y) { return true; } else { notAReturn(); } }",
             None,
@@ -467,12 +491,18 @@ fn test() {
 
     let fail = vec![
         ("if(0)return;else r", None),
-        ("function foo1() { if (true) { return x; } else { return y; } }", None),
+        (
+            "function foo1() { if (true) { return x; } else { return y; } }",
+            None,
+        ),
         (
             "function foo2() { if (true) { var x = bar; return x; } else { var y = baz; return y; } }",
             None,
         ),
-        ("function foo3() { if (true) return x; else return y; }", None),
+        (
+            "function foo3() { if (true) return x; else return y; }",
+            None,
+        ),
         (
             "function foo4() { if (true) { if (false) return x; else return y; } else { return z; } }",
             None,
@@ -505,7 +535,10 @@ fn test() {
             "function foo9b() {if (x) { return true; } if (y) { return true; } else { notAReturn(); } }",
             Some(serde_json::json!([{ "allowElseIf": false }])),
         ),
-        ("function foo10() { if (foo) return bar; else (foo).bar(); }", None),
+        (
+            "function foo10() { if (foo) return bar; else (foo).bar(); }",
+            None,
+        ),
         (
             "function foo11() { if (foo) return bar
             else { [1, 2, 3].map(foo) } }",
@@ -528,7 +561,10 @@ fn test() {
             [1, 2, 3].map(foo) }",
             None,
         ),
-        ("function foo15() { if (foo) return bar; else { baz() } qaz() }", None),
+        (
+            "function foo15() { if (foo) return bar; else { baz() } qaz() }",
+            None,
+        ),
         (
             "function foo16() { if (foo) return bar
             else { baz() } qaz() }",
@@ -557,46 +593,94 @@ fn test() {
             "function foo21() { var x = true; if (x) { return x; } else if (x === false) { return false; } }",
             Some(serde_json::json!([{ "allowElseIf": false }])),
         ),
-        ("function foo() { var a; if (bar) { return true; } else { var a; } }", None),
-        ("function foo() { if (bar) { var a; if (baz) { return true; } else { var a; } } }", None),
-        ("function foo() { let a; if (bar) { return true; } else { let a; } }", None), // { "ecmaVersion": 6 },
-        ("class foo { bar() { let a; if (baz) { return true; } else { let a; } } }", None), // { "ecmaVersion": 6 },
-        ("function foo() { if (bar) { let a; if (baz) { return true; } else { let a; } } }", None), // { "ecmaVersion": 6 },
-        ("function foo() {let a; if (bar) { if (baz) { return true; } else { let a; } } }", None), // { "ecmaVersion": 6 },
-        ("function foo() { const a = 1; if (bar) { return true; } else { let a; } }", None), // { "ecmaVersion": 6 },
+        (
+            "function foo() { var a; if (bar) { return true; } else { var a; } }",
+            None,
+        ),
+        (
+            "function foo() { if (bar) { var a; if (baz) { return true; } else { var a; } } }",
+            None,
+        ),
+        (
+            "function foo() { let a; if (bar) { return true; } else { let a; } }",
+            None,
+        ), // { "ecmaVersion": 6 },
+        (
+            "class foo { bar() { let a; if (baz) { return true; } else { let a; } } }",
+            None,
+        ), // { "ecmaVersion": 6 },
+        (
+            "function foo() { if (bar) { let a; if (baz) { return true; } else { let a; } } }",
+            None,
+        ), // { "ecmaVersion": 6 },
+        (
+            "function foo() {let a; if (bar) { if (baz) { return true; } else { let a; } } }",
+            None,
+        ), // { "ecmaVersion": 6 },
+        (
+            "function foo() { const a = 1; if (bar) { return true; } else { let a; } }",
+            None,
+        ), // { "ecmaVersion": 6 },
         (
             "function foo() { if (bar) { const a = 1; if (baz) { return true; } else { let a; } } }",
             None,
         ), // { "ecmaVersion": 6 },
-        ("function foo() { let a; if (bar) { return true; } else { const a = 1 } }", None), // { "ecmaVersion": 6 },
+        (
+            "function foo() { let a; if (bar) { return true; } else { const a = 1 } }",
+            None,
+        ), // { "ecmaVersion": 6 },
         (
             "function foo() { if (bar) { let a; if (baz) { return true; } else { const a = 1; } } }",
             None,
         ), // { "ecmaVersion": 6 },
-        ("function foo() { class a {}; if (bar) { return true; } else { const a = 1; } }", None), // { "ecmaVersion": 6 },
+        (
+            "function foo() { class a {}; if (bar) { return true; } else { const a = 1; } }",
+            None,
+        ), // { "ecmaVersion": 6 },
         (
             "function foo() { if (bar) { class a {}; if (baz) { return true; } else { const a = 1; } } }",
             None,
         ), // { "ecmaVersion": 6 },
-        ("function foo() { const a = 1; if (bar) { return true; } else { class a {} } }", None), // { "ecmaVersion": 6 },
+        (
+            "function foo() { const a = 1; if (bar) { return true; } else { class a {} } }",
+            None,
+        ), // { "ecmaVersion": 6 },
         (
             "function foo() { if (bar) { const a = 1; if (baz) { return true; } else { class a {} } } }",
             None,
         ), // { "ecmaVersion": 6 },
-        ("function foo() { var a; if (bar) { return true; } else { let a; } }", None), // { "ecmaVersion": 6 },
-        ("function foo() { if (bar) { var a; return true; } else { let a; } }", None), // { "ecmaVersion": 6 },
+        (
+            "function foo() { var a; if (bar) { return true; } else { let a; } }",
+            None,
+        ), // { "ecmaVersion": 6 },
+        (
+            "function foo() { if (bar) { var a; return true; } else { let a; } }",
+            None,
+        ), // { "ecmaVersion": 6 },
         (
             "function foo() { if (bar) { return true; } else { let a; }  while (baz) { var a; } }",
             None,
         ), // { "ecmaVersion": 6 },
-        ("function foo(a) { if (bar) { return true; } else { let a; } }", None), // { "ecmaVersion": 6 },
-        ("function foo(a = 1) { if (bar) { return true; } else { let a; } }", None), // { "ecmaVersion": 6 },
+        (
+            "function foo(a) { if (bar) { return true; } else { let a; } }",
+            None,
+        ), // { "ecmaVersion": 6 },
+        (
+            "function foo(a = 1) { if (bar) { return true; } else { let a; } }",
+            None,
+        ), // { "ecmaVersion": 6 },
         (
             "function foo(a, b = a) { if (bar) { return true; } else { let a; }  if (bar) { return true; } else { let b; }}",
             None,
         ), // { "ecmaVersion": 6 },
-        ("function foo(...args) { if (bar) { return true; } else { let args; } }", None), // { "ecmaVersion": 6 },
-        ("function foo() { try {} catch (a) { if (bar) { return true; } else { let a; } } }", None), // { "ecmaVersion": 6 },
+        (
+            "function foo(...args) { if (bar) { return true; } else { let args; } }",
+            None,
+        ), // { "ecmaVersion": 6 },
+        (
+            "function foo() { try {} catch (a) { if (bar) { return true; } else { let a; } } }",
+            None,
+        ), // { "ecmaVersion": 6 },
         (
             "function foo() { try {} catch (a) { if (bar) { if (baz) { return true; } else { let a; } } } }",
             None,
@@ -605,7 +689,10 @@ fn test() {
             "function foo() { try {} catch ({bar, a = 1}) { if (baz) { return true; } else { let a; } } }",
             None,
         ), // { "ecmaVersion": 6 },
-        ("function foo() { if (bar) { return true; } else { let arguments; } }", None), // { "ecmaVersion": 6 },
+        (
+            "function foo() { if (bar) { return true; } else { let arguments; } }",
+            None,
+        ), // { "ecmaVersion": 6 },
         (
             "function foo() { if (bar) { return true; } else { let arguments; } return arguments[0]; }",
             None,
@@ -614,18 +701,42 @@ fn test() {
             "function foo() { if (bar) { return true; } else { let arguments; } if (baz) { return arguments[0]; } }",
             None,
         ), // { "ecmaVersion": 6 },
-        ("function foo() { if (bar) { if (baz) { return true; } else { let arguments; } } }", None), // { "ecmaVersion": 6 },
-        ("function foo() { if (bar) { return true; } else { let a; } a; }", None), // { "ecmaVersion": 6 },
-        ("function foo() { if (bar) { return true; } else { let a; } if (baz) { a; } }", None), // { "ecmaVersion": 6 },
-        ("function foo() { if (bar) { if (baz) { return true; } else { let a; } } a; }", None), // { "ecmaVersion": 6 },
-        ("function foo() { if (bar) { if (baz) { return true; } else { let a; } a; } }", None), // { "ecmaVersion": 6 },
+        (
+            "function foo() { if (bar) { if (baz) { return true; } else { let arguments; } } }",
+            None,
+        ), // { "ecmaVersion": 6 },
+        (
+            "function foo() { if (bar) { return true; } else { let a; } a; }",
+            None,
+        ), // { "ecmaVersion": 6 },
+        (
+            "function foo() { if (bar) { return true; } else { let a; } if (baz) { a; } }",
+            None,
+        ), // { "ecmaVersion": 6 },
+        (
+            "function foo() { if (bar) { if (baz) { return true; } else { let a; } } a; }",
+            None,
+        ), // { "ecmaVersion": 6 },
+        (
+            "function foo() { if (bar) { if (baz) { return true; } else { let a; } a; } }",
+            None,
+        ), // { "ecmaVersion": 6 },
         (
             "function foo() { if (bar) { if (baz) { return true; } else { let a; } if (quux) { a; } } }",
             None,
         ), // { "ecmaVersion": 6 },
-        ("function a() { if (foo) { return true; } else { let a; } a(); }", None), // { "ecmaVersion": 6 },
-        ("function a() { if (a) { return true; } else { let a; } }", None), // { "ecmaVersion": 6 },
-        ("function a() { if (foo) { return a; } else { let a; } }", None),  // { "ecmaVersion": 6 },
+        (
+            "function a() { if (foo) { return true; } else { let a; } a(); }",
+            None,
+        ), // { "ecmaVersion": 6 },
+        (
+            "function a() { if (a) { return true; } else { let a; } }",
+            None,
+        ), // { "ecmaVersion": 6 },
+        (
+            "function a() { if (foo) { return a; } else { let a; } }",
+            None,
+        ), // { "ecmaVersion": 6 },
         (
             "function foo() { if (bar) { return true; } else { let a; } function baz() { a; } }",
             None,
@@ -634,8 +745,14 @@ fn test() {
             "function foo() { if (bar) { if (baz) { return true; } else { let a; } (() => a) } }",
             None,
         ), // { "ecmaVersion": 6 },
-        ("function foo() { if (bar) { return true; } else { let a; } var a; }", None), // { "ecmaVersion": 6 },
-        ("function foo() { if (bar) { if (baz) { return true; } else { let a; } var a; } }", None), // { "ecmaVersion": 6 },
+        (
+            "function foo() { if (bar) { return true; } else { let a; } var a; }",
+            None,
+        ), // { "ecmaVersion": 6 },
+        (
+            "function foo() { if (bar) { if (baz) { return true; } else { let a; } var a; } }",
+            None,
+        ), // { "ecmaVersion": 6 },
         (
             "function foo() { if (bar) { if (baz) { return true; } else { let a; } var { a } = {}; } }",
             None,
@@ -652,7 +769,10 @@ fn test() {
             "function foo() { if (quux) { var a; } if (bar) { if (baz) { return true; } else { let a; } } }",
             None,
         ), // { "ecmaVersion": 6 },
-        ("function foo() { if (bar) { return true; } else { let a; } function a(){} }", None), // { "ecmaVersion": 6 },
+        (
+            "function foo() { if (bar) { return true; } else { let a; } function a(){} }",
+            None,
+        ), // { "ecmaVersion": 6 },
         (
             "function foo() { if (baz) { if (bar) { return true; } else { let a; } function a(){} } }",
             None,
@@ -665,9 +785,18 @@ fn test() {
             "function foo() { if (bar) { if (baz) { return true; } else { let a; } } function a(){} }",
             None,
         ), // { "ecmaVersion": 6 },
-        ("function foo() { let a; if (bar) { return true; } else { function a(){} } }", None), // { "ecmaVersion": 6 },
-        ("function foo() { var a; if (bar) { return true; } else { function a(){} } }", None), // { "ecmaVersion": 6 },
-        ("function foo() { if (bar) { return true; } else function baz() {} };", None),
+        (
+            "function foo() { let a; if (bar) { return true; } else { function a(){} } }",
+            None,
+        ), // { "ecmaVersion": 6 },
+        (
+            "function foo() { var a; if (bar) { return true; } else { function a(){} } }",
+            None,
+        ), // { "ecmaVersion": 6 },
+        (
+            "function foo() { if (bar) { return true; } else function baz() {} };",
+            None,
+        ),
         ("if (foo) { return true; } else { let a; }", None), // { "ecmaVersion": 6, "sourceType": "commonjs" },
         ("let a; if (foo) { return true; } else { let a; }", None), // { "ecmaVersion": 6, "sourceType": "commonjs" }
         (
@@ -777,7 +906,10 @@ fn test() {
             "function foo17() { if (foo) return bar
             else { baz() }
             qaz() }",
-            concat!("function foo17() { if (foo) return bar\n baz() \n", "            qaz() }",),
+            concat!(
+                "function foo17() { if (foo) return bar\n baz() \n",
+                "            qaz() }",
+            ),
             None,
         ),
         (
@@ -860,7 +992,11 @@ fn test() {
             "function foo() { if (bar) { if (baz) { return true; } let a;  } function a(){} }",
             None,
         ),
-        ("if (foo) { return true; } else { let a; }", "if (foo) { return true; } let a; ", None),
+        (
+            "if (foo) { return true; } else { let a; }",
+            "if (foo) { return true; } let a; ",
+            None,
+        ),
         (
             "if (a) { return 2 } else { /** bar */ /** foo */ return 4 }",
             "if (a) { return 2 } /** bar */ /** foo */ return 4 ",

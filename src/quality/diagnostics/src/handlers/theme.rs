@@ -47,21 +47,30 @@ impl GraphicalTheme {
     /// like CSS classes than specific colors.
     #[must_use]
     pub fn unicode() -> Self {
-        Self { characters: ThemeCharacters::unicode(), styles: ThemeStyles::rgb() }
+        Self {
+            characters: ThemeCharacters::unicode(),
+            styles: ThemeStyles::rgb(),
+        }
     }
 
     /// Graphical theme that draws in monochrome, while still using unicode
     /// characters.
     #[must_use]
     pub fn unicode_nocolor() -> Self {
-        Self { characters: ThemeCharacters::unicode(), styles: ThemeStyles::none() }
+        Self {
+            characters: ThemeCharacters::unicode(),
+            styles: ThemeStyles::none(),
+        }
     }
 
     /// A "basic" graphical theme that skips colors and unicode characters and
     /// just does monochrome ASCII art.
     #[must_use]
     pub fn none() -> Self {
-        Self { characters: ThemeCharacters::ascii(), styles: ThemeStyles::none() }
+        Self {
+            characters: ThemeCharacters::ascii(),
+            styles: ThemeStyles::none(),
+        }
     }
 
     /// Write text using the theme's warning style.
@@ -114,7 +123,11 @@ impl Style {
         let prefix = self.prefix();
         f.write_str(prefix)?;
         write!(f, "{value}")?;
-        if self.is_plain() { Ok(()) } else { f.write_str(ANSI_RESET) }
+        if self.is_plain() {
+            Ok(())
+        } else {
+            f.write_str(ANSI_RESET)
+        }
     }
 }
 
@@ -128,13 +141,20 @@ impl<T: fmt::Display> fmt::Display for Styled<T> {
         let prefix = self.style.prefix();
         f.write_str(prefix)?;
         self.target.fmt(f)?;
-        if self.style.is_plain() { Ok(()) } else { f.write_str(ANSI_RESET) }
+        if self.style.is_plain() {
+            Ok(())
+        } else {
+            f.write_str(ANSI_RESET)
+        }
     }
 }
 
 pub(super) trait DiagnosticColorize: Sized {
     fn style(self, style: Style) -> Styled<Self> {
-        Styled { target: self, style }
+        Styled {
+            target: self,
+            style,
+        }
     }
 }
 

@@ -124,12 +124,13 @@ pub mod package_installer;
 pub mod patch_install;
 pub mod pnpm;
 pub mod prune;
-pub mod system;
 #[path = "repository.rs"]
 pub mod repository_real;
+pub mod system;
 pub mod update_scope;
 pub mod update_transitive;
 pub mod yarn;
+pub mod yarn_berry;
 
 /// `repository` — re-export of the file-backed `repository_real` module
 /// (src/install/repository.rs). The earlier inline stub duplicated the

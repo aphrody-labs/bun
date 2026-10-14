@@ -101,11 +101,27 @@ fn test() {
     let fix = vec![
         ("arr instanceof Array", "Array.isArray(arr)", None),
         ("[] instanceof Array", "Array.isArray([])", None),
-        ("[1,2,3] instanceof Array === true", "Array.isArray([1,2,3]) === true", None),
-        ("fun.call(1, 2, 3) instanceof Array", "Array.isArray(fun.call(1, 2, 3))", None),
+        (
+            "[1,2,3] instanceof Array === true",
+            "Array.isArray([1,2,3]) === true",
+            None,
+        ),
+        (
+            "fun.call(1, 2, 3) instanceof Array",
+            "Array.isArray(fun.call(1, 2, 3))",
+            None,
+        ),
         ("obj.arr instanceof Array", "Array.isArray(obj.arr)", None),
-        ("foo.bar[2] instanceof Array", "Array.isArray(foo.bar[2])", None),
-        ("(0, array) instanceof Array", "Array.isArray((0, array))", None),
+        (
+            "foo.bar[2] instanceof Array",
+            "Array.isArray(foo.bar[2])",
+            None,
+        ),
+        (
+            "(0, array) instanceof Array",
+            "Array.isArray((0, array))",
+            None,
+        ),
         (
             "function foo(){return [] instanceof Array}",
             "function foo(){return Array.isArray([])}",
@@ -113,7 +129,12 @@ fn test() {
         ),
     ];
 
-    Tester::new(NoInstanceofArray::NAME, NoInstanceofArray::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        NoInstanceofArray::NAME,
+        NoInstanceofArray::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

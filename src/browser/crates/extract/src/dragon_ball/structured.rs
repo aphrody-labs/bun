@@ -39,7 +39,12 @@ pub fn text(dom: &DomTree, selector: &str) -> Option<String> {
     dom.query_selector(selector)
         .ok()
         .flatten()
-        .map(|id| dom.text_content(id).split_whitespace().collect::<Vec<_>>().join(" "))
+        .map(|id| {
+            dom.text_content(id)
+                .split_whitespace()
+                .collect::<Vec<_>>()
+                .join(" ")
+        })
         .filter(|value| !value.is_empty())
 }
 
@@ -55,7 +60,9 @@ pub fn attribute(dom: &DomTree, selector: &str, attribute: &str) -> Option<Strin
 pub fn parse_toei_episodes(html: &str, source: &Url) -> Vec<EpisodeSynopsis> {
     let dom = parse_html(html);
     let route = Regex::new(r"/ja/tv/([^/]+)/episode/(\d+)?").expect("static Toei route");
-    let Some(capture) = route.captures(source.path()) else { return Vec::new() };
+    let Some(capture) = route.captures(source.path()) else {
+        return Vec::new();
+    };
     let series = match &capture[1] {
         "dragon" => "dragon_ball",
         "dragonz" => "dragon_ball_z",
@@ -91,14 +98,18 @@ pub fn parse_toei_episodes(html: &str, source: &Url) -> Vec<EpisodeSynopsis> {
     let mut episodes = std::collections::BTreeMap::new();
     for id in dom.query_selector_all("dt").unwrap_or_default() {
         let title = dom.text_content(id);
-        let Some(number) = number.captures(&title).and_then(|capture| capture[1].parse().ok())
+        let Some(number) = number
+            .captures(&title)
+            .and_then(|capture| capture[1].parse().ok())
         else {
             continue;
         };
         let mut next = dom.with_node(id, |node| node.next_sibling).flatten();
         let mut synopsis = String::new();
         while let Some(sibling) = next {
-            let is_element = dom.with_node(sibling, |node| node.is_element()).unwrap_or(false);
+            let is_element = dom
+                .with_node(sibling, |node| node.is_element())
+                .unwrap_or(false);
             if is_element {
                 if dom
                     .with_node(sibling, |node| {
@@ -131,7 +142,9 @@ pub fn parse_toei_episodes(html: &str, source: &Url) -> Vec<EpisodeSynopsis> {
     for id in dom.query_selector_all(".epOne").unwrap_or_default() {
         let node = parse_html(&dom.inner_html(id));
         let label = text(&node, ".num").unwrap_or_else(|| dom.text_content(id));
-        let Some(number) = number.captures(&label).and_then(|capture| capture[1].parse().ok())
+        let Some(number) = number
+            .captures(&label)
+            .and_then(|capture| capture[1].parse().ok())
         else {
             continue;
         };
@@ -167,14 +180,21 @@ pub fn parse_jump_statistics(html: &str) -> Vec<JumpStatistic> {
                 dom.query_selector_from(id, selector)
                     .ok()
                     .flatten()
-                    .map(|id| dom.text_content(id).split_whitespace().collect::<Vec<_>>().join(" "))
+                    .map(|id| {
+                        dom.text_content(id)
+                            .split_whitespace()
+                            .collect::<Vec<_>>()
+                            .join(" ")
+                    })
             };
             let issue = cell(".issue")?;
             let title = cell(".title")?;
             let rank = cell(".order").and_then(|value| value.parse().ok());
             let full = dom.text_content(id);
             Some(JumpStatistic {
-                year: year.find(&issue).and_then(|value| value.as_str().parse().ok()),
+                year: year
+                    .find(&issue)
+                    .and_then(|value| value.as_str().parse().ok()),
                 issue,
                 rank,
                 title,
@@ -222,16 +242,26 @@ pub fn parse_translation(html: &str) -> Translation {
             people.push(person);
         }
     }
-    if title.as_deref().is_some_and(|title| title.contains("Akira Toriyama")) {
+    if title
+        .as_deref()
+        .is_some_and(|title| title.contains("Akira Toriyama"))
+    {
         people.push("Akira Toriyama".into());
     }
     let mut dialogue = Vec::new();
-    for id in dom.query_selector_all(".question, .answer, p").unwrap_or_default() {
+    for id in dom
+        .query_selector_all(".question, .answer, p")
+        .unwrap_or_default()
+    {
         let class = dom
             .with_node(id, |node| node.get_attribute("class").map(str::to_owned))
             .flatten()
             .unwrap_or_default();
-        let body = dom.text_content(id).split_whitespace().collect::<Vec<_>>().join(" ");
+        let body = dom
+            .text_content(id)
+            .split_whitespace()
+            .collect::<Vec<_>>()
+            .join(" ");
         if body.is_empty() {
             continue;
         }
@@ -257,17 +287,32 @@ pub fn parse_translation(html: &str) -> Translation {
                 .trim()
                 .to_owned();
             if !text.is_empty() {
-                dialogue.push(DialogueNode { speaker: person, content: text });
+                dialogue.push(DialogueNode {
+                    speaker: person,
+                    content: text,
+                });
             }
         } else if class.split_whitespace().any(|value| value == "question") {
-            dialogue.push(DialogueNode { speaker: "Question".into(), content: body });
+            dialogue.push(DialogueNode {
+                speaker: "Question".into(),
+                content: body,
+            });
         } else if class.split_whitespace().any(|value| value == "answer")
             && dom.query_selector_from(id, "p").ok().flatten().is_none()
         {
-            dialogue.push(DialogueNode { speaker: "Answer".into(), content: body });
+            dialogue.push(DialogueNode {
+                speaker: "Answer".into(),
+                content: body,
+            });
         }
     }
-    Translation { title, original_print_source, publication_date, people, dialogue }
+    Translation {
+        title,
+        original_print_source,
+        publication_date,
+        people,
+        dialogue,
+    }
 }
 
 #[cfg(test)]
@@ -294,7 +339,10 @@ mod tests {
         let parsed = parse_translation(
             "<div id='trans-content'><h1>Akira Toriyama interview</h1><h2>Daizenshuu 1, July 1995</h2><div class='question'>Why?</div><div class='answer'><p><strong>Toriyama:</strong> Because!</p></div></div>",
         );
-        assert_eq!(parsed.original_print_source.as_deref(), Some("Daizenshuu 1, July 1995"));
+        assert_eq!(
+            parsed.original_print_source.as_deref(),
+            Some("Daizenshuu 1, July 1995")
+        );
         assert_eq!(parsed.dialogue.len(), 2);
         assert_eq!(parsed.dialogue[1].speaker, "Toriyama");
     }

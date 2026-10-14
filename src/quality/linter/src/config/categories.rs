@@ -29,7 +29,8 @@ impl DerefMut for OxlintCategories {
 
 impl OxlintCategories {
     pub fn filters(&self) -> impl Iterator<Item = LintFilter> + '_ {
-        self.iter().map(|(category, severity)| LintFilter::new(*severity, *category).unwrap())
+        self.iter()
+            .map(|(category, severity)| LintFilter::new(*severity, *category).unwrap())
     }
 }
 
@@ -44,19 +45,32 @@ impl JsonSchema for OxlintCategories {
 
     fn json_schema(r#gen: &mut schemars::r#gen::SchemaGenerator) -> schemars::schema::Schema {
         let severity = r#gen.subschema_for::<AllowWarnDeny>();
-        let mut schema =
-            r#gen.subschema_for::<FxHashMap<RuleCategory, AllowWarnDeny>>().into_object();
+        let mut schema = r#gen
+            .subschema_for::<FxHashMap<RuleCategory, AllowWarnDeny>>()
+            .into_object();
 
         {
             schema.object().additional_properties = Some(Box::new(false.into()));
             let properties = &mut schema.object().properties;
 
-            properties.insert(RuleCategory::Correctness.as_str().to_string(), severity.clone());
-            properties.insert(RuleCategory::Suspicious.as_str().to_string(), severity.clone());
-            properties.insert(RuleCategory::Pedantic.as_str().to_string(), severity.clone());
+            properties.insert(
+                RuleCategory::Correctness.as_str().to_string(),
+                severity.clone(),
+            );
+            properties.insert(
+                RuleCategory::Suspicious.as_str().to_string(),
+                severity.clone(),
+            );
+            properties.insert(
+                RuleCategory::Pedantic.as_str().to_string(),
+                severity.clone(),
+            );
             properties.insert(RuleCategory::Perf.as_str().to_string(), severity.clone());
             properties.insert(RuleCategory::Style.as_str().to_string(), severity.clone());
-            properties.insert(RuleCategory::Restriction.as_str().to_string(), severity.clone());
+            properties.insert(
+                RuleCategory::Restriction.as_str().to_string(),
+                severity.clone(),
+            );
             properties.insert(RuleCategory::Nursery.as_str().to_string(), severity);
         }
 

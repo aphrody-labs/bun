@@ -172,7 +172,11 @@ fn check_member(member: &TSSignature, node: &AstNode<'_>, ctx: &LintContext<'_>)
                             format!(
                                 "{}{}{} = {};",
                                 comments_text,
-                                if is_parent_exported { "export type " } else { "type " },
+                                if is_parent_exported {
+                                    "export type "
+                                } else {
+                                    "type "
+                                },
                                 interface_decl.id.name,
                                 suggestion
                             ),
@@ -184,7 +188,11 @@ fn check_member(member: &TSSignature, node: &AstNode<'_>, ctx: &LintContext<'_>)
                     Fix::new(
                         format!(
                             "{} {} = {};",
-                            if is_parent_exported { "export type" } else { "type" },
+                            if is_parent_exported {
+                                "export type"
+                            } else {
+                                "type"
+                            },
                             interface_decl.id.name,
                             suggestion
                         ),
@@ -686,7 +694,12 @@ type X = {} & (() => void);
         ("type K = { new(): T };", "type K = new() => T;"),
     ];
 
-    Tester::new(PreferFunctionType::NAME, PreferFunctionType::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        PreferFunctionType::NAME,
+        PreferFunctionType::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

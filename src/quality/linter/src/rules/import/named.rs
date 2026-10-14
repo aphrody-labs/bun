@@ -10,7 +10,9 @@ use crate::{
 
 fn named_diagnostic(imported_name: &str, module_name: &str, span: Span) -> OxcDiagnostic {
     OxcDiagnostic::warn(format!("named import {imported_name:?} not found"))
-        .with_help(format!("Does {module_name:?} have the export {imported_name:?}?"))
+        .with_help(format!(
+            "Does {module_name:?} have the export {imported_name:?}?"
+        ))
         .with_label(span)
 }
 
@@ -20,7 +22,9 @@ fn has_default_export(module_record: &ModuleRecord) -> bool {
 }
 
 fn is_synthesized_indirect_export_entry(export_entry: &ExportEntry) -> bool {
-    !export_entry.statement_span.contains_inclusive(export_entry.span)
+    !export_entry
+        .statement_span
+        .contains_inclusive(export_entry.span)
 }
 
 fn is_reexport_of_default_import(
@@ -110,7 +114,7 @@ declare_oxc_lint!(
     Named,
     import,
     nursery, // There are race conditions in the runtime which may cause the module to
-             // not find any exports from `exported_bindings_from_star_export`.
+    // not find any exports from `exported_bindings_from_star_export`.
     version = "0.0.13",
     short_description = "Verify that all named imports are part of the set of named exports in the referenced module.",
 );
@@ -321,8 +325,10 @@ fn test() {
 fn regression_extensionless_default_import_barrel() {
     use crate::tester::Tester;
 
-    let pass =
-        vec![("import defaultTarget from './default_target';\nexport { defaultTarget };", None)];
+    let pass = vec![(
+        "import defaultTarget from './default_target';\nexport { defaultTarget };",
+        None,
+    )];
 
     Tester::new(Named::NAME, Named::PLUGIN, pass, vec![])
         .change_rule_path("extensionless_default_import/index.js")

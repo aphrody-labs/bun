@@ -21,9 +21,11 @@ fn missing_delay_diagnostic(span: Span, name: &str) -> OxcDiagnostic {
 }
 
 fn redundant_delay_diagnostic(span: Span, name: &str) -> OxcDiagnostic {
-    OxcDiagnostic::warn(format!("`{name}` should not have an explicit delay of `0`."))
-        .with_help("Remove the explicit `0` delay argument.")
-        .with_label(span)
+    OxcDiagnostic::warn(format!(
+        "`{name}` should not have an explicit delay of `0`."
+    ))
+    .with_help("Remove the explicit `0` delay argument.")
+    .with_label(span)
 }
 
 #[derive(Debug, Default, Clone, Copy, Deserialize, JsonSchema)]
@@ -98,7 +100,8 @@ declare_oxc_lint!(
     fix,
     config = ExplicitTimerDelayMode,
     version = "1.73.0",
-    short_description = "Enforce or disallow explicit `delay` argument for `setTimeout()` and `setInterval()`.",
+    short_description =
+        "Enforce or disallow explicit `delay` argument for `setTimeout()` and `setInterval()`.",
 );
 
 impl Rule for ExplicitTimerDelay {
@@ -149,17 +152,20 @@ fn check_never(call_expr: &CallExpression, ctx: &LintContext, name: &str) {
         return;
     }
 
-    ctx.diagnostic_with_fix(redundant_delay_diagnostic(delay_argument.span(), name), |fixer| {
-        let delete_span = Span::new(first_argument.span().end, delay_argument.span().end);
-        fixer.delete_range(delete_span)
-    });
+    ctx.diagnostic_with_fix(
+        redundant_delay_diagnostic(delay_argument.span(), name),
+        |fixer| {
+            let delete_span = Span::new(first_argument.span().end, delay_argument.span().end);
+            fixer.delete_range(delete_span)
+        },
+    );
 }
 
 fn timer_name<'a>(call_expr: &CallExpression<'a>, ctx: &LintContext<'a>) -> Option<&'a str> {
     match call_expr.callee.get_inner_expression() {
-        Expression::Identifier(ident) if is_timer_function_name(ident.name.as_str()) => {
-            ctx.is_reference_to_global_variable(ident).then_some(ident.name.as_str())
-        }
+        Expression::Identifier(ident) if is_timer_function_name(ident.name.as_str()) => ctx
+            .is_reference_to_global_variable(ident)
+            .then_some(ident.name.as_str()),
         callee => {
             let member_expr = callee.as_member_expression()?;
             if member_expr.is_computed() {
@@ -253,17 +259,44 @@ fn test() {
             self.setInterval(callback);",
             None,
         ),
-        (r#"setTimeout(() => console.log("Hello"));"#, Some(serde_json::json!(["never"]))),
+        (
+            r#"setTimeout(() => console.log("Hello"));"#,
+            Some(serde_json::json!(["never"])),
+        ),
         ("setInterval(callback);", Some(serde_json::json!(["never"]))),
-        (r#"window.setTimeout(() => console.log("Hello"));"#, Some(serde_json::json!(["never"]))),
-        ("globalThis.setInterval(callback);", Some(serde_json::json!(["never"]))),
+        (
+            r#"window.setTimeout(() => console.log("Hello"));"#,
+            Some(serde_json::json!(["never"])),
+        ),
+        (
+            "globalThis.setInterval(callback);",
+            Some(serde_json::json!(["never"])),
+        ),
         ("setTimeout((callback), 0);", None),
-        (r#"setTimeout(() => console.log("Hello"), 1000);"#, Some(serde_json::json!(["never"]))),
-        ("setTimeout(callback, (1000));", Some(serde_json::json!(["never"]))),
-        ("setInterval(callback, 100);", Some(serde_json::json!(["never"]))),
-        ("setInterval(callback, 0, arg1);", Some(serde_json::json!(["never"]))),
-        ("setTimeout(callback, 500, arg1);", Some(serde_json::json!(["never"]))),
-        ("setTimeout(callback, 0, arg1, arg2);", Some(serde_json::json!(["never"]))),
+        (
+            r#"setTimeout(() => console.log("Hello"), 1000);"#,
+            Some(serde_json::json!(["never"])),
+        ),
+        (
+            "setTimeout(callback, (1000));",
+            Some(serde_json::json!(["never"])),
+        ),
+        (
+            "setInterval(callback, 100);",
+            Some(serde_json::json!(["never"])),
+        ),
+        (
+            "setInterval(callback, 0, arg1);",
+            Some(serde_json::json!(["never"])),
+        ),
+        (
+            "setTimeout(callback, 500, arg1);",
+            Some(serde_json::json!(["never"])),
+        ),
+        (
+            "setTimeout(callback, 0, arg1, arg2);",
+            Some(serde_json::json!(["never"])),
+        ),
     ];
 
     let fail = vec![
@@ -286,21 +319,54 @@ fn test() {
             None,
         ),
         ("setTimeout((callback));", None),
-        (r#"setTimeout(() => console.log("Hello"), 0);"#, Some(serde_json::json!(["never"]))),
-        ("setInterval(callback, 0);", Some(serde_json::json!(["never"]))),
-        ("setTimeout((callback), 0);", Some(serde_json::json!(["never"]))),
-        ("self.setTimeout(fn, 0);", Some(serde_json::json!(["never"]))),
-        ("self.setInterval(fn, 0);", Some(serde_json::json!(["never"]))),
+        (
+            r#"setTimeout(() => console.log("Hello"), 0);"#,
+            Some(serde_json::json!(["never"])),
+        ),
+        (
+            "setInterval(callback, 0);",
+            Some(serde_json::json!(["never"])),
+        ),
+        (
+            "setTimeout((callback), 0);",
+            Some(serde_json::json!(["never"])),
+        ),
+        (
+            "self.setTimeout(fn, 0);",
+            Some(serde_json::json!(["never"])),
+        ),
+        (
+            "self.setInterval(fn, 0);",
+            Some(serde_json::json!(["never"])),
+        ),
         (
             r#"window.setTimeout(() => console.log("Hello"), 0);"#,
             Some(serde_json::json!(["never"])),
         ),
-        ("globalThis.setInterval(callback, 0);", Some(serde_json::json!(["never"]))),
-        ("global.setTimeout(fn, 0);", Some(serde_json::json!(["never"]))),
-        (r#"setTimeout(() => console.log("Hello"), -0);"#, Some(serde_json::json!(["never"]))),
-        ("setTimeout(callback, +0);", Some(serde_json::json!(["never"]))),
-        ("setInterval(callback, +(0));", Some(serde_json::json!(["never"]))),
-        ("setTimeout(callback, (-0));", Some(serde_json::json!(["never"]))),
+        (
+            "globalThis.setInterval(callback, 0);",
+            Some(serde_json::json!(["never"])),
+        ),
+        (
+            "global.setTimeout(fn, 0);",
+            Some(serde_json::json!(["never"])),
+        ),
+        (
+            r#"setTimeout(() => console.log("Hello"), -0);"#,
+            Some(serde_json::json!(["never"])),
+        ),
+        (
+            "setTimeout(callback, +0);",
+            Some(serde_json::json!(["never"])),
+        ),
+        (
+            "setInterval(callback, +(0));",
+            Some(serde_json::json!(["never"])),
+        ),
+        (
+            "setTimeout(callback, (-0));",
+            Some(serde_json::json!(["never"])),
+        ),
         (
             r#"setTimeout(
                 () => console.log("Hello"),
@@ -315,7 +381,10 @@ fn test() {
             );",
             Some(serde_json::json!(["never"])),
         ),
-        ("setTimeout(callback, (0));", Some(serde_json::json!(["never"]))),
+        (
+            "setTimeout(callback, (0));",
+            Some(serde_json::json!(["never"])),
+        ),
     ];
 
     let fix = vec![
@@ -330,7 +399,11 @@ fn test() {
             r#"window.setTimeout(() => console.log("Hello"), 0);"#,
             None,
         ),
-        ("globalThis.setInterval(callback);", "globalThis.setInterval(callback, 0);", None),
+        (
+            "globalThis.setInterval(callback);",
+            "globalThis.setInterval(callback, 0);",
+            None,
+        ),
         ("global.setTimeout(fn);", "global.setTimeout(fn, 0);", None),
         ("self.setTimeout(fn);", "self.setTimeout(fn, 0);", None),
         (
@@ -351,20 +424,36 @@ fn test() {
             );",
             None,
         ),
-        ("setTimeout((callback));", "setTimeout((callback), 0);", None),
+        (
+            "setTimeout((callback));",
+            "setTimeout((callback), 0);",
+            None,
+        ),
         (
             r#"setTimeout(() => console.log("Hello"), 0);"#,
             r#"setTimeout(() => console.log("Hello"));"#,
             Some(serde_json::json!(["never"])),
         ),
-        ("setInterval(callback, 0);", "setInterval(callback);", Some(serde_json::json!(["never"]))),
+        (
+            "setInterval(callback, 0);",
+            "setInterval(callback);",
+            Some(serde_json::json!(["never"])),
+        ),
         (
             "setTimeout((callback), 0);",
             "setTimeout((callback));",
             Some(serde_json::json!(["never"])),
         ),
-        ("self.setTimeout(fn, 0);", "self.setTimeout(fn);", Some(serde_json::json!(["never"]))),
-        ("self.setInterval(fn, 0);", "self.setInterval(fn);", Some(serde_json::json!(["never"]))),
+        (
+            "self.setTimeout(fn, 0);",
+            "self.setTimeout(fn);",
+            Some(serde_json::json!(["never"])),
+        ),
+        (
+            "self.setInterval(fn, 0);",
+            "self.setInterval(fn);",
+            Some(serde_json::json!(["never"])),
+        ),
         (
             r#"window.setTimeout(() => console.log("Hello"), 0);"#,
             r#"window.setTimeout(() => console.log("Hello"));"#,
@@ -375,13 +464,21 @@ fn test() {
             "globalThis.setInterval(callback);",
             Some(serde_json::json!(["never"])),
         ),
-        ("global.setTimeout(fn, 0);", "global.setTimeout(fn);", Some(serde_json::json!(["never"]))),
+        (
+            "global.setTimeout(fn, 0);",
+            "global.setTimeout(fn);",
+            Some(serde_json::json!(["never"])),
+        ),
         (
             r#"setTimeout(() => console.log("Hello"), -0);"#,
             r#"setTimeout(() => console.log("Hello"));"#,
             Some(serde_json::json!(["never"])),
         ),
-        ("setTimeout(callback, +0);", "setTimeout(callback);", Some(serde_json::json!(["never"]))),
+        (
+            "setTimeout(callback, +0);",
+            "setTimeout(callback);",
+            Some(serde_json::json!(["never"])),
+        ),
         (
             "setInterval(callback, +(0));",
             "setInterval(callback);",
@@ -412,10 +509,19 @@ fn test() {
             );",
             Some(serde_json::json!(["never"])),
         ),
-        ("setTimeout(callback, (0));", "setTimeout(callback);", Some(serde_json::json!(["never"]))),
+        (
+            "setTimeout(callback, (0));",
+            "setTimeout(callback);",
+            Some(serde_json::json!(["never"])),
+        ),
     ];
 
-    Tester::new(ExplicitTimerDelay::NAME, ExplicitTimerDelay::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        ExplicitTimerDelay::NAME,
+        ExplicitTimerDelay::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

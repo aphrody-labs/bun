@@ -13,9 +13,11 @@ use crate::{context::LintContext, rule::Rule};
 const GLOBAL_THIS: &str = "globalThis";
 
 fn no_obj_calls_diagnostic(obj_name: &str, span: Span) -> OxcDiagnostic {
-    OxcDiagnostic::warn(format!("`{obj_name}` is not a function and cannot be called"))
-        .with_help("This call will throw a TypeError at runtime.")
-        .with_label(span)
+    OxcDiagnostic::warn(format!(
+        "`{obj_name}` is not a function and cannot be called"
+    ))
+    .with_help("This call will throw a TypeError at runtime.")
+    .with_label(span)
 }
 
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
@@ -73,7 +75,11 @@ fn is_global_obj(s: &str) -> bool {
 }
 
 fn global_this_member<'a>(expr: &'a MemberExpression<'_>) -> Option<&'a str> {
-    if expr.object().is_specific_id(GLOBAL_THIS) { expr.static_property_name() } else { None }
+    if expr.object().is_specific_id(GLOBAL_THIS) {
+        expr.static_property_name()
+    } else {
+        None
+    }
 }
 
 fn resolve_global_binding<'a, 'b: 'a>(
@@ -84,7 +90,9 @@ fn resolve_global_binding<'a, 'b: 'a>(
 
     let Some(binding_id) = symbols.get_reference(ident.reference_id()).symbol_id() else {
         // Unresolved references are globals unless disabled through config.
-        return ctx.is_reference_to_global_variable(ident).then_some(ident.name.as_str());
+        return ctx
+            .is_reference_to_global_variable(ident)
+            .then_some(ident.name.as_str());
     };
 
     let decl = ctx.nodes().get_node(symbols.symbol_declaration(binding_id));
@@ -284,7 +292,11 @@ fn test() {
 
     Tester::new(NoObjCalls::NAME, NoObjCalls::PLUGIN, pass, fail).test_and_snapshot();
 
-    let pass = vec![("Math();", None, Some(serde_json::json!({ "globals": { "Math": "off" } })))];
+    let pass = vec![(
+        "Math();",
+        None,
+        Some(serde_json::json!({ "globals": { "Math": "off" } })),
+    )];
     let fail = vec![("Math();", None, None)];
     Tester::new(NoObjCalls::NAME, NoObjCalls::PLUGIN, pass, fail).test();
 }

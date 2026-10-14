@@ -59,7 +59,9 @@ declare_oxc_lint!(
 
 impl Rule for PreferBigintLiterals {
     fn run<'a>(&self, node: &AstNode<'a>, ctx: &LintContext<'a>) {
-        let AstKind::CallExpression(call) = node.kind() else { return };
+        let AstKind::CallExpression(call) = node.kind() else {
+            return;
+        };
         let Some(reference) = call.callee.get_identifier_reference() else {
             return;
         };
@@ -123,24 +125,26 @@ fn matches_js_integer_literal(s: &str) -> Option<NumberBase> {
 
     match chars.next() {
         Some('0') => match chars.next() {
-            Some('b' | 'B') => {
-                chars.all(|char| matches!(char, '0' | '1')).then_some(NumberBase::Binary)
-            }
+            Some('b' | 'B') => chars
+                .all(|char| matches!(char, '0' | '1'))
+                .then_some(NumberBase::Binary),
 
-            Some('o' | 'O') => {
-                chars.all(|char| matches!(char, '0'..='7')).then_some(NumberBase::Octal)
-            }
+            Some('o' | 'O') => chars
+                .all(|char| matches!(char, '0'..='7'))
+                .then_some(NumberBase::Octal),
 
-            Some('x' | 'X') => {
-                chars.all(|char| char.is_ascii_hexdigit()).then_some(NumberBase::Hex)
-            }
-            Some('0'..='9') => {
-                chars.all(|char| char.is_ascii_digit()).then_some(NumberBase::Decimal)
-            }
+            Some('x' | 'X') => chars
+                .all(|char| char.is_ascii_hexdigit())
+                .then_some(NumberBase::Hex),
+            Some('0'..='9') => chars
+                .all(|char| char.is_ascii_digit())
+                .then_some(NumberBase::Decimal),
             None => Some(NumberBase::Decimal),
             _ => None,
         },
-        Some('1'..='9') => chars.all(|char| char.is_ascii_digit()).then_some(NumberBase::Decimal),
+        Some('1'..='9') => chars
+            .all(|char| char.is_ascii_digit())
+            .then_some(NumberBase::Decimal),
         _ => None,
     }
 }
@@ -264,7 +268,12 @@ fn test() {
         (r"BigInt(1E6)", r"BigInt(1E6)"),
     ];
 
-    Tester::new(PreferBigintLiterals::NAME, PreferBigintLiterals::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        PreferBigintLiterals::NAME,
+        PreferBigintLiterals::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

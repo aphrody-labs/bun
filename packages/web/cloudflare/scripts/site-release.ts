@@ -66,7 +66,7 @@ export async function releaseSite(options: {
     resolve(options.assets),
     "--keep-vars",
     "--message",
-    `Bun.Video ${site.commit}`,
+    `Aphrody Bun ${site.commit}`,
     ...(options.dryRun ? ["--dry-run", "--outdir", options.output + "-worker"] : []),
   ]);
   const receipt = {

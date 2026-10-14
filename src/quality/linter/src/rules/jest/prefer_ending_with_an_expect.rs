@@ -221,7 +221,9 @@ impl Rule for PreferEndingWithAnExpect {
             return;
         }
 
-        ctx.diagnostic(prefer_ending_with_an_expect_diagnostic(call_expr.callee.span()));
+        ctx.diagnostic(prefer_ending_with_an_expect_diagnostic(
+            call_expr.callee.span(),
+        ));
     }
 }
 
@@ -300,11 +302,26 @@ fn test() {
         (r#"it.todo("will test something eventually")"#, None),
         (r#"test.todo("will test something eventually")"#, None),
         ("['x']();", None),
-        (r#"it("is weird", "because this should be a function")"#, None),
-        (r#"it("is weird", "because this should be a function", () => {})"#, None),
-        (r#"it("should pass", () => expect(true).toBeDefined())"#, None),
-        (r#"test("should pass", () => expect(true).toBeDefined())"#, None),
-        (r#"it("should pass", myTest); function myTest() { expect(true).toBeDefined() }"#, None),
+        (
+            r#"it("is weird", "because this should be a function")"#,
+            None,
+        ),
+        (
+            r#"it("is weird", "because this should be a function", () => {})"#,
+            None,
+        ),
+        (
+            r#"it("should pass", () => expect(true).toBeDefined())"#,
+            None,
+        ),
+        (
+            r#"test("should pass", () => expect(true).toBeDefined())"#,
+            None,
+        ),
+        (
+            r#"it("should pass", myTest); function myTest() { expect(true).toBeDefined() }"#,
+            None,
+        ),
         (
             "test('should pass', () => {
               expect(true).toBeDefined();
@@ -346,10 +363,22 @@ fn test() {
             })"#,
             Some(serde_json::json!([{ "assertFunctionNames": ["td.verify"] }])),
         ),
-        (r#"it("should pass", async () => expect(true).toBeDefined())"#, None),
-        (r#"it("should pass", () => expect(true).toBeDefined())"#, Some(serde_json::json!([{}]))),
-        (r#"it("should pass", () => { expect(true).toBeDefined() })"#, None),
-        (r#"it("should pass", function () { expect(true).toBeDefined() })"#, None),
+        (
+            r#"it("should pass", async () => expect(true).toBeDefined())"#,
+            None,
+        ),
+        (
+            r#"it("should pass", () => expect(true).toBeDefined())"#,
+            Some(serde_json::json!([{}])),
+        ),
+        (
+            r#"it("should pass", () => { expect(true).toBeDefined() })"#,
+            None,
+        ),
+        (
+            r#"it("should pass", function () { expect(true).toBeDefined() })"#,
+            None,
+        ),
         (
             "it('is a complete test', () => {
               const container = render(Greeter);
@@ -488,7 +517,10 @@ fn test() {
         (r#"it("should fail", () => {});"#, None),
         (r#"test("should fail", () => {});"#, None),
         (r#"test.skip("should fail", () => {});"#, None),
-        (r#"it("should fail", () => { somePromise.then(() => {}); });"#, None),
+        (
+            r#"it("should fail", () => { somePromise.then(() => {}); });"#,
+            None,
+        ),
         (
             r#"test("should fail", () => { foo(true).toBe(true); })"#,
             Some(serde_json::json!([{ "assertFunctionNames": ["expect"] }])),
@@ -497,14 +529,23 @@ fn test() {
             r#"it("should also fail",() => expectSaga(mySaga).returns());"#,
             Some(serde_json::json!([{ "assertFunctionNames": ["expect"] }])),
         ),
-        (r#"it("should pass", () => somePromise().then(() => expect(true).toBeDefined()))"#, None),
+        (
+            r#"it("should pass", () => somePromise().then(() => expect(true).toBeDefined()))"#,
+            None,
+        ),
         (r#"it("should pass", () => render(Greeter))"#, None),
         (r#"it("should pass", () => { render(Greeter) })"#, None),
-        (r#"it("should pass", function () { render(Greeter) })"#, None),
+        (
+            r#"it("should pass", function () { render(Greeter) })"#,
+            None,
+        ),
         (r#"it("should not pass", () => class {})"#, None),
         (r#"it("should not pass", () => ([]))"#, None),
         (r#"it("should not pass", () => { const x = []; })"#, None),
-        (r#"it("should not pass", function () { class Mx {} })"#, None),
+        (
+            r#"it("should not pass", function () { class Mx {} })"#,
+            None,
+        ),
         (
             "it('is a complete test', () => {
               const container = render(Greeter);
@@ -557,7 +598,12 @@ fn test() {
         ),
     ];
 
-    Tester::new(PreferEndingWithAnExpect::NAME, PreferEndingWithAnExpect::PLUGIN, pass, fail)
-        .with_jest_plugin(true)
-        .test_and_snapshot();
+    Tester::new(
+        PreferEndingWithAnExpect::NAME,
+        PreferEndingWithAnExpect::PLUGIN,
+        pass,
+        fail,
+    )
+    .with_jest_plugin(true)
+    .test_and_snapshot();
 }

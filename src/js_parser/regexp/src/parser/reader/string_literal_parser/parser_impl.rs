@@ -30,7 +30,12 @@ pub fn parse_regexp_literal(
         let end = start + ch.len_utf8() as u32;
 
         let offsets_and_cp: OffsetsAndCp = ((start, end), ch as u32, EscapeKind::None);
-        Parser::handle_code_point(&mut body, offsets_and_cp, span_offset, combine_surrogate_pair);
+        Parser::handle_code_point(
+            &mut body,
+            offsets_and_cp,
+            span_offset,
+            combine_surrogate_pair,
+        );
         offset = end;
     }
 
@@ -60,20 +65,39 @@ impl Parser {
 
         if combine_surrogate_pair || (0..=0xffff).contains(&cp) {
             // If the code point is in the BMP or if forced, just push it
-            body.push(CodePoint { span, value: cp, escape_kind });
+            body.push(CodePoint {
+                span,
+                value: cp,
+                escape_kind,
+            });
         } else {
             // Otherwise, split the code point into a surrogate pair, sharing the same span
-            let (lead, trail) =
-                (0xd800 + ((cp - 0x10000) >> 10), 0xdc00 + ((cp - 0x10000) & 0x3ff));
-            body.push(CodePoint { span, value: lead, escape_kind });
-            body.push(CodePoint { span, value: trail, escape_kind });
+            let (lead, trail) = (
+                0xd800 + ((cp - 0x10000) >> 10),
+                0xdc00 + ((cp - 0x10000) & 0x3ff),
+            );
+            body.push(CodePoint {
+                span,
+                value: lead,
+                escape_kind,
+            });
+            body.push(CodePoint {
+                span,
+                value: trail,
+                escape_kind,
+            });
         }
     }
 
     // ---
 
     pub fn new(source_text: &str, options: Options) -> Self {
-        Self { chars: source_text.chars().collect::<Vec<_>>(), index: 0, offset: 0, options }
+        Self {
+            chars: source_text.chars().collect::<Vec<_>>(),
+            index: 0,
+            offset: 0,
+            options,
+        }
     }
 
     // ```
@@ -87,7 +111,9 @@ impl Parser {
         } else if self.eat('\'') {
             ('\'', ast::StringLiteralKind::Single)
         } else {
-            return Err(diagnostics::invalid_input(Span::empty(self.options.span_offset)));
+            return Err(diagnostics::invalid_input(Span::empty(
+                self.options.span_offset,
+            )));
         };
 
         let body = self.parse_string_characters(quote_char)?;
@@ -103,7 +129,9 @@ impl Parser {
             return Ok(ast::StringLiteral { span, kind, body });
         }
 
-        Err(diagnostics::invalid_input(Span::empty(self.options.span_offset + self.offset())))
+        Err(diagnostics::invalid_input(Span::empty(
+            self.options.span_offset + self.offset(),
+        )))
     }
 
     // ---
@@ -155,15 +183,27 @@ impl Parser {
             .filter(|&ch| ch != single_or_double_quote && ch != '\\' && !is_line_terminator(ch))
         {
             self.advance();
-            return Ok(Some(((offset_start, self.offset()), ch as u32, EscapeKind::None)));
+            return Ok(Some((
+                (offset_start, self.offset()),
+                ch as u32,
+                EscapeKind::None,
+            )));
         }
         if self.peek() == Some(LS) {
             self.advance();
-            return Ok(Some(((offset_start, self.offset()), LS as u32, EscapeKind::None)));
+            return Ok(Some((
+                (offset_start, self.offset()),
+                LS as u32,
+                EscapeKind::None,
+            )));
         }
         if self.peek() == Some(PS) {
             self.advance();
-            return Ok(Some(((offset_start, self.offset()), PS as u32, EscapeKind::None)));
+            return Ok(Some((
+                (offset_start, self.offset()),
+                PS as u32,
+                EscapeKind::None,
+            )));
         }
         if self.eat('\\') {
             if let Some((cp, escape_kind)) = self.parse_escape_sequence(offset_start)? {
@@ -271,7 +311,12 @@ impl Parser {
     fn parse_legacy_octal_escape_sequence(&mut self) -> Option<u32> {
         if let Some(first) = self.consume_octal_digit() {
             // 0 [lookahead ∈ { 8, 9 }]
-            if first == 0 && self.peek().as_ref().is_some_and(|&ch| !matches!(ch, '8' | '9')) {
+            if first == 0
+                && self
+                    .peek()
+                    .as_ref()
+                    .is_some_and(|&ch| !matches!(ch, '8' | '9'))
+            {
                 return Some(first);
             }
 
@@ -346,8 +391,9 @@ impl Parser {
 
         if self.eat('u') {
             if self.eat('{')
-                && let Some(hex_digits) =
-                    self.consume_hex_digits(offset_start)?.filter(|&cp| cp <= 0x10_ffff)
+                && let Some(hex_digits) = self
+                    .consume_hex_digits(offset_start)?
+                    .filter(|&cp| cp <= 0x10_ffff)
                 && self.eat('}')
             {
                 return Ok(Some(hex_digits));
@@ -415,7 +461,11 @@ impl Parser {
     }
 
     fn consume_octal_digit(&mut self) -> Option<u32> {
-        if let Some(ch) = self.peek().filter(char::is_ascii_digit).filter(|&ch| ch < '8') {
+        if let Some(ch) = self
+            .peek()
+            .filter(char::is_ascii_digit)
+            .filter(|&ch| ch < '8')
+        {
             self.advance();
             // `- '0' as u32`: convert code point to digit
             return Some(ch as u32 - '0' as u32);
@@ -433,8 +483,10 @@ impl Parser {
 
         let mut value = 0;
         for _ in 0..4 {
-            let Some(hex) =
-                self.peek().filter(char::is_ascii_hexdigit).and_then(|ch| ch.to_digit(16))
+            let Some(hex) = self
+                .peek()
+                .filter(char::is_ascii_hexdigit)
+                .and_then(|ch| ch.to_digit(16))
             else {
                 self.rewind(checkpoint);
                 return None;
@@ -451,8 +503,10 @@ impl Parser {
         let checkpoint = self.checkpoint();
 
         let mut value: u32 = 0;
-        while let Some(hex) =
-            self.peek().filter(char::is_ascii_hexdigit).and_then(|ch| ch.to_digit(16))
+        while let Some(hex) = self
+            .peek()
+            .filter(char::is_ascii_hexdigit)
+            .and_then(|ch| ch.to_digit(16))
         {
             // To prevent panic on overflow cases like `\u{FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF}`
             if let Some(v) = value.checked_mul(16).and_then(|v| v.checked_add(hex)) {

@@ -108,11 +108,16 @@ fn get_last_comment_line(comment: Comment, raw: &str) -> &str {
 fn is_valid_ts_ignore_present(comment: Comment, raw: &str) -> bool {
     let line = get_last_comment_line(comment, raw);
 
-    if comment.is_line() { test_single_line_comment(line) } else { test_multi_line_comment(line) }
+    if comment.is_line() {
+        test_single_line_comment(line)
+    } else {
+        test_multi_line_comment(line)
+    }
 }
 
 fn test_single_line_comment(line: &str) -> bool {
-    line.trim_start_matches(|c: char| c.is_whitespace() || c == '/').starts_with("@ts-ignore")
+    line.trim_start_matches(|c: char| c.is_whitespace() || c == '/')
+        .starts_with("@ts-ignore")
 }
 
 fn test_multi_line_comment(line: &str) -> bool {
@@ -179,8 +184,16 @@ console.log('hello');
 
     let fix = vec![
         ("// @ts-ignore", "// @ts-expect-error", None),
-        ("// @ts-ignore: Suppress next line", "// @ts-expect-error: Suppress next line", None),
-        ("///@ts-ignore: Suppress next line", "///@ts-expect-error: Suppress next line", None),
+        (
+            "// @ts-ignore: Suppress next line",
+            "// @ts-expect-error: Suppress next line",
+            None,
+        ),
+        (
+            "///@ts-ignore: Suppress next line",
+            "///@ts-expect-error: Suppress next line",
+            None,
+        ),
         (
             "
 if (false) {
@@ -212,7 +225,11 @@ console.log('hello');
             ",
             None,
         ),
-        ("/* @ts-ignore in a single block */", "/* @ts-expect-error in a single block */", None),
+        (
+            "/* @ts-ignore in a single block */",
+            "/* @ts-expect-error in a single block */",
+            None,
+        ),
         (
             "
 /*
@@ -226,7 +243,12 @@ console.log('hello');
         ),
     ];
 
-    Tester::new(PreferTsExpectError::NAME, PreferTsExpectError::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        PreferTsExpectError::NAME,
+        PreferTsExpectError::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

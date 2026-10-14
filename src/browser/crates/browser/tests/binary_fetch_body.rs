@@ -1,6 +1,6 @@
 use std::{
     io::{Read, Write},
-    sync::{Arc, mpsc},
+    sync::{mpsc, Arc},
     time::Duration,
 };
 
@@ -63,7 +63,10 @@ fn spawn_echo_server() -> (String, mpsc::Receiver<Vec<u8>>) {
                 let (content_type, body) = if path == "/binary" {
                     ("text/plain", "ok")
                 } else {
-                    ("text/html", "<!doctype html><html><body>binary fetch fixture</body></html>")
+                    (
+                        "text/html",
+                        "<!doctype html><html><body>binary fetch fixture</body></html>",
+                    )
                 };
                 write!(
                     stream,
@@ -125,7 +128,10 @@ async fn assert_binary_fetch_body(stealth: bool) {
         page.evaluate("document.body.getAttribute('data-binary-fetch')"),
         serde_json::json!("done")
     );
-    assert_eq!(body_rx.recv_timeout(Duration::from_secs(2)).unwrap(), BINARY_BODY);
+    assert_eq!(
+        body_rx.recv_timeout(Duration::from_secs(2)).unwrap(),
+        BINARY_BODY
+    );
 }
 
 #[tokio::test(flavor = "current_thread")]

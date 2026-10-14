@@ -12,10 +12,12 @@ fn test() {
     let ast = &ast;
 
     let undefined = Expression::new_identifier(SPAN, "undefined", ast);
-    let shadowed_undefined_bool =
-        undefined.to_boolean(&GlobalReferenceInformation { is_undefined_shadowed: true });
-    let global_undefined_bool =
-        undefined.to_boolean(&GlobalReferenceInformation { is_undefined_shadowed: false });
+    let shadowed_undefined_bool = undefined.to_boolean(&GlobalReferenceInformation {
+        is_undefined_shadowed: true,
+    });
+    let global_undefined_bool = undefined.to_boolean(&GlobalReferenceInformation {
+        is_undefined_shadowed: false,
+    });
 
     assert_eq!(shadowed_undefined_bool, None);
     assert_eq!(global_undefined_bool, Some(false));

@@ -164,7 +164,10 @@ fn test_function_call_optimization_edge_cases() {
 fn test_object_literal_edge_cases() {
     // Test property name optimization that might be supported in future
     test("const obj = { 'key': 1 }", "const obj = {key: 1};"); // could be optimized to { key: value }
-    test("const obj = { 'validName': 1 }", "const obj = {validName: 1};"); // could be optimized to { validName: value }
+    test(
+        "const obj = { 'validName': 1 }",
+        "const obj = {validName: 1};",
+    ); // could be optimized to { validName: value }
 
     // Test cases that should NOT be optimized
     test_same("const obj = { '123invalid': 1 }"); // starts with number
@@ -176,7 +179,10 @@ fn test_object_literal_edge_cases() {
     // Test computed property names
     test("const obj = { ['key']: 1 }", "const obj = {key: 1};"); // could be optimized to { key: value }
     test_same("const obj = { [dynamicKey]: 1 }"); // should not optimize
-    test("const obj = { ['prop' + 'name']: 1 }", "const obj = {propname: 1};"); // might be optimized to { propname: value }
+    test(
+        "const obj = { ['prop' + 'name']: 1 }",
+        "const obj = {propname: 1};",
+    ); // might be optimized to { propname: value }
 }
 
 #[test]
@@ -206,7 +212,10 @@ fn test_array_method_edge_cases() {
     test_same("return ['a', 'b', 'c'].includes('b')");
     test_same("return ['a', 'b', 'c'].includes('d')");
     test_same("return [1, 2, 3].slice(1)");
-    test("return [1, 2].concat([3, 4])", "return [\n\t1,\n\t2,\n\t3,\n\t4\n];");
+    test(
+        "return [1, 2].concat([3, 4])",
+        "return [\n\t1,\n\t2,\n\t3,\n\t4\n];",
+    );
 
     // Test methods that should NOT be optimized due to side effects
     test_same("[1, 2, 3].forEach(fn)");
@@ -261,15 +270,27 @@ fn test_variable_elimination_edge_cases() {
 
     // Test used variables that should not be eliminated - but inlining happens
     test("var used = 5; console.log(used);", "console.log(5);");
-    test("let used = 'hello'; return used;", "let used = 'hello';\nreturn 'hello';"); // variable gets inlined
-    test("const used = true; if (used) foo();", "const used = !0;\nfoo();"); // constant inlined and optimized
+    test(
+        "let used = 'hello'; return used;",
+        "let used = 'hello';\nreturn 'hello';",
+    ); // variable gets inlined
+    test(
+        "const used = true; if (used) foo();",
+        "const used = !0;\nfoo();",
+    ); // constant inlined and optimized
 
     // Test variable inlining
-    test("const y = 'hello'; return y;", "const y = 'hello';\nreturn 'hello';"); // check if const also gets inlined
+    test(
+        "const y = 'hello'; return y;",
+        "const y = 'hello';\nreturn 'hello';",
+    ); // check if const also gets inlined
 
     // Test cases where inlining should NOT happen
     test_same("var x = sideEffect(); console.log(x);"); // side effect
-    test("var x = 5; x = 10; console.log(x);", "var x = 5;\nx = 10, console.log(x);"); // reassigned
+    test(
+        "var x = 5; x = 10; console.log(x);",
+        "var x = 5;\nx = 10, console.log(x);",
+    ); // reassigned
     test(
         "let x = 5; if (condition) x = 10; console.log(x);",
         "let x = 5;\ncondition && (x = 10), console.log(x);",
@@ -282,10 +303,16 @@ fn test_loop_optimization_edge_cases() {
     test("while (false) { neverExecuted(); }", ""); // eliminated since condition is false
     test("for (; false;) { neverExecuted(); }", ""); // eliminated since condition is false
     // Test while loops get optimized
-    test("while (true) { infiniteLoop(); }", "for (;;) infiniteLoop();"); // optimized loop form
+    test(
+        "while (true) { infiniteLoop(); }",
+        "for (;;) infiniteLoop();",
+    ); // optimized loop form
 
     // Test do-while loops - false becomes !1, braces may be removed, true becomes !0
-    test("do { executedOnce(); } while (false);", "do\n\texecutedOnce();\nwhile (0);");
+    test(
+        "do { executedOnce(); } while (false);",
+        "do\n\texecutedOnce();\nwhile (0);",
+    );
     test("do { body(); } while (true);", "do\n\tbody();\nwhile (1);");
 
     // Test for loops with analyzable bounds
@@ -297,13 +324,19 @@ fn test_loop_optimization_edge_cases() {
         "for (var i = 5; i < 3; i++) { neverExecuted(); }",
         "for (var i = 5; i < 3; i++) neverExecuted();",
     ); // could be eliminated
-    test("for (var i = 0; i < 3; i++) { executed(); }", "for (var i = 0; i < 3; i++) executed();"); // should preserve
+    test(
+        "for (var i = 0; i < 3; i++) { executed(); }",
+        "for (var i = 0; i < 3; i++) executed();",
+    ); // should preserve
 }
 
 #[test]
 fn test_switch_statement_edge_cases() {
     // Test switch with constant discriminant - might be optimized in future
-    test("switch (2) { case 1: a(); break; case 2: b(); break; case 3: c(); }", "b();");
+    test(
+        "switch (2) { case 1: a(); break; case 2: b(); break; case 3: c(); }",
+        "b();",
+    );
     test(
         "switch ('test') { case 'foo': a(); break; case 'test': b(); break; default: c(); }",
         "b();",
@@ -313,10 +346,16 @@ fn test_switch_statement_edge_cases() {
     test("switch (5) { case 1: a(); break; case 2: b(); break; }", "");
 
     // Test switch with default
-    test("switch (5) { case 1: a(); break; default: b(); break; }", "b();");
+    test(
+        "switch (5) { case 1: a(); break; default: b(); break; }",
+        "b();",
+    );
 
     // Test switch with fall-through - more complex, keep as same for safety
-    test("switch (1) { case 1: a(); case 2: b(); break; case 3: c(); }", "a(), b();");
+    test(
+        "switch (1) { case 1: a(); case 2: b(); break; case 3: c(); }",
+        "a(), b();",
+    );
     // Should preserve fall-through behavior
 }
 
@@ -384,9 +423,18 @@ fn test_esm_minification_edge_cases() {
 
     // Export declarations with optimizations
     test("export var a = 1 + 2;", "export var a = 3;");
-    test("export let b = 'hello' + ' world';", "export let b = 'hello world';");
-    test("export const c = true ? 'yes' : 'no';", "export const c = 'yes';");
-    test("export function f() { return 2 + 3; }", "export function f() { return 5; }");
+    test(
+        "export let b = 'hello' + ' world';",
+        "export let b = 'hello world';",
+    );
+    test(
+        "export const c = true ? 'yes' : 'no';",
+        "export const c = 'yes';",
+    );
+    test(
+        "export function f() { return 2 + 3; }",
+        "export function f() { return 5; }",
+    );
     test(
         "export class C { method() { return 'a' + 'b'; } }",
         "export class C { method() { return 'ab'; } }",
@@ -411,7 +459,10 @@ fn test_esm_minification_edge_cases() {
     test_same("import.meta.resolve('./module.js')");
     test_same("import.meta.hot");
     test_same("import.meta.env");
-    test("import.meta.resolve('prefix' + 'suffix')", "import.meta.resolve('prefixsuffix')");
+    test(
+        "import.meta.resolve('prefix' + 'suffix')",
+        "import.meta.resolve('prefixsuffix')",
+    );
 
     // Top-level await (should be preserved)
     test_same("await import('./dynamic.js')");
@@ -421,14 +472,20 @@ fn test_esm_minification_edge_cases() {
     // Complex ESM patterns
     test_same("export { default as myDefault } from './other.js';");
     test_same("import('./polyfill.js').then(() => import('./main.js'));");
-    test("export const computed = obj['prop' + 'erty'];", "export const computed = obj.property;");
+    test(
+        "export const computed = obj['prop' + 'erty'];",
+        "export const computed = obj.property;",
+    );
 
     // Import/export with computed property names in object patterns
     test(
         "const { ['computed' + 'Name']: value } = module;",
         "const { computedName: value } = module;",
     );
-    test("import('./modules/' + (true ? 'prod' : 'dev') + '.js')", "import('./modules/prod.js')");
+    test(
+        "import('./modules/' + (true ? 'prod' : 'dev') + '.js')",
+        "import('./modules/prod.js')",
+    );
 
     // Module namespace access
     test_same("ns.exported");
@@ -445,9 +502,18 @@ fn test_advanced_esm_patterns() {
     test_same("export * as namespace from './module.js';");
 
     // Dynamic import with conditional expressions
-    test("import(condition ? './a.js' : './b.js')", "import(condition ? './a.js' : './b.js')");
-    test("import(true ? './production.js' : './development.js')", "import('./production.js')");
-    test("import(false ? './production.js' : './development.js')", "import('./development.js')");
+    test(
+        "import(condition ? './a.js' : './b.js')",
+        "import(condition ? './a.js' : './b.js')",
+    );
+    test(
+        "import(true ? './production.js' : './development.js')",
+        "import('./production.js')",
+    );
+    test(
+        "import(false ? './production.js' : './development.js')",
+        "import('./development.js')",
+    );
 
     // Import assertions/attributes with string optimization
     test(
@@ -464,8 +530,14 @@ fn test_advanced_esm_patterns() {
         "const url = import.meta.url + '/relative';",
         "const url = import.meta.url + '/relative';",
     );
-    test("import.meta.resolve('./' + 'module' + '.js')", "import.meta.resolve('./module.js')");
-    test("import.meta.resolve('module-' + (2 + 3))", "import.meta.resolve('module-5')");
+    test(
+        "import.meta.resolve('./' + 'module' + '.js')",
+        "import.meta.resolve('./module.js')",
+    );
+    test(
+        "import.meta.resolve('module-' + (2 + 3))",
+        "import.meta.resolve('module-5')",
+    );
 
     // Top-level await with expressions that can be optimized
     test(
@@ -475,7 +547,10 @@ fn test_advanced_esm_patterns() {
     test("await (async () => 1 + 2)()", "await (async () => 3)()");
 
     // ESM in conditionals and loops
-    test("if (true) { import('./conditional.js'); }", "import('./conditional.js');");
+    test(
+        "if (true) { import('./conditional.js'); }",
+        "import('./conditional.js');",
+    );
     test("if (false) { import('./never.js'); }", "");
     test(
         "for (const module of modules) { await import(module); }",
@@ -495,7 +570,10 @@ fn test_advanced_esm_patterns() {
     );
 
     // Side-effect imports with conditions
-    test("if (true) import('./polyfill.js');", "import('./polyfill.js');");
+    test(
+        "if (true) import('./polyfill.js');",
+        "import('./polyfill.js');",
+    );
     test("if (false) import('./polyfill.js');", "");
 
     // ESM factory patterns
@@ -531,7 +609,10 @@ fn test_esm_module_patterns() {
     );
 
     // ESM with IIFE patterns
-    test("export default (() => { return 1 + 2; })();", "export default 3;");
+    test(
+        "export default (() => { return 1 + 2; })();",
+        "export default 3;",
+    );
     test(
         "export default (async () => { return await fetchData(); })();",
         "export default (async () => await fetchData())();",
@@ -572,8 +653,14 @@ fn test_esm_module_patterns() {
     test_same("const factory = await container.get('./Component');");
 
     // ESM with string template optimization
-    test("import(`./modules/${1 + 2}.js`)", "import('./modules/3.js')");
-    test("export const path = `./dist/${'app' + '.js'}`;", "export const path = './dist/app.js';");
+    test(
+        "import(`./modules/${1 + 2}.js`)",
+        "import('./modules/3.js')",
+    );
+    test(
+        "export const path = `./dist/${'app' + '.js'}`;",
+        "export const path = './dist/app.js';",
+    );
 
     // Complex conditional imports
     test(
@@ -586,7 +673,10 @@ fn test_esm_module_patterns() {
     );
 
     // Import with computed expressions
-    test("import('module-' + (version || 'latest'))", "import('module-' + (version || 'latest'))");
+    test(
+        "import('module-' + (version || 'latest'))",
+        "import('module-' + (version || 'latest'))",
+    );
     test("import('module-' + (2 + 3))", "import('module-5')");
 }
 

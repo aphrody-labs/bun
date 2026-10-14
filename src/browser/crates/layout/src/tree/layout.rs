@@ -39,14 +39,23 @@ pub struct CollapsibleMarginSet {
 
 impl CollapsibleMarginSet {
     /// A default margin set with no collapsible margins
-    pub const ZERO: Self = Self { positive: 0.0, negative: 0.0 };
+    pub const ZERO: Self = Self {
+        positive: 0.0,
+        negative: 0.0,
+    };
 
     /// Create a set from a single margin
     pub fn from_margin(margin: f32) -> Self {
         if margin >= 0.0 {
-            Self { positive: margin, negative: 0.0 }
+            Self {
+                positive: margin,
+                negative: 0.0,
+            }
         } else {
-            Self { positive: 0.0, negative: margin }
+            Self {
+                positive: 0.0,
+                negative: margin,
+            }
         }
     }
 
@@ -296,19 +305,30 @@ impl Layout {
     /// Get the width of the node's content box
     #[inline]
     pub fn content_box_width(&self) -> f32 {
-        self.size.width - self.padding.left - self.padding.right - self.border.left - self.border.right
+        self.size.width
+            - self.padding.left
+            - self.padding.right
+            - self.border.left
+            - self.border.right
     }
 
     /// Get the height of the node's content box
     #[inline]
     pub fn content_box_height(&self) -> f32 {
-        self.size.height - self.padding.top - self.padding.bottom - self.border.top - self.border.bottom
+        self.size.height
+            - self.padding.top
+            - self.padding.bottom
+            - self.border.top
+            - self.border.bottom
     }
 
     /// Get the size of the node's content box
     #[inline]
     pub fn content_box_size(&self) -> Size<f32> {
-        Size { width: self.content_box_width(), height: self.content_box_height() }
+        Size {
+            width: self.content_box_width(),
+            height: self.content_box_height(),
+        }
     }
 
     /// Get x offset of the node's content box relative to it's parent's border box
@@ -329,7 +349,8 @@ impl Layout {
     pub fn scroll_width(&self) -> f32 {
         f32_max(
             0.0,
-            self.content_size.width + f32_min(self.scrollbar_size.width, self.size.width) - self.size.width
+            self.content_size.width + f32_min(self.scrollbar_size.width, self.size.width)
+                - self.size.width
                 + self.border.right,
         )
     }
@@ -339,7 +360,8 @@ impl Layout {
     pub fn scroll_height(&self) -> f32 {
         f32_max(
             0.0,
-            self.content_size.height + f32_min(self.scrollbar_size.height, self.size.height) - self.size.height
+            self.content_size.height + f32_min(self.scrollbar_size.height, self.size.height)
+                - self.size.height
                 + self.border.bottom,
         )
     }

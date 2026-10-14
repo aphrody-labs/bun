@@ -38,13 +38,19 @@ struct PreferDestructuringTargetConfig {
 
 impl Default for PreferDestructuringTargetConfig {
     fn default() -> Self {
-        Self { array: true, object: true }
+        Self {
+            array: true,
+            object: true,
+        }
     }
 }
 
 impl PreferDestructuringTargetConfig {
     fn disabled() -> Self {
-        Self { array: false, object: false }
+        Self {
+            array: false,
+            object: false,
+        }
     }
 }
 
@@ -57,7 +63,10 @@ struct PreferDestructuringTargetOption {
 
 impl PreferDestructuringTargetOption {
     fn enabled_by_default() -> Self {
-        Self { array: Some(true), object: Some(true) }
+        Self {
+            array: Some(true),
+            object: Some(true),
+        }
     }
 
     fn into_config(self) -> PreferDestructuringTargetConfig {
@@ -76,7 +85,12 @@ struct PreferDestructuringAssignmentConfig {
 }
 
 impl PreferDestructuringAssignmentConfig {
-    fn into_configs(self) -> (PreferDestructuringTargetConfig, PreferDestructuringTargetConfig) {
+    fn into_configs(
+        self,
+    ) -> (
+        PreferDestructuringTargetConfig,
+        PreferDestructuringTargetConfig,
+    ) {
         let variable_declarator = self.variable_declarator.map_or_else(
             PreferDestructuringTargetConfig::disabled,
             PreferDestructuringTargetOption::into_config,
@@ -104,7 +118,12 @@ impl Default for PreferDestructuringOption {
 }
 
 impl PreferDestructuringOption {
-    fn into_configs(self) -> (PreferDestructuringTargetConfig, PreferDestructuringTargetConfig) {
+    fn into_configs(
+        self,
+    ) -> (
+        PreferDestructuringTargetConfig,
+        PreferDestructuringTargetConfig,
+    ) {
         match self {
             Self::Target(config) => {
                 let config = config.into_config();
@@ -124,7 +143,10 @@ struct PreferDestructuringEnforcementConfig {
 
 #[derive(Debug, Default, Clone, JsonSchema, Deserialize, Serialize)]
 #[serde(default)]
-struct PreferDestructuringConfig(PreferDestructuringOption, PreferDestructuringEnforcementConfig);
+struct PreferDestructuringConfig(
+    PreferDestructuringOption,
+    PreferDestructuringEnforcementConfig,
+);
 
 impl PreferDestructuringConfig {
     fn into_rule(self) -> PreferDestructuring {
@@ -208,7 +230,10 @@ impl Rule for PreferDestructuring {
     fn run<'a>(&self, node: &AstNode<'a>, ctx: &LintContext<'a>) {
         match node.kind() {
             AstKind::AssignmentExpression(assign_expr) if assign_expr.operator.is_assign() => {
-                let Some(right) = assign_expr.right.without_parentheses().as_member_expression()
+                let Some(right) = assign_expr
+                    .right
+                    .without_parentheses()
+                    .as_member_expression()
                 else {
                     return;
                 };
@@ -430,14 +455,23 @@ fn test() {
             "var a = arr[0];",
             Some(serde_json::json!([{ "VariableDeclarator": { "object": true } }])),
         ),
-        ("a = arr[0];", Some(serde_json::json!([{ "AssignmentExpression": { "object": true } }]))),
-        ("let a = arr[0];", Some(serde_json::json!([{ "object": true }]))),
+        (
+            "a = arr[0];",
+            Some(serde_json::json!([{ "AssignmentExpression": { "object": true } }])),
+        ),
+        (
+            "let a = arr[0];",
+            Some(serde_json::json!([{ "object": true }])),
+        ),
         ("var foo;", None),
         (
             "var foo = object.bar;",
             Some(serde_json::json!([{ "VariableDeclarator": { "object": true } }])),
         ),
-        ("var foo = object.bar;", Some(serde_json::json!([{ "object": true }]))),
+        (
+            "var foo = object.bar;",
+            Some(serde_json::json!([{ "object": true }])),
+        ),
         (
             "var foo = object.bar;",
             Some(
@@ -482,7 +516,10 @@ fn test() {
             "var foo = array[0];",
             Some(serde_json::json!([{ "VariableDeclarator": { "array": false } }])),
         ),
-        ("var foo = array[0];", Some(serde_json::json!([{ "array": false }]))),
+        (
+            "var foo = array[0];",
+            Some(serde_json::json!([{ "array": false }])),
+        ),
         (
             "var foo = object.foo;",
             Some(serde_json::json!([{ "VariableDeclarator": { "object": false } }])),
@@ -554,11 +591,20 @@ fn test() {
                 serde_json::json!([ { "VariableDeclarator": { "object": false }, "AssignmentExpression": { "object": true } } ]),
             ),
         ),
-        ("class Foo extends Bar { static foo() {var foo = super.foo} }", None),
+        (
+            "class Foo extends Bar { static foo() {var foo = super.foo} }",
+            None,
+        ),
         ("foo = bar[foo];", None),
         ("var foo = bar[foo];", None),
-        ("var {foo: {bar}} = object;", Some(serde_json::json!([{ "object": true }]))),
-        ("var {bar} = object.foo;", Some(serde_json::json!([{ "object": true }]))),
+        (
+            "var {foo: {bar}} = object;",
+            Some(serde_json::json!([{ "object": true }])),
+        ),
+        (
+            "var {bar} = object.foo;",
+            Some(serde_json::json!([{ "object": true }])),
+        ),
         ("var foo = array?.[0];", None),
         ("var foo = object?.foo;", None),
         ("class C { #x; foo() { const x = this.#x; } }", None),
@@ -721,7 +767,10 @@ fn test() {
                 serde_json::json!([ { "VariableDeclarator": { "array": true, "object": false }, "AssignmentExpression": { "object": true }, }, ]),
             ),
         ),
-        ("class Foo extends Bar { static foo() {var bar = super.foo.bar} }", None),
+        (
+            "class Foo extends Bar { static foo() {var bar = super.foo.bar} }",
+            None,
+        ),
         ("var /* comment */ foo = object.foo;", None),
         ("var a, /* comment */foo = object.foo;", None),
         ("var foo /* comment */ = object.foo;", None),
@@ -785,10 +834,26 @@ fn test() {
             "class Foo extends Bar { static foo() {var {bar} = super.foo} }",
             None,
         ),
-        ("var /* comment */ foo = object.foo;", "var /* comment */ {foo} = object;", None),
-        ("var a, /* comment */foo = object.foo;", "var a, /* comment */{foo} = object;", None),
-        ("var foo = bar(/* comment */).foo;", "var {foo} = bar(/* comment */);", None),
-        ("var foo = bar/* comment */.baz.foo;", "var {foo} = bar/* comment */.baz;", None),
+        (
+            "var /* comment */ foo = object.foo;",
+            "var /* comment */ {foo} = object;",
+            None,
+        ),
+        (
+            "var a, /* comment */foo = object.foo;",
+            "var a, /* comment */{foo} = object;",
+            None,
+        ),
+        (
+            "var foo = bar(/* comment */).foo;",
+            "var {foo} = bar(/* comment */);",
+            None,
+        ),
+        (
+            "var foo = bar/* comment */.baz.foo;",
+            "var {foo} = bar/* comment */.baz;",
+            None,
+        ),
         (
             "var foo = bar[// comment
                 baz].foo;",
@@ -797,9 +862,21 @@ fn test() {
             None,
         ),
         ("var foo = (bar[baz]).foo;", "var {foo} = bar[baz];", None),
-        ("var foo = object.foo/* comment */;", "var {foo} = object/* comment */;", None),
-        ("var foo = object.foo// comment", "var {foo} = object// comment", None),
-        ("var foo = object.foo/* comment */, a;", "var {foo} = object/* comment */, a;", None),
+        (
+            "var foo = object.foo/* comment */;",
+            "var {foo} = object/* comment */;",
+            None,
+        ),
+        (
+            "var foo = object.foo// comment",
+            "var {foo} = object// comment",
+            None,
+        ),
+        (
+            "var foo = object.foo/* comment */, a;",
+            "var {foo} = object/* comment */, a;",
+            None,
+        ),
         (
             "var foo = object.foo// comment
                 , a;",
@@ -807,7 +884,11 @@ fn test() {
                 , a;",
             None,
         ),
-        ("var foo = object.foo, /* comment */ a;", "var {foo} = object, /* comment */ a;", None),
+        (
+            "var foo = object.foo, /* comment */ a;",
+            "var {foo} = object, /* comment */ a;",
+            None,
+        ),
         ("var foo = object['foo'];", "var {foo} = object;", None),
         (
             "var foo: string = object.foo;",
@@ -827,7 +908,12 @@ fn test() {
         ("foo = object['foo'];", "foo = object['foo'];", None),
     ];
 
-    Tester::new(PreferDestructuring::NAME, PreferDestructuring::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        PreferDestructuring::NAME,
+        PreferDestructuring::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

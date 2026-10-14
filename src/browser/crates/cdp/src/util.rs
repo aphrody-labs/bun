@@ -135,12 +135,18 @@ mod tests {
         // Ids are JSON documents themselves, so the literal has to carry a
         // second round of quoting without losing the id.
         let oid = r#"{"injectedScriptId":1,"id":7}"#;
-        assert_eq!(object_id_literal(oid), r#""{\"injectedScriptId\":1,\"id\":7}""#);
+        assert_eq!(
+            object_id_literal(oid),
+            r#""{\"injectedScriptId\":1,\"id\":7}""#
+        );
 
         // And a getProperties child id is that, plus `::`, plus a page-chosen
         // property name - the input this helper exists for.
         let child = format!("{oid}::lf\nx");
-        assert_eq!(object_id_literal(&child), r#""{\"injectedScriptId\":1,\"id\":7}::lf\nx""#);
+        assert_eq!(
+            object_id_literal(&child),
+            r#""{\"injectedScriptId\":1,\"id\":7}::lf\nx""#
+        );
     }
 
     #[test]
@@ -149,14 +155,20 @@ mod tests {
         // falls inside the '€'. This is exactly the shape of a malformed CDP
         // frame that would reach the `warn!("Invalid CDP: ...")` preview.
         let s = format!("{}€tail", "a".repeat(199));
-        assert!(!s.is_char_boundary(200), "setup: byte 200 splits the € char");
+        assert!(
+            !s.is_char_boundary(200),
+            "setup: byte 200 splits the € char"
+        );
 
         // The old logging code did `&s[..s.len().min(200)]`, which panics here —
         // a single crafted frame would take down the CDP processor task.
         let naive = std::panic::catch_unwind(|| {
             let _ = &s[..s.len().min(200)];
         });
-        assert!(naive.is_err(), "raw byte slice at a non-char-boundary must panic");
+        assert!(
+            naive.is_err(),
+            "raw byte slice at a non-char-boundary must panic"
+        );
 
         // The helper truncates on the boundary before the € instead.
         let safe = truncate_on_char_boundary(&s, 200);

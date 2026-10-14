@@ -44,7 +44,10 @@ pub type Comments<'a> = SpanCursor<'a, SourceComment>;
 /// Gap measurement resuming from the unmoved anchor would observe that same spacing again
 /// and emit a second blank line.
 pub fn gap_anchor_after_consumed(anchor: u32, f: &YamlFormatter<'_, '_>) -> u32 {
-    f.context().comments().last_consumed().map_or(anchor, |c| anchor.max(c.span.end))
+    f.context()
+        .comments()
+        .last_consumed()
+        .map_or(anchor, |c| anchor.max(c.span.end))
 }
 
 pub use oxc_formatter_core::spec::{Gap, classify_gap};
@@ -109,7 +112,11 @@ pub struct FormatLineCommentSuffix {
 
 impl FormatLineCommentSuffix {
     pub const fn new(span: Span) -> Self {
-        Self { span, leading_space: false, expand_parent: false }
+        Self {
+            span,
+            leading_space: false,
+            expand_parent: false,
+        }
     }
 
     pub const fn with_leading_space(mut self) -> Self {
@@ -132,7 +139,13 @@ impl<'a> Format<'a, YamlFormatContext<'a>> for FormatLineCommentSuffix {
             write!(f, maybe_space(leading_space));
             write_comment_text(span, f);
         });
-        write!(f, [line_suffix(&content), self.expand_parent.then_some(expand_parent())]);
+        write!(
+            f,
+            [
+                line_suffix(&content),
+                self.expand_parent.then_some(expand_parent())
+            ]
+        );
     }
 }
 
@@ -148,7 +161,11 @@ pub fn write_end_comments(
     let source = f.context().source_text();
     for (i, comment) in comments.iter().enumerate() {
         let span = comment.span;
-        let prev_end = if i == 0 { anchor } else { Some(comments[i - 1].span.end) };
+        let prev_end = if i == 0 {
+            anchor
+        } else {
+            Some(comments[i - 1].span.end)
+        };
         let blank = prev_end.is_some_and(|prev_end| {
             prev_end < span.start
                 && classify_gap(source.bytes_range(prev_end, span.start)) == Gap::Blank
@@ -208,9 +225,11 @@ fn pending_same_line_comment_over(
 ) -> Option<SourceComment> {
     f.context().comments().peek().filter(|comment| {
         comment.span.start >= pos
-            && f.context().source_text().all_bytes_match(pos, comment.span.start, |b| {
-                matches!(b, b' ' | b'\t') || gap_punctuation.contains(&b)
-            })
+            && f.context()
+                .source_text()
+                .all_bytes_match(pos, comment.span.start, |b| {
+                    matches!(b, b' ' | b'\t') || gap_punctuation.contains(&b)
+                })
     })
 }
 
@@ -232,7 +251,12 @@ pub fn write_trailing_same_line_comment(
         return;
     };
     f.context().comments().take_before(comment.span.end);
-    write!(f, FormatLineCommentSuffix::new(comment.span).with_leading_space().with_expand_parent());
+    write!(
+        f,
+        FormatLineCommentSuffix::new(comment.span)
+            .with_leading_space()
+            .with_expand_parent()
+    );
 }
 
 /// Returns `true` if `span` is an ignore marker (`# oxfmt-ignore` / `# prettier-ignore`).
@@ -316,7 +340,9 @@ pub fn flush_container_end_comments(
     let source = f.context().source_text();
     let mut prev_end = gap_anchor_after_consumed(prev_end, f);
     loop {
-        let Some(comment) = f.context().comments().peek() else { return prev_end };
+        let Some(comment) = f.context().comments().peek() else {
+            return prev_end;
+        };
         let span = comment.span;
         if span.end > upper_bound
             || comment.own_line_column.is_none_or(|column| column <= item_column)

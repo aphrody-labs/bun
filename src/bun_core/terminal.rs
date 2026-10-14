@@ -126,7 +126,9 @@ fn term_program_version() -> (u32, u32, u32) {
             .map(|p| {
                 p.iter()
                     .take_while(|b| b.is_ascii_digit())
-                    .fold(0u32, |n, b| n.saturating_mul(10).saturating_add(u32::from(b - b'0')))
+                    .fold(0u32, |n, b| {
+                        n.saturating_mul(10).saturating_add(u32::from(b - b'0'))
+                    })
             })
             .unwrap_or(0)
     };
@@ -350,9 +352,15 @@ impl fmt::Display for HyperlinkStart<'_> {
         for &b in path {
             match b {
                 b'\\' if cfg!(windows) => f.write_str("/")?,
-                b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'.' | b'_' | b'~' | b'/' | b':' => {
-                    f.write_char(char::from(b))?
-                }
+                b'A'..=b'Z'
+                | b'a'..=b'z'
+                | b'0'..=b'9'
+                | b'-'
+                | b'.'
+                | b'_'
+                | b'~'
+                | b'/'
+                | b':' => f.write_char(char::from(b))?,
                 _ => {
                     f.write_char('%')?;
                     f.write_char(char::from(HEX[usize::from(b >> 4)]))?;

@@ -13,7 +13,9 @@ fn validate_paths(paths: &Vec<PathBuf>) -> bool {
     if paths.is_empty() {
         true
     } else {
-        paths.iter().all(|p| p.components().all(|c| c != std::path::Component::ParentDir))
+        paths
+            .iter()
+            .all(|p| p.components().all(|c| c != std::path::Component::ParentDir))
     }
 }
 

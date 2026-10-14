@@ -21,7 +21,10 @@ use crate::{
 
 fn no_regex_spaces_diagnostic(span: Span) -> OxcDiagnostic {
     OxcDiagnostic::warn("Multiple consecutive spaces are hard to count.")
-        .with_help(format!("Use a quantifier: ` {{{size}}}`", size = span.size()))
+        .with_help(format!(
+            "Use a quantifier: ` {{{size}}}`",
+            size = span.size()
+        ))
         .with_label(span)
 }
 
@@ -123,7 +126,10 @@ impl NoRegexSpaces {
             &alloc,
             pattern.span.source_text(ctx.source_text()),
             None,
-            Options { pattern_span_offset: pattern.span.start, ..Options::default() },
+            Options {
+                pattern_span_offset: pattern.span.start,
+                ..Options::default()
+            },
         );
         let parsed_pattern = parser.parse().ok()?;
 
@@ -146,7 +152,10 @@ impl NoRegexSpaces {
 }
 
 fn find_consecutive_spaces(pattern: &Pattern) -> Option<Span> {
-    let mut finder = ConsecutiveSpaceFinder { last_space_span: None, depth: 0 };
+    let mut finder = ConsecutiveSpaceFinder {
+        last_space_span: None,
+        depth: 0,
+    };
     finder.visit_pattern(pattern);
 
     // return none if span is only one space
@@ -282,27 +291,87 @@ fn test() {
         ("var foo = /bar  baz/;", "var foo = /bar {2}baz/;", None),
         ("var foo = /bar    baz/;", "var foo = /bar {4}baz/;", None),
         ("var foo = / a b  c d /;", "var foo = / a b {2}c d /;", None),
-        ("var foo = RegExp(' a b c d  ');", "var foo = RegExp(' a b c d {2}');", None),
-        ("var foo = RegExp('bar    baz');", "var foo = RegExp('bar {4}baz');", None),
-        ("var foo = new RegExp('bar    baz');", "var foo = new RegExp('bar {4}baz');", None),
-        ("var foo = /bar   {3}baz/;", "var foo = /bar {2} {3}baz/;", None),
-        ("var foo = /bar    ?baz/;", "var foo = /bar {3} ?baz/;", None),
-        ("var foo = new RegExp('bar   *baz')", "var foo = new RegExp('bar {2} *baz')", None),
-        ("var foo = RegExp('bar   +baz')", "var foo = RegExp('bar {2} +baz')", None),
-        ("var foo = new RegExp('bar    ');", "var foo = new RegExp('bar {4}');", None),
-        (r"var foo = /bar\\  baz/;", r"var foo = /bar\\ {2}baz/;", None),
+        (
+            "var foo = RegExp(' a b c d  ');",
+            "var foo = RegExp(' a b c d {2}');",
+            None,
+        ),
+        (
+            "var foo = RegExp('bar    baz');",
+            "var foo = RegExp('bar {4}baz');",
+            None,
+        ),
+        (
+            "var foo = new RegExp('bar    baz');",
+            "var foo = new RegExp('bar {4}baz');",
+            None,
+        ),
+        (
+            "var foo = /bar   {3}baz/;",
+            "var foo = /bar {2} {3}baz/;",
+            None,
+        ),
+        (
+            "var foo = /bar    ?baz/;",
+            "var foo = /bar {3} ?baz/;",
+            None,
+        ),
+        (
+            "var foo = new RegExp('bar   *baz')",
+            "var foo = new RegExp('bar {2} *baz')",
+            None,
+        ),
+        (
+            "var foo = RegExp('bar   +baz')",
+            "var foo = RegExp('bar {2} +baz')",
+            None,
+        ),
+        (
+            "var foo = new RegExp('bar    ');",
+            "var foo = new RegExp('bar {4}');",
+            None,
+        ),
+        (
+            r"var foo = /bar\\  baz/;",
+            r"var foo = /bar\\ {2}baz/;",
+            None,
+        ),
         ("var foo = /(?:  )/;", "var foo = /(?: {2})/;", None),
-        ("var foo = RegExp('^foo(?=   )');", "var foo = RegExp('^foo(?= {3})');", None),
+        (
+            "var foo = RegExp('^foo(?=   )');",
+            "var foo = RegExp('^foo(?= {3})');",
+            None,
+        ),
         (r"var foo = /\\  /", r"var foo = /\\ {2}/", None),
         (r"var foo = / \\  /", r"var foo = / \\ {2}/", None),
         ("var foo = /  foo   /;", "var foo = / {2}foo   /;", None),
-        (r"var foo = new RegExp('\\d  ')", r"var foo = new RegExp('\\d {2}')", None),
-        (r"var foo = RegExp('\\u0041   ')", r"var foo = RegExp('\\u0041 {3}')", None),
+        (
+            r"var foo = new RegExp('\\d  ')",
+            r"var foo = new RegExp('\\d {2}')",
+            None,
+        ),
+        (
+            r"var foo = RegExp('\\u0041   ')",
+            r"var foo = RegExp('\\u0041 {3}')",
+            None,
+        ),
         ("var foo = /[   ]  /;", "var foo = /[   ] {2}/;", None),
         ("var foo = /  [   ] /;", "var foo = / {2}[   ] /;", None),
-        ("var foo = RegExp('  [ ]');", "var foo = RegExp(' {2}[ ]');", None),
-        ("var foo = /[[    ]    ]    /v;", "var foo = /[[    ]    ] {4}/v;", None),
-        ("var foo = new RegExp('[   ]  ');", "var foo = new RegExp('[   ] {2}');", None),
+        (
+            "var foo = RegExp('  [ ]');",
+            "var foo = RegExp(' {2}[ ]');",
+            None,
+        ),
+        (
+            "var foo = /[[    ]    ]    /v;",
+            "var foo = /[[    ]    ] {4}/v;",
+            None,
+        ),
+        (
+            "var foo = new RegExp('[   ]  ');",
+            "var foo = new RegExp('[   ] {2}');",
+            None,
+        ),
         (
             "var foo = new RegExp('[[    ]    ]    ', 'v');",
             "var foo = new RegExp('[[    ] {4}]    ', 'v');",

@@ -64,7 +64,10 @@ const JSON_STRINGIFY: ConformanceConfig = ConformanceConfig {
 };
 
 fn parse_options(variant: JsonVariant, spec: &OptionSet) -> JsonFormatOptions {
-    let mut options = JsonFormatOptions { variant, ..JsonFormatOptions::default() };
+    let mut options = JsonFormatOptions {
+        variant,
+        ..JsonFormatOptions::default()
+    };
     // Prettier's default `printWidth` is 80 (oxc defaults to 100); the spec's own
     // `printWidth`/`tabWidth`/`useTabs`/`endOfLine` then override inside `apply_json_options`.
     options.apply_core(CoreFormatOptions {
@@ -86,7 +89,9 @@ fn format_json(variant: JsonVariant, source_text: &str, spec: &OptionSet) -> Opt
 fn prettier_conformance_json() {
     let format =
         |_: &Path, source: &str, spec: &OptionSet| format_json(JsonVariant::Json, source, spec);
-    let Some(report) = run_conformance(&JSON, format) else { return };
+    let Some(report) = run_conformance(&JSON, format) else {
+        return;
+    };
     insta::assert_snapshot!("prettier-json", report);
 }
 
@@ -94,7 +99,9 @@ fn prettier_conformance_json() {
 fn prettier_conformance_jsonc() {
     let format =
         |_: &Path, source: &str, spec: &OptionSet| format_json(JsonVariant::Jsonc, source, spec);
-    let Some(report) = run_conformance(&JSONC, format) else { return };
+    let Some(report) = run_conformance(&JSONC, format) else {
+        return;
+    };
     insta::assert_snapshot!("prettier-jsonc", report);
 }
 
@@ -102,7 +109,9 @@ fn prettier_conformance_jsonc() {
 fn prettier_conformance_json5() {
     let format =
         |_: &Path, source: &str, spec: &OptionSet| format_json(JsonVariant::Json5, source, spec);
-    let Some(report) = run_conformance(&JSON5, format) else { return };
+    let Some(report) = run_conformance(&JSON5, format) else {
+        return;
+    };
     insta::assert_snapshot!("prettier-json5", report);
 }
 
@@ -111,6 +120,8 @@ fn prettier_conformance_json_stringify() {
     let format = |_: &Path, source: &str, spec: &OptionSet| {
         format_json(JsonVariant::JsonStringify, source, spec)
     };
-    let Some(report) = run_conformance(&JSON_STRINGIFY, format) else { return };
+    let Some(report) = run_conformance(&JSON_STRINGIFY, format) else {
+        return;
+    };
     insta::assert_snapshot!("prettier-json-stringify", report);
 }

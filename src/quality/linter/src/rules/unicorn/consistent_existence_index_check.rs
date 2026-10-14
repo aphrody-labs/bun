@@ -16,8 +16,11 @@ fn consistent_existence_index_check_diagnostic(
     replacement: &GetReplacementOutput,
     span: Span,
 ) -> OxcDiagnostic {
-    let existence_or_non_existence =
-        if replacement.replacement_value == "-1" { "non-existence" } else { "existence" };
+    let existence_or_non_existence = if replacement.replacement_value == "-1" {
+        "non-existence"
+    } else {
+        "existence"
+    };
 
     let label = format!(
         "Prefer `{} {}` over `{} {}` to check {}.",
@@ -88,7 +91,10 @@ impl Rule for ConsistentExistenceIndexCheck {
             return;
         };
 
-        let Some(symbol_id) = ctx.scoping().get_reference(identifier.reference_id()).symbol_id()
+        let Some(symbol_id) = ctx
+            .scoping()
+            .get_reference(identifier.reference_id())
+            .symbol_id()
         else {
             return;
         };

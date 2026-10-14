@@ -69,7 +69,7 @@ test runner and package manager.
   `normalizeBunSnapshot`. Prefer in-process fixtures; use a subprocess only when
   the test needs to verify CLI behavior, process isolation, workers or teardown.
 - Assert meaningful output before exit status; avoid absence-of-crash assertions.
-- Use `port: 0`, local HTTP fixtures and `VerdaccioRegistry`; no public network.
+- Use `port: 0`, local HTTP fixtures and `TestRegistry` from `registry`; no public network.
 - Await events or poll with a deadline; no fixed sleeps. Keep tests short and use
   concurrency only for independent work within the resource budget.
 - Branch leak bounds on `isASAN` / `isDebug`; avoid inflated global timeouts.

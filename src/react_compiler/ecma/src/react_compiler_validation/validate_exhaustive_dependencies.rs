@@ -81,8 +81,11 @@ pub fn validate_exhaustive_dependencies(
     // Set has_invalid_deps on StartMemoize instructions that had validation errors
     if !callbacks.invalid_memo_ids.is_empty() {
         for instr in func.instructions.iter_mut() {
-            if let InstructionValue::StartMemoize { manual_memo_id, has_invalid_deps, .. } =
-                &mut instr.value
+            if let InstructionValue::StartMemoize {
+                manual_memo_id,
+                has_invalid_deps,
+                ..
+            } = &mut instr.value
                 && callbacks.invalid_memo_ids.contains(manual_memo_id)
             {
                 *has_invalid_deps = true;
@@ -143,18 +146,26 @@ enum InferredDependency<'a> {
 /// Hashable key for deduplicating inferred dependencies in a Set
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 enum InferredDependencyKey<'a> {
-    Local { identifier: IdentifierId, path_key: String },
-    Global { name: Ident<'a> },
+    Local {
+        identifier: IdentifierId,
+        path_key: String,
+    },
+    Global {
+        name: Ident<'a>,
+    },
 }
 
 fn dep_to_key<'a>(dep: &InferredDependency<'a>) -> InferredDependencyKey<'a> {
     match dep {
-        InferredDependency::Local { identifier, path, .. } => {
-            InferredDependencyKey::Local { identifier: *identifier, path_key: path_to_string(path) }
-        }
-        InferredDependency::Global { binding } => {
-            InferredDependencyKey::Global { name: binding.name() }
-        }
+        InferredDependency::Local {
+            identifier, path, ..
+        } => InferredDependencyKey::Local {
+            identifier: *identifier,
+            path_key: path_to_string(path),
+        },
+        InferredDependency::Global { binding } => InferredDependencyKey::Global {
+            name: binding.name(),
+        },
     }
 }
 
@@ -186,7 +197,9 @@ fn is_effect_event_function_type(ty: &Type) -> bool {
 
 fn is_stable_type(ty: &Type) -> bool {
     match ty {
-        Type::Function { shape_id: Some(id), .. } => matches!(
+        Type::Function {
+            shape_id: Some(id), ..
+        } => matches!(
             id.as_str(),
             "BuiltInSetState"
                 | "BuiltInSetActionState"
@@ -255,7 +268,10 @@ fn is_sub_path_ignoring_optionals(
     path: &[DependencyPathEntry],
 ) -> bool {
     subpath.len() <= path.len()
-        && subpath.iter().zip(path.iter()).all(|(a, b)| a.property == b.property)
+        && subpath
+            .iter()
+            .zip(path.iter())
+            .all(|(a, b)| a.property == b.property)
 }
 
 // =============================================================================
@@ -309,8 +325,12 @@ fn find_optional_places(func: &HirFunction) -> FxHashMap<IdentifierId, bool> {
         if visited.contains(&block.id) {
             continue;
         }
-        if let Terminal::Optional { test, fallthrough: optional_fallthrough, optional, .. } =
-            &block.terminal
+        if let Terminal::Optional {
+            test,
+            fallthrough: optional_fallthrough,
+            optional,
+            ..
+        } = &block.terminal
         {
             visited.insert(block.id);
             let mut test_block_id = *test;
@@ -320,7 +340,12 @@ fn find_optional_places(func: &HirFunction) -> FxHashMap<IdentifierId, bool> {
                 let test_block = &func.body.blocks[&test_block_id];
                 visited.insert(test_block.id);
                 match &test_block.terminal {
-                    Terminal::Branch { test: test_place, consequent, fallthrough, .. } => {
+                    Terminal::Branch {
+                        test: test_place,
+                        consequent,
+                        fallthrough,
+                        ..
+                    } => {
                         let is_optional = queue
                             .pop()
                             .expect("Expected an optional value for each optional test condition");
@@ -344,16 +369,26 @@ fn find_optional_places(func: &HirFunction) -> FxHashMap<IdentifierId, bool> {
                             test_block_id = *fallthrough;
                         }
                     }
-                    Terminal::Optional { optional: opt, test: inner_test, .. } => {
+                    Terminal::Optional {
+                        optional: opt,
+                        test: inner_test,
+                        ..
+                    } => {
                         queue.push(Some(*opt));
                         test_block_id = *inner_test;
                     }
-                    Terminal::Logical { test: inner_test, .. }
-                    | Terminal::Ternary { test: inner_test, .. } => {
+                    Terminal::Logical {
+                        test: inner_test, ..
+                    }
+                    | Terminal::Ternary {
+                        test: inner_test, ..
+                    } => {
                         queue.push(None);
                         test_block_id = *inner_test;
                     }
-                    Terminal::Sequence { block: seq_block, .. } => {
+                    Terminal::Sequence {
+                        block: seq_block, ..
+                    } => {
                         test_block_id = *seq_block;
                     }
                     Terminal::MaybeThrow { continuation, .. } => {
@@ -384,7 +419,10 @@ fn add_dependency<'a>(
     locals: &FxHashSet<IdentifierId>,
 ) {
     match dep {
-        Temporary::Aggregate { dependencies: agg_deps, .. } => {
+        Temporary::Aggregate {
+            dependencies: agg_deps,
+            ..
+        } => {
             for d in agg_deps {
                 add_dependency_inferred(d, dependencies, dep_keys, locals);
             }
@@ -396,7 +434,12 @@ fn add_dependency<'a>(
                 dependencies.push(inferred);
             }
         }
-        Temporary::Local { identifier, path, context, span } => {
+        Temporary::Local {
+            identifier,
+            path,
+            context,
+            span,
+        } => {
             if !locals.contains(identifier) {
                 let inferred = InferredDependency::Local {
                     identifier: *identifier,
@@ -491,10 +534,17 @@ fn collect_dependencies<'a>(
             for (_pred_id, operand) in &phi.operands {
                 if let Some(dep) = temporaries.get(&operand.identifier) {
                     match dep {
-                        Temporary::Aggregate { dependencies: agg, .. } => {
+                        Temporary::Aggregate {
+                            dependencies: agg, ..
+                        } => {
                             deps.extend(agg.iter().cloned());
                         }
-                        Temporary::Local { identifier, path, context, span } => {
+                        Temporary::Local {
+                            identifier,
+                            path,
+                            context,
+                            span,
+                        } => {
                             deps.push(InferredDependency::Local {
                                 identifier: *identifier,
                                 path: path.clone(),
@@ -513,7 +563,12 @@ fn collect_dependencies<'a>(
             } else if deps.len() == 1 {
                 let dep = &deps[0];
                 match dep {
-                    InferredDependency::Local { identifier, path, context, span } => {
+                    InferredDependency::Local {
+                        identifier,
+                        path,
+                        context,
+                        span,
+                    } => {
                         temporaries.insert(
                             phi.place.identifier,
                             Temporary::Local {
@@ -525,14 +580,19 @@ fn collect_dependencies<'a>(
                         );
                     }
                     InferredDependency::Global { binding } => {
-                        temporaries
-                            .insert(phi.place.identifier, Temporary::Global { binding: *binding });
+                        temporaries.insert(
+                            phi.place.identifier,
+                            Temporary::Global { binding: *binding },
+                        );
                     }
                 }
             } else {
                 temporaries.insert(
                     phi.place.identifier,
-                    Temporary::Aggregate { dependencies: deps, span: None },
+                    Temporary::Aggregate {
+                        dependencies: deps,
+                        span: None,
+                    },
                 );
             }
         }
@@ -567,7 +627,9 @@ fn collect_dependencies<'a>(
                         }
                     }
                 }
-                InstructionValue::DeclareLocal { lvalue: decl_lv, .. } => {
+                InstructionValue::DeclareLocal {
+                    lvalue: decl_lv, ..
+                } => {
                     temporaries.insert(
                         decl_lv.place.identifier,
                         Temporary::Local {
@@ -579,7 +641,11 @@ fn collect_dependencies<'a>(
                     );
                     locals.insert(decl_lv.place.identifier);
                 }
-                InstructionValue::StoreLocal { lvalue: store_lv, value: store_val, .. } => {
+                InstructionValue::StoreLocal {
+                    lvalue: store_lv,
+                    value: store_val,
+                    ..
+                } => {
                     let has_name = identifiers[store_lv.place.identifier].name.is_some();
                     if !has_name {
                         // Unnamed: propagate temporary
@@ -609,7 +675,9 @@ fn collect_dependencies<'a>(
                         }
                     }
                 }
-                InstructionValue::DeclareContext { lvalue: decl_lv, .. } => {
+                InstructionValue::DeclareContext {
+                    lvalue: decl_lv, ..
+                } => {
                     temporaries.insert(
                         decl_lv.place.identifier,
                         Temporary::Local {
@@ -621,7 +689,11 @@ fn collect_dependencies<'a>(
                     );
                     locals.insert(decl_lv.place.identifier);
                 }
-                InstructionValue::StoreContext { lvalue: store_lv, value: store_val, .. } => {
+                InstructionValue::StoreContext {
+                    lvalue: store_lv,
+                    value: store_val,
+                    ..
+                } => {
                     visit_candidate_dependency(
                         store_val,
                         temporaries,
@@ -642,7 +714,11 @@ fn collect_dependencies<'a>(
                         locals.insert(store_lv.place.identifier);
                     }
                 }
-                InstructionValue::Destructure { value: destr_val, lvalue: destr_lv, .. } => {
+                InstructionValue::Destructure {
+                    value: destr_val,
+                    lvalue: destr_lv,
+                    ..
+                } => {
                     visit_candidate_dependency(
                         destr_val,
                         temporaries,
@@ -689,7 +765,13 @@ fn collect_dependencies<'a>(
                     } else {
                         // Extend path
                         let obj_temp = temporaries.get(&object.identifier).cloned();
-                        if let Some(Temporary::Local { identifier, path, context, .. }) = obj_temp {
+                        if let Some(Temporary::Local {
+                            identifier,
+                            path,
+                            context,
+                            ..
+                        }) = obj_temp
+                        {
                             let optional =
                                 optionals.get(&object.identifier).copied().unwrap_or(false);
                             let mut new_path = path.clone();
@@ -727,7 +809,12 @@ fn collect_dependencies<'a>(
                     temporaries.insert(lvalue_id, function_deps.clone());
                     add_dependency(&function_deps, &mut dependencies, &mut dep_keys, &locals);
                 }
-                InstructionValue::StartMemoize { manual_memo_id, deps, deps_span, .. } => {
+                InstructionValue::StartMemoize {
+                    manual_memo_id,
+                    deps,
+                    deps_span,
+                    ..
+                } => {
                     if let Some(cb) = callbacks.as_mut() {
                         // onStartMemoize — mirrors TS behavior of clearing dependencies and locals
                         *cb.start_memo = Some(StartMemoInfo {
@@ -744,7 +831,11 @@ fn collect_dependencies<'a>(
                         saved_locals = Some(take(&mut locals));
                     }
                 }
-                InstructionValue::FinishMemoize { manual_memo_id, decl, .. } => {
+                InstructionValue::FinishMemoize {
+                    manual_memo_id,
+                    decl,
+                    ..
+                } => {
                     if let Some(cb) = callbacks.as_mut() {
                         // onFinishMemoize — mirrors TS behavior
                         let sm = cb.start_memo.take();
@@ -837,7 +928,10 @@ fn collect_dependencies<'a>(
                     }
                     temporaries.insert(
                         lvalue_id,
-                        Temporary::Aggregate { dependencies: array_deps, span: *span },
+                        Temporary::Aggregate {
+                            dependencies: array_deps,
+                            span: *span,
+                        },
                     );
                 }
                 InstructionValue::CallExpression { callee, args, .. } => {
@@ -861,7 +955,8 @@ fn collect_dependencies<'a>(
                                 let manual_deps = temporaries.get(&deps_place.identifier).cloned();
                                 if let (
                                     Some(Temporary::Aggregate {
-                                        dependencies: fn_dep_list, ..
+                                        dependencies: fn_dep_list,
+                                        ..
                                     }),
                                     Some(Temporary::Aggregate {
                                         dependencies: manual_dep_list,
@@ -946,7 +1041,12 @@ fn collect_dependencies<'a>(
                         );
                     }
                 }
-                InstructionValue::MethodCall { receiver, property, args, .. } => {
+                InstructionValue::MethodCall {
+                    receiver,
+                    property,
+                    args,
+                    ..
+                } => {
                     // Check if this is an effect hook call
                     if let Some(cb) = callbacks.as_mut() {
                         let prop_ty = get_identifier_type(property.identifier, identifiers, types);
@@ -967,7 +1067,8 @@ fn collect_dependencies<'a>(
                                 let manual_deps = temporaries.get(&deps_place.identifier).cloned();
                                 if let (
                                     Some(Temporary::Aggregate {
-                                        dependencies: fn_dep_list, ..
+                                        dependencies: fn_dep_list,
+                                        ..
                                     }),
                                     Some(Temporary::Aggregate {
                                         dependencies: manual_dep_list,
@@ -1097,7 +1198,10 @@ fn collect_dependencies<'a>(
         }
     }
 
-    Ok(Temporary::Aggregate { dependencies, span: None })
+    Ok(Temporary::Aggregate {
+        dependencies,
+        span: None,
+    })
 }
 
 // =============================================================================
@@ -1123,8 +1227,16 @@ fn validate_dependencies(
                 InferredDependency::Global { binding: bb },
             ) => ab.name().as_str().cmp(bb.name().as_str()),
             (
-                InferredDependency::Local { identifier: a_id, path: a_path, .. },
-                InferredDependency::Local { identifier: b_id, path: b_path, .. },
+                InferredDependency::Local {
+                    identifier: a_id,
+                    path: a_path,
+                    ..
+                },
+                InferredDependency::Local {
+                    identifier: b_id,
+                    path: b_path,
+                    ..
+                },
             ) => {
                 let a_name = get_identifier_name(*a_id, identifiers);
                 let b_name = get_identifier_name(*b_id, identifiers);
@@ -1156,7 +1268,9 @@ fn validate_dependencies(
             }
             (
                 InferredDependency::Global { binding: ab },
-                InferredDependency::Local { identifier: b_id, .. },
+                InferredDependency::Local {
+                    identifier: b_id, ..
+                },
             ) => {
                 let a_name = ab.name();
                 let b_name = get_identifier_name(*b_id, identifiers);
@@ -1166,7 +1280,9 @@ fn validate_dependencies(
                 }
             }
             (
-                InferredDependency::Local { identifier: a_id, .. },
+                InferredDependency::Local {
+                    identifier: a_id, ..
+                },
                 InferredDependency::Global { binding: bb },
             ) => {
                 let a_name = get_identifier_name(*a_id, identifiers);
@@ -1194,14 +1310,21 @@ fn validate_dependencies(
                 is_equal_temporary(prev_dep, dep)
                     || (matches!(
                         (prev_dep, dep),
-                        (InferredDependency::Local { .. }, InferredDependency::Local { .. })
+                        (
+                            InferredDependency::Local { .. },
+                            InferredDependency::Local { .. }
+                        )
                     ) && {
                         if let (
                             InferredDependency::Local {
-                                identifier: prev_id, path: prev_path, ..
+                                identifier: prev_id,
+                                path: prev_path,
+                                ..
                             },
                             InferredDependency::Local {
-                                identifier: dep_id, path: dep_path, ..
+                                identifier: dep_id,
+                                path: dep_path,
+                                ..
                             },
                         ) = (prev_dep, dep)
                         {
@@ -1242,7 +1365,9 @@ fn validate_dependencies(
                 }
                 continue;
             }
-            InferredDependency::Local { identifier, path, .. } => {
+            InferredDependency::Local {
+                identifier, path, ..
+            } => {
                 // Skip effect event functions
                 let ty = get_identifier_type(*identifier, identifiers, types);
                 if is_effect_event_function_type(ty) {
@@ -1276,7 +1401,9 @@ fn validate_dependencies(
         if matched.contains(&i) {
             continue;
         }
-        if let ManualMemoDependencyRoot::NamedLocal { constant, value, .. } = &dep.root
+        if let ManualMemoDependencyRoot::NamedLocal {
+            constant, value, ..
+        } = &dep.root
             && *constant
         {
             let dep_ty = get_identifier_type(value.identifier, identifiers, types);
@@ -1289,10 +1416,18 @@ fn validate_dependencies(
     }
 
     // Filter based on report mode
-    let filtered_missing: Vec<&InferredDependency> =
-        if exhaustive_deps_report_mode == "extra-only" { Vec::new() } else { missing };
+    let filtered_missing: Vec<&InferredDependency> = if exhaustive_deps_report_mode == "extra-only"
+    {
+        Vec::new()
+    } else {
+        missing
+    };
     let filtered_extra: Vec<&ManualMemoDependency> =
-        if exhaustive_deps_report_mode == "missing-only" { Vec::new() } else { extra };
+        if exhaustive_deps_report_mode == "missing-only" {
+            Vec::new()
+        } else {
+            extra
+        };
 
     if filtered_missing.is_empty() && filtered_extra.is_empty() {
         return Ok(None);
@@ -1308,7 +1443,13 @@ fn validate_dependencies(
 
     // Add detail items for missing deps
     for dep in &filtered_missing {
-        if let InferredDependency::Local { identifier, path: _, span, .. } = dep {
+        if let InferredDependency::Local {
+            identifier,
+            path: _,
+            span,
+            ..
+        } = dep
+        {
             let ty = get_identifier_type(*identifier, identifiers, types);
             let hint = if is_stable_type(ty) {
                 ". Refs, setState functions, and other \"stable\" values generally do not need to be added as dependencies, but this variable may change over time to point to different values"
@@ -1337,7 +1478,9 @@ fn validate_dependencies(
                 // Check if there's a matching inferred dep
                 let matching_inferred = inferred.iter().find(|inf_dep| {
                     if let InferredDependency::Local {
-                        identifier: inf_id, path: inf_path, ..
+                        identifier: inf_id,
+                        path: inf_path,
+                        ..
                     } = inf_dep
                     {
                         *inf_id == value.identifier
@@ -1404,7 +1547,9 @@ fn print_inferred_dependency(
 ) -> String {
     match dep {
         InferredDependency::Global { binding } => binding.name().to_string(),
-        InferredDependency::Local { identifier, path, .. } => {
+        InferredDependency::Local {
+            identifier, path, ..
+        } => {
             let name = get_identifier_name(*identifier, identifiers).unwrap_or("<unnamed>");
             let path_str: String = path
                 .iter()
@@ -1475,8 +1620,16 @@ fn is_equal_temporary(a: &InferredDependency, b: &InferredDependency) -> bool {
             InferredDependency::Global { binding: bb },
         ) => ab.name() == bb.name(),
         (
-            InferredDependency::Local { identifier: a_id, path: a_path, .. },
-            InferredDependency::Local { identifier: b_id, path: b_path, .. },
+            InferredDependency::Local {
+                identifier: a_id,
+                path: a_path,
+                ..
+            },
+            InferredDependency::Local {
+                identifier: b_id,
+                path: b_path,
+                ..
+            },
         ) => a_id == b_id && are_equal_paths(a_path, b_path),
         _ => false,
     }
@@ -1491,8 +1644,16 @@ fn create_diagnostic(
     missing: &[&InferredDependency],
     extra: &[&ManualMemoDependency],
 ) -> Result<OxcDiagnostic, OxcDiagnostic> {
-    let missing_str = if !missing.is_empty() { Some("missing") } else { None };
-    let extra_str = if !extra.is_empty() { Some("extra") } else { None };
+    let missing_str = if !missing.is_empty() {
+        Some("missing")
+    } else {
+        None
+    };
+    let extra_str = if !extra.is_empty() {
+        Some("extra")
+    } else {
+        None
+    };
 
     let (reason, description) = match category {
         ErrorCategory::MemoDependencies => {
@@ -1546,7 +1707,11 @@ fn create_diagnostic(
         }
     };
 
-    Ok(diagnostics::exhaustive_dependencies(category, &reason, description))
+    Ok(diagnostics::exhaustive_dependencies(
+        category,
+        &reason,
+        description,
+    ))
 }
 
 /// Collect lvalue identifier ids from instruction value (for the default branch).

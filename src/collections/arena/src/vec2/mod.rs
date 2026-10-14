@@ -466,7 +466,9 @@ impl<'a, T: 'a, A: Alloc> Vec<'a, T, A> {
     /// ```
     #[inline]
     pub fn new_in(alloc: &'a A) -> Vec<'a, T, A> {
-        Vec { buf: RawVec::new_in(alloc) }
+        Vec {
+            buf: RawVec::new_in(alloc),
+        }
     }
 
     /// Constructs a new, empty `Vec<'a, T>` with the specified capacity.
@@ -503,7 +505,9 @@ impl<'a, T: 'a, A: Alloc> Vec<'a, T, A> {
     /// ```
     #[inline]
     pub fn with_capacity_in(capacity: usize, alloc: &'a A) -> Vec<'a, T, A> {
-        Vec { buf: RawVec::with_capacity_in(capacity, alloc) }
+        Vec {
+            buf: RawVec::with_capacity_in(capacity, alloc),
+        }
     }
 
     /// Construct a new `Vec` from the given iterator's items.
@@ -1307,7 +1311,9 @@ impl<'a, T: 'a, A: Alloc> Vec<'a, T, A> {
                     unsafe {
                         ptr::copy(
                             self.v.as_ptr().add(self.processed_len),
-                            self.v.as_mut_ptr().add(self.processed_len - self.deleted_cnt),
+                            self.v
+                                .as_mut_ptr()
+                                .add(self.processed_len - self.deleted_cnt),
                             self.original_len - self.processed_len,
                         );
                     }
@@ -1319,7 +1325,12 @@ impl<'a, T: 'a, A: Alloc> Vec<'a, T, A> {
             }
         }
 
-        let mut g = BackshiftOnDrop { v: self, processed_len: 0, deleted_cnt: 0, original_len };
+        let mut g = BackshiftOnDrop {
+            v: self,
+            processed_len: 0,
+            deleted_cnt: 0,
+            original_len,
+        };
 
         fn process_loop<F, T, A: Alloc, const DELETED: bool>(
             original_len: usize,
@@ -1395,7 +1406,13 @@ impl<'a, T: 'a, A: Alloc> Vec<'a, T, A> {
             self.set_len(0);
         }
 
-        DrainFilter { vec: self, idx: 0, del: 0, old_len, pred: filter }
+        DrainFilter {
+            vec: self,
+            idx: 0,
+            del: 0,
+            old_len,
+            pred: filter,
+        }
     }
 
     /// Removes all but the first of consecutive elements in the vector that resolve to the same
@@ -2301,7 +2318,11 @@ impl<'a, T: 'a, A: Alloc> IntoIterator for Vec<'a, T, A> {
             } else {
                 begin.add(self.len_usize()) as *const T
             };
-            IntoIter { phantom: PhantomData, ptr: begin, end }
+            IntoIter {
+                phantom: PhantomData,
+                ptr: begin,
+                end,
+            }
         }
     }
 }
@@ -2417,7 +2438,10 @@ impl<'a, T: 'a, A: Alloc> Vec<'a, T, A> {
         R: RangeBounds<usize>,
         I: IntoIterator<Item = T>,
     {
-        Splice { drain: self.drain(range), replace_with: replace_with.into_iter() }
+        Splice {
+            drain: self.drain(range),
+            replace_with: replace_with.into_iter(),
+        }
     }
 }
 
@@ -2759,7 +2783,9 @@ impl<T, A: Alloc> Iterator for Drain<'_, '_, T, A> {
 
     #[inline]
     fn next(&mut self) -> Option<T> {
-        self.iter.next().map(|elt| unsafe { ptr::read(elt as *const _) })
+        self.iter
+            .next()
+            .map(|elt| unsafe { ptr::read(elt as *const _) })
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
@@ -2770,7 +2796,9 @@ impl<T, A: Alloc> Iterator for Drain<'_, '_, T, A> {
 impl<T, A: Alloc> DoubleEndedIterator for Drain<'_, '_, T, A> {
     #[inline]
     fn next_back(&mut self) -> Option<T> {
-        self.iter.next_back().map(|elt| unsafe { ptr::read(elt as *const _) })
+        self.iter
+            .next_back()
+            .map(|elt| unsafe { ptr::read(elt as *const _) })
     }
 }
 

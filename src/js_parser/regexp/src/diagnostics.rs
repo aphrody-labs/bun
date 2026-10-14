@@ -26,9 +26,11 @@ pub fn duplicated_flags(span: Span, flag: &str) -> OxcDiagnostic {
 
 #[cold]
 pub fn invalid_unicode_flags(span: Span) -> OxcDiagnostic {
-    OxcDiagnostic::error(format!("{PREFIX} Invalid unicode flags combination `u` and `v`"))
-        .with_label(span)
-        .with_help("The `v` flag is a superset of `u`. Use only either of them")
+    OxcDiagnostic::error(format!(
+        "{PREFIX} Invalid unicode flags combination `u` and `v`"
+    ))
+    .with_label(span)
+    .with_help("The `v` flag is a superset of `u`. Use only either of them")
 }
 
 // ---
@@ -56,9 +58,11 @@ pub fn parse_pattern_incomplete(span: Span) -> OxcDiagnostic {
 
 #[cold]
 pub fn lone_quantifier(span: Span, kind: &str) -> OxcDiagnostic {
-    OxcDiagnostic::error(format!("{PREFIX} Lone quantifier found, expected with `{kind}`"))
-        .with_label(span)
-        .with_help("Quantifiers must follow an expression. To match literally, escape it with `\\`")
+    OxcDiagnostic::error(format!(
+        "{PREFIX} Lone quantifier found, expected with `{kind}`"
+    ))
+    .with_label(span)
+    .with_help("Quantifiers must follow an expression. To match literally, escape it with `\\`")
 }
 
 #[cold]
@@ -84,13 +88,13 @@ pub fn invalid_braced_quantifier(span: Span) -> OxcDiagnostic {
 
 #[cold]
 pub fn invalid_indexed_reference(span: Span, max: usize) -> OxcDiagnostic {
-    OxcDiagnostic::error(format!("{PREFIX} Invalid indexed reference")).with_label(span).with_help(
-        match max {
+    OxcDiagnostic::error(format!("{PREFIX} Invalid indexed reference"))
+        .with_label(span)
+        .with_help(match max {
             0 => "There are no capturing groups defined in this pattern".into(),
             1 => "This pattern only has 1 capturing group".into(),
             _ => format!("This pattern only has {max} capturing groups"),
-        },
-    )
+        })
 }
 
 #[cold]
@@ -122,9 +126,11 @@ pub fn invalid_unicode_property_name_negative_strings(span: Span, name: &str) ->
 
 #[cold]
 pub fn invalid_character_class(span: Span) -> OxcDiagnostic {
-    OxcDiagnostic::error(format!("{PREFIX} Invalid character class with strings unicode property"))
-        .with_label(span)
-        .with_help("Properties that match string related unicode properties require the `v` flag")
+    OxcDiagnostic::error(format!(
+        "{PREFIX} Invalid character class with strings unicode property"
+    ))
+    .with_label(span)
+    .with_help("Properties that match string related unicode properties require the `v` flag")
 }
 
 #[cold]
@@ -164,9 +170,11 @@ pub fn empty_class_set_expression(span: Span) -> OxcDiagnostic {
 
 #[cold]
 pub fn class_intersection_unexpected_ampersand(span: Span) -> OxcDiagnostic {
-    OxcDiagnostic::error(format!("{PREFIX} Unexpected `&` inside of class intersection"))
-        .with_label(span)
-        .with_help("A third `&` is not allowed after `&&`. Did you mean `[a&&[b]]`?")
+    OxcDiagnostic::error(format!(
+        "{PREFIX} Unexpected `&` inside of class intersection"
+    ))
+    .with_label(span)
+    .with_help("A third `&` is not allowed after `&&`. Did you mean `[a&&[b]]`?")
 }
 
 #[cold]
@@ -194,9 +202,11 @@ pub fn too_large_number_in_braced_quantifier(span: Span) -> OxcDiagnostic {
 
 #[cold]
 pub fn braced_quantifier_out_of_order(span: Span) -> OxcDiagnostic {
-    OxcDiagnostic::error(format!("{PREFIX} Numbers out of order in braced quantifier"))
-        .with_label(span)
-        .with_help("In `{n,m}`, the minimum `n` must be less than or equal to the maximum `m`")
+    OxcDiagnostic::error(format!(
+        "{PREFIX} Numbers out of order in braced quantifier"
+    ))
+    .with_label(span)
+    .with_help("In `{n,m}`, the minimum `n` must be less than or equal to the maximum `m`")
 }
 
 #[cold]
@@ -234,9 +244,11 @@ pub fn invalid_unicode_escape_sequence(span: Span) -> OxcDiagnostic {
 
 #[cold]
 pub fn invalid_surrogate_pair(span: Span) -> OxcDiagnostic {
-    OxcDiagnostic::error(format!("{PREFIX} Invalid surrogate pair")).with_label(span).with_help(
-        "A high surrogate (0xD800-0xDBFF) must be followed by a low surrogate (0xDC00-0xDFFF)",
-    )
+    OxcDiagnostic::error(format!("{PREFIX} Invalid surrogate pair"))
+        .with_label(span)
+        .with_help(
+            "A high surrogate (0xD800-0xDBFF) must be followed by a low surrogate (0xDC00-0xDFFF)",
+        )
 }
 
 #[cold]
@@ -264,5 +276,8 @@ pub fn empty_modifiers(span: Span) -> OxcDiagnostic {
 pub fn unknown_modifiers(span: Span, valid_modifiers: &[&str]) -> OxcDiagnostic {
     OxcDiagnostic::error(format!("{PREFIX} Unknown modifiers"))
         .with_label(span)
-        .with_help(format!("Valid modifiers are: {}", valid_modifiers.join(", ")))
+        .with_help(format!(
+            "Valid modifiers are: {}",
+            valid_modifiers.join(", ")
+        ))
 }

@@ -74,7 +74,11 @@ pub fn consistent(flat: &str, marks: &[Mark]) -> bool {
                 let prev = flat[..i].chars().next_back();
                 let next = flat[i + len..].chars().next();
                 let run = Run::new(marker, len, prev, next, &constructs);
-                runs.push(PrintedRun { at, run, group: group_of(at) });
+                runs.push(PrintedRun {
+                    at,
+                    run,
+                    group: group_of(at),
+                });
                 i += len;
             }
             _ => i += 1,
@@ -84,14 +88,22 @@ pub fn consistent(flat: &str, marks: &[Mark]) -> bool {
     for group in 0..groups.len() {
         let members: Vec<&PrintedRun> = runs.iter().filter(|r| r.group == group).collect();
         let index_of = |offset: u32| -> Option<usize> {
-            members.iter().position(|r| r.at <= offset && offset < r.at + to_u32(r.run.len))
+            members
+                .iter()
+                .position(|r| r.at <= offset && offset < r.at + to_u32(r.run.len))
         };
         let mut expected: Vec<Pair> = marks
             .iter()
             .filter_map(|m| match *m {
-                Mark::Delimiter { open, close, strong } if group_of(open) == group => {
-                    Some(Pair { opener: index_of(open)?, closer: index_of(close)?, strong })
-                }
+                Mark::Delimiter {
+                    open,
+                    close,
+                    strong,
+                } if group_of(open) == group => Some(Pair {
+                    opener: index_of(open)?,
+                    closer: index_of(close)?,
+                    strong,
+                }),
                 _ => None,
             })
             .collect();

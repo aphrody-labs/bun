@@ -97,16 +97,22 @@ impl Rule for NoUnusedPrivateClassMembers {
     fn run_once(&self, ctx: &LintContext) {
         ctx.classes().iter_enumerated().for_each(|(class_id, _)| {
             for (element_id, element) in ctx.classes().elements[class_id].iter_enumerated() {
-                if !element.kind.intersects(ElementKind::Property | ElementKind::Method) {
+                if !element
+                    .kind
+                    .intersects(ElementKind::Property | ElementKind::Method)
+                {
                     continue;
                 }
 
                 if element.is_private
-                    && !ctx.classes().iter_private_identifiers(class_id).any(|ident| {
-                        // If the element is a property, it must be read.
-                        (!element.kind.is_property() || is_read(ident.id, ctx.semantic()))
-                            && ident.element_ids.contains(&element_id)
-                    })
+                    && !ctx
+                        .classes()
+                        .iter_private_identifiers(class_id)
+                        .any(|ident| {
+                            // If the element is a property, it must be read.
+                            (!element.kind.is_property() || is_read(ident.id, ctx.semantic()))
+                                && ident.element_ids.contains(&element_id)
+                        })
                 {
                     ctx.diagnostic(no_unused_private_class_members_diagnostic(
                         &element.name,
@@ -243,9 +249,10 @@ fn is_value_context(parent: &AstNode, child: &AstNode, semantic: &Semantic<'_>) 
         | AstKind::DoWhileStatement(_)
         | AstKind::AwaitExpression(_)
         | AstKind::SequenceExpression(_) => true,
-        AstKind::FormalParameter(p) => {
-            p.initializer.as_ref().is_some_and(|init| init.span().contains_inclusive(child.span()))
-        }
+        AstKind::FormalParameter(p) => p
+            .initializer
+            .as_ref()
+            .is_some_and(|init| init.span().contains_inclusive(child.span())),
         AstKind::AssignmentExpression(assign_expr) => {
             // The right-hand side of an assignment is always in a value context (being read for assignment)
             assign_expr.right.span().contains_inclusive(child.span())
@@ -271,9 +278,13 @@ fn is_value_context(parent: &AstNode, child: &AstNode, semantic: &Semantic<'_>) 
 /// Check if a compound assignment result is being used in a value context
 fn is_compound_assignment_read(parent_id: NodeId, semantic: &Semantic) -> bool {
     let assignment_expr = semantic.nodes().get_node(parent_id);
-    semantic.nodes().ancestors(parent_id).next().is_some_and(|assignment_parent| {
-        is_value_context(assignment_parent, assignment_expr, semantic)
-    })
+    semantic
+        .nodes()
+        .ancestors(parent_id)
+        .next()
+        .is_some_and(|assignment_parent| {
+            is_value_context(assignment_parent, assignment_expr, semantic)
+        })
 }
 
 #[test]
@@ -659,6 +670,11 @@ fn test() {
         r"class Foo { #a; #b; #c; method() { this.#a ? this.#b : this.#c; } }",
     ];
 
-    Tester::new(NoUnusedPrivateClassMembers::NAME, NoUnusedPrivateClassMembers::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        NoUnusedPrivateClassMembers::NAME,
+        NoUnusedPrivateClassMembers::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

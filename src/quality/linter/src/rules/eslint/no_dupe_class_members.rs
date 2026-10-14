@@ -181,6 +181,11 @@ fn test() {
         "class A { foo;  foo() {}}",
     ];
 
-    Tester::new(NoDupeClassMembers::NAME, NoDupeClassMembers::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        NoDupeClassMembers::NAME,
+        NoDupeClassMembers::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

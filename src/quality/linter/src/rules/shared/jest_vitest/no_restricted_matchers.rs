@@ -132,7 +132,10 @@ impl NoRestrictedMatchersConfig {
             .collect::<Vec<_>>()
             .join(".");
 
-        let span = Span::new(members.first().unwrap().span.start, members.last().unwrap().span.end);
+        let span = Span::new(
+            members.first().unwrap().span.start,
+            members.last().unwrap().span.end,
+        );
 
         for (restriction, message) in &self.restricted_matchers {
             if Self::check_restriction(chain_call.as_str(), restriction.as_str()) {
@@ -147,7 +150,9 @@ impl NoRestrictedMatchersConfig {
 
     fn check_restriction(chain_call: &str, restriction: &str) -> bool {
         if MODIFIER_NAME.contains(&restriction)
-            || Path::new(restriction).extension().is_some_and(|ext| ext.eq_ignore_ascii_case("not"))
+            || Path::new(restriction)
+                .extension()
+                .is_some_and(|ext| ext.eq_ignore_ascii_case("not"))
         {
             chain_call.starts_with(restriction)
         } else {

@@ -192,7 +192,12 @@ impl ESTree for NewTargetProperty<'_> {
 }
 
 fn serialize_meta_property_identifier<S: Serializer>(serializer: S, span: Span, name: Ident<'_>) {
-    IdentifierName { node_id: Cell::new(NodeId::DUMMY), span, name }.serialize(serializer);
+    IdentifierName {
+        node_id: Cell::new(NodeId::DUMMY),
+        span,
+        name,
+    }
+    .serialize(serializer);
 }
 
 // ----------------------------------------
@@ -605,8 +610,10 @@ impl ESTree for FormalParameterConverter<'_, '_> {
 
                 if let Some(init) = &param.initializer {
                     let pattern_span = param.pattern.span();
-                    let left_span_end =
-                        param.type_annotation.as_ref().map_or(pattern_span.end, |ta| ta.span.end);
+                    let left_span_end = param
+                        .type_annotation
+                        .as_ref()
+                        .map_or(pattern_span.end, |ta| ta.span.end);
                     let assignment_span = Span::new(pattern_span.start, init.span().end);
 
                     state.serialize_field(
@@ -621,8 +628,10 @@ impl ESTree for FormalParameterConverter<'_, '_> {
                 } else {
                     let override_span = if param.optional {
                         let pattern_span = param.pattern.span();
-                        let end =
-                            param.type_annotation.as_ref().map_or(param.span.end, |ta| ta.span.end);
+                        let end = param
+                            .type_annotation
+                            .as_ref()
+                            .map_or(param.span.end, |ta| ta.span.end);
                         Some(Span::new(pattern_span.start, end))
                     } else {
                         None
@@ -668,7 +677,11 @@ impl ESTree for FormalParameterConverter<'_, '_> {
                     decorators: Some(&param.decorators),
                     optional: param.optional,
                     type_annotation: param.type_annotation.as_deref(),
-                    override_span: if param.optional { Some(param.span) } else { None },
+                    override_span: if param.optional {
+                        Some(param.span)
+                    } else {
+                        None
+                    },
                 }
                 .serialize(serializer);
             }
@@ -860,7 +873,11 @@ impl ESTree for ExportAllDeclarationWithClause<'_, '_> {
 
 /// Serializer for the derived `expression` field of [`ArrowFunctionExpression`].
 #[ast_meta]
-#[estree(ts_type = "boolean", raw_deser = "uint8[POS_OFFSET.body] !== 64", raw_deser_inline)]
+#[estree(
+    ts_type = "boolean",
+    raw_deser = "uint8[POS_OFFSET.body] !== 64",
+    raw_deser_inline
+)]
 pub struct ArrowFunctionExpressionExpression<'a>(pub &'a ArrowFunctionExpression<'a>);
 
 impl ESTree for ArrowFunctionExpressionExpression<'_> {

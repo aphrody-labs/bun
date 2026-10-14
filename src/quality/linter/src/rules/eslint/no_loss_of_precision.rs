@@ -140,7 +140,11 @@ impl<'a> RawNum<'a> {
                 .unwrap_or(num_without_zeros.len());
 
             // if no integer part was found, default to 0
-            let int = if int_end == 0 { "0" } else { &num_without_zeros[..int_end] };
+            let int = if int_end == 0 {
+                "0"
+            } else {
+                &num_without_zeros[..int_end]
+            };
 
             // make a slice of the rest of the string
             let num_without_int = &num_without_zeros[int_end..];
@@ -150,22 +154,25 @@ impl<'a> RawNum<'a> {
 
         // if next char is a dot, parse the fractional part
         let (frac, num_without_frac) =
-            num_without_int.strip_prefix('.').map_or(("", num_without_int), |num_without_dot| {
-                let frac_end = num_without_dot
-                    .chars()
-                    .position(|ch| !ch.is_ascii_digit())
-                    .unwrap_or(num_without_dot.len());
+            num_without_int
+                .strip_prefix('.')
+                .map_or(("", num_without_int), |num_without_dot| {
+                    let frac_end = num_without_dot
+                        .chars()
+                        .position(|ch| !ch.is_ascii_digit())
+                        .unwrap_or(num_without_dot.len());
 
-                // slice the fractional part and the rest of the string
-                let frac = &num_without_dot[..frac_end];
-                let num_without_frac = &num_without_dot[frac_end..];
+                    // slice the fractional part and the rest of the string
+                    let frac = &num_without_dot[..frac_end];
+                    let num_without_frac = &num_without_dot[frac_end..];
 
-                (frac, num_without_frac)
-            });
+                    (frac, num_without_frac)
+                });
 
         // if next char is an e, treat the rest as the exponent
-        let exp =
-            num_without_frac.strip_prefix(['e', 'E']).map_or("0", |num_without_e| num_without_e);
+        let exp = num_without_frac
+            .strip_prefix(['e', 'E'])
+            .map_or("0", |num_without_e| num_without_e);
 
         let Ok(exp) = exp.parse::<isize>() else {
             return None;
@@ -182,8 +189,16 @@ impl<'a> RawNum<'a> {
             self.frac = &self.frac[frac_zeros..];
 
             match self.frac.len() {
-                0 => ScientificNotation { int: "0", frac: Cow::Borrowed(""), exp },
-                1 => ScientificNotation { int: &self.frac[..1], frac: Cow::Borrowed(""), exp },
+                0 => ScientificNotation {
+                    int: "0",
+                    frac: Cow::Borrowed(""),
+                    exp,
+                },
+                1 => ScientificNotation {
+                    int: &self.frac[..1],
+                    frac: Cow::Borrowed(""),
+                    exp,
+                },
                 _ => ScientificNotation {
                     int: &self.frac[..1],
                     frac: Cow::Borrowed(&self.frac[1..]),
@@ -194,7 +209,11 @@ impl<'a> RawNum<'a> {
             #[expect(clippy::cast_possible_wrap)]
             let exp = self.exp + self.int.len() as isize - 1;
             if self.int.len() == 1 {
-                ScientificNotation { int: self.int, frac: Cow::Borrowed(self.frac), exp }
+                ScientificNotation {
+                    int: self.int,
+                    frac: Cow::Borrowed(self.frac),
+                    exp,
+                }
             } else {
                 let frac = if self.frac.is_empty() {
                     if parse_as_float {
@@ -211,7 +230,11 @@ impl<'a> RawNum<'a> {
                     Cow::Owned(format!("{}{}", &self.int[1..], self.frac))
                 };
 
-                ScientificNotation { int: &self.int[..1], frac, exp }
+                ScientificNotation {
+                    int: &self.int[..1],
+                    frac,
+                    exp,
+                }
             }
         }
     }
@@ -337,8 +360,11 @@ impl NoLossOfPrecision {
             return dot_digit_index - first_non_zero <= Self::MAX_OBVIOUSLY_SAFE_SIGNIFICANT_DIGITS;
         }
 
-        let last_significant =
-            if dot_digit_index.is_some() { digit_index - 1 } else { last_non_zero.unwrap() };
+        let last_significant = if dot_digit_index.is_some() {
+            digit_index - 1
+        } else {
+            last_non_zero.unwrap()
+        };
         last_significant - first_non_zero < Self::MAX_OBVIOUSLY_SAFE_SIGNIFICANT_DIGITS
     }
 
@@ -390,8 +416,10 @@ impl NoLossOfPrecision {
 
     fn normalize(num: &str, parse_as_float: bool) -> Option<ScientificNotation<'_>> {
         let coefficient = num.trim_start_matches(['+', '-']);
-        let exp_start =
-            coefficient.find('e').or_else(|| coefficient.find('E')).unwrap_or(coefficient.len());
+        let exp_start = coefficient
+            .find('e')
+            .or_else(|| coefficient.find('E'))
+            .unwrap_or(coefficient.len());
         let parse_as_float = parse_as_float || coefficient[..exp_start].contains('.');
         Some(RawNum::new(num)?.normalize(parse_as_float))
     }
@@ -447,8 +475,10 @@ fn flt_str_to_exp(flt: &str) -> i32 {
 fn round_to_precision(digits: &mut String, precision: usize) -> bool {
     if digits.len() > precision {
         let to_round = digits.split_off(precision);
-        let mut digit =
-            digits.pop().expect("already checked that length is bigger than precision") as u8;
+        let mut digit = digits
+            .pop()
+            .expect("already checked that length is bigger than precision")
+            as u8;
         if let Some(first) = to_round.chars().next()
             && first > '4'
         {
@@ -499,7 +529,11 @@ fn fractional_digits_for_precision(num: f64, precision: usize) -> usize {
         .unwrap_or_default();
 
     if exponent.is_negative() {
-        exponent.unsigned_abs().saturating_add(precision).saturating_add(1).max(100)
+        exponent
+            .unsigned_abs()
+            .saturating_add(precision)
+            .saturating_add(1)
+            .max(100)
     } else {
         100
     }
@@ -520,14 +554,22 @@ fn fractional_digits_for_precision(num: f64, precision: usize) -> usize {
 #[expect(clippy::cast_sign_loss)]
 pub fn to_precision(mut num: f64, precision: usize) -> String {
     // Validate precision range (1-100)
-    debug_assert!((1..=100).contains(&precision), "Precision must be between 1 and 100");
+    debug_assert!(
+        (1..=100).contains(&precision),
+        "Precision must be between 1 and 100"
+    );
 
     // Handle non-finite numbers
     if !num.is_finite() {
         if num.is_nan() {
             return "NaN".to_string();
         } else if num.is_infinite() {
-            return if num.is_sign_positive() { "Infinity" } else { "-Infinity" }.to_string();
+            return if num.is_sign_positive() {
+                "Infinity"
+            } else {
+                "-Infinity"
+            }
+            .to_string();
         }
     }
 
@@ -758,5 +800,11 @@ fn test() {
         "var x = 96215808661.52751e-84",
     ];
 
-    Tester::new(NoLossOfPrecision::NAME, NoLossOfPrecision::PLUGIN, pass, fail).test_and_snapshot();
+    Tester::new(
+        NoLossOfPrecision::NAME,
+        NoLossOfPrecision::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

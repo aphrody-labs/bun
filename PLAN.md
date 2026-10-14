@@ -1,5 +1,38 @@
 # Plan — aphrody-labs/bun, noyau d'Aphrody
 
+## Site, graph and structured Jev publication — 2026-10-14
+
+The current owner request adds frequent source-pinned site, documentation, plugin
+and graph publication, including the public Neon projection and production routes.
+The homepage keeps upstream components and assets with Aphrody branding and M3.
+Source-derived editorial drafts use the protected application Jev client through
+`bun:yolo.inspect`, with bounded requests, cited immutable sources and no text-model
+fallback. Publication must qualify the native changes and align production source,
+database snapshot and routes before enabling the recurring scheduler.
+
+Global virtual store configuration is qualified for the native workstation:
+isolated sharing and project opt-out tests pass on the recognized installed fork.
+Persistent isolated installations may share the store; temporary test/CI caches
+remain explicit exceptions. No protected store or active installation is deleted.
+
+## Upstream sibling synchronization — 2026-10-14
+
+The source checkout is `bun-upstream` beside the selected fork, resolved from
+the workspace or `APHRODY_BUN_UPSTREAM_CHECKOUT`. The existing coordinator now
+refreshes this verified `oven-sh/bun` source and previews Git objects before
+applying a merge. It inventories additions, deletions and local collisions,
+preserves unrelated work, and checks origin ancestry before a normal push.
+See [the source workflow](docs/project/upstream-source-sync.md).
+
+The current batch integrates upstream `408c9374b266b45fe6b8260e09be73aa82a957cd`,
+removes 15 upstream-retired files and the two superseded fork quality CLI files,
+and retains the quality libraries used by public APIs. Full Cargo metadata with
+`--locked` passes. Scoped native Windows checks and regression tests pass,
+including the component scanner cache and output-limit guards. The complete
+upstream test suite is not certified by these scoped gates.
+The final owner directive includes all pending checkout changes and nested M3
+changes in delivery; protected data and generated caches remain outside Git.
+
 ## GitLab mirror and host authentication — 2026-10-14
 
 GitHub remains authoritative. The private GitLab project

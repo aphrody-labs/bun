@@ -136,7 +136,9 @@ pub fn inline_immediately_invoked_function_expressions<'a>(
                     // Create a new block which will contain code following the IIFE call
                     let continuation_block_id = env.next_block_id();
                     let continuation_instructions: ArenaVec<InstructionId> = ArenaVec::from_iter_in(
-                        func.body.blocks[&block_id].instructions[ii + 1..].iter().copied(),
+                        func.body.blocks[&block_id].instructions[ii + 1..]
+                            .iter()
+                            .copied(),
                         &env.allocator,
                     );
                     let continuation_terminal =
@@ -149,11 +151,18 @@ pub fn inline_immediately_invoked_function_expressions<'a>(
                         preds: ArenaOrderedSet::new_in(env.allocator),
                         terminal: continuation_terminal,
                     };
-                    func.body.blocks.insert(continuation_block_id, continuation_block);
+                    func.body
+                        .blocks
+                        .insert(continuation_block_id, continuation_block);
 
                     // Trim the original block to contain instructions up to (but not including)
                     // the IIFE
-                    func.body.blocks.get_mut(&block_id).unwrap().instructions.truncate(ii);
+                    func.body
+                        .blocks
+                        .get_mut(&block_id)
+                        .unwrap()
+                        .instructions
+                        .truncate(ii);
 
                     let has_single_return =
                         has_single_exit_return_terminal(&env.functions[inner_func_id]);
@@ -186,8 +195,12 @@ pub fn inline_immediately_invoked_function_expressions<'a>(
                             }
                             inner_block.preds.clear();
 
-                            if let Terminal::Return { value, id: ret_id, span: ret_span, .. } =
-                                &inner_block.terminal
+                            if let Terminal::Return {
+                                value,
+                                id: ret_id,
+                                span: ret_span,
+                                ..
+                            } = &inner_block.terminal
                             {
                                 // Replace return with LoadLocal + goto
                                 let load_instr = Instruction {
@@ -339,14 +352,22 @@ fn rewrite_block<'a>(
     return_target: BlockId,
     return_value: &Place,
 ) {
-    if let Terminal::Return { value, span: ret_span, .. } = &block.terminal {
+    if let Terminal::Return {
+        value,
+        span: ret_span,
+        ..
+    } = &block.terminal
+    {
         let store_lvalue = create_temporary_place(env, *ret_span);
         let store_instr = Instruction {
             id: EvaluationOrder::UNSET,
             span: *ret_span,
             lvalue: store_lvalue,
             value: InstructionValue::StoreLocal {
-                lvalue: LValue { kind: InstructionKind::Reassign, place: *return_value },
+                lvalue: LValue {
+                    kind: InstructionKind::Reassign,
+                    place: *return_value,
+                },
                 value: *value,
                 span: *ret_span,
             },
@@ -379,19 +400,30 @@ fn declare_temporary<'a>(
         span: GENERATED_SOURCE,
         lvalue: declare_lvalue,
         value: InstructionValue::DeclareLocal {
-            lvalue: LValue { place: *result, kind: InstructionKind::Let },
+            lvalue: LValue {
+                place: *result,
+                kind: InstructionKind::Let,
+            },
             span: result.span,
         },
         effects: None,
     };
     let instr_id = InstructionId::from_usize(func.instructions.len());
     func.instructions.push(declare_instr);
-    func.body.blocks.get_mut(&block_id).unwrap().instructions.push(instr_id);
+    func.body
+        .blocks
+        .get_mut(&block_id)
+        .unwrap()
+        .instructions
+        .push(instr_id);
 }
 
 /// Promote a temporary identifier to a named identifier.
 fn promote_temporary(env: &mut Environment<'_>, identifier_id: IdentifierId) {
     let decl_id = env.identifiers[identifier_id].declaration_id;
-    env.identifiers[identifier_id].name =
-        Some(IdentifierName::Promoted(format_ident!(env.allocator, "#t{}", decl_id.index())));
+    env.identifiers[identifier_id].name = Some(IdentifierName::Promoted(format_ident!(
+        env.allocator,
+        "#t{}",
+        decl_id.index()
+    )));
 }

@@ -266,7 +266,8 @@ impl<'a> Semantic<'a> {
 
     /// Get the AST node that declares `symbol_id`.
     pub fn symbol_declaration(&self, symbol_id: SymbolId) -> &AstNode<'a> {
-        self.nodes.get_node(self.scoping.symbol_declaration(symbol_id))
+        self.nodes
+            .get_node(self.scoping.symbol_declaration(symbol_id))
     }
 
     /// Returns `true` if `ident` resolves to a global (unbound) reference.
@@ -307,9 +308,14 @@ mod tests {
     ) -> Semantic<'s> {
         let parse = oxc_parser::Parser::new(allocator, source, source_type).parse();
         assert!(parse.diagnostics.is_empty());
-        let semantic =
-            SemanticBuilder::new().with_build_nodes(true).build(allocator.alloc(parse.program));
-        assert!(semantic.diagnostics.is_empty(), "Parse error: {}", semantic.diagnostics[0]);
+        let semantic = SemanticBuilder::new()
+            .with_build_nodes(true)
+            .build(allocator.alloc(parse.program));
+        assert!(
+            semantic.diagnostics.is_empty(),
+            "Parse error: {}",
+            semantic.diagnostics[0]
+        );
         semantic.semantic
     }
 
@@ -353,7 +359,11 @@ mod tests {
         let semantic = get_semantic(&allocator, source, SourceType::default());
         let scopes = semantic.scoping();
 
-        assert!(scopes.get_binding(scopes.root_scope_id(), static_ident!("Fn")).is_some());
+        assert!(
+            scopes
+                .get_binding(scopes.root_scope_id(), static_ident!("Fn"))
+                .is_some()
+        );
     }
 
     #[test]
@@ -403,7 +413,9 @@ mod tests {
             .iter()
             .map(|reference| semantic.nodes.get_node(reference.node_id()))
             .collect::<Vec<_>>();
-        let [global_promise, local_promise] = nodes.as_slice() else { unreachable!() };
+        let [global_promise, local_promise] = nodes.as_slice() else {
+            unreachable!()
+        };
 
         // `Promise.resolve()`
         assert!(semantic.is_unresolved_reference(global_promise.id()));
@@ -434,44 +446,168 @@ mod tests {
         let typescript = SourceType::ts();
         let sources = [
             // simple cases
-            (SourceType::default(), "let a = 1; a = 2", ReferenceFlags::write()),
-            (SourceType::default(), "let a = 1, b; b = a", ReferenceFlags::read()),
-            (SourceType::default(), "let a = 1, b; b[a]", ReferenceFlags::read()),
-            (SourceType::default(), "let a = 1, b = 1, c; c = a + b", ReferenceFlags::read()),
-            (SourceType::default(), "function a() { return }; a()", ReferenceFlags::read()),
-            (SourceType::default(), "class a {}; new a()", ReferenceFlags::read()),
-            (SourceType::default(), "let a; function foo() { return a }", ReferenceFlags::read()),
+            (
+                SourceType::default(),
+                "let a = 1; a = 2",
+                ReferenceFlags::write(),
+            ),
+            (
+                SourceType::default(),
+                "let a = 1, b; b = a",
+                ReferenceFlags::read(),
+            ),
+            (
+                SourceType::default(),
+                "let a = 1, b; b[a]",
+                ReferenceFlags::read(),
+            ),
+            (
+                SourceType::default(),
+                "let a = 1, b = 1, c; c = a + b",
+                ReferenceFlags::read(),
+            ),
+            (
+                SourceType::default(),
+                "function a() { return }; a()",
+                ReferenceFlags::read(),
+            ),
+            (
+                SourceType::default(),
+                "class a {}; new a()",
+                ReferenceFlags::read(),
+            ),
+            (
+                SourceType::default(),
+                "let a; function foo() { return a }",
+                ReferenceFlags::read(),
+            ),
             // pattern assignment
-            (SourceType::default(), "let a = 1, b; b = { a }", ReferenceFlags::read()),
-            (SourceType::default(), "let a, b; ({ b } = { a })", ReferenceFlags::read()),
-            (SourceType::default(), "let a, b; ({ a } = { b })", ReferenceFlags::write()),
-            (SourceType::default(), "let a, b; ([ b ] = [ a ])", ReferenceFlags::read()),
-            (SourceType::default(), "let a, b; ([ a ] = [ b ])", ReferenceFlags::write()),
+            (
+                SourceType::default(),
+                "let a = 1, b; b = { a }",
+                ReferenceFlags::read(),
+            ),
+            (
+                SourceType::default(),
+                "let a, b; ({ b } = { a })",
+                ReferenceFlags::read(),
+            ),
+            (
+                SourceType::default(),
+                "let a, b; ({ a } = { b })",
+                ReferenceFlags::write(),
+            ),
+            (
+                SourceType::default(),
+                "let a, b; ([ b ] = [ a ])",
+                ReferenceFlags::read(),
+            ),
+            (
+                SourceType::default(),
+                "let a, b; ([ a ] = [ b ])",
+                ReferenceFlags::write(),
+            ),
             // property access/mutation
-            (SourceType::default(), "let a = { b: 1 }; a.b = 2", ReferenceFlags::read()),
-            (SourceType::default(), "let a = { b: 1 }; a.b += 2", ReferenceFlags::read()),
+            (
+                SourceType::default(),
+                "let a = { b: 1 }; a.b = 2",
+                ReferenceFlags::read(),
+            ),
+            (
+                SourceType::default(),
+                "let a = { b: 1 }; a.b += 2",
+                ReferenceFlags::read(),
+            ),
             // parens are pass-through
-            (SourceType::default(), "let a = 1, b; b = (a)", ReferenceFlags::read()),
-            (SourceType::default(), "let a = 1, b; b = ++(a)", ReferenceFlags::read_write()),
-            (SourceType::default(), "let a = 1, b; b = ++((((a))))", ReferenceFlags::read_write()),
-            (SourceType::default(), "let a = 1, b; b = ((++((a))))", ReferenceFlags::read_write()),
+            (
+                SourceType::default(),
+                "let a = 1, b; b = (a)",
+                ReferenceFlags::read(),
+            ),
+            (
+                SourceType::default(),
+                "let a = 1, b; b = ++(a)",
+                ReferenceFlags::read_write(),
+            ),
+            (
+                SourceType::default(),
+                "let a = 1, b; b = ++((((a))))",
+                ReferenceFlags::read_write(),
+            ),
+            (
+                SourceType::default(),
+                "let a = 1, b; b = ((++((a))))",
+                ReferenceFlags::read_write(),
+            ),
             // simple binops/calls for sanity check
-            (SourceType::default(), "let a, b; a + b", ReferenceFlags::read()),
-            (SourceType::default(), "let a, b; b(a)", ReferenceFlags::read()),
-            (SourceType::default(), "let a, b; a = 5", ReferenceFlags::write()),
+            (
+                SourceType::default(),
+                "let a, b; a + b",
+                ReferenceFlags::read(),
+            ),
+            (
+                SourceType::default(),
+                "let a, b; b(a)",
+                ReferenceFlags::read(),
+            ),
+            (
+                SourceType::default(),
+                "let a, b; a = 5",
+                ReferenceFlags::write(),
+            ),
             // unary op counts as write, but checking continues up tree
-            (SourceType::default(), "let a = 1, b; b = ++a", ReferenceFlags::read_write()),
-            (SourceType::default(), "let a = 1, b; b = --a", ReferenceFlags::read_write()),
-            (SourceType::default(), "let a = 1, b; b = a++", ReferenceFlags::read_write()),
-            (SourceType::default(), "let a = 1, b; b = a--", ReferenceFlags::read_write()),
+            (
+                SourceType::default(),
+                "let a = 1, b; b = ++a",
+                ReferenceFlags::read_write(),
+            ),
+            (
+                SourceType::default(),
+                "let a = 1, b; b = --a",
+                ReferenceFlags::read_write(),
+            ),
+            (
+                SourceType::default(),
+                "let a = 1, b; b = a++",
+                ReferenceFlags::read_write(),
+            ),
+            (
+                SourceType::default(),
+                "let a = 1, b; b = a--",
+                ReferenceFlags::read_write(),
+            ),
             // assignment expressions count as read-write
-            (SourceType::default(), "let a = 1, b; b = a += 5", ReferenceFlags::read_write()),
-            (SourceType::default(), "let a = 1; a += 5", ReferenceFlags::read_write()),
-            (SourceType::default(), "let a, b; b = a = 1", ReferenceFlags::write()),
-            (SourceType::default(), "let a, b; b = (a = 1)", ReferenceFlags::write()),
-            (SourceType::default(), "let a, b, c; b = c = a", ReferenceFlags::read()),
+            (
+                SourceType::default(),
+                "let a = 1, b; b = a += 5",
+                ReferenceFlags::read_write(),
+            ),
+            (
+                SourceType::default(),
+                "let a = 1; a += 5",
+                ReferenceFlags::read_write(),
+            ),
+            (
+                SourceType::default(),
+                "let a, b; b = a = 1",
+                ReferenceFlags::write(),
+            ),
+            (
+                SourceType::default(),
+                "let a, b; b = (a = 1)",
+                ReferenceFlags::write(),
+            ),
+            (
+                SourceType::default(),
+                "let a, b, c; b = c = a",
+                ReferenceFlags::read(),
+            ),
             // sequences return last read_write in sequence
-            (SourceType::default(), "let a, b; b = (0, a++)", ReferenceFlags::read_write()),
+            (
+                SourceType::default(),
+                "let a, b; b = (0, a++)",
+                ReferenceFlags::read_write(),
+            ),
             // loops
             (
                 SourceType::default(),
@@ -483,8 +619,16 @@ mod tests {
                 "var a, obj = { }; for(a of obj) { break }",
                 ReferenceFlags::write(),
             ),
-            (SourceType::default(), "var a; for(; false; a++) { }", ReferenceFlags::read_write()),
-            (SourceType::default(), "var a = 1; while(a < 5) { break }", ReferenceFlags::read()),
+            (
+                SourceType::default(),
+                "var a; for(; false; a++) { }",
+                ReferenceFlags::read_write(),
+            ),
+            (
+                SourceType::default(),
+                "var a = 1; while(a < 5) { break }",
+                ReferenceFlags::read(),
+            ),
             // if statements
             (
                 SourceType::default(),
@@ -503,8 +647,16 @@ mod tests {
             ),
             // identifiers not in last read_write are also considered a read (at
             // least, or now)
-            (SourceType::default(), "let a, b; b = (a, 0)", ReferenceFlags::read()),
-            (SourceType::default(), "let a, b; b = (--a, 0)", ReferenceFlags::read_write()),
+            (
+                SourceType::default(),
+                "let a, b; b = (a, 0)",
+                ReferenceFlags::read(),
+            ),
+            (
+                SourceType::default(),
+                "let a, b; b = (--a, 0)",
+                ReferenceFlags::read_write(),
+            ),
             (
                 SourceType::default(),
                 "let a; function foo(a) { return a }; foo(a = 1)",
@@ -512,8 +664,16 @@ mod tests {
                 ReferenceFlags::write(),
             ),
             // member expression
-            (SourceType::default(), "let a; a.b = 1", ReferenceFlags::read()),
-            (SourceType::default(), "let a; let b; b[a += 1] = 1", ReferenceFlags::read_write()),
+            (
+                SourceType::default(),
+                "let a; a.b = 1",
+                ReferenceFlags::read(),
+            ),
+            (
+                SourceType::default(),
+                "let a; let b; b[a += 1] = 1",
+                ReferenceFlags::read_write(),
+            ),
             (
                 SourceType::default(),
                 "let a; let b; let c; b[c[a = c['a']] = 'c'] = 'b'",
@@ -525,14 +685,38 @@ mod tests {
                 "let a; let b; let c; a[c[b = c['a']] = 'c'] = 'b'",
                 ReferenceFlags::read(),
             ),
-            (SourceType::default(), "console.log;let a=0;a++", ReferenceFlags::read_write()),
+            (
+                SourceType::default(),
+                "console.log;let a=0;a++",
+                ReferenceFlags::read_write(),
+            ),
             //                                           ^^^ UpdateExpression is always a read | write
             // typescript
-            (typescript, "let a: number = 1; (a as any) = true", ReferenceFlags::write()),
-            (typescript, "let a: number = 1; a = true as any", ReferenceFlags::write()),
-            (typescript, "let a: number = 1; a = 2 as const", ReferenceFlags::write()),
-            (typescript, "let a: number = 1; a = 2 satisfies number", ReferenceFlags::write()),
-            (typescript, "let a: number; (a as any) = 1;", ReferenceFlags::write()),
+            (
+                typescript,
+                "let a: number = 1; (a as any) = true",
+                ReferenceFlags::write(),
+            ),
+            (
+                typescript,
+                "let a: number = 1; a = true as any",
+                ReferenceFlags::write(),
+            ),
+            (
+                typescript,
+                "let a: number = 1; a = 2 as const",
+                ReferenceFlags::write(),
+            ),
+            (
+                typescript,
+                "let a: number = 1; a = 2 satisfies number",
+                ReferenceFlags::write(),
+            ),
+            (
+                typescript,
+                "let a: number; (a as any) = 1;",
+                ReferenceFlags::write(),
+            ),
         ];
 
         for (source_type, source, flags) in sources {

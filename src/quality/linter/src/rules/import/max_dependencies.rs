@@ -51,7 +51,10 @@ impl std::ops::Deref for MaxDependencies {
 
 impl Default for MaxDependenciesConfig {
     fn default() -> Self {
-        Self { max: 10, ignore_type_imports: false }
+        Self {
+            max: 10,
+            ignore_type_imports: false,
+        }
     }
 }
 
@@ -113,7 +116,10 @@ impl Rule for MaxDependencies {
             .and_then(serde_json::Number::as_u64)
             .and_then(|v| u32::try_from(v).ok())
         {
-            Ok(Self(Box::new(MaxDependenciesConfig { max, ignore_type_imports: false })))
+            Ok(Self(Box::new(MaxDependenciesConfig {
+                max,
+                ignore_type_imports: false,
+            })))
         } else {
             DefaultRuleConfig::<Self>::from_value(value).map(DefaultRuleConfig::into_inner)
         }

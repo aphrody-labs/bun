@@ -5,8 +5,14 @@ use crate::{TestRunner, conformance_root};
 impl TestRunner {
     pub(crate) fn run_vitest(&self, dir: &str, dest: &Path) {
         let version = String::from("node: ")
-            + &String::from_utf8(Command::new("node").arg("--version").output().unwrap().stdout)
-                .unwrap();
+            + &String::from_utf8(
+                Command::new("node")
+                    .arg("--version")
+                    .output()
+                    .unwrap()
+                    .stdout,
+            )
+            .unwrap();
         let output = Command::new("node")
             .current_dir(conformance_root())
             .env("NO_COLOR", "1")
@@ -22,7 +28,11 @@ impl TestRunner {
             ])
             .output()
             .unwrap();
-        let content = if output.stderr.is_empty() { output.stdout } else { output.stderr };
+        let content = if output.stderr.is_empty() {
+            output.stdout
+        } else {
+            output.stderr
+        };
         let output = String::from_utf8(content).unwrap();
         let output = version + &output;
         if self.options.should_update_snapshots() {

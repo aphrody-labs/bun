@@ -130,7 +130,8 @@ declare_oxc_lint!(
     pending,
     config = PreferRegexLiterals,
     version = "1.64.0",
-    short_description = "Disallow use of the RegExp constructor in favor of regular expression literals.",
+    short_description =
+        "Disallow use of the RegExp constructor in favor of regular expression literals.",
 );
 
 impl Rule for PreferRegexLiterals {
@@ -169,7 +170,9 @@ impl Rule for PreferRegexLiterals {
 
 fn has_only_static_string_arguments(arguments: &[Argument], ctx: &LintContext) -> bool {
     matches!(arguments.len(), 1 | 2)
-        && arguments.iter().all(|arg| is_static_string_argument(arg, ctx))
+        && arguments
+            .iter()
+            .all(|arg| is_static_string_argument(arg, ctx))
 }
 
 fn is_unnecessarily_wrapped_regex_literal(
@@ -189,13 +192,18 @@ fn is_unnecessarily_wrapped_regex_literal(
 
 fn is_regex_literal_argument(argument: &Argument) -> bool {
     matches!(
-        argument.as_expression().map(Expression::get_inner_expression),
+        argument
+            .as_expression()
+            .map(Expression::get_inner_expression),
         Some(Expression::RegExpLiteral(_))
     )
 }
 
 fn is_static_string_argument(argument: &Argument, ctx: &LintContext) -> bool {
-    let Some(expr) = argument.as_expression().map(Expression::get_inner_expression) else {
+    let Some(expr) = argument
+        .as_expression()
+        .map(Expression::get_inner_expression)
+    else {
         return false;
     };
 
@@ -218,7 +226,10 @@ fn test() {
         ("/abc/", None),
         ("/abc/g", None),
         ("new RegExp(pattern)", None),
-        (r"new RegExp('\\p{Emoji_Presentation}\\P{Script_Extensions=Latin}' + '', `ug`)", None),
+        (
+            r"new RegExp('\\p{Emoji_Presentation}\\P{Script_Extensions=Latin}' + '', `ug`)",
+            None,
+        ),
         (r"new RegExp('\\cA' + '')", None),
         ("RegExp(pattern, 'g')", None),
         ("new RegExp(f('a'))", None),
@@ -237,8 +248,14 @@ fn test() {
         ("new RegExp(String.raw`a${''}c`);", None),
         ("new RegExp('a' + 'b')", None),
         ("RegExp(1)", None),
-        (r"new RegExp('(\\p{Emoji_Presentation})\\1' + '', `ug`)", None),
-        (r"RegExp(String.raw`\78\126` + '\\5934', '' + `g` + '')", None),
+        (
+            r"new RegExp('(\\p{Emoji_Presentation})\\1' + '', `ug`)",
+            None,
+        ),
+        (
+            r"RegExp(String.raw`\78\126` + '\\5934', '' + `g` + '')",
+            None,
+        ),
         (
             r"func(new RegExp(String.raw`a${''}c\d`, 'u'),new RegExp(String.raw`a${''}c\d`, 'u'))",
             None,
@@ -253,7 +270,10 @@ fn test() {
             Some(serde_json::json!([{ "disallowRedundantWrapping": true }])),
         ),
         ("new RegExp(/a/);", Some(serde_json::json!([{}]))),
-        ("new RegExp(/a/);", Some(serde_json::json!([{ "disallowRedundantWrapping": false }]))),
+        (
+            "new RegExp(/a/);",
+            Some(serde_json::json!([{ "disallowRedundantWrapping": false }])),
+        ),
         ("new RegExp;", None),
         ("new RegExp();", None),
         ("RegExp();", None),
@@ -261,7 +281,10 @@ fn test() {
         ("RegExp('a', 'g', 'b');", None),
         ("new RegExp(`a`, `g`, `b`);", None),
         ("RegExp(`a`, `g`, `b`);", None),
-        ("new RegExp(String.raw`a`, String.raw`g`, String.raw`b`);", None),
+        (
+            "new RegExp(String.raw`a`, String.raw`g`, String.raw`b`);",
+            None,
+        ),
         ("RegExp(String.raw`a`, String.raw`g`, String.raw`b`);", None),
         (
             "new RegExp(/a/, 'u', 'foo');",
@@ -278,9 +301,15 @@ fn test() {
         ("RegExp(foo.String.raw`a`);", None),
         ("new RegExp(String.raw);", None),
         ("let String; new RegExp(String.raw`a`);", None),
-        ("function foo() { var String; new RegExp(String.raw`a`); }", None),
+        (
+            "function foo() { var String; new RegExp(String.raw`a`); }",
+            None,
+        ),
         ("function foo(String) { RegExp(String.raw`a`); }", None),
-        ("if (foo) { const String = bar; RegExp(String.raw`a`); }", None),
+        (
+            "if (foo) { const String = bar; RegExp(String.raw`a`); }",
+            None,
+        ),
         ("new Regexp('abc');", None),
         ("Regexp(`a`);", None),
         ("new Regexp(String.raw`a`);", None),
@@ -288,7 +317,10 @@ fn test() {
         ("function foo() { var RegExp; RegExp('a', 'g'); }", None),
         ("function foo(RegExp) { new RegExp(String.raw`a`); }", None),
         ("if (foo) { const RegExp = bar; RegExp('a'); }", None),
-        ("class C { #RegExp; foo() { globalThis.#RegExp('a'); } }", None),
+        (
+            "class C { #RegExp; foo() { globalThis.#RegExp('a'); } }",
+            None,
+        ),
         ("new RegExp('[[A--B]]' + a, 'v')", None),
     ];
 
@@ -329,7 +361,10 @@ fn test() {
         ("RegExp('a', String.raw`g`);", None),
         ("new globalThis.RegExp('a');", None), // { "ecmaVersion": 2020 },
         ("globalThis.RegExp('a');", None),     // { "ecmaVersion": 2020 },
-        ("new RegExp(/a/);", Some(serde_json::json!([ { "disallowRedundantWrapping": true, }, ]))),
+        (
+            "new RegExp(/a/);",
+            Some(serde_json::json!([ { "disallowRedundantWrapping": true, }, ])),
+        ),
         (
             "new RegExp(/a/, 'u');",
             Some(serde_json::json!([ { "disallowRedundantWrapping": true, }, ])),
@@ -366,7 +401,10 @@ fn test() {
             "new RegExp(/a/, `gi`);",
             Some(serde_json::json!([ { "disallowRedundantWrapping": true, }, ])),
         ),
-        ("new RegExp('a');", Some(serde_json::json!([ { "disallowRedundantWrapping": true, }, ]))),
+        (
+            "new RegExp('a');",
+            Some(serde_json::json!([ { "disallowRedundantWrapping": true, }, ])),
+        ),
         (
             "new RegExp(/a/, String.raw`u`);",
             Some(serde_json::json!([ { "disallowRedundantWrapping": true, }, ])),
@@ -389,7 +427,10 @@ fn test() {
             new RegExp(/b/, 'g');",
             Some(serde_json::json!([ { "disallowRedundantWrapping": true, }, ])),
         ),
-        ("a/RegExp(/foo/);", Some(serde_json::json!([ { "disallowRedundantWrapping": true, }, ]))),
+        (
+            "a/RegExp(/foo/);",
+            Some(serde_json::json!([ { "disallowRedundantWrapping": true, }, ])),
+        ),
         (
             "RegExp(/foo/)in a;",
             Some(serde_json::json!([ { "disallowRedundantWrapping": true, }, ])),
@@ -442,7 +483,10 @@ fn test() {
                         RegExp("foo").test(x) ? bar() : baz()"#,
             None,
         ),
-        (r"func(new RegExp(String.raw`\w{1, 2`, 'u'),new RegExp(String.raw`\w{1, 2`, 'u'))", None),
+        (
+            r"func(new RegExp(String.raw`\w{1, 2`, 'u'),new RegExp(String.raw`\w{1, 2`, 'u'))",
+            None,
+        ),
         (
             r#"x = y;
                         RegExp("foo").test(x) ? bar() : baz()"#,
@@ -718,14 +762,26 @@ fn test() {
                         "#,
             None,
         ),
-        ("throw new RegExp('abcdefg') // fail with a regular expression", None),
-        ("for (value of new RegExp('something being searched')) { console.log(value) }", None),
+        (
+            "throw new RegExp('abcdefg') // fail with a regular expression",
+            None,
+        ),
+        (
+            "for (value of new RegExp('something being searched')) { console.log(value) }",
+            None,
+        ),
         (
             "(async function(){for await (value of new RegExp('something being searched')) { console.log(value) }})()",
             None,
         ), // { "ecmaVersion": 2018, },
-        ("for (value in new RegExp('something being searched')) { console.log(value) }", None),
-        ("if (condition1 && condition2) new RegExp('avalue').test(str);", None),
+        (
+            "for (value in new RegExp('something being searched')) { console.log(value) }",
+            None,
+        ),
+        (
+            "if (condition1 && condition2) new RegExp('avalue').test(str);",
+            None,
+        ),
         (
             "debugger
             new RegExp('myReg')",
@@ -743,29 +799,52 @@ fn test() {
         (r#"new RegExp("\\\n\\\n")"#, None),
         (r#"new RegExp("\\\n\\\f\\\n")"#, None),
         (r#"new RegExp("\u000A\u000A");"#, None),
-        ("new RegExp('mysafereg' /* comment explaining its safety */)", None),
+        (
+            "new RegExp('mysafereg' /* comment explaining its safety */)",
+            None,
+        ),
         ("new RegExp('[[A--B]]', 'v')", None), // { "ecmaVersion": 2024 },
         ("new RegExp('[[A--B]]', 'v')", None), // { "ecmaVersion": 2023 },
         ("new RegExp('[[A&&&]]', 'v')", None), // { "ecmaVersion": 2024 },
         ("new RegExp('a', 'uv')", None),       // { "ecmaVersion": 2024 },
-        ("new RegExp(/a/, 'v')", Some(serde_json::json!([{ "disallowRedundantWrapping": true }]))), // { "ecmaVersion": 2024 },
-        ("new RegExp(/a/, 'v')", Some(serde_json::json!([{ "disallowRedundantWrapping": true }]))), // { "ecmaVersion": 2023 },
-        ("new RegExp(/a/g, 'v')", Some(serde_json::json!([{ "disallowRedundantWrapping": true }]))), // { "ecmaVersion": 2024 },
+        (
+            "new RegExp(/a/, 'v')",
+            Some(serde_json::json!([{ "disallowRedundantWrapping": true }])),
+        ), // { "ecmaVersion": 2024 },
+        (
+            "new RegExp(/a/, 'v')",
+            Some(serde_json::json!([{ "disallowRedundantWrapping": true }])),
+        ), // { "ecmaVersion": 2023 },
+        (
+            "new RegExp(/a/g, 'v')",
+            Some(serde_json::json!([{ "disallowRedundantWrapping": true }])),
+        ), // { "ecmaVersion": 2024 },
         (
             "new RegExp(/[[A--B]]/v, 'g')",
             Some(serde_json::json!([{ "disallowRedundantWrapping": true }])),
         ), // { "ecmaVersion": 2024 },
-        ("new RegExp(/a/u, 'v')", Some(serde_json::json!([{ "disallowRedundantWrapping": true }]))), // { "ecmaVersion": 2024 },
-        ("new RegExp(/a/v, 'u')", Some(serde_json::json!([{ "disallowRedundantWrapping": true }]))), // { "ecmaVersion": 2024 },
+        (
+            "new RegExp(/a/u, 'v')",
+            Some(serde_json::json!([{ "disallowRedundantWrapping": true }])),
+        ), // { "ecmaVersion": 2024 },
+        (
+            "new RegExp(/a/v, 'u')",
+            Some(serde_json::json!([{ "disallowRedundantWrapping": true }])),
+        ), // { "ecmaVersion": 2024 },
         (
             "new RegExp(/[[A--B]]/v, 'u')",
             Some(serde_json::json!([{ "disallowRedundantWrapping": true }])),
         ), // { "ecmaVersion": 2024 },
-        ("new RegExp('(?i:foo)bar')", None), // { "ecmaVersion": 2025 },
-        ("new RegExp('(?i:foo)bar')", None), // { "ecmaVersion": 2024 },
+        ("new RegExp('(?i:foo)bar')", None),   // { "ecmaVersion": 2025 },
+        ("new RegExp('(?i:foo)bar')", None),   // { "ecmaVersion": 2024 },
         ("var regex = new RegExp('foo', 'u');", None), // { "ecmaVersion": 2015, }
     ];
 
-    Tester::new(PreferRegexLiterals::NAME, PreferRegexLiterals::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        PreferRegexLiterals::NAME,
+        PreferRegexLiterals::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

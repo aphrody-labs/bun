@@ -14,7 +14,9 @@ pub(crate) fn resolve_candidate(raw: &str, base: Option<&Url>) -> Option<String>
         return None;
     }
     // Unrendered template placeholders are garbage, not URLs.
-    if ["{{", "}}", "${", "<%", "%>", "[[", "]]"].iter().any(|m| raw.contains(m))
+    if ["{{", "}}", "${", "<%", "%>", "[[", "]]"]
+        .iter()
+        .any(|m| raw.contains(m))
         || raw.chars().any(|c| c.is_control() || c == '\u{FFFD}')
     {
         return None;
@@ -113,13 +115,19 @@ mod tests {
     #[test]
     fn og_url_fallback() {
         let html = r#"<head><meta property="og:url" content="https://example.org/a/b"></head>"#;
-        assert_eq!(resolve_canonical(html, None).as_deref(), Some("https://example.org/a/b"));
+        assert_eq!(
+            resolve_canonical(html, None).as_deref(),
+            Some("https://example.org/a/b")
+        );
     }
 
     #[test]
     fn link_wins_over_og() {
         let html = r#"<head><meta property="og:url" content="https://example.org/og"><link rel="canonical" href="https://example.org/link"></head>"#;
-        assert_eq!(resolve_canonical(html, None).as_deref(), Some("https://example.org/link"));
+        assert_eq!(
+            resolve_canonical(html, None).as_deref(),
+            Some("https://example.org/link")
+        );
     }
 
     #[test]
@@ -155,7 +163,10 @@ mod tests {
     fn empty_and_nul_input() {
         assert_eq!(resolve_canonical("", None), None);
         assert_eq!(
-            resolve_canonical("\u{0}\u{0}<link rel=canonical href=\u{0}>", Some("https://a.b/")),
+            resolve_canonical(
+                "\u{0}\u{0}<link rel=canonical href=\u{0}>",
+                Some("https://a.b/")
+            ),
             None
         );
     }

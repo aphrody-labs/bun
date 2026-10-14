@@ -103,7 +103,11 @@ impl Allocator {
     /// i.e to the start of the `ChunkFooter`.
     ///
     /// If the `Allocator` is empty (has no chunks), this returns a dangling pointer.
-    #[cfg(all(feature = "fixed_size", target_pointer_width = "64", target_endian = "little"))]
+    #[cfg(all(
+        feature = "fixed_size",
+        target_pointer_width = "64",
+        target_endian = "little"
+    ))]
     pub(crate) fn data_end_ptr(&self) -> NonNull<u8> {
         self.arena().data_end_ptr()
     }

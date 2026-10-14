@@ -31,10 +31,12 @@ impl Version {
         let Some(first) = b.next() else {
             return Ordering::Equal;
         };
-        self.0.cmp(&first.parse().unwrap_or_default()).then_with(|| match b.next() {
-            Some(second) => self.1.cmp(&second.parse().unwrap_or_default()),
-            None => Ordering::Equal,
-        })
+        self.0
+            .cmp(&first.parse().unwrap_or_default())
+            .then_with(|| match b.next() {
+                Some(second) => self.1.cmp(&second.parse().unwrap_or_default()),
+                None => Ordering::Equal,
+            })
     }
 }
 

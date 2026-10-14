@@ -101,13 +101,15 @@ impl EngineTargets {
 
         let feature_engine_targets = &features()[&feature];
         self.iter().all(|(engine, target_version)| {
-            feature_engine_targets.get(engine).is_some_and(|feature_version| {
-                if *engine == Engine::Es {
-                    target_version.0 >= feature_version.0
-                } else {
-                    target_version >= feature_version
-                }
-            })
+            feature_engine_targets
+                .get(engine)
+                .is_some_and(|feature_version| {
+                    if *engine == Engine::Es {
+                        target_version.0 >= feature_version.0
+                    } else {
+                        target_version >= feature_version
+                    }
+                })
         })
     }
 
@@ -168,7 +170,10 @@ impl EngineTargets {
                 }
             }
         }
-        engine_targets.insert(Engine::Es, es_target.unwrap_or(ESTarget::default()).version());
+        engine_targets.insert(
+            Engine::Es,
+            es_target.unwrap_or(ESTarget::default()).version(),
+        );
         Ok(engine_targets)
     }
 }
@@ -194,16 +199,24 @@ fn test_supports_es_feature() {
     assert!(!EngineTargets::default().supports_es_feature(ES2015ArrowFunctions));
 
     assert!(
-        EngineTargets::from_target("es2015").unwrap().supports_es_feature(ES2015ArrowFunctions)
+        EngineTargets::from_target("es2015")
+            .unwrap()
+            .supports_es_feature(ES2015ArrowFunctions)
     );
     assert!(
-        EngineTargets::from_target("esnext").unwrap().supports_es_feature(ES2020OptionalChaining)
+        EngineTargets::from_target("esnext")
+            .unwrap()
+            .supports_es_feature(ES2020OptionalChaining)
     );
     assert!(
-        !EngineTargets::from_target("es2019").unwrap().supports_es_feature(ES2020OptionalChaining)
+        !EngineTargets::from_target("es2019")
+            .unwrap()
+            .supports_es_feature(ES2020OptionalChaining)
     );
     assert!(
-        EngineTargets::from_target("es2020").unwrap().supports_es_feature(ES2020OptionalChaining)
+        EngineTargets::from_target("es2020")
+            .unwrap()
+            .supports_es_feature(ES2020OptionalChaining)
     );
 
     // Browser targets also contain an implicit `esnext`. All configured engines must support the
@@ -214,7 +227,9 @@ fn test_supports_es_feature() {
             .supports_es_feature(ES2020OptionalChaining)
     );
     assert!(
-        EngineTargets::from_target("chrome91").unwrap().supports_es_feature(ES2020OptionalChaining)
+        EngineTargets::from_target("chrome91")
+            .unwrap()
+            .supports_es_feature(ES2020OptionalChaining)
     );
 
     assert!(

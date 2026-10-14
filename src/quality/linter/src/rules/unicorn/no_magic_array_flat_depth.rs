@@ -62,7 +62,10 @@ impl Rule for NoMagicArrayFlatDepth {
         }
 
         let first_arg = call_expression.arguments.first().expect("missing argument");
-        let Some(arg) = first_arg.as_expression().map(Expression::without_parentheses) else {
+        let Some(arg) = first_arg
+            .as_expression()
+            .map(Expression::without_parentheses)
+        else {
             return;
         };
 
@@ -123,6 +126,11 @@ fn test() {
         "array.flat/* ( */(2)",
     ];
 
-    Tester::new(NoMagicArrayFlatDepth::NAME, NoMagicArrayFlatDepth::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        NoMagicArrayFlatDepth::NAME,
+        NoMagicArrayFlatDepth::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

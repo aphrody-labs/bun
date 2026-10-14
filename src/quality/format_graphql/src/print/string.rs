@@ -21,7 +21,10 @@ use super::GraphqlFormatter;
 
 pub(super) fn write_string_value<'a>(sv: &StringValue<'a>, f: &mut GraphqlFormatter<'_, 'a>) {
     let raw = sv.raw;
-    if let Some(body) = raw.strip_prefix("\"\"\"").and_then(|r| r.strip_suffix("\"\"\"")) {
+    if let Some(body) = raw
+        .strip_prefix("\"\"\"")
+        .and_then(|r| r.strip_suffix("\"\"\""))
+    {
         write_block_string(body, f);
     } else if let Some(body) = raw.strip_prefix('"').and_then(|r| r.strip_suffix('"')) {
         write_regular_string(body, f);
@@ -42,7 +45,11 @@ fn write_block_string(body: &str, f: &mut GraphqlFormatter<'_, '_>) {
     // Trailing spaces/tabs are trimmed per line.
     let mut lines: Vec<String> = cooked_lines
         .iter()
-        .map(|l| l.trim_end_matches([' ', '\t']).cow_replace("\"\"\"", "\\\"\"\"").into_owned())
+        .map(|l| {
+            l.trim_end_matches([' ', '\t'])
+                .cow_replace("\"\"\"", "\\\"\"\"")
+                .into_owned()
+        })
         .collect();
     if lines.len() == 1 {
         lines[0] = lines[0].trim().to_string();
@@ -123,7 +130,11 @@ fn split_graphql_lines(value: &str) -> Vec<&str> {
             }
             b'\r' => {
                 lines.push(&value[start..i]);
-                i += if bytes.get(i + 1) == Some(&b'\n') { 2 } else { 1 };
+                i += if bytes.get(i + 1) == Some(&b'\n') {
+                    2
+                } else {
+                    1
+                };
                 start = i;
             }
             _ => i += 1,
@@ -134,7 +145,9 @@ fn split_graphql_lines(value: &str) -> Vec<&str> {
 }
 
 fn leading_whitespace_len(line: &str) -> usize {
-    line.bytes().take_while(|&b| b == b' ' || b == b'\t').count()
+    line.bytes()
+        .take_while(|&b| b == b' ' || b == b'\t')
+        .count()
 }
 
 /// Regular string: decode escapes (GraphQL `StringValue` semantics), then re-encode

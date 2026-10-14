@@ -20,12 +20,19 @@ pub fn prune_unused_labels_hir(func: &mut HirFunction) {
     let mut merged: Vec<(BlockId, BlockId, BlockId)> = Vec::new(); // (label, next, fallthrough)
 
     for (&block_id, block) in &func.body.blocks {
-        if let Terminal::Label { block: next_id, fallthrough: fallthrough_id, .. } = &block.terminal
+        if let Terminal::Label {
+            block: next_id,
+            fallthrough: fallthrough_id,
+            ..
+        } = &block.terminal
         {
             let next = &func.body.blocks[next_id];
             let fallthrough = &func.body.blocks[fallthrough_id];
-            if let Terminal::Goto { block: goto_target, variant: GotoVariant::Break, .. } =
-                &next.terminal
+            if let Terminal::Goto {
+                block: goto_target,
+                variant: GotoVariant::Break,
+                ..
+            } = &next.terminal
                 && goto_target == fallthrough_id
                 && next.kind == BlockKind::Block
                 && fallthrough.kind == BlockKind::Block
@@ -39,7 +46,10 @@ pub fn prune_unused_labels_hir(func: &mut HirFunction) {
     let mut rewrites: FxHashMap<BlockId, BlockId> = FxHashMap::default();
 
     for (original_label_id, next_id, fallthrough_id) in &merged {
-        let label_id = rewrites.get(original_label_id).copied().unwrap_or(*original_label_id);
+        let label_id = rewrites
+            .get(original_label_id)
+            .copied()
+            .unwrap_or(*original_label_id);
 
         // Validate: no phis in next or fallthrough
         let next_phis_empty = func.body.blocks[next_id].phis.is_empty();
@@ -67,7 +77,9 @@ pub fn prune_unused_labels_hir(func: &mut HirFunction) {
         // Merge into the label block
         let label_block = func.body.blocks.get_mut(&label_id).unwrap();
         label_block.instructions.extend(next_block.instructions);
-        label_block.instructions.extend(fallthrough_block.instructions);
+        label_block
+            .instructions
+            .extend(fallthrough_block.instructions);
         label_block.terminal = fallthrough_block.terminal;
 
         rewrites.insert(*fallthrough_id, label_id);

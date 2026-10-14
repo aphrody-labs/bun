@@ -18,8 +18,11 @@ fn bench_codegen(criterion: &mut Criterion) {
         assert!(parser_ret.diagnostics.is_empty());
         let mut program = parser_ret.program;
 
-        let scoping =
-            SemanticBuilder::new().with_enum_eval(true).build(&program).semantic.into_scoping();
+        let scoping = SemanticBuilder::new()
+            .with_enum_eval(true)
+            .build(&program)
+            .semantic
+            .into_scoping();
 
         let transform_options = TransformOptions::enable_all();
         let transformer_ret =
@@ -32,7 +35,11 @@ fn bench_codegen(criterion: &mut Criterion) {
                 let name = format!(
                     "codegen{}{}",
                     if ascii_only { "_ascii_only" } else { "" },
-                    if sourcemap_enabled { "" } else { "_no_sourcemap" }
+                    if sourcemap_enabled {
+                        ""
+                    } else {
+                        "_no_sourcemap"
+                    }
                 );
 
                 let id = BenchmarkId::from_parameter(&file.file_name);

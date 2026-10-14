@@ -4,7 +4,10 @@
 
 /// Replacement text for `&name;`, if `name` is a known entity.
 pub fn lookup(name: &str) -> Option<&'static str> {
-    ENTITIES.binary_search_by(|&(n, _)| n.cmp(name)).ok().map(|i| ENTITIES[i].1)
+    ENTITIES
+        .binary_search_by(|&(n, _)| n.cmp(name))
+        .ok()
+        .map(|i| ENTITIES[i].1)
 }
 
 #[rustfmt::skip]

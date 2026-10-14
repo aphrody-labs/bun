@@ -115,7 +115,7 @@ declare_oxc_lint!(
     NoRequireImports,
     typescript,
     restriction,
-    pending,  // TODO: fixer (change require to import)
+    pending, // TODO: fixer (change require to import)
     config = NoRequireImportsConfig,
     version = "0.13.0",
     short_description = "Forbids the use of CommonJS `require` calls.",
@@ -257,7 +257,10 @@ fn test() {
             "import pkg = require('some-package');",
             Some(serde_json::json!([{ "allow": ["^some-package$"] }])),
         ),
-        ("import foo = require('foo');", Some(serde_json::json!([{ "allowAsImport": true }]))),
+        (
+            "import foo = require('foo');",
+            Some(serde_json::json!([{ "allowAsImport": true }])),
+        ),
         (
             "
             let require = bazz;
@@ -356,12 +359,18 @@ fn test() {
             "import pkg = require('./package.json');",
             Some(serde_json::json!([{ "allow": ["^some-package$"] }])),
         ),
-        ("var foo = require?.('foo');", Some(serde_json::json!([{ "allowAsImport": true }]))),
+        (
+            "var foo = require?.('foo');",
+            Some(serde_json::json!([{ "allowAsImport": true }])),
+        ),
         (
             "let foo = trick(require?.('foo'));",
             Some(serde_json::json!([{ "allowAsImport": true }])),
         ),
-        ("trick(require('foo'));", Some(serde_json::json!([{ "allowAsImport": true }]))),
+        (
+            "trick(require('foo'));",
+            Some(serde_json::json!([{ "allowAsImport": true }])),
+        ),
         (
             "const foo = require('./foo.json') as Foo;",
             Some(serde_json::json!([{ "allowAsImport": true }])),
@@ -381,8 +390,14 @@ fn test() {
                   ",
             Some(serde_json::json!([{ "allowAsImport": true }])),
         ),
-        ("require('foo');", Some(serde_json::json!([{ "allowAsImport": true }]))),
-        ("require?.('foo');", Some(serde_json::json!([{ "allowAsImport": true }]))),
+        (
+            "require('foo');",
+            Some(serde_json::json!([{ "allowAsImport": true }])),
+        ),
+        (
+            "require?.('foo');",
+            Some(serde_json::json!([{ "allowAsImport": true }])),
+        ),
         // covers global require in scope
         (
             r"function foo() {

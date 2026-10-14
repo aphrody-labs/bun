@@ -35,7 +35,10 @@ pub fn prune_hoisted_contexts<'a>(
     env: &Environment<'a>,
 ) -> Result<(), OxcDiagnostic> {
     let mut transform = Transform { env };
-    let mut state = VisitorState { active_scopes: Vec::new(), uninitialized: FxHashMap::default() };
+    let mut state = VisitorState {
+        active_scopes: Vec::new(),
+        uninitialized: FxHashMap::default(),
+    };
     transform_reactive_function(func, &mut transform, &mut state)
 }
 
@@ -87,7 +90,9 @@ impl<'a, 'e> ReactiveFunctionTransform<'a> for Transform<'a, 'e> {
 
         // Add declared but not initialized variables
         for (_, decl) in &scope_data.declarations {
-            state.uninitialized.insert(decl.identifier, UninitializedKind::UnknownKind);
+            state
+                .uninitialized
+                .insert(decl.identifier, UninitializedKind::UnknownKind);
         }
 
         state.active_scopes.push(decl_ids);

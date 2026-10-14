@@ -174,15 +174,27 @@ fn test() {
         ("function test(err) {console.log(err);}", None),
         ("function test(err, data) {if(err){ data = 'ERROR';}}", None),
         ("var test = function(err) {console.log(err);};", None),
-        ("var test = function(err) {if(err){/* do nothing */}};", None),
-        ("var test = function(err) {if(!err){doSomethingHere();}else{};}", None),
-        ("var test = function(err, data) {if(!err) { good(); } else { bad(); }}", None),
+        (
+            "var test = function(err) {if(err){/* do nothing */}};",
+            None,
+        ),
+        (
+            "var test = function(err) {if(!err){doSomethingHere();}else{};}",
+            None,
+        ),
+        (
+            "var test = function(err, data) {if(!err) { good(); } else { bad(); }}",
+            None,
+        ),
         ("try { } catch(err) {}", None),
         (
             "getData(function(err, data) {if (err) {}getMoreDataWith(data, function(err, moreData) {if (err) {}getEvenMoreDataWith(moreData, function(err, allOfTheThings) {if (err) {}});});});",
             None,
         ),
-        ("var test = function(err) {if(! err){doSomethingHere();}};", None),
+        (
+            "var test = function(err) {if(! err){doSomethingHere();}};",
+            None,
+        ),
         (
             "function test(err, data) {if (data) {doSomething(function(err) {console.error(err);});} else if (err) {console.log(err);}}",
             None,
@@ -195,12 +207,18 @@ fn test() {
             "function handler(err) {logThisAction(function(err) {if (err) {}}); console.log(err);}",
             None,
         ),
-        ("function userHandler(err) {process.nextTick(function() {if (err) {}})}", None),
+        (
+            "function userHandler(err) {process.nextTick(function() {if (err) {}})}",
+            None,
+        ),
         (
             "function help() { function userHandler(err) {function tester() { err; process.nextTick(function() { err; }); } } }",
             None,
         ),
-        ("function help(done) { var err = new Error('error'); done(); }", None),
+        (
+            "function help(done) { var err = new Error('error'); done(); }",
+            None,
+        ),
         ("var test = err => err;", None),
         ("var test = err => !err;", None),
         ("var test = err => err.message;", None),
@@ -243,13 +261,22 @@ fn test() {
         ("function test(err, data) {}", None),
         ("function test(err) {errorLookingWord();}", None),
         ("function test(err) {try{} catch(err) {}}", None),
-        ("function test(err, callback) { foo(function(err, callback) {}); }", None),
+        (
+            "function test(err, callback) { foo(function(err, callback) {}); }",
+            None,
+        ),
         ("var test = (err) => {};", None),
         ("var test = function(err) {};", None),
         ("var test = function test(err, data) {};", None),
         ("var test = function test(err) {/* if(err){} */};", None),
-        ("function test(err) {doSomethingHere(function(err){console.log(err);})}", None),
-        ("function test(error) {}", Some(serde_json::json!(["error"]))),
+        (
+            "function test(err) {doSomethingHere(function(err){console.log(err);})}",
+            None,
+        ),
+        (
+            "function test(error) {}",
+            Some(serde_json::json!(["error"])),
+        ),
         (
             "getData(function(err, data) {getMoreDataWith(data, function(err, moreData) {if (err) {}getEvenMoreDataWith(moreData, function(err, allOfTheThings) {if (err) {}});}); });",
             None,
@@ -270,12 +297,21 @@ fn test() {
             "var test = function(anyError) { console.log(otherError); };",
             Some(serde_json::json!(["^.+Error$"])),
         ),
-        ("var test = function(anyError) { };", Some(serde_json::json!(["^.+Error$"]))),
+        (
+            "var test = function(anyError) { };",
+            Some(serde_json::json!(["^.+Error$"])),
+        ),
         (
             "var test = function(err) { console.log(error); };",
             Some(serde_json::json!(["^(err|error)$"])),
         ),
     ];
 
-    Tester::new(HandleCallbackErr::NAME, HandleCallbackErr::PLUGIN, pass, fail).test_and_snapshot();
+    Tester::new(
+        HandleCallbackErr::NAME,
+        HandleCallbackErr::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

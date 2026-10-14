@@ -167,7 +167,10 @@ enum LineState {
 
 impl PrinterState {
     fn new(initial_line: LineState) -> Self {
-        Self { pending_space: false, line: initial_line }
+        Self {
+            pending_space: false,
+            line: initial_line,
+        }
     }
 
     /// Flushes the pending space (if any) by appending `" "` to the current scope's children.
@@ -185,8 +188,11 @@ fn convert_elements(
     state: &mut ConvertState,
     initial_line: LineState,
 ) -> Result<Vec<Value>, String> {
-    let mut stack: Vec<StackEntry> =
-        vec![StackEntry { start_tag: None, start_info: None, children: vec![] }];
+    let mut stack: Vec<StackEntry> = vec![StackEntry {
+        start_tag: None,
+        start_info: None,
+        children: vec![],
+    }];
     let mut printer = PrinterState::new(initial_line);
 
     for element in elements {
@@ -432,13 +438,17 @@ fn convert_elements(
     }
 
     if stack.len() != 1 {
-        if let Some(unclosed_tag) = stack.iter().rev().find_map(|entry| entry.start_tag.as_ref()) {
+        if let Some(unclosed_tag) = stack
+            .iter()
+            .rev()
+            .find_map(|entry| entry.start_tag.as_ref())
+        {
             return Err(format!(
                 "Invalid formatter IR: unclosed start tag `{unclosed_tag:?}` while converting to Prettier Doc"
             ));
         }
         return Err(
-            "Invalid formatter IR: unclosed tags while converting to Prettier Doc".to_string()
+            "Invalid formatter IR: unclosed tags while converting to Prettier Doc".to_string(),
         );
     }
 
@@ -459,9 +469,12 @@ fn convert_shared_elements(
 }
 
 fn current_children_mut(stack: &mut [StackEntry]) -> Result<&mut Vec<Value>, String> {
-    stack.last_mut().map(|entry| &mut entry.children).ok_or_else(|| {
-        "Invalid formatter IR: stack underflow while appending converted doc".to_string()
-    })
+    stack
+        .last_mut()
+        .map(|entry| &mut entry.children)
+        .ok_or_else(|| {
+            "Invalid formatter IR: stack underflow while appending converted doc".to_string()
+        })
 }
 
 fn interned_cache_key(elements: &[FormatElement]) -> InternedCacheKey {
@@ -561,9 +574,10 @@ fn extract_start_tag_info(tag: &Tag) -> StartTagInfo {
         Tag::StartAlign(align) => StartTagInfo::Align(align.count().get()),
         Tag::StartPrefix(prefix) => StartTagInfo::Prefix(prefix.text()),
         Tag::StartDedent(mode) => StartTagInfo::Dedent(*mode),
-        Tag::StartGroup(group) => {
-            StartTagInfo::Group { id: group.id(), should_break: !group.mode().is_flat() }
-        }
+        Tag::StartGroup(group) => StartTagInfo::Group {
+            id: group.id(),
+            should_break: !group.mode().is_flat(),
+        },
         Tag::StartConditionalContent(condition) => StartTagInfo::ConditionalContent {
             mode: condition.mode(),
             group_id: condition.group_id(),
@@ -782,7 +796,9 @@ fn strip_trailing_hard_line(children: &mut Vec<Value>) -> bool {
 /// Returns `true` if the children consist only of hardline docs and break-parent docs
 /// (i.e., no visible content that would benefit from indentation).
 fn children_are_only_hardlines(children: &[Value]) -> bool {
-    children.iter().all(|child| is_break_parent(child) || is_hard_line(child))
+    children
+        .iter()
+        .all(|child| is_break_parent(child) || is_hard_line(child))
 }
 
 /// Whether the doc (sub)tree contains a dedent-to-root (`align` with `n: null`).
@@ -944,7 +960,10 @@ mod tests {
             A,
             FormatElement::Tag(Tag::EndPrefix),
         ]);
-        assert_eq!(doc["doc"], json!({"type": "align", "n": "> ", "contents": "a"}));
+        assert_eq!(
+            doc["doc"],
+            json!({"type": "align", "n": "> ", "contents": "a"})
+        );
     }
 
     #[test]
@@ -954,7 +973,10 @@ mod tests {
             A,
             FormatElement::Tag(Tag::EndDedent(DedentMode::Root)),
         ]);
-        assert_eq!(doc["doc"], json!({"type": "align", "n": null, "contents": "a"}));
+        assert_eq!(
+            doc["doc"],
+            json!({"type": "align", "n": null, "contents": "a"})
+        );
         assert_eq!(doc["hasRootDedent"], json!(true));
 
         let doc = to_doc(&[A]);

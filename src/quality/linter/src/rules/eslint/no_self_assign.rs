@@ -292,11 +292,19 @@ impl NoSelfAssign {
                     return;
                 };
 
-                let ObjectProperty { method: false, value: expr, span, key, .. } = &**obj_prop
+                let ObjectProperty {
+                    method: false,
+                    value: expr,
+                    span,
+                    key,
+                    ..
+                } = &**obj_prop
                 else {
                     return;
                 };
-                if key.static_name().is_some_and(|name| name == id1.binding.name)
+                if key
+                    .static_name()
+                    .is_some_and(|name| name == id1.binding.name)
                     && let Expression::Identifier(id2) = expr.without_parentheses()
                     && id1.binding.name == id2.name
                 {
@@ -313,7 +321,13 @@ impl NoSelfAssign {
                 let ObjectPropertyKind::ObjectProperty(obj_prop) = right else {
                     return;
                 };
-                let ObjectProperty { method: false, value: expr, key, .. } = &**obj_prop else {
+                let ObjectProperty {
+                    method: false,
+                    value: expr,
+                    key,
+                    ..
+                } = &**obj_prop
+                else {
                     return;
                 };
 
@@ -364,20 +378,53 @@ fn test() {
         ("a.b = c.b", Some(serde_json::json!([{ "props": true }]))),
         ("a.b = a[b]", Some(serde_json::json!([{ "props": true }]))),
         ("a[b] = a.b", Some(serde_json::json!([{ "props": true }]))),
-        ("a.b().c = a.b().c", Some(serde_json::json!([{ "props": true }]))),
-        ("b().c = b().c", Some(serde_json::json!([{ "props": true }]))),
-        ("a.null = a[/(?<zero>0)/]", Some(serde_json::json!([{ "props": true }]))),
-        ("a[b + 1] = a[b + 1]", Some(serde_json::json!([{ "props": true }]))),
+        (
+            "a.b().c = a.b().c",
+            Some(serde_json::json!([{ "props": true }])),
+        ),
+        (
+            "b().c = b().c",
+            Some(serde_json::json!([{ "props": true }])),
+        ),
+        (
+            "a.null = a[/(?<zero>0)/]",
+            Some(serde_json::json!([{ "props": true }])),
+        ),
+        (
+            "a[b + 1] = a[b + 1]",
+            Some(serde_json::json!([{ "props": true }])),
+        ),
         ("a.b = a.b", Some(serde_json::json!([{ "props": false }]))),
-        ("a.b.c = a.b.c", Some(serde_json::json!([{ "props": false }]))),
+        (
+            "a.b.c = a.b.c",
+            Some(serde_json::json!([{ "props": false }])),
+        ),
         ("a[b] = a[b]", Some(serde_json::json!([{ "props": false }]))),
-        ("a['b'] = a['b']", Some(serde_json::json!([{ "props": false }]))),
+        (
+            "a['b'] = a['b']",
+            Some(serde_json::json!([{ "props": false }])),
+        ),
         (r#"obj[a] = obj["a"];"#, None),
-        ("a[\n    'b'\n] = a[\n    'b'\n]", Some(serde_json::json!([{ "props": false }]))),
-        ("this.x = this.y", Some(serde_json::json!([{ "props": true }]))),
-        ("this.x = this.x", Some(serde_json::json!([{ "props": false }]))),
-        ("class C { #field; foo() { this['#field'] = this.#field; } }", None),
-        ("class C { #field; foo() { this.#field = this['#field']; } }", None),
+        (
+            "a[\n    'b'\n] = a[\n    'b'\n]",
+            Some(serde_json::json!([{ "props": false }])),
+        ),
+        (
+            "this.x = this.y",
+            Some(serde_json::json!([{ "props": true }])),
+        ),
+        (
+            "this.x = this.x",
+            Some(serde_json::json!([{ "props": false }])),
+        ),
+        (
+            "class C { #field; foo() { this['#field'] = this.#field; } }",
+            None,
+        ),
+        (
+            "class C { #field; foo() { this.#field = this['#field']; } }",
+            None,
+        ),
         (r#"obj["a" + "b"] = obj["a" + "b"];"#, None),
         ("obj[a + b] = obj[a + b];", None),
         // `&=` and `|=` have an effect on non-integers.
@@ -416,16 +463,37 @@ fn test() {
         ("a['b'] = a['b']", None),
         ("a[\n    'b'\n] = a[\n    'b'\n]", None),
         ("a.b = a.b", Some(serde_json::json!([{ "props": true }]))),
-        ("a.b.c = a.b.c", Some(serde_json::json!([{ "props": true }]))),
+        (
+            "a.b.c = a.b.c",
+            Some(serde_json::json!([{ "props": true }])),
+        ),
         ("a[b] = a[b]", Some(serde_json::json!([{ "props": true }]))),
-        ("a['b'] = a['b']", Some(serde_json::json!([{ "props": true }]))),
-        ("a[\n    'b'\n] = a[\n    'b'\n]", Some(serde_json::json!([{ "props": true }]))),
-        ("this.x = this.x", Some(serde_json::json!([{ "props": true }]))),
-        ("a['/(?<zero>0)/'] = a[/(?<zero>0)/]", Some(serde_json::json!([{ "props": true }]))),
+        (
+            "a['b'] = a['b']",
+            Some(serde_json::json!([{ "props": true }])),
+        ),
+        (
+            "a[\n    'b'\n] = a[\n    'b'\n]",
+            Some(serde_json::json!([{ "props": true }])),
+        ),
+        (
+            "this.x = this.x",
+            Some(serde_json::json!([{ "props": true }])),
+        ),
+        (
+            "a['/(?<zero>0)/'] = a[/(?<zero>0)/]",
+            Some(serde_json::json!([{ "props": true }])),
+        ),
         ("(a?.b).c = (a?.b).c", None),
         ("a.b = a?.b", None),
-        ("class C { #field; foo() { this.#field = this.#field; } }", None),
-        ("class C { #field; foo() { [this.#field] = [this.#field]; } }", None),
+        (
+            "class C { #field; foo() { this.#field = this.#field; } }",
+            None,
+        ),
+        (
+            "class C { #field; foo() { [this.#field] = [this.#field]; } }",
+            None,
+        ),
         ("a &&= a", None),
         ("a ||= a", None),
         ("a ??= a", None),

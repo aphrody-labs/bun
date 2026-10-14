@@ -77,10 +77,10 @@ impl<'s> Engine<'s> {
             }
             // Prettier's liquid is not `concrete`:
             // a container starting on a continuation line interrupts the attempt.
-            if next
-                .flow_start()
-                .is_some_and(|c| self.probe(c.tail(), false).is_some_and(|s| s.is_container()))
-            {
+            if next.flow_start().is_some_and(|c| {
+                self.probe(c.tail(), false)
+                    .is_some_and(|s| s.is_container())
+            }) {
                 return None;
             }
             cur = next;
@@ -92,7 +92,10 @@ impl<'s> Engine<'s> {
     /// Opens (attaches) a validated flow liquid tag and skips its lines.
     pub(super) fn open_liquid(&mut self, tag: LiquidTag) {
         self.close_list_top();
-        self.attach(Ir::Liquid { pieces: tag.pieces, span: tag.span });
+        self.attach(Ir::Liquid {
+            pieces: tag.pieces,
+            span: tag.span,
+        });
         self.skip_to = tag.last_line_end;
     }
 }

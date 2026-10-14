@@ -13,7 +13,9 @@ use crate::{
 };
 
 fn no_defaults_diagnostic(span: Span, x1: &str) -> OxcDiagnostic {
-    OxcDiagnostic::warn("Defaults are not permitted.").with_help(x1.to_string()).with_label(span)
+    OxcDiagnostic::warn("Defaults are not permitted.")
+        .with_help(x1.to_string())
+        .with_label(span)
 }
 
 #[derive(Debug, Default, Clone, Deserialize)]

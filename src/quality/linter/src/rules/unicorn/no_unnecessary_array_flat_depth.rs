@@ -46,13 +46,17 @@ declare_oxc_lint!(
 
 impl Rule for NoUnnecessaryArrayFlatDepth {
     fn run<'a>(&self, node: &AstNode<'a>, ctx: &LintContext<'a>) {
-        let AstKind::CallExpression(call_expr) = node.kind() else { return };
+        let AstKind::CallExpression(call_expr) = node.kind() else {
+            return;
+        };
         if call_expr.optional || !is_method_call(call_expr, None, Some(&["flat"]), Some(1), Some(1))
         {
             return;
         }
 
-        let Some(arg) = call_expr.arguments[0].as_expression() else { return };
+        let Some(arg) = call_expr.arguments[0].as_expression() else {
+            return;
+        };
         let arg = arg.get_inner_expression();
         if arg.is_number_value(1.0) {
             let diagnostic_span = call_expr
@@ -86,7 +90,12 @@ fn test() {
         "foo.notFlat(1)",
     ];
 
-    let fail = vec!["foo.flat(1)", "foo.flat(1.0)", "foo.flat(0b01)", "foo?.flat(1)"];
+    let fail = vec![
+        "foo.flat(1)",
+        "foo.flat(1.0)",
+        "foo.flat(0b01)",
+        "foo?.flat(1)",
+    ];
 
     let fix = vec![
         ("foo.flat(1)", "foo.flat()"),
@@ -96,7 +105,12 @@ fn test() {
         ("foo?.flat(1,)", "foo?.flat()"),
     ];
 
-    Tester::new(NoUnnecessaryArrayFlatDepth::NAME, NoUnnecessaryArrayFlatDepth::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        NoUnnecessaryArrayFlatDepth::NAME,
+        NoUnnecessaryArrayFlatDepth::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

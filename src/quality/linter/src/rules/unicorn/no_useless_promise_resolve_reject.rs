@@ -96,7 +96,10 @@ impl Rule for NoUselessPromiseResolveReject {
             return;
         };
 
-        if !matches!(static_member_expr.property.name.as_str(), "resolve" | "reject") {
+        if !matches!(
+            static_member_expr.property.name.as_str(),
+            "resolve" | "reject"
+        ) {
             return;
         }
 
@@ -112,7 +115,9 @@ impl Rule for NoUselessPromiseResolveReject {
                 let Some(grand_parent) = outermost_paren_parent(parent, ctx) else {
                     return;
                 };
-                let AstKind::FunctionBody(function_body) = grand_parent.kind() else { return };
+                let AstKind::FunctionBody(function_body) = grand_parent.kind() else {
+                    return;
+                };
 
                 if function_body.statements.len() != 1 {
                     return;
@@ -140,7 +145,10 @@ impl Rule for NoUselessPromiseResolveReject {
         match static_member_expr.property.name.as_str() {
             "resolve" => {
                 ctx.diagnostic_with_fix(
-                    resolve(node.kind().span(), if is_yield { "yield" } else { "return" }),
+                    resolve(
+                        node.kind().span(),
+                        if is_yield { "yield" } else { "return" },
+                    ),
                     |fixer| {
                         generate_fix(
                             call_expr,
@@ -159,7 +167,10 @@ impl Rule for NoUselessPromiseResolveReject {
                     return;
                 }
                 ctx.diagnostic_with_fix(
-                    reject(node.kind().span(), if is_yield { "yield" } else { "return" }),
+                    reject(
+                        node.kind().span(),
+                        if is_yield { "yield" } else { "return" },
+                    ),
                     |fixer| {
                         generate_fix(
                             call_expr,
@@ -268,7 +279,9 @@ fn is_bind_member_expression(node: &AstNode) -> bool {
     let Some(member_expr) = node.kind().as_member_expression_kind() else {
         return false;
     };
-    member_expr.static_property_name().is_some_and(|name| name == "bind")
+    member_expr
+        .static_property_name()
+        .is_some_and(|name| name == "bind")
 }
 
 fn generate_fix<'a>(
@@ -318,9 +331,17 @@ fn generate_fix<'a>(
     let is_arrow_function_body =
         matches!(parent.kind(), AstKind::ArrowFunctionExpression(arrow) if arrow.is_expression());
 
-    let mut replace_range = if is_reject { parent.kind().span() } else { call_expr.span() };
+    let mut replace_range = if is_reject {
+        parent.kind().span()
+    } else {
+        call_expr.span()
+    };
     let replacement_text = if is_reject {
-        let text = if arg_text.is_empty() { "undefined" } else { arg_text };
+        let text = if arg_text.is_empty() {
+            "undefined"
+        } else {
+            arg_text
+        };
         let mut text = format!("throw {text}");
 
         if is_yield {
@@ -534,14 +555,23 @@ fn test() {
             None,
         ),
         // Promise#then/catch/finally
-        (r"promise.then(() => foo).catch(() => bar).finally(() => baz)", None),
-        (r"promise.then(() => foo, () => bar).finally(() => baz)", None),
+        (
+            r"promise.then(() => foo).catch(() => bar).finally(() => baz)",
+            None,
+        ),
+        (
+            r"promise.then(() => foo, () => bar).finally(() => baz)",
+            None,
+        ),
         (r"promise.then(x, y, () => Promise.resolve(foo))", None),
         (r"promise.catch(x, () => Promise.resolve(foo))", None),
         (r"promise.finally(x, () => Promise.resolve(foo))", None),
         (r"promise[then](() => Promise.resolve(foo))", None),
         // additional cases:
-        (r"(async () => { Promise.resolve().then(() => console.log('foo')); })();", None),
+        (
+            r"(async () => { Promise.resolve().then(() => console.log('foo')); })();",
+            None,
+        ),
         // TODO: enhance to report this case?
         (
             r#"fs.promises.readFile("foo", 'utf8').then(undefined, err => err.code === 'ENOENT' ? Promise.resolve('{}') : Promise.reject(err))"#,
@@ -557,7 +587,10 @@ fn test() {
         (r"doThing().then(null, function() { throw 4 })", None),
         (r"doThing().catch(null, function() { return 4 })", None),
         (r"doThing().catch(null, function() { throw 4 })", None),
-        (r"doThing().then(function() { return Promise.all([a,b,c]) })", None),
+        (
+            r"doThing().then(function() { return Promise.all([a,b,c]) })",
+            None,
+        ),
         (r"doThing().then(() => 4)", None),
         (r"doThing().then(() => { throw 4 })", None),
         (r"doThing().then(()=>{}, () => 4)", None),
@@ -573,7 +606,10 @@ fn test() {
             "doThing().then(function() { return Promise.reject(4) })",
             Some(serde_json::json!([{ "allowReject": true }])),
         ),
-        (r"doThing().then((function() { return Promise.resolve(4) }).toString())", None),
+        (
+            r"doThing().then((function() { return Promise.resolve(4) }).toString())",
+            None,
+        ),
         (
             "doThing().then(() => Promise.reject(4))",
             Some(serde_json::json!([{ "allowReject": true }])),
@@ -819,33 +855,84 @@ fn test() {
             None,
         ),
         (r"promise.then(() => Promise.resolve(bar))", None),
-        (r"promise.then(() => { return Promise.resolve(bar); })", None),
+        (
+            r"promise.then(() => { return Promise.resolve(bar); })",
+            None,
+        ),
         (r"promise.then(async () => Promise.reject(bar))", None),
-        (r"promise.then(async () => { return Promise.reject(bar); })", None),
+        (
+            r"promise.then(async () => { return Promise.reject(bar); })",
+            None,
+        ),
         (r"promise.catch(() => Promise.resolve(bar))", None),
-        (r"promise.catch(() => { return Promise.resolve(bar); })", None),
+        (
+            r"promise.catch(() => { return Promise.resolve(bar); })",
+            None,
+        ),
         (r"promise.catch(async () => Promise.reject(bar))", None),
-        (r"promise.catch(async () => { return Promise.reject(bar); })", None),
+        (
+            r"promise.catch(async () => { return Promise.reject(bar); })",
+            None,
+        ),
         (r"promise.finally(() => Promise.resolve(bar))", None),
-        (r"promise.finally(() => { return Promise.resolve(bar); })", None),
+        (
+            r"promise.finally(() => { return Promise.resolve(bar); })",
+            None,
+        ),
         (r"promise.finally(async () => Promise.reject(bar))", None),
-        (r"promise.finally(async () => { return Promise.reject(bar); })", None),
+        (
+            r"promise.finally(async () => { return Promise.reject(bar); })",
+            None,
+        ),
         (r"promise.then(() => {}, () => Promise.resolve(bar))", None),
-        (r"promise.then(() => Promise.resolve(bar), () => Promise.resolve(baz))", None),
-        (r"promise.then(() => {}, () => { return Promise.resolve(bar); })", None),
-        (r"promise.then(() => {}, async () => Promise.reject(bar))", None),
-        (r"promise.then(() => {}, async () => { return Promise.reject(bar); })", None),
-        (r"doThing().then(function() { return Promise.resolve(4) })", None),
-        (r"doThing().then(null, function() { return Promise.resolve(4) })", None),
-        (r"doThing().catch(function() { return Promise.resolve(4) })", None),
-        (r"doThing().then(function() { return Promise.reject(4) })", None),
-        (r"doThing().then(null, function() { return Promise.reject(4) })", None),
-        (r"doThing().catch(function() { return Promise.reject(4) })", None),
+        (
+            r"promise.then(() => Promise.resolve(bar), () => Promise.resolve(baz))",
+            None,
+        ),
+        (
+            r"promise.then(() => {}, () => { return Promise.resolve(bar); })",
+            None,
+        ),
+        (
+            r"promise.then(() => {}, async () => Promise.reject(bar))",
+            None,
+        ),
+        (
+            r"promise.then(() => {}, async () => { return Promise.reject(bar); })",
+            None,
+        ),
+        (
+            r"doThing().then(function() { return Promise.resolve(4) })",
+            None,
+        ),
+        (
+            r"doThing().then(null, function() { return Promise.resolve(4) })",
+            None,
+        ),
+        (
+            r"doThing().catch(function() { return Promise.resolve(4) })",
+            None,
+        ),
+        (
+            r"doThing().then(function() { return Promise.reject(4) })",
+            None,
+        ),
+        (
+            r"doThing().then(null, function() { return Promise.reject(4) })",
+            None,
+        ),
+        (
+            r"doThing().catch(function() { return Promise.reject(4) })",
+            None,
+        ),
         (
             r#"doThing().then(function(x) { if (x>1) { return Promise.resolve(4) } else { throw "bad" } })"#,
             None,
         ),
-        (r"doThing().then(function(x) { if (x>1) { return Promise.reject(4) } })", None),
+        (
+            r"doThing().then(function(x) { if (x>1) { return Promise.reject(4) } })",
+            None,
+        ),
         (
             r"doThing().then(null, function() { if (true && false) { return Promise.resolve() } })",
             None,
@@ -921,8 +1008,14 @@ fn test() {
                           ",
             None,
         ),
-        (r"doThing().then((function() { return Promise.resolve(4) }).bind(this))", None),
-        (r"doThing().then((function() { return Promise.resolve(4) }).bind(this).bind(this))", None),
+        (
+            r"doThing().then((function() { return Promise.resolve(4) }).bind(this))",
+            None,
+        ),
+        (
+            r"doThing().then((function() { return Promise.resolve(4) }).bind(this).bind(this))",
+            None,
+        ),
         (r"doThing().then(() => { return Promise.resolve(4) })", None),
         (
             "
@@ -961,7 +1054,11 @@ fn test() {
             None,
         ),
         // Async function returning Promise.resolve
-        ("async () => Promise.resolve(bar);", "async () => bar;", None),
+        (
+            "async () => Promise.resolve(bar);",
+            "async () => bar;",
+            None,
+        ),
         (
             r"
                 async () => {
@@ -1028,7 +1125,11 @@ fn test() {
             None,
         ),
         // Async function returning Promise.reject
-        ("async () => Promise.reject(bar);", "async () => { throw bar; };", None),
+        (
+            "async () => Promise.reject(bar);",
+            "async () => { throw bar; };",
+            None,
+        ),
         (
             r"
                 async () => {
@@ -1163,7 +1264,11 @@ fn test() {
             ",
             None,
         ),
-        (r"async () => Promise.reject();", r"async () => { throw undefined; };", None),
+        (
+            r"async () => Promise.reject();",
+            r"async () => { throw undefined; };",
+            None,
+        ),
         (
             r"
             async function foo() {
@@ -1204,9 +1309,17 @@ fn test() {
             ",
             None,
         ),
-        (r"async () => Promise.resolve((bar, baz))", r"async () => (bar, baz)", None),
+        (
+            r"async () => Promise.resolve((bar, baz))",
+            r"async () => (bar, baz)",
+            None,
+        ),
         // Arrow function returning an object
-        (r"async () => Promise.resolve({})", r"async () => ({})", None),
+        (
+            r"async () => Promise.resolve({})",
+            r"async () => ({})",
+            None,
+        ),
         // Try statements
         (
             r"
@@ -1244,8 +1357,16 @@ fn test() {
             None,
         ),
         // Spread arguments can not modify the original array
-        (r"async () => Promise.resolve(...bar);", r"async () => Promise.resolve(...bar);", None),
-        (r"async () => Promise.reject(...bar);", r"async () => Promise.reject(...bar);", None),
+        (
+            r"async () => Promise.resolve(...bar);",
+            r"async () => Promise.resolve(...bar);",
+            None,
+        ),
+        (
+            r"async () => Promise.reject(...bar);",
+            r"async () => Promise.reject(...bar);",
+            None,
+        ),
         // Yield not in an ExpressionStatement
         (
             r"
@@ -1275,9 +1396,21 @@ fn test() {
             None,
         ),
         // Parenthesized Promise.resolve/reject
-        (r"async () => (Promise.resolve(bar));", r"async () => (bar);", None),
-        (r"async () => (Promise.reject(bar));", r"async () => { throw bar; };", None),
-        (r"async () => ((Promise.reject(bar)));", r"async () => { throw bar; };", None),
+        (
+            r"async () => (Promise.resolve(bar));",
+            r"async () => (bar);",
+            None,
+        ),
+        (
+            r"async () => (Promise.reject(bar));",
+            r"async () => { throw bar; };",
+            None,
+        ),
+        (
+            r"async () => ((Promise.reject(bar)));",
+            r"async () => { throw bar; };",
+            None,
+        ),
         (
             r"
             async function * foo() {

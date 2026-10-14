@@ -34,12 +34,20 @@ use rustc_hash::FxHashSet;
 
 // JS plugins are only supported on 64-bit little-endian platforms at present.
 // Note: `raw_transfer_constants` module will not compile on 32-bit systems.
-#[cfg(all(feature = "napi", target_pointer_width = "64", target_endian = "little"))]
+#[cfg(all(
+    feature = "napi",
+    target_pointer_width = "64",
+    target_endian = "little"
+))]
 mod generated {
     pub mod raw_transfer_constants;
 }
 
-#[cfg(all(feature = "napi", target_pointer_width = "64", target_endian = "little"))]
+#[cfg(all(
+    feature = "napi",
+    target_pointer_width = "64",
+    target_endian = "little"
+))]
 mod js_plugins;
 
 // Use Mimalloc as the global allocator if `--features allocator` is enabled.

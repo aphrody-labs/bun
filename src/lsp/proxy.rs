@@ -65,7 +65,9 @@ struct Proxy {
 }
 
 fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
-    mutex.lock().unwrap_or_else(std::sync::PoisonError::into_inner)
+    mutex
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
 }
 
 fn id_key(id: &Value) -> String {
@@ -120,7 +122,10 @@ fn server_params(client: &Value) -> Value {
         params["capabilities"] = json!({});
     }
     let capabilities = &mut params["capabilities"];
-    if let Some(text_document) = capabilities.get_mut("textDocument").and_then(Value::as_object_mut) {
+    if let Some(text_document) = capabilities
+        .get_mut("textDocument")
+        .and_then(Value::as_object_mut)
+    {
         text_document.remove("diagnostic");
     }
     if !capabilities["general"].is_object() {
@@ -182,7 +187,9 @@ fn native_to_lsp(diagnostic: &NativeDiagnostic) -> Value {
         "message": diagnostic.message,
     });
     if let Some(code) = &diagnostic.code {
-        value["code"] = code.parse::<u64>().map_or_else(|_| json!(code), |number| json!(number));
+        value["code"] = code
+            .parse::<u64>()
+            .map_or_else(|_| json!(code), |number| json!(number));
     }
     value
 }
@@ -198,13 +205,15 @@ impl Proxy {
     }
 
     fn native_active(&self) -> bool {
-        self.options.native.is_some() && self.options.typescript_diagnostics == TypeScriptDiagnostics::Native
+        self.options.native.is_some()
+            && self.options.typescript_diagnostics == TypeScriptDiagnostics::Native
     }
 
     /// The servers of `path`, started if needed, with the open documents of their project.
     fn group_for(&self, path: &Path) -> Result<Group, String> {
         let pool = self.pool().ok_or("the server is not initialized")?;
-        let language = Language::of_path(path).ok_or_else(|| format!("no language server handles {}", path.display()))?;
+        let language = Language::of_path(path)
+            .ok_or_else(|| format!("no language server handles {}", path.display()))?;
         let root = language::project_root(language, path);
         let group = pool.get(language, &root)?;
         let root_key = path_key(&root);
@@ -228,7 +237,9 @@ impl Proxy {
     fn publish(&self, key: &str) {
         let message = {
             let diagnostics = lock(&self.diagnostics);
-            let Some(merged) = diagnostics.get(key) else { return };
+            let Some(merged) = diagnostics.get(key) else {
+                return;
+            };
             let items: Vec<Value> = merged.by_source.values().flatten().cloned().collect();
             let mut params = json!({ "uri": merged.uri, "diagnostics": items });
             if let Some(version) = merged.version {
@@ -256,26 +267,48 @@ impl Proxy {
     /// What a server sends on its own.
     fn from_server(self: &Arc<Self>, backend: &Arc<Backend>, incoming: Incoming) {
         match incoming {
-            Incoming::Notification { method, params } if method == "textDocument/publishDiagnostics" => {
+            Incoming::Notification { method, params }
+                if method == "textDocument/publishDiagnostics" =>
+            {
                 if backend.language == Language::TypeScript && self.native_active() {
                     return;
                 }
-                let Some(uri) = params.get("uri").and_then(Value::as_str) else { return };
-                let items = params.get("diagnostics").and_then(Value::as_array).cloned().unwrap_or_default();
+                let Some(uri) = params.get("uri").and_then(Value::as_str) else {
+                    return;
+                };
+                let items = params
+                    .get("diagnostics")
+                    .and_then(Value::as_array)
+                    .cloned()
+                    .unwrap_or_default();
                 let version = params.get("version").and_then(Value::as_i64);
                 self.set_diagnostics(uri, &backend.command.name, version, items);
             }
-            Incoming::Notification { method, params } => self.send(&protocol::notification(&method, params)),
+            Incoming::Notification { method, params } => {
+                self.send(&protocol::notification(&method, params))
+            }
             Incoming::Request { id, method, params } => {
-                let ours = format!("bun-lsp/{}", self.next_asked.fetch_add(1, Ordering::Relaxed));
+                let ours = format!(
+                    "bun-lsp/{}",
+                    self.next_asked.fetch_add(1, Ordering::Relaxed)
+                );
                 lock(&self.asked).insert(id_key(&json!(ours)), (Arc::downgrade(backend), id));
-                self.send(&json!({ "jsonrpc": "2.0", "id": ours, "method": method, "params": params }));
+                self.send(
+                    &json!({ "jsonrpc": "2.0", "id": ours, "method": method, "params": params }),
+                );
             }
         }
     }
 
     /// Sends a request of the editor to `backend`; its answer goes back to the editor.
-    fn forward(self: &Arc<Self>, backend: &Arc<Backend>, id: Value, method: &str, params: Value, tag: bool) {
+    fn forward(
+        self: &Arc<Self>,
+        backend: &Arc<Backend>,
+        id: Value,
+        method: &str,
+        params: Value,
+        tag: bool,
+    ) {
         let key = id_key(&id);
         let proxy = Arc::clone(self);
         let tag_key = tag.then(|| backend_key(backend));
@@ -305,7 +338,8 @@ impl Proxy {
     }
 
     fn resolve(self: &Arc<Self>, id: Value, method: &str, mut params: Value) {
-        let backend = untag(&mut params).and_then(|key| lock(&self.backends).get(&key).and_then(Weak::upgrade));
+        let backend = untag(&mut params)
+            .and_then(|key| lock(&self.backends).get(&key).and_then(Weak::upgrade));
         let Some(backend) = backend else {
             // Not ours, or its server stopped: the item is complete as it is.
             self.send(&protocol::response(id, params));
@@ -331,7 +365,11 @@ impl Proxy {
 
     fn workspace_symbol(self: &Arc<Self>, id: Value, params: &Value) {
         let Some(pool) = self.pool() else { return };
-        let primaries: Vec<Arc<Backend>> = pool.running().into_iter().map(|group| group.primary).collect();
+        let primaries: Vec<Arc<Backend>> = pool
+            .running()
+            .into_iter()
+            .map(|group| group.primary)
+            .collect();
         if primaries.is_empty() {
             self.send(&protocol::response(id, json!([])));
             return;
@@ -363,15 +401,24 @@ impl Proxy {
     fn execute_command(self: &Arc<Self>, id: Value, params: Value) {
         let command = params.get("command").and_then(Value::as_str).unwrap_or("");
         let backend = self.pool().and_then(|pool| {
-            pool.running().into_iter().flat_map(|group| group.backends().cloned().collect::<Vec<_>>()).find(|backend| {
-                let capabilities = backend.capabilities();
-                (capabilities.pointer("/executeCommandProvider/commands").and_then(Value::as_array))
+            pool.running()
+                .into_iter()
+                .flat_map(|group| group.backends().cloned().collect::<Vec<_>>())
+                .find(|backend| {
+                    let capabilities = backend.capabilities();
+                    (capabilities
+                        .pointer("/executeCommandProvider/commands")
+                        .and_then(Value::as_array))
                     .is_some_and(|commands| commands.iter().any(|it| it.as_str() == Some(command)))
-            })
+                })
         });
         match backend {
             Some(backend) => self.forward(&backend, id, "workspace/executeCommand", params, false),
-            None => self.send(&protocol::error_response(id, code::METHOD_NOT_FOUND, &format!("no server runs {command}"))),
+            None => self.send(&protocol::error_response(
+                id,
+                code::METHOD_NOT_FOUND,
+                &format!("no server runs {command}"),
+            )),
         }
     }
 
@@ -387,23 +434,37 @@ impl Proxy {
             }
             "workspace/symbol" => self.workspace_symbol(id, &params),
             "workspace/executeCommand" => self.execute_command(id, params),
-            "completionItem/resolve" | "codeAction/resolve" | "inlayHint/resolve" | "codeLens/resolve" | "documentLink/resolve" => {
+            "completionItem/resolve"
+            | "codeAction/resolve"
+            | "inlayHint/resolve"
+            | "codeLens/resolve"
+            | "documentLink/resolve" => {
                 self.resolve(id, method, params);
             }
             _ => {
                 let Some(path) = request_uri(&params).and_then(uri_to_path) else {
-                    self.send(&protocol::error_response(id, code::METHOD_NOT_FOUND, &format!("{method} is not supported")));
+                    self.send(&protocol::error_response(
+                        id,
+                        code::METHOD_NOT_FOUND,
+                        &format!("{method} is not supported"),
+                    ));
                     return;
                 };
                 let group = match self.group_for(&path) {
                     Ok(group) => group,
                     Err(message) => {
-                        self.send(&protocol::error_response(id, code::INTERNAL_ERROR, &message));
+                        self.send(&protocol::error_response(
+                            id,
+                            code::INTERNAL_ERROR,
+                            &message,
+                        ));
                         return;
                     }
                 };
                 if let Some(document) = lock(&self.documents).get(&path_key(&path)) {
-                    group.primary.sync(&document.path, &document.text, Some(document.version));
+                    group
+                        .primary
+                        .sync(&document.path, &document.text, Some(document.version));
                 }
                 let tag = matches!(
                     method,
@@ -419,38 +480,52 @@ impl Proxy {
     }
 
     fn open(self: &Arc<Self>, params: &Value) {
-        let Some(item) = params.get("textDocument") else { return };
-        let Some(uri) = item.get("uri").and_then(Value::as_str) else { return };
+        let Some(item) = params.get("textDocument") else {
+            return;
+        };
+        let Some(uri) = item.get("uri").and_then(Value::as_str) else {
+            return;
+        };
         let Some(path) = uri_to_path(uri) else { return };
-        let Some(language) = Language::of_path(&path) else { return };
+        let Some(language) = Language::of_path(&path) else {
+            return;
+        };
         let document = Document {
             uri: uri.to_owned(),
             root: language::project_root(language, &path),
             path: path.clone(),
             language,
             version: item.get("version").and_then(Value::as_i64).unwrap_or(1),
-            text: item.get("text").and_then(Value::as_str).unwrap_or("").to_owned(),
+            text: item
+                .get("text")
+                .and_then(Value::as_str)
+                .unwrap_or("")
+                .to_owned(),
         };
         let (text, version) = (document.text.clone(), document.version);
         lock(&self.documents).insert(path_key(&path), document);
         self.check_natively(&path);
         // Starting a server takes seconds: the editor goes on meanwhile.
         let proxy = Arc::clone(self);
-        let _ = std::thread::Builder::new().name("lsp-open".into()).spawn(move || match proxy.group_for(&path) {
-            Ok(group) => {
-                for backend in group.backends() {
-                    backend.sync(&path, &text, Some(version));
+        let _ = std::thread::Builder::new()
+            .name("lsp-open".into())
+            .spawn(move || match proxy.group_for(&path) {
+                Ok(group) => {
+                    for backend in group.backends() {
+                        backend.sync(&path, &text, Some(version));
+                    }
                 }
-            }
-            Err(message) => proxy.send(&protocol::notification(
-                "window/logMessage",
-                json!({ "type": 2, "message": format!("bun lsp: {message}") }),
-            )),
-        });
+                Err(message) => proxy.send(&protocol::notification(
+                    "window/logMessage",
+                    json!({ "type": 2, "message": format!("bun lsp: {message}") }),
+                )),
+            });
     }
 
     fn change(&self, params: &Value) {
-        let Some(uri) = params.pointer("/textDocument/uri").and_then(Value::as_str) else { return };
+        let Some(uri) = params.pointer("/textDocument/uri").and_then(Value::as_str) else {
+            return;
+        };
         let Some(path) = uri_to_path(uri) else { return };
         let Some(text) = (params.get("contentChanges").and_then(Value::as_array))
             .and_then(|changes| changes.last())
@@ -459,16 +534,23 @@ impl Proxy {
         else {
             return;
         };
-        let version = params.pointer("/textDocument/version").and_then(Value::as_i64);
+        let version = params
+            .pointer("/textDocument/version")
+            .and_then(Value::as_i64);
         let key = path_key(&path);
         let (language, root) = {
             let mut documents = lock(&self.documents);
-            let Some(document) = documents.get_mut(&key) else { return };
+            let Some(document) = documents.get_mut(&key) else {
+                return;
+            };
             text.clone_into(&mut document.text);
             document.version = version.unwrap_or(document.version + 1);
             (document.language, document.root.clone())
         };
-        if let Some(group) = self.pool().and_then(|pool| pool.running_group(language, &root)) {
+        if let Some(group) = self
+            .pool()
+            .and_then(|pool| pool.running_group(language, &root))
+        {
             let version = lock(&self.documents).get(&key).map_or(1, |it| it.version);
             for backend in group.backends() {
                 backend.sync(&path, text, Some(version));
@@ -478,17 +560,27 @@ impl Proxy {
     }
 
     fn close(&self, params: &Value) {
-        let Some(uri) = params.pointer("/textDocument/uri").and_then(Value::as_str) else { return };
+        let Some(uri) = params.pointer("/textDocument/uri").and_then(Value::as_str) else {
+            return;
+        };
         let Some(path) = uri_to_path(uri) else { return };
-        let Some(document) = lock(&self.documents).remove(&path_key(&path)) else { return };
-        if let Some(group) = self.pool().and_then(|pool| pool.running_group(document.language, &document.root)) {
+        let Some(document) = lock(&self.documents).remove(&path_key(&path)) else {
+            return;
+        };
+        if let Some(group) = self
+            .pool()
+            .and_then(|pool| pool.running_group(document.language, &document.root))
+        {
             for backend in group.backends() {
                 backend.close(&path);
             }
         }
         let key = uri_key(uri);
         if lock(&self.diagnostics).remove(&key).is_some() {
-            self.send(&protocol::notification("textDocument/publishDiagnostics", json!({ "uri": uri, "diagnostics": [] })));
+            self.send(&protocol::notification(
+                "textDocument/publishDiagnostics",
+                json!({ "uri": uri, "diagnostics": [] }),
+            ));
         }
     }
 
@@ -502,10 +594,14 @@ impl Proxy {
     }
 
     fn save(&self, params: &Value) {
-        let Some(uri) = params.pointer("/textDocument/uri").and_then(Value::as_str) else { return };
+        let Some(uri) = params.pointer("/textDocument/uri").and_then(Value::as_str) else {
+            return;
+        };
         let Some(path) = uri_to_path(uri) else { return };
         if let Some(language) = Language::of_path(&path)
-            && let Some(group) = self.pool().and_then(|pool| pool.running_group(language, &language::project_root(language, &path)))
+            && let Some(group) = self.pool().and_then(|pool| {
+                pool.running_group(language, &language::project_root(language, &path))
+            })
         {
             for backend in group.backends() {
                 backend.notify("textDocument/didSave", params.clone());
@@ -525,7 +621,9 @@ impl Proxy {
 
     /// Checks the TypeScript documents that changed, once typing stops.
     fn native_worker(&self, receiver: &mpsc::Receiver<String>) {
-        let Some(native) = self.options.native.clone() else { return };
+        let Some(native) = self.options.native.clone() else {
+            return;
+        };
         while let Ok(first) = receiver.recv() {
             let mut keys = vec![first];
             while let Ok(key) = receiver.recv_timeout(NATIVE_DEBOUNCE) {
@@ -534,24 +632,39 @@ impl Proxy {
                 }
             }
             for key in keys {
-                let Some((uri, path, root, text, version)) = lock(&self.documents)
-                    .get(&key)
-                    .map(|it| (it.uri.clone(), it.path.clone(), it.root.clone(), it.text.clone(), it.version))
+                let Some((uri, path, root, text, version)) =
+                    lock(&self.documents).get(&key).map(|it| {
+                        (
+                            it.uri.clone(),
+                            it.path.clone(),
+                            it.root.clone(),
+                            it.text.clone(),
+                            it.version,
+                        )
+                    })
                 else {
                     continue;
                 };
-                let items = match native.check(&root, std::slice::from_ref(&path), &[(path.clone(), text)]) {
-                    Ok(diagnostics) => (diagnostics.iter())
-                        .filter(|it| path_key(&it.path) == key)
-                        .map(native_to_lsp)
-                        .collect(),
-                    Err(message) => {
-                        self.send(&protocol::notification("window/logMessage", json!({ "type": 1, "message": format!("bun check: {message}") })));
-                        continue;
-                    }
-                };
+                let items =
+                    match native.check(&root, std::slice::from_ref(&path), &[(path.clone(), text)])
+                    {
+                        Ok(diagnostics) => (diagnostics.iter())
+                            .filter(|it| path_key(&it.path) == key)
+                            .map(native_to_lsp)
+                            .collect(),
+                        Err(message) => {
+                            self.send(&protocol::notification(
+                                "window/logMessage",
+                                json!({ "type": 1, "message": format!("bun check: {message}") }),
+                            ));
+                            continue;
+                        }
+                    };
                 // A newer text is queued already.
-                if lock(&self.documents).get(&key).is_some_and(|it| it.version == version) {
+                if lock(&self.documents)
+                    .get(&key)
+                    .is_some_and(|it| it.version == version)
+                {
                     self.set_diagnostics(&uri, "bun check", Some(version), items);
                 }
             }
@@ -570,7 +683,9 @@ impl Proxy {
                     backend.cancel(server_id);
                 }
             }
-            "workspace/didChangeConfiguration" | "workspace/didChangeWatchedFiles" | "workspace/didChangeWorkspaceFolders" => {
+            "workspace/didChangeConfiguration"
+            | "workspace/didChangeWatchedFiles"
+            | "workspace/didChangeWorkspaceFolders" => {
                 self.broadcast(method, params);
             }
             _ => {}
@@ -580,8 +695,12 @@ impl Proxy {
     /// The editor's answer to a request of a server.
     fn answer(&self, message: &Value) {
         let Some(id) = message.get("id") else { return };
-        let Some((backend, server_id)) = lock(&self.asked).remove(&id_key(id)) else { return };
-        let Some(backend) = backend.upgrade() else { return };
+        let Some((backend, server_id)) = lock(&self.asked).remove(&id_key(id)) else {
+            return;
+        };
+        let Some(backend) = backend.upgrade() else {
+            return;
+        };
         let mut answer = message.clone();
         answer["id"] = server_id;
         backend.respond(&answer);
@@ -609,11 +728,20 @@ pub fn run(input: &mut impl BufRead, output: Box<dyn Write + Send>, options: Opt
             Ok(Some(message)) => message,
             Ok(None) | Err(_) => break 0,
         };
-        let method = message.get("method").and_then(Value::as_str).map(str::to_owned);
+        let method = message
+            .get("method")
+            .and_then(Value::as_str)
+            .map(str::to_owned);
         let id = message.get("id").cloned();
         let params = message.get("params").cloned().unwrap_or(Value::Null);
         match (method.as_deref(), id) {
-            (Some("exit"), _) => break if proxy.shutting_down.load(Ordering::Acquire) { 0 } else { 1 },
+            (Some("exit"), _) => {
+                break if proxy.shutting_down.load(Ordering::Acquire) {
+                    0
+                } else {
+                    1
+                };
+            }
             (Some("initialize"), Some(id)) => {
                 let weak = Arc::downgrade(&proxy);
                 let handler: Handler = Arc::new(move |backend: &Arc<Backend>, incoming| {
@@ -621,12 +749,18 @@ pub fn run(input: &mut impl BufRead, output: Box<dyn Write + Send>, options: Opt
                         proxy.from_server(backend, incoming);
                     }
                 });
-                let _ = proxy.pool.set(Pool::new(proxy.options.clone(), server_params(&params), handler));
+                let _ = proxy.pool.set(Pool::new(
+                    proxy.options.clone(),
+                    server_params(&params),
+                    handler,
+                ));
                 if proxy.native_active() {
                     let (sender, receiver) = mpsc::channel();
                     *lock(&proxy.native) = Some(sender);
                     let worker = Arc::clone(&proxy);
-                    let _ = std::thread::Builder::new().name("lsp-native".into()).spawn(move || worker.native_worker(&receiver));
+                    let _ = std::thread::Builder::new()
+                        .name("lsp-native".into())
+                        .spawn(move || worker.native_worker(&receiver));
                 }
                 proxy.send(&protocol::response(
                     id,
@@ -638,7 +772,11 @@ pub fn run(input: &mut impl BufRead, output: Box<dyn Write + Send>, options: Opt
             }
             (Some("initialized"), None) => {}
             (Some(method), Some(id)) if proxy.pool().is_none() => {
-                proxy.send(&protocol::error_response(id, code::SERVER_NOT_INITIALIZED, &format!("{method} before initialize")));
+                proxy.send(&protocol::error_response(
+                    id,
+                    code::SERVER_NOT_INITIALIZED,
+                    &format!("{method} before initialize"),
+                ));
             }
             (Some(method), Some(id)) => proxy.request(id, method, params),
             (Some(method), None) => proxy.notification(method, &params),
@@ -672,17 +810,32 @@ mod tests {
 
     #[test]
     fn server_params_drop_pull_diagnostics() {
-        let params = server_params(&json!({ "capabilities": { "textDocument": { "diagnostic": {}, "hover": {} } }, "rootUri": "file:///x" }));
-        assert!(params.pointer("/capabilities/textDocument/diagnostic").is_none());
+        let params = server_params(
+            &json!({ "capabilities": { "textDocument": { "diagnostic": {}, "hover": {} } }, "rootUri": "file:///x" }),
+        );
+        assert!(
+            params
+                .pointer("/capabilities/textDocument/diagnostic")
+                .is_none()
+        );
         assert!(params.pointer("/capabilities/textDocument/hover").is_some());
         assert!(params.get("rootUri").is_none());
-        assert_eq!(params.pointer("/capabilities/general/positionEncodings"), Some(&json!(["utf-16"])));
+        assert_eq!(
+            params.pointer("/capabilities/general/positionEncodings"),
+            Some(&json!(["utf-16"]))
+        );
     }
 
     #[test]
     fn finds_the_document_of_a_request() {
-        assert_eq!(request_uri(&json!({ "textDocument": { "uri": "file:///a.ts" } })), Some("file:///a.ts"));
-        assert_eq!(request_uri(&json!({ "item": { "uri": "file:///b.rs" } })), Some("file:///b.rs"));
+        assert_eq!(
+            request_uri(&json!({ "textDocument": { "uri": "file:///a.ts" } })),
+            Some("file:///a.ts")
+        );
+        assert_eq!(
+            request_uri(&json!({ "item": { "uri": "file:///b.rs" } })),
+            Some("file:///b.rs")
+        );
         assert_eq!(request_uri(&json!({})), None);
     }
 
@@ -701,4 +854,3 @@ mod tests {
         assert_eq!(value["range"]["end"]["character"], json!(5));
     }
 }
-

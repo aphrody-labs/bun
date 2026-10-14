@@ -23,7 +23,9 @@ use crate::{LintContext, rule::Rule};
 fn class_methods_use_this_diagnostic(span: Span, name: Option<Cow<'_, str>>) -> OxcDiagnostic {
     let method_name_str = name.map_or(String::new(), |name| format!(" `{name}`"));
     OxcDiagnostic::warn(format!("Expected method{method_name_str} to have this."))
-        .with_help(format!("Consider converting method{method_name_str} to a static method."))
+        .with_help(format!(
+            "Consider converting method{method_name_str} to a static method."
+        ))
         .with_label(span)
 }
 
@@ -148,12 +150,14 @@ impl Rule for ClassMethodsUseThis {
                         .filter_map(|method| {
                             let method = method.as_str()?;
                             match method.strip_prefix("#") {
-                                Some(method) => {
-                                    Some(MethodException { name: method.into(), private: true })
-                                }
-                                None => {
-                                    Some(MethodException { name: method.into(), private: false })
-                                }
+                                Some(method) => Some(MethodException {
+                                    name: method.into(),
+                                    private: true,
+                                }),
+                                None => Some(MethodException {
+                                    name: method.into(),
+                                    private: false,
+                                }),
                             }
                         })
                         .collect_vec()
@@ -220,8 +224,13 @@ impl Rule for ClassMethodsUseThis {
                 {
                     return;
                 }
-                let Some(function_body) = method_definition.value.body.as_ref() else { return };
-                Some((FunctionLikeBody::Function(function_body), &method_definition.key))
+                let Some(function_body) = method_definition.value.body.as_ref() else {
+                    return;
+                };
+                Some((
+                    FunctionLikeBody::Function(function_body),
+                    &method_definition.key,
+                ))
             }
             AstKind::PropertyDefinition(property_definition) => {
                 if property_definition.r#static
@@ -236,21 +245,26 @@ impl Rule for ClassMethodsUseThis {
                 {
                     return;
                 }
-                property_definition.value.as_ref().and_then(|value| match value {
-                    Expression::ArrowFunctionExpression(arrow_function) => Some((
-                        FunctionLikeBody::Arrow(&arrow_function.body),
-                        &property_definition.key,
-                    )),
-                    Expression::FunctionExpression(function_expression) => Some((
-                        FunctionLikeBody::Function(function_expression.body.as_deref()?),
-                        &property_definition.key,
-                    )),
-                    _ => None,
-                })
+                property_definition
+                    .value
+                    .as_ref()
+                    .and_then(|value| match value {
+                        Expression::ArrowFunctionExpression(arrow_function) => Some((
+                            FunctionLikeBody::Arrow(&arrow_function.body),
+                            &property_definition.key,
+                        )),
+                        Expression::FunctionExpression(function_expression) => Some((
+                            FunctionLikeBody::Function(function_expression.body.as_deref()?),
+                            &property_definition.key,
+                        )),
+                        _ => None,
+                    })
             }
             _ => return,
         };
-        let Some((function_body, name)) = function_pair else { return };
+        let Some((function_body, name)) = function_pair else {
+            return;
+        };
         if let Some(name_str) = name.name()
             && self.except_methods.iter().any(|method| {
                 method.name == name_str && method.private == name.is_private_identifier()
@@ -293,7 +307,9 @@ impl ClassMethodsUseThis {
             return match ignore_classes_with_implements {
                 IgnoreClassWithImplements::All => true,
                 IgnoreClassWithImplements::PublicFields => accessibility
-                    .map_or(!is_private, |accessibility| accessibility == TSAccessibility::Public),
+                    .map_or(!is_private, |accessibility| {
+                        accessibility == TSAccessibility::Public
+                    }),
             };
         }
     }
@@ -354,7 +370,10 @@ fn test() {
         ("class A { foo = () => {super.toString} }", None),
         ("class A { static foo = function() {} }", None),
         ("class A { static foo = () => {} }", None),
-        ("class A { foo() { return class { [this.foo] = 1 }; } }", None),
+        (
+            "class A { foo() { return class { [this.foo] = 1 }; } }",
+            None,
+        ),
         ("class A { foo() { let x: typeof this.bar; } }", None),
         ("class A { static {} }", None),
         ("class A { accessor foo = function() {this} }", None),
@@ -366,9 +385,18 @@ fn test() {
             "class A { foo() {this} bar() {} }",
             Some(serde_json::json!([{ "exceptMethods": ["bar"] }])),
         ),
-        ("class A { \"foo\"() { } }", Some(serde_json::json!([{ "exceptMethods": ["foo"] }]))),
-        ("class A { 42() { } }", Some(serde_json::json!([{ "exceptMethods": ["42"] }]))),
-        ("class A { #bar() {} }", Some(serde_json::json!([{ "exceptMethods": ["#bar"] }]))),
+        (
+            "class A { \"foo\"() { } }",
+            Some(serde_json::json!([{ "exceptMethods": ["foo"] }])),
+        ),
+        (
+            "class A { 42() { } }",
+            Some(serde_json::json!([{ "exceptMethods": ["42"] }])),
+        ),
+        (
+            "class A { #bar() {} }",
+            Some(serde_json::json!([{ "exceptMethods": ["#bar"] }])),
+        ),
         (
             "class A { foo = function () {} }",
             Some(serde_json::json!([{ "enforceForClassFields": false }])),
@@ -543,7 +571,10 @@ fn test() {
         ("class A { foo() {} }", None),
         ("class A { foo() {/**this**/} }", None),
         ("class A { foo() {var a = function () {this};} }", None),
-        ("class A { foo() {var a = function () {var b = function(){this}};} }", None),
+        (
+            "class A { foo() {var a = function () {var b = function(){this}};} }",
+            None,
+        ),
         ("class A { foo() {window.this} }", None),
         ("class A { foo() {that.this = 'this';} }", None),
         ("class A { foo() { () => undefined; } }", None),
@@ -559,31 +590,58 @@ fn test() {
         ("class A { get #foo() {} }", None),
         ("class A { set #foo(x) {} }", None),
         ("class A { foo () { return class { foo = this }; } }", None),
-        ("class A { foo () { return function () { foo = this }; } }", None),
-        ("class A { foo () { return class { static { this; } } } }", None),
+        (
+            "class A { foo () { return function () { foo = this }; } }",
+            None,
+        ),
+        (
+            "class A { foo () { return class { static { this; } } } }",
+            None,
+        ),
         ("class Foo { private method() {} }", None),
         ("class Foo { protected method() {} }", None),
         ("class Foo { accessor method = function () {} }", None),
         ("class Foo { accessor method = () => {} }", None),
         ("class Foo { private accessor method = () => {} }", None),
         ("class Foo { protected accessor method = () => {} }", None),
-        ("class A { foo () { return class { accessor bar = this }; } }", None),
+        (
+            "class A { foo () { return class { accessor bar = this }; } }",
+            None,
+        ),
         ("class Derived extends Base { override method() {} }", None),
         ("class Derived extends Base { property = () => {} }", None),
-        ("class Derived extends Base { public property = () => {} }", None),
-        ("class Derived extends Base { override property = () => {} }", None),
+        (
+            "class Derived extends Base { public property = () => {} }",
+            None,
+        ),
+        (
+            "class Derived extends Base { override property = () => {} }",
+            None,
+        ),
         ("class Foo { private get getter(): number {} }", None),
         ("class Foo { protected get getter(): number {} }", None),
         ("class Foo { private set setter(b: number) {} }", None),
         ("class Foo { protected set setter(b: number) {} }", None),
-        ("function fn() { this.foo = 303; class Foo { method() {} } }", None),
-        ("class Foo implements Bar { override property = () => {}; }", None),
-        ("class A { foo() {} bar() {} }", Some(serde_json::json!([{ "exceptMethods": ["bar"] }]))),
+        (
+            "function fn() { this.foo = 303; class Foo { method() {} } }",
+            None,
+        ),
+        (
+            "class Foo implements Bar { override property = () => {}; }",
+            None,
+        ),
+        (
+            "class A { foo() {} bar() {} }",
+            Some(serde_json::json!([{ "exceptMethods": ["bar"] }])),
+        ),
         (
             "class A { foo() {} hasOwnProperty() {} }",
             Some(serde_json::json!([{ "exceptMethods": ["foo"] }])),
         ),
-        ("class A { [foo]() {} }", Some(serde_json::json!([{ "exceptMethods": ["foo"] }]))),
+        (
+            "class A { [foo]() {} }",
+            Some(serde_json::json!([{ "exceptMethods": ["foo"] }])),
+        ),
         (
             "class A { #foo() { } foo() {} #bar() {} }",
             Some(serde_json::json!([{ "exceptMethods": ["#foo"] }])),
@@ -638,6 +696,11 @@ fn test() {
         ),
     ];
 
-    Tester::new(ClassMethodsUseThis::NAME, ClassMethodsUseThis::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        ClassMethodsUseThis::NAME,
+        ClassMethodsUseThis::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

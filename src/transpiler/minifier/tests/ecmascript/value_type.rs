@@ -13,14 +13,20 @@ struct GlobalReferenceChecker {
 
 impl<'a> GlobalContext<'a> for GlobalReferenceChecker {
     fn is_global_reference(&self, ident: &IdentifierReference<'a>) -> bool {
-        self.global_variable_names.iter().any(|name| name == ident.name.as_str())
+        self.global_variable_names
+            .iter()
+            .any(|name| name == ident.name.as_str())
     }
 }
 
 fn test(source_text: &str, expected: ValueType) {
     test_with_global_variables(
         source_text,
-        vec!["undefined".to_string(), "NaN".to_string(), "Infinity".to_string()],
+        vec![
+            "undefined".to_string(),
+            "NaN".to_string(),
+            "Infinity".to_string(),
+        ],
         expected,
     );
 }
@@ -35,7 +41,9 @@ fn test_with_global_variables(
     assert!(!ret.fatal_error, "{source_text}");
     assert!(ret.diagnostics.is_empty(), "{source_text}");
 
-    let global_reference_checker = GlobalReferenceChecker { global_variable_names };
+    let global_reference_checker = GlobalReferenceChecker {
+        global_variable_names,
+    };
 
     let Some(Statement::ExpressionStatement(stmt)) = &ret.program.body.first() else {
         panic!("should have a expression statement body: {source_text}");

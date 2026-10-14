@@ -63,13 +63,18 @@ impl Rule for NoDeprecatedDataObjectDeclaration {
     }
 
     fn run<'a>(&self, node: &AstNode<'a>, ctx: &LintContext<'a>) {
-        let AstKind::ObjectProperty(prop) = node.kind() else { return };
+        let AstKind::ObjectProperty(prop) = node.kind() else {
+            return;
+        };
 
         if !prop.key.is_specific_static_name("data") {
             return;
         }
 
-        if !matches!(prop.value.get_inner_expression(), Expression::ObjectExpression(_)) {
+        if !matches!(
+            prop.value.get_inner_expression(),
+            Expression::ObjectExpression(_)
+        ) {
             return;
         }
 

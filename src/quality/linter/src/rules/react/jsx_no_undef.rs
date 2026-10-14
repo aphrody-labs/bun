@@ -71,7 +71,9 @@ fn get_member_ident<'a>(
 
 impl Rule for JsxNoUndef {
     fn run<'a>(&self, node: &AstNode<'a>, ctx: &LintContext<'a>) {
-        let AstKind::JSXOpeningElement(elem) = node.kind() else { return };
+        let AstKind::JSXOpeningElement(elem) = node.kind() else {
+            return;
+        };
 
         if let Some(ident) = get_resolvable_ident(&elem.name) {
             let reference = ctx.scoping().get_reference(ident.reference_id());
@@ -127,9 +129,18 @@ fn test() {
         "#,
             None,
         ),
-        ("var App; var React; enum A { App };  React.render(<App />);", None),
-        ("var React; enum A { App }; var App; React.render(<App />);", None),
-        ("var React; import App = require('./app'); React.render(<App />);", None),
+        (
+            "var App; var React; enum A { App };  React.render(<App />);",
+            None,
+        ),
+        (
+            "var React; enum A { App }; var App; React.render(<App />);",
+            None,
+        ),
+        (
+            "var React; import App = require('./app'); React.render(<App />);",
+            None,
+        ),
         (
             "
         var React;
@@ -148,13 +159,20 @@ fn test() {
         ("var React; React.render(<appp.foo.Bar />);", None),
         ("var React; React.render(<Foo />);", None),
         ("var React; Unknown; React.render(<Unknown />)", None),
-        ("var React; { const App = null; }; React.render(<App />);", None),
+        (
+            "var React; { const App = null; }; React.render(<App />);",
+            None,
+        ),
         ("var React; enum A { App }; React.render(<App />);", None),
     ];
 
     Tester::new(JsxNoUndef::NAME, JsxNoUndef::PLUGIN, pass, fail).test_and_snapshot();
 
-    let pass = vec![("let x = <A.B />;", None, Some(json!({ "globals": {"A": "readonly" } })))];
+    let pass = vec![(
+        "let x = <A.B />;",
+        None,
+        Some(json!({ "globals": {"A": "readonly" } })),
+    )];
     let fail = vec![("let x = <A.B />;", None, None)];
     Tester::new(JsxNoUndef::NAME, JsxNoUndef::PLUGIN, pass, fail).test();
 }

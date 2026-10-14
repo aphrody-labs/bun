@@ -130,7 +130,11 @@ fn diagnostic_assign_expr<'a>(expr: &'a AssignmentExpression<'a>, ctx: &LintCont
             }
         }
 
-        ctx.diagnostic(no_jasmine_globals_diagnostic(COMMON_ERROR_TEXT, COMMON_HELP_TEXT, span));
+        ctx.diagnostic(no_jasmine_globals_diagnostic(
+            COMMON_ERROR_TEXT,
+            COMMON_HELP_TEXT,
+            span,
+        ));
     }
 }
 
@@ -178,10 +182,14 @@ fn get_jasmine_property_name<'a>(member_expr: &'a MemberExpression<'a>) -> Optio
 
 fn get_non_jasmine_property_messages(name: &str) -> Option<(&'static str, &'static str)> {
     match name {
-        "spyOn" => Some(("Illegal usage of global spyOn", "prefer use Jest own API `jest.spyOn`")),
-        "spyOnProperty" => {
-            Some(("Illegal usage of global spyOnProperty", "prefer use Jest own API `jest.spyOn`"))
-        }
+        "spyOn" => Some((
+            "Illegal usage of global spyOn",
+            "prefer use Jest own API `jest.spyOn`",
+        )),
+        "spyOnProperty" => Some((
+            "Illegal usage of global spyOnProperty",
+            "prefer use Jest own API `jest.spyOn`",
+        )),
         "fail" => Some((
             "Illegal usage of `fail`",
             "prefer throwing an error, or the `done.fail` callback",
@@ -220,10 +228,14 @@ impl JasmineProperty {
 
     fn details(&self) -> (&'static str, &'static str) {
         match self {
-            Self::Any => ("Illegal usage of `any`", "prefer use Jest own API `expect.any`"),
-            Self::Anything => {
-                ("Illegal usage of `anything`", "prefer use Jest own API `expect.anything`")
-            }
+            Self::Any => (
+                "Illegal usage of `any`",
+                "prefer use Jest own API `expect.any`",
+            ),
+            Self::Anything => (
+                "Illegal usage of `anything`",
+                "prefer use Jest own API `expect.anything`",
+            ),
             Self::ArrayContaining => (
                 "Illegal usage of `arrayContaining`",
                 "prefer use Jest own API `expect.arrayContaining`",
@@ -236,12 +248,14 @@ impl JasmineProperty {
                 "Illegal usage of `stringMatching`",
                 "prefer use Jest own API `expect.stringMatching`",
             ),
-            Self::AddMatchers => {
-                ("Illegal usage of `addMatchers`", "prefer use Jest own API `expect.extend`")
-            }
-            Self::CreateSpy => {
-                ("Illegal usage of `createSpy`", "prefer use Jest own API `jest.fn`")
-            }
+            Self::AddMatchers => (
+                "Illegal usage of `addMatchers`",
+                "prefer use Jest own API `expect.extend`",
+            ),
+            Self::CreateSpy => (
+                "Illegal usage of `createSpy`",
+                "prefer use Jest own API `jest.fn`",
+            ),
         }
     }
 
@@ -300,7 +314,11 @@ fn test() {
     ];
 
     let fix = vec![
-        ("jasmine.DEFAULT_TIMEOUT_INTERVAL = 5", "jest.setTimeout(5)", None),
+        (
+            "jasmine.DEFAULT_TIMEOUT_INTERVAL = 5",
+            "jest.setTimeout(5)",
+            None,
+        ),
         (
             "jasmine.DEFAULT_TIMEOUT_INTERVAL = ()=>{}",
             "jasmine.DEFAULT_TIMEOUT_INTERVAL = ()=>{}",
@@ -308,15 +326,31 @@ fn test() {
         ),
         ("jasmine.any()", "expect.any()", None),
         ("jasmine.anything()", "expect.anything()", None),
-        ("jasmine.arrayContaining()", "expect.arrayContaining()", None),
-        ("jasmine.objectContaining()", "expect.objectContaining()", None),
+        (
+            "jasmine.arrayContaining()",
+            "expect.arrayContaining()",
+            None,
+        ),
+        (
+            "jasmine.objectContaining()",
+            "expect.objectContaining()",
+            None,
+        ),
         ("jasmine.stringMatching()", "expect.stringMatching()", None),
-        ("jasmine.addMatchers(matchers)", "jasmine.addMatchers(matchers)", None),
+        (
+            "jasmine.addMatchers(matchers)",
+            "jasmine.addMatchers(matchers)",
+            None,
+        ),
         ("jasmine.getEnv()", "jasmine.getEnv()", None),
         ("jasmine.empty()", "jasmine.empty()", None),
         ("jasmine.falsy()", "jasmine.falsy()", None),
         ("jasmine.truthy()", "jasmine.truthy()", None),
-        ("jasmine.arrayWithExactContents()", "jasmine.arrayWithExactContents()", None),
+        (
+            "jasmine.arrayWithExactContents()",
+            "jasmine.arrayWithExactContents()",
+            None,
+        ),
         ("jasmine.clock()", "jasmine.clock()", None),
         (
             "jasmine.MAX_PRETTY_PRINT_ARRAY_LENGTH = 42",

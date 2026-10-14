@@ -201,7 +201,12 @@ pub struct LineWidthFromIntError(pub u16);
 
 impl fmt::Display for LineWidthFromIntError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "The line width should be between {} and {}", LineWidth::MIN, LineWidth::MAX)
+        writeln!(
+            f,
+            "The line width should be between {} and {}",
+            LineWidth::MIN,
+            LineWidth::MAX
+        )
     }
 }
 

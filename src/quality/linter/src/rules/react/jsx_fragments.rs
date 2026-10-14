@@ -191,14 +191,23 @@ fn test() {
     let pass = vec![
         ("<><Foo /></>", None),
         (r#"<Fragment key="key"><Foo /></Fragment>"#, None),
-        (r#"<React.Fragment key="key"><Foo /></React.Fragment>"#, None),
+        (
+            r#"<React.Fragment key="key"><Foo /></React.Fragment>"#,
+            None,
+        ),
         ("<Fragment />", None),
         ("<React.Fragment />", None),
         // Configuration can be done via a string directly, or an object with the `mode` field.
         ("<><Foo /></>", Some(json!(["syntax"]))),
         ("<><Foo /></>", Some(json!([{"mode": "syntax"}]))),
-        ("<React.Fragment><Foo /></React.Fragment>", Some(json!(["element"]))),
-        ("<React.Fragment><Foo /></React.Fragment>", Some(json!([{"mode": "element"}]))),
+        (
+            "<React.Fragment><Foo /></React.Fragment>",
+            Some(json!(["element"])),
+        ),
+        (
+            "<React.Fragment><Foo /></React.Fragment>",
+            Some(json!([{"mode": "element"}])),
+        ),
     ];
 
     let fail = vec![
@@ -210,8 +219,16 @@ fn test() {
 
     let fix = vec![
         ("<Fragment><Foo /></Fragment>", "<><Foo /></>", None),
-        ("<React.Fragment><Foo /></React.Fragment>", "<><Foo /></>", None),
-        ("<><Foo /></>", "<React.Fragment><Foo /></React.Fragment>", Some(json!(["element"]))),
+        (
+            "<React.Fragment><Foo /></React.Fragment>",
+            "<><Foo /></>",
+            None,
+        ),
+        (
+            "<><Foo /></>",
+            "<React.Fragment><Foo /></React.Fragment>",
+            Some(json!(["element"])),
+        ),
         (
             "<><Foo /></>",
             "<React.Fragment><Foo /></React.Fragment>",

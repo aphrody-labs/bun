@@ -88,8 +88,13 @@ impl<'a> TaggedTemplateTransform {
                 unreachable!();
             };
 
-            let TaggedTemplateExpression { span, tag, quasi: template_lit, type_arguments, .. } =
-                tagged.unbox();
+            let TaggedTemplateExpression {
+                span,
+                tag,
+                quasi: template_lit,
+                type_arguments,
+                ..
+            } = tagged.unbox();
 
             let binding = self.create_top_level_binding(ctx);
             let arguments = self.transform_template_literal(&binding, template_lit, ctx);
@@ -191,8 +196,11 @@ impl<'a> TaggedTemplateTransform {
         let template_call =
             helper_call_expr(Helper::TaggedTemplateLiteral, template_arguments, ctx);
         // `binding || (binding = babelHelpers.taggedTemplateLiteral([<...cooked>], [<...raw>]?))`
-        let template_call =
-            Argument::from(Self::create_logical_or_expression(binding, template_call, ctx));
+        let template_call = Argument::from(Self::create_logical_or_expression(
+            binding,
+            template_call,
+            ctx,
+        ));
 
         // `(binding || (binding = babelHelpers.taggedTemplateLiteral([<...cooked>], [<...raw>]?)), <...expressions>)`
         ArenaVec::from_iter_in(

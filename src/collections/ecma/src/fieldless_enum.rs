@@ -69,7 +69,10 @@ mod tests {
         }
 
         assert_eq!(Status::VARIANTS.len(), 3);
-        assert_eq!(Status::VARIANTS, [Status::Active, Status::Inactive, Status::Pending]);
+        assert_eq!(
+            Status::VARIANTS,
+            [Status::Active, Status::Inactive, Status::Pending]
+        );
         assert_eq!(Status::Active as u8, 1);
         assert_eq!(Status::Inactive as u8, 5);
         assert_eq!(Status::Pending as u8, 10);
@@ -87,7 +90,10 @@ mod tests {
         }
 
         assert_eq!(WithDefault::default(), WithDefault::First);
-        assert_eq!(WithDefault::VARIANTS, [WithDefault::First, WithDefault::Second]);
+        assert_eq!(
+            WithDefault::VARIANTS,
+            [WithDefault::First, WithDefault::Second]
+        );
     }
 
     #[test]

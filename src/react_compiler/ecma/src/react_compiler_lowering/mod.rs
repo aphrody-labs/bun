@@ -57,7 +57,9 @@ impl FunctionNode<'_, '_> {
                 let end = function
                     .body
                     .as_ref()
-                    .map_or(function.params.span.end, |body| body.span.start.saturating_add(1));
+                    .map_or(function.params.span.end, |body| {
+                        body.span.start.saturating_add(1)
+                    });
                 Span::new(function.span.start, end.min(function.span.end))
             }
             FunctionNode::Arrow(arrow) => {
@@ -65,7 +67,9 @@ impl FunctionNode<'_, '_> {
                     || {
                         arrow
                             .get_function_body()
-                            .map_or(arrow.params.span.end, |body| body.span.start.saturating_add(1))
+                            .map_or(arrow.params.span.end, |body| {
+                                body.span.start.saturating_add(1)
+                            })
                     },
                     |expression| expression.span().start,
                 );

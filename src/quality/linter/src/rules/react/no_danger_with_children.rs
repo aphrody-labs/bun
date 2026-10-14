@@ -240,8 +240,13 @@ fn test() {
         "#,
     ];
 
-    Tester::new(NoDangerWithChildren::NAME, NoDangerWithChildren::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        NoDangerWithChildren::NAME,
+        NoDangerWithChildren::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }
 
 fn is_whitespace(s: &str) -> bool {
@@ -263,20 +268,23 @@ fn has_jsx_prop(ctx: &LintContext, node: &AstNode, prop_name: &'static str) -> b
         return false;
     };
 
-    jsx.opening_element.attributes.iter().any(|attr| match attr {
-        JSXAttributeItem::Attribute(attr) => {
-            let JSXAttributeName::Identifier(ident) = &attr.name else {
-                return false;
-            };
-            ident.name == prop_name
-        }
-        JSXAttributeItem::SpreadAttribute(attr) => {
-            let Some(ident) = attr.argument.get_identifier_reference() else {
-                return false;
-            };
-            does_object_var_have_prop_name(ctx, node, ident.name, prop_name)
-        }
-    })
+    jsx.opening_element
+        .attributes
+        .iter()
+        .any(|attr| match attr {
+            JSXAttributeItem::Attribute(attr) => {
+                let JSXAttributeName::Identifier(ident) = &attr.name else {
+                    return false;
+                };
+                ident.name == prop_name
+            }
+            JSXAttributeItem::SpreadAttribute(attr) => {
+                let Some(ident) = attr.argument.get_identifier_reference() else {
+                    return false;
+                };
+                does_object_var_have_prop_name(ctx, node, ident.name, prop_name)
+            }
+        })
 }
 
 /// Given a variable name, finds the variable and checks if it is an object that has a property
@@ -304,9 +312,10 @@ fn does_object_var_have_prop_name(
     };
 
     obj_expr.properties.iter().any(|prop| match prop {
-        ObjectPropertyKind::ObjectProperty(obj_prop) => {
-            obj_prop.key.static_name().is_some_and(|key| key == prop_name)
-        }
+        ObjectPropertyKind::ObjectProperty(obj_prop) => obj_prop
+            .key
+            .static_name()
+            .is_some_and(|key| key == prop_name),
         ObjectPropertyKind::SpreadProperty(spread_prop) => {
             let Some(ident) = spread_prop.argument.get_identifier_reference() else {
                 return false;
@@ -344,6 +353,9 @@ fn is_object_with_prop_name(
         let ObjectPropertyKind::ObjectProperty(obj_prop) = prop else {
             return false;
         };
-        obj_prop.key.static_name().is_some_and(|key| key == prop_name)
+        obj_prop
+            .key
+            .static_name()
+            .is_some_and(|key| key == prop_name)
     })
 }

@@ -99,7 +99,10 @@ impl JsonSchema for HandlerPrefix {
 
         SchemaObject {
             subschemas: Some(Box::new(SubschemaValidation {
-                any_of: Some(vec![<String as JsonSchema>::json_schema(r#gen), false_schema.into()]),
+                any_of: Some(vec![
+                    <String as JsonSchema>::json_schema(r#gen),
+                    false_schema.into(),
+                ]),
                 ..Default::default()
             })),
             ..Default::default()
@@ -147,7 +150,8 @@ declare_oxc_lint!(
     style,
     config = JsxHandlerNamesConfig,
     version = "1.13.0",
-    short_description = "Ensures that any component or prop methods used to handle events are correctly prefixed.",
+    short_description =
+        "Ensures that any component or prop methods used to handle events are correctly prefixed.",
 );
 
 fn build_event_handler_regex(handler_prefix: &str, handler_prop_prefix: &str) -> Option<Regex> {
@@ -229,11 +233,15 @@ impl Rule for JsxHandlerNames {
                     event_handler_prop_prefixes = s;
                 }
             }
-            if let Some(v) = options.get("checkInlineFunction").and_then(serde_json::Value::as_bool)
+            if let Some(v) = options
+                .get("checkInlineFunction")
+                .and_then(serde_json::Value::as_bool)
             {
                 check_inline_functions = v;
             }
-            if let Some(v) = options.get("checkLocalVariables").and_then(serde_json::Value::as_bool)
+            if let Some(v) = options
+                .get("checkLocalVariables")
+                .and_then(serde_json::Value::as_bool)
             {
                 check_local_variables = v;
             }
@@ -323,7 +331,11 @@ impl Rule for JsxHandlerNames {
                 // For other expressions types, use the whole content inside the braces as the handler name,
                 // which will be marked as a bad handler name if the prop key is an event handler prop.
                 let span = expression_container.span.shrink(1);
-                (Some(Cow::Owned(normalize_handler_name(ctx.source_range(span)))), span, false)
+                (
+                    Some(Cow::Owned(normalize_handler_name(ctx.source_range(span)))),
+                    span,
+                    false,
+                )
             }
         };
 
@@ -374,7 +386,9 @@ impl Rule for JsxHandlerNames {
 
 impl JsxHandlerNames {
     fn match_event_handler_props_name(&self, name: &str) -> Option<bool> {
-        self.event_handler_prop_regex.as_ref().map(|r| r.is_match(name))
+        self.event_handler_prop_regex
+            .as_ref()
+            .map(|r| r.is_match(name))
     }
 
     fn match_event_handler_name(&self, name: &str) -> Option<bool> {
@@ -445,7 +459,11 @@ fn get_element_name_of_member_expression(member_expr: &JSXMemberExpression) -> C
 
 fn normalize_handler_name(s: &str) -> String {
     // Remove whitespace and leading "this."
-    s.strip_prefix("this.").unwrap_or(s).chars().filter(|c| !c.is_whitespace()).collect()
+    s.strip_prefix("this.")
+        .unwrap_or(s)
+        .chars()
+        .filter(|c| !c.is_whitespace())
+        .collect()
 }
 
 // Tests for the normalize_handler_name function to ensure it correctly strips prefixes and whitespace.
@@ -453,10 +471,22 @@ fn normalize_handler_name(s: &str) -> String {
 fn test_normalize_handler_name() {
     assert_eq!(normalize_handler_name("this.handleChange"), "handleChange");
     assert_eq!(normalize_handler_name("handleChange"), "handleChange");
-    assert_eq!(normalize_handler_name("this.props.handleChange"), "props.handleChange");
-    assert_eq!(normalize_handler_name("this.props.onChange"), "props.onChange");
-    assert_eq!(normalize_handler_name("this.props.handleChange()"), "props.handleChange()");
-    assert_eq!(normalize_handler_name("this.props.handleChange(42)"), "props.handleChange(42)");
+    assert_eq!(
+        normalize_handler_name("this.props.handleChange"),
+        "props.handleChange"
+    );
+    assert_eq!(
+        normalize_handler_name("this.props.onChange"),
+        "props.onChange"
+    );
+    assert_eq!(
+        normalize_handler_name("this.props.handleChange()"),
+        "props.handleChange()"
+    );
+    assert_eq!(
+        normalize_handler_name("this.props.handleChange(42)"),
+        "props.handleChange(42)"
+    );
     assert_eq!(
         normalize_handler_name("this.props.handleChange(42, 'foo')"),
         "props.handleChange(42,'foo')"
@@ -482,9 +512,9 @@ fn get_event_handler_name_from_arrow_function<'a>(
 
     match &call_expr.callee {
         Expression::Identifier(ident) => Some((ident.name, ident.span, false)),
-        Expression::StaticMemberExpression(member_expr) => {
-            Some(get_event_handler_name_from_static_member_expression(member_expr))
-        }
+        Expression::StaticMemberExpression(member_expr) => Some(
+            get_event_handler_name_from_static_member_expression(member_expr),
+        ),
         _ => None,
     }
 }
@@ -548,7 +578,10 @@ fn test() {
         ("<TestComponent onChange={() => 42} />", None),
         ("<TestComponent onChange={this.props.onFoo} />", None),
         ("<TestComponent isSelected={this.props.isSelected} />", None),
-        ("<TestComponent shouldDisplay={this.state.shouldDisplay} />", None),
+        (
+            "<TestComponent shouldDisplay={this.state.shouldDisplay} />",
+            None,
+        ),
         ("<TestComponent shouldDisplay={arr[0].prop} />", None),
         ("<TestComponent onChange={props.onChange} />", None),
         ("<TestComponent ref={this.handleRef} />", None),
@@ -629,13 +662,19 @@ fn test() {
     ];
 
     let fail = vec![
-        ("<TestComponent onChange={this.doSomethingOnChange} />", None),
+        (
+            "<TestComponent onChange={this.doSomethingOnChange} />",
+            None,
+        ),
         ("<TestComponent onChange={this.handlerChange} />", None),
         ("<TestComponent onChange={this.handle} />", None),
         ("<TestComponent onChange={this.handle2} />", None),
         ("<TestComponent onChange={this.handl3Change} />", None),
         ("<TestComponent onChange={this.handle4change} />", None),
-        ("<TestComponent onChange={this.props.doSomethingOnChange} />", None),
+        (
+            "<TestComponent onChange={this.props.doSomethingOnChange} />",
+            None,
+        ),
         ("<TestComponent onChange={this.props.obj.onChange} />", None),
         ("<TestComponent onChange={props.obj.onChange} />", None),
         (

@@ -89,7 +89,9 @@ impl StructDef {
 
     /// Get plural type name.
     pub fn plural_name(&self) -> String {
-        self.plural_name.clone().unwrap_or_else(|| pluralize(self.name()))
+        self.plural_name
+            .clone()
+            .unwrap_or_else(|| pluralize(self.name()))
     }
 
     /// Get plural type name in snake case.

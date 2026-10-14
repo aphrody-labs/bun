@@ -29,7 +29,9 @@ fn bench_minifier(criterion: &mut Criterion) {
                 allocator.reset();
 
                 // Create fresh AST + semantic data for each iteration
-                let mut program = Parser::new(&allocator, source_text, source_type).parse().program;
+                let mut program = Parser::new(&allocator, source_text, source_type)
+                    .parse()
+                    .program;
                 let scoping = SemanticBuilder::new()
                     .with_enum_eval(true)
                     .build(&program)
@@ -42,7 +44,10 @@ fn bench_minifier(criterion: &mut Criterion) {
                     Transformer::new(&allocator, Path::new(&file.file_name), &transform_options)
                         .build_with_scoping(scoping, &mut program);
                 assert!(transformer_ret.diagnostics.is_empty());
-                let scoping = SemanticBuilder::new().build(&program).semantic.into_scoping();
+                let scoping = SemanticBuilder::new()
+                    .build(&program)
+                    .semantic
+                    .into_scoping();
 
                 let options = CompressOptions::smallest();
                 runner.run(|| {
@@ -65,9 +70,14 @@ fn transform_to_js<'a>(
     source_type: SourceType,
     path: &Path,
 ) -> Program<'a> {
-    let mut program = Parser::new(allocator, source_text, source_type).parse().program;
-    let scoping =
-        SemanticBuilder::new().with_enum_eval(true).build(&program).semantic.into_scoping();
+    let mut program = Parser::new(allocator, source_text, source_type)
+        .parse()
+        .program;
+    let scoping = SemanticBuilder::new()
+        .with_enum_eval(true)
+        .build(&program)
+        .semantic
+        .into_scoping();
     let transform_options = TransformOptions::from_target("esnext").unwrap();
     let transformer_ret = Transformer::new(allocator, path, &transform_options)
         .build_with_scoping(scoping, &mut program);
@@ -89,8 +99,10 @@ fn bench_mangler(criterion: &mut Criterion) {
                 allocator.reset();
                 temp_allocator.reset();
                 let program = transform_to_js(&allocator, source_text, source_type, path);
-                let mut semantic =
-                    SemanticBuilder::new().with_build_nodes(true).build(&program).semantic;
+                let mut semantic = SemanticBuilder::new()
+                    .with_build_nodes(true)
+                    .build(&program)
+                    .semantic;
                 runner.run(|| {
                     Mangler::new_with_temp_allocator(&temp_allocator)
                         .build_with_semantic(&mut semantic, &program);
@@ -113,8 +125,10 @@ fn bench_mangler(criterion: &mut Criterion) {
                 allocator.reset();
                 temp_allocator.reset();
                 let program = transform_to_js(&allocator, source_text, source_type, path);
-                let mut semantic =
-                    SemanticBuilder::new().with_build_nodes(true).build(&program).semantic;
+                let mut semantic = SemanticBuilder::new()
+                    .with_build_nodes(true)
+                    .build(&program)
+                    .semantic;
                 runner.run(|| {
                     Mangler::new_with_temp_allocator(&temp_allocator)
                         .with_options(MangleOptions {
@@ -159,5 +173,10 @@ fn bench_property_mangler(criterion: &mut Criterion) {
     group.finish();
 }
 
-criterion_group!(minifier, bench_minifier, bench_mangler, bench_property_mangler);
+criterion_group!(
+    minifier,
+    bench_minifier,
+    bench_mangler,
+    bench_property_mangler
+);
 criterion_main!(minifier);

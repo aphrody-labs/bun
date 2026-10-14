@@ -78,7 +78,8 @@ declare_oxc_lint!(
     fix,
     config = NoUselessRenameConfig,
     version = "0.2.14",
-    short_description = "Disallow renaming import, export, and destructured assignments to the same name.",
+    short_description =
+        "Disallow renaming import, export, and destructured assignments to the same name.",
 );
 
 impl Rule for NoUselessRename {
@@ -157,8 +158,11 @@ impl Rule for NoUselessRename {
                 ctx.diagnostic_with_fix(
                     no_useless_rename_diagnostic(import_specifier.local.span),
                     |fixer| {
-                        let local_text =
-                            import_specifier.local.span.source_text(ctx.source_text()).to_string();
+                        let local_text = import_specifier
+                            .local
+                            .span
+                            .source_text(ctx.source_text())
+                            .to_string();
                         let replacement = if import_specifier.import_kind.is_type() {
                             format!("type {local_text}")
                         } else {
@@ -245,7 +249,10 @@ fn fix_object_pattern_property<'c, 'a: 'c>(
                     // ident_span is `foo`, default is from `=` onwards
                     let default_start = binding_ident.span.end;
                     let default_end = assignment_pattern.span.end;
-                    (binding_ident.span, Some(Span::new(default_start, default_end)))
+                    (
+                        binding_ident.span,
+                        Some(Span::new(default_start, default_end)),
+                    )
                 }
                 _ => return fixer.noop(),
             }
@@ -340,7 +347,10 @@ fn test() {
         ("import {'foo' as bar} from 'baz';", None), // { "ecmaVersion": 2022 },
         ("export {foo} from 'foo';", None),
         ("var foo = 0;export {foo as bar};", None),
-        ("var foo = 0; var baz = 0; export {foo as bar, baz as qux};", None),
+        (
+            "var foo = 0; var baz = 0; export {foo as bar, baz as qux};",
+            None,
+        ),
         ("export {foo as bar} from 'foo';", None),
         ("export {foo as bar, baz as qux} from 'foo';", None),
         ("var foo = 0; export {foo as 'bar'};", None), // { "ecmaVersion": 2022 },
@@ -353,7 +363,10 @@ fn test() {
         ("const {...stuff} = myObject;", None),        // { "ecmaVersion": 2018 },
         ("const {foo, ...stuff} = myObject;", None),   // { "ecmaVersion": 2018 },
         ("const {foo: bar, ...stuff} = myObject;", None), // { "ecmaVersion": 2018 },
-        ("let {foo: foo} = obj;", Some(serde_json::json!([{ "ignoreDestructuring": true }]))),
+        (
+            "let {foo: foo} = obj;",
+            Some(serde_json::json!([{ "ignoreDestructuring": true }])),
+        ),
         (
             "let {foo: foo, bar: baz} = obj;",
             Some(serde_json::json!([{ "ignoreDestructuring": true }])),
@@ -362,7 +375,10 @@ fn test() {
             "let {foo: foo, bar: bar} = obj;",
             Some(serde_json::json!([{ "ignoreDestructuring": true }])),
         ),
-        ("import {foo as foo} from 'foo';", Some(serde_json::json!([{ "ignoreImport": true }]))),
+        (
+            "import {foo as foo} from 'foo';",
+            Some(serde_json::json!([{ "ignoreImport": true }])),
+        ),
         (
             "import {foo as foo, bar as baz} from 'foo';",
             Some(serde_json::json!([{ "ignoreImport": true }])),
@@ -371,7 +387,10 @@ fn test() {
             "import {foo as foo, bar as bar} from 'foo';",
             Some(serde_json::json!([{ "ignoreImport": true }])),
         ),
-        ("var foo = 0;export {foo as foo};", Some(serde_json::json!([{ "ignoreExport": true }]))),
+        (
+            "var foo = 0;export {foo as foo};",
+            Some(serde_json::json!([{ "ignoreExport": true }])),
+        ),
         (
             "var foo = 0;var bar = 0;export {foo as foo, bar as baz};",
             Some(serde_json::json!([{ "ignoreExport": true }])),
@@ -380,7 +399,10 @@ fn test() {
             "var foo = 0;var bar = 0;export {foo as foo, bar as bar};",
             Some(serde_json::json!([{ "ignoreExport": true }])),
         ),
-        ("export {foo as foo} from 'foo';", Some(serde_json::json!([{ "ignoreExport": true }]))),
+        (
+            "export {foo as foo} from 'foo';",
+            Some(serde_json::json!([{ "ignoreExport": true }])),
+        ),
         (
             "export {foo as foo, bar as baz} from 'foo';",
             Some(serde_json::json!([{ "ignoreExport": true }])),
@@ -420,8 +442,14 @@ fn test() {
         ("function func({foo: foo, bar: baz}) {}", None),
         ("function func({foo: bar, baz: baz}) {}", None),
         ("function func({foo: foo, bar: bar}) {}", None),
-        ("function func({foo: foo = 1, 'bar': bar = 1, baz: baz}) {}", None),
-        ("function func({foo: {bar: bar = 1, 'baz': baz = 1}}) {}", None),
+        (
+            "function func({foo: foo = 1, 'bar': bar = 1, baz: baz}) {}",
+            None,
+        ),
+        (
+            "function func({foo: {bar: bar = 1, 'baz': baz = 1}}) {}",
+            None,
+        ),
         ("function func({foo: {bar: bar = {}} = {}}) {}", None),
         ("({foo: foo}) => {}", None),
         ("({foo: foo, bar: baz}) => {}", None),
@@ -451,15 +479,27 @@ fn test() {
         (r"var a = 0; export {a as \u0061};", None),
         (r"var \u0061 = 0; export {\u0061 as a};", None),
         (r"var \u0061 = 0; export {\u0061 as \u0061};", None),
-        ("var foo = 0; var bar = 0; export {foo as foo, bar as baz};", None),
-        ("var foo = 0; var baz = 0; export {foo as bar, baz as baz};", None),
-        ("var foo = 0; var bar = 0;export {foo as foo, bar as bar};", None),
+        (
+            "var foo = 0; var bar = 0; export {foo as foo, bar as baz};",
+            None,
+        ),
+        (
+            "var foo = 0; var baz = 0; export {foo as bar, baz as baz};",
+            None,
+        ),
+        (
+            "var foo = 0; var bar = 0;export {foo as foo, bar as bar};",
+            None,
+        ),
         ("export {foo as foo} from 'foo';", None),
         (r"export {a as \u0061} from 'foo';", None),
         (r"export {\u0061 as a} from 'foo';", None),
         (r"export {\u0061 as \u0061} from 'foo';", None),
         ("export {foo as foo, bar as baz} from 'foo';", None),
-        ("var foo = 0; var bar = 0; export {foo as bar, baz as baz} from 'foo';", None),
+        (
+            "var foo = 0; var bar = 0; export {foo as bar, baz as baz} from 'foo';",
+            None,
+        ),
         ("export {foo as foo, bar as bar} from 'foo';", None),
         ("({/* comment */foo: foo} = {});", None),
         ("({/* comment */foo: foo = 1} = {});", None),
@@ -541,17 +581,41 @@ fn test() {
         (r"let {a: \u0061} = obj;", r"let {\u0061} = obj;"),
         (r"let {\u0061: \u0061} = obj;", r"let {\u0061} = obj;"),
         ("let {a, foo: foo} = obj;", "let {a, foo} = obj;"),
-        ("let {foo: foo, bar: baz} = obj;", "let {foo, bar: baz} = obj;"),
-        ("let {foo: bar, baz: baz} = obj;", "let {foo: bar, baz} = obj;"),
+        (
+            "let {foo: foo, bar: baz} = obj;",
+            "let {foo, bar: baz} = obj;",
+        ),
+        (
+            "let {foo: bar, baz: baz} = obj;",
+            "let {foo: bar, baz} = obj;",
+        ),
         ("let {foo: foo, bar: bar} = obj;", "let {foo, bar} = obj;"),
         ("let {foo: {bar: bar}} = obj;", "let {foo: {bar}} = obj;"),
-        ("let {foo: {bar: bar}, baz: baz} = obj;", "let {foo: {bar}, baz} = obj;"),
+        (
+            "let {foo: {bar: bar}, baz: baz} = obj;",
+            "let {foo: {bar}, baz} = obj;",
+        ),
         ("let {'foo': foo} = obj;", "let {foo} = obj;"),
-        ("let {'foo': foo, 'bar': baz} = obj;", "let {foo, 'bar': baz} = obj;"),
-        ("let {'foo': bar, 'baz': baz} = obj;", "let {'foo': bar, baz} = obj;"),
-        ("let {'foo': foo, 'bar': bar} = obj;", "let {foo, bar} = obj;"),
-        ("let {'foo': {'bar': bar}} = obj;", "let {'foo': {bar}} = obj;"),
-        ("let {'foo': {'bar': bar}, 'baz': baz} = obj;", "let {'foo': {bar}, baz} = obj;"),
+        (
+            "let {'foo': foo, 'bar': baz} = obj;",
+            "let {foo, 'bar': baz} = obj;",
+        ),
+        (
+            "let {'foo': bar, 'baz': baz} = obj;",
+            "let {'foo': bar, baz} = obj;",
+        ),
+        (
+            "let {'foo': foo, 'bar': bar} = obj;",
+            "let {foo, bar} = obj;",
+        ),
+        (
+            "let {'foo': {'bar': bar}} = obj;",
+            "let {'foo': {bar}} = obj;",
+        ),
+        (
+            "let {'foo': {'bar': bar}, 'baz': baz} = obj;",
+            "let {'foo': {bar}, baz} = obj;",
+        ),
         (
             "let {foo: foo = 1, 'bar': bar = 1, baz: baz} = obj;",
             "let {foo = 1, bar = 1, baz} = obj;",
@@ -560,13 +624,28 @@ fn test() {
             "let {foo: {bar: bar = 1, 'baz': baz = 1}} = obj;",
             "let {foo: {bar = 1, baz = 1}} = obj;",
         ),
-        ("let {foo: {bar: bar = {}} = {}} = obj;", "let {foo: {bar = {}} = {}} = obj;"),
+        (
+            "let {foo: {bar: bar = {}} = {}} = obj;",
+            "let {foo: {bar = {}} = {}} = obj;",
+        ),
         ("let {foo: foo = (a)} = obj;", "let {foo = (a)} = obj;"),
-        ("let {foo: foo = (a, b)} = obj;", "let {foo = (a, b)} = obj;"),
+        (
+            "let {foo: foo = (a, b)} = obj;",
+            "let {foo = (a, b)} = obj;",
+        ),
         ("function func({foo: foo}) {}", "function func({foo}) {}"),
-        ("function func({foo: foo, bar: baz}) {}", "function func({foo, bar: baz}) {}"),
-        ("function func({foo: bar, baz: baz}) {}", "function func({foo: bar, baz}) {}"),
-        ("function func({foo: foo, bar: bar}) {}", "function func({foo, bar}) {}"),
+        (
+            "function func({foo: foo, bar: baz}) {}",
+            "function func({foo, bar: baz}) {}",
+        ),
+        (
+            "function func({foo: bar, baz: baz}) {}",
+            "function func({foo: bar, baz}) {}",
+        ),
+        (
+            "function func({foo: foo, bar: bar}) {}",
+            "function func({foo, bar}) {}",
+        ),
         (
             "function func({foo: foo = 1, 'bar': bar = 1, baz: baz}) {}",
             "function func({foo = 1, bar = 1, baz}) {}",
@@ -583,10 +662,22 @@ fn test() {
         ("({foo: foo, bar: baz}) => {}", "({foo, bar: baz}) => {}"),
         ("({foo: bar, baz: baz}) => {}", "({foo: bar, baz}) => {}"),
         ("({foo: foo, bar: bar}) => {}", "({foo, bar}) => {}"),
-        ("({foo: foo = 1, 'bar': bar = 1, baz: baz}) => {}", "({foo = 1, bar = 1, baz}) => {}"),
-        ("({foo: {bar: bar = 1, 'baz': baz = 1}}) => {}", "({foo: {bar = 1, baz = 1}}) => {}"),
-        ("({foo: {bar: bar = {}} = {}}) => {}", "({foo: {bar = {}} = {}}) => {}"),
-        ("const {foo: foo, ...stuff} = myObject;", "const {foo, ...stuff} = myObject;"),
+        (
+            "({foo: foo = 1, 'bar': bar = 1, baz: baz}) => {}",
+            "({foo = 1, bar = 1, baz}) => {}",
+        ),
+        (
+            "({foo: {bar: bar = 1, 'baz': baz = 1}}) => {}",
+            "({foo: {bar = 1, baz = 1}}) => {}",
+        ),
+        (
+            "({foo: {bar: bar = {}} = {}}) => {}",
+            "({foo: {bar = {}} = {}}) => {}",
+        ),
+        (
+            "const {foo: foo, ...stuff} = myObject;",
+            "const {foo, ...stuff} = myObject;",
+        ),
         (
             "const {foo: foo, bar: baz, ...stuff} = myObject;",
             "const {foo, bar: baz, ...stuff} = myObject;",
@@ -595,28 +686,79 @@ fn test() {
             "const {foo: foo, bar: bar, ...stuff} = myObject;",
             "const {foo, bar, ...stuff} = myObject;",
         ),
-        ("import {foo as foo} from 'foo';", "import {foo} from 'foo';"),
-        ("import {'foo' as foo} from 'foo';", "import {foo} from 'foo';"),
-        (r"import {\u0061 as a} from 'foo';", "import {a} from 'foo';"),
-        (r"import {a as \u0061} from 'foo';", r"import {\u0061} from 'foo';"),
-        (r"import {\u0061 as \u0061} from 'foo';", r"import {\u0061} from 'foo';"),
-        ("import {foo as foo, bar as baz} from 'foo';", "import {foo, bar as baz} from 'foo';"),
-        ("import {foo as bar, baz as baz} from 'foo';", "import {foo as bar, baz} from 'foo';"),
-        ("import {foo as foo, bar as bar} from 'foo';", "import {foo, bar} from 'foo';"),
+        (
+            "import {foo as foo} from 'foo';",
+            "import {foo} from 'foo';",
+        ),
+        (
+            "import {'foo' as foo} from 'foo';",
+            "import {foo} from 'foo';",
+        ),
+        (
+            r"import {\u0061 as a} from 'foo';",
+            "import {a} from 'foo';",
+        ),
+        (
+            r"import {a as \u0061} from 'foo';",
+            r"import {\u0061} from 'foo';",
+        ),
+        (
+            r"import {\u0061 as \u0061} from 'foo';",
+            r"import {\u0061} from 'foo';",
+        ),
+        (
+            "import {foo as foo, bar as baz} from 'foo';",
+            "import {foo, bar as baz} from 'foo';",
+        ),
+        (
+            "import {foo as bar, baz as baz} from 'foo';",
+            "import {foo as bar, baz} from 'foo';",
+        ),
+        (
+            "import {foo as foo, bar as bar} from 'foo';",
+            "import {foo, bar} from 'foo';",
+        ),
         (
             "export { type Foo as Foo } from 'mod'; import { type Bar as Bar } from 'mod'; type Baz = unknown; export { type Baz as Baz };",
             "export { type Foo } from 'mod'; import { type Bar } from 'mod'; type Baz = unknown; export { type Baz };",
         ),
-        ("var foo = 0; export {foo as foo};", "var foo = 0; export {foo};"),
-        ("var foo = 0; export {foo as 'foo'};", "var foo = 0; export {foo};"),
-        ("export {foo as 'foo'} from 'bar';", "export {foo} from 'bar';"),
-        ("export {'foo' as foo} from 'bar';", "export {'foo'} from 'bar';"),
-        ("export {'foo' as 'foo'} from 'bar';", "export {'foo'} from 'bar';"),
-        ("export {' 👍 ' as ' 👍 '} from 'bar';", "export {' 👍 '} from 'bar';"),
+        (
+            "var foo = 0; export {foo as foo};",
+            "var foo = 0; export {foo};",
+        ),
+        (
+            "var foo = 0; export {foo as 'foo'};",
+            "var foo = 0; export {foo};",
+        ),
+        (
+            "export {foo as 'foo'} from 'bar';",
+            "export {foo} from 'bar';",
+        ),
+        (
+            "export {'foo' as foo} from 'bar';",
+            "export {'foo'} from 'bar';",
+        ),
+        (
+            "export {'foo' as 'foo'} from 'bar';",
+            "export {'foo'} from 'bar';",
+        ),
+        (
+            "export {' 👍 ' as ' 👍 '} from 'bar';",
+            "export {' 👍 '} from 'bar';",
+        ),
         ("export {'' as ''} from 'bar';", "export {''} from 'bar';"),
-        (r"var a = 0; export {a as \u0061};", "var a = 0; export {a};"),
-        (r"var \u0061 = 0; export {\u0061 as a};", r"var \u0061 = 0; export {\u0061};"),
-        (r"var \u0061 = 0; export {\u0061 as \u0061};", r"var \u0061 = 0; export {\u0061};"),
+        (
+            r"var a = 0; export {a as \u0061};",
+            "var a = 0; export {a};",
+        ),
+        (
+            r"var \u0061 = 0; export {\u0061 as a};",
+            r"var \u0061 = 0; export {\u0061};",
+        ),
+        (
+            r"var \u0061 = 0; export {\u0061 as \u0061};",
+            r"var \u0061 = 0; export {\u0061};",
+        ),
         (
             "var foo = 0; var bar = 0; export {foo as foo, bar as baz};",
             "var foo = 0; var bar = 0; export {foo, bar as baz};",
@@ -629,57 +771,108 @@ fn test() {
             "var foo = 0; var bar = 0;export {foo as foo, bar as bar};",
             "var foo = 0; var bar = 0;export {foo, bar};",
         ),
-        ("export {foo as foo} from 'foo';", "export {foo} from 'foo';"),
-        (r"export {a as \u0061} from 'foo';", "export {a} from 'foo';"),
-        (r"export {\u0061 as a} from 'foo';", r"export {\u0061} from 'foo';"),
-        (r"export {\u0061 as \u0061} from 'foo';", r"export {\u0061} from 'foo';"),
-        ("export {foo as foo, bar as baz} from 'foo';", "export {foo, bar as baz} from 'foo';"),
+        (
+            "export {foo as foo} from 'foo';",
+            "export {foo} from 'foo';",
+        ),
+        (
+            r"export {a as \u0061} from 'foo';",
+            "export {a} from 'foo';",
+        ),
+        (
+            r"export {\u0061 as a} from 'foo';",
+            r"export {\u0061} from 'foo';",
+        ),
+        (
+            r"export {\u0061 as \u0061} from 'foo';",
+            r"export {\u0061} from 'foo';",
+        ),
+        (
+            "export {foo as foo, bar as baz} from 'foo';",
+            "export {foo, bar as baz} from 'foo';",
+        ),
         (
             "var foo = 0; var bar = 0; export {foo as bar, baz as baz} from 'foo';",
             "var foo = 0; var bar = 0; export {foo as bar, baz} from 'foo';",
         ),
-        ("export {foo as foo, bar as bar} from 'foo';", "export {foo, bar} from 'foo';"),
-        ("({/* comment */foo: foo} = {});", "({/* comment */foo} = {});"),
-        ("({/* comment */foo: foo = 1} = {});", "({/* comment */foo = 1} = {});"),
-        ("({foo, /* comment */bar: bar} = {});", "({foo, /* comment */bar} = {});"),
-        ("({foo: foo/* comment */} = {});", "({foo/* comment */} = {});"),
+        (
+            "export {foo as foo, bar as bar} from 'foo';",
+            "export {foo, bar} from 'foo';",
+        ),
+        (
+            "({/* comment */foo: foo} = {});",
+            "({/* comment */foo} = {});",
+        ),
+        (
+            "({/* comment */foo: foo = 1} = {});",
+            "({/* comment */foo = 1} = {});",
+        ),
+        (
+            "({foo, /* comment */bar: bar} = {});",
+            "({foo, /* comment */bar} = {});",
+        ),
+        (
+            "({foo: foo/* comment */} = {});",
+            "({foo/* comment */} = {});",
+        ),
         (
             "({foo: foo//comment
             ,bar} = {});",
             "({foo//comment
             ,bar} = {});",
         ),
-        ("({foo: foo/* comment */ = 1} = {});", "({foo/* comment */ = 1} = {});"),
+        (
+            "({foo: foo/* comment */ = 1} = {});",
+            "({foo/* comment */ = 1} = {});",
+        ),
         (
             "({foo: foo // comment
              = 1} = {});",
             "({foo // comment
              = 1} = {});",
         ),
-        ("({foo: foo = /* comment */ 1} = {});", "({foo = /* comment */ 1} = {});"),
+        (
+            "({foo: foo = /* comment */ 1} = {});",
+            "({foo = /* comment */ 1} = {});",
+        ),
         (
             "({foo: foo = // comment
              1} = {});",
             "({foo = // comment
              1} = {});",
         ),
-        ("({foo: foo = (1/* comment */)} = {});", "({foo = (1/* comment */)} = {});"),
-        ("import {/* comment */foo as foo} from 'foo';", "import {/* comment */foo} from 'foo';"),
+        (
+            "({foo: foo = (1/* comment */)} = {});",
+            "({foo = (1/* comment */)} = {});",
+        ),
+        (
+            "import {/* comment */foo as foo} from 'foo';",
+            "import {/* comment */foo} from 'foo';",
+        ),
         (
             "import {foo,/* comment */bar as bar} from 'foo';",
             "import {foo,/* comment */bar} from 'foo';",
         ),
-        ("import {foo as foo/* comment */} from 'foo';", "import {foo/* comment */} from 'foo';"),
+        (
+            "import {foo as foo/* comment */} from 'foo';",
+            "import {foo/* comment */} from 'foo';",
+        ),
         (
             "import {foo as foo/* comment */,bar} from 'foo';",
             "import {foo/* comment */,bar} from 'foo';",
         ),
-        ("let foo; export {/* comment */foo as foo};", "let foo; export {/* comment */foo};"),
+        (
+            "let foo; export {/* comment */foo as foo};",
+            "let foo; export {/* comment */foo};",
+        ),
         (
             "let foo, bar; export {foo,/* comment */bar as bar};",
             "let foo, bar; export {foo,/* comment */bar};",
         ),
-        ("let foo; export {foo as foo/* comment*/};", "let foo; export {foo/* comment*/};"),
+        (
+            "let foo; export {foo as foo/* comment*/};",
+            "let foo; export {foo/* comment*/};",
+        ),
         (
             "let foo, bar; export {foo as foo/* comment*/,bar};",
             "let foo, bar; export {foo/* comment*/,bar};",

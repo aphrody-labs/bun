@@ -59,7 +59,10 @@ mod test {
 
     #[test]
     fn borrows_when_there_is_nothing_to_escape() {
-        assert!(matches!(xml_escape("nothing to escape here"), Cow::Borrowed(_)));
+        assert!(matches!(
+            xml_escape("nothing to escape here"),
+            Cow::Borrowed(_)
+        ));
     }
 
     #[test]

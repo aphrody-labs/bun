@@ -114,40 +114,52 @@ impl DebugDot for ControlFlowGraph {
 
 impl DebugDot for BasicBlock {
     fn debug_dot(&self, ctx: DebugDotContext) -> String {
-        self.instructions().iter().fold(String::new(), |mut acc, it| {
-            acc.push_str(it.debug_dot(ctx).as_str());
-            acc.push('\n');
-            acc
-        })
+        self.instructions()
+            .iter()
+            .fold(String::new(), |mut acc, it| {
+                acc.push_str(it.debug_dot(ctx).as_str());
+                acc.push('\n');
+                acc
+            })
     }
 }
 
 impl DebugDot for Instruction {
     fn debug_dot(&self, ctx: DebugDotContext) -> String {
         match &self.kind {
-            InstructionKind::Statement => {
-                self.node_id.map_or("None".to_string(), |id| ctx.debug_ast_kind(id))
-            }
+            InstructionKind::Statement => self
+                .node_id
+                .map_or("None".to_string(), |id| ctx.debug_ast_kind(id)),
             InstructionKind::Unreachable => "unreachable".to_string(),
             InstructionKind::Throw => "throw".to_string(),
             InstructionKind::Condition => self.node_id.map_or("None".to_string(), |id| {
                 format!(
                     "Condition({})",
-                    ctx.try_eval_literal(id).unwrap_or_else(|| ctx.debug_ast_kind(id))
+                    ctx.try_eval_literal(id)
+                        .unwrap_or_else(|| ctx.debug_ast_kind(id))
                 )
             }),
             InstructionKind::Iteration(kind) => {
                 format!(
                     "Iteration({} {} {})",
-                    self.node_id.map_or("None".to_string(), |id| ctx.debug_ast_kind(id)),
-                    if matches!(kind, IterationInstructionKind::Of) { "of" } else { "in" },
+                    self.node_id
+                        .map_or("None".to_string(), |id| ctx.debug_ast_kind(id)),
+                    if matches!(kind, IterationInstructionKind::Of) {
+                        "of"
+                    } else {
+                        "in"
+                    },
                     // TODO: at this point we can't evaluate this node. needs access to the graph information.
                     "expr"
                 )
             }
             InstructionKind::Break(LabeledInstruction::Labeled) => {
-                let Some(AstKind::BreakStatement(BreakStatement { label: Some(label), .. })) =
-                    self.node_id.map(|id| ctx.nodes.get_node(id)).map(AstNode::kind)
+                let Some(AstKind::BreakStatement(BreakStatement {
+                    label: Some(label), ..
+                })) = self
+                    .node_id
+                    .map(|id| ctx.nodes.get_node(id))
+                    .map(AstNode::kind)
                 else {
                     unreachable!(
                         "Expected a label node to be associated with an labeled break instruction. {:?}",
@@ -160,7 +172,10 @@ impl DebugDot for Instruction {
             InstructionKind::Continue(LabeledInstruction::Labeled) => {
                 let Some(AstKind::ContinueStatement(ContinueStatement {
                     label: Some(label), ..
-                })) = self.node_id.map(|id| ctx.nodes.get_node(id)).map(AstNode::kind)
+                })) = self
+                    .node_id
+                    .map(|id| ctx.nodes.get_node(id))
+                    .map(AstNode::kind)
                 else {
                     unreachable!(
                         "Expected a label node to be associated with an labeled continue instruction. {:?}",

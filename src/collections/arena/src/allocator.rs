@@ -243,7 +243,9 @@ impl Allocator {
     #[expect(clippy::inline_always)]
     #[inline(always)]
     pub fn new() -> Self {
-        Self { arena: Arena::new() }
+        Self {
+            arena: Arena::new(),
+        }
     }
 
     /// Create a new [`Allocator`] with specified capacity.
@@ -254,7 +256,9 @@ impl Allocator {
     #[expect(clippy::inline_always)]
     #[inline(always)]
     pub fn with_capacity(capacity: usize) -> Self {
-        Self { arena: Arena::with_capacity(capacity) }
+        Self {
+            arena: Arena::with_capacity(capacity),
+        }
     }
 
     /// Allocate an object in this [`Allocator`] and return an exclusive reference to it.
@@ -276,7 +280,12 @@ impl Allocator {
     #[expect(clippy::inline_always)]
     #[inline(always)]
     pub fn alloc<T>(&self, val: T) -> &mut T {
-        const { assert!(!std::mem::needs_drop::<T>(), "Cannot allocate Drop type in arena") };
+        const {
+            assert!(
+                !std::mem::needs_drop::<T>(),
+                "Cannot allocate Drop type in arena"
+            )
+        };
 
         self.arena.alloc(val)
     }
@@ -434,7 +443,10 @@ impl Allocator {
             end_ptr = unsafe { end_ptr.add(len) };
         }
 
-        debug_assert_eq!(end_ptr.as_ptr() as usize - start_ptr.as_ptr() as usize, total_len);
+        debug_assert_eq!(
+            end_ptr.as_ptr() as usize - start_ptr.as_ptr() as usize,
+            total_len
+        );
 
         // SAFETY: We have allocated and filled `total_len` bytes starting at `start_ptr`.
         // Concatenating multiple `&str`s results in a valid UTF-8 string.

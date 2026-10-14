@@ -39,7 +39,10 @@ pub struct InlineString<const CAPACITY: usize, Len: UnsignedInt> {
 
 impl<const CAPACITY: usize, Len: UnsignedInt> InlineString<CAPACITY, Len> {
     const ASSERTS: () = {
-        assert!(CAPACITY <= Len::MAX_USIZE, "`CAPACITY` is too large for `Len`");
+        assert!(
+            CAPACITY <= Len::MAX_USIZE,
+            "`CAPACITY` is too large for `Len`"
+        );
         assert!(
             (CAPACITY + size_of::<Len>()).is_multiple_of(size_of::<usize>()),
             "`CAPACITY + size_of::<Len>()` is not a multiple of `size_of::<usize>()`"
@@ -51,7 +54,11 @@ impl<const CAPACITY: usize, Len: UnsignedInt> InlineString<CAPACITY, Len> {
     pub fn new() -> Self {
         const { Self::ASSERTS };
 
-        Self { bytes: [0; CAPACITY], len: Len::ZERO, _align: [] }
+        Self {
+            bytes: [0; CAPACITY],
+            len: Len::ZERO,
+            _align: [],
+        }
     }
 
     /// Create [`InlineString`] from `&str`.
@@ -65,7 +72,11 @@ impl<const CAPACITY: usize, Len: UnsignedInt> InlineString<CAPACITY, Len> {
         let mut bytes = [0; CAPACITY];
         let slice = &mut bytes[..s.len()];
         slice.copy_from_slice(s.as_bytes());
-        Self { bytes, len: Len::from_usize(s.len()), _align: [] }
+        Self {
+            bytes,
+            len: Len::from_usize(s.len()),
+            _align: [],
+        }
     }
 
     /// Push a byte to the string.

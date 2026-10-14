@@ -31,11 +31,12 @@ impl<'a> FrontMatter<'a> {
     /// or the delimiter default (`---` → `"yaml"`, `+++` → `"toml"`).
     /// What the name MEANS stays the host's decision.
     pub fn language(&self) -> &'a str {
-        self.explicit_language.unwrap_or(if self.start_delimiter == "---" {
-            "yaml"
-        } else {
-            "toml"
-        })
+        self.explicit_language
+            .unwrap_or(if self.start_delimiter == "---" {
+                "yaml"
+            } else {
+                "toml"
+            })
     }
 }
 
@@ -81,7 +82,13 @@ pub fn parse_front_matter(text: &str) -> Option<FrontMatter<'_>> {
     // Clamped: for `---\n---` the closing newline IS the opening newline
     let value = &text[(opening_newline + 1).min(closing_newline)..closing_newline];
 
-    Some(FrontMatter { raw, value, start_delimiter, end_delimiter, explicit_language })
+    Some(FrontMatter {
+        raw,
+        value,
+        start_delimiter,
+        end_delimiter,
+        explicit_language,
+    })
 }
 
 /// Blanks the leading `raw_len` bytes of `text` (a [`FrontMatter::raw`] length).
@@ -202,7 +209,11 @@ mod tests {
 
         assert_eq!(blanked.len(), text.len());
         let offsets = |s: &str| -> Vec<usize> {
-            s.bytes().enumerate().filter(|(_, b)| *b == b'\n').map(|(i, _)| i).collect::<Vec<_>>()
+            s.bytes()
+                .enumerate()
+                .filter(|(_, b)| *b == b'\n')
+                .map(|(i, _)| i)
+                .collect::<Vec<_>>()
         };
         assert_eq!(offsets(&blanked), offsets(text));
         // The body is untouched, the block is whitespace-only

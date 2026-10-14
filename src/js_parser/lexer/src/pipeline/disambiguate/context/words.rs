@@ -10,7 +10,11 @@ impl Walk {
     /// Step the word at `pos`; returns its end.
     pub(super) fn step_word(&mut self, tokens: &Tokens, pos: usize) -> usize {
         let end = tokens.next_start(pos + 1);
-        let kw = if self.after_dot { 0 } else { tokens.word_kw(pos, end - pos) };
+        let kw = if self.after_dot {
+            0
+        } else {
+            tokens.word_kw(pos, end - pos)
+        };
 
         if self.in_type() {
             self.type_word(kw);

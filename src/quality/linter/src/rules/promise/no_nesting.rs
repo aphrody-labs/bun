@@ -72,7 +72,10 @@ declare_oxc_lint!(
 );
 
 fn is_inside_promise(node: &AstNode, ctx: &LintContext) -> bool {
-    if !matches!(node.kind(), AstKind::Function(_) | AstKind::ArrowFunctionExpression(_)) {
+    if !matches!(
+        node.kind(),
+        AstKind::Function(_) | AstKind::ArrowFunctionExpression(_)
+    ) {
         return false;
     }
 
@@ -98,12 +101,13 @@ fn closest_promise_cb<'a, 'b>(
     node: &'a AstNode<'b>,
     ctx: &'a LintContext<'b>,
 ) -> Option<&'a CallExpression<'b>> {
-    ctx.nodes().ancestors(node.id()).filter_map(|node| node.kind().as_call_expression()).find(
-        |ancestor| {
+    ctx.nodes()
+        .ancestors(node.id())
+        .filter_map(|node| node.kind().as_call_expression())
+        .find(|ancestor| {
             is_promise(ancestor)
                 .is_some_and(|prop_name| prop_name == "then" || prop_name == "catch")
-        },
-    )
+        })
 }
 
 /// Checks if we can safely unnest the promise callback.

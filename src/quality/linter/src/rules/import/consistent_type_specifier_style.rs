@@ -44,7 +44,9 @@ fn consistent_type_specifier_style_diagnostic(span: Span, mode: &Mode) -> OxcDia
             "Replace inline type specifiers with a top‐level import type statement.",
         ),
     };
-    OxcDiagnostic::warn(warn_msg).with_help(help_msg).with_label(span)
+    OxcDiagnostic::warn(warn_msg)
+        .with_help(help_msg)
+        .with_label(span)
 }
 
 #[derive(Debug, Default, PartialEq, Clone, Serialize, Deserialize, JsonSchema)]
@@ -138,7 +140,10 @@ impl Rule for ConsistentTypeSpecifierStyle {
         let len = specifiers.len();
         if len == 0
             || (len == 1
-                && !matches!(specifiers[0], ImportDeclarationSpecifier::ImportSpecifier(_)))
+                && !matches!(
+                    specifiers[0],
+                    ImportDeclarationSpecifier::ImportSpecifier(_)
+                ))
         {
             return;
         }
@@ -183,7 +188,10 @@ impl Rule for ConsistentTypeSpecifierStyle {
             };
 
             if self.0 == Mode::TopLevelIfOnlyTypeImports && !is_declaration_file_import {
-                report(consistent_type_specifier_style_diagnostic(import_decl.span, &self.0));
+                report(consistent_type_specifier_style_diagnostic(
+                    import_decl.span,
+                    &self.0,
+                ));
             } else {
                 for item in &type_specifiers {
                     let diagnostic = if is_declaration_file_import {
@@ -345,21 +353,54 @@ fn test() {
         ("import 'Foo';", None),
         ("import {} from 'Foo';", None),
         ("import type {} from 'Foo';", None),
-        ("import type { Foo as Bar } from 'Foo';", Some(json!(["prefer-top-level"]))),
-        ("import type { Foo, Bar, Baz, Bam } from 'Foo';", Some(json!(["prefer-top-level"]))),
-        ("import type {Foo} from 'Foo'", Some(json!(["prefer-top-level"]))),
-        ("import Foo from 'Foo';", Some(json!(["prefer-top-level-if-only-type-imports"]))),
-        ("import type Foo from 'Foo';", Some(json!(["prefer-top-level-if-only-type-imports"]))),
-        ("import { Foo } from 'Foo';", Some(json!(["prefer-top-level-if-only-type-imports"]))),
+        (
+            "import type { Foo as Bar } from 'Foo';",
+            Some(json!(["prefer-top-level"])),
+        ),
+        (
+            "import type { Foo, Bar, Baz, Bam } from 'Foo';",
+            Some(json!(["prefer-top-level"])),
+        ),
+        (
+            "import type {Foo} from 'Foo'",
+            Some(json!(["prefer-top-level"])),
+        ),
+        (
+            "import Foo from 'Foo';",
+            Some(json!(["prefer-top-level-if-only-type-imports"])),
+        ),
+        (
+            "import type Foo from 'Foo';",
+            Some(json!(["prefer-top-level-if-only-type-imports"])),
+        ),
+        (
+            "import { Foo } from 'Foo';",
+            Some(json!(["prefer-top-level-if-only-type-imports"])),
+        ),
         (
             "import { Foo as Bar } from 'Foo';",
             Some(json!(["prefer-top-level-if-only-type-imports"])),
         ),
-        ("import * as Foo from 'Foo';", Some(json!(["prefer-top-level-if-only-type-imports"]))),
-        ("import 'Foo';", Some(json!(["prefer-top-level-if-only-type-imports"]))),
-        ("import {} from 'Foo';", Some(json!(["prefer-top-level-if-only-type-imports"]))),
-        ("import type {} from 'Foo';", Some(json!(["prefer-top-level-if-only-type-imports"]))),
-        ("import type { Foo } from 'Foo';", Some(json!(["prefer-top-level-if-only-type-imports"]))),
+        (
+            "import * as Foo from 'Foo';",
+            Some(json!(["prefer-top-level-if-only-type-imports"])),
+        ),
+        (
+            "import 'Foo';",
+            Some(json!(["prefer-top-level-if-only-type-imports"])),
+        ),
+        (
+            "import {} from 'Foo';",
+            Some(json!(["prefer-top-level-if-only-type-imports"])),
+        ),
+        (
+            "import type {} from 'Foo';",
+            Some(json!(["prefer-top-level-if-only-type-imports"])),
+        ),
+        (
+            "import type { Foo } from 'Foo';",
+            Some(json!(["prefer-top-level-if-only-type-imports"])),
+        ),
         (
             "import type { Foo as Bar } from 'Foo';",
             Some(json!(["prefer-top-level-if-only-type-imports"])),
@@ -384,28 +425,73 @@ fn test() {
             "import Foo, { type Bar, Baz } from 'Foo';",
             Some(json!(["prefer-top-level-if-only-type-imports"])),
         ),
-        ("import {type Foo} from 'Foo'", Some(json!(["prefer-inline"]))),
+        (
+            "import {type Foo} from 'Foo'",
+            Some(json!(["prefer-inline"])),
+        ),
         ("import Foo from 'Foo';", Some(json!(["prefer-inline"]))),
-        ("import type Foo from 'Foo';", Some(json!(["prefer-inline"]))),
+        (
+            "import type Foo from 'Foo';",
+            Some(json!(["prefer-inline"])),
+        ),
         ("import { Foo } from 'Foo';", Some(json!(["prefer-inline"]))),
-        ("import { Foo as Bar } from 'Foo';", Some(json!(["prefer-inline"]))),
-        ("import * as Foo from 'Foo';", Some(json!(["prefer-inline"]))),
+        (
+            "import { Foo as Bar } from 'Foo';",
+            Some(json!(["prefer-inline"])),
+        ),
+        (
+            "import * as Foo from 'Foo';",
+            Some(json!(["prefer-inline"])),
+        ),
         ("import 'Foo';", Some(json!(["prefer-inline"]))),
         ("import {} from 'Foo';", Some(json!(["prefer-inline"]))),
         ("import type {} from 'Foo';", Some(json!(["prefer-inline"]))),
-        ("import { type Foo } from 'Foo';", Some(json!(["prefer-inline"]))),
-        ("import { type Foo as Bar } from 'Foo';", Some(json!(["prefer-inline"]))),
-        ("import { type Foo, type Bar, Baz, Bam } from 'Foo';", Some(json!(["prefer-inline"]))),
+        (
+            "import { type Foo } from 'Foo';",
+            Some(json!(["prefer-inline"])),
+        ),
+        (
+            "import { type Foo as Bar } from 'Foo';",
+            Some(json!(["prefer-inline"])),
+        ),
+        (
+            "import { type Foo, type Bar, Baz, Bam } from 'Foo';",
+            Some(json!(["prefer-inline"])),
+        ),
         ("import type * as Foo from 'Foo';", None),
         // declaration files always require `import type` syntax
-        ("import type { Foo } from './index.d.ts';", Some(json!(["prefer-top-level"]))),
-        ("import type { Foo } from './index.d.ts';", Some(json!(["prefer-inline"]))),
-        ("import type { Foo } from './index.d.mts';", Some(json!(["prefer-top-level"]))),
-        ("import type { Foo } from './index.d.mts';", Some(json!(["prefer-inline"]))),
-        ("import type { Foo } from './index.d.cts';", Some(json!(["prefer-top-level"]))),
-        ("import type { Foo } from './index.d.cts';", Some(json!(["prefer-inline"]))),
-        ("import type { Foo } from './app.d.css.ts';", Some(json!(["prefer-top-level"]))),
-        ("import type { Foo } from './app.d.css.ts';", Some(json!(["prefer-inline"]))),
+        (
+            "import type { Foo } from './index.d.ts';",
+            Some(json!(["prefer-top-level"])),
+        ),
+        (
+            "import type { Foo } from './index.d.ts';",
+            Some(json!(["prefer-inline"])),
+        ),
+        (
+            "import type { Foo } from './index.d.mts';",
+            Some(json!(["prefer-top-level"])),
+        ),
+        (
+            "import type { Foo } from './index.d.mts';",
+            Some(json!(["prefer-inline"])),
+        ),
+        (
+            "import type { Foo } from './index.d.cts';",
+            Some(json!(["prefer-top-level"])),
+        ),
+        (
+            "import type { Foo } from './index.d.cts';",
+            Some(json!(["prefer-inline"])),
+        ),
+        (
+            "import type { Foo } from './app.d.css.ts';",
+            Some(json!(["prefer-top-level"])),
+        ),
+        (
+            "import type { Foo } from './app.d.css.ts';",
+            Some(json!(["prefer-inline"])),
+        ),
         (
             "import type { Foo } from './index.d.ts';",
             Some(json!(["prefer-top-level-if-only-type-imports"])),
@@ -414,16 +500,28 @@ fn test() {
 
     let fail = vec![
         ("import { type Foo, type Bar } from 'Foo'", None),
-        ("import type { Foo } from 'Foo'", Some(json!(["prefer-inline"]))),
+        (
+            "import type { Foo } from 'Foo'",
+            Some(json!(["prefer-inline"])),
+        ),
         ("import { type Foo as Bar } from 'Foo';", None),
         ("import { type Foo, type Bar } from 'Foo';", None),
         ("import { Foo, type Bar } from 'Foo';", None),
         ("import { type Foo, Bar } from 'Foo';", None),
         ("import Foo, { type Bar } from 'Foo';", None),
         ("import Foo, { type Bar, Baz } from 'Foo';", None),
-        ("import { Component, type ComponentProps } from 'package-1';", None),
-        ("import type { Foo, Bar, Baz } from 'Foo';", Some(json!(["prefer-inline"]))),
-        ("import { type Foo } from 'Foo';", Some(json!(["prefer-top-level-if-only-type-imports"]))),
+        (
+            "import { Component, type ComponentProps } from 'package-1';",
+            None,
+        ),
+        (
+            "import type { Foo, Bar, Baz } from 'Foo';",
+            Some(json!(["prefer-inline"])),
+        ),
+        (
+            "import { type Foo } from 'Foo';",
+            Some(json!(["prefer-top-level-if-only-type-imports"])),
+        ),
         (
             "import { type Foo as Bar } from 'Foo';",
             Some(json!(["prefer-top-level-if-only-type-imports"])),
@@ -433,14 +531,38 @@ fn test() {
             Some(json!(["prefer-top-level-if-only-type-imports"])),
         ),
         // declaration files always require `import type` syntax
-        ("import { type Foo } from './index.d.ts';", Some(json!(["prefer-top-level"]))),
-        ("import { type Foo } from './index.d.ts';", Some(json!(["prefer-inline"]))),
-        ("import { type Foo } from './index.d.mts';", Some(json!(["prefer-top-level"]))),
-        ("import { type Foo } from './index.d.mts';", Some(json!(["prefer-inline"]))),
-        ("import { type Foo } from './index.d.cts';", Some(json!(["prefer-top-level"]))),
-        ("import { type Foo } from './index.d.cts';", Some(json!(["prefer-inline"]))),
-        ("import { type Foo } from './app.d.css.ts';", Some(json!(["prefer-top-level"]))),
-        ("import { type Foo } from './app.d.css.ts';", Some(json!(["prefer-inline"]))),
+        (
+            "import { type Foo } from './index.d.ts';",
+            Some(json!(["prefer-top-level"])),
+        ),
+        (
+            "import { type Foo } from './index.d.ts';",
+            Some(json!(["prefer-inline"])),
+        ),
+        (
+            "import { type Foo } from './index.d.mts';",
+            Some(json!(["prefer-top-level"])),
+        ),
+        (
+            "import { type Foo } from './index.d.mts';",
+            Some(json!(["prefer-inline"])),
+        ),
+        (
+            "import { type Foo } from './index.d.cts';",
+            Some(json!(["prefer-top-level"])),
+        ),
+        (
+            "import { type Foo } from './index.d.cts';",
+            Some(json!(["prefer-inline"])),
+        ),
+        (
+            "import { type Foo } from './app.d.css.ts';",
+            Some(json!(["prefer-top-level"])),
+        ),
+        (
+            "import { type Foo } from './app.d.css.ts';",
+            Some(json!(["prefer-inline"])),
+        ),
         (
             "import { Foo, type Bar } from './index.d.ts';",
             Some(json!(["prefer-top-level-if-only-type-imports"])),

@@ -58,7 +58,11 @@ pub fn propagate_scope_dependencies_hir<'a>(func: &mut HirFunction<'a>, env: &mu
         // Convert to scope-keyed map with full dependency paths
         let mut keyed: FxHashMap<ScopeId, Vec<ReactiveScopeDependency>> = FxHashMap::default();
         for (_block_id, block) in &func.body.blocks {
-            if let Terminal::Scope { scope, block: inner_block, .. } = &block.terminal
+            if let Terminal::Scope {
+                scope,
+                block: inner_block,
+                ..
+            } = &block.terminal
                 && let Some(node_indices) = working.get(inner_block)
             {
                 let deps: Vec<ReactiveScopeDependency> = node_indices
@@ -79,8 +83,12 @@ pub fn propagate_scope_dependencies_hir<'a>(func: &mut HirFunction<'a>, env: &mu
         }
     }
 
-    let scope_deps =
-        collect_dependencies(func, env, &merged_temporaries, &processed_instrs_in_optional);
+    let scope_deps = collect_dependencies(
+        func,
+        env,
+        &merged_temporaries,
+        &processed_instrs_in_optional,
+    );
 
     // Derive the minimal set of hoistable dependencies for each scope.
     for (scope_id, deps) in &scope_deps {
@@ -159,7 +167,12 @@ fn find_temporaries_used_outside_declaring_scope(
         traversal.record_scopes(block);
 
         let scope_start_info = traversal.block_infos.get(block_id);
-        if let Some(ScopeBlockInfo::Begin { scope, pruned: true, .. }) = scope_start_info {
+        if let Some(ScopeBlockInfo::Begin {
+            scope,
+            pruned: true,
+            ..
+        }) = scope_start_info
+        {
             pruned_scopes.insert(*scope);
         }
 
@@ -274,8 +287,11 @@ fn collect_temporaries_sidemap_impl<'a>(
     for (_block_id, block) in &func.body.blocks {
         for &instr_id in &block.instructions {
             let instr = &func.instructions[instr_id.index()];
-            let instr_eval_order =
-                if let Some(outer_id) = inner_fn_context { outer_id } else { instr.id };
+            let instr_eval_order = if let Some(outer_id) = inner_fn_context {
+                outer_id
+            } else {
+                instr.id
+            };
             let lvalue_decl_id = env.identifiers[instr.lvalue.identifier].declaration_id;
             let used_outside = used_outside_declaring_scope.contains(&lvalue_decl_id);
 
@@ -309,7 +325,10 @@ fn collect_temporaries_sidemap_impl<'a>(
                         && !used_outside =>
                 {
                     if inner_fn_context.is_none()
-                        || func.context.iter().any(|ctx| ctx.identifier == place.identifier)
+                        || func
+                            .context
+                            .iter()
+                            .any(|ctx| ctx.identifier == place.identifier)
                     {
                         temporaries[instr.lvalue.identifier] = Some(ReactiveScopeDependency {
                             identifier: place.identifier,
@@ -326,7 +345,10 @@ fn collect_temporaries_sidemap_impl<'a>(
                         && !used_outside =>
                 {
                     if inner_fn_context.is_none()
-                        || func.context.iter().any(|ctx| ctx.identifier == place.identifier)
+                        || func
+                            .context
+                            .iter()
+                            .any(|ctx| ctx.identifier == place.identifier)
                     {
                         temporaries[instr.lvalue.identifier] = Some(ReactiveScopeDependency {
                             identifier: place.identifier,
@@ -497,7 +519,12 @@ fn match_optional_test_block<'a>(
     func: &HirFunction<'a>,
 ) -> Option<MatchConsequentResult<'a>> {
     let (test_place, consequent_block_id, alternate_block_id) = match test {
-        Terminal::Branch { test, consequent, alternate, .. } => (test, *consequent, *alternate),
+        Terminal::Branch {
+            test,
+            consequent,
+            alternate,
+            ..
+        } => (test, *consequent, *alternate),
         _ => return None,
     };
 
@@ -511,9 +538,13 @@ fn match_optional_test_block<'a>(
 
     let (property_load_object, property, computed, property_load_span, property_span) =
         match &instr0.value {
-            InstructionValue::PropertyLoad { object, property, computed, property_span, span } => {
-                (object, property, computed, span, property_span)
-            }
+            InstructionValue::PropertyLoad {
+                object,
+                property,
+                computed,
+                property_span,
+                span,
+            } => (object, property, computed, span, property_span),
             _ => return None,
         };
 
@@ -535,7 +566,11 @@ fn match_optional_test_block<'a>(
 
     // Check consequent block terminal is goto break
     match &consequent_block.terminal {
-        Terminal::Goto { variant: GotoVariant::Break, block: goto_block, .. } => {
+        Terminal::Goto {
+            variant: GotoVariant::Break,
+            block: goto_block,
+            ..
+        } => {
             // Verify alternate block structure
             let alternate_block = func.body.blocks.get(&alternate_block_id)?;
             if alternate_block.instructions.len() != 2 {
@@ -572,7 +607,12 @@ fn traverse_optional_block<'a>(
     ctx.seen_optionals.insert(optional_block.id);
 
     let (test_block_id, is_optional, fallthrough_block_id) = match &optional_block.terminal {
-        Terminal::Optional { test, optional, fallthrough, .. } => (*test, *optional, *fallthrough),
+        Terminal::Optional {
+            test,
+            optional,
+            fallthrough,
+            ..
+        } => (*test, *optional, *fallthrough),
         _ => return None,
     };
 
@@ -641,7 +681,9 @@ fn traverse_optional_block<'a>(
             (&maybe_test_block.terminal, base)
         }
         Terminal::Optional {
-            fallthrough: inner_fallthrough, optional: _inner_optional, ..
+            fallthrough: inner_fallthrough,
+            optional: _inner_optional,
+            ..
         } => {
             let test_block = func.body.blocks.get(inner_fallthrough)?;
             if !matches!(&test_block.terminal, Terminal::Branch { .. }) {
@@ -712,7 +754,9 @@ fn traverse_optional_block<'a>(
                 property: match_result.property,
                 computed: match_result.computed,
                 optional: is_optional,
-                span: match_result.property_span.or(match_result.property_load_span),
+                span: match_result
+                    .property_span
+                    .or(match_result.property_load_span),
             });
             p
         },
@@ -720,51 +764,54 @@ fn traverse_optional_block<'a>(
     };
 
     ctx.processed_instrs_in_optional
-        .insert(ProcessedInstr::Instruction(match_result.store_local_lvalue_id));
-    ctx.processed_instrs_in_optional.insert(ProcessedInstr::Terminal(match &test_terminal {
-        Terminal::Branch { .. } => {
-            // Find the block ID for this terminal
-            // The terminal belongs to either maybe_test_block or the fallthrough block of inner optional
-            // We need to identify which block this terminal belongs to.
-            // For the base case, it's test_block_id.
-            // For nested optional, it's the fallthrough block.
-            // We'll use the block_id approach based on what we know.
-            // Actually, we tracked the terminal by its block, so we need to find which block
-            // contains this terminal. Let's use a pragmatic approach:
-            // The test terminal we matched was from maybe_test_block or from the inner fallthrough block.
-            // We'll search for it.
+        .insert(ProcessedInstr::Instruction(
+            match_result.store_local_lvalue_id,
+        ));
+    ctx.processed_instrs_in_optional
+        .insert(ProcessedInstr::Terminal(match &test_terminal {
+            Terminal::Branch { .. } => {
+                // Find the block ID for this terminal
+                // The terminal belongs to either maybe_test_block or the fallthrough block of inner optional
+                // We need to identify which block this terminal belongs to.
+                // For the base case, it's test_block_id.
+                // For nested optional, it's the fallthrough block.
+                // We'll use the block_id approach based on what we know.
+                // Actually, we tracked the terminal by its block, so we need to find which block
+                // contains this terminal. Let's use a pragmatic approach:
+                // The test terminal we matched was from maybe_test_block or from the inner fallthrough block.
+                // We'll search for it.
 
-            // For the base case (Branch terminal at maybe_test_block), block_id = test_block_id
-            // For the nested case, the test terminal is at the fallthrough block of inner optional
-            // In either case, we stored the terminal as test_terminal which comes from a known block.
-            // We need to find the block that owns this terminal.
+                // For the base case (Branch terminal at maybe_test_block), block_id = test_block_id
+                // For the nested case, the test terminal is at the fallthrough block of inner optional
+                // In either case, we stored the terminal as test_terminal which comes from a known block.
+                // We need to find the block that owns this terminal.
 
-            // Let's take a simpler approach: find the block whose terminal matches
-            // This is the block we got test_terminal from.
-            // In the first branch of the match, test_terminal = &maybe_test_block.terminal
-            //   and maybe_test_block.id = test_block_id
-            // In the second branch, test_terminal = &test_block.terminal
-            //   and test_block = func.body.blocks.get(inner_fallthrough)
-            // We can't easily tell which case we're in here since we're past the match.
+                // Let's take a simpler approach: find the block whose terminal matches
+                // This is the block we got test_terminal from.
+                // In the first branch of the match, test_terminal = &maybe_test_block.terminal
+                //   and maybe_test_block.id = test_block_id
+                // In the second branch, test_terminal = &test_block.terminal
+                //   and test_block = func.body.blocks.get(inner_fallthrough)
+                // We can't easily tell which case we're in here since we're past the match.
 
-            // Actually, since test_terminal is a reference to a terminal in a block,
-            // we can just look up which block it belongs to by finding blocks whose terminal
-            // pointer matches. But that's expensive. Instead, let's use the block approach
-            // and find the block from the terminal's properties.
+                // Actually, since test_terminal is a reference to a terminal in a block,
+                // we can just look up which block it belongs to by finding blocks whose terminal
+                // pointer matches. But that's expensive. Instead, let's use the block approach
+                // and find the block from the terminal's properties.
 
-            // For simplicity, use a sentinel approach: just check all blocks.
-            // This is O(n) but only happens for optional chains.
-            let mut found_block = BlockId::from_usize(0);
-            for (bid, blk) in &func.body.blocks {
-                if eq(&blk.terminal, test_terminal) {
-                    found_block = *bid;
-                    break;
+                // For simplicity, use a sentinel approach: just check all blocks.
+                // This is O(n) but only happens for optional chains.
+                let mut found_block = BlockId::from_usize(0);
+                for (bid, blk) in &func.body.blocks {
+                    if eq(&blk.terminal, test_terminal) {
+                        found_block = *bid;
+                        break;
+                    }
                 }
+                found_block
             }
-            found_block
-        }
-        _ => BlockId::from_usize(0),
-    }));
+            _ => BlockId::from_usize(0),
+        }));
     ctx.temporaries_read_in_optional[match_result.consequent_id] = Some(load.clone_in(ctx.alloc));
     ctx.temporaries_read_in_optional[match_result.property_id] = Some(load);
 
@@ -831,7 +878,11 @@ fn union_property_paths(
 
 impl<'a> PropertyPathRegistry<'a> {
     fn new(alloc: &'a Allocator) -> Self {
-        Self { nodes: Vec::new(), roots: FxHashMap::default(), alloc }
+        Self {
+            nodes: Vec::new(),
+            roots: FxHashMap::default(),
+            alloc,
+        }
     }
 
     fn get_or_create_identifier(
@@ -866,7 +917,10 @@ impl<'a> PropertyPathRegistry<'a> {
     ) -> usize {
         let map_key = entry.property;
         let existing = if entry.optional {
-            self.nodes[parent_idx].optional_properties.get(&map_key).copied()
+            self.nodes[parent_idx]
+                .optional_properties
+                .get(&map_key)
+                .copied()
         } else {
             self.nodes[parent_idx].properties.get(&map_key).copied()
         };
@@ -896,7 +950,9 @@ impl<'a> PropertyPathRegistry<'a> {
             has_optional: parent_has_optional || entry.optional,
         });
         if entry.optional {
-            self.nodes[parent_idx].optional_properties.insert(map_key, idx);
+            self.nodes[parent_idx]
+                .optional_properties
+                .insert(map_key, idx);
         } else {
             self.nodes[parent_idx].properties.insert(map_key, idx);
         }
@@ -922,8 +978,11 @@ impl<'a> PropertyPathRegistry<'a> {
 /// Port of `reduceMaybeOptionalChains` from CollectHoistablePropertyLoads.ts.
 fn reduce_maybe_optional_chains(nodes: &mut PropertyPathSet, registry: &mut PropertyPathRegistry) {
     // Collect indices of nodes that have optional in their path
-    let mut optional_chain_nodes: PropertyPathSet =
-        nodes.iter().copied().filter(|&idx| registry.nodes[idx].has_optional).collect();
+    let mut optional_chain_nodes: PropertyPathSet = nodes
+        .iter()
+        .copied()
+        .filter(|&idx| registry.nodes[idx].has_optional)
+        .collect();
 
     if optional_chain_nodes.is_empty() {
         return;
@@ -936,7 +995,9 @@ fn reduce_maybe_optional_chains(nodes: &mut PropertyPathSet, registry: &mut Prop
         let to_process = optional_chain_nodes.clone();
 
         for original_idx in to_process {
-            let full_path = registry.nodes[original_idx].full_path.clone_in(registry.alloc);
+            let full_path = registry.nodes[original_idx]
+                .full_path
+                .clone_in(registry.alloc);
 
             let mut curr_node = registry.get_or_create_identifier(
                 full_path.identifier,
@@ -1015,22 +1076,23 @@ fn get_maybe_non_null_in_instruction<'a>(
     alloc: &'a Allocator,
 ) -> Option<ReactiveScopeDependency<'a>> {
     match value {
-        InstructionValue::PropertyLoad { object, .. } => {
-            Some(temporaries[object.identifier].as_ref().map(|d| d.clone_in(alloc)).unwrap_or_else(
-                || ReactiveScopeDependency {
+        InstructionValue::PropertyLoad { object, .. } => Some(
+            temporaries[object.identifier]
+                .as_ref()
+                .map(|d| d.clone_in(alloc))
+                .unwrap_or_else(|| ReactiveScopeDependency {
                     identifier: object.identifier,
                     reactive: object.reactive,
                     path: ArenaVec::new_in(&alloc),
                     span: object.span,
-                },
-            ))
-        }
-        InstructionValue::Destructure { value: val, .. } => {
-            temporaries[val.identifier].as_ref().map(|d| d.clone_in(alloc))
-        }
-        InstructionValue::ComputedLoad { object, .. } => {
-            temporaries[object.identifier].as_ref().map(|d| d.clone_in(alloc))
-        }
+                }),
+        ),
+        InstructionValue::Destructure { value: val, .. } => temporaries[val.identifier]
+            .as_ref()
+            .map(|d| d.clone_in(alloc)),
+        InstructionValue::ComputedLoad { object, .. } => temporaries[object.identifier]
+            .as_ref()
+            .map(|d| d.clone_in(alloc)),
         _ => None,
     }
 }
@@ -1058,10 +1120,14 @@ fn get_assumed_invoked_functions_impl(
             let instr = &func.instructions[instr_id.index()];
             match &instr.value {
                 InstructionValue::FunctionExpression { lowered_func, .. } => {
-                    temporaries
-                        .insert(instr.lvalue.identifier, (lowered_func.func, FxHashSet::default()));
+                    temporaries.insert(
+                        instr.lvalue.identifier,
+                        (lowered_func.func, FxHashSet::default()),
+                    );
                 }
-                InstructionValue::StoreLocal { value: val, lvalue, .. } => {
+                InstructionValue::StoreLocal {
+                    value: val, lvalue, ..
+                } => {
                     if let Some(entry) = temporaries.get(&val.identifier).cloned() {
                         temporaries.insert(lvalue.place.identifier, entry);
                     }
@@ -1098,7 +1164,9 @@ fn get_assumed_invoked_functions_impl(
                         }
                     }
                 }
-                InstructionValue::JsxExpression { props, children, .. } => {
+                InstructionValue::JsxExpression {
+                    props, children, ..
+                } => {
                     // Assume JSX attributes and children are safe to invoke
                     for prop in props {
                         if let JsxAttribute::Attribute { place, .. } = prop
@@ -1214,7 +1282,9 @@ fn collect_non_nulls_in_blocks<'a>(
 
             // Handle StartMemoize deps for enablePreserveExistingMemoizationGuarantees
             if env.enable_preserve_existing_memoization_guarantees
-                && let InstructionValue::StartMemoize { deps: Some(deps), .. } = &instr.value
+                && let InstructionValue::StartMemoize {
+                    deps: Some(deps), ..
+                } = &instr.value
             {
                 for dep in deps {
                     if let ManualMemoDependencyRoot::NamedLocal { value: val, .. } = &dep.root {
@@ -1282,7 +1352,12 @@ fn collect_non_nulls_in_blocks<'a>(
             }
         }
 
-        nodes.insert(*block_id, BlockInfo { assumed_non_null_objects: assumed });
+        nodes.insert(
+            *block_id,
+            BlockInfo {
+                assumed_non_null_objects: assumed,
+            },
+        );
     }
 
     nodes
@@ -1311,8 +1386,10 @@ fn propagate_non_null(
     }
 
     // Clone nodes into mutable working set
-    let mut working: FxHashMap<BlockId, PropertyPathSet> =
-        nodes.iter().map(|(k, v)| (*k, v.assumed_non_null_objects.clone())).collect();
+    let mut working: FxHashMap<BlockId, PropertyPathSet> = nodes
+        .iter()
+        .map(|(k, v)| (*k, v.assumed_non_null_objects.clone()))
+        .collect();
 
     let block_ids: Vec<BlockId> = func.body.blocks.keys().copied().collect();
     let mut reversed_block_ids = block_ids.clone();
@@ -1394,12 +1471,15 @@ fn recursively_propagate_non_null(
     if state.traversal_state.contains_key(&node_id) {
         return false;
     }
-    state.traversal_state.insert(node_id, TraversalState::Active);
+    state
+        .traversal_state
+        .insert(node_id, TraversalState::Active);
 
     let neighbors: Vec<BlockId> = match direction {
-        PropagationDirection::Backward => {
-            block_successors.get(&node_id).map(|s| s.iter().copied().collect()).unwrap_or_default()
-        }
+        PropagationDirection::Backward => block_successors
+            .get(&node_id)
+            .map(|s| s.iter().copied().collect())
+            .unwrap_or_default(),
         PropagationDirection::Forward => func
             .body
             .blocks
@@ -1435,17 +1515,25 @@ fn recursively_propagate_non_null(
             continue;
         };
         if has_done_neighbor {
-            state.neighbor_intersection.retain(|path| neighbor_objects.binary_search(path).is_ok());
+            state
+                .neighbor_intersection
+                .retain(|path| neighbor_objects.binary_search(path).is_ok());
         } else {
             state.neighbor_intersection.clone_from(neighbor_objects);
             has_done_neighbor = true;
         }
     }
 
-    let objects = working.get_mut(&node_id).expect("missing non-null propagation block");
+    let objects = working
+        .get_mut(&node_id)
+        .expect("missing non-null propagation block");
     state.previous_objects.clone_from(objects);
     if has_done_neighbor {
-        union_property_paths(objects, &state.previous_objects, &state.neighbor_intersection);
+        union_property_paths(
+            objects,
+            &state.previous_objects,
+            &state.neighbor_intersection,
+        );
     }
     reduce_maybe_optional_chains(objects, registry);
 
@@ -1460,7 +1548,10 @@ fn collect_hoistable_and_propagate<'a>(
     env: &Environment<'a>,
     temporaries: &TemporariesMap<'a>,
     hoistable_from_optionals: &FxHashMap<BlockId, ReactiveScopeDependency<'a>>,
-) -> (FxHashMap<BlockId, PropertyPathSet>, PropertyPathRegistry<'a>) {
+) -> (
+    FxHashMap<BlockId, PropertyPathSet>,
+    PropertyPathRegistry<'a>,
+) {
     let mut registry = PropertyPathRegistry::new(env.allocator);
     let assumed_invoked_fns = get_assumed_invoked_functions(func, env);
     let known_immutable_identifiers: FxHashSet<IdentifierId> = if func.fn_type
@@ -1505,7 +1596,10 @@ enum PropertyAccessType {
 }
 
 fn is_optional_access(access: PropertyAccessType) -> bool {
-    matches!(access, PropertyAccessType::OptionalAccess | PropertyAccessType::OptionalDependency)
+    matches!(
+        access,
+        PropertyAccessType::OptionalAccess | PropertyAccessType::OptionalDependency
+    )
 }
 
 fn is_dependency_access(access: PropertyAccessType) -> bool {
@@ -1584,7 +1678,13 @@ impl<'a> ReactiveScopeDependencyTreeHIR<'a> {
                 } else {
                     HoistableAccessType::NonNull
                 };
-                (HoistableNode { properties: FxHashMap::default(), access_type }, dep.reactive)
+                (
+                    HoistableNode {
+                        properties: FxHashMap::default(),
+                        access_type,
+                    },
+                    dep.reactive,
+                )
             });
 
             let mut curr = &mut root.0;
@@ -1594,16 +1694,25 @@ impl<'a> ReactiveScopeDependencyTreeHIR<'a> {
                 } else {
                     HoistableAccessType::NonNull
                 };
-                let entry = curr.properties.entry(dep.path[i].property).or_insert_with(|| {
-                    Box::new(HoistableNodeEntry {
-                        node: HoistableNode { properties: FxHashMap::default(), access_type },
-                    })
-                });
+                let entry = curr
+                    .properties
+                    .entry(dep.path[i].property)
+                    .or_insert_with(|| {
+                        Box::new(HoistableNodeEntry {
+                            node: HoistableNode {
+                                properties: FxHashMap::default(),
+                                access_type,
+                            },
+                        })
+                    });
                 curr = &mut entry.node;
             }
         }
 
-        Self { hoistable_roots, dep_roots: FxIndexMap::default() }
+        Self {
+            hoistable_roots,
+            dep_roots: FxIndexMap::default(),
+        }
     }
 
     fn add_dependency(&mut self, dep: ReactiveScopeDependency<'a>) {
@@ -1636,16 +1745,19 @@ impl<'a> ReactiveScopeDependencyTreeHIR<'a> {
             };
 
             // make_or_merge_property
-            let child = dep_cursor.properties.entry(entry.property).or_insert_with(|| {
-                Box::new(DependencyNodeEntry {
-                    node: DependencyNode {
-                        properties: FxIndexMap::default(),
-                        access_type,
-                        computed: entry.computed,
-                        span: entry.span,
-                    },
-                })
-            });
+            let child = dep_cursor
+                .properties
+                .entry(entry.property)
+                .or_insert_with(|| {
+                    Box::new(DependencyNodeEntry {
+                        node: DependencyNode {
+                            properties: FxIndexMap::default(),
+                            access_type,
+                            computed: entry.computed,
+                            span: entry.span,
+                        },
+                    })
+                });
             child.node.access_type = merge_access(child.node.access_type, access_type);
             child.node.computed |= entry.computed;
 
@@ -1654,8 +1766,10 @@ impl<'a> ReactiveScopeDependencyTreeHIR<'a> {
         }
 
         // Mark final node as dependency
-        dep_cursor.access_type =
-            merge_access(dep_cursor.access_type, PropertyAccessType::OptionalDependency);
+        dep_cursor.access_type = merge_access(
+            dep_cursor.access_type,
+            PropertyAccessType::OptionalDependency,
+        );
     }
 
     fn derive_minimal_dependencies(
@@ -1763,8 +1877,10 @@ impl<'a, 'e> DependencyCollectionContext<'a, 'e> {
     }
 
     fn exit_scope(&mut self, scope_id: ScopeId, pruned: bool, env: &mut Environment<'a>) {
-        let scoped_deps =
-            self.dep_stack.pop().expect("[PropagateScopeDeps]: Unexpected scope mismatch");
+        let scoped_deps = self
+            .dep_stack
+            .pop()
+            .expect("[PropagateScopeDeps]: Unexpected scope mismatch");
         self.scope_stack.pop();
 
         // Propagate dependencies upward
@@ -1891,7 +2007,9 @@ impl<'a, 'e> DependencyCollectionContext<'a, 'e> {
                             identifier: dep.identifier,
                             scope: orig_scope_id,
                         };
-                        env.scopes[scope_id].declarations.push((dep.identifier, new_decl));
+                        env.scopes[scope_id]
+                            .declarations
+                            .push((dep.identifier, new_decl));
                     }
                 }
             }
@@ -1899,7 +2017,11 @@ impl<'a, 'e> DependencyCollectionContext<'a, 'e> {
 
         // Handle ref.current access
         let dep = if is_use_ref_type(&env.types[env.identifiers[dep.identifier].type_])
-            && dep.path.first().map(|p| p.property.is_string("current")).unwrap_or(false)
+            && dep
+                .path
+                .first()
+                .map(|p| p.property.is_string("current"))
+                .unwrap_or(false)
         {
             ReactiveScopeDependency {
                 identifier: dep.identifier,
@@ -1936,7 +2058,9 @@ impl<'a, 'e> DependencyCollectionContext<'a, 'e> {
                     env,
                 )
             {
-                env.scopes[current_scope].reassignments.push(place.identifier);
+                env.scopes[current_scope]
+                    .reassignments
+                    .push(place.identifier);
             }
         }
     }
@@ -1948,7 +2072,8 @@ impl<'a, 'e> DependencyCollectionContext<'a, 'e> {
     }
 
     fn is_deferred_dependency_terminal(&self, block_id: BlockId) -> bool {
-        self.processed_instrs_in_optional.contains(&ProcessedInstr::Terminal(block_id))
+        self.processed_instrs_in_optional
+            .contains(&ProcessedInstr::Terminal(block_id))
     }
 }
 
@@ -1966,8 +2091,12 @@ fn visit_inner_function_blocks<'a>(
     // Clone inner function's instructions and block structure to avoid
     // borrow conflicts when mutating env through handle_instruction.
     let inner_instrs = env.functions[func_id].instructions.clone_in(env.allocator);
-    type InnerBlockSnapshot<'a> =
-        (BlockId, Vec<InstructionId>, Vec<(BlockId, IdentifierId)>, Terminal<'a>);
+    type InnerBlockSnapshot<'a> = (
+        BlockId,
+        Vec<InstructionId>,
+        Vec<(BlockId, IdentifierId)>,
+        Terminal<'a>,
+    );
     let inner_blocks: Vec<InnerBlockSnapshot> = env.functions[func_id]
         .body
         .blocks
@@ -1976,7 +2105,11 @@ fn visit_inner_function_blocks<'a>(
             let phi_ops: Vec<(BlockId, IdentifierId)> = blk
                 .phis
                 .iter()
-                .flat_map(|phi| phi.operands.iter().map(|(pred, place)| (*pred, place.identifier)))
+                .flat_map(|phi| {
+                    phi.operands
+                        .iter()
+                        .map(|(pred, place)| (*pred, place.identifier))
+                })
                 .collect();
             (
                 *bid,
@@ -2004,7 +2137,10 @@ fn visit_inner_function_blocks<'a>(
                     let scope_stack_copy = ctx.scope_stack.clone();
                     ctx.declare(
                         inner_instr.lvalue.identifier,
-                        Decl { id: inner_instr.id, scope_stack: scope_stack_copy },
+                        Decl {
+                            id: inner_instr.id,
+                            scope_stack: scope_stack_copy,
+                        },
                         env,
                     );
                     visit_inner_function_blocks(lowered_func.func, ctx, env);
@@ -2012,7 +2148,9 @@ fn visit_inner_function_blocks<'a>(
                 _ => {
                     handle_instruction(
                         inner_instr,
-                        semantic_only_caught_instructions.as_ref().is_some_and(|loads| loads[iid]),
+                        semantic_only_caught_instructions
+                            .as_ref()
+                            .is_some_and(|loads| loads[iid]),
                         ctx,
                         env,
                     );
@@ -2037,7 +2175,14 @@ fn handle_instruction<'a>(
 ) {
     let id = instr.id;
     let scope_stack_copy = ctx.scope_stack.clone();
-    ctx.declare(instr.lvalue.identifier, Decl { id, scope_stack: scope_stack_copy }, env);
+    ctx.declare(
+        instr.lvalue.identifier,
+        Decl {
+            id,
+            scope_stack: scope_stack_copy,
+        },
+        env,
+    );
 
     if semantic_only_caught_instruction {
         // The operation must remain inside the try/catch, so use its root operands as
@@ -2053,7 +2198,13 @@ fn handle_instruction<'a>(
     }
 
     match &instr.value {
-        InstructionValue::PropertyLoad { object, property, computed, property_span, span } => {
+        InstructionValue::PropertyLoad {
+            object,
+            property,
+            computed,
+            property_span,
+            span,
+        } => {
             ctx.visit_property(
                 object,
                 PropertyAccess {
@@ -2066,13 +2217,22 @@ fn handle_instruction<'a>(
                 env,
             );
         }
-        InstructionValue::StoreLocal { value: val, lvalue, .. } => {
+        InstructionValue::StoreLocal {
+            value: val, lvalue, ..
+        } => {
             ctx.visit_operand(val, env);
             if lvalue.kind == InstructionKind::Reassign {
                 ctx.visit_reassignment(&lvalue.place, env);
             }
             let scope_stack_copy = ctx.scope_stack.clone();
-            ctx.declare(lvalue.place.identifier, Decl { id, scope_stack: scope_stack_copy }, env);
+            ctx.declare(
+                lvalue.place.identifier,
+                Decl {
+                    id,
+                    scope_stack: scope_stack_copy,
+                },
+                env,
+            );
         }
         InstructionValue::DeclareLocal { lvalue, .. }
         | InstructionValue::DeclareContext { lvalue, .. } => {
@@ -2080,12 +2240,17 @@ fn handle_instruction<'a>(
                 let scope_stack_copy = ctx.scope_stack.clone();
                 ctx.declare(
                     lvalue.place.identifier,
-                    Decl { id, scope_stack: scope_stack_copy },
+                    Decl {
+                        id,
+                        scope_stack: scope_stack_copy,
+                    },
                     env,
                 );
             }
         }
-        InstructionValue::Destructure { value: val, lvalue, .. } => {
+        InstructionValue::Destructure {
+            value: val, lvalue, ..
+        } => {
             ctx.visit_operand(val, env);
             let pattern_places = visitors::each_pattern_operand(&lvalue.pattern);
             for place in &pattern_places {
@@ -2093,17 +2258,29 @@ fn handle_instruction<'a>(
                     ctx.visit_reassignment(place, env);
                 }
                 let scope_stack_copy = ctx.scope_stack.clone();
-                ctx.declare(place.identifier, Decl { id, scope_stack: scope_stack_copy }, env);
+                ctx.declare(
+                    place.identifier,
+                    Decl {
+                        id,
+                        scope_stack: scope_stack_copy,
+                    },
+                    env,
+                );
             }
         }
-        InstructionValue::StoreContext { lvalue, value: val, .. } => {
+        InstructionValue::StoreContext {
+            lvalue, value: val, ..
+        } => {
             if !ctx.has_declared(lvalue.place.identifier, env)
                 || lvalue.kind != InstructionKind::Reassign
             {
                 let scope_stack_copy = ctx.scope_stack.clone();
                 ctx.declare(
                     lvalue.place.identifier,
-                    Decl { id, scope_stack: scope_stack_copy },
+                    Decl {
+                        id,
+                        scope_stack: scope_stack_copy,
+                    },
                     env,
                 );
             }
@@ -2140,14 +2317,20 @@ fn collect_dependencies<'a>(
             ParamPattern::Place(place) => {
                 ctx.declare(
                     place.identifier,
-                    Decl { id: EvaluationOrder::UNSET, scope_stack: vec![] },
+                    Decl {
+                        id: EvaluationOrder::UNSET,
+                        scope_stack: vec![],
+                    },
                     env,
                 );
             }
             ParamPattern::Spread(spread) => {
                 ctx.declare(
                     spread.place.identifier,
-                    Decl { id: EvaluationOrder::UNSET, scope_stack: vec![] },
+                    Decl {
+                        id: EvaluationOrder::UNSET,
+                        scope_stack: vec![],
+                    },
                     env,
                 );
             }
@@ -2207,7 +2390,10 @@ fn handle_function_deps<'a>(
                     let scope_stack_copy = ctx.scope_stack.clone();
                     ctx.declare(
                         instr.lvalue.identifier,
-                        Decl { id: instr.id, scope_stack: scope_stack_copy },
+                        Decl {
+                            id: instr.id,
+                            scope_stack: scope_stack_copy,
+                        },
                         env,
                     );
 

@@ -283,7 +283,9 @@ impl FormatJsxChildList {
                         // Add a hard line break if what comes after the element is not a text or is all whitespace
                         Some(JsxChild::NonText(_)) => {
                             is_non_text_node_next = true;
-                            Some(ChildSeparator::EndOfText { is_soft_line_break: false })
+                            Some(ChildSeparator::EndOfText {
+                                is_soft_line_break: false,
+                            })
                         }
 
                         Some(JsxChild::Newline | JsxChild::Whitespace | JsxChild::EmptyLine) => {
@@ -508,7 +510,12 @@ enum ChildSeparator {
 impl ChildSeparator {
     /// Returns if formatting this separator will result in a child that expands
     fn will_break(self) -> bool {
-        matches!(self, Self::EndOfText { is_soft_line_break: false })
+        matches!(
+            self,
+            Self::EndOfText {
+                is_soft_line_break: false
+            }
+        )
     }
 }
 
@@ -569,7 +576,10 @@ struct MultilineBuilder<'a> {
 
 impl<'a> MultilineBuilder<'a> {
     fn new(layout: MultilineLayout) -> Self {
-        Self { layout, result: ScratchBuffer::new() }
+        Self {
+            layout,
+            result: ScratchBuffer::new(),
+        }
     }
 
     /// Formats an element that does not require a separator
@@ -633,7 +643,11 @@ impl<'a> MultilineBuilder<'a> {
         separator: &dyn Format<'a, JsFormatContext<'a>>,
         f: &mut JsFormatter<'_, 'a>,
     ) {
-        if self.result.last().is_some_and(|element| element.end_tag(TagKind::Entry).is_some()) {
+        if self
+            .result
+            .last()
+            .is_some_and(|element| element.end_tag(TagKind::Entry).is_some())
+        {
             let last_index = self.result.len() - 1;
             self.result.insert(last_index, f.intern(separator).unwrap());
         } else {
@@ -642,7 +656,10 @@ impl<'a> MultilineBuilder<'a> {
     }
 
     fn finish(self) -> FormatMultilineChildren<'a> {
-        FormatMultilineChildren { layout: self.layout, elements: RefCell::new(self.result) }
+        FormatMultilineChildren {
+            layout: self.layout,
+            elements: RefCell::new(self.result),
+        }
     }
 }
 
@@ -708,7 +725,10 @@ struct FlatBuilder<'a> {
 
 impl<'a> FlatBuilder<'a> {
     fn new(disabled: bool) -> Self {
-        Self { result: ScratchBuffer::new(), disabled }
+        Self {
+            result: ScratchBuffer::new(),
+            disabled,
+        }
     }
 
     fn write(
@@ -735,7 +755,9 @@ impl<'a> FlatBuilder<'a> {
             "The flat builder has been disabled and thus, does no longer store any elements. Make sure you don't call disable if you later intend to format the flat content."
         );
 
-        FormatFlatChildren { elements: RefCell::new(self.result) }
+        FormatFlatChildren {
+            elements: RefCell::new(self.result),
+        }
     }
 }
 

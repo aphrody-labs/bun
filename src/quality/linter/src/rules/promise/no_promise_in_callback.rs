@@ -134,7 +134,10 @@ fn is_error_first_callback(params: &FormalParameters) -> bool {
 }
 
 fn is_within_promise_handler<'a>(node: &AstNode<'a>, ctx: &LintContext<'a>) -> bool {
-    if !matches!(node.kind(), AstKind::Function(_) | AstKind::ArrowFunctionExpression(_)) {
+    if !matches!(
+        node.kind(),
+        AstKind::Function(_) | AstKind::ArrowFunctionExpression(_)
+    ) {
         return false;
     }
 
@@ -176,8 +179,14 @@ fn test() {
         ("function y() { return Promise.resolve(4) }", None),
         ("function then() { return Promise.reject() }", None),
         ("doThing(function(x) { return Promise.reject(x) })", None),
-        ("doThing().then(function() { return Promise.all([a,b,c]) })", None),
-        ("doThing().then(function() { return Promise.resolve(4) })", None),
+        (
+            "doThing().then(function() { return Promise.all([a,b,c]) })",
+            None,
+        ),
+        (
+            "doThing().then(function() { return Promise.resolve(4) })",
+            None,
+        ),
         ("doThing().then(() => Promise.resolve(4))", None),
         ("doThing().then(() => Promise.all([a]))", None),
         ("a(function(err) { return doThing().then(a) })", None),
@@ -205,6 +214,11 @@ fn test() {
         ("let x = (err) => doThingWith(err).then(a)", None),
     ];
 
-    Tester::new(NoPromiseInCallback::NAME, NoPromiseInCallback::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        NoPromiseInCallback::NAME,
+        NoPromiseInCallback::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

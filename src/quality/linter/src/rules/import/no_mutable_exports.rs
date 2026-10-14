@@ -12,10 +12,18 @@ use oxc_span::Span;
 use crate::{context::LintContext, rule::Rule};
 
 fn no_mutable_exports_diagnostic(span: Span, kind: VariableDeclarationKind) -> OxcDiagnostic {
-    let kind_str = if kind == VariableDeclarationKind::Var { "var" } else { "let" };
-    OxcDiagnostic::warn(format!("Exporting mutable '{kind_str}' binding, use 'const' instead."))
-        .with_help(format!("Replace '{kind_str}' with 'const' to export an immutable binding."))
-        .with_label(span)
+    let kind_str = if kind == VariableDeclarationKind::Var {
+        "var"
+    } else {
+        "let"
+    };
+    OxcDiagnostic::warn(format!(
+        "Exporting mutable '{kind_str}' binding, use 'const' instead."
+    ))
+    .with_help(format!(
+        "Replace '{kind_str}' with 'const' to export an immutable binding."
+    ))
+    .with_label(span)
 }
 
 // <https://github.com/import-js/eslint-plugin-import/blob/v2.31.0/docs/rules/no-mutable-exports.md>
@@ -67,8 +75,10 @@ impl Rule for NoMutableExports {
                 let Declaration::VariableDeclaration(decl) = &export_decl.declaration else {
                     return;
                 };
-                if matches!(decl.kind, VariableDeclarationKind::Var | VariableDeclarationKind::Let)
-                {
+                if matches!(
+                    decl.kind,
+                    VariableDeclarationKind::Var | VariableDeclarationKind::Let
+                ) {
                     ctx.diagnostic(no_mutable_exports_diagnostic(decl.span, decl.kind));
                 }
             }
@@ -98,7 +108,10 @@ impl Rule for NoMutableExports {
                 let Some(declaration) = get_reference_declaration(ident.reference_id(), ctx) else {
                     return;
                 };
-                ctx.diagnostic(no_mutable_exports_diagnostic(declaration.span, declaration.kind));
+                ctx.diagnostic(no_mutable_exports_diagnostic(
+                    declaration.span,
+                    declaration.kind,
+                ));
             }
             _ => {}
         }
@@ -117,7 +130,10 @@ fn get_reference_declaration<'a>(
     if matches!(reference_node.kind(), AstKind::VariableDeclarator(_)) {
         // we need return reference_node's parent node
         if let AstKind::VariableDeclaration(decl) = ctx.nodes().parent_kind(reference_node.id())
-            && matches!(decl.kind, VariableDeclarationKind::Let | VariableDeclarationKind::Var)
+            && matches!(
+                decl.kind,
+                VariableDeclarationKind::Let | VariableDeclarationKind::Var
+            )
         {
             return Some(decl);
         }

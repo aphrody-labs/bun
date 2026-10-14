@@ -15,7 +15,7 @@
 //! coordinates are synthetic. `backendNodeId == nid`, matching `DOM.getDocument`.
 
 use bun_browser_dom::{DomTree, NodeData, NodeId};
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 
 use crate::dispatch::CdpContext;
 
@@ -52,7 +52,7 @@ pub async fn handle(
             let title = page.title.clone();
             page.with_dom(|dom| build_capture_snapshot(dom, &url, &title))
                 .ok_or_else(|| "No DOM loaded".to_string())
-        },
+        }
         // Permissive no-op for the rest of the domain (e.g. getSnapshot) so a
         // client that probes it does not abort on an Unknown-method error.
         _ => Ok(json!({})),
@@ -68,7 +68,10 @@ struct Interner {
 
 impl Interner {
     fn new() -> Self {
-        let mut s = Interner { map: std::collections::HashMap::new(), list: Vec::new() };
+        let mut s = Interner {
+            map: std::collections::HashMap::new(),
+            list: Vec::new(),
+        };
         s.intern(""); // index 0 is the empty string by convention
         s
     }
@@ -155,7 +158,7 @@ fn build_capture_snapshot(dom: &DomTree, url: &str, title: &str) -> Value {
                 client_rects.push(json!([0.0, 0.0, 0.0, 0.0]));
                 layout_text.push(-1);
                 continue;
-            },
+            }
         };
 
         let (ntype, nname, nval, attrs, tag): (i64, String, String, Vec<(String, String)>, String) =
@@ -163,22 +166,34 @@ fn build_capture_snapshot(dom: &DomTree, url: &str, title: &str) -> Value {
                 NodeData::Document => (9, "#document".into(), String::new(), vec![], String::new()),
                 NodeData::Doctype { name, .. } => {
                     (10, name.to_string(), String::new(), vec![], String::new())
-                },
+                }
                 NodeData::Element { name, attrs, .. } => {
                     let tag = (&*name.local).to_string();
-                    let flat =
-                        attrs.iter().map(|a| (a.name.local.to_string(), a.value.clone())).collect();
-                    (1, tag.to_ascii_uppercase(), String::new(), flat, tag.to_ascii_lowercase())
-                },
+                    let flat = attrs
+                        .iter()
+                        .map(|a| (a.name.local.to_string(), a.value.clone()))
+                        .collect();
+                    (
+                        1,
+                        tag.to_ascii_uppercase(),
+                        String::new(),
+                        flat,
+                        tag.to_ascii_lowercase(),
+                    )
+                }
                 NodeData::Text { contents } => {
                     (3, "#text".into(), contents.clone(), vec![], String::new())
-                },
-                NodeData::Comment { contents } => {
-                    (8, "#comment".into(), contents.clone(), vec![], String::new())
-                },
+                }
+                NodeData::Comment { contents } => (
+                    8,
+                    "#comment".into(),
+                    contents.clone(),
+                    vec![],
+                    String::new(),
+                ),
                 NodeData::ProcessingInstruction { target, data } => {
                     (7, target.to_string(), data.clone(), vec![], String::new())
-                },
+                }
             };
 
         node_type.push(ntype);
@@ -215,7 +230,11 @@ fn build_capture_snapshot(dom: &DomTree, url: &str, title: &str) -> Value {
             tag.as_str(),
             "head" | "meta" | "title" | "script" | "style" | "link" | "noscript" | "base"
         );
-        let display = if ntype == 1 && hidden { "none" } else { "block" };
+        let display = if ntype == 1 && hidden {
+            "none"
+        } else {
+            "block"
+        };
         let cursor = if interactive { "pointer" } else { "auto" };
         let style_vals = [
             display,
@@ -230,7 +249,10 @@ fn build_capture_snapshot(dom: &DomTree, url: &str, title: &str) -> Value {
             "rgba(0, 0, 0, 0)",
         ];
         debug_assert_eq!(style_vals.len(), REQUIRED_STYLES.len());
-        let style_idx: Vec<Value> = style_vals.iter().map(|s| json!(strings.intern(s))).collect();
+        let style_idx: Vec<Value> = style_vals
+            .iter()
+            .map(|s| json!(strings.intern(s)))
+            .collect();
         styles.push(json!(style_idx));
 
         // Synthetic geometry: a vertical stack, full-width, 18px tall. Distinct
@@ -304,7 +326,11 @@ mod tests {
         }
         node.get("children")
             .and_then(|v| v.as_array())
-            .and_then(|children| children.iter().find_map(|c| find_backend_id_by_name(c, name)))
+            .and_then(|children| {
+                children
+                    .iter()
+                    .find_map(|c| find_backend_id_by_name(c, name))
+            })
     }
 
     async fn navigate(ctx: &mut CdpContext, body: &str) -> String {
@@ -342,9 +368,14 @@ mod tests {
         collect_backend_ids(&doc["root"], &mut doc_ids);
         assert!(!doc_ids.is_empty(), "getDocument returned no nodes");
 
-        let snap = handle("captureSnapshot", &json!({}), &mut ctx, &Some(session.clone()))
-            .await
-            .expect("captureSnapshot should succeed");
+        let snap = handle(
+            "captureSnapshot",
+            &json!({}),
+            &mut ctx,
+            &Some(session.clone()),
+        )
+        .await
+        .expect("captureSnapshot should succeed");
 
         let documents = snap["documents"].as_array().expect("documents array");
         assert_eq!(documents.len(), 1);
@@ -368,7 +399,10 @@ mod tests {
         }
 
         // String table is populated (everything is referenced by index).
-        assert!(snap["strings"].as_array().unwrap().len() > 1, "string table should be populated");
+        assert!(
+            snap["strings"].as_array().unwrap().len() > 1,
+            "string table should be populated"
+        );
 
         // Layout arrays are aligned 1:1 with nodes and carry bounds + the 10
         // computed styles browser-use reads back positionally.
@@ -402,7 +436,10 @@ mod tests {
                 .position(|&id| id == bid)
                 .unwrap_or_else(|| panic!("{tag} should be in the snapshot"))
                 as i64;
-            assert!(clickable.contains(&idx), "{tag} must be flagged isClickable");
+            assert!(
+                clickable.contains(&idx),
+                "{tag} must be flagged isClickable"
+            );
         }
     }
 

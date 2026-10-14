@@ -176,7 +176,11 @@ pub fn lint(source: &str, filename: &str, options: &LintOptions) -> Result<LintR
     // Oxc only attaches fix metadata for fixes enabled by the runner. Collect all metadata in
     // report-only mode, but keep Fixer disabled below so source is never modified.
     let fix_kind = options.fix.kind();
-    let runner_fix_kind = if fix_kind == FixKind::None { FixKind::All } else { fix_kind };
+    let runner_fix_kind = if fix_kind == FixKind::None {
+        FixKind::All
+    } else {
+        fix_kind
+    };
     let linter = Linter::new(
         OxcLintOptions {
             fix: runner_fix_kind,
@@ -305,7 +309,9 @@ mod tests {
     fn default_ast_lint_still_reports_diagnostics() {
         let report = lint("const unused = 42;", "entry.ts", &LintOptions::default()).unwrap();
         assert!(report.diagnostics.iter().any(|diagnostic| {
-            diagnostic["code"].as_str().is_some_and(|code| code.contains("no-unused-vars"))
+            diagnostic["code"]
+                .as_str()
+                .is_some_and(|code| code.contains("no-unused-vars"))
         }));
     }
 

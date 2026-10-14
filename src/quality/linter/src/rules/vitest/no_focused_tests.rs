@@ -41,7 +41,10 @@ fn test() {
         ("it.skip()", None),
         ("test()", None),
         ("test.skip()", None),
-        ("var appliedOnly = describe.only; appliedOnly.apply(describe)", None),
+        (
+            "var appliedOnly = describe.only; appliedOnly.apply(describe)",
+            None,
+        ),
         ("var calledOnly = it.only; calledOnly.call(it)", None),
         ("it.each()()", None),
         ("it.each`table`()", None),
@@ -74,7 +77,12 @@ fn test() {
     ];
 
     let mut fix = vec![
-        ("describe.only('foo', () => {})", "describe('foo', () => {})", None, FixKind::Suggestion),
+        (
+            "describe.only('foo', () => {})",
+            "describe('foo', () => {})",
+            None,
+            FixKind::Suggestion,
+        ),
         (
             "describe['only']('foo', () => {})",
             "describe('foo', () => {})",
@@ -106,7 +114,12 @@ fn test() {
     ];
 
     let fix_vitest = vec![
-        (r#"it.only("test", () => {});"#, r#"it("test", () => {});"#, None, FixKind::Suggestion),
+        (
+            r#"it.only("test", () => {});"#,
+            r#"it("test", () => {});"#,
+            None,
+            FixKind::Suggestion,
+        ),
         (
             r#"describe.only("test", () => {});"#,
             r#"describe("test", () => {});"#,

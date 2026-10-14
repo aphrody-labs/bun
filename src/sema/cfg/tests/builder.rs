@@ -22,12 +22,18 @@ fn labeled_statement_with_multiple_loops_continue_and_break() {
     // loop context 1
     let c1 = cfg.new_basic_block_normal();
     cfg.ctx(None).default().allow_break().allow_continue();
-    cfg.ctx(None).mark_break(c1).mark_continue(c1).resolve_with_upper_label();
+    cfg.ctx(None)
+        .mark_break(c1)
+        .mark_continue(c1)
+        .resolve_with_upper_label();
 
     // loop context 2
     let c2 = cfg.new_basic_block_normal();
     cfg.ctx(None).default().allow_break().allow_continue();
-    cfg.ctx(None).mark_break(c2).mark_continue(c2).resolve_with_upper_label();
+    cfg.ctx(None)
+        .mark_break(c2)
+        .mark_continue(c2)
+        .resolve_with_upper_label();
 
     cfg.append_break(NodeId::DUMMY, A);
 

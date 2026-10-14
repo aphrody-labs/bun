@@ -81,9 +81,10 @@ fn run<'a>(possible_jest_node: &PossibleJestNode<'a, '_>, ctx: &LintContext<'a>)
 
     let preferred_node_name = get_preferred_node_names(&name, &member_names);
 
-    ctx.diagnostic_with_fix(no_test_prefixes_diagnostic(&preferred_node_name, span), |fixer| {
-        fixer.replace(span, preferred_node_name)
-    });
+    ctx.diagnostic_with_fix(
+        no_test_prefixes_diagnostic(&preferred_node_name, span),
+        |fixer| fixer.replace(span, preferred_node_name),
+    );
 }
 
 fn parse_no_test_prefixes_call<'a>(
@@ -113,7 +114,10 @@ fn parse_no_test_prefixes_call<'a>(
 
     let mut member_names = Vec::new();
     let local_name = get_call_chain(&call_expr.callee, &mut member_names)?;
-    let name = possible_jest_node.original.unwrap_or(&local_name).to_string();
+    let name = possible_jest_node
+        .original
+        .unwrap_or(&local_name)
+        .to_string();
 
     Some(ParsedNoTestPrefixesCall { name, member_names })
 }
@@ -144,7 +148,11 @@ fn get_call_chain(expr: &Expression, member_names: &mut Vec<String>) -> Option<S
 }
 
 fn get_preferred_node_names(name: &str, member_names: &[String]) -> String {
-    let preferred_modifier = if name.starts_with('f') { "only" } else { "skip" };
+    let preferred_modifier = if name.starts_with('f') {
+        "only"
+    } else {
+        "skip"
+    };
     let member_names = member_names.join(".");
     let name_slice = &name[1..];
 

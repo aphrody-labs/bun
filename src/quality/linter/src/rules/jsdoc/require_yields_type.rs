@@ -110,5 +110,11 @@ fn test() {
                   ",
     ];
 
-    Tester::new(RequireYieldsType::NAME, RequireYieldsType::PLUGIN, pass, fail).test_and_snapshot();
+    Tester::new(
+        RequireYieldsType::NAME,
+        RequireYieldsType::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

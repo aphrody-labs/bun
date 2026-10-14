@@ -452,7 +452,9 @@ pub trait RuleMeta {
     /// Additional information about the rule.
     ///
     /// Set via `short_description = "..."` in `declare_oxc_lint!`.
-    const INFO: RuleInfo = RuleInfo { short_description: "" };
+    const INFO: RuleInfo = RuleInfo {
+        short_description: "",
+    };
 }
 
 /// Additional information describing a lint rule.
@@ -607,7 +609,10 @@ impl RuleFixMeta {
                 // e.g. a dangerous auto-fix is available for this rule
                 // e.g. an auto-fix is available for this rule for some violations
                 // e.g. an auto-fix and a suggestion are available for this rule
-                let noun = match (kind.contains(FixKind::Fix), kind.contains(FixKind::Suggestion)) {
+                let noun = match (
+                    kind.contains(FixKind::Fix),
+                    kind.contains(FixKind::Suggestion),
+                ) {
                     (true, true) => "auto-fix and a suggestion are available for this rule",
                     (true, false) => "auto-fix is available for this rule",
                     (false, true) => "suggestion is available for this rule",
@@ -615,8 +620,11 @@ impl RuleFixMeta {
                         "Fix kinds must contain Fix and/or Suggestion, but {self:?} has neither."
                     ),
                 };
-                let mut message =
-                    if kind.is_dangerous() { format!("dangerous {noun}") } else { noun.into() };
+                let mut message = if kind.is_dangerous() {
+                    format!("dangerous {noun}")
+                } else {
+                    noun.into()
+                };
 
                 let article = match message.chars().next() {
                     Some('a' | 'e' | 'i' | 'o' | 'u') => "An",
@@ -795,7 +803,9 @@ mod test {
 
     impl Default for Obj {
         fn default() -> Self {
-            Self { foo: "defaultval".to_string() }
+            Self {
+                foo: "defaultval".to_string(),
+            }
         }
     }
 
@@ -814,31 +824,67 @@ mod test {
         // both elements present
         assert_tuple_rule_config(
             r#"[42, { "foo": "abc" }]"#,
-            &Pair(42u32, Obj { foo: "abc".to_string() }),
+            &Pair(
+                42u32,
+                Obj {
+                    foo: "abc".to_string(),
+                },
+            ),
         );
 
         // only first element present -> Since Pair has #[serde(default)],
         // serde will use the default value for the missing second field.
-        assert_tuple_rule_config("[10]", &Pair(10u32, Obj { foo: "defaultval".to_string() }));
+        assert_tuple_rule_config(
+            "[10]",
+            &Pair(
+                10u32,
+                Obj {
+                    foo: "defaultval".to_string(),
+                },
+            ),
+        );
 
         // Should also be able to handle both elements if they are both passed
         assert_tuple_rule_config(
             r#"[10, { "foo": "bar" }]"#,
-            &Pair(10u32, Obj { foo: "bar".to_string() }),
+            &Pair(
+                10u32,
+                Obj {
+                    foo: "bar".to_string(),
+                },
+            ),
         );
 
         // empty array -> both default
-        assert_tuple_rule_config("[]", &Pair(123u32, Obj { foo: "defaultval".to_string() }));
+        assert_tuple_rule_config(
+            "[]",
+            &Pair(
+                123u32,
+                Obj {
+                    foo: "defaultval".to_string(),
+                },
+            ),
+        );
     }
 
     #[test]
     fn test_deserialize_default_rule_config_object_in_array() {
         // Single-element array containing an object should parse into the object
         // configuration (fallback behavior, not the "entire-array as T" path).
-        assert_default_rule_config(r#"[{ "foo": "xyz" }]"#, &Obj { foo: "xyz".to_string() });
+        assert_default_rule_config(
+            r#"[{ "foo": "xyz" }]"#,
+            &Obj {
+                foo: "xyz".to_string(),
+            },
+        );
 
         // Empty array -> default
-        assert_default_rule_config("[]", &Obj { foo: "defaultval".to_string() });
+        assert_default_rule_config(
+            "[]",
+            &Obj {
+                foo: "defaultval".to_string(),
+            },
+        );
     }
 
     #[derive(serde::Deserialize, Debug, PartialEq, Eq, Default)]
@@ -888,7 +934,12 @@ mod test {
         // A basic enum config option with an object.
         assert_tuple_rule_config(
             r#"["optionA", { "foo": "bar" }]"#,
-            &TupleWithEnumAndObjectConfig(EnumOptions::OptionA, Obj { foo: "bar".to_string() }),
+            &TupleWithEnumAndObjectConfig(
+                EnumOptions::OptionA,
+                Obj {
+                    foo: "bar".to_string(),
+                },
+            ),
         );
 
         // Ensure that we can pass just one value and it'll provide the default for the second.
@@ -896,7 +947,9 @@ mod test {
             r#"["optionB"]"#,
             &TupleWithEnumAndObjectConfig(
                 EnumOptions::OptionB,
-                Obj { foo: "defaultval".to_string() },
+                Obj {
+                    foo: "defaultval".to_string(),
+                },
             ),
         );
     }
@@ -910,7 +963,10 @@ mod test {
 
     impl Default for ExampleObjConfig {
         fn default() -> Self {
-            Self { baz: "defaultbaz".to_string(), qux: false }
+            Self {
+                baz: "defaultbaz".to_string(),
+                qux: false,
+            }
         }
     }
 
@@ -919,13 +975,19 @@ mod test {
         // Test a rule config that is a simple object with multiple fields.
         assert_default_rule_config(
             r#"[{ "baz": "fooval", "qux": true }]"#,
-            &ExampleObjConfig { baz: "fooval".to_string(), qux: true },
+            &ExampleObjConfig {
+                baz: "fooval".to_string(),
+                qux: true,
+            },
         );
 
         // Ensure that missing fields get their default values.
         assert_default_rule_config(
             r#"[{ "qux": true }]"#,
-            &ExampleObjConfig { baz: "defaultbaz".to_string(), qux: true },
+            &ExampleObjConfig {
+                baz: "defaultbaz".to_string(),
+                qux: true,
+            },
         );
     }
 

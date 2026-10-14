@@ -12,9 +12,11 @@ use crate::rule::DefaultRuleConfig;
 use crate::{AstNode, ast_util::is_function_node, context::LintContext, rule::Rule};
 
 fn max_depth_diagnostic(num: u32, max: u32, span: Span) -> OxcDiagnostic {
-    OxcDiagnostic::warn(format!("Blocks are nested too deeply ({num}). Maximum allowed is {max}."))
-        .with_help("Consider refactoring your code.")
-        .with_label(span)
+    OxcDiagnostic::warn(format!(
+        "Blocks are nested too deeply ({num}). Maximum allowed is {max}."
+    ))
+    .with_help("Consider refactoring your code.")
+    .with_label(span)
 }
 
 const DEFAULT_MAX_DEPTH: u32 = 4;
@@ -28,7 +30,9 @@ pub struct MaxDepth {
 
 impl Default for MaxDepth {
     fn default() -> Self {
-        Self { max: DEFAULT_MAX_DEPTH }
+        Self {
+            max: DEFAULT_MAX_DEPTH,
+        }
     }
 }
 
@@ -156,13 +160,16 @@ impl Rule for MaxDepth {
 /// kept as a predicate because the ancestor walk needs to test arbitrary nodes.
 fn should_count(node: &AstNode<'_>, nodes: &AstNodes<'_>) -> bool {
     matches!(node.kind(), AstKind::IfStatement(_) if !matches!(nodes.parent_kind(node.id()), AstKind::IfStatement(_)))
-        || matches!(node.kind(), |AstKind::SwitchStatement(_)| AstKind::TryStatement(_)
-            | AstKind::DoWhileStatement(_)
-            | AstKind::WhileStatement(_)
-            | AstKind::WithStatement(_)
-            | AstKind::ForStatement(_)
-            | AstKind::ForInStatement(_)
-            | AstKind::ForOfStatement(_))
+        || matches!(
+            node.kind(),
+            |AstKind::SwitchStatement(_)| AstKind::TryStatement(_)
+                | AstKind::DoWhileStatement(_)
+                | AstKind::WhileStatement(_)
+                | AstKind::WithStatement(_)
+                | AstKind::ForStatement(_)
+                | AstKind::ForInStatement(_)
+                | AstKind::ForOfStatement(_)
+        )
 }
 
 fn should_stop(node: &AstNode<'_>) -> bool {
@@ -189,12 +196,18 @@ fn test() {
             "var foo = () => { if (true) { if (false) { if (true) { } } } }",
             Some(serde_json::json!([3])),
         ), // { "ecmaVersion": 6 },
-        ("function foo() { if (true) { if (false) { if (true) { } } } }", None),
+        (
+            "function foo() { if (true) { if (false) { if (true) { } } } }",
+            None,
+        ),
         (
             "function foo() { if (true) { if (false) { if (true) { } } } }",
             Some(serde_json::json!([{ "max": 3 }])),
         ),
-        ("class C { static { if (1) { if (2) {} } } }", Some(serde_json::json!([2]))), // { "ecmaVersion": 2022 },
+        (
+            "class C { static { if (1) { if (2) {} } } }",
+            Some(serde_json::json!([2])),
+        ), // { "ecmaVersion": 2022 },
         (
             "class C { static { if (1) { if (2) {} } if (1) { if (2) {} } } }",
             Some(serde_json::json!([2])),
@@ -203,7 +216,10 @@ fn test() {
             "class C { static { if (1) { if (2) {} } } static { if (1) { if (2) {} } } }",
             Some(serde_json::json!([2])),
         ), // { "ecmaVersion": 2022 },
-        ("if (1) { class C { static { if (1) { if (2) {} } } } }", Some(serde_json::json!([2]))), // { "ecmaVersion": 2022 },
+        (
+            "if (1) { class C { static { if (1) { if (2) {} } } } }",
+            Some(serde_json::json!([2])),
+        ), // { "ecmaVersion": 2022 },
         (
             "function foo() { if (1) { class C { static { if (1) { if (2) {} } } } } }",
             Some(serde_json::json!([2])),
@@ -223,9 +239,18 @@ fn test() {
             "var foo = () => { if (true) { if (false) { if (true) { } } } }",
             Some(serde_json::json!([2])),
         ), // { "ecmaVersion": 6 },
-        ("function foo() { if (true) {} else { for(;;) {} } }", Some(serde_json::json!([1]))),
-        ("function foo() { while (true) { if (true) {} } }", Some(serde_json::json!([1]))),
-        ("function foo() { for (let x of foo) { if (true) {} } }", Some(serde_json::json!([1]))), // { "ecmaVersion": 6 },
+        (
+            "function foo() { if (true) {} else { for(;;) {} } }",
+            Some(serde_json::json!([1])),
+        ),
+        (
+            "function foo() { while (true) { if (true) {} } }",
+            Some(serde_json::json!([1])),
+        ),
+        (
+            "function foo() { for (let x of foo) { if (true) {} } }",
+            Some(serde_json::json!([1])),
+        ), // { "ecmaVersion": 6 },
         (
             "function foo() { while (true) { if (true) { if (false) { } } } }",
             Some(serde_json::json!([1])),
@@ -242,8 +267,14 @@ fn test() {
             "function foo() { if (a) { if (b) { if (c) { if (d) { if (e) {} } } } } }",
             Some(serde_json::json!([{}])),
         ),
-        ("function foo() { if (true) {} }", Some(serde_json::json!([{ "max": 0 }]))),
-        ("class C { static { if (1) { if (2) { if (3) {} } } } }", Some(serde_json::json!([2]))), // { "ecmaVersion": 2022 },
+        (
+            "function foo() { if (true) {} }",
+            Some(serde_json::json!([{ "max": 0 }])),
+        ),
+        (
+            "class C { static { if (1) { if (2) { if (3) {} } } } }",
+            Some(serde_json::json!([2])),
+        ), // { "ecmaVersion": 2022 },
         (
             "if (1) { class C { static { if (1) { if (2) { if (3) {} } } } } }",
             Some(serde_json::json!([2])),

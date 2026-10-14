@@ -18,7 +18,10 @@ pub struct FormatArrayExpression<'a, 'b> {
 
 impl<'a, 'b> FormatArrayExpression<'a, 'b> {
     pub fn new(array: &'b AstNode<'a, ArrayExpression<'a>>) -> Self {
-        Self { array, options: FormatArrayExpressionOptions::default() }
+        Self {
+            array,
+            options: FormatArrayExpressionOptions::default(),
+        }
     }
 }
 
@@ -27,7 +30,10 @@ impl<'a> Format<'a, JsFormatContext<'a>> for FormatArrayExpression<'a, '_> {
         write!(f, "[");
 
         if self.array.elements().is_empty() {
-            write!(f, format_dangling_comments(self.array.span).with_soft_block_indent());
+            write!(
+                f,
+                format_dangling_comments(self.array.span).with_soft_block_indent()
+            );
         } else {
             let group_id = f.group_id("array");
             // A line comment after the last element (e.g. after a trailing hole)

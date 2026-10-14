@@ -27,7 +27,9 @@ impl EarlyDivergeDetector {
             && let Expr::Match(match_expr) = &*init.expr
             && is_node_kind_call(&match_expr.expr)
         {
-            let mut detector = Self { node_types: NodeTypeSet::new() };
+            let mut detector = Self {
+                node_types: NodeTypeSet::new(),
+            };
             let result = detector.extract_variants_from_diverging_match_expr(match_expr);
             if result == CollectionResult::Incomplete || detector.node_types.is_empty() {
                 return None;
@@ -38,7 +40,9 @@ impl EarlyDivergeDetector {
         else if let Stmt::Expr(Expr::Match(match_expr), _) = stmt
             && is_node_kind_call(&match_expr.expr)
         {
-            let mut detector = Self { node_types: NodeTypeSet::new() };
+            let mut detector = Self {
+                node_types: NodeTypeSet::new(),
+            };
             let result = detector.extract_variants_from_diverging_match_expr(match_expr);
             if result == CollectionResult::Incomplete || detector.node_types.is_empty() {
                 return None;

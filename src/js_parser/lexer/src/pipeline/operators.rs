@@ -53,8 +53,14 @@ struct OpDef {
 impl OpDef {
     /// Create new [`OpDef`].
     const fn new(txt: &'static str, kind: TokenKind) -> Self {
-        assert!(txt.len() == 2 || txt.len() == 3, "`txt` must be 2 or 3 bytes long");
-        Self { txt: txt.as_bytes(), kind }
+        assert!(
+            txt.len() == 2 || txt.len() == 3,
+            "`txt` must be 2 or 3 bytes long"
+        );
+        Self {
+            txt: txt.as_bytes(),
+            kind,
+        }
     }
 
     /// Get length of this operator as a `u32`.
@@ -131,8 +137,10 @@ pub(super) const fn is_op_char(c: u8) -> bool {
 /// The single static containing both tables means code which loads from both tables
 /// can calculate the address of the single `static` once with `rip + OP_TABLES_DATA`,
 /// and load data from both tables relative to that one address.
-static OP_TABLES_DATA: OpTablesData =
-    OpTablesData { op2: OpTableData::new(2, OP2_MUL), op3: OpTableData::new(3, OP3_MUL) };
+static OP_TABLES_DATA: OpTablesData = OpTablesData {
+    op2: OpTableData::new(2, OP2_MUL),
+    op3: OpTableData::new(3, OP3_MUL),
+};
 
 /// Hash tables for 2-byte and 3-byte operators.
 #[repr(C, align(128))]
@@ -236,7 +244,9 @@ impl<const TABLE_SIZE: usize> OpTableData<TABLE_SIZE> {
     const fn new(len: u32, mul: u32) -> Self {
         assert!(TABLE_SIZE.is_power_of_two());
 
-        let mut table = Self { values: [0; TABLE_SIZE] };
+        let mut table = Self {
+            values: [0; TABLE_SIZE],
+        };
 
         let mut i = 0;
         while i < OPMAP_OPS.len() {
@@ -366,7 +376,10 @@ mod tests {
         }
 
         for c in 0..256usize {
-            assert!(is_op_char(c as u8) == in_set[c], "OPCH_LO/HI wrong at byte {c:#04x}");
+            assert!(
+                is_op_char(c as u8) == in_set[c],
+                "OPCH_LO/HI wrong at byte {c:#04x}"
+            );
         }
     }
 
@@ -374,7 +387,10 @@ mod tests {
     fn test_op_defs_token_kind_range() {
         for (i, op_def) in OPMAP_OPS.iter().enumerate() {
             let kind = op_def.kind as u8;
-            assert!(kind >= OP_KIND_BASE && kind <= OP_KIND_MAX, "OpDef {i}: `kind` out of range");
+            assert!(
+                kind >= OP_KIND_BASE && kind <= OP_KIND_MAX,
+                "OpDef {i}: `kind` out of range"
+            );
         }
     }
 
@@ -392,7 +408,10 @@ mod tests {
     fn test_op_defs_no_key_collisions() {
         for (index1, op_def1) in OPMAP_OPS.iter().enumerate() {
             for (index2, op_def2) in OPMAP_OPS.iter().enumerate().skip(index1 + 1) {
-                assert!(op_def1.key() != op_def2.key(), "OpDef {index1}, {index2}: key collision");
+                assert!(
+                    op_def1.key() != op_def2.key(),
+                    "OpDef {index1}, {index2}: key collision"
+                );
             }
         }
     }
@@ -401,9 +420,15 @@ mod tests {
     fn test_optable_lookup_correct_kinds() {
         for (i, op_def) in OPMAP_OPS.iter().enumerate() {
             let bytes = op_def.bytes();
-            let lookup_kind =
-                if op_def.len() == 2 { OP2_TABLE.lookup(bytes) } else { OP3_TABLE.lookup(bytes) };
-            assert!(lookup_kind == Some(op_def.kind), "OpDef {i}: `lookup` produced wrong kind");
+            let lookup_kind = if op_def.len() == 2 {
+                OP2_TABLE.lookup(bytes)
+            } else {
+                OP3_TABLE.lookup(bytes)
+            };
+            assert!(
+                lookup_kind == Some(op_def.kind),
+                "OpDef {i}: `lookup` produced wrong kind"
+            );
         }
     }
 
@@ -422,8 +447,11 @@ mod tests {
         ];
         for txt in cases {
             let bytes = first_4_bytes(txt.as_bytes());
-            let kind =
-                if txt.len() == 2 { OP2_TABLE.lookup(bytes) } else { OP3_TABLE.lookup(bytes) };
+            let kind = if txt.len() == 2 {
+                OP2_TABLE.lookup(bytes)
+            } else {
+                OP3_TABLE.lookup(bytes)
+            };
             assert!(kind.is_none(), "`lookup` should return `None` for {txt:?}");
         }
     }
@@ -436,7 +464,10 @@ mod tests {
 
     fn check_table<const TABLE_SIZE: usize>(table: &OpTable<TABLE_SIZE>) {
         let len = table.len;
-        let operator_count = OPMAP_OPS.iter().filter(|op_def| op_def.len() == len).count();
+        let operator_count = OPMAP_OPS
+            .iter()
+            .filter(|op_def| op_def.len() == len)
+            .count();
 
         // If table has no collisions, all good
         if is_collision_free(table.data, table.mul, operator_count) {

@@ -124,8 +124,12 @@ pub fn drop_manual_memoization<'a>(
 
     // Collect all block instruction lists up front to avoid borrowing func immutably
     // while needing to mutate it
-    let all_block_instructions: Vec<Vec<InstructionId>> =
-        func.body.blocks.values().map(|block| block.instructions.to_vec()).collect();
+    let all_block_instructions: Vec<Vec<InstructionId>> = func
+        .body
+        .blocks
+        .values()
+        .map(|block| block.instructions.to_vec())
+        .collect();
 
     for block_instructions in &all_block_instructions {
         for &instr_id in block_instructions {
@@ -219,10 +223,17 @@ fn process_manual_memo_call<'a>(
         return;
     };
 
-    let ExtractedMemoArgs { fn_place, deps_list, deps_span } = memo_details;
+    let ExtractedMemoArgs {
+        fn_place,
+        deps_list,
+        deps_span,
+    } = memo_details;
 
     let span = func.instructions[instr_id.index()].value.span().cloned();
-    let callee_span = func.instructions[manual_memo.load_instr_id.index()].value.span().copied();
+    let callee_span = func.instructions[manual_memo.load_instr_id.index()]
+        .value
+        .span()
+        .copied();
 
     // Replace the instruction value with the memoization replacement
     let replacement =
@@ -286,7 +297,10 @@ fn collect_temporaries<'a>(
                 if name == "useMemo" {
                     sidemap.manual_memos.insert(
                         lvalue_id,
-                        ManualMemoCallee { kind: ManualMemoKind::UseMemo, load_instr_id: instr_id },
+                        ManualMemoCallee {
+                            kind: ManualMemoKind::UseMemo,
+                            load_instr_id: instr_id,
+                        },
                     );
                     detected = true;
                 } else if name == "useCallback" {
@@ -304,14 +318,19 @@ fn collect_temporaries<'a>(
                 sidemap.react.insert(lvalue_id);
             }
         }
-        InstructionValue::PropertyLoad { object, property, .. } => {
+        InstructionValue::PropertyLoad {
+            object, property, ..
+        } => {
             if sidemap.react.contains(&object.identifier)
                 && let PropertyLiteral::String(prop_name) = property
             {
                 if prop_name == "useMemo" {
                     sidemap.manual_memos.insert(
                         lvalue_id,
-                        ManualMemoCallee { kind: ManualMemoKind::UseMemo, load_instr_id: instr_id },
+                        ManualMemoCallee {
+                            kind: ManualMemoKind::UseMemo,
+                            load_instr_id: instr_id,
+                        },
                     );
                 } else if prop_name == "useCallback" {
                     sidemap.manual_memos.insert(
@@ -337,7 +356,10 @@ fn collect_temporaries<'a>(
             if let Some(deps) = all_places {
                 sidemap.maybe_deps_lists.insert(
                     lvalue_id,
-                    MaybeDepsListInfo { span: instr.value.span().cloned(), deps },
+                    MaybeDepsListInfo {
+                        span: instr.value.span().cloned(),
+                        deps,
+                    },
                 );
             }
         }
@@ -352,7 +374,9 @@ fn collect_temporaries<'a>(
         // matching the TS behavior where collectMaybeMemoDependencies inserts into
         // maybeDeps directly for StoreLocal's target variable.
         if let InstructionValue::StoreLocal { lvalue, .. } = &instr.value {
-            sidemap.maybe_deps.insert(lvalue.place.identifier, dep.clone_in(env.allocator));
+            sidemap
+                .maybe_deps
+                .insert(lvalue.place.identifier, dep.clone_in(env.allocator));
         }
         sidemap.maybe_deps.insert(lvalue_id, dep);
     }
@@ -372,12 +396,21 @@ fn collect_maybe_memo_dependencies<'a>(
 ) -> Option<ManualMemoDependency<'a>> {
     match value {
         InstructionValue::LoadGlobal { binding, span, .. } => Some(ManualMemoDependency {
-            root: ManualMemoDependencyRoot::Global { identifier_name: binding.name() },
+            root: ManualMemoDependencyRoot::Global {
+                identifier_name: binding.name(),
+            },
             path: ArenaVec::new_in(&env.allocator),
             span: *span,
         }),
-        InstructionValue::PropertyLoad { object, property, computed, property_span, span } => {
-            maybe_deps.get(&object.identifier).map(|object_dep| ManualMemoDependency {
+        InstructionValue::PropertyLoad {
+            object,
+            property,
+            computed,
+            property_span,
+            span,
+        } => maybe_deps
+            .get(&object.identifier)
+            .map(|object_dep| ManualMemoDependency {
                 root: object_dep.root,
                 path: {
                     let mut path = object_dep.path.clone_in(env.allocator);
@@ -390,8 +423,7 @@ fn collect_maybe_memo_dependencies<'a>(
                     path
                 },
                 span: *span,
-            })
-        }
+            }),
         InstructionValue::LoadLocal { place, .. } | InstructionValue::LoadContext { place, .. } => {
             if let Some(source) = maybe_deps.get(&place.identifier) {
                 Some(source.clone_in(env.allocator))
@@ -400,7 +432,10 @@ fn collect_maybe_memo_dependencies<'a>(
                 Some(IdentifierName::Named(_))
             ) {
                 Some(ManualMemoDependency {
-                    root: ManualMemoDependencyRoot::NamedLocal { value: *place, constant: false },
+                    root: ManualMemoDependencyRoot::NamedLocal {
+                        value: *place,
+                        constant: false,
+                    },
                     path: ArenaVec::new_in(&env.allocator),
                     span: place.span,
                 })
@@ -408,7 +443,9 @@ fn collect_maybe_memo_dependencies<'a>(
                 None
             }
         }
-        InstructionValue::StoreLocal { lvalue, value: val, .. } => {
+        InstructionValue::StoreLocal {
+            lvalue, value: val, ..
+        } => {
             // Value blocks rely on StoreLocal to populate their return value.
             // We need to track these as optional property chains are valid in
             // source depslists
@@ -440,7 +477,11 @@ fn get_manual_memoization_replacement<'a>(
 ) -> InstructionValue<'a> {
     if kind == ManualMemoKind::UseMemo {
         // Replace with Call fn() - invoke the memo function directly
-        InstructionValue::CallExpression { callee: *fn_place, args: ArenaVec::new_in(&alloc), span }
+        InstructionValue::CallExpression {
+            callee: *fn_place,
+            args: ArenaVec::new_in(&alloc),
+            span,
+        }
     } else {
         // Replace with LoadLocal fn - just reference the function
         InstructionValue::LoadLocal {
@@ -527,7 +568,11 @@ fn extract_manual_memoization_args<'a>(
     // Get the second arg (deps list), if present
     let deps_list_place = args.get(1);
     if deps_list_place.is_none() {
-        return Some(ExtractedMemoArgs { fn_place, deps_list: None, deps_span: None });
+        return Some(ExtractedMemoArgs {
+            fn_place,
+            deps_list: None,
+            deps_span: None,
+        });
     }
 
     let deps_list_id = match deps_list_place {
@@ -557,7 +602,11 @@ fn extract_manual_memoization_args<'a>(
         }
     }
 
-    Some(ExtractedMemoArgs { fn_place, deps_list: Some(deps_list), deps_span: deps_info.span })
+    Some(ExtractedMemoArgs {
+        fn_place,
+        deps_list: Some(deps_list),
+        deps_span: deps_info.span,
+    })
 }
 
 // =============================================================================
@@ -567,13 +616,23 @@ fn extract_manual_memoization_args<'a>(
 fn find_optional_places(func: &HirFunction) -> Result<FxHashSet<IdentifierId>, OxcDiagnostic> {
     let mut optionals = FxHashSet::default();
     for block in func.body.blocks.values() {
-        if let Terminal::Optional { optional: true, test, fallthrough, .. } = &block.terminal {
+        if let Terminal::Optional {
+            optional: true,
+            test,
+            fallthrough,
+            ..
+        } = &block.terminal
+        {
             let optional_fallthrough = *fallthrough;
             let mut test_block_id = *test;
             loop {
                 let test_block = &func.body.blocks[&test_block_id];
                 match &test_block.terminal {
-                    Terminal::Branch { consequent, fallthrough, .. } => {
+                    Terminal::Branch {
+                        consequent,
+                        fallthrough,
+                        ..
+                    } => {
                         if *fallthrough == optional_fallthrough {
                             // Found it
                             let consequent_block = &func.body.blocks[consequent];
@@ -602,7 +661,9 @@ fn find_optional_places(func: &HirFunction) -> Result<FxHashSet<IdentifierId>, O
                     other => {
                         // Invariant: unexpected terminal in optional
                         // In TS this throws CompilerError.invariant
-                        return Err(diagnostics::unexpected_optional_terminal(discriminant(other)));
+                        return Err(diagnostics::unexpected_optional_terminal(discriminant(
+                            other,
+                        )));
                     }
                 }
             }
@@ -629,8 +690,14 @@ fn is_known_react_module(module: &str) -> bool {
 fn get_hook_detection_name<'a>(binding: &NonLocalBinding<'a>) -> Option<&'a str> {
     match binding {
         NonLocalBinding::Global { name } => Some(name.as_str()),
-        NonLocalBinding::ImportSpecifier { imported, module, .. } => {
-            if is_known_react_module(module) { Some(imported.as_str()) } else { None }
+        NonLocalBinding::ImportSpecifier {
+            imported, module, ..
+        } => {
+            if is_known_react_module(module) {
+                Some(imported.as_str())
+            } else {
+                None
+            }
         }
         NonLocalBinding::ImportDefault { name, module }
         | NonLocalBinding::ImportNamespace { name, module } => {

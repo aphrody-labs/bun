@@ -434,8 +434,14 @@ fn js_typeof() {
     fold("x = typeof [1]", "x = \"object\"");
     fold("x = typeof [1,[]]", "x = \"object\"");
     fold("x = typeof {}", "x = \"object\"");
-    test("var a, b; NOOP(x = typeof (a === b))", "var a, b; NOOP(x = \"boolean\")");
-    test("var foo; NOOP(x = typeof { foo })", "var foo; NOOP(x = \"object\")");
+    test(
+        "var a, b; NOOP(x = typeof (a === b))",
+        "var a, b; NOOP(x = \"boolean\")",
+    );
+    test(
+        "var foo; NOOP(x = typeof { foo })",
+        "var foo; NOOP(x = \"object\")",
+    );
     fold("x = typeof function() {}", "x = 'function'");
     fold("x = typeof (() => {})", "x = 'function'");
     fold("x = typeof class{}", "x = \"function\"");
@@ -519,7 +525,10 @@ fn test_fold_unary() {
     fold("a=+[[]]", "a=0");
     fold("a=+[0, 1]", "a=NaN");
     test_same("var foo; NOOP(a=+[0, ...foo])"); // can be either `a=0` or `a=NaN` (also `...foo` may have a side effect)
-    test("var foo; NOOP(a=+[0, ...[foo ? 'foo': ''], 1])", "var foo; NOOP(a=NaN)");
+    test(
+        "var foo; NOOP(a=+[0, ...[foo ? 'foo': ''], 1])",
+        "var foo; NOOP(a=NaN)",
+    );
 
     fold("a=+[false]", "a=NaN"); // `+"false"`
     fold("a=+[true]", "a=NaN"); // `+"true"`
@@ -634,7 +643,10 @@ fn test_fold_logical_op() {
 fn test_fold_logical_op2() {
     fold("x = function(){} && x", "x=x");
     fold("x = true && function(){}", "x=function(){}");
-    fold("x = [(function(){alert(x)})()] && x", "x=((function(){alert(x)})(),x)");
+    fold(
+        "x = [(function(){alert(x)})()] && x",
+        "x=((function(){alert(x)})(),x)",
+    );
 }
 
 // `cjs-module-lexer` scans `module.exports = { ... }` syntactically. esbuild
@@ -684,7 +696,10 @@ fn test_fold_nullish_coalesce() {
 
     fold("x = foo() ?? true ?? bar()", "x = foo() ?? !0 ?? bar()");
     fold("x = foo() ?? (true && bar())", "x = foo() ?? bar()");
-    fold("x = (foo() || false) ?? bar()", "x = (foo() || !1) ?? bar()");
+    fold(
+        "x = (foo() || false) ?? bar()",
+        "x = (foo() || !1) ?? bar()",
+    );
 
     fold("a() ?? (1 ?? b())", "a() ?? 1");
     fold("(a() ?? 1) ?? b()", "a() ?? 1 ?? b()");
@@ -956,7 +971,10 @@ fn test_string_add() {
     fold("x = 'a' + foo()", "x = 'a'+foo()");
     fold("x = foo() + 'a' + 'b'", "x = foo()+'ab'");
     fold("x = (foo() + 'a') + 'b'", "x = foo()+'ab'"); // believe it!
-    fold("x = foo() + 'a' + 'b' + 'cd' + bar()", "x = foo()+'abcd'+bar()");
+    fold(
+        "x = foo() + 'a' + 'b' + 'cd' + bar()",
+        "x = foo()+'abcd'+bar()",
+    );
     fold("x = foo() + 2 + 'b'", "x = foo()+2+\"b\""); // don't fold!
 
     // Don't merge string literals across a non-`+` inner operator: the inner string operand
@@ -1423,8 +1441,14 @@ fn test_fold_same_typeof() {
     fold("typeof foo !== typeof bar", "typeof foo != typeof bar");
     fold("typeof foo === typeof foo", "!0");
     fold("typeof foo !== typeof foo", "!1");
-    fold("typeof foo.bar === typeof foo.bar", "typeof foo.bar == typeof foo.bar");
-    fold("typeof foo.bar !== typeof foo.bar", "typeof foo.bar != typeof foo.bar");
+    fold(
+        "typeof foo.bar === typeof foo.bar",
+        "typeof foo.bar == typeof foo.bar",
+    );
+    fold(
+        "typeof foo.bar !== typeof foo.bar",
+        "typeof foo.bar != typeof foo.bar",
+    );
 }
 
 #[test]
@@ -1668,15 +1692,24 @@ mod bigint {
         fold("({ z, ...function(){} })", result);
         fold_same("({ z, ...'abc' })");
         fold("({ a: 0, ...{ b: 1 } })", "({ a: 0, b: 1 })");
-        fold("({ a: 0, ...{ b: 1, ...{ c: 2 } } })", "({ a: 0, b: 1, c: 2 })");
+        fold(
+            "({ a: 0, ...{ b: 1, ...{ c: 2 } } })",
+            "({ a: 0, b: 1, c: 2 })",
+        );
         fold("({ a: 0, ...{ a: 1 } })", "({ a: 0, a: 1 })"); // can be fold to `({ a: 1 })`
-        fold("({ a: foo(), ...{ a: bar() } })", "({ a: foo(), a: bar() })"); // can be fold to `({ a: (foo(), bar()) })`
+        fold(
+            "({ a: foo(), ...{ a: bar() } })",
+            "({ a: foo(), a: bar() })",
+        ); // can be fold to `({ a: (foo(), bar()) })`
         fold_same("({ ...{ get a() { return 0 } } })");
         fold("({ ...{ __proto__: null } })", "({})");
         fold("({ ...{ '__proto__': null } })", "({})");
         fold_same("({ a: foo(), ...{ __proto__: bar() }, b: baz() })"); // can be folded to `({ a: foo(), b: (bar(), baz()) })`
         fold("({ ...{ __proto__() {} } })", "({ __proto__() {} })");
-        fold("({ ...{ ['__proto__']: null } })", "({ ['__proto__']: null })");
+        fold(
+            "({ ...{ ['__proto__']: null } })",
+            "({ ['__proto__']: null })",
+        );
     }
 }
 

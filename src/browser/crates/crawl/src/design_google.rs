@@ -97,15 +97,22 @@ struct ManifestFailure {
 }
 
 fn sha256(bytes: &[u8]) -> String {
-    Sha256::digest(bytes).iter().map(|byte| format!("{byte:02x}")).collect()
+    Sha256::digest(bytes)
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect()
 }
 
 fn relative_path(raw: &str) -> Result<&Path, GoogleDesignError> {
     let path = Path::new(raw);
     if raw.is_empty()
         || raw.contains(['\\', ':', '\0'])
-        || raw.split('/').any(|part| part.is_empty() || part == "." || part == "..")
-        || path.components().any(|part| !matches!(part, Component::Normal(_)))
+        || raw
+            .split('/')
+            .any(|part| part.is_empty() || part == "." || part == "..")
+        || path
+            .components()
+            .any(|part| !matches!(part, Component::Normal(_)))
     {
         return Err(error(format!("unsafe relative path: {raw:?}")));
     }
@@ -113,7 +120,9 @@ fn relative_path(raw: &str) -> Result<&Path, GoogleDesignError> {
 }
 
 fn canonical_root(root: &Path) -> Result<PathBuf, GoogleDesignError> {
-    let root = root.canonicalize().map_err(|cause| error(format!("mirror root: {cause}")))?;
+    let root = root
+        .canonicalize()
+        .map_err(|cause| error(format!("mirror root: {cause}")))?;
     if !root.is_dir() {
         return Err(error("mirror root must be a directory"));
     }
@@ -126,7 +135,9 @@ fn read_file(root: &Path, raw: &str) -> Result<Vec<u8>, GoogleDesignError> {
         .canonicalize()
         .map_err(|cause| error(format!("read {raw}: {cause}")))?;
     if !path.starts_with(root) || !path.is_file() {
-        return Err(error(format!("file escapes mirror root or is not a file: {raw}")));
+        return Err(error(format!(
+            "file escapes mirror root or is not a file: {raw}"
+        )));
     }
     fs::read(path).map_err(|cause| error(format!("read {raw}: {cause}")))
 }
@@ -155,7 +166,9 @@ fn write_file(root: &Path, raw: &str, bytes: &[u8]) -> Result<(), GoogleDesignEr
             .canonicalize()
             .map_err(|cause| error(format!("resolve output {raw}: {cause}")))?;
         if !resolved.starts_with(root) || !resolved.is_file() {
-            return Err(error(format!("output escapes mirror root or is not a file: {raw}")));
+            return Err(error(format!(
+                "output escapes mirror root or is not a file: {raw}"
+            )));
         }
     }
     fs::write(destination, bytes).map_err(|cause| error(format!("write {raw}: {cause}")))
@@ -196,14 +209,20 @@ pub fn verify_mirror(root: &Path) -> Result<Report, GoogleDesignError> {
         failures: manifest
             .failures
             .into_iter()
-            .map(|failure| Failure { source_url: failure.url, error: failure.error })
+            .map(|failure| Failure {
+                source_url: failure.url,
+                error: failure.error,
+            })
             .collect(),
     };
     let mut seen = BTreeSet::new();
     for entry in manifest.files {
         public_url(&entry.url)?;
         if !seen.insert(entry.path.to_ascii_lowercase()) || entry.path == "manifest.json" {
-            return Err(error(format!("duplicate or reserved mirror path: {}", entry.path)));
+            return Err(error(format!(
+                "duplicate or reserved mirror path: {}",
+                entry.path
+            )));
         }
         let bytes = read_file(&root, &entry.path)?;
         if bytes.len() as u64 != entry.bytes {
@@ -220,7 +239,9 @@ pub fn verify_mirror(root: &Path) -> Result<Report, GoogleDesignError> {
             sha256: sha256(&bytes),
         });
     }
-    report.files.sort_by(|left, right| left.path.cmp(&right.path));
+    report
+        .files
+        .sort_by(|left, right| left.path.cmp(&right.path));
     report.files_verified = report.files.len();
     Ok(report)
 }
@@ -270,7 +291,9 @@ pub fn export_google_documents(root: &Path) -> Result<Report, GoogleDesignError>
     let mut report = verify_mirror(&root)?;
     let seed = public_url(&report.source_url)?;
     if seed.host_str() != Some("design.google") {
-        return Err(error("Google Design export requires a design.google mirror"));
+        return Err(error(
+            "Google Design export requires a design.google mirror",
+        ));
     }
     let mut slugs = BTreeSet::new();
     for file in &report.files {
@@ -317,12 +340,15 @@ pub fn export_google_documents(root: &Path) -> Result<Report, GoogleDesignError>
         })();
         match result {
             Ok(document) => report.entries.push(document),
-            Err(cause) => report
-                .failures
-                .push(Failure { source_url: file.source_url.clone(), error: cause.to_string() }),
+            Err(cause) => report.failures.push(Failure {
+                source_url: file.source_url.clone(),
+                error: cause.to_string(),
+            }),
         }
     }
-    report.entries.sort_by(|left, right| left.slug.cmp(&right.slug));
+    report
+        .entries
+        .sort_by(|left, right| left.slug.cmp(&right.slug));
     report.documents_written = report.entries.len();
     let mut catalog = serde_json::to_vec_pretty(&report)
         .map_err(|cause| error(format!("serialize Google catalog: {cause}")))?;
@@ -361,7 +387,9 @@ pub fn verify_google_documents(root: &Path) -> Result<Report, GoogleDesignError>
     let root = canonical_root(root)?;
     let mirror = verify_mirror(&root)?;
     if public_url(&mirror.source_url)?.host_str() != Some("design.google") {
-        return Err(error("Google Design verification requires a design.google mirror"));
+        return Err(error(
+            "Google Design verification requires a design.google mirror",
+        ));
     }
     let report: Report = serde_json::from_slice(&read_file(&root, "google-catalog.json")?)
         .map_err(|cause| error(format!("Google catalog: {cause}")))?;
@@ -387,11 +415,16 @@ pub fn verify_google_documents(root: &Path) -> Result<Report, GoogleDesignError>
             || document.markdown_path != format!("documents/{}.md", document.slug)
             || !seen.insert(document.slug.to_ascii_lowercase())
         {
-            return Err(error("Google document provenance or slug does not match its source"));
+            return Err(error(
+                "Google document provenance or slug does not match its source",
+            ));
         }
         let bytes = read_file(&root, &document.markdown_path)?;
         if sha256(&bytes) != document.markdown_sha256 {
-            return Err(error(format!("Markdown SHA-256 mismatch: {}", document.markdown_path)));
+            return Err(error(format!(
+                "Markdown SHA-256 mismatch: {}",
+                document.markdown_path
+            )));
         }
     }
     read_file(&root, "AI_READY.md")?;
@@ -428,8 +461,11 @@ mod tests {
                     "kind":"html", "bytes":html.len(),"blake3":blake3::hash(html).to_hex().to_string(),"title":"Color"}],
                 "failures": [{"url":"https://design.google/missing", "error":"HTTP 404"}]
             });
-            fs::write(self.0.join("manifest.json"), serde_json::to_vec(&manifest).unwrap())
-                .unwrap();
+            fs::write(
+                self.0.join("manifest.json"),
+                serde_json::to_vec(&manifest).unwrap(),
+            )
+            .unwrap();
         }
     }
 
@@ -457,12 +493,27 @@ mod tests {
         assert!(markdown.contains("https://design.google/library/color.html"));
         assert!(markdown.contains("Colors communicate meaning"));
         assert!(!markdown.contains("secretScript"));
-        assert_eq!(report.entries[0].markdown_sha256, sha256(markdown.as_bytes()));
-        assert_eq!(verify_google_documents(&fixture.0).unwrap().documents_written, 1);
-        assert!(fs::read_to_string(fixture.0.join("AI_READY.md")).unwrap().contains("HTTP 404"));
+        assert_eq!(
+            report.entries[0].markdown_sha256,
+            sha256(markdown.as_bytes())
+        );
+        assert_eq!(
+            verify_google_documents(&fixture.0)
+                .unwrap()
+                .documents_written,
+            1
+        );
+        assert!(
+            fs::read_to_string(fixture.0.join("AI_READY.md"))
+                .unwrap()
+                .contains("HTTP 404")
+        );
         let catalog = fs::read(fixture.0.join("google-catalog.json")).unwrap();
         export_google_documents(&fixture.0).unwrap();
-        assert_eq!(fs::read(fixture.0.join("google-catalog.json")).unwrap(), catalog);
+        assert_eq!(
+            fs::read(fixture.0.join("google-catalog.json")).unwrap(),
+            catalog
+        );
     }
 
     #[test]
@@ -472,11 +523,21 @@ mod tests {
         fixture.manifest("page.html", HTML);
         let report = export_google_documents(&fixture.0).unwrap();
         fs::write(fixture.0.join(&report.entries[0].markdown_path), "tampered").unwrap();
-        assert!(verify_google_documents(&fixture.0).unwrap_err().to_string().contains("SHA-256"));
+        assert!(
+            verify_google_documents(&fixture.0)
+                .unwrap_err()
+                .to_string()
+                .contains("SHA-256")
+        );
         let mut changed = HTML.to_vec();
         changed[0] = b'!';
         fs::write(fixture.0.join("page.html"), changed).unwrap();
-        assert!(verify_mirror(&fixture.0).unwrap_err().to_string().contains("BLAKE3"));
+        assert!(
+            verify_mirror(&fixture.0)
+                .unwrap_err()
+                .to_string()
+                .contains("BLAKE3")
+        );
     }
 
     #[test]
@@ -491,7 +552,10 @@ mod tests {
         ] {
             fixture.manifest(path, HTML);
             assert!(
-                verify_mirror(&fixture.0).unwrap_err().to_string().contains("unsafe relative path")
+                verify_mirror(&fixture.0)
+                    .unwrap_err()
+                    .to_string()
+                    .contains("unsafe relative path")
             );
         }
     }
@@ -505,7 +569,12 @@ mod tests {
         std::os::unix::fs::symlink(outside.0.join("page.html"), fixture.0.join("page.html"))
             .unwrap();
         fixture.manifest("page.html", HTML);
-        assert!(verify_mirror(&fixture.0).unwrap_err().to_string().contains("escapes mirror root"));
+        assert!(
+            verify_mirror(&fixture.0)
+                .unwrap_err()
+                .to_string()
+                .contains("escapes mirror root")
+        );
     }
 
     #[test]
@@ -517,6 +586,10 @@ mod tests {
         let report = export_google_documents(&fixture.0).unwrap();
         assert_eq!(report.documents_written, 0);
         assert_eq!(report.failures.len(), 2);
-        assert!(report.failures[1].error.contains("no readable main content"));
+        assert!(
+            report.failures[1]
+                .error
+                .contains("no readable main content")
+        );
     }
 }

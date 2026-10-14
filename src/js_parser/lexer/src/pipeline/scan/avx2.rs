@@ -11,7 +11,11 @@ pub unsafe fn scan_block_comment(src: *const u8, n: usize, mut i: usize) -> (usi
         let v = load256(src, i);
         let vn = load256(src, i + 1);
         let term = mm(_mm256_and_si256(veq(v, b'*'), veq(vn, b'/')));
-        let nl = if saw_nl { 0 } else { mm(_mm256_or_si256(veq(v, b'\n'), veq(v, b'\r'))) };
+        let nl = if saw_nl {
+            0
+        } else {
+            mm(_mm256_or_si256(veq(v, b'\n'), veq(v, b'\r')))
+        };
         let at = if lic_q < 0 { mm(veq(v, b'@')) } else { 0 };
         if term != 0 {
             let j = term.trailing_zeros() as usize;

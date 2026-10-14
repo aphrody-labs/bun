@@ -29,10 +29,14 @@ impl<const MIN_ALIGN: usize> Arena<MIN_ALIGN> {
     /// Panics if reserving space matching `layout` fails.
     #[inline(always)]
     pub fn alloc_layout(&self, layout: Layout) -> NonNull<u8> {
-        let ptr =
-            self.try_alloc_layout_fast(layout).unwrap_or_else(|| self.alloc_layout_slow(layout));
+        let ptr = self
+            .try_alloc_layout_fast(layout)
+            .unwrap_or_else(|| self.alloc_layout_slow(layout));
 
-        #[cfg(all(feature = "track_allocations", not(feature = "disable_track_allocations")))]
+        #[cfg(all(
+            feature = "track_allocations",
+            not(feature = "disable_track_allocations")
+        ))]
         self.stats.record_allocation();
 
         ptr
@@ -55,7 +59,10 @@ impl<const MIN_ALIGN: usize> Arena<MIN_ALIGN> {
             self.try_alloc_layout_slow(layout).ok_or(AllocErr)
         };
 
-        #[cfg(all(feature = "track_allocations", not(feature = "disable_track_allocations")))]
+        #[cfg(all(
+            feature = "track_allocations",
+            not(feature = "disable_track_allocations")
+        ))]
         if res.is_ok() {
             self.stats.record_allocation();
         }
@@ -315,7 +322,8 @@ impl<const MIN_ALIGN: usize> Arena<MIN_ALIGN> {
     #[inline(never)]
     #[cold]
     fn alloc_layout_slow(&self, layout: Layout) -> NonNull<u8> {
-        self.try_alloc_layout_slow_impl(layout).unwrap_or_else(|| oom())
+        self.try_alloc_layout_slow_impl(layout)
+            .unwrap_or_else(|| oom())
     }
 
     /// Slow path for [`Arena::try_alloc_layout`].
@@ -590,7 +598,10 @@ impl<const MIN_ALIGN: usize> Arena<MIN_ALIGN> {
         let new_ptr = self.try_alloc_layout(new_layout)?;
         unsafe { new_ptr.copy_from_nonoverlapping(ptr, old_size) };
 
-        #[cfg(all(feature = "track_allocations", not(feature = "disable_track_allocations")))]
+        #[cfg(all(
+            feature = "track_allocations",
+            not(feature = "disable_track_allocations")
+        ))]
         self.stats.record_reallocation_after_allocation();
 
         Ok(new_ptr)
@@ -691,7 +702,12 @@ unsafe impl<const MIN_ALIGN: usize> Allocator for &Arena<MIN_ALIGN> {
         // SAFETY: `new_ptr` covers `new_layout.size()` bytes.
         // `old_layout.size() <= new_layout.size()` (invariant of `Allocator` trait).
         // So `tail_len` bytes starting at offset `old_layout.size()` are in bounds.
-        unsafe { new_ptr.cast::<u8>().add(old_layout.size()).write_bytes(0, tail_len) };
+        unsafe {
+            new_ptr
+                .cast::<u8>()
+                .add(old_layout.size())
+                .write_bytes(0, tail_len)
+        };
 
         Ok(new_ptr)
     }

@@ -217,9 +217,18 @@ enum Parameter<'a> {
 
 #[derive(Clone, Copy)]
 enum Unify<'a> {
-    IdenticalParameters { first: Span, second: Span },
-    SingleParameterDifference { p0: Parameter<'a>, p1: Parameter<'a> },
-    ExtraParameter { extra_parameter: Parameter<'a>, anchor_parameter: Option<Parameter<'a>> },
+    IdenticalParameters {
+        first: Span,
+        second: Span,
+    },
+    SingleParameterDifference {
+        p0: Parameter<'a>,
+        p1: Parameter<'a>,
+    },
+    ExtraParameter {
+        extra_parameter: Parameter<'a>,
+        anchor_parameter: Option<Parameter<'a>>,
+    },
 }
 
 impl UnifiedSignatures {
@@ -445,7 +454,12 @@ fn get_overload_key(
         _ => key.span().source_text(source_text).to_string(),
     };
 
-    format!("{}{}{}", overload_key_bit(computed), overload_key_bit(r#static), info)
+    format!(
+        "{}{}{}",
+        overload_key_bit(computed),
+        overload_key_bit(r#static),
+        info
+    )
 }
 
 fn is_getter_or_setter_method(kind: MethodDefinitionKind) -> bool {
@@ -513,8 +527,12 @@ fn signatures_can_be_unified<'a>(
     }
 
     types_are_equal(
-        first_signature.return_type().map(|annotation| &annotation.type_annotation),
-        second_signature.return_type().map(|annotation| &annotation.type_annotation),
+        first_signature
+            .return_type()
+            .map(|annotation| &annotation.type_annotation),
+        second_signature
+            .return_type()
+            .map(|annotation| &annotation.type_annotation),
         source_text,
     ) && type_parameter_declarations_are_equal(
         first_signature.type_parameters(),
@@ -559,18 +577,24 @@ fn type_parameters_are_equal(
     source_text: &str,
 ) -> bool {
     first.name.name == second.name.name
-        && types_are_equal(first.constraint.as_ref(), second.constraint.as_ref(), source_text)
+        && types_are_equal(
+            first.constraint.as_ref(),
+            second.constraint.as_ref(),
+            source_text,
+        )
 }
 
 fn signature_uses_outer_type_parameter(
     signature: SignatureDefinition<'_>,
     outer_type_parameters: &FxHashSet<&str>,
 ) -> bool {
-    signature_parameters(signature).into_iter().any(|parameter| {
-        parameter_type_annotation(parameter).is_some_and(|type_annotation| {
-            type_contains_outer_type_parameter(type_annotation, outer_type_parameters)
+    signature_parameters(signature)
+        .into_iter()
+        .any(|parameter| {
+            parameter_type_annotation(parameter).is_some_and(|type_annotation| {
+                type_contains_outer_type_parameter(type_annotation, outer_type_parameters)
+            })
         })
-    })
 }
 
 fn type_contains_outer_type_parameter(
@@ -648,7 +672,10 @@ fn signatures_have_same_amount_of_parameters<'a>(
     let second = second[index];
 
     if parameters_have_equal_sigils(first, second) && !matches!(first, Parameter::Rest(_)) {
-        return Some(Unify::SingleParameterDifference { p0: first, p1: second });
+        return Some(Unify::SingleParameterDifference {
+            p0: first,
+            p1: second,
+        });
     }
 
     None
@@ -735,7 +762,10 @@ fn report_failure(unify: Unify<'_>, only_two_overloads: bool, ctx: &LintContext<
                 ],
             ));
         }
-        Unify::ExtraParameter { extra_parameter, anchor_parameter } => {
+        Unify::ExtraParameter {
+            extra_parameter,
+            anchor_parameter,
+        } => {
             let message = if matches!(extra_parameter, Parameter::Rest(_)) {
                 format!("{failure_string_start} with a rest parameter.")
             } else {
@@ -762,7 +792,9 @@ fn get_unified_type_text(
 ) -> String {
     let (Some(first), Some(second)) = (first, second) else {
         return get_union_member_text(
-            first.or(second).expect("one of the differing parameters must have a type annotation"),
+            first
+                .or(second)
+                .expect("one of the differing parameters must have a type annotation"),
             source_text,
         );
     };
@@ -846,12 +878,15 @@ fn parameter_span(parameter: Parameter<'_>) -> Span {
 fn get_static_parameter_name(parameter: Parameter<'_>) -> Option<&str> {
     match parameter {
         Parameter::This(_) => Some("this"),
-        Parameter::Formal(parameter) => {
-            parameter.pattern.get_identifier_name().map(|name| name.as_str())
-        }
-        Parameter::Rest(parameter) => {
-            parameter.rest.argument.get_identifier_name().map(|name| name.as_str())
-        }
+        Parameter::Formal(parameter) => parameter
+            .pattern
+            .get_identifier_name()
+            .map(|name| name.as_str()),
+        Parameter::Rest(parameter) => parameter
+            .rest
+            .argument
+            .get_identifier_name()
+            .map(|name| name.as_str()),
     }
 }
 
@@ -886,8 +921,14 @@ fn types_are_equal(
     match (first, second) {
         (None, None) => true,
         (Some(first), Some(second)) => {
-            first.without_parenthesized().span().source_text(source_text)
-                == second.without_parenthesized().span().source_text(source_text)
+            first
+                .without_parenthesized()
+                .span()
+                .source_text(source_text)
+                == second
+                    .without_parenthesized()
+                    .span()
+                    .source_text(source_text)
         }
         _ => false,
     }
@@ -1396,14 +1437,26 @@ function f<T extends 3 | 4>(x: T): void;",
 function f<R extends number>(x: R): void;",
             None,
         ),
-        ("function f<T>(x: T): void; function f<T extends A>(x: T): void;", None),
+        (
+            "function f<T>(x: T): void; function f<T extends A>(x: T): void;",
+            None,
+        ),
         (
             "function f<T extends { a: string }>(x: T): void; function f<T extends { a: number }>(x: T): void;",
             None,
         ),
-        ("function f<T extends A>(x: T): void; function f<T extends B>(x: T[]): void;", None),
-        ("function f(this: void): void; function f(this: void): void;", None),
-        ("function f(x?: number): void; function f(x: number): void;", None),
+        (
+            "function f<T extends A>(x: T): void; function f<T extends B>(x: T[]): void;",
+            None,
+        ),
+        (
+            "function f(this: void): void; function f(this: void): void;",
+            None,
+        ),
+        (
+            "function f(x?: number): void; function f(x: number): void;",
+            None,
+        ),
         (
             "function f(a: number): void; function f(b: number): void;",
             Some(serde_json::json!([{"ignoreDifferentlyNamedParameters": true}])),
@@ -1412,10 +1465,22 @@ function f<R extends number>(x: R): void;",
             "/** first */ function f(x: number): void; /** second */ function f(x: number): void;",
             Some(serde_json::json!([{"ignoreOverloadsWithDifferentJSDoc": true}])),
         ),
-        ("declare function f(this: string): void; declare function f(x: string): void;", None),
-        ("declare function f(x: string): void; declare function f(this: string): void;", None),
-        ("declare function f(this: string): void; declare function f(x: number): void;", None),
-        ("declare function f(x: number): void; declare function f(this: string): void;", None),
+        (
+            "declare function f(this: string): void; declare function f(x: string): void;",
+            None,
+        ),
+        (
+            "declare function f(x: string): void; declare function f(this: string): void;",
+            None,
+        ),
+        (
+            "declare function f(this: string): void; declare function f(x: number): void;",
+            None,
+        ),
+        (
+            "declare function f(x: number): void; declare function f(this: string): void;",
+            None,
+        ),
     ];
 
     let fail = vec![
@@ -1932,9 +1997,18 @@ function f(a: number): void {}",
         ),
         ("function f(): void; function f(): void;", None),
         ("function f(value): void; function f(value): void;", None),
-        ("function f(...values: string[]): void; function f(...values: string[]): void;", None),
-        ("function f(x?: string): void; function f(x?: string): void;", None),
-        ("function f(this: string): void; function f(this: string): void;", None),
+        (
+            "function f(...values: string[]): void; function f(...values: string[]): void;",
+            None,
+        ),
+        (
+            "function f(x?: string): void; function f(x?: string): void;",
+            None,
+        ),
+        (
+            "function f(this: string): void; function f(this: string): void;",
+            None,
+        ),
         ("interface I { (): void; (): void; }", None),
         ("interface I { new (): I; new (): I; }", None),
         ("interface I { f(): void; f(): void; }", None),
@@ -1946,20 +2020,41 @@ function f(a: number): void {}",
             "function f(x: string | (number | boolean)): void; function f(x: (boolean | string)): void;",
             None,
         ),
-        ("function f(x: (() => void) | string): void; function f(x: () => void): void;", None),
-        ("function f<T extends A>(x: T): void; function f<T extends A>(x: T[]): void;", None),
+        (
+            "function f(x: (() => void) | string): void; function f(x: () => void): void;",
+            None,
+        ),
+        (
+            "function f<T extends A>(x: T): void; function f<T extends A>(x: T[]): void;",
+            None,
+        ),
         (
             "function f<T extends 1 | 2>(x: T): void; function f<T extends 1 | 2>(x: T, y: string): void;",
             None,
         ),
-        ("function f<T extends (A)>(x: T): void; function f<T extends A>(x: T[]): void;", None),
-        ("function f(a: number): void; function f(b: number): void;", None),
+        (
+            "function f<T extends (A)>(x: T): void; function f<T extends A>(x: T[]): void;",
+            None,
+        ),
+        (
+            "function f(a: number): void; function f(b: number): void;",
+            None,
+        ),
         (
             "/** same */ function f(x: number): void; /** same */ function f(x: number): void;",
             Some(serde_json::json!([{"ignoreOverloadsWithDifferentJSDoc": true}])),
         ),
-        ("function f(x): void; function f(x: () => void): void;", None),
+        (
+            "function f(x): void; function f(x: () => void): void;",
+            None,
+        ),
     ];
 
-    Tester::new(UnifiedSignatures::NAME, UnifiedSignatures::PLUGIN, pass, fail).test_and_snapshot();
+    Tester::new(
+        UnifiedSignatures::NAME,
+        UnifiedSignatures::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

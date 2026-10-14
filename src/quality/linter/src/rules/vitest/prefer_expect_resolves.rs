@@ -151,8 +151,13 @@ fn tests() {
         ),
     ];
 
-    Tester::new(PreferExpectResolves::NAME, PreferExpectResolves::PLUGIN, pass, fail)
-        .with_vitest_plugin(true)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        PreferExpectResolves::NAME,
+        PreferExpectResolves::PLUGIN,
+        pass,
+        fail,
+    )
+    .with_vitest_plugin(true)
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

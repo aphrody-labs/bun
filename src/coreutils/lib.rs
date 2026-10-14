@@ -143,7 +143,10 @@ pub fn run(applet: &str, args: &[&[u8]]) -> i32 {
     uucore::panic::preserve_inherited_sigpipe();
     uucore::panic::mute_sigpipe_panic();
     if let Err(err) = uucore::locale::setup_localization(name) {
-        let _ = writeln!(std::io::stderr(), "{name}: could not init the localization system: {err}");
+        let _ = writeln!(
+            std::io::stderr(),
+            "{name}: could not init the localization system: {err}"
+        );
         return 99;
     }
     let args: Vec<OsString> = args.iter().map(|arg| os_string(arg)).collect();
@@ -178,6 +181,10 @@ mod tests {
         assert_eq!(applet_name(b"cat"), None);
         #[cfg(windows)]
         assert_eq!(applet_name(br"C:\x\SHA256SUM.EXE"), Some("sha256sum"));
-        assert!(APPLETS.iter().all(|name| applet_name(name.as_bytes()) == Some(*name)));
+        assert!(
+            APPLETS
+                .iter()
+                .all(|name| applet_name(name.as_bytes()) == Some(*name))
+        );
     }
 }

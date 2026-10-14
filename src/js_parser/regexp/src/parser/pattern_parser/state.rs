@@ -197,7 +197,10 @@ struct AlternativeTracker {
 
 impl AlternativeTracker {
     fn new() -> Self {
-        Self { depth: 0, current_alternative: vec![0] }
+        Self {
+            depth: 0,
+            current_alternative: vec![0],
+        }
     }
 
     fn enter_group(&mut self) {
@@ -221,7 +224,11 @@ impl AlternativeTracker {
     }
 
     fn get_alternative_path(&self) -> Vec<u32> {
-        self.current_alternative.iter().take((self.depth + 1) as usize).copied().collect()
+        self.current_alternative
+            .iter()
+            .take((self.depth + 1) as usize)
+            .copied()
+            .collect()
     }
 
     fn can_participate(alt1: &[u32], alt2: &[u32]) -> bool {

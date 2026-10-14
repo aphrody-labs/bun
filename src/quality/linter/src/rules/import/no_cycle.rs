@@ -136,7 +136,8 @@ declare_oxc_lint!(
     restriction,
     config = NoCycle,
     version = "0.0.13",
-    short_description = "Disallow cyclic dependencies that import the current module in its own dependency graph.",
+    short_description =
+        "Disallow cyclic dependencies that import the current module in its own dependency graph.",
 );
 
 impl Rule for NoCycle {
@@ -169,11 +170,16 @@ impl Rule for NoCycle {
 
             let requested_module = module_record.requested_modules[&key][0];
             let span = requested_module.span;
-            let mut stack =
-                vec![(key.clone(), loaded_module_record.resolved_absolute_path.clone())];
+            let mut stack = vec![(
+                key.clone(),
+                loaded_module_record.resolved_absolute_path.clone(),
+            )];
 
             if loaded_module_record.resolved_absolute_path == *needle {
-                ctx.diagnostic(self_referencing_cycle_diagnostic(span, requested_module.is_import));
+                ctx.diagnostic(self_referencing_cycle_diagnostic(
+                    span,
+                    requested_module.is_import,
+                ));
                 continue;
             }
 
@@ -307,10 +313,11 @@ impl NoCycle {
         // export * as Example from './test.js';
         // ```
         if path == &parent.resolved_absolute_path
-            && let Some(e) = module
-                .indirect_export_entries
-                .iter()
-                .find(|e| e.module_request.as_ref().is_some_and(|r| r.name.as_str() == key))
+            && let Some(e) = module.indirect_export_entries.iter().find(|e| {
+                e.module_request
+                    .as_ref()
+                    .is_some_and(|r| r.name.as_str() == key)
+            })
             && e.export_name.is_name()
         {
             return false;
@@ -346,9 +353,18 @@ fn test() {
         // r#"import { foo } from "cycles/external/depth-one""#,
         // Some(json!([[{"ignoreExternal":true}])),
         // ),
-        (r#"import { foo } from "./es6/depth-two""#, Some(json!([{"maxDepth":1}]))),
-        (r#"import { foo, bar } from "./es6/depth-two""#, Some(json!([{"maxDepth":1}]))),
-        (r#"import("./es6/depth-two").then(function({ foo }) {})"#, Some(json!([{"maxDepth":1}]))),
+        (
+            r#"import { foo } from "./es6/depth-two""#,
+            Some(json!([{"maxDepth":1}])),
+        ),
+        (
+            r#"import { foo, bar } from "./es6/depth-two""#,
+            Some(json!([{"maxDepth":1}])),
+        ),
+        (
+            r#"import("./es6/depth-two").then(function({ foo }) {})"#,
+            Some(json!([{"maxDepth":1}])),
+        ),
         // parser: parsers.BABEL_OLD
         // (r#"import type { FooType } from "./es6/depth-one""#, None),
         // (r#"import type { FooType, BarType } from "./es6/depth-one""#, None),
@@ -389,8 +405,14 @@ fn test() {
         // (r#"import { bar } from "./flow-types-only-importing-type""#, None),
         // (r#"import { bar } from "./flow-types-only-importing-multiple-types""#, None),
         // (r#"import { bar } from "./flow-typeof""#, None),
-        (r#"import { foo } from "./typescript/ts-types-re-exporting-type";"#, None),
-        (r"export function Foo() {}; export * as ns from './depth-zero'", None),
+        (
+            r#"import { foo } from "./typescript/ts-types-re-exporting-type";"#,
+            None,
+        ),
+        (
+            r"export function Foo() {}; export * as ns from './depth-zero'",
+            None,
+        ),
     ];
 
     let fail = vec![
@@ -400,18 +422,30 @@ fn test() {
         // TODO: settings 'import/external-module-folders': ['cycles/external'],
         // (r#"import { foo } from "./external-depth-two""#, None),
         // (r#"import { foo } from "./es6/depth-one""#, None),
-        (r#"import { foo } from "./es6/depth-one""#, Some(json!([{"maxDepth":1}]))),
+        (
+            r#"import { foo } from "./es6/depth-one""#,
+            Some(json!([{"maxDepth":1}])),
+        ),
         // (r#"const { foo } = require("./es6/depth-one")"#, Some(json!([{"commonjs":true}]))),
         // TODO: amd
         // (r#"require(["./es6/depth-one"], d1 => {})"#, Some(json!([{"amd":true}]))),
         // (r#"define(["./es6/depth-one"], d1 => {})"#, Some(json!([{"amd":true}]))),
         (r#"import { foo } from "./es6/depth-one-reexport""#, None),
-        (r#"import { foo } from "./es6/depth-one-reexport""#, Some(json!([{"ignoreTypes":true}]))),
+        (
+            r#"import { foo } from "./es6/depth-one-reexport""#,
+            Some(json!([{"ignoreTypes":true}])),
+        ),
         (r#"import { foo } from "./es6/depth-two""#, None),
-        (r#"import { foo } from "./es6/depth-two""#, Some(json!([{"maxDepth":2}]))),
+        (
+            r#"import { foo } from "./es6/depth-two""#,
+            Some(json!([{"maxDepth":2}])),
+        ),
         // (r#"const { foo } = require("./es6/depth-two")"#, Some(json!([{"commonjs":true}]))),
         (r#"import { two } from "./es6/depth-three-star""#, None),
-        (r#"import one, { two, three } from "./es6/depth-three-star""#, None),
+        (
+            r#"import one, { two, three } from "./es6/depth-three-star""#,
+            None,
+        ),
         (r#"import { bar } from "./es6/depth-three-indirect""#, None),
         (r#"import { bar } from "./es6/depth-three-indirect""#, None),
         // effectively unlimited:
@@ -511,7 +545,10 @@ fn test() {
             r#"import { foo } from "./typescript/ts-types-re-exporting-type";"#,
             Some(json!([{"ignoreTypes":false}])),
         ),
-        (r"export function Foo() {}; export * from './depth-zero'", None),
+        (
+            r"export function Foo() {}; export * from './depth-zero'",
+            None,
+        ),
         (r"import * as depthZero from './depth-zero'", None),
     ];
 

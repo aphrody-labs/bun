@@ -61,7 +61,10 @@ impl DisplayDot for ControlFlowGraph {
 
 impl DisplayDot for BasicBlock {
     fn display_dot(&self) -> String {
-        self.instructions().iter().map(DisplayDot::display_dot).join("\n")
+        self.instructions()
+            .iter()
+            .map(DisplayDot::display_dot)
+            .join("\n")
     }
 }
 
@@ -156,7 +159,11 @@ where
     V: Into<Attr<'a>>,
 {
     fn from_iter<T: IntoIterator<Item = (K, V)>>(iter: T) -> Self {
-        Self(iter.into_iter().map(|(k, v)| (k.into(), v.into())).collect())
+        Self(
+            iter.into_iter()
+                .map(|(k, v)| (k.into(), v.into()))
+                .collect(),
+        )
     }
 }
 

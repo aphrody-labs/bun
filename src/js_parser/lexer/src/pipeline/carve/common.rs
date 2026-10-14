@@ -213,7 +213,11 @@ unsafe fn lex_regex(
         // oxc_parser reports a line terminator in the body as "unterminated"
         // with a span ending just past the first one, even when a later `/`
         // closes our token.
-        lanes.push_diag(s as u32, (nl_at + 1 - s) as u32, DiagCode::LineTerminatorInRegexp);
+        lanes.push_diag(
+            s as u32,
+            (nl_at + 1 - s) as u32,
+            DiagCode::LineTerminatorInRegexp,
+        );
     } else if e >= n {
         lanes.push_diag(s as u32, (n - s) as u32, DiagCode::UnterminatedRegexp);
     }

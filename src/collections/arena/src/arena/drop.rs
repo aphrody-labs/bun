@@ -40,7 +40,10 @@ impl<const MIN_ALIGN: usize> Arena<MIN_ALIGN> {
     ///
     /// [the top-level documentation]: Arena
     pub fn reset(&mut self) {
-        #[cfg(all(feature = "track_allocations", not(feature = "disable_track_allocations")))]
+        #[cfg(all(
+            feature = "track_allocations",
+            not(feature = "disable_track_allocations")
+        ))]
         self.stats.reset();
 
         // Takes `&mut self` so `self` must be unique, and there can't be any borrows active
@@ -51,8 +54,10 @@ impl<const MIN_ALIGN: usize> Arena<MIN_ALIGN> {
             };
 
             // Deallocate all chunks except the current one
-            let prev_footer_ptr =
-                current_footer_ptr.as_ref().previous_chunk_footer_ptr.replace(None);
+            let prev_footer_ptr = current_footer_ptr
+                .as_ref()
+                .previous_chunk_footer_ptr
+                .replace(None);
             dealloc_chunk_list(prev_footer_ptr);
 
             // Reset the bump cursor to the end of the chunk.
@@ -65,7 +70,11 @@ impl<const MIN_ALIGN: usize> Arena<MIN_ALIGN> {
             self.cursor_ptr.set(current_footer_ptr.cast::<u8>());
 
             debug_assert!(
-                current_footer_ptr.as_ref().previous_chunk_footer_ptr.get().is_none(),
+                current_footer_ptr
+                    .as_ref()
+                    .previous_chunk_footer_ptr
+                    .get()
+                    .is_none(),
                 "We should only have a single chunk"
             );
             debug_assert_eq!(
@@ -99,7 +108,9 @@ unsafe fn dealloc_chunk_list(footer_ptr: Option<NonNull<ChunkFooter>>) {
         // when we deallocate the chunk's memory (which includes the `ChunkFooter`)
         {
             // SAFETY: `footer_ptr` always points to a valid `ChunkFooter`
-            next_footer_ptr = unsafe { footer_ptr.as_ref() }.previous_chunk_footer_ptr.get();
+            next_footer_ptr = unsafe { footer_ptr.as_ref() }
+                .previous_chunk_footer_ptr
+                .get();
         }
 
         // SAFETY: `footer_ptr` always points to a valid `ChunkFooter`
@@ -117,12 +128,20 @@ unsafe fn dealloc_chunk(footer_ptr: NonNull<ChunkFooter>) {
     let (backing_alloc_ptr, layout, is_fixed_size) = {
         // SAFETY: Caller guarantees that `footer_ptr` points to a valid `ChunkFooter`
         let footer = unsafe { footer_ptr.as_ref() };
-        (footer.backing_alloc_ptr.as_ptr(), footer.layout, footer.is_fixed_size)
+        (
+            footer.backing_alloc_ptr.as_ptr(),
+            footer.layout,
+            footer.is_fixed_size,
+        )
     };
 
     // If is a fixed-size allocator, delegate to `dealloc_fixed_size_arena_chunk`
     if is_fixed_size {
-        #[cfg(all(feature = "fixed_size", target_pointer_width = "64", target_endian = "little"))]
+        #[cfg(all(
+            feature = "fixed_size",
+            target_pointer_width = "64",
+            target_endian = "little"
+        ))]
         {
             // SAFETY: Caller guarantees that `footer_ptr` points to a valid `ChunkFooter`,
             // and `is_fixed_size` indicates that the chunk is fixed-size
@@ -152,7 +171,10 @@ unsafe fn dealloc_chunk(footer_ptr: NonNull<ChunkFooter>) {
     // Mark the upcoming deallocation as a chunk operation, so the allocation-tracking
     // task can exclude it from its heap metrics. Must be set immediately before the
     // `dealloc` call, with no allocations in between.
-    #[cfg(all(feature = "track_allocations", not(feature = "disable_track_allocations")))]
+    #[cfg(all(
+        feature = "track_allocations",
+        not(feature = "disable_track_allocations")
+    ))]
     crate::tracking::start_chunk_operation();
 
     // SAFETY: Each `ChunkFooter`'s `backing_alloc_ptr` and `layout` describe its backing allocation.

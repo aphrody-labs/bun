@@ -171,8 +171,14 @@ fn test_new() {
 
     test("new (import('foo').bar)", "new (import(\"foo\")).bar();\n");
     test("new (import('foo')).bar", "new (import(\"foo\")).bar();\n");
-    test("new (import('foo')[bar])", "new (import(\"foo\"))[bar]();\n");
-    test("new (import('foo'))[bar]", "new (import(\"foo\"))[bar]();\n");
+    test(
+        "new (import('foo')[bar])",
+        "new (import(\"foo\"))[bar]();\n",
+    );
+    test(
+        "new (import('foo'))[bar]",
+        "new (import(\"foo\"))[bar]();\n",
+    );
 
     test_minify("new x", "new x;");
     test_minify("new x.y", "new x.y;");
@@ -212,10 +218,22 @@ fn test_new() {
     );
 
     // non-webpack comments
-    test("new Worker(/* before */ foo)", "new Worker(\n\t/* before */\n\tfoo\n);\n");
-    test("new Worker(/* before */ 'foo')", "new Worker(\n\t/* before */\n\t\"foo\"\n);\n");
-    test("new Worker(foo /* after */)", "new Worker(\n\tfoo\n\t/* after */\n);\n");
-    test("new Worker('foo' /* after */)", "new Worker(\n\t\"foo\"\n\t/* after */\n);\n");
+    test(
+        "new Worker(/* before */ foo)",
+        "new Worker(\n\t/* before */\n\tfoo\n);\n",
+    );
+    test(
+        "new Worker(/* before */ 'foo')",
+        "new Worker(\n\t/* before */\n\t\"foo\"\n);\n",
+    );
+    test(
+        "new Worker(foo /* after */)",
+        "new Worker(\n\tfoo\n\t/* after */\n);\n",
+    );
+    test(
+        "new Worker('foo' /* after */)",
+        "new Worker(\n\t\"foo\"\n\t/* after */\n);\n",
+    );
 }
 
 #[test]
@@ -280,10 +298,22 @@ fn test_call() {
     );
 
     // non-webpack comments
-    test("require(/* before */ foo)", "require(\n\t/* before */\n\tfoo\n);\n");
-    test("require(/* before */ 'foo')", "require(\n\t/* before */\n\t\"foo\"\n);\n");
-    test("require(foo /* after */)", "require(\n\tfoo\n\t/* after */\n);\n");
-    test("require('foo' /* after */)", "require(\n\t\"foo\"\n\t/* after */\n);\n");
+    test(
+        "require(/* before */ foo)",
+        "require(\n\t/* before */\n\tfoo\n);\n",
+    );
+    test(
+        "require(/* before */ 'foo')",
+        "require(\n\t/* before */\n\t\"foo\"\n);\n",
+    );
+    test(
+        "require(foo /* after */)",
+        "require(\n\tfoo\n\t/* after */\n);\n",
+    );
+    test(
+        "require('foo' /* after */)",
+        "require(\n\t\"foo\"\n\t/* after */\n);\n",
+    );
 }
 
 #[test]
@@ -373,8 +403,14 @@ fn test_string() {
 
     test("let x = '\\x80'", "let x = \"\u{80}\";\n");
     test("let x = '\\xFF'", "let x = \"ÿ\";\n");
-    test("let x = '\\xF0\\x9F\\x8D\\x95'", "let x = \"ð\u{9f}\u{8d}\u{95}\";\n");
-    test("let x = '\\uD801\\uDC02\\uDC03\\uD804'", "let x = \"𐐂\\udc03\\ud804\";\n"); // surrogates
+    test(
+        "let x = '\\xF0\\x9F\\x8D\\x95'",
+        "let x = \"ð\u{9f}\u{8d}\u{95}\";\n",
+    );
+    test(
+        "let x = '\\uD801\\uDC02\\uDC03\\uD804'",
+        "let x = \"𐐂\\udc03\\ud804\";\n",
+    ); // surrogates
 }
 
 #[test]
@@ -390,12 +426,30 @@ fn test_template() {
 
     test("let x = String.raw`\\1`", "let x = String.raw`\\1`;\n");
     test("let x = String.raw`\\x01`", "let x = String.raw`\\x01`;\n");
-    test("let x = String.raw`\\1${0}`", "let x = String.raw`\\1${0}`;\n");
-    test("let x = String.raw`\\x01${0}`", "let x = String.raw`\\x01${0}`;\n");
-    test("let x = String.raw`${0}\\1`", "let x = String.raw`${0}\\1`;\n");
-    test("let x = String.raw`${0}\\x01`", "let x = String.raw`${0}\\x01`;\n");
-    test("let x = String.raw`${0}\\1${1}`", "let x = String.raw`${0}\\1${1}`;\n");
-    test("let x = String.raw`${0}\\x01${1}`", "let x = String.raw`${0}\\x01${1}`;\n");
+    test(
+        "let x = String.raw`\\1${0}`",
+        "let x = String.raw`\\1${0}`;\n",
+    );
+    test(
+        "let x = String.raw`\\x01${0}`",
+        "let x = String.raw`\\x01${0}`;\n",
+    );
+    test(
+        "let x = String.raw`${0}\\1`",
+        "let x = String.raw`${0}\\1`;\n",
+    );
+    test(
+        "let x = String.raw`${0}\\x01`",
+        "let x = String.raw`${0}\\x01`;\n",
+    );
+    test(
+        "let x = String.raw`${0}\\1${1}`",
+        "let x = String.raw`${0}\\1${1}`;\n",
+    );
+    test(
+        "let x = String.raw`${0}\\x01${1}`",
+        "let x = String.raw`${0}\\x01${1}`;\n",
+    );
 
     test("let x = `${y}`", "let x = `${y}`;\n");
     test("let x = `$(y)`", "let x = `$(y)`;\n");
@@ -441,7 +495,10 @@ fn test_object() {
     test("let x = () => ({})", "let x = () => ({});\n");
     test("let x = () => ({}.x)", "let x = () => ({}).x;\n");
     test("let x = () => ({} = {})", "let x = () => ({} = {});\n");
-    test("let x = () => (x, {} = {})", "let x = () => (x, {} = {});\n");
+    test(
+        "let x = () => (x, {} = {})",
+        "let x = () => (x, {} = {});\n",
+    );
 
     // "{ __proto__: __proto__ }" must not become "{ __proto__ }"
     test(
@@ -483,13 +540,22 @@ fn test_for() {
     // Make sure "in" expressions are forbidden in the right places
     test("for ((a in b);;);", "for ((a in b);;);\n");
     test("for (a ? b : (c in d);;);", "for (a ? b : (c in d);;);\n");
-    test("for ((a ? b : c in d).foo;;);", "for ((a ? b : c in d).foo;;);\n");
+    test(
+        "for ((a ? b : c in d).foo;;);",
+        "for ((a ? b : c in d).foo;;);\n",
+    );
     test("for (var x = (a in b);;);", "for (var x = (a in b);;);\n");
     test("for (x = (a in b);;);", "for (x = (a in b);;);\n");
     test("for (x == (a in b);;);", "for (x == (a in b);;);\n");
     test("for (1 * (x == a in b);;);", "for (1 * (x == a in b);;);\n");
-    test("for (a ? b : x = (c in d);;);", "for (a ? b : x = (c in d);;);\n");
-    test("for (var x = y = (a in b);;);", "for (var x = y = (a in b);;);\n");
+    test(
+        "for (a ? b : x = (c in d);;);",
+        "for (a ? b : x = (c in d);;);\n",
+    );
+    test(
+        "for (var x = y = (a in b);;);",
+        "for (var x = y = (a in b);;);\n",
+    );
     test("for ([a in b];;);", "for ([a in b];;);\n");
     test("for (x(a in b);;);", "for (x(a in b);;);\n");
     test("for (x[a in b];;);", "for (x[a in b];;);\n");
@@ -504,7 +570,10 @@ fn test_for() {
 
 #[test]
 fn test_function() {
-    test("function foo(a = (b, c), ...d) {}", "function foo(a = (b, c), ...d) {}\n");
+    test(
+        "function foo(a = (b, c), ...d) {}",
+        "function foo(a = (b, c), ...d) {}\n",
+    );
     test(
         "function foo({[1 + 2]: a = 3} = {[1 + 2]: 3}) {}",
         "function foo({ [1 + 2]: a = 3 } = { [1 + 2]: 3 }) {}\n",
@@ -515,13 +584,19 @@ fn test_function() {
     );
     test("function foo([] = []) {}", "function foo([] = []) {}\n");
     test("function foo([,] = [,]) {}", "function foo([,] = [,]) {}\n");
-    test("function foo([,,] = [,,]) {}", "function foo([, ,] = [, ,]) {}\n");
+    test(
+        "function foo([,,] = [,,]) {}",
+        "function foo([, ,] = [, ,]) {}\n",
+    );
 }
 
 #[test]
 #[ignore = "TODO: Comments and parentheses handling not yet implemented"]
 fn test_comments_and_parentheses() {
-    test("(/* foo */ { x() { foo() } }.x());", "/* foo */\n({ x() {\n  foo();\n} }).x();\n");
+    test(
+        "(/* foo */ { x() { foo() } }.x());",
+        "/* foo */\n({ x() {\n  foo();\n} }).x();\n",
+    );
     test(
         "(/* foo */ function f() { foo(f) }());",
         "/* foo */\n(function f() {\n  foo(f);\n})();\n",
@@ -530,7 +605,10 @@ fn test_comments_and_parentheses() {
         "(/* foo */ class x { static y() { foo(x) } }.y());",
         "/* foo */\n(class x {\n  static y() {\n    foo(x);\n  }\n}).y();\n",
     );
-    test("(/* @__PURE__ */ (() => foo())());", "/* @__PURE__ */ (() => foo())();\n");
+    test(
+        "(/* @__PURE__ */ (() => foo())());",
+        "/* @__PURE__ */ (() => foo())();\n",
+    );
     test(
         "export default (/* foo */ function f() {});",
         "export default (\n  /* foo */\n  function f() {\n  }\n);\n",
@@ -539,9 +617,18 @@ fn test_comments_and_parentheses() {
         "export default (/* foo */ class x {});",
         "export default (\n  /* foo */\n  class x {\n  }\n);\n",
     );
-    test("x = () => (/* foo */ {});", "x = () => (\n  /* foo */\n  {}\n);\n");
-    test("for ((/* foo */ let).x of y) ;", "for (\n  /* foo */\n  (let).x of y\n) ;\n");
-    test("for (/* foo */ (let).x of y) ;", "for (\n  /* foo */\n  (let).x of y\n) ;\n");
+    test(
+        "x = () => (/* foo */ {});",
+        "x = () => (\n  /* foo */\n  {}\n);\n",
+    );
+    test(
+        "for ((/* foo */ let).x of y) ;",
+        "for (\n  /* foo */\n  (let).x of y\n) ;\n",
+    );
+    test(
+        "for (/* foo */ (let).x of y) ;",
+        "for (\n  /* foo */\n  (let).x of y\n) ;\n",
+    );
     test(
         "function *x() { yield (/* foo */ y) }",
         "function* x() {\n  yield (\n    /* foo */\n    y\n  );\n}\n",
@@ -556,9 +643,15 @@ fn test_pure_comment() {
 
     test("new (function() {})", "new (function() {})();\n");
     test("new (function() {})()", "new (function() {})();\n");
-    test("/*@__PURE__*/new (function() {})()", "/*@__PURE__*/ new (function() {})();\n");
+    test(
+        "/*@__PURE__*/new (function() {})()",
+        "/*@__PURE__*/ new (function() {})();\n",
+    );
 
-    test("export default (function() { foo() })", "export default (function() {\n\tfoo();\n});\n");
+    test(
+        "export default (function() { foo() })",
+        "export default (function() {\n\tfoo();\n});\n",
+    );
     test(
         "export default (function() { foo() })()",
         "export default (function() {\n\tfoo();\n})();\n",
@@ -576,14 +669,29 @@ fn test_generator() {
     test("(function* foo() {})", "(function* foo() {});\n");
 
     test("class Foo { *foo() {} }", "class Foo {\n\t*foo() {}\n}\n");
-    test("class Foo { static *foo() {} }", "class Foo {\n\tstatic *foo() {}\n}\n");
-    test("class Foo { *[foo]() {} }", "class Foo {\n\t*[foo]() {}\n}\n");
-    test("class Foo { static *[foo]() {} }", "class Foo {\n\tstatic *[foo]() {}\n}\n");
+    test(
+        "class Foo { static *foo() {} }",
+        "class Foo {\n\tstatic *foo() {}\n}\n",
+    );
+    test(
+        "class Foo { *[foo]() {} }",
+        "class Foo {\n\t*[foo]() {}\n}\n",
+    );
+    test(
+        "class Foo { static *[foo]() {} }",
+        "class Foo {\n\tstatic *[foo]() {}\n}\n",
+    );
 
     test("(class { *foo() {} })", "(class {\n\t*foo() {}\n});\n");
-    test("(class { static *foo() {} })", "(class {\n\tstatic *foo() {}\n});\n");
+    test(
+        "(class { static *foo() {} })",
+        "(class {\n\tstatic *foo() {}\n});\n",
+    );
     test("(class { *[foo]() {} })", "(class {\n\t*[foo]() {}\n});\n");
-    test("(class { static *[foo]() {} })", "(class {\n\tstatic *[foo]() {}\n});\n");
+    test(
+        "(class { static *[foo]() {} })",
+        "(class {\n\tstatic *[foo]() {}\n});\n",
+    );
 }
 
 #[test]
@@ -606,8 +714,14 @@ fn test_arrow() {
     test("a = () => {}", "a = () => {};\n");
     test("a || (() => {})", "a || (() => {});\n");
     test("({a = b, c = d}) => {}", "({ a = b, c = d }) => {};\n");
-    test("([{a = b, c = d} = {}] = []) => {}", "([{ a = b, c = d } = {}] = []) => {};\n");
-    test("({a: [b = c] = []} = {}) => {}", "({ a: [b = c] = [] } = {}) => {};\n");
+    test(
+        "([{a = b, c = d} = {}] = []) => {}",
+        "([{ a = b, c = d } = {}] = []) => {};\n",
+    );
+    test(
+        "({a: [b = c] = []} = {}) => {}",
+        "({ a: [b = c] = [] } = {}) => {};\n",
+    );
 
     // These are not arrow functions but initially look like one
     test("(a = b, c)", "a = b, c;\n");
@@ -620,12 +734,30 @@ fn test_arrow() {
 
 #[test]
 fn test_class() {
-    test("class Foo extends (a, b) {}", "class Foo extends (a, b) {}\n");
-    test("class Foo { get foo() {} }", "class Foo {\n\tget foo() {}\n}\n");
-    test("class Foo { set foo(x) {} }", "class Foo {\n\tset foo(x) {}\n}\n");
-    test("class Foo { static foo() {} }", "class Foo {\n\tstatic foo() {}\n}\n");
-    test("class Foo { static get foo() {} }", "class Foo {\n\tstatic get foo() {}\n}\n");
-    test("class Foo { static set foo(x) {} }", "class Foo {\n\tstatic set foo(x) {}\n}\n");
+    test(
+        "class Foo extends (a, b) {}",
+        "class Foo extends (a, b) {}\n",
+    );
+    test(
+        "class Foo { get foo() {} }",
+        "class Foo {\n\tget foo() {}\n}\n",
+    );
+    test(
+        "class Foo { set foo(x) {} }",
+        "class Foo {\n\tset foo(x) {}\n}\n",
+    );
+    test(
+        "class Foo { static foo() {} }",
+        "class Foo {\n\tstatic foo() {}\n}\n",
+    );
+    test(
+        "class Foo { static get foo() {} }",
+        "class Foo {\n\tstatic get foo() {}\n}\n",
+    );
+    test(
+        "class Foo { static set foo(x) {} }",
+        "class Foo {\n\tstatic set foo(x) {}\n}\n",
+    );
 
     test("class Foo extends foo() {}", "class Foo extends foo() {}\n");
 }
@@ -716,27 +848,69 @@ fn test_import() {
     );
 
     // non-webpack comments
-    test("import(/* before */ foo)", "import(\n\t/* before */\n\tfoo\n);\n");
-    test("import(/* before */ 'foo')", "import(\n\t/* before */\n\t\"foo\"\n);\n");
-    test("import(foo /* after */)", "import(\n\tfoo\n\t/* after */\n);\n");
-    test("import('foo' /* after */)", "import(\n\t\"foo\"\n\t/* after */\n);\n");
+    test(
+        "import(/* before */ foo)",
+        "import(\n\t/* before */\n\tfoo\n);\n",
+    );
+    test(
+        "import(/* before */ 'foo')",
+        "import(\n\t/* before */\n\t\"foo\"\n);\n",
+    );
+    test(
+        "import(foo /* after */)",
+        "import(\n\tfoo\n\t/* after */\n);\n",
+    );
+    test(
+        "import('foo' /* after */)",
+        "import(\n\t\"foo\"\n\t/* after */\n);\n",
+    );
 }
 
 #[test]
 fn test_export_default() {
-    test("export default function() {}", "export default function() {}\n");
-    test("export default function foo() {}", "export default function foo() {}\n");
-    test("export default async function() {}", "export default async function() {}\n");
-    test("export default async function foo() {}", "export default async function foo() {}\n");
+    test(
+        "export default function() {}",
+        "export default function() {}\n",
+    );
+    test(
+        "export default function foo() {}",
+        "export default function foo() {}\n",
+    );
+    test(
+        "export default async function() {}",
+        "export default async function() {}\n",
+    );
+    test(
+        "export default async function foo() {}",
+        "export default async function foo() {}\n",
+    );
     test("export default class {}", "export default class {}\n");
-    test("export default class foo {}", "export default class foo {}\n");
+    test(
+        "export default class foo {}",
+        "export default class foo {}\n",
+    );
 
-    test("export default (function() {})", "export default (function() {});\n");
-    test("export default (function foo() {})", "export default (function foo() {});\n");
-    test("export default (async function() {})", "export default (async function() {});\n");
-    test("export default (async function foo() {})", "export default (async function foo() {});\n");
+    test(
+        "export default (function() {})",
+        "export default (function() {});\n",
+    );
+    test(
+        "export default (function foo() {})",
+        "export default (function foo() {});\n",
+    );
+    test(
+        "export default (async function() {})",
+        "export default (async function() {});\n",
+    );
+    test(
+        "export default (async function foo() {})",
+        "export default (async function foo() {});\n",
+    );
     test("export default (class {})", "export default (class {});\n");
-    test("export default (class foo {})", "export default (class foo {});\n");
+    test(
+        "export default (class foo {})",
+        "export default (class foo {});\n",
+    );
 
     test(
         "export default (function() {}.toString())",
@@ -754,13 +928,31 @@ fn test_export_default() {
         "export default (async function foo() {}.toString())",
         "export default (async function foo() {}).toString();\n",
     );
-    test("export default (class {}.toString())", "export default (class {}).toString();\n");
-    test("export default (class foo {}.toString())", "export default (class foo {}).toString();\n");
+    test(
+        "export default (class {}.toString())",
+        "export default (class {}).toString();\n",
+    );
+    test(
+        "export default (class foo {}.toString())",
+        "export default (class foo {}).toString();\n",
+    );
 
-    test_minify("export default function() {}", "export default function(){}");
-    test_minify("export default function foo() {}", "export default function foo(){}");
-    test_minify("export default async function() {}", "export default async function(){}");
-    test_minify("export default async function foo() {}", "export default async function foo(){}");
+    test_minify(
+        "export default function() {}",
+        "export default function(){}",
+    );
+    test_minify(
+        "export default function foo() {}",
+        "export default function foo(){}",
+    );
+    test_minify(
+        "export default async function() {}",
+        "export default async function(){}",
+    );
+    test_minify(
+        "export default async function foo() {}",
+        "export default async function foo(){}",
+    );
     test_minify("export default class {}", "export default class{}");
     test_minify("export default class foo {}", "export default class foo{}");
 }
@@ -851,15 +1043,30 @@ fn minify() {
 
     test_minify("import a from 'path'", "import a from\"path\";");
     test_minify("import * as ns from 'path'", "import*as ns from\"path\";");
-    test_minify("import {a, b as c} from 'path'", "import{a,b as c}from\"path\";");
-    test_minify("import {a, ' ' as c} from 'path'", "import{a,\" \"as c}from\"path\";");
+    test_minify(
+        "import {a, b as c} from 'path'",
+        "import{a,b as c}from\"path\";",
+    );
+    test_minify(
+        "import {a, ' ' as c} from 'path'",
+        "import{a,\" \"as c}from\"path\";",
+    );
 
     test_minify("export * as ns from 'path'", "export*as ns from\"path\";");
     test_minify("export * as ' ' from 'path'", "export*as\" \"from\"path\";");
-    test_minify("export {a, b as c} from 'path'", "export{a,b as c}from\"path\";");
-    test_minify("export {' ', '-' as ';'} from 'path'", "export{\" \",\"-\"as\";\"}from\"path\";");
+    test_minify(
+        "export {a, b as c} from 'path'",
+        "export{a,b as c}from\"path\";",
+    );
+    test_minify(
+        "export {' ', '-' as ';'} from 'path'",
+        "export{\" \",\"-\"as\";\"}from\"path\";",
+    );
     test_minify("let a, b; export {a, b as c}", "let a,b;export{a,b as c};");
-    test_minify("let a, b; export {a, b as ' '}", "let a,b;export{a,b as\" \"};");
+    test_minify(
+        "let a, b; export {a, b as ' '}",
+        "let a,b;export{a,b as\" \"};",
+    );
 
     // Print some strings using template literals when minifying
     test("x = '\\n'", "x = \"\\n\";\n");
@@ -871,7 +1078,10 @@ fn minify() {
 
     // Comment statements must not affect their surroundings when minified
     test_minify("//!single\nthrow 1 + 2", "//!single\nthrow 1+2;");
-    test_minify("/*!multi-\nline*/\nthrow 1 + 2", "/*!multi-\nline*/throw 1+2;");
+    test_minify(
+        "/*!multi-\nline*/\nthrow 1 + 2",
+        "/*!multi-\nline*/throw 1+2;",
+    );
 }
 
 #[test]
@@ -902,7 +1112,10 @@ fn test_ascii_only() {
     // testTargetASCII(t, 5, "x.𐀀", "x[\"\\uD800\\uDC00\"];\n");
 
     // Escapes should use consistent case
-    test_ascii("var \\u{100a} = {\\u100A: '\\u100A'}", "var \\u100A = { \\u100A: \"\\u100A\" };\n");
+    test_ascii(
+        "var \\u{100a} = {\\u100A: '\\u100A'}",
+        "var \\u100A = { \\u100A: \"\\u100A\" };\n",
+    );
     // esbuild quotes an astral property key for its ES5 targets; as an ES2015+ identifier it can stay bare.
     test_ascii(
         "var \\u{1000a} = {\\u{1000A}: '\\u{1000A}'}",
@@ -917,10 +1130,19 @@ fn test_ascii_only() {
     test_ascii("let x = '\u{FEFF}'", "let x = \"\\uFEFF\";\n");
 
     // There should still be a space before "extends"
-    test_ascii("class 𐀀 extends π {}", "class \\u{10000} extends \\u03C0 {}\n");
-    test_ascii("(class 𐀀 extends π {})", "(class \\u{10000} extends \\u03C0 {});\n");
+    test_ascii(
+        "class 𐀀 extends π {}",
+        "class \\u{10000} extends \\u03C0 {}\n",
+    );
+    test_ascii(
+        "(class 𐀀 extends π {})",
+        "(class \\u{10000} extends \\u03C0 {});\n",
+    );
     test_minify_ascii("class 𐀀 extends π {}", "class \\u{10000} extends \\u03C0{}");
-    test_minify_ascii("(class 𐀀 extends π {})", "(class \\u{10000} extends \\u03C0{});");
+    test_minify_ascii(
+        "(class 𐀀 extends π {})",
+        "(class \\u{10000} extends \\u03C0{});",
+    );
 }
 
 #[test]
@@ -1032,16 +1254,46 @@ fn test_avoid_slash_script() {
     test("x = `<</script`", "x = `<<\\/script`;\n");
     test("x = `</</script`", "x = `</<\\/script`;\n");
     test("x = `</script</script`", "x = `<\\/script<\\/script`;\n");
-    test_minify("x = 1 < /script/.exec(y).length", "x=1< /script/.exec(y).length;");
-    test_minify("x = 1 < /SCRIPT/.exec(y).length", "x=1< /SCRIPT/.exec(y).length;");
-    test_minify("x = 1 < /ScRiPt/.exec(y).length", "x=1< /ScRiPt/.exec(y).length;");
-    test_minify("x = 1 << /script/.exec(y).length", "x=1<< /script/.exec(y).length;");
-    test("//! </script\n//! >/script\n//! /script", "//! <\\/script\n//! >/script\n//! /script\n");
-    test("//! </SCRIPT\n//! >/SCRIPT\n//! /SCRIPT", "//! <\\/SCRIPT\n//! >/SCRIPT\n//! /SCRIPT\n");
-    test("//! </ScRiPt\n//! >/ScRiPt\n//! /ScRiPt", "//! <\\/ScRiPt\n//! >/ScRiPt\n//! /ScRiPt\n");
-    test("/*! </script \n</script */", "/*! <\\/script \n<\\/script */");
-    test("/*! </SCRIPT \n</SCRIPT */", "/*! <\\/SCRIPT \n<\\/SCRIPT */");
-    test("/*! </ScRiPt \n</ScRiPt */", "/*! <\\/ScRiPt \n<\\/ScRiPt */");
+    test_minify(
+        "x = 1 < /script/.exec(y).length",
+        "x=1< /script/.exec(y).length;",
+    );
+    test_minify(
+        "x = 1 < /SCRIPT/.exec(y).length",
+        "x=1< /SCRIPT/.exec(y).length;",
+    );
+    test_minify(
+        "x = 1 < /ScRiPt/.exec(y).length",
+        "x=1< /ScRiPt/.exec(y).length;",
+    );
+    test_minify(
+        "x = 1 << /script/.exec(y).length",
+        "x=1<< /script/.exec(y).length;",
+    );
+    test(
+        "//! </script\n//! >/script\n//! /script",
+        "//! <\\/script\n//! >/script\n//! /script\n",
+    );
+    test(
+        "//! </SCRIPT\n//! >/SCRIPT\n//! /SCRIPT",
+        "//! <\\/SCRIPT\n//! >/SCRIPT\n//! /SCRIPT\n",
+    );
+    test(
+        "//! </ScRiPt\n//! >/ScRiPt\n//! /ScRiPt",
+        "//! <\\/ScRiPt\n//! >/ScRiPt\n//! /ScRiPt\n",
+    );
+    test(
+        "/*! </script \n</script */",
+        "/*! <\\/script \n<\\/script */",
+    );
+    test(
+        "/*! </SCRIPT \n</SCRIPT */",
+        "/*! <\\/SCRIPT \n<\\/SCRIPT */",
+    );
+    test(
+        "/*! </ScRiPt \n</ScRiPt */",
+        "/*! <\\/ScRiPt \n<\\/ScRiPt */",
+    );
     test("String.raw`</script`", "String.raw`<\\/script`;\n");
     test("String.raw`</script${a}`", "String.raw`<\\/script${a}`;\n");
     test("String.raw`${a}</script`", "String.raw`${a}<\\/script`;\n");
@@ -1054,8 +1306,14 @@ fn test_avoid_slash_script() {
     test("x = '< /script'", "x = \"< /script\";\n");
     test("x = '/script>'", "x = \"/script>\";\n");
     test("x = '<script>'", "x = \"<script>\";\n");
-    test_minify("x = 1 < / script/.exec(y).length", "x=1</ script/.exec(y).length;");
-    test_minify("x = 1 << / script/.exec(y).length", "x=1<</ script/.exec(y).length;");
+    test_minify(
+        "x = 1 < / script/.exec(y).length",
+        "x=1</ script/.exec(y).length;",
+    );
+    test_minify(
+        "x = 1 << / script/.exec(y).length",
+        "x=1<</ script/.exec(y).length;",
+    );
 }
 
 #[test]

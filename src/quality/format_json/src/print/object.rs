@@ -67,7 +67,10 @@ impl<'a> Format<'a, JsonFormatContext<'a>> for FmtJsonObject<'a, '_> {
                                 write_object_key(&prop.key, f);
                             }
                             write!(f, [":", space()]);
-                            FmtJsonValue { expression: &prop.value }.fmt(f);
+                            FmtJsonValue {
+                                expression: &prop.value,
+                            }
+                            .fmt(f);
                         }
                     }
                     ObjectPropertyKind::SpreadProperty(spread) => {
@@ -100,7 +103,10 @@ impl<'a> Format<'a, JsonFormatContext<'a>> for FmtJsonObject<'a, '_> {
                 // `+ 1` skips the opening `{`.
                 // Scan only within the object so the slice ends at the closing `}` at the latest.
                 let after_brace = self.object.span.start + 1;
-                let rest = f.context().source_text().slice_range(after_brace, self.object.span.end);
+                let rest = f
+                    .context()
+                    .source_text()
+                    .slice_range(after_brace, self.object.span.end);
                 has_line_terminator_after_skipping_comments(rest)
             }
             Expand::Never => false,

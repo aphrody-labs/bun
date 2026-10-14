@@ -285,7 +285,11 @@ fn diagnose_array_in_array_spread<'a>(
                 let mut codegen = fixer.codegen();
                 codegen.print_ascii_byte(b'[');
                 let n = spreads.iter().map(|arr| arr.elements.len()).sum::<usize>();
-                for (i, el) in spreads.iter().flat_map(|arr| arr.elements.iter()).enumerate() {
+                for (i, el) in spreads
+                    .iter()
+                    .flat_map(|arr| arr.elements.iter())
+                    .enumerate()
+                {
                     match el {
                         ArrayExpressionElement::Elision(_) => {
                             if i == n - 1 {
@@ -332,7 +336,10 @@ fn check_useless_iterable_to_array<'a>(
         }
         AstKind::YieldExpression(yield_expr) => {
             if yield_expr.delegate
-                && yield_expr.argument.as_ref().is_some_and(|arg| arg.span() == array_expr.span)
+                && yield_expr
+                    .argument
+                    .as_ref()
+                    .is_some_and(|arg| arg.span() == array_expr.span)
             {
                 ctx.diagnostic(iterable_to_array_in_yield_star(span));
                 return true;
@@ -342,7 +349,9 @@ fn check_useless_iterable_to_array<'a>(
 
         AstKind::NewExpression(new_expr) => {
             if !((is_new_map_or_set_with_iterable(new_expr) || is_new_typed_array(new_expr))
-                && new_expr.arguments[0].span().contains_inclusive(array_expr.span))
+                && new_expr.arguments[0]
+                    .span()
+                    .contains_inclusive(array_expr.span))
             {
                 return false;
             }
@@ -367,7 +376,9 @@ fn check_useless_iterable_to_array<'a>(
                     Some(1),
                     Some(1),
                 ))
-                && call_expr.arguments[0].span().contains_inclusive(array_expr.span))
+                && call_expr.arguments[0]
+                    .span()
+                    .contains_inclusive(array_expr.span))
             {
                 return false;
             }
@@ -387,7 +398,12 @@ fn check_useless_iterable_to_array<'a>(
 
 /// Matches `new {Set,WeakSet,Map,WeakMap}(iterable)`
 pub fn is_new_map_or_set_with_iterable(new_expr: &NewExpression) -> bool {
-    is_new_expression(new_expr, &["Map", "WeakMap", "Set", "WeakSet"], Some(1), Some(1))
+    is_new_expression(
+        new_expr,
+        &["Map", "WeakMap", "Set", "WeakSet"],
+        Some(1),
+        Some(1),
+    )
 }
 
 fn check_useless_clone<'a>(
@@ -400,12 +416,19 @@ fn check_useless_clone<'a>(
     let target = spread_elem.argument.get_inner_expression();
 
     // already diagnosed by first check
-    if matches!(target, Expression::ArrayExpression(_) | Expression::ObjectExpression(_)) {
+    if matches!(
+        target,
+        Expression::ArrayExpression(_) | Expression::ObjectExpression(_)
+    ) {
         return;
     }
 
     let hint = target.const_eval();
-    let hint_matches_expr = if is_array { hint.is_array() } else { hint.is_object() };
+    let hint_matches_expr = if is_array {
+        hint.is_array()
+    } else {
+        hint.is_object()
+    };
     if hint_matches_expr {
         let name = diagnostic_name(ctx, target);
 
@@ -437,7 +460,11 @@ fn check_useless_clone<'a>(
 fn diagnostic_name<'a>(ctx: &LintContext<'a>, expr: &Expression<'a>) -> Option<&'a str> {
     fn pretty_snippet(snippet: &str) -> Option<&str> {
         // unwieldy snippets don't get included in diagnostic messages
-        if snippet.len() > 50 || snippet.contains('\n') { None } else { Some(snippet) }
+        if snippet.len() > 50 || snippet.contains('\n') {
+            None
+        } else {
+            Some(snippet)
+        }
     }
 
     match expr {
@@ -523,7 +550,11 @@ fn get_method_name(call_expr: &CallExpression) -> Option<String> {
         "unknown"
     };
 
-    Some(format!("{}.{}", object_name, callee.static_property_name().unwrap()))
+    Some(format!(
+        "{}.{}",
+        object_name,
+        callee.static_property_name().unwrap()
+    ))
 }
 
 #[test]
@@ -772,12 +803,27 @@ fn test() {
         ("[...[...[1,2,3]]]", "[...[1,2,3]]"),
         ("const array = [...[a, , b,]]", "const array = [a, , b,]"),
         // object literals
-        ("const obj = { a, ...{ b, c } }", "const obj = ({\n\ta,\n\tb,\n\tc\n})"),
-        ("const obj = { a, ...{ b, c, } }", "const obj = ({\n\ta,\n\tb,\n\tc\n})"),
-        ("const obj = {a, ...{b,c}}", "const obj = ({\n\ta,\n\tb,\n\tc\n})"),
-        ("const obj = {a, ...{b,c,}}", "const obj = ({\n\ta,\n\tb,\n\tc\n})"),
+        (
+            "const obj = { a, ...{ b, c } }",
+            "const obj = ({\n\ta,\n\tb,\n\tc\n})",
+        ),
+        (
+            "const obj = { a, ...{ b, c, } }",
+            "const obj = ({\n\ta,\n\tb,\n\tc\n})",
+        ),
+        (
+            "const obj = {a, ...{b,c}}",
+            "const obj = ({\n\ta,\n\tb,\n\tc\n})",
+        ),
+        (
+            "const obj = {a, ...{b,c,}}",
+            "const obj = ({\n\ta,\n\tb,\n\tc\n})",
+        ),
         // iterable spread
-        (r"const promise = Promise.any([...iterable])", r"const promise = Promise.any(iterable)"),
+        (
+            r"const promise = Promise.any([...iterable])",
+            r"const promise = Promise.any(iterable)",
+        ),
         (r"new Map([...iterable])", r"new Map(iterable)"),
         (r"new Map([ ...((iterable)) ])", r"new Map(((iterable)))"),
         // (r"new Map(...[...iterable])", r"new Map(iterable)"),
@@ -790,9 +836,15 @@ fn test() {
         (r"[...await Promise.all(foo)]", r"await Promise.all(foo)"),
         (r"[...Array.from(iterable)]", r"Array.from(iterable)"),
         ("[...((0, []))]", "((0, []))"),
-        ("[...arr.reduce((a, b) => a.push(b), [])]", "arr.reduce((a, b) => a.push(b), [])"),
+        (
+            "[...arr.reduce((a, b) => a.push(b), [])]",
+            "arr.reduce((a, b) => a.push(b), [])",
+        ),
         // Issue: <https://github.com/oxc-project/oxc/issues/8115>
-        ("setupServer(...[...importHandlers])", "setupServer(...importHandlers)"),
+        (
+            "setupServer(...[...importHandlers])",
+            "setupServer(...importHandlers)",
+        ),
         ("setupServer(...[1, 2, 3])", "setupServer(1, 2, 3)"),
         ("[...[1,2,,,],...[3,4,,,]]", "[1, 2, , , 3, 4, , ,]"),
         ("[...[...foo], ...[...bar]]", "[...foo, ...bar]"),

@@ -116,7 +116,12 @@ static PROPERTY_MANGLE_OPTIONS: LazyLock<ManglePropertiesOptions> = LazyLock::ne
     let mut options = ManglePropertiesOptions::from_pattern("^_").expect("valid property regex");
     options.mangle_quoted = true;
     // These methods come from the host, so their names cannot change.
-    for name in ["__defineGetter__", "__defineSetter__", "__lookupGetter__", "__lookupSetter__"] {
+    for name in [
+        "__defineGetter__",
+        "__defineSetter__",
+        "__lookupGetter__",
+        "__lookupSetter__",
+    ] {
         options.reserved.insert(name.into());
     }
     options
@@ -175,7 +180,11 @@ pub fn run(files: &[Test262File]) -> Vec<CoverageResult> {
             http.post(&format!("{HOST}:{port}/run"))
                 .send_json(request)
                 .map_err(|err| err.to_string())
-                .and_then(|mut res| res.body_mut().read_to_string().map_err(|err| err.to_string()))
+                .and_then(|mut res| {
+                    res.body_mut()
+                        .read_to_string()
+                        .map_err(|err| err.to_string())
+                })
         };
         post().or_else(|_| post())
     };
@@ -235,7 +244,9 @@ fn spawn_server() -> (Child, u16) {
     let mut reader = BufReader::new(stdout);
 
     let mut first_line = String::new();
-    reader.read_line(&mut first_line).expect("failed to read the port line from runtime.js");
+    reader
+        .read_line(&mut first_line)
+        .expect("failed to read the port line from runtime.js");
     let port = first_line
         .strip_prefix("PORT ")
         .and_then(|rest| rest.trim().parse::<u16>().ok())
@@ -255,10 +266,16 @@ fn run_case(
 ) -> CoverageResult {
     // Compute the import dir once per file, rather than per variant (it calls
     // `workspace_root()`, which walks the filesystem to find the project root).
-    let import_dir =
-        workspace_root().join(file.path.parent().unwrap()).to_string_lossy().into_owned();
+    let import_dir = workspace_root()
+        .join(file.path.parent().unwrap())
+        .to_string_lossy()
+        .into_owned();
     let result = run_variants(file, &import_dir, port, send);
-    CoverageResult { path: file.path.clone(), should_fail: false, result }
+    CoverageResult {
+        path: file.path.clone(),
+        should_fail: false,
+        result,
+    }
 }
 
 /// Run the three code-production variants in order, stopping at the first failure.
@@ -337,7 +354,11 @@ fn run_test_code(
                 || file.meta.negative.as_ref().is_some_and(|negative| {
                     negative.phase.is_runtime() && output.starts_with(&*negative.error_type)
                 });
-            if passed { TestResult::Passed } else { TestResult::GenericError(case, output) }
+            if passed {
+                TestResult::Passed
+            } else {
+                TestResult::GenericError(case, output)
+            }
         }
         Err(error) => TestResult::GenericError(case, error),
     }
@@ -352,12 +373,19 @@ fn get_code(file: &Test262File, transform: bool, minify: bool) -> String {
     let flags = &file.meta.flags;
     let is_module = flags.contains(&TestFlag::Module);
     let is_only_strict = flags.contains(&TestFlag::OnlyStrict);
-    let source_type = SourceType::cjs().with_script(!is_module).with_module(is_module);
+    let source_type = SourceType::cjs()
+        .with_script(!is_module)
+        .with_module(is_module);
     let allocator = Allocator::default();
-    let mut program = Parser::new(&allocator, source_text, source_type).parse().program;
+    let mut program = Parser::new(&allocator, source_text, source_type)
+        .parse()
+        .program;
 
     if transform {
-        let scoping = SemanticBuilder::new().build(&program).semantic.into_scoping();
+        let scoping = SemanticBuilder::new()
+            .build(&program)
+            .semantic
+            .into_scoping();
         let mut options = TransformOptions::enable_all();
         options.jsx.refresh = None;
         options.helper_loader.mode = HelperLoaderMode::External;
@@ -379,7 +407,11 @@ fn get_code(file: &Test262File, transform: bool, minify: bool) -> String {
     };
 
     let mut text = Codegen::new()
-        .with_options(if minify { CodegenOptions::minify() } else { CodegenOptions::default() })
+        .with_options(if minify {
+            CodegenOptions::minify()
+        } else {
+            CodegenOptions::default()
+        })
         .with_scoping(scoping)
         .build(&program)
         .code;
@@ -414,14 +446,25 @@ fn skip_case(file: &Test262File) -> bool {
     let features = &meta.features;
 
     // Negative tests that fail at parse time can't produce runnable code.
-    meta.negative.as_ref().is_some_and(|negative| negative.phase == Phase::Parse)
-        || meta.esid.as_ref().is_some_and(|esid| SKIP_ESID.contains(&esid.as_ref()))
+    meta.negative
+        .as_ref()
+        .is_some_and(|negative| negative.phase == Phase::Parse)
+        || meta
+            .esid
+            .as_ref()
+            .is_some_and(|esid| SKIP_ESID.contains(&esid.as_ref()))
         || base_path.contains("built-ins")
         || base_path.contains("staging")
         || base_path.contains("intl402")
-        || includes.iter().any(|include| SKIP_INCLUDES.contains(&include.as_ref()))
-        || features.iter().any(|feature| SKIP_FEATURES.contains(&feature.as_ref()))
-        || SKIP_TEST_CASES.iter().any(|path| test262_path.starts_with(path))
+        || includes
+            .iter()
+            .any(|include| SKIP_INCLUDES.contains(&include.as_ref()))
+        || features
+            .iter()
+            .any(|feature| SKIP_FEATURES.contains(&feature.as_ref()))
+        || SKIP_TEST_CASES
+            .iter()
+            .any(|path| test262_path.starts_with(path))
         || get_v8_test262_failure_paths().iter().any(|path| {
             if let Some(path) = path.strip_suffix('*') {
                 test262_path.starts_with(path)

@@ -28,13 +28,8 @@ pub(crate) fn js_setns(global: &JSGlobalObject, frame: &CallFrame) -> JsResult<J
         let fd = super::int_arg(frame, 0);
         let nstype = super::int_arg(frame, 1);
         // SAFETY: `setns` takes two integers and touches no user memory.
-        let rc = unsafe {
-            libc::syscall(
-                super::nr::SETNS,
-                fd as libc::c_long,
-                nstype as libc::c_long,
-            )
-        };
+        let rc =
+            unsafe { libc::syscall(super::nr::SETNS, fd as libc::c_long, nstype as libc::c_long) };
         super::check(global, rc, "setns", None)?;
         Ok(JSValue::UNDEFINED)
     }

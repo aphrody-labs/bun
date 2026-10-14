@@ -40,7 +40,9 @@ pub fn normalize_plugin_name(plugin_name: &str) -> Cow<'_, str> {
             }
             // @foo/eslint-plugin-bar -> @foo/bar
             // @foo/oxlint-plugin-bar -> @foo/bar
-            if let Some(suffix) = rest.strip_prefix(prefix).and_then(|rest| rest.strip_prefix('-'))
+            if let Some(suffix) = rest
+                .strip_prefix(prefix)
+                .and_then(|rest| rest.strip_prefix('-'))
             {
                 return Cow::Owned(format!("{scope}/{suffix}"));
             }
@@ -49,8 +51,9 @@ pub fn normalize_plugin_name(plugin_name: &str) -> Cow<'_, str> {
 
     // Handle non-scoped packages
     for prefix in PLUGIN_PREFIXES {
-        if let Some(suffix) =
-            plugin_name.strip_prefix(prefix).and_then(|rest| rest.strip_prefix('-'))
+        if let Some(suffix) = plugin_name
+            .strip_prefix(prefix)
+            .and_then(|rest| rest.strip_prefix('-'))
         {
             // eslint-plugin-foo -> foo
             // oxlint-plugin-foo -> foo
@@ -226,7 +229,9 @@ impl<'de> Deserialize<'de> for LintPlugins {
             if let Ok(plugin_flag) = LintPlugins::try_from(plugin.as_str()) {
                 lint_plugins |= plugin_flag;
             } else {
-                return Err(serde::de::Error::custom(format!("Unknown plugin: '{plugin}'.")));
+                return Err(serde::de::Error::custom(format!(
+                    "Unknown plugin: '{plugin}'."
+                )));
             }
         }
 
@@ -314,14 +319,20 @@ mod tests {
     #[test]
     fn test_plugins_default() {
         let default = LintPlugins::default();
-        assert_eq!(default, LintPlugins::UNICORN | LintPlugins::TYPESCRIPT | LintPlugins::OXC);
+        assert_eq!(
+            default,
+            LintPlugins::UNICORN | LintPlugins::TYPESCRIPT | LintPlugins::OXC
+        );
         assert!(!default.contains(LintPlugins::REACT));
     }
 
     #[test]
     fn test_plugin_from_str() {
         assert_eq!(LintPlugins::try_from("react"), Ok(LintPlugins::REACT));
-        assert_eq!(LintPlugins::try_from("typescript-eslint"), Ok(LintPlugins::TYPESCRIPT));
+        assert_eq!(
+            LintPlugins::try_from("typescript-eslint"),
+            Ok(LintPlugins::TYPESCRIPT)
+        );
         assert_eq!(LintPlugins::try_from("deepscan"), Ok(LintPlugins::OXC));
         assert_eq!(LintPlugins::try_from("unknown"), Err(()));
     }
@@ -372,14 +383,38 @@ mod tests {
     #[test]
     fn test_plugin_normalization() {
         // Test eslint-plugin- and oxlint-plugin- prefix normalization
-        assert_eq!(LintPlugins::try_from("eslint-plugin-react"), Ok(LintPlugins::REACT));
-        assert_eq!(LintPlugins::try_from("eslint-plugin-unicorn"), Ok(LintPlugins::UNICORN));
-        assert_eq!(LintPlugins::try_from("eslint-plugin-import"), Ok(LintPlugins::IMPORT));
-        assert_eq!(LintPlugins::try_from("eslint-plugin-jest"), Ok(LintPlugins::JEST));
-        assert_eq!(LintPlugins::try_from("oxlint-plugin-react"), Ok(LintPlugins::REACT));
-        assert_eq!(LintPlugins::try_from("oxlint-plugin-unicorn"), Ok(LintPlugins::UNICORN));
-        assert_eq!(LintPlugins::try_from("oxlint-plugin-import"), Ok(LintPlugins::IMPORT));
-        assert_eq!(LintPlugins::try_from("oxlint-plugin-jest"), Ok(LintPlugins::JEST));
+        assert_eq!(
+            LintPlugins::try_from("eslint-plugin-react"),
+            Ok(LintPlugins::REACT)
+        );
+        assert_eq!(
+            LintPlugins::try_from("eslint-plugin-unicorn"),
+            Ok(LintPlugins::UNICORN)
+        );
+        assert_eq!(
+            LintPlugins::try_from("eslint-plugin-import"),
+            Ok(LintPlugins::IMPORT)
+        );
+        assert_eq!(
+            LintPlugins::try_from("eslint-plugin-jest"),
+            Ok(LintPlugins::JEST)
+        );
+        assert_eq!(
+            LintPlugins::try_from("oxlint-plugin-react"),
+            Ok(LintPlugins::REACT)
+        );
+        assert_eq!(
+            LintPlugins::try_from("oxlint-plugin-unicorn"),
+            Ok(LintPlugins::UNICORN)
+        );
+        assert_eq!(
+            LintPlugins::try_from("oxlint-plugin-import"),
+            Ok(LintPlugins::IMPORT)
+        );
+        assert_eq!(
+            LintPlugins::try_from("oxlint-plugin-jest"),
+            Ok(LintPlugins::JEST)
+        );
 
         // Test @scope/eslint-plugin and @scope/oxlint-plugin normalization
         assert_eq!(
@@ -394,10 +429,16 @@ mod tests {
         // Verify existing plugin names still work
         assert_eq!(LintPlugins::try_from("react"), Ok(LintPlugins::REACT));
         assert_eq!(LintPlugins::try_from("unicorn"), Ok(LintPlugins::UNICORN));
-        assert_eq!(LintPlugins::try_from("@typescript-eslint"), Ok(LintPlugins::TYPESCRIPT));
+        assert_eq!(
+            LintPlugins::try_from("@typescript-eslint"),
+            Ok(LintPlugins::TYPESCRIPT)
+        );
 
         assert_eq!(LintPlugins::try_from("vitest"), Ok(LintPlugins::VITEST));
-        assert_eq!(LintPlugins::try_from("eslint-plugin-vitest"), Ok(LintPlugins::VITEST));
+        assert_eq!(
+            LintPlugins::try_from("eslint-plugin-vitest"),
+            Ok(LintPlugins::VITEST)
+        );
     }
 
     #[test]
@@ -422,7 +463,10 @@ mod tests {
 
         // Test no change for already normalized names
         assert_eq!(normalize_plugin_name("react"), "react");
-        assert_eq!(normalize_plugin_name("@typescript-eslint"), "@typescript-eslint");
+        assert_eq!(
+            normalize_plugin_name("@typescript-eslint"),
+            "@typescript-eslint"
+        );
     }
 
     #[test]

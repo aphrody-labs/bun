@@ -24,8 +24,14 @@ pub fn generate_schema_json<T: JsonSchema>() -> String {
     // Allow comments and trailing commas for vscode-json-languageservice
     // NOTE: This is NOT part of standard JSON Schema specification
     // https://github.com/microsoft/vscode-json-languageservice/blob/fb83547762901f32d8449d57e24666573016b10c/src/jsonLanguageTypes.ts#L151-L159
-    schema.schema.extensions.insert("allowComments".to_string(), Value::Bool(true));
-    schema.schema.extensions.insert("allowTrailingCommas".to_string(), Value::Bool(true));
+    schema
+        .schema
+        .extensions
+        .insert("allowComments".to_string(), Value::Bool(true));
+    schema
+        .schema
+        .extensions
+        .insert("allowTrailingCommas".to_string(), Value::Bool(true));
 
     // Inject markdownDescription fields for better editor support (e.g., VS Code)
     let mut json = serde_json::to_value(&schema).unwrap();
@@ -42,7 +48,10 @@ fn inject_markdown_descriptions(value: &mut Value) {
         Value::Object(map) => {
             // If this object has a `description` field, copy it to `markdownDescription`
             if let Some(Value::String(desc_str)) = map.get("description") {
-                map.insert("markdownDescription".to_string(), Value::String(desc_str.clone()));
+                map.insert(
+                    "markdownDescription".to_string(),
+                    Value::String(desc_str.clone()),
+                );
             }
 
             // Recursively process all values in the object

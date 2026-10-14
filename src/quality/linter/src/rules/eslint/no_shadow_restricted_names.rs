@@ -14,7 +14,9 @@ const PRE_DEFINE_VAR: [&str; 5] = ["Infinity", "NaN", "arguments", "eval", "unde
 
 fn no_shadow_restricted_names_diagnostic(shadowed_name: &str, span: Span) -> OxcDiagnostic {
     OxcDiagnostic::warn("Shadowing of global properties such as `undefined` is not allowed.")
-        .with_help(format!("Rename '{shadowed_name}' to avoid shadowing the global property."))
+        .with_help(format!(
+            "Rename '{shadowed_name}' to avoid shadowing the global property."
+        ))
         .with_label(span)
 }
 
@@ -30,7 +32,9 @@ pub struct NoShadowRestrictedNamesConfig {
 
 impl Default for NoShadowRestrictedNamesConfig {
     fn default() -> Self {
-        Self { report_global_this: true }
+        Self {
+            report_global_this: true,
+        }
     }
 }
 
@@ -161,15 +165,21 @@ fn test() {
         ("var undefined; var undefined;", None),
         ("let undefined", None), // { "ecmaVersion": 2015 },
         ("import { undefined as undef } from 'foo';", None), // { "sourceType": "module", "ecmaVersion": 2015, },
-        ("let globalThis;", Some(serde_json::json!([{ "reportGlobalThis": false }]))), // { "ecmaVersion": 2020 },
-        ("class globalThis {}", Some(serde_json::json!([{ "reportGlobalThis": false }]))), // { "ecmaVersion": 2020 },
+        (
+            "let globalThis;",
+            Some(serde_json::json!([{ "reportGlobalThis": false }])),
+        ), // { "ecmaVersion": 2020 },
+        (
+            "class globalThis {}",
+            Some(serde_json::json!([{ "reportGlobalThis": false }])),
+        ), // { "ecmaVersion": 2020 },
         (
             "import { baz as globalThis } from 'foo';",
             Some(serde_json::json!([{ "reportGlobalThis": false }])),
         ), // { "ecmaVersion": 2020, "sourceType": "module", },
-        ("globalThis.foo", None),         // { "ecmaVersion": 2020 },
-        ("const foo = globalThis", None), // { "ecmaVersion": 2020 },
-        ("function foo() { return globalThis; }", None), // { "ecmaVersion": 2020 },
+        ("globalThis.foo", None),                            // { "ecmaVersion": 2020 },
+        ("const foo = globalThis", None),                    // { "ecmaVersion": 2020 },
+        ("function foo() { return globalThis; }", None),     // { "ecmaVersion": 2020 },
         ("import { globalThis as foo } from 'bar'", None), // { "ecmaVersion": 2020, "sourceType": "module" }
         (
             "export enum Globals { undefined = 'undefined', NaN = 'nan', Infinity = 'infinity', eval = 'eval', arguments = 'arguments' }",
@@ -178,7 +188,10 @@ fn test() {
     ];
 
     let fail = vec![
-        ("function NaN(NaN) { var NaN; !function NaN(NaN) { try {} catch(NaN) {} }; }", None),
+        (
+            "function NaN(NaN) { var NaN; !function NaN(NaN) { try {} catch(NaN) {} }; }",
+            None,
+        ),
         (
             "function undefined(undefined) { !function undefined(undefined) { try {} catch(undefined) {} }; }",
             None,
@@ -191,7 +204,10 @@ fn test() {
             "function arguments(arguments) { var arguments; !function arguments(arguments) { try {} catch(arguments) {} }; }",
             None,
         ),
-        ("function eval(eval) { var eval; !function eval(eval) { try {} catch(eval) {} }; }", None),
+        (
+            "function eval(eval) { var eval; !function eval(eval) { try {} catch(eval) {} }; }",
+            None,
+        ),
         (
             "var eval = (eval) => { var eval; !function eval(eval) { try {} catch(eval) {} }; }",
             None,
@@ -228,6 +244,11 @@ fn test() {
         ("import * as globalThis from 'foo';", None), // { "ecmaVersion": 2020, "sourceType": "module", }
     ];
 
-    Tester::new(NoShadowRestrictedNames::NAME, NoShadowRestrictedNames::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        NoShadowRestrictedNames::NAME,
+        NoShadowRestrictedNames::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

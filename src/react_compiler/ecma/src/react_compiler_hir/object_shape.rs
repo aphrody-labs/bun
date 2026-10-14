@@ -156,7 +156,11 @@ pub struct ShapeRegistry<'a> {
 impl<'a> ShapeRegistry<'a> {
     /// Create an empty builder-mode registry.
     pub fn new() -> Self {
-        Self { base: None, entries: IdentHashMap::default(), allocator: None }
+        Self {
+            base: None,
+            entries: IdentHashMap::default(),
+            allocator: None,
+        }
     }
 
     /// Create an overlay-mode registry backed by a static base.
@@ -164,11 +168,17 @@ impl<'a> ShapeRegistry<'a> {
         base: &'static IdentHashMap<'static, ObjectShape<'static>>,
         allocator: &'a Allocator,
     ) -> Self {
-        Self { base: Some(base), entries: IdentHashMap::default(), allocator: Some(allocator) }
+        Self {
+            base: Some(base),
+            entries: IdentHashMap::default(),
+            allocator: Some(allocator),
+        }
     }
 
     pub fn get(&self, key: &str) -> Option<&ObjectShape<'a>> {
-        self.entries.get(key).or_else(|| self.base.and_then(|b| b.get(key)))
+        self.entries
+            .get(key)
+            .or_else(|| self.base.and_then(|b| b.get(key)))
     }
 
     pub fn insert(&mut self, key: Ident<'a>, value: ObjectShape<'a>) {
@@ -178,7 +188,10 @@ impl<'a> ShapeRegistry<'a> {
     /// Consume the registry and return the inner map.
     /// Only valid in builder mode (no base).
     pub(crate) fn into_inner(self) -> IdentHashMap<'a, ObjectShape<'a>> {
-        debug_assert!(self.base.is_none(), "into_inner() called on overlay-mode ShapeRegistry");
+        debug_assert!(
+            self.base.is_none(),
+            "into_inner() called on overlay-mode ShapeRegistry"
+        );
         self.entries
     }
 
@@ -214,7 +227,11 @@ impl Default for ShapeRegistry<'_> {
 
 impl Clone for ShapeRegistry<'_> {
     fn clone(&self) -> Self {
-        Self { base: self.base, entries: self.entries.clone(), allocator: self.allocator }
+        Self {
+            base: self.base,
+            entries: self.entries.clone(),
+            allocator: self.allocator,
+        }
     }
 }
 
@@ -253,7 +270,11 @@ pub fn add_function<'a>(
             aliasing: sig.aliasing,
         }),
     );
-    Type::Function { shape_id: Some(shape_id), return_type: Box::new(return_type), is_constructor }
+    Type::Function {
+        shape_id: Some(shape_id),
+        return_type: Box::new(return_type),
+        is_constructor,
+    }
 }
 
 /// Add a hook to a ShapeRegistry.
@@ -301,7 +322,9 @@ pub fn add_object<'a>(
 ) -> Type<'a> {
     let shape_id = id.unwrap_or_else(|| registry.next_anon_id());
     add_shape(registry, shape_id, properties, None);
-    Type::Object { shape_id: Some(shape_id) }
+    Type::Object {
+        shape_id: Some(shape_id),
+    }
 }
 
 fn add_shape<'a>(
@@ -310,7 +333,10 @@ fn add_shape<'a>(
     properties: Vec<(Ident<'a>, Type<'a>)>,
     function_type: Option<FunctionSignature>,
 ) {
-    let shape = ObjectShape { properties: properties.into_iter().collect(), function_type };
+    let shape = ObjectShape {
+        properties: properties.into_iter().collect(),
+        function_type,
+    };
     // Note: TS has an invariant that the id doesn't already exist. We use
     // insert which overwrites. In practice duplicates don't occur for built-in
     // shapes, and for user configs we want last-write-wins behavior.
@@ -422,7 +448,10 @@ pub fn default_nonmutating_hook<'a>(registry: &mut ShapeRegistry<'a>) -> Type<'a
                         reason: ValueReason::HookReturn,
                     },
                     // May alias any arguments into the return
-                    AliasingEffectConfig::Alias { from: "@rest", into: "@returns" },
+                    AliasingEffectConfig::Alias {
+                        from: "@rest",
+                        into: "@returns",
+                    },
                 ],
             }),
             ..Default::default()

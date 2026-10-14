@@ -16,11 +16,15 @@ mod tests {
         assert!(ret.diagnostics.is_empty());
         let ret = IsolatedDeclarations::new(
             &allocator,
-            IsolatedDeclarationsOptions { strip_internal: true },
+            IsolatedDeclarationsOptions {
+                strip_internal: true,
+            },
         )
         .build(&ret.program);
         let actual = Codegen::new().build(&ret.program).code;
-        let expected_program = Parser::new(&allocator, expected, source_type).parse().program;
+        let expected_program = Parser::new(&allocator, expected, source_type)
+            .parse()
+            .program;
         let expected = Codegen::new().build(&expected_program).code;
         assert_eq!(actual.trim(), expected.trim());
     }
@@ -183,11 +187,20 @@ export function foo(a: any): number {
 
     #[test]
     fn dts_var_decl_test() {
-        transform_dts_test("export const foo: number = 42;", "export declare const foo: number;");
+        transform_dts_test(
+            "export const foo: number = 42;",
+            "export declare const foo: number;",
+        );
 
-        transform_dts_test("export var foo: number = 42;", "export declare var foo: number;");
+        transform_dts_test(
+            "export var foo: number = 42;",
+            "export declare var foo: number;",
+        );
 
-        transform_dts_test("export let foo: number = 42;", "export declare let foo: number;");
+        transform_dts_test(
+            "export let foo: number = 42;",
+            "export declare let foo: number;",
+        );
     }
 
     #[test]
@@ -250,18 +263,39 @@ export function foo(a: any): number {
             "export const foo: number = \"abc\";",
             "export declare const foo: number;",
         );
-        transform_dts_test("export let foo: number = \"abc\";", "export declare let foo: number;");
-        transform_dts_test("export var foo: number = \"abc\";", "export declare var foo: number;");
+        transform_dts_test(
+            "export let foo: number = \"abc\";",
+            "export declare let foo: number;",
+        );
+        transform_dts_test(
+            "export var foo: number = \"abc\";",
+            "export declare var foo: number;",
+        );
     }
 
     #[test]
     fn dts_literal_inference() {
         transform_dts_test("export const foo = 42;", "export declare const foo = 42;");
-        transform_dts_test("export const foo = \"foo\";", "export declare const foo = \"foo\";");
-        transform_dts_test("export const foo = true;", "export declare const foo: boolean;");
-        transform_dts_test("export const foo = false;", "export declare const foo: boolean;");
-        transform_dts_test("export const foo = null;", "export declare const foo: null;");
-        transform_dts_test("export let foo = undefined;", "export declare let foo: undefined;");
+        transform_dts_test(
+            "export const foo = \"foo\";",
+            "export declare const foo = \"foo\";",
+        );
+        transform_dts_test(
+            "export const foo = true;",
+            "export declare const foo: boolean;",
+        );
+        transform_dts_test(
+            "export const foo = false;",
+            "export declare const foo: boolean;",
+        );
+        transform_dts_test(
+            "export const foo = null;",
+            "export declare const foo: null;",
+        );
+        transform_dts_test(
+            "export let foo = undefined;",
+            "export declare let foo: undefined;",
+        );
         transform_dts_test("export let foo = 10n;", "export declare let foo: bigint;");
     }
 
@@ -383,6 +417,9 @@ export function foo(a: any): number {
 
     #[test]
     fn dts_default_export_all() {
-        transform_dts_test("export * as foo from \"foo\";", "export * as foo from \"foo\";");
+        transform_dts_test(
+            "export * as foo from \"foo\";",
+            "export * as foo from \"foo\";",
+        );
     }
 }

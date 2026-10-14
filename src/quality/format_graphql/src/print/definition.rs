@@ -137,8 +137,10 @@ fn write_operation_definition<'a>(
     // Shorthand means the operation's first significant token IS the selection set's `{`,
     // so their span starts coincide. Mirrors Prettier's
     // `locStart(node) !== locStart(node.selectionSet)` check.
-    let is_shorthand =
-        operation.selection_set.as_ref().is_some_and(|ss| ss.span.start == operation.span.start);
+    let is_shorthand = operation
+        .selection_set
+        .as_ref()
+        .is_some_and(|ss| ss.span.start == operation.span.start);
     let has_operation = !is_shorthand;
     let has_name = operation.name.is_some();
 
@@ -248,9 +250,14 @@ fn write_schema_definition<'a>(schema: &'a SchemaDefinition<'a>, f: &mut Graphql
     if operation_types.is_empty() {
         write!(f, [hard_line_break(), "}"]);
     } else {
-        write_braced_body(f, operation_types, close_delim_start(schema.span), |i, f| {
-            write_root_operation_type_definition(&operation_types[i], f);
-        });
+        write_braced_body(
+            f,
+            operation_types,
+            close_delim_start(schema.span),
+            |i, f| {
+                write_root_operation_type_definition(&operation_types[i], f);
+            },
+        );
     }
 }
 
@@ -265,9 +272,14 @@ fn write_schema_extension<'a>(schema: &'a SchemaExtension<'a>, f: &mut GraphqlFo
             flush_trailing_before_literal(to_span(d.span).end, f);
         }
         write!(f, "{");
-        write_braced_body(f, operation_types, close_delim_start(schema.span), |i, f| {
-            write_root_operation_type_definition(&operation_types[i], f);
-        });
+        write_braced_body(
+            f,
+            operation_types,
+            close_delim_start(schema.span),
+            |i, f| {
+                write_root_operation_type_definition(&operation_types[i], f);
+            },
+        );
     }
 }
 
@@ -479,8 +491,10 @@ fn write_field_definition<'a>(field: &'a FieldDefinition<'a>, f: &mut GraphqlFor
     common::write_name(&field.name, f);
     write_arguments_definition(field.arguments.as_ref(), f);
     // The `:` has no node; scan from the `)` (or the name without arguments)
-    let colon_from =
-        field.arguments.as_ref().map_or(to_span(field.name.span).end, |a| to_span(a.span).end);
+    let colon_from = field
+        .arguments
+        .as_ref()
+        .map_or(to_span(field.name.span).end, |a| to_span(a.span).end);
     flush_trailing_before_literal(colon_from, f);
     write!(f, ": ");
     if let Some(ty) = field.ty.as_ref() {

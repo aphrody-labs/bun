@@ -53,7 +53,10 @@ impl Rule for NoProto {
             return;
         };
 
-        if member_expr.static_property_name().is_some_and(|name| name == "__proto__") {
+        if member_expr
+            .static_property_name()
+            .is_some_and(|name| name == "__proto__")
+        {
             ctx.diagnostic(no_proto_diagnostic(member_expr.span()));
         }
     }

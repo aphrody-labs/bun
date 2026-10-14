@@ -148,7 +148,10 @@ impl JavaScriptRole {
     /// True only for remote page JavaScript. N2B remains parse-only by design.
     #[must_use]
     pub const fn executes_javascript(self) -> bool {
-        matches!(self, Self::RenderedPage | Self::BunTooling | Self::DesktopWebview)
+        matches!(
+            self,
+            Self::RenderedPage | Self::BunTooling | Self::DesktopWebview
+        )
     }
 
     /// Source analysis must never acquire a network capability.
@@ -177,11 +180,17 @@ pub fn validate_render_proxy(proxy: Option<&str>, stealth: bool) -> Result<(), S
         return Ok(());
     }
     let Some(proxy) = proxy else { return Ok(()) };
-    let scheme = proxy.split("://").next().unwrap_or_default().to_ascii_lowercase();
+    let scheme = proxy
+        .split("://")
+        .next()
+        .unwrap_or_default()
+        .to_ascii_lowercase();
     if matches!(scheme.as_str(), "socks5" | "socks5h") {
-        return Err("stealth rendering does not support SOCKS5; use an HTTP proxy or disable \
+        return Err(
+            "stealth rendering does not support SOCKS5; use an HTTP proxy or disable \
                     stealth"
-            .to_string());
+                .to_string(),
+        );
     }
     Ok(())
 }
@@ -202,7 +211,9 @@ pub struct WebSession {
 impl WebSession {
     #[must_use]
     pub fn new(proxy: Option<String>, user_agent: Option<String>, stealth: bool) -> Self {
-        Self { state: bun_browser_mcp::BrowserState::new(proxy, user_agent, stealth) }
+        Self {
+            state: bun_browser_mcp::BrowserState::new(proxy, user_agent, stealth),
+        }
     }
 
     /// Browser tools published by the canonical session implementation.
@@ -230,10 +241,19 @@ mod tests {
 
     #[test]
     fn each_javascript_role_has_exactly_one_engine() {
-        assert_eq!(JavaScriptRole::SourceAnalysis.engine(), JavaScriptEngine::Oxc);
-        assert_eq!(JavaScriptRole::BunTooling.engine(), JavaScriptEngine::BunJavaScriptCore);
+        assert_eq!(
+            JavaScriptRole::SourceAnalysis.engine(),
+            JavaScriptEngine::Oxc
+        );
+        assert_eq!(
+            JavaScriptRole::BunTooling.engine(),
+            JavaScriptEngine::BunJavaScriptCore
+        );
         assert_eq!(JavaScriptRole::RenderedPage.engine(), JavaScriptEngine::V8);
-        assert_eq!(JavaScriptRole::DesktopWebview.engine(), JavaScriptEngine::Cef);
+        assert_eq!(
+            JavaScriptRole::DesktopWebview.engine(),
+            JavaScriptEngine::Cef
+        );
         assert!(!JavaScriptRole::SourceAnalysis.executes_javascript());
         assert!(!JavaScriptRole::SourceAnalysis.permits_network());
         assert!(JavaScriptRole::DesktopWebview.executes_javascript());
@@ -275,8 +295,14 @@ mod tests {
         );
         assert!(artifact.extracted.text.contains("Body"));
         assert_eq!(artifact.scripts.len(), 2);
-        assert_eq!(artifact.scripts[0].url.as_deref(), Some("https://example.test/assets/app.js"));
+        assert_eq!(
+            artifact.scripts[0].url.as_deref(),
+            Some("https://example.test/assets/app.js")
+        );
         assert!(artifact.scripts[0].module);
-        assert_eq!(artifact.scripts[1].source.as_deref(), Some("import value from \"pkg\";"));
+        assert_eq!(
+            artifact.scripts[1].source.as_deref(),
+            Some("import value from \"pkg\";")
+        );
     }
 }

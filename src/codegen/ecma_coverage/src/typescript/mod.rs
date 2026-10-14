@@ -25,7 +25,9 @@ pub fn baseline_root(test_path: &Path) -> PathBuf {
     components
         .find(|component| component.as_os_str() == "cases")
         .expect("TypeScript test path should contain `cases`");
-    let suite = components.next().expect("TypeScript test path should contain a suite");
+    let suite = components
+        .next()
+        .expect("TypeScript test path should contain a suite");
     workspace_root().join(BASELINES_PATH).join(suite)
 }
 
@@ -57,7 +59,9 @@ impl ReferenceBaselines {
         let Some(name) = test_path.file_stem().and_then(|name| name.to_str()) else {
             return false;
         };
-        self.0.get(&baseline_root(test_path)).is_some_and(|tests| tests.contains(name))
+        self.0
+            .get(&baseline_root(test_path))
+            .is_some_and(|tests| tests.contains(name))
     }
 }
 
@@ -79,7 +83,10 @@ fn reference_test_name(name: &str) -> Option<&str> {
 
 #[test]
 fn reference_baseline_names() {
-    assert_eq!(reference_test_name("decoratorOnClass6.es6.js"), Some("decoratorOnClass6.es6"));
+    assert_eq!(
+        reference_test_name("decoratorOnClass6.es6.js"),
+        Some("decoratorOnClass6.es6")
+    );
     assert_eq!(
         reference_test_name("example(strict=true,target=es2015).errors.txt"),
         Some("example")

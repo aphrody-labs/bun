@@ -17,8 +17,8 @@
 //!
 //! Pertinent quand Bun sert de runtime JS hôte pour un module Rust→WASM.
 
-use crate::util::make_finding;
 use crate::types::{Finding, MakeFindingOpts, Severity};
+use crate::util::make_finding;
 
 /// (crate_name, rule_suffix, docs_url, label).
 const RUST_ECOSYSTEM: &[(&str, &str, &str, &str)] = &[

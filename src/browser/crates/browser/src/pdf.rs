@@ -6,8 +6,8 @@
 
 use std::io;
 
-use image::ImageEncoder as _;
 use bun_browser_js::CaptureRegion;
+use image::ImageEncoder as _;
 
 use crate::Page;
 
@@ -113,9 +113,16 @@ impl RasterPdfOptions {
         {
             return Err(RasterPdfError::InvalidPaperSize);
         }
-        let margins =
-            [self.margin_top_in, self.margin_bottom_in, self.margin_left_in, self.margin_right_in];
-        if margins.iter().any(|value| !value.is_finite() || *value < 0.0) {
+        let margins = [
+            self.margin_top_in,
+            self.margin_bottom_in,
+            self.margin_left_in,
+            self.margin_right_in,
+        ];
+        if margins
+            .iter()
+            .any(|value| !value.is_finite() || *value < 0.0)
+        {
             return Err(RasterPdfError::InvalidMargins);
         }
         let (paper_width_in, paper_height_in) = if self.landscape {
@@ -134,7 +141,14 @@ impl RasterPdfOptions {
         if printable_width <= 0.0 || printable_height <= 0.0 {
             return Err(RasterPdfError::InvalidMargins);
         }
-        Ok((page_width, page_height, printable_width, printable_height, left, bottom))
+        Ok((
+            page_width,
+            page_height,
+            printable_width,
+            printable_height,
+            left,
+            bottom,
+        ))
     }
 }
 
@@ -164,7 +178,11 @@ fn pagination_plan(
     }
     let page_count = page_count_value as usize;
 
-    Ok(PaginationPlan { points_per_css_pixel, css_page_height, page_count })
+    Ok(PaginationPlan {
+        points_per_css_pixel,
+        css_page_height,
+        page_count,
+    })
 }
 
 fn validate_selected_raster_work(
@@ -200,8 +218,9 @@ fn validate_selected_raster_work(
         if page_pixels > MAX_PDF_PAGE_PIXELS {
             return Err(RasterPdfError::RasterWorkLimitExceeded);
         }
-        total_pixels =
-            total_pixels.checked_add(page_pixels).ok_or(RasterPdfError::RasterWorkLimitExceeded)?;
+        total_pixels = total_pixels
+            .checked_add(page_pixels)
+            .ok_or(RasterPdfError::RasterWorkLimitExceeded)?;
         if total_pixels > MAX_PDF_TOTAL_RASTER_PIXELS {
             return Err(RasterPdfError::RasterWorkLimitExceeded);
         }
@@ -284,7 +303,10 @@ impl Page {
     ) -> Result<Vec<u8>, RasterPdfError> {
         let (page_width, page_height, printable_width, printable_height, left, bottom) =
             options.page_geometry()?;
-        let js = self.js.as_ref().ok_or(RasterPdfError::NoRenderableDocument)?;
+        let js = self
+            .js
+            .as_ref()
+            .ok_or(RasterPdfError::NoRenderableDocument)?;
         if !js.set_animation_sample(animation_sample) {
             return Err(RasterPdfError::NoRenderableDocument);
         }
@@ -292,8 +314,9 @@ impl Page {
             bun_browser_js::CssMediaType::Print.with_reduced_motion(js.prefers_reduced_motion()),
         );
         let result = (|| {
-            let (content_width, content_height) =
-                js.prepared_content_size().ok_or(RasterPdfError::NoRenderableDocument)?;
+            let (content_width, content_height) = js
+                .prepared_content_size()
+                .ok_or(RasterPdfError::NoRenderableDocument)?;
             if !content_width.is_finite()
                 || !content_height.is_finite()
                 || content_width <= 0.0
@@ -364,13 +387,19 @@ fn encode_pdf_pages(
     mut page_source: impl FnMut(usize) -> Result<RasterPage, RasterPdfError>,
 ) -> Result<Vec<u8>, RasterPdfError> {
     let object_count = 2usize
-        .checked_add(page_count.checked_mul(3).ok_or(RasterPdfError::OutputLimitExceeded)?)
+        .checked_add(
+            page_count
+                .checked_mul(3)
+                .ok_or(RasterPdfError::OutputLimitExceeded)?,
+        )
         .ok_or(RasterPdfError::OutputLimitExceeded)?;
     let mut writer = PdfWriter::new(object_count, MAX_PDF_OUTPUT_BYTES)?;
     writer.write_object(1, b"<< /Type /Catalog /Pages 2 0 R >>")?;
 
-    let kids =
-        (0..page_count).map(|index| format!("{} 0 R", 3 + index * 3)).collect::<Vec<_>>().join(" ");
+    let kids = (0..page_count)
+        .map(|index| format!("{} 0 R", 3 + index * 3))
+        .collect::<Vec<_>>()
+        .join(" ");
     let pages_dictionary = format!("<< /Type /Pages /Count {page_count} /Kids [{kids}] >>");
     writer.write_object(2, pages_dictionary.as_bytes())?;
 
@@ -390,7 +419,11 @@ fn encode_pdf_pages(
             "q\n{:.3} 0 0 {:.3} {:.3} {:.3} cm\n/Im0 Do\nQ\n",
             page.draw_width_pt, page.draw_height_pt, left, draw_y,
         );
-        let content = format!("<< /Length {} >>\nstream\n{}endstream", commands.len(), commands);
+        let content = format!(
+            "<< /Length {} >>\nstream\n{}endstream",
+            commands.len(),
+            commands
+        );
         writer.write_object(content_id, content.as_bytes())?;
         writer.write_rgb_image(image_id, &page.rgb)?;
         // `page`, including its decoded RGB raster, is dropped here before
@@ -458,7 +491,12 @@ impl PdfWriter {
         self.append(b"00000000000000000000 >>\nstream\n")?;
         let stream_offset = self.output.len();
         let encode_result = image::codecs::jpeg::JpegEncoder::new_with_quality(&mut *self, 90)
-            .write_image(rgb.as_raw(), rgb.width(), rgb.height(), image::ExtendedColorType::Rgb8);
+            .write_image(
+                rgb.as_raw(),
+                rgb.width(),
+                rgb.height(),
+                image::ExtendedColorType::Rgb8,
+            );
         if let Err(error) = encode_result {
             return if self.limit_exceeded {
                 Err(RasterPdfError::OutputLimitExceeded)
@@ -512,7 +550,9 @@ mod tests {
     use super::*;
 
     fn find_bytes(haystack: &[u8], needle: &[u8]) -> Option<usize> {
-        haystack.windows(needle.len()).position(|window| window == needle)
+        haystack
+            .windows(needle.len())
+            .position(|window| window == needle)
     }
 
     /// Decode the actual JPEG XObjects emitted into the PDF, rather than
@@ -539,7 +579,9 @@ mod tests {
             let stream_start = digits_end
                 + find_bytes(&pdf[digits_end..], b"stream\n").expect("image stream")
                 + b"stream\n".len();
-            let stream_end = stream_start.checked_add(length).expect("bounded stream end");
+            let stream_end = stream_start
+                .checked_add(length)
+                .expect("bounded stream end");
             let raster = image::load_from_memory_with_format(
                 &pdf[stream_start..stream_end],
                 image::ImageFormat::Jpeg,
@@ -564,7 +606,10 @@ mod tests {
     fn options_reject_impossible_media_boxes() {
         let mut options = RasterPdfOptions::default();
         options.paper_width_in = 0.0;
-        assert_eq!(options.page_geometry(), Err(RasterPdfError::InvalidPaperSize));
+        assert_eq!(
+            options.page_geometry(),
+            Err(RasterPdfError::InvalidPaperSize)
+        );
         let mut options = RasterPdfOptions::default();
         options.margin_left_in = 5.0;
         options.margin_right_in = 5.0;
@@ -630,7 +675,10 @@ mod tests {
         assert!(long.page_count > MAX_PDF_PAGES);
         let selected = selected_page_indices(
             long.page_count,
-            &[RasterPdfPageRange { start: Some(1), end: Some(1) }],
+            &[RasterPdfPageRange {
+                start: Some(1),
+                end: Some(1),
+            }],
         )
         .unwrap();
         assert_eq!(selected, vec![0]);
@@ -639,7 +687,10 @@ mod tests {
         assert_eq!(
             selected_page_indices(
                 long.page_count,
-                &[RasterPdfPageRange { start: Some(1), end: Some(MAX_PDF_PAGES + 1) }],
+                &[RasterPdfPageRange {
+                    start: Some(1),
+                    end: Some(MAX_PDF_PAGES + 1)
+                }],
             ),
             Err(RasterPdfError::TooManyPages(MAX_PDF_PAGES))
         );
@@ -648,8 +699,14 @@ mod tests {
             .expect("base geometry");
         let impossible_height = base.css_page_height * (MAX_PDF_DOCUMENT_PAGES as f32 + 16.0);
         assert_eq!(
-            pagination_plan(800.0, impossible_height, printable_width, printable_height, 1.0,)
-                .unwrap_err(),
+            pagination_plan(
+                800.0,
+                impossible_height,
+                printable_width,
+                printable_height,
+                1.0,
+            )
+            .unwrap_err(),
             RasterPdfError::TooManyPages(MAX_PDF_DOCUMENT_PAGES)
         );
     }
@@ -662,7 +719,10 @@ mod tests {
             pagination_plan(800.0, 2_000.0, printable_width, printable_height, 1.0).unwrap();
         let enlarged =
             pagination_plan(800.0, 2_000.0, printable_width, printable_height, 2.0).unwrap();
-        assert_eq!(enlarged.points_per_css_pixel, normal.points_per_css_pixel * 2.0);
+        assert_eq!(
+            enlarged.points_per_css_pixel,
+            normal.points_per_css_pixel * 2.0
+        );
         assert_eq!(enlarged.css_page_height, normal.css_page_height / 2.0);
         assert!(enlarged.page_count >= normal.page_count);
         assert_eq!(
@@ -678,20 +738,42 @@ mod tests {
             selected_page_indices(
                 6,
                 &[
-                    RasterPdfPageRange { start: Some(3), end: Some(5) },
-                    RasterPdfPageRange { start: Some(1), end: Some(3) },
-                    RasterPdfPageRange { start: Some(5), end: None },
+                    RasterPdfPageRange {
+                        start: Some(3),
+                        end: Some(5)
+                    },
+                    RasterPdfPageRange {
+                        start: Some(1),
+                        end: Some(3)
+                    },
+                    RasterPdfPageRange {
+                        start: Some(5),
+                        end: None
+                    },
                 ],
             )
             .unwrap(),
             vec![0, 1, 2, 3, 4, 5]
         );
         assert_eq!(
-            selected_page_indices(6, &[RasterPdfPageRange { start: None, end: Some(2) }],).unwrap(),
+            selected_page_indices(
+                6,
+                &[RasterPdfPageRange {
+                    start: None,
+                    end: Some(2)
+                }],
+            )
+            .unwrap(),
             vec![0, 1]
         );
         assert_eq!(
-            selected_page_indices(3, &[RasterPdfPageRange { start: Some(9), end: Some(12) }],),
+            selected_page_indices(
+                3,
+                &[RasterPdfPageRange {
+                    start: Some(9),
+                    end: Some(12)
+                }],
+            ),
             Err(RasterPdfError::EmptyPageRange)
         );
     }
@@ -745,12 +827,16 @@ mod tests {
                 raster.get_pixel(5, 5)
             );
         }
-        for (index, expected) in
-            [[224, 32, 32], [32, 192, 64], [32, 80, 224]].into_iter().enumerate()
+        for (index, expected) in [[224, 32, 32], [32, 192, 64], [32, 80, 224]]
+            .into_iter()
+            .enumerate()
         {
             let raster = &rasters[index];
             assert!(
-                channel_near(*raster.get_pixel(raster.width() / 2, raster.height() / 2), expected,),
+                channel_near(
+                    *raster.get_pixel(raster.width() / 2, raster.height() / 2),
+                    expected,
+                ),
                 "ordinary flow did not advance on page {}",
                 index + 1,
             );
@@ -762,7 +848,10 @@ mod tests {
         );
 
         let mut ranged = options;
-        ranged.page_ranges = vec![RasterPdfPageRange { start: Some(2), end: Some(3) }];
+        ranged.page_ranges = vec![RasterPdfPageRange {
+            start: Some(2),
+            end: Some(3),
+        }];
         let selected = pdf_page_rasters(&page.raster_pdf(ranged).expect("selected pages"));
         assert_eq!(selected.len(), 2);
         assert!(channel_near(*selected[0].get_pixel(5, 5), [17, 17, 17]));
@@ -881,8 +970,13 @@ mod tests {
             .parse::<usize>()
             .unwrap();
         assert!(pdf[startxref..].starts_with(b"xref\n"));
-        let object_one_offset = text.split("xref\n0 6\n").nth(1).unwrap().lines().nth(1).unwrap()
-            [..10]
+        let object_one_offset = text
+            .split("xref\n0 6\n")
+            .nth(1)
+            .unwrap()
+            .lines()
+            .nth(1)
+            .unwrap()[..10]
             .parse::<usize>()
             .unwrap();
         assert!(pdf[object_one_offset..].starts_with(b"1 0 obj\n"));
@@ -908,14 +1002,23 @@ mod tests {
             })
         })
         .unwrap();
-        assert_eq!(String::from_utf8_lossy(&pdf).matches("/Subtype /Image").count(), 4);
+        assert_eq!(
+            String::from_utf8_lossy(&pdf)
+                .matches("/Subtype /Image")
+                .count(),
+            4
+        );
     }
 
     #[test]
     fn writer_enforces_the_output_limit_while_encoding_the_image_stream() {
         let mut writer = PdfWriter::new(5, 600).unwrap();
-        writer.write_object(1, b"<< /Type /Catalog /Pages 2 0 R >>").unwrap();
-        writer.write_object(2, b"<< /Type /Pages /Count 1 /Kids [3 0 R] >>").unwrap();
+        writer
+            .write_object(1, b"<< /Type /Catalog /Pages 2 0 R >>")
+            .unwrap();
+        writer
+            .write_object(2, b"<< /Type /Pages /Count 1 /Kids [3 0 R] >>")
+            .unwrap();
         let noisy = image::RgbImage::from_fn(128, 128, |x, y| {
             image::Rgb([
                 x.wrapping_mul(37) as u8,
@@ -923,7 +1026,10 @@ mod tests {
                 x.wrapping_add(y).wrapping_mul(71) as u8,
             ])
         });
-        assert_eq!(writer.write_rgb_image(5, &noisy), Err(RasterPdfError::OutputLimitExceeded));
+        assert_eq!(
+            writer.write_rgb_image(5, &noisy),
+            Err(RasterPdfError::OutputLimitExceeded)
+        );
         assert!(writer.output.len() <= 600);
     }
 }

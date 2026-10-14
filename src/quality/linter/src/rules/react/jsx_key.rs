@@ -146,7 +146,8 @@ impl Rule for JsxKey {
 }
 
 pub fn is_to_array(call: &CallExpression<'_>) -> bool {
-    call.callee_name().is_some_and(|subject| subject == "toArray")
+    call.callee_name()
+        .is_some_and(|subject| subject == "toArray")
 }
 
 pub fn import_matcher<'a>(
@@ -168,7 +169,10 @@ pub fn is_import<'a>(
     expected_module_name: &'a str,
 ) -> bool {
     if ctx.module_record().requested_modules.is_empty()
-        && ctx.scoping().get_bindings(ctx.scoping().root_scope_id()).is_empty()
+        && ctx
+            .scoping()
+            .get_bindings(ctx.scoping().root_scope_id())
+            .is_empty()
     {
         return actual_local_name == expected_local_name;
     }
@@ -215,19 +219,29 @@ pub fn is_children<'a, 'b>(call: &'b CallExpression<'a>, ctx: &'b LintContext<'a
     const REACT: &str = "React";
     const CHILDREN: &str = "Children";
 
-    let Some(member) = call.callee.as_member_expression() else { return false };
+    let Some(member) = call.callee.as_member_expression() else {
+        return false;
+    };
 
     if let Expression::Identifier(ident) = member.object() {
         return is_children_from_react(ident, ctx);
     }
 
-    let Some(inner_member) = member.object().get_inner_expression().as_member_expression() else {
+    let Some(inner_member) = member
+        .object()
+        .get_inner_expression()
+        .as_member_expression()
+    else {
         return false;
     };
 
-    let Some(ident) = inner_member.object().get_identifier_reference() else { return false };
+    let Some(ident) = inner_member.object().get_identifier_reference() else {
+        return false;
+    };
 
-    let Some(local_name) = inner_member.static_property_name() else { return false };
+    let Some(local_name) = inner_member.static_property_name() else {
+        return false;
+    };
 
     is_import(ctx, ident.name.as_str(), REACT, REACT) && local_name == CHILDREN
 }
@@ -605,11 +619,27 @@ fn test() {
         ("[1, 2 ,3].map(function(x) { return <App /> });", None, None),
         ("[1, 2 ,3].map(x => <App />);", None, None),
         ("[1, 2 ,3].map(x => x && <App x={x} />);", None, None),
-        (r#"[1, 2 ,3].map(x => x ? <App x={x} key="1" /> : <OtherApp x={x} />);"#, None, None),
-        (r#"[1, 2 ,3].map(x => x ? <App x={x} /> : <OtherApp x={x} key="2" />);"#, None, None),
+        (
+            r#"[1, 2 ,3].map(x => x ? <App x={x} key="1" /> : <OtherApp x={x} />);"#,
+            None,
+            None,
+        ),
+        (
+            r#"[1, 2 ,3].map(x => x ? <App x={x} /> : <OtherApp x={x} key="2" />);"#,
+            None,
+            None,
+        ),
         ("[1, 2 ,3].map(x => { return <App /> });", None, None),
-        ("Array.from([1, 2 ,3], function(x) { return <App /> });", None, None),
-        ("Array.from([1, 2 ,3], (x => { return <App /> }));", None, None),
+        (
+            "Array.from([1, 2 ,3], function(x) { return <App /> });",
+            None,
+            None,
+        ),
+        (
+            "Array.from([1, 2 ,3], (x => { return <App /> }));",
+            None,
+            None,
+        ),
         ("Array.from([1, 2 ,3], (x => <App />));", None, None),
         ("[1, 2, 3]?.map(x => <BabelEslintApp />)", None, None),
         ("[1, 2, 3]?.map(x => <TypescriptEslintApp />)", None, None),
@@ -744,7 +774,11 @@ fn test() {
             None,
         ),
         ("[1, 2, 3].map(x => { return x && <App />; });", None, None),
-        ("[1, 2, 3].map(x => { return x || y || <App />; });", None, None),
+        (
+            "[1, 2, 3].map(x => { return x || y || <App />; });",
+            None,
+            None,
+        ),
         (
             "[1, 2, 3].map((item) => {
                return item === 'bar' ? <div>{item}</div> : <span>{item}</span>;

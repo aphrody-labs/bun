@@ -73,7 +73,10 @@ impl TransformState<'_> {
     pub fn new(source_path: &Path, options: &TransformOptions) -> Self {
         let filename = source_path
             .file_stem() // omit file extension
-            .map_or_else(|| String::from("unknown"), |name| name.to_string_lossy().to_string());
+            .map_or_else(
+                || String::from("unknown"),
+                |name| name.to_string_lossy().to_string(),
+            );
 
         Self {
             errors: vec![],

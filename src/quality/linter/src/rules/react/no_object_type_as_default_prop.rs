@@ -79,16 +79,23 @@ declare_oxc_lint!(
 
 impl Rule for NoObjectTypeAsDefaultProp {
     fn run<'a>(&self, node: &AstNode<'a>, ctx: &LintContext<'a>) {
-        let AstKind::AssignmentPattern(assign_pat) = node.kind() else { return };
+        let AstKind::AssignmentPattern(assign_pat) = node.kind() else {
+            return;
+        };
 
         let right = assign_pat.right.get_inner_expression();
-        let Some(kind) = forbidden_default_kind(right) else { return };
+        let Some(kind) = forbidden_default_kind(right) else {
+            return;
+        };
 
         if !is_in_component_first_param(node, ctx) {
             return;
         }
 
-        ctx.diagnostic(no_object_type_as_default_prop_diagnostic(kind, right.span()));
+        ctx.diagnostic(no_object_type_as_default_prop_diagnostic(
+            kind,
+            right.span(),
+        ));
     }
 
     fn should_run(&self, ctx: &ContextHost) -> bool {
@@ -154,12 +161,20 @@ fn is_in_component_first_param<'a>(node: &AstNode<'a>, ctx: &LintContext<'a>) ->
 }
 
 fn is_first_param_of_component<'a>(formal_param_node: &AstNode<'a>, ctx: &LintContext<'a>) -> bool {
-    let AstKind::FormalParameter(this_param) = formal_param_node.kind() else { return false };
+    let AstKind::FormalParameter(this_param) = formal_param_node.kind() else {
+        return false;
+    };
 
     let params_node = ctx.nodes().parent_node(formal_param_node.id());
-    let AstKind::FormalParameters(params) = params_node.kind() else { return false };
+    let AstKind::FormalParameters(params) = params_node.kind() else {
+        return false;
+    };
 
-    if !params.items.first().is_some_and(|first| std::ptr::eq(first, this_param)) {
+    if !params
+        .items
+        .first()
+        .is_some_and(|first| std::ptr::eq(first, this_param))
+    {
         return false;
     }
 
@@ -183,15 +198,18 @@ fn is_function_component<'a>(func_node: &AstNode<'a>, ctx: &LintContext<'a>) -> 
 }
 
 fn is_in_component_context<'a>(func_node: &AstNode<'a>, ctx: &LintContext<'a>) -> bool {
-    let Some(parent) = outermost_paren_parent(func_node, ctx.semantic()) else { return false };
+    let Some(parent) = outermost_paren_parent(func_node, ctx.semantic()) else {
+        return false;
+    };
 
     match parent.kind() {
-        AstKind::VariableDeclarator(decl) => {
-            decl.id.get_identifier_name().is_some_and(|name| is_react_component_name(&name))
-        }
-        AstKind::CallExpression(call) => {
-            call.callee_name().is_some_and(|name| is_hoc_call(name, ctx))
-        }
+        AstKind::VariableDeclarator(decl) => decl
+            .id
+            .get_identifier_name()
+            .is_some_and(|name| is_react_component_name(&name)),
+        AstKind::CallExpression(call) => call
+            .callee_name()
+            .is_some_and(|name| is_hoc_call(name, ctx)),
         _ => false,
     }
 }
@@ -273,6 +291,11 @@ fn test() {
         "function Foo({ items = ({}) }) { return <div /> }",
     ];
 
-    Tester::new(NoObjectTypeAsDefaultProp::NAME, NoObjectTypeAsDefaultProp::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        NoObjectTypeAsDefaultProp::NAME,
+        NoObjectTypeAsDefaultProp::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

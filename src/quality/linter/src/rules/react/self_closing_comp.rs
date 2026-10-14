@@ -32,7 +32,10 @@ pub struct SelfClosingComp {
 
 impl Default for SelfClosingComp {
     fn default() -> Self {
-        Self { component: true, html: true }
+        Self {
+            component: true,
+            html: true,
+        }
     }
 }
 
@@ -122,12 +125,18 @@ impl Rule for SelfClosingComp {
         }
 
         if self.html && is_dom_comp || self.component && !is_dom_comp {
-            ctx.diagnostic_with_fix(self_closing_comp_diagnostic(jsx_closing_elem.span), |fixer| {
-                fixer.replace(
-                    Span::new(jsx_el.opening_element.span.end - 1, jsx_closing_elem.span.end),
-                    " />",
-                )
-            });
+            ctx.diagnostic_with_fix(
+                self_closing_comp_diagnostic(jsx_closing_elem.span),
+                |fixer| {
+                    fixer.replace(
+                        Span::new(
+                            jsx_el.opening_element.span.end - 1,
+                            jsx_closing_elem.span.end,
+                        ),
+                        " />",
+                    )
+                },
+            );
         }
     }
 
@@ -143,7 +152,10 @@ fn test() {
     let pass = vec![
         (r#"var HelloJohn = <Hello name="John" />;"#, None),
         (r#"var HelloJohn = <Hello.Compound name="John" />;"#, None),
-        (r#"var Profile = <Hello name="John"><img src="picture.png" /></Hello>;"#, None),
+        (
+            r#"var Profile = <Hello name="John"><img src="picture.png" /></Hello>;"#,
+            None,
+        ),
         (
             r#"var Profile = <Hello.Compound name="John"><img src="picture.png" /></Hello.Compound>;"#,
             None,
@@ -165,15 +177,36 @@ fn test() {
             None,
         ),
         (r#"var HelloJohn = <Hello name="John"> </Hello>;"#, None),
-        (r#"var HelloJohn = <Hello.Compound name="John"> </Hello.Compound>;"#, None),
-        (r#"var HelloJohn = <Hello name="John">        </Hello>;"#, None),
-        (r#"var HelloJohn = <Hello.Compound name="John">        </Hello.Compound>;"#, None),
+        (
+            r#"var HelloJohn = <Hello.Compound name="John"> </Hello.Compound>;"#,
+            None,
+        ),
+        (
+            r#"var HelloJohn = <Hello name="John">        </Hello>;"#,
+            None,
+        ),
+        (
+            r#"var HelloJohn = <Hello.Compound name="John">        </Hello.Compound>;"#,
+            None,
+        ),
         ("var HelloJohn = <div>&nbsp;</div>;", None),
         ("var HelloJohn = <div>{' '}</div>;", None),
-        (r#"var HelloJohn = <Hello name="John">&nbsp;</Hello>;"#, None),
-        (r#"var HelloJohn = <Hello.Compound name="John">&nbsp;</Hello.Compound>;"#, None),
-        (r#"var HelloJohn = <Hello name="John" />;"#, Some(serde_json::json!([]))),
-        (r#"var HelloJohn = <Hello.Compound name="John" />;"#, Some(serde_json::json!([]))),
+        (
+            r#"var HelloJohn = <Hello name="John">&nbsp;</Hello>;"#,
+            None,
+        ),
+        (
+            r#"var HelloJohn = <Hello.Compound name="John">&nbsp;</Hello.Compound>;"#,
+            None,
+        ),
+        (
+            r#"var HelloJohn = <Hello name="John" />;"#,
+            Some(serde_json::json!([])),
+        ),
+        (
+            r#"var HelloJohn = <Hello.Compound name="John" />;"#,
+            Some(serde_json::json!([])),
+        ),
         (
             r#"var Profile = <Hello name="John"><img src="picture.png" /></Hello>;"#,
             Some(serde_json::json!([])),
@@ -197,10 +230,22 @@ fn test() {
             Some(serde_json::json!([])),
         ),
         ("var HelloJohn = <div> </div>;", Some(serde_json::json!([]))),
-        ("var HelloJohn = <div>        </div>;", Some(serde_json::json!([]))),
-        ("var HelloJohn = <div>&nbsp;</div>;", Some(serde_json::json!([]))),
-        ("var HelloJohn = <div>{' '}</div>;", Some(serde_json::json!([]))),
-        (r#"var HelloJohn = <Hello name="John">&nbsp;</Hello>;"#, Some(serde_json::json!([]))),
+        (
+            "var HelloJohn = <div>        </div>;",
+            Some(serde_json::json!([])),
+        ),
+        (
+            "var HelloJohn = <div>&nbsp;</div>;",
+            Some(serde_json::json!([])),
+        ),
+        (
+            "var HelloJohn = <div>{' '}</div>;",
+            Some(serde_json::json!([])),
+        ),
+        (
+            r#"var HelloJohn = <Hello name="John">&nbsp;</Hello>;"#,
+            Some(serde_json::json!([])),
+        ),
         (
             r#"var HelloJohn = <Hello.Compound name="John">&nbsp;</Hello.Compound>;"#,
             Some(serde_json::json!([])),
@@ -250,10 +295,19 @@ fn test() {
     ];
 
     let fail = vec![
-        (r#"var contentContainer = <div className="content"></div>;"#, None),
-        (r#"var contentContainer = <div className="content"></div>;"#, Some(serde_json::json!([]))),
+        (
+            r#"var contentContainer = <div className="content"></div>;"#,
+            None,
+        ),
+        (
+            r#"var contentContainer = <div className="content"></div>;"#,
+            Some(serde_json::json!([])),
+        ),
         (r#"var HelloJohn = <Hello name="John"></Hello>;"#, None),
-        (r#"var CompoundHelloJohn = <Hello.Compound name="John"></Hello.Compound>;"#, None),
+        (
+            r#"var CompoundHelloJohn = <Hello.Compound name="John"></Hello.Compound>;"#,
+            None,
+        ),
         (
             r#"const HelloJohn = <Hello name="John">
 			</Hello>;"#,
@@ -264,7 +318,10 @@ fn test() {
 			</Hello.Compound>;"#,
             None,
         ),
-        (r#"var HelloJohn = <Hello name="John"></Hello>;"#, Some(serde_json::json!([]))),
+        (
+            r#"var HelloJohn = <Hello name="John"></Hello>;"#,
+            Some(serde_json::json!([])),
+        ),
         (
             r#"var HelloJohn = <Hello.Compound name="John"></Hello.Compound>;"#,
             Some(serde_json::json!([])),

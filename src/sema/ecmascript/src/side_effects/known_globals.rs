@@ -105,7 +105,8 @@ fn unsupported_regexp_patterns<'a>(
 }
 
 fn supports_es_feature<'a>(ctx: &impl MayHaveSideEffectsContext<'a>, feature: ESFeature) -> bool {
-    ctx.engine_targets().is_some_and(|target| target.supports_es_feature(feature))
+    ctx.engine_targets()
+        .is_some_and(|target| target.supports_es_feature(feature))
 }
 
 #[rustfmt::skip]
@@ -508,7 +509,12 @@ mod test {
     fn known_global_identifiers_table_is_sorted_and_unique() {
         // `binary_search` relies on byte-order sorting and duplicates are pointless.
         for pair in KNOWN_GLOBAL_IDENTIFIERS.windows(2) {
-            assert!(pair[0] < pair[1], "`{}` must sort before `{}`", pair[0], pair[1]);
+            assert!(
+                pair[0] < pair[1],
+                "`{}` must sort before `{}`",
+                pair[0],
+                pair[1]
+            );
         }
     }
 

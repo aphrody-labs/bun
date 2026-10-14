@@ -18,8 +18,12 @@ impl IfElseKindDetector {
             return None;
         }
         let stmt = stmts[0];
-        let Stmt::Expr(Expr::If(ifexpr), _) = stmt else { return None };
-        let mut detector = Self { node_types: NodeTypeSet::new() };
+        let Stmt::Expr(Expr::If(ifexpr), _) = stmt else {
+            return None;
+        };
+        let mut detector = Self {
+            node_types: NodeTypeSet::new(),
+        };
         let result = detector.collect_if_chain_variants(ifexpr);
         if result == CollectionResult::Incomplete || detector.node_types.is_empty() {
             return None;

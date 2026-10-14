@@ -14,8 +14,8 @@ mod float;
 mod grid;
 
 pub use self::alignment::{
-    AlignContent, AlignContentKeyword, AlignItems, AlignItemsKeyword, AlignSelf, AlignmentSafety, JustifyContent,
-    JustifyItems, JustifySelf,
+    AlignContent, AlignContentKeyword, AlignItems, AlignItemsKeyword, AlignSelf, AlignmentSafety,
+    JustifyContent, JustifyItems, JustifySelf,
 };
 pub use self::available_space::AvailableSpace;
 pub use self::compact_length::CompactLength;
@@ -30,9 +30,10 @@ pub use self::flex::{FlexDirection, FlexWrap, FlexboxContainerStyle, FlexboxItem
 pub use self::float::{Clear, Float, FloatDirection};
 #[cfg(feature = "grid")]
 pub use self::grid::{
-    GenericGridPlacement, GenericGridTemplateComponent, GenericRepetition, GridAutoFlow, GridAutoTracks,
-    GridContainerStyle, GridItemStyle, GridPlacement, GridTemplateComponent, GridTemplateRepetition,
-    GridTemplateTracks, MaxTrackSizingFunction, MinTrackSizingFunction, RepetitionCount, TrackSizingFunction,
+    GenericGridPlacement, GenericGridTemplateComponent, GenericRepetition, GridAutoFlow,
+    GridAutoTracks, GridContainerStyle, GridItemStyle, GridPlacement, GridTemplateComponent,
+    GridTemplateRepetition, GridTemplateTracks, MaxTrackSizingFunction, MinTrackSizingFunction,
+    RepetitionCount, TrackSizingFunction,
 };
 #[cfg(feature = "grid")]
 pub(crate) use self::grid::{GridAreaAxis, GridAreaEnd};
@@ -58,12 +59,28 @@ use crate::sys::String;
 /// consider `Arc<str>` or `string_cache::Atom`.
 #[cfg(any(feature = "alloc", feature = "std"))]
 pub trait CheapCloneStr:
-    AsRef<str> + for<'a> From<&'a str> + From<String> + PartialEq + Eq + Clone + Default + Debug + 'static
+    AsRef<str>
+    + for<'a> From<&'a str>
+    + From<String>
+    + PartialEq
+    + Eq
+    + Clone
+    + Default
+    + Debug
+    + 'static
 {
 }
 #[cfg(any(feature = "alloc", feature = "std"))]
 impl<T> CheapCloneStr for T where
-    T: AsRef<str> + for<'a> From<&'a str> + From<String> + PartialEq + Eq + Clone + Default + Debug + 'static
+    T: AsRef<str>
+        + for<'a> From<&'a str>
+        + From<String>
+        + PartialEq
+        + Eq
+        + Clone
+        + Default
+        + Debug
+        + 'static
 {
 }
 
@@ -211,11 +228,19 @@ impl Display {
     pub const DEFAULT: Display = Display::Grid;
 
     /// The default Display mode
-    #[cfg(all(feature = "block_layout", not(feature = "flexbox"), not(feature = "grid")))]
+    #[cfg(all(
+        feature = "block_layout",
+        not(feature = "flexbox"),
+        not(feature = "grid")
+    ))]
     pub const DEFAULT: Display = Display::Block;
 
     /// The default Display mode
-    #[cfg(all(not(feature = "flexbox"), not(feature = "grid"), not(feature = "block_layout")))]
+    #[cfg(all(
+        not(feature = "flexbox"),
+        not(feature = "grid"),
+        not(feature = "block_layout")
+    ))]
     pub const DEFAULT: Display = Display::None;
 }
 
@@ -605,10 +630,16 @@ impl<S: CheapCloneStr> Style<S> {
         item_is_table: false,
         item_is_replaced: false,
         item_aspect_ratio_is_intrinsic: false,
-        intrinsic_size_containment: Size { width: false, height: false },
+        intrinsic_size_containment: Size {
+            width: false,
+            height: false,
+        },
         box_sizing: BoxSizing::BorderBox,
         direction: Direction::Ltr,
-        overflow: Point { x: Overflow::Visible, y: Overflow::Visible },
+        overflow: Point {
+            x: Overflow::Visible,
+            y: Overflow::Visible,
+        },
         scrollbar_width: 0.0,
         #[cfg(feature = "float_layout")]
         float: Float::None,
@@ -670,9 +701,15 @@ impl<S: CheapCloneStr> Style<S> {
         #[cfg(feature = "grid")]
         grid_auto_flow: GridAutoFlow::Row,
         #[cfg(feature = "grid")]
-        grid_row: Line { start: GridPlacement::<S>::Auto, end: GridPlacement::<S>::Auto },
+        grid_row: Line {
+            start: GridPlacement::<S>::Auto,
+            end: GridPlacement::<S>::Auto,
+        },
         #[cfg(feature = "grid")]
-        grid_column: Line { start: GridPlacement::<S>::Auto, end: GridPlacement::<S>::Auto },
+        grid_column: Line {
+            start: GridPlacement::<S>::Auto,
+            end: GridPlacement::<S>::Auto,
+        },
     };
 }
 
@@ -1004,7 +1041,9 @@ impl<S: CheapCloneStr> GridContainerStyle for Style<S> {
     type TemplateTrackList<'a>
         = core::iter::Map<
         core::slice::Iter<'a, GridTemplateComponent<S>>,
-        fn(&'a GridTemplateComponent<S>) -> GenericGridTemplateComponent<S, &'a GridTemplateRepetition<S>>,
+        fn(
+            &'a GridTemplateComponent<S>,
+        ) -> GenericGridTemplateComponent<S, &'a GridTemplateRepetition<S>>,
     >
     where
         Self: 'a;
@@ -1016,7 +1055,10 @@ impl<S: CheapCloneStr> GridContainerStyle for Style<S> {
 
     #[cfg(feature = "grid")]
     type TemplateLineNames<'a>
-        = core::iter::Map<core::slice::Iter<'a, GridTrackVec<S>>, fn(&GridTrackVec<S>) -> core::slice::Iter<'_, S>>
+        = core::iter::Map<
+        core::slice::Iter<'a, GridTrackVec<S>>,
+        fn(&GridTrackVec<S>) -> core::slice::Iter<'_, S>,
+    >
     where
         Self: 'a;
     #[cfg(feature = "grid")]
@@ -1031,7 +1073,11 @@ impl<S: CheapCloneStr> GridContainerStyle for Style<S> {
     }
     #[inline(always)]
     fn grid_template_columns(&self) -> Option<Self::TemplateTrackList<'_>> {
-        Some(self.grid_template_columns.iter().map(|c| c.as_component_ref()))
+        Some(
+            self.grid_template_columns
+                .iter()
+                .map(|c| c.as_component_ref()),
+        )
     }
     #[inline(always)]
     fn grid_auto_rows(&self) -> Self::AutoTrackList<'_> {
@@ -1075,13 +1121,21 @@ impl<S: CheapCloneStr> GridContainerStyle for Style<S> {
     #[inline(always)]
     #[cfg(feature = "grid")]
     fn grid_template_column_names(&self) -> Option<Self::TemplateLineNames<'_>> {
-        Some(self.grid_template_column_names.iter().map(|names| names.iter()))
+        Some(
+            self.grid_template_column_names
+                .iter()
+                .map(|names| names.iter()),
+        )
     }
 
     #[inline(always)]
     #[cfg(feature = "grid")]
     fn grid_template_row_names(&self) -> Option<Self::TemplateLineNames<'_>> {
-        Some(self.grid_template_row_names.iter().map(|names| names.iter()))
+        Some(
+            self.grid_template_row_names
+                .iter()
+                .map(|names| names.iter()),
+        )
     }
 }
 
@@ -1240,7 +1294,10 @@ mod tests {
             item_is_table: false,
             item_is_replaced: false,
             item_aspect_ratio_is_intrinsic: false,
-            intrinsic_size_containment: Size { width: false, height: false },
+            intrinsic_size_containment: Size {
+                width: false,
+                height: false,
+            },
             box_sizing: Default::default(),
             #[cfg(feature = "float_layout")]
             float: Default::default(),
@@ -1300,9 +1357,15 @@ mod tests {
             #[cfg(feature = "grid")]
             grid_auto_flow: Default::default(),
             #[cfg(feature = "grid")]
-            grid_row: Line { start: GridPlacement::Auto, end: GridPlacement::Auto },
+            grid_row: Line {
+                start: GridPlacement::Auto,
+                end: GridPlacement::Auto,
+            },
             #[cfg(feature = "grid")]
-            grid_column: Line { start: GridPlacement::Auto, end: GridPlacement::Auto },
+            grid_column: Line {
+                start: GridPlacement::Auto,
+                end: GridPlacement::Auto,
+            },
         };
 
         assert_eq!(Style::DEFAULT, Style::<DefaultCheapStr>::default());

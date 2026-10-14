@@ -113,7 +113,9 @@ impl FixedSizeAllocatorPool {
             allocators.push(allocator);
         }
 
-        Self { allocators: Mutex::new(allocators) }
+        Self {
+            allocators: Mutex::new(allocators),
+        }
     }
 
     /// Create a new [`FixedSizeAllocatorPool`] containing *up to* `thread_count` allocators.
@@ -178,7 +180,10 @@ impl FixedSizeAllocatorPool {
             }
         }
 
-        Self { allocators: Mutex::new(allocators), available: Condvar::new() }
+        Self {
+            allocators: Mutex::new(allocators),
+            available: Condvar::new(),
+        }
     }
 
     /// Retrieve an [`Allocator`] from the pool.
@@ -237,8 +242,9 @@ impl FixedSizeAllocatorPool {
     /// # Panics
     /// Panics if the underlying mutex is poisoned.
     pub(super) unsafe fn add(&self, allocator: Allocator) {
-        let mut fixed_size_allocator =
-            FixedSizeAllocator { allocator: ManuallyDrop::new(allocator) };
+        let mut fixed_size_allocator = FixedSizeAllocator {
+            allocator: ManuallyDrop::new(allocator),
+        };
         fixed_size_allocator.reset();
 
         // This is in a block so that lock (`allocators_guard`) is released before notifying the `Condvar`.
@@ -397,13 +403,17 @@ impl FixedSizeAllocator {
         unsafe { allocator.set_cursor_ptr(chunk_ptr.add(RAW_METADATA_OFFSET)) };
 
         // Write `FixedSizeAllocatorMetadata` between `RawTransferMetadata` and `ChunkFooter`
-        let metadata = FixedSizeAllocatorMetadata { id, is_double_owned: AtomicBool::new(false) };
+        let metadata = FixedSizeAllocatorMetadata {
+            id,
+            is_double_owned: AtomicBool::new(false),
+        };
         // SAFETY: `FIXED_METADATA_OFFSET` is `FIXED_METADATA_SIZE + CHUNK_FOOTER_SIZE` bytes before
         // the end of the allocation, so there's space for `FixedSizeAllocatorMetadata`.
         // It's sufficiently aligned for `FixedSizeAllocatorMetadata`.
         unsafe {
-            let metadata_ptr =
-                chunk_ptr.add(FIXED_METADATA_OFFSET).cast::<FixedSizeAllocatorMetadata>();
+            let metadata_ptr = chunk_ptr
+                .add(FIXED_METADATA_OFFSET)
+                .cast::<FixedSizeAllocatorMetadata>();
             metadata_ptr.write(metadata);
         }
 
@@ -420,8 +430,10 @@ impl FixedSizeAllocator {
         // so subtracting `FIXED_METADATA_SIZE + RAW_METADATA_SIZE` gives the start of `RawTransferMetadata`,
         // which lies within the chunk, and is aligned to `Arena::MIN_ALIGN`.
         unsafe {
-            let cursor_ptr =
-                self.allocator.data_end_ptr().sub(FIXED_METADATA_SIZE + RAW_METADATA_SIZE);
+            let cursor_ptr = self
+                .allocator
+                .data_end_ptr()
+                .sub(FIXED_METADATA_SIZE + RAW_METADATA_SIZE);
             debug_assert!(cursor_ptr.addr().get().is_multiple_of(CURSOR_MIN_ALIGN));
             self.allocator.set_cursor_ptr(cursor_ptr);
         }
@@ -499,7 +511,9 @@ pub unsafe fn free_fixed_size_allocator(metadata_ptr: NonNull<FixedSizeAllocator
     // SAFETY: Caller guarantees `metadata_ptr` points to a `FixedSizeAllocatorMetadata` belonging to
     // a `FixedSizeAllocator`, so a valid `ChunkFooter` is at a fixed offset after it within the same allocation.
     unsafe {
-        let footer_ptr = metadata_ptr.byte_add(FIXED_METADATA_SIZE).cast::<ChunkFooter>();
+        let footer_ptr = metadata_ptr
+            .byte_add(FIXED_METADATA_SIZE)
+            .cast::<ChunkFooter>();
         dealloc_fixed_size_arena_chunk(footer_ptr);
     }
 }
@@ -520,6 +534,10 @@ impl Allocator {
         //
         // We never create `&mut` references to `FixedSizeAllocatorMetadata`,
         // and it's not part of the buffer sent to JS, so no danger of aliasing violations.
-        unsafe { self.data_end_ptr().sub(FIXED_METADATA_SIZE).cast::<FixedSizeAllocatorMetadata>() }
+        unsafe {
+            self.data_end_ptr()
+                .sub(FIXED_METADATA_SIZE)
+                .cast::<FixedSizeAllocatorMetadata>()
+        }
     }
 }

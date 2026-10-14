@@ -145,8 +145,10 @@ fn build_compile(
     if !quiet {
         eprintln!("[app build] bun {}", args.join(" "));
     }
-    let status =
-        crate::cli::toolchain::Bun.command(&args).status().context("exécution bun build --compile")?;
+    let status = crate::cli::toolchain::Bun
+        .command(&args)
+        .status()
+        .context("exécution bun build --compile")?;
     if !status.success() {
         anyhow::bail!("bun build a échoué (exit {})", status);
     }

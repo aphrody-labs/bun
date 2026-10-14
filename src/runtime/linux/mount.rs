@@ -64,13 +64,8 @@ pub(crate) fn js_pivot_root(global: &JSGlobalObject, frame: &CallFrame) -> JsRes
         let new_root = super::cstr_arg(global, frame, 0)?;
         let put_old = super::cstr_arg(global, frame, 1)?;
         // SAFETY: both strings are NUL-terminated and outlive the call.
-        let rc = unsafe {
-            libc::syscall(
-                super::nr::PIVOT_ROOT,
-                new_root.as_ptr(),
-                put_old.as_ptr(),
-            )
-        };
+        let rc =
+            unsafe { libc::syscall(super::nr::PIVOT_ROOT, new_root.as_ptr(), put_old.as_ptr()) };
         super::check(global, rc, "pivot_root", Some(new_root.to_bytes()))?;
         Ok(JSValue::UNDEFINED)
     }

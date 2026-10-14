@@ -92,7 +92,9 @@ impl PreferToHaveBeenCalled {
         }
 
         // check if first argument is 0
-        let Some(arg) = parsed_expect_call.args.first() else { return };
+        let Some(arg) = parsed_expect_call.args.first() else {
+            return;
+        };
         let Some(arg_expr) = arg.as_expression() else {
             return;
         };
@@ -100,29 +102,33 @@ impl PreferToHaveBeenCalled {
             return;
         }
 
-        ctx.diagnostic_with_fix(prefer_to_have_been_called_diagnostic(call_expr.span), |fixer| {
-            // check if there is a `not` modifier
-            let not_modifier =
-                parsed_expect_call.modifiers().find(|modifier| modifier.is_name_equal("not"));
+        ctx.diagnostic_with_fix(
+            prefer_to_have_been_called_diagnostic(call_expr.span),
+            |fixer| {
+                // check if there is a `not` modifier
+                let not_modifier = parsed_expect_call
+                    .modifiers()
+                    .find(|modifier| modifier.is_name_equal("not"));
 
-            if let Some(not_modifier) = not_modifier {
-                // if has `not` modifier, remove not and replace with toHaveBeenCalled()
-                // need to find the position of not and replace to the end of the method call
-                let not_start = not_modifier.span.start;
+                if let Some(not_modifier) = not_modifier {
+                    // if has `not` modifier, remove not and replace with toHaveBeenCalled()
+                    // need to find the position of not and replace to the end of the method call
+                    let not_start = not_modifier.span.start;
 
-                let call_end = call_expr.span.end;
-                let replace_span = Span::new(not_start, call_end);
+                    let call_end = call_expr.span.end;
+                    let replace_span = Span::new(not_start, call_end);
 
-                fixer.replace(replace_span, "toHaveBeenCalled()")
-            } else {
-                // if does not have `not` modifier, add `not.` before method name
-                let method_start = matcher.span.start;
-                let call_end = call_expr.span.end;
-                let replace_span = Span::new(method_start, call_end);
+                    fixer.replace(replace_span, "toHaveBeenCalled()")
+                } else {
+                    // if does not have `not` modifier, add `not.` before method name
+                    let method_start = matcher.span.start;
+                    let call_end = call_expr.span.end;
+                    let replace_span = Span::new(method_start, call_end);
 
-                fixer.replace(replace_span, "not.toHaveBeenCalled()")
-            }
-        });
+                    fixer.replace(replace_span, "not.toHaveBeenCalled()")
+                }
+            },
+        );
     }
 }
 
@@ -163,8 +169,16 @@ fn test() {
     ];
 
     let fix = vec![
-        ("expect(method).toBeCalledTimes(0);", "expect(method).not.toHaveBeenCalled();", None),
-        ("expect(method).not.toBeCalledTimes(0);", "expect(method).toHaveBeenCalled();", None),
+        (
+            "expect(method).toBeCalledTimes(0);",
+            "expect(method).not.toHaveBeenCalled();",
+            None,
+        ),
+        (
+            "expect(method).not.toBeCalledTimes(0);",
+            "expect(method).toHaveBeenCalled();",
+            None,
+        ),
         (
             "expect(method).toHaveBeenCalledTimes(0);",
             "expect(method).not.toHaveBeenCalled();",
@@ -223,8 +237,13 @@ fn test() {
             None,
         ),
     ];
-    Tester::new(PreferToHaveBeenCalled::NAME, PreferToHaveBeenCalled::PLUGIN, pass, fail)
-        .with_jest_plugin(true)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        PreferToHaveBeenCalled::NAME,
+        PreferToHaveBeenCalled::PLUGIN,
+        pass,
+        fail,
+    )
+    .with_jest_plugin(true)
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

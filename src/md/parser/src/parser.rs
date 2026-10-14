@@ -57,7 +57,11 @@ impl<'a> Parser<'a> {
     }
 
     pub fn with_options(allocator: &'a Allocator, source: &'a str, options: ParserOptions) -> Self {
-        Self { allocator, source, options }
+        Self {
+            allocator,
+            source,
+            options,
+        }
     }
 
     /// Parse the source into a [`Root`].
@@ -67,9 +71,15 @@ impl<'a> Parser<'a> {
     pub fn parse(self) -> ParserReturn<'a> {
         let mut diagnostics = vec![];
         if u32::try_from(self.source.len()).is_err() {
-            diagnostics.push(Diagnostic::new(DiagnosticKind::SourceTooLong, Span::empty(0)));
+            diagnostics.push(Diagnostic::new(
+                DiagnosticKind::SourceTooLong,
+                Span::empty(0),
+            ));
             return ParserReturn {
-                root: Root { children: ArenaVec::new_in(&self.allocator), span: Span::empty(0) },
+                root: Root {
+                    children: ArenaVec::new_in(&self.allocator),
+                    span: Span::empty(0),
+                },
                 diagnostics,
                 blanks: vec![],
             };
@@ -88,7 +98,11 @@ impl<'a> Parser<'a> {
             &self.options.constructs,
             &refs,
         );
-        ParserReturn { root, diagnostics, blanks: blanks.all }
+        ParserReturn {
+            root,
+            diagnostics,
+            blanks: blanks.all,
+        }
     }
 }
 
@@ -107,7 +121,9 @@ mod tests {
             let allocator = Allocator::default();
             let ret = Parser::new(&allocator, source).parse();
             assert_eq!(ret.blanks, vec![Span::empty(blank_at)], "{source:?}");
-            let Some(Block::List(list)) = ret.root.children.first() else { panic!("list") };
+            let Some(Block::List(list)) = ret.root.children.first() else {
+                panic!("list")
+            };
             assert_eq!(list.tight, tight, "{source:?}");
         }
     }
@@ -117,9 +133,15 @@ mod tests {
     fn setext_heading_keeps_lazy_lines() {
         let allocator = Allocator::default();
         let ret = Parser::new(&allocator, "> a\nb\n> ===\n").parse();
-        let Some(Block::Blockquote(quote)) = ret.root.children.first() else { panic!("quote") };
-        let Some(Block::Heading(heading)) = quote.children.first() else { panic!("heading") };
-        let HeadingKind::Setext { lazy_lines, .. } = &heading.kind else { panic!("setext") };
+        let Some(Block::Blockquote(quote)) = ret.root.children.first() else {
+            panic!("quote")
+        };
+        let Some(Block::Heading(heading)) = quote.children.first() else {
+            panic!("heading")
+        };
+        let HeadingKind::Setext { lazy_lines, .. } = &heading.kind else {
+            panic!("setext")
+        };
         assert_eq!(lazy_lines.as_slice(), &[Span::new(4, 5)]);
     }
 }

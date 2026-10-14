@@ -14,7 +14,10 @@ impl<'a> Parse<'a> for ScopeEnd<'a> {
         let to_span = if token.is_ident_name_eq_ignore_ascii_case(input.source, "to") {
             token.span
         } else {
-            return Err(Error { kind: ErrorKind::ExpectScopeTo, span: token.span });
+            return Err(Error {
+                kind: ErrorKind::ExpectScopeTo,
+                span: token.span,
+            });
         };
 
         let (_, lparen_span) = input.cursor.expect_l_paren()?;
@@ -28,8 +31,16 @@ impl<'a> Parse<'a> for ScopeEnd<'a> {
         };
         let (_, Span { end, .. }) = input.cursor.expect_r_paren()?;
 
-        let span = Span { start: to_span.start, end };
-        Ok(ScopeEnd { to_span, lparen_span, selector, span })
+        let span = Span {
+            start: to_span.start,
+            end,
+        };
+        Ok(ScopeEnd {
+            to_span,
+            lparen_span,
+            selector,
+            span,
+        })
     }
 }
 
@@ -45,7 +56,11 @@ impl<'a> Parse<'a> for ScopePrelude<'a> {
         } else {
             None
         };
-        let end = if input.cursor.peek()?.is_ident_name_eq_ignore_ascii_case(input.source, "to") {
+        let end = if input
+            .cursor
+            .peek()?
+            .is_ident_name_eq_ignore_ascii_case(input.source, "to")
+        {
             Some(input.parse::<ScopeEnd>()?)
         } else {
             None
@@ -53,14 +68,20 @@ impl<'a> Parse<'a> for ScopePrelude<'a> {
 
         match (start, end) {
             (Some(start), Some(end)) => {
-                let span = Span { start: start.span.start, end: end.span.end };
+                let span = Span {
+                    start: start.span.start,
+                    end: end.span.end,
+                };
                 Ok(ScopePrelude::Both(ScopeStartWithEnd { start, end, span }))
             }
             (Some(start), None) => Ok(ScopePrelude::StartOnly(start)),
             (None, Some(end)) => Ok(ScopePrelude::EndOnly(end)),
             (None, None) => {
                 let TokenWithSpan { token, span } = input.cursor.bump()?;
-                Err(Error { kind: ErrorKind::Unexpected("(", token.symbol()), span })
+                Err(Error {
+                    kind: ErrorKind::Unexpected("(", token.symbol()),
+                    span,
+                })
             }
         }
     }
@@ -78,6 +99,9 @@ impl<'a> Parse<'a> for ScopeStart<'a> {
         };
         let (_, Span { end, .. }) = input.cursor.expect_r_paren()?;
 
-        Ok(ScopeStart { selector, span: Span { start, end } })
+        Ok(ScopeStart {
+            selector,
+            span: Span { start, end },
+        })
     }
 }

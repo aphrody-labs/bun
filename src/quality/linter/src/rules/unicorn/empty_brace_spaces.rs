@@ -62,12 +62,15 @@ impl Rule for EmptyBraceSpaces {
                 if static_block.body.is_empty() && !ctx.has_comments_between(span) {
                     // Skip the first 6 chars (static block prefix)
                     let static_block_src = &span.source_text(ctx.source_text())[6..];
-                    let left_curly_brace =
-                        ctx.find_next_token_within(span.start + 6, span.end, "{").unwrap() as usize;
+                    let left_curly_brace = ctx
+                        .find_next_token_within(span.start + 6, span.end, "{")
+                        .unwrap() as usize;
                     let static_block_body = &static_block_src[left_curly_brace..];
 
-                    let whitespace_count =
-                        static_block_body.chars().take_while(|c| c.is_whitespace()).count();
+                    let whitespace_count = static_block_body
+                        .chars()
+                        .take_while(|c| c.is_whitespace())
+                        .count();
                     let static_leading_count = (whitespace_count + left_curly_brace + 8) as u32;
 
                     if span.end - span.start > static_leading_count {
@@ -339,9 +342,18 @@ fn test() {
         ("\nif (true) {\n}", "\nif (true) {}"),
         ("\nif (true) {   }", "\nif (true) {}"),
         ("try{  }catch{  }", "try{}catch{}"),
-        ("for(let i = 0; i <3; i += 1) {\n  }", "for(let i = 0; i <3; i += 1) {}"),
-        ("try{console.log('Hello');}finally{ \n}", "try{console.log('Hello');}finally{}"),
-        ("try{\nconsole.log(\'test\');\n}catch{ }\n", "try{\nconsole.log(\'test\');\n}catch{}\n"),
+        (
+            "for(let i = 0; i <3; i += 1) {\n  }",
+            "for(let i = 0; i <3; i += 1) {}",
+        ),
+        (
+            "try{console.log('Hello');}finally{ \n}",
+            "try{console.log('Hello');}finally{}",
+        ),
+        (
+            "try{\nconsole.log(\'test\');\n}catch{ }\n",
+            "try{\nconsole.log(\'test\');\n}catch{}\n",
+        ),
     ];
 
     Tester::new(EmptyBraceSpaces::NAME, EmptyBraceSpaces::PLUGIN, pass, fail)

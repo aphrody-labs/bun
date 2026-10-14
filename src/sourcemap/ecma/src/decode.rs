@@ -50,9 +50,12 @@ impl<'de> serde::Deserialize<'de> for JSONSourceMap {
             mappings: json.mappings.into_owned(),
             source_root: json.source_root.map(Cow::into_owned),
             sources: json.sources.into_iter().map(Cow::into_owned).collect(),
-            sources_content: json
-                .sources_content
-                .map(|content| content.into_iter().map(|item| item.map(Cow::into_owned)).collect()),
+            sources_content: json.sources_content.map(|content| {
+                content
+                    .into_iter()
+                    .map(|item| item.map(Cow::into_owned))
+                    .collect()
+            }),
             names: json.names.into_iter().map(Cow::into_owned).collect(),
             debug_id: json.debug_id.map(Cow::into_owned),
             ignore_list: resolve_ignore_list(json.ignore_list, json.x_google_ignore_list)
@@ -68,17 +71,21 @@ where
     use serde::Deserialize;
     let version = u32::deserialize(deserializer)?;
     if version != 3 {
-        return Err(serde::de::Error::custom(format!("unsupported source map version: {version}")));
+        return Err(serde::de::Error::custom(format!(
+            "unsupported source map version: {version}"
+        )));
     }
     Ok(version)
 }
 
 pub fn decode(json: JSONSourceMap) -> Result<SourceMap<'static>> {
     if json.version != 3 {
-        return Err(Error::BadJson(<serde_json::Error as serde::de::Error>::custom(format!(
-            "unsupported source map version: {}",
-            json.version
-        ))));
+        return Err(Error::BadJson(
+            <serde_json::Error as serde::de::Error>::custom(format!(
+                "unsupported source map version: {}",
+                json.version
+            )),
+        ));
     }
     validate_ignore_list(json.ignore_list.as_deref(), json.sources.len())?;
 
@@ -313,7 +320,9 @@ fn try_fast_4_or_5_segment(mapping: &[u8], cursor: usize, nums: &mut [i64; 5]) -
         nums[i] = decode_sign(i64::from(v[i]));
     }
 
-    let Some(&b4) = rest.get(4) else { return Some(4) };
+    let Some(&b4) = rest.get(4) else {
+        return Some(4);
+    };
     let v4 = B64_DECODE.0[b4 as usize] as u8;
     if is_delimiter(v4) {
         return Some(4);
@@ -323,7 +332,9 @@ fn try_fast_4_or_5_segment(mapping: &[u8], cursor: usize, nums: &mut [i64; 5]) -
     // after it, else fall back (6+ fields, or a multi-byte VLQ anywhere in
     // the segment).
     if v4 & 0xE0 != 0
-        || rest.get(5).is_some_and(|&b5| !is_delimiter(B64_DECODE.0[b5 as usize] as u8))
+        || rest
+            .get(5)
+            .is_some_and(|&b5| !is_delimiter(B64_DECODE.0[b5 as usize] as u8))
     {
         return None;
     }
@@ -435,7 +446,9 @@ fn parse_vlq_segment_into(mapping: &[u8], cursor: &mut usize, rv: &mut [i64; 5])
 /// delimiter (`,` / `;`) or end of input; otherwise consumes the value's bytes.
 #[inline(always)]
 fn next_vlq(mapping: &[u8], cursor: &mut usize) -> Result<Option<i64>> {
-    let Some(&byte) = mapping.get(*cursor) else { return Ok(None) };
+    let Some(&byte) = mapping.get(*cursor) else {
+        return Ok(None);
+    };
     let first = i64::from(B64_DECODE.0[byte as usize]);
     if first < 0 {
         return Ok(None);
@@ -501,10 +514,21 @@ mod tests {
         let sm = SourceMap::from_json_string(input).unwrap();
         assert_eq!(sm.get_source_root(), Some("x"));
         assert_eq!(sm.get_ignore_list(), Some(&[0][..]));
-        let mut iter = sm.get_source_view_tokens().filter(|token| token.get_name_id().is_some());
-        assert_eq!(iter.next().unwrap().to_tuple(), (Some("coolstuff.js"), 0, 4, Some("x")));
-        assert_eq!(iter.next().unwrap().to_tuple(), (Some("coolstuff.js"), 1, 4, Some("x")));
-        assert_eq!(iter.next().unwrap().to_tuple(), (Some("coolstuff.js"), 2, 2, Some("alert")));
+        let mut iter = sm
+            .get_source_view_tokens()
+            .filter(|token| token.get_name_id().is_some());
+        assert_eq!(
+            iter.next().unwrap().to_tuple(),
+            (Some("coolstuff.js"), 0, 4, Some("x"))
+        );
+        assert_eq!(
+            iter.next().unwrap().to_tuple(),
+            (Some("coolstuff.js"), 1, 4, Some("x"))
+        );
+        assert_eq!(
+            iter.next().unwrap().to_tuple(),
+            (Some("coolstuff.js"), 2, 2, Some("alert"))
+        );
         assert!(iter.next().is_none());
     }
 
@@ -540,18 +564,54 @@ mod tests {
             ("", None),
             (r#", "ignoreList": [0]"#, Some(&[0])),
             (r#", "x_google_ignoreList": [1]"#, Some(&[1])),
-            (r#", "ignoreList": [0], "x_google_ignoreList": [0]"#, Some(&[0])),
-            (r#", "ignoreList": [0], "x_google_ignoreList": [1]"#, Some(&[0])),
-            (r#", "x_google_ignoreList": [1], "ignoreList": [0]"#, Some(&[0])),
-            (r#", "ignoreList": [], "x_google_ignoreList": [1]"#, Some(&[])),
-            (r#", "ignoreList": [0], "x_google_ignoreList": [3]"#, Some(&[0])),
-            (r#", "ignoreList": [], "x_google_ignoreList": [3]"#, Some(&[])),
-            (r#", "ignoreList": [0], "x_google_ignoreList": false"#, Some(&[0])),
-            (r#", "x_google_ignoreList": false, "ignoreList": [0]"#, Some(&[0])),
-            (r#", "x_google_ignoreList": false, "ignoreList": []"#, Some(&[])),
-            (r#", "ignoreList": [0], "x_google_ignoreList": [-1]"#, Some(&[0])),
-            (r#", "ignoreList": null, "x_google_ignoreList": [1]"#, Some(&[1])),
-            (r#", "ignoreList": [0], "x_google_ignoreList": null"#, Some(&[0])),
+            (
+                r#", "ignoreList": [0], "x_google_ignoreList": [0]"#,
+                Some(&[0]),
+            ),
+            (
+                r#", "ignoreList": [0], "x_google_ignoreList": [1]"#,
+                Some(&[0]),
+            ),
+            (
+                r#", "x_google_ignoreList": [1], "ignoreList": [0]"#,
+                Some(&[0]),
+            ),
+            (
+                r#", "ignoreList": [], "x_google_ignoreList": [1]"#,
+                Some(&[]),
+            ),
+            (
+                r#", "ignoreList": [0], "x_google_ignoreList": [3]"#,
+                Some(&[0]),
+            ),
+            (
+                r#", "ignoreList": [], "x_google_ignoreList": [3]"#,
+                Some(&[]),
+            ),
+            (
+                r#", "ignoreList": [0], "x_google_ignoreList": false"#,
+                Some(&[0]),
+            ),
+            (
+                r#", "x_google_ignoreList": false, "ignoreList": [0]"#,
+                Some(&[0]),
+            ),
+            (
+                r#", "x_google_ignoreList": false, "ignoreList": []"#,
+                Some(&[]),
+            ),
+            (
+                r#", "ignoreList": [0], "x_google_ignoreList": [-1]"#,
+                Some(&[0]),
+            ),
+            (
+                r#", "ignoreList": null, "x_google_ignoreList": [1]"#,
+                Some(&[1]),
+            ),
+            (
+                r#", "ignoreList": [0], "x_google_ignoreList": null"#,
+                Some(&[0]),
+            ),
             (r#", "ignoreList": null, "x_google_ignoreList": null"#, None),
             (r#", "ignoreList": null"#, None),
             (r#", "x_google_ignoreList": null"#, None),
@@ -588,7 +648,10 @@ mod tests {
                 matches!(SourceMap::from_json_string(&input), Err(Error::BadJson(_))),
                 "{input}"
             );
-            assert!(serde_json::from_str::<JSONSourceMap>(&input).is_err(), "{input}");
+            assert!(
+                serde_json::from_str::<JSONSourceMap>(&input).is_err(),
+                "{input}"
+            );
         }
     }
 
@@ -661,12 +724,18 @@ mod tests {
         ] {
             let input = format!(r#"{{"version":3,"sources":["a.js"],"mappings":"",{fields}}}"#);
             assert!(
-                matches!(SourceMap::from_json_string(&input), Err(Error::BadSourceReference(3))),
+                matches!(
+                    SourceMap::from_json_string(&input),
+                    Err(Error::BadSourceReference(3))
+                ),
                 "{input}"
             );
             let json = serde_json::from_str(&input).unwrap();
             assert!(
-                matches!(SourceMap::from_json(json), Err(Error::BadSourceReference(3))),
+                matches!(
+                    SourceMap::from_json(json),
+                    Err(Error::BadSourceReference(3))
+                ),
                 "{input}"
             );
         }
@@ -677,16 +746,34 @@ mod tests {
         let empty = || SourceMap::default().to_json();
         // The owned `decode` path (`SourceMap::from_json`) must surface the same
         // validation errors as the borrowed path: an unsupported version...
-        let bad_version = JSONSourceMap { version: 4, ..empty() };
-        assert!(matches!(SourceMap::from_json(bad_version), Err(Error::BadJson(_))));
+        let bad_version = JSONSourceMap {
+            version: 4,
+            ..empty()
+        };
+        assert!(matches!(
+            SourceMap::from_json(bad_version),
+            Err(Error::BadJson(_))
+        ));
 
         // ...a bad ignore-list index...
-        let bad_ignore_list = JSONSourceMap { ignore_list: Some(vec![3]), ..empty() };
-        assert!(matches!(SourceMap::from_json(bad_ignore_list), Err(Error::BadSourceReference(3))));
+        let bad_ignore_list = JSONSourceMap {
+            ignore_list: Some(vec![3]),
+            ..empty()
+        };
+        assert!(matches!(
+            SourceMap::from_json(bad_ignore_list),
+            Err(Error::BadSourceReference(3))
+        ));
 
         // ...and a mapping that references a source with no sources declared.
-        let bad_mapping = JSONSourceMap { mappings: "AAAA".to_string(), ..empty() };
-        assert!(matches!(SourceMap::from_json(bad_mapping), Err(Error::BadSourceReference(_))));
+        let bad_mapping = JSONSourceMap {
+            mappings: "AAAA".to_string(),
+            ..empty()
+        };
+        assert!(matches!(
+            SourceMap::from_json(bad_mapping),
+            Err(Error::BadSourceReference(_))
+        ));
     }
 
     #[test]
@@ -737,7 +824,10 @@ mod tests {
             let input =
                 format!(r#"{{"version":3,"names":[],"sources":[],"mappings":"{mappings}"}}"#);
             let err = SourceMap::from_json_string(&input).unwrap_err();
-            assert!(matches!(err, Error::VlqLeftover), "mappings {mappings:?}: {err:?}");
+            assert!(
+                matches!(err, Error::VlqLeftover),
+                "mappings {mappings:?}: {err:?}"
+            );
         }
     }
 

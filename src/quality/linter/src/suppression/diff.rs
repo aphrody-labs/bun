@@ -107,7 +107,10 @@ impl DiffManager {
                     continue;
                 };
 
-                suppression_tracking.entry(key).or_insert(DiagnosticCounts { count: 0 }).count += 1;
+                suppression_tracking
+                    .entry(key)
+                    .or_insert(DiagnosticCounts { count: 0 })
+                    .count += 1;
             }
 
             suppression_tracking

@@ -105,7 +105,9 @@ impl<'a> MarkdownFormatContext<'a> {
         // A blank that starts where the previous node ends is on that node's last line
         // (a blockquote's bare `>` line), not a line between the two.
         let i = self.blanks.partition_point(|blank| blank.start <= prev_end);
-        self.blanks.get(i).is_some_and(|blank| blank.start < next_start)
+        self.blanks
+            .get(i)
+            .is_some_and(|blank| blank.start < next_start)
     }
 
     pub fn lists(&self) -> &RefCell<Vec<ListFrame>> {

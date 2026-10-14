@@ -74,7 +74,11 @@ struct State {
 fn generate(
     schema: &Schema,
     codegen: &Codegen,
-) -> (/* constructors */ String, /* walkers */ String, /* node type IDs map */ String) {
+) -> (
+    /* constructors */ String,
+    /* walkers */ String,
+    /* node type IDs map */ String,
+) {
     let estree_derive_id = codegen.get_derive_id_by_name("ESTree");
     let span_type_id = schema.type_names["Span"];
 
@@ -241,10 +245,18 @@ impl<'s> WalkStatuses<'s> {
     fn calculate(
         estree_derive_id: DeriveId,
         schema: &'s Schema,
-    ) -> (/* walk statuses */ IndexVec<TypeId, WalkStatus>, /* leaf nodes count */ u32) {
+    ) -> (
+        /* walk statuses */ IndexVec<TypeId, WalkStatus>,
+        /* leaf nodes count */ u32,
+    ) {
         let statuses = index_vec![WalkStatus::Uncalculated; schema.types.len()];
 
-        let mut statuses = Self { statuses, leaf_nodes_count: 0, estree_derive_id, schema };
+        let mut statuses = Self {
+            statuses,
+            leaf_nodes_count: 0,
+            estree_derive_id,
+            schema,
+        };
 
         let program_type = schema.type_by_name("Program");
         statuses.is_walked(program_type);
@@ -270,7 +282,11 @@ impl<'s> WalkStatuses<'s> {
             TypeDef::Pointer(pointer_def) => self.is_walked(pointer_def.inner_type(self.schema)),
         };
 
-        self.statuses[type_id] = if is_walked { WalkStatus::Walk } else { WalkStatus::NoWalk };
+        self.statuses[type_id] = if is_walked {
+            WalkStatus::Walk
+        } else {
+            WalkStatus::NoWalk
+        };
 
         is_walked
     }
@@ -362,7 +378,12 @@ impl<'s> CacheKeyOffsets<'s> {
         offsets[span_type_id] = 0;
 
         // Calculate cache key offset for all structs
-        let mut cache_key_offsets = Self { offsets, estree_derive_id, span_type_id, schema };
+        let mut cache_key_offsets = Self {
+            offsets,
+            estree_derive_id,
+            span_type_id,
+            schema,
+        };
 
         for struct_def in schema.structs() {
             if struct_def.generates_derive(estree_derive_id) {
@@ -396,7 +417,10 @@ impl<'s> CacheKeyOffsets<'s> {
             }
 
             found_offset.unwrap_or_else(|| {
-                panic!("Cannot find a unique cache key offset for `{}`", struct_def.name())
+                panic!(
+                    "Cannot find a unique cache key offset for `{}`",
+                    struct_def.name()
+                )
             })
         };
 
@@ -483,8 +507,11 @@ impl<'s> CacheKeyOffsets<'s> {
                 let inner_type = option_def.inner_type(self.schema);
                 let layout = option_def.layout_64();
                 let inner_layout = inner_type.layout_64();
-                let payload_offset =
-                    if layout.size == inner_layout.size { 0 } else { layout.align };
+                let payload_offset = if layout.size == inner_layout.size {
+                    0
+                } else {
+                    layout.align
+                };
                 if offset < payload_offset {
                     return true;
                 }
@@ -539,7 +566,10 @@ enum ShouldHaveLocalCache {
 
 impl<'s> LocalCacheTypes<'s> {
     fn new(schema: &'s Schema) -> Self {
-        Self { state: index_vec![ShouldHaveLocalCache::Uncalculated; schema.types.len()], schema }
+        Self {
+            state: index_vec![ShouldHaveLocalCache::Uncalculated; schema.types.len()],
+            schema,
+        }
     }
 
     /// Determine if a type should be cached locally.
@@ -584,8 +614,11 @@ impl<'s> LocalCacheTypes<'s> {
             }
         };
 
-        self.state[type_id] =
-            if should_cache { ShouldHaveLocalCache::True } else { ShouldHaveLocalCache::False };
+        self.state[type_id] = if should_cache {
+            ShouldHaveLocalCache::True
+        } else {
+            ShouldHaveLocalCache::False
+        };
 
         should_cache
     }
@@ -789,7 +822,10 @@ fn generate_struct(
             }}
         ");
 
-        write_it!(state.leaf_node_type_ids_map, "['{struct_name}', {node_type_id}],\n");
+        write_it!(
+            state.leaf_node_type_ids_map,
+            "['{struct_name}', {node_type_id}],\n"
+        );
     } else {
         // AST node with children. 2 visitors for enter and exit.
         let node_type_id = state.next_non_leaf_node_type_id;
@@ -812,7 +848,10 @@ fn generate_struct(
             }}
         ");
 
-        write_it!(state.non_leaf_node_type_ids_map, "['{struct_name}', {node_type_id}],\n");
+        write_it!(
+            state.non_leaf_node_type_ids_map,
+            "['{struct_name}', {node_type_id}],\n"
+        );
     }
 
     write_it!(state.walked_constructor_names, "{struct_name}, ");
@@ -850,7 +889,10 @@ fn generate_enum(
             let payload_pos = pos_offset(payload_offset);
 
             let variant_construct_fn_name = variant_type.constructor_name(schema);
-            write_it!(construct_cases, "return {variant_construct_fn_name}({payload_pos}, ast);");
+            write_it!(
+                construct_cases,
+                "return {variant_construct_fn_name}({payload_pos}, ast);"
+            );
 
             // Only walk variants which need to be walked themselves
             if walk_statuses[variant_type.id()] == WalkStatus::Walk {
@@ -1006,7 +1048,11 @@ fn generate_option(
     let (none_condition, payload_pos) = if option_def.layout_64().size == inner_layout.size {
         let niche = inner_layout.niche.clone().unwrap();
         let none_condition = match niche.size {
-            1 => format!("ast.buffer[{}] === {}", pos_offset(niche.offset), niche.value()),
+            1 => format!(
+                "ast.buffer[{}] === {}",
+                pos_offset(niche.offset),
+                niche.value()
+            ),
             // 2 => format!("ast.buffer.uint16[{}] === {}", pos_offset_shift(niche.offset, 1), niche.value()),
             4 => format!(
                 "ast.buffer.int32[{}] === {}",
@@ -1029,7 +1075,10 @@ fn generate_option(
         };
         (none_condition, Cow::Borrowed("pos"))
     } else {
-        ("ast.buffer[pos] === 0".to_string(), pos_offset(inner_layout.align))
+        (
+            "ast.buffer[pos] === 0".to_string(),
+            pos_offset(inner_layout.align),
+        )
     };
 
     // Generate construct function
@@ -1178,7 +1227,11 @@ where
     <O as TryInto<u64>>::Error: Debug,
 {
     let offset = offset.try_into().unwrap();
-    if offset == 0 { Cow::Borrowed("internal.pos") } else { format_cow!("internal.pos + {offset}") }
+    if offset == 0 {
+        Cow::Borrowed("internal.pos")
+    } else {
+        format_cow!("internal.pos + {offset}")
+    }
 }
 
 /// Trait to get function names for constructor and walk functions for a type.

@@ -95,7 +95,9 @@ impl Rule for DefinePropsDeclaration {
     }
 
     fn run<'a>(&self, node: &AstNode<'a>, ctx: &LintContext<'a>) {
-        let AstKind::CallExpression(call_expr) = node.kind() else { return };
+        let AstKind::CallExpression(call_expr) = node.kind() else {
+            return;
+        };
 
         // only check call Expression which is `defineProps`
         if call_expr
@@ -249,6 +251,11 @@ fn test() {
         ), // { "parserOptions": { "parser": require.resolve("@typescript-eslint/parser") } }
     ];
 
-    Tester::new(DefinePropsDeclaration::NAME, DefinePropsDeclaration::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        DefinePropsDeclaration::NAME,
+        DefinePropsDeclaration::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

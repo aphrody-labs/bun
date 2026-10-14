@@ -66,7 +66,10 @@ pub struct ParseResult {
 
 #[napi]
 impl ParseResult {
-    #[napi(getter, ts_return_type = "import(\"../../adapters/types_npm/types.d.ts\").Program")]
+    #[napi(
+        getter,
+        ts_return_type = "import(\"../../adapters/types_npm/types.d.ts\").Program"
+    )]
     pub fn get_program(&mut self) -> String {
         mem::take(&mut self.program_and_fixes)
     }

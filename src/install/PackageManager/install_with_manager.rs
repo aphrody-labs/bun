@@ -977,7 +977,8 @@ pub fn install_with_manager(
     // Before root lifecycle scripts, which exit the process on failure.
     super::package_json_write_back::flush(manager)?;
 
-    if manager.options.do_.install_packages() && !manager.options.dry_run && !manager.options.global {
+    if manager.options.do_.install_packages() && !manager.options.dry_run && !manager.options.global
+    {
         install_system_dependencies(manager, root_package_json_path, log_level);
     }
 
@@ -1197,7 +1198,9 @@ fn install_system_dependencies(
     log_level: Options::LogLevel,
 ) {
     use crate::system;
-    let project_dir = bun_paths::dirname(root_package_json_path.as_bytes()).unwrap_or(b".").to_vec();
+    let project_dir = bun_paths::dirname(root_package_json_path.as_bytes())
+        .unwrap_or(b".")
+        .to_vec();
     let _ = manager.get_cache_directory();
     let cache_dir = manager.cache_directory_path.as_bytes().to_vec();
     let ctx = system::Ctx::new(manager.env(), &cache_dir, PackageManager::verbose_install());
@@ -2326,6 +2329,7 @@ fn save_lockfile_only(
         packages_len_before_install,
         log_level,
     )?;
+    super::package_json_write_back::flush(manager)?;
 
     if manager.subcommand == Subcommand::Dedupe {
         if manager.options.do_.summary() {

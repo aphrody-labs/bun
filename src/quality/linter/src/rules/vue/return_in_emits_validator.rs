@@ -21,8 +21,10 @@ fn expected_boolean_diagnostic(span: Span, name: &str) -> OxcDiagnostic {
 }
 
 fn expected_true_diagnostic(span: Span, name: &str) -> OxcDiagnostic {
-    OxcDiagnostic::warn(format!("Expected to return a true value in \"{name}\" emits validator."))
-        .with_label(span)
+    OxcDiagnostic::warn(format!(
+        "Expected to return a true value in \"{name}\" emits validator."
+    ))
+    .with_label(span)
 }
 
 #[derive(Debug, Default, Clone)]
@@ -72,7 +74,8 @@ declare_oxc_lint!(
     vue,
     correctness,
     version = "1.67.0",
-    short_description = "Enforce that a `return` statement is present in `emits` validators (in Vue.js 3.0.0+).",
+    short_description =
+        "Enforce that a `return` statement is present in `emits` validators (in Vue.js 3.0.0+).",
 );
 
 impl Rule for ReturnInEmitsValidator {
@@ -87,7 +90,9 @@ impl Rule for ReturnInEmitsValidator {
             _ => return,
         };
 
-        let Some(emit_name) = get_emit_validator_name(node, ctx) else { return };
+        let Some(emit_name) = get_emit_validator_name(node, ctx) else {
+            return;
+        };
 
         let (has_return_value, possible_of_return_true) = analyze_return_value(node.kind());
         if possible_of_return_true {
@@ -110,7 +115,9 @@ impl Rule for ReturnInEmitsValidator {
 fn get_emit_validator_name(node: &AstNode<'_>, ctx: &LintContext<'_>) -> Option<String> {
     let nodes = ctx.nodes();
     let parent = nodes.parent_node(node.id());
-    let AstKind::ObjectProperty(prop) = parent.kind() else { return None };
+    let AstKind::ObjectProperty(prop) = parent.kind() else {
+        return None;
+    };
     let emit_name = prop.key.static_name()?;
 
     let obj_node = nodes.parent_node(parent.id());
@@ -136,7 +143,10 @@ fn get_emit_validator_name(node: &AstNode<'_>, ctx: &LintContext<'_>) -> Option<
     //                  -> CallExpression(`defineEmits(...)`)
     if ctx.frameworks_options() == FrameworkOptions::VueSetup
         && let AstKind::CallExpression(call) = outer.kind()
-        && call.callee.get_identifier_reference().is_some_and(|ident| ident.name == "defineEmits")
+        && call
+            .callee
+            .get_identifier_reference()
+            .is_some_and(|ident| ident.name == "defineEmits")
     {
         return Some(emit_name.into_owned());
     }
@@ -551,6 +561,11 @@ fn test() {
         ),
     ];
 
-    Tester::new(ReturnInEmitsValidator::NAME, ReturnInEmitsValidator::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        ReturnInEmitsValidator::NAME,
+        ReturnInEmitsValidator::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

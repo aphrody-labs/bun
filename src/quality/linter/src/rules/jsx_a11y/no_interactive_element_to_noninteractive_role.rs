@@ -77,7 +77,8 @@ declare_oxc_lint!(
     correctness,
     config = NoInteractiveElementToNoninteractiveRoleConfig,
     version = "1.65.0",
-    short_description = "Disallow using a non-interactive WAI-ARIA role on an interactive HTML element.",
+    short_description =
+        "Disallow using a non-interactive WAI-ARIA role on an interactive HTML element.",
 );
 
 impl Rule for NoInteractiveElementToNoninteractiveRole {
@@ -157,7 +158,11 @@ fn test() {
         (r"<TestComponent onClick={doFoo} />", None, None),
         (r"<Button onClick={doFoo} />", None, None),
         (r#"<a href="http://x.y.z" role="button" />"#, None, None),
-        (r#"<a href="http://x.y.z" tabIndex="0" role="button" />"#, None, None),
+        (
+            r#"<a href="http://x.y.z" tabIndex="0" role="button" />"#,
+            None,
+            None,
+        ),
         (r#"<button className="foo" role="button" />"#, None, None),
         (r#"<input role="button" />"#, None, None),
         (r#"<input type="button" role="button" />"#, None, None),
@@ -165,7 +170,11 @@ fn test() {
         (r#"<input type="color" role="button" />"#, None, None),
         (r#"<input type="date" role="button" />"#, None, None),
         (r#"<input type="datetime" role="button" />"#, None, None),
-        (r#"<input type="datetime-local" role="button" />"#, None, None),
+        (
+            r#"<input type="datetime-local" role="button" />"#,
+            None,
+            None,
+        ),
         (r#"<input type="email" role="button" />"#, None, None),
         (r#"<input type="file" role="button" />"#, None, None),
         (r#"<input type="image" role="button" />"#, None, None),
@@ -221,13 +230,21 @@ fn test() {
         (r#"<dir role="button" />;"#, None, None),
         (r#"<div role="button" />;"#, None, None),
         (r#"<div className="foo" role="button" />;"#, None, None),
-        (r#"<div className="foo" {...props} role="button" />;"#, None, None),
+        (
+            r#"<div className="foo" {...props} role="button" />;"#,
+            None,
+            None,
+        ),
         (r#"<div aria-hidden role="button" />;"#, None, None),
         (r#"<div aria-hidden={true} role="button" />;"#, None, None),
         (r#"<div role="button" />;"#, None, None),
         (r#"<div role={undefined} role="button" />;"#, None, None),
         (r#"<div {...props} role="button" />;"#, None, None),
-        (r#"<div onKeyUp={() => void 0} aria-hidden={false} role="button" />;"#, None, None),
+        (
+            r#"<div onKeyUp={() => void 0} aria-hidden={false} role="button" />;"#,
+            None,
+            None,
+        ),
         (r#"<dl role="button" />;"#, None, None),
         (r#"<em role="button" />;"#, None, None),
         (r#"<embed role="button" />;"#, None, None),
@@ -404,17 +421,33 @@ fn test() {
         (r#"<div mynamespace:role="term" />"#, None, None),
         (r#"<input mynamespace:role="img" />"#, None, None),
         (r#"<Link href="http://x.y.z" role="img" />"#, None, None),
-        (r#"<Link href="http://x.y.z" />"#, None, Some(components_settings())),
-        (r"<Button onClick={doFoo} />", None, Some(components_settings())),
+        (
+            r#"<Link href="http://x.y.z" />"#,
+            None,
+            Some(components_settings()),
+        ),
+        (
+            r"<Button onClick={doFoo} />",
+            None,
+            Some(components_settings()),
+        ),
         (r#"<tr role="presentation" />;"#, None, None),
         (r#"<canvas role="img" />;"#, None, None),
-        (r#"<input role="img" />;"#, Some(serde_json::json!([{ "input": ["img"] }])), None),
+        (
+            r#"<input role="img" />;"#,
+            Some(serde_json::json!([{ "input": ["img"] }])),
+            None,
+        ),
         (r#"<Component role="presentation" />;"#, None, None),
     ];
 
     let fail = vec![
         (r#"<a href="http://x.y.z" role="img" />"#, None, None),
-        (r#"<a href="http://x.y.z" tabIndex="0" role="img" />"#, None, None),
+        (
+            r#"<a href="http://x.y.z" tabIndex="0" role="img" />"#,
+            None,
+            None,
+        ),
         (r#"<input role="img" />"#, None, None),
         (r#"<input type="img" role="img" />"#, None, None),
         (r#"<input type="checkbox" role="img" />"#, None, None),
@@ -445,14 +478,22 @@ fn test() {
         (r#"<textarea className="foo" role="img" />"#, None, None),
         (r#"<tr role="img" />;"#, None, None),
         (r#"<a href="http://x.y.z" role="listitem" />"#, None, None),
-        (r#"<a href="http://x.y.z" tabIndex="0" role="listitem" />"#, None, None),
+        (
+            r#"<a href="http://x.y.z" tabIndex="0" role="listitem" />"#,
+            None,
+            None,
+        ),
         (r#"<input role="listitem" />"#, None, None),
         (r#"<input type="listitem" role="listitem" />"#, None, None),
         (r#"<input type="checkbox" role="listitem" />"#, None, None),
         (r#"<input type="color" role="listitem" />"#, None, None),
         (r#"<input type="date" role="listitem" />"#, None, None),
         (r#"<input type="datetime" role="listitem" />"#, None, None),
-        (r#"<input type="datetime-local" role="listitem" />"#, None, None),
+        (
+            r#"<input type="datetime-local" role="listitem" />"#,
+            None,
+            None,
+        ),
         (r#"<input type="email" role="listitem" />"#, None, None),
         (r#"<input type="file" role="listitem" />"#, None, None),
         (r#"<input type="image" role="listitem" />"#, None, None),
@@ -472,11 +513,27 @@ fn test() {
         (r#"<menuitem role="listitem" />;"#, None, None),
         (r#"<option className="foo" role="listitem" />"#, None, None),
         (r#"<select className="foo" role="listitem" />"#, None, None),
-        (r#"<textarea className="foo" role="listitem" />"#, None, None),
+        (
+            r#"<textarea className="foo" role="listitem" />"#,
+            None,
+            None,
+        ),
         (r#"<tr role="listitem" />;"#, None, None),
-        (r#"<Link href="http://x.y.z" role="img" />"#, None, Some(components_settings())),
-        (r#"<tr role="presentation" />;"#, Some(serde_json::json!([{}])), None),
-        (r#"<canvas role="img" />;"#, Some(serde_json::json!([{}])), None),
+        (
+            r#"<Link href="http://x.y.z" role="img" />"#,
+            None,
+            Some(components_settings()),
+        ),
+        (
+            r#"<tr role="presentation" />;"#,
+            Some(serde_json::json!([{}])),
+            None,
+        ),
+        (
+            r#"<canvas role="img" />;"#,
+            Some(serde_json::json!([{}])),
+            None,
+        ),
     ];
 
     Tester::new(

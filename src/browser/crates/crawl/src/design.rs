@@ -5,10 +5,10 @@
 
 use std::{collections::BTreeMap, path::Path, time::Duration};
 
-use bun_browser_extract::html_to_markdown;
-use futures::{StreamExt, stream};
 use bun_browser_dom::parse_html;
+use bun_browser_extract::html_to_markdown;
 use bun_browser_net::{BunBrowserHttpClient, ResourceRequest, ResourceType};
+use futures::{StreamExt, stream};
 use regex::Regex;
 use serde::Serialize;
 use serde_json::Value;
@@ -142,19 +142,24 @@ pub async fn sync_material(
     validate_bounds(output, max_docs, concurrency)?;
     tokio::fs::create_dir_all(output).await.map_err(io_error)?;
     let seed = Url::parse(SOURCE).expect("constant source URL");
-    let bootstrap =
-        fetch(client, &seed).await.map_err(|(error, _)| MaterialSyncError::Http(error))?;
+    let bootstrap = fetch(client, &seed)
+        .await
+        .map_err(|(error, _)| MaterialSyncError::Http(error))?;
     let scripts = discover_bundles(&String::from_utf8_lossy(&bootstrap.body), &bootstrap.url)?;
     let mut sources = vec![save_source(output, &bootstrap).await?];
     let mut requests = bootstrap.attempts;
     let mut version = None;
     let mut catalog = BTreeMap::<String, Vec<String>>::new();
     for script in scripts {
-        let bundle =
-            fetch(client, &script).await.map_err(|(error, _)| MaterialSyncError::Http(error))?;
+        let bundle = fetch(client, &script)
+            .await
+            .map_err(|(error, _)| MaterialSyncError::Http(error))?;
         requests += bundle.attempts;
         let (bundle_version, entries) = discover_catalog(&String::from_utf8_lossy(&bundle.body))?;
-        if version.as_ref().is_some_and(|value| value != &bundle_version) {
+        if version
+            .as_ref()
+            .is_some_and(|value| value != &bundle_version)
+        {
             return Err(MaterialSyncError::Discovery(
                 "conflicting Carbon versions in bundles".into(),
             ));
@@ -229,12 +234,15 @@ pub async fn sync_material(
             Ok(value) => {
                 report.requests += value.attempts;
                 value
-            },
+            }
             Err((error, attempts)) => {
                 report.requests += attempts;
-                report.failures.push(MaterialFailure { url: url.to_string(), error });
+                report.failures.push(MaterialFailure {
+                    url: url.to_string(),
+                    error,
+                });
                 continue;
-            },
+            }
         };
         match save_document(output, &entry, &fetched).await {
             Ok((document, discovered, bytes)) => {
@@ -248,18 +256,26 @@ pub async fn sync_material(
                         report.assets_truncated = true;
                     }
                 }
-            },
-            Err(error) => report.failures.push(MaterialFailure { url: url.to_string(), error }),
+            }
+            Err(error) => report.failures.push(MaterialFailure {
+                url: url.to_string(),
+                error,
+            }),
         }
     }
-    report.entries.sort_by(|left, right| left.slug.cmp(&right.slug));
+    report
+        .entries
+        .sort_by(|left, right| left.slug.cmp(&right.slug));
     report.assets = assets.into_values().collect();
     write_indexes(output, &report).await?;
     Ok(report)
 }
 
 fn seed_url(path: &str) -> Url {
-    Url::parse(SOURCE).expect("constant URL").join(path).expect("validated source path")
+    Url::parse(SOURCE)
+        .expect("constant URL")
+        .join(path)
+        .expect("validated source path")
 }
 
 fn validate_bounds(
@@ -273,7 +289,9 @@ fn validate_bounds(
         )));
     }
     if output.as_os_str().is_empty() {
-        return Err(MaterialSyncError::InvalidBounds("empty output directory".into()));
+        return Err(MaterialSyncError::InvalidBounds(
+            "empty output directory".into(),
+        ));
     }
     Ok(())
 }
@@ -292,7 +310,10 @@ fn same_origin(url: &Url) -> bool {
 
 async fn fetch(client: &BunBrowserHttpClient, url: &Url) -> Result<Fetched, (String, usize)> {
     if !same_origin(url) {
-        return Err(("source must be credential-free HTTPS on m3.material.io".into(), 0));
+        return Err((
+            "source must be credential-free HTTPS on m3.material.io".into(),
+            0,
+        ));
     }
     for attempt in 1..=3 {
         let request = ResourceRequest::subresource(ResourceType::Other, url)
@@ -305,10 +326,14 @@ async fn fetch(client: &BunBrowserHttpClient, url: &Url) -> Result<Fetched, (Str
         let (error, retry) = match response {
             Ok(Ok(response)) if !same_origin(&response.url) => {
                 ("cross-origin redirect rejected".into(), false)
-            },
+            }
             Ok(Ok(response)) if (200..300).contains(&response.status) => {
-                return Ok(Fetched { url: response.url, body: response.body, attempts: attempt });
-            },
+                return Ok(Fetched {
+                    url: response.url,
+                    body: response.body,
+                    attempts: attempt,
+                });
+            }
             Ok(Ok(response)) => (
                 format!("HTTP {}", response.status),
                 response.status == 429 || response.status >= 500,
@@ -350,7 +375,9 @@ fn discover_bundles(html: &str, base: &Url) -> Result<Vec<Url>, MaterialSyncErro
         }
     }
     if urls.is_empty() || urls.len() > MAX_BUNDLES {
-        return Err(MaterialSyncError::Discovery("expected 1..=8 same-origin main bundles".into()));
+        return Err(MaterialSyncError::Discovery(
+            "expected 1..=8 same-origin main bundles".into(),
+        ));
     }
     Ok(urls.into_values().collect())
 }
@@ -394,15 +421,22 @@ fn discover_catalog(bundle: &str) -> Result<(String, Vec<CatalogDocument>), Mate
             slugs.push(slug.to_owned());
         }
         if files.len() > MAX_DOCS {
-            return Err(MaterialSyncError::Discovery("catalog exceeds 2000 documents".into()));
+            return Err(MaterialSyncError::Discovery(
+                "catalog exceeds 2000 documents".into(),
+            ));
         }
     }
     if files.is_empty() {
-        return Err(MaterialSyncError::Discovery("no published Carbon files found".into()));
+        return Err(MaterialSyncError::Discovery(
+            "no published Carbon files found".into(),
+        ));
     }
     Ok((
         version,
-        files.into_iter().map(|(file_id, slugs)| CatalogDocument { file_id, slugs }).collect(),
+        files
+            .into_iter()
+            .map(|(file_id, slugs)| CatalogDocument { file_id, slugs })
+            .collect(),
     ))
 }
 
@@ -426,7 +460,9 @@ async fn save_source(
     fetched: &Fetched,
 ) -> Result<MaterialSource, MaterialSyncError> {
     let path = local_relative_path(&fetched.url, fetched.url.path() == "/");
-    safe_write(output, &path, &fetched.body).await.map_err(io_error)?;
+    safe_write(output, &path, &fetched.body)
+        .await
+        .map_err(io_error)?;
     Ok(MaterialSource {
         url: fetched.url.to_string(),
         path: path.to_string_lossy().replace('\\', "/"),
@@ -440,7 +476,10 @@ fn hash(bytes: &[u8]) -> String {
     Sha256::digest(bytes)
         .iter()
         .flat_map(|byte| {
-            [char::from(HEX[usize::from(byte >> 4)]), char::from(HEX[usize::from(byte & 0x0F)])]
+            [
+                char::from(HEX[usize::from(byte >> 4)]),
+                char::from(HEX[usize::from(byte & 0x0F)]),
+            ]
         })
         .collect()
 }
@@ -478,7 +517,9 @@ async fn save_document(
         fetched.url.path().split('/').nth(4).unwrap_or_default(),
         hash(&fetched.body)
     );
-    safe_write(output, &raw_path, &fetched.body).await.map_err(|error| error.to_string())?;
+    safe_write(output, &raw_path, &fetched.body)
+        .await
+        .map_err(|error| error.to_string())?;
     safe_write(output, &markdown_path, markdown.as_bytes())
         .await
         .map_err(|error| error.to_string())?;
@@ -501,7 +542,11 @@ async fn save_document(
 }
 
 fn escape(value: &str) -> String {
-    value.replace('&', "&amp;").replace('<', "&lt;").replace('>', "&gt;").replace('"', "&quot;")
+    value
+        .replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
+        .replace('"', "&quot;")
 }
 
 fn document_html(value: &Value, base: &Url) -> (String, Vec<Url>) {
@@ -543,24 +588,24 @@ fn document_html(value: &Value, base: &Url) -> (String, Vec<Url>) {
                         assets.insert(url.to_string(), url);
                     }
                 }
-            },
+            }
             Value::String(text) if !text.trim().is_empty() => match key {
                 "htmlValue" | "footer" => {
                     html.push_str(text);
                     collect_html_assets(text, base, &mut assets);
-                },
+                }
                 "snippetCode" => {
                     html.push_str(&format!("<pre><code>{}</code></pre>", escape(text)))
-                },
+                }
                 "title" | "headerTitle" | "name" => {
                     html.push_str(&format!("<h2>{}</h2>", escape(text)))
-                },
+                }
                 "description" | "captionModifierCustomName" | "altText" => {
                     html.push_str(&format!("<p>{}</p>", escape(text)))
-                },
-                _ => {},
+                }
+                _ => {}
             },
-            _ => {},
+            _ => {}
         }
     }
     html.push_str("</main>");
@@ -574,14 +619,16 @@ fn collect_json_assets(value: &Value, base: &Url, assets: &mut BTreeMap<String, 
             Value::Array(items) => stack.extend(items.iter().map(|item| (key, item))),
             Value::Object(map) => {
                 stack.extend(map.iter().map(|(key, value)| (key.as_str(), value)))
-            },
+            }
             Value::String(raw)
                 if raw.starts_with("https://")
                     || raw.starts_with("http://")
                     || raw.starts_with('/') =>
             {
                 let key = key.to_ascii_lowercase();
-                let Some(url) = public_asset(base, raw) else { continue };
+                let Some(url) = public_asset(base, raw) else {
+                    continue;
+                };
                 let extension = Path::new(url.path())
                     .extension()
                     .and_then(|value| value.to_str())
@@ -623,8 +670,8 @@ fn collect_json_assets(value: &Value, base: &Url, assets: &mut BTreeMap<String, 
                 if media_field || media_extension {
                     assets.insert(url.to_string(), url);
                 }
-            },
-            _ => {},
+            }
+            _ => {}
         }
     }
 }
@@ -637,7 +684,7 @@ fn public_asset(base: &Url, raw: &str) -> Option<Url> {
                 && !host.ends_with(".localhost")
                 && !host.ends_with(".local")
                 && !host.ends_with(".internal")
-        },
+        }
         url::Host::Ipv4(ip) => {
             !ip.is_private()
                 && !ip.is_loopback()
@@ -645,14 +692,14 @@ fn public_asset(base: &Url, raw: &str) -> Option<Url> {
                 && !ip.is_unspecified()
                 && !ip.is_multicast()
                 && !ip.is_broadcast()
-        },
+        }
         url::Host::Ipv6(ip) => {
             !ip.is_loopback()
                 && !ip.is_unspecified()
                 && !ip.is_unique_local()
                 && !ip.is_unicast_link_local()
                 && !ip.is_multicast()
-        },
+        }
     };
     if raw.trim().is_empty()
         || !matches!(url.scheme(), "http" | "https")
@@ -723,8 +770,10 @@ async fn write_indexes(
     if report.truncated || !report.failures.is_empty() {
         index.push_str("\n## Published catalog coverage\n\n");
         for entry in &report.catalog {
-            let acquired =
-                report.entries.iter().any(|document| document.source_url == entry.source_url);
+            let acquired = report
+                .entries
+                .iter()
+                .any(|document| document.source_url == entry.source_url);
             index.push_str(&format!(
                 "- [{}]({}) — acquired: {}\n",
                 entry.slugs.join(", "),
@@ -737,12 +786,23 @@ async fn write_indexes(
         index.push_str(&format!("\nFailed: {} — {}\n", failure.url, failure.error));
     }
     for (path, bytes) in [
-        (&report.catalog_path, serde_json::to_vec_pretty(&catalog).map_err(io_error)?),
-        (&report.assets_path, serde_json::to_vec_pretty(&assets).map_err(io_error)?),
-        (&report.receipt_path, serde_json::to_vec_pretty(report).map_err(io_error)?),
+        (
+            &report.catalog_path,
+            serde_json::to_vec_pretty(&catalog).map_err(io_error)?,
+        ),
+        (
+            &report.assets_path,
+            serde_json::to_vec_pretty(&assets).map_err(io_error)?,
+        ),
+        (
+            &report.receipt_path,
+            serde_json::to_vec_pretty(report).map_err(io_error)?,
+        ),
         (&report.ai_index_path, index.into_bytes()),
     ] {
-        safe_write(output, Path::new(path), &bytes).await.map_err(io_error)?;
+        safe_write(output, Path::new(path), &bytes)
+            .await
+            .map_err(io_error)?;
     }
     Ok(())
 }
@@ -753,7 +813,10 @@ mod tests {
 
     #[test]
     fn fingerprints_use_standard_lowercase_sha256() {
-        assert_eq!(hash(b""), "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");
+        assert_eq!(
+            hash(b""),
+            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        );
         assert_eq!(
             hash(b"abc"),
             "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
@@ -771,9 +834,14 @@ mod tests {
 
     #[test]
     fn catalog_rejects_traversal_and_changed_schema() {
-        for slug in
-            ["../secret", "x/../secret", "%2e%2e/secret", "x\\secret", "/absolute", "x?secret"]
-        {
+        for slug in [
+            "../secret",
+            "x/../secret",
+            "%2e%2e/secret",
+            "x\\secret",
+            "/absolute",
+            "x?secret",
+        ] {
             assert!(!valid_slug(slug));
         }
         let bundle = r#"carbonVersion:"2026-09-23_06-10-05";{"slug":"../secret","exportedCarbonFileId":"a513b32c-174e-4b85-8553-60701c021797.json"}"#;
@@ -787,7 +855,9 @@ mod tests {
         let scripts = discover_bundles(html, &seed_url("/")).unwrap();
         assert_eq!(scripts.len(), 1);
         assert_eq!(scripts[0].path(), "/static/angular/main.7906.js");
-        assert!(!same_origin(&Url::parse("https://user:mypass@m3.material.io/").unwrap()));
+        assert!(!same_origin(
+            &Url::parse("https://user:mypass@m3.material.io/").unwrap()
+        ));
     }
 
     #[test]
@@ -798,8 +868,14 @@ mod tests {
         ]});
         let (html, assets) = document_html(&value, &seed_url("styles/motion/overview"));
         let md = html_to_markdown(&html, Some(SOURCE));
-        for text in ["I/O 2026", "35 shapes", "Compose-first", "Specs", "48 dp", "button <primary>"]
-        {
+        for text in [
+            "I/O 2026",
+            "35 shapes",
+            "Compose-first",
+            "Specs",
+            "48 dp",
+            "button <primary>",
+        ] {
             assert!(md.contains(text), "missing {text}: {md}");
         }
         assert_eq!(assets.len(), 2);
@@ -814,7 +890,10 @@ mod tests {
             "https://user:password@cdn.example/private.png",
             "file:///private.png",
         ] {
-            assert!(public_asset(&seed_url("/"), url).is_none(), "accepted {url}");
+            assert!(
+                public_asset(&seed_url("/"), url).is_none(),
+                "accepted {url}"
+            );
         }
     }
 

@@ -55,7 +55,9 @@ pub fn write_root<'a>(root: &'a Root<'a>, f: &mut YamlFormatter<'_, 'a>) -> bool
 
     // Comments after the last node: the last document's end comments
     // (or comments trailing its explicit `...` marker).
-    let anchor = documents.last().map(|document| document_end_comment_anchor(document, f));
+    let anchor = documents
+        .last()
+        .map(|document| document_end_comment_anchor(document, f));
     let remaining = f.context().comments().take_remaining();
     write_end_comments(anchor, remaining, f);
 
@@ -74,7 +76,11 @@ fn document_end_comment_anchor(document: &Document<'_>, f: &YamlFormatter<'_, '_
 fn document_gap_anchor(document: &Document<'_>, f: &YamlFormatter<'_, '_>) -> u32 {
     document.document_end_marker.map_or_else(
         || {
-            let block = document.body.content.as_deref().and_then(last_descendant_block_scalar);
+            let block = document
+                .body
+                .content
+                .as_deref()
+                .and_then(last_descendant_block_scalar);
             item_gap_anchor(block, document.body.span.end, f)
         },
         |marker| marker.end,

@@ -67,7 +67,10 @@ pub(crate) struct Inner {
 
 impl Inner {
     pub fn new(params: IndexParams) -> Self {
-        let layout = Layout { m: params.m, m0: params.m0() };
+        let layout = Layout {
+            m: params.m,
+            m0: params.m0(),
+        };
         let rng = SplitMix64::new(params.seed);
         Self {
             params,
@@ -103,7 +106,9 @@ impl Inner {
     #[inline]
     pub fn is_tombstoned(&self, slot: u32) -> bool {
         let s = slot as usize;
-        self.tombstones.get(s / 64).is_some_and(|w| (w >> (s % 64)) & 1 == 1)
+        self.tombstones
+            .get(s / 64)
+            .is_some_and(|w| (w >> (s % 64)) & 1 == 1)
     }
 
     fn set_tombstone(&mut self, slot: u32) {
@@ -160,7 +165,10 @@ impl Inner {
         if self.params.stores_float() {
             grow(self.floats.to_mut(), additional.saturating_mul(dim));
         }
-        grow(self.links0.to_mut(), additional.saturating_mul(self.layout.m0 + 1));
+        grow(
+            self.links0.to_mut(),
+            additional.saturating_mul(self.layout.m0 + 1),
+        );
         grow(self.upper_off.to_mut(), additional);
         // Expected upper-layer blocks per node: sum_{l>=1} M^-l = 1 / (M - 1).
         let upper_words = additional / (self.layout.m - 1).max(1) * (self.layout.m + 1);
@@ -276,10 +284,13 @@ impl Inner {
                     slot_count,
                 };
                 run_inserts(&ins, start, end, threads, pool);
-            },
+            }
             Quantization::None => {
-                let space =
-                    F32Space { dim: params.dim, metric: params.metric, floats: floats.as_slice() };
+                let space = F32Space {
+                    dim: params.dim,
+                    metric: params.metric,
+                    floats: floats.as_slice(),
+                };
                 let ins = Inserter {
                     space: &space,
                     links,
@@ -290,7 +301,7 @@ impl Inner {
                     slot_count,
                 };
                 run_inserts(&ins, start, end, threads, pool);
-            },
+            }
         }
         *entry = entry_lock.into_inner();
     }
@@ -311,10 +322,9 @@ impl Inner {
     }
 
     pub fn heap_bytes(&self) -> usize {
-        let map_bytes = self
-            .key_map
-            .get()
-            .map_or(0, |m| m.capacity() * (std::mem::size_of::<(u64, u32)>() + 1));
+        let map_bytes = self.key_map.get().map_or(0, |m| {
+            m.capacity() * (std::mem::size_of::<(u64, u32)>() + 1)
+        });
         self.keys.heap_bytes()
             + self.levels.heap_bytes()
             + self.scales.heap_bytes()
@@ -360,8 +370,11 @@ fn run_inserts<S: Space>(
     // The first slots of a graph are linked serially: inserting in parallel
     // into a near-empty graph produces nodes with very few links that can end
     // up unreachable.
-    let serial_end =
-        if threads <= 1 || end - start < 256 { end } else { end.min(start.max(SERIAL_PREFIX)) };
+    let serial_end = if threads <= 1 || end - start < 256 {
+        end
+    } else {
+        end.min(start.max(SERIAL_PREFIX))
+    };
     if start < serial_end {
         let mut visited = pool.get(ins.slot_count);
         let mut scratch = Scratch::default();
@@ -432,7 +445,10 @@ fn new_locks() -> Box<[Mutex<()>]> {
 /// Validate without allocating (used to reject a whole batch up front).
 fn validate_vector(v: &[f32], dim: usize, metric: Metric) -> Result<()> {
     if v.len() != dim {
-        return Err(IndexError::DimensionMismatch { expected: dim, got: v.len() });
+        return Err(IndexError::DimensionMismatch {
+            expected: dim,
+            got: v.len(),
+        });
     }
     let mut norm_sq = 0f64;
     for &x in v {
@@ -532,7 +548,11 @@ impl Index {
         }
         let (dim, metric, threads) = {
             let inner = self.inner.read();
-            (self.dim, inner.params.metric, Self::build_threads(&inner.params))
+            (
+                self.dim,
+                inner.params.metric,
+                Self::build_threads(&inner.params),
+            )
         };
         // Reject the whole batch before mutating anything.
         for i in 0..n {
@@ -570,7 +590,7 @@ impl Index {
                 inner.set_tombstone(slot);
                 self.live.store(inner.live_count(), AtomicOrdering::Relaxed);
                 true
-            },
+            }
             None => false,
         }
     }
@@ -606,7 +626,15 @@ impl Index {
 
     /// k-NN search. Scores are similarities (higher is better).
     pub fn search(&self, query: &[f32], k: usize, ef: Option<usize>) -> Result<Vec<(u64, f32)>> {
-        self.search_impl(query, SearchOptions { k, ef, rescore_multiplier: None }, None)
+        self.search_impl(
+            query,
+            SearchOptions {
+                k,
+                ef,
+                rescore_multiplier: None,
+            },
+            None,
+        )
     }
 
     /// k-NN search restricted to keys accepted by `filter`. Rejected nodes still
@@ -621,7 +649,15 @@ impl Index {
     where
         F: Fn(u64) -> bool,
     {
-        self.search_impl(query, SearchOptions { k, ef, rescore_multiplier: None }, Some(&filter))
+        self.search_impl(
+            query,
+            SearchOptions {
+                k,
+                ef,
+                rescore_multiplier: None,
+            },
+            Some(&filter),
+        )
     }
 
     /// Search with explicit per-query options (e.g. rescoring on/off).
@@ -653,7 +689,11 @@ impl Index {
         let ef = opts.ef.unwrap_or(p.ef_search).max(k);
         let mult = opts.rescore_multiplier.unwrap_or(p.rescore_multiplier);
         let rescore = p.stores_codes() && p.stores_float() && mult > 0;
-        let pool_size = if rescore { ef.max(k.saturating_mul(mult)) } else { ef };
+        let pool_size = if rescore {
+            ef.max(k.saturating_mul(mult))
+        } else {
+            ef
+        };
 
         let links = SliceLinks {
             layout: inner.layout,
@@ -682,7 +722,11 @@ impl Index {
                 };
                 let mut codes = vec![0i8; p.dim];
                 let (scale, norm) = quantize(&q, &mut codes);
-                let qq = I8Query { codes: &codes, scale, norm };
+                let qq = I8Query {
+                    codes: &codes,
+                    scale,
+                    norm,
+                };
                 knn(
                     &space,
                     &links,
@@ -695,10 +739,13 @@ impl Index {
                     accept,
                     &mut out,
                 );
-            },
+            }
             Quantization::None => {
-                let space =
-                    F32Space { dim: p.dim, metric: p.metric, floats: inner.floats.as_slice() };
+                let space = F32Space {
+                    dim: p.dim,
+                    metric: p.metric,
+                    floats: inner.floats.as_slice(),
+                };
                 knn(
                     &space,
                     &links,
@@ -711,12 +758,16 @@ impl Index {
                     accept,
                     &mut out,
                 );
-            },
+            }
         }
         self.visited.put(visited);
 
         if rescore {
-            let space = F32Space { dim: p.dim, metric: p.metric, floats: inner.floats.as_slice() };
+            let space = F32Space {
+                dim: p.dim,
+                metric: p.metric,
+                floats: inner.floats.as_slice(),
+            };
             out.truncate(k.saturating_mul(mult));
             for c in out.iter_mut() {
                 c.dist = space.dist_vec(&q, c.id);
@@ -792,10 +843,24 @@ fn knn<S: Space, F: Fn(u32) -> bool>(
     accept: F,
     out: &mut Vec<Candidate>,
 ) {
-    let mut cur = Candidate { dist: space.dist_query(q, ep), id: ep };
+    let mut cur = Candidate {
+        dist: space.dist_query(q, ep),
+        id: ep,
+    };
     let mut buf = Vec::new();
     for level in (1..=max_level).rev() {
         cur = greedy_closest(space, links, q, cur, level, &mut buf);
     }
-    search_layer(space, links, q, &[cur], ef, 0, visited, scratch, accept, out);
+    search_layer(
+        space,
+        links,
+        q,
+        &[cur],
+        ef,
+        0,
+        visited,
+        scratch,
+        accept,
+        out,
+    );
 }

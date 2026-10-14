@@ -55,7 +55,10 @@ impl<'source> LexerToken<'source> for Escape {
         // Newline escape: backslash followed by optional whitespace and newline
         if let Some(rest) = input.strip_prefix('\\') {
             let bytes = rest.as_bytes();
-            let ws_len = bytes.iter().take_while(|&&b| b == b' ' || b == b'\t').count();
+            let ws_len = bytes
+                .iter()
+                .take_while(|&&b| b == b' ' || b == b'\t')
+                .count();
             let after_ws = &rest[ws_len..];
             if after_ws.starts_with('\n') {
                 return Some((Newline, 1 + ws_len + 1));
@@ -68,7 +71,10 @@ impl<'source> LexerToken<'source> for Escape {
         // Unicode escape \uXXXX
         if input.starts_with("\\u") && input.len() >= 6 {
             let hex_bytes = &input.as_bytes()[2..6];
-            if hex_bytes.iter().all(|&b| b.is_ascii_hexdigit() || b == b'_') {
+            if hex_bytes
+                .iter()
+                .all(|&b| b.is_ascii_hexdigit() || b == b'_')
+            {
                 return Some((Unicode, 6));
             }
         }
@@ -76,7 +82,10 @@ impl<'source> LexerToken<'source> for Escape {
         // Unicode escape \UXXXXXXXX
         if input.starts_with("\\U") && input.len() >= 10 {
             let hex_bytes = &input.as_bytes()[2..10];
-            if hex_bytes.iter().all(|&b| b.is_ascii_hexdigit() || b == b'_') {
+            if hex_bytes
+                .iter()
+                .all(|&b| b.is_ascii_hexdigit() || b == b'_')
+            {
                 return Some((UnicodeLarge, 10));
             }
         }
@@ -87,7 +96,11 @@ impl<'source> LexerToken<'source> for Escape {
         }
 
         // Unescaped character - consume one UTF-8 character
-        if input.is_empty() { None } else { Some((UnEscaped, input.ceil_char_boundary(1))) }
+        if input.is_empty() {
+            None
+        } else {
+            Some((UnEscaped, input.ceil_char_boundary(1)))
+        }
     }
 }
 
@@ -139,5 +152,9 @@ pub fn check_escape(s: &str) -> Result<(), Vec<usize>> {
         }
     }
 
-    if invalid.is_empty() { Ok(()) } else { Err(invalid) }
+    if invalid.is_empty() {
+        Ok(())
+    } else {
+        Err(invalid)
+    }
 }

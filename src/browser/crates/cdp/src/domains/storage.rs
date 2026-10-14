@@ -1,4 +1,4 @@
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 
 use crate::{
     cookie_params::{parse_cdp_cookie, parse_delete_cookies_params},
@@ -11,7 +11,10 @@ fn cookie_jar_for(
     params: &Value,
     session_id: &Option<String>,
 ) -> Result<std::sync::Arc<bun_browser_net::CookieJar>, String> {
-    match params.get("browserContextId").and_then(|value| value.as_str()) {
+    match params
+        .get("browserContextId")
+        .and_then(|value| value.as_str())
+    {
         Some(id) => ctx
             .browser_context(id)
             .map(|context| context.cookie_jar.clone())
@@ -34,20 +37,22 @@ pub async fn handle(
             let cookies = cookie_jar_for(ctx, params, session_id)?.get_all_cookies();
             let cdp_cookies: Vec<Value> = cookies.iter().map(cookie_info_to_cdp_json).collect();
             Ok(json!({ "cookies": cdp_cookies }))
-        },
+        }
         "setCookies" => {
             if let Some(cookies) = params.get("cookies").and_then(|v| v.as_array()) {
                 let parsed: Vec<_> = cookies.iter().filter_map(parse_cdp_cookie).collect();
                 cookie_jar_for(ctx, params, session_id)?.set_cookies_from_cdp_with_scope(
-                    parsed.into_iter().map(|cookie| (cookie.cookie, cookie.host_only)),
+                    parsed
+                        .into_iter()
+                        .map(|cookie| (cookie.cookie, cookie.host_only)),
                 );
             }
             Ok(json!({}))
-        },
+        }
         "clearCookies" => {
             cookie_jar_for(ctx, params, session_id)?.clear();
             Ok(json!({}))
-        },
+        }
         "deleteCookies" => {
             if let Some(filter) = parse_delete_cookies_params(params) {
                 cookie_jar_for(ctx, params, session_id)?.delete_cookies_filtered(
@@ -57,7 +62,7 @@ pub async fn handle(
                 );
             }
             Ok(json!({}))
-        },
+        }
         _ => Ok(json!({})),
     }
 }
@@ -89,19 +94,25 @@ mod tests {
             .unwrap()
             .cookie_jar
             .set_cookies_from_cdp(vec![sample_cookie("isolated")]);
-        ctx.default_context.cookie_jar.set_cookies_from_cdp(vec![sample_cookie("default")]);
+        ctx.default_context
+            .cookie_jar
+            .set_cookies_from_cdp(vec![sample_cookie("default")]);
 
-        handle("clearCookies", &json!({ "browserContextId": browser_context_id }), &mut ctx, &None)
-            .await
-            .unwrap();
+        handle(
+            "clearCookies",
+            &json!({ "browserContextId": browser_context_id }),
+            &mut ctx,
+            &None,
+        )
+        .await
+        .unwrap();
 
-        assert!(
-            ctx.browser_context(&browser_context_id)
-                .unwrap()
-                .cookie_jar
-                .get_all_cookies()
-                .is_empty()
-        );
+        assert!(ctx
+            .browser_context(&browser_context_id)
+            .unwrap()
+            .cookie_jar
+            .get_all_cookies()
+            .is_empty());
         let default = ctx.default_context.cookie_jar.get_all_cookies();
         assert_eq!(default.len(), 1);
         assert_eq!(default[0].value, "default");
@@ -110,9 +121,13 @@ mod tests {
     #[tokio::test]
     async fn clear_cookies_without_context_clears_default_context() {
         let mut ctx = CdpContext::new();
-        ctx.default_context.cookie_jar.set_cookies_from_cdp(vec![sample_cookie("default")]);
+        ctx.default_context
+            .cookie_jar
+            .set_cookies_from_cdp(vec![sample_cookie("default")]);
 
-        handle("clearCookies", &json!({}), &mut ctx, &None).await.unwrap();
+        handle("clearCookies", &json!({}), &mut ctx, &None)
+            .await
+            .unwrap();
 
         assert!(ctx.default_context.cookie_jar.get_all_cookies().is_empty());
     }

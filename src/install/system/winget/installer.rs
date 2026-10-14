@@ -7,10 +7,13 @@
 //!   elevated or `BUN_SYSTEM_ELEVATE=1`.
 
 use super::super::value::Value;
-use super::super::{Ctx, Error, InstallKind, InstallRoot, InstalledRecord, LockEntry, Result, SourceKind};
+use super::super::{
+    Ctx, Error, InstallKind, InstallRoot, InstalledRecord, LockEntry, Result, SourceKind,
+};
 
 use aphrody_pkg_system::winget::{
-    self as pure, Installer as Picked, default_extension, extension_of, file_name_of, needs_elevation, stem,
+    self as pure, Installer as Picked, default_extension, extension_of, file_name_of,
+    needs_elevation, stem,
 };
 
 pub(super) fn host_arch(ctx: &Ctx<'_>) -> String {
@@ -51,21 +54,38 @@ fn path_str(p: &[u8]) -> String {
     super::super::lossy(p)
 }
 
-pub(super) fn install(ctx: &Ctx<'_>, entry: &LockEntry, manifest: &Value, root: &InstallRoot) -> Result<InstalledRecord> {
+pub(super) fn install(
+    ctx: &Ctx<'_>,
+    entry: &LockEntry,
+    manifest: &Value,
+    root: &InstallRoot,
+) -> Result<InstalledRecord> {
     let p = pick(ctx, manifest, &entry.id)?;
     let ty = p.installer_type();
-    let url = p
-        .str("InstallerUrl")
-        .ok_or_else(|| Error::Parse(format!("winget: {} installer has no InstallerUrl", entry.id)))?;
-    let sha = p
-        .str("InstallerSha256")
-        .ok_or_else(|| Error::Parse(format!("winget: {} installer has no InstallerSha256", entry.id)))?;
+    let url = p.str("InstallerUrl").ok_or_else(|| {
+        Error::Parse(format!(
+            "winget: {} installer has no InstallerUrl",
+            entry.id
+        ))
+    })?;
+    let sha = p.str("InstallerSha256").ok_or_else(|| {
+        Error::Parse(format!(
+            "winget: {} installer has no InstallerSha256",
+            entry.id
+        ))
+    })?;
     let name = file_name_of(url);
     let ext = extension_of(name).unwrap_or_else(|| default_extension(&ty));
     let what = format!("winget installer {}@{}", entry.id, entry.version);
     let (bytes, cached_path) = ctx.fetch_verified(SourceKind::Winget, &what, url, sha, ext)?;
 
-    let mut rec = InstalledRecord::new(SourceKind::Winget, &entry.id, &entry.version, &entry.hash, InstallKind::Files);
+    let mut rec = InstalledRecord::new(
+        SourceKind::Winget,
+        &entry.id,
+        &entry.version,
+        &entry.hash,
+        InstallKind::Files,
+    );
     rec.meta.insert("installerType".to_owned(), ty.clone());
     rec.meta.insert("installerUrl".to_owned(), url.to_owned());
     if let Some(a) = p.str("Architecture") {
@@ -79,7 +99,14 @@ pub(super) fn install(ctx: &Ctx<'_>, entry: &LockEntry, manifest: &Value, root: 
     match ty.as_str() {
         "portable" => {
             let cmd = p.portable_command(name);
-            let file = format!("{cmd}{}", if ext.eq_ignore_ascii_case(".exe") { ".exe" } else { ext });
+            let file = format!(
+                "{cmd}{}",
+                if ext.eq_ignore_ascii_case(".exe") {
+                    ".exe"
+                } else {
+                    ext
+                }
+            );
             super::super::fs::remove_tree(&pkg_dir);
             let target = super::super::join(&pkg_dir, &[file.as_bytes()]);
             super::super::fs::write(&target, &bytes)?;
@@ -97,21 +124,34 @@ pub(super) fn install(ctx: &Ctx<'_>, entry: &LockEntry, manifest: &Value, root: 
             let nested_files = p.nested_files();
             if nested == "portable" || nested.is_empty() {
                 for (rel, alias) in &nested_files {
-                    let rel = super::super::archive::safe_relative(rel.as_bytes())
-                        .ok_or_else(|| Error::Parse(format!("winget: unsafe NestedInstallerFiles path \"{rel}\"")))?;
+                    let rel =
+                        super::super::archive::safe_relative(rel.as_bytes()).ok_or_else(|| {
+                            Error::Parse(format!(
+                                "winget: unsafe NestedInstallerFiles path \"{rel}\""
+                            ))
+                        })?;
                     let target = super::super::join(&pkg_dir, &[&rel]);
-                    let cmd = alias.clone().unwrap_or_else(|| stem(&path_str(&rel)).to_owned());
+                    let cmd = alias
+                        .clone()
+                        .unwrap_or_else(|| stem(&path_str(&rel)).to_owned());
                     rec.bins.extend(shim(root, &cmd, &target)?);
                 }
                 return Ok(rec);
             }
-            let (rel, _) = nested_files
-                .first()
-                .ok_or_else(|| Error::Parse(format!("winget: {} zip has no NestedInstallerFiles", entry.id)))?;
-            let rel = super::super::archive::safe_relative(rel.as_bytes())
-                .ok_or_else(|| Error::Parse(format!("winget: unsafe NestedInstallerFiles path \"{rel}\"")))?;
+            let (rel, _) = nested_files.first().ok_or_else(|| {
+                Error::Parse(format!(
+                    "winget: {} zip has no NestedInstallerFiles",
+                    entry.id
+                ))
+            })?;
+            let rel = super::super::archive::safe_relative(rel.as_bytes()).ok_or_else(|| {
+                Error::Parse(format!(
+                    "winget: unsafe NestedInstallerFiles path \"{rel}\""
+                ))
+            })?;
             let inner = super::super::join(&pkg_dir, &[&rel]);
-            rec.meta.insert("nestedInstallerType".to_owned(), nested.clone());
+            rec.meta
+                .insert("nestedInstallerType".to_owned(), nested.clone());
             run_native(ctx, entry, &p, &nested, &inner, &mut rec)?;
             Ok(rec)
         }
@@ -126,8 +166,12 @@ fn extract_zip(bytes: &[u8], what: &str, dir: &[u8]) -> Result<Vec<Vec<u8>>> {
     let mut files = Vec::new();
     let mut dirs = Vec::new();
     super::super::archive::for_each(bytes, what, &mut |item| {
-        let rel = super::super::archive::safe_relative(item.path)
-            .ok_or_else(|| Error::Parse(format!("{what}: unsafe entry path \"{}\"", path_str(item.path))))?;
+        let rel = super::super::archive::safe_relative(item.path).ok_or_else(|| {
+            Error::Parse(format!(
+                "{what}: unsafe entry path \"{}\"",
+                path_str(item.path)
+            ))
+        })?;
         let path = super::super::join(dir, &[&rel]);
         if item.is_dir {
             super::super::fs::mkdir_p(&path)?;
@@ -147,7 +191,9 @@ fn extract_zip(bytes: &[u8], what: &str, dir: &[u8]) -> Result<Vec<Vec<u8>>> {
 /// Creates `<bin>/<cmd>` launching `target`; returns the shim paths.
 fn shim(root: &InstallRoot, cmd: &str, target: &[u8]) -> Result<Vec<String>> {
     if cmd.is_empty() || bun_core::strings::index_of_any(cmd.as_bytes(), b"/\\:").is_some() {
-        return Err(Error::Parse(format!("winget: invalid command alias \"{cmd}\"")));
+        return Err(Error::Parse(format!(
+            "winget: invalid command alias \"{cmd}\""
+        )));
     }
     #[cfg(windows)]
     {
@@ -169,10 +215,22 @@ fn windows_shim(root: &InstallRoot, cmd: &str, target: &[u8]) -> Result<Vec<Stri
     let rel = target
         .strip_prefix(base)
         .and_then(|r| r.strip_prefix(b"\\").or_else(|| r.strip_prefix(b"/")))
-        .ok_or_else(|| Error::Io(format!("winget: {} is outside {}", path_str(target), path_str(base))))?;
+        .ok_or_else(|| {
+            Error::Io(format!(
+                "winget: {} is outside {}",
+                path_str(target),
+                path_str(base)
+            ))
+        })?;
     let rel_w: Vec<u16> = path_str(rel)
         .encode_utf16()
-        .map(|c| if c == u16::from(b'/') { u16::from(b'\\') } else { c })
+        .map(|c| {
+            if c == u16::from(b'/') {
+                u16::from(b'\\')
+            } else {
+                c
+            }
+        })
         .collect();
     let shim = BinLinkingShim {
         bin_path: &rel_w,
@@ -203,17 +261,26 @@ fn run_native(
     rec: &mut InstalledRecord,
 ) -> Result<()> {
     if !cfg!(windows) {
-        return Err(Error::Unsupported(format!("winget: {} installers only run on Windows", ty)));
+        return Err(Error::Unsupported(format!(
+            "winget: {} installers only run on Windows",
+            ty
+        )));
     }
     if needs_elevation(p, ty) && !may_elevate(ctx) {
-        return Err(Error::NeedsElevation(format!("winget:{} ({} installer)", entry.id, ty)));
+        return Err(Error::NeedsElevation(format!(
+            "winget:{} ({} installer)",
+            entry.id, ty
+        )));
     }
     rec.kind = InstallKind::Native;
     let file = path_str(path);
     let argv = pure::install_argv(p, ty, &file, &entry.id)?;
     let code = run(&argv)?;
     if !pure::is_install_success(p, code) {
-        return Err(Error::InstallerFailed { id: entry.id.clone(), code });
+        return Err(Error::InstallerFailed {
+            id: entry.id.clone(),
+            code,
+        });
     }
     rec.uninstall = uninstall_argv(p, ty);
     if let Some(code) = p.product_code() {
@@ -225,7 +292,9 @@ fn run_native(
 fn uninstall_argv(p: &Picked<'_>, ty: &str) -> Vec<String> {
     match pure::uninstall_plan(p, ty) {
         pure::UninstallPlan::Argv(argv) => argv,
-        pure::UninstallPlan::Registry { product_code } => registry_uninstall(&product_code, ty).unwrap_or_default(),
+        pure::UninstallPlan::Registry { product_code } => {
+            registry_uninstall(&product_code, ty).unwrap_or_default()
+        }
         pure::UninstallPlan::None => Vec::new(),
     }
 }
@@ -268,9 +337,18 @@ fn reg_uninstall_value(product_code: &str, value: &str) -> Option<String> {
     let wide = |s: &str| -> Vec<u16> { s.encode_utf16().chain(core::iter::once(0)).collect() };
     let value_w = wide(value);
     for (hive, prefix) in [
-        (HKEY_CURRENT_USER, "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\"),
-        (HKEY_LOCAL_MACHINE, "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\"),
-        (HKEY_LOCAL_MACHINE, "SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\"),
+        (
+            HKEY_CURRENT_USER,
+            "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\",
+        ),
+        (
+            HKEY_LOCAL_MACHINE,
+            "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\",
+        ),
+        (
+            HKEY_LOCAL_MACHINE,
+            "SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\",
+        ),
     ] {
         let key = wide(&format!("{prefix}{product_code}"));
         let mut buf = vec![0u16; 2048];
@@ -303,7 +381,11 @@ fn run(argv: &[String]) -> Result<i64> {
     let args: Vec<&[u8]> = argv.iter().map(|a| a.as_bytes()).collect();
     match bun_core::util::spawn_sync_inherit(&args) {
         Ok(status) => Ok(i64::from(status.code())),
-        Err(e) => Err(Error::Io(format!("could not run {}: {}", argv[0], e.name()))),
+        Err(e) => Err(Error::Io(format!(
+            "could not run {}: {}",
+            argv[0],
+            e.name()
+        ))),
     }
 }
 
@@ -321,11 +403,17 @@ pub(super) fn remove(ctx: &Ctx<'_>, rec: &InstalledRecord, root: &InstallRoot) -
             rec.meta.get("installerType").map(String::as_str),
         );
         if needs && !may_elevate(ctx) {
-            return Err(Error::NeedsElevation(format!("uninstalling winget:{}", rec.id)));
+            return Err(Error::NeedsElevation(format!(
+                "uninstalling winget:{}",
+                rec.id
+            )));
         }
         let code = run(&rec.uninstall)?;
         if !pure::is_uninstall_success(code) {
-            return Err(Error::InstallerFailed { id: rec.id.clone(), code });
+            return Err(Error::InstallerFailed {
+                id: rec.id.clone(),
+                code,
+            });
         }
     }
     for bin in &rec.bins {

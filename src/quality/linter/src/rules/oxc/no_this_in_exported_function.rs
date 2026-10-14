@@ -118,8 +118,9 @@ fn check_function_for_this(func: &Function, ctx: &LintContext) {
         return;
     }
 
-    let mut finder =
-        ThisExpressionFinder::new().skip_static_blocks().skip_property_definition_values();
+    let mut finder = ThisExpressionFinder::new()
+        .skip_static_blocks()
+        .skip_property_definition_values();
     finder.visit_function_body(body);
 
     for span in finder.into_spans() {
@@ -182,6 +183,11 @@ fn test() {
         "function* foo() { yield this; } export { foo };",
     ];
 
-    Tester::new(NoThisInExportedFunction::NAME, NoThisInExportedFunction::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        NoThisInExportedFunction::NAME,
+        NoThisInExportedFunction::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

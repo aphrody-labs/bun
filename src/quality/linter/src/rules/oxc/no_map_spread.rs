@@ -132,7 +132,10 @@ impl From<NoMapSpreadConfig> for NoMapSpread {
 
 impl Default for NoMapSpreadConfig {
     fn default() -> Self {
-        Self { ignore_rereads: true, ignore_args: true }
+        Self {
+            ignore_rereads: true,
+            ignore_args: true,
+        }
     }
 }
 
@@ -379,7 +382,10 @@ impl Rule for NoMapSpread {
             if let Some(obj) = spread.as_object() {
                 debug_assert!(!obj.properties.is_empty());
                 if obj.properties.len() > 1
-                    && obj.properties.first().is_some_and(ObjectPropertyKind::is_spread)
+                    && obj
+                        .properties
+                        .first()
+                        .is_some_and(ObjectPropertyKind::is_spread)
                 {
                     ctx.diagnostic_with_suggestion(diagnostic, |fixer| {
                         fix_spread_to_object_assign(fixer, obj)
@@ -418,7 +424,9 @@ impl NoMapSpread {
         }
 
         if self.ignore_args {
-            let declaration = ctx.nodes().get_node(ctx.scoping().symbol_declaration(symbol_id));
+            let declaration = ctx
+                .nodes()
+                .get_node(ctx.scoping().symbol_declaration(symbol_id));
             if matches!(declaration.kind(), AstKind::FormalParameter(_)) {
                 return true;
             }
@@ -456,7 +464,11 @@ fn get_map_callback<'a, 'b>(call_expr: &'b CallExpression<'a>) -> Option<&'b Exp
         return None;
     }
 
-    let arg = call_expr.arguments.first()?.as_expression()?.get_inner_expression();
+    let arg = call_expr
+        .arguments
+        .first()?
+        .as_expression()?
+        .get_inner_expression();
     match arg {
         Expression::ArrowFunctionExpression(_) | Expression::FunctionExpression(_) => Some(arg),
         _ => None,
@@ -613,7 +625,9 @@ where
             _ => unreachable!(),
         };
 
-        let Expression::FunctionExpression(function) = map_cb else { unreachable!() };
+        let Expression::FunctionExpression(function) = map_cb else {
+            unreachable!()
+        };
         let body = function.body.as_deref()?;
         visitor.visit_function_body(body);
         Some(visitor)
@@ -666,8 +680,11 @@ where
             // check if identifier is a reference to a spread-initialized
             // variable declared within the map callback.
             Expression::Identifier(ident) => {
-                let Some(symbol_id) =
-                    self.ctx.scoping().get_reference(ident.reference_id()).symbol_id()
+                let Some(symbol_id) = self
+                    .ctx
+                    .scoping()
+                    .get_reference(ident.reference_id())
+                    .symbol_id()
                 else {
                     return;
                 };
@@ -736,8 +753,14 @@ fn test() {
 
     let pass = vec![
         ("let a = b.map(x => x)", None),
-        ("let b = []; let a = b.map(x => ({ ...x })); console.log(b)", None),
-        ("let a = b.map(x => Object.assign(x, { foo: { ...x.foo, bar }}))", None),
+        (
+            "let b = []; let a = b.map(x => ({ ...x })); console.log(b)",
+            None,
+        ),
+        (
+            "let a = b.map(x => Object.assign(x, { foo: { ...x.foo, bar }}))",
+            None,
+        ),
         (
             "class Foo {
                 #arr = []
@@ -761,7 +784,10 @@ fn test() {
         ("function map(f) {}; map(x => ({ ...x }))", None),
         ("function flatMap(f) {}; flatMap(x => ({ ...x }))", None),
         // ignoreArgs
-        ("function foo(a) { return a.map(x => ({ ...(x ?? y) })) }", None),
+        (
+            "function foo(a) { return a.map(x => ({ ...(x ?? y) })) }",
+            None,
+        ),
         ("const foo = a => a.map(x => ({ ...(x ?? y) }))", None),
         (
             "const ids = result.map(obj => {
@@ -790,10 +816,19 @@ fn test() {
             "let a = b.map(x => ({ ...x })); console.log(b)",
             Some(json!([{ "ignoreRereads": false }])),
         ),
-        ("let b = []; console.log(b); let a = b.map(x => ({ ...x }));", None),
+        (
+            "let b = []; console.log(b); let a = b.map(x => ({ ...x }));",
+            None,
+        ),
         // indirection
-        ("let a = b.map(x => { let x2 = { ...x }; return x2; })", None),
-        ("let a = b.map(x => { let x2 = { ...x }; let x3 = x2; return x3; })", None),
+        (
+            "let a = b.map(x => { let x2 = { ...x }; return x2; })",
+            None,
+        ),
+        (
+            "let a = b.map(x => { let x2 = { ...x }; let x3 = x2; return x3; })",
+            None,
+        ),
         (
             "let a = b.map(x => {
             let y = { ...x };
@@ -806,8 +841,14 @@ fn test() {
             None,
         ),
         // conditionals and other "outer" expressions
-        ("let a = b.map(x => someCond ? { ...x, foo: true } : { ...x, foo: false })", None),
-        ("let a = b.map( ({ x, y }) => ({ ...(cond ? x : y) }) )", None),
+        (
+            "let a = b.map(x => someCond ? { ...x, foo: true } : { ...x, foo: false })",
+            None,
+        ),
+        (
+            "let a = b.map( ({ x, y }) => ({ ...(cond ? x : y) }) )",
+            None,
+        ),
         ("const b = a.map((x, i) => y ? { ...x, i } : x)", None),
         ("const b = a.map((x, i) => y ? x : { ...x, i })", None),
         ("let a = b.map(x => (0, { ...x }))", None),
@@ -829,7 +870,10 @@ fn test() {
             "function foo(a) { return a.map(x => ({ ...(x ?? y) })) }",
             Some(json!([{ "ignoreArgs": false }])),
         ),
-        ("const foo = a => a.map(x => ({ ...(x ?? y) }))", Some(json!([{ "ignoreArgs": false }]))),
+        (
+            "const foo = a => a.map(x => ({ ...(x ?? y) }))",
+            Some(json!([{ "ignoreArgs": false }])),
+        ),
         (
             "const ids = result.map(obj => {
                 const { a = { ...obj }, b = a } = obj;

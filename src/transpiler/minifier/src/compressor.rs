@@ -20,7 +20,10 @@ impl<'a> Compressor<'a> {
     /// Full minify: removes dead code and applies size-reducing transforms.
     /// For tree-shaking only, see [`Self::dead_code_elimination`].
     pub fn build(self, program: &mut Program<'a>, options: CompressOptions) {
-        let scoping = SemanticBuilder::new().build(program).semantic.into_scoping();
+        let scoping = SemanticBuilder::new()
+            .build(program)
+            .semantic
+            .into_scoping();
         self.build_with_scoping(program, scoping, options);
     }
 
@@ -68,7 +71,10 @@ impl<'a> Compressor<'a> {
     /// Tree-shaking only: removes dead and unused code, but does not otherwise
     /// shrink the output like [`Self::build`]. Rolldown runs this on its own.
     pub fn dead_code_elimination(self, program: &mut Program<'a>, options: CompressOptions) -> u8 {
-        let scoping = SemanticBuilder::new().build(program).semantic.into_scoping();
+        let scoping = SemanticBuilder::new()
+            .build(program)
+            .semantic
+            .into_scoping();
         self.dead_code_elimination_with_scoping(program, scoping, options)
     }
 

@@ -37,7 +37,9 @@ pub async fn search_mediawiki(
         return Ok(Vec::new());
     }
     if limit > 100 {
-        return Err(MediaWikiError::InvalidOptions("search limit must be at most 100".into()));
+        return Err(MediaWikiError::InvalidOptions(
+            "search limit must be at most 100".into(),
+        ));
     }
     let params = [
         ("action", "query".to_owned()),
@@ -67,7 +69,9 @@ fn parse_search_response(
         {
             return Ok(Vec::new());
         }
-        return Err(MediaWikiError::InvalidResponse("search query.pages is missing".into()));
+        return Err(MediaWikiError::InvalidResponse(
+            "search query.pages is missing".into(),
+        ));
     };
     let pages = pages.as_array().ok_or_else(|| {
         MediaWikiError::InvalidResponse("search query.pages must be an array".into())
@@ -95,7 +99,10 @@ fn parse_search_response(
                 "search page URL must be credential-free HTTP(S)".into(),
             ));
         }
-        let rank = page.get("index").and_then(Value::as_u64).unwrap_or(u64::MAX);
+        let rank = page
+            .get("index")
+            .and_then(Value::as_u64)
+            .unwrap_or(u64::MAX);
         ranked.push((
             rank,
             WikiSearchHit {
@@ -117,7 +124,9 @@ mod tests {
     #[tokio::test]
     async fn search_uses_the_shared_http_transport_and_encodes_api_parameters() {
         use tokio::io::{AsyncReadExt, AsyncWriteExt};
-        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.expect("listener");
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+            .await
+            .expect("listener");
         let address = listener.local_addr().expect("address");
         let server = tokio::spawn(async move {
             let (mut stream, _) = listener.accept().await.expect("accept");
@@ -125,7 +134,10 @@ mod tests {
             let mut buffer = [0_u8; 1024];
             while !request.windows(4).any(|window| window == b"\r\n\r\n") {
                 let count = stream.read(&mut buffer).await.expect("read request");
-                assert!(count > 0 && request.len() < 16_384, "incomplete HTTP request");
+                assert!(
+                    count > 0 && request.len() < 16_384,
+                    "incomplete HTTP request"
+                );
                 request.extend_from_slice(&buffer[..count]);
             }
             let body = json!({"query":{"pages":[{
@@ -137,7 +149,10 @@ mod tests {
                 "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
                 body.len()
             );
-            stream.write_all(response.as_bytes()).await.expect("response");
+            stream
+                .write_all(response.as_bytes())
+                .await
+                .expect("response");
             String::from_utf8(request).expect("request encoding")
         });
         let api = Url::parse(&format!("http://{address}/custom/api.php")).expect("api URL");
@@ -147,14 +162,28 @@ mod tests {
         let hits = search_mediawiki(&client, &MediaWikiOptions::new(api), "Goku & Vegeta", 2)
             .await
             .expect("search");
-        assert_eq!(hits[0].url.as_str(), "https://wiki.example/w/index.php?title=Goku");
+        assert_eq!(
+            hits[0].url.as_str(),
+            "https://wiki.example/w/index.php?title=Goku"
+        );
         let request = server.await.expect("server");
-        let path =
-            request.lines().next().expect("request line").split_whitespace().nth(1).expect("path");
+        let path = request
+            .lines()
+            .next()
+            .expect("request line")
+            .split_whitespace()
+            .nth(1)
+            .expect("path");
         let url = Url::parse(&format!("http://{address}{path}")).expect("request URL");
         assert_eq!(url.path(), "/custom/api.php");
-        let params = url.query_pairs().into_owned().collect::<std::collections::HashMap<_, _>>();
-        assert_eq!(params.get("gsrsearch").map(String::as_str), Some("Goku & Vegeta"));
+        let params = url
+            .query_pairs()
+            .into_owned()
+            .collect::<std::collections::HashMap<_, _>>();
+        assert_eq!(
+            params.get("gsrsearch").map(String::as_str),
+            Some("Goku & Vegeta")
+        );
         assert_eq!(params.get("gsrlimit").map(String::as_str), Some("2"));
         assert_eq!(params.get("generator").map(String::as_str), Some("search"));
         assert_eq!(params.get("inprop").map(String::as_str), Some("url"));
@@ -168,7 +197,10 @@ mod tests {
         ]}}), 1).expect("search response");
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].title, "First");
-        assert_eq!(results[0].url.as_str(), "https://wiki.example/fr/wiki/First");
+        assert_eq!(
+            results[0].url.as_str(),
+            "https://wiki.example/fr/wiki/First"
+        );
         assert_eq!(results[0].size, Some(40));
     }
 

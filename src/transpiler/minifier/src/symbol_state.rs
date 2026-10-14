@@ -67,7 +67,10 @@ impl<'a> SymbolState<'a> {
     }
 
     pub fn set_function_summary(&mut self, symbol_id: SymbolId, summary: FunctionSummary) {
-        self.persistent.entry(symbol_id).or_default().set_function_summary(summary);
+        self.persistent
+            .entry(symbol_id)
+            .or_default()
+            .set_function_summary(summary);
     }
 
     pub fn clear_function_summary(&mut self, symbol_id: SymbolId) {
@@ -79,19 +82,24 @@ impl<'a> SymbolState<'a> {
     }
 
     pub fn function_summary(&self, symbol_id: SymbolId) -> FunctionSummary {
-        self.persistent
-            .get(&symbol_id)
-            .map_or(FunctionSummary::Unknown, PersistentSymbolMetadata::function_summary)
+        self.persistent.get(&symbol_id).map_or(
+            FunctionSummary::Unknown,
+            PersistentSymbolMetadata::function_summary,
+        )
     }
 
     pub fn record_member_write_effect(&mut self, symbol_id: SymbolId, effect: MemberWriteEffect) {
-        self.persistent.entry(symbol_id).or_default().record_member_write_effect(effect);
+        self.persistent
+            .entry(symbol_id)
+            .or_default()
+            .record_member_write_effect(effect);
     }
 
     pub fn member_write_effect(&self, symbol_id: SymbolId) -> MemberWriteEffect {
-        self.persistent
-            .get(&symbol_id)
-            .map_or(MemberWriteEffect::None, PersistentSymbolMetadata::member_write_effect)
+        self.persistent.get(&symbol_id).map_or(
+            MemberWriteEffect::None,
+            PersistentSymbolMetadata::member_write_effect,
+        )
     }
 
     /// Whether runtime semantics have an implicit observation channel that
@@ -100,14 +108,18 @@ impl<'a> SymbolState<'a> {
     /// consumers may interpret that result only in configurations where
     /// absence is safe.
     pub fn is_implicitly_observable(&self, symbol_id: SymbolId) -> bool {
-        self.liveness.as_ref().is_some_and(|liveness| liveness.is_implicitly_observable(symbol_id))
+        self.liveness
+            .as_ref()
+            .is_some_and(|liveness| liveness.is_implicitly_observable(symbol_id))
     }
 
     /// Whether post-flush graph analysis proved a function declaration
     /// unreachable from executing code. Returns `false` when liveness state is
     /// absent because deadness was not proved.
     pub fn function_is_dead(&self, symbol_id: SymbolId) -> bool {
-        self.liveness.as_ref().is_some_and(|liveness| liveness.function_is_dead(symbol_id))
+        self.liveness
+            .as_ref()
+            .is_some_and(|liveness| liveness.function_is_dead(symbol_id))
     }
 
     pub fn liveness(&self) -> Option<&SymbolLiveness<'a>> {

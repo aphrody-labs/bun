@@ -32,11 +32,17 @@ impl<'a> Deref for FormatFunction<'a, '_> {
 
 impl<'a, 'b> FormatFunction<'a, 'b> {
     pub fn new(function: &'b AstNode<'a, Function<'a>>) -> Self {
-        Self { function, cache_mode: FunctionCacheMode::NoCache }
+        Self {
+            function,
+            cache_mode: FunctionCacheMode::NoCache,
+        }
     }
 
     pub fn new_cached(function: &'b AstNode<'a, Function<'a>>) -> Self {
-        Self { function, cache_mode: FunctionCacheMode::Cache }
+        Self {
+            function,
+            cache_mode: FunctionCacheMode::Cache,
+        }
     }
 
     #[inline]
@@ -65,8 +71,10 @@ impl<'a, 'b> FormatFunction<'a, 'b> {
             .return_type()
             .map(|return_type| {
                 let content = format_with(move |f| {
-                    let needs_space =
-                        f.context().comments().has_comment_before(return_type.span.start);
+                    let needs_space = f
+                        .context()
+                        .comments()
+                        .has_comment_before(return_type.span.start);
                     write!(f, [maybe_space(needs_space), return_type]);
                 });
                 FormatContentWithCacheMode::new(return_type.span, content, self.cache_mode)
@@ -100,7 +108,13 @@ impl<'a, 'b> FormatFunction<'a, 'b> {
         );
 
         if let Some(body) = self.body() {
-            write!(f, [space(), FormatContentWithCacheMode::new(body.span, body, self.cache_mode)]);
+            write!(
+                f,
+                [
+                    space(),
+                    FormatContentWithCacheMode::new(body.span, body, self.cache_mode)
+                ]
+            );
         }
 
         if self.is_ts_declare_function() {
@@ -122,9 +136,23 @@ impl<'a> FormatWrite<'a> for AstNode<'a, FunctionBody<'a>> {
         let statements = self.statements();
         let directives = self.directives();
         if is_empty_block(statements) && directives.is_empty() {
-            write!(f, ["{", format_dangling_comments(self.span).with_block_indent(), "}"]);
+            write!(
+                f,
+                [
+                    "{",
+                    format_dangling_comments(self.span).with_block_indent(),
+                    "}"
+                ]
+            );
         } else {
-            write!(f, ["{", block_indent(&format_args!(directives, statements)), "}"]);
+            write!(
+                f,
+                [
+                    "{",
+                    block_indent(&format_args!(directives, statements)),
+                    "}"
+                ]
+            );
         }
     }
 }
@@ -157,8 +185,10 @@ pub fn should_group_function_parameters<'a>(
     };
 
     parameter_count == 1
-        && (matches!(return_type, TSType::TSTypeLiteral(_) | TSType::TSMappedType(_))
-            || formatted_return_type.inspect(f).will_break())
+        && (matches!(
+            return_type,
+            TSType::TSTypeLiteral(_) | TSType::TSMappedType(_)
+        ) || formatted_return_type.inspect(f).will_break())
 }
 
 /// A wrapper that formats content and caches the result based on the given cache mode.
@@ -178,7 +208,11 @@ pub struct FormatContentWithCacheMode<T> {
 
 impl<T> FormatContentWithCacheMode<T> {
     pub fn new(key: Span, content: T, cache_mode: FunctionCacheMode) -> Self {
-        Self { key, content, cache_mode }
+        Self {
+            key,
+            content,
+            cache_mode,
+        }
     }
 }
 
@@ -201,12 +235,18 @@ where
 /// A bodyless function (`declare function f(): void;`, an overload, an abstract method) ends at its signature,
 /// extended over dropped source parens; one with a body has no terminator.
 pub fn function_content_end(function: &Function<'_>, f: &JsFormatter<'_, '_>) -> Option<u32> {
-    function.body.is_none().then(|| function_signature_end(function, f))
+    function
+        .body
+        .is_none()
+        .then(|| function_signature_end(function, f))
 }
 
 /// The end of a function's signature (its return type, else its parameters), extended over dropped source parens.
 pub fn function_signature_end(function: &Function<'_>, f: &JsFormatter<'_, '_>) -> u32 {
-    let signature_end =
-        function.return_type.as_ref().map_or(function.params.span.end, |rt| rt.span.end);
-    f.comments().end_including_source_parens(signature_end, function.span.end)
+    let signature_end = function
+        .return_type
+        .as_ref()
+        .map_or(function.params.span.end, |rt| rt.span.end);
+    f.comments()
+        .end_including_source_parens(signature_end, function.span.end)
 }

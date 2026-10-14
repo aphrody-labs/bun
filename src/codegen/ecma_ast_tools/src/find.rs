@@ -20,8 +20,13 @@ const AST_FILES_PREFIX: &str = "src/ast/ecma/src/";
 /// produces generated code in a readable order, with `Program` first.
 ///
 /// Paths are relative to [`AST_FILES_PREFIX`].
-const AST_PRIORITY_PATHS: &[&str] =
-    &["ast/js.rs", "ast/literal.rs", "ast/jsx.rs", "ast/ts.rs", "ast/comment.rs"];
+const AST_PRIORITY_PATHS: &[&str] = &[
+    "ast/js.rs",
+    "ast/literal.rs",
+    "ast/jsx.rs",
+    "ast/ts.rs",
+    "ast/comment.rs",
+];
 
 /// Find all crates and source files containing AST types.
 ///
@@ -49,11 +54,14 @@ pub fn find_crates_and_files() -> (
         serde_json::from_slice(&output.stdout).expect("Failed to parse cargo metadata JSON");
 
     // Find crates that depend on `oxc_ast_macros`
-    let root_path =
-        metadata["workspace_root"].as_str().expect("Missing workspace_root in cargo metadata");
+    let root_path = metadata["workspace_root"]
+        .as_str()
+        .expect("Missing workspace_root in cargo metadata");
     let root_path = PathBuf::from(root_path);
 
-    let packages = metadata["packages"].as_array().expect("Missing packages in cargo metadata");
+    let packages = metadata["packages"]
+        .as_array()
+        .expect("Missing packages in cargo metadata");
 
     // Get paths of crates that depend on `oxc_ast_macros`, and all `.rs` files in those crates
     let mut crate_paths = Vec::new();
@@ -70,8 +78,12 @@ pub fn find_crates_and_files() -> (
             continue;
         }
 
-        let manifest_path = package["manifest_path"].as_str().expect("Missing manifest_path");
-        let crate_absolute_path = Path::new(manifest_path).parent().expect("Invalid manifest path");
+        let manifest_path = package["manifest_path"]
+            .as_str()
+            .expect("Missing manifest_path");
+        let crate_absolute_path = Path::new(manifest_path)
+            .parent()
+            .expect("Invalid manifest path");
 
         // Find all `.rs` files in this crate's `src` directory
         let src_dir = crate_absolute_path.join("src");
@@ -79,7 +91,9 @@ pub fn find_crates_and_files() -> (
         find_rs_files(&src_dir, &root_path, true, &mut file_paths);
 
         let crate_path = path_to_normalized_string(
-            crate_absolute_path.strip_prefix(&root_path).expect("Crate path not in workspace"),
+            crate_absolute_path
+                .strip_prefix(&root_path)
+                .expect("Crate path not in workspace"),
         );
         crate_paths.push(crate_path);
     }
@@ -91,9 +105,13 @@ pub fn find_crates_and_files() -> (
     #[expect(clippy::items_after_statements)]
     fn rank(path: &str) -> (usize, &str) {
         match path.strip_prefix(AST_FILES_PREFIX) {
-            Some(s) => {
-                (AST_PRIORITY_PATHS.iter().position(|&p| p == s).unwrap_or(usize::MAX - 1), path)
-            }
+            Some(s) => (
+                AST_PRIORITY_PATHS
+                    .iter()
+                    .position(|&p| p == s)
+                    .unwrap_or(usize::MAX - 1),
+                path,
+            ),
             None => (usize::MAX, path),
         }
     }
@@ -133,7 +151,9 @@ fn find_rs_files(dir: &Path, root_path: &Path, skip_generated: bool, paths: &mut
 fn path_to_normalized_string(path: &Path) -> String {
     if cfg!(windows) {
         #[expect(clippy::disallowed_methods)]
-        path.to_str().expect("Path is not valid UTF-8").replace('\\', "/")
+        path.to_str()
+            .expect("Path is not valid UTF-8")
+            .replace('\\', "/")
     } else {
         path.to_string_lossy().into_owned()
     }

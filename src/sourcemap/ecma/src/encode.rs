@@ -17,9 +17,16 @@ pub fn encode(sourcemap: &SourceMap<'_>) -> JSONSourceMap {
         },
         source_root: sourcemap.get_source_root().map(ToString::to_string),
         sources: sourcemap.sources.iter().map(ToString::to_string).collect(),
-        sources_content: sourcemap.source_contents.iter().any(Option::is_some).then(|| {
-            sourcemap.get_source_contents().map(|content| content.map(str::to_owned)).collect()
-        }),
+        sources_content: sourcemap
+            .source_contents
+            .iter()
+            .any(Option::is_some)
+            .then(|| {
+                sourcemap
+                    .get_source_contents()
+                    .map(|content| content.map(str::to_owned))
+                    .collect()
+            }),
         names: sourcemap.names.iter().map(ToString::to_string).collect(),
         debug_id: sourcemap.get_debug_id().map(ToString::to_string),
         ignore_list: sourcemap.ignore_list.clone(),
@@ -60,14 +67,21 @@ pub fn encode_to_string(sourcemap: &SourceMap<'_>) -> String {
 
     // Single pass over source_contents to check existence and accumulate byte lengths
     let (has_source_contents, sc_bytes) =
-        sourcemap.source_contents.iter().fold((false, 0usize), |(has_some, bytes), content| {
-            match content {
-                Some(s) => (true, bytes + s.len()),
-                None => (has_some, bytes + 4), // "null"
-            }
-        });
+        sourcemap
+            .source_contents
+            .iter()
+            .fold((false, 0usize), |(has_some, bytes), content| {
+                match content {
+                    Some(s) => (true, bytes + s.len()),
+                    None => (has_some, bytes + 4), // "null"
+                }
+            });
     total_string_bytes += sc_bytes;
-    let sc_count = if has_source_contents { sourcemap.source_contents.len() } else { 0 };
+    let sc_count = if has_source_contents {
+        sourcemap.source_contents.len()
+    } else {
+        0
+    };
 
     // Calculate total capacity needed
     estimated_capacity += 9 + 13; // "names":[ + ],"sources":[
@@ -520,7 +534,9 @@ mod tests {
             assert!(json.get("x_google_ignoreList").is_none());
             assert_eq!(
                 json.get("ignoreList"),
-                sm.get_ignore_list().map(|list| serde_json::json!(list)).as_ref()
+                sm.get_ignore_list()
+                    .map(|list| serde_json::json!(list))
+                    .as_ref()
             );
             let decoded = SourceMap::from_json_string(&encoded).unwrap();
             assert_eq!(decoded.get_ignore_list(), sm.get_ignore_list());
@@ -747,7 +763,10 @@ mod tests {
         let json = sm.to_json_string();
         // Round-trip must succeed (would fail if the quote isn't escaped).
         let roundtripped = SourceMap::from_json_string(&json).unwrap();
-        assert_eq!(roundtripped.get_debug_id(), Some("id-with-\"quote\"-and-\\backslash"));
+        assert_eq!(
+            roundtripped.get_debug_id(),
+            Some("id-with-\"quote\"-and-\\backslash")
+        );
     }
 
     #[test]
@@ -761,7 +780,14 @@ mod tests {
             .map(|i| {
                 let name = if i % 2 == 0 { Some(0) } else { None };
                 let source_position = (i % 2) * 536_870_912;
-                Token::new(0, i * 100_000_000, source_position, source_position, Some(0), name)
+                Token::new(
+                    0,
+                    i * 100_000_000,
+                    source_position,
+                    source_position,
+                    Some(0),
+                    name,
+                )
             })
             .collect();
         let sm = SourceMap::new(
@@ -794,8 +820,15 @@ mod tests {
             None,
             vec!["a.js".into()],
             vec![],
-            vec![Token::new(0, 536_870_912, 536_870_912, 536_870_912, Some(0), None)]
-                .into_boxed_slice(),
+            vec![Token::new(
+                0,
+                536_870_912,
+                536_870_912,
+                536_870_912,
+                Some(0),
+                None,
+            )]
+            .into_boxed_slice(),
             None,
         );
         let json = sm.to_json();
@@ -835,13 +868,20 @@ mod tests {
             None,
             vec![],
             vec![],
-            vec![Token::new(0, 0, 0, 0, None, None), Token::new(0, 4, 0, 0, None, None)]
-                .into_boxed_slice(),
+            vec![
+                Token::new(0, 0, 0, 0, None, None),
+                Token::new(0, 4, 0, 0, None, None),
+            ]
+            .into_boxed_slice(),
             None,
         );
         let encoded = sm.to_json_string();
         let reparsed = SourceMap::from_json_string(&encoded).unwrap();
         assert!(sm.get_tokens().eq(reparsed.get_tokens()));
-        assert!(reparsed.get_tokens().all(|token| token.get_source_id().is_none()));
+        assert!(
+            reparsed
+                .get_tokens()
+                .all(|token| token.get_source_id().is_none())
+        );
     }
 }

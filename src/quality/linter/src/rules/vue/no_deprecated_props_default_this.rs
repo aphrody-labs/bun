@@ -66,12 +66,15 @@ declare_oxc_lint!(
     correctness,
     pending,
     version = "1.67.0",
-    short_description = "Disallow deprecated `this` access in props default function (in Vue.js 3.0.0+).",
+    short_description =
+        "Disallow deprecated `this` access in props default function (in Vue.js 3.0.0+).",
 );
 
 impl Rule for NoDeprecatedPropsDefaultThis {
     fn run<'a>(&self, node: &AstNode<'a>, ctx: &LintContext<'a>) {
-        let AstKind::ThisExpression(this_expr) = node.kind() else { return };
+        let AstKind::ThisExpression(this_expr) = node.kind() else {
+            return;
+        };
 
         let nodes = ctx.nodes();
 
@@ -86,7 +89,9 @@ impl Rule for NoDeprecatedPropsDefaultThis {
         };
 
         let prop_node = nodes.parent_node(fn_id);
-        let AstKind::ObjectProperty(default_prop) = prop_node.kind() else { return };
+        let AstKind::ObjectProperty(default_prop) = prop_node.kind() else {
+            return;
+        };
         if !default_prop.key.is_specific_static_name("default") {
             return;
         }
@@ -94,7 +99,9 @@ impl Rule for NoDeprecatedPropsDefaultThis {
         // `type: Function` means `default` is the function value itself, not a
         // factory that returns a value, so `this` inside is not the deprecated case.
         let opts_node = nodes.parent_node(prop_node.id());
-        let AstKind::ObjectExpression(opts) = opts_node.kind() else { return };
+        let AstKind::ObjectExpression(opts) = opts_node.kind() else {
+            return;
+        };
         if has_function_type(opts) {
             return;
         }
@@ -110,7 +117,9 @@ impl Rule for NoDeprecatedPropsDefaultThis {
         }
 
         let props_node = nodes.parent_node(props_object_node.id());
-        let AstKind::ObjectProperty(props_prop) = props_node.kind() else { return };
+        let AstKind::ObjectProperty(props_prop) = props_node.kind() else {
+            return;
+        };
         if !props_prop.key.is_specific_static_name("props") {
             return;
         }
@@ -130,7 +139,9 @@ impl Rule for NoDeprecatedPropsDefaultThis {
 
 fn has_function_type(opts: &ObjectExpression<'_>) -> bool {
     for property_kind in &opts.properties {
-        let ObjectPropertyKind::ObjectProperty(prop) = property_kind else { continue };
+        let ObjectPropertyKind::ObjectProperty(prop) = property_kind else {
+            continue;
+        };
         if !prop.key.is_specific_static_name("type") {
             continue;
         }

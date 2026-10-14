@@ -140,7 +140,10 @@ impl<'ast, C> Buffer<'ast, C> for VecBuffer<'_, 'ast, C> {
 
     fn replace_end(&mut self, start: usize, replacement: &[FormatElement<'ast>]) {
         // `truncate` silently ignores an out-of-bounds start; fail loudly instead
-        assert!(start <= self.elements.len(), "replace_end start out of bounds");
+        assert!(
+            start <= self.elements.len(),
+            "replace_end start out of bounds"
+        );
         self.elements.truncate(start);
         self.elements.extend_from_slice(replacement);
     }
@@ -346,7 +349,10 @@ impl<'ast, C> Buffer<'ast, C> for AccumulatorBuffer<'_, 'ast, C> {
 
     fn replace_end(&mut self, start: usize, replacement: &[FormatElement<'ast>]) {
         // `truncate` silently ignores an out-of-bounds start; fail loudly instead
-        assert!(start <= self.elements.len(), "replace_end start out of bounds");
+        assert!(
+            start <= self.elements.len(),
+            "replace_end start out of bounds"
+        );
         self.elements.truncate(start);
         self.elements.extend_from_slice(replacement);
     }
@@ -375,7 +381,11 @@ pub struct RemoveSoftLinesBuffer<'buf, 'ast, C> {
 impl<'buf, 'ast, C> RemoveSoftLinesBuffer<'buf, 'ast, C> {
     /// Creates a new buffer that removes the soft line breaks before writing them into `buffer`.
     pub fn new(inner: &'buf mut dyn Buffer<'ast, C>) -> Self {
-        Self { inner, interned_cache: FxHashMap::default(), conditional_content_stack: Vec::new() }
+        Self {
+            inner,
+            interned_cache: FxHashMap::default(),
+            conditional_content_stack: Vec::new(),
+        }
     }
 
     /// Removes the soft line breaks from an interned element.
@@ -410,32 +420,38 @@ fn clean_interned<'ast>(
     } else {
         // Find the first soft line break element, interned element, or conditional expanded
         // content that must be changed.
-        let result = interned.iter().enumerate().find_map(|(index, element)| match element {
-            FormatElement::Line(LineMode::Soft | LineMode::SoftOrSpace)
-            | FormatElement::Tag(Tag::StartConditionalContent(_) | Tag::EndConditionalContent)
-            | FormatElement::BestFitting(_) => {
-                let cleaned = ArenaVec::from_iter_in(interned[..index].iter().cloned(), &allocator);
-                Some((cleaned, &interned[index..]))
-            }
-            FormatElement::Interned(inner) => {
-                let cleaned_inner = clean_interned(
-                    inner.clone(),
-                    interned_cache,
-                    condition_content_stack,
-                    allocator,
-                );
-
-                if &cleaned_inner == inner {
-                    None
-                } else {
-                    let mut cleaned = ArenaVec::with_capacity_in(interned.len(), &allocator);
-                    cleaned.extend(interned[..index].iter().cloned());
-                    cleaned.push(FormatElement::Interned(cleaned_inner));
-                    Some((cleaned, &interned[index + 1..]))
+        let result = interned
+            .iter()
+            .enumerate()
+            .find_map(|(index, element)| match element {
+                FormatElement::Line(LineMode::Soft | LineMode::SoftOrSpace)
+                | FormatElement::Tag(
+                    Tag::StartConditionalContent(_) | Tag::EndConditionalContent,
+                )
+                | FormatElement::BestFitting(_) => {
+                    let cleaned =
+                        ArenaVec::from_iter_in(interned[..index].iter().cloned(), &allocator);
+                    Some((cleaned, &interned[index..]))
                 }
-            }
-            _ => None,
-        });
+                FormatElement::Interned(inner) => {
+                    let cleaned_inner = clean_interned(
+                        inner.clone(),
+                        interned_cache,
+                        condition_content_stack,
+                        allocator,
+                    );
+
+                    if &cleaned_inner == inner {
+                        None
+                    } else {
+                        let mut cleaned = ArenaVec::with_capacity_in(interned.len(), &allocator);
+                        cleaned.extend(interned[..index].iter().cloned());
+                        cleaned.push(FormatElement::Interned(cleaned_inner));
+                        Some((cleaned, &interned[index + 1..]))
+                    }
+                }
+                _ => None,
+            });
 
         let result = match result {
             // Copy the whole interned buffer so that becomes possible to change the necessary elements.
@@ -598,7 +614,11 @@ where
     B: Buffer<'ast, C>,
 {
     fn new(buffer: &'buf mut B) -> Self {
-        Self { start: buffer.elements().len(), buffer, _marker: PhantomData }
+        Self {
+            start: buffer.elements().len(),
+            buffer,
+            _marker: PhantomData,
+        }
     }
 
     #[inline(always)]

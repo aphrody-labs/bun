@@ -58,7 +58,11 @@ impl PairLuts {
             unsafe fn uninit_array_mut<'a, const N: usize, T>(
                 ptr: *mut [T; N],
             ) -> &'a mut [MaybeUninit<T>; N] {
-                unsafe { ptr.cast::<[MaybeUninit<T>; N]>().as_mut().unwrap_unchecked() }
+                unsafe {
+                    ptr.cast::<[MaybeUninit<T>; N]>()
+                        .as_mut()
+                        .unwrap_unchecked()
+                }
             }
 
             let ptr = luts.as_mut_ptr();

@@ -110,9 +110,17 @@ fn test() {
     ];
 
     let fix = vec![
-        ("﻿var a = 123;", "var a = 123;", Some(serde_json::json!(["never"]))),
+        (
+            "﻿var a = 123;",
+            "var a = 123;",
+            Some(serde_json::json!(["never"])),
+        ),
         ("﻿var a = 123;", "var a = 123;", None),
-        ("var a = 123;", "﻿var a = 123;", Some(serde_json::json!(["always"]))),
+        (
+            "var a = 123;",
+            "﻿var a = 123;",
+            Some(serde_json::json!(["always"])),
+        ),
     ];
 
     Tester::new(UnicodeBom::NAME, UnicodeBom::PLUGIN, pass, fail)

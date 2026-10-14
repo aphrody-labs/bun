@@ -67,7 +67,10 @@ fn hard_split(s: &str, max_chars: usize) -> Vec<String> {
         let mut end = (pos + max_chars).min(chars.len());
         if end < chars.len() {
             // Prefer the last whitespace in the second half of the window.
-            if let Some(ws) = (pos + max_chars / 2..end).rev().find(|&k| chars[k].is_whitespace()) {
+            if let Some(ws) = (pos + max_chars / 2..end)
+                .rev()
+                .find(|&k| chars[k].is_whitespace())
+            {
                 end = ws + 1;
             }
         }
@@ -274,7 +277,11 @@ mod tests {
     fn block(kind: BlockKind, path: &[&str], text: &str) -> Block {
         Block {
             kind,
-            level: if kind == BlockKind::Heading { Some(2) } else { None },
+            level: if kind == BlockKind::Heading {
+                Some(2)
+            } else {
+                None
+            },
             heading_path: path.iter().map(|s| s.to_string()).collect(),
             text: text.to_string(),
         }
@@ -283,10 +290,22 @@ mod tests {
     fn sample() -> Vec<Block> {
         vec![
             block(BlockKind::Heading, &[], "Intro"),
-            block(BlockKind::Paragraph, &["Intro"], &"Alpha beta gamma. ".repeat(10)),
-            block(BlockKind::Paragraph, &["Intro"], &"Delta epsilon zeta. ".repeat(10)),
+            block(
+                BlockKind::Paragraph,
+                &["Intro"],
+                &"Alpha beta gamma. ".repeat(10),
+            ),
+            block(
+                BlockKind::Paragraph,
+                &["Intro"],
+                &"Delta epsilon zeta. ".repeat(10),
+            ),
             block(BlockKind::Heading, &[], "Details"),
-            block(BlockKind::Paragraph, &["Details"], &"Eta theta iota. ".repeat(12)),
+            block(
+                BlockKind::Paragraph,
+                &["Details"],
+                &"Eta theta iota. ".repeat(12),
+            ),
             block(BlockKind::ListItem, &["Details"], "Kappa item"),
         ]
     }
@@ -302,7 +321,11 @@ mod tests {
         }
         // Every non-empty block text appears unsplit in some chunk.
         for b in &blocks {
-            assert!(chunks.iter().any(|c| c.text.contains(b.text.trim())), "missing {}", b.text);
+            assert!(
+                chunks.iter().any(|c| c.text.contains(b.text.trim())),
+                "missing {}",
+                b.text
+            );
         }
     }
 

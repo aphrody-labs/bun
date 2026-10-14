@@ -24,7 +24,10 @@ use crate::options::PanicThreshold;
 
 macro_rules! react_lint_url {
     ($rule:literal) => {
-        concat!("https://react.dev/reference/eslint-plugin-react-hooks/lints/", $rule)
+        concat!(
+            "https://react.dev/reference/eslint-plugin-react-hooks/lints/",
+            $rule
+        )
     };
 }
 
@@ -216,7 +219,10 @@ fn primary_label(label: impl Into<LabeledSpan>) -> LabeledSpan {
 
 #[cold]
 pub fn invariant_merge_consecutive_scopes_expected_scope_at_starting_index() -> OxcDiagnostic {
-    diagnostic(ErrorCategory::Invariant, "MergeConsecutiveScopes: Expected scope at starting index")
+    diagnostic(
+        ErrorCategory::Invariant,
+        "MergeConsecutiveScopes: Expected scope at starting index",
+    )
 }
 
 #[cold]
@@ -238,32 +244,50 @@ pub fn invariant_expected_function_expression_entry_block_have_zero_predecessors
 
 #[cold]
 pub fn invariant_mismatched_loop_scope_expected_loop_got_other() -> OxcDiagnostic {
-    diagnostic(ErrorCategory::Invariant, "Mismatched loop scope: expected Loop, got other")
+    diagnostic(
+        ErrorCategory::Invariant,
+        "Mismatched loop scope: expected Loop, got other",
+    )
 }
 
 #[cold]
 pub fn invariant_mismatched_label_scope_expected_label_got_other() -> OxcDiagnostic {
-    diagnostic(ErrorCategory::Invariant, "Mismatched label scope: expected Label, got other")
+    diagnostic(
+        ErrorCategory::Invariant,
+        "Mismatched label scope: expected Label, got other",
+    )
 }
 
 #[cold]
 pub fn invariant_mismatched_switch_scope_expected_switch_got_other() -> OxcDiagnostic {
-    diagnostic(ErrorCategory::Invariant, "Mismatched switch scope: expected Switch, got other")
+    diagnostic(
+        ErrorCategory::Invariant,
+        "Mismatched switch scope: expected Switch, got other",
+    )
 }
 
 #[cold]
 pub fn invariant_expected_loop_or_switch_scope_break() -> OxcDiagnostic {
-    diagnostic(ErrorCategory::Invariant, "Expected a loop or switch to be in scope for break")
+    diagnostic(
+        ErrorCategory::Invariant,
+        "Expected a loop or switch to be in scope for break",
+    )
 }
 
 #[cold]
 pub fn invariant_continue_may_only_refer_labeled_loop() -> OxcDiagnostic {
-    diagnostic(ErrorCategory::Invariant, "Continue may only refer to a labeled loop")
+    diagnostic(
+        ErrorCategory::Invariant,
+        "Continue may only refer to a labeled loop",
+    )
 }
 
 #[cold]
 pub fn invariant_expected_loop_scope_continue() -> OxcDiagnostic {
-    diagnostic(ErrorCategory::Invariant, "Expected a loop to be in scope for continue")
+    diagnostic(
+        ErrorCategory::Invariant,
+        "Expected a loop to be in scope for continue",
+    )
 }
 
 #[cold]
@@ -279,7 +303,9 @@ pub fn terminal_successor_references_unknown_block(
 ) -> OxcDiagnostic {
     const REASON: &str = "Terminal successor references unknown block";
     diagnostic(ErrorCategory::Invariant, REASON)
-        .with_help(format!("Block bb{successor} does not exist for terminal '{terminal}'"))
+        .with_help(format!(
+            "Block bb{successor} does not exist for terminal '{terminal}'"
+        ))
         .with_labels(span.map(|span| span.primary_label(REASON)))
 }
 
@@ -302,8 +328,13 @@ pub fn expected_predecessor_block_to_exist(
     block: impl Display,
     predecessor: impl Display,
 ) -> OxcDiagnostic {
-    diagnostic(ErrorCategory::Invariant, "Expected predecessor block to exist")
-        .with_help(format!("Block {block} references non-existent {predecessor}"))
+    diagnostic(
+        ErrorCategory::Invariant,
+        "Expected predecessor block to exist",
+    )
+    .with_help(format!(
+        "Block {block} references non-existent {predecessor}"
+    ))
 }
 
 #[cold]
@@ -363,7 +394,10 @@ pub fn invariant_expected_node_all_identifiers(id: usize) -> OxcDiagnostic {
 
 #[cold]
 pub fn invariant_there_should_at_least_one_operand() -> OxcDiagnostic {
-    diagnostic(ErrorCategory::Invariant, "there should be at least one operand")
+    diagnostic(
+        ErrorCategory::Invariant,
+        "there should be at least one operand",
+    )
 }
 
 #[cold]
@@ -373,7 +407,10 @@ pub fn invariant_cycle_detected() -> OxcDiagnostic {
 
 #[cold]
 pub fn invariant_can_only_unschedule_last_target() -> OxcDiagnostic {
-    diagnostic(ErrorCategory::Invariant, "Can only unschedule the last target")
+    diagnostic(
+        ErrorCategory::Invariant,
+        "Can only unschedule the last target",
+    )
 }
 
 #[cold]
@@ -395,37 +432,58 @@ pub fn invariant_unexpected_do_while_where_loop_already_scheduled() -> OxcDiagno
 
 #[cold]
 pub fn invariant_unexpected_while_where_loop_already_scheduled() -> OxcDiagnostic {
-    diagnostic(ErrorCategory::Invariant, "Unexpected 'while' where the loop is already scheduled")
+    diagnostic(
+        ErrorCategory::Invariant,
+        "Unexpected 'while' where the loop is already scheduled",
+    )
 }
 
 #[cold]
 pub fn invariant_unexpected_where_loop_already_scheduled() -> OxcDiagnostic {
-    diagnostic(ErrorCategory::Invariant, "Unexpected 'for' where the loop is already scheduled")
+    diagnostic(
+        ErrorCategory::Invariant,
+        "Unexpected 'for' where the loop is already scheduled",
+    )
 }
 
 #[cold]
 pub fn invariant_unexpected_where_loop_already_scheduled_2() -> OxcDiagnostic {
-    diagnostic(ErrorCategory::Invariant, "Unexpected 'for-of' where the loop is already scheduled")
+    diagnostic(
+        ErrorCategory::Invariant,
+        "Unexpected 'for-of' where the loop is already scheduled",
+    )
 }
 
 #[cold]
 pub fn invariant_unexpected_where_loop_already_scheduled_3() -> OxcDiagnostic {
-    diagnostic(ErrorCategory::Invariant, "Unexpected 'for-in' where the loop is already scheduled")
+    diagnostic(
+        ErrorCategory::Invariant,
+        "Unexpected 'for-in' where the loop is already scheduled",
+    )
 }
 
 #[cold]
 pub fn invariant_unexpected_label_where_block_already_scheduled() -> OxcDiagnostic {
-    diagnostic(ErrorCategory::Invariant, "Unexpected 'label' where the block is already scheduled")
+    diagnostic(
+        ErrorCategory::Invariant,
+        "Unexpected 'label' where the block is already scheduled",
+    )
 }
 
 #[cold]
 pub fn invariant_unexpected_scope_where_block_already_scheduled() -> OxcDiagnostic {
-    diagnostic(ErrorCategory::Invariant, "Unexpected 'scope' where the block is already scheduled")
+    diagnostic(
+        ErrorCategory::Invariant,
+        "Unexpected 'scope' where the block is already scheduled",
+    )
 }
 
 #[cold]
 pub fn invariant_unexpected_scope_where_block_already_scheduled_2() -> OxcDiagnostic {
-    diagnostic(ErrorCategory::Invariant, "Unexpected 'scope' where the block is already scheduled")
+    diagnostic(
+        ErrorCategory::Invariant,
+        "Unexpected 'scope' where the block is already scheduled",
+    )
 }
 
 #[cold]
@@ -438,7 +496,10 @@ pub fn invariant_unexpected_branch_where_alternate_already_scheduled() -> OxcDia
 
 #[cold]
 pub fn invariant_unexpected_maybe_throw_visit_value_block_terminal() -> OxcDiagnostic {
-    diagnostic(ErrorCategory::Invariant, "Unexpected maybe-throw in visit_value_block_terminal")
+    diagnostic(
+        ErrorCategory::Invariant,
+        "Unexpected maybe-throw in visit_value_block_terminal",
+    )
 }
 
 #[cold]
@@ -452,7 +513,10 @@ pub fn todo_support_labeled_statements_combined_value_blocks_not_yet_implemented
 
 #[cold]
 pub fn invariant_unsupported_terminal_kind_value_block() -> OxcDiagnostic {
-    diagnostic(ErrorCategory::Invariant, "Unsupported terminal kind in value block")
+    diagnostic(
+        ErrorCategory::Invariant,
+        "Unsupported terminal kind in value block",
+    )
 }
 
 #[cold]
@@ -488,7 +552,10 @@ pub fn invariant_unexpected_unknown_effect() -> OxcDiagnostic {
 
 #[cold]
 pub fn invariant_ref_type_environment_did_not_converge() -> OxcDiagnostic {
-    diagnostic(ErrorCategory::Invariant, "Ref type environment did not converge")
+    diagnostic(
+        ErrorCategory::Invariant,
+        "Ref type environment did not converge",
+    )
 }
 
 #[cold]
@@ -528,24 +595,33 @@ pub fn todo_codegen_reactive_function_codegen_instruction_value_handle_conversio
 pub fn invariant_could_not_find_binding_declaration(
     label: impl Into<oxc_diagnostics::LabeledSpan>,
 ) -> OxcDiagnostic {
-    diagnostic(ErrorCategory::Invariant, "Could not find binding for declaration")
-        .with_label(primary_label(label))
+    diagnostic(
+        ErrorCategory::Invariant,
+        "Could not find binding for declaration",
+    )
+    .with_label(primary_label(label))
 }
 
 #[cold]
 pub fn invariant_could_not_find_binding_declaration_2(
     label: impl Into<oxc_diagnostics::LabeledSpan>,
 ) -> OxcDiagnostic {
-    diagnostic(ErrorCategory::Invariant, "Could not find binding for declaration")
-        .with_label(primary_label(label))
+    diagnostic(
+        ErrorCategory::Invariant,
+        "Could not find binding for declaration",
+    )
+    .with_label(primary_label(label))
 }
 
 #[cold]
 pub fn syntax_expected_const_declaration_not_reassigned(
     label: impl Into<oxc_diagnostics::LabeledSpan>,
 ) -> OxcDiagnostic {
-    diagnostic(ErrorCategory::Syntax, "Expected `const` declaration not to be reassigned")
-        .with_label(primary_label(label))
+    diagnostic(
+        ErrorCategory::Syntax,
+        "Expected `const` declaration not to be reassigned",
+    )
+    .with_label(primary_label(label))
 }
 
 #[cold]
@@ -563,16 +639,22 @@ pub fn todo_build_hir_lower_assignment_handle_computed_properties_object_pattern
 pub fn todo_expected_reassignment_globals_enable_force_temporaries(
     label: impl Into<oxc_diagnostics::LabeledSpan>,
 ) -> OxcDiagnostic {
-    diagnostic(ErrorCategory::Todo, "Expected reassignment of globals to enable forceTemporaries")
-        .with_label(primary_label(label))
+    diagnostic(
+        ErrorCategory::Todo,
+        "Expected reassignment of globals to enable forceTemporaries",
+    )
+    .with_label(primary_label(label))
 }
 
 #[cold]
 pub fn todo_expected_reassignment_globals_enable_force_temporaries_2(
     label: impl Into<oxc_diagnostics::LabeledSpan>,
 ) -> OxcDiagnostic {
-    diagnostic(ErrorCategory::Todo, "Expected reassignment of globals to enable forceTemporaries")
-        .with_label(primary_label(label))
+    diagnostic(
+        ErrorCategory::Todo,
+        "Expected reassignment of globals to enable forceTemporaries",
+    )
+    .with_label(primary_label(label))
 }
 
 #[cold]
@@ -601,16 +683,22 @@ pub fn todo_build_hir_lower_assignment_handle_private_name_properties_member_exp
 pub fn syntax_expected_const_declaration_not_reassigned_2(
     label: impl Into<oxc_diagnostics::LabeledSpan>,
 ) -> OxcDiagnostic {
-    diagnostic(ErrorCategory::Syntax, "Expected `const` declaration not to be reassigned")
-        .with_label(primary_label(label))
+    diagnostic(
+        ErrorCategory::Syntax,
+        "Expected `const` declaration not to be reassigned",
+    )
+    .with_label(primary_label(label))
 }
 
 #[cold]
 pub fn todo_expected_reassignment_globals_enable_force_temporaries_3(
     label: impl Into<oxc_diagnostics::LabeledSpan>,
 ) -> OxcDiagnostic {
-    diagnostic(ErrorCategory::Todo, "Expected reassignment of globals to enable forceTemporaries")
-        .with_label(primary_label(label))
+    diagnostic(
+        ErrorCategory::Todo,
+        "Expected reassignment of globals to enable forceTemporaries",
+    )
+    .with_label(primary_label(label))
 }
 
 #[cold]
@@ -628,16 +716,22 @@ pub fn todo_build_hir_lower_assignment_handle_computed_properties_object_pattern
 pub fn todo_expected_reassignment_globals_enable_force_temporaries_4(
     label: impl Into<oxc_diagnostics::LabeledSpan>,
 ) -> OxcDiagnostic {
-    diagnostic(ErrorCategory::Todo, "Expected reassignment of globals to enable forceTemporaries")
-        .with_label(primary_label(label))
+    diagnostic(
+        ErrorCategory::Todo,
+        "Expected reassignment of globals to enable forceTemporaries",
+    )
+    .with_label(primary_label(label))
 }
 
 #[cold]
 pub fn todo_expected_reassignment_globals_enable_force_temporaries_5(
     label: impl Into<oxc_diagnostics::LabeledSpan>,
 ) -> OxcDiagnostic {
-    diagnostic(ErrorCategory::Todo, "Expected reassignment of globals to enable forceTemporaries")
-        .with_label(primary_label(label))
+    diagnostic(
+        ErrorCategory::Todo,
+        "Expected reassignment of globals to enable forceTemporaries",
+    )
+    .with_label(primary_label(label))
 }
 
 #[cold]
@@ -677,16 +771,22 @@ pub fn todo_build_hir_lower_statement_handle_var_kinds_variable_declaration(
 pub fn syntax_expect_const_declaration_not_reassigned(
     label: impl Into<oxc_diagnostics::LabeledSpan>,
 ) -> OxcDiagnostic {
-    diagnostic(ErrorCategory::Syntax, "Expect `const` declaration not to be reassigned")
-        .with_label(primary_label(label))
+    diagnostic(
+        ErrorCategory::Syntax,
+        "Expect `const` declaration not to be reassigned",
+    )
+    .with_label(primary_label(label))
 }
 
 #[cold]
 pub fn invariant_could_not_find_binding_declaration_3(
     label: impl Into<oxc_diagnostics::LabeledSpan>,
 ) -> OxcDiagnostic {
-    diagnostic(ErrorCategory::Invariant, "Could not find binding for declaration")
-        .with_label(primary_label(label))
+    diagnostic(
+        ErrorCategory::Invariant,
+        "Could not find binding for declaration",
+    )
+    .with_label(primary_label(label))
 }
 
 #[cold]
@@ -723,8 +823,11 @@ where
     L: Into<oxc_diagnostics::LabeledSpan>,
     T: IntoIterator<Item = L>,
 {
-    diagnostic(ErrorCategory::Todo, "[PruneHoistedContexts] Rewrite hoisted function references")
-        .with_labels(labels)
+    diagnostic(
+        ErrorCategory::Todo,
+        "[PruneHoistedContexts] Rewrite hoisted function references",
+    )
+    .with_labels(labels)
 }
 
 #[cold]
@@ -735,8 +838,11 @@ where
     L: Into<oxc_diagnostics::LabeledSpan>,
     T: IntoIterator<Item = L>,
 {
-    diagnostic(ErrorCategory::Invariant, "[PruneHoistedContexts] Unexpected hoisted function")
-        .with_labels(labels)
+    diagnostic(
+        ErrorCategory::Invariant,
+        "[PruneHoistedContexts] Unexpected hoisted function",
+    )
+    .with_labels(labels)
 }
 
 #[cold]
@@ -745,7 +851,11 @@ where
     L: Into<oxc_diagnostics::LabeledSpan>,
     T: IntoIterator<Item = L>,
 {
-    diagnostic(ErrorCategory::Todo, "[PruneHoistedContexts] Unexpected kind").with_labels(labels)
+    diagnostic(
+        ErrorCategory::Todo,
+        "[PruneHoistedContexts] Unexpected kind",
+    )
+    .with_labels(labels)
 }
 
 #[cold]
@@ -756,8 +866,11 @@ where
     L: Into<oxc_diagnostics::LabeledSpan>,
     T: IntoIterator<Item = L>,
 {
-    diagnostic(ErrorCategory::Todo, "ValidateContextVariableLValues: unhandled instruction variant")
-        .with_labels(labels)
+    diagnostic(
+        ErrorCategory::Todo,
+        "ValidateContextVariableLValues: unhandled instruction variant",
+    )
+    .with_labels(labels)
 }
 
 #[cold]
@@ -766,8 +879,11 @@ where
     L: Into<oxc_diagnostics::LabeledSpan>,
     T: IntoIterator<Item = L>,
 {
-    diagnostic(ErrorCategory::Todo, "Support destructuring of context variables")
-        .with_labels(labels)
+    diagnostic(
+        ErrorCategory::Todo,
+        "Support destructuring of context variables",
+    )
+    .with_labels(labels)
 }
 
 #[cold]
@@ -776,7 +892,11 @@ where
     L: Into<oxc_diagnostics::LabeledSpan>,
     T: IntoIterator<Item = L>,
 {
-    diagnostic(ErrorCategory::Todo, "Support spread syntax for hook arguments").with_labels(labels)
+    diagnostic(
+        ErrorCategory::Todo,
+        "Support spread syntax for hook arguments",
+    )
+    .with_labels(labels)
 }
 
 #[cold]
@@ -785,7 +905,11 @@ where
     L: Into<oxc_diagnostics::LabeledSpan>,
     T: IntoIterator<Item = L>,
 {
-    diagnostic(ErrorCategory::Todo, "Support spread syntax for hook arguments").with_labels(labels)
+    diagnostic(
+        ErrorCategory::Todo,
+        "Support spread syntax for hook arguments",
+    )
+    .with_labels(labels)
 }
 
 #[cold]
@@ -794,7 +918,11 @@ where
     L: Into<oxc_diagnostics::LabeledSpan>,
     T: IntoIterator<Item = L>,
 {
-    diagnostic(ErrorCategory::Todo, "Support spread syntax for hook arguments").with_labels(labels)
+    diagnostic(
+        ErrorCategory::Todo,
+        "Support spread syntax for hook arguments",
+    )
+    .with_labels(labels)
 }
 
 #[cold]
@@ -818,8 +946,11 @@ where
     L: Into<oxc_diagnostics::LabeledSpan>,
     T: IntoIterator<Item = L>,
 {
-    diagnostic(ErrorCategory::Todo, "(BuildHIR::lowerExpression) Handle Import expressions")
-        .with_labels(labels)
+    diagnostic(
+        ErrorCategory::Todo,
+        "(BuildHIR::lowerExpression) Handle Import expressions",
+    )
+    .with_labels(labels)
 }
 
 #[cold]
@@ -830,8 +961,11 @@ where
     L: Into<oxc_diagnostics::LabeledSpan>,
     T: IntoIterator<Item = L>,
 {
-    diagnostic(ErrorCategory::Todo, "(BuildHIR::lowerExpression) Handle PrivateName expressions")
-        .with_labels(labels)
+    diagnostic(
+        ErrorCategory::Todo,
+        "(BuildHIR::lowerExpression) Handle PrivateName expressions",
+    )
+    .with_labels(labels)
 }
 
 #[cold]
@@ -855,7 +989,11 @@ where
     L: Into<oxc_diagnostics::LabeledSpan>,
     T: IntoIterator<Item = L>,
 {
-    diagnostic(ErrorCategory::Syntax, "Only object properties can be deleted").with_labels(labels)
+    diagnostic(
+        ErrorCategory::Syntax,
+        "Only object properties can be deleted",
+    )
+    .with_labels(labels)
 }
 
 #[cold]
@@ -927,8 +1065,11 @@ where
     L: Into<oxc_diagnostics::LabeledSpan>,
     T: IntoIterator<Item = L>,
 {
-    diagnostic(ErrorCategory::Todo, "(BuildHIR::lowerExpression) Handle Super expressions")
-        .with_labels(labels)
+    diagnostic(
+        ErrorCategory::Todo,
+        "(BuildHIR::lowerExpression) Handle Super expressions",
+    )
+    .with_labels(labels)
 }
 
 #[cold]
@@ -939,8 +1080,11 @@ where
     L: Into<oxc_diagnostics::LabeledSpan>,
     T: IntoIterator<Item = L>,
 {
-    diagnostic(ErrorCategory::Todo, "(BuildHIR::lowerExpression) Handle ThisExpression expressions")
-        .with_labels(labels)
+    diagnostic(
+        ErrorCategory::Todo,
+        "(BuildHIR::lowerExpression) Handle ThisExpression expressions",
+    )
+    .with_labels(labels)
 }
 
 #[cold]
@@ -997,8 +1141,11 @@ where
     L: Into<oxc_diagnostics::LabeledSpan>,
     T: IntoIterator<Item = L>,
 {
-    diagnostic(ErrorCategory::Todo, "UpdateExpression with unsupported argument type")
-        .with_labels(labels)
+    diagnostic(
+        ErrorCategory::Todo,
+        "UpdateExpression with unsupported argument type",
+    )
+    .with_labels(labels)
 }
 
 #[cold]
@@ -1020,8 +1167,11 @@ where
     L: Into<oxc_diagnostics::LabeledSpan>,
     T: IntoIterator<Item = L>,
 {
-    diagnostic(ErrorCategory::Todo, "Compound assignment to complex pattern is not yet supported")
-        .with_labels(labels)
+    diagnostic(
+        ErrorCategory::Todo,
+        "Compound assignment to complex pattern is not yet supported",
+    )
+    .with_labels(labels)
 }
 
 #[cold]
@@ -1030,7 +1180,11 @@ where
     L: Into<oxc_diagnostics::LabeledSpan>,
     T: IntoIterator<Item = L>,
 {
-    diagnostic(ErrorCategory::Todo, "Unsupported key type in ObjectExpression").with_labels(labels)
+    diagnostic(
+        ErrorCategory::Todo,
+        "Unsupported key type in ObjectExpression",
+    )
+    .with_labels(labels)
 }
 
 #[cold]
@@ -1069,8 +1223,11 @@ where
     L: Into<oxc_diagnostics::LabeledSpan>,
     T: IntoIterator<Item = L>,
 {
-    diagnostic(ErrorCategory::Todo, "(BuildHIR::lowerStatement) Handle for-await loops")
-        .with_labels(labels)
+    diagnostic(
+        ErrorCategory::Todo,
+        "(BuildHIR::lowerStatement) Handle for-await loops",
+    )
+    .with_labels(labels)
 }
 
 #[cold]
@@ -1079,8 +1236,11 @@ where
     L: Into<oxc_diagnostics::LabeledSpan>,
     T: IntoIterator<Item = L>,
 {
-    diagnostic(ErrorCategory::Syntax, "Expected at most one `default` branch in a switch statement")
-        .with_labels(labels)
+    diagnostic(
+        ErrorCategory::Syntax,
+        "Expected at most one `default` branch in a switch statement",
+    )
+    .with_labels(labels)
 }
 
 #[cold]
@@ -1144,9 +1304,12 @@ where
     L: Into<oxc_diagnostics::LabeledSpan>,
     T: IntoIterator<Item = L>,
 {
-    diagnostic(ErrorCategory::Config, "Invalid type configuration for module")
-        .with_help(help)
-        .with_labels(labels)
+    diagnostic(
+        ErrorCategory::Config,
+        "Invalid type configuration for module",
+    )
+    .with_help(help)
+    .with_labels(labels)
 }
 
 #[cold]
@@ -1156,9 +1319,12 @@ where
     L: Into<oxc_diagnostics::LabeledSpan>,
     T: IntoIterator<Item = L>,
 {
-    diagnostic(ErrorCategory::Config, "Invalid type configuration for module")
-        .with_help(help)
-        .with_labels(labels)
+    diagnostic(
+        ErrorCategory::Config,
+        "Invalid type configuration for module",
+    )
+    .with_help(help)
+    .with_labels(labels)
 }
 
 #[cold]
@@ -1178,10 +1344,13 @@ pub fn invariant_expected_temporaries_promoted_named_identifiers_earlier_pass(
 
 #[cold]
 pub fn invariant_expected_scope_have_at_least_one_declaration(span: Option<Span>) -> OxcDiagnostic {
-    diagnostic(ErrorCategory::Invariant, "Expected scope to have at least one declaration")
-        .with_labels(
-            span.map(|span| span.primary_label("Expected scope to have at least one declaration")),
-        )
+    diagnostic(
+        ErrorCategory::Invariant,
+        "Expected scope to have at least one declaration",
+    )
+    .with_labels(
+        span.map(|span| span.primary_label("Expected scope to have at least one declaration")),
+    )
 }
 
 #[cold]
@@ -1199,18 +1368,24 @@ pub fn invariant_expected_early_return_value_promoted_named_variable(
 
 #[cold]
 pub fn invariant_expected_sequence_expression_init(span: Option<Span>) -> OxcDiagnostic {
-    diagnostic(ErrorCategory::Invariant, "Expected a sequence expression init for for..in")
-        .with_labels(
-            span.map(|span| span.primary_label("Expected a sequence expression init for for..in")),
-        )
+    diagnostic(
+        ErrorCategory::Invariant,
+        "Expected a sequence expression init for for..in",
+    )
+    .with_labels(
+        span.map(|span| span.primary_label("Expected a sequence expression init for for..in")),
+    )
 }
 
 #[cold]
 pub fn invariant_expected_sequence_expression_init_2(span: Option<Span>) -> OxcDiagnostic {
-    diagnostic(ErrorCategory::Invariant, "Expected a sequence expression init for for..of")
-        .with_labels(
-            span.map(|span| span.primary_label("Expected a sequence expression init for for..of")),
-        )
+    diagnostic(
+        ErrorCategory::Invariant,
+        "Expected a sequence expression init for for..of",
+    )
+    .with_labels(
+        span.map(|span| span.primary_label("Expected a sequence expression init for for..of")),
+    )
 }
 
 #[cold]
@@ -1228,24 +1403,33 @@ pub fn invariant_expected_single_expression_sequence_expression_init(
 
 #[cold]
 pub fn invariant_expected_get_iterator_init(span: Option<Span>) -> OxcDiagnostic {
-    diagnostic(ErrorCategory::Invariant, "Expected GetIterator in for..of init")
-        .with_labels(span.map(|span| span.primary_label("Expected GetIterator in for..of init")))
+    diagnostic(
+        ErrorCategory::Invariant,
+        "Expected GetIterator in for..of init",
+    )
+    .with_labels(span.map(|span| span.primary_label("Expected GetIterator in for..of init")))
 }
 
 #[cold]
 pub fn invariant_expected_sequence_expression_test(span: Option<Span>) -> OxcDiagnostic {
-    diagnostic(ErrorCategory::Invariant, "Expected a sequence expression test for for..of")
-        .with_labels(
-            span.map(|span| span.primary_label("Expected a sequence expression test for for..of")),
-        )
+    diagnostic(
+        ErrorCategory::Invariant,
+        "Expected a sequence expression test for for..of",
+    )
+    .with_labels(
+        span.map(|span| span.primary_label("Expected a sequence expression test for for..of")),
+    )
 }
 
 #[cold]
 pub fn invariant_expected_let_or_const_variable_declaration(span: Option<Span>) -> OxcDiagnostic {
-    diagnostic(ErrorCategory::Invariant, "Expected a let or const variable declaration")
-        .with_labels(
-            span.map(|span| span.primary_label("Expected a let or const variable declaration")),
-        )
+    diagnostic(
+        ErrorCategory::Invariant,
+        "Expected a let or const variable declaration",
+    )
+    .with_labels(
+        span.map(|span| span.primary_label("Expected a let or const variable declaration")),
+    )
 }
 
 #[cold]
@@ -1256,45 +1440,61 @@ pub fn invariant_expected_variable_declaration(span: Option<Span>) -> OxcDiagnos
 
 #[cold]
 pub fn invariant_expected_variable_declaration_init(span: Option<Span>) -> OxcDiagnostic {
-    diagnostic(ErrorCategory::Invariant, "Expected a variable declaration in for-init").with_labels(
-        span.map(|span| span.primary_label("Expected a variable declaration in for-init")),
+    diagnostic(
+        ErrorCategory::Invariant,
+        "Expected a variable declaration in for-init",
     )
+    .with_labels(span.map(|span| span.primary_label("Expected a variable declaration in for-init")))
 }
 
 #[cold]
 pub fn invariant_expected_identifier_as_function_declaration_lvalue(
     span: Option<Span>,
 ) -> OxcDiagnostic {
-    diagnostic(ErrorCategory::Invariant, "Expected an identifier as function declaration lvalue")
-        .with_labels(span.map(|span| {
+    diagnostic(
+        ErrorCategory::Invariant,
+        "Expected an identifier as function declaration lvalue",
+    )
+    .with_labels(
+        span.map(|span| {
             span.primary_label("Expected an identifier as function declaration lvalue")
-        }))
+        }),
+    )
 }
 
 #[cold]
 pub fn invariant_expected_function_value_function_declaration(span: Option<Span>) -> OxcDiagnostic {
-    diagnostic(ErrorCategory::Invariant, "Expected a function value for function declaration")
-        .with_labels(
-            span.map(|span| {
-                span.primary_label("Expected a function value for function declaration")
-            }),
-        )
+    diagnostic(
+        ErrorCategory::Invariant,
+        "Expected a function value for function declaration",
+    )
+    .with_labels(
+        span.map(|span| span.primary_label("Expected a function value for function declaration")),
+    )
 }
 
 #[cold]
 pub fn invariant_expected_function_expression_function_declaration(
     span: Option<Span>,
 ) -> OxcDiagnostic {
-    diagnostic(ErrorCategory::Invariant, "Expected a function expression for function declaration")
-        .with_labels(span.map(|span| {
+    diagnostic(
+        ErrorCategory::Invariant,
+        "Expected a function expression for function declaration",
+    )
+    .with_labels(
+        span.map(|span| {
             span.primary_label("Expected a function expression for function declaration")
-        }))
+        }),
+    )
 }
 
 #[cold]
 pub fn invariant_expected_value_reassignment(span: Option<Span>) -> OxcDiagnostic {
-    diagnostic(ErrorCategory::Invariant, "Expected a value for reassignment")
-        .with_labels(span.map(|span| span.primary_label("Expected a value for reassignment")))
+    diagnostic(
+        ErrorCategory::Invariant,
+        "Expected a value for reassignment",
+    )
+    .with_labels(span.map(|span| span.primary_label("Expected a value for reassignment")))
 }
 
 #[cold]
@@ -1314,10 +1514,15 @@ pub fn invariant_expected_optional_value_resolve_call_or_member_expression(
 pub fn invariant_unexpected_default_destructuring_assignment_target(
     span: Option<Span>,
 ) -> OxcDiagnostic {
-    diagnostic(ErrorCategory::Invariant, "Unexpected default in destructuring assignment target")
-        .with_labels(span.map(|span| {
+    diagnostic(
+        ErrorCategory::Invariant,
+        "Unexpected default in destructuring assignment target",
+    )
+    .with_labels(
+        span.map(|span| {
             span.primary_label("Unexpected default in destructuring assignment target")
-        }))
+        }),
+    )
 }
 
 #[cold]
@@ -1361,26 +1566,37 @@ pub fn invariant_expected_simple_assignment_target_update_expression(
 
 #[cold]
 pub fn invariant_expected_object_method_instruction(span: Option<Span>) -> OxcDiagnostic {
-    diagnostic(ErrorCategory::Invariant, "Expected ObjectMethod instruction")
-        .with_labels(span.map(|span| span.primary_label("Expected ObjectMethod instruction")))
+    diagnostic(
+        ErrorCategory::Invariant,
+        "Expected ObjectMethod instruction",
+    )
+    .with_labels(span.map(|span| span.primary_label("Expected ObjectMethod instruction")))
 }
 
 #[cold]
 pub fn invariant_expected_jsx_tag_identifier_or_string(span: Option<Span>) -> OxcDiagnostic {
-    diagnostic(ErrorCategory::Invariant, "Expected JSX tag to be an identifier or string")
-        .with_labels(
-            span.map(|span| span.primary_label("Expected JSX tag to be an identifier or string")),
-        )
+    diagnostic(
+        ErrorCategory::Invariant,
+        "Expected JSX tag to be an identifier or string",
+    )
+    .with_labels(
+        span.map(|span| span.primary_label("Expected JSX tag to be an identifier or string")),
+    )
 }
 
 #[cold]
 pub fn invariant_expected_jsx_member_expression_property_string(
     span: Option<Span>,
 ) -> OxcDiagnostic {
-    diagnostic(ErrorCategory::Invariant, "Expected JSX member expression property to be a string")
-        .with_labels(span.map(|span| {
+    diagnostic(
+        ErrorCategory::Invariant,
+        "Expected JSX member expression property to be a string",
+    )
+    .with_labels(
+        span.map(|span| {
             span.primary_label("Expected JSX member expression property to be a string")
-        }))
+        }),
+    )
 }
 
 #[cold]
@@ -1408,16 +1624,22 @@ pub fn invariant_expected_base_instruction_value(span: Option<Span>) -> OxcDiagn
 pub fn invariant_const_declaration_cannot_referenced_as_expression(
     span: Option<Span>,
 ) -> OxcDiagnostic {
-    diagnostic(ErrorCategory::Invariant, "Const declaration cannot be referenced as an expression")
-        .with_labels(span.map(|span| span.primary_label("this is Const")))
+    diagnostic(
+        ErrorCategory::Invariant,
+        "Const declaration cannot be referenced as an expression",
+    )
+    .with_labels(span.map(|span| span.primary_label("this is Const")))
 }
 
 #[cold]
 pub fn invariant_const_declaration_cannot_referenced_as_expression_2(
     span: Option<Span>,
 ) -> OxcDiagnostic {
-    diagnostic(ErrorCategory::Invariant, "Const declaration cannot be referenced as an expression")
-        .with_labels(span.map(|span| span.primary_label("this is Let")))
+    diagnostic(
+        ErrorCategory::Invariant,
+        "Const declaration cannot be referenced as an expression",
+    )
+    .with_labels(span.map(|span| span.primary_label("this is Let")))
 }
 
 #[cold]
@@ -1433,11 +1655,14 @@ fn invariant_with_help_and_reason_label(
 
 #[cold]
 pub fn reserved_identifier(name: &str, span: Option<Span>) -> OxcDiagnostic {
-    diagnostic(ErrorCategory::Syntax, "Expected a non-reserved identifier name")
-        .with_help(format!(
-            "`{name}` is a reserved word in JavaScript and cannot be used as an identifier name"
-        ))
-        .with_labels(span.map(|span| span.primary_label(format!("`{name}` is reserved"))))
+    diagnostic(
+        ErrorCategory::Syntax,
+        "Expected a non-reserved identifier name",
+    )
+    .with_help(format!(
+        "`{name}` is a reserved word in JavaScript and cannot be used as an identifier name"
+    ))
+    .with_labels(span.map(|span| span.primary_label(format!("`{name}` is reserved"))))
 }
 
 #[cold]
@@ -1452,7 +1677,9 @@ pub fn local_fbt_variable(span: Option<Span>) -> OxcDiagnostic {
 #[cold]
 pub fn blocklisted_import(module: &str, span: Span) -> OxcDiagnostic {
     diagnostic(ErrorCategory::Todo, "Import from a blocklisted module")
-        .with_help(format!("Remove the import from blocklisted module `{module}`"))
+        .with_help(format!(
+            "Remove the import from blocklisted module `{module}`"
+        ))
         .with_label(span.primary_label(format!("`{module}` is blocklisted")))
 }
 
@@ -1471,15 +1698,21 @@ pub fn multiple_gating_directives<I>(names: &[&str], spans: I) -> OxcDiagnostic
 where
     I: IntoIterator<Item = Span>,
 {
-    diagnostic(ErrorCategory::Gating, "Multiple dynamic gating directives found")
-        .with_help(format!("Expected a single directive but found [{}]", names.join(", ")))
-        .with_labels(spans.into_iter().enumerate().map(|(index, span)| {
-            if index == 0 {
-                span.primary_label("First gating directive")
-            } else {
-                span.label("Additional gating directive")
-            }
-        }))
+    diagnostic(
+        ErrorCategory::Gating,
+        "Multiple dynamic gating directives found",
+    )
+    .with_help(format!(
+        "Expected a single directive but found [{}]",
+        names.join(", ")
+    ))
+    .with_labels(spans.into_iter().enumerate().map(|(index, span)| {
+        if index == 0 {
+            span.primary_label("First gating directive")
+        } else {
+            span.label("Additional gating directive")
+        }
+    }))
 }
 
 #[cold]
@@ -1491,7 +1724,9 @@ pub fn missing_phi_predecessor_mapping(
         ErrorCategory::Invariant,
         "Expected non-existing phi operand's predecessor to have been mapped to a new terminal",
     )
-    .with_help(format!("Could not find mapping for predecessor bb{predecessor} in block bb{block}"))
+    .with_help(format!(
+        "Could not find mapping for predecessor bb{predecessor} in block bb{block}"
+    ))
 }
 
 #[cold]
@@ -1507,20 +1742,28 @@ pub fn instruction_in_completed_scope(id: impl Debug, scope_id: impl Debug) -> O
 
 #[cold]
 pub fn non_const_declaration_hoisting(name: &str, kind: impl Debug) -> OxcDiagnostic {
-    diagnostic(ErrorCategory::Todo, "Handle non-const declarations for hoisting")
-        .with_help(format!("variable \"{name}\" declared with {kind:?}"))
+    diagnostic(
+        ErrorCategory::Todo,
+        "Handle non-const declarations for hoisting",
+    )
+    .with_help(format!("variable \"{name}\" declared with {kind:?}"))
 }
 
 #[cold]
 pub fn unsupported_declaration_hoisting(name: &str, kind: &str) -> OxcDiagnostic {
-    diagnostic(ErrorCategory::Todo, "Unsupported declaration type for hoisting")
-        .with_help(format!("variable \"{name}\" declared with {kind}"))
+    diagnostic(
+        ErrorCategory::Todo,
+        "Unsupported declaration type for hoisting",
+    )
+    .with_help(format!("variable \"{name}\" declared with {kind}"))
 }
 
 #[cold]
 pub fn missing_parameter_binding(name: &str, span: Span) -> OxcDiagnostic {
     diagnostic(ErrorCategory::Invariant, "Could not find binding")
-        .with_help(format!("[BuildHIR] Could not find binding for param `{name}`"))
+        .with_help(format!(
+            "[BuildHIR] Could not find binding for param `{name}`"
+        ))
         .with_label(span.primary_label("Could not find binding"))
 }
 
@@ -1568,9 +1811,12 @@ pub fn unsupported_with_statement(span: Span) -> OxcDiagnostic {
 
 #[cold]
 pub fn unsupported_inline_class(span: Span) -> OxcDiagnostic {
-    diagnostic(ErrorCategory::UnsupportedSyntax, "Inline `class` declarations are not supported")
-        .with_help("Move class declarations outside of components/hooks")
-        .with_label(span.primary_label("Move this class outside the component or hook"))
+    diagnostic(
+        ErrorCategory::UnsupportedSyntax,
+        "Inline `class` declarations are not supported",
+    )
+    .with_help("Move class declarations outside of components/hooks")
+    .with_label(span.primary_label("Move this class outside the component or hook"))
 }
 
 #[cold]
@@ -1587,16 +1833,21 @@ pub fn undefined_ssa_identifier(name: &str, span: Option<Span>) -> OxcDiagnostic
 
 #[cold]
 pub fn invalid_module_type(module: &str, expect_hook: bool, span: Option<Span>) -> OxcDiagnostic {
-    diagnostic(ErrorCategory::Config, "Invalid type configuration for module")
-        .with_help(format!(
-            "Expected type for `import ... from '{module}'` {} based on the module name",
-            if expect_hook { "to be a hook" } else { "not to be a hook" }
-        ))
-        .with_labels(
-            span.map(|span| {
-                span.primary_label(format!("Invalid type configuration for `{module}`"))
-            }),
-        )
+    diagnostic(
+        ErrorCategory::Config,
+        "Invalid type configuration for module",
+    )
+    .with_help(format!(
+        "Expected type for `import ... from '{module}'` {} based on the module name",
+        if expect_hook {
+            "to be a hook"
+        } else {
+            "not to be a hook"
+        }
+    ))
+    .with_labels(
+        span.map(|span| span.primary_label(format!("Invalid type configuration for `{module}`"))),
+    )
 }
 
 #[cold]
@@ -1617,11 +1868,12 @@ pub fn expected_simple_memo_dependencies(span: Option<Span>) -> OxcDiagnostic {
 
 #[cold]
 pub fn empty_goto(block: impl Display, span: Option<Span>) -> OxcDiagnostic {
-    diagnostic(ErrorCategory::Invariant, "Unexpected empty block with `goto` terminal")
-        .with_help(format!("Block bb{block} is empty"))
-        .with_labels(
-            span.map(|span| span.primary_label("Unexpected empty block with `goto` terminal")),
-        )
+    diagnostic(
+        ErrorCategory::Invariant,
+        "Unexpected empty block with `goto` terminal",
+    )
+    .with_help(format!("Block bb{block} is empty"))
+    .with_labels(span.map(|span| span.primary_label("Unexpected empty block with `goto` terminal")))
 }
 
 #[cold]
@@ -1715,12 +1967,18 @@ pub fn ssa_missing_declaration(place: &str, span: Option<Span>) -> OxcDiagnostic
 
 #[cold]
 pub fn break_block_already_scheduled(block: impl Display) -> OxcDiagnostic {
-    diagnostic(ErrorCategory::Invariant, format!("Break block is already scheduled: bb{block}"))
+    diagnostic(
+        ErrorCategory::Invariant,
+        format!("Break block is already scheduled: bb{block}"),
+    )
 }
 
 #[cold]
 pub fn continue_block_already_scheduled(block: impl Display) -> OxcDiagnostic {
-    diagnostic(ErrorCategory::Invariant, format!("Continue block is already scheduled: bb{block}"))
+    diagnostic(
+        ErrorCategory::Invariant,
+        format!("Continue block is already scheduled: bb{block}"),
+    )
 }
 
 #[cold]
@@ -1791,17 +2049,26 @@ pub fn missing_codegen_temporary(id: impl Display, span: Option<Span>) -> OxcDia
 
 #[cold]
 pub fn expected_object_method_lvalue() -> OxcDiagnostic {
-    diagnostic(ErrorCategory::Invariant, "Expected object methods to have a temp lvalue")
+    diagnostic(
+        ErrorCategory::Invariant,
+        "Expected object methods to have a temp lvalue",
+    )
 }
 
 #[cold]
 pub fn unexpected_store_local_codegen() -> OxcDiagnostic {
-    diagnostic(ErrorCategory::Invariant, "Unexpected StoreLocal in codegenInstructionValue")
+    diagnostic(
+        ErrorCategory::Invariant,
+        "Unexpected StoreLocal in codegenInstructionValue",
+    )
 }
 
 #[cold]
 pub fn enter_ssa_cycle(block: impl Display) -> OxcDiagnostic {
-    diagnostic(ErrorCategory::Invariant, format!("found a cycle! visiting bb{block} again"))
+    diagnostic(
+        ErrorCategory::Invariant,
+        format!("found a cycle! visiting bb{block} again"),
+    )
 }
 
 #[cold]
@@ -1814,7 +2081,10 @@ pub fn expected_scope_terminal(block: impl Display) -> OxcDiagnostic {
 
 #[cold]
 pub fn unexpected_unknown_effect(span: impl Debug) -> OxcDiagnostic {
-    diagnostic(ErrorCategory::Invariant, format!("Unexpected unknown effect at {span:?}"))
+    diagnostic(
+        ErrorCategory::Invariant,
+        format!("Unexpected unknown effect at {span:?}"),
+    )
 }
 
 #[cold]
@@ -1868,13 +2138,18 @@ pub fn expected_memo_callback(
 pub fn expected_memo_dependency_array(kind_name: &str, span: Option<Span>) -> OxcDiagnostic {
     let message = format!("Expected the dependency list for {kind_name} to be an array literal");
     diagnostic(ErrorCategory::UseMemo, &message)
-        .with_help(format!("Pass an array literal as the dependency list for {kind_name}"))
+        .with_help(format!(
+            "Pass an array literal as the dependency list for {kind_name}"
+        ))
         .with_labels(span.map(|span| span.primary_label(message)))
 }
 
 #[cold]
 pub fn unexpected_optional_terminal(kind: impl Debug) -> OxcDiagnostic {
-    diagnostic(ErrorCategory::Invariant, format!("Unexpected terminal kind in optional: {kind:?}"))
+    diagnostic(
+        ErrorCategory::Invariant,
+        format!("Unexpected terminal kind in optional: {kind:?}"),
+    )
 }
 
 #[cold]
@@ -1887,10 +2162,13 @@ pub fn unvisited_dominator_predecessor(block: impl Debug) -> OxcDiagnostic {
 
 #[cold]
 pub fn suppression(reason: &str, description: String, span: Span) -> OxcDiagnostic {
-    diagnostic(ErrorCategory::Suppression, "React rule suppression prevents optimization")
-        .with_help("Remove the suppression and address the reported React rule violation")
-        .with_note(format!("{reason}. {description}"))
-        .with_label(span.primary_label("Found React rule suppression"))
+    diagnostic(
+        ErrorCategory::Suppression,
+        "React rule suppression prevents optimization",
+    )
+    .with_help("Remove the suppression and address the reported React rule violation")
+    .with_note(format!("{reason}. {description}"))
+    .with_label(span.primary_label("Found React rule suppression"))
 }
 
 #[cold]
@@ -1965,17 +2243,26 @@ pub fn hook_in_function_expression(
 
 #[cold]
 pub fn unknown_target_type(target_type: &str) -> OxcDiagnostic {
-    diagnostic(ErrorCategory::Invariant, format!("Unknown target type: {target_type}"))
+    diagnostic(
+        ErrorCategory::Invariant,
+        format!("Unknown target type: {target_type}"),
+    )
 }
 
 #[cold]
 pub fn expected_break_target(block: impl Display) -> OxcDiagnostic {
-    diagnostic(ErrorCategory::Invariant, format!("Expected a break target for bb{block}"))
+    diagnostic(
+        ErrorCategory::Invariant,
+        format!("Expected a break target for bb{block}"),
+    )
 }
 
 #[cold]
 pub fn block_already_emitted(block: impl Display) -> OxcDiagnostic {
-    diagnostic(ErrorCategory::Invariant, format!("Block bb{block} was already emitted"))
+    diagnostic(
+        ErrorCategory::Invariant,
+        format!("Block bb{block} was already emitted"),
+    )
 }
 
 #[cold]
@@ -2004,7 +2291,10 @@ pub fn expected_continue_target(block: impl Display) -> OxcDiagnostic {
 
 #[cold]
 pub fn unexpected_error_category(category: impl Debug) -> OxcDiagnostic {
-    diagnostic(ErrorCategory::Invariant, format!("Unexpected error category: {category:?}"))
+    diagnostic(
+        ErrorCategory::Invariant,
+        format!("Unexpected error category: {category:?}"),
+    )
 }
 
 #[cold]
@@ -2072,10 +2362,13 @@ pub fn unexpected_for_in_of_declarations(count: usize, span: Span) -> OxcDiagnos
 
 #[cold]
 pub fn unsupported_non_trivial_init(context_name: &str, span: Option<Span>) -> OxcDiagnostic {
-    diagnostic(ErrorCategory::Todo, format!("Support non-trivial {context_name} inits"))
-        .with_labels(
-            span.map(|span| span.primary_label(format!("Non-trivial {context_name} initializer"))),
-        )
+    diagnostic(
+        ErrorCategory::Todo,
+        format!("Support non-trivial {context_name} inits"),
+    )
+    .with_labels(
+        span.map(|span| span.primary_label(format!("Non-trivial {context_name} initializer"))),
+    )
 }
 
 #[cold]
@@ -2269,7 +2562,10 @@ pub fn ref_value_access(span: Option<Span>) -> OxcDiagnostic {
 
 #[cold]
 pub fn ref_passed_to_function(span: Option<Span>) -> OxcDiagnostic {
-    ref_access(span, "Passing a ref to a function may read its value during render")
+    ref_access(
+        span,
+        "Passing a ref to a function may read its value during render",
+    )
 }
 
 #[cold]
@@ -2388,7 +2684,9 @@ pub fn preserve_memo_inferred_dependencies(
         "Existing memoization could not be preserved",
     )
     .with_help(description);
-    let primary_span = dependency_list_span.or(inferred_dependency_span).or(fallback_span);
+    let primary_span = dependency_list_span
+        .or(inferred_dependency_span)
+        .or(fallback_span);
     diagnostic.labels.extend(primary_span.map(|span| {
         span.primary_label(if dependency_list_span.is_some() {
             "This dependency list does not match the dependencies inferred from the callback"
@@ -2436,15 +2734,17 @@ pub fn reassigned_after_render(
     reassignment_span: Option<Span>,
     declaration_span: Option<Span>,
 ) -> OxcDiagnostic {
-    let mut diagnostic =
-        diagnostic(ErrorCategory::Immutability, "Cannot reassign variable after render completes")
-            .with_help(format!(
-                "Reassigning {variable} after render has completed can cause inconsistent \
+    let mut diagnostic = diagnostic(
+        ErrorCategory::Immutability,
+        "Cannot reassign variable after render completes",
+    )
+    .with_help(format!(
+        "Reassigning {variable} after render has completed can cause inconsistent \
              behavior on subsequent renders. Consider using state instead"
-            ))
-            .with_labels(reassignment_span.map(|span| {
-                span.primary_label(format!("Cannot reassign {variable} after render completes"))
-            }));
+    ))
+    .with_labels(reassignment_span.map(|span| {
+        span.primary_label(format!("Cannot reassign {variable} after render completes"))
+    }));
     diagnostic.labels.extend(
         declaration_span
             .filter(|span| Some(*span) != reassignment_span)
@@ -2459,17 +2759,18 @@ pub fn reassigned_in_async_function(
     reassignment_span: Option<Span>,
     declaration_span: Option<Span>,
 ) -> OxcDiagnostic {
-    let mut diagnostic =
-        diagnostic(ErrorCategory::Immutability, "Cannot reassign variable in async function")
-            .with_help(
-                "Reassigning a variable in an async function can cause \
+    let mut diagnostic = diagnostic(
+        ErrorCategory::Immutability,
+        "Cannot reassign variable in async function",
+    )
+    .with_help(
+        "Reassigning a variable in an async function can cause \
              inconsistent behavior on subsequent renders. \
              Consider using state instead",
-            )
-            .with_labels(
-                reassignment_span
-                    .map(|span| span.primary_label(format!("Cannot reassign {variable}"))),
-            );
+    )
+    .with_labels(
+        reassignment_span.map(|span| span.primary_label(format!("Cannot reassign {variable}"))),
+    );
     diagnostic.labels.extend(
         declaration_span
             .filter(|span| Some(*span) != reassignment_span)
@@ -2577,7 +2878,9 @@ pub fn variable_accessed_before_declaration(
         "{help_name} is read while its declaration is still being initialized. Move the access after initialization. For a recursive callback, use a named function expression or restructure the callback so it does not capture itself during initialization"
     ));
     diagnostic.labels.extend(access_span.map(|span| {
-        span.primary_label(format!("{label_name} is read during its own initialization"))
+        span.primary_label(format!(
+            "{label_name} is read during its own initialization"
+        ))
     }));
     diagnostic.labels.extend(
         declaration_span.map(|span| span.label(format!("{label_name} is initialized here"))),
@@ -2599,7 +2902,9 @@ pub fn global_reassignment(variable: &str, span: Option<Span>) -> OxcDiagnostic 
 
 #[cold]
 pub fn impure_function(name: Option<&str>, span: Option<Span>) -> OxcDiagnostic {
-    let prefix = name.map_or_else(String::new, |name| format!("`{name}` is an impure function. "));
+    let prefix = name.map_or_else(String::new, |name| {
+        format!("`{name}` is an impure function. ")
+    });
     diagnostic(ErrorCategory::Purity, "Cannot call impure function during render")
         .with_help(format!(
             "{prefix}Calling an impure function can produce unstable results that update unpredictably when the component re-renders"
@@ -2640,8 +2945,14 @@ pub(crate) fn categorize(diagnostic: OxcDiagnostic) -> LintDiagnostic {
         .filter(|scope| *scope == ErrorCategory::CODE_SCOPE)
         .and_then(|_| diagnostic.code.number.as_deref())
         .and_then(ErrorCategory::from_name);
-    debug_assert!(category.is_some(), "missing React Compiler diagnostic category");
-    LintDiagnostic { category: category.unwrap_or(ErrorCategory::Invariant), diagnostic }
+    debug_assert!(
+        category.is_some(),
+        "missing React Compiler diagnostic category"
+    );
+    LintDiagnostic {
+        category: category.unwrap_or(ErrorCategory::Invariant),
+        diagnostic,
+    }
 }
 
 /// Whether any diagnostic is an error at the TS compiler's *internal*
@@ -2747,7 +3058,10 @@ mod tests {
         assert!(!diagnostic.help.as_deref().unwrap().contains("http"));
         assert_eq!(diagnostic.labels.len(), 1);
         assert!(diagnostic.labels[0].primary());
-        assert_eq!(diagnostic.labels[0].label(), Some("This Hook is called conditionally"));
+        assert_eq!(
+            diagnostic.labels[0].label(),
+            Some("This Hook is called conditionally")
+        );
     }
 
     #[test]
@@ -2760,7 +3074,10 @@ mod tests {
 
         assert!(diagnostic.labels[0].primary());
         assert!(!diagnostic.labels[1].primary());
-        assert_eq!(diagnostic.labels[1].label(), Some("value is initialized here"));
+        assert_eq!(
+            diagnostic.labels[1].label(),
+            Some("value is initialized here")
+        );
     }
 
     #[test]
@@ -2770,7 +3087,10 @@ mod tests {
 
         assert_eq!(diagnostic.labels.len(), 1);
         assert!(diagnostic.labels[0].primary());
-        assert_eq!(diagnostic.labels[0].label(), Some(diagnostic.message.as_ref()));
+        assert_eq!(
+            diagnostic.labels[0].label(),
+            Some(diagnostic.message.as_ref())
+        );
     }
 
     #[test]
@@ -2801,7 +3121,13 @@ mod tests {
 
     #[test]
     fn unexpected_error_uses_structured_category() {
-        assert!(is_unexpected_error(&diagnostic(ErrorCategory::Invariant, "unexpected error")));
-        assert!(!is_unexpected_error(&diagnostic(ErrorCategory::Syntax, "unexpected error")));
+        assert!(is_unexpected_error(&diagnostic(
+            ErrorCategory::Invariant,
+            "unexpected error"
+        )));
+        assert!(!is_unexpected_error(&diagnostic(
+            ErrorCategory::Syntax,
+            "unexpected error"
+        )));
     }
 }

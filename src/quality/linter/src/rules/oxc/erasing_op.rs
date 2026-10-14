@@ -133,5 +133,7 @@ fn test() {
         ("0 / 5;", "0;"),
     ];
 
-    Tester::new(ErasingOp::NAME, ErasingOp::PLUGIN, pass, fail).expect_fix(fix).test_and_snapshot();
+    Tester::new(ErasingOp::NAME, ErasingOp::PLUGIN, pass, fail)
+        .expect_fix(fix)
+        .test_and_snapshot();
 }

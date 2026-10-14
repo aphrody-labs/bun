@@ -45,7 +45,9 @@ fn main() -> std::io::Result<()> {
     let max_iterations = args
         .opt_value_from_str::<&str, u8>("--max-iterations")
         .expect("Invalid number for --max-iterations");
-    let name = args.free_from_str().unwrap_or_else(|_| "test.js".to_string());
+    let name = args
+        .free_from_str()
+        .unwrap_or_else(|_| "test.js".to_string());
 
     let path = Path::new(&name);
     let source_text = std::fs::read_to_string(path)?;
@@ -73,7 +75,16 @@ fn main() -> std::io::Result<()> {
 
     if twice {
         allocator.reset();
-        let printed2 = minify(&allocator, &printed, source_type, None, mangle, nospace, None).code;
+        let printed2 = minify(
+            &allocator,
+            &printed,
+            source_type,
+            None,
+            mangle,
+            nospace,
+            None,
+        )
+        .code;
         println!("{printed2}");
         println!("same = {}", printed == printed2);
     }
@@ -96,7 +107,10 @@ fn minify<'a>(
     let options = MinifierOptions {
         mangle: mangle.then(MangleOptions::default),
         mangle_properties: None,
-        compress: Some(CompressOptions { max_iterations, ..CompressOptions::smallest() }),
+        compress: Some(CompressOptions {
+            max_iterations,
+            ..CompressOptions::smallest()
+        }),
     };
     let ret = Minifier::new(options).minify(allocator, &mut program);
     Codegen::new()

@@ -42,7 +42,10 @@ fn test() {
     use crate::tester::{ExpectFixTestCase, Tester};
 
     let pass = vec![
-        ("describe('the correct way to properly handle all the things', () => {});", None),
+        (
+            "describe('the correct way to properly handle all the things', () => {});",
+            None,
+        ),
         ("test('that all is as it should be', () => {});", None),
         (
             "it('correctly sets the value', () => {});",
@@ -50,8 +53,14 @@ fn test() {
               { "ignoreTypeOfDescribeName": false, "disallowedWords": ["correct"] },
             ])),
         ),
-        ("it('correctly sets the value', () => {});", Some(serde_json::json!([]))),
-        ("describe('the correct way to properly handle all the things', () => {});", None),
+        (
+            "it('correctly sets the value', () => {});",
+            Some(serde_json::json!([])),
+        ),
+        (
+            "describe('the correct way to properly handle all the things', () => {});",
+            None,
+        ),
         ("test('that all is as it should be', () => {});", None),
         (
             "it('correctly sets the value', () => {});",
@@ -118,7 +127,10 @@ fn test() {
         ("describe()", None),
         ("someFn('', function () {})", None),
         ("describe('foo', function () {})", None),
-        ("describe('foo', function () { it('bar', function () {}) })", None),
+        (
+            "describe('foo', function () { it('bar', function () {}) })",
+            None,
+        ),
         ("test('foo', function () {})", None),
         ("test.concurrent('foo', function () {})", None),
         ("test(`foo`, function () {})", None),
@@ -192,11 +204,23 @@ fn test() {
             ",
             None,
         ),
-        ("it(abc, function () {})", Some(serde_json::json!([{ "ignoreTypeOfTestName": true }]))),
+        (
+            "it(abc, function () {})",
+            Some(serde_json::json!([{ "ignoreTypeOfTestName": true }])),
+        ),
         // Vitest-specific tests with allowArguments option
-        ("it(foo, () => {});", Some(serde_json::json!([{ "allowArguments": true }]))),
-        ("describe(bar, () => {});", Some(serde_json::json!([{ "allowArguments": true }]))),
-        ("test(baz, () => {});", Some(serde_json::json!([{ "allowArguments": true }]))),
+        (
+            "it(foo, () => {});",
+            Some(serde_json::json!([{ "allowArguments": true }])),
+        ),
+        (
+            "describe(bar, () => {});",
+            Some(serde_json::json!([{ "allowArguments": true }])),
+        ),
+        (
+            "test(baz, () => {});",
+            Some(serde_json::json!([{ "allowArguments": true }])),
+        ),
         // Vitest-specific tests with .extend()
         (
             "export const myTest = test.extend({
@@ -228,7 +252,10 @@ fn test() {
             "test('fooobar', () => {});",
             Some(serde_json::json!([{ "disallowedWords": ["foo+bar"] }])),
         ),
-        ("test('foo', () => {});", Some(serde_json::json!([{ "disallowedWords": ["foo|bar"] }]))),
+        (
+            "test('foo', () => {});",
+            Some(serde_json::json!([{ "disallowedWords": ["foo|bar"] }])),
+        ),
         // `String.raw` evaluates the raw quasi, not its cooked value.
         (
             "it(String.raw`\\x69t duplicates`, () => {});",
@@ -241,7 +268,10 @@ fn test() {
     ];
 
     let fail = vec![
-        ("const String = { raw: () => 'foo' }; it(String.raw`foo`, () => {})", None),
+        (
+            "const String = { raw: () => 'foo' }; it(String.raw`foo`, () => {})",
+            None,
+        ),
         (
             "test('the correct way to properly handle all things', () => {});",
             Some(serde_json::json!([{ "disallowedWords": ["correct", "properly", "all"] }])),
@@ -650,30 +680,63 @@ fn test() {
         ),
         ("it(abc, function () {})", None),
         // Vitest-specific fail test with allowArguments: false
-        ("test(bar, () => {});", Some(serde_json::json!([{ "allowArguments": false }]))),
+        (
+            "test(bar, () => {});",
+            Some(serde_json::json!([{ "allowArguments": false }])),
+        ),
         // https://github.com/oxc-project/oxc/issues/22268
         ("it(Object.raw`foo`, () => {})", None),
         ("it(String.raw(`foo`), () => {})", None),
     ];
 
     let fix = vec![
-        ("describe(' foo', function () {})", "describe('foo', function () {})"),
-        ("describe.each()(' foo', function () {})", "describe.each()('foo', function () {})"),
+        (
+            "describe(' foo', function () {})",
+            "describe('foo', function () {})",
+        ),
+        (
+            "describe.each()(' foo', function () {})",
+            "describe.each()('foo', function () {})",
+        ),
         (
             "describe.only.each()(' foo', function () {})",
             "describe.only.each()('foo', function () {})",
         ),
-        ("describe(' foo foe fum', function () {})", "describe('foo foe fum', function () {})"),
-        ("describe('foo foe fum ', function () {})", "describe('foo foe fum', function () {})"),
-        ("describe(' foo', function () {})", "describe('foo', function () {})"),
-        ("describe(' foo', function () {})", "describe('foo', function () {})"),
-        ("describe(' foo', function () {})", "describe('foo', function () {})"),
+        (
+            "describe(' foo foe fum', function () {})",
+            "describe('foo foe fum', function () {})",
+        ),
+        (
+            "describe('foo foe fum ', function () {})",
+            "describe('foo foe fum', function () {})",
+        ),
+        (
+            "describe(' foo', function () {})",
+            "describe('foo', function () {})",
+        ),
+        (
+            "describe(' foo', function () {})",
+            "describe('foo', function () {})",
+        ),
+        (
+            "describe(' foo', function () {})",
+            "describe('foo', function () {})",
+        ),
         ("it(' foo', function () {})", "it('foo', function () {})"),
-        ("it.concurrent(' foo', function () {})", "it.concurrent('foo', function () {})"),
+        (
+            "it.concurrent(' foo', function () {})",
+            "it.concurrent('foo', function () {})",
+        ),
         ("it(' foo', function () {})", "it('foo', function () {})"),
-        ("it.skip(' foo', function () {})", "it.skip('foo', function () {})"),
+        (
+            "it.skip(' foo', function () {})",
+            "it.skip('foo', function () {})",
+        ),
         ("it('foo ', function () {})", "it('foo', function () {})"),
-        ("it.skip('foo ', function () {})", "it.skip('foo', function () {})"),
+        (
+            "it.skip('foo ', function () {})",
+            "it.skip('foo', function () {})",
+        ),
         (
             "
                 import { test as testThat } from '@jest/globals';
@@ -687,22 +750,46 @@ fn test() {
             ",
         ),
         ("it(' foo', function () {})", "it('foo', function () {})"),
-        ("test(' foo', function () {})", "test('foo', function () {})"),
-        ("test.concurrent(' foo', function () {})", "test.concurrent('foo', function () {})"),
-        ("test(` foo`, function () {})", "test(`foo`, function () {})"),
-        ("test.concurrent(` foo`, function () {})", "test.concurrent(`foo`, function () {})"),
-        ("test(` foo bar bang`, function () {})", "test(`foo bar bang`, function () {})"),
+        (
+            "test(' foo', function () {})",
+            "test('foo', function () {})",
+        ),
+        (
+            "test.concurrent(' foo', function () {})",
+            "test.concurrent('foo', function () {})",
+        ),
+        (
+            "test(` foo`, function () {})",
+            "test(`foo`, function () {})",
+        ),
+        (
+            "test.concurrent(` foo`, function () {})",
+            "test.concurrent(`foo`, function () {})",
+        ),
+        (
+            "test(` foo bar bang`, function () {})",
+            "test(`foo bar bang`, function () {})",
+        ),
         (
             "test.concurrent(` foo bar bang`, function () {})",
             "test.concurrent(`foo bar bang`, function () {})",
         ),
-        ("test(` foo bar bang  `, function () {})", "test(`foo bar bang`, function () {})"),
+        (
+            "test(` foo bar bang  `, function () {})",
+            "test(`foo bar bang`, function () {})",
+        ),
         (
             "test.concurrent(` foo bar bang  `, function () {})",
             "test.concurrent(`foo bar bang`, function () {})",
         ),
-        ("test(' foo', function () {})", "test('foo', function () {})"),
-        ("test(' foo  ', function () {})", "test('foo', function () {})"),
+        (
+            "test(' foo', function () {})",
+            "test('foo', function () {})",
+        ),
+        (
+            "test(' foo  ', function () {})",
+            "test('foo', function () {})",
+        ),
         (
             "
                 describe(' foo', () => {
@@ -727,19 +814,49 @@ fn test() {
                 })
             ",
         ),
-        ("describe('describe foo', function () {})", "describe('foo', function () {})"),
-        ("describe('describe foo', function () {})", "describe('foo', function () {})"),
-        ("describe('describe foo', function () {})", "describe('foo', function () {})"),
-        ("describe('describe foo', function () {})", "describe('foo', function () {})"),
-        ("describe(`describe foo`, function () {})", "describe(`foo`, function () {})"),
-        ("test('test foo', function () {})", "test('foo', function () {})"),
-        ("test('test foo', function () {})", "test('foo', function () {})"),
-        ("test(`test foo`, function () {})", "test(`foo`, function () {})"),
-        ("test(`test foo test`, function () {})", "test(`foo test`, function () {})"),
+        (
+            "describe('describe foo', function () {})",
+            "describe('foo', function () {})",
+        ),
+        (
+            "describe('describe foo', function () {})",
+            "describe('foo', function () {})",
+        ),
+        (
+            "describe('describe foo', function () {})",
+            "describe('foo', function () {})",
+        ),
+        (
+            "describe('describe foo', function () {})",
+            "describe('foo', function () {})",
+        ),
+        (
+            "describe(`describe foo`, function () {})",
+            "describe(`foo`, function () {})",
+        ),
+        (
+            "test('test foo', function () {})",
+            "test('foo', function () {})",
+        ),
+        (
+            "test('test foo', function () {})",
+            "test('foo', function () {})",
+        ),
+        (
+            "test(`test foo`, function () {})",
+            "test(`foo`, function () {})",
+        ),
+        (
+            "test(`test foo test`, function () {})",
+            "test(`foo test`, function () {})",
+        ),
         ("it('it foo', function () {})", "it('foo', function () {})"),
         ("it('it foo', function () {})", "it('foo', function () {})"),
         ("it('it foo', function () {})", "it('foo', function () {})"),
-        ("it('it foos it correctly', function () {})", "it('foos it correctly', function () {})"),
+        (
+            "it('it foos it correctly', function () {})",
+            "it('foos it correctly', function () {})",
+        ),
         (
             "
                 describe('describe foo', () => {

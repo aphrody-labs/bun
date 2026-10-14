@@ -80,7 +80,9 @@ impl Rule for AriaProptypes {
             return;
         }
         let name = name.cow_to_ascii_lowercase();
-        let Ok(aria_prop_name) = AriaProperty::try_from(name.as_ref()) else { return };
+        let Ok(aria_prop_name) = AriaProperty::try_from(name.as_ref()) else {
+            return;
+        };
         let aria_prop_type = get_aria_prop_type(aria_prop_name);
         let Some(aria_prop_value_string) = &attr.value else {
             if !allow_none_value(&aria_prop_type) {
@@ -189,7 +191,9 @@ fn is_valid_value_for_aria_prop_type(
             let Some(value_string) = parse_aria_prop_value_as_string(value, true) else {
                 return false;
             };
-            valid_tokens.iter().any(|valid_token| valid_token == &value_string)
+            valid_tokens
+                .iter()
+                .any(|valid_token| valid_token == &value_string)
         }
         AriaPropType::TokenList(valid_tokens) => {
             let Some(value) = parse_aria_prop_value_as_string(value, true) else {
@@ -233,7 +237,9 @@ fn parse_aria_prop_value_as_string(
             JSXExpression::UnaryExpression(unary)
                 if boolean_as_string && unary.operator == UnaryOperator::LogicalNot =>
             {
-                let value = !unary.argument.to_boolean(&WithoutGlobalReferenceInformation)?;
+                let value = !unary
+                    .argument
+                    .to_boolean(&WithoutGlobalReferenceInformation)?;
                 Some(value.to_string().into())
             }
             _ => None,
@@ -254,7 +260,10 @@ fn is_target_literal_value(value: &JSXAttributeValue) -> bool {
             JSXExpression::UnaryExpression(unary) => {
                 // Check if unary `!` expression can be statically evaluated (e.g., `!true`, `!"string"`)
                 unary.operator == UnaryOperator::LogicalNot
-                    && unary.argument.to_boolean(&WithoutGlobalReferenceInformation).is_some()
+                    && unary
+                        .argument
+                        .to_boolean(&WithoutGlobalReferenceInformation)
+                        .is_some()
             }
             _ => false, // null literal always pass this rule
         },
@@ -306,9 +315,12 @@ fn get_aria_prop_type(prop_name: AriaProperty) -> AriaPropType {
         AriaProperty::ValueMax | AriaProperty::ValueMin | AriaProperty::ValueNow => {
             AriaPropType::Number
         }
-        AriaProperty::AutoComplete => {
-            AriaPropType::Token(vec!["none".into(), "inline".into(), "list".into(), "both".into()])
-        }
+        AriaProperty::AutoComplete => AriaPropType::Token(vec![
+            "none".into(),
+            "inline".into(),
+            "list".into(),
+            "both".into(),
+        ]),
         AriaProperty::Current => AriaPropType::Token(vec![
             "page".into(),
             "step".into(),
@@ -336,9 +348,11 @@ fn get_aria_prop_type(prop_name: AriaProperty) -> AriaPropType {
         AriaProperty::Live => {
             AriaPropType::Token(vec!["assertive".into(), "off".into(), "polite".into()])
         }
-        AriaProperty::Orientation => {
-            AriaPropType::Token(vec!["horizontal".into(), "undefined".into(), "vertical".into()])
-        }
+        AriaProperty::Orientation => AriaPropType::Token(vec![
+            "horizontal".into(),
+            "undefined".into(),
+            "vertical".into(),
+        ]),
         AriaProperty::Sort => AriaPropType::Token(vec![
             "ascending".into(),
             "descending".into(),
@@ -375,7 +389,10 @@ fn generate_valid_prop_message(prop_type: &AriaPropType) -> String {
             format!("one of the following tokens: {}", tokens.join(", "))
         }
         AriaPropType::TokenList(tokens) => {
-            format!("a space-separated list of the following tokens: {}", tokens.join(", "))
+            format!(
+                "a space-separated list of the following tokens: {}",
+                tokens.join(", ")
+            )
         }
     }
 }

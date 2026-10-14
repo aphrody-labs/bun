@@ -33,7 +33,9 @@ pub struct NoArrayReduce {
 
 impl Default for NoArrayReduce {
     fn default() -> Self {
-        Self { allow_simple_operations: true }
+        Self {
+            allow_simple_operations: true,
+        }
     }
 }
 
@@ -82,9 +84,16 @@ impl Rule for NoArrayReduce {
             return;
         };
 
-        if is_method_call(call_expr, None, Some(&["reduce", "reduceRight"]), Some(1), Some(2))
-            && !matches!(call_expr.arguments.first(), Some(Argument::SpreadElement(_)))
-            && !call_expr.optional
+        if is_method_call(
+            call_expr,
+            None,
+            Some(&["reduce", "reduceRight"]),
+            Some(1),
+            Some(2),
+        ) && !matches!(
+            call_expr.arguments.first(),
+            Some(Argument::SpreadElement(_))
+        ) && !call_expr.optional
             && !member_expr.is_computed()
         {
             if self.allow_simple_operations && is_simple_operation(call_expr) {
@@ -236,11 +245,23 @@ fn test() {
         (r"Array.prototype.xreduce.call(array, foo)", None),
         // Option: allowSimpleOperations
         (r"array.reduce((total, item) => total + item)", None),
-        (r"array.reduce((total, item) => { return total - item })", None),
-        (r"array.reduce(function (total, item) { return total * item })", None),
+        (
+            r"array.reduce((total, item) => { return total - item })",
+            None,
+        ),
+        (
+            r"array.reduce(function (total, item) { return total * item })",
+            None,
+        ),
         (r"array.reduce((total, item) => total + item, 0)", None),
-        (r"array.reduce((total, item) => { return total - item }, 0 )", None),
-        (r"array.reduce(function (total, item) { return total * item }, 0)", None),
+        (
+            r"array.reduce((total, item) => { return total - item }, 0 )",
+            None,
+        ),
+        (
+            r"array.reduce(function (total, item) { return total * item }, 0)",
+            None,
+        ),
         (
             r"
         array.reduce((total, item) => {
@@ -249,7 +270,10 @@ fn test() {
         ",
             None,
         ),
-        (r"array.reduce((total, item) => { return total + item }, 0)", None),
+        (
+            r"array.reduce((total, item) => { return total + item }, 0)",
+            None,
+        ),
         (r"a[b.reduceRight]()", None),
         (r"a(b.reduceRight)", None),
         (r"a.reduceRight()", None),
@@ -267,7 +291,10 @@ fn test() {
         // Not listed method or property
         // More or less argument(s)
         (r"foo.reduceRight();", None),
-        (r"foo.reduceRight(fn, extraArgument1, extraArgument2);", None),
+        (
+            r"foo.reduceRight(fn, extraArgument1, extraArgument2);",
+            None,
+        ),
         (r"foo.reduceRight(...argumentsArray)", None),
         // Test `[].reduceRight.{call,apply}`
         // Not `CallExpression`
@@ -316,11 +343,23 @@ fn test() {
         (r"Array.prototype.xreduceRight.call(array, foo)", None),
         // Option: allowSimpleOperations
         (r"array.reduceRight((total, item) => total + item)", None),
-        (r"array.reduceRight((total, item) => { return total - item })", None),
-        (r"array.reduceRight(function (total, item) { return total * item })", None),
+        (
+            r"array.reduceRight((total, item) => { return total - item })",
+            None,
+        ),
+        (
+            r"array.reduceRight(function (total, item) { return total * item })",
+            None,
+        ),
         (r"array.reduceRight((total, item) => total + item, 0)", None),
-        (r"array.reduceRight((total, item) => { return total - item }, 0 )", None),
-        (r"array.reduceRight(function (total, item) { return total * item }, 0)", None),
+        (
+            r"array.reduceRight((total, item) => { return total - item }, 0 )",
+            None,
+        ),
+        (
+            r"array.reduceRight(function (total, item) { return total * item }, 0)",
+            None,
+        ),
         (
             r"
         array.reduceRight((total, item) => {
@@ -329,7 +368,10 @@ fn test() {
         ",
             None,
         ),
-        (r"array.reduceRight((total, item) => { return total + item }, 0)", None),
+        (
+            r"array.reduceRight((total, item) => { return total + item }, 0)",
+            None,
+        ),
     ];
 
     let fail = vec![
@@ -358,7 +400,10 @@ fn test() {
         (r"Array.prototype.reduce.call(array, sum);", None),
         (r"[].reduce.apply(array, [(s, i) => s + i])", None),
         (r"[].reduce.apply(array, [sum]);", None),
-        (r"Array.prototype.reduce.apply(array, [(s, i) => s + i])", None),
+        (
+            r"Array.prototype.reduce.apply(array, [(s, i) => s + i])",
+            None,
+        ),
         (r"Array.prototype.reduce.apply(array, [sum]);", None),
         (
             r"
@@ -414,7 +459,10 @@ fn test() {
             ",
             None,
         ),
-        (r"array.reduceRight((obj, item) => ({ [item]: null }), {})", None),
+        (
+            r"array.reduceRight((obj, item) => ({ [item]: null }), {})",
+            None,
+        ),
         (
             r#"
             const hyphenate = (str, char) => `${str}-${char}`;
@@ -425,11 +473,17 @@ fn test() {
         (r"[].reduceRight.call(array, (s, i) => s + i)", None),
         (r"[].reduceRight.call(array, sum);", None),
         (r"[].reduceRight.call(sum);", None),
-        (r"Array.prototype.reduceRight.call(array, (s, i) => s + i)", None),
+        (
+            r"Array.prototype.reduceRight.call(array, (s, i) => s + i)",
+            None,
+        ),
         (r"Array.prototype.reduceRight.call(array, sum);", None),
         (r"[].reduceRight.apply(array, [(s, i) => s + i])", None),
         (r"[].reduceRight.apply(array, [sum]);", None),
-        (r"Array.prototype.reduceRight.apply(array, [(s, i) => s + i])", None),
+        (
+            r"Array.prototype.reduceRight.apply(array, [(s, i) => s + i])",
+            None,
+        ),
         (r"Array.prototype.reduceRight.apply(array, [sum]);", None),
         (
             r"

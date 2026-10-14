@@ -155,7 +155,10 @@ fn test() {
 
     let pass = vec![
         ("var x = 0; if (x == 0) { var b = 1; }", None),
-        ("var x = 0; if (x == 0) { var b = 1; }", Some(serde_json::json!(["always"]))),
+        (
+            "var x = 0; if (x == 0) { var b = 1; }",
+            Some(serde_json::json!(["always"])),
+        ),
         ("var x = 5; while (x < 5) { x = x + 1; }", None),
         ("if ((someNode = someNode.parentNode) !== null) { }", None),
         (
@@ -183,7 +186,10 @@ fn test() {
             "if ((node => node = parentNode)(someNode)) { }",
             Some(serde_json::json!(["except-parens"])),
         ),
-        ("if ((node => node = parentNode)(someNode)) { }", Some(serde_json::json!(["always"]))),
+        (
+            "if ((node => node = parentNode)(someNode)) { }",
+            Some(serde_json::json!(["always"])),
+        ),
         (
             "if (function(node) { return node = parentNode; }) { }",
             Some(serde_json::json!(["except-parens"])),
@@ -194,14 +200,35 @@ fn test() {
         ),
         ("x = 0;", Some(serde_json::json!(["always"]))),
         ("var x; var b = (x === 0) ? 1 : 0;", None),
-        ("switch (foo) { case a = b: bar(); }", Some(serde_json::json!(["except-parens"]))),
-        ("switch (foo) { case a = b: bar(); }", Some(serde_json::json!(["always"]))),
-        ("switch (foo) { case baz + (a = b): bar(); }", Some(serde_json::json!(["always"]))),
+        (
+            "switch (foo) { case a = b: bar(); }",
+            Some(serde_json::json!(["except-parens"])),
+        ),
+        (
+            "switch (foo) { case a = b: bar(); }",
+            Some(serde_json::json!(["always"])),
+        ),
+        (
+            "switch (foo) { case baz + (a = b): bar(); }",
+            Some(serde_json::json!(["always"])),
+        ),
         // not in condition
-        ("if (obj.key) { (obj.key=false) }", Some(serde_json::json!(["always"]))),
-        ("for (;;) { (obj.key=false) }", Some(serde_json::json!(["always"]))),
-        ("while (obj.key) { (obj.key=false) }", Some(serde_json::json!(["always"]))),
-        ("do { (obj.key=false) } while (obj.key)", Some(serde_json::json!(["always"]))),
+        (
+            "if (obj.key) { (obj.key=false) }",
+            Some(serde_json::json!(["always"])),
+        ),
+        (
+            "for (;;) { (obj.key=false) }",
+            Some(serde_json::json!(["always"])),
+        ),
+        (
+            "while (obj.key) { (obj.key=false) }",
+            Some(serde_json::json!(["always"])),
+        ),
+        (
+            "do { (obj.key=false) } while (obj.key)",
+            Some(serde_json::json!(["always"])),
+        ),
         // https://github.com/oxc-project/oxc/issues/6656
         (
             "
@@ -210,22 +237,34 @@ fn test() {
             ",
             Some(serde_json::json!(["always"])),
         ),
-        ("while(true) newValue = value;", Some(serde_json::json!(["always"]))),
+        (
+            "while(true) newValue = value;",
+            Some(serde_json::json!(["always"])),
+        ),
         (
             "
             for(;;) newValue = value;
             ",
             Some(serde_json::json!(["always"])),
         ),
-        ("for (; (typeof l === 'undefined' ? (l = 0) : l); i++) { }", None),
+        (
+            "for (; (typeof l === 'undefined' ? (l = 0) : l); i++) { }",
+            None,
+        ),
         ("for (x = 0;x<10;x++) { x = 0 }", None),
         ("for (x = 0;x<10;(x = x + 1)) { x = 0 }", None),
-        ("const nums = [1,2,3]; for(let i = 0; i < nums.length; i += 1) { dosomething(); }", None),
+        (
+            "const nums = [1,2,3]; for(let i = 0; i < nums.length; i += 1) { dosomething(); }",
+            None,
+        ),
         (
             "for (let i = 0; i < nums.length; i += 1) { dosomething();}",
             Some(serde_json::json!(["always"])),
         ),
-        ("let a = 1; a = a ? (a += 5) : 1;", Some(serde_json::json!(["always"]))),
+        (
+            "let a = 1; a = a ? (a += 5) : 1;",
+            Some(serde_json::json!(["always"])),
+        ),
     ];
 
     let fail = vec![
@@ -234,8 +273,14 @@ fn test() {
         ("var x = 0, y; do { y = x; } while (x = x + 1);", None),
         ("var x; for(; x+=1 ;){};", None),
         ("var x; if ((x) = (0));", None),
-        ("if (someNode || (someNode = parentNode)) { }", Some(serde_json::json!(["always"]))),
-        ("while (someNode || (someNode = parentNode)) { }", Some(serde_json::json!(["always"]))),
+        (
+            "if (someNode || (someNode = parentNode)) { }",
+            Some(serde_json::json!(["always"])),
+        ),
+        (
+            "while (someNode || (someNode = parentNode)) { }",
+            Some(serde_json::json!(["always"])),
+        ),
         (
             "do { } while (someNode || (someNode = parentNode));",
             Some(serde_json::json!(["always"])),
@@ -246,17 +291,29 @@ fn test() {
         ),
         ("if (x = 0) { }", Some(serde_json::json!(["always"]))),
         ("while (x = 0) { }", Some(serde_json::json!(["always"]))),
-        ("do { } while (x = x + 1);", Some(serde_json::json!(["always"]))),
+        (
+            "do { } while (x = x + 1);",
+            Some(serde_json::json!(["always"])),
+        ),
         ("for(; x = y; ) { }", Some(serde_json::json!(["always"]))),
         ("if ((x = 0)) { }", Some(serde_json::json!(["always"]))),
         ("while ((x = 0)) { }", Some(serde_json::json!(["always"]))),
-        ("do { } while ((x = x + 1));", Some(serde_json::json!(["always"]))),
+        (
+            "do { } while ((x = x + 1));",
+            Some(serde_json::json!(["always"])),
+        ),
         ("for(; (x = y); ) { }", Some(serde_json::json!(["always"]))),
         ("var x; var b = (x = 0) ? 1 : 0;", None),
-        ("var x; var b = x && (y = 0) ? 1 : 0;", Some(serde_json::json!(["always"]))),
+        (
+            "var x; var b = x && (y = 0) ? 1 : 0;",
+            Some(serde_json::json!(["always"])),
+        ),
         ("(((3496.29)).bkufyydt = 2e308) ? foo : bar;", None),
         // the `=` inside the comment is not the operator
-        ("while (a /* = */ = b) {}", Some(serde_json::json!(["always"]))),
+        (
+            "while (a /* = */ = b) {}",
+            Some(serde_json::json!(["always"])),
+        ),
     ];
 
     Tester::new(NoCondAssign::NAME, NoCondAssign::PLUGIN, pass, fail).test_and_snapshot();

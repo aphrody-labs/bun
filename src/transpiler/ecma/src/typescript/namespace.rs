@@ -23,7 +23,9 @@ pub struct TypeScriptNamespace {
 
 impl TypeScriptNamespace {
     pub fn new(options: &TypeScriptOptions) -> Self {
-        Self { allow_namespaces: options.allow_namespaces }
+        Self {
+            allow_namespaces: options.allow_namespaces,
+        }
     }
 }
 
@@ -128,7 +130,13 @@ impl<'a> TypeScriptNamespace {
             return;
         }
 
-        let TSNamespaceDeclaration { span, id: ident, body, scope_id, .. } = decl.unbox();
+        let TSNamespaceDeclaration {
+            span,
+            id: ident,
+            body,
+            scope_id,
+            ..
+        } = decl.unbox();
 
         // Return early if this declaration is empty or only contains type declarations —
         // it emits no JS.
@@ -168,8 +176,11 @@ impl<'a> TypeScriptNamespace {
             //
             // Only the `ValueModule` declaration emits JS; a `NameSpaceModule`
             // declaration is type-only.
-            let current_declaration_flags =
-                redeclarations.iter().find(|rd| rd.span == ident.span).unwrap().flags;
+            let current_declaration_flags = redeclarations
+                .iter()
+                .find(|rd| rd.span == ident.span)
+                .unwrap()
+                .flags;
             if current_declaration_flags.is_namespace_module() {
                 return;
             }
@@ -292,7 +303,8 @@ impl<'a> TypeScriptNamespace {
             // Lowered to a fresh `let` declaration.
             *ctx.scoping_mut().symbol_flags_mut(binding.symbol_id) =
                 SymbolFlags::BlockScopedVariable;
-            ctx.scoping_mut().set_symbol_span(binding.symbol_id, ident.span);
+            ctx.scoping_mut()
+                .set_symbol_span(binding.symbol_id, ident.span);
             let declaration = Self::create_variable_declaration(&binding, span, ident.span, ctx);
             if is_export {
                 let export_decl = ExportDeclaration::boxed(span, declaration, ctx);
@@ -315,8 +327,12 @@ impl<'a> TypeScriptNamespace {
         ));
 
         let redeclarations = ctx.scoping().symbol_redeclarations(symbol_id);
-        if !redeclarations.iter().any(|redeclaration| redeclaration.flags.is_enum())
-            && redeclarations.last().is_some_and(|redeclaration| redeclaration.span == ident.span)
+        if !redeclarations
+            .iter()
+            .any(|redeclaration| redeclaration.flags.is_enum())
+            && redeclarations
+                .last()
+                .is_some_and(|redeclaration| redeclaration.span == ident.span)
         {
             ctx.scoping_mut().clear_symbol_redeclarations(symbol_id);
         }
@@ -486,8 +502,10 @@ impl<'a> TypeScriptNamespace {
         binding: &BoundIdentifier<'a>,
         ctx: &mut TraverseCtx<'a>,
     ) -> ArenaVec<'a, Statement<'a>> {
-        let is_all_binding_identifier =
-            var_decl.declarations.iter().all(|declaration| declaration.id.is_binding_identifier());
+        let is_all_binding_identifier = var_decl
+            .declarations
+            .iter()
+            .all(|declaration| declaration.id.is_binding_identifier());
 
         // `export const a = 1` transforms to `const a = N.a = 1`, the output
         // is smaller than `const a = 1; N.a = a`;
@@ -547,7 +565,10 @@ impl<'a> TypeScriptNamespace {
         let symbol_id = id.symbol_id();
         let redeclarations = ctx.scoping().symbol_redeclarations(symbol_id);
         // Find first value declaration because only value declaration will emit JS code.
-        redeclarations.iter().find(|rd| rd.flags.is_value()).is_some_and(|rd| rd.span != id.span)
+        redeclarations
+            .iter()
+            .find(|rd| rd.flags.is_value())
+            .is_some_and(|rd| rd.span != id.span)
     }
 }
 

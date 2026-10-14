@@ -15,22 +15,51 @@ pub struct MemoryCgroup {
 
 /// Resolve cgroup v1 memory and v2 memberships, including namespace/bind roots.
 pub fn memory_cgroups(membership: &str, mountinfo: &str) -> Vec<MemoryCgroup> {
-    let decode = |text: &str| text.replace("\\040", " ").replace("\\011", "\t")
-        .replace("\\012", "\n").replace("\\134", "\\");
+    let decode = |text: &str| {
+        text.replace("\\040", " ")
+            .replace("\\011", "\t")
+            .replace("\\012", "\n")
+            .replace("\\134", "\\")
+    };
     let mut result = Vec::new();
     for line in membership.lines() {
         let mut fields = line.splitn(3, ':');
-        let (Some(id), Some(controllers), Some(member)) = (fields.next(), fields.next(), fields.next()) else { continue };
+        let (Some(id), Some(controllers), Some(member)) =
+            (fields.next(), fields.next(), fields.next())
+        else {
+            continue;
+        };
         let unified = id == "0" && controllers.is_empty();
-        if !unified && !controllers.split(',').any(|controller| controller == "memory") { continue; }
-        if !member.starts_with('/') || member.split('/').any(|part| part == ".." || part == ".") { continue; }
+        if !unified
+            && !controllers
+                .split(',')
+                .any(|controller| controller == "memory")
+        {
+            continue;
+        }
+        if !member.starts_with('/') || member.split('/').any(|part| part == ".." || part == ".") {
+            continue;
+        }
         for mount in mountinfo.lines() {
-            let Some((before, after)) = mount.split_once(" - ") else { continue };
+            let Some((before, after)) = mount.split_once(" - ") else {
+                continue;
+            };
             let mut tail = after.split_whitespace();
-            let (Some(kind), Some(_source), Some(options)) = (tail.next(), tail.next(), tail.next()) else { continue };
-            if (unified && kind != "cgroup2") || (!unified && (kind != "cgroup" || !options.split(',').any(|option| option == "memory"))) { continue; }
+            let (Some(kind), Some(_source), Some(options)) =
+                (tail.next(), tail.next(), tail.next())
+            else {
+                continue;
+            };
+            if (unified && kind != "cgroup2")
+                || (!unified
+                    && (kind != "cgroup" || !options.split(',').any(|option| option == "memory")))
+            {
+                continue;
+            }
             let mut head = before.split_whitespace().skip(3);
-            let (Some(root), Some(mount)) = (head.next(), head.next()) else { continue };
+            let (Some(root), Some(mount)) = (head.next(), head.next()) else {
+                continue;
+            };
             let root = decode(root);
             let mount = decode(mount);
             let relative = if root == "/" {
@@ -39,9 +68,19 @@ pub fn memory_cgroups(membership: &str, mountinfo: &str) -> Vec<MemoryCgroup> {
                 ""
             } else if let Some(relative) = member.strip_prefix(&format!("{root}/")) {
                 relative
-            } else { continue };
-            let path = if relative.is_empty() { mount.clone() } else { format!("{}/{relative}", mount.trim_end_matches('/')) };
-            result.push(MemoryCgroup { mount, path, unified });
+            } else {
+                continue;
+            };
+            let path = if relative.is_empty() {
+                mount.clone()
+            } else {
+                format!("{}/{relative}", mount.trim_end_matches('/'))
+            };
+            result.push(MemoryCgroup {
+                mount,
+                path,
+                unified,
+            });
         }
     }
     result
@@ -49,9 +88,14 @@ pub fn memory_cgroups(membership: &str, mountinfo: &str) -> Vec<MemoryCgroup> {
 
 /// Apply a finite kernel ceiling and its current usage without inventing free RAM.
 pub fn constrain_memory(memory: &mut Memory, ceiling: &str, usage: Option<&str>) {
-    let Some((ceiling, available)) = memory_budget(ceiling, usage) else { return };
+    let Some((ceiling, available)) = memory_budget(ceiling, usage) else {
+        return;
+    };
     memory.total_mib = memory.total_mib.min(ceiling / MIB);
-    memory.available_mib = memory.available_mib.min(available / MIB).min(memory.total_mib);
+    memory.available_mib = memory
+        .available_mib
+        .min(available / MIB)
+        .min(memory.total_mib);
 }
 
 /// Bytes retained without MiB rounding for process.availableMemory().
@@ -62,8 +106,10 @@ pub fn memory_budget(ceiling: &str, usage: Option<&str>) -> Option<(u64, u64)> {
     if ceiling >= (i64::MAX as u64 & !65535) {
         return None;
     }
-    let available = usage.and_then(|text| text.trim().parse::<u64>().ok())
-        .map(|used| ceiling.saturating_sub(used)).unwrap_or(0);
+    let available = usage
+        .and_then(|text| text.trim().parse::<u64>().ok())
+        .map(|used| ceiling.saturating_sub(used))
+        .unwrap_or(0);
     Some((ceiling, available))
 }
 
@@ -110,7 +156,10 @@ pub fn meminfo(text: &str) -> Memory {
 pub fn psi(text: &str) -> (Option<f64>, Option<f64>) {
     let avg10 = |kind: &str| {
         let line = text.lines().find(|l| l.starts_with(kind))?;
-        line.split_whitespace().find_map(|t| t.strip_prefix("avg10="))?.parse().ok()
+        line.split_whitespace()
+            .find_map(|t| t.strip_prefix("avg10="))?
+            .parse()
+            .ok()
     };
     (avg10("some"), avg10("full"))
 }
@@ -138,7 +187,9 @@ pub fn cpuinfo(text: &str) -> CpuInfo {
         let (key, value) = (key.trim(), value.trim());
         match key {
             "processor" => info.logical += 1,
-            "model name" | "Model" | "Hardware" if info.model.is_empty() => info.model = value.to_string(),
+            "model name" | "Model" | "Hardware" if info.model.is_empty() => {
+                info.model = value.to_string()
+            }
             "physical id" => package = Some(value),
             "core id" => core = Some(value),
             "flags" | "Features" if info.flags.is_empty() => {
@@ -163,11 +214,19 @@ pub fn os_release(text: &str) -> (String, String) {
     let value = |key: &str| {
         text.lines().find_map(|line| {
             let rest = line.strip_prefix(key)?.strip_prefix('=')?;
-            Some(rest.trim().trim_matches(|c| c == '"' || c == '\'').to_string())
+            Some(
+                rest.trim()
+                    .trim_matches(|c| c == '"' || c == '\'')
+                    .to_string(),
+            )
         })
     };
-    let name = value("PRETTY_NAME").or_else(|| value("NAME")).unwrap_or_default();
-    let version = value("VERSION_ID").or_else(|| value("VERSION")).unwrap_or_default();
+    let name = value("PRETTY_NAME")
+        .or_else(|| value("NAME"))
+        .unwrap_or_default();
+    let version = value("VERSION_ID")
+        .or_else(|| value("VERSION"))
+        .unwrap_or_default();
     (name, version)
 }
 
@@ -197,12 +256,18 @@ pub fn nvidia_cuda_version(text: &str) -> Option<String> {
         .iter()
         .find_map(|m| text.find(m).map(|i| i + m.len()))?;
     let token = text[marker..].split_whitespace().next()?;
-    token.starts_with(|c: char| c.is_ascii_digit()).then(|| token.to_string())
+    token
+        .starts_with(|c: char| c.is_ascii_digit())
+        .then(|| token.to_string())
 }
 
 /// `lsblk -J -b -o NAME,TYPE,SIZE,FSTYPE,MOUNTPOINT,ROTA,TRAN,MODEL`: device name to disk kind.
 pub fn lsblk_kinds(text: &str) -> HashMap<String, String> {
-    fn walk(node: &serde_json::Value, inherited: Option<&'static str>, out: &mut HashMap<String, String>) {
+    fn walk(
+        node: &serde_json::Value,
+        inherited: Option<&'static str>,
+        out: &mut HashMap<String, String>,
+    ) {
         let Some(name) = node.get("name").and_then(|v| v.as_str()) else {
             return;
         };
@@ -222,13 +287,23 @@ pub fn lsblk_kinds(text: &str) -> HashMap<String, String> {
         let is_disk = node.get("type").and_then(|v| v.as_str()) == Some("disk");
         let kind = if is_disk { own } else { inherited.or(own) };
         out.insert(name.to_string(), kind.unwrap_or("unknown").to_string());
-        for child in node.get("children").and_then(|v| v.as_array()).into_iter().flatten() {
+        for child in node
+            .get("children")
+            .and_then(|v| v.as_array())
+            .into_iter()
+            .flatten()
+        {
             walk(child, kind, out);
         }
     }
     let mut out = HashMap::new();
     if let Ok(root) = serde_json::from_str::<serde_json::Value>(text) {
-        for node in root.get("blockdevices").and_then(|v| v.as_array()).into_iter().flatten() {
+        for node in root
+            .get("blockdevices")
+            .and_then(|v| v.as_array())
+            .into_iter()
+            .flatten()
+        {
             walk(node, None, &mut out);
         }
     }
@@ -274,9 +349,12 @@ pub fn df(text: &str) -> Vec<Disk> {
                 return None;
             }
             let mount = f[6..].join(" ");
-            let virtual_mount = ["/run", "/dev", "/sys", "/proc", "/snap"]
-                .iter()
-                .any(|p| mount == *p || mount.strip_prefix(p).is_some_and(|rest| rest.starts_with('/')));
+            let virtual_mount = ["/run", "/dev", "/sys", "/proc", "/snap"].iter().any(|p| {
+                mount == *p
+                    || mount
+                        .strip_prefix(p)
+                        .is_some_and(|rest| rest.starts_with('/'))
+            });
             if virtual_mount {
                 return None;
             }
@@ -294,7 +372,9 @@ pub fn df(text: &str) -> Vec<Disk> {
 
 pub fn wireguard_like(iface: &str, ip: &str, prefixes: &[String]) -> bool {
     let lower = iface.to_ascii_lowercase();
-    lower.starts_with("wg") || lower.contains("wireguard") || prefixes.iter().any(|p| ip.starts_with(p.as_str()))
+    lower.starts_with("wg")
+        || lower.contains("wireguard")
+        || prefixes.iter().any(|p| ip.starts_with(p.as_str()))
 }
 
 /// `ip -o -4 addr show`: interfaces that look like WireGuard (`wg*` name, or an address under one of
@@ -418,8 +498,14 @@ pub fn windows_disk_kind(text: &str) -> String {
     let kinds: BTreeSet<&'static str> = csv(text)
         .iter()
         .map(|row| {
-            let bus = row.get("bustype").map(|s| s.to_ascii_lowercase()).unwrap_or_default();
-            let media = row.get("mediatype").map(|s| s.to_ascii_lowercase()).unwrap_or_default();
+            let bus = row
+                .get("bustype")
+                .map(|s| s.to_ascii_lowercase())
+                .unwrap_or_default();
+            let media = row
+                .get("mediatype")
+                .map(|s| s.to_ascii_lowercase())
+                .unwrap_or_default();
             match (bus.as_str(), media.as_str()) {
                 ("nvme", _) => "nvme",
                 (_, "hdd") => "hdd",

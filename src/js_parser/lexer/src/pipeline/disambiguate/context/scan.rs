@@ -92,17 +92,29 @@ fn scan(
     let mut steps = 0u32;
     // Brackets opened (going back) between the query and the position scanned.
     let mut level = 0u32;
-    let mut lv = Level { semi: None, comma: None, brace: None, braces: false, closers: gts };
+    let mut lv = Level {
+        semi: None,
+        comma: None,
+        brace: None,
+        braces: false,
+        closers: gts,
+    };
     // Unmatched `<` found on the query's own level.
     let mut unmatched_lt = 0u32;
     let mut q = tokens.prev_sig(from);
     loop {
         let Some(p) = q else {
             lv.record(jumps, 0);
-            return Some(Scan { anchor: Anchor::Stmt(0), angles: unmatched_lt });
+            return Some(Scan {
+                anchor: Anchor::Stmt(0),
+                angles: unmatched_lt,
+            });
         };
         if cont.is_some_and(|c| p < c) {
-            return Some(Scan { anchor: lv.resume_point(0, 0), angles: unmatched_lt });
+            return Some(Scan {
+                anchor: lv.resume_point(0, 0),
+                angles: unmatched_lt,
+            });
         }
         steps += 1;
         if steps > WALK_SCAN_CAP {
@@ -117,7 +129,10 @@ fn scan(
                     if cont.is_some_and(|c| o < c) {
                         if can_leave(o) {
                             let anchor = lv.resume_point(o, p);
-                            return Some(Scan { anchor, angles: unmatched_lt });
+                            return Some(Scan {
+                                anchor,
+                                angles: unmatched_lt,
+                            });
                         }
                         // The group holds the walk's seed: find an anchor before it instead.
                         cont = None;
@@ -126,14 +141,20 @@ fn scan(
                         lv.brace = brace_boundary(tokens, p);
                     }
                     lv.braces |= c == b'}';
-                    jumps.push(Jump::Skip { at: o as u32, to: p as u32 });
+                    jumps.push(Jump::Skip {
+                        at: o as u32,
+                        to: p as u32,
+                    });
                     q = tokens.prev_sig(o);
                     continue;
                 }
                 b'(' => {
                     lv.record(jumps, p);
                     if let Some(anchor) = paren_anchor(tokens, p) {
-                        return Some(Scan { anchor, angles: unmatched_lt });
+                        return Some(Scan {
+                            anchor,
+                            angles: unmatched_lt,
+                        });
                     }
                     // A paren that may sit in a type: the walk reaches it from further back.
                     level += 1;
@@ -161,7 +182,8 @@ fn scan(
                         if n == 1 {
                             lv.closers.push(p as u32);
                         } else {
-                            lv.closers.extend(core::iter::repeat_n(u32::MAX, n as usize));
+                            lv.closers
+                                .extend(core::iter::repeat_n(u32::MAX, n as usize));
                         }
                     }
                 }
@@ -171,7 +193,10 @@ fn scan(
                         match lv.closers.pop() {
                             Some(g) => {
                                 if n == 1 && g != u32::MAX {
-                                    jumps.push(Jump::Angle { at: p as u32, to: g });
+                                    jumps.push(Jump::Angle {
+                                        at: p as u32,
+                                        to: g,
+                                    });
                                 }
                             }
                             None => {
@@ -195,7 +220,10 @@ fn scan(
                     Anchor::Continue { .. } => p,
                 };
                 lv.record(jumps, at);
-                return Some(Scan { anchor, angles: unmatched_lt });
+                return Some(Scan {
+                    anchor,
+                    angles: unmatched_lt,
+                });
             }
             // A `,` after a class or interface keyword may sit in its heritage list, which belongs
             // to the head, not to the frame around it.
@@ -209,15 +237,26 @@ fn scan(
             let head = tokens.template_head(p, &mut steps, WALK_SCAN_CAP)?;
             if cont.is_some_and(|c| head < c) {
                 // The walk stopped inside the template: it steps on through the rest of it.
-                let anchor = Anchor::Continue { semi: 0, brace: 0, open: 0, close: 0 };
-                return Some(Scan { anchor, angles: unmatched_lt });
+                let anchor = Anchor::Continue {
+                    semi: 0,
+                    brace: 0,
+                    open: 0,
+                    close: 0,
+                };
+                return Some(Scan {
+                    anchor,
+                    angles: unmatched_lt,
+                });
             }
             if k == tk!(TemplateMiddle) {
                 lv.record(jumps, p);
                 level += 1;
                 lv.enter();
             }
-            jumps.push(Jump::Skip { at: head as u32, to: p as u32 });
+            jumps.push(Jump::Skip {
+                at: head as u32,
+                to: p as u32,
+            });
             q = tokens.prev_sig(head);
             continue;
         } else if k == tk!(TemplateHead) {
@@ -288,7 +327,11 @@ pub(crate) fn after(tokens: &Tokens, walks: &mut Walks, pos: usize) -> After {
     };
     let from = from.unwrap_or(pos);
     if let Some(a) = local_walk(tokens, walks, pos, from, |w, tokens| {
-        if w.walked_to > pos { w.classify_after() } else { w.after_token(tokens, pos) }
+        if w.walked_to > pos {
+            w.classify_after()
+        } else {
+            w.after_token(tokens, pos)
+        }
     }) {
         return a;
     }
@@ -301,7 +344,14 @@ impl Walk {
         let valid = floor != 0 && !self.seed_lost && frames.len() >= floor;
         let cont = (valid && self.walked_to <= from).then_some(self.walked_to);
         let can_leave = |open| group_frame(frames, open, floor).is_some();
-        scan(tokens, &mut self.jumps, &mut self.gts, from, cont, can_leave)
+        scan(
+            tokens,
+            &mut self.jumps,
+            &mut self.gts,
+            from,
+            cont,
+            can_leave,
+        )
     }
 
     fn run_local(&mut self, tokens: &Tokens, s: Scan, pos: usize, from: usize) -> bool {
@@ -315,11 +365,19 @@ impl Walk {
     pub(super) fn start(&mut self, tokens: &Tokens, anchor: Anchor, pos: usize, from: usize) {
         self.jumps.reverse();
         if from < pos {
-            self.jumps.push(Jump::Skip { at: from as u32, to: pos as u32 });
+            self.jumps.push(Jump::Skip {
+                at: from as u32,
+                to: pos as u32,
+            });
         }
         self.next_jump = 0;
         match anchor {
-            Anchor::Continue { semi, brace, open, close } => {
+            Anchor::Continue {
+                semi,
+                brace,
+                open,
+                close,
+            } => {
                 if close != 0 {
                     self.leave_group(tokens, open as usize, close as usize);
                 }

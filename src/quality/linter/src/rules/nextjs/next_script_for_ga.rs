@@ -118,18 +118,25 @@ impl Rule for NextScriptForGa {
                 return;
             };
             let template_literal = template_literal.quasis[0].value.raw.as_str();
-            if SUPPORTED_HTML_CONTENT_URLS.iter().any(|s| template_literal.contains(s)) {
+            if SUPPORTED_HTML_CONTENT_URLS
+                .iter()
+                .any(|s| template_literal.contains(s))
+            {
                 ctx.diagnostic(next_script_for_ga_diagnostic(jsx_opening_element_name.span));
             }
         }
     }
 }
 
-const SUPPORTED_SRCS: [&str; 2] =
-    ["www.google-analytics.com/analytics.js", "www.googletagmanager.com/gtag/js"];
+const SUPPORTED_SRCS: [&str; 2] = [
+    "www.google-analytics.com/analytics.js",
+    "www.googletagmanager.com/gtag/js",
+];
 
-const SUPPORTED_HTML_CONTENT_URLS: [&str; 2] =
-    ["www.google-analytics.com/analytics.js", "www.googletagmanager.com/gtm.js"];
+const SUPPORTED_HTML_CONTENT_URLS: [&str; 2] = [
+    "www.google-analytics.com/analytics.js",
+    "www.googletagmanager.com/gtm.js",
+];
 
 fn get_dangerously_set_inner_html_prop_value<'a>(
     jsx_opening_element: &'a JSXOpeningElement<'a>,

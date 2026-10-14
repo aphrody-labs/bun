@@ -22,11 +22,19 @@ fn lint_all_rules(source: &str, path: &str) -> Vec<String> {
     let allocator = Allocator::default();
     let source_type = SourceType::from_path(path).unwrap();
     let parser_ret = Parser::new(&allocator, source, source_type).parse();
-    let semantic = SemanticBuilder::new_linter().build(&parser_ret.program).semantic;
+    let semantic = SemanticBuilder::new_linter()
+        .build(&parser_ret.program)
+        .semantic;
     let path = Path::new(path);
-    let module_record = Arc::new(ModuleRecord::new(path, &parser_ret.module_record, &semantic));
+    let module_record = Arc::new(ModuleRecord::new(
+        path,
+        &parser_ret.module_record,
+        &semantic,
+    ));
     let mut external_plugin_store = ExternalPluginStore::default();
-    let lint_config = ConfigStoreBuilder::all().build(&mut external_plugin_store).unwrap();
+    let lint_config = ConfigStoreBuilder::all()
+        .build(&mut external_plugin_store)
+        .unwrap();
     let linter = Linter::new(
         LintOptions::default(),
         ConfigStore::new(lint_config, FxHashMap::default(), external_plugin_store),
@@ -54,7 +62,9 @@ fn lint_all_rules(source: &str, path: &str) -> Vec<String> {
 fn pending_global_in_non_test_file_is_reported() {
     let diagnostics = lint_all_rules("pending();\n", "src/app.ts");
     assert!(
-        diagnostics.iter().any(|m| m.contains("@jest/globals") && m.contains("pending")),
+        diagnostics
+            .iter()
+            .any(|m| m.contains("@jest/globals") && m.contains("pending")),
         "expected prefer-importing-jest-globals to report `pending`; got: {diagnostics:#?}",
     );
 }
@@ -65,7 +75,9 @@ fn settimeout_wrapper_in_non_test_file_is_reported() {
     let source = "setTimeout(() => {\n  expect(x).toHaveBeenCalledOnce();\n  expect(x).toHaveBeenCalledWith('hoge');\n});\n";
     let diagnostics = lint_all_rules(source, "src/app.ts");
     assert!(
-        diagnostics.iter().any(|m| m.contains("toHaveBeenCalledExactlyOnceWith")),
+        diagnostics
+            .iter()
+            .any(|m| m.contains("toHaveBeenCalledExactlyOnceWith")),
         "expected prefer-called-exactly-once-with to fire; got: {diagnostics:#?}",
     );
 }
@@ -86,7 +98,9 @@ fn settimeout_wrapper_in_vitest_file_is_not_reported() {
     let source = "import { test, expect } from 'vitest';\nsetTimeout(() => {\n  expect(x).toHaveBeenCalledOnce();\n  expect(x).toHaveBeenCalledWith('hoge');\n});\n";
     let diagnostics = lint_all_rules(source, "src/app.ts");
     assert!(
-        !diagnostics.iter().any(|m| m.contains("toHaveBeenCalledExactlyOnceWith")),
+        !diagnostics
+            .iter()
+            .any(|m| m.contains("toHaveBeenCalledExactlyOnceWith")),
         "prefer-called-exactly-once-with must NOT fire for a `setTimeout` wrapper on a Vitest file; got: {diagnostics:#?}",
     );
 }
@@ -97,7 +111,9 @@ fn settimeout_wrapper_in_dot_test_file_is_not_reported() {
     let source = "setTimeout(() => {\n  expect(x).toHaveBeenCalledOnce();\n  expect(x).toHaveBeenCalledWith('hoge');\n});\n";
     let diagnostics = lint_all_rules(source, "src/app.test.ts");
     assert!(
-        !diagnostics.iter().any(|m| m.contains("toHaveBeenCalledExactlyOnceWith")),
+        !diagnostics
+            .iter()
+            .any(|m| m.contains("toHaveBeenCalledExactlyOnceWith")),
         "prefer-called-exactly-once-with must NOT fire for a `setTimeout` wrapper on a *.test.ts file; got: {diagnostics:#?}",
     );
 }

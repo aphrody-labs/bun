@@ -30,9 +30,7 @@ impl ToInt32 for f64 {
                     f64_to_int32_generic(*self)
                 }
             }
-            _ => {
-                f64_to_int32_generic(*self)
-            }
+            _ => f64_to_int32_generic(*self),
         }
     }
 }
@@ -49,7 +47,11 @@ unsafe fn f64_to_int32_arm64(number: f64) -> i32 {
 }
 
 /// Generic implementation of ToInt32 for non-ARM64 architectures or ARM64 without JSCVT
-#[expect(clippy::float_cmp, clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
+#[expect(
+    clippy::float_cmp,
+    clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap
+)]
 #[cfg(any(
     test,
     not(target_arch = "aarch64"),
@@ -85,11 +87,19 @@ fn f64_to_int32_generic(number: f64) -> i32 {
         let d64 = number.to_bits();
         let significand = d64 & SIGNIFICAND_MASK;
 
-        if is_denormal(number) { significand } else { significand + HIDDEN_BIT }
+        if is_denormal(number) {
+            significand
+        } else {
+            significand + HIDDEN_BIT
+        }
     }
 
     fn sign(number: f64) -> i64 {
-        if (number.to_bits() & SIGN_MASK) == 0 { 1 } else { -1 }
+        if (number.to_bits() & SIGN_MASK) == 0 {
+            1
+        } else {
+            -1
+        }
     }
 
     // NOTE: this also matches with negative zero

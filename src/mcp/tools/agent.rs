@@ -33,7 +33,15 @@ macro_rules! tools {
     };
 }
 
-tools!(GIT_INGEST, DEPS_LIST, DEPS_INFO, DEPS_TREE, DEPS_READ, DEPS_SEARCH, DEPS_DOCS);
+tools!(
+    GIT_INGEST,
+    DEPS_LIST,
+    DEPS_INFO,
+    DEPS_TREE,
+    DEPS_READ,
+    DEPS_SEARCH,
+    DEPS_DOCS
+);
 
 #[cfg(test)]
 mod tests {

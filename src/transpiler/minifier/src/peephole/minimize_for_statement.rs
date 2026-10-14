@@ -30,9 +30,11 @@ impl<'a> PeepholeOptimizations {
         // only differ through TDZ behavior, which the minifier intentionally
         // ignores.
         let body_has_function_declaration = match &for_stmt.body {
-            Statement::BlockStatement(block_stmt) => {
-                block_stmt.body.iter().skip(1).any(Self::statement_has_function_declaration)
-            }
+            Statement::BlockStatement(block_stmt) => block_stmt
+                .body
+                .iter()
+                .skip(1)
+                .any(Self::statement_has_function_declaration),
             _ => false,
         };
         if body_has_function_declaration {
@@ -50,7 +52,10 @@ impl<'a> PeepholeOptimizations {
             }
             // Annex B gives a direct function declaration in an `if` branch an implicit scope.
             if is_sloppy_mode
-                && if_stmt.alternate.as_ref().is_some_and(Self::statement_has_function_declaration)
+                && if_stmt
+                    .alternate
+                    .as_ref()
+                    .is_some_and(Self::statement_has_function_declaration)
             {
                 return;
             }
@@ -64,8 +69,12 @@ impl<'a> PeepholeOptimizations {
                 stmt => (stmt, None),
             };
 
-            let Statement::IfStatement(if_stmt) = first else { unreachable!() };
-            let IfStatement { test, alternate, .. } = if_stmt.unbox();
+            let Statement::IfStatement(if_stmt) = first else {
+                unreachable!()
+            };
+            let IfStatement {
+                test, alternate, ..
+            } = if_stmt.unbox();
             let expr = Self::minimize_not(test.span(), test, ctx, true);
 
             if let Some(left) = for_stmt.test.take() {
@@ -86,8 +95,10 @@ impl<'a> PeepholeOptimizations {
         }
         // "for (;;) if (x) y(); else break;" => "for (; x;) y();"
         // "for (; a;) if (x) y(); else break;" => "for (; a && x;) y();"
-        if let Some(Statement::BreakStatement(break_stmt)) =
-            if_stmt.alternate.as_ref().and_then(|stmt| stmt.get_one_child())
+        if let Some(Statement::BreakStatement(break_stmt)) = if_stmt
+            .alternate
+            .as_ref()
+            .and_then(|stmt| stmt.get_one_child())
         {
             if break_stmt.label.is_some() {
                 return;
@@ -106,8 +117,12 @@ impl<'a> PeepholeOptimizations {
                 stmt => (stmt, None),
             };
 
-            let Statement::IfStatement(if_stmt) = first else { unreachable!() };
-            let IfStatement { test, consequent, .. } = if_stmt.unbox();
+            let Statement::IfStatement(if_stmt) = first else {
+                unreachable!()
+            };
+            let IfStatement {
+                test, consequent, ..
+            } = if_stmt.unbox();
 
             let expr = test;
 

@@ -330,8 +330,11 @@ fn generate_scope_code(struct_def: &StructDef) -> (TokenStream, TokenStream, boo
 fn generate_field_walk(struct_def: &StructDef, field: &FieldDef, schema: &Schema) -> TokenStream {
     let type_snake_name = struct_def.snake_name();
     let type_screaming_name = type_snake_name.cow_to_ascii_uppercase();
-    let field_offset =
-        format_ident!("OFFSET_{}_{}", type_screaming_name, field.name().cow_to_ascii_uppercase());
+    let field_offset = format_ident!(
+        "OFFSET_{}_{}",
+        type_screaming_name,
+        field.name().cow_to_ascii_uppercase()
+    );
 
     let field_type = field.type_def(schema);
     let field_type_name = ty_no_lifetime(field_type, schema);
@@ -461,8 +464,11 @@ fn generate_field_walk_option_with_retag(
 ) -> TokenStream {
     let type_snake_name = struct_def.snake_name();
     let type_screaming_name = type_snake_name.cow_to_ascii_uppercase();
-    let field_offset =
-        format_ident!("OFFSET_{}_{}", type_screaming_name, field.name().cow_to_ascii_uppercase());
+    let field_offset = format_ident!(
+        "OFFSET_{}_{}",
+        type_screaming_name,
+        field.name().cow_to_ascii_uppercase()
+    );
 
     let field_type = field.type_def(schema);
     let field_type_name = ty_no_lifetime(field_type, schema);
@@ -538,7 +544,9 @@ fn generate_walk_for_enum(enum_def: &EnumDef, schema: &Schema, config: &WalkConf
 
     // Own variants
     for variant in &enum_def.variants {
-        let Some(field_type) = variant.field_type(schema) else { continue };
+        let Some(field_type) = variant.field_type(schema) else {
+            continue;
+        };
         let inner_type = field_type.innermost_type(schema);
 
         // Check inner type has a visitor

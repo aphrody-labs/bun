@@ -59,7 +59,9 @@ impl TransformOptions {
             Some("javascript") => RelayLanguage::Javascript,
             Some("flow") => RelayLanguage::Flow,
             Some(value) => {
-                return Err(OxcDiagnostic::error(format!("Invalid `language` option: `{value}`.")));
+                return Err(OxcDiagnostic::error(format!(
+                    "Invalid `language` option: `{value}`."
+                )));
             }
         };
         Ok(RelayOptions {

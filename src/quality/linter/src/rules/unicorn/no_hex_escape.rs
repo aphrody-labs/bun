@@ -110,7 +110,9 @@ impl Rule for NoHexEscape {
                     return;
                 };
 
-                let mut finder = HexEscapeFinder { hex_escapes: vec![] };
+                let mut finder = HexEscapeFinder {
+                    hex_escapes: vec![],
+                };
                 finder.visit_pattern(pattern);
 
                 for span in finder.hex_escapes {
@@ -185,34 +187,122 @@ fn test() {
     let fix = vec![
         (r"const foo = '\xb1'", r"const foo = '\u00b1'", None),
         (r"const foo = '\\\xb1'", r"const foo = '\\\u00b1'", None),
-        (r"const foo = '\xb1\xb1'", r"const foo = '\u00b1\u00b1'", None),
-        (r"const foo = '\\\xb1\\\xb1'", r"const foo = '\\\u00b1\\\u00b1'", None),
-        (r"const foo = '\\\xb1\\\\xb1'", r"const foo = '\\\u00b1\\\\xb1'", None),
-        (r"const foo = '\\\\\xb1\\\xb1'", r"const foo = '\\\\\u00b1\\\u00b1'", None),
+        (
+            r"const foo = '\xb1\xb1'",
+            r"const foo = '\u00b1\u00b1'",
+            None,
+        ),
+        (
+            r"const foo = '\\\xb1\\\xb1'",
+            r"const foo = '\\\u00b1\\\u00b1'",
+            None,
+        ),
+        (
+            r"const foo = '\\\xb1\\\\xb1'",
+            r"const foo = '\\\u00b1\\\\xb1'",
+            None,
+        ),
+        (
+            r"const foo = '\\\\\xb1\\\xb1'",
+            r"const foo = '\\\\\u00b1\\\u00b1'",
+            None,
+        ),
         (r"const foo = '\xb1foo'", r"const foo = '\u00b1foo'", None),
-        (r"const foo = '\xd8\x3d\xdc\xa9'", r"const foo = '\u00d8\u003d\u00dc\u00a9'", None),
+        (
+            r"const foo = '\xd8\x3d\xdc\xa9'",
+            r"const foo = '\u00d8\u003d\u00dc\u00a9'",
+            None,
+        ),
         (r"const foo = 'foo\xb1'", r"const foo = 'foo\u00b1'", None),
-        (r"const foo = 'foo\\\xb1'", r"const foo = 'foo\\\u00b1'", None),
-        (r"const foo = 'foo\\\\\xb1'", r"const foo = 'foo\\\\\u00b1'", None),
-        (r"const foo = 'foo\x12foo\x34'", r"const foo = 'foo\u0012foo\u0034'", None),
-        (r"const foo = '42\x1242\x34'", r"const foo = '42\u001242\u0034'", None),
-        (r"const foo = '42\\\x1242\\\x34'", r"const foo = '42\\\u001242\\\u0034'", None),
-        (r"const foo = /^[\x20-\x7E]*$/", r"const foo = /^[\u0020-\u007E]*$/", None),
+        (
+            r"const foo = 'foo\\\xb1'",
+            r"const foo = 'foo\\\u00b1'",
+            None,
+        ),
+        (
+            r"const foo = 'foo\\\\\xb1'",
+            r"const foo = 'foo\\\\\u00b1'",
+            None,
+        ),
+        (
+            r"const foo = 'foo\x12foo\x34'",
+            r"const foo = 'foo\u0012foo\u0034'",
+            None,
+        ),
+        (
+            r"const foo = '42\x1242\x34'",
+            r"const foo = '42\u001242\u0034'",
+            None,
+        ),
+        (
+            r"const foo = '42\\\x1242\\\x34'",
+            r"const foo = '42\\\u001242\\\u0034'",
+            None,
+        ),
+        (
+            r"const foo = /^[\x20-\x7E]*$/",
+            r"const foo = /^[\u0020-\u007E]*$/",
+            None,
+        ),
         (r"const foo = `\xb1`", r"const foo = `\u00b1`", None),
         (r"const foo = `\\\xb1`", r"const foo = `\\\u00b1`", None),
-        (r"const foo = `\xb1\xb1`", r"const foo = `\u00b1\u00b1`", None),
-        (r"const foo = `\\\xb1\\\xb1`", r"const foo = `\\\u00b1\\\u00b1`", None),
-        (r"const foo = `\\\\\xb1\\\xb1`", r"const foo = `\\\\\u00b1\\\u00b1`", None),
-        (r"const foo = `\\\\\xb1\\\\xb1`", r"const foo = `\\\\\u00b1\\\\xb1`", None),
+        (
+            r"const foo = `\xb1\xb1`",
+            r"const foo = `\u00b1\u00b1`",
+            None,
+        ),
+        (
+            r"const foo = `\\\xb1\\\xb1`",
+            r"const foo = `\\\u00b1\\\u00b1`",
+            None,
+        ),
+        (
+            r"const foo = `\\\\\xb1\\\xb1`",
+            r"const foo = `\\\\\u00b1\\\u00b1`",
+            None,
+        ),
+        (
+            r"const foo = `\\\\\xb1\\\\xb1`",
+            r"const foo = `\\\\\u00b1\\\\xb1`",
+            None,
+        ),
         (r"const foo = `\xb1foo`", r"const foo = `\u00b1foo`", None),
-        (r"const foo = `\xd8\x3d\xdc\xa9`", r"const foo = `\u00d8\u003d\u00dc\u00a9`", None),
+        (
+            r"const foo = `\xd8\x3d\xdc\xa9`",
+            r"const foo = `\u00d8\u003d\u00dc\u00a9`",
+            None,
+        ),
         (r"const foo = `foo\xb1`", r"const foo = `foo\u00b1`", None),
-        (r"const foo = `foo\\\xb1`", r"const foo = `foo\\\u00b1`", None),
-        (r"const foo = `foo\\\\\xb1`", r"const foo = `foo\\\\\u00b1`", None),
-        (r"const foo = `foo\x12foo\x34`", r"const foo = `foo\u0012foo\u0034`", None),
-        (r"const foo = `42\x1242\x34`", r"const foo = `42\u001242\u0034`", None),
-        (r"const foo = `42\\\x1242\\\x34`", r"const foo = `42\\\u001242\\\u0034`", None),
-        (r"const foo = `\xb1${foo}\xb1${foo}`", r"const foo = `\u00b1${foo}\u00b1${foo}`", None),
+        (
+            r"const foo = `foo\\\xb1`",
+            r"const foo = `foo\\\u00b1`",
+            None,
+        ),
+        (
+            r"const foo = `foo\\\\\xb1`",
+            r"const foo = `foo\\\\\u00b1`",
+            None,
+        ),
+        (
+            r"const foo = `foo\x12foo\x34`",
+            r"const foo = `foo\u0012foo\u0034`",
+            None,
+        ),
+        (
+            r"const foo = `42\x1242\x34`",
+            r"const foo = `42\u001242\u0034`",
+            None,
+        ),
+        (
+            r"const foo = `42\\\x1242\\\x34`",
+            r"const foo = `42\\\u001242\\\u0034`",
+            None,
+        ),
+        (
+            r"const foo = `\xb1${foo}\xb1${foo}`",
+            r"const foo = `\u00b1${foo}\u00b1${foo}`",
+            None,
+        ),
         (
             r#"const unicodeMatch = "".toString().match(/[^\x00-\xFF]+/g);"#,
             r#"const unicodeMatch = "".toString().match(/[^\u0000-\u00FF]+/g);"#,
@@ -223,8 +313,16 @@ fn test() {
             r#"const unicodeMatch = "".toString().match(/[^\u0000-\u00FF]+/gim);"#,
             None,
         ),
-        (r#"const foo = "it'\x80s""#, r#"const foo = "it'\u0080s""#, None),
-        (r#"const foo = 'it"\x80s'"#, r#"const foo = 'it"\u0080s'"#, None),
+        (
+            r#"const foo = "it'\x80s""#,
+            r#"const foo = "it'\u0080s""#,
+            None,
+        ),
+        (
+            r#"const foo = 'it"\x80s'"#,
+            r#"const foo = 'it"\u0080s'"#,
+            None,
+        ),
     ];
 
     Tester::new(NoHexEscape::NAME, NoHexEscape::PLUGIN, pass, fail)

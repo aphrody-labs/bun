@@ -101,13 +101,19 @@ fn fix_span(jsdoc_span: Span, source_text: &str) -> Option<Span> {
     let prefix = &source_text[..comment_span.start as usize];
     let line_start = prefix.rfind('\n').map_or(0, |index| index + 1);
 
-    if !prefix[line_start..].bytes().all(|byte| matches!(byte, b' ' | b'\t')) {
+    if !prefix[line_start..]
+        .bytes()
+        .all(|byte| matches!(byte, b' ' | b'\t'))
+    {
         return None;
     }
 
     let suffix = &source_text[comment_span.end as usize..];
     let line_end = suffix.find(['\r', '\n']).unwrap_or(suffix.len());
-    if !suffix[..line_end].bytes().all(|byte| matches!(byte, b' ' | b'\t')) {
+    if !suffix[..line_end]
+        .bytes()
+        .all(|byte| matches!(byte, b' ' | b'\t'))
+    {
         return None;
     }
 
@@ -201,7 +207,10 @@ fn test() {
                   ",
             None,
         ),
-        ("foo();\r\n/** */\r\nbar();", Some(serde_json::json!([ { "enableFixer": true, }, ]))),
+        (
+            "foo();\r\n/** */\r\nbar();",
+            Some(serde_json::json!([ { "enableFixer": true, }, ])),
+        ),
     ];
 
     let fix = vec![

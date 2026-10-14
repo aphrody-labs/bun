@@ -16,7 +16,13 @@ impl<'a, 'sm> SourcemapVisualizer<'a, 'sm> {
 
     pub fn get_url(&self) -> String {
         let result = self.sourcemap.to_json_string();
-        let s = format!("{}\0{}{}\0{}", self.code.len(), self.code, result.len(), result);
+        let s = format!(
+            "{}\0{}{}\0{}",
+            self.code.len(),
+            self.code,
+            result.len(),
+            result
+        );
         let hash = base64_simd::STANDARD.encode_to_string(s);
         format!("https://evanw.github.io/source-map-visualization/#{hash}")
     }
@@ -46,9 +52,12 @@ impl<'a, 'sm> SourcemapVisualizer<'a, 'sm> {
             let Some(source_id) = t.get_source_id() else {
                 continue;
             };
-            let Some(source) = self.sourcemap.get_source(source_id) else { continue };
-            let Some(source_lines) =
-                source_contents_lines_map.get(source_id as usize).and_then(Option::as_ref)
+            let Some(source) = self.sourcemap.get_source(source_id) else {
+                continue;
+            };
+            let Some(source_lines) = source_contents_lines_map
+                .get(source_id as usize)
+                .and_then(Option::as_ref)
             else {
                 // No content for this source; skip rather than panic.
                 continue;
@@ -91,7 +100,9 @@ impl<'a, 'sm> SourcemapVisualizer<'a, 'sm> {
                 .iter()
                 .take_while(|t2| t2.get_source_id() == Some(source_id) && t2.src_line == t.src_line)
                 .find(|t2| t2.src_col > t.src_col)
-                .map_or(source_lines[t.src_line as usize].len() as u32, |t2| t2.src_col);
+                .map_or(source_lines[t.src_line as usize].len() as u32, |t2| {
+                    t2.src_col
+                });
 
             writeln!(
                 s,
@@ -161,7 +172,10 @@ mod tests {
             r#"{"version":3,"sources":["a.js"],"names":[],"mappings":"AAAA"}"#,
         )
         .unwrap();
-        assert_eq!(SourcemapVisualizer::new("a", &sm).get_text(), "[no source contents]\n");
+        assert_eq!(
+            SourcemapVisualizer::new("a", &sm).get_text(),
+            "[no source contents]\n"
+        );
     }
 
     #[test]
@@ -196,8 +210,11 @@ mod tests {
             None,
             vec![Cow::Borrowed("a.js")],
             vec![Some(Cow::Borrowed("aa\r\nbb\r\n"))],
-            vec![Token::new(0, 0, 0, 0, Some(0), None), Token::new(1, 0, 1, 0, Some(0), None)]
-                .into_boxed_slice(),
+            vec![
+                Token::new(0, 0, 0, 0, Some(0), None),
+                Token::new(1, 0, 1, 0, Some(0), None),
+            ]
+            .into_boxed_slice(),
             None,
         );
         let text = SourcemapVisualizer::new("aa\r\nbb\r\n", &sm).get_text();
@@ -214,8 +231,11 @@ mod tests {
                 None,
                 vec!["a.js".into()],
                 vec![Some(code.as_str().into())],
-                vec![Token::new(0, 0, 0, 0, Some(0), None), Token::new(1, 0, 1, 0, Some(0), None)]
-                    .into_boxed_slice(),
+                vec![
+                    Token::new(0, 0, 0, 0, Some(0), None),
+                    Token::new(1, 0, 1, 0, Some(0), None),
+                ]
+                .into_boxed_slice(),
                 None,
             );
             let first_line = format!("é{separator}");
@@ -236,8 +256,11 @@ mod tests {
             None,
             vec!["a.js".into()],
             vec![Some("😀x".into())],
-            vec![Token::new(0, 0, 0, 0, Some(0), None), Token::new(0, 1, 0, 1, Some(0), None)]
-                .into_boxed_slice(),
+            vec![
+                Token::new(0, 0, 0, 0, Some(0), None),
+                Token::new(0, 1, 0, 1, Some(0), None),
+            ]
+            .into_boxed_slice(),
             None,
         );
         assert_eq!(

@@ -61,13 +61,18 @@ impl Rule for NoIsMounted {
         };
 
         if !matches!(member_expr.object(), Expression::ThisExpression(_))
-            || member_expr.static_property_name().is_none_or(|str| str != "isMounted")
+            || member_expr
+                .static_property_name()
+                .is_none_or(|str| str != "isMounted")
         {
             return;
         }
 
         for ancestor_kind in ctx.nodes().ancestor_kinds(node.id()) {
-            if matches!(ancestor_kind, AstKind::ObjectProperty(_) | AstKind::MethodDefinition(_)) {
+            if matches!(
+                ancestor_kind,
+                AstKind::ObjectProperty(_) | AstKind::MethodDefinition(_)
+            ) {
                 ctx.diagnostic(no_is_mounted_diagnostic(call_expr.span));
                 break;
             }

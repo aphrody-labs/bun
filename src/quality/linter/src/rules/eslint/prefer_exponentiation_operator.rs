@@ -90,41 +90,47 @@ impl Rule for PreferExponentiationOperator {
             _ => return,
         }
 
-        ctx.diagnostic_with_fix(prefer_exponentian_operator_diagnostic(call_expr.span), |fixer| {
-            if let AstKind::CallExpression(call_expr) = node.kind()
-                && !ctx.has_comments_between(call_expr.span)
-                && call_expr.arguments.len() == 2
-                && let Some(base) = call_expr.arguments[0].as_expression()
-                && let Some(exponent) = call_expr.arguments[1].as_expression()
-            {
-                let base_text = if does_base_need_parens(base) {
-                    format!("({})", base.span().source_text(ctx.source_text()))
+        ctx.diagnostic_with_fix(
+            prefer_exponentian_operator_diagnostic(call_expr.span),
+            |fixer| {
+                if let AstKind::CallExpression(call_expr) = node.kind()
+                    && !ctx.has_comments_between(call_expr.span)
+                    && call_expr.arguments.len() == 2
+                    && let Some(base) = call_expr.arguments[0].as_expression()
+                    && let Some(exponent) = call_expr.arguments[1].as_expression()
+                {
+                    let base_text = if does_base_need_parens(base) {
+                        format!("({})", base.span().source_text(ctx.source_text()))
+                    } else {
+                        base.span().source_text(ctx.source_text()).to_string()
+                    };
+                    let exponent_text =
+                        get_exponent_text(fixer.source_range(exponent.span()), exponent);
+
+                    let replacement = format!("{base_text} ** {exponent_text}");
+
+                    // Check if we need to wrap the entire expression in parentheses based on parent context
+                    let replacement = if needs_parens_for_parent(node, ctx) {
+                        format!("({replacement})")
+                    } else {
+                        replacement
+                    };
+
+                    fixer.replace(call_expr.span, replacement)
                 } else {
-                    base.span().source_text(ctx.source_text()).to_string()
-                };
-                let exponent_text =
-                    get_exponent_text(fixer.source_range(exponent.span()), exponent);
-
-                let replacement = format!("{base_text} ** {exponent_text}");
-
-                // Check if we need to wrap the entire expression in parentheses based on parent context
-                let replacement = if needs_parens_for_parent(node, ctx) {
-                    format!("({replacement})")
-                } else {
-                    replacement
-                };
-
-                fixer.replace(call_expr.span, replacement)
-            } else {
-                fixer.noop()
-            }
-        });
+                    fixer.noop()
+                }
+            },
+        );
     }
 }
 
 fn does_base_need_parens(expr: &Expression) -> bool {
     let expr = expr.without_parentheses();
-    if matches!(expr, Expression::UnaryExpression(_) | Expression::AwaitExpression(_)) {
+    if matches!(
+        expr,
+        Expression::UnaryExpression(_) | Expression::AwaitExpression(_)
+    ) {
         return true;
     }
     if let Some(prec) = get_precedence(expr) {
@@ -247,7 +253,10 @@ fn test() {
         ("globalThis.Math.pow(a, b)", "a ** b"),
         ("globalThis.Math['pow'](a, b)", "a ** b"),
         // Nested Math.pow - only fixes outer call first (inner calls remain as arguments)
-        ("Math.pow(Math.pow(a, b), Math.pow(c, d))", "Math.pow(a, b) ** Math.pow(c, d)"),
+        (
+            "Math.pow(Math.pow(a, b), Math.pow(c, d))",
+            "Math.pow(a, b) ** Math.pow(c, d)",
+        ),
         // When Math.pow is the left operand of **, wrap in parens
         ("Math.pow(a, b)**Math.pow(c, d)", "(a ** b)**c ** d"),
         // TypeScript: exponent with type assertion needs parens

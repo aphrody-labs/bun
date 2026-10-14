@@ -2,12 +2,43 @@ import { expect, test } from "bun:test";
 import { tempDir } from "../../../test/harness";
 import { fileURLToPath } from "node:url";
 import { join, resolve } from "node:path";
+import { moduleClosureURL } from "../../../scripts/aphrody/site-mirror/capture-module-closure";
+import { HOME_DOCUMENTATION_ROUTES, homeDocumentationHref } from "./home-routes";
 import { HOME_THEME_SCRIPT, HOME_THEME_BOOTSTRAP } from "./home-theme";
+
+test("module closure is bounded to public Bun module URLs without credentials or tracking queries", () => {
+  expect(moduleClosureURL("/_assets/chunk-wzpwqqx1.js").href).toBe("https://bun.com/_assets/chunk-wzpwqqx1.js");
+  for (const value of [
+    "https://other.invalid/_assets/chunk.js",
+    "http://bun.com/_assets/chunk.js",
+    "https://user:password@bun.com/_assets/chunk.js",
+    "/_assets/chunk.js?token=fixture",
+    "/_assets/chunk.js#fragment",
+    "/_assets/../secrets.js",
+    "/_assets/chunk.css",
+  ])
+    expect(() => moduleClosureURL(value)).toThrow("Invalid module closure URL");
+});
+
+test("upstream documentation links resolve to existing fork owners while external references stay external", async () => {
+  const root = fileURLToPath(new URL("../../../", import.meta.url));
+  for (const [from, target] of Object.entries(HOME_DOCUMENTATION_ROUTES)) {
+    expect(homeDocumentationHref("https://bun.com" + from)).toBe(target);
+    if (!target.startsWith("/docs")) continue;
+    const path = join(root, target.slice(1));
+    expect((await Bun.file(path + ".mdx").exists()) || (await Bun.file(join(path, "index.mdx")).exists())).toBe(true);
+  }
+  expect(homeDocumentationHref("https://bun.com/docs/api/http#routes")).toBe("/docs/runtime/http/server#routes");
+  expect(homeDocumentationHref("https://bun.com/guides/ecosystem/stric")).toBe(
+    "https://bun.com/guides/ecosystem/stric",
+  );
+  expect(homeDocumentationHref("https://other.invalid/docs/api/http")).toBe("https://other.invalid/docs/api/http");
+});
 import {
   adaptUpstreamHome,
   buildUpstreamHome,
   HOME_SEARCH_SCRIPT,
-  loadRuntimeHomeFacts,
+  HOME_UI_CSS,
   normalizeRuntimeHomeFact,
   publicRuntimeHomeFact,
   type RuntimeHomeFact,
@@ -36,35 +67,49 @@ const adapt = (facts: RuntimeHomeFact[]) =>
     bootstrapPath: "/scheme.js",
   });
 
-test("captured structure becomes native video content and drops upstream claims and executable code", () => {
+test("captured components remain intact and fork evidence is appended with explicit upstream attribution", () => {
   const html = adapt([receipt()]);
   expect(html).toContain("upstream-layout-sentinel");
-  expect(html).toContain("Bun.Video.<br>One fluent");
+  expect(html).toContain("Bun.Video. One fluent");
   expect(html.match(/<h1\b/g)).toHaveLength(1);
-  expect(html).toContain('name="color-scheme" content="light dark"');
-  expect(html).toContain('id="content" tabindex="-1"');
   expect(html).toContain('label for="home-question"');
   expect(html).toContain('role="status" aria-atomic="true"');
-  expect(html).toContain('select id="home-theme"');
-  expect(html).toContain('option value="system"');
-  expect(html).toContain('details class="home-mobile"');
+  expect(html).toContain('button aria-label="Open menu"');
+  expect(html).toContain("performance-sentinel");
+  expect(html).toContain("endorsement-sentinel");
+  expect(html).toContain("unqualified-sentinel");
+  expect(html).toContain("not fork measurements or endorsements");
   expect(html).toContain("Native surfaces measured");
-  for (const removed of [
-    "performance-sentinel",
-    "endorsement-sentinel",
-    "unqualified-sentinel",
-    "Anthropic",
-    "analytics.invalid",
-    "untrusted-handler",
-    "cdn.aphrody.com",
-    "/mirror-assets/symbols/",
-  ])
+  for (const removed of ["analytics.invalid", "untrusted-handler", "/mirror-assets/symbols/"])
     expect(html).not.toContain(removed);
   const absent = receipt();
   absent.nativeVideo.available = false;
   expect(adapt([absent])).toContain("Native qualification pending");
   expect(adapt([])).toContain("Runtime measurements are pending");
   expect(html).not.toContain("all eight targets");
+});
+
+test("homepage retains upstream heading and components with requested Aphrody branding and M3", () => {
+  const html = adaptUpstreamHome(
+    fixture
+      .replace("<h1>Original</h1>", '<h1 class="display upstream-heading">Original</h1>')
+      .replace(">Bun</a>", '><img src="/logo.svg" width="88" height="32" alt="Bun"></a>'),
+    {
+      source,
+      origin: "https://aphrody.app",
+      facts: [],
+      cssPath: "/owned.css",
+      scriptPath: "/owned.js",
+      bootstrapPath: "/scheme.js",
+    },
+  );
+  expect(html).toContain('class="display upstream-heading"');
+  expect(html).toContain('<img src="/aphrody-logo.svg" alt="Aphrody" width="88" height="32">');
+  expect(html).toContain("https://cdn.aphrody.com/h/");
+  expect(html).not.toContain("fusion-brand");
+  expect(html).not.toContain("home-hero-heading");
+  expect(HOME_UI_CSS).not.toContain("--md-");
+  expect(HOME_UI_CSS).not.toContain(".site-header");
 });
 
 test("public capability facts discard local paths and provider configuration and reject malformed evidence", () => {
@@ -149,9 +194,7 @@ test.skipIf(
   !(await Bun.file(new URL("../../../build/media/site-upstream-bun/manifest.json", import.meta.url)).exists()),
 )("real captured Bun homepage keeps CSS and fonts byte-identical and produces a source-bound manifest", async () => {
   const root = fileURLToPath(new URL("../../../", import.meta.url));
-  const facts = await loadRuntimeHomeFacts([
-    fileURLToPath(new URL("../../../build/native-sdk-candidates/bun-windows-capabilities.json", import.meta.url)),
-  ]);
+  const facts = [receipt()];
   const page = await buildUpstreamHome({ captureRoot, sourceRoot: root, source, facts });
   expect(page.html.match(/<h1\b/g)).toHaveLength(1);
   expect(page.html).toContain("Bun.Video.");
@@ -168,12 +211,18 @@ test.skipIf(
     "docs/runtime/video.mdx",
     "docs/runtime/image.mdx",
   ]);
-  expect(page.html).not.toMatch(
-    /Anthropic|Upstream Bun news|Benchmarks|Bun in production|fastest install|No runtime switch required/,
+  expect(page.html).toContain("not fork measurements or endorsements");
+  expect(page.assets.some(asset => asset.path.includes("page-index") && asset.path.endsWith(".js"))).toBe(true);
+  expect(page.assets.some(asset => asset.path.startsWith("_upstream/") && asset.path.includes("analytics"))).toBe(true);
+  expect(page.html).not.toMatch(/<script[^>]*src="[^"]*(?:analytics|plausible|cloudflareinsights)/);
+  expect(page.provenance.upstream.inputs.length).toBeGreaterThanOrEqual(36);
+  const hydratedBrand = page.assets.find(asset =>
+    new TextDecoder().decode(asset.bytes).includes('"aria-label":"Aphrody — home"'),
   );
-  expect(page.assets.some(asset => asset.path.endsWith(".js") && !asset.path.startsWith("_assets/aphrody-home-"))).toBe(
-    false,
-  );
+  expect(hydratedBrand).toBeDefined();
+  expect(new TextDecoder().decode(hydratedBrand!.bytes)).toContain('src:"/aphrody-logo.svg"');
+  expect(new TextDecoder().decode(hydratedBrand!.bytes)).not.toContain('"aria-label":"Bun — home"');
+  expect(page.html.indexOf('id="home-rag-form"')).toBeGreaterThan(page.html.indexOf("</footer>"));
   const resources: string[] = [];
   new HTMLRewriter()
     .on("script[src],link[rel=stylesheet],link[rel=preload],img[src]", {
@@ -182,7 +231,13 @@ test.skipIf(
       },
     })
     .transform(page.html);
-  expect(resources.every(path => page.assets.some(asset => "/" + asset.path === path))).toBe(true);
+  expect(
+    resources.every(
+      path =>
+        path.startsWith("https://cdn.aphrody.com/h/") ||
+        page.assets.some(asset => "/" + asset.path === new URL(path, "https://aphrody.app").pathname),
+    ),
+  ).toBe(true);
 });
 
 // Opt-in renderer qualification uses an isolated profile and closes only its own process tree.
@@ -195,19 +250,28 @@ test.skipIf(!process.env.BUN_HOME_CHROME || process.platform !== "win32")(
     expect(await git.exited).toBe(0);
     expect(source).toMatch(/^[a-f0-9]{40}$/);
     const output = resolve(root, "build/media/site-upstream-home-preview");
-    const facts = await loadRuntimeHomeFacts([
-      join(root, "build/native-sdk-candidates/bun-windows-capabilities.json"),
-      join(root, "factory/artifacts/runtime-release/linux-video-qualification-20261013/runtime-capabilities.json"),
-    ]);
+    const facts: RuntimeHomeFact[] = [];
     const page = await buildUpstreamHome({ captureRoot, sourceRoot: root, source, facts });
     const resources = new Map(page.assets.map(asset => ["/" + asset.path, asset.bytes]));
     const requests: string[] = [];
+    const missingResources: string[] = [];
     const server = Bun.serve({
       hostname: "127.0.0.1",
       port: 0,
       fetch(request) {
         const url = new URL(request.url);
         requests.push(url.pathname);
+        if (url.pathname === "/docs/search.json")
+          return Response.json([
+            {
+              t: "Bun.Video metadata",
+              d: "Read native video metadata",
+              u: "/docs/runtime/video",
+              g: "Bun",
+              h: ["Metadata"],
+              x: "Source dimensions and frame rate",
+            },
+          ]);
         if (url.pathname === "/api/site/rag") {
           const query = url.searchParams.get("q");
           if (query === "fixture cancel")
@@ -243,6 +307,7 @@ test.skipIf(!process.env.BUN_HOME_CHROME || process.platform !== "win32")(
         if (url.pathname === "/")
           return new Response(page.html, { headers: { "Content-Type": "text/html; charset=utf-8" } });
         const bytes = resources.get(url.pathname);
+        if (!bytes) missingResources.push(url.pathname);
         return bytes
           ? new Response(Uint8Array.from(bytes), {
               headers: {
@@ -345,7 +410,8 @@ test.skipIf(!process.env.BUN_HOME_CHROME || process.platform !== "win32")(
         if (reply.method) for (const listener of listeners.get(reply.method) ?? []) listener(reply.params ?? {});
         if (reply.method === "Network.requestWillBeSent" && network.length < 256)
           network.push(reply.params.request.url);
-        if (reply.method === "Runtime.exceptionThrown") errors.push(reply.params.exceptionDetails.text);
+        if (reply.method === "Runtime.exceptionThrown")
+          errors.push(reply.params.exceptionDetails.exception?.description ?? reply.params.exceptionDetails.text);
       };
       const command = (method: string, params: Record<string, unknown> = {}, sessionId?: string) =>
         new Promise<Record<string, any>>((complete, reject) => {
@@ -424,26 +490,82 @@ test.skipIf(!process.env.BUN_HOME_CHROME || process.platform !== "win32")(
         await send("Page.navigate", { url: server.url.href });
         await loaded;
         await evaluate(
-          `localStorage.removeItem('bun-home-theme');const theme=document.getElementById('home-theme');theme.value='system';theme.dispatchEvent(new Event('change'));document.fonts.ready.then(()=>new Promise(resolve=>requestAnimationFrame(resolve)))`,
+          `document.fonts.ready.then(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))))`,
         );
+        const identity = await evaluate(
+          `(()=>({logo:document.querySelector('a[aria-label="Aphrody — home"] img')?.getAttribute('src'),forkHeading:[...document.querySelectorAll('h2')].some(h=>h.textContent==='Bun by Aphrody Labs'),title:document.title,canonical:document.querySelector('link[rel="canonical"]')?.href,search:!!document.getElementById('home-rag-form'),commands:[...document.querySelectorAll('code')].map(e=>e.textContent).filter(t=>t.includes('install'))}))()`,
+        );
+        expect(identity.logo).toBe("/aphrody-logo.svg");
+        expect(identity.forkHeading).toBe(true);
+        expect(identity.title).toBe("Bun by Aphrody Labs");
+        expect(await evaluate(`document.querySelector('a[class*="group/pill"]').textContent`)).toContain(
+          "Published Aphrody releases",
+        );
+        expect(await evaluate(`document.querySelector('a[class*="group/pill"]').getAttribute('href')`)).toBe(
+          "/downloads",
+        );
+        expect(identity.canonical).toBe("https://aphrody.app/");
+        expect(identity.search).toBe(true);
+        expect(identity.commands.some((text: string) => text.includes("https://aphrody.app/install"))).toBe(true);
+        expect(identity.commands.some((text: string) => text.includes("https://bun.sh/install"))).toBe(false);
+        await evaluate(
+          `(()=>{window.homeCopied='';Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async text=>{window.homeCopied=text}}});document.querySelector('button[aria-label="Copy install command"]').click()})()`,
+        );
+        expect(await evaluate(`window.homeCopied`)).toContain("https://aphrody.app/install");
+        for (const tab of ["react", "sqlite", "websocket", "install"]) {
+          await evaluate(
+            `new Promise(resolve=>{const visible=()=>[...document.querySelectorAll('[id="${tab}-tab-content"]')].some(e=>!e.hidden&&e.getBoundingClientRect().width>0);const observer=new MutationObserver(()=>{if(visible()){observer.disconnect();resolve(true)}});observer.observe(document.body,{subtree:true,attributes:true});[...document.querySelectorAll('[id="tab-${tab}"]')].find(e=>e.getBoundingClientRect().width>0).click();if(visible()){observer.disconnect();resolve(true)}})`,
+          );
+          expect(
+            await evaluate(
+              `[...document.querySelectorAll('[id="tab-${tab}"]')].find(e=>e.getBoundingClientRect().width>0).getAttribute('aria-selected')`,
+            ),
+          ).toBe("true");
+          expect(
+            await evaluate(
+              `[...document.querySelectorAll('[id="${tab}-tab-content"]')].some(e=>!e.hidden&&e.getBoundingClientRect().width>0)`,
+            ),
+          ).toBe(true);
+        }
+        await evaluate(
+          `(()=>{window.homeWorkflowStep=new Promise(resolve=>{const section=document.querySelector('button[aria-label="Next step"]').closest('section');const original=section.textContent;const observer=new MutationObserver(()=>{if(section.textContent!==original){observer.disconnect();resolve(section.textContent)}});observer.observe(section,{subtree:true,childList:true,characterData:true});document.querySelector('button[aria-label="Next step"]').click()})})()`,
+        );
+        expect((await evaluate(`window.homeWorkflowStep`)).length).toBeGreaterThan(20);
         const geometry = await evaluate(
           `(()=>{const root=document.documentElement,h=document.querySelector('h1'),box=h.getBoundingClientRect();return {width:innerWidth,scrollWidth:root.scrollWidth,canvas:getComputedStyle(root).getPropertyValue('--c-canvas').trim(),fonts:[...document.fonts].filter(f=>f.status==='loaded').map(f=>f.family),heading:{width:box.width,height:box.height,font:getComputedStyle(h).fontFamily},h1:document.querySelectorAll('h1').length}})()`,
         );
         expect(geometry.scrollWidth).toBeLessThanOrEqual(viewport.width);
-        expect(geometry.canvas).toBe("255 255 255");
+        expect(geometry.canvas).toMatch(/^\d+ \d+ \d+$/);
         expect(geometry.h1).toBe(1);
         expect(geometry.heading.width).toBeGreaterThan(100);
         expect(geometry.fonts.some((font: string) => font.includes("Archivo"))).toBe(true);
         await key("/");
+        await evaluate(`new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))`);
+        expect(await evaluate(`document.activeElement.getAttribute('aria-label')`)).toBe("Search query");
+        await evaluate(
+          `(()=>{window.homePrimarySearch=new Promise(resolve=>{const results=document.getElementById('search-results');const observer=new MutationObserver(()=>{const a=results.querySelector('a[href="/docs/runtime/video"]');if(a){observer.disconnect();resolve(a.getAttribute('href'))}});observer.observe(results,{childList:true,subtree:true});const input=document.activeElement;const setter=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set;setter.call(input,'metadata');input.dispatchEvent(new Event('input',{bubbles:true}));});})()`,
+        );
+        expect(await evaluate(`window.homePrimarySearch`)).toBe("/docs/runtime/video");
+        await key("Escape");
+        await evaluate(`document.querySelector('button[aria-label="Ask AI about Bun"]').click()`);
         expect(await evaluate(`document.activeElement.id`)).toBe("home-question");
         await key("Tab");
         expect(await evaluate(`document.activeElement.type`)).toBe("submit");
         if (viewport.mobile) {
-          await evaluate(`document.querySelector('.home-mobile summary').focus()`);
+          await evaluate(`document.querySelector('button[aria-label="Open menu"]').focus()`);
           await key("Enter");
-          expect(await evaluate(`document.querySelector('.home-mobile').open`)).toBe(true);
-          await key("Enter");
+          await evaluate(`new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))`);
+          expect(
+            await evaluate(`document.querySelector('button[aria-label="Open menu"]').getAttribute('aria-expanded')`),
+          ).toBe("true");
+          expect(await evaluate(`document.getElementById('mobile-menu').getAttribute('aria-hidden')`)).toBe("false");
+          await evaluate(`document.querySelector('button[aria-label="Close menu"]').click()`);
+          await evaluate(`new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))`);
+          expect(
+            await evaluate(`document.querySelector('button[aria-label="Open menu"]').getAttribute('aria-expanded')`),
+          ).toBe("false");
         }
+        const schemeColors: string[] = [];
         for (const dark of [false, true]) {
           await send("Emulation.setEmulatedMedia", {
             features: [
@@ -452,9 +574,15 @@ test.skipIf(!process.env.BUN_HOME_CHROME || process.platform !== "win32")(
             ],
           });
           await evaluate(`new Promise(resolve=>requestAnimationFrame(resolve))`);
+          const colors = await evaluate(
+            `(()=>{const probe=document.createElement('span');document.body.append(probe);probe.style.color='var(--md-sys-color-surface)';const surface=getComputedStyle(probe).color;probe.style.color='rgb(var(--c-canvas))';const canvas=getComputedStyle(probe).color;probe.remove();return {surface,canvas}})()`,
+          );
+          expect(colors.canvas).toBe(colors.surface);
+          expect(colors.surface).toMatch(/^rgb\(\d+, \d+, \d+\)$/);
           expect(
-            await evaluate(`getComputedStyle(document.documentElement).getPropertyValue('--c-canvas').trim()`),
-          ).toBe(dark ? "13 10 12" : "255 255 255");
+            await evaluate(`new URL(document.querySelector('a[aria-label="Aphrody — home"] img').currentSrc).pathname`),
+          ).toBe(dark ? "/aphrody-logo-dark.svg" : "/aphrody-logo.svg");
+          schemeColors.push(colors.canvas);
           await evaluate(`scrollTo(0,0);document.activeElement.blur()`);
           const screenshot = await send("Page.captureScreenshot", { format: "png", captureBeyondViewport: false });
           await Bun.write(
@@ -462,15 +590,7 @@ test.skipIf(!process.env.BUN_HOME_CHROME || process.platform !== "win32")(
             Buffer.from(screenshot.data, "base64"),
           );
         }
-        await evaluate(`document.getElementById('home-theme').focus()`);
-        await key("Home");
-        await key("ArrowDown");
-        await key("Tab");
-        expect(await evaluate(`document.getElementById('home-theme').value`)).toBe("light");
-        expect(await evaluate(`document.documentElement.dataset.homeTheme`)).toBe("light");
-        expect(await evaluate(`getComputedStyle(document.documentElement).getPropertyValue('--c-canvas').trim()`)).toBe(
-          "255 255 255",
-        );
+        expect(schemeColors[0]).not.toBe(schemeColors[1]);
         // A DOM mutation event settles async UI work; no timing sleeps or polling.
         const submit = async (query: string) => {
           await evaluate(
@@ -499,12 +619,15 @@ test.skipIf(!process.env.BUN_HOME_CHROME || process.platform !== "win32")(
         observations.push({
           viewport,
           geometry,
-          keyboard: "slash, tab, enter, select, mobile details, escape cancellation",
+          keyboard: "slash, tab, enter, upstream mobile menu, escape cancellation",
           rag: "503, extractive fixture, safe text citations, mutable citation rejected, pending request cancelled",
         });
       }
       expect(errors).toEqual([]);
-      expect(network.every(url => new URL(url).origin === server.url.origin)).toBe(true);
+      expect(missingResources).toEqual([]);
+      expect(network.every(url => [server.url.origin, "https://cdn.aphrody.com"].includes(new URL(url).origin))).toBe(
+        true,
+      );
       expect(requests.filter(path => path === "/api/site/rag")).toHaveLength(8);
       await Bun.write(
         join(output, "browser-qualification.json"),

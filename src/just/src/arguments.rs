@@ -48,7 +48,10 @@ pub struct Arguments {
     num_args = 1..,
   )]
   pub(crate) arguments: Vec<String>,
-  #[arg(help = "Use Bun Shell instead of the default shell (requires bun just)", long)]
+  #[arg(
+    help = "Use Bun Shell instead of the default shell (requires bun just)",
+    long
+  )]
   pub(crate) bun_shell: bool,
   #[arg(
     add = ArgValueCompleter::new(PathCompleter::dir()),

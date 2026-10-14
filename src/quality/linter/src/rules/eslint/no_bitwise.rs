@@ -179,7 +179,10 @@ fn test() {
         ("~[1, 2, 3].indexOf(1)", Some(json!([ { "allow": ["~"] }]))),
         ("~1<<2 === -8", Some(json!([ { "allow": ["~", "<<"] }]))),
         ("a|0", Some(json!([ { "int32Hint": true }]))),
-        ("a|0", Some(json!([ { "int32Hint": false, "allow": ["|"] }]))),
+        (
+            "a|0",
+            Some(json!([ { "int32Hint": false, "allow": ["|"] }])),
+        ),
     ];
 
     let fail = vec![

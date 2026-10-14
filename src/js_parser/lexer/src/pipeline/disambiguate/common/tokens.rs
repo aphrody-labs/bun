@@ -130,8 +130,16 @@ impl Tokens<'_> {
     #[inline]
     pub(crate) fn peek(&self, i: usize) -> Peek {
         let pos = self.next_sig(i);
-        let kind = if pos < self.n { self.base_kind(pos) } else { tk!(Eof) };
-        Peek { pos, kind, byte: self.src[pos] }
+        let kind = if pos < self.n {
+            self.base_kind(pos)
+        } else {
+            tk!(Eof)
+        };
+        Peek {
+            pos,
+            kind,
+            byte: self.src[pos],
+        }
     }
 
     /// The significant token start before `pos` (skipping trivia), or `None` at the start.
@@ -158,7 +166,8 @@ impl Tokens<'_> {
     /// Is the word at `w` a property name (`x.if`, `x?.if`)?
     #[inline]
     pub(crate) fn property_name(&self, w: usize) -> bool {
-        self.prev_sig(w).is_some_and(|q| self.kind[q] >= OP_KIND_BASE && self.member_dot(q))
+        self.prev_sig(w)
+            .is_some_and(|q| self.kind[q] >= OP_KIND_BASE && self.member_dot(q))
     }
 
     /// Is the operator at q a member access dot, not a spread dot or the start of ?.5?

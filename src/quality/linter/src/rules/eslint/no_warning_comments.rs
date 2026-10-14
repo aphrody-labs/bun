@@ -35,7 +35,11 @@ fn no_warning_comments_diagnostic(term: &str, comment: &str, span: Span) -> OxcD
         }
     }
 
-    let display = if truncated { format!("{comment_to_display}...") } else { comment_to_display };
+    let display = if truncated {
+        format!("{comment_to_display}...")
+    } else {
+        comment_to_display
+    };
 
     OxcDiagnostic::warn(format!("Unexpected '{term}' comment: {display}"))
         .with_help("Remove or rephrase this comment")
@@ -146,7 +150,12 @@ impl Default for NoWarningCommentsConfig {
         let location = Location::Start;
         let decoration = FxHashSet::default();
         let patterns = Self::build_patterns(&terms, &location, &decoration);
-        Self { terms, location, decoration, patterns }
+        Self {
+            terms,
+            location,
+            decoration,
+            patterns,
+        }
     }
 }
 
@@ -211,19 +220,37 @@ fn test() {
     use crate::tester::Tester;
 
     let pass = vec![
-        ("// any comment", Some(serde_json::json!([{ "terms": ["fixme"] }]))),
-        ("// any comment", Some(serde_json::json!([{ "terms": ["fixme", "todo"] }]))),
+        (
+            "// any comment",
+            Some(serde_json::json!([{ "terms": ["fixme"] }])),
+        ),
+        (
+            "// any comment",
+            Some(serde_json::json!([{ "terms": ["fixme", "todo"] }])),
+        ),
         ("// any comment", None),
-        ("// any comment", Some(serde_json::json!([{ "location": "anywhere" }]))),
+        (
+            "// any comment",
+            Some(serde_json::json!([{ "location": "anywhere" }])),
+        ),
         (
             "// any comment with TODO, FIXME or XXX",
             Some(serde_json::json!([{ "location": "start" }])),
         ),
         ("// any comment with TODO, FIXME or XXX", None),
-        ("/* any block comment */", Some(serde_json::json!([{ "terms": ["fixme"] }]))),
-        ("/* any block comment */", Some(serde_json::json!([{ "terms": ["fixme", "todo"] }]))),
+        (
+            "/* any block comment */",
+            Some(serde_json::json!([{ "terms": ["fixme"] }])),
+        ),
+        (
+            "/* any block comment */",
+            Some(serde_json::json!([{ "terms": ["fixme", "todo"] }])),
+        ),
         ("/* any block comment */", None),
-        ("/* any block comment */", Some(serde_json::json!([{ "location": "anywhere" }]))),
+        (
+            "/* any block comment */",
+            Some(serde_json::json!([{ "location": "anywhere" }])),
+        ),
         (
             "/* any block comment with TODO, FIXME or XXX */",
             Some(serde_json::json!([{ "location": "start" }])),
@@ -252,7 +279,10 @@ fn test() {
 			"#,
             Some(serde_json::json!([{ "location": "anywhere" }])),
         ),
-        ("// foo", Some(serde_json::json!([{ "terms": ["foo-bar"] }]))),
+        (
+            "// foo",
+            Some(serde_json::json!([{ "terms": ["foo-bar"] }])),
+        ),
         (
             "/** multi-line block comment with lines starting with
 			TODO
@@ -261,7 +291,10 @@ fn test() {
 			*/",
             None,
         ),
-        ("//!TODO ", Some(serde_json::json!([{ "decoration": ["*"] }]))),
+        (
+            "//!TODO ",
+            Some(serde_json::json!([{ "decoration": ["*"] }])),
+        ),
         (
             "// not a todo! here",
             Some(serde_json::json!([{ "terms": ["todo!"], "location": "start" }])), // additional test not in ESLint
@@ -270,10 +303,22 @@ fn test() {
 
     let fail = vec![
         ("// fixme", None),
-        ("// any fixme", Some(serde_json::json!([{ "location": "anywhere" }]))),
-        ("// any fixme", Some(serde_json::json!([{ "terms": ["fixme"], "location": "anywhere" }]))),
-        ("// any FIXME", Some(serde_json::json!([{ "terms": ["fixme"], "location": "anywhere" }]))),
-        ("// any fIxMe", Some(serde_json::json!([{ "terms": ["fixme"], "location": "anywhere" }]))),
+        (
+            "// any fixme",
+            Some(serde_json::json!([{ "location": "anywhere" }])),
+        ),
+        (
+            "// any fixme",
+            Some(serde_json::json!([{ "terms": ["fixme"], "location": "anywhere" }])),
+        ),
+        (
+            "// any FIXME",
+            Some(serde_json::json!([{ "terms": ["fixme"], "location": "anywhere" }])),
+        ),
+        (
+            "// any fIxMe",
+            Some(serde_json::json!([{ "terms": ["fixme"], "location": "anywhere" }])),
+        ),
         (
             "/* any fixme */",
             Some(serde_json::json!([{ "terms": ["FIXME"], "location": "anywhere" }])),
@@ -294,16 +339,31 @@ fn test() {
             "/* any fixme or todo */",
             Some(serde_json::json!([{ "terms": ["fixme", "todo"], "location": "anywhere" }])),
         ),
-        ("/* any fixme or todo */", Some(serde_json::json!([{ "location": "anywhere" }]))),
+        (
+            "/* any fixme or todo */",
+            Some(serde_json::json!([{ "location": "anywhere" }])),
+        ),
         ("/* fixme and todo */", None),
-        ("/* fixme and todo */", Some(serde_json::json!([{ "location": "anywhere" }]))),
-        ("/* any fixme */", Some(serde_json::json!([{ "location": "anywhere" }]))),
-        ("/* fixme! */", Some(serde_json::json!([{ "terms": ["fixme"] }]))),
+        (
+            "/* fixme and todo */",
+            Some(serde_json::json!([{ "location": "anywhere" }])),
+        ),
+        (
+            "/* any fixme */",
+            Some(serde_json::json!([{ "location": "anywhere" }])),
+        ),
+        (
+            "/* fixme! */",
+            Some(serde_json::json!([{ "terms": ["fixme"] }])),
+        ),
         (
             "// regex [litera|$]",
             Some(serde_json::json!([{ "terms": ["[litera|$]"], "location": "anywhere" }])),
         ),
-        ("/* eslint one-var: 2 */", Some(serde_json::json!([{ "terms": ["eslint"] }]))),
+        (
+            "/* eslint one-var: 2 */",
+            Some(serde_json::json!([{ "terms": ["eslint"] }])),
+        ),
         (
             "/* eslint one-var: 2 */",
             Some(serde_json::json!([{ "terms": ["one"], "location": "anywhere" }])),
@@ -326,7 +386,10 @@ fn test() {
             "// any comment with TODO, FIXME or XXX",
             Some(serde_json::json!([{ "location": "anywhere" }])),
         ),
-        ("// TODO: something small", Some(serde_json::json!([{ "location": "anywhere" }]))),
+        (
+            "// TODO: something small",
+            Some(serde_json::json!([{ "location": "anywhere" }])),
+        ),
         (
             "// TODO: something really longer than 40 characters",
             Some(serde_json::json!([{ "location": "anywhere" }])),
@@ -337,7 +400,10 @@ fn test() {
 			 and also a new line */",
             Some(serde_json::json!([{ "location": "anywhere" }])),
         ),
-        ("// TODO: small", Some(serde_json::json!([{ "location": "anywhere" }]))),
+        (
+            "// TODO: small",
+            Some(serde_json::json!([{ "location": "anywhere" }])),
+        ),
         (
             "// https://github.com/eslint/eslint/pull/13522#discussion_r470293411 TODO",
             Some(serde_json::json!([{ "location": "anywhere" }])),
@@ -414,5 +480,11 @@ fn test() {
         ), // additional test not in ESLint
     ];
 
-    Tester::new(NoWarningComments::NAME, NoWarningComments::PLUGIN, pass, fail).test_and_snapshot();
+    Tester::new(
+        NoWarningComments::NAME,
+        NoWarningComments::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

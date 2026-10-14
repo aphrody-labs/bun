@@ -28,8 +28,10 @@ pub struct Capabilities {
 
 impl From<ClientCapabilities> for Capabilities {
     fn from(value: ClientCapabilities) -> Self {
-        let workspace_apply_edit =
-            value.workspace.as_ref().is_some_and(|workspace| workspace.apply_edit.is_some());
+        let workspace_apply_edit = value
+            .workspace
+            .as_ref()
+            .is_some_and(|workspace| workspace.apply_edit.is_some());
 
         let workspace_configuration = value
             .workspace
@@ -37,9 +39,13 @@ impl From<ClientCapabilities> for Capabilities {
             .is_some_and(|workspace| workspace.configuration.is_some_and(|config| config));
 
         let dynamic_watchers = value.workspace.as_ref().is_some_and(|workspace| {
-            workspace.did_change_watched_files.is_some_and(|watched_files| {
-                watched_files.dynamic_registration.is_some_and(|dynamic| dynamic)
-            })
+            workspace
+                .did_change_watched_files
+                .is_some_and(|watched_files| {
+                    watched_files
+                        .dynamic_registration
+                        .is_some_and(|dynamic| dynamic)
+                })
         });
         let pull_diagnostics = value
             .text_document
@@ -68,7 +74,9 @@ pub fn server_capabilities() -> ServerCapabilities {
         text_document_sync: Some(TextDocumentSync::Options(TextDocumentSyncOptions {
             change: Some(TextDocumentSyncKind::Full),
             open_close: Some(true),
-            save: Some(Save::SaveOptions(SaveOptions { include_text: Some(false) })),
+            save: Some(Save::SaveOptions(SaveOptions {
+                include_text: Some(false),
+            })),
             ..Default::default()
         })),
         workspace: Some(WorkspaceOptions {

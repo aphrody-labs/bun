@@ -59,11 +59,15 @@ impl<'a> PeepholeOptimizations {
         if prop.shorthand {
             return;
         }
-        let Expression::Identifier(value) = &prop.value else { return };
+        let Expression::Identifier(value) = &prop.value else {
+            return;
+        };
         if prop.computed || prop.method || prop.kind != PropertyKind::Init {
             return;
         }
-        let PropertyKey::StaticIdentifier(key) = &prop.key else { return };
+        let PropertyKey::StaticIdentifier(key) = &prop.key else {
+            return;
+        };
         // `{ __proto__: __proto__ }` triggers the Annex B.3.1 proto setter
         // (literal `__proto__` key, non-computed, non-shorthand, non-method),
         // but `{ __proto__ }` is a plain shorthand `IdentifierReference` that
@@ -96,7 +100,9 @@ impl<'a> PeepholeOptimizations {
         if let AssignmentTargetProperty::AssignmentTargetPropertyProperty(assign_target_prop_prop) =
             prop
         {
-            let Some(prop_name) = assign_target_prop_prop.name.static_name() else { return };
+            let Some(prop_name) = assign_target_prop_prop.name.static_name() else {
+                return;
+            };
             let Some(ident) = assign_target_prop_prop.binding.identifier_mut() else {
                 return;
             };
@@ -184,7 +190,9 @@ impl<'a> PeepholeOptimizations {
     }
 
     pub fn substitute_chain_expression(expr: &mut Expression<'a>, ctx: &mut TraverseCtx<'a>) {
-        let Expression::ChainExpression(e) = expr else { return };
+        let Expression::ChainExpression(e) = expr else {
+            return;
+        };
         Self::try_flatten_nested_chain_expression(e, ctx);
         Self::substitute_chain_call_expression(e, ctx);
     }
@@ -221,8 +229,12 @@ impl<'a> PeepholeOptimizations {
     ///
     /// Enabled by `compress.typeofs`
     pub fn substitute_typeof_undefined(expr: &mut Expression<'a>, ctx: &mut TraverseCtx<'a>) {
-        let Expression::BinaryExpression(e) = expr else { return };
-        let Expression::UnaryExpression(unary_expr) = &e.left else { return };
+        let Expression::BinaryExpression(e) = expr else {
+            return;
+        };
+        let Expression::UnaryExpression(unary_expr) = &e.left else {
+            return;
+        };
         if !unary_expr.operator.is_typeof() {
             return;
         }
@@ -256,11 +268,15 @@ impl<'a> PeepholeOptimizations {
     /// - `1 - +b` => `1 - b` (for other operators as well)
     /// - `+a - 1` => `a - 1` (for other operators as well)
     pub fn substitute_unary_plus(expr: &mut Expression<'a>, ctx: &mut TraverseCtx<'a>) {
-        let Expression::UnaryExpression(e) = expr else { return };
+        let Expression::UnaryExpression(e) = expr else {
+            return;
+        };
         if e.operator != UnaryOperator::UnaryPlus {
             return;
         }
-        let Some(parent_expression) = ctx.ancestors().next() else { return };
+        let Some(parent_expression) = ctx.ancestors().next() else {
+            return;
+        };
         let parent_expression_does_to_number_conversion = match parent_expression {
             Ancestor::BinaryExpressionLeft(e) => {
                 Self::is_binary_operator_that_does_number_conversion(*e.operator())
@@ -347,13 +363,23 @@ impl<'a> PeepholeOptimizations {
         expr: &mut Expression<'a>,
         ctx: &mut TraverseCtx<'a>,
     ) {
-        let Expression::LogicalExpression(e) = expr else { return };
-        let Expression::LogicalExpression(right) = &e.right else { return };
+        let Expression::LogicalExpression(e) = expr else {
+            return;
+        };
+        let Expression::LogicalExpression(right) = &e.right else {
+            return;
+        };
         if right.operator != e.operator {
             return;
         }
-        let Expression::LogicalExpression(right) = e.right.take_in(ctx) else { return };
-        let LogicalExpression { left: right_left, right: right_right, .. } = right.unbox();
+        let Expression::LogicalExpression(right) = e.right.take_in(ctx) else {
+            return;
+        };
+        let LogicalExpression {
+            left: right_left,
+            right: right_right,
+            ..
+        } = right.unbox();
         let mut new_left = Expression::new_logical_expression(
             e.span,
             e.left.take_in(ctx),
@@ -377,7 +403,9 @@ impl<'a> PeepholeOptimizations {
         expr: &mut Expression<'a>,
         ctx: &mut TraverseCtx<'a>,
     ) {
-        let Expression::BinaryExpression(e) = expr else { return };
+        let Expression::BinaryExpression(e) = expr else {
+            return;
+        };
 
         // Handle associative rotation
         let is_associative = matches!(
@@ -392,7 +420,11 @@ impl<'a> PeepholeOptimizations {
             let Expression::BinaryExpression(right) = e.right.take_in(ctx) else {
                 return;
             };
-            let BinaryExpression { left: right_left, right: right_right, .. } = right.unbox();
+            let BinaryExpression {
+                left: right_left,
+                right: right_right,
+                ..
+            } = right.unbox();
             let mut new_left = Expression::new_binary_expression(
                 e.span,
                 e.left.take_in(ctx),
@@ -445,7 +477,9 @@ impl<'a> PeepholeOptimizations {
     ///
     /// This compression is safe for `document.all` because `typeof document.all` is not `'object'`.
     pub fn substitute_is_object_and_not_null(expr: &mut Expression<'a>, ctx: &mut TraverseCtx<'a>) {
-        let Expression::LogicalExpression(e) = expr else { return };
+        let Expression::LogicalExpression(e) = expr else {
+            return;
+        };
         let inversed = match e.operator {
             LogicalOperator::And => false,
             LogicalOperator::Or => true,
@@ -466,7 +500,10 @@ impl<'a> PeepholeOptimizations {
         let Some(new_expr) = Self::try_compress_is_object_and_not_null_for_left_and_right(
             &left.right,
             &e.right,
-            left.right.span().merge_within(e.right.span(), e.span).unwrap_or(SPAN),
+            left.right
+                .span()
+                .merge_within(e.right.span(), e.span)
+                .unwrap_or(SPAN),
             ctx,
             inversed,
         ) else {
@@ -496,14 +533,19 @@ impl<'a> PeepholeOptimizations {
         let pair = Self::commutative_pair(
             (&left, &right),
             |a_expr| {
-                let Expression::BinaryExpression(a) = a_expr else { return None };
+                let Expression::BinaryExpression(a) = a_expr else {
+                    return None;
+                };
                 let is_target_ops = if inversed {
                     matches!(
                         a.operator,
                         BinaryOperator::StrictInequality | BinaryOperator::Inequality
                     )
                 } else {
-                    matches!(a.operator, BinaryOperator::StrictEquality | BinaryOperator::Equality)
+                    matches!(
+                        a.operator,
+                        BinaryOperator::StrictEquality | BinaryOperator::Equality
+                    )
                 };
                 if !is_target_ops {
                     return None;
@@ -511,11 +553,15 @@ impl<'a> PeepholeOptimizations {
                 let (id, ()) = Self::commutative_pair(
                     (&a.left, &a.right),
                     |a_a| {
-                        let Expression::UnaryExpression(a_a) = a_a else { return None };
+                        let Expression::UnaryExpression(a_a) = a_a else {
+                            return None;
+                        };
                         if a_a.operator != UnaryOperator::Typeof {
                             return None;
                         }
-                        let Expression::Identifier(id) = &a_a.argument else { return None };
+                        let Expression::Identifier(id) = &a_a.argument else {
+                            return None;
+                        };
                         Some(id)
                     },
                     |b| b.is_specific_string_literal("object").then_some(()),
@@ -527,7 +573,10 @@ impl<'a> PeepholeOptimizations {
                     return None;
                 };
                 let is_target_ops = if inversed {
-                    matches!(b.operator, BinaryOperator::StrictEquality | BinaryOperator::Equality)
+                    matches!(
+                        b.operator,
+                        BinaryOperator::StrictEquality | BinaryOperator::Equality
+                    )
                 } else {
                     matches!(
                         b.operator,
@@ -540,7 +589,9 @@ impl<'a> PeepholeOptimizations {
                 let (id, ()) = Self::commutative_pair(
                     (&b.left, &b.right),
                     |a_a| {
-                        let Expression::Identifier(id) = a_a else { return None };
+                        let Expression::Identifier(id) = a_a else {
+                            return None;
+                        };
                         Some(id)
                     },
                     |b| b.is_null().then_some(()),
@@ -562,10 +613,14 @@ impl<'a> PeepholeOptimizations {
         // `replace_expression` walks the old tree and marks its references dead,
         // so a reused id would be pruned from scoping while still live in the
         // program. Mint fresh references (same name, same resolution) instead.
-        let typeof_symbol_id =
-            ctx.scoping().get_reference(typeof_id_ref.reference_id()).symbol_id();
-        let is_null_symbol_id =
-            ctx.scoping().get_reference(is_null_id_ref.reference_id()).symbol_id();
+        let typeof_symbol_id = ctx
+            .scoping()
+            .get_reference(typeof_id_ref.reference_id())
+            .symbol_id();
+        let is_null_symbol_id = ctx
+            .scoping()
+            .get_reference(is_null_id_ref.reference_id())
+            .symbol_id();
 
         // Plain `clone_in` resets every `reference_id` to `None`, making id
         // aliasing structurally impossible. The fresh references below are
@@ -573,8 +628,11 @@ impl<'a> PeepholeOptimizations {
         // analysis observes them directly from scoping.
         let mut new_left_expr = typeof_binary_expr.clone_in(ctx.allocator());
         if let Expression::BinaryExpression(new_left_expr_binary) = &mut new_left_expr {
-            new_left_expr_binary.operator =
-                if inversed { BinaryOperator::Inequality } else { BinaryOperator::Equality };
+            new_left_expr_binary.operator = if inversed {
+                BinaryOperator::Inequality
+            } else {
+                BinaryOperator::Equality
+            };
             let fresh_reference_id =
                 ctx.create_reference(typeof_id_ref.name, typeof_symbol_id, ReferenceFlags::Read);
             let BinaryExpression { left, right, .. } = &mut **new_left_expr_binary;
@@ -615,14 +673,20 @@ impl<'a> PeepholeOptimizations {
         Some(Expression::new_logical_expression(
             span,
             new_left_expr,
-            if inversed { LogicalOperator::Or } else { LogicalOperator::And },
+            if inversed {
+                LogicalOperator::Or
+            } else {
+                LogicalOperator::And
+            },
             new_right_expr,
             ctx,
         ))
     }
 
     pub fn substitute_loose_equals_undefined(expr: &mut Expression<'a>, ctx: &mut TraverseCtx<'a>) {
-        let Expression::BinaryExpression(e) = expr else { return };
+        let Expression::BinaryExpression(e) = expr else {
+            return;
+        };
         // `foo == void 0` -> `foo == null`, `foo == undefined` -> `foo == null`
         // `foo != void 0` -> `foo == null`, `foo == undefined` -> `foo == null`
         if e.operator == BinaryOperator::Inequality || e.operator == BinaryOperator::Equality {
@@ -753,8 +817,12 @@ impl<'a> PeepholeOptimizations {
                     if b.operator != BinaryOperator::Subtraction {
                         return;
                     }
-                    let Expression::Identifier(id) = &b.left else { return };
-                    let Expression::NumericLiteral(n) = &b.right else { return };
+                    let Expression::Identifier(id) = &b.left else {
+                        return;
+                    };
+                    let Expression::NumericLiteral(n) = &b.right else {
+                        return;
+                    };
                     if n.value.fract() != 0.0 || n.value < 0.0 {
                         return;
                     }
@@ -770,7 +838,9 @@ impl<'a> PeepholeOptimizations {
             else {
                 return;
             };
-            let ComputedMemberExpression { object, expression, .. } = rhs_member_expr.as_mut();
+            let ComputedMemberExpression {
+                object, expression, ..
+            } = rhs_member_expr.as_mut();
             let Expression::Identifier(rhs_member_expr_obj) = object else {
                 return;
             };
@@ -811,14 +881,18 @@ impl<'a> PeepholeOptimizations {
             if b.operator != BinaryOperator::LessThan {
                 return;
             }
-            let Expression::Identifier(left) = &b.left else { return };
+            let Expression::Identifier(left) = &b.left else {
+                return;
+            };
             if left.name != a_id_name {
                 return;
             }
             match &b.right {
                 Expression::Identifier(right) => Some((
                     right.name,
-                    ctx.scoping().get_reference(right.reference_id()).symbol_id(),
+                    ctx.scoping()
+                        .get_reference(right.reference_id())
+                        .symbol_id(),
                 )),
                 Expression::StaticMemberExpression(sm) => {
                     let Expression::Identifier(id) = &sm.object else {
@@ -842,9 +916,15 @@ impl<'a> PeepholeOptimizations {
 
         let init_decl_len = if e_id_info.is_some() { 3 } else { 2 };
 
-        let Some(init) = &mut for_stmt.init else { return };
-        let ForStatementInit::VariableDeclaration(var_init) = init else { return };
-        let Some(siblings) = var_init.declarations.get(init_decl_len..) else { return };
+        let Some(init) = &mut for_stmt.init else {
+            return;
+        };
+        let ForStatementInit::VariableDeclaration(var_init) = init else {
+            return;
+        };
+        let Some(siblings) = var_init.declarations.get(init_decl_len..) else {
+            return;
+        };
         // Sibling declarators may be in the source loop or folded into it by `sequences`.
         // Keep uninitialized `var` siblings, but don't move an initializer across the spread.
         if !siblings.is_empty()
@@ -870,12 +950,18 @@ impl<'a> PeepholeOptimizations {
                 .declarations
                 .get(idx)
                 .expect("var_init.declarations.len() check above ensures this");
-            let BindingPattern::BindingIdentifier(de_id) = &de.id else { return };
+            let BindingPattern::BindingIdentifier(de_id) = &de.id else {
+                return;
+            };
             if de_id.name != e_id_name {
                 return;
             }
-            let Some(Expression::StaticMemberExpression(sm)) = &de.init else { return };
-            let Expression::Identifier(id) = &sm.object else { return };
+            let Some(Expression::StaticMemberExpression(sm)) = &de.init else {
+                return;
+            };
+            let Expression::Identifier(id) = &sm.object else {
+                return;
+            };
             if id.name != "arguments"
                 || !ctx.is_global_reference(id)
                 || sm.property.name != "length"
@@ -892,7 +978,9 @@ impl<'a> PeepholeOptimizations {
                 .declarations
                 .get(idx + 1)
                 .expect("var_init.declarations.len() check above ensures this");
-            let BindingPattern::BindingIdentifier(de_id) = &de_a.id else { return };
+            let BindingPattern::BindingIdentifier(de_id) = &de_a.id else {
+                return;
+            };
             if de_id.name != a_id_name {
                 return;
             }
@@ -911,20 +999,30 @@ impl<'a> PeepholeOptimizations {
             match &de_r.init {
                 // Array(e > 1 ? e - 1 : 0) or Array(e)
                 Some(Expression::CallExpression(call)) => {
-                    let Expression::Identifier(id) = &call.callee else { return };
+                    let Expression::Identifier(id) = &call.callee else {
+                        return;
+                    };
                     if id.name != "Array" || !ctx.is_global_reference(id) {
                         return;
                     }
                     if call.arguments.len() != 1 {
                         return;
                     }
-                    let Some((e_id_name, _)) = e_id_info else { return };
-                    let Some(arg_expr) = call.arguments[0].as_expression() else { return };
+                    let Some((e_id_name, _)) = e_id_info else {
+                        return;
+                    };
+                    let Some(arg_expr) = call.arguments[0].as_expression() else {
+                        return;
+                    };
                     let result = verify_array_arg(arg_expr, e_id_name, offset);
                     if result == VerifyArrayArgResult::Invalid {
                         return;
                     }
-                    e_ref_count += if result == VerifyArrayArgResult::WithOffset { 2 } else { 1 };
+                    e_ref_count += if result == VerifyArrayArgResult::WithOffset {
+                        2
+                    } else {
+                        1
+                    };
                 }
                 Some(Expression::ArrayExpression(arr)) => {
                     if !arr.elements.is_empty() {
@@ -933,7 +1031,9 @@ impl<'a> PeepholeOptimizations {
                 }
                 _ => return,
             }
-            let BindingPattern::BindingIdentifier(de_id) = &de_r.id else { return };
+            let BindingPattern::BindingIdentifier(de_id) = &de_r.id else {
+                return;
+            };
             if de_id.name != r_id_name {
                 return;
             }
@@ -950,7 +1050,12 @@ impl<'a> PeepholeOptimizations {
             {
                 return;
             }
-            if ctx.scoping().get_resolved_references(a_id_symbol_id).count() != a_ref_count {
+            if ctx
+                .scoping()
+                .get_resolved_references(a_id_symbol_id)
+                .count()
+                != a_ref_count
+            {
                 return;
             }
         }
@@ -962,8 +1067,11 @@ impl<'a> PeepholeOptimizations {
             // `var r = [...arguments]` / `var r = [...arguments].slice(n)` is not needed
             // if r is not used by other places because `[...arguments]` does not have a sideeffect
             // `r` is used once in the for-loop (assignment for each index)
-            (ctx.scoping().get_resolved_references(de_id_symbol_id).count() > 1)
-                .then(|| r_id.take_in(ctx))
+            (ctx.scoping()
+                .get_resolved_references(de_id_symbol_id)
+                .count()
+                > 1)
+            .then(|| r_id.take_in(ctx))
         };
 
         if let Some(r_id_pat) = r_id_pat {
@@ -990,7 +1098,13 @@ impl<'a> PeepholeOptimizations {
                     SPAN,
                     callee,
                     None,
-                    [Argument::new_numeric_literal(SPAN, offset, None, NumberBase::Decimal, ctx)],
+                    [Argument::new_numeric_literal(
+                        SPAN,
+                        offset,
+                        None,
+                        NumberBase::Decimal,
+                        ctx,
+                    )],
                     false,
                     ctx,
                 )
@@ -1022,7 +1136,10 @@ impl<'a> PeepholeOptimizations {
         if let Some(old) = for_stmt.update.take() {
             ctx.drop_expression(&old);
         }
-        ctx.replace_statement(&mut for_stmt.body, Statement::new_empty_statement(SPAN, ctx));
+        ctx.replace_statement(
+            &mut for_stmt.body,
+            Statement::new_empty_statement(SPAN, ctx),
+        );
     }
 
     /// Removes redundant argument of `ReturnStatement`
@@ -1030,7 +1147,9 @@ impl<'a> PeepholeOptimizations {
     /// `return undefined` -> `return`
     /// `return void 0` -> `return`
     pub fn substitute_return_statement(stmt: &mut ReturnStatement<'a>, ctx: &mut TraverseCtx<'a>) {
-        let Some(argument) = &stmt.argument else { return };
+        let Some(argument) = &stmt.argument else {
+            return;
+        };
         if !match argument {
             Expression::Identifier(ident) => ctx.is_identifier_undefined(ident),
             Expression::UnaryExpression(e) => {
@@ -1073,7 +1192,10 @@ impl<'a> PeepholeOptimizations {
             return;
         }
         if !kind.is_var()
-            && decl.init.as_ref().is_some_and(|init| ctx.is_expression_undefined(init))
+            && decl
+                .init
+                .as_ref()
+                .is_some_and(|init| ctx.is_expression_undefined(init))
             && let Some(old) = decl.init.take()
         {
             ctx.drop_expression(&old);
@@ -1086,11 +1208,15 @@ impl<'a> PeepholeOptimizations {
     /// `String()` -> `''`
     /// `BigInt(1)` -> `1`
     pub fn substitute_simple_function_call(expr: &mut Expression<'a>, ctx: &mut TraverseCtx<'a>) {
-        let Expression::CallExpression(e) = expr else { return };
+        let Expression::CallExpression(e) = expr else {
+            return;
+        };
         if e.optional || e.arguments.len() >= 2 {
             return;
         }
-        let Expression::Identifier(ident) = &e.callee else { return };
+        let Expression::Identifier(ident) = &e.callee else {
+            return;
+        };
         let name = ident.name.as_str();
         if !matches!(name, "Boolean" | "Number" | "String" | "BigInt") {
             return;
@@ -1137,7 +1263,10 @@ impl<'a> PeepholeOptimizations {
                 match arg {
                     None => 0.0,
                     Some(arg) => {
-                        match arg.to_number(ctx).filter(|_| !arg.may_have_side_effects(ctx)) {
+                        match arg
+                            .to_number(ctx)
+                            .filter(|_| !arg.may_have_side_effects(ctx))
+                        {
                             Some(n) => n,
                             None => return,
                         }
@@ -1196,14 +1325,20 @@ impl<'a> PeepholeOptimizations {
             Expression::CallExpression(e) => &e.callee,
             _ => return,
         };
-        let Some(name) = Self::get_fold_constructor_name(callee, ctx) else { return };
+        let Some(name) = Self::get_fold_constructor_name(callee, ctx) else {
+            return;
+        };
         let (span, args, is_new_expr) = match expr {
             Expression::NewExpression(e) => {
-                let NewExpression { span, arguments, .. } = e.as_mut();
+                let NewExpression {
+                    span, arguments, ..
+                } = e.as_mut();
                 (span, arguments, true)
             }
             Expression::CallExpression(e) => {
-                let CallExpression { span, arguments, .. } = e.as_mut();
+                let CallExpression {
+                    span, arguments, ..
+                } = e.as_mut();
                 (span, arguments, false)
             }
             _ => return,
@@ -1219,7 +1354,9 @@ impl<'a> PeepholeOptimizations {
                     let new_value = Expression::new_array_expression(*span, [], ctx);
                     ctx.replace_expression(expr, new_value);
                 } else if args.len() == 1 {
-                    let Some(arg) = args[0].as_expression_mut() else { return };
+                    let Some(arg) = args[0].as_expression_mut() else {
+                        return;
+                    };
                     // `new Array(0)` -> `[]`
                     if arg.is_number_0() {
                         let new_value = Expression::new_array_expression(*span, [], ctx);
@@ -1294,7 +1431,8 @@ impl<'a> PeepholeOptimizations {
 
                     // `new Array(1, 2, ...xs)` -> `[1, 2, ...xs]`
                     let elements = ArenaVec::from_iter_in(
-                        args.iter_mut().map(|arg| ArrayExpressionElement::from(arg.take_in(ctx))),
+                        args.iter_mut()
+                            .map(|arg| ArrayExpressionElement::from(arg.take_in(ctx))),
                         ctx,
                     );
                     let new_value = Expression::new_array_expression(*span, elements, ctx);
@@ -1310,8 +1448,12 @@ impl<'a> PeepholeOptimizations {
     /// `new Function()` -> `Function()`
     /// `new RegExp()` -> `RegExp()`
     pub fn substitute_global_new_expression(expr: &mut Expression<'a>, ctx: &mut TraverseCtx<'a>) {
-        let Expression::NewExpression(e) = expr else { return };
-        let Expression::Identifier(ident) = &e.callee else { return };
+        let Expression::NewExpression(e) = expr else {
+            return;
+        };
+        let Expression::Identifier(ident) = &e.callee else {
+            return;
+        };
         let name = ident.name.as_str();
         if !matches!(name, "Error" | "AggregateError" | "Function" | "RegExp")
             && !Self::is_native_error_name(name)
@@ -1326,10 +1468,12 @@ impl<'a> PeepholeOptimizations {
                 let arguments_len = e.arguments.len();
                 arguments_len == 0
                     || (arguments_len >= 1
-                        && e.arguments[0].as_expression().is_some_and(|first_argument| {
-                            let ty = first_argument.value_type(ctx);
-                            !ty.is_undetermined() && !ty.is_object()
-                        }))
+                        && e.arguments[0]
+                            .as_expression()
+                            .is_some_and(|first_argument| {
+                                let ty = first_argument.value_type(ctx);
+                                !ty.is_undetermined() && !ty.is_object()
+                            }))
             }
             "Error" | "AggregateError" | "Function" => true,
             _ if Self::is_native_error_name(name) => true,
@@ -1380,8 +1524,13 @@ impl<'a> PeepholeOptimizations {
     }
 
     pub fn substitute_template_literal(expr: &mut Expression<'a>, ctx: &mut TraverseCtx<'a>) {
-        let Expression::TemplateLiteral(t) = expr else { return };
-        let Some(val) = t.to_js_string(ctx).filter(|_| !t.may_have_side_effects(ctx)) else {
+        let Expression::TemplateLiteral(t) = expr else {
+            return;
+        };
+        let Some(val) = t
+            .to_js_string(ctx)
+            .filter(|_| !t.may_have_side_effects(ctx))
+        else {
             return;
         };
         let new_value =
@@ -1437,20 +1586,21 @@ impl<'a> PeepholeOptimizations {
     // `new Foo(...[1,2,3])` -> `new Foo(1,2,3)`
     fn try_flatten_arguments(args: &mut ArenaVec<'a, Argument<'a>>, ctx: &mut TraverseCtx<'a>) {
         let (new_size, should_fold) =
-            args.iter().fold((0, false), |(mut new_size, mut should_fold), arg| {
-                new_size += if let Argument::SpreadElement(spread_el) = arg {
-                    if let Expression::ArrayExpression(array_expr) = &spread_el.argument {
-                        should_fold = true;
-                        array_expr.elements.len()
+            args.iter()
+                .fold((0, false), |(mut new_size, mut should_fold), arg| {
+                    new_size += if let Argument::SpreadElement(spread_el) = arg {
+                        if let Expression::ArrayExpression(array_expr) = &spread_el.argument {
+                            should_fold = true;
+                            array_expr.elements.len()
+                        } else {
+                            1
+                        }
                     } else {
                         1
-                    }
-                } else {
-                    1
-                };
+                    };
 
-                (new_size, should_fold)
-            });
+                    (new_size, should_fold)
+                });
         if !should_fold {
             return;
         }
@@ -1504,7 +1654,9 @@ impl<'a> PeepholeOptimizations {
 
         if matches!(object, Expression::ChainExpression(_)) {
             ctx.replace_expression_with(object, |e, _ctx| {
-                let Expression::ChainExpression(expr) = e else { unreachable!() };
+                let Expression::ChainExpression(expr) = e else {
+                    unreachable!()
+                };
                 Expression::from(expr.unbox().expression)
             });
         }
@@ -1526,7 +1678,9 @@ impl<'a> PeepholeOptimizations {
         expr: &mut CallExpression<'a>,
         ctx: &mut TraverseCtx<'a>,
     ) {
-        let Expression::CallExpression(inner_call) = &mut expr.callee else { return };
+        let Expression::CallExpression(inner_call) = &mut expr.callee else {
+            return;
+        };
         if inner_call.optional || inner_call.arguments.len() != 1 {
             return;
         }
@@ -1555,8 +1709,14 @@ impl<'a> PeepholeOptimizations {
         if ctx.options().keep_names.function {
             return;
         }
-        if func.id.as_ref().is_some_and(|id| ctx.scoping().symbol_is_unused(id.symbol_id()))
-            && !ctx.scoping().scope_flags(func.scope_id()).contains_direct_eval()
+        if func
+            .id
+            .as_ref()
+            .is_some_and(|id| ctx.scoping().symbol_is_unused(id.symbol_id()))
+            && !ctx
+                .scoping()
+                .scope_flags(func.scope_id())
+                .contains_direct_eval()
         {
             func.id = None;
             ctx.notice_change();
@@ -1573,8 +1733,14 @@ impl<'a> PeepholeOptimizations {
             return;
         }
 
-        if class.id.as_ref().is_some_and(|id| ctx.scoping().symbol_is_unused(id.symbol_id()))
-            && !ctx.scoping().scope_flags(class.scope_id()).contains_direct_eval()
+        if class
+            .id
+            .as_ref()
+            .is_some_and(|id| ctx.scoping().symbol_is_unused(id.symbol_id()))
+            && !ctx
+                .scoping()
+                .scope_flags(class.scope_id())
+                .contains_direct_eval()
         {
             class.id = None;
             ctx.notice_change();
@@ -1583,13 +1749,17 @@ impl<'a> PeepholeOptimizations {
 
     /// `new Int8Array(0)` -> `new Int8Array()` (also for other TypedArrays)
     pub fn substitute_typed_array_constructor(e: &mut NewExpression<'a>, ctx: &TraverseCtx<'a>) {
-        let Expression::Identifier(ident) = &e.callee else { return };
+        let Expression::Identifier(ident) = &e.callee else {
+            return;
+        };
         let name = ident.name.as_str();
         if !is_typed_array_constructor(name) || !ctx.is_global_reference(ident) {
             return;
         }
         if e.arguments.len() == 1
-            && e.arguments[0].as_expression().is_some_and(Expression::is_number_0)
+            && e.arguments[0]
+                .as_expression()
+                .is_some_and(Expression::is_number_0)
         {
             e.arguments.clear();
         }
@@ -1597,7 +1767,9 @@ impl<'a> PeepholeOptimizations {
 
     /// Transforms boolean expression `true` => `!0` `false` => `!1`.
     pub fn substitute_boolean(expr: &mut Expression<'a>, ctx: &mut TraverseCtx<'a>) {
-        let Expression::BooleanLiteral(lit) = expr else { return };
+        let Expression::BooleanLiteral(lit) = expr else {
+            return;
+        };
         let num = Expression::new_numeric_literal(
             lit.span,
             if lit.value { 0.0 } else { 1.0 },
@@ -1627,39 +1799,48 @@ impl<'a> PeepholeOptimizations {
         };
 
         let (new_size, should_fold) =
-            array.elements.iter().fold((0, false), |(mut new_size, mut should_fold), arg| {
-                new_size += if let ArrayExpressionElement::SpreadElement(spread_el) = arg {
-                    if let Expression::ArrayExpression(array_expr) = &spread_el.argument
-                        && array_expr
-                            .elements
-                            .iter()
-                            .filter(|inner_el| inner_el.is_elision())
-                            .count()
-                            < 2
-                    {
-                        should_fold = true;
-                        array_expr.elements.len()
+            array
+                .elements
+                .iter()
+                .fold((0, false), |(mut new_size, mut should_fold), arg| {
+                    new_size += if let ArrayExpressionElement::SpreadElement(spread_el) = arg {
+                        if let Expression::ArrayExpression(array_expr) = &spread_el.argument
+                            && array_expr
+                                .elements
+                                .iter()
+                                .filter(|inner_el| inner_el.is_elision())
+                                .count()
+                                < 2
+                        {
+                            should_fold = true;
+                            array_expr.elements.len()
+                        } else {
+                            1
+                        }
                     } else {
                         1
-                    }
-                } else {
-                    1
-                };
+                    };
 
-                (new_size, should_fold)
-            });
+                    (new_size, should_fold)
+                });
         if !should_fold {
             return;
         }
 
-        let old_elements =
-            std::mem::replace(&mut array.elements, ArenaVec::with_capacity_in(new_size, ctx));
+        let old_elements = std::mem::replace(
+            &mut array.elements,
+            ArenaVec::with_capacity_in(new_size, ctx),
+        );
         let new_elements = &mut array.elements;
 
         for elem in old_elements {
             if let ArrayExpressionElement::SpreadElement(mut spread_el) = elem {
                 if let Expression::ArrayExpression(array_expr) = &mut spread_el.argument
-                    && array_expr.elements.iter().filter(|inner_el| inner_el.is_elision()).count()
+                    && array_expr
+                        .elements
+                        .iter()
+                        .filter(|inner_el| inner_el.is_elision())
+                        .count()
                         < 2
                 {
                     for inner_el in array_expr.elements.drain(..) {
@@ -1689,7 +1870,9 @@ impl<'a> PeepholeOptimizations {
         };
 
         let is_all_string = array.elements.iter().all(|element| {
-            element.as_expression().is_some_and(|expr| matches!(expr, Expression::StringLiteral(_)))
+            element
+                .as_expression()
+                .is_some_and(|expr| matches!(expr, Expression::StringLiteral(_)))
         });
         if !is_all_string {
             return;
@@ -1704,10 +1887,14 @@ impl<'a> PeepholeOptimizations {
         }
 
         let strings = array.elements.iter().map(|element| {
-            let Expression::StringLiteral(str) = element.to_expression() else { unreachable!() };
+            let Expression::StringLiteral(str) = element.to_expression() else {
+                unreachable!()
+            };
             str.value.as_str()
         });
-        let Some(delimiter) = Self::pick_delimiter(&strings) else { return };
+        let Some(delimiter) = Self::pick_delimiter(&strings) else {
+            return;
+        };
 
         let concatenated_string = strings.collect::<Vec<_>>().join(delimiter);
 
@@ -1752,7 +1939,9 @@ impl<'a> PeepholeOptimizations {
             return Some("");
         }
 
-        DELIMITERS.into_iter().find(|&delimiter| strings.clone().all(|s| !s.contains(delimiter)))
+        DELIMITERS
+            .into_iter()
+            .find(|&delimiter| strings.clone().all(|s| !s.contains(delimiter)))
     }
 
     pub fn substitute_catch_clause(catch: &mut CatchClause<'a>, ctx: &TraverseCtx<'a>) {
@@ -1791,7 +1980,9 @@ impl<'a> PeepholeOptimizations {
             }
             Expression::AwaitExpression(await_expr) => &mut await_expr.argument,
             Expression::YieldExpression(yield_expr) => {
-                let Some(maybe_sequence_expression) = &mut yield_expr.argument else { return };
+                let Some(maybe_sequence_expression) = &mut yield_expr.argument else {
+                    return;
+                };
                 maybe_sequence_expression
             }
             _ => {
@@ -1799,7 +1990,9 @@ impl<'a> PeepholeOptimizations {
             }
         };
 
-        let Expression::SequenceExpression(seq_expr) = argument else { return };
+        let Expression::SequenceExpression(seq_expr) = argument else {
+            return;
+        };
 
         if seq_expr.expressions.len() <= 1 {
             return;
@@ -1814,7 +2007,9 @@ impl<'a> PeepholeOptimizations {
 
     fn catch_body_has_same_name_var(body: &BlockStatement<'a>, name: Ident<'a>) -> bool {
         body.body.iter().any(|stmt| {
-            let Statement::VariableDeclaration(decl) = stmt else { return false };
+            let Statement::VariableDeclaration(decl) = stmt else {
+                return false;
+            };
             if !decl.kind.is_var() {
                 return false;
             }
@@ -1866,7 +2061,9 @@ impl<'a> PeepholeOptimizations {
     /// - Converts arrow function IIFEs that return void or execute one expression
     ///   (e.g., `(() => { foo() })()` or `(() => { return foo() })()`) into simpler expressions.
     pub fn substitute_iife_call(e: &mut Expression<'a>, ctx: &mut TraverseCtx<'a>) {
-        let Expression::CallExpression(call_expr) = e else { return };
+        let Expression::CallExpression(call_expr) = e else {
+            return;
+        };
 
         if !call_expr.callee.is_function() {
             return;
@@ -1922,7 +2119,9 @@ impl<'a> PeepholeOptimizations {
                 ctx.replace_expression(e, new_value);
                 return;
             }
-            let Some(body) = f.get_function_body_mut() else { return };
+            let Some(body) = f.get_function_body_mut() else {
+                return;
+            };
             if body.statements.len() != 1 || !body.directives.is_empty() {
                 return;
             }
@@ -1971,7 +2170,9 @@ impl<'a> PeepholeOptimizations {
         e: &mut Expression<'a>,
         ctx: &mut TraverseCtx<'a>,
     ) {
-        let Expression::CallExpression(call_expr) = e else { return };
+        let Expression::CallExpression(call_expr) = e else {
+            return;
+        };
 
         // Looser than the spec's `IsSimpleParameterList` (which forbids rest):
         // a rest binding to an identifier is safe here — the empty body never
@@ -1980,7 +2181,9 @@ impl<'a> PeepholeOptimizations {
             p.items
                 .iter()
                 .all(|item| item.pattern.is_binding_identifier() && item.initializer.is_none())
-                && p.rest.as_ref().is_none_or(|r| r.rest.argument.is_binding_identifier())
+                && p.rest
+                    .as_ref()
+                    .is_none_or(|r| r.rest.argument.is_binding_identifier())
         };
 
         let is_drop_candidate = match &call_expr.callee {
@@ -2038,7 +2241,9 @@ impl<'a> PeepholeOptimizations {
         expr: Expression<'a>,
         ctx: &mut TraverseCtx<'a>,
     ) -> Expression<'a> {
-        let Expression::NewExpression(new_expr) = expr else { unreachable!() };
+        let Expression::NewExpression(new_expr) = expr else {
+            unreachable!()
+        };
         let e = new_expr.unbox();
         Expression::new_call_expression_with_pure(
             e.span,
@@ -2089,19 +2294,28 @@ enum ClassPropertyKeyParentType {
 
 impl From<&PropertyDefinition<'_>> for ClassPropertyKeyParent {
     fn from(prop: &PropertyDefinition<'_>) -> Self {
-        Self { ty: ClassPropertyKeyParentType::PropertyDefinition, r#static: prop.r#static }
+        Self {
+            ty: ClassPropertyKeyParentType::PropertyDefinition,
+            r#static: prop.r#static,
+        }
     }
 }
 
 impl From<&AccessorProperty<'_>> for ClassPropertyKeyParent {
     fn from(accessor: &AccessorProperty<'_>) -> Self {
-        Self { ty: ClassPropertyKeyParentType::AccessorProperty, r#static: accessor.r#static }
+        Self {
+            ty: ClassPropertyKeyParentType::AccessorProperty,
+            r#static: accessor.r#static,
+        }
     }
 }
 
 impl From<&MethodDefinition<'_>> for ClassPropertyKeyParent {
     fn from(method: &MethodDefinition<'_>) -> Self {
-        Self { ty: ClassPropertyKeyParentType::MethodDefinition, r#static: method.r#static }
+        Self {
+            ty: ClassPropertyKeyParentType::MethodDefinition,
+            r#static: method.r#static,
+        }
     }
 }
 

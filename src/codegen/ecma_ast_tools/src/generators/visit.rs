@@ -36,7 +36,10 @@ impl Generator for VisitGenerator {
     /// * `#[scope]` on structs or struct fields.
     fn attrs(&self) -> &[(&'static str, AttrPositions)] {
         &[
-            ("visit", attr_positions!(AstAttr | Struct | StructField | EnumVariant)),
+            (
+                "visit",
+                attr_positions!(AstAttr | Struct | StructField | EnumVariant),
+            ),
             ("scope", attr_positions!(Struct | StructField)),
         ]
     }
@@ -54,7 +57,9 @@ impl Generator for VisitGenerator {
     /// whose inner type has a visitor.
     fn prepare(&self, schema: &mut Schema, _codegen: &Codegen) {
         for type_id in schema.types.indices() {
-            let Some(vec_def) = schema.types[type_id].as_vec() else { continue };
+            let Some(vec_def) = schema.types[type_id].as_vec() else {
+                continue;
+            };
 
             let inner_type = vec_def.inner_type(schema);
             let plural_snake_name = match inner_type {
@@ -179,11 +184,22 @@ fn parse_scope_attr(location: AttrLocation, part: AttrPart) -> Result<()> {
 }
 
 /// Generate outputs for `Visit` and `VisitMut`.
-fn generate_outputs(schema: &Schema) -> (/* Visit */ TokenStream, /* VisitMut */ TokenStream) {
+fn generate_outputs(
+    schema: &Schema,
+) -> (
+    /* Visit */ TokenStream,
+    /* VisitMut */ TokenStream,
+) {
     // Generate `visit_*` methods and `walk_*` functions for both `Visit` and `VisitMut`
     let mut builder = VisitBuilder::new(schema);
     builder.generate();
-    let VisitBuilder { visit_methods, walk_fns, visit_mut_methods, walk_mut_fns, .. } = builder;
+    let VisitBuilder {
+        visit_methods,
+        walk_fns,
+        visit_mut_methods,
+        walk_mut_fns,
+        ..
+    } = builder;
 
     // Generate `Visit` trait
     let alloc_fn = quote! {
@@ -341,7 +357,9 @@ impl VisitBuilder<'_> {
     /// Also generates functions for types of struct fields.
     fn generate_struct_visitor(&mut self, struct_def: &StructDef) {
         // Exit if this struct is not visited
-        let Some(visitor_names) = &struct_def.visit.visitor_names else { return };
+        let Some(visitor_names) = &struct_def.visit.visitor_names else {
+            return;
+        };
 
         // Generate visit methods
         let struct_ty = struct_def.ty(self.schema);
@@ -356,7 +374,10 @@ impl VisitBuilder<'_> {
             .map(|(arg_name, arg_type_name)| {
                 let param_ident = create_ident(arg_name);
                 let arg_type_ident = create_ident(arg_type_name);
-                (quote!( , #param_ident: #arg_type_ident ), quote!( , #param_ident ))
+                (
+                    quote!( , #param_ident: #arg_type_ident ),
+                    quote!( , #param_ident ),
+                )
             })
             .unzip();
 
@@ -438,8 +459,11 @@ impl VisitBuilder<'_> {
         }
 
         // `#[inline]` if there are `INLINE_LIMIT` or less fields visited
-        let maybe_inline_attr =
-            if field_visits_count <= INLINE_LIMIT { quote!( #[inline] ) } else { quote!() };
+        let maybe_inline_attr = if field_visits_count <= INLINE_LIMIT {
+            quote!( #[inline] )
+        } else {
+            quote!()
+        };
 
         self.walk_fns.extend(quote! {
             ///@@line_break
@@ -472,11 +496,17 @@ impl VisitBuilder<'_> {
         field_index: usize,
         scope_entry: &mut Option<(usize, TokenStream)>,
         scope_exit: &mut Option<(usize, TokenStream)>,
-    ) -> Option<(/* visit */ TokenStream, /* visit_mut */ TokenStream)> {
+    ) -> Option<(
+        /* visit */ TokenStream,
+        /* visit_mut */ TokenStream,
+    )> {
         // Generate `visit_*` method call for struct field
         let field_type = field.type_def(self.schema);
         let field_ident = field.ident();
-        let VisitAndVisitMut { mut visit, mut visit_mut } = generate_visit_type(
+        let VisitAndVisitMut {
+            mut visit,
+            mut visit_mut,
+        } = generate_visit_type(
             field_type,
             &Target::Property(quote!( it.#field_ident )),
             &field.visit.visit_args,
@@ -515,7 +545,9 @@ impl VisitBuilder<'_> {
     /// Also generates functions for types of enum variants.
     fn generate_enum_visitor(&mut self, enum_def: &EnumDef) {
         // Exit if this enum is not visited
-        let Some(visitor_names) = &enum_def.visit.visitor_names else { return };
+        let Some(visitor_names) = &enum_def.visit.visitor_names else {
+            return;
+        };
 
         // Generate visit methods
         let enum_ty = enum_def.ty(self.schema);
@@ -609,8 +641,11 @@ impl VisitBuilder<'_> {
             };
 
         // `#[inline]` if there are `INLINE_LIMIT` or less fields visited
-        let maybe_inline_attr =
-            if match_arm_count <= INLINE_LIMIT { quote!( #[inline] ) } else { quote!() };
+        let maybe_inline_attr = if match_arm_count <= INLINE_LIMIT {
+            quote!( #[inline] )
+        } else {
+            quote!()
+        };
 
         self.walk_fns.extend(quote! {
             ///@@line_break
@@ -645,7 +680,9 @@ impl VisitBuilder<'_> {
     /// Also generates functions for inner type (`T` in `Vec<T>`).
     fn generate_vec_visitor(&mut self, vec_def: &VecDef) {
         // Exit if this `Vec` does not have its own visitor
-        let Some(visitor_names) = &vec_def.visit.visitor_names else { return };
+        let Some(visitor_names) = &vec_def.visit.visitor_names else {
+            return;
+        };
 
         // Generate visit methods
         let vec_ty = vec_def.ty(self.schema);
@@ -738,7 +775,8 @@ impl VisitBuilder<'_> {
             }
         };
         self.walk_fns.extend(gen_walk("Visit", quote!( & )));
-        self.walk_mut_fns.extend(gen_walk("VisitMut", quote!( &mut )));
+        self.walk_mut_fns
+            .extend(gen_walk("VisitMut", quote!( &mut )));
     }
 }
 
@@ -772,11 +810,17 @@ struct VisitAndVisitMut {
 
 impl VisitorOutputs for VisitAndVisitMut {
     fn gen_each<F: Fn(bool) -> TokenStream>(f: F) -> Self {
-        Self { visit: f(false), visit_mut: f(true) }
+        Self {
+            visit: f(false),
+            visit_mut: f(true),
+        }
     }
 
     fn map<F: Fn(TokenStream, bool) -> TokenStream>(self, f: F) -> Self {
-        Self { visit: f(self.visit, false), visit_mut: f(self.visit_mut, true) }
+        Self {
+            visit: f(self.visit, false),
+            visit_mut: f(self.visit_mut, true),
+        }
     }
 }
 
@@ -836,9 +880,14 @@ pub fn generate_visit_type<V: VisitorOutputs>(
                 schema,
             )
         }
-        TypeDef::Vec(vec_def) => {
-            generate_visit_vec(vec_def, target, visit_args, visitor, trailing_semicolon, schema)
-        }
+        TypeDef::Vec(vec_def) => generate_visit_vec(
+            vec_def,
+            target,
+            visit_args,
+            visitor,
+            trailing_semicolon,
+            schema,
+        ),
         // Primitives, `Cell`s, and pointers are not visited
         TypeDef::Primitive(_) | TypeDef::Cell(_) | TypeDef::Pointer(_) => None,
     }
@@ -896,7 +945,9 @@ fn generate_visit_with_visit_args<V: VisitorOutputs>(
     // Get extra function params for visit args.
     // e.g. if attr on struct field/enum variant is `#[visit(args(x = something, y = something_else))]`,
     // `extra_params` is `, x, y`.
-    let arg_params = visit_args.iter().map(|(arg_name, _)| create_ident(arg_name));
+    let arg_params = visit_args
+        .iter()
+        .map(|(arg_name, _)| create_ident(arg_name));
     let extra_params = quote!( #(, #arg_params)* );
 
     // Create `let` statements for visit args.
@@ -1109,7 +1160,10 @@ pub fn generate_enter_and_leave_node(
     type_ident: &Ident,
     has_kind: bool,
     is_mut: bool,
-) -> (/* enter_node */ TokenStream, /* leave_node */ TokenStream) {
+) -> (
+    /* enter_node */ TokenStream,
+    /* leave_node */ TokenStream,
+) {
     if has_kind {
         let kind = if is_mut {
             quote!( AstType::#type_ident )
@@ -1123,8 +1177,10 @@ pub fn generate_enter_and_leave_node(
         let leave_node = quote!( visitor.leave_node(kind); );
         (enter_node, leave_node)
     } else {
-        let comment =
-            format!("@ No `{}` for this type", if is_mut { "AstType" } else { "AstKind" });
+        let comment = format!(
+            "@ No `{}` for this type",
+            if is_mut { "AstType" } else { "AstKind" }
+        );
         (quote!( #![doc = #comment] ), quote!())
     }
 }

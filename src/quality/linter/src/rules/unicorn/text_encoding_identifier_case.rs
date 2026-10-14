@@ -135,12 +135,18 @@ fn is_text_decoder_argument(id: NodeId, ctx: &LintContext) -> bool {
     let Some(first_arg) = new_expr.arguments.first() else {
         return false;
     };
-    if !first_arg.span().contains_inclusive(ctx.nodes().get_node(id).span()) {
+    if !first_arg
+        .span()
+        .contains_inclusive(ctx.nodes().get_node(id).span())
+    {
         return false;
     }
 
     // Check that the callee is `TextDecoder`
-    new_expr.callee.get_identifier_reference().is_some_and(|ident| ident.name == "TextDecoder")
+    new_expr
+        .callee
+        .get_identifier_reference()
+        .is_some_and(|ident| ident.name == "TextDecoder")
 }
 
 fn is_jsx_element_with_charset_attr(
@@ -157,7 +163,10 @@ fn is_jsx_element_with_charset_attr(
         return false;
     };
 
-    if !attributes.iter().any(|attr| ident.name.eq_ignore_ascii_case(attr)) {
+    if !attributes
+        .iter()
+        .any(|attr| ident.name.eq_ignore_ascii_case(attr))
+    {
         return false;
     }
     let AstKind::JSXOpeningElement(opening_elem) = ctx.nodes().parent_kind(parent.id()) else {
@@ -237,7 +246,10 @@ fn test() {
         (r#"fs.readFileSync(file, "UTF-8")"#, None),
         (r#"fs[readFile](file, "UTF-8")"#, None),
         (r#"fs["readFile"](file, "UTF-8")"#, None),
-        (r#"import fs from 'fs'; await fs.readFile(file, "UTF-8",)"#, None),
+        (
+            r#"import fs from 'fs'; await fs.readFile(file, "UTF-8",)"#,
+            None,
+        ),
         (r#"fs.promises.readFile(file, "UTF-8",)"#, None),
         (r#"whatever.readFile(file, "UTF-8",)"#, None),
         // with_dash: true
@@ -279,41 +291,129 @@ fn test() {
         (r"'utf-8'", r"'utf8'", None),
         (r#""Utf8""#, r#""utf8""#, None),
         (r#""ASCII""#, r#""ascii""#, None),
-        (r#"fs.readFile?.(file, "UTF-8")"#, r#"fs.readFile?.(file, "utf8")"#, None),
-        (r#"fs?.readFile(file, "UTF-8")"#, r#"fs?.readFile(file, "utf8")"#, None),
-        (r#"readFile(file, "UTF-8")"#, r#"readFile(file, "utf8")"#, None),
-        (r#"fs.readFile(...file, "UTF-8")"#, r#"fs.readFile(...file, "utf8")"#, None),
-        (r#"new fs.readFile(file, "UTF-8")"#, r#"new fs.readFile(file, "utf8")"#, None),
+        (
+            r#"fs.readFile?.(file, "UTF-8")"#,
+            r#"fs.readFile?.(file, "utf8")"#,
+            None,
+        ),
+        (
+            r#"fs?.readFile(file, "UTF-8")"#,
+            r#"fs?.readFile(file, "utf8")"#,
+            None,
+        ),
+        (
+            r#"readFile(file, "UTF-8")"#,
+            r#"readFile(file, "utf8")"#,
+            None,
+        ),
+        (
+            r#"fs.readFile(...file, "UTF-8")"#,
+            r#"fs.readFile(...file, "utf8")"#,
+            None,
+        ),
+        (
+            r#"new fs.readFile(file, "UTF-8")"#,
+            r#"new fs.readFile(file, "utf8")"#,
+            None,
+        ),
         (
             r#"fs.readFile(file, {encoding: "UTF-8"})"#,
             r#"fs.readFile(file, {encoding: "utf8"})"#,
             None,
         ),
         (r#"fs.readFile("UTF-8")"#, r#"fs.readFile("utf8")"#, None),
-        (r#"fs.readFile(file, "UTF-8", () => {})"#, r#"fs.readFile(file, "utf8", () => {})"#, None),
-        (r#"fs.readFileSync(file, "UTF-8")"#, r#"fs.readFileSync(file, "utf8")"#, None),
-        (r#"fs[readFile](file, "UTF-8")"#, r#"fs[readFile](file, "utf8")"#, None),
-        (r#"fs["readFile"](file, "UTF-8")"#, r#"fs["readFile"](file, "utf8")"#, None),
+        (
+            r#"fs.readFile(file, "UTF-8", () => {})"#,
+            r#"fs.readFile(file, "utf8", () => {})"#,
+            None,
+        ),
+        (
+            r#"fs.readFileSync(file, "UTF-8")"#,
+            r#"fs.readFileSync(file, "utf8")"#,
+            None,
+        ),
+        (
+            r#"fs[readFile](file, "UTF-8")"#,
+            r#"fs[readFile](file, "utf8")"#,
+            None,
+        ),
+        (
+            r#"fs["readFile"](file, "UTF-8")"#,
+            r#"fs["readFile"](file, "utf8")"#,
+            None,
+        ),
         (
             r#"import fs from 'fs'; await fs.readFile(file, "UTF-8",)"#,
             r#"import fs from 'fs'; await fs.readFile(file, "utf8",)"#,
             None,
         ),
-        (r#"fs.promises.readFile(file, "UTF-8",)"#, r#"fs.promises.readFile(file, "utf8",)"#, None),
-        (r#"whatever.readFile(file, "UTF-8",)"#, r#"whatever.readFile(file, "utf8",)"#, None),
+        (
+            r#"fs.promises.readFile(file, "UTF-8",)"#,
+            r#"fs.promises.readFile(file, "utf8",)"#,
+            None,
+        ),
+        (
+            r#"whatever.readFile(file, "UTF-8",)"#,
+            r#"whatever.readFile(file, "utf8",)"#,
+            None,
+        ),
         // JSX cases that need utf-8
-        (r#"<meta charset="utf8" />"#, r#"<meta charset="utf-8" />"#, None),
-        (r#"<meta charset="UTF-8" />"#, r#"<meta charset="utf-8" />"#, None),
-        (r#"<form acceptCharset="utf8" />"#, r#"<form acceptCharset="utf-8" />"#, None),
-        (r#"<form accept-charset="UTF-8" />"#, r#"<form accept-charset="utf-8" />"#, None),
-        (r#"new TextDecoder("UTF-8")"#, r#"new TextDecoder("utf-8")"#, None),
-        (r#"new TextDecoder("UTF-8", options)"#, r#"new TextDecoder("utf-8", options)"#, None),
+        (
+            r#"<meta charset="utf8" />"#,
+            r#"<meta charset="utf-8" />"#,
+            None,
+        ),
+        (
+            r#"<meta charset="UTF-8" />"#,
+            r#"<meta charset="utf-8" />"#,
+            None,
+        ),
+        (
+            r#"<form acceptCharset="utf8" />"#,
+            r#"<form acceptCharset="utf-8" />"#,
+            None,
+        ),
+        (
+            r#"<form accept-charset="UTF-8" />"#,
+            r#"<form accept-charset="utf-8" />"#,
+            None,
+        ),
+        (
+            r#"new TextDecoder("UTF-8")"#,
+            r#"new TextDecoder("utf-8")"#,
+            None,
+        ),
+        (
+            r#"new TextDecoder("UTF-8", options)"#,
+            r#"new TextDecoder("utf-8", options)"#,
+            None,
+        ),
         // JSX non-matching elements (should use utf8)
-        (r#"<not-meta charset="utf-8" />"#, r#"<not-meta charset="utf8" />"#, None),
-        (r#"<not-meta notCharset="utf-8" />"#, r#"<not-meta notCharset="utf8" />"#, None),
-        (r#"<meta not-charset="utf-8" />"#, r#"<meta not-charset="utf8" />"#, None),
-        (r#"<meta charset="ASCII" />"#, r#"<meta charset="ascii" />"#, None),
-        (r#"<META CHARSET="ASCII" />"#, r#"<META CHARSET="ascii" />"#, None),
+        (
+            r#"<not-meta charset="utf-8" />"#,
+            r#"<not-meta charset="utf8" />"#,
+            None,
+        ),
+        (
+            r#"<not-meta notCharset="utf-8" />"#,
+            r#"<not-meta notCharset="utf8" />"#,
+            None,
+        ),
+        (
+            r#"<meta not-charset="utf-8" />"#,
+            r#"<meta not-charset="utf8" />"#,
+            None,
+        ),
+        (
+            r#"<meta charset="ASCII" />"#,
+            r#"<meta charset="ascii" />"#,
+            None,
+        ),
+        (
+            r#"<META CHARSET="ASCII" />"#,
+            r#"<META CHARSET="ascii" />"#,
+            None,
+        ),
         // with_dash: true
         (r#""UTF-8";"#, r#""utf-8";"#, with_dash.clone()),
         (r#""UTF8";"#, r#""utf-8";"#, with_dash.clone()),
@@ -321,26 +421,55 @@ fn test() {
         (r"'utf8';", r"'utf-8';", with_dash.clone()),
         (r#""Utf8";"#, r#""utf-8";"#, with_dash.clone()),
         (r#""ASCII";"#, r#""ascii";"#, with_dash.clone()),
-        (r#"fs.readFile(file, "utf8",);"#, r#"fs.readFile(file, "utf-8",);"#, with_dash.clone()),
+        (
+            r#"fs.readFile(file, "utf8",);"#,
+            r#"fs.readFile(file, "utf-8",);"#,
+            with_dash.clone(),
+        ),
         (
             r#"whatever.readFile(file, "UTF8",)"#,
             r#"whatever.readFile(file, "utf-8",)"#,
             with_dash.clone(),
         ),
-        (r#"<meta charset="utf8" />"#, r#"<meta charset="utf-8" />"#, with_dash.clone()),
-        (r#"<meta charset="UTF-8" />"#, r#"<meta charset="utf-8" />"#, with_dash.clone()),
+        (
+            r#"<meta charset="utf8" />"#,
+            r#"<meta charset="utf-8" />"#,
+            with_dash.clone(),
+        ),
+        (
+            r#"<meta charset="UTF-8" />"#,
+            r#"<meta charset="utf-8" />"#,
+            with_dash.clone(),
+        ),
         (
             r#"<form acceptCharset="utf8" />"#,
             r#"<form acceptCharset="utf-8" />"#,
             with_dash.clone(),
         ),
-        (r#"new TextDecoder("UTF-8")"#, r#"new TextDecoder("utf-8")"#, with_dash.clone()),
-        (r#"<not-meta charset="utf8" />"#, r#"<not-meta charset="utf-8" />"#, with_dash.clone()),
-        (r#"<not-meta notCharset="utf8" />"#, r#"<not-meta notCharset="utf-8" />"#, with_dash),
+        (
+            r#"new TextDecoder("UTF-8")"#,
+            r#"new TextDecoder("utf-8")"#,
+            with_dash.clone(),
+        ),
+        (
+            r#"<not-meta charset="utf8" />"#,
+            r#"<not-meta charset="utf-8" />"#,
+            with_dash.clone(),
+        ),
+        (
+            r#"<not-meta notCharset="utf8" />"#,
+            r#"<not-meta notCharset="utf-8" />"#,
+            with_dash,
+        ),
     ];
 
-    Tester::new(TextEncodingIdentifierCase::NAME, TextEncodingIdentifierCase::PLUGIN, pass, fail)
-        .change_rule_path_extension("jsx")
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        TextEncodingIdentifierCase::NAME,
+        TextEncodingIdentifierCase::PLUGIN,
+        pass,
+        fail,
+    )
+    .change_rule_path_extension("jsx")
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

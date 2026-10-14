@@ -20,9 +20,10 @@ impl<'a> Parse<'a> for ColorProfilePrelude<'a> {
                 if let InterpolableIdent::Literal(ident) = &ident
                     && !ident.name.starts_with("--")
                 {
-                    input
-                        .recoverable_errors
-                        .push(Error { kind: ErrorKind::ExpectDashedIdent, span: ident.span });
+                    input.recoverable_errors.push(Error {
+                        kind: ErrorKind::ExpectDashedIdent,
+                        span: ident.span,
+                    });
                 }
                 Ok(ColorProfilePrelude::DashedIdent(ident))
             }

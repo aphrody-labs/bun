@@ -35,14 +35,19 @@ pub fn write_quoted(kind: FlowScalarKind, span: Span, f: &mut YamlFormatter<'_, 
         // quoteSingle cannot represent backslash escapes; keep as-is when any appear
         FlowScalarKind::QuoteSingle => raw.contains('\\'),
         // A backslash escaping anything but `"` requires staying double-quoted
-        FlowScalarKind::QuoteDouble => {
-            raw.as_bytes().windows(2).any(|w| w[0] == b'\\' && w[1] != b'"')
-        }
+        FlowScalarKind::QuoteDouble => raw
+            .as_bytes()
+            .windows(2)
+            .any(|w| w[0] == b'\\' && w[1] != b'"'),
         FlowScalarKind::Plain => unreachable!("plain scalars are not quoted"),
     };
 
     if has_unreencodable_escape {
-        let quote = if kind == FlowScalarKind::QuoteDouble { "\"" } else { "'" };
+        let quote = if kind == FlowScalarKind::QuoteDouble {
+            "\""
+        } else {
+            "'"
+        };
         write!(f, text(quote));
         write_flow_scalar_content(kind, raw, f);
         write!(f, text(quote));
@@ -56,7 +61,10 @@ pub fn write_quoted(kind: FlowScalarKind, span: Span, f: &mut YamlFormatter<'_, 
             // `\"` unescapes to `"`; `'` must be doubled in single quotes.
             // (The guarding `contains('"')` means the first replace always matches,
             // so the chain is owned; copy it into the arena once.)
-            let content = raw.cow_replace("\\\"", "\"").cow_replace('\'', "''").into_owned();
+            let content = raw
+                .cow_replace("\\\"", "\"")
+                .cow_replace('\'', "''")
+                .into_owned();
             write_flow_scalar_content(kind, f.allocator().alloc_str(&content), f);
         } else {
             write_flow_scalar_content(kind, raw, f);
@@ -179,7 +187,13 @@ fn flow_scalar_line_contents<'s>(
     if prose_wrap == ProseWrap::Preserve {
         return trimmed
             .iter()
-            .map(|l| if l.is_empty() { vec![] } else { vec![Cow::Borrowed(*l)] })
+            .map(|l| {
+                if l.is_empty() {
+                    vec![]
+                } else {
+                    vec![Cow::Borrowed(*l)]
+                }
+            })
             .collect();
     }
 
@@ -220,7 +234,13 @@ fn flow_scalar_line_contents<'s>(
 pub fn join_lines_for_never_wrap(lines: Vec<Vec<Cow<'_, str>>>) -> Vec<Vec<Cow<'_, str>>> {
     lines
         .into_iter()
-        .map(|words| if words.len() <= 1 { words } else { vec![Cow::Owned(words.join(" "))] })
+        .map(|words| {
+            if words.len() <= 1 {
+                words
+            } else {
+                vec![Cow::Owned(words.join(" "))]
+            }
+        })
         .collect()
 }
 
@@ -256,10 +276,19 @@ mod tests {
             split_with_single_space(" a   b c   d e   f ").collect::<Vec<_>>(),
             vec![" a   b", "c   d", "e   f "]
         );
-        assert_eq!(split_with_single_space("a b").collect::<Vec<_>>(), vec!["a", "b"]);
-        assert_eq!(split_with_single_space("").collect::<Vec<_>>(), Vec::<&str>::new());
+        assert_eq!(
+            split_with_single_space("a b").collect::<Vec<_>>(),
+            vec!["a", "b"]
+        );
+        assert_eq!(
+            split_with_single_space("").collect::<Vec<_>>(),
+            Vec::<&str>::new()
+        );
         // A space-only line is ONE word: block scalar printing relies on
         // "non-empty input yields a non-empty group" to tell content from blank lines
-        assert_eq!(split_with_single_space("   ").collect::<Vec<_>>(), vec!["   "]);
+        assert_eq!(
+            split_with_single_space("   ").collect::<Vec<_>>(),
+            vec!["   "]
+        );
     }
 }

@@ -21,14 +21,20 @@ impl<'a> AccessorAnnotation<'a> {
         &self,
         allocator: &'a Allocator,
     ) -> Option<ArenaBox<'a, TSTypeAnnotation<'a>>> {
-        self.setter.as_ref().or(self.getter.as_ref()).map(|t| t.clone_in(allocator))
+        self.setter
+            .as_ref()
+            .or(self.getter.as_ref())
+            .map(|t| t.clone_in(allocator))
     }
 
     fn get_getter_annotation(
         &self,
         allocator: &'a Allocator,
     ) -> Option<ArenaBox<'a, TSTypeAnnotation<'a>>> {
-        self.getter.as_ref().or(self.setter.as_ref()).map(|t| t.clone_in(allocator))
+        self.getter
+            .as_ref()
+            .or(self.setter.as_ref())
+            .map(|t| t.clone_in(allocator))
     }
 }
 
@@ -40,7 +46,9 @@ impl<'a> IsolatedDeclarations<'a> {
     /// same static name identifies the same property. Keep structural equality as a
     /// fallback for supported non-static keys such as `Symbol.iterator`.
     fn accessor_keys_match(left: &PropertyKey<'a>, right: &PropertyKey<'a>) -> bool {
-        left.static_name().zip(right.static_name()).is_some_and(|(left, right)| left == right)
+        left.static_name()
+            .zip(right.static_name())
+            .is_some_and(|(left, right)| left == right)
             || left.content_eq(right)
     }
 
@@ -163,9 +171,9 @@ impl<'a> IsolatedDeclarations<'a> {
             | Expression::NumericLiteral(_)
             | Expression::BigIntLiteral(_)
             | Expression::StringLiteral(_) => Some(expr.clone_in(self.allocator())),
-            Expression::TemplateLiteral(lit) if lit.expressions.is_empty() => {
-                self.transform_template_to_string(lit).map(Expression::StringLiteral)
-            }
+            Expression::TemplateLiteral(lit) if lit.expressions.is_empty() => self
+                .transform_template_to_string(lit)
+                .map(Expression::StringLiteral),
             Expression::UnaryExpression(expr) if Self::can_infer_unary_expression(expr) => {
                 Some(Expression::UnaryExpression(expr.clone_in(self.allocator())))
             }
@@ -375,7 +383,9 @@ impl<'a> IsolatedDeclarations<'a> {
                             param.type_annotation.clone_in(self.allocator())
                         } else {
                             // transformed params will definitely have type annotation
-                            typed_params.items[index].type_annotation.clone_in(self.allocator())
+                            typed_params.items[index]
+                                .type_annotation
+                                .clone_in(self.allocator())
                         };
                     self.transform_formal_parameter_to_class_property(param, type_annotation)
                 }),
@@ -429,7 +439,10 @@ impl<'a> IsolatedDeclarations<'a> {
                                 method_annotations.push((
                                     method.key.clone_in(self.allocator()),
                                     method.r#static,
-                                    AccessorAnnotation { setter: Some(annotation), getter: None },
+                                    AccessorAnnotation {
+                                        setter: Some(annotation),
+                                        getter: None,
+                                    },
                                 ));
                             }
                         }
@@ -440,12 +453,14 @@ impl<'a> IsolatedDeclarations<'a> {
                         // body inference here would surface errors (e.g. TS9038) that are not
                         // relevant, since the private accessor itself is emitted as a
                         // type-erased class member.
-                        let annotation =
-                            if method.accessibility.is_some_and(TSAccessibility::is_private) {
-                                function.return_type.clone_in(self.allocator())
-                            } else {
-                                self.infer_function_return_type(function)
-                            };
+                        let annotation = if method
+                            .accessibility
+                            .is_some_and(TSAccessibility::is_private)
+                        {
+                            function.return_type.clone_in(self.allocator())
+                        } else {
+                            self.infer_function_return_type(function)
+                        };
                         if let Some(annotation) = annotation {
                             if let Some(entry) =
                                 method_annotations.iter_mut().find(|(key, is_static, _)| {
@@ -458,7 +473,10 @@ impl<'a> IsolatedDeclarations<'a> {
                                 method_annotations.push((
                                     method.key.clone_in(self.allocator()),
                                     method.r#static,
-                                    AccessorAnnotation { setter: None, getter: Some(annotation) },
+                                    AccessorAnnotation {
+                                        setter: None,
+                                        getter: Some(annotation),
+                                    },
                                 ));
                             }
                         }
@@ -481,7 +499,9 @@ impl<'a> IsolatedDeclarations<'a> {
                 && !getter.key.is_private_identifier()
                 && (Self::is_valid_property_key(&getter.key) || !getter.computed)
                 && Self::accessor_keys_match(&getter.key, &setter.key)
-                && !getter.accessibility.is_some_and(TSAccessibility::is_private)
+                && !getter
+                    .accessibility
+                    .is_some_and(TSAccessibility::is_private)
         })
     }
 
@@ -538,7 +558,10 @@ impl<'a> IsolatedDeclarations<'a> {
                     let function = &method.value;
                     let params = match method.kind {
                         MethodDefinitionKind::Set => {
-                            if method.accessibility.is_some_and(TSAccessibility::is_private) {
+                            if method
+                                .accessibility
+                                .is_some_and(TSAccessibility::is_private)
+                            {
                                 elements.push(self.transform_private_modifier_method(method));
                                 continue;
                             }
@@ -575,8 +598,9 @@ impl<'a> IsolatedDeclarations<'a> {
                             }
                         }
                         MethodDefinitionKind::Constructor => {
-                            let is_private =
-                                method.accessibility.is_some_and(TSAccessibility::is_private);
+                            let is_private = method
+                                .accessibility
+                                .is_some_and(TSAccessibility::is_private);
 
                             let inferred_params =
                                 self.infer_constructor_parameter_property_types(&function.params);
@@ -605,8 +629,9 @@ impl<'a> IsolatedDeclarations<'a> {
                             params
                         }
                         _ => {
-                            let is_private =
-                                method.accessibility.is_some_and(TSAccessibility::is_private);
+                            let is_private = method
+                                .accessibility
+                                .is_some_and(TSAccessibility::is_private);
                             if is_private {
                                 elements.push(self.transform_private_modifier_method(method));
                                 continue;
@@ -767,6 +792,12 @@ impl<'a> IsolatedDeclarations<'a> {
     ) -> ArenaBox<'a, FormalParameters<'a>> {
         let parameter =
             FormalParameter::new(SPAN, [], kind, None, None, false, None, false, false, self);
-        FormalParameters::boxed(SPAN, FormalParameterKind::Signature, [parameter], None, self)
+        FormalParameters::boxed(
+            SPAN,
+            FormalParameterKind::Signature,
+            [parameter],
+            None,
+            self,
+        )
     }
 }

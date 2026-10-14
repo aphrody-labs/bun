@@ -228,8 +228,10 @@ fn emphasis_needs_change(bytes: &[u8]) -> bool {
 pub fn capitalize_first(s: &str) -> Cow<'_, str> {
     if s.is_empty()
         || s.starts_with('`')
-        || s.get(..7).is_some_and(|p| p.eq_ignore_ascii_case("http://"))
-        || s.get(..8).is_some_and(|p| p.eq_ignore_ascii_case("https://"))
+        || s.get(..7)
+            .is_some_and(|p| p.eq_ignore_ascii_case("http://"))
+        || s.get(..8)
+            .is_some_and(|p| p.eq_ignore_ascii_case("https://"))
     {
         return Cow::Borrowed(s);
     }
@@ -420,7 +422,11 @@ fn normalize_type_impl(
     };
     // Phase 3: Unquote object property names that are valid JS identifiers.
     // The plugin's formatType() uses Prettier's TS parser which strips unnecessary quotes.
-    let unquoted = if convert_quotes { unquote_object_property_names(&quoted) } else { quoted };
+    let unquoted = if convert_quotes {
+        unquote_object_property_names(&quoted)
+    } else {
+        quoted
+    };
     // Phase 4: Format inline object type spacing (simulating Prettier's TS parser).
     // { key:value } → { key: value }
     Cow::Owned(fix_object_commas(&unquoted).into_owned())
@@ -609,8 +615,10 @@ fn normalize_type_core(type_str: &str) -> String {
     // Check for top-level union: split at `|`, normalize each part, then join
     let parts = split_at_top_level_pipe(trimmed);
     if parts.len() > 1 {
-        let normalized_parts: Vec<String> =
-            parts.iter().map(|p| normalize_type_core(p.trim())).collect();
+        let normalized_parts: Vec<String> = parts
+            .iter()
+            .map(|p| normalize_type_core(p.trim()))
+            .collect();
         return normalized_parts.join(" | ");
     }
 
@@ -1315,9 +1323,18 @@ mod tests {
         assert_eq!(capitalize_first("http://example.com"), "http://example.com");
         assert_eq!(capitalize_first("HTTP://example.com"), "HTTP://example.com");
         assert_eq!(capitalize_first("Http://example.com"), "Http://example.com");
-        assert_eq!(capitalize_first("https://example.com"), "https://example.com");
-        assert_eq!(capitalize_first("HTTPS://example.com"), "HTTPS://example.com");
-        assert_eq!(capitalize_first("Https://example.com"), "Https://example.com");
+        assert_eq!(
+            capitalize_first("https://example.com"),
+            "https://example.com"
+        );
+        assert_eq!(
+            capitalize_first("HTTPS://example.com"),
+            "HTTPS://example.com"
+        );
+        assert_eq!(
+            capitalize_first("Https://example.com"),
+            "Https://example.com"
+        );
     }
 
     #[test]
@@ -1347,10 +1364,16 @@ mod tests {
     #[test]
     fn test_normalize_type_quotes() {
         assert_eq!(normalize_type("import('axios')"), "import(\"axios\")");
-        assert_eq!(normalize_type("import('../types').Foo"), "import(\"../types\").Foo");
+        assert_eq!(
+            normalize_type("import('../types').Foo"),
+            "import(\"../types\").Foo"
+        );
         assert_eq!(normalize_type("import(\"axios\")"), "import(\"axios\")");
         // Property access quotes should be preserved (not converted)
-        assert_eq!(normalize_type("AST.Fragment['nodes']"), "AST.Fragment['nodes']");
+        assert_eq!(
+            normalize_type("AST.Fragment['nodes']"),
+            "AST.Fragment['nodes']"
+        );
         assert_eq!(normalize_type("Binding['kind']"), "Binding['kind']");
         // String literal types should be preserved
         assert_eq!(normalize_type("'hello'"), "'hello'");
@@ -1369,15 +1392,24 @@ mod tests {
     fn test_normalize_array_type() {
         assert_eq!(normalize_type("Array.<String>"), "String[]");
         assert_eq!(normalize_type("Array<String>"), "String[]");
-        assert_eq!(normalize_type("Array<(String | Number)>"), "(String | Number)[]");
-        assert_eq!(normalize_type("Array<String|Number>"), "(String | Number)[]");
+        assert_eq!(
+            normalize_type("Array<(String | Number)>"),
+            "(String | Number)[]"
+        );
+        assert_eq!(
+            normalize_type("Array<String|Number>"),
+            "(String | Number)[]"
+        );
         // Arrow function inside Array<> should not confuse the > matching
         assert_eq!(
             normalize_type("Array<(element: HTMLElement) => boolean>"),
             "((element: HTMLElement) => boolean)[]"
         );
         // Array conversion inside union members
-        assert_eq!(normalize_type("Array<number> | Array<string>"), "number[] | string[]");
+        assert_eq!(
+            normalize_type("Array<number> | Array<string>"),
+            "number[] | string[]"
+        );
         assert_eq!(
             normalize_type(
                 "Array<(item: Foo<Bar>) => Bar<number>> | Array<number> | Array<string>"
@@ -1390,7 +1422,10 @@ mod tests {
     fn test_normalize_rest_type() {
         assert_eq!(normalize_type("... *"), "...any");
         assert_eq!(normalize_type("... number"), "...number");
-        assert_eq!(normalize_type("... (string|number)"), "...(string | number)");
+        assert_eq!(
+            normalize_type("... (string|number)"),
+            "...(string | number)"
+        );
         assert_eq!(normalize_type("... string|number"), "...(string | number)");
     }
 
@@ -1411,9 +1446,18 @@ mod tests {
     #[test]
     fn test_normalize_type_whitespace() {
         assert_eq!(normalize_type_whitespace("string"), "string");
-        assert_eq!(normalize_type_whitespace("  string  |  number  "), "string | number");
-        assert_eq!(normalize_type_whitespace("string|number"), "string | number");
-        assert_eq!(normalize_type_whitespace("Array< string >"), "Array< string >");
+        assert_eq!(
+            normalize_type_whitespace("  string  |  number  "),
+            "string | number"
+        );
+        assert_eq!(
+            normalize_type_whitespace("string|number"),
+            "string | number"
+        );
+        assert_eq!(
+            normalize_type_whitespace("Array< string >"),
+            "Array< string >"
+        );
         assert_eq!(normalize_type_whitespace("  a   b  "), "a b");
         assert_eq!(normalize_type_whitespace("A&B"), "A & B");
     }

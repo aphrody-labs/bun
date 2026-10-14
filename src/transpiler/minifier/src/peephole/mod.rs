@@ -83,11 +83,16 @@ impl<'a> PeepholeOptimizations {
             // `export default function() {}` is hoisted; `export default <expr>`
             // or `export default class C extends … {}` runs user code.
             Statement::ExportDefaultDeclaration(e) => {
-                matches!(&e.declaration, ExportDefaultDeclarationKind::FunctionDeclaration(_))
+                matches!(
+                    &e.declaration,
+                    ExportDefaultDeclarationKind::FunctionDeclaration(_)
+                )
             }
             // Bare declarations route through the shared classifier; anything else
             // (blocks, expressions, control flow) can run user code.
-            _ => stmt.as_declaration().is_some_and(Self::is_declarative_declaration),
+            _ => stmt
+                .as_declaration()
+                .is_some_and(Self::is_declarative_declaration),
         }
     }
 
@@ -112,7 +117,9 @@ impl<'a> PeepholeOptimizations {
     /// which can run user code) with either no initializer or a primitive
     /// literal initializer.
     fn is_declarative_variable_declaration(decl: &VariableDeclaration<'a>) -> bool {
-        decl.declarations.iter().all(Self::is_declarative_variable_declarator)
+        decl.declarations
+            .iter()
+            .all(Self::is_declarative_variable_declarator)
     }
 
     /// Note: only AST `Literal`s qualify. Constant-but-non-literal initializers
@@ -139,9 +146,10 @@ impl<'a> PeepholeOptimizations {
     fn unconditional_super_call_end(expr: &Expression<'a>) -> Option<u32> {
         match expr {
             Expression::CallExpression(call) if call.callee.is_super() => Some(call.span.end),
-            Expression::SequenceExpression(seq) => {
-                seq.expressions.iter().find_map(Self::unconditional_super_call_end)
-            }
+            Expression::SequenceExpression(seq) => seq
+                .expressions
+                .iter()
+                .find_map(Self::unconditional_super_call_end),
             _ => None,
         }
     }
@@ -257,8 +265,11 @@ impl<'a> PeepholeOptimizations {
                 };
                 // Parameter defaults are visited before their function body, so a missing
                 // owner frame means this derived constructor's `this` is uninitialized.
-                let Some(owner_index) =
-                    ctx.state.body_frames.iter().rposition(|frame| frame.scope_id == this_scope)
+                let Some(owner_index) = ctx
+                    .state
+                    .body_frames
+                    .iter()
+                    .rposition(|frame| frame.scope_id == this_scope)
                 else {
                     return true;
                 };
@@ -312,10 +323,10 @@ impl<'a> Traverse<'a> for PeepholeOptimizations {
         // when the body has any loader — bailing every program-scope var inline.
         // Loaders are hoisted, so scan the whole current body each pass (an
         // import may follow a leading var, or an earlier pass may remove one).
-        let module_has_loaders = program
-            .body
-            .iter()
-            .any(|s| s.as_module_declaration().is_some_and(|m| m.source().is_some()));
+        let module_has_loaders = program.body.iter().any(|s| {
+            s.as_module_declaration()
+                .is_some_and(|m| m.source().is_some())
+        });
         // `enter`/`exit_function_body` are balanced, so the stack is back to its
         // single program-root entry by the next pass; reset it in place rather
         // than reallocating (matching the `reset`/`clear` above).
@@ -369,7 +380,8 @@ impl<'a> Traverse<'a> for PeepholeOptimizations {
                     _ => None,
                 })
             } else {
-                body.as_expression().and_then(Self::unconditional_super_call_end)
+                body.as_expression()
+                    .and_then(Self::unconditional_super_call_end)
             }
         } else {
             None
@@ -779,7 +791,9 @@ impl<'a> Traverse<'a> for PeepholeOptimizations {
         }
         Self::remove_dead_code_exit_class_body(body, ctx);
         Self::remove_unused_private_members(body, ctx);
-        ctx.state.private_member_usage.exit_class(Self::declared_private_member_names(body));
+        ctx.state
+            .private_member_usage
+            .exit_class(Self::declared_private_member_names(body));
     }
 
     fn exit_catch_clause(&mut self, catch: &mut CatchClause<'a>, ctx: &mut TraverseCtx<'a>) {

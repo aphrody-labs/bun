@@ -8,7 +8,9 @@ impl<'a> VisitJsMut<'a> for FormalParameterBindingPattern {
     fn visit_binding_pattern(&mut self, pattern: &mut BindingPattern<'a>) {
         if matches!(pattern, BindingPattern::AssignmentPattern(_)) {
             pattern.replace_with(|pattern| {
-                let BindingPattern::AssignmentPattern(assignment) = pattern else { unreachable!() };
+                let BindingPattern::AssignmentPattern(assignment) = pattern else {
+                    unreachable!()
+                };
                 assignment.unbox().left
             });
         }

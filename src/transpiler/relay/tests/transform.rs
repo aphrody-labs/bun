@@ -11,12 +11,21 @@ fn transform(source_path: &str, source_text: &str, options: RelayOptions) -> (St
     let source_type = SourceType::from_path(Path::new(source_path)).unwrap();
     let allocator = Allocator::default();
     let ret = Parser::new(&allocator, source_text, source_type).parse();
-    assert!(ret.diagnostics.is_empty(), "parse errors for source {source_text}");
+    assert!(
+        ret.diagnostics.is_empty(),
+        "parse errors for source {source_text}"
+    );
     let mut program = ret.program;
-    let scoping = SemanticBuilder::new().build(&program).semantic.into_scoping();
+    let scoping = SemanticBuilder::new()
+        .build(&program)
+        .semantic
+        .into_scoping();
     let ret = Relay::new(options, Path::new(source_path)).build(&allocator, &mut program, scoping);
     let code = Codegen::new()
-        .with_options(CodegenOptions { single_quote: true, ..CodegenOptions::default() })
+        .with_options(CodegenOptions {
+            single_quote: true,
+            ..CodegenOptions::default()
+        })
         .build(&program)
         .code;
     (code, ret.diagnostics.has_errors())
@@ -26,9 +35,15 @@ fn codegen(source_path: &str, source_text: &str) -> String {
     let source_type = SourceType::from_path(Path::new(source_path)).unwrap();
     let allocator = Allocator::default();
     let ret = Parser::new(&allocator, source_text, source_type).parse();
-    assert!(ret.diagnostics.is_empty(), "parse errors for expected {source_text}");
+    assert!(
+        ret.diagnostics.is_empty(),
+        "parse errors for expected {source_text}"
+    );
     Codegen::new()
-        .with_options(CodegenOptions { single_quote: true, ..CodegenOptions::default() })
+        .with_options(CodegenOptions {
+            single_quote: true,
+            ..CodegenOptions::default()
+        })
         .build(&ret.program)
         .code
 }
@@ -36,8 +51,15 @@ fn codegen(source_path: &str, source_text: &str) -> String {
 #[track_caller]
 fn test_with_path(source_path: &str, source_text: &str, options: RelayOptions, expected: &str) {
     let (code, has_errors) = transform(source_path, source_text, options);
-    assert!(!has_errors, "unexpected diagnostics for source {source_text}");
-    assert_eq!(code, codegen(source_path, expected), "for source {source_text}");
+    assert!(
+        !has_errors,
+        "unexpected diagnostics for source {source_text}"
+    );
+    assert_eq!(
+        code,
+        codegen(source_path, expected),
+        "for source {source_text}"
+    );
 }
 
 #[test]

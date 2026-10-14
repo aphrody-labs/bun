@@ -96,12 +96,15 @@ declare_oxc_lint!(
     react,
     style,
     version = "1.33.0",
-    short_description = "Disallow usage of `shouldComponentUpdate` when extending `React.PureComponent`.",
+    short_description =
+        "Disallow usage of `shouldComponentUpdate` when extending `React.PureComponent`.",
 );
 
 impl Rule for NoRedundantShouldComponentUpdate {
     fn run<'a>(&self, node: &AstNode<'a>, ctx: &LintContext<'a>) {
-        let AstKind::Class(class_expr) = node.kind() else { return };
+        let AstKind::Class(class_expr) = node.kind() else {
+            return;
+        };
         if !is_react_pure_component(class_expr) {
             return;
         }
@@ -145,7 +148,9 @@ fn is_react_pure_component<'a>(class: &'a Class<'a>) -> bool {
             && let Expression::Identifier(ident) = member_expr.object()
         {
             return ident.name == "React"
-                && member_expr.static_property_name().is_some_and(|name| name == "PureComponent");
+                && member_expr
+                    .static_property_name()
+                    .is_some_and(|name| name == "PureComponent");
         }
 
         if let Some(ident_reference) = super_class.get_identifier_reference() {

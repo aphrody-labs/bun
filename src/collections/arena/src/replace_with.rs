@@ -164,7 +164,10 @@ pub trait ReplaceWith<'a>: Dummy<'a> {
         // Create a guard before calling `replacer`.
         // If `replacer` unwinds, `guard`'s `Drop` writes a fresh dummy into `*ptr`,
         // so the slot never keeps a bitwise duplicate of the value moved into `replacer`.
-        let guard = PanicGuard::<'a, Self> { ptr, marker: PhantomData };
+        let guard = PanicGuard::<'a, Self> {
+            ptr,
+            marker: PhantomData,
+        };
 
         let new = replacer(old);
 

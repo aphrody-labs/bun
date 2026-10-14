@@ -165,12 +165,16 @@ impl Rule for MethodSignatureStyle {
                 ctx.diagnostic(method_signature_style_diagnostic(self.0, ts_method.span));
             }
             AstKind::TSPropertySignature(ts_property) if self.is_method_style() => {
-                if !ts_property.type_annotation.as_ref().is_some_and(|type_annotation| {
-                    matches!(
-                        type_annotation.type_annotation.without_parenthesized(),
-                        TSType::TSFunctionType(_)
-                    )
-                }) {
+                if !ts_property
+                    .type_annotation
+                    .as_ref()
+                    .is_some_and(|type_annotation| {
+                        matches!(
+                            type_annotation.type_annotation.without_parenthesized(),
+                            TSType::TSFunctionType(_)
+                        )
+                    })
+                {
                     return;
                 }
 
@@ -249,7 +253,10 @@ fn test() {
         ("type Test = { readonly f: (a: string) => number };", None),
         ("type Test = { ['f']?: (a: boolean) => void };", None),
         ("type Test = { readonly f?: <T>(a?: T) => T };", None),
-        ("type Test = { readonly ['f']?: <T>(a: T, b: T) => T };", None),
+        (
+            "type Test = { readonly ['f']?: <T>(a: T, b: T) => T };",
+            None,
+        ),
         ("type Test = { get f(): number };", None),
         ("type Test = { set f(value: number) };", None),
         (
@@ -918,6 +925,11 @@ fn test() {
         ),
     ];
 
-    Tester::new(MethodSignatureStyle::NAME, MethodSignatureStyle::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        MethodSignatureStyle::NAME,
+        MethodSignatureStyle::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

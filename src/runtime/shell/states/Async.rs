@@ -125,8 +125,7 @@ impl Async {
                             }
                         }
                     }
-                    ast::Expr::Assign(_)
-                    | ast::Expr::Async(_) => panic!(
+                    ast::Expr::Assign(_) | ast::Expr::Async(_) => panic!(
                         "Unexpected Expr variant as Async child, this indicates a bug in Bun."
                     ),
                 };

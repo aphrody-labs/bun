@@ -188,7 +188,9 @@ fn to_array_call_fix(expr: &Expression) -> Option<ToArrayCallFix> {
         return None;
     }
 
-    let property_span = callee_member_expr.static_property_info().map(|(span, _)| span)?;
+    let property_span = callee_member_expr
+        .static_property_info()
+        .map(|(span, _)| span)?;
 
     Some(ToArrayCallFix {
         property_span,
@@ -216,13 +218,23 @@ const TYPED_ARRAYS: &[&str] = &[
 
 fn is_array_or_typed_array_from_call(call_expr: &CallExpression) -> bool {
     is_method_call(call_expr, Some(&["Array"]), Some(&["from"]), Some(1), None)
-        || is_method_call(call_expr, Some(TYPED_ARRAYS), Some(&["from"]), Some(1), None)
+        || is_method_call(
+            call_expr,
+            Some(TYPED_ARRAYS),
+            Some(&["from"]),
+            Some(1),
+            None,
+        )
 }
 
 // Case 1: `new Set(iterator.toArray())`, `new Map(iterator.toArray())`, etc.
 fn check_new_expr(new_expr: &NewExpression, ctx: &LintContext) {
-    if !is_new_expression(new_expr, &["Map", "WeakMap", "Set", "WeakSet"], Some(1), Some(1))
-        && !is_new_expression(new_expr, TYPED_ARRAYS, Some(1), None)
+    if !is_new_expression(
+        new_expr,
+        &["Map", "WeakMap", "Set", "WeakSet"],
+        Some(1),
+        Some(1),
+    ) && !is_new_expression(new_expr, TYPED_ARRAYS, Some(1), None)
     {
         return;
     }
@@ -254,7 +266,13 @@ fn check_new_expr(new_expr: &NewExpression, ctx: &LintContext) {
 fn check_call_expr(call_expr: &CallExpression, ctx: &LintContext) {
     // Case 2a: `Array.from(iterator.toArray())`, `TypedArray.from(…)`, `Object.fromEntries(…)`
     if is_array_or_typed_array_from_call(call_expr)
-        || is_method_call(call_expr, Some(&["Object"]), Some(&["fromEntries"]), Some(1), None)
+        || is_method_call(
+            call_expr,
+            Some(&["Object"]),
+            Some(&["fromEntries"]),
+            Some(1),
+            None,
+        )
     {
         let Some(callee_member_expr) = call_expr.callee.get_member_expr() else {
             return;
@@ -337,8 +355,13 @@ fn check_call_expr(call_expr: &CallExpression, ctx: &LintContext) {
     }
 
     // Case 2c: `iterator.toArray().every(fn)`, `.find(fn)`, `.forEach(fn)`, `.some(fn)`, `.reduce(fn, init)`
-    if is_method_call(call_expr, None, Some(&["every", "find", "forEach", "some"]), None, Some(1))
-        || is_method_call(call_expr, None, Some(&["reduce"]), Some(2), Some(2))
+    if is_method_call(
+        call_expr,
+        None,
+        Some(&["every", "find", "forEach", "some"]),
+        None,
+        Some(1),
+    ) || is_method_call(call_expr, None, Some(&["reduce"]), Some(2), Some(2))
     {
         let Some(callee_member_expr) = call_expr.callee.get_member_expr() else {
             return;
@@ -557,20 +580,50 @@ fn test() {
         ("new Map(iterator.toArray())", "new Map(iterator)"),
         ("new WeakSet(iterator.toArray())", "new WeakSet(iterator)"),
         ("new WeakMap(iterator.toArray())", "new WeakMap(iterator)"),
-        ("new Int8Array(iterator.toArray())", "new Int8Array(iterator)"),
-        ("new Uint8Array(iterator.toArray())", "new Uint8Array(iterator)"),
-        ("new Float64Array(iterator.toArray())", "new Float64Array(iterator)"),
+        (
+            "new Int8Array(iterator.toArray())",
+            "new Int8Array(iterator)",
+        ),
+        (
+            "new Uint8Array(iterator.toArray())",
+            "new Uint8Array(iterator)",
+        ),
+        (
+            "new Float64Array(iterator.toArray())",
+            "new Float64Array(iterator)",
+        ),
         ("Promise.all(iterator.toArray())", "Promise.all(iterator)"),
-        ("Promise.allSettled(iterator.toArray())", "Promise.allSettled(iterator)"),
+        (
+            "Promise.allSettled(iterator.toArray())",
+            "Promise.allSettled(iterator)",
+        ),
         ("Promise.any(iterator.toArray())", "Promise.any(iterator)"),
         ("Promise.race(iterator.toArray())", "Promise.race(iterator)"),
         ("Array.from(iterator.toArray())", "Array.from(iterator)"),
-        ("Object.fromEntries(iterator.toArray())", "Object.fromEntries(iterator)"),
-        ("Uint8Array.from(iterator.toArray())", "Uint8Array.from(iterator)"),
-        ("Array.from(iterator.toArray(), mapFn)", "Array.from(iterator, mapFn)"),
-        ("Object.fromEntries(iterator.toArray(), extra)", "Object.fromEntries(iterator, extra)"),
-        ("for (const x of iterator.toArray());", "for (const x of iterator);"),
-        ("for (const x of foo.bar().toArray());", "for (const x of foo.bar());"),
+        (
+            "Object.fromEntries(iterator.toArray())",
+            "Object.fromEntries(iterator)",
+        ),
+        (
+            "Uint8Array.from(iterator.toArray())",
+            "Uint8Array.from(iterator)",
+        ),
+        (
+            "Array.from(iterator.toArray(), mapFn)",
+            "Array.from(iterator, mapFn)",
+        ),
+        (
+            "Object.fromEntries(iterator.toArray(), extra)",
+            "Object.fromEntries(iterator, extra)",
+        ),
+        (
+            "for (const x of iterator.toArray());",
+            "for (const x of iterator);",
+        ),
+        (
+            "for (const x of foo.bar().toArray());",
+            "for (const x of foo.bar());",
+        ),
         (
             "async () => { for await (const x of iterator.toArray()); }",
             "async () => { for await (const x of iterator); }",
@@ -586,7 +639,10 @@ fn test() {
         ("iterator.toArray().every(fn)", "iterator.every(fn)"),
         ("iterator.toArray().find(fn)", "iterator.find(fn)"),
         ("iterator.toArray().forEach(fn)", "iterator.forEach(fn)"),
-        ("iterator.toArray().reduce(fn, init)", "iterator.reduce(fn, init)"),
+        (
+            "iterator.toArray().reduce(fn, init)",
+            "iterator.reduce(fn, init)",
+        ),
         ("iterator.toArray().some(fn)", "iterator.some(fn)"),
         (
             "const result = iterator
@@ -605,16 +661,30 @@ fn test() {
         ("new Foo(...iterator.toArray())", "new Foo(...iterator)"),
         ("new Set((iterator.toArray()))", "new Set((iterator))"),
         ("new Set((iterator.toArray)())", "new Set((iterator))"),
-        ("Promise.all((iterator.toArray()))", "Promise.all((iterator))"),
+        (
+            "Promise.all((iterator.toArray()))",
+            "Promise.all((iterator))",
+        ),
         ("Array.from((iterator.toArray()))", "Array.from((iterator))"),
-        ("Object.fromEntries((iterator.toArray()))", "Object.fromEntries((iterator))"),
-        ("for (const x of (iterator.toArray()));", "for (const x of (iterator));"),
+        (
+            "Object.fromEntries((iterator.toArray()))",
+            "Object.fromEntries((iterator))",
+        ),
+        (
+            "for (const x of (iterator.toArray()));",
+            "for (const x of (iterator));",
+        ),
         ("[...(iterator.toArray())]", "[...(iterator)]"),
         ("call(...(iterator.toArray()))", "call(...(iterator))"),
         ("new Foo(...(iterator.toArray()))", "new Foo(...(iterator))"),
     ];
 
-    Tester::new(NoUselessIteratorToArray::NAME, NoUselessIteratorToArray::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        NoUselessIteratorToArray::NAME,
+        NoUselessIteratorToArray::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

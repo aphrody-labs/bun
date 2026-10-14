@@ -114,7 +114,12 @@ impl TestFile {
     pub fn new(url: &str) -> Self {
         let (file_name, source_text) = Self::get_source_text(url).unwrap();
         let source_type = SourceType::from_path(&file_name).unwrap();
-        Self { url: url.to_string(), file_name, source_text, source_type }
+        Self {
+            url: url.to_string(),
+            file_name,
+            source_text,
+            source_type,
+        }
     }
 
     /// # Errors
@@ -123,8 +128,10 @@ impl TestFile {
         if !lib.starts_with("https://") {
             return Err(format!("Not an https url: {lib:?}"));
         }
-        let filename =
-            lib.split('/').next_back().ok_or_else(|| "lib url has no segments".to_string())?;
+        let filename = lib
+            .split('/')
+            .next_back()
+            .ok_or_else(|| "lib url has no segments".to_string())?;
 
         let file = project_root().join("target").join(filename);
 

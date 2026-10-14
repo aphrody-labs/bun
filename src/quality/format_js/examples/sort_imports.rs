@@ -13,12 +13,17 @@ use pico_args::Arguments;
 fn main() -> Result<(), String> {
     let mut args = Arguments::from_env();
     let show_ir = args.contains("--ir");
-    let name = args.free_from_str().unwrap_or_else(|_| "test.js".to_string());
+    let name = args
+        .free_from_str()
+        .unwrap_or_else(|_| "test.js".to_string());
 
     let partition_by_newline = args.contains("--partition_by_newline");
     let partition_by_comment = args.contains("--partition_by_comment");
     let sort_side_effects = args.contains("--sort_side_effects");
-    let order = args.opt_value_from_str("--order").unwrap_or(None).unwrap_or(SortOrder::Asc);
+    let order = args
+        .opt_value_from_str("--order")
+        .unwrap_or(None)
+        .unwrap_or(SortOrder::Asc);
     let ignore_case = !args.contains("--no_ignore_case");
     let newlines_between = !args.contains("--no_newlines_between");
 
@@ -42,8 +47,10 @@ fn main() -> Result<(), String> {
     let allocator = Allocator::new();
 
     // Format the parsed code
-    let options =
-        JsFormatOptions { sort_imports: Some(sort_imports_options.clone()), ..Default::default() };
+    let options = JsFormatOptions {
+        sort_imports: Some(sort_imports_options.clone()),
+        ..Default::default()
+    };
 
     let formatted = match oxc_formatter::format(&allocator, &source_text, source_type, options) {
         Ok(formatted) => formatted,

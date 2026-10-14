@@ -24,9 +24,10 @@ impl Value {
     /// Case-insensitive lookup (winget manifests are case-insensitive).
     pub fn get_ci(&self, key: &str) -> Option<&Value> {
         match self {
-            Value::Object(rows) => {
-                rows.iter().find(|(k, _)| k.eq_ignore_ascii_case(key)).map(|(_, v)| v)
-            },
+            Value::Object(rows) => rows
+                .iter()
+                .find(|(k, _)| k.eq_ignore_ascii_case(key))
+                .map(|(_, v)| v),
             _ => None,
         }
     }
@@ -82,7 +83,7 @@ pub fn write_json_string(out: &mut String, s: &str) {
             c if (c as u32) < 0x20 => {
                 use core::fmt::Write as _;
                 let _ = write!(out, "\\u{:04x}", c as u32);
-            },
+            }
             c => out.push(c),
         }
     }

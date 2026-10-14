@@ -175,14 +175,18 @@ impl Rule for NoInstanceofBuiltins {
     }
 
     fn run<'a>(&self, node: &AstNode<'a>, ctx: &LintContext<'a>) {
-        let AstKind::BinaryExpression(bin) = node.kind() else { return };
+        let AstKind::BinaryExpression(bin) = node.kind() else {
+            return;
+        };
         if bin.operator != BinaryOperator::Instanceof {
             return;
         }
 
         let ctor_expr = bin.right.get_inner_expression();
 
-        let Expression::Identifier(ident) = ctor_expr else { return };
+        let Expression::Identifier(ident) = ctor_expr else {
+            return;
+        };
         let ctor_name = ident.name.as_str();
 
         if self.0.exclude.iter().any(|s| s == ctor_name) {
@@ -245,9 +249,18 @@ fn test() {
     use crate::tester::Tester;
 
     let pass = vec![
-        ("fooExclude instanceof Function", Some(serde_json::json!([{"exclude": ["Function"]}]))),
-        ("fooExclude instanceof Array", Some(serde_json::json!([{"exclude": ["Array"]}]))),
-        ("fooExclude instanceof String", Some(serde_json::json!([{"exclude": ["String"]}]))),
+        (
+            "fooExclude instanceof Function",
+            Some(serde_json::json!([{"exclude": ["Function"]}])),
+        ),
+        (
+            "fooExclude instanceof Array",
+            Some(serde_json::json!([{"exclude": ["Array"]}])),
+        ),
+        (
+            "fooExclude instanceof String",
+            Some(serde_json::json!([{"exclude": ["String"]}])),
+        ),
         ("Array.isArray(arr)", None),
         ("arr instanceof array", None),
         ("a instanceof 'array'", None),
@@ -352,7 +365,10 @@ fn test() {
             "err instanceof AggregateError",
             Some(serde_json::json!([{"useErrorIsError": true, "strategy": "strict"}])),
         ),
-        ("fooInclude instanceof WebWorker", Some(serde_json::json!([{"include": ["WebWorker"]}]))),
+        (
+            "fooInclude instanceof WebWorker",
+            Some(serde_json::json!([{"include": ["WebWorker"]}])),
+        ),
         (
             "fooInclude instanceof HTMLElement",
             Some(serde_json::json!([{"include": ["HTMLElement"]}])),
@@ -400,18 +416,38 @@ fn test() {
         // Array -> Array.isArray()
         ("foo instanceof Array", "Array.isArray(foo)", None),
         ("[] instanceof Array", "Array.isArray([])", None),
-        ("[1,2,3] instanceof Array === true", "Array.isArray([1,2,3]) === true", None),
+        (
+            "[1,2,3] instanceof Array === true",
+            "Array.isArray([1,2,3]) === true",
+            None,
+        ),
         ("arr instanceof Array", "Array.isArray(arr)", None),
         ("obj.arr instanceof Array", "Array.isArray(obj.arr)", None),
         // Function -> typeof x === 'function'
-        ("foo instanceof Function", "typeof (foo) === 'function'", None),
-        ("foo + bar instanceof Function", "typeof (foo + bar) === 'function'", None),
+        (
+            "foo instanceof Function",
+            "typeof (foo) === 'function'",
+            None,
+        ),
+        (
+            "foo + bar instanceof Function",
+            "typeof (foo + bar) === 'function'",
+            None,
+        ),
         // String -> typeof x === 'string'
         ("foo instanceof String", "typeof (foo) === 'string'", None),
-        ("(a ? b : c) instanceof String", "typeof ((a ? b : c)) === 'string'", None),
+        (
+            "(a ? b : c) instanceof String",
+            "typeof ((a ? b : c)) === 'string'",
+            None,
+        ),
         // Number -> typeof x === 'number'
         ("foo instanceof Number", "typeof (foo) === 'number'", None),
-        ("(a in b) instanceof Number", "typeof ((a in b)) === 'number'", None),
+        (
+            "(a in b) instanceof Number",
+            "typeof ((a in b)) === 'number'",
+            None,
+        ),
         // Boolean -> typeof x === 'boolean'
         ("foo instanceof Boolean", "typeof (foo) === 'boolean'", None),
         // BigInt -> typeof x === 'bigint'
@@ -426,7 +462,12 @@ fn test() {
         ),
     ];
 
-    Tester::new(NoInstanceofBuiltins::NAME, NoInstanceofBuiltins::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        NoInstanceofBuiltins::NAME,
+        NoInstanceofBuiltins::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

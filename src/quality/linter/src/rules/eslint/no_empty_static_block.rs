@@ -103,10 +103,18 @@ fn test() {
 			 } }",
             "class Foo {  }",
         ),
-        ("class Foo { static { bar(); } static {} }", "class Foo { static { bar(); }  }"),
+        (
+            "class Foo { static { bar(); } static {} }",
+            "class Foo { static { bar(); }  }",
+        ),
     ];
 
-    Tester::new(NoEmptyStaticBlock::NAME, NoEmptyStaticBlock::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        NoEmptyStaticBlock::NAME,
+        NoEmptyStaticBlock::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

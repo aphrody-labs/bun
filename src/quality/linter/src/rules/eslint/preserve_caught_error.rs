@@ -56,12 +56,16 @@ struct ThrowFinder<'a, 'ctx> {
 impl<'a> VisitJs<'a> for ThrowFinder<'a, '_> {
     fn visit_throw_statement(&mut self, throw_stmt: &ThrowStatement<'a>) {
         let (callee, type_arguments, args) = match &throw_stmt.argument {
-            Expression::NewExpression(new_expr) => {
-                (&new_expr.callee, &new_expr.type_arguments, &new_expr.arguments)
-            }
-            Expression::CallExpression(call_expr) => {
-                (&call_expr.callee, &call_expr.type_arguments, &call_expr.arguments)
-            }
+            Expression::NewExpression(new_expr) => (
+                &new_expr.callee,
+                &new_expr.type_arguments,
+                &new_expr.arguments,
+            ),
+            Expression::CallExpression(call_expr) => (
+                &call_expr.callee,
+                &call_expr.type_arguments,
+                &call_expr.arguments,
+            ),
             _ => return,
         };
 
@@ -76,129 +80,147 @@ impl<'a> VisitJs<'a> for ThrowFinder<'a, '_> {
         }
 
         // Allow spread arguments - they may contain cause property
-        if args.iter().any(|arg| matches!(arg, Argument::SpreadElement(_))) {
+        if args
+            .iter()
+            .any(|arg| matches!(arg, Argument::SpreadElement(_)))
+        {
             return;
         }
 
-        self.ctx.diagnostic_with_fix(preserve_caught_error_diagnostic(throw_stmt.span), |fixer| {
-            let Some(ident) = self.catch_param.get_identifier_name() else {
-                return fixer.noop();
-            };
-            // Keep the catch binding unchanged as part of each fix, so removing or renaming it
-            // conflicts with inserting a reference to it (e.g. `prefer-optional-catch-binding`).
-            let preserve_catch_param = || fixer.replace_with(self.catch_param, self.catch_param);
-            let cause_prop_text = format!("cause: {}", ident.as_str());
+        self.ctx
+            .diagnostic_with_fix(preserve_caught_error_diagnostic(throw_stmt.span), |fixer| {
+                let Some(ident) = self.catch_param.get_identifier_name() else {
+                    return fixer.noop();
+                };
+                // Keep the catch binding unchanged as part of each fix, so removing or renaming it
+                // conflicts with inserting a reference to it (e.g. `prefer-optional-catch-binding`).
+                let preserve_catch_param =
+                    || fixer.replace_with(self.catch_param, self.catch_param);
+                let cause_prop_text = format!("cause: {}", ident.as_str());
 
-            match args.len() {
-                0 => {
-                    // find starting `(` of call after the callee and its type arguments
-                    let args_start = match type_arguments {
-                        Some(type_args) => type_args.span.end,
-                        None => callee.span().end,
-                    };
-                    if let Some(offset) = fixer.find_next_token_within(
-                        args_start,
-                        throw_stmt.argument.span().end,
-                        "(",
-                    ) {
-                        let mut fix = fixer.new_fix_with_capacity(4);
-                        let span = Span::sized(args_start + offset, 1);
-                        if let Expression::Identifier(ident) = callee
-                            && is_aggregate_error(ident, self.ctx)
-                        {
-                            // AggregateError takes options as its third argument
-                            fix.push(fixer.insert_text_after_range(span, "[], "));
-                        }
-                        fix.push(fixer.insert_text_after_range(span, "\"\", "));
-                        fix.push(
-                            fixer.insert_text_after_range(span, format!("{{ {cause_prop_text} }}")),
-                        );
-                        return fix.extend(preserve_catch_param()).with_message(ADD_CAUSE_PROPERTY);
-                    }
-                }
-                1 => {
-                    let span = args[0].span();
-                    // insert comma
-                    let mut fix = fixer.new_fix_with_capacity(4);
-                    if let Expression::Identifier(ident) = callee
-                        && is_aggregate_error(ident, self.ctx)
-                    {
-                        // AggregateError takes options as its third argument
-                        fix.push(fixer.insert_text_after_range(span, ", \"\""));
-                    }
-                    fix.push(fixer.insert_text_after_range(span, ", "));
-                    fix.push(
-                        fixer.insert_text_after_range(span, format!("{{ {cause_prop_text} }}")),
-                    );
-                    return fix.extend(preserve_catch_param()).with_message(ADD_CAUSE_PROPERTY);
-                }
-                2 => {
-                    if let Expression::Identifier(ident) = callee
-                        && is_aggregate_error(ident, self.ctx)
-                    {
-                        // AggregateError takes options as its third argument
-                        let span = args[1].span();
-                        let mut fix = fixer.new_fix_with_capacity(3);
-                        fix.push(fixer.insert_text_after_range(span, ", "));
-                        fix.push(
-                            fixer.insert_text_after_range(span, format!("{{ {cause_prop_text} }}")),
-                        );
-                        return fix.extend(preserve_catch_param()).with_message(ADD_CAUSE_PROPERTY);
-                    }
-
-                    // if the second argument is an existing object, merge into it
-                    if let Argument::ObjectExpression(obj_expr) = &args[1] {
-                        let cause_prop = obj_expr.properties.iter().find(|prop| match prop {
-                            ObjectPropertyKind::ObjectProperty(prop) => {
-                                let PropertyKey::StaticIdentifier(ident) = &prop.key else {
-                                    return false;
-                                };
-                                ident.name == "cause"
-                            }
-                            ObjectPropertyKind::SpreadProperty(_) => true,
-                        });
-
-                        if let Some(cause_prop) = cause_prop {
-                            // if the identifier name is not the catch parameter, replace it
-                            if let ObjectPropertyKind::ObjectProperty(prop) = cause_prop
-                                && !is_catch_parameter(&prop.value, self.catch_param, self.ctx)
+                match args.len() {
+                    0 => {
+                        // find starting `(` of call after the callee and its type arguments
+                        let args_start = match type_arguments {
+                            Some(type_args) => type_args.span.end,
+                            None => callee.span().end,
+                        };
+                        if let Some(offset) = fixer.find_next_token_within(
+                            args_start,
+                            throw_stmt.argument.span().end,
+                            "(",
+                        ) {
+                            let mut fix = fixer.new_fix_with_capacity(4);
+                            let span = Span::sized(args_start + offset, 1);
+                            if let Expression::Identifier(ident) = callee
+                                && is_aggregate_error(ident, self.ctx)
                             {
-                                if prop.shorthand || prop.method || prop.kind.is_accessor() {
-                                    return fixer
-                                        .replace(prop.span(), cause_prop_text)
-                                        .extend(preserve_catch_param())
-                                        .with_message(REPLACE_CAUSE_PROPERTY);
-                                }
-                                return fixer
-                                    .replace(prop.value.span(), ident.as_str().to_string())
-                                    .extend(preserve_catch_param())
-                                    .with_message(REPLACE_CAUSE_PROPERTY);
+                                // AggregateError takes options as its third argument
+                                fix.push(fixer.insert_text_after_range(span, "[], "));
                             }
-                        } else if obj_expr.properties.is_empty() {
-                            return fixer
-                                .insert_text_after_range(
-                                    obj_expr.span().shrink_right(1),
-                                    format!(" {cause_prop_text} "),
-                                )
-                                .extend(preserve_catch_param())
-                                .with_message(ADD_CAUSE_PROPERTY);
-                        } else if let Some(last_prop) = obj_expr.properties.last() {
-                            let mut fix = fixer.new_fix_with_capacity(3);
-                            fix.push(fixer.insert_text_after_range(last_prop.span(), ", "));
+                            fix.push(fixer.insert_text_after_range(span, "\"\", "));
                             fix.push(
-                                fixer.insert_text_after_range(last_prop.span(), cause_prop_text),
+                                fixer.insert_text_after_range(
+                                    span,
+                                    format!("{{ {cause_prop_text} }}"),
+                                ),
                             );
                             return fix
                                 .extend(preserve_catch_param())
                                 .with_message(ADD_CAUSE_PROPERTY);
                         }
                     }
-                }
-                _ => {}
-            }
+                    1 => {
+                        let span = args[0].span();
+                        // insert comma
+                        let mut fix = fixer.new_fix_with_capacity(4);
+                        if let Expression::Identifier(ident) = callee
+                            && is_aggregate_error(ident, self.ctx)
+                        {
+                            // AggregateError takes options as its third argument
+                            fix.push(fixer.insert_text_after_range(span, ", \"\""));
+                        }
+                        fix.push(fixer.insert_text_after_range(span, ", "));
+                        fix.push(
+                            fixer.insert_text_after_range(span, format!("{{ {cause_prop_text} }}")),
+                        );
+                        return fix
+                            .extend(preserve_catch_param())
+                            .with_message(ADD_CAUSE_PROPERTY);
+                    }
+                    2 => {
+                        if let Expression::Identifier(ident) = callee
+                            && is_aggregate_error(ident, self.ctx)
+                        {
+                            // AggregateError takes options as its third argument
+                            let span = args[1].span();
+                            let mut fix = fixer.new_fix_with_capacity(3);
+                            fix.push(fixer.insert_text_after_range(span, ", "));
+                            fix.push(
+                                fixer.insert_text_after_range(
+                                    span,
+                                    format!("{{ {cause_prop_text} }}"),
+                                ),
+                            );
+                            return fix
+                                .extend(preserve_catch_param())
+                                .with_message(ADD_CAUSE_PROPERTY);
+                        }
 
-            fixer.noop()
-        });
+                        // if the second argument is an existing object, merge into it
+                        if let Argument::ObjectExpression(obj_expr) = &args[1] {
+                            let cause_prop = obj_expr.properties.iter().find(|prop| match prop {
+                                ObjectPropertyKind::ObjectProperty(prop) => {
+                                    let PropertyKey::StaticIdentifier(ident) = &prop.key else {
+                                        return false;
+                                    };
+                                    ident.name == "cause"
+                                }
+                                ObjectPropertyKind::SpreadProperty(_) => true,
+                            });
+
+                            if let Some(cause_prop) = cause_prop {
+                                // if the identifier name is not the catch parameter, replace it
+                                if let ObjectPropertyKind::ObjectProperty(prop) = cause_prop
+                                    && !is_catch_parameter(&prop.value, self.catch_param, self.ctx)
+                                {
+                                    if prop.shorthand || prop.method || prop.kind.is_accessor() {
+                                        return fixer
+                                            .replace(prop.span(), cause_prop_text)
+                                            .extend(preserve_catch_param())
+                                            .with_message(REPLACE_CAUSE_PROPERTY);
+                                    }
+                                    return fixer
+                                        .replace(prop.value.span(), ident.as_str().to_string())
+                                        .extend(preserve_catch_param())
+                                        .with_message(REPLACE_CAUSE_PROPERTY);
+                                }
+                            } else if obj_expr.properties.is_empty() {
+                                return fixer
+                                    .insert_text_after_range(
+                                        obj_expr.span().shrink_right(1),
+                                        format!(" {cause_prop_text} "),
+                                    )
+                                    .extend(preserve_catch_param())
+                                    .with_message(ADD_CAUSE_PROPERTY);
+                            } else if let Some(last_prop) = obj_expr.properties.last() {
+                                let mut fix = fixer.new_fix_with_capacity(3);
+                                fix.push(fixer.insert_text_after_range(last_prop.span(), ", "));
+                                fix.push(
+                                    fixer
+                                        .insert_text_after_range(last_prop.span(), cause_prop_text),
+                                );
+                                return fix
+                                    .extend(preserve_catch_param())
+                                    .with_message(ADD_CAUSE_PROPERTY);
+                            }
+                        }
+                    }
+                    _ => {}
+                }
+
+                fixer.noop()
+            });
     }
 
     // Do not traverse into nested functions/closures within the catch block
@@ -316,8 +338,10 @@ impl PreserveCaughtError {
 
     fn check_catch_clause<'a>(&self, catch_clause: &'a CatchClause<'a>, ctx: &LintContext<'a>) {
         if let Some(catch_param) = &catch_clause.param {
-            let mut finder: ThrowFinder<'a, '_> =
-                ThrowFinder { catch_param: &catch_param.pattern, ctx };
+            let mut finder: ThrowFinder<'a, '_> = ThrowFinder {
+                catch_param: &catch_param.pattern,
+                ctx,
+            };
             finder.visit_block_statement(catch_clause.body.as_ref());
         } else if self.0.require_catch_parameter {
             ctx.diagnostic(missing_catch_parameter_diagnostic(catch_clause.span));
@@ -440,8 +464,14 @@ fn test() {
     ];
 
     let fail = vec![
-        ("try { doSomething(); } catch (err) { throw new Error/* ( */(); }", None),
-        ("try { doSomething(); } catch (err) { throw new Error<() => void>(); }", None),
+        (
+            "try { doSomething(); } catch (err) { throw new Error/* ( */(); }",
+            None,
+        ),
+        (
+            "try { doSomething(); } catch (err) { throw new Error<() => void>(); }",
+            None,
+        ),
         (
             r#"try {
 			            doSomething();
@@ -1123,7 +1153,12 @@ fn test() {
         ),
     ];
 
-    Tester::new(PreserveCaughtError::NAME, PreserveCaughtError::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        PreserveCaughtError::NAME,
+        PreserveCaughtError::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

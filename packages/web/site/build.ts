@@ -10,6 +10,7 @@
 //       [--commit <sha>] [--repo aphrody-labs/bun] [--perf <dossier des perf-report.json>] [--perf-run <url>]
 //       [--releases <releases.json> | --offline] [--data <site-data.json>]
 //       [--home-capture-root <capture>] [--home-runtime-fact <receipt.json> ...] [--home-graph <graph-summary.json>]
+//       [--editorial-dir <validated-editorial-output>]
 //
 // --src pointe sur un arbre extrait (git archive) ou sur le dépôt lui-même (défaut). La publication
 // (packages/web/site/publish.ts) extrait origin/main, collecte site-data.json et appelle ce script depuis
@@ -42,6 +43,7 @@ import {
   type GeneratedPage,
 } from "./pages.ts";
 import { buildUpstreamHome, loadRuntimeHomeFacts, type HomeGraphFact } from "./upstream-home.ts";
+import { loadEditorialDirectory, type PublishedEditorial } from "./editorial-publication.ts";
 
 export { formatBytes };
 
@@ -298,9 +300,161 @@ export type BuildOptions = {
   now?: Date;
   /** Explicit capture and measured receipts; no runtime inference from the build executable. */
   home?: HomeBuildOptions;
+  editorialDirectory?: string;
 };
 
 export type HomeBuildOptions = { captureRoot: string; runtimeFactFiles: readonly string[]; graphFile?: string };
+type EditorialPublication = Awaited<ReturnType<typeof loadEditorialDirectory>>;
+export function parseEditorialBuildDirectory(argv: readonly string[]): string | undefined {
+  const positions = argv.flatMap((argument, index) => (argument === "--editorial-dir" ? [index] : []));
+  if (!positions.length) return undefined;
+  if (positions.length > 1) throw TypeError("Duplicate editorial directory option");
+  const value = argv[positions[0]! + 1];
+  if (!value || value.startsWith("--")) throw TypeError("Missing editorial directory option");
+  return resolve(value);
+}
+const editorialHtml = (markdown: string) =>
+  highlightHtml(
+    Bun.markdown.html(mdxToHtmlMarkdown(markdown, { link: href => href, guides: "" }), {
+      headings: { ids: true },
+    } as any),
+  );
+const editorialSummary = (editorial: EditorialPublication) => ({
+  schema: 1,
+  source: editorial.source,
+  snapshot: editorial.snapshot,
+  validator: editorial.validator,
+  receiptSha256: editorial.receiptSha256,
+  authorship: "source-derived-assembly",
+  pages: editorial.pages.map(article => ({
+    path: article.path,
+    mdxSha256: article.manifest.mdxSha256,
+    manifestSha256: article.manifestSha256,
+    models: article.manifest.models,
+    grounding: article.manifest.grounding,
+  })),
+});
+const editorialIndexBody = (kind: "guides" | "blog", articles: readonly PublishedEditorial[]) =>
+  `<h1>${kind === "guides" ? "Guides" : "Blog"}</h1><p>Dossiers assemblés à partir des sources du snapshot, avec jugements structurés Jev et provenance explicite.</p><p><a href="${kind === "guides" ? "/docs/guides" : "/release-notes"}">${kind === "guides" ? "Guides de la documentation" : "Notes de version"}</a></p><ul>${articles.map(article => `<li><a href="${article.path}">${escapeHtml(article.title)}</a><p>${escapeHtml(article.description)}</p></li>`).join("")}</ul>`;
+
+/** Add a qualified editorial batch after the initial immutable DB publication; preserve the existing graph and home. */
+export async function applyEditorialPublication(options: {
+  out: string;
+  origin: string;
+  commit: string;
+  editorialDirectory: string;
+}) {
+  const editorial = await loadEditorialDirectory(options.editorialDirectory, options.commit);
+  const root = resolve(options.out),
+    base = JSON.parse(await Bun.file(join(root, "site.json")).text());
+  if (base.commit !== options.commit) throw Error("Editorial publication base source is stale");
+  const search = JSON.parse(await Bun.file(join(root, "docs/search.json")).text());
+  if (!Array.isArray(search)) throw Error("Invalid editorial publication search index");
+  const sitemap = await Bun.file(join(root, "sitemap.xml")).text();
+  if (!sitemap.includes("</urlset>")) throw Error("Invalid editorial publication sitemap");
+  const llms = await Bun.file(join(root, "llms.txt")).text(),
+    full = await Bun.file(join(root, "llms-full.txt")).text();
+  const written = new Set<string>();
+  const save = (path: string, content: string) => {
+    const file = join(root, path);
+    write(file, content);
+    written.add(file);
+  };
+  const page = (path: string, title: string, body: string, description?: string) =>
+    shell({
+      origin: options.origin,
+      path,
+      title: `${title} - Aphrody Bun`,
+      body,
+      ...(description ? { description } : {}),
+      tabs: [
+        { label: "Docs", href: "/docs" },
+        { label: "Guides", href: "/guides" },
+        { label: "Blog", href: "/blog" },
+        { label: "Downloads", href: "/downloads" },
+      ],
+      footer: '<p>Sources du snapshot · <a href="/editorial-provenance.json">Provenance éditoriale</a></p>',
+      github: "https://github.com/aphrody-labs/bun",
+      brand: "Aphrody Bun",
+      ...(path.includes("/", 1) ? { alternateMarkdown: path + ".md" } : {}),
+    }).replace('<html lang="en">', '<html lang="fr">');
+  const paths = new Set(editorial.pages.map(article => article.path));
+  const updatedSearch = search.filter((entry: { u: string }) => !paths.has(entry.u));
+  for (const article of editorial.pages) {
+    const html = editorialHtml(article.markdown);
+    save(
+      article.path.slice(1) + "/index.html",
+      page(
+        article.path,
+        article.title,
+        `<h1>${escapeHtml(article.title)}</h1><article>${html}</article><p><a href="${article.path}.json">Provenance du dossier</a></p>`,
+        article.description,
+      ),
+    );
+    save(
+      article.path.slice(1) + ".md",
+      pageMarkdown(
+        { title: article.title, description: article.description, markdown: article.markdown },
+        options.origin,
+      ),
+    );
+    save(article.path.slice(1) + ".json", JSON.stringify(article.manifest, null, 2) + "\n");
+    updatedSearch.push({
+      t: article.title,
+      d: article.description,
+      u: article.path,
+      g: article.path.startsWith("/guides/") ? "Guides" : "Blog",
+      h: extractToc(html).map(heading => heading.text),
+      x: textOf(html).slice(0, 240),
+    });
+  }
+  for (const kind of ["guides", "blog"] as const) {
+    const articles = editorial.pages.filter(article => article.path.startsWith("/" + kind + "/"));
+    if (articles.length)
+      save(
+        kind + "/index.html",
+        page("/" + kind, kind === "guides" ? "Guides" : "Blog", editorialIndexBody(kind, articles)),
+      );
+  }
+  save("docs/search.json", JSON.stringify(updatedSearch));
+  const now = new Date().toISOString().slice(0, 10);
+  const additions = ["/guides", "/blog", ...paths]
+    .filter(path => !sitemap.includes(`<loc>${escapeHtml(options.origin + path)}</loc>`))
+    .map(path => `<url><loc>${escapeHtml(options.origin + path)}</loc><lastmod>${now}</lastmod></url>`)
+    .join("\n");
+  save("sitemap.xml", sitemap.replace("</urlset>", additions + "\n</urlset>"));
+  const clean = (text: string) =>
+    text.replace(/\n<!-- editorial:start -->[\s\S]*?<!-- editorial:end -->\n?/g, "\n").trimEnd();
+  save(
+    "llms.txt",
+    clean(llms) +
+      "\n<!-- editorial:start -->\n## Guides et dossiers éditoriaux\n\n" +
+      editorial.pages
+        .map(article => `- [${article.title}](${options.origin}${article.path}.md): ${article.description}`)
+        .join("\n") +
+      "\n<!-- editorial:end -->\n",
+  );
+  save(
+    "llms-full.txt",
+    clean(full) +
+      "\n<!-- editorial:start -->\n" +
+      editorial.pages
+        .map(
+          article =>
+            `# ${article.title}\nSource: ${options.origin}${article.path}\n\n${absolutizeRootLinks(article.markdown, options.origin)}\n`,
+        )
+        .join("\n") +
+      "<!-- editorial:end -->\n",
+  );
+  const summary = editorialSummary(editorial);
+  save("editorial-provenance.json", JSON.stringify(summary, null, 2) + "\n");
+  save("site.json", JSON.stringify({ ...base, editorial: summary }, null, 2) + "\n");
+  for (const file of written) {
+    const bytes = readFileSync(file);
+    write(file + ".gz", Bun.gzipSync(bytes, { level: 9 }));
+  }
+  return summary;
+}
 type Receipt = { sha256: string; bytes: number };
 const sha256 = (bytes: Uint8Array | string) => new Bun.CryptoHasher("sha256").update(bytes).digest("hex");
 
@@ -432,6 +586,7 @@ const absolutizeRootLinks = (markdown: string, origin: string) =>
 
 export async function build(o: BuildOptions) {
   // Reject missing or invalid evidence before writing any site files.
+  const editorial = o.editorialDirectory ? await loadEditorialDirectory(o.editorialDirectory, o.commit) : null;
   const home = await prepareHome(o);
   const docs = join(o.src, "docs");
   const docsJson = JSON.parse(readFileSync(join(docs, "docs.json"), "utf8"));
@@ -631,6 +786,35 @@ ${g.description ? `<p class="lead">${escapeHtml(g.description)}</p>` : ""}
       x: textOf(html).slice(0, 240),
     });
   }
+  for (const article of editorial?.pages ?? []) {
+    const html = editorialHtml(article.markdown);
+    write(
+      join(o.out, article.path.slice(1), "index.html"),
+      page({
+        path: article.path,
+        title: titled(article.title),
+        description: article.description,
+        body: `<h1>${escapeHtml(article.title)}</h1><article>${html}</article><p><a href="${article.path}.json">Provenance du dossier</a></p>`,
+        tabs: topTabs(article.path.startsWith("/guides/") ? "Guides" : "Blog"),
+        alternateMarkdown: article.path + ".md",
+      }),
+    );
+    write(
+      join(o.out, article.path.slice(1) + ".md"),
+      pageMarkdown({ title: article.title, description: article.description, markdown: article.markdown }, o.origin),
+    );
+    write(join(o.out, article.path.slice(1) + ".json"), JSON.stringify(article.manifest, null, 2) + "\n");
+    search.push({
+      t: article.title,
+      d: article.description,
+      u: article.path,
+      g: article.path.startsWith("/guides/") ? "Guides" : "Blog",
+      h: extractToc(html).map(heading => heading.text),
+      x: textOf(html).slice(0, 240),
+    });
+  }
+  if (editorial)
+    write(join(o.out, "editorial-provenance.json"), JSON.stringify(editorialSummary(editorial), null, 2) + "\n");
   if (data) write(join(o.out, "components.json"), JSON.stringify(componentsJson(data), null, 2) + "\n");
   write(join(o.out, "docs", "search.json"), JSON.stringify(search));
 
@@ -687,6 +871,16 @@ ${g.description ? `<p class="lead">${escapeHtml(g.description)}</p>` : ""}
         `- [${p.title}](${o.origin}${markdownUrl(p.slug)})${p.description ? `: ${p.description.replace(/\s+/g, " ")}` : ""}`,
     ),
     "",
+    ...(editorial
+      ? [
+          "## Guides et dossiers éditoriaux",
+          "",
+          ...editorial.pages.map(
+            article => `- [${article.title}](${o.origin}${article.path}.md): ${article.description}`,
+          ),
+          "",
+        ]
+      : []),
     "## Optional",
     "",
     `- [Runtime install script (bash)](${o.origin}/install)`,
@@ -703,6 +897,10 @@ ${g.description ? `<p class="lead">${escapeHtml(g.description)}</p>` : ""}
   write(
     join(o.out, "llms-full.txt"),
     [
+      ...(editorial?.pages ?? []).map(
+        article =>
+          `# ${article.title}\nSource: ${o.origin}${article.path}\n\n${absolutizeRootLinks(article.markdown, o.origin)}\n`,
+      ),
       ...generated.map(
         g => `# ${g.title}\nSource: ${o.origin}${g.path}\n\n${absolutizeRootLinks(g.markdown, o.origin)}\n`,
       ),
@@ -714,8 +912,20 @@ ${g.description ? `<p class="lead">${escapeHtml(g.description)}</p>` : ""}
   );
 
   // /guides -> /docs/guides, /blog -> /release-notes
-  write(join(o.out, "guides", "index.html"), redirectPage(o.origin, "/docs/guides"));
-  write(join(o.out, "blog", "index.html"), redirectPage(o.origin, "/release-notes"));
+  for (const kind of ["guides", "blog"] as const) {
+    const articles = editorial?.pages.filter(article => article.path.startsWith("/" + kind + "/")) ?? [];
+    write(
+      join(o.out, kind, "index.html"),
+      articles.length
+        ? page({
+            path: "/" + kind,
+            title: titled(kind === "guides" ? "Guides" : "Blog"),
+            tabs: topTabs(kind === "guides" ? "Guides" : "Blog"),
+            body: editorialIndexBody(kind, articles),
+          })
+        : redirectPage(o.origin, kind === "guides" ? "/docs/guides" : "/release-notes"),
+    );
+  }
 
   // Téléchargements et notes de version : la distribution (données), puis le runtime (releases GitHub)
   const releases = o.releases;
@@ -842,6 +1052,7 @@ ${runtimeInstallCommands(o.origin)}
     "/downloads",
     "/release-notes",
     ...ordered.map(p => pageUrl(p.slug)),
+    ...(editorial ? ["/guides", "/blog", ...editorial.pages.map(article => article.path)] : []),
     ...(home?.graph ? ["/graph"] : []),
   ];
   write(
@@ -866,6 +1077,7 @@ ${runtimeInstallCommands(o.origin)}
         dataGeneratedAt: data?.generatedAt ?? null,
         pages: ordered.length,
         generated: generated.map(g => g.path),
+        editorial: editorial ? editorialSummary(editorial) : null,
         latestRelease: latest?.tag ?? null,
         perfReports: reports.map(r => r.platform),
         scripts: served,
@@ -1242,6 +1454,7 @@ if (import.meta.main) {
     releases,
     data: dataFile ? (JSON.parse(readFileSync(dataFile, "utf8")) as SiteData) : null,
     ...(parseHomeBuildOptions(args) ? { home: parseHomeBuildOptions(args)! } : {}),
+    ...(parseEditorialBuildDirectory(args) ? { editorialDirectory: parseEditorialBuildDirectory(args)! } : {}),
   });
   const size = walk(resolve(out)).reduce((n, f) => n + statSync(f).size, 0);
   console.log(

@@ -204,7 +204,10 @@ const REGEX_KW_MASK: u64 = {
             kw_index += 1;
         }
 
-        assert!(found >= 0 && found < 64, "regex keyword missing from KEYWORDS_JS");
+        assert!(
+            found >= 0 && found < 64,
+            "regex keyword missing from KEYWORDS_JS"
+        );
         mask |= 1u64 << found;
 
         rx_index += 1;
@@ -263,7 +266,10 @@ static DISPS_JS: Aligned64<[u8; 64]> = Aligned64([
 const _: () = {
     let mut i = 0;
     while i < DISPS_JS.0.len() {
-        assert!(DISPS_JS.0[i] < 64, "every entry of `DISPS_JS` must be less than 64");
+        assert!(
+            DISPS_JS.0[i] < 64,
+            "every entry of `DISPS_JS` must be less than 64"
+        );
         i += 1;
     }
 };
@@ -460,7 +466,11 @@ pub(super) unsafe fn kw_match<const IS_TS: bool>(ptr: *const u8, len: usize) -> 
     };
 
     let is_match = text_matches(ptr, len, &KW_TEXT.0[slot]);
-    let kind = if IS_TS { KW_KINDS_TS.0[slot] } else { KW_KINDS_JS.0[slot] };
+    let kind = if IS_TS {
+        KW_KINDS_TS.0[slot]
+    } else {
+        KW_KINDS_JS.0[slot]
+    };
     // Whether a candidate is a keyword is unpredictable, so tell LLVM to select without a branch.
     // Without the hint, it branches to skip loading `kind` when there's no match.
     hint::select_unpredictable(is_match, kind, TokenKind::Ident)
@@ -562,14 +572,20 @@ mod tests {
 
     /// Bytes which can follow a word in tests. Real source has a non-word char after a word,
     /// but the match must ignore whatever follows.
-    const AFTERS: [&[u8]; 4] =
-        [b" ", b"\0\0\0\0", b"abcdefghijklmnop", b"\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF"];
+    const AFTERS: [&[u8]; 4] = [
+        b" ",
+        b"\0\0\0\0",
+        b"abcdefghijklmnop",
+        b"\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF",
+    ];
 
     /// Keywords from `list`, excluding placeholders whose kind is `Ident`.
     fn keywords(
         list: &'static [(&'static str, TokenKind)],
     ) -> impl Iterator<Item = (&'static str, TokenKind)> {
-        list.iter().copied().filter(|&(_, kind)| kind != TokenKind::Ident)
+        list.iter()
+            .copied()
+            .filter(|&(_, kind)| kind != TokenKind::Ident)
     }
 
     /// Run [`kw_match`] on `word`, followed by `after` (which is not part of the word).
@@ -597,7 +613,10 @@ mod tests {
             in_set[kw.0.as_bytes()[0] as usize] = true;
         }
         for c in 0..256usize {
-            assert!(is_kw_init(c as u8) == in_set[c], "KWINIT_LO/HI wrong at byte {c:#04x}");
+            assert!(
+                is_kw_init(c as u8) == in_set[c],
+                "KWINIT_LO/HI wrong at byte {c:#04x}"
+            );
         }
     }
 
@@ -608,7 +627,10 @@ mod tests {
             in_set_ts[kw.0.as_bytes()[0] as usize] = true;
         }
         for c in 0..256usize {
-            assert!(is_kw_init_ts(c as u8) == in_set_ts[c], "KWINIT_TS_LO wrong at byte {c:#04x}");
+            assert!(
+                is_kw_init_ts(c as u8) == in_set_ts[c],
+                "KWINIT_TS_LO wrong at byte {c:#04x}"
+            );
         }
     }
 
@@ -617,7 +639,10 @@ mod tests {
         // `coalesce`'s candidate filter drops most words longer than 10 bytes,
         // and the word length `kw_verify_batch` passes to `kw_match` is capped at 16
         for (keyword, _) in keywords(&KEYWORDS_TS) {
-            assert!((2..=10).contains(&keyword.len()), "keyword `{keyword}` length out of range");
+            assert!(
+                (2..=10).contains(&keyword.len()),
+                "keyword `{keyword}` length out of range"
+            );
         }
     }
 
@@ -669,7 +694,11 @@ mod tests {
     fn test_kw_match_keywords() {
         for (keyword, kind) in keywords(&KEYWORDS_TS) {
             let is_js_keyword = keywords(&KEYWORDS_JS).any(|(word, _)| word == keyword);
-            let js_kind = if is_js_keyword { kind } else { TokenKind::Ident };
+            let js_kind = if is_js_keyword {
+                kind
+            } else {
+                TokenKind::Ident
+            };
             for after in AFTERS {
                 let word = keyword.as_bytes();
                 assert_eq!(kw_match_str(word, after, true), kind, "TS `{keyword}`");

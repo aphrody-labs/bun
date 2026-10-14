@@ -137,7 +137,9 @@ pub fn format_to_ir<'a>(
 
     write!(&mut buffer, FormatMarkdownEmbedded { parsed: &parsed });
 
-    Ok(EmbeddedIr { ir: buffer.into_vec() })
+    Ok(EmbeddedIr {
+        ir: buffer.into_vec(),
+    })
 }
 
 /// Parse the source into the AST, bailing out on any diagnostic.
@@ -170,14 +172,23 @@ fn parse_root<'a>(
 
     let ret = Parser::new(allocator, source).parse();
     if let Some(diagnostic) = ret.diagnostics.first() {
-        return Err(OxcDiagnostic::error(format!("Syntax error: {diagnostic}"))
-            .with_label(oxc_span::Span::new(diagnostic.span.start, diagnostic.span.end)));
+        return Err(
+            OxcDiagnostic::error(format!("Syntax error: {diagnostic}")).with_label(
+                oxc_span::Span::new(diagnostic.span.start, diagnostic.span.end),
+            ),
+        );
     }
 
     let root = allocator.alloc(ret.root);
     let blanks: &'a [Span] = allocator.alloc_slice_copy(&ret.blanks);
 
-    Ok(ParsedMarkdown { root, blanks, source, front_matter, has_bom })
+    Ok(ParsedMarkdown {
+        root,
+        blanks,
+        source,
+        front_matter,
+        has_bom,
+    })
 }
 
 /// Emits the front matter and the blocks with the final newline.

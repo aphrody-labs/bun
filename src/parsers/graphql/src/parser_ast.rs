@@ -106,7 +106,14 @@ impl<'a> Parser<'a> {
 
     fn into_ast<T>(self, root: T) -> Ast<'a, T> {
         let token_limit = self.lexer.limit_tracker;
-        Ast::new(self.input, root, self.errors, self.comments, self.recursion_limit, token_limit)
+        Ast::new(
+            self.input,
+            root,
+            self.errors,
+            self.comments,
+            self.recursion_limit,
+            token_limit,
+        )
     }
 
     /// Marks the start of a new scratch-built list, pre-sizing the stack so
@@ -159,7 +166,10 @@ impl<'a> Parser<'a> {
             ScratchNode::Definition(definition) => definition,
             _ => unreachable!("scratch stack discipline"),
         });
-        Document { definitions, span: self.span_from(start) }
+        Document {
+            definitions,
+            span: self.span_from(start),
+        }
     }
 
     fn parse_definition(&mut self) -> Option<Definition<'a>> {
@@ -304,7 +314,11 @@ impl<'a> Parser<'a> {
 
         let operation_type = self.parse_operation_type("expected Operation Type");
 
-        let name = if self.peek() == Some(TokenKind::Name) { self.parse_name() } else { None };
+        let name = if self.peek() == Some(TokenKind::Name) {
+            self.parse_name()
+        } else {
+            None
+        };
         let variable_definitions = self.parse_variable_definitions_if_present();
         let directives = self.parse_directives(Constness::NotConst);
         let selection_set = self.parse_required_selection_set();
@@ -428,7 +442,10 @@ impl<'a> Parser<'a> {
             _ => unreachable!("scratch stack discipline"),
         });
 
-        SelectionSet { selections, span: self.span_from(start) }
+        SelectionSet {
+            selections,
+            span: self.span_from(start),
+        }
     }
 
     fn parse_selection(&mut self) -> Selection<'a> {
@@ -481,7 +498,12 @@ impl<'a> Parser<'a> {
         };
         let directives = self.parse_directives(Constness::NotConst);
         Selection::FragmentSpread(ArenaBox::new_in(
-            FragmentSpread { name, arguments, directives, span: self.span_from(start) },
+            FragmentSpread {
+                name,
+                arguments,
+                directives,
+                span: self.span_from(start),
+            },
             &self.allocator,
         ))
     }
@@ -505,7 +527,14 @@ impl<'a> Parser<'a> {
             None
         };
 
-        Field { alias, name, arguments, directives, selection_set, span: self.span_from(start) }
+        Field {
+            alias,
+            name,
+            arguments,
+            directives,
+            selection_set,
+            span: self.span_from(start),
+        }
     }
 
     fn parse_arguments_if_present(&mut self, constness: Constness) -> Option<Arguments<'a>> {
@@ -539,7 +568,10 @@ impl<'a> Parser<'a> {
             ScratchNode::Argument(argument) => argument,
             _ => unreachable!("scratch stack discipline"),
         });
-        Some(Arguments { items, span: self.span_from(open_start) })
+        Some(Arguments {
+            items,
+            span: self.span_from(open_start),
+        })
     }
 
     fn parse_argument(&mut self, constness: Constness) -> Argument<'a> {
@@ -552,7 +584,11 @@ impl<'a> Parser<'a> {
             self.err("expected :");
             None
         };
-        Argument { name, value, span: self.span_from(start) }
+        Argument {
+            name,
+            value,
+            span: self.span_from(start),
+        }
     }
 
     fn parse_variable_definitions_if_present(&mut self) -> Option<VariableDefinitions<'a>> {
@@ -573,7 +609,9 @@ impl<'a> Parser<'a> {
             }
             T![$] | TokenKind::StringValue => {
                 let definition = parser.parse_variable_definition();
-                parser.scratch.push(ScratchNode::VariableDefinition(definition));
+                parser
+                    .scratch
+                    .push(ScratchNode::VariableDefinition(definition));
                 ControlFlow::Continue(())
             }
             TokenKind::Eof => {
@@ -589,13 +627,18 @@ impl<'a> Parser<'a> {
             ScratchNode::VariableDefinition(definition) => definition,
             _ => unreachable!("scratch stack discipline"),
         });
-        Some(VariableDefinitions { items, span: self.span_from(open_start) })
+        Some(VariableDefinitions {
+            items,
+            span: self.span_from(open_start),
+        })
     }
 
     fn parse_variable_definition(&mut self) -> VariableDefinition<'a> {
         let start = self.current_start();
         let description = self.parse_description_if_present();
-        let variable = self.parse_variable().unwrap_or_else(|| self.missing_variable());
+        let variable = self
+            .parse_variable()
+            .unwrap_or_else(|| self.missing_variable());
         let mut ty = None;
         let mut default_value = None;
         let mut directives = ArenaVec::new_in(&self.allocator);
@@ -627,7 +670,10 @@ impl<'a> Parser<'a> {
         }
         self.bump();
         let name = self.parse_name().unwrap_or_else(|| self.missing_name());
-        Some(Variable { name, span: self.span_from(start) })
+        Some(Variable {
+            name,
+            span: self.span_from(start),
+        })
     }
 
     fn parse_directives(&mut self, constness: Constness) -> ArenaVec<'a, Directive<'a>> {
@@ -651,7 +697,11 @@ impl<'a> Parser<'a> {
         self.expect(T![@], "expected @ symbol");
         let name = self.parse_name().unwrap_or_else(|| self.missing_name());
         let arguments = self.parse_arguments_if_present(constness);
-        Directive { name, arguments, span: self.span_from(start) }
+        Directive {
+            name,
+            arguments,
+            span: self.span_from(start),
+        }
     }
 
     fn parse_value(&mut self, constness: Constness, pop_on_error: bool) -> Value<'a> {
@@ -689,7 +739,10 @@ impl<'a> Parser<'a> {
     fn parse_int_value(&mut self) -> Value<'a> {
         let token = self.bump().expect("peeked int token must be available");
         Value::Int(ArenaBox::new_in(
-            IntValue { raw: token.data(), span: token_span(&token) },
+            IntValue {
+                raw: token.data(),
+                span: token_span(&token),
+            },
             &self.allocator,
         ))
     }
@@ -697,7 +750,10 @@ impl<'a> Parser<'a> {
     fn parse_float_value(&mut self) -> Value<'a> {
         let token = self.bump().expect("peeked float token must be available");
         Value::Float(ArenaBox::new_in(
-            FloatValue { raw: token.data(), span: token_span(&token) },
+            FloatValue {
+                raw: token.data(),
+                span: token_span(&token),
+            },
             &self.allocator,
         ))
     }
@@ -708,14 +764,23 @@ impl<'a> Parser<'a> {
         };
         match name.value {
             "true" => Value::Boolean(ArenaBox::new_in(
-                BooleanValue { value: true, span: name.span },
+                BooleanValue {
+                    value: true,
+                    span: name.span,
+                },
                 &self.allocator,
             )),
             "false" => Value::Boolean(ArenaBox::new_in(
-                BooleanValue { value: false, span: name.span },
+                BooleanValue {
+                    value: false,
+                    span: name.span,
+                },
                 &self.allocator,
             )),
-            "null" => Value::Null(ArenaBox::new_in(NullValue { span: name.span }, &self.allocator)),
+            "null" => Value::Null(ArenaBox::new_in(
+                NullValue { span: name.span },
+                &self.allocator,
+            )),
             _ => Value::Enum(ArenaBox::new_in(EnumValue { name }, &self.allocator)),
         }
     }
@@ -746,7 +811,10 @@ impl<'a> Parser<'a> {
         });
 
         Value::List(ArenaBox::new_in(
-            ListValue { values, span: self.span_from(start) },
+            ListValue {
+                values,
+                span: self.span_from(start),
+            },
             &self.allocator,
         ))
     }
@@ -781,7 +849,10 @@ impl<'a> Parser<'a> {
         });
 
         Value::Object(ArenaBox::new_in(
-            ObjectValue { fields, span: self.span_from(start) },
+            ObjectValue {
+                fields,
+                span: self.span_from(start),
+            },
             &self.allocator,
         ))
     }
@@ -796,7 +867,11 @@ impl<'a> Parser<'a> {
             self.err("expected :");
             None
         };
-        ObjectField { name, value, span: self.span_from(start) }
+        ObjectField {
+            name,
+            value,
+            span: self.span_from(start),
+        }
     }
 
     fn parse_type_inner(&mut self) -> Option<Type<'a>> {
@@ -808,12 +883,16 @@ impl<'a> Parser<'a> {
                     self.limit_err("parser recursion limit reached");
                     return Some(Type::Missing(self.span_from(start)));
                 }
-                let inner =
-                    self.parse_type_inner().unwrap_or_else(|| Type::Missing(self.current_span()));
+                let inner = self
+                    .parse_type_inner()
+                    .unwrap_or_else(|| Type::Missing(self.current_span()));
                 self.recursion_limit.decrement();
                 self.expect(T![']'], "expected ]");
                 Type::List(ArenaBox::new_in(
-                    ListType { ty: inner, span: self.span_from(start) },
+                    ListType {
+                        ty: inner,
+                        span: self.span_from(start),
+                    },
                     &self.allocator,
                 ))
             }
@@ -831,7 +910,10 @@ impl<'a> Parser<'a> {
         if self.peek() == Some(T![!]) {
             self.bump();
             ty = Type::NonNull(ArenaBox::new_in(
-                NonNullType { ty, span: self.span_from(start) },
+                NonNullType {
+                    ty,
+                    span: self.span_from(start),
+                },
                 &self.allocator,
             ));
         }
@@ -851,7 +933,12 @@ impl<'a> Parser<'a> {
         self.expect_name_value("schema");
         let directives = self.parse_directives(Constness::Const);
         let root_operations = self.parse_root_operation_types_if_present();
-        SchemaDefinition { description, directives, root_operations, span: self.span_from(start) }
+        SchemaDefinition {
+            description,
+            directives,
+            root_operations,
+            span: self.span_from(start),
+        }
     }
 
     fn parse_schema_extension_from(&mut self, start: u32) -> SchemaExtension<'a> {
@@ -861,7 +948,11 @@ impl<'a> Parser<'a> {
         if directives.is_empty() && root_operations.is_empty() {
             self.err("expected Directives or Root Operation Types");
         }
-        SchemaExtension { directives, root_operations, span: self.span_from(start) }
+        SchemaExtension {
+            directives,
+            root_operations,
+            span: self.span_from(start),
+        }
     }
 
     fn parse_root_operation_types_if_present(
@@ -898,8 +989,14 @@ impl<'a> Parser<'a> {
         let start = self.current_start();
         let operation_type = self.parse_operation_type("expected an Operation Type");
         self.expect(T![:], "expected :");
-        let named_type = self.parse_named_type().unwrap_or_else(|| self.missing_named_type());
-        RootOperationTypeDefinition { operation_type, named_type, span: self.span_from(start) }
+        let named_type = self
+            .parse_named_type()
+            .unwrap_or_else(|| self.missing_named_type());
+        RootOperationTypeDefinition {
+            operation_type,
+            named_type,
+            span: self.span_from(start),
+        }
     }
 
     fn parse_directive_extension_from(&mut self, start: u32) -> DirectiveExtension<'a> {
@@ -910,7 +1007,11 @@ impl<'a> Parser<'a> {
         if directives.is_empty() {
             self.err("expected Directives");
         }
-        DirectiveExtension { name, directives, span: self.span_from(start) }
+        DirectiveExtension {
+            name,
+            directives,
+            span: self.span_from(start),
+        }
     }
 
     fn parse_directive_definition(
@@ -954,7 +1055,10 @@ impl<'a> Parser<'a> {
                 && token.kind() == TokenKind::Name
             {
                 self.bump();
-                locations.push(DirectiveLocation { name: token.data(), span: token_span(&token) });
+                locations.push(DirectiveLocation {
+                    name: token.data(),
+                    span: token_span(&token),
+                });
             } else {
                 self.err("expected valid Directive Location");
                 break;
@@ -977,7 +1081,12 @@ impl<'a> Parser<'a> {
         self.expect_name_value("scalar");
         let name = self.parse_name().unwrap_or_else(|| self.missing_name());
         let directives = self.parse_directives(Constness::Const);
-        ScalarTypeDefinition { description, name, directives, span: self.span_from(start) }
+        ScalarTypeDefinition {
+            description,
+            name,
+            directives,
+            span: self.span_from(start),
+        }
     }
 
     fn parse_scalar_type_extension_from(&mut self, start: u32) -> ScalarTypeExtension<'a> {
@@ -987,7 +1096,11 @@ impl<'a> Parser<'a> {
         if directives.is_empty() {
             self.err("expected Directives");
         }
-        ScalarTypeExtension { name, directives, span: self.span_from(start) }
+        ScalarTypeExtension {
+            name,
+            directives,
+            span: self.span_from(start),
+        }
     }
 
     fn parse_object_type_definition(
@@ -1019,7 +1132,13 @@ impl<'a> Parser<'a> {
         if implements.is_none() && directives.is_empty() && fields.is_none() {
             self.err("expected Implements Interfaces, Directives, or Fields Definition");
         }
-        ObjectTypeExtension { name, implements, directives, fields, span: self.span_from(start) }
+        ObjectTypeExtension {
+            name,
+            implements,
+            directives,
+            fields,
+            span: self.span_from(start),
+        }
     }
 
     fn parse_interface_type_definition(
@@ -1051,7 +1170,13 @@ impl<'a> Parser<'a> {
         if implements.is_none() && directives.is_empty() && fields.is_none() {
             self.err("expected an Implements Interfaces, Directives, or a Fields Definition");
         }
-        InterfaceTypeExtension { name, implements, directives, fields, span: self.span_from(start) }
+        InterfaceTypeExtension {
+            name,
+            implements,
+            directives,
+            fields,
+            span: self.span_from(start),
+        }
     }
 
     fn parse_implements_interfaces_if_present(&mut self) -> Option<ImplementsInterfaces<'a>> {
@@ -1080,7 +1205,10 @@ impl<'a> Parser<'a> {
                 break;
             }
         }
-        Some(ImplementsInterfaces { interfaces, span: self.span_from(start) })
+        Some(ImplementsInterfaces {
+            interfaces,
+            span: self.span_from(start),
+        })
     }
 
     fn parse_fields_definition_if_present(&mut self) -> Option<FieldsDefinition<'a>> {
@@ -1117,7 +1245,10 @@ impl<'a> Parser<'a> {
             ScratchNode::FieldDefinition(field) => field,
             _ => unreachable!("scratch stack discipline"),
         });
-        Some(FieldsDefinition { fields, span: self.span_from(open_start) })
+        Some(FieldsDefinition {
+            fields,
+            span: self.span_from(open_start),
+        })
     }
 
     fn parse_field_definition(&mut self) -> FieldDefinition<'a> {
@@ -1158,7 +1289,9 @@ impl<'a> Parser<'a> {
             }
             TokenKind::Name | TokenKind::StringValue => {
                 let definition = parser.parse_input_value_definition();
-                parser.scratch.push(ScratchNode::InputValueDefinition(definition));
+                parser
+                    .scratch
+                    .push(ScratchNode::InputValueDefinition(definition));
                 ControlFlow::Continue(())
             }
             TokenKind::Eof => {
@@ -1174,7 +1307,10 @@ impl<'a> Parser<'a> {
             ScratchNode::InputValueDefinition(definition) => definition,
             _ => unreachable!("scratch stack discipline"),
         });
-        Some(ArgumentsDefinition { items, span: self.span_from(open_start) })
+        Some(ArgumentsDefinition {
+            items,
+            span: self.span_from(open_start),
+        })
     }
 
     fn parse_input_value_definition(&mut self) -> InputValueDefinition<'a> {
@@ -1209,7 +1345,13 @@ impl<'a> Parser<'a> {
         let name = self.parse_name().unwrap_or_else(|| self.missing_name());
         let directives = self.parse_directives(Constness::Const);
         let members = self.parse_union_members_if_present();
-        UnionTypeDefinition { description, name, directives, members, span: self.span_from(start) }
+        UnionTypeDefinition {
+            description,
+            name,
+            directives,
+            members,
+            span: self.span_from(start),
+        }
     }
 
     fn parse_union_type_extension_from(&mut self, start: u32) -> UnionTypeExtension<'a> {
@@ -1220,7 +1362,12 @@ impl<'a> Parser<'a> {
         if directives.is_empty() && members.is_none() {
             self.err("expected Directives or Union Member Types");
         }
-        UnionTypeExtension { name, directives, members, span: self.span_from(start) }
+        UnionTypeExtension {
+            name,
+            directives,
+            members,
+            span: self.span_from(start),
+        }
     }
 
     fn parse_union_members_if_present(&mut self) -> Option<UnionMemberTypes<'a>> {
@@ -1249,7 +1396,10 @@ impl<'a> Parser<'a> {
                 break;
             }
         }
-        Some(UnionMemberTypes { members, span: self.span_from(start) })
+        Some(UnionMemberTypes {
+            members,
+            span: self.span_from(start),
+        })
     }
 
     fn parse_enum_type_definition(
@@ -1261,7 +1411,13 @@ impl<'a> Parser<'a> {
         let name = self.parse_name().unwrap_or_else(|| self.missing_name());
         let directives = self.parse_directives(Constness::Const);
         let values = self.parse_enum_values_definition_if_present();
-        EnumTypeDefinition { description, name, directives, values, span: self.span_from(start) }
+        EnumTypeDefinition {
+            description,
+            name,
+            directives,
+            values,
+            span: self.span_from(start),
+        }
     }
 
     fn parse_enum_type_extension_from(&mut self, start: u32) -> EnumTypeExtension<'a> {
@@ -1272,7 +1428,12 @@ impl<'a> Parser<'a> {
         if directives.is_empty() && values.is_none() {
             self.err("expected Directives or Enum Values Definition");
         }
-        EnumTypeExtension { name, directives, values, span: self.span_from(start) }
+        EnumTypeExtension {
+            name,
+            directives,
+            values,
+            span: self.span_from(start),
+        }
     }
 
     fn parse_enum_values_definition_if_present(&mut self) -> Option<EnumValuesDefinition<'a>> {
@@ -1304,18 +1465,28 @@ impl<'a> Parser<'a> {
                 ControlFlow::Continue(())
             }
         });
-        Some(EnumValuesDefinition { values, span: self.span_from(open_start) })
+        Some(EnumValuesDefinition {
+            values,
+            span: self.span_from(open_start),
+        })
     }
 
     fn parse_enum_value_definition(&mut self) -> EnumValueDefinition<'a> {
         let start = self.current_start();
         let description = self.parse_description_if_present();
-        let value = EnumValue { name: self.parse_name().unwrap_or_else(|| self.missing_name()) };
+        let value = EnumValue {
+            name: self.parse_name().unwrap_or_else(|| self.missing_name()),
+        };
         if matches!(value.name.as_str(), "true" | "false" | "null") {
             self.err("invalid Enum Value");
         }
         let directives = self.parse_directives(Constness::Const);
-        EnumValueDefinition { description, value, directives, span: self.span_from(start) }
+        EnumValueDefinition {
+            description,
+            value,
+            directives,
+            span: self.span_from(start),
+        }
     }
 
     fn parse_input_object_type_definition(
@@ -1347,7 +1518,12 @@ impl<'a> Parser<'a> {
         if directives.is_empty() && fields.is_none() {
             self.err("expected Directives or Input Fields Definition");
         }
-        InputObjectTypeExtension { name, directives, fields, span: self.span_from(start) }
+        InputObjectTypeExtension {
+            name,
+            directives,
+            fields,
+            span: self.span_from(start),
+        }
     }
 
     fn parse_input_fields_definition_if_present(&mut self) -> Option<InputFieldsDefinition<'a>> {
@@ -1368,7 +1544,9 @@ impl<'a> Parser<'a> {
             }
             TokenKind::Name | TokenKind::StringValue => {
                 let field = parser.parse_input_value_definition();
-                parser.scratch.push(ScratchNode::InputValueDefinition(field));
+                parser
+                    .scratch
+                    .push(ScratchNode::InputValueDefinition(field));
                 ControlFlow::Continue(())
             }
             TokenKind::Eof => {
@@ -1384,7 +1562,10 @@ impl<'a> Parser<'a> {
             ScratchNode::InputValueDefinition(field) => field,
             _ => unreachable!("scratch stack discipline"),
         });
-        Some(InputFieldsDefinition { fields, span: self.span_from(open_start) })
+        Some(InputFieldsDefinition {
+            fields,
+            span: self.span_from(open_start),
+        })
     }
 
     fn parse_description_if_present(&mut self) -> Option<ArenaBox<'a, StringValue<'a>>> {
@@ -1399,7 +1580,9 @@ impl<'a> Parser<'a> {
     /// The span start of a definition: the start of its already-parsed
     /// description if it has one, otherwise the start of the current token.
     fn definition_start(&mut self, description: &Option<ArenaBox<'a, StringValue<'a>>>) -> u32 {
-        description.as_ref().map_or_else(|| self.current_start(), |value| value.span.start)
+        description
+            .as_ref()
+            .map_or_else(|| self.current_start(), |value| value.span.start)
     }
 
     fn parse_string_value(&mut self) -> Option<StringValue<'a>> {
@@ -1420,8 +1603,10 @@ impl<'a> Parser<'a> {
         } else {
             // Strip exactly one quote from each end: `trim_matches` would also
             // eat a trailing escaped quote (`"abc\""` must keep its `"`).
-            let content =
-                raw.strip_prefix('"').and_then(|value| value.strip_suffix('"')).unwrap_or(raw);
+            let content = raw
+                .strip_prefix('"')
+                .and_then(|value| value.strip_suffix('"'))
+                .unwrap_or(raw);
             if content.contains('\\') {
                 self.allocator.alloc_str(&unescape_string(content))
             } else {
@@ -1429,7 +1614,12 @@ impl<'a> Parser<'a> {
                 content
             }
         };
-        Some(StringValue { raw, value, block, span: token_span(&token) })
+        Some(StringValue {
+            raw,
+            value,
+            block,
+            span: token_span(&token),
+        })
     }
 
     fn parse_name(&mut self) -> Option<Name<'a>> {
@@ -1438,7 +1628,10 @@ impl<'a> Parser<'a> {
             return None;
         }
         let token = self.bump().expect("peeked Name token must be available");
-        Some(Name { value: token.data(), span: token_span(&token) })
+        Some(Name {
+            value: token.data(),
+            span: token_span(&token),
+        })
     }
 
     fn expect_name_value(&mut self, expected: &str) {
@@ -1462,8 +1655,13 @@ impl<'a> Parser<'a> {
     fn parse_type_condition(&mut self) -> TypeCondition<'a> {
         let start = self.current_start();
         self.expect_name_value("on");
-        let named_type = self.parse_named_type().unwrap_or_else(|| self.missing_named_type());
-        TypeCondition { named_type, span: self.span_from(start) }
+        let named_type = self
+            .parse_named_type()
+            .unwrap_or_else(|| self.missing_named_type());
+        TypeCondition {
+            named_type,
+            span: self.span_from(start),
+        }
     }
 
     /// `= Value[Const]`, when present.
@@ -1474,19 +1672,30 @@ impl<'a> Parser<'a> {
         let start = self.current_start();
         self.bump();
         let value = self.parse_value(Constness::Const, false);
-        Some(DefaultValue { value, span: self.span_from(start) })
+        Some(DefaultValue {
+            value,
+            span: self.span_from(start),
+        })
     }
 
     fn missing_name(&self) -> Name<'a> {
-        Name { value: "", span: Span::new(self.last_end, self.last_end) }
+        Name {
+            value: "",
+            span: Span::new(self.last_end, self.last_end),
+        }
     }
 
     fn missing_named_type(&self) -> NamedType<'a> {
-        NamedType { name: self.missing_name() }
+        NamedType {
+            name: self.missing_name(),
+        }
     }
 
     fn missing_variable(&self) -> Variable<'a> {
-        Variable { name: self.missing_name(), span: Span::new(self.last_end, self.last_end) }
+        Variable {
+            name: self.missing_name(),
+            span: Span::new(self.last_end, self.last_end),
+        }
     }
 
     fn limit_err<S: Into<String>>(&mut self, message: S) {
@@ -1592,11 +1801,17 @@ impl<'a> Parser<'a> {
     }
 
     fn current_start(&mut self) -> u32 {
-        if let Some(token) = self.peek_token() { span_index(token.index()) } else { self.last_end }
+        if let Some(token) = self.peek_token() {
+            span_index(token.index())
+        } else {
+            self.last_end
+        }
     }
 
     fn current_span(&mut self) -> Span {
-        self.peek_token().map(token_span).unwrap_or_else(|| Span::new(self.last_end, self.last_end))
+        self.peek_token()
+            .map(token_span)
+            .unwrap_or_else(|| Span::new(self.last_end, self.last_end))
     }
 
     fn span_from(&self, start: u32) -> Span {
@@ -1658,8 +1873,10 @@ fn unescape_string(input: &str) -> String {
 }
 
 fn normalize_block_string(raw: &str) -> String {
-    let content =
-        raw.strip_prefix(r#"""""#).and_then(|value| value.strip_suffix(r#"""""#)).unwrap_or(raw);
+    let content = raw
+        .strip_prefix(r#"""""#)
+        .and_then(|value| value.strip_suffix(r#"""""#))
+        .unwrap_or(raw);
     let mut output = String::with_capacity(content.len());
     let mut chars = content.chars().peekable();
     while let Some(ch) = chars.next() {

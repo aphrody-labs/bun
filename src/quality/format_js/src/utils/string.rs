@@ -38,15 +38,22 @@ pub struct FormatLiteralStringToken<'a> {
 
 impl<'a> FormatLiteralStringToken<'a> {
     pub fn new(string: &'a str, jsx: bool, parent_kind: StringLiteralParentKind) -> Self {
-        Self { string, jsx, parent_kind }
+        Self {
+            string,
+            jsx,
+            parent_kind,
+        }
     }
 
     pub fn clean_text(&self, f: &JsFormatter<'_, 'a>) -> CleanedStringLiteralText<'a> {
         let options = f.options();
         let source_type = f.context().source_type();
 
-        let chosen_quote_style =
-            if self.jsx { options.jsx_quote_style } else { options.quote_style };
+        let chosen_quote_style = if self.jsx {
+            options.jsx_quote_style
+        } else {
+            options.quote_style
+        };
 
         let is_quote_needed = match options.quote_properties {
             QuoteProperties::AsNeeded => false,
@@ -165,8 +172,11 @@ impl FormatLiteralStringToken<'_> {
             },
         );
 
-        let current_quote =
-            literal.bytes().next().and_then(QuoteStyle::from_byte).unwrap_or_default();
+        let current_quote = literal
+            .bytes()
+            .next()
+            .and_then(QuoteStyle::from_byte)
+            .unwrap_or_default();
 
         StringInformation {
             current_quote,
@@ -197,7 +207,11 @@ impl<'a> LiteralStringNormalizer<'a> {
         chosen_quote_style: QuoteStyle,
         is_quote_needed: bool,
     ) -> Self {
-        Self { token, chosen_quote_style, is_quote_needed }
+        Self {
+            token,
+            chosen_quote_style,
+            is_quote_needed,
+        }
     }
 
     fn normalize_text(&self, source_type: SourceType) -> Cow<'a, str> {
@@ -206,7 +220,9 @@ impl<'a> LiteralStringNormalizer<'a> {
             return self.normalize_jsx_attribute();
         }
 
-        let str_info = self.token.compute_string_information(self.chosen_quote_style);
+        let str_info = self
+            .token
+            .compute_string_information(self.chosen_quote_style);
         match self.token.parent_kind {
             StringLiteralParentKind::Expression => self.normalize_string_literal(str_info),
             StringLiteralParentKind::Directive => self.normalize_directive(str_info),
@@ -218,8 +234,13 @@ impl<'a> LiteralStringNormalizer<'a> {
     /// Normalizes a JSX attribute string value using HTML entity escaping.
     fn normalize_jsx_attribute(&self) -> Cow<'a, str> {
         let raw_content = self.raw_content();
-        let current_quote =
-            self.token.string.bytes().next().and_then(QuoteStyle::from_byte).unwrap_or_default();
+        let current_quote = self
+            .token
+            .string
+            .bytes()
+            .next()
+            .and_then(QuoteStyle::from_byte)
+            .unwrap_or_default();
 
         let (normalized, chosen_quote) = normalize_jsx_string(raw_content, self.chosen_quote_style);
 
@@ -233,12 +254,16 @@ impl<'a> LiteralStringNormalizer<'a> {
             Cow::Borrowed(s) => {
                 // Content unchanged but quotes need swapping
                 let normalized_newlines = normalize_newlines(s, ['\r']);
-                Cow::Owned(std::format!("{quote_char}{normalized_newlines}{quote_char}"))
+                Cow::Owned(std::format!(
+                    "{quote_char}{normalized_newlines}{quote_char}"
+                ))
             }
             Cow::Owned(s) => {
                 // Content changed
                 let normalized_newlines = normalize_newlines(&s, ['\r']);
-                Cow::Owned(std::format!("{quote_char}{normalized_newlines}{quote_char}"))
+                Cow::Owned(std::format!(
+                    "{quote_char}{normalized_newlines}{quote_char}"
+                ))
             }
         }
     }
@@ -290,7 +315,11 @@ impl<'a> LiteralStringNormalizer<'a> {
     fn can_remove_number_quotes_by_file_type(&self, source_type: SourceType) -> bool {
         let text_to_check = self.raw_content();
 
-        if text_to_check.bytes().next().is_some_and(|b| b.is_ascii_digit()) {
+        if text_to_check
+            .bytes()
+            .next()
+            .is_some_and(|b| b.is_ascii_digit())
+        {
             if let Ok(parsed) = text_to_check.parse::<f64>() {
                 // In TypeScript, numbers like members have different meaning from numbers.
                 // Hence, if we see a number, we bail straightaway
@@ -356,7 +385,9 @@ impl<'a> LiteralStringNormalizer<'a> {
         if original.starts_with(preferred_quote) {
             Cow::Borrowed(original)
         } else {
-            Cow::Owned(std::format!("{preferred_quote}{content_to_use}{preferred_quote}"))
+            Cow::Owned(std::format!(
+                "{preferred_quote}{content_to_use}{preferred_quote}"
+            ))
         }
     }
 }
@@ -418,7 +449,11 @@ fn normalize_jsx_string(
 
     // Choose quote that minimizes escaping, preferring the configured quote when counts are equal
     let chosen_quote = if preferred_quote == QuoteStyle::Double {
-        if double_count > single_count { QuoteStyle::Single } else { QuoteStyle::Double }
+        if double_count > single_count {
+            QuoteStyle::Single
+        } else {
+            QuoteStyle::Double
+        }
     } else if single_count > double_count {
         QuoteStyle::Double
     } else {

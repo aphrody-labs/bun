@@ -20,8 +20,10 @@ use crate::{
 };
 
 fn require_prop_type_constructor_diagnostic(prop_name: &str, span: Span) -> OxcDiagnostic {
-    OxcDiagnostic::warn(format!("The \"{prop_name}\" property should be a constructor."))
-        .with_label(span)
+    OxcDiagnostic::warn(format!(
+        "The \"{prop_name}\" property should be a constructor."
+    ))
+    .with_label(span)
 }
 
 #[derive(Debug, Default, Clone)]
@@ -79,7 +81,9 @@ impl Rule for RequirePropTypeConstructor {
                 if !is_vue_component_options_object_excluding_instance(node, ctx) {
                     return;
                 }
-                let Some(props_prop) = find_property(obj, "props") else { return };
+                let Some(props_prop) = find_property(obj, "props") else {
+                    return;
+                };
                 let Expression::ObjectExpression(props_obj) =
                     props_prop.value.get_inner_expression()
                 else {
@@ -91,7 +95,9 @@ impl Rule for RequirePropTypeConstructor {
                 if ctx.frameworks_options() != FrameworkOptions::VueSetup {
                     return;
                 }
-                let Some(ident) = call.callee.get_identifier_reference() else { return };
+                let Some(ident) = call.callee.get_identifier_reference() else {
+                    return;
+                };
                 if ident.name != "defineProps" {
                     return;
                 }
@@ -114,14 +120,20 @@ impl Rule for RequirePropTypeConstructor {
 
 fn verify_props<'a>(props_obj: &ObjectExpression<'a>, ctx: &LintContext<'a>) {
     for entry in &props_obj.properties {
-        let ObjectPropertyKind::ObjectProperty(prop) = entry else { continue };
-        let Some(prop_name) = prop.key.static_name() else { continue };
+        let ObjectPropertyKind::ObjectProperty(prop) = entry else {
+            continue;
+        };
+        let Some(prop_name) = prop.key.static_name() else {
+            continue;
+        };
         let value = prop.value.get_inner_expression();
 
         match value {
             Expression::ArrayExpression(arr) => check_array_elements(arr, prop_name.as_ref(), ctx),
             Expression::ObjectExpression(obj) => {
-                let Some(type_prop) = find_property(obj, "type") else { continue };
+                let Some(type_prop) = find_property(obj, "type") else {
+                    continue;
+                };
                 let type_value = type_prop.value.get_inner_expression();
                 if let Expression::ArrayExpression(arr) = type_value {
                     check_array_elements(arr, prop_name.as_ref(), ctx);
@@ -156,7 +168,11 @@ fn check_and_report<'a>(expr: &Expression<'a>, prop_name: &str, ctx: &LintContex
     ctx.diagnostic_with_fix(
         require_prop_type_constructor_diagnostic(prop_name, span),
         |fixer: RuleFixer<'_, 'a>| -> RuleFix {
-            if let Some(name) = fix_replacement { fixer.replace(span, name) } else { fixer.noop() }
+            if let Some(name) = fix_replacement {
+                fixer.replace(span, name)
+            } else {
+                fixer.noop()
+            }
         },
     );
 }
@@ -584,7 +600,12 @@ fn test() {
         ),
     ];
 
-    Tester::new(RequirePropTypeConstructor::NAME, RequirePropTypeConstructor::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        RequirePropTypeConstructor::NAME,
+        RequirePropTypeConstructor::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

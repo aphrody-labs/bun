@@ -109,8 +109,9 @@ impl Rule for InlineScriptId {
             return;
         }
 
-        'references_loop: for reference in
-            ctx.semantic().symbol_references(specifier.local.symbol_id())
+        'references_loop: for reference in ctx
+            .semantic()
+            .symbol_references(specifier.local.symbol_id())
         {
             let parent_node = ctx.nodes().parent_node(reference.node_id());
             let AstKind::JSXOpeningElement(jsx_opening_element) = parent_node.kind() else {

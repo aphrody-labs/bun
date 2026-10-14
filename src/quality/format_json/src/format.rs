@@ -41,7 +41,13 @@ pub fn format<'a>(
     let capacity = (parsed.wrapped_source.len() * 3 / 10).max(1024);
     let mut buffer = VecBuffer::with_capacity(capacity, &mut state);
 
-    write!(&mut buffer, FormatJsonRoot { expression: parsed.expression, has_bom: parsed.has_bom });
+    write!(
+        &mut buffer,
+        FormatJsonRoot {
+            expression: parsed.expression,
+            has_bom: parsed.has_bom
+        }
+    );
 
     let elements = buffer.into_vec();
     let context = state.into_context();
@@ -117,7 +123,12 @@ pub fn format_to_ir<'a>(
     let mut state = FormatState::new_with_session(context, session.clone());
     let mut buffer = VecBuffer::new(&mut state);
 
-    write!(&mut buffer, FormatJsonEmbedded { expression: parsed.expression });
+    write!(
+        &mut buffer,
+        FormatJsonEmbedded {
+            expression: parsed.expression
+        }
+    );
 
     let elements = buffer.into_vec();
     let context = state.into_context();

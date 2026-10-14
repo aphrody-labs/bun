@@ -40,7 +40,8 @@ declare_oxc_lint!(
     eslint,
     correctness,
     version = "0.0.4",
-    short_description = "This rule generates warnings for generator functions that do not have the yield keyword.",
+    short_description =
+        "This rule generates warnings for generator functions that do not have the yield keyword.",
 );
 
 impl Rule for RequireYield {
@@ -56,7 +57,10 @@ impl Rule for RequireYield {
             }
 
             if !finder.found {
-                let span = func.id.as_ref().map_or_else(|| func.span, |ident| ident.span);
+                let span = func
+                    .id
+                    .as_ref()
+                    .map_or_else(|| func.span, |ident| ident.span);
                 ctx.diagnostic(require_yield_diagnostic(span));
             }
         }

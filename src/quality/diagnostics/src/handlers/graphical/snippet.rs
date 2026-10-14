@@ -31,7 +31,9 @@ impl GraphicalReportHandler {
         scanner: Option<&mut SpanScanner<'_>>,
         source_name: Option<&str>,
     ) -> fmt::Result {
-        let Some(scanner) = scanner else { return Ok(()) };
+        let Some(scanner) = scanner else {
+            return Ok(());
+        };
         let labels = diagnostic.labels();
         if labels.is_empty() {
             return Ok(());
@@ -102,10 +104,13 @@ impl GraphicalReportHandler {
         let lines = Self::get_lines(contents);
 
         // Only labels within this context can be its primary label.
-        let mut ctx_labels =
-            labels.iter().filter(|label| context.span().contains_inclusive(label.span()));
-        let primary_label =
-            ctx_labels.clone().find(|label| label.primary()).or_else(|| ctx_labels.next());
+        let mut ctx_labels = labels
+            .iter()
+            .filter(|label| context.span().contains_inclusive(label.span()));
+        let primary_label = ctx_labels
+            .clone()
+            .find(|label| label.primary())
+            .or_else(|| ctx_labels.next());
 
         // Assign styles after sorting labels by source position.
         let labels = labels
@@ -128,9 +133,11 @@ impl GraphicalReportHandler {
         }
 
         // Determine the width of the line-number column.
-        let linum_width = lines
-            .last()
-            .map_or(1, |line| line.number.checked_ilog10().map_or(1, |width| width as usize + 1));
+        let linum_width = lines.last().map_or(1, |line| {
+            line.number
+                .checked_ilog10()
+                .map_or(1, |width| width as usize + 1)
+        });
 
         // Header
         write_repeated_char(f, ' ', linum_width + 2)?;
@@ -141,9 +148,9 @@ impl GraphicalReportHandler {
         // at a line boundary at `contents.line()`, and the primary label always
         // lies within it, so only the short prefix needs to be walked.
         let (primary_line, primary_column) = match primary_label {
-            Some(label) => {
-                contents.line_column_at(label.span().start as usize).ok_or(fmt::Error)?
-            }
+            Some(label) => contents
+                .line_column_at(label.span().start as usize)
+                .ok_or(fmt::Error)?,
             None => (contents.line(), contents.column()),
         };
 
@@ -159,7 +166,13 @@ impl GraphicalReportHandler {
                     )?;
                 } else {
                     let source_name = source_name.style(style);
-                    writeln!(f, "[{}:{}:{}]", source_name, primary_line + 1, primary_column + 1)?;
+                    writeln!(
+                        f,
+                        "[{}:{}:{}]",
+                        source_name,
+                        primary_line + 1,
+                        primary_column + 1
+                    )?;
                 }
             }
             _ => {

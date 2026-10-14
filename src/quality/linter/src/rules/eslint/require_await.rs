@@ -103,7 +103,9 @@ impl RequireAwait {
         if !func.r#async {
             return;
         }
-        let Some(expression) = func.get_expression() else { return };
+        let Some(expression) = func.get_expression() else {
+            return;
+        };
         let mut finder = AwaitFinder { found: false };
         finder.visit_expression(expression);
         if !finder.found {
@@ -319,15 +321,36 @@ fn test() {
     ];
 
     let fix = vec![
-        ("const a =async() => { let v = 3 ;}", "const a =() => { let v = 3 ;}"),
-        ("const a = async () => { let v = 3 }", "const a = () => { let v = 3 }"),
-        ("async function foo() { doSomething() }", "function foo() { doSomething() }"),
-        ("(async function() { doSomething() })", "(function() { doSomething() })"),
+        (
+            "const a =async() => { let v = 3 ;}",
+            "const a =() => { let v = 3 ;}",
+        ),
+        (
+            "const a = async () => { let v = 3 }",
+            "const a = () => { let v = 3 }",
+        ),
+        (
+            "async function foo() { doSomething() }",
+            "function foo() { doSomething() }",
+        ),
+        (
+            "(async function() { doSomething() })",
+            "(function() { doSomething() })",
+        ),
         ("async () => { doSomething() }", "() => { doSomething() }"),
         ("async () => doSomething()", "() => doSomething()"),
-        ("({ async foo() { doSomething() } })", "({ foo() { doSomething() } })"),
-        ("class A { async foo() { doSomething() } }", "class A { foo() { doSomething() } }"),
-        ("(class { async ''() { doSomething() } })", "(class { ''() { doSomething() } })"),
+        (
+            "({ async foo() { doSomething() } })",
+            "({ foo() { doSomething() } })",
+        ),
+        (
+            "class A { async foo() { doSomething() } }",
+            "class A { foo() { doSomething() } }",
+        ),
+        (
+            "(class { async ''() { doSomething() } })",
+            "(class { ''() { doSomething() } })",
+        ),
         (
             "async function foo() { async () => { await doSomething() } }",
             "function foo() { async () => { await doSomething() } }",
@@ -340,7 +363,10 @@ fn test() {
             "async /** comments */ function name() { doSomething() }",
             "/** comments */ function name() { doSomething() }",
         ),
-        ("async          function foo() { doSomething() }", "function foo() { doSomething() }"),
+        (
+            "async          function foo() { doSomething() }",
+            "function foo() { doSomething() }",
+        ),
         (
             "async     /** cc */     function foo() { doSomething() }",
             "/** cc */     function foo() { doSomething() }",
@@ -351,7 +377,10 @@ fn test() {
         ),
         ("async function O(){r}", "function O(){r}"),
         ("s={expoí:async function(){{}}}", "s={expoí:function(){{}}}"),
-        ("class foo { private async bar() { x() } }", "class foo { private bar() { x() } }"),
+        (
+            "class foo { private async bar() { x() } }",
+            "class foo { private bar() { x() } }",
+        ),
         (
             "/* async */ async function foo() { doSomething() }",
             "/* async */ function foo() { doSomething() }",

@@ -18,9 +18,11 @@ use crate::{
 
 fn void_dom_elements_no_children_diagnostic(tag: &str, span: Span) -> OxcDiagnostic {
     // TODO: use imperative phrasing
-    OxcDiagnostic::warn(format!("Void DOM element <{tag:?} /> cannot receive children."))
-        .with_help("Remove this element's children or use a non-void element.")
-        .with_label(span)
+    OxcDiagnostic::warn(format!(
+        "Void DOM element <{tag:?} /> cannot receive children."
+    ))
+    .with_help("Remove this element's children or use a non-void element.")
+    .with_label(span)
 }
 
 #[derive(Debug, Default, Clone)]
@@ -61,7 +63,8 @@ declare_oxc_lint!(
     react,
     correctness,
     version = "0.2.11",
-    short_description = "Disallow void DOM elements (e.g. `<img />`, `<br />`) from receiving children.",
+    short_description =
+        "Disallow void DOM elements (e.g. `<img />`, `<br />`) from receiving children.",
 );
 
 const VOID_DOM_ELEMENTS: [&str; 16] = [
@@ -87,15 +90,18 @@ impl Rule for VoidDomElementsNoChildren {
                 }
 
                 let has_children_attribute_or_danger =
-                    jsx_opening_el.attributes.iter().any(|attribute| match attribute {
-                        JSXAttributeItem::Attribute(attr) => {
-                            let JSXAttributeName::Identifier(iden) = &attr.name else {
-                                return false;
-                            };
-                            iden.name == "children" || iden.name == "dangerouslySetInnerHTML"
-                        }
-                        JSXAttributeItem::SpreadAttribute(_) => false,
-                    });
+                    jsx_opening_el
+                        .attributes
+                        .iter()
+                        .any(|attribute| match attribute {
+                            JSXAttributeItem::Attribute(attr) => {
+                                let JSXAttributeName::Identifier(iden) = &attr.name else {
+                                    return false;
+                                };
+                                iden.name == "children" || iden.name == "dangerouslySetInnerHTML"
+                            }
+                            JSXAttributeItem::SpreadAttribute(_) => false,
+                        });
 
                 if !jsx_el.children.is_empty() || has_children_attribute_or_danger {
                     ctx.diagnostic(void_dom_elements_no_children_diagnostic(
@@ -164,10 +170,16 @@ fn test() {
     let pass = vec![
         (r"<div>Foo</div>;", None),
         (r"<div children='Foo' />;", None),
-        (r"<div dangerouslySetInnerHTML={{ __html: 'Foo' }} />;", None),
+        (
+            r"<div dangerouslySetInnerHTML={{ __html: 'Foo' }} />;",
+            None,
+        ),
         (r"React.createElement('div', {}, 'Foo');", None),
         (r"React.createElement('div', { children: 'Foo' });", None),
-        (r"React.createElement('div', { dangerouslySetInnerHTML: { __html: 'Foo' } });", None),
+        (
+            r"React.createElement('div', { dangerouslySetInnerHTML: { __html: 'Foo' } });",
+            None,
+        ),
         (r"React.createElement('img');", None),
         (r"React.createElement();", None),
         (
@@ -214,7 +226,10 @@ fn test() {
         (r"<br dangerouslySetInnerHTML={{ __html: 'Foo' }} />;", None),
         (r"React.createElement('br', {}, 'Foo');", None),
         (r"React.createElement('br', { children: 'Foo' });", None),
-        (r"React.createElement('br', { dangerouslySetInnerHTML: { __html: 'Foo' } });", None),
+        (
+            r"React.createElement('br', { dangerouslySetInnerHTML: { __html: 'Foo' } });",
+            None,
+        ),
         (
             r"
                 import React, {createElement} from 'react';
@@ -238,6 +253,11 @@ fn test() {
         ),
     ];
 
-    Tester::new(VoidDomElementsNoChildren::NAME, VoidDomElementsNoChildren::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        VoidDomElementsNoChildren::NAME,
+        VoidDomElementsNoChildren::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

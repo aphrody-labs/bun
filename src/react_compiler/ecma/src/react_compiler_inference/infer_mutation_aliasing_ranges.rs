@@ -114,11 +114,14 @@ struct AliasingState {
 
 impl AliasingState {
     fn new() -> Self {
-        AliasingState { nodes: FxHashMap::default() }
+        AliasingState {
+            nodes: FxHashMap::default(),
+        }
     }
 
     fn create(&mut self, place: &Place, value: NodeValue) {
-        self.nodes.insert(place.identifier, Node::new(place.identifier, value));
+        self.nodes
+            .insert(place.identifier, Node::new(place.identifier, value));
     }
 
     fn create_from(&mut self, index: usize, from: &Place, into: &Place) {
@@ -127,7 +130,11 @@ impl AliasingState {
         let into_id = into.identifier;
         // Add forward edge from -> into on the from node
         if let Some(from_node) = self.nodes.get_mut(&from_id) {
-            from_node.edges.push(Edge { index, node: into_id, kind: EdgeKind::Alias });
+            from_node.edges.push(Edge {
+                index,
+                node: into_id,
+                kind: EdgeKind::Alias,
+            });
         }
         // Add created_from on the into node
         if let Some(to_node) = self.nodes.get_mut(&into_id) {
@@ -146,7 +153,12 @@ impl AliasingState {
             node: into_id,
             kind: EdgeKind::Capture,
         });
-        self.nodes.get_mut(&into_id).unwrap().captures.entry(from_id).or_insert(index);
+        self.nodes
+            .get_mut(&into_id)
+            .unwrap()
+            .captures
+            .entry(from_id)
+            .or_insert(index);
     }
 
     fn assign(&mut self, index: usize, from: &Place, into: &Place) {
@@ -160,7 +172,12 @@ impl AliasingState {
             node: into_id,
             kind: EdgeKind::Alias,
         });
-        self.nodes.get_mut(&into_id).unwrap().aliases.entry(from_id).or_insert(index);
+        self.nodes
+            .get_mut(&into_id)
+            .unwrap()
+            .aliases
+            .entry(from_id)
+            .or_insert(index);
     }
 
     fn maybe_alias(&mut self, index: usize, from: &Place, into: &Place) {
@@ -174,7 +191,12 @@ impl AliasingState {
             node: into_id,
             kind: EdgeKind::MaybeAlias,
         });
-        self.nodes.get_mut(&into_id).unwrap().maybe_aliases.entry(from_id).or_insert(index);
+        self.nodes
+            .get_mut(&into_id)
+            .unwrap()
+            .maybe_aliases
+            .entry(from_id)
+            .or_insert(index);
     }
 
     fn render(&self, index: usize, start: IdentifierId, env: &mut Environment) {
@@ -285,20 +307,32 @@ impl AliasingState {
             if entry.transitive {
                 match &node.transitive {
                     None => {
-                        node.transitive = Some(MutationInfo { kind: entry.kind, span });
+                        node.transitive = Some(MutationInfo {
+                            kind: entry.kind,
+                            span,
+                        });
                     }
                     Some(existing) if existing.kind < entry.kind => {
-                        node.transitive = Some(MutationInfo { kind: entry.kind, span });
+                        node.transitive = Some(MutationInfo {
+                            kind: entry.kind,
+                            span,
+                        });
                     }
                     _ => {}
                 }
             } else {
                 match &node.local {
                     None => {
-                        node.local = Some(MutationInfo { kind: entry.kind, span });
+                        node.local = Some(MutationInfo {
+                            kind: entry.kind,
+                            span,
+                        });
                     }
                     Some(existing) if existing.kind < entry.kind => {
-                        node.local = Some(MutationInfo { kind: entry.kind, span });
+                        node.local = Some(MutationInfo {
+                            kind: entry.kind,
+                            span,
+                        });
                     }
                     _ => {}
                 }
@@ -504,11 +538,14 @@ pub fn infer_mutation_aliasing_ranges<'a>(
             state.create(&phi.place, NodeValue::Phi);
             for (&pred, operand) in &phi.operands {
                 if !seen_blocks.contains(&pred) {
-                    pending_phis.entry(pred).or_default().push(PendingPhiOperand {
-                        from: *operand,
-                        into: phi.place,
-                        index,
-                    });
+                    pending_phis
+                        .entry(pred)
+                        .or_default()
+                        .push(PendingPhiOperand {
+                            from: *operand,
+                            into: phi.place,
+                            index,
+                        });
                     index += 1;
                 } else {
                     state.assign(index, operand, &phi.place);
@@ -532,8 +569,15 @@ pub fn infer_mutation_aliasing_ranges<'a>(
                     AliasingEffect::Create { into, .. } => {
                         state.create(into, NodeValue::Object);
                     }
-                    AliasingEffect::CreateFunction { into, function_id, .. } => {
-                        state.create(into, NodeValue::Function { function_id: *function_id });
+                    AliasingEffect::CreateFunction {
+                        into, function_id, ..
+                    } => {
+                        state.create(
+                            into,
+                            NodeValue::Function {
+                                function_id: *function_id,
+                            },
+                        );
                     }
                     AliasingEffect::CreateFrom { from, into } => {
                         state.create_from(index, from, into);
@@ -615,7 +659,10 @@ pub fn infer_mutation_aliasing_ranges<'a>(
                         function_effects.push(effect.clone_in(env.allocator));
                     }
                     AliasingEffect::Render { place } => {
-                        renders.push(PendingRender { index, place: *place });
+                        renders.push(PendingRender {
+                            index,
+                            place: *place,
+                        });
                         index += 1;
                         function_effects.push(effect.clone_in(env.allocator));
                     }
@@ -764,7 +811,10 @@ pub fn infer_mutation_aliasing_ranges<'a>(
 
                 (
                     phi.place.identifier,
-                    phi.operands.values().map(|o| o.identifier).collect::<Vec<_>>(),
+                    phi.operands
+                        .values()
+                        .map(|o| o.identifier)
+                        .collect::<Vec<_>>(),
                     is_mutated_after_creation,
                     first_instr_id,
                 )
@@ -779,8 +829,11 @@ pub fn infer_mutation_aliasing_ranges<'a>(
                 if phi.place.identifier == *phi_id {
                     phi.place.effect = Effect::Store;
                     for operand in phi.operands.values_mut() {
-                        operand.effect =
-                            if *is_mutated_after_creation { Effect::Capture } else { Effect::Read };
+                        operand.effect = if *is_mutated_after_creation {
+                            Effect::Capture
+                        } else {
+                            Effect::Read
+                        };
                     }
                     break;
                 }
@@ -937,8 +990,11 @@ pub fn infer_mutation_aliasing_ranges<'a>(
                 | InstructionValue::ObjectMethod { lowered_func, .. } = &instr.value
                 {
                     let func_id = lowered_func.func;
-                    let ctx_ids: Vec<IdentifierId> =
-                        env.functions[func_id].context.iter().map(|c| c.identifier).collect();
+                    let ctx_ids: Vec<IdentifierId> = env.functions[func_id]
+                        .context
+                        .iter()
+                        .map(|c| c.identifier)
+                        .collect();
                     for ctx_id in &ctx_ids {
                         let ident = &env.identifiers[*ctx_id];
                         if ident.mutable_range.end > eval_order
@@ -972,7 +1028,11 @@ pub fn infer_mutation_aliasing_ranges<'a>(
         let block = func.body.blocks.get_mut(&block_id).unwrap();
         match &mut block.terminal {
             Terminal::Return { value, .. } => {
-                value.effect = if is_function_expression { Effect::Read } else { Effect::Freeze };
+                value.effect = if is_function_expression {
+                    Effect::Read
+                } else {
+                    Effect::Freeze
+                };
             }
             terminal => {
                 for_each_terminal_operand_mut(terminal, &mut |place| {
@@ -1078,12 +1138,18 @@ fn collect_param_effects<'a>(
         match local.kind {
             MutationKind::Conditional => {
                 function_effects.push(AliasingEffect::MutateConditionally {
-                    value: Place { span: local.span, ..*place },
+                    value: Place {
+                        span: local.span,
+                        ..*place
+                    },
                 });
             }
             MutationKind::Definite => {
                 function_effects.push(AliasingEffect::Mutate {
-                    value: Place { span: local.span, ..*place },
+                    value: Place {
+                        span: local.span,
+                        ..*place
+                    },
                     reason: node.mutation_reason,
                 });
             }
@@ -1094,12 +1160,18 @@ fn collect_param_effects<'a>(
         match transitive.kind {
             MutationKind::Conditional => {
                 function_effects.push(AliasingEffect::MutateTransitiveConditionally {
-                    value: Place { span: transitive.span, ..*place },
+                    value: Place {
+                        span: transitive.span,
+                        ..*place
+                    },
                 });
             }
             MutationKind::Definite => {
                 function_effects.push(AliasingEffect::MutateTransitive {
-                    value: Place { span: transitive.span, ..*place },
+                    value: Place {
+                        span: transitive.span,
+                        ..*place
+                    },
                 });
             }
         }

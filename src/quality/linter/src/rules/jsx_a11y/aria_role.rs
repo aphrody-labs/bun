@@ -100,7 +100,8 @@ declare_oxc_lint!(
     correctness,
     config = AriaRoleConfig,
     version = "0.1.1",
-    short_description = "Enforce that elements with ARIA roles use a valid, non-abstract ARIA role.",
+    short_description =
+        "Enforce that elements with ARIA roles use a valid, non-abstract ARIA role.",
 );
 
 impl Rule for AriaRole {
@@ -189,14 +190,38 @@ fn test() {
         ("<div role='doc-abstract' />", None, None),
         ("<div role='doc-appendix doc-bibliography' />", None, None),
         ("<Bar baz />", None, None),
-        ("<img role='invalid-role' />", Some(allowed_invalid_roles()), None),
-        ("<img role='invalid-role tabpanel' />", Some(allowed_invalid_roles()), None),
-        ("<img role='invalid-role other-invalid-role' />", Some(allowed_invalid_roles()), None),
+        (
+            "<img role='invalid-role' />",
+            Some(allowed_invalid_roles()),
+            None,
+        ),
+        (
+            "<img role='invalid-role tabpanel' />",
+            Some(allowed_invalid_roles()),
+            None,
+        ),
+        (
+            "<img role='invalid-role other-invalid-role' />",
+            Some(allowed_invalid_roles()),
+            None,
+        ),
         ("<Foo role='bar' />", Some(ignore_non_dom_schema()), None),
-        ("<fakeDOM role='bar' />", Some(ignore_non_dom_schema()), None),
-        ("<img role='presentation' />", Some(ignore_non_dom_schema()), None),
+        (
+            "<fakeDOM role='bar' />",
+            Some(ignore_non_dom_schema()),
+            None,
+        ),
+        (
+            "<img role='presentation' />",
+            Some(ignore_non_dom_schema()),
+            None,
+        ),
         ("<Div role='button' />", None, Some(settings())),
-        ("<Box asChild='div' role='button' />", None, Some(settings())),
+        (
+            "<Box asChild='div' role='button' />",
+            None,
+            Some(settings()),
+        ),
         ("<svg role='graphics-document document' />", None, None),
     ];
 
@@ -210,12 +235,20 @@ fn test() {
         ("<div role='tabpanel row range'></div>", None, None),
         ("<div role='doc-endnotes range'></div>", None, None),
         ("<div role />", None, None),
-        ("<div role='unknown-invalid-role' />", Some(allowed_invalid_roles()), None),
+        (
+            "<div role='unknown-invalid-role' />",
+            Some(allowed_invalid_roles()),
+            None,
+        ),
         ("<div role={null}></div>", None, None),
         ("<Foo role='datepicker' />", None, None),
         ("<Foo role='Button' />", None, None),
         ("<Div role='Button' />", None, Some(settings())),
-        ("<Div role='Button' />", Some(ignore_non_dom_schema()), Some(settings())),
+        (
+            "<Div role='Button' />",
+            Some(ignore_non_dom_schema()),
+            Some(settings()),
+        ),
         ("<Box asChild='div' role='Button' />", None, None),
     ];
 

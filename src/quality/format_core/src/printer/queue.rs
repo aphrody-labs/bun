@@ -103,7 +103,11 @@ pub(super) trait Queue<'a> {
         let next = self.stack_mut().pop().unwrap_or(&[]);
         self.set_current(next);
 
-        if current.is_empty() { None } else { Some(current) }
+        if current.is_empty() {
+            None
+        } else {
+            Some(current)
+        }
     }
 
     /// Skips all content until it finds the corresponding end tag with the given kind.
@@ -136,7 +140,10 @@ pub(super) struct PrintQueue<'a> {
 
 impl<'a> PrintQueue<'a> {
     pub(super) fn new(slice: &'a [FormatElement<'a>]) -> Self {
-        Self { current: slice, slices: Vec::default() }
+        Self {
+            current: slice,
+            slices: Vec::default(),
+        }
     }
 
     pub(super) fn is_empty(&self) -> bool {
@@ -180,7 +187,10 @@ impl<'a, 'print> FitsQueue<'a, 'print> {
     ) -> Self {
         let stack = StackedStack::with_vec(&print_queue.slices, saved);
 
-        Self { current: print_queue.current, stack }
+        Self {
+            current: print_queue.current,
+            stack,
+        }
     }
 
     pub(super) fn finish(self) -> Vec<&'a [FormatElement<'a>]> {
@@ -218,7 +228,12 @@ where
     Q: Queue<'a>,
 {
     fn new(queue: &'q mut Q, kind: TagKind) -> Self {
-        Self { queue, kind, depth: 1, lifetime: PhantomData }
+        Self {
+            queue,
+            kind,
+            depth: 1,
+            lifetime: PhantomData,
+        }
     }
 }
 

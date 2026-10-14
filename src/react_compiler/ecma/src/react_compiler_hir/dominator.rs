@@ -47,7 +47,11 @@ impl PostDominator {
     /// the block post-dominates itself (i.e., it is the exit node).
     pub fn get(&self, id: BlockId) -> Option<BlockId> {
         let dominator = self.nodes[id].expect("Unknown node in post-dominator tree");
-        if dominator == id { None } else { Some(dominator) }
+        if dominator == id {
+            None
+        } else {
+            Some(dominator)
+        }
     }
 
     /// Iterates over `id` and its ancestors in the post-dominator tree.
@@ -107,7 +111,10 @@ pub fn compute_post_dominator_tree(
         }
     }
 
-    Ok(PostDominator { exit: graph.entry, nodes })
+    Ok(PostDominator {
+        exit: graph.entry,
+        nodes,
+    })
 }
 
 /// Build the reverse graph from the HIR function.
@@ -148,7 +155,12 @@ fn build_reverse_graph(
             raw_nodes[exit_id].as_mut().unwrap().succs.insert(*id);
         }
 
-        raw_nodes[*id] = Some(Node { id: *id, index: 0, preds: preds_set, succs: succs_set });
+        raw_nodes[*id] = Some(Node {
+            id: *id,
+            index: 0,
+            preds: preds_set,
+            succs: succs_set,
+        });
     }
 
     // DFS from exit to compute RPO
@@ -168,7 +180,11 @@ fn build_reverse_graph(
         nodes.push(node);
     }
 
-    Graph { entry: exit_id, nodes, node_index }
+    Graph {
+        entry: exit_id,
+        nodes,
+        node_index,
+    }
 }
 
 fn dfs_postorder(
@@ -286,8 +302,9 @@ pub fn compute_post_dominator_frontiers(
     for (&block_id, block) in &func.body.blocks {
         let stop = post_dominators.get(block_id);
         for successor in each_terminal_successor(&block.terminal) {
-            for runner in
-                post_dominators.ancestors(successor).take_while(|&runner| Some(runner) != stop)
+            for runner in post_dominators
+                .ancestors(successor)
+                .take_while(|&runner| Some(runner) != stop)
             {
                 frontiers.entry(runner).or_default().insert(block_id);
             }

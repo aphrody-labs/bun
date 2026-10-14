@@ -86,7 +86,11 @@ pub fn format_trimmed_number(text: &str, keep_one_trailing_decimal_zero: bool) -
     // Prettier's regex-based approach preserves them implicitly because `\d` doesn't match `_`.
     // The only transformation that still applies is adding a leading zero (`.1_1` → `0.1_1`).
     if text.contains('_') {
-        return if text.starts_with('.') { Cow::Owned(format!("0{text}")) } else { text };
+        return if text.starts_with('.') {
+            Cow::Owned(format!("0{text}"))
+        } else {
+            text
+        };
     }
 
     let mut copied_or_ignored_chars = 0usize;
@@ -145,7 +149,9 @@ pub fn format_trimmed_number(text: &str, keep_one_trailing_decimal_zero: bool) -
             }
             (
                 Exponent(FormatNumberLiteralExponent {
-                    e_index, first_non_zero_index: None, ..
+                    e_index,
+                    first_non_zero_index: None,
+                    ..
                 }),
                 (curr_index, None),
             ) => {
@@ -201,10 +207,18 @@ pub fn format_trimmed_number(text: &str, keep_one_trailing_decimal_zero: bool) -
                 });
             }
             (Exponent(exponent), Some((_, b'-'))) => {
-                state = Exponent(FormatNumberLiteralExponent { is_negative: true, ..*exponent });
+                state = Exponent(FormatNumberLiteralExponent {
+                    is_negative: true,
+                    ..*exponent
+                });
             }
             (
-                Exponent(exponent @ FormatNumberLiteralExponent { first_digit_index: None, .. }),
+                Exponent(
+                    exponent @ FormatNumberLiteralExponent {
+                        first_digit_index: None,
+                        ..
+                    },
+                ),
                 Some((curr_index, curr_char @ b'0'..=b'9')),
             ) => {
                 state = Exponent(FormatNumberLiteralExponent {
@@ -220,7 +234,12 @@ pub fn format_trimmed_number(text: &str, keep_one_trailing_decimal_zero: bool) -
                 });
             }
             (
-                Exponent(exponent @ FormatNumberLiteralExponent { first_non_zero_index: None, .. }),
+                Exponent(
+                    exponent @ FormatNumberLiteralExponent {
+                        first_non_zero_index: None,
+                        ..
+                    },
+                ),
                 Some((curr_index, b'1'..=b'9')),
             ) => {
                 state = Exponent(FormatNumberLiteralExponent {

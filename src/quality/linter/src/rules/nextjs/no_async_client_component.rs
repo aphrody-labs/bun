@@ -94,7 +94,11 @@ impl Rule for NoAsyncClientComponent {
     fn run_once(&self, ctx: &LintContext) {
         let program = ctx.nodes().program();
 
-        if program.directives.iter().any(|directive| directive.directive.as_str() == "use client") {
+        if program
+            .directives
+            .iter()
+            .any(|directive| directive.directive.as_str() == "use client")
+        {
             for node in &program.body {
                 let Statement::ExportDefaultDeclaration(export_default_decl) = &node else {
                     continue;
@@ -248,6 +252,11 @@ fn test() {
                   "#,
     ];
 
-    Tester::new(NoAsyncClientComponent::NAME, NoAsyncClientComponent::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        NoAsyncClientComponent::NAME,
+        NoAsyncClientComponent::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

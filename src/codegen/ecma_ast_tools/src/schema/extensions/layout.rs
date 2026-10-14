@@ -67,12 +67,20 @@ pub struct PlatformLayout {
 impl PlatformLayout {
     /// Create [`PlatformLayout`] from `size` and `align` pair, with no niche.
     pub fn from_size_align(size: u32, align: u32) -> Self {
-        Self { size, align, niche: None }
+        Self {
+            size,
+            align,
+            niche: None,
+        }
     }
 
     /// Create [`PlatformLayout`] from `size` and `align` pair, and [`Niche`].
     pub fn from_size_align_niche(size: u32, align: u32, niche: Niche) -> Self {
-        Self { size, align, niche: Some(niche) }
+        Self {
+            size,
+            align,
+            niche: Some(niche),
+        }
     }
 }
 
@@ -92,7 +100,12 @@ pub struct Niche {
 impl Niche {
     /// Create new [`Niche`].
     pub fn new(offset: u32, size: u32, count_start: u32, count_end: u32) -> Self {
-        Self { offset, size, count_start, count_end }
+        Self {
+            offset,
+            size,
+            count_start,
+            count_end,
+        }
     }
 
     /// Get size of largest niche range (start or end)
@@ -125,10 +138,18 @@ impl Niche {
         let next_down = valid_start.wrapping_sub(1) & max_value;
         let sign_bit = (max_value >> 1) + 1;
         let signed_abs = |value: u128| {
-            if value < sign_bit { value } else { ((!value) & max_value) + 1 }
+            if value < sign_bit {
+                value
+            } else {
+                ((!value) & max_value) + 1
+            }
         };
 
-        if signed_abs(next_down) <= signed_abs(next_up) { next_down } else { next_up }
+        if signed_abs(next_down) <= signed_abs(next_up) {
+            next_down
+        } else {
+            next_up
+        }
     }
 }
 
@@ -163,7 +184,11 @@ pub trait GetLayout {
 
     /// Get [`PlatformLayout`] for type on specified platform.
     fn platform_layout(&self, is_64: bool) -> &PlatformLayout {
-        if is_64 { self.layout_64() } else { self.layout_32() }
+        if is_64 {
+            self.layout_64()
+        } else {
+            self.layout_32()
+        }
     }
 }
 
@@ -217,7 +242,11 @@ pub trait GetOffset {
 
     /// Get offset for struct field on specified platform.
     fn platform_offset(&self, is_64: bool) -> u32 {
-        if is_64 { self.offset_64() } else { self.offset_32() }
+        if is_64 {
+            self.offset_64()
+        } else {
+            self.offset_32()
+        }
     }
 }
 

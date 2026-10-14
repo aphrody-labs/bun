@@ -14,11 +14,11 @@
 
 use std::path::{Path, PathBuf};
 
-use anyhow::{Context, Result, anyhow};
 use crate::{
     run,
     types::{Mode, Report, RunOptions},
 };
+use anyhow::{Context, Result, anyhow};
 
 pub(crate) struct PatchOpts {
     pub(crate) package: Option<String>,

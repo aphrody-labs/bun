@@ -203,7 +203,10 @@ impl Rule for NoDuplicateImports {
             for (source, requests) in &module_record.requested_modules {
                 for request in requests {
                     if request.is_import {
-                        side_effect_import_map.entry(source).or_default().push(request.span);
+                        side_effect_import_map
+                            .entry(source)
+                            .or_default()
+                            .push(request.span);
                     }
                 }
             }
@@ -448,8 +451,12 @@ fn can_merge_imports(
     if is_current_statement_type_import && is_current_specifier_type && all_existing_are_type {
         let current_is_default = matches!(current_type, ImportType::Default);
         let current_is_named = matches!(current_type, ImportType::Named);
-        let has_default = existing.iter().any(|(t, _, _, _)| matches!(t, ImportType::Default));
-        let has_named = existing.iter().any(|(t, _, _, _)| matches!(t, ImportType::Named));
+        let has_default = existing
+            .iter()
+            .any(|(t, _, _, _)| matches!(t, ImportType::Default));
+        let has_named = existing
+            .iter()
+            .any(|(t, _, _, _)| matches!(t, ImportType::Named));
 
         // Cannot merge if one is default and the other is named
         if (current_is_default && has_named) || (current_is_named && has_default) {
@@ -481,9 +488,15 @@ fn can_merge_imports(
         }
     }
 
-    let namespace = existing.iter().find(|(t, _, _, _)| matches!(t, ImportType::Namespace));
-    let named = existing.iter().find(|(t, _, _, _)| matches!(t, ImportType::Named));
-    let default = existing.iter().find(|(t, _, _, _)| matches!(t, ImportType::Default));
+    let namespace = existing
+        .iter()
+        .find(|(t, _, _, _)| matches!(t, ImportType::Namespace));
+    let named = existing
+        .iter()
+        .find(|(t, _, _, _)| matches!(t, ImportType::Named));
+    let default = existing
+        .iter()
+        .find(|(t, _, _, _)| matches!(t, ImportType::Default));
 
     let has_namespace = namespace.is_some();
     let has_named = named.is_some();
@@ -936,6 +949,11 @@ fn test() {
         ),
     ];
 
-    Tester::new(NoDuplicateImports::NAME, NoDuplicateImports::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        NoDuplicateImports::NAME,
+        NoDuplicateImports::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

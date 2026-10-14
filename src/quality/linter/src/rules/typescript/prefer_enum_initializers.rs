@@ -197,7 +197,12 @@ fn test() {
             .into(),
     ];
 
-    Tester::new(PreferEnumInitializers::NAME, PreferEnumInitializers::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        PreferEnumInitializers::NAME,
+        PreferEnumInitializers::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

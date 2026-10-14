@@ -34,11 +34,18 @@ impl ES2022<'_> {
                 );
                 (None, Some(class_properties))
             } else {
-                let class_static_block =
-                    if options.class_static_block { Some(ClassStaticBlock::new()) } else { None };
+                let class_static_block = if options.class_static_block {
+                    Some(ClassStaticBlock::new())
+                } else {
+                    None
+                };
                 (class_static_block, None)
             };
-        Self { options, class_static_block, class_properties }
+        Self {
+            options,
+            class_static_block,
+            class_properties,
+        }
     }
 }
 

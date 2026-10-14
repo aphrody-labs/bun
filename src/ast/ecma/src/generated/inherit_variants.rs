@@ -265,7 +265,11 @@ impl<'a> Expression<'a> {
     pub fn as_array_expression_element(&self) -> &ArrayExpressionElement<'a> {
         // SAFETY: Transmute is safe because discriminants + types are identical between
         // `parent` and `child` for the shared variants
-        unsafe { NonNull::from_ref(self).cast::<ArrayExpressionElement>().as_ref() }
+        unsafe {
+            NonNull::from_ref(self)
+                .cast::<ArrayExpressionElement>()
+                .as_ref()
+        }
     }
 }
 
@@ -516,7 +520,11 @@ impl<'a> MemberExpression<'a> {
     pub fn as_array_expression_element(&self) -> &ArrayExpressionElement<'a> {
         // SAFETY: Transmute is safe because discriminants + types are identical between
         // `parent` and `child` for the shared variants
-        unsafe { NonNull::from_ref(self).cast::<ArrayExpressionElement>().as_ref() }
+        unsafe {
+            NonNull::from_ref(self)
+                .cast::<ArrayExpressionElement>()
+                .as_ref()
+        }
     }
 }
 
@@ -1351,7 +1359,11 @@ impl<'a> AssignmentTarget<'a> {
         if self.is_simple_assignment_target() {
             // SAFETY: Transmute is safe because discriminants + types are identical between
             // `parent` and `child` for the shared variants
-            Some(unsafe { NonNull::from_ref(self).cast::<SimpleAssignmentTarget>().as_ref() })
+            Some(unsafe {
+                NonNull::from_ref(self)
+                    .cast::<SimpleAssignmentTarget>()
+                    .as_ref()
+            })
         } else {
             None
         }
@@ -1366,7 +1378,11 @@ impl<'a> AssignmentTarget<'a> {
         if self.is_simple_assignment_target() {
             // SAFETY: Transmute is safe because discriminants + types are identical between
             // `parent` and `child` for the shared variants
-            Some(unsafe { NonNull::from_mut(self).cast::<SimpleAssignmentTarget>().as_mut() })
+            Some(unsafe {
+                NonNull::from_mut(self)
+                    .cast::<SimpleAssignmentTarget>()
+                    .as_mut()
+            })
         } else {
             None
         }
@@ -1617,7 +1633,10 @@ impl<'a> AssignmentTarget<'a> {
     /// Return if an [`AssignmentTarget`] is an [`AssignmentTargetPattern`].
     #[inline]
     pub fn is_assignment_target_pattern(&self) -> bool {
-        matches!(self, Self::ArrayAssignmentTarget(_) | Self::ObjectAssignmentTarget(_))
+        matches!(
+            self,
+            Self::ArrayAssignmentTarget(_) | Self::ObjectAssignmentTarget(_)
+        )
     }
 
     /// Convert an [`AssignmentTarget`] to an [`AssignmentTargetPattern`].
@@ -1638,7 +1657,11 @@ impl<'a> AssignmentTarget<'a> {
         if self.is_assignment_target_pattern() {
             // SAFETY: Transmute is safe because discriminants + types are identical between
             // `parent` and `child` for the shared variants
-            Some(unsafe { NonNull::from_ref(self).cast::<AssignmentTargetPattern>().as_ref() })
+            Some(unsafe {
+                NonNull::from_ref(self)
+                    .cast::<AssignmentTargetPattern>()
+                    .as_ref()
+            })
         } else {
             None
         }
@@ -1653,7 +1676,11 @@ impl<'a> AssignmentTarget<'a> {
         if self.is_assignment_target_pattern() {
             // SAFETY: Transmute is safe because discriminants + types are identical between
             // `parent` and `child` for the shared variants
-            Some(unsafe { NonNull::from_mut(self).cast::<AssignmentTargetPattern>().as_mut() })
+            Some(unsafe {
+                NonNull::from_mut(self)
+                    .cast::<AssignmentTargetPattern>()
+                    .as_mut()
+            })
         } else {
             None
         }
@@ -1822,7 +1849,11 @@ impl<'a> MemberExpression<'a> {
     pub fn as_simple_assignment_target(&self) -> &SimpleAssignmentTarget<'a> {
         // SAFETY: Transmute is safe because discriminants + types are identical between
         // `parent` and `child` for the shared variants
-        unsafe { NonNull::from_ref(self).cast::<SimpleAssignmentTarget>().as_ref() }
+        unsafe {
+            NonNull::from_ref(self)
+                .cast::<SimpleAssignmentTarget>()
+                .as_ref()
+        }
     }
 }
 
@@ -1964,7 +1995,11 @@ impl<'a> AssignmentTarget<'a> {
     pub fn as_assignment_target_maybe_default(&self) -> &AssignmentTargetMaybeDefault<'a> {
         // SAFETY: Transmute is safe because discriminants + types are identical between
         // `parent` and `child` for the shared variants
-        unsafe { NonNull::from_ref(self).cast::<AssignmentTargetMaybeDefault>().as_ref() }
+        unsafe {
+            NonNull::from_ref(self)
+                .cast::<AssignmentTargetMaybeDefault>()
+                .as_ref()
+        }
     }
 }
 
@@ -2089,7 +2124,11 @@ impl<'a> AssignmentTargetMaybeDefault<'a> {
         if self.is_simple_assignment_target() {
             // SAFETY: Transmute is safe because discriminants + types are identical between
             // `parent` and `child` for the shared variants
-            Some(unsafe { NonNull::from_ref(self).cast::<SimpleAssignmentTarget>().as_ref() })
+            Some(unsafe {
+                NonNull::from_ref(self)
+                    .cast::<SimpleAssignmentTarget>()
+                    .as_ref()
+            })
         } else {
             None
         }
@@ -2104,7 +2143,11 @@ impl<'a> AssignmentTargetMaybeDefault<'a> {
         if self.is_simple_assignment_target() {
             // SAFETY: Transmute is safe because discriminants + types are identical between
             // `parent` and `child` for the shared variants
-            Some(unsafe { NonNull::from_mut(self).cast::<SimpleAssignmentTarget>().as_mut() })
+            Some(unsafe {
+                NonNull::from_mut(self)
+                    .cast::<SimpleAssignmentTarget>()
+                    .as_mut()
+            })
         } else {
             None
         }
@@ -2144,7 +2187,11 @@ impl<'a> SimpleAssignmentTarget<'a> {
     pub fn as_assignment_target_maybe_default(&self) -> &AssignmentTargetMaybeDefault<'a> {
         // SAFETY: Transmute is safe because discriminants + types are identical between
         // `parent` and `child` for the shared variants
-        unsafe { NonNull::from_ref(self).cast::<AssignmentTargetMaybeDefault>().as_ref() }
+        unsafe {
+            NonNull::from_ref(self)
+                .cast::<AssignmentTargetMaybeDefault>()
+                .as_ref()
+        }
     }
 }
 
@@ -2309,7 +2356,11 @@ impl<'a> MemberExpression<'a> {
     pub fn as_assignment_target_maybe_default(&self) -> &AssignmentTargetMaybeDefault<'a> {
         // SAFETY: Transmute is safe because discriminants + types are identical between
         // `parent` and `child` for the shared variants
-        unsafe { NonNull::from_ref(self).cast::<AssignmentTargetMaybeDefault>().as_ref() }
+        unsafe {
+            NonNull::from_ref(self)
+                .cast::<AssignmentTargetMaybeDefault>()
+                .as_ref()
+        }
     }
 }
 
@@ -2363,7 +2414,10 @@ impl<'a> AssignmentTargetMaybeDefault<'a> {
     /// Return if an [`AssignmentTargetMaybeDefault`] is an [`AssignmentTargetPattern`].
     #[inline]
     pub fn is_assignment_target_pattern(&self) -> bool {
-        matches!(self, Self::ArrayAssignmentTarget(_) | Self::ObjectAssignmentTarget(_))
+        matches!(
+            self,
+            Self::ArrayAssignmentTarget(_) | Self::ObjectAssignmentTarget(_)
+        )
     }
 
     /// Convert an [`AssignmentTargetMaybeDefault`] to an [`AssignmentTargetPattern`].
@@ -2384,7 +2438,11 @@ impl<'a> AssignmentTargetMaybeDefault<'a> {
         if self.is_assignment_target_pattern() {
             // SAFETY: Transmute is safe because discriminants + types are identical between
             // `parent` and `child` for the shared variants
-            Some(unsafe { NonNull::from_ref(self).cast::<AssignmentTargetPattern>().as_ref() })
+            Some(unsafe {
+                NonNull::from_ref(self)
+                    .cast::<AssignmentTargetPattern>()
+                    .as_ref()
+            })
         } else {
             None
         }
@@ -2399,7 +2457,11 @@ impl<'a> AssignmentTargetMaybeDefault<'a> {
         if self.is_assignment_target_pattern() {
             // SAFETY: Transmute is safe because discriminants + types are identical between
             // `parent` and `child` for the shared variants
-            Some(unsafe { NonNull::from_mut(self).cast::<AssignmentTargetPattern>().as_mut() })
+            Some(unsafe {
+                NonNull::from_mut(self)
+                    .cast::<AssignmentTargetPattern>()
+                    .as_mut()
+            })
         } else {
             None
         }
@@ -2439,7 +2501,11 @@ impl<'a> AssignmentTargetPattern<'a> {
     pub fn as_assignment_target_maybe_default(&self) -> &AssignmentTargetMaybeDefault<'a> {
         // SAFETY: Transmute is safe because discriminants + types are identical between
         // `parent` and `child` for the shared variants
-        unsafe { NonNull::from_ref(self).cast::<AssignmentTargetMaybeDefault>().as_ref() }
+        unsafe {
+            NonNull::from_ref(self)
+                .cast::<AssignmentTargetMaybeDefault>()
+                .as_ref()
+        }
     }
 }
 
@@ -3522,7 +3588,11 @@ impl<'a> ForStatementLeft<'a> {
         if self.is_simple_assignment_target() {
             // SAFETY: Transmute is safe because discriminants + types are identical between
             // `parent` and `child` for the shared variants
-            Some(unsafe { NonNull::from_ref(self).cast::<SimpleAssignmentTarget>().as_ref() })
+            Some(unsafe {
+                NonNull::from_ref(self)
+                    .cast::<SimpleAssignmentTarget>()
+                    .as_ref()
+            })
         } else {
             None
         }
@@ -3537,7 +3607,11 @@ impl<'a> ForStatementLeft<'a> {
         if self.is_simple_assignment_target() {
             // SAFETY: Transmute is safe because discriminants + types are identical between
             // `parent` and `child` for the shared variants
-            Some(unsafe { NonNull::from_mut(self).cast::<SimpleAssignmentTarget>().as_mut() })
+            Some(unsafe {
+                NonNull::from_mut(self)
+                    .cast::<SimpleAssignmentTarget>()
+                    .as_mut()
+            })
         } else {
             None
         }
@@ -3788,7 +3862,10 @@ impl<'a> ForStatementLeft<'a> {
     /// Return if a [`ForStatementLeft`] is an [`AssignmentTargetPattern`].
     #[inline]
     pub fn is_assignment_target_pattern(&self) -> bool {
-        matches!(self, Self::ArrayAssignmentTarget(_) | Self::ObjectAssignmentTarget(_))
+        matches!(
+            self,
+            Self::ArrayAssignmentTarget(_) | Self::ObjectAssignmentTarget(_)
+        )
     }
 
     /// Convert a [`ForStatementLeft`] to an [`AssignmentTargetPattern`].
@@ -3809,7 +3886,11 @@ impl<'a> ForStatementLeft<'a> {
         if self.is_assignment_target_pattern() {
             // SAFETY: Transmute is safe because discriminants + types are identical between
             // `parent` and `child` for the shared variants
-            Some(unsafe { NonNull::from_ref(self).cast::<AssignmentTargetPattern>().as_ref() })
+            Some(unsafe {
+                NonNull::from_ref(self)
+                    .cast::<AssignmentTargetPattern>()
+                    .as_ref()
+            })
         } else {
             None
         }
@@ -3824,7 +3905,11 @@ impl<'a> ForStatementLeft<'a> {
         if self.is_assignment_target_pattern() {
             // SAFETY: Transmute is safe because discriminants + types are identical between
             // `parent` and `child` for the shared variants
-            Some(unsafe { NonNull::from_mut(self).cast::<AssignmentTargetPattern>().as_mut() })
+            Some(unsafe {
+                NonNull::from_mut(self)
+                    .cast::<AssignmentTargetPattern>()
+                    .as_mut()
+            })
         } else {
             None
         }
@@ -4435,7 +4520,11 @@ impl<'a> Expression<'a> {
     pub fn as_export_default_declaration_kind(&self) -> &ExportDefaultDeclarationKind<'a> {
         // SAFETY: Transmute is safe because discriminants + types are identical between
         // `parent` and `child` for the shared variants
-        unsafe { NonNull::from_ref(self).cast::<ExportDefaultDeclarationKind>().as_ref() }
+        unsafe {
+            NonNull::from_ref(self)
+                .cast::<ExportDefaultDeclarationKind>()
+                .as_ref()
+        }
     }
 }
 
@@ -4710,7 +4799,11 @@ impl<'a> MemberExpression<'a> {
     pub fn as_export_default_declaration_kind(&self) -> &ExportDefaultDeclarationKind<'a> {
         // SAFETY: Transmute is safe because discriminants + types are identical between
         // `parent` and `child` for the shared variants
-        unsafe { NonNull::from_ref(self).cast::<ExportDefaultDeclarationKind>().as_ref() }
+        unsafe {
+            NonNull::from_ref(self)
+                .cast::<ExportDefaultDeclarationKind>()
+                .as_ref()
+        }
     }
 }
 
@@ -5451,7 +5544,11 @@ impl<'a> TSTypeName<'a> {
     pub fn as_ts_type_query_expr_name(&self) -> &TSTypeQueryExprName<'a> {
         // SAFETY: Transmute is safe because discriminants + types are identical between
         // `parent` and `child` for the shared variants
-        unsafe { NonNull::from_ref(self).cast::<TSTypeQueryExprName>().as_ref() }
+        unsafe {
+            NonNull::from_ref(self)
+                .cast::<TSTypeQueryExprName>()
+                .as_ref()
+        }
     }
 }
 

@@ -38,7 +38,12 @@ impl<'s, 'a> Symbol<'s, 'a> {
         symbol_id: SymbolId,
     ) -> Self {
         let flags = semantic.scoping().symbol_flags(symbol_id);
-        Self { semantic, module_record, id: symbol_id, flags }
+        Self {
+            semantic,
+            module_record,
+            id: symbol_id,
+            flags,
+        }
     }
 
     #[inline]
@@ -113,16 +118,25 @@ impl<'s, 'a> Symbol<'s, 'a> {
         &self,
         node_id: NodeId,
     ) -> impl Iterator<Item = &AstNode<'a>> + Clone + '_ {
-        self.nodes().ancestors(node_id).filter(|n| Self::is_relevant_kind(n.kind()))
+        self.nodes()
+            .ancestors(node_id)
+            .filter(|n| Self::is_relevant_kind(n.kind()))
     }
 
     pub fn iter_relevant_parent_and_grandparent_kinds(
         &self,
         node_id: NodeId,
-    ) -> impl Iterator<Item = (/* parent */ AstKind<'a>, /* grandparent */ AstKind<'a>)> + '_ {
+    ) -> impl Iterator<
+        Item = (
+            /* parent */ AstKind<'a>,
+            /* grandparent */ AstKind<'a>,
+        ),
+    > + '_ {
         let mut parent = Some(self.nodes().kind(node_id));
-        let mut ancestors =
-            self.nodes().ancestor_kinds(node_id).filter(|kind| Self::is_relevant_kind(*kind));
+        let mut ancestors = self
+            .nodes()
+            .ancestor_kinds(node_id)
+            .filter(|kind| Self::is_relevant_kind(*kind));
 
         iter::from_fn(move || {
             let current = parent?;
@@ -185,7 +199,9 @@ impl Symbol<'_, '_> {
 
     #[inline]
     fn is_in_ts_namespace(&self) -> bool {
-        self.scoping().scope_flags(self.scope_id()).is_ts_module_block()
+        self.scoping()
+            .scope_flags(self.scope_id())
+            .is_ts_module_block()
     }
 
     /// We need to do this due to limitations of [`Semantic`].
@@ -231,7 +247,9 @@ impl<'a> PartialEq<IdentifierReference<'a>> for Symbol<'_, 'a> {
     fn eq(&self, other: &IdentifierReference<'a>) -> bool {
         // cheap: no resolved reference means its a global reference
         let reference = self.scoping().get_reference(other.reference_id());
-        reference.symbol_id().is_some_and(|symbol_id| self.id == symbol_id)
+        reference
+            .symbol_id()
+            .is_some_and(|symbol_id| self.id == symbol_id)
     }
 }
 

@@ -55,15 +55,16 @@ pub fn prune_maybe_throws<'a>(
                 let mut updates = Vec::new();
                 for (predecessor, _) in &phi.operands {
                     if !preds.contains(predecessor) {
-                        let mapped_terminal =
-                            terminal_mapping.get(*predecessor).copied().flatten().ok_or_else(
-                                || {
-                                    diagnostics::missing_phi_predecessor_mapping(
-                                        predecessor.index(),
-                                        block.id.index(),
-                                    )
-                                },
-                            )?;
+                        let mapped_terminal = terminal_mapping
+                            .get(*predecessor)
+                            .copied()
+                            .flatten()
+                            .ok_or_else(|| {
+                                diagnostics::missing_phi_predecessor_mapping(
+                                    predecessor.index(),
+                                    block.id.index(),
+                                )
+                            })?;
                         updates.push((*predecessor, mapped_terminal));
                     }
                 }
@@ -74,7 +75,10 @@ pub fn prune_maybe_throws<'a>(
 
             for (phi_idx, updates) in phi_updates {
                 for (old_pred, new_pred) in updates {
-                    let operand = block.phis[phi_idx].operands.shift_remove(&old_pred).unwrap();
+                    let operand = block.phis[phi_idx]
+                        .operands
+                        .shift_remove(&old_pred)
+                        .unwrap();
                     block.phis[phi_idx].operands.insert(new_pred, operand);
                 }
             }
@@ -89,7 +93,13 @@ pub fn prune_maybe_throws<'a>(
 fn prune_maybe_throws_impl(func: &mut HirFunction) -> Option<IndexVec<BlockId, Option<BlockId>>> {
     // Both keys (continuations) and values (source blocks) are ids of blocks present
     // in the function body, so the maximum present id bounds the id space.
-    let num_ids = func.body.blocks.keys().map(|id| id.index() + 1).max().unwrap_or(0);
+    let num_ids = func
+        .body
+        .blocks
+        .keys()
+        .map(|id| id.index() + 1)
+        .max()
+        .unwrap_or(0);
     let mut terminal_mapping: IndexVec<BlockId, Option<BlockId>> =
         IndexVec::from_vec(vec![None; num_ids]);
     let mut mapped_any = false;
@@ -120,7 +130,11 @@ fn prune_maybe_throws_impl(func: &mut HirFunction) -> Option<IndexVec<BlockId, O
         }
     }
 
-    if mapped_any { Some(terminal_mapping) } else { None }
+    if mapped_any {
+        Some(terminal_mapping)
+    } else {
+        None
+    }
 }
 
 /// Returns whether a `MaybeThrow` edge must be retained during CFG pruning.
@@ -129,8 +143,10 @@ fn prune_maybe_throws_impl(func: &mut HirFunction) -> Option<IndexVec<BlockId, O
 /// Removing that final handler edge can reorder the catch block ahead of the
 /// successful fallthrough, causing reactive scopes to span both paths.
 fn value_may_throw_when_pruning(value: &InstructionValue) -> bool {
-    matches!(value, InstructionValue::StoreLocal { .. } | InstructionValue::StoreContext { .. })
-        || value_may_throw(value)
+    matches!(
+        value,
+        InstructionValue::StoreLocal { .. } | InstructionValue::StoreContext { .. }
+    ) || value_may_throw(value)
 }
 
 /// Returns whether evaluating an instruction value can throw.
@@ -156,9 +172,9 @@ pub(crate) fn value_may_throw(value: &InstructionValue) -> bool {
         | InstructionValue::StoreContext { lvalue, .. } => {
             lvalue.kind == crate::react_compiler_hir::InstructionKind::Reassign
         }
-        InstructionValue::ArrayExpression { elements, .. } => {
-            elements.iter().any(|element| matches!(element, ArrayElement::Spread(_)))
-        }
+        InstructionValue::ArrayExpression { elements, .. } => elements
+            .iter()
+            .any(|element| matches!(element, ArrayElement::Spread(_))),
         InstructionValue::ObjectExpression { properties, .. } => {
             properties.iter().any(|property| match property {
                 ObjectPropertyOrSpread::Property(property) => {

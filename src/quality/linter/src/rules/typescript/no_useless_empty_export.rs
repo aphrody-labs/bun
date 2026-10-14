@@ -59,7 +59,9 @@ declare_oxc_lint!(
 
 impl Rule for NoUselessEmptyExport {
     fn run<'a>(&self, node: &AstNode<'a>, ctx: &LintContext<'a>) {
-        let AstKind::ExportNamedDeclaration(decl) = node.kind() else { return };
+        let AstKind::ExportNamedDeclaration(decl) = node.kind() else {
+            return;
+        };
         if !decl.specifiers.is_empty() {
             return;
         }
@@ -165,19 +167,42 @@ fn test() {
         ("export const _ = {};export {};", "export const _ = {};"),
         ("export * from '_';export {};", "export * from '_';"),
         ("export {};export * from '_';", "export * from '_';"),
-        ("const _ = {};export default _;export {};", "const _ = {};export default _;"),
-        ("export {};const _ = {};export default _;", "const _ = {};export default _;"),
-        ("const _ = {};export { _ };export {};", "const _ = {};export { _ };"),
-        ("import {} from '_';\n\nexport {};", "import {} from '_';\n\n"),
+        (
+            "const _ = {};export default _;export {};",
+            "const _ = {};export default _;",
+        ),
+        (
+            "export {};const _ = {};export default _;",
+            "const _ = {};export default _;",
+        ),
+        (
+            "const _ = {};export { _ };export {};",
+            "const _ = {};export { _ };",
+        ),
+        (
+            "import {} from '_';\n\nexport {};",
+            "import {} from '_';\n\n",
+        ),
         ("import _ from '_';export {};", "import _ from '_';"),
         ("import '_';export {};", "import '_';"),
-        ("import * as all from '_';export {};", "import * as all from '_';"),
-        ("import _ = require('_')\n\nexport {};", "import _ = require('_')\n\n"),
+        (
+            "import * as all from '_';export {};",
+            "import * as all from '_';",
+        ),
+        (
+            "import _ = require('_')\n\nexport {};",
+            "import _ = require('_')\n\n",
+        ),
     ];
 
-    Tester::new(NoUselessEmptyExport::NAME, NoUselessEmptyExport::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        NoUselessEmptyExport::NAME,
+        NoUselessEmptyExport::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .test_and_snapshot();
 }
 
 #[test]
@@ -205,8 +230,13 @@ fn test_declaration() {
 
     let fail = vec![];
 
-    Tester::new(NoUselessEmptyExport::NAME, NoUselessEmptyExport::PLUGIN, pass, fail)
-        .change_rule_path_extension("d.ts")
-        .intentionally_allow_no_fix_tests()
-        .test();
+    Tester::new(
+        NoUselessEmptyExport::NAME,
+        NoUselessEmptyExport::PLUGIN,
+        pass,
+        fail,
+    )
+    .change_rule_path_extension("d.ts")
+    .intentionally_allow_no_fix_tests()
+    .test();
 }

@@ -1,11 +1,10 @@
-//! `bun lint`, `bun fmt`, `bun n2b`, `bun migrate`, `bun wasm` and `bun build --target=wasm`.
+//! `bun n2b`, `bun migrate`, `bun wasm` and `bun build --target=wasm`.
 //!
-//! Quality and migration commands use their linked Rust owners. Other toolchain commands
+//! Migration commands use their linked Rust owner. Other toolchain commands
 //! use embedded `src/js/eval/toolchain.ts`.
 
 use bun_core::{ZStr, env_var};
 
-use super::check_command::{nearest_package_json, working_directory};
 use super::run_command::RunCommand;
 use crate::Command;
 
@@ -27,10 +26,6 @@ impl ToolchainCommand {
         if let Some(code) = exec_native_n2b(&ctx) {
             bun_core::Output::flush();
             bun_core::Global::exit(code as u32);
-        }
-        if let Some(code) = super::native_quality_command::exec_if_selected(&ctx) {
-            bun_core::Output::flush();
-            bun_core::Global::exit(u32::from(code));
         }
         let script = if super::devtools_command::is_devtools_invocation() {
             bun_core::runtime_embed_file!(Codegen, "eval/devtools.ts").as_bytes()
@@ -136,55 +131,18 @@ fn n2b_help_requested(args: &[String]) -> bool {
 pub(crate) fn is_toolchain_name(arg: &[u8]) -> bool {
     matches!(
         arg,
-        b"lint" | b"fmt" | b"n2b" | b"migrate" | b"just" | b"wasm" | b"build" | b"create" | b"c"
+        b"n2b" | b"migrate" | b"just" | b"wasm" | b"build" | b"create" | b"c"
     )
 }
 
-/// Whether `bun <name>` is `bun run <name>`: `scripts.<name>` of the nearest `package.json`, which
-/// `bun lint` and the others ran before they were commands. Inside that script (`"lint": "bun lint"`)
-/// it is the command.
+/// Whether the toolchain command names a project package script.
 #[cold]
 #[inline(never)]
 pub(crate) fn is_package_script(name: &[u8]) -> bool {
-    use bun_paths::platform::Auto;
-    use bun_paths::resolve_path::join_abs_string;
     if env_var::npm_lifecycle_event::get().is_some_and(|event| event == name) {
         return false;
     }
-    let mut cwd = working_directory();
-    let mut args = bun_core::argv().into_iter();
-    while let Some(arg) = args.next() {
-        if arg == name {
-            break;
-        }
-        let given = match arg.strip_prefix(b"--cwd") {
-            Some(b"") => args.next(),
-            Some(rest) => rest.strip_prefix(b"="),
-            None => None,
-        };
-        if let Some(given) = given {
-            cwd = join_abs_string::<Auto>(&cwd, &[given]).to_vec();
-        }
-    }
-    let Some((_, path, contents)) = nearest_package_json(&cwd) else {
-        return false;
-    };
-    let mut quoted = Vec::with_capacity(name.len() + 2);
-    quoted.push(b'"');
-    quoted.extend_from_slice(name);
-    quoted.push(b'"');
-    if !bun_core::strings::contains(&contents, &quoted) {
-        return false;
-    }
-    bun_ast::initialize_store();
-    let source = bun_ast::Source::init_path_string(&path[..], &contents[..]);
-    let (mut log, bump) = (bun_ast::Log::init(), bun_alloc::Arena::new());
-    let Ok(json) = bun_parsers::json::parse_package_json_utf8(&source, &mut log, &bump) else {
-        return false;
-    };
-    (json.as_property(b"scripts"))
-        .and_then(|scripts| scripts.expr.as_property(name))
-        .is_some_and(|script| matches!(script.expr.data, bun_ast::ExprData::EString(_)))
+    super::script_or_command::runs(name) == super::script_or_command::Runs::Script
 }
 
 /// `bun create aphrody/<template>` composes the Aphrody stack templates instead of cloning a GitHub repository;

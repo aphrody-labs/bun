@@ -6,10 +6,10 @@ use std::time::{Duration, Instant};
 
 use serde_json::{Value, json};
 
+use crate::Options;
 use crate::daemon::{self, Stream};
 use crate::language;
 use crate::service::{Answer, Query};
-use crate::Options;
 
 /// How long a new daemon may take to listen.
 const START_TIMEOUT: Duration = Duration::from_secs(15);
@@ -18,8 +18,14 @@ const START_TIMEOUT: Duration = Duration::from_secs(15);
 pub fn query(query: &Query, options: &Options) -> Result<Answer, String> {
     let query = query.clone().absolute();
     let root = language::workspace_root(&query.file);
-    let response = send(&root, &json!({ "op": "query", "query": query }), options, true)?;
-    serde_json::from_value(response["answer"].clone()).map_err(|err| format!("invalid answer from the bun lsp daemon: {err}"))
+    let response = send(
+        &root,
+        &json!({ "op": "query", "query": query }),
+        options,
+        true,
+    )?;
+    serde_json::from_value(response["answer"].clone())
+        .map_err(|err| format!("invalid answer from the bun lsp daemon: {err}"))
 }
 
 /// Sends `request` to the daemon of `root` and returns its answer. With `start`, starts the
@@ -29,7 +35,12 @@ pub fn send(root: &Path, request: &Value, options: &Options, start: bool) -> Res
     let stream = match daemon::connect(&name) {
         Ok(stream) => stream,
         Err(_) if start => start_daemon(root, &name, options)?,
-        Err(err) => return Err(format!("no bun lsp daemon for {:?}: {err}", root.display().to_string())),
+        Err(err) => {
+            return Err(format!(
+                "no bun lsp daemon for {:?}: {err}",
+                root.display().to_string()
+            ));
+        }
     };
     exchange(stream, request)
 }
@@ -38,31 +49,49 @@ fn exchange(stream: Stream, request: &Value) -> Result<Value, String> {
     let mut writer = stream.try_clone().map_err(|err| err.to_string())?;
     let mut line = serde_json::to_string(request).map_err(|err| err.to_string())?;
     line.push('\n');
-    writer.write_all(line.as_bytes()).and_then(|()| writer.flush()).map_err(|err| format!("could not write to the bun lsp daemon: {err}"))?;
+    writer
+        .write_all(line.as_bytes())
+        .and_then(|()| writer.flush())
+        .map_err(|err| format!("could not write to the bun lsp daemon: {err}"))?;
     let mut reader = BufReader::new(stream);
     let mut response = String::new();
-    reader.read_line(&mut response).map_err(|err| format!("could not read from the bun lsp daemon: {err}"))?;
+    reader
+        .read_line(&mut response)
+        .map_err(|err| format!("could not read from the bun lsp daemon: {err}"))?;
     if response.is_empty() {
         return Err("the bun lsp daemon closed the connection".to_owned());
     }
-    let response: Value = serde_json::from_str(&response).map_err(|err| format!("invalid answer from the bun lsp daemon: {err}"))?;
+    let response: Value = serde_json::from_str(&response)
+        .map_err(|err| format!("invalid answer from the bun lsp daemon: {err}"))?;
     if response.get("ok") == Some(&Value::Bool(true)) {
         return Ok(response);
     }
-    Err(response.get("error").and_then(Value::as_str).unwrap_or("the bun lsp daemon failed").to_owned())
+    Err(response
+        .get("error")
+        .and_then(Value::as_str)
+        .unwrap_or("the bun lsp daemon failed")
+        .to_owned())
 }
 
 fn start_daemon(root: &Path, name: &str, options: &Options) -> Result<Stream, String> {
     let Some(bun) = options.bun.as_deref() else {
         return Err("cannot start the bun lsp daemon: the Bun executable is unknown".to_owned());
     };
-    spawn_detached(bun, root).map_err(|err| format!("could not start the bun lsp daemon ({}): {err}", bun.display()))?;
+    spawn_detached(bun, root).map_err(|err| {
+        format!(
+            "could not start the bun lsp daemon ({}): {err}",
+            bun.display()
+        )
+    })?;
     let deadline = Instant::now() + START_TIMEOUT;
     loop {
         match daemon::connect(name) {
             Ok(stream) => return Ok(stream),
             Err(err) if Instant::now() >= deadline => {
-                return Err(format!("the bun lsp daemon did not listen within {} s: {err}", START_TIMEOUT.as_secs()));
+                return Err(format!(
+                    "the bun lsp daemon did not listen within {} s: {err}",
+                    START_TIMEOUT.as_secs()
+                ));
             }
             Err(_) => std::thread::sleep(Duration::from_millis(10)),
         }
@@ -83,7 +112,9 @@ fn spawn_detached(bun: &Path, root: &Path) -> std::io::Result<()> {
         .process_group(0)
         .spawn()?;
     // Reaped here if this process outlives it.
-    let _ = std::thread::Builder::new().name("lsp-daemon-wait".into()).spawn(move || child.wait());
+    let _ = std::thread::Builder::new()
+        .name("lsp-daemon-wait".into())
+        .spawn(move || child.wait());
     Ok(())
 }
 
@@ -104,7 +135,11 @@ fn spawn_detached(bun: &Path, root: &Path) -> std::io::Result<()> {
                 backslashes += 1;
                 continue;
             }
-            let escaped = if unit == u16::from(b'"') { backslashes * 2 + 1 } else { backslashes };
+            let escaped = if unit == u16::from(b'"') {
+                backslashes * 2 + 1
+            } else {
+                backslashes
+            };
             line.extend(std::iter::repeat_n(u16::from(b'\\'), escaped));
             backslashes = 0;
             line.push(unit);
@@ -114,7 +149,16 @@ fn spawn_detached(bun: &Path, root: &Path) -> std::io::Result<()> {
     }
 
     let mut line = Vec::new();
-    for (index, arg) in [bun.as_os_str(), "lsp".as_ref(), "daemon".as_ref(), "--root".as_ref(), root.as_os_str()].into_iter().enumerate() {
+    for (index, arg) in [
+        bun.as_os_str(),
+        "lsp".as_ref(),
+        "daemon".as_ref(),
+        "--root".as_ref(),
+        root.as_os_str(),
+    ]
+    .into_iter()
+    .enumerate()
+    {
         if index > 0 {
             line.push(u16::from(b' '));
         }

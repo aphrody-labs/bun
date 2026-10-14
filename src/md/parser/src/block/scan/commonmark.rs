@@ -124,7 +124,15 @@ pub fn list_marker(tail: &str) -> Option<ListMarkerScan> {
     let bytes = tail.as_bytes();
     let first = *bytes.first()?;
     let (scan, after) = if matches!(first, b'-' | b'*' | b'+') {
-        (ListMarkerScan { marker: first, ordered: false, len: 1, starts_at_one: false }, 1)
+        (
+            ListMarkerScan {
+                marker: first,
+                ordered: false,
+                len: 1,
+                starts_at_one: false,
+            },
+            1,
+        )
     } else if first.is_ascii_digit() {
         let digits = bytes.iter().take_while(|b| b.is_ascii_digit()).count();
         if digits > 9 {
@@ -137,7 +145,12 @@ pub fn list_marker(tail: &str) -> Option<ListMarkerScan> {
         // Leading zeros are allowed; `001` still counts as starting at 1
         let starts_at_one = tail[..digits].parse::<u64>() == Ok(1);
         (
-            ListMarkerScan { marker: delimiter, ordered: true, len: digits + 1, starts_at_one },
+            ListMarkerScan {
+                marker: delimiter,
+                ordered: true,
+                len: digits + 1,
+                starts_at_one,
+            },
             digits + 1,
         )
     } else {
@@ -206,7 +219,10 @@ mod tests {
         assert!(list_marker("+").is_some(), "marker at end of line");
 
         let m = list_marker("1. a").unwrap();
-        assert_eq!((m.marker, m.ordered, m.len, m.starts_at_one), (b'.', true, 2, true));
+        assert_eq!(
+            (m.marker, m.ordered, m.len, m.starts_at_one),
+            (b'.', true, 2, true)
+        );
         let m = list_marker("001)\tx").unwrap();
         assert_eq!((m.marker, m.len, m.starts_at_one), (b')', 4, true));
         assert!(!list_marker("2.").unwrap().starts_at_one);

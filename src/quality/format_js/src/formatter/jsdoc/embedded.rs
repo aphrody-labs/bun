@@ -132,11 +132,15 @@ pub(super) fn format_jsdoc_js_snippet(
     // with labels. The upstream plugin uses `parser: "json"` for this case.
     let trimmed = code.trim();
     if trimmed.starts_with('{') {
-        let wrapped = session.allocator().alloc_concat_strs_array(["(", trimmed, ")"]);
+        let wrapped = session
+            .allocator()
+            .alloc_concat_strs_array(["(", trimmed, ")"]);
         // Use TrailingCommas::None for object literals since JSON-like code
         // shouldn't have trailing commas
-        let obj_options =
-            JsFormatOptions { trailing_commas: TrailingCommas::None, ..base_options.clone() };
+        let obj_options = JsFormatOptions {
+            trailing_commas: TrailingCommas::None,
+            ..base_options.clone()
+        };
 
         let try_format_obj = |code: &str, source_type: SourceType| -> Option<String> {
             let formatted = parse_and_build(session, code, source_type, obj_options.clone())?;
@@ -219,7 +223,9 @@ pub(super) fn format_type_via_formatter(
         if rest.is_empty() {
             return None;
         }
-        let wrapped = session.allocator().alloc_concat_strs_array(["(", rest, ")[]"]);
+        let wrapped = session
+            .allocator()
+            .alloc_concat_strs_array(["(", rest, ")[]"]);
         let formatted = format_type_via_formatter(wrapped, type_options, session)?;
         let inner = formatted.strip_suffix("[]")?;
         let mut result = String::with_capacity(inner.len() + 3);
@@ -239,7 +245,9 @@ pub(super) fn format_type_via_formatter(
     // Let the TS formatter handle quote conversion naturally, matching Prettier's
     // TS parser which uses the configured quote style (double by default).
     // No string literal protection needed — the formatter should convert quotes.
-    let input = session.allocator().alloc_concat_strs_array(["type __t = ", type_str, ";"]);
+    let input = session
+        .allocator()
+        .alloc_concat_strs_array(["type __t = ", type_str, ";"]);
 
     let formatted = parse_and_build(session, input, SourceType::tsx(), type_options.clone())?;
 

@@ -57,13 +57,18 @@ impl<'a> SSABuilder<'a> {
 
     fn define_function(&mut self, func: &HirFunction<'a>) {
         for (id, block) in &func.body.blocks {
-            self.block_preds.insert(*id, block.preds.iter().copied().collect());
+            self.block_preds
+                .insert(*id, block.preds.iter().copied().collect());
         }
     }
 
     fn state_mut(&mut self) -> &mut State {
-        let current = self.current.expect("we need to be in a block to access state!");
-        self.states.get_mut(&current).expect("state not found for current block")
+        let current = self
+            .current
+            .expect("we need to be in a block to access state!");
+        self.states
+            .get_mut(&current)
+            .expect("state not found for current block")
     }
 
     fn make_id(&mut self, old_id: IdentifierId, env: &mut Environment<'a>) -> IdentifierId {
@@ -162,7 +167,10 @@ impl<'a> SSABuilder<'a> {
                 span: old_place.span,
             };
             let state = self.states.get_mut(&block_id).unwrap();
-            state.incomplete_phis.push(IncompletePhi { old_place: *old_place, new_place });
+            state.incomplete_phis.push(IncompletePhi {
+                old_place: *old_place,
+                new_place,
+            });
             state.defs.insert(old_place.identifier, new_id);
             return new_id;
         }
@@ -170,12 +178,20 @@ impl<'a> SSABuilder<'a> {
         if preds.len() == 1 {
             let pred = preds[0];
             let new_id = self.get_id_at(old_place, pred, env);
-            self.states.get_mut(&block_id).unwrap().defs.insert(old_place.identifier, new_id);
+            self.states
+                .get_mut(&block_id)
+                .unwrap()
+                .defs
+                .insert(old_place.identifier, new_id);
             return new_id;
         }
 
         let new_id = self.make_id(old_place.identifier, env);
-        self.states.get_mut(&block_id).unwrap().defs.insert(old_place.identifier, new_id);
+        self.states
+            .get_mut(&block_id)
+            .unwrap()
+            .defs
+            .insert(old_place.identifier, new_id);
         let new_place = Place {
             identifier: new_id,
             effect: old_place.effect,
@@ -210,7 +226,10 @@ impl<'a> SSABuilder<'a> {
             );
         }
 
-        let phi = Phi { place: *new_place, operands: pred_defs };
+        let phi = Phi {
+            place: *new_place,
+            operands: pred_defs,
+        };
 
         self.pending_phis.entry(block_id).or_default().push(phi);
     }
@@ -225,8 +244,13 @@ impl<'a> SSABuilder<'a> {
 
     fn start_block(&mut self, block_id: BlockId) {
         self.current = Some(block_id);
-        self.states
-            .insert(block_id, State { defs: FxHashMap::default(), incomplete_phis: Vec::new() });
+        self.states.insert(
+            block_id,
+            State {
+                defs: FxHashMap::default(),
+                incomplete_phis: Vec::new(),
+            },
+        );
     }
 }
 
@@ -311,8 +335,15 @@ fn enter_ssa_impl<'a>(
         }
 
         // Process instructions
-        let instruction_ids: Vec<InstructionId> =
-            func.body.blocks.get(&block_id).unwrap().instructions.iter().copied().collect();
+        let instruction_ids: Vec<InstructionId> = func
+            .body
+            .blocks
+            .get(&block_id)
+            .unwrap()
+            .instructions
+            .iter()
+            .copied()
+            .collect();
 
         for instr_id in &instruction_ids {
             let instr_idx = instr_id.index();
@@ -333,7 +364,9 @@ fn enter_ssa_impl<'a>(
                 let alloc = env.allocator;
                 let context = replace(&mut env.functions[fid].context, ArenaVec::new_in(&alloc));
                 let new_context = ArenaVec::from_iter_in(
-                    context.into_iter().map(|place| builder.get_place(&place, env)),
+                    context
+                        .into_iter()
+                        .map(|place| builder.get_place(&place, env)),
                     &alloc,
                 );
                 env.functions[fid].context = new_context;
@@ -362,8 +395,11 @@ fn enter_ssa_impl<'a>(
 
             // Handle inner function SSA
             if let Some(fid) = func_expr_id {
-                let context_ids: Vec<IdentifierId> =
-                    env.functions[fid].context.iter().map(|place| place.identifier).collect();
+                let context_ids: Vec<IdentifierId> = env.functions[fid]
+                    .context
+                    .iter()
+                    .map(|place| place.identifier)
+                    .collect();
                 for id in context_ids {
                     builder.unmark_unknown(id);
                 }
@@ -418,7 +454,13 @@ fn enter_ssa_impl<'a>(
                 builder.current = saved_current;
 
                 // Clear entry preds
-                env.functions[fid].body.blocks.get_mut(&inner_entry).unwrap().preds.clear();
+                env.functions[fid]
+                    .body
+                    .blocks
+                    .get_mut(&inner_entry)
+                    .unwrap()
+                    .preds
+                    .clear();
                 builder.block_preds.insert(inner_entry, Vec::new());
             }
         }
@@ -433,8 +475,11 @@ fn enter_ssa_impl<'a>(
         let terminal_ref = &func.body.blocks.get(&block_id).unwrap().terminal;
         let successors = visitors::each_terminal_successor(terminal_ref);
         for output_id in successors {
-            let output_preds_len =
-                builder.block_preds.get(&output_id).map(|p| p.len() as u32).unwrap_or(0);
+            let output_preds_len = builder
+                .block_preds
+                .get(&output_id)
+                .map(|p| p.len() as u32)
+                .unwrap_or(0);
 
             let count = if builder.unsealed_preds.contains_key(&output_id) {
                 builder.unsealed_preds[&output_id] - 1
@@ -472,7 +517,10 @@ pub fn placeholder_function<'a>(alloc: &'a Allocator) -> HirFunction<'a> {
             span: None,
         },
         context: ArenaVec::new_in(&alloc),
-        body: HIR { entry: BlockId::ENTRY, blocks: OrderedMap::default() },
+        body: HIR {
+            entry: BlockId::ENTRY,
+            blocks: OrderedMap::default(),
+        },
         instructions: ArenaVec::new_in(&alloc),
         generator: false,
         is_async: false,

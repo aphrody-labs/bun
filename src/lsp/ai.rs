@@ -36,11 +36,17 @@ pub struct Problem<'a> {
 /// Lines `line - CONTEXT_LINES ..= end + CONTEXT_LINES` of a text of `lines` lines.
 pub fn window(lines: u32, start: u32, end: u32) -> (u32, u32) {
     let last = lines.saturating_sub(1);
-    (start.saturating_sub(CONTEXT_LINES), end.saturating_add(CONTEXT_LINES).min(last))
+    (
+        start.saturating_sub(CONTEXT_LINES),
+        end.saturating_add(CONTEXT_LINES).min(last),
+    )
 }
 
 fn lines(text: &str) -> Vec<&str> {
-    let mut lines: Vec<&str> = text.split('\n').map(|line| line.strip_suffix('\r').unwrap_or(line)).collect();
+    let mut lines: Vec<&str> = text
+        .split('\n')
+        .map(|line| line.strip_suffix('\r').unwrap_or(line))
+        .collect();
     if text.ends_with('\n') {
         lines.pop();
     }
@@ -52,7 +58,13 @@ pub fn line_count(text: &str) -> u32 {
 }
 
 pub fn prompt(problem: &Problem) -> String {
-    let path = problem.path.strip_prefix(problem.root).unwrap_or(problem.path).display().to_string().replace('\\', "/");
+    let path = problem
+        .path
+        .strip_prefix(problem.root)
+        .unwrap_or(problem.path)
+        .display()
+        .to_string()
+        .replace('\\', "/");
     let lines = lines(problem.text);
     let mut out = String::new();
     let _ = writeln!(
@@ -69,8 +81,18 @@ pub fn prompt(problem: &Problem) -> String {
         }
         out.push('\n');
     }
-    let _ = writeln!(out, "## Lines {}-{}\n\n```{}", problem.start + 1, problem.end + 1, problem.language);
-    for line in lines.iter().take(problem.end as usize + 1).skip(problem.start as usize) {
+    let _ = writeln!(
+        out,
+        "## Lines {}-{}\n\n```{}",
+        problem.start + 1,
+        problem.end + 1,
+        problem.language
+    );
+    for line in lines
+        .iter()
+        .take(problem.end as usize + 1)
+        .skip(problem.start as usize)
+    {
         out.push_str(line);
         out.push('\n');
     }
@@ -101,7 +123,12 @@ pub fn splice(text: &str, start: u32, end: u32, replacement: &str) -> String {
     let newline = if text.contains("\r\n") { "\r\n" } else { "\n" };
     let lines = lines(text);
     let mut out: Vec<&str> = lines[..(start as usize).min(lines.len())].to_vec();
-    let replaced: Vec<&str> = replacement.strip_suffix('\n').unwrap_or(replacement).split('\n').map(|it| it.strip_suffix('\r').unwrap_or(it)).collect();
+    let replaced: Vec<&str> = replacement
+        .strip_suffix('\n')
+        .unwrap_or(replacement)
+        .split('\n')
+        .map(|it| it.strip_suffix('\r').unwrap_or(it))
+        .collect();
     out.extend(replaced);
     out.extend(lines.iter().skip(end as usize + 1));
     let mut joined = out.join(newline);
@@ -120,7 +147,9 @@ pub fn docs(root: &Path, word: &str) -> Vec<(String, String)> {
     let mut files: Vec<PathBuf> = vec![root.join("README.md")];
     let mut queue = vec![root.join("docs")];
     while let Some(dir) = queue.pop() {
-        let Ok(entries) = std::fs::read_dir(&dir) else { continue };
+        let Ok(entries) = std::fs::read_dir(&dir) else {
+            continue;
+        };
         for entry in entries.flatten() {
             if files.len() >= MAX_DOC_FILES {
                 break;
@@ -135,12 +164,24 @@ pub fn docs(root: &Path, word: &str) -> Vec<(String, String)> {
     }
     let mut out = Vec::new();
     for path in files {
-        let Ok(text) = std::fs::read_to_string(&path) else { continue };
+        let Ok(text) = std::fs::read_to_string(&path) else {
+            continue;
+        };
         let lines = lines(&text);
-        let Some(at) = lines.iter().position(|line| crate::links::word_at_any(line, word)) else { continue };
+        let Some(at) = lines
+            .iter()
+            .position(|line| crate::links::word_at_any(line, word))
+        else {
+            continue;
+        };
         let from = at.saturating_sub(DOC_LINES / 3);
         let excerpt = lines[from..(from + DOC_LINES).min(lines.len())].join("\n");
-        let shown = path.strip_prefix(root).unwrap_or(&path).display().to_string().replace('\\', "/");
+        let shown = path
+            .strip_prefix(root)
+            .unwrap_or(&path)
+            .display()
+            .to_string()
+            .replace('\\', "/");
         out.push((shown, excerpt));
         if out.len() >= MAX_DOCS {
             break;
@@ -185,7 +226,11 @@ pub fn run(command: &[String], prompt: &str, timeout: Duration) -> Result<String
             Ok(None) => {
                 let _ = child.kill();
                 let _ = child.wait();
-                return Err(format!("{} did not answer in {} ms", program.display(), timeout.as_millis()));
+                return Err(format!(
+                    "{} did not answer in {} ms",
+                    program.display(),
+                    timeout.as_millis()
+                ));
             }
             Err(err) => return Err(err.to_string()),
         }
@@ -193,7 +238,9 @@ pub fn run(command: &[String], prompt: &str, timeout: Duration) -> Result<String
     let _ = writer.join();
     let out = String::from_utf8_lossy(&reader.join().unwrap_or_default()).into_owned();
     if !status.success() {
-        let errors = String::from_utf8_lossy(&errors.join().unwrap_or_default()).trim().to_owned();
+        let errors = String::from_utf8_lossy(&errors.join().unwrap_or_default())
+            .trim()
+            .to_owned();
         return Err(format!("{} failed ({status}): {errors}", program.display()));
     }
     Ok(out)
@@ -207,7 +254,10 @@ mod tests {
     fn splices_and_reads_answers() {
         assert_eq!(splice("a\nb\nc\n", 1, 1, "x\ny\n"), "a\nx\ny\nc\n");
         assert_eq!(splice("a\r\nb\r\n", 0, 0, "z"), "z\r\nb\r\n");
-        assert_eq!(replacement("Here:\n```ts\nlet a = 1;\n```\nDone"), Some("let a = 1;\n".to_owned()));
+        assert_eq!(
+            replacement("Here:\n```ts\nlet a = 1;\n```\nDone"),
+            Some("let a = 1;\n".to_owned())
+        );
         assert_eq!(replacement("no block"), None);
         assert_eq!(window(100, 50, 50), (42, 58));
         assert_eq!(window(5, 0, 4), (0, 4));
@@ -222,14 +272,19 @@ mod tests {
             text: "const a: string = 1;\n",
             start: 0,
             end: 0,
-            diagnostics: vec!["1:7 error 2322: Type 'number' is not assignable to type 'string'.".to_owned()],
+            diagnostics: vec![
+                "1:7 error 2322: Type 'number' is not assignable to type 'string'.".to_owned(),
+            ],
             hover: None,
             graph: Some("**bun graph**".to_owned()),
             docs: Vec::new(),
         };
         let prompt = prompt(&problem);
         assert!(prompt.contains("lines 1-1 of `a.ts`"), "{prompt}");
-        assert!(prompt.contains("```typescript\nconst a: string = 1;\n```"), "{prompt}");
+        assert!(
+            prompt.contains("```typescript\nconst a: string = 1;\n```"),
+            "{prompt}"
+        );
         assert!(prompt.contains("## Code graph"), "{prompt}");
     }
 }

@@ -157,9 +157,17 @@ fn push_error(
     enable_verbose: bool,
 ) {
     if enable_verbose {
-        errors.push(diagnostics::set_state_in_effect(info.span, effect_span, true));
+        errors.push(diagnostics::set_state_in_effect(
+            info.span,
+            effect_span,
+            true,
+        ));
     } else {
-        errors.push(diagnostics::set_state_in_effect(info.span, effect_span, false));
+        errors.push(diagnostics::set_state_in_effect(
+            info.span,
+            effect_span,
+            false,
+        ));
     }
 }
 
@@ -325,7 +333,9 @@ fn get_set_state_call(
                     }
                 }
 
-                if let InstructionValue::PropertyLoad { object, property, .. } = &instr.value
+                if let InstructionValue::PropertyLoad {
+                    object, property, ..
+                } = &instr.value
                     && property.is_string("current")
                 {
                     let obj_ident = &identifiers[object.identifier];
@@ -352,7 +362,10 @@ fn get_set_state_call(
     };
 
     let is_ref_controlled_block = |block_id: BlockId| -> bool {
-        ref_controlled_blocks.get(&block_id).copied().unwrap_or(false)
+        ref_controlled_blocks
+            .get(&block_id)
+            .copied()
+            .unwrap_or(false)
     };
 
     // Reset and redo: second pass with control dominator info available
@@ -415,7 +428,9 @@ fn get_set_state_call(
                 }
 
                 // Special case: PropertyLoad of .current on ref/refValue
-                if let InstructionValue::PropertyLoad { object, property, .. } = &instr.value
+                if let InstructionValue::PropertyLoad {
+                    object, property, ..
+                } = &instr.value
                     && property.is_string("current")
                 {
                     let obj_ident = &identifiers[object.identifier];

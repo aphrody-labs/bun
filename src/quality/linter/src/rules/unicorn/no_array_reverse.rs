@@ -36,7 +36,9 @@ pub struct NoArrayReverse {
 
 impl Default for NoArrayReverse {
     fn default() -> Self {
-        Self { allow_expression_statement: true }
+        Self {
+            allow_expression_statement: true,
+        }
     }
 }
 
@@ -146,21 +148,42 @@ fn test() {
         ("reversed = [...array]?.reverse()", None),
         ("reversed = array.reverse()", None),
         ("reversed = array?.reverse()", None),
-        ("array.reverse()", Some(serde_json::json!([{"allowExpressionStatement": false}]))),
-        ("array?.reverse()", Some(serde_json::json!([{"allowExpressionStatement": false}]))),
-        ("[...array].reverse()", Some(serde_json::json!([{"allowExpressionStatement": true}]))),
+        (
+            "array.reverse()",
+            Some(serde_json::json!([{"allowExpressionStatement": false}])),
+        ),
+        (
+            "array?.reverse()",
+            Some(serde_json::json!([{"allowExpressionStatement": false}])),
+        ),
+        (
+            "[...array].reverse()",
+            Some(serde_json::json!([{"allowExpressionStatement": true}])),
+        ),
         ("reversed = [...(0, array)].reverse()", None),
     ];
 
     let fix = vec![
-        ("reversed = [...array].reverse()", "reversed = [...array].toReversed()", None),
-        ("reversed = [...array]?.reverse()", "reversed = [...array]?.toReversed()", None),
+        (
+            "reversed = [...array].reverse()",
+            "reversed = [...array].toReversed()",
+            None,
+        ),
+        (
+            "reversed = [...array]?.reverse()",
+            "reversed = [...array]?.toReversed()",
+            None,
+        ),
         (
             "a.reverse()",
             "a.toReversed()",
             Some(serde_json::json!([{"allowExpressionStatement": false}])),
         ),
-        ("reversed = array?.reverse()", "reversed = array?.toReversed()", None),
+        (
+            "reversed = array?.reverse()",
+            "reversed = array?.toReversed()",
+            None,
+        ),
     ];
 
     Tester::new(NoArrayReverse::NAME, NoArrayReverse::PLUGIN, pass, fail)

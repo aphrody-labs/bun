@@ -44,7 +44,11 @@ fn test() {
     // }
 
     fn generate_expect_inline_snaps_code(line: usize, matcher: &str) -> String {
-        format!("expect(something).{}({});", matcher, generate_snapshot_lines(line))
+        format!(
+            "expect(something).{}({});",
+            matcher,
+            generate_snapshot_lines(line)
+        )
     }
 
     fn generate_match_inline_snapshot(line: usize) -> String {
@@ -90,7 +94,12 @@ fn test() {
         ("expect(something)", None, None, None),
         ("expect(something).toBe(1)", None, None, None),
         ("expect(something).toMatchInlineSnapshot", None, None, None),
-        ("expect(something).toMatchInlineSnapshot()", None, None, None),
+        (
+            "expect(something).toMatchInlineSnapshot()",
+            None,
+            None,
+            None,
+        ),
         (two_match_inline_cases.as_str(), None, None, None),
         (two_throw_error_match_cases.as_str(), None, None, None),
         (
@@ -105,7 +114,12 @@ fn test() {
             None,
             None,
         ),
-        (sixty_cases.as_str(), Some(serde_json::json!([{ "maxSize": 61 }])), None, None),
+        (
+            sixty_cases.as_str(),
+            Some(serde_json::json!([{ "maxSize": 61 }])),
+            None,
+            None,
+        ),
         // '/mock-component.jsx.snap'
         // (twenty_exports_snapshot.as_str(), None, None, Some(PathBuf::from(snap_path))),
         // '/mock-component.jsx.snap'
@@ -218,7 +232,12 @@ fn test() {
         ("expect(something)", None, None, None),
         ("expect(something).toBe(1)", None, None, None),
         ("expect(something).toMatchInlineSnapshot", None, None, None),
-        ("expect(something).toMatchInlineSnapshot()", None, None, None),
+        (
+            "expect(something).toMatchInlineSnapshot()",
+            None,
+            None,
+            None,
+        ),
         (two_match_inline_cases.as_str(), None, None, None),
         (two_throw_error_match_cases.as_str(), None, None, None),
         (
@@ -233,7 +252,12 @@ fn test() {
             None,
             None,
         ),
-        (sixty_cases.as_str(), Some(serde_json::json!([{ "maxSize": 61 }])), None, None),
+        (
+            sixty_cases.as_str(),
+            Some(serde_json::json!([{ "maxSize": 61 }])),
+            None,
+            None,
+        ),
     ];
 
     let vitest_fail = vec![

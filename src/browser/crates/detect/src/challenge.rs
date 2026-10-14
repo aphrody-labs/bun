@@ -56,22 +56,46 @@ impl Challenge {
         recommendation: Recommendation,
         evidence: &str,
     ) -> Self {
-        Self { provider, confidence, recommendation, evidence: vec![evidence.to_owned()] }
+        Self {
+            provider,
+            confidence,
+            recommendation,
+            evidence: vec![evidence.to_owned()],
+        }
     }
 }
 
 pub(crate) fn detect_challenge(input: &DetectionInput) -> Challenge {
     let status = input.http_status;
-    let body = input.body.chars().take(50_000).collect::<String>().to_ascii_lowercase();
-    let cookie =
-        input.header_values("set-cookie").collect::<Vec<_>>().join(" ").to_ascii_lowercase();
-    let cf_mitigated = input.header("cf-mitigated").unwrap_or("").to_ascii_lowercase();
+    let body = input
+        .body
+        .chars()
+        .take(50_000)
+        .collect::<String>()
+        .to_ascii_lowercase();
+    let cookie = input
+        .header_values("set-cookie")
+        .collect::<Vec<_>>()
+        .join(" ")
+        .to_ascii_lowercase();
+    let cf_mitigated = input
+        .header("cf-mitigated")
+        .unwrap_or("")
+        .to_ascii_lowercase();
     let cf_ray = input.header("cf-ray").is_some();
-    let cf_server =
-        input.header("server").is_some_and(|v| v.to_ascii_lowercase().contains("cloudflare"));
+    let cf_server = input
+        .header("server")
+        .is_some_and(|v| v.to_ascii_lowercase().contains("cloudflare"));
 
     if cf_mitigated == "challenge"
-        || has_any(&body, &["__cf_chl_opt", "cf_chl_jschl", "challenges.cloudflare.com/turnstile"])
+        || has_any(
+            &body,
+            &[
+                "__cf_chl_opt",
+                "cf_chl_jschl",
+                "challenges.cloudflare.com/turnstile",
+            ],
+        )
     {
         return Challenge::new(
             ChallengeProvider::CloudflareTurnstile,
@@ -109,8 +133,10 @@ pub(crate) fn detect_challenge(input: &DetectionInput) -> Challenge {
         );
     }
     if (status >= 400 || short_interstitial(&body))
-        && (has_any(&body, &["id=\"datadome\"", "id='datadome'", "datadome captcha"])
-            || input.header("x-dd-b").is_some()
+        && (has_any(
+            &body,
+            &["id=\"datadome\"", "id='datadome'", "datadome captcha"],
+        ) || input.header("x-dd-b").is_some()
             || cookie.contains("_dd=")
             || cookie.contains("_dd2="))
     {
@@ -174,7 +200,10 @@ pub(crate) fn detect_challenge(input: &DetectionInput) -> Challenge {
         );
     }
     if (status >= 400 || short_interstitial(&body))
-        && has_any(&body, &["sucuri website firewall", "sucuri.net", "sucuri cloudproxy"])
+        && has_any(
+            &body,
+            &["sucuri website firewall", "sucuri.net", "sucuri cloudproxy"],
+        )
     {
         return Challenge::new(
             ChallengeProvider::Sucuri,
@@ -249,7 +278,7 @@ fn visible_text_len(html: &str) -> usize {
             '<' => inside_tag = true,
             '>' => inside_tag = false,
             _ if !inside_tag && !ch.is_whitespace() => count += 1,
-            _ => {},
+            _ => {}
         }
     }
     count
@@ -289,7 +318,10 @@ mod tests {
             200,
             "<div id=\"root\"></div><script src=\"/app.js\"></script>",
         );
-        assert_eq!(detect_challenge(&shell).provider, ChallengeProvider::JsRequired);
+        assert_eq!(
+            detect_challenge(&shell).provider,
+            ChallengeProvider::JsRequired
+        );
         let page = DetectionInput::new(
             "https://example.com",
             200,
@@ -301,6 +333,9 @@ mod tests {
     #[test]
     fn rate_limit_needs_wait() {
         let input = DetectionInput::new("https://example.com", 429, "");
-        assert_eq!(detect_challenge(&input).recommendation, Recommendation::Wait);
+        assert_eq!(
+            detect_challenge(&input).recommendation,
+            Recommendation::Wait
+        );
     }
 }

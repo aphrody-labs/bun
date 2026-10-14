@@ -128,7 +128,9 @@ impl SymbolValue<'_> {
         if self.references.has_writes() || self.implicit_undefined {
             return false;
         }
-        let Some(constant) = &self.initialized_constant else { return false };
+        let Some(constant) = &self.initialized_constant else {
+            return false;
+        };
         self.references.has_single_read()
             || match constant {
                 ConstantValue::Number(n) => n.fract() == 0.0 && *n >= -99.0 && *n <= 999.0,

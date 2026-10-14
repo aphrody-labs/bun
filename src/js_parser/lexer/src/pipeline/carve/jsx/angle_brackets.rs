@@ -52,7 +52,11 @@ pub(super) unsafe fn jsx_over_type_params(
             let (jsx, unterminated) =
                 jsx_over_generic(&tokens, &mut lanes.disambiguate.walks, lt, lp);
             if unterminated {
-                lanes.push_diag(lt as u32, (gt + 1 - lt) as u32, DiagCode::UnterminatedJsxElement);
+                lanes.push_diag(
+                    lt as u32,
+                    (gt + 1 - lt) as u32,
+                    DiagCode::UnterminatedJsxElement,
+                );
             }
             jsx
         }
@@ -116,7 +120,11 @@ unsafe fn ts_angle_verdict(src: &[u8], n: usize, t: usize, word: *const u64) -> 
         if d == b'/' && !matches!(if qq + 1 < n { src[qq + 1] } else { 0 }, b'*' | b'/') {
             return AngleVerdict::Jsx;
         }
-        let v = if d == b'=' || d == b'>' { AngleVerdict::Jsx } else { AngleVerdict::TypeParams };
+        let v = if d == b'=' || d == b'>' {
+            AngleVerdict::Jsx
+        } else {
+            AngleVerdict::TypeParams
+        };
         return v;
     }
     AngleVerdict::Jsx

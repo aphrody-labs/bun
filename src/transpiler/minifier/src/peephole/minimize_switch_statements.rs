@@ -11,16 +11,18 @@ impl<'a> PeepholeOptimizations {
     /// Drops cases that cannot run for the chosen discriminant while preserving any
     /// observable case tests and hoisted `var` bindings.
     pub fn drop_unreachable_switch_cases(stmt: &mut Statement<'a>, ctx: &mut TraverseCtx<'a>) {
-        let Statement::SwitchStatement(switch_stmt) = stmt else { return };
+        let Statement::SwitchStatement(switch_stmt) = stmt else {
+            return;
+        };
         if switch_stmt.cases.len() <= 1 {
             return;
         }
 
-        if switch_stmt
-            .cases
-            .iter()
-            .any(|case| case.consequent.iter().any(Self::statement_cares_about_scope))
-        {
+        if switch_stmt.cases.iter().any(|case| {
+            case.consequent
+                .iter()
+                .any(Self::statement_cares_about_scope)
+        }) {
             // preserve any potential TDZ issues
             return;
         }
@@ -99,7 +101,11 @@ impl<'a> PeepholeOptimizations {
                 selected_case = Some(case);
             } else if index >= entry_index && index < fallthrough_end {
                 // same live fallthrough path
-                selected_case.as_mut().unwrap().consequent.extend(case.consequent.drain(..));
+                selected_case
+                    .as_mut()
+                    .unwrap()
+                    .consequent
+                    .extend(case.consequent.drain(..));
                 ctx.drop_switch_case(&case);
             } else {
                 // keep only hoisted `var`s.

@@ -88,12 +88,12 @@ use crate::webcore::s3::multipart::WriterCollected as S3UploadWriterCollected;
 use crate::webcore::s3::simple_request::S3HttpSimpleTask;
 use crate::webcore::streams::Pending as StreamPending;
 
+use crate::api::browser_realm::ReleaseTask as BrowserRealmReleaseTask;
 use crate::api::bun_subprocess::Subprocess;
 #[cfg(not(windows))]
 use crate::api::bun_terminal_body::Poll as TerminalPoll;
 use crate::api::cron::CronJob;
 use crate::api::native_promise_context::DeferredDerefTask as NativePromiseContextDeferredDerefTask;
-use crate::api::browser_realm::ReleaseTask as BrowserRealmReleaseTask;
 #[cfg(not(windows))]
 use bun_spawn::static_pipe_writer::Poll as StaticPipeWriterPoll;
 

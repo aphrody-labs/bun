@@ -75,7 +75,11 @@ impl Generator for FormatterFormatGenerator {
                 StructOrEnum::Struct(struct_def)
                     if struct_def.visit.has_visitor() && !struct_def.builder.skip =>
                 {
-                    Some(generate_struct_implementation(struct_def, &parenthesis_type_ids, schema))
+                    Some(generate_struct_implementation(
+                        struct_def,
+                        &parenthesis_type_ids,
+                        schema,
+                    ))
                 }
                 StructOrEnum::Enum(enum_def) if enum_def.visit.has_visitor() => {
                     Some(generate_enum_implementation(enum_def, schema))
@@ -102,7 +106,10 @@ impl Generator for FormatterFormatGenerator {
             #impls
         };
 
-        Output::Rust { path: formatter_output_path("format"), tokens: output }
+        Output::Rust {
+            path: formatter_output_path("format"),
+            tokens: output,
+        }
     }
 }
 
@@ -249,14 +256,16 @@ fn generate_struct_implementation(
             };
 
         let type_cast_comment_formatting = needs_parentheses.then(|| {
-            let is_object_or_array_argument =
-                if matches!(struct_def.name.as_str(), "ObjectExpression" | "ArrayExpression") {
-                    quote! {
-                        true
-                    }
-                } else {
-                    quote! { false }
-                };
+            let is_object_or_array_argument = if matches!(
+                struct_def.name.as_str(),
+                "ObjectExpression" | "ArrayExpression"
+            ) {
+                quote! {
+                    true
+                }
+            } else {
+                quote! { false }
+            };
 
             // A suppressed node returned above, so no guard is needed here
             quote! {
@@ -303,8 +312,9 @@ fn generate_enum_implementation(enum_def: &EnumDef, schema: &Schema) -> TokenStr
     let variant_match_arms = enum_def.variants.iter().map(|variant| {
         let variant_name = &variant.ident();
         let field_type = variant.field_type(schema).unwrap();
-        let node_type =
-            field_type.maybe_inner_type(schema).map_or_else(|| field_type.ident(), TypeDef::ident);
+        let node_type = field_type
+            .maybe_inner_type(schema)
+            .map_or_else(|| field_type.ident(), TypeDef::ident);
 
         Some(quote! {
             #enum_ident::#variant_name(inner) => {
@@ -375,8 +385,10 @@ fn generate_enum_implementation(enum_def: &EnumDef, schema: &Schema) -> TokenStr
 
 /// Get [`TypeId`]s of types which do not have a following node.
 fn get_needs_parentheses_type_ids(schema: &Schema) -> Vec<TypeId> {
-    let mut type_ids =
-        AST_NODE_NEEDS_PARENTHESES.iter().map(|&name| schema.type_names[name]).collect::<Vec<_>>();
+    let mut type_ids = AST_NODE_NEEDS_PARENTHESES
+        .iter()
+        .map(|&name| schema.type_names[name])
+        .collect::<Vec<_>>();
 
     let expression_enum = schema.type_by_name("Expression").as_enum().unwrap();
     type_ids.extend(

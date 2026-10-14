@@ -46,7 +46,10 @@ struct NoParamReassignConfig {
 impl NoParamReassignConfig {
     fn is_ignored(&self, name: &str) -> bool {
         self.ignore_property_modifications_for.contains(name)
-            || self.ignore_property_modifications_for_regex.iter().any(|regex| regex.is_match(name))
+            || self
+                .ignore_property_modifications_for_regex
+                .iter()
+                .any(|regex| regex.is_match(name))
     }
 }
 
@@ -83,7 +86,8 @@ declare_oxc_lint!(
     restriction,
     config = NoParamReassignConfig,
     version = "1.20.0",
-    short_description = "Disallow reassigning function parameters or, optionally, their properties.",
+    short_description =
+        "Disallow reassigning function parameters or, optionally, their properties.",
 );
 
 impl Rule for NoParamReassign {
@@ -111,7 +115,11 @@ impl Rule for NoParamReassign {
                     continue;
                 }
 
-                if ctx.nodes().ancestor_ids(node_id).any(|ancestor| ancestor == declaration_id) {
+                if ctx
+                    .nodes()
+                    .ancestor_ids(node_id)
+                    .any(|ancestor| ancestor == declaration_id)
+                {
                     continue;
                 }
 
@@ -144,17 +152,32 @@ fn test() {
         ("function foo(a) { a.prop = 'value'; }", None),
         ("function foo(a) { for (a.prop in obj); }", None),
         ("function foo(a) { for (a.prop of arr); }", None), // { "ecmaVersion": 6 },
-        ("function foo(a) { (function() { var a = 12; a++; })(); }", None),
+        (
+            "function foo(a) { (function() { var a = 12; a++; })(); }",
+            None,
+        ),
         ("function foo() { someGlobal = 13; }", None),
         ("function foo() { someGlobal = 13; }", None), // { "globals": { "someGlobal": false } },
         ("function foo(a) { a.b = 0; }", None),
         ("function foo(a) { delete a.b; }", None),
         ("function foo(a) { ++a.b; }", None),
         ("function foo(a) { [a.b] = []; }", None), // { "ecmaVersion": 6 },
-        ("function foo(a) { bar(a.b).c = 0; }", Some(serde_json::json!([{ "props": true }]))),
-        ("function foo(a) { data[a.b] = 0; }", Some(serde_json::json!([{ "props": true }]))),
-        ("function foo(a) { +a.b; }", Some(serde_json::json!([{ "props": true }]))),
-        ("function foo(a) { (a ? [] : [])[0] = 1; }", Some(serde_json::json!([{ "props": true }]))),
+        (
+            "function foo(a) { bar(a.b).c = 0; }",
+            Some(serde_json::json!([{ "props": true }])),
+        ),
+        (
+            "function foo(a) { data[a.b] = 0; }",
+            Some(serde_json::json!([{ "props": true }])),
+        ),
+        (
+            "function foo(a) { +a.b; }",
+            Some(serde_json::json!([{ "props": true }])),
+        ),
+        (
+            "function foo(a) { (a ? [] : [])[0] = 1; }",
+            Some(serde_json::json!([{ "props": true }])),
+        ),
         (
             "function foo(a) { (a.b ? [] : [])[0] = 1; }",
             Some(serde_json::json!([{ "props": true }])),
@@ -223,8 +246,14 @@ fn test() {
             "function foo(a) { ({ [a]: variable } = value) }",
             Some(serde_json::json!([{ "props": true }])),
         ), // { "ecmaVersion": 6 },
-        ("function foo(a) { ([...a.b] = obj); }", Some(serde_json::json!([{ "props": false }]))), // { "ecmaVersion": 2015 },
-        ("function foo(a) { ({...a.b} = obj); }", Some(serde_json::json!([{ "props": false }]))), // { "ecmaVersion": 2018 },
+        (
+            "function foo(a) { ([...a.b] = obj); }",
+            Some(serde_json::json!([{ "props": false }])),
+        ), // { "ecmaVersion": 2015 },
+        (
+            "function foo(a) { ({...a.b} = obj); }",
+            Some(serde_json::json!([{ "props": false }])),
+        ), // { "ecmaVersion": 2018 },
         (
             "function foo(a) { for (obj[a.b] in obj); }",
             Some(serde_json::json!([{ "props": true }])),
@@ -233,10 +262,22 @@ fn test() {
             "function foo(a) { for (obj[a.b] of arr); }",
             Some(serde_json::json!([{ "props": true }])),
         ), // { "ecmaVersion": 6 },
-        ("function foo(a) { for (bar in a.b); }", Some(serde_json::json!([{ "props": true }]))),
-        ("function foo(a) { for (bar of a.b); }", Some(serde_json::json!([{ "props": true }]))), // { "ecmaVersion": 6 },
-        ("function foo(a) { for (bar in baz) a.b; }", Some(serde_json::json!([{ "props": true }]))),
-        ("function foo(a) { for (bar of baz) a.b; }", Some(serde_json::json!([{ "props": true }]))), // { "ecmaVersion": 6 },
+        (
+            "function foo(a) { for (bar in a.b); }",
+            Some(serde_json::json!([{ "props": true }])),
+        ),
+        (
+            "function foo(a) { for (bar of a.b); }",
+            Some(serde_json::json!([{ "props": true }])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "function foo(a) { for (bar in baz) a.b; }",
+            Some(serde_json::json!([{ "props": true }])),
+        ),
+        (
+            "function foo(a) { for (bar of baz) a.b; }",
+            Some(serde_json::json!([{ "props": true }])),
+        ), // { "ecmaVersion": 6 },
         (
             "function foo(bar, baz) { bar.a = true; baz.b = false; }",
             Some(
@@ -251,7 +292,10 @@ fn test() {
             "function foo(key, value) { this[key] += value; }",
             Some(serde_json::json!([{ "props": true }])),
         ),
-        ("function foo(key) { delete this[key]; }", Some(serde_json::json!([{ "props": true }]))),
+        (
+            "function foo(key) { delete this[key]; }",
+            Some(serde_json::json!([{ "props": true }])),
+        ),
         (
             "function foo<T>(this: Record<PropertyKey, T>, key: PropertyKey, value: T) { this[key] = value; }",
             Some(serde_json::json!([{ "props": true }])),
@@ -267,10 +311,22 @@ fn test() {
             "function foo(a) { for ({bar: a.b} of arr); }",
             Some(serde_json::json!([{ "props": true }])),
         ),
-        ("function foo(a) { a.b = 0; }", Some(serde_json::json!([{ "props": true }]))),
-        ("function foo(a) { ++a.b; }", Some(serde_json::json!([{ "props": true }]))),
-        ("function foo(a) { ({bar: a.b} = obj); }", Some(serde_json::json!([{ "props": true }]))),
-        ("function foo(a) { delete a.b; }", Some(serde_json::json!([{ "props": true }]))),
+        (
+            "function foo(a) { a.b = 0; }",
+            Some(serde_json::json!([{ "props": true }])),
+        ),
+        (
+            "function foo(a) { ++a.b; }",
+            Some(serde_json::json!([{ "props": true }])),
+        ),
+        (
+            "function foo(a) { ({bar: a.b} = obj); }",
+            Some(serde_json::json!([{ "props": true }])),
+        ),
+        (
+            "function foo(a) { delete a.b; }",
+            Some(serde_json::json!([{ "props": true }])),
+        ),
         ("function foo(a) { a &&= b; }", None),
         ("function foo(a) { function bar() { a = 2; } }", None),
         ("function foo(bar) { bar = 13; }", None),
@@ -286,17 +342,38 @@ fn test() {
         ("function foo(bar) { ({x: [, bar = 0]} = {}); }", None), // { "ecmaVersion": 6 },
         ("function foo(bar) { for (bar in baz); }", None),
         ("function foo(bar) { for (bar of baz); }", None), // { "ecmaVersion": 6 },
-        ("function foo(bar) { bar.a = 0; }", Some(serde_json::json!([{ "props": true }]))),
-        ("function foo(bar) { bar.get(0).a = 0; }", Some(serde_json::json!([{ "props": true }]))),
-        ("function foo(bar) { delete bar.a; }", Some(serde_json::json!([{ "props": true }]))),
-        ("function foo(bar) { ++bar.a; }", Some(serde_json::json!([{ "props": true }]))),
-        ("function foo(bar) { for (bar.a in {}); }", Some(serde_json::json!([{ "props": true }]))),
-        ("function foo(bar) { for (bar.a of []); }", Some(serde_json::json!([{ "props": true }]))), // { "ecmaVersion": 6 },
+        (
+            "function foo(bar) { bar.a = 0; }",
+            Some(serde_json::json!([{ "props": true }])),
+        ),
+        (
+            "function foo(bar) { bar.get(0).a = 0; }",
+            Some(serde_json::json!([{ "props": true }])),
+        ),
+        (
+            "function foo(bar) { delete bar.a; }",
+            Some(serde_json::json!([{ "props": true }])),
+        ),
+        (
+            "function foo(bar) { ++bar.a; }",
+            Some(serde_json::json!([{ "props": true }])),
+        ),
+        (
+            "function foo(bar) { for (bar.a in {}); }",
+            Some(serde_json::json!([{ "props": true }])),
+        ),
+        (
+            "function foo(bar) { for (bar.a of []); }",
+            Some(serde_json::json!([{ "props": true }])),
+        ), // { "ecmaVersion": 6 },
         (
             "function foo(bar) { (bar ? bar : [])[0] = 1; }",
             Some(serde_json::json!([{ "props": true }])),
         ),
-        ("function foo(bar) { [bar.a] = []; }", Some(serde_json::json!([{ "props": true }]))), // { "ecmaVersion": 6 },
+        (
+            "function foo(bar) { [bar.a] = []; }",
+            Some(serde_json::json!([{ "props": true }])),
+        ), // { "ecmaVersion": 6 },
         (
             "function foo(bar) { [bar.a] = []; }",
             Some(serde_json::json!([{ "props": true, "ignorePropertyModificationsFor": ["a"] }])),
@@ -317,22 +394,43 @@ fn test() {
             "function foo(bar) { ({foo: bar.a} = {}); }",
             Some(serde_json::json!([{ "props": true }])),
         ), // { "ecmaVersion": 6 },
-        ("function foo(a) { ({a} = obj); }", Some(serde_json::json!([{ "props": true }]))), // { "ecmaVersion": 6 },
+        (
+            "function foo(a) { ({a} = obj); }",
+            Some(serde_json::json!([{ "props": true }])),
+        ), // { "ecmaVersion": 6 },
         ("function foo(a) { ([...a] = obj); }", None), // { "ecmaVersion": 2015 },
         ("function foo(a) { ({...a} = obj); }", None), // { "ecmaVersion": 2018 },
-        ("function foo(a) { ([...a.b] = obj); }", Some(serde_json::json!([{ "props": true }]))), // { "ecmaVersion": 2015 },
-        ("function foo(a) { ({...a.b} = obj); }", Some(serde_json::json!([{ "props": true }]))), // { "ecmaVersion": 2018 },
+        (
+            "function foo(a) { ([...a.b] = obj); }",
+            Some(serde_json::json!([{ "props": true }])),
+        ), // { "ecmaVersion": 2015 },
+        (
+            "function foo(a) { ({...a.b} = obj); }",
+            Some(serde_json::json!([{ "props": true }])),
+        ), // { "ecmaVersion": 2018 },
         (
             "function foo(a) { for ({bar: a.b} in {}); }",
             Some(serde_json::json!([{ "props": true }])),
         ), // { "ecmaVersion": 6 },
-        ("function foo(a) { for ([a.b] of []); }", Some(serde_json::json!([{ "props": true }]))), // { "ecmaVersion": 6 },
-        ("function foo(a) { a &&= b; }", None), // { "ecmaVersion": 2021 },
-        ("function foo(a) { a ||= b; }", None), // { "ecmaVersion": 2021 },
-        ("function foo(a) { a ??= b; }", None), // { "ecmaVersion": 2021 },
-        ("function foo(a) { a.b &&= c; }", Some(serde_json::json!([{ "props": true }]))), // { "ecmaVersion": 2021 },
-        ("function foo(a) { a.b.c ||= d; }", Some(serde_json::json!([{ "props": true }]))), // { "ecmaVersion": 2021 },
-        ("function foo(a) { a[b] ??= c; }", Some(serde_json::json!([{ "props": true }]))), // { "ecmaVersion": 2021 }
+        (
+            "function foo(a) { for ([a.b] of []); }",
+            Some(serde_json::json!([{ "props": true }])),
+        ), // { "ecmaVersion": 6 },
+        ("function foo(a) { a &&= b; }", None),        // { "ecmaVersion": 2021 },
+        ("function foo(a) { a ||= b; }", None),        // { "ecmaVersion": 2021 },
+        ("function foo(a) { a ??= b; }", None),        // { "ecmaVersion": 2021 },
+        (
+            "function foo(a) { a.b &&= c; }",
+            Some(serde_json::json!([{ "props": true }])),
+        ), // { "ecmaVersion": 2021 },
+        (
+            "function foo(a) { a.b.c ||= d; }",
+            Some(serde_json::json!([{ "props": true }])),
+        ), // { "ecmaVersion": 2021 },
+        (
+            "function foo(a) { a[b] ??= c; }",
+            Some(serde_json::json!([{ "props": true }])),
+        ), // { "ecmaVersion": 2021 }
     ];
 
     Tester::new(NoParamReassign::NAME, NoParamReassign::PLUGIN, pass, fail).test_and_snapshot();

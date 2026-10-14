@@ -19,9 +19,11 @@ fn font_display_parameter_missing(span: Span) -> OxcDiagnostic {
 }
 
 fn not_recommended_font_display_value(span: Span, font_display_value: &str) -> OxcDiagnostic {
-    OxcDiagnostic::warn(format!("`{font_display_value}` is not a recommended font-display value."))
-        .with_help("See https://nextjs.org/docs/messages/google-font-display")
-        .with_label(span)
+    OxcDiagnostic::warn(format!(
+        "`{font_display_value}` is not a recommended font-display value."
+    ))
+    .with_help("See https://nextjs.org/docs/messages/google-font-display")
+    .with_label(span)
 }
 
 #[derive(Debug, Default, Clone)]
@@ -102,12 +104,17 @@ impl Rule for GoogleFontDisplay {
 
         if href_prop_value.starts_with("https://fonts.googleapis.com/css") {
             let Some(display_value) = find_url_query_value(href_prop_value, "display") else {
-                ctx.diagnostic(font_display_parameter_missing(jsx_opening_element_name.span));
+                ctx.diagnostic(font_display_parameter_missing(
+                    jsx_opening_element_name.span,
+                ));
                 return;
             };
 
             if matches!(display_value, "auto" | "block" | "fallback") {
-                ctx.diagnostic(not_recommended_font_display_value(href_prop.span(), display_value));
+                ctx.diagnostic(not_recommended_font_display_value(
+                    href_prop.span(),
+                    display_value,
+                ));
             }
         }
     }
@@ -236,5 +243,11 @@ fn test() {
 			     "#,
     ];
 
-    Tester::new(GoogleFontDisplay::NAME, GoogleFontDisplay::PLUGIN, pass, fail).test_and_snapshot();
+    Tester::new(
+        GoogleFontDisplay::NAME,
+        GoogleFontDisplay::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

@@ -264,8 +264,11 @@ impl<'a> Format<'a, JsFormatContext<'a>> for BinaryLikeExpression<'a, '_> {
         // and either pushes Left or recursively adds items that include Left(s)
         let first = &parts[0];
         let jsx_element = parts.last().filter(|part| part.is_jsx());
-        let tail_parts =
-            if jsx_element.is_some() { &parts[1..parts.len() - 1] } else { &parts[1..] };
+        let tail_parts = if jsx_element.is_some() {
+            &parts[1..parts.len() - 1]
+        } else {
+            &parts[1..]
+        };
 
         let group_id = f.group_id("logicalChain");
 
@@ -324,7 +327,9 @@ enum BinaryLeftOrRightSide<'a, 'b> {
     /// A terminal left hand side of a binary expression.
     ///
     /// Formats the left hand side only.
-    Left { parent: BinaryLikeExpression<'a, 'b> },
+    Left {
+        parent: BinaryLikeExpression<'a, 'b>,
+    },
 
     /// The right hand side of a binary expression.
     /// Formats the operand together with the right hand side.
@@ -352,14 +357,22 @@ fn format_flattened_logical_expression<'a>(
 
         if binary.can_flatten() {
             // Recursively format nested binary expressions
-            format_recursive(BinaryLikeExpression::try_from(left).unwrap(), inside_condition, f);
+            format_recursive(
+                BinaryLikeExpression::try_from(left).unwrap(),
+                inside_condition,
+                f,
+            );
         } else {
             // Format the left terminal
             write!(f, [group(left)]);
         }
 
         // Format the right side with operator
-        BinaryLeftOrRightSide::Right { parent: binary, inside_condition }.fmt(f);
+        BinaryLeftOrRightSide::Right {
+            parent: binary,
+            inside_condition,
+        }
+        .fmt(f);
     }
 
     format_recursive(binary, inside_condition, f);
@@ -453,7 +466,8 @@ impl<'a> Format<'a, JsFormatContext<'a>> for BinaryLeftOrRightSide<'a, '_> {
                         write!(f, [space(), binary_like_expression.operator(), space()]);
 
                         if !right.is_jsx()
-                            && f.comments().has_leading_own_line_comment(right.span().start)
+                            && f.comments()
+                                .has_leading_own_line_comment(right.span().start)
                         {
                             return write!(f, soft_line_indent_or_space(right));
                         }
@@ -515,7 +529,10 @@ impl<'a> Format<'a, JsFormatContext<'a>> for BinaryLeftOrRightSide<'a, '_> {
                         })
                         .any(|comment| comment.is_line());
 
-                    write!(f, [group(&operator_and_right_expression).should_expand(should_break)]);
+                    write!(
+                        f,
+                        [group(&operator_and_right_expression).should_expand(should_break)]
+                    );
                 } else {
                     write!(f, [operator_and_right_expression]);
                 }
@@ -572,7 +589,10 @@ fn split_into_left_and_right_sides<'a, 'b>(
             items.push(BinaryLeftOrRightSide::Left { parent: binary });
         }
 
-        items.push(BinaryLeftOrRightSide::Right { parent: binary, inside_condition });
+        items.push(BinaryLeftOrRightSide::Right {
+            parent: binary,
+            inside_condition,
+        });
     }
 
     // Stores the left and right parts of the binary expression in sequence (rather than nested as they

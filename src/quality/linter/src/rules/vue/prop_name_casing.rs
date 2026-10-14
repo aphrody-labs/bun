@@ -101,7 +101,8 @@ declare_oxc_lint!(
     style,
     config = Config,
     version = "1.69.0",
-    short_description = "Enforce a specific casing (camelCase or snake_case) for Vue component prop names.",
+    short_description =
+        "Enforce a specific casing (camelCase or snake_case) for Vue component prop names.",
 );
 
 impl Rule for PropNameCasing {
@@ -115,7 +116,9 @@ impl Rule for PropNameCasing {
                 if !is_vue_component_options_object_excluding_instance(node, ctx) {
                     return;
                 }
-                let Some(props_prop) = find_property(obj, "props") else { return };
+                let Some(props_prop) = find_property(obj, "props") else {
+                    return;
+                };
                 self.check_props_value(&props_prop.value, ctx);
             }
             AstKind::CallExpression(call) => {
@@ -131,7 +134,9 @@ impl Rule for PropNameCasing {
 
 impl PropNameCasing {
     fn check_define_props<'a>(&self, call: &CallExpression<'a>, ctx: &LintContext<'a>) {
-        let Some(ident) = call.callee.get_identifier_reference() else { return };
+        let Some(ident) = call.callee.get_identifier_reference() else {
+            return;
+        };
         if ident.name != "defineProps" {
             return;
         }
@@ -143,8 +148,12 @@ impl PropNameCasing {
         // `import { Props } from './x'` shape requires cross-file TS type
         // resolution and is handled by tsgolint (see the test() comment for
         // details).
-        let Some(type_arguments) = call.type_arguments.as_deref() else { return };
-        let Some(first_type) = type_arguments.params.first() else { return };
+        let Some(type_arguments) = call.type_arguments.as_deref() else {
+            return;
+        };
+        let Some(first_type) = type_arguments.params.first() else {
+            return;
+        };
         for_each_define_props_type_signature(first_type, ctx, &mut |signature| {
             self.check_signature(signature, ctx);
         });
@@ -160,15 +169,21 @@ impl PropNameCasing {
 
     fn check_array_props<'a>(&self, arr: &ArrayExpression<'a>, ctx: &LintContext<'a>) {
         for element in &arr.elements {
-            let ArrayExpressionElement::StringLiteral(lit) = element else { continue };
+            let ArrayExpressionElement::StringLiteral(lit) = element else {
+                continue;
+            };
             self.report_if_invalid(lit.value.as_str(), lit.span, ctx);
         }
     }
 
     fn check_object_props<'a>(&self, obj: &ObjectExpression<'a>, ctx: &LintContext<'a>) {
         for prop in &obj.properties {
-            let ObjectPropertyKind::ObjectProperty(prop) = prop else { continue };
-            let Some((name, span)) = property_key_static_name(&prop.key) else { continue };
+            let ObjectPropertyKind::ObjectProperty(prop) = prop else {
+                continue;
+            };
+            let Some((name, span)) = property_key_static_name(&prop.key) else {
+                continue;
+            };
             self.report_if_invalid(name.as_ref(), span, ctx);
         }
     }

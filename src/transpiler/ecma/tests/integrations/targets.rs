@@ -7,11 +7,31 @@ use crate::{codegen, test};
 fn baseline_targets() {
     // Use fixed dates and years for feature boundaries that change over time.
     for (query, target, source_text) in [
-        ("baseline newly available", ESTarget::ES2026, "using x = acquire();"),
-        ("baseline widely available on 2026-08-15", ESTarget::ES2025, "using x = acquire();"),
-        ("baseline 2020", ESTarget::ES2021, "class C { static { foo(); } }"),
-        ("baseline widely available on 2022-07-01", ESTarget::ES2020, "a ||= b;"),
-        ("baseline widely available on 2022-07-01", ESTarget::ES2017, "({ ...x });"),
+        (
+            "baseline newly available",
+            ESTarget::ES2026,
+            "using x = acquire();",
+        ),
+        (
+            "baseline widely available on 2026-08-15",
+            ESTarget::ES2025,
+            "using x = acquire();",
+        ),
+        (
+            "baseline 2020",
+            ESTarget::ES2021,
+            "class C { static { foo(); } }",
+        ),
+        (
+            "baseline widely available on 2022-07-01",
+            ESTarget::ES2020,
+            "a ||= b;",
+        ),
+        (
+            "baseline widely available on 2022-07-01",
+            ESTarget::ES2017,
+            "({ ...x });",
+        ),
     ] {
         let options = TransformOptions {
             env: EnvOptions::from_browserslist_query(query).unwrap(),

@@ -280,12 +280,18 @@ fn test() {
     ];
 
     let fix = vec![
-        ("const re = /a/; const bar = !foo.match(re)", "const re = /a/; const bar = !re.test(foo)"),
+        (
+            "const re = /a/; const bar = !foo.match(re)",
+            "const re = /a/; const bar = !re.test(foo)",
+        ),
         (
             "const re = /a/; const bar = Boolean(foo.match(re))",
             "const re = /a/; const bar = Boolean(re.test(foo))",
         ),
-        ("const re = /a/; if (foo.match(re)) {}", "const re = /a/; if (re.test(foo)) {}"),
+        (
+            "const re = /a/; if (foo.match(re)) {}",
+            "const re = /a/; if (re.test(foo)) {}",
+        ),
         (
             "const re = /a/; const bar = foo.match(re) ? 1 : 2",
             "const re = /a/; const bar = re.test(foo) ? 1 : 2",
@@ -302,13 +308,22 @@ fn test() {
             "const re = /a/; for (; foo.match(re); ) foo = foo.slice(1);",
             "const re = /a/; for (; re.test(foo); ) foo = foo.slice(1);",
         ),
-        ("const re = /a/; const bar = !re.exec(foo)", "const re = /a/; const bar = !re.test(foo)"),
+        (
+            "const re = /a/; const bar = !re.exec(foo)",
+            "const re = /a/; const bar = !re.test(foo)",
+        ),
         (
             "const re = /a/; const bar = Boolean(re.exec(foo))",
             "const re = /a/; const bar = Boolean(re.test(foo))",
         ),
-        ("const re = /a/; if (re.exec(foo)) {}", "const re = /a/; if (re.test(foo)) {}"),
-        ("const re = /a/; if (someStr.match(re)) {}", "const re = /a/; if (re.test(someStr)) {}"),
+        (
+            "const re = /a/; if (re.exec(foo)) {}",
+            "const re = /a/; if (re.test(foo)) {}",
+        ),
+        (
+            "const re = /a/; if (someStr.match(re)) {}",
+            "const re = /a/; if (re.test(someStr)) {}",
+        ),
     ];
 
     Tester::new(PreferRegexpTest::NAME, PreferRegexpTest::PLUGIN, pass, fail)

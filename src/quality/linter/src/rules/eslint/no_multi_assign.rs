@@ -191,9 +191,15 @@ fn test() {
             "const x = {};const y = {};x.one = y.one = 1;",
             Some(serde_json::json!([{ "ignoreNonDeclaration": true }])),
         ), // { "ecmaVersion": 6 },
-        ("let a, b;a = b = 1", Some(serde_json::json!([{ "ignoreNonDeclaration": true }]))), // { "ecmaVersion": 6 },
+        (
+            "let a, b;a = b = 1",
+            Some(serde_json::json!([{ "ignoreNonDeclaration": true }])),
+        ), // { "ecmaVersion": 6 },
         ("class C { [foo = 0] = 0 }", None), // { "ecmaVersion": 2022 }
-        ("/* eslint-disable no-multi-assign */ const x = (obj.y = z);", None),
+        (
+            "/* eslint-disable no-multi-assign */ const x = (obj.y = z);",
+            None,
+        ),
     ];
 
     let fail = vec![
@@ -225,9 +231,15 @@ fn test() {
             Some(serde_json::json!([{ "ignoreNonDeclaration": true }])),
         ), // { "ecmaVersion": 6 },
         ("let a, b;a = b = 1", Some(serde_json::json!([{}]))), // { "ecmaVersion": 6 },
-        ("let x, y;x = y = 'baz'", Some(serde_json::json!([{ "ignoreNonDeclaration": false }]))), // { "ecmaVersion": 6 },
-        ("const a = b = 1", Some(serde_json::json!([{ "ignoreNonDeclaration": true }]))), // { "ecmaVersion": 6 },
-        ("class C { field = foo = 0 }", None), // { "ecmaVersion": 2022 },
+        (
+            "let x, y;x = y = 'baz'",
+            Some(serde_json::json!([{ "ignoreNonDeclaration": false }])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "const a = b = 1",
+            Some(serde_json::json!([{ "ignoreNonDeclaration": true }])),
+        ), // { "ecmaVersion": 6 },
+        ("class C { field = foo = 0 }", None),                 // { "ecmaVersion": 2022 },
         (
             "class C { field = foo = 0 }",
             Some(serde_json::json!([{ "ignoreNonDeclaration": true }])),

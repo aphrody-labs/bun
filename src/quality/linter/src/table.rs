@@ -105,7 +105,12 @@ impl RuleTable {
             let rows = rows_by_category.remove(&category)?;
             let rule_column_width = rows.iter().map(|r| r.name.len()).max()?;
             let plugin_column_width = rows.iter().map(|r| r.plugin.len()).max()?;
-            Some(RuleTableSection { rows, category, rule_column_width, plugin_column_width })
+            Some(RuleTableSection {
+                rows,
+                category,
+                rule_column_width,
+                plugin_column_width,
+            })
         })
         .collect::<Vec<_>>();
 
@@ -164,7 +169,11 @@ impl RuleTableSection {
                 "Rule name", "Source"
             )
             .unwrap();
-            writeln!(s, "| {x:-<rule_width$} | {x:-<plugin_width$} | {x:-<7} | {x:-<8} |").unwrap();
+            writeln!(
+                s,
+                "| {x:-<rule_width$} | {x:-<plugin_width$} | {x:-<7} | {x:-<8} |"
+            )
+            .unwrap();
         }
 
         for row in rows {
@@ -172,7 +181,10 @@ impl RuleTableSection {
             let plugin_name = &row.plugin;
 
             let (enabled_mark, enabled_width) = if include_enabled {
-                if enabled.unwrap().contains(&(plugin_name.as_str(), rule_name)) {
+                if enabled
+                    .unwrap()
+                    .contains(&(plugin_name.as_str(), rule_name))
+                {
                     ("✅", ENABLED - 1)
                 } else {
                     ("", ENABLED)
@@ -181,8 +193,11 @@ impl RuleTableSection {
                 ("", ENABLED)
             };
 
-            let (default, default_width) =
-                if row.turned_on_by_default { ("✅", DEFAULT - 1) } else { ("", DEFAULT) };
+            let (default, default_width) = if row.turned_on_by_default {
+                ("✅", DEFAULT - 1)
+            } else {
+                ("", DEFAULT)
+            };
             let rendered_name = Cow::Borrowed(rule_name);
             // Improved mapping for emoji column alignment, allowing FIX to grow for negative display widths
             let (fix_emoji, fix_emoji_width) =

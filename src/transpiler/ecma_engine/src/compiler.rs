@@ -173,7 +173,10 @@ pub trait CompilerInterface {
                 return;
             }
 
-            if self.after_transform(&mut program, &mut transformer_return).is_break() {
+            if self
+                .after_transform(&mut program, &mut transformer_return)
+                .is_break()
+            {
                 return;
             }
 
@@ -232,8 +235,9 @@ pub trait CompilerInterface {
 
         /* Mangler */
 
-        let mangler =
-            self.mangle_options().map(|options| self.mangle(&mut program, options, stats));
+        let mangler = self
+            .mangle_options()
+            .map(|options| self.mangle(&mut program, options, stats));
 
         /* Codegen */
 
@@ -249,7 +253,9 @@ pub trait CompilerInterface {
         source_text: &'a str,
         source_type: SourceType,
     ) -> ParserReturn<'a> {
-        Parser::new(allocator, source_text, source_type).with_options(self.parse_options()).parse()
+        Parser::new(allocator, source_text, source_type)
+            .with_options(self.parse_options())
+            .parse()
     }
 
     fn semantic<'a>(&self, program: &'a Program<'a>) -> SemanticBuilderReturn<'a> {
@@ -313,7 +319,10 @@ pub trait CompilerInterface {
         options: MangleOptions,
         stats: Stats,
     ) -> ManglerReturn {
-        Mangler::new().with_options(options).with_stats(stats).build(program)
+        Mangler::new()
+            .with_options(options)
+            .with_stats(stats)
+            .build(program)
     }
 
     fn codegen<'a>(

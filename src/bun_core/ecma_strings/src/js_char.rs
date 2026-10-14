@@ -13,7 +13,11 @@ impl JSChar {
     /// Construct a code point, returning `None` if `value > 0x10_FFFF`.
     #[inline]
     pub const fn from_u32(value: u32) -> Option<Self> {
-        if value <= CODE_POINT_MAX { Some(Self(value)) } else { None }
+        if value <= CODE_POINT_MAX {
+            Some(Self(value))
+        } else {
+            None
+        }
     }
 
     /// Return the code point's numeric value.
@@ -64,7 +68,10 @@ impl JSChar {
 
     /// Encode one code point. The caller handles pairing adjacent surrogates.
     #[inline]
-    #[expect(clippy::cast_possible_truncation, reason = "each byte is masked or range-checked")]
+    #[expect(
+        clippy::cast_possible_truncation,
+        reason = "each byte is masked or range-checked"
+    )]
     pub(super) fn encode(self, buffer: &mut [u8; char::MAX_LEN_UTF8]) -> &[u8] {
         let value = self.0;
         let len = match value {

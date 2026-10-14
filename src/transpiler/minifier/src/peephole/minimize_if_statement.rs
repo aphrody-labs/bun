@@ -11,14 +11,18 @@ use super::PeepholeOptimizations;
 impl<'a> PeepholeOptimizations {
     /// `MangleIf`: <https://github.com/evanw/esbuild/blob/v0.24.2/internal/js_parser/js_parser.go#L9860>
     pub fn try_minimize_if(stmt: &mut Statement<'a>, ctx: &mut TraverseCtx<'a>) {
-        let Statement::IfStatement(if_stmt) = stmt else { return };
+        let Statement::IfStatement(if_stmt) = stmt else {
+            return;
+        };
 
         // Flip empty consequent so the rest of the function can assume consequent is non-empty.
         if Self::is_statement_empty(&if_stmt.consequent) {
             if if_stmt.alternate.is_none() {
                 // `if (a) {}` => `a;`
                 ctx.replace_statement_with(stmt, |stmt, ctx| {
-                    let Statement::IfStatement(if_stmt) = stmt else { unreachable!() };
+                    let Statement::IfStatement(if_stmt) = stmt else {
+                        unreachable!()
+                    };
                     let IfStatement { mut test, span, .. } = if_stmt.unbox();
                     Self::remove_unused_expression(&mut test, ctx);
                     Statement::new_expression_statement(span, test, ctx)
@@ -29,7 +33,9 @@ impl<'a> PeepholeOptimizations {
 
             if let Statement::ExpressionStatement(expr_stmt) = new_consequent {
                 ctx.replace_statement_with(stmt, |stmt, ctx| {
-                    let Statement::IfStatement(if_stmt) = stmt else { unreachable!() };
+                    let Statement::IfStatement(if_stmt) = stmt else {
+                        unreachable!()
+                    };
                     let IfStatement { test, span, .. } = if_stmt.unbox();
                     let (op, a) = match test {
                         // `if (!a); else b();` => `a && b();`
@@ -61,9 +67,19 @@ impl<'a> PeepholeOptimizations {
                 if matches!(alternate, Statement::ExpressionStatement(_)) {
                     // `if (a) b(); else c();` => `a ? b() : c();`
                     ctx.replace_statement_with(stmt, |stmt, ctx| {
-                        let Statement::IfStatement(if_stmt) = stmt else { unreachable!() };
-                        let IfStatement { test, consequent, alternate, span, .. } = if_stmt.unbox();
-                        let Statement::ExpressionStatement(a) = consequent else { unreachable!() };
+                        let Statement::IfStatement(if_stmt) = stmt else {
+                            unreachable!()
+                        };
+                        let IfStatement {
+                            test,
+                            consequent,
+                            alternate,
+                            span,
+                            ..
+                        } = if_stmt.unbox();
+                        let Statement::ExpressionStatement(a) = consequent else {
+                            unreachable!()
+                        };
                         let Statement::ExpressionStatement(b) = alternate.unwrap() else {
                             unreachable!()
                         };
@@ -84,15 +100,26 @@ impl<'a> PeepholeOptimizations {
                 {
                     ctx.replace_expression_with(&mut if_stmt.test, Self::unwrap_unary);
                     let if_mut = if_stmt.as_mut();
-                    let Some(alternate) = &mut if_mut.alternate else { unreachable!() };
+                    let Some(alternate) = &mut if_mut.alternate else {
+                        unreachable!()
+                    };
                     std::mem::swap(&mut if_mut.consequent, alternate);
                 }
             }
         } else if matches!(&if_stmt.consequent, Statement::ExpressionStatement(_)) {
             ctx.replace_statement_with(stmt, |stmt, ctx| {
-                let Statement::IfStatement(if_stmt) = stmt else { unreachable!() };
-                let IfStatement { test, consequent, span, .. } = if_stmt.unbox();
-                let Statement::ExpressionStatement(b) = consequent else { unreachable!() };
+                let Statement::IfStatement(if_stmt) = stmt else {
+                    unreachable!()
+                };
+                let IfStatement {
+                    test,
+                    consequent,
+                    span,
+                    ..
+                } = if_stmt.unbox();
+                let Statement::ExpressionStatement(b) = consequent else {
+                    unreachable!()
+                };
                 let (op, a) = match test {
                     // `if (!a) b();` => `a || b();`
                     Expression::UnaryExpression(unary_expr) if unary_expr.operator.is_not() => {
@@ -110,7 +137,9 @@ impl<'a> PeepholeOptimizations {
             && if2_stmt.alternate.is_none()
         {
             // `if (a) if (b) x;` => `if (a && b) x;`
-            let IfStatement { test, consequent, .. } = if2_stmt.take_in(ctx);
+            let IfStatement {
+                test, consequent, ..
+            } = if2_stmt.take_in(ctx);
             ctx.replace_expression_with(&mut if_stmt.test, |a, ctx| {
                 Self::join_with_left_associative_op(test.span(), LogicalOperator::And, a, test, ctx)
             });

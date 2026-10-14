@@ -51,7 +51,8 @@ declare_oxc_lint!(
     import,
     restriction,
     version = "0.7.0",
-    short_description = "Forbids using Webpack loader syntax directly in import or require statements.",
+    short_description =
+        "Forbids using Webpack loader syntax directly in import or require statements.",
 );
 
 impl Rule for NoWebpackLoaderSyntax {
@@ -131,6 +132,11 @@ fn test() {
         "var data = require('json!@scope/my-package/data.json')",
     ];
 
-    Tester::new(NoWebpackLoaderSyntax::NAME, NoWebpackLoaderSyntax::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        NoWebpackLoaderSyntax::NAME,
+        NoWebpackLoaderSyntax::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

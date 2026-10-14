@@ -78,15 +78,45 @@ fn test() {
     use std::path::PathBuf;
 
     let pass = vec![
-        ("Vue.config.silent = true", None, None, Some(PathBuf::from("test.js"))),
-        ("config.keyCodes = {}", None, None, Some(PathBuf::from("test.js"))),
-        ("V.config.keyCodes = {}", None, None, Some(PathBuf::from("test.js"))),
+        (
+            "Vue.config.silent = true",
+            None,
+            None,
+            Some(PathBuf::from("test.js")),
+        ),
+        (
+            "config.keyCodes = {}",
+            None,
+            None,
+            Some(PathBuf::from("test.js")),
+        ),
+        (
+            "V.config.keyCodes = {}",
+            None,
+            None,
+            Some(PathBuf::from("test.js")),
+        ),
     ];
 
     let fail = vec![
-        ("Vue.config.keyCodes = {}", None, None, Some(PathBuf::from("test.js"))),
-        ("Vue?.config?.keyCodes", None, None, Some(PathBuf::from("test.js"))),
-        ("(Vue?.config)?.keyCodes", None, None, Some(PathBuf::from("test.js"))),
+        (
+            "Vue.config.keyCodes = {}",
+            None,
+            None,
+            Some(PathBuf::from("test.js")),
+        ),
+        (
+            "Vue?.config?.keyCodes",
+            None,
+            None,
+            Some(PathBuf::from("test.js")),
+        ),
+        (
+            "(Vue?.config)?.keyCodes",
+            None,
+            None,
+            Some(PathBuf::from("test.js")),
+        ),
     ];
 
     Tester::new(

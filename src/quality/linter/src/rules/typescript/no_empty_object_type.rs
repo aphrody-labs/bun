@@ -227,19 +227,22 @@ fn check_interface_declaration(
             "Do not use an empty interface declaration.",
         );
 
-        if matches!(ctx.nodes().parent_kind(node_id), AstKind::ExportDefaultDeclaration(_)) {
+        if matches!(
+            ctx.nodes().parent_kind(node_id),
+            AstKind::ExportDefaultDeclaration(_)
+        ) {
             ctx.diagnostic(diagnostic);
             return;
         }
 
         let has_declaration_merge = interface.id.symbol_id.get().is_some_and(|symbol_id| {
-            ctx.scoping().symbol_declarations(symbol_id).any(|declaration| {
-                match ctx.nodes().kind(declaration) {
+            ctx.scoping()
+                .symbol_declarations(symbol_id)
+                .any(|declaration| match ctx.nodes().kind(declaration) {
                     AstKind::Class(_) => true,
                     AstKind::TSInterfaceDeclaration(_) => declaration != node_id,
                     _ => false,
-                }
-            })
+                })
         });
         if has_declaration_merge {
             ctx.diagnostic(diagnostic);
@@ -247,15 +250,20 @@ fn check_interface_declaration(
         }
 
         let id = ctx.source_range(interface.id.span);
-        let type_parameters =
-            interface.type_parameters.as_ref().map_or("", |params| ctx.source_range(params.span));
+        let type_parameters = interface
+            .type_parameters
+            .as_ref()
+            .map_or("", |params| ctx.source_range(params.span));
 
         if let Some(extended) = interface.extends.first() {
             ctx.diagnostic_with_suggestion(diagnostic, |fixer| {
                 fixer
                     .replace(
                         interface.span,
-                        format!("type {id}{type_parameters} = {}", ctx.source_range(extended.span)),
+                        format!(
+                            "type {id}{type_parameters} = {}",
+                            ctx.source_range(extended.span)
+                        ),
                     )
                     .with_message("Replace empty interface with a type alias.")
             });
@@ -265,10 +273,16 @@ fn check_interface_declaration(
                 diagnostic,
                 [
                     fixer
-                        .replace(interface.span, format!("type {id}{type_parameters} = object"))
+                        .replace(
+                            interface.span,
+                            format!("type {id}{type_parameters} = object"),
+                        )
                         .with_message("Replace empty interface with `object`."),
                     fixer
-                        .replace(interface.span, format!("type {id}{type_parameters} = unknown"))
+                        .replace(
+                            interface.span,
+                            format!("type {id}{type_parameters} = unknown"),
+                        )
                         .with_message("Replace empty interface with `unknown`."),
                 ],
             );
@@ -305,7 +319,9 @@ fn check_type_literal(
     ctx.diagnostic_with_suggestions(
         diagnostic,
         [
-            fixer.replace(type_literal.span, "object").with_message("Replace `{}` with `object`."),
+            fixer
+                .replace(type_literal.span, "object")
+                .with_message("Replace `{}` with `object`."),
             fixer
                 .replace(type_literal.span, "unknown")
                 .with_message("Replace `{}` with `unknown`."),
@@ -341,7 +357,10 @@ fn test() {
                 ",
             None,
         ),
-        ("interface Base {}", Some(serde_json::json!([{ "allowInterfaces": "always" }]))),
+        (
+            "interface Base {}",
+            Some(serde_json::json!([{ "allowInterfaces": "always" }])),
+        ),
         (
             "
             interface Base {
@@ -368,18 +387,42 @@ fn test() {
         ("let value: Object;", None),
         ("let value: { inner: true };", None),
         ("type MyNonNullable<T> = T & {};", None),
-        ("type Base = {};", Some(serde_json::json!([{ "allowObjectTypes": "always" }]))),
-        ("type Base = {};", Some(serde_json::json!([{ "allowWithName": "Base" }]))),
-        ("type BaseProps = {};", Some(serde_json::json!([{ "allowWithName": "BaseProps" }]))),
-        ("type BaseProps = {};", Some(serde_json::json!([{ "allowWithName": "Props$" }]))),
-        ("interface Base {}", Some(serde_json::json!([{ "allowWithName": "Base" }]))),
-        ("interface BaseProps {}", Some(serde_json::json!([{ "allowWithName": "BaseProps" }]))),
-        ("interface BaseProps {}", Some(serde_json::json!([{ "allowWithName": "Props$" }]))),
+        (
+            "type Base = {};",
+            Some(serde_json::json!([{ "allowObjectTypes": "always" }])),
+        ),
+        (
+            "type Base = {};",
+            Some(serde_json::json!([{ "allowWithName": "Base" }])),
+        ),
+        (
+            "type BaseProps = {};",
+            Some(serde_json::json!([{ "allowWithName": "BaseProps" }])),
+        ),
+        (
+            "type BaseProps = {};",
+            Some(serde_json::json!([{ "allowWithName": "Props$" }])),
+        ),
+        (
+            "interface Base {}",
+            Some(serde_json::json!([{ "allowWithName": "Base" }])),
+        ),
+        (
+            "interface BaseProps {}",
+            Some(serde_json::json!([{ "allowWithName": "BaseProps" }])),
+        ),
+        (
+            "interface BaseProps {}",
+            Some(serde_json::json!([{ "allowWithName": "Props$" }])),
+        ),
     ];
 
     let fail = vec![
         ("interface Base {}", None),
-        ("interface Base {}", Some(serde_json::json!([{ "allowInterfaces": "never" }]))),
+        (
+            "interface Base {}",
+            Some(serde_json::json!([{ "allowInterfaces": "never" }])),
+        ),
         (
             "
             interface Base {
@@ -455,9 +498,15 @@ fn test() {
             None,
         ),
         ("type Base = {};", None),
-        ("type Base = {};", Some(serde_json::json!([{ "allowObjectTypes": "never" }]))),
+        (
+            "type Base = {};",
+            Some(serde_json::json!([{ "allowObjectTypes": "never" }])),
+        ),
         ("let value: {};", None),
-        ("let value: {};", Some(serde_json::json!([{ "allowObjectTypes": "never" }]))),
+        (
+            "let value: {};",
+            Some(serde_json::json!([{ "allowObjectTypes": "never" }])),
+        ),
         (
             "
             let value: {
@@ -467,13 +516,26 @@ fn test() {
             None,
         ),
         ("type MyUnion<T> = T | {};", None),
-        ("type Base = {} | null;", Some(serde_json::json!([{ "allowWithName": "Base" }]))),
-        ("type Base = {};", Some(serde_json::json!([{ "allowWithName": "Mismatch" }]))),
-        ("interface Base {}", Some(serde_json::json!([{ "allowWithName": "Props" }]))),
+        (
+            "type Base = {} | null;",
+            Some(serde_json::json!([{ "allowWithName": "Base" }])),
+        ),
+        (
+            "type Base = {};",
+            Some(serde_json::json!([{ "allowWithName": "Mismatch" }])),
+        ),
+        (
+            "interface Base {}",
+            Some(serde_json::json!([{ "allowWithName": "Props" }])),
+        ),
     ];
 
     let fix: Vec<ExpectFixTestCase> = vec![
-        ("interface Base {}", ("type Base = object", "type Base = unknown")).into(),
+        (
+            "interface Base {}",
+            ("type Base = object", "type Base = unknown"),
+        )
+            .into(),
         (
             "interface Base {}",
             ("type Base = object", "type Base = unknown"),
@@ -539,7 +601,11 @@ fn test() {
             ",
         )
             .into(),
-        ("interface Base extends Array<number> {}", "type Base = Array<number>").into(),
+        (
+            "interface Base extends Array<number> {}",
+            "type Base = Array<number>",
+        )
+            .into(),
         (
             "interface Base extends Array<number | {}> {}",
             "type Base = Array<number | {}>",
@@ -581,7 +647,11 @@ fn test() {
             ",
         )
             .into(),
-        ("interface Base<T> extends Derived<T> {}", "type Base<T> = Derived<T>").into(),
+        (
+            "interface Base<T> extends Derived<T> {}",
+            "type Base<T> = Derived<T>",
+        )
+            .into(),
         (
             "
             declare namespace BaseAndDerived {
@@ -597,24 +667,39 @@ fn test() {
             ",
         )
             .into(),
-        ("type Base = {};", ("type Base = object;", "type Base = unknown;")).into(),
+        (
+            "type Base = {};",
+            ("type Base = object;", "type Base = unknown;"),
+        )
+            .into(),
         (
             "type Base = {};",
             ("type Base = object;", "type Base = unknown;"),
             Some(serde_json::json!([{ "allowObjectTypes": "never" }])),
         )
             .into(),
-        ("let value: {};", ("let value: object;", "let value: unknown;")).into(),
+        (
+            "let value: {};",
+            ("let value: object;", "let value: unknown;"),
+        )
+            .into(),
         (
             "let value: {};",
             ("let value: object;", "let value: unknown;"),
             Some(serde_json::json!([{ "allowObjectTypes": "never" }])),
         )
             .into(),
-        ("let value: {/* ... */};", ("let value: object;", "let value: unknown;")).into(),
+        (
+            "let value: {/* ... */};",
+            ("let value: object;", "let value: unknown;"),
+        )
+            .into(),
         (
             "type MyUnion<T> = T | {};",
-            ("type MyUnion<T> = T | object;", "type MyUnion<T> = T | unknown;"),
+            (
+                "type MyUnion<T> = T | object;",
+                "type MyUnion<T> = T | unknown;",
+            ),
         )
             .into(),
         (
@@ -636,7 +721,11 @@ fn test() {
         )
             .into(),
         // Suggestion is not applied because it would produce invalid typescript syntax
-        ("export default interface Foo {}", "export default interface Foo {}").into(),
+        (
+            "export default interface Foo {}",
+            "export default interface Foo {}",
+        )
+            .into(),
         (
             "interface Foo {} interface Foo { value: string }",
             "interface Foo {} interface Foo { value: string }",
@@ -644,7 +733,12 @@ fn test() {
             .into(),
     ];
 
-    Tester::new(NoEmptyObjectType::NAME, NoEmptyObjectType::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        NoEmptyObjectType::NAME,
+        NoEmptyObjectType::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

@@ -6,8 +6,8 @@
 use std::path::{Path, PathBuf};
 
 use bun_dotnet_host::releases::{self, Asset, Product};
-use bun_dotnet_host::{env, info, inventory, select};
 use bun_dotnet_host::serde_json;
+use bun_dotnet_host::{env, info, inventory, select};
 use bun_install::system::{archive, fs as sysfs, hex, join, net};
 
 pub(crate) const COMMANDS: [&str; 5] = ["setup", "env", "sync", "info", "resolve"];
@@ -28,7 +28,15 @@ struct Args {
     positional: Vec<String>,
 }
 
-const VALUED: [&str; 7] = ["--channel", "--version", "--runtime", "--install-dir", "--arch", "--shell", "--feed"];
+const VALUED: [&str; 7] = [
+    "--channel",
+    "--version",
+    "--runtime",
+    "--install-dir",
+    "--arch",
+    "--shell",
+    "--feed",
+];
 
 impl Args {
     fn parse(args: &[String]) -> Result<Self, String> {
@@ -36,7 +44,8 @@ impl Args {
         let mut positional = Vec::new();
         let mut iter = args.iter();
         while let Some(arg) = iter.next() {
-            let equals = bun_core::strings::index_of_char_usize(arg.as_bytes(), b'=').filter(|_| arg.starts_with("--"));
+            let equals = bun_core::strings::index_of_char_usize(arg.as_bytes(), b'=')
+                .filter(|_| arg.starts_with("--"));
             if let Some(index) = equals {
                 flags.push((arg[..index].to_owned(), Some(arg[index + 1..].to_owned())));
             } else if VALUED.contains(&arg.as_str()) {
@@ -56,7 +65,11 @@ impl Args {
     }
 
     fn value(&self, name: &str) -> Option<&str> {
-        self.flags.iter().rev().find(|(flag, _)| flag == name).and_then(|(_, value)| value.as_deref())
+        self.flags
+            .iter()
+            .rev()
+            .find(|(flag, _)| flag == name)
+            .and_then(|(_, value)| value.as_deref())
     }
 }
 
@@ -85,7 +98,11 @@ pub(crate) fn run(command: &str, args: &[String]) -> i32 {
         "sync" => sync(&args),
         "info" => {
             let info = info::collect(&cwd());
-            out(&if args.has("--json") { format!("{:#}\n", info.to_json()) } else { info.to_text() });
+            out(&if args.has("--json") {
+                format!("{:#}\n", info.to_json())
+            } else {
+                info.to_text()
+            });
             Ok(())
         }
         "resolve" => resolve(&args),
@@ -104,7 +121,8 @@ fn fail(message: &str) -> i32 {
 
 fn env_command(args: &Args) -> Result<(), String> {
     let shell = match args.value("--shell") {
-        Some(name) => env::Shell::parse(name).ok_or_else(|| format!("unknown shell '{name}' (cmd, ps1, sh, json)"))?,
+        Some(name) => env::Shell::parse(name)
+            .ok_or_else(|| format!("unknown shell '{name}' (cmd, ps1, sh, json)"))?,
         None => env::Shell::default_for_platform(),
     };
     let (snapshot, _) = env::load(&cwd(), args.has("--refresh")).map_err(|err| err.message)?;
@@ -133,13 +151,18 @@ fn sync(args: &Args) -> Result<(), String> {
 }
 
 /// The SDK `cwd` selects, or with `runtimeconfig` the frameworks an app binds to, as JSON.
-pub(crate) fn resolve_json(runtimeconfig: Option<&Path>, cwd: &Path) -> Result<serde_json::Value, String> {
+pub(crate) fn resolve_json(
+    runtimeconfig: Option<&Path>,
+    cwd: &Path,
+) -> Result<serde_json::Value, String> {
     let location = bun_dotnet_host::locate(None).map_err(|err| err.message)?;
     let root = inventory::canonical(&location.dotnet_root).unwrap_or(location.dotnet_root);
     let install = inventory::scan_root(&root, location.source.as_str().to_owned())
         .ok_or_else(|| format!("{} holds no .NET install", root.display()))?;
     Ok(match runtimeconfig {
-        Some(config) => select::resolve_app(&install, config, &select::RollForwardEnv::from_process())?,
+        Some(config) => {
+            select::resolve_app(&install, config, &select::RollForwardEnv::from_process())?
+        }
         None => {
             let resolution = select::resolve_sdk(&install.root, cwd);
             serde_json::json!({
@@ -158,26 +181,58 @@ fn resolve(args: &Args) -> Result<(), String> {
         out(&format!("{value:#}\n"));
         return Ok(());
     }
-    if let Some(frameworks) = value.get("frameworks").and_then(serde_json::Value::as_array) {
+    if let Some(frameworks) = value
+        .get("frameworks")
+        .and_then(serde_json::Value::as_array)
+    {
         let mut missing = false;
         for framework in frameworks {
-            let text = |key: &str| framework.get(key).and_then(serde_json::Value::as_str).unwrap_or("").to_owned();
-            match framework.pointer("/resolved/version").and_then(serde_json::Value::as_str) {
-                Some(version) => out(&format!("{} {} -> {version}\n", text("name"), text("requested"))),
+            let text = |key: &str| {
+                framework
+                    .get(key)
+                    .and_then(serde_json::Value::as_str)
+                    .unwrap_or("")
+                    .to_owned()
+            };
+            match framework
+                .pointer("/resolved/version")
+                .and_then(serde_json::Value::as_str)
+            {
+                Some(version) => out(&format!(
+                    "{} {} -> {version}\n",
+                    text("name"),
+                    text("requested")
+                )),
                 None => {
                     missing = true;
-                    out(&format!("{} {} -> not found (rollForward {})\n", text("name"), text("requested"), text("rollForward")));
+                    out(&format!(
+                        "{} {} -> not found (rollForward {})\n",
+                        text("name"),
+                        text("requested"),
+                        text("rollForward")
+                    ));
                 }
             }
         }
-        return if missing { Err("a framework is missing; install it with `bun dotnet setup --runtime …`".into()) } else { Ok(()) };
+        return if missing {
+            Err("a framework is missing; install it with `bun dotnet setup --runtime …`".into())
+        } else {
+            Ok(())
+        };
     }
-    match value.pointer("/sdk/version").and_then(serde_json::Value::as_str) {
+    match value
+        .pointer("/sdk/version")
+        .and_then(serde_json::Value::as_str)
+    {
         Some(version) => {
             out(&format!("{version}\n"));
             Ok(())
         }
-        None => Err(value.get("error").and_then(serde_json::Value::as_str).unwrap_or("no .NET SDK found").to_owned()),
+        None => Err(value
+            .get("error")
+            .and_then(serde_json::Value::as_str)
+            .unwrap_or("no .NET SDK found")
+            .to_owned()),
     }
 }
 
@@ -204,26 +259,45 @@ fn asset_json(asset: &Asset, install_dir: &Path, status: &str) -> serde_json::Va
 }
 
 fn setup(args: &Args) -> Result<(), String> {
-    let product = Product::parse_runtime(args.value("--runtime"))
-        .ok_or_else(|| format!("unknown --runtime '{}' (dotnet, aspnetcore, windowsdesktop)", args.value("--runtime").unwrap_or("")))?;
+    let product = Product::parse_runtime(args.value("--runtime")).ok_or_else(|| {
+        format!(
+            "unknown --runtime '{}' (dotnet, aspnetcore, windowsdesktop)",
+            args.value("--runtime").unwrap_or("")
+        )
+    })?;
     let rid = match args.value("--arch") {
         Some(arch) => releases::rid_for(arch),
         None => releases::host_rid(),
     };
     let install_dir = match args.value("--install-dir") {
         Some(dir) => std::path::absolute(dir).map_err(|error| format!("{dir}: {error}"))?,
-        None => inventory::default_install_dir().ok_or("no default install directory; pass --install-dir")?,
+        None => inventory::default_install_dir()
+            .ok_or("no default install directory; pass --install-dir")?,
     };
     let mut loader = bun_dotenv::Loader::init();
     loader.quiet = true;
-    loader.load_process().map_err(|_| "out of memory".to_owned())?;
-    let feed = match (args.value("--feed"), loader.get(b"BUN_DOTNET_FEED").filter(|feed| !feed.is_empty())) {
+    loader
+        .load_process()
+        .map_err(|_| "out of memory".to_owned())?;
+    let feed = match (
+        args.value("--feed"),
+        loader
+            .get(b"BUN_DOTNET_FEED")
+            .filter(|feed| !feed.is_empty()),
+    ) {
         (Some(feed), _) => feed.to_owned(),
         (None, Some(feed)) => bstr::BStr::new(feed).to_string(),
         (None, None) => releases::DEFAULT_FEED.to_owned(),
     };
     let mut fetch = |url: &str| net::get(&loader, url).map_err(|err| err.to_string());
-    let asset = releases::resolve_asset(&feed, args.value("--channel"), args.value("--version"), product, &rid, &mut fetch)?;
+    let asset = releases::resolve_asset(
+        &feed,
+        args.value("--channel"),
+        args.value("--version"),
+        product,
+        &rid,
+        &mut fetch,
+    )?;
     let json = args.has("--json");
     let report = |status: &str| {
         if json {
@@ -242,12 +316,19 @@ fn setup(args: &Args) -> Result<(), String> {
         report("planned");
         return Ok(());
     }
-    if install_dir.join(product.installed_dir(&asset.version)).is_dir() && !args.has("--force") {
+    if install_dir
+        .join(product.installed_dir(&asset.version))
+        .is_dir()
+        && !args.has("--force")
+    {
         report("already installed");
         return Ok(());
     }
     if asset.url.is_empty() || asset.hash.is_empty() {
-        return Err(format!("{} has no url or hash in the release metadata", asset.name));
+        return Err(format!(
+            "{} has no url or hash in the release metadata",
+            asset.name
+        ));
     }
     if !json {
         out(&format!("Downloading {}\n", asset.url));
@@ -255,7 +336,10 @@ fn setup(args: &Args) -> Result<(), String> {
     let bytes = net::get(&loader, &asset.url).map_err(|err| err.to_string())?;
     let actual = sha512_hex(&bytes);
     if actual != asset.hash {
-        return Err(format!("integrity check failed for {}: expected sha512 {}, got {actual}", asset.name, asset.hash));
+        return Err(format!(
+            "integrity check failed for {}: expected sha512 {}, got {actual}",
+            asset.name, asset.hash
+        ));
     }
     extract(&bytes, &asset.name, &install_dir, args.has("--force"))?;
     report("installed");

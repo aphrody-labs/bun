@@ -125,9 +125,10 @@ fn starts_with_path_separator(expr: &Expression) -> bool {
             starts_with_path_separator(&logical.left) || starts_with_path_separator(&logical.right)
         }
         Expression::AssignmentExpression(assign) => starts_with_path_separator(&assign.right),
-        Expression::SequenceExpression(seq) => {
-            seq.expressions.last().is_some_and(|last| starts_with_path_separator(last))
-        }
+        Expression::SequenceExpression(seq) => seq
+            .expressions
+            .last()
+            .is_some_and(|last| starts_with_path_separator(last)),
         Expression::ParenthesizedExpression(paren) => starts_with_path_separator(&paren.expression),
         _ => is_path_sep(expr),
     }
@@ -138,13 +139,20 @@ fn template_element_starts_with_path_separator(temp_lit: &TemplateLiteral, i: us
         return false;
     };
 
-    if let Some(c) = quasi.value.cooked.as_ref().and_then(|cooked| cooked.chars().next())
+    if let Some(c) = quasi
+        .value
+        .cooked
+        .as_ref()
+        .and_then(|cooked| cooked.chars().next())
         && is_path_separator(c)
     {
         return true;
     }
 
-    temp_lit.expressions.get(i).is_some_and(|expr| starts_with_path_separator(expr))
+    temp_lit
+        .expressions
+        .get(i)
+        .is_some_and(|expr| starts_with_path_separator(expr))
 }
 
 #[test]

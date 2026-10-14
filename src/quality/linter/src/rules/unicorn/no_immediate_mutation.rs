@@ -17,7 +17,9 @@ fn array_mutation_diagnostic(span: Span, method: &str) -> OxcDiagnostic {
     OxcDiagnostic::warn(format!(
         "Do not call `{method}()` immediately after initializing an array."
     ))
-    .with_help(format!("Move the elements from `{method}()` into the array initializer."))
+    .with_help(format!(
+        "Move the elements from `{method}()` into the array initializer."
+    ))
     .with_label(span)
 }
 
@@ -125,7 +127,9 @@ impl Rule for NoImmediateMutation {
         };
 
         // Find the index of current statement
-        let Some(current_idx) = statements.iter().position(|stmt| stmt.span() == expr_stmt.span)
+        let Some(current_idx) = statements
+            .iter()
+            .position(|stmt| stmt.span() == expr_stmt.span)
         else {
             return;
         };
@@ -488,7 +492,8 @@ fn expression_references_variable(expr: &Expression<'_>, var_name: &str) -> bool
                 return true;
             }
             c.arguments.iter().any(|arg| {
-                arg.as_expression().is_some_and(|e| expression_references_variable(e, var_name))
+                arg.as_expression()
+                    .is_some_and(|e| expression_references_variable(e, var_name))
             })
         }
         Expression::ArrayExpression(arr) => arr.elements.iter().any(|el| match el {
@@ -496,7 +501,9 @@ fn expression_references_variable(expr: &Expression<'_>, var_name: &str) -> bool
                 expression_references_variable(&s.argument, var_name)
             }
             ArrayExpressionElement::Elision(_) => false,
-            _ => el.as_expression().is_some_and(|e| expression_references_variable(e, var_name)),
+            _ => el
+                .as_expression()
+                .is_some_and(|e| expression_references_variable(e, var_name)),
         }),
         Expression::ObjectExpression(obj) => obj.properties.iter().any(|prop| match prop {
             ObjectPropertyKind::ObjectProperty(p) => {
@@ -513,7 +520,10 @@ fn expression_references_variable(expr: &Expression<'_>, var_name: &str) -> bool
         Expression::ArrowFunctionExpression(arrow) => {
             // Check if any parameter shadows the variable name
             let is_shadowed = arrow.params.items.iter().any(|param| {
-                param.pattern.get_identifier_name().is_some_and(|name| name == var_name)
+                param
+                    .pattern
+                    .get_identifier_name()
+                    .is_some_and(|name| name == var_name)
             });
             if is_shadowed {
                 return false;
@@ -522,17 +532,22 @@ fn expression_references_variable(expr: &Expression<'_>, var_name: &str) -> bool
             if let Some(expression) = arrow.get_expression() {
                 return expression_references_variable(expression, var_name);
             }
-            arrow.get_function_body().unwrap().statements.iter().any(|stmt| {
-                if let Statement::ExpressionStatement(expr_stmt) = stmt {
-                    expression_references_variable(&expr_stmt.expression, var_name)
-                } else if let Statement::ReturnStatement(ret) = stmt {
-                    ret.argument
-                        .as_ref()
-                        .is_some_and(|e| expression_references_variable(e, var_name))
-                } else {
-                    false
-                }
-            })
+            arrow
+                .get_function_body()
+                .unwrap()
+                .statements
+                .iter()
+                .any(|stmt| {
+                    if let Statement::ExpressionStatement(expr_stmt) = stmt {
+                        expression_references_variable(&expr_stmt.expression, var_name)
+                    } else if let Statement::ReturnStatement(ret) = stmt {
+                        ret.argument
+                            .as_ref()
+                            .is_some_and(|e| expression_references_variable(e, var_name))
+                    } else {
+                        false
+                    }
+                })
         }
         Expression::AssignmentExpression(assign) => {
             // Check both sides of the assignment
@@ -552,7 +567,10 @@ fn expression_references_variable(expr: &Expression<'_>, var_name: &str) -> bool
         Expression::FunctionExpression(func) => {
             // Check if any parameter shadows the variable name
             let is_shadowed = func.params.items.iter().any(|param| {
-                param.pattern.get_identifier_name().is_some_and(|name| name == var_name)
+                param
+                    .pattern
+                    .get_identifier_name()
+                    .is_some_and(|name| name == var_name)
             });
             if is_shadowed {
                 return false;
@@ -595,13 +613,15 @@ fn expression_references_variable(expr: &Expression<'_>, var_name: &str) -> bool
             expression_references_variable(&unary.argument, var_name)
         }
         // Sequence expressions: (a, b, c)
-        Expression::SequenceExpression(seq) => {
-            seq.expressions.iter().any(|e| expression_references_variable(e, var_name))
-        }
+        Expression::SequenceExpression(seq) => seq
+            .expressions
+            .iter()
+            .any(|e| expression_references_variable(e, var_name)),
         // Template literals: `${array.length}`
-        Expression::TemplateLiteral(template) => {
-            template.expressions.iter().any(|e| expression_references_variable(e, var_name))
-        }
+        Expression::TemplateLiteral(template) => template
+            .expressions
+            .iter()
+            .any(|e| expression_references_variable(e, var_name)),
         // Tagged template: tag`${array.length}`
         Expression::TaggedTemplateExpression(tagged) => {
             expression_references_variable(&tagged.tag, var_name)
@@ -615,7 +635,8 @@ fn expression_references_variable(expr: &Expression<'_>, var_name: &str) -> bool
         Expression::NewExpression(new_expr) => {
             expression_references_variable(&new_expr.callee, var_name)
                 || new_expr.arguments.iter().any(|arg| {
-                    arg.as_expression().is_some_and(|e| expression_references_variable(e, var_name))
+                    arg.as_expression()
+                        .is_some_and(|e| expression_references_variable(e, var_name))
                 })
         }
         // Await expression: await array
@@ -1150,6 +1171,11 @@ fn test() {
             cellOutputMappers.set('display_data', translateDisplayDataOutput);",
     ];
 
-    Tester::new(NoImmediateMutation::NAME, NoImmediateMutation::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        NoImmediateMutation::NAME,
+        NoImmediateMutation::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

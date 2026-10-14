@@ -80,11 +80,23 @@ mod resource_paths_tests {
     #[test]
     fn conformance_resources_resolve_to_the_transferred_owner() {
         let root = conformance_root();
-        assert_eq!(root.canonicalize().unwrap(), Path::new(env!("CARGO_MANIFEST_DIR")).canonicalize().unwrap());
+        assert_eq!(
+            root.canonicalize().unwrap(),
+            Path::new(env!("CARGO_MANIFEST_DIR"))
+                .canonicalize()
+                .unwrap()
+        );
         assert!(!project_root().join("tasks/transform_conformance").exists());
-        assert_eq!(babel_root(), project_root().join("src/codegen/ecma_coverage/babel"));
+        assert_eq!(
+            babel_root(),
+            project_root().join("src/codegen/ecma_coverage/babel")
+        );
         for directory in [oxc_test_root(), override_root(), snap_root()] {
-            assert!(fs::read_dir(&directory).unwrap().next().is_some(), "empty resource directory {}", directory.display());
+            assert!(
+                fs::read_dir(&directory).unwrap().next().is_some(),
+                "empty resource directory {}",
+                directory.display()
+            );
         }
     }
 }
@@ -108,7 +120,10 @@ impl TestRunner {
             let transform_paths = Self::generate_test_cases(root, &self.options);
             self.generate_snapshot(root, &snap_root().join(snapshot), transform_paths);
             if self.options.exec {
-                self.run_vitest(&format!("./fixtures/{name}"), &snap_root().join(exec_snapshot));
+                self.run_vitest(
+                    &format!("./fixtures/{name}"),
+                    &snap_root().join(exec_snapshot),
+                );
             }
         }
     }
@@ -178,8 +193,9 @@ impl TestRunner {
             }
 
             // Run the test
-            let (passed, failed): (Vec<TestCase>, Vec<TestCase>) =
-                test_cases.into_iter().partition(|test_case| test_case.errors.is_empty());
+            let (passed, failed): (Vec<TestCase>, Vec<TestCase>) = test_cases
+                .into_iter()
+                .partition(|test_case| test_case.errors.is_empty());
             all_passed_count += passed.len();
 
             // Snapshot
@@ -207,8 +223,11 @@ impl TestRunner {
         }
 
         if self.options.should_update_snapshots() {
-            let all_passed =
-                all_passed.into_iter().map(|s| format!("* {s}")).collect::<Vec<_>>().join("\n");
+            let all_passed = all_passed
+                .into_iter()
+                .map(|s| format!("* {s}"))
+                .collect::<Vec<_>>()
+                .join("\n");
             let snapshot = format!(
                 "Passed: {all_passed_count}/{total}\n\n# All Passed:\n{all_passed}\n\n\n{snapshot}"
             );

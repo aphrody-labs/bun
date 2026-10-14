@@ -31,8 +31,15 @@ type Reply = Box<dyn FnOnce(Result<Value, RpcError>) + Send>;
 
 /// A message that the server sent on its own: a notification, or a request to the client.
 pub enum Incoming {
-    Notification { method: String, params: Value },
-    Request { id: Value, method: String, params: Value },
+    Notification {
+        method: String,
+        params: Value,
+    },
+    Request {
+        id: Value,
+        method: String,
+        params: Value,
+    },
 }
 
 /// What happens to the messages that a server sends on its own.
@@ -80,12 +87,16 @@ pub struct Backend {
 }
 
 fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
-    mutex.lock().unwrap_or_else(std::sync::PoisonError::into_inner)
+    mutex
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
 }
 
 fn hash_text(text: &str) -> u64 {
     // FNV-1a: only compared with itself, in this process.
-    text.bytes().fold(0xcbf2_9ce4_8422_2325u64, |hash, byte| (hash ^ u64::from(byte)).wrapping_mul(0x0100_0000_01b3))
+    text.bytes().fold(0xcbf2_9ce4_8422_2325u64, |hash, byte| {
+        (hash ^ u64::from(byte)).wrapping_mul(0x0100_0000_01b3)
+    })
 }
 
 impl Backend {
@@ -113,9 +124,13 @@ impl Backend {
             const CREATE_NO_WINDOW: u32 = 0x0800_0000;
             process.creation_flags(CREATE_NO_WINDOW);
         }
-        let mut child = process
-            .spawn()
-            .map_err(|err| format!("could not start {} ({}): {err}", command.name, command.command_line()))?;
+        let mut child = process.spawn().map_err(|err| {
+            format!(
+                "could not start {} ({}): {err}",
+                command.name,
+                command.command_line()
+            )
+        })?;
         let stdin = child.stdin.take().map(BufWriter::new);
         let stdout = child.stdout.take();
         let stderr = child.stderr.take();
@@ -145,25 +160,29 @@ impl Backend {
         }
         if let Some(mut stderr) = stderr {
             let tail = Arc::clone(&backend);
-            let _ = std::thread::Builder::new().name("lsp-stderr".into()).spawn(move || {
-                let mut buffer = [0u8; 4096];
-                let mut partial = String::new();
-                while let Ok(read @ 1..) = stderr.read(&mut buffer) {
-                    partial.push_str(&String::from_utf8_lossy(&buffer[..read]));
-                    while let Some(at) = partial.find('\n') {
-                        let line: String = partial.drain(..=at).collect();
-                        let mut lines = lock(&tail.stderr);
-                        if lines.len() == STDERR_LINES {
-                            lines.pop_front();
+            let _ = std::thread::Builder::new()
+                .name("lsp-stderr".into())
+                .spawn(move || {
+                    let mut buffer = [0u8; 4096];
+                    let mut partial = String::new();
+                    while let Ok(read @ 1..) = stderr.read(&mut buffer) {
+                        partial.push_str(&String::from_utf8_lossy(&buffer[..read]));
+                        while let Some(at) = partial.find('\n') {
+                            let line: String = partial.drain(..=at).collect();
+                            let mut lines = lock(&tail.stderr);
+                            if lines.len() == STDERR_LINES {
+                                lines.pop_front();
+                            }
+                            lines.push_back(line.trim_end().chars().take(400).collect());
                         }
-                        lines.push_back(line.trim_end().chars().take(400).collect());
                     }
-                }
-            });
+                });
         }
         let mut params = params.clone();
         let uri = path_to_uri(root);
-        let name = root.file_name().map_or_else(|| uri.clone(), |it| it.to_string_lossy().into_owned());
+        let name = root
+            .file_name()
+            .map_or_else(|| uri.clone(), |it| it.to_string_lossy().into_owned());
         params["processId"] = json!(std::process::id());
         params["rootUri"] = json!(uri);
         params["rootPath"] = json!(root.display().to_string());
@@ -173,13 +192,19 @@ impl Backend {
         }
         match backend.request("initialize", params, timeout, None) {
             Ok(result) => {
-                *lock(&backend.capabilities) = result.get("capabilities").cloned().unwrap_or(Value::Null);
+                *lock(&backend.capabilities) =
+                    result.get("capabilities").cloned().unwrap_or(Value::Null);
                 backend.notify("initialized", json!({}));
                 Ok(backend)
             }
             Err(err) => {
                 backend.kill();
-                Err(format!("{} did not initialize: {}{}", backend.command.name, err.message, backend.stderr_note()))
+                Err(format!(
+                    "{} did not initialize: {}{}",
+                    backend.command.name,
+                    err.message,
+                    backend.stderr_note()
+                ))
             }
         }
     }
@@ -190,8 +215,18 @@ impl Backend {
         if lines.is_empty() {
             return String::new();
         }
-        let tail: Vec<&str> = lines.iter().rev().take(5).rev().map(String::as_str).collect();
-        format!("\nnote: {} stderr:\n  {}", self.command.name, tail.join("\n  "))
+        let tail: Vec<&str> = lines
+            .iter()
+            .rev()
+            .take(5)
+            .rev()
+            .map(String::as_str)
+            .collect();
+        format!(
+            "\nnote: {} stderr:\n  {}",
+            self.command.name,
+            tail.join("\n  ")
+        )
     }
 
     pub fn is_alive(&self) -> bool {
@@ -222,16 +257,28 @@ impl Backend {
     fn read_loop(self: Arc<Self>, stdout: impl Read, handler: &Handler) {
         let mut reader = BufReader::new(stdout);
         while let Ok(Some(message)) = protocol::read_message(&mut reader) {
-            let method = message.get("method").and_then(Value::as_str).map(str::to_owned);
+            let method = message
+                .get("method")
+                .and_then(Value::as_str)
+                .map(str::to_owned);
             let id = message.get("id").cloned();
             match (method, id) {
                 (None, Some(id)) => {
                     let Some(id) = id.as_i64() else { continue };
-                    let Some(reply) = lock(&self.pending).remove(&id) else { continue };
+                    let Some(reply) = lock(&self.pending).remove(&id) else {
+                        continue;
+                    };
                     let result = match message.get("error") {
                         Some(error) => Err(RpcError {
-                            code: error.get("code").and_then(Value::as_i64).unwrap_or(code::INTERNAL_ERROR),
-                            message: error.get("message").and_then(Value::as_str).unwrap_or("").to_owned(),
+                            code: error
+                                .get("code")
+                                .and_then(Value::as_i64)
+                                .unwrap_or(code::INTERNAL_ERROR),
+                            message: error
+                                .get("message")
+                                .and_then(Value::as_str)
+                                .unwrap_or("")
+                                .to_owned(),
                         }),
                         None => Ok(message.get("result").cloned().unwrap_or(Value::Null)),
                     };
@@ -253,19 +300,31 @@ impl Backend {
         }
         self.alive.store(false, Ordering::Release);
         let note = self.stderr_note();
-        let pending: Vec<Reply> = lock(&self.pending).drain().map(|(_, reply)| reply).collect();
+        let pending: Vec<Reply> = lock(&self.pending)
+            .drain()
+            .map(|(_, reply)| reply)
+            .collect();
         for reply in pending {
-            reply(Err(RpcError { code: code::INTERNAL_ERROR, message: format!("{} exited{note}", self.command.name) }));
+            reply(Err(RpcError {
+                code: code::INTERNAL_ERROR,
+                message: format!("{} exited{note}", self.command.name),
+            }));
         }
         self.published.notify_all();
     }
 
     fn store_published(&self, params: &Value) {
-        let Some(uri) = params.get("uri").and_then(Value::as_str) else { return };
+        let Some(uri) = params.get("uri").and_then(Value::as_str) else {
+            return;
+        };
         let sequence = self.published_count.fetch_add(1, Ordering::AcqRel) + 1;
         let published = Published {
             version: params.get("version").and_then(Value::as_i64),
-            items: params.get("diagnostics").and_then(Value::as_array).cloned().unwrap_or_default(),
+            items: params
+                .get("diagnostics")
+                .and_then(Value::as_array)
+                .cloned()
+                .unwrap_or_default(),
             sequence,
         };
         lock(&self.diagnostics).insert(uri_key(uri), published);
@@ -275,11 +334,18 @@ impl Backend {
     fn write(&self, message: &Value) -> Result<(), RpcError> {
         let mut stdin = lock(&self.stdin);
         let Some(stdin) = stdin.as_mut() else {
-            return Err(RpcError { code: code::INTERNAL_ERROR, message: format!("{} has stopped", self.command.name) });
+            return Err(RpcError {
+                code: code::INTERNAL_ERROR,
+                message: format!("{} has stopped", self.command.name),
+            });
         };
         protocol::write_message(stdin, message).map_err(|err| RpcError {
             code: code::INTERNAL_ERROR,
-            message: format!("could not write to {}: {err}{}", self.command.name, self.stderr_note()),
+            message: format!(
+                "could not write to {}: {err}{}",
+                self.command.name,
+                self.stderr_note()
+            ),
         })
     }
 
@@ -318,14 +384,21 @@ impl Backend {
         cancelled: Option<&AtomicBool>,
     ) -> Result<Value, RpcError> {
         let (sender, receiver) = mpsc::channel();
-        let id = self.send(method, params, Box::new(move |result| drop(sender.send(result))));
+        let id = self.send(
+            method,
+            params,
+            Box::new(move |result| drop(sender.send(result))),
+        );
         let deadline = Instant::now() + timeout;
         loop {
             let left = deadline.saturating_duration_since(Instant::now());
             match receiver.recv_timeout(left.min(Duration::from_millis(50))) {
                 Ok(result) => return result,
                 Err(mpsc::RecvTimeoutError::Disconnected) => {
-                    return Err(RpcError { code: code::INTERNAL_ERROR, message: format!("{} exited", self.command.name) });
+                    return Err(RpcError {
+                        code: code::INTERNAL_ERROR,
+                        message: format!("{} exited", self.command.name),
+                    });
                 }
                 Err(mpsc::RecvTimeoutError::Timeout) => {}
             }
@@ -335,9 +408,16 @@ impl Backend {
                 self.cancel(id);
                 let message = match is_cancelled {
                     true => format!("{method} was cancelled"),
-                    false => format!("{} did not answer {method} within {} ms", self.command.name, timeout.as_millis()),
+                    false => format!(
+                        "{} did not answer {method} within {} ms",
+                        self.command.name,
+                        timeout.as_millis()
+                    ),
                 };
-                return Err(RpcError { code: code::REQUEST_CANCELLED, message });
+                return Err(RpcError {
+                    code: code::REQUEST_CANCELLED,
+                    message,
+                });
             }
         }
     }
@@ -364,14 +444,28 @@ impl Backend {
             return version;
         }
         if documents.len() >= MAX_OPEN_DOCUMENTS
-            && let Some(oldest) = documents.iter().min_by_key(|(_, it)| it.used).map(|(key, _)| key.clone())
+            && let Some(oldest) = documents
+                .iter()
+                .min_by_key(|(_, it)| it.used)
+                .map(|(key, _)| key.clone())
             && let Some(closed) = documents.remove(&oldest)
         {
             lock(&self.diagnostics).remove(&oldest);
-            self.notify("textDocument/didClose", json!({ "textDocument": { "uri": closed.uri } }));
+            self.notify(
+                "textDocument/didClose",
+                json!({ "textDocument": { "uri": closed.uri } }),
+            );
         }
         let version = version.unwrap_or(1);
-        documents.insert(key, OpenDocument { uri: uri.clone(), version, hash, used: Instant::now() });
+        documents.insert(
+            key,
+            OpenDocument {
+                uri: uri.clone(),
+                version,
+                hash,
+                used: Instant::now(),
+            },
+        );
         drop(documents);
         self.notify(
             "textDocument/didOpen",
@@ -386,8 +480,14 @@ impl Backend {
     }
 
     pub fn close(&self, path: &Path) {
-        if lock(&self.documents).remove(&protocol::path_key(path)).is_some() {
-            self.notify("textDocument/didClose", json!({ "textDocument": { "uri": path_to_uri(path) } }));
+        if lock(&self.documents)
+            .remove(&protocol::path_key(path))
+            .is_some()
+        {
+            self.notify(
+                "textDocument/didClose",
+                json!({ "textDocument": { "uri": path_to_uri(path) } }),
+            );
         }
         lock(&self.diagnostics).remove(&protocol::path_key(path));
     }
@@ -399,7 +499,9 @@ impl Backend {
 
     /// The diagnostics last published for `path`.
     pub fn published(&self, path: &Path) -> Option<Published> {
-        lock(&self.diagnostics).get(&protocol::path_key(path)).cloned()
+        lock(&self.diagnostics)
+            .get(&protocol::path_key(path))
+            .cloned()
     }
 
     pub fn published_count(&self) -> u64 {
@@ -408,12 +510,19 @@ impl Backend {
 
     /// The diagnostics of `path` with `text`: pulled with `textDocument/diagnostic` if the server
     /// can, else those it publishes after the text is sent. `complete` is false if none came in time.
-    pub fn diagnostics(&self, path: &Path, text: &str, timeout: Duration, cancelled: Option<&AtomicBool>) -> (Vec<Value>, bool) {
+    pub fn diagnostics(
+        &self,
+        path: &Path,
+        text: &str,
+        timeout: Duration,
+        cancelled: Option<&AtomicBool>,
+    ) -> (Vec<Value>, bool) {
         let before = self.published_count();
         let version = self.sync(path, text, None);
         if self.supports("diagnosticProvider") {
             let params = json!({ "textDocument": { "uri": path_to_uri(path) } });
-            if let Ok(result) = self.request("textDocument/diagnostic", params, timeout, cancelled) {
+            if let Ok(result) = self.request("textDocument/diagnostic", params, timeout, cancelled)
+            {
                 if let Some(items) = result.get("items").and_then(Value::as_array) {
                     return (items.clone(), true);
                 }
@@ -443,10 +552,16 @@ impl Backend {
             }
             let cancelled = cancelled.is_some_and(|flag| flag.load(Ordering::Acquire));
             if now >= deadline || cancelled || !self.is_alive() {
-                let items = diagnostics.get(&key).map(|it| it.items.clone()).unwrap_or_default();
+                let items = diagnostics
+                    .get(&key)
+                    .map(|it| it.items.clone())
+                    .unwrap_or_default();
                 return (items, fresh.is_some());
             }
-            let wake = settled_at.unwrap_or(deadline).min(deadline).min(now + Duration::from_millis(50));
+            let wake = settled_at
+                .unwrap_or(deadline)
+                .min(deadline)
+                .min(now + Duration::from_millis(50));
             let (guard, _) = self
                 .published
                 .wait_timeout(diagnostics, wake.saturating_duration_since(now))

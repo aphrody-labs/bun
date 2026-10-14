@@ -134,7 +134,10 @@ fn is_event_emitter_from_ignored_package<'a>(
     ident: &IdentifierReference<'a>,
     ctx: &LintContext<'a>,
 ) -> bool {
-    if IGNORED_PACKAGES.iter().any(|package_name| is_import_from_module(ident, package_name, ctx)) {
+    if IGNORED_PACKAGES
+        .iter()
+        .any(|package_name| is_import_from_module(ident, package_name, ctx))
+    {
         return true;
     }
 
@@ -154,12 +157,18 @@ fn is_event_emitter_from_ignored_package<'a>(
                     .get_identifier_name()
                     .is_some_and(|name| name.as_str() == "EventEmitter")
         })
-        && var_decl.init.as_ref().is_some_and(is_await_import_or_require_from_ignored_packages)
+        && var_decl
+            .init
+            .as_ref()
+            .is_some_and(is_await_import_or_require_from_ignored_packages)
     {
         return true;
     }
 
-    if var_decl.id.get_identifier_name().is_some_and(|name| name.as_str() == "EventEmitter")
+    if var_decl
+        .id
+        .get_identifier_name()
+        .is_some_and(|name| name.as_str() == "EventEmitter")
         && let Some(init) = &var_decl.init
         && is_event_emitter_member_access_from_ignored_packages(init)
     {
@@ -220,5 +229,11 @@ fn test() {
         "for (const EventEmitter of []) {new EventEmitter}",
     ];
 
-    Tester::new(PreferEventTarget::NAME, PreferEventTarget::PLUGIN, pass, fail).test_and_snapshot();
+    Tester::new(
+        PreferEventTarget::NAME,
+        PreferEventTarget::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

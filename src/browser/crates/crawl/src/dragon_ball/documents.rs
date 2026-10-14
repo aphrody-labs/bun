@@ -2,8 +2,8 @@
 // Projection contract from integrated BXC apps/bxc/src/archive/dragonball-export.ts.
 use super::structured::{attribute, parse_translation};
 use super::{DialogueNode, sha256, validate_source_url};
-use bun_browser_extract::{extract_main, media::extract_media_candidates};
 use bun_browser_dom::parse_html;
+use bun_browser_extract::{extract_main, media::extract_media_candidates};
 use regex::Regex;
 use rusqlite::{Connection, OpenFlags};
 use serde::{Deserialize, Serialize};
@@ -67,10 +67,10 @@ pub(crate) fn category(url: &Url) -> &'static str {
         "archive.org" | "web.archive.org" => "multimedia_archive",
         _ if host == "dragon-ball-official.com" || host.ends_with(".dragon-ball-official.com") => {
             "official_news"
-        },
+        }
         _ if host == "dragonballfr.com" || host.ends_with(".dragonballfr.com") => {
             "shenron_community"
-        },
+        }
         "comic.dragonballcn.com" => "bibliography",
         _ => "biography",
     }
@@ -108,14 +108,26 @@ fn embedded_media(html: &str, markdown: &str, base: &Url) -> Vec<EmbeddedMedia> 
         if validate_source_url(url.as_str()).is_err() {
             return;
         }
-        let Some(kind) = media_kind(&url).or(explicit) else { return };
+        let Some(kind) = media_kind(&url).or(explicit) else {
+            return;
+        };
         if seen.insert(url.to_string()) {
-            media.push(EmbeddedMedia { url: url.to_string(), kind: kind.into(), caption });
+            media.push(EmbeddedMedia {
+                url: url.to_string(),
+                kind: kind.into(),
+                caption,
+            });
         }
     };
-    for id in dom.query_selector_all("img, video, audio, source").unwrap_or_default() {
+    for id in dom
+        .query_selector_all("img, video, audio, source")
+        .unwrap_or_default()
+    {
         let Some((name, src, caption, poster)) = dom.with_node(id, |node| {
-            let name = node.as_element().map(|name| name.local.to_string()).unwrap_or_default();
+            let name = node
+                .as_element()
+                .map(|name| name.local.to_string())
+                .unwrap_or_default();
             let src = ["src", "data-src", "data-original"]
                 .into_iter()
                 .find_map(|key| node.get_attribute(key))
@@ -124,7 +136,12 @@ fn embedded_media(html: &str, markdown: &str, base: &Url) -> Vec<EmbeddedMedia> 
                 .get_attribute("alt")
                 .or_else(|| node.get_attribute("title"))
                 .map(str::to_owned);
-            (name, src, caption, node.get_attribute("poster").map(str::to_owned))
+            (
+                name,
+                src,
+                caption,
+                node.get_attribute("poster").map(str::to_owned),
+            )
         }) else {
             continue;
         };
@@ -142,8 +159,9 @@ fn embedded_media(html: &str, markdown: &str, base: &Url) -> Vec<EmbeddedMedia> 
         if let Some(poster) = poster {
             add(&poster, Some("image"), None);
         }
-        if let Some(srcset) =
-            dom.with_node(id, |node| node.get_attribute("srcset").map(str::to_owned)).flatten()
+        if let Some(srcset) = dom
+            .with_node(id, |node| node.get_attribute("srcset").map(str::to_owned))
+            .flatten()
         {
             for candidate in srcset.split(',') {
                 if let Some(src) = candidate.split_whitespace().next() {
@@ -165,8 +183,9 @@ fn embedded_media(html: &str, markdown: &str, base: &Url) -> Vec<EmbeddedMedia> 
         .query_selector_all("link[rel='image_src'], link[rel='preload'][as='image']")
         .unwrap_or_default()
     {
-        if let Some(src) =
-            dom.with_node(id, |node| node.get_attribute("href").map(str::to_owned)).flatten()
+        if let Some(src) = dom
+            .with_node(id, |node| node.get_attribute("href").map(str::to_owned))
+            .flatten()
         {
             add(&src, Some("image"), None);
         }
@@ -213,10 +232,13 @@ pub fn project_document(
     } else {
         Default::default()
     };
-    let title = string(metadata, "title").or(translation.title).unwrap_or(extracted.title);
+    let title = string(metadata, "title")
+        .or(translation.title)
+        .unwrap_or(extracted.title);
     let mut people = Vec::new();
-    if let Some(author) =
-        string(metadata, "author").or_else(|| string(metadata, "authorName")).or(extracted.byline)
+    if let Some(author) = string(metadata, "author")
+        .or_else(|| string(metadata, "authorName"))
+        .or(extracted.byline)
     {
         people.push(author);
     }
@@ -227,7 +249,11 @@ pub fn project_document(
     }
     let route = Regex::new(r"^/ja/tv/([^/]+)/episode/(\d+)/?$").expect("static Toei fields");
     let toei = route.captures(canonical.path());
-    let markdown = if markdown.is_empty() { extracted.markdown } else { markdown.into() };
+    let markdown = if markdown.is_empty() {
+        extracted.markdown
+    } else {
+        markdown.into()
+    };
     let fields = StructuredFields {
         series_identifier: string(metadata, "series")
             .or_else(|| toei.as_ref().map(|value| value[1].into())),
@@ -260,7 +286,11 @@ pub fn project_document(
     };
     Ok(DragonBallDocument {
         crawl_id: "crawl_toriyama_archive_full".into(),
-        document_uid: sha256(&format!("{}{}", canonical.host_str().unwrap_or_default(), canonical)),
+        document_uid: sha256(&format!(
+            "{}{}",
+            canonical.host_str().unwrap_or_default(),
+            canonical
+        )),
         canonical_url: canonical.to_string(),
         source_domain: canonical.host_str().unwrap_or_default().into(),
         category: category(&canonical).into(),
@@ -317,8 +347,11 @@ pub fn export_bxc(databases: &[PathBuf], output: &Path) -> Result<usize, String>
             .map_err(|error| error.to_string())?
             .collect::<rusqlite::Result<Vec<_>>>()
             .map_err(|error| error.to_string())?;
-        let structured =
-            if columns.iter().any(|name| name == "json_data") { "s.json_data" } else { "NULL" };
+        let structured = if columns.iter().any(|name| name == "json_data") {
+            "s.json_data"
+        } else {
+            "NULL"
+        };
         let mut query=connection.prepare(&format!("SELECT s.id,s.url,s.status,s.content,s.metadata,{structured},s.markdown,s.timestamp FROM scrapes s JOIN (SELECT url,MAX(id) id FROM scrapes GROUP BY url) latest ON latest.id=s.id ORDER BY s.id")).map_err(|error|error.to_string())?;
         let mut rows = query.query([]).map_err(|error| error.to_string())?;
         while let Some(row) = rows.next().map_err(|error| error.to_string())? {
@@ -328,7 +361,7 @@ pub fn export_bxc(databases: &[PathBuf], output: &Path) -> Result<usize, String>
                 Err(reason) => {
                     rejected.push(serde_json::json!({"sourceDatabase":path,"sourceUrlSha256":sha256(&url),"reason":reason}));
                     continue;
-                },
+                }
             };
             let content: Option<String> = row.get(3).map_err(|error| error.to_string())?;
             let metadata: Option<String> = row.get(4).map_err(|error| error.to_string())?;
@@ -347,7 +380,10 @@ pub fn export_bxc(databases: &[PathBuf], output: &Path) -> Result<usize, String>
                     }
                 }
             }
-            combined.insert("crawlSource".into(), Value::String(path.display().to_string()));
+            combined.insert(
+                "crawlSource".into(),
+                Value::String(path.display().to_string()),
+            );
             let markdown: Option<String> = row.get(6).map_err(|error| error.to_string())?;
             let timestamp: Option<String> = row.get(7).map_err(|error| error.to_string())?;
             let status: Option<u16> = row.get(2).map_err(|error| error.to_string())?;
@@ -363,12 +399,15 @@ pub fn export_bxc(databases: &[PathBuf], output: &Path) -> Result<usize, String>
                 Err(reason) => {
                     rejected.push(serde_json::json!({"sourceDatabase":path,"sourceUrlSha256":sha256(&url),"reason":reason}));
                     continue;
-                },
+                }
             };
             let key = document.canonical_url.clone();
-            if documents.get(&key).is_none_or(|existing: &DragonBallDocument| {
-                existing.timestamp_utc <= document.timestamp_utc
-            }) {
+            if documents
+                .get(&key)
+                .is_none_or(|existing: &DragonBallDocument| {
+                    existing.timestamp_utc <= document.timestamp_utc
+                })
+            {
                 documents.insert(key, document);
             }
         }
@@ -426,7 +465,11 @@ pub fn materialize_documents(output: &Path) -> Result<usize, String> {
             validate_source_url(url)?;
             let markdown = value
                 .get("markdown")
-                .or_else(|| value.get("payload").and_then(|payload| payload.get("body_markdown")))
+                .or_else(|| {
+                    value
+                        .get("payload")
+                        .and_then(|payload| payload.get("body_markdown"))
+                })
                 .and_then(Value::as_str)
                 .ok_or("corpus record has no markdown")?;
             if markdown.trim().is_empty() {
@@ -434,10 +477,17 @@ pub fn materialize_documents(output: &Path) -> Result<usize, String> {
             }
             let title = value
                 .get("name")
-                .or_else(|| value.get("payload").and_then(|payload| payload.get("title_raw")))
+                .or_else(|| {
+                    value
+                        .get("payload")
+                        .and_then(|payload| payload.get("title_raw"))
+                })
                 .and_then(Value::as_str)
                 .unwrap_or(url);
-            documents.insert(url.to_owned(), format!("# {title}\n\nSource: {url}\n\n{markdown}\n"));
+            documents.insert(
+                url.to_owned(),
+                format!("# {title}\n\nSource: {url}\n\n{markdown}\n"),
+            );
         }
     }
     for (url, markdown) in &documents {
@@ -457,10 +507,16 @@ mod tests {
         let url = Url::parse("https://lineup.toei-anim.co.jp/ja/tv/dragonz/episode/12/").unwrap();
         let document=project_document(&url,200,"<img data-src='/thumb?id=12' alt='Goku'><video src='https://cdn.example.test/preview.mp4'></video>","https://cdn.example.test/episode.webp",&serde_json::json!({"title":"第12話","series":"dragonz","episodeNumber":12}),"2026-09-15T12:00:00Z").unwrap();
         assert_eq!(document.category, "toei_episode");
-        assert_eq!(document.payload.structured_fields.episode_or_chapter_number, Some(12));
+        assert_eq!(
+            document.payload.structured_fields.episode_or_chapter_number,
+            Some(12)
+        );
         assert_eq!(document.payload.embedded_media.len(), 3);
         assert_eq!(document.document_uid.len(), 64);
-        assert_eq!(document.raw_checksum, sha256("https://cdn.example.test/episode.webp"));
+        assert_eq!(
+            document.raw_checksum,
+            sha256("https://cdn.example.test/episode.webp")
+        );
         assert!(!document.canonical_eligible);
     }
     #[test]
@@ -474,7 +530,11 @@ mod tests {
         drop(connection);
         let before = std::fs::read(&path).unwrap();
         assert_eq!(
-            export_bxc(std::slice::from_ref(&path), &dir.join("shenron-documents.jsonl")).unwrap(),
+            export_bxc(
+                std::slice::from_ref(&path),
+                &dir.join("shenron-documents.jsonl")
+            )
+            .unwrap(),
             1
         );
         assert_eq!(before, std::fs::read(&path).unwrap());

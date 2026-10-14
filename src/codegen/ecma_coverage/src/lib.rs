@@ -107,10 +107,19 @@ mod resource_paths_tests {
     #[test]
     fn coverage_resources_resolve_to_the_transferred_owner() {
         let root = workspace_root();
-        assert_eq!(root.canonicalize().unwrap(), Path::new(env!("CARGO_MANIFEST_DIR")).canonicalize().unwrap());
+        assert_eq!(
+            root.canonicalize().unwrap(),
+            Path::new(env!("CARGO_MANIFEST_DIR"))
+                .canonicalize()
+                .unwrap()
+        );
         assert!(!project_root().join("tasks/coverage").exists());
         for directory in [root.join("misc"), snap_root()] {
-            assert!(std::fs::read_dir(&directory).unwrap().next().is_some(), "empty resource directory {}", directory.display());
+            assert!(
+                std::fs::read_dir(&directory).unwrap().next().is_some(),
+                "empty resource directory {}",
+                directory.display()
+            );
         }
     }
 }
@@ -257,8 +266,11 @@ pub fn snapshot_results(name: &str, test_root: &Path, results: &[CoverageResult]
     stats.write_summary(name, &mut out);
 
     // Write failed negatives (tests that should fail but didn't, e.g., IncorrectlyPassed)
-    let mut failed_negatives: Vec<_> =
-        stats.negatives.into_iter().filter(|r| !r.passed()).collect();
+    let mut failed_negatives: Vec<_> = stats
+        .negatives
+        .into_iter()
+        .filter(|r| !r.passed())
+        .collect();
     failed_negatives.sort_by_key(|r| &r.path);
 
     for r in &failed_negatives {
@@ -269,15 +281,22 @@ pub fn snapshot_results(name: &str, test_root: &Path, results: &[CoverageResult]
     }
 
     // Write failed positive results (detailed errors)
-    let mut failed_positives: Vec<_> =
-        stats.positives.into_iter().filter(|r| !r.passed()).collect();
+    let mut failed_positives: Vec<_> = stats
+        .positives
+        .into_iter()
+        .filter(|r| !r.passed())
+        .collect();
     failed_positives.sort_by_key(|r| &r.path);
 
     for r in &failed_positives {
         let path = normalize_path(Path::new("src/codegen/ecma_coverage").join(&r.path));
         match &r.result {
             TestResult::ParseError(error, is_fatal) => {
-                let label = if *is_fatal { "Fatal error" } else { "Expect to Parse" };
+                let label = if *is_fatal {
+                    "Fatal error"
+                } else {
+                    "Expect to Parse"
+                };
                 writeln!(out, "{label}: {path}").unwrap();
                 out.push_str(error);
                 out.push('\n'); // Blank line after error content
@@ -295,8 +314,10 @@ pub fn snapshot_results(name: &str, test_root: &Path, results: &[CoverageResult]
     }
 
     // Write correct errors (negative tests that failed as expected)
-    let mut correct_errors: Vec<_> =
-        results.iter().filter(|r| matches!(r.result, TestResult::CorrectError(_, _))).collect();
+    let mut correct_errors: Vec<_> = results
+        .iter()
+        .filter(|r| matches!(r.result, TestResult::CorrectError(_, _)))
+        .collect();
     correct_errors.sort_by_key(|r| &r.path);
 
     for r in correct_errors {
@@ -367,8 +388,18 @@ impl AppArgs {
     }
 
     pub fn run_parser(&self, data: &TestData) {
-        self.run_tool("parser_test262", TEST262_PATH, &data.test262, tools::run_parser_test262);
-        self.run_tool("parser_babel", BABEL_PATH, &data.babel, tools::run_parser_babel);
+        self.run_tool(
+            "parser_test262",
+            TEST262_PATH,
+            &data.test262,
+            tools::run_parser_test262,
+        );
+        self.run_tool(
+            "parser_babel",
+            BABEL_PATH,
+            &data.babel,
+            tools::run_parser_babel,
+        );
         self.run_tool(
             "parser_typescript",
             TYPESCRIPT_PATH,
@@ -406,14 +437,24 @@ impl AppArgs {
                 &data.test262,
                 lexer_diff::run_lexer_test262,
             );
-            self.run_tool("lexer_babel", BABEL_PATH, &data.babel, lexer_diff::run_lexer_babel);
+            self.run_tool(
+                "lexer_babel",
+                BABEL_PATH,
+                &data.babel,
+                lexer_diff::run_lexer_babel,
+            );
             self.run_tool(
                 "lexer_typescript",
                 TYPESCRIPT_PATH,
                 &data.typescript,
                 lexer_diff::run_lexer_typescript,
             );
-            self.run_tool("lexer_misc", MISC_PATH, &data.misc, lexer_diff::run_lexer_misc);
+            self.run_tool(
+                "lexer_misc",
+                MISC_PATH,
+                &data.misc,
+                lexer_diff::run_lexer_misc,
+            );
         }
 
         #[cfg(not(all(feature = "lexer", target_endian = "little")))]
@@ -424,27 +465,57 @@ impl AppArgs {
     }
 
     pub fn run_semantic(&self, data: &TestData) {
-        self.run_tool("semantic_test262", TEST262_PATH, &data.test262, tools::run_semantic_test262);
-        self.run_tool("semantic_babel", BABEL_PATH, &data.babel, tools::run_semantic_babel);
+        self.run_tool(
+            "semantic_test262",
+            TEST262_PATH,
+            &data.test262,
+            tools::run_semantic_test262,
+        );
+        self.run_tool(
+            "semantic_babel",
+            BABEL_PATH,
+            &data.babel,
+            tools::run_semantic_babel,
+        );
         self.run_tool(
             "semantic_typescript",
             TYPESCRIPT_PATH,
             &data.typescript,
             tools::run_semantic_typescript,
         );
-        self.run_tool("semantic_misc", MISC_PATH, &data.misc, tools::run_semantic_misc);
+        self.run_tool(
+            "semantic_misc",
+            MISC_PATH,
+            &data.misc,
+            tools::run_semantic_misc,
+        );
     }
 
     pub fn run_codegen(&self, data: &TestData) {
-        self.run_tool("codegen_test262", TEST262_PATH, &data.test262, tools::run_codegen_test262);
-        self.run_tool("codegen_babel", BABEL_PATH, &data.babel, tools::run_codegen_babel);
+        self.run_tool(
+            "codegen_test262",
+            TEST262_PATH,
+            &data.test262,
+            tools::run_codegen_test262,
+        );
+        self.run_tool(
+            "codegen_babel",
+            BABEL_PATH,
+            &data.babel,
+            tools::run_codegen_babel,
+        );
         self.run_tool(
             "codegen_typescript",
             TYPESCRIPT_PATH,
             &data.typescript,
             tools::run_codegen_typescript,
         );
-        self.run_tool("codegen_misc", MISC_PATH, &data.misc, tools::run_codegen_misc);
+        self.run_tool(
+            "codegen_misc",
+            MISC_PATH,
+            &data.misc,
+            tools::run_codegen_misc,
+        );
     }
 
     pub fn run_formatter(&self, data: &TestData) {
@@ -454,14 +525,24 @@ impl AppArgs {
             &data.test262,
             tools::run_formatter_test262,
         );
-        self.run_tool("formatter_babel", BABEL_PATH, &data.babel, tools::run_formatter_babel);
+        self.run_tool(
+            "formatter_babel",
+            BABEL_PATH,
+            &data.babel,
+            tools::run_formatter_babel,
+        );
         self.run_tool(
             "formatter_typescript",
             TYPESCRIPT_PATH,
             &data.typescript,
             tools::run_formatter_typescript,
         );
-        self.run_tool("formatter_misc", MISC_PATH, &data.misc, tools::run_formatter_misc);
+        self.run_tool(
+            "formatter_misc",
+            MISC_PATH,
+            &data.misc,
+            tools::run_formatter_misc,
+        );
     }
 
     pub fn run_transformer(&self, data: &TestData) {
@@ -471,23 +552,48 @@ impl AppArgs {
             &data.test262,
             tools::run_transformer_test262,
         );
-        self.run_tool("transformer_babel", BABEL_PATH, &data.babel, tools::run_transformer_babel);
+        self.run_tool(
+            "transformer_babel",
+            BABEL_PATH,
+            &data.babel,
+            tools::run_transformer_babel,
+        );
         self.run_tool(
             "transformer_typescript",
             TYPESCRIPT_PATH,
             &data.typescript,
             tools::run_transformer_typescript,
         );
-        self.run_tool("transformer_misc", MISC_PATH, &data.misc, tools::run_transformer_misc);
+        self.run_tool(
+            "transformer_misc",
+            MISC_PATH,
+            &data.misc,
+            tools::run_transformer_misc,
+        );
     }
 
     pub fn run_minifier(&self, data: &TestData) {
-        self.run_tool("minifier_test262", TEST262_PATH, &data.test262, tools::run_minifier_test262);
-        self.run_tool("minifier_babel", BABEL_PATH, &data.babel, tools::run_minifier_babel);
+        self.run_tool(
+            "minifier_test262",
+            TEST262_PATH,
+            &data.test262,
+            tools::run_minifier_test262,
+        );
+        self.run_tool(
+            "minifier_babel",
+            BABEL_PATH,
+            &data.babel,
+            tools::run_minifier_babel,
+        );
     }
 
     pub fn run_estree(&self, data: &TestData) {
-        self.run_tool("estree_test262", TEST262_PATH, &data.test262, tools::run_estree_test262);
+        self.run_tool(
+            "estree_test262",
+            TEST262_PATH,
+            &data.test262,
+            tools::run_estree_test262,
+        );
         self.run_tool(
             "estree_acorn_jsx",
             ESTREE_ACORN_JSX_PATH,

@@ -94,12 +94,24 @@ impl Rule for NoTypeofUndefined {
             ctx.diagnostic_with_suggestion(
                 no_typeof_undefined_diagnostic(bin_expr.span),
                 |fixer| {
-                    generate_fix(fixer, &unary_expr.argument, bin_expr.operator, bin_expr.span, ctx)
+                    generate_fix(
+                        fixer,
+                        &unary_expr.argument,
+                        bin_expr.operator,
+                        bin_expr.span,
+                        ctx,
+                    )
                 },
             );
         } else {
             ctx.diagnostic_with_fix(no_typeof_undefined_diagnostic(bin_expr.span), |fixer| {
-                generate_fix(fixer, &unary_expr.argument, bin_expr.operator, bin_expr.span, ctx)
+                generate_fix(
+                    fixer,
+                    &unary_expr.argument,
+                    bin_expr.operator,
+                    bin_expr.span,
+                    ctx,
+                )
             });
         }
     }
@@ -149,10 +161,19 @@ fn test() {
         (r#"typeof a.b === "string""#, None),
         (r#"typeof foo === "undefined""#, None),
         (r#"foo = 2; typeof foo === "undefined""#, None),
-        (r#"/* globals foo: readonly */ typeof foo === "undefined""#, None),
-        (r#"/* globals globalThis: readonly */ typeof globalThis === "undefined""#, None),
+        (
+            r#"/* globals foo: readonly */ typeof foo === "undefined""#,
+            None,
+        ),
+        (
+            r#"/* globals globalThis: readonly */ typeof globalThis === "undefined""#,
+            None,
+        ),
         (r#""undefined" === typeof a.b"#, None),
-        (r#"const UNDEFINED = "undefined"; typeof a.b === UNDEFINED"#, None),
+        (
+            r#"const UNDEFINED = "undefined"; typeof a.b === UNDEFINED"#,
+            None,
+        ),
         (r"typeof a.b === `undefined`", None),
     ];
 
@@ -166,7 +187,10 @@ fn test() {
         (r#"const foo = 1; typeof foo === "undefined""#, None),
         (r#"var foo; typeof foo === "undefined""#, None),
         (r#"var foo; var foo; typeof foo === "undefined""#, None),
-        (r#"for (const foo of bar) typeof foo === "undefined";"#, None),
+        (
+            r#"for (const foo of bar) typeof foo === "undefined";"#,
+            None,
+        ),
         (r#"function foo() {typeof foo === "undefined"}"#, None),
         (r#"function foo(bar) {typeof bar === "undefined"}"#, None),
         (r#"function foo({bar}) {typeof bar === "undefined"}"#, None),
@@ -188,10 +212,26 @@ fn test() {
         (r#"typeof a.b == "undefined""#, r"a.b === undefined", None),
         (r#"typeof a.b != "undefined""#, r"a.b !== undefined", None),
         (r"typeof a.b == 'undefined'", r"a.b === undefined", None),
-        (r#"let foo; typeof foo === "undefined""#, r"let foo; foo === undefined", None),
-        (r#"const foo = 1; typeof foo === "undefined""#, r"const foo = 1; foo === undefined", None),
-        (r#"var foo; typeof foo === "undefined""#, r"var foo; foo === undefined", None),
-        (r#"typeof foo.bar === "undefined""#, r"foo.bar === undefined", None),
+        (
+            r#"let foo; typeof foo === "undefined""#,
+            r"let foo; foo === undefined",
+            None,
+        ),
+        (
+            r#"const foo = 1; typeof foo === "undefined""#,
+            r"const foo = 1; foo === undefined",
+            None,
+        ),
+        (
+            r#"var foo; typeof foo === "undefined""#,
+            r"var foo; foo === undefined",
+            None,
+        ),
+        (
+            r#"typeof foo.bar === "undefined""#,
+            r"foo.bar === undefined",
+            None,
+        ),
         (
             r#"typeof foo === "undefined""#,
             r"foo === undefined",
@@ -199,7 +239,12 @@ fn test() {
         ),
     ];
 
-    Tester::new(NoTypeofUndefined::NAME, NoTypeofUndefined::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        NoTypeofUndefined::NAME,
+        NoTypeofUndefined::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

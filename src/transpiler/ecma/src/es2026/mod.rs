@@ -20,7 +20,9 @@ impl ES2026<'_> {
         } else {
             None
         };
-        Self { explicit_resource_management }
+        Self {
+            explicit_resource_management,
+        }
     }
 }
 

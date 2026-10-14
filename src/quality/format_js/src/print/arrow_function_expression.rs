@@ -139,7 +139,10 @@ impl<'a, 'b> FormatJsArrowFunctionExpression<'a, 'b> {
                     return if let Some(format_sequence) =
                         format_sequence_with_leading_comment(sequence, &format_body, f)
                     {
-                        write!(f, [group(&format_args!(formatted_signature, format_sequence))]);
+                        write!(
+                            f,
+                            [group(&format_args!(formatted_signature, format_sequence))]
+                        );
                     } else {
                         write!(
                             f,
@@ -375,7 +378,10 @@ pub fn is_multiline_template_starting_on_same_line(
         _ => return false,
     };
 
-    template.quasis.iter().any(|quasi| source_text.contains_newline(quasi.span))
+    template
+        .quasis
+        .iter()
+        .any(|quasi| source_text.contains_newline(quasi.span))
         && !source_text.has_line_terminator_before(start)
 }
 
@@ -400,13 +406,19 @@ impl<'a, 'b> ArrowChain<'a, 'b> {
     /// Returns an iterator over all arrow functions in this chain
     fn arrows(&self) -> impl Iterator<Item = &'b AstNode<'a, ArrowFunctionExpression<'a>>> {
         use std::iter::once;
-        once(self.head).chain(self.middle.iter().copied()).chain(once(self.tail))
+        once(self.head)
+            .chain(self.middle.iter().copied())
+            .chain(once(self.tail))
     }
 }
 
 impl<'a> Format<'a, JsFormatContext<'a>> for ArrowChain<'a, '_> {
     fn fmt(&self, f: &mut JsFormatter<'_, 'a>) {
-        let ArrowChain { tail, expand_signatures, .. } = *self;
+        let ArrowChain {
+            tail,
+            expand_signatures,
+            ..
+        } = *self;
 
         let tail_body = tail.body();
         let is_grouped_call_arg_layout = self.options.call_argument_layout.is_some();
@@ -454,9 +466,10 @@ impl<'a> Format<'a, JsFormatContext<'a>> for ArrowChain<'a, '_> {
         // matching Prettier's `shouldPutBodyOnSameLine`.
         // Sequence expressions are excluded:
         // their body formatting already places the leading comment (see `format_sequence_with_leading_comment`).
-        let tail_body_has_leading_own_line_comment =
-            !matches!(tail.get_expression(), Some(Expression::SequenceExpression(_)))
-                && has_own_line_comment_before_body(tail, f);
+        let tail_body_has_leading_own_line_comment = !matches!(
+            tail.get_expression(),
+            Some(Expression::SequenceExpression(_))
+        ) && has_own_line_comment_before_body(tail, f);
         let body_on_separate_line = body_on_separate_line || tail_body_has_leading_own_line_comment;
 
         // Each non-tail arrow's "body" is the next arrow in the chain,
@@ -572,7 +585,9 @@ impl<'a> Format<'a, JsFormatContext<'a>> for ArrowChain<'a, '_> {
                 }
             });
 
-            group(&join_signatures).should_expand(expand_signatures).fmt(f);
+            group(&join_signatures)
+                .should_expand(expand_signatures)
+                .fmt(f);
         });
 
         let format_tail_body_inner = format_with(|f| {
@@ -640,9 +655,12 @@ impl<'a> Format<'a, JsFormatContext<'a>> for ArrowChain<'a, '_> {
             if has_initial_indent {
                 write!(
                     f,
-                    [group(&indent(&format_args!(soft_line_break(), format_arrow_signatures)))
-                        .with_group_id(Some(group_id))
-                        .should_expand(break_signatures)]
+                    [group(&indent(&format_args!(
+                        soft_line_break(),
+                        format_arrow_signatures
+                    )))
+                    .with_group_id(Some(group_id))
+                    .should_expand(break_signatures)]
                 );
             } else {
                 write!(
@@ -678,7 +696,10 @@ impl<'a> Format<'a, JsFormatContext<'a>> for ArrowChain<'a, '_> {
             }
 
             if is_callee {
-                write!(f, [if_group_breaks(&soft_line_break()).with_group_id(Some(group_id))]);
+                write!(
+                    f,
+                    [if_group_breaks(&soft_line_break()).with_group_id(Some(group_id))]
+                );
             }
         });
 
@@ -696,9 +717,11 @@ fn has_own_line_comment_before_body<'a>(
     arrow: &AstNode<'a, ArrowFunctionExpression<'a>>,
     f: &JsFormatter<'_, 'a>,
 ) -> bool {
-    let signature_end =
-        arrow.return_type().map_or_else(|| arrow.params().span().end, |rt| rt.span().end);
-    f.comments().has_own_line_comment_in_range(signature_end, arrow.body().span().start)
+    let signature_end = arrow
+        .return_type()
+        .map_or_else(|| arrow.params().span().end, |rt| rt.span().end);
+    f.comments()
+        .has_own_line_comment_in_range(signature_end, arrow.body().span().start)
 }
 
 fn should_add_parens(expression: &AstNode<'_, Expression<'_>>) -> bool {
@@ -719,7 +742,10 @@ fn should_add_parens(expression: &AstNode<'_, Expression<'_>>) -> bool {
 
 fn has_rest_object_or_array_parameter(params: &FormalParameters) -> bool {
     params.rest.is_some()
-        || params.items.iter().any(|param| param.pattern.is_destructuring_pattern())
+        || params
+            .items
+            .iter()
+            .any(|param| param.pattern.is_destructuring_pattern())
 }
 
 /// Writes the arrow function type parameters, parameters, and return type annotation.
@@ -768,10 +794,17 @@ fn format_signature<'a, 'b>(
         }
 
         // Print comments before the fat arrow (`=>`)
-        let comments_before_fat_arrow =
-            f.context().comments().comments_before_character(arrow.params.span().end, b'=');
+        let comments_before_fat_arrow = f
+            .context()
+            .comments()
+            .comments_before_character(arrow.params.span().end, b'=');
         let content = FormatTrailingComments::Comments(comments_before_fat_arrow);
-        write!(f, [FormatContentWithCacheMode::new(arrow.span, content, cache_mode)]);
+        write!(
+            f,
+            [FormatContentWithCacheMode::new(
+                arrow.span, content, cache_mode
+            )]
+        );
     })
 }
 
@@ -818,6 +851,9 @@ fn format_sequence_with_leading_comment<'a, 'b>(
     });
 
     Some(format_with(move |f| {
-        write!(f, group(&indent(&format_args!(hard_line_break(), format_sequence))));
+        write!(
+            f,
+            group(&indent(&format_args!(hard_line_break(), format_sequence)))
+        );
     }))
 }

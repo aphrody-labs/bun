@@ -17,8 +17,8 @@
 //! en clé `command:` ou `entrypoint:`. Phase 4.
 
 use crate::rules::cli_commands::apply_cli_rules;
-use crate::util::{line_offsets, make_finding};
 use crate::types::{Finding, MakeFindingOpts, Severity};
+use crate::util::{line_offsets, make_finding};
 use once_cell::sync::Lazy;
 use regex::Regex;
 

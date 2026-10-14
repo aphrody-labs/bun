@@ -92,7 +92,10 @@ impl Rule for PreferTopLevelAwait {
 
         if let AstKind::StaticMemberExpression(member_expr) = parent.kind()
             && member_expr.object.span() == call_expr.span
-            && matches!(member_expr.property.name.as_str(), "then" | "catch" | "finally")
+            && matches!(
+                member_expr.property.name.as_str(),
+                "then" | "catch" | "finally"
+            )
             && let AstKind::CallExpression(grand_call_expr) = grand_parent.kind()
             && grand_call_expr.callee.span() == member_expr.span()
         {
@@ -131,9 +134,14 @@ impl Rule for PreferTopLevelAwait {
         }
 
         if let Expression::StaticMemberExpression(member_expr) = &call_expr.callee
-            && matches!(member_expr.property.name.as_str(), "then" | "catch" | "finally")
+            && matches!(
+                member_expr.property.name.as_str(),
+                "then" | "catch" | "finally"
+            )
         {
-            ctx.diagnostic(prefer_top_level_await_over_promise_chain_diagnostic(call_expr.span));
+            ctx.diagnostic(prefer_top_level_await_over_promise_chain_diagnostic(
+                call_expr.span,
+            ));
             return;
         }
 
@@ -142,7 +150,9 @@ impl Rule for PreferTopLevelAwait {
             Expression::ArrowFunctionExpression(func) if func.r#async => true,
             _ => false,
         } {
-            ctx.diagnostic(prefer_top_level_await_over_async_iife_diagnostic(call_expr.span));
+            ctx.diagnostic(prefer_top_level_await_over_async_iife_diagnostic(
+                call_expr.span,
+            ));
             return;
         }
 
@@ -150,7 +160,11 @@ impl Rule for PreferTopLevelAwait {
             return;
         };
 
-        let Some(symbol_id) = ctx.scoping().get_reference(ident.reference_id()).symbol_id() else {
+        let Some(symbol_id) = ctx
+            .scoping()
+            .get_reference(ident.reference_id())
+            .symbol_id()
+        else {
             return;
         };
 
@@ -248,7 +262,12 @@ fn test() {
             None,
             None,
         ),
-        ("foo.then(bar)", None, None, Some(PathBuf::from("'foo.cjS'"))),
+        (
+            "foo.then(bar)",
+            None,
+            None,
+            Some(PathBuf::from("'foo.cjS'")),
+        ),
         ("foo()", None, None, None),
         ("foo.bar()", None, None, None),
         (
@@ -332,7 +351,12 @@ fn test() {
             None,
             None,
         ),
-        ("for (const statement of statements) { statement() };", None, None, None),
+        (
+            "for (const statement of statements) { statement() };",
+            None,
+            None,
+            None,
+        ),
         (
             "const foo = async () => {};
             await Promise.all([
@@ -425,8 +449,18 @@ fn test() {
         ("foo.then(bar, baz)", None, None, None),
         ("foo.then(bar, baz).finally(qux)", None, None, None),
         ("(foo.then(bar, baz)).finally(qux)", None, None, None),
-        ("(async () => {})().catch(() => process.exit(1))", None, None, None),
-        ("(async function() {}()).finally(() => {})", None, None, None),
+        (
+            "(async () => {})().catch(() => process.exit(1))",
+            None,
+            None,
+            None,
+        ),
+        (
+            "(async function() {}()).finally(() => {})",
+            None,
+            None,
+            None,
+        ),
         ("for (const foo of bar) foo.then(bar)", None, None, None),
         ("foo?.then(bar).finally(qux)", None, None, None),
         ("foo.then().toString()", None, None, None),
@@ -482,7 +516,12 @@ fn test() {
         ),
     ];
 
-    Tester::new(PreferTopLevelAwait::NAME, PreferTopLevelAwait::PLUGIN, pass, fail)
-        .change_rule_path_extension("mjs")
-        .test_and_snapshot();
+    Tester::new(
+        PreferTopLevelAwait::NAME,
+        PreferTopLevelAwait::PLUGIN,
+        pass,
+        fail,
+    )
+    .change_rule_path_extension("mjs")
+    .test_and_snapshot();
 }

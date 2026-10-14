@@ -130,11 +130,26 @@ fn test() {
         ("fs.fooSync;", None),
         ("fooSync;", None),
         ("() => fooSync;", None),
-        ("var foo = fs.fooSync;", Some(serde_json::json!([{ "allowAtRootLevel": true }]))),
-        ("var foo = fooSync;", Some(serde_json::json!([{ "allowAtRootLevel": true }]))),
-        ("if (true) {fs.fooSync();}", Some(serde_json::json!([{ "allowAtRootLevel": true }]))),
-        ("if (true) {fooSync();}", Some(serde_json::json!([{ "allowAtRootLevel": true }]))),
-        ("fooSync();", Some(serde_json::json!([{ "ignores": ["fooSync"] }]))),
+        (
+            "var foo = fs.fooSync;",
+            Some(serde_json::json!([{ "allowAtRootLevel": true }])),
+        ),
+        (
+            "var foo = fooSync;",
+            Some(serde_json::json!([{ "allowAtRootLevel": true }])),
+        ),
+        (
+            "if (true) {fs.fooSync();}",
+            Some(serde_json::json!([{ "allowAtRootLevel": true }])),
+        ),
+        (
+            "if (true) {fooSync();}",
+            Some(serde_json::json!([{ "allowAtRootLevel": true }])),
+        ),
+        (
+            "fooSync();",
+            Some(serde_json::json!([{ "ignores": ["fooSync"] }])),
+        ),
     ];
 
     let fail = vec![
@@ -142,7 +157,10 @@ fn test() {
         ("var foo = fs.fooSync.apply();", None),
         ("var foo = fooSync();", None),
         ("var foo = fooSync.apply();", None),
-        ("var foo = fs.fooSync();", Some(serde_json::json!([{ "allowAtRootLevel": false }]))),
+        (
+            "var foo = fs.fooSync();",
+            Some(serde_json::json!([{ "allowAtRootLevel": false }])),
+        ),
         ("if (true) {fs.fooSync();}", None),
         ("function someFunction() {fs.fooSync();}", None),
         (

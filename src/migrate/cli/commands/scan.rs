@@ -15,11 +15,11 @@
 /// Mode scan par défaut (check / fix / aggressive / migrate).
 use std::process::ExitCode;
 
-use anyhow::Result;
 use crate::{
     report, run,
     types::{Mode, Report, RunOptions, Severity},
 };
+use anyhow::Result;
 
 use crate::cli::cli::args::{Cli, ReportArg};
 

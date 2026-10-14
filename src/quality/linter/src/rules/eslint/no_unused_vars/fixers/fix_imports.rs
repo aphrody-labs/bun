@@ -120,7 +120,10 @@ impl NoUnusedVars {
             .find(|s| matches!(s, ImportDeclarationSpecifier::ImportDefaultSpecifier(_)));
 
         let Some(default_spec) = default_specifier else {
-            debug_assert!(false, "Expected a default import when removing named imports block.");
+            debug_assert!(
+                false,
+                "Expected a default import when removing named imports block."
+            );
 
             return fixer.noop();
         };
@@ -210,7 +213,10 @@ impl NoUnusedVars {
             .find(|s| matches!(s, ImportDeclarationSpecifier::ImportDefaultSpecifier(_)));
 
         let Some(default_spec) = default_specifier else {
-            debug_assert!(false, "Expected a default import when removing namespace import.");
+            debug_assert!(
+                false,
+                "Expected a default import when removing namespace import."
+            );
             return fixer.noop();
         };
 

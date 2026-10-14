@@ -146,10 +146,18 @@ fn handle_watch_inner_property<'a>(inner_prop: &ObjectPropertyKind<'a>, ctx: &Li
         return;
     };
 
-    if obj_prop.key.static_name().is_some_and(|key| key == "handler")
-        && matches!(obj_prop.value.get_inner_expression(), Expression::ArrowFunctionExpression(_))
+    if obj_prop
+        .key
+        .static_name()
+        .is_some_and(|key| key == "handler")
+        && matches!(
+            obj_prop.value.get_inner_expression(),
+            Expression::ArrowFunctionExpression(_)
+        )
     {
-        ctx.diagnostic(no_arrow_functions_in_watch_diagnostic(obj_prop.value.span()));
+        ctx.diagnostic(no_arrow_functions_in_watch_diagnostic(
+            obj_prop.value.span(),
+        ));
     }
 }
 
@@ -425,6 +433,11 @@ fn test() {
         ),
     ];
 
-    Tester::new(NoArrowFunctionsInWatch::NAME, NoArrowFunctionsInWatch::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        NoArrowFunctionsInWatch::NAME,
+        NoArrowFunctionsInWatch::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

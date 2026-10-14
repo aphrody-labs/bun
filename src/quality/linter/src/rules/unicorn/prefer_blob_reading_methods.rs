@@ -84,7 +84,11 @@ impl Rule for PreferBlobReadingMethods {
             _ => return,
         };
 
-        ctx.diagnostic(prefer_blob_reading_methods_diagnostic(span, replacement, current));
+        ctx.diagnostic(prefer_blob_reading_methods_diagnostic(
+            span,
+            replacement,
+            current,
+        ));
     }
 }
 
@@ -102,8 +106,16 @@ fn test() {
         r#"fileReader.readAsText(blob, "ascii")"#,
     ];
 
-    let fail = vec!["fileReader.readAsArrayBuffer(blob)", "fileReader.readAsText(blob)"];
+    let fail = vec![
+        "fileReader.readAsArrayBuffer(blob)",
+        "fileReader.readAsText(blob)",
+    ];
 
-    Tester::new(PreferBlobReadingMethods::NAME, PreferBlobReadingMethods::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        PreferBlobReadingMethods::NAME,
+        PreferBlobReadingMethods::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

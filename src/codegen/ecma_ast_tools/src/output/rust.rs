@@ -24,7 +24,9 @@ pub fn print_rust(tokens: &TokenStream, generator_path: &str) -> String {
     };
 
     let code = prettyplease::unparse(&file);
-    let code = COMMENT_REGEX.replace_all(&code, CommentReplacer).to_string();
+    let code = COMMENT_REGEX
+        .replace_all(&code, CommentReplacer)
+        .to_string();
     let code = add_header(&code, generator_path, "//");
     rust_fmt(&code)
 }

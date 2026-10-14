@@ -119,8 +119,13 @@ fn test() {
         r#"<div aria-labeledby="foobar" />"#,
         r#"<div aria-skldjfaria-klajsd="foobar" />"#,
     ];
-    let fix =
-        vec![(r#"<div aria-labeledby="foobar" />"#, r#"<div aria-labelledby="foobar" />"#, None)];
+    let fix = vec![(
+        r#"<div aria-labeledby="foobar" />"#,
+        r#"<div aria-labelledby="foobar" />"#,
+        None,
+    )];
 
-    Tester::new(AriaProps::NAME, AriaProps::PLUGIN, pass, fail).expect_fix(fix).test_and_snapshot();
+    Tester::new(AriaProps::NAME, AriaProps::PLUGIN, pass, fail)
+        .expect_fix(fix)
+        .test_and_snapshot();
 }

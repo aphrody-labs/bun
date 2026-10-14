@@ -100,9 +100,10 @@ impl<'a> DetermineValueType<'a> for Expression<'a> {
             }
             Expression::UnaryExpression(e) => e.value_type(ctx),
             Expression::BinaryExpression(e) => e.value_type(ctx),
-            Expression::SequenceExpression(e) => {
-                e.expressions.last().map_or(ValueType::Undetermined, |e| e.value_type(ctx))
-            }
+            Expression::SequenceExpression(e) => e
+                .expressions
+                .last()
+                .map_or(ValueType::Undetermined, |e| e.value_type(ctx)),
             Expression::AssignmentExpression(e) => e.value_type(ctx),
             Expression::ConditionalExpression(e) => e.value_type(ctx),
             Expression::LogicalExpression(e) => e.value_type(ctx),
@@ -201,7 +202,11 @@ impl<'a> DetermineValueType<'a> for AssignmentExpression<'a> {
             AssignmentOperator::Assign => self.right.value_type(ctx),
             AssignmentOperator::Addition => {
                 let right = self.right.value_type(ctx);
-                if right.is_string() { ValueType::String } else { ValueType::Undetermined }
+                if right.is_string() {
+                    ValueType::String
+                } else {
+                    ValueType::Undetermined
+                }
             }
             AssignmentOperator::Subtraction
             | AssignmentOperator::Multiplication

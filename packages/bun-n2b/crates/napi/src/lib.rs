@@ -110,7 +110,9 @@ pub fn scan(root: String, options: Option<ScanOptions>) -> Result<serde_json::Va
         max_report_bytes: None,
     });
     let settings = run::ScanSettings {
-        max_files: options.max_files.map_or(run::DEFAULT_MAX_FILES, |limit| limit as usize),
+        max_files: options
+            .max_files
+            .map_or(run::DEFAULT_MAX_FILES, |limit| limit as usize),
         max_report_bytes: options
             .max_report_bytes
             .map_or(run::DEFAULT_MAX_REPORT_BYTES, |limit| limit as usize),
@@ -123,7 +125,9 @@ pub fn scan(root: String, options: Option<ScanOptions>) -> Result<serde_json::Va
         options.dry_run.unwrap_or(true),
         options.since,
     );
-    let jobs = options.jobs.map_or_else(run::default_jobs, |jobs| jobs as usize);
+    let jobs = options
+        .jobs
+        .map_or_else(run::default_jobs, |jobs| jobs as usize);
     let summary =
         run::run_map_with_settings(&opts, jobs, settings, |fix| Ok(report::json_file(&fix)?))
             .map_err(|error| Error::from_reason(format!("{error:#}")))?;
@@ -146,11 +150,19 @@ pub struct TransformResult {
 #[napi]
 pub fn transform(path: String, source: String, mode: Option<String>) -> Result<TransformResult> {
     let mode = self::mode(mode.as_deref())?;
-    let root = PathBuf::from(&path).parent().map(PathBuf::from).unwrap_or_default();
+    let root = PathBuf::from(&path)
+        .parent()
+        .map(PathBuf::from)
+        .unwrap_or_default();
     let opts = options(root, mode, Vec::new(), true, None);
     let (findings, after) = scan_source(&path, &source, &opts);
     let changed = after != source;
-    let fix = FileFix { file: path, before: source, after, findings };
+    let fix = FileFix {
+        file: path,
+        before: source,
+        after,
+        findings,
+    };
     let entry = report::json_file(&fix).map_err(|error| Error::from_reason(error.to_string()))?;
     Ok(TransformResult {
         code: fix.after,

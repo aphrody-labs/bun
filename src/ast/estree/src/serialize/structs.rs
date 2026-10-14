@@ -75,7 +75,10 @@ impl<'s, C: Config, F: Formatter> ESTreeStructSerializer<'s, C, F> {
 
         serializer.buffer_mut().print_ascii_byte(b'{');
 
-        Self { serializer, state: StructState::Empty }
+        Self {
+            serializer,
+            state: StructState::Empty,
+        }
     }
 }
 
@@ -408,10 +411,16 @@ mod tests {
         let foo = Foo {
             n: 123.0,
             u: 12345,
-            bar: Bar { yes: "yup", no: "nope" },
+            bar: Bar {
+                yes: "yup",
+                no: "nope",
+            },
             empty: Null,
             hello: Some("hi!"),
-            maybe_bar: Some(Bar { yes: "hell yeah!", no: "not a chance in a million, mate" }),
+            maybe_bar: Some(Bar {
+                yes: "hell yeah!",
+                no: "not a chance in a million, mate",
+            }),
             maybe_not_bar: None,
         };
 
@@ -498,7 +507,10 @@ mod tests {
             outer1: "out1",
             inner: Inner {
                 inner1: "in1",
-                innermost: Innermost { innermost1: "inin1", innermost2: "inin2" },
+                innermost: Innermost {
+                    innermost1: "inin1",
+                    innermost2: "inin2",
+                },
                 inner2: "in2",
             },
             outer2: "out2",
@@ -548,7 +560,12 @@ mod tests {
             }
         }
 
-        let foo = Foo { js: 1, ts: 2, js_only: 3, more_js: 4 };
+        let foo = Foo {
+            js: 1,
+            ts: 2,
+            js_only: 3,
+            more_js: 4,
+        };
 
         let mut serializer = CompactSerializer::default();
         foo.serialize(&mut serializer);

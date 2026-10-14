@@ -80,7 +80,9 @@ impl<'a, 'o> JsdocFormatter<'a, 'o> {
         // `commentContentPrintWidth` to Prettier's TS formatter. This lets the
         // formatter wrap complex types (object literals, function types) across
         // multiple lines when they exceed the available width.
-        let type_width = u16::try_from(wrap_width).unwrap_or(80).clamp(1, LineWidth::MAX);
+        let type_width = u16::try_from(wrap_width)
+            .unwrap_or(80)
+            .clamp(1, LineWidth::MAX);
         let type_format_options = JsFormatOptions {
             line_width: LineWidth::try_from(type_width).unwrap(),
             jsdoc: None,
@@ -569,13 +571,19 @@ pub(super) fn should_preserve_description_verbatim(tag_kind: &str) -> bool {
 /// Tags that use `type_name_comment()` pattern: `@tag {type} name description`
 /// Expects canonical (normalized) tag names.
 pub(super) fn is_type_name_comment_tag(tag_kind: &str) -> bool {
-    matches!(tag_kind, "param" | "property" | "typedef" | "template" | "fires")
+    matches!(
+        tag_kind,
+        "param" | "property" | "typedef" | "template" | "fires"
+    )
 }
 
 /// Tags that use `type_comment()` pattern: `@tag {type} description`
 /// Expects canonical (normalized) tag names.
 pub(super) fn is_type_comment_tag(tag_kind: &str) -> bool {
-    matches!(tag_kind, "returns" | "yields" | "throws" | "type" | "satisfies" | "this" | "extends")
+    matches!(
+        tag_kind,
+        "returns" | "yields" | "throws" | "type" | "satisfies" | "this" | "extends"
+    )
 }
 
 /// Get the sort priority for a tag kind (lower number = higher priority).
@@ -734,7 +742,10 @@ fn sort_tags_by_groups<'a>(
         // Single group — sort directly by priority.
         let mut sorted: Vec<_> = tags.iter().map(normalize).collect();
         // Skip sort if already in priority order (common case: well-formatted comments)
-        if !sorted.windows(2).all(|w| tag_sort_priority(w[0].1) <= tag_sort_priority(w[1].1)) {
+        if !sorted
+            .windows(2)
+            .all(|w| tag_sort_priority(w[0].1) <= tag_sort_priority(w[1].1))
+        {
             sorted.sort_by_key(|(_, kind)| tag_sort_priority(kind));
         }
         return sorted;
@@ -1175,7 +1186,10 @@ mod tests {
         // Types with operators go through the formatter but return None when unchanged
         assert_eq!(fmt_type("string | number"), None);
         // Types that would actually change
-        assert_eq!(fmt_type("string|number"), Some("string | number".to_string()));
+        assert_eq!(
+            fmt_type("string|number"),
+            Some("string | number".to_string())
+        );
         assert_eq!(fmt_type(""), None);
         // Quote conversion: single → double (default QuoteStyle::Double)
         let result = fmt_type("import('eslint').Linter.Config");
@@ -1208,7 +1222,10 @@ mod tests {
         let result = fmt_type(
             "ProxyHandler<{ props: Record<string, unknown>; handler: (event: CustomEvent<string>) => void }>",
         );
-        assert!(result.is_some(), "Complex ProxyHandler type should be formatted");
+        assert!(
+            result.is_some(),
+            "Complex ProxyHandler type should be formatted"
+        );
 
         // At wide width (320), the type fits on one line and stays unchanged.
         assert_eq!(
@@ -1228,15 +1245,24 @@ mod tests {
         let type_str =
             "ProxyHandler<{ props: Record<string, unknown>; handler: (event: string) => void }>";
         let result = fmt_type_width(type_str, 40);
-        assert!(result.is_some(), "Narrow width should produce formatted output");
+        assert!(
+            result.is_some(),
+            "Narrow width should produce formatted output"
+        );
         let s = result.unwrap();
-        assert!(s.contains('\n'), "Narrow width should produce multi-line output: {s:?}");
+        assert!(
+            s.contains('\n'),
+            "Narrow width should produce multi-line output: {s:?}"
+        );
     }
 
     #[test]
     fn test_format_type_via_formatter_rest() {
         assert_eq!(fmt_type("...any"), Some("...any".to_string()));
         assert_eq!(fmt_type("...number"), Some("...number".to_string()));
-        assert_eq!(fmt_type("...(string | number)"), Some("...(string | number)".to_string()));
+        assert_eq!(
+            fmt_type("...(string | number)"),
+            Some("...(string | number)".to_string())
+        );
     }
 }

@@ -186,7 +186,10 @@ impl<I: Idx, T> IndexSlice<I, [T]> {
     /// `usize`.
     #[inline(always)]
     pub fn iter_enumerated(&self) -> Enumerated<slice::Iter<'_, T>, I, &T> {
-        self.raw.iter().enumerate().map(|(i, t)| (I::from_usize(i), t))
+        self.raw
+            .iter()
+            .enumerate()
+            .map(|(i, t)| (I::from_usize(i), t))
     }
 
     /// Get an iterator over all our indices.
@@ -199,7 +202,10 @@ impl<I: Idx, T> IndexSlice<I, [T]> {
     /// `usize`.
     #[inline(always)]
     pub fn iter_mut_enumerated(&mut self) -> Enumerated<slice::IterMut<'_, T>, I, &mut T> {
-        self.raw.iter_mut().enumerate().map(|(i, t)| (I::from_usize(i), t))
+        self.raw
+            .iter_mut()
+            .enumerate()
+            .map(|(i, t)| (I::from_usize(i), t))
     }
 
     /// Forwards to the slice's `sort` implementation.
@@ -486,7 +492,9 @@ impl<I: Idx, T> IndexSlice<I, [T]> {
         &mut self,
         chunk_size: usize,
     ) -> SliceMappedMut<slice::ChunksExactMut<'_, T>, I, T> {
-        self.raw.chunks_exact_mut(chunk_size).map(IndexSlice::new_mut)
+        self.raw
+            .chunks_exact_mut(chunk_size)
+            .map(IndexSlice::new_mut)
     }
 
     /// Wraps the underlying slice's `rchunks` iterator with one that yields
@@ -520,7 +528,9 @@ impl<I: Idx, T> IndexSlice<I, [T]> {
         &mut self,
         chunk_size: usize,
     ) -> SliceMappedMut<slice::RChunksExactMut<'_, T>, I, T> {
-        self.raw.rchunks_exact_mut(chunk_size).map(IndexSlice::new_mut)
+        self.raw
+            .rchunks_exact_mut(chunk_size)
+            .map(IndexSlice::new_mut)
     }
 
     /// Wraps the underlying slice's `split` iterator with one that yields
@@ -815,7 +825,9 @@ impl<I: Idx, T: Clone> Clone for Box<IndexSlice<I, [T]>> {
 impl<I: Idx, A> FromIterator<A> for Box<IndexSlice<I, [A]>> {
     #[inline]
     fn from_iter<T: IntoIterator<Item = A>>(iter: T) -> Self {
-        iter.into_iter().collect::<IndexVec<I, _>>().into_boxed_slice()
+        iter.into_iter()
+            .collect::<IndexVec<I, _>>()
+            .into_boxed_slice()
     }
 }
 

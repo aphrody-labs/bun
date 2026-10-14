@@ -25,7 +25,9 @@ pub struct InjectGlobalVariablesConfig {
 
 impl InjectGlobalVariablesConfig {
     pub fn new(injects: Vec<InjectImport>) -> Self {
-        Self { injects: Arc::from(injects) }
+        Self {
+            injects: Arc::from(injects),
+        }
     }
 }
 
@@ -53,7 +55,9 @@ impl InjectImport {
     pub fn namespace_specifier(source: &str, local: &str) -> InjectImport {
         InjectImport {
             source: CompactStr::from(source),
-            specifier: InjectImportSpecifier::NamespaceSpecifier { local: CompactStr::from(local) },
+            specifier: InjectImportSpecifier::NamespaceSpecifier {
+                local: CompactStr::from(local),
+            },
             replace_value: Self::replace_name(local),
         }
     }
@@ -61,7 +65,9 @@ impl InjectImport {
     pub fn default_specifier(source: &str, local: &str) -> InjectImport {
         InjectImport {
             source: CompactStr::from(source),
-            specifier: InjectImportSpecifier::DefaultSpecifier { local: CompactStr::from(local) },
+            specifier: InjectImportSpecifier::DefaultSpecifier {
+                local: CompactStr::from(local),
+            },
             replace_value: Self::replace_name(local),
         }
     }
@@ -78,7 +84,10 @@ impl InjectImport {
 pub enum InjectImportSpecifier {
     /// `import { local } from "source"`
     /// `import { default as local } from "source"` when `imported` is `None`
-    Specifier { imported: Option<CompactStr>, local: CompactStr },
+    Specifier {
+        imported: Option<CompactStr>,
+        local: CompactStr,
+    },
     /// import * as local from "source"
     NamespaceSpecifier { local: CompactStr },
     /// import local from "source"
@@ -105,10 +114,18 @@ struct DotDefineState<'a> {
 
 impl From<&InjectImport> for DotDefineState<'_> {
     fn from(inject: &InjectImport) -> Self {
-        let parts = inject.specifier.local().split('.').map(CompactStr::from).collect::<Vec<_>>();
+        let parts = inject
+            .specifier
+            .local()
+            .split('.')
+            .map(CompactStr::from)
+            .collect::<Vec<_>>();
         let value = inject.replace_value.clone().unwrap();
         let dot_define = DotDefine { parts, value };
-        Self { dot_define, value_str: None }
+        Self {
+            dot_define,
+            value_str: None,
+        }
     }
 }
 
@@ -132,8 +149,10 @@ pub struct InjectGlobalVariables<'a> {
     dot_defines: Vec<DotDefineState<'a>>,
 
     /// Identifiers for which dot define replaced a member expression.
-    replaced_dot_defines:
-        Vec<(/* identifier of member expression */ CompactStr, /* local */ CompactStr)>,
+    replaced_dot_defines: Vec<(
+        /* identifier of member expression */ CompactStr,
+        /* local */ CompactStr,
+    )>,
 
     changed: bool,
 }
@@ -187,11 +206,16 @@ impl<'a> InjectGlobalVariables<'a> {
             .filter(|i| {
                 // remove replaced `Buffer` for `Buffer` + Buffer.isBuffer` combo.
                 match &i.replace_value {
-                    Some(replace_value) => {
-                        self.replaced_dot_defines.iter().any(|d| d.1 == replace_value)
-                    }
+                    Some(replace_value) => self
+                        .replaced_dot_defines
+                        .iter()
+                        .any(|d| d.1 == replace_value),
                     _ => {
-                        if self.replaced_dot_defines.iter().any(|d| d.0 == i.specifier.local()) {
+                        if self
+                            .replaced_dot_defines
+                            .iter()
+                            .any(|d| d.0 == i.specifier.local())
+                        {
                             false
                         } else {
                             scoping
@@ -205,18 +229,26 @@ impl<'a> InjectGlobalVariables<'a> {
             .collect::<Vec<_>>();
 
         if injects.is_empty() {
-            return InjectGlobalVariablesReturn { scoping, changed: self.changed };
+            return InjectGlobalVariablesReturn {
+                scoping,
+                changed: self.changed,
+            };
         }
 
         self.inject_imports(&injects, program);
 
-        InjectGlobalVariablesReturn { scoping, changed: self.changed }
+        InjectGlobalVariablesReturn {
+            scoping,
+            changed: self.changed,
+        }
     }
 
     fn inject_imports(&mut self, injects: &[InjectImport], program: &mut Program<'a>) {
         let imports = injects.iter().map(|inject| {
-            let specifiers =
-                Some(ArenaVec::from_value_in(self.inject_import_to_specifier(inject), self));
+            let specifiers = Some(ArenaVec::from_value_in(
+                self.inject_import_to_specifier(inject),
+                self,
+            ));
             let source =
                 StringLiteral::new(SPAN, Str::from_str_in(&inject.source, self), None, self);
             let kind = ImportOrExportKind::Value;
@@ -270,7 +302,11 @@ impl<'a> InjectGlobalVariables<'a> {
     fn replace_dot_defines(&mut self, expr: &mut Expression<'a>, ctx: &TraverseCtx<'a>) {
         match expr {
             Expression::StaticMemberExpression(member) => {
-                for DotDefineState { dot_define, value_str } in &mut self.dot_defines {
+                for DotDefineState {
+                    dot_define,
+                    value_str,
+                } in &mut self.dot_defines
+                {
                     if ReplaceGlobalDefines::is_dot_define(
                         ctx.scoping(),
                         ctx.current_scope_flags(),
@@ -293,7 +329,11 @@ impl<'a> InjectGlobalVariables<'a> {
                 }
             }
             Expression::ImportMeta(_) => {
-                for DotDefineState { dot_define, value_str } in &mut self.dot_defines {
+                for DotDefineState {
+                    dot_define,
+                    value_str,
+                } in &mut self.dot_defines
+                {
                     // Check if dot_define is exactly ["import", "meta"]
                     if dot_define.parts.len() == 2
                         && dot_define.parts[0].as_str() == "import"

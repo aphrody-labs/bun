@@ -1,10 +1,19 @@
 #![cfg(target_endian = "little")]
-#![expect(clippy::cast_possible_truncation, reason = "test helpers: lengths fit u32")]
+#![expect(
+    clippy::cast_possible_truncation,
+    reason = "test helpers: lengths fit u32"
+)]
 
 use oxc_lexer::{DiagCode, LexOptions, Lexer, PAD, TokenKind, lex_utf8};
 
 fn kinds_of(code: &str, module: bool) -> Vec<TokenKind> {
-    kinds_with(code, LexOptions { source_type_module: module, ..Default::default() })
+    kinds_with(
+        code,
+        LexOptions {
+            source_type_module: module,
+            ..Default::default()
+        },
+    )
 }
 
 fn kinds_with(code: &str, opts: LexOptions) -> Vec<TokenKind> {
@@ -13,11 +22,21 @@ fn kinds_with(code: &str, opts: LexOptions) -> Vec<TokenKind> {
     buf.resize(n + PAD, 0);
     let mut lx = Lexer::new();
     let count = lx.lex(&buf, n, opts);
-    lx.kinds()[..count].iter().copied().filter(|kk| !kk.is_trivia()).collect()
+    lx.kinds()[..count]
+        .iter()
+        .copied()
+        .filter(|kk| !kk.is_trivia())
+        .collect()
 }
 
 fn diag_codes(code: &str, module: bool) -> Vec<DiagCode> {
-    diag_codes_with(code, LexOptions { source_type_module: module, ..Default::default() })
+    diag_codes_with(
+        code,
+        LexOptions {
+            source_type_module: module,
+            ..Default::default()
+        },
+    )
 }
 
 fn diag_codes_with(code: &str, opts: LexOptions) -> Vec<DiagCode> {
@@ -43,7 +62,10 @@ fn html_comment_content() {
     let source = "<!--a\n-->\n<!--";
     let mut buf = source.as_bytes().to_vec();
     buf.resize(buf.len() + PAD, 0);
-    let options = LexOptions { source_type_module: false, ..Default::default() };
+    let options = LexOptions {
+        source_type_module: false,
+        ..Default::default()
+    };
     let (result, arena) = lex_utf8(&buf, source.len() as u32, options);
     assert!(result.diagnostics().is_empty());
     let comments = result.comments(&arena);
@@ -58,8 +80,14 @@ fn html_comment_content() {
 fn module_html_open_comment_mid_expression_is_lt() {
     let ks = kinds_of("x <!-- y;", true);
     assert!(ks.contains(&TokenKind::Lt), "expected `<` operator: {ks:?}");
-    assert!(ks.contains(&TokenKind::Bang), "expected `!` operator: {ks:?}");
-    assert!(ks.contains(&TokenKind::MinusMinus), "expected `--` operator: {ks:?}");
+    assert!(
+        ks.contains(&TokenKind::Bang),
+        "expected `!` operator: {ks:?}"
+    );
+    assert!(
+        ks.contains(&TokenKind::MinusMinus),
+        "expected `--` operator: {ks:?}"
+    );
     assert_eq!(diag_codes("x <!-- y;", true), []);
 }
 
@@ -67,7 +95,10 @@ fn module_html_open_comment_mid_expression_is_lt() {
 fn module_html_open_comment_at_line_start_diagnosed() {
     let src = "<!-- c\nx;";
     let ks = kinds_of(src, true);
-    assert!(!ks.contains(&TokenKind::Lt), "line-start form stays a comment: {ks:?}");
+    assert!(
+        !ks.contains(&TokenKind::Lt),
+        "line-start form stays a comment: {ks:?}"
+    );
     assert_eq!(diag_codes(src, true), [DiagCode::HtmlCommentInModule]);
     let src = "x;\n<!-- c\ny;";
     assert_eq!(diag_codes(src, true), [DiagCode::HtmlCommentInModule]);
@@ -78,9 +109,15 @@ fn module_html_open_comment_at_line_start_diagnosed() {
 fn module_html_close_comment_is_operators() {
     let src = "a;\n--> b;";
     let script = kinds_of(src, false);
-    assert!(!script.contains(&TokenKind::MinusMinus), "script comment: {script:?}");
+    assert!(
+        !script.contains(&TokenKind::MinusMinus),
+        "script comment: {script:?}"
+    );
     let module = kinds_of(src, true);
-    assert!(module.contains(&TokenKind::MinusMinus), "expected `--`: {module:?}");
+    assert!(
+        module.contains(&TokenKind::MinusMinus),
+        "expected `--`: {module:?}"
+    );
     assert!(module.contains(&TokenKind::Gt), "expected `>`: {module:?}");
     assert_eq!(diag_codes(src, true), []);
 }
@@ -89,13 +126,23 @@ fn module_html_close_comment_is_operators() {
 fn mid_line_close_comment_unchanged() {
     for module in [false, true] {
         let ks = kinds_of("a --> b;", module);
-        assert!(ks.contains(&TokenKind::MinusMinus), "module={module}: {ks:?}");
+        assert!(
+            ks.contains(&TokenKind::MinusMinus),
+            "module={module}: {ks:?}"
+        );
         assert!(ks.contains(&TokenKind::Gt), "module={module}: {ks:?}");
     }
 }
 
 fn kinds_of_jsx(code: &str, module: bool) -> Vec<TokenKind> {
-    kinds_with(code, LexOptions { source_type_module: module, jsx: true, ..Default::default() })
+    kinds_with(
+        code,
+        LexOptions {
+            source_type_module: module,
+            jsx: true,
+            ..Default::default()
+        },
+    )
 }
 
 #[test]
@@ -103,10 +150,17 @@ fn jsx_script_html_comments() {
     // Annex B applies to a script whatever its JSX setting.
     for src in ["x <!-- y\nz;", "<!-- c\nx;", "x = <a>{y}</a> <!-- c\nz;"] {
         let ks = kinds_of_jsx(src, false);
-        assert!(!ks.contains(&TokenKind::Lt) && !ks.contains(&TokenKind::Bang), "{src:?}: {ks:?}");
+        assert!(
+            !ks.contains(&TokenKind::Lt) && !ks.contains(&TokenKind::Bang),
+            "{src:?}: {ks:?}"
+        );
     }
     // `-->` closes a comment a `<!--` opened: in a JSX script it is recognised after one.
-    for src in ["<!--\na;\n--> b;", "<!--\nx = 1;\n  --> c\ny;", "<!--\nx = 1;\n/* */ --> c\ny;"] {
+    for src in [
+        "<!--\na;\n--> b;",
+        "<!--\nx = 1;\n  --> c\ny;",
+        "<!--\nx = 1;\n/* */ --> c\ny;",
+    ] {
         let ks = kinds_of_jsx(src, false);
         assert!(!ks.contains(&TokenKind::MinusMinus), "{src:?}: {ks:?}");
         let ks = kinds_of_jsx(src, true);
@@ -117,13 +171,20 @@ fn jsx_script_html_comments() {
     let ks = kinds_of_jsx("a;\n--> b;", false);
     assert!(ks.contains(&TokenKind::MinusMinus), "{ks:?}");
     let ks = kinds_of_jsx("x <!-- y;", true);
-    assert!(ks.contains(&TokenKind::Lt) && ks.contains(&TokenKind::Bang), "{ks:?}");
+    assert!(
+        ks.contains(&TokenKind::Lt) && ks.contains(&TokenKind::Bang),
+        "{ks:?}"
+    );
 }
 
 #[test]
 fn tsx_script_lone_html_close_comment_stays_operators() {
     // tsc has no HTML comments: the line is a decrement and a comparison, and tsc rejects it.
-    for src in ["a;\n--> b;", "f((\n--> c\n) => 1);", "x = <a/>;\n  --> c\ny;"] {
+    for src in [
+        "a;\n--> b;",
+        "f((\n--> c\n) => 1);",
+        "x = <a/>;\n  --> c\ny;",
+    ] {
         for module in [false, true] {
             let opts = LexOptions {
                 source_type_module: module,
@@ -136,7 +197,10 @@ fn tsx_script_lone_html_close_comment_stays_operators() {
                 ks.contains(&TokenKind::MinusMinus) && ks.contains(&TokenKind::Gt),
                 "{src:?} module={module}: {ks:?}"
             );
-            assert!(diag_codes_with(src, opts).is_empty(), "{src:?} module={module}");
+            assert!(
+                diag_codes_with(src, opts).is_empty(),
+                "{src:?} module={module}"
+            );
         }
     }
 }

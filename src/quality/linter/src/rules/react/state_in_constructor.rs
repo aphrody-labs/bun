@@ -140,7 +140,9 @@ impl Rule for StateInConstructor {
 }
 
 fn has_parent_es6_component<'a>(node: &AstNode<'a>, ctx: &LintContext<'a>) -> bool {
-    ctx.nodes().ancestors(node.id()).any(|node| is_es6_component(node))
+    ctx.nodes()
+        .ancestors(node.id())
+        .any(|node| is_es6_component(node))
 }
 
 /// Checks if a node is inside a constructor method.
@@ -530,6 +532,11 @@ fn test() {
         ),
     ];
 
-    Tester::new(StateInConstructor::NAME, StateInConstructor::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        StateInConstructor::NAME,
+        StateInConstructor::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

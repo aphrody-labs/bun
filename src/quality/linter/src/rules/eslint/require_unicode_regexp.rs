@@ -237,7 +237,10 @@ fn extract_regex_flags<'a>(
 }
 
 fn parse_flags(flags_text: &str) -> RegExpFlags {
-    flags_text.chars().filter_map(|ch| RegExpFlags::try_from(ch).ok()).collect()
+    flags_text
+        .chars()
+        .filter_map(|ch| RegExpFlags::try_from(ch).ok())
+        .collect()
 }
 
 const MAX_RESOLVE_DEPTH: usize = 8;
@@ -255,15 +258,22 @@ fn resolve_flags<'a>(
     let next_depth = depth + 1;
     let expr = expr.get_inner_expression();
     if follow_identifier && let Expression::Identifier(ident) = expr {
-        return resolve_flags(resolve_const_initializer(ident, ctx)?, ctx, true, next_depth);
+        return resolve_flags(
+            resolve_const_initializer(ident, ctx)?,
+            ctx,
+            true,
+            next_depth,
+        );
     }
 
     match expr {
         Expression::StringLiteral(lit) => Some(parse_flags(lit.value.as_str())),
         Expression::TemplateLiteral(template) => resolve_template_flags(template, ctx, next_depth),
-        Expression::BooleanLiteral(lit) => {
-            Some(if lit.value { RegExpFlags::U } else { RegExpFlags::empty() })
-        }
+        Expression::BooleanLiteral(lit) => Some(if lit.value {
+            RegExpFlags::U
+        } else {
+            RegExpFlags::empty()
+        }),
         Expression::NullLiteral(_) => Some(RegExpFlags::U),
         Expression::NumericLiteral(_) => Some(RegExpFlags::empty()),
         Expression::BinaryExpression(binary) if binary.operator == BinaryOperator::Addition => {
@@ -325,7 +335,9 @@ fn resolve_const_initializer<'a>(
     ctx: &LintContext<'a>,
 ) -> Option<&'a Expression<'a>> {
     let declaration = get_declaration_of_variable(ident, ctx.semantic())?;
-    let AstKind::VariableDeclarator(decl) = declaration.kind() else { return None };
+    let AstKind::VariableDeclarator(decl) = declaration.kind() else {
+        return None;
+    };
 
     if !variable_declaration_kind(decl, ctx).is_const() || !decl.id.is_binding_identifier() {
         return None;
@@ -369,19 +381,37 @@ fn test() {
         ("const flags = 'gimu'; new RegExp('foo', flags[3])", None),
         ("const flags = flags; new RegExp('foo', flags)", None),
         ("const flags = `${flags}`; new RegExp('foo', flags)", None),
-        ("const flags = other; const other = flags; new RegExp('foo', flags)", None),
+        (
+            "const flags = other; const other = flags; new RegExp('foo', flags)",
+            None,
+        ),
         ("new RegExp('', flags)", None),
         ("function f(flags) { return new RegExp('', flags) }", None),
         ("function f(RegExp) { return new RegExp('foo') }", None),
-        ("function f(patternAndFlags) { return new RegExp(...patternAndFlags) }", None),
+        (
+            "function f(patternAndFlags) { return new RegExp(...patternAndFlags) }",
+            None,
+        ),
         ("new globalThis.RegExp('foo', 'u')", None), // { "ecmaVersion": 2020 },
         ("globalThis.RegExp('foo', 'u')", None),     // { "ecmaVersion": 2020 },
         ("const flags = 'u'; new globalThis.RegExp('', flags)", None), // { "ecmaVersion": 2020 },
-        ("const flags = 'g'; new globalThis.RegExp('', flags + 'u')", None), // { "ecmaVersion": 2020 },
-        ("const flags = 'gimu'; new globalThis.RegExp('foo', flags[3])", None), // { "ecmaVersion": 2020 },
-        ("class C { #RegExp; foo() { new globalThis.#RegExp('foo') } }", None), // { "ecmaVersion": 2022 },
+        (
+            "const flags = 'g'; new globalThis.RegExp('', flags + 'u')",
+            None,
+        ), // { "ecmaVersion": 2020 },
+        (
+            "const flags = 'gimu'; new globalThis.RegExp('foo', flags[3])",
+            None,
+        ), // { "ecmaVersion": 2020 },
+        (
+            "class C { #RegExp; foo() { new globalThis.#RegExp('foo') } }",
+            None,
+        ), // { "ecmaVersion": 2022 },
         ("/foo/u", Some(serde_json::json!([{ "requireFlag": "u" }]))),
-        ("new RegExp('foo', 'u')", Some(serde_json::json!([{ "requireFlag": "u" }]))),
+        (
+            "new RegExp('foo', 'u')",
+            Some(serde_json::json!([{ "requireFlag": "u" }])),
+        ),
         ("/foo/v", None),                  // { "ecmaVersion": 2024 },
         ("/foo/gimvy", None),              // { "ecmaVersion": 2024 },
         ("RegExp('', 'v')", None),         // { "ecmaVersion": 2024 },
@@ -394,7 +424,10 @@ fn test() {
         ("const flags = 'g'; new RegExp('', flags + 'v')", None), // { "ecmaVersion": 2024 },
         ("const flags = 'gimv'; new RegExp('foo', flags[3])", None), // { "ecmaVersion": 2024 },
         ("/foo/v", Some(serde_json::json!([{ "requireFlag": "v" }]))), // { "ecmaVersion": 2024 },
-        ("new RegExp('foo', 'v')", Some(serde_json::json!([{ "requireFlag": "v" }]))), // { "ecmaVersion": 2024 }
+        (
+            "new RegExp('foo', 'v')",
+            Some(serde_json::json!([{ "requireFlag": "v" }])),
+        ), // { "ecmaVersion": 2024 }
     ];
 
     let fail = vec![
@@ -416,9 +449,15 @@ fn test() {
         ("new RegExp(('foo'))", None),
         ("new RegExp(('unrelated', 'foo'))", None),
         ("const flags = 'gi'; new RegExp('foo', flags)", None),
-        ("const flags = 'gi'; new RegExp('foo', ('unrelated', flags))", None),
+        (
+            "const flags = 'gi'; new RegExp('foo', ('unrelated', flags))",
+            None,
+        ),
         ("let flags; new RegExp('foo', flags = 'g')", None),
-        ("const flags = `gi`; new RegExp(`foo`, (`unrelated`, flags))", None),
+        (
+            "const flags = `gi`; new RegExp(`foo`, (`unrelated`, flags))",
+            None,
+        ),
         ("const flags = 'gimu'; new RegExp('foo', flags[0])", None),
         ("new window.RegExp('foo')", None), // { "globals": globals.browser },
         ("new global.RegExp('foo')", None), // { "sourceType": "commonjs" },
@@ -427,12 +466,30 @@ fn test() {
         ("/foo/u", Some(serde_json::json!([{ "requireFlag": "v" }]))), // { "ecmaVersion": 2024 },
         ("/foo/u", Some(serde_json::json!([{ "requireFlag": "v" }]))), // { "ecmaVersion": 6 },
         ("/[[a]/u", Some(serde_json::json!([{ "requireFlag": "v" }]))), // { "ecmaVersion": 2024 },
-        ("new RegExp('foo', 'u')", Some(serde_json::json!([{ "requireFlag": "v" }]))), // { "ecmaVersion": 2024 },
-        ("new RegExp('[[a]', 'u')", Some(serde_json::json!([{ "requireFlag": "v" }]))), // { "ecmaVersion": 2024 },
-        (r#"new RegExp("foo", "\u0067")"#, Some(serde_json::json!([{ "requireFlag": "v" }]))), // { "ecmaVersion": 2024 },
-        (r#"new RegExp("foo", `\u0067`)"#, Some(serde_json::json!([{ "requireFlag": "v" }]))), // { "ecmaVersion": 2024 },
-        (r#"new RegExp("foo", "\u0075")"#, Some(serde_json::json!([{ "requireFlag": "v" }]))), // { "ecmaVersion": 2024 },
-        (r#"new RegExp("foo", `\u0075`)"#, Some(serde_json::json!([{ "requireFlag": "v" }]))), // { "ecmaVersion": 2024 },
+        (
+            "new RegExp('foo', 'u')",
+            Some(serde_json::json!([{ "requireFlag": "v" }])),
+        ), // { "ecmaVersion": 2024 },
+        (
+            "new RegExp('[[a]', 'u')",
+            Some(serde_json::json!([{ "requireFlag": "v" }])),
+        ), // { "ecmaVersion": 2024 },
+        (
+            r#"new RegExp("foo", "\u0067")"#,
+            Some(serde_json::json!([{ "requireFlag": "v" }])),
+        ), // { "ecmaVersion": 2024 },
+        (
+            r#"new RegExp("foo", `\u0067`)"#,
+            Some(serde_json::json!([{ "requireFlag": "v" }])),
+        ), // { "ecmaVersion": 2024 },
+        (
+            r#"new RegExp("foo", "\u0075")"#,
+            Some(serde_json::json!([{ "requireFlag": "v" }])),
+        ), // { "ecmaVersion": 2024 },
+        (
+            r#"new RegExp("foo", `\u0075`)"#,
+            Some(serde_json::json!([{ "requireFlag": "v" }])),
+        ), // { "ecmaVersion": 2024 },
         (
             r#"const regularFlags = "sm"; new RegExp("foo", `${regularFlags}g`)"#,
             Some(serde_json::json!([{ "requireFlag": "v" }])),
@@ -442,11 +499,22 @@ fn test() {
             Some(serde_json::json!([{ "requireFlag": "v" }])),
         ), // { "ecmaVersion": 2024 },
         ("/foo/v", Some(serde_json::json!([{ "requireFlag": "u" }]))), // { "ecmaVersion": 2024 },
-        ("new RegExp('foo')", Some(serde_json::json!([{ "requireFlag": "v" }]))), // { "ecmaVersion": 2024 },
-        ("new RegExp('foo', 'v')", Some(serde_json::json!([{ "requireFlag": "u" }]))), // { "ecmaVersion": 2024 }
+        (
+            "new RegExp('foo')",
+            Some(serde_json::json!([{ "requireFlag": "v" }])),
+        ), // { "ecmaVersion": 2024 },
+        (
+            "new RegExp('foo', 'v')",
+            Some(serde_json::json!([{ "requireFlag": "u" }])),
+        ), // { "ecmaVersion": 2024 }
         ("const a = 'g'; const b = a; new RegExp('x', b)", None),
     ];
 
-    Tester::new(RequireUnicodeRegexp::NAME, RequireUnicodeRegexp::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        RequireUnicodeRegexp::NAME,
+        RequireUnicodeRegexp::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

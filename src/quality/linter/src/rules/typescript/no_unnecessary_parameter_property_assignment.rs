@@ -69,7 +69,13 @@ impl Rule for NoUnnecessaryParameterPropertyAssignment {
             return;
         }
 
-        if !method.value.params.items.iter().any(FormalParameter::has_modifier) {
+        if !method
+            .value
+            .params
+            .items
+            .iter()
+            .any(FormalParameter::has_modifier)
+        {
             return;
         }
 
@@ -131,7 +137,8 @@ impl<'a> VisitJs<'a> for AssignmentVisitor<'a, '_> {
             && self.is_in_constructor_scope(reference.node_id())
         {
             // Any prior write may change the value copied by a later `this.x = x`.
-            self.assigned_before_unnecessary.insert(identifier.name.into());
+            self.assigned_before_unnecessary
+                .insert(identifier.name.into());
         }
     }
 
@@ -145,7 +152,10 @@ impl<'a> AssignmentVisitor<'a, '_> {
     fn is_in_constructor_scope(&self, node_id: NodeId) -> bool {
         // Match the constructor scope, allowing a single arrow IIFE as upstream does.
         let mut functions = self.ctx.nodes().ancestors(node_id).filter(|node| {
-            matches!(node.kind(), AstKind::Function(_) | AstKind::ArrowFunctionExpression(_))
+            matches!(
+                node.kind(),
+                AstKind::Function(_) | AstKind::ArrowFunctionExpression(_)
+            )
         });
         let mut function = functions.next();
         if let Some(node) = function
@@ -198,7 +208,10 @@ impl<'a> AssignmentVisitor<'a, '_> {
             }
             // name of property parameter matches the name of the assigned property
 
-            let right_reference = self.ctx.scoping().get_reference(right_identifier.reference_id());
+            let right_reference = self
+                .ctx
+                .scoping()
+                .get_reference(right_identifier.reference_id());
             if !self
                 .ctx
                 .symbol_references(binding_identifier.symbol_id())
@@ -208,11 +221,17 @@ impl<'a> AssignmentVisitor<'a, '_> {
             }
             // property parameter is same symbol as identifier on the right of assignment
 
-            if self.assigned_before_unnecessary.contains(&this_property_name) {
+            if self
+                .assigned_before_unnecessary
+                .contains(&this_property_name)
+            {
                 continue; // there already was an assignment inside the constructor
             }
 
-            if self.assigned_before_constructor.contains(&this_property_name) {
+            if self
+                .assigned_before_constructor
+                .contains(&this_property_name)
+            {
                 continue; // there already was an assignment outside the constructor
             }
 

@@ -9,7 +9,11 @@ pub fn archive_manifest(item: &Value, series: Option<&str>) -> Result<Value, Str
     let identifier = metadata
         .get("identifier")
         .and_then(Value::as_str)
-        .or_else(|| item.get("dir").and_then(Value::as_str).and_then(|dir| dir.rsplit('/').next()))
+        .or_else(|| {
+            item.get("dir")
+                .and_then(Value::as_str)
+                .and_then(|dir| dir.rsplit('/').next())
+        })
         .filter(|value| !value.is_empty())
         .ok_or("Archive item has no identifier")?;
     let number = |value: Option<&Value>| {
@@ -24,8 +28,15 @@ pub fn archive_manifest(item: &Value, series: Option<&str>) -> Result<Value, Str
     let episode =
         Regex::new(r"^\s*(\d{1,3})\s*[-_. ]+\s*(.+?)\s*$").expect("static archive episode regex");
     let mut files = Vec::new();
-    for file in item.get("files").and_then(Value::as_array).into_iter().flatten() {
-        let Some(name) = file.get("name").and_then(Value::as_str) else { continue };
+    for file in item
+        .get("files")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+    {
+        let Some(name) = file.get("name").and_then(Value::as_str) else {
+            continue;
+        };
         if name.contains(".thumbs/") {
             continue;
         }
@@ -38,14 +49,19 @@ pub fn archive_manifest(item: &Value, series: Option<&str>) -> Result<Value, Str
             "pdf" | "epub" | "cbz" | "cbr" | "txt" | "djvu" => "document",
             _ => continue,
         };
-        let stem =
-            name.rsplit('/').next().unwrap_or(name).rsplit_once('.').map_or(name, |(stem, _)| stem);
+        let stem = name
+            .rsplit('/')
+            .next()
+            .unwrap_or(name)
+            .rsplit_once('.')
+            .map_or(name, |(stem, _)| stem);
         let parsed = episode.captures(stem);
         let mut content =
             url::Url::parse("https://archive.org/download/").expect("static archive origin");
         {
-            let mut segments =
-                content.path_segments_mut().map_err(|()| "invalid archive download URL")?;
+            let mut segments = content
+                .path_segments_mut()
+                .map_err(|()| "invalid archive download URL")?;
             segments.pop_if_empty().push(identifier);
             for segment in name.split('/') {
                 segments.push(segment);

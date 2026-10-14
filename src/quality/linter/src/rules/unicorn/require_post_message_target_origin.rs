@@ -106,7 +106,10 @@ fn is_message_port_expression(expr: &Expression<'_>) -> bool {
     let mut current_expr = expr.without_parentheses();
     loop {
         if let Expression::Identifier(ident) = current_expr
-            && matches!(ident.name.as_str(), "port" | "port1" | "port2" | "messagePort")
+            && matches!(
+                ident.name.as_str(),
+                "port" | "port1" | "port2" | "messagePort"
+            )
         {
             return true;
         }
@@ -115,17 +118,23 @@ fn is_message_port_expression(expr: &Expression<'_>) -> bool {
             return false;
         };
 
-        if member_expr.static_property_name().is_some_and(|name| matches!(name, "port1" | "port2"))
+        if member_expr
+            .static_property_name()
+            .is_some_and(|name| matches!(name, "port1" | "port2"))
         {
             return true;
         }
 
         if member_expr.is_computed()
-            && member_expr.object().without_parentheses().get_member_expr().is_some_and(
-                |object_member| {
-                    object_member.static_property_name().is_some_and(|name| name == "ports")
-                },
-            )
+            && member_expr
+                .object()
+                .without_parentheses()
+                .get_member_expr()
+                .is_some_and(|object_member| {
+                    object_member
+                        .static_property_name()
+                        .is_some_and(|name| name == "ports")
+                })
         {
             return true;
         }
@@ -182,20 +191,38 @@ fn test() {
     ];
 
     let fix = vec![
-        ("window.postMessage(message)", "window.postMessage(message, window.location.origin)"),
-        ("self.postMessage(message)", "self.postMessage(message, self.location.origin)"),
+        (
+            "window.postMessage(message)",
+            "window.postMessage(message, window.location.origin)",
+        ),
+        (
+            "self.postMessage(message)",
+            "self.postMessage(message, self.location.origin)",
+        ),
         (
             "globalThis.postMessage(message)",
             "globalThis.postMessage(message, globalThis.location.origin)",
         ),
-        ("foo.postMessage(message )", "foo.postMessage(message, foo.location.origin )"),
-        ("foo?.postMessage(message )", "foo?.postMessage(message, foo.location.origin )"),
-        ("window.postMessage(message,)", "window.postMessage(message, window.location.origin,)"),
+        (
+            "foo.postMessage(message )",
+            "foo.postMessage(message, foo.location.origin )",
+        ),
+        (
+            "foo?.postMessage(message )",
+            "foo?.postMessage(message, foo.location.origin )",
+        ),
+        (
+            "window.postMessage(message,)",
+            "window.postMessage(message, window.location.origin,)",
+        ),
         (
             "window.postMessage(message,                 /** comments */  )",
             "window.postMessage(message, window.location.origin,                 /** comments */  )",
         ),
-        ("window?.c.postMessage(message)", "window?.c.postMessage(message, self.location.origin)"),
+        (
+            "window?.c.postMessage(message)",
+            "window?.c.postMessage(message, self.location.origin)",
+        ),
         (
             "window?.a?.b.postMessage(message)",
             "window?.a?.b.postMessage(message, self.location.origin)",

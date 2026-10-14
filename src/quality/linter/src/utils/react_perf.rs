@@ -118,7 +118,9 @@ pub fn run_react_perf_rule<'a>(
             NativeAllowList::All(_) => return,
             NativeAllowList::List(names) => {
                 if let Some(attr_name) = attr.name.as_identifier()
-                    && names.iter().any(|n| n.as_str().eq_ignore_ascii_case(&attr_name.name))
+                    && names
+                        .iter()
+                        .any(|n| n.as_str().eq_ignore_ascii_case(&attr_name.name))
                 {
                     return;
                 }
@@ -142,7 +144,11 @@ pub fn run_react_perf_rule<'a>(
     let Expression::Identifier(ident) = expr else {
         return;
     };
-    let Some(symbol_id) = ctx.scoping().get_reference(ident.reference_id()).symbol_id() else {
+    let Some(symbol_id) = ctx
+        .scoping()
+        .get_reference(ident.reference_id())
+        .symbol_id()
+    else {
         return;
     };
     // Symbols declared at the root scope won't (or, at least, shouldn't) be
@@ -152,11 +158,15 @@ pub fn run_react_perf_rule<'a>(
         return;
     }
 
-    let declaration_node = ctx.nodes().get_node(ctx.scoping().symbol_declaration(symbol_id));
+    let declaration_node = ctx
+        .nodes()
+        .get_node(ctx.scoping().symbol_declaration(symbol_id));
     if let Some((decl_span, init_span)) =
         check_for_violation_on_ast_kind(&declaration_node.kind(), symbol_id)
     {
-        ctx.diagnostic(react_perf_reference_diagnostic(message, ident.span, decl_span, init_span));
+        ctx.diagnostic(react_perf_reference_diagnostic(
+            message, ident.span, decl_span, init_span,
+        ));
     }
 }
 

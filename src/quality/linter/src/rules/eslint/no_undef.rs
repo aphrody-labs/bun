@@ -117,7 +117,11 @@ fn test() {
     let pass = vec![
         ("var a = 1, b = 2; a;", None, None),
         // "/*global b*/ function f() { b; }",
-        ("function f() { b; }", None, Some(serde_json::json!({"globals": { "b": false }}))),
+        (
+            "function f() { b; }",
+            None,
+            Some(serde_json::json!({"globals": { "b": false }})),
+        ),
         // "/*global b a:false*/  a;  function f() { b; a; }",
         ("function a(){}  a();", None, None),
         ("function f(b) { b; }", None, None),
@@ -137,19 +141,47 @@ fn test() {
         ("var b = typeof a", None, None),
         ("typeof a === 'undefined'", None, None),
         ("if (typeof a === 'undefined') {}", None, None),
-        ("function foo() { var [a, b=4] = [1, 2]; return {a, b}; }", None, None),
+        (
+            "function foo() { var [a, b=4] = [1, 2]; return {a, b}; }",
+            None,
+            None,
+        ),
         ("var toString = 1;", None, None),
         ("function myFunc(...foo) {  return foo;}", None, None),
-        ("var React, App, a=1; React.render(<App attr={a} />);", None, None),
-        ("var console; [1,2,3].forEach(obj => {\n  console.log(obj);\n});", None, None),
-        ("var Foo; class Bar extends Foo { constructor() { super();  }}", None, None),
-        ("import Warning from '../lib/warning'; var warn = new Warning('text');", None, None),
-        ("import * as Warning from '../lib/warning'; var warn = new Warning('text');", None, None),
+        (
+            "var React, App, a=1; React.render(<App attr={a} />);",
+            None,
+            None,
+        ),
+        (
+            "var console; [1,2,3].forEach(obj => {\n  console.log(obj);\n});",
+            None,
+            None,
+        ),
+        (
+            "var Foo; class Bar extends Foo { constructor() { super();  }}",
+            None,
+            None,
+        ),
+        (
+            "import Warning from '../lib/warning'; var warn = new Warning('text');",
+            None,
+            None,
+        ),
+        (
+            "import * as Warning from '../lib/warning'; var warn = new Warning('text');",
+            None,
+            None,
+        ),
         ("var a; [a] = [0];", None, None),
         ("var a; ({a} = {});", None, None),
         ("var a; ({b: a} = {});", None, None),
         ("var obj; [obj.a, obj.b] = [0, 1];", None, None),
-        ("URLSearchParams;", None, Some(serde_json::json!({"env": { "browser": true }}))),
+        (
+            "URLSearchParams;",
+            None,
+            Some(serde_json::json!({"env": { "browser": true }})),
+        ),
         (
             "URLSearchParams;",
             None,
@@ -157,16 +189,48 @@ fn test() {
                 serde_json::json!({"env": { "browser": false }, "globals": { "URLSearchParams": "readonly" }}),
             ),
         ),
-        ("Intl;", None, Some(serde_json::json!({"env": { "browser": true }}))),
-        ("IntersectionObserver;", None, Some(serde_json::json!({"env": { "browser": true }}))),
-        ("Credential;", None, Some(serde_json::json!({"env": { "browser": true }}))),
-        ("requestIdleCallback;", None, Some(serde_json::json!({"env": { "browser": true }}))),
-        ("customElements;", None, Some(serde_json::json!({"env": { "browser": true }}))),
-        ("PromiseRejectionEvent;", None, Some(serde_json::json!({"env": { "browser": true }}))),
-        ("(foo, bar) => { foo ||= WeakRef; bar ??= FinalizationRegistry; }", None, None),
+        (
+            "Intl;",
+            None,
+            Some(serde_json::json!({"env": { "browser": true }})),
+        ),
+        (
+            "IntersectionObserver;",
+            None,
+            Some(serde_json::json!({"env": { "browser": true }})),
+        ),
+        (
+            "Credential;",
+            None,
+            Some(serde_json::json!({"env": { "browser": true }})),
+        ),
+        (
+            "requestIdleCallback;",
+            None,
+            Some(serde_json::json!({"env": { "browser": true }})),
+        ),
+        (
+            "customElements;",
+            None,
+            Some(serde_json::json!({"env": { "browser": true }})),
+        ),
+        (
+            "PromiseRejectionEvent;",
+            None,
+            Some(serde_json::json!({"env": { "browser": true }})),
+        ),
+        (
+            "(foo, bar) => { foo ||= WeakRef; bar ??= FinalizationRegistry; }",
+            None,
+            None,
+        ),
         ("class C extends C {}", None, None),
         // "/*global b:false*/ function f() { b = 1; }",
-        ("function f() { b = 1; }", None, Some(serde_json::json!({"globals": { "b": false } }))),
+        (
+            "function f() { b = 1; }",
+            None,
+            Some(serde_json::json!({"globals": { "b": false } })),
+        ),
         // "/*global b:false*/ function f() { b++; }",
         // "/*global b*/ b = 1;",
         // "/*global b:false*/ var b = 1;",
@@ -201,13 +265,29 @@ fn test() {
         // arguments should not be reported in regular functions
         ("function test() { return arguments; }", None, None),
         ("var fn = function() { return arguments[0]; };", None, None),
-        ("const obj = { method() { return arguments.length; } };", None, None),
+        (
+            "const obj = { method() { return arguments.length; } };",
+            None,
+            None,
+        ),
         // arguments in nested block scope within function should not be reported
         ("function correct(a) { { return arguments; } }", None, None),
-        ("function test() { if (true) { return arguments[0]; } }", None, None),
-        ("function test() { for (let i = 0; i < 1; i++) { return arguments; } }", None, None),
+        (
+            "function test() { if (true) { return arguments[0]; } }",
+            None,
+            None,
+        ),
+        (
+            "function test() { for (let i = 0; i < 1; i++) { return arguments; } }",
+            None,
+            None,
+        ),
         // ("AsyncDisposableStack; DisposableStack; SuppressedError", None, None), / es2026
-        ("function resolve<T>(path: string): T { return { path } as T; }", None, None),
+        (
+            "function resolve<T>(path: string): T { return { path } as T; }",
+            None,
+            None,
+        ),
         ("let xyz: NodeListOf<HTMLElement>", None, None),
         ("type Foo = Record<string, unknown>;", None, None),
         (
@@ -226,7 +306,11 @@ fn test() {
         // ("Intl;", None, None), builtin
         ("require(\"a\");", None, None),
         ("var React; React.render(<img attr={a} />);", None, None),
-        ("var React, App; React.render(<App attr={a} />);", None, None),
+        (
+            "var React, App; React.render(<App attr={a} />);",
+            None,
+            None,
+        ),
         ("[a] = [0];", None, None),
         ("({a} = {});", None, None),
         ("({b: a} = {});", None, None),
@@ -235,10 +319,18 @@ fn test() {
         ("class C { static { a; } }", None, None),
         ("class C { static { { let a; } a; } }", None, None),
         ("class C { static { { function a() {} } a; } }", None, None),
-        ("class C { static { function foo() { var a; }  a; } }", None, None),
+        (
+            "class C { static { function foo() { var a; }  a; } }",
+            None,
+            None,
+        ),
         ("class C { static { var a; } static { a; } }", None, None),
         ("class C { static { let a; } static { a; } }", None, None),
-        ("class C { static { function a(){} } static { a; } }", None, None),
+        (
+            "class C { static { function a(){} } static { a; } }",
+            None,
+            None,
+        ),
         ("class C { static { var a; } foo() { a; } }", None, None),
         ("class C { static { let a; } foo() { a; } }", None, None),
         ("class C { static { var a; } [a]; }", None, None),
@@ -247,7 +339,11 @@ fn test() {
         ("class C { static { var a; } } a;", None, None),
         ("toString()", None, None),
         ("hasOwnProperty()", None, None),
-        ("export class Foo{ bar: notDefined; }; const t = r + 1;", None, None),
+        (
+            "export class Foo{ bar: notDefined; }; const t = r + 1;",
+            None,
+            None,
+        ),
         // arguments should be reported in arrow functions (they don't have their own arguments)
         ("const arrow = () => arguments;", None, None),
         // arguments outside functions should be reported
@@ -267,8 +363,16 @@ fn test() {
 
     Tester::new(NoUndef::NAME, NoUndef::PLUGIN, pass, fail).test();
 
-    let pass = vec![("foo", None, Some(serde_json::json!({ "globals": { "foo": "readonly" } })))];
-    let fail = vec![("foo", None, Some(serde_json::json!({ "globals": { "foo": "off" } })))];
+    let pass = vec![(
+        "foo",
+        None,
+        Some(serde_json::json!({ "globals": { "foo": "readonly" } })),
+    )];
+    let fail = vec![(
+        "foo",
+        None,
+        Some(serde_json::json!({ "globals": { "foo": "off" } })),
+    )];
 
     Tester::new(NoUndef::NAME, NoUndef::PLUGIN, pass, fail).test();
 }
@@ -278,7 +382,11 @@ fn test_repeated_unresolved_names() {
     use crate::tester::Tester;
 
     let pass = vec![
-        ("let value: Array<string>; Array; Array.isArray(value);", None, None),
+        (
+            "let value: Array<string>; Array; Array.isArray(value);",
+            None,
+            None,
+        ),
         (
             "customGlobal; function f() { customGlobal; } customGlobal;",
             None,

@@ -126,12 +126,19 @@ fn module_and_commonjs_member_positions_are_rewritten() {
         source_type,
         options("^_"),
     );
-    assert_eq!(actual, codegen("exports.e = require('pkg').t; let _local = 1;", source_type));
+    assert_eq!(
+        actual,
+        codegen("exports.e = require('pkg').t; let _local = 1;", source_type)
+    );
 }
 
 #[test]
 fn automatic_names_avoid_source_property_spellings() {
-    test("obj.e; obj.t; obj._foo; obj._bar;", "obj.e; obj.t; obj.r; obj.n;", options("^_"));
+    test(
+        "obj.e; obj.t; obj._foo; obj._bar;",
+        "obj.e; obj.t; obj.r; obj.n;",
+        options("^_"),
+    );
 }
 
 #[test]
@@ -151,7 +158,10 @@ fn property_key_annotations_survive_codegen_before_mangling() {
     assert!(parsed.diagnostics.is_empty(), "{:?}", parsed.diagnostics);
     let rendered = Codegen::new()
         .with_options(CodegenOptions {
-            comments: CommentOptions { normal: false, ..CommentOptions::default() },
+            comments: CommentOptions {
+                normal: false,
+                ..CommentOptions::default()
+            },
             ..CodegenOptions::default()
         })
         .build(&parsed.program)
@@ -171,9 +181,15 @@ fn property_key_annotations_survive_codegen_before_mangling() {
 #[test]
 fn key_annotations_do_not_rewrite_directives() {
     let source_type = SourceType::mjs();
-    let (actual, cache) =
-        mangle_with("/* @__KEY__ */ '_directive'; obj._field;", source_type, options("^_"));
-    assert_eq!(actual, codegen("/* @__KEY__ */ '_directive'; obj.e;", source_type));
+    let (actual, cache) = mangle_with(
+        "/* @__KEY__ */ '_directive'; obj._field;",
+        source_type,
+        options("^_"),
+    );
+    assert_eq!(
+        actual,
+        codegen("/* @__KEY__ */ '_directive'; obj.e;", source_type)
+    );
     assert!(cache.get("_directive").is_none());
     assert_eq!(cache.get("_field").and_then(Option::as_deref), Some("e"));
 }
@@ -197,38 +213,64 @@ fn exact_reservations_do_not_grow_into_a_denylist() {
 fn exclude_keeps_selected_names_unchanged() {
     let mut excluded = options("^_");
     excluded.exclude = Some(lazy_regex::Regex::new("^_keep(?:One|Two)$").unwrap());
-    test("obj._keepOne; obj._mangle;", "obj._keepOne; obj.e;", excluded);
+    test(
+        "obj._keepOne; obj._mangle;",
+        "obj._keepOne; obj.e;",
+        excluded,
+    );
 }
 
 #[test]
 fn frequency_controls_assignment() {
-    test("a._often; b._rare; c._often; d._often;", "a.e; b.t; c.e; d.e;", options("^_"));
+    test(
+        "a._often; b._rare; c._often; d._often;",
+        "a.e; b.t; c.e; d.e;",
+        options("^_"),
+    );
 }
 
 #[test]
 fn cache_is_authoritative_and_duplicate_targets_are_allowed() {
     let mut options = options("^_");
-    options.cache.insert("_first".into(), Some("A".into())).unwrap();
-    options.cache.insert("_second".into(), Some("A".into())).unwrap();
+    options
+        .cache
+        .insert("_first".into(), Some("A".into()))
+        .unwrap();
+    options
+        .cache
+        .insert("_second".into(), Some("A".into()))
+        .unwrap();
     options.cache.insert("_keep".into(), None).unwrap();
     let (actual, cache) = mangle_with(
         "obj._first; obj._second; obj._keep; obj._automatic;",
         SourceType::mjs(),
         options,
     );
-    assert_eq!(actual, codegen("obj.A; obj.A; obj._keep; obj.e;", SourceType::mjs()));
+    assert_eq!(
+        actual,
+        codegen("obj.A; obj.A; obj._keep; obj.e;", SourceType::mjs())
+    );
     assert_eq!(cache.get("_first").and_then(Option::as_deref), Some("A"));
     assert_eq!(cache.get("_second").and_then(Option::as_deref), Some("A"));
     assert_eq!(cache.get("_keep"), Some(&None));
-    assert_eq!(cache.get("_automatic").and_then(Option::as_deref), Some("e"));
+    assert_eq!(
+        cache.get("_automatic").and_then(Option::as_deref),
+        Some("e")
+    );
 }
 
 #[test]
 fn cache_targets_are_not_remapped_during_rewrite() {
     let mut options = options("^_");
     options.mangle_quoted = true;
-    options.cache.insert("_first".into(), Some("_second".into())).unwrap();
-    options.cache.insert("_second".into(), Some("final".into())).unwrap();
+    options
+        .cache
+        .insert("_first".into(), Some("_second".into()))
+        .unwrap();
+    options
+        .cache
+        .insert("_second".into(), Some("final".into()))
+        .unwrap();
     test(
         "obj._first; obj['_first']; ({ '_first': 1 }); helper(/* @__KEY__ */ '_first'); obj._second;",
         "obj._second; obj._second; ({ _second: 1 }); helper(/* @__KEY__ */ '_second'); obj.final;",
@@ -247,7 +289,10 @@ fn cache_cycles_are_applied_once() {
 #[test]
 fn non_matching_cache_entries_are_inert_and_preserved() {
     let mut options = options("^_");
-    options.cache.insert("public".into(), Some("A".into())).unwrap();
+    options
+        .cache
+        .insert("public".into(), Some("A".into()))
+        .unwrap();
     let (actual, cache) = mangle_with("obj.public; obj._private;", SourceType::mjs(), options);
     assert_eq!(actual, codegen("obj.public; obj.e;", SourceType::mjs()));
     assert_eq!(cache.get("public").and_then(Option::as_deref), Some("A"));
@@ -256,7 +301,10 @@ fn non_matching_cache_entries_are_inert_and_preserved() {
 #[test]
 fn automatic_names_avoid_unchanged_and_cached_spellings() {
     let mut options = options("^_");
-    options.cache.insert("unused".into(), Some("e".into())).unwrap();
+    options
+        .cache
+        .insert("unused".into(), Some("e".into()))
+        .unwrap();
     test("obj._foo; obj['t'];", "obj.n; obj['t'];", options);
 }
 
@@ -274,7 +322,10 @@ fn cache_keys_occupy_the_automatic_output_namespace_across_calls() {
     test("obj.e; obj.foo;", "obj.e; obj.t;", second_options);
 
     let mut inert_cache_key = options("^_");
-    inert_cache_key.cache.insert("e".into(), Some("A".into())).unwrap();
+    inert_cache_key
+        .cache
+        .insert("e".into(), Some("A".into()))
+        .unwrap();
     test("obj._foo;", "obj.t;", inert_cache_key);
 }
 
@@ -286,7 +337,13 @@ fn jsx_properties_are_rewritten_but_namespaces_are_not() {
         source_type,
         options("^_"),
     );
-    assert_eq!(actual, codegen("const x = <Components.e t={1} ns:_keep={2} />;", source_type));
+    assert_eq!(
+        actual,
+        codegen(
+            "const x = <Components.e t={1} ns:_keep={2} />;",
+            source_type
+        )
+    );
 }
 
 #[test]
@@ -327,7 +384,11 @@ fn debug_names_are_readable() {
 
     let mut collision = options("^_");
     collision.debug = true;
-    test("obj['_$_field$_']; obj._field;", "obj['_$_field$_']; obj._$_field$1$_;", collision);
+    test(
+        "obj['_$_field$_']; obj._field;",
+        "obj['_$_field$_']; obj._$_field$1$_;",
+        collision,
+    );
 
     let mut non_identifier = options(".");
     non_identifier.debug = true;
@@ -337,10 +398,16 @@ fn debug_names_are_readable() {
 
 #[test]
 fn assignment_is_deterministic_for_equal_frequencies() {
-    let (_, forward) =
-        mangle_with("obj._alpha; obj._beta; obj._gamma;", SourceType::mjs(), options("^_"));
-    let (_, reverse) =
-        mangle_with("obj._gamma; obj._beta; obj._alpha;", SourceType::mjs(), options("^_"));
+    let (_, forward) = mangle_with(
+        "obj._alpha; obj._beta; obj._gamma;",
+        SourceType::mjs(),
+        options("^_"),
+    );
+    let (_, reverse) = mangle_with(
+        "obj._gamma; obj._beta; obj._alpha;",
+        SourceType::mjs(),
+        options("^_"),
+    );
     assert_eq!(forward, reverse);
 }
 
@@ -385,15 +452,22 @@ fn eval_function_and_with_do_not_disable_property_mangling() {
     let (actual, _) = mangle_with(source, source_type, options("^_"));
     assert_eq!(
         actual,
-        codegen("eval('dynamic'); Function('return 0'); with (obj) obj.e;", source_type)
+        codegen(
+            "eval('dynamic'); Function('return 0'); with (obj) obj.e;",
+            source_type
+        )
     );
 }
 
 #[test]
 fn rewrite_happens_before_compression_erases_quotes() {
     let allocator = Allocator::default();
-    let parsed =
-        Parser::new(&allocator, "globalThis._foo; globalThis['_foo'];", SourceType::mjs()).parse();
+    let parsed = Parser::new(
+        &allocator,
+        "globalThis._foo; globalThis['_foo'];",
+        SourceType::mjs(),
+    )
+    .parse();
     let mut program = parsed.program;
     let result = Minifier::new(MinifierOptions {
         mangle: None,
@@ -401,7 +475,10 @@ fn rewrite_happens_before_compression_erases_quotes() {
         compress: Some(CompressOptions::default()),
     })
     .minify(&allocator, &mut program);
-    let actual = Codegen::new().with_scoping(result.scoping).build(&program).code;
+    let actual = Codegen::new()
+        .with_scoping(result.scoping)
+        .build(&program)
+        .code;
     assert!(actual.contains("globalThis.e"), "{actual}");
     assert!(actual.contains("globalThis._foo"), "{actual}");
 }
@@ -422,7 +499,10 @@ fn property_identifier_and_compression_pipeline_runs_together() {
         compress: Some(CompressOptions::default()),
     })
     .minify(&allocator, &mut program);
-    let actual = Codegen::new().with_scoping(result.scoping).build(&program).code;
+    let actual = Codegen::new()
+        .with_scoping(result.scoping)
+        .build(&program)
+        .code;
     assert!(!actual.contains("_field"), "{actual}");
     assert!(!actual.contains("_local"), "{actual}");
     assert!(actual.matches(".e").count() >= 2, "{actual}");
@@ -444,10 +524,16 @@ fn compression_does_not_revisit_folded_computed_keys() {
         compress: Some(CompressOptions::default()),
     })
     .minify(&allocator, &mut program);
-    let actual = Codegen::new().with_scoping(result.scoping).build(&program).code;
+    let actual = Codegen::new()
+        .with_scoping(result.scoping)
+        .build(&program)
+        .code;
     assert_eq!(
         actual,
-        codegen("export const o = { foo_: 1 }; export const v = o.e;", SourceType::mjs())
+        codegen(
+            "export const o = { foo_: 1 }; export const v = o.e;",
+            SourceType::mjs()
+        )
     );
 }
 
@@ -467,10 +553,16 @@ fn automatic_names_avoid_keys_materialized_by_compression() {
         compress: Some(CompressOptions::default()),
     })
     .minify(&allocator, &mut program);
-    let actual = Codegen::new().with_scoping(result.scoping).build(&program).code;
+    let actual = Codegen::new()
+        .with_scoping(result.scoping)
+        .build(&program)
+        .code;
     assert_eq!(
         actual,
-        codegen("export function f(obj) { return obj.e + obj.t + obj.t; }", SourceType::mjs())
+        codegen(
+            "export function f(obj) { return obj.e + obj.t + obj.t; }",
+            SourceType::mjs()
+        )
     );
 }
 
@@ -486,9 +578,12 @@ impl VisitMut<'_> for ZeroSpans {
 #[test]
 fn duplicated_spans_do_not_skip_property_rewrites() {
     let allocator = Allocator::default();
-    let parsed =
-        Parser::new(&allocator, "x = { _a: 1, _b: 2 }; use_(x._a, x._b);", SourceType::mjs())
-            .parse();
+    let parsed = Parser::new(
+        &allocator,
+        "x = { _a: 1, _b: 2 }; use_(x._a, x._b);",
+        SourceType::mjs(),
+    )
+    .parse();
     let mut program = parsed.program;
     ZeroSpans.visit_program(&mut program);
 
@@ -507,12 +602,16 @@ fn duplicated_spans_do_not_skip_property_rewrites() {
 fn one_assignment_can_be_shared_across_programs() {
     let allocator_a = Allocator::default();
     let allocator_b = Allocator::default();
-    let mut program_a =
-        Parser::new(&allocator_a, "a._shared; a._local;", SourceType::mjs()).parse().program;
-    let mut program_b =
-        Parser::new(&allocator_b, "b._shared; b._shared; b['_quoted'];", SourceType::mjs())
-            .parse()
-            .program;
+    let mut program_a = Parser::new(&allocator_a, "a._shared; a._local;", SourceType::mjs())
+        .parse()
+        .program;
+    let mut program_b = Parser::new(
+        &allocator_b,
+        "b._shared; b._shared; b['_quoted'];",
+        SourceType::mjs(),
+    )
+    .parse()
+    .program;
 
     let mut mangler = PropertyMangler::new_in(options("^_"), &allocator_a);
     mangler.collect(&program_a);
@@ -521,7 +620,10 @@ fn one_assignment_can_be_shared_across_programs() {
     mangler.rewrite(&mut program_a);
     mangler.rewrite(&mut program_b);
 
-    assert_eq!(Codegen::new().build(&program_a).code, codegen("a.e; a.t;", SourceType::mjs()));
+    assert_eq!(
+        Codegen::new().build(&program_a).code,
+        codegen("a.e; a.t;", SourceType::mjs())
+    );
     assert_eq!(
         Codegen::new().build(&program_b).code,
         codegen("b.e; b.e; b['_quoted'];", SourceType::mjs())
@@ -532,12 +634,16 @@ fn one_assignment_can_be_shared_across_programs() {
 fn independently_collected_programs_can_be_merged_before_assignment() {
     let allocator_a = Allocator::default();
     let allocator_b = Allocator::default();
-    let mut program_a =
-        Parser::new(&allocator_a, "a._shared; a._local;", SourceType::mjs()).parse().program;
-    let mut program_b =
-        Parser::new(&allocator_b, "b._shared; b._shared; b['_quoted'];", SourceType::mjs())
-            .parse()
-            .program;
+    let mut program_a = Parser::new(&allocator_a, "a._shared; a._local;", SourceType::mjs())
+        .parse()
+        .program;
+    let mut program_b = Parser::new(
+        &allocator_b,
+        "b._shared; b._shared; b['_quoted'];",
+        SourceType::mjs(),
+    )
+    .parse()
+    .program;
 
     let options = options("^_");
     let collected_a = PropertyMangleCollection::from_program(&options, &program_a, &allocator_a);
@@ -550,7 +656,10 @@ fn independently_collected_programs_can_be_merged_before_assignment() {
     mangler.rewrite(&mut program_a);
     mangler.rewrite(&mut program_b);
 
-    assert_eq!(Codegen::new().build(&program_a).code, codegen("a.e; a.t;", SourceType::mjs()));
+    assert_eq!(
+        Codegen::new().build(&program_a).code,
+        codegen("a.e; a.t;", SourceType::mjs())
+    );
     assert_eq!(
         Codegen::new().build(&program_b).code,
         codegen("b.e; b.e; b['_quoted'];", SourceType::mjs())

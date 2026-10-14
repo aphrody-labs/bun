@@ -146,13 +146,20 @@ impl<'a> ClassProperties<'a> {
         // Debug checks that we're removing what we think we are
         #[cfg(debug_assertions)]
         {
-            let PropertyKey::AssignmentExpression(assign_expr) = &prop.key else { unreachable!() };
+            let PropertyKey::AssignmentExpression(assign_expr) = &prop.key else {
+                unreachable!()
+            };
             assert!(assign_expr.span.is_empty());
             let AssignmentTarget::AssignmentTargetIdentifier(ident) = &assign_expr.left else {
                 unreachable!();
             };
             assert!(ident.name.starts_with('_'));
-            assert!(ctx.scoping().get_reference(ident.reference_id()).symbol_id().is_some());
+            assert!(
+                ctx.scoping()
+                    .get_reference(ident.reference_id())
+                    .symbol_id()
+                    .is_some()
+            );
             assert!(ident.span.is_empty());
             assert!(prop.value.is_none());
         }

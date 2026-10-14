@@ -35,7 +35,9 @@ pub fn is_agent() -> bool {
 
 fn detect_agent_from_env(env: impl Fn(&str) -> Option<OsString>) -> Option<AgentInfo> {
     if let Some(ai_agent) = env_string(&env, "AI_AGENT") {
-        return Some(AgentInfo::Other(ai_agent.cow_to_ascii_lowercase().into_owned()));
+        return Some(AgentInfo::Other(
+            ai_agent.cow_to_ascii_lowercase().into_owned(),
+        ));
     }
 
     if has_any_env(&env, &["CLAUDECODE", "CLAUDE_CODE"]) {
@@ -66,11 +68,14 @@ fn detect_agent_from_env(env: impl Fn(&str) -> Option<OsString>) -> Option<Agent
 }
 
 fn has_any_env(env: &impl Fn(&str) -> Option<OsString>, keys: &[&str]) -> bool {
-    keys.iter().any(|key| env(key).is_some_and(|value| !value.is_empty()))
+    keys.iter()
+        .any(|key| env(key).is_some_and(|value| !value.is_empty()))
 }
 
 fn env_string(env: &impl Fn(&str) -> Option<OsString>, key: &str) -> Option<String> {
-    env(key).filter(|value| !value.is_empty()).map(|value| value.to_string_lossy().into_owned())
+    env(key)
+        .filter(|value| !value.is_empty())
+        .map(|value| value.to_string_lossy().into_owned())
 }
 
 fn env_contains(env: &impl Fn(&str) -> Option<OsString>, key: &str, needle: &str) -> bool {
@@ -149,8 +154,14 @@ mod tests {
 
     #[test]
     fn detects_agent_env_matchers() {
-        assert_eq!(detect(&[("PATH", "/usr/bin:/home/me/.pi/agent/bin")]), Some(AgentInfo::Pi));
-        assert_eq!(detect(&[("PATH", r"C:\Users\me\.pi\agent\bin")]), Some(AgentInfo::Pi));
+        assert_eq!(
+            detect(&[("PATH", "/usr/bin:/home/me/.pi/agent/bin")]),
+            Some(AgentInfo::Pi)
+        );
+        assert_eq!(
+            detect(&[("PATH", r"C:\Users\me\.pi\agent\bin")]),
+            Some(AgentInfo::Pi)
+        );
         assert_eq!(detect(&[("EDITOR", "devin")]), Some(AgentInfo::Devin));
         assert_eq!(detect(&[("TERM_PROGRAM", "kiro")]), Some(AgentInfo::Kiro));
     }

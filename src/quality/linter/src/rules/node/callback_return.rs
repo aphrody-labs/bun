@@ -32,7 +32,11 @@ struct CallbackNames(Vec<CompactStr>);
 
 impl Default for CallbackReturn {
     fn default() -> Self {
-        Self(Box::new(CallbackNames(vec!["callback".into(), "cb".into(), "next".into()])))
+        Self(Box::new(CallbackNames(vec![
+            "callback".into(),
+            "cb".into(),
+            "next".into(),
+        ])))
     }
 }
 
@@ -230,11 +234,16 @@ fn find_closest_function_parent<'a, 'b>(
     ast_node: &AstNode<'a>,
     ctx: &'b LintContext<'a>,
 ) -> Option<&'b AstNode<'a>> {
-    ctx.nodes().ancestors(ast_node.id()).find(|parent| is_function_like(&parent.kind()))
+    ctx.nodes()
+        .ancestors(ast_node.id())
+        .find(|parent| is_function_like(&parent.kind()))
 }
 
 fn is_function_like(kind: &AstKind) -> bool {
-    matches!(kind, AstKind::Function(_) | AstKind::ArrowFunctionExpression(_))
+    matches!(
+        kind,
+        AstKind::Function(_) | AstKind::ArrowFunctionExpression(_)
+    )
 }
 
 fn is_callback_expression(call_expr: &CallExpression, parent_node: &Statement) -> bool {
@@ -263,8 +272,14 @@ fn test() {
 
     let pass = vec![
         ("function a(err) { if (err) return callback (err); }", None),
-        ("function a(err) { if (err) return callback (err); callback(); }", None),
-        ("function a(err) { if (err) { return callback (err); } callback(); }", None),
+        (
+            "function a(err) { if (err) return callback (err); callback(); }",
+            None,
+        ),
+        (
+            "function a(err) { if (err) { return callback (err); } callback(); }",
+            None,
+        ),
         (
             "function a(err) { if (err) { return /* confusing comment */ callback (err); } callback(); }",
             None,
@@ -276,18 +291,39 @@ fn test() {
              callback(); return; } }",
             None,
         ),
-        ("function x(err) { if (err) { callback(); return; } return callback(); }", None),
-        ("function x(err) { if (err) { return callback(); } else { return callback(); } }", None),
+        (
+            "function x(err) { if (err) { callback(); return; } return callback(); }",
+            None,
+        ),
+        (
+            "function x(err) { if (err) { return callback(); } else { return callback(); } }",
+            None,
+        ),
         (
             "function x(err) { if (err) { return callback(); } else if (x) { return callback(); } }",
             None,
         ),
-        ("function x(err) { if (err) return callback(); else return callback(); }", None),
+        (
+            "function x(err) { if (err) return callback(); else return callback(); }",
+            None,
+        ),
         ("function x(cb) { cb && cb(); }", None),
-        ("function x(next) { typeof next !== 'undefined' && next(); }", None),
-        ("function x(next) { if (typeof next === 'function')  { return next() } }", None),
-        ("function x() { switch(x) { case 'a': return next(); } }", None),
-        ("function x() { for(x = 0; x < 10; x++) { return next(); } }", None),
+        (
+            "function x(next) { typeof next !== 'undefined' && next(); }",
+            None,
+        ),
+        (
+            "function x(next) { if (typeof next === 'function')  { return next() } }",
+            None,
+        ),
+        (
+            "function x() { switch(x) { case 'a': return next(); } }",
+            None,
+        ),
+        (
+            "function x() { for(x = 0; x < 10; x++) { return next(); } }",
+            None,
+        ),
         ("function x() { while(x) { return next(); } }", None),
         ("function a(err) { if (err) { obj.method (err); } }", None),
         ("callback()", None),
@@ -299,10 +335,19 @@ fn test() {
         ("if (x) { callback(); }", None),
         ("var x = err => { if (err) { callback(); return; } }", None),
         ("var x = err => callback(err)", None),
-        ("var x = err => { setTimeout( () => { callback(); }); }", None),
+        (
+            "var x = err => { setTimeout( () => { callback(); }); }",
+            None,
+        ),
         ("class x { horse() { callback(); } } ", None),
-        ("class x { horse() { if (err) { return callback(); } callback(); } } ", None),
-        ("function a(err) { if (err) { callback(err) } }", Some(serde_json::json!([["cb"]]))),
+        (
+            "class x { horse() { if (err) { return callback(); } callback(); } } ",
+            None,
+        ),
+        (
+            "function a(err) { if (err) { callback(err) } }",
+            Some(serde_json::json!([["cb"]])),
+        ),
         (
             "function a(err) { if (err) { callback(err) } next(); }",
             Some(serde_json::json!([["cb", "next"]])),
@@ -321,7 +366,10 @@ fn test() {
         ),
         (
             "function a(err) { if (err) { return obj.prop.method(err); } otherObj.prop.method() }",
-            Some(serde_json::json!([["obj.prop.method", "otherObj.prop.method"]])),
+            Some(serde_json::json!([[
+                "obj.prop.method",
+                "otherObj.prop.method"
+            ]])),
         ),
         (
             "function a(err) { if (err) { callback(err); } }",
@@ -369,20 +417,35 @@ fn test() {
             "function a(err) { if (err) { obj().method(err); } obj.method(); }",
             Some(serde_json::json!([["obj.method"]])),
         ),
-        ("function x(err) { if (err) { setTimeout(callback, 0); } callback(); }", None),
+        (
+            "function x(err) { if (err) { setTimeout(callback, 0); } callback(); }",
+            None,
+        ),
         (
             "function x(err) { if (err) { process.nextTick(function(err) { callback(); }); } callback(); }",
             None,
         ),
         ("function a(err) { (callback(err)); }", None),
-        ("function x(err) { if (err) { (callback()); return; } }", None),
+        (
+            "function x(err) { if (err) { (callback()); return; } }",
+            None,
+        ),
     ];
 
     let fail = vec![
         ("function a(err) { if (err) { callback (err); } }", None),
-        ("function a(callback) { if (typeof callback !== 'undefined') { callback(); } }", None),
-        ("function a(callback) { if (typeof callback !== 'undefined') callback();  }", None),
-        ("function a(callback) { if (err) { callback(); horse && horse(); } }", None),
+        (
+            "function a(callback) { if (typeof callback !== 'undefined') { callback(); } }",
+            None,
+        ),
+        (
+            "function a(callback) { if (typeof callback !== 'undefined') callback();  }",
+            None,
+        ),
+        (
+            "function a(callback) { if (err) { callback(); horse && horse(); } }",
+            None,
+        ),
         ("var x = (err) => { if (err) { callback (err); } }", None),
         ("var x = { x(err) { if (err) { callback (err); } } }", None),
         (
@@ -391,10 +454,16 @@ fn test() {
              callback(err); } }",
             None,
         ),
-        ("var x = { x(err) { if (err) { callback && callback (err); } } }", None),
+        (
+            "var x = { x(err) { if (err) { callback && callback (err); } } }",
+            None,
+        ),
         ("function a(err) { callback (err); callback(); }", None),
         ("function a(err) { callback (err); horse(); }", None),
-        ("function a(err) { if (err) { callback (err); horse(); return; } }", None),
+        (
+            "function a(err) { if (err) { callback (err); horse(); return; } }",
+            None,
+        ),
         ("var a = (err) => { callback (err); callback(); }", None),
         (
             "function a(err) { if (err) { callback (err); } else if (x) { callback(err); return; } }",
@@ -408,16 +477,31 @@ fn test() {
             return callback(); } }",
             None,
         ),
-        ("class x { horse() { if (err) { callback(); } callback(); } } ", None),
-        ("function x(err) { if (err) { callback() } else { callback() } }", None),
-        ("function x(err) { if (err) return callback(); else callback(); }", None),
+        (
+            "class x { horse() { if (err) { callback(); } callback(); } } ",
+            None,
+        ),
+        (
+            "function x(err) { if (err) { callback() } else { callback() } }",
+            None,
+        ),
+        (
+            "function x(err) { if (err) return callback(); else callback(); }",
+            None,
+        ),
         ("() => { if (x) { callback(); } }", None),
-        ("function b() { switch(x) { case 'horse': callback(); } }", None),
+        (
+            "function b() { switch(x) { case 'horse': callback(); } }",
+            None,
+        ),
         (
             "function a() { switch(x) { case 'horse': move(); } }",
             Some(serde_json::json!([["move"]])),
         ),
-        ("var x = function() { while(x) { move(); } }", Some(serde_json::json!([["move"]]))),
+        (
+            "var x = function() { while(x) { move(); } }",
+            Some(serde_json::json!([["move"]])),
+        ),
         (
             "function x() { for (var i = 0; i < 10; i++) { move(); } }",
             Some(serde_json::json!([["move"]])),
@@ -436,7 +520,10 @@ fn test() {
         ),
         (
             "function a(err) { if (err) { obj.prop.method(err); } otherObj.prop.method() }",
-            Some(serde_json::json!([["obj.prop.method", "otherObj.prop.method"]])),
+            Some(serde_json::json!([[
+                "obj.prop.method",
+                "otherObj.prop.method"
+            ]])),
         ),
         (
             "function a(err) { if (err) { /*comment*/obj.method(err); } }",

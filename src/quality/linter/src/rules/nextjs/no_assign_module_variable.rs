@@ -104,6 +104,11 @@ fn test() {
 			      ",
     ];
 
-    Tester::new(NoAssignModuleVariable::NAME, NoAssignModuleVariable::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        NoAssignModuleVariable::NAME,
+        NoAssignModuleVariable::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

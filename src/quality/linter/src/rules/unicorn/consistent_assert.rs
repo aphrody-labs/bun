@@ -11,7 +11,9 @@ use crate::{AstNode, context::LintContext, rule::Rule};
 
 fn consistent_assert_diagnostic(assert_identifier: &str, span: Span) -> OxcDiagnostic {
     OxcDiagnostic::warn("Inconsistent assert usage.")
-        .with_help(format!("Prefer `{assert_identifier}.ok(...)` over `{assert_identifier}(...)`."))
+        .with_help(format!(
+            "Prefer `{assert_identifier}.ok(...)` over `{assert_identifier}(...)`."
+        ))
         .with_label(span)
 }
 
@@ -56,7 +58,9 @@ declare_oxc_lint!(
 
 impl Rule for ConsistentAssert {
     fn run<'a>(&self, node: &AstNode<'a>, ctx: &LintContext<'a>) {
-        let AstKind::ImportDeclaration(import_decl) = node.kind() else { return };
+        let AstKind::ImportDeclaration(import_decl) = node.kind() else {
+            return;
+        };
 
         if !is_assert_module_import(import_decl) {
             return;

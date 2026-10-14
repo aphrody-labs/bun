@@ -29,7 +29,11 @@ pub(super) unsafe fn jsx_names_equal_fast(
     {
         let x = ptr::read_unaligned(src.add(a) as *const u64);
         let y = ptr::read_unaligned(src.add(b) as *const u64);
-        let mask = if len == 8 { !0u64 } else { (1u64 << (len * 8)) - 1 };
+        let mask = if len == 8 {
+            !0u64
+        } else {
+            (1u64 << (len * 8)) - 1
+        };
         if (x ^ y) & mask != 0 {
             return false;
         }
@@ -60,7 +64,11 @@ pub(super) unsafe fn jsx_skip_trivia_fast(src: *const u8, n: usize, mut i: usize
         i += 1;
     }
     let c = *src.add(i);
-    if i < n && (is_ws(c) || c == b'/' || c >= 0x80) { jsx_skip_trivia(src, n, i) } else { i }
+    if i < n && (is_ws(c) || c == b'/' || c >= 0x80) {
+        jsx_skip_trivia(src, n, i)
+    } else {
+        i
+    }
 }
 
 pub(super) unsafe fn jsx_skip_trivia(src: *const u8, n: usize, mut i: usize) -> usize {
@@ -134,7 +142,11 @@ unsafe fn jsx_name_next(src: *const u8, i: usize, lim: usize, after_sep: bool) -
         return i;
     }
     let t = jsx_skip_trivia(src, lim, i);
-    if after_sep || (t < lim && matches!(*src.add(t), b'.' | b':')) { t } else { i }
+    if after_sep || (t < lim && matches!(*src.add(t), b'.' | b':')) {
+        t
+    } else {
+        i
+    }
 }
 
 pub(super) unsafe fn jsx_name_end(src: *const u8, n: usize, mut i: usize) -> usize {

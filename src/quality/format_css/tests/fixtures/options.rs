@@ -22,8 +22,11 @@ pub fn apply_css_options(options: &mut CssFormatOptions, json: &OptionSet) {
             }
             "trailingComma" => {
                 if let Some(s) = value.as_str() {
-                    options.trailing_commas =
-                        if s == "none" { TrailingCommas::Never } else { TrailingCommas::Always };
+                    options.trailing_commas = if s == "none" {
+                        TrailingCommas::Never
+                    } else {
+                        TrailingCommas::Always
+                    };
                 }
             }
             _ => {}

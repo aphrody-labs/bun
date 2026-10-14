@@ -59,7 +59,10 @@ fn main() {
             pattern_text,
             Some(flags_text),
             // +1 for added `/` in error reports
-            Options { pattern_span_offset: 1, ..Options::default() },
+            Options {
+                pattern_span_offset: 1,
+                ..Options::default()
+            },
         );
         let ret = parser.parse();
 

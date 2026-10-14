@@ -61,7 +61,13 @@ pub fn run<'a>(possible_jest_node: &PossibleJestNode<'a, '_>, ctx: &LintContext<
             let Expression::CallExpression(expr_call_expr) = mem_expr.object() else {
                 return;
             };
-            check_and_fix(call_expr, expr_call_expr, &parsed_expect_call, Some(mem_expr), ctx);
+            check_and_fix(
+                call_expr,
+                expr_call_expr,
+                &parsed_expect_call,
+                Some(mem_expr),
+                ctx,
+            );
         }
         Expression::CallExpression(expr_call_expr) => {
             check_and_fix(call_expr, expr_call_expr, &parsed_expect_call, None, ctx);

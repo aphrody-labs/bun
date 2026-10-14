@@ -35,10 +35,13 @@ pub fn check(host: &str, port: u16, key: &PublicKey, files: &[PathBuf]) -> Resul
     for file in &all {
         match russh::keys::check_known_hosts_path(host, port, key, file) {
             Ok(true) => return Ok(Verdict::Known),
-            Ok(false) => {},
+            Ok(false) => {}
             Err(russh::keys::Error::KeyChanged { line }) => {
-                return Ok(Verdict::Changed { file: file.clone(), line });
-            },
+                return Ok(Verdict::Changed {
+                    file: file.clone(),
+                    line,
+                });
+            }
             // An unreadable or malformed file must not let an unknown key through.
             Err(err) => return Err(err.into()),
         }
@@ -87,7 +90,7 @@ pub fn verify(config: &HostConfig, key: &PublicKey) -> Result<()> {
                     learn(host, config.port, key, file)?;
                 }
                 Ok(())
-            },
+            }
             StrictHostKeyChecking::No => Ok(()),
         },
     }
@@ -97,8 +100,10 @@ pub fn verify(config: &HostConfig, key: &PublicKey) -> Result<()> {
 mod tests {
     use super::*;
 
-    const KEY: &str = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJdD7y3aLq454yWBdwLWbieU1ebz9/cu7/QEXn9OIeZJ";
-    const OTHER: &str = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIA6rWI3G1sz07DnfFlrouTcysQlj2P+jpNSOEWD9OJ3X";
+    const KEY: &str =
+        "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJdD7y3aLq454yWBdwLWbieU1ebz9/cu7/QEXn9OIeZJ";
+    const OTHER: &str =
+        "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIA6rWI3G1sz07DnfFlrouTcysQlj2P+jpNSOEWD9OJ3X";
 
     #[test]
     fn learn_then_check_and_detect_change() {
@@ -108,11 +113,23 @@ mod tests {
         let key = PublicKey::from_openssh(KEY).unwrap();
         let other = PublicKey::from_openssh(OTHER).unwrap();
         let files = vec![file.clone()];
-        assert_eq!(check("example.test", 2222, &key, &files).unwrap(), Verdict::Unknown);
+        assert_eq!(
+            check("example.test", 2222, &key, &files).unwrap(),
+            Verdict::Unknown
+        );
         learn("example.test", 2222, &key, &file).unwrap();
-        assert_eq!(check("example.test", 2222, &key, &files).unwrap(), Verdict::Known);
-        assert!(matches!(check("example.test", 2222, &other, &files).unwrap(), Verdict::Changed { .. }));
-        assert_eq!(check("example.test", 22, &key, &files).unwrap(), Verdict::Unknown);
+        assert_eq!(
+            check("example.test", 2222, &key, &files).unwrap(),
+            Verdict::Known
+        );
+        assert!(matches!(
+            check("example.test", 2222, &other, &files).unwrap(),
+            Verdict::Changed { .. }
+        ));
+        assert_eq!(
+            check("example.test", 22, &key, &files).unwrap(),
+            Verdict::Unknown
+        );
         let _ = std::fs::remove_dir_all(&dir);
     }
 }

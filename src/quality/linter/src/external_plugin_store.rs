@@ -101,9 +101,10 @@ impl ExternalPluginStore {
         let newly_inserted = self.registered_plugin_paths.insert(plugin_path);
         assert!(newly_inserted, "register_plugin: plugin already registered");
 
-        let plugin_id = self
-            .plugins
-            .push(ExternalPlugin { name: plugin_name.clone(), rules: FxHashMap::default() });
+        let plugin_id = self.plugins.push(ExternalPlugin {
+            name: plugin_name.clone(),
+            rules: FxHashMap::default(),
+        });
         self.plugin_names.insert(plugin_name, plugin_id);
 
         assert!(
@@ -114,7 +115,10 @@ impl ExternalPluginStore {
         );
 
         for rule_name in rule_names {
-            let rule_id = self.rules.push(ExternalRule { name: rule_name.clone(), plugin_id });
+            let rule_id = self.rules.push(ExternalRule {
+                name: rule_name.clone(),
+                plugin_id,
+            });
             self.plugins[plugin_id].rules.insert(rule_name, rule_id);
         }
     }
@@ -127,15 +131,19 @@ impl ExternalPluginStore {
         rule_name: &str,
     ) -> Result<ExternalRuleId, ExternalRuleLookupError> {
         let plugin_id = *self.plugin_names.get(plugin_name).ok_or_else(|| {
-            ExternalRuleLookupError::PluginNotFound { plugin: plugin_name.to_string() }
+            ExternalRuleLookupError::PluginNotFound {
+                plugin: plugin_name.to_string(),
+            }
         })?;
 
-        self.plugins[plugin_id].rules.get(rule_name).copied().ok_or_else(|| {
-            ExternalRuleLookupError::RuleNotFound {
+        self.plugins[plugin_id]
+            .rules
+            .get(rule_name)
+            .copied()
+            .ok_or_else(|| ExternalRuleLookupError::RuleNotFound {
                 plugin: plugin_name.to_string(),
                 rule: rule_name.to_string(),
-            }
-        })
+            })
     }
 
     pub fn resolve_plugin_rule_names(
@@ -174,7 +182,9 @@ impl ExternalPluginStore {
         let json = serde_json::to_string(&ConfigSer::new(cwd, workspace_uri, self));
         match json {
             Ok(options_json) => (external_linter.setup_rule_configs)(options_json),
-            Err(err) => Err(format!("Failed to serialize external plugin options: {err}")),
+            Err(err) => Err(format!(
+                "Failed to serialize external plugin options: {err}"
+            )),
         }
     }
 }

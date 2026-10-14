@@ -23,8 +23,8 @@
  */
 
 import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
-import { join, relative } from "node:path";
+import { existsSync, linkSync, mkdirSync, readFileSync, statSync, unlinkSync, writeFileSync } from "node:fs";
+import { dirname, join, relative } from "node:path";
 import {
   inheritOrderFile,
   orderFileContext,
@@ -300,118 +300,176 @@ async function main(): Promise<void> {
     }
   } else {
     // Local: configure, then spawn ninja, one build of a build directory at a time.
-    const releaseLock = lockBuildDir(configOf(input).cfg.buildDir, line =>
-      process.stderr.write(`[build] ${line}
-`),
+    await withBuildDirectoryLock(
+      configOf(input).cfg.buildDir,
+      async () => {
+        const result = await configure(input);
+        if (!args.ninjaArgs.includes("-n")) {
+          for (const exe of [result.output.exe, result.output.strippedExe]) if (exe) unlockRunningExe(exe);
+        }
+
+        // Quiet one-liner when configure was a no-op — the full banner only
+        // prints when build.ninja changed. Timing matters: a regression here
+        // would otherwise be invisible. Suppressed for ninja's generator-
+        // rule replay (--config-file) since ninja's [N/M] already says
+        // "reconfigure" and doubling it is noise.
+        // Quiet mode: suppress build output unless the build fails. Enabled by
+        // --quiet or automatically when positionals are present (you want to see
+        // your test output, not a wall of [N/M] lines above it).
+        // Not with -n, -d <mode> or -v: what ninja prints is what those were asked for.
+        const quiet = (args.quiet || args.execArgs.length > 0) && !args.ninjaArgs.some(a => /^-[ndv]/.test(a));
+
+        // Configure summary. Full block only when build.ninja changed (new
+        // profile/flags/sources) — a no-op reconfigure, which happens every
+        // run, gets a one-liner. CI always full. Suppressed entirely in quiet
+        // mode.
+        if (!quiet) {
+          if (result.changed || result.cfg.ci) {
+            const o = result.output;
+            process.stderr.write(formatConfig(result.cfg, result.exe) + "\n\n");
+            process.stderr.write(
+              `${o.deps.length} deps, ${o.codegen?.all.length ?? 0} codegen, ${o.objects.length} objects in ${result.elapsed}ms\n\n`,
+            );
+          } else {
+            process.stderr.write(formatConfigUnchanged(result.exe, result.elapsed) + "\n");
+          }
+        }
+
+        if (args.configureOnly) {
+          // The report describes the build directory, so it needs no build: this is how to ask for it without one.
+          if (args.timings) reportTimings(result.cfg, t => process.stderr.write(t));
+          return;
+        }
+        // FD 3 sideband — only when interactive. stream.ts (wrapping deps and
+        // the cargo plan) writes live output there, bypassing ninja's per-job buffering.
+        // A human watching a terminal wants to see cmake configure spew and
+        // cargo's download progress in real time. A log file (CI) doesn't —
+        // that live output is noise (hundreds of `-- Looking for header.h`
+        // lines from cmake). When FD 3 isn't set up, stream.ts falls back to
+        // stdout which ninja buffers per-job: deps stay quiet until they
+        // finish or fail, failure logs stay compact.
+        //
+        // Ninja's subprocess spawn only touches FDs 0-2; higher fds inherit
+        // through posix_spawn/CreateProcessA. Passing our stderr fd (2) at
+        // index STREAM_FD dups it there for the whole ninja process tree.
+        //
+        // In quiet mode, capture to buffers instead — dumped only on failure.
+        const stdio: (number | "inherit" | "pipe")[] = quiet
+          ? ["inherit", "pipe", "pipe"]
+          : ["inherit", "inherit", "inherit"];
+        if (!quiet && interactive) {
+          stdio[STREAM_FD] = 2;
+        }
+        const ninja = spawnSync(result.ninja, ninjaArgv(result.cfg), {
+          stdio,
+          env: ninjaEnv(result.cfg, result.env),
+          // Captured output (quiet mode) can be tens of MB on a cold build; the default 1 MB maxBuffer ENOBUFSes.
+          maxBuffer: 1024 * 1024 * 1024,
+        });
+        if (ninja.error) {
+          const hint =
+            result.ninja === "ninja"
+              ? "Is ninja in your PATH?"
+              : "That is the ninja release the build pins. If the file is damaged, delete its directory and the next build fetches it again.";
+          process.stderr.write(`Failed to exec ${result.ninja}: ${ninja.error.message}\n${hint}\n`);
+          process.exit(127);
+        }
+        if (ninja.status !== 0) {
+          if (quiet) {
+            if (ninja.stdout) process.stderr.write(ninja.stdout);
+            if (ninja.stderr) process.stderr.write(ninja.stderr);
+          }
+          process.exit(ninja.status ?? 1);
+        }
+
+        if (args.timings) reportTimings(result.cfg, t => process.stderr.write(t));
+
+        if (args.execArgs.length === 0) {
+          // Closing line on success: when restat prunes most of the graph
+          // (local WebKit no-op shows `[1/555] build WebKit` then silence),
+          // it's not obvious ninja finished vs. stalled. This disambiguates.
+          // Targets named when explicit so it's clear what was actually built.
+          const what = args.ninjaTargets.length > 0 ? ` ${args.ninjaTargets.map(t => nameColor(t)).join(", ")}` : "";
+          status(`[build]${what} done`);
+          process.exit(0);
+        }
+
+        // Exec the built binary. result.output.exe is the linked (unstripped)
+        // binary — bun-debug for debug, bun-profile for release. That's the one
+        // you want for dev iteration (has symbols + assertions in debug).
+        const exe = result.output.exe;
+        const child = spawnSync(exe, args.execArgs, { stdio: "inherit", env: builtRuntimeEnvironment(exe) });
+        if (child.error) {
+          throw new BuildError(`Failed to exec ${exe}`, { cause: child.error });
+        }
+        // Signal death: re-raise so our parent sees the same signal (shells
+        // show "Segmentation fault" etc. based on this, not exit code).
+        if (child.signal) {
+          process.kill(process.pid, child.signal);
+          return;
+        }
+        process.exit(child.status ?? 0);
+      },
+      line => process.stderr.write(`[build] ${line}\n`),
     );
-    const result = await configure(input);
-    if (!args.ninjaArgs.includes("-n")) {
-      for (const exe of [result.output.exe, result.output.strippedExe]) if (exe) unlockRunningExe(exe);
-    }
-
-    // Quiet one-liner when configure was a no-op — the full banner only
-    // prints when build.ninja changed. Timing matters: a regression here
-    // would otherwise be invisible. Suppressed for ninja's generator-
-    // rule replay (--config-file) since ninja's [N/M] already says
-    // "reconfigure" and doubling it is noise.
-    // Quiet mode: suppress build output unless the build fails. Enabled by
-    // --quiet or automatically when positionals are present (you want to see
-    // your test output, not a wall of [N/M] lines above it).
-    // Not with -n, -d <mode> or -v: what ninja prints is what those were asked for.
-    const quiet = (args.quiet || args.execArgs.length > 0) && !args.ninjaArgs.some(a => /^-[ndv]/.test(a));
-
-    // Configure summary. Full block only when build.ninja changed (new
-    // profile/flags/sources) — a no-op reconfigure, which happens every
-    // run, gets a one-liner. CI always full. Suppressed entirely in quiet
-    // mode.
-    if (!quiet) {
-      if (result.changed || result.cfg.ci) {
-        const o = result.output;
-        process.stderr.write(formatConfig(result.cfg, result.exe) + "\n\n");
-        process.stderr.write(
-          `${o.deps.length} deps, ${o.codegen?.all.length ?? 0} codegen, ${o.objects.length} objects in ${result.elapsed}ms\n\n`,
-        );
-      } else {
-        process.stderr.write(formatConfigUnchanged(result.exe, result.elapsed) + "\n");
-      }
-    }
-
-    if (args.configureOnly) {
-      // The report describes the build directory, so it needs no build: this is how to ask for it without one.
-      if (args.timings) reportTimings(result.cfg, t => process.stderr.write(t));
-      return;
-    }
-    // FD 3 sideband — only when interactive. stream.ts (wrapping deps and
-    // the cargo plan) writes live output there, bypassing ninja's per-job buffering.
-    // A human watching a terminal wants to see cmake configure spew and
-    // cargo's download progress in real time. A log file (CI) doesn't —
-    // that live output is noise (hundreds of `-- Looking for header.h`
-    // lines from cmake). When FD 3 isn't set up, stream.ts falls back to
-    // stdout which ninja buffers per-job: deps stay quiet until they
-    // finish or fail, failure logs stay compact.
-    //
-    // Ninja's subprocess spawn only touches FDs 0-2; higher fds inherit
-    // through posix_spawn/CreateProcessA. Passing our stderr fd (2) at
-    // index STREAM_FD dups it there for the whole ninja process tree.
-    //
-    // In quiet mode, capture to buffers instead — dumped only on failure.
-    const stdio: (number | "inherit" | "pipe")[] = quiet
-      ? ["inherit", "pipe", "pipe"]
-      : ["inherit", "inherit", "inherit"];
-    if (!quiet && interactive) {
-      stdio[STREAM_FD] = 2;
-    }
-    const ninja = spawnSync(result.ninja, ninjaArgv(result.cfg), {
-      stdio,
-      env: ninjaEnv(result.cfg, result.env),
-      // Captured output (quiet mode) can be tens of MB on a cold build; the default 1 MB maxBuffer ENOBUFSes.
-      maxBuffer: 1024 * 1024 * 1024,
-    });
-    if (ninja.error) {
-      const hint =
-        result.ninja === "ninja"
-          ? "Is ninja in your PATH?"
-          : "That is the ninja release the build pins. If the file is damaged, delete its directory and the next build fetches it again.";
-      process.stderr.write(`Failed to exec ${result.ninja}: ${ninja.error.message}\n${hint}\n`);
-      process.exit(127);
-    }
-    if (ninja.status !== 0) {
-      if (quiet) {
-        if (ninja.stdout) process.stderr.write(ninja.stdout);
-        if (ninja.stderr) process.stderr.write(ninja.stderr);
-      }
-      process.exit(ninja.status ?? 1);
-    }
-
-    releaseLock();
-    if (args.timings) reportTimings(result.cfg, t => process.stderr.write(t));
-
-    if (args.execArgs.length === 0) {
-      // Closing line on success: when restat prunes most of the graph
-      // (local WebKit no-op shows `[1/555] build WebKit` then silence),
-      // it's not obvious ninja finished vs. stalled. This disambiguates.
-      // Targets named when explicit so it's clear what was actually built.
-      const what = args.ninjaTargets.length > 0 ? ` ${args.ninjaTargets.map(t => nameColor(t)).join(", ")}` : "";
-      status(`[build]${what} done`);
-      process.exit(0);
-    }
-
-    // Exec the built binary. result.output.exe is the linked (unstripped)
-    // binary — bun-debug for debug, bun-profile for release. That's the one
-    // you want for dev iteration (has symbols + assertions in debug).
-    const exe = result.output.exe;
-    const child = spawnSync(exe, args.execArgs, { stdio: "inherit" });
-    if (child.error) {
-      throw new BuildError(`Failed to exec ${exe}`, { cause: child.error });
-    }
-    // Signal death: re-raise so our parent sees the same signal (shells
-    // show "Segmentation fault" etc. based on this, not exit code).
-    if (child.signal) {
-      process.kill(process.pid, child.signal);
-      return;
-    }
-    process.exit(child.status ?? 0);
   }
+}
+
+/** Keep the linked binary and its alias stable through the runtime child, including asynchronous work. */
+export async function withBuildDirectoryLock<T>(
+  directory: string,
+  run: () => T | Promise<T>,
+  log: (line: string) => void = () => {},
+): Promise<T> {
+  const release = lockBuildDir(directory, log);
+  try {
+    return await run();
+  } finally {
+    release();
+  }
+}
+
+/** Only the runtime child sees this PATH; preserve the native toolchain and its environment key casing. */
+export function runtimePathEnvironment(
+  directory: string,
+  inherited: NodeJS.ProcessEnv,
+  windows = process.platform === "win32",
+): NodeJS.ProcessEnv {
+  const env = { ...inherited };
+  const keys = Object.keys(env).filter(key => (windows ? key.toUpperCase() === "PATH" : key === "PATH"));
+  const key = keys[0] ?? "PATH";
+  const previous = keys
+    .map(name => env[name])
+    .filter(Boolean)
+    .join(windows ? ";" : ":");
+  for (const name of keys) delete env[name];
+  env[key] = directory + (previous ? (windows ? ";" : ":") + previous : "");
+  return env;
+}
+
+/** A native alias of the exact linked binary, without a copied or stale runtime. */
+export function builtRuntimeEnvironment(exe: string, inherited: NodeJS.ProcessEnv = process.env): NodeJS.ProcessEnv {
+  // Keep release's stripped bun output intact: this private alias always targets the executable bd runs.
+  const directory = join(dirname(exe), ".runtime-bin");
+  const alias = join(directory, process.platform === "win32" ? "bun.exe" : "bun");
+  mkdirSync(directory, { recursive: true });
+  const source = statSync(exe);
+  let same = false;
+  try {
+    const current = statSync(alias);
+    same = current.dev === source.dev && current.ino === source.ino;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+  }
+  if (!same) {
+    try {
+      unlinkSync(alias);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+    }
+    linkSync(exe, alias);
+  }
+  return runtimePathEnvironment(directory, inherited);
 }
 
 /**
@@ -807,12 +865,14 @@ Examples:
 
 // Entry point — must run after all module-level declarations (USAGE) are
 // initialized, otherwise parseArgs hits a TDZ ReferenceError on --help.
-try {
-  await main();
-} catch (err) {
-  if (err instanceof BuildError) {
-    process.stderr.write(err.format());
-    process.exit(1);
+if (import.meta.main) {
+  try {
+    await main();
+  } catch (err) {
+    if (err instanceof BuildError) {
+      process.stderr.write(err.format());
+      process.exit(1);
+    }
+    throw err;
   }
-  throw err;
 }

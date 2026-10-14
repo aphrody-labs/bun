@@ -60,7 +60,11 @@ impl<'a> ConcatSourceMapBuilder<'a> {
         maps: impl Iterator<Item = &'s SourceMap<'d>>,
     ) -> (usize, usize, usize) {
         maps.fold((0, 0, 0), |(names, sources, tokens), map| {
-            (names + map.names.len(), sources + map.sources.len(), tokens + map.tokens.len())
+            (
+                names + map.names.len(),
+                sources + map.sources.len(),
+                tokens + map.tokens.len(),
+            )
         })
     }
 
@@ -91,8 +95,11 @@ impl<'a> ConcatSourceMapBuilder<'a> {
     /// let combined_sourcemap = builder.into_sourcemap();
     /// ```
     pub fn from_sourcemaps(sourcemap_and_line_offsets: &[(&'a SourceMap<'_>, u32)]) -> Self {
-        let (names_len, sources_len, tokens_len) =
-            Self::sum_lengths(sourcemap_and_line_offsets.iter().map(|(sourcemap, _)| *sourcemap));
+        let (names_len, sources_len, tokens_len) = Self::sum_lengths(
+            sourcemap_and_line_offsets
+                .iter()
+                .map(|(sourcemap, _)| *sourcemap),
+        );
         let mut builder = Self::with_capacity(
             names_len,
             sources_len,
@@ -115,8 +122,11 @@ impl<'a> ConcatSourceMapBuilder<'a> {
     /// maps that are discarded afterwards (e.g. a bundler joining rendered modules): no
     /// name/source/sourcesContent string is copied.
     pub fn from_owned_sourcemaps(sourcemap_and_line_offsets: Vec<(SourceMap<'a>, u32)>) -> Self {
-        let (names_len, sources_len, tokens_len) =
-            Self::sum_lengths(sourcemap_and_line_offsets.iter().map(|(sourcemap, _)| sourcemap));
+        let (names_len, sources_len, tokens_len) = Self::sum_lengths(
+            sourcemap_and_line_offsets
+                .iter()
+                .map(|(sourcemap, _)| sourcemap),
+        );
         let mut builder = Self::with_capacity(
             names_len,
             sources_len,
@@ -142,9 +152,13 @@ impl<'a> ConcatSourceMapBuilder<'a> {
 
         // Borrow strings directly from the input map — no allocations. The output `SourceMap`'s
         // lifetime is tied to `'a`, so the borrow checker enforces that input maps outlive it.
-        self.sources.extend(sourcemap.get_sources().map(Cow::Borrowed));
-        self.source_contents
-            .extend(sourcemap.get_source_contents().map(|content| content.map(Cow::Borrowed)));
+        self.sources
+            .extend(sourcemap.get_sources().map(Cow::Borrowed));
+        self.source_contents.extend(
+            sourcemap
+                .get_source_contents()
+                .map(|content| content.map(Cow::Borrowed)),
+        );
         self.pad_source_contents();
         self.names.extend(sourcemap.get_names().map(Cow::Borrowed));
 
@@ -275,9 +289,21 @@ mod tests {
 
     fn build_test_inputs() -> [SourceMap<'static>; 3] {
         [
-            (vec!["foo", "foo2"], "foo.js", Token::new(1, 1, 1, 1, Some(0), Some(0))),
-            (vec!["bar"], "bar.js", Token::new(1, 1, 1, 1, Some(0), Some(0))),
-            (vec!["abc"], "abc.js", Token::new(1, 2, 2, 2, Some(0), Some(0))),
+            (
+                vec!["foo", "foo2"],
+                "foo.js",
+                Token::new(1, 1, 1, 1, Some(0), Some(0)),
+            ),
+            (
+                vec!["bar"],
+                "bar.js",
+                Token::new(1, 1, 1, 1, Some(0), Some(0)),
+            ),
+            (
+                vec!["abc"],
+                "abc.js",
+                Token::new(1, 2, 2, 2, Some(0), Some(0)),
+            ),
         ]
         .map(|(names, source, token)| SourceMap {
             names: names.into_iter().map(Cow::Borrowed).collect(),
@@ -297,7 +323,11 @@ mod tests {
                 Cow::Borrowed("abc"),
             ],
             None,
-            vec![Cow::Borrowed("foo.js"), Cow::Borrowed("bar.js"), Cow::Borrowed("abc.js")],
+            vec![
+                Cow::Borrowed("foo.js"),
+                Cow::Borrowed("bar.js"),
+                Cow::Borrowed("abc.js"),
+            ],
             vec![],
             vec![
                 Token::new(1, 1, 1, 1, Some(0), Some(0)),
@@ -386,12 +416,21 @@ mod tests {
         let owned = ConcatSourceMapBuilder::from_owned_sourcemaps(vec![(a, 0), (b, 5)])
             .into_owned_sourcemap();
 
-        assert_eq!(owned.get_sources().collect::<Vec<_>>(), vec!["a.js", "b.js"]);
-        assert_eq!(owned.get_names().collect::<Vec<_>>(), vec!["name_a", "name_b"]);
+        assert_eq!(
+            owned.get_sources().collect::<Vec<_>>(),
+            vec!["a.js", "b.js"]
+        );
+        assert_eq!(
+            owned.get_names().collect::<Vec<_>>(),
+            vec!["name_a", "name_b"]
+        );
         assert_eq!(owned.get_source_content(0), Some("a content"));
         assert_eq!(owned.get_source_content(1), Some("b content"));
         // `b`'s token is shifted by the line offset and renumbered onto the combined ids.
-        assert_eq!(owned.get_token(1), Some(Token::new(5, 0, 0, 0, Some(1), Some(1))));
+        assert_eq!(
+            owned.get_token(1),
+            Some(Token::new(5, 0, 0, 0, Some(1), Some(1)))
+        );
     }
 
     #[test]
@@ -515,8 +554,11 @@ mod tests {
             None,
             vec![],
             vec![],
-            vec![Token::new(0, 0, 0, 0, None, None), Token::new(2, 3, 0, 0, None, None)]
-                .into_boxed_slice(),
+            vec![
+                Token::new(0, 0, 0, 0, None, None),
+                Token::new(2, 3, 0, 0, None, None),
+            ]
+            .into_boxed_slice(),
             None,
         );
         let map2 = SourceMap::new(
@@ -525,8 +567,11 @@ mod tests {
             None,
             vec![],
             vec![],
-            vec![Token::new(0, 3, 0, 0, None, None), Token::new(1, 9, 0, 0, None, None)]
-                .into_boxed_slice(),
+            vec![
+                Token::new(0, 3, 0, 0, None, None),
+                Token::new(1, 9, 0, 0, None, None),
+            ]
+            .into_boxed_slice(),
             None,
         );
 

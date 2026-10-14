@@ -1,5 +1,3 @@
-
-
 use lazy_regex::{Captures, Lazy, Regex, lazy_regex, regex::Replacer};
 use rayon::prelude::*;
 
@@ -249,7 +247,11 @@ pub(crate) use generate_variants;
 pub fn parse_js<'a>(source_text: &'a str, allocator: &'a Allocator) -> Program<'a> {
     let source_type = SourceType::mjs();
     let parser_ret = Parser::new(allocator, source_text, source_type).parse();
-    assert!(parser_ret.diagnostics.is_empty(), "Parse errors: {:#?}", parser_ret.diagnostics);
+    assert!(
+        parser_ret.diagnostics.is_empty(),
+        "Parse errors: {:#?}",
+        parser_ret.diagnostics
+    );
     parser_ret.program
 }
 
@@ -260,7 +262,9 @@ fn replace_flag_comments<const FLAG_COUNT: usize>(
     flags: [bool; FLAG_COUNT],
     flag_names: &[&str; FLAG_COUNT],
 ) -> String {
-    FLAG_COMMENT_REGEX.replace_all(code, FlagCommentReplacer { flags, flag_names }).into_owned()
+    FLAG_COMMENT_REGEX
+        .replace_all(code, FlagCommentReplacer { flags, flag_names })
+        .into_owned()
 }
 
 static FLAG_COMMENT_REGEX: Lazy<Regex> =
@@ -327,7 +331,9 @@ pub fn print_minified<'a>(program: &mut Program<'a>, allocator: &'a Allocator) -
     static REGEX: Lazy<Regex> = lazy_regex!(
         r"(?:^|\n)(?:(?:(?://[^\n]*|/\*[\s\S]*?\*/)\n)*)(?:export|function|class|const|let) "
     );
-    REGEX.replace_all(&code, |caps: &Captures| format!("\n{}", &caps[0])).into_owned()
+    REGEX
+        .replace_all(&code, |caps: &Captures| format!("\n{}", &caps[0]))
+        .into_owned()
 }
 
 /// Visitor which converts `!0` to `true` and `!1` to `false`.
@@ -337,7 +343,9 @@ struct BooleanUnminifier<'a> {
 
 impl<'a> BooleanUnminifier<'a> {
     fn new(allocator: &'a Allocator) -> Self {
-        Self { ast: AstBuilder::new(allocator) }
+        Self {
+            ast: AstBuilder::new(allocator),
+        }
     }
 }
 

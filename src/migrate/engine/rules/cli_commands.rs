@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::util::{Edit, apply_edits, line_offsets, make_finding};
 use crate::registry::CLI;
 use crate::types::{Finding, MakeFindingOpts};
+use crate::util::{Edit, apply_edits, line_offsets, make_finding};
 use once_cell::sync::Lazy;
 use regex::Regex;
 
@@ -77,7 +77,11 @@ fn command_positions(source: &str, procfile: bool) -> (Vec<usize>, Vec<usize>) {
     let mut contexts = Vec::new();
     let mut index = 0;
     while index < bytes.len() {
-        if procfile && executable && !word && quote.is_none() && contexts.is_empty()
+        if procfile
+            && executable
+            && !word
+            && quote.is_none()
+            && contexts.is_empty()
             && (index == 0 || bytes[index - 1] == b'\n')
         {
             if let Some(length) = procfile_prefix_len(&bytes[index..]) {
@@ -120,20 +124,20 @@ fn command_positions(source: &str, procfile: bool) -> (Vec<usize>, Vec<usize>) {
                 quote = Some(byte);
                 executable = false;
                 word = true;
-            }
+            },
             b'#' if !word => {
                 while index < bytes.len() && bytes[index] != b'\n' {
                     index += 1;
                 }
                 continue;
-            }
+            },
             b'(' => {
                 contexts.push((None, false, false));
                 (executable, word) = (true, false);
-            }
+            },
             b')' => {
                 (quote, executable, word) = contexts.pop().unwrap_or((None, false, false));
-            }
+            },
             b';' | b'&' | b'|' | b'\n' => (executable, word) = (true, false),
             b' ' | b'\t' | b'\r' => word = false,
             _ => {
@@ -148,12 +152,11 @@ fn command_positions(source: &str, procfile: bool) -> (Vec<usize>, Vec<usize>) {
                         .map_or(bytes.len(), |length| index + length);
                     let token = &bytes[index..end];
                     // Document scanners pass Docker RUN and workflow run: prefixes.
-                    executable = token.eq_ignore_ascii_case(b"RUN")
-                        || token == b"run:"
-                        || token == b"-";
+                    executable =
+                        token.eq_ignore_ascii_case(b"RUN") || token == b"run:" || token == b"-";
                 }
                 word = true;
-            }
+            },
         }
         index += 1;
     }
@@ -170,10 +173,8 @@ fn command_positions(source: &str, procfile: bool) -> (Vec<usize>, Vec<usize>) {
 /// autofix ni édition.
 pub fn apply_cli_rules(path: &str, source: &str, aggressive: bool) -> (Vec<Finding>, String) {
     let mut out = source.to_string();
-    let procfile = path
-        .rsplit(['/', '\\'])
-        .next()
-        .is_some_and(crate::scanners::procfile::is_procfile);
+    let procfile =
+        path.rsplit(['/', '\\']).next().is_some_and(crate::scanners::procfile::is_procfile);
     // Copie de `out` où les hits signalés sans édition sont masqués par des
     // espaces (même longueur en octets) : une règle plus générique ne doit pas
     // re-signaler `vitest run` déjà couvert par `cli/vitest-run`.
@@ -205,8 +206,8 @@ pub fn apply_cli_rules(path: &str, source: &str, aggressive: bool) -> (Vec<Findi
         let mut cursor = 0;
         while let Some(mat) = rule.re.find_at(&shadow, cursor) {
             // Native patterns capture a separator as context for the next command.
-            let separator = native
-                && mat.as_str().as_bytes().last().is_some_and(|byte| b";&|)".contains(byte));
+            let separator =
+                native && mat.as_str().as_bytes().last().is_some_and(|byte| b";&|)".contains(byte));
             cursor = mat.end() - usize::from(separator);
             if cursor <= mat.start() {
                 break;
@@ -230,7 +231,9 @@ pub fn apply_cli_rules(path: &str, source: &str, aggressive: bool) -> (Vec<Findi
                 rule.re.captures(text).and_then(|captures| captures.get(1)).map_or(0, |m| m.len())
             } else {
                 text.len()
-                    - text.trim_start_matches(|c: char| c.is_whitespace() || ";&|(".contains(c)).len()
+                    - text
+                        .trim_start_matches(|c: char| c.is_whitespace() || ";&|(".contains(c))
+                        .len()
             };
             let start = mat.start() + lead;
             if executable.binary_search(&start).is_err() {
@@ -238,7 +241,9 @@ pub fn apply_cli_rules(path: &str, source: &str, aggressive: bool) -> (Vec<Findi
             }
             if rule.rule_id == "cli/native-check-no-emit" {
                 let flag = rule.re.captures(text).and_then(|captures| captures.get(3));
-                if flag.is_none_or(|flag| words.binary_search(&(mat.start() + flag.start())).is_err()) {
+                if flag
+                    .is_none_or(|flag| words.binary_search(&(mat.start() + flag.start())).is_err())
+                {
                     continue;
                 }
             }
@@ -264,8 +269,8 @@ pub fn apply_cli_rules(path: &str, source: &str, aggressive: bool) -> (Vec<Findi
                 edits.push(Edit { index: start, len: end - start, replacement });
             } else {
                 // Keep a captured command separator available to the next rule.
-                let context = !native
-                    && text.as_bytes().last().is_some_and(|byte| b";&|)".contains(byte));
+                let context =
+                    !native && text.as_bytes().last().is_some_and(|byte| b";&|)".contains(byte));
                 masked.push((start, end - usize::from(context)));
             }
         }

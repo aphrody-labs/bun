@@ -96,7 +96,9 @@ pub struct RequireTopLevelDescribeConfig {
 
 impl Default for RequireTopLevelDescribeConfig {
     fn default() -> Self {
-        Self { max_number_of_top_level_describes: u32::MAX }
+        Self {
+            max_number_of_top_level_describes: u32::MAX,
+        }
     }
 }
 

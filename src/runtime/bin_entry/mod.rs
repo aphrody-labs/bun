@@ -33,8 +33,8 @@
 use core::ffi::{c_char, c_int};
 
 mod c_abi_exports;
-mod workspace_command;
 mod crawl_command;
+mod workspace_command;
 
 // Force-link `bun_platform` so its `#[no_mangle]` C exports
 // (`sys_epoll_pwait2`, …) reach the linker.
@@ -227,8 +227,8 @@ fn remove_replaced_executable() {
     const SUFFIX: [u16; 5] = [b'.' as u16, b'o' as u16, b'l' as u16, b'd' as u16, 0];
     let mut buf = [0u16; 1024];
     let cap = buf.len() - SUFFIX.len();
-    let Some(len) =
-        bun_sys::windows::get_module_name_w(core::ptr::null_mut(), &mut buf[..cap]).map(<[u16]>::len)
+    let Some(len) = bun_sys::windows::get_module_name_w(core::ptr::null_mut(), &mut buf[..cap])
+        .map(<[u16]>::len)
     else {
         return;
     };

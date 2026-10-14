@@ -100,7 +100,12 @@ pub fn select_profile() -> &'static BrowserProfile {
 
 fn env_enabled(key: &str) -> bool {
     matches!(
-        std::env::var(key).ok().as_deref().map(str::trim).map(str::to_ascii_lowercase).as_deref(),
+        std::env::var(key)
+            .ok()
+            .as_deref()
+            .map(str::trim)
+            .map(str::to_ascii_lowercase)
+            .as_deref(),
         Some("1") | Some("true") | Some("yes") | Some("on")
     )
 }

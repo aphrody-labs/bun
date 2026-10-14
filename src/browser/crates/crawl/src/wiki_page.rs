@@ -4,8 +4,8 @@
 use std::collections::BTreeMap;
 use std::time::Instant;
 
-use bun_browser_extract::{extract_main, html_to_markdown};
 use bun_browser_dom::{DomTree, NodeData, NodeId, parse_html};
+use bun_browser_extract::{extract_main, html_to_markdown};
 use bun_browser_net::BunBrowserHttpClient;
 use serde::Serialize;
 use serde_json::Value;
@@ -25,7 +25,10 @@ pub struct WikiPageOptions {
 
 impl Default for WikiPageOptions {
     fn default() -> Self {
-        Self { include_images: true, include_content: false }
+        Self {
+            include_images: true,
+            include_content: false,
+        }
     }
 }
 
@@ -131,12 +134,22 @@ pub async fn page_dossier(
         }
     });
     let images = if options.include_images {
-        resolve_images(client, api_options, &content.image_titles, &mut last_request).await?
+        resolve_images(
+            client,
+            api_options,
+            &content.image_titles,
+            &mut last_request,
+        )
+        .await?
     } else {
         Vec::new()
     };
     let tables = parse_tables(html, Some(page_url.as_str()));
-    let infobox = content.wikitext.as_deref().map(parse_infobox).unwrap_or_default();
+    let infobox = content
+        .wikitext
+        .as_deref()
+        .map(parse_infobox)
+        .unwrap_or_default();
 
     let mut measures = BTreeMap::new();
     measures.insert("sections".into(), content.sections.len() as u64);
@@ -151,7 +164,10 @@ pub async fn page_dossier(
     measures.insert("octets_markdown".into(), markdown.len() as u64);
     measures.insert(
         "octets_wikitext".into(),
-        content.wikitext.as_ref().map_or(0, |text| text.len() as u64),
+        content
+            .wikitext
+            .as_ref()
+            .map_or(0, |text| text.len() as u64),
     );
 
     Ok(WikiPageDossier {
@@ -166,7 +182,10 @@ pub async fn page_dossier(
         categories: content.categories,
         liens_externes: content.external_links,
         markdown: options.include_content.then_some(markdown),
-        wikitext: options.include_content.then_some(content.wikitext).flatten(),
+        wikitext: options
+            .include_content
+            .then_some(content.wikitext)
+            .flatten(),
         mesures: measures,
     })
 }
@@ -181,7 +200,10 @@ pub async fn page_markdown(
         client,
         api_options,
         page_url,
-        WikiPageOptions { include_images: false, include_content: true },
+        WikiPageOptions {
+            include_images: false,
+            include_content: true,
+        },
     )
     .await?
     .markdown
@@ -228,7 +250,10 @@ async fn fetch_action_page(
         titre: html_text(raw_title),
         html: Some(html.to_owned()),
         markdown: None,
-        wikitext: parsed.get("wikitext").and_then(Value::as_str).map(str::to_owned),
+        wikitext: parsed
+            .get("wikitext")
+            .and_then(Value::as_str)
+            .map(str::to_owned),
         sections: parse_sections(parsed.get("sections"))?,
         image_titles: parse_images(parsed.get("images"))?,
         categories: parse_categories(parsed.get("categories"))?,
@@ -258,7 +283,11 @@ async fn fetch_rest_page(
             MediaWikiError::InvalidResponse("REST page source is missing or too short".into())
         })?;
     Ok(PageContent {
-        titre: response.get("title").and_then(Value::as_str).unwrap_or(title).to_owned(),
+        titre: response
+            .get("title")
+            .and_then(Value::as_str)
+            .unwrap_or(title)
+            .to_owned(),
         html: None,
         // The REST API returns wikitext source. This preserves the legacy Markdown consumer's
         // fallback behavior instead of pretending the source is rendered HTML.
@@ -284,7 +313,10 @@ fn rest_page_url(api_url: &Url, title: &str) -> Result<Url, MediaWikiError> {
     let encoded = url::form_urlencoded::byte_serialize(title.as_bytes())
         .collect::<String>()
         .replace('+', "%20");
-    url.set_path(&format!("{}/rest.php/v1/page/{encoded}", base.trim_end_matches('/')));
+    url.set_path(&format!(
+        "{}/rest.php/v1/page/{encoded}",
+        base.trim_end_matches('/')
+    ));
     Ok(url)
 }
 
@@ -332,7 +364,9 @@ fn decode_path_component(value: &str) -> String {
 }
 
 fn parse_sections(value: Option<&Value>) -> Result<Vec<WikiPageSection>, MediaWikiError> {
-    let Some(value) = value else { return Ok(Vec::new()) };
+    let Some(value) = value else {
+        return Ok(Vec::new());
+    };
     let rows = value
         .as_array()
         .ok_or_else(|| MediaWikiError::InvalidResponse("parse.sections must be an array".into()))?;
@@ -348,14 +382,20 @@ fn parse_sections(value: Option<&Value>) -> Result<Vec<WikiPageSection>, MediaWi
                     .unwrap_or(1)
                     .min(u32::MAX as u64) as u32,
                 titre: html_text(title),
-                ancre: row.get("anchor").and_then(Value::as_str).unwrap_or_default().to_owned(),
+                ancre: row
+                    .get("anchor")
+                    .and_then(Value::as_str)
+                    .unwrap_or_default()
+                    .to_owned(),
             })
         })
         .collect()
 }
 
 fn parse_images(value: Option<&Value>) -> Result<Vec<String>, MediaWikiError> {
-    let Some(value) = value else { return Ok(Vec::new()) };
+    let Some(value) = value else {
+        return Ok(Vec::new());
+    };
     let rows = value
         .as_array()
         .ok_or_else(|| MediaWikiError::InvalidResponse("parse.images must be an array".into()))?;
@@ -369,7 +409,9 @@ fn parse_images(value: Option<&Value>) -> Result<Vec<String>, MediaWikiError> {
 }
 
 fn parse_categories(value: Option<&Value>) -> Result<Vec<String>, MediaWikiError> {
-    let Some(value) = value else { return Ok(Vec::new()) };
+    let Some(value) = value else {
+        return Ok(Vec::new());
+    };
     let rows = value.as_array().ok_or_else(|| {
         MediaWikiError::InvalidResponse("parse.categories must be an array".into())
     })?;
@@ -387,7 +429,9 @@ fn parse_categories(value: Option<&Value>) -> Result<Vec<String>, MediaWikiError
 }
 
 fn parse_string_array(value: Option<&Value>, field: &str) -> Result<Vec<String>, MediaWikiError> {
-    let Some(value) = value else { return Ok(Vec::new()) };
+    let Some(value) = value else {
+        return Ok(Vec::new());
+    };
     value
         .as_array()
         .ok_or_else(|| MediaWikiError::InvalidResponse(format!("{field} must be an array")))?
@@ -410,11 +454,13 @@ async fn resolve_images(
     for batch in files.chunks(50) {
         let titles = batch
             .iter()
-            .map(
-                |name| {
-                    if has_file_namespace(name) { name.clone() } else { format!("File:{name}") }
-                },
-            )
+            .map(|name| {
+                if has_file_namespace(name) {
+                    name.clone()
+                } else {
+                    format!("File:{name}")
+                }
+            })
             .collect::<Vec<_>>()
             .join("|");
         let params = [
@@ -429,12 +475,16 @@ async fn resolve_images(
         if let Some(message) = api_error(&response) {
             return Err(MediaWikiError::Api(message));
         }
-        let pages =
-            response.pointer("/query/pages").and_then(Value::as_array).ok_or_else(|| {
+        let pages = response
+            .pointer("/query/pages")
+            .and_then(Value::as_array)
+            .ok_or_else(|| {
                 MediaWikiError::InvalidResponse("image query.pages is missing or invalid".into())
             })?;
         for page in pages {
-            let Some(info) = page.pointer("/imageinfo/0") else { continue };
+            let Some(info) = page.pointer("/imageinfo/0") else {
+                continue;
+            };
             let raw_url = info.get("url").and_then(Value::as_str).ok_or_else(|| {
                 MediaWikiError::InvalidResponse("imageinfo.url is missing".into())
             })?;
@@ -450,7 +500,11 @@ async fn resolve_images(
                 ));
             }
             images.push(WikiImage {
-                fichier: page.get("title").and_then(Value::as_str).unwrap_or_default().to_owned(),
+                fichier: page
+                    .get("title")
+                    .and_then(Value::as_str)
+                    .unwrap_or_default()
+                    .to_owned(),
                 url: image_url.to_string(),
                 largeur: info.get("width").and_then(Value::as_u64),
                 hauteur: info.get("height").and_then(Value::as_u64),
@@ -487,10 +541,14 @@ fn html_text(value: &str) -> String {
 /// Parse MediaWiki data tables, expanding rowspan and colspan like the legacy consumer.
 pub fn parse_tables(html: &str, page_url: Option<&str>) -> Vec<WikiTable> {
     let tree = parse_html(html);
-    let Ok(table_nodes) = tree.query_selector_all("table") else { return Vec::new() };
+    let Ok(table_nodes) = tree.query_selector_all("table") else {
+        return Vec::new();
+    };
     let mut output = Vec::new();
     for (index, table_id) in table_nodes.iter().copied().enumerate() {
-        let Ok(row_nodes) = tree.query_selector_all("tr") else { continue };
+        let Ok(row_nodes) = tree.query_selector_all("tr") else {
+            continue;
+        };
         let rows = row_nodes
             .into_iter()
             .filter(|row| closest_table(&tree, *row) == Some(table_id))
@@ -503,7 +561,8 @@ pub fn parse_tables(html: &str, page_url: Option<&str>) -> Vec<WikiTable> {
             fill_pending(&mut row, &mut column, row_index, &pending);
             let cells = tree.children(row_id).into_iter().filter(|cell| {
                 tree.get_node(*cell).is_some_and(|node| {
-                    node.as_element().is_some_and(|name| matches!(name.local.as_ref(), "th" | "td"))
+                    node.as_element()
+                        .is_some_and(|name| matches!(name.local.as_ref(), "th" | "td"))
                 })
             });
             for cell in cells {
@@ -555,7 +614,12 @@ pub fn parse_tables(html: &str, page_url: Option<&str>) -> Vec<WikiTable> {
             .filter(|text| !text.is_empty())
             .or_else(|| previous_heading(&tree, table_id));
         let _ = page_url; // Reserved for future absolute-link rendering in cell text.
-        output.push(WikiTable { index, titre: caption, entetes: headers, lignes: grid });
+        output.push(WikiTable {
+            index,
+            titre: caption,
+            entetes: headers,
+            lignes: grid,
+        });
     }
     output
 }
@@ -576,7 +640,10 @@ fn closest_table(tree: &DomTree, node: NodeId) -> Option<NodeId> {
     let mut current = tree.get_node(node)?.parent;
     while let Some(id) = current {
         let parent = tree.get_node(id)?;
-        if parent.as_element().is_some_and(|name| (&*name.local) == "table") {
+        if parent
+            .as_element()
+            .is_some_and(|name| (&*name.local) == "table")
+        {
             return Some(id);
         }
         current = parent.parent;
@@ -585,14 +652,19 @@ fn closest_table(tree: &DomTree, node: NodeId) -> Option<NodeId> {
 }
 
 fn attr_u32(tree: &DomTree, node: NodeId, name: &str) -> Option<u32> {
-    tree.with_node(node, |node| node.get_attribute(name).and_then(|value| value.parse().ok()))
-        .flatten()
+    tree.with_node(node, |node| {
+        node.get_attribute(name)
+            .and_then(|value| value.parse().ok())
+    })
+    .flatten()
 }
 
 fn cell_text(tree: &DomTree, node: NodeId) -> String {
     let mut text = String::new();
     for child in tree.descendants(node) {
-        let Some(current) = tree.get_node(child) else { continue };
+        let Some(current) = tree.get_node(child) else {
+            continue;
+        };
         if let NodeData::Text { contents } = &current.data {
             if !in_ignored_cell_subtree(tree, child) {
                 text.push_str(contents);
@@ -611,13 +683,17 @@ fn cell_text(tree: &DomTree, node: NodeId) -> String {
 fn in_ignored_cell_subtree(tree: &DomTree, node: NodeId) -> bool {
     tree.ancestors(node).into_iter().any(|ancestor| {
         tree.with_node(ancestor, |element| {
-            let Some(name) = element.as_element() else { return false };
+            let Some(name) = element.as_element() else {
+                return false;
+            };
             if matches!(name.local.as_ref(), "script" | "style") {
                 return true;
             }
             (&*name.local) == "sup"
                 && element.get_attribute("class").is_some_and(|class| {
-                    class.split_ascii_whitespace().any(|token| token == "reference")
+                    class
+                        .split_ascii_whitespace()
+                        .any(|token| token == "reference")
                 })
         })
         .unwrap_or(false)
@@ -646,7 +722,9 @@ fn heading_text(tree: &DomTree, node: NodeId) -> Option<String> {
     let heading = matches!(tag.local.as_ref(), "h1" | "h2" | "h3" | "h4" | "h5" | "h6");
     let wrapper = (&*tag.local) == "div"
         && element.get_attribute("class").is_some_and(|classes| {
-            classes.split_ascii_whitespace().any(|class| class == "mw-heading")
+            classes
+                .split_ascii_whitespace()
+                .any(|class| class == "mw-heading")
         });
     if !heading && !wrapper {
         return None;
@@ -667,11 +745,18 @@ pub fn parse_infobox(wikitext: &str) -> Vec<WikiInfobox> {
         };
         let body = &wikitext[start + 2..end - 2];
         let mut parts = split_top_level(body, '|');
-        let name = parts.first().copied().unwrap_or_default().trim().to_ascii_lowercase();
+        let name = parts
+            .first()
+            .copied()
+            .unwrap_or_default()
+            .trim()
+            .to_ascii_lowercase();
         if name.contains("infobox") || name.contains("character") {
             let mut fields = WikiInfobox::new();
             for parameter in parts.drain(1..) {
-                let Some((key, raw)) = split_top_level_once(parameter, '=') else { continue };
+                let Some((key, raw)) = split_top_level_once(parameter, '=') else {
+                    continue;
+                };
                 let key = key.trim();
                 if !valid_infobox_key(key) {
                     continue;
@@ -679,7 +764,10 @@ pub fn parse_infobox(wikitext: &str) -> Vec<WikiInfobox> {
                 let raw = raw.trim();
                 fields.insert(
                     key.to_owned(),
-                    WikiInfoboxValue { brut: raw.to_owned(), propre: clean_wikitext(raw) },
+                    WikiInfoboxValue {
+                        brut: raw.to_owned(),
+                        propre: clean_wikitext(raw),
+                    },
                 );
             }
             if !fields.is_empty() {
@@ -700,14 +788,14 @@ fn template_end(source: &str, start: usize) -> Option<usize> {
             (b'{', b'{') => {
                 depth += 1;
                 index += 2;
-            },
+            }
             (b'}', b'}') if depth > 0 => {
                 depth -= 1;
                 index += 2;
                 if depth == 0 {
                     return Some(index);
                 }
-            },
+            }
             _ => index += 1,
         }
     }
@@ -869,11 +957,15 @@ mod tests {
     fn page_url_resolves_title_query_and_encoded_article_paths() {
         let options = MediaWikiOptions::new(Url::parse("https://example.test/w/api.php").unwrap());
         assert_eq!(
-            page_target("https://example.test/wiki/Aphrodi%20Terumi", &options).unwrap().1,
+            page_target("https://example.test/wiki/Aphrodi%20Terumi", &options)
+                .unwrap()
+                .1,
             "Aphrodi Terumi"
         );
         assert_eq!(
-            page_target("https://example.test/w/index.php?title=Goku", &options).unwrap().1,
+            page_target("https://example.test/w/index.php?title=Goku", &options)
+                .unwrap()
+                .1,
             "Goku"
         );
         assert!(page_target("https://other.test/wiki/Goku", &options).is_err());
@@ -882,7 +974,9 @@ mod tests {
     #[tokio::test]
     async fn page_dossier_uses_local_mediawiki_and_resolves_full_image_urls() {
         use tokio::io::{AsyncReadExt, AsyncWriteExt};
-        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.expect("listener");
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+            .await
+            .expect("listener");
         let address = listener.local_addr().expect("address");
         let page_html = format!(
             "<main><h2>Profil</h2>{}<table><tr><th>Nom</th></tr><tr><td>Aphrodi</td></tr></table></main>",
@@ -932,7 +1026,10 @@ mod tests {
             &client,
             &options,
             &format!("http://{address}/wiki/Aphrodi"),
-            WikiPageOptions { include_images: true, include_content: true },
+            WikiPageOptions {
+                include_images: true,
+                include_content: true,
+            },
         )
         .await
         .expect("dossier");
@@ -950,7 +1047,12 @@ mod tests {
                 .as_deref()
                 .is_some_and(|markdown| markdown.contains("Prince du football"))
         );
-        assert!(dossier.wikitext.as_deref().is_some_and(|text| text.contains("Infobox character")));
+        assert!(
+            dossier
+                .wikitext
+                .as_deref()
+                .is_some_and(|text| text.contains("Infobox character"))
+        );
         let requests = server.await.expect("server");
         assert_eq!(requests.len(), 2);
         assert!(requests[0].contains("action=parse"));
@@ -960,7 +1062,9 @@ mod tests {
     #[tokio::test]
     async fn missing_page_api_errors_are_propagated_instead_of_empty_dossiers() {
         use tokio::io::{AsyncReadExt, AsyncWriteExt};
-        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.expect("listener");
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+            .await
+            .expect("listener");
         let address = listener.local_addr().expect("address");
         let server = tokio::spawn(async move {
             let (mut stream, _) = listener.accept().await.expect("accept");
@@ -968,7 +1072,10 @@ mod tests {
             let mut buffer = [0_u8; 1024];
             while !request.windows(4).any(|window| window == b"\r\n\r\n") {
                 let count = stream.read(&mut buffer).await.expect("read request");
-                assert!(count > 0 && request.len() < 16_384, "incomplete HTTP request");
+                assert!(
+                    count > 0 && request.len() < 16_384,
+                    "incomplete HTTP request"
+                );
                 request.extend_from_slice(&buffer[..count]);
             }
             let body = r#"{"error":{"code":"missingtitle","info":"The page does not exist."}}"#;
@@ -976,7 +1083,10 @@ mod tests {
                 "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
                 body.len()
             );
-            stream.write_all(response.as_bytes()).await.expect("response");
+            stream
+                .write_all(response.as_bytes())
+                .await
+                .expect("response");
         });
         let api = Url::parse(&format!("http://{address}/w/api.php")).expect("api URL");
         let mut client = BunBrowserHttpClient::new();
@@ -1001,10 +1111,14 @@ mod tests {
     #[tokio::test]
     async fn unavailable_action_api_falls_back_to_real_rest_page_source() {
         use tokio::io::{AsyncReadExt, AsyncWriteExt};
-        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.expect("listener");
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+            .await
+            .expect("listener");
         let address = listener.local_addr().expect("address");
-        let source =
-            format!("{{{{Infobox character|name=Aphrodi}}}}\n{}", "long page source ".repeat(20));
+        let source = format!(
+            "{{{{Infobox character|name=Aphrodi}}}}\n{}",
+            "long page source ".repeat(20)
+        );
         let server = tokio::spawn(async move {
             let mut paths = Vec::new();
             let payloads = [
@@ -1017,7 +1131,10 @@ mod tests {
                 let mut buffer = [0_u8; 1024];
                 while !request.windows(4).any(|window| window == b"\r\n\r\n") {
                     let count = stream.read(&mut buffer).await.expect("read request");
-                    assert!(count > 0 && request.len() < 16_384, "incomplete HTTP request");
+                    assert!(
+                        count > 0 && request.len() < 16_384,
+                        "incomplete HTTP request"
+                    );
                     request.extend_from_slice(&buffer[..count]);
                 }
                 paths.push(
@@ -1033,7 +1150,10 @@ mod tests {
                     "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
                     body.len()
                 );
-                stream.write_all(response.as_bytes()).await.expect("response");
+                stream
+                    .write_all(response.as_bytes())
+                    .await
+                    .expect("response");
             }
             paths
         });
@@ -1047,7 +1167,10 @@ mod tests {
             &client,
             &api_options,
             &format!("http://{address}/wiki/Aphrodi"),
-            WikiPageOptions { include_images: false, include_content: true },
+            WikiPageOptions {
+                include_images: false,
+                include_content: true,
+            },
         )
         .await
         .expect("REST fallback dossier");
@@ -1055,7 +1178,12 @@ mod tests {
         assert_eq!(dossier.titre, "Aphrodi");
         assert_eq!(dossier.revid, Some(78));
         assert_eq!(dossier.infobox[0]["name"].propre, "Aphrodi");
-        assert!(dossier.markdown.as_deref().is_some_and(|text| text.starts_with("{{Infobox")));
+        assert!(
+            dossier
+                .markdown
+                .as_deref()
+                .is_some_and(|text| text.starts_with("{{Infobox"))
+        );
         assert_eq!(dossier.mesures["octets_html"], 0);
         let paths = server.await.expect("server");
         assert!(paths[0].contains("/w/api.php?action=parse"));

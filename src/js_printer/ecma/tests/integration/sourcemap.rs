@@ -31,7 +31,11 @@ fn pos(line: u32, col: u32) -> Position {
 fn sourcemap_tokens(source_text: &str, source_type: SourceType) -> Vec<Mapping> {
     let allocator = Allocator::default();
     let ret = Parser::new(&allocator, source_text, source_type).parse();
-    assert!(ret.diagnostics.is_empty(), "parse errors: {:?}", ret.diagnostics);
+    assert!(
+        ret.diagnostics.is_empty(),
+        "parse errors: {:?}",
+        ret.diagnostics
+    );
 
     Codegen::new()
         .with_options(default_options())
@@ -106,7 +110,9 @@ fn incorrect_ast() {
         }
     }
 
-    let ret = Codegen::new().with_options(default_options()).build(&program);
+    let ret = Codegen::new()
+        .with_options(default_options())
+        .build(&program);
     assert!(ret.map.is_some(), "sourcemap exists");
 }
 
@@ -240,7 +246,11 @@ fn synthesized_block_closing_braces_are_mapped() {
     let source_text = "if (foo) {\n  if (bar)\n    baz();\n} else\n  qux();";
     let allocator = Allocator::default();
     let ret = Parser::new(&allocator, source_text, SourceType::mjs()).parse();
-    assert!(ret.diagnostics.is_empty(), "parse errors: {:?}", ret.diagnostics);
+    assert!(
+        ret.diagnostics.is_empty(),
+        "parse errors: {:?}",
+        ret.diagnostics
+    );
 
     let mut program = ret.program;
     let Statement::IfStatement(outer_if) = &mut program.body[0] else {
@@ -255,7 +265,9 @@ fn synthesized_block_closing_braces_are_mapped() {
     };
     outer_if.consequent = consequent;
 
-    let ret = Codegen::new().with_options(default_options()).build(&program);
+    let ret = Codegen::new()
+        .with_options(default_options())
+        .build(&program);
     assert_eq!(ret.code, "if (foo) {\n\tif (bar) baz();\n} else qux();\n");
 
     let tokens: Vec<Mapping> = ret
@@ -308,7 +320,11 @@ fn array_close_bracket_lands_at_close_bracket() {
     let source = "const a = [1, 2]";
     let src_bracket = u32::try_from(source.rfind(']').unwrap()).unwrap();
     let tokens = sourcemap_tokens(source, SourceType::mjs());
-    assert!(has_mapping(&tokens, pos(0, src_bracket), pos(0, src_bracket)));
+    assert!(has_mapping(
+        &tokens,
+        pos(0, src_bracket),
+        pos(0, src_bracket)
+    ));
 }
 
 #[test]
@@ -328,21 +344,30 @@ fn object_close_brace_lands_at_close_brace() {
 #[test]
 fn nested_call_outer_open_paren_resolves_to_source() {
     let tokens = sourcemap_tokens("factory()()", SourceType::mjs());
-    assert!(has_mapping(&tokens, pos(0, 9), pos(0, 9)), "outer `(` of `factory()()`");
+    assert!(
+        has_mapping(&tokens, pos(0, 9), pos(0, 9)),
+        "outer `(` of `factory()()`"
+    );
 }
 
 // Member/getter access on a call result: reported at the `.` after the `)`.
 #[test]
 fn member_access_after_call_resolves_to_source() {
     let tokens = sourcemap_tokens("expect(x).resolves", SourceType::mjs());
-    assert!(has_mapping(&tokens, pos(0, 9), pos(0, 9)), "`.` after `expect(x)`");
+    assert!(
+        has_mapping(&tokens, pos(0, 9), pos(0, 9)),
+        "`.` after `expect(x)`"
+    );
 }
 
 // Same gap for a computed-member result: reported at the `(` after the `]`.
 #[test]
 fn call_after_computed_member_resolves_to_source() {
     let tokens = sourcemap_tokens("arr[i]()", SourceType::mjs());
-    assert!(has_mapping(&tokens, pos(0, 6), pos(0, 6)), "`(` after `arr[i]`");
+    assert!(
+        has_mapping(&tokens, pos(0, 6), pos(0, 6)),
+        "`(` after `arr[i]`"
+    );
 }
 
 // A tagged template whose tag is a call result (`` f()`x` ``) is the same shape
@@ -350,7 +375,10 @@ fn call_after_computed_member_resolves_to_source() {
 #[test]
 fn tagged_template_after_call_resolves_to_source() {
     let tokens = sourcemap_tokens("f()`x`", SourceType::mjs());
-    assert!(has_mapping(&tokens, pos(0, 3), pos(0, 3)), "backtick after `f()`");
+    assert!(
+        has_mapping(&tokens, pos(0, 3), pos(0, 3)),
+        "backtick after `f()`"
+    );
 }
 
 #[test]
@@ -440,10 +468,13 @@ const make = () => ({
 make().prop",
     ];
 
-    let node_version = std::process::Command::new("node").arg("--version").output().map_or_else(
-        |_| "unknown".to_string(),
-        |output| String::from_utf8_lossy(&output.stdout).trim().to_string(),
-    );
+    let node_version = std::process::Command::new("node")
+        .arg("--version")
+        .output()
+        .map_or_else(
+            |_| "unknown".to_string(),
+            |output| String::from_utf8_lossy(&output.stdout).trim().to_string(),
+        );
 
     insta::with_settings!({ prepend_module_to_snapshot => false, snapshot_suffix => "", omit_expression => true }, {
         insta::assert_snapshot!(
@@ -478,7 +509,11 @@ fn codegen(code: &str) -> (String, String) {
 fn mangled_private_names(source_text: &str, mappings: &[(&str, &str)]) -> Vec<String> {
     let allocator = Allocator::default();
     let ret = Parser::new(&allocator, source_text, SourceType::mjs()).parse();
-    assert!(ret.diagnostics.is_empty(), "parse errors: {:?}", ret.diagnostics);
+    assert!(
+        ret.diagnostics.is_empty(),
+        "parse errors: {:?}",
+        ret.diagnostics
+    );
 
     let mut class_mappings = IndexVec::new();
     class_mappings.push(
@@ -504,11 +539,17 @@ fn private_identifier_is_named_only_when_mangled() {
     let source_text = "class C { #ab; m() { return this.#ab; } }";
 
     // Printed as spelled, so nothing to name
-    assert_eq!(mangled_private_names(source_text, &[]), Vec::<String>::new());
+    assert_eq!(
+        mangled_private_names(source_text, &[]),
+        Vec::<String>::new()
+    );
 
     // The token is `#ab`, so that is the name recorded - not `ab`, which would describe a region
     // of the output which includes the `#`
-    assert_eq!(mangled_private_names(source_text, &[("ab", "a")]), vec!["#ab".to_string()]);
+    assert_eq!(
+        mangled_private_names(source_text, &[("ab", "a")]),
+        vec!["#ab".to_string()]
+    );
 }
 
 fn execute_with_node(code: &str, sourcemap_url: &str) -> String {
@@ -538,7 +579,10 @@ fn minified_template_dollar_escapes() {
     let ret = Parser::new(&allocator, source, SourceType::mjs()).parse();
     assert!(ret.diagnostics.is_empty());
     let result = Codegen::new()
-        .with_options(CodegenOptions { minify: true, ..default_options() })
+        .with_options(CodegenOptions {
+            minify: true,
+            ..default_options()
+        })
         .build(&ret.program);
     assert_eq!(result.code, r"`$${first}$${second}$`;after();");
     let map = result.map.unwrap();

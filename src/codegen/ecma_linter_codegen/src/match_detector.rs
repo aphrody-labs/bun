@@ -24,15 +24,22 @@ impl<'a> MatchDetector<'a> {
         }
         let first_stmt = stmts[0];
         // Must be an expression statement
-        let Stmt::Expr(expr, _) = first_stmt else { return None };
+        let Stmt::Expr(expr, _) = first_stmt else {
+            return None;
+        };
         // Must be a match expression
-        let Expr::Match(match_expr) = expr else { return None };
+        let Expr::Match(match_expr) = expr else {
+            return None;
+        };
         // The match expression's must be matching on a `node.kind()` call
         if !is_node_kind_call(&match_expr.expr) {
             return None;
         }
 
-        let mut detector = Self { node_types: NodeTypeSet::new(), rule_runner_data };
+        let mut detector = Self {
+            node_types: NodeTypeSet::new(),
+            rule_runner_data,
+        };
         let result = detector.extract_variants_from_match_expr(match_expr);
         if detector.node_types.is_empty() || result == CollectionResult::Incomplete {
             return None;
@@ -106,7 +113,8 @@ impl<'a> MatchDetector<'a> {
                     && method_call.args.is_empty()
                 {
                     // We have a match, so we can add MemberExpression to the set of node types
-                    self.node_types.extend(self.rule_runner_data.member_expression_kinds.clone());
+                    self.node_types
+                        .extend(self.rule_runner_data.member_expression_kinds.clone());
                     CollectionResult::Complete
                 } else {
                     CollectionResult::Incomplete

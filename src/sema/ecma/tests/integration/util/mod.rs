@@ -191,7 +191,10 @@ impl<'a> SemanticTester<'a> {
     }
 
     #[cfg(not(feature = "cfg"))]
-    #[expect(clippy::unused_self, reason = "keep method signature consistent across cfg modes")]
+    #[expect(
+        clippy::unused_self,
+        reason = "keep method signature consistent across cfg modes"
+    )]
     pub fn basic_blocks_count(&self) -> usize {
         0
     }
@@ -215,7 +218,10 @@ impl<'a> SemanticTester<'a> {
     }
 
     #[cfg(not(feature = "cfg"))]
-    #[expect(clippy::unused_self, reason = "keep method signature consistent across cfg modes")]
+    #[expect(
+        clippy::unused_self,
+        reason = "keep method signature consistent across cfg modes"
+    )]
     pub fn basic_blocks_printed(&self) -> String {
         String::default()
     }
@@ -223,11 +229,16 @@ impl<'a> SemanticTester<'a> {
     #[cfg(feature = "cfg")]
     pub fn cfg_dot_diagram(&self) -> String {
         let semantic = self.build();
-        semantic.cfg().map_or_else(String::default, |cfg| cfg.debug_dot(semantic.nodes().into()))
+        semantic.cfg().map_or_else(String::default, |cfg| {
+            cfg.debug_dot(semantic.nodes().into())
+        })
     }
 
     #[cfg(not(feature = "cfg"))]
-    #[expect(clippy::unused_self, reason = "keep method signature consistent across cfg modes")]
+    #[expect(
+        clippy::unused_self,
+        reason = "keep method signature consistent across cfg modes"
+    )]
     pub fn cfg_dot_diagram(&self) -> String {
         String::default()
     }

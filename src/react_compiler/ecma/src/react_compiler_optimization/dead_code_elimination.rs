@@ -40,7 +40,9 @@ pub fn dead_code_elimination<'a>(func: &mut HirFunction<'a>, env: &Environment<'
 
     for (_block_id, block) in &mut func.body.blocks {
         // Remove unused phi nodes
-        block.phis.retain(|phi| is_id_or_name_used(&state, &env.identifiers, phi.place.identifier));
+        block
+            .phis
+            .retain(|phi| is_id_or_name_used(&state, &env.identifiers, phi.place.identifier));
 
         // Remove instructions with unused lvalues
         block.instructions.retain(|instr_id| {
@@ -54,12 +56,16 @@ pub fn dead_code_elimination<'a>(func: &mut HirFunction<'a>, env: &Environment<'
             let is_block_value = block.kind != BlockKind::Block && i == retained_count - 1;
             if !is_block_value {
                 let instr_id = block.instructions[i];
-                let preserve_destructure =
-                    matches!(block.terminal, Terminal::MaybeThrow { handler: Some(_), .. })
-                        && matches!(
-                            func.instructions[instr_id.index()].value,
-                            InstructionValue::Destructure { .. }
-                        );
+                let preserve_destructure = matches!(
+                    block.terminal,
+                    Terminal::MaybeThrow {
+                        handler: Some(_),
+                        ..
+                    }
+                ) && matches!(
+                    func.instructions[instr_id.index()].value,
+                    InstructionValue::Destructure { .. }
+                );
                 instructions_to_rewrite.push((instr_id, preserve_destructure));
             }
         }
@@ -71,7 +77,8 @@ pub fn dead_code_elimination<'a>(func: &mut HirFunction<'a>, env: &Environment<'
     }
 
     // Remove unused context variables
-    func.context.retain(|ctx_var| is_id_or_name_used(&state, &env.identifiers, ctx_var.identifier));
+    func.context
+        .retain(|ctx_var| is_id_or_name_used(&state, &env.identifiers, ctx_var.identifier));
 }
 
 /// State for tracking referenced identifiers during mark phase.
@@ -84,7 +91,10 @@ struct State<'a> {
 
 impl State<'_> {
     fn new() -> Self {
-        State { identifiers: FxHashSet::default(), named: IdentHashSet::default() }
+        State {
+            identifiers: FxHashSet::default(),
+            named: IdentHashSet::default(),
+        }
     }
 
     fn count(&self) -> usize {
@@ -116,7 +126,11 @@ fn is_id_or_name_used(
         return true;
     }
     let ident = &identifiers[identifier_id];
-    if let Some(ref name) = ident.name { state.named.contains(name.value()) } else { false }
+    if let Some(ref name) = ident.name {
+        state.named.contains(name.value())
+    } else {
+        false
+    }
 }
 
 /// Check if this specific SSA id is used.
@@ -220,7 +234,13 @@ pub(crate) fn find_semantic_only_caught_instructions(
 ) -> Option<IndexVec<InstructionId, bool>> {
     let mut candidates = Vec::new();
     for block in func.body.blocks.values() {
-        if !matches!(block.terminal, Terminal::MaybeThrow { handler: Some(_), .. }) {
+        if !matches!(
+            block.terminal,
+            Terminal::MaybeThrow {
+                handler: Some(_),
+                ..
+            }
+        ) {
             continue;
         }
         for &instr_id in &block.instructions {
@@ -319,7 +339,10 @@ fn rewrite_instruction<'a>(
             // Rewrite to DeclareLocal so the initializer value can be DCE'd.
             let new_lvalue = *lvalue;
             let new_span = *span;
-            instr.value = InstructionValue::DeclareLocal { lvalue: new_lvalue, span: new_span };
+            instr.value = InstructionValue::DeclareLocal {
+                lvalue: new_lvalue,
+                span: new_span,
+            };
         }
         _ => {}
     }

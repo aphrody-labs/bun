@@ -28,7 +28,10 @@ pub struct SpanCursor<'a, T> {
 impl<'a, T: GetSpan> SpanCursor<'a, T> {
     /// `items` must be sorted by span (source order).
     pub fn new(items: &'a [T]) -> Self {
-        Self { inner: items, cursor: Cell::new(0) }
+        Self {
+            inner: items,
+            cursor: Cell::new(0),
+        }
     }
 
     /// Returns unprinted items whose `span.end <= upper_bound`,
@@ -62,7 +65,10 @@ impl<T: GetSpan + Copy> SpanCursor<'_, T> {
     /// callers that want to mark these as printed must call [`Self::take_before`] instead.
     pub fn iter_before(&self, upper_bound: u32) -> impl Iterator<Item = T> {
         let start = self.cursor.get();
-        self.inner[start..].iter().copied().take_while(move |item| item.span().end <= upper_bound)
+        self.inner[start..]
+            .iter()
+            .copied()
+            .take_while(move |item| item.span().end <= upper_bound)
     }
 
     /// Iterator over every unprinted item ([`Self::take_remaining`] without advancing the cursor).

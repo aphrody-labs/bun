@@ -23,7 +23,11 @@ pub fn detect_code_removal(
 fn collect(code: &str, source_type: SourceType) -> StatsCollector {
     // Parse the way the formatter does (so the before/after comparison matches the formatter's view).
     let allocator = Allocator::default();
-    let ParserReturn { program, diagnostics, .. } = parse_for_format(&allocator, code, source_type);
+    let ParserReturn {
+        program,
+        diagnostics,
+        ..
+    } = parse_for_format(&allocator, code, source_type);
 
     let mut collector = StatsCollector::default();
 
@@ -35,7 +39,9 @@ fn collect(code: &str, source_type: SourceType) -> StatsCollector {
     }
 
     // Using semantic analysis here only to get parent node
-    let semantic_ret = SemanticBuilder::new().with_build_nodes(true).build(&program);
+    let semantic_ret = SemanticBuilder::new()
+        .with_build_nodes(true)
+        .build(&program);
     collector.collect(&program, &semantic_ret.semantic)
 }
 
@@ -54,7 +60,9 @@ fn diff(before: &StatsCollector, after: &StatsCollector) -> Option<String> {
             let after_count = after.get(key).copied().unwrap_or(0);
 
             if before_count != after_count {
-                errors.push(format!("Count mismatch for '{key}': {before_count} -> {after_count}"));
+                errors.push(format!(
+                    "Count mismatch for '{key}': {before_count} -> {after_count}"
+                ));
             }
         }
 
@@ -67,8 +75,9 @@ fn diff(before: &StatsCollector, after: &StatsCollector) -> Option<String> {
     fn diff_block_comments(before: &[String], after: &[String]) -> Option<String> {
         let before_count = before.len();
         let after_count = after.len();
-        (before_count != after_count)
-            .then_some(format!("BlockComment count mismatch: {before_count} -> {after_count}"))
+        (before_count != after_count).then_some(format!(
+            "BlockComment count mismatch: {before_count} -> {after_count}"
+        ))
     }
 
     // Compare line comments by their content.
@@ -96,7 +105,10 @@ fn diff(before: &StatsCollector, after: &StatsCollector) -> Option<String> {
         // ```
         // -> `for (x in y); //a //b` = Comment: 2 -> 1
         for bf in before {
-            if after.iter().any(|af| bf.trim_end() == af || af.contains(bf)) {
+            if after
+                .iter()
+                .any(|af| bf.trim_end() == af || af.contains(bf))
+            {
                 continue;
             }
             return Some(format!("LineComment mismatch: `{bf}` not found"));
@@ -113,8 +125,14 @@ fn diff(before: &StatsCollector, after: &StatsCollector) -> Option<String> {
     }
 
     let mut errors = Vec::new();
-    errors.extend(diff_block_comments(&before.block_comments, &after.block_comments));
-    errors.extend(diff_line_comments(&before.line_comments, &after.line_comments));
+    errors.extend(diff_block_comments(
+        &before.block_comments,
+        &after.block_comments,
+    ));
+    errors.extend(diff_line_comments(
+        &before.line_comments,
+        &after.line_comments,
+    ));
     errors.extend(diff_counts(&before.node_counts, &after.node_counts).unwrap_or_default());
 
     (!errors.is_empty()).then_some(errors.join("\n"))
@@ -224,7 +242,10 @@ impl StatsCollector {
                 if let Some(rest) = node_name.strip_prefix(prefix)
                     && let Some(value) = rest.strip_suffix(')')
                 {
-                    *self.node_counts.entry(format!("OBJECT_LIKE_KEYS({value})")).or_insert(0) += 1;
+                    *self
+                        .node_counts
+                        .entry(format!("OBJECT_LIKE_KEYS({value})"))
+                        .or_insert(0) += 1;
                     return;
                 }
             }
@@ -270,14 +291,21 @@ impl StatsCollector {
             // The number of quasis is already tracked via `TemplateElement` nodes,
             // so we only need to count `TemplateLiteral` instances without content.
             AstKind::TemplateLiteral(t) => {
-                format!("TEMPLATE_LITERAL({},{})", t.quasis.len(), t.expressions.len())
+                format!(
+                    "TEMPLATE_LITERAL({},{})",
+                    t.quasis.len(),
+                    t.expressions.len()
+                )
             }
             // `JSXText` may contain redundant whitespaces.
             // e.g. `<p>World    </p>` -> `<p>World </p>`
             // Redundant whitespaces can be truncated even if they are inside.
             // e.g. `<p>abc   :  def</p>` -> `<p>abc : def</p>`
             AstKind::JSXText(t) if t.value != " " => {
-                format!("JSX_TEXT({})", t.value.split_whitespace().collect::<Vec<_>>().join(" "))
+                format!(
+                    "JSX_TEXT({})",
+                    t.value.split_whitespace().collect::<Vec<_>>().join(" ")
+                )
             }
             // When ParenthesizedExpression is removed, CallExpression(calee name) may be affected.
             // e.g. `(a?.b)?.()` -> `a?.b?.()`
@@ -327,7 +355,11 @@ mod tests {
             let stats1 = collect(code1, source_type);
             let stats2 = collect(code2, source_type);
 
-            assert_ne!(diff(&stats1, &stats2), None, "Expected diff not found:\n{code1}");
+            assert_ne!(
+                diff(&stats1, &stats2),
+                None,
+                "Expected diff not found:\n{code1}"
+            );
         }
     }
 
@@ -338,7 +370,10 @@ mod tests {
             ("for ((let.a) of foo);", "for ((let).a of foo);"),
             ("for ((let[a]) of foo);", "for ((let)[a] of foo);"),
             ("for ((let.a) in foo);", "for (let.a in foo);"),
-            (r#"const { index, "0": code } = match;"#, r"const { index, 0: code } = match;"),
+            (
+                r#"const { index, "0": code } = match;"#,
+                r"const { index, 0: code } = match;",
+            ),
             (r#"({ "0": code } = match);"#, r"({ 0: code } = match);"),
             (
                 r#"interface C { "assert"(condition?: boolean): void; }"#,
@@ -370,7 +405,10 @@ mod tests {
             // Function call arguments
             (r#"clsx("flex p-4 m-2")"#, r#"clsx("flex m-2 p-4")"#),
             // Duplicate class removal (preserve_duplicates: false)
-            (r#"<div className="flex flex p-4" />"#, r#"<div className="flex p-4" />"#),
+            (
+                r#"<div className="flex flex p-4" />"#,
+                r#"<div className="flex p-4" />"#,
+            ),
             // Single class should still be tracked normally
             (r#"const a = "flex";"#, r#"const a = "flex";"#),
         ] {

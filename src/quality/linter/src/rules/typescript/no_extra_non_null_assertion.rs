@@ -266,7 +266,12 @@ fn test() {
         ),
     ];
 
-    Tester::new(NoExtraNonNullAssertion::NAME, NoExtraNonNullAssertion::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        NoExtraNonNullAssertion::NAME,
+        NoExtraNonNullAssertion::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

@@ -47,7 +47,10 @@ fn run_parser(
         Cow::Borrowed(code)
     };
 
-    let mut driver = Driver { allow_return_outside_function, ..Driver::default() };
+    let mut driver = Driver {
+        allow_return_outside_function,
+        ..Driver::default()
+    };
     driver.run(&source_text, source_type);
 
     let errors = driver.errors();
@@ -83,15 +86,24 @@ pub fn run_parser_test262(files: &[Test262File]) -> Vec<CoverageResult> {
         .par_iter()
         .map(|f| {
             let flags = &f.meta.flags;
-            let should_fail =
-                f.meta.negative.as_ref().is_some_and(|n| n.phase == crate::test262::Phase::Parse);
+            let should_fail = f
+                .meta
+                .negative
+                .as_ref()
+                .is_some_and(|n| n.phase == crate::test262::Phase::Parse);
             let source_type = SourceType::cjs().with_script(true);
 
             let result = if flags.contains(&TestFlag::OnlyStrict) {
                 let r = run_parser(&f.path, &f.code, source_type, true, false);
                 evaluate_result(r, should_fail)
             } else if flags.contains(&TestFlag::Module) {
-                let r = run_parser(&f.path, &f.code, source_type.with_module(true), false, false);
+                let r = run_parser(
+                    &f.path,
+                    &f.code,
+                    source_type.with_module(true),
+                    false,
+                    false,
+                );
                 evaluate_result(r, should_fail)
             } else if flags.contains(&TestFlag::NoStrict) || flags.contains(&TestFlag::Raw) {
                 let r = run_parser(&f.path, &f.code, source_type, false, false);
@@ -108,7 +120,11 @@ pub fn run_parser_test262(files: &[Test262File]) -> Vec<CoverageResult> {
                 }
             };
 
-            CoverageResult { path: f.path.clone(), should_fail, result }
+            CoverageResult {
+                path: f.path.clone(),
+                should_fail,
+                result,
+            }
         })
         .collect()
 }
@@ -125,7 +141,11 @@ pub fn run_parser_babel(files: &[BabelFile]) -> Vec<CoverageResult> {
                 f.options.allow_return_outside_function,
             );
             let result = evaluate_result(result, f.should_fail);
-            CoverageResult { path: f.path.clone(), should_fail: f.should_fail, result }
+            CoverageResult {
+                path: f.path.clone(),
+                should_fail: f.should_fail,
+                result,
+            }
         })
         .collect()
 }
@@ -189,7 +209,10 @@ fn run_parser_typescript_unit(
         Cow::Borrowed(code)
     };
 
-    let mut driver = Driver { allow_return_outside_function: false, ..Driver::default() };
+    let mut driver = Driver {
+        allow_return_outside_function: false,
+        ..Driver::default()
+    };
     driver.run(&source_text, source_type);
 
     let errors = driver.errors();
@@ -245,7 +268,11 @@ pub fn run_parser_typescript(files: &[TypeScriptFile]) -> Vec<CoverageResult> {
                 }
             }
             let result = evaluate_result(final_result, f.should_fail);
-            CoverageResult { path: f.path.clone(), should_fail: f.should_fail, result }
+            CoverageResult {
+                path: f.path.clone(),
+                should_fail: f.should_fail,
+                result,
+            }
         })
         .collect()
 }
@@ -256,7 +283,11 @@ pub fn run_parser_misc(files: &[MiscFile]) -> Vec<CoverageResult> {
         .map(|f| {
             let result = run_parser(&f.path, &f.code, f.source_type, false, false);
             let result = evaluate_result(result, f.should_fail);
-            CoverageResult { path: f.path.clone(), should_fail: f.should_fail, result }
+            CoverageResult {
+                path: f.path.clone(),
+                should_fail: f.should_fail,
+                result,
+            }
         })
         .collect()
 }
@@ -295,8 +326,11 @@ fn run_semantic(
     if errors.is_empty() {
         TestResult::Passed
     } else {
-        let messages =
-            errors.into_iter().map(|e| e.message.to_string()).collect::<Vec<_>>().join("\n");
+        let messages = errors
+            .into_iter()
+            .map(|e| e.message.to_string())
+            .collect::<Vec<_>>()
+            .join("\n");
         TestResult::GenericError("semantic", messages)
     }
 }
@@ -305,15 +339,22 @@ pub fn run_semantic_test262(files: &[Test262File]) -> Vec<CoverageResult> {
     files
         .par_iter()
         .filter(|f| {
-            let should_fail =
-                f.meta.negative.as_ref().is_some_and(|n| n.phase == crate::test262::Phase::Parse);
+            let should_fail = f
+                .meta
+                .negative
+                .as_ref()
+                .is_some_and(|n| n.phase == crate::test262::Phase::Parse);
             !should_fail
         })
         .map(|f| {
             let is_module = f.meta.flags.contains(&TestFlag::Module);
             let source_type = SourceType::script().with_module(is_module);
             let result = run_semantic(&f.code, source_type, &f.path, None);
-            CoverageResult { path: f.path.clone(), should_fail: false, result }
+            CoverageResult {
+                path: f.path.clone(),
+                should_fail: false,
+                result,
+            }
         })
         .collect()
 }
@@ -324,7 +365,11 @@ pub fn run_semantic_babel(files: &[BabelFile]) -> Vec<CoverageResult> {
         .filter(|f| !f.should_fail)
         .map(|f| {
             let result = run_semantic(&f.code, f.source_type, &f.path, None);
-            CoverageResult { path: f.path.clone(), should_fail: false, result }
+            CoverageResult {
+                path: f.path.clone(),
+                should_fail: false,
+                result,
+            }
         })
         .collect()
 }
@@ -349,7 +394,11 @@ pub fn run_semantic_typescript(files: &[TypeScriptFile]) -> Vec<CoverageResult> 
                     break;
                 }
             }
-            CoverageResult { path: f.path.clone(), should_fail: false, result: final_result }
+            CoverageResult {
+                path: f.path.clone(),
+                should_fail: false,
+                result: final_result,
+            }
         })
         .collect()
 }
@@ -360,7 +409,11 @@ pub fn run_semantic_misc(files: &[MiscFile]) -> Vec<CoverageResult> {
         .filter(|f| !f.should_fail)
         .map(|f| {
             let result = run_semantic(&f.code, f.source_type, &f.path, None);
-            CoverageResult { path: f.path.clone(), should_fail: false, result }
+            CoverageResult {
+                path: f.path.clone(),
+                should_fail: false,
+                result,
+            }
         })
         .collect()
 }
@@ -371,32 +424,43 @@ pub fn run_semantic_misc(files: &[MiscFile]) -> Vec<CoverageResult> {
 
 fn run_codegen(code: &str, source_type: SourceType) -> TestResult {
     // Normal idempotency
-    let result =
-        Driver { codegen: true, ..Driver::default() }.idempotency("Normal", code, source_type);
+    let result = Driver {
+        codegen: true,
+        ..Driver::default()
+    }
+    .idempotency("Normal", code, source_type);
     if result != TestResult::Passed {
         return result;
     }
     // Minified idempotency
-    Driver { codegen: true, remove_whitespace: true, ..Driver::default() }.idempotency(
-        "Minify",
-        code,
-        source_type,
-    )
+    Driver {
+        codegen: true,
+        remove_whitespace: true,
+        ..Driver::default()
+    }
+    .idempotency("Minify", code, source_type)
 }
 
 pub fn run_codegen_test262(files: &[Test262File]) -> Vec<CoverageResult> {
     files
         .par_iter()
         .filter(|f| {
-            let should_fail =
-                f.meta.negative.as_ref().is_some_and(|n| n.phase == crate::test262::Phase::Parse);
+            let should_fail = f
+                .meta
+                .negative
+                .as_ref()
+                .is_some_and(|n| n.phase == crate::test262::Phase::Parse);
             !should_fail
         })
         .map(|f| {
             let is_module = f.meta.flags.contains(&TestFlag::Module);
             let source_type = SourceType::script().with_module(is_module);
             let result = run_codegen(&f.code, source_type);
-            CoverageResult { path: f.path.clone(), should_fail: false, result }
+            CoverageResult {
+                path: f.path.clone(),
+                should_fail: false,
+                result,
+            }
         })
         .collect()
 }
@@ -407,7 +471,11 @@ pub fn run_codegen_babel(files: &[BabelFile]) -> Vec<CoverageResult> {
         .filter(|f| !f.should_fail)
         .map(|f| {
             let result = run_codegen(&f.code, f.source_type);
-            CoverageResult { path: f.path.clone(), should_fail: false, result }
+            CoverageResult {
+                path: f.path.clone(),
+                should_fail: false,
+                result,
+            }
         })
         .collect()
 }
@@ -425,7 +493,11 @@ pub fn run_codegen_typescript(files: &[TypeScriptFile]) -> Vec<CoverageResult> {
                     break;
                 }
             }
-            CoverageResult { path: f.path.clone(), should_fail: false, result: final_result }
+            CoverageResult {
+                path: f.path.clone(),
+                should_fail: false,
+                result: final_result,
+            }
         })
         .collect()
 }
@@ -436,7 +508,11 @@ pub fn run_codegen_misc(files: &[MiscFile]) -> Vec<CoverageResult> {
         .filter(|f| !f.should_fail)
         .map(|f| {
             let result = run_codegen(&f.code, f.source_type);
-            CoverageResult { path: f.path.clone(), should_fail: false, result }
+            CoverageResult {
+                path: f.path.clone(),
+                should_fail: false,
+                result,
+            }
         })
         .collect()
 }
@@ -503,15 +579,22 @@ pub fn run_formatter_test262(files: &[Test262File]) -> Vec<CoverageResult> {
     files
         .par_iter()
         .filter(|f| {
-            let should_fail =
-                f.meta.negative.as_ref().is_some_and(|n| n.phase == crate::test262::Phase::Parse);
+            let should_fail = f
+                .meta
+                .negative
+                .as_ref()
+                .is_some_and(|n| n.phase == crate::test262::Phase::Parse);
             !should_fail
         })
         .map(|f| {
             let is_module = f.meta.flags.contains(&TestFlag::Module);
             let source_type = SourceType::script().with_module(is_module);
             let result = run_formatter(&f.code, source_type);
-            CoverageResult { path: f.path.clone(), should_fail: false, result }
+            CoverageResult {
+                path: f.path.clone(),
+                should_fail: false,
+                result,
+            }
         })
         .collect()
 }
@@ -522,7 +605,11 @@ pub fn run_formatter_babel(files: &[BabelFile]) -> Vec<CoverageResult> {
         .filter(|f| !f.should_fail)
         .map(|f| {
             let result = run_formatter(&f.code, f.source_type);
-            CoverageResult { path: f.path.clone(), should_fail: false, result }
+            CoverageResult {
+                path: f.path.clone(),
+                should_fail: false,
+                result,
+            }
         })
         .collect()
 }
@@ -540,7 +627,11 @@ pub fn run_formatter_typescript(files: &[TypeScriptFile]) -> Vec<CoverageResult>
                     break;
                 }
             }
-            CoverageResult { path: f.path.clone(), should_fail: false, result: final_result }
+            CoverageResult {
+                path: f.path.clone(),
+                should_fail: false,
+                result: final_result,
+            }
         })
         .collect()
 }
@@ -551,7 +642,11 @@ pub fn run_formatter_misc(files: &[MiscFile]) -> Vec<CoverageResult> {
         .filter(|f| !f.should_fail)
         .map(|f| {
             let result = run_formatter(&f.code, f.source_type);
-            CoverageResult { path: f.path.clone(), should_fail: false, result }
+            CoverageResult {
+                path: f.path.clone(),
+                should_fail: false,
+                result,
+            }
         })
         .collect()
 }
@@ -588,7 +683,11 @@ fn run_transformer(
     if transformed1 == driver.printed {
         TestResult::Passed
     } else {
-        TestResult::Mismatch("Mismatch", transformed1, std::mem::take(&mut driver.printed))
+        TestResult::Mismatch(
+            "Mismatch",
+            transformed1,
+            std::mem::take(&mut driver.printed),
+        )
     }
 }
 
@@ -596,15 +695,22 @@ pub fn run_transformer_test262(files: &[Test262File]) -> Vec<CoverageResult> {
     files
         .par_iter()
         .filter(|f| {
-            let should_fail =
-                f.meta.negative.as_ref().is_some_and(|n| n.phase == crate::test262::Phase::Parse);
+            let should_fail = f
+                .meta
+                .negative
+                .as_ref()
+                .is_some_and(|n| n.phase == crate::test262::Phase::Parse);
             !should_fail
         })
         .map(|f| {
             let is_module = f.meta.flags.contains(&TestFlag::Module);
             let source_type = SourceType::script().with_module(is_module);
             let result = run_transformer(&f.code, source_type, &f.path, None);
-            CoverageResult { path: f.path.clone(), should_fail: false, result }
+            CoverageResult {
+                path: f.path.clone(),
+                should_fail: false,
+                result,
+            }
         })
         .collect()
 }
@@ -615,7 +721,11 @@ pub fn run_transformer_babel(files: &[BabelFile]) -> Vec<CoverageResult> {
         .filter(|f| !f.should_fail)
         .map(|f| {
             let result = run_transformer(&f.code, f.source_type, &f.path, None);
-            CoverageResult { path: f.path.clone(), should_fail: false, result }
+            CoverageResult {
+                path: f.path.clone(),
+                should_fail: false,
+                result,
+            }
         })
         .collect()
 }
@@ -639,7 +749,11 @@ pub fn run_transformer_typescript(files: &[TypeScriptFile]) -> Vec<CoverageResul
                     break;
                 }
             }
-            CoverageResult { path: f.path.clone(), should_fail: false, result: final_result }
+            CoverageResult {
+                path: f.path.clone(),
+                should_fail: false,
+                result: final_result,
+            }
         })
         .collect()
 }
@@ -650,7 +764,11 @@ pub fn run_transformer_misc(files: &[MiscFile]) -> Vec<CoverageResult> {
         .filter(|f| !f.should_fail)
         .map(|f| {
             let result = run_transformer(&f.code, f.source_type, &f.path, None);
-            CoverageResult { path: f.path.clone(), should_fail: false, result }
+            CoverageResult {
+                path: f.path.clone(),
+                should_fail: false,
+                result,
+            }
         })
         .collect()
 }
@@ -660,16 +778,23 @@ pub fn run_transformer_misc(files: &[MiscFile]) -> Vec<CoverageResult> {
 // ================================
 
 fn run_minifier(code: &str, source_type: SourceType) -> TestResult {
-    Driver { compress: Some(CompressOptions::smallest()), codegen: true, ..Driver::default() }
-        .idempotency("Compress", code, source_type)
+    Driver {
+        compress: Some(CompressOptions::smallest()),
+        codegen: true,
+        ..Driver::default()
+    }
+    .idempotency("Compress", code, source_type)
 }
 
 pub fn run_minifier_test262(files: &[Test262File]) -> Vec<CoverageResult> {
     files
         .par_iter()
         .filter(|f| {
-            let should_fail =
-                f.meta.negative.as_ref().is_some_and(|n| n.phase == crate::test262::Phase::Parse);
+            let should_fail = f
+                .meta
+                .negative
+                .as_ref()
+                .is_some_and(|n| n.phase == crate::test262::Phase::Parse);
             let is_no_strict = f.meta.flags.contains(&TestFlag::NoStrict);
             !should_fail && !is_no_strict
         })
@@ -677,7 +802,11 @@ pub fn run_minifier_test262(files: &[Test262File]) -> Vec<CoverageResult> {
             let is_module = f.meta.flags.contains(&TestFlag::Module);
             let source_type = SourceType::script().with_module(is_module);
             let result = run_minifier(&f.code, source_type);
-            CoverageResult { path: f.path.clone(), should_fail: false, result }
+            CoverageResult {
+                path: f.path.clone(),
+                should_fail: false,
+                result,
+            }
         })
         .collect()
 }
@@ -688,7 +817,11 @@ pub fn run_minifier_babel(files: &[BabelFile]) -> Vec<CoverageResult> {
         .filter(|f| !f.should_fail && !f.source_type.is_typescript())
         .map(|f| {
             let result = run_minifier(&f.code, f.source_type);
-            CoverageResult { path: f.path.clone(), should_fail: false, result }
+            CoverageResult {
+                path: f.path.clone(),
+                should_fail: false,
+                result,
+            }
         })
         .collect()
 }
@@ -722,12 +855,19 @@ pub fn run_estree_test262_tokens(files: &[Test262File]) -> Vec<CoverageResult> {
         |test_file| {
             workspace_root()
                 .join("estree-conformance/tests/test262-tokens")
-                .join(test_file.path.strip_prefix("test262/").unwrap_or(&test_file.path))
+                .join(
+                    test_file
+                        .path
+                        .strip_prefix("test262/")
+                        .unwrap_or(&test_file.path),
+                )
                 .with_extension("json")
         },
         RuntimeParserConfig::new(true),
         |parser_ret| {
-            let ParserReturn { program, tokens, .. } = parser_ret;
+            let ParserReturn {
+                program, tokens, ..
+            } = parser_ret;
             let source_text = program.source_text;
             let span_converter = Utf8ToUtf16::new(source_text);
             to_estree_tokens_pretty_json(
@@ -789,7 +929,11 @@ fn run_estree_test262_impl(
             } else {
                 TestResult::Mismatch("Mismatch", actual_json, expected_json)
             };
-            CoverageResult { path: test_file.path.clone(), should_fail: false, result }
+            CoverageResult {
+                path: test_file.path.clone(),
+                should_fail: false,
+                result,
+            }
         })
         .collect()
 }
@@ -797,7 +941,11 @@ fn run_estree_test262_impl(
 pub fn run_estree_acorn_jsx(files: &[AcornJsxFile]) -> Vec<CoverageResult> {
     run_estree_acorn_jsx_impl(
         files,
-        |test_file| workspace_root().join(&test_file.path).with_extension("json"),
+        |test_file| {
+            workspace_root()
+                .join(&test_file.path)
+                .with_extension("json")
+        },
         RuntimeParserConfig::default(),
         |parser_ret| {
             let mut program = parser_ret.program;
@@ -814,7 +962,9 @@ pub fn run_estree_acorn_jsx_tokens(files: &[AcornJsxFile]) -> Vec<CoverageResult
         |test_file| workspace_root().join(test_file.path.with_extension("tokens.json")),
         RuntimeParserConfig::new(true),
         |parser_ret| {
-            let ParserReturn { program, tokens, .. } = parser_ret;
+            let ParserReturn {
+                program, tokens, ..
+            } = parser_ret;
             let source_text = program.source_text;
             let span_converter = Utf8ToUtf16::new(source_text);
             to_estree_tokens_pretty_json(
@@ -891,7 +1041,11 @@ fn run_estree_acorn_jsx_impl(
             } else {
                 TestResult::Mismatch("Mismatch", actual_json, expected_json)
             };
-            CoverageResult { path: test_file.path.clone(), should_fail: false, result }
+            CoverageResult {
+                path: test_file.path.clone(),
+                should_fail: false,
+                result,
+            }
         })
         .collect()
 }
@@ -919,7 +1073,9 @@ pub fn run_estree_typescript(files: &[TypeScriptFile]) -> Vec<CoverageResult> {
 
 pub fn run_estree_typescript_tokens(files: &[TypeScriptFile]) -> Vec<CoverageResult> {
     run_estree_typescript_impl(files, "TOKENS", RuntimeParserConfig::new(true), |ret| {
-        let ParserReturn { program, tokens, .. } = ret;
+        let ParserReturn {
+            program, tokens, ..
+        } = ret;
         let source_text = program.source_text;
         let span_converter = Utf8ToUtf16::new(source_text);
         to_estree_tokens_pretty_json(
@@ -944,11 +1100,19 @@ fn run_estree_typescript_impl(
             if test_file.should_fail {
                 return None;
             }
-            if test_file.path.to_str().is_some_and(|p| TS_SKIP_PATHS.contains(&p)) {
+            if test_file
+                .path
+                .to_str()
+                .is_some_and(|p| TS_SKIP_PATHS.contains(&p))
+            {
                 return None;
             }
 
-            let ext = test_file.path.extension().and_then(|e| e.to_str()).unwrap_or("");
+            let ext = test_file
+                .path
+                .extension()
+                .and_then(|e| e.to_str())
+                .unwrap_or("");
             let estree_path = workspace_root()
                 .join("estree-conformance/tests")
                 .join(&test_file.path)
@@ -977,7 +1141,10 @@ fn run_estree_typescript_impl(
             for (unit, &expected_json) in test_file.units.iter().zip(snapshot_units.iter()) {
                 let source_type = unit.source_type;
                 let source_text = unit.content.as_str();
-                let parse_options = ParseOptions { preserve_parens: false, ..Default::default() };
+                let parse_options = ParseOptions {
+                    preserve_parens: false,
+                    ..Default::default()
+                };
 
                 let allocator = Allocator::new();
                 let ret = Parser::new(&allocator, source_text, source_type)

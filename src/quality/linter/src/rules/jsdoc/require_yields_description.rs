@@ -143,6 +143,11 @@ fn test() {
                   ",
     ];
 
-    Tester::new(RequireYieldsDescription::NAME, RequireYieldsDescription::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        RequireYieldsDescription::NAME,
+        RequireYieldsDescription::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

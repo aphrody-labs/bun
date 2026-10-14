@@ -290,15 +290,39 @@ fn test() {
         ),
         (r"a = 'a\\b'", r"a = String.raw`a\b`"),
         (r"a = {['a\\b']: b}", r"a = {[String.raw`a\b`]: b}"),
-        (r"function a() {return'a\\b'}", r"function a() {return String.raw`a\b`}"),
-        (r"const foo = 'foo \\x46';", r"const foo = String.raw`foo \x46`;"),
-        (r"for (const f of'a\\b') {}", r"for (const f of String.raw`a\b`) {}"),
-        (r"function* a() {yield'a\\b'}", r"function* a() {yield String.raw`a\b`}"),
-        (r"function a() {throw'a\\b'}", r"function a() {throw String.raw`a\b`}"),
-        (r"if (typeof'a\\b' === 'string') {}", r"if (typeof String.raw`a\b` === 'string') {}"),
-        (r"const a = () => void'a\\b';", r"const a = () => void String.raw`a\b`;"),
+        (
+            r"function a() {return'a\\b'}",
+            r"function a() {return String.raw`a\b`}",
+        ),
+        (
+            r"const foo = 'foo \\x46';",
+            r"const foo = String.raw`foo \x46`;",
+        ),
+        (
+            r"for (const f of'a\\b') {}",
+            r"for (const f of String.raw`a\b`) {}",
+        ),
+        (
+            r"function* a() {yield'a\\b'}",
+            r"function* a() {yield String.raw`a\b`}",
+        ),
+        (
+            r"function a() {throw'a\\b'}",
+            r"function a() {throw String.raw`a\b`}",
+        ),
+        (
+            r"if (typeof'a\\b' === 'string') {}",
+            r"if (typeof String.raw`a\b` === 'string') {}",
+        ),
+        (
+            r"const a = () => void'a\\b';",
+            r"const a = () => void String.raw`a\b`;",
+        ),
         // Non-ASCII characters
-        (r"const a = 'c:\\someöäü\\path';", r"const a = String.raw`c:\someöäü\path`;"),
+        (
+            r"const a = 'c:\\someöäü\\path';",
+            r"const a = String.raw`c:\someöäü\path`;",
+        ),
     ];
 
     Tester::new(PreferStringRaw::NAME, PreferStringRaw::PLUGIN, pass, fail)
@@ -308,8 +332,13 @@ fn test() {
     let dts_pass = vec![r#"declare const POSIX_REGEX_SOURCE: { ascii: "\\x00-\\x7F"; };"#];
     let dts_fail: Vec<&str> = vec![];
 
-    Tester::new(PreferStringRaw::NAME, PreferStringRaw::PLUGIN, dts_pass, dts_fail)
-        .change_rule_path("test.d.ts")
-        .intentionally_allow_no_fix_tests()
-        .test();
+    Tester::new(
+        PreferStringRaw::NAME,
+        PreferStringRaw::PLUGIN,
+        dts_pass,
+        dts_fail,
+    )
+    .change_rule_path("test.d.ts")
+    .intentionally_allow_no_fix_tests()
+    .test();
 }

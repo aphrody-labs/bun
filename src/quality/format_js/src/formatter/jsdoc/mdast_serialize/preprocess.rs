@@ -12,7 +12,9 @@ pub(super) fn normalize_legacy_ordered_list_markers(text: &str) -> Cow<'_, str> 
     // minimal signature (a digit followed somewhere by `-`) to skip the
     // per-line scan for the vast majority of descriptions.
     let bytes = text.as_bytes();
-    let has_digit_dash = bytes.windows(2).any(|w| w[0].is_ascii_digit() && w[1] == b'-');
+    let has_digit_dash = bytes
+        .windows(2)
+        .any(|w| w[0].is_ascii_digit() && w[1] == b'-');
     if !has_digit_dash {
         return Cow::Borrowed(text);
     }
@@ -55,7 +57,11 @@ pub(super) fn normalize_legacy_ordered_list_markers(text: &str) -> Cow<'_, str> 
         result.push_str(line);
     }
 
-    if changed { Cow::Owned(result) } else { Cow::Borrowed(text) }
+    if changed {
+        Cow::Owned(result)
+    } else {
+        Cow::Borrowed(text)
+    }
 }
 
 /// Convert `* ` list markers at the start of lines to `- `.
@@ -86,7 +92,11 @@ pub(super) fn convert_star_list_markers(text: &str) -> Cow<'_, str> {
         }
     }
 
-    if changed { Cow::Owned(result) } else { Cow::Borrowed(text) }
+    if changed {
+        Cow::Owned(result)
+    } else {
+        Cow::Borrowed(text)
+    }
 }
 
 /// Replace `{@link ...}`, `{@linkcode ...}`, `{@linkplain ...}`, `{@tutorial ...}`

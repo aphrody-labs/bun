@@ -64,7 +64,10 @@ impl GroupName {
         let selector = ImportSelector::parse(parts.last()?)?;
 
         if parts.len() == 1 {
-            return Some(Self { modifiers: vec![], selector });
+            return Some(Self {
+                modifiers: vec![],
+                selector,
+            });
         }
 
         let mut modifiers = Vec::with_capacity(parts.len() - 1);
@@ -77,7 +80,10 @@ impl GroupName {
         modifiers.sort_unstable();
         modifiers.dedup();
 
-        Some(Self { selector, modifiers })
+        Some(Self {
+            selector,
+            modifiers,
+        })
     }
 
     /// Check if it represents a possible group name of the given import.

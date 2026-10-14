@@ -121,7 +121,11 @@ pub struct ModuleGraphVisitResult<T> {
 
 impl<T> ModuleGraphVisitResult<T> {
     fn with_result(result: T, visitor: ModuleGraphVisitor) -> Self {
-        Self { result, _traversed: visitor.traversed, _max_depth: visitor.max_depth }
+        Self {
+            result,
+            _traversed: visitor.traversed,
+            _max_depth: visitor.max_depth,
+        }
     }
 }
 

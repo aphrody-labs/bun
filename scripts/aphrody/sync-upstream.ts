@@ -1,7 +1,8 @@
 // Merge upstream oven-sh/bun into the fork and keep the @aphrody rename.
 //
 //   bun scripts/aphrody/sync-upstream.ts [--push] [--dry-run] [--keep-conflicts]
-//       [--root <dir>] [--remote upstream] [--ref upstream/main] [--branch main] [--no-fetch] [--no-index]
+//       [--root <dir>] [--upstream-checkout <sibling>] [--remote upstream] [--ref upstream/main]
+//       [--branch main] [--no-fetch] [--no-index]
 //
 // Conflicts are first retried as a rename-aware three-way merge: the merge
 // base and the upstream side are passed through scope.ts `rewrite()` before
@@ -12,7 +13,9 @@
 
 import { join } from "node:path";
 import { mkdir, mkdtemp, rm } from "node:fs/promises";
-import { apply, rewrite } from "./scope.ts";
+import { isManaged, rewrite } from "./scope.ts";
+import { previewUpstream } from "./sync-upstream-preview.ts";
+import { prepareUpstreamSource } from "./sync-upstream-source.ts";
 
 type Options = {
   root: string;
@@ -24,6 +27,7 @@ type Options = {
   dryRun: boolean;
   keepConflicts: boolean;
   index: boolean;
+  upstreamCheckout?: string;
 };
 
 // Files whose content is this component's, not upstream's: on a conflict the local version is kept.
@@ -45,7 +49,8 @@ export type SyncResult =
       kept: string[];
       pushed: boolean;
     }
-  | { status: "dry-run"; behind: number; conflicts: string[] }
+  | { status: "dry-run"; behind: number; conflicts: string[]; added: string[]; deleted: string[]; collisions: string[] }
+  | { status: "collisions"; behind: number; collisions: string[] }
   | { status: "conflicts"; behind: number; conflicts: string[] };
 
 function parseArgs(argv: string[]): Options {
@@ -64,6 +69,7 @@ function parseArgs(argv: string[]): Options {
     dryRun: argv.includes("--dry-run"),
     keepConflicts: argv.includes("--keep-conflicts"),
     index: !argv.includes("--no-index"),
+    upstreamCheckout: argv.includes("--upstream-checkout") ? value("--upstream-checkout", "") : undefined,
   };
 }
 
@@ -81,6 +87,20 @@ function gitOk(root: string, args: string[]): string {
   const r = git(root, args);
   if (r.code !== 0) throw new Error(`git ${args.join(" ")} failed (exit ${r.code}): ${r.err.trim()}`);
   return r.out.trim();
+}
+
+async function gitAsyncOk(root: string, args: string[]): Promise<string> {
+  await using proc = Bun.spawn(["git", ...args], {
+    cwd: root,
+    env: { ...process.env, GIT_TERMINAL_PROMPT: "0" },
+    stdin: "ignore",
+    stdout: "pipe",
+    stderr: "pipe",
+    timeout: 600_000,
+  });
+  const [out, err, code] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+  if (code !== 0) throw new Error(`git ${args[0]} failed (exit ${code}): ${err.trim()}`);
+  return out.trim();
 }
 
 // Stage blob of a conflicted path, or null when that side deleted it.
@@ -129,15 +149,42 @@ async function resolveWithRename(root: string, path: string): Promise<boolean> {
 
 export async function sync(opts: Options): Promise<SyncResult> {
   const { root } = opts;
-  if (gitOk(root, ["status", "--porcelain", "--untracked-files=no"]) !== "") {
-    throw new Error("working tree has uncommitted changes to tracked files; commit or stash them first");
-  }
   const current = gitOk(root, ["rev-parse", "--abbrev-ref", "HEAD"]);
   if (current !== opts.branch) throw new Error(`on branch "${current}", expected "${opts.branch}"`);
-  if (opts.fetch) gitOk(root, ["fetch", "--quiet", opts.remote]);
+  if (opts.fetch) {
+    if (opts.remote === "upstream" || opts.upstreamCheckout) {
+      await prepareUpstreamSource({ root, checkout: opts.upstreamCheckout, remote: opts.remote, dryRun: opts.dryRun });
+    } else if (!opts.dryRun) {
+      await gitAsyncOk(root, ["fetch", "--quiet", opts.remote]);
+    }
+  }
 
-  const behind = Number(gitOk(root, ["rev-list", "--count", `HEAD..${opts.ref}`]));
+  const preview = await previewUpstream({ root, ref: opts.ref, owned: OWNED, rewrite });
+  const { behind } = preview;
   if (behind === 0) return { status: "up-to-date", behind: 0 };
+  if (opts.dryRun) {
+    return {
+      status: "dry-run",
+      behind,
+      conflicts: preview.conflicts,
+      added: preview.added,
+      deleted: preview.deleted,
+      collisions: preview.collisions,
+    };
+  }
+  if (preview.conflicts.length && !opts.keepConflicts) {
+    return { status: "conflicts", behind, conflicts: preview.conflicts };
+  }
+  if (preview.collisions.length) return { status: "collisions", behind, collisions: preview.collisions };
+  if (gitOk(root, ["diff", "--cached", "--name-only"])) {
+    throw new Error("shared index contains staged work; upstream merge leaves it unchanged");
+  }
+  if (
+    gitOk(root, ["rev-parse", "HEAD"]) !== preview.head ||
+    gitOk(root, ["rev-parse", opts.ref]) !== preview.upstream
+  ) {
+    throw new Error("HEAD or upstream changed after preview; retry synchronization");
+  }
 
   const upstreamHead = gitOk(root, ["rev-parse", "--short", opts.ref]);
   const merge = git(root, ["merge", "--no-ff", "--no-commit", opts.ref]);
@@ -156,20 +203,24 @@ export async function sync(opts: Options): Promise<SyncResult> {
     else conflicts.push(path);
   }
 
-  if (opts.dryRun || conflicts.length) {
+  if (conflicts.length) {
     if (!(conflicts.length && opts.keepConflicts)) git(root, ["merge", "--abort"]);
-    return opts.dryRun && !conflicts.length
-      ? { status: "dry-run", behind, conflicts }
-      : { status: "conflicts", behind, conflicts };
+    return { status: "conflicts", behind, conflicts };
   }
 
   // Upstream may have added new references to the renamed packages.
-  const rescoped = await apply(root, true);
-  if (rescoped.length) gitOk(root, ["add", "--", ...rescoped]);
-  const leftover = await apply(root, false);
-  if (leftover.length) {
-    git(root, ["merge", "--abort"]);
-    throw new Error(`scope rewrite is not idempotent for: ${leftover.join(", ")}`);
+  const rescoped: string[] = [];
+  const mergedPaths = gitOk(root, ["diff", "--cached", "--name-only", "-z"]).split("\0").filter(Boolean);
+  for (const path of mergedPaths.filter(isManaged)) {
+    const file = Bun.file(join(root, path));
+    if (!(await file.exists())) continue;
+    const content = await file.text();
+    const scoped = rewrite(path, content);
+    if (scoped === content) continue;
+    if (rewrite(path, scoped) !== scoped) throw new Error(`scope rewrite is not idempotent for: ${path}`);
+    await Bun.write(file, scoped);
+    gitOk(root, ["add", "--", path]);
+    rescoped.push(path);
   }
 
   const lines = [`Merge ${opts.ref} (${upstreamHead}) into ${opts.branch}`, ""];
@@ -183,43 +234,65 @@ export async function sync(opts: Options): Promise<SyncResult> {
 
   let pushed = false;
   if (opts.push) {
-    gitOk(root, ["push", "--quiet", "origin", opts.branch]);
+    await qualifyMerge(root, mergedPaths);
+    await gitAsyncOk(root, ["fetch", "--quiet", "origin", opts.branch]);
+    gitOk(root, ["merge-base", "--is-ancestor", `origin/${opts.branch}`, "HEAD"]);
+    await gitAsyncOk(root, ["push", "--quiet", "origin", opts.branch]);
     pushed = true;
   }
-  if (opts.index) refreshIndex(root, head);
+  if (opts.index) await refreshIndex(root);
   return { status: "merged", behind, commit: head, renameResolved, kept, pushed };
 }
 
-// Keep the aphrody code graph and memory in step with the merged tree. Both
-// are optional tooling: a missing or failing `aphrody` never fails the sync.
-function refreshIndex(root: string, head: string) {
+async function qualifyMerge(root: string, paths: string[]) {
+  const native = paths.some(
+    path =>
+      path.startsWith("src/") || path.startsWith("scripts/build/") || path === "Cargo.toml" || path === "Cargo.lock",
+  );
+  const tests = [
+    "test/internal/aphrody-upstream-sync.test.ts",
+    ...paths.filter(path => path.startsWith("test/") && /\.test\.[cm]?[jt]sx?$/.test(path)),
+  ];
+  if (paths.some(path => path.startsWith("packages/bun-types/")))
+    tests.push("test/integration/bun-types/bun-types.test.ts");
+  const command = native
+    ? [process.execPath, "bd", "-j1", "--", "test", "--max-concurrency=2", ...new Set(tests)]
+    : [process.execPath, "test", "--max-concurrency=2", ...new Set(tests)];
+  // The build owns its repository lock and has no timeout.
+  await using child = Bun.spawn(command, {
+    cwd: root,
+    stdin: "ignore",
+    stdout: "inherit",
+    stderr: "inherit",
+    windowsHide: true,
+  });
+  const code = await child.exited;
+  if (code !== 0) throw new Error(`upstream qualification failed (${code}); merge remains local and was not pushed`);
+}
+
+// Refresh the scoped graph in Aphrody Home after committing.
+async function refreshIndex(root: string) {
   if (!Bun.which("aphrody")) return;
-  const run = (args: string[], input?: string) =>
-    Bun.spawnSync(["aphrody", ...args], {
+  await using proc = Bun.spawn(
+    [
+      "aphrody",
+      "graph",
+      "--profile",
+      "bun",
+      "--source",
+      "graph:bun:scripts:aphrody",
+      "build",
+      join(root, "scripts", "aphrody"),
+    ],
+    {
       cwd: root,
-      stdin: input === undefined ? "ignore" : Buffer.from(input),
+      stdin: "ignore",
       stdout: "ignore",
       stderr: "ignore",
-    }).exitCode === 0;
-  const graph = run(["graph", "--source", "graph:bun", "build", root]);
-  const note = `Upstream sync merged at ${head} on ${new Date().toISOString()}; graph:bun rebuilt: ${graph}.`;
-  run(
-    [
-      "memory",
-      "write",
-      "--agent-id",
-      "bun",
-      "--id",
-      "bun-upstream-sync-last",
-      "--tag",
-      "bun",
-      "--tag",
-      "sync",
-      "--content",
-      "-",
-    ],
-    note,
+      timeout: 120_000,
+    },
   );
+  await proc.exited;
 }
 
 if (import.meta.main) {
@@ -230,10 +303,11 @@ if (import.meta.main) {
     if (result.status === "conflicts") {
       console.error(
         `${result.conflicts.length} file(s) conflict beyond the @aphrody rename; ` +
-          (opts.keepConflicts ? "the merge is left in progress." : "the merge was aborted."),
+          (opts.keepConflicts ? "the merge is left in progress." : "the checkout is unchanged."),
       );
       process.exit(2);
     }
+    if (result.status === "collisions") process.exit(3);
   } catch (err) {
     console.error(`error: ${(err as Error).message}`);
     process.exit(1);

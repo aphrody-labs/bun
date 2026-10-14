@@ -173,8 +173,11 @@ unsafe fn parse_raw_impl(
 
     // Get source type
     let options = options.unwrap_or_default();
-    let source_type =
-        get_source_type(filename, options.lang.as_deref(), options.source_type.as_deref());
+    let source_type = get_source_type(
+        filename,
+        options.lang.as_deref(),
+        options.source_type.as_deref(),
+    );
     let ignore_non_fatal_errors = options.ignore_non_fatal_errors.unwrap_or(false);
 
     // Parse source.
@@ -204,8 +207,13 @@ unsafe fn parse_raw_impl(
             })
             .with_config(RuntimeParserConfig::new(true))
             .parse();
-        let ParserReturn { program: parsed_program, diagnostics, mut tokens, fatal_error, .. } =
-            parser_ret;
+        let ParserReturn {
+            program: parsed_program,
+            diagnostics,
+            mut tokens,
+            fatal_error,
+            ..
+        } = parser_ret;
         let program = allocator.alloc(parsed_program);
 
         let mut parsing_failed =
@@ -307,6 +315,9 @@ unsafe fn parse_raw_impl(
     // SAFETY: `RAW_METADATA_OFFSET + size_of::<RawTransferMetadata>()` is less than length of `buffer`.
     // `buffer_ptr + RAW_METADATA_OFFSET` is aligned for `RawTransferMetadata`.
     unsafe {
-        buffer_ptr.add(RAW_METADATA_OFFSET).cast::<RawTransferMetadata>().write(metadata);
+        buffer_ptr
+            .add(RAW_METADATA_OFFSET)
+            .cast::<RawTransferMetadata>()
+            .write(metadata);
     }
 }

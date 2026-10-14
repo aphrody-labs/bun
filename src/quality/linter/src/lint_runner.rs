@@ -42,7 +42,9 @@ pub struct DirectivesStore {
 impl DirectivesStore {
     /// Create a new directives coordinator
     pub fn new() -> Self {
-        Self { map: Arc::new(Mutex::new(FxHashMap::default())) }
+        Self {
+            map: Arc::new(Mutex::new(FxHashMap::default())),
+        }
     }
 
     /// Get the underlying map (for sharing with LintService)
@@ -55,7 +57,10 @@ impl DirectivesStore {
     /// # Panics
     /// Panics if the mutex is poisoned.
     pub fn should_disable(&self, path: &Path, rule: &str, span: Span) -> bool {
-        let map = self.map.lock().expect("DirectivesStore mutex poisoned in should_disable");
+        let map = self
+            .map
+            .lock()
+            .expect("DirectivesStore mutex poisoned in should_disable");
         if let Some(directives) = map.get(path) {
             // Check with various rule name formats
             directives.contains(rule, span)
@@ -71,7 +76,10 @@ impl DirectivesStore {
     /// # Panics
     /// Panics if the mutex is poisoned.
     pub fn insert(&self, path: PathBuf, directives: DisableDirectives) {
-        self.map.lock().expect("DirectivesStore mutex poisoned in insert").insert(path, directives);
+        self.map
+            .lock()
+            .expect("DirectivesStore mutex poisoned in insert")
+            .insert(path, directives);
     }
 
     /// Get disable directives for a file
@@ -81,7 +89,11 @@ impl DirectivesStore {
     /// # Panics
     /// Panics if the mutex is poisoned.
     pub fn get(&self, path: &Path) -> Option<DisableDirectives> {
-        self.map.lock().expect("DirectivesStore mutex poisoned in get").get(path).cloned()
+        self.map
+            .lock()
+            .expect("DirectivesStore mutex poisoned in get")
+            .get(path)
+            .cloned()
     }
 
     /// Report unused disable directives
@@ -91,7 +103,10 @@ impl DirectivesStore {
     pub fn report_unused(&self, severity: AllowWarnDeny, cwd: &Path, tx_error: &DiagnosticSender) {
         use crate::create_unused_directives_diagnostics;
 
-        let map = self.map.lock().expect("DirectivesStore mutex poisoned in report_unused");
+        let map = self
+            .map
+            .lock()
+            .expect("DirectivesStore mutex poisoned in report_unused");
         for (path, directives) in map.iter() {
             let diagnostics = create_unused_directives_diagnostics(directives, severity);
 
@@ -103,7 +118,9 @@ impl DirectivesStore {
                     &source_text,
                     diagnostics,
                 );
-                tx_error.send(wrapped).expect("failed to send unused directive diagnostics");
+                tx_error
+                    .send(wrapped)
+                    .expect("failed to send unused directive diagnostics");
             }
         }
     }
@@ -113,7 +130,10 @@ impl DirectivesStore {
     /// # Panics
     /// Panics if the mutex is poisoned.
     pub fn clear(&self) {
-        self.map.lock().expect("DirectivesStore mutex poisoned in clear").clear();
+        self.map
+            .lock()
+            .expect("DirectivesStore mutex poisoned in clear")
+            .clear();
     }
 
     /// Remove disable directives for a specific file
@@ -125,7 +145,10 @@ impl DirectivesStore {
     /// # Panics
     /// Panics if the mutex is poisoned.
     pub fn remove(&self, path: &Path) {
-        self.map.lock().expect("DirectivesStore mutex poisoned in remove").remove(path);
+        self.map
+            .lock()
+            .expect("DirectivesStore mutex poisoned in remove")
+            .remove(path);
     }
 
     /// Take and remove disable directives for a specific file in a single lock acquisition.
@@ -133,7 +156,10 @@ impl DirectivesStore {
     /// # Panics
     /// Panics if the mutex is poisoned.
     pub fn take(&self, path: &Path) -> Option<DisableDirectives> {
-        self.map.lock().expect("DirectivesStore mutex poisoned in take").remove(path)
+        self.map
+            .lock()
+            .expect("DirectivesStore mutex poisoned in take")
+            .remove(path)
     }
 }
 
@@ -271,7 +297,8 @@ impl LintRunner {
         let fs: &(dyn crate::RuntimeFileSystem + Sync + Send) = &OsFileSystem;
 
         if self.type_check_only {
-            self.lint_service.collect_parse_diagnostics(fs, files.to_owned(), &tx_error);
+            self.lint_service
+                .collect_parse_diagnostics(fs, files.to_owned(), &tx_error);
         } else {
             self.lint_service.run::<TIMINGS>(
                 fs,
@@ -324,7 +351,8 @@ impl LintRunner {
         tx_error: &DiagnosticSender,
     ) {
         if let Some(severity) = severity {
-            self.directives_store.report_unused(severity, &self.cwd, tx_error);
+            self.directives_store
+                .report_unused(severity, &self.cwd, tx_error);
         }
     }
 

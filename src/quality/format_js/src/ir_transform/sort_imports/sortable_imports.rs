@@ -43,7 +43,10 @@ impl SortSortableImports for Vec<SortableImport<'_>> {
         // Stage 2: Group non-ignored imports by `group_idx`
         let mut imports_by_group: FxHashMap<usize, Vec<usize>> = FxHashMap::default();
         for &idx in &sortable_indices {
-            imports_by_group.entry(self[idx].group_idx).or_default().push(idx);
+            imports_by_group
+                .entry(self[idx].group_idx)
+                .or_default()
+                .push(idx);
         }
 
         // Stage 3: Sort within each group and build sorted list
@@ -77,7 +80,10 @@ impl SortSortableImports for Vec<SortableImport<'_>> {
             apply_permutation(self, &permutation);
         }
 
-        debug_assert!(self.len() == imports_len, "Length must remain the same after sorting.");
+        debug_assert!(
+            self.len() == imports_len,
+            "Length must remain the same after sorting."
+        );
     }
 }
 
@@ -160,7 +166,11 @@ fn sort_indices_by_source(
     indices.sort_by(|&a, &b| {
         let ordering =
             natord::compare(&imports[a].normalized_source, &imports[b].normalized_source);
-        if options.order.is_desc() { ordering.reverse() } else { ordering }
+        if options.order.is_desc() {
+            ordering.reverse()
+        } else {
+            ordering
+        }
     });
 }
 

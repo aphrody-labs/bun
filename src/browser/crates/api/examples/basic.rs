@@ -5,7 +5,10 @@ use bun_browser::Browser;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let browser = Browser::builder().stealth(true).storage_dir("/tmp/bun_browser-api-test").build()?;
+    let browser = Browser::builder()
+        .stealth(true)
+        .storage_dir("/tmp/bun_browser-api-test")
+        .build()?;
 
     let mut page = browser.new_page().await?;
     page.goto("https://example.com").await?;

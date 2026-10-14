@@ -241,6 +241,11 @@ fn test() {
         ),
     ];
 
-    Tester::new(NoDocumentImportInPage::NAME, NoDocumentImportInPage::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        NoDocumentImportInPage::NAME,
+        NoDocumentImportInPage::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

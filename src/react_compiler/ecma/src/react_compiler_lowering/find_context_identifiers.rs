@@ -64,7 +64,10 @@ struct ContextIdentifierVisitor<'a> {
 
 impl<'a> ContextIdentifierVisitor<'a> {
     fn current_scope(&self) -> ScopeId {
-        self.scope_stack.last().copied().unwrap_or_else(|| self.scope.program_scope())
+        self.scope_stack
+            .last()
+            .copied()
+            .unwrap_or_else(|| self.scope.program_scope())
     }
 
     /// Push the generic scope a node creates (its `scope_id` cell), if any.
@@ -431,7 +434,10 @@ fn is_captured_by_function(
 ) -> bool {
     // The binding is captured when it is declared in a strict ancestor scope of
     // the function (its parent scope or higher).
-    scope.ancestors(function_scope).skip(1).any(|s| s == binding_scope)
+    scope
+        .ancestors(function_scope)
+        .skip(1)
+        .any(|s| s == binding_scope)
 }
 
 /// Find context identifiers for a function: variables that are captured across
@@ -500,7 +506,11 @@ pub fn find_context_identifiers(
             let ref_node = scope.reference_node_id(ref_id);
             for fn_scope in scope.containing_function_scopes(ref_node) {
                 if is_captured_by_function(scope, binding_scope, fn_scope) {
-                    visitor.binding_info.get_mut(&symbol_id).unwrap().referenced_by_inner_fn = true;
+                    visitor
+                        .binding_info
+                        .get_mut(&symbol_id)
+                        .unwrap()
+                        .referenced_by_inner_fn = true;
                     break 'refs;
                 }
             }

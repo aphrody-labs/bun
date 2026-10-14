@@ -109,7 +109,11 @@ fn type_list_legal(tokens: &Tokens, lo: usize, hi: usize) -> bool {
                 w = bits::next1(st, j, hi);
                 continue;
             }
-            k = if c0 == b'`' { tk!(TemplateNoSub) } else { tk!(String) };
+            k = if c0 == b'`' {
+                tk!(TemplateNoSub)
+            } else {
+                tk!(String)
+            };
             if !start && braces == 0 {
                 return false;
             }
@@ -134,7 +138,11 @@ fn type_list_legal(tokens: &Tokens, lo: usize, hi: usize) -> bool {
         if matches_tk!(k, Ident | IdentEscaped) {
             // A qualified name's part is a name (z.infer, a.typeof).
             let dotted = prev != usize::MAX && tokens.member_dot(prev);
-            let kk = if dotted { 0 } else { kw_match_at(true, src, w, word_len(src, w)) as u8 };
+            let kk = if dotted {
+                0
+            } else {
+                kw_match_at(true, src, w, word_len(src, w)) as u8
+            };
             // A keyword type (`this`, `any`, `null`, ...) takes no type arguments; in a type
             // query it names a value, which may (`typeof this<A>`).
             this_head = keyword_type(kk) && last_kw != tk!(KwTypeof);

@@ -167,8 +167,12 @@ impl Rule for AltText {
         let mut alt_text = AltTextConfig::default();
         if let Some(config) = value.get(0) {
             if let Some(elements) = config.get("elements").and_then(|v| v.as_array()) {
-                alt_text =
-                    AltTextConfig { img: None, object: None, area: None, input_type_image: None };
+                alt_text = AltTextConfig {
+                    img: None,
+                    object: None,
+                    area: None,
+                    input_type_image: None,
+                };
                 for el in elements {
                     match el.as_str() {
                         Some("img") => alt_text.img = Some(vec![]),
@@ -189,7 +193,11 @@ impl Rule for AltText {
                 if let (Some(tags), Some(elements)) =
                     (tags, config.get(field).and_then(|v| v.as_array()))
                 {
-                    tags.extend(elements.iter().filter_map(|v| v.as_str().map(CompactStr::from)));
+                    tags.extend(
+                        elements
+                            .iter()
+                            .filter_map(|v| v.as_str().map(CompactStr::from)),
+                    );
                 }
             }
         }
@@ -406,9 +414,21 @@ fn test() {
         (r#"<img alt="" role="none" />"#, None, None),
         (r#"<img alt="" role={`presentation`} />"#, None, None),
         (r#"<img alt="" role={"presentation"} />"#, None, None),
-        (r#"<img alt="this is lit..." role="presentation" />"#, None, None),
-        (r#"<img alt={error ? "not working": "working"} />"#, None, None),
-        (r#"<img alt={undefined ? "working": "not working"} />"#, None, None),
+        (
+            r#"<img alt="this is lit..." role="presentation" />"#,
+            None,
+            None,
+        ),
+        (
+            r#"<img alt={error ? "not working": "working"} />"#,
+            None,
+            None,
+        ),
+        (
+            r#"<img alt={undefined ? "working": "not working"} />"#,
+            None,
+            None,
+        ),
         (r#"<img alt={plugin.name + " Logo"} />"#, None, None),
         (r#"<img aria-label="foo" />"#, None, None),
         (r#"<img aria-labelledby="id1" />"#, None, None),
@@ -427,21 +447,45 @@ fn test() {
         (r"<input />", None, None),
         (r#"<input type="foo" />"#, None, None),
         (r#"<input type="image" aria-label="foo" />"#, None, None),
-        (r#"<input type="image" aria-labelledby="id1" />"#, None, None),
+        (
+            r#"<input type="image" aria-labelledby="id1" />"#,
+            None,
+            None,
+        ),
         (r#"<input type="image" alt="" />"#, None, None),
-        (r#"<input type="image" alt="This is descriptive!" />"#, None, None),
+        (
+            r#"<input type="image" alt="This is descriptive!" />"#,
+            None,
+            None,
+        ),
         (r#"<input type="image" alt={altText} />"#, None, None),
         (r"<InputImage />", None, None),
         (r#"<Input type="image" alt="" />"#, None, None),
-        (r#"<SomeComponent as="input" type="image" alt="" />"#, None, None),
+        (
+            r#"<SomeComponent as="input" type="image" alt="" />"#,
+            None,
+            None,
+        ),
         (r#"<Thumbnail alt="foo" />;"#, Some(config()), None),
         (r#"<Thumbnail alt={"foo"} />;"#, Some(config()), None),
         (r"<Thumbnail alt={alt} />;", Some(config()), None),
         (r#"<Thumbnail ALT="foo" />;"#, Some(config()), None),
-        (r"<Thumbnail ALT={`This is the ${alt} text`} />;", Some(config()), None),
+        (
+            r"<Thumbnail ALT={`This is the ${alt} text`} />;",
+            Some(config()),
+            None,
+        ),
         (r#"<Thumbnail ALt="foo" />;"#, Some(config()), None),
-        (r#"<Thumbnail alt="foo" salt={undefined} />;"#, Some(config()), None),
-        (r#"<Thumbnail {...this.props} alt="foo" />"#, Some(config()), None),
+        (
+            r#"<Thumbnail alt="foo" salt={undefined} />;"#,
+            Some(config()),
+            None,
+        ),
+        (
+            r#"<Thumbnail {...this.props} alt="foo" />"#,
+            Some(config()),
+            None,
+        ),
         (r"<thumbnail />", Some(config()), None),
         (r"<Thumbnail alt={function(e) {} } />", Some(config()), None),
         (r"<div alt={function(e) {} } />", Some(config()), None),
@@ -452,10 +496,22 @@ fn test() {
         (r#"<Image alt={"foo"} />;"#, Some(config()), None),
         (r"<Image alt={alt} />;", Some(config()), None),
         (r#"<Image ALT="foo" />;"#, Some(config()), None),
-        (r"<Image ALT={`This is the ${alt} text`} />;", Some(config()), None),
+        (
+            r"<Image ALT={`This is the ${alt} text`} />;",
+            Some(config()),
+            None,
+        ),
         (r#"<Image ALt="foo" />;"#, Some(config()), None),
-        (r#"<Image alt="foo" salt={undefined} />;"#, Some(config()), None),
-        (r#"<Image {...this.props} alt="foo" />"#, Some(config()), None),
+        (
+            r#"<Image alt="foo" salt={undefined} />;"#,
+            Some(config()),
+            None,
+        ),
+        (
+            r#"<Image {...this.props} alt="foo" />"#,
+            Some(config()),
+            None,
+        ),
         (r"<image />", Some(config()), None),
         (r"<Image alt={function(e) {} } />", Some(config()), None),
         (r"<div alt={function(e) {} } />", Some(config()), None),
@@ -465,17 +521,33 @@ fn test() {
         (r#"<Object aria-label="foo" />"#, Some(config()), None),
         (r#"<Object aria-labelledby="id1" />"#, Some(config()), None),
         (r"<Object>Foo</Object>", Some(config()), None),
-        (r"<Object><p>This is descriptive!</p></Object>", Some(config()), None),
+        (
+            r"<Object><p>This is descriptive!</p></Object>",
+            Some(config()),
+            None,
+        ),
         (r#"<Object title="An object" />"#, Some(config()), None),
         (r#"<Area aria-label="foo" />"#, Some(config()), None),
         (r#"<Area aria-labelledby="id1" />"#, Some(config()), None),
         (r#"<Area alt="" />"#, Some(config()), None),
-        (r#"<Area alt="This is descriptive!" />"#, Some(config()), None),
+        (
+            r#"<Area alt="This is descriptive!" />"#,
+            Some(config()),
+            None,
+        ),
         (r"<Area alt={altText} />", Some(config()), None),
         (r#"<InputImage aria-label="foo" />"#, Some(config()), None),
-        (r#"<InputImage aria-labelledby="id1" />"#, Some(config()), None),
+        (
+            r#"<InputImage aria-labelledby="id1" />"#,
+            Some(config()),
+            None,
+        ),
         (r#"<InputImage alt="" />"#, Some(config()), None),
-        (r#"<InputImage alt="This is descriptive!" />"#, Some(config()), None),
+        (
+            r#"<InputImage alt="This is descriptive!" />"#,
+            Some(config()),
+            None,
+        ),
         (r"<InputImage alt={altText} />", Some(config()), None),
     ];
 
@@ -489,7 +561,11 @@ fn test() {
         // TODO: Could support if get_prop_value could evaluate
         // some logical expressions
         // (r#"<img alt={false || false} />"#, None, None),
-        (r#"<img alt={undefined} role="presentation" />;"#, None, None),
+        (
+            r#"<img alt={undefined} role="presentation" />;"#,
+            None,
+            None,
+        ),
         (r#"<img alt role="presentation" />;"#, None, None),
         (r#"<img role="presentation" />;"#, None, None),
         (r#"<img role="none" />;"#, None, None),
@@ -526,9 +602,17 @@ fn test() {
         (r#"<input type="image">Foo</input>"#, None, None),
         (r#"<input type="image" {...this.props} />"#, None, None),
         (r#"<input type="image" aria-label="" />"#, None, None),
-        (r#"<input type="image" aria-label={undefined} />"#, None, None),
+        (
+            r#"<input type="image" aria-label={undefined} />"#,
+            None,
+            None,
+        ),
         (r#"<input type="image" aria-labelledby="" />"#, None, None),
-        (r#"<input type="image" aria-labelledby={undefined} />"#, None, None),
+        (
+            r#"<input type="image" aria-labelledby={undefined} />"#,
+            None,
+            None,
+        ),
         (r"<Thumbnail />;", Some(config()), None),
         (r"<Thumbnail alt />;", Some(config()), None),
         (r"<Thumbnail alt={undefined} />;", Some(config()), None),
@@ -540,7 +624,11 @@ fn test() {
         (r#"<Image src="xyz" />"#, Some(config()), None),
         (r"<Image {...this.props} />", Some(config()), None),
         (r"<Object />", Some(config()), None),
-        (r"<Object><div aria-hidden /></Object>", Some(config()), None),
+        (
+            r"<Object><div aria-hidden /></Object>",
+            Some(config()),
+            None,
+        ),
         (r"<Object title={undefined} />", Some(config()), None),
         (r"<Area />", Some(config()), None),
         (r"<Area alt />", Some(config()), None),

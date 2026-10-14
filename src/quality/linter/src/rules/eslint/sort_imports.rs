@@ -24,8 +24,10 @@ fn unexpected_syntax_order_diagnostic(
     prev_kind: &ImportKind,
     span: Span,
 ) -> OxcDiagnostic {
-    OxcDiagnostic::warn(format!("Expected '{curr_kind}' syntax before '{prev_kind}' syntax."))
-        .with_label(span)
+    OxcDiagnostic::warn(format!(
+        "Expected '{curr_kind}' syntax before '{prev_kind}' syntax."
+    ))
+    .with_label(span)
 }
 
 fn sort_imports_alphabetically_diagnostic(span: Span) -> OxcDiagnostic {
@@ -168,10 +170,12 @@ impl SortImports {
         current: &ImportDeclaration,
         ctx: &LintContext,
     ) {
-        let current_member_syntax_group_index =
-            self.member_syntax_sort_order.get_group_index_by_import_decl(current);
-        let previous_member_syntax_group_index =
-            self.member_syntax_sort_order.get_group_index_by_import_decl(previous);
+        let current_member_syntax_group_index = self
+            .member_syntax_sort_order
+            .get_group_index_by_import_decl(current);
+        let previous_member_syntax_group_index = self
+            .member_syntax_sort_order
+            .get_group_index_by_import_decl(previous);
 
         let current_local_member_name = get_first_local_member_name(current);
         let previous_local_member_name = get_first_local_member_name(previous);
@@ -183,10 +187,12 @@ impl SortImports {
         // ```
         match current_member_syntax_group_index.cmp(&previous_member_syntax_group_index) {
             std::cmp::Ordering::Less => {
-                let current_kind =
-                    self.member_syntax_sort_order.get(current_member_syntax_group_index);
-                let previous_kind =
-                    self.member_syntax_sort_order.get(previous_member_syntax_group_index);
+                let current_kind = self
+                    .member_syntax_sort_order
+                    .get(current_member_syntax_group_index);
+                let previous_kind = self
+                    .member_syntax_sort_order
+                    .get(previous_member_syntax_group_index);
                 if let Some((current_kind, previous_kind)) = current_kind.zip(previous_kind) {
                     ctx.diagnostic(unexpected_syntax_order_diagnostic(
                         current_kind,
@@ -269,7 +275,9 @@ impl SortImports {
 
         if is_fixable {
             // Safe to index because we know that `specifiers` is at least 2 element long
-            let specifiers_span = specifiers[0].span.merge(specifiers[specifiers.len() - 1].span);
+            let specifiers_span = specifiers[0]
+                .span
+                .merge(specifiers[specifiers.len() - 1].span);
             ctx.diagnostic_with_fix(
                 sort_members_alphabetically_diagnostic(unsorted_name, unsorted_span),
                 |fixer| {
@@ -312,7 +320,10 @@ impl SortImports {
                 },
             );
         } else {
-            ctx.diagnostic(sort_members_alphabetically_diagnostic(unsorted_name, unsorted_span));
+            ctx.diagnostic(sort_members_alphabetically_diagnostic(
+                unsorted_name,
+                unsorted_span,
+            ));
         }
     }
 }
@@ -390,7 +401,9 @@ impl MemberSyntaxSortOrder {
             None => ImportKind::None,
         };
 
-        self.iter().position(|kind| kind == &import_kind).unwrap_or_default()
+        self.iter()
+            .position(|kind| kind == &import_kind)
+            .unwrap_or_default()
     }
 }
 
@@ -434,7 +447,11 @@ fn get_number_of_lines_between(left: Span, right: Span, ctx: &LintContext) -> us
         return 0;
     }
     let between_span = Span::new(left.end, right.start);
-    let count = ctx.source_range(between_span).chars().filter(|c| *c == '\n').count();
+    let count = ctx
+        .source_range(between_span)
+        .chars()
+        .filter(|c| *c == '\n')
+        .count();
 
     if count < 1 {
         return 0;
@@ -528,7 +545,10 @@ fn test() {
             "import {B, a, C, d} from 'foo.js';",
             Some(serde_json::json!([{ "ignoreMemberSort": true }])),
         ),
-        ("import {a, B, c, D} from 'foo.js';", Some(serde_json::json!([{ "ignoreCase": true }]))),
+        (
+            "import {a, B, c, D} from 'foo.js';",
+            Some(serde_json::json!([{ "ignoreCase": true }])),
+        ),
         ("import a, * as b from 'foo.js';", None),
         (
             "import * as a from 'foo.js';
@@ -756,8 +776,16 @@ import a from 'a';",
     ];
 
     let fix = vec![
-        ("import {b, a, d, c} from 'foo.js';", "import {a, b, c, d} from 'foo.js';", None),
-        ("import {a, B, c, D} from 'foo.js';", "import {B, D, a, c} from 'foo.js';", None),
+        (
+            "import {b, a, d, c} from 'foo.js';",
+            "import {a, b, c, d} from 'foo.js';",
+            None,
+        ),
+        (
+            "import {a, B, c, D} from 'foo.js';",
+            "import {B, D, a, c} from 'foo.js';",
+            None,
+        ),
         (
             " import {
                 boop,

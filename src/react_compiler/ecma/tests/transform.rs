@@ -31,22 +31,36 @@ fn transform_source<'a>(
     allocator: &'a Allocator,
     options: PluginOptions,
 ) -> (Program<'a>, TransformResult) {
-    let mut program = Parser::new(allocator, source_text, source_type).parse().program;
+    let mut program = Parser::new(allocator, source_text, source_type)
+        .parse()
+        .program;
     let result = {
-        let semantic = SemanticBuilder::new().with_build_nodes(true).build(&program).semantic;
+        let semantic = SemanticBuilder::new()
+            .with_build_nodes(true)
+            .build(&program)
+            .semantic;
         compile(&program, &semantic, allocator, options)
     };
     let result = match result {
-        CompileResult::Success { output, diagnostics } => {
+        CompileResult::Success {
+            output,
+            diagnostics,
+        } => {
             let changed = output.is_some();
             if let Some(output) = output {
                 output.transform(&mut program);
             }
-            TransformResult { changed, diagnostics, fatal: false }
+            TransformResult {
+                changed,
+                diagnostics,
+                fatal: false,
+            }
         }
-        CompileResult::Fatal { diagnostics } => {
-            TransformResult { changed: false, diagnostics, fatal: true }
-        }
+        CompileResult::Fatal { diagnostics } => TransformResult {
+            changed: false,
+            diagnostics,
+            fatal: true,
+        },
     };
     (program, result)
 }
@@ -59,9 +73,20 @@ fn memoizes_a_component_end_to_end() {
     let allocator = Allocator::default();
     let (program, result) = transform_source(source, SourceType::tsx(), &allocator, options());
 
-    assert!(!result.diagnostics.has_errors(), "unexpected errors: {:?}", result.diagnostics);
-    assert!(!result.diagnostics.has_warnings(), "unexpected warnings: {:?}", result.diagnostics);
-    assert!(result.changed, "React Compiler should have transformed the component");
+    assert!(
+        !result.diagnostics.has_errors(),
+        "unexpected errors: {:?}",
+        result.diagnostics
+    );
+    assert!(
+        !result.diagnostics.has_warnings(),
+        "unexpected warnings: {:?}",
+        result.diagnostics
+    );
+    assert!(
+        result.changed,
+        "React Compiler should have transformed the component"
+    );
 
     let output = Codegen::new().build(&program).code;
 
@@ -69,7 +94,10 @@ fn memoizes_a_component_end_to_end() {
         output.contains("react/compiler-runtime"),
         "expected the compiler-runtime cache import in output:\n{output}"
     );
-    assert!(output.contains("_c("), "expected memo cache reads (`_c(...)`) in output:\n{output}");
+    assert!(
+        output.contains("_c("),
+        "expected memo cache reads (`_c(...)`) in output:\n{output}"
+    );
 }
 
 #[test]
@@ -91,10 +119,21 @@ function Component({ onChange, onInput }) {\n\
     let allocator = Allocator::default();
     let (program, result) = transform_source(source, SourceType::tsx(), &allocator, options());
 
-    assert!(result.changed, "component should compile; diagnostics: {:?}", result.diagnostics);
-    assert!(result.diagnostics.is_empty(), "unexpected diagnostics: {:?}", result.diagnostics);
+    assert!(
+        result.changed,
+        "component should compile; diagnostics: {:?}",
+        result.diagnostics
+    );
+    assert!(
+        result.diagnostics.is_empty(),
+        "unexpected diagnostics: {:?}",
+        result.diagnostics
+    );
     let output = Codegen::new().build(&program).code;
-    assert!(output.contains("react/compiler-runtime"), "component should memoize:\n{output}");
+    assert!(
+        output.contains("react/compiler-runtime"),
+        "component should memoize:\n{output}"
+    );
 }
 
 #[test]
@@ -109,11 +148,23 @@ export function Component({ value }) {
 ";
 
     let allocator = Allocator::default();
-    let (program, result) =
-        transform_source(source, SourceType::tsx(), &allocator, PluginOptions::default());
+    let (program, result) = transform_source(
+        source,
+        SourceType::tsx(),
+        &allocator,
+        PluginOptions::default(),
+    );
 
-    assert!(result.changed, "component should compile: {:?}", result.diagnostics);
-    assert!(!result.diagnostics.has_errors(), "unexpected errors: {:?}", result.diagnostics);
+    assert!(
+        result.changed,
+        "component should compile: {:?}",
+        result.diagnostics
+    );
+    assert!(
+        !result.diagnostics.has_errors(),
+        "unexpected errors: {:?}",
+        result.diagnostics
+    );
 
     let output = Codegen::new().build(&program).code;
     assert!(
@@ -159,11 +210,18 @@ fn default_lint_suppressions_bail_out() {
         for (kind, source) in fixtures {
             let source = source.cow_replace("eslint", prefix);
             let allocator = Allocator::default();
-            let (_program, result) =
-                transform_source(&source, SourceType::tsx(), &allocator, PluginOptions::default());
+            let (_program, result) = transform_source(
+                &source,
+                SourceType::tsx(),
+                &allocator,
+                PluginOptions::default(),
+            );
 
             assert!(!result.changed, "{prefix} {kind} must prevent compilation");
-            assert!(!result.fatal, "{prefix} {kind} must not produce a fatal result");
+            assert!(
+                !result.fatal,
+                "{prefix} {kind} must not produce a fatal result"
+            );
             assert_eq!(result.diagnostics.len(), 1);
             assert!(ErrorCategory::Suppression.matches(&result.diagnostics[0]));
         }
@@ -174,11 +232,18 @@ fn default_lint_suppressions_bail_out() {
 fn flow_suppressions_still_bail_out_by_default() {
     let source = include_str!("../fixtures/default-suppression-flow.js");
     let allocator = Allocator::default();
-    let (_program, result) =
-        transform_source(source, SourceType::tsx(), &allocator, PluginOptions::default());
+    let (_program, result) = transform_source(
+        source,
+        SourceType::tsx(),
+        &allocator,
+        PluginOptions::default(),
+    );
 
     assert!(!result.changed, "Flow suppression must prevent compilation");
-    assert!(!result.fatal, "Flow suppression must be a nonfatal bail-out by default");
+    assert!(
+        !result.fatal,
+        "Flow suppression must be a nonfatal bail-out by default"
+    );
     assert_eq!(result.diagnostics.len(), 1);
     assert!(ErrorCategory::Suppression.matches(&result.diagnostics[0]));
 }
@@ -186,12 +251,17 @@ fn flow_suppressions_still_bail_out_by_default() {
 #[test]
 fn empty_eslint_suppression_rules_disable_bailouts() {
     let source = include_str!("../fixtures/default-suppression-eslint-next-line.js");
-    let options =
-        PluginOptions { eslint_suppression_rules: Some(Vec::new()), ..PluginOptions::default() };
+    let options = PluginOptions {
+        eslint_suppression_rules: Some(Vec::new()),
+        ..PluginOptions::default()
+    };
     let allocator = Allocator::default();
     let (_program, result) = transform_source(source, SourceType::tsx(), &allocator, options);
 
-    assert!(result.changed, "an empty suppression rule list must allow compilation");
+    assert!(
+        result.changed,
+        "an empty suppression rule list must allow compilation"
+    );
     assert!(!result.fatal);
     assert!(!result.diagnostics.has_errors());
 }
@@ -227,11 +297,16 @@ function Component({ condition }) {
 
     for (kind, source) in cases {
         let mut options = PluginOptions::default();
-        options.environment.validate_exhaustive_memoization_dependencies = true;
+        options
+            .environment
+            .validate_exhaustive_memoization_dependencies = true;
         let allocator = Allocator::default();
         let (_program, result) = transform_source(source, SourceType::tsx(), &allocator, options);
 
-        assert!(!result.changed, "{kind} suppression must prevent compilation");
+        assert!(
+            !result.changed,
+            "{kind} suppression must prevent compilation"
+        );
         assert_eq!(result.diagnostics.len(), 1);
         assert!(
             ErrorCategory::Suppression.matches(&result.diagnostics[0]),
@@ -257,7 +332,10 @@ function Component({ value }) {
         ..PluginOptions::default()
     };
     let (_program, result) = transform_source(source, SourceType::tsx(), &allocator, options);
-    assert!(!result.changed, "custom suppression must bail out by default");
+    assert!(
+        !result.changed,
+        "custom suppression must bail out by default"
+    );
     assert_eq!(result.diagnostics.len(), 1);
     assert!(ErrorCategory::Suppression.matches(&result.diagnostics[0]));
 
@@ -266,9 +344,14 @@ function Component({ value }) {
         eslint_suppression_rules: Some(vec!["custom/react-rule".to_string()]),
         ..PluginOptions::default()
     };
-    options.environment.validate_exhaustive_memoization_dependencies = true;
+    options
+        .environment
+        .validate_exhaustive_memoization_dependencies = true;
     let (_program, result) = transform_source(source, SourceType::tsx(), &allocator, options);
-    assert!(!result.changed, "custom suppression must bail out with both validations enabled");
+    assert!(
+        !result.changed,
+        "custom suppression must bail out with both validations enabled"
+    );
     assert_eq!(result.diagnostics.len(), 1);
     assert!(ErrorCategory::Suppression.matches(&result.diagnostics[0]));
 }
@@ -277,12 +360,19 @@ function Component({ value }) {
 fn all_errors_makes_enabled_eslint_suppressions_fatal() {
     let source = include_str!("../fixtures/default-suppression-eslint-next-line.js");
     let allocator = Allocator::default();
-    let mut options =
-        PluginOptions { panic_threshold: PanicThreshold::AllErrors, ..PluginOptions::default() };
-    options.environment.validate_exhaustive_memoization_dependencies = true;
+    let mut options = PluginOptions {
+        panic_threshold: PanicThreshold::AllErrors,
+        ..PluginOptions::default()
+    };
+    options
+        .environment
+        .validate_exhaustive_memoization_dependencies = true;
     let (_program, result) = transform_source(source, SourceType::tsx(), &allocator, options);
 
-    assert!(result.fatal, "all_errors must escalate suppression diagnostics");
+    assert!(
+        result.fatal,
+        "all_errors must escalate suppression diagnostics"
+    );
     assert!(!result.changed, "a fatal result must not produce a rewrite");
     assert!(result.diagnostics.has_errors());
 }
@@ -305,14 +395,24 @@ export = legacy;\n";
 
     let allocator = Allocator::default();
     let (program, result) = transform_source(source, SourceType::tsx(), &allocator, options());
-    assert!(result.changed, "component should be compiled; diagnostics: {:?}", result.diagnostics);
+    assert!(
+        result.changed,
+        "component should be compiled; diagnostics: {:?}",
+        result.diagnostics
+    );
     let output = Codegen::new().build(&program).code;
     assert!(
         output.contains("react/compiler-runtime"),
         "expected compiler-runtime import in output:\n{output}"
     );
-    assert!(output.contains("declare global"), "`declare global` lost:\n{output}");
-    assert!(output.contains("import legacy"), "`import =` lost:\n{output}");
+    assert!(
+        output.contains("declare global"),
+        "`declare global` lost:\n{output}"
+    );
+    assert!(
+        output.contains("import legacy"),
+        "`import =` lost:\n{output}"
+    );
     assert!(
         output.contains("function overloaded(x: number): number;"),
         "overload signature lost:\n{output}"
@@ -321,7 +421,10 @@ export = legacy;\n";
         !output.contains("function overloaded(x: number): number {}"),
         "overload signature gained an empty body:\n{output}"
     );
-    assert!(output.contains("export = legacy"), "`export =` lost:\n{output}");
+    assert!(
+        output.contains("export = legacy"),
+        "`export =` lost:\n{output}"
+    );
 }
 
 /// TS wrappers in assignment-target / for-head positions must not crash the
@@ -350,11 +453,25 @@ fn ts_type_assertion_assignment_target_compiles() {
     opts.compilation_mode = CompilationMode::All;
     let (program, result) = transform_source(source, SourceType::ts(), &allocator, opts);
 
-    assert!(result.changed, "component should compile; diagnostics: {:?}", result.diagnostics);
-    assert!(result.diagnostics.is_empty(), "unexpected diagnostics: {:?}", result.diagnostics);
+    assert!(
+        result.changed,
+        "component should compile; diagnostics: {:?}",
+        result.diagnostics
+    );
+    assert!(
+        result.diagnostics.is_empty(),
+        "unexpected diagnostics: {:?}",
+        result.diagnostics
+    );
     let output = Codegen::new().build(&program).code;
-    assert!(output.contains("x = props.x"), "type assertion assignment was lost:\n{output}");
-    assert!(output.contains("x = x + 1"), "type assertion compound assignment was lost:\n{output}");
+    assert!(
+        output.contains("x = props.x"),
+        "type assertion assignment was lost:\n{output}"
+    );
+    assert!(
+        output.contains("x = x + 1"),
+        "type assertion compound assignment was lost:\n{output}"
+    );
     assert!(
         output.contains("obj.x = obj.x * x"),
         "type assertion member compound assignment was lost:\n{output}"
@@ -372,9 +489,15 @@ function Component(props) {\n  return <div>{props.text}</div>;\n}\n";
     let (program, result) = transform_source(source, SourceType::tsx(), &allocator, options());
     assert!(result.changed, "component should be compiled");
     let output = Codegen::new().build(&program).code;
-    assert!(output.contains("react/compiler-runtime"), "component should memoize:\n{output}");
+    assert!(
+        output.contains("react/compiler-runtime"),
+        "component should memoize:\n{output}"
+    );
     assert!(output.contains("count = 0"), "class field lost:\n{output}");
-    assert!(output.contains("increment("), "class method lost:\n{output}");
+    assert!(
+        output.contains("increment("),
+        "class method lost:\n{output}"
+    );
 }
 
 #[test]
@@ -398,17 +521,35 @@ function Component(props) {\n\
     assert!(result.changed, "component should be compiled");
     let output = Codegen::new().build(&program).code;
 
-    assert!(output.contains("react/compiler-runtime"), "component should memoize:\n{output}");
-    assert!(output.contains("import \"./style.css\";"), "bare import changed:\n{output}");
+    assert!(
+        output.contains("react/compiler-runtime"),
+        "component should memoize:\n{output}"
+    );
+    assert!(
+        output.contains("import \"./style.css\";"),
+        "bare import changed:\n{output}"
+    );
     assert!(
         !output.contains("import {} from \"./style.css\""),
         "bare import became an empty named import:\n{output}"
     );
-    assert!(output.contains("export * as ns from \"./mod\";"), "namespace export lost:\n{output}");
-    assert!(output.contains("method() {"), "class expression method lost:\n{output}");
-    assert!(output.contains("return 1;"), "class expression body lost:\n{output}");
+    assert!(
+        output.contains("export * as ns from \"./mod\";"),
+        "namespace export lost:\n{output}"
+    );
+    assert!(
+        output.contains("method() {"),
+        "class expression method lost:\n{output}"
+    );
+    assert!(
+        output.contains("return 1;"),
+        "class expression body lost:\n{output}"
+    );
     assert!(output.contains("123n"), "BigInt literal lost:\n{output}");
-    assert!(!output.contains("123nn"), "BigInt literal gained an extra suffix:\n{output}");
+    assert!(
+        !output.contains("123nn"),
+        "BigInt literal gained an extra suffix:\n{output}"
+    );
 }
 
 #[test]
@@ -445,10 +586,17 @@ function Component(props: Props): JSX.Element {\n\
 
     let allocator = Allocator::default();
     let (program, result) = transform_source(source, SourceType::tsx(), &allocator, options());
-    assert!(result.changed, "component should compile; diagnostics: {:?}", result.diagnostics);
+    assert!(
+        result.changed,
+        "component should compile; diagnostics: {:?}",
+        result.diagnostics
+    );
     let output = Codegen::new().build(&program).code;
 
-    assert!(output.contains("react/compiler-runtime"), "component should memoize:\n{output}");
+    assert!(
+        output.contains("react/compiler-runtime"),
+        "component should memoize:\n{output}"
+    );
     assert!(output.contains("as const"), "`as const` lost:\n{output}");
     assert!(
         output.contains("declare const Generic: React.FC<Props>"),
@@ -458,19 +606,43 @@ function Component(props: Props): JSX.Element {\n\
         output.contains("createContext<Props | undefined>"),
         "call type arguments lost:\n{output}"
     );
-    assert!(output.contains("typedValue: string"), "variable type annotation lost:\n{output}");
-    assert!(output.contains("as string"), "`as` expression lost:\n{output}");
-    assert!(output.contains("satisfies string"), "`satisfies` expression lost:\n{output}");
-    assert!(output.contains("new Box<Props>()"), "`new` type arguments lost:\n{output}");
-    assert!(output.contains("tag<Props>`value`"), "tagged template type arguments lost:\n{output}");
+    assert!(
+        output.contains("typedValue: string"),
+        "variable type annotation lost:\n{output}"
+    );
+    assert!(
+        output.contains("as string"),
+        "`as` expression lost:\n{output}"
+    );
+    assert!(
+        output.contains("satisfies string"),
+        "`satisfies` expression lost:\n{output}"
+    );
+    assert!(
+        output.contains("new Box<Props>()"),
+        "`new` type arguments lost:\n{output}"
+    );
+    assert!(
+        output.contains("tag<Props>`value`"),
+        "tagged template type arguments lost:\n{output}"
+    );
     assert!(
         output.contains("forwardRef<HTMLDivElement, Props>"),
         "generic forwardRef call lost type arguments:\n{output}"
     );
     assert!(output.contains(": Props"), "parameter type lost:\n{output}");
-    assert!(output.contains(": JSX.Element"), "return type lost:\n{output}");
-    assert!(output.contains("catch (error: unknown)"), "catch type lost:\n{output}");
-    assert!(output.contains("<Generic<Props>"), "generic JSX type arguments lost:\n{output}");
+    assert!(
+        output.contains(": JSX.Element"),
+        "return type lost:\n{output}"
+    );
+    assert!(
+        output.contains("catch (error: unknown)"),
+        "catch type lost:\n{output}"
+    );
+    assert!(
+        output.contains("<Generic<Props>"),
+        "generic JSX type arguments lost:\n{output}"
+    );
 }
 
 #[test]
@@ -492,7 +664,10 @@ return <div key={index}>{firstOptionInput}{field.value}</div>;\n\
     assert!(result.changed, "component should be compiled");
     let output = Codegen::new().build(&program).code;
 
-    assert!(output.contains("react/compiler-runtime"), "component should memoize:\n{output}");
+    assert!(
+        output.contains("react/compiler-runtime"),
+        "component should memoize:\n{output}"
+    );
     assert!(
         !output.contains("typeof field.optionsInputs"),
         "stale type query source was restored:\n{output}"
@@ -515,7 +690,10 @@ function Component(props) {\n\
     assert!(result.changed, "component should be compiled");
     let output = Codegen::new().build(&program).code;
 
-    assert!(output.contains("react/compiler-runtime"), "component should memoize:\n{output}");
+    assert!(
+        output.contains("react/compiler-runtime"),
+        "component should memoize:\n{output}"
+    );
     assert!(
         output.contains("iframe's payload"),
         "JSX string attribute entity was not decoded:\n{output}"
@@ -539,8 +717,15 @@ async function Component(props) {\n  await using x = sideEffect();\n  return <di
         let allocator = Allocator::default();
         let (_program, result) = transform_source(source, SourceType::tsx(), &allocator, options());
 
-        assert!(!result.changed, "resource management should skip React Compiler");
-        assert!(result.diagnostics.is_empty(), "unexpected diagnostics: {:?}", result.diagnostics);
+        assert!(
+            !result.changed,
+            "resource management should skip React Compiler"
+        );
+        assert!(
+            result.diagnostics.is_empty(),
+            "unexpected diagnostics: {:?}",
+            result.diagnostics
+        );
     }
 }
 
@@ -555,10 +740,19 @@ function Component(props) {\n  return <div>{E.A}{N.value}{props.text}</div>;\n}\
     assert!(result.changed, "component should be compiled");
     let output = Codegen::new().build(&program).code;
 
-    assert!(output.contains("export enum E"), "exported enum lost:\n{output}");
+    assert!(
+        output.contains("export enum E"),
+        "exported enum lost:\n{output}"
+    );
     assert!(output.contains("A"), "enum member lost:\n{output}");
-    assert!(output.contains("export namespace N"), "exported namespace lost:\n{output}");
-    assert!(output.contains("value = E.A"), "namespace body lost:\n{output}");
+    assert!(
+        output.contains("export namespace N"),
+        "exported namespace lost:\n{output}"
+    );
+    assert!(
+        output.contains("value = E.A"),
+        "namespace body lost:\n{output}"
+    );
     assert!(
         !output.contains("declare const"),
         "exported TS declaration became a placeholder:\n{output}"
@@ -615,8 +809,14 @@ fn memo_wrapped_component_compiles() {
     let (program, result) = transform_source(source, SourceType::tsx(), &allocator, options());
     assert!(result.changed, "memo-wrapped component should compile");
     let output = Codegen::new().build(&program).code;
-    assert!(output.contains("react/compiler-runtime"), "should memoize:\n{output}");
-    assert!(output.contains("_c("), "expected memo cache reads:\n{output}");
+    assert!(
+        output.contains("react/compiler-runtime"),
+        "should memoize:\n{output}"
+    );
+    assert!(
+        output.contains("_c("),
+        "expected memo cache reads:\n{output}"
+    );
 }
 
 /// Diagnostics are surfaced at the compiler's own severity, not flattened.
@@ -711,9 +911,24 @@ export default Component;\n";
     assert!(result.changed, "component should be compiled");
     let output = Codegen::new().build(&program).code;
 
-    assert!(output.contains("react/compiler-runtime"), "component should memoize:\n{output}");
-    assert!(output.contains("// keep: leading"), "leading comment lost:\n{output}");
-    assert!(output.contains("/** keep: jsdoc */"), "jsdoc comment lost:\n{output}");
-    assert!(output.contains("// keep: trailing"), "trailing comment lost:\n{output}");
-    assert!(!output.contains("// drop: inner"), "inner comment should not be recovered:\n{output}");
+    assert!(
+        output.contains("react/compiler-runtime"),
+        "component should memoize:\n{output}"
+    );
+    assert!(
+        output.contains("// keep: leading"),
+        "leading comment lost:\n{output}"
+    );
+    assert!(
+        output.contains("/** keep: jsdoc */"),
+        "jsdoc comment lost:\n{output}"
+    );
+    assert!(
+        output.contains("// keep: trailing"),
+        "trailing comment lost:\n{output}"
+    );
+    assert!(
+        !output.contains("// drop: inner"),
+        "inner comment should not be recovered:\n{output}"
+    );
 }

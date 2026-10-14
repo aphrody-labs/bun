@@ -32,15 +32,19 @@ impl<'a> FormatWrite<'a> for AstNode<'a, TSMappedType<'a>> {
         //     [A in B]: T}
         // Because the break is not immediately after `{`.
         // `+ 1` skips the opening `{`.
-        let should_expand =
-            f.source_text().has_line_terminator_after_skipping_comments(self.span.start + 1);
+        let should_expand = f
+            .source_text()
+            .has_line_terminator_after_skipping_comments(self.span.start + 1);
 
         let format_inner = format_with(|f| {
             // Comments between `{` and `[` are the mapped type's dangling comments, joined by hard line breaks.
             // After the last one: a hard line break when it is a line comment or the source breaks after it,
             // otherwise a group collapsing to a space when the member fits on the line.
             // Only the last comment goes inside that group: the ones before it always hard-break.
-            let comments = f.context().comments().comments_before_character(self.span.start, b'[');
+            let comments = f
+                .context()
+                .comments()
+                .comments_before_character(self.span.start, b'[');
             if let Some((last, rest)) = comments.split_last() {
                 if last.is_line() || last.followed_by_newline() {
                     write!(
@@ -91,7 +95,14 @@ impl<'a> FormatWrite<'a> for AstNode<'a, TSMappedType<'a>> {
                 key.format_trailing_comments(f);
             });
 
-            write!(f, ["[", group(&soft_block_indent(&format_key_in_constraint)), "]"]);
+            write!(
+                f,
+                [
+                    "[",
+                    group(&soft_block_indent(&format_key_in_constraint)),
+                    "]"
+                ]
+            );
             if let Some(optional) = self.optional() {
                 write!(
                     f,

@@ -50,10 +50,18 @@ fn kinds(code: &str, ts: bool, jsx: bool) -> Vec<TokenKind> {
     let mut buf = code.as_bytes().to_vec();
     let n = buf.len();
     buf.resize(n + PAD, 0);
-    let opts = LexOptions { jsx, ts, ..Default::default() };
+    let opts = LexOptions {
+        jsx,
+        ts,
+        ..Default::default()
+    };
     let mut lx = Lexer::new();
     let count = lx.lex(&buf, n, opts);
-    lx.kinds()[..count].iter().copied().filter(|kk| !kk.is_trivia()).collect()
+    lx.kinds()[..count]
+        .iter()
+        .copied()
+        .filter(|kk| !kk.is_trivia())
+        .collect()
 }
 
 fn first_kind(code: &str, ts: bool) -> TokenKind {
@@ -137,7 +145,10 @@ fn near_misses_stay_ident() {
 #[test]
 fn member_access_words_stay_ident() {
     // The candidate filter drops words right after a member dot.
-    assert_eq!(kinds("a.type", true, false), [TokenKind::Ident, TokenKind::Dot, TokenKind::Ident]);
+    assert_eq!(
+        kinds("a.type", true, false),
+        [TokenKind::Ident, TokenKind::Dot, TokenKind::Ident]
+    );
     assert_eq!(
         kinds("a?.string", true, false),
         [TokenKind::Ident, TokenKind::OptionalChain, TokenKind::Ident]
@@ -152,7 +163,13 @@ fn member_access_words_stay_ident() {
 fn ts_statement_shapes() {
     assert_eq!(
         kinds("type X = string;", true, false),
-        [TokenKind::KwType, TokenKind::Ident, TokenKind::Eq, TokenKind::KwString, TokenKind::Semi]
+        [
+            TokenKind::KwType,
+            TokenKind::Ident,
+            TokenKind::Eq,
+            TokenKind::KwString,
+            TokenKind::Semi
+        ]
     );
     assert_eq!(
         kinds("interface I { readonly x: number }", true, false),
@@ -169,12 +186,23 @@ fn ts_statement_shapes() {
     );
     assert_eq!(
         kinds("declare module 'x';", true, false),
-        [TokenKind::KwDeclare, TokenKind::KwModule, TokenKind::String, TokenKind::Semi]
+        [
+            TokenKind::KwDeclare,
+            TokenKind::KwModule,
+            TokenKind::String,
+            TokenKind::Semi
+        ]
     );
     // Same input in JS mode: every TS spelling is a plain identifier.
     assert_eq!(
         kinds("type X = string;", false, false),
-        [TokenKind::Ident, TokenKind::Ident, TokenKind::Eq, TokenKind::Ident, TokenKind::Semi]
+        [
+            TokenKind::Ident,
+            TokenKind::Ident,
+            TokenKind::Eq,
+            TokenKind::Ident,
+            TokenKind::Semi
+        ]
     );
 }
 
@@ -240,9 +268,17 @@ fn regex_vs_division_untouched_by_ts_kinds() {
     // not a regex-preceding keyword in either mode.
     let ts = kinds("type/x/g", true, false);
     assert_eq!(ts[0], TokenKind::KwType);
-    assert_eq!(ts[1], TokenKind::Slash, "ts: `/` after `type` must be division");
+    assert_eq!(
+        ts[1],
+        TokenKind::Slash,
+        "ts: `/` after `type` must be division"
+    );
     let js = kinds("type/x/g", false, false);
-    assert_eq!(js[1], TokenKind::Slash, "js: `/` after `type` must be division");
+    assert_eq!(
+        js[1],
+        TokenKind::Slash,
+        "js: `/` after `type` must be division"
+    );
     // Control: after a real RX keyword it is a regex in both modes.
     assert_eq!(kinds("return /x/g", true, false)[1], TokenKind::RegExp);
 }

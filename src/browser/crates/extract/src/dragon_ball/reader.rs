@@ -13,9 +13,21 @@ pub fn parse_reader_images(html: &str) -> Result<Vec<String>, String> {
         .ok_or("reader image configuration is absent")?;
     let value: Value = serde_json::from_str(json.as_str()).map_err(|error| error.to_string())?;
     let mut images = Vec::new();
-    for source in value.get("sources").and_then(Value::as_array).into_iter().flatten() {
-        for raw in source.get("images").and_then(Value::as_array).into_iter().flatten() {
-            let url = raw.as_str().ok_or("reader image reference is not a string")?;
+    for source in value
+        .get("sources")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+    {
+        for raw in source
+            .get("images")
+            .and_then(Value::as_array)
+            .into_iter()
+            .flatten()
+        {
+            let url = raw
+                .as_str()
+                .ok_or("reader image reference is not a string")?;
             if !images.iter().any(|image| image == url) {
                 images.push(url.to_owned());
             }
@@ -32,7 +44,10 @@ mod tests {
         let html = r#"<script>ts_reader.run({"sources":[{"images":["https://cdn.example.org/2.jpg","https://cdn.example.org/1.jpg"]}]});</script>"#;
         assert_eq!(
             parse_reader_images(html).unwrap(),
-            vec!["https://cdn.example.org/2.jpg", "https://cdn.example.org/1.jpg"]
+            vec![
+                "https://cdn.example.org/2.jpg",
+                "https://cdn.example.org/1.jpg"
+            ]
         );
         assert!(parse_reader_images("<script>ts_reader.run({not:json});</script>").is_err());
     }

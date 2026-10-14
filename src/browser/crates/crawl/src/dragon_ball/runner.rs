@@ -12,8 +12,8 @@ use super::{
 use crate::{
     AddRequest, CrawlOptions, CrawlTransport, FetchResult, Frontier, FrontierOptions, crawl_bounded,
 };
-use bun_browser_extract::{extract_main, html_to_markdown};
 use bun_browser_dom::parse_html;
+use bun_browser_extract::{extract_main, html_to_markdown};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use std::{
@@ -119,17 +119,19 @@ impl<T: CrawlTransport> CrawlTransport for CaptureTransport<'_, T> {
         }
         let clean = clean_source_html(&response.body, &response.url);
         let extracted = extract_main(&clean, Some(response.url.as_str()));
-        let public_json =
-            if response.content_type.as_deref().is_some_and(|kind| kind.contains("json"))
-                || matches!(self.target.mode.as_str(), "json" | "shenron_api")
-            {
-                Some(
-                    serde_json::from_str::<Value>(&response.body)
-                        .map_err(|error| format!("invalid source JSON: {error}"))?,
-                )
-            } else {
-                None
-            };
+        let public_json = if response
+            .content_type
+            .as_deref()
+            .is_some_and(|kind| kind.contains("json"))
+            || matches!(self.target.mode.as_str(), "json" | "shenron_api")
+        {
+            Some(
+                serde_json::from_str::<Value>(&response.body)
+                    .map_err(|error| format!("invalid source JSON: {error}"))?,
+            )
+        } else {
+            None
+        };
         let markdown = if let Some(value) = &public_json {
             format!(
                 "```json\n{}\n```",
@@ -151,7 +153,11 @@ impl<T: CrawlTransport> CrawlTransport for CaptureTransport<'_, T> {
         )?;
         let is_cn = response.url.host_str() == Some("comic.dragonballcn.com");
         let collection = if is_cn && !response.url.path().ends_with("gain_1.php") {
-            let slug = response.url.path().trim_matches('/').trim_end_matches(".htm");
+            let slug = response
+                .url
+                .path()
+                .trim_matches('/')
+                .trim_end_matches(".htm");
             let mut collection = parse_collection(
                 &response.body,
                 if slug.is_empty() { "divers" } else { slug },
@@ -178,7 +184,10 @@ impl<T: CrawlTransport> CrawlTransport for CaptureTransport<'_, T> {
                 .query_pairs()
                 .find(|(key, _)| key == "did")
                 .map(|(_, value)| {
-                    (value.into_owned(), parse_gallery(&response.body, "", &response.url))
+                    (
+                        value.into_owned(),
+                        parse_gallery(&response.body, "", &response.url),
+                    )
                 })
                 .map(|(did, _)| {
                     let gallery = parse_gallery(&response.body, &did, &response.url);
@@ -192,7 +201,11 @@ impl<T: CrawlTransport> CrawlTransport for CaptureTransport<'_, T> {
             document,
             collection,
             gallery,
-            plates: if is_cn { parse_plate_inventory(&markdown) } else { Vec::new() },
+            plates: if is_cn {
+                parse_plate_inventory(&markdown)
+            } else {
+                Vec::new()
+            },
             episodes: parse_toei_episodes(&response.body, &response.url),
             jump_statistics: if response.url.host_str() == Some("www.jajanken.net") {
                 parse_jump_statistics(&response.body)
@@ -202,8 +215,12 @@ impl<T: CrawlTransport> CrawlTransport for CaptureTransport<'_, T> {
             public_json,
         };
         write_private(
-            &self.directory.join(format!("{}.json", sha256(response.url.as_str()))),
-            serde_json::to_vec(&capture).map_err(|error| error.to_string())?.as_slice(),
+            &self
+                .directory
+                .join(format!("{}.json", sha256(response.url.as_str()))),
+            serde_json::to_vec(&capture)
+                .map_err(|error| error.to_string())?
+                .as_slice(),
         )?;
         Ok(response)
     }
@@ -217,15 +234,26 @@ fn clean_source_html(html: &str, url: &Url) -> String {
     {
         dom.remove(id);
     }
-    if url.host_str().is_some_and(|host| host.ends_with("neoseeker.com")) {
-        let posts =
-            dom.query_selector_all(".postContent, .message, .post-content").unwrap_or_default();
+    if url
+        .host_str()
+        .is_some_and(|host| host.ends_with("neoseeker.com"))
+    {
+        let posts = dom
+            .query_selector_all(".postContent, .message, .post-content")
+            .unwrap_or_default();
         if !posts.is_empty() {
-            return posts.into_iter().map(|id| dom.outer_html(id)).collect::<Vec<_>>().join("\n");
+            return posts
+                .into_iter()
+                .map(|id| dom.outer_html(id))
+                .collect::<Vec<_>>()
+                .join("\n");
         }
     }
     if url.host_str() == Some("www.kanzenshuu.com")
-        && let Some(id) = dom.query_selector("#trans-content, main#content, main").ok().flatten()
+        && let Some(id) = dom
+            .query_selector("#trans-content, main#content, main")
+            .ok()
+            .flatten()
     {
         return dom.outer_html(id);
     }
@@ -280,16 +308,20 @@ async fn resolve_wayback<T: CrawlTransport>(
             Err(error) => {
                 errors.push((seed.clone(), error));
                 continue;
-            },
+            }
         };
         if !(200..300).contains(&response.status) {
-            errors.push((seed.clone(), format!("Wayback resolver HTTP {}", response.status)));
+            errors.push((
+                seed.clone(),
+                format!("Wayback resolver HTTP {}", response.status),
+            ));
             continue;
         }
         let value: Value =
             serde_json::from_str(&response.body).map_err(|error| error.to_string())?;
-        let Some(snapshot) =
-            value.pointer("/archived_snapshots/closest/url").and_then(Value::as_str)
+        let Some(snapshot) = value
+            .pointer("/archived_snapshots/closest/url")
+            .and_then(Value::as_str)
         else {
             errors.push((seed.clone(), "no Wayback snapshot available".into()));
             continue;
@@ -319,13 +351,21 @@ pub async fn run_dragon_ball<T: CrawlTransport>(
 ) -> Result<DragonBallRunReport, String> {
     plan.validate()?;
     for id in &options.sources {
-        if !plan.targets.iter().any(|target| target.id == *id && target.enabled) {
+        if !plan
+            .targets
+            .iter()
+            .any(|target| target.id == *id && target.enabled)
+        {
             return Err(format!("unknown or disabled Dragon Ball source: {id}"));
         }
     }
     std::fs::create_dir_all(&options.output).map_err(|error| error.to_string())?;
     let limit = options.max_requests.unwrap_or(plan.defaults.max_pages);
-    let budget = Budget { inner: transport, requests: Cell::new(0), limit };
+    let budget = Budget {
+        inner: transport,
+        requests: Cell::new(0),
+        limit,
+    };
     let mut report = DragonBallRunReport {
         schema: "aphrody-dragon-ball-crawl/v1".into(),
         completed: false,
@@ -344,25 +384,35 @@ pub async fn run_dragon_ball<T: CrawlTransport>(
         target.enabled && (options.sources.is_empty() || options.sources.contains(&target.id))
     }) {
         let mut target = original.clone();
-        let mut target_report = TargetReport { id: target.id.clone(), ..TargetReport::default() };
+        let mut target_report = TargetReport {
+            id: target.id.clone(),
+            ..TargetReport::default()
+        };
         if target.mode == "wayback" {
-            target_report.errors.extend(resolve_wayback(&mut target, &budget).await?);
+            target_report
+                .errors
+                .extend(resolve_wayback(&mut target, &budget).await?);
         }
         let directory = options.output.join("captures").join(&target.id);
         if target.mode == "mediawiki" {
             let seed = validate_source_url(&target.seeds[0])?;
-            let root =
-                seed.path().rfind("/wiki/").ok_or("MediaWiki seed must contain /wiki/<title>")?;
+            let root = seed
+                .path()
+                .rfind("/wiki/")
+                .ok_or("MediaWiki seed must contain /wiki/<title>")?;
             let installation = &seed.path()[..root];
-            let api =
-                seed.join(&format!("{installation}/api.php")).map_err(|error| error.to_string())?;
+            let api = seed
+                .join(&format!("{installation}/api.php"))
+                .map_err(|error| error.to_string())?;
             let mut wiki = crate::MediaWikiOptions::new(api);
             wiki.article_path = format!("{installation}/wiki/$1");
             wiki.include_url_regex = target.include_patterns.clone();
             wiki.exclude_url_regex = target.exclude_patterns.clone();
             wiki.max_pages = limit.saturating_sub(budget.requests.get()) / 2;
             wiki.request_interval = std::time::Duration::from_millis(
-                target.per_host_delay_ms.unwrap_or(plan.defaults.per_host_delay_ms),
+                target
+                    .per_host_delay_ms
+                    .unwrap_or(plan.defaults.per_host_delay_ms),
             );
             let before = budget.requests.get();
             match crate::crawl_mediawiki_with_transport(&budget, &wiki).await {
@@ -395,8 +445,10 @@ pub async fn run_dragon_ball<T: CrawlTransport>(
                             &serde_json::to_vec(&capture).map_err(|error| error.to_string())?,
                         )?;
                     }
-                },
-                Err(error) => target_report.errors.push((target.id.clone(), error.to_string())),
+                }
+                Err(error) => target_report
+                    .errors
+                    .push((target.id.clone(), error.to_string())),
             }
             target_report.attempts = budget.requests.get() - before;
             target_report.completed = target_report.completed && target_report.errors.is_empty();
@@ -409,7 +461,10 @@ pub async fn run_dragon_ball<T: CrawlTransport>(
                 corpus.push('\n');
             }
             write_private(
-                &options.output.join("corpus").join(format!("{}.jsonl", target.id)),
+                &options
+                    .output
+                    .join("corpus")
+                    .join(format!("{}.jsonl", target.id)),
                 corpus.as_bytes(),
             )?;
             report.errors.extend(target_report.errors.clone());
@@ -423,7 +478,9 @@ pub async fn run_dragon_ball<T: CrawlTransport>(
             frontier_dir.join(format!("{}.sqlite", target.id)),
             FrontierOptions {
                 per_host_delay_ms: i64::try_from(
-                    target.per_host_delay_ms.unwrap_or(plan.defaults.per_host_delay_ms),
+                    target
+                        .per_host_delay_ms
+                        .unwrap_or(plan.defaults.per_host_delay_ms),
                 )
                 .unwrap_or(i64::MAX),
                 max_in_flight_per_host: target
@@ -443,23 +500,35 @@ pub async fn run_dragon_ball<T: CrawlTransport>(
                     options.force,
                 )?;
             }
-            enqueue(&mut frontier, "https://comic.dragonballcn.com/update.htm", options.force)?;
+            enqueue(
+                &mut frontier,
+                "https://comic.dragonballcn.com/update.htm",
+                options.force,
+            )?;
         }
         for seed in &target.seeds {
             let mut url = validate_source_url(seed)?;
             if target.mode == "shenron_api" {
-                url.query_pairs_mut().append_pair("limit", "100").append_pair("offset", "0");
+                url.query_pairs_mut()
+                    .append_pair("limit", "100")
+                    .append_pair("offset", "0");
             }
             enqueue(&mut frontier, url.as_str(), options.force)?;
         }
-        let capture =
-            CaptureTransport { inner: &budget, target: &target, directory: directory.clone() };
+        let capture = CaptureTransport {
+            inner: &budget,
+            target: &target,
+            directory: directory.clone(),
+        };
         let before = budget.requests.get();
         let mut crawl = CrawlOptions {
             max_depth: if matches!(target.mode.as_str(), "catalogue" | "shenron_api" | "json") {
                 0
             } else {
-                options.max_depth.or(target.max_depth).unwrap_or(plan.defaults.max_depth)
+                options
+                    .max_depth
+                    .or(target.max_depth)
+                    .unwrap_or(plan.defaults.max_depth)
             },
             max_requests: limit.saturating_sub(budget.requests.get()),
             max_concurrency: plan.defaults.max_concurrency.clamp(1, 8),
@@ -506,7 +575,10 @@ pub async fn run_dragon_ball<T: CrawlTransport>(
                 };
                 let mut page =
                     Url::parse(&entry.document.canonical_url).map_err(|error| error.to_string())?;
-                if page.query_pairs().any(|(key, value)| key == "offset" && value != "0") {
+                if page
+                    .query_pairs()
+                    .any(|(key, value)| key == "offset" && value != "0")
+                {
                     continue;
                 }
                 // The page budget bounds even a corrupt remote total value.
@@ -542,7 +614,10 @@ pub async fn run_dragon_ball<T: CrawlTransport>(
             && stats.locked == 0
             && stats.failed == 0
             && target_report.errors.is_empty();
-        let corpus_path = options.output.join("corpus").join(format!("{}.jsonl", target.id));
+        let corpus_path = options
+            .output
+            .join("corpus")
+            .join(format!("{}.jsonl", target.id));
         let mut corpus = String::new();
         for entry in &captures {
             let document = &entry.document;
@@ -574,7 +649,10 @@ pub async fn run_dragon_ball<T: CrawlTransport>(
         }
     }
     for capture in &all_captures {
-        all_documents.insert(capture.document.canonical_url.clone(), capture.document.clone());
+        all_documents.insert(
+            capture.document.canonical_url.clone(),
+            capture.document.clone(),
+        );
     }
     export_structured(&all_captures, &options.output, &mut report)?;
     let mut projection = String::new();
@@ -608,7 +686,9 @@ fn export_structured(
                 && collection.slug == *edition
             {
                 let mut collection = collection.clone();
-                collection.publications.retain(|book| seen.insert(book.did.clone()));
+                collection
+                    .publications
+                    .retain(|book| seen.insert(book.did.clone()));
                 collections.push(collection);
             }
         }
@@ -638,7 +718,10 @@ fn export_structured(
     for collection in &mut collections {
         for publication in &mut collection.publications {
             if let Some(capture) = captures.iter().find(|capture| {
-                capture.gallery.as_ref().is_some_and(|(did, _)| did == &publication.did)
+                capture
+                    .gallery
+                    .as_ref()
+                    .is_some_and(|(did, _)| did == &publication.did)
             }) {
                 if let Some((_, gallery)) = &capture.gallery {
                     publication.plates = (!gallery.pages.is_empty()).then_some(gallery.pages.len());
@@ -717,9 +800,10 @@ fn export_structured(
         }
         if let Some(value) = &capture.public_json {
             collect_public_assets(value, &mut assets);
-            for (kind, items) in
-                [("episode", value.get("episodes")), ("movie", value.get("movies"))]
-            {
+            for (kind, items) in [
+                ("episode", value.get("episodes")),
+                ("movie", value.get("movies")),
+            ] {
                 if let Some(items) = items.and_then(Value::as_array) {
                     for item in items {
                         let id = item.get("id").and_then(Value::as_u64);
@@ -749,7 +833,10 @@ fn export_structured(
             serde_json::to_value(episodes.into_values().collect::<Vec<_>>())
                 .map_err(|error| error.to_string())?,
         ),
-        ("jump-stats.json", serde_json::to_value(statistics).map_err(|error| error.to_string())?),
+        (
+            "jump-stats.json",
+            serde_json::to_value(statistics).map_err(|error| error.to_string())?,
+        ),
         (
             "shenron-catalogue.json",
             json!({"episodes":public_episodes,"movies":public_movies,"assets":assets}),
@@ -790,9 +877,12 @@ fn export_bxc_artifacts(
         if host == "dragon-ball-official.com" || host.ends_with(".dragon-ball-official.com") {
             for article in parse_official_articles(&capture.raw_html, &url) {
                 let detail = article.content_markdown.is_some();
-                if articles.get(&article.url).is_none_or(|old: &super::OfficialArticle| {
-                    detail || old.content_markdown.is_none()
-                }) {
+                if articles
+                    .get(&article.url)
+                    .is_none_or(|old: &super::OfficialArticle| {
+                        detail || old.content_markdown.is_none()
+                    })
+                {
                     articles.insert(article.url.clone(), article);
                 }
             }
@@ -810,7 +900,11 @@ fn export_bxc_artifacts(
         } else if host == "web.archive.org" && url.path().contains("inlifeweb.com") {
             Some("inlifeBio")
         } else if host == "ja.wikipedia.org"
-            && capture.document.provenance.get("targetId").and_then(Value::as_str)
+            && capture
+                .document
+                .provenance
+                .get("targetId")
+                .and_then(Value::as_str)
                 == Some("toriyama-biography")
         {
             Some("wikiJaSummary")
@@ -824,8 +918,10 @@ fn export_bxc_artifacts(
             && url.path() == "/metadata/drslump"
             && let Some(item) = &capture.public_json
         {
-            archive =
-                Some(bun_browser_extract::dragon_ball::archive_manifest(item, Some("dr_slump"))?);
+            archive = Some(bun_browser_extract::dragon_ball::archive_manifest(
+                item,
+                Some("dr_slump"),
+            )?);
         }
         if host == "ja.wikipedia.org" && bio_key == Some("wikiJaSummary") {
             wiki = Some(
@@ -842,7 +938,9 @@ fn export_bxc_artifacts(
                     .all(|byte| byte.is_ascii_alphanumeric() || b"_-".contains(&byte))
             {
                 write_private(
-                    &output.join("data/catalogues/pages").join(format!("{safe_slug}.html")),
+                    &output
+                        .join("data/catalogues/pages")
+                        .join(format!("{safe_slug}.html")),
                     capture.raw_html.as_bytes(),
                 )?;
             }
@@ -859,11 +957,22 @@ fn export_bxc_artifacts(
         ("dragon_ball_z", "toei_episodes_dbz.json", "episodesDbz"),
         ("dragon_ball_super", "toei_episodes_dbs.json", "episodesDbs"),
         ("dragon_ball_kai", "toei_episodes_kai.json", "episodesKai"),
-        ("dragon_ball", "toei_episodes_classic.json", "episodesClassic"),
+        (
+            "dragon_ball",
+            "toei_episodes_classic.json",
+            "episodesClassic",
+        ),
         ("dragon_gt", "toei_episodes_gt.json", "episodesGt"),
-        ("dragonball_daima", "toei_episodes_daima.json", "episodesDaima"),
+        (
+            "dragonball_daima",
+            "toei_episodes_daima.json",
+            "episodesDaima",
+        ),
     ] {
-        let rows: Vec<_> = episodes.values().filter(|episode| episode.series == series).collect();
+        let rows: Vec<_> = episodes
+            .values()
+            .filter(|episode| episode.series == series)
+            .collect();
         write_private(
             &output.join(name),
             &serde_json::to_vec_pretty(&rows).map_err(|error| error.to_string())?,
@@ -898,7 +1007,10 @@ fn export_bxc_artifacts(
         )?;
         modules.push("shenron-timeline.json");
     }
-    for (name, value) in [("archive-drslump.json", archive), ("wiki-toriyama.json", wiki)] {
+    for (name, value) in [
+        ("archive-drslump.json", archive),
+        ("wiki-toriyama.json", wiki),
+    ] {
         if let Some(value) = value {
             write_private(
                 &output.join(name),
@@ -922,7 +1034,7 @@ fn collect_public_assets(value: &Value, output: &mut HashSet<String>) {
             for value in values {
                 collect_public_assets(value, output);
             }
-        },
+        }
         Value::Object(fields) => {
             for (key, value) in fields {
                 if key == "frames"
@@ -946,8 +1058,8 @@ fn collect_public_assets(value: &Value, output: &mut HashSet<String>) {
                     collect_public_assets(value, output);
                 }
             }
-        },
-        _ => {},
+        }
+        _ => {}
     }
 }
 
@@ -985,11 +1097,15 @@ mod tests {
         let directory = std::env::temp_dir().join(format!(
             "aphrody-shenron-wiki-redirect-{}-{}",
             std::process::id(),
-            std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos()
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
         ));
         let output = directory.join("corpus");
         let mut plan = DragonBallPlan::default();
-        plan.targets.retain(|target| matches!(target.id.as_str(), "shenron" | "shenron-timeline"));
+        plan.targets
+            .retain(|target| matches!(target.id.as_str(), "shenron" | "shenron-timeline"));
         plan.defaults.per_host_delay_ms = 0;
         let fixture = RedirectFixture(Fixture(HashMap::from([
             (
@@ -1035,18 +1151,20 @@ mod tests {
                 .unwrap();
         assert_eq!(projection["completed"], true);
         let documents = std::fs::read_to_string(output.join("shenron-documents.jsonl")).unwrap();
-        assert!(
-            documents.lines().any(|line| serde_json::from_str::<DragonBallDocument>(line)
+        assert!(documents.lines().any(|line| {
+            serde_json::from_str::<DragonBallDocument>(line)
                 .unwrap()
                 .canonical_url
-                == "https://dragonballfr.com/wiki")
-        );
+                == "https://dragonballfr.com/wiki"
+        }));
         std::fs::remove_dir_all(directory).unwrap();
     }
     #[tokio::test]
     async fn campaigns_resume_and_export_native_markdown_without_network_replay() {
-        let output = std::env::temp_dir()
-            .join(format!("aphrody-dragon-ball-campaign-{}", std::process::id()));
+        let output = std::env::temp_dir().join(format!(
+            "aphrody-dragon-ball-campaign-{}",
+            std::process::id()
+        ));
         let mut plan = DragonBallPlan::default();
         plan.targets.retain(|target| target.id == "guides");
         plan.targets[0].seeds = vec!["https://www.kanzenshuu.com/translations/one/".into()];
@@ -1078,7 +1196,10 @@ mod tests {
         .unwrap();
         // BXC's historical projection hashes body_markdown; the acquisition
         // capture separately retains the complete source HTML for media parity.
-        assert_eq!(document.raw_checksum, sha256(&document.payload.body_markdown));
+        assert_eq!(
+            document.raw_checksum,
+            sha256(&document.payload.body_markdown)
+        );
         let captures = read_captures(&output.join("captures/guides")).unwrap();
         assert_eq!(captures.len(), 1);
         assert_eq!(captures[0].raw_html, raw);
@@ -1089,7 +1210,9 @@ mod tests {
             media.url == "https://cdn.example.org/interview.mp4" && media.kind == "video"
         }));
         assert!(!document.payload.body_markdown.contains("cdn.example.org"));
-        let report = run_dragon_ball(&plan, &options, &Fixture(HashMap::new())).await.unwrap();
+        let report = run_dragon_ball(&plan, &options, &Fixture(HashMap::new()))
+            .await
+            .unwrap();
         assert_eq!(report.documents, 1);
         assert_eq!(report.network_requests, 0);
         assert_eq!(materialize_documents(&output).unwrap(), 1);
@@ -1100,7 +1223,8 @@ mod tests {
         let output =
             std::env::temp_dir().join(format!("aphrody-dragon-ball-budget-{}", std::process::id()));
         let mut plan = DragonBallPlan::default();
-        plan.targets.retain(|target| matches!(target.id.as_str(), "dbm-fr" | "dbm-en"));
+        plan.targets
+            .retain(|target| matches!(target.id.as_str(), "dbm-fr" | "dbm-en"));
         plan.respect_robots = false;
         plan.defaults.per_host_delay_ms = 0;
         let fixture=Fixture(plan.targets.iter().map(|target|(target.seeds[0].clone(),"<main><p>Dragon Ball Multiverse community production with its own provenance.</p></main>".into())).collect());
@@ -1126,8 +1250,10 @@ mod tests {
 
     #[tokio::test]
     async fn bxc_dataset_filenames_and_manifest_keep_structured_fields() {
-        let output = std::env::temp_dir()
-            .join(format!("bun-browser-dragon-ball-contract-{}", std::process::id()));
+        let output = std::env::temp_dir().join(format!(
+            "bun-browser-dragon-ball-contract-{}",
+            std::process::id()
+        ));
         let mut plan = DragonBallPlan::default();
         plan.targets.retain(|target| {
             matches!(
@@ -1175,9 +1301,18 @@ mod tests {
         };
         assert_eq!(read("db_official_news.json")[0]["date"], "2026-10-07");
         assert_eq!(read("toei_episodes_classic.json")[0]["episodeNumber"], 1);
-        assert_eq!(read("toei_episodes_classic.json")[0]["broadcastDate"], Value::Null);
-        assert_eq!(read("archive-drslump.json")["data"]["files"][0]["sha1"], "abc");
-        assert_eq!(read("shenron-timeline.json")["items"][0]["date"], Value::Null);
+        assert_eq!(
+            read("toei_episodes_classic.json")[0]["broadcastDate"],
+            Value::Null
+        );
+        assert_eq!(
+            read("archive-drslump.json")["data"]["files"][0]["sha1"],
+            "abc"
+        );
+        assert_eq!(
+            read("shenron-timeline.json")["items"][0]["date"],
+            Value::Null
+        );
         assert_eq!(
             read("shenron-timeline.json")["provenance"]["orderingMeaning"],
             "source-product-preserved"
@@ -1186,7 +1321,11 @@ mod tests {
             read("shenron-ingest-manifest.json")["datasets"]["episodesClassic"],
             "toei_episodes_classic.json"
         );
-        assert!(read("shenron-ingest-manifest.json").get("shenronCanon").is_none());
+        assert!(
+            read("shenron-ingest-manifest.json")
+                .get("shenronCanon")
+                .is_none()
+        );
         std::fs::remove_dir_all(output).unwrap();
     }
 }

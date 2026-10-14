@@ -227,8 +227,9 @@ impl TryFrom<Value> for LintOptions {
         // deprecated flags field
         let mut flags = FxHashMap::with_capacity_and_hasher(2, FxBuildHasher);
         if let Some(json_flags) = object.get("flags").and_then(Value::as_object) {
-            if let Some(disable_nested_config) =
-                json_flags.get("disable_nested_config").and_then(Value::as_str)
+            if let Some(disable_nested_config) = json_flags
+                .get("disable_nested_config")
+                .and_then(Value::as_str)
             {
                 flags.insert("disable_nested_config".to_string(), disable_nested_config);
             }
@@ -238,7 +239,10 @@ impl TryFrom<Value> for LintOptions {
             }
         }
         Ok(Self {
-            run: object.get("run").and_then(|run| Run::deserialize(run).ok()).unwrap_or_default(),
+            run: object
+                .get("run")
+                .and_then(|run| Run::deserialize(run).ok())
+                .unwrap_or_default(),
             unused_disable_directives: object
                 .get("unusedDisableDirectives")
                 .and_then(|key| UnusedDisableDirectives::deserialize(key).ok()),
@@ -307,7 +311,10 @@ mod test {
         let options = LintOptions::try_from(json).unwrap();
         assert_eq!(options.run, Run::OnSave);
         assert_eq!(options.config_path, Some("./custom.json".into()));
-        assert_eq!(options.unused_disable_directives, Some(UnusedDisableDirectives::Warn));
+        assert_eq!(
+            options.unused_disable_directives,
+            Some(UnusedDisableDirectives::Warn)
+        );
         assert_eq!(options.type_aware, Some(true));
         assert!(options.disable_nested_config);
         assert_eq!(options.fix_kind, super::LintFixKindFlag::DangerousFix);
@@ -316,7 +323,10 @@ mod test {
         let rules_customization = options.rules_customization.unwrap();
         assert_eq!(rules_customization.rules.len(), 2);
         let no_unused_vars = &rules_customization.rules["no-unused-vars"];
-        assert_eq!(no_unused_vars.severity, Some(RuleCustomizationSeverity::Error));
+        assert_eq!(
+            no_unused_vars.severity,
+            Some(RuleCustomizationSeverity::Error)
+        );
         assert_eq!(no_unused_vars.autofix, Some(true));
         let eqeqeq = &rules_customization.rules["eqeqeq"];
         assert_eq!(eqeqeq.severity, Some(RuleCustomizationSeverity::Warn));
@@ -360,7 +370,10 @@ mod test {
         assert_eq!(options.unused_disable_directives, None);
         assert_eq!(options.type_aware, None);
         assert!(!options.disable_nested_config);
-        assert_eq!(options.fix_kind, super::LintFixKindFlag::SafeFixOrSuggestion);
+        assert_eq!(
+            options.fix_kind,
+            super::LintFixKindFlag::SafeFixOrSuggestion
+        );
         assert!(options.rules_customization.is_none());
     }
 
@@ -424,11 +437,16 @@ mod test {
         let options = LintOptions::default();
         assert!(options.use_nested_configs());
 
-        let options =
-            LintOptions { config_path: Some("config.json".to_string()), ..Default::default() };
+        let options = LintOptions {
+            config_path: Some("config.json".to_string()),
+            ..Default::default()
+        };
         assert!(!options.use_nested_configs());
 
-        let options = LintOptions { disable_nested_config: true, ..Default::default() };
+        let options = LintOptions {
+            disable_nested_config: true,
+            ..Default::default()
+        };
         assert!(!options.use_nested_configs());
     }
 
@@ -455,7 +473,10 @@ mod test {
             let options = LintOptions::try_from(json).unwrap();
             assert_eq!(options.run, Run::OnSave);
             assert_eq!(options.config_path, Some("./custom.json".into()));
-            assert_eq!(options.unused_disable_directives, Some(UnusedDisableDirectives::Warn));
+            assert_eq!(
+                options.unused_disable_directives,
+                Some(UnusedDisableDirectives::Warn)
+            );
             assert_eq!(options.type_aware, Some(true));
             assert!(options.disable_nested_config);
             assert_eq!(options.fix_kind, LintFixKindFlag::DangerousFix);

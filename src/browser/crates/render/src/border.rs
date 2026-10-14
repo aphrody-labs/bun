@@ -19,11 +19,21 @@ pub struct Sides<T> {
 
 impl<T: Copy> Sides<T> {
     pub const fn all(value: T) -> Self {
-        Self { top: value, right: value, bottom: value, left: value }
+        Self {
+            top: value,
+            right: value,
+            bottom: value,
+            left: value,
+        }
     }
 
     pub fn map<U>(self, mut f: impl FnMut(T) -> U) -> Sides<U> {
-        Sides { top: f(self.top), right: f(self.right), bottom: f(self.bottom), left: f(self.left) }
+        Sides {
+            top: f(self.top),
+            right: f(self.right),
+            bottom: f(self.bottom),
+            left: f(self.left),
+        }
     }
 
     pub const fn as_array(self) -> [T; 4] {
@@ -33,7 +43,12 @@ impl<T: Copy> Sides<T> {
 
 impl<T: Default> Default for Sides<T> {
     fn default() -> Self {
-        Self { top: T::default(), right: T::default(), bottom: T::default(), left: T::default() }
+        Self {
+            top: T::default(),
+            right: T::default(),
+            bottom: T::default(),
+            left: T::default(),
+        }
     }
 }
 
@@ -41,15 +56,24 @@ impl<T: Default> Default for Sides<T> {
 pub fn expand_sides<T: Copy>(values: &[T]) -> Option<Sides<T>> {
     match values {
         [all] => Some(Sides::all(*all)),
-        [vertical, horizontal] => {
-            Some(Sides { top: *vertical, right: *horizontal, bottom: *vertical, left: *horizontal })
-        },
-        [top, horizontal, bottom] => {
-            Some(Sides { top: *top, right: *horizontal, bottom: *bottom, left: *horizontal })
-        },
-        [top, right, bottom, left] => {
-            Some(Sides { top: *top, right: *right, bottom: *bottom, left: *left })
-        },
+        [vertical, horizontal] => Some(Sides {
+            top: *vertical,
+            right: *horizontal,
+            bottom: *vertical,
+            left: *horizontal,
+        }),
+        [top, horizontal, bottom] => Some(Sides {
+            top: *top,
+            right: *horizontal,
+            bottom: *bottom,
+            left: *horizontal,
+        }),
+        [top, right, bottom, left] => Some(Sides {
+            top: *top,
+            right: *right,
+            bottom: *bottom,
+            left: *left,
+        }),
         _ => None,
     }
 }
@@ -130,7 +154,11 @@ impl BorderModel {
 }
 
 fn used_width(specified: f32, style: BorderStyle) -> f32 {
-    if style.is_visible() { specified.max(0.0) } else { 0.0 }
+    if style.is_visible() {
+        specified.max(0.0)
+    } else {
+        0.0
+    }
 }
 
 /// Uniform outline state. Outlines paint outside the border edge and never
@@ -171,11 +199,17 @@ pub struct RadiusValue {
 
 impl RadiusValue {
     pub const fn pixels(length: f32) -> Self {
-        Self { length, percentage: 0.0 }
+        Self {
+            length,
+            percentage: 0.0,
+        }
     }
 
     pub const fn percentage(percentage: f32) -> Self {
-        Self { length: 0.0, percentage }
+        Self {
+            length: 0.0,
+            percentage,
+        }
     }
 
     pub fn resolve(self, axis: f32) -> f32 {
@@ -211,7 +245,12 @@ pub struct BorderRadii {
 
 impl BorderRadii {
     pub const fn all(radius: CornerRadius) -> Self {
-        Self { top_left: radius, top_right: radius, bottom_right: radius, bottom_left: radius }
+        Self {
+            top_left: radius,
+            top_right: radius,
+            bottom_right: radius,
+            bottom_left: radius,
+        }
     }
 
     /// Resolve percentages and apply CSS Backgrounds 3's corner-overlap rule.
@@ -224,13 +263,23 @@ impl BorderRadii {
             bottom_left: resolve_corner(self.bottom_left, width, height),
         };
         let ratio = |available: f32, requested: f32| {
-            if requested > 0.0 { available.max(0.0) / requested } else { 1.0 }
+            if requested > 0.0 {
+                available.max(0.0) / requested
+            } else {
+                1.0
+            }
         };
         let scale = 1.0f32
             .min(ratio(width, resolved.top_left.0 + resolved.top_right.0))
-            .min(ratio(width, resolved.bottom_left.0 + resolved.bottom_right.0))
+            .min(ratio(
+                width,
+                resolved.bottom_left.0 + resolved.bottom_right.0,
+            ))
             .min(ratio(height, resolved.top_left.1 + resolved.bottom_left.1))
-            .min(ratio(height, resolved.top_right.1 + resolved.bottom_right.1));
+            .min(ratio(
+                height,
+                resolved.top_right.1 + resolved.bottom_right.1,
+            ));
         if scale < 1.0 {
             resolved = resolved.scaled(scale);
         }
@@ -253,7 +302,11 @@ fn resolve_corner(radius: CornerRadius, width: f32, height: f32) -> (f32, f32) {
     let x = radius.x.resolve(width);
     let y = radius.y.resolve(height);
     // CSS treats a corner as square when either axis has a zero radius.
-    if x <= f32::EPSILON || y <= f32::EPSILON { (0.0, 0.0) } else { (x, y) }
+    if x <= f32::EPSILON || y <= f32::EPSILON {
+        (0.0, 0.0)
+    } else {
+        (x, y)
+    }
 }
 
 /// Final used radii in CSS pixels after percentage resolution and overlap
@@ -314,7 +367,11 @@ impl ResolvedBorderRadii {
 fn shrink_corner((x, y): (f32, f32), horizontal: f32, vertical: f32) -> (f32, f32) {
     let x = (x - horizontal).max(0.0);
     let y = (y - vertical).max(0.0);
-    if x <= f32::EPSILON || y <= f32::EPSILON { (0.0, 0.0) } else { (x, y) }
+    if x <= f32::EPSILON || y <= f32::EPSILON {
+        (0.0, 0.0)
+    } else {
+        (x, y)
+    }
 }
 
 fn grow_corner((x, y): (f32, f32), horizontal: f32, vertical: f32) -> (f32, f32) {
@@ -325,7 +382,11 @@ fn grow_corner((x, y): (f32, f32), horizontal: f32, vertical: f32) -> (f32, f32)
     }
     let x = (x + horizontal).max(0.0);
     let y = (y + vertical).max(0.0);
-    if x <= f32::EPSILON || y <= f32::EPSILON { (0.0, 0.0) } else { (x, y) }
+    if x <= f32::EPSILON || y <= f32::EPSILON {
+        (0.0, 0.0)
+    } else {
+        (x, y)
+    }
 }
 
 #[cfg(test)]
@@ -335,7 +396,15 @@ mod tests {
     #[test]
     fn side_expansion_follows_css_trbl_rules() {
         assert_eq!(expand_sides(&[1]), Some(Sides::all(1)));
-        assert_eq!(expand_sides(&[1, 2, 3]), Some(Sides { top: 1, right: 2, bottom: 3, left: 2 }));
+        assert_eq!(
+            expand_sides(&[1, 2, 3]),
+            Some(Sides {
+                top: 1,
+                right: 2,
+                bottom: 3,
+                left: 2
+            })
+        );
         assert_eq!(expand_sides::<i32>(&[]), None);
         assert_eq!(expand_sides(&[1, 2, 3, 4, 5]), None);
     }
@@ -354,8 +423,14 @@ mod tests {
     #[test]
     fn elliptical_radii_use_one_overlap_scale() {
         let radii = BorderRadii {
-            top_left: CornerRadius { x: RadiusValue::pixels(80.0), y: RadiusValue::pixels(50.0) },
-            top_right: CornerRadius { x: RadiusValue::pixels(60.0), y: RadiusValue::pixels(40.0) },
+            top_left: CornerRadius {
+                x: RadiusValue::pixels(80.0),
+                y: RadiusValue::pixels(50.0),
+            },
+            top_right: CornerRadius {
+                x: RadiusValue::pixels(60.0),
+                y: RadiusValue::pixels(40.0),
+            },
             bottom_right: CornerRadius {
                 x: RadiusValue::pixels(40.0),
                 y: RadiusValue::pixels(30.0),

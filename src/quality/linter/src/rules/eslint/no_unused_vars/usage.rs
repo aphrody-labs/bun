@@ -31,14 +31,19 @@ impl<'a> Symbol<'_, 'a> {
         const IMPORT: SymbolFlags = SymbolFlags::Import.union(SymbolFlags::TypeImport);
         // note: intentionally do not use `SymbolFlags::is_type` here, since that
         // can return `true` for values
-        const TYPE: SymbolFlags =
-            SymbolFlags::TypeAlias.union(SymbolFlags::TypeParameter).union(SymbolFlags::Interface);
+        const TYPE: SymbolFlags = SymbolFlags::TypeAlias
+            .union(SymbolFlags::TypeParameter)
+            .union(SymbolFlags::Interface);
         const ENUM: SymbolFlags = SymbolFlags::Enum.union(SymbolFlags::EnumMember);
         const NAMESPACE_LIKE: SymbolFlags =
             SymbolFlags::NamespaceModule.union(SymbolFlags::ValueModule);
 
         !self.flags().intersects(
-            IMPORT.union(TYPE).union(ENUM).union(NAMESPACE_LIKE).union(SymbolFlags::CatchVariable),
+            IMPORT
+                .union(TYPE)
+                .union(ENUM)
+                .union(NAMESPACE_LIKE)
+                .union(SymbolFlags::CatchVariable),
         )
     }
 
@@ -143,7 +148,9 @@ impl<'a> Symbol<'_, 'a> {
                 // export type Foo = typeof foo
                 // ```
                 if options.report_vars_only_used_as_types
-                    && !self.flags().intersects(SymbolFlags::TypeImport.union(SymbolFlags::Import))
+                    && !self
+                        .flags()
+                        .intersects(SymbolFlags::TypeImport.union(SymbolFlags::Import))
                     && self.reference_contains_type_query(reference)
                 {
                     continue;
@@ -258,7 +265,9 @@ impl<'a> Symbol<'_, 'a> {
                 | AstKind::AssignmentTargetPropertyIdentifier(_)
                 | AstKind::AssignmentTargetPropertyProperty(_) => {}
                 AstKind::AssignmentExpression(assignment) => {
-                    return options.is_ignored_assignment_target(self, &assignment.left).is_some();
+                    return options
+                        .is_ignored_assignment_target(self, &assignment.left)
+                        .is_some();
                 }
                 // Needs to be checked separately from AssignmentTarget due to
                 // weird heritage bug for object assignment patterns.
@@ -302,7 +311,10 @@ impl<'a> Symbol<'_, 'a> {
     /// type Foo = Array<Bar>
     /// ```
     fn is_type_self_usage(&self, reference: &Reference) -> bool {
-        for parent in self.iter_relevant_parents_of(reference.node_id()).map(AstNode::kind) {
+        for parent in self
+            .iter_relevant_parents_of(reference.node_id())
+            .map(AstNode::kind)
+        {
             match parent {
                 AstKind::TSTypeAliasDeclaration(decl) => {
                     return self == &decl.id;
@@ -388,8 +400,10 @@ impl<'a> Symbol<'_, 'a> {
         &self,
         return_type: Option<&TSTypeAnnotation<'a>>,
     ) -> bool {
-        let Some(TSTypeAnnotation { type_annotation: TSType::TSTypePredicate(predicate), .. }) =
-            return_type
+        let Some(TSTypeAnnotation {
+            type_annotation: TSType::TSTypePredicate(predicate),
+            ..
+        }) = return_type
         else {
             return false;
         };
@@ -959,7 +973,9 @@ impl<'a> Symbol<'_, 'a> {
     fn is_self_call_simple(&self, reference: &Reference) -> bool {
         let redeclarations = self.scoping().symbol_redeclarations(self.id());
         if redeclarations.is_empty() {
-            self.declaration().span().contains_inclusive(self.get_ref_span(reference))
+            self.declaration()
+                .span()
+                .contains_inclusive(self.get_ref_span(reference))
         } else {
             // Syntax like `var a = 0; function a() { a() }` is legal. We need
             // to check the redeclarations to find the one that is a function
@@ -967,7 +983,11 @@ impl<'a> Symbol<'_, 'a> {
             let span = self.get_ref_span(reference);
             redeclarations.iter().any(|decl| {
                 decl.flags.intersects(SymbolFlags::Function)
-                    && self.nodes().kind(decl.declaration).span().contains_inclusive(span)
+                    && self
+                        .nodes()
+                        .kind(decl.declaration)
+                        .span()
+                        .contains_inclusive(span)
             })
         }
     }
@@ -1011,7 +1031,10 @@ impl<'a> Symbol<'_, 'a> {
                     needs_variable_identifier = true;
                 }
                 AstKind::VariableDeclarator(decl) if needs_variable_identifier => {
-                    return decl.id.get_binding_identifier().map(BindingIdentifier::symbol_id);
+                    return decl
+                        .id
+                        .get_binding_identifier()
+                        .map(BindingIdentifier::symbol_id);
                 }
                 // An arrow assigned to a property belongs to that property, not to an enclosing
                 // variable declarator. Keep scanning after a direct self-assignment because the
@@ -1061,7 +1084,8 @@ impl<'a> Symbol<'_, 'a> {
     }
 
     pub fn has_reference_used_as_type_query(&self) -> bool {
-        self.references().any(|reference| self.reference_contains_type_query(reference))
+        self.references()
+            .any(|reference| self.reference_contains_type_query(reference))
     }
 
     fn reference_contains_type_query(&self, reference: &Reference) -> bool {

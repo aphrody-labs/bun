@@ -60,30 +60,30 @@ pub(crate) mod hw_exports;
 pub(crate) mod ipc;
 pub(crate) mod ipc_host;
 pub(crate) mod jsc_hooks;
-pub(crate) mod linux;
-pub(crate) mod windows;
 #[path = "JSONLineBuffer.rs"]
 pub(crate) mod json_line_buffer;
 pub(crate) mod linear_fifo_testing;
+pub(crate) mod linux;
 pub(crate) mod napi;
 #[path = "../bun.js.rs"]
 pub(crate) mod run_main;
 pub(crate) mod timer;
+pub(crate) mod windows;
 
 pub(crate) mod generated_classes; // include!()s ${BUN_CODEGEN_DIR}/generated_classes.rs
 pub(crate) mod generated_host_exports; // include!()s ${BUN_CODEGEN_DIR}/generated_host_exports.rs
 pub(crate) mod generated_js2native; // include!()s ${BUN_CODEGEN_DIR}/generated_js2native.rs
 pub(crate) mod generated_jssink; // include!()s ${BUN_CODEGEN_DIR}/generated_jssink.rs
 
+pub(crate) mod crawl;
+pub(crate) mod curl;
 pub(crate) mod dns_jsc;
 pub(crate) mod image;
-pub(crate) mod video;
-pub(crate) mod curl;
-pub(crate) mod crawl;
 pub(crate) mod nginx;
-pub(crate) mod yolo;
 pub(crate) mod test_runner;
 pub(crate) mod valkey_jsc;
+pub(crate) mod video;
+pub(crate) mod yolo;
 
 // ─── crate-root re-exports for `cli/` submodules ────────────────────────────
 // Modules under `src/runtime/cli/**` use crate-root paths

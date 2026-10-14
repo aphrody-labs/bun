@@ -85,7 +85,11 @@ where
     Separator: Format<'ast, JsFormatContext<'ast>>,
 {
     pub(super) fn new(separator: Separator, fmt: &'fmt mut JsFormatter<'buf, 'ast>) -> Self {
-        Self { separator, fmt, has_elements: false }
+        Self {
+            separator,
+            fmt,
+            has_elements: false,
+        }
     }
 
     /// Returns a reference to the formatter.

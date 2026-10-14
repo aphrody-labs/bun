@@ -100,7 +100,11 @@ impl Rule for NoArrayConstructor {
                 // that line ends without a semicolon: `foo` then `Array()` on the next
                 // line would be rewritten to `[]` directly under `foo`, i.e. a member
                 // access on it, which does not even parse.
-                let semi = if ast_util::could_be_asi_hazard(node, ctx) { ";" } else { "" };
+                let semi = if ast_util::could_be_asi_hazard(node, ctx) {
+                    ";"
+                } else {
+                    ""
+                };
                 fixer.replace(span, format!("{semi}[{replacement}]"))
             });
         }
@@ -237,7 +241,10 @@ fn test() {
         //                         ];
         //                         ",
         // ),
-        ("const array = Array(5, 6, ...args);", "const array = [5, 6, ...args];"),
+        (
+            "const array = Array(5, 6, ...args);",
+            "const array = [5, 6, ...args];",
+        ),
         // TODO: Catch this case:
         // ("a = new (Array);", "a = [];"),
         // ("a = new (Array) && (foo);", "a = [] && (foo);"),
@@ -311,7 +318,12 @@ fn test() {
         // ),
     ];
 
-    Tester::new(NoArrayConstructor::NAME, NoArrayConstructor::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        NoArrayConstructor::NAME,
+        NoArrayConstructor::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

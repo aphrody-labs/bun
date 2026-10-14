@@ -175,7 +175,10 @@ pub struct Group {
 
 impl Group {
     pub fn new() -> Self {
-        Self { id: None, mode: Cell::new(GroupMode::Flat) }
+        Self {
+            id: None,
+            mode: Cell::new(GroupMode::Flat),
+        }
     }
 
     #[must_use]
@@ -227,7 +230,10 @@ pub struct Condition {
 
 impl Condition {
     pub fn new(mode: PrintMode) -> Self {
-        Self { mode, group_id: None }
+        Self {
+            mode,
+            group_id: None,
+        }
     }
 
     #[must_use]

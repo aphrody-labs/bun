@@ -76,11 +76,8 @@ impl<'a> Format<'a, JsFormatContext<'a>> for AstNode<'a, ArenaVec<'a, TSTypePara
             FormatTrailingCommas::ES5.trailing_separator(f.options())
         };
 
-        f.join_with(soft_line_break_or_space()).entries_with_trailing_separator(
-            self.iter(),
-            ",",
-            trailing_separator,
-        );
+        f.join_with(soft_line_break_or_space())
+            .entries_with_trailing_separator(self.iter(), ",", trailing_separator);
     }
 }
 
@@ -115,7 +112,10 @@ fn should_force_trailing_comma_for_arrow_function(
 
     let source_type = f.context().source_type();
     source_type.is_jsx()
-        || matches!(source_type.extension(), Some(FileExtension::Mts | FileExtension::Cts))
+        || matches!(
+            source_type.extension(),
+            Some(FileExtension::Mts | FileExtension::Cts)
+        )
 }
 
 #[derive(Default)]
@@ -174,7 +174,14 @@ impl<'a> FormatWrite<'a> for AstNode<'a, TSTypeParameterInstantiation<'a>> {
             } else {
                 DanglingIndentMode::None
             };
-            return write!(f, ["<", FormatDanglingComments::Comments { comments, indent }, ">"]);
+            return write!(
+                f,
+                [
+                    "<",
+                    FormatDanglingComments::Comments { comments, indent },
+                    ">"
+                ]
+            );
         }
 
         // Check if this is in the context of an arrow function variable
@@ -186,15 +193,14 @@ impl<'a> FormatWrite<'a> for AstNode<'a, TSTypeParameterInstantiation<'a>> {
             && params.first().is_some_and(|first_type| {
                 (matches!(first_type.as_ref(), TSType::TSNullKeyword(_))
                     || should_hug_single_type(first_type.as_ref(), f))
-                    && !f.comments().has_comment_in_range(first_type.span().end, self.span.end)
+                    && !f
+                        .comments()
+                        .has_comment_in_range(first_type.span().end, self.span.end)
             });
 
         let format_params = format_with(|f| {
-            f.join_with(&soft_line_break_or_space()).entries_with_trailing_separator(
-                params,
-                ",",
-                TrailingSeparator::Disallowed,
-            );
+            f.join_with(&soft_line_break_or_space())
+                .entries_with_trailing_separator(params, ",", TrailingSeparator::Disallowed);
         });
 
         let should_inline = !is_arrow_function_vars && first_arg_can_be_hugged;
@@ -202,7 +208,14 @@ impl<'a> FormatWrite<'a> for AstNode<'a, TSTypeParameterInstantiation<'a>> {
         if should_inline {
             write!(f, ["<", format_params, ">"]);
         } else {
-            write!(f, [group(&format_args!("<", soft_block_indent(&format_params), ">"))]);
+            write!(
+                f,
+                [group(&format_args!(
+                    "<",
+                    soft_block_indent(&format_params),
+                    ">"
+                ))]
+            );
         }
     }
 }
@@ -228,7 +241,9 @@ fn should_hug_single_type(ty: &TSType, f: &JsFormatter<'_, '_>) -> bool {
 fn is_arrow_function_variable_type_argument<'a>(
     node: &AstNode<'a, TSTypeParameterInstantiation<'a>>,
 ) -> bool {
-    let Some(first) = node.params().first() else { unreachable!() };
+    let Some(first) = node.params().first() else {
+        unreachable!()
+    };
 
     // Skip check for single object-like types
     if node.params().len() == 1 && is_object_like_type(first.as_ref()) {

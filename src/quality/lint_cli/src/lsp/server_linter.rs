@@ -165,13 +165,19 @@ impl ServerLinterBuilder {
 
         let use_cross_module = config_builder.plugins().has_import()
             || (use_nested_config
-                && nested_configs.values().any(|config| config.plugins().has_import()));
+                && nested_configs
+                    .values()
+                    .any(|config| config.plugins().has_import()));
 
         extended_paths.extend(config_builder.extended_paths.clone());
-        let base_config = config_builder.build(&mut external_plugin_store).unwrap_or_else(|err| {
-            warn!("Failed to build config: {err}");
-            ConfigStoreBuilder::empty().build(&mut ExternalPluginStore::new(false)).unwrap()
-        });
+        let base_config = config_builder
+            .build(&mut external_plugin_store)
+            .unwrap_or_else(|err| {
+                warn!("Failed to build config: {err}");
+                ConfigStoreBuilder::empty()
+                    .build(&mut ExternalPluginStore::new(false))
+                    .unwrap()
+            });
 
         if external_plugin_store.is_empty() {
             external_linter = None;
@@ -193,7 +199,9 @@ impl ServerLinterBuilder {
             ..Default::default()
         };
 
-        let type_aware = options.type_aware.unwrap_or(config_store.type_aware_enabled());
+        let type_aware = options
+            .type_aware
+            .unwrap_or(config_store.type_aware_enabled());
         let config_store_clone = config_store.clone();
 
         // Send JS plugins config to JS side
@@ -215,7 +223,11 @@ impl ServerLinterBuilder {
 
         if let Some(ts_path) = options.ts_config_path.as_ref() {
             let ts_path = Path::new(ts_path).to_path_buf();
-            let ts_path = if ts_path.is_relative() { root_path.join(ts_path) } else { ts_path };
+            let ts_path = if ts_path.is_relative() {
+                root_path.join(ts_path)
+            } else {
+                ts_path
+            };
             if ts_path.is_file() {
                 lint_service_options = lint_service_options.with_tsconfig(&ts_path);
             }
@@ -293,7 +305,9 @@ impl ToolBuilder for ServerLinterBuilder {
         // tell the client we support pull diagnostics
         capabilities.diagnostic_provider =
             if backend_capabilities.diagnostic_mode == DiagnosticMode::Pull {
-                Some(DiagnosticProvider::DiagnosticOptions(DiagnosticOptions::default()))
+                Some(DiagnosticProvider::DiagnosticOptions(
+                    DiagnosticOptions::default(),
+                ))
             } else {
                 None
             };
@@ -301,7 +315,10 @@ impl ToolBuilder for ServerLinterBuilder {
 
     fn build(&self, root_uri: &Uri, options: serde_json::Value) -> ToolBuildResult {
         let (tool, client_messages) = self.build(root_uri, options);
-        ToolBuildResult { tool: Box::new(tool), client_messages }
+        ToolBuildResult {
+            tool: Box::new(tool),
+            client_messages,
+        }
     }
 
     #[expect(unused)]
@@ -369,7 +386,9 @@ impl ServerLinterBuilder {
             .git_global(false)
             .filter_entry(|entry| {
                 !(entry.file_name() == ".git"
-                    && entry.file_type().is_some_and(|file_type| file_type.is_dir()))
+                    && entry
+                        .file_type()
+                        .is_some_and(|file_type| file_type.is_dir()))
             })
             .build()
             .flatten();
@@ -453,8 +472,10 @@ impl Tool for ServerLinter {
 
         // get the cached files before refreshing the linter, and revalidate them after
         builder.shutdown(root_uri);
-        let ToolBuildResult { tool, client_messages } =
-            builder.build(root_uri, new_options_json.clone());
+        let ToolBuildResult {
+            tool,
+            client_messages,
+        } = builder.build(root_uri, new_options_json.clone());
 
         let patterns = {
             if old_option.config_path == new_options.config_path
@@ -467,7 +488,11 @@ impl Tool for ServerLinter {
             }
         };
 
-        ToolRestartChanges { tool: Some(tool), watch_patterns: patterns, client_messages }
+        ToolRestartChanges {
+            tool: Some(tool),
+            watch_patterns: patterns,
+            client_messages,
+        }
     }
 
     fn get_watcher_patterns(&self, options: serde_json::Value) -> Vec<Pattern> {
@@ -484,8 +509,15 @@ impl Tool for ServerLinter {
             vec![normalize_user_config_path_to_watch_pattern(config_path)]
         } else {
             // Watch subdirectories too only when nested config discovery is on.
-            let prefix = if options.use_nested_configs() { "**/" } else { "" };
-            config_file_names().into_iter().map(|name| format!("{prefix}{name}")).collect()
+            let prefix = if options.use_nested_configs() {
+                "**/"
+            } else {
+                ""
+            };
+            config_file_names()
+                .into_iter()
+                .map(|name| format!("{prefix}{name}"))
+                .collect()
         };
 
         for path in &self.extended_paths {
@@ -517,7 +549,10 @@ impl Tool for ServerLinter {
     ) -> ToolRestartChanges {
         // TODO: Check if the changed file is actually a config file (including extended paths)
         builder.shutdown(root_uri);
-        let ToolBuildResult { tool, client_messages } = builder.build(root_uri, options);
+        let ToolBuildResult {
+            tool,
+            client_messages,
+        } = builder.build(root_uri, options);
 
         ToolRestartChanges {
             tool: Some(tool),
@@ -593,7 +628,9 @@ impl Tool for ServerLinter {
             return vec![];
         }
 
-        let actions = actions.into_iter().filter(|r| range_overlaps(params.range, r.range));
+        let actions = actions
+            .into_iter()
+            .filter(|r| range_overlaps(params.range, r.range));
 
         // `context.only` is a special case here. ESLint behavior is if `source.fixAll` is the first element in `context.only`,
         // then only return fix all code action, and ignore other code actions, even if they are requested.
@@ -672,7 +709,10 @@ impl Tool for ServerLinter {
     /// Lint a file with the current linter
     /// - If the file is not lintable or ignored, an empty vector is returned
     fn run_diagnostic(&self, document: TextDocument) -> DiagnosticResult {
-        Ok(vec![(document.uri.clone(), self.run_file(document.uri, document.text.as_deref())?)])
+        Ok(vec![(
+            document.uri.clone(),
+            self.run_file(document.uri, document.text.as_deref())?,
+        )])
     }
 
     /// Lint a file with the current linter
@@ -775,7 +815,10 @@ impl ServerLinter {
             if !uri_path.starts_with(gitignore.path()) {
                 continue;
             }
-            if gitignore.matched_path_or_any_parents(uri_path, uri_path.is_dir()).is_ignore() {
+            if gitignore
+                .matched_path_or_any_parents(uri_path, uri_path.is_dir())
+                .is_ignore()
+            {
                 debug!("ignored: {uri_path:?}");
                 return true;
             }
@@ -859,7 +902,11 @@ impl ServerLinter {
         if let Some(severity) = self.unused_directives_severity
             && let Some(directives) = directives
         {
-            messages.extend(create_unused_directives_report(&directives, severity, source_text));
+            messages.extend(create_unused_directives_report(
+                &directives,
+                severity,
+                source_text,
+            ));
         }
         Ok(messages)
     }
@@ -922,7 +969,11 @@ mod tests_builder {
 
         // Should set execute command provider with fix all command
         let execute_command_provider = capabilities.execute_command_provider.as_ref().unwrap();
-        assert!(execute_command_provider.commands.contains(&FIX_ALL_COMMAND_ID.to_string()));
+        assert!(
+            execute_command_provider
+                .commands
+                .contains(&FIX_ALL_COMMAND_ID.to_string())
+        );
         assert_eq!(execute_command_provider.commands.len(), 1);
     }
 
@@ -1096,11 +1147,26 @@ mod test_watchers {
                     }));
             assert!(watch_patterns.is_some());
             assert_eq!(watch_patterns.as_ref().unwrap().len(), 5);
-            assert_eq!(watch_patterns.as_ref().unwrap()[0], "**/.oxlintrc.json".to_string());
-            assert_eq!(watch_patterns.as_ref().unwrap()[1], "**/.oxlintrc.jsonc".to_string());
-            assert_eq!(watch_patterns.as_ref().unwrap()[2], "**/oxlint.config.ts".to_string());
-            assert_eq!(watch_patterns.as_ref().unwrap()[3], "**/oxlint.config.mts".to_string());
-            assert_eq!(watch_patterns.as_ref().unwrap()[4], "**/tsconfig*.json".to_string());
+            assert_eq!(
+                watch_patterns.as_ref().unwrap()[0],
+                "**/.oxlintrc.json".to_string()
+            );
+            assert_eq!(
+                watch_patterns.as_ref().unwrap()[1],
+                "**/.oxlintrc.jsonc".to_string()
+            );
+            assert_eq!(
+                watch_patterns.as_ref().unwrap()[2],
+                "**/oxlint.config.ts".to_string()
+            );
+            assert_eq!(
+                watch_patterns.as_ref().unwrap()[3],
+                "**/oxlint.config.mts".to_string()
+            );
+            assert_eq!(
+                watch_patterns.as_ref().unwrap()[4],
+                "**/tsconfig*.json".to_string()
+            );
         }
     }
 }
@@ -1130,7 +1196,12 @@ mod test {
         range: Range,
         context: CodeActionContext,
     ) -> CodeActionParams {
-        CodeActionParams { uri: uri.clone(), range, context, is_open_document: false }
+        CodeActionParams {
+            uri: uri.clone(),
+            range,
+            context,
+            is_open_document: false,
+        }
     }
 
     #[test]
@@ -1176,8 +1247,10 @@ mod test {
 
     #[test]
     fn test_fix_all_dangerous_returns_dangerous_fix_action() {
-        let tester =
-            Tester::new("fixtures/lsp/dangerous_fix", json!({ "fixKind": "dangerous_fix" }));
+        let tester = Tester::new(
+            "fixtures/lsp/dangerous_fix",
+            json!({ "fixKind": "dangerous_fix" }),
+        );
         let linter = tester.create_linter();
         let range = Range::new(Position::new(0, 0), Position::new(u32::MAX, u32::MAX));
         let uri = tester.get_file_uri("unused_var.js");
@@ -1198,7 +1271,10 @@ mod test {
                 ..Default::default()
             },
         ));
-        assert!(safe_actions.is_empty(), "source.fixAll should not apply dangerous fixes");
+        assert!(
+            safe_actions.is_empty(),
+            "source.fixAll should not apply dangerous fixes"
+        );
 
         // source.fixAllDangerous.oxc should return dangerous fix actions when fix_kind is dangerous
         let dangerous_actions = linter.get_code_actions_or_commands(code_action_params(
@@ -1243,7 +1319,10 @@ mod test {
         let code_actions = linter.get_code_actions_or_commands(code_action_params(
             &uri,
             range,
-            CodeActionContext { only: Some(vec![CodeActionKind::QuickFix]), ..Default::default() },
+            CodeActionContext {
+                only: Some(vec![CodeActionKind::QuickFix]),
+                ..Default::default()
+            },
         ));
 
         assert_eq!(
@@ -1501,8 +1580,10 @@ mod test {
     #[test]
     #[cfg(not(target_endian = "big"))]
     fn test_config_file_type_aware_disabled_when_lsp_set() {
-        let tester =
-            Tester::new("fixtures/lsp/tsgolint/type_aware_config", json!({ "typeAware": false }));
+        let tester = Tester::new(
+            "fixtures/lsp/tsgolint/type_aware_config",
+            json!({ "typeAware": false }),
+        );
         tester.test_and_snapshot_single_file("test-with-lsp-config.ts");
     }
 

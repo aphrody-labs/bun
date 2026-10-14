@@ -110,7 +110,10 @@ impl fmt::Debug for ModuleRecord {
             .field("indirect_export_entries", &self.indirect_export_entries)
             .field("star_export_entries", &self.star_export_entries)
             .field("exported_bindings", &self.exported_bindings)
-            .field("exported_bindings_from_star_export", &self.exported_bindings_from_star_export)
+            .field(
+                "exported_bindings_from_star_export",
+                &self.exported_bindings_from_star_export,
+            )
             .field("export_default", &self.export_default)
             .finish()
     }
@@ -134,7 +137,10 @@ impl NameSpan {
 
 impl<'a> From<&oxc_syntax::module_record::NameSpan<'a>> for NameSpan {
     fn from(other: &oxc_syntax::module_record::NameSpan<'a>) -> Self {
-        Self { name: CompactStr::from(other.name.as_str()), span: other.span }
+        Self {
+            name: CompactStr::from(other.name.as_str()),
+            span: other.span,
+        }
     }
 }
 
@@ -490,7 +496,11 @@ impl ModuleRecord {
                 .iter()
                 .map(ExportEntry::from)
                 .collect(),
-            star_export_entries: other.star_export_entries.iter().map(ExportEntry::from).collect(),
+            star_export_entries: other
+                .star_export_entries
+                .iter()
+                .map(ExportEntry::from)
+                .collect(),
             exported_bindings: other
                 .exported_bindings
                 .iter()
@@ -536,7 +546,9 @@ impl ModuleRecord {
     /// * If `ModuleRecord` is dropped (fails to Weak::upgrade).
     pub fn get_loaded_module(&self, key: &str) -> Option<Arc<ModuleRecord>> {
         let loaded_modules = self.loaded_modules();
-        loaded_modules.get(key).map(|weak| Weak::upgrade(weak).unwrap())
+        loaded_modules
+            .get(key)
+            .map(|weak| Weak::upgrade(weak).unwrap())
     }
 
     pub(crate) fn exported_bindings_from_star_export(
@@ -563,8 +575,11 @@ impl ModuleRecord {
                     continue;
                 };
                 // Append the remote's own `bindings` plus its transitive star re-exports.
-                let mut remote_bindings: Vec<CompactStr> =
-                    remote_module_record.exported_bindings.keys().cloned().collect();
+                let mut remote_bindings: Vec<CompactStr> = remote_module_record
+                    .exported_bindings
+                    .keys()
+                    .cloned()
+                    .collect();
                 remote_module_record
                     .collect_star_exported_bindings(&mut visited, &mut remote_bindings);
                 exported_bindings_from_star_export

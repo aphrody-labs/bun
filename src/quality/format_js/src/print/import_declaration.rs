@@ -55,7 +55,10 @@ pub fn format_source_with_clause_and_semicolon<'a>(
         }
     });
     let content_end = module_source_end(source, with_clause.map(AsRef::as_ref));
-    write!(f, FormatContentWithSemicolon::new(&content, content_end, span_end));
+    write!(
+        f,
+        FormatContentWithSemicolon::new(&content, content_end, span_end)
+    );
 }
 
 /// Where an import/export's content ends: its with-clause, else its source.
@@ -88,7 +91,10 @@ impl<'a> FormatWrite<'a> for AstNode<'a, ImportDeclaration<'a>> {
         });
 
         if f.options().sort_imports.is_some() {
-            write!(f, [labelled(LabelId::of(JsLabels::ImportDeclaration), &decl)]);
+            write!(
+                f,
+                [labelled(LabelId::of(JsLabels::ImportDeclaration), &decl)]
+            );
         } else {
             write!(f, decl);
         }
@@ -128,7 +134,9 @@ impl<'a> Format<'a, JsFormatContext<'a>>
                 specifiers_iter.peek().map(AsRef::as_ref),
                 Some(ImportDeclarationSpecifier::ImportSpecifier(_))
             )
-            && f.comments().comments_before_character(self.parent().span().start, b'}').is_empty()
+            && f.comments()
+                .comments_before_character(self.parent().span().start, b'}')
+                .is_empty()
         {
             write!(
                 f,
@@ -178,8 +186,17 @@ impl<'a> Format<'a, JsFormatContext<'a>>
 
 impl<'a> FormatWrite<'a> for AstNode<'a, ImportSpecifier<'a>> {
     fn write(&self, f: &mut JsFormatter<'_, 'a>) {
-        let comments = f.context().comments().line_comments_before(self.local.span.end);
-        write!(f, [FormatLeadingComments::Comments(comments), self.import_kind()]);
+        let comments = f
+            .context()
+            .comments()
+            .line_comments_before(self.local.span.end);
+        write!(
+            f,
+            [
+                FormatLeadingComments::Comments(comments),
+                self.import_kind()
+            ]
+        );
         if self.local.span == self.imported.span() {
             write!(f, [self.local()]);
         } else {
@@ -217,7 +234,16 @@ impl<'a> FormatWrite<'a> for AstNode<'a, WithClause<'a>> {
                 write!(f, [space(), FormatLeadingComments::Comments(comments)]);
             }
         });
-        write!(f, [space(), format_comment, self.keyword().as_str(), space(), self.with_entries()]);
+        write!(
+            f,
+            [
+                space(),
+                format_comment,
+                self.keyword().as_str(),
+                space(),
+                self.with_entries()
+            ]
+        );
 
         if f.options().quote_properties.is_consistent() {
             f.context_mut().pop_quote_needed();
@@ -308,11 +334,18 @@ impl<'a> FormatWrite<'a> for AstNode<'a, ImportAttribute<'a>> {
         }
         write!(f, [":", space()]);
 
-        let has_leading_own_line_comment =
-            f.comments().has_leading_own_line_comment(self.value.span.start);
+        let has_leading_own_line_comment = f
+            .comments()
+            .has_leading_own_line_comment(self.value.span.start);
 
         if has_leading_own_line_comment {
-            write!(f, [group(&indent(&format_args!(soft_line_break(), self.value())))]);
+            write!(
+                f,
+                [group(&indent(&format_args!(
+                    soft_line_break(),
+                    self.value()
+                )))]
+            );
         } else {
             write!(f, [self.value()]);
         }

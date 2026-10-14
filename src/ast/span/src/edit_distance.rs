@@ -17,7 +17,11 @@ pub fn min_edit_distance(a: &str, b: &str) -> usize {
         curr.clear();
         curr.push(i + 1);
         for (j, &cb) in b_chars.iter().enumerate() {
-            curr.push((prev[j] + usize::from(ca != cb)).min(prev[j + 1] + 1).min(curr[j] + 1));
+            curr.push(
+                (prev[j] + usize::from(ca != cb))
+                    .min(prev[j + 1] + 1)
+                    .min(curr[j] + 1),
+            );
         }
         std::mem::swap(&mut prev, &mut curr);
     }

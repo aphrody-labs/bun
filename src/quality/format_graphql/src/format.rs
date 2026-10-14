@@ -34,7 +34,13 @@ pub fn format<'a>(
     let capacity = (parsed.source.len() * 2 / 5).max(1024);
     let mut buffer = VecBuffer::with_capacity(capacity, &mut state);
 
-    write!(&mut buffer, FormatGraphqlRoot { document: parsed.document, has_bom: parsed.has_bom });
+    write!(
+        &mut buffer,
+        FormatGraphqlRoot {
+            document: parsed.document,
+            has_bom: parsed.has_bom
+        }
+    );
 
     let elements = buffer.into_vec();
     let context = state.into_context();
@@ -68,7 +74,12 @@ pub fn parse_for_format<'a>(
 ) -> Result<ParsedGraphql<'a>, OxcDiagnostic> {
     let (has_bom, source_text) = oxc_formatter_core::spec::split_bom(source_text);
     let (document, source, comments) = parse_document(allocator, source_text)?;
-    Ok(ParsedGraphql { document, comments, source, has_bom })
+    Ok(ParsedGraphql {
+        document,
+        comments,
+        source,
+        has_bom,
+    })
 }
 
 /// Parse `source_text` and build the formatter IR for embedding into another
@@ -96,7 +107,9 @@ pub fn format_to_ir<'a>(
 
     write!(&mut buffer, FormatGraphqlEmbedded { document });
 
-    Ok(EmbeddedIr { ir: buffer.into_vec() })
+    Ok(EmbeddedIr {
+        ir: buffer.into_vec(),
+    })
 }
 
 /// Parse the source into a direct AST and collect comment trivia,
@@ -111,12 +124,16 @@ fn parse_document<'a>(
     let source: &'a str = allocator.alloc_str(source_text);
 
     // Opt-in graphql-js 17 syntax
-    let ast = Parser::new(allocator, source).experimental_fragment_arguments(true).parse();
+    let ast = Parser::new(allocator, source)
+        .experimental_fragment_arguments(true)
+        .parse();
     if let Some(error) = ast.errors().next() {
         let start = u32::try_from(error.index()).unwrap_or(0);
         let len = u32::try_from(error.data().len()).unwrap_or(0);
-        return Err(OxcDiagnostic::error(format!("Syntax error: {}", error.message()))
-            .with_label(Span::sized(start, len)));
+        return Err(
+            OxcDiagnostic::error(format!("Syntax error: {}", error.message()))
+                .with_label(Span::sized(start, len)),
+        );
     }
 
     let comments: &'a [Span] =

@@ -207,7 +207,10 @@ pub struct CompressOptionsKeepNames {
 
 impl From<&CompressOptionsKeepNames> for oxc_minifier::CompressOptionsKeepNames {
     fn from(o: &CompressOptionsKeepNames) -> Self {
-        oxc_minifier::CompressOptionsKeepNames { function: o.function, class: o.class }
+        oxc_minifier::CompressOptionsKeepNames {
+            function: o.function,
+            class: o.class,
+        }
     }
 }
 
@@ -250,7 +253,10 @@ impl From<&MangleOptions> for oxc_minifier::MangleOptions {
                 None => default.keep_names,
             },
             reserved: o.reserved.as_ref().map_or(default.reserved, |names| {
-                names.iter().map(|name| CompactStr::from(name.as_str())).collect()
+                names
+                    .iter()
+                    .map(|name| CompactStr::from(name.as_str()))
+                    .collect()
             }),
             debug: o.debug.unwrap_or(default.debug),
         }
@@ -272,7 +278,10 @@ pub struct MangleOptionsKeepNames {
 
 impl From<&MangleOptionsKeepNames> for oxc_minifier::MangleOptionsKeepNames {
     fn from(o: &MangleOptionsKeepNames) -> Self {
-        oxc_minifier::MangleOptionsKeepNames { function: o.function, class: o.class }
+        oxc_minifier::MangleOptionsKeepNames {
+            function: o.function,
+            class: o.class,
+        }
     }
 }
 
@@ -355,9 +364,15 @@ impl TryFrom<&ManglePropertiesOptions> for oxc_minifier::ManglePropertiesOptions
         Ok(Self {
             include,
             exclude,
-            reserved: options.reserved.as_ref().map_or_else(Default::default, |names| {
-                names.iter().map(|name| CompactStr::from(name.as_str())).collect()
-            }),
+            reserved: options
+                .reserved
+                .as_ref()
+                .map_or_else(Default::default, |names| {
+                    names
+                        .iter()
+                        .map(|name| CompactStr::from(name.as_str()))
+                        .collect()
+                }),
             mangle_quoted: options.quoted.unwrap_or(false),
             debug: options.debug.unwrap_or(false),
             cache,
@@ -423,7 +438,11 @@ pub struct CodegenOptions {
 
 impl Default for CodegenOptions {
     fn default() -> Self {
-        Self { remove_whitespace: Some(true), ascii_only: None, legal_comments: None }
+        Self {
+            remove_whitespace: Some(true),
+            ascii_only: None,
+            legal_comments: None,
+        }
     }
 }
 
@@ -438,7 +457,10 @@ impl CodegenOptions {
             oxc_codegen::CodegenOptions::minify()
         } else {
             // Need to remove all comments.
-            oxc_codegen::CodegenOptions { minify: false, ..oxc_codegen::CodegenOptions::minify() }
+            oxc_codegen::CodegenOptions {
+                minify: false,
+                ..oxc_codegen::CodegenOptions::minify()
+            }
         };
         opts.ascii_only = self.ascii_only.unwrap_or(false);
 
@@ -502,6 +524,10 @@ impl TryFrom<&MinifyOptions> for oxc_minifier::MinifierOptions {
             .as_ref()
             .map(oxc_minifier::ManglePropertiesOptions::try_from)
             .transpose()?;
-        Ok(oxc_minifier::MinifierOptions { compress, mangle, mangle_properties })
+        Ok(oxc_minifier::MinifierOptions {
+            compress,
+            mangle,
+            mangle_properties,
+        })
     }
 }

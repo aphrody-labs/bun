@@ -70,8 +70,10 @@ pub trait DiagnosticReporter {
         keep: &mut dyn FnMut(Option<&str>, &str) -> bool,
     ) {
         for error in errors {
-            let source_name =
-                error.source_code().and_then(|source| source.name()).map(ToString::to_string);
+            let source_name = error
+                .source_code()
+                .and_then(|source| source.name())
+                .map(ToString::to_string);
             if let Some(rendered) = self.render_error(error)
                 && !keep(source_name.as_deref(), &rendered)
             {
@@ -105,7 +107,11 @@ pub struct DiagnosticResult {
 
 impl DiagnosticResult {
     pub fn new(warnings_count: usize, errors_count: usize, max_warnings_exceeded: bool) -> Self {
-        Self { warnings_count, errors_count, max_warnings_exceeded }
+        Self {
+            warnings_count,
+            errors_count,
+            max_warnings_exceeded,
+        }
     }
 
     /// Get the number of warning-level diagnostics received.
@@ -161,7 +167,10 @@ fn line_column(data: &[u8], mut offset: usize) -> Option<InfoPosition> {
             index + 1
         };
     }
-    Some(InfoPosition { line, column: offset - line_start + 1 })
+    Some(InfoPosition {
+        line,
+        column: offset - line_start + 1,
+    })
 }
 
 impl Info {
@@ -198,7 +207,14 @@ impl Info {
             }
         }
 
-        Self { start, end, filename, message, severity, rule_id }
+        Self {
+            start,
+            end,
+            filename,
+            message,
+            severity,
+            rule_id,
+        }
     }
 }
 

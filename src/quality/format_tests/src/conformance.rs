@@ -105,15 +105,26 @@ where
         .unwrap_or_else(|err| panic!("failed to provision the Prettier suite: {err}"));
     let format_root = suite_root.join("tests").join("format");
 
-    let fixture_roots =
-        config.fixture_roots.iter().map(|dir| format_root.join(dir)).collect::<Vec<_>>();
+    let fixture_roots = config
+        .fixture_roots
+        .iter()
+        .map(|dir| format_root.join(dir))
+        .collect::<Vec<_>>();
     let test_dirs = collect_test_dirs(&fixture_roots);
 
     let filter = env::var("PRETTIER_FILTER").ok();
     if let Some(filter) = filter.as_deref() {
         for dir in &test_dirs {
             let inputs = collect_test_files(dir, &format_root, config.ignore, Some(filter));
-            test_snapshots(config, &mut format, dir, &format_root, &inputs, Some(filter), true);
+            test_snapshots(
+                config,
+                &mut format,
+                dir,
+                &format_root,
+                &inputs,
+                Some(filter),
+                true,
+            );
         }
         return None;
     }
@@ -176,7 +187,11 @@ where
     if !total_non_idempotent_files.is_empty() {
         report.push_str("\n# Not idempotent\n\n");
         for (path, parse_failed) in &total_non_idempotent_files {
-            let note = if *parse_failed { " (second pass failed to parse)" } else { "" };
+            let note = if *parse_failed {
+                " (second pass failed to parse)"
+            } else {
+                ""
+            };
             writeln!(report, "- {path}{note}").unwrap();
         }
     }
@@ -186,7 +201,11 @@ where
 
 /// Suite-relative path with `/` separators, so reports are identical on Windows.
 fn report_path(path: &Path, format_root: &Path) -> String {
-    path.strip_prefix(format_root).unwrap().to_string_lossy().cow_replace('\\', "/").into_owned()
+    path.strip_prefix(format_root)
+        .unwrap()
+        .to_string_lossy()
+        .cow_replace('\\', "/")
+        .into_owned()
 }
 
 /// Ignore / filter substrings match the SUITE-RELATIVE path (`/`-separated):
@@ -239,7 +258,11 @@ fn collect_test_files(
         .into_iter()
         .filter_map(Result::ok)
         .filter(|e| !e.file_type().is_dir())
-        .filter(|e| e.path().file_name().is_none_or(|name| name != FORMAT_TEST_SPEC_NAME))
+        .filter(|e| {
+            e.path()
+                .file_name()
+                .is_none_or(|name| name != FORMAT_TEST_SPEC_NAME)
+        })
         .filter(|e| is_selected(&report_path(e.path(), format_root), ignore, filter))
         .map(|e| e.path().to_path_buf())
         .collect();
@@ -310,7 +333,14 @@ where
                 &call.snapshot_options,
             )
             .unwrap();
-            tally.record(&run_case(format, path, &source_text, call, &expected, debug));
+            tally.record(&run_case(
+                format,
+                path,
+                &source_text,
+                call,
+                &expected,
+                debug,
+            ));
         }
         tally.finish(report_path(path, format_root), &mut results);
     }
@@ -405,8 +435,10 @@ where
         outcome.non_idempotent = Some(reformatted.is_none());
     }
 
-    let escaped =
-        replace_escape_and_eol(&actual, expected.contains("LF>") || expected.contains("<CR"));
+    let escaped = replace_escape_and_eol(
+        &actual,
+        expected.contains("LF>") || expected.contains("<CR"),
+    );
 
     let result = expected == escaped;
     if !result {
@@ -489,7 +521,9 @@ impl CaseTally {
             results.skipped.push(report_path.clone());
         }
         if self.non_idempotent {
-            results.non_idempotent.push((report_path, self.second_pass_parse_failed));
+            results
+                .non_idempotent
+                .push((report_path, self.second_pass_parse_failed));
         }
     }
 }
@@ -547,7 +581,11 @@ fn find_output_from_snapshots(
     // retrying past the false match otherwise.
     let options_pattern = format!(
         "{OPTIONS_SEPARATOR}{}\n",
-        snapshot_options.iter().map(|(k, v)| format!("{k}: {v}")).collect::<Vec<_>>().join("\n"),
+        snapshot_options
+            .iter()
+            .map(|(k, v)| format!("{k}: {v}"))
+            .collect::<Vec<_>>()
+            .join("\n"),
     );
     let mut search_from = 0;
     let section = loop {
@@ -615,19 +653,28 @@ fn collect_snippets<'a>(snap_content: &'a str, exact: &str) -> Vec<SnippetCase<'
     // `(title, is_variant, case)`
     let mut targeted = vec![];
     for section in snap_content.split(SNIPPET_KEY_PREFIX).skip(1) {
-        let Some((key, rest)) = section.split_once("`] = `\n") else { continue };
-        let Some((body, _)) = rest.split_once(END_SEPARATOR) else { continue };
+        let Some((key, rest)) = section.split_once("`] = `\n") else {
+            continue;
+        };
+        let Some((body, _)) = rest.split_once(END_SEPARATOR) else {
+            continue;
+        };
         // The key is a template literal too, so it carries the same escaping as the body
         let Some((title, variant)) = parse_snippet_key(&unescape_snapshot_text(key)) else {
             continue;
         };
-        let Some((options_block, rest)) =
-            body.strip_prefix(OPTIONS_SEPARATOR).and_then(|body| body.split_once(INPUT_SEPARATOR))
+        let Some((options_block, rest)) = body
+            .strip_prefix(OPTIONS_SEPARATOR)
+            .and_then(|body| body.split_once(INPUT_SEPARATOR))
         else {
             continue;
         };
-        let Some((input, expected)) = rest.split_once(OUTPUT_SEPARATOR) else { continue };
-        let Some((call, parsers)) = parse_snippet_options(options_block) else { continue };
+        let Some((input, expected)) = rest.split_once(OUTPUT_SEPARATOR) else {
+            continue;
+        };
+        let Some((call, parsers)) = parse_snippet_options(options_block) else {
+            continue;
+        };
 
         let is_targeted = match &variant {
             Some(variant) => variant == exact,
@@ -638,9 +685,17 @@ fn collect_snippets<'a>(snap_content: &'a str, exact: &str) -> Vec<SnippetCase<'
         }
 
         let input = unescape_snapshot_text(input);
-        let input =
-            if call.options.contains_key("endOfLine") { devisualize_eol(&input) } else { input };
-        let case = SnippetCase { name: snippet_name(&title).to_string(), call, input, expected };
+        let input = if call.options.contains_key("endOfLine") {
+            devisualize_eol(&input)
+        } else {
+            input
+        };
+        let case = SnippetCase {
+            name: snippet_name(&title).to_string(),
+            call,
+            input,
+            expected,
+        };
         targeted.push((title, variant.is_some(), case));
     }
 
@@ -661,7 +716,9 @@ fn collect_snippets<'a>(snap_content: &'a str, exact: &str) -> Vec<SnippetCase<'
 /// Key shape: `<name>[ - <options json>] format[<parser>] <n>`; the title is everything before ` format`.
 fn parse_snippet_key(key: &str) -> Option<(String, Option<String>)> {
     // Trailing jest counter
-    let key = key.trim_end_matches(|c: char| c.is_ascii_digit()).strip_suffix(' ')?;
+    let key = key
+        .trim_end_matches(|c: char| c.is_ascii_digit())
+        .strip_suffix(' ')?;
     if let Some(title) = key.strip_suffix(" format") {
         return Some((title.to_string(), None));
     }
@@ -685,7 +742,10 @@ fn snippet_name(title: &str) -> &str {
 /// The block is `key: <json>` lines; the `printWidth` indicator line is indented and skipped.
 /// Returns `None` for placeholder-driven sections or values the option set cannot represent.
 fn parse_snippet_options(block: &str) -> Option<(SpecCall, Vec<String>)> {
-    let mut call = SpecCall { options: OptionSet::new(), snapshot_options: vec![] };
+    let mut call = SpecCall {
+        options: OptionSet::new(),
+        snapshot_options: vec![],
+    };
     let mut parsers = vec![];
     for line in block.lines() {
         if line.starts_with(' ') || line.is_empty() {
@@ -695,11 +755,13 @@ fn parse_snippet_options(block: &str) -> Option<(SpecCall, Vec<String>)> {
         if matches!(key, "cursorOffset" | "rangeStart" | "rangeEnd") {
             return None;
         }
-        call.snapshot_options.push((key.to_string(), raw.to_string()));
+        call.snapshot_options
+            .push((key.to_string(), raw.to_string()));
         if key == "parsers" {
             parsers = serde_json::from_str(raw).ok()?;
         } else {
-            call.options.insert(key.to_string(), serde_json::from_str(raw).ok()?);
+            call.options
+                .insert(key.to_string(), serde_json::from_str(raw).ok()?);
         }
     }
     Some((call, parsers))
@@ -756,7 +818,9 @@ fn string_elements(arr: &oxc_ast::ast::ArrayExpression) -> Vec<String> {
 fn parse_spec(spec: &Path, exact_parser: Option<&str>) -> (Vec<SpecCall>, bool) {
     let source_text = fs::read_to_string(spec).unwrap_or_default();
     let allocator = Allocator::default();
-    let source_type = SourceType::from_path(spec).unwrap_or_default().with_jsx(true);
+    let source_type = SourceType::from_path(spec)
+        .unwrap_or_default()
+        .with_jsx(true);
     let ret = Parser::new(&allocator, &source_text, source_type).parse();
     assert!(ret.diagnostics.is_empty());
 
@@ -789,7 +853,9 @@ impl Visit<'_> for SpecParser<'_> {
     // runFormatTest(import.meta, parser, { semi: false });
     // ```
     fn visit_variable_declarator(&mut self, decl: &VariableDeclarator<'_>) {
-        let Some(name) = decl.id.get_identifier_name() else { return };
+        let Some(name) = decl.id.get_identifier_name() else {
+            return;
+        };
         if !matches!(name.as_str(), "parser" | "parsers") {
             return;
         }
@@ -803,7 +869,9 @@ impl Visit<'_> for SpecParser<'_> {
     // The `runFormatTest()` function is used on prettier's test cases.
     // We need to collect all calls and get the options and parsers.
     fn visit_call_expression(&mut self, expr: &CallExpression<'_>) {
-        let Some(ident) = expr.callee.get_identifier_reference() else { return };
+        let Some(ident) = expr.callee.get_identifier_reference() else {
+            return;
+        };
         if ident.name != "runFormatTest" {
             return;
         }
@@ -877,7 +945,11 @@ impl Visit<'_> for SpecParser<'_> {
                     if name != "errors" {
                         snapshot_options.push((
                             name.to_string(),
-                            obj_prop.value.span().source_text(self.source_text).to_string(),
+                            obj_prop
+                                .value
+                                .span()
+                                .source_text(self.source_text)
+                                .to_string(),
                         ));
                     }
                 }
@@ -889,7 +961,11 @@ impl Visit<'_> for SpecParser<'_> {
             "parsers".to_string(),
             format!(
                 "[{}]",
-                parsers.iter().map(|p| format!("\"{p}\"")).collect::<Vec<_>>().join(", ")
+                parsers
+                    .iter()
+                    .map(|p| format!("\"{p}\""))
+                    .collect::<Vec<_>>()
+                    .join(", ")
             ),
         ));
 
@@ -897,7 +973,10 @@ impl Visit<'_> for SpecParser<'_> {
         // the value is only shown in the trailing visualization line.
         snapshot_options.sort_by(|a, b| a.0.cmp(&b.0));
 
-        self.calls.push(SpecCall { options, snapshot_options });
+        self.calls.push(SpecCall {
+            options,
+            snapshot_options,
+        });
     }
 }
 
@@ -909,7 +988,10 @@ mod tests {
     fn snippet_key_shapes() {
         assert_eq!(
             parse_snippet_key(r#"example-1.md (Tabs) - {"proseWrap":"always"} format 1"#),
-            Some((r#"example-1.md (Tabs) - {"proseWrap":"always"}"#.into(), None))
+            Some((
+                r#"example-1.md (Tabs) - {"proseWrap":"always"}"#.into(),
+                None
+            ))
         );
         // No options suffix, jest counter above 9
         assert_eq!(parse_snippet_key("#0 format 12"), Some(("#0".into(), None)));
@@ -939,10 +1021,19 @@ tabWidth: 4
                                                       printWidth: 80 (default) |";
         let (call, parsers) = parse_snippet_options(block).unwrap();
         assert_eq!(parsers, ["markdown"]);
-        assert_eq!(call.options.get("proseWrap"), Some(&serde_json::Value::from("always")));
-        assert_eq!(call.options.get("tabWidth"), Some(&serde_json::Value::from(4)));
+        assert_eq!(
+            call.options.get("proseWrap"),
+            Some(&serde_json::Value::from("always"))
+        );
+        assert_eq!(
+            call.options.get("tabWidth"),
+            Some(&serde_json::Value::from(4))
+        );
         assert!(!call.options.contains_key("parsers"));
-        assert_eq!(call.snapshot_options[0], ("parsers".into(), "[\"markdown\"]".into()));
+        assert_eq!(
+            call.snapshot_options[0],
+            ("parsers".into(), "[\"markdown\"]".into())
+        );
         assert_eq!(call.snapshot_options.len(), 3);
 
         let placeholder = block.cow_replace("tabWidth: 4", "cursorOffset: 2");

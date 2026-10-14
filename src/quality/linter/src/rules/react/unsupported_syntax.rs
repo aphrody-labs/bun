@@ -42,7 +42,8 @@ declare_react_compiler_lint!(
     react,
     restriction,
     version = "1.79.0",
-    short_description = "Warns on syntax that the React Compiler does not plan to support, such as `eval`.",
+    short_description =
+        "Warns on syntax that the React Compiler does not plan to support, such as `eval`.",
 );
 
 impl Rule for UnsupportedSyntax {
@@ -77,5 +78,11 @@ function Component(props) {
 ",
     ];
 
-    Tester::new(UnsupportedSyntax::NAME, UnsupportedSyntax::PLUGIN, pass, fail).test_and_snapshot();
+    Tester::new(
+        UnsupportedSyntax::NAME,
+        UnsupportedSyntax::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

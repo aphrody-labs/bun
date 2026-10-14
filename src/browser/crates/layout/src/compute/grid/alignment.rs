@@ -32,15 +32,23 @@ pub(super) fn align_tracks(
     let origin = padding.start + border.start;
 
     // Count the number of non-collapsed tracks (not counting gutters)
-    let num_tracks = tracks.iter().skip(1).step_by(2).filter(|track| !track.is_collapsed).count();
+    let num_tracks = tracks
+        .iter()
+        .skip(1)
+        .step_by(2)
+        .filter(|track| !track.is_collapsed)
+        .count();
 
     // Grid layout treats gaps as full tracks rather than applying them at alignment so we
     // simply pass zero here. Grid layout is never reversed.
     let gap = 0.0;
     let layout_is_reversed = false;
     let track_alignment = apply_alignment_fallback(free_space, num_tracks, track_alignment_style);
-    let track_alignment =
-        if axis_is_reversed { track_alignment.reversed() } else { track_alignment };
+    let track_alignment = if axis_is_reversed {
+        track_alignment.reversed()
+    } else {
+        track_alignment
+    };
 
     // Compute offsets
     let mut total_offset = origin;
@@ -84,8 +92,10 @@ pub(super) fn align_and_position_item(
     baseline_shim: f32,
     direction: Direction,
 ) -> (Size<f32>, f32, f32) {
-    let grid_area_size =
-        Size { width: grid_area.right - grid_area.left, height: grid_area.bottom - grid_area.top };
+    let grid_area_size = Size {
+        width: grid_area.right - grid_area.left,
+        height: grid_area.bottom - grid_area.top,
+    };
 
     let style = tree.get_grid_child_style(node);
 
@@ -102,16 +112,23 @@ pub(super) fn align_and_position_item(
     let inset_vertical = style.inset().vertical_components().map(|size| {
         size.resolve_to_option(grid_area_size.height, |val, basis| tree.calc(val, basis))
     });
-    let padding = style
-        .padding()
-        .map(|p| p.resolve_or_zero(Some(grid_area_size.width), |val, basis| tree.calc(val, basis)));
-    let border = style
-        .border()
-        .map(|p| p.resolve_or_zero(Some(grid_area_size.width), |val, basis| tree.calc(val, basis)));
+    let padding = style.padding().map(|p| {
+        p.resolve_or_zero(Some(grid_area_size.width), |val, basis| {
+            tree.calc(val, basis)
+        })
+    });
+    let border = style.border().map(|p| {
+        p.resolve_or_zero(Some(grid_area_size.width), |val, basis| {
+            tree.calc(val, basis)
+        })
+    });
     let padding_border_size = (padding + border).sum_axes();
 
-    let box_sizing_adjustment =
-        if style.box_sizing() == BoxSizing::ContentBox { padding_border_size } else { Size::ZERO };
+    let box_sizing_adjustment = if style.box_sizing() == BoxSizing::ContentBox {
+        padding_border_size
+    } else {
+        Size::ZERO
+    };
     let aspect_ratio_adjustment = if style.aspect_ratio_uses_content_box() {
         padding_border_size
     } else {
@@ -139,8 +156,12 @@ pub(super) fn align_and_position_item(
     // ratio are known. Explicit stretch in one axis can make the other normal
     // axis ratio-derived, while two normal axes prefer inline-axis stretch.
     let alignment_styles = super::resolve_item_alignment(
-        justify_self.or(container_alignment_styles.horizontal).unwrap_or(AlignSelf::NORMAL),
-        align_self.or(container_alignment_styles.vertical).unwrap_or(AlignSelf::NORMAL),
+        justify_self
+            .or(container_alignment_styles.horizontal)
+            .unwrap_or(AlignSelf::NORMAL),
+        align_self
+            .or(container_alignment_styles.vertical)
+            .unwrap_or(AlignSelf::NORMAL),
         style.is_compressible_replaced(),
         aspect_ratio.is_some(),
     );
@@ -152,8 +173,14 @@ pub(super) fn align_and_position_item(
     });
 
     let grid_area_minus_item_margins_size = Size {
-        width: grid_area_size.width.maybe_sub(margin.left).maybe_sub(margin.right),
-        height: grid_area_size.height.maybe_sub(margin.top).maybe_sub(margin.bottom)
+        width: grid_area_size
+            .width
+            .maybe_sub(margin.left)
+            .maybe_sub(margin.right),
+        height: grid_area_size
+            .height
+            .maybe_sub(margin.top)
+            .maybe_sub(margin.bottom)
             - baseline_shim,
     };
 
@@ -164,7 +191,10 @@ pub(super) fn align_and_position_item(
         // positioned element being set
         if position == Position::Absolute {
             if let (Some(left), Some(right)) = (inset_horizontal.start, inset_horizontal.end) {
-                return Some(f32_max(grid_area_minus_item_margins_size.width - left - right, 0.0));
+                return Some(f32_max(
+                    grid_area_minus_item_margins_size.width - left - right,
+                    0.0,
+                ));
             }
         }
 
@@ -186,7 +216,10 @@ pub(super) fn align_and_position_item(
     let height = inherent_size.height.or_else(|| {
         if position == Position::Absolute {
             if let (Some(top), Some(bottom)) = (inset_vertical.start, inset_vertical.end) {
-                return Some(f32_max(grid_area_minus_item_margins_size.height - top - bottom, 0.0));
+                return Some(f32_max(
+                    grid_area_minus_item_margins_size.height - top - bottom,
+                    0.0,
+                ));
             }
         }
 
@@ -255,7 +288,9 @@ pub(super) fn align_and_position_item(
     );
 
     // Resolve final size
-    let mut resolved_size = size.unwrap_or(layout_output.size).maybe_clamp(min_size, max_size);
+    let mut resolved_size = size
+        .unwrap_or(layout_output.size)
+        .maybe_clamp(min_size, max_size);
 
     // An auto-sized grid item that is not effectively stretched uses
     // fit-content sizing in the inline axis:
@@ -269,7 +304,10 @@ pub(super) fn align_and_position_item(
     if uses_inline_fit_content && resolved_size.width > grid_area_minus_item_margins_size.width {
         let min_content_width = tree.measure_child_size(
             node,
-            Size { width: None, height: size.height },
+            Size {
+                width: None,
+                height: size.height,
+            },
             grid_area_size.map(Option::Some),
             Size {
                 width: AvailableSpace::MinContent,
@@ -284,7 +322,10 @@ pub(super) fn align_and_position_item(
             f32_min(grid_area_minus_item_margins_size.width, resolved_size.width),
         )
         .maybe_clamp(min_size.width, max_size.width);
-        let constrained_size = Size { width: Some(fit_content_width), height: size.height };
+        let constrained_size = Size {
+            width: Some(fit_content_width),
+            height: size.height,
+        };
         layout_output = tree.perform_child_layout(
             node,
             constrained_size,
@@ -293,14 +334,18 @@ pub(super) fn align_and_position_item(
             SizingMode::InherentSize,
             Line::FALSE,
         );
-        resolved_size =
-            constrained_size.unwrap_or(layout_output.size).maybe_clamp(min_size, max_size);
+        resolved_size = constrained_size
+            .unwrap_or(layout_output.size)
+            .maybe_clamp(min_size, max_size);
     }
 
     let Size { width, height } = resolved_size;
 
     let (x, x_margin) = align_item_within_area(
-        Line { start: grid_area.left, end: grid_area.right },
+        Line {
+            start: grid_area.left,
+            end: grid_area.right,
+        },
         alignment_styles.horizontal,
         width,
         position,
@@ -310,7 +355,10 @@ pub(super) fn align_and_position_item(
         direction,
     );
     let (y, y_margin) = align_item_within_area(
-        Line { start: grid_area.top, end: grid_area.bottom },
+        Line {
+            start: grid_area.top,
+            end: grid_area.bottom,
+        },
         alignment_styles.vertical,
         height,
         position,
@@ -321,8 +369,16 @@ pub(super) fn align_and_position_item(
     );
 
     let scrollbar_size = Size {
-        width: if overflow.y == Overflow::Scroll { scrollbar_width } else { 0.0 },
-        height: if overflow.x == Overflow::Scroll { scrollbar_width } else { 0.0 },
+        width: if overflow.y == Overflow::Scroll {
+            scrollbar_width
+        } else {
+            0.0
+        },
+        height: if overflow.x == Overflow::Scroll {
+            scrollbar_width
+        } else {
+            0.0
+        },
     };
 
     let resolved_margin = Rect {
@@ -349,7 +405,10 @@ pub(super) fn align_and_position_item(
 
     #[cfg(feature = "content_size")]
     let contribution = compute_content_size_contribution(
-        Point { x: x - grid_area.left, y: y - grid_area.top },
+        Point {
+            x: x - grid_area.left,
+            y: y - grid_area.top,
+        },
         Size { width, height },
         layout_output.content_size,
         overflow,
@@ -373,15 +432,20 @@ pub(super) fn align_item_within_area(
     direction: Direction,
 ) -> (f32, Line<f32>) {
     // Calculate grid area dimension in the axis
-    let non_auto_margin =
-        Line { start: margin.start.unwrap_or(0.0) + baseline_shim, end: margin.end.unwrap_or(0.0) };
+    let non_auto_margin = Line {
+        start: margin.start.unwrap_or(0.0) + baseline_shim,
+        end: margin.end.unwrap_or(0.0),
+    };
     let grid_area_size = f32_max(grid_area.end - grid_area.start, 0.0);
     let free_space = f32_max(grid_area_size - resolved_size - non_auto_margin.sum(), 0.0);
 
     // Expand auto margins to fill available space
     let auto_margin_count = margin.start.is_none() as u8 + margin.end.is_none() as u8;
-    let auto_margin_size =
-        if auto_margin_count > 0 { free_space / auto_margin_count as f32 } else { 0.0 };
+    let auto_margin_size = if auto_margin_count > 0 {
+        free_space / auto_margin_count as f32
+    } else {
+        0.0
+    };
     let resolved_margin = Line {
         start: margin.start.unwrap_or(auto_margin_size) + baseline_shim,
         end: margin.end.unwrap_or(auto_margin_size),
@@ -414,17 +478,17 @@ pub(super) fn align_item_within_area(
             } else {
                 resolved_margin.start
             }
-        },
+        }
         AlignItemsKeyword::End | AlignItemsKeyword::FlexEnd => {
             if direction.is_rtl() {
                 resolved_margin.start
             } else {
                 grid_area_size - resolved_size - resolved_margin.end
             }
-        },
+        }
         AlignItemsKeyword::Center => {
             (grid_area_size - resolved_size + resolved_margin.start - resolved_margin.end) / 2.0
-        },
+        }
     };
 
     let offset_within_area = if position == Position::Absolute {
@@ -435,7 +499,7 @@ pub(super) fn align_item_within_area(
                 } else {
                     start + non_auto_margin.start
                 }
-            },
+            }
             (Some(start), None) => start + non_auto_margin.start,
             (None, Some(end)) => grid_area_size - end - resolved_size - non_auto_margin.end,
             (None, None) => alignment_based_offset,
@@ -460,8 +524,8 @@ pub(super) fn align_item_within_area(
 #[cfg(test)]
 mod tests {
     use super::{f32_max, f32_min};
-    use crate::Point;
     use crate::prelude::*;
+    use crate::Point;
 
     #[derive(Clone, Copy)]
     struct IntrinsicInlineSize {
@@ -476,15 +540,22 @@ mod tests {
         context: Option<&mut IntrinsicInlineSize>,
         _style: &Style,
     ) -> Size<f32> {
-        let intrinsic = context.copied().unwrap_or(IntrinsicInlineSize { min: 0.0, max: 0.0 });
-        let width = known_dimensions.width.unwrap_or_else(|| match available_space.width {
-            AvailableSpace::MinContent => intrinsic.min,
-            AvailableSpace::MaxContent => intrinsic.max,
-            AvailableSpace::Definite(available) => {
-                f32_max(intrinsic.min, f32_min(available, intrinsic.max))
-            },
-        });
-        Size { width, height: known_dimensions.height.unwrap_or(10.0) }
+        let intrinsic = context
+            .copied()
+            .unwrap_or(IntrinsicInlineSize { min: 0.0, max: 0.0 });
+        let width = known_dimensions
+            .width
+            .unwrap_or_else(|| match available_space.width {
+                AvailableSpace::MinContent => intrinsic.min,
+                AvailableSpace::MaxContent => intrinsic.max,
+                AvailableSpace::Definite(available) => {
+                    f32_max(intrinsic.min, f32_min(available, intrinsic.max))
+                }
+            });
+        Size {
+            width,
+            height: known_dimensions.height.unwrap_or(10.0),
+        }
     }
 
     #[derive(Clone, Copy)]
@@ -500,15 +571,36 @@ mod tests {
         context: Option<&mut ReplacedIntrinsicSize>,
         _style: &Style,
     ) -> Size<f32> {
-        let intrinsic =
-            context.copied().unwrap_or(ReplacedIntrinsicSize { width: 0.0, height: 0.0 });
+        let intrinsic = context.copied().unwrap_or(ReplacedIntrinsicSize {
+            width: 0.0,
+            height: 0.0,
+        });
         let ratio = intrinsic.width / intrinsic.height;
         match known_dimensions {
-            Size { width: Some(width), height: Some(height) } => Size { width, height },
-            Size { width: Some(width), height: None } => Size { width, height: width / ratio },
-            Size { width: None, height: Some(height) } => Size { width: height * ratio, height },
-            Size { width: None, height: None } => {
-                Size { width: intrinsic.width, height: intrinsic.height }
+            Size {
+                width: Some(width),
+                height: Some(height),
+            } => Size { width, height },
+            Size {
+                width: Some(width),
+                height: None,
+            } => Size {
+                width,
+                height: width / ratio,
+            },
+            Size {
+                width: None,
+                height: Some(height),
+            } => Size {
+                width: height * ratio,
+                height,
+            },
+            Size {
+                width: None,
+                height: None,
+            } => Size {
+                width: intrinsic.width,
+                height: intrinsic.height,
             },
         }
     }
@@ -521,14 +613,24 @@ mod tests {
         tree.disable_rounding();
         item_style.aspect_ratio = Some(2.0);
         let item = tree
-            .new_leaf_with_context(item_style, ReplacedIntrinsicSize { width: 100.0, height: 50.0 })
+            .new_leaf_with_context(
+                item_style,
+                ReplacedIntrinsicSize {
+                    width: 100.0,
+                    height: 50.0,
+                },
+            )
             .unwrap();
         root_style.display = Display::Grid;
-        root_style.size = Size { width: length(300.0), height: length(200.0) };
+        root_style.size = Size {
+            width: length(300.0),
+            height: length(200.0),
+        };
         root_style.grid_template_columns = vec![length(300.0)];
         root_style.grid_template_rows = vec![length(200.0)];
         let root = tree.new_with_children(root_style, &[item]).unwrap();
-        tree.compute_layout_with_measure(root, Size::MAX_CONTENT, measure_replaced_child).unwrap();
+        tree.compute_layout_with_measure(root, Size::MAX_CONTENT, measure_replaced_child)
+            .unwrap();
         let layout = tree.layout(item).unwrap();
         (layout.location, layout.size)
     }
@@ -555,7 +657,9 @@ mod tests {
         let mut tree = TaffyTree::new();
         tree.disable_rounding();
 
-        let text = tree.new_leaf_with_context(Style::default(), intrinsic).unwrap();
+        let text = tree
+            .new_leaf_with_context(Style::default(), intrinsic)
+            .unwrap();
         let item = tree
             .new_with_children(
                 Style {
@@ -563,8 +667,14 @@ mod tests {
                     grid_template_columns: vec![fr(1.0)],
                     margin,
                     justify_self,
-                    min_size: Size { width: min_width, height: Dimension::auto() },
-                    max_size: Size { width: max_width, height: Dimension::auto() },
+                    min_size: Size {
+                        width: min_width,
+                        height: Dimension::auto(),
+                    },
+                    max_size: Size {
+                        width: max_width,
+                        height: Dimension::auto(),
+                    },
                     padding,
                     border,
                     box_sizing,
@@ -577,7 +687,10 @@ mod tests {
             .new_with_children(
                 Style {
                     display: Display::Grid,
-                    size: Size { width: length(300.0), height: auto() },
+                    size: Size {
+                        width: length(300.0),
+                        height: auto(),
+                    },
                     grid_template_columns: vec![length(300.0)],
                     ..Style::default()
                 },
@@ -585,7 +698,8 @@ mod tests {
             )
             .unwrap();
 
-        tree.compute_layout_with_measure(root, Size::MAX_CONTENT, measure_intrinsic_child).unwrap();
+        tree.compute_layout_with_measure(root, Size::MAX_CONTENT, measure_intrinsic_child)
+            .unwrap();
         tree.layout(item).unwrap().size.width
     }
 
@@ -608,7 +722,10 @@ mod tests {
 
     #[test]
     fn breakable_fit_content_honors_auto_margin_and_self_alignment_matrix() {
-        let breakable = IntrinsicInlineSize { min: 100.0, max: 600.0 };
+        let breakable = IntrinsicInlineSize {
+            min: 100.0,
+            max: 600.0,
+        };
         let cases = [
             (inline_margins(true, true), None),
             (inline_margins(true, false), None),
@@ -620,13 +737,19 @@ mod tests {
         ];
 
         for (margin, justify_self) in cases {
-            assert_eq!(unconstrained_item_width(breakable, margin, justify_self), 300.0);
+            assert_eq!(
+                unconstrained_item_width(breakable, margin, justify_self),
+                300.0
+            );
         }
     }
 
     #[test]
     fn unbreakable_fit_content_preserves_the_min_content_floor() {
-        let unbreakable = IntrinsicInlineSize { min: 600.0, max: 600.0 };
+        let unbreakable = IntrinsicInlineSize {
+            min: 600.0,
+            max: 600.0,
+        };
         let cases = [
             (inline_margins(true, true), None),
             (inline_margins(true, false), None),
@@ -638,7 +761,10 @@ mod tests {
         ];
 
         for (margin, justify_self) in cases {
-            assert_eq!(unconstrained_item_width(unbreakable, margin, justify_self), 600.0);
+            assert_eq!(
+                unconstrained_item_width(unbreakable, margin, justify_self),
+                600.0
+            );
         }
 
         assert_eq!(
@@ -650,8 +776,14 @@ mod tests {
 
     #[test]
     fn fit_content_applies_author_min_max_and_box_edges() {
-        let breakable = IntrinsicInlineSize { min: 100.0, max: 600.0 };
-        let unbreakable = IntrinsicInlineSize { min: 600.0, max: 600.0 };
+        let breakable = IntrinsicInlineSize {
+            min: 100.0,
+            max: 600.0,
+        };
+        let unbreakable = IntrinsicInlineSize {
+            min: 600.0,
+            max: 600.0,
+        };
         let auto_margins = inline_margins(true, true);
 
         let author_min = layout_nested_grid_item(
@@ -678,7 +810,12 @@ mod tests {
         );
         assert_eq!(author_max, 250.0);
 
-        let edges = Rect { left: length(10.0), right: length(10.0), top: zero(), bottom: zero() };
+        let edges = Rect {
+            left: length(10.0),
+            right: length(10.0),
+            top: zero(),
+            bottom: zero(),
+        };
         let content_box_max = layout_nested_grid_item(
             unbreakable,
             auto_margins,
@@ -695,39 +832,131 @@ mod tests {
     #[test]
     fn grid_normal_uses_natural_replaced_size_but_stretches_ordinary_items() {
         let (_, replaced) = layout_replaced_grid_item(
-            Style { item_is_replaced: true, ..Style::default() },
+            Style {
+                item_is_replaced: true,
+                ..Style::default()
+            },
             Style::default(),
         );
-        assert_eq!(replaced, Size { width: 100.0, height: 50.0 });
+        assert_eq!(
+            replaced,
+            Size {
+                width: 100.0,
+                height: 50.0
+            }
+        );
 
         let (_, ordinary) = layout_replaced_grid_item(Style::default(), Style::default());
-        assert_eq!(ordinary, Size { width: 300.0, height: 150.0 });
+        assert_eq!(
+            ordinary,
+            Size {
+                width: 300.0,
+                height: 150.0
+            }
+        );
     }
 
     #[test]
     fn ordinary_grid_aspect_ratio_preserves_normal_alignment_provenance() {
         let cases = [
-            (None, None, None, None, Size { width: 300.0, height: 150.0 }),
-            (None, Some(AlignSelf::STRETCH), None, None, Size { width: 400.0, height: 200.0 }),
-            (Some(AlignSelf::STRETCH), None, None, None, Size { width: 300.0, height: 150.0 }),
+            (
+                None,
+                None,
+                None,
+                None,
+                Size {
+                    width: 300.0,
+                    height: 150.0,
+                },
+            ),
+            (
+                None,
+                Some(AlignSelf::STRETCH),
+                None,
+                None,
+                Size {
+                    width: 400.0,
+                    height: 200.0,
+                },
+            ),
+            (
+                Some(AlignSelf::STRETCH),
+                None,
+                None,
+                None,
+                Size {
+                    width: 300.0,
+                    height: 150.0,
+                },
+            ),
             (
                 Some(AlignSelf::STRETCH),
                 Some(AlignSelf::STRETCH),
                 None,
                 None,
-                Size { width: 300.0, height: 200.0 },
+                Size {
+                    width: 300.0,
+                    height: 200.0,
+                },
             ),
-            (None, Some(AlignSelf::START), None, None, Size { width: 300.0, height: 150.0 }),
-            (Some(AlignSelf::START), None, None, None, Size { width: 400.0, height: 200.0 }),
-            (None, None, Some(AlignItems::STRETCH), None, Size { width: 400.0, height: 200.0 }),
-            (None, None, None, Some(AlignItems::STRETCH), Size { width: 300.0, height: 150.0 }),
+            (
+                None,
+                Some(AlignSelf::START),
+                None,
+                None,
+                Size {
+                    width: 300.0,
+                    height: 150.0,
+                },
+            ),
+            (
+                Some(AlignSelf::START),
+                None,
+                None,
+                None,
+                Size {
+                    width: 400.0,
+                    height: 200.0,
+                },
+            ),
+            (
+                None,
+                None,
+                Some(AlignItems::STRETCH),
+                None,
+                Size {
+                    width: 400.0,
+                    height: 200.0,
+                },
+            ),
+            (
+                None,
+                None,
+                None,
+                Some(AlignItems::STRETCH),
+                Size {
+                    width: 300.0,
+                    height: 150.0,
+                },
+            ),
         ];
         for (justify_self, align_self, align_items, justify_items, expected) in cases {
             let (_, actual) = layout_replaced_grid_item(
-                Style { justify_self, align_self, ..Style::default() },
-                Style { align_items, justify_items, ..Style::default() },
+                Style {
+                    justify_self,
+                    align_self,
+                    ..Style::default()
+                },
+                Style {
+                    align_items,
+                    justify_items,
+                    ..Style::default()
+                },
             );
-            assert_eq!(actual, expected, "justify={justify_self:?}, align={align_self:?}");
+            assert_eq!(
+                actual, expected,
+                "justify={justify_self:?}, align={align_self:?}"
+            );
         }
     }
 
@@ -736,39 +965,78 @@ mod tests {
         let (_, inline_min) = layout_replaced_grid_item(
             Style {
                 item_is_replaced: true,
-                min_size: Size { width: percent(0.5), height: Dimension::auto() },
+                min_size: Size {
+                    width: percent(0.5),
+                    height: Dimension::auto(),
+                },
                 ..Style::default()
             },
             Style::default(),
         );
-        assert_eq!(inline_min, Size { width: 150.0, height: 75.0 });
+        assert_eq!(
+            inline_min,
+            Size {
+                width: 150.0,
+                height: 75.0
+            }
+        );
 
         let (_, block_min) = layout_replaced_grid_item(
             Style {
                 item_is_replaced: true,
-                min_size: Size { width: Dimension::auto(), height: percent(0.5) },
+                min_size: Size {
+                    width: Dimension::auto(),
+                    height: percent(0.5),
+                },
                 ..Style::default()
             },
             Style::default(),
         );
-        assert_eq!(block_min, Size { width: 200.0, height: 100.0 });
+        assert_eq!(
+            block_min,
+            Size {
+                width: 200.0,
+                height: 100.0
+            }
+        );
     }
 
     #[test]
     fn replaced_grid_explicit_stretch_precedes_aspect_ratio_transfer() {
-        let base = Style { item_is_replaced: true, ..Style::default() };
+        let base = Style {
+            item_is_replaced: true,
+            ..Style::default()
+        };
 
         let (_, inline_stretch) = layout_replaced_grid_item(
-            Style { justify_self: Some(AlignSelf::STRETCH), ..base.clone() },
+            Style {
+                justify_self: Some(AlignSelf::STRETCH),
+                ..base.clone()
+            },
             Style::default(),
         );
-        assert_eq!(inline_stretch, Size { width: 300.0, height: 150.0 });
+        assert_eq!(
+            inline_stretch,
+            Size {
+                width: 300.0,
+                height: 150.0
+            }
+        );
 
         let (_, block_stretch) = layout_replaced_grid_item(
-            Style { align_self: Some(AlignSelf::STRETCH), ..base.clone() },
+            Style {
+                align_self: Some(AlignSelf::STRETCH),
+                ..base.clone()
+            },
             Style::default(),
         );
-        assert_eq!(block_stretch, Size { width: 400.0, height: 200.0 });
+        assert_eq!(
+            block_stretch,
+            Size {
+                width: 400.0,
+                height: 200.0
+            }
+        );
 
         let (_, both_stretch) = layout_replaced_grid_item(
             Style {
@@ -778,27 +1046,51 @@ mod tests {
             },
             Style::default(),
         );
-        assert_eq!(both_stretch, Size { width: 300.0, height: 200.0 });
+        assert_eq!(
+            both_stretch,
+            Size {
+                width: 300.0,
+                height: 200.0
+            }
+        );
 
         let (_, definite_inline) = layout_replaced_grid_item(
             Style {
-                size: Size { width: length(120.0), height: Dimension::auto() },
+                size: Size {
+                    width: length(120.0),
+                    height: Dimension::auto(),
+                },
                 align_self: Some(AlignSelf::STRETCH),
                 ..base.clone()
             },
             Style::default(),
         );
-        assert_eq!(definite_inline, Size { width: 120.0, height: 200.0 });
+        assert_eq!(
+            definite_inline,
+            Size {
+                width: 120.0,
+                height: 200.0
+            }
+        );
 
         let (_, definite_block) = layout_replaced_grid_item(
             Style {
-                size: Size { width: Dimension::auto(), height: length(80.0) },
+                size: Size {
+                    width: Dimension::auto(),
+                    height: length(80.0),
+                },
                 justify_self: Some(AlignSelf::STRETCH),
                 ..base
             },
             Style::default(),
         );
-        assert_eq!(definite_block, Size { width: 300.0, height: 80.0 });
+        assert_eq!(
+            definite_block,
+            Size {
+                width: 300.0,
+                height: 80.0
+            }
+        );
     }
 
     #[test]
@@ -806,24 +1098,53 @@ mod tests {
         let (location, size) = layout_replaced_grid_item(
             Style {
                 item_is_replaced: true,
-                min_size: Size { width: percent(0.5), height: Dimension::auto() },
-                margin: Rect { left: auto(), right: zero(), top: zero(), bottom: zero() },
+                min_size: Size {
+                    width: percent(0.5),
+                    height: Dimension::auto(),
+                },
+                margin: Rect {
+                    left: auto(),
+                    right: zero(),
+                    top: zero(),
+                    bottom: zero(),
+                },
                 ..Style::default()
             },
-            Style { justify_items: Some(AlignItems::NORMAL), ..Style::default() },
+            Style {
+                justify_items: Some(AlignItems::NORMAL),
+                ..Style::default()
+            },
         );
-        assert_eq!(size, Size { width: 150.0, height: 75.0 });
+        assert_eq!(
+            size,
+            Size {
+                width: 150.0,
+                height: 75.0
+            }
+        );
         assert_eq!(location.x, 150.0);
     }
 
     #[test]
     fn overflowing_auto_margins_override_unsafe_self_alignment() {
-        let area = Line { start: 0.0, end: 300.0 };
+        let area = Line {
+            start: 0.0,
+            end: 300.0,
+        };
         let oversized = 600.0;
         let margin_cases = [
-            Line { start: None, end: Some(0.0) },
-            Line { start: Some(0.0), end: None },
-            Line { start: None, end: None },
+            Line {
+                start: None,
+                end: Some(0.0),
+            },
+            Line {
+                start: Some(0.0),
+                end: None,
+            },
+            Line {
+                start: None,
+                end: None,
+            },
         ];
 
         for alignment in [AlignSelf::CENTER, AlignSelf::END] {
@@ -833,26 +1154,44 @@ mod tests {
                     alignment,
                     oversized,
                     Position::Relative,
-                    Line { start: None, end: None },
+                    Line {
+                        start: None,
+                        end: None,
+                    },
                     margin,
                     0.0,
                     crate::Direction::Ltr,
                 );
                 assert_eq!(ltr_start, 0.0);
-                assert_eq!(ltr_margin, Line { start: 0.0, end: 0.0 });
+                assert_eq!(
+                    ltr_margin,
+                    Line {
+                        start: 0.0,
+                        end: 0.0
+                    }
+                );
 
                 let (rtl_start, rtl_margin) = super::align_item_within_area(
                     area,
                     alignment,
                     oversized,
                     Position::Relative,
-                    Line { start: None, end: None },
+                    Line {
+                        start: None,
+                        end: None,
+                    },
                     margin,
                     0.0,
                     crate::Direction::Rtl,
                 );
                 assert_eq!(rtl_start, -300.0);
-                assert_eq!(rtl_margin, Line { start: 0.0, end: 0.0 });
+                assert_eq!(
+                    rtl_margin,
+                    Line {
+                        start: 0.0,
+                        end: 0.0
+                    }
+                );
             }
         }
 
@@ -861,8 +1200,14 @@ mod tests {
             AlignSelf::CENTER,
             oversized,
             Position::Absolute,
-            Line { start: None, end: None },
-            Line { start: None, end: Some(0.0) },
+            Line {
+                start: None,
+                end: None,
+            },
+            Line {
+                start: None,
+                end: Some(0.0),
+            },
             0.0,
             crate::Direction::Ltr,
         );
@@ -873,8 +1218,14 @@ mod tests {
             AlignSelf::END,
             oversized,
             Position::Absolute,
-            Line { start: None, end: None },
-            Line { start: None, end: Some(0.0) },
+            Line {
+                start: None,
+                end: None,
+            },
+            Line {
+                start: None,
+                end: Some(0.0),
+            },
             0.0,
             crate::Direction::Ltr,
         );

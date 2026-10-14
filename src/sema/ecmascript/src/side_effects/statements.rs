@@ -59,7 +59,10 @@ impl<'a> MayHaveSideEffects<'a> for SwitchStatement<'a> {
         self.discriminant.may_have_side_effects(ctx)
             || self.cases.iter().any(|case| {
                 case.test.may_have_side_effects(ctx)
-                    || case.consequent.iter().any(|stmt| stmt.may_have_side_effects(ctx))
+                    || case
+                        .consequent
+                        .iter()
+                        .any(|stmt| stmt.may_have_side_effects(ctx))
             })
     }
 }
@@ -74,7 +77,10 @@ impl<'a> MayHaveSideEffects<'a> for TryStatement<'a> {
                     .is_some_and(|param| param.pattern.may_have_side_effects(ctx))
                     || catch_clause.body.may_have_side_effects(ctx)
             })
-            || self.finalizer.as_ref().is_some_and(|finalizer| finalizer.may_have_side_effects(ctx))
+            || self
+                .finalizer
+                .as_ref()
+                .is_some_and(|finalizer| finalizer.may_have_side_effects(ctx))
     }
 }
 
@@ -124,7 +130,10 @@ impl<'a> MayHaveSideEffects<'a> for BindingPattern<'a> {
         match &self {
             BindingPattern::ArrayPattern(array_pattern) => {
                 ctx.property_read_side_effects() != PropertyReadSideEffects::None
-                    || array_pattern.elements.iter().any(|el| el.may_have_side_effects(ctx))
+                    || array_pattern
+                        .elements
+                        .iter()
+                        .any(|el| el.may_have_side_effects(ctx))
             }
             BindingPattern::ObjectPattern(object_pattern) => {
                 ctx.property_read_side_effects() != PropertyReadSideEffects::None

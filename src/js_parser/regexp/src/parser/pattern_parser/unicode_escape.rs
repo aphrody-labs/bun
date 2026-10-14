@@ -35,16 +35,22 @@ pub(super) fn decode(units: &[CodePoint], unicode_mode: bool) -> UnicodeEscape {
                 length: 11,
             };
         }
-        return UnicodeEscape::Value { code_point: value, length: 5 };
+        return UnicodeEscape::Value {
+            code_point: value,
+            length: 5,
+        };
     }
 
     if unicode_mode && units.get(1).is_some_and(|unit| unit.value == '{' as u32) {
         let mut index = 2;
         let mut value = 0_u32;
-        while let Some(digit) =
-            units.get(index).and_then(|unit| character::map_hex_digit(unit.value))
+        while let Some(digit) = units
+            .get(index)
+            .and_then(|unit| character::map_hex_digit(unit.value))
         {
-            let Some(next) = value.checked_mul(16).and_then(|value| value.checked_add(digit))
+            let Some(next) = value
+                .checked_mul(16)
+                .and_then(|value| value.checked_add(digit))
             else {
                 return UnicodeEscape::Overflow { digits: index - 2 };
             };
@@ -52,10 +58,15 @@ pub(super) fn decode(units: &[CodePoint], unicode_mode: bool) -> UnicodeEscape {
             index += 1;
         }
         if index > 2
-            && units.get(index).is_some_and(|unit| unit.value == '}' as u32)
+            && units
+                .get(index)
+                .is_some_and(|unit| unit.value == '}' as u32)
             && character::is_valid_unicode(value)
         {
-            return UnicodeEscape::Value { code_point: value, length: index + 1 };
+            return UnicodeEscape::Value {
+                code_point: value,
+                length: index + 1,
+            };
         }
     }
 

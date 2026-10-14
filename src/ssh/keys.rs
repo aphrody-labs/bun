@@ -35,7 +35,9 @@ pub fn public_key(path: &Path) -> Result<PublicKey> {
     if let Ok(key) = russh::keys::load_public_key(&pub_path) {
         return Ok(key);
     }
-    Ok(crate::auth::load_identity(path, false)?.public_key().clone())
+    Ok(crate::auth::load_identity(path, false)?
+        .public_key()
+        .clone())
 }
 
 pub fn fingerprint(path: &Path) -> Result<KeyInfo> {
@@ -43,32 +45,54 @@ pub fn fingerprint(path: &Path) -> Result<KeyInfo> {
 }
 
 /// Writes a new key pair to `path` and `path.pub`. `kind` is `ed25519` or `rsa`.
-pub fn generate(path: &Path, kind: &str, bits: Option<usize>, comment: &str, passphrase: Option<&str>) -> Result<KeyInfo> {
+pub fn generate(
+    path: &Path,
+    kind: &str,
+    bits: Option<usize>,
+    comment: &str,
+    passphrase: Option<&str>,
+) -> Result<KeyInfo> {
     if path.exists() {
-        return Err(Error::InvalidInput(format!("{} already exists", path.display())));
+        return Err(Error::InvalidInput(format!(
+            "{} already exists",
+            path.display()
+        )));
     }
     let mut rng = rand::rng();
     let mut key = match kind {
-        "ed25519" => PrivateKey::random(&mut rng, Algorithm::Ed25519).map_err(russh::keys::Error::from)?,
+        "ed25519" => {
+            PrivateKey::random(&mut rng, Algorithm::Ed25519).map_err(russh::keys::Error::from)?
+        }
         "rsa" => {
             let bits = bits.unwrap_or(4096);
             if bits < 2048 {
-                return Err(Error::InvalidInput("RSA keys need at least 2048 bits".into()));
+                return Err(Error::InvalidInput(
+                    "RSA keys need at least 2048 bits".into(),
+                ));
             }
-            let keypair = russh::keys::ssh_key::private::RsaKeypair::random(&mut rng, bits).map_err(russh::keys::Error::from)?;
+            let keypair = russh::keys::ssh_key::private::RsaKeypair::random(&mut rng, bits)
+                .map_err(russh::keys::Error::from)?;
             PrivateKey::from(keypair)
-        },
-        other => return Err(Error::InvalidInput(format!("unsupported key type `{other}` (ed25519, rsa)"))),
+        }
+        other => {
+            return Err(Error::InvalidInput(format!(
+                "unsupported key type `{other}` (ed25519, rsa)"
+            )));
+        }
     };
     key.set_comment(comment);
     let public = key.public_key().clone();
     if let Some(passphrase) = passphrase.filter(|p| !p.is_empty()) {
-        key = key.encrypt(&mut rng, passphrase).map_err(russh::keys::Error::from)?;
+        key = key
+            .encrypt(&mut rng, passphrase)
+            .map_err(russh::keys::Error::from)?;
     }
     if let Some(parent) = path.parent().filter(|p| !p.as_os_str().is_empty()) {
         std::fs::create_dir_all(parent)?;
     }
-    let pem = key.to_openssh(LineEnding::LF).map_err(russh::keys::Error::from)?;
+    let pem = key
+        .to_openssh(LineEnding::LF)
+        .map_err(russh::keys::Error::from)?;
     write_private(path, pem.as_bytes())?;
     let mut pub_path = path.as_os_str().to_owned();
     pub_path.push(".pub");
@@ -94,9 +118,16 @@ fn write_private(path: &Path, bytes: &[u8]) -> Result<()> {
 pub async fn agent_identities(identity_agent: Option<&str>) -> Result<Vec<KeyInfo>> {
     let mut agent = crate::auth::connect_agent(identity_agent)
         .await
-        .ok_or_else(|| crate::other("no ssh-agent is running (SSH_AUTH_SOCK, the OpenSSH agent pipe or Pageant)"))?;
+        .ok_or_else(|| {
+            crate::other(
+                "no ssh-agent is running (SSH_AUTH_SOCK, the OpenSSH agent pipe or Pageant)",
+            )
+        })?;
     let identities = agent.request_identities().await?;
-    Ok(identities.iter().map(|identity| info(identity.public_key().as_ref())).collect())
+    Ok(identities
+        .iter()
+        .map(|identity| info(identity.public_key().as_ref()))
+        .collect())
 }
 
 /// Adds the private key at `path` to the agent.
@@ -119,7 +150,10 @@ mod tests {
         let _ = std::fs::remove_dir_all(&dir);
         let path = dir.join("id_ed25519");
         let made = generate(&path, "ed25519", None, "test@bun", Some("secret")).unwrap();
-        assert!(matches!(russh::keys::load_secret_key(&path, None), Err(russh::keys::Error::KeyIsEncrypted)));
+        assert!(matches!(
+            russh::keys::load_secret_key(&path, None),
+            Err(russh::keys::Error::KeyIsEncrypted)
+        ));
         assert!(russh::keys::load_secret_key(&path, Some("secret")).is_ok());
         assert_eq!(fingerprint(&path).unwrap().fingerprint, made.fingerprint);
         let _ = std::fs::remove_dir_all(&dir);

@@ -16,7 +16,11 @@ pub fn with_number_literal<R>(value: f64, f: impl FnOnce(&str) -> R) -> R {
     f(literal.as_str())
 }
 
-#[expect(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::cast_possible_wrap)]
+#[expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    clippy::cast_possible_wrap
+)]
 fn number_literal(value: f64) -> LiteralString {
     let mut buffer = dragonbox_ecma::Buffer::new();
     let formatted = buffer.format(value);
@@ -54,7 +58,11 @@ fn number_literal(value: f64) -> LiteralString {
         let expected_len = digits.len() + 2 + exponent.len();
         if expected_len < best_candidate.len_usize() {
             let mut candidate = LiteralString::new();
-            for byte in digits.bytes().chain(b"e-".iter().copied()).chain(exponent.bytes()) {
+            for byte in digits
+                .bytes()
+                .chain(b"e-".iter().copied())
+                .chain(exponent.bytes())
+            {
                 candidate.push(byte);
             }
             best_candidate = candidate;
@@ -85,7 +93,8 @@ fn number_literal(value: f64) -> LiteralString {
 
     if let Some((integer, point, exponent)) =
         best_candidate.split_once('.').and_then(|(integer, rest)| {
-            rest.split_once('e').map(|(point, exponent)| (integer, point, exponent))
+            rest.split_once('e')
+                .map(|(point, exponent)| (integer, point, exponent))
         })
         && let Ok(exponent) = exponent.parse::<isize>()
     {
@@ -115,7 +124,11 @@ fn push_hex(mut value: u128, output: &mut LiteralString) {
     let mut len = 0;
     loop {
         let digit = (value & 0xf) as u8;
-        digits[len] = if digit < 10 { b'0' + digit } else { b'a' + digit - 10 };
+        digits[len] = if digit < 10 {
+            b'0' + digit
+        } else {
+            b'a' + digit - 10
+        };
         len += 1;
         value >>= 4;
         if value == 0 {
@@ -159,7 +172,9 @@ mod tests {
             (1000.0_f64.next_up(), "1000.0000000000001"),
             (1001.0, "1001"),
         ] {
-            with_number_literal(value, |literal| assert_eq!(literal, expected, "value: {value:?}"));
+            with_number_literal(value, |literal| {
+                assert_eq!(literal, expected, "value: {value:?}")
+            });
         }
     }
 

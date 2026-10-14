@@ -54,7 +54,8 @@ declare_oxc_lint!(
     style,
     pending,
     version = "0.2.16",
-    short_description = "Enforces the use of a `for...of` loop instead of a `for` loop with simple iteration.",
+    short_description =
+        "Enforces the use of a `for...of` loop instead of a `for` loop with simple iteration.",
 );
 
 trait ExpressionExt {
@@ -174,38 +175,45 @@ impl Rule for PreferForOf {
         let body_span = for_stmt.body.span();
         let array_span = array_expr.span();
 
-        if ctx.semantic().symbol_references(var_symbol_id).any(|reference| {
-            let ref_id = reference.node_id();
+        if ctx
+            .semantic()
+            .symbol_references(var_symbol_id)
+            .any(|reference| {
+                let ref_id = reference.node_id();
 
-            let symbol_span = nodes.get_node(ref_id).kind().span();
-            // A for-of loop evaluates its collection only once, so it cannot depend on the index.
-            if array_span.contains_inclusive(symbol_span) {
-                return true;
-            }
-            if !body_span.contains_inclusive(symbol_span) {
-                return false;
-            }
+                let symbol_span = nodes.get_node(ref_id).kind().span();
+                // A for-of loop evaluates its collection only once, so it cannot depend on the index.
+                if array_span.contains_inclusive(symbol_span) {
+                    return true;
+                }
+                if !body_span.contains_inclusive(symbol_span) {
+                    return false;
+                }
 
-            let parent = nodes.parent_node(ref_id);
-            let grand_parent = nodes.parent_node(parent.id());
+                let parent = nodes.parent_node(ref_id);
+                let grand_parent = nodes.parent_node(parent.id());
 
-            // Check for direct uses of the loop variable that prevent for-of conversion
-            if prevents_for_of_conversion_direct_usage(grand_parent, parent) {
-                return true;
-            }
+                // Check for direct uses of the loop variable that prevent for-of conversion
+                if prevents_for_of_conversion_direct_usage(grand_parent, parent) {
+                    return true;
+                }
 
-            // Check if arr[i] usage prevents for-of conversion
-            if prevents_for_of_array_access(parent, grand_parent, nodes) {
-                return true;
-            }
+                // Check if arr[i] usage prevents for-of conversion
+                if prevents_for_of_array_access(parent, grand_parent, nodes) {
+                    return true;
+                }
 
-            // Check if this is a non-array access that prevents conversion
-            prevents_for_of_non_array_access(parent, array_expr, ctx)
-        }) {
+                // Check if this is a non-array access that prevents conversion
+                prevents_for_of_non_array_access(parent, array_expr, ctx)
+            })
+        {
             return;
         }
 
-        let span = for_stmt_init.span.merge(test_expr.span).merge(update_expr.span());
+        let span = for_stmt_init
+            .span
+            .merge(test_expr.span)
+            .merge(update_expr.span());
         ctx.diagnostic(prefer_for_of_diagnostic(span));
     }
 }
@@ -269,7 +277,10 @@ fn prevents_for_of_non_array_access(
 
 /// Check if the AST kind represents a direct assignment target
 fn is_direct_assignment_target(kind: &AstKind) -> bool {
-    matches!(kind, AstKind::ArrayAssignmentTarget(_) | AstKind::ObjectAssignmentTarget(_))
+    matches!(
+        kind,
+        AstKind::ArrayAssignmentTarget(_) | AstKind::ObjectAssignmentTarget(_)
+    )
 }
 
 #[test]

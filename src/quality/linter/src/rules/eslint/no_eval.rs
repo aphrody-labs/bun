@@ -98,8 +98,9 @@ impl Rule for NoEval {
     fn run<'a>(&self, node: &AstNode<'a>, ctx: &LintContext<'a>) {
         match node.kind() {
             AstKind::Program(_) if !self.allow_indirect => {
-                let globals =
-                    ["eval", "global", "window", "globalThis"].into_iter().filter(|name| {
+                let globals = ["eval", "global", "window", "globalThis"]
+                    .into_iter()
+                    .filter(|name| {
                         ctx.get_global_variable_value(name)
                             .is_some_and(|var| var != GlobalValue::Off)
                     });
@@ -196,10 +197,12 @@ impl Rule for NoEval {
                     }
 
                     let scope_id =
-                        ctx.scoping().scope_ancestors(parent.scope_id()).find(|scope_id| {
-                            let scope_flags = ctx.scoping().scope_flags(*scope_id);
-                            scope_flags.is_var() && !scope_flags.is_arrow()
-                        });
+                        ctx.scoping()
+                            .scope_ancestors(parent.scope_id())
+                            .find(|scope_id| {
+                                let scope_flags = ctx.scoping().scope_flags(*scope_id);
+                                scope_flags.is_var() && !scope_flags.is_arrow()
+                            });
 
                     let scope_id = scope_id.unwrap();
                     let scope_flags = ctx.scoping().scope_flags(scope_id);
@@ -311,7 +314,12 @@ fn test() {
         ("window.setTimeout('foo')", None, env_with_browser(), None),
         ("window.setInterval('foo')", None, env_with_browser(), None),
         ("window.eval('foo')", None, None, None),
-        ("window.eval('foo')", None, None, Some(PathBuf::from("foo.cjs"))),
+        (
+            "window.eval('foo')",
+            None,
+            None,
+            Some(PathBuf::from("foo.cjs")),
+        ),
         ("window.noeval('foo')", None, env_with_browser(), None),
         (
             "function foo() { var eval = 'foo'; window[eval]('foo') }",
@@ -320,7 +328,12 @@ fn test() {
             None,
         ),
         ("global.eval('foo')", None, None, None),
-        ("global.noeval('foo')", None, None, Some(PathBuf::from("foo.cjs"))),
+        (
+            "global.noeval('foo')",
+            None,
+            None,
+            Some(PathBuf::from("foo.cjs")),
+        ),
         (
             "function foo() { var eval = 'foo'; global[eval]('foo') }",
             None,
@@ -336,12 +349,37 @@ fn test() {
             None,
         ),
         ("this.noeval('foo');", None, None, None),
-        ("function foo() { 'use strict'; this.eval('foo'); }", None, None, None),
-        ("'use strict'; this.eval('foo');", allow_indirect_with_true(), None, None), // { "parserOptions": { "ecmaFeatures": { "globalReturn": true } } },
+        (
+            "function foo() { 'use strict'; this.eval('foo'); }",
+            None,
+            None,
+            None,
+        ),
+        (
+            "'use strict'; this.eval('foo');",
+            allow_indirect_with_true(),
+            None,
+            None,
+        ), // { "parserOptions": { "ecmaFeatures": { "globalReturn": true } } },
         ("this.eval('foo');", allow_indirect_with_true(), None, None), // { "ecmaVersion": 6, "sourceType": "module" },
-        ("function foo() { this.eval('foo'); }", allow_indirect_with_true(), None, None),
-        ("var obj = {foo: function() { this.eval('foo'); }}", None, None, None),
-        ("var obj = {}; obj.foo = function() { this.eval('foo'); }", None, None, None),
+        (
+            "function foo() { this.eval('foo'); }",
+            allow_indirect_with_true(),
+            None,
+            None,
+        ),
+        (
+            "var obj = {foo: function() { this.eval('foo'); }}",
+            None,
+            None,
+            None,
+        ),
+        (
+            "var obj = {}; obj.foo = function() { this.eval('foo'); }",
+            None,
+            None,
+            None,
+        ),
         // A function returned from an immediately-invoked function and assigned to a
         // member is not bound to the global object, so `this.eval` is not indirect eval.
         (
@@ -356,18 +394,58 @@ fn test() {
             None,
             Some(PathBuf::from("foo.cjs")),
         ),
-        ("() => { this.eval('foo') }", allow_indirect_with_true(), None, None), // { "ecmaVersion": 6, "sourceType": "module" },
-        ("function f() { 'use strict'; () => { this.eval('foo') } }", None, None, None), // { "ecmaVersion": 6 },
-        ("(function f() { 'use strict'; () => { this.eval('foo') } })", None, None, None), // { "ecmaVersion": 6 },
-        ("class C extends function () { this.eval('foo'); } {}", None, None, None), // { "ecmaVersion": 6 },
+        (
+            "() => { this.eval('foo') }",
+            allow_indirect_with_true(),
+            None,
+            None,
+        ), // { "ecmaVersion": 6, "sourceType": "module" },
+        (
+            "function f() { 'use strict'; () => { this.eval('foo') } }",
+            None,
+            None,
+            None,
+        ), // { "ecmaVersion": 6 },
+        (
+            "(function f() { 'use strict'; () => { this.eval('foo') } })",
+            None,
+            None,
+            None,
+        ), // { "ecmaVersion": 6 },
+        (
+            "class C extends function () { this.eval('foo'); } {}",
+            None,
+            None,
+            None,
+        ), // { "ecmaVersion": 6 },
         ("class A { foo() { this.eval(); } }", None, None, None), // { "ecmaVersion": 6 },
-        ("class A { static foo() { this.eval(); } }", None, None, None), // { "ecmaVersion": 6 },
+        (
+            "class A { static foo() { this.eval(); } }",
+            None,
+            None,
+            None,
+        ), // { "ecmaVersion": 6 },
         ("class A { field = this.eval(); }", None, None, None),   // { "ecmaVersion": 2022 },
         ("class A { field = () => this.eval(); }", None, None, None), // { "ecmaVersion": 2022 },
         ("class A { static field = this.eval(); }", None, None, None), // { "ecmaVersion": 2022 },
-        ("class A { static field = () => this.eval(); }", None, None, None), // { "ecmaVersion": 2022 },
-        ("class A { accessor field = this.eval(); }", None, None, None), // { "ecmaVersion": 2022 },
-        ("class A { static accessor field = () => this.eval(); }", None, None, None), // { "ecmaVersion": 2022 },
+        (
+            "class A { static field = () => this.eval(); }",
+            None,
+            None,
+            None,
+        ), // { "ecmaVersion": 2022 },
+        (
+            "class A { accessor field = this.eval(); }",
+            None,
+            None,
+            None,
+        ), // { "ecmaVersion": 2022 },
+        (
+            "class A { static accessor field = () => this.eval(); }",
+            None,
+            None,
+            None,
+        ), // { "ecmaVersion": 2022 },
         ("class A { static { this.eval(); } }", None, None, None), // { "ecmaVersion": 2022 },
         (
             "array.findLast(function (x) { return this.eval.includes(x); }, { eval: ['foo', 'bar'] });",
@@ -406,19 +484,79 @@ fn test() {
             None,
         ),
         ("(0, eval)('foo')", allow_indirect_with_true(), None, None),
-        ("(0, window.eval)('foo')", allow_indirect_with_true(), env_with_browser(), None),
-        ("(0, window['eval'])('foo')", allow_indirect_with_true(), env_with_browser(), None),
-        ("var EVAL = eval; EVAL('foo')", allow_indirect_with_true(), None, None),
-        ("var EVAL = this.eval; EVAL('foo')", allow_indirect_with_true(), None, None),
-        ("(function(exe){ exe('foo') })(eval);", allow_indirect_with_true(), None, None),
-        ("window.window.eval('foo')", allow_indirect_with_true(), env_with_browser(), None),
-        ("window.window['eval']('foo')", allow_indirect_with_true(), env_with_browser(), None),
-        ("global.eval('foo')", allow_indirect_with_true(), env_with_node(), None),
-        ("global.global.eval('foo')", allow_indirect_with_true(), env_with_node(), None),
+        (
+            "(0, window.eval)('foo')",
+            allow_indirect_with_true(),
+            env_with_browser(),
+            None,
+        ),
+        (
+            "(0, window['eval'])('foo')",
+            allow_indirect_with_true(),
+            env_with_browser(),
+            None,
+        ),
+        (
+            "var EVAL = eval; EVAL('foo')",
+            allow_indirect_with_true(),
+            None,
+            None,
+        ),
+        (
+            "var EVAL = this.eval; EVAL('foo')",
+            allow_indirect_with_true(),
+            None,
+            None,
+        ),
+        (
+            "(function(exe){ exe('foo') })(eval);",
+            allow_indirect_with_true(),
+            None,
+            None,
+        ),
+        (
+            "window.window.eval('foo')",
+            allow_indirect_with_true(),
+            env_with_browser(),
+            None,
+        ),
+        (
+            "window.window['eval']('foo')",
+            allow_indirect_with_true(),
+            env_with_browser(),
+            None,
+        ),
+        (
+            "global.eval('foo')",
+            allow_indirect_with_true(),
+            env_with_node(),
+            None,
+        ),
+        (
+            "global.global.eval('foo')",
+            allow_indirect_with_true(),
+            env_with_node(),
+            None,
+        ),
         ("this.eval('foo')", allow_indirect_with_true(), None, None),
-        ("function foo() { this.eval('foo') }", allow_indirect_with_true(), None, None),
-        ("(0, globalThis.eval)('foo')", allow_indirect_with_true(), env_with_browser(), None),
-        ("(0, globalThis['eval'])('foo')", allow_indirect_with_true(), env_with_browser(), None),
+        (
+            "function foo() { this.eval('foo') }",
+            allow_indirect_with_true(),
+            None,
+            None,
+        ),
+        (
+            "(0, globalThis.eval)('foo')",
+            allow_indirect_with_true(),
+            env_with_browser(),
+            None,
+        ),
+        (
+            "(0, globalThis['eval'])('foo')",
+            allow_indirect_with_true(),
+            env_with_browser(),
+            None,
+        ),
         (
             "var EVAL = globalThis.eval; EVAL('foo')",
             allow_indirect_with_true(),
@@ -438,9 +576,24 @@ fn test() {
             None,
         ),
         ("eval?.('foo')", allow_indirect_with_true(), None, None),
-        ("// eslint-disable-next-line no-eval\neval.toString()", None, None, None),
-        ("window?.eval('foo')", allow_indirect_with_true(), env_with_browser(), None),
-        ("(window?.eval)('foo')", allow_indirect_with_true(), env_with_browser(), None),
+        (
+            "// eslint-disable-next-line no-eval\neval.toString()",
+            None,
+            None,
+            None,
+        ),
+        (
+            "window?.eval('foo')",
+            allow_indirect_with_true(),
+            env_with_browser(),
+            None,
+        ),
+        (
+            "(window?.eval)('foo')",
+            allow_indirect_with_true(),
+            env_with_browser(),
+            None,
+        ),
         (
             "sinon.test(/** @this sinon.Sandbox */function() { this.eval(); });",
             None,
@@ -460,9 +613,24 @@ fn test() {
         ("window.eval('foo')", None, env_with_browser(), None),
         ("function foo(eval) { eval('foo') }", None, None, None),
         ("(0, eval)('foo')", allow_indirect_with_false(), None, None),
-        ("(0, window.eval)('foo')", allow_indirect_with_false(), env_with_browser(), None),
-        ("(0, window['eval'])('foo')", allow_indirect_with_false(), env_with_browser(), None),
-        ("var EVAL = eval; EVAL('foo')", allow_indirect_with_false(), None, None),
+        (
+            "(0, window.eval)('foo')",
+            allow_indirect_with_false(),
+            env_with_browser(),
+            None,
+        ),
+        (
+            "(0, window['eval'])('foo')",
+            allow_indirect_with_false(),
+            env_with_browser(),
+            None,
+        ),
+        (
+            "var EVAL = eval; EVAL('foo')",
+            allow_indirect_with_false(),
+            None,
+            None,
+        ),
         (
             "var EVAL = this.eval; EVAL('foo')",
             allow_indirect_with_false(),
@@ -505,14 +673,54 @@ fn test() {
             None,
             Some(PathBuf::from("foo.cjs")),
         ), // { "ecmaVersion": 6 },
-        ("(function(exe){ exe('foo') })(eval);", allow_indirect_with_false(), None, None),
-        ("window.eval('foo')", allow_indirect_with_false(), env_with_browser(), None),
-        ("window.window.eval('foo')", allow_indirect_with_false(), env_with_browser(), None),
-        ("window.window['eval']('foo')", allow_indirect_with_false(), env_with_browser(), None),
-        ("global.eval('foo')", allow_indirect_with_false(), env_with_node(), None),
-        ("global.global.eval('foo')", allow_indirect_with_false(), env_with_node(), None),
-        ("global.global[`eval`]('foo')", allow_indirect_with_false(), env_with_node(), None), // { "ecmaVersion": 6, "sourceType": "commonjs" },
-        ("this.eval('foo')", allow_indirect_with_false(), None, Some(PathBuf::from("foo.cjs"))),
+        (
+            "(function(exe){ exe('foo') })(eval);",
+            allow_indirect_with_false(),
+            None,
+            None,
+        ),
+        (
+            "window.eval('foo')",
+            allow_indirect_with_false(),
+            env_with_browser(),
+            None,
+        ),
+        (
+            "window.window.eval('foo')",
+            allow_indirect_with_false(),
+            env_with_browser(),
+            None,
+        ),
+        (
+            "window.window['eval']('foo')",
+            allow_indirect_with_false(),
+            env_with_browser(),
+            None,
+        ),
+        (
+            "global.eval('foo')",
+            allow_indirect_with_false(),
+            env_with_node(),
+            None,
+        ),
+        (
+            "global.global.eval('foo')",
+            allow_indirect_with_false(),
+            env_with_node(),
+            None,
+        ),
+        (
+            "global.global[`eval`]('foo')",
+            allow_indirect_with_false(),
+            env_with_node(),
+            None,
+        ), // { "ecmaVersion": 6, "sourceType": "commonjs" },
+        (
+            "this.eval('foo')",
+            allow_indirect_with_false(),
+            None,
+            Some(PathBuf::from("foo.cjs")),
+        ),
         (
             "'use strict'; this.eval('foo')",
             allow_indirect_with_false(),
@@ -531,7 +739,12 @@ fn test() {
             env_with_browser(),
             None,
         ),
-        ("globalThis.eval('foo')", allow_indirect_with_false(), env_with_browser(), None),
+        (
+            "globalThis.eval('foo')",
+            allow_indirect_with_false(),
+            env_with_browser(),
+            None,
+        ),
         (
             "globalThis.globalThis.eval('foo')",
             allow_indirect_with_false(),
@@ -544,12 +757,42 @@ fn test() {
             env_with_browser(),
             None,
         ),
-        ("(0, globalThis.eval)('foo')", allow_indirect_with_false(), env_with_browser(), None),
-        ("(0, globalThis['eval'])('foo')", allow_indirect_with_false(), env_with_browser(), None),
-        ("window?.eval('foo')", allow_indirect_with_false(), env_with_browser(), None),
-        ("(window?.eval)('foo')", allow_indirect_with_false(), env_with_browser(), None),
-        ("(window?.window).eval('foo')", allow_indirect_with_false(), env_with_browser(), None),
-        ("class C { [this.eval('foo')] }", None, None, Some(PathBuf::from("foo.cjs"))), // { "ecmaVersion": 2022 },
+        (
+            "(0, globalThis.eval)('foo')",
+            allow_indirect_with_false(),
+            env_with_browser(),
+            None,
+        ),
+        (
+            "(0, globalThis['eval'])('foo')",
+            allow_indirect_with_false(),
+            env_with_browser(),
+            None,
+        ),
+        (
+            "window?.eval('foo')",
+            allow_indirect_with_false(),
+            env_with_browser(),
+            None,
+        ),
+        (
+            "(window?.eval)('foo')",
+            allow_indirect_with_false(),
+            env_with_browser(),
+            None,
+        ),
+        (
+            "(window?.window).eval('foo')",
+            allow_indirect_with_false(),
+            env_with_browser(),
+            None,
+        ),
+        (
+            "class C { [this.eval('foo')] }",
+            None,
+            None,
+            Some(PathBuf::from("foo.cjs")),
+        ), // { "ecmaVersion": 2022 },
         (
             "'use strict'; class C { [this.eval('foo')] }",
             allow_indirect_with_false(),

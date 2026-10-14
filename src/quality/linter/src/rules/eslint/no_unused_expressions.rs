@@ -91,7 +91,9 @@ impl Rule for NoUnusedExpressions {
 fn is_parent_arrow_function_expression<'a>(node: &AstNode<'a>, ctx: &LintContext<'a>) -> bool {
     let parent = ctx.nodes().parent_node(node.id());
 
-    let AstKind::FunctionBody(_) = parent.kind() else { return false };
+    let AstKind::FunctionBody(_) = parent.kind() else {
+        return false;
+    };
 
     let grand_parent = ctx.nodes().parent_node(parent.id());
 
@@ -163,9 +165,10 @@ impl NoUnusedExpressions {
                 self.is_disallowed(&parenthesized_expression.expression)
             }
             Expression::TaggedTemplateExpression(_) => !self.0.allow_tagged_templates,
-            Expression::UnaryExpression(unary_expression) => {
-                !matches!(unary_expression.operator, UnaryOperator::Delete | UnaryOperator::Void)
-            }
+            Expression::UnaryExpression(unary_expression) => !matches!(
+                unary_expression.operator,
+                UnaryOperator::Delete | UnaryOperator::Void
+            ),
             Expression::JSXElement(_) | Expression::JSXFragment(_) => self.0.enforce_for_jsx,
             Expression::TSAsExpression(ts_as_expression) => {
                 self.is_disallowed(&ts_as_expression.expression)
@@ -196,9 +199,18 @@ fn test() {
         ("f(); g()", None),
         ("i++", None),
         ("a()", None),
-        ("a && a()", Some(serde_json::json!([{ "allowShortCircuit": true }]))),
-        ("a() || (b = c)", Some(serde_json::json!([{ "allowShortCircuit": true }]))),
-        ("a ? b() : c()", Some(serde_json::json!([{ "allowTernary": true }]))),
+        (
+            "a && a()",
+            Some(serde_json::json!([{ "allowShortCircuit": true }])),
+        ),
+        (
+            "a() || (b = c)",
+            Some(serde_json::json!([{ "allowShortCircuit": true }])),
+        ),
+        (
+            "a ? b() : c()",
+            Some(serde_json::json!([{ "allowTernary": true }])),
+        ),
         (
             "a ? b() || (c = d) : e()",
             Some(serde_json::json!([{ "allowShortCircuit": true, "allowTernary": true }])),
@@ -209,8 +221,14 @@ fn test() {
         (r#""directive one"; "directive two"; f();"#, None),
         (r#"function foo() {"use strict"; return true; }"#, None),
         (r#"var foo = () => {"use strict"; return true; }"#, None), // { "ecmaVersion": 6 },
-        (r#"function foo() {"directive one"; "directive two"; f(); }"#, None),
-        (r#"function foo() { var foo = "use strict"; return true; }"#, None),
+        (
+            r#"function foo() {"directive one"; "directive two"; f(); }"#,
+            None,
+        ),
+        (
+            r#"function foo() { var foo = "use strict"; return true; }"#,
+            None,
+        ),
         ("function* foo(){ yield 0; }", None), // { "ecmaVersion": 6 },
         ("async function foo() { await 5; }", None), // { "ecmaVersion": 8 },
         ("async function foo() { await foo.bar; }", None), // { "ecmaVersion": 8 },
@@ -236,9 +254,18 @@ fn test() {
         ("<div />", None), // { "parserOptions": { "ecmaFeatures": { "jsx": true } } },
         ("<></>", None),   // { "parserOptions": { "ecmaFeatures": { "jsx": true } } },
         ("var partial = <div />", None), // { "parserOptions": { "ecmaFeatures": { "jsx": true } } },
-        ("var partial = <div />", Some(serde_json::json!([{ "enforceForJSX": true }]))), // { "parserOptions": { "ecmaFeatures": { "jsx": true } } },
-        ("var partial = <></>", Some(serde_json::json!([{ "enforceForJSX": true }]))), // { "parserOptions": { "ecmaFeatures": { "jsx": true } } },
-        (r#""use strict";"#, Some(serde_json::json!([{ "ignoreDirectives": true }]))),
+        (
+            "var partial = <div />",
+            Some(serde_json::json!([{ "enforceForJSX": true }])),
+        ), // { "parserOptions": { "ecmaFeatures": { "jsx": true } } },
+        (
+            "var partial = <></>",
+            Some(serde_json::json!([{ "enforceForJSX": true }])),
+        ), // { "parserOptions": { "ecmaFeatures": { "jsx": true } } },
+        (
+            r#""use strict";"#,
+            Some(serde_json::json!([{ "ignoreDirectives": true }])),
+        ),
         (
             r#""directive one"; "directive two"; f();"#,
             Some(serde_json::json!([{ "ignoreDirectives": true }])),
@@ -336,8 +363,14 @@ fn test() {
                 ",
             None,
         ),
-        ("foo && foo?.();", Some(serde_json::json!([{ "allowShortCircuit": true }]))),
-        ("foo && import('./foo');", Some(serde_json::json!([{ "allowShortCircuit": true }]))),
+        (
+            "foo && foo?.();",
+            Some(serde_json::json!([{ "allowShortCircuit": true }])),
+        ),
+        (
+            "foo && import('./foo');",
+            Some(serde_json::json!([{ "allowShortCircuit": true }])),
+        ),
         (
             "foo ? import('./foo') : import('./bar');",
             Some(serde_json::json!([{ "allowTernary": true }])),
@@ -376,17 +409,38 @@ fn test() {
         ("a ? b() || (c = d) : e", None),
         ("`untagged template literal`", None), // { "ecmaVersion": 6 },
         ("tag`tagged template literal`", None), // { "ecmaVersion": 6 },
-        ("a && b()", Some(serde_json::json!([{ "allowTernary": true }]))),
-        ("a ? b() : c()", Some(serde_json::json!([{ "allowShortCircuit": true }]))),
-        ("a || b", Some(serde_json::json!([{ "allowShortCircuit": true }]))),
-        ("a() && b", Some(serde_json::json!([{ "allowShortCircuit": true }]))),
-        ("a ? b : 0", Some(serde_json::json!([{ "allowTernary": true }]))),
-        ("a ? b : c()", Some(serde_json::json!([{ "allowTernary": true }]))),
+        (
+            "a && b()",
+            Some(serde_json::json!([{ "allowTernary": true }])),
+        ),
+        (
+            "a ? b() : c()",
+            Some(serde_json::json!([{ "allowShortCircuit": true }])),
+        ),
+        (
+            "a || b",
+            Some(serde_json::json!([{ "allowShortCircuit": true }])),
+        ),
+        (
+            "a() && b",
+            Some(serde_json::json!([{ "allowShortCircuit": true }])),
+        ),
+        (
+            "a ? b : 0",
+            Some(serde_json::json!([{ "allowTernary": true }])),
+        ),
+        (
+            "a ? b : c()",
+            Some(serde_json::json!([{ "allowTernary": true }])),
+        ),
         ("foo.bar;", None),
         ("!a", None),
         ("+a", None),
         (r#""directive one"; f(); "directive two";"#, None),
-        (r#"function foo() {"directive one"; f(); "directive two"; }"#, None),
+        (
+            r#"function foo() {"directive one"; f(); "directive two"; }"#,
+            None,
+        ),
         (r#"if (0) { "not a directive"; f(); }"#, None),
         (r#"function foo() { var foo = true; "use strict"; }"#, None),
         (r#"var foo = () => { var foo = true; "use strict"; }"#, None), // { "ecmaVersion": 6 },
@@ -405,9 +459,15 @@ fn test() {
         ("obj?.foo", None),                                             // { "ecmaVersion": 2020 },
         ("obj?.foo.bar", None),                                         // { "ecmaVersion": 2020 },
         ("obj?.foo().bar", None),                                       // { "ecmaVersion": 2020 },
-        ("<div />", Some(serde_json::json!([{ "enforceForJSX": true }]))), // { "parserOptions": { "ecmaFeatures": { "jsx": true } } },
-        ("<></>", Some(serde_json::json!([{ "enforceForJSX": true }]))), // { "parserOptions": { "ecmaFeatures": { "jsx": true } } },
-        ("class C { static { 'use strict'; } }", None),                  // { "ecmaVersion": 2022 },
+        (
+            "<div />",
+            Some(serde_json::json!([{ "enforceForJSX": true }])),
+        ), // { "parserOptions": { "ecmaFeatures": { "jsx": true } } },
+        (
+            "<></>",
+            Some(serde_json::json!([{ "enforceForJSX": true }])),
+        ), // { "parserOptions": { "ecmaFeatures": { "jsx": true } } },
+        ("class C { static { 'use strict'; } }", None),                 // { "ecmaVersion": 2022 },
         (
             "class C { static {
             'foo'
@@ -415,7 +475,10 @@ fn test() {
              } }",
             None,
         ), // { "ecmaVersion": 2022 },
-        ("foo;", Some(serde_json::json!([{ "ignoreDirectives": true }]))),
+        (
+            "foo;",
+            Some(serde_json::json!([{ "ignoreDirectives": true }])),
+        ),
         // https://github.com/typescript-eslint/typescript-eslint/blob/32a7a7061abba5bbf1403230526514768d3e2760/packages/eslint-plugin/tests/rules/no-unused-expressions.test.ts#L91
         (
             "
@@ -529,8 +592,14 @@ fn test() {
             }",
             None,
         ),
-        ("foo && foo?.bar;", Some(serde_json::json!([{ "allowShortCircuit": true }]))),
-        ("foo ? foo?.bar : bar.baz;", Some(serde_json::json!([{ "allowTernary": true }]))),
+        (
+            "foo && foo?.bar;",
+            Some(serde_json::json!([{ "allowShortCircuit": true }])),
+        ),
+        (
+            "foo ? foo?.bar : bar.baz;",
+            Some(serde_json::json!([{ "allowTernary": true }])),
+        ),
         (
             "
             class Foo<T> {}
@@ -563,6 +632,11 @@ fn test() {
         ("const _func = (value: number) => { value + 1; }", None),
     ];
 
-    Tester::new(NoUnusedExpressions::NAME, NoUnusedExpressions::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        NoUnusedExpressions::NAME,
+        NoUnusedExpressions::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

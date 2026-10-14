@@ -289,13 +289,19 @@ fn handle_type_argument<'a>(
 ) {
     for_each_define_props_type_signature(ts_type, ctx, &mut |item| {
         let (key_name, optional, key) = match item {
-            TSSignature::TSPropertySignature(prop_sign) => {
-                (prop_sign.key.static_name(), prop_sign.optional, &prop_sign.key)
-            }
+            TSSignature::TSPropertySignature(prop_sign) => (
+                prop_sign.key.static_name(),
+                prop_sign.optional,
+                &prop_sign.key,
+            ),
             TSSignature::TSMethodSignature(method_sign)
                 if method_sign.kind == TSMethodSignatureKind::Method =>
             {
-                (method_sign.key.static_name(), method_sign.optional, &method_sign.key)
+                (
+                    method_sign.key.static_name(),
+                    method_sign.optional,
+                    &method_sign.key,
+                )
             }
             _ => return,
         };
@@ -1485,7 +1491,12 @@ fn test() {
         ),
     ];
 
-    Tester::new(NoRequiredPropWithDefault::NAME, NoRequiredPropWithDefault::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        NoRequiredPropWithDefault::NAME,
+        NoRequiredPropWithDefault::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

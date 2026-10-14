@@ -106,7 +106,12 @@ fn clean<'a>(source_text: &'a str, source_type: SourceType, allocator: &'a Alloc
     clean_source_text.push_str(&source_text[last_index..]);
 
     // Check lexer can lex it without any errors
-    let lexer = lex_whole_file(allocator, &clean_source_text, source_type, NoTokensLexerConfig);
+    let lexer = lex_whole_file(
+        allocator,
+        &clean_source_text,
+        source_type,
+        NoTokensLexerConfig,
+    );
     assert!(lexer.errors().is_empty());
 
     clean_source_text
@@ -125,7 +130,11 @@ struct Replacement {
 
 impl<'a> SourceCleaner<'a> {
     fn new(source_text: &'a str) -> Self {
-        Self { source_text, replacements: vec![], clean_source_text_len: source_text.len() }
+        Self {
+            source_text,
+            replacements: vec![],
+            clean_source_text_len: source_text.len(),
+        }
     }
 
     fn replace(&mut self, span: Span, text: String) {
@@ -137,7 +146,10 @@ impl<'a> SourceCleaner<'a> {
 impl<'a> Visit<'a> for SourceCleaner<'a> {
     fn visit_reg_exp_literal(&mut self, regexp: &RegExpLiteral<'a>) {
         let pattern_text = regexp.regex.pattern.text.as_str();
-        let span = Span::sized(regexp.span.start, u32::try_from(pattern_text.len()).unwrap() + 2);
+        let span = Span::sized(
+            regexp.span.start,
+            u32::try_from(pattern_text.len()).unwrap() + 2,
+        );
         let text = convert_to_string(pattern_text);
         self.replace(span, text);
     }
@@ -174,8 +186,11 @@ fn convert_to_string(text: &str) -> String {
     let single_quote_count = text.as_bytes().iter().filter(|&&b| b == b'\'').count();
     let double_quote_count = text.as_bytes().iter().filter(|&&b| b == b'"').count();
 
-    let (quote, other_quote) =
-        if single_quote_count <= double_quote_count { ('\'', "\"") } else { ('"', "'") };
+    let (quote, other_quote) = if single_quote_count <= double_quote_count {
+        ('\'', "\"")
+    } else {
+        ('"', "'")
+    };
 
     #[expect(clippy::disallowed_methods)]
     let text = if single_quote_count == 0 || double_quote_count == 0 {

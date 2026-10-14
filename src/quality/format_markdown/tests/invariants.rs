@@ -188,13 +188,21 @@ impl Rng {
     }
 
     fn soup(&mut self, n: usize) -> String {
-        std::iter::repeat_with(|| TOKENS[self.int(0, TOKENS.len() - 1)]).take(n).collect()
+        std::iter::repeat_with(|| TOKENS[self.int(0, TOKENS.len() - 1)])
+            .take(n)
+            .collect()
     }
 }
 
 fn format_source(source: &str, options: MarkdownFormatOptions) -> Option<String> {
     let allocator = Allocator::default();
-    Some(format(&allocator, source, options).ok()?.print().ok()?.into_code())
+    Some(
+        format(&allocator, source, options)
+            .ok()?
+            .print()
+            .ok()?
+            .into_code(),
+    )
 }
 
 fn fingerprint_of(source: &str) -> String {
@@ -219,10 +227,15 @@ fn first_difference<'a>(before: &'a str, after: &'a str) -> (&'a str, &'a str) {
 /// (`MD_FUZZ_WIDTH` / `MD_FUZZ_TAB_WIDTH` override the corpus options).
 #[test]
 fn single_file() {
-    let Ok(path) = std::env::var("MD_FUZZ_FILE") else { return };
+    let Ok(path) = std::env::var("MD_FUZZ_FILE") else {
+        return;
+    };
     let source = std::fs::read_to_string(path).unwrap();
     let env = |name: &str, default: u16| -> u16 {
-        std::env::var(name).ok().and_then(|v| v.parse().ok()).unwrap_or(default)
+        std::env::var(name)
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(default)
     };
     let line_width = LineWidth::try_from(env("MD_FUZZ_WIDTH", 40)).unwrap();
     let indent_width =
@@ -247,9 +260,14 @@ fn single_file() {
 
 #[test]
 fn fuzzed_invariants() {
-    let count: usize =
-        std::env::var("MD_FUZZ_COUNT").ok().and_then(|v| v.parse().ok()).unwrap_or(3000);
-    let seed: u32 = std::env::var("MD_FUZZ_SEED").ok().and_then(|v| v.parse().ok()).unwrap_or(0);
+    let count: usize = std::env::var("MD_FUZZ_COUNT")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(3000);
+    let seed: u32 = std::env::var("MD_FUZZ_SEED")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(0);
     let mut rng = Rng(seed);
     let mut failures: Vec<((usize, ProseWrap), String)> = Vec::new();
     for i in 0..count {
@@ -284,8 +302,11 @@ fn fuzzed_invariants() {
             }
         }
     }
-    let known: &[(usize, ProseWrap)] =
-        if count == 3000 && seed == 0 { KNOWN_FAILURES } else { &[] };
+    let known: &[(usize, ProseWrap)] = if count == 3000 && seed == 0 {
+        KNOWN_FAILURES
+    } else {
+        &[]
+    };
     let failed: Vec<_> = failures.iter().map(|(key, _)| *key).collect();
     if failed != known {
         let report: Vec<_> = failures
@@ -299,5 +320,8 @@ fn fuzzed_invariants() {
             report.join("\n\n")
         );
     }
-    assert_eq!(failed, known, "failures on seed {seed} differ from the known ones");
+    assert_eq!(
+        failed, known,
+        "failures on seed {seed} differ from the known ones"
+    );
 }

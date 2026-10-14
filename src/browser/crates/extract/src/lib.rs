@@ -73,8 +73,13 @@ pub fn extract_main_with_options(
     page_url: Option<&str>,
     options: &ExtractOptions,
 ) -> Extracted {
-    catch_unwind(AssertUnwindSafe(|| extract::extract(html, page_url, options)))
-        .unwrap_or_else(|_| Extracted { simhash: format!("{:016x}", 0), ..Extracted::default() })
+    catch_unwind(AssertUnwindSafe(|| {
+        extract::extract(html, page_url, options)
+    }))
+    .unwrap_or_else(|_| Extracted {
+        simhash: format!("{:016x}", 0),
+        ..Extracted::default()
+    })
 }
 
 /// Serializes [`extract_main`] as JSON (the FFI entry point).
@@ -105,13 +110,21 @@ pub fn html_to_markdown(html: &str, base_url: Option<&str>) -> String {
             (p, None) => p.clone(),
         };
         let excluded = vec![false; arena.nodes.len()];
-        let root = if arena.body != dom::NONE { arena.body } else { 0 };
+        let root = if arena.body != dom::NONE {
+            arena.body
+        } else {
+            0
+        };
         let rendered = render::render(
             &arena,
             &[root],
             &excluded,
             base.as_ref(),
-            render::RenderOptions { images: true, fragment_links: true, links: true },
+            render::RenderOptions {
+                images: true,
+                fragment_links: true,
+                links: true,
+            },
         );
         rendered.markdown
     }))

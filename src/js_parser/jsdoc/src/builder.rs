@@ -26,7 +26,10 @@ impl<'a> JSDocBuilder<'a> {
                 .or_default()
                 .push(Self::parse_jsdoc_comment(comment, source_text));
         }
-        Self { not_attached_docs, attached_docs: FxHashMap::default() }
+        Self {
+            not_attached_docs,
+            attached_docs: FxHashMap::default(),
+        }
     }
 
     pub fn build(self) -> JSDocBuilderResult<'a> {

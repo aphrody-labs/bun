@@ -41,8 +41,9 @@ pub fn should_hug_type(node: &TSUnionType<'_>, f: &JsFormatter<'_, '_>) -> bool 
         return true;
     }
 
-    let has_object_type =
-        types.iter().any(|t| matches!(t, TSType::TSTypeLiteral(_) | TSType::TSTypeReference(_)));
+    let has_object_type = types
+        .iter()
+        .any(|t| matches!(t, TSType::TSTypeLiteral(_) | TSType::TSTypeReference(_)));
 
     if !has_object_type {
         return false;

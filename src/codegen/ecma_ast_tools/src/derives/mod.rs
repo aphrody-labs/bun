@@ -172,7 +172,9 @@ pub trait Derive: Runner {
                 _ => continue,
             };
 
-            let content = crate_contents.entry(schema.files[file_id].krate()).or_default();
+            let content = crate_contents
+                .entry(schema.files[file_id].krate())
+                .or_default();
             content.import_file_ids.insert(file_id);
 
             content.output.extend(quote! {
@@ -187,7 +189,11 @@ pub trait Derive: Runner {
         crate_contents
             .into_values()
             .map(|content| {
-                let file_id = *content.import_file_ids.iter().next().expect("derived source file");
+                let file_id = *content
+                    .import_file_ids
+                    .iter()
+                    .next()
+                    .expect("derived source file");
                 let crate_path = schema.files[file_id].krate_path();
                 let mut import_paths = content
                     .import_file_ids

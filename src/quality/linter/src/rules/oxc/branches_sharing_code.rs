@@ -134,8 +134,9 @@ impl Rule for BranchesSharingCode {
             if start == 1
                 && let Some(indent) = get_preceding_indent_str(ctx.source_text(), if_stmt.span)
             {
-                let delete_spans =
-                    bodies.iter().map(|body| get_duplicated_delete_span(start, body, false));
+                let delete_spans = bodies
+                    .iter()
+                    .map(|body| get_duplicated_delete_span(start, body, false));
                 let moved_code = ctx.source_range(spans[0]);
                 ctx.diagnostic_with_suggestion(diagnostic, |fixer| {
                     let fixer = fixer.for_multifix();
@@ -152,8 +153,10 @@ impl Rule for BranchesSharingCode {
         }
 
         if let Some(end) = end_eq.filter(|&end| !duplicated_stmts_are_empty(end, &bodies, true)) {
-            let spans =
-                bodies.iter().map(|body| get_duplicated_span(end, body, true)).collect::<Vec<_>>();
+            let spans = bodies
+                .iter()
+                .map(|body| get_duplicated_span(end, body, true))
+                .collect::<Vec<_>>();
             let diagnostic =
                 branches_sharing_code_at_end_diagnostic(if_span, spans.iter().copied());
 
@@ -161,8 +164,9 @@ impl Rule for BranchesSharingCode {
                 && let Some(indent) = get_preceding_indent_str(ctx.source_text(), if_stmt.span)
                 && !duplicated_end_references_branch_locals(end, &bodies, ctx)
             {
-                let delete_spans =
-                    bodies.iter().map(|body| get_duplicated_delete_span(end, body, true));
+                let delete_spans = bodies
+                    .iter()
+                    .map(|body| get_duplicated_delete_span(end, body, true));
                 let moved_code = ctx.source_range(spans[0]);
                 ctx.diagnostic_with_suggestion(diagnostic, |fixer| {
                     let fixer = fixer.for_multifix();
@@ -189,7 +193,11 @@ fn get_block_statements<'a>(stmt: &'a Statement<'a>) -> &'a [Statement<'a>] {
 
 fn get_duplicated_span(count: usize, body: &Statement, reverse: bool) -> Span {
     let stmts = get_block_statements(body);
-    let range = if reverse { &stmts[stmts.len() - count..] } else { &stmts[..count] };
+    let range = if reverse {
+        &stmts[stmts.len() - count..]
+    } else {
+        &stmts[..count]
+    };
     let start = range.first().map(|s| s.span().start).unwrap();
     let end = range.last().map(|s| s.span().end).unwrap();
     Span::new(start, end)
@@ -212,7 +220,9 @@ fn get_duplicated_delete_span(count: usize, body: &Statement, reverse: bool) -> 
 
     Span::new(
         duplicated_span.start,
-        stmts.get(count).map_or(duplicated_span.end, |s| s.span().start),
+        stmts
+            .get(count)
+            .map_or(duplicated_span.end, |s| s.span().start),
     )
 }
 
@@ -253,7 +263,11 @@ fn duplicated_statements<'a>(
     reverse: bool,
 ) -> &'a [Statement<'a>] {
     let stmts = get_block_statements(body);
-    if reverse { &stmts[stmts.len() - count..] } else { &stmts[..count] }
+    if reverse {
+        &stmts[stmts.len() - count..]
+    } else {
+        &stmts[..count]
+    }
 }
 
 fn collect_lexical_declaration_symbols(stmt: &Statement, symbols: &mut FxHashSet<SymbolId>) {
@@ -280,16 +294,25 @@ impl<'a> Visit<'a> for ReferenceCollector {
 fn duplicated_stmts_are_empty(count: usize, bodies: &[&Statement], reverse: bool) -> bool {
     bodies.iter().all(|body| {
         let stmts = get_block_statements(body);
-        let range = if reverse { &stmts[stmts.len() - count..] } else { &stmts[..count] };
-        range.iter().all(|stmt| matches!(stmt, Statement::EmptyStatement(_)))
+        let range = if reverse {
+            &stmts[stmts.len() - count..]
+        } else {
+            &stmts[..count]
+        };
+        range
+            .iter()
+            .all(|stmt| matches!(stmt, Statement::EmptyStatement(_)))
     })
 }
 
 fn scan_blocks_for_eq<'a>(bodies: &[&'a Statement<'a>]) -> (Option<usize>, Option<usize>) {
     let first_stmts = get_block_statements(bodies[0]);
 
-    let min_stmt_count =
-        bodies.iter().map(|body| get_block_statements(body).len()).min().unwrap_or(0);
+    let min_stmt_count = bodies
+        .iter()
+        .map(|body| get_block_statements(body).len())
+        .min()
+        .unwrap_or(0);
 
     let start_end_eq = first_stmts
         .iter()
@@ -334,8 +357,16 @@ fn scan_blocks_for_eq<'a>(bodies: &[&'a Statement<'a>]) -> (Option<usize>, Optio
         });
 
     (
-        if has_remaining_code_for_start { Some(start_end_eq) } else { None },
-        if has_remaining_code_for_end { Some(end_begin_eq) } else { None },
+        if has_remaining_code_for_start {
+            Some(start_end_eq)
+        } else {
+            None
+        },
+        if has_remaining_code_for_end {
+            Some(end_begin_eq)
+        } else {
+            None
+        },
     )
 }
 
@@ -735,7 +766,12 @@ fn test() {
         ),
     ];
 
-    Tester::new(BranchesSharingCode::NAME, BranchesSharingCode::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        BranchesSharingCode::NAME,
+        BranchesSharingCode::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

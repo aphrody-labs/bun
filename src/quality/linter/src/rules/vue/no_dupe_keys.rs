@@ -113,13 +113,20 @@ impl NoDupeKeys {
         }
         let extra_groups = &self.0.groups;
         // dedup: user-supplied group names may overlap with built-in names
-        let groups: FxHashSet<&str> =
-            GROUP_NAMES.iter().copied().chain(extra_groups.iter().map(String::as_str)).collect();
+        let groups: FxHashSet<&str> = GROUP_NAMES
+            .iter()
+            .copied()
+            .chain(extra_groups.iter().map(String::as_str))
+            .collect();
         let mut seen: FxHashSet<Cow<'a, str>> = FxHashSet::default();
         // Walk all properties in source order so duplicate group names are both visited
         for prop_kind in &obj.properties {
-            let ObjectPropertyKind::ObjectProperty(prop) = prop_kind else { continue };
-            let Some(group_name) = static_key_name(&prop.key) else { continue };
+            let ObjectPropertyKind::ObjectProperty(prop) = prop_kind else {
+                continue;
+            };
+            let Some(group_name) = static_key_name(&prop.key) else {
+                continue;
+            };
             if !groups.contains(group_name.as_ref()) {
                 continue;
             }
@@ -149,11 +156,17 @@ fn check_define_props<'a>(node: &AstNode<'a>, call: &'a CallExpression<'a>, ctx:
             continue;
         }
         // Only look in the module (root) scope — nested function/block bindings are invisible
-        let Some(symbol_id) = ctx.scoping().get_binding(root_scope_id, prop_name.as_ref().into())
+        let Some(symbol_id) = ctx
+            .scoping()
+            .get_binding(root_scope_id, prop_name.as_ref().into())
         else {
             continue;
         };
-        if !ctx.scoping().symbol_flags(symbol_id).can_be_referenced_by_value() {
+        if !ctx
+            .scoping()
+            .symbol_flags(symbol_id)
+            .can_be_referenced_by_value()
+        {
             continue;
         }
         let decl = ctx.semantic().symbol_declaration(symbol_id);
@@ -214,7 +227,9 @@ fn collect_group_keys<'a>(
     match value.without_parentheses() {
         Expression::ArrayExpression(arr) => {
             for el in &arr.elements {
-                let Some(expr) = el.as_expression() else { continue };
+                let Some(expr) = el.as_expression() else {
+                    continue;
+                };
                 let expr = expr.without_parentheses();
                 if let Some(name) = literal_element_name(expr)
                     && !name.is_empty()
@@ -275,15 +290,23 @@ fn collect_object_keys<'a>(
         .iter()
         .filter_map(|p| {
             let prop = p.as_property()?;
-            if prop.kind == PropertyKind::Get { static_key_name(&prop.key) } else { None }
+            if prop.kind == PropertyKind::Get {
+                static_key_name(&prop.key)
+            } else {
+                None
+            }
         })
         .collect();
 
     let mut used_getters: FxHashSet<Cow<'a, str>> = FxHashSet::default();
 
     for prop_kind in &obj.properties {
-        let ObjectPropertyKind::ObjectProperty(prop) = prop_kind else { continue };
-        let Some(name) = static_key_name(&prop.key) else { continue };
+        let ObjectPropertyKind::ObjectProperty(prop) = prop_kind else {
+            continue;
+        };
+        let Some(name) = static_key_name(&prop.key) else {
+            continue;
+        };
         // upstream skips empty names (`if (name)`)
         if name.is_empty() {
             continue;
@@ -360,10 +383,20 @@ fn collect_props_bindings<'a>(
     let mut ids = Vec::new();
     let mut renamed = FxHashSet::default();
     let declarator = ctx.nodes().ancestors(node.id()).find_map(|ancestor| {
-        if let AstKind::VariableDeclarator(decl) = ancestor.kind() { Some(decl) } else { None }
+        if let AstKind::VariableDeclarator(decl) = ancestor.kind() {
+            Some(decl)
+        } else {
+            None
+        }
     });
-    let Some(decl) = declarator else { return (ids, renamed) };
-    if !decl.init.as_ref().is_some_and(|init| is_define_props_initializer(init, call)) {
+    let Some(decl) = declarator else {
+        return (ids, renamed);
+    };
+    if !decl
+        .init
+        .as_ref()
+        .is_some_and(|init| is_define_props_initializer(init, call))
+    {
         return (ids, renamed);
     }
     collect_binding_symbol_ids(&decl.id, &mut ids);
@@ -412,10 +445,12 @@ fn is_inside_props_reference(
     }
     let init_span = init.span();
     symbol_ids.iter().any(|&symbol_id| {
-        ctx.semantic().symbol_references(symbol_id).any(|reference| {
-            let ref_span = ctx.nodes().get_node(reference.node_id()).kind().span();
-            init_span.start <= ref_span.start && ref_span.end <= init_span.end
-        })
+        ctx.semantic()
+            .symbol_references(symbol_id)
+            .any(|reference| {
+                let ref_span = ctx.nodes().get_node(reference.node_id()).kind().span();
+                init_span.start <= ref_span.start && ref_span.end <= init_span.end
+            })
     })
 }
 
@@ -437,7 +472,9 @@ fn collect_prop_names_from_call<'a>(
             }
             Expression::ArrayExpression(arr) => {
                 for el in &arr.elements {
-                    let Some(expr) = el.as_expression() else { continue };
+                    let Some(expr) = el.as_expression() else {
+                        continue;
+                    };
                     if let Some(name) = literal_element_name(expr.without_parentheses()) {
                         props.push(name);
                     }
@@ -456,8 +493,12 @@ fn collect_ts_type_prop_names<'a>(
     ctx: &LintContext<'a>,
     out: &mut Vec<Cow<'a, str>>,
 ) {
-    let Some(type_params) = &call.type_arguments else { return };
-    let Some(first_type) = type_params.params.first() else { return };
+    let Some(type_params) = &call.type_arguments else {
+        return;
+    };
+    let Some(first_type) = type_params.params.first() else {
+        return;
+    };
     for_each_define_props_type_signature(first_type, ctx, &mut |sig| {
         let key = match sig {
             TSSignature::TSPropertySignature(s) => &s.key,

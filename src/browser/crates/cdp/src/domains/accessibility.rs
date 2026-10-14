@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet};
 
 use bun_browser_dom::{DomTree, NodeData, NodeId};
 use bun_browser_js::runtime::AccessibilityStyle;
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 
 use crate::dispatch::CdpContext;
 
@@ -37,13 +37,18 @@ pub async fn handle(
         "getFullAXTree" => {
             let page = ctx.get_session_page(session_id).ok_or("No page")?;
             #[cfg(feature = "render")]
-            let styles = page.js.as_ref().map(|js| js.accessibility_styles()).unwrap_or_default();
+            let styles = page
+                .js
+                .as_ref()
+                .map(|js| js.accessibility_styles())
+                .unwrap_or_default();
             #[cfg(not(feature = "render"))]
             let styles = HashMap::new();
-            let nodes =
-                page.with_dom(|dom| build_ax_nodes_with_styles(dom, &styles)).unwrap_or_default();
+            let nodes = page
+                .with_dom(|dom| build_ax_nodes_with_styles(dom, &styles))
+                .unwrap_or_default();
             Ok(json!({ "nodes": nodes }))
-        },
+        }
         _ => Ok(json!({})),
     }
 }
@@ -94,7 +99,10 @@ fn build_ax_nodes_with_styles(
     let mut children: HashMap<String, Vec<Value>> = HashMap::new();
     for node in &nodes {
         if let Some(parent) = node["parentId"].as_str() {
-            children.entry(parent.to_string()).or_default().push(node["nodeId"].clone());
+            children
+                .entry(parent.to_string())
+                .or_default()
+                .push(node["nodeId"].clone());
         }
     }
     for node in &mut nodes {
@@ -137,7 +145,7 @@ fn build_ax_node(
                         break;
                     }
                     current = pid;
-                },
+                }
                 None => break,
             }
         }
@@ -153,18 +161,33 @@ fn build_ax_node(
     });
 
     if let Some(ref pid) = parent_id {
-        ax_node.as_object_mut().unwrap().insert("parentId".into(), json!(pid));
+        ax_node
+            .as_object_mut()
+            .unwrap()
+            .insert("parentId".into(), json!(pid));
     }
     if let Some(ref n) = name {
-        ax_node.as_object_mut().unwrap().insert("name".into(), json!(ax_value_string(n)));
+        ax_node
+            .as_object_mut()
+            .unwrap()
+            .insert("name".into(), json!(ax_value_string(n)));
     }
     if let Some(ref v) = value {
-        ax_node.as_object_mut().unwrap().insert("value".into(), json!(ax_value_string(v)));
+        ax_node
+            .as_object_mut()
+            .unwrap()
+            .insert("value".into(), json!(ax_value_string(v)));
     }
     if !properties.is_empty() {
-        ax_node.as_object_mut().unwrap().insert("properties".into(), json!(properties));
+        ax_node
+            .as_object_mut()
+            .unwrap()
+            .insert("properties".into(), json!(properties));
     }
-    ax_node.as_object_mut().unwrap().insert("backendDOMNodeId".into(), json!(node_id.raw()));
+    ax_node
+        .as_object_mut()
+        .unwrap()
+        .insert("backendDOMNodeId".into(), json!(node_id.raw()));
 
     Some(ax_node)
 }
@@ -211,7 +234,7 @@ fn map_role(data: &NodeData) -> &'static str {
                     "presentation" | "none" => {
                         // presentation/none roles get the role but content is still in tree
                         "presentation"
-                    },
+                    }
                     _ => "generic",
                 };
             }
@@ -223,7 +246,7 @@ fn map_role(data: &NodeData) -> &'static str {
                     } else {
                         "generic"
                     }
-                },
+                }
                 "button" | "summary" => "button",
                 "input" => {
                     let type_attr = attrs
@@ -240,7 +263,7 @@ fn map_role(data: &NodeData) -> &'static str {
                         "search" => "searchbox",
                         _ => "textbox",
                     }
-                },
+                }
                 "textarea" => "textbox",
                 "select" => {
                     if attrs
@@ -251,7 +274,7 @@ fn map_role(data: &NodeData) -> &'static str {
                     } else {
                         "combobox"
                     }
-                },
+                }
                 "h1" | "h2" | "h3" | "h4" | "h5" | "h6" => "heading",
                 "img" | "svg" => "image",
                 "ul" | "ol" | "menu" => "list",
@@ -277,7 +300,7 @@ fn map_role(data: &NodeData) -> &'static str {
                 "iframe" => "Iframe",
                 _ => "generic",
             }
-        },
+        }
         NodeData::Text { .. } => "StaticText",
         NodeData::Doctype { .. }
         | NodeData::Comment { .. }
@@ -308,14 +331,20 @@ impl NameContext {
             let Some(node) = dom.get_node(*id) else {
                 continue;
             };
-            let parent =
-                node.parent.and_then(|id| context.visibility.get(&id)).copied().unwrap_or_default();
+            let parent = node
+                .parent
+                .and_then(|id| context.visibility.get(&id))
+                .copied()
+                .unwrap_or_default();
             let style = styles.get(id).copied().unwrap_or_default();
             let hidden = node.get_attribute("hidden").is_some()
                 || node
                     .get_attribute("aria-hidden")
                     .is_some_and(|value| value.eq_ignore_ascii_case("true"))
-                || matches!(tag(&node), "head" | "script" | "style" | "template" | "noscript")
+                || matches!(
+                    tag(&node),
+                    "head" | "script" | "style" | "template" | "noscript"
+                )
                 || (tag(&node) == "input" && input_type(&node) == "hidden");
             context.visibility.insert(
                 *id,
@@ -325,7 +354,10 @@ impl NameContext {
                 },
             );
             if let Some(value) = node.get_attribute("id").filter(|value| !value.is_empty()) {
-                context.elements_by_id.entry(value.to_string()).or_insert(*id);
+                context
+                    .elements_by_id
+                    .entry(value.to_string())
+                    .or_insert(*id);
             }
         }
         for id in ids {
@@ -361,21 +393,29 @@ impl NameContext {
 }
 
 fn tag(node: &bun_browser_dom::Node) -> &str {
-    node.as_element().map(|name| name.local.as_ref()).unwrap_or("")
+    node.as_element()
+        .map(|name| name.local.as_ref())
+        .unwrap_or("")
 }
 
 fn input_type(node: &bun_browser_dom::Node) -> String {
-    node.get_attribute("type").unwrap_or("text").to_ascii_lowercase()
+    node.get_attribute("type")
+        .unwrap_or("text")
+        .to_ascii_lowercase()
 }
 
 fn is_labelable(node: &bun_browser_dom::Node) -> bool {
-    matches!(tag(node), "button" | "meter" | "output" | "progress" | "select" | "textarea")
-        || (tag(node) == "input" && input_type(node) != "hidden")
+    matches!(
+        tag(node),
+        "button" | "meter" | "output" | "progress" | "select" | "textarea"
+    ) || (tag(node) == "input" && input_type(node) != "hidden")
 }
 
 fn is_nested_control(node: &bun_browser_dom::Node) -> bool {
-    matches!(tag(node), "input" | "textarea" | "select" | "button" | "summary" | "iframe")
-        || contenteditable_keyword(node) == Some(true)
+    matches!(
+        tag(node),
+        "input" | "textarea" | "select" | "button" | "summary" | "iframe"
+    ) || contenteditable_keyword(node) == Some(true)
         || matches!(
             map_role(&node.data),
             "button"
@@ -413,15 +453,19 @@ fn text_alternative(node: &bun_browser_dom::Node) -> Option<String> {
             "button" => return node.get_attribute("value").and_then(nonempty),
             "submit" => {
                 return Some(
-                    node.get_attribute("value").map(flat_string).unwrap_or_else(|| "Submit".into()),
+                    node.get_attribute("value")
+                        .map(flat_string)
+                        .unwrap_or_else(|| "Submit".into()),
                 );
-            },
+            }
             "reset" => {
                 return Some(
-                    node.get_attribute("value").map(flat_string).unwrap_or_else(|| "Reset".into()),
+                    node.get_attribute("value")
+                        .map(flat_string)
+                        .unwrap_or_else(|| "Reset".into()),
                 );
-            },
-            _ => {},
+            }
+            _ => {}
         }
     }
     None
@@ -443,7 +487,11 @@ fn content_name(
         let Some(node) = dom.get_node(id) else {
             continue;
         };
-        if !include_hidden && context.visibility.get(&id).is_some_and(|state| state.subtree_hidden)
+        if !include_hidden
+            && context
+                .visibility
+                .get(&id)
+                .is_some_and(|state| state.subtree_hidden)
         {
             continue;
         }
@@ -482,7 +530,11 @@ fn content_name(
 }
 
 /// Compute the accessible name for a node.
-fn compute_name(dom: &DomTree, node: &bun_browser_dom::Node, context: &NameContext) -> Option<String> {
+fn compute_name(
+    dom: &DomTree,
+    node: &bun_browser_dom::Node,
+    context: &NameContext,
+) -> Option<String> {
     if let NodeData::Text { contents } = &node.data {
         return nonempty(contents);
     }
@@ -562,7 +614,10 @@ fn compute_value(dom: &DomTree, node: &bun_browser_dom::Node) -> Option<String> 
         let tag = (&*name.local);
         // For native form controls, return the value attribute.
         if tag == "input" || tag == "textarea" || tag == "select" {
-            return attrs.iter().find(|a| (&*a.name.local) == "value").map(|a| a.value.clone());
+            return attrs
+                .iter()
+                .find(|a| (&*a.name.local) == "value")
+                .map(|a| a.value.clone());
         }
 
         if is_content_editing_host(dom, node) {
@@ -576,7 +631,10 @@ fn contenteditable_keyword(node: &bun_browser_dom::Node) -> Option<bool> {
     let NodeData::Element { attrs, .. } = &node.data else {
         return None;
     };
-    let value = &attrs.iter().find(|attr| (&*attr.name.local) == "contenteditable")?.value;
+    let value = &attrs
+        .iter()
+        .find(|attr| (&*attr.name.local) == "contenteditable")?
+        .value;
 
     if value.is_empty()
         || value.eq_ignore_ascii_case("true")
@@ -606,7 +664,9 @@ fn is_effectively_contenteditable(dom: &DomTree, node_id: NodeId) -> bool {
 
 fn is_content_editing_host(dom: &DomTree, node: &bun_browser_dom::Node) -> bool {
     is_effectively_contenteditable(dom, node.id)
-        && node.parent.is_none_or(|parent| !is_effectively_contenteditable(dom, parent))
+        && node
+            .parent
+            .is_none_or(|parent| !is_effectively_contenteditable(dom, parent))
 }
 
 /// Compute accessibility properties for a node.
@@ -616,12 +676,13 @@ fn compute_properties(_dom: &DomTree, node: &bun_browser_dom::Node) -> Vec<Value
         let mut props = Vec::new();
 
         // focusable
-        let focusable =
-            matches!(tag, "a" | "button" | "input" | "select" | "textarea" | "details" | "summary")
-                || attrs.iter().any(|a| {
-                    let an = (&*a.name.local);
-                    an == "tabindex" || an == "contenteditable"
-                });
+        let focusable = matches!(
+            tag,
+            "a" | "button" | "input" | "select" | "textarea" | "details" | "summary"
+        ) || attrs.iter().any(|a| {
+            let an = (&*a.name.local);
+            an == "tabindex" || an == "contenteditable"
+        });
         if focusable {
             props.push(json!({"name": "focusable", "value": ax_value_boolean(true)}));
         }
@@ -629,7 +690,9 @@ fn compute_properties(_dom: &DomTree, node: &bun_browser_dom::Node) -> Vec<Value
         // editable
         if tag == "input"
             || tag == "textarea"
-            || attrs.iter().any(|a| (&*a.name.local) == "contenteditable" && a.value != "false")
+            || attrs
+                .iter()
+                .any(|a| (&*a.name.local) == "contenteditable" && a.value != "false")
         {
             props.push(json!({"name": "editable", "value": ax_value_boolean(true)}));
         }
@@ -695,7 +758,11 @@ mod tests {
     fn assert_name(dom: &DomTree, id: &str, expected: Option<&str>) {
         let nodes = build_ax_nodes(dom);
         let node = ax_node_for(&nodes, dom.get_element_by_id(id).unwrap());
-        assert_eq!(node.get("name").and_then(|name| name["value"].as_str()), expected, "#{id}");
+        assert_eq!(
+            node.get("name").and_then(|name| name["value"].as_str()),
+            expected,
+            "#{id}"
+        );
     }
 
     #[test]
@@ -765,7 +832,9 @@ mod tests {
         assert_name(&dom, "content", Some("Shown"));
         let nodes = build_ax_nodes(&dom);
         let hidden = dom.get_element_by_id("hidden").unwrap();
-        assert!(!nodes.iter().any(|node| node["backendDOMNodeId"] == hidden.raw()));
+        assert!(!nodes
+            .iter()
+            .any(|node| node["backendDOMNodeId"] == hidden.raw()));
     }
 
     #[test]
@@ -829,7 +898,9 @@ mod tests {
         let nodes = build_ax_nodes(&dom);
         for id in ["html", "aria", "input"] {
             let id = dom.get_element_by_id(id).unwrap();
-            assert!(!nodes.iter().any(|node| node["backendDOMNodeId"] == id.raw()));
+            assert!(!nodes
+                .iter()
+                .any(|node| node["backendDOMNodeId"] == id.raw()));
         }
         assert_name(&dom, "visible", Some("Visible"));
     }

@@ -196,7 +196,10 @@ fn test() {
             "switch (a) { default: class C {} break; }",
             "switch (a) { default: { class C {} break; } }",
         ),
-        ("switch (a) { case 1: case 2: let x; }", "switch (a) { case 1: case 2: { let x; } }"),
+        (
+            "switch (a) { case 1: case 2: let x; }",
+            "switch (a) { case 1: case 2: { let x; } }",
+        ),
         (
             r#"switch ("foo") {
                     case "bar":
@@ -217,7 +220,12 @@ fn test() {
         ),
     ];
 
-    Tester::new(NoCaseDeclarations::NAME, NoCaseDeclarations::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        NoCaseDeclarations::NAME,
+        NoCaseDeclarations::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

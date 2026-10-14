@@ -26,22 +26,34 @@ impl LintFilter {
         severity: AllowWarnDeny,
         kind: F,
     ) -> Result<Self, <F as TryInto<LintFilterKind>>::Error> {
-        Ok(Self { severity, kind: kind.try_into()? })
+        Ok(Self {
+            severity,
+            kind: kind.try_into()?,
+        })
     }
 
     #[must_use]
     pub fn allow<F: Into<LintFilterKind>>(kind: F) -> Self {
-        Self { severity: AllowWarnDeny::Allow, kind: kind.into() }
+        Self {
+            severity: AllowWarnDeny::Allow,
+            kind: kind.into(),
+        }
     }
 
     #[must_use]
     pub fn warn<F: Into<LintFilterKind>>(kind: F) -> Self {
-        Self { severity: AllowWarnDeny::Warn, kind: kind.into() }
+        Self {
+            severity: AllowWarnDeny::Warn,
+            kind: kind.into(),
+        }
     }
 
     #[must_use]
     pub fn deny<F: Into<LintFilterKind>>(kind: F) -> Self {
-        Self { severity: AllowWarnDeny::Deny, kind: kind.into() }
+        Self {
+            severity: AllowWarnDeny::Deny,
+            kind: kind.into(),
+        }
     }
 
     #[inline]
@@ -228,18 +240,27 @@ mod test {
     fn test_from_category() {
         let correctness: LintFilter = LintFilter::new(AllowWarnDeny::Warn, "correctness").unwrap();
         assert_eq!(correctness.severity(), AllowWarnDeny::Warn);
-        assert_eq!(correctness.kind(), &LintFilterKind::Category(RuleCategory::Correctness));
+        assert_eq!(
+            correctness.kind(),
+            &LintFilterKind::Category(RuleCategory::Correctness)
+        );
     }
 
     #[test]
     fn test_eslint_deny() {
         let filter = LintFilter::deny(LintFilterKind::try_from("no-const-assign").unwrap());
         assert_eq!(filter.severity(), AllowWarnDeny::Deny);
-        assert_eq!(filter.kind(), &LintFilterKind::Generic("no-const-assign".into()));
+        assert_eq!(
+            filter.kind(),
+            &LintFilterKind::Generic("no-const-assign".into())
+        );
 
         let filter = LintFilter::deny(LintFilterKind::try_from("eslint/no-const-assign").unwrap());
         assert_eq!(filter.severity(), AllowWarnDeny::Deny);
-        assert_eq!(filter.kind(), &LintFilterKind::Rule("eslint".into(), "no-const-assign".into()));
+        assert_eq!(
+            filter.kind(),
+            &LintFilterKind::Rule("eslint".into(), "no-const-assign".into())
+        );
     }
 
     #[test]

@@ -189,7 +189,10 @@ struct ReturnStatementFinder {
 
 impl ReturnStatementFinder {
     fn new(allow_void: bool) -> Self {
-        Self { return_spans: Vec::new(), allow_void }
+        Self {
+            return_spans: Vec::new(),
+            allow_void,
+        }
     }
 }
 
@@ -232,8 +235,14 @@ fn test() {
         ("(function foo(resolve, reject) { return 1; })", None),
         ("(function Promise(resolve, reject) { return 1; })", None),
         ("var foo = function (resolve, reject) { return 1; }", None),
-        ("var foo = function Promise(resolve, reject) { return 1; }", None),
-        ("var Promise = function (resolve, reject) { return 1; }", None),
+        (
+            "var foo = function Promise(resolve, reject) { return 1; }",
+            None,
+        ),
+        (
+            "var Promise = function (resolve, reject) { return 1; }",
+            None,
+        ),
         ("(resolve, reject) => { return 1; }", None),
         ("(resolve, reject) => 1", None),
         ("var foo = (resolve, reject) => { return 1; }", None),
@@ -243,46 +252,109 @@ fn test() {
         ("var foo = { bar(resolve, reject) { return 1; } }", None),
         ("var foo = { Promise(resolve, reject) { return 1; } }", None),
         ("new foo(function (resolve, reject) { return 1; });", None),
-        ("new foo(function bar(resolve, reject) { return 1; });", None),
-        ("new foo(function Promise(resolve, reject) { return 1; });", None),
+        (
+            "new foo(function bar(resolve, reject) { return 1; });",
+            None,
+        ),
+        (
+            "new foo(function Promise(resolve, reject) { return 1; });",
+            None,
+        ),
         ("new foo((resolve, reject) => { return 1; });", None),
         ("new foo((resolve, reject) => 1);", None),
-        ("new promise(function foo(resolve, reject) { return 1; });", None),
-        ("new Promise.foo(function foo(resolve, reject) { return 1; });", None),
-        ("new foo.Promise(function foo(resolve, reject) { return 1; });", None),
-        ("new Promise.Promise(function foo(resolve, reject) { return 1; });", None),
-        ("new Promise()(function foo(resolve, reject) { return 1; });", None),
+        (
+            "new promise(function foo(resolve, reject) { return 1; });",
+            None,
+        ),
+        (
+            "new Promise.foo(function foo(resolve, reject) { return 1; });",
+            None,
+        ),
+        (
+            "new foo.Promise(function foo(resolve, reject) { return 1; });",
+            None,
+        ),
+        (
+            "new Promise.Promise(function foo(resolve, reject) { return 1; });",
+            None,
+        ),
+        (
+            "new Promise()(function foo(resolve, reject) { return 1; });",
+            None,
+        ),
         ("Promise(function (resolve, reject) { return 1; });", None),
         ("Promise((resolve, reject) => { return 1; });", None),
         ("Promise((resolve, reject) => 1);", None),
-        ("new Promise(foo, function (resolve, reject) { return 1; });", None),
-        ("new Promise(foo, (resolve, reject) => { return 1; });", None),
+        (
+            "new Promise(foo, function (resolve, reject) { return 1; });",
+            None,
+        ),
+        (
+            "new Promise(foo, (resolve, reject) => { return 1; });",
+            None,
+        ),
         ("new Promise(foo, (resolve, reject) => 1);", None),
         // globals are not supported in tests.
         // ("/* globals Promise:off */ new Promise(function (resolve, reject) { return 1; });", None)
         // ("new Promise((resolve, reject) => { return 1; });", None), // { "globals": { "Promise": "off" } }
-        ("Promise.resolve(); function f(Promise) { new Promise((resolve, reject) => 1); }", None),
-        ("let Promise; new Promise(function (resolve, reject) { return 1; });", None),
-        ("function f() { new Promise((resolve, reject) => { return 1; }); var Promise; }", None),
-        ("function f(Promise) { new Promise((resolve, reject) => 1); }", None),
+        (
+            "Promise.resolve(); function f(Promise) { new Promise((resolve, reject) => 1); }",
+            None,
+        ),
+        (
+            "let Promise; new Promise(function (resolve, reject) { return 1; });",
+            None,
+        ),
+        (
+            "function f() { new Promise((resolve, reject) => { return 1; }); var Promise; }",
+            None,
+        ),
+        (
+            "function f(Promise) { new Promise((resolve, reject) => 1); }",
+            None,
+        ),
         (
             "if (x) { const Promise = foo(); new Promise(function (resolve, reject) { return 1; }); }",
             None,
         ),
-        ("x = function Promise() { new Promise((resolve, reject) => { return 1; }); }", None),
+        (
+            "x = function Promise() { new Promise((resolve, reject) => { return 1; }); }",
+            None,
+        ),
         ("new Promise(function (resolve, reject) { return; });", None),
-        ("new Promise(function (resolve, reject) { reject(new Error()); return; });", None),
-        ("new Promise(function (resolve, reject) { if (foo) { return; } });", None),
+        (
+            "new Promise(function (resolve, reject) { reject(new Error()); return; });",
+            None,
+        ),
+        (
+            "new Promise(function (resolve, reject) { if (foo) { return; } });",
+            None,
+        ),
         ("new Promise((resolve, reject) => { return; });", None),
         (
             "new Promise((resolve, reject) => { if (foo) { resolve(1); return; } reject(new Error()); });",
             None,
         ),
-        ("new Promise(function (resolve, reject) { throw new Error(); });", None),
-        ("new Promise((resolve, reject) => { throw new Error(); });", None),
-        ("new Promise(function (resolve, reject) { function foo() { return 1; } });", None),
-        ("new Promise((resolve, reject) => { (function foo() { return 1; })(); });", None),
-        ("new Promise(function (resolve, reject) { () => { return 1; } });", None),
+        (
+            "new Promise(function (resolve, reject) { throw new Error(); });",
+            None,
+        ),
+        (
+            "new Promise((resolve, reject) => { throw new Error(); });",
+            None,
+        ),
+        (
+            "new Promise(function (resolve, reject) { function foo() { return 1; } });",
+            None,
+        ),
+        (
+            "new Promise((resolve, reject) => { (function foo() { return 1; })(); });",
+            None,
+        ),
+        (
+            "new Promise(function (resolve, reject) { () => { return 1; } });",
+            None,
+        ),
         ("new Promise((resolve, reject) => { () => 1 });", None),
         (
             "function foo() { return new Promise(function (resolve, reject) { resolve(bar); }) };",
@@ -292,9 +364,18 @@ fn test() {
             "foo => new Promise((resolve, reject) => { bar(foo, (err, data) => { if (err) { reject(err); return; } resolve(data); })});",
             None,
         ),
-        ("new Promise(function (resolve, reject) {}); function foo() { return 1; }", None),
-        ("new Promise((resolve, reject) => {}); (function () { return 1; });", None),
-        ("new Promise(function (resolve, reject) {}); () => { return 1; };", None),
+        (
+            "new Promise(function (resolve, reject) {}); function foo() { return 1; }",
+            None,
+        ),
+        (
+            "new Promise((resolve, reject) => {}); (function () { return 1; });",
+            None,
+        ),
+        (
+            "new Promise(function (resolve, reject) {}); () => { return 1; };",
+            None,
+        ),
         ("new Promise((resolve, reject) => {}); () => 1;", None),
         ("return 1;", None), // { "sourceType": "commonjs" }
         ("return 1;", None), // { "sourceType": "script", "parserOptions": { "ecmaFeatures": { "globalReturn": true } } }
@@ -303,9 +384,18 @@ fn test() {
             "function foo(){} return 1; var bar = function*(){ return 1; }; return 1; var baz = () => {}; return 1;",
             None,
         ), // { "sourceType": "commonjs" }
-        ("new Promise(function (resolve, reject) {}); return 1;", None), // { "sourceType": "commonjs" }
-        ("new Promise((r) => void cbf(r));", Some(serde_json::json!([ { "allowVoid": true, }, ]))),
-        ("new Promise(r => void 0)", Some(serde_json::json!([ { "allowVoid": true, }, ]))),
+        (
+            "new Promise(function (resolve, reject) {}); return 1;",
+            None,
+        ), // { "sourceType": "commonjs" }
+        (
+            "new Promise((r) => void cbf(r));",
+            Some(serde_json::json!([ { "allowVoid": true, }, ])),
+        ),
+        (
+            "new Promise(r => void 0)",
+            Some(serde_json::json!([ { "allowVoid": true, }, ])),
+        ),
         (
             "new Promise(r => { return void 0 })",
             Some(serde_json::json!([ { "allowVoid": true, }, ])),
@@ -318,7 +408,10 @@ fn test() {
     ];
 
     let fail = vec![
-        ("new Promise(function (resolve, reject) { return 1; })", None),
+        (
+            "new Promise(function (resolve, reject) { return 1; })",
+            None,
+        ),
         (
             "new Promise((resolve, reject) => resolve(1))",
             Some(serde_json::json!([ { "allowVoid": true, }, ])),
@@ -327,17 +420,50 @@ fn test() {
             "new Promise((resolve, reject) => { return 1 })",
             Some(serde_json::json!([ { "allowVoid": true, }, ])),
         ),
-        ("new Promise(r => 1)", Some(serde_json::json!([ { "allowVoid": true, }, ]))),
-        ("new Promise(r => 1 ? 2 : 3)", Some(serde_json::json!([ { "allowVoid": true, }, ]))),
-        ("new Promise(r => (1 ? 2 : 3))", Some(serde_json::json!([ { "allowVoid": true, }, ]))),
-        ("new Promise(r => (1))", Some(serde_json::json!([ { "allowVoid": true, }, ]))),
-        ("new Promise(r => () => {})", Some(serde_json::json!([ { "allowVoid": true, }, ]))),
-        ("new Promise(r => null)", Some(serde_json::json!([ { "allowVoid": true, }, ]))),
-        ("new Promise(r => null)", Some(serde_json::json!([ { "allowVoid": false, }, ]))),
-        ("new Promise(r => /*hi*/ ~0)", Some(serde_json::json!([ { "allowVoid": true, }, ]))),
-        ("new Promise(r => /*hi*/ ~0)", Some(serde_json::json!([ { "allowVoid": false, }, ]))),
-        ("new Promise(r => { return 0 })", Some(serde_json::json!([ { "allowVoid": true, }, ]))),
-        ("new Promise(r => { return 0 })", Some(serde_json::json!([ { "allowVoid": false, }, ]))),
+        (
+            "new Promise(r => 1)",
+            Some(serde_json::json!([ { "allowVoid": true, }, ])),
+        ),
+        (
+            "new Promise(r => 1 ? 2 : 3)",
+            Some(serde_json::json!([ { "allowVoid": true, }, ])),
+        ),
+        (
+            "new Promise(r => (1 ? 2 : 3))",
+            Some(serde_json::json!([ { "allowVoid": true, }, ])),
+        ),
+        (
+            "new Promise(r => (1))",
+            Some(serde_json::json!([ { "allowVoid": true, }, ])),
+        ),
+        (
+            "new Promise(r => () => {})",
+            Some(serde_json::json!([ { "allowVoid": true, }, ])),
+        ),
+        (
+            "new Promise(r => null)",
+            Some(serde_json::json!([ { "allowVoid": true, }, ])),
+        ),
+        (
+            "new Promise(r => null)",
+            Some(serde_json::json!([ { "allowVoid": false, }, ])),
+        ),
+        (
+            "new Promise(r => /*hi*/ ~0)",
+            Some(serde_json::json!([ { "allowVoid": true, }, ])),
+        ),
+        (
+            "new Promise(r => /*hi*/ ~0)",
+            Some(serde_json::json!([ { "allowVoid": false, }, ])),
+        ),
+        (
+            "new Promise(r => { return 0 })",
+            Some(serde_json::json!([ { "allowVoid": true, }, ])),
+        ),
+        (
+            "new Promise(r => { return 0 })",
+            Some(serde_json::json!([ { "allowVoid": false, }, ])),
+        ),
         (
             "new Promise(r => { if (foo) { return void 0 } return 0 })",
             Some(serde_json::json!([ { "allowVoid": true, }, ])),
@@ -350,22 +476,55 @@ fn test() {
             "new Promise(resolve => r = resolve)",
             Some(serde_json::json!([ { "allowVoid": true, }, ])),
         ),
-        ("new Promise(r => { return(1) })", Some(serde_json::json!([ { "allowVoid": true, }, ]))),
-        ("new Promise(r =>1)", Some(serde_json::json!([ { "allowVoid": true, }, ]))),
-        ("new Promise(r => ((1)))", Some(serde_json::json!([ { "allowVoid": true, }, ]))),
-        ("new Promise(function foo(resolve, reject) { return 1; })", None),
+        (
+            "new Promise(r => { return(1) })",
+            Some(serde_json::json!([ { "allowVoid": true, }, ])),
+        ),
+        (
+            "new Promise(r =>1)",
+            Some(serde_json::json!([ { "allowVoid": true, }, ])),
+        ),
+        (
+            "new Promise(r => ((1)))",
+            Some(serde_json::json!([ { "allowVoid": true, }, ])),
+        ),
+        (
+            "new Promise(function foo(resolve, reject) { return 1; })",
+            None,
+        ),
         ("new Promise((resolve, reject) => { return 1; })", None),
-        ("new Promise(function (resolve, reject) { return undefined; })", None),
+        (
+            "new Promise(function (resolve, reject) { return undefined; })",
+            None,
+        ),
         ("new Promise((resolve, reject) => { return null; })", None),
-        ("new Promise(function (resolve, reject) { return false; })", None),
+        (
+            "new Promise(function (resolve, reject) { return false; })",
+            None,
+        ),
         ("new Promise((resolve, reject) => resolve)", None),
         ("new Promise((resolve, reject) => null)", None),
-        ("new Promise(function (resolve, reject) { return resolve(foo); })", None),
-        ("new Promise((resolve, reject) => { return reject(foo); })", None),
+        (
+            "new Promise(function (resolve, reject) { return resolve(foo); })",
+            None,
+        ),
+        (
+            "new Promise((resolve, reject) => { return reject(foo); })",
+            None,
+        ),
         ("new Promise((resolve, reject) => x + y)", None),
-        ("new Promise((resolve, reject) => { return Promise.resolve(42); })", None),
-        ("new Promise(function (resolve, reject) { if (foo) { return 1; } })", None),
-        ("new Promise((resolve, reject) => { try { return 1; } catch(e) {} })", None),
+        (
+            "new Promise((resolve, reject) => { return Promise.resolve(42); })",
+            None,
+        ),
+        (
+            "new Promise(function (resolve, reject) { if (foo) { return 1; } })",
+            None,
+        ),
+        (
+            "new Promise((resolve, reject) => { try { return 1; } catch(e) {} })",
+            None,
+        ),
         (
             "new Promise(function (resolve, reject) { while (foo){ if (bar) break; else return 1; } })",
             None,
@@ -376,10 +535,22 @@ fn test() {
         ("new Promise(function () { return 1; })", None),
         ("new Promise(() => { return 1; })", None),
         ("new Promise(() => 1)", None),
-        ("function foo() {} new Promise(function () { return 1; });", None),
-        ("function foo() { return; } new Promise(() => { return 1; });", None),
-        ("function foo() { return 1; } new Promise(() => { return 2; });", None),
-        ("function foo () { return new Promise(function () { return 1; }); }", None),
+        (
+            "function foo() {} new Promise(function () { return 1; });",
+            None,
+        ),
+        (
+            "function foo() { return; } new Promise(() => { return 1; });",
+            None,
+        ),
+        (
+            "function foo() { return 1; } new Promise(() => { return 2; });",
+            None,
+        ),
+        (
+            "function foo () { return new Promise(function () { return 1; }); }",
+            None,
+        ),
         (
             "function foo() { return new Promise(() => { bar(() => { return 1; }); return false; }); }",
             None,
@@ -393,7 +564,10 @@ fn test() {
             None,
         ),
         ("() => 1; new Promise(() => { return 1; })", None),
-        ("new Promise(function () { return 1; }); function foo() { return 1; } ", None),
+        (
+            "new Promise(function () { return 1; }); function foo() { return 1; } ",
+            None,
+        ),
         ("() => new Promise(() => { return 1; });", None),
         ("() => new Promise(() => 1);", None),
         ("() => new Promise(() => () => 1);", None),
@@ -402,9 +576,17 @@ fn test() {
         ("() => new Promise(() => function foo() {});", None),
         ("() => new Promise(() => []);", None),
         ("new Promise((Promise) => { return 1; })", None),
-        ("new Promise(function Promise(resolve, reject) { return 1; })", None),
+        (
+            "new Promise(function Promise(resolve, reject) { return 1; })",
+            None,
+        ),
     ];
 
-    Tester::new(NoPromiseExecutorReturn::NAME, NoPromiseExecutorReturn::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        NoPromiseExecutorReturn::NAME,
+        NoPromiseExecutorReturn::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

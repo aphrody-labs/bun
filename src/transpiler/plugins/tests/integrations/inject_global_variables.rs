@@ -18,11 +18,17 @@ fn test(source_text: &str, expected: &str, config: InjectGlobalVariablesConfig) 
     let ret = Parser::new(&allocator, source_text, source_type).parse();
     assert!(ret.diagnostics.is_empty());
     let mut program = ret.program;
-    let scoping = SemanticBuilder::new().build(&program).semantic.into_scoping();
+    let scoping = SemanticBuilder::new()
+        .build(&program)
+        .semantic
+        .into_scoping();
     let ret = InjectGlobalVariables::new(&allocator, config).build(scoping, &mut program);
     assert_eq!(ret.changed, source_text != expected);
     let result = Codegen::new()
-        .with_options(CodegenOptions { single_quote: true, ..CodegenOptions::default() })
+        .with_options(CodegenOptions {
+            single_quote: true,
+            ..CodegenOptions::default()
+        })
         .build(&program)
         .code;
     let expected = codegen(expected, source_type);

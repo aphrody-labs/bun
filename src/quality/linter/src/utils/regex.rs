@@ -83,9 +83,12 @@ pub fn get_regex_pattern_span(arg: Option<&Argument>) -> Option<Span> {
     // Missing or non-string arguments will be runtime errors, but are not covered by this rule.
     let arg = arg?.as_expression()?.get_inner_expression();
     match arg {
-        Expression::RegExpLiteral(reg) => {
-            reg.regex.pattern.pattern.as_ref().map(|pattern| pattern.span)
-        }
+        Expression::RegExpLiteral(reg) => reg
+            .regex
+            .pattern
+            .pattern
+            .as_ref()
+            .map(|pattern| pattern.span),
         Expression::StringLiteral(pattern) => Some(pattern.span),
         Expression::TemplateLiteral(pattern) if pattern.is_no_substitution_template() => {
             Some(pattern.span)
@@ -142,9 +145,12 @@ pub fn run_on_arguments<M>(
 
     let allocator = Allocator::default();
     if is_regex_literal {
-        if let Some(pat) =
-            parse_regex_literal(&allocator, pattern_span, flag_span.map(|span| span.shrink(1)), ctx)
-        {
+        if let Some(pat) = parse_regex_literal(
+            &allocator,
+            pattern_span,
+            flag_span.map(|span| span.shrink(1)),
+            ctx,
+        ) {
             cb(&pat, pattern_span);
         }
     } else if let Some(pat) = parse_regex_string(&allocator, pattern_span, flag_span, ctx) {
@@ -186,7 +192,9 @@ fn parse_regex_string<'a>(
             flags_span_offset: flags_span.map_or(0, |span| span.start),
         },
     );
-    let Ok(pattern) = parser.parse() else { return None };
+    let Ok(pattern) = parser.parse() else {
+        return None;
+    };
     Some(pattern)
 }
 
@@ -206,7 +214,9 @@ fn parse_regex_literal<'a>(
             flags_span_offset: flags_span.map_or(0, |span| span.start),
         },
     );
-    let Ok(pattern) = parser.parse() else { return None };
+    let Ok(pattern) = parser.parse() else {
+        return None;
+    };
     Some(pattern)
 }
 
@@ -260,7 +270,10 @@ mod test {
     fn is_first_call_or_new_regexp(source: &str) -> Option<bool> {
         let allocator = Allocator::default();
         let parser_ret = Parser::new(&allocator, source, SourceType::default()).parse();
-        assert!(parser_ret.diagnostics.is_empty(), "Parse error in: {source}");
+        assert!(
+            parser_ret.diagnostics.is_empty(),
+            "Parse error in: {source}"
+        );
 
         let program = allocator.alloc(parser_ret.program);
         let semantic = SemanticBuilder::new_linter().build(program).semantic;

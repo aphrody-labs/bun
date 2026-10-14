@@ -67,7 +67,11 @@ impl CellOccupancyMatrix {
     /// Create a CellOccupancyMatrix given a set of provisional track counts. The grid can expand as needed to fit more tracks,
     /// the provisional track counts represent a best effort attempt to avoid the extra allocations this requires.
     pub fn with_track_counts(columns: TrackCounts, rows: TrackCounts) -> Self {
-        Self { inner: Grid::new(rows.len(), columns.len()), rows, columns }
+        Self {
+            inner: Grid::new(rows.len(), columns.len()),
+            rows,
+            columns,
+        }
     }
 
     /// Determines whether the specified area fits within the tracks currently represented by the matrix
@@ -157,8 +161,11 @@ impl CellOccupancyMatrix {
 
         // Check that if the resolved ranges fit within the allocated grid. And if they don't then expand the grid to fit
         // and then re-resolve the ranges once the grid has been expanded as the resolved indexes may have changed
-        let is_in_range =
-            self.is_area_in_range(AbsoluteAxis::Horizontal, col_range.clone(), row_range.clone());
+        let is_in_range = self.is_area_in_range(
+            AbsoluteAxis::Horizontal,
+            col_range.clone(),
+            row_range.clone(),
+        );
         if !is_in_range {
             self.expand_to_fit_range(row_range.clone(), col_range.clone());
             col_range = self.columns.oz_line_range_to_track_range(column_span);
@@ -180,8 +187,9 @@ impl CellOccupancyMatrix {
         primary_span: Line<OriginZeroLine>,
         secondary_span: Line<OriginZeroLine>,
     ) -> bool {
-        let primary_range =
-            self.track_counts(primary_axis).oz_line_range_to_track_range(primary_span);
+        let primary_range = self
+            .track_counts(primary_axis)
+            .oz_line_range_to_track_range(primary_span);
         let secondary_range = self
             .track_counts(primary_axis.other_axis())
             .oz_line_range_to_track_range(secondary_span);
@@ -219,7 +227,9 @@ impl CellOccupancyMatrix {
         if row_index >= self.inner.rows() {
             return false;
         }
-        self.inner.iter_row(row_index).any(|cell| !matches!(cell, CellOccupancyState::Unoccupied))
+        self.inner
+            .iter_row(row_index)
+            .any(|cell| !matches!(cell, CellOccupancyState::Unoccupied))
     }
 
     /// Determines whether the specified column contains any items
@@ -262,7 +272,7 @@ impl CellOccupancyMatrix {
                         .iter_row(track_computed_index as usize)
                         .rposition(|item| *item == kind)
                 }
-            },
+            }
             AbsoluteAxis::Vertical => {
                 if track_computed_index < 0 || track_computed_index >= self.inner.cols() as i16 {
                     // Index out of bounds: no tracks to search
@@ -272,7 +282,7 @@ impl CellOccupancyMatrix {
                         .iter_col(track_computed_index as usize)
                         .rposition(|item| *item == kind)
                 }
-            },
+            }
         };
 
         maybe_index.map(|idx| track_counts.track_to_prev_oz_line(idx as u16))
@@ -300,7 +310,7 @@ impl CellOccupancyMatrix {
                         .iter_row(track_computed_index as usize)
                         .position(|item| *item == kind)
                 }
-            },
+            }
             AbsoluteAxis::Vertical => {
                 if track_computed_index < 0 || track_computed_index >= self.inner.cols() as i16 {
                     // Index out of bounds: no tracks to search
@@ -310,7 +320,7 @@ impl CellOccupancyMatrix {
                         .iter_col(track_computed_index as usize)
                         .position(|item| *item == kind)
                 }
-            },
+            }
         };
 
         maybe_index.map(|idx| track_counts.track_to_prev_oz_line(idx as u16))

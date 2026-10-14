@@ -9,11 +9,23 @@ use standard::StandardAllocatorPool;
 // They are only enabled if `fixed_size` Cargo feature is enabled.
 //
 // Note: Importing the `fixed_size` module would cause a compilation error on 32-bit systems.
-#[cfg(all(feature = "fixed_size", target_pointer_width = "64", target_endian = "little"))]
+#[cfg(all(
+    feature = "fixed_size",
+    target_pointer_width = "64",
+    target_endian = "little"
+))]
 mod fixed_size;
-#[cfg(all(feature = "fixed_size", target_pointer_width = "64", target_endian = "little"))]
+#[cfg(all(
+    feature = "fixed_size",
+    target_pointer_width = "64",
+    target_endian = "little"
+))]
 use fixed_size::FixedSizeAllocatorPool;
-#[cfg(all(feature = "fixed_size", target_pointer_width = "64", target_endian = "little"))]
+#[cfg(all(
+    feature = "fixed_size",
+    target_pointer_width = "64",
+    target_endian = "little"
+))]
 pub use fixed_size::{FixedSizeAllocatorMetadata, free_fixed_size_allocator};
 
 /// A thread-safe pool for reusing [`Allocator`] instances to reduce allocation overhead.
@@ -33,7 +45,11 @@ pub struct AllocatorPool(AllocatorPoolInner);
 /// Inner type of [`AllocatorPool`], holding either a standard or fixed-size allocator pool.
 enum AllocatorPoolInner {
     Standard(StandardAllocatorPool),
-    #[cfg(all(feature = "fixed_size", target_pointer_width = "64", target_endian = "little"))]
+    #[cfg(all(
+        feature = "fixed_size",
+        target_pointer_width = "64",
+        target_endian = "little"
+    ))]
     FixedSize(FixedSizeAllocatorPool),
 }
 
@@ -41,7 +57,9 @@ impl AllocatorPool {
     /// Create a new [`AllocatorPool`] for use across the specified number of threads,
     /// which uses standard allocators.
     pub fn new(thread_count: usize) -> AllocatorPool {
-        Self(AllocatorPoolInner::Standard(StandardAllocatorPool::new(thread_count)))
+        Self(AllocatorPoolInner::Standard(StandardAllocatorPool::new(
+            thread_count,
+        )))
     }
 
     /// Create a new [`AllocatorPool`] for use across the specified number of threads,
@@ -50,7 +68,9 @@ impl AllocatorPool {
     pub fn new_fixed_size(thread_count: usize) -> AllocatorPool {
         #[cfg(all(target_pointer_width = "64", target_endian = "little"))]
         {
-            Self(AllocatorPoolInner::FixedSize(FixedSizeAllocatorPool::new(thread_count)))
+            Self(AllocatorPoolInner::FixedSize(FixedSizeAllocatorPool::new(
+                thread_count,
+            )))
         }
 
         #[cfg(not(all(target_pointer_width = "64", target_endian = "little")))]
@@ -79,7 +99,10 @@ impl AllocatorPool {
             AllocatorPoolInner::FixedSize(pool) => pool.get(),
         };
 
-        AllocatorGuard { allocator: ManuallyDrop::new(allocator), pool: self }
+        AllocatorGuard {
+            allocator: ManuallyDrop::new(allocator),
+            pool: self,
+        }
     }
 
     /// Add an [`Allocator`] to the pool.

@@ -39,14 +39,18 @@ pub fn is_less_than<'a>(
     if px.is_bigint() && py.is_string() {
         use crate::StringToBigInt;
         let ny = y.to_js_string(ctx)?.as_ref().string_to_big_int();
-        let Some(ny) = ny else { return Some(ConstantValue::Undefined) };
+        let Some(ny) = ny else {
+            return Some(ConstantValue::Undefined);
+        };
         return Some(ConstantValue::Boolean(x.to_big_int(ctx)? < ny));
     }
     // b. If px is a String and py is a BigInt, then
     if px.is_string() && py.is_bigint() {
         use crate::StringToBigInt;
         let nx = x.to_js_string(ctx)?.as_ref().string_to_big_int();
-        let Some(nx) = nx else { return Some(ConstantValue::Undefined) };
+        let Some(nx) = nx else {
+            return Some(ConstantValue::Undefined);
+        };
         return Some(ConstantValue::Boolean(nx < y.to_big_int(ctx)?));
     }
 
@@ -70,7 +74,9 @@ pub fn is_less_than<'a>(
     }
     //   ii. Else,
     if px.is_bigint() && py.is_bigint() {
-        return Some(ConstantValue::Boolean(x.to_big_int(ctx)? < y.to_big_int(ctx)?));
+        return Some(ConstantValue::Boolean(
+            x.to_big_int(ctx)? < y.to_big_int(ctx)?,
+        ));
     }
 
     let nx = x.evaluate_value_to_number(ctx);
@@ -116,7 +122,9 @@ fn compare_bigint_and_f64(x: &BigInt, y: f64) -> Option<Ordering> {
 
     let raw_ord = x.cmp(&ny);
     if raw_ord == Ordering::Equal {
-        let fract_ord = 0.0f64.partial_cmp(&y.fract()).expect("both should be finite");
+        let fract_ord = 0.0f64
+            .partial_cmp(&y.fract())
+            .expect("both should be finite");
         Some(fract_ord)
     } else {
         Some(raw_ord)
@@ -132,19 +140,52 @@ mod test {
     #[test]
     fn test_compare_bigint_and_f64() {
         assert_eq!(compare_bigint_and_f64(&BigInt::from(1), f64::NAN), None);
-        assert_eq!(compare_bigint_and_f64(&BigInt::from(1), f64::INFINITY), None);
-        assert_eq!(compare_bigint_and_f64(&BigInt::from(1), f64::NEG_INFINITY), None);
+        assert_eq!(
+            compare_bigint_and_f64(&BigInt::from(1), f64::INFINITY),
+            None
+        );
+        assert_eq!(
+            compare_bigint_and_f64(&BigInt::from(1), f64::NEG_INFINITY),
+            None
+        );
 
-        assert_eq!(compare_bigint_and_f64(&BigInt::from(1), 0.0), Some(Ordering::Greater));
-        assert_eq!(compare_bigint_and_f64(&BigInt::from(0), 0.0), Some(Ordering::Equal));
-        assert_eq!(compare_bigint_and_f64(&BigInt::from(-1), 0.0), Some(Ordering::Less));
+        assert_eq!(
+            compare_bigint_and_f64(&BigInt::from(1), 0.0),
+            Some(Ordering::Greater)
+        );
+        assert_eq!(
+            compare_bigint_and_f64(&BigInt::from(0), 0.0),
+            Some(Ordering::Equal)
+        );
+        assert_eq!(
+            compare_bigint_and_f64(&BigInt::from(-1), 0.0),
+            Some(Ordering::Less)
+        );
 
-        assert_eq!(compare_bigint_and_f64(&BigInt::from(1), 0.9), Some(Ordering::Greater));
-        assert_eq!(compare_bigint_and_f64(&BigInt::from(1), 1.0), Some(Ordering::Equal));
-        assert_eq!(compare_bigint_and_f64(&BigInt::from(1), 1.1), Some(Ordering::Less));
+        assert_eq!(
+            compare_bigint_and_f64(&BigInt::from(1), 0.9),
+            Some(Ordering::Greater)
+        );
+        assert_eq!(
+            compare_bigint_and_f64(&BigInt::from(1), 1.0),
+            Some(Ordering::Equal)
+        );
+        assert_eq!(
+            compare_bigint_and_f64(&BigInt::from(1), 1.1),
+            Some(Ordering::Less)
+        );
 
-        assert_eq!(compare_bigint_and_f64(&BigInt::from(-1), -1.1), Some(Ordering::Greater));
-        assert_eq!(compare_bigint_and_f64(&BigInt::from(-1), -1.0), Some(Ordering::Equal));
-        assert_eq!(compare_bigint_and_f64(&BigInt::from(-1), -0.9), Some(Ordering::Less));
+        assert_eq!(
+            compare_bigint_and_f64(&BigInt::from(-1), -1.1),
+            Some(Ordering::Greater)
+        );
+        assert_eq!(
+            compare_bigint_and_f64(&BigInt::from(-1), -1.0),
+            Some(Ordering::Equal)
+        );
+        assert_eq!(
+            compare_bigint_and_f64(&BigInt::from(-1), -0.9),
+            Some(Ordering::Less)
+        );
     }
 }

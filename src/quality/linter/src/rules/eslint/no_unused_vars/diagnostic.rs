@@ -9,7 +9,10 @@ use super::{Symbol, options::IgnorePattern};
 
 fn pronoun_for_symbol(
     symbol_flags: SymbolFlags,
-) -> (/* singular */ &'static str, /* plural */ &'static str) {
+) -> (
+    /* singular */ &'static str,
+    /* plural */ &'static str,
+) {
     if symbol_flags.is_function() {
         ("Function", "functions")
     } else if symbol_flags.is_class() {
@@ -42,20 +45,22 @@ where
 
     let help_suffix = match pat {
         IgnorePattern::None => ".".into(),
-        IgnorePattern::Default | IgnorePattern::PrefixUnderscore => {
-            name.strip_prefix('_').map_or(".".into(), |name| format!(" to '{name}'."))
-        }
+        IgnorePattern::Default | IgnorePattern::PrefixUnderscore => name
+            .strip_prefix('_')
+            .map_or(".".into(), |name| format!(" to '{name}'.")),
         IgnorePattern::Some(r) => {
             format!(" to match the pattern /{r}/.")
         }
     };
 
-    OxcDiagnostic::warn(format!("{pronoun_singular} '{name}' is marked as ignored but is used."))
-        .with_label(symbol.span().label(format!("'{name}' is declared here")))
-        .with_help(format!(
-            "Consider renaming this {}{help_suffix}",
-            pronoun_singular.cow_to_ascii_lowercase()
-        ))
+    OxcDiagnostic::warn(format!(
+        "{pronoun_singular} '{name}' is marked as ignored but is used."
+    ))
+    .with_label(symbol.span().label(format!("'{name}' is declared here")))
+    .with_help(format!(
+        "Consider renaming this {}{help_suffix}",
+        pronoun_singular.cow_to_ascii_lowercase()
+    ))
 }
 
 /// Variable 'x' is declared but never used.
@@ -98,12 +103,14 @@ where
     let (pronoun, pronoun_plural) = pronoun_for_symbol(symbol.flags());
     let suffix = pat.diagnostic_help(pronoun_plural);
 
-    OxcDiagnostic::warn(format!("{pronoun} '{name}' is assigned a value but never used.{suffix}"))
-        .with_labels([
-            symbol.span().label(format!("'{name}' is declared here")),
-            assign_span.label("it was last assigned here"),
-        ])
-        .with_help("Did you mean to use this variable?")
+    OxcDiagnostic::warn(format!(
+        "{pronoun} '{name}' is assigned a value but never used.{suffix}"
+    ))
+    .with_labels([
+        symbol.span().label(format!("'{name}' is declared here")),
+        assign_span.label("it was last assigned here"),
+    ])
+    .with_help("Did you mean to use this variable?")
 }
 
 /// Parameter 'x' is declared but never used.

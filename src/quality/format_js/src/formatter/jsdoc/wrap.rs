@@ -9,7 +9,11 @@ use super::markers::is_block_marker_token;
 /// Fast path: for ASCII-only strings (99%+ of JSDoc content), `len()` equals UTF-16 count.
 #[inline]
 pub fn str_width(s: &str) -> usize {
-    if s.is_ascii() { s.len() } else { s.encode_utf16().count() }
+    if s.is_ascii() {
+        s.len()
+    } else {
+        s.encode_utf16().count()
+    }
 }
 
 /// Lookup table of pre-allocated indent strings (0–12 spaces).
@@ -315,7 +319,11 @@ pub fn wrap_paragraph(
     for word in &words {
         let word_width = link_rendered_width(word);
         let is_inline_tag = inline_tag_overhead(word) > 0;
-        let capacity = if is_first_line { first_line_max } else { effective_max };
+        let capacity = if is_first_line {
+            first_line_max
+        } else {
+            effective_max
+        };
         // Tolerance: allow ~1 char of overflow per inline tag on the line
         // (including the current word if it's a tag).
         // Upstream plugin is more lenient about line width when the line contains `{@link ...}` tokens
@@ -537,15 +545,27 @@ mod tests {
 
     #[test]
     fn test_wrap_converts_code_fence_to_indented() {
-        let result =
-            wrap_text("Some text\n```\ncode here\n  indented\n```\nMore text", 80, 0, false);
+        let result = wrap_text(
+            "Some text\n```\ncode here\n  indented\n```\nMore text",
+            80,
+            0,
+            false,
+        );
         // Fenced code without language tag is converted to indented code block.
-        assert_eq!(result, "Some text\n\n    code here\n      indented\n\nMore text");
+        assert_eq!(
+            result,
+            "Some text\n\n    code here\n      indented\n\nMore text"
+        );
     }
 
     #[test]
     fn test_wrap_preserves_code_fence_with_language() {
-        let result = wrap_text("Some text\n```js\nconst x = 1;\n```\nMore text", 80, 0, false);
+        let result = wrap_text(
+            "Some text\n```js\nconst x = 1;\n```\nMore text",
+            80,
+            0,
+            false,
+        );
         assert_eq!(result, "Some text\n\n```js\nconst x = 1;\n```\n\nMore text");
     }
 
@@ -675,7 +695,10 @@ mod tests {
             false,
         );
         for line in result.lines() {
-            assert!(!line.starts_with("- "), "line must not start with a list marker:\n{result}");
+            assert!(
+                !line.starts_with("- "),
+                "line must not start with a list marker:\n{result}"
+            );
         }
         // Idempotency: re-wrapping the output yields the same result
         let rewrapped = wrap_text(&result, 40, 0, false);

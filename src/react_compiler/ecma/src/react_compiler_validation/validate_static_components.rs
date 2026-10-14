@@ -47,7 +47,9 @@ pub fn validate_static_components(
             let value = &instr.value;
 
             match value {
-                InstructionValue::FunctionExpression { lowered_func, span, .. } => {
+                InstructionValue::FunctionExpression {
+                    lowered_func, span, ..
+                } => {
                     let location = functions[lowered_func.func].diagnostic_span().or(*span);
                     known_dynamic_components.insert(lvalue_id, location);
                 }
@@ -63,14 +65,19 @@ pub fn validate_static_components(
                         known_dynamic_components.insert(lvalue_id, *span);
                     }
                 }
-                InstructionValue::StoreLocal { lvalue, value: val, .. } => {
+                InstructionValue::StoreLocal {
+                    lvalue, value: val, ..
+                } => {
                     if let Some(span) = known_dynamic_components.get(&val.identifier) {
                         let span = *span;
                         known_dynamic_components.insert(lvalue_id, span);
                         known_dynamic_components.insert(lvalue.place.identifier, span);
                     }
                 }
-                InstructionValue::JsxExpression { tag: JsxTag::Place(tag_place), .. } => {
+                InstructionValue::JsxExpression {
+                    tag: JsxTag::Place(tag_place),
+                    ..
+                } => {
                     if let Some(location) = known_dynamic_components.get(&tag_place.identifier) {
                         let location = *location;
                         let diagnostic =

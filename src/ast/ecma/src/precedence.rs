@@ -79,7 +79,11 @@ impl GetPrecedence for AwaitExpression<'_> {
 
 impl GetPrecedence for UpdateExpression<'_> {
     fn precedence(&self) -> Precedence {
-        if self.prefix { Precedence::Prefix } else { Precedence::Postfix }
+        if self.prefix {
+            Precedence::Prefix
+        } else {
+            Precedence::Postfix
+        }
     }
 }
 

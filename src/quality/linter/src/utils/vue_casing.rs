@@ -53,7 +53,9 @@ pub fn has_upper(s: &str) -> bool {
 pub fn is_pascal_case(s: &str) -> bool {
     !has_symbols(s)
         && !s.chars().next().is_some_and(|c| c.is_ascii_lowercase())
-        && !s.chars().any(|c| matches!(c, '-' | '_') || c.is_whitespace())
+        && !s
+            .chars()
+            .any(|c| matches!(c, '-' | '_') || c.is_whitespace())
 }
 
 pub fn is_kebab_case(s: &str) -> bool {
@@ -69,7 +71,9 @@ pub fn is_kebab_case(s: &str) -> bool {
 pub fn is_camel_case(s: &str) -> bool {
     !has_symbols(s)
         && !s.chars().next().is_some_and(|c| c.is_ascii_uppercase())
-        && !s.chars().any(|c| matches!(c, '-' | '_') || c.is_whitespace())
+        && !s
+            .chars()
+            .any(|c| matches!(c, '-' | '_') || c.is_whitespace())
 }
 
 pub fn is_snake_case(s: &str) -> bool {
@@ -138,8 +142,11 @@ pub fn pascal_case(s: &str) -> String {
 }
 
 pub fn kebab_case(s: &str) -> String {
-    let word_before_upper =
-        Boundary::Custom { condition: regex_word_before_upper, start: 1, len: 0 };
+    let word_before_upper = Boundary::Custom {
+        condition: regex_word_before_upper,
+        start: 1,
+        len: 0,
+    };
     Converter::new()
         .set_boundaries(&[Boundary::Underscore, word_before_upper])
         .to_case(Case::Kebab)

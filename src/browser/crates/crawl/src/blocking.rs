@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 //! Synchronous facade over the shared crawl scheduler for synchronous domain consumers.
 use crate::{
-    AddRequest, CrawlOptions, CrawlTransport, FetchResult, Frontier, FrontierOptions,
-    BunBrowserTransport, crawl_bounded,
+    AddRequest, BunBrowserTransport, CrawlOptions, CrawlTransport, FetchResult, Frontier,
+    FrontierOptions, crawl_bounded,
 };
 use std::{
     cell::RefCell,
@@ -66,7 +66,10 @@ impl BlockingCrawler {
             return Err("crawler accepts HTTP(S) URLs only".into());
         }
         let now_ms = i64::try_from(
-            SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_millis(),
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_millis(),
         )
         .unwrap_or(i64::MAX);
         let mut frontier = self.frontier.borrow_mut();

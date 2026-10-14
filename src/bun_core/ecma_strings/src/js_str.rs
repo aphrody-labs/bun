@@ -109,7 +109,10 @@ impl<'a> JSStr<'a> {
     /// Panics if `value.len()` exceeds `u32::MAX`.
     #[inline]
     const fn from_str(value: &'a str) -> Self {
-        assert!(value.len() <= u32::MAX as usize, "JavaScript string exceeds u32::MAX bytes");
+        assert!(
+            value.len() <= u32::MAX as usize,
+            "JavaScript string exceeds u32::MAX bytes"
+        );
         // SAFETY: `str` is UTF-8 (thus canonical WTF-8 without surrogates),
         // and its bytes are immutable and valid for `'a`. The length was checked.
         unsafe { Self::from_bytes_unchecked(value.as_bytes(), false) }
@@ -205,13 +208,20 @@ impl<'a> JSStr<'a> {
     /// Iterate code points. Paired surrogates yield one supplementary `JSChar`.
     #[inline]
     pub fn chars(self) -> impl FusedIterator<Item = JSChar> + Clone + 'a {
-        JSChars { remaining: self.as_bytes() }
+        JSChars {
+            remaining: self.as_bytes(),
+        }
     }
 
     /// Iterate UTF-16 code units, preserving lone surrogates.
     #[inline]
     pub fn encode_utf16(self) -> impl FusedIterator<Item = u16> + Clone + 'a {
-        EncodeUtf16 { chars: JSChars { remaining: self.as_bytes() }, pending: 0 }
+        EncodeUtf16 {
+            chars: JSChars {
+                remaining: self.as_bytes(),
+            },
+            pending: 0,
+        }
     }
 
     /// Borrow the underlying canonical WTF-8 bytes.
@@ -244,7 +254,10 @@ impl<'a> JSStr<'a> {
     ///
     /// [`as_bytes`]: Self::as_bytes
     #[inline]
-    #[expect(clippy::cast_possible_truncation, reason = "the caller guarantees the length fits")]
+    #[expect(
+        clippy::cast_possible_truncation,
+        reason = "the caller guarantees the length fits"
+    )]
     pub const unsafe fn from_bytes_unchecked(bytes: &'a [u8], has_lone_surrogate: bool) -> Self {
         Self {
             ptr: NonNull::from_ref(bytes).cast(),
@@ -420,7 +433,10 @@ impl Iterator for JSChars<'_> {
                 } else {
                     let third = u32::from(*rest.get_unchecked(1) & CONT_MASK);
                     if first < FOUR_BYTE_TAG {
-                        ((u32::from(first & THREE_BYTE_MASK) << 12) | (second << 6) | third, 2)
+                        (
+                            (u32::from(first & THREE_BYTE_MASK) << 12) | (second << 6) | third,
+                            2,
+                        )
                     } else {
                         let fourth = u32::from(*rest.get_unchecked(2) & CONT_MASK);
                         let first = u32::from(first & FOUR_BYTE_MASK);
@@ -456,7 +472,10 @@ impl Iterator for EncodeUtf16<'_> {
     type Item = u16;
 
     #[inline]
-    #[expect(clippy::cast_possible_truncation, reason = "code units are masked or range-checked")]
+    #[expect(
+        clippy::cast_possible_truncation,
+        reason = "code units are masked or range-checked"
+    )]
     fn next(&mut self) -> Option<u16> {
         if self.pending != 0 {
             let trail = self.pending;

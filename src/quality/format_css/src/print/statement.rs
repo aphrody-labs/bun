@@ -50,7 +50,11 @@ pub(super) fn params_region_end<'a>(
     block.map_or_else(
         || {
             let with_semi = end_with_semicolon(span_end, f);
-            if with_semi > span_end { with_semi - 1 } else { span_end }
+            if with_semi > span_end {
+                with_semi - 1
+            } else {
+                span_end
+            }
         },
         |block| to_span(&block.span).start,
     )
@@ -76,7 +80,11 @@ pub(super) fn end_with_semicolon(end: u32, f: &CssFormatter<'_, '_>) -> u32 {
         }
         break;
     }
-    if i < bytes.len() && bytes[i] == b';' { u32::try_from(i + 1).unwrap_or(end) } else { end }
+    if i < bytes.len() && bytes[i] == b';' {
+        u32::try_from(i + 1).unwrap_or(end)
+    } else {
+        end
+    }
 }
 
 /// Emits `statements` separated by hard lines, preserving at most one blank line
@@ -107,8 +115,11 @@ pub(super) fn write_statement_sequence_bounded<'a>(
             write_trailing_same_line_comments(prev_end, upper.min(start), f);
             // The gap considered is from the end of the previous statement to the
             // next printed position (comment or stmt).
-            let next_start =
-                f.context().comments().peek().map_or(start, |c| c.span.start.min(start));
+            let next_start = f
+                .context()
+                .comments()
+                .peek()
+                .map_or(start, |c| c.span.start.min(start));
             let gap = classify_gap(source.bytes_range(prev_end, next_start));
             // A `;`-less css-in-js placeholder preserves the source whitespace that
             // follows it: Prettier keeps `${a} ${b}` on one line and `${a}\n${b}` on two
@@ -176,8 +187,10 @@ pub(super) fn write_statement<'a>(stmt: &Statement<'a>, f: &mut CssFormatter<'_,
                 if end_with_semicolon(end, f) > end {
                     write!(f, ";");
                 }
-            } else if !matches!(decl.value.last(), Some(ComponentValue::SassNestingDeclaration(_)))
-                || decl.name.is_custom_property()
+            } else if !matches!(
+                decl.value.last(),
+                Some(ComponentValue::SassNestingDeclaration(_))
+            ) || decl.name.is_custom_property()
             {
                 // No `;` after a nested declaration block (`background: { ... }`),
                 // except a custom-property rule block (`--p: { ... };`).
@@ -248,7 +261,10 @@ pub(super) fn write_statement<'a>(stmt: &Statement<'a>, f: &mut CssFormatter<'_,
             for (i, sel) in keyframe_block.selectors.iter().enumerate() {
                 if i > 0 {
                     value::write_group_comma(
-                        keyframe_block.comma_spans.get(i - 1).map(|sp| to_span(sp).start),
+                        keyframe_block
+                            .comma_spans
+                            .get(i - 1)
+                            .map(|sp| to_span(sp).start),
                         f,
                     );
                     write!(f, hard_line_break());
@@ -342,7 +358,10 @@ pub(super) fn write_declaration<'a>(decl: &Declaration<'a>, f: &mut CssFormatter
     let is_custom_property = decl.name.is_custom_property();
     // postcss keeps the IE `*color` prefix as part of the prop, so Prettier preserves it
     if let Some(prefix) = decl.name_prefix {
-        write!(f, text(f.allocator().alloc_str(prefix.encode_utf8(&mut [0; 4]))));
+        write!(
+            f,
+            text(f.allocator().alloc_str(prefix.encode_utf8(&mut [0; 4])))
+        );
     }
     if let InterpolableIdent::Placeholder(placeholder) = &decl.name {
         // A css-in-js placeholder property name (`${foo}: ...`) is a typed marker
@@ -363,21 +382,34 @@ pub(super) fn write_declaration<'a>(decl: &Declaration<'a>, f: &mut CssFormatter
     // (prop → value, `:` and any comments included) trimmed but otherwise verbatim,
     // with a space before a leading `//` comment and a space before the value.
     let colon_end = to_span(&decl.colon_span).end;
-    let between_upper =
-        if decl.value.is_empty() { colon_end } else { to_span(decl.value[0].span()).start };
+    let between_upper = if decl.value.is_empty() {
+        colon_end
+    } else {
+        to_span(decl.value[0].span()).start
+    };
     let between = source.slice_range(name_span.end, between_upper);
     let trimmed_between = between.trim_ascii();
     // `lastLineHasInlineComment`: the value drops to the next line,
     // one indent under the prop (`indent([hardline, dedent(value)])`).
     let between_breaks = trimmed_between != ":"
-        && trimmed_between.rsplit(['\n', '\r']).next().unwrap_or(trimmed_between).contains("//");
+        && trimmed_between
+            .rsplit(['\n', '\r'])
+            .next()
+            .unwrap_or(trimmed_between)
+            .contains("//");
     // A Less merge marker (`prop+: val` / `prop+_: val`)
     // glues to the property name and its spaces drop, leaving only `:`
     // (Prettier 3.9.5 #19517; the SPACED `+_` is ours alone, postcss-less cannot parse it).
     // Comments around the marker keep the verbatim path.
-    let merge_marker =
-        decl.less_property_merge.as_ref().map(|merge| to_span(&merge.span)).filter(|span| {
-            source.slice_range(name_span.end, span.start).trim_ascii().is_empty()
+    let merge_marker = decl
+        .less_property_merge
+        .as_ref()
+        .map(|merge| to_span(&merge.span))
+        .filter(|span| {
+            source
+                .slice_range(name_span.end, span.start)
+                .trim_ascii()
+                .is_empty()
                 && source.slice_range(span.end, between_upper).trim_ascii() == ":"
         });
     if let Some(span) = merge_marker {
@@ -427,7 +459,10 @@ pub(super) fn write_declaration<'a>(decl: &Declaration<'a>, f: &mut CssFormatter
                 i += 1;
             }
             if i < bytes.len() && bytes[i] == b';' && i > colon_end as usize {
-                write!(f, text(source.slice_range(colon_end, u32::try_from(i).unwrap())));
+                write!(
+                    f,
+                    text(source.slice_range(colon_end, u32::try_from(i).unwrap()))
+                );
             }
         }
     } else {
@@ -512,13 +547,23 @@ pub(super) fn write_declaration<'a>(decl: &Declaration<'a>, f: &mut CssFormatter
             // Only when such comments exist (keeps simple declarations on the single-component fast path).
             let decl_end_pre = to_span(decl.span()).end;
             let semi = end_with_semicolon(decl_end_pre, f);
-            let bound = if semi > decl_end_pre { semi - 1 } else { decl_end_pre };
+            let bound = if semi > decl_end_pre {
+                semi - 1
+            } else {
+                decl_end_pre
+            };
             // A single interpolated component is exempt,
             // its fill-chunk fit ignores the line tail (see `is_single_sass_interpolation`).
             let has_tail = decl.important.is_none()
                 && !value::is_single_sass_interpolation(values)
-                && f.context().comments().iter_before(bound).any(|c| c.span.start >= value_end);
-            let ctx = ValueContext { tail_bound: has_tail.then_some(bound), ..ctx };
+                && f.context()
+                    .comments()
+                    .iter_before(bound)
+                    .any(|c| c.span.start >= value_end);
+            let ctx = ValueContext {
+                tail_bound: has_tail.then_some(bound),
+                ..ctx
+            };
             // `prop: <values> { decls }`:
             // A trailing nested block hugs the declaration; leading values are space-joined flat.
             if let Some(ComponentValue::SassNestingDeclaration(nesting)) = values.last() {
@@ -569,7 +614,11 @@ pub(super) fn write_colon_run(name_end: u32, colon_end: u32, f: &mut CssFormatte
 /// the trivia up to the `;` is the formatter's, so a source gap before it (`/* c */ ;`) is not kept.
 pub(super) fn write_terminator_tail_comments(content_end: u32, f: &mut CssFormatter<'_, '_>) {
     let end = end_with_semicolon(content_end, f);
-    let bound = if end > content_end { end - 1 } else { content_end };
+    let bound = if end > content_end {
+        end - 1
+    } else {
+        content_end
+    };
     value::flush_trailing_value_comments(bound, f);
 }
 
@@ -616,7 +665,12 @@ fn write_custom_property_block<'a>(value_text: &'a str, f: &mut CssFormatter<'_,
                 write!(f, hard_line_break());
             }
             // Re-flow line by line (keeps interior comments in place)
-            for (j, line) in decl.lines().map(str::trim).filter(|l| !l.is_empty()).enumerate() {
+            for (j, line) in decl
+                .lines()
+                .map(str::trim)
+                .filter(|l| !l.is_empty())
+                .enumerate()
+            {
                 if j > 0 {
                     write!(f, hard_line_break());
                 }
@@ -726,7 +780,10 @@ pub(super) fn write_block<'a>(block: &SimpleBlock<'a>, f: &mut CssFormatter<'_, 
     } else {
         let body = format_with(|f: &mut CssFormatter<'_, 'a>| {
             write_statement_sequence_bounded(&block.statements, r_curly, f);
-            let last_end = block.statements.last().map_or(block_span.start, |s| stmt_end(s, f));
+            let last_end = block
+                .statements
+                .last()
+                .map_or(block_span.start, |s| stmt_end(s, f));
             flush_trailing_inside_comments(last_end, r_curly, f);
         });
         write!(f, block_indent(&body));

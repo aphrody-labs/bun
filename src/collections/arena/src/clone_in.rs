@@ -110,7 +110,8 @@ where
         with_semantic_ids: CloneInSemanticIds,
         allocator: &'alloc Allocator,
     ) -> Self::Cloned {
-        self.as_ref().map(|it| it.clone_in_impl(with_semantic_ids, allocator))
+        self.as_ref()
+            .map(|it| it.clone_in_impl(with_semantic_ids, allocator))
     }
 }
 
@@ -126,7 +127,10 @@ where
         with_semantic_ids: CloneInSemanticIds,
         allocator: &'new_alloc Allocator,
     ) -> Self::Cloned {
-        Box::new_in(self.as_ref().clone_in_impl(with_semantic_ids, allocator), &allocator)
+        Box::new_in(
+            self.as_ref().clone_in_impl(with_semantic_ids, allocator),
+            &allocator,
+        )
     }
 }
 
@@ -211,7 +215,10 @@ where
 
     let layout = Layout::for_value(slice);
 
-    let dst_ptr = allocator.alloc_layout(layout).cast::<MaybeUninit<C>>().as_ptr();
+    let dst_ptr = allocator
+        .alloc_layout(layout)
+        .cast::<MaybeUninit<C>>()
+        .as_ptr();
 
     // SAFETY: We allocated space for `slice.len()` items of type `C`, starting at `dst_ptr`.
     // `MaybeUninit<C>` has the same layout as `C`, so this is a valid view of that
@@ -429,16 +436,25 @@ mod test {
 
         let mut original_as_vec = original.iter().collect::<std::vec::Vec<_>>();
         original_as_vec.sort_unstable();
-        assert_eq!(original_as_vec, &[(&"x", &"xx"), (&"y", &"changed"), (&"z", &"zz")]);
+        assert_eq!(
+            original_as_vec,
+            &[(&"x", &"xx"), (&"y", &"changed"), (&"z", &"zz")]
+        );
 
         assert_eq!(cloned.capacity(), 3);
         let mut cloned_as_vec = cloned.iter().collect::<std::vec::Vec<_>>();
         cloned_as_vec.sort_unstable();
-        assert_eq!(cloned_as_vec, &[(&"x", &"xx"), (&"y", &"yy"), (&"z", &"zz")]);
+        assert_eq!(
+            cloned_as_vec,
+            &[(&"x", &"xx"), (&"y", &"yy"), (&"z", &"zz")]
+        );
 
         assert_eq!(cloned2.capacity(), 3);
         let mut cloned2_as_vec = cloned2.iter().collect::<std::vec::Vec<_>>();
         cloned2_as_vec.sort_unstable();
-        assert_eq!(cloned2_as_vec, &[(&"x", &"xx"), (&"y", &"yy"), (&"z", &"zz")]);
+        assert_eq!(
+            cloned2_as_vec,
+            &[(&"x", &"xx"), (&"y", &"yy"), (&"z", &"zz")]
+        );
     }
 }

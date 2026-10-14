@@ -8,7 +8,10 @@ pub struct BasicBlock {
 
 impl BasicBlock {
     pub(crate) fn new() -> Self {
-        BasicBlock { instructions: Vec::new(), unreachable: false }
+        BasicBlock {
+            instructions: Vec::new(),
+            unreachable: false,
+        }
     }
 
     pub fn instructions(&self) -> &Vec<Instruction> {

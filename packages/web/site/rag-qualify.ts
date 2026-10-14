@@ -1,17 +1,8 @@
-import { lstatSync } from "node:fs";
-import { isAbsolute } from "node:path";
 import { parseArgs } from "node:util";
 import { TypeSafeClient } from "@aphrody/typesafe-sdk";
 import { createNeonHTTPClient } from "@aphrody/bun-plugin-neon/http";
 import { buildBunRag } from "./rag";
-
-async function protectedReference(path: string | undefined) {
-  if (!path || !isAbsolute(path)) throw new TypeError("Expected an explicit protected file reference");
-  const file = lstatSync(path);
-  if (!file.isFile() || file.isSymbolicLink() || file.size < 1 || file.size > 4096)
-    throw new TypeError("Invalid protected file reference");
-  return (await Bun.file(path).text()).trim();
-}
+import { protectedReference } from "./protected-reference";
 
 const { values } = parseArgs({
   args: process.argv.slice(2),
@@ -20,6 +11,7 @@ const { values } = parseArgs({
     "database-url-file": { type: "string" },
     "api-key-file": { type: "string" },
     out: { type: "string" },
+    native: { type: "boolean", default: false },
   },
 });
 let report: Record<string, unknown>;
@@ -41,13 +33,18 @@ try {
   });
   const result = await buildBunRag(
     sql,
-    { query: "Comment utiliser Bun.Video avec Linux ?", limit: 1, client },
+    {
+      query: "Comment utiliser Bun.Video avec Linux ?",
+      limit: 1,
+      client: values.native ? await (await import("./editorial-native")).withNativeEditorialValidation(client) : client,
+    },
     AbortSignal.timeout(20000),
   );
   report = {
     schema: 1,
     date: new Date().toISOString(),
     calls,
+    validator: values.native ? "bun:yolo" : "application-sdk",
     source: result.snapshot?.source ?? null,
     snapshot: result.snapshot?.id ?? null,
     judgement: result.judgement,

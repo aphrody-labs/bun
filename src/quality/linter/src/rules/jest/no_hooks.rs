@@ -41,7 +41,10 @@ fn test() {
     let pass = vec![
         ("test(\"foo\")", None),
         ("describe(\"foo\", () => { it(\"bar\") })", None),
-        ("test(\"foo\", () => { expect(subject.beforeEach()).toBe(true) })", None),
+        (
+            "test(\"foo\", () => { expect(subject.beforeEach()).toBe(true) })",
+            None,
+        ),
         (
             "afterEach(() => {}); afterAll(() => {});",
             Some(serde_json::json!([{ "allow": ["afterEach", "afterAll"] }])),

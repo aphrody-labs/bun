@@ -387,11 +387,20 @@ fn fixer_error<S: Into<String>, T>(message: S) -> FixerResult<T> {
 // import { Foo, Bar } from 'foo' => import type { Foo, Bar } from 'foo'
 #[expect(clippy::cast_possible_truncation)]
 fn fix_to_type_import_declaration(options: &FixOptions<'_, '_>) -> FixerResult<RuleFix> {
-    let FixOptions { fixer, import_decl, type_names, fix_style, ctx } = options;
+    let FixOptions {
+        fixer,
+        import_decl,
+        type_names,
+        fix_style,
+        ctx,
+    } = options;
     let fixer = fixer.for_multifix();
 
-    let GroupedSpecifiers { namespace_specifier, named_specifiers, default_specifier } =
-        classify_specifier(import_decl);
+    let GroupedSpecifiers {
+        namespace_specifier,
+        named_specifiers,
+        default_specifier,
+    } = classify_specifier(import_decl);
 
     // import * as type from 'foo'
     if namespace_specifier.is_some()
@@ -403,8 +412,9 @@ fn fix_to_type_import_declaration(options: &FixOptions<'_, '_>) -> FixerResult<R
             options, /* is_default_import */ false,
         );
     } else if let Some(default_specifier) = default_specifier {
-        let default_specifier_is_type =
-            type_names.iter().any(|name| *name == default_specifier.local.name.as_str());
+        let default_specifier_is_type = type_names
+            .iter()
+            .any(|name| *name == default_specifier.local.name.as_str());
         // import Type from 'foo'
         if default_specifier_is_type && named_specifiers.is_empty() && namespace_specifier.is_none()
         {
@@ -502,7 +512,9 @@ fn fix_to_type_import_declaration(options: &FixOptions<'_, '_>) -> FixerResult<R
     let mut fixes_remove_type_namespace_specifier = fixer.new_fix_with_capacity(0);
 
     if let Some(namespace_specifier) = namespace_specifier
-        && type_names.iter().contains(&namespace_specifier.local.name.as_str())
+        && type_names
+            .iter()
+            .contains(&namespace_specifier.local.name.as_str())
     {
         // import Foo, * as Type from 'foo'
         // import DefType, * as Type from 'foo'
@@ -511,10 +523,10 @@ fn fix_to_type_import_declaration(options: &FixOptions<'_, '_>) -> FixerResult<R
 
         // import Def, * as Ns from 'foo'
         //           ^^^^^^^^^ remove
-        fixes_remove_type_namespace_specifier.push(
-            fixer
-                .delete(&Span::new(import_decl.span.start + comma, namespace_specifier.span().end)),
-        );
+        fixes_remove_type_namespace_specifier.push(fixer.delete(&Span::new(
+            import_decl.span.start + comma,
+            namespace_specifier.span().end,
+        )));
 
         // import type * as Ns from 'foo'
         // ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ insert
@@ -529,7 +541,9 @@ fn fix_to_type_import_declaration(options: &FixOptions<'_, '_>) -> FixerResult<R
     }
 
     if let Some(default_specifier) = default_specifier
-        && type_names.iter().contains(&default_specifier.local.name.as_str())
+        && type_names
+            .iter()
+            .contains(&default_specifier.local.name.as_str())
     {
         if type_names.len() == import_decl.specifiers.as_ref().map_or(0, |s| s.len()) {
             // import type Type from 'foo'
@@ -577,7 +591,12 @@ fn fix_insert_named_specifiers_in_named_specifier_list(
     options: &FixOptions<'_, '_>,
     insert_text: &str,
 ) -> FixerResult<RuleFix> {
-    let FixOptions { fixer, import_decl, ctx, .. } = options;
+    let FixOptions {
+        fixer,
+        import_decl,
+        ctx,
+        ..
+    } = options;
     let close_brace = import_decl.span().start + try_find_token(ctx, import_decl.span, "}")?;
 
     // Anchor on the last named specifier so a separator between earlier specifiers isn't
@@ -641,7 +660,12 @@ fn get_fixes_named_specifiers<'a>(
     subset_named_specifiers: &[&ImportSpecifier<'a>],
     all_named_specifiers: &[&ImportSpecifier<'a>],
 ) -> FixerResult<FixNamedSpecifiers> {
-    let FixOptions { fixer, import_decl, ctx, .. } = options;
+    let FixOptions {
+        fixer,
+        import_decl,
+        ctx,
+        ..
+    } = options;
     let fixer = fixer.for_multifix();
 
     if all_named_specifiers.is_empty() {
@@ -712,7 +736,9 @@ fn get_named_specifier_ranges(
     all_named_specifiers: &[&ImportSpecifier],
     options: &FixOptions<'_, '_>,
 ) -> FixerResult<(/* remove_range */ Span, /* text_range*/ Span)> {
-    let FixOptions { ctx, import_decl, .. } = options;
+    let FixOptions {
+        ctx, import_decl, ..
+    } = options;
 
     // It will never empty, in `get_fixes_named_specifiers`, we have already checked every group is
     // not empty.
@@ -791,12 +817,22 @@ fn try_find_token(ctx: &LintContext, span: Span, token: &str) -> Result<u32, Box
     if let Some(index) = index {
         Ok(index)
     } else {
-        Err(format!("Missing token '{token}' in text: {}", ctx.source_range(span)).into())
+        Err(format!(
+            "Missing token '{token}' in text: {}",
+            ctx.source_range(span)
+        )
+        .into())
     }
 }
 
 fn fix_inline_type_import_declaration(options: &FixOptions<'_, '_>) -> FixerResult<RuleFix> {
-    let FixOptions { fixer, import_decl, type_names, ctx, .. } = options;
+    let FixOptions {
+        fixer,
+        import_decl,
+        type_names,
+        ctx,
+        ..
+    } = options;
     let fixer = fixer.for_multifix();
 
     let mut rule_fixes = fixer.new_fix_with_capacity(0);
@@ -809,9 +845,10 @@ fn fix_inline_type_import_declaration(options: &FixOptions<'_, '_>) -> FixerResu
         if let ImportDeclarationSpecifier::ImportSpecifier(specifier) = specifier
             && type_names.iter().contains(&specifier.local.name.as_str())
         {
-            rule_fixes.push(
-                fixer.replace(specifier.span, format!("type {}", ctx.source_range(specifier.span))),
-            );
+            rule_fixes.push(fixer.replace(
+                specifier.span,
+                format!("type {}", ctx.source_range(specifier.span)),
+            ));
         }
     }
 
@@ -822,7 +859,12 @@ fn fix_insert_type_specifier_for_import_declaration(
     options: &FixOptions<'_, '_>,
     is_default_import: bool,
 ) -> FixerResult<RuleFix> {
-    let FixOptions { fixer, import_decl, ctx, .. } = options;
+    let FixOptions {
+        fixer,
+        import_decl,
+        ctx,
+        ..
+    } = options;
     let fixer = fixer.for_multifix();
     let import_specifiers_span = Span::new(import_decl.span.start, import_decl.source.span.start);
     let import_source = ctx.source_range(import_specifiers_span);
@@ -842,9 +884,15 @@ fn fix_insert_type_specifier_for_import_declaration(
         let base = import_decl.span.start;
         // import foo, {} from 'foo'
         //           ^^^^ delete
-        rule_fixes
-            .push(fixer.delete(&Span::new(base + comma_token, base + (closing_brace_token + 1))));
-        if import_decl.specifiers.as_ref().is_some_and(|specifiers| specifiers.len() > 1) {
+        rule_fixes.push(fixer.delete(&Span::new(
+            base + comma_token,
+            base + (closing_brace_token + 1),
+        )));
+        if import_decl
+            .specifiers
+            .as_ref()
+            .is_some_and(|specifiers| specifiers.len() > 1)
+        {
             // import type {} from 'asdf'
             let Some(specifiers_text) =
                 import_source.get(((comma_token + 1) as usize)..closing_brace_token as usize)
@@ -875,9 +923,10 @@ fn fix_insert_type_specifier_for_import_declaration(
             {
                 // import { type    A } from 'foo.js'
                 //          ^^^^^^^^ delete
-                rule_fixes.push(
-                    fixer.delete(&Span::new(specifier.span.start, specifier.imported.span().start)),
-                );
+                rule_fixes.push(fixer.delete(&Span::new(
+                    specifier.span.start,
+                    specifier.imported.span().start,
+                )));
             }
         }
     }
@@ -897,7 +946,11 @@ fn classify_specifier<'a, 'b>(import_decl: &'b ImportDeclaration<'a>) -> Grouped
     let mut default_specifier = None;
 
     let Some(specifiers) = &import_decl.specifiers else {
-        return GroupedSpecifiers { namespace_specifier, named_specifiers, default_specifier };
+        return GroupedSpecifiers {
+            namespace_specifier,
+            named_specifiers,
+            default_specifier,
+        };
     };
 
     for specifier in specifiers {
@@ -914,7 +967,11 @@ fn classify_specifier<'a, 'b>(import_decl: &'b ImportDeclaration<'a>) -> Grouped
         }
     }
 
-    GroupedSpecifiers { namespace_specifier, named_specifiers, default_specifier }
+    GroupedSpecifiers {
+        namespace_specifier,
+        named_specifiers,
+        default_specifier,
+    }
 }
 
 // import type Foo from 'foo'
@@ -956,7 +1013,9 @@ fn fix_remove_type_specifier_from_import_specifier(
 
     fixer.replace(
         specifier_span,
-        new_specifier_source.map(std::string::ToString::to_string).unwrap_or(specifier_source),
+        new_specifier_source
+            .map(std::string::ToString::to_string)
+            .unwrap_or(specifier_source),
     )
 }
 
@@ -966,8 +1025,10 @@ fn test() {
 
     fn remove_common_prefix_space(str: &str) -> String {
         let first_content_line = str.lines().find(|line| line.trim() != "").unwrap();
-        let prefix_space =
-            first_content_line.chars().take_while(|c| c.is_whitespace()).collect::<String>();
+        let prefix_space = first_content_line
+            .chars()
+            .take_while(|c| c.is_whitespace())
+            .collect::<String>();
 
         str.lines()
             .map(|line| line.strip_prefix(&prefix_space).unwrap_or(line).to_string())
@@ -3465,12 +3526,23 @@ export class Foo extends Bar {}
     // '\n'`, so let's remove the prefix space.
     let fix = fix
         .into_iter()
-        .map(|(a, b, c)| (remove_common_prefix_space(a), remove_common_prefix_space(b), c))
+        .map(|(a, b, c)| {
+            (
+                remove_common_prefix_space(a),
+                remove_common_prefix_space(b),
+                c,
+            )
+        })
         .collect::<Vec<_>>();
 
-    Tester::new(ConsistentTypeImports::NAME, ConsistentTypeImports::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        ConsistentTypeImports::NAME,
+        ConsistentTypeImports::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .test_and_snapshot();
 }
 
 #[test]
@@ -3520,7 +3592,12 @@ type _TypeofWelcome = typeof Welcome;
         ),
     ];
 
-    Tester::new(ConsistentTypeImports::NAME, ConsistentTypeImports::PLUGIN, pass, vec![])
-        .intentionally_allow_no_fix_tests()
-        .test();
+    Tester::new(
+        ConsistentTypeImports::NAME,
+        ConsistentTypeImports::PLUGIN,
+        pass,
+        vec![],
+    )
+    .intentionally_allow_no_fix_tests()
+    .test();
 }

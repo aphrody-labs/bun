@@ -52,7 +52,8 @@ declare_oxc_lint!(
     oxc,
     correctness,
     version = "0.0.3",
-    short_description = "This rule applies when the comparison operator is applied two or more times in a row.",
+    short_description =
+        "This rule applies when the comparison operator is applied two or more times in a row.",
 );
 
 impl Rule for BadComparisonSequence {
@@ -63,7 +64,10 @@ impl Rule for BadComparisonSequence {
         if let Some((comparison_result, compared_against)) = bad_comparison_sequence(expr)
             && has_no_bad_comparison_in_parents(node, ctx)
         {
-            ctx.diagnostic(bad_comparison_sequence_diagnostic(comparison_result, compared_against));
+            ctx.diagnostic(bad_comparison_sequence_diagnostic(
+                comparison_result,
+                compared_against,
+            ));
         }
     }
 }
@@ -180,6 +184,11 @@ fn test() {
         "if (a <= b <= c) { console.log('foo') }",
     ];
 
-    Tester::new(BadComparisonSequence::NAME, BadComparisonSequence::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        BadComparisonSequence::NAME,
+        BadComparisonSequence::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

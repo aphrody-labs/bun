@@ -58,7 +58,8 @@ impl AllocationStats {
     pub(crate) fn record_reallocation(&self) {
         // Counter maxes out at `usize::MAX`, but if there's that many allocations,
         // the exact number is not important
-        self.num_realloc.set(self.num_realloc.get().saturating_add(1));
+        self.num_realloc
+            .set(self.num_realloc.get().saturating_add(1));
     }
 
     /// Record that a reallocation was made, after it was initially recorded as an allocation.
@@ -72,7 +73,8 @@ impl AllocationStats {
 
         // Counter maxes out at `usize::MAX`, but if there's that many allocations,
         // the exact number is not important
-        self.num_realloc.set(self.num_realloc.get().saturating_add(1));
+        self.num_realloc
+            .set(self.num_realloc.get().saturating_add(1));
     }
 
     /// Reset allocation counters.

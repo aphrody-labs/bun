@@ -27,7 +27,9 @@ pub fn line_shape<'a>(
     alert: bool,
     f: &MarkdownFormatter<'_, 'a>,
 ) -> bool {
-    let Some(inline) = children.get(j) else { return false };
+    let Some(inline) = children.get(j) else {
+        return false;
+    };
     if matches!(inline, Inline::SoftBreak(_) | Inline::HardBreak(_)) {
         return false;
     }
@@ -66,7 +68,12 @@ impl<'a> PrintedLine<'a> {
     /// `printed` (possibly empty) in place of the first `source` bytes of the source line, then `tail`.
     fn spliced(base: u32, printed: &str, tail: Cow<'a, str>, source: usize) -> Self {
         if printed.is_empty() {
-            Self { base, text: tail, printed: 0, source: 0 }
+            Self {
+                base,
+                text: tail,
+                printed: 0,
+                source: 0,
+            }
         } else {
             Self {
                 base,
@@ -80,7 +87,11 @@ impl<'a> PrintedLine<'a> {
     /// The source offset of byte `at` of `text`
     /// (inside the replaced span, its start: the span is opaque as a whole).
     fn offset(&self, at: usize) -> u32 {
-        let at = if at < self.printed { 0 } else { at - self.printed + self.source };
+        let at = if at < self.printed {
+            0
+        } else {
+            at - self.printed + self.source
+        };
         self.base + u32::try_from(at).unwrap_or(u32::MAX)
     }
 }
@@ -95,7 +106,10 @@ pub fn line_from<'a>(
 ) -> PrintedLine<'a> {
     let (base, line) = source_line_at(children, start, f);
     let (printed, source) = replace.map_or(("", 0), |(printed, source_end)| {
-        (printed, (source_end.saturating_sub(base) as usize).min(line.len()))
+        (
+            printed,
+            (source_end.saturating_sub(base) as usize).min(line.len()),
+        )
     });
     PrintedLine::spliced(base, printed, Cow::Borrowed(&line[source..]), source)
 }
@@ -199,7 +213,12 @@ pub fn printed_line_opens_block<'a>(
     // The source line runs to the line end
     // (through a backslash hard break: `---\` is no thematic break)
     let line = printed_line_at(children, i, f);
-    if !line.text.as_bytes().first().is_some_and(|&b| may_open_block(b)) {
+    if !line
+        .text
+        .as_bytes()
+        .first()
+        .is_some_and(|&b| may_open_block(b))
+    {
         return false;
     }
     let prose_wrap = f.options().prose_wrap;
@@ -238,9 +257,15 @@ pub fn printed_line_opens_block<'a>(
         Inline::CodeSpan(code) => (print_code_span(code, f), code.span.end.min(end)),
         _ => ("", start),
     };
-    let segment = f.context().source_text().slice_range(rest_start, end.max(rest_start));
-    let trimmed =
-        if head.is_empty() { segment.trim_start_matches(HTML_WHITESPACE) } else { segment };
+    let segment = f
+        .context()
+        .source_text()
+        .slice_range(rest_start, end.max(rest_start));
+    let trimmed = if head.is_empty() {
+        segment.trim_start_matches(HTML_WHITESPACE)
+    } else {
+        segment
+    };
     let line = PrintedLine::spliced(
         start + u32::try_from(segment.len() - trimmed.len()).unwrap_or(0),
         head,
@@ -324,9 +349,14 @@ pub fn is_line_shape_start(line: &str) -> bool {
 }
 
 fn is_component_tag(raw: &str) -> bool {
-    let Some(rest) = raw.strip_prefix('<') else { return false };
+    let Some(rest) = raw.strip_prefix('<') else {
+        return false;
+    };
     let rest = rest.strip_prefix('/').unwrap_or(rest);
-    let name_len = rest.bytes().take_while(|b| b.is_ascii_alphanumeric() || *b == b'-').count();
+    let name_len = rest
+        .bytes()
+        .take_while(|b| b.is_ascii_alphanumeric() || *b == b'-')
+        .count();
     let name = &rest[..name_len];
     name.starts_with(|c: char| c.is_ascii_uppercase())
         || (name.contains('-') && name.starts_with(|c: char| c.is_ascii_alphabetic()))

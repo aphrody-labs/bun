@@ -126,8 +126,10 @@ pub fn unexpected_arguments(x0: &str, span1: Span) -> OxcDiagnostic {
 
 #[cold]
 pub fn private_not_in_class(x0: &str, span1: Span) -> OxcDiagnostic {
-    OxcDiagnostic::error(format!("Private identifier '#{x0}' is not allowed outside class bodies"))
-        .with_label(span1)
+    OxcDiagnostic::error(format!(
+        "Private identifier '#{x0}' is not allowed outside class bodies"
+    ))
+    .with_label(span1)
 }
 
 #[cold]
@@ -249,8 +251,10 @@ pub fn label_redeclaration(x0: &str, span1: Span, span2: Span) -> OxcDiagnostic 
 
 #[cold]
 pub fn unexpected_initializer_in_for_loop_head(x0: &str, span1: Span) -> OxcDiagnostic {
-    OxcDiagnostic::error(format!("{x0} loop variable declaration may not have an initializer"))
-        .with_label(span1)
+    OxcDiagnostic::error(format!(
+        "{x0} loop variable declaration may not have an initializer"
+    ))
+    .with_label(span1)
 }
 
 #[cold]
@@ -321,7 +325,11 @@ pub fn jsdoc_type_in_annotation(
     span: Span,
     suggested_type: &str,
 ) -> OxcDiagnostic {
-    let (code, start_or_end) = if is_start { ("17020", "start") } else { ("17019", "end") };
+    let (code, start_or_end) = if is_start {
+        ("17020", "start")
+    } else {
+        ("17019", "end")
+    };
 
     ts_error(
         code,
@@ -342,14 +350,20 @@ pub fn not_allowed_namespace_declaration(span: Span) -> OxcDiagnostic {
 
 #[cold]
 pub fn not_allowed_ambient_module_declaration(span: Span) -> OxcDiagnostic {
-    ts_error("1234", "An ambient module declaration is only allowed at the top level in a file.")
-        .with_label(span)
+    ts_error(
+        "1234",
+        "An ambient module declaration is only allowed at the top level in a file.",
+    )
+    .with_label(span)
 }
 
 #[cold]
 pub fn nested_ambient_module_declaration(span: Span) -> OxcDiagnostic {
-    ts_error("2435", "Ambient modules cannot be nested in other modules or namespaces.")
-        .with_label(span)
+    ts_error(
+        "2435",
+        "Ambient modules cannot be nested in other modules or namespaces.",
+    )
+    .with_label(span)
 }
 
 #[cold]
@@ -380,9 +394,16 @@ pub fn infer_declaration_only_permitted_in_extends_clause(span: Span) -> OxcDiag
 /// - Abstract methods can only appear within an abstract class. (1244)
 #[cold]
 pub fn abstract_elem_in_concrete_class(is_property: bool, span: Span) -> OxcDiagnostic {
-    let (code, elem_kind) = if is_property { ("1253", "properties") } else { ("1244", "methods") };
-    ts_error(code, format!("Abstract {elem_kind} can only appear within an abstract class."))
-        .with_label(span)
+    let (code, elem_kind) = if is_property {
+        ("1253", "properties")
+    } else {
+        ("1244", "methods")
+    };
+    ts_error(
+        code,
+        format!("Abstract {elem_kind} can only appear within an abstract class."),
+    )
+    .with_label(span)
 }
 
 #[cold]
@@ -402,8 +423,11 @@ pub fn function_implementation_missing(span: Span) -> OxcDiagnostic {
 /// A parameter property is only allowed in a constructor implementation.ts(2369)
 #[cold]
 pub fn parameter_property_only_in_constructor_impl(span: Span) -> OxcDiagnostic {
-    ts_error("2369", "A parameter property is only allowed in a constructor implementation.")
-        .with_label(span)
+    ts_error(
+        "2369",
+        "A parameter property is only allowed in a constructor implementation.",
+    )
+    .with_label(span)
 }
 
 /// Getter or setter without a body. There is no corresponding TS error code,
@@ -417,7 +441,11 @@ pub fn accessor_without_body(span: Span) -> OxcDiagnostic {
 /// The left-hand side of a 'for...in' statement cannot use a type annotation. (2404)
 #[cold]
 pub fn type_annotation_in_for_left(span: Span, is_for_in: bool) -> OxcDiagnostic {
-    let (for_of_or_in, code) = if is_for_in { ("for...in", "2404") } else { ("for...of", "2483") };
+    let (for_of_or_in, code) = if is_for_in {
+        ("for...in", "2404")
+    } else {
+        ("for...of", "2483")
+    };
     ts_error(
         code,
         format!(

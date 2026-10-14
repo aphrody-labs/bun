@@ -41,7 +41,9 @@ fn main() -> std::io::Result<()> {
     let minify = args.contains("--minify");
     let sourcemap = args.contains("--sourcemap");
 
-    let name = args.free_from_str().unwrap_or_else(|_| "test.js".to_string());
+    let name = args
+        .free_from_str()
+        .unwrap_or_else(|_| "test.js".to_string());
     let path = Path::new(&name);
     let sourcemap = sourcemap.then_some(path);
 
@@ -94,7 +96,11 @@ fn parse<'a>(
 
 /// Generate JavaScript code from an AST
 fn codegen(program: &Program<'_>, minify: bool, source_map_path: Option<&Path>) -> String {
-    let mut options = if minify { CodegenOptions::minify() } else { CodegenOptions::default() };
+    let mut options = if minify {
+        CodegenOptions::minify()
+    } else {
+        CodegenOptions::default()
+    };
     options.source_map_path = source_map_path.map(Path::to_path_buf);
 
     let CodegenReturn { code, map, .. } = Codegen::new().with_options(options).build(program);

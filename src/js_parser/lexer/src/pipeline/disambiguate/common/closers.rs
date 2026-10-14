@@ -47,7 +47,9 @@ impl Closers {
 
     pub(crate) fn set(&self, pos: usize, closer: Option<usize>) {
         let closer = closer.map(|c| c as u32);
-        self.memo.borrow_mut().insert(pos as u32, Resolved { closer, args: None });
+        self.memo
+            .borrow_mut()
+            .insert(pos as u32, Resolved { closer, args: None });
     }
 
     pub(crate) fn set_args(&self, lt: usize, yes: bool) {

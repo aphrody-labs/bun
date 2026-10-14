@@ -46,11 +46,14 @@ impl Winget {
                 n.push_str(".db");
                 n
             };
-            let cache_path = super::join(&ctx.source_cache_dir(SourceKind::Winget), &[cache_name.as_bytes()]);
+            let cache_path = super::join(
+                &ctx.source_cache_dir(SourceKind::Winget),
+                &[cache_name.as_bytes()],
+            );
             let cached = super::fs::read_with_age(&cache_path);
-            let fresh = cached
-                .as_ref()
-                .is_some_and(|(_, age)| !ctx.options.refresh && (ctx.options.offline || *age <= pure::INDEX_MAX_AGE_SECS));
+            let fresh = cached.as_ref().is_some_and(|(_, age)| {
+                !ctx.options.refresh && (ctx.options.offline || *age <= pure::INDEX_MAX_AGE_SECS)
+            });
             let db = match cached {
                 Some((bytes, _)) if fresh => bytes,
                 stale => match download_index(ctx, &base) {
@@ -77,7 +80,12 @@ impl Winget {
     fn versions(&self, ctx: &Ctx<'_>, row: &IndexRow) -> Result<Vec<VersionRef>> {
         let url = url_join(&base_url(ctx), &row.version_data_path());
         // The path embeds the index hash, so a cached copy never goes stale.
-        let bytes = ctx.fetch_cached(SourceKind::Winget, &row.version_data_cache_name(), &url, u64::MAX)?;
+        let bytes = ctx.fetch_cached(
+            SourceKind::Winget,
+            &row.version_data_cache_name(),
+            &url,
+            u64::MAX,
+        )?;
         let yaml = super::mszip::decode(&bytes)?;
         let doc = value::parse_yaml(&yaml, "versionData.yaml")?;
         Ok(pure::version_refs(&doc, &row.id)?)
@@ -152,19 +160,28 @@ impl Source for Winget {
         Ok(entry)
     }
 
-    fn install(&mut self, ctx: &Ctx<'_>, entry: &LockEntry, root: &InstallRoot) -> Result<InstalledRecord> {
+    fn install(
+        &mut self,
+        ctx: &Ctx<'_>,
+        entry: &LockEntry,
+        root: &InstallRoot,
+    ) -> Result<InstalledRecord> {
         check_id(&entry.id)?;
-        let sha = entry
-            .hash
-            .strip_prefix("sha256:")
-            .ok_or_else(|| Error::Parse(format!("winget lock entry {} has no sha256 hash", entry.id)))?;
+        let sha = entry.hash.strip_prefix("sha256:").ok_or_else(|| {
+            Error::Parse(format!("winget lock entry {} has no sha256 hash", entry.id))
+        })?;
         let what = format!("winget manifest {}@{}", entry.id, entry.version);
         let (bytes, _) = ctx.fetch_verified(SourceKind::Winget, &what, &entry.url, sha, ".yaml")?;
         let manifest = value::parse_yaml(&bytes, "manifest.yaml")?;
         installer::install(ctx, entry, &manifest, root)
     }
 
-    fn remove(&mut self, ctx: &Ctx<'_>, record: &InstalledRecord, root: &InstallRoot) -> Result<()> {
+    fn remove(
+        &mut self,
+        ctx: &Ctx<'_>,
+        record: &InstalledRecord,
+        root: &InstallRoot,
+    ) -> Result<()> {
         installer::remove(ctx, record, root)
     }
 }

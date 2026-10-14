@@ -7,7 +7,10 @@ use crate::{
 
 #[track_caller]
 fn test_unused(source_text: &str, expected: &str) {
-    let options = CompressOptions { unused: CompressOptionsUnused::Remove, ..default_options() };
+    let options = CompressOptions {
+        unused: CompressOptionsUnused::Remove,
+        ..default_options()
+    };
     test_options(source_text, expected, &options);
 }
 
@@ -27,7 +30,10 @@ fn test_fold_block() {
     test("{ (function foo(){x++; foo()}) }", "");
     test("function f(){return;}", "function f(){}");
     test("function f(){return 3;}", "function f(){return 3}");
-    test("function f(){if(x)return; x=3; return; }", "function f(){ x ||= 3; }");
+    test(
+        "function f(){if(x)return; x=3; return; }",
+        "function f(){ x ||= 3; }",
+    );
     test("{x=3;;;y=2;;;}", "x=3, y=2");
 
     // Cases to test for empty block.
@@ -36,8 +42,14 @@ fn test_fold_block() {
     // test("for(x=0;x<100;x++){x}", "for(x=0;x<100;x++);");
     // test("for(x in y){x}", "for(x in y);");
     // test("for (x of y) {x}", "for(x of y);");
-    test("for (let x = 1; x <10; x++ ) {}", "for (let x = 1; x <10; x++ );");
-    test("for (var x = 1; x <10; x++ ) {}", "for (var x = 1; x <10; x++ );");
+    test(
+        "for (let x = 1; x <10; x++ ) {}",
+        "for (let x = 1; x <10; x++ );",
+    );
+    test(
+        "for (var x = 1; x <10; x++ ) {}",
+        "for (var x = 1; x <10; x++ );",
+    );
     test("do { } while (true)", "do;while(1)");
     test(
         "function z(a) {
@@ -81,9 +93,15 @@ fn test_fold_useless_for() {
     // Make sure it plays nice with minimizing
     test("for(;false;) { foo(); continue }", "");
 
-    test("for (var { c, x: [d] } = {}; 0;);", "var { c, x: [d] } = {};");
+    test(
+        "for (var { c, x: [d] } = {}; 0;);",
+        "var { c, x: [d] } = {};",
+    );
     test("for (var se = [1, 2]; false;);", "var se = [1, 2];");
-    test("for (var se = [1, 2]; false;) { var a = 0; }", "var se = [1, 2], a;");
+    test(
+        "for (var se = [1, 2]; false;) { var a = 0; }",
+        "var se = [1, 2], a;",
+    );
 
     test("for (foo = bar; false;) {}", "for (foo = bar; 0;);");
     // test("l1:for(;false;) {  }", "");
@@ -102,9 +120,15 @@ fn test_minimize_loop_with_constant_condition_vanilla_for() {
 
 #[test]
 fn test_fold_try_statement() {
-    test("try { throw 0 } catch (e) { foo() }", "try { throw 0 } catch { foo() }");
+    test(
+        "try { throw 0 } catch (e) { foo() }",
+        "try { throw 0 } catch { foo() }",
+    );
     test("try {} catch (e) { var foo }", "try {} catch { var foo }");
-    test("try {} catch (e) { var foo; bar() } finally {}", "try {} catch { var foo }");
+    test(
+        "try {} catch (e) { var foo; bar() } finally {}",
+        "try {} catch { var foo }",
+    );
     test(
         "try {} catch (e) { var foo; bar() } finally { baz() }",
         "try {} catch { var foo } finally { baz() }",
@@ -114,11 +138,20 @@ fn test_fold_try_statement() {
     test("try {} finally { foo() }", "foo()");
     test("try {} catch (e) { foo() } finally { bar() }", "bar()");
     test("try {} finally { var x = foo() }", "var x = foo()");
-    test("try {} catch (e) { foo() } finally { var x = bar() }", "var x = bar()");
+    test(
+        "try {} catch (e) { foo() } finally { var x = bar() }",
+        "var x = bar()",
+    );
     test("try {} finally { let x = foo() }", "{ let x = foo() }");
-    test("try {} catch (e) { foo() } finally { let x = bar() }", "{ let x = bar();}");
+    test(
+        "try {} catch (e) { foo() } finally { let x = bar() }",
+        "{ let x = bar();}",
+    );
     test("try {} catch (e) { } finally {}", "");
-    test("try { foo() } catch (e) { bar() } finally {}", "try { foo() } catch { bar() }");
+    test(
+        "try { foo() } catch (e) { bar() } finally {}",
+        "try { foo() } catch { bar() }",
+    );
     test_same("try { foo() } catch { bar() } finally { baz() }");
 
     // Leak regression: when the empty `try` drops, the catch arm's write-ref
@@ -176,13 +209,19 @@ fn remove_empty_spread_arguments() {
 #[test]
 fn remove_unreachable() {
     test("while(true) { break a; unreachable;}", "for(;;) break a");
-    test("while(true) { continue a; unreachable;}", "for(;;) continue a");
+    test(
+        "while(true) { continue a; unreachable;}",
+        "for(;;) continue a",
+    );
     test("while(true) { throw a; unreachable;}", "for(;;) throw a");
     test("while(true) { return a; unreachable;}", "for(;;) return a");
 
     // A kept function declaration (not a dead IIFE) so the unreachable `var a`
     // after `return` is preserved under `unused: Keep`.
-    test("function f() { return; var a }", "function f() { return; var a }");
+    test(
+        "function f() { return; var a }",
+        "function f() { return; var a }",
+    );
     test_unused("(function () { return; var a })()", "");
 
     // https://github.com/rolldown/rolldown/issues/10184
@@ -228,7 +267,10 @@ fn remove_unused_expressions_in_sequence() {
     test("(true, foo.bar)();", "(0, foo.bar)();");
     test("(true, true, foo.bar)();", "(0, foo.bar)();");
     test("var foo; (true, foo.bar)();", "var foo; (0, foo.bar)();");
-    test("var foo; (true, true, foo.bar)();", "var foo; (0, foo.bar)();");
+    test(
+        "var foo; (true, true, foo.bar)();",
+        "var foo; (0, foo.bar)();",
+    );
 
     // Regression: a >=3 element sequence in indirect-access position whose
     // second-to-last element is already `0` must converge. Re-wrapping the
@@ -240,7 +282,10 @@ fn remove_unused_expressions_in_sequence() {
     test("typeof (0, foo);", "foo");
     test_same("v = typeof (0, foo);");
     test("var foo; typeof (0, foo);", "var foo;");
-    test("v = function(foo) { return typeof (0, foo) }", "v = function(foo) { return typeof foo }");
+    test(
+        "v = function(foo) { return typeof (0, foo) }",
+        "v = function(foo) { return typeof foo }",
+    );
     test("typeof 0", "");
 
     test_same("delete (0, foo);");
@@ -252,13 +297,22 @@ fn remove_unused_expressions_in_sequence() {
 
 #[test]
 fn remove_unused_expressions_in_for() {
-    test("var i; for (i = 0, 0; i < 10; i++) foo(i);", "for (var i = 0; i < 10; i++) foo(i);");
-    test("var i; for (i = 0; i < 10; 0, i++, 0) foo(i);", "for (var i = 0; i < 10; i++) foo(i);");
+    test(
+        "var i; for (i = 0, 0; i < 10; i++) foo(i);",
+        "for (var i = 0; i < 10; i++) foo(i);",
+    );
+    test(
+        "var i; for (i = 0; i < 10; 0, i++, 0) foo(i);",
+        "for (var i = 0; i < 10; i++) foo(i);",
+    );
 }
 
 #[test]
 fn remove_constant_value() {
-    test("const foo = false; if (foo) { console.log('foo') }", "const foo = !1;");
+    test(
+        "const foo = false; if (foo) { console.log('foo') }",
+        "const foo = !1;",
+    );
 }
 
 #[test]
@@ -270,9 +324,17 @@ fn remove_empty_function() {
     test_options("var foo = () => {}; foo(a)", "a", &options);
     test_options("var foo = () => {}; foo(a, b)", "a, b", &options);
     test_options("var foo = () => {}; foo(...a, b)", "[...a], b", &options);
-    test_options("var foo = () => {}; foo(...a, ...b)", "[...a], [...b]", &options);
+    test_options(
+        "var foo = () => {}; foo(...a, ...b)",
+        "[...a], [...b]",
+        &options,
+    );
     test_options("var foo = () => {}; x = foo()", "x = void 0", &options);
-    test_options("var foo = () => {}; x = foo(a(), b())", "x = (a(), b(), void 0)", &options);
+    test_options(
+        "var foo = () => {}; x = foo(a(), b())",
+        "x = (a(), b(), void 0)",
+        &options,
+    );
     test_options("var foo = function () {}; foo()", "", &options);
 
     test_options("var foo = (a = 0) => {}; foo()", "", &options);
@@ -285,14 +347,30 @@ fn remove_empty_function() {
 
     test_same_options("function foo({}) {} foo()", &options);
     test_options("var foo = ({}) => {}; foo()", "(({}) => {})()", &options);
-    test_options("var foo = function ({}) {}; foo()", "(function ({}) {})()", &options);
+    test_options(
+        "var foo = function ({}) {}; foo()",
+        "(function ({}) {})()",
+        &options,
+    );
 
     test_same_options("async function foo({}) {} foo()", &options);
-    test_options("var foo = async ({}) => {}; foo()", "(async ({}) => {})()", &options);
-    test_options("var foo = async function ({}) {}; foo()", "(async function ({}) {})()", &options);
+    test_options(
+        "var foo = async ({}) => {}; foo()",
+        "(async ({}) => {})()",
+        &options,
+    );
+    test_options(
+        "var foo = async function ({}) {}; foo()",
+        "(async function ({}) {})()",
+        &options,
+    );
 
     test_same_options("function* foo({}) {} foo()", &options);
-    test_options("var foo = function*({}) {}; foo()", "(function*({}) {})()", &options);
+    test_options(
+        "var foo = function*({}) {}; foo()",
+        "(function*({}) {})()",
+        &options,
+    );
 }
 
 #[test]

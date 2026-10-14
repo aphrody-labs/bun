@@ -101,7 +101,9 @@ fn try_find_directive_enabling_memoization<'a>(
     opts: &PluginOptions,
 ) -> Result<Option<&'a str>, Diagnostics> {
     // Check standard opt-in directives
-    let opt_in = directives.iter().find(|d| OPT_IN_DIRECTIVES.contains(&d.value.as_str()));
+    let opt_in = directives
+        .iter()
+        .find(|d| OPT_IN_DIRECTIVES.contains(&d.value.as_str()));
     if let Some(directive) = opt_in {
         return Ok(Some(directive.value.as_str()));
     }
@@ -166,7 +168,9 @@ fn find_directives_dynamic_gating<'a>(
     if matches.len() > 1 {
         let names: Vec<&str> = matches.iter().map(|(directive, _, _)| *directive).collect();
         let spans = matches.iter().map(|(_, _, span)| *span);
-        return Err(Diagnostics::from(diagnostics::multiple_gating_directives(&names, spans)));
+        return Err(Diagnostics::from(diagnostics::multiple_gating_directives(
+            &names, spans,
+        )));
     }
 
     if matches.len() == 1 {
@@ -211,12 +215,16 @@ fn is_hook_name(s: &str) -> bool {
         && bytes[0] == b'u'
         && bytes[1] == b's'
         && bytes[2] == b'e'
-        && bytes.get(3).is_some_and(|c| c.is_ascii_uppercase() || c.is_ascii_digit())
+        && bytes
+            .get(3)
+            .is_some_and(|c| c.is_ascii_uppercase() || c.is_ascii_digit())
 }
 
 /// Check if a name looks like a React component (starts with uppercase letter).
 fn is_component_name(name: &str) -> bool {
-    name.as_bytes().first().is_some_and(|c| c.is_ascii_uppercase())
+    name.as_bytes()
+        .first()
+        .is_some_and(|c| c.is_ascii_uppercase())
 }
 
 /// Check if an expression is a hook call (identifier with hook name, or
@@ -231,7 +239,10 @@ fn expr_is_hook(expr: &Expression) -> bool {
             }
             // Object must be a PascalCase identifier
             if let Expression::Identifier(obj) = &member.object {
-                obj.name.chars().next().is_some_and(|c| c.is_ascii_uppercase())
+                obj.name
+                    .chars()
+                    .next()
+                    .is_some_and(|c| c.is_ascii_uppercase())
             } else {
                 false
             }
@@ -512,7 +523,10 @@ fn calls_hooks_or_creates_jsx_in_stmt(stmt: &Statement) -> bool {
 fn calls_hooks_or_creates_jsx_in_expr(expr: &Expression) -> bool {
     /// Whether an argument expression is a nested function (skipped by the walk).
     fn is_nested_fn(arg: &Expression) -> bool {
-        matches!(arg, Expression::ArrowFunctionExpression(_) | Expression::FunctionExpression(_))
+        matches!(
+            arg,
+            Expression::ArrowFunctionExpression(_) | Expression::FunctionExpression(_)
+        )
     }
 
     match expr {
@@ -571,15 +585,16 @@ fn calls_hooks_or_creates_jsx_in_expr(expr: &Expression) -> bool {
         Expression::AssignmentExpression(assign) => {
             calls_hooks_or_creates_jsx_in_expr(&assign.right)
         }
-        Expression::SequenceExpression(seq) => {
-            seq.expressions.iter().any(calls_hooks_or_creates_jsx_in_expr)
-        }
+        Expression::SequenceExpression(seq) => seq
+            .expressions
+            .iter()
+            .any(calls_hooks_or_creates_jsx_in_expr),
         Expression::UnaryExpression(unary) => calls_hooks_or_creates_jsx_in_expr(&unary.argument),
         Expression::UpdateExpression(update) => match &update.argument {
             SimpleAssignmentTarget::AssignmentTargetIdentifier(_) => false,
-            target => {
-                target.as_member_expression().is_some_and(calls_hooks_or_creates_jsx_in_member)
-            }
+            target => target
+                .as_member_expression()
+                .is_some_and(calls_hooks_or_creates_jsx_in_member),
         },
         Expression::StaticMemberExpression(member) => {
             calls_hooks_or_creates_jsx_in_expr(&member.object)
@@ -594,22 +609,30 @@ fn calls_hooks_or_creates_jsx_in_expr(expr: &Expression) -> bool {
         Expression::AwaitExpression(await_expr) => {
             calls_hooks_or_creates_jsx_in_expr(&await_expr.argument)
         }
-        Expression::YieldExpression(yield_expr) => {
-            yield_expr.argument.as_ref().is_some_and(|arg| calls_hooks_or_creates_jsx_in_expr(arg))
-        }
+        Expression::YieldExpression(yield_expr) => yield_expr
+            .argument
+            .as_ref()
+            .is_some_and(|arg| calls_hooks_or_creates_jsx_in_expr(arg)),
         Expression::TaggedTemplateExpression(tagged) => {
             calls_hooks_or_creates_jsx_in_expr(&tagged.tag)
-                || tagged.quasi.expressions.iter().any(calls_hooks_or_creates_jsx_in_expr)
+                || tagged
+                    .quasi
+                    .expressions
+                    .iter()
+                    .any(calls_hooks_or_creates_jsx_in_expr)
         }
-        Expression::TemplateLiteral(tl) => {
-            tl.expressions.iter().any(calls_hooks_or_creates_jsx_in_expr)
-        }
+        Expression::TemplateLiteral(tl) => tl
+            .expressions
+            .iter()
+            .any(calls_hooks_or_creates_jsx_in_expr),
         Expression::ArrayExpression(arr) => arr.elements.iter().any(|e| match e {
             ArrayExpressionElement::SpreadElement(s) => {
                 calls_hooks_or_creates_jsx_in_expr(&s.argument)
             }
             ArrayExpressionElement::Elision(_) => false,
-            other => other.as_expression().is_some_and(calls_hooks_or_creates_jsx_in_expr),
+            other => other
+                .as_expression()
+                .is_some_and(calls_hooks_or_creates_jsx_in_expr),
         }),
         Expression::ObjectExpression(obj) => obj.properties.iter().any(|prop| match prop {
             ObjectPropertyKind::SpreadProperty(s) => {
@@ -757,20 +780,22 @@ fn calls_hooks_or_creates_jsx_in_binding(pattern: &BindingPattern) -> bool {
     match pattern {
         BindingPattern::BindingIdentifier(_) => false,
         BindingPattern::ObjectPattern(obj) => {
-            obj.properties.iter().any(|p| calls_hooks_or_creates_jsx_in_binding(&p.value))
+            obj.properties
+                .iter()
+                .any(|p| calls_hooks_or_creates_jsx_in_binding(&p.value))
                 || obj
                     .rest
                     .as_ref()
                     .is_some_and(|r| calls_hooks_or_creates_jsx_in_binding(&r.argument))
         }
         BindingPattern::ArrayPattern(arr) => {
-            arr.elements
-                .iter()
-                .any(|e| e.as_ref().is_some_and(calls_hooks_or_creates_jsx_in_binding))
-                || arr
-                    .rest
-                    .as_ref()
-                    .is_some_and(|r| calls_hooks_or_creates_jsx_in_binding(&r.argument))
+            arr.elements.iter().any(|e| {
+                e.as_ref()
+                    .is_some_and(calls_hooks_or_creates_jsx_in_binding)
+            }) || arr
+                .rest
+                .as_ref()
+                .is_some_and(|r| calls_hooks_or_creates_jsx_in_binding(&r.argument))
         }
         BindingPattern::AssignmentPattern(assign) => {
             calls_hooks_or_creates_jsx_in_expr(&assign.right)
@@ -937,7 +962,11 @@ fn get_component_or_hook_like(
             let is_component = is_valid_component_params(params)
                 && calls_hooks_or_creates_jsx(params, body)
                 && !returns_non_node_fn(body);
-            return if is_component { Some(ReactFunctionType::Component) } else { None };
+            return if is_component {
+                Some(ReactFunctionType::Component)
+            } else {
+                None
+            };
         } else if is_hook_name(fn_name) {
             // Hooks have hook invocations or JSX, but can take any # of arguments
             return if calls_hooks_or_creates_jsx(params, body) {
@@ -1021,7 +1050,9 @@ fn handle_error<'a>(
     if should_panic(err, panic_threshold) {
         // The per-detail diagnostics were already pushed by `log_error`; the fatal
         // result just carries them. (The old JS-shim summary is dropped.)
-        Some(CompileResult::Fatal { diagnostics: std::mem::take(diagnostics) })
+        Some(CompileResult::Fatal {
+            diagnostics: std::mem::take(diagnostics),
+        })
     } else {
         None
     }
@@ -1104,10 +1135,17 @@ fn outlined_compile_source<'b, 'a>(
         original_kind: OriginalFnKind::FunctionDeclaration,
         fn_start: Some(span.start),
         fn_end: Some(span.end),
-        fn_scope_id: function.scope_id.get().expect("outlined function should have a scope"),
+        fn_scope_id: function
+            .scope_id
+            .get()
+            .expect("outlined function should have a scope"),
         fn_type,
         fn_node: FunctionNode::Function(function),
-        body_directives: function.body.as_deref().map(body_directive_values).unwrap_or_default(),
+        body_directives: function
+            .body
+            .as_deref()
+            .map(body_directive_values)
+            .unwrap_or_default(),
     }
 }
 
@@ -1133,7 +1171,10 @@ fn compile_outlined_functions<'a, 'b, 'p, 's, const EMIT: bool>(
         for outlined in std::mem::take(&mut compiled.codegen_fn.outlined) {
             let should_compile = outlined.fn_type.is_some();
             let index = nodes.len();
-            nodes.push(OutlinedNode { outlined: Some(outlined), children: Vec::new() });
+            nodes.push(OutlinedNode {
+                outlined: Some(outlined),
+                children: Vec::new(),
+            });
             roots.push(index);
             if should_compile {
                 queue.push(index);
@@ -1147,8 +1188,19 @@ fn compile_outlined_functions<'a, 'b, 'p, 's, const EMIT: bool>(
             let outlined = nodes[index].outlined.as_ref().unwrap();
             body.push(outlined_function_declaration(ast, &outlined.func));
         }
-        let program = Program::new(SPAN, source_type, context.source_text, [], None, [], body, ast);
-        let semantic_ret = SemanticBuilder::new().with_build_nodes(true).build(&program);
+        let program = Program::new(
+            SPAN,
+            source_type,
+            context.source_text,
+            [],
+            None,
+            [],
+            body,
+            ast,
+        );
+        let semantic_ret = SemanticBuilder::new()
+            .with_build_nodes(true)
+            .build(&program);
         if !semantic_ret.diagnostics.is_empty() {
             if let Some(result) = handle_error(
                 &semantic_ret.diagnostics,
@@ -1167,14 +1219,23 @@ fn compile_outlined_functions<'a, 'b, 'p, 's, const EMIT: bool>(
             .iter()
             .zip(&queue)
             .map(|(statement, &index)| {
-                let Statement::FunctionDeclaration(function) = statement else { unreachable!() };
+                let Statement::FunctionDeclaration(function) = statement else {
+                    unreachable!()
+                };
                 let fn_type = nodes[index].outlined.as_ref().unwrap().fn_type.unwrap();
                 outlined_compile_source(function, fn_type)
             })
             .collect::<Vec<_>>();
         let mut results = Vec::with_capacity(sources.len());
         for source in &sources {
-            results.push(process_fn::<EMIT>(ast, source, &scope, output_mode, env_config, context));
+            results.push(process_fn::<EMIT>(
+                ast,
+                source,
+                &scope,
+                output_mode,
+                env_config,
+                context,
+            ));
         }
 
         let mut next_queue = Vec::new();
@@ -1196,7 +1257,10 @@ fn compile_outlined_functions<'a, 'b, 'p, 's, const EMIT: bool>(
             for outlined in nested {
                 let should_compile = outlined.fn_type.is_some();
                 let child = nodes.len();
-                nodes.push(OutlinedNode { outlined: Some(outlined), children: Vec::new() });
+                nodes.push(OutlinedNode {
+                    outlined: Some(outlined),
+                    children: Vec::new(),
+                });
                 nodes[index].children.push(child);
                 if should_compile {
                     next_queue.push(child);
@@ -1211,7 +1275,10 @@ fn compile_outlined_functions<'a, 'b, 'p, 's, const EMIT: bool>(
         while let Some(index) = stack.pop() {
             let node = &mut nodes[index];
             stack.extend(std::mem::take(&mut node.children).into_iter().rev());
-            compiled.codegen_fn.outlined.push(node.outlined.take().unwrap());
+            compiled
+                .codegen_fn
+                .outlined
+                .push(node.outlined.take().unwrap());
         }
     }
     Ok(())
@@ -1236,7 +1303,10 @@ fn process_fn<'a, const EMIT: bool>(
     let opt_in_result =
         try_find_directive_enabling_memoization(&source.body_directives, &context.opts);
     let opt_out = find_directive_disabling_memoization(
-        source.body_directives.iter().map(|directive| directive.value.as_str()),
+        source
+            .body_directives
+            .iter()
+            .map(|directive| directive.value.as_str()),
         context.opts.custom_opt_out_directives.as_deref(),
     );
 
@@ -1345,7 +1415,12 @@ fn try_make_compile_source<'b, 'a>(
             // `TSDeclareFunction`) are never compiled; Babel modeled these as
             // separate, non-traversed statement kinds.
             let block = f.body.as_deref()?;
-            (&f.params, FnBody::Block(block), f.span, body_directive_values(block))
+            (
+                &f.params,
+                FnBody::Block(block),
+                f.span,
+                body_directive_values(block),
+            )
         }
         FunctionNode::Arrow(a) => {
             let (body, directives) = if let Some(expr) = a.get_expression() {
@@ -2118,13 +2193,17 @@ fn may_have_functions_to_compile(semantic: &Semantic, opts: &PluginOptions) -> b
                         get_function_name_from_id(func.id.as_ref()),
                         OriginalFnKind::FunctionDeclaration,
                     ),
-                    _ => {
-                        (declarator_name_for(nodes, node.id()), OriginalFnKind::FunctionExpression)
-                    }
+                    _ => (
+                        declarator_name_for(nodes, node.id()),
+                        OriginalFnKind::FunctionExpression,
+                    ),
                 };
                 // A nameless function without directives can never classify.
                 if name.is_none()
-                    && func.body.as_ref().is_none_or(|body| body.directives.is_empty())
+                    && func
+                        .body
+                        .as_ref()
+                        .is_none_or(|body| body.directives.is_empty())
                 {
                     continue;
                 }
@@ -2133,11 +2212,17 @@ fn may_have_functions_to_compile(semantic: &Semantic, opts: &PluginOptions) -> b
             AstKind::ArrowFunctionExpression(arrow) => {
                 let name = declarator_name_for(nodes, node.id());
                 if name.is_none()
-                    && arrow.get_function_body().is_none_or(|body| body.directives.is_empty())
+                    && arrow
+                        .get_function_body()
+                        .is_none_or(|body| body.directives.is_empty())
                 {
                     continue;
                 }
-                (FunctionNode::Arrow(arrow), name, OriginalFnKind::ArrowFunctionExpression)
+                (
+                    FunctionNode::Arrow(arrow),
+                    name,
+                    OriginalFnKind::ArrowFunctionExpression,
+                )
             }
             _ => continue,
         };
@@ -2153,8 +2238,10 @@ fn may_have_functions_to_compile(semantic: &Semantic, opts: &PluginOptions) -> b
     // wrapper regardless of what the name resolves to). Scanned last so
     // component files exit in the function-scope pass above.
     for symbol_id in scoping.symbol_ids() {
-        if matches!(scoping.symbol_name(symbol_id), "memo" | "forwardRef" | "React")
-            && has_wrapper_callee_reference(scoping, nodes, symbol_id)
+        if matches!(
+            scoping.symbol_name(symbol_id),
+            "memo" | "forwardRef" | "React"
+        ) && has_wrapper_callee_reference(scoping, nodes, symbol_id)
         {
             return true;
         }
@@ -2165,9 +2252,12 @@ fn may_have_functions_to_compile(semantic: &Semantic, opts: &PluginOptions) -> b
 
 /// Whether any resolved reference of `symbol_id` is a wrapper-call callee.
 fn has_wrapper_callee_reference(scoping: &Scoping, nodes: &AstNodes, symbol_id: SymbolId) -> bool {
-    scoping.get_resolved_reference_ids(symbol_id).iter().any(|reference_id| {
-        is_wrapper_callee(nodes, scoping.get_reference(*reference_id).node_id())
-    })
+    scoping
+        .get_resolved_reference_ids(symbol_id)
+        .iter()
+        .any(|reference_id| {
+            is_wrapper_callee(nodes, scoping.get_reference(*reference_id).node_id())
+        })
 }
 
 /// The `const Foo = <fn>` name for a function/arrow node, ignoring any parenthesis
@@ -2252,7 +2342,10 @@ impl<'a> CompileOutput<'a> {
     /// `program` must be the same, unmodified program [`compile`](crate::compile)
     /// saw. Afterwards any previously computed `Semantic`/`Scoping` is stale.
     pub fn transform(self, program: &mut Program<'a>) {
-        let CompileOutput { replacements, mut context } = self;
+        let CompileOutput {
+            replacements,
+            mut context,
+        } = self;
         let ast = AstBuilder::new(context.allocator());
         ox_transform_program(&ast, program, replacements, &mut context);
         // Diagnostics were extracted at the end of compilation; nothing in the
@@ -2277,7 +2370,9 @@ fn prune_inner_comments(program: &mut Program<'_>) {
             top_level_starts.insert(start);
         }
     }
-    program.comments.retain(|comment| top_level_starts.contains(&comment.attached_to));
+    program
+        .comments
+        .retain(|comment| top_level_starts.contains(&comment.attached_to));
 }
 
 /// Copy the TS metadata (type annotation, decorators, optional/modifier flags)
@@ -2300,7 +2395,9 @@ fn copy_param_ts_metadata<'a>(
     }
     if let (Some(rest), Some(source_rest)) = (&mut new_params.rest, &source_params.rest) {
         rest.decorators = source_rest.decorators.clone_in_with_semantic_ids(allocator);
-        rest.type_annotation = source_rest.type_annotation.clone_in_with_semantic_ids(allocator);
+        rest.type_annotation = source_rest
+            .type_annotation
+            .clone_in_with_semantic_ids(allocator);
     }
 }
 
@@ -2471,7 +2568,10 @@ enum OxcVisitMode<'a, 'b> {
     /// Find the function with scope `scope_id` and clone it as an expression
     /// (a declaration becomes a `FunctionExpression`), for
     /// [`ox_clone_original_fn_as_expression`]. Mutates nothing.
-    FindOriginalFn { scope_id: ScopeId, found: Option<Expression<'a>> },
+    FindOriginalFn {
+        scope_id: ScopeId,
+        found: Option<Expression<'a>>,
+    },
     /// Insert outlined function declarations immediately after the statement
     /// declaring the function with scope `scope_id`, in whatever statement
     /// list that statement lives (program body, function body, nested block),
@@ -2571,7 +2671,10 @@ impl<'a> oxc_ast_visit::VisitMut<'a> for OxcVisitor<'a, '_> {
     fn visit_function(&mut self, func: &mut Function<'a>, flags: oxc_syntax::scope::ScopeFlags) {
         let ast = self.ast;
         match &mut self.mode {
-            OxcVisitMode::ReplaceFns { replacements, remaining } => {
+            OxcVisitMode::ReplaceFns {
+                replacements,
+                remaining,
+            } => {
                 if *remaining == 0 {
                     return;
                 }
@@ -2620,7 +2723,10 @@ impl<'a> oxc_ast_visit::VisitMut<'a> for OxcVisitor<'a, '_> {
     fn visit_arrow_function_expression(&mut self, arrow: &mut ArrowFunctionExpression<'a>) {
         let ast = self.ast;
         match &mut self.mode {
-            OxcVisitMode::ReplaceFns { replacements, remaining } => {
+            OxcVisitMode::ReplaceFns {
+                replacements,
+                remaining,
+            } => {
                 if *remaining == 0 {
                     return;
                 }
@@ -2661,7 +2767,10 @@ impl<'a> oxc_ast_visit::VisitMut<'a> for OxcVisitor<'a, '_> {
                 return;
             }
             let scope_id = *scope_id;
-            if let Some(idx) = stmts.iter().position(|s| ox_declares_fn_with_scope(s, scope_id)) {
+            if let Some(idx) = stmts
+                .iter()
+                .position(|s| ox_declares_fn_with_scope(s, scope_id))
+            {
                 // Babel inserts each outlined function via `originalFn.insertAfter(...)`,
                 // anchored at the same original node, so repeated insertions reverse the
                 // emitted order. Insert each at `idx + 1` to reproduce that.
@@ -2690,7 +2799,10 @@ impl<'a> oxc_ast_visit::VisitMut<'a> for OxcVisitor<'a, '_> {
         }
 
         // Insert `export default Name;` right after the replaced declaration.
-        if let OxcVisitMode::ReplaceWithGated { export_default_name, .. } = &mut self.mode
+        if let OxcVisitMode::ReplaceWithGated {
+            export_default_name,
+            ..
+        } = &mut self.mode
             && let Some(name) = export_default_name.take()
         {
             let ident = Expression::new_identifier(SPAN, name, self.ast);
@@ -2714,8 +2826,12 @@ impl<'a> oxc_ast_visit::VisitMut<'a> for OxcVisitor<'a, '_> {
     }
 
     fn visit_expression(&mut self, expr: &mut Expression<'a>) {
-        if let OxcVisitMode::ReplaceWithGated { scope_id, gating_expression, done, .. } =
-            &mut self.mode
+        if let OxcVisitMode::ReplaceWithGated {
+            scope_id,
+            gating_expression,
+            done,
+            ..
+        } = &mut self.mode
         {
             if *done {
                 return;
@@ -2812,10 +2928,17 @@ fn ox_clone_original_fn_as_expression<'a>(
     program: &mut Program<'a>,
     scope_id: ScopeId,
 ) -> Option<Expression<'a>> {
-    let mut finder =
-        OxcVisitor { ast, mode: OxcVisitMode::FindOriginalFn { scope_id, found: None } };
+    let mut finder = OxcVisitor {
+        ast,
+        mode: OxcVisitMode::FindOriginalFn {
+            scope_id,
+            found: None,
+        },
+    };
     oxc_ast_visit::VisitMut::visit_program(&mut finder, program);
-    let OxcVisitMode::FindOriginalFn { found, .. } = finder.mode else { unreachable!() };
+    let OxcVisitMode::FindOriginalFn { found, .. } = finder.mode else {
+        unreachable!()
+    };
     found.map(|e| e.clone_in_with_semantic_ids(ast.allocator()))
 }
 
@@ -2836,10 +2959,9 @@ fn ox_transform_program<'a>(
     // preceding offset also keeps them distinct from comments attached to the
     // first statement, while avoiding `SPAN` (`0..0`), which makes later
     // transforms mistake them for source text at the beginning of the file.
-    let import_span = program
-        .body
-        .first()
-        .map_or(SPAN, |statement| Span::empty(statement.span().start.saturating_sub(1)));
+    let import_span = program.body.first().map_or(SPAN, |statement| {
+        Span::empty(statement.span().start.saturating_sub(1))
+    });
 
     // Outlined function declarations are placed differently depending on the
     // original function's syntactic kind, mirroring `insertNewOutlinedFunctionNode`
@@ -2852,7 +2974,9 @@ fn ox_transform_program<'a>(
     //     the outlined function past bindings it references — upstream has the same
     //     behavior, so we reproduce it rather than diverge.
     let mut appended_outlined_decls: Vec<Statement<'a>> = Vec::new();
-    let needs_memo_import = replacements.iter().any(|r| codegen_uses_memo_cache(&r.codegen_fn));
+    let needs_memo_import = replacements
+        .iter()
+        .any(|r| codegen_uses_memo_cache(&r.codegen_fn));
 
     let mut replace_map: FxHashMap<ScopeId, CodegenFunction<'a>> = FxHashMap::default();
     let mut gated_replacements = Vec::new();
@@ -2896,8 +3020,10 @@ fn ox_transform_program<'a>(
     // (which do restructure it) are unaffected by running first. Gated functions
     // are replaced by a conditional in the loop below, not edited in place.
     if !replace_map.is_empty() {
-        let mode =
-            OxcVisitMode::ReplaceFns { remaining: replace_map.len(), replacements: replace_map };
+        let mode = OxcVisitMode::ReplaceFns {
+            remaining: replace_map.len(),
+            replacements: replace_map,
+        };
         let mut visitor = OxcVisitor { ast, mode };
         oxc_ast_visit::VisitMut::visit_program(&mut visitor, program);
     }
@@ -2928,7 +3054,10 @@ fn ox_transform_program<'a>(
 
 fn codegen_uses_memo_cache(codegen_fn: &CodegenFunction<'_>) -> bool {
     codegen_fn.memo_slots_used > 0
-        || codegen_fn.outlined.iter().any(|outlined| codegen_uses_memo_cache(&outlined.func))
+        || codegen_fn
+            .outlined
+            .iter()
+            .any(|outlined| codegen_uses_memo_cache(&outlined.func))
 }
 
 /// Insert outlined function declarations immediately after the statement that
@@ -2950,10 +3079,15 @@ fn ox_insert_outlined_after<'a>(
 ) {
     let mut visitor = OxcVisitor {
         ast,
-        mode: OxcVisitMode::InsertOutlinedAfter { scope_id, decls: outlined_decls },
+        mode: OxcVisitMode::InsertOutlinedAfter {
+            scope_id,
+            decls: outlined_decls,
+        },
     };
     oxc_ast_visit::VisitMut::visit_program(&mut visitor, program);
-    let OxcVisitMode::InsertOutlinedAfter { decls, .. } = visitor.mode else { unreachable!() };
+    let OxcVisitMode::InsertOutlinedAfter { decls, .. } = visitor.mode else {
+        unreachable!()
+    };
     // A `FunctionDeclaration` sits directly in a statement list everywhere in
     // module code, so the walk finds it; the exception is sloppy-mode annex-B
     // positions (`if (c) function F() {}`), where we degrade to appending at
@@ -2997,14 +3131,19 @@ fn ox_add_imports_to_program<'a>(
         if let Statement::ImportDeclaration(import) = stmt
             && ox_is_non_namespaced_import(import)
         {
-            existing_import_indices.entry(import.source.value.as_str()).or_insert(idx);
+            existing_import_indices
+                .entry(import.source.value.as_str())
+                .or_insert(idx);
         }
     }
 
     let mut sorted_modules: Vec<_> = imports.iter().collect();
     sorted_modules.sort_unstable_by_key(|(a, _)| a.cow_to_lowercase());
 
-    let is_module = matches!(program.source_type.module_kind(), oxc_span::ModuleKind::Module);
+    let is_module = matches!(
+        program.source_type.module_kind(),
+        oxc_span::ModuleKind::Module
+    );
 
     let mut new_stmts: Vec<Statement<'a>> = Vec::new();
 
@@ -3016,7 +3155,9 @@ fn ox_add_imports_to_program<'a>(
             // Merge into the existing import declaration.
             if let Statement::ImportDeclaration(import) = &mut program.body[idx] {
                 let specifier_span = Span::empty(import.span.start);
-                let specifiers = import.specifiers.get_or_insert_with(|| ArenaVec::new_in(ast));
+                let specifiers = import
+                    .specifiers
+                    .get_or_insert_with(|| ArenaVec::new_in(ast));
                 for spec in &sorted_imports {
                     specifiers.push(ox_make_import_specifier(ast, spec, specifier_span));
                 }
@@ -3052,14 +3193,26 @@ fn ox_add_imports_to_program<'a>(
                     ox_atom(ast, &spec.name),
                     ast,
                 );
-                props.push(BindingProperty::new(import_span, key, value, false, false, ast));
+                props.push(BindingProperty::new(
+                    import_span,
+                    key,
+                    value,
+                    false,
+                    false,
+                    ast,
+                ));
             }
             let object_pattern = BindingPattern::new_object_pattern(import_span, props, None, ast);
             let require_call = Expression::new_call_expression(
                 import_span,
                 Expression::new_identifier(import_span, "require", ast),
                 None,
-                [Argument::new_string_literal(import_span, ox_atom(ast, module_name), None, ast)],
+                [Argument::new_string_literal(
+                    import_span,
+                    ox_atom(ast, module_name),
+                    None,
+                    ast,
+                )],
                 false,
                 ast,
             );
@@ -3114,9 +3267,9 @@ fn ox_is_non_namespaced_import(import: &ImportDeclaration) -> bool {
     }
     match &import.specifiers {
         None => true,
-        Some(specifiers) => {
-            specifiers.iter().all(|s| matches!(s, ImportDeclarationSpecifier::ImportSpecifier(_)))
-        }
+        Some(specifiers) => specifiers
+            .iter()
+            .all(|s| matches!(s, ImportDeclarationSpecifier::ImportSpecifier(_))),
     }
 }
 
@@ -3141,11 +3294,17 @@ pub fn compile_program<'a, const EMIT: bool>(
     // before all the setup below, which only compilation needs. The pre-check
     // decides emptiness from semantic data without walking the AST.
     if !may_have_functions_to_compile(semantic, &options) {
-        return CompileResult::Success { output: None, diagnostics: Diagnostics::new() };
+        return CompileResult::Success {
+            output: None,
+            diagnostics: Diagnostics::new(),
+        };
     }
     let queue = find_functions_to_compile(program, &options);
     if queue.is_empty() {
-        return CompileResult::Success { output: None, diagnostics: Diagnostics::new() };
+        return CompileResult::Success {
+            output: None,
+            diagnostics: Diagnostics::new(),
+        };
     }
 
     // Compute output mode once, up front
@@ -3171,7 +3330,10 @@ pub fn compile_program<'a, const EMIT: bool>(
 
     // Check for module-scope opt-out directive
     let has_module_scope_opt_out = find_directive_disabling_memoization(
-        program.directives.iter().map(|d| d.expression.value.as_str()),
+        program
+            .directives
+            .iter()
+            .map(|d| d.expression.value.as_str()),
         options.custom_opt_out_directives.as_deref(),
     )
     .is_some();
@@ -3214,14 +3376,18 @@ pub fn compile_program<'a, const EMIT: bool>(
         };
 
         let hook_guard_name =
-            options.environment.enable_emit_hook_guards.as_ref().map(|hook_guard_config| {
-                let spec = context.add_import_specifier(
-                    &hook_guard_config.source,
-                    &hook_guard_config.import_specifier_name,
-                    None,
-                );
-                spec.name
-            });
+            options
+                .environment
+                .enable_emit_hook_guards
+                .as_ref()
+                .map(|hook_guard_config| {
+                    let spec = context.add_import_specifier(
+                        &hook_guard_config.source,
+                        &hook_guard_config.import_specifier_name,
+                        None,
+                    );
+                    spec.name
+                });
 
         // Store pre-resolved names on context for pipeline access
         context.instrument_fn_name = instrument_fn_name;
@@ -3247,7 +3413,11 @@ pub fn compile_program<'a, const EMIT: bool>(
             &mut context,
         ) {
             Ok(Some(codegen_fn)) => {
-                compiled_fns.push(CompiledFunction { kind: source.kind, source, codegen_fn });
+                compiled_fns.push(CompiledFunction {
+                    kind: source.kind,
+                    source,
+                    codegen_fn,
+                });
             }
             Ok(None) => {
                 // Function was skipped or lint-only
@@ -3259,7 +3429,10 @@ pub fn compile_program<'a, const EMIT: bool>(
     }
 
     if !EMIT {
-        return CompileResult::Success { output: None, diagnostics: context.diagnostics };
+        return CompileResult::Success {
+            output: None,
+            diagnostics: context.diagnostics,
+        };
     }
 
     if let Err(fatal_result) = compile_outlined_functions::<EMIT>(
@@ -3278,13 +3451,19 @@ pub fn compile_program<'a, const EMIT: bool>(
         if !compiled_fns.is_empty() {
             let err =
                 Diagnostics::from(diagnostics::invariant_unexpected_compiled_functions_when_module_scope_opt_out_present());
-            if let Some(result) =
-                handle_error(&err, None, context.opts.panic_threshold, &mut context.diagnostics)
-            {
+            if let Some(result) = handle_error(
+                &err,
+                None,
+                context.opts.panic_threshold,
+                &mut context.diagnostics,
+            ) {
                 return result;
             }
         }
-        return CompileResult::Success { output: None, diagnostics: context.diagnostics };
+        return CompileResult::Success {
+            output: None,
+            diagnostics: context.diagnostics,
+        };
     }
 
     // Convert compiled functions to owned oxc replacements (dropping the borrows of
@@ -3326,7 +3505,13 @@ pub fn compile_program<'a, const EMIT: bool>(
     let output = if replacements.is_empty() {
         None
     } else {
-        Some(Box::new(CompileOutput { replacements, context }))
+        Some(Box::new(CompileOutput {
+            replacements,
+            context,
+        }))
     };
-    CompileResult::Success { output, diagnostics }
+    CompileResult::Success {
+        output,
+        diagnostics,
+    }
 }

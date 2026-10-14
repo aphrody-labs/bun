@@ -54,12 +54,18 @@ pub enum OverrideRulesError {
 impl fmt::Display for OverrideRulesError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            OverrideRulesError::RuleNotFound { plugin_name, rule_name } => {
+            OverrideRulesError::RuleNotFound {
+                plugin_name,
+                rule_name,
+            } => {
                 write!(f, "Rule '{rule_name}' not found in plugin '{plugin_name}'")
             }
             OverrideRulesError::ExternalRuleLookup(e) => write!(f, "{e}"),
             OverrideRulesError::RuleConfiguration { rule_name, message } => {
-                write!(f, "Invalid configuration for rule `{rule_name}`:\n  {message}")
+                write!(
+                    f,
+                    "Invalid configuration for rule `{rule_name}`:\n  {message}"
+                )
             }
         }
     }
@@ -129,7 +135,10 @@ impl OxlintRules {
         let mut rules_to_replace = vec![];
         let mut errors = vec![];
 
-        let lookup = self.rules.iter().into_group_map_by(|r| r.rule_name.as_str());
+        let lookup = self
+            .rules
+            .iter()
+            .into_group_map_by(|r| r.rule_name.as_str());
 
         for (name, rule_configs) in &lookup {
             let rules_map = rules_for_override
@@ -627,7 +636,12 @@ impl<'de> Deserialize<'de> for OxlintRules {
                 while let Some((key, value)) = map.next_entry::<String, serde_json::Value>()? {
                     let (plugin_name, rule_name) = parse_rule_key(&key);
                     let (severity, config) = parse_rule_value(value).map_err(de::Error::custom)?;
-                    rules.push(ESLintRule { plugin_name, rule_name, severity, config });
+                    rules.push(ESLintRule {
+                        plugin_name,
+                        rule_name,
+                        severity,
+                        config,
+                    });
                 }
 
                 Ok(OxlintRules { rules })
@@ -642,7 +656,11 @@ fn parse_rule_key(name: &str) -> (String, String) {
     // For scoped packages (starting with `@`), split at the last `/` to handle
     // packages like `@eslint-react/naming-convention` with rule `rule-name`.
     // For non-scoped packages, split at the first `/`.
-    let parts = if name.starts_with('@') { name.rsplit_once('/') } else { name.split_once('/') };
+    let parts = if name.starts_with('@') {
+        name.rsplit_once('/')
+    } else {
+        name.split_once('/')
+    };
 
     let Some((plugin_name, rule_name)) = parts else {
         return (
@@ -666,7 +684,11 @@ fn parse_rule_key(name: &str) -> (String, String) {
 pub fn normalize_rule_name(name: &str) -> String {
     let (plugin_name, rule_name) = parse_rule_key(name);
     let plugin_name = super::plugins::plugin_display_name(&plugin_name);
-    if plugin_name == "eslint" { rule_name } else { format!("{plugin_name}/{rule_name}") }
+    if plugin_name == "eslint" {
+        rule_name
+    } else {
+        format!("{plugin_name}/{rule_name}")
+    }
 }
 
 pub(super) fn unalias_plugin_name(plugin_name: &str, rule_name: &str) -> (String, String) {
@@ -797,7 +819,10 @@ mod test {
         assert_eq!(r3.rule_name, "dummy");
         assert_eq!(r3.plugin_name, "eslint");
         assert!(r3.severity.is_warn_deny());
-        assert_eq!(r3.config.as_slice(), &[serde_json::json!("arg1"), serde_json::json!("args2")]);
+        assert_eq!(
+            r3.config.as_slice(),
+            &[serde_json::json!("arg1"), serde_json::json!("args2")]
+        );
 
         // `@next/next` is aliased to `nextjs`
         let r4 = rules.next().unwrap();
@@ -850,7 +875,10 @@ mod test {
     #[test]
     fn test_override_empty() {
         let mut rules = RuleSet::default();
-        let configs = [json!({ "no-console": "error" }), json!({ "eslint/no-console": "error" })];
+        let configs = [
+            json!({ "no-console": "error" }),
+            json!({ "eslint/no-console": "error" }),
+        ];
 
         for config in configs {
             rules.clear();
@@ -866,7 +894,10 @@ mod test {
     #[test]
     fn test_override_allow() {
         let mut rules = RuleSet::default();
-        rules.insert(RuleEnum::EslintNoConsole(Default::default()), AllowWarnDeny::Deny);
+        rules.insert(
+            RuleEnum::EslintNoConsole(Default::default()),
+            AllowWarnDeny::Deny,
+        );
         r#override(&mut rules, &json!({ "eslint/no-console": "off" }));
 
         assert!(!rules.iter().any(|(_, severity)| severity.is_warn_deny()));
@@ -892,7 +923,10 @@ mod test {
 
         for config in &configs {
             let mut rules = RuleSet::default();
-            rules.insert(RuleEnum::EslintNoUnusedVars(Default::default()), AllowWarnDeny::Warn);
+            rules.insert(
+                RuleEnum::EslintNoUnusedVars(Default::default()),
+                AllowWarnDeny::Warn,
+            );
             r#override(&mut rules, config);
 
             assert_eq!(rules.len(), 1, "{config:?}");
@@ -971,14 +1005,23 @@ mod test {
 
         // Test @scope/eslint-plugin-name and @scope/oxlint-plugin-name normalization
         assert_eq!(normalize_plugin_name("@foo/eslint-plugin-bar"), "@foo/bar");
-        assert_eq!(normalize_plugin_name("@typescript-eslint/eslint-plugin"), "@typescript-eslint");
+        assert_eq!(
+            normalize_plugin_name("@typescript-eslint/eslint-plugin"),
+            "@typescript-eslint"
+        );
         assert_eq!(normalize_plugin_name("@foo/oxlint-plugin-bar"), "@foo/bar");
-        assert_eq!(normalize_plugin_name("@typescript-eslint/oxlint-plugin"), "@typescript-eslint");
+        assert_eq!(
+            normalize_plugin_name("@typescript-eslint/oxlint-plugin"),
+            "@typescript-eslint"
+        );
 
         // Test no change for already normalized names
         assert_eq!(normalize_plugin_name("react"), "react");
         assert_eq!(normalize_plugin_name("unicorn"), "unicorn");
-        assert_eq!(normalize_plugin_name("@typescript-eslint"), "@typescript-eslint");
+        assert_eq!(
+            normalize_plugin_name("@typescript-eslint"),
+            "@typescript-eslint"
+        );
         assert_eq!(normalize_plugin_name("jsx-a11y"), "jsx-a11y");
     }
 
@@ -1021,12 +1064,18 @@ mod test {
             super::normalize_rule_name("eslint-plugin-react/jsx-uses-vars"),
             "react/jsx-uses-vars"
         );
-        assert_eq!(super::normalize_rule_name("jsx-a11y/alt-text"), "jsx-a11y/alt-text");
+        assert_eq!(
+            super::normalize_rule_name("jsx-a11y/alt-text"),
+            "jsx-a11y/alt-text"
+        );
         assert_eq!(
             super::normalize_rule_name("react-perf/jsx-no-new-object-as-prop"),
             "react-perf/jsx-no-new-object-as-prop"
         );
-        assert_eq!(super::normalize_rule_name("@next/next/no-img-element"), "next/no-img-element");
+        assert_eq!(
+            super::normalize_rule_name("@next/next/no-img-element"),
+            "next/no-img-element"
+        );
     }
 
     #[test]
@@ -1048,7 +1097,9 @@ mod test {
 
         let mut builtin_rules = RuleSet::default();
         let mut external_rules = FxHashMap::default();
-        rules.override_rules(&mut builtin_rules, &mut external_rules, &RULES, &mut store).unwrap();
+        rules
+            .override_rules(&mut builtin_rules, &mut external_rules, &RULES, &mut store)
+            .unwrap();
 
         assert_eq!(builtin_rules.len(), 0);
         assert_eq!(external_rules.len(), 1);
@@ -1071,7 +1122,11 @@ mod test {
             .override_rules(&mut builtin_rules, &mut external_rules, &RULES, &mut store)
             .unwrap();
         let (_rule_id, &(options_id, severity)) = external_rules.iter().next().unwrap();
-        assert_eq!(options_id, ExternalOptionsId::NONE, "no options should use reserved id 0");
+        assert_eq!(
+            options_id,
+            ExternalOptionsId::NONE,
+            "no options should use reserved id 0"
+        );
         assert_eq!(severity, AllowWarnDeny::Deny);
     }
 
@@ -1187,9 +1242,14 @@ mod test {
             &mut store,
         ) {
             Err(errors) => {
-                let strs: Vec<String> =
-                    errors.iter().map(std::string::ToString::to_string).collect();
-                assert!(strs.windows(2).all(|w| w[0] <= w[1]), "errors not sorted: {strs:#?}");
+                let strs: Vec<String> = errors
+                    .iter()
+                    .map(std::string::ToString::to_string)
+                    .collect();
+                assert!(
+                    strs.windows(2).all(|w| w[0] <= w[1]),
+                    "errors not sorted: {strs:#?}"
+                );
             }
             Ok(()) => panic!("expected errors from invalid configs"),
         }
@@ -1221,15 +1281,21 @@ mod test {
 
         // Verify the rules were actually added
         assert!(
-            builtin_rules.iter().any(|(r, _)| r.name() == "no-empty-function"),
+            builtin_rules
+                .iter()
+                .any(|(r, _)| r.name() == "no-empty-function"),
             "no-empty-function should be in the rule set"
         );
         assert!(
-            builtin_rules.iter().any(|(r, _)| r.name() == "no-restricted-imports"),
+            builtin_rules
+                .iter()
+                .any(|(r, _)| r.name() == "no-restricted-imports"),
             "no-restricted-imports should be in the rule set"
         );
         assert!(
-            builtin_rules.iter().any(|(r, _)| r.name() == "no-warning-comments"),
+            builtin_rules
+                .iter()
+                .any(|(r, _)| r.name() == "no-warning-comments"),
             "no-warning-comments should be in the rule set"
         );
         assert!(
@@ -1237,7 +1303,9 @@ mod test {
             "valid-title should be in the rule set"
         );
         assert!(
-            builtin_rules.iter().any(|(r, _)| r.name() == "forbid-dom-props"),
+            builtin_rules
+                .iter()
+                .any(|(r, _)| r.name() == "forbid-dom-props"),
             "forbid-dom-props should be in the rule set"
         );
     }

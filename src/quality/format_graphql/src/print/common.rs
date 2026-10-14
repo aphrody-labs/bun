@@ -172,8 +172,13 @@ pub(super) fn write_paren_list<'a, T, F>(
     // `( # c`: the comment leads the first item (own line), as after every opener
     // (DIVERGENCES.md#argument-list-opener-comment: Prettier moves it past the `)`).
     let body = format_with(|f: &mut GraphqlFormatter<'_, 'a>| {
-        let last_end =
-            write_sequence(f, items, SeparatorKind::CommaSoftline, preserve_blank, &write_item);
+        let last_end = write_sequence(
+            f,
+            items,
+            SeparatorKind::CommaSoftline,
+            preserve_blank,
+            &write_item,
+        );
         if let Some(last_end) = last_end {
             flush_trailing_inside_comments(last_end, r_paren_start, f);
         }
@@ -206,7 +211,9 @@ pub(super) fn write_variable_definitions<'a>(
     variable_definitions: Option<&'a ast::VariableDefinitions<'a>>,
     f: &mut GraphqlFormatter<'_, 'a>,
 ) {
-    let Some(variable_definitions) = variable_definitions else { return };
+    let Some(variable_definitions) = variable_definitions else {
+        return;
+    };
     let items = variable_definitions.items.as_slice();
     write_paren_list(f, items, variable_definitions.span, false, |i, f| {
         write_variable_definition(&items[i], f);
@@ -225,7 +232,11 @@ fn write_variable_definition<'a>(
         write_type(ty, f);
     }
     write_default_value(variable_definition.default_value.as_ref(), f);
-    write_directives(&variable_definition.directives, DirectivesStyle::Attached, f);
+    write_directives(
+        &variable_definition.directives,
+        DirectivesStyle::Attached,
+        f,
+    );
 }
 
 pub(super) fn write_variable<'a>(variable: &Variable<'a>, f: &mut GraphqlFormatter<'_, 'a>) {
@@ -240,7 +251,9 @@ fn write_default_value<'a>(
     default_value: Option<&'a ast::DefaultValue<'a>>,
     f: &mut GraphqlFormatter<'_, 'a>,
 ) {
-    let Some(default_value) = default_value else { return };
+    let Some(default_value) = default_value else {
+        return;
+    };
     // The node's span starts at the `=`
     write_spaced_keyword(to_span(default_value.span).start, "= ", f);
     value::write_value(&default_value.value, f);

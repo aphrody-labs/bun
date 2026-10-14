@@ -52,7 +52,10 @@ struct RequireParamConfig {
     /// Whether to check rest properties.
     check_rest_property: bool,
     /// Regex pattern to match types that exempt parameters from checking.
-    #[serde(default = "default_check_types_pattern", deserialize_with = "deserialize_regex")]
+    #[serde(
+        default = "default_check_types_pattern",
+        deserialize_with = "deserialize_regex"
+    )]
     #[schemars(with = "String", default = "default_check_types_pattern_str")]
     check_types_pattern: Regex,
     /// Set to `true` if you wish to expect documentation of properties on objects supplied as default values. Defaults to `false`.
@@ -111,7 +114,8 @@ declare_oxc_lint!(
     pending,
     config = RequireParamConfig,
     version = "0.4.3",
-    short_description = "Requires that all function parameters are documented with JSDoc `@param` tags.",
+    short_description =
+        "Requires that all function parameters are documented with JSDoc `@param` tags.",
 );
 
 impl Rule for RequireParam {
@@ -207,8 +211,10 @@ impl Rule for RequireParam {
             return;
         }
 
-        let shallow_tags =
-            tags_to_check.iter().filter(|(name, _)| !name.contains('.')).collect::<Vec<_>>();
+        let shallow_tags = tags_to_check
+            .iter()
+            .filter(|(name, _)| !name.contains('.'))
+            .collect::<Vec<_>>();
 
         let check_types_regex = &config.check_types_pattern;
 
@@ -268,7 +274,9 @@ impl Rule for RequireParam {
                             not_checking_names.insert(name);
                         }
 
-                        if not_checking_names.iter().any(|&name| full_param_name.starts_with(name))
+                        if not_checking_names
+                            .iter()
+                            .any(|&name| full_param_name.starts_with(name))
                         {
                             continue;
                         }

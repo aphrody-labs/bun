@@ -29,7 +29,10 @@ pub async fn connect_agent(identity_agent: Option<&str>) -> Option<DynAgent> {
     #[cfg(unix)]
     {
         let path = explicit?;
-        AgentClient::connect_uds(path).await.ok().map(AgentClient::dynamic)
+        AgentClient::connect_uds(path)
+            .await
+            .ok()
+            .map(AgentClient::dynamic)
     }
     #[cfg(windows)]
     {
@@ -37,7 +40,10 @@ pub async fn connect_agent(identity_agent: Option<&str>) -> Option<DynAgent> {
         if let Ok(agent) = AgentClient::connect_named_pipe(&pipe).await {
             return Some(agent.dynamic());
         }
-        AgentClient::connect_pageant().await.ok().map(AgentClient::dynamic)
+        AgentClient::connect_pageant()
+            .await
+            .ok()
+            .map(AgentClient::dynamic)
     }
 }
 
@@ -67,10 +73,21 @@ pub fn load_identity(path: &Path, batch_mode: bool) -> Result<PrivateKey> {
         Ok(key) => Ok(key),
         Err(russh::keys::Error::KeyIsEncrypted) => {
             let passphrase = env_secret("BUN_SSH_PASSPHRASE")
-                .or_else(|| (!batch_mode).then(|| askpass(&format!("Enter passphrase for key '{}': ", path.display()))).flatten())
-                .ok_or_else(|| Error::InvalidInput(format!("{} is encrypted; set BUN_SSH_PASSPHRASE or SSH_ASKPASS", path.display())))?;
+                .or_else(|| {
+                    (!batch_mode)
+                        .then(|| {
+                            askpass(&format!("Enter passphrase for key '{}': ", path.display()))
+                        })
+                        .flatten()
+                })
+                .ok_or_else(|| {
+                    Error::InvalidInput(format!(
+                        "{} is encrypted; set BUN_SSH_PASSPHRASE or SSH_ASKPASS",
+                        path.display()
+                    ))
+                })?;
             Ok(russh::keys::load_secret_key(path, Some(&passphrase))?)
-        },
+        }
         Err(err) => Err(err.into()),
     }
 }
@@ -95,12 +112,22 @@ pub async fn authenticate<H: Handler>(handle: &mut Handle<H>, config: &HostConfi
         let allowed = identity_public_keys(config);
         if let Ok(identities) = agent.request_identities().await {
             for identity in identities {
-                let AgentIdentity::PublicKey { key, .. } = identity else { continue };
-                if config.identities_only && !allowed.iter().any(|k| k.key_data() == key.key_data()) {
+                let AgentIdentity::PublicKey { key, .. } = identity else {
+                    continue;
+                };
+                if config.identities_only && !allowed.iter().any(|k| k.key_data() == key.key_data())
+                {
                     continue;
                 }
-                let hash = if matches!(key.algorithm(), russh::keys::Algorithm::Rsa { .. }) { rsa_hash } else { None };
-                if let Ok(result) = handle.authenticate_publickey_with(&config.user, key, hash, &mut agent).await {
+                let hash = if matches!(key.algorithm(), russh::keys::Algorithm::Rsa { .. }) {
+                    rsa_hash
+                } else {
+                    None
+                };
+                if let Ok(result) = handle
+                    .authenticate_publickey_with(&config.user, key, hash, &mut agent)
+                    .await
+                {
                     if result.success() {
                         return Ok(());
                     }
@@ -118,9 +145,16 @@ pub async fn authenticate<H: Handler>(handle: &mut Handle<H>, config: &HostConfi
             Err(Error::InvalidInput(message)) => return Err(Error::InvalidInput(message)),
             Err(_) => continue,
         };
-        let hash = if matches!(key.algorithm(), russh::keys::Algorithm::Rsa { .. }) { rsa_hash } else { None };
+        let hash = if matches!(key.algorithm(), russh::keys::Algorithm::Rsa { .. }) {
+            rsa_hash
+        } else {
+            None
+        };
         let result = handle
-            .authenticate_publickey(&config.user, PrivateKeyWithHashAlg::new(Arc::new(key), hash))
+            .authenticate_publickey(
+                &config.user,
+                PrivateKeyWithHashAlg::new(Arc::new(key), hash),
+            )
             .await?;
         if result.success() {
             return Ok(());
@@ -133,9 +167,16 @@ pub async fn authenticate<H: Handler>(handle: &mut Handle<H>, config: &HostConfi
             .flatten()
     });
     if let Some(password) = password {
-        if handle.authenticate_password(&config.user, password).await?.success() {
+        if handle
+            .authenticate_password(&config.user, password)
+            .await?
+            .success()
+        {
             return Ok(());
         }
     }
-    Err(Error::Auth { user: config.user.clone(), host: config.hostname.clone() })
+    Err(Error::Auth {
+        user: config.user.clone(),
+        host: config.hostname.clone(),
+    })
 }

@@ -36,7 +36,13 @@ pub fn convert_envelope<'a>(
     envelope: Value,
     allocator: &'a Allocator,
     group_id_builder: &UniqueGroupIdBuilder,
-) -> Result<(ArenaVec<'a, FormatElement<'a>>, serde_json::Map<String, Value>), String> {
+) -> Result<
+    (
+        ArenaVec<'a, FormatElement<'a>>,
+        serde_json::Map<String, Value>,
+    ),
+    String,
+> {
     let Value::Array(mut arr) = envelope else {
         unreachable!("Doc JSON envelope must be [doc, metadata]");
     };
@@ -44,7 +50,10 @@ pub fn convert_envelope<'a>(
         Some(Value::Object(obj)) => obj,
         _ => serde_json::Map::new(),
     };
-    let doc_json = arr.into_iter().next().expect("Doc JSON envelope must contain doc");
+    let doc_json = arr
+        .into_iter()
+        .next()
+        .expect("Doc JSON envelope must contain doc");
 
     let mut ctx = FmtCtx::new(allocator, group_id_builder);
     let mut ir = ArenaVec::new_in(&allocator);
@@ -62,11 +71,18 @@ struct FmtCtx<'a, 'b> {
 
 impl<'a, 'b> FmtCtx<'a, 'b> {
     fn new(allocator: &'a Allocator, group_id_builder: &'b UniqueGroupIdBuilder) -> Self {
-        Self { allocator, group_id_builder, group_id_map: FxHashMap::default() }
+        Self {
+            allocator,
+            group_id_builder,
+            group_id_map: FxHashMap::default(),
+        }
     }
 
     fn resolve_group_id(&mut self, id: u32) -> GroupId {
-        *self.group_id_map.entry(id).or_insert_with(|| self.group_id_builder.group_id("xxx-in-js"))
+        *self
+            .group_id_map
+            .entry(id)
+            .or_insert_with(|| self.group_id_builder.group_id("xxx-in-js"))
     }
 }
 
@@ -224,8 +240,9 @@ fn convert_group<'a>(
         variants.push(flat);
         variants.push(expanded);
     } else {
-        for (index, state) in
-            std::iter::once(contents).chain(expanded_states.iter().skip(1)).enumerate()
+        for (index, state) in std::iter::once(contents)
+            .chain(expanded_states.iter().skip(1))
+            .enumerate()
         {
             let mode = if index + 1 == expanded_states.len() {
                 GroupMode::Expand
@@ -261,8 +278,9 @@ fn convert_variant<'a>(
     // Note the same remeasure hazard reappears here via `propagate_expand` if a variant contains a top-level hard line,
     // so revisit before relying on it for real inputs.)
     if gid.is_some() {
-        variant
-            .push(FormatElement::Tag(Tag::StartGroup(Group::new().with_id(gid).with_mode(mode))));
+        variant.push(FormatElement::Tag(Tag::StartGroup(
+            Group::new().with_id(gid).with_mode(mode),
+        )));
     }
     convert_doc(state, &mut variant, ctx)?;
     if gid.is_some() {
@@ -282,8 +300,14 @@ fn convert_group_contents<'a>(
     out: &mut ArenaVec<'a, FormatElement<'a>>,
     ctx: &mut FmtCtx<'a, '_>,
 ) -> Result<(), String> {
-    let mode = if should_break { GroupMode::Expand } else { GroupMode::Flat };
-    out.push(FormatElement::Tag(Tag::StartGroup(Group::new().with_id(gid).with_mode(mode))));
+    let mode = if should_break {
+        GroupMode::Expand
+    } else {
+        GroupMode::Flat
+    };
+    out.push(FormatElement::Tag(Tag::StartGroup(
+        Group::new().with_id(gid).with_mode(mode),
+    )));
     if let Some(contents) = contents {
         convert_doc(contents, out, ctx)?;
     }
@@ -502,7 +526,10 @@ pub fn postprocess<'a>(ir: &mut ArenaVec<'a, FormatElement<'a>>, allocator: &'a 
     // Strip trailing hardline
     if ir.len() >= 2
         && matches!(ir[ir.len() - 1], FormatElement::ExpandParent)
-        && matches!(ir[ir.len() - 2], FormatElement::Line(LineMode::HardWithoutExpand))
+        && matches!(
+            ir[ir.len() - 2],
+            FormatElement::Line(LineMode::HardWithoutExpand)
+        )
     {
         let new_len = ir.len() - 2;
         ir.truncate(new_len);
@@ -539,7 +566,9 @@ pub fn postprocess<'a>(ir: &mut ArenaVec<'a, FormatElement<'a>>, allocator: &'a 
             }
             let single = read - run_start == 1;
             let text: &str = if single {
-                let FormatElement::Text { text, .. } = ir[run_start] else { unreachable!() };
+                let FormatElement::Text { text, .. } = ir[run_start] else {
+                    unreachable!()
+                };
                 text
             } else {
                 let mut sb = ArenaStringBuilder::new_in(allocator);
@@ -610,7 +639,10 @@ mod tests {
         let (mut ir, _) =
             convert_envelope(json!([doc, {}]), &allocator, &group_id_builder).unwrap();
         postprocess(&mut ir, &allocator);
-        Document::new(ir, vec![]).print(0, options).unwrap().into_code()
+        Document::new(ir, vec![])
+            .print(0, options)
+            .unwrap()
+            .into_code()
     }
 
     #[test]

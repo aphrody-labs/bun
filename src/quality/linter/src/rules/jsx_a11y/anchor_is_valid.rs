@@ -22,9 +22,15 @@ use crate::{
 
 fn missing_href_attribute<S: AsRef<str>>(span: Span, valid_attrs: &[S]) -> OxcDiagnostic {
     let help = if valid_attrs.len() == 1 {
-        format!("Provide the `{}` attribute for the `a` element.", valid_attrs[0].as_ref())
+        format!(
+            "Provide the `{}` attribute for the `a` element.",
+            valid_attrs[0].as_ref()
+        )
     } else {
-        let list = valid_attrs.iter().map(|a| format!("`{}`", a.as_ref())).join(", ");
+        let list = valid_attrs
+            .iter()
+            .map(|a| format!("`{}`", a.as_ref()))
+            .join(", ");
         format!("Provide one of these attributes for the `a` element: {list}")
     };
     OxcDiagnostic::warn("Missing `href` attribute for the `a` element.")
@@ -164,7 +170,12 @@ impl Rule for AnchorIsValid {
         if let AstKind::JSXElement(jsx_el) = node.kind() {
             let name = get_element_type(ctx, &jsx_el.opening_element);
 
-            if name != "a" && !self.components.iter().any(|component| component == name.as_ref()) {
+            if name != "a"
+                && !self
+                    .components
+                    .iter()
+                    .any(|component| component == name.as_ref())
+            {
                 return;
             }
             // Don't eagerly get `span` here, to avoid that work unless rule fails
@@ -243,7 +254,9 @@ impl AnchorIsValid {
     }
 
     fn has_aspect(&self, aspect: AnchorIsValidAspect) -> bool {
-        self.aspects.as_ref().is_none_or(|aspects| aspects.contains(&aspect))
+        self.aspects
+            .as_ref()
+            .is_none_or(|aspects| aspects.contains(&aspect))
     }
 
     fn check_value(value: &JSXAttributeValue) -> HrefValueKind {
@@ -277,7 +290,11 @@ impl AnchorIsValid {
     }
 
     fn href_value_kind_from_string(href: &str) -> HrefValueKind {
-        if Self::is_invalid_href(href) { HrefValueKind::Invalid } else { HrefValueKind::Valid }
+        if Self::is_invalid_href(href) {
+            HrefValueKind::Invalid
+        } else {
+            HrefValueKind::Valid
+        }
     }
 
     fn is_invalid_href(href: &str) -> bool {
@@ -391,7 +408,11 @@ fn test() {
         (r"<Anchor href='foo' />", Some(components()), None),
         (r"<Anchor href={foo} />", Some(components()), None),
         (r"<Anchor href='/foo' />", Some(components()), None),
-        (r"<Anchor href='https://foo.bar.com' />", Some(components()), None),
+        (
+            r"<Anchor href='https://foo.bar.com' />",
+            Some(components()),
+            None,
+        ),
         (r"<div href='foo' />", Some(components()), None),
         (r"<Anchor href={`#foo`}/>", Some(components()), None),
         (r"<Anchor href={'foo'}/>", Some(components()), None),
@@ -400,19 +421,31 @@ fn test() {
         (r"<Link href='foo' />", Some(components()), None),
         (r"<Link href={foo} />", Some(components()), None),
         (r"<Link href='/foo' />", Some(components()), None),
-        (r"<Link href='https://foo.bar.com' />", Some(components()), None),
+        (
+            r"<Link href='https://foo.bar.com' />",
+            Some(components()),
+            None,
+        ),
         (r"<div href='foo' />", Some(components()), None),
         (r"<Link href={`#foo`}/>", Some(components()), None),
         (r"<Link href={'foo'}/>", Some(components()), None),
         (r"<Link href='#foo' />", Some(components()), None),
         (r"<Link href='#foo' />", None, Some(components_settings())),
-        (r"<Link to='https://example.com' />", None, Some(attributes_settings())),
+        (
+            r"<Link to='https://example.com' />",
+            None,
+            Some(attributes_settings()),
+        ),
         (r"<Link to={dest} />", None, Some(attributes_settings())),
         (r"<a {...props} />", Some(special_link()), None),
         (r"<a hrefLeft='foo' />", Some(special_link()), None),
         (r"<a hrefLeft={foo} />", Some(special_link()), None),
         (r"<a hrefLeft='/foo' />", Some(special_link()), None),
-        (r"<a hrefLeft='https://foo.bar.com' />", Some(special_link()), None),
+        (
+            r"<a hrefLeft='https://foo.bar.com' />",
+            Some(special_link()),
+            None,
+        ),
         (r"<div hrefLeft='foo' />", Some(special_link()), None),
         (r"<a hrefLeft={`#foo`}/>", Some(special_link()), None),
         (r"<a hrefLeft={'foo'}/>", Some(special_link()), None),
@@ -423,78 +456,266 @@ fn test() {
         (r"<a hrefRight='foo' />", Some(special_link()), None),
         (r"<a hrefRight={foo} />", Some(special_link()), None),
         (r"<a hrefRight='/foo' />", Some(special_link()), None),
-        (r"<a hrefRight='https://foo.bar.com' />", Some(special_link()), None),
+        (
+            r"<a hrefRight='https://foo.bar.com' />",
+            Some(special_link()),
+            None,
+        ),
         (r"<div hrefRight='foo' />", Some(special_link()), None),
         (r"<a hrefRight={`#foo`}/>", Some(special_link()), None),
         (r"<a hrefRight={'foo'}/>", Some(special_link()), None),
         (r"<a hrefRight='#foo' />", Some(special_link()), None),
         (r"<UX.Layout>test</UX.Layout>", Some(special_link()), None),
         (r"<a hrefRight={this} />", Some(special_link()), None),
-        (r"<Anchor {...props} />", Some(components_and_special_link()), None),
-        (r"<Anchor hrefLeft='foo' />", Some(components_and_special_link()), None),
-        (r"<Anchor hrefLeft={foo} />", Some(components_and_special_link()), None),
-        (r"<Anchor hrefLeft='/foo' />", Some(components_and_special_link()), None),
-        (r"<Anchor hrefLeft='https://foo.bar.com' />", Some(components_and_special_link()), None),
-        (r"<div hrefLeft='foo' />", Some(components_and_special_link()), None),
-        (r"<Anchor hrefLeft={`#foo`}/>", Some(components_and_special_link()), None),
-        (r"<Anchor hrefLeft={'foo'}/>", Some(components_and_special_link()), None),
-        (r"<Anchor hrefLeft='#foo' />", Some(components_and_special_link()), None),
-        (r"<UX.Layout>test</UX.Layout>", Some(components_and_special_link()), None),
+        (
+            r"<Anchor {...props} />",
+            Some(components_and_special_link()),
+            None,
+        ),
+        (
+            r"<Anchor hrefLeft='foo' />",
+            Some(components_and_special_link()),
+            None,
+        ),
+        (
+            r"<Anchor hrefLeft={foo} />",
+            Some(components_and_special_link()),
+            None,
+        ),
+        (
+            r"<Anchor hrefLeft='/foo' />",
+            Some(components_and_special_link()),
+            None,
+        ),
+        (
+            r"<Anchor hrefLeft='https://foo.bar.com' />",
+            Some(components_and_special_link()),
+            None,
+        ),
+        (
+            r"<div hrefLeft='foo' />",
+            Some(components_and_special_link()),
+            None,
+        ),
+        (
+            r"<Anchor hrefLeft={`#foo`}/>",
+            Some(components_and_special_link()),
+            None,
+        ),
+        (
+            r"<Anchor hrefLeft={'foo'}/>",
+            Some(components_and_special_link()),
+            None,
+        ),
+        (
+            r"<Anchor hrefLeft='#foo' />",
+            Some(components_and_special_link()),
+            None,
+        ),
+        (
+            r"<UX.Layout>test</UX.Layout>",
+            Some(components_and_special_link()),
+            None,
+        ),
         (r"<a {...props} onClick={() => void 0} />", None, None),
         (r"<a href='foo' onClick={() => void 0} />", None, None),
         (r"<a href={foo} onClick={() => void 0} />", None, None),
         (r"<a href='/foo' onClick={() => void 0} />", None, None),
-        (r"<a href='https://foo.bar.com' onClick={() => void 0} />", None, None),
+        (
+            r"<a href='https://foo.bar.com' onClick={() => void 0} />",
+            None,
+            None,
+        ),
         (r"<div href='foo' onClick={() => void 0} />", None, None),
         (r"<a href={`#foo`} onClick={() => void 0} />", None, None),
         (r"<a href={'foo'} onClick={() => void 0} />", None, None),
         (r"<a href='#foo' onClick={() => void 0} />", None, None),
         (r"<a href={this} onClick={() => void 0} />", None, None),
-        (r"<Anchor {...props} onClick={() => void 0} />", Some(components()), None),
-        (r"<Anchor href='foo' onClick={() => void 0} />", Some(components()), None),
-        (r"<Anchor href={foo} onClick={() => void 0} />", Some(components()), None),
-        (r"<Anchor href='/foo' onClick={() => void 0} />", Some(components()), None),
-        (r"<Anchor href='https://foo.bar.com' onClick={() => void 0} />", Some(components()), None),
-        (r"<Anchor href={`#foo`} onClick={() => void 0} />", Some(components()), None),
-        (r"<Anchor href={'foo'} onClick={() => void 0} />", Some(components()), None),
-        (r"<Anchor href='#foo' onClick={() => void 0} />", Some(components()), None),
-        (r"<Link {...props} onClick={() => void 0} />", Some(components()), None),
-        (r"<Link href='foo' onClick={() => void 0} />", Some(components()), None),
-        (r"<Link href={foo} onClick={() => void 0} />", Some(components()), None),
-        (r"<Link href='/foo' onClick={() => void 0} />", Some(components()), None),
-        (r"<Link href='https://foo.bar.com' onClick={() => void 0} />", Some(components()), None),
-        (r"<div href='foo' onClick={() => void 0} />", Some(components()), None),
-        (r"<Link href={`#foo`} onClick={() => void 0} />", Some(components()), None),
-        (r"<Link href={'foo'} onClick={() => void 0} />", Some(components()), None),
-        (r"<Link href='#foo' onClick={() => void 0} />", Some(components()), None),
-        (r"<a {...props} onClick={() => void 0} />", Some(special_link()), None),
-        (r"<a hrefLeft='foo' onClick={() => void 0} />", Some(special_link()), None),
-        (r"<a hrefLeft={foo} onClick={() => void 0} />", Some(special_link()), None),
-        (r"<a hrefLeft='/foo' onClick={() => void 0} />", Some(special_link()), None),
+        (
+            r"<Anchor {...props} onClick={() => void 0} />",
+            Some(components()),
+            None,
+        ),
+        (
+            r"<Anchor href='foo' onClick={() => void 0} />",
+            Some(components()),
+            None,
+        ),
+        (
+            r"<Anchor href={foo} onClick={() => void 0} />",
+            Some(components()),
+            None,
+        ),
+        (
+            r"<Anchor href='/foo' onClick={() => void 0} />",
+            Some(components()),
+            None,
+        ),
+        (
+            r"<Anchor href='https://foo.bar.com' onClick={() => void 0} />",
+            Some(components()),
+            None,
+        ),
+        (
+            r"<Anchor href={`#foo`} onClick={() => void 0} />",
+            Some(components()),
+            None,
+        ),
+        (
+            r"<Anchor href={'foo'} onClick={() => void 0} />",
+            Some(components()),
+            None,
+        ),
+        (
+            r"<Anchor href='#foo' onClick={() => void 0} />",
+            Some(components()),
+            None,
+        ),
+        (
+            r"<Link {...props} onClick={() => void 0} />",
+            Some(components()),
+            None,
+        ),
+        (
+            r"<Link href='foo' onClick={() => void 0} />",
+            Some(components()),
+            None,
+        ),
+        (
+            r"<Link href={foo} onClick={() => void 0} />",
+            Some(components()),
+            None,
+        ),
+        (
+            r"<Link href='/foo' onClick={() => void 0} />",
+            Some(components()),
+            None,
+        ),
+        (
+            r"<Link href='https://foo.bar.com' onClick={() => void 0} />",
+            Some(components()),
+            None,
+        ),
+        (
+            r"<div href='foo' onClick={() => void 0} />",
+            Some(components()),
+            None,
+        ),
+        (
+            r"<Link href={`#foo`} onClick={() => void 0} />",
+            Some(components()),
+            None,
+        ),
+        (
+            r"<Link href={'foo'} onClick={() => void 0} />",
+            Some(components()),
+            None,
+        ),
+        (
+            r"<Link href='#foo' onClick={() => void 0} />",
+            Some(components()),
+            None,
+        ),
+        (
+            r"<a {...props} onClick={() => void 0} />",
+            Some(special_link()),
+            None,
+        ),
+        (
+            r"<a hrefLeft='foo' onClick={() => void 0} />",
+            Some(special_link()),
+            None,
+        ),
+        (
+            r"<a hrefLeft={foo} onClick={() => void 0} />",
+            Some(special_link()),
+            None,
+        ),
+        (
+            r"<a hrefLeft='/foo' onClick={() => void 0} />",
+            Some(special_link()),
+            None,
+        ),
         (
             r"<a hrefLeft href='https://foo.bar.com' onClick={() => void 0} />",
             Some(special_link()),
             None,
         ),
-        (r"<div hrefLeft='foo' onClick={() => void 0} />", Some(special_link()), None),
-        (r"<a hrefLeft={`#foo`} onClick={() => void 0} />", Some(special_link()), None),
-        (r"<a hrefLeft={'foo'} onClick={() => void 0} />", Some(special_link()), None),
-        (r"<a hrefLeft='#foo' onClick={() => void 0} />", Some(special_link()), None),
-        (r"<a hrefRight={this} onClick={() => void 0} />", Some(special_link()), None),
-        (r"<a {...props} onClick={() => void 0} />", Some(special_link()), None),
-        (r"<a hrefRight='foo' onClick={() => void 0} />", Some(special_link()), None),
-        (r"<a hrefRight={foo} onClick={() => void 0} />", Some(special_link()), None),
-        (r"<a hrefRight='/foo' onClick={() => void 0} />", Some(special_link()), None),
+        (
+            r"<div hrefLeft='foo' onClick={() => void 0} />",
+            Some(special_link()),
+            None,
+        ),
+        (
+            r"<a hrefLeft={`#foo`} onClick={() => void 0} />",
+            Some(special_link()),
+            None,
+        ),
+        (
+            r"<a hrefLeft={'foo'} onClick={() => void 0} />",
+            Some(special_link()),
+            None,
+        ),
+        (
+            r"<a hrefLeft='#foo' onClick={() => void 0} />",
+            Some(special_link()),
+            None,
+        ),
+        (
+            r"<a hrefRight={this} onClick={() => void 0} />",
+            Some(special_link()),
+            None,
+        ),
+        (
+            r"<a {...props} onClick={() => void 0} />",
+            Some(special_link()),
+            None,
+        ),
+        (
+            r"<a hrefRight='foo' onClick={() => void 0} />",
+            Some(special_link()),
+            None,
+        ),
+        (
+            r"<a hrefRight={foo} onClick={() => void 0} />",
+            Some(special_link()),
+            None,
+        ),
+        (
+            r"<a hrefRight='/foo' onClick={() => void 0} />",
+            Some(special_link()),
+            None,
+        ),
         (
             r"<a hrefRight href='https://foo.bar.com' onClick={() => void 0} />",
             Some(special_link()),
             None,
         ),
-        (r"<div hrefRight='foo' onClick={() => void 0} />", Some(special_link()), None),
-        (r"<a hrefRight={`#foo`} onClick={() => void 0} />", Some(special_link()), None),
-        (r"<a hrefRight={'foo'} onClick={() => void 0} />", Some(special_link()), None),
-        (r"<a hrefRight='#foo' onClick={() => void 0} />", Some(special_link()), None),
-        (r"<a hrefRight={this} onClick={() => void 0} />", Some(special_link()), None),
+        (
+            r"<div hrefRight='foo' onClick={() => void 0} />",
+            Some(special_link()),
+            None,
+        ),
+        (
+            r"<a hrefRight={`#foo`} onClick={() => void 0} />",
+            Some(special_link()),
+            None,
+        ),
+        (
+            r"<a hrefRight={'foo'} onClick={() => void 0} />",
+            Some(special_link()),
+            None,
+        ),
+        (
+            r"<a hrefRight='#foo' onClick={() => void 0} />",
+            Some(special_link()),
+            None,
+        ),
+        (
+            r"<a hrefRight={this} onClick={() => void 0} />",
+            Some(special_link()),
+            None,
+        ),
         (
             r"<Anchor {...props} onClick={() => void 0} />",
             Some(components_and_special_link()),
@@ -539,30 +760,94 @@ fn test() {
         (r"<a href={undefined} />", Some(invalid_href_aspect()), None),
         (r"<a href={null} />", Some(invalid_href_aspect()), None),
         (r"<a />", Some(prefer_button_aspect()), None),
-        (r"<a href={undefined} />", Some(prefer_button_aspect()), None),
+        (
+            r"<a href={undefined} />",
+            Some(prefer_button_aspect()),
+            None,
+        ),
         (r"<a href={null} />", Some(prefer_button_aspect()), None),
         (r"<a />", Some(prefer_button_invalid_href_aspect()), None),
-        (r"<a href={undefined} />", Some(prefer_button_invalid_href_aspect()), None),
-        (r"<a href={null} />", Some(prefer_button_invalid_href_aspect()), None),
+        (
+            r"<a href={undefined} />",
+            Some(prefer_button_invalid_href_aspect()),
+            None,
+        ),
+        (
+            r"<a href={null} />",
+            Some(prefer_button_invalid_href_aspect()),
+            None,
+        ),
         (r#"<a href="" />;"#, Some(prefer_button_aspect()), None),
         (r"<a href='#' />", Some(prefer_button_aspect()), None),
         (r"<a href={'#'} />", Some(prefer_button_aspect()), None),
-        (r"<a href='javascript:void(0)' />", Some(prefer_button_aspect()), None),
-        (r"<a href={'javascript:void(0)'} />", Some(prefer_button_aspect()), None),
+        (
+            r"<a href='javascript:void(0)' />",
+            Some(prefer_button_aspect()),
+            None,
+        ),
+        (
+            r"<a href={'javascript:void(0)'} />",
+            Some(prefer_button_aspect()),
+            None,
+        ),
         (r#"<a href="" />;"#, Some(no_href_aspect()), None),
         (r"<a href='#' />", Some(no_href_aspect()), None),
         (r"<a href={'#'} />", Some(no_href_aspect()), None),
-        (r"<a href='javascript:void(0)' />", Some(no_href_aspect()), None),
-        (r"<a href={'javascript:void(0)'} />", Some(no_href_aspect()), None),
-        (r#"<a href="" />;"#, Some(no_href_prefer_button_aspect()), None),
-        (r"<a href='#' />", Some(no_href_prefer_button_aspect()), None),
-        (r"<a href={'#'} />", Some(no_href_prefer_button_aspect()), None),
-        (r"<a href='javascript:void(0)' />", Some(no_href_prefer_button_aspect()), None),
-        (r"<a href={'javascript:void(0)'} />", Some(no_href_prefer_button_aspect()), None),
-        (r"<a onClick={() => void 0} />", Some(invalid_href_aspect()), None),
-        (r"<a href='#' onClick={() => void 0} />", Some(no_href_aspect()), None),
-        (r"<a href='javascript:void(0)' onClick={() => void 0} />", Some(no_href_aspect()), None),
-        (r"<a href={'javascript:void(0)'} onClick={() => void 0} />", Some(no_href_aspect()), None),
+        (
+            r"<a href='javascript:void(0)' />",
+            Some(no_href_aspect()),
+            None,
+        ),
+        (
+            r"<a href={'javascript:void(0)'} />",
+            Some(no_href_aspect()),
+            None,
+        ),
+        (
+            r#"<a href="" />;"#,
+            Some(no_href_prefer_button_aspect()),
+            None,
+        ),
+        (
+            r"<a href='#' />",
+            Some(no_href_prefer_button_aspect()),
+            None,
+        ),
+        (
+            r"<a href={'#'} />",
+            Some(no_href_prefer_button_aspect()),
+            None,
+        ),
+        (
+            r"<a href='javascript:void(0)' />",
+            Some(no_href_prefer_button_aspect()),
+            None,
+        ),
+        (
+            r"<a href={'javascript:void(0)'} />",
+            Some(no_href_prefer_button_aspect()),
+            None,
+        ),
+        (
+            r"<a onClick={() => void 0} />",
+            Some(invalid_href_aspect()),
+            None,
+        ),
+        (
+            r"<a href='#' onClick={() => void 0} />",
+            Some(no_href_aspect()),
+            None,
+        ),
+        (
+            r"<a href='javascript:void(0)' onClick={() => void 0} />",
+            Some(no_href_aspect()),
+            None,
+        ),
+        (
+            r"<a href={'javascript:void(0)'} onClick={() => void 0} />",
+            Some(no_href_aspect()),
+            None,
+        ),
         (
             r"<Anchor hrefLeft={undefined} />",
             Some(components_and_special_link_and_invalid_href_aspect()),
@@ -588,34 +873,86 @@ fn test() {
         (r"<a href={'javascript:void(0)'} />", None, None),
         (r"<a onClick={() => void 0} />", None, None),
         (r"<a href='#' onClick={() => void 0} />", None, None),
-        (r"<a href='javascript:void(0)' onClick={() => void 0} />", None, None),
-        (r"<a href={'javascript:void(0)'} onClick={() => void 0} />", None, None),
+        (
+            r"<a href='javascript:void(0)' onClick={() => void 0} />",
+            None,
+            None,
+        ),
+        (
+            r"<a href={'javascript:void(0)'} onClick={() => void 0} />",
+            None,
+            None,
+        ),
         (r"<Link />", Some(components()), None),
         (r"<Link href={undefined} />", Some(components()), None),
         (r"<Link href={null} />", Some(components()), None),
         (r#"<Link href="" />"#, Some(components()), None),
         (r"<Link href='#' />", Some(components()), None),
         (r"<Link href={'#'} />", Some(components()), None),
-        (r"<Link href='javascript:void(0)' />", Some(components()), None),
-        (r"<Link href={'javascript:void(0)'} />", Some(components()), None),
+        (
+            r"<Link href='javascript:void(0)' />",
+            Some(components()),
+            None,
+        ),
+        (
+            r"<Link href={'javascript:void(0)'} />",
+            Some(components()),
+            None,
+        ),
         (r#"<Anchor href="" />"#, Some(components()), None),
         (r"<Anchor href='#' />", Some(components()), None),
         (r"<Anchor href={'#'} />", Some(components()), None),
-        (r"<Anchor href='javascript:void(0)' />", Some(components()), None),
-        (r"<Anchor href={'javascript:void(0)'} />", Some(components()), None),
+        (
+            r"<Anchor href='javascript:void(0)' />",
+            Some(components()),
+            None,
+        ),
+        (
+            r"<Anchor href={'javascript:void(0)'} />",
+            Some(components()),
+            None,
+        ),
         (r"<Link onClick={() => void 0} />", Some(components()), None),
-        (r"<Link href='#' onClick={() => void 0} />", Some(components()), None),
-        (r"<Link href='javascript:void(0)' onClick={() => void 0} />", Some(components()), None),
-        (r"<Link href={'javascript:void(0)'} onClick={() => void 0} />", Some(components()), None),
-        (r"<Anchor onClick={() => void 0} />", Some(components()), None),
-        (r"<Anchor href='#' onClick={() => void 0} />", Some(components()), None),
-        (r"<Anchor href='javascript:void(0)' onClick={() => void 0} />", Some(components()), None),
+        (
+            r"<Link href='#' onClick={() => void 0} />",
+            Some(components()),
+            None,
+        ),
+        (
+            r"<Link href='javascript:void(0)' onClick={() => void 0} />",
+            Some(components()),
+            None,
+        ),
+        (
+            r"<Link href={'javascript:void(0)'} onClick={() => void 0} />",
+            Some(components()),
+            None,
+        ),
+        (
+            r"<Anchor onClick={() => void 0} />",
+            Some(components()),
+            None,
+        ),
+        (
+            r"<Anchor href='#' onClick={() => void 0} />",
+            Some(components()),
+            None,
+        ),
+        (
+            r"<Anchor href='javascript:void(0)' onClick={() => void 0} />",
+            Some(components()),
+            None,
+        ),
         (
             r"<Anchor href={'javascript:void(0)'} onClick={() => void 0} />",
             Some(components()),
             None,
         ),
-        (r"<Link href='#' onClick={() => void 0} />", None, Some(components_settings())),
+        (
+            r"<Link href='#' onClick={() => void 0} />",
+            None,
+            Some(components_settings()),
+        ),
         (r"<Link />", None, Some(attributes_settings())),
         (r"<Link to='#' />", None, Some(attributes_settings())),
         (r"<a hrefLeft={undefined} />", Some(special_link()), None),
@@ -624,22 +961,66 @@ fn test() {
         (r#"<a hrefLeft="" />;"#, Some(special_link()), None),
         (r"<a hrefLeft='#' />", Some(special_link()), None),
         (r"<a hrefLeft={'#'} />", Some(special_link()), None),
-        (r"<a hrefLeft='javascript:void(0)' />", Some(special_link()), None),
-        (r"<a hrefLeft={'javascript:void(0)'} />", Some(special_link()), None),
-        (r"<a hrefLeft='#' onClick={() => void 0} />", Some(special_link()), None),
-        (r"<a hrefLeft='javascript:void(0)' onClick={() => void 0} />", Some(special_link()), None),
+        (
+            r"<a hrefLeft='javascript:void(0)' />",
+            Some(special_link()),
+            None,
+        ),
+        (
+            r"<a hrefLeft={'javascript:void(0)'} />",
+            Some(special_link()),
+            None,
+        ),
+        (
+            r"<a hrefLeft='#' onClick={() => void 0} />",
+            Some(special_link()),
+            None,
+        ),
+        (
+            r"<a hrefLeft='javascript:void(0)' onClick={() => void 0} />",
+            Some(special_link()),
+            None,
+        ),
         (
             r"<a hrefLeft={'javascript:void(0)'} onClick={() => void 0} />",
             Some(special_link()),
             None,
         ),
-        (r"<Anchor Anchor={undefined} />", Some(components_and_special_link()), None),
-        (r"<Anchor hrefLeft={null} />", Some(components_and_special_link()), None),
-        (r#"<Anchor hrefLeft="" />;"#, Some(components_and_special_link()), None),
-        (r"<Anchor hrefLeft='#' />", Some(components_and_special_link()), None),
-        (r"<Anchor hrefLeft={'#'} />", Some(components_and_special_link()), None),
-        (r"<Anchor hrefLeft='javascript:void(0)' />", Some(components_and_special_link()), None),
-        (r"<Anchor hrefLeft={'javascript:void(0)'} />", Some(components_and_special_link()), None),
+        (
+            r"<Anchor Anchor={undefined} />",
+            Some(components_and_special_link()),
+            None,
+        ),
+        (
+            r"<Anchor hrefLeft={null} />",
+            Some(components_and_special_link()),
+            None,
+        ),
+        (
+            r#"<Anchor hrefLeft="" />;"#,
+            Some(components_and_special_link()),
+            None,
+        ),
+        (
+            r"<Anchor hrefLeft='#' />",
+            Some(components_and_special_link()),
+            None,
+        ),
+        (
+            r"<Anchor hrefLeft={'#'} />",
+            Some(components_and_special_link()),
+            None,
+        ),
+        (
+            r"<Anchor hrefLeft='javascript:void(0)' />",
+            Some(components_and_special_link()),
+            None,
+        ),
+        (
+            r"<Anchor hrefLeft={'javascript:void(0)'} />",
+            Some(components_and_special_link()),
+            None,
+        ),
         (
             r"<Anchor hrefLeft='#' onClick={() => void 0} />",
             Some(components_and_special_link()),
@@ -659,36 +1040,140 @@ fn test() {
         (r"<a />", Some(no_href_prefer_button_aspect()), None),
         (r"<a />", Some(no_href_invalid_href_aspect()), None),
         (r"<a href={undefined} />", Some(no_href_aspect()), None),
-        (r"<a href={undefined} />", Some(no_href_prefer_button_aspect()), None),
-        (r"<a href={undefined} />", Some(no_href_invalid_href_aspect()), None),
+        (
+            r"<a href={undefined} />",
+            Some(no_href_prefer_button_aspect()),
+            None,
+        ),
+        (
+            r"<a href={undefined} />",
+            Some(no_href_invalid_href_aspect()),
+            None,
+        ),
         (r"<a href={null} />", Some(no_href_aspect()), None),
-        (r"<a href={null} />", Some(no_href_prefer_button_aspect()), None),
-        (r"<a href={null} />", Some(no_href_invalid_href_aspect()), None),
+        (
+            r"<a href={null} />",
+            Some(no_href_prefer_button_aspect()),
+            None,
+        ),
+        (
+            r"<a href={null} />",
+            Some(no_href_invalid_href_aspect()),
+            None,
+        ),
         (r#"<a href="" />;"#, Some(invalid_href_aspect()), None),
-        (r#"<a href="" />;"#, Some(no_href_invalid_href_aspect()), None),
-        (r#"<a href="" />;"#, Some(prefer_button_invalid_href_aspect()), None),
+        (
+            r#"<a href="" />;"#,
+            Some(no_href_invalid_href_aspect()),
+            None,
+        ),
+        (
+            r#"<a href="" />;"#,
+            Some(prefer_button_invalid_href_aspect()),
+            None,
+        ),
         (r"<a href='#' />;", Some(invalid_href_aspect()), None),
-        (r"<a href='#' />;", Some(no_href_invalid_href_aspect()), None),
-        (r"<a href='#' />;", Some(prefer_button_invalid_href_aspect()), None),
+        (
+            r"<a href='#' />;",
+            Some(no_href_invalid_href_aspect()),
+            None,
+        ),
+        (
+            r"<a href='#' />;",
+            Some(prefer_button_invalid_href_aspect()),
+            None,
+        ),
         (r"<a href={'#'} />;", Some(invalid_href_aspect()), None),
-        (r"<a href={'#'} />;", Some(no_href_invalid_href_aspect()), None),
-        (r"<a href={'#'} />;", Some(prefer_button_invalid_href_aspect()), None),
-        (r"<a href='javascript:void(0)' />;", Some(invalid_href_aspect()), None),
-        (r"<a href='javascript:void(0)' />;", Some(no_href_invalid_href_aspect()), None),
-        (r"<a href='javascript:void(0)' />;", Some(prefer_button_invalid_href_aspect()), None),
-        (r"<a href={'javascript:void(0)'} />;", Some(invalid_href_aspect()), None),
-        (r"<a href={'javascript:void(0)'} />;", Some(no_href_invalid_href_aspect()), None),
-        (r"<a href={'javascript:void(0)'} />;", Some(prefer_button_invalid_href_aspect()), None),
-        (r"<a onClick={() => void 0} />", Some(prefer_button_aspect()), None),
-        (r"<a onClick={() => void 0} />", Some(prefer_button_invalid_href_aspect()), None),
-        (r"<a onClick={() => void 0} />", Some(no_href_prefer_button_aspect()), None),
-        (r"<a onClick={() => void 0} />", Some(no_href_aspect()), None),
-        (r"<a onClick={() => void 0} />", Some(no_href_invalid_href_aspect()), None),
-        (r"<a href='#' onClick={() => void 0} />", Some(prefer_button_aspect()), None),
-        (r"<a href='#' onClick={() => void 0} />", Some(no_href_prefer_button_aspect()), None),
-        (r"<a href='#' onClick={() => void 0} />", Some(prefer_button_invalid_href_aspect()), None),
-        (r"<a href='#' onClick={() => void 0} />", Some(invalid_href_aspect()), None),
-        (r"<a href='#' onClick={() => void 0} />", Some(no_href_invalid_href_aspect()), None),
+        (
+            r"<a href={'#'} />;",
+            Some(no_href_invalid_href_aspect()),
+            None,
+        ),
+        (
+            r"<a href={'#'} />;",
+            Some(prefer_button_invalid_href_aspect()),
+            None,
+        ),
+        (
+            r"<a href='javascript:void(0)' />;",
+            Some(invalid_href_aspect()),
+            None,
+        ),
+        (
+            r"<a href='javascript:void(0)' />;",
+            Some(no_href_invalid_href_aspect()),
+            None,
+        ),
+        (
+            r"<a href='javascript:void(0)' />;",
+            Some(prefer_button_invalid_href_aspect()),
+            None,
+        ),
+        (
+            r"<a href={'javascript:void(0)'} />;",
+            Some(invalid_href_aspect()),
+            None,
+        ),
+        (
+            r"<a href={'javascript:void(0)'} />;",
+            Some(no_href_invalid_href_aspect()),
+            None,
+        ),
+        (
+            r"<a href={'javascript:void(0)'} />;",
+            Some(prefer_button_invalid_href_aspect()),
+            None,
+        ),
+        (
+            r"<a onClick={() => void 0} />",
+            Some(prefer_button_aspect()),
+            None,
+        ),
+        (
+            r"<a onClick={() => void 0} />",
+            Some(prefer_button_invalid_href_aspect()),
+            None,
+        ),
+        (
+            r"<a onClick={() => void 0} />",
+            Some(no_href_prefer_button_aspect()),
+            None,
+        ),
+        (
+            r"<a onClick={() => void 0} />",
+            Some(no_href_aspect()),
+            None,
+        ),
+        (
+            r"<a onClick={() => void 0} />",
+            Some(no_href_invalid_href_aspect()),
+            None,
+        ),
+        (
+            r"<a href='#' onClick={() => void 0} />",
+            Some(prefer_button_aspect()),
+            None,
+        ),
+        (
+            r"<a href='#' onClick={() => void 0} />",
+            Some(no_href_prefer_button_aspect()),
+            None,
+        ),
+        (
+            r"<a href='#' onClick={() => void 0} />",
+            Some(prefer_button_invalid_href_aspect()),
+            None,
+        ),
+        (
+            r"<a href='#' onClick={() => void 0} />",
+            Some(invalid_href_aspect()),
+            None,
+        ),
+        (
+            r"<a href='#' onClick={() => void 0} />",
+            Some(no_href_invalid_href_aspect()),
+            None,
+        ),
         (
             r"<a href='javascript:void(0)' onClick={() => void 0} />",
             Some(prefer_button_aspect()),

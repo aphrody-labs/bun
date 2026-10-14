@@ -52,8 +52,11 @@ pub fn lex_utf8_arena(src: &[u8], len: u32, options: LexOptions, arena: &mut Are
 pub fn lex_utf8(src: &[u8], len: u32, options: LexOptions) -> (LexResult, Arena) {
     #[expect(clippy::cast_possible_truncation, reason = "PAD is a small constant")]
     let tok_cap = len + PAD as u32;
-    let diag_cap =
-        if options.max_diagnostic_count > 0 { options.max_diagnostic_count } else { 1024 };
+    let diag_cap = if options.max_diagnostic_count > 0 {
+        options.max_diagnostic_count
+    } else {
+        1024
+    };
     let line_cap = (len / 32) + 64;
     let mut arena = Arena::new(tok_cap, diag_cap, line_cap);
     let r = lex_utf8_arena(src, len, options, &mut arena);
@@ -123,9 +126,16 @@ fn lex_into_arena(src: &[u8], len: u32, options: LexOptions, arena: &mut Arena) 
         let n_str = copy_lane(&l.strings, arena.strings, arena.strings_capacity);
         let n_tpl = copy_lane(&l.templates, arena.templates, arena.templates_capacity);
         let n_atm = copy_lane(&l.atoms, arena.atoms, arena.atoms_capacity);
-        let n_rxf =
-            copy_lane(&l.regex_flags, arena.regex_flags.cast::<u8>(), arena.regex_flags_capacity);
-        let n_cm = copy_lane(&l.comment_meta, arena.comment_meta, arena.comment_meta_capacity);
+        let n_rxf = copy_lane(
+            &l.regex_flags,
+            arena.regex_flags.cast::<u8>(),
+            arena.regex_flags_capacity,
+        );
+        let n_cm = copy_lane(
+            &l.comment_meta,
+            arena.comment_meta,
+            arena.comment_meta_capacity,
+        );
         let n_cr = copy_lane(&l.comments, arena.comments, arena.comments_capacity);
         let n_diag = copy_lane(&l.diags, arena.diags, arena.diags_capacity);
 
@@ -173,13 +183,19 @@ fn resolve_unicode_leads(
         {
             continue;
         }
-        let Some(ch) = lanes::decode_char_at(src, off as usize) else { continue };
+        let Some(ch) = lanes::decode_char_at(src, off as usize) else {
+            continue;
+        };
         let name_start = spans_all[ti].start
             + u32::from(matches!(
                 kinds_all[ti],
                 TokenKind::PrivateIdent | TokenKind::PrivateIdentEscaped
             ));
-        let ok = if off == name_start { is_identifier_start(ch) } else { is_identifier_part(ch) };
+        let ok = if off == name_start {
+            is_identifier_start(ch)
+        } else {
+            is_identifier_part(ch)
+        };
         if ok {
             continue;
         }
@@ -191,7 +207,12 @@ fn resolve_unicode_leads(
         };
         #[expect(clippy::cast_possible_truncation, reason = "char lengths are 1..=4")]
         let len = ch.len_utf8() as u32;
-        lanes.diags.push(Diagnostic { off, len, code, severity: DiagSeverity::Error });
+        lanes.diags.push(Diagnostic {
+            off,
+            len,
+            code,
+            severity: DiagSeverity::Error,
+        });
     }
     leads.clear();
     lanes.unicode_leads = leads;

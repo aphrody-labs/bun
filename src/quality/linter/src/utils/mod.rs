@@ -92,7 +92,9 @@ const TYPESCRIPT_COMPATIBLE_ESLINT_RULES: [&str; 18] = [
 /// Many Typescript rule are essentially ports of Eslint plugin rules with minor modifications.
 /// For these rules, we use the corresponding eslint rules with some adjustments for compatibility.
 pub fn is_eslint_rule_adapted_to_typescript(rule_name: &str) -> bool {
-    TYPESCRIPT_COMPATIBLE_ESLINT_RULES.binary_search(&rule_name).is_ok()
+    TYPESCRIPT_COMPATIBLE_ESLINT_RULES
+        .binary_search(&rule_name)
+        .is_ok()
 }
 
 /// Pads replacement text with spaces when needed to preserve token boundaries
@@ -194,7 +196,10 @@ pub fn read_to_arena_str<'alloc>(
 
     // Convert to `&str`, checking contents is valid UTF-8
     simdutf8::basic::from_utf8(bytes).map_err(|_| {
-        io::Error::new(io::ErrorKind::InvalidData, "stream did not contain valid UTF-8")
+        io::Error::new(
+            io::ErrorKind::InvalidData,
+            "stream did not contain valid UTF-8",
+        )
     })
 }
 

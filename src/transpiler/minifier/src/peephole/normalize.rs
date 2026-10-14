@@ -54,7 +54,8 @@ impl<'a> Normalize {
 impl<'a> Traverse<'a> for Normalize {
     fn exit_program(&mut self, node: &mut Program<'a>, _ctx: &mut TraverseCtx<'a>) {
         if self.options.remove_unnecessary_use_strict && node.source_type.is_module() {
-            node.directives.drain_filter(|d| d.directive.as_str() == "use strict");
+            node.directives
+                .drain_filter(|d| d.directive.as_str() == "use strict");
         }
     }
 
@@ -134,7 +135,9 @@ impl<'a> Traverse<'a> for Normalize {
     fn exit_expression(&mut self, expr: &mut Expression<'a>, ctx: &mut TraverseCtx<'a>) {
         if matches!(expr, Expression::ParenthesizedExpression(_)) {
             expr.replace_with(|expr| {
-                let Expression::ParenthesizedExpression(paren_expr) = expr else { unreachable!() };
+                let Expression::ParenthesizedExpression(paren_expr) = expr else {
+                    unreachable!()
+                };
                 paren_expr.unbox().expression
             });
         }
@@ -190,7 +193,9 @@ impl<'a> Traverse<'a> for Normalize {
         if !ctx.should_track_member_write_effects() {
             return;
         }
-        let Some(target) = node.as_simple_assignment_target() else { return };
+        let Some(target) = node.as_simple_assignment_target() else {
+            return;
+        };
         // Compound and logical assignments (`o.x += 1`, `o.y ||= 2`) READ the
         // property before writing; every other position is a plain write.
         let is_read_modify = matches!(
@@ -250,16 +255,22 @@ impl<'a> Normalize {
     }
 
     fn is_console_call_expression(call_expr: &CallExpression<'_>) -> bool {
-        let Some(member_expr) = call_expr.callee.as_member_expression() else { return false };
+        let Some(member_expr) = call_expr.callee.as_member_expression() else {
+            return false;
+        };
         let obj = member_expr.object();
-        let Some(ident) = obj.get_identifier_reference() else { return false };
+        let Some(ident) = obj.get_identifier_reference() else {
+            return false;
+        };
         ident.name == "console"
     }
 
     fn convert_while_to_for(stmt: &mut Statement<'a>, ctx: &mut TraverseCtx<'a>) {
         // Caller (`exit_statement`) only calls this for a `WhileStatement`, so the `else` is dead.
         stmt.replace_with(|stmt| {
-            let Statement::WhileStatement(while_stmt) = stmt else { unreachable!() };
+            let Statement::WhileStatement(while_stmt) = stmt else {
+                unreachable!()
+            };
             let while_stmt = while_stmt.unbox();
             Statement::new_for_statement_with_scope_id(
                 while_stmt.span,
@@ -352,7 +363,9 @@ impl<'a> Normalize {
 
     fn fold_void_ident(e: &mut UnaryExpression<'a>, ctx: &mut TraverseCtx<'a>) {
         debug_assert!(e.operator.is_void());
-        let Expression::Identifier(ident) = &e.argument else { return };
+        let Expression::Identifier(ident) = &e.argument else {
+            return;
+        };
         if ident.is_global_reference(ctx.scoping()) {
             return;
         }
@@ -367,7 +380,9 @@ impl<'a> Normalize {
         e: &StaticMemberExpression<'a>,
         ctx: &TraverseCtx<'a>,
     ) -> Option<Expression<'a>> {
-        let Expression::Identifier(ident) = &e.object else { return None };
+        let Expression::Identifier(ident) = &e.object else {
+            return None;
+        };
         if ident.name != "Number" {
             return None;
         }
@@ -390,7 +405,11 @@ impl<'a> Normalize {
         let Some(ident) = call_expr.callee.get_identifier_reference() else {
             return;
         };
-        if let Some(symbol_id) = ctx.scoping().get_reference(ident.reference_id()).symbol_id() {
+        if let Some(symbol_id) = ctx
+            .scoping()
+            .get_reference(ident.reference_id())
+            .symbol_id()
+        {
             // Apply `/* #__NO_SIDE_EFFECTS__ */`
             if ctx.scoping().no_side_effects().contains(&symbol_id) {
                 call_expr.pure = true;
@@ -410,7 +429,11 @@ impl<'a> Normalize {
         let Some(ident) = new_expr.callee.get_identifier_reference() else {
             return;
         };
-        if let Some(symbol_id) = ctx.scoping().get_reference(ident.reference_id()).symbol_id() {
+        if let Some(symbol_id) = ctx
+            .scoping()
+            .get_reference(ident.reference_id())
+            .symbol_id()
+        {
             // Apply `/* #__NO_SIDE_EFFECTS__ */`
             if ctx.scoping().no_side_effects().contains(&symbol_id) {
                 new_expr.pure = true;
@@ -455,7 +478,12 @@ impl<'a> Normalize {
             "Set" => (
                 false,
                 false,
-                &[ValueType::Number, ValueType::Boolean, ValueType::BigInt, ValueType::Object],
+                &[
+                    ValueType::Number,
+                    ValueType::Boolean,
+                    ValueType::BigInt,
+                    ValueType::Object,
+                ],
             ),
             // `Map`/`WeakSet`/`WeakMap` need `[k, v]` entries / object keys, so a string
             // argument throws (`new Map("ab")` — `"a"` is not an entry; `new WeakSet("a")`
@@ -665,7 +693,9 @@ impl<'a> Normalize {
         } else {
             MemberWriteEffect::Hazard
         };
-        ctx.state.symbols.record_member_write_effect(symbol_id, effect);
+        ctx.state
+            .symbols
+            .record_member_write_effect(symbol_id, effect);
     }
 
     fn remove_unused_use_strict_directive(body: &mut FunctionBody<'a>, ctx: &TraverseCtx<'a>) {
@@ -676,7 +706,8 @@ impl<'a> Normalize {
                 .map(|scope_id| ctx.scoping().scope_flags(scope_id))
                 .is_some_and(ScopeFlags::is_strict_mode)
         {
-            body.directives.drain_filter(|d| d.directive.as_str() == "use strict");
+            body.directives
+                .drain_filter(|d| d.directive.as_str() == "use strict");
         }
     }
 }

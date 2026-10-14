@@ -13,11 +13,19 @@ use crate::{
 
 fn reorder_hooks(hook: (&str, Span), previous_hook: (&str, Span)) -> OxcDiagnostic {
     OxcDiagnostic::warn("Test hooks are not in a consistent order.")
-        .with_help(format!("{:?} hooks should be before any {:?} hooks", hook.0, previous_hook.0))
-        .with_label(
-            hook.1.label(format!("this should be moved to before the {:?} hook", previous_hook.0)),
+        .with_help(format!(
+            "{:?} hooks should be before any {:?} hooks",
+            hook.0, previous_hook.0
+        ))
+        .with_label(hook.1.label(format!(
+            "this should be moved to before the {:?} hook",
+            previous_hook.0
+        )))
+        .and_label(
+            previous_hook
+                .1
+                .label(format!("{:?} hook should be called before this", hook.0)),
         )
-        .and_label(previous_hook.1.label(format!("{:?} hook should be called before this", hook.0)))
 }
 
 pub const DOCUMENTATION: &str = r"### What it does
@@ -131,7 +139,10 @@ pub fn run_once(ctx: &LintContext) {
             continue;
         };
 
-        let possible_jest_node = &PossibleJestNode { node, original: None };
+        let possible_jest_node = &PossibleJestNode {
+            node,
+            original: None,
+        };
         let Some(ParsedJestFnCallNew::GeneralJest(jest_fn_call)) =
             parse_jest_fn_call(call_expr, possible_jest_node, ctx)
         else {
@@ -139,7 +150,10 @@ pub fn run_once(ctx: &LintContext) {
             continue;
         };
 
-        if !matches!(jest_fn_call.kind, JestFnKind::General(JestGeneralFnKind::Hook)) {
+        if !matches!(
+            jest_fn_call.kind,
+            JestFnKind::General(JestGeneralFnKind::Hook)
+        ) {
             previous_hook_orders.remove(&node.scope_id());
             continue;
         }

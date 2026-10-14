@@ -1728,7 +1728,20 @@ Readable.wrap = function (src, options?) {
   }).wrap(src);
 };
 
-export default Readable as unknown as typeof import("node:stream").Readable & {
+export default Readable as unknown as Omit<typeof import("node:stream").Readable, "fromWeb" | "toWeb"> & {
+  new (options?: import("node:stream").ReadableOptions): import("node:stream").Readable;
+  fromWeb(
+    stream: import("node:stream/web").ReadableStream,
+    options?: Pick<import("node:stream").ReadableOptions, "encoding" | "highWaterMark" | "objectMode" | "signal">,
+  ): import("node:stream").Readable;
+  fromWeb(
+    stream: ReadableStream,
+    options?: Pick<import("node:stream").ReadableOptions, "encoding" | "highWaterMark" | "objectMode" | "signal">,
+  ): import("node:stream").Readable;
+  toWeb(
+    stream: NodeJS.ReadableStream,
+    options?: import("node:stream").ReadableToWebOptions,
+  ): ReadableStream & import("node:stream/web").ReadableStream;
   ReadableState: typeof ReadableState;
   wrap: typeof Readable.wrap;
 };

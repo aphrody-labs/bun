@@ -78,8 +78,10 @@ impl Rule for PreferObjectHasOwn {
 
         let object_property_name = object.static_property_name();
         let is_object = has_left_hand_object(object);
-        let is_global_scope =
-            ctx.scoping().find_binding(node.scope_id(), static_ident!("Object")).is_none();
+        let is_global_scope = ctx
+            .scoping()
+            .find_binding(node.scope_id(), static_ident!("Object"))
+            .is_none();
 
         if is_method_call(call_expr, None, Some(&["call"]), Some(2), Some(2))
             && object_property_name == Some("hasOwnProperty")
@@ -97,7 +99,11 @@ impl Rule for PreferObjectHasOwn {
                             .source_range(Span::new(0, replace_target_span.start))
                             .ends_with([' ', '=', '/', '(']);
 
-                    let replacement = if needs_space { " Object.hasOwn" } else { "Object.hasOwn" };
+                    let replacement = if needs_space {
+                        " Object.hasOwn"
+                    } else {
+                        "Object.hasOwn"
+                    };
                     fixer.replace(replace_target_span, replacement)
                 });
             }
@@ -239,10 +245,26 @@ fn test() {
     ];
 
     let fix = vec![
-        ("Object.hasOwnProperty.call(obj, 'foo')", "Object.hasOwn(obj, 'foo')", None),
-        ("Object.hasOwnProperty.call(obj, property)", "Object.hasOwn(obj, property)", None),
-        ("Object.prototype.hasOwnProperty.call(obj, 'foo')", "Object.hasOwn(obj, 'foo')", None),
-        ("({}).hasOwnProperty.call(obj, 'foo')", "Object.hasOwn(obj, 'foo')", None),
+        (
+            "Object.hasOwnProperty.call(obj, 'foo')",
+            "Object.hasOwn(obj, 'foo')",
+            None,
+        ),
+        (
+            "Object.hasOwnProperty.call(obj, property)",
+            "Object.hasOwn(obj, property)",
+            None,
+        ),
+        (
+            "Object.prototype.hasOwnProperty.call(obj, 'foo')",
+            "Object.hasOwn(obj, 'foo')",
+            None,
+        ),
+        (
+            "({}).hasOwnProperty.call(obj, 'foo')",
+            "Object.hasOwn(obj, 'foo')",
+            None,
+        ),
         (
             "const hasProperty = Object.prototype.hasOwnProperty.call(object, property);",
             "const hasProperty = Object.hasOwn(object, property);",
@@ -384,9 +406,18 @@ fn test() {
             None,
         ),
         // Issue: <https://github.com/oxc-project/oxc/issues/7450>
-        ("Object.prototype.hasOwnProperty.call(C,x);", " Object.hasOwn(C,x);", None),
+        (
+            "Object.prototype.hasOwnProperty.call(C,x);",
+            " Object.hasOwn(C,x);",
+            None,
+        ),
     ];
-    Tester::new(PreferObjectHasOwn::NAME, PreferObjectHasOwn::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        PreferObjectHasOwn::NAME,
+        PreferObjectHasOwn::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

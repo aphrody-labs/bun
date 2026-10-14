@@ -102,13 +102,13 @@ fn fix_to_short_array(
 ) -> RuleFix {
     let needs_semi = ast_util::could_be_asi_hazard(node, ctx);
     let fixer = fixer.for_multifix();
-    let mut rule_fixes = fixer.new_fix_with_capacity(2).with_message("Replace with [argument]");
-    rule_fixes.push(
-        fixer.replace(
-            Span::new(new_span.start, arg_span.start),
-            if needs_semi { ";[" } else { "[" },
-        ),
-    );
+    let mut rule_fixes = fixer
+        .new_fix_with_capacity(2)
+        .with_message("Replace with [argument]");
+    rule_fixes.push(fixer.replace(
+        Span::new(new_span.start, arg_span.start),
+        if needs_semi { ";[" } else { "[" },
+    ));
     rule_fixes.push(fixer.replace(Span::new(arg_span.end, new_span.end), "]"));
     rule_fixes
 }
@@ -213,7 +213,10 @@ fn test() {
     // the fixes are separated into 3 groups, these groups are matched from the original rule,
     // but does not necessarily reflect the actual implementation of the real fix behavior, because we are not looking into the (resolved) arguments.
     let fix_only_to_number: Vec<(&str, (&str, &str))> = vec![
-        ("new Array((42 as number))", ("Array.from({length: (42 as number)})", "[(42 as number)]")),
+        (
+            "new Array((42 as number))",
+            ("Array.from({length: (42 as number)})", "[(42 as number)]"),
+        ),
         (
             "const array = new Array(1)",
             ("const array = Array.from({length: 1})", "const array = [1]"),
@@ -234,7 +237,10 @@ fn test() {
         ),
         (
             "const array = new Array(1.5)",
-            ("const array = Array.from({length: 1.5})", "const array = [1.5]"),
+            (
+                "const array = Array.from({length: 1.5})",
+                "const array = [1.5]",
+            ),
         ),
         (
             r#"const array = new Array(Number("1"))"#,
@@ -245,35 +251,77 @@ fn test() {
         ),
         (
             "const array = new Array((0, 1))",
-            ("const array = Array.from({length: (0, 1)})", "const array = [(0, 1)]"),
+            (
+                "const array = Array.from({length: (0, 1)})",
+                "const array = [(0, 1)]",
+            ),
         ),
         ("new Array(0xff)", ("Array.from({length: 0xff})", "[0xff]")),
-        ("new Array(Math.PI | foo)", ("Array.from({length: Math.PI | foo})", "[Math.PI | foo]")),
+        (
+            "new Array(Math.PI | foo)",
+            ("Array.from({length: Math.PI | foo})", "[Math.PI | foo]"),
+        ),
         (
             "new Array(Math.min(foo, bar))",
-            ("Array.from({length: Math.min(foo, bar)})", "[Math.min(foo, bar)]"),
+            (
+                "Array.from({length: Math.min(foo, bar)})",
+                "[Math.min(foo, bar)]",
+            ),
         ),
-        ("new Array(Number(foo))", ("Array.from({length: Number(foo)})", "[Number(foo)]")),
+        (
+            "new Array(Number(foo))",
+            ("Array.from({length: Number(foo)})", "[Number(foo)]"),
+        ),
         (
             "new Array(Number.MAX_SAFE_INTEGER)",
-            ("Array.from({length: Number.MAX_SAFE_INTEGER})", "[Number.MAX_SAFE_INTEGER]"),
+            (
+                "Array.from({length: Number.MAX_SAFE_INTEGER})",
+                "[Number.MAX_SAFE_INTEGER]",
+            ),
         ),
-        ("new Array(parseInt(foo))", ("Array.from({length: parseInt(foo)})", "[parseInt(foo)]")),
+        (
+            "new Array(parseInt(foo))",
+            ("Array.from({length: parseInt(foo)})", "[parseInt(foo)]"),
+        ),
         (
             "new Array(Number.parseInt(foo))",
-            ("Array.from({length: Number.parseInt(foo)})", "[Number.parseInt(foo)]"),
+            (
+                "Array.from({length: Number.parseInt(foo)})",
+                "[Number.parseInt(foo)]",
+            ),
         ),
         ("new Array(+foo)", ("Array.from({length: +foo})", "[+foo]")),
-        ("new Array(-Math.PI)", ("Array.from({length: -Math.PI})", "[-Math.PI]")),
-        (r#"new Array(-"-2")"#, (r#"Array.from({length: -"-2"})"#, r#"[-"-2"]"#)),
-        ("new Array(foo.length)", ("Array.from({length: foo.length})", "[foo.length]")),
+        (
+            "new Array(-Math.PI)",
+            ("Array.from({length: -Math.PI})", "[-Math.PI]"),
+        ),
+        (
+            r#"new Array(-"-2")"#,
+            (r#"Array.from({length: -"-2"})"#, r#"[-"-2"]"#),
+        ),
+        (
+            "new Array(foo.length)",
+            ("Array.from({length: foo.length})", "[foo.length]"),
+        ),
         (
             "const foo = 1; new Array(foo + 2)",
-            ("const foo = 1; Array.from({length: foo + 2})", "const foo = 1; [foo + 2]"),
+            (
+                "const foo = 1; Array.from({length: foo + 2})",
+                "const foo = 1; [foo + 2]",
+            ),
         ),
-        ("new Array(foo - 2)", ("Array.from({length: foo - 2})", "[foo - 2]")),
-        ("new Array(foo -= 2)", ("Array.from({length: foo -= 2})", "[foo -= 2]")),
-        ("new Array(foo ? 1 : 2)", ("Array.from({length: foo ? 1 : 2})", "[foo ? 1 : 2]")),
+        (
+            "new Array(foo - 2)",
+            ("Array.from({length: foo - 2})", "[foo - 2]"),
+        ),
+        (
+            "new Array(foo -= 2)",
+            ("Array.from({length: foo -= 2})", "[foo -= 2]"),
+        ),
+        (
+            "new Array(foo ? 1 : 2)",
+            ("Array.from({length: foo ? 1 : 2})", "[foo ? 1 : 2]"),
+        ),
         (
             r#"const truthy = "truthy"; new Array(truthy ? 1 : foo)"#,
             (
@@ -288,31 +336,61 @@ fn test() {
                 r#"const falsy = !"truthy"; [falsy ? foo : 1]"#,
             ),
         ),
-        ("new Array((1n, 2))", ("Array.from({length: (1n, 2)})", "[(1n, 2)]")),
-        ("new Array(Number.NaN)", ("Array.from({length: Number.NaN})", "[Number.NaN]")),
+        (
+            "new Array((1n, 2))",
+            ("Array.from({length: (1n, 2)})", "[(1n, 2)]"),
+        ),
+        (
+            "new Array(Number.NaN)",
+            ("Array.from({length: Number.NaN})", "[Number.NaN]"),
+        ),
         ("new Array(NaN)", ("Array.from({length: NaN})", "[NaN]")),
-        ("new Array(foo >>> bar)", ("Array.from({length: foo >>> bar})", "[foo >>> bar]")),
-        ("new Array(foo >>>= bar)", ("Array.from({length: foo >>>= bar})", "[foo >>>= bar]")),
-        ("new Array(++bar.length)", ("Array.from({length: ++bar.length})", "[++bar.length]")),
-        ("new Array(bar.length++)", ("Array.from({length: bar.length++})", "[bar.length++]")),
+        (
+            "new Array(foo >>> bar)",
+            ("Array.from({length: foo >>> bar})", "[foo >>> bar]"),
+        ),
+        (
+            "new Array(foo >>>= bar)",
+            ("Array.from({length: foo >>>= bar})", "[foo >>>= bar]"),
+        ),
+        (
+            "new Array(++bar.length)",
+            ("Array.from({length: ++bar.length})", "[++bar.length]"),
+        ),
+        (
+            "new Array(bar.length++)",
+            ("Array.from({length: bar.length++})", "[bar.length++]"),
+        ),
         (
             "new Array(foo = bar.length)",
-            ("Array.from({length: foo = bar.length})", "[foo = bar.length]"),
+            (
+                "Array.from({length: foo = bar.length})",
+                "[foo = bar.length]",
+            ),
         ),
     ];
 
     let fix_only_short_array = vec![
         (
             r#"const array = new Array("1")"#,
-            (r#"const array = Array.from({length: "1"})"#, r#"const array = ["1"]"#),
+            (
+                r#"const array = Array.from({length: "1"})"#,
+                r#"const array = ["1"]"#,
+            ),
         ),
         (
             "const array = new Array(null)",
-            ("const array = Array.from({length: null})", "const array = [null]"),
+            (
+                "const array = Array.from({length: null})",
+                "const array = [null]",
+            ),
         ),
         (
             r#"const array = new Array(("1"))"#,
-            (r#"const array = Array.from({length: ("1")})"#, r#"const array = [("1")]"#),
+            (
+                r#"const array = Array.from({length: ("1")})"#,
+                r#"const array = [("1")]"#,
+            ),
         ),
         (
             r#"const foo = []
@@ -324,20 +402,35 @@ fn test() {
         ;["bar"].forEach(baz)"#,
             ),
         ),
-        (r#"new Array("0xff")"#, (r#"Array.from({length: "0xff"})"#, r#"["0xff"]"#)),
+        (
+            r#"new Array("0xff")"#,
+            (r#"Array.from({length: "0xff"})"#, r#"["0xff"]"#),
+        ),
         (
             "new Array(Math.NON_EXISTS_PROPERTY)",
-            ("Array.from({length: Math.NON_EXISTS_PROPERTY})", "[Math.NON_EXISTS_PROPERTY]"),
+            (
+                "Array.from({length: Math.NON_EXISTS_PROPERTY})",
+                "[Math.NON_EXISTS_PROPERTY]",
+            ),
         ),
         (
             r#"const foo = 1; new Array(foo + "2")"#,
-            (r#"const foo = 1; Array.from({length: foo + "2"})"#, r#"const foo = 1; [foo + "2"]"#),
+            (
+                r#"const foo = 1; Array.from({length: foo + "2"})"#,
+                r#"const foo = 1; [foo + "2"]"#,
+            ),
         ),
-        ("new Array((1, 2n))", ("Array.from({length: (1, 2n)})", "[(1, 2n)]")),
+        (
+            "new Array((1, 2n))",
+            ("Array.from({length: (1, 2n)})", "[(1, 2n)]"),
+        ),
         // spread arguments cannot be a numeric literal
         (
             "const array = new Array(...[foo])",
-            ("const array = [...[foo]]", "const array = new Array(...[foo])"),
+            (
+                "const array = [...[foo]]",
+                "const array = new Array(...[foo])",
+            ),
         ),
         (
             "const array = new Array(...foo)",
@@ -345,7 +438,10 @@ fn test() {
         ),
         (
             "const array = new Array(...[...foo])",
-            ("const array = [...[...foo]]", "const array = new Array(...[...foo])"),
+            (
+                "const array = [...[...foo]]",
+                "const array = new Array(...[...foo])",
+            ),
         ),
         (
             "const array = new Array(...[1])",
@@ -353,11 +449,17 @@ fn test() {
         ),
         (
             r#"const array = new Array(...["1"])"#,
-            (r#"const array = [...["1"]]"#, r#"const array = new Array(...["1"])"#),
+            (
+                r#"const array = [...["1"]]"#,
+                r#"const array = new Array(...["1"])"#,
+            ),
         ),
         (
             r#"const array = new Array(...[1, "1"])"#,
-            (r#"const array = [...[1, "1"]]"#, r#"const array = new Array(...[1, "1"])"#),
+            (
+                r#"const array = [...[1, "1"]]"#,
+                r#"const array = new Array(...[1, "1"])"#,
+            ),
         ),
         (
             "const foo = []
@@ -374,32 +476,62 @@ fn test() {
     let fix_double = vec![
         (
             "new Array(Math.NON_EXISTS_METHOD(foo))",
-            ("Array.from({length: Math.NON_EXISTS_METHOD(foo)})", "[Math.NON_EXISTS_METHOD(foo)]"),
+            (
+                "Array.from({length: Math.NON_EXISTS_METHOD(foo)})",
+                "[Math.NON_EXISTS_METHOD(foo)]",
+            ),
         ),
         (
             "new Array(Math[min](foo, bar))",
-            ("Array.from({length: Math[min](foo, bar)})", "[Math[min](foo, bar)]"),
+            (
+                "Array.from({length: Math[min](foo, bar)})",
+                "[Math[min](foo, bar)]",
+            ),
         ),
         (
             "new Array(Number[MAX_SAFE_INTEGER])",
-            ("Array.from({length: Number[MAX_SAFE_INTEGER]})", "[Number[MAX_SAFE_INTEGER]]"),
+            (
+                "Array.from({length: Number[MAX_SAFE_INTEGER]})",
+                "[Number[MAX_SAFE_INTEGER]]",
+            ),
         ),
         (
             "new Array(new Number(foo))",
             ("Array.from({length: new Number(foo)})", "[new Number(foo)]"),
         ),
-        ("new Array(foo - 2n)", ("Array.from({length: foo - 2n})", "[foo - 2n]")),
-        ("new Array(foo -= 2n)", ("Array.from({length: foo -= 2n})", "[foo -= 2n]")),
+        (
+            "new Array(foo - 2n)",
+            ("Array.from({length: foo - 2n})", "[foo - 2n]"),
+        ),
+        (
+            "new Array(foo -= 2n)",
+            ("Array.from({length: foo -= 2n})", "[foo -= 2n]"),
+        ),
         (
             "new Array(foo instanceof 1)",
-            ("Array.from({length: foo instanceof 1})", "[foo instanceof 1]"),
+            (
+                "Array.from({length: foo instanceof 1})",
+                "[foo instanceof 1]",
+            ),
         ),
-        ("new Array(foo || 1)", ("Array.from({length: foo || 1})", "[foo || 1]")),
-        ("new Array(foo ||= 1)", ("Array.from({length: foo ||= 1})", "[foo ||= 1]")),
-        ("new Array(foo ? 1n : 2)", ("Array.from({length: foo ? 1n : 2})", "[foo ? 1n : 2]")),
+        (
+            "new Array(foo || 1)",
+            ("Array.from({length: foo || 1})", "[foo || 1]"),
+        ),
+        (
+            "new Array(foo ||= 1)",
+            ("Array.from({length: foo ||= 1})", "[foo ||= 1]"),
+        ),
+        (
+            "new Array(foo ? 1n : 2)",
+            ("Array.from({length: foo ? 1n : 2})", "[foo ? 1n : 2]"),
+        ),
         ("new Array(-foo)", ("Array.from({length: -foo})", "[-foo]")),
         ("new Array(~foo)", ("Array.from({length: ~foo})", "[~foo]")),
-        ("new Array(typeof 1)", ("Array.from({length: typeof 1})", "[typeof 1]")),
+        (
+            "new Array(typeof 1)",
+            ("Array.from({length: typeof 1})", "[typeof 1]"),
+        ),
         (
             r#"const truthy = "truthy"; new Array(truthy ? foo : 1)"#,
             (
@@ -416,20 +548,35 @@ fn test() {
         ),
         (
             "new Array(unknown ? foo : 1)",
-            ("Array.from({length: unknown ? foo : 1})", "[unknown ? foo : 1]"),
+            (
+                "Array.from({length: unknown ? foo : 1})",
+                "[unknown ? foo : 1]",
+            ),
         ),
         (
             "new Array(unknown ? 1 : foo)",
-            ("Array.from({length: unknown ? 1 : foo})", "[unknown ? 1 : foo]"),
+            (
+                "Array.from({length: unknown ? 1 : foo})",
+                "[unknown ? 1 : foo]",
+            ),
         ),
-        ("new Array(++foo)", ("Array.from({length: ++foo})", "[++foo]")),
+        (
+            "new Array(++foo)",
+            ("Array.from({length: ++foo})", "[++foo]"),
+        ),
         (
             "const array = new Array(foo)",
-            ("const array = Array.from({length: foo})", "const array = [foo]"),
+            (
+                "const array = Array.from({length: foo})",
+                "const array = [foo]",
+            ),
         ),
         (
             "const array = new Array(length)",
-            ("const array = Array.from({length: length})", "const array = [length]"),
+            (
+                "const array = Array.from({length: length})",
+                "const array = [length]",
+            ),
             // the original rules just appends `{length}`, we do not resolve the arguments
         ),
         (

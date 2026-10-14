@@ -69,6 +69,10 @@ mod tests {
         assert!(!map.contains("1"));
         assert!(map.contains_footnote("1"));
         assert!(!map.contains_footnote("a"));
-        assert_eq!(map.labels, ["a", "b"], "storage stays sorted and deduplicated");
+        assert_eq!(
+            map.labels,
+            ["a", "b"],
+            "storage stays sorted and deduplicated"
+        );
     }
 }

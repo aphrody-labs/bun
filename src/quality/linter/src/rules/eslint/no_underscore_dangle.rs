@@ -22,7 +22,9 @@ use crate::{
 
 fn no_underscore_dangle_diagnostic(span: Span, name: &str) -> OxcDiagnostic {
     OxcDiagnostic::warn(format!("Unexpected dangling '_' in '`{name}`'."))
-        .with_help(format!("Remove the dangling '_' or add `{name}` to the 'allow' configuration."))
+        .with_help(format!(
+            "Remove the dangling '_' or add `{name}` to the 'allow' configuration."
+        ))
         .with_label(span)
 }
 
@@ -304,11 +306,26 @@ fn test() {
         ("const foo = (..._bar) => {}", None), // { "ecmaVersion": 6 },
         ("const foo = { onClick(..._bar) { } }", None), // { "ecmaVersion": 6 },
         ("export default function() {}", None), // { "ecmaVersion": 6, "sourceType": "module" },
-        ("var _foo = 1", Some(serde_json::json!([{ "allow": ["_foo"] }]))),
-        ("var __proto__ = 1;", Some(serde_json::json!([{ "allow": ["__proto__"] }]))),
-        ("foo._bar;", Some(serde_json::json!([{ "allow": ["_bar"] }]))),
-        ("function _foo() {}", Some(serde_json::json!([{ "allow": ["_foo"] }]))),
-        ("this._bar;", Some(serde_json::json!([{ "allowAfterThis": true }]))),
+        (
+            "var _foo = 1",
+            Some(serde_json::json!([{ "allow": ["_foo"] }])),
+        ),
+        (
+            "var __proto__ = 1;",
+            Some(serde_json::json!([{ "allow": ["__proto__"] }])),
+        ),
+        (
+            "foo._bar;",
+            Some(serde_json::json!([{ "allow": ["_bar"] }])),
+        ),
+        (
+            "function _foo() {}",
+            Some(serde_json::json!([{ "allow": ["_foo"] }])),
+        ),
+        (
+            "this._bar;",
+            Some(serde_json::json!([{ "allowAfterThis": true }])),
+        ),
         (
             "class foo { constructor() { super._bar; } }",
             Some(serde_json::json!([{ "allowAfterSuper": true }])),
@@ -323,22 +340,40 @@ fn test() {
         ), // { "ecmaVersion": 6 },
         ("const o = { _foo: 'bar' }", None),    // { "ecmaVersion": 6 },
         ("const o = { foo_: 'bar' }", None),    // { "ecmaVersion": 6 },
-        ("this.constructor._bar", Some(serde_json::json!([{ "allowAfterThisConstructor": true }]))),
+        (
+            "this.constructor._bar",
+            Some(serde_json::json!([{ "allowAfterThisConstructor": true }])),
+        ),
         ("const foo = { onClick(bar) { } }", None), // { "ecmaVersion": 6 },
         ("const foo = (bar) => {}", None),          // { "ecmaVersion": 6 },
-        ("function foo(_bar) {}", Some(serde_json::json!([{ "allowFunctionParams": true }]))),
-        ("function foo( _bar = 0) {}", Some(serde_json::json!([{ "allowFunctionParams": true }]))), // { "ecmaVersion": 6 },
+        (
+            "function foo(_bar) {}",
+            Some(serde_json::json!([{ "allowFunctionParams": true }])),
+        ),
+        (
+            "function foo( _bar = 0) {}",
+            Some(serde_json::json!([{ "allowFunctionParams": true }])),
+        ), // { "ecmaVersion": 6 },
         (
             "const foo = { onClick(_bar) { } }",
             Some(serde_json::json!([{ "allowFunctionParams": true }])),
         ), // { "ecmaVersion": 6 },
-        ("const foo = (_bar) => {}", Some(serde_json::json!([{ "allowFunctionParams": true }]))), // { "ecmaVersion": 6 },
-        ("function foo(bar) {}", Some(serde_json::json!([{ "allowFunctionParams": false }]))), // { "ecmaVersion": 6 },
+        (
+            "const foo = (_bar) => {}",
+            Some(serde_json::json!([{ "allowFunctionParams": true }])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "function foo(bar) {}",
+            Some(serde_json::json!([{ "allowFunctionParams": false }])),
+        ), // { "ecmaVersion": 6 },
         (
             "const foo = { onClick(bar) { } }",
             Some(serde_json::json!([{ "allowFunctionParams": false }])),
         ), // { "ecmaVersion": 6 },
-        ("const foo = (bar) => {}", Some(serde_json::json!([{ "allowFunctionParams": false }]))), // { "ecmaVersion": 6 },
+        (
+            "const foo = (bar) => {}",
+            Some(serde_json::json!([{ "allowFunctionParams": false }])),
+        ), // { "ecmaVersion": 6 },
         (
             "function foo(_bar) {}",
             Some(serde_json::json!([{ "allowFunctionParams": false, "allow": ["_bar"] }])),
@@ -351,20 +386,32 @@ fn test() {
             "const foo = (_bar) => {}",
             Some(serde_json::json!([{ "allowFunctionParams": false, "allow": ["_bar"] }])),
         ), // { "ecmaVersion": 6 },
-        ("function foo([_bar]) {}", Some(serde_json::json!([{ "allowFunctionParams": false }]))), // { "ecmaVersion": 6 },
+        (
+            "function foo([_bar]) {}",
+            Some(serde_json::json!([{ "allowFunctionParams": false }])),
+        ), // { "ecmaVersion": 6 },
         (
             "function foo([_bar] = []) {}",
             Some(serde_json::json!([{ "allowFunctionParams": false }])),
         ), // { "ecmaVersion": 6 },
-        ("function foo( { _bar }) {}", Some(serde_json::json!([{ "allowFunctionParams": false }]))), // { "ecmaVersion": 6 },
+        (
+            "function foo( { _bar }) {}",
+            Some(serde_json::json!([{ "allowFunctionParams": false }])),
+        ), // { "ecmaVersion": 6 },
         (
             "function foo( { _bar = 0 } = {}) {}",
             Some(serde_json::json!([{ "allowFunctionParams": false }])),
         ), // { "ecmaVersion": 6 },
-        ("function foo(...[_bar]) {}", Some(serde_json::json!([{ "allowFunctionParams": false }]))), // { "ecmaVersion": 2016 },
+        (
+            "function foo(...[_bar]) {}",
+            Some(serde_json::json!([{ "allowFunctionParams": false }])),
+        ), // { "ecmaVersion": 2016 },
         ("const [_foo] = arr", None), // { "ecmaVersion": 6 },
         ("const [_foo] = arr", Some(serde_json::json!([{}]))), // { "ecmaVersion": 6 },
-        ("const [_foo] = arr", Some(serde_json::json!([{ "allowInArrayDestructuring": true }]))), // { "ecmaVersion": 6 },
+        (
+            "const [_foo] = arr",
+            Some(serde_json::json!([{ "allowInArrayDestructuring": true }])),
+        ), // { "ecmaVersion": 6 },
         (
             "const [foo, ...rest] = [1, 2, 3]",
             Some(serde_json::json!([{ "allowInArrayDestructuring": false }])),
@@ -375,7 +422,10 @@ fn test() {
         ), // { "ecmaVersion": 2022 },
         ("const { _foo } = obj", None), // { "ecmaVersion": 6 },
         ("const { _foo } = obj", Some(serde_json::json!([{}]))), // { "ecmaVersion": 6 },
-        ("const { _foo } = obj", Some(serde_json::json!([{ "allowInObjectDestructuring": true }]))), // { "ecmaVersion": 6 },
+        (
+            "const { _foo } = obj",
+            Some(serde_json::json!([{ "allowInObjectDestructuring": true }])),
+        ), // { "ecmaVersion": 6 },
         (
             "const { foo, bar: _bar } = { foo: 1, bar: 2 }",
             Some(serde_json::json!([{ "allowInObjectDestructuring": false, "allow": ["_bar"] }])),
@@ -389,17 +439,29 @@ fn test() {
             Some(serde_json::json!([{ "allowInObjectDestructuring": false }])),
         ), // { "ecmaVersion": 2022 },
         ("class foo { _field; }", None), // { "ecmaVersion": 2022 },
-        ("class foo { _field; }", Some(serde_json::json!([{ "enforceInClassFields": false }]))), // { "ecmaVersion": 2022 },
+        (
+            "class foo { _field; }",
+            Some(serde_json::json!([{ "enforceInClassFields": false }])),
+        ), // { "ecmaVersion": 2022 },
         ("class foo { #_field; }", None), // { "ecmaVersion": 2022 },
-        ("class foo { #_field; }", Some(serde_json::json!([{ "enforceInClassFields": false }]))), // { "ecmaVersion": 2022 },
+        (
+            "class foo { #_field; }",
+            Some(serde_json::json!([{ "enforceInClassFields": false }])),
+        ), // { "ecmaVersion": 2022 },
         ("class foo { _field; }", Some(serde_json::json!([{}]))), // { "ecmaVersion": 2022 },
         ("import foo from 'foo.json' with { _type: 'json' }", None), // { "ecmaVersion": 2025 },
         ("export * from 'foo.json' with { _type: 'json' }", None), // { "ecmaVersion": 2025 },
-        ("export { default } from 'foo.json' with { _type: 'json' }", None), // { "ecmaVersion": 2025 },
+        (
+            "export { default } from 'foo.json' with { _type: 'json' }",
+            None,
+        ), // { "ecmaVersion": 2025 },
         ("import('foo.json', { _with: { _type: 'json' } })", None), // { "ecmaVersion": 2025 },
         ("import('foo.json', { 'with': { _type: 'json' } })", None), // { "ecmaVersion": 2025 },
-        ("import('foo.json', { _with: { _type } })", None),         // { "ecmaVersion": 2025 }
-        ("const o = { _foo: 'bar' }", Some(serde_json::json!([{ "enforceInMethodNames": true }]))), // { "ecmaVersion": 6 },
+        ("import('foo.json', { _with: { _type } })", None), // { "ecmaVersion": 2025 }
+        (
+            "const o = { _foo: 'bar' }",
+            Some(serde_json::json!([{ "enforceInMethodNames": true }])),
+        ), // { "ecmaVersion": 6 },
         (
             "using _guard = enterCriticalSection();",
             Some(serde_json::json!([{ "allowInUsingDeclarations": true }])),
@@ -444,15 +506,30 @@ fn test() {
             Some(serde_json::json!([{ "enforceInMethodNames": true }])),
         ), // { "ecmaVersion": 6 },
         ("this.constructor._bar", None),
-        ("function foo(_bar) {}", Some(serde_json::json!([{ "allowFunctionParams": false }]))),
-        ("(function foo(_bar) {})", Some(serde_json::json!([{ "allowFunctionParams": false }]))),
-        ("function foo(bar, _foo) {}", Some(serde_json::json!([{ "allowFunctionParams": false }]))),
+        (
+            "function foo(_bar) {}",
+            Some(serde_json::json!([{ "allowFunctionParams": false }])),
+        ),
+        (
+            "(function foo(_bar) {})",
+            Some(serde_json::json!([{ "allowFunctionParams": false }])),
+        ),
+        (
+            "function foo(bar, _foo) {}",
+            Some(serde_json::json!([{ "allowFunctionParams": false }])),
+        ),
         (
             "const foo = { onClick(_bar) { } }",
             Some(serde_json::json!([{ "allowFunctionParams": false }])),
         ), // { "ecmaVersion": 6 },
-        ("const foo = (_bar) => {}", Some(serde_json::json!([{ "allowFunctionParams": false }]))), // { "ecmaVersion": 6 },
-        ("function foo(_bar = 0) {}", Some(serde_json::json!([{ "allowFunctionParams": false }]))), // { "ecmaVersion": 6 },
+        (
+            "const foo = (_bar) => {}",
+            Some(serde_json::json!([{ "allowFunctionParams": false }])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "function foo(_bar = 0) {}",
+            Some(serde_json::json!([{ "allowFunctionParams": false }])),
+        ), // { "ecmaVersion": 6 },
         (
             "const foo = { onClick(_bar = 0) { } }",
             Some(serde_json::json!([{ "allowFunctionParams": false }])),
@@ -461,7 +538,10 @@ fn test() {
             "const foo = (_bar = 0) => {}",
             Some(serde_json::json!([{ "allowFunctionParams": false }])),
         ), // { "ecmaVersion": 6 },
-        ("function foo(..._bar) {}", Some(serde_json::json!([{ "allowFunctionParams": false }]))), // { "ecmaVersion": 6 },
+        (
+            "function foo(..._bar) {}",
+            Some(serde_json::json!([{ "allowFunctionParams": false }])),
+        ), // { "ecmaVersion": 6 },
         (
             "const foo = { onClick(..._bar) { } }",
             Some(serde_json::json!([{ "allowFunctionParams": false }])),
@@ -528,12 +608,30 @@ fn test() {
             "const { foo, bar: { baz, _qux } } = { foo: 1, bar: { baz: 3, _qux: 4 } }",
             Some(serde_json::json!([{ "allowInObjectDestructuring": false }])),
         ), // { "ecmaVersion": 2022 },
-        ("class foo { #_bar() {} }", Some(serde_json::json!([{ "enforceInMethodNames": true }]))), // { "ecmaVersion": 2022 },
-        ("class foo { #bar_() {} }", Some(serde_json::json!([{ "enforceInMethodNames": true }]))), // { "ecmaVersion": 2022 },
-        ("class foo { _field; }", Some(serde_json::json!([{ "enforceInClassFields": true }]))), // { "ecmaVersion": 2022 },
-        ("class foo { #_field; }", Some(serde_json::json!([{ "enforceInClassFields": true }]))), // { "ecmaVersion": 2022 },
-        ("class foo { field_; }", Some(serde_json::json!([{ "enforceInClassFields": true }]))), // { "ecmaVersion": 2022 },
-        ("class foo { #field_; }", Some(serde_json::json!([{ "enforceInClassFields": true }]))), // { "ecmaVersion": 2022 },
+        (
+            "class foo { #_bar() {} }",
+            Some(serde_json::json!([{ "enforceInMethodNames": true }])),
+        ), // { "ecmaVersion": 2022 },
+        (
+            "class foo { #bar_() {} }",
+            Some(serde_json::json!([{ "enforceInMethodNames": true }])),
+        ), // { "ecmaVersion": 2022 },
+        (
+            "class foo { _field; }",
+            Some(serde_json::json!([{ "enforceInClassFields": true }])),
+        ), // { "ecmaVersion": 2022 },
+        (
+            "class foo { #_field; }",
+            Some(serde_json::json!([{ "enforceInClassFields": true }])),
+        ), // { "ecmaVersion": 2022 },
+        (
+            "class foo { field_; }",
+            Some(serde_json::json!([{ "enforceInClassFields": true }])),
+        ), // { "ecmaVersion": 2022 },
+        (
+            "class foo { #field_; }",
+            Some(serde_json::json!([{ "enforceInClassFields": true }])),
+        ), // { "ecmaVersion": 2022 },
         ("var __filename = 1;", None),
         ("class Foo { #_x; foo() { this.#_x; } }", None),
         ("using _guard = enterCriticalSection();", None),
@@ -543,6 +641,11 @@ fn test() {
         ),
     ];
 
-    Tester::new(NoUnderscoreDangle::NAME, NoUnderscoreDangle::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        NoUnderscoreDangle::NAME,
+        NoUnderscoreDangle::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

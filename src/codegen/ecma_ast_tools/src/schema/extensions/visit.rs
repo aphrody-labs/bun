@@ -90,7 +90,10 @@ pub struct VisitorNames {
 
 impl VisitorNames {
     pub fn from_snake_name(snake_name: &str) -> Self {
-        Self { visit: format!("visit_{snake_name}"), walk: format!("walk_{snake_name}") }
+        Self {
+            visit: format!("visit_{snake_name}"),
+            walk: format!("walk_{snake_name}"),
+        }
     }
 
     /// Get name of visitor method as an [`Ident`].

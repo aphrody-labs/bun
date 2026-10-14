@@ -166,14 +166,20 @@ fn expect_shadowed_by_parameter(span: Span) -> OxcDiagnostic {
 
 pub fn has_assertions_takes_no_arguments(span: Span, prefix: &str) -> OxcDiagnostic {
     OxcDiagnostic::warn(format!("`{prefix}.hasAssertions` expects no arguments."))
-        .with_help(format!("Remove the arguments from `{prefix}.hasAssertions()`."))
+        .with_help(format!(
+            "Remove the arguments from `{prefix}.hasAssertions()`."
+        ))
         .with_label(span)
 }
 
 fn assertions_requires_one_argument(span: Span, prefix: &str) -> OxcDiagnostic {
-    OxcDiagnostic::warn(format!("`{prefix}.assertions` expects a single argument of type number."))
-        .with_help(format!("Pass a single numeric argument to `{prefix}.assertions()`."))
-        .with_label(span)
+    OxcDiagnostic::warn(format!(
+        "`{prefix}.assertions` expects a single argument of type number."
+    ))
+    .with_help(format!(
+        "Pass a single numeric argument to `{prefix}.assertions()`."
+    ))
+    .with_label(span)
 }
 
 fn assertions_requires_number_argument(span: Span) -> OxcDiagnostic {
@@ -274,7 +280,9 @@ pub trait PreferExpectAssertionsRuleImpl {
             let call_span = scanner.has_assertions_call_span.unwrap();
             let delete_span = Span::new(args_span.start, call_span.end - 1);
             let fixer = RuleFixer::new(FixKind::Suggestion, ctx);
-            let suggestion = fixer.delete_range(delete_span).with_message("Remove extra arguments");
+            let suggestion = fixer
+                .delete_range(delete_span)
+                .with_message("Remove extra arguments");
             ctx.diagnostic_with_suggestions(
                 has_assertions_takes_no_arguments(args_span, file_expect_prefix),
                 [suggestion],
@@ -608,7 +616,9 @@ fn validate_has_assertions_args(call: &CallExpression<'_>, prefix: &str, ctx: &L
     if let Some(args_span) = call.arguments_span() {
         let delete_span = Span::new(args_span.start, call.span.end - 1);
         let fixer = RuleFixer::new(FixKind::Suggestion, ctx);
-        let suggestion = fixer.delete_range(delete_span).with_message("Remove extra arguments");
+        let suggestion = fixer
+            .delete_range(delete_span)
+            .with_message("Remove extra arguments");
         ctx.diagnostic_with_suggestions(
             has_assertions_takes_no_arguments(args_span, prefix),
             [suggestion],
@@ -632,7 +642,9 @@ pub fn validate_assertions_args(call: &CallExpression<'_>, prefix: &str, ctx: &L
             let extra_end = call.span.end - 1;
             let extra_span = Span::new(extra_start, extra_end);
             let fixer = RuleFixer::new(FixKind::Suggestion, ctx);
-            let suggestion = fixer.delete_range(extra_span).with_message("Remove extra arguments");
+            let suggestion = fixer
+                .delete_range(extra_span)
+                .with_message("Remove extra arguments");
             ctx.diagnostic_with_suggestions(
                 assertions_requires_one_argument(extra_span, prefix),
                 [suggestion],
@@ -644,13 +656,15 @@ pub fn validate_assertions_args(call: &CallExpression<'_>, prefix: &str, ctx: &L
 pub fn is_describe_call(call_expr: &CallExpression<'_>) -> bool {
     let callee_name = match &call_expr.callee {
         Expression::Identifier(ident) => ident.name.as_str(),
-        Expression::StaticMemberExpression(member) => {
-            member.object.get_identifier_reference().map_or("", |id| id.name.as_str())
-        }
+        Expression::StaticMemberExpression(member) => member
+            .object
+            .get_identifier_reference()
+            .map_or("", |id| id.name.as_str()),
         Expression::TaggedTemplateExpression(tagged) => match &tagged.tag {
-            Expression::StaticMemberExpression(member) => {
-                member.object.get_identifier_reference().map_or("", |id| id.name.as_str())
-            }
+            Expression::StaticMemberExpression(member) => member
+                .object
+                .get_identifier_reference()
+                .map_or("", |id| id.name.as_str()),
             _ => "",
         },
         _ => "",
@@ -662,9 +676,17 @@ pub fn is_describe_call(call_expr: &CallExpression<'_>) -> bool {
 }
 
 fn find_test_callback<'a>(call_expr: &'a CallExpression<'a>) -> Option<&'a Expression<'a>> {
-    call_expr.arguments.iter().rev().filter_map(|arg| arg.as_expression()).find(|expr| {
-        matches!(expr, Expression::FunctionExpression(_) | Expression::ArrowFunctionExpression(_))
-    })
+    call_expr
+        .arguments
+        .iter()
+        .rev()
+        .filter_map(|arg| arg.as_expression())
+        .find(|expr| {
+            matches!(
+                expr,
+                Expression::FunctionExpression(_) | Expression::ArrowFunctionExpression(_)
+            )
+        })
 }
 
 fn callback_body<'a>(callback: &'a Expression<'a>) -> Option<CallbackBody<'a>> {

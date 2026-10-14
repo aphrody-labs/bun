@@ -40,8 +40,9 @@ fn sender() -> Result<&'static mpsc::UnboundedSender<Request>> {
             .name("bun-browser-native-session".to_owned())
             .stack_size(64 * 1024 * 1024)
             .spawn(move || {
-                let Ok(runtime) =
-                    tokio::runtime::Builder::new_current_thread().enable_all().build()
+                let Ok(runtime) = tokio::runtime::Builder::new_current_thread()
+                    .enable_all()
+                    .build()
                 else {
                     return;
                 };
@@ -79,9 +80,10 @@ fn sender() -> Result<&'static mpsc::UnboundedSender<Request>> {
         Ok(sender)
     }) {
         Ok(sender) => Ok(sender),
-        Err(detail) => {
-            Err(WebError::Browser { url: "native session".to_owned(), detail: detail.clone() })
-        },
+        Err(detail) => Err(WebError::Browser {
+            url: "native session".to_owned(),
+            detail: detail.clone(),
+        }),
     }
 }
 
@@ -122,14 +124,27 @@ async fn call_inner(
         })?;
     let result = tokio::time::timeout(budget, receiver)
         .await
-        .map_err(|_| WebError::BrowserTimeout { url: tool.to_owned(), secs: budget.as_secs() })?
+        .map_err(|_| WebError::BrowserTimeout {
+            url: tool.to_owned(),
+            secs: budget.as_secs(),
+        })?
         .map_err(|_| WebError::Browser {
             url: tool.to_owned(),
             detail: "native browser worker ended without a reply".to_owned(),
         })?
-        .map_err(|detail| WebError::Browser { url: tool.to_owned(), detail })?;
-    if result.get("isError").and_then(Value::as_bool).unwrap_or(false) {
-        return Err(WebError::Browser { url: tool.to_owned(), detail: text_content(&result) });
+        .map_err(|detail| WebError::Browser {
+            url: tool.to_owned(),
+            detail,
+        })?;
+    if result
+        .get("isError")
+        .and_then(Value::as_bool)
+        .unwrap_or(false)
+    {
+        return Err(WebError::Browser {
+            url: tool.to_owned(),
+            detail: text_content(&result),
+        });
     }
     Ok(result)
 }
@@ -163,7 +178,9 @@ pub fn image_data(value: &Value) -> Option<&str> {
 }
 
 async fn text(tool: &str, arguments: Value, budget: Duration) -> Result<String> {
-    call(tool, arguments, budget).await.map(|result| text_content(&result))
+    call(tool, arguments, budget)
+        .await
+        .map(|result| text_content(&result))
 }
 
 /// Navigate the shared page to `url` (http or https only).
@@ -219,7 +236,12 @@ pub async fn scroll(dx: i64, dy: i64, budget: Duration) -> Result<String> {
     } else {
         ("left", -dx)
     };
-    text("browser_scroll", json!({ "direction": direction, "amount": amount }), budget).await
+    text(
+        "browser_scroll",
+        json!({ "direction": direction, "amount": amount }),
+        budget,
+    )
+    .await
 }
 
 /// The open tabs of the shared session.
@@ -237,10 +259,12 @@ pub async fn tabs(budget: Duration) -> Result<String> {
 /// image, or the deadline.
 pub async fn screenshot(budget: Duration) -> Result<String> {
     let result = call("browser_screenshot", json!({}), budget).await?;
-    image_data(&result).map(str::to_owned).ok_or(WebError::Unsupported {
-        operation: "screenshot",
-        detail: "the browser returned no PNG image",
-    })
+    image_data(&result)
+        .map(str::to_owned)
+        .ok_or(WebError::Unsupported {
+            operation: "screenshot",
+            detail: "the browser returned no PNG image",
+        })
 }
 
 /// Evaluate a JavaScript expression in a fresh browser state, without access to open tabs.
@@ -248,9 +272,13 @@ pub async fn screenshot(budget: Duration) -> Result<String> {
 /// # Errors
 /// Reports an evaluation failure or the deadline.
 pub async fn evaluate(expression: &str, budget: Duration) -> Result<String> {
-    call_isolated("browser_evaluate", json!({ "expression": expression }), budget)
-        .await
-        .map(|result| text_content(&result))
+    call_isolated(
+        "browser_evaluate",
+        json!({ "expression": expression }),
+        budget,
+    )
+    .await
+    .map(|result| text_content(&result))
 }
 
 #[cfg(test)]
@@ -273,12 +301,23 @@ mod tests {
     #[tokio::test]
     async fn a_diagonal_scroll_is_refused_before_reaching_the_browser() {
         let error = scroll(5, 5, Duration::from_secs(1)).await.unwrap_err();
-        assert!(matches!(error, WebError::Unsupported { operation: "scroll", .. }), "{error}");
+        assert!(
+            matches!(
+                error,
+                WebError::Unsupported {
+                    operation: "scroll",
+                    ..
+                }
+            ),
+            "{error}"
+        );
     }
 
     #[tokio::test]
     async fn a_refused_url_never_starts_navigation() {
-        let error = navigate("file:///etc/passwd", Duration::from_secs(5)).await.unwrap_err();
+        let error = navigate("file:///etc/passwd", Duration::from_secs(5))
+            .await
+            .unwrap_err();
         assert!(error.to_string().contains("not allowed"), "{error}");
     }
 
@@ -289,7 +328,12 @@ mod tests {
         // Preserve the evaluated numeric value and the isolated-state contract.
         let number: Value = serde_json::from_str(result.trim()).unwrap();
         assert_eq!(number.as_f64(), Some(3.0));
-        evaluate("globalThis.__bunServiceIsolation = 1", Duration::from_secs(10)).await.unwrap();
+        evaluate(
+            "globalThis.__bunServiceIsolation = 1",
+            Duration::from_secs(10),
+        )
+        .await
+        .unwrap();
         let isolated = evaluate(
             "typeof globalThis.__bunServiceIsolation === 'undefined'",
             Duration::from_secs(10),
@@ -305,6 +349,9 @@ mod tests {
         let error = screenshot(Duration::from_secs(10))
             .await
             .expect_err("a blank session must not invent screenshot data");
-        assert!(error.to_string().contains("no renderable viewport"), "{error}");
+        assert!(
+            error.to_string().contains("no renderable viewport"),
+            "{error}"
+        );
     }
 }

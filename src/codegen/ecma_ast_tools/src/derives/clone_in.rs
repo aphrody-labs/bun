@@ -35,7 +35,10 @@ impl Derive for DeriveCloneIn {
     /// Register that accept `#[clone_in]` attr on structs, enums, or struct fields.
     /// Allow attr on structs and enums which don't derive this trait.
     fn attrs(&self) -> &[(&'static str, AttrPositions)] {
-        &[("clone_in", attr_positions!(StructMaybeDerived | EnumMaybeDerived | StructField))]
+        &[(
+            "clone_in",
+            attr_positions!(StructMaybeDerived | EnumMaybeDerived | StructField),
+        )]
     }
 
     /// Parse `#[clone_in(default)]` on struct, enum, or struct field,
@@ -112,7 +115,13 @@ fn derive_struct(struct_def: &StructDef, schema: &Schema) -> TokenStream {
         (quote!( #type_ident { #(#fields),* } ), true)
     };
 
-    generate_impl(&type_ident, &body, struct_def.has_lifetime, false, body_uses_flag)
+    generate_impl(
+        &type_ident,
+        &body,
+        struct_def.has_lifetime,
+        false,
+        body_uses_flag,
+    )
 }
 
 /// Get if a struct field should be filled with default value when cloning.
@@ -138,9 +147,15 @@ fn struct_field_is_default(field: &FieldDef, schema: &Schema) -> bool {
 ///
 /// Such fields are cloned with `SemanticId::clone_cell_option_id`.
 fn struct_field_is_semantic_id_cell_option(field: &FieldDef, schema: &Schema) -> bool {
-    let TypeDef::Cell(cell_def) = field.type_def(schema) else { return false };
-    let TypeDef::Option(option_def) = cell_def.inner_type(schema) else { return false };
-    let TypeDef::Struct(struct_def) = option_def.inner_type(schema) else { return false };
+    let TypeDef::Cell(cell_def) = field.type_def(schema) else {
+        return false;
+    };
+    let TypeDef::Option(option_def) = cell_def.inner_type(schema) else {
+        return false;
+    };
+    let TypeDef::Struct(struct_def) = option_def.inner_type(schema) else {
+        return false;
+    };
     struct_def.clone_in.is_semantic_id
 }
 
@@ -159,7 +174,13 @@ fn derive_enum(enum_def: &EnumDef, schema: &Schema) -> TokenStream {
     // Add `#[inline(always)]` to methods for fieldless enums, because they're no-ops
     let inline_always = enum_def.is_fieldless();
 
-    generate_impl(&type_ident, &body, enum_def.has_lifetime, inline_always, body_uses_flag)
+    generate_impl(
+        &type_ident,
+        &body,
+        enum_def.has_lifetime,
+        inline_always,
+        body_uses_flag,
+    )
 }
 
 /// Generate the `match` body for an enum's `clone_in_impl` method.
@@ -215,15 +236,25 @@ fn generate_impl(
     inline_always: bool,
     body_uses_flag: bool,
 ) -> TokenStream {
-    let (from_lifetime, to_lifetime) =
-        if has_lifetime { (quote!( <'_> ), quote!( <'new_alloc> )) } else { (quote!(), quote!()) };
+    let (from_lifetime, to_lifetime) = if has_lifetime {
+        (quote!( <'_> ), quote!( <'new_alloc> ))
+    } else {
+        (quote!(), quote!())
+    };
 
-    let inline = if inline_always { quote!( #[inline(always)] ) } else { quote!() };
+    let inline = if inline_always {
+        quote!( #[inline(always)] )
+    } else {
+        quote!()
+    };
 
     // A single `clone_in_impl` traversal serves both public methods. Name the flag `_`-prefixed when
     // the body ignores it (default structs, empty structs, fieldless enums) to avoid an unused warning.
-    let flag_param =
-        if body_uses_flag { quote!(with_semantic_ids) } else { quote!(_with_semantic_ids) };
+    let flag_param = if body_uses_flag {
+        quote!(with_semantic_ids)
+    } else {
+        quote!(_with_semantic_ids)
+    };
 
     quote! {
         impl<'new_alloc> CloneIn<'new_alloc> for #type_ident #from_lifetime {

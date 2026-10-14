@@ -98,8 +98,10 @@ impl Rule for PreferDomNodeDataset {
                 // Playwright's `Locator#getAttribute()` returns a promise.
                 // https://playwright.dev/docs/api/class-locator#locator-get-attribute
                 // https://github.com/sindresorhus/eslint-plugin-unicorn/pull/2334
-                if matches!(ctx.nodes().parent_node(node.id()).kind(), AstKind::AwaitExpression(_))
-                {
+                if matches!(
+                    ctx.nodes().parent_node(node.id()).kind(),
+                    AstKind::AwaitExpression(_)
+                ) {
                     return;
                 }
             }
@@ -454,17 +456,38 @@ fn test() {
     ];
 
     let fix = vec![
-        (r"element.setAttribute('data-unicorn', '🦄');", r"element.dataset.unicorn = '🦄';"),
-        (r"element.setAttribute('data-🦄', '🦄');", r#"element.dataset["🦄"] = '🦄';"#),
-        (r"element.setAttribute('data-ゆ', 'ゆ');", r"element.dataset.ゆ = 'ゆ';"),
-        (r"element.setAttribute('data-foo2', '🦄');", r"element.dataset.foo2 = '🦄';"),
-        (r"element.setAttribute('data-foo:bar', 'zaz');", r#"element.dataset["foo:bar"] = 'zaz';"#),
+        (
+            r"element.setAttribute('data-unicorn', '🦄');",
+            r"element.dataset.unicorn = '🦄';",
+        ),
+        (
+            r"element.setAttribute('data-🦄', '🦄');",
+            r#"element.dataset["🦄"] = '🦄';"#,
+        ),
+        (
+            r"element.setAttribute('data-ゆ', 'ゆ');",
+            r"element.dataset.ゆ = 'ゆ';",
+        ),
+        (
+            r"element.setAttribute('data-foo2', '🦄');",
+            r"element.dataset.foo2 = '🦄';",
+        ),
+        (
+            r"element.setAttribute('data-foo:bar', 'zaz');",
+            r#"element.dataset["foo:bar"] = 'zaz';"#,
+        ),
         (
             r#"element.setAttribute("data-foo:bar", "zaz");"#,
             r#"element.dataset["foo:bar"] = "zaz";"#,
         ),
-        (r"element.setAttribute('data-foo.bar', 'zaz');", r#"element.dataset["foo.bar"] = 'zaz';"#),
-        (r"element.setAttribute('data-foo-bar', 'zaz');", r"element.dataset.fooBar = 'zaz';"),
+        (
+            r"element.setAttribute('data-foo.bar', 'zaz');",
+            r#"element.dataset["foo.bar"] = 'zaz';"#,
+        ),
+        (
+            r"element.setAttribute('data-foo-bar', 'zaz');",
+            r"element.dataset.fooBar = 'zaz';",
+        ),
         (
             r"element.setAttribute('data-foo', /* comment */ 'bar');",
             r"element.dataset.foo = 'bar';",
@@ -473,12 +496,30 @@ fn test() {
             r"element.querySelector('#selector').setAttribute('data-AllowAccess', true);",
             r"element.querySelector('#selector').dataset.allowaccess = true;",
         ),
-        (r#"element.setAttribute("data-", "🦄");"#, r#"element.dataset[""] = "🦄";"#),
-        (r#"element.setAttribute("data--foo", "🦄");"#, r#"element.dataset.Foo = "🦄";"#),
-        (r#"element.setAttribute("DATA--FOO", "🦄");"#, r#"element.dataset.Foo = "🦄";"#),
-        (r#"element.setAttribute("DATA- ", "🦄");"#, r#"element.dataset[" "] = "🦄";"#),
-        (r#"element.setAttribute("DATA-Foo-bar", "🦄");"#, r#"element.dataset.fooBar = "🦄";"#),
-        (r#"element.setAttribute('data-a"b', "zaz");"#, r#"element.dataset["a\"b"] = "zaz";"#),
+        (
+            r#"element.setAttribute("data-", "🦄");"#,
+            r#"element.dataset[""] = "🦄";"#,
+        ),
+        (
+            r#"element.setAttribute("data--foo", "🦄");"#,
+            r#"element.dataset.Foo = "🦄";"#,
+        ),
+        (
+            r#"element.setAttribute("DATA--FOO", "🦄");"#,
+            r#"element.dataset.Foo = "🦄";"#,
+        ),
+        (
+            r#"element.setAttribute("DATA- ", "🦄");"#,
+            r#"element.dataset[" "] = "🦄";"#,
+        ),
+        (
+            r#"element.setAttribute("DATA-Foo-bar", "🦄");"#,
+            r#"element.dataset.fooBar = "🦄";"#,
+        ),
+        (
+            r#"element.setAttribute('data-a"b', "zaz");"#,
+            r#"element.dataset["a\"b"] = "zaz";"#,
+        ),
         (
             r#"optional?.element.setAttribute("data-unicorn", "🦄");"#,
             r#"optional?.element.setAttribute("data-unicorn", "🦄");"#,
@@ -487,22 +528,58 @@ fn test() {
             r#"element.optional?.setAttribute("data-unicorn", "🦄");"#,
             r#"element.optional?.setAttribute("data-unicorn", "🦄");"#,
         ),
-        (r"element.removeAttribute('data-unicorn');", r"delete element.dataset.unicorn;"),
-        (r#"element.removeAttribute("data-unicorn");"#, r"delete element.dataset.unicorn;"),
-        (r#"element.removeAttribute("data-unicorn",);"#, r"delete element.dataset.unicorn;"),
-        (r#"element.removeAttribute("data-🦄");"#, r#"delete element.dataset["🦄"];"#),
-        (r#"element.removeAttribute("data-ゆ");"#, r"delete element.dataset.ゆ;"),
-        (r#"element.removeAttribute("data-foo2");"#, r"delete element.dataset.foo2;"),
-        (r#"element.removeAttribute("data-foo:bar");"#, r#"delete element.dataset["foo:bar"];"#),
-        (r#"element.removeAttribute("data-foo.bar");"#, r#"delete element.dataset["foo.bar"];"#),
-        (r#"element.removeAttribute("data-foo-bar");"#, r"delete element.dataset.fooBar;"),
-        (r#"element.removeAttribute("data-foo");"#, r"delete element.dataset.foo;"),
-        (r#"element.removeAttribute('data-a"b');"#, r#"delete element.dataset["a\"b"];"#),
+        (
+            r"element.removeAttribute('data-unicorn');",
+            r"delete element.dataset.unicorn;",
+        ),
+        (
+            r#"element.removeAttribute("data-unicorn");"#,
+            r"delete element.dataset.unicorn;",
+        ),
+        (
+            r#"element.removeAttribute("data-unicorn",);"#,
+            r"delete element.dataset.unicorn;",
+        ),
+        (
+            r#"element.removeAttribute("data-🦄");"#,
+            r#"delete element.dataset["🦄"];"#,
+        ),
+        (
+            r#"element.removeAttribute("data-ゆ");"#,
+            r"delete element.dataset.ゆ;",
+        ),
+        (
+            r#"element.removeAttribute("data-foo2");"#,
+            r"delete element.dataset.foo2;",
+        ),
+        (
+            r#"element.removeAttribute("data-foo:bar");"#,
+            r#"delete element.dataset["foo:bar"];"#,
+        ),
+        (
+            r#"element.removeAttribute("data-foo.bar");"#,
+            r#"delete element.dataset["foo.bar"];"#,
+        ),
+        (
+            r#"element.removeAttribute("data-foo-bar");"#,
+            r"delete element.dataset.fooBar;",
+        ),
+        (
+            r#"element.removeAttribute("data-foo");"#,
+            r"delete element.dataset.foo;",
+        ),
+        (
+            r#"element.removeAttribute('data-a"b');"#,
+            r#"delete element.dataset["a\"b"];"#,
+        ),
         (
             r##"element.querySelector("#selector").removeAttribute("data-AllowAccess");"##,
             r##"delete element.querySelector("#selector").dataset.allowaccess;"##,
         ),
-        (r#"element.removeAttribute("data-");"#, r#"delete element.dataset[""];"#),
+        (
+            r#"element.removeAttribute("data-");"#,
+            r#"delete element.dataset[""];"#,
+        ),
         (
             r#"optional?.element.removeAttribute("data-unicorn");"#,
             r"delete optional?.element.dataset.unicorn;",
@@ -515,7 +592,10 @@ fn test() {
             r#"element.removeAttribute?.("data-unicorn");"#,
             r#"element.removeAttribute?.("data-unicorn");"#,
         ),
-        (r"element.hasAttribute('data-unicorn');", r#"Object.hasOwn(element.dataset, "unicorn");"#),
+        (
+            r"element.hasAttribute('data-unicorn');",
+            r#"Object.hasOwn(element.dataset, "unicorn");"#,
+        ),
         (
             r#"element.hasAttribute("data-unicorn");"#,
             r#"Object.hasOwn(element.dataset, "unicorn");"#,
@@ -524,9 +604,18 @@ fn test() {
             r#"element.hasAttribute("data-unicorn",);"#,
             r#"Object.hasOwn(element.dataset, "unicorn");"#,
         ),
-        (r#"element.hasAttribute("data-🦄");"#, r#"Object.hasOwn(element.dataset, "🦄");"#),
-        (r#"element.hasAttribute("data-ゆ");"#, r#"Object.hasOwn(element.dataset, "ゆ");"#),
-        (r#"element.hasAttribute("data-foo2");"#, r#"Object.hasOwn(element.dataset, "foo2");"#),
+        (
+            r#"element.hasAttribute("data-🦄");"#,
+            r#"Object.hasOwn(element.dataset, "🦄");"#,
+        ),
+        (
+            r#"element.hasAttribute("data-ゆ");"#,
+            r#"Object.hasOwn(element.dataset, "ゆ");"#,
+        ),
+        (
+            r#"element.hasAttribute("data-foo2");"#,
+            r#"Object.hasOwn(element.dataset, "foo2");"#,
+        ),
         (
             r#"element.hasAttribute("data-foo:bar");"#,
             r#"Object.hasOwn(element.dataset, "foo:bar");"#,
@@ -539,12 +628,18 @@ fn test() {
             r#"element.hasAttribute("data-foo-bar");"#,
             r#"Object.hasOwn(element.dataset, "fooBar");"#,
         ),
-        (r#"element.hasAttribute("data-foo");"#, r#"Object.hasOwn(element.dataset, "foo");"#),
+        (
+            r#"element.hasAttribute("data-foo");"#,
+            r#"Object.hasOwn(element.dataset, "foo");"#,
+        ),
         (
             r##"element.querySelector("#selector").hasAttribute("data-AllowAccess");"##,
             r##"Object.hasOwn(element.querySelector("#selector").dataset, "allowaccess");"##,
         ),
-        (r#"element.hasAttribute('data-a"b');"#, r#"Object.hasOwn(element.dataset, "a\"b");"#),
+        (
+            r#"element.hasAttribute('data-a"b');"#,
+            r#"Object.hasOwn(element.dataset, "a\"b");"#,
+        ),
         (
             r#"optional?.element.hasAttribute("data-unicorn");"#,
             r#"optional?.element.hasAttribute("data-unicorn");"#,
@@ -557,17 +652,50 @@ fn test() {
             r#"element.hasAttribute("data-unicorn").toString()"#,
             r#"Object.hasOwn(element.dataset, "unicorn").toString()"#,
         ),
-        (r"element.getAttribute('data-unicorn');", r"element.dataset.unicorn;"),
-        (r#"element.getAttribute("data-unicorn");"#, r"element.dataset.unicorn;"),
-        (r#"element.getAttribute("data-unicorn",);"#, r"element.dataset.unicorn;"),
-        (r#"element.getAttribute("data-🦄");"#, r#"element.dataset["🦄"];"#),
-        (r#"element.getAttribute("data-ゆ");"#, r"element.dataset.ゆ;"),
-        (r#"element.getAttribute("data-foo2");"#, r"element.dataset.foo2;"),
-        (r#"element.getAttribute("data-foo:bar");"#, r#"element.dataset["foo:bar"];"#),
-        (r#"element.getAttribute("data-foo.bar");"#, r#"element.dataset["foo.bar"];"#),
-        (r#"element.getAttribute("data-foo-bar");"#, r"element.dataset.fooBar;"),
-        (r#"element.getAttribute("data-foo");"#, r"element.dataset.foo;"),
-        (r#"element.getAttribute('data-a"b');"#, r#"element.dataset["a\"b"];"#),
+        (
+            r"element.getAttribute('data-unicorn');",
+            r"element.dataset.unicorn;",
+        ),
+        (
+            r#"element.getAttribute("data-unicorn");"#,
+            r"element.dataset.unicorn;",
+        ),
+        (
+            r#"element.getAttribute("data-unicorn",);"#,
+            r"element.dataset.unicorn;",
+        ),
+        (
+            r#"element.getAttribute("data-🦄");"#,
+            r#"element.dataset["🦄"];"#,
+        ),
+        (
+            r#"element.getAttribute("data-ゆ");"#,
+            r"element.dataset.ゆ;",
+        ),
+        (
+            r#"element.getAttribute("data-foo2");"#,
+            r"element.dataset.foo2;",
+        ),
+        (
+            r#"element.getAttribute("data-foo:bar");"#,
+            r#"element.dataset["foo:bar"];"#,
+        ),
+        (
+            r#"element.getAttribute("data-foo.bar");"#,
+            r#"element.dataset["foo.bar"];"#,
+        ),
+        (
+            r#"element.getAttribute("data-foo-bar");"#,
+            r"element.dataset.fooBar;",
+        ),
+        (
+            r#"element.getAttribute("data-foo");"#,
+            r"element.dataset.foo;",
+        ),
+        (
+            r#"element.getAttribute('data-a"b');"#,
+            r#"element.dataset["a\"b"];"#,
+        ),
         (
             r##"element.querySelector("#selector").getAttribute("data-AllowAccess");"##,
             r##"element.querySelector("#selector").dataset.allowaccess;"##,
@@ -592,11 +720,19 @@ fn test() {
             r#"element.getAttribute("data-unicorn").toString()"#,
             r"element.dataset.unicorn.toString()",
         ),
-        (r#"(await promise).getAttribute("data-foo")"#, r"(await promise).dataset.foo"),
+        (
+            r#"(await promise).getAttribute("data-foo")"#,
+            r"(await promise).dataset.foo",
+        ),
     ];
 
-    Tester::new(PreferDomNodeDataset::NAME, PreferDomNodeDataset::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .change_rule_path_extension("mjs")
-        .test_and_snapshot();
+    Tester::new(
+        PreferDomNodeDataset::NAME,
+        PreferDomNodeDataset::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .change_rule_path_extension("mjs")
+    .test_and_snapshot();
 }

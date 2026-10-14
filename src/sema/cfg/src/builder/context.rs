@@ -22,7 +22,13 @@ pub(super) struct Ctx<'a> {
 
 impl<'a> Ctx<'a> {
     fn new(label: Option<&'a str>, flags: CtxFlags) -> Self {
-        Self { flags, label, entries: Vec::new(), break_jmp: None, continue_jmp: None }
+        Self {
+            flags,
+            label,
+            entries: Vec::new(),
+            break_jmp: None,
+            continue_jmp: None,
+        }
     }
 
     fn is(&self, label: &str) -> bool {
@@ -50,7 +56,10 @@ pub trait CtxCursor {
     fn r#continue(self, bb: BlockNodeId) -> Self;
 }
 
-pub struct QueryCtx<'a, 'c>(&'c mut ControlFlowGraphBuilder<'a>, /* label */ Option<&'a str>);
+pub struct QueryCtx<'a, 'c>(
+    &'c mut ControlFlowGraphBuilder<'a>,
+    /* label */ Option<&'a str>,
+);
 
 impl CtxCursor for QueryCtx<'_, '_> {
     fn mark_break(self, jmp_pos: BlockNodeId) -> Self {
@@ -107,7 +116,9 @@ impl<'a, 'c> QueryCtx<'a, 'c> {
 
     /// Resolves the current context and adds the required edges to the graph.
     pub fn resolve(mut self) {
-        let Some(ctx) = self.0.ctx_stack.pop() else { return };
+        let Some(ctx) = self.0.ctx_stack.pop() else {
+            return;
+        };
         self.resolve_ctx(ctx);
     }
 
@@ -115,7 +126,11 @@ impl<'a, 'c> QueryCtx<'a, 'c> {
     ///
     /// # Panics if there is no ctx on the stack or `expectation` isn't satisfied.
     pub fn resolve_expect(mut self, expectation: CtxFlags) {
-        let ctx = self.0.ctx_stack.pop().expect("expected a `ctx` on the stack for resolution");
+        let ctx = self
+            .0
+            .ctx_stack
+            .pop()
+            .expect("expected a `ctx` on the stack for resolution");
         assert!(ctx.flags.difference(expectation).is_empty());
         self.resolve_ctx(ctx);
     }
@@ -123,7 +138,9 @@ impl<'a, 'c> QueryCtx<'a, 'c> {
     /// Resolves the current context and would mark the possible upper label
     /// continue jump point the same as the resolved context.
     pub fn resolve_with_upper_label(mut self) {
-        let Some(ctx) = self.0.ctx_stack.pop() else { return };
+        let Some(ctx) = self.0.ctx_stack.pop() else {
+            return;
+        };
 
         let continue_jmp = ctx.continue_jmp;
 
@@ -132,8 +149,11 @@ impl<'a, 'c> QueryCtx<'a, 'c> {
         // mark the upper label continue jump point the same as ours if it isn't already assigned,
         // NOTE: if it is already assigned there's a resolution before this context.
         if let Some(jmp) = continue_jmp
-            && let Some(label_ctx @ RefCtxCursor(Ctx { continue_jmp: None, .. })) =
-                self.0.immediate_labeled_ctx()
+            && let Some(
+                label_ctx @ RefCtxCursor(Ctx {
+                    continue_jmp: None, ..
+                }),
+            ) = self.0.immediate_labeled_ctx()
         {
             label_ctx.mark_continue(jmp);
         }
@@ -221,7 +241,10 @@ impl<'a> ControlFlowGraphBuilder<'a> {
 
     /// Returns `None` if there is no immediate labeled context before this call.
     fn immediate_labeled_ctx<'c>(&'c mut self) -> Option<RefCtxCursor<'a, 'c>> {
-        self.ctx_stack.last_mut().filter(|it| it.label.is_some()).map(RefCtxCursor)
+        self.ctx_stack
+            .last_mut()
+            .filter(|it| it.label.is_some())
+            .map(RefCtxCursor)
     }
 
     fn in_break_context<F: Fn(&mut Ctx<'a>)>(&mut self, label: Option<&str>, f: F) {

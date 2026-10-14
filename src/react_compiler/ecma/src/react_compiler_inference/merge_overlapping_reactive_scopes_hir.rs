@@ -79,7 +79,11 @@ fn get_place_scope(
     identifier_id: IdentifierId,
 ) -> Option<ScopeId> {
     let scope_id = env.identifiers[identifier_id].scope?;
-    if is_scope_active(env, scope_id, id) { Some(scope_id) } else { None }
+    if is_scope_active(env, scope_id, id) {
+        Some(scope_id)
+    } else {
+        None
+    }
 }
 
 /// Check if a place is mutable at the given instruction.
@@ -106,7 +110,10 @@ fn collect_scope_info(func: &HirFunction, env: &Environment) -> ScopeInfo {
         place_scopes.insert(identifier_id, scope_id);
         let range = &env.scopes[scope_id].range;
         if range.start != range.end {
-            scope_starts_map.entry(range.start).or_default().push(scope_id);
+            scope_starts_map
+                .entry(range.start)
+                .or_default()
+                .push(scope_id);
             scope_ends_map.entry(range.end).or_default().push(scope_id);
         }
     };
@@ -151,15 +158,23 @@ fn collect_scope_info(func: &HirFunction, env: &Environment) -> ScopeInfo {
     }
 
     // Convert to sorted vecs (descending by id for pop-from-end)
-    let mut scope_starts: Vec<ScopeStartEntry> =
-        scope_starts_map.into_iter().map(|(id, scopes)| ScopeStartEntry { id, scopes }).collect();
+    let mut scope_starts: Vec<ScopeStartEntry> = scope_starts_map
+        .into_iter()
+        .map(|(id, scopes)| ScopeStartEntry { id, scopes })
+        .collect();
     scope_starts.sort_unstable_by_key(|a| std::cmp::Reverse(a.id));
 
-    let mut scope_ends: Vec<ScopeEndEntry> =
-        scope_ends_map.into_iter().map(|(id, scopes)| ScopeEndEntry { id, scopes }).collect();
+    let mut scope_ends: Vec<ScopeEndEntry> = scope_ends_map
+        .into_iter()
+        .map(|(id, scopes)| ScopeEndEntry { id, scopes })
+        .collect();
     scope_ends.sort_unstable_by_key(|a| std::cmp::Reverse(a.id));
 
-    ScopeInfo { scope_starts, scope_ends, place_scopes }
+    ScopeInfo {
+        scope_starts,
+        scope_ends,
+        place_scopes,
+    }
 }
 
 // =============================================================================
@@ -255,8 +270,10 @@ fn get_overlapping_reactive_scopes(
     env: &Environment,
     mut scope_info: ScopeInfo,
 ) -> DisjointSet<ScopeId> {
-    let mut state =
-        TraversalState { joined: DisjointSet::<ScopeId>::new(), active_scopes: Vec::new() };
+    let mut state = TraversalState {
+        joined: DisjointSet::<ScopeId>::new(),
+        active_scopes: Vec::new(),
+    };
 
     for (_block_id, block) in &func.body.blocks {
         for &instr_id in &block.instructions {

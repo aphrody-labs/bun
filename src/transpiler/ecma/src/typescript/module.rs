@@ -18,7 +18,10 @@ pub struct TypeScriptModule {
 
 impl TypeScriptModule {
     pub fn new(only_remove_type_imports: bool, module: Module) -> Self {
-        Self { only_remove_type_imports, module }
+        Self {
+            only_remove_type_imports,
+            module,
+        }
     }
 }
 
@@ -63,9 +66,10 @@ impl<'a> TypeScriptModule {
         ctx: &mut TraverseCtx<'a>,
     ) -> Statement<'a> {
         if self.module.is_esm() {
-            ctx.state.error(diagnostics::export_assignment_cannot_bed_used_in_esm(
-                export_assignment.span,
-            ));
+            ctx.state
+                .error(diagnostics::export_assignment_cannot_bed_used_in_esm(
+                    export_assignment.span,
+                ));
         }
 
         // module.exports
@@ -108,7 +112,10 @@ impl<'a> TypeScriptModule {
     ) -> Option<Declaration<'a>> {
         if !self.only_remove_type_imports
             && !ctx.parent().is_export_declaration()
-            && ctx.scoping().get_resolved_references(decl.id.symbol_id()).all(Reference::is_type)
+            && ctx
+                .scoping()
+                .get_resolved_references(decl.id.symbol_id())
+                .all(Reference::is_type)
         {
             // No value reference, we will remove this declaration in `TypeScriptAnnotations`
             let scope_id = ctx.current_scope_id();
@@ -155,7 +162,8 @@ impl<'a> TypeScriptModule {
                 flags.insert(SymbolFlags::BlockScopedVariable | SymbolFlags::ConstVariable);
 
                 if self.module.is_esm() {
-                    ctx.state.error(diagnostics::import_equals_cannot_be_used_in_esm(decl_span));
+                    ctx.state
+                        .error(diagnostics::import_equals_cannot_be_used_in_esm(decl_span));
                 }
 
                 let require = static_ident!("require");
@@ -179,7 +187,13 @@ impl<'a> TypeScriptModule {
         };
         let decl = VariableDeclarator::new(SPAN, binding, None, Some(init), false, ctx);
 
-        Some(Declaration::new_variable_declaration(SPAN, kind, [decl], false, ctx))
+        Some(Declaration::new_variable_declaration(
+            SPAN,
+            kind,
+            [decl],
+            false,
+            ctx,
+        ))
     }
 
     #[expect(clippy::self_only_used_in_recursion)]
@@ -259,7 +273,11 @@ impl<'a> TypeScriptModule {
     ) {
         // If the binding has any value reference, don't change the module reference flag.
         // We only change it when all references are type (meaning the binding is unused as a value).
-        if !ctx.scoping().get_resolved_references(decl.id.symbol_id()).all(Reference::is_type) {
+        if !ctx
+            .scoping()
+            .get_resolved_references(decl.id.symbol_id())
+            .all(Reference::is_type)
+        {
             return;
         }
 

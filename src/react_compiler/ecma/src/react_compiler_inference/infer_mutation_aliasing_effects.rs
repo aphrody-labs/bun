@@ -116,7 +116,10 @@ pub fn infer_mutation_aliasing_effects<'a>(
     }
 
     let param_kind: AbstractValue = if is_function_expression {
-        AbstractValue { kind: ValueKind::Mutable, reason: ReasonSet::single(ValueReason::Other) }
+        AbstractValue {
+            kind: ValueKind::Mutable,
+            reason: ReasonSet::single(ValueReason::Other),
+        }
     } else {
         AbstractValue {
             kind: ValueKind::Frozen,
@@ -177,7 +180,12 @@ pub fn infer_mutation_aliasing_effects<'a>(
         }
     }
 
-    queue(&mut queued_states, &states_by_block, func.body.entry, initial_state);
+    queue(
+        &mut queued_states,
+        &states_by_block,
+        func.body.entry,
+        initial_state,
+    );
 
     let hoisted_context_declarations = find_hoisted_context_declarations(func, env);
     let non_mutating_spreads = find_non_mutated_destructure_spreads(func, env);
@@ -203,14 +211,21 @@ pub fn infer_mutation_aliasing_effects<'a>(
     // needs no ordering assumption, and a successor missing from the map counts
     // as a back edge to stay conservative. The scan cannot go stale: `infer_block`
     // rewrites only terminal effects, never successor ids.
-    let has_back_edge = func.body.blocks.iter().enumerate().any(|(index, (_, block))| {
-        terminal_successors(&block.terminal).into_iter().any(|successor| {
-            match func.body.blocks.get_index_of(&successor) {
-                Some(successor_index) => successor_index <= index,
-                None => true,
-            }
-        })
-    });
+    let has_back_edge = func
+        .body
+        .blocks
+        .iter()
+        .enumerate()
+        .any(|(index, (_, block))| {
+            terminal_successors(&block.terminal)
+                .into_iter()
+                .any(
+                    |successor| match func.body.blocks.get_index_of(&successor) {
+                        Some(successor_index) => successor_index <= index,
+                        None => true,
+                    },
+                )
+        });
 
     let mut iteration_count = 0;
 
@@ -252,8 +267,12 @@ pub fn infer_mutation_aliasing_effects<'a>(
                         format_type_for_print(ty)
                     })
                     .unwrap_or_default();
-                let description =
-                    format!("<unknown> {}${}{}", name, uninitialized_id.index(), type_str);
+                let description = format!(
+                    "<unknown> {}${}{}",
+                    name,
+                    uninitialized_id.index(),
+                    type_str
+                );
                 let diag = diagnostics::uninitialized_value(description, error_span);
                 return Err(diag);
             }
@@ -264,7 +283,12 @@ pub fn infer_mutation_aliasing_effects<'a>(
             let mut successors = successors.into_iter();
             if let Some(mut next_block_id) = successors.next() {
                 for later_block_id in successors {
-                    queue(&mut queued_states, &states_by_block, next_block_id, state.clone());
+                    queue(
+                        &mut queued_states,
+                        &states_by_block,
+                        next_block_id,
+                        state.clone(),
+                    );
                     next_block_id = later_block_id;
                 }
                 queue(&mut queued_states, &states_by_block, next_block_id, state);
@@ -350,7 +374,9 @@ impl ReasonSet {
     }
 
     fn iter(&self) -> impl Iterator<Item = ValueReason> + '_ {
-        Self::ALL.into_iter().filter(move |&reason| self.0 & Self::bit(reason) != 0)
+        Self::ALL
+            .into_iter()
+            .filter(move |&reason| self.0 & Self::bit(reason) != 0)
     }
 }
 
@@ -365,7 +391,10 @@ const VALUE_ID_INLINE_CAPACITY: usize = 5;
 /// sets contain at most five values, so keep those values inline.
 #[derive(Debug, Clone)]
 enum ValueIdSet {
-    Inline { items: [ValueId; VALUE_ID_INLINE_CAPACITY], len: u8 },
+    Inline {
+        items: [ValueId; VALUE_ID_INLINE_CAPACITY],
+        len: u8,
+    },
     Spilled(Rc<SpilledValueIdSet>),
 }
 
@@ -379,13 +408,19 @@ impl Clone for SpilledValueIdSet {
     fn clone(&self) -> Self {
         let mut values = Vec::with_capacity(self.values.capacity());
         values.extend_from_slice(&self.values);
-        Self { values, members: self.members.clone() }
+        Self {
+            values,
+            members: self.members.clone(),
+        }
     }
 }
 
 impl Default for ValueIdSet {
     fn default() -> Self {
-        Self::Inline { items: [ValueId(0); VALUE_ID_INLINE_CAPACITY], len: 0 }
+        Self::Inline {
+            items: [ValueId(0); VALUE_ID_INLINE_CAPACITY],
+            len: 0,
+        }
     }
 }
 
@@ -512,7 +547,8 @@ impl InferenceState {
     }
 
     fn define(&mut self, place_id: IdentifierId, value_id: ValueId) {
-        self.variables.insert(place_id, ValueIdSet::single(value_id));
+        self.variables
+            .insert(place_id, ValueIdSet::single(value_id));
     }
 
     fn assign(&mut self, into: IdentifierId, from: IdentifierId) {
@@ -584,7 +620,10 @@ impl InferenceState {
     fn freeze_value(&mut self, value_id: ValueId, reason: ValueReason) {
         self.values.insert(
             value_id,
-            AbstractValue { kind: ValueKind::Frozen, reason: ReasonSet::single(reason) },
+            AbstractValue {
+                kind: ValueKind::Frozen,
+                reason: ReasonSet::single(reason),
+            },
         );
         // Note: In TS, this also transitively freezes FunctionExpression captures
         // if enableTransitivelyFreezeFunctionExpressions is set. We skip that here
@@ -794,7 +833,10 @@ impl<'a> Context<'a> {
     /// Get or create a stable ValueId for a given effect, ensuring fixpoint convergence.
     fn get_or_create_value_id(&mut self, effect: &AliasingEffect) -> ValueId {
         let key = effect_key(effect);
-        *self.effect_value_id_cache.entry(key).or_insert_with(ValueId::new)
+        *self
+            .effect_value_id_cache
+            .entry(key)
+            .or_insert_with(ValueId::new)
     }
 }
 
@@ -906,7 +948,14 @@ enum ArgKey {
 
 fn effect_key(effect: &AliasingEffect) -> EffectKey {
     match effect {
-        AliasingEffect::Apply { receiver, function, mutates_function, args, into, .. } => {
+        AliasingEffect::Apply {
+            receiver,
+            function,
+            mutates_function,
+            args,
+            into,
+            ..
+        } => {
             let mut key_args: SmallVec<[ArgKey; 4]> = args
                 .iter()
                 .map(|a| match a {
@@ -928,55 +977,80 @@ fn effect_key(effect: &AliasingEffect) -> EffectKey {
                 into: into.identifier,
             }
         }
-        AliasingEffect::CreateFrom { from, into } => {
-            EffectKey::CreateFrom { from: from.identifier, into: into.identifier }
-        }
-        AliasingEffect::ImmutableCapture { from, into } => {
-            EffectKey::ImmutableCapture { from: from.identifier, into: into.identifier }
-        }
-        AliasingEffect::Assign { from, into } => {
-            EffectKey::Assign { from: from.identifier, into: into.identifier }
-        }
-        AliasingEffect::Alias { from, into } => {
-            EffectKey::Alias { from: from.identifier, into: into.identifier }
-        }
-        AliasingEffect::Capture { from, into } => {
-            EffectKey::Capture { from: from.identifier, into: into.identifier }
-        }
-        AliasingEffect::MaybeAlias { from, into } => {
-            EffectKey::MaybeAlias { from: from.identifier, into: into.identifier }
-        }
-        AliasingEffect::Create { into, value, reason } => {
-            EffectKey::Create { into: into.identifier, value: *value, reason: *reason }
-        }
-        AliasingEffect::Freeze { value, reason } => {
-            EffectKey::Freeze { value: value.identifier, reason: *reason }
-        }
-        AliasingEffect::Impure { place, .. } => EffectKey::Impure { place: place.identifier },
-        AliasingEffect::Render { place } => EffectKey::Render { place: place.identifier },
-        AliasingEffect::MutateFrozen { place, error } => {
-            EffectKey::MutateFrozen { place: place.identifier, diag: error.identity() }
-        }
-        AliasingEffect::MutateGlobal { place, error } => {
-            EffectKey::MutateGlobal { place: place.identifier, diag: error.identity() }
-        }
-        AliasingEffect::Mutate { value, .. } => EffectKey::Mutate { value: value.identifier },
-        AliasingEffect::MutateConditionally { value } => {
-            EffectKey::MutateConditionally { value: value.identifier }
-        }
-        AliasingEffect::MutateTransitive { value } => {
-            EffectKey::MutateTransitive { value: value.identifier }
-        }
+        AliasingEffect::CreateFrom { from, into } => EffectKey::CreateFrom {
+            from: from.identifier,
+            into: into.identifier,
+        },
+        AliasingEffect::ImmutableCapture { from, into } => EffectKey::ImmutableCapture {
+            from: from.identifier,
+            into: into.identifier,
+        },
+        AliasingEffect::Assign { from, into } => EffectKey::Assign {
+            from: from.identifier,
+            into: into.identifier,
+        },
+        AliasingEffect::Alias { from, into } => EffectKey::Alias {
+            from: from.identifier,
+            into: into.identifier,
+        },
+        AliasingEffect::Capture { from, into } => EffectKey::Capture {
+            from: from.identifier,
+            into: into.identifier,
+        },
+        AliasingEffect::MaybeAlias { from, into } => EffectKey::MaybeAlias {
+            from: from.identifier,
+            into: into.identifier,
+        },
+        AliasingEffect::Create {
+            into,
+            value,
+            reason,
+        } => EffectKey::Create {
+            into: into.identifier,
+            value: *value,
+            reason: *reason,
+        },
+        AliasingEffect::Freeze { value, reason } => EffectKey::Freeze {
+            value: value.identifier,
+            reason: *reason,
+        },
+        AliasingEffect::Impure { place, .. } => EffectKey::Impure {
+            place: place.identifier,
+        },
+        AliasingEffect::Render { place } => EffectKey::Render {
+            place: place.identifier,
+        },
+        AliasingEffect::MutateFrozen { place, error } => EffectKey::MutateFrozen {
+            place: place.identifier,
+            diag: error.identity(),
+        },
+        AliasingEffect::MutateGlobal { place, error } => EffectKey::MutateGlobal {
+            place: place.identifier,
+            diag: error.identity(),
+        },
+        AliasingEffect::Mutate { value, .. } => EffectKey::Mutate {
+            value: value.identifier,
+        },
+        AliasingEffect::MutateConditionally { value } => EffectKey::MutateConditionally {
+            value: value.identifier,
+        },
+        AliasingEffect::MutateTransitive { value } => EffectKey::MutateTransitive {
+            value: value.identifier,
+        },
         AliasingEffect::MutateTransitiveConditionally { value } => {
-            EffectKey::MutateTransitiveConditionally { value: value.identifier }
-        }
-        AliasingEffect::CreateFunction { into, function_id, captures } => {
-            EffectKey::CreateFunction {
-                into: into.identifier,
-                function_id: *function_id,
-                captures: captures.iter().map(|p| p.identifier).collect(),
+            EffectKey::MutateTransitiveConditionally {
+                value: value.identifier,
             }
         }
+        AliasingEffect::CreateFunction {
+            into,
+            function_id,
+            captures,
+        } => EffectKey::CreateFunction {
+            into: into.identifier,
+            function_id: *function_id,
+            captures: captures.iter().map(|p| p.identifier).collect(),
+        },
     }
 }
 
@@ -1097,8 +1171,9 @@ fn find_non_mutated_destructure_spreads(
         if !candidate_non_mutating_spreads.is_empty() {
             for phi in &block.phis {
                 for (_, operand) in &phi.operands {
-                    if let Some(spread) =
-                        candidate_non_mutating_spreads.get(&operand.identifier).copied()
+                    if let Some(spread) = candidate_non_mutating_spreads
+                        .get(&operand.identifier)
+                        .copied()
                     {
                         candidate_non_mutating_spreads.remove(&spread);
                     }
@@ -1131,13 +1206,18 @@ fn find_non_mutated_destructure_spreads(
                     }
                 }
                 InstructionValue::LoadLocal { place, .. } => {
-                    if let Some(spread) =
-                        candidate_non_mutating_spreads.get(&place.identifier).copied()
+                    if let Some(spread) = candidate_non_mutating_spreads
+                        .get(&place.identifier)
+                        .copied()
                     {
                         candidate_non_mutating_spreads.insert(lvalue_id, spread);
                     }
                 }
-                InstructionValue::StoreLocal { lvalue: sl, value: sv, .. } => {
+                InstructionValue::StoreLocal {
+                    lvalue: sl,
+                    value: sv,
+                    ..
+                } => {
                     if let Some(spread) =
                         candidate_non_mutating_spreads.get(&sv.identifier).copied()
                     {
@@ -1152,17 +1232,24 @@ fn find_non_mutated_destructure_spreads(
                     // Properties must be frozen since the original value was frozen
                 }
                 InstructionValue::CallExpression { callee, .. }
-                | InstructionValue::MethodCall { property: callee, .. }
+                | InstructionValue::MethodCall {
+                    property: callee, ..
+                }
                 | InstructionValue::TaggedTemplateExpression { tag: callee, .. } => {
                     let callee_ty = &env.types[env.identifiers[callee.identifier].type_];
-                    if get_hook_kind_for_type(env, callee_ty).ok().flatten().is_some() {
+                    if get_hook_kind_for_type(env, callee_ty)
+                        .ok()
+                        .flatten()
+                        .is_some()
+                    {
                         if !is_ref_or_ref_value_for_id(env, lvalue_id) {
                             known_frozen.insert(lvalue_id);
                         }
                     } else if !candidate_non_mutating_spreads.is_empty() {
                         for operand in visitors::each_instruction_value_operand(&instr.value, env) {
-                            if let Some(spread) =
-                                candidate_non_mutating_spreads.get(&operand.identifier).copied()
+                            if let Some(spread) = candidate_non_mutating_spreads
+                                .get(&operand.identifier)
+                                .copied()
                             {
                                 candidate_non_mutating_spreads.remove(&spread);
                             }
@@ -1172,8 +1259,9 @@ fn find_non_mutated_destructure_spreads(
                 _ => {
                     if !candidate_non_mutating_spreads.is_empty() {
                         for operand in visitors::each_instruction_value_operand(&instr.value, env) {
-                            if let Some(spread) =
-                                candidate_non_mutating_spreads.get(&operand.identifier).copied()
+                            if let Some(spread) = candidate_non_mutating_spreads
+                                .get(&operand.identifier)
+                                .copied()
                             {
                                 candidate_non_mutating_spreads.remove(&spread);
                             }
@@ -1238,7 +1326,11 @@ fn infer_block<'a>(
     }
 
     // Process instructions
-    let instr_ids: Vec<u32> = block.instructions.iter().map(|id| id.index() as u32).collect();
+    let instr_ids: Vec<u32> = block
+        .instructions
+        .iter()
+        .map(|id| id.index() as u32)
+        .collect();
     for instr_idx in &instr_ids {
         let instr_index = *instr_idx as usize;
 
@@ -1246,12 +1338,19 @@ fn infer_block<'a>(
         if !context.instruction_signature_cache.contains_key(instr_idx) {
             let sig =
                 compute_signature_for_instruction(context, env, &func.instructions[instr_index]);
-            context.instruction_signature_cache.insert(*instr_idx, Rc::new(sig));
+            context
+                .instruction_signature_cache
+                .insert(*instr_idx, Rc::new(sig));
         }
 
         // Apply signature
-        let effects =
-            apply_signature(context, state, *instr_idx, &func.instructions[instr_index], env)?;
+        let effects = apply_signature(
+            context,
+            state,
+            *instr_idx,
+            &func.instructions[instr_index],
+            env,
+        )?;
         func.instructions[instr_index].effects = effects.map(|e| ArenaVec::from_iter_in(e, &alloc));
     }
 
@@ -1266,12 +1365,20 @@ fn infer_block<'a>(
     let action = {
         let block = &func.body.blocks[&block_id];
         match &block.terminal {
-            Terminal::Try { handler, handler_binding: Some(binding), .. } => {
-                TerminalAction::Try { handler: *handler, binding: *binding }
-            }
-            Terminal::MaybeThrow { handler: Some(handler_id), .. } => {
-                TerminalAction::MaybeThrow { handler_id: *handler_id }
-            }
+            Terminal::Try {
+                handler,
+                handler_binding: Some(binding),
+                ..
+            } => TerminalAction::Try {
+                handler: *handler,
+                binding: *binding,
+            },
+            Terminal::MaybeThrow {
+                handler: Some(handler_id),
+                ..
+            } => TerminalAction::MaybeThrow {
+                handler_id: *handler_id,
+            },
             Terminal::Return { .. } => TerminalAction::Return,
             _ => TerminalAction::None,
         }
@@ -1304,8 +1411,10 @@ fn infer_block<'a>(
                     }
                 }
                 let block_mut = func.body.blocks.get_mut(&block_id).unwrap();
-                if let Terminal::MaybeThrow { effects: ref mut term_effects, .. } =
-                    block_mut.terminal
+                if let Terminal::MaybeThrow {
+                    effects: ref mut term_effects,
+                    ..
+                } = block_mut.terminal
                 {
                     *term_effects = if terminal_effects.is_empty() {
                         None
@@ -1318,8 +1427,11 @@ fn infer_block<'a>(
         TerminalAction::Return => {
             if !context.is_function_expression {
                 let block_mut = func.body.blocks.get_mut(&block_id).unwrap();
-                if let Terminal::Return { ref value, effects: ref mut term_effects, .. } =
-                    block_mut.terminal
+                if let Terminal::Return {
+                    ref value,
+                    effects: ref mut term_effects,
+                    ..
+                } = block_mut.terminal
                 {
                     *term_effects = Some(ArenaVec::from_array_in(
                         [AliasingEffect::Freeze {
@@ -1387,7 +1499,10 @@ fn apply_signature<'a>(
                         );
                         let error =
                             env.intern_aliasing_diagnostic(mutate_value.identifier, diagnostic);
-                        effects.push(AliasingEffect::MutateFrozen { place: *mutate_value, error });
+                        effects.push(AliasingEffect::MutateFrozen {
+                            place: *mutate_value,
+                            error,
+                        });
                     }
                 }
             }
@@ -1420,7 +1535,11 @@ fn apply_signature<'a>(
         state.define(instr.lvalue.identifier, vid);
     }
 
-    Ok(if effects.is_empty() { None } else { Some(effects) })
+    Ok(if effects.is_empty() {
+        None
+    } else {
+        Some(effects)
+    })
 }
 
 // =============================================================================
@@ -1439,8 +1558,11 @@ fn freeze_function_captures_transitive(
     reason: ValueReason,
 ) {
     if let Some(&func_id) = context.function_values.get(&value_id) {
-        let ctx_ids: Vec<IdentifierId> =
-            env.functions[func_id].context.iter().map(|p| p.identifier).collect();
+        let ctx_ids: Vec<IdentifierId> = env.functions[func_id]
+            .context
+            .iter()
+            .map(|p| p.identifier)
+            .collect();
         for ctx_id in ctx_ids {
             // Replicate InferenceState::freeze() logic inline —
             // we need to recurse with context/env which freeze() doesn't have.
@@ -1509,7 +1631,11 @@ fn apply_effect_ref<'a>(
                 }
             }
         }
-        AliasingEffect::Create { into, value: kind, reason } => {
+        AliasingEffect::Create {
+            into,
+            value: kind,
+            reason,
+        } => {
             assert!(
                 !initialized.contains(&into.identifier),
                 "[InferMutationAliasingEffects] Cannot re-initialize variable within an instruction"
@@ -1518,7 +1644,10 @@ fn apply_effect_ref<'a>(
             let value_id = context.get_or_create_value_id(effect);
             state.initialize(
                 value_id,
-                AbstractValue { kind: *kind, reason: ReasonSet::single(*reason) },
+                AbstractValue {
+                    kind: *kind,
+                    reason: ReasonSet::single(*reason),
+                },
             );
             state.define(into.identifier, value_id);
             effects.push(effect.clone_in(context.alloc));
@@ -1544,7 +1673,10 @@ fn apply_effect_ref<'a>(
             let value_id = context.get_or_create_value_id(effect);
             state.initialize(
                 value_id,
-                AbstractValue { kind: from_value.kind, reason: from_value.reason },
+                AbstractValue {
+                    kind: from_value.kind,
+                    reason: from_value.reason,
+                },
             );
             state.define(into.identifier, value_id);
             match from_value.kind {
@@ -1566,7 +1698,10 @@ fn apply_effect_ref<'a>(
                     apply_effect(
                         context,
                         state,
-                        AliasingEffect::ImmutableCapture { from: *from, into: *into },
+                        AliasingEffect::ImmutableCapture {
+                            from: *from,
+                            into: *into,
+                        },
                         initialized,
                         effects,
                         env,
@@ -1577,7 +1712,11 @@ fn apply_effect_ref<'a>(
                 }
             }
         }
-        AliasingEffect::CreateFunction { captures, function_id, into } => {
+        AliasingEffect::CreateFunction {
+            captures,
+            function_id,
+            into,
+        } => {
             assert!(
                 !initialized.contains(&into.identifier),
                 "[InferMutationAliasingEffects] Cannot re-initialize variable within an instruction"
@@ -1647,7 +1786,11 @@ fn apply_effect_ref<'a>(
             state.initialize(
                 value_id,
                 AbstractValue {
-                    kind: if is_mutable { ValueKind::Mutable } else { ValueKind::Frozen },
+                    kind: if is_mutable {
+                        ValueKind::Mutable
+                    } else {
+                        ValueKind::Frozen
+                    },
                     reason: ReasonSet::default(),
                 },
             );
@@ -1657,7 +1800,10 @@ fn apply_effect_ref<'a>(
                 apply_effect(
                     context,
                     state,
-                    AliasingEffect::Capture { from: *capture, into: *into },
+                    AliasingEffect::Capture {
+                        from: *capture,
+                        into: *into,
+                    },
                     initialized,
                     effects,
                     env,
@@ -1695,7 +1841,10 @@ fn apply_effect_ref<'a>(
                 apply_effect(
                     context,
                     state,
-                    AliasingEffect::ImmutableCapture { from: *from, into: *into },
+                    AliasingEffect::ImmutableCapture {
+                        from: *from,
+                        into: *into,
+                    },
                     initialized,
                     effects,
                     env,
@@ -1710,7 +1859,10 @@ fn apply_effect_ref<'a>(
                 apply_effect(
                     context,
                     state,
-                    AliasingEffect::MaybeAlias { from: *from, into: *into },
+                    AliasingEffect::MaybeAlias {
+                        from: *from,
+                        into: *into,
+                    },
                     initialized,
                     effects,
                     env,
@@ -1729,33 +1881,46 @@ fn apply_effect_ref<'a>(
                     apply_effect(
                         context,
                         state,
-                        AliasingEffect::ImmutableCapture { from: *from, into: *into },
+                        AliasingEffect::ImmutableCapture {
+                            from: *from,
+                            into: *into,
+                        },
                         initialized,
                         effects,
                         env,
                     )?;
-                    let cache_key =
-                        EffectKey::AssignFrozen { from: from.identifier, into: into.identifier };
+                    let cache_key = EffectKey::AssignFrozen {
+                        from: from.identifier,
+                        into: into.identifier,
+                    };
                     let value_id = *context
                         .effect_value_id_cache
                         .entry(cache_key)
                         .or_insert_with(ValueId::new);
                     state.initialize(
                         value_id,
-                        AbstractValue { kind: from_value.kind, reason: from_value.reason },
+                        AbstractValue {
+                            kind: from_value.kind,
+                            reason: from_value.reason,
+                        },
                     );
                     state.define(into.identifier, value_id);
                 }
                 ValueKind::Global | ValueKind::Primitive => {
-                    let cache_key =
-                        EffectKey::AssignCopy { from: from.identifier, into: into.identifier };
+                    let cache_key = EffectKey::AssignCopy {
+                        from: from.identifier,
+                        into: into.identifier,
+                    };
                     let value_id = *context
                         .effect_value_id_cache
                         .entry(cache_key)
                         .or_insert_with(ValueId::new);
                     state.initialize(
                         value_id,
-                        AbstractValue { kind: from_value.kind, reason: from_value.reason },
+                        AbstractValue {
+                            kind: from_value.kind,
+                            reason: from_value.reason,
+                        },
                     );
                     state.define(into.identifier, value_id);
                 }
@@ -1784,9 +1949,12 @@ fn apply_effect_ref<'a>(
                         let inner_func = &env.functions[func_id];
                         if inner_func.aliasing_effects.is_some() {
                             // Build or retrieve the signature from the function expression
-                            context.function_signature_cache.entry(func_id).or_insert_with(|| {
-                                build_signature_from_function_expression(env, func_id)
-                            });
+                            context
+                                .function_signature_cache
+                                .entry(func_id)
+                                .or_insert_with(|| {
+                                    build_signature_from_function_expression(env, func_id)
+                                });
                             let sig = context
                                 .function_signature_cache
                                 .get(&func_id)
@@ -1926,7 +2094,10 @@ fn apply_effect_ref<'a>(
                     apply_effect(
                         context,
                         state,
-                        AliasingEffect::MaybeAlias { from: *operand, into: *into },
+                        AliasingEffect::MaybeAlias {
+                            from: *operand,
+                            into: *into,
+                        },
                         initialized,
                         effects,
                         env,
@@ -1946,7 +2117,10 @@ fn apply_effect_ref<'a>(
                         apply_effect(
                             context,
                             state,
-                            AliasingEffect::Capture { from: *operand, into: *other },
+                            AliasingEffect::Capture {
+                                from: *operand,
+                                into: *other,
+                            },
                             initialized,
                             effects,
                             env,
@@ -1979,7 +2153,10 @@ fn apply_effect_ref<'a>(
             } else if mutation_kind == MutationResult::MutateRef {
                 // no-op
             } else if mutation_kind != MutationResult::None
-                && matches!(variant, MutateVariant::Mutate | MutateVariant::MutateTransitive)
+                && matches!(
+                    variant,
+                    MutateVariant::Mutate | MutateVariant::MutateTransitive
+                )
             {
                 let abstract_value = state.kind(value.identifier);
 
@@ -1993,8 +2170,11 @@ fn apply_effect_ref<'a>(
                         Some(IdentifierName::Named(n)) => Some(format!("`{}`", n)),
                         _ => None,
                     };
-                    let hoisted_access =
-                        context.hoisted_context_declarations.get(&decl_id).cloned().flatten();
+                    let hoisted_access = context
+                        .hoisted_context_declarations
+                        .get(&decl_id)
+                        .cloned()
+                        .flatten();
                     let access_span = hoisted_access
                         .as_ref()
                         .filter(|access| access.span != value.span)
@@ -2008,7 +2188,10 @@ fn apply_effect_ref<'a>(
                     apply_effect(
                         context,
                         state,
-                        AliasingEffect::MutateFrozen { place: *value, error },
+                        AliasingEffect::MutateFrozen {
+                            place: *value,
+                            error,
+                        },
                         initialized,
                         effects,
                         env,
@@ -2026,9 +2209,15 @@ fn apply_effect_ref<'a>(
 
                     let error = env.intern_aliasing_diagnostic(value.identifier, diagnostic);
                     let error_kind = if abstract_value.kind == ValueKind::Frozen {
-                        AliasingEffect::MutateFrozen { place: *value, error }
+                        AliasingEffect::MutateFrozen {
+                            place: *value,
+                            error,
+                        }
                     } else {
-                        AliasingEffect::MutateGlobal { place: *value, error }
+                        AliasingEffect::MutateGlobal {
+                            place: *value,
+                            error,
+                        }
                     };
                     apply_effect(context, state, error_kind, initialized, effects, env)?;
                 }
@@ -2068,14 +2257,20 @@ fn compute_signature_for_instruction<'a>(
             for element in elements {
                 match element {
                     ArrayElement::Place(p) => {
-                        effects.push(AliasingEffect::Capture { from: *p, into: *lvalue });
+                        effects.push(AliasingEffect::Capture {
+                            from: *p,
+                            into: *lvalue,
+                        });
                     }
                     ArrayElement::Spread(s) => {
                         let ty = &env.types[env.identifiers[s.place.identifier].type_];
                         if let Some(mutate_iter) = conditionally_mutate_iterator(&s.place, ty) {
                             effects.push(mutate_iter);
                         }
-                        effects.push(AliasingEffect::Capture { from: s.place, into: *lvalue });
+                        effects.push(AliasingEffect::Capture {
+                            from: s.place,
+                            into: *lvalue,
+                        });
                     }
                     ArrayElement::Hole => {}
                 }
@@ -2090,24 +2285,42 @@ fn compute_signature_for_instruction<'a>(
             for property in properties {
                 match property {
                     ObjectPropertyOrSpread::Property(p) => {
-                        effects.push(AliasingEffect::Capture { from: p.place, into: *lvalue });
+                        effects.push(AliasingEffect::Capture {
+                            from: p.place,
+                            into: *lvalue,
+                        });
                     }
                     ObjectPropertyOrSpread::Spread(s) => {
-                        effects.push(AliasingEffect::Capture { from: s.place, into: *lvalue });
+                        effects.push(AliasingEffect::Capture {
+                            from: s.place,
+                            into: *lvalue,
+                        });
                     }
                 }
             }
         }
-        InstructionValue::Await { value: await_value, .. } => {
+        InstructionValue::Await {
+            value: await_value, ..
+        } => {
             effects.push(AliasingEffect::Create {
                 into: *lvalue,
                 value: ValueKind::Mutable,
                 reason: ValueReason::Other,
             });
-            effects.push(AliasingEffect::MutateTransitiveConditionally { value: *await_value });
-            effects.push(AliasingEffect::Capture { from: *await_value, into: *lvalue });
+            effects.push(AliasingEffect::MutateTransitiveConditionally {
+                value: *await_value,
+            });
+            effects.push(AliasingEffect::Capture {
+                from: *await_value,
+                into: *lvalue,
+            });
         }
-        InstructionValue::TaggedTemplateExpression { tag, subexprs, span, .. } => {
+        InstructionValue::TaggedTemplateExpression {
+            tag,
+            subexprs,
+            span,
+            ..
+        } => {
             // A primitive return type does not imply that invoking the tag is pure. Always retain
             // call/aliasing effects so mutations of captured values remain in the same scope. A
             // later pass flattens the containing scope unless the configured function signature
@@ -2147,7 +2360,12 @@ fn compute_signature_for_instruction<'a>(
                 span: *span,
             });
         }
-        InstructionValue::MethodCall { receiver, property, args, span } => {
+        InstructionValue::MethodCall {
+            receiver,
+            property,
+            args,
+            span,
+        } => {
             effects.push(AliasingEffect::Apply {
                 receiver: *receiver,
                 function: *property,
@@ -2165,7 +2383,10 @@ fn compute_signature_for_instruction<'a>(
                 value: ValueKind::Primitive,
                 reason: ValueReason::Other,
             });
-            effects.push(AliasingEffect::Mutate { value: *object, reason: None });
+            effects.push(AliasingEffect::Mutate {
+                value: *object,
+                reason: None,
+            });
         }
         InstructionValue::PropertyLoad { object, .. }
         | InstructionValue::ComputedLoad { object, .. } => {
@@ -2177,10 +2398,18 @@ fn compute_signature_for_instruction<'a>(
                     reason: ValueReason::Other,
                 });
             } else {
-                effects.push(AliasingEffect::CreateFrom { from: *object, into: *lvalue });
+                effects.push(AliasingEffect::CreateFrom {
+                    from: *object,
+                    into: *lvalue,
+                });
             }
         }
-        InstructionValue::PropertyStore { object, property, value: store_value, .. } => {
+        InstructionValue::PropertyStore {
+            object,
+            property,
+            value: store_value,
+            ..
+        } => {
             let mutation_reason: Option<MutationReason> = {
                 let obj_ty = &env.types[env.identifiers[object.identifier].type_];
                 if let PropertyLiteral::String(prop_name) = property {
@@ -2193,17 +2422,33 @@ fn compute_signature_for_instruction<'a>(
                     None
                 }
             };
-            effects.push(AliasingEffect::Mutate { value: *object, reason: mutation_reason });
-            effects.push(AliasingEffect::Capture { from: *store_value, into: *object });
+            effects.push(AliasingEffect::Mutate {
+                value: *object,
+                reason: mutation_reason,
+            });
+            effects.push(AliasingEffect::Capture {
+                from: *store_value,
+                into: *object,
+            });
             effects.push(AliasingEffect::Create {
                 into: *lvalue,
                 value: ValueKind::Primitive,
                 reason: ValueReason::Other,
             });
         }
-        InstructionValue::ComputedStore { object, value: store_value, .. } => {
-            effects.push(AliasingEffect::Mutate { value: *object, reason: None });
-            effects.push(AliasingEffect::Capture { from: *store_value, into: *object });
+        InstructionValue::ComputedStore {
+            object,
+            value: store_value,
+            ..
+        } => {
+            effects.push(AliasingEffect::Mutate {
+                value: *object,
+                reason: None,
+            });
+            effects.push(AliasingEffect::Capture {
+                from: *store_value,
+                into: *object,
+            });
             effects.push(AliasingEffect::Create {
                 into: *lvalue,
                 value: ValueKind::Primitive,
@@ -2235,15 +2480,28 @@ fn compute_signature_for_instruction<'a>(
             });
             let ty = &env.types[env.identifiers[collection.identifier].type_];
             if is_builtin_collection_type(ty) {
-                effects.push(AliasingEffect::Capture { from: *collection, into: *lvalue });
+                effects.push(AliasingEffect::Capture {
+                    from: *collection,
+                    into: *lvalue,
+                });
             } else {
-                effects.push(AliasingEffect::Alias { from: *collection, into: *lvalue });
+                effects.push(AliasingEffect::Alias {
+                    from: *collection,
+                    into: *lvalue,
+                });
                 effects.push(AliasingEffect::MutateTransitiveConditionally { value: *collection });
             }
         }
-        InstructionValue::IteratorNext { iterator, collection, .. } => {
+        InstructionValue::IteratorNext {
+            iterator,
+            collection,
+            ..
+        } => {
             effects.push(AliasingEffect::MutateConditionally { value: *iterator });
-            effects.push(AliasingEffect::CreateFrom { from: *collection, into: *lvalue });
+            effects.push(AliasingEffect::CreateFrom {
+                from: *collection,
+                into: *lvalue,
+            });
         }
         InstructionValue::NextPropertyOf { .. } => {
             effects.push(AliasingEffect::Create {
@@ -2252,7 +2510,12 @@ fn compute_signature_for_instruction<'a>(
                 reason: ValueReason::Other,
             });
         }
-        InstructionValue::JsxExpression { tag, props, children, .. } => {
+        InstructionValue::JsxExpression {
+            tag,
+            props,
+            children,
+            ..
+        } => {
             effects.push(AliasingEffect::Create {
                 into: *lvalue,
                 value: ValueKind::Frozen,
@@ -2263,7 +2526,10 @@ fn compute_signature_for_instruction<'a>(
                     value: operand,
                     reason: ValueReason::JsxCaptured,
                 });
-                effects.push(AliasingEffect::Capture { from: operand, into: *lvalue });
+                effects.push(AliasingEffect::Capture {
+                    from: operand,
+                    into: *lvalue,
+                });
             }
             if let JsxTag::Place(tag_place) = tag {
                 effects.push(AliasingEffect::Render { place: *tag_place });
@@ -2274,7 +2540,10 @@ fn compute_signature_for_instruction<'a>(
                 }
             }
             for prop in props {
-                if let JsxAttribute::Attribute { place: prop_place, .. } = prop {
+                if let JsxAttribute::Attribute {
+                    place: prop_place, ..
+                } = prop
+                {
                     let prop_ty = &env.types[env.identifiers[prop_place.identifier].type_];
                     if let Type::Function { return_type, .. } = prop_ty
                         && (is_jsx_type(return_type) || is_phi_with_jsx(return_type))
@@ -2295,7 +2564,10 @@ fn compute_signature_for_instruction<'a>(
                     value: operand,
                     reason: ValueReason::JsxCaptured,
                 });
-                effects.push(AliasingEffect::Capture { from: operand, into: *lvalue });
+                effects.push(AliasingEffect::Capture {
+                    from: operand,
+                    into: *lvalue,
+                });
             }
         }
         InstructionValue::DeclareLocal { lvalue: dl, .. } => {
@@ -2310,7 +2582,11 @@ fn compute_signature_for_instruction<'a>(
                 reason: ValueReason::Other,
             });
         }
-        InstructionValue::Destructure { lvalue: dl, value: dest_value, .. } => {
+        InstructionValue::Destructure {
+            lvalue: dl,
+            value: dest_value,
+            ..
+        } => {
             for pat_item in each_pattern_items(&dl.pattern) {
                 match pat_item {
                     PatternItem::Place(place) => {
@@ -2340,14 +2616,23 @@ fn compute_signature_for_instruction<'a>(
                             reason: ValueReason::Other,
                             value: value_kind,
                         });
-                        effects.push(AliasingEffect::Capture { from: *dest_value, into: *place });
+                        effects.push(AliasingEffect::Capture {
+                            from: *dest_value,
+                            into: *place,
+                        });
                     }
                 }
             }
-            effects.push(AliasingEffect::Assign { from: *dest_value, into: *lvalue });
+            effects.push(AliasingEffect::Assign {
+                from: *dest_value,
+                into: *lvalue,
+            });
         }
         InstructionValue::LoadContext { place, .. } => {
-            effects.push(AliasingEffect::CreateFrom { from: *place, into: *lvalue });
+            effects.push(AliasingEffect::CreateFrom {
+                from: *place,
+                into: *lvalue,
+            });
         }
         InstructionValue::DeclareContext { lvalue: dcl, .. } => {
             let decl_id = env.identifiers[dcl.place.identifier].declaration_id;
@@ -2363,7 +2648,10 @@ fn compute_signature_for_instruction<'a>(
                     reason: ValueReason::Other,
                 });
             } else {
-                effects.push(AliasingEffect::Mutate { value: dcl.place, reason: None });
+                effects.push(AliasingEffect::Mutate {
+                    value: dcl.place,
+                    reason: None,
+                });
             }
             effects.push(AliasingEffect::Create {
                 into: *lvalue,
@@ -2371,12 +2659,19 @@ fn compute_signature_for_instruction<'a>(
                 reason: ValueReason::Other,
             });
         }
-        InstructionValue::StoreContext { lvalue: scl, value: sc_value, .. } => {
+        InstructionValue::StoreContext {
+            lvalue: scl,
+            value: sc_value,
+            ..
+        } => {
             let decl_id = env.identifiers[scl.place.identifier].declaration_id;
             if scl.kind == InstructionKind::Reassign
                 || context.hoisted_context_declarations.contains_key(&decl_id)
             {
-                effects.push(AliasingEffect::Mutate { value: scl.place, reason: None });
+                effects.push(AliasingEffect::Mutate {
+                    value: scl.place,
+                    reason: None,
+                });
             } else {
                 effects.push(AliasingEffect::Create {
                     into: scl.place,
@@ -2384,18 +2679,41 @@ fn compute_signature_for_instruction<'a>(
                     reason: ValueReason::Other,
                 });
             }
-            effects.push(AliasingEffect::Capture { from: *sc_value, into: scl.place });
-            effects.push(AliasingEffect::Assign { from: *sc_value, into: *lvalue });
+            effects.push(AliasingEffect::Capture {
+                from: *sc_value,
+                into: scl.place,
+            });
+            effects.push(AliasingEffect::Assign {
+                from: *sc_value,
+                into: *lvalue,
+            });
         }
         InstructionValue::LoadLocal { place, .. } => {
-            effects.push(AliasingEffect::Assign { from: *place, into: *lvalue });
+            effects.push(AliasingEffect::Assign {
+                from: *place,
+                into: *lvalue,
+            });
         }
-        InstructionValue::StoreLocal { lvalue: sl, value: sl_value, .. } => {
-            effects.push(AliasingEffect::Assign { from: *sl_value, into: sl.place });
-            effects.push(AliasingEffect::Assign { from: *sl_value, into: *lvalue });
+        InstructionValue::StoreLocal {
+            lvalue: sl,
+            value: sl_value,
+            ..
+        } => {
+            effects.push(AliasingEffect::Assign {
+                from: *sl_value,
+                into: sl.place,
+            });
+            effects.push(AliasingEffect::Assign {
+                from: *sl_value,
+                into: *lvalue,
+            });
         }
-        InstructionValue::PostfixUpdate { lvalue: pf_lvalue, .. }
-        | InstructionValue::PrefixUpdate { lvalue: pf_lvalue, .. } => {
+        InstructionValue::PostfixUpdate {
+            lvalue: pf_lvalue, ..
+        }
+        | InstructionValue::PrefixUpdate {
+            lvalue: pf_lvalue, ..
+        } => {
             effects.push(AliasingEffect::Create {
                 into: *lvalue,
                 value: ValueKind::Primitive,
@@ -2407,15 +2725,30 @@ fn compute_signature_for_instruction<'a>(
                 reason: ValueReason::Other,
             });
         }
-        InstructionValue::StoreGlobal { name, value: sg_value, .. } => {
+        InstructionValue::StoreGlobal {
+            name,
+            value: sg_value,
+            ..
+        } => {
             let variable = format!("`{}`", name);
             let diagnostic = diagnostics::global_reassignment(&variable, instr.span);
             let error = env.intern_aliasing_diagnostic(sg_value.identifier, diagnostic);
-            effects.push(AliasingEffect::MutateGlobal { place: *sg_value, error });
-            effects.push(AliasingEffect::Assign { from: *sg_value, into: *lvalue });
+            effects.push(AliasingEffect::MutateGlobal {
+                place: *sg_value,
+                error,
+            });
+            effects.push(AliasingEffect::Assign {
+                from: *sg_value,
+                into: *lvalue,
+            });
         }
-        InstructionValue::TypeCastExpression { value: tc_value, .. } => {
-            effects.push(AliasingEffect::Assign { from: *tc_value, into: *lvalue });
+        InstructionValue::TypeCastExpression {
+            value: tc_value, ..
+        } => {
+            effects.push(AliasingEffect::Assign {
+                from: *tc_value,
+                into: *lvalue,
+            });
         }
         InstructionValue::LoadGlobal { .. } => {
             effects.push(AliasingEffect::Create {
@@ -2492,7 +2825,10 @@ fn compute_effects_for_legacy_signature<'a>(
         let diagnostic =
             diagnostics::impure_function(signature.canonical_name.as_deref(), span.copied());
         let error = env.intern_aliasing_diagnostic(receiver.identifier, diagnostic);
-        effects.push(AliasingEffect::Impure { place: *receiver, error });
+        effects.push(AliasingEffect::Impure {
+            place: *receiver,
+            error,
+        });
     }
 
     // If the function is mutable only if operands are mutable, and all
@@ -2500,13 +2836,19 @@ fn compute_effects_for_legacy_signature<'a>(
     if signature.mutable_only_if_operands_are_mutable
         && are_arguments_immutable_and_non_mutating(state, args, env, function_values)
     {
-        effects.push(AliasingEffect::Alias { from: *receiver, into: *lvalue });
+        effects.push(AliasingEffect::Alias {
+            from: *receiver,
+            into: *lvalue,
+        });
         for arg in args {
             match arg {
                 PlaceOrSpreadOrHole::Hole => continue,
                 PlaceOrSpreadOrHole::Place(place)
                 | PlaceOrSpreadOrHole::Spread(SpreadPattern { place, .. }) => {
-                    effects.push(AliasingEffect::ImmutableCapture { from: *place, into: *lvalue });
+                    effects.push(AliasingEffect::ImmutableCapture {
+                        from: *place,
+                        into: *lvalue,
+                    });
                 }
             }
         }
@@ -2519,7 +2861,10 @@ fn compute_effects_for_legacy_signature<'a>(
     let mut visit = |place: &Place, effect: Effect, effects: &mut Vec<AliasingEffect>| match effect
     {
         Effect::Store => {
-            effects.push(AliasingEffect::Mutate { value: *place, reason: None });
+            effects.push(AliasingEffect::Mutate {
+                value: *place,
+                reason: None,
+            });
             stores.push(*place);
         }
         Effect::Capture => {
@@ -2533,22 +2878,34 @@ fn compute_effects_for_legacy_signature<'a>(
             if let Some(mutate_iter) = conditionally_mutate_iterator(place, ty) {
                 effects.push(mutate_iter);
             }
-            effects.push(AliasingEffect::Capture { from: *place, into: *lvalue });
+            effects.push(AliasingEffect::Capture {
+                from: *place,
+                into: *lvalue,
+            });
         }
         Effect::Freeze => {
-            effects.push(AliasingEffect::Freeze { value: *place, reason: return_value_reason });
+            effects.push(AliasingEffect::Freeze {
+                value: *place,
+                reason: return_value_reason,
+            });
         }
         Effect::Mutate => {
             effects.push(AliasingEffect::MutateTransitive { value: *place });
         }
         Effect::Read => {
-            effects.push(AliasingEffect::ImmutableCapture { from: *place, into: *lvalue });
+            effects.push(AliasingEffect::ImmutableCapture {
+                from: *place,
+                into: *lvalue,
+            });
         }
         _ => {}
     };
 
     if signature.callee_effect != Effect::Capture {
-        effects.push(AliasingEffect::Alias { from: *receiver, into: *lvalue });
+        effects.push(AliasingEffect::Alias {
+            from: *receiver,
+            into: *lvalue,
+        });
     }
 
     visit(receiver, signature.callee_effect, &mut effects);
@@ -2575,12 +2932,18 @@ fn compute_effects_for_legacy_signature<'a>(
     if !captures.is_empty() {
         if stores.is_empty() {
             for capture in &captures {
-                effects.push(AliasingEffect::Alias { from: *capture, into: *lvalue });
+                effects.push(AliasingEffect::Alias {
+                    from: *capture,
+                    into: *lvalue,
+                });
             }
         } else {
             for capture in &captures {
                 for store in &stores {
-                    effects.push(AliasingEffect::Capture { from: *capture, into: *store });
+                    effects.push(AliasingEffect::Capture {
+                        from: *capture,
+                        into: *store,
+                    });
                 }
             }
         }
@@ -2600,7 +2963,9 @@ fn get_argument_effect(
         // Spread with Freeze effect is unsupported for hook arguments
         // (matches TS CompilerError.throwTodo)
         let detail = if sig_effect == Effect::Freeze {
-            Some(diagnostics::todo_support_spread_syntax_hook_arguments(spread_span))
+            Some(diagnostics::todo_support_spread_syntax_hook_arguments(
+                spread_span,
+            ))
         } else {
             None
         };
@@ -2717,7 +3082,10 @@ fn compute_effects_for_aliasing_signature_config<'a>(
                 if i < config.params.len() && !matches!(arg, PlaceOrSpreadOrHole::Spread(_)) {
                     substitutions.insert(config.params[i].to_string(), vec![*place]);
                 } else if let Some(rest) = config.rest {
-                    substitutions.entry(rest.to_string()).or_default().push(*place);
+                    substitutions
+                        .entry(rest.to_string())
+                        .or_default()
+                        .push(*place);
                 } else {
                     return Ok(None);
                 }
@@ -2743,8 +3111,9 @@ fn compute_effects_for_aliasing_signature_config<'a>(
     // Create temporaries (cached by lvalue + temp_name to be stable across fixpoint iterations)
     for temp_name in config.temporaries {
         let cache_key = (lvalue.identifier, temp_name.to_string());
-        let temp_place =
-            *temp_cache.entry(cache_key).or_insert_with(|| create_temp_place(env, receiver.span));
+        let temp_place = *temp_cache
+            .entry(cache_key)
+            .or_insert_with(|| create_temp_place(env, receiver.span));
         substitutions.insert(temp_name.to_string(), vec![temp_place]);
     }
 
@@ -2760,10 +3129,17 @@ fn compute_effects_for_aliasing_signature_config<'a>(
                             v.span,
                         ));
                     }
-                    effects.push(AliasingEffect::Freeze { value: v, reason: *reason });
+                    effects.push(AliasingEffect::Freeze {
+                        value: v,
+                        reason: *reason,
+                    });
                 }
             }
-            AliasingEffectConfig::Create { into, value, reason } => {
+            AliasingEffectConfig::Create {
+                into,
+                value,
+                reason,
+            } => {
                 let intos = substitutions.get(*into).cloned().unwrap_or_default();
                 for v in intos {
                     effects.push(AliasingEffect::Create {
@@ -2831,7 +3207,10 @@ fn compute_effects_for_aliasing_signature_config<'a>(
             AliasingEffectConfig::Mutate { value } => {
                 let values = substitutions.get(*value).cloned().unwrap_or_default();
                 for v in values {
-                    effects.push(AliasingEffect::Mutate { value: v, reason: None });
+                    effects.push(AliasingEffect::Mutate {
+                        value: v,
+                        reason: None,
+                    });
                 }
             }
             AliasingEffectConfig::MutateTransitiveConditionally { value } => {
@@ -2997,8 +3376,14 @@ fn compute_effects_for_aliasing_signature<'a>(
             | AliasingEffect::Alias { from, into }
             | AliasingEffect::CreateFrom { from, into }
             | AliasingEffect::Capture { from, into } => {
-                let from_places = substitutions.get(&from.identifier).cloned().unwrap_or_default();
-                let to_places = substitutions.get(&into.identifier).cloned().unwrap_or_default();
+                let from_places = substitutions
+                    .get(&from.identifier)
+                    .cloned()
+                    .unwrap_or_default();
+                let to_places = substitutions
+                    .get(&into.identifier)
+                    .cloned()
+                    .unwrap_or_default();
                 for f in &from_places {
                     for t in &to_places {
                         effects.push(match eff {
@@ -3026,66 +3411,115 @@ fn compute_effects_for_aliasing_signature<'a>(
                 }
             }
             AliasingEffect::Impure { place, error } => {
-                let values = substitutions.get(&place.identifier).cloned().unwrap_or_default();
+                let values = substitutions
+                    .get(&place.identifier)
+                    .cloned()
+                    .unwrap_or_default();
                 for v in values {
-                    effects.push(AliasingEffect::Impure { place: v, error: *error });
+                    effects.push(AliasingEffect::Impure {
+                        place: v,
+                        error: *error,
+                    });
                 }
             }
             AliasingEffect::MutateFrozen { place, error } => {
-                let values = substitutions.get(&place.identifier).cloned().unwrap_or_default();
+                let values = substitutions
+                    .get(&place.identifier)
+                    .cloned()
+                    .unwrap_or_default();
                 for v in values {
-                    effects.push(AliasingEffect::MutateFrozen { place: v, error: *error });
+                    effects.push(AliasingEffect::MutateFrozen {
+                        place: v,
+                        error: *error,
+                    });
                 }
             }
             AliasingEffect::MutateGlobal { place, error } => {
-                let values = substitutions.get(&place.identifier).cloned().unwrap_or_default();
+                let values = substitutions
+                    .get(&place.identifier)
+                    .cloned()
+                    .unwrap_or_default();
                 for v in values {
-                    effects.push(AliasingEffect::MutateGlobal { place: v, error: *error });
+                    effects.push(AliasingEffect::MutateGlobal {
+                        place: v,
+                        error: *error,
+                    });
                 }
             }
             AliasingEffect::Render { place } => {
-                let values = substitutions.get(&place.identifier).cloned().unwrap_or_default();
+                let values = substitutions
+                    .get(&place.identifier)
+                    .cloned()
+                    .unwrap_or_default();
                 for v in values {
                     effects.push(AliasingEffect::Render { place: v });
                 }
             }
             AliasingEffect::Mutate { value, reason } => {
-                let values = substitutions.get(&value.identifier).cloned().unwrap_or_default();
+                let values = substitutions
+                    .get(&value.identifier)
+                    .cloned()
+                    .unwrap_or_default();
                 for v in values {
-                    effects.push(AliasingEffect::Mutate { value: v, reason: *reason });
+                    effects.push(AliasingEffect::Mutate {
+                        value: v,
+                        reason: *reason,
+                    });
                 }
             }
             AliasingEffect::MutateConditionally { value } => {
-                let values = substitutions.get(&value.identifier).cloned().unwrap_or_default();
+                let values = substitutions
+                    .get(&value.identifier)
+                    .cloned()
+                    .unwrap_or_default();
                 for v in values {
                     effects.push(AliasingEffect::MutateConditionally { value: v });
                 }
             }
             AliasingEffect::MutateTransitive { value } => {
-                let values = substitutions.get(&value.identifier).cloned().unwrap_or_default();
+                let values = substitutions
+                    .get(&value.identifier)
+                    .cloned()
+                    .unwrap_or_default();
                 for v in values {
                     effects.push(AliasingEffect::MutateTransitive { value: v });
                 }
             }
             AliasingEffect::MutateTransitiveConditionally { value } => {
-                let values = substitutions.get(&value.identifier).cloned().unwrap_or_default();
+                let values = substitutions
+                    .get(&value.identifier)
+                    .cloned()
+                    .unwrap_or_default();
                 for v in values {
                     effects.push(AliasingEffect::MutateTransitiveConditionally { value: v });
                 }
             }
             AliasingEffect::Freeze { value, reason } => {
-                let values = substitutions.get(&value.identifier).cloned().unwrap_or_default();
+                let values = substitutions
+                    .get(&value.identifier)
+                    .cloned()
+                    .unwrap_or_default();
                 for v in values {
                     if mutable_spreads.contains(&v.identifier) {
                         return Err(diagnostics::todo_support_spread_syntax_hook_arguments_3(
                             v.span,
                         ));
                     }
-                    effects.push(AliasingEffect::Freeze { value: v, reason: *reason });
+                    effects.push(AliasingEffect::Freeze {
+                        value: v,
+                        reason: *reason,
+                    });
                 }
             }
-            AliasingEffect::Create { into, value, reason } => {
-                let intos = substitutions.get(&into.identifier).cloned().unwrap_or_default();
+            AliasingEffect::Create {
+                into,
+                value,
+                reason,
+            } => {
+                let intos = substitutions
+                    .get(&into.identifier)
+                    .cloned()
+                    .unwrap_or_default();
                 for v in intos {
                     effects.push(AliasingEffect::Create {
                         into: v,
@@ -3103,9 +3537,18 @@ fn compute_effects_for_aliasing_signature<'a>(
                 signature: s,
                 span: _l,
             } => {
-                let recv = substitutions.get(&r.identifier).and_then(|v| v.first()).cloned();
-                let func = substitutions.get(&f.identifier).and_then(|v| v.first()).cloned();
-                let apply_into = substitutions.get(&i.identifier).and_then(|v| v.first()).cloned();
+                let recv = substitutions
+                    .get(&r.identifier)
+                    .and_then(|v| v.first())
+                    .cloned();
+                let func = substitutions
+                    .get(&f.identifier)
+                    .and_then(|v| v.first())
+                    .cloned();
+                let apply_into = substitutions
+                    .get(&i.identifier)
+                    .and_then(|v| v.first())
+                    .cloned();
                 if let (Some(recv), Some(func), Some(apply_into)) = (recv, func, apply_into) {
                     let mut apply_args = ArenaVec::new_in(&alloc);
                     for arg in a {
@@ -3178,10 +3621,16 @@ fn get_write_error_reason(abstract_value: &AbstractValue) -> String {
         "Modifying a value used previously in JSX is not allowed. Consider moving the modification before the JSX".to_string()
     } else if abstract_value.reason.contains(&ValueReason::Context) {
         "Modifying a value returned from 'useContext()' is not allowed.".to_string()
-    } else if abstract_value.reason.contains(&ValueReason::KnownReturnSignature) {
+    } else if abstract_value
+        .reason
+        .contains(&ValueReason::KnownReturnSignature)
+    {
         "Modifying a value returned from a function whose return value should not be mutated"
             .to_string()
-    } else if abstract_value.reason.contains(&ValueReason::ReactiveFunctionArgument) {
+    } else if abstract_value
+        .reason
+        .contains(&ValueReason::ReactiveFunctionArgument)
+    {
         "Do not mutate component props or hook arguments. If the value should change, update it where it is owned and pass an update callback, or use local state".to_string()
     } else if abstract_value.reason.contains(&ValueReason::State) {
         "Modifying a value returned from 'useState()', which should not be modified directly. Use the setter function to update instead".to_string()
@@ -3228,7 +3677,11 @@ fn get_hook_kind_for_type<'a>(
 fn format_type_for_print<'t>(ty: &'t Type) -> Cow<'t, str> {
     match ty {
         Type::Primitive => Cow::Borrowed(""),
-        Type::Function { shape_id, return_type, .. } => {
+        Type::Function {
+            shape_id,
+            return_type,
+            ..
+        } => {
             if let Some(sid) = shape_id {
                 let ret = format_type_for_print(return_type);
                 if ret.is_empty() {
@@ -3256,7 +3709,11 @@ fn format_type_for_print<'t>(ty: &'t Type) -> Cow<'t, str> {
 }
 
 fn is_phi_with_jsx(ty: &Type) -> bool {
-    if let Type::Phi { operands } = ty { operands.iter().any(is_jsx_type) } else { false }
+    if let Type::Phi { operands } = ty {
+        operands.iter().any(is_jsx_type)
+    } else {
+        false
+    }
 }
 
 fn place_or_spread_to_hole(pos: &PlaceOrSpread) -> PlaceOrSpreadOrHole {
@@ -3287,7 +3744,12 @@ fn build_apply_operands(
 fn create_temp_place(env: &mut Environment, span: Option<Span>) -> Place {
     let id = env.next_identifier_id();
     env.identifiers[id].span = span;
-    Place { identifier: id, effect: Effect::Unknown, reactive: false, span }
+    Place {
+        identifier: id,
+        effect: Effect::Unknown,
+        reactive: false,
+        span,
+    }
 }
 
 // =============================================================================
@@ -3303,8 +3765,16 @@ fn create_temp_place(env: &mut Environment, span: Option<Span>) -> Place {
 fn terminal_successors(terminal: &Terminal) -> SmallVec<[BlockId; 2]> {
     match terminal {
         Terminal::Goto { block, .. } => smallvec![*block],
-        Terminal::If { consequent, alternate, .. } => smallvec![*consequent, *alternate],
-        Terminal::Branch { consequent, alternate, .. } => smallvec![*consequent, *alternate],
+        Terminal::If {
+            consequent,
+            alternate,
+            ..
+        } => smallvec![*consequent, *alternate],
+        Terminal::Branch {
+            consequent,
+            alternate,
+            ..
+        } => smallvec![*consequent, *alternate],
         Terminal::Switch { cases, .. } => cases.iter().map(|c| c.block).collect(),
         Terminal::For { init, .. } => smallvec![*init],
         Terminal::ForOf { init, .. } | Terminal::ForIn { init, .. } => smallvec![*init],
@@ -3314,7 +3784,11 @@ fn terminal_successors(terminal: &Terminal) -> SmallVec<[BlockId; 2]> {
             smallvec![]
         }
         Terminal::Try { block, .. } => smallvec![*block],
-        Terminal::MaybeThrow { continuation, handler, .. } => {
+        Terminal::MaybeThrow {
+            continuation,
+            handler,
+            ..
+        } => {
             let mut v = smallvec![*continuation];
             if let Some(h) = handler {
                 v.push(*h);

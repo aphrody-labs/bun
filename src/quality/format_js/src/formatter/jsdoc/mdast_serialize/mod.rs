@@ -42,8 +42,9 @@ pub fn format_description_mdast(
     let jsdoc_opts = format_options.jsdoc.as_ref();
     let description_with_dot = jsdoc_opts.is_some_and(|o| o.description_with_dot);
     let prefer_code_fences = jsdoc_opts.is_some_and(|o| o.prefer_code_fences);
-    let line_wrapping_style =
-        jsdoc_opts.map_or(crate::LineWrappingStyle::default(), |o| o.line_wrapping_style);
+    let line_wrapping_style = jsdoc_opts.map_or(crate::LineWrappingStyle::default(), |o| {
+        o.line_wrapping_style
+    });
 
     // Fast path: if text has no markdown constructs requiring AST parsing,
     // use lightweight wrap_plain_paragraphs() directly.

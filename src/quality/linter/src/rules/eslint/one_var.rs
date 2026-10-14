@@ -108,7 +108,8 @@ declare_oxc_lint!(
     conditional_fix,
     config = OneVar,
     version = "1.78.0",
-    short_description = "Enforce variables to be declared either together or separately in functions.",
+    short_description =
+        "Enforce variables to be declared either together or separately in functions.",
 );
 
 impl Rule for OneVar {
@@ -313,9 +314,10 @@ struct EffectiveModes {
 impl OneVar {
     fn modes(&self, kind: VariableDeclarationKind) -> EffectiveModes {
         match &self.0 {
-            OneVarConfig::Mode(mode) => {
-                EffectiveModes { initialized: Some(*mode), uninitialized: Some(*mode) }
-            }
+            OneVarConfig::Mode(mode) => EffectiveModes {
+                initialized: Some(*mode),
+                uninitialized: Some(*mode),
+            },
             OneVarConfig::Options(options) => {
                 let per_kind = match kind {
                     VariableDeclarationKind::Var => options.var,
@@ -360,7 +362,11 @@ impl DeclarationFacts {
                 requires += usize::from(is_require(initializer));
             }
         }
-        Self { initialized, uninitialized: declaration.declarations.len() - initialized, requires }
+        Self {
+            initialized,
+            uninitialized: declaration.declarations.len() - initialized,
+            requires,
+        }
     }
 
     fn mixed_requires_with(&self, other: &Self) -> bool {
@@ -446,7 +452,10 @@ fn previous_declaration<'a, 'c>(
     let index = statements
         .binary_search_by_key(&statement_span.start, |statement| statement.span().start)
         .ok()?;
-    match index.checked_sub(1).and_then(|index| statements.get(index))? {
+    match index
+        .checked_sub(1)
+        .and_then(|index| statements.get(index))?
+    {
         Statement::VariableDeclaration(declaration) => Some(declaration),
         _ => None,
     }
@@ -489,14 +498,22 @@ fn report_join(
     let diagnostic = one_var_diagnostic(declaration.span, message);
     if declaration.declare
         || previous.declare
-        || matches!(ctx.nodes().parent_kind(node.id()), AstKind::ExportDeclaration(_))
+        || matches!(
+            ctx.nodes().parent_kind(node.id()),
+            AstKind::ExportDeclaration(_)
+        )
     {
         ctx.diagnostic(diagnostic);
         return;
     }
     ctx.diagnostic_with_fix(diagnostic, |fixer| {
         let mut fixes = fixer.new_fix_with_capacity(3);
-        if ctx.source_text().as_bytes().get(previous.span.end as usize - 1) == Some(&b';') {
+        if ctx
+            .source_text()
+            .as_bytes()
+            .get(previous.span.end as usize - 1)
+            == Some(&b';')
+        {
             fixes.push(Fix::new(",", Span::sized(previous.span.end - 1, 1)));
         } else {
             fixes.push(Fix::new(",", Span::empty(previous.span.end)));
@@ -534,7 +551,10 @@ fn report_split(
     }
     ctx.diagnostic_with_fix(diagnostic, |fixer| {
         let keyword = declaration.kind.as_str();
-        let exported = matches!(ctx.nodes().parent_kind(node.id()), AstKind::ExportDeclaration(_));
+        let exported = matches!(
+            ctx.nodes().parent_kind(node.id()),
+            AstKind::ExportDeclaration(_)
+        );
         let export = if exported { "export " } else { "" };
         let declare = if declaration.declare { "declare " } else { "" };
         let prefix = format!("{export}{declare}{keyword} ");
@@ -544,7 +564,11 @@ fn report_split(
                 .find_next_token_within(left.span.end, right.span.start, ",")
                 .expect("variable declarators must be separated by a comma");
             let comma = left.span.end + offset;
-            let separator = if comma + 1 == right.span.start { "; " } else { ";" };
+            let separator = if comma + 1 == right.span.start {
+                "; "
+            } else {
+                ";"
+            };
             fixes.push(Fix::new(separator, Span::sized(comma, 1)));
             fixes.push(Fix::new(prefix.clone(), Span::empty(right.span.start)));
         }
@@ -558,17 +582,47 @@ fn test() {
 
     let pass = vec![
         ("function foo() { var bar = true; }", None),
-        ("function foo() { var bar = true, baz = 1; if (qux) { bar = false; } }", None),
+        (
+            "function foo() { var bar = true, baz = 1; if (qux) { bar = false; } }",
+            None,
+        ),
         ("var foo = function() { var bar = true; baz(); }", None),
-        ("function foo() { var bar = true, baz = false; }", Some(serde_json::json!(["always"]))),
-        ("function foo() { var bar = true; var baz = false; }", Some(serde_json::json!(["never"]))),
-        ("for (var i = 0, len = arr.length; i < len; i++) {}", Some(serde_json::json!(["never"]))),
-        ("var bar = true; var baz = false;", Some(serde_json::json!([{ "initialized": "never" }]))),
-        ("var bar = true, baz = false;", Some(serde_json::json!([{ "initialized": "always" }]))),
-        ("var bar, baz;", Some(serde_json::json!([{ "initialized": "never" }]))),
-        ("var bar; var baz;", Some(serde_json::json!([{ "uninitialized": "never" }]))),
-        ("var bar, baz;", Some(serde_json::json!([{ "uninitialized": "always" }]))),
-        ("var bar = true, baz = false;", Some(serde_json::json!([{ "uninitialized": "never" }]))),
+        (
+            "function foo() { var bar = true, baz = false; }",
+            Some(serde_json::json!(["always"])),
+        ),
+        (
+            "function foo() { var bar = true; var baz = false; }",
+            Some(serde_json::json!(["never"])),
+        ),
+        (
+            "for (var i = 0, len = arr.length; i < len; i++) {}",
+            Some(serde_json::json!(["never"])),
+        ),
+        (
+            "var bar = true; var baz = false;",
+            Some(serde_json::json!([{ "initialized": "never" }])),
+        ),
+        (
+            "var bar = true, baz = false;",
+            Some(serde_json::json!([{ "initialized": "always" }])),
+        ),
+        (
+            "var bar, baz;",
+            Some(serde_json::json!([{ "initialized": "never" }])),
+        ),
+        (
+            "var bar; var baz;",
+            Some(serde_json::json!([{ "uninitialized": "never" }])),
+        ),
+        (
+            "var bar, baz;",
+            Some(serde_json::json!([{ "uninitialized": "always" }])),
+        ),
+        (
+            "var bar = true, baz = false;",
+            Some(serde_json::json!([{ "uninitialized": "never" }])),
+        ),
         (
             "var bar = true, baz = false, a, b;",
             Some(serde_json::json!([{ "uninitialized": "always", "initialized": "always" }])),
@@ -605,8 +659,14 @@ fn test() {
             "function foo() { if (true) { const a = 1; }; if (true) {const a = true; } }",
             Some(serde_json::json!(["always"])),
         ),
-        ("function foo() { let a = 1; let b = true; }", Some(serde_json::json!(["never"]))),
-        ("function foo() { const a = 1; const b = true; }", Some(serde_json::json!(["never"]))),
+        (
+            "function foo() { let a = 1; let b = true; }",
+            Some(serde_json::json!(["never"])),
+        ),
+        (
+            "function foo() { const a = 1; const b = true; }",
+            Some(serde_json::json!(["never"])),
+        ),
         (
             "function foo() { let a = 1; const b = false; var c = true; }",
             Some(serde_json::json!(["always"])),
@@ -627,10 +687,22 @@ fn test() {
             "let foo = true; for (let i = 0; i < 1; i++) { let foo = false; }",
             Some(serde_json::json!([{ "var": "always" }])),
         ),
-        ("let foo = true, bar = false;", Some(serde_json::json!([{ "var": "never" }]))),
-        ("let foo = true, bar = false;", Some(serde_json::json!([{ "const": "never" }]))),
-        ("let foo = true, bar = false;", Some(serde_json::json!([{ "uninitialized": "never" }]))),
-        ("let foo, bar", Some(serde_json::json!([{ "initialized": "never" }]))),
+        (
+            "let foo = true, bar = false;",
+            Some(serde_json::json!([{ "var": "never" }])),
+        ),
+        (
+            "let foo = true, bar = false;",
+            Some(serde_json::json!([{ "const": "never" }])),
+        ),
+        (
+            "let foo = true, bar = false;",
+            Some(serde_json::json!([{ "uninitialized": "never" }])),
+        ),
+        (
+            "let foo, bar",
+            Some(serde_json::json!([{ "initialized": "never" }])),
+        ),
         (
             "let foo = true, bar = false; let a; let b;",
             Some(serde_json::json!([{ "uninitialized": "never" }])),
@@ -712,15 +784,39 @@ fn test() {
             Some(serde_json::json!([{ "separateRequires": true, "var": "always" }])),
         ),
         ("var a = 0, b, c;", Some(serde_json::json!(["consecutive"]))),
-        ("var a = 0, b = 1, c = 2;", Some(serde_json::json!(["consecutive"]))),
-        ("var a = 0, b = 1; foo(); var c = 2;", Some(serde_json::json!(["consecutive"]))),
+        (
+            "var a = 0, b = 1, c = 2;",
+            Some(serde_json::json!(["consecutive"])),
+        ),
+        (
+            "var a = 0, b = 1; foo(); var c = 2;",
+            Some(serde_json::json!(["consecutive"])),
+        ),
         ("let a = 0, b, c;", Some(serde_json::json!(["consecutive"]))), // { "ecmaVersion": 6 },
-        ("let a = 0, b = 1, c = 2;", Some(serde_json::json!(["consecutive"]))), // { "ecmaVersion": 6 },
-        ("let a = 0, b = 1; foo(); let c = 2;", Some(serde_json::json!(["consecutive"]))), // { "ecmaVersion": 6 },
-        ("const a = 0, b = 1; foo(); const c = 2;", Some(serde_json::json!(["consecutive"]))), // { "ecmaVersion": 6 },
-        ("const a = 0; var b = 1;", Some(serde_json::json!(["consecutive"]))), // { "ecmaVersion": 6 },
-        ("const a = 0; let b = 1;", Some(serde_json::json!(["consecutive"]))), // { "ecmaVersion": 6 },
-        ("let a = 0; const b = 1; var c = 2;", Some(serde_json::json!(["consecutive"]))), // { "ecmaVersion": 6 },
+        (
+            "let a = 0, b = 1, c = 2;",
+            Some(serde_json::json!(["consecutive"])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "let a = 0, b = 1; foo(); let c = 2;",
+            Some(serde_json::json!(["consecutive"])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "const a = 0, b = 1; foo(); const c = 2;",
+            Some(serde_json::json!(["consecutive"])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "const a = 0; var b = 1;",
+            Some(serde_json::json!(["consecutive"])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "const a = 0; let b = 1;",
+            Some(serde_json::json!(["consecutive"])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "let a = 0; const b = 1; var c = 2;",
+            Some(serde_json::json!(["consecutive"])),
+        ), // { "ecmaVersion": 6 },
         (
             "const foo = require('foo'); const bar = 'bar';",
             Some(serde_json::json!([{ "const": "consecutive", "separateRequires": true }])),
@@ -821,12 +917,30 @@ fn test() {
             "let a; const b = 0; const c = 1; let d;",
             Some(serde_json::json!([{ "uninitialized": "consecutive", "initialized": "never" }])),
         ), // { "ecmaVersion": 6 },
-        ("var a = 0, b = 1;", Some(serde_json::json!([{ "var": "consecutive" }]))),
-        ("var a = 0; foo; var b = 1;", Some(serde_json::json!([{ "var": "consecutive" }]))),
-        ("let a = 0, b = 1;", Some(serde_json::json!([{ "let": "consecutive" }]))), // { "ecmaVersion": 6 },
-        ("let a = 0; foo; let b = 1;", Some(serde_json::json!([{ "let": "consecutive" }]))), // { "ecmaVersion": 6 },
-        ("const a = 0, b = 1;", Some(serde_json::json!([{ "const": "consecutive" }]))), // { "ecmaVersion": 6 },
-        ("const a = 0; foo; const b = 1;", Some(serde_json::json!([{ "const": "consecutive" }]))), // { "ecmaVersion": 6 },
+        (
+            "var a = 0, b = 1;",
+            Some(serde_json::json!([{ "var": "consecutive" }])),
+        ),
+        (
+            "var a = 0; foo; var b = 1;",
+            Some(serde_json::json!([{ "var": "consecutive" }])),
+        ),
+        (
+            "let a = 0, b = 1;",
+            Some(serde_json::json!([{ "let": "consecutive" }])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "let a = 0; foo; let b = 1;",
+            Some(serde_json::json!([{ "let": "consecutive" }])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "const a = 0, b = 1;",
+            Some(serde_json::json!([{ "const": "consecutive" }])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "const a = 0; foo; const b = 1;",
+            Some(serde_json::json!([{ "const": "consecutive" }])),
+        ), // { "ecmaVersion": 6 },
         (
             "let a, b; const c = 0, d = 1;",
             Some(serde_json::json!([{ "let": "consecutive", "const": "always" }])),
@@ -888,37 +1002,88 @@ fn test() {
             "var a = 1, b = 2; var c; var d; var e = 3, f = 4;",
             Some(serde_json::json!([{ "initialized": "consecutive", "uninitialized": "never" }])),
         ),
-        ("var a; somethingElse(); var b;", Some(serde_json::json!([{ "var": "never" }]))),
+        (
+            "var a; somethingElse(); var b;",
+            Some(serde_json::json!([{ "var": "never" }])),
+        ),
         (
             "var foo = 1;
             let bar = function() { var x; };
             var baz = 2;",
             Some(serde_json::json!([{ "var": "never" }])),
         ),
-        ("class C { static { var a; let b; const c = 0; } }", Some(serde_json::json!(["always"]))), // { "ecmaVersion": 2022 },
-        ("const a = 0; class C { static { const b = 0; } }", Some(serde_json::json!(["always"]))), // { "ecmaVersion": 2022 },
-        ("class C { static { const b = 0; } } const a = 0; ", Some(serde_json::json!(["always"]))), // { "ecmaVersion": 2022 },
-        ("let a; class C { static { let b; } }", Some(serde_json::json!(["always"]))), // { "ecmaVersion": 2022 },
-        ("class C { static { let b; } } let a;", Some(serde_json::json!(["always"]))), // { "ecmaVersion": 2022 },
-        ("var a; class C { static { var b; } }", Some(serde_json::json!(["always"]))), // { "ecmaVersion": 2022 },
-        ("class C { static { var b; } } var a; ", Some(serde_json::json!(["always"]))), // { "ecmaVersion": 2022 },
-        ("var a; class C { static { if (foo) { var b; } } }", Some(serde_json::json!(["always"]))), // { "ecmaVersion": 2022 },
-        ("class C { static { if (foo) { var b; } } } var a; ", Some(serde_json::json!(["always"]))), // { "ecmaVersion": 2022 },
+        (
+            "class C { static { var a; let b; const c = 0; } }",
+            Some(serde_json::json!(["always"])),
+        ), // { "ecmaVersion": 2022 },
+        (
+            "const a = 0; class C { static { const b = 0; } }",
+            Some(serde_json::json!(["always"])),
+        ), // { "ecmaVersion": 2022 },
+        (
+            "class C { static { const b = 0; } } const a = 0; ",
+            Some(serde_json::json!(["always"])),
+        ), // { "ecmaVersion": 2022 },
+        (
+            "let a; class C { static { let b; } }",
+            Some(serde_json::json!(["always"])),
+        ), // { "ecmaVersion": 2022 },
+        (
+            "class C { static { let b; } } let a;",
+            Some(serde_json::json!(["always"])),
+        ), // { "ecmaVersion": 2022 },
+        (
+            "var a; class C { static { var b; } }",
+            Some(serde_json::json!(["always"])),
+        ), // { "ecmaVersion": 2022 },
+        (
+            "class C { static { var b; } } var a; ",
+            Some(serde_json::json!(["always"])),
+        ), // { "ecmaVersion": 2022 },
+        (
+            "var a; class C { static { if (foo) { var b; } } }",
+            Some(serde_json::json!(["always"])),
+        ), // { "ecmaVersion": 2022 },
+        (
+            "class C { static { if (foo) { var b; } } } var a; ",
+            Some(serde_json::json!(["always"])),
+        ), // { "ecmaVersion": 2022 },
         (
             "class C { static { const a = 0; if (foo) { const b = 0; } } }",
             Some(serde_json::json!(["always"])),
         ), // { "ecmaVersion": 2022 },
-        ("class C { static { let a; if (foo) { let b; } } }", Some(serde_json::json!(["always"]))), // { "ecmaVersion": 2022 },
-        ("class C { static { const a = 0; const b = 0; } }", Some(serde_json::json!(["never"]))), // { "ecmaVersion": 2022 },
-        ("class C { static { let a; let b; } }", Some(serde_json::json!(["never"]))), // { "ecmaVersion": 2022 },
-        ("class C { static { var a; var b; } }", Some(serde_json::json!(["never"]))), // { "ecmaVersion": 2022 },
-        ("class C { static { let a; foo; let b; } }", Some(serde_json::json!(["consecutive"]))), // { "ecmaVersion": 2022 },
+        (
+            "class C { static { let a; if (foo) { let b; } } }",
+            Some(serde_json::json!(["always"])),
+        ), // { "ecmaVersion": 2022 },
+        (
+            "class C { static { const a = 0; const b = 0; } }",
+            Some(serde_json::json!(["never"])),
+        ), // { "ecmaVersion": 2022 },
+        (
+            "class C { static { let a; let b; } }",
+            Some(serde_json::json!(["never"])),
+        ), // { "ecmaVersion": 2022 },
+        (
+            "class C { static { var a; var b; } }",
+            Some(serde_json::json!(["never"])),
+        ), // { "ecmaVersion": 2022 },
+        (
+            "class C { static { let a; foo; let b; } }",
+            Some(serde_json::json!(["consecutive"])),
+        ), // { "ecmaVersion": 2022 },
         (
             "class C { static { let a; const b = 0; let c; } }",
             Some(serde_json::json!(["consecutive"])),
         ), // { "ecmaVersion": 2022 },
-        ("class C { static { var a; foo; var b; } }", Some(serde_json::json!(["consecutive"]))), // { "ecmaVersion": 2022 },
-        ("class C { static { var a; let b; var c; } }", Some(serde_json::json!(["consecutive"]))), // { "ecmaVersion": 2022 },
+        (
+            "class C { static { var a; foo; var b; } }",
+            Some(serde_json::json!(["consecutive"])),
+        ), // { "ecmaVersion": 2022 },
+        (
+            "class C { static { var a; let b; var c; } }",
+            Some(serde_json::json!(["consecutive"])),
+        ), // { "ecmaVersion": 2022 },
         (
             "class C { static { let a; if (foo) { let b; } } }",
             Some(serde_json::json!(["consecutive"])),
@@ -935,8 +1100,14 @@ fn test() {
             "class C { static { if (foo) { const b = 0; } const a = 0; } }",
             Some(serde_json::json!(["consecutive"])),
         ), // { "ecmaVersion": 2022 },
-        ("class C { static { var a; if (foo) var b; } }", Some(serde_json::json!(["consecutive"]))), // { "ecmaVersion": 2022 },
-        ("class C { static { if (foo) var b; var a; } }", Some(serde_json::json!(["consecutive"]))), // { "ecmaVersion": 2022 },
+        (
+            "class C { static { var a; if (foo) var b; } }",
+            Some(serde_json::json!(["consecutive"])),
+        ), // { "ecmaVersion": 2022 },
+        (
+            "class C { static { if (foo) var b; var a; } }",
+            Some(serde_json::json!(["consecutive"])),
+        ), // { "ecmaVersion": 2022 },
         (
             "class C { static { if (foo) { var b; } var a; } }",
             Some(serde_json::json!(["consecutive"])),
@@ -954,13 +1125,34 @@ fn test() {
         ("using a = 0, b = 1;", None), // { "ecmaVersion": 2026, "sourceType": "module", },
         ("await using a = 0, b = 1;", None), // { "ecmaVersion": 2026, "sourceType": "module", },
         ("function fn() { { using a = 0; } using b = 1; }", None), // { "ecmaVersion": 2026, "sourceType": "module", },
-        ("using a = 0; using b = 1;", Some(serde_json::json!(["never"]))), // { "ecmaVersion": 2026, "sourceType": "module", },
-        ("await using a = 0; await using b = 1;", Some(serde_json::json!(["never"]))), // { "ecmaVersion": 2026, "sourceType": "module", },
-        ("using a = 0, b = 1;", Some(serde_json::json!(["consecutive"]))), // { "ecmaVersion": 2026, "sourceType": "module", },
-        ("await using a = 0, b = 1;", Some(serde_json::json!(["consecutive"]))), // { "ecmaVersion": 2026, "sourceType": "module", },
-        ("using a = 0, b = 1;", Some(serde_json::json!([{ "initialized": "always" }]))), // { "ecmaVersion": 2026, "sourceType": "module", },
-        ("await using a = 0, b = 1;", Some(serde_json::json!([{ "initialized": "always" }]))), // { "ecmaVersion": 2026, "sourceType": "module", },
-        ("using a = 0; using b = 1;", Some(serde_json::json!([{ "initialized": "never" }]))), // { "ecmaVersion": 2026, "sourceType": "module", },
+        (
+            "using a = 0; using b = 1;",
+            Some(serde_json::json!(["never"])),
+        ), // { "ecmaVersion": 2026, "sourceType": "module", },
+        (
+            "await using a = 0; await using b = 1;",
+            Some(serde_json::json!(["never"])),
+        ), // { "ecmaVersion": 2026, "sourceType": "module", },
+        (
+            "using a = 0, b = 1;",
+            Some(serde_json::json!(["consecutive"])),
+        ), // { "ecmaVersion": 2026, "sourceType": "module", },
+        (
+            "await using a = 0, b = 1;",
+            Some(serde_json::json!(["consecutive"])),
+        ), // { "ecmaVersion": 2026, "sourceType": "module", },
+        (
+            "using a = 0, b = 1;",
+            Some(serde_json::json!([{ "initialized": "always" }])),
+        ), // { "ecmaVersion": 2026, "sourceType": "module", },
+        (
+            "await using a = 0, b = 1;",
+            Some(serde_json::json!([{ "initialized": "always" }])),
+        ), // { "ecmaVersion": 2026, "sourceType": "module", },
+        (
+            "using a = 0; using b = 1;",
+            Some(serde_json::json!([{ "initialized": "never" }])),
+        ), // { "ecmaVersion": 2026, "sourceType": "module", },
         (
             "await using a = 0; await using b = 1;",
             Some(serde_json::json!([{ "initialized": "never" }])),
@@ -975,9 +1167,18 @@ fn test() {
         ), // { "ecmaVersion": 2026, "sourceType": "module", }
     ];
     let fail = vec![
-        ("var bar = true, baz = false;", Some(serde_json::json!(["never"]))),
-        ("function foo() { var bar = true, baz = false; }", Some(serde_json::json!(["never"]))),
-        ("if (foo) { var bar = true, baz = false; }", Some(serde_json::json!(["never"]))),
+        (
+            "var bar = true, baz = false;",
+            Some(serde_json::json!(["never"])),
+        ),
+        (
+            "function foo() { var bar = true, baz = false; }",
+            Some(serde_json::json!(["never"])),
+        ),
+        (
+            "if (foo) { var bar = true, baz = false; }",
+            Some(serde_json::json!(["never"])),
+        ),
         (
             "switch (foo) { case bar: var baz = true, quux = false; }",
             Some(serde_json::json!(["never"])),
@@ -990,7 +1191,10 @@ fn test() {
             "function foo() { var bar = true; var baz = false; }",
             Some(serde_json::json!(["always"])),
         ),
-        ("var a = 1; for (var b = 2;;) {}", Some(serde_json::json!(["always"]))),
+        (
+            "var a = 1; for (var b = 2;;) {}",
+            Some(serde_json::json!(["always"])),
+        ),
         (
             "function foo() { var foo = true, bar = false; }",
             Some(serde_json::json!([{ "initialized": "never" }])),
@@ -1019,8 +1223,14 @@ fn test() {
             "function foo() { var a = [1, 2, 3]; var [b, c, d] = a; }",
             Some(serde_json::json!(["always"])),
         ),
-        ("function foo() { let a = 1; let b = 2; }", Some(serde_json::json!(["always"]))),
-        ("function foo() { const a = 1; const b = 2; }", Some(serde_json::json!(["always"]))),
+        (
+            "function foo() { let a = 1; let b = 2; }",
+            Some(serde_json::json!(["always"])),
+        ),
+        (
+            "function foo() { const a = 1; const b = 2; }",
+            Some(serde_json::json!(["always"])),
+        ),
         (
             "function foo() { let a = 1; let b = 2; }",
             Some(serde_json::json!([{ "let": "always" }])),
@@ -1029,17 +1239,26 @@ fn test() {
             "function foo() { const a = 1; const b = 2; }",
             Some(serde_json::json!([{ "const": "always" }])),
         ),
-        ("function foo() { let a = 1, b = 2; }", Some(serde_json::json!([{ "let": "never" }]))),
+        (
+            "function foo() { let a = 1, b = 2; }",
+            Some(serde_json::json!([{ "let": "never" }])),
+        ),
         (
             "function foo() { let a = 1, b = 2; }",
             Some(serde_json::json!([{ "initialized": "never" }])),
         ),
-        ("function foo() { let a, b; }", Some(serde_json::json!([{ "uninitialized": "never" }]))),
+        (
+            "function foo() { let a, b; }",
+            Some(serde_json::json!([{ "uninitialized": "never" }])),
+        ),
         (
             "function foo() { const a = 1, b = 2; }",
             Some(serde_json::json!([{ "initialized": "never" }])),
         ),
-        ("function foo() { const a = 1, b = 2; }", Some(serde_json::json!([{ "const": "never" }]))),
+        (
+            "function foo() { const a = 1, b = 2; }",
+            Some(serde_json::json!([{ "const": "never" }])),
+        ),
         (
             "let foo = true; switch(foo) { case true: let bar = 2; break; case false: let baz = 3; break; }",
             Some(serde_json::json!([{ "var": "always", "let": "always", "const": "never" }])),
@@ -1049,17 +1268,35 @@ fn test() {
             var three;",
             Some(serde_json::json!(["always"])),
         ),
-        ("var i = [0], j;", Some(serde_json::json!([{ "initialized": "never" }]))),
-        ("var i = [0], j;", Some(serde_json::json!([{ "uninitialized": "never" }]))),
-        ("for (var x of foo) {}; for (var y of foo) {}", Some(serde_json::json!(["always"]))),
-        ("for (var x in foo) {}; for (var y in foo) {}", Some(serde_json::json!(["always"]))),
-        ("var foo = function() { var bar = true; var baz = false; }", None),
+        (
+            "var i = [0], j;",
+            Some(serde_json::json!([{ "initialized": "never" }])),
+        ),
+        (
+            "var i = [0], j;",
+            Some(serde_json::json!([{ "uninitialized": "never" }])),
+        ),
+        (
+            "for (var x of foo) {}; for (var y of foo) {}",
+            Some(serde_json::json!(["always"])),
+        ),
+        (
+            "for (var x in foo) {}; for (var y in foo) {}",
+            Some(serde_json::json!(["always"])),
+        ),
+        (
+            "var foo = function() { var bar = true; var baz = false; }",
+            None,
+        ),
         (
             "function foo() { var bar = true; if (qux) { var baz = false; } else { var quxx = 42; } }",
             None,
         ),
         ("var foo = () => { var bar = true; var baz = false; }", None), // { "ecmaVersion": 6 },
-        ("var foo = function() { var bar = true; if (qux) { var baz = false; } }", None),
+        (
+            "var foo = function() { var bar = true; if (qux) { var baz = false; } }",
+            None,
+        ),
         ("var foo; var bar;", None),
         (
             "var x = 1, y = 2; for (var z in foo) {}",
@@ -1085,7 +1322,10 @@ fn test() {
             "var a = 1; var b = 2; var x, y; for (var z of foo) {var c = 3, baz = z; for (var d in baz) {}}",
             Some(serde_json::json!([{ "initialized": "never", "uninitialized": "always" }])),
         ),
-        ("var {foo} = 1, [bar] = 2;", Some(serde_json::json!([{ "initialized": "never" }]))), // { "ecmaVersion": 6 },
+        (
+            "var {foo} = 1, [bar] = 2;",
+            Some(serde_json::json!([{ "initialized": "never" }])),
+        ), // { "ecmaVersion": 6 },
         (
             "const foo = 1,
                 bar = 2;",
@@ -1101,8 +1341,14 @@ fn test() {
                 bar = 2;",
             Some(serde_json::json!([{ "initialized": "never" }])),
         ),
-        ("var f, k /* test */, l;", Some(serde_json::json!(["never"]))),
-        ("var f,          /* test */ l;", Some(serde_json::json!(["never"]))),
+        (
+            "var f, k /* test */, l;",
+            Some(serde_json::json!(["never"])),
+        ),
+        (
+            "var f,          /* test */ l;",
+            Some(serde_json::json!(["never"])),
+        ),
         (
             "var f, k /* test 
              some more comment 
@@ -1130,11 +1376,26 @@ fn test() {
             "const foo = require('foo'); const bar = require('bar');",
             Some(serde_json::json!([{ "separateRequires": true, "const": "always" }])),
         ),
-        ("var a = 1, b; var c;", Some(serde_json::json!(["consecutive"]))),
-        ("var a = 0, b = 1; var c = 2;", Some(serde_json::json!(["consecutive"]))),
-        ("let a = 1, b; let c;", Some(serde_json::json!(["consecutive"]))), // { "ecmaVersion": 6 },
-        ("let a = 0, b = 1; let c = 2;", Some(serde_json::json!(["consecutive"]))), // { "ecmaVersion": 6 },
-        ("const a = 0, b = 1; const c = 2;", Some(serde_json::json!(["consecutive"]))), // { "ecmaVersion": 6 },
+        (
+            "var a = 1, b; var c;",
+            Some(serde_json::json!(["consecutive"])),
+        ),
+        (
+            "var a = 0, b = 1; var c = 2;",
+            Some(serde_json::json!(["consecutive"])),
+        ),
+        (
+            "let a = 1, b; let c;",
+            Some(serde_json::json!(["consecutive"])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "let a = 0, b = 1; let c = 2;",
+            Some(serde_json::json!(["consecutive"])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "const a = 0, b = 1; const c = 2;",
+            Some(serde_json::json!(["consecutive"])),
+        ), // { "ecmaVersion": 6 },
         (
             "const a = 0; var b = 1; var c = 2; const d = 3;",
             Some(serde_json::json!(["consecutive"])),
@@ -1247,9 +1508,18 @@ fn test() {
             "let a; const b = 0, c = 1; let d;",
             Some(serde_json::json!([{ "uninitialized": "consecutive", "initialized": "never" }])),
         ), // { "ecmaVersion": 6 },
-        ("var a = 0; var b = 1;", Some(serde_json::json!([{ "var": "consecutive" }]))),
-        ("let a = 0; let b = 1;", Some(serde_json::json!([{ "let": "consecutive" }]))), // { "ecmaVersion": 6 },
-        ("const a = 0; const b = 1;", Some(serde_json::json!([{ "const": "consecutive" }]))), // { "ecmaVersion": 6 },
+        (
+            "var a = 0; var b = 1;",
+            Some(serde_json::json!([{ "var": "consecutive" }])),
+        ),
+        (
+            "let a = 0; let b = 1;",
+            Some(serde_json::json!([{ "let": "consecutive" }])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "const a = 0; const b = 1;",
+            Some(serde_json::json!([{ "const": "consecutive" }])),
+        ), // { "ecmaVersion": 6 },
         (
             "let a; let b; const c = 0; const d = 1;",
             Some(serde_json::json!([{ "let": "consecutive", "const": "always" }])),
@@ -1282,7 +1552,10 @@ fn test() {
             "const a = 0; let b, c; const d = 1;",
             Some(serde_json::json!([{ "const": "consecutive", "let": "never" }])),
         ), // { "ecmaVersion": 6 },
-        ("var bar; var baz;", Some(serde_json::json!(["consecutive"]))),
+        (
+            "var bar; var baz;",
+            Some(serde_json::json!(["consecutive"])),
+        ),
         (
             "var bar = 1; var baz = 2; qux(); var qux = 3; var quux;",
             Some(serde_json::json!(["consecutive"])),
@@ -1293,7 +1566,10 @@ fn test() {
                 serde_json::json!([ { "var": "never", "let": "consecutive", "const": "consecutive" }, ]),
             ),
         ), // { "ecmaVersion": 6 },
-        ("var a; var b;", Some(serde_json::json!([{ "var": "consecutive" }]))),
+        (
+            "var a; var b;",
+            Some(serde_json::json!([{ "var": "consecutive" }])),
+        ),
         (
             "var a = 1; var b = 2; var c, d; var e = 3; var f = 4;",
             Some(serde_json::json!([{ "initialized": "consecutive", "uninitialized": "never" }])),
@@ -1307,7 +1583,10 @@ fn test() {
             var b",
             Some(serde_json::json!(["always"])),
         ),
-        ("export const foo=1, bar=2;", Some(serde_json::json!(["never"]))), // { "ecmaVersion": 2021, "sourceType": "module" },
+        (
+            "export const foo=1, bar=2;",
+            Some(serde_json::json!(["never"])),
+        ), // { "ecmaVersion": 2021, "sourceType": "module" },
         (
             "const foo=1,
              bar=2;",
@@ -1323,43 +1602,127 @@ fn test() {
             , bar=2;",
             Some(serde_json::json!(["never"])),
         ), // { "ecmaVersion": 2021, "sourceType": "module" },
-        ("export const foo= a, bar=2;", Some(serde_json::json!(["never"]))), // { "ecmaVersion": 2021, "sourceType": "module" },
-        ("export const foo=() => a, bar=2;", Some(serde_json::json!(["never"]))), // { "ecmaVersion": 2021, "sourceType": "module" },
-        ("export const foo= a, bar=2, bar2=2;", Some(serde_json::json!(["never"]))), // { "ecmaVersion": 2021, "sourceType": "module" },
-        ("export const foo = 1,bar = 2;", Some(serde_json::json!(["never"]))), // { "ecmaVersion": 2021, "sourceType": "module" },
-        ("const foo = 1; export const bar = 2;", Some(serde_json::json!(["always"]))), // { "ecmaVersion": 2021, "sourceType": "module" },
+        (
+            "export const foo= a, bar=2;",
+            Some(serde_json::json!(["never"])),
+        ), // { "ecmaVersion": 2021, "sourceType": "module" },
+        (
+            "export const foo=() => a, bar=2;",
+            Some(serde_json::json!(["never"])),
+        ), // { "ecmaVersion": 2021, "sourceType": "module" },
+        (
+            "export const foo= a, bar=2, bar2=2;",
+            Some(serde_json::json!(["never"])),
+        ), // { "ecmaVersion": 2021, "sourceType": "module" },
+        (
+            "export const foo = 1,bar = 2;",
+            Some(serde_json::json!(["never"])),
+        ), // { "ecmaVersion": 2021, "sourceType": "module" },
+        (
+            "const foo = 1; export const bar = 2;",
+            Some(serde_json::json!(["always"])),
+        ), // { "ecmaVersion": 2021, "sourceType": "module" },
         (
             "function foo() { const a = () => { return false; }; const b = 1; }",
             Some(serde_json::json!(["always"])),
         ),
-        ("declare const foo: number; const bar = 2;", Some(serde_json::json!(["always"]))),
-        ("declare var a: string, b: number;", Some(serde_json::json!(["never"]))),
-        ("declare const a: string, b: number;", Some(serde_json::json!(["never"]))),
-        ("export declare let a: string, b: number;", Some(serde_json::json!(["never"]))),
-        ("declare namespace N { var a, b; }", Some(serde_json::json!(["never"]))),
-        ("declare global { var a: string, b: number; }", Some(serde_json::json!(["never"]))),
+        (
+            "declare const foo: number; const bar = 2;",
+            Some(serde_json::json!(["always"])),
+        ),
+        (
+            "declare var a: string, b: number;",
+            Some(serde_json::json!(["never"])),
+        ),
+        (
+            "declare const a: string, b: number;",
+            Some(serde_json::json!(["never"])),
+        ),
+        (
+            "export declare let a: string, b: number;",
+            Some(serde_json::json!(["never"])),
+        ),
+        (
+            "declare namespace N { var a, b; }",
+            Some(serde_json::json!(["never"])),
+        ),
+        (
+            "declare global { var a: string, b: number; }",
+            Some(serde_json::json!(["never"])),
+        ),
         ("if (foo) var x, y;", Some(serde_json::json!(["never"]))),
-        ("if (foo) var x, y;", Some(serde_json::json!([{ "var": "never" }]))),
-        ("if (foo) var x, y;", Some(serde_json::json!([{ "uninitialized": "never" }]))),
-        ("if (foo) var x = 1, y = 1;", Some(serde_json::json!([{ "initialized": "never" }]))),
-        ("if (foo) {} else var x, y;", Some(serde_json::json!(["never"]))),
+        (
+            "if (foo) var x, y;",
+            Some(serde_json::json!([{ "var": "never" }])),
+        ),
+        (
+            "if (foo) var x, y;",
+            Some(serde_json::json!([{ "uninitialized": "never" }])),
+        ),
+        (
+            "if (foo) var x = 1, y = 1;",
+            Some(serde_json::json!([{ "initialized": "never" }])),
+        ),
+        (
+            "if (foo) {} else var x, y;",
+            Some(serde_json::json!(["never"])),
+        ),
         ("while (foo) var x, y;", Some(serde_json::json!(["never"]))),
-        ("do var x, y; while (foo);", Some(serde_json::json!(["never"]))),
-        ("do var x = f(), y = b(); while (x < y);", Some(serde_json::json!(["never"]))),
+        (
+            "do var x, y; while (foo);",
+            Some(serde_json::json!(["never"])),
+        ),
+        (
+            "do var x = f(), y = b(); while (x < y);",
+            Some(serde_json::json!(["never"])),
+        ),
         ("for (;;) var x, y;", Some(serde_json::json!(["never"]))),
-        ("for (foo in bar) var x, y;", Some(serde_json::json!(["never"]))),
-        ("for (foo of bar) var x, y;", Some(serde_json::json!(["never"]))),
+        (
+            "for (foo in bar) var x, y;",
+            Some(serde_json::json!(["never"])),
+        ),
+        (
+            "for (foo of bar) var x, y;",
+            Some(serde_json::json!(["never"])),
+        ),
         ("with (foo) var x, y;", Some(serde_json::json!(["never"]))),
         ("label: var x, y;", Some(serde_json::json!(["never"]))),
-        ("class C { static { let x, y; } }", Some(serde_json::json!(["never"]))), // { "ecmaVersion": 2022 },
-        ("class C { static { var x, y; } }", Some(serde_json::json!(["never"]))), // { "ecmaVersion": 2022 },
-        ("class C { static { let x; let y; } }", Some(serde_json::json!(["always"]))), // { "ecmaVersion": 2022 },
-        ("class C { static { var x; var y; } }", Some(serde_json::json!(["always"]))), // { "ecmaVersion": 2022 },
-        ("class C { static { let x; foo; let y; } }", Some(serde_json::json!(["always"]))), // { "ecmaVersion": 2022 },
-        ("class C { static { var x; foo; var y; } }", Some(serde_json::json!(["always"]))), // { "ecmaVersion": 2022 },
-        ("class C { static { var x; if (foo) { var y; } } }", Some(serde_json::json!(["always"]))), // { "ecmaVersion": 2022 },
-        ("class C { static { let x; let y; } }", Some(serde_json::json!(["consecutive"]))), // { "ecmaVersion": 2022 },
-        ("class C { static { var x; var y; } }", Some(serde_json::json!(["consecutive"]))), // { "ecmaVersion": 2022 },
+        (
+            "class C { static { let x, y; } }",
+            Some(serde_json::json!(["never"])),
+        ), // { "ecmaVersion": 2022 },
+        (
+            "class C { static { var x, y; } }",
+            Some(serde_json::json!(["never"])),
+        ), // { "ecmaVersion": 2022 },
+        (
+            "class C { static { let x; let y; } }",
+            Some(serde_json::json!(["always"])),
+        ), // { "ecmaVersion": 2022 },
+        (
+            "class C { static { var x; var y; } }",
+            Some(serde_json::json!(["always"])),
+        ), // { "ecmaVersion": 2022 },
+        (
+            "class C { static { let x; foo; let y; } }",
+            Some(serde_json::json!(["always"])),
+        ), // { "ecmaVersion": 2022 },
+        (
+            "class C { static { var x; foo; var y; } }",
+            Some(serde_json::json!(["always"])),
+        ), // { "ecmaVersion": 2022 },
+        (
+            "class C { static { var x; if (foo) { var y; } } }",
+            Some(serde_json::json!(["always"])),
+        ), // { "ecmaVersion": 2022 },
+        (
+            "class C { static { let x; let y; } }",
+            Some(serde_json::json!(["consecutive"])),
+        ), // { "ecmaVersion": 2022 },
+        (
+            "class C { static { var x; var y; } }",
+            Some(serde_json::json!(["consecutive"])),
+        ), // { "ecmaVersion": 2022 },
         (
             "class C { static { let a = 0; let b = 1; } }",
             Some(serde_json::json!([{ "initialized": "consecutive" }])),
@@ -1368,14 +1731,35 @@ fn test() {
             "class C { static { var a = 0; var b = 1; } }",
             Some(serde_json::json!([{ "initialized": "consecutive" }])),
         ), // { "ecmaVersion": 2022 },
-        ("using a = 0; using b = 1;", Some(serde_json::json!(["always"]))), // { "ecmaVersion": 2026, "sourceType": "module", },
-        ("await using a = 0; await using b = 1;", Some(serde_json::json!(["always"]))), // { "ecmaVersion": 2026, "sourceType": "module", },
+        (
+            "using a = 0; using b = 1;",
+            Some(serde_json::json!(["always"])),
+        ), // { "ecmaVersion": 2026, "sourceType": "module", },
+        (
+            "await using a = 0; await using b = 1;",
+            Some(serde_json::json!(["always"])),
+        ), // { "ecmaVersion": 2026, "sourceType": "module", },
         ("using a = 0, b = 1;", Some(serde_json::json!(["never"]))), // { "ecmaVersion": 2026, "sourceType": "module", },
-        ("await using a = 0, b = 1;", Some(serde_json::json!(["never"]))), // { "ecmaVersion": 2026, "sourceType": "module", },
-        ("using a = 0; using b = 1;", Some(serde_json::json!(["consecutive"]))), // { "ecmaVersion": 2026, "sourceType": "module", },
-        ("await using a = 0; await using b = 1;", Some(serde_json::json!(["consecutive"]))), // { "ecmaVersion": 2026, "sourceType": "module", },
-        ("using a = 0, b = 1;", Some(serde_json::json!([{ "initialized": "never" }]))), // { "ecmaVersion": 2026, "sourceType": "module", },
-        ("await using a = 0, b = 1;", Some(serde_json::json!([{ "initialized": "never" }]))), // { "ecmaVersion": 2026, "sourceType": "module", }
+        (
+            "await using a = 0, b = 1;",
+            Some(serde_json::json!(["never"])),
+        ), // { "ecmaVersion": 2026, "sourceType": "module", },
+        (
+            "using a = 0; using b = 1;",
+            Some(serde_json::json!(["consecutive"])),
+        ), // { "ecmaVersion": 2026, "sourceType": "module", },
+        (
+            "await using a = 0; await using b = 1;",
+            Some(serde_json::json!(["consecutive"])),
+        ), // { "ecmaVersion": 2026, "sourceType": "module", },
+        (
+            "using a = 0, b = 1;",
+            Some(serde_json::json!([{ "initialized": "never" }])),
+        ), // { "ecmaVersion": 2026, "sourceType": "module", },
+        (
+            "await using a = 0, b = 1;",
+            Some(serde_json::json!([{ "initialized": "never" }])),
+        ), // { "ecmaVersion": 2026, "sourceType": "module", }
     ];
     let fix = vec![
         (
@@ -1591,7 +1975,11 @@ fn test() {
              even more */; var l = 1; var P;",
             Some(serde_json::json!(["never"])),
         ),
-        ("var a = 1, b = 2", "var a = 1; var b = 2", Some(serde_json::json!(["never"]))),
+        (
+            "var a = 1, b = 2",
+            "var a = 1; var b = 2",
+            Some(serde_json::json!(["never"])),
+        ),
         (
             "const foo = require('foo'); const bar = require('bar');",
             "const foo = require('foo'),  bar = require('bar');",
@@ -1602,13 +1990,21 @@ fn test() {
             "const foo = obj.require('foo'),  bar = 1;",
             Some(serde_json::json!([{ "separateRequires": true, "const": "always" }])),
         ),
-        ("var a = 1, b; var c;", "var a = 1, b,  c;", Some(serde_json::json!(["consecutive"]))),
+        (
+            "var a = 1, b; var c;",
+            "var a = 1, b,  c;",
+            Some(serde_json::json!(["consecutive"])),
+        ),
         (
             "var a = 0, b = 1; var c = 2;",
             "var a = 0, b = 1,  c = 2;",
             Some(serde_json::json!(["consecutive"])),
         ),
-        ("let a = 1, b; let c;", "let a = 1, b,  c;", Some(serde_json::json!(["consecutive"]))),
+        (
+            "let a = 1, b; let c;",
+            "let a = 1, b,  c;",
+            Some(serde_json::json!(["consecutive"])),
+        ),
         (
             "let a = 0, b = 1; let c = 2;",
             "let a = 0, b = 1,  c = 2;",
@@ -1814,7 +2210,11 @@ fn test() {
             "const a = 0; let b; let c; const d = 1;",
             Some(serde_json::json!([{ "const": "consecutive", "let": "never" }])),
         ),
-        ("var bar; var baz;", "var bar,  baz;", Some(serde_json::json!(["consecutive"]))),
+        (
+            "var bar; var baz;",
+            "var bar,  baz;",
+            Some(serde_json::json!(["consecutive"])),
+        ),
         (
             "var bar = 1; var baz = 2; qux(); var qux = 3; var quux;",
             "var bar = 1,  baz = 2; qux(); var qux = 3,  quux;",
@@ -1827,7 +2227,11 @@ fn test() {
                 serde_json::json!([ { "var": "never", "let": "consecutive", "const": "consecutive" }, ]),
             ),
         ),
-        ("var a; var b;", "var a,  b;", Some(serde_json::json!([{ "var": "consecutive" }]))),
+        (
+            "var a; var b;",
+            "var a,  b;",
+            Some(serde_json::json!([{ "var": "consecutive" }])),
+        ),
         (
             "var a = 1; var b = 2; var c, d; var e = 3; var f = 4;",
             "var a = 1,  b = 2; var c; var d; var e = 3,  f = 4;",
@@ -1971,13 +2375,21 @@ fn test() {
             "class C { static { var a = 0,  b = 1; } }",
             Some(serde_json::json!([{ "initialized": "consecutive" }])),
         ),
-        ("using a = 0; using b = 1;", "using a = 0,  b = 1;", Some(serde_json::json!(["always"]))),
+        (
+            "using a = 0; using b = 1;",
+            "using a = 0,  b = 1;",
+            Some(serde_json::json!(["always"])),
+        ),
         (
             "await using a = 0; await using b = 1;",
             "await using a = 0,   b = 1;",
             Some(serde_json::json!(["always"])),
         ),
-        ("using a = 0, b = 1;", "using a = 0; using b = 1;", Some(serde_json::json!(["never"]))),
+        (
+            "using a = 0, b = 1;",
+            "using a = 0; using b = 1;",
+            Some(serde_json::json!(["never"])),
+        ),
         (
             "await using a = 0, b = 1;",
             "await using a = 0; await using b = 1;",
@@ -2004,5 +2416,7 @@ fn test() {
             Some(serde_json::json!([{ "initialized": "never" }])),
         ),
     ];
-    Tester::new(OneVar::NAME, OneVar::PLUGIN, pass, fail).expect_fix(fix).test_and_snapshot();
+    Tester::new(OneVar::NAME, OneVar::PLUGIN, pass, fail)
+        .expect_fix(fix)
+        .test_and_snapshot();
 }

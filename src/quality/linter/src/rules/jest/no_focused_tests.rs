@@ -41,7 +41,10 @@ fn test() {
         ("it.skip()", None),
         ("test()", None),
         ("test.skip()", None),
-        ("var appliedOnly = describe.only; appliedOnly.apply(describe)", None),
+        (
+            "var appliedOnly = describe.only; appliedOnly.apply(describe)",
+            None,
+        ),
         ("var calledOnly = it.only; calledOnly.call(it)", None),
         ("it.each()()", None),
         ("it.each`table`()", None),
@@ -74,14 +77,24 @@ fn test() {
     ];
 
     let fix = vec![
-        ("describe.only('foo', () => {})", "describe('foo', () => {})", None, FixKind::Suggestion),
+        (
+            "describe.only('foo', () => {})",
+            "describe('foo', () => {})",
+            None,
+            FixKind::Suggestion,
+        ),
         (
             "describe['only']('foo', () => {})",
             "describe('foo', () => {})",
             None,
             FixKind::Suggestion,
         ),
-        ("fdescribe('foo', () => {})", "describe('foo', () => {})", None, FixKind::Suggestion),
+        (
+            "fdescribe('foo', () => {})",
+            "describe('foo', () => {})",
+            None,
+            FixKind::Suggestion,
+        ),
     ];
 
     Tester::new(NoFocusedTests::NAME, NoFocusedTests::PLUGIN, pass, fail)

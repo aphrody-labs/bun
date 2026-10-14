@@ -34,7 +34,10 @@ struct BlockIdMappings {
 
 impl BlockIdMappings {
     fn new(num_block_ids: usize) -> Self {
-        Self { map: IndexVec::from_vec(vec![None; num_block_ids]), next: 0 }
+        Self {
+            map: IndexVec::from_vec(vec![None; num_block_ids]),
+            next: 0,
+        }
     }
 
     fn get_or_insert(&mut self, id: BlockId) -> BlockId {

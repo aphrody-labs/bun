@@ -170,7 +170,11 @@ pub struct NoLargeSnapshotsConfig {
 
 impl Default for NoLargeSnapshotsConfig {
     fn default() -> Self {
-        Self { max_size: 50, inline_max_size: None, allowed_snapshots: FxHashMap::default() }
+        Self {
+            max_size: 50,
+            inline_max_size: None,
+            allowed_snapshots: FxHashMap::default(),
+        }
     }
 }
 
@@ -184,7 +188,9 @@ impl NoLargeSnapshotsConfig {
     }
 
     pub fn run_once(&self, ctx: &LintContext) {
-        let is_snap = ctx.file_extension().is_some_and(|ext| ext.eq_ignore_ascii_case("snap"));
+        let is_snap = ctx
+            .file_extension()
+            .is_some_and(|ext| ext.eq_ignore_ascii_case("snap"));
 
         if is_snap {
             for node in ctx.nodes().iter() {
@@ -293,7 +299,9 @@ impl NoLargeSnapshotsConfig {
             return false;
         };
 
-        allowed_snapshots_in_file.iter().any(|matcher| matcher.is_match(snapshot_name))
+        allowed_snapshots_in_file
+            .iter()
+            .any(|matcher| matcher.is_match(snapshot_name))
     }
 
     #[expect(clippy::cast_possible_truncation)] // the line count can't be over u32::MAX, because the source code is already limited by u32::MAX.

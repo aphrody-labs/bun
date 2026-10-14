@@ -35,7 +35,9 @@ impl Generator for GetIdGenerator {
             generate_for_struct(struct_def, &semantic_id_type_ids, schema)
         });
 
-        let enum_impls = schema.enums().filter_map(|enum_def| generate_for_enum(enum_def, schema));
+        let enum_impls = schema
+            .enums()
+            .filter_map(|enum_def| generate_for_enum(enum_def, schema));
 
         let output = quote! {
             #![expect(clippy::inline_always)]
@@ -51,7 +53,10 @@ impl Generator for GetIdGenerator {
             #(#enum_impls)*
         };
 
-        Output::Rust { path: output_path(AST_CRATE_PATH, "get_id.rs"), tokens: output }
+        Output::Rust {
+            path: output_path(AST_CRATE_PATH, "get_id.rs"),
+            tokens: output,
+        }
     }
 }
 

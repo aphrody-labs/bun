@@ -9,7 +9,13 @@ pub fn dedent(s: &str) -> String {
 
     s.lines()
         .filter(|line| !line.trim().is_empty())
-        .map(|line| if line.len() >= min_indent { &line[min_indent..] } else { line })
+        .map(|line| {
+            if line.len() >= min_indent {
+                &line[min_indent..]
+            } else {
+                line
+            }
+        })
         .collect::<Vec<_>>()
         .join("\n")
 }

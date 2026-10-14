@@ -19,7 +19,9 @@ pub fn size() -> Option<(u16, u16)> {
 
 #[cfg(windows)]
 pub fn size() -> Option<(u16, u16)> {
-    use windows_sys::Win32::System::Console::{CONSOLE_SCREEN_BUFFER_INFO, GetConsoleScreenBufferInfo, GetStdHandle, STD_OUTPUT_HANDLE};
+    use windows_sys::Win32::System::Console::{
+        CONSOLE_SCREEN_BUFFER_INFO, GetConsoleScreenBufferInfo, GetStdHandle, STD_OUTPUT_HANDLE,
+    };
     // SAFETY: the handle comes from GetStdHandle and the info struct is plain data.
     unsafe {
         let mut info: CONSOLE_SCREEN_BUFFER_INFO = core::mem::zeroed();
@@ -65,9 +67,9 @@ impl RawMode {
     #[cfg(windows)]
     pub fn enable() -> Option<Self> {
         use windows_sys::Win32::System::Console::{
-            ENABLE_ECHO_INPUT, ENABLE_LINE_INPUT, ENABLE_PROCESSED_INPUT, ENABLE_VIRTUAL_TERMINAL_INPUT,
-            ENABLE_VIRTUAL_TERMINAL_PROCESSING, GetConsoleMode, GetStdHandle, STD_INPUT_HANDLE, STD_OUTPUT_HANDLE,
-            SetConsoleMode,
+            ENABLE_ECHO_INPUT, ENABLE_LINE_INPUT, ENABLE_PROCESSED_INPUT,
+            ENABLE_VIRTUAL_TERMINAL_INPUT, ENABLE_VIRTUAL_TERMINAL_PROCESSING, GetConsoleMode,
+            GetStdHandle, STD_INPUT_HANDLE, STD_OUTPUT_HANDLE, SetConsoleMode,
         };
         // SAFETY: handles come from GetStdHandle; the modes are plain integers.
         unsafe {
@@ -78,12 +80,16 @@ impl RawMode {
                 return None;
             }
             GetConsoleMode(output, &raw mut out_mode);
-            let raw_in = (in_mode & !(ENABLE_ECHO_INPUT | ENABLE_LINE_INPUT | ENABLE_PROCESSED_INPUT)) | ENABLE_VIRTUAL_TERMINAL_INPUT;
+            let raw_in = (in_mode
+                & !(ENABLE_ECHO_INPUT | ENABLE_LINE_INPUT | ENABLE_PROCESSED_INPUT))
+                | ENABLE_VIRTUAL_TERMINAL_INPUT;
             if SetConsoleMode(input, raw_in) == 0 {
                 return None;
             }
             SetConsoleMode(output, out_mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
-            Some(Self { saved: (in_mode, out_mode) })
+            Some(Self {
+                saved: (in_mode, out_mode),
+            })
         }
     }
 }
@@ -98,7 +104,9 @@ impl Drop for RawMode {
         #[cfg(windows)]
         // SAFETY: restores the console modes captured in `enable`.
         unsafe {
-            use windows_sys::Win32::System::Console::{GetStdHandle, STD_INPUT_HANDLE, STD_OUTPUT_HANDLE, SetConsoleMode};
+            use windows_sys::Win32::System::Console::{
+                GetStdHandle, STD_INPUT_HANDLE, STD_OUTPUT_HANDLE, SetConsoleMode,
+            };
             SetConsoleMode(GetStdHandle(STD_INPUT_HANDLE), self.saved.0);
             SetConsoleMode(GetStdHandle(STD_OUTPUT_HANDLE), self.saved.1);
         }

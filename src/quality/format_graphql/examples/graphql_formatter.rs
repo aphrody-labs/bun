@@ -26,8 +26,12 @@ fn main() -> Result<(), String> {
     let mut args = Arguments::from_env();
     // Show diff between original and formatted code
     let show_diff = args.contains("--diff");
-    let print_width = args.opt_value_from_str::<&'static str, u16>("--print-width").unwrap_or(None);
-    let name = args.free_from_str().unwrap_or_else(|_| "test.graphql".to_string());
+    let print_width = args
+        .opt_value_from_str::<&'static str, u16>("--print-width")
+        .unwrap_or(None);
+    let name = args
+        .free_from_str()
+        .unwrap_or_else(|_| "test.graphql".to_string());
 
     let source_text = fs::read_to_string(&name).map_err(|_| format!("Missing '{name}'"))?;
 
@@ -35,7 +39,10 @@ fn main() -> Result<(), String> {
         Some(width) => LineWidth::try_from(width).unwrap(),
         None => LineWidth::try_from(80).unwrap(),
     };
-    let options = GraphqlFormatOptions { line_width, ..Default::default() };
+    let options = GraphqlFormatOptions {
+        line_width,
+        ..Default::default()
+    };
 
     let allocator = Allocator::new();
     let formatted = match oxc_formatter_graphql::format(&allocator, &source_text, options) {

@@ -100,7 +100,10 @@ impl<'a> Format<'a, JsonFormatContext<'a>> for FmtJsonValue<'a, '_> {
             // so the inner number is normalized (`-1.0e+2` → `-1.0e2`).
             Expression::UnaryExpression(unary) => {
                 write!(f, unary.operator.as_str());
-                FmtJsonValue { expression: &unary.argument }.fmt(f);
+                FmtJsonValue {
+                    expression: &unary.argument,
+                }
+                .fmt(f);
             }
             // JSON5 `Infinity` / `NaN`, JSON6 `undefined`
             // Prettier accepts these identifiers for every JSON variant and prints them verbatim.
@@ -117,7 +120,14 @@ impl<'a> Format<'a, JsonFormatContext<'a>> for FmtJsonValue<'a, '_> {
             Expression::TemplateLiteral(template)
                 if template.expressions.is_empty() && template.quasis.len() == 1 =>
             {
-                write!(f, [text("`"), text(template.quasis[0].value.raw.as_str()), text("`")]);
+                write!(
+                    f,
+                    [
+                        text("`"),
+                        text(template.quasis[0].value.raw.as_str()),
+                        text("`")
+                    ]
+                );
             }
             _ => write!(f, FormatInvalidJson(span)),
         }

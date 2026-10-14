@@ -46,16 +46,24 @@ pub struct GlobalRegistry<'a> {
 impl<'a> GlobalRegistry<'a> {
     /// Create an empty builder-mode registry.
     pub fn new() -> Self {
-        Self { base: None, entries: IdentHashMap::default() }
+        Self {
+            base: None,
+            entries: IdentHashMap::default(),
+        }
     }
 
     /// Create an overlay-mode registry backed by a static base.
     pub fn with_base(base: &'static IdentHashMap<'static, Global<'static>>) -> Self {
-        Self { base: Some(base), entries: IdentHashMap::default() }
+        Self {
+            base: Some(base),
+            entries: IdentHashMap::default(),
+        }
     }
 
     pub fn get(&self, key: &str) -> Option<&Global<'a>> {
-        self.entries.get(key).or_else(|| self.base.and_then(|b| b.get(key)))
+        self.entries
+            .get(key)
+            .or_else(|| self.base.and_then(|b| b.get(key)))
     }
 
     pub fn insert(&mut self, key: Ident<'a>, value: Global<'a>) {
@@ -81,7 +89,10 @@ impl<'a> GlobalRegistry<'a> {
     /// Consume the registry and return the inner map.
     /// Only valid in builder mode (no base).
     fn into_inner(self) -> IdentHashMap<'a, Global<'a>> {
-        debug_assert!(self.base.is_none(), "into_inner() called on overlay-mode GlobalRegistry");
+        debug_assert!(
+            self.base.is_none(),
+            "into_inner() called on overlay-mode GlobalRegistry"
+        );
         self.entries
     }
 }
@@ -94,7 +105,10 @@ impl Default for GlobalRegistry<'_> {
 
 impl Clone for GlobalRegistry<'_> {
     fn clone(&self) -> Self {
-        Self { base: self.base, entries: self.entries.clone() }
+        Self {
+            base: self.base,
+            entries: self.entries.clone(),
+        }
     }
 }
 
@@ -110,7 +124,10 @@ struct BaseRegistries {
 static BASE: LazyLock<BaseRegistries> = LazyLock::new(|| {
     let mut shapes = build_builtin_shapes();
     let globals = build_default_globals(&mut shapes);
-    BaseRegistries { shapes: shapes.into_inner(), globals: globals.into_inner() }
+    BaseRegistries {
+        shapes: shapes.into_inner(),
+        globals: globals.into_inner(),
+    }
 });
 
 /// Get a reference to the static base shapes registry.
@@ -137,12 +154,16 @@ pub fn install_type_config<'a>(
 ) -> Global<'a> {
     match type_config {
         TypeConfig::TypeReference(TypeReferenceConfig { name }) => match name {
-            BuiltInTypeRef::Array => Type::Object { shape_id: Some(BUILT_IN_ARRAY_ID) },
-            BuiltInTypeRef::MixedReadonly => {
-                Type::Object { shape_id: Some(BUILT_IN_MIXED_READONLY_ID) }
-            }
+            BuiltInTypeRef::Array => Type::Object {
+                shape_id: Some(BUILT_IN_ARRAY_ID),
+            },
+            BuiltInTypeRef::MixedReadonly => Type::Object {
+                shape_id: Some(BUILT_IN_MIXED_READONLY_ID),
+            },
             BuiltInTypeRef::Primitive => Type::Primitive,
-            BuiltInTypeRef::Ref => Type::Object { shape_id: Some(BUILT_IN_USE_REF_ID) },
+            BuiltInTypeRef::Ref => Type::Object {
+                shape_id: Some(BUILT_IN_USE_REF_ID),
+            },
             BuiltInTypeRef::Any => Type::Poly,
         },
         TypeConfig::Function(func_config) => {
@@ -258,7 +279,9 @@ impl TypeDef {
         match self {
             TypeDef::Primitive => Type::Primitive,
             TypeDef::Poly => Type::Poly,
-            TypeDef::Object(shape_id) => Type::Object { shape_id: Some(shape_id) },
+            TypeDef::Object(shape_id) => Type::Object {
+                shape_id: Some(shape_id),
+            },
         }
     }
 }
@@ -462,7 +485,10 @@ const BUILTIN_SHAPE_DEFS: &[ShapeDef] = &[
                             // Push directly mutates the array itself
                             AliasingEffectConfig::Mutate { value: "@receiver" },
                             // The arguments are captured into the array
-                            AliasingEffectConfig::Capture { from: "@rest", into: "@receiver" },
+                            AliasingEffectConfig::Capture {
+                                from: "@rest",
+                                into: "@receiver",
+                            },
                             // Returns the new length, a primitive
                             AliasingEffectConfig::Create {
                                 into: "@returns",
@@ -507,7 +533,10 @@ const BUILTIN_SHAPE_DEFS: &[ShapeDef] = &[
                                 reason: ValueReason::KnownReturnSignature,
                             },
                             // The first arg to the callback is an item extracted from the receiver array
-                            AliasingEffectConfig::CreateFrom { from: "@receiver", into: "@item" },
+                            AliasingEffectConfig::CreateFrom {
+                                from: "@receiver",
+                                into: "@item",
+                            },
                             // The undefined this for the callback
                             AliasingEffectConfig::Create {
                                 into: "@thisArg",
@@ -631,11 +660,17 @@ const BUILTIN_SHAPE_DEFS: &[ShapeDef] = &[
                         temporaries: &[],
                         effects: &[
                             // Set.add returns the receiver Set
-                            AliasingEffectConfig::Assign { from: "@receiver", into: "@returns" },
+                            AliasingEffectConfig::Assign {
+                                from: "@receiver",
+                                into: "@returns",
+                            },
                             // Set.add mutates the set itself
                             AliasingEffectConfig::Mutate { value: "@receiver" },
                             // Captures the rest params into the set
-                            AliasingEffectConfig::Capture { from: "@rest", into: "@receiver" },
+                            AliasingEffectConfig::Capture {
+                                from: "@rest",
+                                into: "@receiver",
+                            },
                         ],
                     }),
                     ..MethodDef::DEFAULT
@@ -932,9 +967,15 @@ const BUILTIN_SHAPE_DEFS: &[ShapeDef] = &[
         )],
     },
     // BuiltInFunction: empty shape
-    ShapeDef { id: BUILT_IN_FUNCTION_ID, props: &[] },
+    ShapeDef {
+        id: BUILT_IN_FUNCTION_ID,
+        props: &[],
+    },
     // BuiltInJsx: empty shape
-    ShapeDef { id: BUILT_IN_JSX_ID, props: &[] },
+    ShapeDef {
+        id: BUILT_IN_JSX_ID,
+        props: &[],
+    },
     // BuiltInMixedReadonly: has explicit method types + wildcard returning MixedReadonly
     // (matches TS BuiltInMixedReadonlyId shape)
     ShapeDef {
@@ -1141,7 +1182,10 @@ fn build_state_shapes(shapes: &mut ShapeRegistry<'static>) {
         add_object(
             shapes,
             Some(def.tuple_id),
-            vec![(Ident::from("0"), def.value_type.as_type()), (Ident::from("1"), setter)],
+            vec![
+                (Ident::from("0"), def.value_type.as_type()),
+                (Ident::from("1"), setter),
+            ],
         );
     }
 }
@@ -1207,7 +1251,9 @@ pub fn get_reanimated_module_type<'a>(shapes: &mut ShapeRegistry<'a>) -> Type<'a
             shapes,
             HookSignatureBuilder {
                 rest_param: Some(Effect::Freeze),
-                return_type: Type::Object { shape_id: Some(REANIMATED_SHARED_VALUE_ID) },
+                return_type: Type::Object {
+                    shape_id: Some(REANIMATED_SHARED_VALUE_ID),
+                },
                 return_value_kind: ValueKind::Mutable,
                 no_alias: true,
                 hook_kind: HookKind::Custom,
@@ -1278,7 +1324,11 @@ fn build_default_globals(shapes: &mut ShapeRegistry<'static>) -> GlobalRegistry<
     // (matching TS: `addObject(DEFAULT_SHAPES, 'globalThis', TYPED_GLOBALS)`)
     globals.insert(
         Ident::from("globalThis"),
-        add_object(shapes, Some(Ident::from("globalThis")), typed_globals.clone()),
+        add_object(
+            shapes,
+            Some(Ident::from("globalThis")),
+            typed_globals.clone(),
+        ),
     );
     globals.insert(
         Ident::from("global"),
@@ -1392,8 +1442,16 @@ const REACT_HOOK_DEFS: &[HookDef] = &[
         return_type: TypeDef::Primitive,
         ..HookDef::DEFAULT
     },
-    HookDef { name: "useMemo", hook_kind: HookKind::UseMemo, ..HookDef::DEFAULT },
-    HookDef { name: "useCallback", hook_kind: HookKind::UseCallback, ..HookDef::DEFAULT },
+    HookDef {
+        name: "useMemo",
+        hook_kind: HookKind::UseMemo,
+        ..HookDef::DEFAULT
+    },
+    HookDef {
+        name: "useCallback",
+        hook_kind: HookKind::UseCallback,
+        ..HookDef::DEFAULT
+    },
     HookDef {
         name: "useEffect",
         hook_kind: HookKind::UseEffect,
@@ -1406,13 +1464,19 @@ const REACT_HOOK_DEFS: &[HookDef] = &[
             returns: "@returns",
             temporaries: &["@effect"],
             effects: &[
-                AliasingEffectConfig::Freeze { value: "@rest", reason: ValueReason::Effect },
+                AliasingEffectConfig::Freeze {
+                    value: "@rest",
+                    reason: ValueReason::Effect,
+                },
                 AliasingEffectConfig::Create {
                     into: "@effect",
                     value: ValueKind::Frozen,
                     reason: ValueReason::KnownReturnSignature,
                 },
-                AliasingEffectConfig::Capture { from: "@rest", into: "@effect" },
+                AliasingEffectConfig::Capture {
+                    from: "@rest",
+                    into: "@effect",
+                },
                 AliasingEffectConfig::Create {
                     into: "@returns",
                     value: ValueKind::Primitive,
@@ -1479,7 +1543,12 @@ fn build_react_apis(
     }
 
     // use (not a hook, it's a function)
-    let use_fn = add_method(shapes, &FREEZE_ARGS_FN, Some(BUILT_IN_USE_OPERATOR_ID), false);
+    let use_fn = add_method(
+        shapes,
+        &FREEZE_ARGS_FN,
+        Some(BUILT_IN_USE_OPERATOR_ID),
+        false,
+    );
     react_apis.push((Ident::from("use"), use_fn));
 
     // useEffectEvent — its return type is a function type, which cannot be
@@ -1579,7 +1648,10 @@ const TYPED_GLOBAL_OBJECTS: &[GlobalObjectDef] = &[
                                 reason: ValueReason::KnownReturnSignature,
                             },
                             // Object values are captured into the return
-                            AliasingEffectConfig::Capture { from: "@object", into: "@returns" },
+                            AliasingEffectConfig::Capture {
+                                from: "@object",
+                                into: "@returns",
+                            },
                         ],
                     }),
                     ..MethodDef::DEFAULT
@@ -1604,7 +1676,10 @@ const TYPED_GLOBAL_OBJECTS: &[GlobalObjectDef] = &[
                                 reason: ValueReason::KnownReturnSignature,
                             },
                             // Object values are captured into the return
-                            AliasingEffectConfig::Capture { from: "@object", into: "@returns" },
+                            AliasingEffectConfig::Capture {
+                                from: "@object",
+                                into: "@returns",
+                            },
                         ],
                     }),
                     ..MethodDef::DEFAULT

@@ -38,14 +38,22 @@ fn main() -> std::io::Result<()> {
     let max_iterations = args
         .opt_value_from_str::<&str, u8>("--max-iterations")
         .expect("Invalid number for --max-iterations");
-    let name = args.free_from_str().unwrap_or_else(|_| "test.js".to_string());
+    let name = args
+        .free_from_str()
+        .unwrap_or_else(|_| "test.js".to_string());
 
     let path = Path::new(&name);
     let source_text = std::fs::read_to_string(path)?;
     let source_type = SourceType::from_path(path).unwrap();
 
     let mut allocator = Allocator::default();
-    let printed = dce(&allocator, &source_text, source_type, nospace, max_iterations);
+    let printed = dce(
+        &allocator,
+        &source_text,
+        source_type,
+        nospace,
+        max_iterations,
+    );
     println!("{printed}");
 
     if twice {
@@ -70,10 +78,16 @@ fn dce(
     let mut program = ret.program;
     Compressor::new(allocator).dead_code_elimination(
         &mut program,
-        CompressOptions { max_iterations, ..CompressOptions::dce() },
+        CompressOptions {
+            max_iterations,
+            ..CompressOptions::dce()
+        },
     );
     Codegen::new()
-        .with_options(CodegenOptions { minify: nospace, ..CodegenOptions::default() })
+        .with_options(CodegenOptions {
+            minify: nospace,
+            ..CodegenOptions::default()
+        })
         .build(&program)
         .code
 }

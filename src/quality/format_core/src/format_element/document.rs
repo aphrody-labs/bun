@@ -36,7 +36,10 @@ impl<'a> Document<'a> {
         elements: ArenaVec<'a, FormatElement<'a>>,
         sorted_tailwind_classes: Vec<String>,
     ) -> Self {
-        Self { elements: elements.into_arena_slice(), sorted_tailwind_classes }
+        Self {
+            elements: elements.into_arena_slice(),
+            sorted_tailwind_classes,
+        }
     }
 
     /// Consumes the document and returns its elements and sorted Tailwind CSS classes.
@@ -267,7 +270,8 @@ impl FormatElements for [FormatElement<'_>] {
     }
 
     fn has_label(&self, expected: LabelId) -> bool {
-        self.first().is_some_and(|element| element.has_label(expected))
+        self.first()
+            .is_some_and(|element| element.has_label(expected))
     }
 
     fn start_tag(&self, kind: TagKind) -> Option<&Tag> {

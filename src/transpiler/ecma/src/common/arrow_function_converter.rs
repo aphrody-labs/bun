@@ -572,7 +572,10 @@ impl<'a> ArrowFunctionConverter<'a> {
         // TODO: Add `BoundIdentifier::create_spanned_read_reference_boxed` method (and friends)
         // for this use case, so we can avoid `alloc()` call here.
         // I (@overlookmotel) doubt it'd make a perf difference, but it'd be cleaner code.
-        Some(ArenaBox::new_in(this_var.create_spanned_read_reference(span, ctx), ctx))
+        Some(ArenaBox::new_in(
+            this_var.create_spanned_read_reference(span, ctx),
+            ctx,
+        ))
     }
 
     /// Traverses upward through ancestor nodes to find the `ScopeId` of the block
@@ -812,12 +815,19 @@ impl<'a> ArrowFunctionConverter<'a> {
         };
 
         let is_assignment = assign_value.is_some();
-        let key = SuperMethodKey { is_assignment, property };
+        let key = SuperMethodKey {
+            is_assignment,
+            property,
+        };
         let super_info = super_methods.entry(key).or_insert_with(|| {
             let binding_name = Self::generate_super_binding_name(is_assignment, property);
             let binding = ctx
                 .generate_uid_in_current_scope(&binding_name, SymbolFlags::FunctionScopedVariable);
-            SuperMethodInfo { binding, super_expr: init, is_computed: argument.is_some() }
+            SuperMethodInfo {
+                binding,
+                super_expr: init,
+                is_computed: argument.is_some(),
+            }
         });
 
         let callee = super_info.binding.create_read_expression(ctx);
@@ -875,7 +885,9 @@ impl<'a> ArrowFunctionConverter<'a> {
         let callee =
             MemberExpression::new_static_member_expression(SPAN, object, property, false, ctx);
         let callee = Expression::from(callee);
-        Some(Expression::new_call_expression(call.span, callee, None, arguments, false, ctx))
+        Some(Expression::new_call_expression(
+            call.span, callee, None, arguments, false, ctx,
+        ))
     }
 
     /// Transform an `AssignmentExpression` whose assignment target is a `super` member expression.
@@ -902,7 +914,10 @@ impl<'a> ArrowFunctionConverter<'a> {
     ) -> Option<Expression<'a>> {
         // Check if the left of the assignment is a `super` member expression.
         if !*self.super_needs_transform_stack.last()
-            || !assignment.left.as_member_expression().is_some_and(|m| m.object().is_super())
+            || !assignment
+                .left
+                .as_member_expression()
+                .is_some_and(|m| m.object().is_super())
         {
             return None;
         }
@@ -942,7 +957,11 @@ impl<'a> ArrowFunctionConverter<'a> {
         is_assignment: bool,
         ctx: &mut TraverseCtx<'a>,
     ) -> VariableDeclarator<'a> {
-        let SuperMethodInfo { binding, super_expr: mut init, is_computed } = super_method;
+        let SuperMethodInfo {
+            binding,
+            super_expr: mut init,
+            is_computed,
+        } = super_method;
 
         Self::adjust_binding_scope(target_scope_id, &binding, ctx);
         let scope_id =
@@ -1122,7 +1141,11 @@ impl<'a> ArrowFunctionConverter<'a> {
                 // because the `arguments` variable will be inserted to a new scope which haven't been created yet,
                 // so we temporary use root scope id as the fake target scope ID.
                 let target_scope_id = ctx.scoping().root_scope_id();
-                ctx.generate_uid("arguments", target_scope_id, SymbolFlags::FunctionScopedVariable)
+                ctx.generate_uid(
+                    "arguments",
+                    target_scope_id,
+                    SymbolFlags::FunctionScopedVariable,
+                )
             }
         });
 
@@ -1131,8 +1154,10 @@ impl<'a> ArrowFunctionConverter<'a> {
         if symbol_id.is_none() {
             let reference = ctx.scoping_mut().get_reference_mut(reference_id);
             reference.set_symbol_id(binding.symbol_id);
-            ctx.scoping_mut().delete_root_unresolved_reference(ident.name, reference_id);
-            ctx.scoping_mut().add_resolved_reference(binding.symbol_id, reference_id);
+            ctx.scoping_mut()
+                .delete_root_unresolved_reference(ident.name, reference_id);
+            ctx.scoping_mut()
+                .add_resolved_reference(binding.symbol_id, reference_id);
         }
 
         ident.name = binding.name;
@@ -1173,7 +1198,10 @@ impl<'a> ArrowFunctionConverter<'a> {
         let arguments_var = arguments_var?;
 
         // Just a renamed `arguments` variable, we don't need to create a new variable declaration.
-        if self.renamed_arguments_symbol_ids.contains(&arguments_var.symbol_id) {
+        if self
+            .renamed_arguments_symbol_ids
+            .contains(&arguments_var.symbol_id)
+        {
             return None;
         }
 
@@ -1304,7 +1332,10 @@ struct ConstructorBodyThisAfterSuperInserter<'a, 'v> {
 
 impl<'a, 'v> ConstructorBodyThisAfterSuperInserter<'a, 'v> {
     fn new(this_var_binding: &'v BoundIdentifier<'a>, ctx: &'v mut TraverseCtx<'a>) -> Self {
-        Self { this_var_binding, ctx }
+        Self {
+            this_var_binding,
+            ctx,
+        }
     }
 }
 

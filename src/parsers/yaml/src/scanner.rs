@@ -129,12 +129,20 @@ pub struct Token {
 
 impl Token {
     fn new(kind: TokenKind, span: Span) -> Self {
-        Self { kind, span, synthesized: false }
+        Self {
+            kind,
+            span,
+            synthesized: false,
+        }
     }
 
     /// A zero-width token invented by the scanner at the given offset.
     fn synthesized(kind: TokenKind, at: usize) -> Self {
-        Self { kind, span: span(at, at), synthesized: true }
+        Self {
+            kind,
+            span: span(at, at),
+            synthesized: true,
+        }
     }
 }
 
@@ -157,7 +165,14 @@ struct SimpleKey {
 
 impl SimpleKey {
     fn new() -> Self {
-        Self { possible: false, required: false, token_number: 0, pos: 0, line: 0, col: 0 }
+        Self {
+            possible: false,
+            required: false,
+            token_number: 0,
+            pos: 0,
+            line: 0,
+            col: 0,
+        }
     }
 }
 
@@ -426,7 +441,10 @@ impl<'a> Scanner<'a> {
         // `leading_whitespace` says whether only whitespace precedes it.
         let own_line_column = self.leading_whitespace.then_some(self.col as u32);
         self.bump_while(|b| !is_breakz(b));
-        self.comments.push(Comment { span: span(start, self.pos), own_line_column });
+        self.comments.push(Comment {
+            span: span(start, self.pos),
+            own_line_column,
+        });
     }
 
     /// Skip over whitespace, comments and line breaks until the next token.
@@ -641,7 +659,8 @@ impl<'a> Scanner<'a> {
         self.indent = -1;
         self.stream_start_produced = true;
         self.simple_key_allowed = true;
-        self.tokens.push_back(Token::synthesized(TokenKind::StreamStart, 0));
+        self.tokens
+            .push_back(Token::synthesized(TokenKind::StreamStart, 0));
         self.simple_keys.push(SimpleKey::new());
     }
 
@@ -659,7 +678,8 @@ impl<'a> Scanner<'a> {
         self.remove_simple_key()?;
         self.simple_key_allowed = false;
 
-        self.tokens.push_back(Token::synthesized(TokenKind::StreamEnd, self.pos));
+        self.tokens
+            .push_back(Token::synthesized(TokenKind::StreamEnd, self.pos));
         Ok(())
     }
 
@@ -694,7 +714,8 @@ impl<'a> Scanner<'a> {
                 end = self.pos;
             }
         }
-        self.tokens.push_back(Token::new(TokenKind::Directive, span(start, end)));
+        self.tokens
+            .push_back(Token::new(TokenKind::Directive, span(start, end)));
         if is_break(self.peek()) {
             self.bump_break();
         }
@@ -711,7 +732,8 @@ impl<'a> Scanner<'a> {
         self.col += 3;
         self.leading_whitespace = false;
 
-        self.tokens.push_back(Token::new(kind, span(start, self.pos)));
+        self.tokens
+            .push_back(Token::new(kind, span(start, self.pos)));
         Ok(())
     }
 
@@ -730,13 +752,15 @@ impl<'a> Scanner<'a> {
         if kind == TokenKind::FlowMappingStart {
             self.flow_mapping_started = true;
         } else {
-            self.implicit_flow_mapping_states.push(ImplicitMappingState::Possible);
+            self.implicit_flow_mapping_states
+                .push(ImplicitMappingState::Possible);
         }
 
         let token_end = self.pos;
         self.skip_ws_to_eol(true)?;
 
-        self.tokens.push_back(Token::new(kind, span(start, token_end)));
+        self.tokens
+            .push_back(Token::new(kind, span(start, token_end)));
         Ok(())
     }
 
@@ -765,7 +789,8 @@ impl<'a> Scanner<'a> {
             self.adjacent_value_allowed_at = self.pos;
         }
 
-        self.tokens.push_back(Token::new(kind, span(start, token_end)));
+        self.tokens
+            .push_back(Token::new(kind, span(start, token_end)));
         Ok(())
     }
 
@@ -783,7 +808,8 @@ impl<'a> Scanner<'a> {
         let token_end = self.pos;
         self.skip_ws_to_eol(true)?;
 
-        self.tokens.push_back(Token::new(TokenKind::FlowEntry, span(start, token_end)));
+        self.tokens
+            .push_back(Token::new(TokenKind::FlowEntry, span(start, token_end)));
         Ok(())
     }
 
@@ -797,8 +823,11 @@ impl<'a> Scanner<'a> {
 
         // An anchor or tag at column 0 cannot apply to a sequence starting at
         // column 0 of the next line (yaml-test-suite G9HC).
-        if let Some(Token { span, kind: TokenKind::Anchor | TokenKind::Tag, .. }) =
-            self.tokens.back()
+        if let Some(Token {
+            span,
+            kind: TokenKind::Anchor | TokenKind::Tag,
+            ..
+        }) = self.tokens.back()
             && self.col == 0
             && self.indent > -1
             && span_starts_at_col0(self.src, *span)
@@ -825,7 +854,8 @@ impl<'a> Scanner<'a> {
         self.remove_simple_key()?;
         self.simple_key_allowed = true;
 
-        self.tokens.push_back(Token::new(TokenKind::BlockEntry, span(start, start + 1)));
+        self.tokens
+            .push_back(Token::new(TokenKind::BlockEntry, span(start, start + 1)));
         Ok(())
     }
 
@@ -852,7 +882,8 @@ impl<'a> Scanner<'a> {
         if self.peek() == b'\t' {
             return Err(self.error(ErrorKind::TabAsIndent, self.pos));
         }
-        self.tokens.push_back(Token::new(TokenKind::Key, span(start, token_end)));
+        self.tokens
+            .push_back(Token::new(TokenKind::Key, span(start, token_end)));
         Ok(())
     }
 
@@ -903,14 +934,20 @@ impl<'a> Scanner<'a> {
             }
 
             // Add the BLOCK-MAPPING-START token if needed.
-            self.roll_indent(sk.col, Some(sk.token_number), TokenKind::BlockMappingStart, sk.pos);
+            self.roll_indent(
+                sk.col,
+                Some(sk.token_number),
+                TokenKind::BlockMappingStart,
+                sk.pos,
+            );
             self.roll_one_col_indent();
 
             self.simple_keys.last_mut().unwrap().possible = false;
             self.simple_key_allowed = false;
         } else {
             if is_implicit_flow_mapping {
-                self.tokens.push_back(Token::synthesized(TokenKind::FlowMappingStart, start));
+                self.tokens
+                    .push_back(Token::synthesized(TokenKind::FlowMappingStart, start));
             }
             // The ':' indicator follows a complex key.
             if self.flow_level == 0 {
@@ -923,7 +960,8 @@ impl<'a> Scanner<'a> {
 
             self.simple_key_allowed = self.flow_level == 0;
         }
-        self.tokens.push_back(Token::new(TokenKind::Value, span(start, start + 1)));
+        self.tokens
+            .push_back(Token::new(TokenKind::Value, span(start, start + 1)));
         Ok(())
     }
 
@@ -937,8 +975,13 @@ impl<'a> Scanner<'a> {
         if self.pos == start + 1 {
             return Err(self.error(ErrorKind::EmptyAnchorName, start));
         }
-        let kind = if alias { TokenKind::Alias } else { TokenKind::Anchor };
-        self.tokens.push_back(Token::new(kind, span(start, self.pos)));
+        let kind = if alias {
+            TokenKind::Alias
+        } else {
+            TokenKind::Anchor
+        };
+        self.tokens
+            .push_back(Token::new(kind, span(start, self.pos)));
         Ok(())
     }
 
@@ -993,7 +1036,11 @@ impl<'a> Scanner<'a> {
         let start = self.pos;
         let mut chomping = Chomping::Clip;
         let mut increment: usize = 0;
-        let style = if literal { ScalarStyle::Literal } else { ScalarStyle::Folded };
+        let style = if literal {
+            ScalarStyle::Literal
+        } else {
+            ScalarStyle::Folded
+        };
 
         // Skip `|` or `>`.
         self.bump();
@@ -1029,8 +1076,11 @@ impl<'a> Scanner<'a> {
 
         let mut indent: usize = 0;
         if increment > 0 {
-            indent =
-                if self.indent >= 0 { self.indent.cast_unsigned() + increment } else { increment };
+            indent = if self.indent >= 0 {
+                self.indent.cast_unsigned() + increment
+            } else {
+                increment
+            };
         }
 
         // Scan the leading line breaks and determine the indentation level if needed.
@@ -1043,7 +1093,11 @@ impl<'a> Scanner<'a> {
         let header_index = BlockHeaderIndex::new(self.block_headers.len());
         self.block_headers.push(BlockScalarHeader {
             chomping,
-            indent: if increment > 0 { Some(increment as u32) } else { None },
+            indent: if increment > 0 {
+                Some(increment as u32)
+            } else {
+                None
+            },
             content_start: content_start as u32,
             // Placeholder for the no-content early return below;
             // the content loop overwrites it with the real text end.
@@ -1103,18 +1157,27 @@ impl<'a> Scanner<'a> {
         // the content scan never collects a comment
         // (comments are appended in source order, so checking the last one suffices).
         debug_assert!(
-            self.comments.last().is_none_or(|c| c.span.end <= content_start as u32),
+            self.comments
+                .last()
+                .is_none_or(|c| c.span.end <= content_start as u32),
             "no comment may lie inside a block scalar's content range"
         );
 
-        Ok(Token::new(TokenKind::Scalar(style, Some(header_index)), span(start, content_end)))
+        Ok(Token::new(
+            TokenKind::Scalar(style, Some(header_index)),
+            span(start, content_end),
+        ))
     }
 
     /// Read a block scalar chomping indicator: `+` (keep) or `-` (strip). The
     /// cursor must be at a `+` or `-`.
     fn read_chomping(&mut self) -> Chomping {
         debug_assert!(self.peek() == b'+' || self.peek() == b'-');
-        let chomping = if self.peek() == b'+' { Chomping::Keep } else { Chomping::Strip };
+        let chomping = if self.peek() == b'+' {
+            Chomping::Keep
+        } else {
+            Chomping::Strip
+        };
         self.bump();
         chomping
     }
@@ -1287,14 +1350,22 @@ impl<'a> Scanner<'a> {
             // contexts, keys cannot span multiple lines.
             b':' if self.flow_level > 0 || self.line == start_line => {}
             _ => {
-                return Err(
-                    self.error(ErrorKind::UnexpectedToken("content after quoted scalar"), self.pos)
-                );
+                return Err(self.error(
+                    ErrorKind::UnexpectedToken("content after quoted scalar"),
+                    self.pos,
+                ));
             }
         }
 
-        let style = if single { ScalarStyle::SingleQuoted } else { ScalarStyle::DoubleQuoted };
-        Ok(Token::new(TokenKind::Scalar(style, None), span(start, token_end)))
+        let style = if single {
+            ScalarStyle::SingleQuoted
+        } else {
+            ScalarStyle::DoubleQuoted
+        };
+        Ok(Token::new(
+            TokenKind::Scalar(style, None),
+            span(start, token_end),
+        ))
     }
 
     /// Validate an escape sequence in a double quoted scalar. The cursor must
@@ -1430,7 +1501,10 @@ impl<'a> Scanner<'a> {
         }
 
         if consumed_content {
-            Ok(Token::new(TokenKind::Scalar(ScalarStyle::Plain, None), span(start, end)))
+            Ok(Token::new(
+                TokenKind::Scalar(ScalarStyle::Plain, None),
+                span(start, end),
+            ))
         } else {
             // `fetch_plain_scalar` must absolutely consume at least one byte;
             // an empty plain scalar happens with erroneous inputs like `{...`.
@@ -1456,7 +1530,10 @@ impl<'a> Scanner<'a> {
         }
 
         if self.indent < col.cast_signed() {
-            self.indents.push(Indent { indent: self.indent, needs_block_end: true });
+            self.indents.push(Indent {
+                indent: self.indent,
+                needs_block_end: true,
+            });
             self.indent = col.cast_signed();
             let tokens_parsed = self.tokens_parsed;
             match number {
@@ -1475,7 +1552,8 @@ impl<'a> Scanner<'a> {
             let indent = self.indents.pop().unwrap();
             self.indent = indent.indent;
             if indent.needs_block_end {
-                self.tokens.push_back(Token::synthesized(TokenKind::BlockEnd, self.pos));
+                self.tokens
+                    .push_back(Token::synthesized(TokenKind::BlockEnd, self.pos));
             }
         }
     }
@@ -1483,7 +1561,10 @@ impl<'a> Scanner<'a> {
     /// Add an indentation level of 1 column that does not start a block.
     fn roll_one_col_indent(&mut self) {
         if self.flow_level == 0 && self.indents.last().is_some_and(|x| x.needs_block_end) {
-            self.indents.push(Indent { indent: self.indent, needs_block_end: false });
+            self.indents.push(Indent {
+                indent: self.indent,
+                needs_block_end: false,
+            });
             self.indent += 1;
         }
     }
@@ -1549,7 +1630,8 @@ impl<'a> Scanner<'a> {
         {
             self.flow_mapping_started = false;
             *implicit_mapping = ImplicitMappingState::Possible;
-            self.tokens.push_back(Token::synthesized(TokenKind::FlowMappingEnd, at));
+            self.tokens
+                .push_back(Token::synthesized(TokenKind::FlowMappingEnd, at));
         }
     }
 

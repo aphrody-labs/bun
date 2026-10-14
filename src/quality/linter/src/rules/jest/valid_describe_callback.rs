@@ -49,7 +49,8 @@ declare_oxc_lint!(
     jest,
     correctness,
     version = "0.0.8",
-    short_description = "Enforce that the second argument to `describe()` is a valid callback function.",
+    short_description =
+        "Enforce that the second argument to `describe()` is a valid callback function.",
 );
 
 impl Rule for ValidDescribeCallback {
@@ -205,7 +206,12 @@ fn test() {
         ("describe('foo', async function (done) {})", None),
     ];
 
-    Tester::new(ValidDescribeCallback::NAME, ValidDescribeCallback::PLUGIN, pass, fail)
-        .with_jest_plugin(true)
-        .test_and_snapshot();
+    Tester::new(
+        ValidDescribeCallback::NAME,
+        ValidDescribeCallback::PLUGIN,
+        pass,
+        fail,
+    )
+    .with_jest_plugin(true)
+    .test_and_snapshot();
 }

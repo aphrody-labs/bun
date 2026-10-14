@@ -93,18 +93,42 @@ fn validate_context_variable_lvalues_impl(
                     )?;
                 }
                 InstructionValue::LoadContext { place, .. } => {
-                    visit(identifier_kinds, place, VarRefKind::Context, identifiers, errors)?;
+                    visit(
+                        identifier_kinds,
+                        place,
+                        VarRefKind::Context,
+                        identifiers,
+                        errors,
+                    )?;
                 }
                 InstructionValue::StoreLocal { lvalue, .. }
                 | InstructionValue::DeclareLocal { lvalue, .. } => {
-                    visit(identifier_kinds, &lvalue.place, VarRefKind::Local, identifiers, errors)?;
+                    visit(
+                        identifier_kinds,
+                        &lvalue.place,
+                        VarRefKind::Local,
+                        identifiers,
+                        errors,
+                    )?;
                 }
                 InstructionValue::LoadLocal { place, .. } => {
-                    visit(identifier_kinds, place, VarRefKind::Local, identifiers, errors)?;
+                    visit(
+                        identifier_kinds,
+                        place,
+                        VarRefKind::Local,
+                        identifiers,
+                        errors,
+                    )?;
                 }
                 InstructionValue::PostfixUpdate { lvalue, .. }
                 | InstructionValue::PrefixUpdate { lvalue, .. } => {
-                    visit(identifier_kinds, lvalue, VarRefKind::Local, identifiers, errors)?;
+                    visit(
+                        identifier_kinds,
+                        lvalue,
+                        VarRefKind::Local,
+                        identifiers,
+                        errors,
+                    )?;
                 }
                 InstructionValue::Destructure { lvalue, .. } => {
                     for place in each_pattern_operand(&lvalue.pattern) {
@@ -167,9 +191,14 @@ fn visit(
         let is_context = kind == VarRefKind::Context;
         if was_context != is_context {
             if *prev_kind == VarRefKind::Destructure || kind == VarRefKind::Destructure {
-                let span =
-                    if kind == VarRefKind::Destructure { place.span } else { prev_place.span };
-                errors.push(diagnostics::todo_support_destructuring_context_variables(span));
+                let span = if kind == VarRefKind::Destructure {
+                    place.span
+                } else {
+                    prev_place.span
+                };
+                errors.push(diagnostics::todo_support_destructuring_context_variables(
+                    span,
+                ));
                 return Ok(());
             }
             let place_str = format_place(place, env_identifiers);

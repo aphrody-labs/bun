@@ -27,7 +27,9 @@ impl<K: Copy + Eq + Hash> Default for DisjointSet<K> {
 
 impl<K: Copy + Eq + Hash> DisjointSet<K> {
     pub fn new() -> Self {
-        DisjointSet { entries: FxIndexMap::default() }
+        DisjointSet {
+            entries: FxIndexMap::default(),
+        }
     }
 
     /// Updates the graph to reflect that the given items form a set,

@@ -45,7 +45,10 @@ fn test() {
         ("test.concurrent('foo', function () {})", None),
         ("describe[`${'skip'}`]('foo', function () {})", None),
         ("it.todo('fill this later')", None),
-        ("var appliedSkip = describe.skip; appliedSkip.apply(describe)", None),
+        (
+            "var appliedSkip = describe.skip; appliedSkip.apply(describe)",
+            None,
+        ),
         ("var calledSkip = it.skip; calledSkip.call(it)", None),
         ("({ f: function () {} }).f()", None),
         ("(a || b).f()", None),
@@ -77,7 +80,10 @@ fn test() {
             "test('foo', () => { expect(pending()).toEqual({}) }); function pending() { return {} }",
             None,
         ),
-        ("import { test } from './test-utils'; test('something');", None),
+        (
+            "import { test } from './test-utils'; test('something');",
+            None,
+        ),
     ];
 
     pass.extend(
@@ -150,10 +156,19 @@ fn test() {
         ("test['skip']('foo', function () {})", None),
         ("it('has title but no callback')", None),
         ("test('has title but no callback')", None),
-        ("it('contains a call to pending', function () { pending() })", None),
+        (
+            "it('contains a call to pending', function () { pending() })",
+            None,
+        ),
         ("pending()", None),
-        ("describe('contains a call to pending', function () { pending() })", None),
-        ("import { test } from '@jest/globals';test('something');", None),
+        (
+            "describe('contains a call to pending', function () { pending() })",
+            None,
+        ),
+        (
+            "import { test } from '@jest/globals';test('something');",
+            None,
+        ),
     ];
 
     fail.extend(

@@ -90,11 +90,15 @@ impl CookieStore {
 
     /// Save cookies to a file (JSON format).
     pub fn save_to_file(&self, path: &std::path::Path) -> Result<(), crate::error::Error> {
-        self.jar.save_to_file(path).map_err(|e| crate::error::Error::Internal(e.into()))
+        self.jar
+            .save_to_file(path)
+            .map_err(|e| crate::error::Error::Internal(e.into()))
     }
 
     /// Load cookies from a file.
     pub fn load_from_file(&self, path: &std::path::Path) -> Result<usize, crate::error::Error> {
-        self.jar.load_from_file(path).map_err(|e| crate::error::Error::Internal(e.into()))
+        self.jar
+            .load_from_file(path)
+            .map_err(|e| crate::error::Error::Internal(e.into()))
     }
 }

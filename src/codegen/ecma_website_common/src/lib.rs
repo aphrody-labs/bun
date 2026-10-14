@@ -33,7 +33,10 @@ pub fn generate_cli_docs(raw_markdown: &str, tool_name: &str) -> String {
         .flat_map(|line| {
             // Hack the bug on the line containing `###`
             if line.contains("###") {
-                line.split("###").map(str::trim).chain(["\n"]).collect::<Vec<_>>()
+                line.split("###")
+                    .map(str::trim)
+                    .chain(["\n"])
+                    .collect::<Vec<_>>()
             } else {
                 vec![line]
             }

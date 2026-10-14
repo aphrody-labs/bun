@@ -52,7 +52,11 @@ pub fn estimate_change_rate(history: ChangeHistory, policy: RevisitPolicy) -> f6
 
 #[must_use]
 pub fn importance_weight(importance: f64, policy: RevisitPolicy) -> f64 {
-    let reference = if policy.importance_ref > 0.0 { policy.importance_ref } else { 1.0 };
+    let reference = if policy.importance_ref > 0.0 {
+        policy.importance_ref
+    } else {
+        1.0
+    };
     let weight = importance / reference;
     if !weight.is_finite() {
         return 0.1;

@@ -28,13 +28,17 @@ use crate::{
 };
 
 fn id_match_diagnostic(span: Span, name: &str, pattern: &str) -> OxcDiagnostic {
-    OxcDiagnostic::warn(format!("Identifier '{name}' does not match the pattern '{pattern}'."))
-        .with_label(span)
+    OxcDiagnostic::warn(format!(
+        "Identifier '{name}' does not match the pattern '{pattern}'."
+    ))
+    .with_label(span)
 }
 
 fn id_match_private_diagnostic(span: Span, name: &str, pattern: &str) -> OxcDiagnostic {
-    OxcDiagnostic::warn(format!("Identifier '#{name}' does not match the pattern '{pattern}'."))
-        .with_label(span)
+    OxcDiagnostic::warn(format!(
+        "Identifier '#{name}' does not match the pattern '{pattern}'."
+    ))
+    .with_label(span)
 }
 
 #[derive(Debug, Default, Clone, Deserialize, JsonSchema)]
@@ -188,7 +192,9 @@ impl IdMatch {
         node: &AstNode<'a>,
         ctx: &LintContext<'a>,
     ) {
-        let regex = self.regex().expect("regex should be present when should_run returns true");
+        let regex = self
+            .regex()
+            .expect("regex should be present when should_run returns true");
         let name = ident.name.as_str();
         if regex.is_match(name) {
             return;
@@ -256,7 +262,9 @@ impl IdMatch {
         node: &AstNode<'a>,
         ctx: &LintContext<'a>,
     ) {
-        let regex = self.regex().expect("regex should be present when should_run returns true");
+        let regex = self
+            .regex()
+            .expect("regex should be present when should_run returns true");
         let name = ident.name.as_str();
         if regex.is_match(name) {
             return;
@@ -338,7 +346,9 @@ impl IdMatch {
         node: &AstNode<'a>,
         ctx: &LintContext<'a>,
     ) {
-        let regex = self.regex().expect("regex should be present when should_run returns true");
+        let regex = self
+            .regex()
+            .expect("regex should be present when should_run returns true");
         let name = ident.name.as_str();
         if regex.is_match(name) {
             return;
@@ -422,7 +432,9 @@ impl IdMatch {
         node: &AstNode<'a>,
         ctx: &LintContext<'a>,
     ) {
-        let regex = self.regex().expect("regex should be present when should_run returns true");
+        let regex = self
+            .regex()
+            .expect("regex should be present when should_run returns true");
         let name = ident.name.as_str();
         if regex.is_match(name) {
             return;
@@ -445,7 +457,9 @@ impl IdMatch {
         node: &AstNode<'a>,
         ctx: &LintContext<'a>,
     ) {
-        let regex = self.regex().expect("regex should be present when should_run returns true");
+        let regex = self
+            .regex()
+            .expect("regex should be present when should_run returns true");
         let name = ident.name.as_str();
         if regex.is_match(name) {
             return;
@@ -484,8 +498,10 @@ impl IdMatch {
             return;
         }
 
-        if matches!(effective_parent.kind(), AstKind::CallExpression(_) | AstKind::NewExpression(_))
-        {
+        if matches!(
+            effective_parent.kind(),
+            AstKind::CallExpression(_) | AstKind::NewExpression(_)
+        ) {
             return;
         }
 
@@ -767,23 +783,59 @@ fn test() {
             r#"__foo = "Matthieu""#,
             Some(serde_json::json!([ "^[a-z]+$", { "onlyDeclarations": true, }, ])),
         ),
-        (r#"firstname = "Matthieu""#, Some(serde_json::json!(["^[a-z]+$"]))),
-        (r#"first_name = "Matthieu""#, Some(serde_json::json!(["[a-z]+"]))),
+        (
+            r#"firstname = "Matthieu""#,
+            Some(serde_json::json!(["^[a-z]+$"])),
+        ),
+        (
+            r#"first_name = "Matthieu""#,
+            Some(serde_json::json!(["[a-z]+"])),
+        ),
         (r#"firstname = "Matthieu""#, Some(serde_json::json!(["^f"]))),
-        (r#"last_Name = "Larcher""#, Some(serde_json::json!(["^[a-z]+(_[A-Z][a-z]+)*$"]))),
-        (r#"param = "none""#, Some(serde_json::json!(["^[a-z]+(_[A-Z][a-z])*$"]))),
+        (
+            r#"last_Name = "Larcher""#,
+            Some(serde_json::json!(["^[a-z]+(_[A-Z][a-z]+)*$"])),
+        ),
+        (
+            r#"param = "none""#,
+            Some(serde_json::json!(["^[a-z]+(_[A-Z][a-z])*$"])),
+        ),
         ("function noUnder(){}", Some(serde_json::json!(["^[^_]+$"]))),
         ("no_under()", Some(serde_json::json!(["^[^_]+$"]))),
         ("foo.no_under2()", Some(serde_json::json!(["^[^_]+$"]))),
-        ("var foo = bar.no_under3;", Some(serde_json::json!(["^[^_]+$"]))),
-        ("var foo = bar.no_under4.something;", Some(serde_json::json!(["^[^_]+$"]))),
-        ("foo.no_under5.qux = bar.no_under6.something;", Some(serde_json::json!(["^[^_]+$"]))),
-        ("if (bar.no_under7) {}", Some(serde_json::json!(["^[^_]+$"]))),
-        ("var obj = { key: foo.no_under8 };", Some(serde_json::json!(["^[^_]+$"]))),
-        ("var arr = [foo.no_under9];", Some(serde_json::json!(["^[^_]+$"]))),
+        (
+            "var foo = bar.no_under3;",
+            Some(serde_json::json!(["^[^_]+$"])),
+        ),
+        (
+            "var foo = bar.no_under4.something;",
+            Some(serde_json::json!(["^[^_]+$"])),
+        ),
+        (
+            "foo.no_under5.qux = bar.no_under6.something;",
+            Some(serde_json::json!(["^[^_]+$"])),
+        ),
+        (
+            "if (bar.no_under7) {}",
+            Some(serde_json::json!(["^[^_]+$"])),
+        ),
+        (
+            "var obj = { key: foo.no_under8 };",
+            Some(serde_json::json!(["^[^_]+$"])),
+        ),
+        (
+            "var arr = [foo.no_under9];",
+            Some(serde_json::json!(["^[^_]+$"])),
+        ),
         ("[foo.no_under10]", Some(serde_json::json!(["^[^_]+$"]))),
-        ("var arr = [foo.no_under11.qux];", Some(serde_json::json!(["^[^_]+$"]))),
-        ("[foo.no_under12.nesting]", Some(serde_json::json!(["^[^_]+$"]))),
+        (
+            "var arr = [foo.no_under11.qux];",
+            Some(serde_json::json!(["^[^_]+$"])),
+        ),
+        (
+            "[foo.no_under12.nesting]",
+            Some(serde_json::json!(["^[^_]+$"])),
+        ),
         (
             "if (foo.no_under13 === boom.no_under14) { [foo.no_under15] }",
             Some(serde_json::json!(["^[^_]+$"])),
@@ -821,12 +873,18 @@ fn test() {
                 serde_json::json!([ "^[^_]+$", { "properties": true, "ignoreDestructuring": true, }, ]),
             ),
         ),
-        ("var o = {key: 1}", Some(serde_json::json!([ "^[^_]+$", { "properties": true, }, ]))),
+        (
+            "var o = {key: 1}",
+            Some(serde_json::json!([ "^[^_]+$", { "properties": true, }, ])),
+        ),
         (
             "var o = {no_under16: 1}",
             Some(serde_json::json!([ "^[^_]+$", { "properties": false, }, ])),
         ),
-        ("obj.no_under17 = 2;", Some(serde_json::json!([ "^[^_]+$", { "properties": false, }, ]))),
+        (
+            "obj.no_under17 = 2;",
+            Some(serde_json::json!([ "^[^_]+$", { "properties": false, }, ])),
+        ),
         (
             "var obj = { no_under18: 1 }; obj.no_under19 = 2;",
             Some(serde_json::json!([ "^[^_]+$", { "properties": false, }, ])),
@@ -835,7 +893,10 @@ fn test() {
             "obj.no_under20 = function(){};",
             Some(serde_json::json!([ "^[^_]+$", { "properties": false, }, ])),
         ),
-        ("var x = obj._foo2;", Some(serde_json::json!([ "^[^_]+$", { "properties": false, }, ]))),
+        (
+            "var x = obj._foo2;",
+            Some(serde_json::json!([ "^[^_]+$", { "properties": false, }, ])),
+        ),
         (
             "const foo = Object.keys(bar); const a = Array.from(b); const bar = () => Array;",
             Some(
@@ -863,8 +924,14 @@ fn test() {
             ),
         ),
         ("class x { foo() {} }", Some(serde_json::json!(["^[^_]+$"]))),
-        ("class x { #foo() {} }", Some(serde_json::json!(["^[^_]+$"]))),
-        ("class x { _foo = 1; }", Some(serde_json::json!(["^[^_]+$"]))),
+        (
+            "class x { #foo() {} }",
+            Some(serde_json::json!(["^[^_]+$"])),
+        ),
+        (
+            "class x { _foo = 1; }",
+            Some(serde_json::json!(["^[^_]+$"])),
+        ),
         (
             "class x { _foo = 1; }",
             Some(serde_json::json!([ "^[^_]+$", { "classFields": false, }, ])),
@@ -873,9 +940,18 @@ fn test() {
             "class x { #_foo = 1; }",
             Some(serde_json::json!([ "^[^_]+$", { "classFields": false, }, ])),
         ),
-        ("class x { [_foo] = 1; }", Some(serde_json::json!(["^[^_]+$"]))),
-        ("class x { foo = _foo; }", Some(serde_json::json!(["^[^_]+$"]))),
-        ("class x { #_foo = 1; }", Some(serde_json::json!(["^[^_]+$"]))),
+        (
+            "class x { [_foo] = 1; }",
+            Some(serde_json::json!(["^[^_]+$"])),
+        ),
+        (
+            "class x { foo = _foo; }",
+            Some(serde_json::json!(["^[^_]+$"])),
+        ),
+        (
+            "class x { #_foo = 1; }",
+            Some(serde_json::json!(["^[^_]+$"])),
+        ),
         (
             "import foo from 'foo.json' with { type: 'json' }",
             Some(serde_json::json!([ "^foo", { "properties": true, }, ])),
@@ -916,12 +992,24 @@ fn test() {
             r#"export * as bad_name from "external-module";"#,
             Some(serde_json::json!([ "^[^_]+$", { "onlyDeclarations": true, }, ])),
         ),
-        ("foo[bad_name];", Some(serde_json::json!([ "^[^_]+$", { "properties": true, }, ]))),
-        ("foo[bad_name]();", Some(serde_json::json!([ "^[^_]+$", { "properties": true, }, ]))),
+        (
+            "foo[bad_name];",
+            Some(serde_json::json!([ "^[^_]+$", { "properties": true, }, ])),
+        ),
+        (
+            "foo[bad_name]();",
+            Some(serde_json::json!([ "^[^_]+$", { "properties": true, }, ])),
+        ),
         ("(bad_name)();", Some(serde_json::json!(["^[^_]+$"]))),
         ("new (bad_name)();", Some(serde_json::json!(["^[^_]+$"]))),
-        ("foo[(bad_name)];", Some(serde_json::json!([ "^[^_]+$", { "properties": true, }, ]))),
-        ("foo[bad_name] = 1;", Some(serde_json::json!([ "^[^_]+$", { "properties": false, }, ]))),
+        (
+            "foo[(bad_name)];",
+            Some(serde_json::json!([ "^[^_]+$", { "properties": true, }, ])),
+        ),
+        (
+            "foo[bad_name] = 1;",
+            Some(serde_json::json!([ "^[^_]+$", { "properties": false, }, ])),
+        ),
         ("bad_name.foo;", Some(serde_json::json!(["^[^_]+$"]))),
         (
             "const o = { [good]: bad_name };",
@@ -966,23 +1054,38 @@ fn test() {
         ),
         // ESLint suppresses default-value bindings and RHS default refs unless
         // they become ordinary property/value checks under `properties:true`.
-        ("function f(bad_name = 1) {}", Some(serde_json::json!(["^[^_]+$"]))),
+        (
+            "function f(bad_name = 1) {}",
+            Some(serde_json::json!(["^[^_]+$"])),
+        ),
         (
             "function f(bad_name = 1) {}",
             Some(serde_json::json!([ "^[^_]+$", { "onlyDeclarations": true, }, ])),
         ),
-        ("const [bad_name = 1] = arr;", Some(serde_json::json!(["^[^_]+$"]))),
-        ("function f(p = bad_name) {}", Some(serde_json::json!(["^[^_]+$"]))),
+        (
+            "const [bad_name = 1] = arr;",
+            Some(serde_json::json!(["^[^_]+$"])),
+        ),
+        (
+            "function f(p = bad_name) {}",
+            Some(serde_json::json!(["^[^_]+$"])),
+        ),
         (
             "function f(p = bad_name) {}",
             Some(serde_json::json!([ "^[^_]+$", { "properties": true, }, ])),
         ),
-        ("const { p = bad_name } = obj;", Some(serde_json::json!(["^[^_]+$"]))),
+        (
+            "const { p = bad_name } = obj;",
+            Some(serde_json::json!(["^[^_]+$"])),
+        ),
         (
             "const { p = bad_name } = obj;",
             Some(serde_json::json!([ "^[^_]+$", { "properties": true, }, ])),
         ),
-        ("good_label: while (foo) { break good_label; }", Some(serde_json::json!(["^[a-z_]+$"]))),
+        (
+            "good_label: while (foo) { break good_label; }",
+            Some(serde_json::json!(["^[a-z_]+$"])),
+        ),
         (
             "bad_label: while (foo) { break bad_label; }",
             Some(serde_json::json!([ "^[^_]+$", { "onlyDeclarations": true, }, ])),
@@ -1019,9 +1122,18 @@ fn test() {
             "try {} catch (bad_name) {}",
             Some(serde_json::json!([ "^[^_]+$", { "onlyDeclarations": true, }, ])),
         ),
-        ("class C { static #bad_private = 1 }", Some(serde_json::json!(["^[^_]+$"]))),
-        ("foo?.bad_name", Some(serde_json::json!([ "^[^_]+$", { "properties": true, }, ]))),
-        ("class A { #foo; m() { return bad_name.#foo; } }", Some(serde_json::json!(["^[^_]+$"]))),
+        (
+            "class C { static #bad_private = 1 }",
+            Some(serde_json::json!(["^[^_]+$"])),
+        ),
+        (
+            "foo?.bad_name",
+            Some(serde_json::json!([ "^[^_]+$", { "properties": true, }, ])),
+        ),
+        (
+            "class A { #foo; m() { return bad_name.#foo; } }",
+            Some(serde_json::json!(["^[^_]+$"])),
+        ),
         (
             "class C { accessor [bad_name] = 1 }",
             Some(serde_json::json!([ "^[^_]+$", { "classFields": false, }, ])),
@@ -1033,14 +1145,26 @@ fn test() {
             r#"var __foo = "Matthieu""#,
             Some(serde_json::json!([ "^[a-z]+$", { "onlyDeclarations": true, }, ])),
         ),
-        (r#"first_name = "Matthieu""#, Some(serde_json::json!(["^[a-z]+$"]))),
-        (r#"first_name = "Matthieu""#, Some(serde_json::json!(["^z"]))),
-        (r#"Last_Name = "Larcher""#, Some(serde_json::json!(["^[a-z]+(_[A-Z][a-z])*$"]))),
+        (
+            r#"first_name = "Matthieu""#,
+            Some(serde_json::json!(["^[a-z]+$"])),
+        ),
+        (
+            r#"first_name = "Matthieu""#,
+            Some(serde_json::json!(["^z"])),
+        ),
+        (
+            r#"Last_Name = "Larcher""#,
+            Some(serde_json::json!(["^[a-z]+(_[A-Z][a-z])*$"])),
+        ),
         (
             "var obj = {key: no_under}",
             Some(serde_json::json!([ "^[^_]+$", { "properties": true, }, ])),
         ),
-        ("function no_under21(){}", Some(serde_json::json!(["^[^_]+$"]))),
+        (
+            "function no_under21(){}",
+            Some(serde_json::json!(["^[^_]+$"])),
+        ),
         (
             "obj.no_under22 = function(){};",
             Some(serde_json::json!([ "^[^_]+$", { "properties": true, }, ])),
@@ -1049,7 +1173,10 @@ fn test() {
             "no_under23.foo = function(){};",
             Some(serde_json::json!([ "^[^_]+$", { "properties": true, }, ])),
         ),
-        ("[no_under24.baz]", Some(serde_json::json!([ "^[^_]+$", { "properties": true, }, ]))),
+        (
+            "[no_under24.baz]",
+            Some(serde_json::json!([ "^[^_]+$", { "properties": true, }, ])),
+        ),
         (
             "if (foo.bar_baz === boom.bam_pow) { [no_under25.baz] }",
             Some(serde_json::json!([ "^[^_]+$", { "properties": true, }, ])),
@@ -1070,7 +1197,10 @@ fn test() {
             "var o = {no_under29: 1}",
             Some(serde_json::json!([ "^[^_]+$", { "properties": true, }, ])),
         ),
-        ("obj.no_under30 = 2;", Some(serde_json::json!([ "^[^_]+$", { "properties": true, }, ]))),
+        (
+            "obj.no_under30 = 2;",
+            Some(serde_json::json!([ "^[^_]+$", { "properties": true, }, ])),
+        ),
         (
             "var { category_id: category_alias } = query;",
             Some(serde_json::json!([ "^[^_]+$", { "properties": true, }, ])),
@@ -1173,8 +1303,14 @@ fn test() {
                 serde_json::json!([ "^\\$?[a-z]+([A-Z0-9][a-z0-9]+)*$", { "properties": true, }, ]),
             ),
         ),
-        ("class x { _foo() {} }", Some(serde_json::json!(["^[^_]+$"]))),
-        ("class x { #_foo() {} }", Some(serde_json::json!(["^[^_]+$"]))),
+        (
+            "class x { _foo() {} }",
+            Some(serde_json::json!(["^[^_]+$"])),
+        ),
+        (
+            "class x { #_foo() {} }",
+            Some(serde_json::json!(["^[^_]+$"])),
+        ),
         (
             "class x { _foo = 1; }",
             Some(serde_json::json!([ "^[^_]+$", { "classFields": true, }, ])),
@@ -1237,15 +1373,30 @@ fn test() {
                 serde_json::json!([ "^[^_]+$", { "classFields": true, "onlyDeclarations": true, }, ]),
             ),
         ),
-        ("foo[bad_name] = 1;", Some(serde_json::json!([ "^[^_]+$", { "properties": true, }, ]))),
-        ("bad_name[foo];", Some(serde_json::json!([ "^[^_]+$", { "properties": true, }, ]))),
-        ("const o = { [good]: bad_name };", Some(serde_json::json!(["^[^_]+$"]))),
-        ("({ bad_name } = obj);", Some(serde_json::json!(["^[^_]+$"]))),
+        (
+            "foo[bad_name] = 1;",
+            Some(serde_json::json!([ "^[^_]+$", { "properties": true, }, ])),
+        ),
+        (
+            "bad_name[foo];",
+            Some(serde_json::json!([ "^[^_]+$", { "properties": true, }, ])),
+        ),
+        (
+            "const o = { [good]: bad_name };",
+            Some(serde_json::json!(["^[^_]+$"])),
+        ),
+        (
+            "({ bad_name } = obj);",
+            Some(serde_json::json!(["^[^_]+$"])),
+        ),
         (
             "({ goodName: bad_name } = obj);",
             Some(serde_json::json!([ "^[^_]+$", { "ignoreDestructuring": true, }, ])),
         ),
-        ("const [good, ...bad_rest] = arr;", Some(serde_json::json!(["^[^_]+$"]))),
+        (
+            "const [good, ...bad_rest] = arr;",
+            Some(serde_json::json!(["^[^_]+$"])),
+        ),
         (
             "function f(bad_name) {}",
             Some(serde_json::json!([ "^[^_]+$", { "onlyDeclarations": true, }, ])),
@@ -1254,11 +1405,20 @@ fn test() {
             "const goodName = 1; export { goodName as bad_name };",
             Some(serde_json::json!(["^[^_]+$"])),
         ),
-        (r#"export { bad_name } from "mod";"#, Some(serde_json::json!(["^[^_]+$"]))),
-        (r#"export { goodName as bad_name } from "mod";"#, Some(serde_json::json!(["^[^_]+$"]))),
+        (
+            r#"export { bad_name } from "mod";"#,
+            Some(serde_json::json!(["^[^_]+$"])),
+        ),
+        (
+            r#"export { goodName as bad_name } from "mod";"#,
+            Some(serde_json::json!(["^[^_]+$"])),
+        ),
         // Intentionally stricter than ESLint: computed destructuring keys use a
         // local reference, so binding and assignment forms both report.
-        ("const { [bad_name]: goodName } = obj;", Some(serde_json::json!(["^[^_]+$"]))),
+        (
+            "const { [bad_name]: goodName } = obj;",
+            Some(serde_json::json!(["^[^_]+$"])),
+        ),
         (
             "function f(bad_name = 1) {}",
             Some(serde_json::json!([ "^[^_]+$", { "properties": true, }, ])),
@@ -1269,7 +1429,10 @@ fn test() {
         ),
         // Shorthand export reports once; explicit `as bad_name` still reports
         // both ranges and is locked in by the snapshot.
-        ("const bad_name = 1; export { bad_name };", Some(serde_json::json!(["^[^_]+$"]))),
+        (
+            "const bad_name = 1; export { bad_name };",
+            Some(serde_json::json!(["^[^_]+$"])),
+        ),
         (
             "const bad_name = 1; export { bad_name as bad_name };",
             Some(serde_json::json!(["^[^_]+$"])),
@@ -1278,7 +1441,10 @@ fn test() {
             "const bad_name = 1; export { bad_name as goodName };",
             Some(serde_json::json!(["^[^_]+$"])),
         ),
-        ("bad_label: while (foo) { break bad_label; }", Some(serde_json::json!(["^[^_]+$"]))),
+        (
+            "bad_label: while (foo) { break bad_label; }",
+            Some(serde_json::json!(["^[^_]+$"])),
+        ),
         // Intentionally stricter than ESLint/origin: keys outside the inner
         // `with` attribute object are still ordinary user-controlled names.
         (
@@ -1299,21 +1465,42 @@ fn test() {
             "class C { accessor #bad_name = 1 }",
             Some(serde_json::json!([ "^[^_]+$", { "classFields": true, }, ])),
         ),
-        ("({ [bad_name]: value } = obj);", Some(serde_json::json!(["^[^_]+$"]))),
+        (
+            "({ [bad_name]: value } = obj);",
+            Some(serde_json::json!(["^[^_]+$"])),
+        ),
         (
             "const { [bad_name]: goodName } = obj;",
             Some(serde_json::json!([ "^[^_]+$", { "ignoreDestructuring": true, }, ])),
         ),
-        ("const { user: { bad_name } } = response;", Some(serde_json::json!(["^[^_]+$"]))),
-        ("for (const { bad_name } of users) {}", Some(serde_json::json!(["^[^_]+$"]))),
-        ("try {} catch (bad_name) {}", Some(serde_json::json!(["^[^_]+$"]))),
-        ("function* bad_gen() {}", Some(serde_json::json!(["^[^_]+$"]))),
-        ("async function bad_async() {}", Some(serde_json::json!(["^[^_]+$"]))),
+        (
+            "const { user: { bad_name } } = response;",
+            Some(serde_json::json!(["^[^_]+$"])),
+        ),
+        (
+            "for (const { bad_name } of users) {}",
+            Some(serde_json::json!(["^[^_]+$"])),
+        ),
+        (
+            "try {} catch (bad_name) {}",
+            Some(serde_json::json!(["^[^_]+$"])),
+        ),
+        (
+            "function* bad_gen() {}",
+            Some(serde_json::json!(["^[^_]+$"])),
+        ),
+        (
+            "async function bad_async() {}",
+            Some(serde_json::json!(["^[^_]+$"])),
+        ),
         (
             "class C { static #bad_private = 1 }",
             Some(serde_json::json!([ "^[^_]+$", { "classFields": true, }, ])),
         ),
-        ("const o = { [bad_name + suffix]: 1 }", Some(serde_json::json!(["^[^_]+$"]))),
+        (
+            "const o = { [bad_name + suffix]: 1 }",
+            Some(serde_json::json!(["^[^_]+$"])),
+        ),
         (
             "class C { accessor [bad_name] = 1 }",
             Some(serde_json::json!([ "^[^_]+$", { "classFields": true, }, ])),
@@ -1342,17 +1529,35 @@ fn test_typescript() {
             "type FooBar = string;",
             Some(serde_json::json!([ "^[^_]+$", { "onlyDeclarations": true, }, ])),
         ),
-        ("enum FooBar {}", Some(serde_json::json!([ "^[^_]+$", { "onlyDeclarations": true, }, ]))),
-        ("(bad_name as Foo).foo", Some(serde_json::json!(["^[^_]+$"]))),
+        (
+            "enum FooBar {}",
+            Some(serde_json::json!([ "^[^_]+$", { "onlyDeclarations": true, }, ])),
+        ),
+        (
+            "(bad_name as Foo).foo",
+            Some(serde_json::json!(["^[^_]+$"])),
+        ),
         ("bad_name!.foo", Some(serde_json::json!(["^[^_]+$"]))),
     ];
 
     let fail = vec![
-        ("interface Bad_Name {}", Some(serde_json::json!(["^[^_]+$"]))),
-        ("type Bad_Name = string;", Some(serde_json::json!(["^[^_]+$"]))),
+        (
+            "interface Bad_Name {}",
+            Some(serde_json::json!(["^[^_]+$"])),
+        ),
+        (
+            "type Bad_Name = string;",
+            Some(serde_json::json!(["^[^_]+$"])),
+        ),
         ("enum Bad_Name {}", Some(serde_json::json!(["^[^_]+$"]))),
-        ("(bad_name as Foo).foo", Some(serde_json::json!([ "^[^_]+$", { "properties": true, }, ]))),
-        ("bad_name!.foo", Some(serde_json::json!([ "^[^_]+$", { "properties": true, }, ]))),
+        (
+            "(bad_name as Foo).foo",
+            Some(serde_json::json!([ "^[^_]+$", { "properties": true, }, ])),
+        ),
+        (
+            "bad_name!.foo",
+            Some(serde_json::json!([ "^[^_]+$", { "properties": true, }, ])),
+        ),
     ];
 
     Tester::new(IdMatch::NAME, IdMatch::PLUGIN, pass, fail)

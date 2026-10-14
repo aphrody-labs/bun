@@ -39,91 +39,601 @@ pub static ENUMS: phf::Map<&'static str, EnumDetails> = ::phf::Map {
         (0, 15),
     ],
     entries: &[
-        ("ImportAttributeKey", EnumDetails { is_fieldless: false, inherits: &[] }),
-        ("UpdateOperator", EnumDetails { is_fieldless: true, inherits: &[] }),
-        ("JSXAttributeItem", EnumDetails { is_fieldless: false, inherits: &[] }),
-        ("ClassType", EnumDetails { is_fieldless: true, inherits: &[] }),
-        ("ErrorSeverity", EnumDetails { is_fieldless: true, inherits: &[] }),
-        ("WithClauseKeyword", EnumDetails { is_fieldless: true, inherits: &[] }),
-        ("Term", EnumDetails { is_fieldless: false, inherits: &[] }),
-        ("JSXElementName", EnumDetails { is_fieldless: false, inherits: &[] }),
-        ("CharacterClassContentsKind", EnumDetails { is_fieldless: true, inherits: &[] }),
-        ("ObjectPropertyKind", EnumDetails { is_fieldless: false, inherits: &[] }),
-        ("Language", EnumDetails { is_fieldless: true, inherits: &[] }),
-        ("Declaration", EnumDetails { is_fieldless: false, inherits: &[] }),
-        ("ModuleKind", EnumDetails { is_fieldless: true, inherits: &[] }),
-        ("FileExtension", EnumDetails { is_fieldless: true, inherits: &[] }),
-        ("TSEnumMemberName", EnumDetails { is_fieldless: false, inherits: &[] }),
-        ("NumberBase", EnumDetails { is_fieldless: true, inherits: &[] }),
-        ("JSXAttributeName", EnumDetails { is_fieldless: false, inherits: &[] }),
-        ("ModuleExportName", EnumDetails { is_fieldless: false, inherits: &[] }),
-        ("TSType", EnumDetails { is_fieldless: false, inherits: &[] }),
-        ("UnaryOperator", EnumDetails { is_fieldless: true, inherits: &[] }),
-        ("VariableDeclarationKind", EnumDetails { is_fieldless: true, inherits: &[] }),
-        ("TSMappedTypeModifierOperator", EnumDetails { is_fieldless: true, inherits: &[] }),
-        ("ClassElement", EnumDetails { is_fieldless: false, inherits: &[] }),
-        ("ChainElement", EnumDetails { is_fieldless: false, inherits: &[1] }),
-        ("CharacterClassEscapeKind", EnumDetails { is_fieldless: true, inherits: &[] }),
-        ("Expression", EnumDetails { is_fieldless: false, inherits: &[1] }),
-        ("ForStatementInit", EnumDetails { is_fieldless: false, inherits: &[0] }),
-        ("JSXExpression", EnumDetails { is_fieldless: false, inherits: &[0] }),
-        ("ArrayExpressionElement", EnumDetails { is_fieldless: false, inherits: &[0] }),
-        ("LanguageVariant", EnumDetails { is_fieldless: true, inherits: &[] }),
-        ("TSNamespaceDeclarationBody", EnumDetails { is_fieldless: false, inherits: &[] }),
-        ("Statement", EnumDetails { is_fieldless: false, inherits: &[5, 6] }),
-        ("Argument", EnumDetails { is_fieldless: false, inherits: &[0] }),
-        ("TSTupleElement", EnumDetails { is_fieldless: false, inherits: &[7] }),
-        ("PropertyKey", EnumDetails { is_fieldless: false, inherits: &[0] }),
-        ("ImportDeclarationSpecifier", EnumDetails { is_fieldless: false, inherits: &[] }),
-        ("CommentKind", EnumDetails { is_fieldless: true, inherits: &[] }),
-        ("AccessorPropertyType", EnumDetails { is_fieldless: true, inherits: &[] }),
-        ("AssignmentTargetProperty", EnumDetails { is_fieldless: false, inherits: &[] }),
-        ("TSMethodSignatureKind", EnumDetails { is_fieldless: true, inherits: &[] }),
-        ("ArrowFunctionBody", EnumDetails { is_fieldless: false, inherits: &[0] }),
-        ("LogicalOperator", EnumDetails { is_fieldless: true, inherits: &[] }),
-        ("BinaryOperator", EnumDetails { is_fieldless: true, inherits: &[] }),
-        ("CharacterClassContents", EnumDetails { is_fieldless: false, inherits: &[] }),
-        ("BindingPattern", EnumDetails { is_fieldless: false, inherits: &[] }),
-        ("AssignmentTargetMaybeDefault", EnumDetails { is_fieldless: false, inherits: &[2] }),
-        ("FormalParameterKind", EnumDetails { is_fieldless: true, inherits: &[] }),
-        ("CommentPosition", EnumDetails { is_fieldless: true, inherits: &[] }),
-        ("PropertyKind", EnumDetails { is_fieldless: true, inherits: &[] }),
-        ("TSTypeQueryExprName", EnumDetails { is_fieldless: false, inherits: &[8] }),
-        ("ImportPhase", EnumDetails { is_fieldless: true, inherits: &[] }),
-        ("FunctionType", EnumDetails { is_fieldless: true, inherits: &[] }),
-        ("TSNamespaceDeclarationKind", EnumDetails { is_fieldless: true, inherits: &[] }),
-        ("JSXMemberExpressionObject", EnumDetails { is_fieldless: false, inherits: &[] }),
-        ("ExportExportName", EnumDetails { is_fieldless: false, inherits: &[] }),
-        ("ForStatementLeft", EnumDetails { is_fieldless: false, inherits: &[2] }),
-        ("ImportImportName", EnumDetails { is_fieldless: false, inherits: &[] }),
-        ("AssignmentTarget", EnumDetails { is_fieldless: false, inherits: &[3, 4] }),
-        ("JSXChild", EnumDetails { is_fieldless: false, inherits: &[] }),
-        ("TSSignature", EnumDetails { is_fieldless: false, inherits: &[] }),
-        ("AssignmentOperator", EnumDetails { is_fieldless: true, inherits: &[] }),
-        ("PropertyDefinitionType", EnumDetails { is_fieldless: true, inherits: &[] }),
-        ("MethodDefinitionKind", EnumDetails { is_fieldless: true, inherits: &[] }),
-        ("BigintBase", EnumDetails { is_fieldless: true, inherits: &[] }),
-        ("ExportDefaultDeclarationKind", EnumDetails { is_fieldless: false, inherits: &[0] }),
-        ("TSTypePredicateName", EnumDetails { is_fieldless: false, inherits: &[] }),
-        ("CharacterKind", EnumDetails { is_fieldless: true, inherits: &[] }),
-        ("AssignmentTargetPattern", EnumDetails { is_fieldless: false, inherits: &[] }),
-        ("TSTypeOperatorOperator", EnumDetails { is_fieldless: true, inherits: &[] }),
-        ("CommentContent", EnumDetails { is_fieldless: true, inherits: &[] }),
-        ("TSAccessibility", EnumDetails { is_fieldless: true, inherits: &[] }),
-        ("MethodDefinitionType", EnumDetails { is_fieldless: true, inherits: &[] }),
-        ("TSLiteral", EnumDetails { is_fieldless: false, inherits: &[] }),
-        ("ModuleDeclaration", EnumDetails { is_fieldless: false, inherits: &[] }),
-        ("ExportLocalName", EnumDetails { is_fieldless: false, inherits: &[] }),
-        ("BoundaryAssertionKind", EnumDetails { is_fieldless: true, inherits: &[] }),
-        ("TSImportTypeQualifier", EnumDetails { is_fieldless: false, inherits: &[] }),
-        ("JSXAttributeValue", EnumDetails { is_fieldless: false, inherits: &[] }),
-        ("LookAroundAssertionKind", EnumDetails { is_fieldless: true, inherits: &[] }),
-        ("ExportImportName", EnumDetails { is_fieldless: false, inherits: &[] }),
-        ("TSTypeName", EnumDetails { is_fieldless: false, inherits: &[] }),
-        ("SimpleAssignmentTarget", EnumDetails { is_fieldless: false, inherits: &[1] }),
-        ("ImportOrExportKind", EnumDetails { is_fieldless: true, inherits: &[] }),
-        ("TSModuleReference", EnumDetails { is_fieldless: false, inherits: &[] }),
-        ("MemberExpression", EnumDetails { is_fieldless: false, inherits: &[] }),
+        (
+            "ImportAttributeKey",
+            EnumDetails {
+                is_fieldless: false,
+                inherits: &[],
+            },
+        ),
+        (
+            "UpdateOperator",
+            EnumDetails {
+                is_fieldless: true,
+                inherits: &[],
+            },
+        ),
+        (
+            "JSXAttributeItem",
+            EnumDetails {
+                is_fieldless: false,
+                inherits: &[],
+            },
+        ),
+        (
+            "ClassType",
+            EnumDetails {
+                is_fieldless: true,
+                inherits: &[],
+            },
+        ),
+        (
+            "ErrorSeverity",
+            EnumDetails {
+                is_fieldless: true,
+                inherits: &[],
+            },
+        ),
+        (
+            "WithClauseKeyword",
+            EnumDetails {
+                is_fieldless: true,
+                inherits: &[],
+            },
+        ),
+        (
+            "Term",
+            EnumDetails {
+                is_fieldless: false,
+                inherits: &[],
+            },
+        ),
+        (
+            "JSXElementName",
+            EnumDetails {
+                is_fieldless: false,
+                inherits: &[],
+            },
+        ),
+        (
+            "CharacterClassContentsKind",
+            EnumDetails {
+                is_fieldless: true,
+                inherits: &[],
+            },
+        ),
+        (
+            "ObjectPropertyKind",
+            EnumDetails {
+                is_fieldless: false,
+                inherits: &[],
+            },
+        ),
+        (
+            "Language",
+            EnumDetails {
+                is_fieldless: true,
+                inherits: &[],
+            },
+        ),
+        (
+            "Declaration",
+            EnumDetails {
+                is_fieldless: false,
+                inherits: &[],
+            },
+        ),
+        (
+            "ModuleKind",
+            EnumDetails {
+                is_fieldless: true,
+                inherits: &[],
+            },
+        ),
+        (
+            "FileExtension",
+            EnumDetails {
+                is_fieldless: true,
+                inherits: &[],
+            },
+        ),
+        (
+            "TSEnumMemberName",
+            EnumDetails {
+                is_fieldless: false,
+                inherits: &[],
+            },
+        ),
+        (
+            "NumberBase",
+            EnumDetails {
+                is_fieldless: true,
+                inherits: &[],
+            },
+        ),
+        (
+            "JSXAttributeName",
+            EnumDetails {
+                is_fieldless: false,
+                inherits: &[],
+            },
+        ),
+        (
+            "ModuleExportName",
+            EnumDetails {
+                is_fieldless: false,
+                inherits: &[],
+            },
+        ),
+        (
+            "TSType",
+            EnumDetails {
+                is_fieldless: false,
+                inherits: &[],
+            },
+        ),
+        (
+            "UnaryOperator",
+            EnumDetails {
+                is_fieldless: true,
+                inherits: &[],
+            },
+        ),
+        (
+            "VariableDeclarationKind",
+            EnumDetails {
+                is_fieldless: true,
+                inherits: &[],
+            },
+        ),
+        (
+            "TSMappedTypeModifierOperator",
+            EnumDetails {
+                is_fieldless: true,
+                inherits: &[],
+            },
+        ),
+        (
+            "ClassElement",
+            EnumDetails {
+                is_fieldless: false,
+                inherits: &[],
+            },
+        ),
+        (
+            "ChainElement",
+            EnumDetails {
+                is_fieldless: false,
+                inherits: &[1],
+            },
+        ),
+        (
+            "CharacterClassEscapeKind",
+            EnumDetails {
+                is_fieldless: true,
+                inherits: &[],
+            },
+        ),
+        (
+            "Expression",
+            EnumDetails {
+                is_fieldless: false,
+                inherits: &[1],
+            },
+        ),
+        (
+            "ForStatementInit",
+            EnumDetails {
+                is_fieldless: false,
+                inherits: &[0],
+            },
+        ),
+        (
+            "JSXExpression",
+            EnumDetails {
+                is_fieldless: false,
+                inherits: &[0],
+            },
+        ),
+        (
+            "ArrayExpressionElement",
+            EnumDetails {
+                is_fieldless: false,
+                inherits: &[0],
+            },
+        ),
+        (
+            "LanguageVariant",
+            EnumDetails {
+                is_fieldless: true,
+                inherits: &[],
+            },
+        ),
+        (
+            "TSNamespaceDeclarationBody",
+            EnumDetails {
+                is_fieldless: false,
+                inherits: &[],
+            },
+        ),
+        (
+            "Statement",
+            EnumDetails {
+                is_fieldless: false,
+                inherits: &[5, 6],
+            },
+        ),
+        (
+            "Argument",
+            EnumDetails {
+                is_fieldless: false,
+                inherits: &[0],
+            },
+        ),
+        (
+            "TSTupleElement",
+            EnumDetails {
+                is_fieldless: false,
+                inherits: &[7],
+            },
+        ),
+        (
+            "PropertyKey",
+            EnumDetails {
+                is_fieldless: false,
+                inherits: &[0],
+            },
+        ),
+        (
+            "ImportDeclarationSpecifier",
+            EnumDetails {
+                is_fieldless: false,
+                inherits: &[],
+            },
+        ),
+        (
+            "CommentKind",
+            EnumDetails {
+                is_fieldless: true,
+                inherits: &[],
+            },
+        ),
+        (
+            "AccessorPropertyType",
+            EnumDetails {
+                is_fieldless: true,
+                inherits: &[],
+            },
+        ),
+        (
+            "AssignmentTargetProperty",
+            EnumDetails {
+                is_fieldless: false,
+                inherits: &[],
+            },
+        ),
+        (
+            "TSMethodSignatureKind",
+            EnumDetails {
+                is_fieldless: true,
+                inherits: &[],
+            },
+        ),
+        (
+            "ArrowFunctionBody",
+            EnumDetails {
+                is_fieldless: false,
+                inherits: &[0],
+            },
+        ),
+        (
+            "LogicalOperator",
+            EnumDetails {
+                is_fieldless: true,
+                inherits: &[],
+            },
+        ),
+        (
+            "BinaryOperator",
+            EnumDetails {
+                is_fieldless: true,
+                inherits: &[],
+            },
+        ),
+        (
+            "CharacterClassContents",
+            EnumDetails {
+                is_fieldless: false,
+                inherits: &[],
+            },
+        ),
+        (
+            "BindingPattern",
+            EnumDetails {
+                is_fieldless: false,
+                inherits: &[],
+            },
+        ),
+        (
+            "AssignmentTargetMaybeDefault",
+            EnumDetails {
+                is_fieldless: false,
+                inherits: &[2],
+            },
+        ),
+        (
+            "FormalParameterKind",
+            EnumDetails {
+                is_fieldless: true,
+                inherits: &[],
+            },
+        ),
+        (
+            "CommentPosition",
+            EnumDetails {
+                is_fieldless: true,
+                inherits: &[],
+            },
+        ),
+        (
+            "PropertyKind",
+            EnumDetails {
+                is_fieldless: true,
+                inherits: &[],
+            },
+        ),
+        (
+            "TSTypeQueryExprName",
+            EnumDetails {
+                is_fieldless: false,
+                inherits: &[8],
+            },
+        ),
+        (
+            "ImportPhase",
+            EnumDetails {
+                is_fieldless: true,
+                inherits: &[],
+            },
+        ),
+        (
+            "FunctionType",
+            EnumDetails {
+                is_fieldless: true,
+                inherits: &[],
+            },
+        ),
+        (
+            "TSNamespaceDeclarationKind",
+            EnumDetails {
+                is_fieldless: true,
+                inherits: &[],
+            },
+        ),
+        (
+            "JSXMemberExpressionObject",
+            EnumDetails {
+                is_fieldless: false,
+                inherits: &[],
+            },
+        ),
+        (
+            "ExportExportName",
+            EnumDetails {
+                is_fieldless: false,
+                inherits: &[],
+            },
+        ),
+        (
+            "ForStatementLeft",
+            EnumDetails {
+                is_fieldless: false,
+                inherits: &[2],
+            },
+        ),
+        (
+            "ImportImportName",
+            EnumDetails {
+                is_fieldless: false,
+                inherits: &[],
+            },
+        ),
+        (
+            "AssignmentTarget",
+            EnumDetails {
+                is_fieldless: false,
+                inherits: &[3, 4],
+            },
+        ),
+        (
+            "JSXChild",
+            EnumDetails {
+                is_fieldless: false,
+                inherits: &[],
+            },
+        ),
+        (
+            "TSSignature",
+            EnumDetails {
+                is_fieldless: false,
+                inherits: &[],
+            },
+        ),
+        (
+            "AssignmentOperator",
+            EnumDetails {
+                is_fieldless: true,
+                inherits: &[],
+            },
+        ),
+        (
+            "PropertyDefinitionType",
+            EnumDetails {
+                is_fieldless: true,
+                inherits: &[],
+            },
+        ),
+        (
+            "MethodDefinitionKind",
+            EnumDetails {
+                is_fieldless: true,
+                inherits: &[],
+            },
+        ),
+        (
+            "BigintBase",
+            EnumDetails {
+                is_fieldless: true,
+                inherits: &[],
+            },
+        ),
+        (
+            "ExportDefaultDeclarationKind",
+            EnumDetails {
+                is_fieldless: false,
+                inherits: &[0],
+            },
+        ),
+        (
+            "TSTypePredicateName",
+            EnumDetails {
+                is_fieldless: false,
+                inherits: &[],
+            },
+        ),
+        (
+            "CharacterKind",
+            EnumDetails {
+                is_fieldless: true,
+                inherits: &[],
+            },
+        ),
+        (
+            "AssignmentTargetPattern",
+            EnumDetails {
+                is_fieldless: false,
+                inherits: &[],
+            },
+        ),
+        (
+            "TSTypeOperatorOperator",
+            EnumDetails {
+                is_fieldless: true,
+                inherits: &[],
+            },
+        ),
+        (
+            "CommentContent",
+            EnumDetails {
+                is_fieldless: true,
+                inherits: &[],
+            },
+        ),
+        (
+            "TSAccessibility",
+            EnumDetails {
+                is_fieldless: true,
+                inherits: &[],
+            },
+        ),
+        (
+            "MethodDefinitionType",
+            EnumDetails {
+                is_fieldless: true,
+                inherits: &[],
+            },
+        ),
+        (
+            "TSLiteral",
+            EnumDetails {
+                is_fieldless: false,
+                inherits: &[],
+            },
+        ),
+        (
+            "ModuleDeclaration",
+            EnumDetails {
+                is_fieldless: false,
+                inherits: &[],
+            },
+        ),
+        (
+            "ExportLocalName",
+            EnumDetails {
+                is_fieldless: false,
+                inherits: &[],
+            },
+        ),
+        (
+            "BoundaryAssertionKind",
+            EnumDetails {
+                is_fieldless: true,
+                inherits: &[],
+            },
+        ),
+        (
+            "TSImportTypeQualifier",
+            EnumDetails {
+                is_fieldless: false,
+                inherits: &[],
+            },
+        ),
+        (
+            "JSXAttributeValue",
+            EnumDetails {
+                is_fieldless: false,
+                inherits: &[],
+            },
+        ),
+        (
+            "LookAroundAssertionKind",
+            EnumDetails {
+                is_fieldless: true,
+                inherits: &[],
+            },
+        ),
+        (
+            "ExportImportName",
+            EnumDetails {
+                is_fieldless: false,
+                inherits: &[],
+            },
+        ),
+        (
+            "TSTypeName",
+            EnumDetails {
+                is_fieldless: false,
+                inherits: &[],
+            },
+        ),
+        (
+            "SimpleAssignmentTarget",
+            EnumDetails {
+                is_fieldless: false,
+                inherits: &[1],
+            },
+        ),
+        (
+            "ImportOrExportKind",
+            EnumDetails {
+                is_fieldless: true,
+                inherits: &[],
+            },
+        ),
+        (
+            "TSModuleReference",
+            EnumDetails {
+                is_fieldless: false,
+                inherits: &[],
+            },
+        ),
+        (
+            "MemberExpression",
+            EnumDetails {
+                is_fieldless: false,
+                inherits: &[],
+            },
+        ),
     ],
 };
 

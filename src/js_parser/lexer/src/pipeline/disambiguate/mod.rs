@@ -65,7 +65,11 @@ pub(crate) struct State {
 
 impl Default for State {
     fn default() -> Self {
-        State { walks: Walks::new(), brackets: Brackets::default(), closers: Closers::default() }
+        State {
+            walks: Walks::new(),
+            brackets: Brackets::default(),
+            closers: Closers::default(),
+        }
     }
 }
 

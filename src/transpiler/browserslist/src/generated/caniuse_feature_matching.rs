@@ -68,6 +68,9 @@ static RANGES: &[u16] = &[
     43544u16,
 ];
 pub fn get_feature_stat(name: &str) -> Option<Feature> {
-    let index = KEYS.get().binary_search_by(|key| key.as_str().cmp(name)).ok()?;
+    let index = KEYS
+        .get()
+        .binary_search_by(|key| key.as_str().cmp(name))
+        .ok()?;
     Some(Feature::new(RANGES[index].into(), RANGES[index + 1].into()))
 }

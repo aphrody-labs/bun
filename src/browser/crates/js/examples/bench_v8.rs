@@ -1,8 +1,8 @@
 //! Banc V8 de reference (METHOD S2, S4c, S6, S7) sur le vrai runtime d'BunBrowser.
 //! `cargo run --release -p bun_browser_js --example bench_v8 -- [realms] [calls]`
 //! Sortie : une ligne JSON. Le snapshot de `bootstrap.js` est celui du build.
-use deno_core::{op2, JsRuntime, RuntimeOptions};
 use bun_browser_js::runtime::BunBrowserJsRuntime;
+use deno_core::{op2, JsRuntime, RuntimeOptions};
 use std::time::Instant;
 
 #[op2(fast)]
@@ -30,7 +30,11 @@ fn status_kib(key: &str) -> u64 {
 fn stats(mut v: Vec<f64>) -> serde_json::Value {
     v.sort_by(|a, b| a.partial_cmp(b).unwrap());
     let n = v.len();
-    let med = if n % 2 == 1 { v[n / 2] } else { (v[n / 2 - 1] + v[n / 2]) / 2.0 };
+    let med = if n % 2 == 1 {
+        v[n / 2]
+    } else {
+        (v[n / 2 - 1] + v[n / 2]) / 2.0
+    };
     let p95 = v[((n as f64 * 0.95).ceil() as usize).min(n) - 1];
     serde_json::json!({"min": v[0], "median": med, "p95": p95, "samples": v})
 }
@@ -38,7 +42,10 @@ fn stats(mut v: Vec<f64>) -> serde_json::Value {
 fn main() {
     let args: Vec<String> = std::env::args().collect();
     let realms: usize = args.get(1).and_then(|s| s.parse().ok()).unwrap_or(30);
-    let calls: u64 = args.get(2).and_then(|s| s.parse().ok()).unwrap_or(1_000_000);
+    let calls: u64 = args
+        .get(2)
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(1_000_000);
 
     // S2/S4c : creation d'un runtime BunBrowser (isolat + restauration du snapshot de bootstrap.js).
     let t = Instant::now();
@@ -82,7 +89,9 @@ fn main() {
     let run_raw = |rt: &mut JsRuntime, body: &str| -> f64 {
         let v = rt.execute_script("<s7>", loop_src(body)).unwrap();
         deno_core::scope!(scope, rt);
-        deno_core::v8::Local::new(scope, v).number_value(scope).unwrap()
+        deno_core::v8::Local::new(scope, v)
+            .number_value(scope)
+            .unwrap()
     };
     let mut s7_empty = Vec::new();
     let mut s7_op = Vec::new();
@@ -95,7 +104,12 @@ fn main() {
     let mut s7_perf = Vec::new();
     for _ in 0..5 {
         s7_obs_empty.push(obs.evaluate(&loop_src("a+=i;")).unwrap().as_f64().unwrap());
-        s7_perf.push(obs.evaluate(&loop_src("a+=performance.now();")).unwrap().as_f64().unwrap());
+        s7_perf.push(
+            obs.evaluate(&loop_src("a+=performance.now();"))
+                .unwrap()
+                .as_f64()
+                .unwrap(),
+        );
     }
 
     let out = serde_json::json!({

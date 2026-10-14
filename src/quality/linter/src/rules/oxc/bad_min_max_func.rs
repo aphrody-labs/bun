@@ -95,7 +95,9 @@ enum MinMax {
 
 impl BadMinMaxFunc {
     fn min_max<'a>(node: &'a CallExpression<'a>) -> Option<(MinMax, Vec<&'a CallExpression<'a>>)> {
-        let CallExpression { callee, arguments, .. } = node;
+        let CallExpression {
+            callee, arguments, ..
+        } = node;
 
         let member_expr = callee.get_member_expr()?;
         let Expression::Identifier(ident) = member_expr.object() else {
@@ -106,7 +108,11 @@ impl BadMinMaxFunc {
         }
 
         let number_args = arguments.iter().filter_map(|arg| {
-            if let Argument::NumericLiteral(literal) = arg { Some(literal.value) } else { None }
+            if let Argument::NumericLiteral(literal) = arg {
+                Some(literal.value)
+            } else {
+                None
+            }
         });
 
         let min_max = match member_expr.static_property_name() {
@@ -118,7 +124,11 @@ impl BadMinMaxFunc {
         let mut inner = vec![];
 
         for expr in arguments.iter().filter_map(|arg| {
-            if let Argument::CallExpression(expr) = arg { Some(&**expr) } else { None }
+            if let Argument::CallExpression(expr) = arg {
+                Some(&**expr)
+            } else {
+                None
+            }
         }) {
             inner.push(expr);
         }

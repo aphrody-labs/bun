@@ -140,7 +140,9 @@ impl Rule for DefineEmitsDeclaration {
     }
 
     fn run<'a>(&self, node: &AstNode<'a>, ctx: &LintContext<'a>) {
-        let AstKind::CallExpression(call_expr) = node.kind() else { return };
+        let AstKind::CallExpression(call_expr) = node.kind() else {
+            return;
+        };
 
         // only check call Expression which is `defineEmits`
         if call_expr
@@ -183,7 +185,11 @@ impl Rule for DefineEmitsDeclaration {
                 }
             }
             DeclarationStyle::Runtime => {
-                if call_expr.type_arguments.as_ref().is_some_and(|args| !args.params.is_empty()) {
+                if call_expr
+                    .type_arguments
+                    .as_ref()
+                    .is_some_and(|args| !args.params.is_empty())
+                {
                     ctx.diagnostic(has_type_arg_diagnostic(call_expr.span));
                 }
             }
@@ -386,6 +392,11 @@ fn test() {
         ), // {        "parserOptions": {          "parser": require.resolve("@typescript-eslint/parser")        }      }
     ];
 
-    Tester::new(DefineEmitsDeclaration::NAME, DefineEmitsDeclaration::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        DefineEmitsDeclaration::NAME,
+        DefineEmitsDeclaration::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

@@ -104,8 +104,11 @@ impl Rule for NoMultiComp {
         finder.visit_program(ctx.nodes().program());
 
         // Filter components based on ignoreStateless option and report all after the first
-        for component in
-            finder.components.iter().filter(|c| !self.0.ignore_stateless || !c.is_stateless).skip(1)
+        for component in finder
+            .components
+            .iter()
+            .filter(|c| !self.0.ignore_stateless || !c.is_stateless)
+            .skip(1)
         {
             ctx.diagnostic(no_multi_comp_diagnostic(&component.name, component.span));
         }
@@ -128,12 +131,21 @@ struct ComponentFinder<'a, 'ctx> {
 
 impl<'a, 'ctx> ComponentFinder<'a, 'ctx> {
     fn new(ctx: &'ctx LintContext<'a>) -> Self {
-        Self { components: Vec::new(), component_depth: 0, ctx, current_var_name: None }
+        Self {
+            components: Vec::new(),
+            component_depth: 0,
+            ctx,
+            current_var_name: None,
+        }
     }
 
     fn record_component(&mut self, name: String, span: Span, is_stateless: bool) {
         if self.component_depth == 0 {
-            self.components.push(DetectedComponent { name, span, is_stateless });
+            self.components.push(DetectedComponent {
+                name,
+                span,
+                is_stateless,
+            });
         }
     }
 }
@@ -190,7 +202,10 @@ impl<'a> VisitJs<'a> for ComponentFinder<'a, '_> {
     fn visit_call_expression(&mut self, call: &CallExpression<'a>) {
         // ES5 component: createReactClass({...})
         if is_es5_component_call(call) && self.component_depth == 0 {
-            let name = self.current_var_name.clone().unwrap_or_else(|| "UnnamedComponent".into());
+            let name = self
+                .current_var_name
+                .clone()
+                .unwrap_or_else(|| "UnnamedComponent".into());
             self.record_component(name, call.span, false);
             self.component_depth += 1;
             walk_js::walk_call_expression(self, call);
@@ -270,7 +285,11 @@ fn detect_variable_component(
 
     // Arrow function or function expression with JSX, or returning null (valid component pattern)
     if expression_contains_jsx(init) || is_function_returning_null(init) {
-        return Some(DetectedComponent { name, span: decl.span, is_stateless: true });
+        return Some(DetectedComponent {
+            name,
+            span: decl.span,
+            is_stateless: true,
+        });
     }
 
     // Sequence expression: const Foo = (0, () => <div/>) or const Foo = (0, () => null)
@@ -278,14 +297,22 @@ fn detect_variable_component(
         && let Some(last) = seq.expressions.last()
         && (expression_contains_jsx(last) || is_function_returning_null(last))
     {
-        return Some(DetectedComponent { name, span: decl.span, is_stateless: true });
+        return Some(DetectedComponent {
+            name,
+            span: decl.span,
+            is_stateless: true,
+        });
     }
 
     // HOC: const Foo = memo(() => <div/>)
     if let Expression::CallExpression(call) = init
         && is_hoc_component(call, ctx)
     {
-        return Some(DetectedComponent { name, span: decl.span, is_stateless: true });
+        return Some(DetectedComponent {
+            name,
+            span: decl.span,
+            is_stateless: true,
+        });
     }
 
     None
@@ -338,7 +365,9 @@ fn get_hoc_callee_name(call: &CallExpression, ctx: &LintContext) -> Option<Strin
 
 /// Check if a function just passes through to a single JSX component
 fn is_passthrough_function(func: &oxc_ast::ast::Function) -> bool {
-    func.body.as_ref().is_some_and(|body| is_single_return_passthrough(&body.statements))
+    func.body
+        .as_ref()
+        .is_some_and(|body| is_single_return_passthrough(&body.statements))
 }
 
 /// Check if an arrow function just passes through to a single JSX component
@@ -431,7 +460,9 @@ fn is_es5_component_call(call: &CallExpression) -> bool {
     {
         return member_expr.static_property_name() == Some("createReactClass");
     }
-    call.callee.get_identifier_reference().is_some_and(|id| id.name == "createReactClass")
+    call.callee
+        .get_identifier_reference()
+        .is_some_and(|id| id.name == "createReactClass")
 }
 
 #[test]

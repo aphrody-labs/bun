@@ -144,9 +144,19 @@ fn format_left_trailing_comments(start: u32, f: &mut JsFormatter<'_, '_>) {
     let end_of_line_comments = f.context().comments().end_of_line_comments_after(start);
 
     let comments = if end_of_line_comments.is_empty() {
-        let comments = f.context().comments().comments_before_character(start, b'=');
-        if comments.iter().any(|c| c.preceded_by_newline()) { &[] } else { comments }
-    } else if end_of_line_comments.last().is_some_and(|c| c.is_multiline_block()) {
+        let comments = f
+            .context()
+            .comments()
+            .comments_before_character(start, b'=');
+        if comments.iter().any(|c| c.preceded_by_newline()) {
+            &[]
+        } else {
+            comments
+        }
+    } else if end_of_line_comments
+        .last()
+        .is_some_and(|c| c.is_multiline_block())
+    {
         // A line-ending multiline block is promoted own-line above the right-hand side
         &[]
     } else {
@@ -312,7 +322,10 @@ impl<'a> AssignmentLike<'a, '_> {
                 if let Some(type_parameters) = &declaration.type_parameters() {
                     write!(
                         f,
-                        [declaration.id(), FormatNodeWithoutTrailingComments(type_parameters)]
+                        [
+                            declaration.id(),
+                            FormatNodeWithoutTrailingComments(type_parameters)
+                        ]
                     );
                 } else {
                     write!(f, [FormatNodeWithoutTrailingComments(declaration.id())]);
@@ -365,7 +378,13 @@ impl<'a> AssignmentLike<'a, '_> {
     fn write_right(&self, f: &mut JsFormatter<'_, 'a>, layout: AssignmentLikeLayout) {
         match self {
             Self::VariableDeclarator(declarator) => {
-                write!(f, [with_assignment_layout(declarator.init().unwrap(), Some(layout))]);
+                write!(
+                    f,
+                    [with_assignment_layout(
+                        declarator.init().unwrap(),
+                        Some(layout)
+                    )]
+                );
             }
             Self::AssignmentExpression(assignment) => {
                 let right = assignment.right();
@@ -382,10 +401,22 @@ impl<'a> AssignmentLike<'a, '_> {
                 write!(f, property.binding());
             }
             Self::PropertyDefinition(property) => {
-                write!(f, [with_assignment_layout(property.value().unwrap(), Some(layout))]);
+                write!(
+                    f,
+                    [with_assignment_layout(
+                        property.value().unwrap(),
+                        Some(layout)
+                    )]
+                );
             }
             Self::AccessorProperty(property) => {
-                write!(f, [with_assignment_layout(property.value().unwrap(), Some(layout))]);
+                write!(
+                    f,
+                    [with_assignment_layout(
+                        property.value().unwrap(),
+                        Some(layout)
+                    )]
+                );
             }
             Self::TSTypeAliasDeclaration(declaration) => {
                 write!(f, [declaration.type_annotation()]);
@@ -416,7 +447,9 @@ impl<'a> AssignmentLike<'a, '_> {
                 .callee
                 .get_identifier_reference()
                 .is_some_and(|ident| ident.name == "require")
-            && !f.comments().has_leading_own_line_comment(call_expression.span.start)
+            && !f
+                .comments()
+                .has_leading_own_line_comment(call_expression.span.start)
         {
             return AssignmentLikeLayout::NeverBreakAfterOperator;
         }
@@ -548,8 +581,15 @@ impl<'a> AssignmentLike<'a, '_> {
         if f.context().comments().has_comment_before(operator_end) {
             return &[];
         }
-        let run = f.context().comments().end_of_line_comments_after(operator_end);
-        if run.last().is_some_and(|c| c.is_line()) { run } else { &[] }
+        let run = f
+            .context()
+            .comments()
+            .end_of_line_comments_after(operator_end);
+        if run.last().is_some_and(|c| c.is_line()) {
+            run
+        } else {
+            &[]
+        }
     }
 
     /// End of the left-hand side (type annotation included), before the operator and any comments around it.
@@ -738,7 +778,8 @@ impl<'a> AssignmentLike<'a, '_> {
             }
         } else {
             // A pattern on the right side: only comments on their own line force the break
-            self.right_start().is_some_and(|start| comments.has_leading_own_line_comment(start))
+            self.right_start()
+                .is_some_and(|start| comments.has_leading_own_line_comment(start))
         }
     }
 
@@ -921,17 +962,23 @@ impl<'a> Format<'a, JsFormatContext<'a>> for AssignmentLike<'a, '_> {
             let operator_end = self.commented_operator_position(f);
             let view_limit =
                 operator_end.map(|end| f.context_mut().comments_mut().limit_comments_up_to(end));
-            let is_left_short =
-                self.write_left(&mut Formatter::new(&mut formatted_left.writer(f.state_mut())));
+            let is_left_short = self.write_left(&mut Formatter::new(
+                &mut formatted_left.writer(f.state_mut()),
+            ));
             if let Some(view_limit) = view_limit {
-                f.context_mut().comments_mut().restore_view_limit(view_limit);
+                f.context_mut()
+                    .comments_mut()
+                    .restore_view_limit(view_limit);
             }
             let operator_line_run =
                 operator_end.map_or(&[][..], |end| Self::operator_line_run(end, f));
             // A line comment on the operator's line, before it (printed by the left side) or after it (the run):
             // the pending `line_suffix` must be followed by the break, or it flushes past the right-hand side
             let has_line_comment_on_operator_line = !operator_line_run.is_empty()
-                || f.context().comments().printed_line_comment_after(self.left_end()).is_some();
+                || f.context()
+                    .comments()
+                    .printed_line_comment_after(self.left_end())
+                    .is_some();
             let left_may_break = formatted_left.may_directly_break();
 
             let left = format_once(move |f| f.write_elements(formatted_left.drain()));
@@ -939,8 +986,12 @@ impl<'a> Format<'a, JsFormatContext<'a>> for AssignmentLike<'a, '_> {
             // Compare name only if we are in a position of computing it.
             // If not (for example, left is not an identifier), then let's fallback to false,
             // so we can continue the chain of checks
-            let layout =
-                self.layout(is_left_short, left_may_break, has_line_comment_on_operator_line, f);
+            let layout = self.layout(
+                is_left_short,
+                left_may_break,
+                has_line_comment_on_operator_line,
+                f,
+            );
             let right = format_with(|f| self.write_right(f, layout));
 
             // Whether `BreakAfterOperator` must keep the comment order around the operator (no group):
@@ -969,7 +1020,9 @@ impl<'a> Format<'a, JsFormatContext<'a>> for AssignmentLike<'a, '_> {
                             .any(|c| f.context().comments().is_suppression_comment(c))
                             && let Some(start) = self.right_start()
                         {
-                            f.context_mut().comments_mut().mark_suppressed_after_operator(start);
+                            f.context_mut()
+                                .comments_mut()
+                                .mark_suppressed_after_operator(start);
                         }
                     }
                 }
@@ -1062,7 +1115,8 @@ impl<'a> Format<'a, JsFormatContext<'a>> for WithAssignmentLayout<'a, '_> {
             (self.layout, self.expression.as_ast_nodes())
             && !is_cast_target(arrow.span(), f)
         {
-            f.context_mut().set_arrow_assignment_layout(arrow.span(), layout);
+            f.context_mut()
+                .set_arrow_assignment_layout(arrow.span(), layout);
             arrow.fmt(f);
             f.context_mut().clear_arrow_assignment_layout();
         } else {

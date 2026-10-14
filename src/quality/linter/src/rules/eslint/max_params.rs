@@ -67,7 +67,11 @@ impl std::ops::Deref for MaxParams {
 
 impl Default for MaxParamsConfig {
     fn default() -> Self {
-        Self { max: 3, count_this: None, count_void_this: false }
+        Self {
+            max: 3,
+            count_this: None,
+            count_void_this: false,
+        }
     }
 }
 
@@ -160,7 +164,8 @@ declare_oxc_lint!(
     style,
     config = MaxParamsConfigEnum,
     version = "0.2.14",
-    short_description = "Enforce a maximum number of parameters in function definitions which by default is three.",
+    short_description =
+        "Enforce a maximum number of parameters in function definitions which by default is three.",
 );
 
 impl Rule for MaxParams {
@@ -171,7 +176,10 @@ impl Rule for MaxParams {
             .and_then(serde_json::Number::as_u64)
             .and_then(|v| u32::try_from(v).ok())
         {
-            Ok(Self(Box::new(MaxParamsConfig { max, ..MaxParamsConfig::default() })))
+            Ok(Self(Box::new(MaxParamsConfig {
+                max,
+                ..MaxParamsConfig::default()
+            })))
         } else {
             DefaultRuleConfig::<Self>::from_value(value).map(DefaultRuleConfig::into_inner)
         }
@@ -248,10 +256,19 @@ fn test() {
 
     let pass = vec![
         ("function test(d, e, f) {}", None),
-        ("var test = function(a, b, c) {};", Some(serde_json::json!([3]))),
+        (
+            "var test = function(a, b, c) {};",
+            Some(serde_json::json!([3])),
+        ),
         ("var test = (a, b, c) => {};", Some(serde_json::json!([3]))), // { "ecmaVersion": 6 },
-        ("var test = function test(a, b, c) {};", Some(serde_json::json!([3]))),
-        ("var test = function(a, b, c) {};", Some(serde_json::json!([{ "max": 3 }]))),
+        (
+            "var test = function test(a, b, c) {};",
+            Some(serde_json::json!([3])),
+        ),
+        (
+            "var test = function(a, b, c) {};",
+            Some(serde_json::json!([{ "max": 3 }])),
+        ),
         ("function foo() {}", None),
         ("const foo = function () {};", None),
         ("const foo = () => {};", None),
@@ -280,8 +297,14 @@ fn test() {
                   ",
             None,
         ),
-        ("function foo(a, b, c, d) {}", Some(serde_json::json!([{ "max": 4 }]))),
-        ("function foo(a, b, c, d) {}", Some(serde_json::json!([{ "maximum": 4 }]))),
+        (
+            "function foo(a, b, c, d) {}",
+            Some(serde_json::json!([{ "max": 4 }])),
+        ),
+        (
+            "function foo(a, b, c, d) {}",
+            Some(serde_json::json!([{ "maximum": 4 }])),
+        ),
         (
             "
               class Foo {
@@ -306,12 +329,18 @@ fn test() {
                     ",
             Some(serde_json::json!([{ "countVoidThis": true, "max": 2 }])),
         ),
-        ("function testD(this: void, a) {}", Some(serde_json::json!([{ "max": 1 }]))),
+        (
+            "function testD(this: void, a) {}",
+            Some(serde_json::json!([{ "max": 1 }])),
+        ),
         (
             "function testD(this: void, a) {}",
             Some(serde_json::json!([{ "countVoidThis": true, "max": 2 }])),
         ),
-        ("const testE = function (this: void, a) {}", Some(serde_json::json!([{ "max": 1 }]))),
+        (
+            "const testE = function (this: void, a) {}",
+            Some(serde_json::json!([{ "max": 1 }])),
+        ),
         (
             "const testE = function (this: void, a) {}",
             Some(serde_json::json!([{ "countVoidThis": true, "max": 2 }])),
@@ -341,13 +370,31 @@ fn test() {
     let fail = vec![
         ("function test(a, b, c) {}", Some(serde_json::json!([2]))),
         ("function test(a, b, c, d) {}", None),
-        ("var test = function(a, b, c, d) {};", Some(serde_json::json!([3]))),
-        ("var test = (a, b, c, d) => {};", Some(serde_json::json!([3]))), // { "ecmaVersion": 6 },
+        (
+            "var test = function(a, b, c, d) {};",
+            Some(serde_json::json!([3])),
+        ),
+        (
+            "var test = (a, b, c, d) => {};",
+            Some(serde_json::json!([3])),
+        ), // { "ecmaVersion": 6 },
         ("(function(a, b, c, d) {});", Some(serde_json::json!([3]))),
-        ("var test = function test(a, b, c) {};", Some(serde_json::json!([1]))),
-        ("function test(a, b, c) {}", Some(serde_json::json!([{ "max": 2 }]))),
-        ("function test(a, b, c, d) {}", Some(serde_json::json!([{}]))),
-        ("function test(a) {}", Some(serde_json::json!([{ "max": 0 }]))),
+        (
+            "var test = function test(a, b, c) {};",
+            Some(serde_json::json!([1])),
+        ),
+        (
+            "function test(a, b, c) {}",
+            Some(serde_json::json!([{ "max": 2 }])),
+        ),
+        (
+            "function test(a, b, c, d) {}",
+            Some(serde_json::json!([{}])),
+        ),
+        (
+            "function test(a) {}",
+            Some(serde_json::json!([{ "max": 0 }])),
+        ),
         (
             "function test(a, b, c) {
                           // Just to make it longer
@@ -357,7 +404,10 @@ fn test() {
         ("function foo(a, b, c, d) {}", None),
         ("const foo = function (a, b, c, d) {};", None),
         ("const foo = (a, b, c, d) => {};", None),
-        ("const foo = a => {};", Some(serde_json::json!([{ "max": 0 }]))),
+        (
+            "const foo = a => {};",
+            Some(serde_json::json!([{ "max": 0 }])),
+        ),
         (
             "
               class Foo {

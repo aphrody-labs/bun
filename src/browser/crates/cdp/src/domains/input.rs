@@ -1,4 +1,4 @@
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 
 use crate::dispatch::CdpContext;
 
@@ -64,7 +64,8 @@ const BACKSPACE_JS: &str = "(function() {var t = document.activeElement;if (!t |
      d);}}t.dispatchEvent(globalThis.__bun_browser_markTrusted(new Event('input', \
      {bubbles:true})));})()";
 
-const DELETE_JS: &str = "(function() {var t = document.activeElement;if (!t || (t.localName !== 'input' && \
+const DELETE_JS: &str =
+    "(function() {var t = document.activeElement;if (!t || (t.localName !== 'input' && \
      t.localName !== 'textarea')) return;if (t.hasAttribute('readonly')) return;var v = t.value \
      || '';var s = t.selectionStart, e = t.selectionEnd;if (s == null) return;s = Math.max(0, \
      Math.min(s, v.length));e = (e == null) ? s : Math.max(0, Math.min(e, v.length));var lo = \
@@ -97,7 +98,12 @@ fn mouse_button_mask(button: &str) -> u64 {
 
 fn modifier_flags(modifiers: u64) -> (bool, bool, bool, bool) {
     // CDP Input.Modifier: Alt=1, Ctrl=2, Meta=4, Shift=8.
-    (modifiers & 1 != 0, modifiers & 2 != 0, modifiers & 4 != 0, modifiers & 8 != 0)
+    (
+        modifiers & 1 != 0,
+        modifiers & 2 != 0,
+        modifiers & 4 != 0,
+        modifiers & 8 != 0,
+    )
 }
 
 pub async fn handle(
@@ -111,14 +117,23 @@ pub async fn handle(
             let event_type = params.get("type").and_then(|v| v.as_str()).unwrap_or("");
             let x = params.get("x").and_then(|v| v.as_f64()).unwrap_or(0.0);
             let y = params.get("y").and_then(|v| v.as_f64()).unwrap_or(0.0);
-            let button = params.get("button").and_then(|v| v.as_str()).unwrap_or("left");
+            let button = params
+                .get("button")
+                .and_then(|v| v.as_str())
+                .unwrap_or("left");
             let button_code = mouse_button_code(button);
             let buttons = params
                 .get("buttons")
                 .and_then(|v| v.as_u64())
                 .unwrap_or_else(|| mouse_button_mask(button));
-            let click_count = params.get("clickCount").and_then(|v| v.as_u64()).unwrap_or(1);
-            let modifiers = params.get("modifiers").and_then(|v| v.as_u64()).unwrap_or(0);
+            let click_count = params
+                .get("clickCount")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(1);
+            let modifiers = params
+                .get("modifiers")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
             let (alt_key, ctrl_key, meta_key, shift_key) = modifier_flags(modifiers);
 
             if event_type == "mouseMoved" {
@@ -398,7 +413,7 @@ pub async fn handle(
             }
 
             Ok(json!({}))
-        },
+        }
         // Chrome's Input.insertText: Playwright's fill() focuses the field in
         // page and then types the whole value through this one call (#577).
         "insertText" => {
@@ -409,16 +424,21 @@ pub async fn handle(
                 page.evaluate(&insert_text_js(text, true));
             }
             Ok(json!({}))
-        },
+        }
         "dispatchKeyEvent" => {
             let event_type = params.get("type").and_then(|v| v.as_str()).unwrap_or("");
-            let modifiers = params.get("modifiers").and_then(|v| v.as_u64()).unwrap_or(0);
+            let modifiers = params
+                .get("modifiers")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
             let (alt_key, ctrl_key, meta_key, shift_key) = modifier_flags(modifiers);
             let key = params.get("key").and_then(|v| v.as_str()).unwrap_or("");
             let code = params.get("code").and_then(|v| v.as_str()).unwrap_or("");
             let text = params.get("text").and_then(|v| v.as_str()).unwrap_or("");
-            let virtual_key_code =
-                params.get("windowsVirtualKeyCode").and_then(|v| v.as_u64()).unwrap_or(0);
+            let virtual_key_code = params
+                .get("windowsVirtualKeyCode")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
 
             if let Some(page) = ctx.get_session_page_mut(session_id) {
                 match event_type {
@@ -491,7 +511,7 @@ pub async fn handle(
                         if key == "Delete" {
                             page.evaluate(DELETE_JS);
                         }
-                    },
+                    }
                     "keyUp" => {
                         let js = format!(
                             "(function() {{var target = document.activeElement || \
@@ -505,20 +525,20 @@ pub async fn handle(
                             virtual_key_code = virtual_key_code,
                         );
                         page.evaluate(&js);
-                    },
+                    }
                     "char" => {
                         if !text.is_empty() {
                             page.evaluate(&insert_text_js(text, false));
                             // Pump event loop so Angular change detection picks up the input
                             page.settle(50).await;
                         }
-                    },
-                    _ => {},
+                    }
+                    _ => {}
                 }
             }
 
             Ok(json!({}))
-        },
+        }
         "dispatchTouchEvent" => Ok(json!({})),
         "setIgnoreInputEvents" => Ok(json!({})),
         _ => Err(format!("Unknown Input method: {}", method)),

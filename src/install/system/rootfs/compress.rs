@@ -28,7 +28,9 @@ pub fn gunzip_members(input: &[u8], what: &str) -> Result<Vec<GzMember>> {
         let start = pos;
         let mut data: Vec<u8> = Vec::new();
         loop {
-            let reserve = (input.len() - pos).saturating_mul(4).clamp(64 * 1024, 16 * 1024 * 1024);
+            let reserve = (input.len() - pos)
+                .saturating_mul(4)
+                .clamp(64 * 1024, 16 * 1024 * 1024);
             let (consumed, rc) = dec.step(&input[pos..], &mut data, reserve, FlushValue::NoFlush);
             pos += consumed;
             match rc {
@@ -39,7 +41,11 @@ pub fn gunzip_members(input: &[u8], what: &str) -> Result<Vec<GzMember>> {
                 _ => return Err(bad()),
             }
         }
-        members.push(GzMember { start, end: pos, data });
+        members.push(GzMember {
+            start,
+            end: pos,
+            data,
+        });
     }
     Ok(members)
 }
@@ -86,7 +92,9 @@ pub fn unxz(input: &[u8], what: &str) -> Result<Vec<u8>> {
                 break;
             }
             let header_len = (usize::from(size_byte) + 1) * 4;
-            let header = input.get(pos..pos + header_len).ok_or_else(|| bad("truncated block header"))?;
+            let header = input
+                .get(pos..pos + header_len)
+                .ok_or_else(|| bad("truncated block header"))?;
             let flags = header[1];
             let mut h = 2usize;
             if flags & 0x40 != 0 {
@@ -99,13 +107,20 @@ pub fn unxz(input: &[u8], what: &str) -> Result<Vec<u8>> {
             let mut dict_size = None;
             for _ in 0..filters {
                 let id = read_vli(header, &mut h).ok_or_else(|| bad("filter flags"))?;
-                let props_len = read_vli(header, &mut h).ok_or_else(|| bad("filter flags"))? as usize;
-                let props = header.get(h..h + props_len).ok_or_else(|| bad("filter flags"))?;
+                let props_len =
+                    read_vli(header, &mut h).ok_or_else(|| bad("filter flags"))? as usize;
+                let props = header
+                    .get(h..h + props_len)
+                    .ok_or_else(|| bad("filter flags"))?;
                 h += props_len;
                 match id {
                     0x21 if props_len == 1 => {
                         let bits = u32::from(props[0] & 0x3f);
-                        dict_size = Some(if bits >= 40 { u32::MAX } else { (2 | (bits & 1)) << (bits / 2 + 11) });
+                        dict_size = Some(if bits >= 40 {
+                            u32::MAX
+                        } else {
+                            (2 | (bits & 1)) << (bits / 2 + 11)
+                        });
                     }
                     _ => {
                         return Err(Error::Unsupported(format!(
@@ -161,7 +176,8 @@ fn read_vli(buf: &[u8], pos: &mut usize) -> Option<u64> {
 }
 
 pub fn unzstd(input: &[u8], what: &str) -> Result<Vec<u8>> {
-    bun_zstd::decompress_alloc(input).map_err(|_| Error::Parse(format!("{what}: corrupt zstd data")))
+    bun_zstd::decompress_alloc(input)
+        .map_err(|_| Error::Parse(format!("{what}: corrupt zstd data")))
 }
 
 /// Picks the decoder from the magic bytes (or returns `input` as is).
@@ -173,7 +189,9 @@ pub fn decompress_auto(input: &[u8], what: &str) -> Result<Vec<u8>> {
     } else if input.starts_with(&[0x28, 0xb5, 0x2f, 0xfd]) {
         unzstd(input, what)
     } else if input.starts_with(b"BZh") {
-        Err(Error::Unsupported(format!("{what}: bzip2 archives are not supported")))
+        Err(Error::Unsupported(format!(
+            "{what}: bzip2 archives are not supported"
+        )))
     } else {
         Ok(input.to_vec())
     }

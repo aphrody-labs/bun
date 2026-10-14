@@ -489,7 +489,10 @@ where
                     ContentArrayEnd,
                     token(")"),
                     soft_line_break_or_space(),
-                    text(f.allocator().alloc_str(&std::format!("<START_WITHOUT_END<{top:?}>>"))),
+                    text(
+                        f.allocator()
+                            .alloc_str(&std::format!("<START_WITHOUT_END<{top:?}>>"))
+                    ),
                 ]
             );
         }

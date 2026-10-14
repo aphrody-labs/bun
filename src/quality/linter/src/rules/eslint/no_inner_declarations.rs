@@ -96,13 +96,13 @@ declare_oxc_lint!(
 
 impl Rule for NoInnerDeclarations {
     fn from_configuration(value: serde_json::Value) -> Result<Self, serde_json::error::Error> {
-        let config = value.get(0).and_then(serde_json::Value::as_str).map_or_else(
-            NoInnerDeclarationsConfig::default,
-            |value| match value {
+        let config = value
+            .get(0)
+            .and_then(serde_json::Value::as_str)
+            .map_or_else(NoInnerDeclarationsConfig::default, |value| match value {
                 "functions" => NoInnerDeclarationsConfig::Functions,
                 _ => NoInnerDeclarationsConfig::Both,
-            },
-        );
+            });
 
         // Options follow the mode string, matching ESLint's positional schema
         // `[("functions" | "both"), { … }]`.
@@ -120,15 +120,22 @@ impl Rule for NoInnerDeclarations {
             None
         };
 
-        let namespaces =
-            value.get(1).and_then(|v| v.get("namespaces")).and_then(serde_json::Value::as_str).map(
-                |value| match value {
-                    "allow" => Namespaces::Allow,
-                    _ => Namespaces::Disallow,
-                },
-            );
+        let namespaces = value
+            .get(1)
+            .and_then(|v| v.get("namespaces"))
+            .and_then(serde_json::Value::as_str)
+            .map(|value| match value {
+                "allow" => Namespaces::Allow,
+                _ => Namespaces::Disallow,
+            });
 
-        Ok(Self(config, NoInnerDeclarationsOptions { block_scoped_functions, namespaces }))
+        Ok(Self(
+            config,
+            NoInnerDeclarationsOptions {
+                block_scoped_functions,
+                namespaces,
+            },
+        ))
     }
 
     fn run<'a>(&self, node: &AstNode<'a>, ctx: &LintContext<'a>) {
@@ -238,37 +245,97 @@ fn test() {
 
     let pass = vec![
         ("function doSomething() { }", None),
-        ("function doSomething() { function somethingElse() { } }", None),
+        (
+            "function doSomething() { function somethingElse() { } }",
+            None,
+        ),
         ("(function() { function doSomething() { } }());", None),
         ("if (test) { var fn = function() { }; }", None),
         ("if (test) { var fn = function expr() { }; }", None),
         ("function decl() { var fn = function expr() { }; }", None),
-        ("function decl(arg) { var fn; if (arg) { fn = function() { }; } }", None),
-        ("var x = {doSomething() {function doSomethingElse() {}}}", None), // { "ecmaVersion": 6 },
-        ("function decl(arg) { var fn; if (arg) { fn = function expr() { }; } }", None), // { "ecmaVersion": 6 },
+        (
+            "function decl(arg) { var fn; if (arg) { fn = function() { }; } }",
+            None,
+        ),
+        (
+            "var x = {doSomething() {function doSomethingElse() {}}}",
+            None,
+        ), // { "ecmaVersion": 6 },
+        (
+            "function decl(arg) { var fn; if (arg) { fn = function expr() { }; } }",
+            None,
+        ), // { "ecmaVersion": 6 },
         ("if (test) { var foo; }", None),
-        ("if (test) { let x = 1; }", Some(serde_json::json!(["both"]))), // { "ecmaVersion": 6 },
-        ("if (test) { const x = 1; }", Some(serde_json::json!(["both"]))), // { "ecmaVersion": 6 },
-        ("if (test) { using x = 1; }", Some(serde_json::json!(["both"]))), // { "ecmaVersion": 2026, "sourceType": "module", },
-        ("if (test) { await using x = 1; }", Some(serde_json::json!(["both"]))), // { "ecmaVersion": 2026, "sourceType": "module", },
+        (
+            "if (test) { let x = 1; }",
+            Some(serde_json::json!(["both"])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "if (test) { const x = 1; }",
+            Some(serde_json::json!(["both"])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "if (test) { using x = 1; }",
+            Some(serde_json::json!(["both"])),
+        ), // { "ecmaVersion": 2026, "sourceType": "module", },
+        (
+            "if (test) { await using x = 1; }",
+            Some(serde_json::json!(["both"])),
+        ), // { "ecmaVersion": 2026, "sourceType": "module", },
         ("function doSomething() { while (test) { var foo; } }", None),
         ("var foo;", Some(serde_json::json!(["both"]))),
         ("var foo = 42;", Some(serde_json::json!(["both"]))),
-        ("function doSomething() { var foo; }", Some(serde_json::json!(["both"]))),
-        ("(function() { var foo; }());", Some(serde_json::json!(["both"]))),
+        (
+            "function doSomething() { var foo; }",
+            Some(serde_json::json!(["both"])),
+        ),
+        (
+            "(function() { var foo; }());",
+            Some(serde_json::json!(["both"])),
+        ),
         ("foo(() => { function bar() { } });", None), // { "ecmaVersion": 6 },
-        ("var fn = () => {var foo;}", Some(serde_json::json!(["both"]))), // { "ecmaVersion": 6 },
-        ("var x = {doSomething() {var foo;}}", Some(serde_json::json!(["both"]))), // { "ecmaVersion": 6 },
+        (
+            "var fn = () => {var foo;}",
+            Some(serde_json::json!(["both"])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "var x = {doSomething() {var foo;}}",
+            Some(serde_json::json!(["both"])),
+        ), // { "ecmaVersion": 6 },
         ("export var foo;", Some(serde_json::json!(["both"]))), // { "sourceType": "module", "ecmaVersion": 6 },
-        ("export function bar() {}", Some(serde_json::json!(["both"]))), // { "sourceType": "module", "ecmaVersion": 6 },
-        ("export default function baz() {}", Some(serde_json::json!(["both"]))), // { "sourceType": "module", "ecmaVersion": 6 },
+        (
+            "export function bar() {}",
+            Some(serde_json::json!(["both"])),
+        ), // { "sourceType": "module", "ecmaVersion": 6 },
+        (
+            "export default function baz() {}",
+            Some(serde_json::json!(["both"])),
+        ), // { "sourceType": "module", "ecmaVersion": 6 },
         ("exports.foo = () => {}", Some(serde_json::json!(["both"]))), // { "ecmaVersion": 6 },
-        ("exports.foo = function(){}", Some(serde_json::json!(["both"]))),
-        ("module.exports = function foo(){}", Some(serde_json::json!(["both"]))),
-        ("class C { method() { function foo() {} } }", Some(serde_json::json!(["both"]))), // { "ecmaVersion": 2022 },
-        ("class C { method() { var x; } }", Some(serde_json::json!(["both"]))), // { "ecmaVersion": 2022 },
-        ("class C { static { function foo() {} } }", Some(serde_json::json!(["both"]))), // { "ecmaVersion": 2022 },
-        ("class C { static { var x; } }", Some(serde_json::json!(["both"]))), // { "ecmaVersion": 2022 },
+        (
+            "exports.foo = function(){}",
+            Some(serde_json::json!(["both"])),
+        ),
+        (
+            "module.exports = function foo(){}",
+            Some(serde_json::json!(["both"])),
+        ),
+        (
+            "class C { method() { function foo() {} } }",
+            Some(serde_json::json!(["both"])),
+        ), // { "ecmaVersion": 2022 },
+        (
+            "class C { method() { var x; } }",
+            Some(serde_json::json!(["both"])),
+        ), // { "ecmaVersion": 2022 },
+        (
+            "class C { static { function foo() {} } }",
+            Some(serde_json::json!(["both"])),
+        ), // { "ecmaVersion": 2022 },
+        (
+            "class C { static { var x; } }",
+            Some(serde_json::json!(["both"])),
+        ), // { "ecmaVersion": 2022 },
         (
             "'use strict'
              if (test) { function doSomething() { } }",
@@ -320,30 +387,69 @@ fn test() {
     ];
 
     let fail = vec![
-        ("if (test) { function doSomething() { } }", Some(serde_json::json!(["both"]))),
+        (
+            "if (test) { function doSomething() { } }",
+            Some(serde_json::json!(["both"])),
+        ),
         ("if (foo) var a; ", Some(serde_json::json!(["both"]))),
-        ("if (foo) /* some comments */ var a; ", Some(serde_json::json!(["both"]))),
-        ("if (foo){ function f(){ if(bar){ var a; } } }", Some(serde_json::json!(["both"]))),
-        ("if (foo) function f(){ if(bar) var a; }", Some(serde_json::json!(["both"]))),
-        ("if (foo) { var fn = function(){} } ", Some(serde_json::json!(["both"]))),
+        (
+            "if (foo) /* some comments */ var a; ",
+            Some(serde_json::json!(["both"])),
+        ),
+        (
+            "if (foo){ function f(){ if(bar){ var a; } } }",
+            Some(serde_json::json!(["both"])),
+        ),
+        (
+            "if (foo) function f(){ if(bar) var a; }",
+            Some(serde_json::json!(["both"])),
+        ),
+        (
+            "if (foo) { var fn = function(){} } ",
+            Some(serde_json::json!(["both"])),
+        ),
         ("if (foo)  function f(){} ", None),
-        ("function bar() { if (foo) function f(){}; }", Some(serde_json::json!(["both"]))),
-        ("function bar() { if (foo) var a; }", Some(serde_json::json!(["both"]))),
+        (
+            "function bar() { if (foo) function f(){}; }",
+            Some(serde_json::json!(["both"])),
+        ),
+        (
+            "function bar() { if (foo) var a; }",
+            Some(serde_json::json!(["both"])),
+        ),
         ("if (foo) { var a; }", Some(serde_json::json!(["both"]))),
-        ("function doSomething() { do { function somethingElse() { } } while (test); }", None),
-        ("(function() { if (test) { function doSomething() { } } }());", None),
-        ("while (test) { var foo; }", Some(serde_json::json!(["both"]))),
+        (
+            "function doSomething() { do { function somethingElse() { } } while (test); }",
+            None,
+        ),
+        (
+            "(function() { if (test) { function doSomething() { } } }());",
+            None,
+        ),
+        (
+            "while (test) { var foo; }",
+            Some(serde_json::json!(["both"])),
+        ),
         (
             "function doSomething() { if (test) { var foo = 42; } }",
             Some(serde_json::json!(["both"])),
         ),
-        ("(function() { if (test) { var foo; } }());", Some(serde_json::json!(["both"]))),
+        (
+            "(function() { if (test) { var foo; } }());",
+            Some(serde_json::json!(["both"])),
+        ),
         (
             "const doSomething = () => { if (test) { var foo = 42; } }",
             Some(serde_json::json!(["both"])),
         ), // { "ecmaVersion": 6 },
-        ("class C { method() { if(test) { var foo; } } }", Some(serde_json::json!(["both"]))), // { "ecmaVersion": 6 },
-        ("class C { static { if (test) { var foo; } } }", Some(serde_json::json!(["both"]))), // { "ecmaVersion": 2022 },
+        (
+            "class C { method() { if(test) { var foo; } } }",
+            Some(serde_json::json!(["both"])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "class C { static { if (test) { var foo; } } }",
+            Some(serde_json::json!(["both"])),
+        ), // { "ecmaVersion": 2022 },
         (
             "class C { static { if (test) { function foo() {} } } }",
             Some(serde_json::json!(["both", { "blockScopedFunctions": "disallow" }])),
@@ -391,17 +497,31 @@ fn test() {
             Some(serde_json::json!(["both"])),
         ), // { "ecmaVersion": 2022 }
         // `namespaces` default (disallow); nested blocks inside a namespace still report
-        ("namespace N { function foo() {} }", Some(serde_json::json!(["both"]))),
-        ("namespace N { var x = 1; }", Some(serde_json::json!(["both"]))),
+        (
+            "namespace N { function foo() {} }",
+            Some(serde_json::json!(["both"])),
+        ),
+        (
+            "namespace N { var x = 1; }",
+            Some(serde_json::json!(["both"])),
+        ),
         // an exported declaration inside a namespace is still governed by `namespaces`
-        ("namespace N { export function bar() {} }", Some(serde_json::json!(["both"]))),
+        (
+            "namespace N { export function bar() {} }",
+            Some(serde_json::json!(["both"])),
+        ),
         (
             "namespace N { if (x) { function foo() {} } }",
             Some(serde_json::json!(["both", { "namespaces": "allow" }])),
         ),
     ];
 
-    Tester::new(NoInnerDeclarations::NAME, NoInnerDeclarations::PLUGIN, pass, fail)
-        .change_rule_path_extension("mts")
-        .test_and_snapshot();
+    Tester::new(
+        NoInnerDeclarations::NAME,
+        NoInnerDeclarations::PLUGIN,
+        pass,
+        fail,
+    )
+    .change_rule_path_extension("mts")
+    .test_and_snapshot();
 }

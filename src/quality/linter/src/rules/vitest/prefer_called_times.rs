@@ -97,17 +97,21 @@ impl PreferCalledTimes {
             return;
         }
 
-        let expect_argument = parsed_expect_call.expect_arguments.and_then(|args| args.first());
+        let expect_argument = parsed_expect_call
+            .expect_arguments
+            .and_then(|args| args.first());
 
         ctx.diagnostic_with_fix(prefer_called_times_diagnostic(call_expr.span), |fixer| {
             let param_text = Self::build_expect_argument(expect_argument, fixer);
 
             let modifier_text =
-                parsed_expect_call.modifiers().fold(String::new(), |mut acc, modifier| {
-                    use std::fmt::Write;
-                    write!(&mut acc, ".{}", fixer.source_range(modifier.span)).unwrap();
-                    acc
-                });
+                parsed_expect_call
+                    .modifiers()
+                    .fold(String::new(), |mut acc, modifier| {
+                        use std::fmt::Write;
+                        write!(&mut acc, ".{}", fixer.source_range(modifier.span)).unwrap();
+                        acc
+                    });
 
             let method_text = if matcher.is_name_equal("toBeCalledOnce") {
                 "toBeCalledTimes"
@@ -162,19 +166,39 @@ fn test() {
     ];
 
     let fix = vec![
-        ("expect(fn).toBeCalledOnce();", "expect(fn).toBeCalledTimes(1);"),
-        ("expect(fn).toHaveBeenCalledOnce();", "expect(fn).toHaveBeenCalledTimes(1);"),
-        ("expect(fn).not.toBeCalledOnce();", "expect(fn).not.toBeCalledTimes(1);"),
-        ("expect(fn).not.toHaveBeenCalledOnce();", "expect(fn).not.toHaveBeenCalledTimes(1);"),
-        ("expect(fn).resolves.toBeCalledOnce();", "expect(fn).resolves.toBeCalledTimes(1);"),
+        (
+            "expect(fn).toBeCalledOnce();",
+            "expect(fn).toBeCalledTimes(1);",
+        ),
+        (
+            "expect(fn).toHaveBeenCalledOnce();",
+            "expect(fn).toHaveBeenCalledTimes(1);",
+        ),
+        (
+            "expect(fn).not.toBeCalledOnce();",
+            "expect(fn).not.toBeCalledTimes(1);",
+        ),
+        (
+            "expect(fn).not.toHaveBeenCalledOnce();",
+            "expect(fn).not.toHaveBeenCalledTimes(1);",
+        ),
+        (
+            "expect(fn).resolves.toBeCalledOnce();",
+            "expect(fn).resolves.toBeCalledTimes(1);",
+        ),
         (
             "expect(fn).resolves.toHaveBeenCalledOnce();",
             "expect(fn).resolves.toHaveBeenCalledTimes(1);",
         ),
     ];
 
-    Tester::new(PreferCalledTimes::NAME, PreferCalledTimes::PLUGIN, pass, fail)
-        .with_vitest_plugin(true)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        PreferCalledTimes::NAME,
+        PreferCalledTimes::PLUGIN,
+        pass,
+        fail,
+    )
+    .with_vitest_plugin(true)
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

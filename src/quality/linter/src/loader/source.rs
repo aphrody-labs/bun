@@ -43,7 +43,13 @@ impl<'a> JavaScriptSource<'a> {
         framework_options: FrameworkOptions,
         start: u32,
     ) -> Self {
-        Self { source_text, source_type, start, is_partial: true, framework_options }
+        Self {
+            source_text,
+            source_type,
+            start,
+            is_partial: true,
+            framework_options,
+        }
     }
 
     pub fn as_str(&self) -> &'a str {

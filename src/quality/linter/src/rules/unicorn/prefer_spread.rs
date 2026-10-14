@@ -10,9 +10,11 @@ use oxc_span::Span;
 use crate::{AstNode, ast_util, context::LintContext, rule::Rule};
 
 fn unicorn_prefer_spread_diagnostic(span: Span, bad_method: &str) -> OxcDiagnostic {
-    OxcDiagnostic::warn(format!("Prefer the spread operator (`...`) over {bad_method}"))
-        .with_help("The spread operator (`...`) is more concise and readable.")
-        .with_label(span)
+    OxcDiagnostic::warn(format!(
+        "Prefer the spread operator (`...`) over {bad_method}"
+    ))
+    .with_help("The spread operator (`...`) is more concise and readable.")
+    .with_label(span)
 }
 
 #[derive(Debug, Default, Clone)]
@@ -63,7 +65,11 @@ fn check_unicorn_prefer_spread<'a>(
     call_expr: &CallExpression<'a>,
     ctx: &LintContext<'a>,
 ) {
-    let Some(member_expr) = call_expr.callee.without_parentheses().as_member_expression() else {
+    let Some(member_expr) = call_expr
+        .callee
+        .without_parentheses()
+        .as_member_expression()
+    else {
         return;
     };
 
@@ -101,7 +107,10 @@ fn check_unicorn_prefer_spread<'a>(
                 return;
             }
 
-            ctx.diagnostic(unicorn_prefer_spread_diagnostic(call_expr.span, "array.concat()"));
+            ctx.diagnostic(unicorn_prefer_spread_diagnostic(
+                call_expr.span,
+                "array.concat()",
+            ));
         }
         // `array.slice()`
         "slice" => {
@@ -156,8 +165,10 @@ fn check_unicorn_prefer_spread<'a>(
                 return;
             }
 
-            if matches!(member_expr.object().without_parentheses(), Expression::ArrayExpression(_))
-            {
+            if matches!(
+                member_expr.object().without_parentheses(),
+                Expression::ArrayExpression(_)
+            ) {
                 return;
             }
 
@@ -179,8 +190,12 @@ const IGNORED_SLICE_CALLEE: [&str; 5] = ["arrayBuffer", "blob", "buffer", "file"
 /// or `new SharedArrayBuffer(...)`. Spreading these either fails (ArrayBuffer
 /// has no iterator) or changes the type (TypedArray → number[]).
 fn is_typed_array_or_buffer_construction(expr: &Expression) -> bool {
-    let Expression::NewExpression(new_expr) = expr else { return false };
-    let Expression::Identifier(ident) = &new_expr.callee else { return false };
+    let Expression::NewExpression(new_expr) = expr else {
+        return false;
+    };
+    let Expression::Identifier(ident) = &new_expr.callee else {
+        return false;
+    };
     matches!(
         ident.name.as_str(),
         "ArrayBuffer"
@@ -212,7 +227,11 @@ fn is_not_array(expr: &Expression, ctx: &LintContext) -> bool {
     }
 
     if let Expression::CallExpression(call_expr) = expr {
-        if let Some(member_expr) = call_expr.callee.without_parentheses().as_member_expression() {
+        if let Some(member_expr) = call_expr
+            .callee
+            .without_parentheses()
+            .as_member_expression()
+        {
             if Some("join") == member_expr.static_property_name() && call_expr.arguments.len() < 2 {
                 return true;
             }
@@ -225,7 +244,9 @@ fn is_not_array(expr: &Expression, ctx: &LintContext) -> bool {
         Expression::Identifier(ident) => {
             if let Some(symbol_id) = ast_util::get_symbol_id_of_variable(ident, ctx) {
                 let symbol_table = ctx.scoping();
-                let node = ctx.nodes().get_node(symbol_table.symbol_declaration(symbol_id));
+                let node = ctx
+                    .nodes()
+                    .get_node(symbol_table.symbol_declaration(symbol_id));
 
                 if let AstKind::VariableDeclarator(variable_declarator) = node.kind()
                     && let Some(ref_expr) = &variable_declarator.init
@@ -262,17 +283,20 @@ fn report_with_spread_fixer(
     bad_method: &str,
     expr_to_spread: &Expression,
 ) {
-    ctx.diagnostic_with_fix(unicorn_prefer_spread_diagnostic(span, bad_method), |fixer| {
-        let needs_semi = ast_util::could_be_asi_hazard(node, ctx);
-        let mut codegen = fixer.codegen();
-        if needs_semi {
-            codegen.print_str(";");
-        }
-        codegen.print_str("[...");
-        codegen.print_expression(expr_to_spread);
-        codegen.print_str("]");
-        fixer.replace(span, codegen.into_source_text())
-    });
+    ctx.diagnostic_with_fix(
+        unicorn_prefer_spread_diagnostic(span, bad_method),
+        |fixer| {
+            let needs_semi = ast_util::could_be_asi_hazard(node, ctx);
+            let mut codegen = fixer.codegen();
+            if needs_semi {
+                codegen.print_str(";");
+            }
+            codegen.print_str("[...");
+            codegen.print_expression(expr_to_spread);
+            codegen.print_str("]");
+            fixer.replace(span, codegen.into_source_text())
+        },
+    );
 }
 
 #[test]
@@ -586,13 +610,19 @@ str.split("")"#,
     let fix = vec![
         // `Array.from()`
         ("const x = Array.from(set);", "const x = [...set];"),
-        ("Array.from(new Set([1, 2])).map(() => {});", "[...new Set([1, 2])].map(() => {});"),
+        (
+            "Array.from(new Set([1, 2])).map(() => {});",
+            "[...new Set([1, 2])].map(() => {});",
+        ),
         // `Array.from()` - ASI hazard cases (need semicolon prefix)
         (
             "const foo = bar\nArray.from(set).map(() => {})",
             "const foo = bar\n;[...set].map(() => {})",
         ),
-        ("foo()\nArray.from(set).forEach(doSomething)", "foo()\n;[...set].forEach(doSomething)"),
+        (
+            "foo()\nArray.from(set).forEach(doSomething)",
+            "foo()\n;[...set].forEach(doSomething)",
+        ),
         // `Array.from()` - No ASI hazard (semicolon already present)
         (
             "const foo = bar;\nArray.from(set).map(() => {})",
@@ -627,24 +657,54 @@ str.split("")"#,
         ("foo(Array.from(set))", "foo([...set])"),
         ("if (Array.from(set).length) {}", "if ([...set].length) {}"),
         // `Array.from()` - ASI hazard with multi-byte Unicode identifiers
-        ("日本語\nArray.from(set).map(() => {})", "日本語\n;[...set].map(() => {})"),
+        (
+            "日本語\nArray.from(set).map(() => {})",
+            "日本語\n;[...set].map(() => {})",
+        ),
         (
             "const foo = 日本語\nArray.from(set).map(() => {})",
             "const foo = 日本語\n;[...set].map(() => {})",
         ),
-        ("/**/Array.from(set).map(() => {})", "/**/[...set].map(() => {})"),
-        ("/regex/\nArray.from(set).map(() => {})", "/regex/\n;[...set].map(() => {})"),
-        ("/regex/g\nArray.from(set).map(() => {})", "/regex/g\n;[...set].map(() => {})"),
-        ("0.\nArray.from(set).map(() => {})", "0.\n;[...set].map(() => {})"),
-        ("foo()\u{00A0}\nArray.from(set).map(() => {})", "foo()\u{00A0}\n;[...set].map(() => {})"),
-        ("foo()\u{FEFF}\nArray.from(set).map(() => {})", "foo()\u{FEFF}\n;[...set].map(() => {})"),
-        ("foo() /* a */ /* b */\nArray.from(set)", "foo() /* a */ /* b */\n;[...set]"),
+        (
+            "/**/Array.from(set).map(() => {})",
+            "/**/[...set].map(() => {})",
+        ),
+        (
+            "/regex/\nArray.from(set).map(() => {})",
+            "/regex/\n;[...set].map(() => {})",
+        ),
+        (
+            "/regex/g\nArray.from(set).map(() => {})",
+            "/regex/g\n;[...set].map(() => {})",
+        ),
+        (
+            "0.\nArray.from(set).map(() => {})",
+            "0.\n;[...set].map(() => {})",
+        ),
+        (
+            "foo()\u{00A0}\nArray.from(set).map(() => {})",
+            "foo()\u{00A0}\n;[...set].map(() => {})",
+        ),
+        (
+            "foo()\u{FEFF}\nArray.from(set).map(() => {})",
+            "foo()\u{FEFF}\n;[...set].map(() => {})",
+        ),
+        (
+            "foo() /* a */ /* b */\nArray.from(set)",
+            "foo() /* a */ /* b */\n;[...set]",
+        ),
         ("x++\narray.slice()", "x++\n;[...array]"),
         ("x--\narray.slice()", "x--\n;[...array]"),
         ("arr[0]\narray.slice()", "arr[0]\n;[...array]"),
         ("obj.prop\narray.slice()", "obj.prop\n;[...array]"),
-        ("while (array.slice().length) {}", "while ([...array].length) {}"),
-        ("do {} while (array.slice().length)", "do {} while ([...array].length)"),
+        (
+            "while (array.slice().length) {}",
+            "while ([...array].length) {}",
+        ),
+        (
+            "do {} while (array.slice().length)",
+            "do {} while ([...array].length)",
+        ),
         ("for (array.slice();;) {}", "for ([...array];;) {}"),
         ("switch (array.slice()[0]) {}", "switch ([...array][0]) {}"),
         ("`template`\narray.toSpliced()", "`template`\n;[...array]"),
@@ -652,16 +712,25 @@ str.split("")"#,
             "foo()\nArray.from(set).map(x => x).filter(Boolean).length",
             "foo()\n;[...set].map(x => x).filter(Boolean).length",
         ),
-        ("const fn = () => Array.from(set)", "const fn = () => [...set]"),
+        (
+            "const fn = () => Array.from(set)",
+            "const fn = () => [...set]",
+        ),
         ("foo ? Array.from(a) : b", "foo ? [...a] : b"),
         ("foo || Array.from(set)", "foo || [...set]"),
         ("foo && Array.from(set)", "foo && [...set]"),
         ("foo + Array.from(set).length", "foo + [...set].length"),
         ("x = Array.from(set)", "x = [...set]"),
-        ("const obj = { arr: Array.from(set) }", "const obj = { arr: [...set] }"),
+        (
+            "const obj = { arr: Array.from(set) }",
+            "const obj = { arr: [...set] }",
+        ),
         ("(foo, Array.from(set))", "(foo, [...set])"),
         ("[Array.from(set)]", "[[...set]]"),
-        ("async () => await Array.from(set)", "async () => await [...set]"),
+        (
+            "async () => await Array.from(set)",
+            "async () => await [...set]",
+        ),
     ];
 
     Tester::new(PreferSpread::NAME, PreferSpread::PLUGIN, pass, fail)

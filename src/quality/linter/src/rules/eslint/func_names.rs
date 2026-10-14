@@ -32,9 +32,11 @@ fn named_diagnostic(function_name: &str, span: Span) -> OxcDiagnostic {
 }
 
 fn unnamed_diagnostic(inferred_name_or_description: &str, span: Span) -> OxcDiagnostic {
-    OxcDiagnostic::warn(format!("Unexpected unnamed {inferred_name_or_description}."))
-        .with_label(span)
-        .with_help("Consider giving this function expression a name.")
+    OxcDiagnostic::warn(format!(
+        "Unexpected unnamed {inferred_name_or_description}."
+    ))
+    .with_label(span)
+    .with_help("Consider giving this function expression a name.")
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, JsonSchema, Deserialize)]
@@ -232,7 +234,11 @@ impl Rule for FuncNames {
     fn run<'a>(&self, node: &AstNode<'a>, ctx: &LintContext<'a>) {
         if let AstKind::Function(func) = node.kind() {
             let parent_node = ctx.nodes().parent_node(node.id());
-            let config = if func.generator { self.generators_config() } else { self.0 };
+            let config = if func.generator {
+                self.generators_config()
+            } else {
+                self.0
+            };
 
             if is_invalid_function(config, func, parent_node) {
                 // For named functions, check if they're recursive (need their name for recursion)
@@ -296,7 +302,9 @@ fn diagnostic_invalid_function(
 
     let replace_span = Span::new(
         func.span.start,
-        func.type_parameters.as_ref().map_or_else(|| func.params.span.start, |tp| tp.span.start),
+        func.type_parameters
+            .as_ref()
+            .map_or_else(|| func.params.span.start, |tp| tp.span.start),
     );
 
     let function_name = guess_function_name(ctx, node.id()).map(Cow::into_owned);
@@ -357,27 +365,39 @@ fn has_inferred_name<'a>(function: &Function<'a>, parent_node: &AstNode<'a>) -> 
     match parent_node.kind() {
         AstKind::VariableDeclarator(declarator) => {
             matches!(declarator.id, BindingPattern::BindingIdentifier(_))
-                && declarator.init.as_ref().is_some_and(|init| is_same_function(init, function))
+                && declarator
+                    .init
+                    .as_ref()
+                    .is_some_and(|init| is_same_function(init, function))
         }
         AstKind::ObjectProperty(property) => is_same_function(&property.value, function),
-        AstKind::PropertyDefinition(definition) => {
-            definition.value.as_ref().is_some_and(|value| is_same_function(value, function))
-        }
+        AstKind::PropertyDefinition(definition) => definition
+            .value
+            .as_ref()
+            .is_some_and(|value| is_same_function(value, function)),
         AstKind::AssignmentExpression(expression) => {
-            matches!(expression.left, AssignmentTarget::AssignmentTargetIdentifier(_))
-                && is_same_function(&expression.right, function)
+            matches!(
+                expression.left,
+                AssignmentTarget::AssignmentTargetIdentifier(_)
+            ) && is_same_function(&expression.right, function)
         }
         AstKind::AssignmentTargetWithDefault(target) => {
-            matches!(target.binding, AssignmentTarget::AssignmentTargetIdentifier(_))
-                && is_same_function(&target.init, function)
+            matches!(
+                target.binding,
+                AssignmentTarget::AssignmentTargetIdentifier(_)
+            ) && is_same_function(&target.init, function)
         }
         AstKind::FormalParameter(pattern) => {
             matches!(pattern.pattern, BindingPattern::BindingIdentifier(_))
-                && pattern.initializer.as_ref().is_some_and(|init| init.span() == function.span)
+                && pattern
+                    .initializer
+                    .as_ref()
+                    .is_some_and(|init| init.span() == function.span)
         }
-        AstKind::AssignmentTargetPropertyIdentifier(ident) => {
-            ident.init.as_ref().is_some_and(|expr| is_same_function(expr, function))
-        }
+        AstKind::AssignmentTargetPropertyIdentifier(ident) => ident
+            .init
+            .as_ref()
+            .is_some_and(|expr| is_same_function(expr, function)),
         AstKind::ObjectAssignmentTarget(target) => {
             has_object_assignment_target_name(target, function)
         }
@@ -420,11 +440,16 @@ fn is_invalid_function(
 
 /// Returns whether it's safe to insert a function name without breaking shadowing rules
 fn can_safely_apply_fix(func: &Function, name: Ident<'_>, ctx: &LintContext) -> bool {
-    !ctx.scoping().find_binding(func.scope_id(), name).is_some_and(|shadowed_var| {
-        ctx.semantic().symbol_references(shadowed_var).any(|reference| {
-            func.span.contains_inclusive(ctx.nodes().get_node(reference.node_id()).kind().span())
+    !ctx.scoping()
+        .find_binding(func.scope_id(), name)
+        .is_some_and(|shadowed_var| {
+            ctx.semantic()
+                .symbol_references(shadowed_var)
+                .any(|reference| {
+                    func.span
+                        .contains_inclusive(ctx.nodes().get_node(reference.node_id()).kind().span())
+                })
         })
-    })
 }
 
 fn apply_rule_fix(
@@ -462,11 +487,17 @@ fn guess_function_name<'a>(ctx: &LintContext<'a>, node_id: NodeId) -> Option<Cow
             }
             AstKind::ObjectProperty(prop) => {
                 // Stop here - we found the direct property context
-                return prop.key.static_name().filter(|name| is_valid_identifier_name(name));
+                return prop
+                    .key
+                    .static_name()
+                    .filter(|name| is_valid_identifier_name(name));
             }
             AstKind::PropertyDefinition(prop_def) => {
                 // Stop here - we found the direct class property context
-                return prop_def.key.static_name().filter(|name| is_valid_identifier_name(name));
+                return prop_def
+                    .key
+                    .static_name()
+                    .filter(|name| is_valid_identifier_name(name));
             }
             _ => {}
         }
@@ -490,9 +521,15 @@ fn test() {
         ("function foo(){}", None),
         ("function test(d, e, f) {}", None),
         ("new function bar(){}", None),
-        ("exports = { get foo() { return 1; }, set bar(val) { return val; } };", None),
+        (
+            "exports = { get foo() { return 1; }, set bar(val) { return val; } };",
+            None,
+        ),
         ("({ foo() { return 1; } });", None), // { "ecmaVersion": 6 },
-        ("class A { constructor(){} foo(){} get bar(){} set baz(value){} static qux(){}}", None), // { "ecmaVersion": 6 },
+        (
+            "class A { constructor(){} foo(){} get bar(){} set baz(value){} static qux(){}}",
+            None,
+        ), // { "ecmaVersion": 6 },
         ("function foo() {}", always.clone()),
         ("var a = function foo() {};", always.clone()),
         (
@@ -524,11 +561,20 @@ fn test() {
             never.clone(),
         ),
         // Multiple references, but only one is a call - still recursive
-        ("var a = function foo() { var x = foo; foo(); };", never.clone()),
+        (
+            "var a = function foo() { var x = foo; foo(); };",
+            never.clone(),
+        ),
         // Direct recursive call in setTimeout - this is actually recursive
-        ("setTimeout(function ticker() { ticker(); }, 1000);", never.clone()),
+        (
+            "setTimeout(function ticker() { ticker(); }, 1000);",
+            never.clone(),
+        ),
         // Mutual recursion doesn't count as self-recursion (would need different handling)
-        ("var a = function foo() { function bar() { foo(); } bar(); };", never.clone()),
+        (
+            "var a = function foo() { function bar() { foo(); } bar(); };",
+            never.clone(),
+        ),
         // Critical test: function with multiple references where the recursive call is not the first reference
         // This tests the fix for the control flow bug where early returns could miss later recursive calls
         (
@@ -552,14 +598,20 @@ fn test() {
         ("export default function foo() {}", never.clone()), // { "sourceType": "module", "ecmaVersion": 6 },
         ("export default function() {}", never.clone()), // { "sourceType": "module", "ecmaVersion": 6 },
         ("var foo = bar(function *baz() {});", always.clone()), // { "ecmaVersion": 6 },
-        ("var foo = bar(function *baz() {});", Some(json!(["always", { "generators": "always" }]))), // { "ecmaVersion": 6 },
+        (
+            "var foo = bar(function *baz() {});",
+            Some(json!(["always", { "generators": "always" }])),
+        ), // { "ecmaVersion": 6 },
         (
             "var foo = bar(function *baz() {});",
             Some(json!(["always", { "generators": "as-needed" }])),
         ), // { "ecmaVersion": 6 },
-        ("var foo = function*() {};", Some(json!(["always", { "generators": "as-needed" }]))), // { "ecmaVersion": 6 },
+        (
+            "var foo = function*() {};",
+            Some(json!(["always", { "generators": "as-needed" }])),
+        ), // { "ecmaVersion": 6 },
         ("var foo = bar(function *baz() {});", as_needed.clone()), // { "ecmaVersion": 6 },
-        ("var foo = function*() {};", as_needed.clone()),          // { "ecmaVersion": 6 },
+        ("var foo = function*() {};", as_needed.clone()), // { "ecmaVersion": 6 },
         (
             "var foo = bar(function *baz() {});",
             Some(json!(["as-needed", { "generators": "always" }])),
@@ -568,25 +620,61 @@ fn test() {
             "var foo = bar(function *baz() {});",
             Some(json!(["as-needed", { "generators": "as-needed" }])),
         ), // { "ecmaVersion": 6 },
-        ("var foo = function*() {};", Some(json!(["as-needed", { "generators": "as-needed" }]))), // { "ecmaVersion": 6 },
-        ("var foo = bar(function *baz() {});", Some(json!(["never", { "generators": "always" }]))), // { "ecmaVersion": 6 },
+        (
+            "var foo = function*() {};",
+            Some(json!(["as-needed", { "generators": "as-needed" }])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "var foo = bar(function *baz() {});",
+            Some(json!(["never", { "generators": "always" }])),
+        ), // { "ecmaVersion": 6 },
         (
             "var foo = bar(function *baz() {});",
             Some(json!(["never", { "generators": "as-needed" }])),
         ), // { "ecmaVersion": 6 },
-        ("var foo = function*() {};", Some(json!(["never", { "generators": "as-needed" }]))), // { "ecmaVersion": 6 },
+        (
+            "var foo = function*() {};",
+            Some(json!(["never", { "generators": "as-needed" }])),
+        ), // { "ecmaVersion": 6 },
         ("var foo = bar(function *() {});", never.clone()), // { "ecmaVersion": 6 },
-        ("var foo = function*() {};", never.clone()),       // { "ecmaVersion": 6 },
-        ("(function*() {}())", never.clone()),              // { "ecmaVersion": 6 },
-        ("var foo = bar(function *() {});", Some(json!(["never", { "generators": "never" }]))), // { "ecmaVersion": 6 },
-        ("var foo = function*() {};", Some(json!(["never", { "generators": "never" }]))), // { "ecmaVersion": 6 },
-        ("(function*() {}())", Some(json!(["never", { "generators": "never" }]))), // { "ecmaVersion": 6 },
-        ("var foo = bar(function *() {});", Some(json!(["always", { "generators": "never" }]))), // { "ecmaVersion": 6 },
-        ("var foo = function*() {};", Some(json!(["always", { "generators": "never" }]))), // { "ecmaVersion": 6 },
-        ("(function*() {}())", Some(json!(["always", { "generators": "never" }]))), // { "ecmaVersion": 6 },
-        ("var foo = bar(function *() {});", Some(json!(["as-needed", { "generators": "never" }]))), // { "ecmaVersion": 6 },
-        ("var foo = function*() {};", Some(json!(["as-needed", { "generators": "never" }]))), // { "ecmaVersion": 6 },
-        ("(function*() {}())", Some(json!(["as-needed", { "generators": "never" }]))), // { "ecmaVersion": 6 },
+        ("var foo = function*() {};", never.clone()),    // { "ecmaVersion": 6 },
+        ("(function*() {}())", never.clone()),           // { "ecmaVersion": 6 },
+        (
+            "var foo = bar(function *() {});",
+            Some(json!(["never", { "generators": "never" }])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "var foo = function*() {};",
+            Some(json!(["never", { "generators": "never" }])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "(function*() {}())",
+            Some(json!(["never", { "generators": "never" }])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "var foo = bar(function *() {});",
+            Some(json!(["always", { "generators": "never" }])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "var foo = function*() {};",
+            Some(json!(["always", { "generators": "never" }])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "(function*() {}())",
+            Some(json!(["always", { "generators": "never" }])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "var foo = bar(function *() {});",
+            Some(json!(["as-needed", { "generators": "never" }])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "var foo = function*() {};",
+            Some(json!(["as-needed", { "generators": "never" }])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "(function*() {}())",
+            Some(json!(["as-needed", { "generators": "never" }])),
+        ), // { "ecmaVersion": 6 },
         ("class C { foo = function() {}; }", as_needed.clone()), // { "ecmaVersion": 2022 },
         ("class C { [foo] = function() {}; }", as_needed.clone()), // { "ecmaVersion": 2022 },
         ("class C { #foo = function() {}; }", as_needed.clone()), // { "ecmaVersion": 2022 }
@@ -610,11 +698,26 @@ fn test() {
         ("var { a: [b] = function(){} } = foo;", as_needed.clone()), // { "ecmaVersion": 6 },
         ("function foo({ a } = function(){}) {};", as_needed.clone()), // { "ecmaVersion": 6 },
         ("var x = function foo() {};", never.clone()),
-        ("var x = function foo() { return foo.length; };", never.clone()),
-        ("var foo = 1; var x = function foo() { return foo + 1; };", never.clone()),
-        ("var x = function foo() { console.log('hello'); };", never.clone()),
-        ("var outer = function inner() { function nested() { nested(); } };", never.clone()),
-        ("setTimeout(function ticker() { setTimeout(ticker, 1000); }, 1000);", never.clone()),
+        (
+            "var x = function foo() { return foo.length; };",
+            never.clone(),
+        ),
+        (
+            "var foo = 1; var x = function foo() { return foo + 1; };",
+            never.clone(),
+        ),
+        (
+            "var x = function foo() { console.log('hello'); };",
+            never.clone(),
+        ),
+        (
+            "var outer = function inner() { function nested() { nested(); } };",
+            never.clone(),
+        ),
+        (
+            "setTimeout(function ticker() { setTimeout(ticker, 1000); }, 1000);",
+            never.clone(),
+        ),
         ("Foo.prototype.bar = function foo() {};", never.clone()),
         ("({foo: function foo() {}})", never.clone()),
         ("export default function() {}", always.clone()), // { "sourceType": "module", "ecmaVersion": 6 },
@@ -623,50 +726,106 @@ fn test() {
         ("var foo = bar(function *() {});", always.clone()),   // { "ecmaVersion": 6 },
         ("var foo = function*() {};", always.clone()),         // { "ecmaVersion": 6 },
         ("(function*() {}())", always.clone()),                // { "ecmaVersion": 6 },
-        ("var foo = bar(function *() {});", Some(json!(["always", { "generators": "always" }]))), // { "ecmaVersion": 6 },
-        ("var foo = function*() {};", Some(json!(["always", { "generators": "always" }]))), // { "ecmaVersion": 6 },
-        ("(function*() {}())", Some(json!(["always", { "generators": "always" }]))), // { "ecmaVersion": 6 },
-        ("var foo = bar(function *() {});", Some(json!(["always", { "generators": "as-needed" }]))), // { "ecmaVersion": 6 },
-        ("(function*() {}())", Some(json!(["always", { "generators": "as-needed" }]))), // { "ecmaVersion": 6 },
+        (
+            "var foo = bar(function *() {});",
+            Some(json!(["always", { "generators": "always" }])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "var foo = function*() {};",
+            Some(json!(["always", { "generators": "always" }])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "(function*() {}())",
+            Some(json!(["always", { "generators": "always" }])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "var foo = bar(function *() {});",
+            Some(json!(["always", { "generators": "as-needed" }])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "(function*() {}())",
+            Some(json!(["always", { "generators": "as-needed" }])),
+        ), // { "ecmaVersion": 6 },
         ("var foo = bar(function *() {});", as_needed.clone()), // { "ecmaVersion": 6 },
-        ("(function*() {}())", as_needed.clone()),              // { "ecmaVersion": 6 },
-        ("var foo = bar(function *() {});", Some(json!(["as-needed", { "generators": "always" }]))), // { "ecmaVersion": 6 },
-        ("var foo = function*() {};", Some(json!(["as-needed", { "generators": "always" }]))), // { "ecmaVersion": 6 },
-        ("(function*() {}())", Some(json!(["as-needed", { "generators": "always" }]))), // { "ecmaVersion": 6 },
+        ("(function*() {}())", as_needed.clone()),             // { "ecmaVersion": 6 },
+        (
+            "var foo = bar(function *() {});",
+            Some(json!(["as-needed", { "generators": "always" }])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "var foo = function*() {};",
+            Some(json!(["as-needed", { "generators": "always" }])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "(function*() {}())",
+            Some(json!(["as-needed", { "generators": "always" }])),
+        ), // { "ecmaVersion": 6 },
         (
             "var foo = bar(function *() {});",
             Some(json!(["as-needed", { "generators": "as-needed" }])),
         ), // { "ecmaVersion": 6 },
-        ("(function*() {}())", Some(json!(["as-needed", { "generators": "as-needed" }]))), // { "ecmaVersion": 6 },
-        ("var foo = bar(function *() {});", Some(json!(["never", { "generators": "always" }]))), // { "ecmaVersion": 6 },
-        ("var foo = function*() {};", Some(json!(["never", { "generators": "always" }]))), // { "ecmaVersion": 6 },
-        ("(function*() {}())", Some(json!(["never", { "generators": "always" }]))), // { "ecmaVersion": 6 },
-        ("var foo = bar(function *() {});", Some(json!(["never", { "generators": "as-needed" }]))), // { "ecmaVersion": 6 },
-        ("(function*() {}())", Some(json!(["never", { "generators": "as-needed" }]))), // { "ecmaVersion": 6 },
+        (
+            "(function*() {}())",
+            Some(json!(["as-needed", { "generators": "as-needed" }])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "var foo = bar(function *() {});",
+            Some(json!(["never", { "generators": "always" }])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "var foo = function*() {};",
+            Some(json!(["never", { "generators": "always" }])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "(function*() {}())",
+            Some(json!(["never", { "generators": "always" }])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "var foo = bar(function *() {});",
+            Some(json!(["never", { "generators": "as-needed" }])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "(function*() {}())",
+            Some(json!(["never", { "generators": "as-needed" }])),
+        ), // { "ecmaVersion": 6 },
         ("var foo = bar(function *baz() {});", never.clone()), // { "ecmaVersion": 6 },
-        ("var foo = bar(function *baz() {});", Some(json!(["never", { "generators": "never" }]))), // { "ecmaVersion": 6 },
-        ("var foo = bar(function *baz() {});", Some(json!(["always", { "generators": "never" }]))), // { "ecmaVersion": 6 },
+        (
+            "var foo = bar(function *baz() {});",
+            Some(json!(["never", { "generators": "never" }])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "var foo = bar(function *baz() {});",
+            Some(json!(["always", { "generators": "never" }])),
+        ), // { "ecmaVersion": 6 },
         (
             "var foo = bar(function *baz() {});",
             Some(json!(["as-needed", { "generators": "never" }])),
         ), // { "ecmaVersion": 6 },
-        ("class C { foo = function() {} }", always.clone()), // { "ecmaVersion": 2022 },
+        ("class C { foo = function() {} }", always.clone()),   // { "ecmaVersion": 2022 },
         ("class C { public foo = function() {} }", always.clone()), // { "ecmaVersion": 2022 },
         ("class C { [foo] = function() {} }", always.clone()), // { "ecmaVersion": 2022 },
-        ("class C { #foo = function() {} }", always.clone()), // { "ecmaVersion": 2022 },
-        ("class C { foo = bar(function() {}) }", as_needed), // { "ecmaVersion": 2022 },
+        ("class C { #foo = function() {} }", always.clone()),  // { "ecmaVersion": 2022 },
+        ("class C { foo = bar(function() {}) }", as_needed),   // { "ecmaVersion": 2022 },
         ("class C { foo = function bar() {} }", never.clone()), // { "ecmaVersion": 2022 }
     ];
 
     let fix = vec![
         // lb
-        ("const foo = function() {}", "const foo = function foo() {}", always.clone()),
+        (
+            "const foo = function() {}",
+            "const foo = function foo() {}",
+            always.clone(),
+        ),
         (
             "Foo.prototype.bar = function() {}",
             "Foo.prototype.bar = function bar() {}",
             always.clone(),
         ),
-        ("let foo; foo = function() {}", "let foo; foo = function foo() {}", always.clone()),
+        (
+            "let foo; foo = function() {}",
+            "let foo; foo = function foo() {}",
+            always.clone(),
+        ),
         (
             "class C { public foo = function() {} }",
             "class C { public foo = function foo() {} }",
@@ -723,19 +882,31 @@ fn test() {
             always.clone(),
         ),
         // suggest removal when configured to "never"
-        ("const foo = function foo() {}", "const foo = function () {}", never.clone()),
+        (
+            "const foo = function foo() {}",
+            "const foo = function () {}",
+            never.clone(),
+        ),
         (
             "Foo.prototype.bar = function bar() {}",
             "Foo.prototype.bar = function () {}",
             never.clone(),
         ),
-        ("class C { foo = function foo() {} }", "class C { foo = function () {} }", never),
+        (
+            "class C { foo = function foo() {} }",
+            "class C { foo = function () {} }",
+            never,
+        ),
         (
             "const restoreGracefully = function <T>(entries: T[]) { }",
             "const restoreGracefully = function  restoreGracefully<T>(entries: T[]) { }",
             None,
         ),
-        ("const foo = async function() {}", "const foo = async function foo() {}", always.clone()),
+        (
+            "const foo = async function() {}",
+            "const foo = async function foo() {}",
+            always.clone(),
+        ),
         (
             "const foo = async function            () {}",
             "const foo = async function             foo() {}",
@@ -751,7 +922,11 @@ fn test() {
             "const foo =      async          function       foo<T           >      ()           {}",
             always.clone(),
         ),
-        ("const foo = function* () {}", "const foo = function*  foo() {}", always.clone()),
+        (
+            "const foo = function* () {}",
+            "const foo = function*  foo() {}",
+            always.clone(),
+        ),
         (
             "const foo = async function* (){}",
             "const foo = async function*  foo(){}",
@@ -780,7 +955,11 @@ fn test() {
             "exports['default'] = function() {}",
             always.clone(),
         ),
-        ("obj.default = function() {}", "obj.default = function() {}", always.clone()),
+        (
+            "obj.default = function() {}",
+            "obj.default = function() {}",
+            always.clone(),
+        ),
         (
             "const { default: foo = function() {} } = {}",
             "const { default: foo = function() {} } = {}",
@@ -793,5 +972,7 @@ fn test() {
         ),
     ];
 
-    Tester::new(FuncNames::NAME, FuncNames::PLUGIN, pass, fail).expect_fix(fix).test_and_snapshot();
+    Tester::new(FuncNames::NAME, FuncNames::PLUGIN, pass, fail)
+        .expect_fix(fix)
+        .test_and_snapshot();
 }

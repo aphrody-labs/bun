@@ -131,7 +131,11 @@ fn check_expression(expr: &Expression) -> Option<Span> {
 
             let member_expr = expr.callee.as_member_expression()?;
             let property_name = MemberExpression::static_property_name(member_expr);
-            if property_name == Some("bind") { Some(expr.span) } else { None }
+            if property_name == Some("bind") {
+                Some(expr.span)
+            } else {
+                None
+            }
         }
         Expression::NewExpression(expr) => {
             if is_constructor_matching_name(&expr.callee, "Function") {
@@ -157,12 +161,24 @@ fn test() {
     use crate::tester::Tester;
 
     let pass = vec![
-        (r"const Foo = () => <Item callback={this.props.callback} />", None),
-        (r"const Foo = () => (<Item promise={new Promise()} />)", None),
+        (
+            r"const Foo = () => <Item callback={this.props.callback} />",
+            None,
+        ),
+        (
+            r"const Foo = () => (<Item promise={new Promise()} />)",
+            None,
+        ),
         (r"const Foo = () => (<Item onClick={bind(foo)} />)", None),
         (r"const Foo = () => (<Item prop={0} />)", None),
-        (r"const Foo = () => { var a; return <Item prop={a} /> }", None),
-        (r"const Foo = () => { var a;a = 1; return <Item prop={a} /> }", None),
+        (
+            r"const Foo = () => { var a; return <Item prop={a} /> }",
+            None,
+        ),
+        (
+            r"const Foo = () => { var a;a = 1; return <Item prop={a} /> }",
+            None,
+        ),
         (r"const Foo = () => { var a;<Item prop={a} /> }", None),
         (
             r"function foo ({prop1 = function(){}, prop2}) {
@@ -181,8 +197,14 @@ fn test() {
         (r"<Item prop={new Function('a', 'alert(a)')}/>", None),
         (r"<Item prop={Function()}/>", None),
         (r"<Item onClick={this.clickHandler.bind(this)} />", None),
-        (r"<Item callback={this.props.callback || function() {}} />", None),
-        (r"<Item callback={this.props.callback ? this.props.callback : function() {}} />", None),
+        (
+            r"<Item callback={this.props.callback || function() {}} />",
+            None,
+        ),
+        (
+            r"<Item callback={this.props.callback ? this.props.callback : function() {}} />",
+            None,
+        ),
         (
             r"<Item prop={this.props.callback || this.props.callback ? this.props.callback : function(){}} />",
             None,
@@ -226,12 +248,24 @@ fn test() {
     ];
 
     let fail = vec![
-        (r"const Foo = () => (<Item prop={function(){return true}} />)", None),
+        (
+            r"const Foo = () => (<Item prop={function(){return true}} />)",
+            None,
+        ),
         (r"const Foo = () => (<Item prop={() => true} />)", None),
-        (r"const Foo = () => (<Item prop={new Function('a', 'alert(a)')}/>)", None),
+        (
+            r"const Foo = () => (<Item prop={new Function('a', 'alert(a)')}/>)",
+            None,
+        ),
         (r"const Foo = () => (<Item prop={Function()}/>)", None),
-        (r"const Foo = () => (<Item onClick={this.clickHandler.bind(this)} />)", None),
-        (r"const Foo = () => (<Item callback={this.props.callback || function() {}} />)", None),
+        (
+            r"const Foo = () => (<Item onClick={this.clickHandler.bind(this)} />)",
+            None,
+        ),
+        (
+            r"const Foo = () => (<Item callback={this.props.callback || function() {}} />)",
+            None,
+        ),
         (
             r"const Foo = () => (<Item callback={this.props.callback ? this.props.callback : function() {}} />)",
             None,
@@ -296,6 +330,11 @@ fn test() {
         ),
     ];
 
-    Tester::new(JsxNoNewFunctionAsProp::NAME, JsxNoNewFunctionAsProp::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        JsxNoNewFunctionAsProp::NAME,
+        JsxNoNewFunctionAsProp::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

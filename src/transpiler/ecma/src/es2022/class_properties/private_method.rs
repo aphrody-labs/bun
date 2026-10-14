@@ -47,7 +47,14 @@ impl<'a> ClassProperties<'a> {
         method: &mut MethodDefinition<'a>,
         ctx: &mut TraverseCtx<'a>,
     ) -> Option<Statement<'a>> {
-        let MethodDefinition { key, value, span, kind, r#static, .. } = method;
+        let MethodDefinition {
+            key,
+            value,
+            span,
+            kind,
+            r#static,
+            ..
+        } = method;
         let PropertyKey::PrivateIdentifier(ident) = &key else {
             return None;
         };
@@ -64,8 +71,9 @@ impl<'a> ClassProperties<'a> {
         function.span = *span;
         function.id = Some(temp_binding.create_binding_identifier(ctx));
         function.r#type = FunctionType::FunctionDeclaration;
-        let helper_in_class_sequence =
-            self.current_class().private_method_helpers_in_class_sequence;
+        let helper_in_class_sequence = self
+            .current_class()
+            .private_method_helpers_in_class_sequence;
         if !helper_in_class_sequence {
             sync_function_symbol_flags(&function, ctx);
         }
@@ -84,7 +92,8 @@ impl<'a> ClassProperties<'a> {
             } else {
                 ctx.current_scope_id()
             };
-        ctx.scoping_mut().change_scope_parent_id(scope_id, Some(new_parent_id));
+        ctx.scoping_mut()
+            .change_scope_parent_id(scope_id, Some(new_parent_id));
         let make_sloppy_mode = !ctx.scoping().scope_flags(new_parent_id).is_strict_mode();
         let flags = ctx.scoping_mut().scope_flags_mut(scope_id);
         *flags -= ScopeFlags::GetAccessor | ScopeFlags::SetAccessor;
@@ -173,11 +182,13 @@ impl<'a> VisitMut<'a> for PrivateMethodVisitor<'a, '_> {
         match expr {
             // `super.prop`
             Expression::StaticMemberExpression(_) => {
-                self.super_converter.transform_static_member_expression(expr, self.ctx);
+                self.super_converter
+                    .transform_static_member_expression(expr, self.ctx);
             }
             // `super[prop]`
             Expression::ComputedMemberExpression(_) => {
-                self.super_converter.transform_computed_member_expression(expr, self.ctx);
+                self.super_converter
+                    .transform_computed_member_expression(expr, self.ctx);
             }
             // `super.prop()`
             Expression::CallExpression(call_expr) => {
@@ -201,7 +212,9 @@ impl<'a> VisitMut<'a> for PrivateMethodVisitor<'a, '_> {
 
     /// Transform reference to class name to temp var
     fn visit_identifier_reference(&mut self, ident: &mut IdentifierReference<'a>) {
-        self.super_converter.class_properties.replace_class_name_with_temp_var(ident, self.ctx);
+        self.super_converter
+            .class_properties
+            .replace_class_name_with_temp_var(ident, self.ctx);
     }
 
     #[inline]
@@ -226,8 +239,10 @@ impl<'a> VisitMut<'a> for PrivateMethodVisitor<'a, '_> {
         if self.strict_scope_depth > 0 || flags.is_strict_mode() {
             self.strict_scope_depth += 1;
         } else {
-            *self.ctx.scoping_mut().scope_flags_mut(scope_id.get().unwrap()) -=
-                ScopeFlags::StrictMode;
+            *self
+                .ctx
+                .scoping_mut()
+                .scope_flags_mut(scope_id.get().unwrap()) -= ScopeFlags::StrictMode;
         }
     }
 

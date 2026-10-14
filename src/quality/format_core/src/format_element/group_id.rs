@@ -57,7 +57,12 @@ mod debug_names {
     }
 
     pub(super) fn lookup(value: NonZeroU32) -> Option<&'static str> {
-        NAMES.lock().unwrap().get(value.get() as usize - 1).copied().flatten()
+        NAMES
+            .lock()
+            .unwrap()
+            .get(value.get() as usize - 1)
+            .copied()
+            .flatten()
     }
 }
 

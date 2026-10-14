@@ -106,7 +106,8 @@ declare_oxc_lint!(
     restriction,
     config = NoCommonjs,
     version = "0.11.0",
-    short_description = "Forbid the use of CommonJS `require` calls and `module.exports` or `exports.*`.",
+    short_description =
+        "Forbid the use of CommonJS `require` calls and `module.exports` or `exports.*`.",
 );
 
 fn is_conditional(parent_node: &AstNode, ctx: &LintContext) -> bool {
@@ -264,7 +265,11 @@ impl Rule for NoCommonjs {
                     return;
                 };
 
-                ctx.diagnostic(no_commonjs_diagnostic(call_expr.span, "import", callee_name));
+                ctx.diagnostic(no_commonjs_diagnostic(
+                    call_expr.span,
+                    "import",
+                    callee_name,
+                ));
             }
             _ => {}
         }
@@ -303,13 +308,34 @@ fn test() {
         ("var bar = require(`x${1}`);", None),
         ("var zero = require(0);", None),
         (r#"require("x")"#, Some(json!([{ "allowRequire": true }]))),
-        (r#"require(rootRequire("x"))"#, Some(json!([{ "allowRequire": true }]))),
-        (r#"require(String("x"))"#, Some(json!([{ "allowRequire": true }]))),
-        (r#"require(["x", "y", "z"].join("/"))"#, Some(json!([{ "allowRequire": true }]))),
-        (r#"rootRequire("x")"#, Some(json!([{ "allowRequire": true }]))),
-        (r#"rootRequire("x")"#, Some(json!([{ "allowRequire": false }]))),
-        ("module.exports = function () {}", Some(json!([{ "allowPrimitiveModules": true }]))),
-        (r#"module.exports = "foo""#, Some(json!([{ "allowPrimitiveModules": true }]))),
+        (
+            r#"require(rootRequire("x"))"#,
+            Some(json!([{ "allowRequire": true }])),
+        ),
+        (
+            r#"require(String("x"))"#,
+            Some(json!([{ "allowRequire": true }])),
+        ),
+        (
+            r#"require(["x", "y", "z"].join("/"))"#,
+            Some(json!([{ "allowRequire": true }])),
+        ),
+        (
+            r#"rootRequire("x")"#,
+            Some(json!([{ "allowRequire": true }])),
+        ),
+        (
+            r#"rootRequire("x")"#,
+            Some(json!([{ "allowRequire": false }])),
+        ),
+        (
+            "module.exports = function () {}",
+            Some(json!([{ "allowPrimitiveModules": true }])),
+        ),
+        (
+            r#"module.exports = "foo""#,
+            Some(json!([{ "allowPrimitiveModules": true }])),
+        ),
         (
             r#"if (typeof window !== "undefined") require("x")"#,
             Some(json!([{ "allowRequire": true }])),
@@ -366,8 +392,14 @@ fn test() {
         (r"module.exports = face", None),
         (r"exports = module.exports = {}", None),
         (r"var x = module.exports = {}", None),
-        (r"module.exports = {}", Some(json!([{ "allowPrimitiveModules": true }]))),
-        (r"var x = module.exports", Some(json!([{ "allowPrimitiveModules": true }]))),
+        (
+            r"module.exports = {}",
+            Some(json!([{ "allowPrimitiveModules": true }])),
+        ),
+        (
+            r"var x = module.exports",
+            Some(json!([{ "allowPrimitiveModules": true }])),
+        ),
     ];
 
     Tester::new(NoCommonjs::NAME, NoCommonjs::PLUGIN, pass, fail)

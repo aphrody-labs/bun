@@ -121,7 +121,10 @@ fn is_in_test_context<'a>(node: &AstNode<'a>, ctx: &LintContext<'a>) -> bool {
         current = ctx.nodes().parent_node(current.id());
 
         if let AstKind::CallExpression(call_expr) = current.kind() {
-            let jest_node = PossibleJestNode { node: current, original: None };
+            let jest_node = PossibleJestNode {
+                node: current,
+                original: None,
+            };
             if is_type_of_jest_fn_call(
                 call_expr,
                 &jest_node,
@@ -153,7 +156,10 @@ fn check_parents<'a>(
 
     match parent_node.kind() {
         AstKind::CallExpression(call_expr) => {
-            let jest_node = PossibleJestNode { node: parent_node, original: None };
+            let jest_node = PossibleJestNode {
+                node: parent_node,
+                original: None,
+            };
 
             if is_type_of_jest_fn_call(
                 call_expr,
@@ -186,27 +192,36 @@ fn check_parents<'a>(
 
             // Check if this function is used in a test context
             let is_used_in_test =
-                symbol_table.get_resolved_references(symbol_id).any(|reference| {
-                    let parent = ctx.nodes().parent_node(reference.node_id());
+                symbol_table
+                    .get_resolved_references(symbol_id)
+                    .any(|reference| {
+                        let parent = ctx.nodes().parent_node(reference.node_id());
 
-                    // Check if directly used as test callback
-                    if let AstKind::CallExpression(call_expr) = parent.kind() {
-                        let jest_node = PossibleJestNode { node: parent, original: None };
-                        if is_type_of_jest_fn_call(
-                            call_expr,
-                            &jest_node,
-                            ctx,
-                            &[JestFnKind::General(JestGeneralFnKind::Test)],
-                        ) {
-                            return true;
+                        // Check if directly used as test callback
+                        if let AstKind::CallExpression(call_expr) = parent.kind() {
+                            let jest_node = PossibleJestNode {
+                                node: parent,
+                                original: None,
+                            };
+                            if is_type_of_jest_fn_call(
+                                call_expr,
+                                &jest_node,
+                                ctx,
+                                &[JestFnKind::General(JestGeneralFnKind::Test)],
+                            ) {
+                                return true;
+                            }
                         }
-                    }
 
-                    // Check if called within a test context by traversing from the call site
-                    is_in_test_context(parent, ctx)
-                });
+                        // Check if called within a test context by traversing from the call site
+                        is_in_test_context(parent, ctx)
+                    });
 
-            return if is_used_in_test { in_conditional } else { InConditional(false) };
+            return if is_used_in_test {
+                in_conditional
+            } else {
+                InConditional(false)
+            };
         }
         AstKind::Program(_) => return InConditional(false),
         _ => {}

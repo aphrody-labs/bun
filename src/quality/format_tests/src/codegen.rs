@@ -48,7 +48,12 @@ pub fn generate_tests(
     writeln!(f)?;
 
     let mut dir_structure = DirStructure::default();
-    collect_tests(fixtures_dir, fixtures_dir, &mut dir_structure, config.extensions)?;
+    collect_tests(
+        fixtures_dir,
+        fixtures_dir,
+        &mut dir_structure,
+        config.extensions,
+    )?;
 
     generate_modules(&mut f, &dir_structure, 0, config.extensions)?;
 
@@ -130,7 +135,9 @@ fn is_test_file(path: &Path, extensions: &[&str]) -> bool {
     if path.file_name().and_then(|n| n.to_str()) == Some("options.json") {
         return false;
     }
-    path.extension().and_then(|e| e.to_str()).is_some_and(|ext| extensions.contains(&ext))
+    path.extension()
+        .and_then(|e| e.to_str())
+        .is_some_and(|ext| extensions.contains(&ext))
 }
 
 #[expect(clippy::disallowed_methods)]
@@ -150,7 +157,10 @@ fn generate_test_function(
         f,
         "{}    let path = std::path::Path::new(\"tests/fixtures/{}\");",
         indent,
-        relative_path.display().to_string().replace(MAIN_SEPARATOR, "/")
+        relative_path
+            .display()
+            .to_string()
+            .replace(MAIN_SEPARATOR, "/")
     )?;
     writeln!(f, "{indent}    test_file(path);")?;
     writeln!(f, "{indent}}}")?;
@@ -194,7 +204,11 @@ fn sanitize_module_name(name: &str) -> String {
 
 fn sanitize_identifier(mut name: String, prefix: &str) -> String {
     if name.is_empty() || name.chars().next().unwrap().is_numeric() {
-        name = if prefix.is_empty() { format!("_{name}") } else { format!("{prefix}_{name}") };
+        name = if prefix.is_empty() {
+            format!("_{name}")
+        } else {
+            format!("{prefix}_{name}")
+        };
     }
     if is_reserved_keyword(&name) {
         return format!("r#{name}");

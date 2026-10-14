@@ -619,7 +619,10 @@ impl Loader {
             }
         }
 
-        if !self.quiet && self.loaded_count() > loaded_before {
+        if !self.quiet
+            && !bun_core::env_var::BUN_DEBUG_QUIET_LOGS.get().unwrap_or(false)
+            && self.loaded_count() > loaded_before
+        {
             self.print_loaded(start);
         }
         Ok(())

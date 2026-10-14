@@ -1,0 +1,7 @@
+[install]
+linker = "isolated"
+globalStore = true
+
+[lint.rules]
+# The tests pass values of the wrong type on purpose.
+"@typescript-eslint/no-explicit-any" = "off"

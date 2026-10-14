@@ -5,8 +5,8 @@
 use std::{
     io::{Read, Write},
     sync::{
-        Arc, Mutex,
         atomic::{AtomicU32, Ordering},
+        Arc, Mutex,
     },
 };
 
@@ -143,7 +143,11 @@ async fn callbacks_do_not_bleed_across_pages() {
     // must stay silent.
     page_b.goto(&base).await.unwrap();
     page_b.settle(500).await;
-    assert_eq!(a_hits.load(Ordering::SeqCst), 0, "page A's on_request fired for page B's requests");
+    assert_eq!(
+        a_hits.load(Ordering::SeqCst),
+        0,
+        "page A's on_request fired for page B's requests"
+    );
 
     // Page A navigates; its own callback fires.
     page_a.goto(&base).await.unwrap();
@@ -186,8 +190,11 @@ async fn page_rewrites_request_url_via_interception() {
     let modified_for_task = modified.clone();
     tokio::spawn(async move {
         while let Some(req) = rx.recv().await {
-            let new_url =
-                if req.url.contains("/api") { Some(modified_for_task.clone()) } else { None };
+            let new_url = if req.url.contains("/api") {
+                Some(modified_for_task.clone())
+            } else {
+                None
+            };
             if req
                 .resolver
                 .send(InterceptResolution::Continue {
@@ -235,7 +242,10 @@ async fn unparsable_continue_rewrite_is_blocked() {
     let mut rx = page.enable_interception();
     tokio::spawn(async move {
         while let Some(req) = rx.recv().await {
-            let new_url = req.url.contains("/api").then(|| "not a url at all".to_string());
+            let new_url = req
+                .url
+                .contains("/api")
+                .then(|| "not a url at all".to_string());
             if req
                 .resolver
                 .send(InterceptResolution::Continue {
@@ -255,7 +265,11 @@ async fn unparsable_continue_rewrite_is_blocked() {
     let mut outcome = String::new();
     for _ in 0..20 {
         page.settle(500).await;
-        outcome = page.evaluate("document.title").as_str().unwrap_or("").to_string();
+        outcome = page
+            .evaluate("document.title")
+            .as_str()
+            .unwrap_or("")
+            .to_string();
         if !outcome.is_empty() {
             break;
         }
@@ -297,8 +311,14 @@ async fn on_response_callback_can_be_detached() {
     assert!(after_first >= 1, "on_response should fire while attached");
 
     // Detach it; off_response must report success and the id must be gone.
-    assert!(page.off_response(id), "off_response must remove the callback");
-    assert!(!page.off_response(id), "removing an already-removed id returns false");
+    assert!(
+        page.off_response(id),
+        "off_response must remove the callback"
+    );
+    assert!(
+        !page.off_response(id),
+        "removing an already-removed id returns false"
+    );
 
     // Second navigation: the detached callback must not fire again.
     page.goto(&base).await.unwrap();

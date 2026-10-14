@@ -126,8 +126,15 @@ pub(crate) fn resolve_href(raw: &str, base: Option<&Url>) -> Option<String> {
     if raw.is_empty() {
         return None;
     }
-    let lower: String = raw.chars().take(12).collect::<String>().to_ascii_lowercase();
-    let lower: String = lower.chars().filter(|c| !c.is_whitespace() && !c.is_control()).collect();
+    let lower: String = raw
+        .chars()
+        .take(12)
+        .collect::<String>()
+        .to_ascii_lowercase();
+    let lower: String = lower
+        .chars()
+        .filter(|c| !c.is_whitespace() && !c.is_control())
+        .collect();
     if lower.starts_with("javascript:")
         || lower.starts_with("vbscript:")
         || lower.starts_with("data:")
@@ -135,7 +142,11 @@ pub(crate) fn resolve_href(raw: &str, base: Option<&Url>) -> Option<String> {
         return None;
     }
     match base {
-        Some(b) => Some(b.join(raw).map(|u| u.to_string()).unwrap_or_else(|_| raw.to_string())),
+        Some(b) => Some(
+            b.join(raw)
+                .map(|u| u.to_string())
+                .unwrap_or_else(|_| raw.to_string()),
+        ),
         None => Some(raw.to_string()),
     }
 }
@@ -149,7 +160,7 @@ fn md_url(url: &str) -> String {
             ')' => out.push_str("%29"),
             '<' => out.push_str("%3C"),
             '>' => out.push_str("%3E"),
-            '\n' | '\r' | '\t' => {},
+            '\n' | '\r' | '\t' => {}
             _ => out.push(c),
         }
     }
@@ -158,7 +169,10 @@ fn md_url(url: &str) -> String {
 
 /// Escapes Markdown-significant characters inside a single word.
 fn escape_word(word: &str, out: &mut String) {
-    if !word.bytes().any(|b| matches!(b, b'*' | b'`' | b'\\' | b'_' | b'[' | b']')) {
+    if !word
+        .bytes()
+        .any(|b| matches!(b, b'*' | b'`' | b'\\' | b'_' | b'[' | b']'))
+    {
         out.push_str(word);
         return;
     }
@@ -169,7 +183,7 @@ fn escape_word(word: &str, out: &mut String) {
             '*' | '`' | '\\' => {
                 out.push('\\');
                 out.push(c);
-            },
+            }
             '_' if i == 0
                 || i == last
                 || !chars[i - 1].is_alphanumeric()
@@ -177,11 +191,11 @@ fn escape_word(word: &str, out: &mut String) {
             {
                 out.push('\\');
                 out.push(c);
-            },
+            }
             '[' | ']' => {
                 out.push('\\');
                 out.push(c);
-            },
+            }
             _ => out.push(c),
         }
     }
@@ -199,7 +213,7 @@ fn escape_block_start(md: &mut String) {
             digits <= 9
                 && matches!(bytes.get(digits), Some(b'.') | Some(b')'))
                 && matches!(bytes.get(digits + 1), None | Some(b' '))
-        },
+        }
         _ => false,
     };
     if needs {
@@ -215,7 +229,13 @@ fn escape_block_start(md: &mut String) {
 fn class_language(class: &str) -> Option<String> {
     for token in class.split(|c: char| c.is_whitespace() || c == ';') {
         let t = token.trim();
-        for prefix in ["language-", "lang-", "highlight-source-", "brush:", "sourceCode "] {
+        for prefix in [
+            "language-",
+            "lang-",
+            "highlight-source-",
+            "brush:",
+            "sourceCode ",
+        ] {
             if let Some(rest) = t.strip_prefix(prefix) {
                 if !rest.is_empty() {
                     return Some(rest.to_string());
@@ -293,7 +313,12 @@ impl<'a> Renderer<'a> {
         if kind == MarkKind::Link && self.marks.iter().any(|m| m.kind == MarkKind::Link) {
             return false;
         }
-        self.marks.push(Mark { kind, open, close, emitted: false });
+        self.marks.push(Mark {
+            kind,
+            open,
+            close,
+            emitted: false,
+        });
         true
     }
 
@@ -328,8 +353,8 @@ impl<'a> Renderer<'a> {
                 Container::Quote => {
                     first.push_str("> ");
                     rest.push_str("> ");
-                },
-                Container::List { .. } => {},
+                }
+                Container::List { .. } => {}
                 Container::Item { marker, used } => {
                     in_item = true;
                     let pad = " ".repeat(marker.len());
@@ -341,7 +366,7 @@ impl<'a> Renderer<'a> {
                         new_item = true;
                     }
                     rest.push_str(&pad);
-                },
+                }
             }
         }
         (first, rest, new_item, in_item)
@@ -468,8 +493,8 @@ impl<'a> Renderer<'a> {
                     {
                         out.push('\n');
                     }
-                },
-                Kind::Other => {},
+                }
+                Kind::Other => {}
             }
             j += 1;
         }
@@ -478,8 +503,10 @@ impl<'a> Renderer<'a> {
 
     fn code_language(&self, pre: u32) -> String {
         let mut candidates: Vec<u32> = vec![pre];
-        if let Some(first) =
-            self.arena.children(pre).find(|&c| self.arena.node(c).kind == Kind::Element)
+        if let Some(first) = self
+            .arena
+            .children(pre)
+            .find(|&c| self.arena.node(c).kind == Kind::Element)
         {
             candidates.push(first);
         }
@@ -568,18 +595,18 @@ impl<'a> Renderer<'a> {
                         rows += 1;
                         max_cells = max_cells.max(row_cells);
                         row_cells = 0;
-                    },
+                    }
                     Tag::Td | Tag::Th => {
                         row_cells += 1;
                         cells += 1;
-                    },
+                    }
                     Tag::P | Tag::H(_) | Tag::Pre | Tag::Blockquote | Tag::Ul | Tag::Ol => {
                         blocks += 1
-                    },
-                    _ => {},
+                    }
+                    _ => {}
                 },
                 Kind::Text => text_len += n.text_len as usize,
-                Kind::Other => {},
+                Kind::Other => {}
             }
             j += 1;
         }
@@ -627,7 +654,12 @@ impl<'a> Renderer<'a> {
             }
             self.marks = std::mem::take(&mut t.saved_marks);
         }
-        let md = buf.md.trim().replace("  \n", " ").replace('\n', " ").replace('|', "\\|");
+        let md = buf
+            .md
+            .trim()
+            .replace("  \n", " ")
+            .replace('\n', " ")
+            .replace('|', "\\|");
         let text = collapse_ws(&buf.text);
         (md, text)
     }
@@ -699,7 +731,13 @@ impl<'a> Renderer<'a> {
             .text_rows
             .iter()
             .filter(|r| r.iter().any(|c| !c.is_empty()))
-            .map(|r| r.iter().filter(|c| !c.is_empty()).cloned().collect::<Vec<_>>().join(" | "))
+            .map(|r| {
+                r.iter()
+                    .filter(|c| !c.is_empty())
+                    .cloned()
+                    .collect::<Vec<_>>()
+                    .join(" | ")
+            })
             .collect::<Vec<_>>()
             .join("\n");
         self.push_block(BlockKind::Table, None, md, text, true);
@@ -721,27 +759,27 @@ impl<'a> Renderer<'a> {
                 Frame::ExitList => {
                     self.flush();
                     self.containers.pop();
-                },
+                }
                 Frame::ExitItem => {
                     self.flush();
                     self.containers.pop();
                     self.ctx.pop();
-                },
+                }
                 Frame::ExitQuote => {
                     self.flush();
                     self.containers.pop();
                     self.ctx.pop();
-                },
+                }
                 Frame::ExitHeading => {
                     self.flush();
                     self.ctx.pop();
-                },
+                }
                 Frame::ExitTable => self.table_end(),
                 Frame::ExitRow => {
                     if let Some(t) = self.tables.last_mut() {
                         t.row_open = false;
                     }
-                },
+                }
                 Frame::ExitCell => self.table_end_cell(),
                 Frame::ExitCaption => self.table_end_caption(),
                 Frame::ExitCellSpace => self.buf.pending_space = true,
@@ -768,14 +806,14 @@ impl<'a> Renderer<'a> {
                 let t = self.arena.text_of(i);
                 self.emit_text(t);
                 return;
-            },
+            }
             Kind::Other => {
                 if node.parent == NONE {
                     self.push_children(i, stack);
                 }
                 return;
-            },
-            Kind::Element => {},
+            }
+            Kind::Element => {}
         }
         let tag = node.tag;
         if tag.is_non_content() {
@@ -788,17 +826,17 @@ impl<'a> Renderer<'a> {
                 let lang = self.code_language(i);
                 self.emit_code_block(&code, &lang);
                 return;
-            },
+            }
             Tag::Code | Tag::Kbd | Tag::Samp => {
                 self.inline_code_atom(i);
                 return;
-            },
+            }
             Tag::Img => {
                 if self.opts.images {
                     self.image_atom(i);
                 }
                 return;
-            },
+            }
             Tag::Br => {
                 if in_cell {
                     self.buf.pending_space = true;
@@ -806,7 +844,7 @@ impl<'a> Renderer<'a> {
                     self.buf.pending_break = true;
                 }
                 return;
-            },
+            }
             Tag::Hr => {
                 if in_cell {
                     self.buf.pending_space = true;
@@ -821,9 +859,9 @@ impl<'a> Renderer<'a> {
                     );
                 }
                 return;
-            },
+            }
             Tag::Input | Tag::Select | Tag::Textarea => return,
-            _ => {},
+            _ => {}
         }
 
         if in_cell {
@@ -837,7 +875,7 @@ impl<'a> Renderer<'a> {
                     self.buf.pending_space = true;
                     stack.push(Frame::ExitCellSpace);
                     self.push_children(i, stack);
-                },
+                }
                 _ => self.push_children(i, stack),
             }
             return;
@@ -863,7 +901,7 @@ impl<'a> Renderer<'a> {
                     stack.push(Frame::ExitTable);
                 }
                 self.push_children(i, stack);
-            },
+            }
             Tag::Tr if !self.tables.is_empty() => {
                 if let Some(t) = self.tables.last_mut() {
                     t.rows.push(Vec::new());
@@ -872,7 +910,7 @@ impl<'a> Renderer<'a> {
                 }
                 stack.push(Frame::ExitRow);
                 self.push_children(i, stack);
-            },
+            }
             Tag::Td | Tag::Th if !self.tables.is_empty() => {
                 let colspan = self
                     .arena
@@ -881,12 +919,12 @@ impl<'a> Renderer<'a> {
                 self.table_start_cell(colspan);
                 stack.push(Frame::ExitCell);
                 self.push_children(i, stack);
-            },
+            }
             Tag::Caption if !self.tables.is_empty() => {
                 self.table_start_cell(1);
                 stack.push(Frame::ExitCaption);
                 self.push_children(i, stack);
-            },
+            }
             Tag::Ul | Tag::Ol => {
                 self.flush();
                 let start = if tag == Tag::Ol {
@@ -897,38 +935,47 @@ impl<'a> Renderer<'a> {
                 } else {
                     1
                 };
-                self.containers.push(Container::List { ordered: tag == Tag::Ol, next: start });
+                self.containers.push(Container::List {
+                    ordered: tag == Tag::Ol,
+                    next: start,
+                });
                 stack.push(Frame::ExitList);
                 self.push_children(i, stack);
-            },
+            }
             Tag::Li => {
                 self.flush();
                 let marker = match self.containers.last_mut() {
-                    Some(Container::List { ordered: true, next }) => {
+                    Some(Container::List {
+                        ordered: true,
+                        next,
+                    }) => {
                         let m = format!("{next}. ");
                         *next = next.saturating_add(1);
                         m
-                    },
+                    }
                     _ => "- ".to_string(),
                 };
-                self.containers.push(Container::Item { marker, used: false });
+                self.containers.push(Container::Item {
+                    marker,
+                    used: false,
+                });
                 self.ctx.push(Ctx::Item);
                 stack.push(Frame::ExitItem);
                 self.push_children(i, stack);
-            },
+            }
             Tag::Blockquote => {
                 self.flush();
                 self.containers.push(Container::Quote);
                 self.ctx.push(Ctx::Quote);
                 stack.push(Frame::ExitQuote);
                 self.push_children(i, stack);
-            },
+            }
             Tag::H(level) => {
                 self.flush();
                 self.ctx.push(Ctx::Heading(level));
                 stack.push(Frame::ExitHeading);
                 self.push_children(i, stack);
-            },
+            }
             Tag::Strong | Tag::B => self.inline_mark(i, MarkKind::Bold, stack),
             Tag::Em | Tag::I => self.inline_mark(i, MarkKind::Italic, stack),
             Tag::Del | Tag::S => self.inline_mark(i, MarkKind::Strike, stack),
@@ -937,7 +984,7 @@ impl<'a> Renderer<'a> {
                 self.flush();
                 stack.push(Frame::ExitFlush);
                 self.push_children(i, stack);
-            },
+            }
             _ => self.push_children(i, stack),
         }
     }
@@ -977,7 +1024,11 @@ impl<'a> Renderer<'a> {
 }
 
 fn inline_code(flat: &str) -> String {
-    if flat.contains('`') { format!("`` {flat} ``") } else { format!("`{flat}`") }
+    if flat.contains('`') {
+        format!("`` {flat} ``")
+    } else {
+        format!("`{flat}`")
+    }
 }
 
 /// Renders `roots` (in document order) to Markdown, plain text and blocks.
@@ -1067,11 +1118,20 @@ pub(crate) fn render(
                 text: b.text.clone(),
             });
         } else {
-            blocks.push(Block { kind: b.kind, level: None, heading_path, text: b.text.clone() });
+            blocks.push(Block {
+                kind: b.kind,
+                level: None,
+                heading_path,
+                text: b.text.clone(),
+            });
         }
     }
     if !markdown.is_empty() {
         markdown.push('\n');
     }
-    Rendered { markdown, text, blocks }
+    Rendered {
+        markdown,
+        text,
+        blocks,
+    }
 }

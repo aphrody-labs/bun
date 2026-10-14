@@ -8,7 +8,10 @@
 
 use std::{alloc::Layout, cell::Cell, ptr::NonNull};
 
-#[cfg(all(feature = "track_allocations", not(feature = "disable_track_allocations")))]
+#[cfg(all(
+    feature = "track_allocations",
+    not(feature = "disable_track_allocations")
+))]
 use crate::tracking::AllocationStats;
 
 mod alloc;
@@ -23,7 +26,11 @@ mod utils;
 pub use bumpalo_alloc::AllocErr;
 use create::DEFAULT_CHUNK_SIZE_WITHOUT_FOOTER;
 
-#[cfg(all(feature = "fixed_size", target_pointer_width = "64", target_endian = "little"))]
+#[cfg(all(
+    feature = "fixed_size",
+    target_pointer_width = "64",
+    target_endian = "little"
+))]
 #[cfg_attr(not(feature = "testing"), expect(clippy::redundant_pub_crate))]
 pub(crate) mod fixed_size;
 
@@ -171,7 +178,10 @@ mod tests_alloc;
 // forcing LLVM to emit two independent 8-byte `ldr`s, each of which forwards cleanly.
 // More background here: https://eme64.github.io/blog/2024/06/24/Auto-Vectorization-and-Store-to-Load-Forwarding.html
 #[cfg_attr(
-    not(all(feature = "track_allocations", not(feature = "disable_track_allocations"))),
+    not(all(
+        feature = "track_allocations",
+        not(feature = "disable_track_allocations")
+    )),
     expect(clippy::struct_field_names)
 )]
 #[repr(C)]
@@ -207,7 +217,10 @@ pub struct Arena<const MIN_ALIGN: usize = 1> {
     start_ptr: Cell<NonNull<u8>>,
 
     /// Used to track number of allocations made in this `Arena` when `track_allocations` feature is enabled.
-    #[cfg(all(feature = "track_allocations", not(feature = "disable_track_allocations")))]
+    #[cfg(all(
+        feature = "track_allocations",
+        not(feature = "disable_track_allocations")
+    ))]
     pub(crate) stats: AllocationStats,
 }
 
@@ -219,8 +232,14 @@ impl<const MIN_ALIGN: usize> Arena<MIN_ALIGN> {
     //
     // This constant must be referenced in all code paths which create an `Arena`, in order to validate `MIN_ALIGN`.
     pub const MIN_ALIGN: usize = {
-        assert!(MIN_ALIGN.is_power_of_two(), "MIN_ALIGN must be a power of 2");
-        assert!(MIN_ALIGN <= CHUNK_ALIGN, "MIN_ALIGN may not be larger than `CHUNK_ALIGN`");
+        assert!(
+            MIN_ALIGN.is_power_of_two(),
+            "MIN_ALIGN must be a power of 2"
+        );
+        assert!(
+            MIN_ALIGN <= CHUNK_ALIGN,
+            "MIN_ALIGN may not be larger than `CHUNK_ALIGN`"
+        );
         MIN_ALIGN
     };
 

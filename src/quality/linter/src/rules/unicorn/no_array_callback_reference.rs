@@ -62,7 +62,9 @@ declare_oxc_lint!(
 
 impl Rule for NoArrayCallbackReference {
     fn run<'a>(&self, node: &AstNode<'a>, ctx: &LintContext<'a>) {
-        let AstKind::CallExpression(call_expr) = node.kind() else { return };
+        let AstKind::CallExpression(call_expr) = node.kind() else {
+            return;
+        };
 
         let is_relevant_method = is_method_call(
             call_expr,
@@ -110,9 +112,13 @@ impl Rule for NoArrayCallbackReference {
             }
         }
 
-        let Some(first_arg) = call_expr.arguments.first() else { return };
+        let Some(first_arg) = call_expr.arguments.first() else {
+            return;
+        };
 
-        let Some(callback_expr) = first_arg.as_expression() else { return };
+        let Some(callback_expr) = first_arg.as_expression() else {
+            return;
+        };
 
         if !should_wrap_callback(callback_expr) {
             return;
@@ -139,9 +145,10 @@ fn should_wrap_callback(expr: &Expression) -> bool {
 
             true
         }
-        Expression::SequenceExpression(seq_expr) => {
-            seq_expr.expressions.last().is_none_or(|e| should_wrap_callback(e))
-        }
+        Expression::SequenceExpression(seq_expr) => seq_expr
+            .expressions
+            .last()
+            .is_none_or(|e| should_wrap_callback(e)),
         Expression::ComputedMemberExpression(_)
         | Expression::StaticMemberExpression(_)
         | Expression::PrivateFieldExpression(_)
@@ -341,6 +348,11 @@ fn test() {
             }",
     ];
 
-    Tester::new(NoArrayCallbackReference::NAME, NoArrayCallbackReference::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        NoArrayCallbackReference::NAME,
+        NoArrayCallbackReference::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

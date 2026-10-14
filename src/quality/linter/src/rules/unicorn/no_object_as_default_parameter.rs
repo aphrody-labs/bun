@@ -9,8 +9,10 @@ use oxc_span::Span;
 use crate::{AstNode, context::LintContext, rule::Rule};
 
 fn identifier(span: Span, param: &str) -> OxcDiagnostic {
-    OxcDiagnostic::warn(format!("Do not use an object literal as default for parameter `{param}`."))
-        .with_label(span)
+    OxcDiagnostic::warn(format!(
+        "Do not use an object literal as default for parameter `{param}`."
+    ))
+    .with_label(span)
 }
 
 fn non_identifier(span: Span) -> OxcDiagnostic {
@@ -168,6 +170,11 @@ fn test() {
         "function abc([a] = {a: 123}) {}",
     ];
 
-    Tester::new(NoObjectAsDefaultParameter::NAME, NoObjectAsDefaultParameter::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        NoObjectAsDefaultParameter::NAME,
+        NoObjectAsDefaultParameter::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

@@ -66,7 +66,9 @@ declare_oxc_lint!(
 
 impl Rule for RequireSlotsAsFunctions {
     fn run<'a>(&self, node: &AstNode<'a>, ctx: &LintContext<'a>) {
-        let AstKind::StaticMemberExpression(slot_prop_member) = node.kind() else { return };
+        let AstKind::StaticMemberExpression(slot_prop_member) = node.kind() else {
+            return;
+        };
 
         // Inner must be `this.$slots` (`StaticMemberExpression` with property `$slots`).
         let Some(slots_static) = inner_static_member_expression(&slot_prop_member.object) else {
@@ -118,7 +120,10 @@ fn verify(node: &AstNode<'_>, report_span: Span, ctx: &LintContext<'_>) {
         }
         // `var children = this.$slots.foo` — follow references of `children`
         AstKind::VariableDeclarator(var)
-            if var.init.as_ref().is_some_and(|init| init.span() == node.kind().span()) =>
+            if var
+                .init
+                .as_ref()
+                .is_some_and(|init| init.span() == node.kind().span()) =>
         {
             if let Some(binding_ident) = var.id.get_binding_identifier() {
                 let symbol_id = binding_ident.symbol_id();
@@ -128,8 +133,10 @@ fn verify(node: &AstNode<'_>, report_span: Span, ctx: &LintContext<'_>) {
         // `children = this.$slots.foo` — follow references of `children`
         AstKind::AssignmentExpression(assign) if assign.right.span() == node.kind().span() => {
             if let AssignmentTarget::AssignmentTargetIdentifier(target) = &assign.left
-                && let Some(symbol_id) =
-                    ctx.scoping().get_reference(target.reference_id()).symbol_id()
+                && let Some(symbol_id) = ctx
+                    .scoping()
+                    .get_reference(target.reference_id())
+                    .symbol_id()
             {
                 follow_references(symbol_id, report_span, ctx);
             }
@@ -148,7 +155,9 @@ fn verify(node: &AstNode<'_>, report_span: Span, ctx: &LintContext<'_>) {
 }
 
 fn is_under_vue_component_options_object(node: &AstNode<'_>, ctx: &LintContext<'_>) -> bool {
-    ctx.nodes().ancestors(node.id()).any(|ancestor| is_vue_component_options_object(ancestor, ctx))
+    ctx.nodes()
+        .ancestors(node.id())
+        .any(|ancestor| is_vue_component_options_object(ancestor, ctx))
 }
 
 fn follow_references(symbol_id: SymbolId, report_span: Span, ctx: &LintContext<'_>) {
@@ -337,6 +346,11 @@ fn test() {
         ),
     ];
 
-    Tester::new(RequireSlotsAsFunctions::NAME, RequireSlotsAsFunctions::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        RequireSlotsAsFunctions::NAME,
+        RequireSlotsAsFunctions::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

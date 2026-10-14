@@ -91,7 +91,10 @@ pub fn write_block_scalar<'a>(
         && comment.own_line_column.is_none()
     {
         f.context().comments().take_before(comment.span.end);
-        write!(f, FormatLineCommentSuffix::new(comment.span).with_leading_space());
+        write!(
+            f,
+            FormatLineCommentSuffix::new(comment.span).with_leading_space()
+        );
     }
 
     let line_groups: Vec<Vec<&'a str>> =
@@ -179,7 +182,11 @@ fn block_value_line_contents<'s>(
             .find_map(|l| {
                 let spaces = l.len() - l.trim_start_matches(' ').len();
                 // First line containing a non-space, non-CR character
-                l[spaces..].chars().next().filter(|c| *c != '\r').map(|_| spaces)
+                l[spaces..]
+                    .chars()
+                    .next()
+                    .filter(|c| *c != '\r')
+                    .map(|_| spaces)
             })
             .unwrap_or(usize::MAX)
     };
@@ -230,12 +237,17 @@ fn fold_lines<'s>(stripped: &[&'s str], prose_wrap: ProseWrap) -> Vec<Vec<Cow<'s
         }
         let mut words = split_with_single_space(line).peekable();
         let prev_group_has_boundary_space = lines.last().is_some_and(|prev| {
-            prev.first().is_some_and(|w| w.starts_with(char::is_whitespace))
-                || prev.last().is_some_and(|w| w.ends_with(char::is_whitespace))
+            prev.first()
+                .is_some_and(|w| w.starts_with(char::is_whitespace))
+                || prev
+                    .last()
+                    .is_some_and(|w| w.ends_with(char::is_whitespace))
         });
         let merge = !line.is_empty()
             && lines.last().is_some_and(|prev| !prev.is_empty())
-            && !words.peek().is_some_and(|w| w.starts_with(char::is_whitespace))
+            && !words
+                .peek()
+                .is_some_and(|w| w.starts_with(char::is_whitespace))
             && !prev_group_has_boundary_space;
         if merge {
             lines.last_mut().unwrap().extend(words);
@@ -289,7 +301,11 @@ fn remove_unnecessary_trailing_newlines<'s>(
         return lines;
     }
 
-    let trailing_blanks = lines.iter().rev().take_while(|words| words.is_empty()).count();
+    let trailing_blanks = lines
+        .iter()
+        .rev()
+        .take_while(|words| words.is_empty())
+        .count();
     // Preserve one blank line when the source had two or more
     lines.truncate(
         lines.len() - trailing_blanks + usize::from(trailing_blanks >= 2 && !is_last_descendant),
@@ -372,7 +388,10 @@ pub fn item_gap_anchor(block: Option<&BlockScalar>, end: u32, f: &YamlFormatter<
     }
     // The trailing break run (`content_end..span.end`, line breaks plus blank-line indentation).
     // Only the newlines the scalar's own output does NOT consume are the inter-item gap.
-    let tail = f.context().source_text().bytes_range(block.content_end, block.span.end);
+    let tail = f
+        .context()
+        .source_text()
+        .bytes_range(block.content_end, block.span.end);
     // A handful of bytes; not worth a bytecount dependency
     #[expect(clippy::naive_bytecount)]
     let total_newlines = tail.iter().filter(|&&b| b == b'\n').count();

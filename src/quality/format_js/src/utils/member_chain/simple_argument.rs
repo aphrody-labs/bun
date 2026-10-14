@@ -159,7 +159,9 @@ impl<'a, 'b> SimpleArgument<'a, 'b> {
     ) -> bool {
         Self::from(callee).is_simple_impl(depth)
             && arguments.len() + usize::from(depth) <= 2
-            && arguments.iter().all(|argument| Self::new(argument).is_simple_impl(depth + 1))
+            && arguments
+                .iter()
+                .all(|argument| Self::new(argument).is_simple_impl(depth + 1))
     }
 
     #[inline]

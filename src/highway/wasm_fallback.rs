@@ -48,28 +48,49 @@ fn rfind<T: Eq>(h: &[T], n: &[T]) -> Option<usize> {
     if h.len() < n.len() {
         return None;
     }
-    (0..=h.len() - n.len()).rev().find(|&i| h[i..i + n.len()] == *n)
+    (0..=h.len() - n.len())
+        .rev()
+        .find(|&i| h[i..i + n.len()] == *n)
 }
 
-pub(crate) unsafe fn highway_index_of_char(haystack: *const u8, haystack_len: usize, needle: u8) -> usize {
+pub(crate) unsafe fn highway_index_of_char(
+    haystack: *const u8,
+    haystack_len: usize,
+    needle: u8,
+) -> usize {
     // SAFETY: caller contract.
     first(unsafe { s(haystack, haystack_len) }, |c| c == needle)
 }
 
-pub(crate) unsafe fn highway_last_index_of_char(haystack: *const u8, haystack_len: usize, needle: u8) -> usize {
+pub(crate) unsafe fn highway_last_index_of_char(
+    haystack: *const u8,
+    haystack_len: usize,
+    needle: u8,
+) -> usize {
     // SAFETY: caller contract.
     let h = unsafe { s(haystack, haystack_len) };
     h.iter().rposition(|&c| c == needle).unwrap_or(h.len())
 }
 
-pub(crate) unsafe fn highway_index_of_not_char(haystack: *const u8, haystack_len: usize, value: u8) -> usize {
+pub(crate) unsafe fn highway_index_of_not_char(
+    haystack: *const u8,
+    haystack_len: usize,
+    value: u8,
+) -> usize {
     // SAFETY: caller contract.
     first(unsafe { s(haystack, haystack_len) }, |c| c != value)
 }
 
-pub(crate) unsafe fn highway_count_char(haystack: *const u8, haystack_len: usize, needle: u8) -> usize {
+pub(crate) unsafe fn highway_count_char(
+    haystack: *const u8,
+    haystack_len: usize,
+    needle: u8,
+) -> usize {
     // SAFETY: caller contract.
-    unsafe { s(haystack, haystack_len) }.iter().filter(|&&c| c == needle).count()
+    unsafe { s(haystack, haystack_len) }
+        .iter()
+        .filter(|&&c| c == needle)
+        .count()
 }
 
 pub(crate) unsafe fn highway_memmem(
@@ -79,7 +100,9 @@ pub(crate) unsafe fn highway_memmem(
     needle_len: usize,
 ) -> *const u8 {
     // SAFETY: caller contract.
-    match find(unsafe { s(haystack, haystack_len) }, unsafe { s(needle, needle_len) }) {
+    match find(unsafe { s(haystack, haystack_len) }, unsafe {
+        s(needle, needle_len)
+    }) {
         Some(i) => haystack.wrapping_add(i),
         None => core::ptr::null(),
     }
@@ -92,7 +115,10 @@ pub(crate) unsafe fn highway_memrmem(
     needle_len: usize,
 ) -> usize {
     // SAFETY: caller contract.
-    rfind(unsafe { s(haystack, haystack_len) }, unsafe { s(needle, needle_len) }).unwrap_or(usize::MAX)
+    rfind(unsafe { s(haystack, haystack_len) }, unsafe {
+        s(needle, needle_len)
+    })
+    .unwrap_or(usize::MAX)
 }
 
 pub(crate) unsafe fn highway_memmem16(
@@ -102,7 +128,10 @@ pub(crate) unsafe fn highway_memmem16(
     needle_len: usize,
 ) -> usize {
     // SAFETY: caller contract.
-    find(unsafe { s(haystack, haystack_len) }, unsafe { s(needle, needle_len) }).unwrap_or(usize::MAX)
+    find(unsafe { s(haystack, haystack_len) }, unsafe {
+        s(needle, needle_len)
+    })
+    .unwrap_or(usize::MAX)
 }
 
 pub(crate) unsafe fn highway_memrmem16(
@@ -112,7 +141,10 @@ pub(crate) unsafe fn highway_memrmem16(
     needle_len: usize,
 ) -> usize {
     // SAFETY: caller contract.
-    rfind(unsafe { s(haystack, haystack_len) }, unsafe { s(needle, needle_len) }).unwrap_or(usize::MAX)
+    rfind(unsafe { s(haystack, haystack_len) }, unsafe {
+        s(needle, needle_len)
+    })
+    .unwrap_or(usize::MAX)
 }
 
 pub(crate) unsafe fn highway_index_of_interesting_character_in_string_literal(
@@ -136,9 +168,14 @@ pub(crate) unsafe fn highway_index_of_interesting_character_in_multiline_comment
     })
 }
 
-pub(crate) unsafe fn highway_index_of_newline_or_non_ascii(haystack: *const u8, haystack_len: usize) -> usize {
+pub(crate) unsafe fn highway_index_of_newline_or_non_ascii(
+    haystack: *const u8,
+    haystack_len: usize,
+) -> usize {
     // SAFETY: caller contract.
-    first(unsafe { s(haystack, haystack_len) }, |c| c > 127 || c < 0x20)
+    first(unsafe { s(haystack, haystack_len) }, |c| {
+        c > 127 || c < 0x20
+    })
 }
 
 pub(crate) unsafe fn highway_index_of_newline_or_non_ascii_or_hash_or_at(
@@ -156,10 +193,15 @@ pub(crate) unsafe fn highway_index_of_space_or_newline_or_non_ascii(
     haystack_len: usize,
 ) -> usize {
     // SAFETY: caller contract.
-    first(unsafe { s(haystack, haystack_len) }, |c| c <= b' ' || c > 127)
+    first(unsafe { s(haystack, haystack_len) }, |c| {
+        c <= b' ' || c > 127
+    })
 }
 
-pub(crate) unsafe fn highway_contains_newline_or_non_ascii_or_quote(text: *const u8, text_len: usize) -> bool {
+pub(crate) unsafe fn highway_contains_newline_or_non_ascii_or_quote(
+    text: *const u8,
+    text_len: usize,
+) -> bool {
     // SAFETY: caller contract.
     unsafe { s(text, text_len) }
         .iter()
@@ -215,9 +257,11 @@ pub(crate) unsafe fn highway_fill_with_skip_mask(
         let mask = s(mask, mask_len);
         for i in 0..length {
             let b = input.add(i).read();
-            output
-                .add(i)
-                .write(if skip_mask || mask.is_empty() { b } else { b ^ mask[i % mask.len()] });
+            output.add(i).write(if skip_mask || mask.is_empty() {
+                b
+            } else {
+                b ^ mask[i % mask.len()]
+            });
         }
     }
 }
@@ -268,13 +312,21 @@ fn decode_hex_pairs(out: &mut [u8], unit: impl Fn(usize) -> u8) -> usize {
     out.len()
 }
 
-pub(crate) unsafe fn highway_decode_hex8(input: *const u8, output: *mut u8, out_len: usize) -> usize {
+pub(crate) unsafe fn highway_decode_hex8(
+    input: *const u8,
+    output: *mut u8,
+    out_len: usize,
+) -> usize {
     // SAFETY: caller contract (`input` holds `2 * out_len` bytes).
     let (src, dst) = unsafe { (s(input, out_len * 2), s_mut(output, out_len)) };
     decode_hex_pairs(dst, |i| src[i])
 }
 
-pub(crate) unsafe fn highway_decode_hex16(input: *const u16, output: *mut u8, out_len: usize) -> usize {
+pub(crate) unsafe fn highway_decode_hex16(
+    input: *const u16,
+    output: *mut u8,
+    out_len: usize,
+) -> usize {
     // SAFETY: caller contract (`input` holds `2 * out_len` units).
     let (src, dst) = unsafe { (s(input, out_len * 2), s_mut(output, out_len)) };
     decode_hex_pairs(dst, |i| src[i] as u8)
@@ -489,7 +541,13 @@ fn xxh3_long(input: &[u8], secret: &[u8]) -> u64 {
     }
     let nb_stripes = ((len - 1) - block_len * nb_blocks) / 64;
     for st in 0..nb_stripes {
-        accumulate512(&mut acc, input, nb_blocks * block_len + st * 64, secret, st * 8);
+        accumulate512(
+            &mut acc,
+            input,
+            nb_blocks * block_len + st * 64,
+            secret,
+            st * 8,
+        );
     }
     accumulate512(&mut acc, input, len - 64, secret, 192 - 64 - 7);
     let mut result = (len as u64).wrapping_mul(P64_1);

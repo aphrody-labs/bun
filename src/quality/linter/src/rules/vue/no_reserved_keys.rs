@@ -128,13 +128,17 @@ impl Rule for NoReservedKeys {
         match node.kind() {
             AstKind::CallExpression(call) => self.check_define_props(call, ctx),
             AstKind::ObjectProperty(prop) => {
-                let Some(group_name) = prop.key.static_name() else { return };
+                let Some(group_name) = prop.key.static_name() else {
+                    return;
+                };
                 let group = group_name.as_ref();
                 if !self.is_target_group(group) {
                     return;
                 }
 
-                let Some(parent) = ctx.nodes().ancestors(node.id()).next() else { return };
+                let Some(parent) = ctx.nodes().ancestors(node.id()).next() else {
+                    return;
+                };
                 if !is_vue_component_options_object(parent, ctx) {
                     return;
                 }
@@ -205,8 +209,10 @@ impl Rule for NoReservedKeys {
 impl NoReservedKeys {
     /// Built-in groups plus any added via the `groups` option.
     fn is_target_group(&self, group: &str) -> bool {
-        matches!(group, "props" | "data" | "asyncData" | "computed" | "methods" | "setup")
-            || self.0.groups.iter().any(|g| g.as_str() == group)
+        matches!(
+            group,
+            "props" | "data" | "asyncData" | "computed" | "methods" | "setup"
+        ) || self.0.groups.iter().any(|g| g.as_str() == group)
     }
 
     /// Built-in reserved keys plus any added via the `reserved` option.
@@ -216,8 +222,12 @@ impl NoReservedKeys {
 
     fn check_keys<'a>(&self, group: &str, obj: &ObjectExpression<'a>, ctx: &LintContext<'a>) {
         for prop_kind in &obj.properties {
-            let ObjectPropertyKind::ObjectProperty(p) = prop_kind else { continue };
-            let Some(name) = p.key.static_name() else { continue };
+            let ObjectPropertyKind::ObjectProperty(p) = prop_kind else {
+                continue;
+            };
+            let Some(name) = p.key.static_name() else {
+                continue;
+            };
             let span = p.key.span();
             let n = name.as_ref();
             if self.is_reserved(n) {
@@ -233,7 +243,11 @@ impl NoReservedKeys {
         if ctx.frameworks_options() != FrameworkOptions::VueSetup {
             return;
         }
-        if !call.callee.get_identifier_reference().is_some_and(|id| id.name == "defineProps") {
+        if !call
+            .callee
+            .get_identifier_reference()
+            .is_some_and(|id| id.name == "defineProps")
+        {
             return;
         }
 
@@ -251,8 +265,12 @@ impl NoReservedKeys {
                 }
                 Expression::ObjectExpression(obj) => {
                     for prop_kind in &obj.properties {
-                        let ObjectPropertyKind::ObjectProperty(p) = prop_kind else { continue };
-                        let Some(name) = p.key.static_name() else { continue };
+                        let ObjectPropertyKind::ObjectProperty(p) = prop_kind else {
+                            continue;
+                        };
+                        let Some(name) = p.key.static_name() else {
+                            continue;
+                        };
                         if self.is_reserved(name.as_ref()) {
                             ctx.diagnostic(reserved_key_diagnostic(name.as_ref(), p.key.span()));
                         }
@@ -279,7 +297,9 @@ impl NoReservedKeys {
             TSSignature::TSMethodSignature(method) => &method.key,
             _ => return,
         };
-        let Some(name) = key.static_name() else { return };
+        let Some(name) = key.static_name() else {
+            return;
+        };
         if self.is_reserved(name.as_ref()) {
             ctx.diagnostic(reserved_key_diagnostic(name.as_ref(), key.span()));
         }

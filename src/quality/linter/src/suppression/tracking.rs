@@ -19,7 +19,12 @@ pub struct Filename(String);
 
 impl Filename {
     pub fn new(path: &Path) -> Self {
-        Self(path.as_os_str().to_string_lossy().cow_replace('\\', "/").to_string())
+        Self(
+            path.as_os_str()
+                .to_string_lossy()
+                .cow_replace('\\', "/")
+                .to_string(),
+        )
     }
 }
 
@@ -54,13 +59,18 @@ where
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(transparent)]
 pub struct SuppressionTracking {
-    #[serde(deserialize_with = "deserialize_arc_map", serialize_with = "serialize_arc_map")]
+    #[serde(
+        deserialize_with = "deserialize_arc_map",
+        serialize_with = "serialize_arc_map"
+    )]
     suppressions: AllSuppressionsMap,
 }
 
 impl Default for SuppressionTracking {
     fn default() -> Self {
-        Self { suppressions: Arc::new(FxHashMap::default()) }
+        Self {
+            suppressions: Arc::new(FxHashMap::default()),
+        }
     }
 }
 
@@ -90,7 +100,9 @@ impl SuppressionTracking {
                     )
                 }
             };
-            OxcDiagnostic::error(format!("Failed to parse oxlint config {path_to_error}.\n{err}"))
+            OxcDiagnostic::error(format!(
+                "Failed to parse oxlint config {path_to_error}.\n{err}"
+            ))
         })?;
 
         let config = Self::deserialize(&json).map_err(|err| {
@@ -103,7 +115,9 @@ impl SuppressionTracking {
     }
 
     pub fn from_map(map: FxHashMap<Filename, FileSuppressionsMap>) -> Self {
-        Self { suppressions: Arc::new(map) }
+        Self {
+            suppressions: Arc::new(map),
+        }
     }
 
     pub fn suppressions(&self) -> &AllSuppressionsMap {
@@ -138,7 +152,10 @@ pub struct SuppressionFile<'a> {
 
 impl Default for SuppressionFile<'_> {
     fn default() -> Self {
-        Self { state: SuppressionFileState::Ignored, suppression_data: None }
+        Self {
+            state: SuppressionFileState::Ignored,
+            suppression_data: None,
+        }
     }
 }
 
@@ -152,15 +169,24 @@ impl<'a> SuppressionFile<'a> {
         'b: 'a,
     {
         if !file_exists && !suppress_all {
-            return Self { state: SuppressionFileState::Ignored, suppression_data: None };
+            return Self {
+                state: SuppressionFileState::Ignored,
+                suppression_data: None,
+            };
         }
 
         if suppress_all {
             // All errors will be suppressed and written to the file.
-            return Self { state: SuppressionFileState::New, suppression_data: None };
+            return Self {
+                state: SuppressionFileState::New,
+                suppression_data: None,
+            };
         }
 
-        Self { state: SuppressionFileState::Exists, suppression_data }
+        Self {
+            state: SuppressionFileState::Exists,
+            suppression_data,
+        }
     }
 
     pub fn suppression_state(&self) -> &SuppressionFileState {

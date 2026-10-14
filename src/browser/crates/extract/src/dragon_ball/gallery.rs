@@ -42,7 +42,12 @@ pub fn parse_gallery(html: &str, did: &str, base: &Url) -> Gallery {
     let dom = parse_html(html);
     let title = dom.query_selector("title").ok().flatten().map(|id| {
         let title = dom.text_content(id);
-        title.split('-').next().unwrap_or_default().trim().to_owned()
+        title
+            .split('-')
+            .next()
+            .unwrap_or_default()
+            .trim()
+            .to_owned()
     });
     let pattern = Regex::new(r"^/list/+(.+)/_thumb\.([^/]+)$").expect("static gallery regex");
     let source_pattern =
@@ -51,8 +56,9 @@ pub fn parse_gallery(html: &str, did: &str, base: &Url) -> Gallery {
     let mut pages = Vec::new();
     let mut directory = None;
     for id in dom.query_selector_all("img[src]").unwrap_or_default() {
-        let Some(src) =
-            dom.with_node(id, |node| node.get_attribute("src").map(str::to_owned)).flatten()
+        let Some(src) = dom
+            .with_node(id, |node| node.get_attribute("src").map(str::to_owned))
+            .flatten()
         else {
             continue;
         };
@@ -60,17 +66,19 @@ pub fn parse_gallery(html: &str, did: &str, base: &Url) -> Gallery {
         if url.origin() != base.origin() {
             continue;
         }
-        let Some(capture) = pattern.captures(url.path()) else { continue };
+        let Some(capture) = pattern.captures(url.path()) else {
+            continue;
+        };
         // URL transport paths are encoded; bibliographic inventory names keep
         // their original Unicode and spaces as declared in the source markup.
         let source_path = src.split(['?', '#']).next().unwrap_or(&src);
         let source_capture = source_pattern.captures(source_path);
-        let dir = source_capture
-            .as_ref()
-            .map_or(&capture[1], |value| value.get(1).map_or(&capture[1], |value| value.as_str()));
-        let file = source_capture
-            .as_ref()
-            .map_or(&capture[2], |value| value.get(2).map_or(&capture[2], |value| value.as_str()));
+        let dir = source_capture.as_ref().map_or(&capture[1], |value| {
+            value.get(1).map_or(&capture[1], |value| value.as_str())
+        });
+        let file = source_capture.as_ref().map_or(&capture[2], |value| {
+            value.get(2).map_or(&capture[2], |value| value.as_str())
+        });
         if !seen.insert(file.to_owned()) {
             continue;
         }
@@ -118,7 +126,9 @@ pub fn parse_plate_inventory(markdown: &str) -> Vec<Plate> {
     let lines: Vec<_> = markdown.lines().collect();
     let mut plates = BTreeMap::new();
     for (index, line) in lines.iter().enumerate() {
-        let Some(capture) = pattern.captures(line) else { continue };
+        let Some(capture) = pattern.captures(line) else {
+            continue;
+        };
         let Ok(n) = capture[2].parse() else { continue };
         plates.entry(n).or_insert_with(|| Plate {
             n,
@@ -142,8 +152,11 @@ mod tests {
     #[test]
     fn shenron_gallery_contract_preserves_order_and_deduplicates() {
         let html = "<title>Vol 1 - 龙珠中文网</title><img src='/list//db/v01/_thumb.001.jpg'><img src='/list/db/v01/_thumb.002.jpg'><img src='/list/db/v01/_thumb.001.jpg'>";
-        let gallery =
-            parse_gallery(html, "a b", &Url::parse("https://comic.dragonballcn.com").unwrap());
+        let gallery = parse_gallery(
+            html,
+            "a b",
+            &Url::parse("https://comic.dragonballcn.com").unwrap(),
+        );
         assert_eq!(gallery.title.as_deref(), Some("Vol 1"));
         assert_eq!(gallery.directory.as_deref(), Some("db/v01"));
         assert_eq!(gallery.files, ["001.jpg", "002.jpg"]);

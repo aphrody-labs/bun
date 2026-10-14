@@ -143,8 +143,9 @@ impl Radix {
                 ctx.diagnostic_with_dangerous_fix(missing_radix(call_expr.span), |fixer| {
                     let first_arg = &call_expr.arguments[0];
                     let end = call_expr.span.end;
-                    let has_trailing_comma =
-                        ctx.find_next_token_within(first_arg.span().end, end, ",").is_some();
+                    let has_trailing_comma = ctx
+                        .find_next_token_within(first_arg.span().end, end, ",")
+                        .is_some();
                     let insert_param = if has_trailing_comma { " 10," } else { ", 10" };
                     fixer.insert_text_before_range(Span::empty(end - 1), insert_param)
                 });
@@ -191,19 +192,59 @@ fn test() {
         ("parseInt", None, None),
         ("Number.foo();", None, None),
         ("Number[parseInt]();", None, None),
-        ("class C { #parseInt; foo() { Number.#parseInt(); } }", None, None), // { "ecmaVersion": 2022 },
-        ("class C { #parseInt; foo() { Number.#parseInt(foo); } }", None, None), // { "ecmaVersion": 2022 },
-        ("class C { #parseInt; foo() { Number.#parseInt(foo, 'bar'); } }", None, None), // { "ecmaVersion": 2022 },
+        (
+            "class C { #parseInt; foo() { Number.#parseInt(); } }",
+            None,
+            None,
+        ), // { "ecmaVersion": 2022 },
+        (
+            "class C { #parseInt; foo() { Number.#parseInt(foo); } }",
+            None,
+            None,
+        ), // { "ecmaVersion": 2022 },
+        (
+            "class C { #parseInt; foo() { Number.#parseInt(foo, 'bar'); } }",
+            None,
+            None,
+        ), // { "ecmaVersion": 2022 },
         ("var parseInt; parseInt();", None, None),
         ("var Number; Number.parseInt();", None, None),
         // ("/* globals parseInt:off */ parseInt(foo);", None, None),
-        ("Number.parseInt(foo);", None, Some(serde_json::json!({"globals": {"Number": "off"} }))),
-        (r#"parseInt("10", 10);"#, Some(serde_json::json!(["always"])), None),
-        (r#"parseInt("10", 10);"#, Some(serde_json::json!(["as-needed"])), None),
-        (r#"parseInt("10", 8);"#, Some(serde_json::json!(["always"])), None),
-        (r#"parseInt("10", 8);"#, Some(serde_json::json!(["as-needed"])), None),
-        (r#"parseInt("10", foo);"#, Some(serde_json::json!(["always"])), None),
-        (r#"parseInt("10", foo);"#, Some(serde_json::json!(["as-needed"])), None),
+        (
+            "Number.parseInt(foo);",
+            None,
+            Some(serde_json::json!({"globals": {"Number": "off"} })),
+        ),
+        (
+            r#"parseInt("10", 10);"#,
+            Some(serde_json::json!(["always"])),
+            None,
+        ),
+        (
+            r#"parseInt("10", 10);"#,
+            Some(serde_json::json!(["as-needed"])),
+            None,
+        ),
+        (
+            r#"parseInt("10", 8);"#,
+            Some(serde_json::json!(["always"])),
+            None,
+        ),
+        (
+            r#"parseInt("10", 8);"#,
+            Some(serde_json::json!(["as-needed"])),
+            None,
+        ),
+        (
+            r#"parseInt("10", foo);"#,
+            Some(serde_json::json!(["always"])),
+            None,
+        ),
+        (
+            r#"parseInt("10", foo);"#,
+            Some(serde_json::json!(["as-needed"])),
+            None,
+        ),
     ];
 
     let fail = vec![
@@ -233,18 +274,54 @@ fn test() {
         (r#"(Number?.parseInt)("10");"#, None, None), // { "ecmaVersion": 2020 },
         ("parseInt();", Some(serde_json::json!(["always"])), None),
         ("parseInt();", Some(serde_json::json!(["as-needed"])), None),
-        (r#"parseInt("10");"#, Some(serde_json::json!(["always"])), None),
-        (r#"parseInt("10");"#, Some(serde_json::json!(["as-needed"])), None),
-        (r#"parseInt("10", 1);"#, Some(serde_json::json!(["always"])), None),
-        (r#"parseInt("10", 1);"#, Some(serde_json::json!(["as-needed"])), None),
-        ("Number.parseInt();", Some(serde_json::json!(["always"])), None),
-        ("Number.parseInt();", Some(serde_json::json!(["as-needed"])), None),
+        (
+            r#"parseInt("10");"#,
+            Some(serde_json::json!(["always"])),
+            None,
+        ),
+        (
+            r#"parseInt("10");"#,
+            Some(serde_json::json!(["as-needed"])),
+            None,
+        ),
+        (
+            r#"parseInt("10", 1);"#,
+            Some(serde_json::json!(["always"])),
+            None,
+        ),
+        (
+            r#"parseInt("10", 1);"#,
+            Some(serde_json::json!(["as-needed"])),
+            None,
+        ),
+        (
+            "Number.parseInt();",
+            Some(serde_json::json!(["always"])),
+            None,
+        ),
+        (
+            "Number.parseInt();",
+            Some(serde_json::json!(["as-needed"])),
+            None,
+        ),
     ];
 
     let fix = vec![
-        ("parseInt(10)", "parseInt(10, 10)", Some(serde_json::json!(["always"]))),
-        ("parseInt(10,)", "parseInt(10, 10,)", Some(serde_json::json!(["always"]))),
-        ("parseInt(10      )", "parseInt(10      , 10)", Some(serde_json::json!(["always"]))),
+        (
+            "parseInt(10)",
+            "parseInt(10, 10)",
+            Some(serde_json::json!(["always"])),
+        ),
+        (
+            "parseInt(10,)",
+            "parseInt(10, 10,)",
+            Some(serde_json::json!(["always"])),
+        ),
+        (
+            "parseInt(10      )",
+            "parseInt(10      , 10)",
+            Some(serde_json::json!(["always"])),
+        ),
         (
             "parseInt(10,         )",
             "parseInt(10,          10,)",
@@ -280,8 +357,16 @@ fn test() {
             r#"parseInt((0, "10"), 10)"#,
             Some(serde_json::json!(["always"])),
         ),
-        ("parseInt(f(a, b))", "parseInt(f(a, b), 10)", Some(serde_json::json!(["always"]))),
-        ("parseInt([1, 2][0])", "parseInt([1, 2][0], 10)", Some(serde_json::json!(["always"]))),
+        (
+            "parseInt(f(a, b))",
+            "parseInt(f(a, b), 10)",
+            Some(serde_json::json!(["always"])),
+        ),
+        (
+            "parseInt([1, 2][0])",
+            "parseInt([1, 2][0], 10)",
+            Some(serde_json::json!(["always"])),
+        ),
         (
             r#"parseInt("10" /* , */)"#,
             r#"parseInt("10" /* , */, 10)"#,
@@ -299,5 +384,7 @@ fn test() {
         ),
     ];
 
-    Tester::new(Radix::NAME, Radix::PLUGIN, pass, fail).expect_fix(fix).test_and_snapshot();
+    Tester::new(Radix::NAME, Radix::PLUGIN, pass, fail)
+        .expect_fix(fix)
+        .test_and_snapshot();
 }

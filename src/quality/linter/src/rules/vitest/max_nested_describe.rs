@@ -371,7 +371,12 @@ fn test() {
     pass.extend(pass_vitest);
     fail.extend(fail_vitest);
 
-    Tester::new(MaxNestedDescribe::NAME, MaxNestedDescribe::PLUGIN, pass, fail)
-        .with_vitest_plugin(true)
-        .test_and_snapshot();
+    Tester::new(
+        MaxNestedDescribe::NAME,
+        MaxNestedDescribe::PLUGIN,
+        pass,
+        fail,
+    )
+    .with_vitest_plugin(true)
+    .test_and_snapshot();
 }

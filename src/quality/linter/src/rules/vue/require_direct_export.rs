@@ -269,14 +269,24 @@ export default (props) => {
             None,
             Some(PathBuf::from("test.vue")),
         ),
-        ("export default {}", None, None, Some(PathBuf::from("test.vue"))),
+        (
+            "export default {}",
+            None,
+            None,
+            Some(PathBuf::from("test.vue")),
+        ),
         (
             "export default {}",
             Some(serde_json::json!([{ "disallowFunctionalComponentFunction": true }])),
             None,
             Some(PathBuf::from("test.vue")),
         ),
-        ("export default Foo", None, None, Some(PathBuf::from("test.js"))),
+        (
+            "export default Foo",
+            None,
+            None,
+            Some(PathBuf::from("test.js")),
+        ),
         (
             "
                   import { h } from 'vue'
@@ -319,7 +329,12 @@ export default (props) => {
             None,
             Some(PathBuf::from("test.vue")),
         ),
-        ("export default (() => 2)", None, None, Some(PathBuf::from("test.vue"))),
+        (
+            "export default (() => 2)",
+            None,
+            None,
+            Some(PathBuf::from("test.vue")),
+        ),
         (
             "
                   import Vue from 'vue'
@@ -387,7 +402,12 @@ export default (props) => {
             None,
             Some(PathBuf::from("test.vue")),
         ),
-        ("<script>export default () => {} </script>", None, None, Some(PathBuf::from("test.vue"))),
+        (
+            "<script>export default () => {} </script>",
+            None,
+            None,
+            Some(PathBuf::from("test.vue")),
+        ),
         (
             "<script>export default () => {
                     const foo = () => {
@@ -597,6 +617,11 @@ export default (props) => {
         ),
     ];
 
-    Tester::new(RequireDirectExport::NAME, RequireDirectExport::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        RequireDirectExport::NAME,
+        RequireDirectExport::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

@@ -48,9 +48,9 @@ fn format_kind(kind: Option<InstructionKind>) -> &'static str {
 fn format_place(place: &Place, env: &Environment) -> String {
     let ident = &env.identifiers[place.identifier];
     let name = ident.name.as_ref().map_or("", |name| name.value());
-    let scope = ident
-        .scope
-        .map_or(Cow::Borrowed(""), |scope_id| Cow::Owned(format!("_@{}", scope_id.index())));
+    let scope = ident.scope.map_or(Cow::Borrowed(""), |scope_id| {
+        Cow::Owned(format!("_@{}", scope_id.index()))
+    });
     let mutable_range = if ident.mutable_range.end > ident.mutable_range.start + 1 {
         Cow::Owned(format!(
             "[{}:{}]",
@@ -80,7 +80,10 @@ fn format_place(place: &Place, env: &Environment) -> String {
 /// In Rust, we track instruction indices and apply changes in a second pass.
 enum DeclarationLoc {
     /// An LValue from DeclareLocal or StoreLocal — identified by (block_index, instr_index_in_block)
-    Instruction { block_index: usize, instr_local_index: usize },
+    Instruction {
+        block_index: usize,
+        instr_local_index: usize,
+    },
     /// A parameter or context variable (seeded as Let, may be upgraded to Let on reassignment — already Let)
     ParamOrContext,
 }
@@ -148,7 +151,10 @@ pub fn rewrite_instruction_kinds_based_on_reassignment(
                     }
                     declarations.insert(
                         decl_id,
-                        DeclarationLoc::Instruction { block_index, instr_local_index: local_idx },
+                        DeclarationLoc::Instruction {
+                            block_index,
+                            instr_local_index: local_idx,
+                        },
                     );
                 }
                 InstructionValue::StoreLocal { lvalue, .. } => {
@@ -262,7 +268,10 @@ pub fn rewrite_instruction_kinds_based_on_reassignment(
                         ));
                     };
                     match existing {
-                        DeclarationLoc::Instruction { block_index: bi, instr_local_index: ili } => {
+                        DeclarationLoc::Instruction {
+                            block_index: bi,
+                            instr_local_index: ili,
+                        } => {
                             let_spans.push((*bi, *ili));
                         }
                         DeclarationLoc::ParamOrContext => {

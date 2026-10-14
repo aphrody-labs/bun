@@ -74,10 +74,14 @@ fn empty_document() {
 #[test]
 fn bom_is_preserved() {
     let allocator = Allocator::default();
-    let formatted = format(&allocator, "\u{feff}# Title", MarkdownFormatOptions::default())
-        .expect("BOM input should parse")
-        .print()
-        .expect("print should succeed")
-        .into_code();
+    let formatted = format(
+        &allocator,
+        "\u{feff}# Title",
+        MarkdownFormatOptions::default(),
+    )
+    .expect("BOM input should parse")
+    .print()
+    .expect("print should succeed")
+    .into_code();
     assert_eq!(formatted, "\u{feff}# Title\n");
 }

@@ -113,8 +113,9 @@ impl Rule for PreferPromiseRejectErrors {
                     return;
                 }
 
-                let Some(arg) =
-                    new_expr.arguments[0].as_expression().map(Expression::get_inner_expression)
+                let Some(arg) = new_expr.arguments[0]
+                    .as_expression()
+                    .map(Expression::get_inner_expression)
                 else {
                     return;
                 };
@@ -141,7 +142,9 @@ fn check_reject_call(call_expr: &CallExpression, ctx: &LintContext, allow_empty_
 
     if call_expr.arguments.is_empty()
         || matches!(&call_expr.arguments[0], Argument::SpreadElement(_))
-        || call_expr.arguments[0].as_expression().is_some_and(|e| !could_be_error(e))
+        || call_expr.arguments[0]
+            .as_expression()
+            .is_some_and(|e| !could_be_error(e))
         || is_undefined(&call_expr.arguments[0], ctx)
     {
         ctx.diagnostic(prefer_promise_reject_errors_diagnostic(call_expr.span));
@@ -159,21 +162,27 @@ fn check_reject_in_function(
             return;
         };
 
-        ctx.symbol_references(reject_arg.symbol_id()).for_each(|reference| {
-            if let AstKind::CallExpression(call_expr) = ctx.nodes().parent_kind(reference.node_id())
-            {
-                let ref_node = ctx.nodes().get_node(reference.node_id());
+        ctx.symbol_references(reject_arg.symbol_id())
+            .for_each(|reference| {
+                if let AstKind::CallExpression(call_expr) =
+                    ctx.nodes().parent_kind(reference.node_id())
+                {
+                    let ref_node = ctx.nodes().get_node(reference.node_id());
 
-                if call_expr.callee.span().contains_inclusive(ref_node.span()) {
-                    check_reject_call(call_expr, ctx, allow_empty_reject);
+                    if call_expr.callee.span().contains_inclusive(ref_node.span()) {
+                        check_reject_call(call_expr, ctx, allow_empty_reject);
+                    }
                 }
-            }
-        });
+            });
         return;
     }
 
-    let Some(rest_param) = &params.rest else { return };
-    let Some(rest_arg) = rest_param.rest.argument.get_binding_identifier() else { return };
+    let Some(rest_param) = &params.rest else {
+        return;
+    };
+    let Some(rest_arg) = rest_param.rest.argument.get_binding_identifier() else {
+        return;
+    };
     let rest_index = (1 - params.items.len()) as f64;
     for reference in ctx.symbol_references(rest_arg.symbol_id()) {
         let node = ctx.nodes().get_node(reference.node_id());
@@ -195,7 +204,9 @@ fn check_reject_in_function(
             continue;
         }
 
-        let Some(parent) = outermost_paren_parent(parent, ctx) else { continue };
+        let Some(parent) = outermost_paren_parent(parent, ctx) else {
+            continue;
+        };
 
         if let AstKind::CallExpression(call_expr) = parent.kind()
             && call_expr.callee.span().contains_inclusive(member_expr.span)
@@ -227,7 +238,10 @@ fn test() {
         ("Promise.reject(new Error())", None),
         ("Promise.reject(new TypeError)", None),
         ("Promise.reject(new Error('foo'))", None),
-        ("function foo(undefined) { Promise.reject(undefined); }", None),
+        (
+            "function foo(undefined) { Promise.reject(undefined); }",
+            None,
+        ),
         (
             "declare const error: Error | undefined; new Promise((_, reject) => { if (error) reject(error); });",
             None,
@@ -235,15 +249,24 @@ fn test() {
         ("Promise.reject(foo || 5)", None),
         ("Promise.reject(5 && foo)", None),
         ("new Foo((resolve, reject) => reject(5))", None),
-        ("new Promise(function(resolve, reject) { return function(reject) { reject(5) } })", None),
+        (
+            "new Promise(function(resolve, reject) { return function(reject) { reject(5) } })",
+            None,
+        ),
         (
             "new Promise(function(resolve, reject) { if (foo) { const reject = somethingElse; reject(5) } })",
             None,
         ),
         ("new Promise(function(resolve, {apply}) { apply(5) })", None),
-        ("new Promise(function(resolve, reject) { resolve(5, reject) })", None),
+        (
+            "new Promise(function(resolve, reject) { resolve(5, reject) })",
+            None,
+        ),
         ("async function foo() { Promise.reject(await foo); }", None),
-        ("Promise.reject()", Some(serde_json::json!([{ "allowEmptyReject": true }]))),
+        (
+            "Promise.reject()",
+            Some(serde_json::json!([{ "allowEmptyReject": true }])),
+        ),
         (
             "new Promise(function(resolve, reject) { reject() })",
             Some(serde_json::json!([{ "allowEmptyReject": true }])),
@@ -255,13 +278,31 @@ fn test() {
         ("Promise.reject(foo.bar ??= 5)", None),
         ("Promise.reject(foo[bar] ??= 5)", None),
         ("class C { #reject; foo() { Promise.#reject(5); } }", None),
-        ("class C { #error; foo() { Promise.reject(this.#error); } }", None),
-        ("new Promise(function (resolve, ...rest) { rest[0](new Error('')); });", None),
-        ("new Promise(function (...rest) { rest[0](new Error('')); });", None),
-        ("new Promise(function (...rest) { rest[1](new Error('')); });", None),
-        ("new Promise(function (...rest) { foo(5, (rest[1])); });", None),
+        (
+            "class C { #error; foo() { Promise.reject(this.#error); } }",
+            None,
+        ),
+        (
+            "new Promise(function (resolve, ...rest) { rest[0](new Error('')); });",
+            None,
+        ),
+        (
+            "new Promise(function (...rest) { rest[0](new Error('')); });",
+            None,
+        ),
+        (
+            "new Promise(function (...rest) { rest[1](new Error('')); });",
+            None,
+        ),
+        (
+            "new Promise(function (...rest) { foo(5, (rest[1])); });",
+            None,
+        ),
         // This is fundamentally false, but we can not recognize the value of `i`.
-        ("new Promise(function (resolve, ...rest) { rest[i](5); });", None),
+        (
+            "new Promise(function (resolve, ...rest) { rest[i](5); });",
+            None,
+        ),
     ];
 
     let fail = vec![
@@ -274,12 +315,18 @@ fn test() {
         ("Promise.reject(undefined)", None),
         ("Promise.reject({ foo: 1 })", None),
         ("Promise.reject([1, 2, 3])", None),
-        ("Promise.reject()", Some(serde_json::json!([{ "allowEmptyReject": false }]))),
+        (
+            "Promise.reject()",
+            Some(serde_json::json!([{ "allowEmptyReject": false }])),
+        ),
         (
             "new Promise(function(resolve, reject) { reject() })",
             Some(serde_json::json!([{ "allowEmptyReject": false }])),
         ),
-        ("Promise.reject(undefined)", Some(serde_json::json!([{ "allowEmptyReject": true }]))),
+        (
+            "Promise.reject(undefined)",
+            Some(serde_json::json!([{ "allowEmptyReject": true }])),
+        ),
         ("Promise.reject('foo', somethingElse)", None),
         ("new Promise(function(resolve, reject) { reject(5) })", None),
         ("new Promise((resolve, reject) => { reject(5) })", None),
@@ -299,11 +346,17 @@ fn test() {
         ),
         ("new Promise(({foo, bar, baz}, reject) => reject(5))", None),
         ("new Promise(function(reject, reject) { reject(5) })", None),
-        ("new Promise(function(foo, arguments) { arguments(5) })", None),
+        (
+            "new Promise(function(foo, arguments) { arguments(5) })",
+            None,
+        ),
         ("new Promise((foo, arguments) => arguments(5))", None),
         ("new Promise(function({}, reject) { reject(5) })", None),
         ("new Promise(({}, reject) => reject(5))", None),
-        ("new Promise((resolve, reject, somethingElse = reject(5)) => {})", None),
+        (
+            "new Promise((resolve, reject, somethingElse = reject(5)) => {})",
+            None,
+        ),
         // Optional chaining
         ("Promise.reject?.(5)", None),
         ("Promise?.reject(5)", None),
@@ -328,12 +381,20 @@ fn test() {
             })",
             None,
         ),
-        ("new Promise(function (resolve, ...rest) { rest[0](5); });", None),
+        (
+            "new Promise(function (resolve, ...rest) { rest[0](5); });",
+            None,
+        ),
         ("new Promise(function (...rest) { rest[1](5); });", None),
         ("new Promise(function (...rest) { (rest[1])(5); });", None),
         ("new Promise(function (...rest) { ((rest[1]))(5); });", None),
     ];
 
-    Tester::new(PreferPromiseRejectErrors::NAME, PreferPromiseRejectErrors::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        PreferPromiseRejectErrors::NAME,
+        PreferPromiseRejectErrors::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

@@ -166,6 +166,11 @@ fn test() {
         ),
     ];
 
-    Tester::new(RequireReturnsType::NAME, RequireReturnsType::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        RequireReturnsType::NAME,
+        RequireReturnsType::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

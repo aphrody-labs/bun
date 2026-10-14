@@ -273,7 +273,11 @@ enum StyledComponentsHelper {
 impl StyledComponentsHelper {
     /// Convert string to [`StyledComponentsHelper`].
     fn from_str(name: &str) -> Option<Self> {
-        if name == "injectGlobal" { Some(Self::InjectGlobal) } else { Self::pure_from_str(name) }
+        if name == "injectGlobal" {
+            Some(Self::InjectGlobal)
+        } else {
+            Self::pure_from_str(name)
+        }
     }
 
     /// Convert string to [`StyledComponentsHelper`], excluding `injectGlobal`.
@@ -408,7 +412,13 @@ impl<'a> StyledComponents<'a> {
         let TaggedTemplateExpression {
             span,
             tag,
-            quasi: TemplateLiteral { span: quasi_span, quasis, expressions, .. },
+            quasi:
+                TemplateLiteral {
+                    span: quasi_span,
+                    quasis,
+                    expressions,
+                    ..
+                },
             type_arguments,
             ..
         } = expr.take_in(ctx);
@@ -473,8 +483,12 @@ impl<'a> StyledComponents<'a> {
     /// Collects import bindings which imports from `styled-components`
     fn collect_styled_bindings(&mut self, program: &Program<'a>, _ctx: &mut TraverseCtx<'a>) {
         for statement in &program.body {
-            let Statement::ImportDeclaration(import) = &statement else { continue };
-            let Some(specifiers) = &import.specifiers else { continue };
+            let Statement::ImportDeclaration(import) = &statement else {
+                continue;
+            };
+            let Some(specifiers) = &import.specifiers else {
+                continue;
+            };
             if !is_valid_styled_component_source(&import.source.value) {
                 continue;
             }
@@ -670,22 +684,30 @@ impl<'a> StyledComponents<'a> {
             return None;
         }
 
-        let file_stem = ctx.state.source_path.file_stem().and_then(|stem| stem.to_str())?;
+        let file_stem = ctx
+            .state
+            .source_path
+            .file_stem()
+            .and_then(|stem| stem.to_str())?;
 
         Some(*self.block_name.get_or_insert_with(|| {
             // Should be a name, but if the file stem is in the meaningless file names list,
             // we will use the parent directory name instead.
-            let block_name =
-                if self.options.meaningless_file_names.iter().any(|name| name == file_stem) {
-                    ctx.state
-                        .source_path
-                        .parent()
-                        .and_then(|parent| parent.file_name())
-                        .and_then(|name| name.to_str())
-                        .unwrap_or(file_stem)
-                } else {
-                    file_stem
-                };
+            let block_name = if self
+                .options
+                .meaningless_file_names
+                .iter()
+                .any(|name| name == file_stem)
+            {
+                ctx.state
+                    .source_path
+                    .parent()
+                    .and_then(|parent| parent.file_name())
+                    .and_then(|name| name.to_str())
+                    .unwrap_or(file_stem)
+            } else {
+                file_stem
+            };
 
             Str::from_str_in(block_name, ctx)
         }))
@@ -773,13 +795,15 @@ impl<'a> StyledComponents<'a> {
         helper: StyledComponentsHelper,
         ctx: &TraverseCtx<'a>,
     ) -> bool {
-        self.styled_bindings.helper_symbol_id(helper).is_some_and(|symbol_id| {
-            let reference_id = ident.reference_id();
-            ctx.scoping()
-                .get_reference(reference_id)
-                .symbol_id()
-                .is_some_and(|reference_symbol_id| reference_symbol_id == symbol_id)
-        })
+        self.styled_bindings
+            .helper_symbol_id(helper)
+            .is_some_and(|symbol_id| {
+                let reference_id = ident.reference_id();
+                ctx.scoping()
+                    .get_reference(reference_id)
+                    .symbol_id()
+                    .is_some_and(|reference_symbol_id| reference_symbol_id == symbol_id)
+            })
     }
 
     /// Checks if the identifier is a reference to a styled binding.
@@ -1036,8 +1060,9 @@ fn minify_template_literal<'a>(lit: &mut TemplateLiteral<'a>, ast: &AstBuilder<'
                             }
                             // Skip line comments, but be careful not to break URLs like `https://...`
                             b'/' if paren_depth == 0 && (i == 0 || bytes[i - 1] != b':') => {
-                                let end_index =
-                                    bytes[i + 2..].iter().position(|&b| matches!(b, b'\n' | b'\r'));
+                                let end_index = bytes[i + 2..]
+                                    .iter()
+                                    .position(|&b| matches!(b, b'\n' | b'\r'));
                                 if let Some(end_index) = end_index {
                                     // Insert space in place of `\n` / `\r`
                                     insert_space_if_required(&mut output, is_first_output);

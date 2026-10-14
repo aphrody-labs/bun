@@ -5,9 +5,9 @@
 // `BrowserState` holds a V8 isolate and is `!Send`: callers keep it on one
 // thread (a current-thread runtime / LocalSet).
 
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 
-use crate::{BrowserState, handle_tool_call};
+use crate::{handle_tool_call, BrowserState};
 
 /// Every tool this build serves, as MCP tool descriptors
 /// (`name`, `description`, `inputSchema`). Includes `browser_screenshot` and
@@ -31,5 +31,7 @@ pub async fn call(state: &mut BrowserState, name: &str, arguments: Value) -> Res
     if let Some(error) = response.error {
         return Err(error.message);
     }
-    response.result.ok_or_else(|| "empty tool result".to_owned())
+    response
+        .result
+        .ok_or_else(|| "empty tool result".to_owned())
 }

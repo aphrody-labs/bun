@@ -50,7 +50,8 @@ declare_oxc_lint!(
     style,
     fix,
     version = "0.0.14",
-    short_description = "Disallows leading/trailing space inside `console.log()` and similar methods.",
+    short_description =
+        "Disallows leading/trailing space inside `console.log()` and similar methods.",
 );
 
 impl Rule for NoConsoleSpaces {
@@ -131,18 +132,25 @@ fn report_diagnostic<'a>(
     is_template_lit: bool,
     ctx: &LintContext<'a>,
 ) {
-    let span = if is_template_lit { span } else { Span::new(span.start + 1, span.end - 1) };
+    let span = if is_template_lit {
+        span
+    } else {
+        Span::new(span.start + 1, span.end - 1)
+    };
 
-    ctx.diagnostic_with_fix(no_console_spaces_diagnostic(direction, ident, span), |fixer| {
-        // Use raw source text to preserve escape sequences (e.g. `\n`, `\'`)
-        let raw_text = fixer.source_range(span);
-        let content = if is_template_lit {
-            format!("`{}`", raw_text.trim_matches('`').trim())
-        } else {
-            raw_text.trim().to_string()
-        };
-        fixer.replace(span, content)
-    });
+    ctx.diagnostic_with_fix(
+        no_console_spaces_diagnostic(direction, ident, span),
+        |fixer| {
+            // Use raw source text to preserve escape sequences (e.g. `\n`, `\'`)
+            let raw_text = fixer.source_range(span);
+            let content = if is_template_lit {
+                format!("`{}`", raw_text.trim_matches('`').trim())
+            } else {
+                raw_text.trim().to_string()
+            };
+            fixer.replace(span, content)
+        },
+    );
 }
 
 #[test]
@@ -233,15 +241,27 @@ fn test() {
 
     let fix = vec![
         ("console.log(\"foo \", bar)", "console.log(\"foo\", bar)"),
-        ("console.debug(\"foo \", bar)", "console.debug(\"foo\", bar)"),
+        (
+            "console.debug(\"foo \", bar)",
+            "console.debug(\"foo\", bar)",
+        ),
         ("console.info(\"foo \", bar)", "console.info(\"foo\", bar)"),
         ("console.warn(\"foo \", bar)", "console.warn(\"foo\", bar)"),
-        ("console.error(\"foo \", bar)", "console.error(\"foo\", bar)"),
+        (
+            "console.error(\"foo \", bar)",
+            "console.error(\"foo\", bar)",
+        ),
         ("console.log(foo, \" bar\")", "console.log(foo, \"bar\")"),
-        ("console.debug(foo, \" bar\")", "console.debug(foo, \"bar\")"),
+        (
+            "console.debug(foo, \" bar\")",
+            "console.debug(foo, \"bar\")",
+        ),
         ("console.info(foo, \" bar\")", "console.info(foo, \"bar\")"),
         ("console.warn(foo, \" bar\")", "console.warn(foo, \"bar\")"),
-        ("console.error(foo, \" bar\")", "console.error(foo, \"bar\")"),
+        (
+            "console.error(foo, \" bar\")",
+            "console.error(foo, \"bar\")",
+        ),
         ("console.log(`foo `, bar)", "console.log(`foo`, bar)"),
         ("console.debug(`foo `, bar)", "console.debug(`foo`, bar)"),
         ("console.info(`foo `, bar)", "console.info(`foo`, bar)"),
@@ -252,8 +272,14 @@ fn test() {
         ("console.info(foo, ` bar`)", "console.info(foo, `bar`)"),
         ("console.warn(foo, ` bar`)", "console.warn(foo, `bar`)"),
         ("console.error(foo, ` bar`)", "console.error(foo, `bar`)"),
-        (r#"console.log("foo\\n ", bar)"#, r#"console.log("foo\\n", bar)"#),
-        (r#"console.log(foo, " \\nbar")"#, r#"console.log(foo, "\\nbar")"#),
+        (
+            r#"console.log("foo\\n ", bar)"#,
+            r#"console.log("foo\\n", bar)"#,
+        ),
+        (
+            r#"console.log(foo, " \\nbar")"#,
+            r#"console.log(foo, "\\nbar")"#,
+        ),
     ];
 
     Tester::new(NoConsoleSpaces::NAME, NoConsoleSpaces::PLUGIN, pass, fail)

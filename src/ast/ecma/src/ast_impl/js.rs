@@ -190,9 +190,9 @@ impl<'a> Expression<'a> {
     /// and could be checked like `expr.is_specific_member_access("Array", "from")`.
     pub fn is_specific_member_access(&self, object: &str, property: &str) -> bool {
         match self.get_inner_expression() {
-            expr if expr.is_member_expression() => {
-                expr.to_member_expression().is_specific_member_access(object, property)
-            }
+            expr if expr.is_member_expression() => expr
+                .to_member_expression()
+                .is_specific_member_access(object, property),
             Expression::ChainExpression(chain) => {
                 let Some(expr) = chain.expression.as_member_expression() else {
                     return false;
@@ -304,7 +304,10 @@ impl<'a> Expression<'a> {
     /// Returns `true` if this [`Expression`] is a function
     /// (either [`Function`] or [`ArrowFunctionExpression`]).
     pub fn is_function(&self) -> bool {
-        matches!(self, Expression::FunctionExpression(_) | Expression::ArrowFunctionExpression(_))
+        matches!(
+            self,
+            Expression::FunctionExpression(_) | Expression::ArrowFunctionExpression(_)
+        )
     }
 
     /// Returns `true` if this [`Expression`] is an anonymous function definition.
@@ -338,12 +341,18 @@ impl<'a> Expression<'a> {
     /// or [`ImportExpression`].
     pub fn is_call_like_expression(&self) -> bool {
         self.is_call_expression()
-            || matches!(self, Expression::NewExpression(_) | Expression::ImportExpression(_))
+            || matches!(
+                self,
+                Expression::NewExpression(_) | Expression::ImportExpression(_)
+            )
     }
 
     /// Returns `true` if this [`Expression`] is a [`BinaryExpression`] or [`LogicalExpression`].
     pub fn is_binaryish(&self) -> bool {
-        matches!(self, Expression::BinaryExpression(_) | Expression::LogicalExpression(_))
+        matches!(
+            self,
+            Expression::BinaryExpression(_) | Expression::LogicalExpression(_)
+        )
     }
 
     /// Returns the [`MemberExpression`] if this expression is a [`MemberExpression`], contains a
@@ -360,7 +369,11 @@ impl<'a> Expression<'a> {
     ///
     /// See [`CallExpression::is_require_call`] for details of the exact patterns that match.
     pub fn is_require_call(&self) -> bool {
-        if let Self::CallExpression(call_expr) = self { call_expr.is_require_call() } else { false }
+        if let Self::CallExpression(call_expr) = self {
+            call_expr.is_require_call()
+        } else {
+            false
+        }
     }
 
     /// Returns `true` if this is an [assignment expression](AssignmentExpression).
@@ -566,7 +579,11 @@ impl<'a> TemplateLiteral<'a> {
 
     /// Get single quasi from `template`
     pub fn single_quasi(&self) -> Option<Str<'a>> {
-        if self.is_no_substitution_template() { self.quasis[0].value.cooked } else { None }
+        if self.is_no_substitution_template() {
+            self.quasis[0].value.cooked
+        } else {
+            None
+        }
     }
 }
 
@@ -635,7 +652,10 @@ impl<'a> MemberExpression<'a> {
                 Expression::StringLiteral(lit) => Some((lit.span, lit.value.as_str())),
                 Expression::TemplateLiteral(lit) => {
                     if lit.quasis.len() == 1 {
-                        lit.quasis[0].value.cooked.map(|cooked| (lit.span, cooked.as_str()))
+                        lit.quasis[0]
+                            .value
+                            .cooked
+                            .map(|cooked| (lit.span, cooked.as_str()))
                     } else {
                         None
                     }
@@ -655,9 +675,10 @@ impl<'a> MemberExpression<'a> {
         let object_matches = match self.object().without_parentheses() {
             Expression::ChainExpression(x) => match x.expression.member_expression() {
                 None => false,
-                Some(member_expr) => {
-                    member_expr.object().without_parentheses().is_specific_id(object)
-                }
+                Some(member_expr) => member_expr
+                    .object()
+                    .without_parentheses()
+                    .is_specific_id(object),
             },
             x => x.is_specific_id(object),
         };
@@ -691,9 +712,10 @@ impl<'a> ComputedMemberExpression<'a> {
     pub fn static_property_info(&self) -> Option<(Span, &'a str)> {
         match &self.expression {
             Expression::StringLiteral(lit) => Some((lit.span, lit.value.as_str())),
-            Expression::TemplateLiteral(lit) if lit.quasis.len() == 1 => {
-                lit.quasis[0].value.cooked.map(|cooked| (lit.span, cooked.as_str()))
-            }
+            Expression::TemplateLiteral(lit) if lit.quasis.len() == 1 => lit.quasis[0]
+                .value
+                .cooked
+                .map(|cooked| (lit.span, cooked.as_str())),
             Expression::RegExpLiteral(lit) => lit.raw.map(|raw| (lit.span, raw.as_str())),
             _ => None,
         }
@@ -760,7 +782,9 @@ impl CallExpression<'_> {
     pub fn callee_name(&self) -> Option<&str> {
         match &self.callee {
             Expression::Identifier(ident) => Some(ident.name.as_str()),
-            expr => expr.as_member_expression().and_then(MemberExpression::static_property_name),
+            expr => expr
+                .as_member_expression()
+                .and_then(MemberExpression::static_property_name),
         }
     }
 
@@ -868,7 +892,8 @@ impl<'a> AssignmentTarget<'a> {
     /// - returns `b` when called on the left-hand side of `a.b = b`
     /// - returns `None` when called on the left-hand side of `a[b] = b`
     pub fn get_identifier_name(&self) -> Option<&'a str> {
-        self.as_simple_assignment_target().and_then(SimpleAssignmentTarget::get_identifier_name)
+        self.as_simple_assignment_target()
+            .and_then(SimpleAssignmentTarget::get_identifier_name)
     }
 
     /// Returns the expression inside of this assignment target, if applicable, and returns a reference to it.
@@ -880,7 +905,8 @@ impl<'a> AssignmentTarget<'a> {
     /// - returns `a` when called on `a!` in `a! = b`
     /// - returns `None` when called on `a` in `a = b` because there is no inner expression to get
     pub fn get_expression(&self) -> Option<&Expression<'a>> {
-        self.as_simple_assignment_target().and_then(SimpleAssignmentTarget::get_expression)
+        self.as_simple_assignment_target()
+            .and_then(SimpleAssignmentTarget::get_expression)
     }
 
     /// Returns the expression inside of this assignment target, if applicable, and returns a mutable reference to it.
@@ -892,7 +918,8 @@ impl<'a> AssignmentTarget<'a> {
     /// - returns `a` when called on `a!` in `a! = b`
     /// - returns `None` when called on `a` in `a = b` because there is no inner expression to get
     pub fn get_expression_mut(&mut self) -> Option<&mut Expression<'a>> {
-        self.as_simple_assignment_target_mut().and_then(SimpleAssignmentTarget::get_expression_mut)
+        self.as_simple_assignment_target_mut()
+            .and_then(SimpleAssignmentTarget::get_expression_mut)
     }
 }
 
@@ -1015,12 +1042,12 @@ impl Statement<'_> {
     /// Returns `true` if this statement uses any TypeScript syntax (such as `declare`).
     pub fn is_typescript_syntax(&self) -> bool {
         match self {
-            match_declaration!(Self) => {
-                self.as_declaration().is_some_and(Declaration::is_typescript_syntax)
-            }
-            match_module_declaration!(Self) => {
-                self.as_module_declaration().is_some_and(ModuleDeclaration::is_typescript_syntax)
-            }
+            match_declaration!(Self) => self
+                .as_declaration()
+                .is_some_and(Declaration::is_typescript_syntax),
+            match_module_declaration!(Self) => self
+                .as_module_declaration()
+                .is_some_and(ModuleDeclaration::is_typescript_syntax),
             _ => false,
         }
     }
@@ -1146,7 +1173,10 @@ impl<'a> Declaration<'a> {
 
     /// Returns `true` if this declaration is a TypeScript type or interface declaration.
     pub fn is_type(&self) -> bool {
-        matches!(self, Self::TSTypeAliasDeclaration(_) | Self::TSInterfaceDeclaration(_))
+        matches!(
+            self,
+            Self::TSTypeAliasDeclaration(_) | Self::TSInterfaceDeclaration(_)
+        )
     }
 }
 
@@ -1175,7 +1205,10 @@ impl VariableDeclarationKind {
 
     /// Returns `true` if declared using `let`, `const` or `using` (such as `let x` or `const x`)
     pub fn is_lexical(self) -> bool {
-        matches!(self, Self::Const | Self::Let | Self::Using | Self::AwaitUsing)
+        matches!(
+            self,
+            Self::Const | Self::Let | Self::Using | Self::AwaitUsing
+        )
     }
 
     /// Returns `true` if declared with `using` (such as `using x` or `await using x`)
@@ -1329,7 +1362,10 @@ impl<'a> BindingPattern<'a> {
                 }
             }
             Self::ObjectPattern(pattern) => {
-                pattern.properties.iter().for_each(|item| item.value.append_symbol_ids(symbol_ids));
+                pattern
+                    .properties
+                    .iter()
+                    .for_each(|item| item.value.append_symbol_ids(symbol_ids));
                 if let Some(rest) = &pattern.rest {
                     rest.argument.append_symbol_ids(symbol_ids);
                 }
@@ -1370,7 +1406,10 @@ impl<'a> BindingPattern<'a> {
                         .is_none_or(|rest| rest.argument.all_binding_identifiers(predicate))
             }
             Self::ObjectPattern(pattern) => {
-                pattern.properties.iter().all(|item| item.value.all_binding_identifiers(predicate))
+                pattern
+                    .properties
+                    .iter()
+                    .all(|item| item.value.all_binding_identifiers(predicate))
                     && pattern
                         .rest
                         .as_ref()
@@ -1470,19 +1509,27 @@ impl<'a> Function<'a> {
 
     /// `true` for non-expression functions
     pub fn is_declaration(&self) -> bool {
-        matches!(self.r#type, FunctionType::FunctionDeclaration | FunctionType::TSDeclareFunction)
+        matches!(
+            self.r#type,
+            FunctionType::FunctionDeclaration | FunctionType::TSDeclareFunction
+        )
     }
 
     /// Returns `true` if this function's body has a `"use strict"` directive.
     pub fn has_use_strict_directive(&self) -> bool {
-        self.body.as_ref().is_some_and(|body| body.has_use_strict_directive())
+        self.body
+            .as_ref()
+            .is_some_and(|body| body.has_use_strict_directive())
     }
 }
 
 impl FunctionType {
     /// Returns `true` if it is a [`FunctionType::TSDeclareFunction`] or [`FunctionType::TSEmptyBodyFunctionExpression`].
     pub fn is_typescript_syntax(self) -> bool {
-        matches!(self, Self::TSDeclareFunction | Self::TSEmptyBodyFunctionExpression)
+        matches!(
+            self,
+            Self::TSDeclareFunction | Self::TSEmptyBodyFunctionExpression
+        )
     }
 }
 
@@ -1606,7 +1653,8 @@ impl<'a> ArrowFunctionBody<'a> {
 
     /// Returns `true` if this block body has a `"use strict"` directive.
     pub fn has_use_strict_directive(&self) -> bool {
-        self.as_function_body().is_some_and(FunctionBody::has_use_strict_directive)
+        self.as_function_body()
+            .is_some_and(FunctionBody::has_use_strict_directive)
     }
 }
 
@@ -1705,7 +1753,9 @@ impl GetSpan for ClassHeritage<'_> {
         let expression_span = self.expression.span();
         self.type_arguments
             .as_ref()
-            .map_or(expression_span, |type_arguments| expression_span.merge(type_arguments.span))
+            .map_or(expression_span, |type_arguments| {
+                expression_span.merge(type_arguments.span)
+            })
     }
 }
 
@@ -1805,7 +1855,10 @@ impl<'a> ClassElement<'a> {
 
     /// Returns `true` if this [`ClassElement`] is a property or accessor
     pub fn is_property(&self) -> bool {
-        matches!(self, Self::PropertyDefinition(_) | Self::AccessorProperty(_))
+        matches!(
+            self,
+            Self::PropertyDefinition(_) | Self::AccessorProperty(_)
+        )
     }
 
     /// `true` for overloads, declarations, index signatures, and abstract

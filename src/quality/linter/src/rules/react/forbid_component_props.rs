@@ -60,7 +60,9 @@ impl ForbidOption {
         if self.allowed_for_patterns.is_empty() {
             return true;
         }
-        self.allowed_for_patterns.iter().all(|pat| !glob_match(pat.as_str(), tag))
+        self.allowed_for_patterns
+            .iter()
+            .all(|pat| !glob_match(pat.as_str(), tag))
     }
 
     fn is_tag_forbidden_by_disallow(&self, tag: &str) -> bool {
@@ -70,7 +72,9 @@ impl ForbidOption {
         if self.disallowed_for_patterns.is_empty() {
             return false;
         }
-        self.disallowed_for_patterns.iter().any(|pat| glob_match(pat.as_str(), tag))
+        self.disallowed_for_patterns
+            .iter()
+            .any(|pat| glob_match(pat.as_str(), tag))
     }
 }
 
@@ -199,7 +203,9 @@ impl From<ForbidComponentPropsConfig> for ForbidComponentProps {
                 .iter()
                 .map(|&name| (CompactStr::new(name), ForbidOption::default()))
                 .collect();
-            return Self { forbid: Box::new(forbid) };
+            return Self {
+                forbid: Box::new(forbid),
+            };
         }
 
         let forbid = config
@@ -230,7 +236,9 @@ impl From<ForbidComponentPropsConfig> for ForbidComponentProps {
             })
             .collect();
 
-        Self { forbid: Box::new(forbid) }
+        Self {
+            forbid: Box::new(forbid),
+        }
     }
 }
 
@@ -304,7 +312,11 @@ impl Rule for ForbidComponentProps {
 
         let tag_name = get_jsx_element_name(&jsx_elem.name);
 
-        let tag_name_for_check = if component_name.is_some() { Some(tag_name) } else { None };
+        let tag_name_for_check = if component_name.is_some() {
+            Some(tag_name)
+        } else {
+            None
+        };
 
         for attr_item in &jsx_elem.attributes {
             let Some(attr) = attr_item.as_attribute() else {
@@ -782,8 +794,13 @@ fn test() {
         ),
     ];
 
-    Tester::new(ForbidComponentProps::NAME, ForbidComponentProps::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        ForbidComponentProps::NAME,
+        ForbidComponentProps::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }
 
 #[test]

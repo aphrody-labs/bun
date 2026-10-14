@@ -1,6 +1,6 @@
-use serde_json::Value;
 #[cfg(feature = "render")]
 use serde_json::json;
+use serde_json::Value;
 
 use crate::dispatch::CdpContext;
 
@@ -76,33 +76,38 @@ fn parse_page_ranges(value: &str) -> Result<Vec<bun_browser_browser::RasterPdfPa
         if part.is_empty() {
             return Err("Invalid parameters: pageRanges contains an empty range".to_string());
         }
-        let page =
-            |text: &str| -> Result<Option<usize>, String> {
-                let text = text.trim();
-                if text.is_empty() {
-                    return Ok(None);
-                }
-                text.parse::<usize>().ok().filter(|page| *page > 0).map(Some).ok_or_else(|| {
-                    format!("Invalid parameters: pageRanges has invalid page {text:?}")
-                })
-            };
+        let page = |text: &str| -> Result<Option<usize>, String> {
+            let text = text.trim();
+            if text.is_empty() {
+                return Ok(None);
+            }
+            text.parse::<usize>()
+                .ok()
+                .filter(|page| *page > 0)
+                .map(Some)
+                .ok_or_else(|| format!("Invalid parameters: pageRanges has invalid page {text:?}"))
+        };
         let (start, end) = match part.split_once('-') {
             Some((start, end)) if !end.contains('-') => (page(start)?, page(end)?),
             Some(_) => {
-                return Err(format!("Invalid parameters: pageRanges has invalid range {part:?}"));
-            },
+                return Err(format!(
+                    "Invalid parameters: pageRanges has invalid range {part:?}"
+                ));
+            }
             None => {
                 let page = page(part)?.ok_or_else(|| {
                     "Invalid parameters: pageRanges contains an empty page".to_string()
                 })?;
                 (Some(page), Some(page))
-            },
+            }
         };
         if start.is_none() && end.is_none() {
             return Err("Invalid parameters: pageRanges range '-' is empty".to_string());
         }
         if matches!((start, end), (Some(start), Some(end)) if start > end) {
-            return Err(format!("Invalid parameters: pageRanges range {part:?} is descending"));
+            return Err(format!(
+                "Invalid parameters: pageRanges range {part:?} is descending"
+            ));
         }
         ranges.push(bun_browser_browser::RasterPdfPageRange { start, end });
     }
@@ -124,7 +129,10 @@ fn parse_page_ranges(value: &str) -> Result<Vec<bun_browser_browser::RasterPdfPa
                 continue;
             }
         }
-        normalized.push(bun_browser_browser::RasterPdfPageRange { start: Some(start), end: range.end });
+        normalized.push(bun_browser_browser::RasterPdfPageRange {
+            start: Some(start),
+            end: range.end,
+        });
     }
     Ok(normalized)
 }
@@ -141,7 +149,9 @@ fn parse_options(params: &Value) -> Result<ParsedPdfOptions, String> {
     ];
     for (name, capability) in unsupported_true {
         if boolean(params, name, false)? {
-            return Err(format!("Page.printToPDF does not yet support {capability} ({name}=true)"));
+            return Err(format!(
+                "Page.printToPDF does not yet support {capability} ({name}=true)"
+            ));
         }
     }
     let requested_print_background = boolean(params, "printBackground", false)?;
@@ -155,9 +165,11 @@ fn parse_options(params: &Value) -> Result<ParsedPdfOptions, String> {
     }
     let page_ranges = match params.get("pageRanges") {
         Some(value) => {
-            let ranges = value.as_str().ok_or("Invalid parameters: pageRanges must be a string")?;
+            let ranges = value
+                .as_str()
+                .ok_or("Invalid parameters: pageRanges must be a string")?;
             parse_page_ranges(ranges)?
-        },
+        }
         None => Vec::new(),
     };
     for name in ["headerTemplate", "footerTemplate"] {
@@ -208,7 +220,9 @@ pub async fn print_to_pdf(
     #[cfg(feature = "render")]
     {
         let options = parse_options(params)?;
-        let page = ctx.get_session_page_mut(session_id).ok_or("No page for session")?;
+        let page = ctx
+            .get_session_page_mut(session_id)
+            .ok_or("No page for session")?;
         crate::domains::page::prepare_capture_resources_if_requested(page).await;
         let animation_sample = page.live_animation_sample();
         let pdf = page
@@ -249,7 +263,7 @@ pub async fn print_to_pdf(
                 }
                 response["data"] =
                     Value::String(base64::engine::general_purpose::STANDARD.encode(pdf));
-            },
+            }
             PdfTransferMode::ReturnAsStream => {
                 let handle = ctx
                     .io_streams
@@ -257,7 +271,7 @@ pub async fn print_to_pdf(
                     .map_err(|error| format!("Page.printToPDF could not open stream: {error}"))?;
                 response["data"] = Value::String(String::new());
                 response["stream"] = Value::String(handle);
-            },
+            }
         }
         Ok(response)
     }
@@ -313,16 +327,31 @@ mod tests {
         assert_eq!(
             ranged.raster.page_ranges,
             vec![
-                bun_browser_browser::RasterPdfPageRange { start: Some(1), end: Some(1) },
-                bun_browser_browser::RasterPdfPageRange { start: Some(3), end: Some(5) },
-                bun_browser_browser::RasterPdfPageRange { start: Some(8), end: None },
+                bun_browser_browser::RasterPdfPageRange {
+                    start: Some(1),
+                    end: Some(1)
+                },
+                bun_browser_browser::RasterPdfPageRange {
+                    start: Some(3),
+                    end: Some(5)
+                },
+                bun_browser_browser::RasterPdfPageRange {
+                    start: Some(8),
+                    end: None
+                },
             ]
         );
         assert_eq!(
             parse_page_ranges("5-8, 1-3, 3-6, 10, 9, 12-").unwrap(),
             vec![
-                bun_browser_browser::RasterPdfPageRange { start: Some(1), end: Some(10) },
-                bun_browser_browser::RasterPdfPageRange { start: Some(12), end: None },
+                bun_browser_browser::RasterPdfPageRange {
+                    start: Some(1),
+                    end: Some(10)
+                },
+                bun_browser_browser::RasterPdfPageRange {
+                    start: Some(12),
+                    end: None
+                },
             ],
             "overlapping, adjacent, and repeated ranges must normalize before pagination"
         );
@@ -337,8 +366,9 @@ mod tests {
             assert!(parse_options(&params).is_err(), "must reject {params}");
         }
 
-        let too_many_parts =
-            std::iter::repeat_n("1", MAX_PAGE_RANGE_PARTS + 1).collect::<Vec<_>>().join(",");
+        let too_many_parts = std::iter::repeat_n("1", MAX_PAGE_RANGE_PARTS + 1)
+            .collect::<Vec<_>>()
+            .join(",");
         assert!(
             parse_page_ranges(&too_many_parts).is_err(),
             "range-token work must remain bounded before output allocation"
@@ -370,7 +400,9 @@ mod tests {
         let session_id = format!("{page_id}-session");
         ctx.sessions.insert(session_id.clone(), page_id);
         let session = Some(session_id);
-        ctx.get_session_page_mut(&session).unwrap().set_viewport((100.0, 80.0));
+        ctx.get_session_page_mut(&session)
+            .unwrap()
+            .set_viewport((100.0, 80.0));
         page::handle(
             "navigate",
             &json!({
@@ -436,13 +468,22 @@ mod tests {
         assert_eq!(streamed["data"], "");
         assert_eq!(streamed["bun_browserPrintBackground"], false);
         assert_eq!(streamed["bun_browserRequestedPrintBackground"], false);
-        assert_eq!(streamed["bun_browserCapabilities"]["honorsPrintBackground"], true);
+        assert_eq!(
+            streamed["bun_browserCapabilities"]["honorsPrintBackground"],
+            true
+        );
         assert_eq!(streamed["bun_browserCapabilities"]["honorsScale"], true);
-        assert_eq!(streamed["bun_browserCapabilities"]["honorsPrintMedia"], true);
+        assert_eq!(
+            streamed["bun_browserCapabilities"]["honorsPrintMedia"],
+            true
+        );
         assert_eq!(streamed["bun_browserCapabilities"]["pageRanges"], true);
         assert_eq!(streamed["bun_browserTaggedPDF"], false);
         assert_eq!(streamed["bun_browserRequestedTaggedPDF"], true);
-        assert_eq!(streamed["bun_browserIgnoredOptions"], json!(["generateTaggedPDF"]));
+        assert_eq!(
+            streamed["bun_browserIgnoredOptions"],
+            json!(["generateTaggedPDF"])
+        );
         let handle = streamed["stream"].as_str().expect("protocol stream handle");
         let mut streamed_bytes = Vec::new();
         loop {

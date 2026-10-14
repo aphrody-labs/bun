@@ -84,7 +84,8 @@ impl LockEntry {
     }
 
     pub fn from_value(key: &str, value: &Value) -> Result<LockEntry> {
-        let bad = |what: &str| Error::Parse(format!("bun.lock: invalid \"system\".\"{key}\": {what}"));
+        let bad =
+            |what: &str| Error::Parse(format!("bun.lock: invalid \"system\".\"{key}\": {what}"));
         let spec = super::parse_entry(key.as_bytes(), b"*").ok_or_else(|| bad("unknown source"))?;
         let field = |name: &str| -> Result<String> {
             match value.get(name) {
@@ -105,14 +106,18 @@ impl LockEntry {
         }
         if let Some(deps) = value.get("deps") {
             for dep in deps.as_array() {
-                entry
-                    .deps
-                    .push(dep.as_str().ok_or_else(|| bad("\"deps\" must be strings"))?.to_owned());
+                entry.deps.push(
+                    dep.as_str()
+                        .ok_or_else(|| bad("\"deps\" must be strings"))?
+                        .to_owned(),
+                );
             }
         }
         if let Some(Value::Object(rows)) = value.get("meta") {
             for (k, v) in rows {
-                let v = v.as_str().ok_or_else(|| bad("\"meta\" values must be strings"))?;
+                let v = v
+                    .as_str()
+                    .ok_or_else(|| bad("\"meta\" values must be strings"))?;
                 entry.meta.insert(k.clone(), v.to_owned());
             }
         }
@@ -154,7 +159,9 @@ impl SystemLock {
 
     pub fn from_value(value: &Value) -> Result<SystemLock> {
         let Value::Object(rows) = value else {
-            return Err(Error::Parse("bun.lock: \"system\" must be an object".to_owned()));
+            return Err(Error::Parse(
+                "bun.lock: \"system\" must be an object".to_owned(),
+            ));
         };
         let mut lock = SystemLock::default();
         for (key, v) in rows {

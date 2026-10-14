@@ -1,9 +1,7 @@
 // Copyright 2026 aphrody-code
 // SPDX-License-Identifier: Apache-2.0
 
-
 //! Native Node.js to Bun project migration.
-
 
 #[path = "engine/ai/mod.rs"]
 pub mod ai;

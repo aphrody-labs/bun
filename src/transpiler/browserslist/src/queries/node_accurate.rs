@@ -3,7 +3,10 @@ use crate::{data::node::node_versions, error::Error, opts::Opts};
 
 pub(super) fn node_accurate(version_str: &str, opts: &Opts) -> QueryResult {
     // Reject leading zeros (e.g. "08"), like the JavaScript implementation.
-    if version_str.split('.').any(|n| n != "0" && n.starts_with('0')) {
+    if version_str
+        .split('.')
+        .any(|n| n != "0" && n.starts_with('0'))
+    {
         return Err(Error::UnknownNodejsVersion(version_str.to_string()));
     }
 

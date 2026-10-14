@@ -59,7 +59,10 @@ fn test() {
 
     let fail = vec![
         ("vi.fn()", Some(serde_json::json!([{ "fn": null }]))),
-        ("vi.mock()", Some(serde_json::json!([{ "mock": "Do not use mocks" }]))),
+        (
+            "vi.mock()",
+            Some(serde_json::json!([{ "mock": "Do not use mocks" }])),
+        ),
         (
             "
 			     import { vi } from 'vitest';
@@ -70,6 +73,11 @@ fn test() {
         (r#"vi["fn"]()"#, Some(serde_json::json!([{ "fn": null }]))),
     ];
 
-    Tester::new(NoRestrictedViMethods::NAME, NoRestrictedViMethods::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        NoRestrictedViMethods::NAME,
+        NoRestrictedViMethods::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

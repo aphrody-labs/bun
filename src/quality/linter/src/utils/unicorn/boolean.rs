@@ -59,10 +59,14 @@ pub fn is_boolean_node<'a, 'b>(node: &'b AstNode<'a>, ctx: &'b LintContext<'a>) 
     }
 
     if let AstKind::ConditionalExpression(ConditionalExpression {
-        test: conditional_test, ..
+        test: conditional_test,
+        ..
     }) = parent.kind()
     {
-        let expr_span = conditional_test.get_inner_expression().without_parentheses().span();
+        let expr_span = conditional_test
+            .get_inner_expression()
+            .without_parentheses()
+            .span();
         return expr_span == node.kind().span();
     }
 

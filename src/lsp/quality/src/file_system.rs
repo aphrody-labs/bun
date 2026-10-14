@@ -81,11 +81,15 @@ impl LSPFileSystem {
 
     pub fn set(&self, uri: Uri, content: String) {
         let language_id = self.get_language_id(&uri).unwrap_or_default();
-        self.files.pin().insert(uri, (language_id, Arc::from(content)));
+        self.files
+            .pin()
+            .insert(uri, (language_id, Arc::from(content)));
     }
 
     pub fn set_with_language(&self, uri: Uri, language_id: LanguageId, content: String) {
-        self.files.pin().insert(uri, (language_id, Arc::from(content)));
+        self.files
+            .pin()
+            .insert(uri, (language_id, Arc::from(content)));
     }
 
     pub fn get_language_id(&self, uri: &Uri) -> Option<LanguageId> {
@@ -94,7 +98,11 @@ impl LSPFileSystem {
 
     pub fn get_document<'a>(&self, uri: &'a Uri) -> TextDocument<'a> {
         self.files.pin().get(uri).map_or_else(
-            || TextDocument { uri, language_id: LanguageId::default(), text: None },
+            || TextDocument {
+                uri,
+                language_id: LanguageId::default(),
+                text: None,
+            },
             |(language_id, content)| TextDocument {
                 uri,
                 language_id: language_id.clone(),
@@ -126,7 +134,9 @@ mod tests {
     use super::*;
 
     fn path_from_fixture(fixture: &str) -> PathBuf {
-        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("fixtures").join(fixture)
+        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("fixtures")
+            .join(fixture)
     }
 
     fn path_to_lossy_string(path: &Path) -> Cow<'_, str> {
@@ -147,7 +157,10 @@ mod tests {
         assert_eq!(*resolved_path.as_path(), file);
 
         #[cfg(any(target_os = "windows", target_os = "macos"))]
-        assert_eq!(path_to_lossy_string(unresolved_path.as_path()), path_to_lossy_string(&file));
+        assert_eq!(
+            path_to_lossy_string(unresolved_path.as_path()),
+            path_to_lossy_string(&file)
+        );
 
         #[cfg(not(any(target_os = "windows", target_os = "macos")))]
         assert_eq!(
@@ -172,7 +185,10 @@ mod tests {
         assert_eq!(*resolved_path.as_path(), dir);
 
         #[cfg(any(target_os = "windows", target_os = "macos"))]
-        assert_eq!(path_to_lossy_string(unresolved_path.as_path()), path_to_lossy_string(&dir));
+        assert_eq!(
+            path_to_lossy_string(unresolved_path.as_path()),
+            path_to_lossy_string(&dir)
+        );
 
         #[cfg(not(any(target_os = "windows", target_os = "macos")))]
         assert_eq!(

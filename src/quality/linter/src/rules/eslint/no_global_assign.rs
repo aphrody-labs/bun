@@ -12,9 +12,15 @@ use crate::{
 };
 
 fn no_global_assign_diagnostic(global_name: &str, span: Span) -> OxcDiagnostic {
-    OxcDiagnostic::warn(format!("Read-only global '{global_name}' should not be modified."))
-        .with_help(format!("Use a local variable instead of modifying the global '{global_name}'."))
-        .with_label(span.label(format!("Read-only global '{global_name}' should not be modified.")))
+    OxcDiagnostic::warn(format!(
+        "Read-only global '{global_name}' should not be modified."
+    ))
+    .with_help(format!(
+        "Use a local variable instead of modifying the global '{global_name}'."
+    ))
+    .with_label(span.label(format!(
+        "Read-only global '{global_name}' should not be modified."
+    )))
 }
 
 #[derive(Debug, Default, Clone, Deserialize)]
@@ -92,7 +98,11 @@ fn test() {
     let pass = vec![
         ("string='1';", None, None),
         ("var string;", None, None),
-        ("Object = 0;", Some(serde_json::json!([{ "exceptions": ["Object"] }])), None),
+        (
+            "Object = 0;",
+            Some(serde_json::json!([{ "exceptions": ["Object"] }])),
+            None,
+        ),
         ("top = 0;", None, None),
         (
             "onload = 0;",

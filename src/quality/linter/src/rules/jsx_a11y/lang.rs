@@ -56,7 +56,8 @@ declare_oxc_lint!(
     jsx_a11y,
     correctness,
     version = "0.1.1",
-    short_description = "The lang prop on the `<html>` element must be a valid IETF BCP 47 language tag.",
+    short_description =
+        "The lang prop on the `<html>` element must be a valid IETF BCP 47 language tag.",
 );
 
 impl Rule for Lang {
@@ -108,7 +109,9 @@ fn is_valid_lang_prop(item: &JSXAttributeItem) -> bool {
 }
 
 fn is_valid_language_tag(value: &str) -> bool {
-    LanguageTag::parse(value).as_ref().is_ok_and(LanguageTag::is_valid)
+    LanguageTag::parse(value)
+        .as_ref()
+        .is_ok_and(LanguageTag::is_valid)
 }
 
 #[test]
@@ -150,7 +153,11 @@ fn test() {
         (r"<html lang={`${language}`} />", None, None),
         (r#"<div lang={"foo"} />"#, None, None),
         (r#"<Foo lang={"en"} />"#, None, Some(settings())),
-        (r#"<Box as="html" lang={`en-US`} />"#, None, Some(settings())),
+        (
+            r#"<Box as="html" lang={`en-US`} />"#,
+            None,
+            Some(settings()),
+        ),
     ];
 
     let fail = vec![

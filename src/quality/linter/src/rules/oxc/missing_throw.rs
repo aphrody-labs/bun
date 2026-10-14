@@ -41,7 +41,8 @@ declare_oxc_lint!(
     correctness,
     suggestion,
     version = "0.0.3",
-    short_description = "Checks whether the `throw` keyword is missing in front of a `new` expression.",
+    short_description =
+        "Checks whether the `throw` keyword is missing in front of a `new` expression.",
 );
 
 impl Rule for MissingThrow {
@@ -78,12 +79,20 @@ fn test() {
         ("[new Error()]", None),
     ];
 
-    let fail =
-        vec![("function foo() { new Error() }", None), ("const foo = () => { new Error() }", None)];
+    let fail = vec![
+        ("function foo() { new Error() }", None),
+        ("const foo = () => { new Error() }", None),
+    ];
 
     let fix = vec![
-        ("function foo() { new Error() }", "function foo() { throw new Error() }"),
-        ("const foo = () => { new Error() }", "const foo = () => { throw new Error() }"),
+        (
+            "function foo() { new Error() }",
+            "function foo() { throw new Error() }",
+        ),
+        (
+            "const foo = () => { new Error() }",
+            "const foo = () => { throw new Error() }",
+        ),
     ];
 
     Tester::new(MissingThrow::NAME, MissingThrow::PLUGIN, pass, fail)

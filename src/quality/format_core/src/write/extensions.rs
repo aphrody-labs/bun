@@ -31,7 +31,11 @@ where
     F: Format<'ast, C>,
 {
     fn new(inner: F) -> Self {
-        Self { inner, memory: OnceCell::new(), _marker: PhantomData }
+        Self {
+            inner,
+            memory: OnceCell::new(),
+            _marker: PhantomData,
+        }
     }
 
     /// Gives access to the memoized content.

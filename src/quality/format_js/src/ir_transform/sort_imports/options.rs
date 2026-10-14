@@ -220,13 +220,20 @@ mod tests {
     #[test]
     fn rejects_custom_group_names_conflicting_with_predefined() {
         // Plain predefined names, compound predefined names, and `unknown` are all reserved
-        for name in
-            ["side_effect", "side_effect_style", "external", "side_effect-import", "unknown"]
-        {
+        for name in [
+            "side_effect",
+            "side_effect_style",
+            "external",
+            "side_effect-import",
+            "unknown",
+        ] {
             let err = options_with_custom_group_name(name)
                 .validate()
                 .expect_err("conflicting name must be rejected");
-            assert!(err.contains(name), "error must name the conflicting group: {err}");
+            assert!(
+                err.contains(name),
+                "error must name the conflicting group: {err}"
+            );
         }
     }
 
@@ -235,9 +242,11 @@ mod tests {
         // `-` is not usable in predefined names (only as their separator),
         // so `side-effect` / `side-effect-style` are valid custom names.
         for name in ["side-effect", "side-effect-style", "warp-drive", "myGroup"] {
-            options_with_custom_group_name(name).validate().unwrap_or_else(|err| {
-                panic!("`{name}` must be accepted as a custom group name: {err}")
-            });
+            options_with_custom_group_name(name)
+                .validate()
+                .unwrap_or_else(|err| {
+                    panic!("`{name}` must be accepted as a custom group name: {err}")
+                });
         }
     }
 }

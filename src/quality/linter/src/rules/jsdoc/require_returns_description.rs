@@ -262,6 +262,11 @@ fn test() {
         ),
     ];
 
-    Tester::new(RequireReturnsDescription::NAME, RequireReturnsDescription::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        RequireReturnsDescription::NAME,
+        RequireReturnsDescription::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

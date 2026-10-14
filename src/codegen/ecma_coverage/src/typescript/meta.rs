@@ -118,7 +118,11 @@ impl CompilerSettings {
                     .collect()
             })
             .unwrap_or_default();
-        if parsed.is_empty() { vec![default] } else { parsed }
+        if parsed.is_empty() {
+            vec![default]
+        } else {
+            parsed
+        }
     }
 }
 
@@ -225,7 +229,8 @@ impl TestCaseContent {
                     .captures_iter(&unit.content)
                     .filter_map(|cap| {
                         #[expect(clippy::cast_possible_truncation)]
-                        cap.get(1).map(|m| Span::new(m.start() as u32, m.end() as u32))
+                        cap.get(1)
+                            .map(|m| Span::new(m.start() as u32, m.end() as u32))
                     })
                     .collect();
 
@@ -241,7 +246,11 @@ impl TestCaseContent {
             path.display(),
         );
 
-        Self { tests: test_unit_data, settings, error_codes }
+        Self {
+            tests: test_unit_data,
+            settings,
+            error_codes,
+        }
     }
 
     fn get_source_type(path: &Path, options: &CompilerSettings) -> Option<SourceType> {
@@ -328,7 +337,11 @@ impl TestCaseContent {
     fn collect_package_json_types(units: &[TestUnitData]) -> FxHashMap<String, Option<String>> {
         units
             .iter()
-            .filter(|unit| Path::new(&unit.name).file_name().is_some_and(|f| f == "package.json"))
+            .filter(|unit| {
+                Path::new(&unit.name)
+                    .file_name()
+                    .is_some_and(|f| f == "package.json")
+            })
             .map(|unit| {
                 let dir = Path::new(&unit.name)
                     .parent()
@@ -368,11 +381,16 @@ impl TestCaseContent {
         if options.check_js.len() > 1 && options.check_js.contains(&true) {
             suffixes.push(vec!["checkjs=true".to_string()]);
         }
-        suffixes
-            .extend(create_suffixes("experimentaldecorators", &options.experimental_decorators));
+        suffixes.extend(create_suffixes(
+            "experimentaldecorators",
+            &options.experimental_decorators,
+        ));
         suffixes.extend(create_suffixes("jsx", &options.jsx));
         suffixes.extend(create_suffixes("module", &options.modules));
-        suffixes.extend(create_suffixes("preserveconstenums", &options.preserve_const_enums));
+        suffixes.extend(create_suffixes(
+            "preserveconstenums",
+            &options.preserve_const_enums,
+        ));
         // As with `checkJs`, use the enabled baseline when both `strict` variants are present.
         if options.strict.len() > 1 && options.strict.contains(&true) {
             suffixes.push(vec!["strict=true".to_string()]);
@@ -462,7 +480,11 @@ pub struct BaselineFile {
 
 impl BaselineFile {
     pub fn print(&self) -> String {
-        self.files.iter().map(|f| f.oxc_printed.as_str()).collect::<Vec<_>>().join("\n")
+        self.files
+            .iter()
+            .map(|f| f.oxc_printed.as_str())
+            .collect::<Vec<_>>()
+            .join("\n")
     }
 
     pub fn snapshot(&self) -> String {
@@ -477,7 +499,9 @@ impl BaselineFile {
     }
 
     pub fn parse(path: &Path) -> Self {
-        let Ok(s) = fs::read_to_string(path) else { return Self::default() };
+        let Ok(s) = fs::read_to_string(path) else {
+            return Self::default();
+        };
 
         let mut files: Vec<Baseline> = vec![];
         let mut is_diagnostic = false;
@@ -492,11 +516,16 @@ impl BaselineFile {
                 }
                 continue;
             }
-            let Some(last) = files.last_mut() else { continue };
+            let Some(last) = files.last_mut() else {
+                continue;
+            };
             if is_diagnostic {
                 // Skip details of the diagnostic
                 if line.is_empty() {
-                    while lines.peek().is_some_and(|l| l.strip_prefix("//// [").is_none()) {
+                    while lines
+                        .peek()
+                        .is_some_and(|l| l.strip_prefix("//// [").is_none())
+                    {
                         lines.next();
                     }
                     continue;

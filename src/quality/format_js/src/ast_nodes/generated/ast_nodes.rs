@@ -901,8 +901,12 @@ impl<'a> AstNode<'a, Program<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -1257,8 +1261,12 @@ impl<'a> AstNode<'a, IdentifierName<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -1278,8 +1286,12 @@ impl<'a> AstNode<'a, IdentifierReference<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -1299,8 +1311,12 @@ impl<'a> AstNode<'a, BindingIdentifier<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -1320,8 +1336,12 @@ impl<'a> AstNode<'a, LabelIdentifier<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -1336,8 +1356,12 @@ impl<'a> AstNode<'a, ThisExpression> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -1363,8 +1387,12 @@ impl<'a> AstNode<'a, ArrayExpression<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -1416,8 +1444,12 @@ impl<'a> AstNode<'a, Elision> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -1443,8 +1475,12 @@ impl<'a> AstNode<'a, ObjectExpression<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -1527,8 +1563,12 @@ impl<'a> AstNode<'a, ObjectProperty<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -1608,8 +1648,12 @@ impl<'a> AstNode<'a, TemplateLiteral<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -1665,8 +1709,12 @@ impl<'a> AstNode<'a, TaggedTemplateExpression<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -1696,8 +1744,12 @@ impl<'a> AstNode<'a, TemplateElement<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -1773,8 +1825,12 @@ impl<'a> AstNode<'a, ComputedMemberExpression<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -1816,8 +1872,12 @@ impl<'a> AstNode<'a, StaticMemberExpression<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -1859,8 +1919,12 @@ impl<'a> AstNode<'a, PrivateFieldExpression<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -1933,8 +1997,12 @@ impl<'a> AstNode<'a, CallExpression<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -2002,8 +2070,12 @@ impl<'a> AstNode<'a, NewExpression<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -2018,8 +2090,12 @@ impl<'a> AstNode<'a, ImportMeta> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -2034,8 +2110,12 @@ impl<'a> AstNode<'a, NewTarget> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -2061,8 +2141,12 @@ impl<'a> AstNode<'a, SpreadElement<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -2125,8 +2209,12 @@ impl<'a> AstNode<'a, UpdateExpression<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -2157,8 +2245,12 @@ impl<'a> AstNode<'a, UnaryExpression<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -2200,8 +2292,12 @@ impl<'a> AstNode<'a, BinaryExpression<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -2238,8 +2334,12 @@ impl<'a> AstNode<'a, PrivateInExpression<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -2281,8 +2381,12 @@ impl<'a> AstNode<'a, LogicalExpression<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -2330,8 +2434,12 @@ impl<'a> AstNode<'a, ConditionalExpression<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -2373,8 +2481,12 @@ impl<'a> AstNode<'a, AssignmentExpression<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -2532,8 +2644,12 @@ impl<'a> AstNode<'a, ArrayAssignmentTarget<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -2572,8 +2688,12 @@ impl<'a> AstNode<'a, ObjectAssignmentTarget<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -2599,8 +2719,12 @@ impl<'a> AstNode<'a, AssignmentTargetRest<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -2666,8 +2790,12 @@ impl<'a> AstNode<'a, AssignmentTargetWithDefault<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -2738,8 +2866,12 @@ impl<'a> AstNode<'a, AssignmentTargetPropertyIdentifier<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -2781,8 +2913,12 @@ impl<'a> AstNode<'a, AssignmentTargetPropertyProperty<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -2808,8 +2944,12 @@ impl<'a> AstNode<'a, SequenceExpression<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -2824,8 +2964,12 @@ impl<'a> AstNode<'a, Super> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -2851,8 +2995,12 @@ impl<'a> AstNode<'a, AwaitExpression<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -2878,8 +3026,12 @@ impl<'a> AstNode<'a, ChainExpression<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -2942,8 +3094,12 @@ impl<'a> AstNode<'a, ParenthesizedExpression<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -3142,8 +3298,12 @@ impl<'a> AstNode<'a, Directive<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -3163,8 +3323,12 @@ impl<'a> AstNode<'a, Hashbang<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -3190,8 +3354,12 @@ impl<'a> AstNode<'a, BlockStatement<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -3315,8 +3483,12 @@ impl<'a> AstNode<'a, VariableDeclaration<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -3386,8 +3558,12 @@ impl<'a> AstNode<'a, VariableDeclarator<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -3402,8 +3578,12 @@ impl<'a> AstNode<'a, EmptyStatement> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -3429,8 +3609,12 @@ impl<'a> AstNode<'a, ExpressionStatement<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -3480,8 +3664,12 @@ impl<'a> AstNode<'a, IfStatement<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -3518,8 +3706,12 @@ impl<'a> AstNode<'a, DoWhileStatement<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -3556,8 +3748,12 @@ impl<'a> AstNode<'a, WhileStatement<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -3635,8 +3831,12 @@ impl<'a> AstNode<'a, ForStatement<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -3713,8 +3913,12 @@ impl<'a> AstNode<'a, ForInStatement<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -3796,8 +4000,12 @@ impl<'a> AstNode<'a, ForOfStatement<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -3825,8 +4033,12 @@ impl<'a> AstNode<'a, ContinueStatement<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -3854,8 +4066,12 @@ impl<'a> AstNode<'a, BreakStatement<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -3883,8 +4099,12 @@ impl<'a> AstNode<'a, ReturnStatement<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -3921,8 +4141,12 @@ impl<'a> AstNode<'a, WithStatement<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -3959,8 +4183,12 @@ impl<'a> AstNode<'a, SwitchStatement<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -4005,8 +4233,12 @@ impl<'a> AstNode<'a, SwitchCase<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -4043,8 +4275,12 @@ impl<'a> AstNode<'a, LabeledStatement<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -4070,8 +4306,12 @@ impl<'a> AstNode<'a, ThrowStatement<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -4100,7 +4340,11 @@ impl<'a> AstNode<'a, TryStatement<'a>> {
 
     #[inline]
     pub fn handler(&self) -> Option<&AstNode<'a, CatchClause<'a>>> {
-        let following_span_start = self.inner.finalizer.as_deref().map_or(0, |n| n.span().start);
+        let following_span_start = self
+            .inner
+            .finalizer
+            .as_deref()
+            .map_or(0, |n| n.span().start);
         self.allocator
             .alloc(self.inner.handler.as_ref().map(|inner| AstNode {
                 inner: inner.as_ref(),
@@ -4129,8 +4373,12 @@ impl<'a> AstNode<'a, TryStatement<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -4169,8 +4417,12 @@ impl<'a> AstNode<'a, CatchClause<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -4215,8 +4467,12 @@ impl<'a> AstNode<'a, CatchParameter<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -4231,8 +4487,12 @@ impl<'a> AstNode<'a, DebuggerStatement> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -4311,8 +4571,12 @@ impl<'a> AstNode<'a, AssignmentPattern<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -4351,8 +4615,12 @@ impl<'a> AstNode<'a, ObjectPattern<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -4399,8 +4667,12 @@ impl<'a> AstNode<'a, BindingProperty<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -4439,8 +4711,12 @@ impl<'a> AstNode<'a, ArrayPattern<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -4466,8 +4742,12 @@ impl<'a> AstNode<'a, BindingRestElement<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -4614,8 +4894,12 @@ impl<'a> AstNode<'a, Function<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -4659,8 +4943,12 @@ impl<'a> AstNode<'a, FormalParameters<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -4756,8 +5044,12 @@ impl<'a> AstNode<'a, FormalParameter<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -4813,8 +5105,12 @@ impl<'a> AstNode<'a, FormalParameterRest<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -4857,8 +5153,12 @@ impl<'a> AstNode<'a, FunctionBody<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -4971,8 +5271,12 @@ impl<'a> AstNode<'a, ArrowFunctionExpression<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -5005,8 +5309,12 @@ impl<'a> AstNode<'a, YieldExpression<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -5028,7 +5336,12 @@ impl<'a> AstNode<'a, Class<'a>> {
             .id
             .as_ref()
             .map(|n| n.span().start)
-            .or_else(|| self.inner.type_parameters.as_deref().map(|n| n.span().start))
+            .or_else(|| {
+                self.inner
+                    .type_parameters
+                    .as_deref()
+                    .map(|n| n.span().start)
+            })
             .or_else(|| self.inner.heritage.as_ref().map(|n| n.span().start))
             .or_else(|| self.inner.implements.first().map(|n| n.span().start))
             .or_else(|| Some(self.inner.body.span().start))
@@ -5138,8 +5451,12 @@ impl<'a> AstNode<'a, Class<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -5179,8 +5496,12 @@ impl<'a> AstNode<'a, ClassHeritage<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -5206,8 +5527,12 @@ impl<'a> AstNode<'a, ClassBody<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -5338,8 +5663,12 @@ impl<'a> AstNode<'a, MethodDefinition<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -5460,8 +5789,12 @@ impl<'a> AstNode<'a, PropertyDefinition<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -5481,8 +5814,12 @@ impl<'a> AstNode<'a, PrivateIdentifier<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -5508,8 +5845,12 @@ impl<'a> AstNode<'a, StaticBlock<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -5689,8 +6030,12 @@ impl<'a> AstNode<'a, AccessorProperty<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -5740,8 +6085,12 @@ impl<'a> AstNode<'a, ImportExpression<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -5766,7 +6115,11 @@ impl<'a> AstNode<'a, ImportDeclaration<'a>> {
 
     #[inline]
     pub fn source(&self) -> &AstNode<'a, StringLiteral<'a>> {
-        let following_span_start = self.inner.with_clause.as_deref().map_or(0, |n| n.span().start);
+        let following_span_start = self
+            .inner
+            .with_clause
+            .as_deref()
+            .map_or(0, |n| n.span().start);
         self.allocator.alloc(AstNode {
             inner: &self.inner.source,
             allocator: self.allocator,
@@ -5803,8 +6156,12 @@ impl<'a> AstNode<'a, ImportDeclaration<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -5880,8 +6237,12 @@ impl<'a> AstNode<'a, ImportSpecifier<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -5907,8 +6268,12 @@ impl<'a> AstNode<'a, ImportDefaultSpecifier<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -5934,8 +6299,12 @@ impl<'a> AstNode<'a, ImportNamespaceSpecifier<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -5966,8 +6335,12 @@ impl<'a> AstNode<'a, WithClause<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -6004,8 +6377,12 @@ impl<'a> AstNode<'a, ImportAttribute<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -6057,8 +6434,12 @@ impl<'a> AstNode<'a, ExportDeclaration<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -6089,8 +6470,12 @@ impl<'a> AstNode<'a, ExportNamedDeclaration<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -6113,7 +6498,11 @@ impl<'a> AstNode<'a, ExportFromDeclaration<'a>> {
 
     #[inline]
     pub fn source(&self) -> &AstNode<'a, StringLiteral<'a>> {
-        let following_span_start = self.inner.with_clause.as_deref().map_or(0, |n| n.span().start);
+        let following_span_start = self
+            .inner
+            .with_clause
+            .as_deref()
+            .map_or(0, |n| n.span().start);
         self.allocator.alloc(AstNode {
             inner: &self.inner.source,
             allocator: self.allocator,
@@ -6145,8 +6534,12 @@ impl<'a> AstNode<'a, ExportFromDeclaration<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -6172,8 +6565,12 @@ impl<'a> AstNode<'a, ExportDefaultDeclaration<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -6198,7 +6595,11 @@ impl<'a> AstNode<'a, ExportAllDeclaration<'a>> {
 
     #[inline]
     pub fn source(&self) -> &AstNode<'a, StringLiteral<'a>> {
-        let following_span_start = self.inner.with_clause.as_deref().map_or(0, |n| n.span().start);
+        let following_span_start = self
+            .inner
+            .with_clause
+            .as_deref()
+            .map_or(0, |n| n.span().start);
         self.allocator.alloc(AstNode {
             inner: &self.inner.source,
             allocator: self.allocator,
@@ -6230,8 +6631,12 @@ impl<'a> AstNode<'a, ExportAllDeclaration<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -6273,8 +6678,12 @@ impl<'a> AstNode<'a, ExportSpecifier<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -6396,8 +6805,12 @@ impl<'a> AstNode<'a, V8IntrinsicExpression<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -6417,8 +6830,12 @@ impl<'a> AstNode<'a, BooleanLiteral> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -6433,8 +6850,12 @@ impl<'a> AstNode<'a, NullLiteral> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -6464,8 +6885,12 @@ impl<'a> AstNode<'a, NumericLiteral<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -6495,8 +6920,12 @@ impl<'a> AstNode<'a, StringLiteral<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -6526,8 +6955,12 @@ impl<'a> AstNode<'a, BigIntLiteral<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -6552,8 +6985,12 @@ impl<'a> AstNode<'a, RegExpLiteral<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -6570,7 +7007,12 @@ impl<'a> AstNode<'a, JSXElement<'a>> {
             .children
             .first()
             .map(|n| n.span().start)
-            .or_else(|| self.inner.closing_element.as_deref().map(|n| n.span().start))
+            .or_else(|| {
+                self.inner
+                    .closing_element
+                    .as_deref()
+                    .map(|n| n.span().start)
+            })
             .or(Some(self.following_span_start))
             .unwrap_or(0);
         self.allocator.alloc(AstNode {
@@ -6616,8 +7058,12 @@ impl<'a> AstNode<'a, JSXElement<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -6680,8 +7126,12 @@ impl<'a> AstNode<'a, JSXOpeningElement<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -6707,8 +7157,12 @@ impl<'a> AstNode<'a, JSXClosingElement<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -6762,8 +7216,12 @@ impl<'a> AstNode<'a, JSXFragment<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -6778,8 +7236,12 @@ impl<'a> AstNode<'a, JSXOpeningFragment> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -6794,8 +7256,12 @@ impl<'a> AstNode<'a, JSXClosingFragment> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -6882,8 +7348,12 @@ impl<'a> AstNode<'a, JSXNamespacedName<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -6920,8 +7390,12 @@ impl<'a> AstNode<'a, JSXMemberExpression<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -6981,8 +7455,12 @@ impl<'a> AstNode<'a, JSXExpressionContainer<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -7026,8 +7504,12 @@ impl<'a> AstNode<'a, JSXEmptyExpression> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -7098,8 +7580,12 @@ impl<'a> AstNode<'a, JSXAttribute<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -7125,8 +7611,12 @@ impl<'a> AstNode<'a, JSXSpreadAttribute<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -7212,8 +7702,12 @@ impl<'a> AstNode<'a, JSXIdentifier<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -7281,8 +7775,12 @@ impl<'a> AstNode<'a, JSXSpreadChild<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -7307,8 +7805,12 @@ impl<'a> AstNode<'a, JSXText<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -7341,8 +7843,12 @@ impl<'a> AstNode<'a, TSThisParameter<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -7389,8 +7895,12 @@ impl<'a> AstNode<'a, TSEnumDeclaration<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -7416,8 +7926,12 @@ impl<'a> AstNode<'a, TSEnumBody<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -7462,8 +7976,12 @@ impl<'a> AstNode<'a, TSEnumMember<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -7529,8 +8047,12 @@ impl<'a> AstNode<'a, TSTypeAnnotation<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -7556,8 +8078,12 @@ impl<'a> AstNode<'a, TSLiteralType<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -7946,8 +8472,12 @@ impl<'a> AstNode<'a, TSConditionalType<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -7973,8 +8503,12 @@ impl<'a> AstNode<'a, TSUnionType<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -8000,8 +8534,12 @@ impl<'a> AstNode<'a, TSIntersectionType<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -8027,8 +8565,12 @@ impl<'a> AstNode<'a, TSParenthesizedType<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -8059,8 +8601,12 @@ impl<'a> AstNode<'a, TSTypeOperator<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -8086,8 +8632,12 @@ impl<'a> AstNode<'a, TSArrayType<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -8124,8 +8674,12 @@ impl<'a> AstNode<'a, TSIndexedAccessType<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -8151,8 +8705,12 @@ impl<'a> AstNode<'a, TSTupleType<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -8194,8 +8752,12 @@ impl<'a> AstNode<'a, TSNamedTupleMember<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -8221,8 +8783,12 @@ impl<'a> AstNode<'a, TSOptionalType<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -8248,8 +8814,12 @@ impl<'a> AstNode<'a, TSRestType<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -8299,8 +8869,12 @@ impl<'a> AstNode<'a, TSAnyKeyword> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -8315,8 +8889,12 @@ impl<'a> AstNode<'a, TSStringKeyword> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -8331,8 +8909,12 @@ impl<'a> AstNode<'a, TSBooleanKeyword> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -8347,8 +8929,12 @@ impl<'a> AstNode<'a, TSNumberKeyword> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -8363,8 +8949,12 @@ impl<'a> AstNode<'a, TSNeverKeyword> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -8379,8 +8969,12 @@ impl<'a> AstNode<'a, TSIntrinsicKeyword> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -8395,8 +8989,12 @@ impl<'a> AstNode<'a, TSUnknownKeyword> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -8411,8 +9009,12 @@ impl<'a> AstNode<'a, TSNullKeyword> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -8427,8 +9029,12 @@ impl<'a> AstNode<'a, TSUndefinedKeyword> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -8443,8 +9049,12 @@ impl<'a> AstNode<'a, TSVoidKeyword> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -8459,8 +9069,12 @@ impl<'a> AstNode<'a, TSSymbolKeyword> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -8475,8 +9089,12 @@ impl<'a> AstNode<'a, TSThisType> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -8491,8 +9109,12 @@ impl<'a> AstNode<'a, TSObjectKeyword> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -8507,8 +9129,12 @@ impl<'a> AstNode<'a, TSBigIntKeyword> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -8553,8 +9179,12 @@ impl<'a> AstNode<'a, TSTypeReference<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -8625,8 +9255,12 @@ impl<'a> AstNode<'a, TSQualifiedName<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -8652,8 +9286,12 @@ impl<'a> AstNode<'a, TSTypeParameterInstantiation<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -8733,8 +9371,12 @@ impl<'a> AstNode<'a, TSTypeParameter<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -8760,8 +9402,12 @@ impl<'a> AstNode<'a, TSTypeParameterDeclaration<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -8822,8 +9468,12 @@ impl<'a> AstNode<'a, TSTypeAliasDeclaration<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -8868,8 +9518,12 @@ impl<'a> AstNode<'a, TSClassImplements<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -8948,8 +9602,12 @@ impl<'a> AstNode<'a, TSInterfaceDeclaration<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -8975,8 +9633,12 @@ impl<'a> AstNode<'a, TSInterfaceBody<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -9036,8 +9698,12 @@ impl<'a> AstNode<'a, TSPropertySignature<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -9134,8 +9800,12 @@ impl<'a> AstNode<'a, TSIndexSignature<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -9212,8 +9882,12 @@ impl<'a> AstNode<'a, TSCallSignatureDeclaration<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -9323,8 +9997,12 @@ impl<'a> AstNode<'a, TSMethodSignature<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -9382,8 +10060,12 @@ impl<'a> AstNode<'a, TSConstructSignatureDeclaration<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -9414,8 +10096,12 @@ impl<'a> AstNode<'a, TSIndexSignatureName<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -9460,8 +10146,12 @@ impl<'a> AstNode<'a, TSInterfaceHeritage<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -9511,8 +10201,12 @@ impl<'a> AstNode<'a, TSTypePredicate<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -9580,8 +10274,12 @@ impl<'a> AstNode<'a, TSExternalModuleDeclaration<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -9628,8 +10326,12 @@ impl<'a> AstNode<'a, TSNamespaceDeclaration<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -9691,8 +10393,12 @@ impl<'a> AstNode<'a, TSGlobalDeclaration<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -9735,8 +10441,12 @@ impl<'a> AstNode<'a, TSModuleBlock<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -9762,8 +10472,12 @@ impl<'a> AstNode<'a, TSTypeLiteral<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -9789,8 +10503,12 @@ impl<'a> AstNode<'a, TSInferType<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -9835,8 +10553,12 @@ impl<'a> AstNode<'a, TSTypeQuery<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -9951,8 +10673,12 @@ impl<'a> AstNode<'a, TSImportType<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -10015,8 +10741,12 @@ impl<'a> AstNode<'a, TSImportTypeQualifiedName<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -10085,8 +10815,12 @@ impl<'a> AstNode<'a, TSFunctionType<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -10141,8 +10875,12 @@ impl<'a> AstNode<'a, TSConstructorType<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -10228,8 +10966,12 @@ impl<'a> AstNode<'a, TSMappedType<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -10272,8 +11014,12 @@ impl<'a> AstNode<'a, TSTemplateLiteralType<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -10310,8 +11056,12 @@ impl<'a> AstNode<'a, TSAsExpression<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -10348,8 +11098,12 @@ impl<'a> AstNode<'a, TSSatisfiesExpression<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -10386,8 +11140,12 @@ impl<'a> AstNode<'a, TSTypeAssertion<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -10429,8 +11187,12 @@ impl<'a> AstNode<'a, TSImportEqualsDeclaration<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -10490,8 +11252,12 @@ impl<'a> AstNode<'a, TSExternalModuleReference<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -10517,8 +11283,12 @@ impl<'a> AstNode<'a, TSNonNullExpression<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -10544,8 +11314,12 @@ impl<'a> AstNode<'a, Decorator<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -10571,8 +11345,12 @@ impl<'a> AstNode<'a, TSExportAssignment<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -10598,8 +11376,12 @@ impl<'a> AstNode<'a, TSNamespaceExportDeclaration<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -10636,8 +11418,12 @@ impl<'a> AstNode<'a, TSInstantiationExpression<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -10668,8 +11454,12 @@ impl<'a> AstNode<'a, JSDocNullableType<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -10700,8 +11490,12 @@ impl<'a> AstNode<'a, JSDocNonNullableType<'a>> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }
 
@@ -10716,7 +11510,11 @@ impl<'a> AstNode<'a, JSDocUnknownType> {
     }
 
     pub fn format_trailing_comments(&self, f: &mut JsFormatter<'_, 'a>) {
-        format_trailing_comments(self.parent.span(), self.inner.span(), self.following_span_start)
-            .fmt(f);
+        format_trailing_comments(
+            self.parent.span(),
+            self.inner.span(),
+            self.following_span_start,
+        )
+        .fmt(f);
     }
 }

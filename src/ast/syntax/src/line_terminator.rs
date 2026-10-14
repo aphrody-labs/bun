@@ -95,8 +95,11 @@ impl<'a> Iterator for LineTerminatorSplitter<'a> {
                     // SAFETY: Byte at `index` is `\r`, so `index` is on a UTF-8 char boundary
                     let line = unsafe { self.text.get_unchecked(..index) };
                     // If the next byte is `\n`, consume it as well
-                    let skip_bytes =
-                        if self.text.as_bytes().get(index + 1) == Some(&b'\n') { 2 } else { 1 };
+                    let skip_bytes = if self.text.as_bytes().get(index + 1) == Some(&b'\n') {
+                        2
+                    } else {
+                        1
+                    };
                     // SAFETY: `index + skip_bytes` is after `\r` or `\n`, so on a UTF-8 char boundary.
                     // Therefore slice from `index + skip_bytes` is a valid `&str`.
                     self.text = unsafe { self.text.get_unchecked(index + skip_bytes..) };

@@ -91,7 +91,11 @@ pub fn run<'a>(node: &AstNode<'a>, ctx: &LintContext<'a>) {
         return;
     };
 
-    let Some(expr) = call_expr.arguments.first().and_then(Argument::as_expression) else {
+    let Some(expr) = call_expr
+        .arguments
+        .first()
+        .and_then(Argument::as_expression)
+    else {
         return;
     };
 
@@ -125,7 +129,11 @@ pub fn run<'a>(node: &AstNode<'a>, ctx: &LintContext<'a>) {
         }
     }
 
-    let new_property_name = if is_once { "mockReturnValueOnce" } else { "mockReturnValue" };
+    let new_property_name = if is_once {
+        "mockReturnValueOnce"
+    } else {
+        "mockReturnValue"
+    };
     let diagnostic =
         prefer_mock_return_shorthand_diagnostic(property_span, property_name, new_property_name);
 
@@ -135,8 +143,9 @@ pub fn run<'a>(node: &AstNode<'a>, ctx: &LintContext<'a>) {
     }
 
     ctx.diagnostic_with_fix(diagnostic, |fixer| {
-        let return_text =
-            ctx.source_range(GetSpan::span(return_expression.without_parentheses())).to_owned();
+        let return_text = ctx
+            .source_range(GetSpan::span(return_expression.without_parentheses()))
+            .to_owned();
         let argument_span = GetSpan::span(expr);
 
         let mut multifixer = fixer.for_multifix().new_fix_with_capacity(2);
@@ -261,7 +270,11 @@ struct IdentifierCollectorVisitor {
 
 impl IdentifierCollectorVisitor {
     fn new() -> Self {
-        Self { references: FxHashSet::default(), has_this_expression: false, this_binding_depth: 0 }
+        Self {
+            references: FxHashSet::default(),
+            has_this_expression: false,
+            this_binding_depth: 0,
+        }
     }
 }
 

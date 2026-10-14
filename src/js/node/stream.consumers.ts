@@ -5,7 +5,7 @@ async function blob(stream): Promise<Blob> {
   if ($inheritsReadableStream(stream)) return Bun.readableStreamToBlob(stream);
   const chunks: (Blob | ArrayBuffer | string | NodeJS.ArrayBufferView)[] = [];
   for await (const chunk of stream) chunks.push(chunk);
-  return new Blob(chunks);
+  return new (Blob as BunBuiltinBlobConstructor)(chunks);
 }
 
 async function arrayBuffer(stream): Promise<ArrayBuffer> {

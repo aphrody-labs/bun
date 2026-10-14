@@ -72,7 +72,9 @@ impl<'a> Format<'a, JsFormatContext<'a>> for ReturnAndThrowStatement<'a, '_> {
         if let Some(argument) = self.argument() {
             write!(f, space());
             let argument_leaf_end = assignment_chain_leaf_end(argument.as_ref(), f);
-            if f.comments().has_comment_in_range(argument_leaf_end, self.span().end) {
+            if f.comments()
+                .has_comment_in_range(argument_leaf_end, self.span().end)
+            {
                 // Comments inside the argument's source parentheses belong to the argument
                 // and stay in place (`return (\n  a && b // c\n);` keeps the comment inside, like Prettier);
                 // only comments after the closing paren are dangling comments.
@@ -83,7 +85,8 @@ impl<'a> Format<'a, JsFormatContext<'a>> for ReturnAndThrowStatement<'a, '_> {
                 let argument_end = if argument_leaf_end < argument.span().end {
                     argument_leaf_end
                 } else {
-                    f.comments().end_including_source_parens(argument.span().end, self.span().end)
+                    f.comments()
+                        .end_including_source_parens(argument.span().end, self.span().end)
                 };
                 if f.comments().has_trailing_suppression_comment(argument_end) {
                     // Keep a trailing suppression comment visible to the argument,
@@ -111,8 +114,10 @@ impl<'a> Format<'a, JsFormatContext<'a>> for ReturnAndThrowStatement<'a, '_> {
         // from the first one on, comments are left for a later pass (the next node's leading comments),
         // also like Prettier, whose statement `locEnd` excludes the trailing `;`.
         let dangling_comments = f.context().comments().comments_before(self.span().end);
-        let same_line_count =
-            dangling_comments.iter().take_while(|c| !c.preceded_by_newline()).count();
+        let same_line_count = dangling_comments
+            .iter()
+            .take_while(|c| !c.preceded_by_newline())
+            .count();
         let dangling_comments = &dangling_comments[..same_line_count];
 
         write!(f, OptionalSemicolon);
@@ -164,7 +169,14 @@ impl<'a> Format<'a, JsFormatContext<'a>> for FormatAdjacentArgument<'a, '_> {
                 ))]
             );
         } else if matches!(argument.as_ref(), Expression::SequenceExpression(_)) {
-            write!(f, [group(&format_args!(token("("), soft_block_indent(&argument), token(")")))]);
+            write!(
+                f,
+                [group(&format_args!(
+                    token("("),
+                    soft_block_indent(&argument),
+                    token(")")
+                ))]
+            );
         } else {
             write!(f, argument);
         }

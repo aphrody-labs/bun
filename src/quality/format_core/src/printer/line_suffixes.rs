@@ -14,7 +14,8 @@ impl<'a> LineSuffixes<'a> {
     where
         I: IntoIterator<Item = &'a FormatElement<'a>>,
     {
-        self.suffixes.extend(elements.into_iter().map(LineSuffixEntry::Suffix));
+        self.suffixes
+            .extend(elements.into_iter().map(LineSuffixEntry::Suffix));
         self.suffixes.push(LineSuffixEntry::Args(args));
     }
 

@@ -271,7 +271,13 @@ fn generate_deserializers(
     for type_def in &schema.types {
         match type_def {
             TypeDef::Struct(struct_def) => {
-                generate_struct(struct_def, &mut code, span_type_id, estree_derive_id, schema);
+                generate_struct(
+                    struct_def,
+                    &mut code,
+                    span_type_id,
+                    estree_derive_id,
+                    schema,
+                );
             }
             TypeDef::Enum(enum_def) => {
                 generate_enum(enum_def, &mut code, estree_derive_id, schema);
@@ -306,8 +312,14 @@ fn generate_deserializers(
     }
 
     impl VariantGenerator<6> for VariantGen {
-        const FLAG_NAMES: [&str; 6] =
-            ["IS_TS", "RANGE", "LOC", "PARENT", "PRESERVE_PARENS", "LINTER"];
+        const FLAG_NAMES: [&str; 6] = [
+            "IS_TS",
+            "RANGE",
+            "LOC",
+            "PARENT",
+            "PRESERVE_PARENS",
+            "LINTER",
+        ];
 
         fn variants(&mut self) -> Vec<[bool; 6]> {
             let mut variants = Vec::with_capacity(9);
@@ -332,7 +344,8 @@ fn generate_deserializers(
             }
 
             // Linter deserializer
-            self.variant_paths.push(format!("{OXLINT_APP_PATH}/src-js/generated/deserialize.js"));
+            self.variant_paths
+                .push(format!("{OXLINT_APP_PATH}/src-js/generated/deserialize.js"));
             variants.push([
                 /* is_ts */ true, /* range */ true, /* loc */ true,
                 /* parent */ true, /* preserve_parens */ false, /* linter */ true,
@@ -354,7 +367,9 @@ fn generate_deserializers(
         }
     }
 
-    let mut generator = VariantGen { variant_paths: vec![] };
+    let mut generator = VariantGen {
+        variant_paths: vec![],
+    };
     let codes = generator.generate(&code);
 
     let mut outputs: Vec<(String, String)> =
@@ -411,25 +426,27 @@ fn generate_struct(
 
     let body = struct_def.estree.via.as_deref().and_then(|converter_name| {
         let converter = schema.meta_by_name(converter_name);
-        generator.apply_converter(converter, struct_def, 0).map(|(value, _)| {
-            let preamble = if generator.inline_preamble.is_empty() {
-                generator.assignments_preamble.as_slice()
-            } else {
-                generator.inline_preamble.as_slice()
-            };
+        generator
+            .apply_converter(converter, struct_def, 0)
+            .map(|(value, _)| {
+                let preamble = if generator.inline_preamble.is_empty() {
+                    generator.assignments_preamble.as_slice()
+                } else {
+                    generator.inline_preamble.as_slice()
+                };
 
-            if preamble.is_empty() {
-                format!("return {value};")
-            } else {
-                let preamble = preamble.join("");
-                format!(
-                    "
+                if preamble.is_empty() {
+                    format!("return {value};")
+                } else {
+                    let preamble = preamble.join("");
+                    format!(
+                        "
                         {preamble}
                         return {value};
                     "
-                )
-            }
-        })
+                    )
+                }
+            })
     });
 
     let body = body.unwrap_or_else(|| {
@@ -444,7 +461,15 @@ fn generate_struct(
             generator.fields.contains_key("type") && !struct_def.estree.no_parent;
 
         let mut all_fields_inline = true;
-        for (field_name, StructFieldValue { value, deser_type, inline }) in generator.fields {
+        for (
+            field_name,
+            StructFieldValue {
+                value,
+                deser_type,
+                inline,
+            },
+        ) in generator.fields
+        {
             if let Some(value) = value.strip_prefix("...") {
                 assert!(inline, "Spread fields must be inlined");
                 match deser_type {
@@ -453,18 +478,20 @@ fn generate_struct(
                     DeserializerType::TsOnly => write_it!(fields_str, "...(IS_TS && {value}),"),
                 }
             } else if inline || !needs_parent_field {
-                let value: Cow<str> =
-                    if generator.inline_assignment_field_names.contains(&field_name) {
-                        // Use inline assignment pattern: `let x; return { x: x = value };`
-                        // This allows minifiers to eliminate the variable when RANGE is false.
-                        write_it!(inline_preamble_str, "let {field_name};\n");
-                        Cow::Owned(format!("{field_name} = {value}"))
-                    } else if generator.dependent_field_names.contains(&field_name) {
-                        write_it!(inline_preamble_str, "const {field_name} = {value};\n");
-                        Cow::Borrowed(field_name.as_str())
-                    } else {
-                        Cow::Borrowed(value.as_str())
-                    };
+                let value: Cow<str> = if generator
+                    .inline_assignment_field_names
+                    .contains(&field_name)
+                {
+                    // Use inline assignment pattern: `let x; return { x: x = value };`
+                    // This allows minifiers to eliminate the variable when RANGE is false.
+                    write_it!(inline_preamble_str, "let {field_name};\n");
+                    Cow::Owned(format!("{field_name} = {value}"))
+                } else if generator.dependent_field_names.contains(&field_name) {
+                    write_it!(inline_preamble_str, "const {field_name} = {value};\n");
+                    Cow::Borrowed(field_name.as_str())
+                } else {
+                    Cow::Borrowed(value.as_str())
+                };
 
                 if deser_type == DeserializerType::Both {
                     write_it!(fields_str, "{field_name}: {value},");
@@ -474,7 +501,10 @@ fn generate_struct(
                         DeserializerType::TsOnly => "IS_TS",
                         DeserializerType::Both => unreachable!(),
                     };
-                    write_it!(fields_str, "...({condition} && {{ {field_name}: {value} }}),");
+                    write_it!(
+                        fields_str,
+                        "...({condition} && {{ {field_name}: {value} }}),"
+                    );
                 }
             } else {
                 all_fields_inline = false;
@@ -499,7 +529,10 @@ fn generate_struct(
                     };
                     write_it!(fields_str, "...({condition} && {{ {field_name}: null }}),");
                     if value != "null" {
-                        write_it!(assignments_str, "if ({condition}) node.{field_name} = {value};");
+                        write_it!(
+                            assignments_str,
+                            "if ({condition}) node.{field_name} = {value};"
+                        );
                     }
                 }
             }
@@ -610,8 +643,11 @@ impl<'s> StructDeserializerGenerator<'s> {
 
         // Add `type` field if there isn't one already, and struct isn't marked `#[estree(no_type)]`
         if !struct_def.estree.no_type && !self.fields.contains_key("type") {
-            let struct_name =
-                struct_def.estree.rename.as_deref().unwrap_or_else(|| struct_def.name());
+            let struct_name = struct_def
+                .estree
+                .rename
+                .as_deref()
+                .unwrap_or_else(|| struct_def.name());
             self.fields.insert_before(
                 0,
                 "type".to_string(),
@@ -712,8 +748,9 @@ impl<'s> StructDeserializerGenerator<'s> {
                     TypeDef::Option(option_def) => {
                         let option_field_name = get_struct_field_name(field).to_string();
                         let field_fn = option_def.deser_name(self.schema);
-                        self.assignments_preamble
-                            .push(format!("const {option_field_name} = {field_fn}({field_pos});"));
+                        self.assignments_preamble.push(format!(
+                            "const {option_field_name} = {field_fn}({field_pos});"
+                        ));
                         if index == 0 {
                             self.assignments_preamble.push(format!(
                                 "const {field_name} = {option_field_name} === null ? [] : [{option_field_name}];"
@@ -770,8 +807,9 @@ impl<'s> StructDeserializerGenerator<'s> {
             format!("{prefix}sourceText.slice(start, end)")
         } else if let Some(converter_name) = &field.estree.via {
             let converter = self.schema.meta_by_name(converter_name);
-            let (value, can_inline) =
-                self.apply_converter(converter, struct_def, struct_offset).unwrap();
+            let (value, can_inline) = self
+                .apply_converter(converter, struct_def, struct_offset)
+                .unwrap();
             inline = can_inline;
             value
         } else {
@@ -788,7 +826,14 @@ impl<'s> StructDeserializerGenerator<'s> {
             format!("{value_fn}({pos})")
         };
 
-        self.fields.insert(field_name, StructFieldValue { value, deser_type, inline });
+        self.fields.insert(
+            field_name,
+            StructFieldValue {
+                value,
+                deser_type,
+                inline,
+            },
+        );
     }
 
     fn generate_struct_field_added(
@@ -807,8 +852,17 @@ impl<'s> StructDeserializerGenerator<'s> {
             deser_type = DeserializerType::TsOnly;
         }
 
-        let (value, inline) = self.apply_converter(converter, struct_def, struct_offset).unwrap();
-        self.fields.insert(field_name.to_string(), StructFieldValue { value, deser_type, inline });
+        let (value, inline) = self
+            .apply_converter(converter, struct_def, struct_offset)
+            .unwrap();
+        self.fields.insert(
+            field_name.to_string(),
+            StructFieldValue {
+                value,
+                deser_type,
+                inline,
+            },
+        );
     }
 
     fn apply_converter(
@@ -822,8 +876,10 @@ impl<'s> StructDeserializerGenerator<'s> {
 
         let value = THIS_REGEX.replace_all(raw_deser, ThisReplacer::new(self));
         let value = DESER_REGEX.replace_all(&value, DeserReplacer::new(self.schema));
-        let value = POS_OFFSET_REGEX
-            .replace_all(&value, PosOffsetReplacer::new(self, struct_def, struct_offset));
+        let value = POS_OFFSET_REGEX.replace_all(
+            &value,
+            PosOffsetReplacer::new(self, struct_def, struct_offset),
+        );
         let value = POS_REGEX.replace_all(&value, PosReplacer::new(struct_offset));
         let value = value.cow_replace("SOURCE_TEXT", "sourceText");
 
@@ -1054,7 +1110,11 @@ fn get_option_none_condition_and_offset(
         let none_condition = match niche.size {
             1 => format!("uint8[{}] === {}", pos_offset(niche_offset), niche.value()),
             // 2 => format!("uint16[{}] === {}", pos_offset_shift(offset, 1), niche.value()),
-            4 => format!("int32[{}] === {}", pos_offset_shift(niche_offset, 2), niche.value()),
+            4 => format!(
+                "int32[{}] === {}",
+                pos_offset_shift(niche_offset, 2),
+                niche.value()
+            ),
             8 => {
                 // TODO: Use `float64[pos >> 3] === 0` instead of
                 // `int32[pos >> 2] === 0 && int32[(pos >> 2) + 1] === 0`?
@@ -1071,7 +1131,10 @@ fn get_option_none_condition_and_offset(
         };
         (none_condition, pos_offset(offset))
     } else {
-        (format!("uint8[{}] === 0", pos_offset(offset)), pos_offset(offset + inner_layout.align))
+        (
+            format!("uint8[{}] === 0", pos_offset(offset)),
+            pos_offset(offset + inner_layout.align),
+        )
     }
 }
 
@@ -1109,7 +1172,10 @@ fn generate_vec(vec_def: &VecDef, code: &mut String, estree_derive_id: DeriveId,
 
     // Use shift if possible (stride is a power of 2)
     let end_pos_offset = if inner_type_size.is_power_of_two() {
-        format!("(int32[{len_pos32}] << {})", inner_type_size.trailing_zeros())
+        format!(
+            "(int32[{len_pos32}] << {})",
+            inner_type_size.trailing_zeros()
+        )
     } else {
         format!("int32[{len_pos32}] * {inner_type_size}")
     };
@@ -1157,7 +1223,11 @@ where
     <O as TryInto<u64>>::Error: Debug,
 {
     let offset = offset.try_into().unwrap();
-    if offset == 0 { Cow::Borrowed("pos") } else { format_cow!("pos + {offset}") }
+    if offset == 0 {
+        Cow::Borrowed("pos")
+    } else {
+        format_cow!("pos + {offset}")
+    }
 }
 
 /// Generate pos offset and shift string.
@@ -1197,7 +1267,11 @@ where
 {
     let offset = offset.try_into().unwrap();
     let offset32 = offset >> 2;
-    if offset32 == 0 { Cow::Borrowed("pos32") } else { format_cow!("pos32 + {offset32}") }
+    if offset32 == 0 {
+        Cow::Borrowed("pos32")
+    } else {
+        format_cow!("pos32 + {offset32}")
+    }
 }
 
 // `raw_deser` replacements
@@ -1229,7 +1303,9 @@ struct ThisReplacer<'d> {
 
 impl<'d> ThisReplacer<'d> {
     fn new(generator: &'d mut StructDeserializerGenerator<'_>) -> Self {
-        Self { dependent_field_names: &mut generator.dependent_field_names }
+        Self {
+            dependent_field_names: &mut generator.dependent_field_names,
+        }
     }
 }
 
@@ -1299,7 +1375,11 @@ impl<'s, 'd> PosOffsetReplacer<'s, 'd> {
         struct_def: &'d StructDef,
         struct_offset: u32,
     ) -> Self {
-        Self { schema: generator.schema, struct_def, struct_offset }
+        Self {
+            schema: generator.schema,
+            struct_def,
+            struct_offset,
+        }
     }
 }
 
@@ -1308,7 +1388,10 @@ impl Replacer for PosOffsetReplacer<'_, '_> {
         assert_eq!(caps.len(), 5);
 
         let struct_def = if let Some(struct_name) = caps.get(1) {
-            self.schema.type_by_name(struct_name.as_str()).as_struct().unwrap()
+            self.schema
+                .type_by_name(struct_name.as_str())
+                .as_struct()
+                .unwrap()
         } else {
             self.struct_def
         };
@@ -1672,12 +1755,21 @@ fn generate_constants(consts: Constants) -> (String, TokenStream) {
 
 /// Calculate constants.
 fn get_constants(schema: &Schema) -> Constants {
-    let raw_metadata_struct = schema.type_by_name("RawTransferMetadata").as_struct().unwrap();
-    let raw_metadata2_struct = schema.type_by_name("RawTransferMetadata2").as_struct().unwrap();
+    let raw_metadata_struct = schema
+        .type_by_name("RawTransferMetadata")
+        .as_struct()
+        .unwrap();
+    let raw_metadata2_struct = schema
+        .type_by_name("RawTransferMetadata2")
+        .as_struct()
+        .unwrap();
 
     // Check layout and fields of `RawTransferMetadata` and `RawTransferMetadata2` are identical
     assert_eq!(raw_metadata_struct.layout, raw_metadata2_struct.layout);
-    assert_eq!(raw_metadata_struct.fields.len(), raw_metadata2_struct.fields.len());
+    assert_eq!(
+        raw_metadata_struct.fields.len(),
+        raw_metadata2_struct.fields.len()
+    );
 
     let mut data_offset_field = None;
     let mut is_ts_field = None;
@@ -1685,7 +1777,11 @@ fn get_constants(schema: &Schema) -> Constants {
     let mut has_bom_field = None;
     let mut tokens_offset_field = None;
     let mut tokens_len_field = None;
-    for (field1, field2) in raw_metadata_struct.fields.iter().zip(&raw_metadata2_struct.fields) {
+    for (field1, field2) in raw_metadata_struct
+        .fields
+        .iter()
+        .zip(&raw_metadata2_struct.fields)
+    {
         assert_eq!(field1.name(), field2.name());
         assert_eq!(field1.type_id, field2.type_id);
         assert_eq!(field1.offset_64(), field2.offset_64());
@@ -1709,8 +1805,10 @@ fn get_constants(schema: &Schema) -> Constants {
     let raw_metadata_size = raw_metadata_struct.layout_64().size;
     let raw_metadata_align = raw_metadata_struct.layout_64().align;
 
-    let fixed_metadata_struct =
-        schema.type_by_name("FixedSizeAllocatorMetadata").as_struct().unwrap();
+    let fixed_metadata_struct = schema
+        .type_by_name("FixedSizeAllocatorMetadata")
+        .as_struct()
+        .unwrap();
     let fixed_metadata_size = fixed_metadata_struct.layout_64().size;
 
     // Buffer on JS side excludes `FixedSizeAllocatorMetadata` and `ChunkFooter`, but includes `RawTransferMetadata`.
@@ -1753,8 +1851,12 @@ fn get_constants(schema: &Schema) -> Constants {
     let deserialized_flag_offset = comment_struct.field_by_name("content").offset_64();
 
     let comment_kind_enum = schema.type_by_name("CommentKind").as_enum().unwrap();
-    let comment_line_kind =
-        comment_kind_enum.variants.iter().find(|v| v.name() == "Line").unwrap().discriminant;
+    let comment_line_kind = comment_kind_enum
+        .variants
+        .iter()
+        .find(|v| v.name() == "Line")
+        .unwrap()
+        .discriminant;
 
     Constants {
         buffer_size,
@@ -1789,7 +1891,9 @@ struct LocFieldAdder<'a> {
 
 impl<'a> LocFieldAdder<'a> {
     fn new(allocator: &'a Allocator) -> Self {
-        Self { ast: AstBuilder::new(allocator) }
+        Self {
+            ast: AstBuilder::new(allocator),
+        }
     }
 }
 

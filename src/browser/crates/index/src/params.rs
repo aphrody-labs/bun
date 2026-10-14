@@ -124,7 +124,10 @@ impl Default for IndexParams {
 impl IndexParams {
     /// Defaults for a given dimension.
     pub fn new(dim: usize) -> Self {
-        Self { dim, ..Self::default() }
+        Self {
+            dim,
+            ..Self::default()
+        }
     }
 
     /// Layer-0 connectivity.
@@ -161,13 +164,19 @@ impl IndexParams {
             )));
         }
         if self.ef_construction == 0 || self.ef_construction > 1 << 20 {
-            return Err(IndexError::InvalidParams("ef_construction must be in 1..=1048576".into()));
+            return Err(IndexError::InvalidParams(
+                "ef_construction must be in 1..=1048576".into(),
+            ));
         }
         if self.ef_search == 0 || self.ef_search > 1 << 20 {
-            return Err(IndexError::InvalidParams("ef_search must be in 1..=1048576".into()));
+            return Err(IndexError::InvalidParams(
+                "ef_search must be in 1..=1048576".into(),
+            ));
         }
         if self.rescore_multiplier > 1024 {
-            return Err(IndexError::InvalidParams("rescore_multiplier must be <= 1024".into()));
+            return Err(IndexError::InvalidParams(
+                "rescore_multiplier must be <= 1024".into(),
+            ));
         }
         Ok(())
     }

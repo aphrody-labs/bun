@@ -206,7 +206,10 @@ pub fn parse_jsdoc(
         }
     }
 
-    (comment.unwrap_or(JSDocCommentPart::new("", Span::empty(jsdoc_span_start))), tags)
+    (
+        comment.unwrap_or(JSDocCommentPart::new("", Span::empty(jsdoc_span_start))),
+        tags,
+    )
 }
 
 /// Check if the current line position represents a 4-space indented code block.

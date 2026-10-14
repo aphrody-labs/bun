@@ -197,7 +197,9 @@ fn get_context_reassignment(
                                 each_instruction_value_operand(&instr.value, env)
                             }
                         }
-                        InstructionValue::MethodCall { receiver, property, .. } => {
+                        InstructionValue::MethodCall {
+                            receiver, property, ..
+                        } => {
                             if env.has_no_alias_signature(property.identifier) {
                                 smallvec![*receiver, *property]
                             } else {

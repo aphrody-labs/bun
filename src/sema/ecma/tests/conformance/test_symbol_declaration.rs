@@ -60,9 +60,12 @@ fn malformed_binding_pattern(expected_id: SymbolId, pattern: &BindingPattern) ->
 }
 
 fn invalid_declaration_node(kind: AstKind) -> TestResult {
-    OxcDiagnostic::error(format!("Invalid declaration node kind: {}", kind.debug_name()))
-        .with_label(kind.span())
-        .into()
+    OxcDiagnostic::error(format!(
+        "Invalid declaration node kind: {}",
+        kind.debug_name()
+    ))
+    .with_label(kind.span())
+    .into()
 }
 
 impl ConformanceTest for SymbolDeclarationTest {

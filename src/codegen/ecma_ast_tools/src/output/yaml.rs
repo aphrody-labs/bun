@@ -106,7 +106,9 @@ impl Output {
                     "oxc_minsize" => Some("src/codegen/ecma_minsize/"),
                     "rulegen" => Some("src/codegen/ecma_rulegen/"),
                     "oxc_track_linter_timings" => Some("src/codegen/ecma_track_linter_timings/"),
-                    "oxc_track_memory_allocations" => Some("src/codegen/ecma_track_memory_allocations/"),
+                    "oxc_track_memory_allocations" => {
+                        Some("src/codegen/ecma_track_memory_allocations/")
+                    }
                     "oxc_tasks_transform_checker" => Some("src/codegen/ecma_transform_checker/"),
                     "oxc_transform_conformance" => Some("src/codegen/ecma_transform_conformance/"),
                     "website_common" => Some("src/codegen/ecma_website_common/"),
@@ -124,23 +126,30 @@ impl Output {
                     "oxc_schemars_derive" => Some("src/parsers/json_schema_macros/"),
                     "oxc_sourcemap" => Some("src/sourcemap/ecma/"),
                     _ => None,
-                }).map(str::to_owned),
+                })
+                .map(str::to_owned),
         );
         crate_paths.sort_unstable();
         crate_paths.dedup();
 
         // Convert crate paths to glob patterns
-        let crate_globs = crate_paths.iter().map(|p| format!("{p}src/**/*.rs")).collect_vec();
+        let crate_globs = crate_paths
+            .iter()
+            .map(|p| format!("{p}src/**/*.rs"))
+            .collect_vec();
 
         // Collect output paths, excluding `.rs` files already covered by crate globs
         #[expect(clippy::case_sensitive_file_extension_comparisons)]
-        let output_paths = outputs.iter().map(|output| output.path.as_str()).filter(|path| {
-            !path.ends_with(".rs")
-                || !crate_paths
-                    .iter()
-                    .find_map(|crate_path| path.strip_prefix(crate_path.as_str()))
-                    .is_some_and(|rest| rest.starts_with("src/"))
-        });
+        let output_paths = outputs
+            .iter()
+            .map(|output| output.path.as_str())
+            .filter(|path| {
+                !path.ends_with(".rs")
+                    || !crate_paths
+                        .iter()
+                        .find_map(|crate_path| path.strip_prefix(crate_path.as_str()))
+                        .is_some_and(|rest| rest.starts_with("src/"))
+            });
 
         // Combine all paths
         let mut paths = chain!(
@@ -166,7 +175,10 @@ impl Output {
             writeln!(code, "  - '{path}'").unwrap();
         }
 
-        let output = Self::Yaml { path: AST_CHANGES_WATCH_LIST_PATH.to_string(), code };
+        let output = Self::Yaml {
+            path: AST_CHANGES_WATCH_LIST_PATH.to_string(),
+            code,
+        };
         output.into_raw(file!())
     }
 }

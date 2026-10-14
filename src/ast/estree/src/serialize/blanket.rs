@@ -91,8 +91,10 @@ mod tests {
 
     #[test]
     fn serialize_cow() {
-        let cases =
-            [(Cow::Borrowed("foo"), r#""foo""#), (Cow::Owned("bar".to_string()), r#""bar""#)];
+        let cases = [
+            (Cow::Borrowed("foo"), r#""foo""#),
+            (Cow::Owned("bar".to_string()), r#""bar""#),
+        ];
 
         for (input, output) in cases {
             let mut serializer = CompactSerializer::default();

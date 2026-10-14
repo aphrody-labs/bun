@@ -27,7 +27,11 @@ pub(super) fn write_postcss_simple_var_declaration<'a>(
     f: &mut CssFormatter<'_, 'a>,
 ) {
     write_postcss_simple_var(&decl.name, f);
-    statement::write_colon_run(to_span(&decl.name.span).end, to_span(&decl.colon_span).end, f);
+    statement::write_colon_run(
+        to_span(&decl.name.span).end,
+        to_span(&decl.colon_span).end,
+        f,
+    );
 
     // An empty value prints as `$x:;`, as Prettier does.
     let end = to_span(&decl.span).end;

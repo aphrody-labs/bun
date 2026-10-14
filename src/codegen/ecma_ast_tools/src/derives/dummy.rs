@@ -210,7 +210,13 @@ fn generate_impl_for_struct(struct_def: &StructDef, schema: &Schema) -> TokenStr
         }
     };
 
-    generate_impl(struct_def.name(), &struct_def.ty(schema), &value, struct_def.dummy.alloc, false)
+    generate_impl(
+        struct_def.name(),
+        &struct_def.ty(schema),
+        &value,
+        struct_def.dummy.alloc,
+        false,
+    )
 }
 
 /// Generate `Dummy` impl for enum.
@@ -224,7 +230,10 @@ fn generate_impl_for_enum(enum_def: &EnumDef, schema: &Schema) -> TokenStream {
 
     let variant_ident = variant.ident();
     let (value, should_inline) = if variant.field_type(schema).is_some() {
-        (quote!( Self::#variant_ident(Dummy::dummy(allocator)) ), false)
+        (
+            quote!( Self::#variant_ident(Dummy::dummy(allocator)) ),
+            false,
+        )
     } else {
         (quote!( Self::#variant_ident ), true)
     };
@@ -251,10 +260,18 @@ fn generate_impl(
         Cow::Borrowed(" Does not allocate any data into arena.")
     } else {
         let s = if alloc.count > 1 { "s" } else { "" };
-        format_cow!(" Has cost of making {} allocation{s} ({} bytes).", alloc.count, alloc.bytes_64)
+        format_cow!(
+            " Has cost of making {} allocation{s} ({} bytes).",
+            alloc.count,
+            alloc.bytes_64
+        )
     };
 
-    let inline = if should_inline { quote!( #[inline(always)] ) } else { quote!() };
+    let inline = if should_inline {
+        quote!( #[inline(always)] )
+    } else {
+        quote!()
+    };
 
     quote! {
         impl<'a> Dummy<'a> for #ty {

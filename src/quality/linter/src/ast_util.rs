@@ -99,17 +99,25 @@ impl<'a> IsConstant<'a, '_> for Expression<'a> {
             Self::TemplateLiteral(template) => {
                 let test_quasis = in_boolean_position
                     && template.quasis.iter().any(|quasi| {
-                        quasi.value.cooked.as_ref().is_some_and(|cooked| !cooked.is_empty())
+                        quasi
+                            .value
+                            .cooked
+                            .as_ref()
+                            .is_some_and(|cooked| !cooked.is_empty())
                     });
-                let test_expressions =
-                    template.expressions.iter().all(|expr| expr.is_constant(false, semantic));
+                let test_expressions = template
+                    .expressions
+                    .iter()
+                    .all(|expr| expr.is_constant(false, semantic));
                 test_quasis || test_expressions
             }
             Self::ArrayExpression(expr) => {
                 if in_boolean_position {
                     return true;
                 }
-                expr.elements.iter().all(|element| element.is_constant(false, semantic))
+                expr.elements
+                    .iter()
+                    .all(|element| element.is_constant(false, semantic))
             }
             Self::UnaryExpression(expr) => match expr.operator {
                 UnaryOperator::Void => true,
@@ -151,9 +159,9 @@ impl<'a> IsConstant<'a, '_> for Expression<'a> {
                 .last()
                 .is_some_and(|last| last.is_constant(in_boolean_position, semantic)),
             Self::CallExpression(call_expr) => call_expr.is_constant(in_boolean_position, semantic),
-            Self::ParenthesizedExpression(paren_expr) => {
-                paren_expr.expression.is_constant(in_boolean_position, semantic)
-            }
+            Self::ParenthesizedExpression(paren_expr) => paren_expr
+                .expression
+                .is_constant(in_boolean_position, semantic),
             Self::Identifier(ident) => {
                 ident.name == "undefined" && semantic.is_reference_to_global_variable(ident)
             }
@@ -167,7 +175,11 @@ impl<'a> IsConstant<'a, '_> for CallExpression<'a> {
     fn is_constant(&self, _in_boolean_position: bool, semantic: &Semantic<'a>) -> bool {
         if let Expression::Identifier(ident) = &self.callee
             && ident.name == "Boolean"
-            && self.arguments.iter().next().is_none_or(|first| first.is_constant(true, semantic))
+            && self
+                .arguments
+                .iter()
+                .next()
+                .is_none_or(|first| first.is_constant(true, semantic))
         {
             return semantic.is_reference_to_global_variable(ident);
         }
@@ -179,9 +191,9 @@ impl<'a> IsConstant<'a, '_> for Argument<'a> {
     fn is_constant(&self, in_boolean_position: bool, semantic: &Semantic<'a>) -> bool {
         match self {
             Self::SpreadElement(element) => element.is_constant(in_boolean_position, semantic),
-            match_expression!(Self) => {
-                self.to_expression().is_constant(in_boolean_position, semantic)
-            }
+            match_expression!(Self) => self
+                .to_expression()
+                .is_constant(in_boolean_position, semantic),
         }
     }
 }
@@ -190,9 +202,9 @@ impl<'a> IsConstant<'a, '_> for ArrayExpressionElement<'a> {
     fn is_constant(&self, in_boolean_position: bool, semantic: &Semantic<'a>) -> bool {
         match self {
             Self::SpreadElement(element) => element.is_constant(in_boolean_position, semantic),
-            match_expression!(Self) => {
-                self.to_expression().is_constant(in_boolean_position, semantic)
-            }
+            match_expression!(Self) => self
+                .to_expression()
+                .is_constant(in_boolean_position, semantic),
             Self::Elision(_) => true,
         }
     }
@@ -215,8 +227,10 @@ pub fn get_enclosing_function<'a, 'b>(
         if matches!(current_node.kind(), AstKind::Program(_)) {
             return None;
         }
-        if matches!(current_node.kind(), AstKind::Function(_) | AstKind::ArrowFunctionExpression(_))
-        {
+        if matches!(
+            current_node.kind(),
+            AstKind::Function(_) | AstKind::ArrowFunctionExpression(_)
+        ) {
             return Some(current_node);
         }
         current_node = semantic.nodes().parent_node(current_node.id());
@@ -290,7 +304,11 @@ pub fn get_declaration_of_variable<'a, 'b>(
 ) -> Option<&'b AstNode<'a>> {
     let symbol_id = get_symbol_id_of_variable(ident, semantic)?;
     let symbol_table = semantic.scoping();
-    Some(semantic.nodes().get_node(symbol_table.symbol_declaration(symbol_id)))
+    Some(
+        semantic
+            .nodes()
+            .get_node(symbol_table.symbol_declaration(symbol_id)),
+    )
 }
 
 pub fn get_declaration_from_reference_id<'a, 'b>(
@@ -299,14 +317,21 @@ pub fn get_declaration_from_reference_id<'a, 'b>(
 ) -> Option<&'b AstNode<'a>> {
     let symbol_table = semantic.scoping();
     let symbol_id = symbol_table.get_reference(reference_id).symbol_id()?;
-    Some(semantic.nodes().get_node(symbol_table.symbol_declaration(symbol_id)))
+    Some(
+        semantic
+            .nodes()
+            .get_node(symbol_table.symbol_declaration(symbol_id)),
+    )
 }
 
 pub fn get_symbol_id_of_variable(
     ident: &IdentifierReference,
     semantic: &Semantic<'_>,
 ) -> Option<SymbolId> {
-    semantic.scoping().get_reference(ident.reference_id()).symbol_id()
+    semantic
+        .scoping()
+        .get_reference(ident.reference_id())
+        .symbol_id()
 }
 
 pub fn extract_regex_flags<'a>(args: &'a ArenaVec<'a, Argument<'a>>) -> Option<RegExpFlags> {
@@ -452,7 +477,10 @@ pub fn is_new_expression<'a>(
 pub fn call_expr_method_callee_info<'a>(
     call_expr: &'a CallExpression<'a>,
 ) -> Option<(Span, &'a str)> {
-    let member_expr = call_expr.callee.get_inner_expression().as_member_expression()?;
+    let member_expr = call_expr
+        .callee
+        .get_inner_expression()
+        .as_member_expression()?;
     member_expr.static_property_info()
 }
 
@@ -468,7 +496,9 @@ pub fn is_global_require_call(call_expr: &CallExpression, ctx: &Semantic) -> boo
     if call_expr.arguments.len() != 1 {
         return false;
     }
-    call_expr.callee.is_global_reference_name(static_ident!("require"), ctx.scoping())
+    call_expr
+        .callee
+        .is_global_reference_name(static_ident!("require"), ctx.scoping())
 }
 
 pub fn is_function_node(node: &AstNode) -> bool {
@@ -554,7 +584,10 @@ pub fn get_preceding_indent_str(source_text: &str, span: Span) -> Option<&str> {
     let preceding_source_text = &source_text[..span_start];
 
     // only return last line if is whitespace
-    preceding_source_text.lines().last().filter(|&line| line.trim().is_empty())
+    preceding_source_text
+        .lines()
+        .last()
+        .filter(|&line| line.trim().is_empty())
 }
 
 pub fn could_be_error(expr: &Expression) -> bool {
@@ -570,8 +603,10 @@ pub fn could_be_error(expr: &Expression) -> bool {
         | Expression::TaggedTemplateExpression(_)
         | Expression::Identifier(_) => true,
         Expression::AssignmentExpression(expr) => {
-            if matches!(expr.operator, AssignmentOperator::Assign | AssignmentOperator::LogicalAnd)
-            {
+            if matches!(
+                expr.operator,
+                AssignmentOperator::Assign | AssignmentOperator::LogicalAnd
+            ) {
                 return could_be_error(&expr.right);
             }
 
@@ -663,7 +698,10 @@ pub fn is_default_this_binding<'a>(
     let is_anonymous = match node.kind() {
         AstKind::Function(func) if cap_is_constructor => {
             let is_constructor = func.id.as_ref().is_some_and(|id| {
-                id.name.chars().next().is_some_and(|char| char.is_ascii_uppercase())
+                id.name
+                    .chars()
+                    .next()
+                    .is_some_and(|char| char.is_ascii_uppercase())
             });
 
             if is_constructor || has_jsdoc_this_tag(semantic, node) {
@@ -733,7 +771,9 @@ pub fn is_default_this_binding<'a>(
 
                 let is_constructor = is_anonymous_and_cap_is_constructor
                     && expr.left.get_identifier_name().is_some_and(|name| {
-                        name.chars().next().is_some_and(|char| char.is_ascii_uppercase())
+                        name.chars()
+                            .next()
+                            .is_some_and(|char| char.is_ascii_uppercase())
                     });
 
                 return !is_constructor;
@@ -741,16 +781,23 @@ pub fn is_default_this_binding<'a>(
             AstKind::AssignmentPattern(pattern) => {
                 let is_constructor = is_anonymous_and_cap_is_constructor
                     && pattern.left.get_identifier_name().is_some_and(|name| {
-                        name.chars().next().is_some_and(|char| char.is_ascii_uppercase())
+                        name.chars()
+                            .next()
+                            .is_some_and(|char| char.is_ascii_uppercase())
                     });
 
                 return !is_constructor;
             }
             AstKind::VariableDeclarator(var) => {
                 let is_constructor = is_anonymous_and_cap_is_constructor
-                    && var.init.as_ref().is_some_and(|init| init.span() == current_node.span())
+                    && var
+                        .init
+                        .as_ref()
+                        .is_some_and(|init| init.span() == current_node.span())
                     && var.id.get_identifier_name().is_some_and(|name| {
-                        name.chars().next().is_some_and(|char| char.is_ascii_uppercase())
+                        name.chars()
+                            .next()
+                            .is_some_and(|char| char.is_ascii_uppercase())
                     });
 
                 return !is_constructor;
@@ -764,8 +811,10 @@ pub fn is_default_this_binding<'a>(
                 {
                     let node = outermost_paren_parent(parent, semantic).unwrap();
                     if let AstKind::CallExpression(call_expr) = node.kind()
-                        && let Some(arg) =
-                            call_expr.arguments.first().and_then(|arg| arg.as_expression())
+                        && let Some(arg) = call_expr
+                            .arguments
+                            .first()
+                            .and_then(|arg| arg.as_expression())
                     {
                         return arg.is_null_or_undefined();
                     }
@@ -773,7 +822,10 @@ pub fn is_default_this_binding<'a>(
                 return true;
             }
             AstKind::CallExpression(call_expr) => {
-                if call_expr.callee.is_specific_member_access("Reflect", "apply") {
+                if call_expr
+                    .callee
+                    .is_specific_member_access("Reflect", "apply")
+                {
                     return call_expr.arguments.len() != 3
                         || call_expr.arguments[0].span() != current_node.span()
                         || call_expr.arguments[1]
@@ -1071,8 +1123,10 @@ pub fn could_be_asi_hazard(node: &AstNode, ctx: &LintContext) -> bool {
     };
 
     // Characters that could cause ASI issues when followed by `[`, `(`, `/`, etc.
-    matches!(last_char, ')' | ']' | '}' | '"' | '\'' | '`' | '+' | '-' | '/' | '.')
-        || last_char.is_alphanumeric()
+    matches!(
+        last_char,
+        ')' | ']' | '}' | '"' | '\'' | '`' | '+' | '-' | '/' | '.'
+    ) || last_char.is_alphanumeric()
         || last_char == '_'
         || last_char == '$'
 }

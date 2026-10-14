@@ -11,7 +11,9 @@ use crate::{
 };
 
 fn check_tag_names_diagnostic(span: Span, x1: &str) -> OxcDiagnostic {
-    OxcDiagnostic::warn("Invalid tag name found.").with_help(x1.to_string()).with_label(span)
+    OxcDiagnostic::warn("Invalid tag name found.")
+        .with_help(x1.to_string())
+        .with_label(span)
 }
 
 #[derive(Debug, Default, Clone, Deserialize)]
@@ -243,7 +245,10 @@ impl Rule for CheckTagNames {
         let config = &self.0;
         let user_defined_tags = settings.list_user_defined_tag_names();
 
-        let is_dts = ctx.file_path().to_str().is_some_and(|p| p.ends_with(".d.ts"));
+        let is_dts = ctx
+            .file_path()
+            .to_str()
+            .is_some_and(|p| p.ends_with(".d.ts"));
         // NOTE: The original rule seems to check `declare` context by visiting AST nodes.
         // https://github.com/gajus/eslint-plugin-jsdoc/blob/e343ab5b1efaa59b07c600138aee070b4083857e/src/rules/checkTagNames.js#L121
         // But...
@@ -1132,7 +1137,11 @@ fn test() {
         ),
     ];
 
-    let dts_pass: Vec<(&'static str, Option<serde_json::Value>, Option<serde_json::Value>)> = vec![
+    let dts_pass: Vec<(
+        &'static str,
+        Option<serde_json::Value>,
+        Option<serde_json::Value>,
+    )> = vec![
         (
             "
                             /** @default 0 */
@@ -1196,19 +1205,27 @@ fn test() {
             None,
         ),
     ];
-    let dts_fail: Vec<(&'static str, Option<serde_json::Value>, Option<serde_json::Value>)> =
-        vec![(
-            "
+    let dts_fail: Vec<(
+        &'static str,
+        Option<serde_json::Value>,
+        Option<serde_json::Value>,
+    )> = vec![(
+        "
                             /** @typoo {string} (fail: invalid name) */
                             let a;
                           ",
-            None,
-            None,
-        )];
+        None,
+        None,
+    )];
 
     Tester::new(CheckTagNames::NAME, CheckTagNames::PLUGIN, pass, fail).test_and_snapshot();
     // Currently only 1 snapshot can be saved under a rule name
-    Tester::new(CheckTagNames::NAME, CheckTagNames::PLUGIN, dts_pass, dts_fail)
-        .change_rule_path("test.d.ts")
-        .test();
+    Tester::new(
+        CheckTagNames::NAME,
+        CheckTagNames::PLUGIN,
+        dts_pass,
+        dts_fail,
+    )
+    .change_rule_path("test.d.ts")
+    .test();
 }

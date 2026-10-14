@@ -1,3 +1,7 @@
 # runtime:* modules resolve through the package preload plugin in tests, as in consumers.
+[install]
+linker = "isolated"
+globalStore = true
+
 [test]
 preload = ["./src/preload.ts"]

@@ -69,14 +69,18 @@ impl EnvOptions {
     pub fn enable_all(include_unfinished_plugins: bool) -> Self {
         Self {
             module: Module::default(),
-            es2026: ES2026Options { explicit_resource_management: true },
+            es2026: ES2026Options {
+                explicit_resource_management: true,
+            },
             es2022: ES2022Options {
                 class_static_block: true,
                 class_properties: Some(ClassPropertiesOptions::default()),
                 // Turn this on would throw error for all top-level awaits.
                 top_level_await: false,
             },
-            es2021: ES2021Options { logical_assignment_operators: true },
+            es2021: ES2021Options {
+                logical_assignment_operators: true,
+            },
             es2020: ES2020Options {
                 export_namespace_from: true,
                 nullish_coalescing_operator: true,
@@ -85,13 +89,19 @@ impl EnvOptions {
                 big_int: false,
                 arbitrary_module_namespace_names: false,
             },
-            es2019: ES2019Options { optional_catch_binding: true },
+            es2019: ES2019Options {
+                optional_catch_binding: true,
+            },
             es2018: ES2018Options {
                 object_rest_spread: Some(ObjectRestSpreadOptions::default()),
                 async_generator_functions: true,
             },
-            es2017: ES2017Options { async_to_generator: true },
-            es2016: ES2016Options { exponentiation_operator: true },
+            es2017: ES2017Options {
+                async_to_generator: true,
+            },
+            es2016: ES2016Options {
+                exponentiation_operator: true,
+            },
             es2015: ES2015Options {
                 // Turned off because it is not ready.
                 arrow_function: if include_unfinished_plugins {
@@ -177,7 +187,9 @@ impl From<EngineTargets> for EnvOptions {
                 object_rest_spread: o.has_feature(ES2018ObjectRestSpread).then(Default::default),
                 async_generator_functions: o.has_feature(ES2018AsyncGeneratorFunctions),
             },
-            es2017: ES2017Options { async_to_generator: o.has_feature(ES2017AsyncToGenerator) },
+            es2017: ES2017Options {
+                async_to_generator: o.has_feature(ES2017AsyncToGenerator),
+            },
             es2016: ES2016Options {
                 exponentiation_operator: o.has_feature(ES2016ExponentiationOperator),
             },

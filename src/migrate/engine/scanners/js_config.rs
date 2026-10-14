@@ -23,8 +23,8 @@
 //!
 //! Phase 4.
 
-use crate::util::{line_offsets, make_finding};
 use crate::types::{Finding, MakeFindingOpts, Severity};
+use crate::util::{line_offsets, make_finding};
 
 pub fn is_js_config(name: &str) -> bool {
     classify(name).is_some()

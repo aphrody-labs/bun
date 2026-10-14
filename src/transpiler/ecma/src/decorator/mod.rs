@@ -18,7 +18,10 @@ pub struct Decorator<'a> {
 
 impl Decorator<'_> {
     pub fn new(options: DecoratorOptions) -> Self {
-        Self { legacy_decorator: LegacyDecorator::new(options), options }
+        Self {
+            legacy_decorator: LegacyDecorator::new(options),
+            options,
+        }
     }
 }
 

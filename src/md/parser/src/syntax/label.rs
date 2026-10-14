@@ -59,7 +59,9 @@ fn is_markdown_space(c: char) -> bool {
 
 /// `c.toLowerCase().toUpperCase().toLowerCase()`; for ASCII this is `to_ascii_lowercase`.
 fn fold(c: char) -> impl Iterator<Item = char> {
-    c.to_lowercase().flat_map(char::to_uppercase).flat_map(char::to_lowercase)
+    c.to_lowercase()
+        .flat_map(char::to_uppercase)
+        .flat_map(char::to_lowercase)
 }
 
 /// Whether trim/collapse/fold would all be no-ops.

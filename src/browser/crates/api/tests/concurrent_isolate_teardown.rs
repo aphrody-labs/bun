@@ -72,7 +72,10 @@ async fn one_browser_one_page_drops_cleanly() {
     let browser = Browser::new().unwrap();
     let mut page = browser.new_page().await.unwrap();
     page.goto(&base).await.unwrap();
-    assert_eq!(page.evaluate("document.title"), serde_json::json!("fixture"));
+    assert_eq!(
+        page.evaluate("document.title"),
+        serde_json::json!("fixture")
+    );
 }
 
 /// Two pages on ONE browser — one isolate each, same context.
@@ -109,19 +112,34 @@ async fn a_page_in_the_middle_can_be_dropped_and_the_rest_keep_working() {
     // Both neighbours must still be able to run script: the one below the
     // hole on the entry stack and the one above it, which was exited and
     // re-entered to reach it.
-    assert_eq!(first.evaluate("document.title"), serde_json::json!("fixture"));
-    assert_eq!(last.evaluate("document.title"), serde_json::json!("fixture"));
+    assert_eq!(
+        first.evaluate("document.title"),
+        serde_json::json!("fixture")
+    );
+    assert_eq!(
+        last.evaluate("document.title"),
+        serde_json::json!("fixture")
+    );
 
     // And a page created after the hole works, so the stack was left in a
     // state a new isolate can be pushed onto.
     let mut fresh = browser.new_page().await.unwrap();
     fresh.goto(&base).await.unwrap();
-    assert_eq!(fresh.evaluate("document.title"), serde_json::json!("fixture"));
+    assert_eq!(
+        fresh.evaluate("document.title"),
+        serde_json::json!("fixture")
+    );
 
     // Finally drop out of order again, oldest first, and keep using the rest.
     drop(first);
-    assert_eq!(last.evaluate("document.title"), serde_json::json!("fixture"));
-    assert_eq!(fresh.evaluate("document.title"), serde_json::json!("fixture"));
+    assert_eq!(
+        last.evaluate("document.title"),
+        serde_json::json!("fixture")
+    );
+    assert_eq!(
+        fresh.evaluate("document.title"),
+        serde_json::json!("fixture")
+    );
 }
 
 /// The half of this that has nothing to do with dropping: a second page put
@@ -140,8 +158,14 @@ async fn an_older_page_still_runs_script_while_a_newer_one_is_alive() {
     second.goto(&base).await.unwrap();
 
     // The newest page always worked; the older one is what aborted.
-    assert_eq!(second.evaluate("document.title"), serde_json::json!("fixture"));
-    assert_eq!(first.evaluate("document.title"), serde_json::json!("fixture"));
+    assert_eq!(
+        second.evaluate("document.title"),
+        serde_json::json!("fixture")
+    );
+    assert_eq!(
+        first.evaluate("document.title"),
+        serde_json::json!("fixture")
+    );
 
     // Interleaving the two must keep working in both directions.
     assert_eq!(first.evaluate("1 + 1"), serde_json::json!(2.0));

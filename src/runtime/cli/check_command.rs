@@ -6,7 +6,7 @@ use bstr::BStr;
 
 use bun_bundler::options::{TypeChecked, loaders_from_transform_options};
 use bun_clap as clap;
-use bun_core::{Global, Output, UnwrapOrOom, ZStr, env_var};
+use bun_core::{Global, Output, ZStr, env_var};
 use bun_sema_driver::format::{self, Layout, Style};
 use bun_sema_driver::host::{AlreadyRead, BeforeRead, Provided};
 use bun_sema_driver::{
@@ -190,97 +190,6 @@ pub(crate) fn working_directory() -> Vec<u8> {
     }
 }
 
-/// The `package.json` nearest to `dir`, which is where `bun run` looks: its directory, its path and
-/// its text.
-pub(crate) fn nearest_package_json(mut dir: &[u8]) -> Option<(&[u8], Vec<u8>, Vec<u8>)> {
-    use bun_paths::platform::Auto;
-    use bun_paths::resolve_path::{dirname, join_abs_string};
-    loop {
-        let path = join_abs_string::<Auto>(dir, &[b"package.json"]).to_vec();
-        if let Ok(contents) = bun_sys::File::read_from(bun_core::Fd::cwd(), &path) {
-            let dir = bun_core::strings::without_trailing_slash(dir);
-            return Some((dir, path, contents));
-        }
-        let parent = dirname::<Auto>(dir);
-        if !bun_paths::is_absolute(parent) || parent.len() >= dir.len() {
-            return None;
-        }
-        dir = parent;
-    }
-}
-
-/// The entries of `BUN_INTERNAL_CHECK_SCRIPTS`. Each is a length, `:` and as many bytes, since a
-/// path can have any byte in it.
-fn running_package_scripts(mut running: &[u8]) -> impl Iterator<Item = &[u8]> {
-    core::iter::from_fn(move || {
-        let colon = bun_core::strings::index_of_char_usize(running, b':')?;
-        let len: usize = core::str::from_utf8(&running[..colon]).ok()?.parse().ok()?;
-        let (entry, rest) = running[colon + 1..].split_at_checked(len)?;
-        running = rest;
-        Some(entry)
-    })
-}
-
-/// `bun run check` runs all three.
-fn is_check_script(name: &[u8]) -> bool {
-    matches!(name, b"check" | b"precheck" | b"postcheck")
-}
-
-/// The directory of the package whose `check` script another package manager has started, with
-/// this process in it. npm, pnpm and yarn say which script they run. Not all say of which package:
-/// then it is the one that this process is started in, not each one whose scripts it runs.
-fn package_of_inherited_check_script() -> Option<Vec<u8>> {
-    use bun_paths::{platform::Auto, resolve_path::dirname};
-    if !env_var::npm_lifecycle_event::get().is_some_and(is_check_script) {
-        return None;
-    }
-    match env_var::npm_package_json::get() {
-        Some(of) => Some(bun_core::strings::without_trailing_slash(dirname::<Auto>(of)).to_vec()),
-        None if env_var::BUN_INTERNAL_CHECK_SCRIPTS::get().is_some() => None,
-        None => Some(nearest_package_json(&working_directory())?.0.to_vec()),
-    }
-}
-
-/// Makes `env` that of the script `name` of the package that has `dir`. See `is_package_script`.
-pub(crate) fn note_package_script(env: &mut bun_dotenv::Loader, name: &[u8], dir: &[u8]) {
-    use std::io::Write;
-    let key = b"BUN_INTERNAL_CHECK_SCRIPTS";
-    // As `is_package_script` finds it, wherever in the package the script is started.
-    let Some((dir, ..)) = nearest_package_json(dir) else {
-        return;
-    };
-    // `name` takes the place of what another package manager has said, for what the script runs.
-    let inherited = package_of_inherited_check_script();
-    let mut running = env.get(key).unwrap_or_default().to_vec();
-    for dir in (inherited.as_deref().into_iter()).chain(is_check_script(name).then_some(dir)) {
-        if !running_package_scripts(&running).any(|it| it == dir) {
-            let _ = write!(running, "{}:", dir.len());
-            running.extend_from_slice(dir);
-        }
-    }
-    if !running.is_empty() {
-        env.map.put(key, &running).unwrap_or_oom();
-    }
-}
-
-/// `note_package_script` for as long as `with` takes: `env` is that of other scripts too.
-pub(crate) fn with_package_script<R>(
-    env: &mut bun_dotenv::Loader,
-    name: &[u8],
-    dir: &[u8],
-    with: impl FnOnce(&mut bun_dotenv::Loader) -> R,
-) -> R {
-    let key = b"BUN_INTERNAL_CHECK_SCRIPTS";
-    let before = env.get(key).map(<[u8]>::to_vec);
-    note_package_script(env, name, dir);
-    let result = with(env);
-    match before {
-        Some(before) => env.map.put(key, &before).unwrap_or_oom(),
-        None => env.map.remove(key),
-    }
-    result
-}
-
 /// Displays `progress` on stderr until `is_done`, starting once the check has run long enough for a
 /// user to notice.
 fn show_progress(progress: &Progress, is_done: &AtomicBool, style: &Style) {
@@ -425,6 +334,7 @@ fn request<'a>(
     Request {
         cwd,
         project,
+        listed_projects: None,
         build: command_line.is_some_and(|it| it.build),
         errors: command_line.map_or(&[][..], |it| &it.errors[..]),
         paths: entries.paths,
@@ -601,6 +511,13 @@ fn report_and_exit(report: &Report, options: &Options, cwd: &[u8]) -> ! {
             report.check_time.as_secs_f64() * 1000.0,
             report.deepest_stack / 1024,
         );
+        if report.files_parsed_for_all > 0 {
+            let _ = writeln!(
+                summary,
+                "  {} files parsed for all projects",
+                report.files_parsed_for_all,
+            );
+        }
     }
     let _ = Output::error_writer().write_all(&summary);
     Output::flush();
@@ -786,14 +703,12 @@ fn check_for_build(checked: TypeChecked, log: &mut bun_ast::Log, shows_progress:
             ..Default::default()
         });
     }
-    for path in &report.incomplete {
+    for file in &report.incomplete {
+        let path = bun_sema_driver::host::to_native(&file.path);
         log.add_error_fmt(
             None,
             bun_ast::Loc::EMPTY,
-            format_args!(
-                "ran out of stack in {}. This is a bug in Bun: errors in this file may be missing.",
-                BStr::new(bun_sema_driver::host::to_native(path))
-            ),
+            format_args!("{}", BStr::new(&file.message(path))),
         );
     }
     report.is_ok()
@@ -810,7 +725,9 @@ fn log_data_of(reported: &Diagnostic) -> bun_ast::Data {
     text.extend_from_slice(&reported.text);
     let line_text = || {
         let index = reported.line.checked_sub(reported.source_line)?;
-        Some(Cow::Owned(reported.source.get(index as usize)?.clone()))
+        let line = reported.source.get(index as usize)?;
+        // Of a longer one only the beginning is kept, which the column need not be in.
+        (line.len() <= bun_sema_driver::MAX_SHOWN_LINE).then(|| Cow::Owned(line.clone()))
     };
     bun_ast::Data {
         text: Cow::Owned(text),

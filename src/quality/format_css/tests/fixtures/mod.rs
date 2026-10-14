@@ -33,7 +33,10 @@ impl FixtureFormatter for CssHarness {
     }
 
     fn format(source: &str, path: &Path, options: &Self::Options) -> String {
-        let options = CssFormatOptions { variant: variant_of(path), ..*options };
+        let options = CssFormatOptions {
+            variant: variant_of(path),
+            ..*options
+        };
 
         if is_embedded(path) {
             return format_embedded(source, options);
@@ -48,16 +51,25 @@ impl FixtureFormatter for CssHarness {
     }
 
     fn fingerprint(source: &str, path: &Path, options: &Self::Options) -> Fingerprint {
-        let options = CssFormatOptions { variant: variant_of(path), ..*options };
+        let options = CssFormatOptions {
+            variant: variant_of(path),
+            ..*options
+        };
         let allocator = Allocator::default();
         let parsed = parse_for_format(
             &allocator,
             source,
             options,
-            if is_embedded(path) { CssRoot::CssInJsTemplate } else { CssRoot::Stylesheet },
+            if is_embedded(path) {
+                CssRoot::CssInJsTemplate
+            } else {
+                CssRoot::Stylesheet
+            },
         )
         .expect("source should parse");
-        Fingerprint { comments: parsed.comments.len() }
+        Fingerprint {
+            comments: parsed.comments.len(),
+        }
     }
 }
 
@@ -137,12 +149,15 @@ include!(concat!(env!("OUT_DIR"), "/generated_tests.rs"));
 #[test]
 fn bom_is_preserved() {
     let allocator = Allocator::default();
-    let formatted =
-        format(&allocator, "\u{feff}a {\n  color: red;\n}\n", CssFormatOptions::default())
-            .expect("BOM input should parse")
-            .print()
-            .expect("print should succeed")
-            .into_code();
+    let formatted = format(
+        &allocator,
+        "\u{feff}a {\n  color: red;\n}\n",
+        CssFormatOptions::default(),
+    )
+    .expect("BOM input should parse")
+    .print()
+    .expect("print should succeed")
+    .into_code();
     assert_eq!(formatted, "\u{feff}a {\n  color: red;\n}\n");
 }
 
@@ -150,8 +165,14 @@ fn bom_is_preserved() {
 fn parse_error_is_err() {
     let allocator = Allocator::default();
     let css = CssFormatOptions::default();
-    let scss = CssFormatOptions { variant: CssVariant::Scss, ..css };
-    let less = CssFormatOptions { variant: CssVariant::Less, ..css };
+    let scss = CssFormatOptions {
+        variant: CssVariant::Scss,
+        ..css
+    };
+    let less = CssFormatOptions {
+        variant: CssVariant::Less,
+        ..css
+    };
     for (source, options) in [
         // Root declaration: `TopLevelDeclaration` in a stylesheet, as opposed to a fragment (`CssRoot`)
         // (dart-sass rejects it; Less parses it like less.js).
@@ -180,6 +201,9 @@ fn parse_error_is_err() {
         // Pin for crates/oxc_formatter_css/DIVERGENCES.md#less-value-interpolation-rejected
         (".a { width: @{min-width}; }", less),
     ] {
-        assert!(format(&allocator, source, options).is_err(), "{source:?} should fail to format");
+        assert!(
+            format(&allocator, source, options).is_err(),
+            "{source:?} should fail to format"
+        );
     }
 }

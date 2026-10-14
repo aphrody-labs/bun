@@ -127,7 +127,11 @@ pub struct MetaPropertyDefine {
 
 impl MetaPropertyDefine {
     pub fn new(parts: Vec<CompactStr>, value: CompactStr, postfix_wildcard: bool) -> Self {
-        Self { parts, value, postfix_wildcard }
+        Self {
+            parts,
+            value,
+            postfix_wildcard,
+        }
     }
 }
 
@@ -142,10 +146,19 @@ impl DotDefine {
 enum IdentifierType {
     Identifier,
     // `key` is the last part (the bucket key); `parts` is the full member path.
-    DotDefines { key: CompactStr, parts: Vec<CompactStr> },
-    Typeof { parts: Vec<CompactStr> },
+    DotDefines {
+        key: CompactStr,
+        parts: Vec<CompactStr>,
+    },
+    Typeof {
+        parts: Vec<CompactStr>,
+    },
     // import.meta.a; `key` is the last part (used to bucket non-wildcard defines).
-    ImportMetaWithParts { key: CompactStr, parts: Vec<CompactStr>, postfix_wildcard: bool },
+    ImportMetaWithParts {
+        key: CompactStr,
+        parts: Vec<CompactStr>,
+        postfix_wildcard: bool,
+    },
     // import.meta or import.meta.*
     ImportMeta(bool),
 }
@@ -187,9 +200,16 @@ impl ReplaceGlobalDefinesConfig {
                         .push(DotDefine::new(parts, CompactStr::new(value)));
                 }
                 IdentifierType::Typeof { parts } => {
-                    typeof_defines.push(TypeofDefine { parts, value: CompactStr::new(value) });
+                    typeof_defines.push(TypeofDefine {
+                        parts,
+                        value: CompactStr::new(value),
+                    });
                 }
-                IdentifierType::ImportMetaWithParts { key, parts, postfix_wildcard } => {
+                IdentifierType::ImportMetaWithParts {
+                    key,
+                    parts,
+                    postfix_wildcard,
+                } => {
                     let define =
                         MetaPropertyDefine::new(parts, CompactStr::new(value), postfix_wildcard);
                     if postfix_wildcard {
@@ -215,7 +235,10 @@ impl ReplaceGlobalDefinesConfig {
         // before the `meta_property_wildcard` list, which preserves "specific wins over wildcard".
         // See test case `dot_with_postfix_mixed`.
         Ok(Self(Arc::new(ReplaceGlobalDefinesConfigImpl {
-            identifier: IdentifierDefine { identifier_defines, has_this_expr_define },
+            identifier: IdentifierDefine {
+                identifier_defines,
+                has_this_expr_define,
+            },
             dot: dot_defines,
             meta_property,
             meta_property_wildcard,
@@ -244,8 +267,11 @@ impl ReplaceGlobalDefinesConfig {
             }
             return Ok(IdentifierType::Identifier);
         }
-        let normalized_parts_len =
-            if parts[parts.len() - 1] == "*" { parts.len() - 1 } else { parts.len() };
+        let normalized_parts_len = if parts[parts.len() - 1] == "*" {
+            parts.len() - 1
+        } else {
+            parts.len()
+        };
         // We can ensure now the parts.len() >= 2
         let is_import_meta = parts[0] == "import" && parts[1] == "meta";
 
@@ -255,7 +281,9 @@ impl ReplaceGlobalDefinesConfig {
         let key = CompactStr::new(parts[normalized_parts_len - 1]);
         if is_import_meta {
             match normalized_parts_len {
-                2 => Ok(IdentifierType::ImportMeta(normalized_parts_len != parts.len())),
+                2 => Ok(IdentifierType::ImportMeta(
+                    normalized_parts_len != parts.len(),
+                )),
                 _ => Ok(IdentifierType::ImportMetaWithParts {
                     key,
                     parts: compact_parts.into_iter().skip(2).collect(),
@@ -269,7 +297,10 @@ impl ReplaceGlobalDefinesConfig {
             )]
             .into())
         } else {
-            Ok(IdentifierType::DotDefines { key, parts: compact_parts })
+            Ok(IdentifierType::DotDefines {
+                key,
+                parts: compact_parts,
+            })
         }
     }
 
@@ -466,7 +497,10 @@ impl<'a> ReplaceGlobalDefines<'a> {
         self.scoping = Some(scoping);
         self.visit_program(program);
         let scoping = self.scoping.take().unwrap();
-        ReplaceGlobalDefinesReturn { scoping, changed: self.changed }
+        ReplaceGlobalDefinesReturn {
+            scoping,
+            changed: self.changed,
+        }
     }
 
     // Construct a new expression because we don't have ast clone right now.
@@ -594,7 +628,13 @@ impl<'a> ReplaceGlobalDefines<'a> {
         if !Self::is_global_or_ambient_reference(self.scoping(), ident) {
             return None;
         }
-        let value = self.config.0.identifier.identifier_defines.get(ident.name.as_str())?.clone();
+        let value = self
+            .config
+            .0
+            .identifier
+            .identifier_defines
+            .get(ident.name.as_str())?
+            .clone();
         let value = self.parse_value(&value);
         Some(value)
     }
@@ -626,8 +666,10 @@ impl<'a> ReplaceGlobalDefines<'a> {
     fn replace_dot_defines(&mut self, expr: &mut Expression<'a>) -> bool {
         match expr {
             Expression::ChainExpression(chain) => {
-                let Some(new_expr) =
-                    chain.expression.as_member_expression_mut().and_then(|item| match item {
+                let Some(new_expr) = chain
+                    .expression
+                    .as_member_expression_mut()
+                    .and_then(|item| match item {
                         MemberExpression::ComputedMemberExpression(computed_member_expr) => {
                             self.replace_dot_computed_member_expr(computed_member_expr)
                         }
@@ -706,7 +748,10 @@ impl<'a> ReplaceGlobalDefines<'a> {
     ) -> Option<Expression<'a>> {
         let leaf = member.property.name.as_str();
         let value = self
-            .find_dot_define_value(leaf, DotDefineMemberExpression::StaticMemberExpression(member))
+            .find_dot_define_value(
+                leaf,
+                DotDefineMemberExpression::StaticMemberExpression(member),
+            )
             .or_else(|| self.find_meta_property_value(leaf, member))?;
         Some(self.parse_value(&value))
     }
@@ -738,8 +783,9 @@ impl<'a> ReplaceGlobalDefines<'a> {
         member: &StaticMemberExpression<'a>,
     ) -> Option<CompactStr> {
         if let Some(bucket) = self.config.0.meta_property.get(leaf)
-            && let Some(define) =
-                bucket.iter().find(|define| Self::is_meta_property_define(define, member))
+            && let Some(define) = bucket
+                .iter()
+                .find(|define| Self::is_meta_property_define(define, member))
         {
             return Some(define.value.clone());
         }
@@ -809,8 +855,10 @@ impl<'a> ReplaceGlobalDefines<'a> {
                 // `None` means there is no postfix wildcard defined, so any part not matched should return false
                 // `Matched` means there is a postfix wildcard defined, and already matched a part, so any further
                 // not matched part should return false
-                if matches!(wildcard_status, WildCardStatus::None | WildCardStatus::Matched)
-                    || has_matched_part
+                if matches!(
+                    wildcard_status,
+                    WildCardStatus::None | WildCardStatus::Matched
+                ) || has_matched_part
                 {
                     return false;
                 }
@@ -871,7 +919,9 @@ impl<'a> ReplaceGlobalDefines<'a> {
     /// `optional: true` markers (because a define replacement removed them),
     /// unwrap it to a plain expression.
     fn unwrap_chain_expression_if_no_optional(expr: &mut Expression<'a>) {
-        let Expression::ChainExpression(chain) = &*expr else { return };
+        let Expression::ChainExpression(chain) = &*expr else {
+            return;
+        };
 
         // Check the chain element's optional flag and get the first object/callee to walk.
         let (optional, mut current) = match &chain.expression {
@@ -919,7 +969,9 @@ impl<'a> ReplaceGlobalDefines<'a> {
 
         // No optional markers remain — unwrap the chain to a plain expression.
         expr.replace_with(|chain_expr| {
-            let Expression::ChainExpression(chain) = chain_expr else { unreachable!() };
+            let Expression::ChainExpression(chain) = chain_expr else {
+                unreachable!()
+            };
             Expression::from(chain.unbox().expression)
         });
     }
@@ -1007,8 +1059,12 @@ impl<'a> ReplaceGlobalDefines<'a> {
     /// Optimize object expression replacements in destructuring patterns by only keeping needed
     /// keys.
     fn destructing_dot_define_optimizer(&self, mut expr: Expression<'a>) -> Expression<'a> {
-        let Expression::ObjectExpression(obj) = &mut expr else { return expr };
-        let Some(needed_keys) = &self.destructuring_keys else { return expr };
+        let Expression::ObjectExpression(obj) = &mut expr else {
+            return expr;
+        };
+        let Some(needed_keys) = &self.destructuring_keys else {
+            return expr;
+        };
 
         // here we iterate the object properties twice
         // for the first time we check if all the keys are static
@@ -1130,10 +1186,14 @@ struct UpdateReplacedExpression<'a> {
 
 impl VisitJsMut<'_> for UpdateReplacedExpression<'_> {
     fn visit_identifier_reference(&mut self, ident: &mut IdentifierReference<'_>) {
-        let reference =
-            Reference::new(NodeId::DUMMY, self.scoping.root_scope_id(), ReferenceFlags::Read);
+        let reference = Reference::new(
+            NodeId::DUMMY,
+            self.scoping.root_scope_id(),
+            ReferenceFlags::Read,
+        );
         let reference_id = self.scoping.create_reference(reference);
-        self.scoping.add_root_unresolved_reference(ident.name, reference_id);
+        self.scoping
+            .add_root_unresolved_reference(ident.name, reference_id);
         ident.set_reference_id(reference_id);
         walk_js_mut::walk_identifier_reference(self, ident);
     }

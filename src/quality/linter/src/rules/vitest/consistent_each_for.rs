@@ -25,7 +25,9 @@ fn consistent_each_for_diagnostic(
         "To create parameterized test with `{fn_kind}` function you should use `{method_name}`"
     );
 
-    OxcDiagnostic::warn(message).with_help(help).with_label(span)
+    OxcDiagnostic::warn(message)
+        .with_help(help)
+        .with_label(span)
 }
 
 #[derive(Debug, Default, Clone)]
@@ -169,13 +171,17 @@ declare_oxc_lint!(
     style,
     config = ConsistentEachForJson,
     version = "1.39.0",
-    short_description = "Enforce consistency in whether `.each` or `.for` is used to create parameterized tests.",
+    short_description =
+        "Enforce consistency in whether `.each` or `.for` is used to create parameterized tests.",
 );
 
 impl Rule for ConsistentEachFor {
     fn from_configuration(value: serde_json::Value) -> Result<Self, serde_json::error::Error> {
-        DefaultRuleConfig::<ConsistentEachForJson>::from_value(value)
-            .map(|config| Self(Box::new(config.into_inner().into_consistent_each_for_config())))
+        DefaultRuleConfig::<ConsistentEachForJson>::from_value(value).map(|config| {
+            Self(Box::new(
+                config.into_inner().into_consistent_each_for_config(),
+            ))
+        })
     }
 
     fn run_on_jest_node<'a, 'c>(
@@ -262,7 +268,10 @@ fn test() {
     }
 
     let pass = vec![
-        (vitest_context!("test.each([1, 2, 3])('test', (n) => { expect(n).toBeDefined() })"), None),
+        (
+            vitest_context!("test.each([1, 2, 3])('test', (n) => { expect(n).toBeDefined() })"),
+            None,
+        ),
         (
             vitest_context!("test.for([1, 2, 3])('test', ([n]) => { expect(n).toBeDefined() })"),
             None,
@@ -416,7 +425,12 @@ fn test() {
         ),
     ];
 
-    Tester::new(ConsistentEachFor::NAME, ConsistentEachFor::PLUGIN, pass, fail)
-        .with_vitest_plugin(true)
-        .test_and_snapshot();
+    Tester::new(
+        ConsistentEachFor::NAME,
+        ConsistentEachFor::PLUGIN,
+        pass,
+        fail,
+    )
+    .with_vitest_plugin(true)
+    .test_and_snapshot();
 }

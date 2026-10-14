@@ -63,7 +63,10 @@ impl Rule for NoPrototypeBuiltins {
             return;
         };
         if DISALLOWED_PROPS.contains(&prop_name) {
-            ctx.diagnostic(no_prototype_builtins_diagnostic(prop_name, member_expr.span()));
+            ctx.diagnostic(no_prototype_builtins_diagnostic(
+                prop_name,
+                member_expr.span(),
+            ));
         }
     }
 }
@@ -125,6 +128,11 @@ fn test() {
         "(foo?.[`hasOwnProperty`])('bar')", // { "ecmaVersion": 2020 }
     ];
 
-    Tester::new(NoPrototypeBuiltins::NAME, NoPrototypeBuiltins::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        NoPrototypeBuiltins::NAME,
+        NoPrototypeBuiltins::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

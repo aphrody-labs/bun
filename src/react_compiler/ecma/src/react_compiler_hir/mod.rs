@@ -226,10 +226,15 @@ impl HirFunction<'_> {
             ));
         }
         let fallback_end = function_span.start.saturating_add(2);
-        let end = self.params.first().map_or(fallback_end, |param| match param {
-            ParamPattern::Place(place) => place.span.map_or(fallback_end, |span| span.end),
-            ParamPattern::Spread(spread) => spread.place.span.map_or(fallback_end, |span| span.end),
-        });
+        let end = self
+            .params
+            .first()
+            .map_or(fallback_end, |param| match param {
+                ParamPattern::Place(place) => place.span.map_or(fallback_end, |span| span.end),
+                ParamPattern::Spread(spread) => {
+                    spread.place.span.map_or(fallback_end, |span| span.end)
+                }
+            });
         Some(Span::new(function_span.start, end.min(function_span.end)))
     }
 }
@@ -1250,8 +1255,15 @@ pub enum JsxTag<'a> {
 
 #[derive(Debug, Clone, Copy)]
 pub enum JsxAttribute<'a> {
-    SpreadAttribute { argument: Place, span: Option<Span> },
-    Attribute { name: Ident<'a>, name_span: Option<Span>, place: Place },
+    SpreadAttribute {
+        argument: Place,
+        span: Option<Span>,
+    },
+    Attribute {
+        name: Ident<'a>,
+        name_span: Option<Span>,
+        place: Place,
+    },
 }
 
 // =============================================================================
@@ -1272,21 +1284,52 @@ pub enum BindingKind {
 
 #[derive(Debug, Clone, Copy)]
 pub enum VariableBinding<'a> {
-    Identifier { identifier: IdentifierId, binding_kind: BindingKind },
-    Global { name: Ident<'a> },
-    ImportDefault { name: Ident<'a>, module: Str<'a> },
-    ImportSpecifier { name: Ident<'a>, module: Str<'a>, imported: Ident<'a> },
-    ImportNamespace { name: Ident<'a>, module: Str<'a> },
-    ModuleLocal { name: Ident<'a> },
+    Identifier {
+        identifier: IdentifierId,
+        binding_kind: BindingKind,
+    },
+    Global {
+        name: Ident<'a>,
+    },
+    ImportDefault {
+        name: Ident<'a>,
+        module: Str<'a>,
+    },
+    ImportSpecifier {
+        name: Ident<'a>,
+        module: Str<'a>,
+        imported: Ident<'a>,
+    },
+    ImportNamespace {
+        name: Ident<'a>,
+        module: Str<'a>,
+    },
+    ModuleLocal {
+        name: Ident<'a>,
+    },
 }
 
 #[derive(Debug, Clone, Copy)]
 pub enum NonLocalBinding<'a> {
-    ImportDefault { name: Ident<'a>, module: Str<'a> },
-    ImportSpecifier { name: Ident<'a>, module: Str<'a>, imported: Ident<'a> },
-    ImportNamespace { name: Ident<'a>, module: Str<'a> },
-    ModuleLocal { name: Ident<'a> },
-    Global { name: Ident<'a> },
+    ImportDefault {
+        name: Ident<'a>,
+        module: Str<'a>,
+    },
+    ImportSpecifier {
+        name: Ident<'a>,
+        module: Str<'a>,
+        imported: Ident<'a>,
+    },
+    ImportNamespace {
+        name: Ident<'a>,
+        module: Str<'a>,
+    },
+    ModuleLocal {
+        name: Ident<'a>,
+    },
+    Global {
+        name: Ident<'a>,
+    },
 }
 
 impl<'a> NonLocalBinding<'a> {
@@ -1467,7 +1510,10 @@ pub enum AliasingEffect<'a> {
     /// Marks the given value and its direct aliases as frozen.
     Freeze { value: Place, reason: ValueReason },
     /// Mutate the value and any direct aliases.
-    Mutate { value: Place, reason: Option<MutationReason> },
+    Mutate {
+        value: Place,
+        reason: Option<MutationReason>,
+    },
     /// Mutate the value conditionally (only if mutable).
     MutateConditionally { value: Place },
     /// Mutate the value and transitive captures.
@@ -1483,7 +1529,11 @@ pub enum AliasingEffect<'a> {
     /// Direct assignment: `into = from`.
     Assign { from: Place, into: Place },
     /// Creates a value of the given kind at the given place.
-    Create { into: Place, value: ValueKind, reason: ValueReason },
+    Create {
+        into: Place,
+        value: ValueKind,
+        reason: ValueReason,
+    },
     /// Creates a new value with the same kind as the source.
     CreateFrom { from: Place, into: Place },
     /// Immutable data flow (escape analysis only, no mutable range influence).
@@ -1502,17 +1552,30 @@ pub enum AliasingEffect<'a> {
         span: Option<Span>,
     },
     /// Function expression creation with captures.
-    CreateFunction { captures: ArenaVec<'a, Place>, function_id: FunctionId, into: Place },
+    CreateFunction {
+        captures: ArenaVec<'a, Place>,
+        function_id: FunctionId,
+        into: Place,
+    },
     /// Mutation of a value known to be frozen (error).
     ///
     /// `error` references the diagnostic interned on `Environment`; the
     /// `OxcDiagnostic` itself is held out-of-band so this effect stays
     /// `Copy`/non-`Drop` and can be arena-allocated.
-    MutateFrozen { place: Place, error: AliasingDiagnostic },
+    MutateFrozen {
+        place: Place,
+        error: AliasingDiagnostic,
+    },
     /// Mutation of a global value (error).
-    MutateGlobal { place: Place, error: AliasingDiagnostic },
+    MutateGlobal {
+        place: Place,
+        error: AliasingDiagnostic,
+    },
     /// Side-effect not safe during render.
-    Impure { place: Place, error: AliasingDiagnostic },
+    Impure {
+        place: Place,
+        error: AliasingDiagnostic,
+    },
     /// Value is accessed during render.
     Render { place: Place },
 }
@@ -1563,7 +1626,10 @@ impl<'a> CloneIn<'a> for HirFunction<'a> {
             generator: self.generator,
             is_async: self.is_async,
             directives: self.directives.clone_in_impl(sem, alloc),
-            aliasing_effects: self.aliasing_effects.as_ref().map(|v| v.clone_in_impl(sem, alloc)),
+            aliasing_effects: self
+                .aliasing_effects
+                .as_ref()
+                .map(|v| v.clone_in_impl(sem, alloc)),
         }
     }
 }
@@ -1586,7 +1652,10 @@ impl<'a> CloneIn<'a> for HIR<'a> {
         for (id, block) in self.blocks.iter() {
             blocks.insert(*id, block.clone_in_impl(sem, alloc));
         }
-        HIR { entry: self.entry, blocks }
+        HIR {
+            entry: self.entry,
+            blocks,
+        }
     }
 }
 
@@ -1607,7 +1676,10 @@ impl<'a> CloneIn<'a> for BasicBlock<'a> {
 impl<'a> CloneIn<'a> for Phi<'a> {
     type Cloned = Phi<'a>;
     fn clone_in_impl(&self, sem: CloneInSemanticIds, alloc: &'a Allocator) -> Self {
-        Phi { place: self.place, operands: self.operands.clone_in_impl(sem, alloc) }
+        Phi {
+            place: self.place,
+            operands: self.operands.clone_in_impl(sem, alloc),
+        }
     }
 }
 
@@ -1615,20 +1687,39 @@ impl<'a> CloneIn<'a> for Terminal<'a> {
     type Cloned = Terminal<'a>;
     fn clone_in_impl(&self, sem: CloneInSemanticIds, alloc: &'a Allocator) -> Self {
         match self {
-            Terminal::Unreachable { id, span } => Terminal::Unreachable { id: *id, span: *span },
-            Terminal::Throw { value, id, span } => {
-                Terminal::Throw { value: *value, id: *id, span: *span }
-            }
-            Terminal::Return { value, return_variant, id, span, effects } => Terminal::Return {
+            Terminal::Unreachable { id, span } => Terminal::Unreachable {
+                id: *id,
+                span: *span,
+            },
+            Terminal::Throw { value, id, span } => Terminal::Throw {
+                value: *value,
+                id: *id,
+                span: *span,
+            },
+            Terminal::Return {
+                value,
+                return_variant,
+                id,
+                span,
+                effects,
+            } => Terminal::Return {
                 value: *value,
                 return_variant: *return_variant,
                 id: *id,
                 span: *span,
                 effects: effects.as_ref().map(|v| v.clone_in_impl(sem, alloc)),
             },
-            Terminal::Goto { block, variant, id, span } => {
-                Terminal::Goto { block: *block, variant: *variant, id: *id, span: *span }
-            }
+            Terminal::Goto {
+                block,
+                variant,
+                id,
+                span,
+            } => Terminal::Goto {
+                block: *block,
+                variant: *variant,
+                id: *id,
+                span: *span,
+            },
             Terminal::If {
                 test,
                 consequent,
@@ -1648,43 +1739,64 @@ impl<'a> CloneIn<'a> for Terminal<'a> {
                 id: *id,
                 span: *span,
             },
-            Terminal::Branch { test, consequent, alternate, fallthrough, id, span } => {
-                Terminal::Branch {
-                    test: *test,
-                    consequent: *consequent,
-                    alternate: *alternate,
-                    fallthrough: *fallthrough,
-                    id: *id,
-                    span: *span,
-                }
-            }
-            Terminal::Switch { test, cases, fallthrough, id, span } => Terminal::Switch {
+            Terminal::Branch {
+                test,
+                consequent,
+                alternate,
+                fallthrough,
+                id,
+                span,
+            } => Terminal::Branch {
+                test: *test,
+                consequent: *consequent,
+                alternate: *alternate,
+                fallthrough: *fallthrough,
+                id: *id,
+                span: *span,
+            },
+            Terminal::Switch {
+                test,
+                cases,
+                fallthrough,
+                id,
+                span,
+            } => Terminal::Switch {
                 test: *test,
                 cases: cases.clone_in_impl(sem, alloc),
                 fallthrough: *fallthrough,
                 id: *id,
                 span: *span,
             },
-            Terminal::DoWhile { loop_block, loop_block_span, test, fallthrough, id, span } => {
-                Terminal::DoWhile {
-                    loop_block: *loop_block,
-                    loop_block_span: *loop_block_span,
-                    test: *test,
-                    fallthrough: *fallthrough,
-                    id: *id,
-                    span: *span,
-                }
-            }
-            Terminal::While { test, loop_block, loop_block_span, fallthrough, id, span } => {
-                Terminal::While {
-                    test: *test,
-                    loop_block: *loop_block,
-                    loop_block_span: *loop_block_span,
-                    fallthrough: *fallthrough,
-                    id: *id,
-                    span: *span,
-                }
-            }
+            Terminal::DoWhile {
+                loop_block,
+                loop_block_span,
+                test,
+                fallthrough,
+                id,
+                span,
+            } => Terminal::DoWhile {
+                loop_block: *loop_block,
+                loop_block_span: *loop_block_span,
+                test: *test,
+                fallthrough: *fallthrough,
+                id: *id,
+                span: *span,
+            },
+            Terminal::While {
+                test,
+                loop_block,
+                loop_block_span,
+                fallthrough,
+                id,
+                span,
+            } => Terminal::While {
+                test: *test,
+                loop_block: *loop_block,
+                loop_block_span: *loop_block_span,
+                fallthrough: *fallthrough,
+                id: *id,
+                span: *span,
+            },
             Terminal::For {
                 init,
                 test,
@@ -1740,45 +1852,80 @@ impl<'a> CloneIn<'a> for Terminal<'a> {
                 id: *id,
                 span: *span,
             },
-            Terminal::Logical { operator, test, fallthrough, id, span } => Terminal::Logical {
+            Terminal::Logical {
+                operator,
+                test,
+                fallthrough,
+                id,
+                span,
+            } => Terminal::Logical {
                 operator: *operator,
                 test: *test,
                 fallthrough: *fallthrough,
                 id: *id,
                 span: *span,
             },
-            Terminal::Ternary { test, fallthrough, id, span } => {
-                Terminal::Ternary { test: *test, fallthrough: *fallthrough, id: *id, span: *span }
-            }
-            Terminal::Optional { optional, test, fallthrough, id, span } => Terminal::Optional {
+            Terminal::Ternary {
+                test,
+                fallthrough,
+                id,
+                span,
+            } => Terminal::Ternary {
+                test: *test,
+                fallthrough: *fallthrough,
+                id: *id,
+                span: *span,
+            },
+            Terminal::Optional {
+                optional,
+                test,
+                fallthrough,
+                id,
+                span,
+            } => Terminal::Optional {
                 optional: *optional,
                 test: *test,
                 fallthrough: *fallthrough,
                 id: *id,
                 span: *span,
             },
-            Terminal::Label { block, block_span, fallthrough, id, span } => Terminal::Label {
+            Terminal::Label {
+                block,
+                block_span,
+                fallthrough,
+                id,
+                span,
+            } => Terminal::Label {
                 block: *block,
                 block_span: *block_span,
                 fallthrough: *fallthrough,
                 id: *id,
                 span: *span,
             },
-            Terminal::Sequence { block, fallthrough, id, span } => Terminal::Sequence {
+            Terminal::Sequence {
+                block,
+                fallthrough,
+                id,
+                span,
+            } => Terminal::Sequence {
                 block: *block,
                 fallthrough: *fallthrough,
                 id: *id,
                 span: *span,
             },
-            Terminal::MaybeThrow { continuation, handler, id, span, effects } => {
-                Terminal::MaybeThrow {
-                    continuation: *continuation,
-                    handler: *handler,
-                    id: *id,
-                    span: *span,
-                    effects: effects.as_ref().map(|v| v.clone_in_impl(sem, alloc)),
-                }
-            }
+            Terminal::MaybeThrow {
+                continuation,
+                handler,
+                id,
+                span,
+                effects,
+            } => Terminal::MaybeThrow {
+                continuation: *continuation,
+                handler: *handler,
+                id: *id,
+                span: *span,
+                effects: effects.as_ref().map(|v| v.clone_in_impl(sem, alloc)),
+            },
             Terminal::Try {
                 block,
                 block_span,
@@ -1798,22 +1945,32 @@ impl<'a> CloneIn<'a> for Terminal<'a> {
                 id: *id,
                 span: *span,
             },
-            Terminal::Scope { fallthrough, block, scope, id, span } => Terminal::Scope {
+            Terminal::Scope {
+                fallthrough,
+                block,
+                scope,
+                id,
+                span,
+            } => Terminal::Scope {
                 fallthrough: *fallthrough,
                 block: *block,
                 scope: *scope,
                 id: *id,
                 span: *span,
             },
-            Terminal::PrunedScope { fallthrough, block, scope, id, span } => {
-                Terminal::PrunedScope {
-                    fallthrough: *fallthrough,
-                    block: *block,
-                    scope: *scope,
-                    id: *id,
-                    span: *span,
-                }
-            }
+            Terminal::PrunedScope {
+                fallthrough,
+                block,
+                scope,
+                id,
+                span,
+            } => Terminal::PrunedScope {
+                fallthrough: *fallthrough,
+                block: *block,
+                scope: *scope,
+                id: *id,
+                span: *span,
+            },
         }
     }
 }
@@ -1836,61 +1993,104 @@ impl<'a> CloneIn<'a> for InstructionValue<'a> {
     fn clone_in_impl(&self, sem: CloneInSemanticIds, alloc: &'a Allocator) -> Self {
         match self {
             // --- Copy-only variants: field-copy ---
-            InstructionValue::LoadLocal { place, span } => {
-                InstructionValue::LoadLocal { place: *place, span: *span }
-            }
-            InstructionValue::LoadContext { place, span, is_compound_assignment_result } => {
-                InstructionValue::LoadContext {
-                    place: *place,
-                    span: *span,
-                    is_compound_assignment_result: *is_compound_assignment_result,
-                }
-            }
-            InstructionValue::DeclareLocal { lvalue, span } => {
-                InstructionValue::DeclareLocal { lvalue: *lvalue, span: *span }
-            }
-            InstructionValue::DeclareContext { lvalue, span } => {
-                InstructionValue::DeclareContext { lvalue: *lvalue, span: *span }
-            }
-            InstructionValue::StoreLocal { lvalue, value, span } => {
-                InstructionValue::StoreLocal { lvalue: *lvalue, value: *value, span: *span }
-            }
-            InstructionValue::StoreContext { lvalue, value, span } => {
-                InstructionValue::StoreContext { lvalue: *lvalue, value: *value, span: *span }
-            }
-            InstructionValue::Primitive { value, span } => {
-                InstructionValue::Primitive { value: *value, span: *span }
-            }
-            InstructionValue::JSXText { value, span } => {
-                InstructionValue::JSXText { value: *value, span: *span }
-            }
-            InstructionValue::BinaryExpression { operator, left, right, span } => {
-                InstructionValue::BinaryExpression {
-                    operator: *operator,
-                    left: *left,
-                    right: *right,
-                    span: *span,
-                }
-            }
-            InstructionValue::UnaryExpression { operator, value, span } => {
-                InstructionValue::UnaryExpression {
-                    operator: *operator,
-                    value: *value,
-                    span: *span,
-                }
-            }
+            InstructionValue::LoadLocal { place, span } => InstructionValue::LoadLocal {
+                place: *place,
+                span: *span,
+            },
+            InstructionValue::LoadContext {
+                place,
+                span,
+                is_compound_assignment_result,
+            } => InstructionValue::LoadContext {
+                place: *place,
+                span: *span,
+                is_compound_assignment_result: *is_compound_assignment_result,
+            },
+            InstructionValue::DeclareLocal { lvalue, span } => InstructionValue::DeclareLocal {
+                lvalue: *lvalue,
+                span: *span,
+            },
+            InstructionValue::DeclareContext { lvalue, span } => InstructionValue::DeclareContext {
+                lvalue: *lvalue,
+                span: *span,
+            },
+            InstructionValue::StoreLocal {
+                lvalue,
+                value,
+                span,
+            } => InstructionValue::StoreLocal {
+                lvalue: *lvalue,
+                value: *value,
+                span: *span,
+            },
+            InstructionValue::StoreContext {
+                lvalue,
+                value,
+                span,
+            } => InstructionValue::StoreContext {
+                lvalue: *lvalue,
+                value: *value,
+                span: *span,
+            },
+            InstructionValue::Primitive { value, span } => InstructionValue::Primitive {
+                value: *value,
+                span: *span,
+            },
+            InstructionValue::JSXText { value, span } => InstructionValue::JSXText {
+                value: *value,
+                span: *span,
+            },
+            InstructionValue::BinaryExpression {
+                operator,
+                left,
+                right,
+                span,
+            } => InstructionValue::BinaryExpression {
+                operator: *operator,
+                left: *left,
+                right: *right,
+                span: *span,
+            },
+            InstructionValue::UnaryExpression {
+                operator,
+                value,
+                span,
+            } => InstructionValue::UnaryExpression {
+                operator: *operator,
+                value: *value,
+                span: *span,
+            },
             InstructionValue::TypeCastExpression { value, cast, span } => {
-                InstructionValue::TypeCastExpression { value: *value, cast: *cast, span: *span }
+                InstructionValue::TypeCastExpression {
+                    value: *value,
+                    cast: *cast,
+                    span: *span,
+                }
             }
             InstructionValue::ObjectMethod { span, lowered_func } => {
-                InstructionValue::ObjectMethod { span: *span, lowered_func: *lowered_func }
+                InstructionValue::ObjectMethod {
+                    span: *span,
+                    lowered_func: *lowered_func,
+                }
             }
-            InstructionValue::RegExpLiteral { pattern, flags, span } => {
-                InstructionValue::RegExpLiteral { pattern: *pattern, flags: *flags, span: *span }
-            }
-            InstructionValue::MetaProperty { meta, property, span } => {
-                InstructionValue::MetaProperty { meta: *meta, property: *property, span: *span }
-            }
+            InstructionValue::RegExpLiteral {
+                pattern,
+                flags,
+                span,
+            } => InstructionValue::RegExpLiteral {
+                pattern: *pattern,
+                flags: *flags,
+                span: *span,
+            },
+            InstructionValue::MetaProperty {
+                meta,
+                property,
+                span,
+            } => InstructionValue::MetaProperty {
+                meta: *meta,
+                property: *property,
+                span: *span,
+            },
             InstructionValue::PropertyStore {
                 object,
                 property,
@@ -1906,47 +2106,68 @@ impl<'a> CloneIn<'a> for InstructionValue<'a> {
                 value: *value,
                 span: *span,
             },
-            InstructionValue::PropertyLoad { object, property, computed, property_span, span } => {
-                InstructionValue::PropertyLoad {
-                    object: *object,
-                    property: *property,
-                    computed: *computed,
-                    property_span: *property_span,
-                    span: *span,
-                }
-            }
-            InstructionValue::PropertyDelete { object, property, property_span, span } => {
-                InstructionValue::PropertyDelete {
-                    object: *object,
-                    property: *property,
-                    property_span: *property_span,
-                    span: *span,
-                }
-            }
-            InstructionValue::ComputedStore { object, property, value, span } => {
-                InstructionValue::ComputedStore {
-                    object: *object,
-                    property: *property,
-                    value: *value,
-                    span: *span,
-                }
-            }
-            InstructionValue::ComputedLoad { object, property, span } => {
-                InstructionValue::ComputedLoad { object: *object, property: *property, span: *span }
-            }
-            InstructionValue::ComputedDelete { object, property, span } => {
-                InstructionValue::ComputedDelete {
-                    object: *object,
-                    property: *property,
-                    span: *span,
-                }
-            }
-            InstructionValue::LoadGlobal { binding, span } => {
-                InstructionValue::LoadGlobal { binding: *binding, span: *span }
-            }
-            InstructionValue::StoreGlobal { name, value, span } => {
-                InstructionValue::StoreGlobal { name: *name, value: *value, span: *span }
-            }
+            InstructionValue::PropertyLoad {
+                object,
+                property,
+                computed,
+                property_span,
+                span,
+            } => InstructionValue::PropertyLoad {
+                object: *object,
+                property: *property,
+                computed: *computed,
+                property_span: *property_span,
+                span: *span,
+            },
+            InstructionValue::PropertyDelete {
+                object,
+                property,
+                property_span,
+                span,
+            } => InstructionValue::PropertyDelete {
+                object: *object,
+                property: *property,
+                property_span: *property_span,
+                span: *span,
+            },
+            InstructionValue::ComputedStore {
+                object,
+                property,
+                value,
+                span,
+            } => InstructionValue::ComputedStore {
+                object: *object,
+                property: *property,
+                value: *value,
+                span: *span,
+            },
+            InstructionValue::ComputedLoad {
+                object,
+                property,
+                span,
+            } => InstructionValue::ComputedLoad {
+                object: *object,
+                property: *property,
+                span: *span,
+            },
+            InstructionValue::ComputedDelete {
+                object,
+                property,
+                span,
+            } => InstructionValue::ComputedDelete {
+                object: *object,
+                property: *property,
+                span: *span,
+            },
+            InstructionValue::LoadGlobal { binding, span } => InstructionValue::LoadGlobal {
+                binding: *binding,
+                span: *span,
+            },
+            InstructionValue::StoreGlobal { name, value, span } => InstructionValue::StoreGlobal {
+                name: *name,
+                value: *value,
+                span: *span,
+            },
             InstructionValue::FunctionExpression {
                 name,
                 name_span,
@@ -1962,47 +2183,61 @@ impl<'a> CloneIn<'a> for InstructionValue<'a> {
                 expr_type: *expr_type,
                 span: *span,
             },
-            InstructionValue::Await { value, span } => {
-                InstructionValue::Await { value: *value, span: *span }
-            }
-            InstructionValue::GetIterator { collection, span } => {
-                InstructionValue::GetIterator { collection: *collection, span: *span }
-            }
-            InstructionValue::IteratorNext { iterator, collection, span } => {
-                InstructionValue::IteratorNext {
-                    iterator: *iterator,
-                    collection: *collection,
-                    span: *span,
-                }
-            }
-            InstructionValue::NextPropertyOf { value, span } => {
-                InstructionValue::NextPropertyOf { value: *value, span: *span }
-            }
-            InstructionValue::PrefixUpdate { lvalue, operation, value, span } => {
-                InstructionValue::PrefixUpdate {
-                    lvalue: *lvalue,
-                    operation: *operation,
-                    value: *value,
-                    span: *span,
-                }
-            }
-            InstructionValue::PostfixUpdate { lvalue, operation, value, span } => {
-                InstructionValue::PostfixUpdate {
-                    lvalue: *lvalue,
-                    operation: *operation,
-                    value: *value,
-                    span: *span,
-                }
-            }
+            InstructionValue::Await { value, span } => InstructionValue::Await {
+                value: *value,
+                span: *span,
+            },
+            InstructionValue::GetIterator { collection, span } => InstructionValue::GetIterator {
+                collection: *collection,
+                span: *span,
+            },
+            InstructionValue::IteratorNext {
+                iterator,
+                collection,
+                span,
+            } => InstructionValue::IteratorNext {
+                iterator: *iterator,
+                collection: *collection,
+                span: *span,
+            },
+            InstructionValue::NextPropertyOf { value, span } => InstructionValue::NextPropertyOf {
+                value: *value,
+                span: *span,
+            },
+            InstructionValue::PrefixUpdate {
+                lvalue,
+                operation,
+                value,
+                span,
+            } => InstructionValue::PrefixUpdate {
+                lvalue: *lvalue,
+                operation: *operation,
+                value: *value,
+                span: *span,
+            },
+            InstructionValue::PostfixUpdate {
+                lvalue,
+                operation,
+                value,
+                span,
+            } => InstructionValue::PostfixUpdate {
+                lvalue: *lvalue,
+                operation: *operation,
+                value: *value,
+                span: *span,
+            },
             InstructionValue::Debugger { span } => InstructionValue::Debugger { span: *span },
-            InstructionValue::FinishMemoize { manual_memo_id, decl, pruned, span } => {
-                InstructionValue::FinishMemoize {
-                    manual_memo_id: *manual_memo_id,
-                    decl: *decl,
-                    pruned: *pruned,
-                    span: *span,
-                }
-            }
+            InstructionValue::FinishMemoize {
+                manual_memo_id,
+                decl,
+                pruned,
+                span,
+            } => InstructionValue::FinishMemoize {
+                manual_memo_id: *manual_memo_id,
+                decl: *decl,
+                pruned: *pruned,
+                span: *span,
+            },
             // --- Arena-carrying variants: recurse ---
             InstructionValue::TSEnumDeclaration { declaration, span } => {
                 InstructionValue::TSEnumDeclaration {
@@ -2012,13 +2247,15 @@ impl<'a> CloneIn<'a> for InstructionValue<'a> {
                     span: *span,
                 }
             }
-            InstructionValue::Destructure { lvalue, value, span } => {
-                InstructionValue::Destructure {
-                    lvalue: lvalue.clone_in_impl(sem, alloc),
-                    value: *value,
-                    span: *span,
-                }
-            }
+            InstructionValue::Destructure {
+                lvalue,
+                value,
+                span,
+            } => InstructionValue::Destructure {
+                lvalue: lvalue.clone_in_impl(sem, alloc),
+                value: *value,
+                span: *span,
+            },
             InstructionValue::NewExpression { callee, args, span } => {
                 InstructionValue::NewExpression {
                     callee: *callee,
@@ -2033,14 +2270,17 @@ impl<'a> CloneIn<'a> for InstructionValue<'a> {
                     span: *span,
                 }
             }
-            InstructionValue::MethodCall { receiver, property, args, span } => {
-                InstructionValue::MethodCall {
-                    receiver: *receiver,
-                    property: *property,
-                    args: args.clone_in_impl(sem, alloc),
-                    span: *span,
-                }
-            }
+            InstructionValue::MethodCall {
+                receiver,
+                property,
+                args,
+                span,
+            } => InstructionValue::MethodCall {
+                receiver: *receiver,
+                property: *property,
+                args: args.clone_in_impl(sem, alloc),
+                span: *span,
+            },
             InstructionValue::JsxExpression {
                 tag,
                 props,
@@ -2072,14 +2312,17 @@ impl<'a> CloneIn<'a> for InstructionValue<'a> {
                     span: *span,
                 }
             }
-            InstructionValue::JsxFragment { children, span, opening_span, closing_span } => {
-                InstructionValue::JsxFragment {
-                    children: children.clone_in_impl(sem, alloc),
-                    span: *span,
-                    opening_span: *opening_span,
-                    closing_span: *closing_span,
-                }
-            }
+            InstructionValue::JsxFragment {
+                children,
+                span,
+                opening_span,
+                closing_span,
+            } => InstructionValue::JsxFragment {
+                children: children.clone_in_impl(sem, alloc),
+                span: *span,
+                opening_span: *opening_span,
+                closing_span: *closing_span,
+            },
             InstructionValue::TaggedTemplateExpression {
                 tag,
                 quasis,
@@ -2093,13 +2336,15 @@ impl<'a> CloneIn<'a> for InstructionValue<'a> {
                 quasi_span: *quasi_span,
                 span: *span,
             },
-            InstructionValue::TemplateLiteral { subexprs, quasis, span } => {
-                InstructionValue::TemplateLiteral {
-                    subexprs: subexprs.clone_in_impl(sem, alloc),
-                    quasis: quasis.clone_in_impl(sem, alloc),
-                    span: *span,
-                }
-            }
+            InstructionValue::TemplateLiteral {
+                subexprs,
+                quasis,
+                span,
+            } => InstructionValue::TemplateLiteral {
+                subexprs: subexprs.clone_in_impl(sem, alloc),
+                quasis: quasis.clone_in_impl(sem, alloc),
+                span: *span,
+            },
             InstructionValue::StartMemoize {
                 manual_memo_id,
                 deps,
@@ -2122,7 +2367,10 @@ impl<'a> CloneIn<'a> for InstructionValue<'a> {
 impl<'a> CloneIn<'a> for LValuePattern<'a> {
     type Cloned = LValuePattern<'a>;
     fn clone_in_impl(&self, sem: CloneInSemanticIds, alloc: &'a Allocator) -> Self {
-        LValuePattern { pattern: self.pattern.clone_in_impl(sem, alloc), kind: self.kind }
+        LValuePattern {
+            pattern: self.pattern.clone_in_impl(sem, alloc),
+            kind: self.kind,
+        }
     }
 }
 
@@ -2139,14 +2387,20 @@ impl<'a> CloneIn<'a> for Pattern<'a> {
 impl<'a> CloneIn<'a> for ArrayPattern<'a> {
     type Cloned = ArrayPattern<'a>;
     fn clone_in_impl(&self, sem: CloneInSemanticIds, alloc: &'a Allocator) -> Self {
-        ArrayPattern { items: self.items.clone_in_impl(sem, alloc), span: self.span }
+        ArrayPattern {
+            items: self.items.clone_in_impl(sem, alloc),
+            span: self.span,
+        }
     }
 }
 
 impl<'a> CloneIn<'a> for ObjectPattern<'a> {
     type Cloned = ObjectPattern<'a>;
     fn clone_in_impl(&self, sem: CloneInSemanticIds, alloc: &'a Allocator) -> Self {
-        ObjectPattern { properties: self.properties.clone_in_impl(sem, alloc), span: self.span }
+        ObjectPattern {
+            properties: self.properties.clone_in_impl(sem, alloc),
+            span: self.span,
+        }
     }
 }
 
@@ -2165,12 +2419,14 @@ impl<'a> CloneIn<'a> for AliasingEffect<'a> {
     type Cloned = AliasingEffect<'a>;
     fn clone_in_impl(&self, sem: CloneInSemanticIds, alloc: &'a Allocator) -> Self {
         match self {
-            AliasingEffect::Freeze { value, reason } => {
-                AliasingEffect::Freeze { value: *value, reason: *reason }
-            }
-            AliasingEffect::Mutate { value, reason } => {
-                AliasingEffect::Mutate { value: *value, reason: *reason }
-            }
+            AliasingEffect::Freeze { value, reason } => AliasingEffect::Freeze {
+                value: *value,
+                reason: *reason,
+            },
+            AliasingEffect::Mutate { value, reason } => AliasingEffect::Mutate {
+                value: *value,
+                reason: *reason,
+            },
             AliasingEffect::MutateConditionally { value } => {
                 AliasingEffect::MutateConditionally { value: *value }
             }
@@ -2180,27 +2436,39 @@ impl<'a> CloneIn<'a> for AliasingEffect<'a> {
             AliasingEffect::MutateTransitiveConditionally { value } => {
                 AliasingEffect::MutateTransitiveConditionally { value: *value }
             }
-            AliasingEffect::Capture { from, into } => {
-                AliasingEffect::Capture { from: *from, into: *into }
-            }
-            AliasingEffect::Alias { from, into } => {
-                AliasingEffect::Alias { from: *from, into: *into }
-            }
-            AliasingEffect::MaybeAlias { from, into } => {
-                AliasingEffect::MaybeAlias { from: *from, into: *into }
-            }
-            AliasingEffect::Assign { from, into } => {
-                AliasingEffect::Assign { from: *from, into: *into }
-            }
-            AliasingEffect::Create { into, value, reason } => {
-                AliasingEffect::Create { into: *into, value: *value, reason: *reason }
-            }
-            AliasingEffect::CreateFrom { from, into } => {
-                AliasingEffect::CreateFrom { from: *from, into: *into }
-            }
-            AliasingEffect::ImmutableCapture { from, into } => {
-                AliasingEffect::ImmutableCapture { from: *from, into: *into }
-            }
+            AliasingEffect::Capture { from, into } => AliasingEffect::Capture {
+                from: *from,
+                into: *into,
+            },
+            AliasingEffect::Alias { from, into } => AliasingEffect::Alias {
+                from: *from,
+                into: *into,
+            },
+            AliasingEffect::MaybeAlias { from, into } => AliasingEffect::MaybeAlias {
+                from: *from,
+                into: *into,
+            },
+            AliasingEffect::Assign { from, into } => AliasingEffect::Assign {
+                from: *from,
+                into: *into,
+            },
+            AliasingEffect::Create {
+                into,
+                value,
+                reason,
+            } => AliasingEffect::Create {
+                into: *into,
+                value: *value,
+                reason: *reason,
+            },
+            AliasingEffect::CreateFrom { from, into } => AliasingEffect::CreateFrom {
+                from: *from,
+                into: *into,
+            },
+            AliasingEffect::ImmutableCapture { from, into } => AliasingEffect::ImmutableCapture {
+                from: *from,
+                into: *into,
+            },
             AliasingEffect::Apply {
                 receiver,
                 function,
@@ -2218,22 +2486,27 @@ impl<'a> CloneIn<'a> for AliasingEffect<'a> {
                 signature: *signature,
                 span: *span,
             },
-            AliasingEffect::CreateFunction { captures, function_id, into } => {
-                AliasingEffect::CreateFunction {
-                    captures: captures.clone_in_impl(sem, alloc),
-                    function_id: *function_id,
-                    into: *into,
-                }
-            }
-            AliasingEffect::MutateFrozen { place, error } => {
-                AliasingEffect::MutateFrozen { place: *place, error: *error }
-            }
-            AliasingEffect::MutateGlobal { place, error } => {
-                AliasingEffect::MutateGlobal { place: *place, error: *error }
-            }
-            AliasingEffect::Impure { place, error } => {
-                AliasingEffect::Impure { place: *place, error: *error }
-            }
+            AliasingEffect::CreateFunction {
+                captures,
+                function_id,
+                into,
+            } => AliasingEffect::CreateFunction {
+                captures: captures.clone_in_impl(sem, alloc),
+                function_id: *function_id,
+                into: *into,
+            },
+            AliasingEffect::MutateFrozen { place, error } => AliasingEffect::MutateFrozen {
+                place: *place,
+                error: *error,
+            },
+            AliasingEffect::MutateGlobal { place, error } => AliasingEffect::MutateGlobal {
+                place: *place,
+                error: *error,
+            },
+            AliasingEffect::Impure { place, error } => AliasingEffect::Impure {
+                place: *place,
+                error: *error,
+            },
             AliasingEffect::Render { place } => AliasingEffect::Render { place: *place },
         }
     }

@@ -159,8 +159,14 @@ fn rewrites_only_explicit_type_checks_without_emission() {
     for (source, expected) in [
         ("npx tsc --noEmit", "bun check --noEmit"),
         ("tsgo --no-emit -p ./tsconfig.json", "bun check --no-emit -p ./tsconfig.json"),
-        ("pnpm exec tsc --project tsconfig.json --noEmit", "bun check --project tsconfig.json --noEmit"),
-        ("bunx --bun tsgo --noEmit --strict && bun test", "bun check --noEmit --strict && bun test"),
+        (
+            "pnpm exec tsc --project tsconfig.json --noEmit",
+            "bun check --project tsconfig.json --noEmit",
+        ),
+        (
+            "bunx --bun tsgo --noEmit --strict && bun test",
+            "bun check --noEmit --strict && bun test",
+        ),
         ("tsc --noEmit;oxfmt --check .", "bun check --noEmit;bun fmt --check ."),
         ("tsc --noEmit\r\noxfmt --check .\r\n", "bun check --noEmit\r\nbun fmt --check .\r\n"),
     ] {
@@ -316,7 +322,8 @@ fn native_commands_reuse_adjacent_separators() {
 #[test]
 fn native_commands_work_through_document_scanners() {
     use bun_migrate::scanners::{dockerfile::scan_dockerfile, workflows::scan_workflow};
-    let source = "FROM oven/bun:latest\nRUN npx -y oxlint@1.70.0 src;npm exec -- oxfmt@latest --check .\n";
+    let source =
+        "FROM oven/bun:latest\nRUN npx -y oxlint@1.70.0 src;npm exec -- oxfmt@latest --check .\n";
     let (findings, output) = scan_dockerfile("Dockerfile", source, false);
     assert_eq!(output, "FROM oven/bun:latest\nRUN bun lint src;bun fmt --check .\n");
     assert_eq!(findings.len(), 2);
@@ -331,9 +338,13 @@ fn native_commands_work_through_document_scanners() {
 fn wrapped_type_emitters_are_manual_without_runner_fallback() {
     use bun_migrate::scanners::package_json::scan_package_json;
     for command in [
-        "npx -y tsc@6.0.2 -d", "npm exec -- tsc -b .", "pnpm dlx tsgo --declaration",
-        "yarn dlx @typescript/native-preview@latest --noEmit false", "bunx --bun tsc --noEmit=false",
-        "npx tsc --noEmit --declaration", "bunx @typescript/native-preview",
+        "npx -y tsc@6.0.2 -d",
+        "npm exec -- tsc -b .",
+        "pnpm dlx tsgo --declaration",
+        "yarn dlx @typescript/native-preview@latest --noEmit false",
+        "bunx --bun tsc --noEmit=false",
+        "npx tsc --noEmit --declaration",
+        "bunx @typescript/native-preview",
     ] {
         let source = format!("{command};{command}");
         for aggressive in [false, true] {
@@ -347,10 +358,19 @@ fn wrapped_type_emitters_are_manual_without_runner_fallback() {
         let (findings, output) = scan_package_json("package.json", &content);
         let output: serde_json::Value = serde_json::from_str(&output).unwrap();
         assert_eq!(output["scripts"]["build"], source);
-        assert_eq!(findings.iter().filter(|f| f.rule_id == "cli/native-check-manual" && !f.autofix).count(), 2);
+        assert_eq!(
+            findings
+                .iter()
+                .filter(|f| f.rule_id == "cli/native-check-manual" && !f.autofix)
+                .count(),
+            2
+        );
     }
     assert_eq!(rewrite("npx unrelated-package --noEmit"), "bunx unrelated-package --noEmit");
-    assert_eq!(rewrite("bunx --bun @typescript/native-preview@latest --noEmit"), "bun check --noEmit");
+    assert_eq!(
+        rewrite("bunx --bun @typescript/native-preview@latest --noEmit"),
+        "bun check --noEmit"
+    );
 }
 
 #[test]
@@ -422,11 +442,20 @@ fn quoted_or_escaped_operators_do_not_make_arguments_executable() {
 #[test]
 fn real_commands_after_quoted_arguments_and_in_substitutions_still_rewrite() {
     for (source, expected) in [
-        ("echo 'x; npx shadcn'; npx shadcn add button", "echo 'x; npx shadcn'; bunx shadcn add button"),
-        ("echo \"x && npx oxlint\" && npx oxlint --fix .", "echo \"x && npx oxlint\" && bun lint --fix ."),
+        (
+            "echo 'x; npx shadcn'; npx shadcn add button",
+            "echo 'x; npx shadcn'; bunx shadcn add button",
+        ),
+        (
+            "echo \"x && npx oxlint\" && npx oxlint --fix .",
+            "echo \"x && npx oxlint\" && bun lint --fix .",
+        ),
         (r"echo x\\; npx shadcn add button", r"echo x\\; bunx shadcn add button"),
         ("echo \"$(npx shadcn add button)\"", "echo \"$(bunx shadcn add button)\""),
-        ("echo 'x; npm install' | npm exec shadcn add button", "echo 'x; npm install' | bunx shadcn add button"),
+        (
+            "echo 'x; npm install' | npm exec shadcn add button",
+            "echo 'x; npm install' | bunx shadcn add button",
+        ),
         ("RUN echo 'x; npx shadcn'; npx shadcn", "RUN echo 'x; npx shadcn'; bunx shadcn"),
         ("  - run: echo 'x; npx shadcn'; npx shadcn", "  - run: echo 'x; npx shadcn'; bunx shadcn"),
     ] {
@@ -441,7 +470,12 @@ fn native_findings_exclude_shared_command_separators() {
     for (source, expected, original, replacement) in [
         ("npx oxlint;npx oxlint", "bun lint;bun lint", "npx oxlint", "bun lint"),
         ("npx oxfmt&&npx oxfmt", "bun fmt&&bun fmt", "npx oxfmt", "bun fmt"),
-        ("npx tsc --noEmit;npx tsc --noEmit", "bun check --noEmit;bun check --noEmit", "npx tsc --noEmit", "bun check --noEmit"),
+        (
+            "npx tsc --noEmit;npx tsc --noEmit",
+            "bun check --noEmit;bun check --noEmit",
+            "npx tsc --noEmit",
+            "bun check --noEmit",
+        ),
     ] {
         let (findings, output) = apply_cli_rules("script.sh", source, true);
         assert_eq!(output, expected);

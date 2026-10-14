@@ -36,7 +36,10 @@ impl<'a, 'v> ClassPropertiesSuperConverter<'a, 'v> {
         mode: ClassPropertiesSuperConverterMode,
         class_properties: &'v mut ClassProperties<'a>,
     ) -> Self {
-        Self { mode, class_properties }
+        Self {
+            mode,
+            class_properties,
+        }
     }
 }
 
@@ -52,7 +55,9 @@ impl<'a> ClassPropertiesSuperConverter<'a, '_> {
         expr: &mut Expression<'a>,
         ctx: &mut TraverseCtx<'a>,
     ) {
-        let Expression::StaticMemberExpression(member) = expr else { unreachable!() };
+        let Expression::StaticMemberExpression(member) = expr else {
+            unreachable!()
+        };
         if member.object.is_super() {
             *expr = self.transform_static_member_expression_impl(member, false, ctx);
         }
@@ -80,7 +85,9 @@ impl<'a> ClassPropertiesSuperConverter<'a, '_> {
         expr: &mut Expression<'a>,
         ctx: &mut TraverseCtx<'a>,
     ) {
-        let Expression::ComputedMemberExpression(member) = expr else { unreachable!() };
+        let Expression::ComputedMemberExpression(member) = expr else {
+            unreachable!()
+        };
         if member.object.is_super() {
             *expr = self.transform_computed_member_expression_impl(member, false, ctx);
         }
@@ -127,7 +134,9 @@ impl<'a> ClassPropertiesSuperConverter<'a, '_> {
         ctx: &mut TraverseCtx<'a>,
     ) {
         let callee = &mut call_expr.callee;
-        let Expression::StaticMemberExpression(member) = callee else { unreachable!() };
+        let Expression::StaticMemberExpression(member) = callee else {
+            unreachable!()
+        };
         *callee = self.transform_static_member_expression_impl(member, true, ctx);
         Self::transform_super_call_expression_arguments(&mut call_expr.arguments, ctx);
     }
@@ -138,7 +147,9 @@ impl<'a> ClassPropertiesSuperConverter<'a, '_> {
         ctx: &mut TraverseCtx<'a>,
     ) {
         let callee = &mut call_expr.callee;
-        let Expression::ComputedMemberExpression(member) = callee else { unreachable!() };
+        let Expression::ComputedMemberExpression(member) = callee else {
+            unreachable!()
+        };
         *callee = self.transform_computed_member_expression_impl(member, true, ctx);
         Self::transform_super_call_expression_arguments(&mut call_expr.arguments, ctx);
     }
@@ -178,7 +189,9 @@ impl<'a> ClassPropertiesSuperConverter<'a, '_> {
         expr: &mut Expression<'a>,
         ctx: &mut TraverseCtx<'a>,
     ) {
-        let Expression::AssignmentExpression(assign_expr) = expr else { unreachable!() };
+        let Expression::AssignmentExpression(assign_expr) = expr else {
+            unreachable!()
+        };
         match &assign_expr.left {
             AssignmentTarget::StaticMemberExpression(member) if member.object.is_super() => {
                 self.transform_assignment_expression_for_super_static_member_expr(expr, ctx);
@@ -208,10 +221,19 @@ impl<'a> ClassPropertiesSuperConverter<'a, '_> {
         ctx: &mut TraverseCtx<'a>,
     ) {
         expr.replace_with(|expr| {
-            let Expression::AssignmentExpression(assign_expr) = expr else { unreachable!() };
-            let AssignmentExpression { span, operator, right: value, left, .. } =
-                assign_expr.unbox();
-            let AssignmentTarget::StaticMemberExpression(member) = left else { unreachable!() };
+            let Expression::AssignmentExpression(assign_expr) = expr else {
+                unreachable!()
+            };
+            let AssignmentExpression {
+                span,
+                operator,
+                right: value,
+                left,
+                ..
+            } = assign_expr.unbox();
+            let AssignmentTarget::StaticMemberExpression(member) = left else {
+                unreachable!()
+            };
             let property = Expression::new_string_literal(
                 member.property.span,
                 member.property.name,
@@ -240,10 +262,19 @@ impl<'a> ClassPropertiesSuperConverter<'a, '_> {
         ctx: &mut TraverseCtx<'a>,
     ) {
         expr.replace_with(|expr| {
-            let Expression::AssignmentExpression(assign_expr) = expr else { unreachable!() };
-            let AssignmentExpression { span, operator, right: value, left, .. } =
-                assign_expr.unbox();
-            let AssignmentTarget::ComputedMemberExpression(member) = left else { unreachable!() };
+            let Expression::AssignmentExpression(assign_expr) = expr else {
+                unreachable!()
+            };
+            let AssignmentExpression {
+                span,
+                operator,
+                right: value,
+                left,
+                ..
+            } = assign_expr.unbox();
+            let AssignmentTarget::ComputedMemberExpression(member) = left else {
+                unreachable!()
+            };
             let property = member.unbox().expression.into_inner_expression();
             self.transform_super_assignment_expression_impl(span, operator, property, value, ctx)
         });
@@ -317,7 +348,9 @@ impl<'a> ClassPropertiesSuperConverter<'a, '_> {
         expr: &mut Expression<'a>,
         ctx: &mut TraverseCtx<'a>,
     ) {
-        let Expression::UpdateExpression(update_expr) = expr else { unreachable!() };
+        let Expression::UpdateExpression(update_expr) = expr else {
+            unreachable!()
+        };
 
         match &update_expr.argument {
             SimpleAssignmentTarget::StaticMemberExpression(member) if member.object.is_super() => {
@@ -375,7 +408,9 @@ impl<'a> ClassPropertiesSuperConverter<'a, '_> {
         ctx: &mut TraverseCtx<'a>,
     ) {
         expr.replace_with(|expr| {
-            let Expression::UpdateExpression(mut update_expr) = expr else { unreachable!() };
+            let Expression::UpdateExpression(mut update_expr) = expr else {
+                unreachable!()
+            };
             let SimpleAssignmentTarget::StaticMemberExpression(member) = &mut update_expr.argument
             else {
                 unreachable!()
@@ -442,7 +477,9 @@ impl<'a> ClassPropertiesSuperConverter<'a, '_> {
         ctx: &mut TraverseCtx<'a>,
     ) {
         expr.replace_with(|expr| {
-            let Expression::UpdateExpression(mut update_expr) = expr else { unreachable!() };
+            let Expression::UpdateExpression(mut update_expr) = expr else {
+                unreachable!()
+            };
             let SimpleAssignmentTarget::ComputedMemberExpression(member) =
                 &mut update_expr.argument
             else {
@@ -534,7 +571,11 @@ impl<'a> ClassPropertiesSuperConverter<'a, '_> {
             // `(_super$prop = _superPropGet(_Class, prop, _Class), _super$prop2 = _super$prop++, _super$prop)`
             let value = Expression::new_sequence_expression(
                 SPAN,
-                [assignment, assignment2, temp_binding.create_read_expression(ctx)],
+                [
+                    assignment,
+                    assignment2,
+                    temp_binding.create_read_expression(ctx),
+                ],
                 ctx,
             );
 
@@ -611,8 +652,11 @@ impl<'a> ClassPropertiesSuperConverter<'a, '_> {
         &mut self,
         ctx: &mut TraverseCtx<'a>,
     ) -> (Argument<'a>, Argument<'a>) {
-        let temp_binding =
-            self.class_properties.current_class_mut().bindings.get_or_init_static_binding(ctx);
+        let temp_binding = self
+            .class_properties
+            .current_class_mut()
+            .bindings
+            .get_or_init_static_binding(ctx);
         let mut class = temp_binding.create_read_expression(ctx);
         let receiver = match self.mode {
             ClassPropertiesSuperConverterMode::Static => temp_binding.create_read_expression(ctx),

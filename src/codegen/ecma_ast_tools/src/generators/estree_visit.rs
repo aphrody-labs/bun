@@ -126,8 +126,9 @@ struct NodeKeys {
 /// * Visitor type definition.
 fn generate(codegen: &Codegen) -> Codes {
     // Run `src/quality/adapters/parser/scripts/visitor-keys.js` to get visitor keys from TS-ESLint
-    let script_path =
-        codegen.root_path().join("src/quality/adapters/parser/scripts/visitor-keys.js");
+    let script_path = codegen
+        .root_path()
+        .join("src/quality/adapters/parser/scripts/visitor-keys.js");
 
     let output = Command::new("bun")
         .arg(script_path)
@@ -261,7 +262,10 @@ fn generate(codegen: &Codegen) -> Codes {
         }
 
         let node_name = node.name.as_str();
-        write_it!(walk, "case \"{node_name}\": walk{node_name}(node, visitors); break;\n");
+        write_it!(
+            walk,
+            "case \"{node_name}\": walk{node_name}(node, visitors); break;\n"
+        );
 
         #[rustfmt::skip]
         let walk_fn_body = if is_leaf {
@@ -312,7 +316,10 @@ fn generate(codegen: &Codegen) -> Codes {
             Entry::Occupied(mut entry) => {
                 let var_name = entry.get_mut();
                 if var_name.is_none() {
-                    let name = keys.iter().map(|key| key.to_case(Case::Constant)).join("__");
+                    let name = keys
+                        .iter()
+                        .map(|key| key.to_case(Case::Constant))
+                        .join("__");
                     *var_name = Some(name);
                 }
             }
@@ -349,9 +356,11 @@ fn generate(codegen: &Codegen) -> Codes {
                 "AssignmentTargetPropertyProperty",
                 "BindingProperty",
             ]),
-            "RestElement" => {
-                Some(&["AssignmentTargetRest", "BindingRestElement", "FormalParameterRest"])
-            }
+            "RestElement" => Some(&[
+                "AssignmentTargetRest",
+                "BindingRestElement",
+                "FormalParameterRest",
+            ]),
             "TSModuleDeclaration" => Some(&["TSModuleDeclaration", "TSGlobalDeclaration"]),
             _ => None,
         };
@@ -397,7 +406,9 @@ fn generate(codegen: &Codegen) -> Codes {
     let visitor_keys_vars_str = visitor_keys_vars
         .iter()
         .filter_map(|(keys_str, var_name)| {
-            var_name.as_ref().map(|name| format!("{name} = freeze({keys_str})"))
+            var_name
+                .as_ref()
+                .map(|name| format!("{name} = freeze({keys_str})"))
         })
         .join(",\n");
 
@@ -410,7 +421,11 @@ fn generate(codegen: &Codegen) -> Codes {
             } else {
                 format!("{name}: freeze({keys_str}),\n")
             };
-            if index == leaf_nodes_count { format!("// Non-leaf nodes\n{entry}") } else { entry }
+            if index == leaf_nodes_count {
+                format!("// Non-leaf nodes\n{entry}")
+            } else {
+                entry
+            }
         })
         .join("");
 
@@ -640,8 +655,22 @@ impl SelectorClasses {
     }
 
     #[expect(clippy::type_complexity)]
-    fn into_vecs(mut self) -> (Vec<NodeId>, Vec<NodeId>, Vec<NodeId>, Vec<NodeId>, Vec<NodeId>) {
+    fn into_vecs(
+        mut self,
+    ) -> (
+        Vec<NodeId>,
+        Vec<NodeId>,
+        Vec<NodeId>,
+        Vec<NodeId>,
+        Vec<NodeId>,
+    ) {
         self.sort();
-        (self.statement, self.declaration, self.pattern, self.expression, self.function)
+        (
+            self.statement,
+            self.declaration,
+            self.pattern,
+            self.expression,
+            self.function,
+        )
     }
 }

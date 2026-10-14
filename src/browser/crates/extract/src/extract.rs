@@ -40,7 +40,11 @@ pub struct ExtractOptions {
 
 impl Default for ExtractOptions {
     fn default() -> Self {
-        ExtractOptions { include_comments: false, include_images: false, include_links: true }
+        ExtractOptions {
+            include_comments: false,
+            include_images: false,
+            include_links: true,
+        }
     }
 }
 
@@ -89,7 +93,11 @@ impl Stats {
     }
 
     fn link_density(&self) -> f32 {
-        if self.chars == 0 { 0.0 } else { (self.link_chars as f32 / self.chars as f32).min(1.0) }
+        if self.chars == 0 {
+            0.0
+        } else {
+            (self.link_chars as f32 / self.chars as f32).min(1.0)
+        }
     }
 
     fn plain(&self) -> u32 {
@@ -130,7 +138,11 @@ impl std::hash::Hasher for FnvHasher {
         self.0
     }
     fn write(&mut self, bytes: &[u8]) {
-        let mut h = if self.0 == 0 { 0xcbf2_9ce4_8422_2325 } else { self.0 };
+        let mut h = if self.0 == 0 {
+            0xcbf2_9ce4_8422_2325
+        } else {
+            self.0
+        };
         for &b in bytes {
             h ^= u64::from(b);
             h = h.wrapping_mul(0x0000_0100_0000_01b3);
@@ -179,8 +191,11 @@ fn text_metrics(s: &str) -> (u32, u32) {
 }
 
 fn is_style_hidden(style: &str) -> bool {
-    let compact: String =
-        style.chars().filter(|c| !c.is_whitespace()).collect::<String>().to_ascii_lowercase();
+    let compact: String = style
+        .chars()
+        .filter(|c| !c.is_whitespace())
+        .collect::<String>()
+        .to_ascii_lowercase();
     compact.contains("display:none") || compact.contains("visibility:hidden")
 }
 
@@ -248,7 +263,7 @@ impl<'a> Analysis<'a> {
                         "hidden" => hidden = true,
                         "aria-hidden" => hidden |= v.trim().eq_ignore_ascii_case("true"),
                         "style" => hidden |= is_style_hidden(v),
-                        _ => {},
+                        _ => {}
                     }
                 }
                 if let Some(ip) = itemprop {
@@ -319,7 +334,7 @@ impl<'a> Analysis<'a> {
                         }
                         cache.insert(sig.clone(), (sf, sw));
                         (sf, sw)
-                    },
+                    }
                 };
                 f |= sig_flags;
                 weight += sig_weight;
@@ -328,23 +343,23 @@ impl<'a> Analysis<'a> {
                 Tag::Nav | Tag::Footer | Tag::Dialog => {
                     f |= F_SOFT;
                     weight -= 25;
-                },
+                }
                 Tag::Aside => {
                     weight -= 25;
                     if f & F_IN_ARTICLE == 0 {
                         f |= F_SOFT;
                     }
-                },
+                }
                 Tag::Header => {
                     if f & F_IN_ARTICLE == 0 {
                         f |= F_SOFT;
                     }
-                },
+                }
                 Tag::Form => weight -= 3,
                 Tag::Article | Tag::Main => {
                     weight += 10;
-                },
-                _ => {},
+                }
+                _ => {}
             }
             if tag == Tag::Article || tag == Tag::Main || article_body || role_main {
                 f |= F_PROTECTED | F_IN_ARTICLE;
@@ -378,8 +393,8 @@ impl<'a> Analysis<'a> {
                         Tag::Iframe | Tag::Object | Tag::Embed => self.stats[p as usize].embed += 1,
                         Tag::Input | Tag::Select | Tag::Textarea => {
                             self.stats[p as usize].input += 1
-                        },
-                        _ => {},
+                        }
+                        _ => {}
                     }
                 }
                 continue;
@@ -393,7 +408,7 @@ impl<'a> Analysis<'a> {
                     if f & F_IN_LINK != 0 {
                         s.link_chars = s.link_chars.saturating_add(chars);
                     }
-                },
+                }
                 Kind::Element => {
                     s.tags = s.tags.saturating_add(1);
                     match node.tag {
@@ -406,11 +421,11 @@ impl<'a> Analysis<'a> {
                             if l == 1 {
                                 s.h1 += 1;
                             }
-                        },
-                        _ => {},
+                        }
+                        _ => {}
                     }
-                },
-                Kind::Other => {},
+                }
+                Kind::Other => {}
             }
             self.stats[i] = s;
             let p = node.parent;
@@ -443,7 +458,11 @@ impl<'a> Analysis<'a> {
     /// Top-down boilerplate removal, outermost match first. Returns the
     /// readable text mass removed as comment sections.
     fn drop_boilerplate(&mut self, aggressive: bool, drop_comments: bool) -> u32 {
-        let root = if self.arena.body != NONE { self.arena.body } else { 0 };
+        let root = if self.arena.body != NONE {
+            self.arena.body
+        } else {
+            0
+        };
         let total_plain = self.stats[root as usize].plain();
         let n = self.arena.nodes.len() as u32;
         let mut comment_mass = 0u32;
@@ -499,7 +518,7 @@ fn tag_prior(tag: Tag) -> f32 {
         Tag::Pre | Tag::Td | Tag::Blockquote => 3.0,
         Tag::Address | Tag::Ol | Tag::Ul | Tag::Dl | Tag::Dd | Tag::Dt | Tag::Li | Tag::Form => {
             -3.0
-        },
+        }
         Tag::H(_) | Tag::Th => -5.0,
         Tag::Nav | Tag::Aside | Tag::Footer => -20.0,
         _ => 0.0,
@@ -690,7 +709,7 @@ fn select_content(a: &Analysis<'_>) -> Selection {
                     if f64::from(a.stats[c as usize].plain()) >= 0.6 * f64::from(total_plain) =>
                 {
                     center = c
-                },
+                }
                 _ => break,
             }
         }
@@ -733,7 +752,10 @@ fn select_content(a: &Analysis<'_>) -> Selection {
     let top_final = score[top as usize];
     let parent = arena.node(top).parent;
     if parent == NONE || top == root {
-        return Selection { roots: vec![top], top };
+        return Selection {
+            roots: vec![top],
+            top,
+        };
     }
     let sib_threshold = (top_final * 0.2).max(10.0);
     let top_sig = a.sigs[top as usize].clone();
@@ -923,7 +945,10 @@ fn fallback_selection(a: &Analysis<'_>, dead: &[bool], root: u32) -> Selection {
         }
     }
     let top = best.filter(|(_, c)| *c > 0).map(|(i, _)| i).unwrap_or(root);
-    Selection { roots: vec![top], top }
+    Selection {
+        roots: vec![top],
+        top,
+    }
 }
 
 /// Readability-style conditional cleaning inside the selected content.
@@ -1018,7 +1043,9 @@ fn clean_title(raw: &str, site_name: Option<&str>) -> String {
     if t.is_empty() {
         return t;
     }
-    const SEPS: [&str; 9] = [" | ", " - ", " – ", " — ", " :: ", " · ", " • ", " » ", " ~ "];
+    const SEPS: [&str; 9] = [
+        " | ", " - ", " – ", " — ", " :: ", " · ", " • ", " » ", " ~ ",
+    ];
     let site = site_name.map(|s| s.to_lowercase());
     let matches_site = |part: &str| {
         let p = part.trim().to_lowercase();
@@ -1038,7 +1065,11 @@ fn clean_title(raw: &str, site_name: Option<&str>) -> String {
     }
     if let Some(pos) = best_suffix {
         let left = &t[..pos];
-        let right_start = t[pos..].char_indices().nth(3).map(|(k, _)| pos + k).unwrap_or(t.len());
+        let right_start = t[pos..]
+            .char_indices()
+            .nth(3)
+            .map(|(k, _)| pos + k)
+            .unwrap_or(t.len());
         let right = t[right_start..]
             .trim_start_matches(|c: char| c.is_whitespace() || c == '|' || c == '-');
         if matches_site(right) || (words(right) <= 4 && words(left) >= 3) {
@@ -1105,15 +1136,24 @@ fn first_h1(a: &Analysis<'_>, roots: &[u32]) -> Option<String> {
 
 fn clean_byline(raw: &str) -> Option<String> {
     let mut t = collapse_ws(raw);
-    for prefix in
-        ["By ", "by ", "BY ", "Par ", "par ", "PAR ", "Written by ", "Posted by ", "Publié par "]
-    {
+    for prefix in [
+        "By ",
+        "by ",
+        "BY ",
+        "Par ",
+        "par ",
+        "PAR ",
+        "Written by ",
+        "Posted by ",
+        "Publié par ",
+    ] {
         if let Some(rest) = t.strip_prefix(prefix) {
             t = rest.trim().to_string();
         }
     }
-    let t =
-        t.trim_matches(|c: char| c == '|' || c == '-' || c == ',' || c.is_whitespace()).to_string();
+    let t = t
+        .trim_matches(|c: char| c == '|' || c == '-' || c == ',' || c.is_whitespace())
+        .to_string();
     if t.is_empty()
         || t.chars().count() > 120
         || t.starts_with("http://")
@@ -1155,9 +1195,13 @@ fn find_byline(a: &Analysis<'_>, meta: &PageMeta) -> Option<String> {
             continue;
         }
         let is_author_prop = arena
-            .attr(i as u32, "itemprop", |v| v.to_ascii_lowercase().contains("author"))
+            .attr(i as u32, "itemprop", |v| {
+                v.to_ascii_lowercase().contains("author")
+            })
             .unwrap_or(false);
-        let sig_match = a.sigs[i].as_deref().is_some_and(|s| pats.byline.is_match(s));
+        let sig_match = a.sigs[i]
+            .as_deref()
+            .is_some_and(|s| pats.byline.is_match(s));
         if !(is_author_prop || sig_match) {
             continue;
         }
@@ -1210,7 +1254,9 @@ fn dom_date(a: &Analysis<'_>, roots: &[u32]) -> Option<String> {
             continue;
         }
         let is_pub = arena
-            .attr(i as u32, "itemprop", |v| v.to_ascii_lowercase().contains("datepublished"))
+            .attr(i as u32, "itemprop", |v| {
+                v.to_ascii_lowercase().contains("datepublished")
+            })
             .unwrap_or(false);
         if is_pub {
             let v = arena
@@ -1273,7 +1319,12 @@ pub(crate) fn extract(html: &str, page_url: Option<&str>, opts: &ExtractOptions)
     lap("analysis");
 
     let site_name = meta
-        .first_of(&["og:site_name", "application-name", "twitter:site", "publisher"])
+        .first_of(&[
+            "og:site_name",
+            "application-name",
+            "twitter:site",
+            "publisher",
+        ])
         .map(|s| s.trim_start_matches('@').to_string())
         .or_else(|| meta.jsonld.publisher.clone())
         .filter(|s| !s.is_empty());
@@ -1341,8 +1392,12 @@ pub(crate) fn extract(html: &str, page_url: Option<&str>, opts: &ExtractOptions)
         match (og_title, h1, tag_title) {
             (Some(o), ..) => o,
             (None, Some(h), Some(t)) => {
-                if token_overlap(&h, &t) >= 0.5 || token_overlap(&t, &h) >= 0.5 { h } else { t }
-            },
+                if token_overlap(&h, &t) >= 0.5 || token_overlap(&t, &h) >= 0.5 {
+                    h
+                } else {
+                    t
+                }
+            }
             (None, Some(h), None) => h,
             (None, None, Some(t)) => t,
             (None, None, None) => rendered
@@ -1357,7 +1412,12 @@ pub(crate) fn extract(html: &str, page_url: Option<&str>, opts: &ExtractOptions)
     let byline = find_byline(a, &meta);
     let published = find_published(a, &meta, &roots);
     let description = meta
-        .first_of(&["og:description", "description", "twitter:description", "dc.description"])
+        .first_of(&[
+            "og:description",
+            "description",
+            "twitter:description",
+            "dc.description",
+        ])
         .or_else(|| meta.jsonld.description.clone());
     let canonical = crate::canonical::from_meta(&meta, page_url);
     let word_count = rendered.text.split_whitespace().count();
@@ -1424,7 +1484,9 @@ pub fn debug_trace(html: &str, needle: &str, drop_comments: bool) -> String {
             "{i:>6} {:?} sig={:?} flags={:#06x} w={} chars={} ld={:.2} p={} dropped={} cleaned={} \
              root={}",
             n.tag,
-            a.sigs[i as usize].as_deref().map(|s| s.chars().take(60).collect::<String>()),
+            a.sigs[i as usize]
+                .as_deref()
+                .map(|s| s.chars().take(60).collect::<String>()),
             a.flags[i as usize],
             a.weight[i as usize],
             s.chars,

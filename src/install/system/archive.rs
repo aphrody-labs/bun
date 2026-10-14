@@ -12,7 +12,11 @@ pub struct Item<'a> {
 }
 
 /// Calls `f` for every entry of `bytes`; `f` returning `false` stops early.
-pub fn for_each(bytes: &[u8], what: &str, f: &mut dyn FnMut(Item<'_>) -> Result<bool>) -> Result<()> {
+pub fn for_each(
+    bytes: &[u8],
+    what: &str,
+    f: &mut dyn FnMut(Item<'_>) -> Result<bool>,
+) -> Result<()> {
     let ar = Archive::read_new();
     let a = Archive::opaque_ref(ar);
     let _free = scopeguard::guard((), |()| {
@@ -34,7 +38,8 @@ pub fn for_each(bytes: &[u8], what: &str, f: &mut dyn FnMut(Item<'_>) -> Result<
         }
         let e = Entry::opaque_ref(entry);
         let path = e.pathname().as_bytes().to_vec();
-        let is_dir = bun_sys::kind_from_mode(e.filetype() as bun_sys::Mode) == bun_sys::FileKind::Directory
+        let is_dir = bun_sys::kind_from_mode(e.filetype() as bun_sys::Mode)
+            == bun_sys::FileKind::Directory
             || path.ends_with(b"/");
         let mut data = Vec::new();
         if !is_dir {
@@ -52,7 +57,11 @@ pub fn for_each(bytes: &[u8], what: &str, f: &mut dyn FnMut(Item<'_>) -> Result<
                 data.extend_from_slice(&chunk[..n as usize]);
             }
         }
-        if !f(Item { path: &path, is_dir, data })? {
+        if !f(Item {
+            path: &path,
+            is_dir,
+            data,
+        })? {
             return Ok(());
         }
     }

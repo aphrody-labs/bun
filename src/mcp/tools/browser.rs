@@ -13,7 +13,9 @@ const MAX_RESULTS: u64 = 100;
 fn source<'a>(args: &'a Args<'_>, key: &str) -> Result<&'a str, ToolError> {
     let value = args.str(key)?;
     if value.len() > MAX_INPUT {
-        return Err(ToolError::InvalidArgs(format!("`{key}` exceeds 2 MiB of UTF-8")));
+        return Err(ToolError::InvalidArgs(format!(
+            "`{key}` exceeds 2 MiB of UTF-8"
+        )));
     }
     Ok(value)
 }
@@ -21,24 +23,33 @@ fn source<'a>(args: &'a Args<'_>, key: &str) -> Result<&'a str, ToolError> {
 fn limit(args: &Args<'_>) -> Result<usize, ToolError> {
     match args.0.get("limit") {
         None => Ok(20),
-        Some(value) => value.as_u64()
+        Some(value) => value
+            .as_u64()
             .filter(|value| (1..=MAX_RESULTS).contains(value))
             .and_then(|value| usize::try_from(value).ok())
-            .ok_or_else(|| ToolError::InvalidArgs("`limit` must be an integer from 1 to 100".into())),
+            .ok_or_else(|| {
+                ToolError::InvalidArgs("`limit` must be an integer from 1 to 100".into())
+            }),
     }
 }
 
 fn preview(value: &str, bytes: usize) -> (&str, bool) {
-    if value.len() <= bytes { return (value, false); }
+    if value.len() <= bytes {
+        return (value, false);
+    }
     let mut end = bytes;
-    while !value.is_char_boundary(end) { end -= 1; }
+    while !value.is_char_boundary(end) {
+        end -= 1;
+    }
     (&value[..end], true)
 }
 
 fn include_html(args: &Args<'_>) -> Result<bool, ToolError> {
     match args.0.get("include_html") {
         None => Ok(false),
-        Some(value) => value.as_bool().ok_or_else(|| ToolError::InvalidArgs("`include_html` must be boolean".into())),
+        Some(value) => value
+            .as_bool()
+            .ok_or_else(|| ToolError::InvalidArgs("`include_html` must be boolean".into())),
     }
 }
 
@@ -47,21 +58,31 @@ fn html_parse(_context: &Context, args: &Args<'_>) -> Result<Output, ToolError> 
     let limit = limit(args)?;
     let selector = match args.0.get("selector") {
         None => "*",
-        Some(value) => value.as_str().ok_or_else(|| ToolError::InvalidArgs("`selector` must be a string".into()))?,
+        Some(value) => value
+            .as_str()
+            .ok_or_else(|| ToolError::InvalidArgs("`selector` must be a string".into()))?,
     };
     if selector.is_empty() || selector.len() > 512 {
-        return Err(ToolError::InvalidArgs("`selector` must contain 1 to 512 UTF-8 bytes".into()));
+        return Err(ToolError::InvalidArgs(
+            "`selector` must contain 1 to 512 UTF-8 bytes".into(),
+        ));
     }
     let include_html = include_html(args)?;
     let tree = bun_browser_dom::parse_html(html);
-    let matched = tree.query_selector_all(selector).map_err(ToolError::InvalidArgs)?;
+    let matched = tree
+        .query_selector_all(selector)
+        .map_err(ToolError::InvalidArgs)?;
     let total = matched.len();
     let mut nodes = Vec::with_capacity(limit.min(total));
     let mut bytes = 1024; // reserve metadata, separators and JSON escaping
     let mut truncated = total > limit;
     for id in matched.into_iter().take(limit) {
-        let Some(node) = tree.get_node(id) else { continue; };
-        let Some(name) = node.as_element() else { continue; };
+        let Some(node) = tree.get_node(id) else {
+            continue;
+        };
+        let Some(name) = node.as_element() else {
+            continue;
+        };
         let text = tree.text_content(id);
         let (text, text_truncated) = preview(&text, 512);
         let tag: &str = name.local.as_ref();
@@ -76,7 +97,10 @@ fn html_parse(_context: &Context, args: &Args<'_>) -> Result<Output, ToolError> 
             truncated |= html_truncated;
         }
         let encoded = result.to_string().len() + 1;
-        if bytes + encoded > MAX_OUTPUT { truncated = true; break; }
+        if bytes + encoded > MAX_OUTPUT {
+            truncated = true;
+            break;
+        }
         bytes += encoded;
         nodes.push(result);
     }
@@ -97,25 +121,35 @@ fn css_parse(_context: &Context, args: &Args<'_>) -> Result<Output, ToolError> {
     for rule in parsed.into_iter().take(limit) {
         let (prelude, prelude_truncated) = preview(&rule.prelude, 512);
         let (body, body_truncated) = match rule.body.as_deref() {
-            Some(body) => { let (body, truncated) = preview(body, 1024); (Some(body), truncated) },
+            Some(body) => {
+                let (body, truncated) = preview(body, 1024);
+                (Some(body), truncated)
+            }
             None => (None, false),
         };
         let result = json!({ "prelude": prelude, "body": body,
             "prelude_truncated": prelude_truncated, "body_truncated": body_truncated });
         truncated |= prelude_truncated || body_truncated;
         let encoded = result.to_string().len() + 1;
-        if bytes + encoded > MAX_OUTPUT { truncated = true; break; }
+        if bytes + encoded > MAX_OUTPUT {
+            truncated = true;
+            break;
+        }
         bytes += encoded;
         rules.push(result);
     }
-    bounded(json!({ "engine": "bun_css", "recovery": true, "rules_total": total,
-        "returned": rules.len(), "truncated": truncated, "rules": rules }))
+    bounded(
+        json!({ "engine": "bun_css", "recovery": true, "rules_total": total,
+        "returned": rules.len(), "truncated": truncated, "rules": rules }),
+    )
 }
 
 fn bounded(value: Value) -> Result<Output, ToolError> {
     let text = value.to_string();
     if text.len() > MAX_OUTPUT {
-        return Err(ToolError::Failed("Browser parser result exceeded its output budget".into()));
+        return Err(ToolError::Failed(
+            "Browser parser result exceeded its output budget".into(),
+        ));
     }
     Ok(Output::text(text))
 }

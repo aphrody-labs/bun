@@ -65,7 +65,8 @@ declare_oxc_lint!(
     style,
     fix,
     version = "0.9.2",
-    short_description = "This rule enforces using `toBeObject()` to check if a value is of type `Object`.",
+    short_description =
+        "This rule enforces using `toBeObject()` to check if a value is of type `Object`.",
 );
 
 impl Rule for PreferToBeObject {
@@ -97,7 +98,10 @@ impl PreferToBeObject {
 
         if is_parsed_instance_of_matcher_call(&parsed_expect_call, matcher) {
             ctx.diagnostic_with_fix(prefer_to_be_object(matcher.span), |fixer| {
-                fixer.replace(Span::new(matcher.span.start, call_expr.span.end), "toBeObject()")
+                fixer.replace(
+                    Span::new(matcher.span.start, call_expr.span.end),
+                    "toBeObject()",
+                )
             });
             return;
         }
@@ -199,16 +203,34 @@ fn test() {
     ];
 
     let fix = vec![
-        ("expectTypeOf(({} instanceof Object)).toBeTruthy();", "expectTypeOf(({})).toBeObject();"),
-        ("expectTypeOf({} instanceof Object).toBeTruthy();", "expectTypeOf({}).toBeObject();"),
+        (
+            "expectTypeOf(({} instanceof Object)).toBeTruthy();",
+            "expectTypeOf(({})).toBeObject();",
+        ),
+        (
+            "expectTypeOf({} instanceof Object).toBeTruthy();",
+            "expectTypeOf({}).toBeObject();",
+        ),
         (
             "expectTypeOf({} instanceof Object).not.toBeTruthy();",
             "expectTypeOf({}).not.toBeObject();",
         ),
-        ("expectTypeOf({} instanceof Object).toBeFalsy();", "expectTypeOf({}).not.toBeObject();"),
-        ("expectTypeOf({} instanceof Object).not.toBeFalsy();", "expectTypeOf({}).toBeObject();"),
-        ("expectTypeOf({}).toBeInstanceOf(Object);", "expectTypeOf({}).toBeObject();"),
-        ("expectTypeOf({}).not.toBeInstanceOf(Object);", "expectTypeOf({}).not.toBeObject();"),
+        (
+            "expectTypeOf({} instanceof Object).toBeFalsy();",
+            "expectTypeOf({}).not.toBeObject();",
+        ),
+        (
+            "expectTypeOf({} instanceof Object).not.toBeFalsy();",
+            "expectTypeOf({}).toBeObject();",
+        ),
+        (
+            "expectTypeOf({}).toBeInstanceOf(Object);",
+            "expectTypeOf({}).toBeObject();",
+        ),
+        (
+            "expectTypeOf({}).not.toBeInstanceOf(Object);",
+            "expectTypeOf({}).not.toBeObject();",
+        ),
         (
             "expectTypeOf(requestValues()).resolves.toBeInstanceOf(Object);",
             "expectTypeOf(requestValues()).resolves.toBeObject();",

@@ -10,7 +10,13 @@ use crate::{
 #[derive(Debug, Default, Clone)]
 pub struct NoConditionalInTest;
 
-declare_oxc_lint!(NoConditionalInTest, vitest, pedantic, docs = DOCUMENTATION, version = "0.8.0",);
+declare_oxc_lint!(
+    NoConditionalInTest,
+    vitest,
+    pedantic,
+    docs = DOCUMENTATION,
+    version = "0.8.0",
+);
 
 impl Rule for NoConditionalInTest {
     fn run<'a>(&self, node: &oxc_semantic::AstNode<'a>, ctx: &LintContext<'a>) {
@@ -533,7 +539,12 @@ fn test() {
                   "#,
     ]);
 
-    Tester::new(NoConditionalInTest::NAME, NoConditionalInTest::PLUGIN, pass, fail)
-        .with_vitest_plugin(true)
-        .test_and_snapshot();
+    Tester::new(
+        NoConditionalInTest::NAME,
+        NoConditionalInTest::PLUGIN,
+        pass,
+        fail,
+    )
+    .with_vitest_plugin(true)
+    .test_and_snapshot();
 }

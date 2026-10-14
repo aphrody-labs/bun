@@ -272,6 +272,11 @@ fn test() {
         r"<a href='/'>Home</a>",
     ];
 
-    Tester::new(NoHtmlLinkForPages::NAME, NoHtmlLinkForPages::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        NoHtmlLinkForPages::NAME,
+        NoHtmlLinkForPages::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

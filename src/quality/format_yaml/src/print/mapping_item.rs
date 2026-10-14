@@ -55,7 +55,10 @@ pub fn write_mapping_item<'a>(
         }
         if let Some(comment) = same_line_comment {
             f.context().comments().take_before(comment.span.end);
-            write!(f, FormatLineCommentSuffix::new(comment.span).with_expand_parent());
+            write!(
+                f,
+                FormatLineCommentSuffix::new(comment.span).with_expand_parent()
+            );
         }
         return;
     }
@@ -68,7 +71,12 @@ pub fn write_mapping_item<'a>(
             write_key(item, f);
             return;
         }
-        let key_end = item.key.as_ref().expect("a value-less non-empty item has a key").span.end;
+        let key_end = item
+            .key
+            .as_ref()
+            .expect("a value-less non-empty item has a key")
+            .span
+            .end;
         // An explicit `? key` with no value is normalized to `key:` too.
         // Prettier's `!hasTrailingComment(key.content)`:
         // with no `:`, a same-line comment (`? key # c`, whitespace-only gap) attaches to the key content and keeps the explicit form.
@@ -110,7 +118,10 @@ pub fn write_mapping_item<'a>(
     // or between the key and `:` (an implicit `key:` with a comment above the value keeps the implicit form,
     // the comment becomes the value's leading comment instead).
     let explicit_comment_before_key = key.explicit
-        && f.context().comments().peek().is_some_and(|c| c.span.end <= key_node.span.start);
+        && f.context()
+            .comments()
+            .peek()
+            .is_some_and(|c| c.span.end <= key_node.span.start);
     if !is_inline(key_content)
         || explicit_comment_before_key
         || (key.explicit && has_own_line_comment_before_value(value_node, f))
@@ -128,7 +139,9 @@ pub fn write_mapping_item<'a>(
             while let Some(comment) = f.context().comments().peek() {
                 let span = comment.span;
                 if span.end > colon
-                    || comment.own_line_column.is_none_or(|column| column <= item_column)
+                    || comment
+                        .own_line_column
+                        .is_none_or(|column| column <= item_column)
                 {
                     break;
                 }
@@ -190,7 +203,10 @@ pub fn write_mapping_item<'a>(
     // Flow collections reformat onto one line as well.
     let key_is_multiline_scalar = !key_single_line
         && !key_content.is_some_and(|k| {
-            matches!(k.content, Content::FlowMapping(_) | Content::FlowSequence(_))
+            matches!(
+                k.content,
+                Content::FlowMapping(_) | Content::FlowSequence(_)
+            )
         })
         && (f.options().prose_wrap == ProseWrap::Preserve
             || has_forced_break_when_folded(key_content, f));
@@ -210,10 +226,11 @@ pub fn write_mapping_item<'a>(
     // A props-carrying block collection is NOT pinned:
     // like a block scalar it takes the width-based routing below
     // (Prettier hangs `key:\n  !!tag &a` under an overflowing key too).
-    let block_collection_without_props =
-        matches!(value_node.content, Content::Mapping(_) | Content::Sequence(_))
-            && value_node.props.anchor.is_none()
-            && value_node.props.tag.is_none();
+    let block_collection_without_props = matches!(
+        value_node.content,
+        Content::Mapping(_) | Content::Sequence(_)
+    ) && value_node.props.anchor.is_none()
+        && value_node.props.tag.is_none();
     let colon = if space_before_colon { " :" } else { ":" };
     let hardline_separator =
         block_collection_without_props || has_pending_comment_before(value_start, f);
@@ -253,7 +270,10 @@ pub fn write_mapping_item<'a>(
             f,
             if_group_fits_on_line(&format_args!(
                 colon,
-                align(tab_width, &format_args!(hard_line_break().without_expand_parent(), value))
+                align(
+                    tab_width,
+                    &format_args!(hard_line_break().without_expand_parent(), value)
+                )
             ))
             .with_group_id(Some(group_id))
         );
@@ -291,7 +311,10 @@ pub fn write_mapping_item<'a>(
                 format_args!(
                     key,
                     colon,
-                    align(tab_width, &format_args!(hard_line_break(), value_content_fmt))
+                    align(
+                        tab_width,
+                        &format_args!(hard_line_break(), value_content_fmt)
+                    )
                 ),
             ]
         );
@@ -308,7 +331,10 @@ pub fn write_mapping_item<'a>(
             // Value on the next line
             format_args!(
                 colon,
-                align(tab_width, &format_args!(hard_line_break(), value_content_fmt))
+                align(
+                    tab_width,
+                    &format_args!(hard_line_break(), value_content_fmt)
+                )
             ),
         ])
         .with_group_id(Some(group_id))
@@ -407,7 +433,9 @@ fn is_absolutely_single_line(node: Option<&Node<'_>>, f: &YamlFormatter<'_, '_>)
     if matches!(node.content, Content::Alias(_)) {
         return true;
     }
-    let Some(raw) = scalar_raw(node, f) else { return false };
+    let Some(raw) = scalar_raw(node, f) else {
+        return false;
+    };
 
     let prose_wrap = f.options().prose_wrap;
     if prose_wrap == ProseWrap::Preserve {
@@ -443,7 +471,9 @@ fn has_backslash_continuation(raw: &str) -> bool {
 fn has_forced_break_when_folded(node: Option<&Node<'_>>, f: &YamlFormatter<'_, '_>) -> bool {
     let Some(node) = node else { return false };
     // Defensive: non-scalars never re-fold
-    let Some(raw) = scalar_raw(node, f) else { return true };
+    let Some(raw) = scalar_raw(node, f) else {
+        return true;
+    };
     has_blank_line(raw) || has_backslash_continuation(raw)
 }
 
@@ -451,7 +481,9 @@ fn has_forced_break_when_folded(node: Option<&Node<'_>>, f: &YamlFormatter<'_, '
 /// (`key: # comment` with the value on the next line,
 /// a comment after the value like `key: value # comment` is the value's trailing comment instead.)
 fn key_has_trailing_comment(key_end: u32, value_start: u32, f: &YamlFormatter<'_, '_>) -> bool {
-    let Some(comment) = f.context().comments().peek() else { return false };
+    let Some(comment) = f.context().comments().peek() else {
+        return false;
+    };
     let span = comment.span;
     let source = f.context().source_text();
     span.start >= key_end
@@ -461,7 +493,10 @@ fn key_has_trailing_comment(key_end: u32, value_start: u32, f: &YamlFormatter<'_
 
 /// Is there any pending comment before `bound` (a leading comment of the value)?
 fn has_pending_comment_before(bound: u32, f: &YamlFormatter<'_, '_>) -> bool {
-    f.context().comments().peek().is_some_and(|c| c.span.end <= bound)
+    f.context()
+        .comments()
+        .peek()
+        .is_some_and(|c| c.span.end <= bound)
 }
 
 /// Own-line comment between the key and the value forces the explicit form.

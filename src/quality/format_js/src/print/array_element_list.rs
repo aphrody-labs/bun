@@ -26,7 +26,10 @@ impl<'a, 'b> ArrayElementList<'a, 'b> {
         elements: &'b AstNode<'a, ArenaVec<'a, ArrayExpressionElement<'a>>>,
         group_id: GroupId,
     ) -> Self {
-        Self { elements, group_id: Some(group_id) }
+        Self {
+            elements,
+            group_id: Some(group_id),
+        }
     }
 }
 
@@ -71,7 +74,9 @@ impl<'a> Format<'a, JsFormatContext<'a>> for ArrayElementList<'a, '_> {
             }
             ArrayLayout::OnePerLine => write_array_node(
                 self.elements.len(),
-                self.elements.iter().map(|e| if e.is_elision() { None } else { Some(e) }),
+                self.elements
+                    .iter()
+                    .map(|e| if e.is_elision() { None } else { Some(e) }),
                 f,
             ),
         }
@@ -79,8 +84,10 @@ impl<'a> Format<'a, JsFormatContext<'a>> for ArrayElementList<'a, '_> {
         // Comments that no element consumed as a trailing comment
         // (e.g. after a trailing hole: `[,, /* comment */]`)
         // would otherwise escape the brackets; print them right before the `]` like Prettier
-        let dangling_comments =
-            f.context().comments().comments_before(self.elements.parent().span().end);
+        let dangling_comments = f
+            .context()
+            .comments()
+            .comments_before(self.elements.parent().span().end);
         write!(
             f,
             FormatDanglingComments::Comments {

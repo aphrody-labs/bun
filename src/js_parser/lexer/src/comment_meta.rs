@@ -80,7 +80,11 @@ fn classify(bytes: &[u8], is_block: bool, lic: bool) -> u8 {
         b'!' => return CONTENT_LEGAL,
         b'*' if is_block => {
             if !bytes.iter().all(|&c| c == b'*') {
-                return if lic { CONTENT_JSDOC_LEGAL } else { CONTENT_JSDOC };
+                return if lic {
+                    CONTENT_JSDOC_LEGAL
+                } else {
+                    CONTENT_JSDOC
+                };
             }
             return CONTENT_NONE;
         }
@@ -206,7 +210,10 @@ mod tests {
             (b"istanbul ignore file".as_slice(), true),
             (b"istanbul ignore file -- generated".as_slice(), false),
         ] {
-            assert_eq!(classify(source, is_block, false), CONTENT_COVERAGE_IGNORE_FILE);
+            assert_eq!(
+                classify(source, is_block, false),
+                CONTENT_COVERAGE_IGNORE_FILE
+            );
             assert_eq!(
                 content_from_ordinal(CONTENT_COVERAGE_IGNORE_FILE),
                 CommentContent::CoverageIgnoreFile
@@ -232,12 +239,19 @@ mod tests {
             "\u{a0}@__KEY__\u{a0}".as_bytes(),
         ] {
             assert_eq!(classify(source, true, false), CONTENT_PROPERTY_KEY);
-            assert_eq!(content_from_ordinal(CONTENT_PROPERTY_KEY), CommentContent::PropertyKey);
+            assert_eq!(
+                content_from_ordinal(CONTENT_PROPERTY_KEY),
+                CommentContent::PropertyKey
+            );
         }
 
-        for source in
-            [b"__KEY__".as_slice(), b"@ __KEY__", b"@__key__", b"@__KEY___", b"@__KEY__ extra"]
-        {
+        for source in [
+            b"__KEY__".as_slice(),
+            b"@ __KEY__",
+            b"@__key__",
+            b"@__KEY___",
+            b"@__KEY__ extra",
+        ] {
             assert_eq!(classify(source, true, false), CONTENT_NONE);
         }
     }

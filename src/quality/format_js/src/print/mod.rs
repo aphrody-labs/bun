@@ -208,11 +208,8 @@ impl<'a> FormatWrite<'a> for AstNode<'a, ObjectExpression<'a>> {
 impl<'a> Format<'a, JsFormatContext<'a>> for AstNode<'a, ArenaVec<'a, ObjectPropertyKind<'a>>> {
     fn fmt(&self, f: &mut JsFormatter<'_, 'a>) {
         let trailing_separator = FormatTrailingCommas::ES5.trailing_separator(f.options());
-        f.join_nodes_with_soft_line().entries_with_trailing_separator(
-            self.iter(),
-            ",",
-            trailing_separator,
-        );
+        f.join_nodes_with_soft_line()
+            .entries_with_trailing_separator(self.iter(), ",", trailing_separator);
     }
 }
 
@@ -342,7 +339,11 @@ impl<'a> FormatWrite<'a> for AstNode<'a, UnaryExpression<'a>> {
         if unary_argument_takes_comment_parens(self, f) {
             write!(
                 f,
-                [group(&format_args!(token("("), soft_block_indent(self.argument()), token(")")))]
+                [group(&format_args!(
+                    token("("),
+                    soft_block_indent(self.argument()),
+                    token(")")
+                ))]
             );
         } else {
             write!(f, self.argument());
@@ -386,7 +387,10 @@ impl<'a> FormatWrite<'a> for AstNode<'a, ArrayAssignmentTarget<'a>> {
         write!(f, "[");
 
         if self.elements.is_empty() && self.rest.is_none() {
-            write!(f, [format_dangling_comments(self.span()).with_soft_block_indent()]);
+            write!(
+                f,
+                [format_dangling_comments(self.span()).with_soft_block_indent()]
+            );
         } else {
             write!(
                 f,
@@ -598,9 +602,11 @@ fn expression_statement_needs_semicolon<'a>(
     let expr = stmt.expression();
 
     // Get the leftmost expression to check what the line starts with
-    ExpressionLeftSide::from(expr).iter().any(|current| match current {
-        ExpressionLeftSide::Expression(expr) => {
-            expr.needs_parentheses(f)
+    ExpressionLeftSide::from(expr)
+        .iter()
+        .any(|current| match current {
+            ExpressionLeftSide::Expression(expr) => {
+                expr.needs_parentheses(f)
                 || match expr.as_ref() {
                     Expression::ArrayExpression(_)
                     | Expression::RegExpLiteral(_)
@@ -622,25 +628,25 @@ fn expression_statement_needs_semicolon<'a>(
                 // `/** @type {string} */ (this.s).length`
                 // Checked last: this scans source text/comments, unlike the checks above.
                 || is_cast_target(expr.span(), f)
-        }
-        ExpressionLeftSide::AssignmentTarget(assignment) => {
-            matches!(
-                assignment.as_ref(),
-                AssignmentTarget::ArrayAssignmentTarget(_)
-                    | AssignmentTarget::TSTypeAssertion(_)
-                    | AssignmentTarget::TSAsExpression(_)
-                    | AssignmentTarget::TSSatisfiesExpression(_)
-            )
-        }
-        ExpressionLeftSide::SimpleAssignmentTarget(assignment) => {
-            matches!(
-                assignment.as_ref(),
-                SimpleAssignmentTarget::TSTypeAssertion(_)
-                    | SimpleAssignmentTarget::TSAsExpression(_)
-                    | SimpleAssignmentTarget::TSSatisfiesExpression(_)
-            )
-        }
-    })
+            }
+            ExpressionLeftSide::AssignmentTarget(assignment) => {
+                matches!(
+                    assignment.as_ref(),
+                    AssignmentTarget::ArrayAssignmentTarget(_)
+                        | AssignmentTarget::TSTypeAssertion(_)
+                        | AssignmentTarget::TSAsExpression(_)
+                        | AssignmentTarget::TSSatisfiesExpression(_)
+                )
+            }
+            ExpressionLeftSide::SimpleAssignmentTarget(assignment) => {
+                matches!(
+                    assignment.as_ref(),
+                    SimpleAssignmentTarget::TSTypeAssertion(_)
+                        | SimpleAssignmentTarget::TSAsExpression(_)
+                        | SimpleAssignmentTarget::TSSatisfiesExpression(_)
+                )
+            }
+        })
 }
 
 /// Prints the statement's leading comments with the `semi: false` ASI guard spliced in
@@ -657,17 +663,25 @@ fn write_leading_comments_with_asi_guard<'a>(
         && expression_statement_needs_semicolon(stmt, f, verbatim);
     let leading_comments = f.context().comments().comments_before(start);
     let split = if needs_semicolon
-        && leading_comments.last().is_some_and(|last| f.comments().is_type_cast_comment(last))
+        && leading_comments
+            .last()
+            .is_some_and(|last| f.comments().is_type_cast_comment(last))
     {
         leading_comments.len() - 1
     } else {
         leading_comments.len()
     };
-    write!(f, FormatLeadingComments::CommentsOfNode(&leading_comments[..split], start));
+    write!(
+        f,
+        FormatLeadingComments::CommentsOfNode(&leading_comments[..split], start)
+    );
     if needs_semicolon {
         write!(f, ";");
     }
-    write!(f, FormatLeadingComments::CommentsOfNode(&leading_comments[split..], start));
+    write!(
+        f,
+        FormatLeadingComments::CommentsOfNode(&leading_comments[split..], start)
+    );
 }
 
 impl<'a> FormatWrite<'a> for AstNode<'a, ExpressionStatement<'a>> {
@@ -687,7 +701,10 @@ impl<'a> FormatWrite<'a> for AstNode<'a, ExpressionStatement<'a>> {
             self.span().end,
             false,
         );
-        write!(f, FormatContentWithSemicolon::new(expression, content_end, self.span().end));
+        write!(
+            f,
+            FormatContentWithSemicolon::new(expression, content_end, self.span().end)
+        );
     }
 }
 
@@ -702,11 +719,17 @@ impl<'a> FormatWrite<'a> for AstNode<'a, DoWhileStatement<'a>> {
             write_head_body_separator(body.span().start, f);
             FormatNodeWithoutTrailingComments(body).fmt(f);
         } else {
-            write!(f, group(&format_args!("do", FormatStatementBody::new(body))));
+            write!(
+                f,
+                group(&format_args!("do", FormatStatementBody::new(body)))
+            );
         }
 
         // Lexical scan for the keyword's first byte: the gap holds only trivia and `while`
-        let comments = f.context().comments().comments_before_character(body.span().end, b'w');
+        let comments = f
+            .context()
+            .comments()
+            .comments_before_character(body.span().end, b'w');
         if write_comments_between_blocks(comments, f) {
             if is_block_body {
                 write!(f, space());
@@ -727,9 +750,21 @@ impl<'a> FormatWrite<'a> for AstNode<'a, DoWhileStatement<'a>> {
             test_end
         };
         let content = format_with(|f| {
-            write!(f, ["while", space(), "(", group(&soft_block_indent(&self.test())), ")"]);
+            write!(
+                f,
+                [
+                    "while",
+                    space(),
+                    "(",
+                    group(&soft_block_indent(&self.test())),
+                    ")"
+                ]
+            );
         });
-        write!(f, FormatContentWithSemicolon::new(&content, rparen_end, node_end));
+        write!(
+            f,
+            FormatContentWithSemicolon::new(&content, rparen_end, node_end)
+        );
     }
 }
 
@@ -755,11 +790,16 @@ impl<'a> Format<'a, JsFormatContext<'a>> for FormatParenHeadExpression<'a, '_> {
         // (`if ((0, 0) /* c */) {}` keeps the comment inside);
         // comments after it lead the body instead.
         let expression_end = self.expression.span().end;
-        if !f.comments().has_comment_in_range(expression_end, self.body_start) {
+        if !f
+            .comments()
+            .has_comment_in_range(expression_end, self.body_start)
+        {
             return;
         }
 
-        let rparen_end = f.comments().end_including_source_parens(expression_end, self.body_start);
+        let rparen_end = f
+            .comments()
+            .end_including_source_parens(expression_end, self.body_start);
         // `comments_before` returns a prefix of the unprinted comments,
         // as the printed-count cursor requires;
         // the range check above fences out stale pre-`expression_end` entries.
@@ -840,7 +880,9 @@ impl<'a> FormatWrite<'a> for AstNode<'a, ForStatement<'a>> {
             // each slot owns the comments before its closing token, with or without a node to anchor on.
             // Lexical scans: each gap holds only trivia and `;`.
             if f.comments().has_comment_before(body.span().start) {
-                let mut cursor = f.comments().position_after_character(self.span().start, b'(');
+                let mut cursor = f
+                    .comments()
+                    .position_after_character(self.span().start, b'(');
                 cursor = write_for_head_slot(init, cursor, f);
                 if !is_headless {
                     write!(f, soft_line_break_or_space());
@@ -850,8 +892,11 @@ impl<'a> FormatWrite<'a> for AstNode<'a, ForStatement<'a>> {
                     write!(f, soft_line_break_or_space());
                 }
                 if let Some(update) = update {
-                    FormatParenHeadExpression { expression: update, body_start: body.span().start }
-                        .fmt(f);
+                    FormatParenHeadExpression {
+                        expression: update,
+                        body_start: body.span().start,
+                    }
+                    .fmt(f);
                 } else {
                     // Discarded flush obligation:
                     // a riding line comment flushes at the expanded head's closing break,
@@ -887,7 +932,10 @@ impl<'a> FormatWrite<'a> for AstNode<'a, ForStatement<'a>> {
 
 impl<'a> FormatWrite<'a> for AstNode<'a, ForInStatement<'a>> {
     fn write(&self, f: &mut JsFormatter<'_, 'a>) {
-        let comments = f.context().comments().own_line_comments_before(self.right.span().start);
+        let comments = f
+            .context()
+            .comments()
+            .own_line_comments_before(self.right.span().start);
         let left = self.left();
         let body = self.body();
 
@@ -927,7 +975,10 @@ impl<'a> FormatWrite<'a> for AstNode<'a, ForInStatement<'a>> {
 
 impl<'a> FormatWrite<'a> for AstNode<'a, ForOfStatement<'a>> {
     fn write(&self, f: &mut JsFormatter<'_, 'a>) {
-        let comments = f.context().comments().own_line_comments_before(self.right.span().start);
+        let comments = f
+            .context()
+            .comments()
+            .own_line_comments_before(self.right.span().start);
 
         let r#await = self.r#await();
         let left = self.left();
@@ -948,7 +999,10 @@ impl<'a> FormatWrite<'a> for AstNode<'a, ForOfStatement<'a>> {
                     "of",
                     space(),
                     // NOTE: Not grouped, like the for-in head above.
-                    FormatParenHeadExpression { expression: right, body_start: body.span().start },
+                    FormatParenHeadExpression {
+                        expression: right,
+                        body_start: body.span().start
+                    },
                     line_suffix_boundary(),
                     ")",
                     FormatStatementBody::new(body)
@@ -979,7 +1033,9 @@ impl<'a> FormatWrite<'a> for AstNode<'a, IfStatement<'a>> {
             // A trailing suppression comment must stay visible to the consequent's own gate
             // (`write_suppressed_statement`).
             if alternate.is_some()
-                && !f.comments().has_trailing_suppression_comment(consequent.span().end)
+                && !f
+                    .comments()
+                    .has_trailing_suppression_comment(consequent.span().end)
             {
                 format_content_without_comments_after(&body, consequent.span().end, f);
             } else {
@@ -1002,8 +1058,10 @@ impl<'a> FormatWrite<'a> for AstNode<'a, IfStatement<'a>> {
         );
         if let Some(alternate) = alternate {
             // Lexical scan for the keyword's first byte: the gap holds only trivia and `else`.
-            let comments =
-                f.context().comments().comments_before_character(consequent.span().end, b'e');
+            let comments = f
+                .context()
+                .comments()
+                .comments_before_character(consequent.span().end, b'e');
             if write_comments_between_blocks(comments, f) {
                 if matches!(consequent.as_ref(), Statement::BlockStatement(_)) {
                     write!(f, space());
@@ -1017,10 +1075,12 @@ impl<'a> FormatWrite<'a> for AstNode<'a, IfStatement<'a>> {
                 [
                     "else",
                     line_suffix_boundary(),
-                    group(&FormatStatementBody::new(alternate).with_forced_space(matches!(
-                        alternate.as_ref(),
-                        Statement::IfStatement(_)
-                    )))
+                    group(
+                        &FormatStatementBody::new(alternate).with_forced_space(matches!(
+                            alternate.as_ref(),
+                            Statement::IfStatement(_)
+                        ))
+                    )
                 ]
             );
         }
@@ -1031,7 +1091,10 @@ impl<'a> FormatWrite<'a> for AstNode<'a, ContinueStatement<'a>> {
     fn write(&self, f: &mut JsFormatter<'_, 'a>) {
         if let Some(label) = self.label() {
             let content = format_with(|f| write!(f, ["continue", space(), label]));
-            write!(f, FormatContentWithSemicolon::new(&content, label.span().end, self.span().end));
+            write!(
+                f,
+                FormatContentWithSemicolon::new(&content, label.span().end, self.span().end)
+            );
         } else {
             write!(f, ["continue", OptionalSemicolon]);
         }
@@ -1042,7 +1105,10 @@ impl<'a> FormatWrite<'a> for AstNode<'a, BreakStatement<'a>> {
     fn write(&self, f: &mut JsFormatter<'_, 'a>) {
         if let Some(label) = self.label() {
             let content = format_with(|f| write!(f, ["break", space(), label]));
-            write!(f, FormatContentWithSemicolon::new(&content, label.span().end, self.span().end));
+            write!(
+                f,
+                FormatContentWithSemicolon::new(&content, label.span().end, self.span().end)
+            );
         } else {
             write!(f, ["break", OptionalSemicolon]);
         }
@@ -1113,7 +1179,10 @@ impl<'a> FormatWrite<'a> for AstNode<'a, AssignmentPattern<'a>> {
         // Format `left` early before writing leading comments, so that comments
         // inside `left` are not treated as leading comments of `= right`
         left.inspect(f);
-        let comments = f.context().comments().own_line_comments_before(self.right.span().start);
+        let comments = f
+            .context()
+            .comments()
+            .own_line_comments_before(self.right.span().start);
         write!(
             f,
             [
@@ -1223,7 +1292,14 @@ impl<'a> FormatWrite<'a> for AstNode<'a, NumericLiteral<'a>> {
 
             if should_quote {
                 let quote_str = f.options().quote_style.as_str();
-                write!(f, [quote_str, text(f.allocator().alloc_str(&formatted)), quote_str]);
+                write!(
+                    f,
+                    [
+                        quote_str,
+                        text(f.allocator().alloc_str(&formatted)),
+                        quote_str
+                    ]
+                );
                 return;
             }
         }
@@ -1290,7 +1366,14 @@ impl<'a> FormatWrite<'a> for AstNode<'a, TSEnumDeclaration<'a>> {
             write!(f, ["const", space()]);
         }
         let body = self.body();
-        write!(f, ["enum", space(), FormatNodeWithoutTrailingComments(self.id())]);
+        write!(
+            f,
+            [
+                "enum",
+                space(),
+                FormatNodeWithoutTrailingComments(self.id())
+            ]
+        );
         write_head_body_separator(body.span().start, f);
         write!(f, ["{", body, "}"]);
     }
@@ -1299,7 +1382,10 @@ impl<'a> FormatWrite<'a> for AstNode<'a, TSEnumDeclaration<'a>> {
 impl<'a> FormatWrite<'a> for AstNode<'a, TSEnumBody<'a>> {
     fn write(&self, f: &mut JsFormatter<'_, 'a>) {
         if self.members().is_empty() {
-            write!(f, format_dangling_comments(self.span()).with_soft_block_indent());
+            write!(
+                f,
+                format_dangling_comments(self.span()).with_soft_block_indent()
+            );
         } else {
             write!(f, block_indent(self.members()));
         }
@@ -1317,11 +1403,8 @@ impl<'a> Format<'a, JsFormatContext<'a>> for AstNode<'a, ArenaVec<'a, TSEnumMemb
         }
 
         let trailing_separator = FormatTrailingCommas::ES5.trailing_separator(f.options());
-        f.join_nodes_with_soft_line().entries_with_trailing_separator(
-            self.iter(),
-            ",",
-            trailing_separator,
-        );
+        f.join_nodes_with_soft_line()
+            .entries_with_trailing_separator(self.iter(), ",", trailing_separator);
 
         if f.options().quote_properties.is_consistent() {
             f.context_mut().pop_quote_needed();
@@ -1409,7 +1492,10 @@ impl<'a> FormatWrite<'a> for AstNode<'a, TSParenthesizedType<'a>> {
 
 impl<'a> FormatWrite<'a> for AstNode<'a, TSTypeOperator<'a>> {
     fn write(&self, f: &mut JsFormatter<'_, 'a>) {
-        write!(f, [self.operator().to_str(), space(), self.type_annotation()]);
+        write!(
+            f,
+            [self.operator().to_str(), space(), self.type_annotation()]
+        );
     }
 }
 
@@ -1536,7 +1622,12 @@ impl<'a> FormatWrite<'a> for AstNode<'a, TSTypeReference<'a>> {
         let wrap = is_leftmost_intrinsic_in_type_alias(self);
         write!(
             f,
-            [wrap.then_some("("), self.type_name(), self.type_arguments(), wrap.then_some(")")]
+            [
+                wrap.then_some("("),
+                self.type_name(),
+                self.type_arguments(),
+                wrap.then_some(")")
+            ]
         );
     }
 }
@@ -1561,13 +1652,21 @@ fn is_leftmost_intrinsic_in_type_alias(reference: &AstNode<'_, TSTypeReference<'
         match parent {
             AstNodes::TSTypeAliasDeclaration(_) => return true,
             AstNodes::TSUnionType(union) => {
-                if union.types.first().is_none_or(|t| t.span().start != span_start) {
+                if union
+                    .types
+                    .first()
+                    .is_none_or(|t| t.span().start != span_start)
+                {
                     return false;
                 }
                 parent = union.parent();
             }
             AstNodes::TSIntersectionType(intersection) => {
-                if intersection.types.first().is_none_or(|t| t.span().start != span_start) {
+                if intersection
+                    .types
+                    .first()
+                    .is_none_or(|t| t.span().start != span_start)
+                {
                     return false;
                 }
                 parent = intersection.parent();
@@ -1627,7 +1726,8 @@ impl<'a> FormatWrite<'a> for AstNode<'a, TSInterfaceDeclaration<'a>> {
             || extends.as_ref().first().is_some_and(|first| {
                 (first.type_name.is_qualified_name() && first.type_arguments.is_none()) || {
                     let prev_span = type_parameters.as_ref().map_or(id.span(), GetSpan::span);
-                    f.comments().has_comment_in_range(prev_span.end, first.span().start)
+                    f.comments()
+                        .has_comment_in_range(prev_span.end, first.span().start)
                 }
             });
 
@@ -1658,14 +1758,18 @@ impl<'a> FormatWrite<'a> for AstNode<'a, TSInterfaceDeclaration<'a>> {
                 return;
             };
 
-            let has_leading_own_line_comment =
-                f.context().comments().has_leading_own_line_comment(first_extend.span().start);
+            let has_leading_own_line_comment = f
+                .context()
+                .comments()
+                .has_leading_own_line_comment(first_extend.span().start);
 
             if has_leading_own_line_comment {
                 write!(
                     f,
                     FormatTrailingComments::Comments(
-                        f.context().comments().comments_before(first_extend.span().start)
+                        f.context()
+                            .comments()
+                            .comments_before(first_extend.span().start)
                     )
                 );
             }
@@ -1701,7 +1805,10 @@ impl<'a> FormatWrite<'a> for AstNode<'a, TSInterfaceDeclaration<'a>> {
             } else if group_mode {
                 let indented = format_with(|f| write!(f, [format_id, indent(&format_extends)]));
                 let heritage_id = f.group_id("heritageGroup");
-                write!(f, [group(&indented).with_group_id(Some(heritage_id)), space()]);
+                write!(
+                    f,
+                    [group(&indented).with_group_id(Some(heritage_id)), space()]
+                );
             } else {
                 write!(f, [&format_args!(format_id, format_extends)]);
             }
@@ -1822,7 +1929,10 @@ impl<'a> Format<'a, JsFormatContext<'a>> for AstNode<'a, ArenaVec<'a, TSSignatur
         while let Some(signature) = iter.next() {
             joiner.entry(
                 signature.span(),
-                &FormatTSSignature { signature, next_signature: iter.peek().copied() },
+                &FormatTSSignature {
+                    signature,
+                    next_signature: iter.peek().copied(),
+                },
             );
         }
 
@@ -1922,7 +2032,10 @@ impl<'a> FormatWrite<'a> for AstNode<'a, TSGlobalDeclaration<'a>> {
         if self.declare {
             write!(f, ["declare", space()]);
         }
-        let comments_before_global = f.context().comments().comments_before(self.global_span.start);
+        let comments_before_global = f
+            .context()
+            .comments()
+            .comments_before(self.global_span.start);
         write!(f, FormatLeadingComments::Comments(comments_before_global));
         let body = self.body();
         write!(f, "global");
@@ -1943,7 +2056,13 @@ impl<'a> FormatWrite<'a> for AstNode<'a, TSModuleBlock<'a>> {
         } else {
             // Use `FormatStatementsWithImports` formatter (instead of generic `AstNode<Vec<Statement>>` impl)
             // so imports inside ambient modules (`declare module "foo" { ... }`) are sorted when sorting is enabled
-            write!(f, [block_indent(&format_args!(directives, FormatStatementsWithImports(body)))]);
+            write!(
+                f,
+                [block_indent(&format_args!(
+                    directives,
+                    FormatStatementsWithImports(body)
+                ))]
+            );
         }
         write!(f, "}");
     }
@@ -1971,7 +2090,10 @@ impl<'a> FormatWrite<'a> for AstNode<'a, TSImportType<'a>> {
     fn write(&self, f: &mut JsFormatter<'_, 'a>) {
         write!(f, ["import("]);
 
-        let has_comment = f.context().comments().has_comment_before(self.source.span().start);
+        let has_comment = f
+            .context()
+            .comments()
+            .has_comment_before(self.source.span().start);
 
         let format_argument = self.source().memoized();
         let format_options = self.options().memoized();
@@ -1993,7 +2115,13 @@ impl<'a> FormatWrite<'a> for AstNode<'a, TSImportType<'a>> {
             if has_comment {
                 write!(f, [&soft_block_indent(&format_inner)]);
             } else if self.options().is_some() {
-                write!(f, [best_fitting!(format_inner, &soft_block_indent(&format_inner))]);
+                write!(
+                    f,
+                    [best_fitting!(
+                        format_inner,
+                        &soft_block_indent(&format_inner)
+                    )]
+                );
             } else {
                 write!(f, [format_inner]);
             }
@@ -2023,7 +2151,10 @@ impl<'a> FormatWrite<'a> for AstNode<'a, TSTypeAssertion<'a>> {
         );
 
         let format_cast = format_with(|f| {
-            write!(f, ["<", group(&soft_block_indent(&self.type_annotation())), ">",]);
+            write!(
+                f,
+                ["<", group(&soft_block_indent(&self.type_annotation())), ">",]
+            );
         });
 
         if break_after_cast {

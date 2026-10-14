@@ -57,8 +57,13 @@ impl Generator for AstBuilderGenerator {
 
     /// Generate builder methods on AST types.
     fn generate(&self, schema: &Schema, _codegen: &Codegen) -> Output {
-        let node_id_cell_type_id =
-            schema.type_by_name("NodeId").as_struct().unwrap().containers.cell_id.unwrap();
+        let node_id_cell_type_id = schema
+            .type_by_name("NodeId")
+            .as_struct()
+            .unwrap()
+            .containers
+            .cell_id
+            .unwrap();
 
         let impls = schema
             .structs_and_enums()
@@ -101,7 +106,10 @@ impl Generator for AstBuilderGenerator {
             #impls
         };
 
-        Output::Rust { path: output_path(AST_CRATE_PATH, "ast_builder.rs"), tokens: output }
+        Output::Rust {
+            path: output_path(AST_CRATE_PATH, "ast_builder.rs"),
+            tokens: output,
+        }
     }
 }
 
@@ -178,13 +186,22 @@ fn generate_builder_methods_for_struct(
 
     let (fn_name_postfix, doc_postfix) = if has_default_fields {
         // Exclude `node_id` from the list of default params (it's always assigned by the builder)
-        let default_params = params.iter().filter(|param| param.is_default && !param.is_node_id);
+        let default_params = params
+            .iter()
+            .filter(|param| param.is_default && !param.is_node_id);
         let fn_name_postfix = format!(
             "_with_{}",
-            default_params.clone().map(|param| param.field.name()).join("_and_")
+            default_params
+                .clone()
+                .map(|param| param.field.name())
+                .join("_and_")
         );
-        let doc_postfix =
-            format!(" with `{}`", default_params.map(|param| param.field.name()).join("` and `"));
+        let doc_postfix = format!(
+            " with `{}`",
+            default_params
+                .map(|param| param.field.name())
+                .join("` and `")
+        );
         (fn_name_postfix, doc_postfix)
     } else {
         (String::new(), String::new())
@@ -228,15 +245,25 @@ fn generate_builder_methods_for_struct_impl(
 ) -> TokenStream {
     let struct_ident = struct_def.ident();
 
-    let args = params.iter().filter(|param| !param.is_node_id).map(|param| &param.ident);
+    let args = params
+        .iter()
+        .filter(|param| !param.is_node_id)
+        .map(|param| &param.ident);
 
     let new_fn_name = format_ident!("new{fn_name_postfix}");
     // Function only needs lifetime param for `impl GetAstBuilder<'a>` if the struct doesn't have a lifetime itself
-    let lifetime_param = if struct_def.has_lifetime { quote!() } else { quote!( <'a> ) };
+    let lifetime_param = if struct_def.has_lifetime {
+        quote!()
+    } else {
+        quote!( <'a> )
+    };
 
     // Only generate a `boxed` method if `Box<T>` exists in AST
-    let boxed_fn_name =
-        struct_def.containers.box_id.is_some().then(|| format_ident!("boxed{fn_name_postfix}"));
+    let boxed_fn_name = struct_def
+        .containers
+        .box_id
+        .is_some()
+        .then(|| format_ident!("boxed{fn_name_postfix}"));
 
     // Generate main builder method
     let struct_name = struct_def.name();
@@ -268,7 +295,9 @@ fn generate_builder_methods_for_struct_impl(
         }
     };
 
-    let Some(boxed_fn_name) = boxed_fn_name else { return new_method };
+    let Some(boxed_fn_name) = boxed_fn_name else {
+        return new_method;
+    };
 
     // Generate `boxed` builder method
     let boxed_doc1 = format!(
@@ -361,7 +390,14 @@ fn get_struct_params<'s>(
             let fn_param = quote!( #field_ident: #fn_param_ty );
 
             let is_node_id = field.type_id == node_id_cell_type_id;
-            Param { field, ident: field_ident, fn_param, is_default, is_node_id, generic_type }
+            Param {
+                field,
+                ident: field_ident,
+                fn_param,
+                is_default,
+                is_node_id,
+                generic_type,
+            }
         })
         .collect();
 
@@ -387,7 +423,10 @@ fn get_struct_fn_params_and_fields(
     params: &[Param],
     include_default_fields: bool,
     schema: &Schema,
-) -> (/* function params */ TokenStream, /* fields */ TokenStream) {
+) -> (
+    /* function params */ TokenStream,
+    /* fields */ TokenStream,
+) {
     let mut fields = vec![];
     let fn_params = params.iter().filter_map(|param| {
         let param_ident = &param.ident;
@@ -467,7 +506,9 @@ fn generate_builder_method_for_enum_variant(
         variant_type = box_def.inner_type(schema);
         is_boxed = true;
     }
-    let TypeDef::Struct(struct_def) = variant_type else { panic!("Unsupported!") };
+    let TypeDef::Struct(struct_def) = variant_type else {
+        panic!("Unsupported!")
+    };
 
     let (mut params, has_default_fields) =
         get_struct_params(struct_def, node_id_cell_type_id, schema);
@@ -477,13 +518,22 @@ fn generate_builder_method_for_enum_variant(
 
     let output = has_default_fields.then(|| {
         // Exclude `node_id` from the list of default params (it's always assigned by the builder)
-        let default_params = params.iter().filter(|param| param.is_default && !param.is_node_id);
+        let default_params = params
+            .iter()
+            .filter(|param| param.is_default && !param.is_node_id);
         let fn_name_postfix = format!(
             "_with_{}",
-            default_params.clone().map(|param| param.field.name()).join("_and_")
+            default_params
+                .clone()
+                .map(|param| param.field.name())
+                .join("_and_")
         );
-        let doc_postfix =
-            format!(" with `{}`", default_params.map(|param| param.field.name()).join("` and `"));
+        let doc_postfix = format!(
+            " with `{}`",
+            default_params
+                .map(|param| param.field.name())
+                .join("` and `")
+        );
         generate_builder_method_for_enum_variant_impl(
             enum_def,
             struct_def,
@@ -526,14 +576,26 @@ fn generate_builder_method_for_enum_variant_impl(
     is_boxed: bool,
 ) -> TokenStream {
     let fn_name = format_ident!("{}{}", method_name, fn_name_postfix);
-    let fn_params = params.iter().filter(|param| !param.is_node_id).map(|param| &param.fn_param);
-    let args = params.iter().filter(|param| !param.is_node_id).map(|param| &param.ident);
+    let fn_params = params
+        .iter()
+        .filter(|param| !param.is_node_id)
+        .map(|param| &param.fn_param);
+    let args = params
+        .iter()
+        .filter(|param| !param.is_node_id)
+        .map(|param| &param.ident);
 
     let struct_ident = struct_def.ident();
-    let inner_fn_name =
-        format_ident!("{}{fn_name_postfix}", if is_boxed { "boxed" } else { "new" });
+    let inner_fn_name = format_ident!(
+        "{}{fn_name_postfix}",
+        if is_boxed { "boxed" } else { "new" }
+    );
     // Function only needs lifetime param for `impl GetAstBuilder<'a>` if the enum doesn't have a lifetime itself
-    let lifetime_param = if enum_def.has_lifetime { quote!() } else { quote!( <'a> ) };
+    let lifetime_param = if enum_def.has_lifetime {
+        quote!()
+    } else {
+        quote!( <'a> )
+    };
 
     // Generate doc comments
     let enum_name = enum_def.name();
@@ -594,18 +656,21 @@ fn generate_doc_comment_for_params(params: &[Param]) -> TokenStream {
         return quote!();
     }
 
-    let lines = params.iter().filter(|param| !param.is_node_id).map(|param| {
-        let field = param.field;
-        let field_name = field.name();
-        let field_comment = if let Some(field_comment) = field.doc_comment.as_deref() {
-            format!(" * `{field_name}`: {field_comment}")
-        } else if field.name() == "span" {
-            " * `span`: The [`Span`] covering this node".to_string()
-        } else {
-            format!(" * `{field_name}`")
-        };
-        quote!( #[doc = #field_comment] )
-    });
+    let lines = params
+        .iter()
+        .filter(|param| !param.is_node_id)
+        .map(|param| {
+            let field = param.field;
+            let field_name = field.name();
+            let field_comment = if let Some(field_comment) = field.doc_comment.as_deref() {
+                format!(" * `{field_name}`: {field_comment}")
+            } else if field.name() == "span" {
+                " * `span`: The [`Span`] covering this node".to_string()
+            } else {
+                format!(" * `{field_name}`")
+            };
+            quote!( #[doc = #field_comment] )
+        });
 
     quote! {
         ///

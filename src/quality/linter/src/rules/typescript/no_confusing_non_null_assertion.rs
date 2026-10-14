@@ -128,7 +128,10 @@ impl Rule for NoConfusingNonNullAssertion {
                 };
                 let operator = binary_expr.operator.as_str();
                 let left_span = binary_expr.left.span();
-                if matches!(binary_expr.operator, BinaryOperator::In | BinaryOperator::Instanceof) {
+                if matches!(
+                    binary_expr.operator,
+                    BinaryOperator::In | BinaryOperator::Instanceof
+                ) {
                     let diagnostic =
                         confusing_non_null_operator_diagnostic(operator, binary_expr.span);
                     if bang_depth == 0 {
@@ -275,12 +278,29 @@ fn test() {
             .into(),
         ("a! in b;", ("a in b;", "(a!) in b;")).into(),
         ("a !in b;", ("a in b;", "(a !)in b;")).into(),
-        ("a! instanceof b;", ("a instanceof b;", "(a!) instanceof b;")).into(),
-        ("foo?.bar! in obj;", ("foo?.bar in obj;", "(foo?.bar!) in obj;")).into(),
-        ("foo?.bar! instanceof C;", ("foo?.bar instanceof C;", "(foo?.bar!) instanceof C;")).into(),
+        (
+            "a! instanceof b;",
+            ("a instanceof b;", "(a!) instanceof b;"),
+        )
+            .into(),
+        (
+            "foo?.bar! in obj;",
+            ("foo?.bar in obj;", "(foo?.bar!) in obj;"),
+        )
+            .into(),
+        (
+            "foo?.bar! instanceof C;",
+            ("foo?.bar instanceof C;", "(foo?.bar!) instanceof C;"),
+        )
+            .into(),
     ];
 
-    Tester::new(NoConfusingNonNullAssertion::NAME, NoConfusingNonNullAssertion::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        NoConfusingNonNullAssertion::NAME,
+        NoConfusingNonNullAssertion::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

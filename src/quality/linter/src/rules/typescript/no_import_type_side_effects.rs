@@ -112,7 +112,10 @@ impl Rule for NoImportTypeSideEffects {
                 // import type A from 'foo.js'
                 //        ^^^^ add
                 if raw.starts_with("import") {
-                    fix.push(Fix::new("import type", Span::sized(import_decl.span.start, 6)));
+                    fix.push(Fix::new(
+                        "import type",
+                        Span::sized(import_decl.span.start, 6),
+                    ));
                 }
 
                 for specifier in type_specifiers {
@@ -160,16 +163,30 @@ fn test() {
     ];
 
     let fix = vec![
-        ("import { type A } from 'mod';", "import type { A } from 'mod';"),
-        ("import { type A as AA } from 'mod';", "import type { A as AA } from 'mod';"),
-        ("import { type A, type B } from 'mod';", "import type { A, B } from 'mod';"),
+        (
+            "import { type A } from 'mod';",
+            "import type { A } from 'mod';",
+        ),
+        (
+            "import { type A as AA } from 'mod';",
+            "import type { A as AA } from 'mod';",
+        ),
+        (
+            "import { type A, type B } from 'mod';",
+            "import type { A, B } from 'mod';",
+        ),
         (
             "import { type A as AA, type B as BB } from 'mod';",
             "import type { A as AA, B as BB } from 'mod';",
         ),
     ];
 
-    Tester::new(NoImportTypeSideEffects::NAME, NoImportTypeSideEffects::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        NoImportTypeSideEffects::NAME,
+        NoImportTypeSideEffects::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

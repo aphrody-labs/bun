@@ -6,8 +6,8 @@ use std::{
 };
 
 use deno_core::{
-    ModuleLoadOptions, ModuleLoadReferrer, ModuleLoadResponse, ModuleLoader, ModuleSource,
-    ModuleSourceCode, ModuleSpecifier, error::ModuleLoaderError,
+    error::ModuleLoaderError, ModuleLoadOptions, ModuleLoadReferrer, ModuleLoadResponse,
+    ModuleLoader, ModuleSource, ModuleSourceCode, ModuleSpecifier,
 };
 use deno_error::JsErrorBox;
 
@@ -28,9 +28,12 @@ pub(crate) struct ModuleLoadActivity {
 
 impl ModuleLoadActivity {
     fn begin(self: &Arc<Self>) -> ModuleLoadGuard {
-        self.pending.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-        *self.last_activity.lock().unwrap_or_else(|poisoned| poisoned.into_inner()) =
-            Some(std::time::Instant::now());
+        self.pending
+            .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        *self
+            .last_activity
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner()) = Some(std::time::Instant::now());
         ModuleLoadGuard(self.clone())
     }
 
@@ -49,10 +52,16 @@ struct ModuleLoadGuard(Arc<ModuleLoadActivity>);
 
 impl Drop for ModuleLoadGuard {
     fn drop(&mut self) {
-        let previous = self.0.pending.fetch_sub(1, std::sync::atomic::Ordering::Relaxed);
+        let previous = self
+            .0
+            .pending
+            .fetch_sub(1, std::sync::atomic::Ordering::Relaxed);
         debug_assert!(previous > 0, "module load activity counter underflow");
-        *self.0.last_activity.lock().unwrap_or_else(|poisoned| poisoned.into_inner()) =
-            Some(std::time::Instant::now());
+        *self
+            .0
+            .last_activity
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner()) = Some(std::time::Instant::now());
     }
 }
 
@@ -264,7 +273,7 @@ impl ModuleLoader for BunBrowserModuleLoader {
                                     callbacks.as_deref(),
                                 )
                                 .await
-                        },
+                        }
                         None => {
                             client
                                 .fetch_resource_with_callbacks(
@@ -273,7 +282,7 @@ impl ModuleLoader for BunBrowserModuleLoader {
                                     callbacks.as_deref(),
                                 )
                                 .await
-                        },
+                        }
                     }
                     .map_err(|e| io_err(format!("Failed to fetch module {}: {}", url, e)))?;
                     #[cfg(not(feature = "stealth"))]
@@ -308,7 +317,7 @@ impl ModuleLoader for BunBrowserModuleLoader {
                         &found,
                         None,
                     ))
-                },
+                }
                 Err(error) => Err(io_err(error)),
             }
         })))

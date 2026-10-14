@@ -8,7 +8,9 @@ use crate::{AstNode, context::LintContext, rule::Rule};
 
 fn uppercase_prefix(span: Span, prefix: &str) -> OxcDiagnostic {
     OxcDiagnostic::warn("Unexpected number literal prefix in uppercase.")
-        .with_help(format!("Use lowercase for the number literal prefix `{prefix}`."))
+        .with_help(format!(
+            "Use lowercase for the number literal prefix `{prefix}`."
+        ))
         .with_label(span)
 }
 
@@ -107,14 +109,20 @@ fn check_number_literal(number_literal: &str, raw_span: Span) -> Option<(OxcDiag
         return Some((
             uppercase_prefix(
                 Span::new(raw_span.start + 1, raw_span.start + 2),
-                if number_literal.starts_with("0B") { "0b" } else { "0o" },
+                if number_literal.starts_with("0B") {
+                    "0b"
+                } else {
+                    "0o"
+                },
             ),
             number_literal.cow_to_ascii_lowercase().into_owned(),
         ));
     }
     if number_literal.starts_with("0X") || number_literal.starts_with("0x") {
         let has_uppercase_prefix = number_literal.starts_with("0X");
-        let has_lowercase_digits = number_literal[2..].chars().any(|c| ('a'..='f').contains(&c));
+        let has_lowercase_digits = number_literal[2..]
+            .chars()
+            .any(|c| ('a'..='f').contains(&c));
         if has_uppercase_prefix && has_lowercase_digits {
             return Some((
                 uppercase_prefix_and_lowercase_hexadecimal_digits(raw_span, "0x"),
@@ -249,7 +257,12 @@ fn test() {
         ),
     ];
 
-    Tester::new(NumberLiteralCase::NAME, NumberLiteralCase::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        NumberLiteralCase::NAME,
+        NumberLiteralCase::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

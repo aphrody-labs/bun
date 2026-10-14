@@ -240,7 +240,11 @@ struct JsxSplitChunksIterator<'a> {
 
 impl<'a> JsxSplitChunksIterator<'a> {
     fn new(text: &'a str) -> Self {
-        Self { position: 0, text, chars: text.chars().peekable() }
+        Self {
+            position: 0,
+            text,
+            chars: text.chars().peekable(),
+        }
     }
 }
 
@@ -268,8 +272,11 @@ impl<'a> Iterator for JsxSplitChunksIterator<'a> {
 
         let slice = &self.text[start..self.position];
 
-        let chunk =
-            if is_whitespace { JsxTextChunk::Whitespace(slice) } else { JsxTextChunk::Word(slice) };
+        let chunk = if is_whitespace {
+            JsxTextChunk::Whitespace(slice)
+        } else {
+            JsxTextChunk::Word(slice)
+        };
 
         Some(chunk)
     }
@@ -422,7 +429,12 @@ pub struct JsxChildrenIterator<I: Iterator> {
 
 impl<I: Iterator> JsxChildrenIterator<I> {
     pub fn new(iter: I) -> Self {
-        Self { iter, peeked: None, peeked_next: None, peeked_next_next: None }
+        Self {
+            iter,
+            peeked: None,
+            peeked_next: None,
+            peeked_next_next: None,
+        }
     }
 
     pub fn peek(&mut self) -> Option<&I::Item> {

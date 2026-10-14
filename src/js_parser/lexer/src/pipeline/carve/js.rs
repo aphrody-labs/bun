@@ -34,7 +34,11 @@ pub(super) unsafe fn carve_js(
     }
     loop {
         let nsub = depth.len();
-        let s = if nsub != 0 { find_opener6(src, n, i) } else { find_opener(src, n, i) };
+        let s = if nsub != 0 {
+            find_opener6(src, n, i)
+        } else {
+            find_opener(src, n, i)
+        };
         if s >= n {
             break;
         }

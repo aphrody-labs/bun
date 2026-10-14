@@ -296,7 +296,13 @@ impl<'a> Parser<'a> {
     /// - `source_type`: Source type (e.g. JavaScript, TypeScript, JSX, ESM Module, Script)
     pub fn new(allocator: &'a Allocator, source_text: &'a str, source_type: SourceType) -> Self {
         let options = ParseOptions::default();
-        Self { allocator, source_text, source_type, options, config: NoTokensParserConfig }
+        Self {
+            allocator,
+            source_text,
+            source_type,
+            options,
+            config: NoTokensParserConfig,
+        }
     }
 }
 
@@ -680,7 +686,13 @@ impl<'a, C: ParserConfig> ParserImpl<'a, C> {
     ) -> Self {
         Self {
             options,
-            lexer: Lexer::new(allocator, source_text, source_type, config.lexer_config(), unique),
+            lexer: Lexer::new(
+                allocator,
+                source_text,
+                source_type,
+                config.lexer_config(),
+                unique,
+            ),
             source_type,
             source_text,
             errors: vec![],
@@ -741,7 +753,12 @@ impl<'a, C: ParserConfig> ParserImpl<'a, C> {
         if errors.len() != 1 {
             errors
                 .reserve(self.lexer.errors.len() + self.errors.len() + module_record_errors.len());
-            errors.extend(self.lexer.errors.drain(..).map(ParserDiagnostic::into_diagnostic));
+            errors.extend(
+                self.lexer
+                    .errors
+                    .drain(..)
+                    .map(ParserDiagnostic::into_diagnostic),
+            );
             errors.extend(self.errors.drain(..).map(ParserDiagnostic::into_diagnostic));
             errors.append(&mut module_record_errors);
         }
@@ -765,7 +782,9 @@ impl<'a, C: ParserConfig> ParserImpl<'a, C> {
                 // discard deferred module errors (HTML comments are valid in scripts)
                 program.source_type = source_type.with_script(true);
                 errors.extend(
-                    self.deferred_script_errors.into_iter().map(ParserDiagnostic::into_diagnostic),
+                    self.deferred_script_errors
+                        .into_iter()
+                        .map(ParserDiagnostic::into_diagnostic),
                 );
             }
         }
@@ -857,16 +876,25 @@ impl<'a, C: ParserConfig> ParserImpl<'a, C> {
     /// `await / x / u` (identifier with divisions). If ESM syntax is detected,
     /// we need to reparse them with the await context enabled.
     fn reparse_potential_top_level_awaits(&mut self, statements: &mut ArenaVec<'a, Statement<'a>>) {
-        let original_tokens =
-            if self.lexer.config.tokens() { Some(self.lexer.take_tokens()) } else { None };
-        let original = original_tokens.as_ref().map_or(&[][..], |tokens| tokens.as_slice());
+        let original_tokens = if self.lexer.config.tokens() {
+            Some(self.lexer.take_tokens())
+        } else {
+            None
+        };
+        let original = original_tokens
+            .as_ref()
+            .map_or(&[][..], |tokens| tokens.as_slice());
         let mut original_index = 0;
         let mut replacements = ArenaVec::new_in(self);
 
         let checkpoints = std::mem::take(&mut self.state.potential_await_reparse);
         // Ranges refer to the original tokens and to the flat replacement buffer
         let mut edits = ArenaVec::with_capacity_in(
-            if self.lexer.config.tokens() { checkpoints.len() } else { 0 },
+            if self.lexer.config.tokens() {
+                checkpoints.len()
+            } else {
+                0
+            },
             self,
         );
         for (stmt_index, checkpoint) in checkpoints {
@@ -880,7 +908,8 @@ impl<'a, C: ParserConfig> ParserImpl<'a, C> {
                     .unwrap_or(original.len() - original_index);
                 // The checkpoint's current token has already been lexed
                 replacements.push(self.token);
-                self.lexer.set_tokens(std::mem::replace(&mut replacements, ArenaVec::new_in(self)));
+                self.lexer
+                    .set_tokens(std::mem::replace(&mut replacements, ArenaVec::new_in(self)));
             }
             let edit_start = original_index;
 
@@ -900,7 +929,9 @@ impl<'a, C: ParserConfig> ParserImpl<'a, C> {
                 replacements.pop();
                 // An earlier reparse can consume a later candidate, as in `await\nawait /x/u`.
                 // Record overlapping source ranges only once.
-                let end = replacements[..replacement_start].last().map_or(0, Token::end);
+                let end = replacements[..replacement_start]
+                    .last()
+                    .map_or(0, Token::end);
                 let overlap_len =
                     replacements[replacement_start..].partition_point(|token| token.start() < end);
                 if overlap_len != 0 {
@@ -912,13 +943,19 @@ impl<'a, C: ParserConfig> ParserImpl<'a, C> {
                     .iter()
                     .position(|token| token.start() >= self.token.start())
                     .unwrap_or(original.len() - original_index);
-                edits.push((edit_start..original_index, replacement_start..replacements.len()));
+                edits.push((
+                    edit_start..original_index,
+                    replacement_start..replacements.len(),
+                ));
             }
         }
 
         if let Some(mut tokens) = original_tokens {
             let mut read = 0;
-            if edits.iter().all(|(range, replacement)| replacement.len() <= range.len()) {
+            if edits
+                .iter()
+                .all(|(range, replacement)| replacement.len() <= range.len())
+            {
                 // Compact in place. Original indices remain valid because the write cursor
                 // never overtakes the read cursor.
                 let mut write = 0;
@@ -937,9 +974,11 @@ impl<'a, C: ParserConfig> ParserImpl<'a, C> {
             } else {
                 // A growing replacement could overwrite unread tokens.
                 // Use a separate output buffer, still applying all edits in one forward pass.
-                let len = edits.iter().fold(tokens.len(), |len, (range, replacement)| {
-                    len - range.len() + replacement.len()
-                });
+                let len = edits
+                    .iter()
+                    .fold(tokens.len(), |len, (range, replacement)| {
+                        len - range.len() + replacement.len()
+                    });
                 let mut output = ArenaVec::with_capacity_in(len, self);
                 for (range, replacement) in edits {
                     output.extend_from_slice(&tokens[read..range.start]);
@@ -989,7 +1028,8 @@ impl<'a, C: ParserConfig> ParserImpl<'a, C> {
         // PropertyDefinition : cover_initialized_name
         // It is a Syntax Error if any source text is matched by this production.
         for expr in self.state.cover_initialized_name.values() {
-            self.errors.push(diagnostics::cover_initialized_name(expr.span()));
+            self.errors
+                .push(diagnostics::cover_initialized_name(expr.span()));
         }
     }
 
@@ -1052,7 +1092,9 @@ mod test {
         let allocator = Allocator::default();
         let source_type = SourceType::default();
         let source = "a";
-        let expr = Parser::new(&allocator, source, source_type).parse_expression().unwrap();
+        let expr = Parser::new(&allocator, source, source_type)
+            .parse_expression()
+            .unwrap();
         assert!(matches!(expr, Expression::Identifier(_)));
     }
 
@@ -1061,7 +1103,11 @@ mod test {
         let allocator = Allocator::default();
         let source_type = SourceType::default();
         for source in ["a b", "a;", "let x = 1"] {
-            assert!(Parser::new(&allocator, source, source_type).parse_expression().is_err());
+            assert!(
+                Parser::new(&allocator, source, source_type)
+                    .parse_expression()
+                    .is_err()
+            );
         }
     }
 
@@ -1083,7 +1129,10 @@ mod test {
             let ret = Parser::new(&allocator, source, source_type).parse();
             assert!(ret.is_flow_language);
             assert_eq!(ret.diagnostics.len(), 1);
-            assert_eq!(ret.diagnostics.first().unwrap().to_string(), "Flow is not supported");
+            assert_eq!(
+                ret.diagnostics.first().unwrap().to_string(),
+                "Flow is not supported"
+            );
         }
     }
 
@@ -1149,8 +1198,13 @@ mod test {
         let source_type = SourceType::default();
         {
             let source = "%DebugPrint('Raging against the Dying Light')";
-            let opts = ParseOptions { allow_v8_intrinsics: true, ..ParseOptions::default() };
-            let ret = Parser::new(&allocator, source, source_type).with_options(opts).parse();
+            let opts = ParseOptions {
+                allow_v8_intrinsics: true,
+                ..ParseOptions::default()
+            };
+            let ret = Parser::new(&allocator, source, source_type)
+                .with_options(opts)
+                .parse();
             assert!(ret.diagnostics.is_empty());
 
             if let Some(Statement::ExpressionStatement(expr_stmt)) = ret.program.body.first() {
@@ -1165,8 +1219,13 @@ mod test {
         }
         {
             let source = "%DebugPrint(...illegalSpread)";
-            let opts = ParseOptions { allow_v8_intrinsics: true, ..ParseOptions::default() };
-            let ret = Parser::new(&allocator, source, source_type).with_options(opts).parse();
+            let opts = ParseOptions {
+                allow_v8_intrinsics: true,
+                ..ParseOptions::default()
+            };
+            let ret = Parser::new(&allocator, source, source_type)
+                .with_options(opts)
+                .parse();
             assert_eq!(ret.diagnostics.len(), 1);
             assert_eq!(
                 ret.diagnostics[0].to_string(),
@@ -1184,8 +1243,13 @@ mod test {
             let source = "interface Props extends %enuProps {}";
             let source_type = SourceType::default().with_typescript(true);
             // Should not panic whether `allow_v8_intrinsics` is set or not.
-            let opts = ParseOptions { allow_v8_intrinsics: true, ..ParseOptions::default() };
-            let ret = Parser::new(&allocator, source, source_type).with_options(opts).parse();
+            let opts = ParseOptions {
+                allow_v8_intrinsics: true,
+                ..ParseOptions::default()
+            };
+            let ret = Parser::new(&allocator, source, source_type)
+                .with_options(opts)
+                .parse();
             assert_eq!(ret.diagnostics.len(), 1);
             let ret = Parser::new(&allocator, source, source_type).parse();
             assert_eq!(ret.diagnostics.len(), 1);
@@ -1218,7 +1282,10 @@ mod test {
         let source_type = SourceType::default();
         let source = "#!/usr/bin/node\n;";
         let ret = Parser::new(&allocator, source, source_type).parse();
-        assert_eq!(ret.program.hashbang.unwrap().value.as_str(), "/usr/bin/node");
+        assert_eq!(
+            ret.program.hashbang.unwrap().value.as_str(),
+            "/usr/bin/node"
+        );
     }
 
     #[test]
@@ -1226,7 +1293,11 @@ mod test {
         let allocator = Allocator::default();
         let source_type = SourceType::unambiguous();
         assert!(source_type.is_unambiguous());
-        let sources = ["import x from 'foo';", "export {x} from 'foo';", "import.meta"];
+        let sources = [
+            "import x from 'foo';",
+            "export {x} from 'foo';",
+            "import.meta",
+        ];
         for source in sources {
             let ret = Parser::new(&allocator, source, source_type).parse();
             assert!(ret.program.source_type.is_module());
@@ -1375,7 +1446,10 @@ mod test {
 
         assert!(!ret.fatal_error);
         assert_eq!(ret.diagnostics.len(), 1);
-        assert_eq!(ret.diagnostics.first().unwrap().to_string(), "Unterminated string");
+        assert_eq!(
+            ret.diagnostics.first().unwrap().to_string(),
+            "Unterminated string"
+        );
 
         let tokens = ret
             .tokens
@@ -1419,7 +1493,11 @@ mod test {
             };
             let unambiguous = parse(SourceType::unambiguous());
             let module = parse(SourceType::mjs());
-            assert_eq!(unambiguous.tokens.as_slice(), module.tokens.as_slice(), "{source}");
+            assert_eq!(
+                unambiguous.tokens.as_slice(),
+                module.tokens.as_slice(),
+                "{source}"
+            );
         }
     }
 

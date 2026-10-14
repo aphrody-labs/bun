@@ -179,18 +179,29 @@ impl<'a> AutomaticScriptBindings<'a> {
             let id = self.add_require_statement("react", source, true, ctx);
             self.require_create_element = Some(id);
         }
-        let ident = self.require_create_element.as_ref().unwrap().create_read_reference(ctx);
+        let ident = self
+            .require_create_element
+            .as_ref()
+            .unwrap()
+            .create_read_reference(ctx);
         ctx.alloc(ident)
     }
 
     fn require_jsx(&mut self, ctx: &mut TraverseCtx<'a>) -> ArenaBox<'a, IdentifierReference<'a>> {
         if self.require_jsx.is_none() {
-            let var_name =
-                if self.is_development { "reactJsxDevRuntime" } else { "reactJsxRuntime" };
+            let var_name = if self.is_development {
+                "reactJsxDevRuntime"
+            } else {
+                "reactJsxRuntime"
+            };
             let id = self.add_require_statement(var_name, self.jsx_runtime_importer, false, ctx);
             self.require_jsx = Some(id);
         }
-        let ident = self.require_jsx.as_ref().unwrap().create_read_reference(ctx);
+        let ident = self
+            .require_jsx
+            .as_ref()
+            .unwrap()
+            .create_read_reference(ctx);
         ctx.alloc(ident)
     }
 
@@ -204,7 +215,9 @@ impl<'a> AutomaticScriptBindings<'a> {
     ) -> BoundIdentifier<'a> {
         let binding =
             ctx.generate_uid_in_root_scope(variable_name, SymbolFlags::FunctionScopedVariable);
-        ctx.state.module_imports.add_default_import(source, binding.clone(), front);
+        ctx.state
+            .module_imports
+            .add_default_import(source, binding.clone(), front);
         binding
     }
 }
@@ -242,7 +255,11 @@ impl<'a> AutomaticModuleBindings<'a> {
             let id = self.add_import_statement("createElement", source, ctx);
             self.import_create_element = Some(id);
         }
-        let ident = self.import_create_element.as_ref().unwrap().create_read_reference(ctx);
+        let ident = self
+            .import_create_element
+            .as_ref()
+            .unwrap()
+            .create_read_reference(ctx);
         ctx.alloc(ident)
     }
 
@@ -253,7 +270,11 @@ impl<'a> AutomaticModuleBindings<'a> {
         if self.import_fragment.is_none() {
             self.import_fragment = Some(self.add_jsx_import_statement("Fragment", ctx));
         }
-        let ident = self.import_fragment.as_ref().unwrap().create_read_reference(ctx);
+        let ident = self
+            .import_fragment
+            .as_ref()
+            .unwrap()
+            .create_read_reference(ctx);
         ctx.alloc(ident)
     }
 
@@ -277,7 +298,11 @@ impl<'a> AutomaticModuleBindings<'a> {
                 self.import_jsxs = Some(self.add_jsx_import_statement("jsxs", ctx));
             }
         }
-        let ident = self.import_jsxs.as_ref().unwrap().create_read_reference(ctx);
+        let ident = self
+            .import_jsxs
+            .as_ref()
+            .unwrap()
+            .create_read_reference(ctx);
         ctx.alloc(ident)
     }
 
@@ -306,7 +331,9 @@ impl<'a> AutomaticModuleBindings<'a> {
         ctx: &mut TraverseCtx<'a>,
     ) -> BoundIdentifier<'a> {
         let binding = ctx.generate_uid_in_root_scope(name, SymbolFlags::Import);
-        ctx.state.module_imports.add_named_import(source, Str::from(name), binding.clone(), false);
+        ctx.state
+            .module_imports
+            .add_named_import(source, Str::from(name), binding.clone(), false);
         binding
     }
 }
@@ -374,8 +401,12 @@ impl<'a> Pragma<'a> {
     }
 
     fn parse_impl(pragma: &str, ast: &AstBuilder<'a>) -> Option<Self> {
-        let strs_to_arena_strs =
-            |parts: &[&str]| parts.iter().map(|part| Str::from_str_in(part, ast)).collect();
+        let strs_to_arena_strs = |parts: &[&str]| {
+            parts
+                .iter()
+                .map(|part| Str::from_str_in(part, ast))
+                .collect()
+        };
 
         let parts = pragma.split('.').collect::<Vec<_>>();
         let [root, tail @ ..] = &parts[..] else {
@@ -471,7 +502,10 @@ impl<'a> JsxImpl<'a> {
                 let pragma = Pragma::parse_no_ctx(options.pragma.as_deref(), "createElement", ast);
                 let pragma_frag =
                     Pragma::parse_no_ctx(options.pragma_frag.as_deref(), "Fragment", ast);
-                Bindings::Classic(ClassicBindings { pragma, pragma_frag })
+                Bindings::Classic(ClassicBindings {
+                    pragma,
+                    pragma_frag,
+                })
             }
             JsxRuntime::Automatic => {
                 let is_development = options.development;
@@ -557,7 +591,9 @@ impl<'a> JsxImpl<'a> {
         });
     }
     fn insert_filename_var_statement(&self, ctx: &mut TraverseCtx<'a>) {
-        let Some(declarator) = self.jsx_source.get_filename_var_declarator(ctx) else { return };
+        let Some(declarator) = self.jsx_source.get_filename_var_declarator(ctx) else {
+            return;
+        };
 
         // If is a module, add filename statements before `import`s. If script, then after `require`s.
         // This is the same behavior as Babel.
@@ -575,7 +611,9 @@ impl<'a> JsxImpl<'a> {
             ctx.state.top_level_statements.insert_statement(stmt);
         } else {
             // Insert after imports - add to `var_declarations`, which are inserted after `require` statements
-            ctx.state.var_declarations.insert_var_declarator(declarator, &ctx.ast);
+            ctx.state
+                .var_declarations
+                .insert_var_declarator(declarator, &ctx.ast);
         }
     }
 
@@ -584,7 +622,13 @@ impl<'a> JsxImpl<'a> {
         element: ArenaBox<'a, JSXElement<'a>>,
         ctx: &mut TraverseCtx<'a>,
     ) -> Expression<'a> {
-        let JSXElement { span, opening_element, closing_element, children, .. } = element.unbox();
+        let JSXElement {
+            span,
+            opening_element,
+            closing_element,
+            children,
+            ..
+        } = element.unbox();
         Self::delete_reference_for_closing_element(closing_element.as_deref(), ctx);
         self.transform_jsx(span, Some(opening_element), children, ctx)
     }
@@ -596,8 +640,9 @@ impl<'a> JsxImpl<'a> {
         children: ArenaVec<'a, JSXChild<'a>>,
         ctx: &mut TraverseCtx<'a>,
     ) -> Expression<'a> {
-        let has_key_after_props_spread =
-            opening_element.as_ref().is_some_and(|e| Self::has_key_after_props_spread(e));
+        let has_key_after_props_spread = opening_element
+            .as_ref()
+            .is_some_and(|e| Self::has_key_after_props_spread(e));
         // If has_key_after_props_spread is true, we need to fallback to `createElement` same behavior as classic runtime
         let is_classic = self.bindings.is_classic() || has_key_after_props_spread;
         let is_automatic = !is_classic;
@@ -630,7 +675,9 @@ impl<'a> JsxImpl<'a> {
             for attribute in attributes {
                 match attribute {
                     JSXAttributeItem::Attribute(attr) => {
-                        let JSXAttribute { span, name, value, .. } = attr.unbox();
+                        let JSXAttribute {
+                            span, name, value, ..
+                        } = attr.unbox();
                         match &name {
                             JSXAttributeName::Identifier(ident) if ident.name == "key" => {
                                 if value.is_none() {
@@ -729,7 +776,9 @@ impl<'a> JsxImpl<'a> {
             // Only jsx and jsxDev will have more than 2 arguments
             // key
             if key_prop.is_some() {
-                arguments.push(Argument::from(self.transform_jsx_attribute_value(key_prop, ctx)));
+                arguments.push(Argument::from(
+                    self.transform_jsx_attribute_value(key_prop, ctx),
+                ));
             } else if is_development {
                 arguments.push(Argument::from(Expression::new_void_0(SPAN, ctx)));
             }
@@ -760,7 +809,8 @@ impl<'a> JsxImpl<'a> {
                 if self.options.jsx_source_plugin {
                     let (line, column) = self.jsx_source.get_line_column(span.start, ctx);
                     properties.push(
-                        self.jsx_source.get_object_property_kind_for_jsx_plugin(line, column, ctx),
+                        self.jsx_source
+                            .get_object_property_kind_for_jsx_plugin(line, column, ctx),
                     );
                 }
             }
@@ -824,7 +874,8 @@ impl<'a> JsxImpl<'a> {
             }
             JSXElementName::NamespacedName(namespaced) => {
                 if self.options.throw_if_namespace {
-                    ctx.state.error(diagnostics::namespace_does_not_support(namespaced.span));
+                    ctx.state
+                        .error(diagnostics::namespace_does_not_support(namespaced.span));
                 }
                 let namespace_name = Str::from_strs_array_in(
                     [&namespaced.namespace.name, ":", &namespaced.name.name],
@@ -860,7 +911,10 @@ impl<'a> JsxImpl<'a> {
             Bindings::Classic(bindings) => bindings.pragma.create_expression(ctx),
             Bindings::AutomaticScript(bindings) => {
                 let (ident, property_name) = if has_key_after_props_spread {
-                    (bindings.require_create_element(ctx), Str::from("createElement"))
+                    (
+                        bindings.require_create_element(ctx),
+                        Str::from("createElement"),
+                    )
                 } else {
                     let property_name = if bindings.is_development {
                         Str::from("jsxDEV")
@@ -890,7 +944,12 @@ impl<'a> JsxImpl<'a> {
         expr: ArenaBox<'a, JSXMemberExpression<'a>>,
         ctx: &TraverseCtx<'a>,
     ) -> Expression<'a> {
-        let JSXMemberExpression { span, object, property, .. } = expr.unbox();
+        let JSXMemberExpression {
+            span,
+            object,
+            property,
+            ..
+        } = expr.unbox();
         let object = match object {
             JSXMemberExpressionObject::IdentifierReference(ident) => Expression::Identifier(ident),
             JSXMemberExpressionObject::MemberExpression(expr) => {
@@ -912,7 +971,12 @@ impl<'a> JsxImpl<'a> {
         match value {
             Some(JSXAttributeValue::StringLiteral(s)) => {
                 let mut decoded = None;
-                decode_entities(s.value.as_str(), &mut decoded, s.value.len(), ctx.allocator());
+                decode_entities(
+                    s.value.as_str(),
+                    &mut decoded,
+                    s.value.len(),
+                    ctx.allocator(),
+                );
                 let jsx_text = if let Some(decoded) = decoded {
                     // Text contains HTML entities which were decoded.
                     // `decoded` contains the decoded string as an `ArenaString`. Convert it to `Str`.
@@ -946,10 +1010,15 @@ impl<'a> JsxImpl<'a> {
         // Instead of Babel throwing `Spread children are not supported in React.`
         // `<>{...foo}</>` -> `jsxs(Fragment, { children: [ ...foo ] })`
         if let JSXChild::Spread(e) = child {
-            let JSXSpreadChild { span, expression, .. } = e.unbox();
-            Some(ArrayExpressionElement::new_spread_element(span, expression, ctx))
+            let JSXSpreadChild {
+                span, expression, ..
+            } = e.unbox();
+            Some(ArrayExpressionElement::new_spread_element(
+                span, expression, ctx,
+            ))
         } else {
-            self.transform_jsx_child(child, ctx).map(ArrayExpressionElement::from)
+            self.transform_jsx_child(child, ctx)
+                .map(ArrayExpressionElement::from)
         }
     }
 
@@ -962,7 +1031,9 @@ impl<'a> JsxImpl<'a> {
         // Instead of Babel throwing `Spread children are not supported in React.`
         // `<>{...foo}</>` -> `React.createElement(React.Fragment, null, ...foo)`
         if let JSXChild::Spread(e) = child {
-            let JSXSpreadChild { span, expression, .. } = e.unbox();
+            let JSXSpreadChild {
+                span, expression, ..
+            } = e.unbox();
             Some(Argument::new_spread_element(span, expression, ctx))
         } else {
             self.transform_jsx_child(child, ctx).map(Argument::from)
@@ -1088,7 +1159,11 @@ impl<'a> JsxImpl<'a> {
             );
         }
 
-        if let Some(acc) = acc { Some(Str::from(acc)) } else { only_line }
+        if let Some(acc) = acc {
+            Some(Str::from(acc))
+        } else {
+            only_line
+        }
     }
 
     fn add_line_of_jsx_text(
@@ -1181,7 +1256,9 @@ fn create_static_member_expression<'a>(
 /// Also currently returns `true` for `{ [__proto__]: ... }`, but that's probably not correct.
 /// TODO: Fix that.
 fn has_proto(e: &ObjectExpression<'_>) -> bool {
-    e.properties.iter().any(|p| p.prop_name().is_some_and(|(name, _)| name == "__proto__"))
+    e.properties
+        .iter()
+        .any(|p| p.prop_name().is_some_and(|(name, _)| name == "__proto__"))
 }
 
 #[cfg(test)]
@@ -1220,11 +1297,20 @@ mod test {
         setup!(traverse_ctx, transform_ctx);
 
         let pragma = None;
-        let pragma = Pragma::parse(pragma, "createElement", &traverse_ctx.ast, &mut transform_ctx);
+        let pragma = Pragma::parse(
+            pragma,
+            "createElement",
+            &traverse_ctx.ast,
+            &mut transform_ctx,
+        );
         let expr = pragma.create_expression(traverse_ctx);
 
-        let Expression::StaticMemberExpression(member) = &expr else { panic!() };
-        let Expression::Identifier(object) = &member.object else { panic!() };
+        let Expression::StaticMemberExpression(member) = &expr else {
+            panic!()
+        };
+        let Expression::Identifier(object) = &member.object else {
+            panic!()
+        };
         assert_eq!(object.name, "React");
         assert_eq!(member.property.name, "createElement");
     }
@@ -1234,10 +1320,17 @@ mod test {
         setup!(traverse_ctx, transform_ctx);
 
         let pragma = Some("single");
-        let pragma = Pragma::parse(pragma, "createElement", &traverse_ctx.ast, &mut transform_ctx);
+        let pragma = Pragma::parse(
+            pragma,
+            "createElement",
+            &traverse_ctx.ast,
+            &mut transform_ctx,
+        );
         let expr = pragma.create_expression(traverse_ctx);
 
-        let Expression::Identifier(ident) = &expr else { panic!() };
+        let Expression::Identifier(ident) = &expr else {
+            panic!()
+        };
         assert_eq!(ident.name, "single");
     }
 
@@ -1246,11 +1339,20 @@ mod test {
         setup!(traverse_ctx, transform_ctx);
 
         let pragma = Some("first.second");
-        let pragma = Pragma::parse(pragma, "createElement", &traverse_ctx.ast, &mut transform_ctx);
+        let pragma = Pragma::parse(
+            pragma,
+            "createElement",
+            &traverse_ctx.ast,
+            &mut transform_ctx,
+        );
         let expr = pragma.create_expression(traverse_ctx);
 
-        let Expression::StaticMemberExpression(member) = &expr else { panic!() };
-        let Expression::Identifier(object) = &member.object else { panic!() };
+        let Expression::StaticMemberExpression(member) = &expr else {
+            panic!()
+        };
+        let Expression::Identifier(object) = &member.object else {
+            panic!()
+        };
         assert_eq!(object.name, "first");
         assert_eq!(member.property.name, "second");
     }
@@ -1260,14 +1362,23 @@ mod test {
         setup!(traverse_ctx, transform_ctx);
 
         let pragma = Some("first.second.third");
-        let pragma = Pragma::parse(pragma, "createElement", &traverse_ctx.ast, &mut transform_ctx);
+        let pragma = Pragma::parse(
+            pragma,
+            "createElement",
+            &traverse_ctx.ast,
+            &mut transform_ctx,
+        );
         let expr = pragma.create_expression(traverse_ctx);
 
-        let Expression::StaticMemberExpression(outer_member) = &expr else { panic!() };
+        let Expression::StaticMemberExpression(outer_member) = &expr else {
+            panic!()
+        };
         let Expression::StaticMemberExpression(inner_member) = &outer_member.object else {
             panic!()
         };
-        let Expression::Identifier(object) = &inner_member.object else { panic!() };
+        let Expression::Identifier(object) = &inner_member.object else {
+            panic!()
+        };
         assert_eq!(object.name, "first");
         assert_eq!(inner_member.property.name, "second");
         assert_eq!(outer_member.property.name, "third");
@@ -1278,7 +1389,12 @@ mod test {
         setup!(traverse_ctx, transform_ctx);
 
         let pragma = Some("this");
-        let pragma = Pragma::parse(pragma, "createElement", &traverse_ctx.ast, &mut transform_ctx);
+        let pragma = Pragma::parse(
+            pragma,
+            "createElement",
+            &traverse_ctx.ast,
+            &mut transform_ctx,
+        );
         let expr = pragma.create_expression(traverse_ctx);
 
         assert!(matches!(&expr, Expression::ThisExpression(_)));
@@ -1289,14 +1405,24 @@ mod test {
         setup!(traverse_ctx, transform_ctx);
 
         let pragma = Some("this.a.b");
-        let pragma = Pragma::parse(pragma, "createElement", &traverse_ctx.ast, &mut transform_ctx);
+        let pragma = Pragma::parse(
+            pragma,
+            "createElement",
+            &traverse_ctx.ast,
+            &mut transform_ctx,
+        );
         let expr = pragma.create_expression(traverse_ctx);
 
-        let Expression::StaticMemberExpression(outer_member) = &expr else { panic!() };
+        let Expression::StaticMemberExpression(outer_member) = &expr else {
+            panic!()
+        };
         let Expression::StaticMemberExpression(inner_member) = &outer_member.object else {
             panic!()
         };
-        assert!(matches!(&inner_member.object, Expression::ThisExpression(_)));
+        assert!(matches!(
+            &inner_member.object,
+            Expression::ThisExpression(_)
+        ));
         assert_eq!(inner_member.property.name, "a");
         assert_eq!(outer_member.property.name, "b");
     }
@@ -1306,7 +1432,12 @@ mod test {
         setup!(traverse_ctx, transform_ctx);
 
         let pragma = Some("import.meta");
-        let pragma = Pragma::parse(pragma, "createElement", &traverse_ctx.ast, &mut transform_ctx);
+        let pragma = Pragma::parse(
+            pragma,
+            "createElement",
+            &traverse_ctx.ast,
+            &mut transform_ctx,
+        );
         let expr = pragma.create_expression(traverse_ctx);
 
         assert!(matches!(expr, Expression::ImportMeta(_)));
@@ -1317,10 +1448,17 @@ mod test {
         setup!(traverse_ctx, transform_ctx);
 
         let pragma = Some("import.meta.prop");
-        let pragma = Pragma::parse(pragma, "createElement", &traverse_ctx.ast, &mut transform_ctx);
+        let pragma = Pragma::parse(
+            pragma,
+            "createElement",
+            &traverse_ctx.ast,
+            &mut transform_ctx,
+        );
         let expr = pragma.create_expression(traverse_ctx);
 
-        let Expression::StaticMemberExpression(member) = &expr else { panic!() };
+        let Expression::StaticMemberExpression(member) = &expr else {
+            panic!()
+        };
         assert!(matches!(&member.object, Expression::ImportMeta(_)));
         assert_eq!(member.property.name, "prop");
     }
@@ -1333,8 +1471,12 @@ mod test {
         let pragma = Pragma::parse_no_ctx(pragma, "Fragment", &traverse_ctx.ast);
         let expr = pragma.create_expression(traverse_ctx);
 
-        let Expression::StaticMemberExpression(member) = &expr else { panic!() };
-        let Expression::Identifier(object) = &member.object else { panic!() };
+        let Expression::StaticMemberExpression(member) = &expr else {
+            panic!()
+        };
+        let Expression::Identifier(object) = &member.object else {
+            panic!()
+        };
         assert_eq!(object.name, "React");
         assert_eq!(member.property.name, "Fragment");
     }

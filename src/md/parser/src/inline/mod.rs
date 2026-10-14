@@ -98,8 +98,15 @@ impl PN {
 }
 
 pub enum PLinkKind {
-    Inline { dest: Range<usize>, angle_bracketed: bool, title: Option<Range<usize>> },
-    Reference { kind: ReferenceKind, label: Range<usize> },
+    Inline {
+        dest: Range<usize>,
+        angle_bracketed: bool,
+        title: Option<Range<usize>>,
+    },
+    Reference {
+        kind: ReferenceKind,
+        label: Range<usize>,
+    },
 }
 
 pub fn inlines<'a>(
@@ -225,7 +232,9 @@ impl Tokenizer<'_, '_> {
             return false;
         }
         let prev = self.t[..self.pos].chars().next_back();
-        let Some(end) = gfm_autolink::scan(self.t, self.pos, prev) else { return false };
+        let Some(end) = gfm_autolink::scan(self.t, self.pos, prev) else {
+            return false;
+        };
         self.flush_text(self.pos);
         self.nodes.push(PN::AutolinkLiteral(self.pos..end));
         self.pos = end;
@@ -249,7 +258,9 @@ impl Tokenizer<'_, '_> {
     /// GFM footnote call `[^label]` at the current `[`. Only defined labels match;
     /// anything else falls back to the ordinary bracket machinery.
     fn try_footnote_call(&mut self) -> bool {
-        let Some((label, end)) = self.footnote_label(self.pos) else { return false };
+        let Some((label, end)) = self.footnote_label(self.pos) else {
+            return false;
+        };
         self.flush_text(self.pos);
         self.push_footnote_call(label, self.pos, end);
         true
@@ -301,8 +312,15 @@ impl Tokenizer<'_, '_> {
         self.flush_text(p - trail);
         // A hard break needs a trailing run of two-plus spaces;
         // a tab in the run demotes it to stripped whitespace (micromark behavior).
-        if trail >= 2 && run.as_bytes()[run.len() - trail..].iter().all(|&b| b == b' ') {
-            self.nodes.push(PN::HardBreak { kind: HardBreakKind::Spaces, r: p - trail..p });
+        if trail >= 2
+            && run.as_bytes()[run.len() - trail..]
+                .iter()
+                .all(|&b| b == b' ')
+        {
+            self.nodes.push(PN::HardBreak {
+                kind: HardBreakKind::Spaces,
+                r: p - trail..p,
+            });
         } else {
             self.nodes.push(PN::SoftBreak(p));
         }
@@ -327,7 +345,10 @@ impl Tokenizer<'_, '_> {
             content = content.start + 1..content.end - 1;
         }
         self.flush_text(start);
-        self.nodes.push(PN::Code { r: start..close + n, content });
+        self.nodes.push(PN::Code {
+            r: start..close + n,
+            content,
+        });
         self.pos = close + n;
         self.text_start = self.pos;
     }
@@ -339,7 +360,10 @@ impl Tokenizer<'_, '_> {
             && let Some((end, email)) = autolink::scan(self.t, self.pos)
         {
             self.flush_text(self.pos);
-            self.nodes.push(PN::Autolink { r: self.pos..end, email });
+            self.nodes.push(PN::Autolink {
+                r: self.pos..end,
+                email,
+            });
             self.pos = end;
             self.text_start = end;
             return true;

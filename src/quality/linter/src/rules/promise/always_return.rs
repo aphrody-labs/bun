@@ -185,7 +185,8 @@ declare_oxc_lint!(
     suspicious,
     config = AlwaysReturnConfig,
     version = "1.13.0",
-    short_description = "Require returning inside each `then()` to create readable and reusable Promise chains.",
+    short_description =
+        "Require returning inside each `then()` to create readable and reusable Promise chains.",
 );
 
 const PROCESS_METHODS: [&str; 2] = ["exit", "abort"];
@@ -235,9 +236,10 @@ fn is_member_call(node: &AstNode, member_name: &str) -> bool {
 
 fn is_first_argument(node: &AstNode, call_node: &AstNode) -> bool {
     match call_node.kind() {
-        AstKind::CallExpression(call_exp) => {
-            call_exp.arguments.first().is_some_and(|arg| arg.span() == node.span())
-        }
+        AstKind::CallExpression(call_exp) => call_exp
+            .arguments
+            .first()
+            .is_some_and(|arg| arg.span() == node.span()),
         _ => false,
     }
 }
@@ -341,8 +343,11 @@ fn has_no_return_code_path(node: &AstNode, ctx: &LintContext) -> bool {
                 }
             }
             DfsEvent::Discover(basic_block_id, _) => {
-                let return_instruction =
-                    cfg.basic_block(basic_block_id).instructions().iter().find(|it| {
+                let return_instruction = cfg
+                    .basic_block(basic_block_id)
+                    .instructions()
+                    .iter()
+                    .find(|it| {
                         match it.kind {
                             // return or throw
                             InstructionKind::Return(_) | InstructionKind::Throw => true,
@@ -357,15 +362,18 @@ fn has_no_return_code_path(node: &AstNode, ctx: &LintContext) -> bool {
 
                 let does_return = return_instruction.is_some();
 
-                if graph.edges_directed(basic_block_id, Direction::Outgoing).any(|e| {
-                    matches!(
-                        e.weight(),
-                        EdgeType::Jump
-                            | EdgeType::Normal
-                            | EdgeType::Backedge
-                            | EdgeType::Error(ErrorEdgeKind::Explicit)
-                    )
-                }) {
+                if graph
+                    .edges_directed(basic_block_id, Direction::Outgoing)
+                    .any(|e| {
+                        matches!(
+                            e.weight(),
+                            EdgeType::Jump
+                                | EdgeType::Normal
+                                | EdgeType::Backedge
+                                | EdgeType::Error(ErrorEdgeKind::Explicit)
+                        )
+                    })
+                {
                     Control::Continue
                 } else if does_return {
                     Control::Prune
@@ -384,7 +392,9 @@ fn has_ignored_assignment(
     ignore_assignment_variable: &FxHashSet<Cow<str>>,
 ) -> bool {
     let is_ignored_assignment = |expression: &Expression| {
-        let Expression::AssignmentExpression(assignment_expr) = expression else { return false };
+        let Expression::AssignmentExpression(assignment_expr) = expression else {
+            return false;
+        };
         let object_name = get_root_object_name(&assignment_expr.left);
         object_name.is_some_and(|name| ignore_assignment_variable.contains(name))
     };
@@ -397,9 +407,9 @@ fn has_ignored_assignment(
 
     let body_statements = match node.kind() {
         AstKind::Function(func_expr) => func_expr.body.as_ref().map(|body| &body.statements),
-        AstKind::ArrowFunctionExpression(arrow_func_expr) => {
-            arrow_func_expr.get_function_body().map(|body| &body.statements)
-        }
+        AstKind::ArrowFunctionExpression(arrow_func_expr) => arrow_func_expr
+            .get_function_body()
+            .map(|body| &body.statements),
         _ => None,
     };
     body_statements.is_some_and(|statements| {
@@ -452,23 +462,59 @@ fn test() {
         ("hey.then(x => { process.abort(); })", None),
         ("hey.then(function() { return 42; })", None),
         ("hey.then(function() { return new Promise(); })", None),
-        (r#"hey.then(function() { return "x"; }).then(doSomethingWicked)"#, None),
+        (
+            r#"hey.then(function() { return "x"; }).then(doSomethingWicked)"#,
+            None,
+        ),
         (r#"hey.then(x => x).then(function() { return "3" })"#, None),
         (r#"hey.then(function() { throw new Error("msg"); })"#, None),
-        (r#"hey.then(function(x) { if (!x) { throw new Error("no x"); } return x; })"#, None),
-        (r#"hey.then(function(x) { if (x) { return x; } throw new Error("no x"); })"#, None),
-        (r#"hey.then(function(x) { if (x) { process.exit(0); } throw new Error("no x"); })"#, None),
-        (r#"hey.then(function(x) { if (x) { process.abort(); } throw new Error("no x"); })"#, None),
+        (
+            r#"hey.then(function(x) { if (!x) { throw new Error("no x"); } return x; })"#,
+            None,
+        ),
+        (
+            r#"hey.then(function(x) { if (x) { return x; } throw new Error("no x"); })"#,
+            None,
+        ),
+        (
+            r#"hey.then(function(x) { if (x) { process.exit(0); } throw new Error("no x"); })"#,
+            None,
+        ),
+        (
+            r#"hey.then(function(x) { if (x) { process.abort(); } throw new Error("no x"); })"#,
+            None,
+        ),
         (r#"hey.then(x => { throw new Error("msg"); })"#, None),
-        (r#"hey.then(x => { if (!x) { throw new Error("no x"); } return x; })"#, None),
-        (r#"hey.then(x => { if (x) { return x; } throw new Error("no x"); })"#, None),
+        (
+            r#"hey.then(x => { if (!x) { throw new Error("no x"); } return x; })"#,
+            None,
+        ),
+        (
+            r#"hey.then(x => { if (x) { return x; } throw new Error("no x"); })"#,
+            None,
+        ),
         ("hey.then(x => { var f = function() { }; return f; })", None),
-        ("hey.then(x => { if (x) { return x; } else { return x; } })", None),
-        (r#"hey.then(x => { return x; var y = "unreachable"; })"#, None),
-        (r#"hey.then(x => { return x; return "unreachable"; })"#, None),
+        (
+            "hey.then(x => { if (x) { return x; } else { return x; } })",
+            None,
+        ),
+        (
+            r#"hey.then(x => { return x; var y = "unreachable"; })"#,
+            None,
+        ),
+        (
+            r#"hey.then(x => { return x; return "unreachable"; })"#,
+            None,
+        ),
         ("hey.then(x => { return; }, err=>{ log(err); })", None),
-        ("hey.then(x => { return x && x(); }, err=>{ log(err); })", None),
-        ("hey.then(x => { return x.y || x(); }, err=>{ log(err); })", None),
+        (
+            "hey.then(x => { return x && x(); }, err=>{ log(err); })",
+            None,
+        ),
+        (
+            "hey.then(x => { return x.y || x(); }, err=>{ log(err); })",
+            None,
+        ),
         (
             "hey.then(x => {
     return anotherFunc({
@@ -565,13 +611,28 @@ fn test() {
         ("hey.then(function() { })", None),
         ("hey.then(function() { }).then(x)", None),
         ("hey.then(function() { }).then(function() { })", None),
-        ("hey.then(function() { return; }).then(function() { })", None),
+        (
+            "hey.then(function() { return; }).then(function() { })",
+            None,
+        ),
         ("hey.then(function() { doSomethingWicked(); })", None),
         ("hey.then(function() { if (x) { return x; } })", None),
-        ("hey.then(function() { if (x) { return x; } else { }})", None),
-        ("hey.then(function() { if (x) { } else { return x; }})", None),
-        ("hey.then(function() { if (x) { process.chdir(); } else { return x; }})", None),
-        ("hey.then(function() { if (x) { return you.then(function() { return x; }); } })", None),
+        (
+            "hey.then(function() { if (x) { return x; } else { }})",
+            None,
+        ),
+        (
+            "hey.then(function() { if (x) { } else { return x; }})",
+            None,
+        ),
+        (
+            "hey.then(function() { if (x) { process.chdir(); } else { return x; }})",
+            None,
+        ),
+        (
+            "hey.then(function() { if (x) { return you.then(function() { return x; }); } })",
+            None,
+        ),
         ("hey.then( x => { x ? x.id : null })", None),
         ("hey.then(function(x) { x ? x.id : null })", None),
         (

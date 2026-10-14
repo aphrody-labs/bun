@@ -201,8 +201,9 @@ fn check_getters_mode<'a>(class_body: &ClassBody<'a>, ctx: &LintContext<'a>) {
             && method.kind == MethodDefinitionKind::Constructor
             && let Some(body) = &method.value.body
         {
-            let mut collector =
-                ConstructorAssignmentCollector { excluded_properties: &mut excluded_properties };
+            let mut collector = ConstructorAssignmentCollector {
+                excluded_properties: &mut excluded_properties,
+            };
             collector.visit_function_body(body);
         }
     }
@@ -299,7 +300,10 @@ fn literal_readonly_property_value<'a, 'b>(
         return None;
     }
 
-    property.value.as_ref().filter(|value| is_supported_literal(value))
+    property
+        .value
+        .as_ref()
+        .filter(|value| is_supported_literal(value))
 }
 
 fn is_supported_literal(expression: &Expression<'_>) -> bool {
@@ -1298,7 +1302,12 @@ fn test() {
         ),
     ];
 
-    Tester::new(ClassLiteralPropertyStyle::NAME, ClassLiteralPropertyStyle::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        ClassLiteralPropertyStyle::NAME,
+        ClassLiteralPropertyStyle::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

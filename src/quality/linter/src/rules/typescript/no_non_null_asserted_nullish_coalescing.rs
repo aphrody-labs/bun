@@ -68,17 +68,22 @@ declare_oxc_lint!(
     restriction,
     suggestion,
     version = "0.5.0",
-    short_description = "Disallow non-null assertions in the left operand of a nullish coalescing operator.",
+    short_description =
+        "Disallow non-null assertions in the left operand of a nullish coalescing operator.",
 );
 
 impl Rule for NoNonNullAssertedNullishCoalescing {
     fn run<'a>(&self, node: &AstNode<'a>, ctx: &LintContext<'a>) {
-        let AstKind::LogicalExpression(expr) = node.kind() else { return };
+        let AstKind::LogicalExpression(expr) = node.kind() else {
+            return;
+        };
         if expr.operator != LogicalOperator::Coalesce {
             return;
         }
 
-        let Expression::TSNonNullExpression(ts_non_null_expr) = &expr.left else { return };
+        let Expression::TSNonNullExpression(ts_non_null_expr) = &expr.left else {
+            return;
+        };
         if let Expression::Identifier(ident) = ts_non_null_expr.expression.without_parentheses()
             && let Some(symbol_id) = ctx.scoping().get_binding(node.scope_id(), ident.name)
             && !has_assignment_before_node(symbol_id, ctx, expr.span.end)
@@ -297,7 +302,10 @@ fn test() {
         ("foo!! ?? bar;", "foo ?? bar;"),
         ("(foo!)! ?? bar;", "(foo) ?? bar;"),
         ("((foo!)!)! ?? bar;", "((foo)) ?? bar;"),
-        ("foo()! ?? bar; baz()! ?? qux;", "foo() ?? bar; baz() ?? qux;"),
+        (
+            "foo()! ?? bar; baz()! ?? qux;",
+            "foo() ?? bar; baz() ?? qux;",
+        ),
         (
             "
             let x!: string;

@@ -27,7 +27,11 @@ impl<'a> Parse<'a> for LayerNames<'a> {
         if let Some(last) = names.last() {
             span.end = last.span.end;
         }
-        Ok(LayerNames { names, comma_spans, span })
+        Ok(LayerNames {
+            names,
+            comma_spans,
+            span,
+        })
     }
 }
 
@@ -41,7 +45,11 @@ impl<'a> Parse<'a> for LayerName<'a> {
         let mut end = first.span().end;
 
         let mut idents = input.vec1(first);
-        while let TokenWithSpan { token: Token::Dot(..), span } = input.cursor.peek()? {
+        while let TokenWithSpan {
+            token: Token::Dot(..),
+            span,
+        } = input.cursor.peek()?
+        {
             if span.start == end {
                 let span = input.cursor.bump()?.span;
                 let ident = input.parse::<InterpolableIdent>()?;

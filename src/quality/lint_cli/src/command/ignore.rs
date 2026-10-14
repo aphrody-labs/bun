@@ -3,7 +3,10 @@ use std::ffi::OsString;
 use bpaf::{Bpaf, doc::Style};
 
 pub const NO_IGNORE_HELP: &[(&str, Style)] = &[
-    ("Disable excluding files from `.eslintignore` files, ", Style::Text),
+    (
+        "Disable excluding files from `.eslintignore` files, ",
+        Style::Text,
+    ),
     ("--ignore-path", Style::Literal),
     (" flags and ", Style::Text),
     ("--ignore-pattern", Style::Literal),
@@ -35,8 +38,14 @@ mod ignore_options {
     use super::{super::lint::lint_command, IgnoreOptions};
 
     fn get_ignore_options(arg: &str) -> IgnoreOptions {
-        let args = arg.split(' ').map(std::string::ToString::to_string).collect::<Vec<_>>();
-        lint_command().run_inner(args.as_slice()).unwrap().ignore_options
+        let args = arg
+            .split(' ')
+            .map(std::string::ToString::to_string)
+            .collect::<Vec<_>>();
+        lint_command()
+            .run_inner(args.as_slice())
+            .unwrap()
+            .ignore_options
     }
 
     #[test]
@@ -68,6 +77,9 @@ mod ignore_options {
     #[test]
     fn multiple_ignore_pattern() {
         let options = get_ignore_options("--ignore-pattern ./test --ignore-pattern bar.js foo.js");
-        assert_eq!(options.ignore_pattern, vec![String::from("test"), String::from("bar.js")]);
+        assert_eq!(
+            options.ignore_pattern,
+            vec![String::from("test"), String::from("bar.js")]
+        );
     }
 }

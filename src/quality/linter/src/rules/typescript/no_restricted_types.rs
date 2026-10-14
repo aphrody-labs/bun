@@ -103,7 +103,9 @@ impl RestrictedTypesIndex {
 
     #[inline]
     fn lookup(&self, normalized_name: &str) -> Option<(&str, &BanConfigValue)> {
-        self.by_name.get(normalized_name).map(|(display, config)| (&**display, config))
+        self.by_name
+            .get(normalized_name)
+            .map(|(display, config)| (&**display, config))
     }
 
     /// Lookup a source snippet (may contain whitespace); normalizes only when needed.
@@ -169,7 +171,11 @@ impl<'de> Deserialize<'de> for True {
         D: serde::Deserializer<'de>,
     {
         let value = bool::deserialize(deserializer)?;
-        if value { Ok(True) } else { Err(serde::de::Error::custom("expected `true`, got `false`")) }
+        if value {
+            Ok(True)
+        } else {
+            Err(serde::de::Error::custom("expected `true`, got `false`"))
+        }
     }
 }
 
@@ -483,16 +489,34 @@ fn test() {
     let pass = vec![
         ("let f = Object();", None),
         ("let f: { x: number; y: number } = { x: 1, y: 1 };", None),
-        ("let f = Object();", Some(serde_json::json!([{ "types": { "Object": true } }]))),
-        ("let f = Object(false);", Some(serde_json::json!([{ "types": { "Object": true } }]))),
+        (
+            "let f = Object();",
+            Some(serde_json::json!([{ "types": { "Object": true } }])),
+        ),
+        (
+            "let f = Object(false);",
+            Some(serde_json::json!([{ "types": { "Object": true } }])),
+        ),
         (
             "let g = Object.create(null);",
             Some(serde_json::json!([{ "types": { "Object": true } }])),
         ),
-        ("let e: namespace.Object;", Some(serde_json::json!([{ "types": { "Object": true } }]))),
-        ("let value: _.NS.Banned;", Some(serde_json::json!([{ "types": { "NS.Banned": true } }]))),
-        ("let value: NS.Banned._;", Some(serde_json::json!([{ "types": { "NS.Banned": true } }]))),
-        ("let f: any = true", Some(serde_json::json!([{ "types": {} }]))),
+        (
+            "let e: namespace.Object;",
+            Some(serde_json::json!([{ "types": { "Object": true } }])),
+        ),
+        (
+            "let value: _.NS.Banned;",
+            Some(serde_json::json!([{ "types": { "NS.Banned": true } }])),
+        ),
+        (
+            "let value: NS.Banned._;",
+            Some(serde_json::json!([{ "types": { "NS.Banned": true } }])),
+        ),
+        (
+            "let f: any = true",
+            Some(serde_json::json!([{ "types": {} }])),
+        ),
     ];
 
     let fail = vec![
@@ -508,7 +532,10 @@ fn test() {
             "let value: never;",
             Some(serde_json::json!([{ "types": { "never": "Use Ok instead." } }])),
         ),
-        ("let value: null;", Some(serde_json::json!([{ "types": { "null": "Use Ok instead." } }]))),
+        (
+            "let value: null;",
+            Some(serde_json::json!([{ "types": { "null": "Use Ok instead." } }])),
+        ),
         (
             "let value: number;",
             Some(serde_json::json!([{ "types": { "number": "Use Ok instead." } }])),
@@ -537,7 +564,10 @@ fn test() {
             "let value: any;",
             Some(serde_json::json!([{ "types": { "any": "Use unknown instead." } }])),
         ),
-        ("let value: void;", Some(serde_json::json!([{ "types": { "void": "Use Ok instead." } }]))),
+        (
+            "let value: void;",
+            Some(serde_json::json!([{ "types": { "void": "Use Ok instead." } }])),
+        ),
         (
             "let value: [];",
             Some(serde_json::json!([{ "types": { "[]": "Use unknown[] instead." } }])),
@@ -550,7 +580,10 @@ fn test() {
             "let value: [[]];",
             Some(serde_json::json!([{ "types": { "[]": "Use unknown[] instead." } }])),
         ),
-        ("let value: Banned;", Some(serde_json::json!([{ "types": { "Banned": true } }]))),
+        (
+            "let value: Banned;",
+            Some(serde_json::json!([{ "types": { "Banned": true } }])),
+        ),
         (
             "let value: Banned;",
             Some(serde_json::json!([{ "types": { "Banned": r#"Use "{}" instead."#} }])),
@@ -563,7 +596,10 @@ fn test() {
             "let value: [Banned];",
             Some(serde_json::json!([{ "types": { "Banned": r#"Use "{}" instead."# } }])),
         ),
-        ("let value: Banned;", Some(serde_json::json!([{ "types": { "Banned": "" } }]))),
+        (
+            "let value: Banned;",
+            Some(serde_json::json!([{ "types": { "Banned": "" } }])),
+        ),
         (
             "let b: { c: Banned };",
             Some(
@@ -729,7 +765,12 @@ fn test() {
             ),
         ),
     ];
-    Tester::new(NoRestrictedTypes::NAME, NoRestrictedTypes::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        NoRestrictedTypes::NAME,
+        NoRestrictedTypes::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

@@ -165,7 +165,11 @@ fn slash_dense_chains() {
         let ks = kinds_of(code, ScriptJS);
         let re = ks.iter().filter(|&&kk| kk == TokenKind::RegExp).count();
         let sl = ks.iter().filter(|&&kk| kk == TokenKind::Slash).count();
-        assert_eq!((re, sl), (want_re, want_slash), "{code:?}: kinds {ks:?} (regexps, slashes)");
+        assert_eq!(
+            (re, sl),
+            (want_re, want_slash),
+            "{code:?}: kinds {ks:?} (regexps, slashes)"
+        );
     };
     count("x = /a/g / /b/g;", 2, 1);
     count("x = /a/ / /b/;", 2, 1);
@@ -317,7 +321,10 @@ fn plain_contexts_unchanged() {
 #[test]
 fn ts_postfix_bang_unchanged() {
     let ks = kinds_of("x! / 2;", ScriptTS);
-    assert!(!ks.contains(&TokenKind::RegExp), "x! / 2 must stay division: {ks:?}");
+    assert!(
+        !ks.contains(&TokenKind::RegExp),
+        "x! / 2 must stay division: {ks:?}"
+    );
 }
 
 #[test]
@@ -339,9 +346,15 @@ fn arrow_block_bodies_still_regex() {
 #[test]
 fn ts_angle_close_resolved() {
     let ks = kinds_of("class C<T> {} /re/.test(x);", ScriptTS);
-    assert!(ks.contains(&TokenKind::RegExp), "TS class decl with type params: {ks:?}");
+    assert!(
+        ks.contains(&TokenKind::RegExp),
+        "TS class decl with type params: {ks:?}"
+    );
     let ks = kinds_of("x = f < T > {} / re / g;", ScriptTS);
-    assert!(!ks.contains(&TokenKind::RegExp), "TS relational re-read must divide: {ks:?}");
+    assert!(
+        !ks.contains(&TokenKind::RegExp),
+        "TS relational re-read must divide: {ks:?}"
+    );
 }
 
 #[test]
@@ -361,17 +374,35 @@ fn of_trade_resolved() {
 fn jsx_operand_positions() {
     let jsx = |code: &str| kinds_of(code, ScriptJSX);
     let ks = jsx("export default <App/>;");
-    assert!(ks.contains(&TokenKind::JsxLt), "export default <App/> must open JSX: {ks:?}");
+    assert!(
+        ks.contains(&TokenKind::JsxLt),
+        "export default <App/> must open JSX: {ks:?}"
+    );
     let ks = jsx("if (x) <App/>;");
-    assert!(ks.contains(&TokenKind::JsxLt), "if (x) <App/> must open JSX: {ks:?}");
+    assert!(
+        ks.contains(&TokenKind::JsxLt),
+        "if (x) <App/> must open JSX: {ks:?}"
+    );
     let ks = jsx("x = a < b;");
-    assert!(!ks.contains(&TokenKind::JsxLt), "a < b is a comparison: {ks:?}");
+    assert!(
+        !ks.contains(&TokenKind::JsxLt),
+        "a < b is a comparison: {ks:?}"
+    );
     let ks = jsx("f(x) < y;");
-    assert!(!ks.contains(&TokenKind::JsxLt), "f(x) < y is a comparison: {ks:?}");
+    assert!(
+        !ks.contains(&TokenKind::JsxLt),
+        "f(x) < y is a comparison: {ks:?}"
+    );
     let ks = jsx("a++ < b;");
-    assert!(!ks.contains(&TokenKind::JsxLt), "a++ < b is a comparison: {ks:?}");
+    assert!(
+        !ks.contains(&TokenKind::JsxLt),
+        "a++ < b is a comparison: {ks:?}"
+    );
     let ks = jsx("x = a > {} < b;");
-    assert!(!ks.contains(&TokenKind::JsxLt), "a > {{}} < b is a comparison chain: {ks:?}");
+    assert!(
+        !ks.contains(&TokenKind::JsxLt),
+        "a > {{}} < b is a comparison chain: {ks:?}"
+    );
 }
 
 #[test]
@@ -474,11 +505,23 @@ fn ts_pathological_type_annotation_forces_asi() {
 /re/g.exec(s)"#,
         ScriptTS,
     );
-    regex("let x: {[K in keyof T as `g${K & string}`]-?: T[K]}\n/re/g.exec(s);", ScriptTS);
-    regex("let x: T extends infer U extends F ? A : B\n/re/g.exec(s);", ScriptTS);
-    regex("let x: typeof import(\"./m\").default\n/re/g.exec(s);", ScriptTS);
+    regex(
+        "let x: {[K in keyof T as `g${K & string}`]-?: T[K]}\n/re/g.exec(s);",
+        ScriptTS,
+    );
+    regex(
+        "let x: T extends infer U extends F ? A : B\n/re/g.exec(s);",
+        ScriptTS,
+    );
+    regex(
+        "let x: typeof import(\"./m\").default\n/re/g.exec(s);",
+        ScriptTS,
+    );
     regex("let x: abstract new () => void\n/re/g.exec(s);", ScriptTS);
-    regex("let x: (...a: [x: string, ...r: number[]]) => R\n/re/g.exec(s);", ScriptTS);
+    regex(
+        "let x: (...a: [x: string, ...r: number[]]) => R\n/re/g.exec(s);",
+        ScriptTS,
+    );
     division(
         r#"let x = y as {
   readonly [K in keyof T as `get${Capitalize<K & string>}`]-?: T[K]
@@ -493,13 +536,25 @@ fn ts_type_literal_brace_forces_asi() {
     regex("type A = { a: T }\n/re/g.exec(s);", ScriptTS);
     regex("type A = {}\n/re/g.exec(s);", ScriptTS);
     regex("type A<T> = { a: T }\n/re/g.exec(s);", ScriptTS);
-    regex("type A = { [K in keyof T]: T[K] }\n/re/g.exec(s);", ScriptTS);
+    regex(
+        "type A = { [K in keyof T]: T[K] }\n/re/g.exec(s);",
+        ScriptTS,
+    );
     regex("type A = { (): T }\n/re/g.exec(s);", ScriptTS);
     regex("let x: A | { a: T }\n/re/g.exec(s);", ScriptTS);
     regex("let x: A & { a: T }\n/re/g.exec(s);", ScriptTS);
-    regex("let x: A extends B ? C : { a: T }\n/re/g.exec(s);", ScriptTS);
-    regex("let x: A extends B ? { a: T } : C\n/re/g.exec(s);", ScriptTS);
-    regex("declare function f(): A | { a: T }\n/re/g.exec(s);", ScriptTS);
+    regex(
+        "let x: A extends B ? C : { a: T }\n/re/g.exec(s);",
+        ScriptTS,
+    );
+    regex(
+        "let x: A extends B ? { a: T } : C\n/re/g.exec(s);",
+        ScriptTS,
+    );
+    regex(
+        "declare function f(): A | { a: T }\n/re/g.exec(s);",
+        ScriptTS,
+    );
     division("x = {a: 1}\n/re/g.exec(s);", ScriptTS);
     division("let x = {a: 1}\n/re/g.exec(s);", ScriptTS);
     division("let x: T = {a: 1}\n/re/g.exec(s);", ScriptTS);
@@ -556,10 +611,19 @@ fn ts_non_null_before_as_is_division() {
 fn ts_import_type_chain_head() {
     division("let x = y as import('m').T<U>\n/re/g.exec(s);", ScriptTS);
     division("let x = y as import('m').T<U> / 2;", ScriptTS);
-    division("let x = y satisfies import('m').T<U>\n/re/g.exec(s);", ScriptTS);
-    division("let x = y as import('m').a.b.T<U>\n/re/g.exec(s);", ScriptTS);
+    division(
+        "let x = y satisfies import('m').T<U>\n/re/g.exec(s);",
+        ScriptTS,
+    );
+    division(
+        "let x = y as import('m').a.b.T<U>\n/re/g.exec(s);",
+        ScriptTS,
+    );
     regex("let x: import('m').T<U>\n/re/g.exec(s);", ScriptTS);
-    regex("let x: typeof import('./m').default\n/re/g.exec(s);", ScriptTS);
+    regex(
+        "let x: typeof import('./m').default\n/re/g.exec(s);",
+        ScriptTS,
+    );
 }
 
 #[test]
@@ -575,13 +639,25 @@ fn value_ternary_and_arrow_stay_division() {
 fn tsx_asi_then_jsx_element() {
     let tsx = |code: &str| kinds_of(code, ScriptTSX);
     let ks = tsx("let v: T\n<div />;");
-    assert!(ks.contains(&TokenKind::JsxLt), "type-annotation ASI must open JSX: {ks:?}");
+    assert!(
+        ks.contains(&TokenKind::JsxLt),
+        "type-annotation ASI must open JSX: {ks:?}"
+    );
     let ks = tsx("let v\n<div />;");
-    assert!(ks.contains(&TokenKind::JsxLt), "uninitialised declarator ASI must open JSX: {ks:?}");
+    assert!(
+        ks.contains(&TokenKind::JsxLt),
+        "uninitialised declarator ASI must open JSX: {ks:?}"
+    );
     let ks = tsx("import R from 'r'\n<div />;");
-    assert!(ks.contains(&TokenKind::JsxLt), "module-specifier ASI must open JSX: {ks:?}");
+    assert!(
+        ks.contains(&TokenKind::JsxLt),
+        "module-specifier ASI must open JSX: {ks:?}"
+    );
     let ks = tsx("const a = 1, div = 2;\nexport const r = a < div;");
-    assert!(!ks.contains(&TokenKind::JsxLt), "a < div stays a comparison: {ks:?}");
+    assert!(
+        !ks.contains(&TokenKind::JsxLt),
+        "a < div stays a comparison: {ks:?}"
+    );
 }
 
 #[test]
@@ -658,12 +734,21 @@ fn tsx_literal_type_asi_then_jsx_element() {
         "let v!: T\n<div />;",
     ] {
         let ks = tsx(code);
-        assert!(ks.contains(&TokenKind::JsxLt), "{code:?} must open JSX: {ks:?}");
+        assert!(
+            ks.contains(&TokenKind::JsxLt),
+            "{code:?} must open JSX: {ks:?}"
+        );
     }
     let ks = kinds_of("outer: for(;;){ break outer\n<div />; }", ScriptJSX);
-    assert!(ks.contains(&TokenKind::JsxLt), "labelled break ASI must open JSX: {ks:?}");
+    assert!(
+        ks.contains(&TokenKind::JsxLt),
+        "labelled break ASI must open JSX: {ks:?}"
+    );
     let ks = tsx("const a = 1, div = 2;\nconst r = a - 1 < div;");
-    assert!(!ks.contains(&TokenKind::JsxLt), "a - 1 < div stays a comparison: {ks:?}");
+    assert!(
+        !ks.contains(&TokenKind::JsxLt),
+        "a - 1 < div stays a comparison: {ks:?}"
+    );
 }
 
 #[test]
@@ -698,7 +783,10 @@ fn class_body_after_a_heritage_list_with_type_arguments_precedes_regex() {
         regex(code, ScriptTS);
     }
     division("x = class implements A, V<T> {} / 2;", ScriptTS);
-    division("x = class extends A implements B, V<T<U>> {} / 2;", ScriptTS);
+    division(
+        "x = class extends A implements B, V<T<U>> {} / 2;",
+        ScriptTS,
+    );
 }
 
 #[test]
@@ -786,7 +874,10 @@ fn label_colon_inside_a_function_expression_body_is_a_statement() {
 #[test]
 fn bodiless_function_signature_before_a_line_break_ends_the_statement() {
     for (code, want) in [
-        ("declare function y()\n/[/\\]]/.x;", "declare function IDENT ( ) REGEXP . IDENT ;"),
+        (
+            "declare function y()\n/[/\\]]/.x;",
+            "declare function IDENT ( ) REGEXP . IDENT ;",
+        ),
         (
             "declare function y(a: T)\n/re/.x;",
             "declare function IDENT ( IDENT : IDENT ) REGEXP . IDENT ;",
@@ -833,7 +924,10 @@ fn operand_heads_before_a_value_brace() {
             "x = {}\n{ {k: v}\n/re/.test(s) }",
             "IDENT = { } { { IDENT : IDENT } REGEXP . IDENT ( IDENT ) }",
         ),
-        ("{ {k: v}\n/re/.test(s) }", "{ { IDENT : IDENT } REGEXP . IDENT ( IDENT ) }"),
+        (
+            "{ {k: v}\n/re/.test(s) }",
+            "{ { IDENT : IDENT } REGEXP . IDENT ( IDENT ) }",
+        ),
     ] {
         stream(code, ScriptJSX, want);
     }
@@ -859,12 +953,18 @@ fn function_head_walks_cross_every_return_type_shape() {
         "const P = function a(x: A): abstract new () => abstract new () => keyof any {}\n/ 2 / 3;",
         ScriptTS,
     );
-    division("x = [function (): _ is Record<Promise<V>> {}\n/ 2 / 3];", ScriptTS);
+    division(
+        "x = [function (): _ is Record<Promise<V>> {}\n/ 2 / 3];",
+        ScriptTS,
+    );
     regex(
         "function y(): x is abstract new () => typeof import('m') extends boolean ? K<A, B<unique symbol>> : void[] {}\n/[a-z]+/v.x;",
         ScriptTS,
     );
-    regex("async function fn($, x): N is <a>() => Array<symbol> {\n}\n/a{1,2}/u.x;", ScriptTS);
+    regex(
+        "async function fn($, x): N is <a>() => Array<symbol> {\n}\n/a{1,2}/u.x;",
+        ScriptTS,
+    );
     regex("function f(): { a: T } {}\n/re/.test(x);", ScriptTS);
     regex(
         "async function obj(): K<U, $JSX<Array<U>>> {\nclass C implements V, E<$JSX<-1>> {\n\n}\n/[\\]]/.test(s);\n}",
@@ -874,22 +974,37 @@ fn function_head_walks_cross_every_return_type_shape() {
         "x = [async function $(): _ is Record<Promise<V>>{} < function Bar(arr?: any): K<this>{}];",
         ScriptTSX,
     );
-    assert!(ks.contains(&TokenKind::Lt) && !ks.contains(&TokenKind::JsxLt), "{ks:?}");
+    assert!(
+        ks.contains(&TokenKind::Lt) && !ks.contains(&TokenKind::JsxLt),
+        "{ks:?}"
+    );
 }
 
 #[test]
 fn brace_after_a_generic_return_type_is_a_body() {
     for (code, file_type) in [
-        ("async function fn($, x): N is <a>() => Array<symbol> {\n}\n/a{1,2}/u.x;", ScriptTS),
-        ("async function fn($, x): N is <a>() => Array<symbol> {\n}\n/a{1,2}/u.x;", ScriptTSX),
+        (
+            "async function fn($, x): N is <a>() => Array<symbol> {\n}\n/a{1,2}/u.x;",
+            ScriptTS,
+        ),
+        (
+            "async function fn($, x): N is <a>() => Array<symbol> {\n}\n/a{1,2}/u.x;",
+            ScriptTSX,
+        ),
         ("function f(): () => Array<symbol> {}\n/re/.x;", ScriptTS),
         ("function f(): A | B<C> {}\n/re/.x;", ScriptTS),
-        ("x = function* (): P<Q<R>> {}\nwhile (a) { async (p): B => 1\n}\n/re/.x;", ScriptTS),
+        (
+            "x = function* (): P<Q<R>> {}\nwhile (a) { async (p): B => 1\n}\n/re/.x;",
+            ScriptTS,
+        ),
     ] {
         regex(code, file_type);
     }
     division("x = f < T > {} / 2;", ScriptTS);
-    division("x = c ? function* (...a): Pick<E<F<G>>>[][] {} / 2 : null;", ScriptTS);
+    division(
+        "x = c ? function* (...a): Pick<E<F<G>>>[][] {} / 2 : null;",
+        ScriptTS,
+    );
 }
 
 #[test]
@@ -912,14 +1027,23 @@ fn adjacent_type_atoms_end_an_annotation() {
     regex("let x: asserts y is T\n/re/.test(s);", ScriptTS);
     regex("let x: abstract new () => T\n/re/.test(s);", ScriptTS);
     regex("let x: readonly unique symbol[]\n/re/.test(s);", ScriptTS);
-    regex("let x: A extends infer U extends B ? C : D\n/re/.test(s);", ScriptTS);
+    regex(
+        "let x: A extends infer U extends B ? C : D\n/re/.test(s);",
+        ScriptTS,
+    );
     regex("let x: `a${T}b${U}c`\n/re/.test(s);", ScriptTS);
-    regex("let x: { [K in keyof T as `x${K}`]: T[K] }\n/re/.test(s);", ScriptTS);
+    regex(
+        "let x: { [K in keyof T as `x${K}`]: T[K] }\n/re/.test(s);",
+        ScriptTS,
+    );
     regex("let x: <T>(a: T) => T\n/re/.test(s);", ScriptTS);
     regex("let x: new <T>(a: T) => T\n/re/.test(s);", ScriptTS);
     regex("let x: <T>(a: T) => T | undefined\n/re/.test(s);", ScriptTS);
     regex("let a: A, b: B, c: <T>(a: T) => T\n/re/.test(s);", ScriptTS);
-    regex("declare function f<T>(a: T): <U>(b: U) => T\n/re/.test(s);", ScriptTS);
+    regex(
+        "declare function f<T>(a: T): <U>(b: U) => T\n/re/.test(s);",
+        ScriptTS,
+    );
     regex("type A<T> = <T>(a: T) => T\n/re/.test(s);", ScriptTS);
     for code in [
         "declare let x: <T>(a: T) => T\n<div />;",
@@ -929,10 +1053,16 @@ fn adjacent_type_atoms_end_an_annotation() {
         "declare function f(): <T>(a: T) => T\n<div />;",
     ] {
         let ks = kinds_of(code, ScriptTSX);
-        assert!(ks.contains(&TokenKind::JsxLt), "{code:?} must open JSX: {ks:?}");
+        assert!(
+            ks.contains(&TokenKind::JsxLt),
+            "{code:?} must open JSX: {ks:?}"
+        );
     }
     let ks = kinds_of("let P: Array<bigint, this>\n_(x)\n<(P().foo);", ScriptTSX);
-    assert!(ks.contains(&TokenKind::Lt) && !ks.contains(&TokenKind::JsxLt), "{ks:?}");
+    assert!(
+        ks.contains(&TokenKind::Lt) && !ks.contains(&TokenKind::JsxLt),
+        "{ks:?}"
+    );
     let codes = diag_codes_of("let P: Array<bigint, this>\n_(x)\n<(P().foo);", ScriptTSX);
     assert!(codes.is_empty(), "{codes:?}");
 }
@@ -974,14 +1104,35 @@ fn function_name_after_a_line_break() {
 fn class_field_initializer_is_outside_yield_and_await_contexts() {
     // A field initializer is parsed outside the enclosing function's `yield` / `await` context,
     // so both are identifiers in it; computed keys and static blocks still see the function.
-    division("async function f() { class A { x = await / 2 / 1 } }", ScriptJS);
-    division("async function f() { class A { static x = await / 2 / 1 } }", ScriptJS);
-    division("async function f() { class A { x = (a = await / 2 / 1) => a } }", ScriptJS);
-    division("async function f() { class A { x = await / 2 / 1; y = 3 } }", ScriptJS);
-    regex("async function f() { class A { [await /re/.test(x)] = 1 } }", ScriptJS);
-    regex("async function f() { class A { x = 1; [await /re/.test(x)] = 1 } }", ScriptJS);
+    division(
+        "async function f() { class A { x = await / 2 / 1 } }",
+        ScriptJS,
+    );
+    division(
+        "async function f() { class A { static x = await / 2 / 1 } }",
+        ScriptJS,
+    );
+    division(
+        "async function f() { class A { x = (a = await / 2 / 1) => a } }",
+        ScriptJS,
+    );
+    division(
+        "async function f() { class A { x = await / 2 / 1; y = 3 } }",
+        ScriptJS,
+    );
+    regex(
+        "async function f() { class A { [await /re/.test(x)] = 1 } }",
+        ScriptJS,
+    );
+    regex(
+        "async function f() { class A { x = 1; [await /re/.test(x)] = 1 } }",
+        ScriptJS,
+    );
     regex("class A { static { await /re/.test(x) } }", ScriptJS);
-    regex("async function f() { class A { async m() { await /re/.test(x) } } }", ScriptJS);
+    regex(
+        "async function f() { class A { async m() { await /re/.test(x) } } }",
+        ScriptJS,
+    );
 }
 
 #[test]
@@ -1009,7 +1160,10 @@ fn declaration_after_a_name_or_type_ended_by_a_line_break() {
     // The word or postfix operator before the line break ends a value, so ASI starts a declaration.
     regex("let of\nfunction f() {}\n/re/g", ScriptJS);
     regex("var await\nfunction f() {}\n/re/g", ScriptJS);
-    regex("declare function f(): void\nfunction f() {}\n/re/g", ScriptTS);
+    regex(
+        "declare function f(): void\nfunction f() {}\n/re/g",
+        ScriptTS,
+    );
     regex("let x: void\nclass K {}\n/re/g", ScriptTS);
     regex("let x = y!\nfunction f() {}\n/re/g", ScriptTS);
 }
@@ -1038,7 +1192,10 @@ fn interface_members_on_separate_lines() {
 fn yield_and_await_inside_the_function_a_bounded_walk_starts_in() {
     division("function* g() { const a = 1; yield {} / 2; }", ScriptJS);
     division("function* g() { const a = 1; yield {} / 2; }", ModuleJS);
-    division("async function f() { const a = 1; await {} / 2; }", ScriptJS);
+    division(
+        "async function f() { const a = 1; await {} / 2; }",
+        ScriptJS,
+    );
     division("({ *function() { yield {} / 2 } });", ScriptJS);
     division("class C { *function() { yield {} / 2 } }", ScriptJS);
 }
@@ -1063,9 +1220,18 @@ fn keyword_after_a_number_with_a_trailing_dot() {
 
 #[test]
 fn statement_after_import_attributes() {
-    division("import a from \"b\" with { type: \"json\" }\nlet x = a\n/re/g;", ModuleJS);
-    regex("import a from \"b\" with { type: \"json\" }\nlet x\n/re/g;", ModuleJS);
-    regex("export { a } from \"b\" with { type: \"json\" }\nfunction f() {}\n/re/g;", ModuleJS);
+    division(
+        "import a from \"b\" with { type: \"json\" }\nlet x = a\n/re/g;",
+        ModuleJS,
+    );
+    regex(
+        "import a from \"b\" with { type: \"json\" }\nlet x\n/re/g;",
+        ModuleJS,
+    );
+    regex(
+        "export { a } from \"b\" with { type: \"json\" }\nfunction f() {}\n/re/g;",
+        ModuleJS,
+    );
 }
 
 #[test]

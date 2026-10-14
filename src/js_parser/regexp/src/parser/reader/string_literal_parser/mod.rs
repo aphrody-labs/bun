@@ -87,25 +87,47 @@ without continuation""#,
             r#"'str'+"str""#,
         ] {
             let result = Parser::new(source_text, Options::default()).parse();
-            assert!(result.is_err(), "Expect to fail: {source_text} but passed...");
+            assert!(
+                result.is_err(),
+                "Expect to fail: {source_text} but passed..."
+            );
             // println!("{:?}", result.unwrap_err().with_source_code(source_text));
         }
     }
 
     #[test]
     fn should_fail_early_errors() {
-        for source_text in [r#""invalid octal \777""#, r#""invalid non-octal decimal \9""#] {
+        for source_text in [
+            r#""invalid octal \777""#,
+            r#""invalid non-octal decimal \9""#,
+        ] {
             // These are allowed in non-strict mode.
-            let result =
-                Parser::new(source_text, Options { strict_mode: false, ..Options::default() })
-                    .parse();
-            assert!(result.is_ok(), "Expect to parse: {source_text} but failed...");
+            let result = Parser::new(
+                source_text,
+                Options {
+                    strict_mode: false,
+                    ..Options::default()
+                },
+            )
+            .parse();
+            assert!(
+                result.is_ok(),
+                "Expect to parse: {source_text} but failed..."
+            );
 
             // But not in strict mode.
-            let result =
-                Parser::new(source_text, Options { strict_mode: true, ..Options::default() })
-                    .parse();
-            assert!(result.is_err(), "Expect to fail w/ early error: {source_text} but passed...");
+            let result = Parser::new(
+                source_text,
+                Options {
+                    strict_mode: true,
+                    ..Options::default()
+                },
+            )
+            .parse();
+            assert!(
+                result.is_err(),
+                "Expect to fail w/ early error: {source_text} but passed..."
+            );
             // println!("{:?}", result.unwrap_err().with_source_code(source_text));
         }
     }
@@ -127,7 +149,10 @@ without continuation""#,
 
         let ast = Parser::new(
             source_text,
-            Options { combine_surrogate_pair: false, ..Options::default() },
+            Options {
+                combine_surrogate_pair: false,
+                ..Options::default()
+            },
         )
         .parse()
         .unwrap();
@@ -135,7 +160,10 @@ without continuation""#,
 
         let ast = Parser::new(
             source_text,
-            Options { combine_surrogate_pair: true, ..Options::default() },
+            Options {
+                combine_surrogate_pair: true,
+                ..Options::default()
+            },
         )
         .parse()
         .unwrap();
@@ -145,12 +173,24 @@ without continuation""#,
     #[test]
     fn span_offset() {
         let source_text = "\"Adjust span but should have no side effect for parsing\"";
-        let ret1 = Parser::new(source_text, Options { span_offset: 0, ..Options::default() })
-            .parse()
-            .unwrap();
-        let ret2 = Parser::new(source_text, Options { span_offset: 10, ..Options::default() })
-            .parse()
-            .unwrap();
+        let ret1 = Parser::new(
+            source_text,
+            Options {
+                span_offset: 0,
+                ..Options::default()
+            },
+        )
+        .parse()
+        .unwrap();
+        let ret2 = Parser::new(
+            source_text,
+            Options {
+                span_offset: 10,
+                ..Options::default()
+            },
+        )
+        .parse()
+        .unwrap();
 
         assert_ne!(ret1.span, ret2.span);
         for (a, b) in ret1.body.iter().zip(ret2.body.iter()) {
@@ -163,7 +203,11 @@ without continuation""#,
         let source_text = "'123'";
         let ast = Parser::new(
             source_text,
-            Options { span_offset: 0, combine_surrogate_pair: false, strict_mode: false },
+            Options {
+                span_offset: 0,
+                combine_surrogate_pair: false,
+                strict_mode: false,
+            },
         )
         .parse()
         .unwrap();
@@ -173,7 +217,11 @@ without continuation""#,
         let source_text = "\"Hi,\\n🦄\\w\"";
         let ast = Parser::new(
             source_text,
-            Options { span_offset: 0, combine_surrogate_pair: true, strict_mode: false },
+            Options {
+                span_offset: 0,
+                combine_surrogate_pair: true,
+                strict_mode: false,
+            },
         )
         .parse()
         .unwrap();
@@ -189,10 +237,15 @@ without continuation""#,
         assert!(units.next().is_none());
 
         let source_text = "...'<-HERE->'...";
-        let ast =
-            Parser::new(&source_text[3..13], Options { span_offset: 3, ..Options::default() })
-                .parse()
-                .unwrap();
+        let ast = Parser::new(
+            &source_text[3..13],
+            Options {
+                span_offset: 3,
+                ..Options::default()
+            },
+        )
+        .parse()
+        .unwrap();
 
         assert_eq!(ast.span.source_text(source_text), "'<-HERE->'");
         let mut units = ast.body.iter();

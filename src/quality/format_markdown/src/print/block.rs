@@ -61,7 +61,10 @@ pub fn write_blocks<'a>(
             let start_comment = block.span();
             let end_comment = blocks[end].span();
             write_verbatim(start_comment, f);
-            write!(f, text(source.slice_range(start_comment.end, end_comment.start)));
+            write!(
+                f,
+                text(source.slice_range(start_comment.end, end_comment.start))
+            );
             write_verbatim(end_comment, f);
             index = end + 1;
             continue;
@@ -109,7 +112,8 @@ pub fn double_gap(
             && matches!(siblings[index - 2], Block::Definition(_))
             && !ctx.has_blank_between(siblings[index - 2].span().end, previous.span().start);
         let multi_line =
-            ctx.source_text().bytes_contain(previous.span().start, previous.span().end, b'\n');
+            ctx.source_text()
+                .bytes_contain(previous.span().start, previous.span().end, b'\n');
         return !after_definition && !multi_line;
     }
 
@@ -124,7 +128,10 @@ pub fn double_gap(
         return true;
     }
 
-    let is_sibling_node = matches!((previous, node), (Block::Definition(_), Block::Definition(_)));
+    let is_sibling_node = matches!(
+        (previous, node),
+        (Block::Definition(_), Block::Definition(_))
+    );
     let in_tight_list_item = match parent {
         Parent::ListItem { loose, .. } => matches!(node, Block::List(_)) || !loose,
         _ => false,
@@ -163,7 +170,9 @@ enum IgnoreKind {
 /// `<!-- prettier-ignore -->` / `<!-- oxfmt-ignore -->` and their `-start` / `-end` forms as a whole HTML block.
 /// Asked several times per block, so it bails on the first byte before joining anything.
 fn ignore_kind(block: &Block<'_>, f: &MarkdownFormatter<'_, '_>) -> Option<IgnoreKind> {
-    let Block::HtmlBlock(html) = block else { return None };
+    let Block::HtmlBlock(html) = block else {
+        return None;
+    };
 
     let source = f.context().source_text().as_str();
     let (first, last) = (html.lines.first()?, html.lines.last()?);
@@ -223,7 +232,13 @@ pub fn write_block<'a>(
                 paragraph: true,
                 first_in_container: parent == Parent::Container && index == 0,
                 first_in_document: front_matter_risk(parent, siblings, index, f),
-                after_checkbox: matches!(parent, Parent::ListItem { after_checkbox: true, .. }),
+                after_checkbox: matches!(
+                    parent,
+                    Parent::ListItem {
+                        after_checkbox: true,
+                        ..
+                    }
+                ),
                 ..inline::InlineParent::default()
             };
             inline::write_inlines(&p.children, parent, f);
@@ -249,7 +264,10 @@ pub fn write_block<'a>(
                 .first()
                 .is_some_and(|first| blank_between(d.opening.end, first.span().start));
             let before_closing = d.closing.is_some_and(|closing| {
-                let before = d.children.last().map_or(d.opening.end, |last| last.span().end);
+                let before = d
+                    .children
+                    .last()
+                    .map_or(d.opening.end, |last| last.span().end);
                 blank_between(before, closing.start)
             });
             write_verbatim(d.opening, f);
@@ -288,7 +306,10 @@ fn front_matter_risk(
     let head = &source[siblings[0].span().start as usize..];
     parse_front_matter(head).is_some()
         || (head.starts_with("---")
-            && siblings.iter().skip(1).any(|b| matches!(b, Block::ThematicBreak(_))))
+            && siblings
+                .iter()
+                .skip(1)
+                .any(|b| matches!(b, Block::ThematicBreak(_))))
 }
 
 /// ATX headings normalize to `#`s + one space;
@@ -329,7 +350,10 @@ fn write_footnote_definition<'a>(
     def: &'a FootnoteDefinition<'a>,
     f: &mut MarkdownFormatter<'_, 'a>,
 ) {
-    write!(f, [token("[^"), text(f.context().slice(def.label)), token("]:")]);
+    write!(
+        f,
+        [token("[^"), text(f.context().slice(def.label)), token("]:")]
+    );
     let children = &def.children;
     let parent = Parent::Container;
     let first = format_with(|f| write_block(&children[0], children, 0, parent, f)).memoized();
@@ -384,7 +408,11 @@ fn write_html_block<'a>(
     // Prettier prints it, and the block gains a line on every pass. It is not printed.
     write!(
         f,
-        mark_as_root(&format_with(|f| write_lines(value.split('\n'), literal_line_break(), f)))
+        mark_as_root(&format_with(|f| write_lines(
+            value.split('\n'),
+            literal_line_break(),
+            f
+        )))
     );
 }
 

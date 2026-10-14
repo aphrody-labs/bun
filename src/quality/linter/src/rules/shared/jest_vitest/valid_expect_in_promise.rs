@@ -120,7 +120,12 @@ pub fn run<'a>(possible_jest_node: &PossibleJestNode<'a, '_>, ctx: &LintContext<
     let mut pending_promises: FxHashMap<CompactStr, Span> = FxHashMap::default();
     let mut return_found = false;
 
-    process_statements(&callback_body.statements, &mut pending_promises, &mut return_found, ctx);
+    process_statements(
+        &callback_body.statements,
+        &mut pending_promises,
+        &mut return_found,
+        ctx,
+    );
 
     for &span in pending_promises.values() {
         ctx.diagnostic(expect_in_unhandled_promise(span));
@@ -161,8 +166,12 @@ fn process_statements<'a>(
         match statement {
             Statement::VariableDeclaration(decl) => {
                 for declarator in &decl.declarations {
-                    let Some(init) = &declarator.init else { continue };
-                    let Some(ident) = declarator.id.get_binding_identifier() else { continue };
+                    let Some(init) = &declarator.init else {
+                        continue;
+                    };
+                    let Some(ident) = declarator.id.get_binding_identifier() else {
+                        continue;
+                    };
                     // Per-declarator scan: `let x = 1, promise = getPromise().then(...)` —
                     // only track the declarator that actually has expect-in-promise.
                     let mut init_scanner = PromiseExpectScanner::new();
@@ -199,7 +208,10 @@ fn process_statements<'a>(
                 }
             }
             Statement::ReturnStatement(return_stmt) => {
-                if let Some(name) = return_stmt.argument.as_ref().and_then(|arg| ident_name_of(arg))
+                if let Some(name) = return_stmt
+                    .argument
+                    .as_ref()
+                    .and_then(|arg| ident_name_of(arg))
                 {
                     pending_promises.remove(name);
                 }
@@ -223,7 +235,11 @@ fn resolve_pending_promises(
 }
 
 fn ident_name_of<'a>(expr: &'a Expression<'a>) -> Option<&'a str> {
-    if let Expression::Identifier(ident) = expr { Some(ident.name.as_str()) } else { None }
+    if let Expression::Identifier(ident) = expr {
+        Some(ident.name.as_str())
+    } else {
+        None
+    }
 }
 
 /// Walks down the callee chain of `expect(x).resolves.not.toBe(2)` to find
@@ -335,8 +351,12 @@ impl PromiseExpectScanner {
     }
 
     fn collect_resolved_from_promise_wrapper(&mut self, call_expr: &CallExpression) {
-        let Some(member) = call_expr.callee.as_member_expression() else { return };
-        let Expression::Identifier(obj) = member.object() else { return };
+        let Some(member) = call_expr.callee.as_member_expression() else {
+            return;
+        };
+        let Expression::Identifier(obj) = member.object() else {
+            return;
+        };
         if obj.name != "Promise" {
             return;
         }
@@ -376,8 +396,10 @@ impl<'a> VisitJs<'a> for PromiseExpectScanner {
         // Check for `expect(promise).resolves/rejects` — resolves the promise variable
         let callee_name = get_node_name_vec(&call_expr.callee);
         let is_expect_node = callee_name.first().is_some_and(|n| n == "expect");
-        let is_expecting_promise =
-            is_expect_node && callee_name.iter().any(|n| n == "resolves" || n == "rejects");
+        let is_expecting_promise = is_expect_node
+            && callee_name
+                .iter()
+                .any(|n| n == "resolves" || n == "rejects");
 
         if is_expecting_promise
             && let Some(expr) = find_expect_args(call_expr)

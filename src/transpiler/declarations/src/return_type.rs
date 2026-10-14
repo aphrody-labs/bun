@@ -112,7 +112,10 @@ impl<'a> FunctionReturnType<'a> {
                 expr_type = TSType::new_ts_parenthesized_type(SPAN, expr_type, transformer);
             }
 
-            let types = [expr_type, TSType::new_ts_undefined_keyword(SPAN, transformer)];
+            let types = [
+                expr_type,
+                TSType::new_ts_undefined_keyword(SPAN, transformer),
+            ];
             expr_type = TSType::new_ts_union_type(SPAN, types, transformer);
         }
         Some(expr_type)

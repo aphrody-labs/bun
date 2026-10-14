@@ -33,7 +33,9 @@ pub fn prune_unused_scopes<'a>(
     env: &Environment<'a>,
 ) -> Result<(), OxcDiagnostic> {
     let mut transform = Transform { env };
-    let mut state = State { has_return_statement: false };
+    let mut state = State {
+        has_return_statement: false,
+    };
     transform_reactive_function(func, &mut transform, &mut state)
 }
 
@@ -65,7 +67,9 @@ impl<'a, 'e> ReactiveFunctionTransform<'a> for Transform<'a, 'e> {
         scope: &mut ReactiveScopeBlock<'a>,
         _state: &mut State,
     ) -> Result<Transformed<ReactiveStatement<'a>>, OxcDiagnostic> {
-        let mut scope_state = State { has_return_statement: false };
+        let mut scope_state = State {
+            has_return_statement: false,
+        };
         self.visit_scope(scope, &mut scope_state)?;
 
         let alloc = self.env.allocator;
@@ -77,10 +81,12 @@ impl<'a, 'e> ReactiveFunctionTransform<'a> for Transform<'a, 'e> {
             && (scope_data.declarations.is_empty() || !has_own_declaration(scope_data, scope_id))
         {
             // Replace with pruned scope
-            Ok(Transformed::Replace(ReactiveStatement::PrunedScope(PrunedReactiveScopeBlock {
-                scope: scope.scope,
-                instructions: replace(&mut scope.instructions, ArenaVec::new_in(&alloc)),
-            })))
+            Ok(Transformed::Replace(ReactiveStatement::PrunedScope(
+                PrunedReactiveScopeBlock {
+                    scope: scope.scope,
+                    instructions: replace(&mut scope.instructions, ArenaVec::new_in(&alloc)),
+                },
+            )))
         } else {
             Ok(Transformed::Keep)
         }

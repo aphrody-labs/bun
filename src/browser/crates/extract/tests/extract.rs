@@ -44,8 +44,9 @@ fn boilerplate_heavy_page() -> String {
             )
         })
         .collect();
-    let footer: String =
-        (0..60).map(|i| format!("<a href=\"/f/{i}\">Footer link {i}</a> ")).collect();
+    let footer: String = (0..60)
+        .map(|i| format!("<a href=\"/f/{i}\">Footer link {i}</a> "))
+        .collect();
     let body: String = ARTICLE_PARAGRAPHS
         .iter()
         .enumerate()
@@ -96,10 +97,16 @@ fn boilerplate_heavy_page() -> String {
 #[test]
 fn boilerplate_heavy_page_keeps_article_and_drops_chrome() {
     let html = boilerplate_heavy_page();
-    let e =
-        extract_main(&html, Some("https://metrotimes.example/news/tram-extension?utm_source=x"));
+    let e = extract_main(
+        &html,
+        Some("https://metrotimes.example/news/tram-extension?utm_source=x"),
+    );
     for p in ARTICLE_PARAGRAPHS {
-        assert!(e.text.contains(p), "missing paragraph: {p}\n---\n{}", e.text);
+        assert!(
+            e.text.contains(p),
+            "missing paragraph: {p}\n---\n{}",
+            e.text
+        );
     }
     assert!(e.text.contains("Funding and heritage"));
     assert!(e.text.contains("Regional grant: 140 million"));
@@ -117,7 +124,11 @@ fn boilerplate_heavy_page_keeps_article_and_drops_chrome() {
         "color:red",
         "__STATE__",
     ] {
-        assert!(!e.text.contains(junk), "boilerplate leaked: {junk}\n---\n{}", e.text);
+        assert!(
+            !e.text.contains(junk),
+            "boilerplate leaked: {junk}\n---\n{}",
+            e.text
+        );
     }
     assert_eq!(e.title, "Tram extension approved after eleven years");
     assert_eq!(e.byline.as_deref(), Some("Maya Lindqvist"));
@@ -130,8 +141,16 @@ fn boilerplate_heavy_page_keeps_article_and_drops_chrome() {
     );
     assert_eq!(e.simhash.len(), 16);
     assert_eq!(e.word_count, e.text.split_whitespace().count());
-    assert!(e.markdown.contains("## Funding and heritage"), "{}", e.markdown);
-    assert!(e.markdown.contains("- Regional grant: 140 million"), "{}", e.markdown);
+    assert!(
+        e.markdown.contains("## Funding and heritage"),
+        "{}",
+        e.markdown
+    );
+    assert!(
+        e.markdown.contains("- Regional grant: 140 million"),
+        "{}",
+        e.markdown
+    );
 }
 
 #[test]
@@ -140,7 +159,10 @@ fn comments_are_optional() {
     let with = extract_main_with_options(
         &html,
         None,
-        &ExtractOptions { include_comments: true, ..ExtractOptions::default() },
+        &ExtractOptions {
+            include_comments: true,
+            ..ExtractOptions::default()
+        },
     );
     assert!(ARTICLE_PARAGRAPHS.iter().all(|p| with.text.contains(p)));
     let without = extract_main(&html, None);
@@ -166,13 +188,24 @@ aphrody-web --help</code></pre>
     assert!(kinds.contains(&BlockKind::ListItem));
     assert!(kinds.contains(&BlockKind::Quote));
     assert!(kinds.contains(&BlockKind::Table));
-    let linux_item =
-        e.blocks.iter().find(|b| b.text.starts_with("Use the tarball")).expect("list item");
+    let linux_item = e
+        .blocks
+        .iter()
+        .find(|b| b.text.starts_with("Use the tarball"))
+        .expect("list item");
     assert_eq!(linux_item.heading_path, vec!["Guide", "Install", "Linux"]);
-    let configure = e.blocks.iter().find(|b| b.text == "Configure").expect("heading");
+    let configure = e
+        .blocks
+        .iter()
+        .find(|b| b.text == "Configure")
+        .expect("heading");
     assert_eq!(configure.level, Some(2));
     assert_eq!(configure.heading_path, vec!["Guide"]);
-    let quote = e.blocks.iter().find(|b| b.kind == BlockKind::Quote).expect("quote");
+    let quote = e
+        .blocks
+        .iter()
+        .find(|b| b.kind == BlockKind::Quote)
+        .expect("quote");
     assert_eq!(quote.heading_path, vec!["Guide", "Configure"]);
 
     // Contract relied upon by the FFI bridge: block texts appear verbatim in
@@ -180,7 +213,8 @@ aphrody-web --help</code></pre>
     let joined: Vec<&str> = e.blocks.iter().map(|b| b.text.as_str()).collect();
     assert_eq!(e.text, joined.join("\n\n"));
     assert!(
-        e.markdown.contains("```bash\ncargo install aphrody-web\n\naphrody-web --help\n```"),
+        e.markdown
+            .contains("```bash\ncargo install aphrody-web\n\naphrody-web --help\n```"),
         "{}",
         e.markdown
     );
@@ -188,11 +222,10 @@ aphrody-web --help</code></pre>
     let chunks = chunk_blocks(&e.blocks, 160, 20);
     assert!(chunks.len() >= 3);
     assert!(chunks.iter().all(|c| c.text.chars().count() <= 160));
-    assert!(
-        chunks
-            .iter()
-            .any(|c| c.heading_path.starts_with(&["Guide".to_string(), "Install".to_string()]))
-    );
+    assert!(chunks.iter().any(|c| {
+        c.heading_path
+            .starts_with(&["Guide".to_string(), "Install".to_string()])
+    }));
 }
 
 #[test]
@@ -255,7 +288,10 @@ fn large_document_is_linear() {
         "<div class=\"post\"><p>{}</p><a href=\"/x\">link</a></div>",
         ARTICLE_PARAGRAPHS.join(" ")
     );
-    let html = format!("<html><body><main>{}</main></body></html>", paragraph.repeat(4000));
+    let html = format!(
+        "<html><body><main>{}</main></body></html>",
+        paragraph.repeat(4000)
+    );
     assert!(html.len() > 3_000_000);
     let start = std::time::Instant::now();
     let e = extract_main(&html, None);

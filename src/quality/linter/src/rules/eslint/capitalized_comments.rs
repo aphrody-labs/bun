@@ -33,9 +33,13 @@ fn capitalized_comments_diagnostic(
     correct_case: &str,
 ) -> OxcDiagnostic {
     let article = if wrong_case == "uppercase" { "an" } else { "a" };
-    OxcDiagnostic::warn(format!("Comments should not begin with {article} {wrong_case} letter"))
-        .with_help(format!("Change the first letter of the comment to {correct_case}"))
-        .with_label(span)
+    OxcDiagnostic::warn(format!(
+        "Comments should not begin with {article} {wrong_case} letter"
+    ))
+    .with_help(format!(
+        "Change the first letter of the comment to {correct_case}"
+    ))
+    .with_label(span)
 }
 
 /// Configuration for either line or block comments
@@ -113,7 +117,10 @@ where
 #[expect(unused)] // Only for schemars docs, not used in actual config parsing
 enum OptionsJsonEnum {
     Base(CommentConfigJson),
-    Difference { line: Option<CommentConfigJson>, block: Option<CommentConfigJson> },
+    Difference {
+        line: Option<CommentConfigJson>,
+        block: Option<CommentConfigJson>,
+    },
 }
 
 #[derive(Debug, Clone, Default, Deserialize, JsonSchema)]
@@ -175,17 +182,30 @@ impl Rule for CapitalizedComments {
             return Ok(Self::default());
         };
 
-        let capitalize =
-            arr.first().and_then(|v| serde_json::from_value(v.clone()).ok()).unwrap_or_default();
+        let capitalize = arr
+            .first()
+            .and_then(|v| serde_json::from_value(v.clone()).ok())
+            .unwrap_or_default();
 
-        let options: OptionsJson = arr
-            .get(1)
-            .map_or_else(|| Ok(OptionsJson::default()), |v| serde_json::from_value(v.clone()))?;
+        let options: OptionsJson = arr.get(1).map_or_else(
+            || Ok(OptionsJson::default()),
+            |v| serde_json::from_value(v.clone()),
+        )?;
 
-        let line_config = options.line.unwrap_or_default().into_comment_config(&options.base);
-        let block_config = options.block.unwrap_or_default().into_comment_config(&options.base);
+        let line_config = options
+            .line
+            .unwrap_or_default()
+            .into_comment_config(&options.base);
+        let block_config = options
+            .block
+            .unwrap_or_default()
+            .into_comment_config(&options.base);
 
-        Ok(Self(Box::new(CapitalizedCommentsConfig { capitalize, line_config, block_config })))
+        Ok(Self(Box::new(CapitalizedCommentsConfig {
+            capitalize,
+            line_config,
+            block_config,
+        })))
     }
 
     fn run_once(&self, ctx: &LintContext) {
@@ -193,14 +213,21 @@ impl Rule for CapitalizedComments {
         let comments = ctx.semantic().comments();
 
         // Skip shebang comment if present
-        let comments_iter =
-            comments.iter().skip_while(|c| c.span.start == 0 && source_text.starts_with("#!"));
+        let comments_iter = comments
+            .iter()
+            .skip_while(|c| c.span.start == 0 && source_text.starts_with("#!"));
 
         // Iterate with (prev, current) pairs to check consecutive comments
-        let iter = std::iter::once(None).chain(comments_iter.clone().map(Some)).zip(comments_iter);
+        let iter = std::iter::once(None)
+            .chain(comments_iter.clone().map(Some))
+            .zip(comments_iter);
 
         for (prev_comment, comment) in iter {
-            let config = if comment.is_line() { &self.line_config } else { &self.block_config };
+            let config = if comment.is_line() {
+                &self.line_config
+            } else {
+                &self.block_config
+            };
 
             // Get the comment content (without the // or /* */)
             let content = ctx.source_range(comment.content_span());
@@ -298,9 +325,9 @@ fn normalize_comment_text(content: &str) -> String {
             let trimmed = line.trim_start();
             // Remove leading * and ONE following space (if present)
             // This matches ESLint's behavior which only removes a single space
-            trimmed
-                .strip_prefix('*')
-                .map_or(trimmed, |after_star| after_star.strip_prefix(' ').unwrap_or(after_star))
+            trimmed.strip_prefix('*').map_or(trimmed, |after_star| {
+                after_star.strip_prefix(' ').unwrap_or(after_star)
+            })
         })
         .join("\n")
 }
@@ -367,7 +394,9 @@ fn is_inline_comment(source_text: &str, span: Span) -> bool {
     // Find the start of the line
     let line_start = source_text[..start].rfind('\n').map_or(0, |i| i + 1);
     // Find the end of the line
-    let line_end = source_text[end..].find('\n').map_or(source_text.len(), |i| end + i);
+    let line_end = source_text[end..]
+        .find('\n')
+        .map_or(source_text.len(), |i| end + i);
 
     // Check if there's non-whitespace content before the comment on the same line
     let before = source_text[line_start..start].trim();
@@ -539,21 +568,48 @@ fn test() {
         ),
         ("// jscs: enable", Some(serde_json::json!(["always"]))),
         ("// jscs:disable", Some(serde_json::json!(["always"]))),
-        ("// eslint-disable-line", Some(serde_json::json!(["always"]))),
-        ("// eslint-disable-next-line", Some(serde_json::json!(["always"]))),
-        ("// oxlint-disable-line", Some(serde_json::json!(["always"]))),
-        ("// oxlint-disable-next-line", Some(serde_json::json!(["always"]))),
+        (
+            "// eslint-disable-line",
+            Some(serde_json::json!(["always"])),
+        ),
+        (
+            "// eslint-disable-next-line",
+            Some(serde_json::json!(["always"])),
+        ),
+        (
+            "// oxlint-disable-line",
+            Some(serde_json::json!(["always"])),
+        ),
+        (
+            "// oxlint-disable-next-line",
+            Some(serde_json::json!(["always"])),
+        ),
         ("/* eslint semi:off */", Some(serde_json::json!(["always"]))),
         ("/* eslint-enable */", Some(serde_json::json!(["always"]))),
         ("/* oxlint-disable */", Some(serde_json::json!(["always"]))),
         ("/* oxlint-enable */", Some(serde_json::json!(["always"]))),
-        ("/* istanbul ignore next */", Some(serde_json::json!(["always"]))),
+        (
+            "/* istanbul ignore next */",
+            Some(serde_json::json!(["always"])),
+        ),
         ("/* jshint asi:true */", Some(serde_json::json!(["always"]))),
         ("/* jscs: enable */", Some(serde_json::json!(["always"]))),
-        ("/* global var1, var2 */", Some(serde_json::json!(["always"]))),
-        ("/* global var1:true, var2 */", Some(serde_json::json!(["always"]))),
-        ("/* globals var1, var2 */", Some(serde_json::json!(["always"]))),
-        ("/* globals var1:true, var2 */", Some(serde_json::json!(["always"]))),
+        (
+            "/* global var1, var2 */",
+            Some(serde_json::json!(["always"])),
+        ),
+        (
+            "/* global var1:true, var2 */",
+            Some(serde_json::json!(["always"])),
+        ),
+        (
+            "/* globals var1, var2 */",
+            Some(serde_json::json!(["always"])),
+        ),
+        (
+            "/* globals var1:true, var2 */",
+            Some(serde_json::json!(["always"])),
+        ),
         ("/* exported myVar */", Some(serde_json::json!(["always"]))),
         // Formatter directives with "always"
         ("// prettier-ignore", Some(serde_json::json!(["always"]))),
@@ -601,10 +657,22 @@ fn test() {
              * @Fileoverview This is a file */",
             Some(serde_json::json!(["never"])),
         ),
-        ("// matching", Some(serde_json::json!(["always", { "ignorePattern": "match" }]))),
-        ("// Matching", Some(serde_json::json!(["never", { "ignorePattern": "Match" }]))),
-        ("// bar", Some(serde_json::json!(["always", { "ignorePattern": "foo|bar" }]))),
-        ("// Bar", Some(serde_json::json!(["never", { "ignorePattern": "Foo|Bar" }]))),
+        (
+            "// matching",
+            Some(serde_json::json!(["always", { "ignorePattern": "match" }])),
+        ),
+        (
+            "// Matching",
+            Some(serde_json::json!(["never", { "ignorePattern": "Match" }])),
+        ),
+        (
+            "// bar",
+            Some(serde_json::json!(["always", { "ignorePattern": "foo|bar" }])),
+        ),
+        (
+            "// Bar",
+            Some(serde_json::json!(["never", { "ignorePattern": "Foo|Bar" }])),
+        ),
         (
             "foo(/* ignored */ a);",
             Some(serde_json::json!(["always", { "ignoreInlineComments": true }])),
@@ -773,8 +841,14 @@ fn test() {
         ("// 𑢢", Some(serde_json::json!(["never"]))),
         ("//* jscs: enable", Some(serde_json::json!(["always"]))),
         ("//* jscs:disable", Some(serde_json::json!(["always"]))),
-        ("//* eslint-disable-line", Some(serde_json::json!(["always"]))),
-        ("//* eslint-disable-next-line", Some(serde_json::json!(["always"]))),
+        (
+            "//* eslint-disable-line",
+            Some(serde_json::json!(["always"])),
+        ),
+        (
+            "//* eslint-disable-next-line",
+            Some(serde_json::json!(["always"])),
+        ),
         (
             "/*
              * eslint semi:off */",
@@ -872,8 +946,14 @@ fn test() {
             b);",
             Some(serde_json::json!(["never", { "ignoreInlineComments": true }])),
         ),
-        ("// not matching", Some(serde_json::json!(["always", { "ignorePattern": "ignored?" }]))),
-        ("// Not matching", Some(serde_json::json!(["never", { "ignorePattern": "ignored?" }]))),
+        (
+            "// not matching",
+            Some(serde_json::json!(["always", { "ignorePattern": "ignored?" }])),
+        ),
+        (
+            "// Not matching",
+            Some(serde_json::json!(["never", { "ignorePattern": "ignored?" }])),
+        ),
         (
             "// This comment is valid since it is capitalized,
             // and this one is valid since it follows a valid one,
@@ -896,8 +976,14 @@ fn test() {
             // but this one is invalid even if it follows a valid one.",
             Some(serde_json::json!(["always", { "ignoreConsecutiveComments": false }])),
         ),
-        ("// should fail. https://github.com", Some(serde_json::json!(["always"]))),
-        ("// Should fail. https://github.com", Some(serde_json::json!(["never"]))),
+        (
+            "// should fail. https://github.com",
+            Some(serde_json::json!(["always"])),
+        ),
+        (
+            "// Should fail. https://github.com",
+            Some(serde_json::json!(["never"])),
+        ),
     ];
 
     let fix = vec![
@@ -931,11 +1017,31 @@ fn test() {
         ),
         ("// ꮳꮃꭹ", "// Ꮳꮃꭹ", None),
         ("/* 𐳡𐳡𐳡 */", "/* 𐲡𐳡𐳡 */", None),
-        ("//lowercase", "//Lowercase", Some(serde_json::json!(["always"]))),
-        ("// lowercase", "// Lowercase", Some(serde_json::json!(["always"]))),
-        ("/*lowercase */", "/*Lowercase */", Some(serde_json::json!(["always"]))),
-        ("/* lowercase */", "/* Lowercase */", Some(serde_json::json!(["always"]))),
-        ("/** lowercase */", "/** Lowercase */", Some(serde_json::json!(["always"]))),
+        (
+            "//lowercase",
+            "//Lowercase",
+            Some(serde_json::json!(["always"])),
+        ),
+        (
+            "// lowercase",
+            "// Lowercase",
+            Some(serde_json::json!(["always"])),
+        ),
+        (
+            "/*lowercase */",
+            "/*Lowercase */",
+            Some(serde_json::json!(["always"])),
+        ),
+        (
+            "/* lowercase */",
+            "/* Lowercase */",
+            Some(serde_json::json!(["always"])),
+        ),
+        (
+            "/** lowercase */",
+            "/** Lowercase */",
+            Some(serde_json::json!(["always"])),
+        ),
         (
             "/**
             lowercase */",
@@ -952,10 +1058,26 @@ fn test() {
             Second line need not be lowercase */",
             Some(serde_json::json!(["always"])),
         ),
-        ("//Uppercase", "//uppercase", Some(serde_json::json!(["never"]))),
-        ("// Uppercase", "// uppercase", Some(serde_json::json!(["never"]))),
-        ("/*Uppercase */", "/*uppercase */", Some(serde_json::json!(["never"]))),
-        ("/* Uppercase */", "/* uppercase */", Some(serde_json::json!(["never"]))),
+        (
+            "//Uppercase",
+            "//uppercase",
+            Some(serde_json::json!(["never"])),
+        ),
+        (
+            "// Uppercase",
+            "// uppercase",
+            Some(serde_json::json!(["never"])),
+        ),
+        (
+            "/*Uppercase */",
+            "/*uppercase */",
+            Some(serde_json::json!(["never"])),
+        ),
+        (
+            "/* Uppercase */",
+            "/* uppercase */",
+            Some(serde_json::json!(["never"])),
+        ),
         (
             "/*
             Uppercase */",
@@ -974,9 +1096,21 @@ fn test() {
         ),
         ("// Გ", "// გ", Some(serde_json::json!(["never"]))),
         ("// 𑢢", "// 𑣂", Some(serde_json::json!(["never"]))),
-        ("//* jscs: enable", "//* Jscs: enable", Some(serde_json::json!(["always"]))),
-        ("//* jscs:disable", "//* Jscs:disable", Some(serde_json::json!(["always"]))),
-        ("//* eslint-disable-line", "//* Eslint-disable-line", Some(serde_json::json!(["always"]))),
+        (
+            "//* jscs: enable",
+            "//* Jscs: enable",
+            Some(serde_json::json!(["always"])),
+        ),
+        (
+            "//* jscs:disable",
+            "//* Jscs:disable",
+            Some(serde_json::json!(["always"])),
+        ),
+        (
+            "//* eslint-disable-line",
+            "//* Eslint-disable-line",
+            Some(serde_json::json!(["always"])),
+        ),
         (
             "//* eslint-disable-next-line",
             "//* Eslint-disable-next-line",
@@ -1052,7 +1186,11 @@ fn test() {
              *  Exported myVar */",
             Some(serde_json::json!(["always"])),
         ),
-        ("foo(/* invalid */a);", "foo(/* Invalid */a);", Some(serde_json::json!(["always"]))),
+        (
+            "foo(/* invalid */a);",
+            "foo(/* Invalid */a);",
+            Some(serde_json::json!(["always"])),
+        ),
         (
             "foo(/* invalid */a);",
             "foo(/* Invalid */a);",
@@ -1139,10 +1277,19 @@ fn test() {
             Some(serde_json::json!(["never"])),
         ),
         ("// ßeta", "// SSeta", Some(serde_json::json!(["always"]))),
-        ("// İtem", "// i\u{307}tem", Some(serde_json::json!(["never"]))),
+        (
+            "// İtem",
+            "// i\u{307}tem",
+            Some(serde_json::json!(["never"])),
+        ),
     ];
 
-    Tester::new(CapitalizedComments::NAME, CapitalizedComments::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        CapitalizedComments::NAME,
+        CapitalizedComments::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

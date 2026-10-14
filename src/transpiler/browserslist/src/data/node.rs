@@ -41,7 +41,11 @@ fn node_data() -> &'static NodeData {
             let patch = read_varint(data, &mut pos) as u16;
             previous_start += read_zigzag(data, &mut pos);
             let end = previous_start + read_varint(data, &mut pos) as i64;
-            schedule.push((Version(major, minor, patch), previous_start as i32, end as i32));
+            schedule.push((
+                Version(major, minor, patch),
+                previous_start as i32,
+                end as i32,
+            ));
         }
         assert_eq!(pos, data.len(), "trailing node data");
 

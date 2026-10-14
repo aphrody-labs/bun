@@ -138,7 +138,10 @@ t9b: number;
             (r#"[n7 = "foo bar"]"#, Some(r#"[n7 = "foo bar"]"#)),
             ("n.n8", Some("n.n8")),
             ("n[].n9", Some("n[].n9")),
-            (r#"[ n10 = ["{}", "[]"] ]"#, Some(r#"[ n10 = ["{}", "[]"] ]"#)),
+            (
+                r#"[ n10 = ["{}", "[]"] ]"#,
+                Some(r#"[ n10 = ["{}", "[]"] ]"#),
+            ),
             ("[n11... c11]", Some("[n11... c11]")),
             ("[n12[]\nc12]", Some("[n12[]\nc12]")),
             ("n12.n12", Some("n12.n12")),
@@ -147,7 +150,10 @@ t9b: number;
             ("[n12[]\nc12", None),
             ("[n12\nc12", None),
         ] {
-            assert_eq!(find_type_name_range(actual).map(|(s, e)| &actual[s..e]), expect);
+            assert_eq!(
+                find_type_name_range(actual).map(|(s, e)| &actual[s..e]),
+                expect
+            );
         }
     }
 

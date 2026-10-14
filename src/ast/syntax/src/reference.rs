@@ -248,7 +248,11 @@ impl<'alloc> CloneIn<'alloc> for ReferenceFlags {
 /// const arr = [1, 2, 3].map(function mapper(x) { return x + 1; });
 /// //      Not considered a reference ^^^^^^
 /// ```
-#[cfg_attr(feature = "serialize", derive(Serialize), serde(rename_all = "camelCase"))]
+#[cfg_attr(
+    feature = "serialize",
+    derive(Serialize),
+    serde(rename_all = "camelCase")
+)]
 #[derive(Debug, Clone)]
 pub struct Reference {
     /// The AST node making the reference.
@@ -270,7 +274,12 @@ impl Reference {
     /// Create a new unresolved reference.
     #[inline]
     pub fn new(node_id: NodeId, scope_id: ScopeId, flags: ReferenceFlags) -> Self {
-        Self { node_id, symbol_id: None, scope_id, flags }
+        Self {
+            node_id,
+            symbol_id: None,
+            scope_id,
+            flags,
+        }
     }
 
     /// Create a new resolved reference on a symbol.
@@ -281,7 +290,12 @@ impl Reference {
         scope_id: ScopeId,
         flags: ReferenceFlags,
     ) -> Self {
-        Self { node_id, symbol_id: Some(symbol_id), scope_id, flags }
+        Self {
+            node_id,
+            symbol_id: Some(symbol_id),
+            scope_id,
+            flags,
+        }
     }
 
     /// Get the id of the node that is referencing the symbol.

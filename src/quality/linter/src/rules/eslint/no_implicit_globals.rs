@@ -22,9 +22,11 @@ fn global_non_lexical_binding_diagnostic(kind: &'static str, span: Span) -> OxcD
 }
 
 fn global_lexical_binding_diagnostic(kind: &'static str, span: Span) -> OxcDiagnostic {
-    OxcDiagnostic::warn(format!("Unexpected {kind} declaration in the global scope."))
-        .with_help("Wrap it in a block or in an IIFE.")
-        .with_label(span)
+    OxcDiagnostic::warn(format!(
+        "Unexpected {kind} declaration in the global scope."
+    ))
+    .with_help("Wrap it in a block or in an IIFE.")
+    .with_label(span)
 }
 
 fn global_variable_leak_diagnostic(span: Span) -> OxcDiagnostic {
@@ -310,8 +312,14 @@ fn test() {
             Some(serde_json::json!([{ "lexicalBindings": false }])),
         ), // { "ecmaVersion": 2015 },
         ("const Array = 1; let Object; class Math {}", None), // { "ecmaVersion": 2015 },
-        ("typeof class {}", Some(serde_json::json!([{ "lexicalBindings": true }]))), // { "ecmaVersion": 2015 },
-        ("typeof class foo {}", Some(serde_json::json!([{ "lexicalBindings": true }]))), // { "ecmaVersion": 2015 },
+        (
+            "typeof class {}",
+            Some(serde_json::json!([{ "lexicalBindings": true }])),
+        ), // { "ecmaVersion": 2015 },
+        (
+            "typeof class foo {}",
+            Some(serde_json::json!([{ "lexicalBindings": true }])),
+        ), // { "ecmaVersion": 2015 },
         (
             "{ const foo = 1; let bar; class Baz {} }",
             Some(serde_json::json!([{ "lexicalBindings": true }])),
@@ -347,7 +355,10 @@ fn test() {
         ("foo ||= 1", None), // { "ecmaVersion": 2021 },
         ("'use strict';foo = 1;", None),
         ("(function() {'use strict'; foo = 1; })();", None),
-        ("{ class Foo { constructor() { bar = 1; } baz() { bar = 1; } } }", None), // { "ecmaVersion": 2015 },
+        (
+            "{ class Foo { constructor() { bar = 1; } baz() { bar = 1; } } }",
+            None,
+        ), // { "ecmaVersion": 2015 },
         ("Foo.bar = 1;", None),
         ("Utils.foo = 1;", None),
         ("Utils.foo = function() {};", None),
@@ -360,7 +371,10 @@ fn test() {
         ("foo--", None),
         ("window.foo = function bar() { bar = 1; };", None), // { "globals": globals.browser },
         ("window.foo = function bar(baz) { baz = 1; };", None), // { "globals": globals.browser },
-        ("window.foo = function bar() { var baz; function quux() { quux = 1; } };", None), // { "globals": globals.browser },
+        (
+            "window.foo = function bar() { var baz; function quux() { quux = 1; } };",
+            None,
+        ), // { "globals": globals.browser },
         ("Array.from = 1;", None),
         ("Object['assign'] = 1;", None),
         ("foo.bar = 1;", None),
@@ -377,15 +391,42 @@ fn test() {
         ("var foo = function*() {};", None), // { "ecmaVersion": 2015 },
         ("var foo = function *foo() {};", None), // { "ecmaVersion": 2015 },
         ("var foo = 1, bar = 2;", None),
-        ("const a = 1;", Some(serde_json::json!([{ "lexicalBindings": true }]))), // { "ecmaVersion": 2015 },
-        ("let a;", Some(serde_json::json!([{ "lexicalBindings": true }]))), // { "ecmaVersion": 2015 },
-        ("let a = 1;", Some(serde_json::json!([{ "lexicalBindings": true }]))), // { "ecmaVersion": 2015 },
-        ("class A {}", Some(serde_json::json!([{ "lexicalBindings": true }]))), // { "ecmaVersion": 2015 },
-        ("const a = 1; const b = 2;", Some(serde_json::json!([{ "lexicalBindings": true }]))), // { "ecmaVersion": 2015 },
-        ("const a = 1, b = 2;", Some(serde_json::json!([{ "lexicalBindings": true }]))), // { "ecmaVersion": 2015 },
-        ("let a, b = 1;", Some(serde_json::json!([{ "lexicalBindings": true }]))), // { "ecmaVersion": 2015 },
-        ("const a = 1; let b; class C {}", Some(serde_json::json!([{ "lexicalBindings": true }]))), // { "ecmaVersion": 2015 },
-        ("const [a, b, ...c] = [];", Some(serde_json::json!([{ "lexicalBindings": true }]))), // { "ecmaVersion": 2015 },
+        (
+            "const a = 1;",
+            Some(serde_json::json!([{ "lexicalBindings": true }])),
+        ), // { "ecmaVersion": 2015 },
+        (
+            "let a;",
+            Some(serde_json::json!([{ "lexicalBindings": true }])),
+        ), // { "ecmaVersion": 2015 },
+        (
+            "let a = 1;",
+            Some(serde_json::json!([{ "lexicalBindings": true }])),
+        ), // { "ecmaVersion": 2015 },
+        (
+            "class A {}",
+            Some(serde_json::json!([{ "lexicalBindings": true }])),
+        ), // { "ecmaVersion": 2015 },
+        (
+            "const a = 1; const b = 2;",
+            Some(serde_json::json!([{ "lexicalBindings": true }])),
+        ), // { "ecmaVersion": 2015 },
+        (
+            "const a = 1, b = 2;",
+            Some(serde_json::json!([{ "lexicalBindings": true }])),
+        ), // { "ecmaVersion": 2015 },
+        (
+            "let a, b = 1;",
+            Some(serde_json::json!([{ "lexicalBindings": true }])),
+        ), // { "ecmaVersion": 2015 },
+        (
+            "const a = 1; let b; class C {}",
+            Some(serde_json::json!([{ "lexicalBindings": true }])),
+        ), // { "ecmaVersion": 2015 },
+        (
+            "const [a, b, ...c] = [];",
+            Some(serde_json::json!([{ "lexicalBindings": true }])),
+        ), // { "ecmaVersion": 2015 },
         (
             "let { a, foo: b, bar: { c } } = {};",
             Some(serde_json::json!([{ "lexicalBindings": true }])),
@@ -409,7 +450,13 @@ fn test() {
         ("var Array = 1; Array = 2;", None),
     ];
 
-    Tester::new(NoImplicitGlobals::NAME, NoImplicitGlobals::PLUGIN, pass, fail).test_and_snapshot();
+    Tester::new(
+        NoImplicitGlobals::NAME,
+        NoImplicitGlobals::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }
 
 #[test]
@@ -456,7 +503,12 @@ fn test_configured_globals() {
         ("foo = 1;", None, disabled_globals),
     ];
 
-    Tester::new(NoImplicitGlobals::NAME, NoImplicitGlobals::PLUGIN, pass, fail)
-        .with_snapshot_suffix("configured-globals")
-        .test_and_snapshot();
+    Tester::new(
+        NoImplicitGlobals::NAME,
+        NoImplicitGlobals::PLUGIN,
+        pass,
+        fail,
+    )
+    .with_snapshot_suffix("configured-globals")
+    .test_and_snapshot();
 }

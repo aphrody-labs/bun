@@ -10,7 +10,11 @@ use super::*;
 impl Walk {
     pub(super) fn step_op(&mut self, tokens: &Tokens, pos: usize, newline: bool) -> usize {
         let c = tokens.src[pos];
-        let mut len = if is_op_char(c) || c == b'/' { tokens.op_len(pos) } else { 1 };
+        let mut len = if is_op_char(c) || c == b'/' {
+            tokens.op_len(pos)
+        } else {
+            1
+        };
         let c1 = tokens.src[pos + 1];
 
         // Type context: brackets and separators belong to the type.
@@ -192,7 +196,11 @@ impl Walk {
     }
 
     pub(super) fn arrow(&mut self, tokens: &Tokens, pos: usize) {
-        let is_async = if self.closed_group { self.closed_group_async } else { self.arrow_async };
+        let is_async = if self.closed_group {
+            self.closed_group_async
+        } else {
+            self.arrow_async
+        };
         // Concise body unless `{` follows.
         let nx = tokens.peek(pos + 2);
         let block = nx.kind >= OP_KIND_BASE && nx.byte == b'{';
@@ -411,7 +419,11 @@ impl Walk {
             f.is_generator = generator;
             f.is_async = is_async;
         }
-        self.expect = if kind.is_stmt_holder() { Expect::Statement } else { Expect::Operand };
+        self.expect = if kind.is_stmt_holder() {
+            Expect::Statement
+        } else {
+            Expect::Operand
+        };
         self.clear_prev();
         self.decorator = 0;
     }
@@ -477,8 +489,10 @@ impl Walk {
             kind = FrameKind::Params;
             generator = m & MOD_GEN != 0;
             is_async = m & MOD_ASYNC != 0;
-        } else if matches_tk!(self.prev_kw, KwIf | KwWhile | KwFor | KwWith | KwSwitch | KwCatch)
-            && self.frames[self.stmt_frame()].kind.is_stmt_holder()
+        } else if matches_tk!(
+            self.prev_kw,
+            KwIf | KwWhile | KwFor | KwWith | KwSwitch | KwCatch
+        ) && self.frames[self.stmt_frame()].kind.is_stmt_holder()
         {
             kind = FrameKind::Head;
         } else if self.operand_allowed() || self.prev_kw == tk!(KwNew) {

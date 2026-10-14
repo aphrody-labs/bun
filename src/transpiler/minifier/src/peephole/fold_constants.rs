@@ -19,7 +19,9 @@ use super::PeepholeOptimizations;
 impl<'a> PeepholeOptimizations {
     #[expect(clippy::float_cmp)]
     pub fn fold_unary_expr(expr: &mut Expression<'a>, ctx: &mut TraverseCtx<'a>) {
-        let Expression::UnaryExpression(e) = expr else { return };
+        let Expression::UnaryExpression(e) = expr else {
+            return;
+        };
         match e.operator {
             // Do not fold `void 0` back to `undefined`.
             UnaryOperator::Void if e.argument.is_number_0() => {}
@@ -38,14 +40,18 @@ impl<'a> PeepholeOptimizations {
     }
 
     pub fn fold_static_member_expr(expr: &mut Expression<'a>, ctx: &mut TraverseCtx<'a>) {
-        let Expression::StaticMemberExpression(e) = expr else { return };
+        let Expression::StaticMemberExpression(e) = expr else {
+            return;
+        };
         // TODO: tryFoldObjectPropAccess(n, left, name)
         // `evaluate_value` only folds a narrow set of member accesses (currently
         // `.length` on constant strings/arrays) and bails cheaply otherwise.
         // Evaluate it first so the overwhelmingly common non-foldable access
         // (e.g. `a.b.c.prop`) skips the recursive `may_have_side_effects` walk
         // over the object's member chain.
-        let Some(value) = e.evaluate_value(ctx) else { return };
+        let Some(value) = e.evaluate_value(ctx) else {
+            return;
+        };
         if e.object.may_have_side_effects(ctx) {
             return;
         }
@@ -54,11 +60,15 @@ impl<'a> PeepholeOptimizations {
     }
 
     pub fn fold_computed_member_expr(expr: &mut Expression<'a>, ctx: &mut TraverseCtx<'a>) {
-        let Expression::ComputedMemberExpression(e) = expr else { return };
+        let Expression::ComputedMemberExpression(e) = expr else {
+            return;
+        };
         // TODO: tryFoldObjectPropAccess(n, left, name)
         // See `fold_static_member_expr`: bail via the cheap `evaluate_value`
         // check before walking the object and key for side effects.
-        let Some(value) = e.evaluate_value(ctx) else { return };
+        let Some(value) = e.evaluate_value(ctx) else {
+            return;
+        };
         if e.object.may_have_side_effects(ctx) || e.expression.may_have_side_effects(ctx) {
             return;
         }
@@ -67,7 +77,9 @@ impl<'a> PeepholeOptimizations {
     }
 
     pub fn fold_logical_expr(expr: &mut Expression<'a>, ctx: &mut TraverseCtx<'a>) {
-        let Expression::LogicalExpression(e) = expr else { return };
+        let Expression::LogicalExpression(e) = expr else {
+            return;
+        };
         match e.operator {
             LogicalOperator::And | LogicalOperator::Or => Self::try_fold_and_or(expr, ctx),
             LogicalOperator::Coalesce => Self::try_fold_coalesce(expr, ctx),
@@ -75,7 +87,9 @@ impl<'a> PeepholeOptimizations {
     }
 
     pub fn fold_chain_expr(expr: &mut Expression<'a>, ctx: &mut TraverseCtx<'a>) {
-        let Expression::ChainExpression(e) = expr else { return };
+        let Expression::ChainExpression(e) = expr else {
+            return;
+        };
         let span = e.span;
         match try_fold_chain_at_element(&mut e.expression, ctx) {
             ChainFold::Unfolded { .. } => {}
@@ -86,12 +100,17 @@ impl<'a> PeepholeOptimizations {
                     ctx.notice_change();
                 } else {
                     ctx.replace_expression_with(expr, |e, _ctx| {
-                        let Expression::ChainExpression(e) = e else { unreachable!() };
+                        let Expression::ChainExpression(e) = e else {
+                            unreachable!()
+                        };
                         Expression::from(e.unbox().expression)
                     });
                 }
             }
-            ChainFold::Collapse { base, base_has_side_effects } => {
+            ChainFold::Collapse {
+                base,
+                base_has_side_effects,
+            } => {
                 let new_expr = if base_has_side_effects {
                     Expression::new_sequence_expression(
                         span,
@@ -274,7 +293,9 @@ impl<'a> PeepholeOptimizations {
     #[expect(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     #[expect(clippy::float_cmp)]
     pub fn fold_binary_expr(expr: &mut Expression<'a>, ctx: &mut TraverseCtx<'a>) {
-        let Expression::BinaryExpression(e) = expr else { return };
+        let Expression::BinaryExpression(e) = expr else {
+            return;
+        };
         // Do not fold `1/0` and `-1/0`: codegen prints the non-finite numbers
         // in exactly this form, so like `!0` and `void 0` above, folding them
         // cannot shrink the output and only records a change on every run.
@@ -301,7 +322,8 @@ impl<'a> PeepholeOptimizations {
             | BinaryOperator::ShiftRight
             | BinaryOperator::Instanceof => ctx.eval_binary(e),
             BinaryOperator::BitwiseAnd | BinaryOperator::BitwiseOR | BinaryOperator::BitwiseXOR => {
-                ctx.eval_binary(e).or_else(|| Self::try_fold_left_child_op(e, ctx))
+                ctx.eval_binary(e)
+                    .or_else(|| Self::try_fold_left_child_op(e, ctx))
             }
             BinaryOperator::Addition => Self::try_fold_add(e, ctx),
             BinaryOperator::Subtraction => {
@@ -506,7 +528,10 @@ impl<'a> PeepholeOptimizations {
                     Self::string_expression_size_lower_bound(&e.left, ctx)?;
                 let (right_size, right_has_non_inlineable) =
                     Self::string_expression_size_lower_bound(&e.right, ctx)?;
-                (left_size + 1 + right_size, left_has_non_inlineable || right_has_non_inlineable)
+                (
+                    left_size + 1 + right_size,
+                    left_has_non_inlineable || right_has_non_inlineable,
+                )
             }
             _ => return None,
         };
@@ -588,21 +613,32 @@ impl<'a> PeepholeOptimizations {
         if let Expression::TemplateLiteral(left) = left_expr {
             // "`${a}b` + `x${y}`" => "`${a}bx${y}`"
             if let Expression::TemplateLiteral(right) = right_expr {
-                left.span = left.span.merge_within(right.span, parent_span).unwrap_or(SPAN);
-                let left_last_quasi =
-                    left.quasis.last_mut().expect("template literal must have at least one quasi");
+                left.span = left
+                    .span
+                    .merge_within(right.span, parent_span)
+                    .unwrap_or(SPAN);
+                let left_last_quasi = left
+                    .quasis
+                    .last_mut()
+                    .expect("template literal must have at least one quasi");
                 let right_first_quasi = right
                     .quasis
                     .first_mut()
                     .expect("template literal must have at least one quasi");
                 left_last_quasi.value.raw = Str::from_strs_array_in(
-                    [left_last_quasi.value.raw.as_str(), right_first_quasi.value.raw.as_str()],
+                    [
+                        left_last_quasi.value.raw.as_str(),
+                        right_first_quasi.value.raw.as_str(),
+                    ],
                     ctx,
                 );
                 let new_cooked = if let (Some(cooked1), Some(cooked2)) =
                     (left_last_quasi.value.cooked, right_first_quasi.value.cooked)
                 {
-                    Some(Str::from_strs_array_in([cooked1.as_str(), cooked2.as_str()], ctx))
+                    Some(Str::from_strs_array_in(
+                        [cooked1.as_str(), cooked2.as_str()],
+                        ctx,
+                    ))
                 } else {
                     None
                 };
@@ -617,9 +653,14 @@ impl<'a> PeepholeOptimizations {
 
             // "`${x}y` + 'z'" => "`${x}yz`"
             if let Some(right_str) = right_expr.get_side_free_string_value(ctx) {
-                left.span = left.span.merge_within(right_expr.span(), parent_span).unwrap_or(SPAN);
-                let last_quasi =
-                    left.quasis.last_mut().expect("template literal must have at least one quasi");
+                left.span = left
+                    .span
+                    .merge_within(right_expr.span(), parent_span)
+                    .unwrap_or(SPAN);
+                let last_quasi = left
+                    .quasis
+                    .last_mut()
+                    .expect("template literal must have at least one quasi");
                 last_quasi.value.raw = Str::from_strs_array_in(
                     [
                         last_quasi.value.raw.as_str(),
@@ -636,7 +677,10 @@ impl<'a> PeepholeOptimizations {
         } else if let Expression::TemplateLiteral(right) = right_expr {
             // "'x' + `y${z}`" => "`xy${z}`"
             if let Some(left_str) = left_expr.get_side_free_string_value(ctx) {
-                right.span = right.span.merge_within(left_expr.span(), parent_span).unwrap_or(SPAN);
+                right.span = right
+                    .span
+                    .merge_within(left_expr.span(), parent_span)
+                    .unwrap_or(SPAN);
                 let first_quasi = right
                     .quasis
                     .first_mut()
@@ -698,7 +742,9 @@ impl<'a> PeepholeOptimizations {
             return None;
         }
 
-        let Expression::BinaryExpression(left) = &mut e.left else { unreachable!() };
+        let Expression::BinaryExpression(left) = &mut e.left else {
+            unreachable!()
+        };
 
         let (v, expr_to_move);
         if !left.left.may_have_side_effects(ctx)
@@ -718,7 +764,10 @@ impl<'a> PeepholeOptimizations {
             expr_to_move.take_in(ctx),
             op,
             ctx.value_to_expr(
-                left.right.span().merge_within(e.right.span(), e.span).unwrap_or(SPAN),
+                left.right
+                    .span()
+                    .merge_within(e.right.span(), e.span)
+                    .unwrap_or(SPAN),
                 v,
             ),
             ctx,
@@ -726,14 +775,18 @@ impl<'a> PeepholeOptimizations {
     }
 
     pub fn fold_call_expression(expr: &mut Expression<'a>, ctx: &mut TraverseCtx<'a>) {
-        let Expression::CallExpression(e) = expr else { return };
+        let Expression::CallExpression(e) = expr else {
+            return;
+        };
         if !ctx.is_global_expr("Number", &e.callee) {
             return;
         }
         if e.arguments.len() != 1 {
             return;
         }
-        let Some(arg) = e.arguments[0].as_expression() else { return };
+        let Some(arg) = e.arguments[0].as_expression() else {
+            return;
+        };
         let value = ConstantValue::Number(match arg {
             // `Number(undefined)` -> `NaN`
             Expression::Identifier(ident) if ctx.is_identifier_undefined(ident) => f64::NAN,
@@ -767,7 +820,9 @@ impl<'a> PeepholeOptimizations {
     }
 
     pub fn fold_binary_typeof_comparison(expr: &mut Expression<'a>, ctx: &mut TraverseCtx<'a>) {
-        let Expression::BinaryExpression(e) = expr else { return };
+        let Expression::BinaryExpression(e) = expr else {
+            return;
+        };
         // `typeof a == typeof a` -> `true`, `typeof a != typeof a` -> `false`
         if e.operator.is_equality()
             && let (Expression::UnaryExpression(left), Expression::UnaryExpression(right)) =
@@ -778,7 +833,10 @@ impl<'a> PeepholeOptimizations {
                 (&left.argument, &right.argument)
             && left_ident.name == right_ident.name
         {
-            let b = matches!(e.operator, BinaryOperator::StrictEquality | BinaryOperator::Equality);
+            let b = matches!(
+                e.operator,
+                BinaryOperator::StrictEquality | BinaryOperator::Equality
+            );
             let new_expr = Expression::new_boolean_literal(e.span, b, ctx);
             ctx.replace_expression(expr, new_expr);
             return;
@@ -832,7 +890,10 @@ impl<'a> PeepholeOptimizations {
 
             let new_expr = Expression::new_boolean_literal(
                 e.span,
-                matches!(e.operator, BinaryOperator::StrictInequality | BinaryOperator::Inequality),
+                matches!(
+                    e.operator,
+                    BinaryOperator::StrictInequality | BinaryOperator::Inequality
+                ),
                 ctx,
             );
             ctx.replace_expression(expr, new_expr);
@@ -854,20 +915,22 @@ impl<'a> PeepholeOptimizations {
             }
         }
         let (new_size, should_fold) =
-            e.properties.iter().fold((0, false), |(new_size, should_fold), p| {
-                let ObjectPropertyKind::SpreadProperty(spread_element) = p else {
-                    return (new_size + 1, should_fold);
-                };
-                match &spread_element.argument {
-                    Expression::ObjectExpression(o)
-                        if Self::is_spread_inlineable_object_literal(o, ctx) =>
-                    {
-                        (new_size + o.properties.len(), true)
+            e.properties
+                .iter()
+                .fold((0, false), |(new_size, should_fold), p| {
+                    let ObjectPropertyKind::SpreadProperty(spread_element) = p else {
+                        return (new_size + 1, should_fold);
+                    };
+                    match &spread_element.argument {
+                        Expression::ObjectExpression(o)
+                            if Self::is_spread_inlineable_object_literal(o, ctx) =>
+                        {
+                            (new_size + o.properties.len(), true)
+                        }
+                        e if should_fold_spread_element(e, ctx) => (new_size, true),
+                        _ => (new_size + 1, should_fold),
                     }
-                    e if should_fold_spread_element(e, ctx) => (new_size, true),
-                    _ => (new_size + 1, should_fold),
-                }
-            });
+                });
         if !should_fold {
             return;
         }
@@ -988,15 +1051,20 @@ impl<'a> PeepholeOptimizations {
             let next_quasi = (idx + 1 < t.quasis.len()).then(|| t.quasis.remove(idx + 1));
             let quasi = &mut t.quasis[idx];
             let escaped = Self::escape_string_for_template_literal(&str);
-            let next_raw = next_quasi.as_ref().map(|q| q.value.raw.as_str()).unwrap_or_default();
+            let next_raw = next_quasi
+                .as_ref()
+                .map(|q| q.value.raw.as_str())
+                .unwrap_or_default();
             let raw = quasi.value.raw.as_str();
             let starts_with_digit = escaped
                 .as_bytes()
                 .first()
                 .or_else(|| next_raw.as_bytes().first())
                 .is_some_and(u8::is_ascii_digit);
-            let cooked_ends_with_null =
-                quasi.value.cooked.is_some_and(|cooked| cooked.as_str().ends_with('\0'));
+            let cooked_ends_with_null = quasi
+                .value
+                .cooked
+                .is_some_and(|cooked| cooked.as_str().ends_with('\0'));
             quasi.value.raw = if starts_with_digit
                 && cooked_ends_with_null
                 && let Some(prefix) = raw.strip_suffix("\\0")
@@ -1005,11 +1073,15 @@ impl<'a> PeepholeOptimizations {
             } else {
                 Str::from_strs_array_in([raw, &escaped, next_raw], ctx)
             };
-            let new_cooked = if let (Some(cooked1), Some(cooked2)) =
-                (quasi.value.cooked, next_quasi.as_ref().map(|q| q.value.cooked))
-            {
+            let new_cooked = if let (Some(cooked1), Some(cooked2)) = (
+                quasi.value.cooked,
+                next_quasi.as_ref().map(|q| q.value.cooked),
+            ) {
                 let cooked2_str = cooked2.map(|c| c.as_str()).unwrap_or_default();
-                Some(Str::from_strs_array_in([cooked1.as_str(), &str, cooked2_str], ctx))
+                Some(Str::from_strs_array_in(
+                    [cooked1.as_str(), &str, cooked2_str],
+                    ctx,
+                ))
             } else {
                 None
             };
@@ -1068,7 +1140,9 @@ fn try_fold_chain_at_expr<'a>(expr: &mut Expression<'a>, ctx: &TraverseCtx<'a>) 
         match_member_expression!(Expression) => {
             try_fold_member_expression(expr.to_member_expression_mut(), ctx)
         }
-        _ => ChainFold::Unfolded { has_optional: false },
+        _ => ChainFold::Unfolded {
+            has_optional: false,
+        },
     }
 }
 
@@ -1077,13 +1151,16 @@ fn try_fold_call_expression<'a>(
     ctx: &TraverseCtx<'a>,
 ) -> ChainFold<'a> {
     match try_fold_chain_at_expr(&mut call.callee, ctx) {
-        ChainFold::Flipped { has_optional } => {
-            ChainFold::Flipped { has_optional: has_optional || call.optional }
-        }
+        ChainFold::Flipped { has_optional } => ChainFold::Flipped {
+            has_optional: has_optional || call.optional,
+        },
         collapse @ ChainFold::Collapse { .. } => collapse,
         ChainFold::Unfolded { has_optional } => {
-            try_fold_at_optional(&mut call.optional, &mut call.callee, has_optional, ctx)
-                .unwrap_or(ChainFold::Unfolded { has_optional: has_optional || call.optional })
+            try_fold_at_optional(&mut call.optional, &mut call.callee, has_optional, ctx).unwrap_or(
+                ChainFold::Unfolded {
+                    has_optional: has_optional || call.optional,
+                },
+            )
         }
     }
 }
@@ -1095,13 +1172,16 @@ fn try_fold_member_expression<'a>(
     let (optional_mut, object) = member_expression_optional_and_object_mut(member);
     let optional = *optional_mut;
     match try_fold_chain_at_expr(object, ctx) {
-        ChainFold::Flipped { has_optional } => {
-            ChainFold::Flipped { has_optional: has_optional || optional }
-        }
+        ChainFold::Flipped { has_optional } => ChainFold::Flipped {
+            has_optional: has_optional || optional,
+        },
         collapse @ ChainFold::Collapse { .. } => collapse,
         ChainFold::Unfolded { has_optional } => {
-            try_fold_at_optional(optional_mut, object, has_optional, ctx)
-                .unwrap_or(ChainFold::Unfolded { has_optional: has_optional || optional })
+            try_fold_at_optional(optional_mut, object, has_optional, ctx).unwrap_or(
+                ChainFold::Unfolded {
+                    has_optional: has_optional || optional,
+                },
+            )
         }
     }
 }
@@ -1138,13 +1218,18 @@ fn try_fold_at_optional<'a>(
         ValueType::Null | ValueType::Undefined => {
             let base_has_side_effects = base.may_have_side_effects(ctx);
             let taken = base.take_in(ctx);
-            Some(ChainFold::Collapse { base: taken, base_has_side_effects })
+            Some(ChainFold::Collapse {
+                base: taken,
+                base_has_side_effects,
+            })
         }
         ValueType::Undetermined => None,
         _ => {
             // Bool field flip on an existing AST node, not a slot replacement.
             *optional = false;
-            Some(ChainFold::Flipped { has_optional: false })
+            Some(ChainFold::Flipped {
+                has_optional: false,
+            })
         }
     }
 }

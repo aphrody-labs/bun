@@ -14,7 +14,9 @@ use crate::{
 
 fn exceeded_max_depth(current: u32, max: u32, span: Span) -> OxcDiagnostic {
     OxcDiagnostic::warn("Enforces a maximum depth to nested describe calls.")
-        .with_help(format!("Too many nested describe calls ({current}) - maximum allowed is {max}"))
+        .with_help(format!(
+            "Too many nested describe calls ({current}) - maximum allowed is {max}"
+        ))
         .with_label(span)
 }
 
@@ -142,7 +144,10 @@ impl MaxNestedDescribeConfig {
 
         let mut active_describes: Vec<Span> = Vec::new();
         for span in describe_call_spans {
-            while active_describes.last().is_some_and(|parent| !parent.contains_inclusive(span)) {
+            while active_describes
+                .last()
+                .is_some_and(|parent| !parent.contains_inclusive(span))
+            {
                 active_describes.pop();
             }
             active_describes.push(span);

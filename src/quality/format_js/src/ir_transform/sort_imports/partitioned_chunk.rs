@@ -66,7 +66,12 @@ impl<'a> PartitionedChunk<'a> {
         self,
         group_matcher: &GroupMatcher,
         options: &SortImportsOptions,
-    ) -> (Vec<SortableImport<'a>>, Vec<OrphanContent<'a>>, Vec<SourceLine<'a>>, Vec<bool>) {
+    ) -> (
+        Vec<SortableImport<'a>>,
+        Vec<OrphanContent<'a>>,
+        Vec<SourceLine<'a>>,
+        Vec<bool>,
+    ) {
         let Self::Imports(lines) = self else {
             unreachable!(
                 "`into_import_units()` must be called on `PartitionedChunk::Imports` only."
@@ -89,8 +94,11 @@ impl<'a> PartitionedChunk<'a> {
                 SourceLine::Import(_, ref metadata) => {
                     // A blank line in the original source ends up in `orphan_pending`,
                     // so its presence there marks this slot as having a leading blank.
-                    slot_had_leading_blank
-                        .push(orphan_pending.iter().any(|l| matches!(l, SourceLine::Empty)));
+                    slot_had_leading_blank.push(
+                        orphan_pending
+                            .iter()
+                            .any(|l| matches!(l, SourceLine::Empty)),
+                    );
 
                     // Handle orphan content (separated by empty line from this import)
                     // These stay at their original slot position, not attached to any import.
@@ -155,6 +163,11 @@ impl<'a> PartitionedChunk<'a> {
         // Let's sort this chunk!
         sortable_imports.sort(options);
 
-        (sortable_imports, orphan_contents, trailing_lines, slot_had_leading_blank)
+        (
+            sortable_imports,
+            orphan_contents,
+            trailing_lines,
+            slot_had_leading_blank,
+        )
     }
 }

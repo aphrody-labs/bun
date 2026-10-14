@@ -70,8 +70,14 @@ fn test() {
                     format!("expect({} {} {}).not.{}(true)", b, operator, a, matcher),
                     format!("expect({} {} {}).not.{}(false)", b, operator, a, matcher),
                     format!("expect({} {} {}).not.{}(false)", b, operator, b, matcher),
-                    format!("expect({} {} {}).resolves.not.{}(false)", b, operator, b, matcher),
-                    format!("expect({} {} {}).resolves.{}(false)", b, operator, b, matcher),
+                    format!(
+                        "expect({} {} {}).resolves.not.{}(false)",
+                        b, operator, b, matcher
+                    ),
+                    format!(
+                        "expect({} {} {}).resolves.{}(false)",
+                        b, operator, b, matcher
+                    ),
                 ]
             })
             .collect()
@@ -88,12 +94,27 @@ fn test() {
             format!("expect(value {} 1).resolves.{}(false);", operator, matcher),
             format!("expect(value {} 1).not.{}(true);", operator, matcher),
             format!("expect(value {} 1)['not'].{}(true);", operator, matcher),
-            format!("expect(value {} 1).resolves.not.{}(true);", operator, matcher),
+            format!(
+                "expect(value {} 1).resolves.not.{}(true);",
+                operator, matcher
+            ),
             format!("expect(value {} 1).not.{}(false);", operator, matcher),
-            format!("expect(value {} 1).resolves.not.{}(false);", operator, matcher),
-            format!("expect(value {} 1)[\"resolves\"].not.{}(false);", operator, matcher),
-            format!("expect(value {} 1)[\"resolves\"][\"not\"].{}(false);", operator, matcher),
-            format!("expect(value {} 1)[\"resolves\"][\"not\"]['{}'](false);", operator, matcher),
+            format!(
+                "expect(value {} 1).resolves.not.{}(false);",
+                operator, matcher
+            ),
+            format!(
+                "expect(value {} 1)[\"resolves\"].not.{}(false);",
+                operator, matcher
+            ),
+            format!(
+                "expect(value {} 1)[\"resolves\"][\"not\"].{}(false);",
+                operator, matcher
+            ),
+            format!(
+                "expect(value {} 1)[\"resolves\"][\"not\"]['{}'](false);",
+                operator, matcher
+            ),
         ]
     }
 
@@ -300,7 +321,10 @@ fn test() {
         ("expect(5 != a).toBe(true)", None),
         (r#"expect(a == "string").toBe(true)"#, None),
         (r#"expect(a == "string").not.toBe(true)"#, None),
-        ("expect().fail('Should not succeed a HTTPS proxy request.');", None),
+        (
+            "expect().fail('Should not succeed a HTTPS proxy request.');",
+            None,
+        ),
     ];
 
     let fail_vitest = vec![
@@ -314,21 +338,54 @@ fn test() {
     ];
 
     let fix_vitest = vec![
-        ("expect(a > b).toBe(true)", "expect(a).toBeGreaterThan(b)", None),
-        ("expect(a < b).toBe(true)", "expect(a).toBeLessThan(b)", None),
-        ("expect(a >= b).toBe(true)", "expect(a).toBeGreaterThanOrEqual(b)", None),
-        ("expect(a <= b).toBe(true)", "expect(a).toBeLessThanOrEqual(b)", None),
-        ("expect(a > b).not.toBe(true)", "expect(a).toBeLessThanOrEqual(b)", None),
-        ("expect(a < b).not.toBe(true)", "expect(a).toBeGreaterThanOrEqual(b)", None),
-        ("expect(a >= b).not.toBe(true)", "expect(a).toBeLessThan(b)", None),
+        (
+            "expect(a > b).toBe(true)",
+            "expect(a).toBeGreaterThan(b)",
+            None,
+        ),
+        (
+            "expect(a < b).toBe(true)",
+            "expect(a).toBeLessThan(b)",
+            None,
+        ),
+        (
+            "expect(a >= b).toBe(true)",
+            "expect(a).toBeGreaterThanOrEqual(b)",
+            None,
+        ),
+        (
+            "expect(a <= b).toBe(true)",
+            "expect(a).toBeLessThanOrEqual(b)",
+            None,
+        ),
+        (
+            "expect(a > b).not.toBe(true)",
+            "expect(a).toBeLessThanOrEqual(b)",
+            None,
+        ),
+        (
+            "expect(a < b).not.toBe(true)",
+            "expect(a).toBeGreaterThanOrEqual(b)",
+            None,
+        ),
+        (
+            "expect(a >= b).not.toBe(true)",
+            "expect(a).toBeLessThan(b)",
+            None,
+        ),
     ];
 
     pass.extend(pass_vitest);
     fail.extend(fail_vitest);
     fix.extend(fix_vitest);
 
-    Tester::new(PreferComparisonMatcher::NAME, PreferComparisonMatcher::PLUGIN, pass, fail)
-        .with_vitest_plugin(true)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        PreferComparisonMatcher::NAME,
+        PreferComparisonMatcher::PLUGIN,
+        pass,
+        fail,
+    )
+    .with_vitest_plugin(true)
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

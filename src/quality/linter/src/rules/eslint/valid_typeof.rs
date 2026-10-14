@@ -150,7 +150,10 @@ impl Rule for ValidTypeof {
         {
             ctx.diagnostic_with_fix(
                 if self.require_string_literals {
-                    not_string(Some("Use `\"undefined\"` instead of `undefined`."), sibling.span())
+                    not_string(
+                        Some("Use `\"undefined\"` instead of `undefined`."),
+                        sibling.span(),
+                    )
                 } else {
                     invalid_value(
                         Some("Use `\"undefined\"` instead of `undefined`.".to_string()),
@@ -170,8 +173,16 @@ impl Rule for ValidTypeof {
     }
 }
 
-const VALID_TYPES: [&str; 8] =
-    ["bigint", "boolean", "function", "number", "object", "string", "symbol", "undefined"];
+const VALID_TYPES: [&str; 8] = [
+    "bigint",
+    "boolean",
+    "function",
+    "number",
+    "object",
+    "string",
+    "symbol",
+    "undefined",
+];
 
 /// Check for common misspellings of typeof values and return a suggestion.
 fn get_typo_suggestion(value: &str) -> Option<&'static str> {
@@ -210,15 +221,30 @@ fn test() {
         ("typeof(foo) != 'string'", None),
         ("var oddUse = typeof foo + 'thing'", None),
         ("function f(undefined) { typeof x === undefined }", None),
-        ("typeof foo === 'number'", Some(serde_json::json!([{ "requireStringLiterals": true }]))),
-        ("typeof foo === \"number\"", Some(serde_json::json!([{ "requireStringLiterals": true }]))),
+        (
+            "typeof foo === 'number'",
+            Some(serde_json::json!([{ "requireStringLiterals": true }])),
+        ),
+        (
+            "typeof foo === \"number\"",
+            Some(serde_json::json!([{ "requireStringLiterals": true }])),
+        ),
         (
             "var baz = typeof foo + 'thing'",
             Some(serde_json::json!([{ "requireStringLiterals": true }])),
         ),
-        ("typeof foo === typeof bar", Some(serde_json::json!([{ "requireStringLiterals": true }]))),
-        ("typeof foo === `string`", Some(serde_json::json!([{ "requireStringLiterals": true }]))),
-        ("`object` === typeof foo", Some(serde_json::json!([{ "requireStringLiterals": true }]))),
+        (
+            "typeof foo === typeof bar",
+            Some(serde_json::json!([{ "requireStringLiterals": true }])),
+        ),
+        (
+            "typeof foo === `string`",
+            Some(serde_json::json!([{ "requireStringLiterals": true }])),
+        ),
+        (
+            "`object` === typeof foo",
+            Some(serde_json::json!([{ "requireStringLiterals": true }])),
+        ),
         ("typeof foo === `str${somethingElse}`", None), // { "ecmaVersion": 6 }
         (
             "function f(x, u) { const undefined = u; return typeof x === undefined; }; var y = undefined;",
@@ -245,10 +271,22 @@ fn test() {
             Some(serde_json::json!([{ "requireStringLiterals": true }])),
         ),
         ("if (typeof bar !== undefined) {}", None),
-        ("typeof foo == Object", Some(serde_json::json!([{ "requireStringLiterals": true }]))),
-        ("typeof foo === undefined", Some(serde_json::json!([{ "requireStringLiterals": true }]))),
-        ("undefined === typeof foo", Some(serde_json::json!([{ "requireStringLiterals": true }]))),
-        ("undefined == typeof foo", Some(serde_json::json!([{ "requireStringLiterals": true }]))),
+        (
+            "typeof foo == Object",
+            Some(serde_json::json!([{ "requireStringLiterals": true }])),
+        ),
+        (
+            "typeof foo === undefined",
+            Some(serde_json::json!([{ "requireStringLiterals": true }])),
+        ),
+        (
+            "undefined === typeof foo",
+            Some(serde_json::json!([{ "requireStringLiterals": true }])),
+        ),
+        (
+            "undefined == typeof foo",
+            Some(serde_json::json!([{ "requireStringLiterals": true }])),
+        ),
         (
             "typeof foo === `undefined${foo}`",
             Some(serde_json::json!([{ "requireStringLiterals": true }])),

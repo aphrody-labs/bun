@@ -200,7 +200,12 @@ fn test() {
         ("a || x <= y && x >= y", "a || x == y"),
     ];
 
-    Tester::new(DoubleComparisons::NAME, DoubleComparisons::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        DoubleComparisons::NAME,
+        DoubleComparisons::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

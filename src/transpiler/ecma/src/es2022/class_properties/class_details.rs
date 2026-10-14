@@ -56,7 +56,13 @@ impl<'a> PrivateProp<'a> {
         method_kind: Option<MethodDefinitionKind>,
         is_accessor: bool,
     ) -> Self {
-        Self { binding, is_static, method_kind, is_accessor, binding2: None }
+        Self {
+            binding,
+            is_static,
+            method_kind,
+            is_accessor,
+            binding2: None,
+        }
     }
 
     pub fn is_method(&self) -> bool {
@@ -64,7 +70,10 @@ impl<'a> PrivateProp<'a> {
     }
 
     pub fn is_accessor(&self) -> bool {
-        self.is_accessor || self.method_kind.is_some_and(MethodDefinitionKind::is_accessor)
+        self.is_accessor
+            || self
+                .method_kind
+                .is_some_and(MethodDefinitionKind::is_accessor)
     }
 
     pub fn set_binding2(&mut self, binding: BoundIdentifier<'a>) {
@@ -91,7 +100,9 @@ impl<'a> ClassesStack<'a> {
     /// Create new `ClassesStack`.
     pub fn new() -> Self {
         // Default stack capacity is 4. That's is probably good. More than 4 nested classes is rare.
-        Self { stack: NonEmptyStack::new(ClassDetails::dummy(false)) }
+        Self {
+            stack: NonEmptyStack::new(ClassDetails::dummy(false)),
+        }
     }
 
     /// Push an entry to stack.

@@ -53,7 +53,9 @@ impl Rule for NoNew {
             return;
         };
 
-        let Some(node) = outermost_paren_parent(node, ctx) else { return };
+        let Some(node) = outermost_paren_parent(node, ctx) else {
+            return;
+        };
 
         if matches!(node.kind(), AstKind::ExpressionStatement(_)) {
             let span = Span::new(expr.span.start, expr.callee.span().end);
@@ -72,7 +74,12 @@ fn test() {
         "(() => new Date())",
     ];
 
-    let fail = vec!["new Date()", "(() => { new Date() })", "(new Date())", "((new Date()))"];
+    let fail = vec![
+        "new Date()",
+        "(() => { new Date() })",
+        "(new Date())",
+        "((new Date()))",
+    ];
 
     Tester::new(NoNew::NAME, NoNew::PLUGIN, pass, fail).test_and_snapshot();
 }

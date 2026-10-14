@@ -59,7 +59,8 @@ declare_oxc_lint!(
     oxc,
     correctness,
     version = "0.0.3",
-    short_description = "This rule applies when an array method is called on the arguments object itself.",
+    short_description =
+        "This rule applies when an array method is called on the arguments object itself.",
 );
 
 impl Rule for BadArrayMethodOnArguments {
@@ -183,8 +184,13 @@ fn test() {
          fn(arr)",
     ];
 
-    Tester::new(BadArrayMethodOnArguments::NAME, BadArrayMethodOnArguments::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        BadArrayMethodOnArguments::NAME,
+        BadArrayMethodOnArguments::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }
 
 #[test]

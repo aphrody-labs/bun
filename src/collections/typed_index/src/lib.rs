@@ -276,7 +276,10 @@ impl<I: Idx, T> IndexVec<I, T> {
     /// Construct a new IndexVec.
     #[inline]
     pub const fn new() -> Self {
-        IndexVec { raw: Vec::new(), _marker: PhantomData }
+        IndexVec {
+            raw: Vec::new(),
+            _marker: PhantomData,
+        }
     }
 
     /// Construct a `IndexVec` from a `Vec<T>`.
@@ -286,21 +289,30 @@ impl<I: Idx, T> IndexVec<I, T> {
     pub fn from_vec(vec: Vec<T>) -> Self {
         // See if `I::from_usize` might be upset by this length.
         let _ = I::from_usize(vec.len());
-        IndexVec { raw: vec, _marker: PhantomData }
+        IndexVec {
+            raw: vec,
+            _marker: PhantomData,
+        }
     }
 
     /// Construct an IndexVec that can hold at least `capacity` items before
     /// reallocating. See [`Vec::with_capacity`].
     #[inline]
     pub fn with_capacity(capacity: usize) -> Self {
-        IndexVec { raw: Vec::with_capacity(capacity), _marker: PhantomData }
+        IndexVec {
+            raw: Vec::with_capacity(capacity),
+            _marker: PhantomData,
+        }
     }
 
     /// Similar to `self.into_iter().enumerate()` but with indices of `I` and
     /// not `usize`.
     #[inline(always)]
     pub fn into_iter_enumerated(self) -> Enumerated<vec::IntoIter<T>, I, T> {
-        self.raw.into_iter().enumerate().map(|(i, t)| (I::from_usize(i), t))
+        self.raw
+            .into_iter()
+            .enumerate()
+            .map(|(i, t)| (I::from_usize(i), t))
     }
 
     /// Creates a splicing iterator that replaces the specified range in the
@@ -326,7 +338,10 @@ impl<I: Idx, T> IndexVec<I, T> {
         &mut self,
         range: R,
     ) -> Enumerated<vec::Drain<'_, T>, I, T> {
-        self.raw.drain(range.into_range()).enumerate().map(|(i, t)| (I::from_usize(i), t))
+        self.raw
+            .drain(range.into_range())
+            .enumerate()
+            .map(|(i, t)| (I::from_usize(i), t))
     }
 
     /// Gives the next index that will be assigned when `push` is
@@ -570,7 +585,10 @@ impl<I: Idx, T> FromIterator<T> for IndexVec<I, T> {
     where
         J: IntoIterator<Item = T>,
     {
-        IndexVec { raw: FromIterator::from_iter(iter), _marker: PhantomData }
+        IndexVec {
+            raw: FromIterator::from_iter(iter),
+            _marker: PhantomData,
+        }
     }
 }
 
@@ -644,14 +662,20 @@ impl<'a, I: Idx, T: Clone> From<&'a mut IndexSlice<I, [T]>> for IndexVec<I, T> {
 impl<I: Idx, T> From<Vec<T>> for IndexVec<I, T> {
     #[inline]
     fn from(v: Vec<T>) -> Self {
-        Self { raw: v, _marker: PhantomData }
+        Self {
+            raw: v,
+            _marker: PhantomData,
+        }
     }
 }
 
 impl<I: Idx, T: Clone> Clone for IndexVec<I, T> {
     #[inline]
     fn clone(&self) -> Self {
-        Self { raw: self.raw.clone(), _marker: PhantomData }
+        Self {
+            raw: self.raw.clone(),
+            _marker: PhantomData,
+        }
     }
 
     #[inline]
@@ -797,7 +821,10 @@ array_impls! {
 #[cold]
 #[doc(hidden)]
 pub fn __max_check_fail(u: usize, max: usize) -> ! {
-    panic!("index_vec index overflow: {} is outside the range [0, {})", u, max,)
+    panic!(
+        "index_vec index overflow: {} is outside the range [0, {})",
+        u, max,
+    )
 }
 
 #[cfg(feature = "serde")]

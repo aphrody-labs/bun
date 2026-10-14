@@ -20,14 +20,20 @@ mod join_vars {
         test("var a;var b, c;var d;", "var a,b,c,d;");
 
         // Some already collapsed with values
-        test("var a = 1;var b = 2, c = 3;var d = 4;", "var a=1,b=2,c=3,d=4;");
+        test(
+            "var a = 1;var b = 2, c = 3;var d = 4;",
+            "var a=1,b=2,c=3,d=4;",
+        );
 
         test(
             "var x = 2; foo(x); x = 3; x = 1; var y = 2; var z = 4; x = 5",
             "var x = 2; foo(x), x = 3, x = 1; var y = 2, z = 4; x = 5",
         );
 
-        test("/* comment */const a = 1; const b = 2", "/* comment */const a = 1, b = 2");
+        test(
+            "/* comment */const a = 1; const b = 2",
+            "/* comment */const a = 1, b = 2",
+        );
     }
 
     #[test]
@@ -45,16 +51,28 @@ mod join_vars {
     #[test]
     fn test_aggressive_redeclaration_in_for() {
         test_same("for(var x = 1; x = 2; x = 3) x = 4");
-        test("for(var x = 1; y = 2; z = 3) {var a = 4}", "for(var x = 1; y = 2; z = 3) var a = 4");
-        test("var x; for(x = 1; x = 2; z = 3) x = 4", "for(var x = 1; x = 2; z = 3) x = 4");
+        test(
+            "for(var x = 1; y = 2; z = 3) {var a = 4}",
+            "for(var x = 1; y = 2; z = 3) var a = 4",
+        );
+        test(
+            "var x; for(x = 1; x = 2; z = 3) x = 4",
+            "for(var x = 1; x = 2; z = 3) x = 4",
+        );
     }
 
     #[test]
     fn test_issue397() {
         test("var x; x = 5; var z = 7;", "var x = 5, z = 7");
         test("var x; var y = 3; x = 5;", "var x, y = 3; x = 5;");
-        test("var a = 1; var x; var y = 3; x = 5;", "var a = 1, x, y = 3; x = 5;");
-        test("var x; var y = 3; x = 5; var z = 7;", "var x, y = 3; x = 5; var z = 7;");
+        test(
+            "var a = 1; var x; var y = 3; x = 5;",
+            "var a = 1, x, y = 3; x = 5;",
+        );
+        test(
+            "var x; var y = 3; x = 5; var z = 7;",
+            "var x, y = 3; x = 5; var z = 7;",
+        );
     }
 
     #[test]
@@ -81,7 +99,10 @@ mod join_vars {
         test("let a;let b, c;let d;", "let a,b,c,d;");
 
         // Some already collapsed with values
-        test("let a = 1;let b = 2, c = 3;let d = 4;", "let a=1,b=2,c=3,d=4;");
+        test(
+            "let a = 1;let b = 2, c = 3;let d = 4;",
+            "let a=1,b=2,c=3,d=4;",
+        );
 
         // Different variable types
         test_same("let a = 1; const b = 2;");
@@ -96,7 +117,10 @@ mod join_vars {
     fn test_aggressive_redeclaration_of_let_in_for() {
         test_same("for(let x = 1; x = 2; x = 3) x = 4");
         test_same("for(let x = 1; y = 2; z = 3) {let a = 4}");
-        test("let x; for(x = 1; x = 2; z = 3) x = 4", "let x = 1; for(; x = 2; z = 3) x = 4");
+        test(
+            "let x; for(x = 1; x = 2; z = 3) x = 4",
+            "let x = 1; for(; x = 2; z = 3) x = 4",
+        );
     }
 
     #[test]
@@ -131,7 +155,10 @@ mod join_vars {
 
         // do not redeclare function parameters
         // incompatible with strict mode
-        test("((x) => { x = 4; let y = 2; x + y; })()", "((x) => { x = 4; let y = 2; x + 2; })()");
+        test(
+            "((x) => { x = 4; let y = 2; x + y; })()",
+            "((x) => { x = 4; let y = 2; x + 2; })()",
+        );
     }
 
     #[test]
@@ -143,8 +170,14 @@ mod join_vars {
     #[test]
     fn test_mixed_declaration_types() {
         // lets, vars, const declarations consecutive
-        test("let x = 1; let z = 3; var y = 2;", "let x = 1, z = 3; var y = 2;");
-        test("let x = 1; let y = 2; var z = 3; var a = 4;", "let x = 1, y = 2; var z = 3, a = 4");
+        test(
+            "let x = 1; let z = 3; var y = 2;",
+            "let x = 1, z = 3; var y = 2;",
+        );
+        test(
+            "let x = 1; let y = 2; var z = 3; var a = 4;",
+            "let x = 1, y = 2; var z = 3, a = 4",
+        );
     }
 }
 
@@ -156,9 +189,15 @@ mod collapse_for {
     #[test]
     fn test_for() {
         // Verify assignments are moved into the FOR init node.
-        test("a = 0; for(; a < 2 ; a++) foo()", "for(a = 0; a < 2 ; a++) foo();");
+        test(
+            "a = 0; for(; a < 2 ; a++) foo()",
+            "for(a = 0; a < 2 ; a++) foo();",
+        );
         // Verify vars are are moved into the FOR init node.
-        test("var a = 0; for(; c < b ; c++) foo()", "for(var a = 0; c < b ; c++) foo()");
+        test(
+            "var a = 0; for(; c < b ; c++) foo()",
+            "for(var a = 0; c < b ; c++) foo()",
+        );
         test(
             "var a = 0; var b = 0; for(; c < b ; c++) foo()",
             "for(var a = 0, b = 0; c < b ; c++) foo()",
@@ -173,10 +212,16 @@ mod collapse_for {
         test_same("const a = 0; for(; c < b ; c++) foo()");
 
         // Verify FOR inside IFs.
-        test("if(x){var a = 0; for(; c < b; c++) foo()}", "if(x)for(var a = 0; c < b; c++) foo()");
+        test(
+            "if(x){var a = 0; for(; c < b; c++) foo()}",
+            "if(x)for(var a = 0; c < b; c++) foo()",
+        );
 
         // Any other expression.
-        test("init(); for(; a < 2 ; a++) foo()", "for(init(); a < 2 ; a++) foo();");
+        test(
+            "init(); for(; a < 2 ; a++) foo()",
+            "for(init(); a < 2 ; a++) foo();",
+        );
 
         // Other statements are left as is.
         test(
@@ -208,7 +253,10 @@ mod collapse_for {
         test_same("var a; a:b:for(a in b) foo()");
 
         // Verify FOR inside IFs.
-        test("if(x){var a; for(a in b) foo()}", "if(x) for(var a in b) foo()");
+        test(
+            "if(x){var a; for(a in b) foo()}",
+            "if(x) for(var a in b) foo()",
+        );
 
         // Any other expression.
         test("init(); for(a in b) foo()", "for (a in init(), b) foo();");
@@ -217,7 +265,10 @@ mod collapse_for {
         test_same("function f(){ for(a in b) foo() }");
 
         // We don't handle destructuring patterns yet.
-        test("var a; var b; for ([a, b] in c) foo();", "var a, b; for ([a, b] in c) foo();");
+        test(
+            "var a; var b; for ([a, b] in c) foo();",
+            "var a, b; for ([a, b] in c) foo();",
+        );
     }
 
     #[test]
@@ -231,7 +282,10 @@ mod collapse_for {
         test_same("var a; a: b: for (a of b) foo()");
 
         // Verify FOR inside IFs.
-        test("if (x) { var a; for (a of b) foo() }", "if (x) for (var a of b) foo()");
+        test(
+            "if (x) { var a; for (a of b) foo() }",
+            "if (x) for (var a of b) foo()",
+        );
 
         // Any other expression.
         test_same("init(); for (a of b) foo()");
@@ -240,6 +294,9 @@ mod collapse_for {
         test_same("function f() { for (a of b) foo() }");
 
         // We don't handle destructuring patterns yet.
-        test("var a; var b; for ([a, b] of c) foo();", "var a, b; for ([a, b] of c) foo();");
+        test(
+            "var a; var b; for ([a, b] of c) foo();",
+            "var a, b; for ([a, b] of c) foo();",
+        );
     }
 }

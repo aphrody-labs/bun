@@ -574,8 +574,14 @@ fn test() {
             r#"jest.fn().mockImplementation(() => "hello sunshine")"#,
             r#"jest.fn().mockReturnValue("hello sunshine")"#,
         ),
-        ("jest.fn().mockImplementation(() => ({}))", "jest.fn().mockReturnValue({})"),
-        ("jest.fn().mockImplementation(() => x)", "jest.fn().mockReturnValue(x)"),
+        (
+            "jest.fn().mockImplementation(() => ({}))",
+            "jest.fn().mockReturnValue({})",
+        ),
+        (
+            "jest.fn().mockImplementation(() => x)",
+            "jest.fn().mockReturnValue(x)",
+        ),
         (
             "jest.fn().mockImplementation(() => true ? x : y)",
             "jest.fn().mockReturnValue(true ? x : y)",
@@ -624,7 +630,10 @@ fn test() {
               message: 'hello'
             })",
         ),
-        ("jest.fn().mockImplementation(() => [], xyz)", "jest.fn().mockReturnValue([], xyz)"),
+        (
+            "jest.fn().mockImplementation(() => [], xyz)",
+            "jest.fn().mockReturnValue([], xyz)",
+        ),
         (
             "const currentX = 0;
             jest.spyOn(X, getCount).mockImplementation(() => currentX);",
@@ -963,8 +972,13 @@ fn test() {
         ),
     ];
 
-    Tester::new(PreferMockReturnShorthand::NAME, PreferMockReturnShorthand::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .with_jest_plugin(true)
-        .test_and_snapshot();
+    Tester::new(
+        PreferMockReturnShorthand::NAME,
+        PreferMockReturnShorthand::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .with_jest_plugin(true)
+    .test_and_snapshot();
 }

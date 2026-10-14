@@ -28,7 +28,11 @@ impl NoUnusedVars {
         decl: &VariableDeclarator<'a>,
         decl_id: NodeId,
     ) -> RuleFix {
-        if decl.init.as_ref().is_some_and(|init| is_skipped_init(symbol, init)) {
+        if decl
+            .init
+            .as_ref()
+            .is_some_and(|init| is_skipped_init(symbol, init))
+        {
             return fixer.noop();
         }
 
@@ -71,7 +75,9 @@ impl NoUnusedVars {
             match binding_info {
                 BindingInfo::SingleDestructure | BindingInfo::NotDestructure => {
                     if has_neighbors {
-                        return symbol.delete_from_list(fixer, declarations, decl).dangerously();
+                        return symbol
+                            .delete_from_list(fixer, declarations, decl)
+                            .dangerously();
                     }
                     return fixer.delete_range(span).dangerously();
                 }

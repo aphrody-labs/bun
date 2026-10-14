@@ -404,7 +404,9 @@ impl JsxCurlyBracePresence {
         let JSXAttributeItem::Attribute(attr) = attr else {
             return;
         };
-        let Some(value) = attr.value.as_ref() else { return };
+        let Some(value) = attr.value.as_ref() else {
+            return;
+        };
 
         match value {
             JSXAttributeValue::ExpressionContainer(container) => {
@@ -440,12 +442,18 @@ impl JsxCurlyBracePresence {
         // true for JSX props, false for JSX children
         parent_is_attribute: bool,
     ) {
-        let Some(inner) = container.expression.as_expression() else { return };
+        let Some(inner) = container.expression.as_expression() else {
+            return;
+        };
         if ctx.has_comments_between(container.span) {
             return;
         }
 
-        let allowed = if parent_is_attribute { self.props } else { self.children };
+        let allowed = if parent_is_attribute {
+            self.props
+        } else {
+            self.children
+        };
         match inner {
             Expression::JSXFragment(_)
                 if !parent_is_attribute
@@ -536,7 +544,9 @@ fn contains_line_break(s: &str) -> bool {
 }
 
 fn contains_line_break_literal(s: &str) -> bool {
-    s.chars().zip(s.chars().skip(1)).any(|tuple| matches!(tuple, ('\\', 'n' | 'r')))
+    s.chars()
+        .zip(s.chars().skip(1))
+        .any(|tuple| matches!(tuple, ('\\', 'n' | 'r')))
 }
 
 fn contains_disallowed_jsx_text_chars(s: &str) -> bool {
@@ -564,7 +574,9 @@ fn contains_both_quote_characters(s: &str) -> bool {
 }
 
 fn contains_utf8_escape(s: &str) -> bool {
-    s.chars().zip(s.chars().skip(1)).any(|tuple| matches!(tuple, ('\\', 'u')))
+    s.chars()
+        .zip(s.chars().skip(1))
+        .any(|tuple| matches!(tuple, ('\\', 'u')))
 }
 
 pub static HTML_ENTITY_REGEX: Lazy<Regex> = lazy_regex!(r#"(&[A-Za-z\d#]+;)"#);
@@ -582,8 +594,9 @@ fn report_unnecessary_curly<'a>(
     container: &JSXExpressionContainer<'a>,
     inner_span: Span,
 ) {
-    ctx.diagnostic_with_fix(jsx_curly_brace_presence_unnecessary_diagnostic(inner_span), |fixer| {
-        match &container.expression {
+    ctx.diagnostic_with_fix(
+        jsx_curly_brace_presence_unnecessary_diagnostic(inner_span),
+        |fixer| match &container.expression {
             JSXExpression::TemplateLiteral(template_lit) => {
                 let mut fix = fixer.codegen();
                 fix.print_str(template_lit.single_quasi().unwrap().as_str());
@@ -604,8 +617,8 @@ fn report_unnecessary_curly<'a>(
 
                 fix.with_message("remove the curly braces")
             }
-        }
-    });
+        },
+    );
 }
 
 fn report_unnecessary_curly_for_attribute_value<'a>(
@@ -613,35 +626,43 @@ fn report_unnecessary_curly_for_attribute_value<'a>(
     container: &JSXExpressionContainer<'a>,
     inner_span: Span,
 ) {
-    ctx.diagnostic_with_fix(jsx_curly_brace_presence_unnecessary_diagnostic(inner_span), |fixer| {
-        let str = match &container.expression {
-            JSXExpression::TemplateLiteral(template_lit) => template_lit.single_quasi().unwrap(),
-            JSXExpression::StringLiteral(string_lit) => string_lit.value,
-            JSXExpression::JSXElement(el) => {
-                return fixer.replace(container.span, ctx.source_range(el.span).to_owned());
+    ctx.diagnostic_with_fix(
+        jsx_curly_brace_presence_unnecessary_diagnostic(inner_span),
+        |fixer| {
+            let str = match &container.expression {
+                JSXExpression::TemplateLiteral(template_lit) => {
+                    template_lit.single_quasi().unwrap()
+                }
+                JSXExpression::StringLiteral(string_lit) => string_lit.value,
+                JSXExpression::JSXElement(el) => {
+                    return fixer.replace(container.span, ctx.source_range(el.span).to_owned());
+                }
+                _ => unreachable!(),
+            };
+
+            let mut fix = fixer.codegen();
+
+            if !contains_double_quote_characters(str.as_str()) {
+                fix = fix.with_options(CodegenOptions::default());
             }
-            _ => unreachable!(),
-        };
 
-        let mut fix = fixer.codegen();
+            fix.print_string(str.as_str());
 
-        if !contains_double_quote_characters(str.as_str()) {
-            fix = fix.with_options(CodegenOptions::default());
-        }
-
-        fix.print_string(str.as_str());
-
-        fixer.replace(container.span, fix.into_source_text())
-    });
+            fixer.replace(container.span, fix.into_source_text())
+        },
+    );
 }
 
 fn report_missing_curly_for_expression(ctx: &LintContext, span: Span) {
-    ctx.diagnostic_with_fix(jsx_curly_brace_presence_necessary_diagnostic(span), |fixer| {
-        let mut fix = fixer.new_fix_with_capacity(2);
-        fix.push(fixer.insert_text_before(&span, "{"));
-        fix.push(fixer.insert_text_after(&span, "}"));
-        fix.with_message("add the missing curly braces")
-    });
+    ctx.diagnostic_with_fix(
+        jsx_curly_brace_presence_necessary_diagnostic(span),
+        |fixer| {
+            let mut fix = fixer.new_fix_with_capacity(2);
+            fix.push(fixer.insert_text_before(&span, "{"));
+            fix.push(fixer.insert_text_after(&span, "}"));
+            fix.with_message("add the missing curly braces")
+        },
+    );
 }
 
 fn report_missing_curly_for_string_attribute_value(
@@ -649,54 +670,60 @@ fn report_missing_curly_for_string_attribute_value(
     span: Span,
     string_value: &str,
 ) {
-    ctx.diagnostic_with_fix(jsx_curly_brace_presence_necessary_diagnostic(span), |fixer| {
-        let mut replace = fixer.codegen().with_options(CodegenOptions::default());
+    ctx.diagnostic_with_fix(
+        jsx_curly_brace_presence_necessary_diagnostic(span),
+        |fixer| {
+            let mut replace = fixer.codegen().with_options(CodegenOptions::default());
 
-        replace.print_string(string_value);
+            replace.print_string(string_value);
 
-        let mut fix = fixer.new_fix_with_capacity(3);
-        fix.push(fixer.insert_text_before(&span, "{"));
-        fix.push(fixer.insert_text_after(&span, "}"));
-        fix.push(fixer.replace(span, replace.into_source_text()));
-        fix.with_message("add the missing curly braces")
-    });
+            let mut fix = fixer.new_fix_with_capacity(3);
+            fix.push(fixer.insert_text_before(&span, "{"));
+            fix.push(fixer.insert_text_after(&span, "}"));
+            fix.push(fixer.replace(span, replace.into_source_text()));
+            fix.with_message("add the missing curly braces")
+        },
+    );
 }
 fn report_missing_curly_for_text_node(ctx: &LintContext, span: Span, string_value: &str) {
-    ctx.diagnostic_with_fix(jsx_curly_brace_presence_necessary_diagnostic(span), |fixer| {
-        let fixer = fixer.for_multifix();
-        let fix_contexts = if string_value.contains('\n') {
-            string_value
-                .split('\n')
-                .scan(0, |line_start, line| {
-                    let contexts = build_missing_curly_fix_context_for_line(
-                        span,
-                        line,
-                        u32::try_from(*line_start).unwrap(),
-                    );
-                    *line_start += line.len() + 1;
-                    Some(contexts)
-                })
-                .flatten()
-                .collect::<Vec<_>>()
-        } else {
-            build_missing_curly_fix_context_for_part(span, string_value, 0)
-                .iter()
-                .copied()
-                .collect::<Vec<_>>()
-        };
-        if fix_contexts.is_empty() {
-            return fixer.noop();
-        }
-        let mut fix = fixer.new_fix_with_capacity(fix_contexts.len() * 3);
-        for (span_from_first_char, text) in fix_contexts {
-            let mut replace = fixer.codegen().with_options(CodegenOptions::default());
-            replace.print_string(text);
-            fix.push(fixer.replace(span_from_first_char, replace.into_source_text()));
-            fix.push(fixer.insert_text_before(&span_from_first_char, "{"));
-            fix.push(fixer.insert_text_after(&span_from_first_char, "}"));
-        }
-        fix.with_message("add the missing curly braces")
-    });
+    ctx.diagnostic_with_fix(
+        jsx_curly_brace_presence_necessary_diagnostic(span),
+        |fixer| {
+            let fixer = fixer.for_multifix();
+            let fix_contexts = if string_value.contains('\n') {
+                string_value
+                    .split('\n')
+                    .scan(0, |line_start, line| {
+                        let contexts = build_missing_curly_fix_context_for_line(
+                            span,
+                            line,
+                            u32::try_from(*line_start).unwrap(),
+                        );
+                        *line_start += line.len() + 1;
+                        Some(contexts)
+                    })
+                    .flatten()
+                    .collect::<Vec<_>>()
+            } else {
+                build_missing_curly_fix_context_for_part(span, string_value, 0)
+                    .iter()
+                    .copied()
+                    .collect::<Vec<_>>()
+            };
+            if fix_contexts.is_empty() {
+                return fixer.noop();
+            }
+            let mut fix = fixer.new_fix_with_capacity(fix_contexts.len() * 3);
+            for (span_from_first_char, text) in fix_contexts {
+                let mut replace = fixer.codegen().with_options(CodegenOptions::default());
+                replace.print_string(text);
+                fix.push(fixer.replace(span_from_first_char, replace.into_source_text()));
+                fix.push(fixer.insert_text_before(&span_from_first_char, "{"));
+                fix.push(fixer.insert_text_after(&span_from_first_char, "}"));
+            }
+            fix.with_message("add the missing curly braces")
+        },
+    );
 }
 
 fn build_missing_curly_fix_context_for_line(
@@ -704,7 +731,10 @@ fn build_missing_curly_fix_context_for_line(
     line: &str,
     line_start: u32,
 ) -> Vec<(Span, &str)> {
-    let html_entities = HTML_ENTITY_REGEX.find_iter(line).map(|mat| mat.end()).collect::<Vec<_>>();
+    let html_entities = HTML_ENTITY_REGEX
+        .find_iter(line)
+        .map(|mat| mat.end())
+        .collect::<Vec<_>>();
     HTML_ENTITY_REGEX
         .split(line)
         .enumerate()
@@ -720,12 +750,14 @@ fn build_missing_curly_fix_context_for_part(
     part: &str,
     part_start: u32,
 ) -> Option<(Span, &str)> {
-    part.char_indices().find(|(_, ch)| !ch.is_whitespace()).map(|(first_char_index, _)| {
-        let text = part.split_at(first_char_index).1;
-        let new_start = span.start + part_start + u32::try_from(first_char_index).unwrap();
-        let span_from_first_char = Span::sized(new_start, u32::try_from(text.len()).unwrap());
-        (span_from_first_char, text)
-    })
+    part.char_indices()
+        .find(|(_, ch)| !ch.is_whitespace())
+        .map(|(first_char_index, _)| {
+            let text = part.split_at(first_char_index).1;
+            let new_start = span.start + part_start + u32::try_from(first_char_index).unwrap();
+            let span_from_first_char = Span::sized(new_start, u32::try_from(text.len()).unwrap());
+            (span_from_first_char, text)
+        })
 }
 
 fn calculate_part_start(line_matches: &[usize], index: usize) -> u32 {
@@ -757,16 +789,21 @@ fn has_adjacent_jsx_expression_containers<'a>(
             return false;
         }
     };
-    let Some(this_container_idx) = children.iter().position(|child| child.span() == container.span)
+    let Some(this_container_idx) = children
+        .iter()
+        .position(|child| child.span() == container.span)
     else {
         return false;
     };
 
-    [this_container_idx.checked_sub(1), this_container_idx.checked_add(1)]
-        .into_iter()
-        // [prev id, next id] -> [prev node, next node], removing out-of-bounds indices
-        .filter_map(|idx| idx.and_then(|idx| children.get(idx)))
-        .any(JSXChild::is_expression_container)
+    [
+        this_container_idx.checked_sub(1),
+        this_container_idx.checked_add(1),
+    ]
+    .into_iter()
+    // [prev id, next id] -> [prev node, next node], removing out-of-bounds indices
+    .filter_map(|idx| idx.and_then(|idx| children.get(idx)))
+    .any(JSXChild::is_expression_container)
 }
 
 #[test]
@@ -778,7 +815,10 @@ fn test() {
     let pass = vec![
         ("<App {...props}>foo</App>", None),
         ("<>foo</>", None),
-        ("<App {...props}>foo</App>", Some(json!([{ "props": "never" }]))),
+        (
+            "<App {...props}>foo</App>",
+            Some(json!([{ "props": "never" }])),
+        ),
         ("<App>{' '}</App>", None),
         (
             "<App>{' '}
@@ -792,11 +832,23 @@ fn test() {
             None,
         ),
         ("<App>{' '}</App>", Some(json!([{ "children": "never" }]))),
-        ("<App>{'    '}</App>", Some(json!([{ "children": "never" }]))),
+        (
+            "<App>{'    '}</App>",
+            Some(json!([{ "children": "never" }])),
+        ),
         ("<App>{' '}</App>", Some(json!([{ "children": "always" }]))),
-        ("<App>{'        '}</App>", Some(json!([{ "children": "always" }]))),
-        ("<App {...props}>foo</App>", Some(json!([{ "props": "always" }]))),
-        ("<App>{`Hello ${word} World`}</App>", Some(json!([{ "children": "never" }]))),
+        (
+            "<App>{'        '}</App>",
+            Some(json!([{ "children": "always" }])),
+        ),
+        (
+            "<App {...props}>foo</App>",
+            Some(json!([{ "props": "always" }])),
+        ),
+        (
+            "<App>{`Hello ${word} World`}</App>",
+            Some(json!([{ "children": "never" }])),
+        ),
         (
             "
                     <React.Fragment>
@@ -815,11 +867,26 @@ fn test() {
                   ",
             Some(json!([{ "children": "never" }])),
         ),
-        ("<App>{`Hello \n World`}</App>", Some(json!([{ "children": "never" }]))),
-        ("<App>{`Hello ${word} World`}{`foo`}</App>", Some(json!([{ "children": "never" }]))),
-        ("<App prop={`foo ${word} bar`}>foo</App>", Some(json!([{ "props": "never" }]))),
-        ("<App prop={`foo ${word} bar`} />", Some(json!([{ "props": "never" }]))),
-        ("<App>{<myApp></myApp>}</App>", Some(json!([{ "children": "always" }]))),
+        (
+            "<App>{`Hello \n World`}</App>",
+            Some(json!([{ "children": "never" }])),
+        ),
+        (
+            "<App>{`Hello ${word} World`}{`foo`}</App>",
+            Some(json!([{ "children": "never" }])),
+        ),
+        (
+            "<App prop={`foo ${word} bar`}>foo</App>",
+            Some(json!([{ "props": "never" }])),
+        ),
+        (
+            "<App prop={`foo ${word} bar`} />",
+            Some(json!([{ "props": "never" }])),
+        ),
+        (
+            "<App>{<myApp></myApp>}</App>",
+            Some(json!([{ "children": "always" }])),
+        ),
         ("<App>{[]}</App>", None),
         ("<App>foo</App>", None),
         (r#"<App>{"foo"}{<Component>bar</Component>}</App>"#, None),
@@ -828,20 +895,62 @@ fn test() {
         ("<App prop>foo</App>", None),
         (r"<App prop='bar'>{'foo \n bar'}</App>", None),
         ("<App prop={ ' ' }/>", None),
-        ("<MyComponent prop='bar'>foo</MyComponent>", Some(json!([{ "props": "never" }]))),
-        (r#"<MyComponent prop="bar">foo</MyComponent>"#, Some(json!([{ "props": "never" }]))),
-        ("<MyComponent>foo</MyComponent>", Some(json!([{ "children": "never" }]))),
-        (r#"<MyComponent>{<App/>}{"123"}</MyComponent>"#, Some(json!([{ "children": "never" }]))),
-        (r#"<App>{"foo 'bar' \"foo\" bar"}</App>"#, Some(json!([{ "children": "never" }]))),
-        ("<MyComponent prop={'bar'}>foo</MyComponent>", Some(json!([{ "props": "always" }]))),
-        ("<MyComponent>{'foo'}</MyComponent>", Some(json!([{ "children": "always" }]))),
-        (r#"<MyComponent prop={"bar"}>foo</MyComponent>"#, Some(json!([{ "props": "always" }]))),
-        (r#"<MyComponent>{"foo"}</MyComponent>"#, Some(json!([{ "children": "always" }]))),
-        ("<MyComponent>{'foo'}</MyComponent>", Some(json!([{ "children": "ignore" }]))),
-        ("<MyComponent prop={'bar'}>foo</MyComponent>", Some(json!([{ "props": "ignore" }]))),
-        ("<MyComponent>foo</MyComponent>", Some(json!([{ "children": "ignore" }]))),
-        ("<MyComponent prop='bar'>foo</MyComponent>", Some(json!([{ "props": "ignore" }]))),
-        (r#"<MyComponent prop="bar">foo</MyComponent>"#, Some(json!([{ "props": "ignore" }]))),
+        (
+            "<MyComponent prop='bar'>foo</MyComponent>",
+            Some(json!([{ "props": "never" }])),
+        ),
+        (
+            r#"<MyComponent prop="bar">foo</MyComponent>"#,
+            Some(json!([{ "props": "never" }])),
+        ),
+        (
+            "<MyComponent>foo</MyComponent>",
+            Some(json!([{ "children": "never" }])),
+        ),
+        (
+            r#"<MyComponent>{<App/>}{"123"}</MyComponent>"#,
+            Some(json!([{ "children": "never" }])),
+        ),
+        (
+            r#"<App>{"foo 'bar' \"foo\" bar"}</App>"#,
+            Some(json!([{ "children": "never" }])),
+        ),
+        (
+            "<MyComponent prop={'bar'}>foo</MyComponent>",
+            Some(json!([{ "props": "always" }])),
+        ),
+        (
+            "<MyComponent>{'foo'}</MyComponent>",
+            Some(json!([{ "children": "always" }])),
+        ),
+        (
+            r#"<MyComponent prop={"bar"}>foo</MyComponent>"#,
+            Some(json!([{ "props": "always" }])),
+        ),
+        (
+            r#"<MyComponent>{"foo"}</MyComponent>"#,
+            Some(json!([{ "children": "always" }])),
+        ),
+        (
+            "<MyComponent>{'foo'}</MyComponent>",
+            Some(json!([{ "children": "ignore" }])),
+        ),
+        (
+            "<MyComponent prop={'bar'}>foo</MyComponent>",
+            Some(json!([{ "props": "ignore" }])),
+        ),
+        (
+            "<MyComponent>foo</MyComponent>",
+            Some(json!([{ "children": "ignore" }])),
+        ),
+        (
+            "<MyComponent prop='bar'>foo</MyComponent>",
+            Some(json!([{ "props": "ignore" }])),
+        ),
+        (
+            r#"<MyComponent prop="bar">foo</MyComponent>"#,
+            Some(json!([{ "props": "ignore" }])),
+        ),
         (
             "<MyComponent prop='bar'>{'foo'}</MyComponent>",
             Some(json!([{ "children": "always", "props": "never" }])),
@@ -850,26 +959,74 @@ fn test() {
             "<MyComponent prop={'bar'}>foo</MyComponent>",
             Some(json!([{ "children": "never", "props": "always" }])),
         ),
-        ("<MyComponent prop={'bar'}>{'foo'}</MyComponent>", Some(json!(["always"]))),
-        (r#"<MyComponent prop={"bar"}>{"foo"}</MyComponent>"#, Some(json!(["always"]))),
-        (r#"<MyComponent prop={"bar"} attr={'foo'} />"#, Some(json!(["always"]))),
-        (r#"<MyComponent prop="bar" attr='foo' />"#, Some(json!(["never"]))),
-        ("<MyComponent prop='bar'>foo</MyComponent>", Some(json!(["never"]))),
+        (
+            "<MyComponent prop={'bar'}>{'foo'}</MyComponent>",
+            Some(json!(["always"])),
+        ),
+        (
+            r#"<MyComponent prop={"bar"}>{"foo"}</MyComponent>"#,
+            Some(json!(["always"])),
+        ),
+        (
+            r#"<MyComponent prop={"bar"} attr={'foo'} />"#,
+            Some(json!(["always"])),
+        ),
+        (
+            r#"<MyComponent prop="bar" attr='foo' />"#,
+            Some(json!(["never"])),
+        ),
+        (
+            "<MyComponent prop='bar'>foo</MyComponent>",
+            Some(json!(["never"])),
+        ),
         (
             "<MyComponent prop={`bar ${word} foo`}>{`foo ${word}`}</MyComponent>",
             Some(json!(["never"])),
         ),
-        (r#"<MyComponent>{"div { margin-top: 0; }"}</MyComponent>"#, Some(json!(["never"]))),
-        (r#"<MyComponent>{"<Foo />"}</MyComponent>"#, Some(json!(["never"]))),
-        (r#"<MyComponent prop={"Hello \u1026 world"}>bar</MyComponent>"#, Some(json!(["never"]))),
-        (r#"<MyComponent>{"Hello \u1026 world"}</MyComponent>"#, Some(json!(["never"]))),
-        (r#"<MyComponent prop={"Hello &middot; world"}>bar</MyComponent>"#, Some(json!(["never"]))),
-        (r#"<MyComponent>{"Hello &middot; world"}</MyComponent>"#, Some(json!(["never"]))),
-        (r#"<MyComponent>{"Hello \n world"}</MyComponent>"#, Some(json!(["never"]))),
-        (r#"<MyComponent>{"space after "}</MyComponent>"#, Some(json!(["never"]))),
-        (r#"<MyComponent>{" space before"}</MyComponent>"#, Some(json!(["never"]))),
-        ("<MyComponent>{`space after `}</MyComponent>", Some(json!(["never"]))),
-        ("<MyComponent>{` space before`}</MyComponent>", Some(json!(["never"]))),
+        (
+            r#"<MyComponent>{"div { margin-top: 0; }"}</MyComponent>"#,
+            Some(json!(["never"])),
+        ),
+        (
+            r#"<MyComponent>{"<Foo />"}</MyComponent>"#,
+            Some(json!(["never"])),
+        ),
+        (
+            r#"<MyComponent prop={"Hello \u1026 world"}>bar</MyComponent>"#,
+            Some(json!(["never"])),
+        ),
+        (
+            r#"<MyComponent>{"Hello \u1026 world"}</MyComponent>"#,
+            Some(json!(["never"])),
+        ),
+        (
+            r#"<MyComponent prop={"Hello &middot; world"}>bar</MyComponent>"#,
+            Some(json!(["never"])),
+        ),
+        (
+            r#"<MyComponent>{"Hello &middot; world"}</MyComponent>"#,
+            Some(json!(["never"])),
+        ),
+        (
+            r#"<MyComponent>{"Hello \n world"}</MyComponent>"#,
+            Some(json!(["never"])),
+        ),
+        (
+            r#"<MyComponent>{"space after "}</MyComponent>"#,
+            Some(json!(["never"])),
+        ),
+        (
+            r#"<MyComponent>{" space before"}</MyComponent>"#,
+            Some(json!(["never"])),
+        ),
+        (
+            "<MyComponent>{`space after `}</MyComponent>",
+            Some(json!(["never"])),
+        ),
+        (
+            "<MyComponent>{` space before`}</MyComponent>",
+            Some(json!(["never"])),
+        ),
         (
             "
                     <App prop={`
@@ -1004,8 +1161,14 @@ fn test() {
         ("<App>{/* comment */}</App>", None),
         ("<App horror=<div /> />", None),
         ("<App horror={<div />} />", None),
-        ("<App horror=<div /> />", Some(json!([{ "propElementValues": "ignore" }]))),
-        ("<App horror={<div />} />", Some(json!([{ "propElementValues": "ignore" }]))),
+        (
+            "<App horror=<div /> />",
+            Some(json!([{ "propElementValues": "ignore" }])),
+        ),
+        (
+            "<App horror={<div />} />",
+            Some(json!([{ "propElementValues": "ignore" }])),
+        ),
         (
             r#"
                     <script>{`window.foo = "bar"`}</script>
@@ -1041,15 +1204,27 @@ fn test() {
 
     let fail = vec![
         ("<App prop={`foo`} />", Some(json!([{ "props": "never" }]))),
-        ("<App>{<myApp></myApp>}</App>", Some(json!([{ "children": "never" }]))),
+        (
+            "<App>{<myApp></myApp>}</App>",
+            Some(json!([{ "children": "never" }])),
+        ),
         ("<App>{<myApp></myApp>}</App>", None),
-        ("<App prop={`foo`}>foo</App>", Some(json!([{ "props": "never" }]))),
+        (
+            "<App prop={`foo`}>foo</App>",
+            Some(json!([{ "props": "never" }])),
+        ),
         ("<App>{`foo`}</App>", Some(json!([{ "children": "never" }]))),
         ("<>{`foo`}</>", Some(json!([{ "children": "never" }]))),
         ("<MyComponent>{'foo'}</MyComponent>", None),
         ("<MyComponent prop={'bar'}>foo</MyComponent>", None),
-        ("<MyComponent>{'foo'}</MyComponent>", Some(json!([{ "children": "never" }]))),
-        ("<MyComponent prop={'bar'}>foo</MyComponent>", Some(json!([{ "props": "never" }]))),
+        (
+            "<MyComponent>{'foo'}</MyComponent>",
+            Some(json!([{ "children": "never" }])),
+        ),
+        (
+            "<MyComponent prop={'bar'}>foo</MyComponent>",
+            Some(json!([{ "props": "never" }])),
+        ),
         (
             "
                     <MyComponent>
@@ -1083,7 +1258,10 @@ fn test() {
                   ",
             Some(json!([{ "children": "never" }])),
         ),
-        ("<MyComponent prop='bar'>foo</MyComponent>", Some(json!([{ "props": "always" }]))),
+        (
+            "<MyComponent prop='bar'>foo</MyComponent>",
+            Some(json!([{ "props": "always" }])),
+        ),
         (
             r#"<MyComponent prop="foo 'bar'">foo</MyComponent>"#,
             Some(json!([{ "props": "always" }])),
@@ -1096,28 +1274,82 @@ fn test() {
             r#"<MyComponent prop="foo 'bar'">foo</MyComponent>"#,
             Some(json!([{ "props": "always" }])),
         ),
-        ("<MyComponent>foo bar </MyComponent>", Some(json!([{ "children": "always" }]))),
+        (
+            "<MyComponent>foo bar </MyComponent>",
+            Some(json!([{ "children": "always" }])),
+        ),
         (
             r#"<MyComponent prop="foo 'bar' \n ">foo</MyComponent>"#,
             Some(json!([{ "props": "always" }])),
         ),
-        ("<MyComponent>foo bar \r </MyComponent>", Some(json!([{ "children": "always" }]))),
-        ("<MyComponent>foo bar 'foo'</MyComponent>", Some(json!([{ "children": "always" }]))),
-        (r#"<MyComponent>foo bar "foo"</MyComponent>"#, Some(json!([{ "children": "always" }]))),
-        ("<MyComponent>foo bar <App/></MyComponent>", Some(json!([{ "children": "always" }]))),
-        ("<MyComponent>foo \n bar</MyComponent>", Some(json!([{ "children": "always" }]))),
-        ("<MyComponent>foo \\u1234 bar</MyComponent>", Some(json!([{ "children": "always" }]))),
-        ("<MyComponent prop='foo \\u1234 bar' />", Some(json!([{ "props": "always" }]))),
-        ("<MyComponent prop={'bar'}>{'foo'}</MyComponent>", Some(json!(["never"]))),
-        ("<MyComponent prop='bar'>foo</MyComponent>", Some(json!(["always"]))),
-        (r#"<App prop={'foo'} attr={" foo "} />"#, Some(json!([{ "props": "never" }]))),
-        (r#"<App prop='foo' attr="bar" />"#, Some(json!([{ "props": "always" }]))),
-        (r#"<App prop='foo' attr={"bar"} />"#, Some(json!([{ "props": "always" }]))),
-        ("<App prop={'foo'} attr='bar' />", Some(json!([{ "props": "always" }]))),
-        ("<App prop='foo &middot; bar' />", Some(json!([{ "props": "always" }]))),
-        ("<App>foo &middot; bar</App>", Some(json!([{ "children": "always" }]))),
-        (r#"<App>{'foo "bar"'}</App>"#, Some(json!([{ "children": "never" }]))),
-        (r#"<App>{"foo 'bar'"}</App>"#, Some(json!([{ "children": "never" }]))),
+        (
+            "<MyComponent>foo bar \r </MyComponent>",
+            Some(json!([{ "children": "always" }])),
+        ),
+        (
+            "<MyComponent>foo bar 'foo'</MyComponent>",
+            Some(json!([{ "children": "always" }])),
+        ),
+        (
+            r#"<MyComponent>foo bar "foo"</MyComponent>"#,
+            Some(json!([{ "children": "always" }])),
+        ),
+        (
+            "<MyComponent>foo bar <App/></MyComponent>",
+            Some(json!([{ "children": "always" }])),
+        ),
+        (
+            "<MyComponent>foo \n bar</MyComponent>",
+            Some(json!([{ "children": "always" }])),
+        ),
+        (
+            "<MyComponent>foo \\u1234 bar</MyComponent>",
+            Some(json!([{ "children": "always" }])),
+        ),
+        (
+            "<MyComponent prop='foo \\u1234 bar' />",
+            Some(json!([{ "props": "always" }])),
+        ),
+        (
+            "<MyComponent prop={'bar'}>{'foo'}</MyComponent>",
+            Some(json!(["never"])),
+        ),
+        (
+            "<MyComponent prop='bar'>foo</MyComponent>",
+            Some(json!(["always"])),
+        ),
+        (
+            r#"<App prop={'foo'} attr={" foo "} />"#,
+            Some(json!([{ "props": "never" }])),
+        ),
+        (
+            r#"<App prop='foo' attr="bar" />"#,
+            Some(json!([{ "props": "always" }])),
+        ),
+        (
+            r#"<App prop='foo' attr={"bar"} />"#,
+            Some(json!([{ "props": "always" }])),
+        ),
+        (
+            "<App prop={'foo'} attr='bar' />",
+            Some(json!([{ "props": "always" }])),
+        ),
+        (
+            "<App prop='foo &middot; bar' />",
+            Some(json!([{ "props": "always" }])),
+        ),
+        (
+            "<App>foo &middot; bar</App>",
+            Some(json!([{ "children": "always" }])),
+        ),
+        (
+            r#"<App>{'foo "bar"'}</App>"#,
+            Some(json!([{ "children": "never" }])),
+        ),
+        (
+            r#"<App>{"foo 'bar'"}</App>"#,
+            Some(json!([{ "children": "never" }])),
+        ),
         (
             r#"
                     <App prop="" />"#,
@@ -1165,8 +1397,14 @@ fn test() {
                   ",
             Some(json!(["never"])),
         ),
-        (r#"<MyComponent prop={"{ style: true }"}>bar</MyComponent>"#, Some(json!(["never"]))),
-        (r#"<MyComponent prop={"< style: true >"}>foo</MyComponent>"#, Some(json!(["never"]))),
+        (
+            r#"<MyComponent prop={"{ style: true }"}>bar</MyComponent>"#,
+            Some(json!(["never"])),
+        ),
+        (
+            r#"<MyComponent prop={"< style: true >"}>foo</MyComponent>"#,
+            Some(json!(["never"])),
+        ),
         (
             "<App horror=<div /> />",
             Some(
@@ -1187,26 +1425,52 @@ fn test() {
                   "#,
             Some(json!(["never"])),
         ),
-        (r#"<Image alt={""} />"#, Some(json!([{ "props": "never", "children": "never" }]))),
-        (r#"<App>{""}</App>"#, Some(json!([{ "props": "never", "children": "never" }]))),
+        (
+            r#"<Image alt={""} />"#,
+            Some(json!([{ "props": "never", "children": "never" }])),
+        ),
+        (
+            r#"<App>{""}</App>"#,
+            Some(json!([{ "props": "never", "children": "never" }])),
+        ),
     ];
 
     let fix = vec![
-        ("<App prop={`foo`} />", r#"<App prop="foo" />"#, Some(json!([{ "props": "never" }]))),
+        (
+            "<App prop={`foo`} />",
+            r#"<App prop="foo" />"#,
+            Some(json!([{ "props": "never" }])),
+        ),
         (
             "<App>{<myApp></myApp>}</App>",
             "<App><myApp></myApp></App>",
             Some(json!([{ "children": "never" }])),
         ),
-        ("<App>{<myApp></myApp>}</App>", "<App><myApp></myApp></App>", None),
+        (
+            "<App>{<myApp></myApp>}</App>",
+            "<App><myApp></myApp></App>",
+            None,
+        ),
         (
             "<App prop={`foo`}>foo</App>",
             r#"<App prop="foo">foo</App>"#,
             Some(json!([{ "props": "never" }])),
         ),
-        ("<App>{`foo`}</App>", "<App>foo</App>", Some(json!([{ "children": "never" }]))),
-        ("<>{`foo`}</>", "<>foo</>", Some(json!([{ "children": "never" }]))),
-        ("<MyComponent>{'foo'}</MyComponent>", "<MyComponent>foo</MyComponent>", None),
+        (
+            "<App>{`foo`}</App>",
+            "<App>foo</App>",
+            Some(json!([{ "children": "never" }])),
+        ),
+        (
+            "<>{`foo`}</>",
+            "<>foo</>",
+            Some(json!([{ "children": "never" }])),
+        ),
+        (
+            "<MyComponent>{'foo'}</MyComponent>",
+            "<MyComponent>foo</MyComponent>",
+            None,
+        ),
         (
             "<MyComponent prop={'bar'}>foo</MyComponent>",
             r#"<MyComponent prop="bar">foo</MyComponent>"#,
@@ -1533,12 +1797,21 @@ fn test() {
             "#,
             Some(json!([{ "children": "always" }])),
         ),
-        (r#"<Foo bar={'"'} />"#, r#"<Foo bar='"' />"#, Some(json!(["never"]))),
+        (
+            r#"<Foo bar={'"'} />"#,
+            r#"<Foo bar='"' />"#,
+            Some(json!(["never"])),
+        ),
     ];
 
-    Tester::new(JsxCurlyBracePresence::NAME, JsxCurlyBracePresence::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        JsxCurlyBracePresence::NAME,
+        JsxCurlyBracePresence::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .test_and_snapshot();
 }
 
 #[test]

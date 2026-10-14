@@ -22,7 +22,9 @@ declare_oxc_lint!(
 
 impl Rule for ValidExpect {
     fn from_configuration(value: serde_json::Value) -> Result<Self, serde_json::error::Error> {
-        Ok(Self(Box::new(ValidExpectConfig::from_configuration(&value))))
+        Ok(Self(Box::new(ValidExpectConfig::from_configuration(
+            &value,
+        ))))
     }
 
     fn run_once(&self, ctx: &LintContext) {

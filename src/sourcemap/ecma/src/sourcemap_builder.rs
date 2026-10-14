@@ -71,7 +71,9 @@ impl<'a> SourceMapBuilder<'a> {
         src_id: Option<u32>,
         name_id: Option<u32>,
     ) {
-        self.tokens.push(Token::new(dst_line, dst_col, src_line, src_col, src_id, name_id));
+        self.tokens.push(Token::new(
+            dst_line, dst_col, src_line, src_col, src_id, name_id,
+        ));
     }
 
     /// Set the generated file name. Borrowed for `'a` (no allocation).
@@ -96,7 +98,10 @@ impl<'a> SourceMapBuilder<'a> {
             self.names.into_iter().map(Cow::Borrowed).collect(),
             None,
             self.sources.into_iter().map(Cow::Borrowed).collect(),
-            self.source_contents.into_iter().map(|content| content.map(Cow::Borrowed)).collect(),
+            self.source_contents
+                .into_iter()
+                .map(|content| content.map(Cow::Borrowed))
+                .collect(),
             self.tokens.into_boxed_slice(),
             self.token_chunks,
         )
@@ -167,7 +172,10 @@ mod tests {
         let sm = builder.into_sourcemap();
         assert!(sm.token_chunks.is_some());
         assert_eq!(sm.get_tokens().count(), 2);
-        assert_eq!(sm.get_token(0), Some(Token::new(0, 0, 0, 0, Some(0), Some(0))));
+        assert_eq!(
+            sm.get_token(0),
+            Some(Token::new(0, 0, 0, 0, Some(0), Some(0)))
+        );
     }
 
     #[test]

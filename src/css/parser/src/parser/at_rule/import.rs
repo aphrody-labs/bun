@@ -36,7 +36,11 @@ impl<'a> Parse<'a> for ImportPrelude<'a> {
                 }
                 let raw = unsafe { input.source.get_unchecked(start..end) };
                 let span = Span { start, end };
-                ImportPreludeHref::Str(InterpolableStr::Literal(Str { value: raw, raw, span }))
+                ImportPreludeHref::Str(InterpolableStr::Literal(Str {
+                    value: raw,
+                    raw,
+                    span,
+                }))
             }
             _ => match input.try_parse(Url::parse) {
                 Ok(url) => ImportPreludeHref::Url(url),
@@ -87,10 +91,21 @@ impl<'a> Parse<'a> for ImportPrelude<'a> {
                     span,
                 })) = values.last()
                 {
-                    return Err(Error { kind: ErrorKind::ExpectRule, span: *span });
+                    return Err(Error {
+                        kind: ErrorKind::ExpectRule,
+                        span: *span,
+                    });
                 }
                 let end = values.last().map_or(start, |value| value.span().end);
-                (None, None, None, Some(ComponentValues { values, span: Span { start, end } }))
+                (
+                    None,
+                    None,
+                    None,
+                    Some(ComponentValues {
+                        values,
+                        span: Span { start, end },
+                    }),
+                )
             }
         };
         if let Some(layer) = &layer {
@@ -108,7 +123,14 @@ impl<'a> Parse<'a> for ImportPrelude<'a> {
             span.end = modifiers.span.end;
         }
 
-        Ok(ImportPrelude { href, layer, supports, media, modifiers, span })
+        Ok(ImportPrelude {
+            href,
+            layer,
+            supports,
+            media,
+            modifiers,
+            span,
+        })
     }
 }
 
@@ -124,36 +146,46 @@ impl<'a> ImportPrelude<'a> {
         Option<ImportPreludeSupports<'a>>,
         Option<MediaQueryList<'a>>,
     )> {
-        let layer =
-            if input.cursor.peek()?.is_ident_name_eq_ignore_ascii_case(input.source, "layer") {
-                let ident = input.parse::<Ident>()?;
-                let layer = match input.cursor.peek()? {
-                    TokenWithSpan { token: Token::LParen(..), span }
-                        if span.start == ident.span.end =>
-                    {
-                        input.cursor.bump()?;
-                        let layer_name = input.parse().map(ComponentValue::LayerName)?;
-                        let args = input.vec1(layer_name);
-                        let end = input.cursor.expect_r_paren()?.1.end;
-                        let span = Span { start: ident.span.start, end };
-                        ImportPreludeLayer::WithName(Function {
-                            name: FunctionName::Ident(InterpolableIdent::Literal(ident)),
-                            args,
-                            span,
-                        })
-                    }
-                    _ => ImportPreludeLayer::Empty(ident),
-                };
-                Some(layer)
-            } else {
-                None
+        let layer = if input
+            .cursor
+            .peek()?
+            .is_ident_name_eq_ignore_ascii_case(input.source, "layer")
+        {
+            let ident = input.parse::<Ident>()?;
+            let layer = match input.cursor.peek()? {
+                TokenWithSpan {
+                    token: Token::LParen(..),
+                    span,
+                } if span.start == ident.span.end => {
+                    input.cursor.bump()?;
+                    let layer_name = input.parse().map(ComponentValue::LayerName)?;
+                    let args = input.vec1(layer_name);
+                    let end = input.cursor.expect_r_paren()?.1.end;
+                    let span = Span {
+                        start: ident.span.start,
+                        end,
+                    };
+                    ImportPreludeLayer::WithName(Function {
+                        name: FunctionName::Ident(InterpolableIdent::Literal(ident)),
+                        args,
+                        span,
+                    })
+                }
+                _ => ImportPreludeLayer::Empty(ident),
             };
+            Some(layer)
+        } else {
+            None
+        };
 
         let supports = input.try_parse(|parser| {
             // (kept as its own try so a non-`supports` ident rolls back)
             let (ident, span) = parser.cursor.expect_ident()?;
             if !ident.name().eq_ignore_ascii_case("supports") {
-                return Err(Error { kind: ErrorKind::TryParseError, span });
+                return Err(Error {
+                    kind: ErrorKind::TryParseError,
+                    span,
+                });
             }
 
             parser.cursor.expect_l_paren_without_ws_or_comments()?;
@@ -164,7 +196,13 @@ impl<'a> ImportPrelude<'a> {
                 parser.parse().map(ImportPreludeSupportsKind::Declaration)?
             };
             let (_, Span { end, .. }) = parser.cursor.expect_r_paren()?;
-            Ok(ImportPreludeSupports { kind, span: Span { start: span.start, end } })
+            Ok(ImportPreludeSupports {
+                kind,
+                span: Span {
+                    start: span.start,
+                    end,
+                },
+            })
         });
         // `}` ends the at-rule too, so an `@import` nested in a style rule needs no
         // trailing `;` (`a { @import "b.css" }`); it can't start a media query.
@@ -179,7 +217,10 @@ impl<'a> ImportPrelude<'a> {
             Ok((layer, supports.ok(), media))
         } else {
             let span = input.cursor.peek()?.span;
-            Err(Error { kind: ErrorKind::TryParseError, span })
+            Err(Error {
+                kind: ErrorKind::TryParseError,
+                span,
+            })
         }
     }
 }

@@ -20,7 +20,8 @@ impl<'s, 'a> BindingContext<'s, 'a> {
 
     #[inline]
     pub fn has_usages(&self, symbol_id: SymbolId, module_record: &'s ModuleRecord) -> bool {
-        self.symbol(module_record, symbol_id).has_usages(self.options)
+        self.symbol(module_record, symbol_id)
+            .has_usages(self.options)
     }
 }
 
@@ -50,8 +51,13 @@ impl<'a> HasAnyUsedBinding<'a> for ObjectPattern<'a> {
         if ctx.options.ignore_rest_siblings && self.rest.is_some() {
             return true;
         }
-        self.properties.iter().any(|p| p.value.has_any_used_binding(ctx))
-            || self.rest.as_ref().is_some_and(|rest| rest.argument.has_any_used_binding(ctx))
+        self.properties
+            .iter()
+            .any(|p| p.value.has_any_used_binding(ctx))
+            || self
+                .rest
+                .as_ref()
+                .is_some_and(|rest| rest.argument.has_any_used_binding(ctx))
     }
 }
 impl<'a> HasAnyUsedBinding<'a> for ArrayPattern<'a> {
@@ -61,6 +67,9 @@ impl<'a> HasAnyUsedBinding<'a> for ArrayPattern<'a> {
             el.get_identifier_name()
                 .is_some_and(|name| ctx.options.is_ignored_array_destructured(&name).is_some())
                 || el.has_any_used_binding(ctx)
-        }) || self.rest.as_ref().is_some_and(|rest| rest.argument.has_any_used_binding(ctx))
+        }) || self
+            .rest
+            .as_ref()
+            .is_some_and(|rest| rest.argument.has_any_used_binding(ctx))
     }
 }

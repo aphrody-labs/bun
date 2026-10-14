@@ -60,10 +60,19 @@ impl LayoutCalculator<'_> {
     /// Calculate layouts of all types.
     fn calculate(schema: &mut Schema) {
         let span_type_id = schema.type_names["Span"];
-        let node_id_cell_type_id =
-            schema.type_by_name("NodeId").as_struct().unwrap().containers.cell_id.unwrap();
+        let node_id_cell_type_id = schema
+            .type_by_name("NodeId")
+            .as_struct()
+            .unwrap()
+            .containers
+            .cell_id
+            .unwrap();
 
-        let mut calculator = LayoutCalculator { schema, span_type_id, node_id_cell_type_id };
+        let mut calculator = LayoutCalculator {
+            schema,
+            span_type_id,
+            node_id_cell_type_id,
+        };
 
         for type_id in calculator.schema.types.indices() {
             calculator.calculate_type(type_id);
@@ -180,7 +189,11 @@ impl<'s> StructState<'s> {
 
         // Store offset on `field`
         let field = &mut self.struct_def.fields[field_data.index];
-        field.offset = Offset { offset_64, offset_32, layout_index: self.field_count };
+        field.offset = Offset {
+            offset_64,
+            offset_32,
+            layout_index: self.field_count,
+        };
 
         self.field_count += 1;
     }
@@ -302,7 +315,11 @@ impl LayoutCalculator<'_> {
                     (u64::from(layout.layout_64.align) << 32) | u64::from(layout.layout_32.align)
                 };
 
-                FieldData { index, layout, priority }
+                FieldData {
+                    index,
+                    layout,
+                    priority,
+                }
             })
             .collect::<Vec<_>>();
 
@@ -332,23 +349,34 @@ impl LayoutCalculator<'_> {
                 if state.current_align_64 < smallest_align_64 {
                     // No field meets alignment requirement for 64 bit
                     state.current_align_64 *= 2;
-                    state.layout_64.size =
-                        state.layout_64.size.next_multiple_of(state.current_align_64);
+                    state.layout_64.size = state
+                        .layout_64
+                        .size
+                        .next_multiple_of(state.current_align_64);
                 } else {
                     // No field meets alignment requirement for 32 bit
                     state.current_align_32 *= 2;
-                    state.layout_32.size =
-                        state.layout_32.size.next_multiple_of(state.current_align_32);
+                    state.layout_32.size = state
+                        .layout_32
+                        .size
+                        .next_multiple_of(state.current_align_32);
                 }
             }
         }
 
         // Round up size to alignment
-        let StructState { mut layout_64, mut layout_32, .. } = state;
+        let StructState {
+            mut layout_64,
+            mut layout_32,
+            ..
+        } = state;
         layout_64.size = layout_64.size.next_multiple_of(layout_64.align);
         layout_32.size = layout_32.size.next_multiple_of(layout_32.align);
 
-        Layout { layout_64, layout_32 }
+        Layout {
+            layout_64,
+            layout_32,
+        }
     }
 }
 
@@ -380,7 +408,12 @@ impl LayoutCalculator<'_> {
             layout_32: PlatformLayout::from_size_align(0, 1),
         };
         self.process_enum_variants(type_id, &mut state);
-        let EnumState { min_discriminant, max_discriminant, mut layout_64, mut layout_32 } = state;
+        let EnumState {
+            min_discriminant,
+            max_discriminant,
+            mut layout_64,
+            mut layout_32,
+        } = state;
 
         layout_64.size += layout_64.align;
         layout_32.size += layout_32.align;
@@ -398,11 +431,19 @@ impl LayoutCalculator<'_> {
             layout_32.niche = Some(niche);
         }
 
-        Layout { layout_64, layout_32 }
+        Layout {
+            layout_64,
+            layout_32,
+        }
     }
 
     fn process_enum_variants(&mut self, type_id: TypeId, state: &mut EnumState) {
-        let EnumState { min_discriminant, max_discriminant, layout_64, layout_32 } = state;
+        let EnumState {
+            min_discriminant,
+            max_discriminant,
+            layout_64,
+            layout_32,
+        } = state;
 
         for variant_index in self.schema.enum_def(type_id).variant_indices() {
             let variant = &self.schema.enum_def(type_id).variants[variant_index];
@@ -612,9 +653,16 @@ fn generate_assertions(schema: &Schema) -> Vec<Output> {
         .map(|(krate, (assertions_64, assertions_32))| {
             let output = template(krate, &assertions_64, &assertions_32);
 
-            let crate_path = schema.files.iter().find(|file| file.krate() == krate)
-                .expect("layout source owner").krate_path();
-            Output::Rust { path: output_path(crate_path, "assert_layouts.rs"), tokens: output }
+            let crate_path = schema
+                .files
+                .iter()
+                .find(|file| file.krate() == krate)
+                .expect("layout source owner")
+                .krate_path();
+            Output::Rust {
+                path: output_path(crate_path, "assert_layouts.rs"),
+                tokens: output,
+            }
         })
         .collect()
 }
@@ -688,8 +736,9 @@ fn generate_layout_assertions_for_struct<'s>(
     let mut fields = struct_def.fields.iter().collect_vec();
     fields.sort_by_key(|f1| f1.offset.layout_index);
 
-    let (assertions_64, assertions_32) =
-        assertions.entry(struct_def.file(schema).krate()).or_default();
+    let (assertions_64, assertions_32) = assertions
+        .entry(struct_def.file(schema).krate())
+        .or_default();
 
     let ident = struct_def.ident();
     assertions_64.extend(r#gen(struct_def, &fields, true, &ident, schema));
@@ -844,7 +893,10 @@ fn generate_struct_details(schema: &Schema) -> Output {
         pub static STRUCTS: phf::Map<&'static str, StructDetails> = #map;
     };
 
-    Output::Rust { path: output_path(AST_MACROS_CRATE_PATH, "structs.rs"), tokens: code }
+    Output::Rust {
+        path: output_path(AST_MACROS_CRATE_PATH, "structs.rs"),
+        tokens: code,
+    }
 }
 
 /// Add a line break to [`TokenStream`].

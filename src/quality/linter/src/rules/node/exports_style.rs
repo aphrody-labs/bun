@@ -140,7 +140,9 @@ impl ExportsStyle {
                 continue;
             }
 
-            ctx.diagnostic(unexpected_exports_diagnostic(ctx.nodes().kind(node_id).span()));
+            ctx.diagnostic(unexpected_exports_diagnostic(
+                ctx.nodes().kind(node_id).span(),
+            ));
         }
     }
 
@@ -159,7 +161,9 @@ impl ExportsStyle {
             };
             // Skip `module` in property position (`foo[module]`) and any property but `exports`.
             if member_expr.object().get_inner_expression().node_id() != node_id
-                || !member_expr.static_property_name().is_some_and(|name| name == "exports")
+                || !member_expr
+                    .static_property_name()
+                    .is_some_and(|name| name == "exports")
             {
                 continue;
             }
@@ -208,7 +212,11 @@ fn global_reference_ids<'c>(name: &str, ctx: &'c LintContext) -> &'c [ReferenceI
     let Some(references) = ctx.scoping().root_unresolved_references().get(name) else {
         return &[];
     };
-    if ctx.globals().get(name).is_some_and(|value| *value == GlobalValue::Off) {
+    if ctx
+        .globals()
+        .get(name)
+        .is_some_and(|value| *value == GlobalValue::Off)
+    {
         return &[];
     }
     references
@@ -279,7 +287,10 @@ fn top_assignment_id(mut node_id: NodeId, ctx: &LintContext) -> Option<NodeId> {
 /// Climb from an assignment expression to the outermost one enclosing it, as in
 /// `a = b = c` from `b = c`.
 fn outermost_assignment_id(mut node_id: NodeId, ctx: &LintContext) -> NodeId {
-    while matches!(ctx.nodes().parent_kind(node_id), AstKind::AssignmentExpression(_)) {
+    while matches!(
+        ctx.nodes().parent_kind(node_id),
+        AstKind::AssignmentExpression(_)
+    ) {
         node_id = ctx.nodes().parent_id(node_id);
     }
     node_id
@@ -291,8 +302,16 @@ fn test() {
 
     let pass = vec![
         ("module.exports = {foo: 1}", None, None),
-        ("module.exports = {foo: 1}", Some(serde_json::json!(["module.exports"])), None),
-        ("exports.foo = 1", Some(serde_json::json!(["exports"])), None),
+        (
+            "module.exports = {foo: 1}",
+            Some(serde_json::json!(["module.exports"])),
+            None,
+        ),
+        (
+            "exports.foo = 1",
+            Some(serde_json::json!(["exports"])),
+            None,
+        ),
         (
             "exports = module.exports = {foo: 1}",
             Some(serde_json::json!(["module.exports", { "allowBatchAssign": true }])),
@@ -323,11 +342,19 @@ fn test() {
             Some(serde_json::json!(["exports", { "allowBatchAssign": true }])),
             None,
         ),
-        ("module = {}; module.foo = 1", Some(serde_json::json!(["exports"])), None),
+        (
+            "module = {}; module.foo = 1",
+            Some(serde_json::json!(["exports"])),
+            None,
+        ),
         // `exports` is read, not assigned to
         ("foo = exports", Some(serde_json::json!(["exports"])), None),
         // `module` is the property, not the object
-        ("foo[module] = 1", Some(serde_json::json!(["exports"])), None),
+        (
+            "foo[module] = 1",
+            Some(serde_json::json!(["exports"])),
+            None,
+        ),
         (
             "exports.foo = 1",
             Some(serde_json::json!(["module.exports"])),
@@ -345,15 +372,51 @@ fn test() {
         ("exports.foo = 1", None, None),
         ("module.exports = exports = {foo: 1}", None, None),
         ("exports = module.exports = {foo: 1}", None, None),
-        ("exports = {foo: 1}", Some(serde_json::json!(["module.exports"])), None),
-        ("exports.foo = 1", Some(serde_json::json!(["module.exports"])), None),
-        ("module.exports = exports = {foo: 1}", Some(serde_json::json!(["module.exports"])), None),
-        ("exports = module.exports = {foo: 1}", Some(serde_json::json!(["module.exports"])), None),
-        ("exports = {foo: 1}", Some(serde_json::json!(["exports"])), None),
-        ("module.exports = {foo: 1}", Some(serde_json::json!(["exports"])), None),
-        ("module.exports.foo = 1", Some(serde_json::json!(["exports"])), None),
-        ("module.exports = { a: 1 }", Some(serde_json::json!(["exports"])), None),
-        ("module.exports = { a: 1, b: 2 }", Some(serde_json::json!(["exports"])), None),
+        (
+            "exports = {foo: 1}",
+            Some(serde_json::json!(["module.exports"])),
+            None,
+        ),
+        (
+            "exports.foo = 1",
+            Some(serde_json::json!(["module.exports"])),
+            None,
+        ),
+        (
+            "module.exports = exports = {foo: 1}",
+            Some(serde_json::json!(["module.exports"])),
+            None,
+        ),
+        (
+            "exports = module.exports = {foo: 1}",
+            Some(serde_json::json!(["module.exports"])),
+            None,
+        ),
+        (
+            "exports = {foo: 1}",
+            Some(serde_json::json!(["exports"])),
+            None,
+        ),
+        (
+            "module.exports = {foo: 1}",
+            Some(serde_json::json!(["exports"])),
+            None,
+        ),
+        (
+            "module.exports.foo = 1",
+            Some(serde_json::json!(["exports"])),
+            None,
+        ),
+        (
+            "module.exports = { a: 1 }",
+            Some(serde_json::json!(["exports"])),
+            None,
+        ),
+        (
+            "module.exports = { a: 1, b: 2 }",
+            Some(serde_json::json!(["exports"])),
+            None,
+        ),
         (
             "module.exports = { // before a
             a: 1, // between a and b
@@ -362,7 +425,11 @@ fn test() {
             Some(serde_json::json!(["exports"])),
             None,
         ),
-        ("foo(module.exports = {foo: 1})", Some(serde_json::json!(["exports"])), None),
+        (
+            "foo(module.exports = {foo: 1})",
+            Some(serde_json::json!(["exports"])),
+            None,
+        ),
         (
             "if(foo){ module.exports = { foo: 1};} else { module.exports = {foo: 2};}",
             Some(serde_json::json!(["exports"])),
@@ -373,25 +440,81 @@ fn test() {
             Some(serde_json::json!(["exports"])),
             None,
         ),
-        ("module.exports = { get a() {} }", Some(serde_json::json!(["exports"])), None),
-        ("module.exports = { set a(a) {} }", Some(serde_json::json!(["exports"])), None),
-        ("module.exports = { a }", Some(serde_json::json!(["exports"])), None),
-        ("module.exports = { ...a }", Some(serde_json::json!(["exports"])), None),
-        ("module.exports = { ['a' + 'b']: 1 }", Some(serde_json::json!(["exports"])), None),
-        ("module.exports = { 'foo': 1 }", Some(serde_json::json!(["exports"])), None),
-        ("module.exports = { foo(a) {} }", Some(serde_json::json!(["exports"])), None),
-        ("module.exports = { *foo(a) {} }", Some(serde_json::json!(["exports"])), None),
-        ("module.exports = { async foo(a) {} }", Some(serde_json::json!(["exports"])), None),
-        ("module.exports.foo()", Some(serde_json::json!(["exports"])), None),
+        (
+            "module.exports = { get a() {} }",
+            Some(serde_json::json!(["exports"])),
+            None,
+        ),
+        (
+            "module.exports = { set a(a) {} }",
+            Some(serde_json::json!(["exports"])),
+            None,
+        ),
+        (
+            "module.exports = { a }",
+            Some(serde_json::json!(["exports"])),
+            None,
+        ),
+        (
+            "module.exports = { ...a }",
+            Some(serde_json::json!(["exports"])),
+            None,
+        ),
+        (
+            "module.exports = { ['a' + 'b']: 1 }",
+            Some(serde_json::json!(["exports"])),
+            None,
+        ),
+        (
+            "module.exports = { 'foo': 1 }",
+            Some(serde_json::json!(["exports"])),
+            None,
+        ),
+        (
+            "module.exports = { foo(a) {} }",
+            Some(serde_json::json!(["exports"])),
+            None,
+        ),
+        (
+            "module.exports = { *foo(a) {} }",
+            Some(serde_json::json!(["exports"])),
+            None,
+        ),
+        (
+            "module.exports = { async foo(a) {} }",
+            Some(serde_json::json!(["exports"])),
+            None,
+        ),
+        (
+            "module.exports.foo()",
+            Some(serde_json::json!(["exports"])),
+            None,
+        ),
         (
             "a = module.exports.foo + module.exports['bar']",
             Some(serde_json::json!(["exports"])),
             None,
         ),
-        ("module.exports = exports = {foo: 1}", Some(serde_json::json!(["exports"])), None),
-        ("exports = module.exports = {foo: 1}", Some(serde_json::json!(["exports"])), None),
-        ("(module).exports = {foo: 1}", Some(serde_json::json!(["exports"])), None),
-        ("(module as any).exports = {foo: 1}", Some(serde_json::json!(["exports"])), None),
+        (
+            "module.exports = exports = {foo: 1}",
+            Some(serde_json::json!(["exports"])),
+            None,
+        ),
+        (
+            "exports = module.exports = {foo: 1}",
+            Some(serde_json::json!(["exports"])),
+            None,
+        ),
+        (
+            "(module).exports = {foo: 1}",
+            Some(serde_json::json!(["exports"])),
+            None,
+        ),
+        (
+            "(module as any).exports = {foo: 1}",
+            Some(serde_json::json!(["exports"])),
+            None,
+        ),
         (
             "module.exports = exports = {foo: 1}; exports = obj",
             Some(serde_json::json!(["exports", { "allowBatchAssign": true }])),
@@ -405,9 +528,21 @@ fn test() {
     ];
 
     let _fix = vec![
-        ("module.exports = {foo: 1}", "exports.foo = 1;", Some(serde_json::json!(["exports"]))),
-        ("module.exports.foo = 1", "exports.foo = 1", Some(serde_json::json!(["exports"]))),
-        ("module.exports = { a: 1 }", "exports.a = 1;", Some(serde_json::json!(["exports"]))),
+        (
+            "module.exports = {foo: 1}",
+            "exports.foo = 1;",
+            Some(serde_json::json!(["exports"])),
+        ),
+        (
+            "module.exports.foo = 1",
+            "exports.foo = 1",
+            Some(serde_json::json!(["exports"])),
+        ),
+        (
+            "module.exports = { a: 1 }",
+            "exports.a = 1;",
+            Some(serde_json::json!(["exports"])),
+        ),
         (
             "module.exports = { a: 1, b: 2 }",
             "exports.a = 1;
@@ -428,7 +563,11 @@ fn test() {
             // after b",
             Some(serde_json::json!(["exports"])),
         ),
-        ("module.exports = { a }", "exports.a = a;", Some(serde_json::json!(["exports"]))),
+        (
+            "module.exports = { a }",
+            "exports.a = a;",
+            Some(serde_json::json!(["exports"])),
+        ),
         (
             "module.exports = { ['a' + 'b']: 1 }",
             "exports['a' + 'b'] = 1;",
@@ -454,7 +593,11 @@ fn test() {
             "exports.foo = async function (a) {};",
             Some(serde_json::json!(["exports"])),
         ),
-        ("module.exports.foo()", "exports.foo()", Some(serde_json::json!(["exports"]))),
+        (
+            "module.exports.foo()",
+            "exports.foo()",
+            Some(serde_json::json!(["exports"])),
+        ),
         (
             "a = module.exports.foo + module.exports['bar']",
             "a = exports.foo + exports['bar']",

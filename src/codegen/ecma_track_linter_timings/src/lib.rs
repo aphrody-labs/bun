@@ -37,8 +37,14 @@ pub fn run() -> Result<(), io::Error> {
         assert!(parser_ret.diagnostics.is_empty());
 
         let path = Path::new(&file.file_name);
-        let semantic = SemanticBuilder::new_linter().build(&parser_ret.program).semantic;
-        let module_record = Arc::new(ModuleRecord::new(path, &parser_ret.module_record, &semantic));
+        let semantic = SemanticBuilder::new_linter()
+            .build(&parser_ret.program)
+            .semantic;
+        let module_record = Arc::new(ModuleRecord::new(
+            path,
+            &parser_ret.module_record,
+            &semantic,
+        ));
 
         let _ = linter.run_with_disable_directives::<true>(
             path,
@@ -56,7 +62,9 @@ pub fn run() -> Result<(), io::Error> {
 
     let mut records = rule_timing_store.collect();
     records.sort_unstable_by(|left, right| {
-        left.plugin_name.cmp(&right.plugin_name).then_with(|| left.rule_name.cmp(&right.rule_name))
+        left.plugin_name
+            .cmp(&right.plugin_name)
+            .then_with(|| left.rule_name.cmp(&right.rule_name))
     });
 
     write_snapshot(SNAPSHOT_PATH, &format_snapshot(&records))
@@ -64,7 +72,9 @@ pub fn run() -> Result<(), io::Error> {
 
 fn create_linter() -> Linter {
     let mut external_plugin_store = ExternalPluginStore::default();
-    let lint_config = ConfigStoreBuilder::all().build(&mut external_plugin_store).unwrap();
+    let lint_config = ConfigStoreBuilder::all()
+        .build(&mut external_plugin_store)
+        .unwrap();
     Linter::new(
         LintOptions::default(),
         ConfigStore::new(lint_config, FxHashMap::default(), external_plugin_store),
@@ -77,8 +87,12 @@ fn format_snapshot(records: &[RuleTimingRecord]) -> String {
         .iter()
         .map(|record| format!("{}/{}", record.plugin_name, record.rule_name))
         .collect::<Vec<_>>();
-    let rule_width =
-        rule_names.iter().map(String::len).max().unwrap_or("Rule".len()).max("Rule".len());
+    let rule_width = rule_names
+        .iter()
+        .map(String::len)
+        .max()
+        .unwrap_or("Rule".len())
+        .max("Rule".len());
     let calls_width = records
         .iter()
         .map(|record| record.calls.to_string().len())
@@ -87,7 +101,12 @@ fn format_snapshot(records: &[RuleTimingRecord]) -> String {
         .max("Calls".len());
 
     let mut output = String::new();
-    writeln!(output, "{:<rule_width$} | {:>calls_width$}", "Rule", "Calls").unwrap();
+    writeln!(
+        output,
+        "{:<rule_width$} | {:>calls_width$}",
+        "Rule", "Calls"
+    )
+    .unwrap();
     writeln!(output, "{:-<rule_width$}-+-{:-<calls_width$}", "", "").unwrap();
 
     for (record, rule_name) in records.iter().zip(rule_names) {

@@ -78,7 +78,11 @@ impl Rule for NoAccessKey {
 fn test() {
     use crate::tester::Tester;
 
-    let pass = vec![r"<div />;", r"<div {...props} />", r"<div accessKey={undefined} />"];
+    let pass = vec![
+        r"<div />;",
+        r"<div {...props} />",
+        r"<div accessKey={undefined} />",
+    ];
 
     let fail = vec![
         r#"<div accesskey="h" />"#,
@@ -97,15 +101,24 @@ fn test() {
     let fix = vec![
         (r#"<div accesskey="h" />"#, r"<div  />"),
         (r#"<div accessKey="h" />"#, r"<div  />"),
-        (r#"<div accessKey="h" {...props} />"#, r"<div  {...props} />"),
+        (
+            r#"<div accessKey="h" {...props} />"#,
+            r"<div  {...props} />",
+        ),
         (r#"<div acCesSKeY="y" />"#, r"<div  />"),
         (r#"<div accessKey={"y"} />"#, r"<div  />"),
         (r"<div accessKey={`${y}`} />", r"<div  />"),
-        (r"<div accessKey={`${undefined}y${undefined}`} />", r"<div  />"),
+        (
+            r"<div accessKey={`${undefined}y${undefined}`} />",
+            r"<div  />",
+        ),
         (r"<div accessKey={`This is ${bad}`} />", r"<div  />"),
         (r"<div accessKey={accessKey} />", r"<div  />"),
         (r"<div accessKey={`${undefined}`} />", r"<div  />"),
-        (r"<div accessKey={`${undefined}${undefined}`} />", r"<div  />"),
+        (
+            r"<div accessKey={`${undefined}${undefined}`} />",
+            r"<div  />",
+        ),
     ];
 
     Tester::new(NoAccessKey::NAME, NoAccessKey::PLUGIN, pass, fail)

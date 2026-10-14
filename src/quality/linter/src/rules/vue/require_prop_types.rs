@@ -89,7 +89,9 @@ impl Rule for RequirePropTypes {
 
 impl RequirePropTypes {
     fn run_on_setup<'a>(call_expr: &CallExpression<'a>, ctx: &LintContext<'a>) {
-        let Some(ident) = call_expr.callee.get_identifier_reference() else { return };
+        let Some(ident) = call_expr.callee.get_identifier_reference() else {
+            return;
+        };
 
         if call_expr.type_arguments.is_some() {
             return;
@@ -97,7 +99,11 @@ impl RequirePropTypes {
 
         match ident.name.as_str() {
             "defineProps" => {
-                match call_expr.arguments.first().and_then(|arg| arg.as_expression()) {
+                match call_expr
+                    .arguments
+                    .first()
+                    .and_then(|arg| arg.as_expression())
+                {
                     // foo: {
                     Some(Expression::ObjectExpression(obj)) => Self::check_props(obj, ctx),
                     // foo: [
@@ -116,7 +122,9 @@ impl RequirePropTypes {
             return;
         };
 
-        let Some(expr) = first_arg.as_expression() else { return };
+        let Some(expr) = first_arg.as_expression() else {
+            return;
+        };
 
         if matches!(expr, Expression::Identifier(_)) {
             return;
@@ -139,7 +147,9 @@ impl RequirePropTypes {
             return;
         }
 
-        let Expression::ObjectExpression(obj) = expr else { return };
+        let Expression::ObjectExpression(obj) = expr else {
+            return;
+        };
 
         if !prop_value_has_type(obj) {
             ctx.diagnostic(require_type_diagnostic(call_expr.span, "modelValue"));
@@ -163,14 +173,21 @@ impl RequirePropTypes {
     }
 
     fn run_on_options_new<'a>(new_expr: &NewExpression<'a>, ctx: &LintContext<'a>) {
-        let Some(obj) = Self::find_props_in_new_expr(new_expr) else { return };
+        let Some(obj) = Self::find_props_in_new_expr(new_expr) else {
+            return;
+        };
         Self::check_options_props(obj, ctx);
     }
 
     fn check_options_props(obj: &ObjectExpression, ctx: &LintContext) {
         let Some(props_prop) = obj.properties.iter().find_map(|prop| {
-            let ObjectPropertyKind::ObjectProperty(p) = prop else { return None };
-            p.key.static_name().is_some_and(|k| k == "props").then_some(p)
+            let ObjectPropertyKind::ObjectProperty(p) = prop else {
+                return None;
+            };
+            p.key
+                .static_name()
+                .is_some_and(|k| k == "props")
+                .then_some(p)
         }) else {
             return;
         };
@@ -190,8 +207,11 @@ impl RequirePropTypes {
         let member_expr = call_expr.callee.get_member_expr()?;
 
         if member_expr.static_property_name() == Some("extend")
-            && let Expression::ObjectExpression(obj) =
-                call_expr.arguments.first()?.as_expression()?.get_inner_expression()
+            && let Expression::ObjectExpression(obj) = call_expr
+                .arguments
+                .first()?
+                .as_expression()?
+                .get_inner_expression()
         {
             return Some(obj);
         }
@@ -217,7 +237,9 @@ impl RequirePropTypes {
 
     fn check_props(obj: &ObjectExpression, ctx: &LintContext) {
         for prop in &obj.properties {
-            let ObjectPropertyKind::ObjectProperty(p) = prop else { continue };
+            let ObjectPropertyKind::ObjectProperty(p) = prop else {
+                continue;
+            };
             let Some(key) = p.key.static_name() else {
                 ctx.diagnostic(require_type_diagnostic(p.key.span(), "Unknown prop"));
                 continue;
@@ -238,7 +260,9 @@ impl RequirePropTypes {
 
     fn check_array_props(arr: &ArrayExpression, ctx: &LintContext) {
         for elem in &arr.elements {
-            let Some(expr) = elem.as_expression() else { continue };
+            let Some(expr) = elem.as_expression() else {
+                continue;
+            };
             let name = match expr {
                 Expression::StringLiteral(lit) => Some(lit.value.as_str()),
                 Expression::Identifier(id) => Some(id.name.as_str()),

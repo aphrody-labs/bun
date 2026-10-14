@@ -196,7 +196,10 @@ fn test() {
         ("while (true) {}", None),
         ("while (true) { break; }", None),
         ("while (true) { continue; }", None),
-        ("A: while (a) { break A; }", Some(serde_json::json!([{ "allowLoop": true }]))),
+        (
+            "A: while (a) { break A; }",
+            Some(serde_json::json!([{ "allowLoop": true }])),
+        ),
         (
             "A: do { if (b) { break A; } } while (a);",
             Some(serde_json::json!([{ "allowLoop": true }])),
@@ -205,7 +208,10 @@ fn test() {
             "A: for (var a in obj) { for (;;) { switch (a) { case 0: continue A; } } }",
             Some(serde_json::json!([{ "allowLoop": true }])),
         ),
-        ("A: switch (a) { case 0: break A; }", Some(serde_json::json!([{ "allowSwitch": true }]))),
+        (
+            "A: switch (a) { case 0: break A; }",
+            Some(serde_json::json!([{ "allowSwitch": true }])),
+        ),
     ];
 
     let fail = vec![
@@ -217,9 +223,18 @@ fn test() {
         ("A: { if (foo()) { break A; } bar(); };", None),
         ("A: if (a) { if (foo()) { break A; } bar(); };", None),
         ("A: switch (a) { case 0: break A; default: break; };", None),
-        ("A: switch (a) { case 0: B: { break A; } default: break; };", None),
-        ("A: var foo = 0;", Some(serde_json::json!([{ "allowLoop": true }]))),
-        ("A: break A;", Some(serde_json::json!([{ "allowLoop": true }]))),
+        (
+            "A: switch (a) { case 0: B: { break A; } default: break; };",
+            None,
+        ),
+        (
+            "A: var foo = 0;",
+            Some(serde_json::json!([{ "allowLoop": true }])),
+        ),
+        (
+            "A: break A;",
+            Some(serde_json::json!([{ "allowLoop": true }])),
+        ),
         (
             "A: { if (foo()) { break A; } bar(); };",
             Some(serde_json::json!([{ "allowLoop": true }])),
@@ -232,8 +247,14 @@ fn test() {
             "A: switch (a) { case 0: break A; default: break; };",
             Some(serde_json::json!([{ "allowLoop": true }])),
         ),
-        ("A: var foo = 0;", Some(serde_json::json!([{ "allowSwitch": true }]))),
-        ("A: break A;", Some(serde_json::json!([{ "allowSwitch": true }]))),
+        (
+            "A: var foo = 0;",
+            Some(serde_json::json!([{ "allowSwitch": true }])),
+        ),
+        (
+            "A: break A;",
+            Some(serde_json::json!([{ "allowSwitch": true }])),
+        ),
         (
             "A: { if (foo()) { break A; } bar(); };",
             Some(serde_json::json!([{ "allowSwitch": true }])),
@@ -242,7 +263,10 @@ fn test() {
             "A: if (a) { if (foo()) { break A; } bar(); };",
             Some(serde_json::json!([{ "allowSwitch": true }])),
         ),
-        ("A: while (a) { break A; }", Some(serde_json::json!([{ "allowSwitch": true }]))),
+        (
+            "A: while (a) { break A; }",
+            Some(serde_json::json!([{ "allowSwitch": true }])),
+        ),
         (
             "A: do { if (b) { break A; } } while (a);",
             Some(serde_json::json!([{ "allowSwitch": true }])),

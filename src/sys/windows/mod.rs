@@ -454,7 +454,10 @@ pub fn is_elevated() -> bool {
     const TOKEN_ELEVATION: c_int = 20;
     let mut token: win32::HANDLE = core::ptr::null_mut();
     // SAFETY: GetCurrentProcess() is the pseudo-handle; TOKEN_QUERY suffices for TokenElevation.
-    if unsafe { win32::OpenProcessToken(win32::GetCurrentProcess(), win32::TOKEN_QUERY, &mut token) } == 0 {
+    if unsafe {
+        win32::OpenProcessToken(win32::GetCurrentProcess(), win32::TOKEN_QUERY, &mut token)
+    } == 0
+    {
         return false;
     }
     let mut elevated: win32::DWORD = 0;

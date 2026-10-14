@@ -96,7 +96,10 @@ impl NoStandaloneExpectConfig {
         if members.len() == 1
             && members[0].is_name_unequal("assertions")
             && members[0].is_name_unequal("hasAssertions")
-            && matches!(head.parent_kind, Some(KnownMemberExpressionParentKind::Member))
+            && matches!(
+                head.parent_kind,
+                Some(KnownMemberExpressionParentKind::Member)
+            )
         {
             return;
         }
@@ -212,7 +215,10 @@ fn is_var_declarator_or_test_block<'a>(
             if let Some(jest_node) = id_nodes_mapping.get(&node.id())
                 && let Some(jest_fn_call) = parse_general_jest_fn_call(call_expr, jest_node, ctx)
             {
-                return matches!(jest_fn_call.kind, JestFnKind::General(JestGeneralFnKind::Test));
+                return matches!(
+                    jest_fn_call.kind,
+                    JestFnKind::General(JestGeneralFnKind::Test)
+                );
             }
 
             let parent = ctx.nodes().parent_node(node.id());

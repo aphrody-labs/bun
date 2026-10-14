@@ -31,8 +31,14 @@ mod test {
     fn test_find_url_query_value() {
         use super::find_url_query_value;
         assert_eq!(find_url_query_value("something", "q"), None);
-        assert_eq!(find_url_query_value("https://example.com/?foo=bar", "foo"), Some("bar"));
-        assert_eq!(find_url_query_value("https://example.com/?foo=bar", "baz"), None);
+        assert_eq!(
+            find_url_query_value("https://example.com/?foo=bar", "foo"),
+            Some("bar")
+        );
+        assert_eq!(
+            find_url_query_value("https://example.com/?foo=bar", "baz"),
+            None
+        );
         assert_eq!(
             find_url_query_value("https://example.com/?foo=bar&baz=qux", "baz"),
             Some("qux")

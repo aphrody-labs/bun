@@ -202,7 +202,13 @@ impl Oxc {
         let minifier_return = self.apply_minification(&allocator, &mut program, &options);
 
         // Phase 8: Generate code
-        self.codegen(&path, &program, minifier_return, run_options, &codegen_options);
+        self.codegen(
+            &path,
+            &program,
+            minifier_return,
+            run_options,
+            &codegen_options,
+        );
 
         // Phase 9: Finalize output
         self.finalize_output(&source_text, &mut program, &mut module_record, source_type);
@@ -224,8 +230,14 @@ impl Oxc {
             allow_v8_intrinsics: parser_options.allow_v8_intrinsics,
             ..ParseOptions::default()
         };
-        let ParserReturn { program, diagnostics, module_record, .. } =
-            Parser::new(allocator, source_text, source_type).with_options(parser_options).parse();
+        let ParserReturn {
+            program,
+            diagnostics,
+            module_record,
+            ..
+        } = Parser::new(allocator, source_text, source_type)
+            .with_options(parser_options)
+            .parse();
         self.diagnostics.extend(diagnostics);
         (program, module_record)
     }
@@ -240,7 +252,9 @@ impl Oxc {
         let mut semantic_builder = SemanticBuilder::new_compiler().with_build_nodes(true);
         if run_options.transform {
             // Estimate transformer will triple scopes, symbols, references
-            semantic_builder = semantic_builder.with_excess_capacity(2.0).with_enum_eval(true);
+            semantic_builder = semantic_builder
+                .with_excess_capacity(2.0)
+                .with_enum_eval(true);
         }
         let semantic_ret = semantic_builder
             .with_check_syntax_error(parser_options.semantic_errors)
@@ -248,12 +262,15 @@ impl Oxc {
             .build(program);
         self.diagnostics.extend(semantic_ret.diagnostics);
 
-        self.control_flow_graph = semantic_ret.semantic.cfg().map_or_else(String::default, |cfg| {
-            cfg.debug_dot(DebugDotContext::new(
-                semantic_ret.semantic.nodes(),
-                control_flow_options.verbose.unwrap_or_default(),
-            ))
-        });
+        self.control_flow_graph = semantic_ret
+            .semantic
+            .cfg()
+            .map_or_else(String::default, |cfg| {
+                cfg.debug_dot(DebugDotContext::new(
+                    semantic_ret.semantic.nodes(),
+                    control_flow_options.verbose.unwrap_or_default(),
+                ))
+            });
 
         semantic_ret.semantic
     }
@@ -268,7 +285,9 @@ impl Oxc {
         isolated_declarations_options: Option<OxcIsolatedDeclarationsOptions>,
     ) {
         let id_options = isolated_declarations_options
-            .map(|o| IsolatedDeclarationsOptions { strip_internal: o.strip_internal })
+            .map(|o| IsolatedDeclarationsOptions {
+                strip_internal: o.strip_internal,
+            })
             .unwrap_or_default();
         let ret = IsolatedDeclarations::new(allocator, id_options).build(program);
         if ret.diagnostics.is_empty() {
@@ -345,7 +364,10 @@ impl Oxc {
         let mangle = if options.run.mangle {
             options.mangle.map(|o| MangleOptions {
                 top_level: Some(o.top_level),
-                keep_names: MangleOptionsKeepNames { function: o.keep_names, class: o.keep_names },
+                keep_names: MangleOptionsKeepNames {
+                    function: o.keep_names,
+                    class: o.keep_names,
+                },
                 ..MangleOptions::default()
             })
         } else {
@@ -367,8 +389,12 @@ impl Oxc {
             None
         };
         Some(
-            Minifier::new(MinifierOptions { mangle, mangle_properties, compress })
-                .minify(allocator, program),
+            Minifier::new(MinifierOptions {
+                mangle,
+                mangle_properties,
+                compress,
+            })
+            .minify(allocator, program),
         )
     }
 
@@ -446,7 +472,8 @@ impl Oxc {
                 )],
                 allocator,
             );
-            self.diagnostics.extend(linter_ret.into_iter().map(|e| e.error));
+            self.diagnostics
+                .extend(linter_ret.into_iter().map(|e| e.error));
         }
     }
 
@@ -454,8 +481,11 @@ impl Oxc {
         let mut format_options = JsFormatOptions::default();
 
         if let Some(use_tabs) = options.use_tabs {
-            format_options.indent_style =
-                if use_tabs { IndentStyle::Tab } else { IndentStyle::Space };
+            format_options.indent_style = if use_tabs {
+                IndentStyle::Tab
+            } else {
+                IndentStyle::Space
+            };
         }
 
         if let Some(tab_width) = options.tab_width
@@ -477,13 +507,19 @@ impl Oxc {
         }
 
         if let Some(single_quote) = options.single_quote {
-            format_options.quote_style =
-                if single_quote { QuoteStyle::Single } else { QuoteStyle::Double };
+            format_options.quote_style = if single_quote {
+                QuoteStyle::Single
+            } else {
+                QuoteStyle::Double
+            };
         }
 
         if let Some(jsx_single_quote) = options.jsx_single_quote {
-            format_options.jsx_quote_style =
-                if jsx_single_quote { QuoteStyle::Single } else { QuoteStyle::Double };
+            format_options.jsx_quote_style = if jsx_single_quote {
+                QuoteStyle::Single
+            } else {
+                QuoteStyle::Double
+            };
         }
 
         if let Some(ref quote_props) = options.quote_props
@@ -499,13 +535,19 @@ impl Oxc {
         }
 
         if let Some(semi) = options.semi {
-            format_options.semicolons =
-                if semi { Semicolons::Always } else { Semicolons::AsNeeded };
+            format_options.semicolons = if semi {
+                Semicolons::Always
+            } else {
+                Semicolons::AsNeeded
+            };
         }
 
         if let Some(ref arrow_parens) = options.arrow_parens {
-            let normalized =
-                if arrow_parens == "avoid" { "as-needed" } else { arrow_parens.as_str() };
+            let normalized = if arrow_parens == "avoid" {
+                "as-needed"
+            } else {
+                arrow_parens.as_str()
+            };
             if let Ok(parens) = normalized.parse::<ArrowParentheses>() {
                 format_options.arrow_parentheses = parens;
             }
@@ -569,7 +611,9 @@ impl Oxc {
                                     .as_ref()
                                     .and_then(|s| ImportSelector::parse(s)),
                                 modifiers: cg.modifiers.as_ref().map_or_else(Vec::new, |mods| {
-                                    mods.iter().filter_map(|m| ImportModifier::parse(m)).collect()
+                                    mods.iter()
+                                        .filter_map(|m| ImportModifier::parse(m))
+                                        .collect()
                                 }),
                             })
                         })
@@ -691,8 +735,9 @@ impl Oxc {
             source_map_path: Some(path.to_path_buf()),
             ..CodegenOptions::default()
         };
-        let (scoping, class_private_mappings) =
-            minifier_return.map(|m| (m.scoping, m.class_private_mappings)).unwrap_or_default();
+        let (scoping, class_private_mappings) = minifier_return
+            .map(|m| (m.scoping, m.class_private_mappings))
+            .unwrap_or_default();
         let codegen_result = Codegen::new()
             .with_scoping(scoping)
             .with_private_member_mappings(class_private_mappings)
@@ -712,7 +757,12 @@ impl Oxc {
 
         impl<'s> ScopesTextWriter<'s> {
             fn new(scoping: &'s Scoping) -> Self {
-                Self { scoping, scope_text: String::new(), indent: 0, space: String::new() }
+                Self {
+                    scoping,
+                    scope_text: String::new(),
+                    indent: 0,
+                    space: String::new(),
+                }
             }
 
             fn write_line<S: AsRef<str>>(&mut self, line: S) {
@@ -793,8 +843,11 @@ impl Oxc {
     fn build_define_config(
         define_opts: &OxcDefineOptions,
     ) -> napi::Result<ReplaceGlobalDefinesConfig> {
-        let define_pairs: Vec<(String, String)> =
-            define_opts.define.iter().map(|(k, v)| (k.clone(), v.clone())).collect();
+        let define_pairs: Vec<(String, String)> = define_opts
+            .define
+            .iter()
+            .map(|(k, v)| (k.clone(), v.clone()))
+            .collect();
 
         ReplaceGlobalDefinesConfig::new(&define_pairs).map_err(|errors| {
             let error_messages: Vec<String> = errors.iter().map(ToString::to_string).collect();

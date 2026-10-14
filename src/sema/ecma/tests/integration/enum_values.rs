@@ -8,9 +8,19 @@ fn get_enum_member_value(source: &str, member_name: &str) -> Option<ConstantValu
     let allocator = Allocator::default();
     let source_type = SourceType::ts();
     let parser_ret = Parser::new(&allocator, source, source_type).parse();
-    assert!(parser_ret.diagnostics.is_empty(), "Parse errors: {:?}", parser_ret.diagnostics);
-    let semantic_ret = SemanticBuilder::new().with_enum_eval(true).build(&parser_ret.program);
-    assert!(semantic_ret.diagnostics.is_empty(), "Semantic errors: {:?}", semantic_ret.diagnostics);
+    assert!(
+        parser_ret.diagnostics.is_empty(),
+        "Parse errors: {:?}",
+        parser_ret.diagnostics
+    );
+    let semantic_ret = SemanticBuilder::new()
+        .with_enum_eval(true)
+        .build(&parser_ret.program);
+    assert!(
+        semantic_ret.diagnostics.is_empty(),
+        "Semantic errors: {:?}",
+        semantic_ret.diagnostics
+    );
     let scoping = semantic_ret.semantic.into_scoping();
 
     for symbol_id in scoping.symbol_ids() {
@@ -26,17 +36,35 @@ fn get_enum_member_value(source: &str, member_name: &str) -> Option<ConstantValu
 #[test]
 fn auto_increment() {
     let source = "enum A { X, Y, Z }";
-    debug_assert_eq!(get_enum_member_value(source, "X"), Some(ConstantValue::Number(0.0)));
-    debug_assert_eq!(get_enum_member_value(source, "Y"), Some(ConstantValue::Number(1.0)));
-    debug_assert_eq!(get_enum_member_value(source, "Z"), Some(ConstantValue::Number(2.0)));
+    debug_assert_eq!(
+        get_enum_member_value(source, "X"),
+        Some(ConstantValue::Number(0.0))
+    );
+    debug_assert_eq!(
+        get_enum_member_value(source, "Y"),
+        Some(ConstantValue::Number(1.0))
+    );
+    debug_assert_eq!(
+        get_enum_member_value(source, "Z"),
+        Some(ConstantValue::Number(2.0))
+    );
 }
 
 #[test]
 fn explicit_numeric() {
     let source = "enum A { X = 10, Y, Z }";
-    debug_assert_eq!(get_enum_member_value(source, "X"), Some(ConstantValue::Number(10.0)));
-    debug_assert_eq!(get_enum_member_value(source, "Y"), Some(ConstantValue::Number(11.0)));
-    debug_assert_eq!(get_enum_member_value(source, "Z"), Some(ConstantValue::Number(12.0)));
+    debug_assert_eq!(
+        get_enum_member_value(source, "X"),
+        Some(ConstantValue::Number(10.0))
+    );
+    debug_assert_eq!(
+        get_enum_member_value(source, "Y"),
+        Some(ConstantValue::Number(11.0))
+    );
+    debug_assert_eq!(
+        get_enum_member_value(source, "Z"),
+        Some(ConstantValue::Number(12.0))
+    );
 }
 
 #[test]
@@ -51,29 +79,53 @@ fn string_members() {
 #[test]
 fn binary_expressions() {
     let source = "enum A { X = 1 + 2, Y = 1 << 3 }";
-    debug_assert_eq!(get_enum_member_value(source, "X"), Some(ConstantValue::Number(3.0)));
-    debug_assert_eq!(get_enum_member_value(source, "Y"), Some(ConstantValue::Number(8.0)));
+    debug_assert_eq!(
+        get_enum_member_value(source, "X"),
+        Some(ConstantValue::Number(3.0))
+    );
+    debug_assert_eq!(
+        get_enum_member_value(source, "Y"),
+        Some(ConstantValue::Number(8.0))
+    );
 }
 
 #[test]
 fn unary_expressions() {
     let source = "enum A { X = -1, Y = ~0 }";
-    debug_assert_eq!(get_enum_member_value(source, "X"), Some(ConstantValue::Number(-1.0)));
-    debug_assert_eq!(get_enum_member_value(source, "Y"), Some(ConstantValue::Number(-1.0)));
+    debug_assert_eq!(
+        get_enum_member_value(source, "X"),
+        Some(ConstantValue::Number(-1.0))
+    );
+    debug_assert_eq!(
+        get_enum_member_value(source, "Y"),
+        Some(ConstantValue::Number(-1.0))
+    );
 }
 
 #[test]
 fn cross_member_reference() {
     let source = "enum A { X = 1, Y = X + 1 }";
-    debug_assert_eq!(get_enum_member_value(source, "X"), Some(ConstantValue::Number(1.0)));
-    debug_assert_eq!(get_enum_member_value(source, "Y"), Some(ConstantValue::Number(2.0)));
+    debug_assert_eq!(
+        get_enum_member_value(source, "X"),
+        Some(ConstantValue::Number(1.0))
+    );
+    debug_assert_eq!(
+        get_enum_member_value(source, "Y"),
+        Some(ConstantValue::Number(2.0))
+    );
 }
 
 #[test]
 fn enum_member_shadows_outer_binding() {
     let source = "var X = 4; enum A { X = 1, Y = X + 1 }";
-    assert_eq!(get_enum_member_value(source, "X"), Some(ConstantValue::Number(1.0)));
-    assert_eq!(get_enum_member_value(source, "Y"), Some(ConstantValue::Number(2.0)));
+    assert_eq!(
+        get_enum_member_value(source, "X"),
+        Some(ConstantValue::Number(1.0))
+    );
+    assert_eq!(
+        get_enum_member_value(source, "Y"),
+        Some(ConstantValue::Number(2.0))
+    );
 }
 
 #[test]
@@ -100,8 +152,14 @@ fn shadowed_infinity_nan_are_not_evaluated_as_globals() {
 #[test]
 fn merged_enum_members_named_infinity_nan_take_precedence_over_globals() {
     let source = "enum A { Infinity = 1, NaN = 2 } enum A { X = Infinity, Y = NaN }";
-    assert_eq!(get_enum_member_value(source, "X"), Some(ConstantValue::Number(1.0)));
-    assert_eq!(get_enum_member_value(source, "Y"), Some(ConstantValue::Number(2.0)));
+    assert_eq!(
+        get_enum_member_value(source, "X"),
+        Some(ConstantValue::Number(1.0))
+    );
+    assert_eq!(
+        get_enum_member_value(source, "Y"),
+        Some(ConstantValue::Number(2.0))
+    );
 }
 
 #[test]
@@ -114,13 +172,19 @@ fn unevaluated_merged_enum_member_shadows_global() {
 fn merged_enum_member_shadows_outer_binding() {
     let source =
         "function f() { const Infinity = 3; enum A { Infinity = 1 } enum A { X = Infinity } }";
-    assert_eq!(get_enum_member_value(source, "X"), Some(ConstantValue::Number(1.0)));
+    assert_eq!(
+        get_enum_member_value(source, "X"),
+        Some(ConstantValue::Number(1.0))
+    );
 }
 
 #[test]
 fn string_concat() {
     let source = r#"enum A { X = "a" + "b" }"#;
-    debug_assert_eq!(get_enum_member_value(source, "X"), Some(ConstantValue::String("ab".into())));
+    debug_assert_eq!(
+        get_enum_member_value(source, "X"),
+        Some(ConstantValue::String("ab".into()))
+    );
 }
 
 #[test]
@@ -132,14 +196,23 @@ fn unresolvable() {
 #[test]
 fn const_enum() {
     let source = "const enum A { X, Y }";
-    debug_assert_eq!(get_enum_member_value(source, "X"), Some(ConstantValue::Number(0.0)));
-    debug_assert_eq!(get_enum_member_value(source, "Y"), Some(ConstantValue::Number(1.0)));
+    debug_assert_eq!(
+        get_enum_member_value(source, "X"),
+        Some(ConstantValue::Number(0.0))
+    );
+    debug_assert_eq!(
+        get_enum_member_value(source, "Y"),
+        Some(ConstantValue::Number(1.0))
+    );
 }
 
 #[test]
 fn declare_enum() {
     let source = "declare enum A { X = 1 }";
-    debug_assert_eq!(get_enum_member_value(source, "X"), Some(ConstantValue::Number(1.0)));
+    debug_assert_eq!(
+        get_enum_member_value(source, "X"),
+        Some(ConstantValue::Number(1.0))
+    );
 }
 
 #[test]
@@ -168,7 +241,10 @@ fn auto_increment_after_unresolvable_fails() {
 #[test]
 fn parenthesized_expression() {
     let source = "enum A { X = (1 + 2) }";
-    debug_assert_eq!(get_enum_member_value(source, "X"), Some(ConstantValue::Number(3.0)));
+    debug_assert_eq!(
+        get_enum_member_value(source, "X"),
+        Some(ConstantValue::Number(3.0))
+    );
 }
 
 #[test]
@@ -183,13 +259,19 @@ fn template_literal() {
 #[test]
 fn cross_enum_member_expression() {
     let source = "enum A { X = 1 } enum B { Y = A.X + 1 }";
-    debug_assert_eq!(get_enum_member_value(source, "Y"), Some(ConstantValue::Number(2.0)));
+    debug_assert_eq!(
+        get_enum_member_value(source, "Y"),
+        Some(ConstantValue::Number(2.0))
+    );
 }
 
 #[test]
 fn cross_enum_computed_member_expression() {
     let source = r#"enum A { X = 1 } enum B { Y = A["X"] + 1 }"#;
-    debug_assert_eq!(get_enum_member_value(source, "Y"), Some(ConstantValue::Number(2.0)));
+    debug_assert_eq!(
+        get_enum_member_value(source, "Y"),
+        Some(ConstantValue::Number(2.0))
+    );
 }
 
 #[test]
@@ -204,16 +286,31 @@ fn cross_enum_string_value() {
 #[test]
 fn bitwise_operations() {
     let source = "enum A { X = 0xFF & 0x0F, Y = 1 | 2, Z = 1 ^ 3 }";
-    debug_assert_eq!(get_enum_member_value(source, "X"), Some(ConstantValue::Number(15.0)));
-    debug_assert_eq!(get_enum_member_value(source, "Y"), Some(ConstantValue::Number(3.0)));
-    debug_assert_eq!(get_enum_member_value(source, "Z"), Some(ConstantValue::Number(2.0)));
+    debug_assert_eq!(
+        get_enum_member_value(source, "X"),
+        Some(ConstantValue::Number(15.0))
+    );
+    debug_assert_eq!(
+        get_enum_member_value(source, "Y"),
+        Some(ConstantValue::Number(3.0))
+    );
+    debug_assert_eq!(
+        get_enum_member_value(source, "Z"),
+        Some(ConstantValue::Number(2.0))
+    );
 }
 
 #[test]
 fn merged_enum_cross_declaration_reference() {
     let source = "enum Foo { A = 1 } enum Foo { B = A + 1 }";
-    debug_assert_eq!(get_enum_member_value(source, "A"), Some(ConstantValue::Number(1.0)));
-    debug_assert_eq!(get_enum_member_value(source, "B"), Some(ConstantValue::Number(2.0)));
+    debug_assert_eq!(
+        get_enum_member_value(source, "A"),
+        Some(ConstantValue::Number(1.0))
+    );
+    debug_assert_eq!(
+        get_enum_member_value(source, "B"),
+        Some(ConstantValue::Number(2.0))
+    );
 }
 
 #[test]
@@ -228,5 +325,8 @@ fn unary_on_string() {
         Some(ConstantValue::Number(n)) => assert!(n.is_nan()),
         other => panic!("Expected Some(Number(NaN)), got {other:?}"),
     }
-    debug_assert_eq!(get_enum_member_value(source, "Z"), Some(ConstantValue::Number(-1.0)));
+    debug_assert_eq!(
+        get_enum_member_value(source, "Z"),
+        Some(ConstantValue::Number(-1.0))
+    );
 }

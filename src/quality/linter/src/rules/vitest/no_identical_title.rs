@@ -9,7 +9,13 @@ use crate::{
 #[derive(Debug, Default, Clone)]
 pub struct NoIdenticalTitle;
 
-declare_oxc_lint!(NoIdenticalTitle, vitest, style, docs = DOCUMENTATION, version = "0.0.14",);
+declare_oxc_lint!(
+    NoIdenticalTitle,
+    vitest,
+    style,
+    docs = DOCUMENTATION,
+    version = "0.0.14",
+);
 
 impl Rule for NoIdenticalTitle {
     fn run_once(&self, ctx: &LintContext) {
@@ -141,7 +147,10 @@ fn test() {
             None,
         ),
         ("test('number' + n, function() {});", None),
-        ("test('number' + n, function() {}); test('number' + n, function() {});", None),
+        (
+            "test('number' + n, function() {}); test('number' + n, function() {});",
+            None,
+        ),
         // ("it(`${n}`, function() {});", None),
         // ("it(`${n}`, function() {}); it(`${n}`, function() {});", None),
         (

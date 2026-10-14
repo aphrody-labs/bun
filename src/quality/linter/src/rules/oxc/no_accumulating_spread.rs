@@ -150,7 +150,13 @@ impl Rule for NoAccumulatingSpread {
         let declaration_id = symbols.symbol_declaration(referenced_symbol_id);
         let declaration = ctx.nodes().parent_node(declaration_id);
 
-        check_reduce_usage(declaration, referenced_symbol_id, spread.span, node.id(), ctx);
+        check_reduce_usage(
+            declaration,
+            referenced_symbol_id,
+            spread.span,
+            node.id(),
+            ctx,
+        );
         check_loop_usage(
             declaration,
             ctx.nodes().get_node(declaration_id),
@@ -175,8 +181,10 @@ fn check_reduce_usage<'a>(
 
     // We're only looking for the first parameter, since that's where acc is.
     // Skip non-parameter or non-first-parameter declarations.
-    let first_param_symbol_id =
-        params.items.first().and_then(|item| get_identifier_symbol_id(&item.pattern));
+    let first_param_symbol_id = params
+        .items
+        .first()
+        .and_then(|item| get_identifier_symbol_id(&item.pattern));
     if first_param_symbol_id.is_none_or(|id| id != referenced_symbol_id) {
         return;
     }
@@ -190,13 +198,22 @@ fn check_reduce_usage<'a>(
     // Check if the declaration resides within a call to reduce()
     for parent in ctx.nodes().ancestors(declaration.id()) {
         if let AstKind::CallExpression(call_expr) = parent.kind()
-            && is_method_call(call_expr, None, Some(&["reduce", "reduceRight"]), Some(1), Some(2))
+            && is_method_call(
+                call_expr,
+                None,
+                Some(&["reduce", "reduceRight"]),
+                Some(1),
+                Some(2),
+            )
             && ctx
                 .nodes()
                 .ancestors(spread_node_id)
                 .take_while(|n| !n.kind().span().contains_inclusive(declaration.span()))
                 .all(|n| {
-                    !matches!(n.kind(), AstKind::ArrowFunctionExpression(_) | AstKind::Function(_))
+                    !matches!(
+                        n.kind(),
+                        AstKind::ArrowFunctionExpression(_) | AstKind::Function(_)
+                    )
                 })
         {
             ctx.diagnostic(get_reduce_diagnostic(call_expr, spread_span));
@@ -248,8 +265,10 @@ fn find_assignment_expression<'a>(
     referenced_symbol_id: SymbolId,
     ctx: &LintContext<'a>,
 ) -> Option<&'a AssignmentExpression<'a>> {
-    let write_reference =
-        ctx.semantic().symbol_references(referenced_symbol_id).find(|r| r.is_write())?;
+    let write_reference = ctx
+        .semantic()
+        .symbol_references(referenced_symbol_id)
+        .find(|r| r.is_write())?;
     let parent_node = ctx.nodes().parent_node(write_reference.node_id());
 
     if let AstKind::AssignmentExpression(expr) = parent_node.kind() {
@@ -531,6 +550,11 @@ fn test() {
         "let foo = {}; while (Object.keys(foo).length < 10) { foo = { ...foo, [Object.keys(foo).length]: Object.keys(foo).length }; }",
     ];
 
-    Tester::new(NoAccumulatingSpread::NAME, NoAccumulatingSpread::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        NoAccumulatingSpread::NAME,
+        NoAccumulatingSpread::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

@@ -104,7 +104,11 @@ fn parse_estree_attr(location: AttrLocation, part: AttrPart) -> Result<()> {
             AttrPart::List("field_order", list) => {
                 // Get iterator over all field names (including added fields)
                 let all_field_names = struct_def.fields.iter().map(FieldDef::name).chain(
-                    struct_def.estree.add_fields.iter().map(|(field_name, _)| field_name.as_str()),
+                    struct_def
+                        .estree
+                        .add_fields
+                        .iter()
+                        .map(|(field_name, _)| field_name.as_str()),
                 );
 
                 // Convert field names to indexes.
@@ -256,7 +260,9 @@ fn prepare_field_orders(schema: &mut Schema, estree_derive_id: DeriveId) {
     let mut unskipped_field_indices = vec![];
 
     for type_id in schema.types.indices() {
-        let Some(struct_def) = schema.types[type_id].as_struct() else { continue };
+        let Some(struct_def) = schema.types[type_id].as_struct() else {
+            continue;
+        };
         if !struct_def.generates_derive(estree_derive_id) {
             continue;
         }
@@ -371,7 +377,11 @@ fn generate_body_for_struct(struct_def: &StructDef, schema: &Schema) -> TokenStr
     g.generate_stmts_for_struct(struct_def, &quote!(self));
 
     let type_field = if g.add_type_field {
-        let type_name = struct_def.estree.rename.as_deref().unwrap_or_else(|| struct_def.name());
+        let type_name = struct_def
+            .estree
+            .rename
+            .as_deref()
+            .unwrap_or_else(|| struct_def.name());
         let type_name = string_to_tokens(type_name, true);
         quote!( state.serialize_field("type", #type_name); )
     } else {
@@ -408,7 +418,12 @@ struct StructSerializerGenerator<'s> {
 impl<'s> StructSerializerGenerator<'s> {
     /// Create new [`StructSerializerGenerator`].
     fn new(add_type_field: bool, krate: &'s str, schema: &'s Schema) -> Self {
-        Self { stmts: quote!(), add_type_field, krate, schema }
+        Self {
+            stmts: quote!(),
+            add_type_field,
+            krate,
+            schema,
+        }
     }
 
     /// Generate code to serialize all fields in a struct.
@@ -571,7 +586,11 @@ fn generate_body_for_enum(enum_def: &EnumDef, schema: &Schema) -> TokenStream {
         let variant_ident = variant.ident();
 
         if should_skip_enum_variant(variant) {
-            let pattern = if variant.is_fieldless() { quote!() } else { quote!((_)) };
+            let pattern = if variant.is_fieldless() {
+                quote!()
+            } else {
+                quote!((_))
+            };
             return quote! {
                 Self::#variant_ident #pattern => unreachable!("This enum variant is skipped."),
             };
@@ -707,7 +726,9 @@ pub fn should_flatten_field(field: &FieldDef, schema: &Schema) -> bool {
 /// the `ESTree` impl will be generated, and one of the flattened fields is not public.
 pub fn can_flatten_field_inline(field: &FieldDef, krate: &str, schema: &Schema) -> bool {
     let field_type = field.type_def(schema);
-    let TypeDef::Struct(struct_def) = field_type else { return false };
+    let TypeDef::Struct(struct_def) = field_type else {
+        return false;
+    };
 
     struct_def.fields.iter().all(|field| {
         if should_skip_field(field, schema) {
@@ -760,8 +781,10 @@ pub fn get_struct_field_name(field: &FieldDef) -> Cow<'_, str> {
 ///
 /// If `as_ref` is `true`, and string is JSON-safe, returns tokens for `&JsonSafeString("string")`.
 fn string_to_tokens(str: &str, as_ref: bool) -> TokenStream {
-    let contains_chars_needing_escaping =
-        str.as_bytes().iter().any(|&b| b < 32 || b == b'"' || b == b'\\');
+    let contains_chars_needing_escaping = str
+        .as_bytes()
+        .iter()
+        .any(|&b| b < 32 || b == b'"' || b == b'\\');
     if contains_chars_needing_escaping {
         quote!(#str)
     } else if as_ref {

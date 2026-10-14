@@ -64,7 +64,8 @@ declare_oxc_lint!(
     suspicious,
     config = NoUnmodifiedLoopCondition,
     version = "1.48.0",
-    short_description = "Disallow references in loop conditions that are never modified within the loop.",
+    short_description =
+        "Disallow references in loop conditions that are never modified within the loop.",
 );
 
 impl Rule for NoUnmodifiedLoopCondition {
@@ -75,13 +76,19 @@ impl Rule for NoUnmodifiedLoopCondition {
     fn run<'a>(&self, node: &AstNode<'a>, ctx: &LintContext<'a>) {
         match node.kind() {
             AstKind::WhileStatement(statement) => {
-                let loop_info =
-                    LoopInfo { span: statement.span, node_id: node.id(), kind: LoopKind::While };
+                let loop_info = LoopInfo {
+                    span: statement.span,
+                    node_id: node.id(),
+                    kind: LoopKind::While,
+                };
                 self.check_loop_condition(&statement.test, &loop_info, ctx);
             }
             AstKind::DoWhileStatement(statement) => {
-                let loop_info =
-                    LoopInfo { span: statement.span, node_id: node.id(), kind: LoopKind::DoWhile };
+                let loop_info = LoopInfo {
+                    span: statement.span,
+                    node_id: node.id(),
+                    kind: LoopKind::DoWhile,
+                };
                 self.check_loop_condition(&statement.test, &loop_info, ctx);
             }
             AstKind::ForStatement(statement) => {
@@ -91,7 +98,9 @@ impl Rule for NoUnmodifiedLoopCondition {
                 let loop_info = LoopInfo {
                     span: statement.span,
                     node_id: node.id(),
-                    kind: LoopKind::For { init_span: statement.init.as_ref().map(GetSpan::span) },
+                    kind: LoopKind::For {
+                        init_span: statement.init.as_ref().map(GetSpan::span),
+                    },
                 };
                 self.check_loop_condition(test, &loop_info, ctx);
             }
@@ -121,9 +130,9 @@ impl LoopInfo {
             return false;
         }
         let is_in_loop_range = match self.kind {
-            LoopKind::For { init_span: Some(init_span) } => {
-                !init_span.contains_inclusive(reference_span)
-            }
+            LoopKind::For {
+                init_span: Some(init_span),
+            } => !init_span.contains_inclusive(reference_span),
             _ => true,
         };
 
@@ -135,8 +144,10 @@ impl LoopInfo {
             if ancestor_id == self.node_id {
                 return false;
             }
-            if matches!(ancestor.kind(), AstKind::Function(_) | AstKind::ArrowFunctionExpression(_))
-            {
+            if matches!(
+                ancestor.kind(),
+                AstKind::Function(_) | AstKind::ArrowFunctionExpression(_)
+            ) {
                 return true;
             }
         }
@@ -229,7 +240,10 @@ impl NoUnmodifiedLoopCondition {
         let AstKind::IdentifierReference(ident) = node.kind() else {
             return;
         };
-        ctx.diagnostic(no_unmodified_loop_condition_diagnostic(ident.name.as_str(), ident.span));
+        ctx.diagnostic(no_unmodified_loop_condition_diagnostic(
+            ident.name.as_str(),
+            ident.span,
+        ));
     }
 
     fn is_symbol_modified_in_loop(
@@ -299,7 +313,10 @@ impl NoUnmodifiedLoopCondition {
             if let AstKind::Function(function) = current_node.kind()
                 && function.is_declaration()
             {
-                return function.id.as_ref().map(oxc_ast::ast::BindingIdentifier::symbol_id);
+                return function
+                    .id
+                    .as_ref()
+                    .map(oxc_ast::ast::BindingIdentifier::symbol_id);
             }
             current_id = nodes.parent_id(current_id);
         }
@@ -476,8 +493,13 @@ fn test() {
         "for (var foo = 0; foo < 10; ) { } foo = 1;",
     ];
 
-    Tester::new(NoUnmodifiedLoopCondition::NAME, NoUnmodifiedLoopCondition::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        NoUnmodifiedLoopCondition::NAME,
+        NoUnmodifiedLoopCondition::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }
 
 #[test]
@@ -490,8 +512,14 @@ fn test_check_conditional_expressions() {
         config.clone(),
     )];
     let fail = vec![
-        ("let foo = 0, bar = 1, baz = 2; while (foo ? bar : baz) { foo += 1; }", config.clone()),
-        ("let foo = 0, bar = 1; while (foo ? foo : bar) { bar++; }", config.clone()),
+        (
+            "let foo = 0, bar = 1, baz = 2; while (foo ? bar : baz) { foo += 1; }",
+            config.clone(),
+        ),
+        (
+            "let foo = 0, bar = 1; while (foo ? foo : bar) { bar++; }",
+            config.clone(),
+        ),
         (
             "let flag = true, foo = 0; while (flag ? foo < foo : false) { flag = false; }",
             config.clone(),
@@ -506,7 +534,12 @@ fn test_check_conditional_expressions() {
         ),
     ];
 
-    Tester::new(NoUnmodifiedLoopCondition::NAME, NoUnmodifiedLoopCondition::PLUGIN, pass, fail)
-        .with_snapshot_suffix("check_conditional_expressions")
-        .test_and_snapshot();
+    Tester::new(
+        NoUnmodifiedLoopCondition::NAME,
+        NoUnmodifiedLoopCondition::PLUGIN,
+        pass,
+        fail,
+    )
+    .with_snapshot_suffix("check_conditional_expressions")
+    .test_and_snapshot();
 }

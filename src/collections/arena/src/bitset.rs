@@ -35,7 +35,10 @@ impl<'alloc> BitSet<'alloc> {
         // Lifetime of returned `BitSet` matches the `Allocator` the data was allocated in.
         let entries = unsafe { Box::from_non_null(NonNull::from(slice)) };
 
-        Self { entries, max_bit_count }
+        Self {
+            entries,
+            max_bit_count,
+        }
     }
 
     /// Returns the maximum number of bits this set can hold.
@@ -101,7 +104,10 @@ impl<'alloc> BitSet<'alloc> {
     /// Iterator element is the index of the `1` bit, type `usize`.
     #[inline]
     pub fn ones(&self) -> Ones<'_, '_> {
-        Ones { bitset: self, idx: 0 }
+        Ones {
+            bitset: self,
+            idx: 0,
+        }
     }
 }
 
@@ -192,7 +198,10 @@ impl<'new_alloc> CloneIn<'new_alloc> for BitSet<'_> {
         // Lifetime of returned `BitSet` matches the `Allocator` the data was allocated in.
         let entries = unsafe { Box::from_non_null(NonNull::from(new_slice)) };
 
-        BitSet { entries, max_bit_count: self.max_bit_count }
+        BitSet {
+            entries,
+            max_bit_count: self.max_bit_count,
+        }
     }
 }
 

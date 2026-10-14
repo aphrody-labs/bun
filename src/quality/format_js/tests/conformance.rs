@@ -118,7 +118,9 @@ const IGNORE: &[&str] = &[
 
 /// Option combinations not supported yet; dropped from the test population entirely.
 fn skip_unsupported_options(spec: &OptionSet) -> bool {
-    spec.get("experimentalTernaries").and_then(serde_json::Value::as_bool) == Some(true)
+    spec.get("experimentalTernaries")
+        .and_then(serde_json::Value::as_bool)
+        == Some(true)
 }
 
 const JS: ConformanceConfig = ConformanceConfig {
@@ -163,17 +165,26 @@ fn format_js(path: &Path, source_text: &str, spec: &OptionSet) -> Option<String>
 /// Deeply nested fixtures overflow libtest's default 2MiB test-thread stack;
 /// run on a dedicated big-stack thread instead.
 fn with_big_stack<T: Send + 'static>(f: impl FnOnce() -> T + Send + 'static) -> T {
-    std::thread::Builder::new().stack_size(16 * 1024 * 1024).spawn(f).unwrap().join().unwrap()
+    std::thread::Builder::new()
+        .stack_size(16 * 1024 * 1024)
+        .spawn(f)
+        .unwrap()
+        .join()
+        .unwrap()
 }
 
 #[test]
 fn prettier_conformance_js() {
-    let Some(report) = with_big_stack(|| run_conformance(&JS, format_js)) else { return };
+    let Some(report) = with_big_stack(|| run_conformance(&JS, format_js)) else {
+        return;
+    };
     insta::assert_snapshot!("prettier-js", report);
 }
 
 #[test]
 fn prettier_conformance_ts() {
-    let Some(report) = with_big_stack(|| run_conformance(&TS, format_js)) else { return };
+    let Some(report) = with_big_stack(|| run_conformance(&TS, format_js)) else {
+        return;
+    };
     insta::assert_snapshot!("prettier-ts", report);
 }

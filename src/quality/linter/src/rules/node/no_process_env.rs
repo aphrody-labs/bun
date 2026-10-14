@@ -88,7 +88,9 @@ impl Rule for NoProcessEnv {
                 mem.span
             }
             AstKind::ComputedMemberExpression(mem)
-                if mem.static_property_name().is_some_and(|name| name.as_str() == "env")
+                if mem
+                    .static_property_name()
+                    .is_some_and(|name| name.as_str() == "env")
                     && is_process_global_object(&mem.object, ctx) =>
             {
                 mem.span
@@ -138,7 +140,10 @@ fn test() {
         ("process[env]", None),
         ("process.nextTick", None),
         ("process.execArgv", None),
-        ("process.env.NODE_ENV", Some(serde_json::json!([{ "allowedVariables": ["NODE_ENV"] }]))),
+        (
+            "process.env.NODE_ENV",
+            Some(serde_json::json!([{ "allowedVariables": ["NODE_ENV"] }])),
+        ),
         (
             "process.env['NODE_ENV']",
             Some(serde_json::json!([{ "allowedVariables": ["NODE_ENV"] }])),
@@ -158,7 +163,10 @@ fn test() {
         ("process['env']", None),
         ("process.env.ENV", None),
         ("f(process.env)", None),
-        ("process.env.ENV", Some(serde_json::json!([{ "allowedVariables": [] }]))),
+        (
+            "process.env.ENV",
+            Some(serde_json::json!([{ "allowedVariables": [] }])),
+        ),
         ("f(process.env.NODE_ENV)", None),
         (
             "process.env['OTHER_VARIABLE']",
@@ -176,7 +184,10 @@ fn test() {
             "process['env'].OTHER_VARIABLE",
             Some(serde_json::json!([{ "allowedVariables": ["NODE_ENV"] }])),
         ),
-        ("process.env[NODE_ENV]", Some(serde_json::json!([{ "allowedVariables": ["NODE_ENV"] }]))),
+        (
+            "process.env[NODE_ENV]",
+            Some(serde_json::json!([{ "allowedVariables": ["NODE_ENV"] }])),
+        ),
         (
             "process['env'][NODE_ENV]",
             Some(serde_json::json!([{ "allowedVariables": ["NODE_ENV"] }])),

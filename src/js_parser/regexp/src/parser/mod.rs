@@ -129,8 +129,14 @@ mod test {
             ("a.b..", ""),
             (r"\d\D\s\S\w\W", ""),
             (r"\x", ""),
-            (r"\p{Emoji_Presentation}\P{Script_Extensions=Latin}\p{Sc}|\p{Basic_Emoji}", ""),
-            (r"\p{Emoji_Presentation}\P{Script_Extensions=Latin}\p{Sc}|\p{P}", "u"),
+            (
+                r"\p{Emoji_Presentation}\P{Script_Extensions=Latin}\p{Sc}|\p{Basic_Emoji}",
+                "",
+            ),
+            (
+                r"\p{Emoji_Presentation}\P{Script_Extensions=Latin}\p{Sc}|\p{P}",
+                "u",
+            ),
             (r"^\p{General_Category=cntrl}+$", "u"),
             (r"\p{Basic_Emoji}", "v"),
             (r"\n\cM\0\x41\u1f60\.\/", ""),
@@ -287,9 +293,13 @@ mod test {
             (r"(?m:(?-m:\A)\z)", "u"),
             (r"(?m:(?-m:\A)\z)", "v"),
         ] {
-            let res =
-                LiteralParser::new(&allocator, pattern_text, Some(flags_text), Options::default())
-                    .parse();
+            let res = LiteralParser::new(
+                &allocator,
+                pattern_text,
+                Some(flags_text),
+                Options::default(),
+            )
+            .parse();
             if let Err(err) = res {
                 panic!("Failed to parse /{pattern_text}/{flags_text}\n💥 {err}");
             }
@@ -398,9 +408,14 @@ mod test {
             (r"(?i:[\z])", "v"),
         ] {
             assert!(
-                LiteralParser::new(&allocator, pattern_text, Some(flags_text), Options::default())
-                    .parse()
-                    .is_err(),
+                LiteralParser::new(
+                    &allocator,
+                    pattern_text,
+                    Some(flags_text),
+                    Options::default()
+                )
+                .parse()
+                .is_err(),
                 "/{pattern_text}/{flags_text} should fail to parse, but passed!"
             );
         }
@@ -457,9 +472,14 @@ mod test {
             (r"(?im-im:.)", "", true),
         ] {
             assert_eq!(
-                LiteralParser::new(&allocator, pattern_text, Some(flags_text), Options::default())
-                    .parse()
-                    .is_err(),
+                LiteralParser::new(
+                    &allocator,
+                    pattern_text,
+                    Some(flags_text),
+                    Options::default()
+                )
+                .parse()
+                .is_err(),
                 *is_err,
                 "/{pattern_text}/{flags_text} should fail with early error, but passed!"
             );
@@ -503,10 +523,12 @@ mod test {
     #[test]
     fn should_handle_empty() {
         let allocator = Allocator::default();
-        let pattern1 =
-            LiteralParser::new(&allocator, "", None, Options::default()).parse().unwrap();
-        let pattern2 =
-            ConstructorParser::new(&allocator, "''", None, Options::default()).parse().unwrap();
+        let pattern1 = LiteralParser::new(&allocator, "", None, Options::default())
+            .parse()
+            .unwrap();
+        let pattern2 = ConstructorParser::new(&allocator, "''", None, Options::default())
+            .parse()
+            .unwrap();
 
         assert_eq!(pattern1.body.body[0].body.len(), 1);
         assert_eq!(pattern2.body.body[0].body.len(), 1);
@@ -535,7 +557,10 @@ mod test {
             &allocator,
             pattern_text,
             None,
-            Options { pattern_span_offset: 0, flags_span_offset: 0 },
+            Options {
+                pattern_span_offset: 0,
+                flags_span_offset: 0,
+            },
         )
         .parse()
         .unwrap();
@@ -543,7 +568,10 @@ mod test {
             &allocator,
             pattern_text,
             None,
-            Options { pattern_span_offset: 123, flags_span_offset: 456 },
+            Options {
+                pattern_span_offset: 123,
+                flags_span_offset: 456,
+            },
         )
         .parse()
         .unwrap();
@@ -561,16 +589,23 @@ mod test {
             &allocator,
             &source_text[7..35],
             None,
-            Options { pattern_span_offset: 7, ..Options::default() },
+            Options {
+                pattern_span_offset: 7,
+                ..Options::default()
+            },
         )
         .parse();
         assert!(err.is_err());
         // println!("{:?}", err.unwrap_err().with_source_code(source_text));
 
-        let ret1 =
-            LiteralParser::new(&allocator, r"\d{4}-\d{2}-\d{2}", Some("vi"), Options::default())
-                .parse()
-                .unwrap();
+        let ret1 = LiteralParser::new(
+            &allocator,
+            r"\d{4}-\d{2}-\d{2}",
+            Some("vi"),
+            Options::default(),
+        )
+        .parse()
+        .unwrap();
         let ret2 = ConstructorParser::new(
             &allocator,
             r"'\\d{4}-\\d{2}-\\d{2}'",
@@ -591,8 +626,9 @@ mod test {
         let allocator = Allocator::default();
 
         // RegExp literal: /[A\u0301]/
-        let pattern1 =
-            LiteralParser::new(&allocator, r"[A\u0301]", None, Options::default()).parse().unwrap();
+        let pattern1 = LiteralParser::new(&allocator, r"[A\u0301]", None, Options::default())
+            .parse()
+            .unwrap();
 
         // RegExp constructor: RegExp("[A\u0301]") - the string literal has the escape resolved
         let pattern2 =
@@ -623,7 +659,13 @@ mod test {
         let kinds2 = get_char_kinds(&pattern2);
 
         // Both should have: Symbol (A), UnicodeEscape (\u0301)
-        assert_eq!(kinds1, vec![CharacterKind::Symbol, CharacterKind::UnicodeEscape]);
-        assert_eq!(kinds2, vec![CharacterKind::Symbol, CharacterKind::UnicodeEscape]);
+        assert_eq!(
+            kinds1,
+            vec![CharacterKind::Symbol, CharacterKind::UnicodeEscape]
+        );
+        assert_eq!(
+            kinds2,
+            vec![CharacterKind::Symbol, CharacterKind::UnicodeEscape]
+        );
     }
 }

@@ -247,8 +247,10 @@ impl<'t> Utf8ToUtf16Converter<'t> {
         // Note: `translations` is a slice, which has max length of `isize::MAX` on all platforms.
         // `self.index` is always in bounds of `translations`. So additions here cannot overflow `usize`.
         let mut next_index = self.index as usize + 2;
-        let linear_search_end_index =
-            min(next_index + LINEAR_SEARCH_ITERATIONS, self.translations.len());
+        let linear_search_end_index = min(
+            next_index + LINEAR_SEARCH_ITERATIONS,
+            self.translations.len(),
+        );
         while next_index < linear_search_end_index {
             // SAFETY: `linear_search_end_index` is capped at `translations.len()`,
             // so `next_index` is in bounds

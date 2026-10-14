@@ -19,7 +19,10 @@ pub fn as_endpoint_registration<'a, 'n>(
 ) -> Option<(Option<Str<'a>>, &'n [Argument<'a>])> {
     let callee = call.callee.as_member_expression()?;
     let method_name = callee.static_property_name()?;
-    if ROUTER_HANDLER_METHOD_NAMES.binary_search(&method_name).is_err() {
+    if ROUTER_HANDLER_METHOD_NAMES
+        .binary_search(&method_name)
+        .is_err()
+    {
         return None;
     }
     if call.arguments.is_empty() {
@@ -30,9 +33,9 @@ pub fn as_endpoint_registration<'a, 'n>(
         Expression::StringLiteral(path) => {
             Some((Some(path.value), &call.arguments.as_slice()[1..]))
         }
-        Expression::TemplateLiteral(template) => {
-            template.single_quasi().map(|quasi| (Some(quasi), &call.arguments.as_slice()[1..]))
-        }
+        Expression::TemplateLiteral(template) => template
+            .single_quasi()
+            .map(|quasi| (Some(quasi), &call.arguments.as_slice()[1..])),
         _ => Some((None, call.arguments.as_slice())),
     }
 }
@@ -69,8 +72,9 @@ pub fn is_endpoint_handler(maybe_handler: &Expression<'_>) -> bool {
     }
 }
 
-const ROUTER_HANDLER_METHOD_NAMES: [&str; 9] =
-    ["all", "delete", "get", "head", "options", "patch", "post", "put", "use"];
+const ROUTER_HANDLER_METHOD_NAMES: [&str; 9] = [
+    "all", "delete", "get", "head", "options", "patch", "post", "put", "use",
+];
 
 const COMMON_REQUEST_NAMES: [&str; 3] = ["r", "req", "request"];
 fn is_req_param(param: &FormalParameter) -> bool {
@@ -90,12 +94,18 @@ fn is_res_param(param: &FormalParameter) -> bool {
 
 const COMMON_NEXT_NAMES: [&str; 2] = ["n", "next"];
 fn is_next_param(param: &FormalParameter) -> bool {
-    param.pattern.get_identifier_name().is_some_and(|id| COMMON_NEXT_NAMES.contains(&id.as_str()))
+    param
+        .pattern
+        .get_identifier_name()
+        .is_some_and(|id| COMMON_NEXT_NAMES.contains(&id.as_str()))
 }
 
 const COMMON_ERROR_NAMES: [&str; 4] = ["e", "err", "error", "exception"];
 fn is_error_param(param: &FormalParameter) -> bool {
-    param.pattern.get_identifier_name().is_some_and(|id| COMMON_ERROR_NAMES.contains(&id.as_str()))
+    param
+        .pattern
+        .get_identifier_name()
+        .is_some_and(|id| COMMON_ERROR_NAMES.contains(&id.as_str()))
 }
 
 #[test]

@@ -276,7 +276,11 @@ fn check_and_report<T: GetMethod>(members: &[T], ctx: &LintContext<'_>) {
             continue;
         };
 
-        let last_method = if prev_was_method { methods.last().map(|(m, _)| m) } else { None };
+        let last_method = if prev_was_method {
+            methods.last().map(|(m, _)| m)
+        } else {
+            None
+        };
         prev_was_method = true;
 
         let last_same_method = if method.is_same_method(last_method) {
@@ -763,6 +767,11 @@ fn test() {
       }",
     ];
 
-    Tester::new(AdjacentOverloadSignatures::NAME, AdjacentOverloadSignatures::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        AdjacentOverloadSignatures::NAME,
+        AdjacentOverloadSignatures::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

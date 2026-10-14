@@ -114,7 +114,9 @@ pub fn table_delimiter_activates(constructs: &Constructs, header: &str, row: &st
 
 /// `line` from where a flow construct could start, `None` when it is indented-code-deep.
 fn flow_tail(line: &str) -> Option<&str> {
-    Cursor::new(line, 0).flow_start().map(|cursor| cursor.tail())
+    Cursor::new(line, 0)
+        .flow_start()
+        .map(|cursor| cursor.tail())
 }
 
 #[cfg(test)]
@@ -168,7 +170,10 @@ mod tests {
             !table_delimiter_activates(&md, "| a | b |", "| - | - | - |"),
             "a cell count mismatch"
         );
-        assert!(!table_delimiter_activates(&md, "| a | b |", "| a | b |"), "not a delimiter row");
+        assert!(
+            !table_delimiter_activates(&md, "| a | b |", "| a | b |"),
+            "not a delimiter row"
+        );
         assert!(
             !table_delimiter_activates(&md, "    | a | b |", "| - | - |"),
             "an indented header"

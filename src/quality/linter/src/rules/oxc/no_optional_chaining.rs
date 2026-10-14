@@ -90,7 +90,11 @@ impl Rule for NoOptionalChaining {
 fn test() {
     use crate::tester::Tester;
 
-    let pass = vec![("var x = a.b", None), ("var x = a[b]", None), ("foo()", None)];
+    let pass = vec![
+        ("var x = a.b", None),
+        ("var x = a[b]", None),
+        ("foo()", None),
+    ];
 
     let fail = vec![
         ("var x = a?.b", None),
@@ -113,6 +117,11 @@ fn test() {
         ),
     ];
 
-    Tester::new(NoOptionalChaining::NAME, NoOptionalChaining::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        NoOptionalChaining::NAME,
+        NoOptionalChaining::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

@@ -14,7 +14,9 @@ fn main() {
     let mut args = pico_args::Arguments::from_env();
     let line_width: Option<u16> = args.opt_value_from_str("--print-width").unwrap();
     let single_quote = args.contains("--single-quote");
-    let name = args.free_from_str().unwrap_or_else(|_| "test.css".to_string());
+    let name = args
+        .free_from_str()
+        .unwrap_or_else(|_| "test.css".to_string());
     let path = Path::new(&name);
 
     let source_text = std::fs::read_to_string(path)

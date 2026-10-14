@@ -31,13 +31,23 @@ pub struct TypeScriptAnnotations<'a> {
 impl TypeScriptAnnotations<'_> {
     pub fn new(options: &TypeScriptOptions) -> Self {
         let jsx_element_import_name = if options.jsx_pragma.contains('.') {
-            options.jsx_pragma.split('.').next().map(String::from).unwrap()
+            options
+                .jsx_pragma
+                .split('.')
+                .next()
+                .map(String::from)
+                .unwrap()
         } else {
             options.jsx_pragma.to_string()
         };
 
         let jsx_fragment_import_name = if options.jsx_pragma_frag.contains('.') {
-            options.jsx_pragma_frag.split('.').next().map(String::from).unwrap()
+            options
+                .jsx_pragma_frag
+                .split('.')
+                .next()
+                .map(String::from)
+                .unwrap()
         } else {
             options.jsx_pragma_frag.to_string()
         };
@@ -413,7 +423,9 @@ impl<'a> Traverse<'a, TransformState<'a>> for TypeScriptAnnotations<'a> {
             .iter()
             .map(|assignment| assignment.create_this_property_assignment(ctx))
             .collect();
-        ctx.state.statement_injector.insert_many_after(stmt, assignments);
+        ctx.state
+            .statement_injector
+            .insert_many_after(stmt, assignments);
         self.has_super_call = true;
     }
 
@@ -455,7 +467,11 @@ impl<'a> Traverse<'a, TransformState<'a>> for TypeScriptAnnotations<'a> {
 
         Self::replace_with_empty_block_if_ts(&mut stmt.consequent, ctx.current_scope_id(), ctx);
 
-        if stmt.alternate.as_ref().is_some_and(Statement::is_typescript_syntax) {
+        if stmt
+            .alternate
+            .as_ref()
+            .is_some_and(Statement::is_typescript_syntax)
+        {
             stmt.alternate = None;
         }
     }
@@ -559,7 +575,8 @@ impl<'a> TypeScriptAnnotations<'a> {
                             .all(Reference::is_type));
                 if !keep {
                     let scope_id = ctx.current_scope_id();
-                    ctx.scoping_mut().remove_binding(scope_id, import_equals.id.name);
+                    ctx.scoping_mut()
+                        .remove_binding(scope_id, import_equals.id.name);
                 }
                 keep
             }
@@ -588,7 +605,8 @@ impl<'a> TypeScriptAnnotations<'a> {
         let symbol_id = ident.symbol_id();
         let flags = ctx.scoping().symbol_flags(symbol_id);
         if (flags - SymbolFlags::Import - SymbolFlags::TypeImport).is_value() {
-            ctx.scoping_mut().remove_symbol_declaration(symbol_id, ident.span);
+            ctx.scoping_mut()
+                .remove_symbol_declaration(symbol_id, ident.span);
             return;
         }
 
@@ -642,7 +660,11 @@ impl<'a> TypeScriptAnnotations<'a> {
             return false;
         }
 
-        if ctx.scoping().get_resolved_references(symbol_id).any(|reference| !reference.is_type()) {
+        if ctx
+            .scoping()
+            .get_resolved_references(symbol_id)
+            .any(|reference| !reference.is_type())
+        {
             return true;
         }
 
@@ -663,7 +685,10 @@ impl<'a> TypeScriptAnnotations<'a> {
         reference.symbol_id().is_some_and(|symbol_id| {
             reference.is_type()
                 || scoping.symbol_flags(symbol_id).is_ambient()
-                    && scoping.symbol_redeclarations(symbol_id).iter().all(|r| r.flags.is_ambient())
+                    && scoping
+                        .symbol_redeclarations(symbol_id)
+                        .iter()
+                        .all(|r| r.flags.is_ambient())
         })
     }
 }

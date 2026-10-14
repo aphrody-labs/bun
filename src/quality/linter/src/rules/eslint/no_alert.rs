@@ -109,7 +109,9 @@ impl Rule for NoAlert {
             return;
         }
 
-        let Some(member_expr) = callee.get_member_expr() else { return };
+        let Some(member_expr) = callee.get_member_expr() else {
+            return;
+        };
         if !is_global_this_ref_or_global_window(scope_id, ctx, member_expr.object()) {
             return;
         }

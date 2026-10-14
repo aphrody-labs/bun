@@ -49,7 +49,8 @@ declare_oxc_lint!(
     style,
     suggestion,
     version = "1.29.0",
-    short_description = "Enforces the use of `Response.json()` over `new Response(JSON.stringify())`.",
+    short_description =
+        "Enforces the use of `Response.json()` over `new Response(JSON.stringify())`.",
 );
 
 impl Rule for PreferResponseStaticJson {
@@ -74,7 +75,13 @@ impl Rule for PreferResponseStaticJson {
             return;
         };
 
-        if !is_method_call(call_expr, Some(&["JSON"]), Some(&["stringify"]), Some(1), Some(1)) {
+        if !is_method_call(
+            call_expr,
+            Some(&["JSON"]),
+            Some(&["stringify"]),
+            Some(1),
+            Some(1),
+        ) {
             return;
         }
 
@@ -145,7 +152,10 @@ fn should_add_semicolon(node: &AstNode, new_expr: &NewExpression, ctx: &LintCont
 }
 
 fn stringify_has_spread_arguments(call_expr: &CallExpression) -> bool {
-    call_expr.arguments.iter().any(oxc_ast::ast::Argument::is_spread)
+    call_expr
+        .arguments
+        .iter()
+        .any(oxc_ast::ast::Argument::is_spread)
 }
 
 #[test]
@@ -190,7 +200,10 @@ fn test() {
 
     let fix = vec![
         ("new Response(JSON.stringify(data))", "Response.json(data)"),
-        ("new Response(JSON.stringify(data), extraArgument)", "Response.json(data, extraArgument)"),
+        (
+            "new Response(JSON.stringify(data), extraArgument)",
+            "Response.json(data, extraArgument)",
+        ),
         (
             "new Response( (( JSON.stringify( (( 0, data )), ) )), )",
             "Response.json( (( 0, data )), )",
@@ -205,7 +218,10 @@ fn test() {
                     Response.json(data))
             }",
         ),
-        ("new Response(JSON.stringify(data), {status: 200})", "Response.json(data, {status: 200})"),
+        (
+            "new Response(JSON.stringify(data), {status: 200})",
+            "Response.json(data, {status: 200})",
+        ),
         (
             "foo
             new (( Response ))(JSON.stringify(data))",
@@ -232,7 +248,12 @@ fn test() {
         ),
     ];
 
-    Tester::new(PreferResponseStaticJson::NAME, PreferResponseStaticJson::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        PreferResponseStaticJson::NAME,
+        PreferResponseStaticJson::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

@@ -8,8 +8,12 @@ use serde::Deserialize;
 
 pub fn assert_format(code: &str, config_json: &str, expected: &str) {
     // NOTE: Strip leading single `\n` for better test case readability.
-    let code = code.strip_prefix('\n').expect("Test code should start with a newline");
-    let expected = expected.strip_prefix('\n').expect("Expected code should start with a newline");
+    let code = code
+        .strip_prefix('\n')
+        .expect("Test code should start with a newline");
+    let expected = expected
+        .strip_prefix('\n')
+        .expect("Expected code should start with a newline");
 
     let options = parse_test_config(config_json);
 
@@ -112,16 +116,20 @@ where
             }
             let group = match item {
                 Value::String(s) => vec![GroupEntry::parse(&s)],
-                Value::Array(a) => {
-                    a.into_iter().filter_map(|v| v.as_str().map(GroupEntry::parse)).collect()
-                }
+                Value::Array(a) => a
+                    .into_iter()
+                    .filter_map(|v| v.as_str().map(GroupEntry::parse))
+                    .collect(),
                 _ => continue,
             };
             groups.push(group);
         }
     }
 
-    Ok(Some(ParsedGroups { groups, newline_boundary_overrides }))
+    Ok(Some(ParsedGroups {
+        groups,
+        newline_boundary_overrides,
+    }))
 }
 
 fn parse_test_config(json: &str) -> JsFormatOptions {
@@ -129,10 +137,18 @@ fn parse_test_config(json: &str) -> JsFormatOptions {
     let mut options = JsFormatOptions::default();
 
     if let Some(single_quote) = config.single_quote {
-        options.quote_style = if single_quote { QuoteStyle::Single } else { QuoteStyle::Double };
+        options.quote_style = if single_quote {
+            QuoteStyle::Single
+        } else {
+            QuoteStyle::Double
+        };
     }
     if let Some(semi) = config.semi {
-        options.semicolons = if semi { Semicolons::Always } else { Semicolons::AsNeeded };
+        options.semicolons = if semi {
+            Semicolons::Always
+        } else {
+            Semicolons::AsNeeded
+        };
     }
     if config.jsdoc == Some(true) {
         options.jsdoc = Some(JsdocOptions::default());
@@ -183,7 +199,9 @@ fn parse_test_config(json: &str) -> JsFormatOptions {
                 })
                 .collect();
         }
-        sort_imports.validate().expect("fixture `options.json` holds an invalid sortImports set");
+        sort_imports
+            .validate()
+            .expect("fixture `options.json` holds an invalid sortImports set");
         options.sort_imports = Some(sort_imports);
     }
 

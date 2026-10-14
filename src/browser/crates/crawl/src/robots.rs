@@ -35,7 +35,9 @@ impl RobotsFile {
                 }
                 continue;
             }
-            let Some((field, value)) = line.split_once(':') else { continue };
+            let Some((field, value)) = line.split_once(':') else {
+                continue;
+            };
             let value = value.trim();
             match field.trim().to_ascii_lowercase().as_str() {
                 "user-agent" => {
@@ -45,7 +47,7 @@ impl RobotsFile {
                     if !value.is_empty() {
                         current.agents.push(value.to_ascii_lowercase());
                     }
-                },
+                }
                 "allow" | "disallow" if !current.agents.is_empty() => {
                     if !value.is_empty() {
                         current.rules.push(Rule {
@@ -53,7 +55,7 @@ impl RobotsFile {
                             pattern: value.to_owned(),
                         });
                     }
-                },
+                }
                 "crawl-delay" if !current.agents.is_empty() => {
                     if let Ok(seconds) = value.parse::<f64>()
                         && seconds.is_finite()
@@ -62,7 +64,7 @@ impl RobotsFile {
                         current.crawl_delay_ms =
                             Some((seconds * 1000.0).min(i64::MAX as f64) as i64);
                     }
-                },
+                }
                 "sitemap" | "site-map" => {
                     if let Ok(url) = source_url.join(value)
                         && matches!(url.scheme(), "http" | "https")
@@ -70,8 +72,8 @@ impl RobotsFile {
                     {
                         result.sitemaps.push(url);
                     }
-                },
-                _ => {},
+                }
+                _ => {}
             }
         }
         if !current.agents.is_empty() {
@@ -96,7 +98,9 @@ impl RobotsFile {
 
     #[must_use]
     pub fn crawl_delay_ms(&self, user_agent: &str) -> Option<i64> {
-        self.active_groups(user_agent).filter_map(|group| group.crawl_delay_ms).next()
+        self.active_groups(user_agent)
+            .filter_map(|group| group.crawl_delay_ms)
+            .next()
     }
 
     #[must_use]
@@ -106,13 +110,19 @@ impl RobotsFile {
 
     fn active_groups<'a>(&'a self, user_agent: &str) -> impl Iterator<Item = &'a Group> {
         let agent = user_agent.to_ascii_lowercase();
-        let specific = self
-            .groups
-            .iter()
-            .any(|group| group.agents.iter().any(|entry| entry != "*" && agent.contains(entry)));
+        let specific = self.groups.iter().any(|group| {
+            group
+                .agents
+                .iter()
+                .any(|entry| entry != "*" && agent.contains(entry))
+        });
         self.groups.iter().filter(move |group| {
             group.agents.iter().any(|entry| {
-                if specific { entry != "*" && agent.contains(entry) } else { entry == "*" }
+                if specific {
+                    entry != "*" && agent.contains(entry)
+                } else {
+                    entry == "*"
+                }
             })
         })
     }
@@ -158,7 +168,10 @@ mod tests {
         assert!(!robots.allows(&source.join("/private/secret").unwrap(), "AphrodyWeb"));
         assert!(robots.allows(&source.join("/private/public/page").unwrap(), "AphrodyWeb"));
         assert_eq!(robots.crawl_delay_ms("AphrodyWeb"), Some(500));
-        assert_eq!(robots.sitemaps()[0].as_str(), "https://example.test/sitemap.xml");
+        assert_eq!(
+            robots.sitemaps()[0].as_str(),
+            "https://example.test/sitemap.xml"
+        );
     }
 
     #[test]

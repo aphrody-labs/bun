@@ -77,8 +77,10 @@ pub fn run_on_jest_node<'a, 'c>(
     let Some(Argument::BinaryExpression(binary_expr)) = parent_call_expr.arguments.first() else {
         return;
     };
-    let Some(first_matcher_arg) =
-        parse_expect_jest_fn.args.first().and_then(Argument::as_expression)
+    let Some(first_matcher_arg) = parse_expect_jest_fn
+        .args
+        .first()
+        .and_then(Argument::as_expression)
     else {
         return;
     };
@@ -87,8 +89,9 @@ pub fn run_on_jest_node<'a, 'c>(
         return;
     }
 
-    let has_not_modifier =
-        parse_expect_jest_fn.modifiers().any(|modifier| modifier.is_name_equal("not"));
+    let has_not_modifier = parse_expect_jest_fn
+        .modifiers()
+        .any(|modifier| modifier.is_name_equal("not"));
     let Expression::BooleanLiteral(matcher_arg_value) = first_matcher_arg.get_inner_expression()
     else {
         return;
@@ -99,35 +102,47 @@ pub fn run_on_jest_node<'a, 'c>(
         return;
     };
 
-    ctx.diagnostic_with_fix(use_to_be_comparison(prefer_matcher_name, matcher.span), |fixer| {
-        // This is to handle the case can be transform into the following case:
-        // expect(value > 1,).toEqual(true,) => expect(value,).toBeGreaterThan(1,)
-        //                 ^              ^
-        // Therefore the range starting after ',' and before '.' is called as call_span_end,
-        // and the same as `arg_span_end`.
-        let call_span_end =
-            fixer.source_range(Span::new(binary_expr.span.end, parent_call_expr.span.end));
-        let arg_span_end =
-            fixer.source_range(Span::new(matcher_arg_value.span.end, call_expr.span.end));
-        let content = building_code(
-            binary_expr,
-            call_span_end,
-            arg_span_end,
-            &parse_expect_jest_fn,
-            prefer_matcher_name,
-            fixer,
-        );
-        fixer.replace(call_expr.span, content)
-    });
+    ctx.diagnostic_with_fix(
+        use_to_be_comparison(prefer_matcher_name, matcher.span),
+        |fixer| {
+            // This is to handle the case can be transform into the following case:
+            // expect(value > 1,).toEqual(true,) => expect(value,).toBeGreaterThan(1,)
+            //                 ^              ^
+            // Therefore the range starting after ',' and before '.' is called as call_span_end,
+            // and the same as `arg_span_end`.
+            let call_span_end =
+                fixer.source_range(Span::new(binary_expr.span.end, parent_call_expr.span.end));
+            let arg_span_end =
+                fixer.source_range(Span::new(matcher_arg_value.span.end, call_expr.span.end));
+            let content = building_code(
+                binary_expr,
+                call_span_end,
+                arg_span_end,
+                &parse_expect_jest_fn,
+                prefer_matcher_name,
+                fixer,
+            );
+            fixer.replace(call_expr.span, content)
+        },
+    );
 }
 
 fn is_comparing_to_string(expr: &BinaryExpression) -> bool {
-    matches!(expr.left, Expression::StringLiteral(_) | Expression::TemplateLiteral(_))
-        || matches!(expr.right, Expression::StringLiteral(_) | Expression::TemplateLiteral(_))
+    matches!(
+        expr.left,
+        Expression::StringLiteral(_) | Expression::TemplateLiteral(_)
+    ) || matches!(
+        expr.right,
+        Expression::StringLiteral(_) | Expression::TemplateLiteral(_)
+    )
 }
 
 fn determine_matcher(operator: BinaryOperator, negated: bool) -> Option<&'static str> {
-    let op = if negated { invert_operator(operator) } else { Some(operator) };
+    let op = if negated {
+        invert_operator(operator)
+    } else {
+        Some(operator)
+    };
 
     match op {
         Some(BinaryOperator::GreaterThan) => Some("toBeGreaterThan"),

@@ -26,7 +26,8 @@ declare_oxc_lint!(
     fix,
     config = ConsistentTestItConfig,
     version = "0.5.3",
-    short_description = "Enforce consistent use of either the `it` or `test` keyword for defining tests.",
+    short_description =
+        "Enforce consistent use of either the `it` or `test` keyword for defining tests.",
 );
 
 impl Rule for ConsistentTestIt {
@@ -46,12 +47,30 @@ fn test() {
     let pass = vec![
         // consistent-test-it with fn=test
         ("test(\"foo\")", Some(serde_json::json!([{ "fn": "test" }]))),
-        ("test.only(\"foo\")", Some(serde_json::json!([{ "fn": "test" }]))),
-        ("test.skip(\"foo\")", Some(serde_json::json!([{ "fn": "test" }]))),
-        ("test.concurrent(\"foo\")", Some(serde_json::json!([{ "fn": "test" }]))),
-        ("xtest(\"foo\")", Some(serde_json::json!([{ "fn": "test" }]))),
-        ("test.each([])(\"foo\")", Some(serde_json::json!([{ "fn": "test" }]))),
-        ("test.each``(\"foo\")", Some(serde_json::json!([{ "fn": "test" }]))),
+        (
+            "test.only(\"foo\")",
+            Some(serde_json::json!([{ "fn": "test" }])),
+        ),
+        (
+            "test.skip(\"foo\")",
+            Some(serde_json::json!([{ "fn": "test" }])),
+        ),
+        (
+            "test.concurrent(\"foo\")",
+            Some(serde_json::json!([{ "fn": "test" }])),
+        ),
+        (
+            "xtest(\"foo\")",
+            Some(serde_json::json!([{ "fn": "test" }])),
+        ),
+        (
+            "test.each([])(\"foo\")",
+            Some(serde_json::json!([{ "fn": "test" }])),
+        ),
+        (
+            "test.each``(\"foo\")",
+            Some(serde_json::json!([{ "fn": "test" }])),
+        ),
         (
             "describe(\"suite\", () => { test(\"foo\") })",
             Some(serde_json::json!([{ "fn": "test" }])),
@@ -60,34 +79,76 @@ fn test() {
         ("it(\"foo\")", Some(serde_json::json!([{ "fn": "it" }]))),
         ("fit(\"foo\")", Some(serde_json::json!([{ "fn": "it" }]))),
         ("xit(\"foo\")", Some(serde_json::json!([{ "fn": "it" }]))),
-        ("it.only(\"foo\")", Some(serde_json::json!([{ "fn": "it" }]))),
-        ("it.skip(\"foo\")", Some(serde_json::json!([{ "fn": "it" }]))),
-        ("it.concurrent(\"foo\")", Some(serde_json::json!([{ "fn": "it" }]))),
-        ("it.each([])(\"foo\")", Some(serde_json::json!([{ "fn": "it" }]))),
-        ("it.each``(\"foo\")", Some(serde_json::json!([{ "fn": "it" }]))),
-        ("describe(\"suite\", () => { it(\"foo\") })", Some(serde_json::json!([{ "fn": "it" }]))),
+        (
+            "it.only(\"foo\")",
+            Some(serde_json::json!([{ "fn": "it" }])),
+        ),
+        (
+            "it.skip(\"foo\")",
+            Some(serde_json::json!([{ "fn": "it" }])),
+        ),
+        (
+            "it.concurrent(\"foo\")",
+            Some(serde_json::json!([{ "fn": "it" }])),
+        ),
+        (
+            "it.each([])(\"foo\")",
+            Some(serde_json::json!([{ "fn": "it" }])),
+        ),
+        (
+            "it.each``(\"foo\")",
+            Some(serde_json::json!([{ "fn": "it" }])),
+        ),
+        (
+            "describe(\"suite\", () => { it(\"foo\") })",
+            Some(serde_json::json!([{ "fn": "it" }])),
+        ),
         // consistent-test-it with fn=test and withinDescribe=it
-        ("test(\"foo\")", Some(serde_json::json!([{ "fn": "test", "withinDescribe": "it" }]))),
-        ("test.only(\"foo\")", Some(serde_json::json!([{ "fn": "test", "withinDescribe": "it" }]))),
-        ("test.skip(\"foo\")", Some(serde_json::json!([{ "fn": "test", "withinDescribe": "it" }]))),
+        (
+            "test(\"foo\")",
+            Some(serde_json::json!([{ "fn": "test", "withinDescribe": "it" }])),
+        ),
+        (
+            "test.only(\"foo\")",
+            Some(serde_json::json!([{ "fn": "test", "withinDescribe": "it" }])),
+        ),
+        (
+            "test.skip(\"foo\")",
+            Some(serde_json::json!([{ "fn": "test", "withinDescribe": "it" }])),
+        ),
         (
             "test.concurrent(\"foo\")",
             Some(serde_json::json!([{ "fn": "test", "withinDescribe": "it" }])),
         ),
-        ("xtest(\"foo\")", Some(serde_json::json!([{ "fn": "test", "withinDescribe": "it" }]))),
+        (
+            "xtest(\"foo\")",
+            Some(serde_json::json!([{ "fn": "test", "withinDescribe": "it" }])),
+        ),
         (
             "[1,2,3].forEach(() => { test(\"foo\") })",
             Some(serde_json::json!([{ "fn": "test", "withinDescribe": "it" }])),
         ),
         // consistent-test-it with fn=it and withinDescribe=test
-        ("it(\"foo\")", Some(serde_json::json!([{ "fn": "it", "withinDescribe": "test" }]))),
-        ("it.only(\"foo\")", Some(serde_json::json!([{ "fn": "it", "withinDescribe": "test" }]))),
-        ("it.skip(\"foo\")", Some(serde_json::json!([{ "fn": "it", "withinDescribe": "test" }]))),
+        (
+            "it(\"foo\")",
+            Some(serde_json::json!([{ "fn": "it", "withinDescribe": "test" }])),
+        ),
+        (
+            "it.only(\"foo\")",
+            Some(serde_json::json!([{ "fn": "it", "withinDescribe": "test" }])),
+        ),
+        (
+            "it.skip(\"foo\")",
+            Some(serde_json::json!([{ "fn": "it", "withinDescribe": "test" }])),
+        ),
         (
             "it.concurrent(\"foo\")",
             Some(serde_json::json!([{ "fn": "it", "withinDescribe": "test" }])),
         ),
-        ("xit(\"foo\")", Some(serde_json::json!([{ "fn": "it", "withinDescribe": "test" }]))),
+        (
+            "xit(\"foo\")",
+            Some(serde_json::json!([{ "fn": "it", "withinDescribe": "test" }])),
+        ),
         (
             "[1,2,3].forEach(() => { it(\"foo\") })",
             Some(serde_json::json!([{ "fn": "it", "withinDescribe": "test" }])),
@@ -97,23 +158,35 @@ fn test() {
             "describe(\"suite\", () => { test(\"foo\") })",
             Some(serde_json::json!([{ "fn": "test", "withinDescribe": "test" }])),
         ),
-        ("test(\"foo\");", Some(serde_json::json!([{ "fn": "test", "withinDescribe": "test" }]))),
+        (
+            "test(\"foo\");",
+            Some(serde_json::json!([{ "fn": "test", "withinDescribe": "test" }])),
+        ),
         // consistent-test-it with fn=it and withinDescribe=it
         (
             "describe(\"suite\", () => { it(\"foo\") })",
             Some(serde_json::json!([{ "fn": "it", "withinDescribe": "it" }])),
         ),
-        ("it(\"foo\")", Some(serde_json::json!([{ "fn": "it", "withinDescribe": "it" }]))),
+        (
+            "it(\"foo\")",
+            Some(serde_json::json!([{ "fn": "it", "withinDescribe": "it" }])),
+        ),
         // consistent-test-it defaults without config object
         ("test(\"foo\")", None),
         // consistent-test-it with withinDescribe=it
-        ("test(\"foo\")", Some(serde_json::json!([{ "withinDescribe": "it" }]))),
+        (
+            "test(\"foo\")",
+            Some(serde_json::json!([{ "withinDescribe": "it" }])),
+        ),
         (
             "describe(\"suite\", () => { it(\"foo\") })",
             Some(serde_json::json!([{ "withinDescribe": "it" }])),
         ),
         // consistent-test-it with withinDescribe=test
-        ("test(\"foo\")", Some(serde_json::json!([{ "withinDescribe": "test" }]))),
+        (
+            "test(\"foo\")",
+            Some(serde_json::json!([{ "withinDescribe": "test" }])),
+        ),
         (
             "describe(\"suite\", () => { test(\"foo\") })",
             Some(serde_json::json!([{ "withinDescribe": "test" }])),
@@ -149,11 +222,26 @@ fn test() {
         ),
         ("xit(\"foo\")", Some(serde_json::json!([{ "fn": "test" }]))),
         ("fit(\"foo\")", Some(serde_json::json!([{ "fn": "test" }]))),
-        ("it.skip(\"foo\")", Some(serde_json::json!([{ "fn": "test" }]))),
-        ("it.concurrent(\"foo\")", Some(serde_json::json!([{ "fn": "test" }]))),
-        ("it.only(\"foo\")", Some(serde_json::json!([{ "fn": "test" }]))),
-        ("it.each([])(\"foo\")", Some(serde_json::json!([{ "fn": "test" }]))),
-        ("it.each``(\"foo\")", Some(serde_json::json!([{ "fn": "test" }]))),
+        (
+            "it.skip(\"foo\")",
+            Some(serde_json::json!([{ "fn": "test" }])),
+        ),
+        (
+            "it.concurrent(\"foo\")",
+            Some(serde_json::json!([{ "fn": "test" }])),
+        ),
+        (
+            "it.only(\"foo\")",
+            Some(serde_json::json!([{ "fn": "test" }])),
+        ),
+        (
+            "it.each([])(\"foo\")",
+            Some(serde_json::json!([{ "fn": "test" }])),
+        ),
+        (
+            "it.each``(\"foo\")",
+            Some(serde_json::json!([{ "fn": "test" }])),
+        ),
         (
             "describe.each``(\"foo\", () => { it.each``(\"bar\") })",
             Some(serde_json::json!([{ "fn": "test" }])),
@@ -182,20 +270,41 @@ fn test() {
             ",
             Some(serde_json::json!([{ "fn": "test", "withinDescribe": "it" }])),
         ),
-        ("describe(\"suite\", () => { it(\"foo\") })", Some(serde_json::json!([{ "fn": "test" }]))),
+        (
+            "describe(\"suite\", () => { it(\"foo\") })",
+            Some(serde_json::json!([{ "fn": "test" }])),
+        ),
         // consistent-test-it with fn=it
         ("test(\"foo\")", Some(serde_json::json!([{ "fn": "it" }]))),
         ("xtest(\"foo\")", Some(serde_json::json!([{ "fn": "it" }]))),
-        ("test.skip(\"foo\")", Some(serde_json::json!([{ "fn": "it" }]))),
-        ("test.concurrent(\"foo\")", Some(serde_json::json!([{ "fn": "it" }]))),
-        ("test.only(\"foo\")", Some(serde_json::json!([{ "fn": "it" }]))),
-        ("test.each([])(\"foo\")", Some(serde_json::json!([{ "fn": "it" }]))),
+        (
+            "test.skip(\"foo\")",
+            Some(serde_json::json!([{ "fn": "it" }])),
+        ),
+        (
+            "test.concurrent(\"foo\")",
+            Some(serde_json::json!([{ "fn": "it" }])),
+        ),
+        (
+            "test.only(\"foo\")",
+            Some(serde_json::json!([{ "fn": "it" }])),
+        ),
+        (
+            "test.each([])(\"foo\")",
+            Some(serde_json::json!([{ "fn": "it" }])),
+        ),
         (
             "describe.each``(\"foo\", () => { test.each``(\"bar\") })",
             Some(serde_json::json!([{ "fn": "it" }])),
         ),
-        ("test.each``(\"foo\")", Some(serde_json::json!([{ "fn": "it" }]))),
-        ("describe(\"suite\", () => { test(\"foo\") })", Some(serde_json::json!([{ "fn": "it" }]))),
+        (
+            "test.each``(\"foo\")",
+            Some(serde_json::json!([{ "fn": "it" }])),
+        ),
+        (
+            "describe(\"suite\", () => { test(\"foo\") })",
+            Some(serde_json::json!([{ "fn": "it" }])),
+        ),
         // consistent-test-it with fn=test and withinDescribe=it
         (
             "describe(\"suite\", () => { test(\"foo\") })",
@@ -275,23 +384,35 @@ fn test() {
             "describe(\"suite\", () => { it(\"foo\") })",
             Some(serde_json::json!([{ "fn": "test", "withinDescribe": "test" }])),
         ),
-        ("it(\"foo\")", Some(serde_json::json!([{ "fn": "test", "withinDescribe": "test" }]))),
+        (
+            "it(\"foo\")",
+            Some(serde_json::json!([{ "fn": "test", "withinDescribe": "test" }])),
+        ),
         // consistent-test-it with fn=it and withinDescribe=it
         (
             "describe(\"suite\", () => { test(\"foo\") })",
             Some(serde_json::json!([{ "fn": "it", "withinDescribe": "it" }])),
         ),
-        ("test(\"foo\")", Some(serde_json::json!([{ "fn": "it", "withinDescribe": "it" }]))),
+        (
+            "test(\"foo\")",
+            Some(serde_json::json!([{ "fn": "it", "withinDescribe": "it" }])),
+        ),
         // consistent-test-it defaults without config object
         ("describe(\"suite\", () => { test(\"foo\") })", None),
         // consistent-test-it with withinDescribe=it
-        ("it(\"foo\")", Some(serde_json::json!([{ "withinDescribe": "it" }]))),
+        (
+            "it(\"foo\")",
+            Some(serde_json::json!([{ "withinDescribe": "it" }])),
+        ),
         (
             "describe(\"suite\", () => { test(\"foo\") })",
             Some(serde_json::json!([{ "withinDescribe": "it" }])),
         ),
         // consistent-test-it with withinDescribe=test
-        ("it(\"foo\")", Some(serde_json::json!([{ "withinDescribe": "test" }]))),
+        (
+            "it(\"foo\")",
+            Some(serde_json::json!([{ "withinDescribe": "test" }])),
+        ),
         (
             "describe(\"suite\", () => { it(\"foo\") })",
             Some(serde_json::json!([{ "withinDescribe": "test" }])),

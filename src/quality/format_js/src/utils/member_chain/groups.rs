@@ -87,7 +87,11 @@ impl<'a, 'b> TailChainGroups<'a, 'b> {
 
     /// Removes the first group and returns it
     pub(super) fn pop_first(&mut self) -> Option<MemberChainGroup<'a, 'b>> {
-        if self.groups.is_empty() { None } else { Some(self.groups.remove(0)) }
+        if self.groups.is_empty() {
+            None
+        } else {
+            Some(self.groups.remove(0))
+        }
     }
 
     /// Here we check if the length of the groups exceeds the cutoff or there are comments
@@ -241,13 +245,19 @@ impl<'a, 'b> MemberChainGroup<'a, 'b> {
 
 impl<'a, 'b> From<ChainMembers<'a, 'b>> for MemberChainGroup<'a, 'b> {
     fn from(entries: ChainMembers<'a, 'b>) -> Self {
-        Self { members: entries, formatted: RefCell::new(None), needs_empty_line: Cell::new(false) }
+        Self {
+            members: entries,
+            formatted: RefCell::new(None),
+            needs_empty_line: Cell::new(false),
+        }
     }
 }
 
 impl std::fmt::Debug for MemberChainGroup<'_, '_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_tuple("MemberChainGroup").field(&self.members).finish()
+        f.debug_tuple("MemberChainGroup")
+            .field(&self.members)
+            .finish()
     }
 }
 

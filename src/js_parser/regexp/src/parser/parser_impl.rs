@@ -25,12 +25,20 @@ impl<'a, 'b> LiteralParser<'a, 'b> {
         flags_text: Option<&'b str>,
         options: Options,
     ) -> Self {
-        Self { allocator, pattern_text, flags_text, options }
+        Self {
+            allocator,
+            pattern_text,
+            flags_text,
+            options,
+        }
     }
 
     pub fn parse(self) -> Result<ast::Pattern<'a>> {
         let parse_string_literal = false;
-        let Options { pattern_span_offset, flags_span_offset } = self.options;
+        let Options {
+            pattern_span_offset,
+            flags_span_offset,
+        } = self.options;
 
         let (unicode_mode, unicode_sets_mode) = if let Some(flags_text) = self.flags_text {
             let reader = Reader::initialize(flags_text, true, parse_string_literal)?; // For literal, never expect to throw
@@ -40,7 +48,11 @@ impl<'a, 'b> LiteralParser<'a, 'b> {
             (false, false)
         };
 
-        let pattern_text = if self.pattern_text.is_empty() { "(?:)" } else { self.pattern_text };
+        let pattern_text = if self.pattern_text.is_empty() {
+            "(?:)"
+        } else {
+            self.pattern_text
+        };
         let reader = Reader::initialize(pattern_text, unicode_mode, parse_string_literal)?; // For literal, never expect to throw
 
         PatternParser::new(
@@ -72,12 +84,20 @@ impl<'a> ConstructorParser<'a> {
         flags_text: Option<&'a str>,
         options: Options,
     ) -> Self {
-        Self { allocator, pattern_text, flags_text, options }
+        Self {
+            allocator,
+            pattern_text,
+            flags_text,
+            options,
+        }
     }
 
     pub fn parse(self) -> Result<ast::Pattern<'a>> {
         let parse_string_literal = true;
-        let Options { pattern_span_offset, flags_span_offset } = self.options;
+        let Options {
+            pattern_span_offset,
+            flags_span_offset,
+        } = self.options;
 
         let (unicode_mode, unicode_sets_mode) = if let Some(flags_text) = self.flags_text {
             let reader =

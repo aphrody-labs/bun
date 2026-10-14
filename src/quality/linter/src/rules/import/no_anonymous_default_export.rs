@@ -207,16 +207,43 @@ fn test() {
         ("const foo = 123; export default foo", None),
         ("export default foo(bar)", None),
         ("export default []", Some(json!([{ "allowArray": true }]))),
-        ("export default 123", Some(json!([{ "allowLiteral": true }]))),
-        ("export default () => {}", Some(json!([{ "allowArrowFunction": true }]))),
-        ("export default class {}", Some(json!([{ "allowAnonymousClass": true }]))),
-        ("export default function() {}", Some(json!([{ "allowAnonymousFunction": true }]))),
-        ("export default 'foo'", Some(json!([{ "allowLiteral": true }]))),
-        (r"export default `123`", Some(json!([{ "allowLiteral": true }]))),
-        (r"export default /^123/", Some(json!([{ "allowLiteral": true }]))),
+        (
+            "export default 123",
+            Some(json!([{ "allowLiteral": true }])),
+        ),
+        (
+            "export default () => {}",
+            Some(json!([{ "allowArrowFunction": true }])),
+        ),
+        (
+            "export default class {}",
+            Some(json!([{ "allowAnonymousClass": true }])),
+        ),
+        (
+            "export default function() {}",
+            Some(json!([{ "allowAnonymousFunction": true }])),
+        ),
+        (
+            "export default 'foo'",
+            Some(json!([{ "allowLiteral": true }])),
+        ),
+        (
+            r"export default `123`",
+            Some(json!([{ "allowLiteral": true }])),
+        ),
+        (
+            r"export default /^123/",
+            Some(json!([{ "allowLiteral": true }])),
+        ),
         ("export default {}", Some(json!([{ "allowObject": true }]))),
-        ("export default new Foo()", Some(json!([{ "allowNew": true }]))),
-        ("export default foo(bar)", Some(json!([{ "allowCallExpression": true }]))),
+        (
+            "export default new Foo()",
+            Some(json!([{ "allowNew": true }])),
+        ),
+        (
+            "export default foo(bar)",
+            Some(json!([{ "allowCallExpression": true }])),
+        ),
         (
             r"
                 const foo = 3;
@@ -240,7 +267,10 @@ fn test() {
         ("export default () => {}", None),
         ("export default class {}", None),
         ("export default function () {}", None),
-        ("export default foo(bar)", Some(json!([{ "allowCallExpression": false }]))),
+        (
+            "export default foo(bar)",
+            Some(json!([{ "allowCallExpression": false }])),
+        ),
         ("export default 123", None),
         ("export default {}", None),
         ("export default new Foo()", None),
@@ -248,6 +278,11 @@ fn test() {
         (r"export default /^123/", None),
     ];
 
-    Tester::new(NoAnonymousDefaultExport::NAME, NoAnonymousDefaultExport::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        NoAnonymousDefaultExport::NAME,
+        NoAnonymousDefaultExport::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

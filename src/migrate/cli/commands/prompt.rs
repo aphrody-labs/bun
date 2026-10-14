@@ -16,11 +16,11 @@
 use std::path::PathBuf;
 use std::process::ExitCode;
 
-use anyhow::Result;
 use crate::{
     report, run,
     types::{Mode, Report, RunOptions, Severity},
 };
+use anyhow::Result;
 
 pub(crate) fn run_prompt(
     root: PathBuf,

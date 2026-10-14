@@ -1,7 +1,7 @@
 //! ConPTY capabilities of the running Windows build. Sessions are created by `Bun.Terminal`.
 
 use super::system::version_numbers;
-use super::{system_proc, Json};
+use super::{Json, system_proc};
 
 /// First build exporting `CreatePseudoConsole` (Windows 10 version 1809).
 const CONPTY_BUILD: u32 = 17763;

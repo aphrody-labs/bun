@@ -81,14 +81,13 @@ impl<'a> Format<'a, JsFormatContext<'a>> for FormatTypeParameters<'a, '_> {
         let params = self.decl.params();
 
         soft_block_indent(&format_with(|f| {
-            f.join_with(soft_line_break_or_space()).entries_with_trailing_separator(
-                params,
-                ",",
-                TrailingSeparator::Omit,
-            );
+            f.join_with(soft_line_break_or_space())
+                .entries_with_trailing_separator(params, ",", TrailingSeparator::Omit);
         }))
         .fmt(f);
 
-        format_dangling_comments(self.decl.span).with_soft_block_indent().fmt(f);
+        format_dangling_comments(self.decl.span)
+            .with_soft_block_indent()
+            .fmt(f);
     }
 }

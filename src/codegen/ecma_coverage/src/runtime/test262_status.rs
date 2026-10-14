@@ -15,7 +15,11 @@ pub fn get_v8_test262_failure_paths() -> &'static Vec<String> {
         let path = workspace_root().join("src/runtime/v8_test262.status");
 
         if path.exists() {
-            fs::read_to_string(&path).unwrap().lines().map(ToString::to_string).collect::<Vec<_>>()
+            fs::read_to_string(&path)
+                .unwrap()
+                .lines()
+                .map(ToString::to_string)
+                .collect::<Vec<_>>()
         } else {
             let res = agent()
                 .get("http://raw.githubusercontent.com/v8/v8/main/test/test262/test262.status")

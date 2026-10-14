@@ -76,7 +76,13 @@ impl Rule for PreferArraySome {
             // `.find(…)`
             // `.findLast(…)`
             AstKind::CallExpression(call_expr) => {
-                if !is_method_call(call_expr, None, Some(&["find", "findLast"]), Some(1), Some(2)) {
+                if !is_method_call(
+                    call_expr,
+                    None,
+                    Some(&["find", "findLast"]),
+                    Some(1),
+                    Some(2),
+                ) {
                     return;
                 }
 
@@ -102,8 +108,11 @@ impl Rule for PreferArraySome {
                         if let (Some(target_span), Some((bin_expr, should_negate))) =
                             (target_span, nullish_comparison)
                         {
-                            let mut replacement =
-                                bin_expr.left.span().source_text(ctx.source_text()).to_string();
+                            let mut replacement = bin_expr
+                                .left
+                                .span()
+                                .source_text(ctx.source_text())
+                                .to_string();
                             let replacement_start =
                                 (target_span.start - bin_expr.left.span().start) as usize;
                             let replacement_end =
@@ -245,8 +254,10 @@ impl Rule for PreferArraySome {
                     return;
                 }
 
-                let Some(first_filter_call_arg) =
-                    left_call_expr.arguments.first().and_then(Argument::as_expression)
+                let Some(first_filter_call_arg) = left_call_expr
+                    .arguments
+                    .first()
+                    .and_then(Argument::as_expression)
                 else {
                     return;
                 };
@@ -561,24 +572,51 @@ fn test() {
         // find — boolean contexts
         ("const bar = !foo.find(fn)", "const bar = !foo.some(fn)"),
         ("if (foo.find(fn)) {}", "if (foo.some(fn)) {}"),
-        ("const bar = foo.find(fn) ? 1 : 2", "const bar = foo.some(fn) ? 1 : 2"),
-        ("while (foo.find(fn)) foo.shift();", "while (foo.some(fn)) foo.shift();"),
-        ("do {foo.shift();} while (foo.find(fn));", "do {foo.shift();} while (foo.some(fn));"),
-        ("for (; foo.find(fn); ) foo.shift();", "for (; foo.some(fn); ) foo.shift();"),
+        (
+            "const bar = foo.find(fn) ? 1 : 2",
+            "const bar = foo.some(fn) ? 1 : 2",
+        ),
+        (
+            "while (foo.find(fn)) foo.shift();",
+            "while (foo.some(fn)) foo.shift();",
+        ),
+        (
+            "do {foo.shift();} while (foo.find(fn));",
+            "do {foo.shift();} while (foo.some(fn));",
+        ),
+        (
+            "for (; foo.find(fn); ) foo.shift();",
+            "for (; foo.some(fn); ) foo.shift();",
+        ),
         // findLast — boolean contexts
         ("const bar = !foo.findLast(fn)", "const bar = !foo.some(fn)"),
         ("if (foo.findLast(fn)) {}", "if (foo.some(fn)) {}"),
-        ("const bar = foo.findLast(fn) ? 1 : 2", "const bar = foo.some(fn) ? 1 : 2"),
-        ("while (foo.findLast(fn)) foo.shift();", "while (foo.some(fn)) foo.shift();"),
-        ("do {foo.shift();} while (foo.findLast(fn));", "do {foo.shift();} while (foo.some(fn));"),
-        ("for (; foo.findLast(fn); ) foo.shift();", "for (; foo.some(fn); ) foo.shift();"),
+        (
+            "const bar = foo.findLast(fn) ? 1 : 2",
+            "const bar = foo.some(fn) ? 1 : 2",
+        ),
+        (
+            "while (foo.findLast(fn)) foo.shift();",
+            "while (foo.some(fn)) foo.shift();",
+        ),
+        (
+            "do {foo.shift();} while (foo.findLast(fn));",
+            "do {foo.shift();} while (foo.some(fn));",
+        ),
+        (
+            "for (; foo.findLast(fn); ) foo.shift();",
+            "for (; foo.some(fn); ) foo.shift();",
+        ),
         // Comments
         (
             "console.log(foo /* comment 1 */ . /* comment 2 */ find /* comment 3 */ (fn) ? a : b)",
             "console.log(foo /* comment 1 */ . /* comment 2 */ some /* comment 3 */ (fn) ? a : b)",
         ),
         // jQuery
-        (r#"if (jQuery.find(".outer > div")) {}"#, r#"if (jQuery.some(".outer > div")) {}"#),
+        (
+            r#"if (jQuery.find(".outer > div")) {}"#,
+            r#"if (jQuery.some(".outer > div")) {}"#,
+        ),
         // Actual messages
         ("if (bar.find(fn)) {}", "if (bar.some(fn)) {}"),
         ("if (bar.findLast(fn)) {}", "if (bar.some(fn)) {}"),

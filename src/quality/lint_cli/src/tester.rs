@@ -17,7 +17,9 @@ impl Tester {
         // disable multiple workers for diagnostic
         // because the snapshot could change every time when we are analyzing multiple files
         // do not unwrap because we can set it only one time.
-        let _ = rayon::ThreadPoolBuilder::new().num_threads(1).build_global();
+        let _ = rayon::ThreadPoolBuilder::new()
+            .num_threads(1)
+            .build_global();
 
         Self { cwd }
     }
@@ -33,7 +35,9 @@ impl Tester {
 
         let options = lint_command().run_inner(new_args.as_slice()).unwrap();
         let mut output = Vec::new();
-        let _ = CliRunner::new(options, None).with_cwd(self.cwd.clone()).run(&mut output);
+        let _ = CliRunner::new(options, None)
+            .with_cwd(self.cwd.clone())
+            .run(&mut output);
     }
 
     pub fn test_output(&self, args: &[&str]) -> (String, CliRunResult) {
@@ -42,14 +46,18 @@ impl Tester {
 
         let options = lint_command().run_inner(new_args.as_slice()).unwrap();
         let mut output = Vec::new();
-        let result = CliRunner::new(options, None).with_cwd(self.cwd.clone()).run(&mut output);
+        let result = CliRunner::new(options, None)
+            .with_cwd(self.cwd.clone())
+            .run(&mut output);
         (String::from_utf8(output).unwrap(), result)
     }
 
     pub fn test_output_verbose(&self, args: &[&str]) -> String {
         let options = lint_command().run_inner(args).unwrap();
         let mut output = Vec::new();
-        let _ = CliRunner::new(options, None).with_cwd(self.cwd.clone()).run(&mut output);
+        let _ = CliRunner::new(options, None)
+            .with_cwd(self.cwd.clone())
+            .run(&mut output);
 
         String::from_utf8(output).unwrap()
     }
@@ -107,7 +115,9 @@ impl Tester {
                 format!("working directory: {}\n", relative_dir.to_str().unwrap()).as_bytes(),
             );
             output.extend_from_slice(b"----------\n");
-            let result = CliRunner::new(options, None).with_cwd(self.cwd.clone()).run(&mut output);
+            let result = CliRunner::new(options, None)
+                .with_cwd(self.cwd.clone())
+                .run(&mut output);
 
             output.extend_from_slice(b"----------\n");
             output.extend_from_slice(format!("CLI result: {result:?}\n").as_bytes());
@@ -123,11 +133,15 @@ impl Tester {
 
         let output_string = &String::from_utf8(output).unwrap();
         let regex = Regex::new(r"\d+(?:\.\d+)?s|\d+ms").unwrap();
-        let output_string = regex.replace_all(output_string, "<variable>ms").into_owned();
+        let output_string = regex
+            .replace_all(output_string, "<variable>ms")
+            .into_owned();
         let regex = Regex::new(r"\b\d+\.\d{3}\b").unwrap();
         let output_string = regex.replace_all(&output_string, "<variable>").into_owned();
         let regex = Regex::new(r"\b\d+\.\d%").unwrap();
-        let output_string = regex.replace_all(&output_string, "<variable>%").into_owned();
+        let output_string = regex
+            .replace_all(&output_string, "<variable>%")
+            .into_owned();
         let regex = Regex::new(r#""start_time": \d+\.\d+"#).unwrap();
         let output_string = regex.replace_all(&output_string, r#""start_time": <variable>"#);
         // Censor the oxlint version in SARIF output so snapshots survive version bumps.
@@ -151,8 +165,11 @@ impl Tester {
         let cwd_string = cwd_string.cow_replace('\\', "/").to_string(); // for windows
         let output_string = output_string.cow_replace(&cwd_string, "<cwd>");
 
-        let full_args_list =
-            multiple_args.iter().map(|args| args.join(" ")).collect::<Vec<String>>().join(" ");
+        let full_args_list = multiple_args
+            .iter()
+            .map(|args| args.join(" "))
+            .collect::<Vec<String>>()
+            .join(" ");
 
         let snapshot_file_name = format!("{}_{}", relative_dir.to_str().unwrap(), full_args_list);
 
@@ -198,7 +215,9 @@ impl SuppressionTester {
         // disable multiple workers for diagnostic
         // because the snapshot could change every time when we are analyzing multiple files
         // do not unwrap because we can set it only one time.
-        let _ = rayon::ThreadPoolBuilder::new().num_threads(1).build_global();
+        let _ = rayon::ThreadPoolBuilder::new()
+            .num_threads(1)
+            .build_global();
 
         Self {
             cwd,
@@ -212,7 +231,8 @@ impl SuppressionTester {
     }
 
     pub fn with_cwd(mut self, fixture_name: &str) -> Self {
-        self.cwd.push(format!("fixtures/suppression/{fixture_name}"));
+        self.cwd
+            .push(format!("fixtures/suppression/{fixture_name}"));
         self.fixture_name = fixture_name.to_string();
         self
     }
@@ -239,15 +259,25 @@ impl SuppressionTester {
 
     fn assert_message(&self, expected_file: bool) -> String {
         if expected_file {
-            format!("{} not found in {}/", self.oxlint_suppression_file_name, self.fixture_name)
+            format!(
+                "{} not found in {}/",
+                self.oxlint_suppression_file_name, self.fixture_name
+            )
         } else {
-            format!("{} found in {}/", self.oxlint_suppression_file_name, self.fixture_name)
+            format!(
+                "{} found in {}/",
+                self.oxlint_suppression_file_name, self.fixture_name
+            )
         }
     }
 
     pub fn test(&self, args: &[&str]) {
         assert!(
-            fs::exists(self.cwd.join::<&str>(self.oxlint_suppression_file_name.as_ref())).unwrap()
+            fs::exists(
+                self.cwd
+                    .join::<&str>(self.oxlint_suppression_file_name.as_ref())
+            )
+            .unwrap()
                 == self.have_setup_file,
             "{}",
             self.assert_message(self.have_setup_file)
@@ -256,7 +286,11 @@ impl SuppressionTester {
         Tester::new().with_cwd(self.cwd.clone()).test(args);
 
         assert!(
-            fs::exists(self.cwd.join::<&str>(self.oxlint_suppression_file_name.as_ref())).unwrap()
+            fs::exists(
+                self.cwd
+                    .join::<&str>(self.oxlint_suppression_file_name.as_ref())
+            )
+            .unwrap()
                 == self.have_expected_file,
             "{}",
             self.assert_message(self.have_expected_file)
@@ -264,14 +298,21 @@ impl SuppressionTester {
 
         if self.have_expected_file {
             let new_content_string = fs::read_to_string(
-                self.cwd.join::<&str>(self.oxlint_suppression_file_name.as_ref()),
+                self.cwd
+                    .join::<&str>(self.oxlint_suppression_file_name.as_ref()),
             )
             .unwrap_or_else(|_| {
-                panic!("Unable to read the new {}", self.oxlint_suppression_file_name)
+                panic!(
+                    "Unable to read the new {}",
+                    self.oxlint_suppression_file_name
+                )
             });
             let new_content: Value =
                 serde_json::from_str(&new_content_string).unwrap_or_else(|_| {
-                    panic!("Unable to deserialize the new {}", self.oxlint_suppression_file_name)
+                    panic!(
+                        "Unable to deserialize the new {}",
+                        self.oxlint_suppression_file_name
+                    )
                 });
 
             let expected_content_string = fs::read_to_string(
@@ -292,8 +333,10 @@ impl SuppressionTester {
 impl Drop for SuppressionTester {
     fn drop(&mut self) {
         if self.have_expected_file {
-            match fs::remove_file(self.cwd.join::<&str>(self.oxlint_suppression_file_name.as_ref()))
-            {
+            match fs::remove_file(
+                self.cwd
+                    .join::<&str>(self.oxlint_suppression_file_name.as_ref()),
+            ) {
                 Ok(()) => {}
                 Err(err) => panic!(
                     "Unable to delete the setup file in fixture {} with error {}",
@@ -306,8 +349,9 @@ impl Drop for SuppressionTester {
         }
 
         if self.have_backup_file {
-            let oxlint_file_dest =
-                self.cwd.join::<&str>(self.oxlint_suppression_file_name.as_ref());
+            let oxlint_file_dest = self
+                .cwd
+                .join::<&str>(self.oxlint_suppression_file_name.as_ref());
             let oxlint_file_source = self.cwd.join("oxlint-suppressions-backup.json");
             match fs::copy(oxlint_file_source, oxlint_file_dest) {
                 Ok(_) => {}

@@ -138,7 +138,9 @@ fn try_fold_string_index_of<'a>(
     if args.len() >= 3 {
         return None;
     }
-    let Expression::StringLiteral(s) = object else { return None };
+    let Expression::StringLiteral(s) = object else {
+        return None;
+    };
     let search_value = match args.first() {
         Some(Argument::SpreadElement(_)) => return None,
         Some(arg @ match_expression!(Argument)) => {
@@ -155,10 +157,14 @@ fn try_fold_string_index_of<'a>(
     };
 
     let result = match name {
-        "indexOf" => s.value.as_str().index_of(search_value.as_deref(), search_start_index),
-        "lastIndexOf" => {
-            s.value.as_str().last_index_of(search_value.as_deref(), search_start_index)
-        }
+        "indexOf" => s
+            .value
+            .as_str()
+            .index_of(search_value.as_deref(), search_start_index),
+        "lastIndexOf" => s
+            .value
+            .as_str()
+            .last_index_of(search_value.as_deref(), search_start_index),
         _ => unreachable!(),
     };
     Some(ConstantValue::Number(result as f64))
@@ -172,7 +178,9 @@ fn try_fold_string_substring_or_slice<'a>(
     if args.len() > 2 {
         return None;
     }
-    let Expression::StringLiteral(s) = object else { return None };
+    let Expression::StringLiteral(s) = object else {
+        return None;
+    };
     let start_idx = match args.first() {
         Some(Argument::SpreadElement(_)) => return None,
         Some(arg @ match_expression!(Argument)) => {
@@ -198,7 +206,9 @@ fn try_fold_string_substring_or_slice<'a>(
         return None;
     }
 
-    Some(ConstantValue::String(Cow::Owned(s.value.as_str().substring(start_idx, end_idx))))
+    Some(ConstantValue::String(Cow::Owned(
+        s.value.as_str().substring(start_idx, end_idx),
+    )))
 }
 
 fn try_fold_string_char_at<'a>(
@@ -209,7 +219,9 @@ fn try_fold_string_char_at<'a>(
     if args.len() > 1 {
         return None;
     }
-    let Expression::StringLiteral(s) = object else { return None };
+    let Expression::StringLiteral(s) = object else {
+        return None;
+    };
     let char_at_index = match args.first() {
         Some(Argument::SpreadElement(_)) => return None,
         Some(arg @ match_expression!(Argument)) => {
@@ -231,14 +243,15 @@ fn try_fold_string_char_code_at<'a>(
     object: &Expression<'a>,
     ctx: &impl ConstantEvaluationCtx<'a>,
 ) -> Option<ConstantValue<'a>> {
-    if args
-        .iter()
-        .skip(1)
-        .any(|arg| arg.as_expression().is_none_or(|e| e.may_have_side_effects(ctx)))
-    {
+    if args.iter().skip(1).any(|arg| {
+        arg.as_expression()
+            .is_none_or(|e| e.may_have_side_effects(ctx))
+    }) {
         return None;
     }
-    let Expression::StringLiteral(s) = object else { return None };
+    let Expression::StringLiteral(s) = object else {
+        return None;
+    };
     let char_at_index = match args.first() {
         Some(Argument::SpreadElement(_)) => return None,
         Some(arg @ match_expression!(Argument)) => {
@@ -247,7 +260,11 @@ fn try_fold_string_char_code_at<'a>(
         None => None,
     };
 
-    let value = s.value.as_str().char_code_at(char_at_index).map_or(f64::NAN, |n| n as f64);
+    let value = s
+        .value
+        .as_str()
+        .char_code_at(char_at_index)
+        .map_or(f64::NAN, |n| n as f64);
     Some(ConstantValue::Number(value))
 }
 
@@ -259,9 +276,15 @@ fn try_fold_starts_with<'a>(
     if args.len() != 1 {
         return None;
     }
-    let Argument::StringLiteral(arg) = args.first().unwrap() else { return None };
-    let Expression::StringLiteral(s) = object else { return None };
-    Some(ConstantValue::Boolean(s.value.starts_with(arg.value.as_str())))
+    let Argument::StringLiteral(arg) = args.first().unwrap() else {
+        return None;
+    };
+    let Expression::StringLiteral(s) = object else {
+        return None;
+    };
+    Some(ConstantValue::Boolean(
+        s.value.starts_with(arg.value.as_str()),
+    ))
 }
 
 fn try_fold_string_replace<'a>(
@@ -273,7 +296,9 @@ fn try_fold_string_replace<'a>(
     if args.len() != 2 {
         return None;
     }
-    let Expression::StringLiteral(s) = object else { return None };
+    let Expression::StringLiteral(s) = object else {
+        return None;
+    };
     let search_value = args.first().unwrap();
     let search_value = match search_value {
         Argument::SpreadElement(_) => return None,
@@ -288,16 +313,22 @@ fn try_fold_string_replace<'a>(
     let replace_value = args.get(1).unwrap();
     let replace_value = match replace_value {
         Argument::SpreadElement(_) => return None,
-        match_expression!(Argument) => {
-            replace_value.to_expression().get_side_free_string_value(ctx)?
-        }
+        match_expression!(Argument) => replace_value
+            .to_expression()
+            .get_side_free_string_value(ctx)?,
     };
     if replace_value.contains('$') {
         return None;
     }
     let result = match name {
-        "replace" => s.value.as_str().cow_replacen(search_value.as_ref(), &replace_value, 1),
-        "replaceAll" => s.value.as_str().cow_replace(search_value.as_ref(), &replace_value),
+        "replace" => s
+            .value
+            .as_str()
+            .cow_replacen(search_value.as_ref(), &replace_value, 1),
+        "replaceAll" => s
+            .value
+            .as_str()
+            .cow_replace(search_value.as_ref(), &replace_value),
         _ => unreachable!(),
     };
     Some(ConstantValue::String(result))
@@ -352,7 +383,11 @@ fn try_fold_to_string<'a>(
             // Only convert integers for other radix values.
             let value = lit.value;
             if value.is_infinite() {
-                let s = if value.is_sign_negative() { "-Infinity" } else { "Infinity" };
+                let s = if value.is_sign_negative() {
+                    "-Infinity"
+                } else {
+                    "Infinity"
+                };
                 return Some(ConstantValue::String(Cow::Borrowed(s)));
             }
             if value.is_nan() {
@@ -616,7 +651,12 @@ fn try_fold_decode_uri<'a>(
     let decoded = decode_uri_chars(
         string_value,
         #[inline(always)]
-        |c| matches!(c, b';' | b',' | b'/' | b'?' | b':' | b'@' | b'&' | b'=' | b'+' | b'$' | b'#'),
+        |c| {
+            matches!(
+                c,
+                b';' | b',' | b'/' | b'?' | b':' | b'@' | b'&' | b'=' | b'+' | b'$' | b'#'
+            )
+        },
     )?;
     Some(ConstantValue::String(decoded))
 }
@@ -694,11 +734,14 @@ fn try_fold_global_parse_float<'a>(
         return Some(ConstantValue::Number(f64::NAN));
     };
 
-    let parsed = trimmed_prefix.cow_replace('_', "").parse::<f64>().unwrap_or_else(|_| {
-        unreachable!(
-            "StrDecimalLiteral should be parse-able with Rust FromStr for f64: {trimmed_prefix}"
-        )
-    });
+    let parsed = trimmed_prefix
+        .cow_replace('_', "")
+        .parse::<f64>()
+        .unwrap_or_else(|_| {
+            unreachable!(
+                "StrDecimalLiteral should be parse-able with Rust FromStr for f64: {trimmed_prefix}"
+            )
+        });
     Some(ConstantValue::Number(parsed))
 }
 
@@ -808,9 +851,10 @@ fn try_fold_global_parse_int<'a>(
         return Some(ConstantValue::Number(f64::NAN));
     }
     if args.len() > 2
-        || args
-            .iter()
-            .any(|arg| arg.as_expression().is_none_or(|arg| arg.may_have_side_effects(ctx)))
+        || args.iter().any(|arg| {
+            arg.as_expression()
+                .is_none_or(|arg| arg.may_have_side_effects(ctx))
+        })
     {
         return None;
     }
@@ -878,9 +922,18 @@ fn try_fold_global_parse_int<'a>(
 
 #[test]
 fn test_find_str_decimal_literal_prefix() {
-    assert_eq!(find_str_decimal_literal_prefix("Infinitya"), Some("Infinity"));
-    assert_eq!(find_str_decimal_literal_prefix("+Infinitya"), Some("+Infinity"));
-    assert_eq!(find_str_decimal_literal_prefix("-Infinitya"), Some("-Infinity"));
+    assert_eq!(
+        find_str_decimal_literal_prefix("Infinitya"),
+        Some("Infinity")
+    );
+    assert_eq!(
+        find_str_decimal_literal_prefix("+Infinitya"),
+        Some("+Infinity")
+    );
+    assert_eq!(
+        find_str_decimal_literal_prefix("-Infinitya"),
+        Some("-Infinity")
+    );
     assert_eq!(find_str_decimal_literal_prefix("0a"), Some("0"));
     assert_eq!(find_str_decimal_literal_prefix("+0a"), Some("+0"));
     assert_eq!(find_str_decimal_literal_prefix("-0a"), Some("-0"));

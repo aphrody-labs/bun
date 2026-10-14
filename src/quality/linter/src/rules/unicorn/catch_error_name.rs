@@ -42,7 +42,10 @@ pub struct CatchErrorNameConfig {
     ignore: Vec<Regex>,
     /// The name to use for error variables in `catch` blocks. You can customize it
     /// to something other than `'error'` (e.g., `'exception'`).
-    #[serde(default = "default_error_name", deserialize_with = "deserialize_error_name")]
+    #[serde(
+        default = "default_error_name",
+        deserialize_with = "deserialize_error_name"
+    )]
     name: CompactStr,
 }
 
@@ -56,7 +59,10 @@ impl std::ops::Deref for CatchErrorName {
 
 impl Default for CatchErrorNameConfig {
     fn default() -> Self {
-        Self { ignore: vec![], name: default_error_name() }
+        Self {
+            ignore: vec![],
+            name: default_error_name(),
+        }
     }
 }
 
@@ -71,7 +77,11 @@ where
     let name = String::deserialize(deserializer)?;
     let name = name.trim();
 
-    if is_identifier_name(name) { Ok(CompactStr::from(name)) } else { Ok(default_error_name()) }
+    if is_identifier_name(name) {
+        Ok(CompactStr::from(name))
+    } else {
+        Ok(default_error_name())
+    }
 }
 
 declare_oxc_lint!(
@@ -178,7 +188,9 @@ impl CatchErrorName {
     }
 
     fn check_function_arguments(&self, arg: &Argument, ctx: &LintContext) {
-        let Some(expr) = arg.as_expression() else { return };
+        let Some(expr) = arg.as_expression() else {
+            return;
+        };
 
         let first_arg = match expr.without_parentheses() {
             Expression::ArrowFunctionExpression(arrow_expr) => arrow_expr.params.items.first(),
@@ -222,13 +234,17 @@ impl CatchErrorName {
                     declaration_fix.push(basic_fix);
                     for reference in iter {
                         let node = ctx.nodes().get_node(reference.node_id()).kind();
-                        let Some(id) = node.as_identifier_reference() else { continue };
+                        let Some(id) = node.as_identifier_reference() else {
+                            continue;
+                        };
 
                         declaration_fix.push(fixer.replace(id.span, self.name.clone()));
                     }
 
-                    declaration_fix
-                        .with_message(format!("Rename `{}` to `{}`", binding_ident.name, self.name))
+                    declaration_fix.with_message(format!(
+                        "Rename `{}` to `{}`",
+                        binding_ident.name, self.name
+                    ))
                 },
             );
         }
@@ -240,7 +256,10 @@ fn test() {
     use crate::tester::Tester;
 
     let pass = vec![
-        ("try {} catch (err) {}", Some(serde_json::json!([{"name": "err"}]))),
+        (
+            "try {} catch (err) {}",
+            Some(serde_json::json!([{"name": "err"}])),
+        ),
         (
             "try {
             } catch (outerError) {
@@ -340,8 +359,14 @@ fn test() {
             None,
         ),
         ("obj.catch(() => {})", None),
-        ("obj.catch(err => {})", Some(serde_json::json!([{"name": "err"}]))),
-        ("obj.then(undefined, err => {})", Some(serde_json::json!([{"name": "err"}]))),
+        (
+            "obj.catch(err => {})",
+            Some(serde_json::json!([{"name": "err"}])),
+        ),
+        (
+            "obj.then(undefined, err => {})",
+            Some(serde_json::json!([{"name": "err"}])),
+        ),
         (
             "obj.catch(
                 outerError => {
@@ -354,10 +379,19 @@ fn test() {
         ("obj.then(undefined, function (error) {})", None),
         ("obj.catch(function onReject(error) {})", None),
         ("obj.then(undefined, function onReject(error) {})", None),
-        ("obj.then(function onFulfilled(result) {}, function onReject(error) {})", None),
+        (
+            "obj.then(function onFulfilled(result) {}, function onReject(error) {})",
+            None,
+        ),
         ("obj.catch(function () {})", None),
-        ("obj.catch(function (err) {})", Some(serde_json::json!([{"name": "err"}]))),
-        ("obj.then(undefined, function (err) {})", Some(serde_json::json!([{"name": "err"}]))),
+        (
+            "obj.catch(function (err) {})",
+            Some(serde_json::json!([{"name": "err"}])),
+        ),
+        (
+            "obj.then(undefined, function (err) {})",
+            Some(serde_json::json!([{"name": "err"}])),
+        ),
         (
             "obj.catch(function (outerError) {
                 return obj2.catch(function (innerError) {
@@ -432,7 +466,10 @@ fn test() {
         ("try {} catch (descriptive_error) {}", None),
         ("try {} catch (descriptiveError__) {}", None),
         ("try {} catch (descriptive_error__) {}", None),
-        ("try {} catch (skipThisNameCheck) {}", Some(serde_json::json!([{"ignore": ["^skip"]}]))),
+        (
+            "try {} catch (skipThisNameCheck) {}",
+            Some(serde_json::json!([{"ignore": ["^skip"]}])),
+        ),
         // This one needs to be modified from the upstream because there's no way to pass a regex with a flag (e.g. case insensitive flag).
         (
             "try {} catch (skipThisNameCheck) {}
@@ -446,7 +483,10 @@ fn test() {
             try {} catch (error2) {}",
             Some(serde_json::json!([{"ignore": ["error\\d*"]}])),
         ),
-        ("promise.catch(unicorn => {})", Some(serde_json::json!([{"ignore": ["unicorn"]}]))),
+        (
+            "promise.catch(unicorn => {})",
+            Some(serde_json::json!([{"ignore": ["unicorn"]}])),
+        ),
         // https://github.com/oxc-project/oxc/issues/12430
         (
             "try {
@@ -460,7 +500,10 @@ fn test() {
             }",
             Some(serde_json::json!([{"ignore": [ "^error\\d*$"]}])),
         ),
-        ("try { } catch (exception) { }", Some(serde_json::json!([{"name": "exception"}]))),
+        (
+            "try { } catch (exception) { }",
+            Some(serde_json::json!([{"name": "exception"}])),
+        ),
     ];
 
     let fail = vec![
@@ -499,12 +542,30 @@ fn test() {
             obj.then(err => {}, err => {});",
             None,
         ),
-        ("try {} catch (descriptiveError) {}", Some(serde_json::json!([{"name": "exception"}]))),
-        ("try {} catch (e) {}", Some(serde_json::json!([{"name": "has_space_after "}]))),
-        ("try {} catch (e) {}", Some(serde_json::json!([{"name": "1_start_with_a_number"}]))),
-        ("try {} catch (e) {}", Some(serde_json::json!([{"name": "_){} evilCode; if(false"}]))),
-        ("try {} catch (notMatching) {}", Some(serde_json::json!([{"ignore": []}]))),
-        ("try {} catch (notMatching) {}", Some(serde_json::json!([{"ignore": ["unicorn"]}]))),
+        (
+            "try {} catch (descriptiveError) {}",
+            Some(serde_json::json!([{"name": "exception"}])),
+        ),
+        (
+            "try {} catch (e) {}",
+            Some(serde_json::json!([{"name": "has_space_after "}])),
+        ),
+        (
+            "try {} catch (e) {}",
+            Some(serde_json::json!([{"name": "1_start_with_a_number"}])),
+        ),
+        (
+            "try {} catch (e) {}",
+            Some(serde_json::json!([{"name": "_){} evilCode; if(false"}])),
+        ),
+        (
+            "try {} catch (notMatching) {}",
+            Some(serde_json::json!([{"ignore": []}])),
+        ),
+        (
+            "try {} catch (notMatching) {}",
+            Some(serde_json::json!([{"ignore": ["unicorn"]}])),
+        ),
         // ("try {} catch (notMatching) {}", Some(serde_json::json!([{"ignore": [/unicorn/]}]))),
         (
             "try {} catch (error1) {}
@@ -519,7 +580,10 @@ fn test() {
             try {} catch (unicorn__) {}",
             Some(serde_json::json!([{"ignore": ["unicorn"]}])),
         ),
-        ("promise.catch(notMatching => {})", Some(serde_json::json!([{"ignore": ["unicorn"]}]))),
+        (
+            "promise.catch(notMatching => {})",
+            Some(serde_json::json!([{"ignore": ["unicorn"]}])),
+        ),
         (
             "try {
             } catch (_) {
@@ -626,9 +690,21 @@ fn test() {
             "promise.catch(error => { })",
             Some(serde_json::json!([{"ignore": ["unicorn"]}])),
         ),
-        ("promise.catch((foo) => { })", "promise.catch((error) => { })", None),
-        ("promise.catch(function (foo) { })", "promise.catch(function (error) { })", None),
-        ("promise.catch((function (foo) { }))", "promise.catch((function (error) { }))", None),
+        (
+            "promise.catch((foo) => { })",
+            "promise.catch((error) => { })",
+            None,
+        ),
+        (
+            "promise.catch(function (foo) { })",
+            "promise.catch(function (error) { })",
+            None,
+        ),
+        (
+            "promise.catch((function (foo) { }))",
+            "promise.catch((function (error) { }))",
+            None,
+        ),
         (
             "promise.then(function (foo) { }).catch((foo) => { })",
             "promise.then(function (foo) { }).catch((error) => { })",
@@ -639,7 +715,11 @@ fn test() {
             "promise.then(undefined, function (error) { })",
             None,
         ),
-        ("promise.then(undefined, (foo) => { })", "promise.then(undefined, (error) => { })", None),
+        (
+            "promise.then(undefined, (foo) => { })",
+            "promise.then(undefined, (error) => { })",
+            None,
+        ),
     ];
 
     Tester::new(CatchErrorName::NAME, CatchErrorName::PLUGIN, pass, fail)

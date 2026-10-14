@@ -82,11 +82,12 @@ impl Rule for NoTopLevelAwait {
         };
 
         // Only report when not nested inside a function (i.e. top-level).
-        if ctx
-            .nodes()
-            .ancestor_kinds(node.id())
-            .any(|kind| matches!(kind, AstKind::Function(_) | AstKind::ArrowFunctionExpression(_)))
-        {
+        if ctx.nodes().ancestor_kinds(node.id()).any(|kind| {
+            matches!(
+                kind,
+                AstKind::Function(_) | AstKind::ArrowFunctionExpression(_)
+            )
+        }) {
             return;
         }
 
@@ -109,16 +110,34 @@ fn test() {
         // Plain `using` (without `await`) is not top-level `await`.
         ("using foo = x", None),
         // `await` nested inside any function form is allowed.
-        ("async function fn () { const foo = await import('foo') }", None),
-        ("async function fn () { for await (const e of asyncIterate()) { /* ... */ } }", None),
+        (
+            "async function fn () { const foo = await import('foo') }",
+            None,
+        ),
+        (
+            "async function fn () { for await (const e of asyncIterate()) { /* ... */ } }",
+            None,
+        ),
         ("const fn = async () => await import('foo')", None),
-        ("const fn = async () => { for await (const e of asyncIterate()) { /* ... */ } }", None),
+        (
+            "const fn = async () => { for await (const e of asyncIterate()) { /* ... */ } }",
+            None,
+        ),
         ("async function f() { await using foo = x }", None),
-        ("class A { async foo () { const bar = await import('bar') } }", None),
-        ("const o = { async foo () { const bar = await import('bar') } }", None),
+        (
+            "class A { async foo () { const bar = await import('bar') } }",
+            None,
+        ),
+        (
+            "const o = { async foo () { const bar = await import('bar') } }",
+            None,
+        ),
         // A top-level `await` inside a nested function is allowed even when the
         // outer function is not async.
-        ("function outer () { return async function () { await import('foo') } }", None),
+        (
+            "function outer () { return async function () { await import('foo') } }",
+            None,
+        ),
         (
             "#!/usr/bin/env node\nconst foo = await import('foo')",
             Some(serde_json::json!([{ "ignoreBin": true }])),
@@ -145,7 +164,10 @@ fn test() {
         ("for (const e of iterate()) { await handle(e) }", None),
         ("{ await using foo = x }", None),
         // `ignoreBin` without a hashbang still reports.
-        ("const foo = await import('foo')", Some(serde_json::json!([{ "ignoreBin": true }]))),
+        (
+            "const foo = await import('foo')",
+            Some(serde_json::json!([{ "ignoreBin": true }])),
+        ),
         // A hashbang without `ignoreBin` still reports.
         ("#!/usr/bin/env node\nconst foo = await import('foo')", None),
     ];

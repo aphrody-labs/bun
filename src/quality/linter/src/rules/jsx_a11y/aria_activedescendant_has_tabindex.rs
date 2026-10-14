@@ -127,9 +127,21 @@ fn test() {
 
     let pass = vec![
         (r"<CustomComponent />;", None, None),
-        (r"<CustomComponent aria-activedescendant={someID} />;", None, None),
-        (r"<CustomComponent aria-activedescendant={someID} tabIndex={0} />;", None, None),
-        (r"<CustomComponent aria-activedescendant={someID} tabIndex={-1} />;", None, None),
+        (
+            r"<CustomComponent aria-activedescendant={someID} />;",
+            None,
+            None,
+        ),
+        (
+            r"<CustomComponent aria-activedescendant={someID} tabIndex={0} />;",
+            None,
+            None,
+        ),
+        (
+            r"<CustomComponent aria-activedescendant={someID} tabIndex={-1} />;",
+            None,
+            None,
+        ),
         (
             r"<CustomComponent aria-activedescendant={someID} tabIndex={0} />;",
             None,
@@ -138,21 +150,61 @@ fn test() {
         (r"<div />;", None, None),
         (r"<input />;", None, None),
         (r"<div tabIndex={0} />;", None, None),
-        (r"<div aria-activedescendant={someID} tabIndex={0} />;", None, None),
-        (r"<div aria-activedescendant={someID} tabIndex='0' />;", None, None),
-        (r"<div aria-activedescendant={someID} tabIndex={1} />;", None, None),
+        (
+            r"<div aria-activedescendant={someID} tabIndex={0} />;",
+            None,
+            None,
+        ),
+        (
+            r"<div aria-activedescendant={someID} tabIndex='0' />;",
+            None,
+            None,
+        ),
+        (
+            r"<div aria-activedescendant={someID} tabIndex={1} />;",
+            None,
+            None,
+        ),
         (r"<input aria-activedescendant={someID} />;", None, None),
-        (r"<input aria-activedescendant={someID} tabIndex={1} />;", None, None),
-        (r"<input aria-activedescendant={someID} tabIndex={0} />;", None, None),
-        (r"<input aria-activedescendant={someID} tabIndex={-1} />;", None, None),
-        (r"<div aria-activedescendant={someID} tabIndex={-1} />;", None, None),
-        (r"<div aria-activedescendant={someID} tabIndex='-1' />;", None, None),
-        (r"<input aria-activedescendant={someID} tabIndex={-1} />;", None, None),
+        (
+            r"<input aria-activedescendant={someID} tabIndex={1} />;",
+            None,
+            None,
+        ),
+        (
+            r"<input aria-activedescendant={someID} tabIndex={0} />;",
+            None,
+            None,
+        ),
+        (
+            r"<input aria-activedescendant={someID} tabIndex={-1} />;",
+            None,
+            None,
+        ),
+        (
+            r"<div aria-activedescendant={someID} tabIndex={-1} />;",
+            None,
+            None,
+        ),
+        (
+            r"<div aria-activedescendant={someID} tabIndex='-1' />;",
+            None,
+            None,
+        ),
+        (
+            r"<input aria-activedescendant={someID} tabIndex={-1} />;",
+            None,
+            None,
+        ),
     ];
 
     let fail = vec![
         (r"<div aria-activedescendant={someID} />;", None, None),
-        (r"<CustomComponent aria-activedescendant={someID} />;", None, Some(settings())),
+        (
+            r"<CustomComponent aria-activedescendant={someID} />;",
+            None,
+            Some(settings()),
+        ),
     ];
 
     Tester::new(

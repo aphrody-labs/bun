@@ -9,10 +9,18 @@ fn main() {
 
     if !cwd.join("compat-table").exists() {
         println!("Cloning compat-table ...");
-        Command::new("pnpm").current_dir(&cwd).args(["run", "init"]).output().unwrap();
+        Command::new("pnpm")
+            .current_dir(&cwd)
+            .args(["run", "init"])
+            .output()
+            .unwrap();
     }
 
-    let output = Command::new("pnpm").current_dir(cwd).args(["run", "build"]).output().unwrap();
+    let output = Command::new("pnpm")
+        .current_dir(cwd)
+        .args(["run", "build"])
+        .output()
+        .unwrap();
     if !output.status.success() {
         println!("{}", String::from_utf8(output.stderr).unwrap());
     }

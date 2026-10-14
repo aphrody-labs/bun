@@ -173,7 +173,9 @@ fn try_format_graphql_call<'a>(
     template: &AstNode<'a, TemplateLiteral<'a>>,
     f: &mut JsFormatter<'_, 'a>,
 ) -> bool {
-    let AstNodes::CallExpression(call) = template.parent() else { return false };
+    let AstNodes::CallExpression(call) = template.parent() else {
+        return false;
+    };
     if !is_graphql_callee(&call.callee) {
         return false;
     }
@@ -321,8 +323,10 @@ fn split_on_placeholders<'a>(text: &'a str, prefix: &str, suffix: &str) -> Vec<&
         let after_prefix = &remaining[start + prefix.len()..];
 
         // Find the index digits
-        let digit_end =
-            after_prefix.bytes().position(|b| !b.is_ascii_digit()).unwrap_or(after_prefix.len());
+        let digit_end = after_prefix
+            .bytes()
+            .position(|b| !b.is_ascii_digit())
+            .unwrap_or(after_prefix.len());
 
         if digit_end == 0 {
             // No digits found after prefix — not a valid placeholder, treat as literal
@@ -395,8 +399,13 @@ fn escape_text_in_ir<'a>(
     let allocator = f.allocator();
     let indent_width = f.options().indent_width;
     map_text_in_ir(ir, allocator, &mut |text, out| {
-        let Some(text) = escape(text, allocator) else { return false };
-        out.push(FormatElement::Text { text, width: TextWidth::from_text(text, indent_width) });
+        let Some(text) = escape(text, allocator) else {
+            return false;
+        };
+        out.push(FormatElement::Text {
+            text,
+            width: TextWidth::from_text(text, indent_width),
+        });
         true
     })
 }
@@ -499,8 +508,10 @@ fn count_placeholders(text: &str, prefix: &str, suffix: &str) -> usize {
     let mut rest = text;
     while let Some(start) = rest.find(prefix) {
         let after_prefix = &rest[start + prefix.len()..];
-        let digit_end =
-            after_prefix.bytes().position(|b| !b.is_ascii_digit()).unwrap_or(after_prefix.len());
+        let digit_end = after_prefix
+            .bytes()
+            .position(|b| !b.is_ascii_digit())
+            .unwrap_or(after_prefix.len());
         if digit_end > 0 {
             let mut after_digits = &after_prefix[digit_end..];
             // Skip optional `_{digits}` counter (HTML).

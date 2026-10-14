@@ -66,7 +66,9 @@ fn bench_isolated_declarations(criterion: &mut Criterion) {
     let source_type = file.source_type;
 
     let ast_allocator = Allocator::new();
-    let program = Parser::new(&ast_allocator, source_text, source_type).parse().program;
+    let program = Parser::new(&ast_allocator, source_text, source_type)
+        .parse()
+        .program;
 
     // Create `Allocator` outside of `bench_function`, so same allocator is used for
     // both the warmup and measurement phases
@@ -78,7 +80,9 @@ fn bench_isolated_declarations(criterion: &mut Criterion) {
 
             // Include dropping `IsolatedDeclarations::build`'s return value in benchmark timing.
             // Drop time is part of the cost of using this API.
-            let options = IsolatedDeclarationsOptions { strip_internal: true };
+            let options = IsolatedDeclarationsOptions {
+                strip_internal: true,
+            };
             runner.run(|| IsolatedDeclarations::new(&output_allocator, options).build(&program));
         });
     });

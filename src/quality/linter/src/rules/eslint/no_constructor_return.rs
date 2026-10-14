@@ -52,7 +52,9 @@ declare_oxc_lint!(
 
 impl Rule for NoConstructorReturn {
     fn run<'a>(&self, node: &AstNode<'a>, ctx: &LintContext<'a>) {
-        let AstKind::ReturnStatement(ret) = node.kind() else { return };
+        let AstKind::ReturnStatement(ret) = node.kind() else {
+            return;
+        };
         if ret.argument.is_none() {
             return;
         }
@@ -66,7 +68,10 @@ impl Rule for NoConstructorReturn {
 fn is_constructor(node: &AstNode<'_>) -> bool {
     matches!(
         node.kind(),
-        AstKind::MethodDefinition(MethodDefinition { kind: MethodDefinitionKind::Constructor, .. })
+        AstKind::MethodDefinition(MethodDefinition {
+            kind: MethodDefinitionKind::Constructor,
+            ..
+        })
     )
 }
 
@@ -113,6 +118,11 @@ fn test() {
         "class C { constructor(a) { if (!a) { return '' } else { a() } } }",
     ];
 
-    Tester::new(NoConstructorReturn::NAME, NoConstructorReturn::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        NoConstructorReturn::NAME,
+        NoConstructorReturn::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

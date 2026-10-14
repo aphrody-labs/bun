@@ -26,19 +26,43 @@ fn decl() {
 
 #[test]
 fn module_decl() {
-    test("export * as foo from 'foo'", "export * as foo from \"foo\";\n");
-    test("import x from './foo.js' with {}", "import x from \"./foo.js\" with {};\n");
-    test("import {} from './foo.js' with {}", "import {} from \"./foo.js\" with {};\n");
-    test("import {} from './a\"b.mjs';", "import {} from \"./a\\\"b.mjs\";\n");
-    test("import {} from './a\\nb.mjs';", "import {} from \"./a\\nb.mjs\";\n");
-    test("export * from './foo.js' with {}", "export * from \"./foo.js\" with {};\n");
+    test(
+        "export * as foo from 'foo'",
+        "export * as foo from \"foo\";\n",
+    );
+    test(
+        "import x from './foo.js' with {}",
+        "import x from \"./foo.js\" with {};\n",
+    );
+    test(
+        "import {} from './foo.js' with {}",
+        "import {} from \"./foo.js\" with {};\n",
+    );
+    test(
+        "import {} from './a\"b.mjs';",
+        "import {} from \"./a\\\"b.mjs\";\n",
+    );
+    test(
+        "import {} from './a\\nb.mjs';",
+        "import {} from \"./a\\nb.mjs\";\n",
+    );
+    test(
+        "export * from './foo.js' with {}",
+        "export * from \"./foo.js\" with {};\n",
+    );
     test(
         "export { default } from './foo.js' with { type: 'json' }",
         "export { default } from \"./foo.js\" with { type: \"json\" };\n",
     );
-    test("export {} from './foo.js' with {}", "export {} from \"./foo.js\" with {};\n");
+    test(
+        "export {} from './foo.js' with {}",
+        "export {} from \"./foo.js\" with {};\n",
+    );
     test_minify("export { '☿' } from 'mod';", "export{\"☿\"}from\"mod\";");
-    test_minify("export { '☿' as '☿' } from 'mod';", "export{\"☿\"}from\"mod\";");
+    test_minify(
+        "export { '☿' as '☿' } from 'mod';",
+        "export{\"☿\"}from\"mod\";",
+    );
     test_minify(
         "import x from './foo.custom' with { 'type': 'json' }",
         "import x from\"./foo.custom\"with{\"type\":\"json\"};",
@@ -58,17 +82,35 @@ fn module_decl() {
 
     // `as` next to a string export/import name needs no space.
     test_minify("export { foo as \"name\" }", "export{foo as\"name\"};");
-    test_minify("import { \"y\" as z } from \"m\"", "import{\"y\"as z}from\"m\";");
-    test_minify("export * as \"ns\" from \"m\"", "export*as\"ns\" from\"m\";");
+    test_minify(
+        "import { \"y\" as z } from \"m\"",
+        "import{\"y\"as z}from\"m\";",
+    );
+    test_minify(
+        "export * as \"ns\" from \"m\"",
+        "export*as\"ns\" from\"m\";",
+    );
     test_minify("export { foo as bar }", "export{foo as bar};");
 }
 
 #[test]
 fn quoted_import_names() {
-    test(r#"import { "foo" as foo } from "m";"#, "import { foo } from \"m\";\n");
-    test(r#"import { "a\u0062" as ab } from "m";"#, "import { ab } from \"m\";\n");
-    test(r#"import { "π" as π } from "m";"#, "import { π } from \"m\";\n");
-    test(r#"import { "type" as type } from "m";"#, "import { type } from \"m\";\n");
+    test(
+        r#"import { "foo" as foo } from "m";"#,
+        "import { foo } from \"m\";\n",
+    );
+    test(
+        r#"import { "a\u0062" as ab } from "m";"#,
+        "import { ab } from \"m\";\n",
+    );
+    test(
+        r#"import { "π" as π } from "m";"#,
+        "import { π } from \"m\";\n",
+    );
+    test(
+        r#"import { "type" as type } from "m";"#,
+        "import { type } from \"m\";\n",
+    );
 
     test_same("import { \"foo-bar\" as foo } from \"m\";\n");
     test_same("import { \"\" as foo } from \"m\";\n");
@@ -78,11 +120,23 @@ fn quoted_import_names() {
         r#"import { "foo" as foo, "bar" as bar, baz } from "m";"#,
         "import { foo, bar, baz } from \"m\";\n",
     );
-    test(r#"import { foo as foo, bar } from "m";"#, "import { foo, bar } from \"m\";\n");
+    test(
+        r#"import { foo as foo, bar } from "m";"#,
+        "import { foo, bar } from \"m\";\n",
+    );
 
-    test_minify(r#"import { "foo" as foo } from "m";"#, r#"import{foo}from"m";"#);
-    test_minify(r#"import { "a\u0062" as ab } from "m";"#, r#"import{ab}from"m";"#);
-    test_minify(r#"import { foo as foo, bar } from "m";"#, r#"import{foo,bar}from"m";"#);
+    test_minify(
+        r#"import { "foo" as foo } from "m";"#,
+        r#"import{foo}from"m";"#,
+    );
+    test_minify(
+        r#"import { "a\u0062" as ab } from "m";"#,
+        r#"import{ab}from"m";"#,
+    );
+    test_minify(
+        r#"import { foo as foo, bar } from "m";"#,
+        r#"import{foo,bar}from"m";"#,
+    );
 }
 
 #[test]
@@ -105,12 +159,21 @@ fn expr() {
         "new class {\n\tfoo() {\n\t\tlet a = foo?.bar().baz;\n\t\treturn a;\n\t}\n}();\n",
     );
 
-    test("1000000000000000128.0.toFixed(0)", "0xde0b6b3a7640080.toFixed(0);\n");
-    test_minify("1000000000000000128.0.toFixed(0)", "0xde0b6b3a7640080.toFixed(0);");
+    test(
+        "1000000000000000128.0.toFixed(0)",
+        "0xde0b6b3a7640080.toFixed(0);\n",
+    );
+    test_minify(
+        "1000000000000000128.0.toFixed(0)",
+        "0xde0b6b3a7640080.toFixed(0);",
+    );
 
     test_minify("throw 'foo'", "throw`foo`;");
     test_minify("function a() { return 'foo' }", "function a(){return`foo`}");
-    test_minify("function a() { return class {} }", "function a(){return class{}}");
+    test_minify(
+        "function a() { return class {} }",
+        "function a(){return class{}}",
+    );
     test_minify(
         "function a() { return async function foo() {} }",
         "function a(){return async function foo(){}}",
@@ -137,8 +200,14 @@ fn expr() {
     test_same("new (f?.()?.g)();\n");
     test("new (f()`g`)();", "new (f())`g`();\n"); // #22961
     test_same("new (import(\"foo\"))();\n");
-    test("new (import(\"foo\").bar)();", "new (import(\"foo\")).bar();\n");
-    test("new (import(\"foo\")`bar`)();", "new (import(\"foo\"))`bar`();\n");
+    test(
+        "new (import(\"foo\").bar)();",
+        "new (import(\"foo\")).bar();\n",
+    );
+    test(
+        "new (import(\"foo\")`bar`)();",
+        "new (import(\"foo\"))`bar`();\n",
+    );
     test("new (a`b`)();", "new a`b`();\n");
     test("new (f().g.h)();", "new (f()).g.h();\n");
     test("new (f[g()])();", "new f[g()]();\n");
@@ -167,8 +236,11 @@ fn private_in() {
 #[test]
 fn private_in_binary_right() {
     fn wrap_case_equal_lower_precedence(op: &str) -> (String, String, String) {
-        let minified_op =
-            if matches!(op, "in" | "instanceof") { format!(" {op} ") } else { op.to_string() };
+        let minified_op = if matches!(op, "in" | "instanceof") {
+            format!(" {op} ")
+        } else {
+            op.to_string()
+        };
         (
             format!("class C {{ #x; test(a, b) {{ return #x in (a {op} b); }} }}"),
             format!("class C {{\n\t#x;\n\ttest(a, b) {{\n\t\treturn #x in (a {op} b);\n\t}}\n}}\n"),
@@ -215,13 +287,20 @@ fn private_in_binary_right() {
         test_minify(&source, &expected_minified);
     }
 
-    for (rhs, minified_rhs) in [("#x in a", "#x in a"), ("a ? a : b", "a?a:b"), ("a, b", "a,b")] {
+    for (rhs, minified_rhs) in [
+        ("#x in a", "#x in a"),
+        ("a ? a : b", "a?a:b"),
+        ("a, b", "a,b"),
+    ] {
         let source = format!("class C {{ #x; test(a, b) {{ return #x in ({rhs}); }} }}");
         test(
             &source,
             &format!("class C {{\n\t#x;\n\ttest(a, b) {{\n\t\treturn #x in ({rhs});\n\t}}\n}}\n"),
         );
-        test_minify(&source, &format!("class C{{#x;test(a,b){{return#x in ({minified_rhs})}}}}"));
+        test_minify(
+            &source,
+            &format!("class C{{#x;test(a,b){{return#x in ({minified_rhs})}}}}"),
+        );
     }
 }
 
@@ -249,9 +328,10 @@ fn private_in_binary_left() {
         test_minify(&source, &expected_minified);
     }
 
-    for (source, expected, expected_minified) in
-        ["<", "<=", ">", ">=", "==", "!=", "===", "!==", "&", "^", "|", "&&", "||", "??"]
-            .map(wrap_case_equal_lower_precedence)
+    for (source, expected, expected_minified) in [
+        "<", "<=", ">", ">=", "==", "!=", "===", "!==", "&", "^", "|", "&&", "||", "??",
+    ]
+    .map(wrap_case_equal_lower_precedence)
     {
         test(&source, &expected);
         test_minify(&source, &expected_minified);
@@ -275,7 +355,10 @@ fn class() {
 
 #[test]
 fn for_stmt() {
-    test("for (let x = 0; x < 10; x++) {}", "for (let x = 0; x < 10; x++) {}\n");
+    test(
+        "for (let x = 0; x < 10; x++) {}",
+        "for (let x = 0; x < 10; x++) {}\n",
+    );
     test("for (;;) {}", "for (;;) {}\n");
     test("for (let x = 1;;) {}", "for (let x = 1;;) {}\n");
     test("for (;true;) {}", "for (; true;) {}\n");
@@ -285,8 +368,14 @@ fn for_stmt() {
 
     //  `in` expression
     test("for (x = (y in z) || y;;);", "for (x = (y in z) || y;;);\n");
-    test("for (x = (y in z) || y || y;;);", "for (x = (y in z) || y || y;;);\n");
-    test("for (x = y || y || (y in z);;);", "for (x = y || y || (y in z);;);\n");
+    test(
+        "for (x = (y in z) || y || y;;);",
+        "for (x = (y in z) || y || y;;);\n",
+    );
+    test(
+        "for (x = y || y || (y in z);;);",
+        "for (x = y || y || (y in z);;);\n",
+    );
     test(
         "for (x = (y in z) || y || (y in z) || y || (y in z);;);",
         "for (x = (y in z) || y || (y in z) || y || (y in z);;);\n",
@@ -324,21 +413,39 @@ fn do_while_stmt() {
     test_minify("do break; while (true)", "do break;while(true);");
     test_minify("do continue; while (true)", "do continue;while(true);");
     test_minify("do debugger; while (true)", "do debugger;while(true);");
-    test_minify("do for(x in y); while (true)", "do for(x in y);while(true);");
-    test_minify("do for(x of y); while (true)", "do for(x of y);while(true);");
+    test_minify(
+        "do for(x in y); while (true)",
+        "do for(x in y);while(true);",
+    );
+    test_minify(
+        "do for(x of y); while (true)",
+        "do for(x of y);while(true);",
+    );
     test_minify("do for(;;); while (true)", "do for(;;);while(true);");
     test_minify("do if (test) {} while (true)", "do if(test){}while(true);");
     test_minify("do foo:; while (true)", "do foo:;while(true);");
-    test_minify("function a() { do return; while (true) }", "function a(){do return;while(true)}");
-    test_minify("do switch(test){} while (true)", "do switch(test){}while(true);");
+    test_minify(
+        "function a() { do return; while (true) }",
+        "function a(){do return;while(true)}",
+    );
+    test_minify(
+        "do switch(test){} while (true)",
+        "do switch(test){}while(true);",
+    );
     test_minify("do throw x; while (true)", "do throw x;while(true);");
     test_minify("do with(x); while (true)", "do with(x);while(true);");
-    test_minify("do try{} catch{} while (true)", "do try{}catch{}while(true);");
+    test_minify(
+        "do try{} catch{} while (true)",
+        "do try{}catch{}while(true);",
+    );
     test_minify(
         "try { x } catch (err) /* v8 ignore next */ { y }",
         "try{x}catch(err)/* v8 ignore next */{y}",
     );
-    test_minify("do do ; while(true) while (true)", "do do;while(true);while(true);");
+    test_minify(
+        "do do ; while(true) while (true)",
+        "do do;while(true);while(true);",
+    );
 }
 
 #[test]
@@ -366,17 +473,32 @@ fn shorthand() {
     test("({ x: (x) })", "({ x });\n");
     test("({ x } = y)", "({x} = y);\n");
     // https://github.com/tc39/test262/blob/05c45a4c430ab6fee3e0c7f0d47d8a30d8876a6d/test/language/expressions/object/__proto__-permitted-dup-shorthand.js
-    test("var obj = { __proto__, __proto__, };", "var obj = {\n\t__proto__,\n\t__proto__\n};\n");
-    test("var obj = { __proto__: __proto__, };", "var obj = { __proto__: __proto__ };\n");
+    test(
+        "var obj = { __proto__, __proto__, };",
+        "var obj = {\n\t__proto__,\n\t__proto__\n};\n",
+    );
+    test(
+        "var obj = { __proto__: __proto__, };",
+        "var obj = { __proto__: __proto__ };\n",
+    );
 }
 
 #[test]
 fn unicode_escape() {
     test("console.log('你好');", "console.log(\"你好\");\n");
-    test("console.log('こんにちは');", "console.log(\"こんにちは\");\n");
-    test("console.log('안녕하세요');", "console.log(\"안녕하세요\");\n");
+    test(
+        "console.log('こんにちは');",
+        "console.log(\"こんにちは\");\n",
+    );
+    test(
+        "console.log('안녕하세요');",
+        "console.log(\"안녕하세요\");\n",
+    );
     test("console.log('🧑‍🤝‍🧑');", "console.log(\"🧑‍🤝‍🧑\");\n");
-    test("console.log(\"\\uD800\\uD801\")", "console.log(\"\\ud800\\ud801\");\n");
+    test(
+        "console.log(\"\\uD800\\uD801\")",
+        "console.log(\"\\ud800\\ud801\");\n",
+    );
 }
 
 #[test]
@@ -397,7 +519,11 @@ fn regex() {
         "/\\n\\cM\\0\\x41\\u{1f600}\\./u;\n",
         "/\\n\\cM\\0\\x41\\u{1f600}\\./u;",
     );
-    test_all(r"/\n\cM\0\x41\./u", "/\\n\\cM\\0\\x41\\./u;\n", "/\\n\\cM\\0\\x41\\./u;");
+    test_all(
+        r"/\n\cM\0\x41\./u",
+        "/\\n\\cM\\0\\x41\\./u;\n",
+        "/\\n\\cM\\0\\x41\\./u;",
+    );
     test_all(
         r"/\n\cM\0\x41\u1234\./",
         "/\\n\\cM\\0\\x41\\u1234\\./;\n",
@@ -429,7 +555,10 @@ fn assignment() {
     test_minify("[a,b] = (1, 2)", "[a,b]=(1,2);");
     // `{a,b}` is a block, must wrap the whole expression to be an assignment expression
     test_minify("({a,b} = (1, 2))", "({a,b}=(1,2));");
-    test_minify("function* foo() { a *= yield b }", "function*foo(){a*=yield b}");
+    test_minify(
+        "function* foo() { a *= yield b }",
+        "function*foo(){a*=yield b}",
+    );
     test_minify("a /= () => {}", "a/=()=>{};");
     test_minify("a %= async () => {}", "a%=async()=>{};");
     test_minify("a -= (1, 2)", "a-=(1,2);");
@@ -440,35 +569,77 @@ fn assignment() {
     test_minify("({ a: x } = foo);", "({a:x}=foo);");
     test_minify("({ [a.b]: x } = foo);", "({[a.b]:x}=foo);");
 
-    test_minify(r#"({"my-key": value} = obj);"#, r#"({"my-key":value}=obj);"#);
+    test_minify(
+        r#"({"my-key": value} = obj);"#,
+        r#"({"my-key":value}=obj);"#,
+    );
     test_minify(
         r#"({["computed"]: a, "literal": b} = obj);"#,
         r#"({["computed"]:a,"literal":b}=obj);"#,
     );
-    test_minify(r#"let {"test-key": testKey} = obj;"#, r#"let{"test-key":testKey}=obj;"#);
+    test_minify(
+        r#"let {"test-key": testKey} = obj;"#,
+        r#"let{"test-key":testKey}=obj;"#,
+    );
 
     test_minify(r#"({ "test-key": key });"#, r#"({"test-key":key});"#);
-    test_minify(r#"(class { "test-key" = key });"#, r#"(class{"test-key"=key});"#);
+    test_minify(
+        r#"(class { "test-key" = key });"#,
+        r#"(class{"test-key"=key});"#,
+    );
 }
 
 #[test]
 fn r#yield() {
-    test("function * foo() { yield * 1 }", "function* foo() {\n\tyield* 1;\n}\n");
+    test(
+        "function * foo() { yield * 1 }",
+        "function* foo() {\n\tyield* 1;\n}\n",
+    );
     test_minify("function *foo() { yield }", "function*foo(){yield}");
-    test_minify("function *foo() { yield * a ? b : c }", "function*foo(){yield*a?b:c}");
-    test_minify("function *foo() { yield * yield * a }", "function*foo(){yield*yield*a}");
-    test_minify("function *foo() { yield * () => {} }", "function*foo(){yield*()=>{}}");
-    test_minify("function *foo() { yield * async () => {} }", "function*foo(){yield*async()=>{}}");
-    test_minify("function *foo() { yield a ? b : c }", "function*foo(){yield a?b:c}");
-    test_minify("function *foo() { yield yield a }", "function*foo(){yield yield a}");
-    test_minify("function *foo() { yield () => {} }", "function*foo(){yield()=>{}}");
-    test_minify("function *foo() { yield async () => {} }", "function*foo(){yield async()=>{}}");
+    test_minify(
+        "function *foo() { yield * a ? b : c }",
+        "function*foo(){yield*a?b:c}",
+    );
+    test_minify(
+        "function *foo() { yield * yield * a }",
+        "function*foo(){yield*yield*a}",
+    );
+    test_minify(
+        "function *foo() { yield * () => {} }",
+        "function*foo(){yield*()=>{}}",
+    );
+    test_minify(
+        "function *foo() { yield * async () => {} }",
+        "function*foo(){yield*async()=>{}}",
+    );
+    test_minify(
+        "function *foo() { yield a ? b : c }",
+        "function*foo(){yield a?b:c}",
+    );
+    test_minify(
+        "function *foo() { yield yield a }",
+        "function*foo(){yield yield a}",
+    );
+    test_minify(
+        "function *foo() { yield () => {} }",
+        "function*foo(){yield()=>{}}",
+    );
+    test_minify(
+        "function *foo() { yield async () => {} }",
+        "function*foo(){yield async()=>{}}",
+    );
     test_minify(
         "function *foo() { yield { a } = [ b ] = c ? b : d }",
         "function*foo(){yield{a}=[b]=c?b:d}",
     );
-    test_minify("function *foo() { yield (a, b) }", "function*foo(){yield(a,b)}");
-    test_minify("function *foo() { yield a, b }", "function*foo(){yield a,b}");
+    test_minify(
+        "function *foo() { yield (a, b) }",
+        "function*foo(){yield(a,b)}",
+    );
+    test_minify(
+        "function *foo() { yield a, b }",
+        "function*foo(){yield a,b}",
+    );
 }
 
 #[test]
@@ -619,16 +790,28 @@ fn import_phase() {
 fn pure_comment() {
     test_same("/* @__PURE__ */ pureOperation();\n");
     test_same("/* @__PURE__ */ new PureConsutrctor();\n");
-    test("/* @__PURE__ */\npureOperation();\n", "/* @__PURE__ */ pureOperation();\n");
+    test(
+        "/* @__PURE__ */\npureOperation();\n",
+        "/* @__PURE__ */ pureOperation();\n",
+    );
     test_same("/* @__PURE__ The comment may contain additional text */ pureOperation();\n");
     test_same(
         "/* #__PURE__ -- @preserve */ pureOperation();\n", // rolldown#9408
     );
-    test("const foo /* #__PURE__ */ = pureOperation();", "const foo = pureOperation();\n"); // INVALID: "=" not allowed after annotation
+    test(
+        "const foo /* #__PURE__ */ = pureOperation();",
+        "const foo = pureOperation();\n",
+    ); // INVALID: "=" not allowed after annotation
 
     test("/* @__PURE__ */ (foo());", "/* @__PURE__ */ foo();\n");
-    test("/* @__PURE__ */ (new Foo());\n", "/* @__PURE__ */ new Foo();\n");
-    test("/*#__PURE__*/ (foo(), bar());", "/*#__PURE__*/ foo(), bar();\n"); // INVALID, there is a comma expression in the parentheses
+    test(
+        "/* @__PURE__ */ (new Foo());\n",
+        "/* @__PURE__ */ new Foo();\n",
+    );
+    test(
+        "/*#__PURE__*/ (foo(), bar());",
+        "/*#__PURE__*/ foo(), bar();\n",
+    ); // INVALID, there is a comma expression in the parentheses
 
     test_same("/* @__PURE__ */ a.b().c.d();\n");
     // PURE applies to the innermost call; codegen wraps to keep the annotation on the call.
@@ -718,17 +901,29 @@ fn in_expr_in_yield_expression() {
             ),
         ] {
             let source = format!("function *g(o) {{ for ({init}; false;); }}");
-            test(&source, &format!("function* g(o) {{\n\tfor ({expected}; false;);\n}}\n"));
-            test_minify(&source, &format!("function*g(o){{for({minified};false;);}}"));
+            test(
+                &source,
+                &format!("function* g(o) {{\n\tfor ({expected}; false;);\n}}\n"),
+            );
+            test_minify(
+                &source,
+                &format!("function*g(o){{for({minified};false;);}}"),
+            );
             crate::test_idempotency(&source);
             crate::test_idempotency_options(
                 &source,
-                &CodegenOptions { minify: true, ..CodegenOptions::default() },
+                &CodegenOptions {
+                    minify: true,
+                    ..CodegenOptions::default()
+                },
             );
         }
 
         let source = format!("function *g(o) {{ {keyword} (1 in o); }}");
-        test(&source, &format!("function* g(o) {{\n\t{keyword} 1 in o;\n}}\n"));
+        test(
+            &source,
+            &format!("function* g(o) {{\n\t{keyword} 1 in o;\n}}\n"),
+        );
         test_minify(&source, &format!("function*g(o){{{prefix}1 in o}}"));
     }
 }
@@ -737,12 +932,21 @@ fn in_expr_in_yield_expression() {
 fn in_expr_in_arrow_function_expression() {
     test("() => ('foo' in bar)", "() => \"foo\" in bar;\n");
     test("() => 'foo' in bar", "() => \"foo\" in bar;\n");
-    test("() => { ('foo' in bar) }", "() => {\n\t\"foo\" in bar;\n};\n");
+    test(
+        "() => { ('foo' in bar) }",
+        "() => {\n\t\"foo\" in bar;\n};\n",
+    );
 
     // A parenthesized arrow resets FORBID_IN, so its concise body / param default
     // does not need extra parentheses around `in` (was `(() => (a in b))`).
-    test("for (x = (() => a in b);;);", "for (x = (() => a in b);;);\n");
-    test("for (x = ((a = b in c) => 1);;);", "for (x = ((a = b in c) => 1);;);\n");
+    test(
+        "for (x = (() => a in b);;);",
+        "for (x = (() => a in b);;);\n",
+    );
+    test(
+        "for (x = ((a = b in c) => 1);;);",
+        "for (x = ((a = b in c) => 1);;);\n",
+    );
 }
 
 #[test]
@@ -776,7 +980,10 @@ fn big_int() {
     test("0xaef_en;", "44798n;\n");
     test("0xaefen;", "44798n;\n");
 
-    test("function a() { return 1n }", "function a() {\n\treturn 1n;\n}\n");
+    test(
+        "function a() { return 1n }",
+        "function a() {\n\treturn 1n;\n}\n",
+    );
     test_minify("function a() { return 1n }", "function a(){return 1n}");
 }
 
@@ -815,10 +1022,16 @@ fn big_int_minify() {
 
 #[test]
 fn directive() {
-    let single_quote = CodegenOptions { single_quote: true, ..CodegenOptions::default() };
+    let single_quote = CodegenOptions {
+        single_quote: true,
+        ..CodegenOptions::default()
+    };
     test_options("\"'\"", "\"'\";\n", single_quote.clone());
     test_options("'\"'", "'\"';\n", single_quote);
-    let double_quote = CodegenOptions { single_quote: false, ..CodegenOptions::default() };
+    let double_quote = CodegenOptions {
+        single_quote: false,
+        ..CodegenOptions::default()
+    };
     test_options("\"'\"", "\"'\";\n", double_quote.clone());
     test_options("'\"'", "'\"';\n", double_quote.clone());
     test_options(r#""'\"""#, "\"'\\\"\";\n", double_quote);
@@ -848,7 +1061,10 @@ fn directive_prologue_boundary() {
     // after it cannot be a directive
     test_same("(\"a\");\n\"b\";\n");
     test("foo();\n(\"a\");\n", "foo();\n\"a\";\n");
-    test("\"use strict\";\nfoo();\n(\"a\");\n", "\"use strict\";\nfoo();\n\"a\";\n");
+    test(
+        "\"use strict\";\nfoo();\n(\"a\");\n",
+        "\"use strict\";\nfoo();\n\"a\";\n",
+    );
 }
 
 #[test]
@@ -988,12 +1204,24 @@ fn print_string() {
         codegen.into_source_text()
     }
 
-    assert_eq!(print("hello \"world\"", CodegenOptions::default()), r#""hello \"world\"""#);
     assert_eq!(
-        print("hello 'world'", CodegenOptions { single_quote: true, ..Default::default() }),
+        print("hello \"world\"", CodegenOptions::default()),
+        r#""hello \"world\"""#
+    );
+    assert_eq!(
+        print(
+            "hello 'world'",
+            CodegenOptions {
+                single_quote: true,
+                ..Default::default()
+            }
+        ),
         r"'hello \'world\''"
     );
-    assert_eq!(print("line\n\u{00a0}🦄", CodegenOptions::default()), "\"line\\n\\xA0🦄\"");
+    assert_eq!(
+        print("line\n\u{00a0}🦄", CodegenOptions::default()),
+        "\"line\\n\\xA0🦄\""
+    );
     assert_eq!(print("\"\"''", CodegenOptions::minify()), r#""\"\"''""#);
     assert_eq!(print("\"\"''${", CodegenOptions::minify()), r#""\"\"''${""#);
 }
@@ -1058,7 +1286,10 @@ fn indentation() {
     test_options(
         "let foo = 1;",
         "\tlet foo = 1;\n",
-        CodegenOptions { initial_indent: 1, ..CodegenOptions::default() },
+        CodegenOptions {
+            initial_indent: 1,
+            ..CodegenOptions::default()
+        },
     );
 }
 
@@ -1085,7 +1316,16 @@ fn template_literal_escape_when_building_ast() {
         &ast,
     );
     let stmt = Statement::new_expression_statement(SPAN, expr, &ast);
-    let program = Program::new(SPAN, oxc_span::SourceType::mjs(), "", [], None, [], [stmt], &ast);
+    let program = Program::new(
+        SPAN,
+        oxc_span::SourceType::mjs(),
+        "",
+        [],
+        None,
+        [],
+        [stmt],
+        &ast,
+    );
 
     let result = Codegen::new().build(&program).code;
     // The raw value should have been escaped by template_element with escape_raw: true
@@ -1168,12 +1408,20 @@ fn template_literal_dollar_escapes() {
             } else {
                 r"`é$<\/script>${value}$é`;"
             },
-            CodegenOptions { minify: true, ascii_only, ..CodegenOptions::default() },
+            CodegenOptions {
+                minify: true,
+                ascii_only,
+                ..CodegenOptions::default()
+            },
         );
         test_options(
             r"String.raw`é\$`;",
             r"String.raw`é\$`;",
-            CodegenOptions { minify: true, ascii_only, ..CodegenOptions::default() },
+            CodegenOptions {
+                minify: true,
+                ascii_only,
+                ..CodegenOptions::default()
+            },
         );
     }
 }

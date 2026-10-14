@@ -10,7 +10,14 @@ use crate::{
 #[derive(Debug, Default, Clone)]
 pub struct PreferToContain;
 
-declare_oxc_lint!(PreferToContain, vitest, style, fix, docs = DOCUMENTATION, version = "0.2.14",);
+declare_oxc_lint!(
+    PreferToContain,
+    vitest,
+    style,
+    fix,
+    docs = DOCUMENTATION,
+    version = "0.2.14",
+);
 
 impl Rule for PreferToContain {
     fn run_on_jest_node<'a, 'c>(
@@ -85,17 +92,35 @@ fn tests() {
         ("expect(a.includes(b)).not.toStrictEqual(false);", None),
         ("expect(a.includes(b)).not.toStrictEqual(true);", None),
         ("expect(a.test(t).includes(b.test(p))).toEqual(true);", None),
-        ("expect(a.test(t).includes(b.test(p))).toEqual(false);", None),
-        ("expect(a.test(t).includes(b.test(p))).not.toEqual(true);", None),
-        ("expect(a.test(t).includes(b.test(p))).not.toEqual(false);", None),
+        (
+            "expect(a.test(t).includes(b.test(p))).toEqual(false);",
+            None,
+        ),
+        (
+            "expect(a.test(t).includes(b.test(p))).not.toEqual(true);",
+            None,
+        ),
+        (
+            "expect(a.test(t).includes(b.test(p))).not.toEqual(false);",
+            None,
+        ),
         ("expect([{a:1}].includes({b:1})).toBe(true);", None),
         ("expect([{a:1}].includes({a:1})).toBe(false);", None),
         ("expect([{a:1}].includes({a:1})).not.toBe(true);", None),
         ("expect([{a:1}].includes({a:1})).not.toBe(false);", None),
         ("expect([{a:1}].includes({a:1})).toStrictEqual(true);", None),
-        ("expect([{a:1}].includes({a:1})).toStrictEqual(false);", None),
-        ("expect([{a:1}].includes({a:1})).not.toStrictEqual(true);", None),
-        ("expect([{a:1}].includes({a:1})).not.toStrictEqual(false);", None),
+        (
+            "expect([{a:1}].includes({a:1})).toStrictEqual(false);",
+            None,
+        ),
+        (
+            "expect([{a:1}].includes({a:1})).not.toStrictEqual(true);",
+            None,
+        ),
+        (
+            "expect([{a:1}].includes({a:1})).not.toStrictEqual(false);",
+            None,
+        ),
         (
             "
                 import { expect as pleaseExpect } from '@jest/globals';
@@ -118,25 +143,101 @@ fn tests() {
 
     #[expect(clippy::literal_string_with_formatting_args)]
     let fix = vec![
-        ("expect(a.includes(b)).toEqual(true);", "expect(a).toContain(b);", None),
-        ("expect(a.includes(b,),).toEqual(true,)", "expect(a).toContain(b)", None),
-        ("expect(a['includes'](b)).toEqual(true);", "expect(a).toContain(b);", None),
-        ("expect(a['includes'](b))['toEqual'](true);", "expect(a).toContain(b);", None),
-        ("expect(a['includes'](b)).toEqual(false);", "expect(a).not.toContain(b);", None),
-        ("expect(a['includes'](b)).not.toEqual(false);", "expect(a).toContain(b);", None),
-        ("expect(a['includes'](b))['not'].toEqual(false);", "expect(a).toContain(b);", None),
-        ("expect(a['includes'](b))['not']['toEqual'](false);", "expect(a).toContain(b);", None),
-        ("expect(a.includes(b)).toEqual(false);", "expect(a).not.toContain(b);", None),
-        ("expect(a.includes(b)).not.toEqual(false);", "expect(a).toContain(b);", None),
-        ("expect(a.includes(b)).not.toEqual(true);", "expect(a).not.toContain(b);", None),
-        ("expect(a.includes(b)).toBe(true);", "expect(a).toContain(b);", None),
-        ("expect(a.includes(b)).toBe(false);", "expect(a).not.toContain(b);", None),
-        ("expect(a.includes(b)).not.toBe(false);", "expect(a).toContain(b);", None),
-        ("expect(a.includes(b)).not.toBe(true);", "expect(a).not.toContain(b);", None),
-        ("expect(a.includes(b)).toStrictEqual(true);", "expect(a).toContain(b);", None),
-        ("expect(a.includes(b)).toStrictEqual(false);", "expect(a).not.toContain(b);", None),
-        ("expect(a.includes(b)).not.toStrictEqual(false);", "expect(a).toContain(b);", None),
-        ("expect(a.includes(b)).not.toStrictEqual(true);", "expect(a).not.toContain(b);", None),
+        (
+            "expect(a.includes(b)).toEqual(true);",
+            "expect(a).toContain(b);",
+            None,
+        ),
+        (
+            "expect(a.includes(b,),).toEqual(true,)",
+            "expect(a).toContain(b)",
+            None,
+        ),
+        (
+            "expect(a['includes'](b)).toEqual(true);",
+            "expect(a).toContain(b);",
+            None,
+        ),
+        (
+            "expect(a['includes'](b))['toEqual'](true);",
+            "expect(a).toContain(b);",
+            None,
+        ),
+        (
+            "expect(a['includes'](b)).toEqual(false);",
+            "expect(a).not.toContain(b);",
+            None,
+        ),
+        (
+            "expect(a['includes'](b)).not.toEqual(false);",
+            "expect(a).toContain(b);",
+            None,
+        ),
+        (
+            "expect(a['includes'](b))['not'].toEqual(false);",
+            "expect(a).toContain(b);",
+            None,
+        ),
+        (
+            "expect(a['includes'](b))['not']['toEqual'](false);",
+            "expect(a).toContain(b);",
+            None,
+        ),
+        (
+            "expect(a.includes(b)).toEqual(false);",
+            "expect(a).not.toContain(b);",
+            None,
+        ),
+        (
+            "expect(a.includes(b)).not.toEqual(false);",
+            "expect(a).toContain(b);",
+            None,
+        ),
+        (
+            "expect(a.includes(b)).not.toEqual(true);",
+            "expect(a).not.toContain(b);",
+            None,
+        ),
+        (
+            "expect(a.includes(b)).toBe(true);",
+            "expect(a).toContain(b);",
+            None,
+        ),
+        (
+            "expect(a.includes(b)).toBe(false);",
+            "expect(a).not.toContain(b);",
+            None,
+        ),
+        (
+            "expect(a.includes(b)).not.toBe(false);",
+            "expect(a).toContain(b);",
+            None,
+        ),
+        (
+            "expect(a.includes(b)).not.toBe(true);",
+            "expect(a).not.toContain(b);",
+            None,
+        ),
+        (
+            "expect(a.includes(b)).toStrictEqual(true);",
+            "expect(a).toContain(b);",
+            None,
+        ),
+        (
+            "expect(a.includes(b)).toStrictEqual(false);",
+            "expect(a).not.toContain(b);",
+            None,
+        ),
+        (
+            "expect(a.includes(b)).not.toStrictEqual(false);",
+            "expect(a).toContain(b);",
+            None,
+        ),
+        (
+            "expect(a.includes(b)).not.toStrictEqual(true);",
+            "expect(a).not.toContain(b);",
+            None,
+        ),
         (
             "expect(a.test(t).includes(b.test(p))).toEqual(true);",
             "expect(a.test(t)).toContain(b.test(p));",
@@ -205,8 +306,16 @@ fn tests() {
 			pleaseExpect([{ a: 1 }]).toContain({ a: 1 });",
             None,
         ),
-        ("expect(a.includes(b)).toEqual(false as boolean);", "expect(a).not.toContain(b);", None),
-        ("expect(a.includes(b,),).toEqual(true,);", "expect(a).toContain(b);", None),
+        (
+            "expect(a.includes(b)).toEqual(false as boolean);",
+            "expect(a).not.toContain(b);",
+            None,
+        ),
+        (
+            "expect(a.includes(b,),).toEqual(true,);",
+            "expect(a).toContain(b);",
+            None,
+        ),
         (
             "import { expect as pleaseExpect } from 'vitest';
                 pleaseExpect([{a:1}].includes({a:1})).not.toStrictEqual(false);",

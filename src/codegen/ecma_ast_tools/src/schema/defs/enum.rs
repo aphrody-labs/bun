@@ -101,7 +101,9 @@ impl EnumDef {
 
     /// Get plural type name.
     pub fn plural_name(&self) -> String {
-        self.plural_name.clone().unwrap_or_else(|| pluralize(self.name()))
+        self.plural_name
+            .clone()
+            .unwrap_or_else(|| pluralize(self.name()))
     }
 
     /// Get plural type name in snake case.
@@ -120,7 +122,9 @@ impl EnumDef {
     ///
     /// [`all_inherits`]: Self::all_inherits
     pub fn inherits_enums<'s>(&'s self, schema: &'s Schema) -> impl Iterator<Item = &'s EnumDef> {
-        self.inherits.iter().map(|&type_id| schema.enum_def(type_id))
+        self.inherits
+            .iter()
+            .map(|&type_id| schema.enum_def(type_id))
     }
 
     /// Get iterator over all enums this enum inherits variants from, transitively, in depth-first pre-order.
@@ -319,7 +323,10 @@ pub struct AllInheritsIter<'s> {
 impl<'s> AllInheritsIter<'s> {
     /// Create new [`AllInheritsIter`].
     fn new(enum_def: &'s EnumDef, schema: &'s Schema) -> Self {
-        Self { schema, stack: vec![enum_def.inherits.iter()] }
+        Self {
+            schema,
+            stack: vec![enum_def.inherits.iter()],
+        }
     }
 }
 

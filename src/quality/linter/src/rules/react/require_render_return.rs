@@ -71,7 +71,8 @@ declare_oxc_lint!(
     react,
     nursery,
     version = "0.2.0",
-    short_description = "Require render methods in ES5 and ES2015 React components to return a value.",
+    short_description =
+        "Require render methods in ES5 and ES2015 React components to return a value.",
 );
 
 impl Rule for RequireRenderReturn {
@@ -358,6 +359,11 @@ fn test() {
          ",
     ];
 
-    Tester::new(RequireRenderReturn::NAME, RequireRenderReturn::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        RequireRenderReturn::NAME,
+        RequireRenderReturn::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

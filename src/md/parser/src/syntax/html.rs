@@ -67,7 +67,10 @@ fn attribute(bytes: &[u8], mut i: usize, newlines: bool) -> Option<usize> {
     } else {
         let start = i;
         while bytes.get(i).copied().is_some_and(|c| {
-            !matches!(c, b' ' | b'\t' | b'\n' | b'"' | b'\'' | b'=' | b'<' | b'>' | b'`')
+            !matches!(
+                c,
+                b' ' | b'\t' | b'\n' | b'"' | b'\'' | b'=' | b'<' | b'>' | b'`'
+            )
         }) {
             i += 1;
         }

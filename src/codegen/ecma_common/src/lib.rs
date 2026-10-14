@@ -17,7 +17,10 @@ pub use crate::{
 /// # Panics
 /// Invalid Project Root
 pub fn project_root() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR")).join("../../..").canonicalize().expect("Bun workspace root")
+    Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../..")
+        .canonicalize()
+        .expect("Bun workspace root")
 }
 
 /// Normalizes the path when on Windows to using forward slash delimiters.

@@ -33,7 +33,11 @@ impl TrailingSeparator {
     /// `AllowedWhenBreaking` when `allow` (the variant + user option permit a trailing comma),
     /// otherwise `Disallowed`.
     pub fn when_breaking(allow: bool) -> Self {
-        if allow { Self::AllowedWhenBreaking } else { Self::Disallowed }
+        if allow {
+            Self::AllowedWhenBreaking
+        } else {
+            Self::Disallowed
+        }
     }
 }
 
@@ -187,8 +191,14 @@ fn write_break_after(start: u32, curr_start: u32, f: &mut JsonFormatter<'_, '_>)
 /// newlines before that comma are ignored (`1\n,2` is layout style, not grouping).
 /// After the comma the slice doesn't contain it and we count raw newlines.
 fn has_blank_line(start: u32, curr_start: u32, f: &JsonFormatter<'_, '_>) -> bool {
-    let Some(slice) = gap_slice(start, curr_start, f) else { return false };
-    if slice.contains(&b',') { blank_line_after_comma(slice) } else { count_newlines(slice) >= 2 }
+    let Some(slice) = gap_slice(start, curr_start, f) else {
+        return false;
+    };
+    if slice.contains(&b',') {
+        blank_line_after_comma(slice)
+    } else {
+        count_newlines(slice) >= 2
+    }
 }
 
 /// Returns the source byte slice from `start` to the first pending leading comment of `curr`
@@ -216,6 +226,8 @@ fn gap_slice<'a>(start: u32, curr_start: u32, f: &JsonFormatter<'_, 'a>) -> Opti
 pub fn blank_line_after_comma(between: &[u8]) -> bool {
     // Count only the line terminators following the first (separator) comma.
     // `count_newlines` is CR/CRLF-aware, keeping this consistent with core newline detection.
-    let Some(comma) = between.iter().position(|&b| b == b',') else { return false };
+    let Some(comma) = between.iter().position(|&b| b == b',') else {
+        return false;
+    };
     count_newlines(&between[comma + 1..]) >= 2
 }

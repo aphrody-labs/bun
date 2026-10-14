@@ -250,7 +250,10 @@ impl FormatElement<'_> {
     }
 
     pub const fn is_text(&self) -> bool {
-        matches!(self, FormatElement::Text { .. } | FormatElement::Token { .. })
+        matches!(
+            self,
+            FormatElement::Text { .. } | FormatElement::Token { .. }
+        )
     }
 
     pub const fn is_space(&self) -> bool {
@@ -334,7 +337,9 @@ impl<'a> BestFittingElement<'a> {
             "Requires at least the least expanded and most expanded variants"
         );
 
-        Self { variants: variants.into_arena_slice() }
+        Self {
+            variants: variants.into_arena_slice(),
+        }
     }
 
     /// Returns the most expanded variant
@@ -448,10 +453,17 @@ impl TextWidth {
 
     /// Encodes width and multiline flag into a single u32.
     const fn encode(width: u32, multiline: bool) -> u32 {
-        debug_assert!(width <= Self::WIDTH_MASK, "width exceeds maximum representable value");
+        debug_assert!(
+            width <= Self::WIDTH_MASK,
+            "width exceeds maximum representable value"
+        );
 
         // Set multiline flag if needed
-        if multiline { width | Self::MULTILINE_MASK } else { width }
+        if multiline {
+            width | Self::MULTILINE_MASK
+        } else {
+            width
+        }
     }
 
     /// Creates a single-line text width.
@@ -527,7 +539,11 @@ impl TextWidth {
     /// (Prettier's `literallineWithoutBreakParent`). No-op for single-line widths.
     #[must_use]
     pub const fn without_expand_parent(self) -> Self {
-        if self.is_multiline() { Self(self.0 | Self::NO_EXPAND_MASK) } else { self }
+        if self.is_multiline() {
+            Self(self.0 | Self::NO_EXPAND_MASK)
+        } else {
+            self
+        }
     }
 
     /// Returns true if the text forces enclosing groups to expand:

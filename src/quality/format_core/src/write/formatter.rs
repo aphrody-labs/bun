@@ -23,9 +23,9 @@ pub fn intern_exact<'ast>(
         // Doesn't get cheaper than calling clone, use the element directly
         1 => elements.next(),
         // The exact size hint makes `from_iter_in` allocate exactly-sized
-        _ => Some(FormatElement::Interned(Interned::new(ArenaVec::from_iter_in(
-            elements, &allocator,
-        )))),
+        _ => Some(FormatElement::Interned(Interned::new(
+            ArenaVec::from_iter_in(elements, &allocator),
+        ))),
     }
 }
 

@@ -33,9 +33,10 @@ impl<'a> Parse<'a> for PageSelector<'a> {
 
         loop {
             match input.cursor.peek()? {
-                TokenWithSpan { token: Token::Colon(..) | Token::ColonColon(..), span }
-                    if span.start == end =>
-                {
+                TokenWithSpan {
+                    token: Token::Colon(..) | Token::ColonColon(..),
+                    span,
+                } if span.start == end => {
                     let item = input.parse::<PseudoPage>()?;
                     end = item.span.end;
                     pseudo.push(item);
@@ -44,7 +45,11 @@ impl<'a> Parse<'a> for PageSelector<'a> {
             }
         }
 
-        Ok(PageSelector { name, pseudo, span: Span { start, end } })
+        Ok(PageSelector {
+            name,
+            pseudo,
+            span: Span { start, end },
+        })
     }
 }
 
@@ -64,7 +69,11 @@ impl<'a> Parse<'a> for PageSelectorList<'a> {
         if let Some(last) = selectors.last() {
             span.end = last.span.end;
         }
-        Ok(PageSelectorList { selectors, comma_spans, span })
+        Ok(PageSelectorList {
+            selectors,
+            comma_spans,
+            span,
+        })
     }
 }
 
@@ -85,7 +94,10 @@ impl<'a> Parse<'a> for PseudoPage<'a> {
         let mut end = name_span.end;
 
         let arg = match input.cursor.peek()? {
-            TokenWithSpan { token: Token::LParen(..), span } if span.start == end => {
+            TokenWithSpan {
+                token: Token::LParen(..),
+                span,
+            } if span.start == end => {
                 input.cursor.bump()?;
                 let tokens = input.parse_tokens_in_parens()?;
                 end = input.cursor.expect_r_paren()?.1.end;
@@ -94,7 +106,10 @@ impl<'a> Parse<'a> for PseudoPage<'a> {
             _ => None,
         };
 
-        let span = Span { start: colon_span.start, end };
+        let span = Span {
+            start: colon_span.start,
+            end,
+        };
         Ok(PseudoPage { name, arg, span })
     }
 }

@@ -143,7 +143,10 @@ impl<'a> SymbolLiveness<'a> {
                 implicitly_observable.set_bit(symbol_id.index());
             }
         }
-        Self { implicitly_observable, recursive_functions: None }
+        Self {
+            implicitly_observable,
+            recursive_functions: None,
+        }
     }
 
     #[inline]
@@ -153,7 +156,9 @@ impl<'a> SymbolLiveness<'a> {
 
     #[inline]
     pub fn function_is_dead(&self, symbol_id: SymbolId) -> bool {
-        self.recursive_functions.as_ref().is_some_and(|graph| graph.is_dead(symbol_id))
+        self.recursive_functions
+            .as_ref()
+            .is_some_and(|graph| graph.is_dead(symbol_id))
     }
 
     fn mark_implicitly_observable(&mut self, symbol_id: SymbolId) {
@@ -178,7 +183,9 @@ impl<'a> SymbolLiveness<'a> {
         let Some(symbol_id) = function.id.as_ref().and_then(|id| id.symbol_id.get()) else {
             return;
         };
-        let Some(scope_id) = function.scope_id.get() else { return };
+        let Some(scope_id) = function.scope_id.get() else {
+            return;
+        };
 
         let binding_scope_id = scoping.symbol_scope_id(symbol_id);
 
@@ -205,13 +212,16 @@ impl<'a> SymbolLiveness<'a> {
             return;
         }
 
-        let graph =
-            self.recursive_functions.get_or_insert_with(|| FunctionGraph::new(scoping, allocator));
+        let graph = self
+            .recursive_functions
+            .get_or_insert_with(|| FunctionGraph::new(scoping, allocator));
         graph.register(scope_id, symbol_id);
     }
 
     fn analyze(&mut self, scoping: &Scoping) -> bool {
-        let Some(graph) = &mut self.recursive_functions else { return false };
+        let Some(graph) = &mut self.recursive_functions else {
+            return false;
+        };
         graph.analyze(scoping, &self.implicitly_observable)
     }
 
@@ -268,9 +278,12 @@ impl<'a> FunctionGraph<'a> {
     /// means the scope is not inside any registered function, so references
     /// there make their target unconditionally live.
     fn owner(&self, scoping: &Scoping, scope_id: ScopeId) -> Option<SymbolId> {
-        scoping
-            .scope_ancestors(scope_id)
-            .find_map(|scope_id| self.function_by_scope.get(scope_id.index()).copied().flatten())
+        scoping.scope_ancestors(scope_id).find_map(|scope_id| {
+            self.function_by_scope
+                .get(scope_id.index())
+                .copied()
+                .flatten()
+        })
     }
 
     /// Rebuild current reachability and report whether this run published any
@@ -280,7 +293,10 @@ impl<'a> FunctionGraph<'a> {
             // The minifier may remove direct eval but must never create one,
             // so a graph that already published dead functions cannot get
             // here.
-            debug_assert!(self.dead.is_empty(), "direct eval formed after liveness was published");
+            debug_assert!(
+                self.dead.is_empty(),
+                "direct eval formed after liveness was published"
+            );
             // In release builds, stop later passes from consuming more
             // invalidated deadness. Declarations already removed cannot be
             // restored if a transform violated the direct-eval contract.
@@ -439,9 +455,11 @@ impl<'a> GraphScratch<'a> {
     fn propagate_liveness(&mut self, candidates: &BitSet<'_>) {
         // References owned by functions no longer in the graph cannot
         // propagate. Targets of count-live owners were seeded before this call.
-        self.owned_references.retain(|(owner, _)| candidates.contains(owner.index()));
+        self.owned_references
+            .retain(|(owner, _)| candidates.contains(owner.index()));
         // Group references by owner for `mark_targets_live`.
-        self.owned_references.sort_unstable_by_key(|&(owner, _)| owner.index());
+        self.owned_references
+            .sort_unstable_by_key(|&(owner, _)| owner.index());
         while let Some(owner) = self.live_worklist.pop() {
             if !candidates.contains(owner.index()) {
                 // The owner may have been seeded before it was untracked; its
@@ -493,7 +511,9 @@ pub fn register_using_declaration(
 /// Normalize hook: record runtime bindings exposed by an exported declaration.
 pub fn register_export_declaration(declaration: &ExportDeclaration<'_>, ctx: &mut TraverseCtx<'_>) {
     let TraverseCtx { state, .. } = ctx;
-    let Some(liveness) = state.symbols.liveness_mut() else { return };
+    let Some(liveness) = state.symbols.liveness_mut() else {
+        return;
+    };
     if !declaration.export_kind().is_type() {
         liveness.mark_bound_names(&declaration.declaration);
     }
@@ -506,13 +526,19 @@ pub fn register_named_export(declaration: &ExportNamedDeclaration<'_>, ctx: &mut
     }
 
     let TraverseCtx { state, scoping, .. } = ctx;
-    let Some(liveness) = state.symbols.liveness_mut() else { return };
+    let Some(liveness) = state.symbols.liveness_mut() else {
+        return;
+    };
     for specifier in &declaration.specifiers {
         if specifier.export_kind.is_type() {
             continue;
         }
-        let ModuleExportName::IdentifierReference(local) = &specifier.local else { continue };
-        let Some(reference_id) = local.reference_id.get() else { continue };
+        let ModuleExportName::IdentifierReference(local) = &specifier.local else {
+            continue;
+        };
+        let Some(reference_id) = local.reference_id.get() else {
+            continue;
+        };
         let reference = scoping.scoping().get_reference(reference_id);
         if reference.flags().is_type_only() {
             continue;
@@ -558,8 +584,12 @@ pub fn register_default_export(
 /// cannot resurrect a published dead function, so additions alone need no
 /// recompute. Scope-only rewrites preserve the nearest function owner.
 pub fn dead_references_affect_analysis(ctx: &TraverseCtx<'_>) -> bool {
-    let Some(liveness) = ctx.state.symbols.liveness() else { return false };
-    let Some(graph) = &liveness.recursive_functions else { return false };
+    let Some(liveness) = ctx.state.symbols.liveness() else {
+        return false;
+    };
+    let Some(graph) = &liveness.recursive_functions else {
+        return false;
+    };
     // The analysis is disabled while the root scope contains direct eval, so
     // removed references cannot affect it. The flag may be stale if this pass
     // dropped the last eval (flags refresh after this check), but that drop
@@ -584,7 +614,12 @@ pub fn analyze<'a>(program: &Program<'a>, ctx: &mut TraverseCtx<'a>, recompute: 
     let _ = program;
 
     #[cfg(debug_assertions)]
-    if let Some(dead) = ctx.state.symbols.liveness().and_then(SymbolLiveness::dead_functions) {
+    if let Some(dead) = ctx
+        .state
+        .symbols
+        .liveness()
+        .and_then(SymbolLiveness::dead_functions)
+    {
         debug_assert_dead_function_declarations_removed(program, ctx.scoping(), dead);
     }
 
@@ -593,7 +628,10 @@ pub fn analyze<'a>(program: &Program<'a>, ctx: &mut TraverseCtx<'a>, recompute: 
     }
 
     let TraverseCtx { state, scoping, .. } = ctx;
-    state.symbols.liveness_mut().is_some_and(|liveness| liveness.analyze(scoping.scoping()))
+    state
+        .symbols
+        .liveness_mut()
+        .is_some_and(|liveness| liveness.analyze(scoping.scoping()))
 }
 
 /// Debug contract for previously published graph deadness: it is consumed only

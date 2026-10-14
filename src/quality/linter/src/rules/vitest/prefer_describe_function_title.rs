@@ -435,8 +435,13 @@ fn test() {
             None,
         ),
     ];
-    Tester::new(PreferDescribeFunctionTitle::NAME, PreferDescribeFunctionTitle::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .with_vitest_plugin(true)
-        .test_and_snapshot();
+    Tester::new(
+        PreferDescribeFunctionTitle::NAME,
+        PreferDescribeFunctionTitle::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .with_vitest_plugin(true)
+    .test_and_snapshot();
 }

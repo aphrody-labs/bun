@@ -113,11 +113,10 @@ impl Rule for NoBarrelFile {
                 && let Some(count) = count_loaded_modules(&remote_module)
             {
                 total += count;
-                labels.push(
-                    module_request
-                        .span
-                        .label(format!("{count} module{}", if count > 1 { "s" } else { "" })),
-                );
+                labels.push(module_request.span.label(format!(
+                    "{count} module{}",
+                    if count > 1 { "s" } else { "" }
+                )));
             }
         }
 
@@ -150,14 +149,23 @@ fn test() {
     let pass = vec![
         (r#"export type * from "foo";"#, None),
         (r#"export type { foo } from "foo";"#, None),
-        (r#"export type * from "foo"; export type { bar } from "bar";"#, None),
-        (r#"import { foo, bar, baz } from "../import/export-star/models";"#, None),
+        (
+            r#"export type * from "foo"; export type { bar } from "bar";"#,
+            None,
+        ),
+        (
+            r#"import { foo, bar, baz } from "../import/export-star/models";"#,
+            None,
+        ),
         (
             r#"import boo from "foo";
                     const test = 0;"#,
             Some(serde_json::json!([{"threshold": 0}])),
         ),
-        (r"export const test = 0;", Some(serde_json::json!([{"threshold": 0}]))),
+        (
+            r"export const test = 0;",
+            Some(serde_json::json!([{"threshold": 0}])),
+        ),
         (
             r"export const test = 0;
             export const other = 1;",

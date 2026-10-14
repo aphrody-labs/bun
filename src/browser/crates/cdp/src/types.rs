@@ -23,11 +23,21 @@ pub struct CdpResponse {
 
 impl CdpResponse {
     pub fn success(id: u64, result: serde_json::Value, session_id: Option<String>) -> Self {
-        CdpResponse { id, result: Some(result), error: None, session_id }
+        CdpResponse {
+            id,
+            result: Some(result),
+            error: None,
+            session_id,
+        }
     }
 
     pub fn error(id: u64, code: i64, message: String, session_id: Option<String>) -> Self {
-        CdpResponse { id, result: None, error: Some(CdpError { code, message }), session_id }
+        CdpResponse {
+            id,
+            result: None,
+            error: Some(CdpError { code, message }),
+            session_id,
+        }
     }
 }
 
@@ -47,10 +57,18 @@ pub struct CdpEvent {
 
 impl CdpEvent {
     pub fn new(method: &str, params: serde_json::Value) -> Self {
-        CdpEvent { method: method.to_string(), params, session_id: None }
+        CdpEvent {
+            method: method.to_string(),
+            params,
+            session_id: None,
+        }
     }
 
     pub fn with_session(method: &str, params: serde_json::Value, session_id: String) -> Self {
-        CdpEvent { method: method.to_string(), params, session_id: Some(session_id) }
+        CdpEvent {
+            method: method.to_string(),
+            params,
+            session_id: Some(session_id),
+        }
     }
 }

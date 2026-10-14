@@ -40,16 +40,20 @@ impl AtomicCounter {
     }
 
     fn increment(&self) {
-        self.0.update(SeqCst, SeqCst, |count| count.saturating_add(1));
+        self.0
+            .update(SeqCst, SeqCst, |count| count.saturating_add(1));
     }
 
     /// Add `n` to the counter, returning the new value.
     fn add(&self, n: usize) -> usize {
-        self.0.update(SeqCst, SeqCst, |count| count.saturating_add(n)).saturating_add(n)
+        self.0
+            .update(SeqCst, SeqCst, |count| count.saturating_add(n))
+            .saturating_add(n)
     }
 
     fn sub(&self, n: usize) {
-        self.0.update(SeqCst, SeqCst, |count| count.saturating_sub(n));
+        self.0
+            .update(SeqCst, SeqCst, |count| count.saturating_sub(n));
     }
 
     /// Raise the counter to `value` if it is currently lower.
@@ -308,7 +312,10 @@ pub fn run() -> Result<(), io::Error> {
 
     let mut allocator = Allocator::default();
 
-    let parse_options = ParseOptions { parse_regular_expression: true, ..ParseOptions::default() };
+    let parse_options = ParseOptions {
+        parse_regular_expression: true,
+        ..ParseOptions::default()
+    };
     let minifier_options = MinifierOptions {
         mangle: Some(MangleOptions::default()),
         mangle_properties: None,
@@ -332,9 +339,12 @@ pub fn run() -> Result<(), io::Error> {
             .semantic
             .into_scoping();
         let transform_options = TransformOptions::from_target("esnext").unwrap();
-        let _ =
-            Transformer::new(&allocator, std::path::Path::new(&file.file_name), &transform_options)
-                .build_with_scoping(scoping, &mut parsed.program);
+        let _ = Transformer::new(
+            &allocator,
+            std::path::Path::new(&file.file_name),
+            &transform_options,
+        )
+        .build_with_scoping(scoping, &mut parsed.program);
 
         Minifier::new(minifier_options.clone()).minify(&allocator, &mut parsed.program);
 
@@ -366,7 +376,9 @@ pub fn run() -> Result<(), io::Error> {
         parser_entries.push((file, parser_stats));
 
         let ((), semantic_stats) = record_stats_in(&allocator, || {
-            let _ = SemanticBuilder::new().with_enum_eval(true).build(&parsed.program);
+            let _ = SemanticBuilder::new()
+                .with_enum_eval(true)
+                .build(&parsed.program);
         });
 
         semantic_entries.push((file, semantic_stats));
@@ -417,11 +429,26 @@ pub fn run() -> Result<(), io::Error> {
         formatter_entries.push((file, formatter_stats));
     }
 
-    write_snapshot("src/codegen/ecma_track_memory_allocations/allocs_parser.yaml", &parser_entries)?;
-    write_snapshot("src/codegen/ecma_track_memory_allocations/allocs_semantic.yaml", &semantic_entries)?;
-    write_snapshot("src/codegen/ecma_track_memory_allocations/allocs_transformer.yaml", &transformer_entries)?;
-    write_snapshot("src/codegen/ecma_track_memory_allocations/allocs_minifier.yaml", &minifier_entries)?;
-    write_snapshot("src/codegen/ecma_track_memory_allocations/allocs_formatter.yaml", &formatter_entries)?;
+    write_snapshot(
+        "src/codegen/ecma_track_memory_allocations/allocs_parser.yaml",
+        &parser_entries,
+    )?;
+    write_snapshot(
+        "src/codegen/ecma_track_memory_allocations/allocs_semantic.yaml",
+        &semantic_entries,
+    )?;
+    write_snapshot(
+        "src/codegen/ecma_track_memory_allocations/allocs_transformer.yaml",
+        &transformer_entries,
+    )?;
+    write_snapshot(
+        "src/codegen/ecma_track_memory_allocations/allocs_minifier.yaml",
+        &minifier_entries,
+    )?;
+    write_snapshot(
+        "src/codegen/ecma_track_memory_allocations/allocs_formatter.yaml",
+        &formatter_entries,
+    )?;
 
     Ok(())
 }
@@ -436,7 +463,10 @@ impl Counters {
         #[cfg(feature = "is_all_features")]
         let (allocs, reallocs) = (0, 0);
 
-        Self { heap, arena: ArenaCounters { allocs, reallocs } }
+        Self {
+            heap,
+            arena: ArenaCounters { allocs, reallocs },
+        }
     }
 
     /// Counters accumulated since `prev` was recorded. This is useful for measuring
@@ -531,11 +561,19 @@ enum MetricKind {
 
 impl Metric {
     fn count(label: &'static str, value: usize) -> Self {
-        Self { label, value, kind: MetricKind::Count }
+        Self {
+            label,
+            value,
+            kind: MetricKind::Count,
+        }
     }
 
     fn bytes(label: &'static str, value: usize, tolerance: usize) -> Self {
-        Self { label, value, kind: MetricKind::Bytes { tolerance } }
+        Self {
+            label,
+            value,
+            kind: MetricKind::Bytes { tolerance },
+        }
     }
 
     /// The value to record in the snapshot, given the committed value (if any).
@@ -549,7 +587,11 @@ impl Metric {
         let Some(committed) = committed.and_then(|value| usize::try_from(value).ok()) else {
             return self.value;
         };
-        if self.value.abs_diff(committed) <= tolerance { committed } else { self.value }
+        if self.value.abs_diff(committed) <= tolerance {
+            committed
+        } else {
+            self.value
+        }
     }
 }
 
@@ -595,7 +637,12 @@ fn render_file_stats(
         match metric.kind {
             MetricKind::Count => writeln!(out, "  {}: {value}", metric.label),
             MetricKind::Bytes { .. } => {
-                writeln!(out, "  {}: {value} # {}", metric.label, format_size(value, DECIMAL))
+                writeln!(
+                    out,
+                    "  {}: {value} # {}",
+                    metric.label,
+                    format_size(value, DECIMAL)
+                )
             }
         }
         .unwrap();

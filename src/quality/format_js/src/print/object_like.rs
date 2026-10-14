@@ -59,10 +59,12 @@ impl<'a> ObjectLike<'a, '_> {
     fn members_have_leading_newline(&self, f: &JsFormatter<'_, 'a>) -> bool {
         match self {
             Self::ObjectExpression(o) => o.as_ref().properties.first().is_some_and(|p| {
-                f.source_text().contains_newline_between(o.span.start, p.span().start)
+                f.source_text()
+                    .contains_newline_between(o.span.start, p.span().start)
             }),
             Self::TSTypeLiteral(o) => o.as_ref().members.first().is_some_and(|p| {
-                f.source_text().contains_newline_between(o.span().start, p.span().start)
+                f.source_text()
+                    .contains_newline_between(o.span().start, p.span().start)
             }),
         }
     }
@@ -92,7 +94,10 @@ impl<'a> Format<'a, JsFormatContext<'a>> for ObjectLike<'a, '_> {
             // Soft indent so the object can stay on one line if it fits:
             // a single one-line block comment stays inline without bracket spacing
             // line comments and multiple comments still expand.
-            write!(f, format_dangling_comments(self.span()).with_soft_block_indent());
+            write!(
+                f,
+                format_dangling_comments(self.span()).with_soft_block_indent()
+            );
         } else {
             let should_insert_space_around_brackets = f.options().bracket_spacing.value();
             let should_expand =

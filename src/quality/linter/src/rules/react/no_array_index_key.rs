@@ -92,7 +92,13 @@ fn check_react_clone_element<'a>(
     node: &'a AstNode,
     ctx: &'a LintContext,
 ) {
-    if !is_method_call(call_expr, Some(&["React"]), Some(&["cloneElement"]), Some(2), Some(3)) {
+    if !is_method_call(
+        call_expr,
+        Some(&["React"]),
+        Some(&["cloneElement"]),
+        Some(2),
+        Some(3),
+    ) {
         return;
     }
     let Some(Argument::ObjectExpression(obj_expr)) = call_expr.arguments.get(1) else {
@@ -129,7 +135,11 @@ fn check_react_clone_element<'a>(
 
 fn is_index_reference(ctx: &LintContext, symbol_id: SymbolId, expr: &Expression) -> bool {
     if let Expression::Identifier(ident) = expr.get_inner_expression()
-        && ctx.scoping().get_reference(ident.reference_id()).symbol_id() == Some(symbol_id)
+        && ctx
+            .scoping()
+            .get_reference(ident.reference_id())
+            .symbol_id()
+            == Some(symbol_id)
     {
         return true;
     }
@@ -155,9 +165,10 @@ fn expression_uses_index(ctx: &LintContext, symbol_id: SymbolId, expr: &Expressi
 
     match expr {
         // key={`abc${index}`}
-        Expression::TemplateLiteral(tmpl) => {
-            tmpl.expressions.iter().any(|e| is_index_reference(ctx, symbol_id, e))
-        }
+        Expression::TemplateLiteral(tmpl) => tmpl
+            .expressions
+            .iter()
+            .any(|e| is_index_reference(ctx, symbol_id, e)),
         // key={1 + index}
         Expression::BinaryExpression(bin) => binary_expression_uses_index(ctx, symbol_id, bin),
         Expression::CallExpression(call) => {
@@ -188,7 +199,9 @@ fn expression_uses_index(ctx: &LintContext, symbol_id: SymbolId, expr: &Expressi
 fn jsx_expression_uses_index(ctx: &LintContext, symbol_id: SymbolId, expr: &JSXExpression) -> bool {
     match expr {
         JSXExpression::EmptyExpression(_) => false,
-        _ => expr.as_expression().is_some_and(|e| expression_uses_index(ctx, symbol_id, e)),
+        _ => expr
+            .as_expression()
+            .is_some_and(|e| expression_uses_index(ctx, symbol_id, e)),
     }
 }
 
@@ -217,27 +230,30 @@ fn find_index_param_symbol_id_by_position(
     call_expr: &CallExpression,
     position: usize,
 ) -> Option<SymbolId> {
-    call_expr.arguments.first().and_then(|argument| match argument {
-        Argument::ArrowFunctionExpression(arrow_fn_expr) => Some(
-            arrow_fn_expr
-                .params
-                .items
-                .get(position)?
-                .pattern
-                .get_binding_identifier()
-                .map(BindingIdentifier::symbol_id)?,
-        ),
-        Argument::FunctionExpression(regular_fn_expr) => Some(
-            regular_fn_expr
-                .params
-                .items
-                .get(position)?
-                .pattern
-                .get_binding_identifier()
-                .map(BindingIdentifier::symbol_id)?,
-        ),
-        _ => None,
-    })
+    call_expr
+        .arguments
+        .first()
+        .and_then(|argument| match argument {
+            Argument::ArrowFunctionExpression(arrow_fn_expr) => Some(
+                arrow_fn_expr
+                    .params
+                    .items
+                    .get(position)?
+                    .pattern
+                    .get_binding_identifier()
+                    .map(BindingIdentifier::symbol_id)?,
+            ),
+            Argument::FunctionExpression(regular_fn_expr) => Some(
+                regular_fn_expr
+                    .params
+                    .items
+                    .get(position)?
+                    .pattern
+                    .get_binding_identifier()
+                    .map(BindingIdentifier::symbol_id)?,
+            ),
+            _ => None,
+        })
 }
 
 impl Rule for NoArrayIndexKey {

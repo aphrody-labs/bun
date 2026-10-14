@@ -63,7 +63,9 @@ pub struct ConsistentFunctionScoping {
 
 impl Default for ConsistentFunctionScoping {
     fn default() -> Self {
-        Self { check_arrow_functions: true }
+        Self {
+            check_arrow_functions: true,
+        }
     }
 }
 
@@ -225,7 +227,9 @@ impl ConsistentFunctionScoping {
 
                     // NOTE: function.body will always be some here because of
                     // checks in `is_typescript_syntax`
-                    let Some(function_body) = &function.body else { return };
+                    let Some(function_body) = &function.body else {
+                        return;
+                    };
 
                     if let Some(binding_ident) = get_function_like_declaration(node, ctx) {
                         (
@@ -268,8 +272,13 @@ impl ConsistentFunctionScoping {
 
         // if the function is declared at the root scope or in a TS
         // module/namespace block, we don't need to check anything
-        let scope = ctx.scoping().symbol_scope_id(function_declaration_symbol_id);
-        if ctx.scoping().scope_flags(scope).intersects(ScopeFlags::Top | ScopeFlags::TsModuleBlock)
+        let scope = ctx
+            .scoping()
+            .symbol_scope_id(function_declaration_symbol_id);
+        if ctx
+            .scoping()
+            .scope_flags(scope)
+            .intersects(ScopeFlags::Top | ScopeFlags::TsModuleBlock)
         {
             return;
         }
@@ -319,15 +328,21 @@ impl ConsistentFunctionScoping {
         let parent_scope_flags = ctx.scoping().scope_flags(parent_scope_id);
         for reference_id in function_var_references {
             let reference = ctx.scoping().get_reference(reference_id);
-            let Some(symbol_id) = reference.symbol_id() else { continue };
+            let Some(symbol_id) = reference.symbol_id() else {
+                continue;
+            };
             if ctx.scoping().symbol_flags(symbol_id).is_import()
-                || captures.last_checked_in.insert(symbol_id, function_scope_id)
+                || captures
+                    .last_checked_in
+                    .insert(symbol_id, function_scope_id)
                     == Some(function_scope_id)
             {
                 continue;
             }
             let scope_id = ctx.scoping().symbol_scope_id(symbol_id);
-            if ctx.scoping().scope_is_descendant_of(function_scope_id, scope_id)
+            if ctx
+                .scoping()
+                .scope_is_descendant_of(function_scope_id, scope_id)
                 && symbol_id != function_declaration_symbol_id
             {
                 // Both class declarations and expressions have an internal self binding.
@@ -391,14 +406,19 @@ impl CaptureCache {
         if references.is_empty() {
             return false;
         }
-        let private_scopes = self.private_scopes.get_or_init(|| private_reference_scopes(ctx));
+        let private_scopes = self
+            .private_scopes
+            .get_or_init(|| private_reference_scopes(ctx));
         // A declaration must move past class bodies to reach an outer statement scope.
         let destination_scope_id = ctx
             .scoping()
             .scope_ancestors(parent_scope_id)
             .skip(1)
             .find(|&id| {
-                !matches!(ctx.nodes().kind(ctx.scoping().get_node_id(id)), AstKind::Class(_))
+                !matches!(
+                    ctx.nodes().kind(ctx.scoping().get_node_id(id)),
+                    AstKind::Class(_)
+                )
             })
             .unwrap_or_else(|| ctx.scoping().root_scope_id());
         for reference_id in references {
@@ -406,9 +426,13 @@ impl CaptureCache {
                 continue;
             };
             // Classes declared inside the candidate move together with it.
-            if !ctx.scoping().scope_is_descendant_of(class_scope_id, function_scope_id)
+            if !ctx
+                .scoping()
+                .scope_is_descendant_of(class_scope_id, function_scope_id)
                 && destination_scope_id != class_scope_id
-                && !ctx.scoping().scope_is_descendant_of(destination_scope_id, class_scope_id)
+                && !ctx
+                    .scoping()
+                    .scope_is_descendant_of(destination_scope_id, class_scope_id)
             {
                 return true;
             }
@@ -439,7 +463,9 @@ fn private_reference_scopes(ctx: &LintContext) -> FxHashMap<NodeId, ScopeId> {
     // Private references use a separate semantic table from ordinary identifier references.
     let mut private_definitions = FxHashMap::default();
     for (class_id, &node_id) in ctx.classes().iter_enumerated() {
-        let AstKind::Class(class) = ctx.nodes().kind(node_id) else { continue };
+        let AstKind::Class(class) = ctx.nodes().kind(node_id) else {
+            continue;
+        };
         for element in &ctx.classes().elements[class_id] {
             if element.is_private {
                 private_definitions.insert((class_id, element.name.as_ref()), class.scope_id());
@@ -544,7 +570,10 @@ impl<'a> Visit<'a> for ReferencesFinder {
 fn is_parent_scope_iife<'a>(node: &AstNode<'a>, ctx: &LintContext<'a>) -> bool {
     if let Some(parent_node) = outermost_paren_parent(node, ctx)
         && let Some(parent_node) = outermost_paren_parent(parent_node, ctx)
-        && matches!(parent_node.kind(), AstKind::Function(_) | AstKind::ArrowFunctionExpression(_))
+        && matches!(
+            parent_node.kind(),
+            AstKind::Function(_) | AstKind::ArrowFunctionExpression(_)
+        )
         && let Some(call_node) = outermost_paren_parent(parent_node, ctx)
         && let AstKind::CallExpression(call) = call_node.kind()
     {
@@ -606,13 +635,15 @@ fn get_short_span_for_fn_scope(
 
     debug_assert!(!scoping.scope_flags(scope_id).contains(ScopeFlags::Top));
 
-    let scope_id =
-        match ctx.nodes().parent_kind(ctx.scoping().symbol_declaration(function_symbol_id)) {
-            AstKind::AssignmentExpression(_) | AstKind::ObjectProperty(_) => {
-                ctx.scoping().scope_parent_id(scope_id).unwrap_or(scope_id)
-            }
-            _ => scope_id,
-        };
+    let scope_id = match ctx
+        .nodes()
+        .parent_kind(ctx.scoping().symbol_declaration(function_symbol_id))
+    {
+        AstKind::AssignmentExpression(_) | AstKind::ObjectProperty(_) => {
+            ctx.scoping().scope_parent_id(scope_id).unwrap_or(scope_id)
+        }
+        _ => scope_id,
+    };
 
     let node_creating_parent_scope = ctx.nodes().get_node(scoping.get_node_id(scope_id));
 
@@ -665,7 +696,10 @@ fn test() {
         ("const doFoo = function() {};", None),
         ("const doFoo = foo => foo;", None),
         ("foo => foo;", None),
-        ("function doFoo(foo) { function doBar(bar) { return foo + bar; } return foo; }", None),
+        (
+            "function doFoo(foo) { function doBar(bar) { return foo + bar; } return foo; }",
+            None,
+        ),
         (
             "const doFoo = function(foo) {
                 function doBar(bar) {
@@ -731,7 +765,10 @@ fn test() {
             }",
             None,
         ),
-        ("for (let foo = 0; foo < 1; foo++) { function doBar(bar) { return bar + foo; } }", None),
+        (
+            "for (let foo = 0; foo < 1; foo++) { function doBar(bar) { return bar + foo; } }",
+            None,
+        ),
         (
             "let foo = 0;
             function doFoo() {
@@ -780,13 +817,31 @@ fn test() {
             None,
         ),
         ("function doFoo() { return function doBar() {}; }", None),
-        ("function doFoo(Foo) { function doBar() { return new Foo(); } return doBar; };", None),
-        ("function doFoo(FooComponent) { return <FooComponent />; } ", None),
+        (
+            "function doFoo(Foo) { function doBar() { return new Foo(); } return doBar; };",
+            None,
+        ),
+        (
+            "function doFoo(FooComponent) { return <FooComponent />; } ",
+            None,
+        ),
         ("const foo = <JSX/>;", None),
-        ("function foo() { function bar() { return <JSX a={foo()}/>; } }", None),
-        ("function doFoo(Foo) { const doBar = () => this; return doBar(); };", None),
-        ("function doFoo(Foo) { const doBar = () => () => this; return doBar(); };", None),
-        ("function doFoo(Foo) { const doBar = () => () => () => this; return doBar(); };", None),
+        (
+            "function foo() { function bar() { return <JSX a={foo()}/>; } }",
+            None,
+        ),
+        (
+            "function doFoo(Foo) { const doBar = () => this; return doBar(); };",
+            None,
+        ),
+        (
+            "function doFoo(Foo) { const doBar = () => () => this; return doBar(); };",
+            None,
+        ),
+        (
+            "function doFoo(Foo) { const doBar = () => () => () => this; return doBar(); };",
+            None,
+        ),
         ("useEffect(() => { function foo() {} }, []) ", None),
         ("React.useEffect(() => { function foo() {} }, [])", None),
         ("(function() { function bar() {} })();", None),
@@ -795,7 +850,10 @@ fn test() {
         ("(() => { function bar() {} })();", None),
         ("(async function() { function bar() {} })();", None),
         (" (async function * () { function bar() {} })();", None),
-        ("function doFoo() { const doBar = (function(bar) { return bar; })(); }", None),
+        (
+            "function doFoo() { const doBar = (function(bar) { return bar; })(); }",
+            None,
+        ),
         (
             "const enrichErrors = (packageName, cliArgs, f) => async (...args) => {
                 try {
@@ -915,7 +973,10 @@ fn test() {
         ),
         // https://github.com/oxc-project/oxc/pull/4948#issuecomment-2295819822
         ("t.throws(() => receiveString(function a() {}), {})", None),
-        ("function test () { t.throws(() => receiveString(function a() {}), {}) }", None),
+        (
+            "function test () { t.throws(() => receiveString(function a() {}), {}) }",
+            None,
+        ),
         ("function foo() { let x = new Bar(function b() {}) }", None),
         ("module.exports = function foo() {};", None),
         ("module.exports.foo = function foo() {};", None),
@@ -977,7 +1038,10 @@ fn test() {
             ",
             None,
         ),
-        ("function outer() { { let x; var inner = () => x; } return inner; }", None),
+        (
+            "function outer() { { let x; var inner = () => x; } return inner; }",
+            None,
+        ),
         (
             "const shared = 1;
             function outer() {
@@ -1194,7 +1258,10 @@ fn test() {
             None,
         ),
         ("function foo() { function bar() { return <JSX/>; } }", None),
-        ("function doFoo(Foo) { const doBar = () => arguments; return doBar(); };", None),
+        (
+            "function doFoo(Foo) { const doBar = () => arguments; return doBar(); };",
+            None,
+        ),
         (
             "let inner;
 
@@ -1223,8 +1290,14 @@ fn test() {
             }",
             None,
         ),
-        ("function doFoo() { function doBar(bar) { return bar; } }", None),
-        ("const doFoo = function() { function doBar(bar) { return bar; } };", None),
+        (
+            "function doFoo() { function doBar(bar) { return bar; } }",
+            None,
+        ),
+        (
+            "const doFoo = function() { function doBar(bar) { return bar; } };",
+            None,
+        ),
         (
             "const doFoo = function() {
                 const doBar = function(bar) {
@@ -1233,10 +1306,22 @@ fn test() {
             };",
             None,
         ),
-        ("function doFoo() { const doBar = function(bar) { return bar; }; }", None),
-        ("function doFoo() { const doBar = function(bar) { return bar; }; doBar(); }", None),
-        ("const doFoo = () => { const doBar = bar => { return bar; } }", None),
-        ("function doFoo(Foo) { function doBar() { return this; } return doBar(); };", None),
+        (
+            "function doFoo() { const doBar = function(bar) { return bar; }; }",
+            None,
+        ),
+        (
+            "function doFoo() { const doBar = function(bar) { return bar; }; doBar(); }",
+            None,
+        ),
+        (
+            "const doFoo = () => { const doBar = bar => { return bar; } }",
+            None,
+        ),
+        (
+            "function doFoo(Foo) { function doBar() { return this; } return doBar(); };",
+            None,
+        ),
         (
             "function doFoo(Foo) { const doBar = () => (function() {return this})(); return doBar(); };",
             None,
@@ -1283,9 +1368,15 @@ fn test() {
             None,
         ),
         ("function doFoo() { function doBar() {} }", None),
-        ("function doFoo(foo) { { { function doBar(bar) { return bar; } } } return foo; }", None),
+        (
+            "function doFoo(foo) { { { function doBar(bar) { return bar; } } } return foo; }",
+            None,
+        ),
         ("{ { function doBar(bar) { return bar; } } }", None),
-        ("for (let foo = 0; foo < 1; foo++) { function doBar(bar) { return bar; } }", None),
+        (
+            "for (let foo = 0; foo < 1; foo++) { function doBar(bar) { return bar; } }",
+            None,
+        ),
         ("function foo() { function bar() {} }", None),
         ("function foo() { async function bar() {} }", None),
         ("function foo() { function* bar() {} }", None),
@@ -1392,7 +1483,10 @@ fn test() {
         ("function foo() { function * bar() {} }", None),
         ("function foo() { async function * bar() {} }", None),
         // ("const doFoo = () => bar => bar;", None),
-        ("function outer() { const inner = function inner() {}; }", None),
+        (
+            "function outer() { const inner = function inner() {}; }",
+            None,
+        ),
         (
             "export namespace Foo { export function outer() { const inner = function inner() {}; } }",
             None,
@@ -1570,8 +1664,13 @@ fn test() {
         ),
     ];
 
-    Tester::new(ConsistentFunctionScoping::NAME, ConsistentFunctionScoping::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        ConsistentFunctionScoping::NAME,
+        ConsistentFunctionScoping::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }
 
 #[test]

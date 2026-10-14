@@ -132,7 +132,9 @@ impl NoRedundantRoles {
     fn is_allowed_redundant_role(&self, element: &str, role: &str) -> bool {
         match self.0.allowed_redundant_roles.get(element) {
             Some(roles) => roles.iter().any(|r| r == role),
-            None => DEFAULT_ROLE_EXCEPTIONS.iter().any(|&(el, r)| el == element && r == role),
+            None => DEFAULT_ROLE_EXCEPTIONS
+                .iter()
+                .any(|&(el, r)| el == element && r == role),
         }
     }
 }
@@ -152,13 +154,17 @@ fn get_redundant_implicit_role(
         // dependent. eslint-plugin-jsx-a11y omits these elements from its
         // implicit-role lookup for the same reason. See #22743.
         "header" | "footer" | "main" | "address" => None,
-        "body" => explicit_role.eq_ignore_ascii_case("document").then_some("document"),
+        "body" => explicit_role
+            .eq_ignore_ascii_case("document")
+            .then_some("document"),
         "img" => get_img_implicit_role(jsx_el)
             .filter(|implicit_role| explicit_role.eq_ignore_ascii_case(implicit_role)),
         "input" => get_input_implicit_role(jsx_el, explicit_role),
         "select" => {
             let implicit_role = get_select_implicit_role(jsx_el);
-            explicit_role.eq_ignore_ascii_case(implicit_role).then_some(implicit_role)
+            explicit_role
+                .eq_ignore_ascii_case(implicit_role)
+                .then_some(implicit_role)
         }
         _ => get_element_implicit_roles(element)
             .into_iter()
@@ -248,15 +254,25 @@ fn get_input_implicit_role(
         || input_type.eq_ignore_ascii_case("reset")
         || input_type.eq_ignore_ascii_case("submit")
     {
-        explicit_role.eq_ignore_ascii_case("button").then_some("button")
+        explicit_role
+            .eq_ignore_ascii_case("button")
+            .then_some("button")
     } else if input_type.eq_ignore_ascii_case("checkbox") {
-        explicit_role.eq_ignore_ascii_case("checkbox").then_some("checkbox")
+        explicit_role
+            .eq_ignore_ascii_case("checkbox")
+            .then_some("checkbox")
     } else if input_type.eq_ignore_ascii_case("radio") {
-        explicit_role.eq_ignore_ascii_case("radio").then_some("radio")
+        explicit_role
+            .eq_ignore_ascii_case("radio")
+            .then_some("radio")
     } else if input_type.eq_ignore_ascii_case("range") {
-        explicit_role.eq_ignore_ascii_case("slider").then_some("slider")
+        explicit_role
+            .eq_ignore_ascii_case("slider")
+            .then_some("slider")
     } else if input_type.eq_ignore_ascii_case("number") {
-        explicit_role.eq_ignore_ascii_case("spinbutton").then_some("spinbutton")
+        explicit_role
+            .eq_ignore_ascii_case("spinbutton")
+            .then_some("spinbutton")
     } else if input_type.eq_ignore_ascii_case("search") {
         if explicit_role.eq_ignore_ascii_case("searchbox") {
             Some("searchbox")
@@ -309,7 +325,11 @@ fn test() {
         ("<MyComponent role='button' />", None, None),
         ("<button role={`${foo}button`} />", None, None),
         ("<Button role={`${foo}button`} />", None, Some(settings())),
-        (r#"<select role="menu"><option>1</option><option>2</option></select>"#, None, None),
+        (
+            r#"<select role="menu"><option>1</option><option>2</option></select>"#,
+            None,
+            None,
+        ),
         (
             r#"<select role="menu" size={2}><option>1</option><option>2</option></select>"#,
             None,
@@ -350,11 +370,19 @@ fn test() {
             Some(serde_json::json!([{ "ul": ["list"], "ol": ["list"] }])),
             None,
         ),
-        (r#"<li role="listitem" />"#, Some(serde_json::json!([{ "li": ["listitem"] }])), None),
+        (
+            r#"<li role="listitem" />"#,
+            Some(serde_json::json!([{ "li": ["listitem"] }])),
+            None,
+        ),
         // Ancestor-dependent elements: implicit role cannot be determined
         // from a single opening element, so do not flag. See #22743.
         (r#"<header role="banner" />"#, None, None),
-        (r#"<header role="banner" aria-label="Editor topbar">Topbar</header>"#, None, None),
+        (
+            r#"<header role="banner" aria-label="Editor topbar">Topbar</header>"#,
+            None,
+            None,
+        ),
         (r#"<footer role="contentinfo" />"#, None, None),
         (r#"<main role="main" />"#, None, None),
         (r#"<main role="main"><p>Content</p></main>"#, None, None),
@@ -396,11 +424,31 @@ fn test() {
         (r#"<select role="combobox" size="" />"#, None, None),
         (r#"<select role="combobox" size={1} />"#, None, None),
         (r#"<select role="combobox" size="1" />"#, None, None),
-        (r#"<select role="combobox" size={null}></select>"#, None, None),
-        (r#"<select role="combobox" size={undefined}></select>"#, None, None),
-        (r#"<select role="combobox" multiple={undefined}></select>"#, None, None),
-        (r#"<select role="combobox" multiple={false}></select>"#, None, None),
-        (r#"<select role="combobox" multiple=""></select>"#, None, None),
+        (
+            r#"<select role="combobox" size={null}></select>"#,
+            None,
+            None,
+        ),
+        (
+            r#"<select role="combobox" size={undefined}></select>"#,
+            None,
+            None,
+        ),
+        (
+            r#"<select role="combobox" multiple={undefined}></select>"#,
+            None,
+            None,
+        ),
+        (
+            r#"<select role="combobox" multiple={false}></select>"#,
+            None,
+            None,
+        ),
+        (
+            r#"<select role="combobox" multiple=""></select>"#,
+            None,
+            None,
+        ),
         (r#"<select role="listbox" size="3" />"#, None, None),
         (r#"<select role="listbox" size={2} />"#, None, None),
         (
@@ -408,7 +456,11 @@ fn test() {
             None,
             None,
         ),
-        (r#"<select role="listbox" multiple={true}></select>"#, None, None),
+        (
+            r#"<select role="listbox" multiple={true}></select>"#,
+            None,
+            None,
+        ),
         (r#"<table role="table" />"#, None, None),
         (r#"<tbody role="rowgroup" />"#, None, None),
         (r#"<td role="cell" />"#, None, None),
@@ -423,12 +475,24 @@ fn test() {
         (r#"<progress role="progressbar" />"#, None, None),
         (r#"<tr role="row" />"#, None, None),
         // An option for a different element does not suppress this one.
-        (r#"<ul role="list" />"#, Some(serde_json::json!([{ "li": ["listitem"] }])), None),
+        (
+            r#"<ul role="list" />"#,
+            Some(serde_json::json!([{ "li": ["listitem"] }])),
+            None,
+        ),
         // A user-provided option overrides the default exception for that element.
-        (r#"<nav role="navigation" />"#, Some(serde_json::json!([{ "nav": [] }])), None),
+        (
+            r#"<nav role="navigation" />"#,
+            Some(serde_json::json!([{ "nav": [] }])),
+            None,
+        ),
         // Attribute-narrowed implicit roles for <input>:
         (r#"<input list="opts" role="combobox" />"#, None, None),
-        (r#"<input type="search" list="opts" role="combobox" />"#, None, None),
+        (
+            r#"<input type="search" list="opts" role="combobox" />"#,
+            None,
+            None,
+        ),
         (r#"<input type="checkbox" role="checkbox" />"#, None, None),
         (r#"<input type={"checkbox"} role="checkbox" />"#, None, None),
         (r#"<input type="radio" role="radio" />"#, None, None),
@@ -437,7 +501,11 @@ fn test() {
         (r#"<input type="search" role="searchbox" />"#, None, None),
         (r#"<input type="text" role="textbox" />"#, None, None),
         (r#"<input role="textbox" />"#, None, None),
-        (r#"<input type="email" list="opts" role="combobox" />"#, None, None),
+        (
+            r#"<input type="email" list="opts" role="combobox" />"#,
+            None,
+            None,
+        ),
         (r#"<input type="button" role="button" />"#, None, None),
         (r#"<input type="image" role="button" />"#, None, None),
         (r#"<input type="reset" role="button" />"#, None, None),
@@ -446,9 +514,18 @@ fn test() {
 
     let fix = vec![
         ("<button role='button' />", "<button  />"),
-        ("<button role='button'>Foo</button>", "<button >Foo</button>"),
-        ("<button role='button' data-role='bar' />", "<button  data-role='bar' />"),
-        ("<button data-role='bar' role='button' />", "<button data-role='bar'  />"),
+        (
+            "<button role='button'>Foo</button>",
+            "<button >Foo</button>",
+        ),
+        (
+            "<button role='button' data-role='bar' />",
+            "<button  data-role='bar' />",
+        ),
+        (
+            "<button data-role='bar' role='button' />",
+            "<button data-role='bar'  />",
+        ),
         (
             "<button role='button'>
               Foo
@@ -460,9 +537,18 @@ fn test() {
         // Note: prior fixtures for `<main role='main' />` and
         // `<header role='banner' />` were removed because those roles are
         // ancestor-dependent and no longer flagged. See #22743.
-        (r#"<input type="checkbox" role="checkbox" />"#, r#"<input type="checkbox"  />"#),
-        (r#"<input list="opts" role="combobox" />"#, r#"<input list="opts"  />"#),
-        (r#"<input type="submit" role="button" />"#, r#"<input type="submit"  />"#),
+        (
+            r#"<input type="checkbox" role="checkbox" />"#,
+            r#"<input type="checkbox"  />"#,
+        ),
+        (
+            r#"<input list="opts" role="combobox" />"#,
+            r#"<input list="opts"  />"#,
+        ),
+        (
+            r#"<input type="submit" role="button" />"#,
+            r#"<input type="submit"  />"#,
+        ),
     ];
 
     Tester::new(NoRedundantRoles::NAME, NoRedundantRoles::PLUGIN, pass, fail)

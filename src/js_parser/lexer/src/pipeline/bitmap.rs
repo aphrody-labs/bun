@@ -64,7 +64,11 @@ pub(super) unsafe fn bm_prev1(bm: *const u64, p: usize) -> i64 {
     let i = p - 1;
     let mut w = (i >> 6) as i64;
     let lim = i & 63;
-    let mask = if lim == 63 { !0u64 } else { (1u64 << (lim + 1)) - 1 };
+    let mask = if lim == 63 {
+        !0u64
+    } else {
+        (1u64 << (lim + 1)) - 1
+    };
     let x = *bm.add(w as usize) & mask;
     if x != 0 {
         return (w << 6) + (63 - x.leading_zeros() as i64);
@@ -119,7 +123,11 @@ pub(super) unsafe fn bm_clear_range(bm: *mut u64, a: usize, b: usize) {
     let wa = a >> 6;
     let wb = b >> 6;
     let lo = (!0u64) << (a & 63);
-    let hi = if (b & 63) == 63 { !0u64 } else { (1u64 << ((b & 63) + 1)) - 1 };
+    let hi = if (b & 63) == 63 {
+        !0u64
+    } else {
+        (1u64 << ((b & 63) + 1)) - 1
+    };
     if wa == wb {
         *bm.add(wa) &= !(lo & hi);
         return;

@@ -139,7 +139,12 @@ impl GraphicalReportHandler {
     pub(super) fn line_visual_char_width(text: &str) -> impl Iterator<Item = usize> + '_ + use<'_> {
         let graphemes = (!text.is_ascii()).then(|| text.grapheme_indices(true).peekable());
 
-        CharWidthIterator { chars: text.char_indices(), graphemes, column: 0, escaped: false }
+        CharWidthIterator {
+            chars: text.char_indices(),
+            graphemes,
+            column: 0,
+            escaped: false,
+        }
     }
 
     /// Returns the visual column position of a byte offset on a specific line.
@@ -191,14 +196,20 @@ impl GraphicalReportHandler {
         // The built-in readers advance `line_count` from the payload's first
         // line, which gives the number of newline-terminated `Line`s here.
         // Cap the hint by byte length because custom sources own this metadata.
-        let capacity =
-            context_data.line_count().saturating_sub(context_data.line()).max(1).min(bytes.len());
+        let capacity = context_data
+            .line_count()
+            .saturating_sub(context_data.line())
+            .max(1)
+            .min(bytes.len());
         let mut lines = SmallVec::with_capacity(capacity);
         let mut start = 0;
         for newline in memchr::memchr_iter(b'\n', bytes) {
             let end = newline + 1;
-            let text_end =
-                if newline > start && bytes[newline - 1] == b'\r' { newline - 1 } else { newline };
+            let text_end = if newline > start && bytes[newline - 1] == b'\r' {
+                newline - 1
+            } else {
+                newline
+            };
             line += 1;
             lines.push(Line {
                 number: line,

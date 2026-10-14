@@ -45,7 +45,10 @@ declare_oxc_lint_test!(
 fn test_declare_oxc_lint() {
     // Simple, multiline documentation
     #[cfg(feature = "ruledocs")]
-    assert_eq!(TestRule::documentation().unwrap(), "Dummy description\n# which is multiline\n");
+    assert_eq!(
+        TestRule::documentation().unwrap(),
+        "Dummy description\n# which is multiline\n"
+    );
 
     // Ensure structs with fields can be passed to the macro
     #[cfg(feature = "ruledocs")]
@@ -71,7 +74,11 @@ fn test_react_compiler_rule_categories() {
     const EXPECTED: [(&str, RuleCategory, bool); 22] = [
         ("capitalized-calls", RuleCategory::Suspicious, false),
         ("error-boundaries", RuleCategory::Correctness, true),
-        ("exhaustive-effect-dependencies", RuleCategory::Suspicious, false),
+        (
+            "exhaustive-effect-dependencies",
+            RuleCategory::Suspicious,
+            false,
+        ),
         ("globals", RuleCategory::Correctness, true),
         ("hooks", RuleCategory::Suspicious, false),
         ("immutability", RuleCategory::Correctness, true),
@@ -79,7 +86,11 @@ fn test_react_compiler_rule_categories() {
         ("invariant", RuleCategory::Restriction, false),
         ("memo-dependencies", RuleCategory::Suspicious, false),
         ("no-deriving-state-in-effects", RuleCategory::Perf, false),
-        ("preserve-manual-memoization", RuleCategory::Correctness, true),
+        (
+            "preserve-manual-memoization",
+            RuleCategory::Correctness,
+            true,
+        ),
         ("purity", RuleCategory::Correctness, true),
         ("refs", RuleCategory::Correctness, true),
         ("rule-suppression", RuleCategory::Restriction, false),
@@ -93,25 +104,36 @@ fn test_react_compiler_rule_categories() {
         ("void-use-memo", RuleCategory::Correctness, false),
     ];
 
-    let names =
-        EXPECTED.iter().map(|(name, _, _)| *name).collect::<std::collections::BTreeSet<_>>();
-    assert_eq!(names.len(), EXPECTED.len(), "React Compiler rule names must be unique");
+    let names = EXPECTED
+        .iter()
+        .map(|(name, _, _)| *name)
+        .collect::<std::collections::BTreeSet<_>>();
+    assert_eq!(
+        names.len(),
+        EXPECTED.len(),
+        "React Compiler rule names must be unique"
+    );
 
     for (name, expected_category, has_upstream_docs) in EXPECTED {
         let rule = RULES
             .iter()
             .find(|rule| rule.plugin_name() == "react" && rule.name() == name)
             .unwrap_or_else(|| panic!("React Compiler rule react/{name} must be registered"));
-        assert_eq!(rule.category(), expected_category, "unexpected category for react/{name}");
+        assert_eq!(
+            rule.category(),
+            expected_category,
+            "unexpected category for react/{name}"
+        );
 
         #[cfg(not(feature = "ruledocs"))]
         let _ = has_upstream_docs;
 
         #[cfg(feature = "ruledocs")]
         assert_eq!(
-            rule.documentation().is_some_and(|docs| docs.contains(&format!(
-                "https://react.dev/reference/eslint-plugin-react-hooks/lints/{name}"
-            ))),
+            rule.documentation()
+                .is_some_and(|docs| docs.contains(&format!(
+                    "https://react.dev/reference/eslint-plugin-react-hooks/lints/{name}"
+                ))),
             has_upstream_docs,
             "unexpected upstream documentation link state for react/{name}"
         );

@@ -57,7 +57,11 @@ impl Rule for NoEmptyNamedBlocks {
             // import {} from 'mod'
             ctx.diagnostic_with_fix_of_kind(
                 no_empty_named_blocks_diagnostic(import_decl.span),
-                if import_decl.import_kind.is_type() { FixKind::Fix } else { FixKind::Suggestion },
+                if import_decl.import_kind.is_type() {
+                    FixKind::Fix
+                } else {
+                    FixKind::Suggestion
+                },
                 |fixer| fixer.delete_range(import_decl.span),
             );
             return;
@@ -86,9 +90,10 @@ impl Rule for NoEmptyNamedBlocks {
         let end = from_pos;
         let span = Span::new(start, end);
 
-        ctx.diagnostic_with_fix(no_empty_named_blocks_diagnostic(import_decl.span), |fixer| {
-            fixer.replace(span, " ")
-        });
+        ctx.diagnostic_with_fix(
+            no_empty_named_blocks_diagnostic(import_decl.span),
+            |fixer| fixer.replace(span, " "),
+        );
     }
 }
 
@@ -126,19 +131,39 @@ fn test() {
         ("import {  } from 'mod'", ""),
         ("import a, {} from 'mod'", "import a from 'mod'"),
         ("import a, {         } from 'mod'", "import a from 'mod'"),
-        ("import a,            {         } from 'mod'", "import a from 'mod'"),
-        ("import a,      {    }       from 'mod'", "import a from 'mod'"),
-        ("import a,      {    }       from'mod'", "import a from'mod'"),
+        (
+            "import a,            {         } from 'mod'",
+            "import a from 'mod'",
+        ),
+        (
+            "import a,      {    }       from 'mod'",
+            "import a from 'mod'",
+        ),
+        (
+            "import a,      {    }       from'mod'",
+            "import a from'mod'",
+        ),
         // ("import type a,      {    }       from'mod'", "import type a from'mod'"),
         ("import a,{} from 'mod'", "import a from 'mod'"),
         // ("import type a,{} from 'foo'", "import type a from 'foo'"),
         ("import type {} from 'foo'", ""),
         ("import{}from ''", ""),
-        ("import Default, /* from */ {} from 'mod'", "import Default from 'mod'"),
-        ("import Default /* , */ ,  {} from 'mod'", "import Default from 'mod'"),
+        (
+            "import Default, /* from */ {} from 'mod'",
+            "import Default from 'mod'",
+        ),
+        (
+            "import Default /* , */ ,  {} from 'mod'",
+            "import Default from 'mod'",
+        ),
     ];
 
-    Tester::new(NoEmptyNamedBlocks::NAME, NoEmptyNamedBlocks::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        NoEmptyNamedBlocks::NAME,
+        NoEmptyNamedBlocks::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

@@ -30,7 +30,11 @@ impl FormatService {
     where
         T: Into<Box<Path>>,
     {
-        Self { cwd: cwd.into(), format_mode, formatter }
+        Self {
+            cwd: cwd.into(),
+            format_mode,
+            formatter,
+        }
     }
 
     /// Process entries as they are received from the channel

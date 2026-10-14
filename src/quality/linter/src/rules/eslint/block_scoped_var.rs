@@ -195,7 +195,11 @@ fn run_for_all_redeclarations(
             )
         })
         .for_each(|redeclaration| {
-            ctx.diagnostic(redeclaration_diagnostic(pattern.span(), redeclaration.span, &name));
+            ctx.diagnostic(redeclaration_diagnostic(
+                pattern.span(),
+                redeclaration.span,
+                &name,
+            ));
         });
 }
 

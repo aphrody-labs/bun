@@ -16,7 +16,11 @@ pub(crate) mod allowed_chars {
             }
         }
 
-        if err_indices.is_empty() { Ok(()) } else { Err(err_indices) }
+        if err_indices.is_empty() {
+            Ok(())
+        } else {
+            Err(err_indices)
+        }
     }
 
     pub(crate) fn string(s: &str) -> Result<(), Vec<usize>> {
@@ -32,7 +36,11 @@ pub(crate) mod allowed_chars {
             }
         }
 
-        if err_indices.is_empty() { Ok(()) } else { Err(err_indices) }
+        if err_indices.is_empty() {
+            Ok(())
+        } else {
+            Err(err_indices)
+        }
     }
 
     pub(crate) fn multi_line_string(s: &str) -> Result<(), Vec<usize>> {
@@ -50,7 +58,11 @@ pub(crate) mod allowed_chars {
             }
         }
 
-        if err_indices.is_empty() { Ok(()) } else { Err(err_indices) }
+        if err_indices.is_empty() {
+            Ok(())
+        } else {
+            Err(err_indices)
+        }
     }
 
     pub(crate) fn string_literal(s: &str) -> Result<(), Vec<usize>> {
@@ -64,7 +76,11 @@ pub(crate) mod allowed_chars {
             }
         }
 
-        if err_indices.is_empty() { Ok(()) } else { Err(err_indices) }
+        if err_indices.is_empty() {
+            Ok(())
+        } else {
+            Err(err_indices)
+        }
     }
 
     pub(crate) fn multi_line_string_literal(s: &str) -> Result<(), Vec<usize>> {
@@ -78,7 +94,11 @@ pub(crate) mod allowed_chars {
             }
         }
 
-        if err_indices.is_empty() { Ok(()) } else { Err(err_indices) }
+        if err_indices.is_empty() {
+            Ok(())
+        } else {
+            Err(err_indices)
+        }
     }
 }
 

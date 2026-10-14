@@ -28,7 +28,9 @@ struct RobotsRules {
 
 impl RobotsCache {
     pub fn new() -> Self {
-        RobotsCache { cache: RwLock::new(RobotsEntries::default()) }
+        RobotsCache {
+            cache: RwLock::new(RobotsEntries::default()),
+        }
     }
 
     pub fn parse_and_store(&self, domain: &str, body: &str, our_agent: &str) {
@@ -131,14 +133,14 @@ fn parse_robots_txt(body: &str, our_agent: &str) -> RobotsRules {
                     if agent != "*" && in_matching_section {
                         found_specific = true;
                     }
-                },
+                }
                 "disallow" if in_matching_section && !value.is_empty() => {
                     disallowed.push(value.to_string());
-                },
+                }
                 "allow" if in_matching_section && !value.is_empty() => {
                     allowed.push(value.to_string());
-                },
-                _ => {},
+                }
+                _ => {}
             }
         }
     }
@@ -159,20 +161,23 @@ fn parse_robots_txt(body: &str, our_agent: &str) -> RobotsRules {
                 match key.as_str() {
                     "user-agent" => {
                         in_matching_section = value.trim() == "*";
-                    },
+                    }
                     "disallow" if in_matching_section && !value.is_empty() => {
                         disallowed.push(value.to_string());
-                    },
+                    }
                     "allow" if in_matching_section && !value.is_empty() => {
                         allowed.push(value.to_string());
-                    },
-                    _ => {},
+                    }
+                    _ => {}
                 }
             }
         }
     }
 
-    RobotsRules { disallowed, allowed }
+    RobotsRules {
+        disallowed,
+        allowed,
+    }
 }
 
 fn path_matches(path: &str, pattern: &str) -> bool {
@@ -210,13 +215,20 @@ mod tests {
                       Chrome/145.0.0.0 Safari/537.36";
         let cache = RobotsCache::new();
         cache.parse_and_store("a.test", "User-agent: Moz\nDisallow: /\n", chrome);
-        assert!(cache.is_allowed("a.test", "/page"), "a token prefix is not a match");
+        assert!(
+            cache.is_allowed("a.test", "/page"),
+            "a token prefix is not a match"
+        );
         cache.parse_and_store("b.test", "User-agent: chrome\nDisallow: /\n", chrome);
         assert!(
             !cache.is_allowed("b.test", "/page"),
             "an exact token still matches, case-insensitively"
         );
-        cache.parse_and_store("c.test", "User-agent: BunBrowserBot\nDisallow: /\n", "BunBrowser");
+        cache.parse_and_store(
+            "c.test",
+            "User-agent: BunBrowserBot\nDisallow: /\n",
+            "BunBrowser",
+        );
         assert!(
             cache.is_allowed("c.test", "/page"),
             "our token being a substring of theirs is not a match"

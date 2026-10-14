@@ -14,9 +14,16 @@ impl Tokenizer<'_, '_> {
     pub(super) fn math_span(&mut self) {
         let start = self.pos;
         let n = syntax::run_len(&self.t.as_bytes()[start..], b'$');
-        let min = if self.constructs.math_text_single_dollar { 1 } else { 2 };
-        let close =
-            if n < min { None } else { matching_run(self.t.as_bytes(), start + n, b'$', n) };
+        let min = if self.constructs.math_text_single_dollar {
+            1
+        } else {
+            2
+        };
+        let close = if n < min {
+            None
+        } else {
+            matching_run(self.t.as_bytes(), start + n, b'$', n)
+        };
         let Some(close) = close else {
             self.pos = start + n;
             return;
@@ -74,7 +81,9 @@ impl Tokenizer<'_, '_> {
             return false;
         }
         let start = self.pos;
-        let Some(closer) = syntax::liquid::open(&self.t[start..]) else { return false };
+        let Some(closer) = syntax::liquid::open(&self.t[start..]) else {
+            return false;
+        };
         let exhausted = &mut self.liquid_exhausted[usize::from(closer == b'}')];
         if *exhausted {
             return false;

@@ -160,12 +160,16 @@ impl Rule for PreferObjectSpread {
                 let callee_left_paren_span =
                     Span::sized(call_expr.callee.span().end + paren_offset, 1);
 
-                let (left, right) = if needs_paren { ("({", "})") } else { ("{", "}") };
+                let (left, right) = if needs_paren {
+                    ("({", "})")
+                } else {
+                    ("{", "}")
+                };
 
-                rule_fixes.push(
-                    fixer
-                        .replace(Span::new(call_expr.span.start, callee_left_paren_span.end), left),
-                );
+                rule_fixes.push(fixer.replace(
+                    Span::new(call_expr.span.start, callee_left_paren_span.end),
+                    left,
+                ));
                 rule_fixes.push(
                     fixer.replace(Span::new(call_expr.span.end - 1, call_expr.span.end), right),
                 );
@@ -267,7 +271,11 @@ fn get_last_char_span(expr: &Expression, last_from: u32, ctx: &LintContext) -> O
 
         let current_span = Span::sized(span_start, c_size);
 
-        if ctx.comments().iter().any(|comment| comment.span.contains_inclusive(current_span)) {
+        if ctx
+            .comments()
+            .iter()
+            .any(|comment| comment.span.contains_inclusive(current_span))
+        {
             continue;
         }
 
@@ -297,7 +305,11 @@ fn get_char_span_after(expr: &Expression, ctx: &LintContext) -> Option<Span> {
 
         let current_span = Span::new(span_end - c_size, span_end);
 
-        if ctx.comments().iter().any(|comment| comment.span.contains_inclusive(current_span)) {
+        if ctx
+            .comments()
+            .iter()
+            .any(|comment| comment.span.contains_inclusive(current_span))
+        {
             continue;
         }
 
@@ -333,8 +345,10 @@ fn get_delete_span_start_of_right(
         return obj_expr_last_char_span.start;
     };
 
-    let has_line_comment = if let Some(comment) =
-        ctx.comments().iter().find(|&c| c.span.contains_inclusive(prev_token_span))
+    let has_line_comment = if let Some(comment) = ctx
+        .comments()
+        .iter()
+        .find(|&c| c.span.contains_inclusive(prev_token_span))
     {
         comment.is_line()
     } else {
@@ -590,14 +604,26 @@ fn test() {
         ("Object.assign({}, foo)", "({ ...foo})", None),
         ("Object.assign  ({}, foo)", "({ ...foo})", None),
         ("Object.assign({}, { foo: 'bar' })", "({ foo: 'bar'})", None),
-        ("Object.assign({}, baz, { foo: 'bar' })", "({ ...baz, foo: 'bar'})", None),
-        ("Object.assign({}, { foo: 'bar', baz: 'foo' })", "({ foo: 'bar', baz: 'foo'})", None),
+        (
+            "Object.assign({}, baz, { foo: 'bar' })",
+            "({ ...baz, foo: 'bar'})",
+            None,
+        ),
+        (
+            "Object.assign({}, { foo: 'bar', baz: 'foo' })",
+            "({ foo: 'bar', baz: 'foo'})",
+            None,
+        ),
         (
             r"Object.assign/** comment with multi byte 😀 */({}, { '😀': '😀', '😆': '💪' })",
             r"({ '😀': '😀', '😆': '💪'})",
             None,
         ),
-        ("Object.assign({ foo: 'bar' }, baz)", "({foo: 'bar', ...baz})", None),
+        (
+            "Object.assign({ foo: 'bar' }, baz)",
+            "({foo: 'bar', ...baz})",
+            None,
+        ),
         (
             "Object.assign({ foo: 'bar' }, cats, dogs, trees, birds)",
             "({foo: 'bar', ...cats, ...dogs, ...trees, ...birds})",
@@ -613,10 +639,26 @@ fn test() {
             "({foo: 'bar', ...Object.assign({ bar: 'foo' }, Object.assign({}, { superNested: 'butwhy' }))})",
             None,
         ),
-        ("Object.assign({foo: 'bar', ...bar}, baz)", "({foo: 'bar', ...bar, ...baz})", None),
-        ("Object.assign({}, { foo, bar, baz })", "({ foo, bar, baz})", None),
-        ("Object.assign({}, { [bar]: 'foo' })", "({ [bar]: 'foo'})", None),
-        ("Object.assign({ ...bar }, { ...baz })", "({...bar, ...baz})", None),
+        (
+            "Object.assign({foo: 'bar', ...bar}, baz)",
+            "({foo: 'bar', ...bar, ...baz})",
+            None,
+        ),
+        (
+            "Object.assign({}, { foo, bar, baz })",
+            "({ foo, bar, baz})",
+            None,
+        ),
+        (
+            "Object.assign({}, { [bar]: 'foo' })",
+            "({ [bar]: 'foo'})",
+            None,
+        ),
+        (
+            "Object.assign({ ...bar }, { ...baz })",
+            "({...bar, ...baz})",
+            None,
+        ),
         (
             r#"
             Object.assign({ ...bar }, {
@@ -729,8 +771,16 @@ fn test() {
         ("let a = Object.assign({})", "let a = {}", None),
         ("let a = Object.assign({}, a)", "let a = { ...a}", None),
         ("let a = Object.assign   ({}, a)", "let a = { ...a}", None),
-        ("let a = Object.assign({ a: 1 }, b)", "let a = {a: 1, ...b}", None),
-        ("Object.assign(  {},  a,      b,   )", "({    ...a,      ...b,   })", None),
+        (
+            "let a = Object.assign({ a: 1 }, b)",
+            "let a = {a: 1, ...b}",
+            None,
+        ),
+        (
+            "Object.assign(  {},  a,      b,   )",
+            "({    ...a,      ...b,   })",
+            None,
+        ),
         (
             "Object.assign({}, a ? b : {}, b => c, a = 2)",
             "({ ...(a ? b : {}), ...(b => c), ...(a = 2)})",
@@ -759,7 +809,11 @@ fn test() {
             None,
         ),
         ("[1, 2, Object.assign({}, a)]", "[1, 2, { ...a}]", None),
-        ("const foo = Object.assign({}, a)", "const foo = { ...a}", None),
+        (
+            "const foo = Object.assign({}, a)",
+            "const foo = { ...a}",
+            None,
+        ),
         (
             "function foo() { return Object.assign({}, a) }",
             "function foo() { return { ...a} }",
@@ -948,7 +1002,11 @@ fn test() {
             ",
             None,
         ),
-        ("Object.assign({ get a() {}, set b(val) {} })", "({get a() {}, set b(val) {}})", None),
+        (
+            "Object.assign({ get a() {}, set b(val) {} })",
+            "({get a() {}, set b(val) {}})",
+            None,
+        ),
         (
             "const obj = Object.assign<{}, Record<string, string[]>>({}, getObject());",
             "const obj = { ...getObject()};",
@@ -956,7 +1014,12 @@ fn test() {
         ),
         ("Object.assign<{}, A>({}, foo);", "({ ...foo});", None),
     ];
-    Tester::new(PreferObjectSpread::NAME, PreferObjectSpread::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        PreferObjectSpread::NAME,
+        PreferObjectSpread::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

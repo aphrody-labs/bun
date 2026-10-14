@@ -1,6 +1,6 @@
 use bun_browser_browser::Page;
 use bun_browser_dom::{DomTree, NodeData, NodeId};
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 
 use crate::dispatch::CdpContext;
 
@@ -44,8 +44,16 @@ fn encode_base64(input: &[u8]) -> String {
         let n = (b0 << 16) | (b1 << 8) | b2;
         out.push(T[((n >> 18) & 63) as usize] as char);
         out.push(T[((n >> 12) & 63) as usize] as char);
-        out.push(if chunk.len() > 1 { T[((n >> 6) & 63) as usize] as char } else { '=' });
-        out.push(if chunk.len() > 2 { T[(n & 63) as usize] as char } else { '=' });
+        out.push(if chunk.len() > 1 {
+            T[((n >> 6) & 63) as usize] as char
+        } else {
+            '='
+        });
+        out.push(if chunk.len() > 2 {
+            T[(n & 63) as usize] as char
+        } else {
+            '='
+        });
     }
     out
 }
@@ -104,22 +112,30 @@ pub async fn handle(
                 json!({ "root": node })
             })
             .ok_or_else(|| "No DOM loaded".to_string())
-        },
+        }
         "querySelector" => {
             let page = ctx.get_session_page(session_id).ok_or("No page")?;
-            let selector =
-                params.get("selector").and_then(|v| v.as_str()).ok_or("selector required")?;
+            let selector = params
+                .get("selector")
+                .and_then(|v| v.as_str())
+                .ok_or("selector required")?;
             let result = page
                 .with_dom(|dom| {
-                    dom.query_selector(selector).ok().flatten().map(|id| id.index()).unwrap_or(0)
+                    dom.query_selector(selector)
+                        .ok()
+                        .flatten()
+                        .map(|id| id.index())
+                        .unwrap_or(0)
                 })
                 .unwrap_or(0);
             Ok(json!({ "nodeId": result }))
-        },
+        }
         "querySelectorAll" => {
             let page = ctx.get_session_page(session_id).ok_or("No page")?;
-            let selector =
-                params.get("selector").and_then(|v| v.as_str()).ok_or("selector required")?;
+            let selector = params
+                .get("selector")
+                .and_then(|v| v.as_str())
+                .ok_or("selector required")?;
             let ids = page
                 .with_dom(|dom| {
                     dom.query_selector_all(selector)
@@ -129,7 +145,7 @@ pub async fn handle(
                 })
                 .unwrap_or_default();
             Ok(json!({ "nodeIds": ids }))
-        },
+        }
         "getOuterHTML" => {
             let page = ctx.get_session_page(session_id).ok_or("No page")?;
             let node_id = params
@@ -141,7 +157,7 @@ pub async fn handle(
                 .with_dom(|dom| dom.outer_html(NodeId::new(node_id as u32)))
                 .unwrap_or_default();
             Ok(json!({ "outerHTML": html }))
-        },
+        }
         "describeNode" => {
             let page = ctx.get_session_page_mut(session_id).ok_or("No page")?;
             let depth = params.get("depth").and_then(|v| v.as_i64()).unwrap_or(0);
@@ -174,7 +190,7 @@ pub async fn handle(
                 .with_dom(|dom| serialize_node(dom, NodeId::new(node_id as u32), depth as u32, 0))
                 .unwrap_or(json!(null));
             Ok(json!({ "node": node }))
-        },
+        }
         "resolveNode" => {
             let page = ctx.get_session_page_mut(session_id).ok_or("No page")?;
             let node_id = if let Some(nid) = params
@@ -215,7 +231,7 @@ pub async fn handle(
                                 "objectId": format!("node-{}", node_id),
                             }
                         }));
-                    },
+                    }
                 }
             } else {
                 return Err("No JS runtime".to_string());
@@ -230,7 +246,7 @@ pub async fn handle(
                     "objectId": info.object_id.unwrap_or_else(|| format!("node-{}", node_id)),
                 }
             }))
-        },
+        }
         "setAttributeValue" => Ok(json!({})),
         "removeNode" => Ok(json!({})),
         "focus" => {
@@ -248,7 +264,7 @@ pub async fn handle(
             );
             let _ = page.evaluate(&code);
             Ok(json!({}))
-        },
+        }
         "scrollIntoViewIfNeeded" => {
             let page = ctx.get_session_page_mut(session_id).ok_or("No page")?;
             let node_id = resolve_node_id(page, params)?;
@@ -267,7 +283,7 @@ pub async fn handle(
                 ));
             }
             Ok(json!({}))
-        },
+        }
         "setFileInputFiles" => {
             // Puppeteer's ElementHandle.uploadFile / Playwright's setInputFiles
             // drive an <input type=file> through this CDP call (issue #359). Read
@@ -281,15 +297,21 @@ pub async fn handle(
             // process can read — the same threat as Page.navigate to file://, so
             // it honours the same opt-in and is off by default.
             if !page.context.allow_file_access {
-                return Err("DOM.setFileInputFiles is disabled. Restart with `bun_browser serve \
+                return Err(
+                    "DOM.setFileInputFiles is disabled. Restart with `bun_browser serve \
                             --allow-file-access` to enable local file uploads."
-                    .to_string());
+                        .to_string(),
+                );
             }
             let node_id = resolve_node_id(page, params)?;
             let paths: Vec<String> = params
                 .get("files")
                 .and_then(|v| v.as_array())
-                .map(|a| a.iter().filter_map(|v| v.as_str().map(String::from)).collect())
+                .map(|a| {
+                    a.iter()
+                        .filter_map(|v| v.as_str().map(String::from))
+                        .collect()
+                })
                 .unwrap_or_default();
 
             let mut specs = Vec::with_capacity(paths.len());
@@ -315,7 +337,7 @@ pub async fn handle(
             );
             let _ = page.evaluate(&code);
             Ok(json!({}))
-        },
+        }
         "getBoxModel" => {
             let page = ctx.get_session_page_mut(session_id).ok_or("No page")?;
             let node_id = match resolve_node_id(page, params) {
@@ -376,7 +398,7 @@ pub async fn handle(
                     "width": coord_value(w), "height": coord_value(h),
                 }
             }))
-        },
+        }
         "getContentQuads" => {
             let page = ctx.get_session_page_mut(session_id).ok_or("No page")?;
             let node_id = match resolve_node_id(page, params) {
@@ -420,7 +442,7 @@ pub async fn handle(
                 ]
             };
             Ok(json!({ "quads": [quad] }))
-        },
+        }
         _ => Err(format!("Unknown DOM method: {}", method)),
     }
 }
@@ -479,15 +501,19 @@ fn node_value(dom: &DomTree, node_id: NodeId) -> Option<(Value, Vec<NodeId>)> {
             result["documentURL"] = json!("");
             result["baseURL"] = json!("");
             result["xmlVersion"] = json!("");
-        },
-        NodeData::Doctype { name, public_id, system_id } => {
+        }
+        NodeData::Doctype {
+            name,
+            public_id,
+            system_id,
+        } => {
             result["nodeType"] = json!(10);
             result["nodeName"] = json!(name);
             result["localName"] = json!("");
             result["nodeValue"] = json!("");
             result["publicId"] = json!(public_id);
             result["systemId"] = json!(system_id);
-        },
+        }
         NodeData::Element { name, attrs, .. } => {
             result["nodeType"] = json!(1);
             result["nodeName"] = json!((&*name.local).to_ascii_uppercase());
@@ -498,25 +524,25 @@ fn node_value(dom: &DomTree, node_id: NodeId) -> Option<(Value, Vec<NodeId>)> {
                 .flat_map(|a| vec![a.name.local.to_string(), a.value.clone()])
                 .collect();
             result["attributes"] = json!(cdp_attrs);
-        },
+        }
         NodeData::Text { contents } => {
             result["nodeType"] = json!(3);
             result["nodeName"] = json!("#text");
             result["localName"] = json!("");
             result["nodeValue"] = json!(contents);
-        },
+        }
         NodeData::Comment { contents } => {
             result["nodeType"] = json!(8);
             result["nodeName"] = json!("#comment");
             result["localName"] = json!("");
             result["nodeValue"] = json!(contents);
-        },
+        }
         NodeData::ProcessingInstruction { target, data } => {
             result["nodeType"] = json!(7);
             result["nodeName"] = json!(target);
             result["localName"] = json!("");
             result["nodeValue"] = json!(data);
-        },
+        }
     }
 
     Some((result, children_ids))
@@ -580,11 +606,11 @@ fn serialize_node(dom: &DomTree, node_id: NodeId, max_depth: u32, current_depth:
                             depth: child_depth,
                             expand: cexpand,
                         });
-                    },
+                    }
                     // Missing child: match the old recursive behavior of emitting null.
                     None => stack.last_mut().unwrap().built.push(json!(null)),
                 }
-            },
+            }
             None => {
                 // This node's children are all built; finalize and fold into parent.
                 let mut frame = stack.pop().unwrap();
@@ -595,7 +621,7 @@ fn serialize_node(dom: &DomTree, node_id: NodeId, max_depth: u32, current_depth:
                     Some(parent) => parent.built.push(frame.value),
                     None => return frame.value,
                 }
-            },
+            }
         }
     }
 }
@@ -618,7 +644,8 @@ mod tests {
         let mut ctx = CdpContext::new();
         let page_id = ctx.create_page();
         let session = Some(format!("{page_id}-session"));
-        ctx.sessions.insert(session.clone().unwrap(), page_id.clone());
+        ctx.sessions
+            .insert(session.clone().unwrap(), page_id.clone());
 
         crate::domains::page::handle(
             "navigate",
@@ -629,10 +656,17 @@ mod tests {
         .await
         .expect("navigate should succeed");
 
-        let res =
-            handle("describeNode", &json!({ "objectId": "no-such-object" }), &mut ctx, &session)
-                .await;
-        assert!(res.is_err(), "describeNode must error on an unresolvable objectId, got: {res:?}");
+        let res = handle(
+            "describeNode",
+            &json!({ "objectId": "no-such-object" }),
+            &mut ctx,
+            &session,
+        )
+        .await;
+        assert!(
+            res.is_err(),
+            "describeNode must error on an unresolvable objectId, got: {res:?}"
+        );
     }
 
     #[tokio::test]
@@ -640,7 +674,8 @@ mod tests {
         let mut ctx = CdpContext::new();
         let page_id = ctx.create_page();
         let session = Some(format!("{page_id}-session"));
-        ctx.sessions.insert(session.clone().unwrap(), page_id.clone());
+        ctx.sessions
+            .insert(session.clone().unwrap(), page_id.clone());
 
         crate::domains::page::handle(
             "navigate",
@@ -651,10 +686,17 @@ mod tests {
         .await
         .expect("navigate should succeed");
 
-        let res =
-            handle("resolveNode", &json!({ "objectId": "no-such-object" }), &mut ctx, &session)
-                .await;
-        assert!(res.is_err(), "resolveNode must error on an unresolvable objectId, got: {res:?}");
+        let res = handle(
+            "resolveNode",
+            &json!({ "objectId": "no-such-object" }),
+            &mut ctx,
+            &session,
+        )
+        .await;
+        assert!(
+            res.is_err(),
+            "resolveNode must error on an unresolvable objectId, got: {res:?}"
+        );
     }
 
     #[tokio::test]
@@ -665,7 +707,8 @@ mod tests {
         let mut ctx = CdpContext::new();
         let page_id = ctx.create_page();
         let session = Some(format!("{page_id}-session"));
-        ctx.sessions.insert(session.clone().unwrap(), page_id.clone());
+        ctx.sessions
+            .insert(session.clone().unwrap(), page_id.clone());
 
         crate::domains::page::handle(
             "navigate",
@@ -676,9 +719,14 @@ mod tests {
         .await
         .expect("navigate should succeed");
 
-        let qs = handle("querySelector", &json!({ "selector": "input" }), &mut ctx, &session)
-            .await
-            .expect("querySelector should succeed");
+        let qs = handle(
+            "querySelector",
+            &json!({ "selector": "input" }),
+            &mut ctx,
+            &session,
+        )
+        .await
+        .expect("querySelector should succeed");
         let nid = qs["nodeId"].as_u64().expect("input nodeId");
         assert!(nid > 0, "the input element should be found");
 
@@ -705,11 +753,19 @@ mod tests {
         crate::domains::page::handle("navigate", &json!({
             "url": "data:text/html,<html><body><textarea id=field></textarea><a id=link href=https://example.com>Next</a></body></html>"
         }), &mut ctx, &session).await.unwrap();
-        for (id, constructor) in [("field", "HTMLTextAreaElement"), ("link", "HTMLAnchorElement")] {
+        for (id, constructor) in [
+            ("field", "HTMLTextAreaElement"),
+            ("link", "HTMLAnchorElement"),
+        ] {
             let selector = format!("#{id}");
-            let query = handle("querySelector", &json!({"selector": selector}), &mut ctx, &session)
-                .await
-                .unwrap();
+            let query = handle(
+                "querySelector",
+                &json!({"selector": selector}),
+                &mut ctx,
+                &session,
+            )
+            .await
+            .unwrap();
             let resolved = handle(
                 "resolveNode",
                 &json!({"backendNodeId": query["nodeId"]}),
@@ -727,12 +783,16 @@ mod tests {
                 constructor
             );
             assert_eq!(
-                ctx.get_session_page_mut(&session).unwrap().evaluate(&expression),
+                ctx.get_session_page_mut(&session)
+                    .unwrap()
+                    .evaluate(&expression),
                 json!(true)
             );
         }
 
-        let document = handle("getDocument", &json!({}), &mut ctx, &session).await.unwrap();
+        let document = handle("getDocument", &json!({}), &mut ctx, &session)
+            .await
+            .unwrap();
         let resolved = handle(
             "resolveNode",
             &json!({"nodeId": document["root"]["nodeId"]}),
@@ -746,7 +806,12 @@ mod tests {
             "globalThis.__bun_browser_objects[{}] === document",
             serde_json::to_string(object_id).unwrap()
         );
-        assert_eq!(ctx.get_session_page_mut(&session).unwrap().evaluate(&expression), json!(true));
+        assert_eq!(
+            ctx.get_session_page_mut(&session)
+                .unwrap()
+                .evaluate(&expression),
+            json!(true)
+        );
     }
 
     #[tokio::test(flavor = "current_thread")]
@@ -768,16 +833,28 @@ mod tests {
         .await
         .expect("navigate should succeed");
 
-        let query = handle("querySelector", &json!({ "selector": "#target" }), &mut ctx, &session)
-            .await
-            .expect("querySelector should succeed");
+        let query = handle(
+            "querySelector",
+            &json!({ "selector": "#target" }),
+            &mut ctx,
+            &session,
+        )
+        .await
+        .expect("querySelector should succeed");
         let node_id = query["nodeId"].as_u64().expect("button nodeId");
 
-        let resolved = handle("resolveNode", &json!({ "nodeId": node_id }), &mut ctx, &session)
-            .await
-            .expect("resolveNode should succeed");
-        let object_id =
-            resolved["object"]["objectId"].as_str().expect("button objectId").to_string();
+        let resolved = handle(
+            "resolveNode",
+            &json!({ "nodeId": node_id }),
+            &mut ctx,
+            &session,
+        )
+        .await
+        .expect("resolveNode should succeed");
+        let object_id = resolved["object"]["objectId"]
+            .as_str()
+            .expect("button objectId")
+            .to_string();
 
         for params in [
             json!({ "nodeId": node_id }),
@@ -810,12 +887,22 @@ mod tests {
             "url": "data:text/html,<body style='margin:0;height:1800px'><div style='height:200px'></div><button id=target style='height:40px'>Go</button></body>",
             "waitUntil": "load"
         }), &mut ctx, &session).await.unwrap();
-        let node = handle("querySelector", &json!({"selector":"#target"}), &mut ctx, &session)
-            .await
-            .unwrap();
-        handle("scrollIntoViewIfNeeded", &json!({"nodeId":node["nodeId"]}), &mut ctx, &session)
-            .await
-            .unwrap();
+        let node = handle(
+            "querySelector",
+            &json!({"selector":"#target"}),
+            &mut ctx,
+            &session,
+        )
+        .await
+        .unwrap();
+        handle(
+            "scrollIntoViewIfNeeded",
+            &json!({"nodeId":node["nodeId"]}),
+            &mut ctx,
+            &session,
+        )
+        .await
+        .unwrap();
         let position = ctx
             .get_session_page_mut(&session)
             .unwrap()
@@ -836,12 +923,19 @@ mod tests {
 
         assert_eq!(error, "nodeId, backendNodeId, or objectId required");
 
-        let error =
-            handle("scrollIntoViewIfNeeded", &json!({ "nodeId": 999_999 }), &mut ctx, &session)
-                .await
-                .expect_err("an unknown node should fail");
+        let error = handle(
+            "scrollIntoViewIfNeeded",
+            &json!({ "nodeId": 999_999 }),
+            &mut ctx,
+            &session,
+        )
+        .await
+        .expect_err("an unknown node should fail");
 
-        assert_eq!(error, "node 999999 could not be resolved to a scrollable element");
+        assert_eq!(
+            error,
+            "node 999999 could not be resolved to a scrollable element"
+        );
     }
 
     // A hostile or heavy page can nest nodes tens of thousands deep (trivially
@@ -863,7 +957,9 @@ mod tests {
         let mut parent = dom.document();
         let depth = 50_000usize;
         for _ in 0..depth {
-            let n = dom.new_node(NodeData::Text { contents: String::new() });
+            let n = dom.new_node(NodeData::Text {
+                contents: String::new(),
+            });
             dom.append_child(parent, n);
             parent = n;
         }
@@ -886,7 +982,10 @@ mod tests {
             cur = first;
             levels += 1;
         }
-        assert!(levels >= 100, "should serialize a deep prefix, got {levels}");
+        assert!(
+            levels >= 100,
+            "should serialize a deep prefix, got {levels}"
+        );
         assert!(
             levels < depth,
             "nesting must be bounded below the tree's true depth, got {levels}"
@@ -914,9 +1013,14 @@ mod tests {
         .await
         .expect("navigate should succeed");
 
-        let qs = handle("querySelector", &json!({ "selector": "input" }), &mut ctx, &session)
-            .await
-            .expect("querySelector should succeed");
+        let qs = handle(
+            "querySelector",
+            &json!({ "selector": "input" }),
+            &mut ctx,
+            &session,
+        )
+        .await
+        .expect("querySelector should succeed");
         let nid = qs["nodeId"].as_u64().expect("input nodeId");
 
         // A real, readable file. Without the gate the handler slurps it and
@@ -946,13 +1050,24 @@ mod tests {
         assert_eq!(serde_json::to_string(&coord_value(256.0)).unwrap(), "256");
         assert_eq!(serde_json::to_string(&coord_value(0.0)).unwrap(), "0");
         // fractional coordinates stay floats
-        assert_eq!(serde_json::to_string(&coord_value(206.0390625)).unwrap(), "206.0390625");
+        assert_eq!(
+            serde_json::to_string(&coord_value(206.0390625)).unwrap(),
+            "206.0390625"
+        );
         // a full quad mixes both, exactly as DOM.getBoxModel returns it
-        let quad: Vec<Value> =
-            [256.0, 206.0390625, 347.25, 206.0390625, 347.25, 225.0390625, 256.0, 225.0390625]
-                .iter()
-                .map(|n| coord_value(*n))
-                .collect();
+        let quad: Vec<Value> = [
+            256.0,
+            206.0390625,
+            347.25,
+            206.0390625,
+            347.25,
+            225.0390625,
+            256.0,
+            225.0390625,
+        ]
+        .iter()
+        .map(|n| coord_value(*n))
+        .collect();
         assert_eq!(
             serde_json::to_string(&quad).unwrap(),
             "[256,206.0390625,347.25,206.0390625,347.25,225.0390625,256,225.0390625]"

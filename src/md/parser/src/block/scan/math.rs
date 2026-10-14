@@ -30,7 +30,11 @@ mod tests {
     #[test]
     fn fence_open() {
         assert_eq!(math_fence_open("$$"), Some((2, 2..2)));
-        assert_eq!(math_fence_open("$$$  "), Some((3, 5..5)), "whitespace only is no meta");
+        assert_eq!(
+            math_fence_open("$$$  "),
+            Some((3, 5..5)),
+            "whitespace only is no meta"
+        );
         // Surrounding whitespace is stripped
         assert_eq!(math_fence_open("$$ meta "), Some((2, 3..7)));
         assert_eq!(math_fence_open("$"), None);

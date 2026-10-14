@@ -6,7 +6,9 @@ use super::{ESTree, Serializer};
 /// [`ESTree`] implementation for `bool`.
 impl ESTree for bool {
     fn serialize<S: Serializer>(&self, mut serializer: S) {
-        serializer.buffer_mut().print_str(if *self { "true" } else { "false" });
+        serializer
+            .buffer_mut()
+            .print_str(if *self { "true" } else { "false" });
     }
 }
 
@@ -110,12 +112,22 @@ mod tests {
 
     #[test]
     fn serialize_u32() {
-        run_test(&[(0, "0"), (1, "1"), (123_456, "123456"), (u32::MAX, "4294967295")]);
+        run_test(&[
+            (0, "0"),
+            (1, "1"),
+            (123_456, "123456"),
+            (u32::MAX, "4294967295"),
+        ]);
     }
 
     #[test]
     fn serialize_u64() {
-        run_test(&[(0, "0"), (1, "1"), (123_456, "123456"), (u64::MAX, "18446744073709551615")]);
+        run_test(&[
+            (0, "0"),
+            (1, "1"),
+            (123_456, "123456"),
+            (u64::MAX, "18446744073709551615"),
+        ]);
     }
 
     #[test]
@@ -130,7 +142,12 @@ mod tests {
 
     #[test]
     fn serialize_usize() {
-        run_test(&[(0, "0"), (1, "1"), (123_456, "123456"), (u32::MAX as usize, "4294967295")]);
+        run_test(&[
+            (0, "0"),
+            (1, "1"),
+            (123_456, "123456"),
+            (u32::MAX as usize, "4294967295"),
+        ]);
     }
 
     #[test]

@@ -20,7 +20,10 @@ impl Utf8ToUtf16 {
     pub fn new(source_text: &str) -> Self {
         let mut translations = Vec::with_capacity(16);
 
-        translations.push(Translation { utf8_offset: 0, utf16_difference: 0 });
+        translations.push(Translation {
+            utf8_offset: 0,
+            utf16_difference: 0,
+        });
 
         build_translations(source_text, &mut translations, 0);
 
@@ -31,7 +34,10 @@ impl Utf8ToUtf16 {
             // In conformance tests, force offset conversion to happen on all inputs,
             // even if they are pure ASCII
             if cfg!(feature = "conformance") {
-                translations.push(Translation { utf8_offset: u32::MAX, utf16_difference: 0 });
+                translations.push(Translation {
+                    utf8_offset: u32::MAX,
+                    utf16_difference: 0,
+                });
             } else {
                 translations.clear();
             }
@@ -51,8 +57,14 @@ impl Utf8ToUtf16 {
     pub fn new_with_offset(source_text: &str, offset: u32) -> Self {
         let mut translations = Vec::with_capacity(16);
 
-        translations.push(Translation { utf8_offset: 0, utf16_difference: 0 });
-        translations.push(Translation { utf8_offset: offset, utf16_difference: offset });
+        translations.push(Translation {
+            utf8_offset: 0,
+            utf16_difference: 0,
+        });
+        translations.push(Translation {
+            utf8_offset: offset,
+            utf16_difference: offset,
+        });
 
         build_translations(source_text, &mut translations, offset);
 
@@ -187,8 +199,12 @@ mod test {
 
         assert_eq!(program.span, Span::new(0, 11));
         assert_eq!(program.body[1].span(), Span::new(1, 5));
-        let Statement::ExpressionStatement(expr_stmt) = &program.body[1] else { unreachable!() };
-        let Expression::StringLiteral(s) = &expr_stmt.expression else { unreachable!() };
+        let Statement::ExpressionStatement(expr_stmt) = &program.body[1] else {
+            unreachable!()
+        };
+        let Expression::StringLiteral(s) = &expr_stmt.expression else {
+            unreachable!()
+        };
         assert_eq!(s.span, Span::new(1, 5));
         assert_eq!(program.comments[0].span, Span::new(6, 11));
 
@@ -240,7 +256,10 @@ mod test {
             ("_🤨", &[(0, 0), (1, 1), (5, 3)]),
             ("_🤨_", &[(0, 0), (1, 1), (5, 3), (6, 4)]),
             ("_🤨🤨_", &[(0, 0), (1, 1), (5, 3), (9, 5), (10, 6)]),
-            ("_🤨_🤨_", &[(0, 0), (1, 1), (5, 3), (6, 4), (10, 6), (11, 7)]),
+            (
+                "_🤨_🤨_",
+                &[(0, 0), (1, 1), (5, 3), (6, 4), (10, 6), (11, 7)],
+            ),
         ];
 
         // Convert cases to `Vec`

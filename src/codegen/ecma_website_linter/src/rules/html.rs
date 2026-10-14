@@ -36,7 +36,9 @@ impl From<HtmlWriter> for String {
 
 impl HtmlWriter {
     pub fn with_capacity(capacity: usize) -> Self {
-        Self { inner: RefCell::new(String::with_capacity(capacity)) }
+        Self {
+            inner: RefCell::new(String::with_capacity(capacity)),
+        }
     }
 
     /// Reserve capacity in this writer's buffer for at least `additional` bytes.
@@ -156,7 +158,10 @@ Hello, world!
     #[test]
     fn test_stringification() {
         let w = HtmlWriter::default();
-        w.html("span", "class=\"foo\"", |html| html.writeln("Hello, world!")).unwrap();
+        w.html("span", "class=\"foo\"", |html| {
+            html.writeln("Hello, world!")
+        })
+        .unwrap();
         let html = w.take();
         assert_eq!(html, "<span class=\"foo\">\nHello, world!\n</span>\n");
         let html = w.take();

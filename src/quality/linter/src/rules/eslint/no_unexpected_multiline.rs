@@ -256,7 +256,9 @@ fn has_newline_before(ctx: &LintContext, span: Span, token: &str) -> Option<u32>
     let target = ctx.find_next_token_within(span.start, span.end, token)?;
     let before_target = Span::new(span.start, span.start + target);
 
-    ctx.source_range(before_target).contains('\n').then_some(target)
+    ctx.source_range(before_target)
+        .contains('\n')
+        .then_some(target)
 }
 
 #[test]
@@ -392,9 +394,17 @@ fn test() {
     ];
 
     // TODO: add more fixer tests
-    let fix = vec![("var a = b\n(x || y).doSomething()", "var a = b\n;(x || y).doSomething()")];
+    let fix = vec![(
+        "var a = b\n(x || y).doSomething()",
+        "var a = b\n;(x || y).doSomething()",
+    )];
 
-    Tester::new(NoUnexpectedMultiline::NAME, NoUnexpectedMultiline::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        NoUnexpectedMultiline::NAME,
+        NoUnexpectedMultiline::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

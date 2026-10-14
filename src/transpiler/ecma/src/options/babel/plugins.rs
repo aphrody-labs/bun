@@ -100,8 +100,10 @@ impl TryFrom<PluginPresetEntries> for BabelPlugins {
                     p.proposal_decorators = Some(entry.value::<SyntaxDecoratorOptions>()?);
                 }
                 "transform-typescript" => {
-                    p.typescript =
-                        entry.value::<TypeScriptOptions>().map_err(|err| p.errors.push(err)).ok();
+                    p.typescript = entry
+                        .value::<TypeScriptOptions>()
+                        .map_err(|err| p.errors.push(err))
+                        .ok();
                 }
                 "transform-react-jsx" => {
                     #[derive(Deserialize, Default)]
@@ -121,8 +123,10 @@ impl TryFrom<PluginPresetEntries> for BabelPlugins {
                         .ok();
                 }
                 "transform-react-jsx-development" => {
-                    p.react_jsx_dev =
-                        entry.value::<JsxOptions>().map_err(|err| p.errors.push(err)).ok();
+                    p.react_jsx_dev = entry
+                        .value::<JsxOptions>()
+                        .map_err(|err| p.errors.push(err))
+                        .ok();
                 }
                 "transform-react-display-name" => p.react_display_name = true,
                 "transform-react-jsx-self" => p.react_jsx_self = true,
@@ -165,8 +169,10 @@ impl TryFrom<PluginPresetEntries> for BabelPlugins {
                 }
                 // This is not a Babel plugin, we pretend it exists for running legacy decorator by Babel options
                 "transform-legacy-decorator" => {
-                    p.legacy_decorator =
-                        entry.value::<DecoratorOptions>().map_err(|err| p.errors.push(err)).ok();
+                    p.legacy_decorator = entry
+                        .value::<DecoratorOptions>()
+                        .map_err(|err| p.errors.push(err))
+                        .ok();
                 }
                 "transform-explicit-resource-management" => p.explicit_resource_management = true,
                 "styled-components" => {

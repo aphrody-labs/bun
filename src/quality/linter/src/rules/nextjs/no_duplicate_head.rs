@@ -115,7 +115,10 @@ impl Rule for NoDuplicateHead {
                 continue;
             }
 
-            if !matches!(nodes.parent_kind(reference.node_id()), AstKind::JSXOpeningElement(_)) {
+            if !matches!(
+                nodes.parent_kind(reference.node_id()),
+                AstKind::JSXOpeningElement(_)
+            ) {
                 continue;
             }
 

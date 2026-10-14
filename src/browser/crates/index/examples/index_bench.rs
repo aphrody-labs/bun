@@ -71,7 +71,10 @@ fn thread_cpu_time() -> Duration {
         fn clock_gettime(clock_id: i32, tp: *mut Timespec) -> i32;
     }
     const CLOCK_THREAD_CPUTIME_ID: i32 = 3;
-    let mut ts = Timespec { tv_sec: 0, tv_nsec: 0 };
+    let mut ts = Timespec {
+        tv_sec: 0,
+        tv_nsec: 0,
+    };
     // SAFETY: `ts` is a valid, writable timespec (64-bit Linux layout).
     let rc = unsafe { clock_gettime(CLOCK_THREAD_CPUTIME_ID, &mut ts) };
     if rc != 0 {
@@ -144,8 +147,9 @@ fn run_queries(
             s.spawn(move || {
                 for i in 0..nq {
                     let qi = (i + th * 37) % nq;
-                    let _ =
-                        index.search_with(&queries[qi * dim..(qi + 1) * dim], opts, None).unwrap();
+                    let _ = index
+                        .search_with(&queries[qi * dim..(qi + 1) * dim], opts, None)
+                        .unwrap();
                 }
             });
         }
@@ -217,7 +221,10 @@ fn main() {
     let rescores = list("rescore", vec![4]);
 
     println!("# Bun browser index bench");
-    println!("n={n} queries={nq} dim={dim} k={k} spec={spec:?} kernels={}", kernels::kernel_name());
+    println!(
+        "n={n} queries={nq} dim={dim} k={k} spec={spec:?} kernels={}",
+        kernels::kernel_name()
+    );
     println!("params={}", serde_json::to_string(&params).unwrap());
 
     let t = Instant::now();
@@ -231,7 +238,10 @@ fn main() {
         .into_iter()
         .map(|ids| ids.into_iter().map(u64::from).collect())
         .collect();
-    println!("brute force ground truth ({nq} queries, parallel): {:.2?}", t.elapsed());
+    println!(
+        "brute force ground truth ({nq} queries, parallel): {:.2?}",
+        t.elapsed()
+    );
 
     let rss_before = rss_bytes();
     let index_file = a.get("index-file").cloned();
@@ -241,7 +251,7 @@ fn main() {
             let index = Index::load(path).unwrap();
             println!("loaded existing index {path} in {:.2?}", t.elapsed());
             index
-        },
+        }
         _ => {
             let index = Index::new(params).unwrap();
             let keys: Vec<u64> = (0..n as u64).collect();
@@ -261,7 +271,7 @@ fn main() {
                 index.save(path).unwrap();
             }
             index
-        },
+        }
     };
     let stats = index.stats();
     let rss_after = rss_bytes();
@@ -282,10 +292,17 @@ fn main() {
             &queries,
             dim,
             &truth,
-            SearchOptions { k, ef: Some(ef), rescore_multiplier: None },
+            SearchOptions {
+                k,
+                ef: Some(ef),
+                rescore_multiplier: None,
+            },
         );
         print_run(&format!("ef={ef} default"), &run);
-        for &mult in rescores.iter().filter(|&&m| m != index.params().rescore_multiplier) {
+        for &mult in rescores
+            .iter()
+            .filter(|&&m| m != index.params().rescore_multiplier)
+        {
             if !index.params().rescoring() {
                 break;
             }
@@ -294,7 +311,11 @@ fn main() {
                 &queries,
                 dim,
                 &truth,
-                SearchOptions { k, ef: Some(ef), rescore_multiplier: Some(mult) },
+                SearchOptions {
+                    k,
+                    ef: Some(ef),
+                    rescore_multiplier: Some(mult),
+                },
             );
             print_run(&format!("ef={ef} rescore x{mult}"), &run);
         }
@@ -304,7 +325,11 @@ fn main() {
                 &queries,
                 dim,
                 &truth,
-                SearchOptions { k, ef: Some(ef), rescore_multiplier: Some(0) },
+                SearchOptions {
+                    k,
+                    ef: Some(ef),
+                    rescore_multiplier: Some(0),
+                },
             );
             print_run(&format!("ef={ef} int8 no rescore"), &run);
         }
@@ -333,7 +358,11 @@ fn main() {
             &queries,
             dim,
             &truth,
-            SearchOptions { k, ef: Some(128), rescore_multiplier: None },
+            SearchOptions {
+                k,
+                ef: Some(128),
+                rescore_multiplier: None,
+            },
         );
         print_header(k);
         print_run("ef=128 after mmap load", &run);

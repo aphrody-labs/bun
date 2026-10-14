@@ -36,7 +36,10 @@ pub struct NoNull {
 
 impl Default for NoNull {
     fn default() -> Self {
-        Self { check_strict_equality: false, check_arguments: true }
+        Self {
+            check_strict_equality: false,
+            check_arguments: true,
+        }
     }
 }
 
@@ -69,7 +72,8 @@ declare_oxc_lint!(
     conditional_dangerous_fix,
     config = NoNull,
     version = "0.0.21",
-    short_description = "Disallow the use of the `null` literal, to encourage using `undefined` instead.",
+    short_description =
+        "Disallow the use of the `null` literal, to encourage using `undefined` instead.",
 );
 
 fn match_null_arg(call_expr: &CallExpression, index: usize, span: Span) -> bool {
@@ -135,7 +139,10 @@ fn diagnose_variable_declarator(
         && matches!(parent_kind, Some(AstKind::VariableDeclaration(var_declaration)) if !var_declaration.kind.is_const() )
     {
         ctx.diagnostic_with_dangerous_fix(no_null_diagnostic(null_literal.span), |fixer| {
-            fixer.delete_range(Span::new(variable_declarator.id.span().end, null_literal.span.end))
+            fixer.delete_range(Span::new(
+                variable_declarator.id.span().end,
+                null_literal.span.end,
+            ))
         });
 
         return;
@@ -149,8 +156,13 @@ fn diagnose_variable_declarator(
 
 fn match_call_expression_pass_case(null_literal: &NullLiteral, call_expr: &CallExpression) -> bool {
     // `Object.create(null)`, `Object.create(null, foo)`
-    if is_method_call(call_expr, Some(&["Object"]), Some(&["create"]), Some(1), Some(2))
-        && !call_expr.optional
+    if is_method_call(
+        call_expr,
+        Some(&["Object"]),
+        Some(&["create"]),
+        Some(1),
+        Some(2),
+    ) && !call_expr.optional
         && !matches!(&call_expr.callee, Expression::ComputedMemberExpression(_))
         && match_null_arg(call_expr, 0, null_literal.span)
     {
@@ -167,8 +179,13 @@ fn match_call_expression_pass_case(null_literal: &NullLiteral, call_expr: &CallE
     }
 
     // `React.useRef(null)`
-    if is_method_call(call_expr, Some(&["React"]), Some(&["useRef"]), Some(1), Some(1))
-        && !call_expr.optional
+    if is_method_call(
+        call_expr,
+        Some(&["React"]),
+        Some(&["useRef"]),
+        Some(1),
+        Some(1),
+    ) && !call_expr.optional
     {
         return true;
     }
@@ -280,7 +297,11 @@ fn try_fix_case(
         .iter()
         .filter_map(|case| case.test.as_ref())
         .any(|test| test.get_inner_expression().is_undefined());
-    if also_has_undefined { fixer.noop() } else { fixer.replace(null.span, "undefined") }
+    if also_has_undefined {
+        fixer.noop()
+    } else {
+        fixer.replace(null.span, "undefined")
+    }
 }
 
 #[test]
@@ -309,8 +330,14 @@ fn test() {
         ("Object.create(null)", None),
         ("Object.create(null as any)", None),
         ("Object.create(null, {foo: {value:1}})", None),
-        ("let insertedNode = parentNode.insertBefore(newNode, null)", None),
-        ("let insertedNode = parentNode?.insertBefore(newNode, null)", None),
+        (
+            "let insertedNode = parentNode.insertBefore(newNode, null)",
+            None,
+        ),
+        (
+            "let insertedNode = parentNode?.insertBefore(newNode, null)",
+            None,
+        ),
         ("const foo = \"null\";", None),
         ("Object.create()", None),
         ("Object.create(bar)", None),
@@ -346,7 +373,10 @@ fn test() {
         ("if (foo != null) {}", None),
         ("if (null == foo) {}", None),
         ("if (null != foo) {}", None),
-        ("let curr;\nwhile (curr != null) { curr = stack.pop() }", None),
+        (
+            "let curr;\nwhile (curr != null) { curr = stack.pop() }",
+            None,
+        ),
         // Suggestion `ReturnStatement`
         (
             "function foo() {
@@ -366,7 +396,10 @@ fn test() {
             }",
             Some(check_arguments(false)),
         ),
-        ("if (foo === null) {}", Some(check_arguments_and_strict_equality())),
+        (
+            "if (foo === null) {}",
+            Some(check_arguments_and_strict_equality()),
+        ),
         ("foo([null])", Some(check_arguments(false))),
         ("foo(bar ?? null)", Some(check_arguments(false))),
         ("foo(...[null])", Some(check_arguments(false))),
@@ -413,7 +446,11 @@ fn test() {
         ("let x = null as any;", "let x = undefined as any;", None),
         ("if (foo == null) {}", "if (foo == undefined) {}", None),
         ("if (foo != null) {}", "if (foo != undefined) {}", None),
-        ("if (foo == null) {}", "if (foo == undefined) {}", Some(check_strict_equality(true))),
+        (
+            "if (foo == null) {}",
+            "if (foo == undefined) {}",
+            Some(check_strict_equality(true)),
+        ),
         (
             "
             let isNullish;
@@ -448,7 +485,11 @@ fn test() {
             Some(check_strict_equality(true)),
         ),
         ("() => { return null! }", "() => { return  }", None),
-        ("() => { return null as any as typeof Array }", "() => { return  }", None),
+        (
+            "() => { return null as any as typeof Array }",
+            "() => { return  }",
+            None,
+        ),
         (
             r"const newDecorations = enabled ?
     this._debugService.getModel().getBreakpoints().map(breakpoint => {
@@ -471,5 +512,7 @@ fn test() {
             None,
         ),
     ];
-    Tester::new(NoNull::NAME, NoNull::PLUGIN, pass, fail).expect_fix(fix).test_and_snapshot();
+    Tester::new(NoNull::NAME, NoNull::PLUGIN, pass, fail)
+        .expect_fix(fix)
+        .test_and_snapshot();
 }

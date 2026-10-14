@@ -334,17 +334,20 @@ impl<'a> FormatConditionalLike<'a, '_> {
 
         // Check if the parent context requires extra indentation
         match parent {
-            AstNodes::VariableDeclarator(decl) => {
-                decl.init.as_ref().is_some_and(|init| init.span() == expression_span)
-            }
-            AstNodes::ReturnStatement(ret) => {
-                ret.argument.as_ref().is_some_and(|arg| arg.span() == expression_span)
-            }
+            AstNodes::VariableDeclarator(decl) => decl
+                .init
+                .as_ref()
+                .is_some_and(|init| init.span() == expression_span),
+            AstNodes::ReturnStatement(ret) => ret
+                .argument
+                .as_ref()
+                .is_some_and(|arg| arg.span() == expression_span),
             AstNodes::ThrowStatement(throw) => throw.argument.span() == expression_span,
             AstNodes::UnaryExpression(unary) => unary.argument.span() == expression_span,
-            AstNodes::YieldExpression(yield_expr) => {
-                yield_expr.argument.as_ref().is_some_and(|arg| arg.span() == expression_span)
-            }
+            AstNodes::YieldExpression(yield_expr) => yield_expr
+                .argument
+                .as_ref()
+                .is_some_and(|arg| arg.span() == expression_span),
             AstNodes::AwaitExpression(await_expr) => await_expr.argument.span() == expression_span,
             AstNodes::AssignmentExpression(assign) => assign.right.span() == expression_span,
             _ => false,
@@ -365,7 +368,10 @@ impl<'a> FormatConditionalLike<'a, '_> {
             let (start, end) = match self.conditional {
                 ConditionalLike::ConditionalExpression(conditional) => {
                     write!(f, FormatNodeWithoutTrailingComments(conditional.test()));
-                    (conditional.test.span().end, conditional.consequent.span().start)
+                    (
+                        conditional.test.span().end,
+                        conditional.consequent.span().start,
+                    )
                 }
                 ConditionalLike::TSConditionalType(conditional) => {
                     write!(
@@ -378,7 +384,10 @@ impl<'a> FormatConditionalLike<'a, '_> {
                             FormatNodeWithoutTrailingComments(conditional.extends_type())
                         ]
                     );
-                    (conditional.extends_type.span().end, conditional.true_type.span().start)
+                    (
+                        conditional.extends_type.span().end,
+                        conditional.true_type.span().start,
+                    )
                 }
             };
 
@@ -405,12 +414,24 @@ impl<'a> FormatConditionalLike<'a, '_> {
             let format_consequent_with_trailing_comments = format_with(|f| {
                 let (start, end) = match self.conditional {
                     ConditionalLike::ConditionalExpression(conditional) => {
-                        write!(f, FormatNodeWithoutTrailingComments(conditional.consequent()));
-                        (conditional.consequent.span().end, conditional.alternate.span().start)
+                        write!(
+                            f,
+                            FormatNodeWithoutTrailingComments(conditional.consequent())
+                        );
+                        (
+                            conditional.consequent.span().end,
+                            conditional.alternate.span().start,
+                        )
                     }
                     ConditionalLike::TSConditionalType(conditional) => {
-                        write!(f, FormatNodeWithoutTrailingComments(conditional.true_type()));
-                        (conditional.true_type.span().end, conditional.false_type.span().start)
+                        write!(
+                            f,
+                            FormatNodeWithoutTrailingComments(conditional.true_type())
+                        );
+                        (
+                            conditional.true_type.span().end,
+                            conditional.false_type.span().start,
+                        )
                     }
                 };
                 format_trailing_comments(start, end, b':', f);
@@ -452,10 +473,16 @@ impl<'a> FormatConditionalLike<'a, '_> {
 
         let format_alternative = format_with(|f| match self.conditional {
             ConditionalLike::ConditionalExpression(conditional) => {
-                write!(f, [FormatNodeWithoutTrailingComments(conditional.alternate())]);
+                write!(
+                    f,
+                    [FormatNodeWithoutTrailingComments(conditional.alternate())]
+                );
             }
             ConditionalLike::TSConditionalType(conditional) => {
-                write!(f, [FormatNodeWithoutTrailingComments(conditional.false_type())]);
+                write!(
+                    f,
+                    [FormatNodeWithoutTrailingComments(conditional.false_type())]
+                );
             }
         });
         let format_alternative = format_with(|f| {
@@ -468,7 +495,13 @@ impl<'a> FormatConditionalLike<'a, '_> {
 
         write!(
             f,
-            [format_consequent, soft_line_break_or_space(), ":", space(), format_alternative]
+            [
+                format_consequent,
+                soft_line_break_or_space(),
+                ":",
+                space(),
+                format_alternative
+            ]
         );
     }
 }
@@ -597,14 +630,20 @@ impl<'a> Format<'a, JsFormatContext<'a>> for FormatConditionalLike<'a, '_> {
 fn format_jsx_chain_consequent<'a, 'b>(
     expression: &'b AstNode<'a, Expression<'a>>,
 ) -> impl Format<'a, JsFormatContext<'a>> + 'b {
-    FormatJsxChainExpression { expression, alternate: false }
+    FormatJsxChainExpression {
+        expression,
+        alternate: false,
+    }
 }
 
 /// Formats JSX alternate with conditional wrapping
 fn format_jsx_chain_alternate<'a, 'b>(
     expression: &'b AstNode<'a, Expression<'a>>,
 ) -> impl Format<'a, JsFormatContext<'a>> + 'b {
-    FormatJsxChainExpression { expression, alternate: true }
+    FormatJsxChainExpression {
+        expression,
+        alternate: true,
+    }
 }
 
 /// A [ConditionalExpression] that itself or any of its parent's [ConditionalExpression] have a [JSXElement]

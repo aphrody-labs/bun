@@ -27,11 +27,22 @@ impl<'a> Parse<'a> for KeyframeBlock<'a> {
         debug_assert_eq!(comma_spans.len() + 1, selectors.len());
 
         let block = input
-            .with_state(ParserState { in_keyframes_at_rule: false, ..input.state.clone() })
+            .with_state(ParserState {
+                in_keyframes_at_rule: false,
+                ..input.state.clone()
+            })
             .parse::<SimpleBlock>()?;
 
-        let span = Span { start, end: block.span.end };
-        Ok(KeyframeBlock { selectors, comma_spans, block, span })
+        let span = Span {
+            start,
+            end: block.span.end,
+        };
+        Ok(KeyframeBlock {
+            selectors,
+            comma_spans,
+            block,
+            span,
+        })
     }
 }
 
@@ -65,7 +76,10 @@ impl<'a> Parse<'a> for KeyframeSelector<'a> {
                         });
                     }
                     let percentage = input.parse::<Percentage>()?;
-                    let span = Span { start: ident.span().start, end: percentage.span.end };
+                    let span = Span {
+                        start: ident.span().start,
+                        end: percentage.span.end,
+                    };
                     return Ok(KeyframeSelector::TimelineRange(KeyframeTimelineRange {
                         name: ident,
                         percentage,

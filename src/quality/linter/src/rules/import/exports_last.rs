@@ -56,8 +56,10 @@ impl Rule for ExportsLast {
         // find last non export declaration index
         let program = ctx.nodes().program();
         let body = &program.body;
-        let find_res =
-            body.iter().rev().find_position(|statement| !is_exports_declaration(statement));
+        let find_res = body
+            .iter()
+            .rev()
+            .find_position(|statement| !is_exports_declaration(statement));
         if let Some((index, _)) = find_res {
             let end = body.len() - index;
             for statement in &body[0..end] {
@@ -70,16 +72,18 @@ impl Rule for ExportsLast {
 }
 
 fn is_exports_declaration(statement: &Statement) -> bool {
-    statement.as_module_declaration().is_some_and(|declaration| {
-        matches!(
-            declaration,
-            ModuleDeclaration::ExportAllDeclaration(_)
-                | ModuleDeclaration::ExportDeclaration(_)
-                | ModuleDeclaration::ExportDefaultDeclaration(_)
-                | ModuleDeclaration::ExportNamedDeclaration(_)
-                | ModuleDeclaration::ExportFromDeclaration(_)
-        )
-    })
+    statement
+        .as_module_declaration()
+        .is_some_and(|declaration| {
+            matches!(
+                declaration,
+                ModuleDeclaration::ExportAllDeclaration(_)
+                    | ModuleDeclaration::ExportDeclaration(_)
+                    | ModuleDeclaration::ExportDefaultDeclaration(_)
+                    | ModuleDeclaration::ExportNamedDeclaration(_)
+                    | ModuleDeclaration::ExportFromDeclaration(_)
+            )
+        })
 }
 
 #[test]

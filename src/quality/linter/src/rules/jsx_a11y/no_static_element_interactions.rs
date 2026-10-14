@@ -29,8 +29,14 @@ fn no_static_element_interactions_diagnostic(span: Span) -> OxcDiagnostic {
         .with_label(span)
 }
 
-const DEFAULT_HANDLERS: &[&str] =
-    &["onClick", "onMouseDown", "onMouseUp", "onKeyPress", "onKeyDown", "onKeyUp"];
+const DEFAULT_HANDLERS: &[&str] = &[
+    "onClick",
+    "onMouseDown",
+    "onMouseUp",
+    "onKeyPress",
+    "onKeyDown",
+    "onKeyUp",
+];
 
 #[derive(Debug, Default, Clone, Deserialize)]
 pub struct NoStaticElementInteractions(Box<NoStaticElementInteractionsConfig>);
@@ -83,7 +89,8 @@ declare_oxc_lint!(
     correctness,
     config = NoStaticElementInteractionsConfig,
     version = "1.37.0",
-    short_description = "Enforces that static HTML elements with event handlers must have appropriate ARIA roles.",
+    short_description =
+        "Enforces that static HTML elements with event handlers must have appropriate ARIA roles.",
 );
 
 impl Rule for NoStaticElementInteractions {
@@ -140,12 +147,16 @@ impl Rule for NoStaticElementInteractions {
 
         let Some(JSXAttributeItem::Attribute(role_attr)) = has_jsx_prop_ignore_case(jsx_el, "role")
         else {
-            ctx.diagnostic(no_static_element_interactions_diagnostic(jsx_el.name.span()));
+            ctx.diagnostic(no_static_element_interactions_diagnostic(
+                jsx_el.name.span(),
+            ));
             return;
         };
 
         let Some(role_value) = &role_attr.value else {
-            ctx.diagnostic(no_static_element_interactions_diagnostic(jsx_el.name.span()));
+            ctx.diagnostic(no_static_element_interactions_diagnostic(
+                jsx_el.name.span(),
+            ));
             return;
         };
 
@@ -167,7 +178,9 @@ impl Rule for NoStaticElementInteractions {
             _ => {}
         }
 
-        ctx.diagnostic(no_static_element_interactions_diagnostic(jsx_el.name.span()));
+        ctx.diagnostic(no_static_element_interactions_diagnostic(
+            jsx_el.name.span(),
+        ));
     }
 }
 
@@ -197,7 +210,10 @@ fn test() {
         (r#"<input type="color" onClick={() => void 0} />"#, None),
         (r#"<input type="date" onClick={() => void 0} />"#, None),
         (r#"<input type="datetime" onClick={() => void 0} />"#, None),
-        (r#"<input type="datetime-local" onClick={() => void 0} />"#, None),
+        (
+            r#"<input type="datetime-local" onClick={() => void 0} />"#,
+            None,
+        ),
         (r#"<input type="email" onClick={() => void 0} />"#, None),
         (r#"<input type="file" onClick={() => void 0} />"#, None),
         (r#"<input type="hidden" onClick={() => void 0} />"#, None),
@@ -221,9 +237,15 @@ fn test() {
         (r"<menuitem onClick={() => {}} />;", None),
         (r#"<option onClick={() => void 0} className="foo" />"#, None),
         (r#"<select onClick={() => void 0} className="foo" />"#, None),
-        (r#"<textarea onClick={() => void 0} className="foo" />"#, None),
+        (
+            r#"<textarea onClick={() => void 0} className="foo" />"#,
+            None,
+        ),
         (r#"<a onClick={() => void 0} href="http://x.y.z" />"#, None),
-        (r#"<a onClick={() => void 0} href="http://x.y.z" tabIndex="0" />"#, None),
+        (
+            r#"<a onClick={() => void 0} href="http://x.y.z" tabIndex="0" />"#,
+            None,
+        ),
         (r"<audio onClick={() => {}} />;", None),
         (r"<form onClick={() => {}} />;", None),
         (r"<form onSubmit={() => {}} />;", None),
@@ -236,7 +258,10 @@ fn test() {
         (r#"<div role="gridcell" onClick={() => {}} />;"#, None),
         (r#"<div role="link" onClick={() => {}} />;"#, None),
         (r#"<div role="menuitem" onClick={() => {}} />;"#, None),
-        (r#"<div role="menuitemcheckbox" onClick={() => {}} />;"#, None),
+        (
+            r#"<div role="menuitemcheckbox" onClick={() => {}} />;"#,
+            None,
+        ),
         (r#"<div role="menuitemradio" onClick={() => {}} />;"#, None),
         (r#"<div role="option" onClick={() => {}} />;"#, None),
         (r#"<div role="radio" onClick={() => {}} />;"#, None),
@@ -302,7 +327,10 @@ fn test() {
         (r"<progress onClick={() => {}} />;", None),
         (r"<ruby onClick={() => {}} />;", None),
         (r#"<section onClick={() => {}} aria-label="Aa" />;"#, None),
-        (r#"<section onClick={() => {}} aria-labelledby="js_1" />;"#, None),
+        (
+            r#"<section onClick={() => {}} aria-labelledby="js_1" />;"#,
+            None,
+        ),
         (r"<strong onClick={() => {}} />;", None),
         (r"<sub onClick={() => {}} />;", None),
         (r"<summary onClick={() => {}} />;", None),
@@ -423,8 +451,14 @@ fn test() {
         ("<div onAnimationEnd={() => {}} />;", None),
         ("<div onAnimationIteration={() => {}} />;", None),
         // other tests
-        (r#"<div className="foo" onClick={() => {}} role="button" />;"#, None),
-        (r#"<div className="foo" onKeyDown={() => {}} role="button" />;"#, None),
+        (
+            r#"<div className="foo" onClick={() => {}} role="button" />;"#,
+            None,
+        ),
+        (
+            r#"<div className="foo" onKeyDown={() => {}} role="button" />;"#,
+            None,
+        ),
         (r#"<div onClick={() => {}} role="button" />;"#, None),
         (r#"<button onClick={() => {}} className="foo" />;"#, None),
         (r#"<input type="text" onClick={() => {}} />;"#, None),
@@ -442,7 +476,10 @@ fn test() {
         (r#"<div onKeyUp={() => {}} role="button" />;"#, None),
         (r"<div onClick={() => {}} aria-hidden />;", None),
         (r"<div onClick={() => {}} aria-hidden={true} />;", None),
-        (r#"<div onClick={() => {}} aria-hidden={false} role="button" />;"#, None),
+        (
+            r#"<div onClick={() => {}} aria-hidden={false} role="button" />;"#,
+            None,
+        ),
         (r#"<input onClick={() => {}} type="submit" />;"#, None),
         (r"<TestComponent onClick={() => {}} />;", None),
         (r"<Button onClick={() => {}} />;", None),
@@ -454,11 +491,17 @@ fn test() {
             r#"<div onClick={() => {}} role={isButton ? "button" : "link"} />"#,
             Some(serde_json::json!([{ "allowExpressionValues": true }])),
         ),
-        (r"<div onDblClick={() => {}} />", Some(serde_json::json!([{ "handlers": ["onClick"] }]))),
+        (
+            r"<div onDblClick={() => {}} />",
+            Some(serde_json::json!([{ "handlers": ["onClick"] }])),
+        ),
         // Test that it works regardless of order.
         (r#"<div onClick={() => {}} role="tab" />;"#, None),
         // Test that it works regardless of extra attributes.
-        (r#"<div role="tab" onClick={() => {}} style="color: red;" />;"#, None),
+        (
+            r#"<div role="tab" onClick={() => {}} style="color: red;" />;"#,
+            None,
+        ),
     ];
 
     let fail = vec![
@@ -566,6 +609,11 @@ fn test() {
         // (r"<div onMouseOver={() => {}} />;", None),
     ];
 
-    Tester::new(NoStaticElementInteractions::NAME, NoStaticElementInteractions::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        NoStaticElementInteractions::NAME,
+        NoStaticElementInteractions::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

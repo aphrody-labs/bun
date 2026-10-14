@@ -132,11 +132,26 @@ fn test() {
         ("foo = ! a <= b;", None),
         ("foo = ! a >= b;", None),
         ("! a <= b", Some(serde_json::json!([{}]))),
-        ("foo = ! a >= b;", Some(serde_json::json!([{ "enforceForOrderingRelations": false }]))),
-        ("foo = (!a) >= b;", Some(serde_json::json!([{ "enforceForOrderingRelations": true }]))),
-        ("a <= b", Some(serde_json::json!([{ "enforceForOrderingRelations": true }]))),
-        ("!(a < b)", Some(serde_json::json!([{ "enforceForOrderingRelations": true }]))),
-        ("foo = a > b;", Some(serde_json::json!([{ "enforceForOrderingRelations": true }]))),
+        (
+            "foo = ! a >= b;",
+            Some(serde_json::json!([{ "enforceForOrderingRelations": false }])),
+        ),
+        (
+            "foo = (!a) >= b;",
+            Some(serde_json::json!([{ "enforceForOrderingRelations": true }])),
+        ),
+        (
+            "a <= b",
+            Some(serde_json::json!([{ "enforceForOrderingRelations": true }])),
+        ),
+        (
+            "!(a < b)",
+            Some(serde_json::json!([{ "enforceForOrderingRelations": true }])),
+        ),
+        (
+            "foo = a > b;",
+            Some(serde_json::json!([{ "enforceForOrderingRelations": true }])),
+        ),
     ];
 
     let fail = vec![
@@ -147,11 +162,26 @@ fn test() {
         ("(!a instanceof b)", None),
         ("!(a) instanceof b", None),
         ("(y=>{if(!/s/ in(l)){}})", None),
-        ("if (! a < b) {}", Some(serde_json::json!([{ "enforceForOrderingRelations": true }]))),
-        ("while (! a > b) {}", Some(serde_json::json!([{ "enforceForOrderingRelations": true }]))),
-        ("foo = ! a <= b;", Some(serde_json::json!([{ "enforceForOrderingRelations": true }]))),
-        ("foo = ! a >= b;", Some(serde_json::json!([{ "enforceForOrderingRelations": true }]))),
-        ("! a <= b", Some(serde_json::json!([{ "enforceForOrderingRelations": true }]))),
+        (
+            "if (! a < b) {}",
+            Some(serde_json::json!([{ "enforceForOrderingRelations": true }])),
+        ),
+        (
+            "while (! a > b) {}",
+            Some(serde_json::json!([{ "enforceForOrderingRelations": true }])),
+        ),
+        (
+            "foo = ! a <= b;",
+            Some(serde_json::json!([{ "enforceForOrderingRelations": true }])),
+        ),
+        (
+            "foo = ! a >= b;",
+            Some(serde_json::json!([{ "enforceForOrderingRelations": true }])),
+        ),
+        (
+            "! a <= b",
+            Some(serde_json::json!([{ "enforceForOrderingRelations": true }])),
+        ),
     ];
 
     let fix = vec![

@@ -65,7 +65,9 @@ declare_oxc_lint!(
 
 impl Rule for PreferNamespaceKeyword {
     fn run<'a>(&self, node: &AstNode<'a>, ctx: &LintContext<'a>) {
-        let AstKind::TSNamespaceDeclaration(module) = node.kind() else { return };
+        let AstKind::TSNamespaceDeclaration(module) = node.kind() else {
+            return;
+        };
 
         if module.kind != TSNamespaceDeclarationKind::Module {
             return;
@@ -79,8 +81,9 @@ impl Rule for PreferNamespaceKeyword {
 
         ctx.diagnostic_with_fix(prefer_namespace_keyword_diagnostic(module.span), |fixer| {
             let mut span_start = module.span.start;
-            span_start +=
-                ctx.find_next_token_within(span_start, module.span.end, "module").unwrap();
+            span_start += ctx
+                .find_next_token_within(span_start, module.span.end, "module")
+                .unwrap();
             fixer.replace(Span::sized(span_start, 6), "namespace")
         });
     }
@@ -148,7 +151,11 @@ fn test() {
             ",
             None,
         ),
-        ("declare /* module */ module foo {}", "declare /* module */ namespace foo {}", None),
+        (
+            "declare /* module */ module foo {}",
+            "declare /* module */ namespace foo {}",
+            None,
+        ),
         (
             "declare module X.Y.module { let x: 'module'; }",
             "declare namespace X.Y.module { let x: 'module'; }",
@@ -156,7 +163,12 @@ fn test() {
         ),
     ];
 
-    Tester::new(PreferNamespaceKeyword::NAME, PreferNamespaceKeyword::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        PreferNamespaceKeyword::NAME,
+        PreferNamespaceKeyword::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

@@ -57,7 +57,10 @@ impl<'a> SourceText<'a> {
 
     /// Get bytes from start to position in reverse
     pub fn bytes_to(&self, position: u32) -> impl ExactSizeIterator<Item = u8> {
-        self.text.as_bytes()[..position as usize].iter().copied().rev()
+        self.text.as_bytes()[..position as usize]
+            .iter()
+            .copied()
+            .rev()
     }
 
     /// Get bytes between two positions

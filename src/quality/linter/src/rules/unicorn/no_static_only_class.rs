@@ -303,15 +303,36 @@ fn test() {
     let fix = vec![
         ("class A { static a() {}; }", "const A = { a() {}, }"),
         ("class A { static a() {} }", "const A = { a() {}, }"),
-        ("const a = class { static bar = 2; static baz() {} }", "const a =  { bar: 2, baz() {}, }"),
-        ("const A = class A { static a() {}; }", "const A = class A { static a() {}; }"),
-        ("class A { static constructor() {}; }", "const A = { constructor() {}, }"),
-        ("export default class A { static a() {}; }", "export default class A { static a() {}; }"),
-        ("export default class{ static a() {}; }", "export default { a() {}, }"),
-        ("export class A { static a() {}; }", "export const A = { a() {}, }"),
+        (
+            "const a = class { static bar = 2; static baz() {} }",
+            "const a =  { bar: 2, baz() {}, }",
+        ),
+        (
+            "const A = class A { static a() {}; }",
+            "const A = class A { static a() {}; }",
+        ),
+        (
+            "class A { static constructor() {}; }",
+            "const A = { constructor() {}, }",
+        ),
+        (
+            "export default class A { static a() {}; }",
+            "export default class A { static a() {}; }",
+        ),
+        (
+            "export default class{ static a() {}; }",
+            "export default { a() {}, }",
+        ),
+        (
+            "export class A { static a() {}; }",
+            "export const A = { a() {}, }",
+        ),
         ("class A {static foo = 1}", "const A = {foo: 1,}"),
         ("class A {static [this.a] = 1}", "const A = {[this.a]: 1,}"),
-        ("class A { static a: string; }", "class A { static a: string; }"),
+        (
+            "class A { static a: string; }",
+            "class A { static a: string; }",
+        ),
         (
             "class A { static a() {} /** comment ;;;; */ ;}",
             "const A = { a() {}, /** comment ;;;; */ }",
@@ -336,7 +357,10 @@ fn test() {
             "class A { static a() {}; /** comment ;;;; */ }",
             "const A = { a() {}, /** comment ;;;; */ }",
         ),
-        ("function a() { return class{ static b = 2 }; }", "function a() { return { b: 2, }; }"),
+        (
+            "function a() { return class{ static b = 2 }; }",
+            "function a() { return { b: 2, }; }",
+        ),
         (
             "function a() { return class A { static b = 2 }; }",
             "function a() { return class A { static b = 2 }; }",
@@ -350,7 +374,12 @@ fn test() {
         ("class A { static foo; }", "const A = { foo: undefined, }"),
     ];
 
-    Tester::new(NoStaticOnlyClass::NAME, NoStaticOnlyClass::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        NoStaticOnlyClass::NAME,
+        NoStaticOnlyClass::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

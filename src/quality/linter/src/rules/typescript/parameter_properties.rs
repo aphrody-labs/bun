@@ -22,9 +22,11 @@ use crate::{
 };
 
 fn prefer_class_property_diagnostic(parameter: &str, span: Span) -> OxcDiagnostic {
-    OxcDiagnostic::warn(format!("Property {parameter} should be declared as a class property."))
-        .with_help("Remove the parameter modifier and declare this member on the class instead.")
-        .with_label(span)
+    OxcDiagnostic::warn(format!(
+        "Property {parameter} should be declared as a class property."
+    ))
+    .with_help("Remove the parameter modifier and declare this member on the class instead.")
+    .with_label(span)
 }
 
 fn prefer_parameter_property_diagnostic(parameter: &str, span: Span) -> OxcDiagnostic {
@@ -179,7 +181,10 @@ impl ParameterProperties {
                 continue;
             };
 
-            ctx.diagnostic(prefer_class_property_diagnostic(name.as_str(), parameter.span));
+            ctx.diagnostic(prefer_class_property_diagnostic(
+                name.as_str(),
+                parameter.span,
+            ));
         }
     }
 
@@ -187,21 +192,29 @@ impl ParameterProperties {
         let mut property_nodes_by_name = FxHashMap::<Str<'a>, PropertyNodes<'a>>::default();
 
         for element in &class.body.body {
-            let ClassElement::PropertyDefinition(property) = element else { continue };
+            let ClassElement::PropertyDefinition(property) = element else {
+                continue;
+            };
             if property.computed || property.value.is_some() {
                 continue;
             }
-            let PropertyKey::StaticIdentifier(identifier) = &property.key else { continue };
+            let PropertyKey::StaticIdentifier(identifier) = &property.key else {
+                continue;
+            };
             if self.is_allowed_modifier(modifier_from_property(property)) {
                 continue;
             }
 
-            property_nodes_by_name.entry(identifier.name.into()).or_default().class_property =
-                Some(property);
+            property_nodes_by_name
+                .entry(identifier.name.into())
+                .or_default()
+                .class_property = Some(property);
         }
 
         for element in &class.body.body {
-            let ClassElement::MethodDefinition(method) = element else { continue };
+            let ClassElement::MethodDefinition(method) = element else {
+                continue;
+            };
             if method.kind != MethodDefinitionKind::Constructor {
                 continue;
             }
@@ -210,26 +223,37 @@ impl ParameterProperties {
                 if parameter.initializer.is_some() {
                     continue;
                 }
-                let Some(identifier) = parameter.pattern.get_binding_identifier() else { continue };
+                let Some(identifier) = parameter.pattern.get_binding_identifier() else {
+                    continue;
+                };
                 property_nodes_by_name
                     .entry(identifier.name.into())
                     .or_default()
                     .constructor_parameter = Some(parameter);
             }
 
-            for statement in
-                method.value.body.as_ref().map_or([].as_slice(), |body| &body.statements)
+            for statement in method
+                .value
+                .body
+                .as_ref()
+                .map_or([].as_slice(), |body| &body.statements)
             {
-                let Some((assignment, name)) = constructor_assignment(statement) else { break };
-                property_nodes_by_name.entry(name).or_default().constructor_assignment =
-                    Some(assignment);
+                let Some((assignment, name)) = constructor_assignment(statement) else {
+                    break;
+                };
+                property_nodes_by_name
+                    .entry(name)
+                    .or_default()
+                    .constructor_assignment = Some(assignment);
             }
         }
 
         for (name, nodes) in property_nodes_by_name {
-            let (Some(class_property), Some(_assignment), Some(constructor_parameter)) =
-                (nodes.class_property, nodes.constructor_assignment, nodes.constructor_parameter)
-            else {
+            let (Some(class_property), Some(_assignment), Some(constructor_parameter)) = (
+                nodes.class_property,
+                nodes.constructor_assignment,
+                nodes.constructor_parameter,
+            ) else {
                 continue;
             };
 
@@ -285,7 +309,10 @@ fn constructor_assignment<'a>(
     let AssignmentTarget::StaticMemberExpression(member_expression) = &assignment.left else {
         return None;
     };
-    if !matches!(member_expression.object.get_inner_expression(), Expression::ThisExpression(_)) {
+    if !matches!(
+        member_expression.object.get_inner_expression(),
+        Expression::ThisExpression(_)
+    ) {
         return None;
     }
     let Expression::Identifier(identifier) = assignment.right.get_inner_expression() else {
@@ -302,7 +329,10 @@ fn type_annotations_match(
     constructor_parameter: &FormalParameter<'_>,
     ctx: &LintContext<'_>,
 ) -> bool {
-    match (&class_property.type_annotation, &constructor_parameter.type_annotation) {
+    match (
+        &class_property.type_annotation,
+        &constructor_parameter.type_annotation,
+    ) {
         (None, None) => true,
         (Some(left), Some(right)) => {
             ctx.source_range(left.span()) == ctx.source_range(right.span())
@@ -973,6 +1003,11 @@ fn test() {
         ),
     ];
 
-    Tester::new(ParameterProperties::NAME, ParameterProperties::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        ParameterProperties::NAME,
+        ParameterProperties::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

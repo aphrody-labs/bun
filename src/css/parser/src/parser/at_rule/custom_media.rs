@@ -9,7 +9,10 @@ impl<'a> Parse<'a> for CustomMedia<'a> {
     fn parse(input: &mut Parser<'a>) -> PResult<Self> {
         let name = input.parse_dashed_ident()?;
         let value = input.parse::<CustomMediaValue>()?;
-        let span = Span { start: name.span().start, end: value.span().end };
+        let span = Span {
+            start: name.span().start,
+            end: value.span().end,
+        };
         Ok(CustomMedia { name, value, span })
     }
 }

@@ -10,7 +10,9 @@ pub struct NodeTypeSet {
 impl NodeTypeSet {
     /// Create a new set of node variants
     pub fn new() -> Self {
-        Self { node_types: FxHashSet::default() }
+        Self {
+            node_types: FxHashSet::default(),
+        }
     }
 
     /// Insert a variant into the set
@@ -31,11 +33,16 @@ impl NodeTypeSet {
     /// Returns the generated code string to initialize an `AstTypesBitset` with the variants
     /// in this set.
     pub fn to_ast_type_bitset_string(&self) -> String {
-        let mut variants: Vec<&str> =
-            self.node_types.iter().map(std::string::String::as_str).collect();
+        let mut variants: Vec<&str> = self
+            .node_types
+            .iter()
+            .map(std::string::String::as_str)
+            .collect();
         variants.sort_unstable();
-        let type_idents: Vec<String> =
-            variants.into_iter().map(|v| format!("AstType::{v}")).collect();
+        let type_idents: Vec<String> = variants
+            .into_iter()
+            .map(|v| format!("AstType::{v}"))
+            .collect();
         format!("AstTypesBitset::from_types(&[{}])", type_idents.join(", "))
     }
 }

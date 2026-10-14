@@ -27,10 +27,22 @@ fn merge_imports() {
         "import { foo } from 'foo'; import { bar } from 'foo'; import { baz } from 'foo';",
         "import { foo, bar, baz } from 'foo';",
     );
-    test("import foo from 'foo'; import { bar } from 'foo';", "import foo, { bar } from 'foo';");
-    test("import { bar } from 'foo'; import foo from 'foo';", "import foo, { bar } from 'foo';");
-    test("import foo from 'foo'; import * as ns from 'foo';", "import foo, * as ns from 'foo';");
-    test("import * as ns from 'foo'; import foo from 'foo';", "import foo, * as ns from 'foo';");
+    test(
+        "import foo from 'foo'; import { bar } from 'foo';",
+        "import foo, { bar } from 'foo';",
+    );
+    test(
+        "import { bar } from 'foo'; import foo from 'foo';",
+        "import foo, { bar } from 'foo';",
+    );
+    test(
+        "import foo from 'foo'; import * as ns from 'foo';",
+        "import foo, * as ns from 'foo';",
+    );
+    test(
+        "import * as ns from 'foo'; import foo from 'foo';",
+        "import foo, * as ns from 'foo';",
+    );
     test(
         "import foo from 'foo'; import bar from 'foo';",
         "import foo, { default as bar } from 'foo';",

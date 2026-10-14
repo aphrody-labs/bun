@@ -49,12 +49,18 @@ impl Underline {
 
 const CHUNK_CHARS: usize = 64;
 const MIN_CHUNKED_CHARS: usize = 8;
-const SPACES: &str =
-    concat!("                                ", "                                ");
-const UNICODE_BARS: &str =
-    concat!("────────────────────────────────", "────────────────────────────────");
-const ASCII_CARETS: &str =
-    concat!("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^", "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^");
+const SPACES: &str = concat!(
+    "                                ",
+    "                                "
+);
+const UNICODE_BARS: &str = concat!(
+    "────────────────────────────────",
+    "────────────────────────────────"
+);
+const ASCII_CARETS: &str = concat!(
+    "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^",
+    "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"
+);
 
 fn write_repeated_chunk(
     f: &mut impl fmt::Write,
@@ -66,7 +72,11 @@ fn write_repeated_chunk(
         f.write_str(chunk)?;
         count -= CHUNK_CHARS;
     }
-    if count == 0 { Ok(()) } else { f.write_str(&chunk[..count * char_len]) }
+    if count == 0 {
+        Ok(())
+    } else {
+        f.write_str(&chunk[..count * char_len])
+    }
 }
 
 pub(super) fn write_repeated_char(f: &mut impl fmt::Write, c: char, count: usize) -> fmt::Result {
@@ -313,7 +323,12 @@ impl GraphicalReportHandler {
     ) -> fmt::Result {
         match render_mode {
             LabelRenderMode::SingleLine => {
-                writeln!(f, "{} {}", self.theme.characters.hbar.style(style), label.style(style))?;
+                writeln!(
+                    f,
+                    "{} {}",
+                    self.theme.characters.hbar.style(style),
+                    label.style(style)
+                )?;
             }
             LabelRenderMode::BlockFirst => {
                 writeln!(
@@ -324,7 +339,12 @@ impl GraphicalReportHandler {
                 )?;
             }
             LabelRenderMode::BlockRest => {
-                writeln!(f, "{} {}", self.theme.characters.vbar.style(style), label.style(style))?;
+                writeln!(
+                    f,
+                    "{} {}",
+                    self.theme.characters.vbar.style(style),
+                    label.style(style)
+                )?;
             }
         }
 
@@ -338,15 +358,23 @@ mod tests {
 
     #[test]
     fn plain_fast_paths_match_display_output() {
-        let underline = Underline { padding: 3, left: 2, marker: '|', right: 4, line: '^' };
+        let underline = Underline {
+            padding: 3,
+            left: 2,
+            marker: '|',
+            right: 4,
+            line: '^',
+        };
         let mut output = String::new();
         underline.write(&mut output).unwrap();
         assert_eq!(output, underline.to_string());
 
         let theme = crate::GraphicalTheme::none();
-        for render_mode in
-            [LabelRenderMode::SingleLine, LabelRenderMode::BlockFirst, LabelRenderMode::BlockRest]
-        {
+        for render_mode in [
+            LabelRenderMode::SingleLine,
+            LabelRenderMode::BlockFirst,
+            LabelRenderMode::BlockRest,
+        ] {
             let label = LabelText {
                 chars: &theme.characters,
                 label: "plain label",

@@ -60,7 +60,10 @@ impl<'a> PeepholeOptimizations {
         while let Some(stmt) = old_stmts.next() {
             if is_control_flow_dead
                 && !stmt.is_module_declaration()
-                && !matches!(stmt.as_declaration(), Some(Declaration::FunctionDeclaration(_)))
+                && !matches!(
+                    stmt.as_declaration(),
+                    Some(Declaration::FunctionDeclaration(_))
+                )
             {
                 // Harvest any `var` bindings so they re-emit at the end of
                 // the block (see `keep_var.get_variable_declaration_statement`
@@ -154,7 +157,12 @@ impl<'a> PeepholeOptimizations {
             .specifiers
             .iter()
             .flat_map(|specifiers| specifiers.iter())
-            .chain(second.specifiers.iter().flat_map(|specifiers| specifiers.iter()))
+            .chain(
+                second
+                    .specifiers
+                    .iter()
+                    .flat_map(|specifiers| specifiers.iter()),
+            )
         {
             match specifier {
                 ImportDeclarationSpecifier::ImportSpecifier(_) => has_named = true,
@@ -282,7 +290,9 @@ impl<'a> PeepholeOptimizations {
         export_decl: &ExportNamedDeclaration<'a>,
         ctx: &TraverseCtx<'a>,
     ) -> bool {
-        let Some(import_specifiers) = import_decl.specifiers.as_ref() else { return false };
+        let Some(import_specifiers) = import_decl.specifiers.as_ref() else {
+            return false;
+        };
         let is_namespace_import = matches!(
             import_specifiers.as_slice(),
             [ImportDeclarationSpecifier::ImportNamespaceSpecifier(_)]
@@ -468,8 +478,11 @@ impl<'a> PeepholeOptimizations {
                     let ModuleExportName::IdentifierReference(id) = &export_specifier.local else {
                         unreachable!();
                     };
-                    let symbol_id =
-                        ctx.scoping().get_reference(id.reference_id()).symbol_id().unwrap();
+                    let symbol_id = ctx
+                        .scoping()
+                        .get_reference(id.reference_id())
+                        .symbol_id()
+                        .unwrap();
                     let import_specifier = import_specifiers
                         .iter_mut()
                         .find(|import_specifier| import_specifier.symbol_id() == symbol_id)
@@ -573,7 +586,9 @@ impl<'a> PeepholeOptimizations {
             return;
         }
         let last_epr = result.pop().unwrap();
-        let Statement::ExpressionStatement(prev_expr_stmt) = last_epr else { unreachable!() };
+        let Statement::ExpressionStatement(prev_expr_stmt) = last_epr else {
+            unreachable!()
+        };
         let a = prev_expr_stmt.unbox().expression;
         ctx.replace_expression_with(target, |b, ctx| Self::join_sequence(a, b, ctx));
     }
@@ -616,7 +631,13 @@ impl<'a> PeepholeOptimizations {
         {
             ctx.notice_change();
         }
-        let VariableDeclaration { span, kind, declarations, declare, .. } = var_decl.unbox();
+        let VariableDeclaration {
+            span,
+            kind,
+            declarations,
+            declare,
+            ..
+        } = var_decl.unbox();
         for mut decl in declarations {
             if Self::should_remove_unused_declarator(&decl, kind, ctx) {
                 // `init` is `mut` because `remove_unused_expression` rewrites
@@ -714,7 +735,10 @@ impl<'a> PeepholeOptimizations {
         let Some(Statement::VariableDeclaration(var_decl)) = result.last_mut() else {
             return false;
         };
-        if !matches!(&var_decl.kind, VariableDeclarationKind::Var | VariableDeclarationKind::Let) {
+        if !matches!(
+            &var_decl.kind,
+            VariableDeclarationKind::Var | VariableDeclarationKind::Let
+        ) {
             return false;
         }
         let declaration_kind = var_decl.kind;
@@ -773,8 +797,11 @@ impl<'a> PeepholeOptimizations {
             Expression::SequenceExpression(sequence_expr) => {
                 // The value of the last expression is observed unless discarded.
                 let limit = sequence_expr.expressions.len() - usize::from(!value_is_discarded);
-                let first_non_merged_index =
-                    sequence_expr.expressions.iter_mut().take(limit).position(|expr| match expr {
+                let first_non_merged_index = sequence_expr
+                    .expressions
+                    .iter_mut()
+                    .take(limit)
+                    .position(|expr| match expr {
                         Expression::AssignmentExpression(assign_expr) => {
                             !Self::merge_assignment_to_declaration(assign_expr, result, ctx)
                         }
@@ -849,8 +876,17 @@ impl<'a> PeepholeOptimizations {
         {
             ctx.notice_change();
             let switch_scope_id = switch_stmt.scope_id();
-            let SwitchStatement { span: switch_span, discriminant, .. } = switch_stmt.unbox();
-            let SwitchCase { span: case_span, test, mut consequent, .. } = case;
+            let SwitchStatement {
+                span: switch_span,
+                discriminant,
+                ..
+            } = switch_stmt.unbox();
+            let SwitchCase {
+                span: case_span,
+                test,
+                mut consequent,
+                ..
+            } = case;
 
             let block_stmt =
                 if consequent.len() == 1 && matches!(consequent[0], Statement::BlockStatement(_)) {
@@ -917,7 +953,9 @@ impl<'a> PeepholeOptimizations {
                 // `if (a) JUMP; if (b) JUMP;` => `if (a || b) JUMP;`
                 // `if (a) { b; JUMP }; if (b) { b; JUMP };` => `if (a || b) { b; JUMP };`
                 let previous = result.pop().unwrap();
-                let Statement::IfStatement(previous) = previous else { unreachable!() };
+                let Statement::IfStatement(previous) = previous else {
+                    unreachable!()
+                };
                 let previous = previous.unbox();
                 let span = if_stmt.test.span();
                 ctx.replace_expression_with(&mut if_stmt.test, |test, ctx| {
@@ -952,9 +990,14 @@ impl<'a> PeepholeOptimizations {
                 //   if (a(() => b)) return; let b;
                 //   if (a(() => b)) { let b; }
                 //
-                let can_move_branch_condition_outside_scope =
-                    !if_stmt.alternate.as_ref().is_some_and(Self::statement_cares_about_scope)
-                        && !stmts.as_slice().iter().any(Self::statement_cares_about_scope);
+                let can_move_branch_condition_outside_scope = !if_stmt
+                    .alternate
+                    .as_ref()
+                    .is_some_and(Self::statement_cares_about_scope)
+                    && !stmts
+                        .as_slice()
+                        .iter()
+                        .any(Self::statement_cares_about_scope);
 
                 if can_move_branch_condition_outside_scope {
                     let drained_stmts = stmts.by_ref();
@@ -963,7 +1006,11 @@ impl<'a> PeepholeOptimizations {
                     } else {
                         ArenaVec::from_iter_in(drained_stmts, ctx)
                     };
-                    let span = if body.is_empty() { SPAN } else { body[0].span() };
+                    let span = if body.is_empty() {
+                        SPAN
+                    } else {
+                        body[0].span()
+                    };
                     Self::minimize_statements(&mut body, ctx);
                     let alternate = if body.len() == 1 {
                         body.remove(0)
@@ -999,7 +1046,10 @@ impl<'a> PeepholeOptimizations {
                 }
             }
 
-            if !if_stmt.alternate.as_ref().is_none_or(Self::statement_cares_about_scope)
+            if !if_stmt
+                .alternate
+                .as_ref()
+                .is_none_or(Self::statement_cares_about_scope)
                 && if_stmt.consequent.is_terminated()
                 && let Some(stmt) = if_stmt.alternate.take()
             {
@@ -1060,7 +1110,9 @@ impl<'a> PeepholeOptimizations {
                         // `if (a) return; return;` => `a; return;`
                         ctx.notice_change();
                         let prev_stmt = result.pop().unwrap();
-                        let Statement::IfStatement(prev_if) = prev_stmt else { unreachable!() };
+                        let Statement::IfStatement(prev_if) = prev_stmt else {
+                            unreachable!()
+                        };
                         let test_expr = prev_if.unbox().test;
 
                         Self::push_new_expression_stmt_to_result(test_expr, result, ctx);
@@ -1089,7 +1141,9 @@ impl<'a> PeepholeOptimizations {
                     // `if (a) return b; return c;` => `return a ? b : c;`
                     ctx.notice_change();
                     let prev_stmt = result.pop().unwrap();
-                    let Statement::IfStatement(prev_if) = prev_stmt else { unreachable!() };
+                    let Statement::IfStatement(prev_if) = prev_stmt else {
+                        unreachable!()
+                    };
                     let prev_if = prev_if.unbox();
                     let Statement::ReturnStatement(mut prev_return) = prev_if.consequent else {
                         unreachable!()
@@ -1154,7 +1208,9 @@ impl<'a> PeepholeOptimizations {
                 {
                     ctx.notice_change();
                     let prev_stmt = result.pop().unwrap();
-                    let Statement::IfStatement(prev_if) = prev_stmt else { unreachable!() };
+                    let Statement::IfStatement(prev_if) = prev_stmt else {
+                        unreachable!()
+                    };
                     let prev_if = prev_if.unbox();
                     let Statement::ThrowStatement(prev_throw) = prev_if.consequent else {
                         unreachable!()
@@ -1444,7 +1500,10 @@ impl<'a> PeepholeOptimizations {
         block_stmt: ArenaBox<'a, BlockStatement<'a>>,
         ctx: &mut TraverseCtx<'a>,
     ) {
-        let keep_block = block_stmt.body.iter().any(Self::statement_cares_about_scope);
+        let keep_block = block_stmt
+            .body
+            .iter()
+            .any(Self::statement_cares_about_scope);
         if keep_block {
             result.push(Statement::BlockStatement(block_stmt));
         } else {
@@ -1549,7 +1608,9 @@ impl<'a> PeepholeOptimizations {
         let mut changed = false;
         let mut i = 1;
         while i < declarations.len() {
-            let (prev_decls, [decl, ..]) = declarations.split_at_mut(i) else { unreachable!() };
+            let (prev_decls, [decl, ..]) = declarations.split_at_mut(i) else {
+                unreachable!()
+            };
             let Some(decl_init) = &mut decl.init else {
                 i += 1;
                 continue;
@@ -1598,7 +1659,11 @@ impl<'a> PeepholeOptimizations {
             // would lose the function-scoped hoisting that `var` provides. The catch parameter
             // and the var share one symbol (with CatchVariable flag) due to the redeclaration
             // semantics in https://tc39.es/ecma262/#sec-variablestatements-in-catch-blocks
-            if ctx.scoping().symbol_flags(prev_decl_id.symbol_id()).is_catch_variable() {
+            if ctx
+                .scoping()
+                .symbol_flags(prev_decl_id.symbol_id())
+                .is_catch_variable()
+            {
                 return true;
             }
             if ctx.is_expression_whose_name_needs_to_be_kept(prev_decl_init) {
@@ -1612,7 +1677,10 @@ impl<'a> PeepholeOptimizations {
             // An `export { foo }` specifier also contributes a reference, but
             // consult the shared metadata explicitly for consistency with the
             // other count-based consumers.
-            if ctx.state.symbols.is_implicitly_observable(prev_decl_id.symbol_id())
+            if ctx
+                .state
+                .symbols
+                .is_implicitly_observable(prev_decl_id.symbol_id())
                 || symbol_value.references.has_multiple_reads()
                 || symbol_value.references.has_writes()
             {

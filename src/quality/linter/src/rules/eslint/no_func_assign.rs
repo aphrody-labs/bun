@@ -74,7 +74,9 @@ declare_oxc_lint!(
 
 impl Rule for NoFuncAssign {
     fn run<'a>(&self, node: &AstNode<'a>, ctx: &LintContext<'a>) {
-        let AstKind::Function(func) = node.kind() else { return };
+        let AstKind::Function(func) = node.kind() else {
+            return;
+        };
 
         let (func_name, symbol_id) = match &func.id {
             Some(id) => (id.name.as_str(), id.symbol_id()),

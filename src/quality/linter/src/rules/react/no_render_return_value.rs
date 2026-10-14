@@ -50,7 +50,8 @@ declare_oxc_lint!(
     react,
     correctness,
     version = "0.0.15",
-    short_description = "This rule will warn you if you try to use the `ReactDOM.render()` return value.",
+    short_description =
+        "This rule will warn you if you try to use the `ReactDOM.render()` return value.",
 );
 
 impl Rule for NoRenderReturnValue {
@@ -77,7 +78,9 @@ impl Rule for NoRenderReturnValue {
                     | AstKind::AssignmentExpression(_)
                     | AstKind::ArrowFunctionExpression(_)
             ) {
-                ctx.diagnostic(no_render_return_value_diagnostic(ident.span.merge(property_span)));
+                ctx.diagnostic(no_render_return_value_diagnostic(
+                    ident.span.merge(property_span),
+                ));
             }
 
             let scope_id = parent_node.scope_id();
@@ -86,7 +89,9 @@ impl Rule for NoRenderReturnValue {
                     ctx.nodes().kind(ctx.scoping().get_node_id(scope_id))
                 && e.is_expression()
             {
-                ctx.diagnostic(no_render_return_value_diagnostic(ident.span.merge(property_span)));
+                ctx.diagnostic(no_render_return_value_diagnostic(
+                    ident.span.merge(property_span),
+                ));
             }
         }
     }
@@ -109,9 +114,18 @@ fn test() {
                   ",
             None,
         ),
-        ("ReactDOM.render(<div ref={ref => this.node = ref}/>, document.body);", None),
-        ("React.render(<div ref={ref => this.node = ref}/>, document.body);", None),
-        ("React.render(<div ref={ref => this.node = ref}/>, document.body);", None),
+        (
+            "ReactDOM.render(<div ref={ref => this.node = ref}/>, document.body);",
+            None,
+        ),
+        (
+            "React.render(<div ref={ref => this.node = ref}/>, document.body);",
+            None,
+        ),
+        (
+            "React.render(<div ref={ref => this.node = ref}/>, document.body);",
+            None,
+        ),
         ("var foo = React.render(<div />, root);", None),
         ("var foo = render(<div />, root)", None),
         ("var foo = ReactDom.renderder(<div />, root)", None),
@@ -147,9 +161,17 @@ fn test() {
         // See https://github.com/oxc-project/oxc/pull/1042#discussion_r1369762147
         // ("var inst = React.render(<div />, document.body);", None),
         // ("var inst = React.render(<div />, document.body);", None),
-        ("const render = () => ReactDOM.render(<div />, document.body)", None),
+        (
+            "const render = () => ReactDOM.render(<div />, document.body)",
+            None,
+        ),
     ];
 
-    Tester::new(NoRenderReturnValue::NAME, NoRenderReturnValue::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        NoRenderReturnValue::NAME,
+        NoRenderReturnValue::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

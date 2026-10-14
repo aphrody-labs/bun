@@ -9,11 +9,20 @@ use oxc_span::Span;
 
 use crate::{AstNode, config::JSDocPluginSettings};
 
-pub const CUSTOM_SKIP_TAG_NAMES: [&str; 6] =
-    ["abstract", "class", "constructor", "interface", "type", "virtual"];
+pub const CUSTOM_SKIP_TAG_NAMES: [&str; 6] = [
+    "abstract",
+    "class",
+    "constructor",
+    "interface",
+    "type",
+    "virtual",
+];
 
 pub fn should_ignore_as_custom_skip(jsdoc: &JSDoc) -> bool {
-    jsdoc.tags().iter().any(|tag| CUSTOM_SKIP_TAG_NAMES.contains(&tag.kind.parsed()))
+    jsdoc
+        .tags()
+        .iter()
+        .any(|tag| CUSTOM_SKIP_TAG_NAMES.contains(&tag.kind.parsed()))
 }
 
 pub fn is_missing_special_tag<'a, 'b>(
@@ -23,7 +32,9 @@ pub fn is_missing_special_tag<'a, 'b>(
 where
     'a: 'b,
 {
-    jsdoc_tags.into_iter().all(|tag| tag.kind.parsed() != resolved_tag_name)
+    jsdoc_tags
+        .into_iter()
+        .all(|tag| tag.kind.parsed() != resolved_tag_name)
 }
 
 pub fn is_duplicated_special_tag<'a, 'b>(
@@ -71,7 +82,11 @@ pub fn get_function_nearest_jsdoc_node<'a, 'b>(
     let mut current_node = node;
     let source_function_id = node.id();
     // Whether the node has attached JSDoc or not is determined by `JSDocBuilder`
-    while semantic.jsdoc().get_all_by_node(semantic.nodes(), current_node).is_none() {
+    while semantic
+        .jsdoc()
+        .get_all_by_node(semantic.nodes(), current_node)
+        .is_none()
+    {
         // Tie-breaker, otherwise every loop will end at `Program` node!
         // Maybe more checks should be added
         match current_node.kind() {
@@ -152,8 +167,10 @@ pub fn should_ignore_as_avoid(
     settings: &JSDocPluginSettings,
     exempted_tag_names: &[String],
 ) -> bool {
-    let mut ignore_tag_names =
-        exempted_tag_names.iter().map(String::as_str).collect::<FxHashSet<_>>();
+    let mut ignore_tag_names = exempted_tag_names
+        .iter()
+        .map(String::as_str)
+        .collect::<FxHashSet<_>>();
     if settings.ignore_replaces_docs {
         ignore_tag_names.insert(settings.resolve_tag_name("ignore"));
     }
@@ -168,7 +185,10 @@ pub fn should_ignore_as_avoid(
         ignore_tag_names.insert(settings.resolve_tag_name("implements"));
     }
 
-    jsdoc.tags().iter().any(|tag| ignore_tag_names.contains(tag.kind.parsed()))
+    jsdoc
+        .tags()
+        .iter()
+        .any(|tag| ignore_tag_names.contains(tag.kind.parsed()))
 }
 
 #[derive(Debug, Clone)]
@@ -201,18 +221,25 @@ pub fn collect_params(
         use_default_object_properties: bool,
     ) -> ParamKind {
         match &pattern {
-            BindingPattern::BindingIdentifier(ident) => {
-                ParamKind::Single(Param { span: ident.span, name: ident.name.to_string(), is_rest })
-            }
+            BindingPattern::BindingIdentifier(ident) => ParamKind::Single(Param {
+                span: ident.span,
+                name: ident.name.to_string(),
+                is_rest,
+            }),
             BindingPattern::ObjectPattern(obj_pat) => {
                 let mut collected = vec![];
 
                 for prop in &obj_pat.properties {
-                    let Some(name) = prop.key.name() else { continue };
+                    let Some(name) = prop.key.name() else {
+                        continue;
+                    };
 
                     match get_param_name(&prop.value, false, use_default_object_properties) {
                         ParamKind::Single(param) => {
-                            collected.push(Param { name: format!("{name}"), ..param });
+                            collected.push(Param {
+                                name: format!("{name}"),
+                                ..param
+                            });
                         }
                         ParamKind::Nested(params) => {
                             collected.push(Param {

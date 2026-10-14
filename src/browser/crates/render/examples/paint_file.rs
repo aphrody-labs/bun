@@ -7,7 +7,10 @@ use bun_browser_render::screenshot_png;
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
-    let input = args.get(1).map(|s| s.as_str()).unwrap_or("wiki_prepared.html");
+    let input = args
+        .get(1)
+        .map(|s| s.as_str())
+        .unwrap_or("wiki_prepared.html");
     let output = args.get(2).map(|s| s.as_str()).unwrap_or("wiki_out.png");
     let w: f32 = args.get(3).and_then(|s| s.parse().ok()).unwrap_or(1280.0);
     let h: f32 = args.get(4).and_then(|s| s.parse().ok()).unwrap_or(720.0);

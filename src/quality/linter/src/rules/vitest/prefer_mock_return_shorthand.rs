@@ -705,8 +705,14 @@ fn test() {
             r#"jest.fn().mockImplementation(() => "hello sunshine")"#,
             r#"jest.fn().mockReturnValue("hello sunshine")"#,
         ),
-        ("jest.fn().mockImplementation(() => ({}))", "jest.fn().mockReturnValue({})"),
-        ("jest.fn().mockImplementation(() => x)", "jest.fn().mockReturnValue(x)"),
+        (
+            "jest.fn().mockImplementation(() => ({}))",
+            "jest.fn().mockReturnValue({})",
+        ),
+        (
+            "jest.fn().mockImplementation(() => x)",
+            "jest.fn().mockReturnValue(x)",
+        ),
         (
             "jest.fn().mockImplementation(() => true ? x : y)",
             "jest.fn().mockReturnValue(true ? x : y)",
@@ -755,7 +761,10 @@ fn test() {
               message: 'hello'
             })",
         ),
-        ("jest.fn().mockImplementation(() => [], xyz)", "jest.fn().mockReturnValue([], xyz)"),
+        (
+            "jest.fn().mockImplementation(() => [], xyz)",
+            "jest.fn().mockReturnValue([], xyz)",
+        ),
         (
             "const currentX = 0;
             jest.spyOn(X, getCount).mockImplementation(() => currentX);",
@@ -1075,9 +1084,18 @@ fn test() {
             r#"vi.fn().mockImplementation(() => "hello sunshine")"#,
             r#"vi.fn().mockReturnValue("hello sunshine")"#,
         ),
-        ("vi.fn().mockImplementation(() => ({}))", "vi.fn().mockReturnValue({})"),
-        ("vi.fn().mockImplementation(() => x)", "vi.fn().mockReturnValue(x)"),
-        ("vi.fn().mockImplementation(() => true ? x : y)", "vi.fn().mockReturnValue(true ? x : y)"),
+        (
+            "vi.fn().mockImplementation(() => ({}))",
+            "vi.fn().mockReturnValue({})",
+        ),
+        (
+            "vi.fn().mockImplementation(() => x)",
+            "vi.fn().mockReturnValue(x)",
+        ),
+        (
+            "vi.fn().mockImplementation(() => true ? x : y)",
+            "vi.fn().mockReturnValue(true ? x : y)",
+        ),
         (
             r#"vi.fn().mockImplementation(() => "hello world")"#,
             r#"vi.fn().mockReturnValue("hello world")"#,
@@ -1094,13 +1112,21 @@ fn test() {
             r#"aVariable.mockImplementationOnce(() => "hello world")"#,
             r#"aVariable.mockReturnValueOnce("hello world")"#,
         ),
-        ("vi.fn().mockImplementation(() => [], xyz)", "vi.fn().mockReturnValue([], xyz)"),
+        (
+            "vi.fn().mockImplementation(() => [], xyz)",
+            "vi.fn().mockReturnValue([], xyz)",
+        ),
     ];
 
     fix.extend(fix_jest);
 
-    Tester::new(PreferMockReturnShorthand::NAME, PreferMockReturnShorthand::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .with_vitest_plugin(true)
-        .test_and_snapshot();
+    Tester::new(
+        PreferMockReturnShorthand::NAME,
+        PreferMockReturnShorthand::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .with_vitest_plugin(true)
+    .test_and_snapshot();
 }

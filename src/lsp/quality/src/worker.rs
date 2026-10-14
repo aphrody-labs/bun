@@ -94,7 +94,12 @@ impl WorkspaceWorker {
         // clone the options to avoid locking the mutex
         let options_json = { self.options.lock().await.clone().unwrap_or_default() };
 
-        let patterns = self.tool.read().await.as_ref()?.get_watcher_patterns(options_json);
+        let patterns = self
+            .tool
+            .read()
+            .await
+            .as_ref()?
+            .get_watcher_patterns(options_json);
         if patterns.is_empty() {
             None
         } else {
@@ -216,8 +221,12 @@ impl WorkspaceWorker {
         // Watchers that need to be unregistered
         Vec<Unregistration>,
     ) {
-        let uris_to_clear_diagnostics =
-            self.published_diagnostics.lock().await.drain().collect::<Vec<Uri>>();
+        let uris_to_clear_diagnostics = self
+            .published_diagnostics
+            .lock()
+            .await
+            .drain()
+            .collect::<Vec<Uri>>();
         let mut watchers_to_unregister = Vec::new();
 
         self.builder.shutdown(&self.root_uri);
@@ -254,9 +263,13 @@ impl WorkspaceWorker {
             options_guard.clone().unwrap_or_default()
         };
 
-        self.handle_tool_changes(file_system, needs_diagnostic_refresh, move |tool, builder| {
-            tool.handle_watched_file_change(builder, &file_event.uri, &self.root_uri, options)
-        })
+        self.handle_tool_changes(
+            file_system,
+            needs_diagnostic_refresh,
+            move |tool, builder| {
+                tool.handle_watched_file_change(builder, &file_event.uri, &self.root_uri, options)
+            },
+        )
         .await
     }
 
@@ -459,7 +472,10 @@ mod tests {
             DiagnosticMode::None,
         );
 
-        assert_eq!(worker.get_root_uri(), &Uri::from_str("file:///root/").unwrap());
+        assert_eq!(
+            worker.get_root_uri(),
+            &Uri::from_str("file:///root/").unwrap()
+        );
     }
 
     #[tokio::test]
@@ -494,7 +510,9 @@ mod tests {
             create_builder(),
             DiagnosticMode::None,
         );
-        worker_no_watchers.start_worker(serde_json::json!({"some_option": true})).await;
+        worker_no_watchers
+            .start_worker(serde_json::json!({"some_option": true}))
+            .await;
         let registration_no_watchers = worker_no_watchers.init_watchers().await;
         assert!(registration_no_watchers.is_none());
     }
@@ -539,7 +557,9 @@ mod tests {
         assert!(result.ok().unwrap().is_none());
 
         // Test command found with arguments
-        let result = worker.execute_command(FAKE_COMMAND, vec![serde_json::Value::Null]).await;
+        let result = worker
+            .execute_command(FAKE_COMMAND, vec![serde_json::Value::Null])
+            .await;
         assert!(result.is_ok());
         assert!(result.ok().unwrap().is_some());
     }
@@ -640,7 +660,9 @@ mod tests {
             create_builder(),
             DiagnosticMode::None,
         );
-        worker.start_worker(serde_json::json!({"some_option": true})).await;
+        worker
+            .start_worker(serde_json::json!({"some_option": true}))
+            .await;
 
         let fs = LSPFileSystem::default();
         fs.set(

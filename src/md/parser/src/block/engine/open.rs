@@ -142,7 +142,11 @@ impl<'s> Engine<'s> {
         cur.eat_one_space();
         // An empty quote still spans its `>` marker
         // (as an empty item spans its marker)
-        self.stack.push(OpenContainer::Quote { children: Vec::new(), start, end: start + 1 });
+        self.stack.push(OpenContainer::Quote {
+            children: Vec::new(),
+            start,
+            end: start + 1,
+        });
     }
 
     /// Opens an item, and a new list first unless the top of the stack is a compatible one.
@@ -231,7 +235,9 @@ impl<'s> Engine<'s> {
             unreachable!("setext is only probed with a paragraph open")
         };
         let rest = self.finish_paragraph(segments);
-        let Some(first) = rest.first() else { return false };
+        let Some(first) = rest.first() else {
+            return false;
+        };
         let start = first.seg.span.start;
         self.attach(Ir::Heading {
             level,
@@ -244,7 +250,9 @@ impl<'s> Engine<'s> {
 
     fn open_thematic_break(&mut self, cur: Cursor<'s>) {
         self.close_leaf_and_list();
-        self.attach(Ir::ThematicBreak { span: cur.trimmed_span() });
+        self.attach(Ir::ThematicBreak {
+            span: cur.trimmed_span(),
+        });
     }
 
     /// `content` is the heading text's byte range within the tail (closing `#` run stripped).
@@ -257,7 +265,12 @@ impl<'s> Engine<'s> {
             let seg = Segment::new(Span::at(base, content), 0);
             vec![IrSeg { seg, lazy: false }]
         };
-        self.attach(Ir::Heading { level, underline: None, segments, span: cur.trimmed_span() });
+        self.attach(Ir::Heading {
+            level,
+            underline: None,
+            segments,
+            span: cur.trimmed_span(),
+        });
     }
 
     /// Code (`` ` ``/`~`) and math (`$`) fences share one leaf;

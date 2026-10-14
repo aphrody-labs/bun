@@ -9,7 +9,10 @@ use std::{
 
 use super::bumpalo_alloc::AllocErr;
 
-#[cfg(all(feature = "track_allocations", not(feature = "disable_track_allocations")))]
+#[cfg(all(
+    feature = "track_allocations",
+    not(feature = "disable_track_allocations")
+))]
 use crate::tracking::AllocationStats;
 
 use super::{
@@ -40,7 +43,11 @@ const _: () = {
 // We can only do this check if we're on a 64-bit little-endian platform with the `fixed_size` feature enabled,
 // because the `fixed_size_constants` module is only compiled under those conditions.
 // That's good enough, as the size of `ChunkFooter` only matters in that case anyway (Oxlint JS plugins).
-#[cfg(all(feature = "fixed_size", target_pointer_width = "64", target_endian = "little"))]
+#[cfg(all(
+    feature = "fixed_size",
+    target_pointer_width = "64",
+    target_endian = "little"
+))]
 const _: () = {
     use crate::generated::fixed_size_constants::CHUNK_FOOTER_SIZE as EXPECTED_CHUNK_FOOTER_SIZE;
     assert!(CHUNK_FOOTER_SIZE == EXPECTED_CHUNK_FOOTER_SIZE);
@@ -277,7 +284,11 @@ impl<const MIN_ALIGN: usize> Arena<MIN_ALIGN> {
         // The footer is aligned on `CHUNK_ALIGN`, which is `>= MIN_ALIGN`, so this is already aligned to `MIN_ALIGN`.
         let cursor_ptr = chunk_footer_ptr.cast::<u8>();
 
-        Ok(Self::new_impl(start_ptr, cursor_ptr, Some(chunk_footer_ptr)))
+        Ok(Self::new_impl(
+            start_ptr,
+            cursor_ptr,
+            Some(chunk_footer_ptr),
+        ))
     }
 
     /// Create a new `Arena`.
@@ -308,7 +319,10 @@ impl<const MIN_ALIGN: usize> Arena<MIN_ALIGN> {
             cursor_ptr: Cell::new(cursor_ptr),
             current_chunk_footer_ptr: Cell::new(chunk_footer_ptr),
             start_ptr: Cell::new(start_ptr),
-            #[cfg(all(feature = "track_allocations", not(feature = "disable_track_allocations")))]
+            #[cfg(all(
+                feature = "track_allocations",
+                not(feature = "disable_track_allocations")
+            ))]
             stats: AllocationStats::default(),
         }
     }
@@ -412,7 +426,10 @@ impl<const MIN_ALIGN: usize> Arena<MIN_ALIGN> {
         // Mark the upcoming allocation as a chunk operation, so the allocation-tracking
         // task can exclude it from its heap metrics. Must be set immediately before the
         // `alloc` call, with no allocations in between.
-        #[cfg(all(feature = "track_allocations", not(feature = "disable_track_allocations")))]
+        #[cfg(all(
+            feature = "track_allocations",
+            not(feature = "disable_track_allocations")
+        ))]
         crate::tracking::start_chunk_operation();
 
         // Allocate memory for the chunk.

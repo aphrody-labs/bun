@@ -259,7 +259,10 @@ impl<'source> LexerToken<'source> for SyntaxKind {
 
         // Comment
         if first == b'#' {
-            let len = bytes.iter().take_while(|&&b| b != b'\n' && b != b'\r').count();
+            let len = bytes
+                .iter()
+                .take_while(|&&b| b != b'\n' && b != b'\r')
+                .count();
             return Some((SyntaxKind::COMMENT, len));
         }
 
@@ -346,8 +349,10 @@ impl<'source> LexerToken<'source> for SyntaxKind {
 
             // Try integers with different bases
             if bytes.len() >= 2 && bytes[0] == b'0' && bytes[1] == b'x' {
-                let len =
-                    2 + bytes[2..].iter().take_while(|&&b| is_hex_digit(b) || b == b'_').count();
+                let len = 2 + bytes[2..]
+                    .iter()
+                    .take_while(|&&b| is_hex_digit(b) || b == b'_')
+                    .count();
                 if len > 2 && !extends_into_ident(bytes, len, first) {
                     return Some((SyntaxKind::INTEGER_HEX, len));
                 }
@@ -387,7 +392,10 @@ impl<'source> LexerToken<'source> for SyntaxKind {
 
         // Identifier with glob
         if first == b'*' || first == b'?' {
-            let len = bytes.iter().take_while(|&&b| is_ident_with_glob_char(b)).count();
+            let len = bytes
+                .iter()
+                .take_while(|&&b| is_ident_with_glob_char(b))
+                .count();
             return Some((SyntaxKind::IDENT_WITH_GLOB, len));
         }
 
@@ -446,7 +454,14 @@ fn try_lex_number(input: &str) -> Option<(SyntaxKind, usize)> {
     }
 
     if i > 0 {
-        Some((if is_float { SyntaxKind::FLOAT } else { SyntaxKind::INTEGER }, i))
+        Some((
+            if is_float {
+                SyntaxKind::FLOAT
+            } else {
+                SyntaxKind::INTEGER
+            },
+            i,
+        ))
     } else {
         None
     }

@@ -1,5 +1,5 @@
 import { lstatSync, mkdirSync, realpathSync } from "node:fs";
-import { dirname, isAbsolute, join, relative, resolve } from "node:path";
+import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { GitTree } from "./collect";
 
 /** Export only workspace metadata; dependency sources retain their canonical Git owners. */
@@ -43,7 +43,7 @@ export async function exportJitWorkspaceMetadata(tree: GitTree, destination: str
   if (!isAbsolute(destination)) throw new Error("JIT output must be absolute");
   const root = realpathSync(destination);
   const files = jitWorkspaceMetadata(tree);
-  const receipts = [];
+  const receipts: { path: string; bytes: number; sha256: string }[] = [];
   for (const [name, bytes] of files) {
     const path = resolve(root, name);
     const member = relative(root, path);
@@ -93,7 +93,7 @@ export async function verifyJitGraphFrontendSources(tree: GitTree, destination: 
     "scripts/aphrody/release-graph-index.ts",
     "scripts/aphrody/fork-graph-docs.ts",
   ];
-  const files = [];
+  const files: { path: string; gitBlob: string; bytes: number; sha256: string }[] = [];
   for (const [path, expected] of tree.readBytes(paths)) {
     const file = join(root, path);
     for (let parent = dirname(file); parent !== root; parent = dirname(parent)) {
@@ -103,9 +103,11 @@ export async function verifyJitGraphFrontendSources(tree: GitTree, destination: 
     const stat = lstatSync(file);
     if (!stat.isFile() || stat.isSymbolicLink() || !Buffer.from(await Bun.file(file).bytes()).equals(expected))
       throw new Error("Graph frontend differs from its immutable source: " + path);
+    const gitBlob = tree.files.get(path);
+    if (!gitBlob) throw new Error("Graph frontend has no immutable source blob");
     files.push({
       path,
-      gitBlob: tree.files.get(path),
+      gitBlob,
       bytes: expected.length,
       sha256: new Bun.CryptoHasher("sha256").update(expected).digest("hex"),
     });
@@ -122,8 +124,29 @@ export async function verifyJitGraphFrontendSources(tree: GitTree, destination: 
   return receipt;
 }
 
+async function ownerInstallCache(owner: string): Promise<string> {
+  const child = Bun.spawn([process.execPath, "--no-env-file", "pm", "cache"], {
+    cwd: owner,
+    stdin: "ignore",
+    stdout: "pipe",
+    stderr: "pipe",
+    timeout: 10_000,
+    maxBuffer: 64 * 1024,
+  });
+  const [code, stdout] = await Promise.all([child.exited, child.stdout.text(), child.stderr.text()]);
+  const path = stdout.trim();
+  if (code !== 0 || stdout.length > 32768 || !isAbsolute(path) || /[\r\n\0]/.test(path))
+    throw new Error("Cloudflare owner install cache is unavailable");
+  return realpathSync(path);
+}
+
 /** Reuse the installed Cloudflare owner only while its captured pins and lock agree. */
-export async function verifyJitCloudflareDependencies(checkout: string, destination: string, source: string) {
+export async function verifyJitCloudflareDependencies(
+  checkout: string,
+  destination: string,
+  source: string,
+  installCache: (owner: string) => Promise<string> = ownerInstallCache,
+) {
   const installed = join(checkout, "packages/bun-cloudflare");
   const captured = join(destination, "packages/bun-cloudflare");
   const [before, expected] = await Promise.all([
@@ -151,12 +174,34 @@ export async function verifyJitCloudflareDependencies(checkout: string, destinat
   };
   const locked = parsedLock.packages?.wrangler?.[0];
   const manifestPath = realpathSync(Bun.resolveSync("wrangler/package.json", join(captured, "src")));
+  const ownerManifest = realpathSync(join(installed, "node_modules", "wrangler", "package.json"));
+  if (manifestPath !== ownerManifest) throw new Error("Wrangler escapes its installed Cloudflare owner");
   const moduleRoot = realpathSync(join(installed, "node_modules"));
   const member = relative(moduleRoot, manifestPath);
-  if (isAbsolute(member) || member.startsWith("..")) throw new Error("Wrangler escapes its installed Cloudflare owner");
   const metadata = await Bun.file(manifestPath).json();
-  if (metadata.name !== "wrangler" || locked !== "wrangler@" + metadata.version)
+  if (metadata.name !== "wrangler" || typeof metadata.version !== "string" || locked !== "wrangler@" + metadata.version)
     throw new Error("Wrangler bytes are labelled with a different captured version");
+  if (isAbsolute(member) || member === ".." || member.startsWith(".." + sep)) {
+    const cache = realpathSync(await installCache(installed));
+    const parts = relative(cache, manifestPath).split(sep);
+    const entry = parts[1];
+    if (
+      parts.length !== 5 ||
+      parts[0] !== "links" ||
+      parts[2] !== "node_modules" ||
+      parts[3] !== "wrangler" ||
+      parts[4] !== "package.json" ||
+      typeof metadata.version !== "string" ||
+      !entry?.startsWith("wrangler@" + metadata.version + "-") ||
+      !/^[a-f0-9]{16}$/.test(entry.slice(("wrangler@" + metadata.version + "-").length))
+    )
+      throw new Error("Wrangler escapes its installed Cloudflare owner store");
+    for (let index = 1; index <= parts.length; index++) {
+      const stat = lstatSync(join(cache, ...parts.slice(0, index)));
+      if (stat.isSymbolicLink() || (index === parts.length ? !stat.isFile() : !stat.isDirectory()))
+        throw new Error("Wrangler store entry is not owned");
+    }
+  }
   const hash = (bytes: Uint8Array | string) => new Bun.CryptoHasher("sha256").update(bytes).digest("hex");
   const receipt = {
     schema: 1,

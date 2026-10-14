@@ -18,8 +18,8 @@
 use std::path::PathBuf;
 use std::process::ExitCode;
 
-use anyhow::Result;
 use crate::{audit, types::Report};
+use anyhow::Result;
 
 pub(crate) fn run_audit(
     root: PathBuf,

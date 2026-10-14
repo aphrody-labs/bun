@@ -48,7 +48,9 @@ impl Destination {
         let rest = value.strip_prefix("ssh://").unwrap_or(value);
         let rest = rest.strip_suffix('/').unwrap_or(rest);
         if rest.is_empty() || rest.starts_with('-') || rest.contains(char::is_whitespace) {
-            return Err(Error::InvalidInput(format!("invalid destination `{value}`")));
+            return Err(Error::InvalidInput(format!(
+                "invalid destination `{value}`"
+            )));
         }
         let (user, host_port) = match rest.rfind('@') {
             Some(at) => (Some(rest[..at].to_owned()), &rest[at + 1..]),
@@ -58,21 +60,34 @@ impl Destination {
             let close = inner
                 .find(']')
                 .ok_or_else(|| Error::InvalidInput(format!("invalid destination `{value}`")))?;
-            let port = inner[close + 1..].strip_prefix(':').map(parse_port).transpose()?;
+            let port = inner[close + 1..]
+                .strip_prefix(':')
+                .map(parse_port)
+                .transpose()?;
             (inner[..close].to_owned(), port)
         } else {
             match host_port.rsplit_once(':') {
                 // A bare IPv6 address has several colons and no port.
-                Some((h, p)) if !h.contains(':') && !p.is_empty() && p.bytes().all(|b| b.is_ascii_digit()) => {
+                Some((h, p))
+                    if !h.contains(':')
+                        && !p.is_empty()
+                        && p.bytes().all(|b| b.is_ascii_digit()) =>
+                {
                     (h.to_owned(), Some(parse_port(p)?))
-                },
+                }
                 _ => (host_port.to_owned(), None),
             }
         };
         if host.is_empty() {
-            return Err(Error::InvalidInput(format!("invalid destination `{value}`")));
+            return Err(Error::InvalidInput(format!(
+                "invalid destination `{value}`"
+            )));
         }
-        Ok(Self { host, user: user.filter(|u| !u.is_empty()), port })
+        Ok(Self {
+            host,
+            user: user.filter(|u| !u.is_empty()),
+            port,
+        })
     }
 }
 
@@ -106,7 +121,10 @@ impl Overrides {
     }
 
     fn option(&self, key: &str) -> Option<&str> {
-        self.options.iter().find(|(k, _)| k.eq_ignore_ascii_case(key)).map(|(_, v)| v.as_str())
+        self.options
+            .iter()
+            .find(|(k, _)| k.eq_ignore_ascii_case(key))
+            .map(|(_, v)| v.as_str())
     }
 
     /// Arguments that reproduce these overrides for the system `ssh`/`scp`/`sftp`.
@@ -184,7 +202,9 @@ impl HostConfig {
             command.args(["-p", &port.to_string()]);
         }
         command.arg("-G").arg(&destination.host);
-        command.stdin(std::process::Stdio::null()).stderr(std::process::Stdio::null());
+        command
+            .stdin(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null());
         let output = command.output()?;
         if !output.status.success() {
             return Err(crate::other("ssh -G failed"));
@@ -229,7 +249,14 @@ impl Entries {
     /// First value wins, except for the keywords OpenSSH accumulates.
     fn push_first(&mut self, key: &str, value: &str) {
         let key = key.to_ascii_lowercase();
-        let accumulates = matches!(key.as_str(), "identityfile" | "userknownhostsfile" | "localforward" | "remoteforward" | "dynamicforward");
+        let accumulates = matches!(
+            key.as_str(),
+            "identityfile"
+                | "userknownhostsfile"
+                | "localforward"
+                | "remoteforward"
+                | "dynamicforward"
+        );
         if accumulates || !self.values.iter().any(|(k, _)| *k == key) {
             self.values.push((key, value.to_owned()));
         }
@@ -237,18 +264,30 @@ impl Entries {
 
     /// `ssh -G` output already resolved precedence; keep every line.
     fn push_all(&mut self, key: &str, value: &str) {
-        self.values.push((key.to_ascii_lowercase(), value.to_owned()));
+        self.values
+            .push((key.to_ascii_lowercase(), value.to_owned()));
     }
 
     fn get(&self, key: &str) -> Option<&str> {
-        self.values.iter().find(|(k, _)| k == key).map(|(_, v)| v.as_str())
+        self.values
+            .iter()
+            .find(|(k, _)| k == key)
+            .map(|(_, v)| v.as_str())
     }
 
     fn all(&self, key: &str) -> impl Iterator<Item = &str> {
-        self.values.iter().filter(move |(k, _)| k == key).map(|(_, v)| v.as_str())
+        self.values
+            .iter()
+            .filter(move |(k, _)| k == key)
+            .map(|(_, v)| v.as_str())
     }
 
-    fn into_config(self, destination: &Destination, overrides: &Overrides, from_ssh_g: bool) -> HostConfig {
+    fn into_config(
+        self,
+        destination: &Destination,
+        overrides: &Overrides,
+        from_ssh_g: bool,
+    ) -> HostConfig {
         let local_user = local_user();
         let user = overrides
             .user
@@ -262,8 +301,24 @@ impl Entries {
             .or(destination.port)
             .or_else(|| self.get("port").and_then(|p| p.parse().ok()))
             .unwrap_or(22);
-        let hostname = expand_tokens(&hostname_raw, &destination.host, &hostname_raw, port, &user, &local_user);
-        let expand = |value: &str| expand_path(&expand_tokens(value, &destination.host, &hostname, port, &user, &local_user));
+        let hostname = expand_tokens(
+            &hostname_raw,
+            &destination.host,
+            &hostname_raw,
+            port,
+            &user,
+            &local_user,
+        );
+        let expand = |value: &str| {
+            expand_path(&expand_tokens(
+                value,
+                &destination.host,
+                &hostname,
+                port,
+                &user,
+                &local_user,
+            ))
+        };
 
         let mut identity_files: Vec<PathBuf> = overrides.identity_files.clone();
         let configured: Vec<PathBuf> = self.all("identityfile").map(expand).collect();
@@ -297,11 +352,17 @@ impl Entries {
             .option("StrictHostKeyChecking")
             .or_else(|| self.get("stricthostkeychecking"))
             .and_then(StrictHostKeyChecking::parse)
-            .unwrap_or(if from_ssh_g { StrictHostKeyChecking::Yes } else { StrictHostKeyChecking::AcceptNew });
+            .unwrap_or(if from_ssh_g {
+                StrictHostKeyChecking::Yes
+            } else {
+                StrictHostKeyChecking::AcceptNew
+            });
         // `ssh -G` prints `stricthostkeychecking ask` by default; interactive prompts do not
         // exist in the in-process client, so the default becomes trust-on-first-use.
         let strict = match (from_ssh_g, self.get("stricthostkeychecking")) {
-            (true, Some("ask")) if overrides.option("StrictHostKeyChecking").is_none() => StrictHostKeyChecking::AcceptNew,
+            (true, Some("ask")) if overrides.option("StrictHostKeyChecking").is_none() => {
+                StrictHostKeyChecking::AcceptNew
+            }
             _ => strict,
         };
 
@@ -310,7 +371,11 @@ impl Entries {
             .clone()
             .or_else(|| self.get("proxyjump").map(str::to_owned))
             .filter(|v| !v.eq_ignore_ascii_case("none"));
-        let number = |key: &str| self.get(key).and_then(|v| v.parse::<u64>().ok()).filter(|v| *v > 0);
+        let number = |key: &str| {
+            self.get(key)
+                .and_then(|v| v.parse::<u64>().ok())
+                .filter(|v| *v > 0)
+        };
         HostConfig {
             alias: destination.host.clone(),
             hostname,
@@ -323,7 +388,10 @@ impl Entries {
             strict_host_key_checking: strict,
             connect_timeout: number("connecttimeout"),
             server_alive_interval: number("serveraliveinterval"),
-            server_alive_count_max: self.get("serveralivecountmax").and_then(|v| v.parse().ok()).unwrap_or(3),
+            server_alive_count_max: self
+                .get("serveralivecountmax")
+                .and_then(|v| v.parse().ok())
+                .unwrap_or(3),
             batch_mode: self.get("batchmode").is_some_and(is_yes),
             identity_agent: self.get("identityagent").map(str::to_owned),
         }
@@ -348,20 +416,29 @@ fn split_key_value(line: &str) -> Option<(&str, &str)> {
     }
     let split = line.find(|c: char| c.is_whitespace() || c == '=')?;
     let key = &line[..split];
-    let rest = line[split..].trim_start_matches(|c: char| c.is_whitespace() || c == '=').trim_end();
-    let rest = rest.strip_prefix('"').and_then(|r| r.strip_suffix('"')).unwrap_or(rest);
+    let rest = line[split..]
+        .trim_start_matches(|c: char| c.is_whitespace() || c == '=')
+        .trim_end();
+    let rest = rest
+        .strip_prefix('"')
+        .and_then(|r| r.strip_suffix('"'))
+        .unwrap_or(rest);
     Some((key, rest))
 }
 
 fn parse_file(path: &Path, host: &str, entries: &mut Entries, depth: &mut u32) -> Result<()> {
     *depth += 1;
     if *depth > 16 {
-        return Err(Error::InvalidInput("ssh config Include nesting too deep".into()));
+        return Err(Error::InvalidInput(
+            "ssh config Include nesting too deep".into(),
+        ));
     }
     let text = std::fs::read_to_string(path)?;
     let mut active = true;
     for line in text.lines() {
-        let Some((key, value)) = split_key_value(line) else { continue };
+        let Some((key, value)) = split_key_value(line) else {
+            continue;
+        };
         if key.eq_ignore_ascii_case("host") {
             active = host_matches(value, host);
             continue;
@@ -393,16 +470,24 @@ fn parse_file(path: &Path, host: &str, entries: &mut Entries, depth: &mut u32) -
 fn expand_include(pattern: &str) -> Vec<PathBuf> {
     let path = expand_path(pattern);
     let path = if path.is_relative() {
-        home_dir().map(|h| h.join(".ssh").join(&path)).unwrap_or(path)
+        home_dir()
+            .map(|h| h.join(".ssh").join(&path))
+            .unwrap_or(path)
     } else {
         path
     };
-    let Some(name) = path.file_name().and_then(|n| n.to_str()) else { return vec![path] };
+    let Some(name) = path.file_name().and_then(|n| n.to_str()) else {
+        return vec![path];
+    };
     if !name.contains(['*', '?']) {
         return vec![path];
     }
-    let Some(parent) = path.parent() else { return Vec::new() };
-    let Ok(read) = std::fs::read_dir(parent) else { return Vec::new() };
+    let Some(parent) = path.parent() else {
+        return Vec::new();
+    };
+    let Ok(read) = std::fs::read_dir(parent) else {
+        return Vec::new();
+    };
     let mut out: Vec<PathBuf> = read
         .flatten()
         .filter(|e| e.file_name().to_str().is_some_and(|n| wildcard(name, n)))
@@ -416,7 +501,10 @@ fn expand_include(pattern: &str) -> Vec<PathBuf> {
 pub fn host_matches(patterns: &str, host: &str) -> bool {
     let host = host.to_ascii_lowercase();
     let mut matched = false;
-    for pattern in patterns.split(|c: char| c.is_whitespace() || c == ',').filter(|p| !p.is_empty()) {
+    for pattern in patterns
+        .split(|c: char| c.is_whitespace() || c == ',')
+        .filter(|p| !p.is_empty())
+    {
         let pattern = pattern.to_ascii_lowercase();
         if let Some(negated) = pattern.strip_prefix('!') {
             if wildcard(negated, &host) {
@@ -455,7 +543,14 @@ pub fn wildcard(pattern: &str, text: &str) -> bool {
     pi == p.len()
 }
 
-fn expand_tokens(value: &str, alias: &str, hostname: &str, port: u16, user: &str, local_user: &str) -> String {
+fn expand_tokens(
+    value: &str,
+    alias: &str,
+    hostname: &str,
+    port: u16,
+    user: &str,
+    local_user: &str,
+) -> String {
     if !value.contains('%') {
         return value.to_owned();
     }
@@ -472,12 +567,16 @@ fn expand_tokens(value: &str, alias: &str, hostname: &str, port: u16, user: &str
             Some('p') => out.push_str(&port.to_string()),
             Some('r') => out.push_str(user),
             Some('u') => out.push_str(local_user),
-            Some('d') => out.push_str(&home_dir().map(|h| h.to_string_lossy().into_owned()).unwrap_or_default()),
+            Some('d') => out.push_str(
+                &home_dir()
+                    .map(|h| h.to_string_lossy().into_owned())
+                    .unwrap_or_default(),
+            ),
             Some('%') => out.push('%'),
             Some(other) => {
                 out.push('%');
                 out.push(other);
-            },
+            }
             None => out.push('%'),
         }
     }
@@ -489,7 +588,10 @@ pub fn expand_path(value: &str) -> PathBuf {
     if value == "~" {
         return home_dir().unwrap_or_else(|| PathBuf::from(value));
     }
-    if let Some(rest) = value.strip_prefix("~/").or_else(|| value.strip_prefix("~\\")) {
+    if let Some(rest) = value
+        .strip_prefix("~/")
+        .or_else(|| value.strip_prefix("~\\"))
+    {
         if let Some(home) = home_dir() {
             return home.join(rest);
         }
@@ -504,9 +606,15 @@ mod tests {
     #[test]
     fn destinations() {
         let d = Destination::parse("ubuntu@vps:2222").unwrap();
-        assert_eq!((d.user.as_deref(), d.host.as_str(), d.port), (Some("ubuntu"), "vps", Some(2222)));
+        assert_eq!(
+            (d.user.as_deref(), d.host.as_str(), d.port),
+            (Some("ubuntu"), "vps", Some(2222))
+        );
         let d = Destination::parse("ssh://git@github.com").unwrap();
-        assert_eq!((d.user.as_deref(), d.host.as_str(), d.port), (Some("git"), "github.com", None));
+        assert_eq!(
+            (d.user.as_deref(), d.host.as_str(), d.port),
+            (Some("git"), "github.com", None)
+        );
         let d = Destination::parse("[::1]:22").unwrap();
         assert_eq!((d.host.as_str(), d.port), ("::1", Some(22)));
         let d = Destination::parse("fe80::1").unwrap();
@@ -534,8 +642,12 @@ mod tests {
             "Host vps\n  HostName 10.0.0.1\n  User ubuntu\n  Port 2222\n  IdentityFile ~/.ssh/ovh_vps\n  ProxyJump jump\nHost *\n  User other\n  ServerAliveInterval 15\n",
         )
         .unwrap();
-        let overrides = Overrides { config_file: Some(file), ..Default::default() };
-        let config = HostConfig::resolve_native(&Destination::parse("vps").unwrap(), &overrides).unwrap();
+        let overrides = Overrides {
+            config_file: Some(file),
+            ..Default::default()
+        };
+        let config =
+            HostConfig::resolve_native(&Destination::parse("vps").unwrap(), &overrides).unwrap();
         assert_eq!(config.hostname, "10.0.0.1");
         assert_eq!(config.user, "ubuntu");
         assert_eq!(config.port, 2222);

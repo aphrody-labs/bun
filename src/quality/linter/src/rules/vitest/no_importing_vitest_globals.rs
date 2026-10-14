@@ -14,11 +14,18 @@ use oxc_span::{GetSpan, Span};
 use crate::{context::LintContext, rule::Rule, utils::is_vitest_import_source};
 
 fn no_importing_vitest_globals_diagnostic(spans: &[Span]) -> OxcDiagnostic {
-    let help = format!("You can import anything except `{}`.", VITEST_GLOBALS.join(", "));
+    let help = format!(
+        "You can import anything except `{}`.",
+        VITEST_GLOBALS.join(", ")
+    );
 
     OxcDiagnostic::warn("Do not `import`/`require` global functions from 'vitest'.")
         .with_help(help)
-        .with_labels(spans.iter().map(|span| span.label("Remove this global vitest import")))
+        .with_labels(
+            spans
+                .iter()
+                .map(|span| span.label("Remove this global vitest import")),
+        )
 }
 
 #[derive(Debug, Default, Clone)]
@@ -145,14 +152,16 @@ impl Rule for NoImportingVitestGlobals {
                     return;
                 };
 
-                let Some(span_start) =
-                    specifiers.first().map(|specifier| GetSpan::span(specifier).start)
+                let Some(span_start) = specifiers
+                    .first()
+                    .map(|specifier| GetSpan::span(specifier).start)
                 else {
                     return;
                 };
 
-                let Some(span_end) =
-                    specifiers.last().map(|specifier| GetSpan::span(specifier).end)
+                let Some(span_end) = specifiers
+                    .last()
+                    .map(|specifier| GetSpan::span(specifier).end)
                 else {
                     return;
                 };
@@ -243,7 +252,11 @@ fn process_declaration<'a>(
         return DeclarationRenderType::NoVitest(declaration.span);
     }
 
-    if obj.properties.iter().any(|property| property.key.is_specific_static_name("default")) {
+    if obj
+        .properties
+        .iter()
+        .any(|property| property.key.is_specific_static_name("default"))
+    {
         return DeclarationRenderType::NoVitest(declaration.span);
     }
 
@@ -395,9 +408,21 @@ import { it, describe } from 'vitest'",
             None,
         ),
         ("const { describe } = require('vitest');", "", None),
-        ("const { describe } = require('vitest'), x = 1;", "const x = 1;", None),
-        ("const x = 1, { describe } = require('vitest');", "const x = 1;", None),
-        ("const x = 1, { describe } = require('vitest'), y = 2;", "const x = 1, y = 2;", None),
+        (
+            "const { describe } = require('vitest'), x = 1;",
+            "const x = 1;",
+            None,
+        ),
+        (
+            "const x = 1, { describe } = require('vitest');",
+            "const x = 1;",
+            None,
+        ),
+        (
+            "const x = 1, { describe } = require('vitest'), y = 2;",
+            "const x = 1, y = 2;",
+            None,
+        ),
         ("const { describe, it } = require('vitest');", "", None),
         ("const { describe } = require('@effect/vitest');", "", None),
         (
@@ -426,8 +451,13 @@ import { it, describe } from 'vitest'",
             None,
         ),
     ];
-    Tester::new(NoImportingVitestGlobals::NAME, NoImportingVitestGlobals::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .with_vitest_plugin(true)
-        .test_and_snapshot();
+    Tester::new(
+        NoImportingVitestGlobals::NAME,
+        NoImportingVitestGlobals::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .with_vitest_plugin(true)
+    .test_and_snapshot();
 }

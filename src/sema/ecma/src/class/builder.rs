@@ -24,7 +24,11 @@ pub struct ClassTableBuilder<'a> {
 
 impl<'a> ClassTableBuilder<'a> {
     pub fn new() -> Self {
-        Self { enabled: false, current_class_id: None, classes: ClassTable::default() }
+        Self {
+            enabled: false,
+            current_class_id: None,
+            classes: ClassTable::default(),
+        }
     }
 
     pub fn build(self) -> ClassTable<'a> {
@@ -35,8 +39,10 @@ impl<'a> ClassTableBuilder<'a> {
         if !self.enabled {
             return;
         }
-        self.current_class_id =
-            Some(self.classes.declare_class(self.current_class_id, parent_node_id));
+        self.current_class_id = Some(
+            self.classes
+                .declare_class(self.current_class_id, parent_node_id),
+        );
 
         for element in &class.body {
             match element {
@@ -107,8 +113,9 @@ impl<'a> ClassTableBuilder<'a> {
             || parent_kind.is_member_expression_kind())
             && let Some(class_id) = self.current_class_id
         {
-            let element_ids =
-                self.classes.get_element_ids(class_id, ident.name, /* is_private */ true);
+            let element_ids = self
+                .classes
+                .get_element_ids(class_id, ident.name, /* is_private */ true);
 
             let reference = PrivateIdentifierReference::new(
                 current_node_id,
@@ -116,7 +123,8 @@ impl<'a> ClassTableBuilder<'a> {
                 ident.span,
                 element_ids,
             );
-            self.classes.add_private_identifier_reference(class_id, reference);
+            self.classes
+                .add_private_identifier_reference(class_id, reference);
         }
     }
 

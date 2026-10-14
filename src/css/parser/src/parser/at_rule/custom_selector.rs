@@ -29,9 +29,17 @@ impl<'a> Parse<'a> for CustomSelector<'a> {
                 .as_ref()
                 .map(|prefix_arg| prefix_arg.span.start)
                 .unwrap_or(name.span.start),
-            end: args.as_ref().map(|args| args.span.end).unwrap_or(name.span.end),
+            end: args
+                .as_ref()
+                .map(|args| args.span.end)
+                .unwrap_or(name.span.end),
         };
-        Ok(CustomSelector { prefix_arg, name, args, span })
+        Ok(CustomSelector {
+            prefix_arg,
+            name,
+            args,
+            span,
+        })
     }
 }
 
@@ -42,7 +50,10 @@ impl<'a> Parse<'a> for CustomSelectorArg<'a> {
         Ok(CustomSelectorArg {
             name: input.ident(
                 dollar_var.ident,
-                Span { start: dollar_var_span.start + 1, end: dollar_var_span.end },
+                Span {
+                    start: dollar_var_span.start + 1,
+                    end: dollar_var_span.end,
+                },
             ),
             span: dollar_var_span,
         })
@@ -64,7 +75,11 @@ impl<'a> Parse<'a> for CustomSelectorArgs<'a> {
         }
 
         let (_, Span { end, .. }) = input.cursor.expect_r_paren()?;
-        Ok(CustomSelectorArgs { args, comma_spans, span: Span { start, end } })
+        Ok(CustomSelectorArgs {
+            args,
+            comma_spans,
+            span: Span { start, end },
+        })
     }
 }
 
@@ -76,7 +91,14 @@ impl<'a> Parse<'a> for CustomSelectorPrelude<'a> {
     fn parse(input: &mut Parser<'a>) -> PResult<Self> {
         let custom_selector = input.parse::<CustomSelector>()?;
         let selector = input.parse::<SelectorList>()?;
-        let span = Span { start: custom_selector.span.start, end: selector.span.end };
-        Ok(CustomSelectorPrelude { custom_selector, selector, span })
+        let span = Span {
+            start: custom_selector.span.start,
+            end: selector.span.end,
+        };
+        Ok(CustomSelectorPrelude {
+            custom_selector,
+            selector,
+            span,
+        })
     }
 }

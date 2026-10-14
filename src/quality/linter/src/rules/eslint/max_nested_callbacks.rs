@@ -15,9 +15,11 @@ use crate::{
 };
 
 fn max_nested_callbacks_diagnostic(num: u32, max: u32, span: Span) -> OxcDiagnostic {
-    OxcDiagnostic::warn(format!("Too many nested callbacks ({num}). Maximum allowed is {max}."))
-        .with_help("Reduce nesting with promises or refactoring your code.")
-        .with_label(span)
+    OxcDiagnostic::warn(format!(
+        "Too many nested callbacks ({num}). Maximum allowed is {max}."
+    ))
+    .with_help("Reduce nesting with promises or refactoring your code.")
+    .with_label(span)
 }
 
 #[derive(Debug, Clone, JsonSchema, Deserialize)]
@@ -31,7 +33,9 @@ const DEFAULT_MAX_NESTED_CALLBACKS: u32 = 10;
 
 impl Default for MaxNestedCallbacks {
     fn default() -> Self {
-        Self { max: DEFAULT_MAX_NESTED_CALLBACKS }
+        Self {
+            max: DEFAULT_MAX_NESTED_CALLBACKS,
+        }
     }
 }
 
@@ -118,7 +122,11 @@ impl Rule for MaxNestedCallbacks {
                 .filter(|node| is_callback(node, ctx))
                 .count() as u32;
             if depth > self.max {
-                ctx.diagnostic(max_nested_callbacks_diagnostic(depth, self.max, node.span()));
+                ctx.diagnostic(max_nested_callbacks_diagnostic(
+                    depth,
+                    self.max,
+                    node.span(),
+                ));
             }
         }
     }
@@ -160,13 +168,22 @@ fn test() {
     let nested_11 = nested_functions(11);
 
     let pass = vec![
-        ("foo(function() { bar(thing, function(data) {}); });", Some(serde_json::json!([3]))),
+        (
+            "foo(function() { bar(thing, function(data) {}); });",
+            Some(serde_json::json!([3])),
+        ),
         (
             "var foo = function() {}; bar(function(){ baz(function() { qux(foo); }) });",
             Some(serde_json::json!([2])),
         ),
-        ("fn(function(){}, function(){}, function(){});", Some(serde_json::json!([2]))),
-        ("fn(() => {}, function(){}, function(){});", Some(serde_json::json!([2]))), // { "ecmaVersion": 6 },
+        (
+            "fn(function(){}, function(){}, function(){});",
+            Some(serde_json::json!([2])),
+        ),
+        (
+            "fn(() => {}, function(){}, function(){});",
+            Some(serde_json::json!([2])),
+        ), // { "ecmaVersion": 6 },
         (&nested_10, Some(serde_json::json!([{}]))),
         (
             "foo(function() { bar(thing, function(data) {}); });",
@@ -192,13 +209,21 @@ fn test() {
             Some(serde_json::json!([2])),
         ),
         (&nested_11, Some(serde_json::json!([{}]))),
-        ("foo(function() {})", Some(serde_json::json!([{ "max": 0 }]))),
+        (
+            "foo(function() {})",
+            Some(serde_json::json!([{ "max": 0 }])),
+        ),
         (
             "foo(function() { bar(thing, function(data) { baz(function() {}); }); });",
             Some(serde_json::json!([{ "max": 2 }])),
         ),
     ];
 
-    Tester::new(MaxNestedCallbacks::NAME, MaxNestedCallbacks::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        MaxNestedCallbacks::NAME,
+        MaxNestedCallbacks::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

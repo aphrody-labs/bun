@@ -82,7 +82,11 @@ impl<O: ESTreeTokenConfig> RawContext<'_, O> {
     /// The target token is returned without kind conversion — the caller sets its kind explicitly.
     /// The target token *does* have its span converted from UTF-8 to UTF-16.
     fn advance_to(&mut self, start: u32) -> &mut Token {
-        let Self { tokens, span_converter, .. } = self;
+        let Self {
+            tokens,
+            span_converter,
+            ..
+        } = self;
         for token in &mut *tokens {
             debug_assert!(
                 token.start() <= start,

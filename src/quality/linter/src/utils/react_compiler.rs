@@ -68,7 +68,9 @@ pub struct ReactCompilerResults {
 impl ReactCompilerResults {
     /// Findings for one category, in the order the compiler reported them.
     fn diagnostics_for(&self, category: ErrorCategory) -> impl Iterator<Item = &LintDiagnostic> {
-        self.diagnostics.iter().filter(move |d| d.category == category)
+        self.diagnostics
+            .iter()
+            .filter(move |d| d.category == category)
     }
 }
 
@@ -85,7 +87,9 @@ pub fn build_react_compiler_results(host: &ContextHost) -> ReactCompilerResults 
         react_compiler_plugin_options(),
     );
 
-    ReactCompilerResults { diagnostics: result.diagnostics }
+    ReactCompilerResults {
+        diagnostics: result.diagnostics,
+    }
 }
 
 /// Shared `should_run` for the React Compiler family: match the upstream

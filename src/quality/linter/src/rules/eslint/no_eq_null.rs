@@ -102,7 +102,11 @@ fn test() {
 
     let pass = vec!["if (x === null) { }", "if (null === f()) { }"];
 
-    let fail = vec!["if (x == null) { }", "if (x != null) { }", "do {} while (null == x)"];
+    let fail = vec![
+        "if (x == null) { }",
+        "if (x != null) { }",
+        "do {} while (null == x)",
+    ];
 
     let fix = vec![
         ("if (x == null) { }", "if (x === null) { }"),
@@ -110,5 +114,7 @@ fn test() {
         ("do {} while (null == x)", "do {} while (null === x)"),
     ];
 
-    Tester::new(NoEqNull::NAME, NoEqNull::PLUGIN, pass, fail).expect_fix(fix).test_and_snapshot();
+    Tester::new(NoEqNull::NAME, NoEqNull::PLUGIN, pass, fail)
+        .expect_fix(fix)
+        .test_and_snapshot();
 }

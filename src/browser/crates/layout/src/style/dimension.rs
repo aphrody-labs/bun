@@ -86,7 +86,10 @@ impl<'de> serde::Deserialize<'de> for LengthPercentage {
     {
         let inner = CompactLength::deserialize(deserializer)?;
         // Note: validation intentionally excludes the CALC_TAG as deserializing calc() values is not supported
-        if matches!(inner.tag(), CompactLength::LENGTH_TAG | CompactLength::PERCENT_TAG) {
+        if matches!(
+            inner.tag(),
+            CompactLength::LENGTH_TAG | CompactLength::PERCENT_TAG
+        ) {
             Ok(Self(inner))
         } else {
             Err(serde::de::Error::custom("Invalid tag"))
@@ -187,7 +190,11 @@ impl LengthPercentageAuto {
     ///   - Some(resolved) using the provided context for Percent variants
     ///   - None for Auto variants
     #[inline(always)]
-    pub fn resolve_to_option(self, context: f32, calc_resolver: impl Fn(*const (), f32) -> f32) -> Option<f32> {
+    pub fn resolve_to_option(
+        self,
+        context: f32,
+        calc_resolver: impl Fn(*const (), f32) -> f32,
+    ) -> Option<f32> {
         match self.0.tag() {
             CompactLength::LENGTH_TAG => Some(self.0.value()),
             CompactLength::PERCENT_TAG => Some(context * self.0.value()),
@@ -213,7 +220,10 @@ impl<'de> serde::Deserialize<'de> for LengthPercentageAuto {
     {
         let inner = CompactLength::deserialize(deserializer)?;
         // Note: validation intentionally excludes the CALC_TAG as deserializing calc() values is not supported
-        if matches!(inner.tag(), CompactLength::LENGTH_TAG | CompactLength::PERCENT_TAG | CompactLength::AUTO_TAG) {
+        if matches!(
+            inner.tag(),
+            CompactLength::LENGTH_TAG | CompactLength::PERCENT_TAG | CompactLength::AUTO_TAG
+        ) {
             Ok(Self(inner))
         } else {
             Err(serde::de::Error::custom("Invalid tag"))
@@ -347,7 +357,10 @@ impl<'de> serde::Deserialize<'de> for Dimension {
     {
         let inner = CompactLength::deserialize(deserializer)?;
         // Note: validation intentionally excludes the CALC_TAG as deserializing calc() values is not supported
-        if matches!(inner.tag(), CompactLength::LENGTH_TAG | CompactLength::PERCENT_TAG | CompactLength::AUTO_TAG) {
+        if matches!(
+            inner.tag(),
+            CompactLength::LENGTH_TAG | CompactLength::PERCENT_TAG | CompactLength::AUTO_TAG
+        ) {
             Ok(Self(inner))
         } else {
             Err(serde::de::Error::custom("Invalid tag"))

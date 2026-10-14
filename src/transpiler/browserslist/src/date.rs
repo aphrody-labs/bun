@@ -10,7 +10,10 @@ const UNIX_EPOCH_JDN: i64 = 2440588;
 pub(crate) type CivilDate = (i64, u32, u32);
 
 #[cfg(windows)]
-#[expect(unsafe_code, reason = "the C runtime provides the system's local calendar date")]
+#[expect(
+    unsafe_code,
+    reason = "the C runtime provides the system's local calendar date"
+)]
 unsafe extern "C" {
     fn _mktime64(timeptr: *mut libc::tm) -> i64;
 }
@@ -20,15 +23,29 @@ unsafe extern "C" {
 /// Returns None if the calculation would overflow.
 const fn date_to_julian_day(year: i32, month: u32, day: u32) -> Option<i32> {
     let a = (14 - month.cast_signed()) / 12;
-    let Some(y) = year.checked_add(4800 - a) else { return None };
+    let Some(y) = year.checked_add(4800 - a) else {
+        return None;
+    };
     let m = month.cast_signed() + 12 * a - 3;
     // Use checked arithmetic to prevent overflow
-    let Some(term1) = 365_i32.checked_mul(y) else { return None };
-    let Some(term2) = term1.checked_add((153 * m + 2) / 5) else { return None };
-    let Some(term3) = term2.checked_add(day.cast_signed()) else { return None };
-    let Some(term4) = term3.checked_add(y / 4) else { return None };
-    let Some(term5) = term4.checked_sub(y / 100) else { return None };
-    let Some(term6) = term5.checked_add(y / 400) else { return None };
+    let Some(term1) = 365_i32.checked_mul(y) else {
+        return None;
+    };
+    let Some(term2) = term1.checked_add((153 * m + 2) / 5) else {
+        return None;
+    };
+    let Some(term3) = term2.checked_add(day.cast_signed()) else {
+        return None;
+    };
+    let Some(term4) = term3.checked_add(y / 4) else {
+        return None;
+    };
+    let Some(term5) = term4.checked_sub(y / 100) else {
+        return None;
+    };
+    let Some(term6) = term5.checked_add(y / 400) else {
+        return None;
+    };
     term6.checked_sub(32045)
 }
 
@@ -44,15 +61,11 @@ pub fn date_to_unix_timestamp(year: i32, month: u32, day: u32) -> Option<i64> {
 /// Get current unix timestamp.
 pub fn now_unix_timestamp() -> i64 {
     std::cfg_select! {
-        not(target_arch = "wasm32") => {
-            std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .map(|d| d.as_secs().cast_signed())
-                .unwrap_or(0)
-        }
-        target_arch = "wasm32" => {
-            (js_sys::Date::now() / 1000.0) as i64
-        }
+        not(target_arch = "wasm32") => std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_secs().cast_signed())
+            .unwrap_or(0),
+        target_arch = "wasm32" => (js_sys::Date::now() / 1000.0) as i64,
     }
 }
 
@@ -96,20 +109,19 @@ pub(crate) fn add_months_local(timestamp: i64, offset: i32) -> Option<i64> {
             if year < 0 {
                 return Some(0);
             }
-            let millis = date.set_full_year_with_month(
-                u32::try_from(year).ok()?,
-                months.rem_euclid(12) as i32,
-            );
+            let millis = date
+                .set_full_year_with_month(u32::try_from(year).ok()?, months.rem_euclid(12) as i32);
             millis.is_finite().then_some((millis / 1000.0) as i64)
         }
-        _ => {
-            add_months_utc(timestamp, offset)
-        }
+        _ => add_months_utc(timestamp, offset),
     }
 }
 
 #[cfg(all(not(miri), not(target_arch = "wasm32"), any(unix, windows)))]
-#[expect(unsafe_code, reason = "the C runtime provides the system's local calendar date")]
+#[expect(
+    unsafe_code,
+    reason = "the C runtime provides the system's local calendar date"
+)]
 fn add_months_local_native(timestamp: i64, offset: i32) -> Option<i64> {
     if std::mem::size_of::<libc::time_t>() == 4
         && !(i64::from(i32::MIN)..=i64::from(i32::MAX)).contains(&timestamp)
@@ -137,7 +149,11 @@ fn add_months_local_native(timestamp: i64, offset: i32) -> Option<i64> {
 
 #[cfg(all(not(miri), not(target_arch = "wasm32"), any(unix, windows)))]
 fn mktime_or_fallback(timestamp: i64, offset: i32, shifted: i64) -> Option<i64> {
-    if shifted == -1 { add_months_utc(timestamp, offset) } else { Some(shifted) }
+    if shifted == -1 {
+        add_months_utc(timestamp, offset)
+    } else {
+        Some(shifted)
+    }
 }
 
 #[cfg(any(test, not(target_arch = "wasm32")))]
@@ -205,12 +221,18 @@ mod tests {
         assert_eq!(add_months((2024, 5, 31), -30), (2021, 12, 1));
         assert_eq!(add_months(add_months((2024, 3, 31), 30), -30), (2024, 4, 1));
         let timestamp = date_to_unix_timestamp(2040, 1, 1).unwrap();
-        assert_eq!(add_months_utc(timestamp, -30), date_to_unix_timestamp(2037, 7, 1));
+        assert_eq!(
+            add_months_utc(timestamp, -30),
+            date_to_unix_timestamp(2037, 7, 1)
+        );
 
         #[cfg(all(not(miri), not(target_arch = "wasm32"), any(unix, windows)))]
         {
             let timestamp = date_to_unix_timestamp(2035, 8, 1).unwrap();
-            assert_eq!(mktime_or_fallback(timestamp, 30, -1), date_to_unix_timestamp(2038, 2, 1));
+            assert_eq!(
+                mktime_or_fallback(timestamp, 30, -1),
+                date_to_unix_timestamp(2038, 2, 1)
+            );
         }
     }
 

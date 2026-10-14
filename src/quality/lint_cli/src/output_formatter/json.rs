@@ -71,8 +71,9 @@ impl InternalFormatter for JsonOutputFormatter {
 
     fn lint_command_info(&self, lint_command_info: &super::LintCommandInfo) -> Option<String> {
         let diagnostics = self.reporter.0.borrow_mut().render();
-        let number_of_rules =
-            lint_command_info.number_of_rules.map_or("null".to_string(), |x| x.to_string());
+        let number_of_rules = lint_command_info
+            .number_of_rules
+            .map_or("null".to_string(), |x| x.to_string());
         let start_time = lint_command_info.start_time.as_secs_f64();
 
         Some(format!(

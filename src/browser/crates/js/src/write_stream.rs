@@ -13,14 +13,14 @@ use std::{
     collections::{HashMap, HashSet},
 };
 
+use bun_browser_dom::{DomTree, NodeData, NodeId};
 use html5ever::{
-    QualName,
-    driver::{ParseOpts, Parser, parse_document, parse_fragment},
+    driver::{parse_document, parse_fragment, ParseOpts, Parser},
     local_name, ns,
     tendril::TendrilSink,
     tree_builder::Tracer,
+    QualName,
 };
-use bun_browser_dom::{DomTree, NodeData, NodeId};
 
 /// Collects every node the TreeBuilder still holds.
 ///
@@ -107,13 +107,19 @@ impl DocumentWriteStream {
         let handed_over = &mut self.handed_over;
         let staging = &mut self.staging;
 
-        let root = if self.document { source.document() } else { source.fragment_root() };
+        let root = if self.document {
+            source.document()
+        } else {
+            source.fragment_root()
+        };
         let mut placements = Vec::new();
         // Only look at what is new. A walk over all children would cost as much per call as
         // the input stream written so far is long, so quadratic over a thousand calls. Measured at
         // 5000 calls: 852 ms versus 4130 ms.
-        let mut stack: Vec<(NodeId, Option<NodeId>)> =
-            fresh_children(source, root, handed_over).into_iter().map(|id| (id, None)).collect();
+        let mut stack: Vec<(NodeId, Option<NodeId>)> = fresh_children(source, root, handed_over)
+            .into_iter()
+            .map(|id| (id, None))
+            .collect();
 
         while let Some((current, before)) = stack.pop() {
             let node = match source.get_node(current) {
@@ -180,7 +186,11 @@ impl DocumentWriteStream {
                 };
                 dom.detach(copy);
                 map_subtree(source, current, dom, copy, handed_over);
-                placements.push(Placement { parent, node: copy, before });
+                placements.push(Placement {
+                    parent,
+                    node: copy,
+                    before,
+                });
                 continue;
             }
 
@@ -188,7 +198,11 @@ impl DocumentWriteStream {
             // never closed appear at once instead of never.
             let copy = dom.new_node(node.data.clone());
             handed_over.insert(current, copy);
-            placements.push(Placement { parent, node: copy, before });
+            placements.push(Placement {
+                parent,
+                node: copy,
+                before,
+            });
             for child in fresh_children(source, current, handed_over) {
                 stack.push((child, None));
             }

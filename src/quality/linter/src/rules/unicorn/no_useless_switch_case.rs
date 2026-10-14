@@ -442,7 +442,12 @@ fn test() {
         ),
     ];
 
-    Tester::new(NoUselessSwitchCase::NAME, NoUselessSwitchCase::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        NoUselessSwitchCase::NAME,
+        NoUselessSwitchCase::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

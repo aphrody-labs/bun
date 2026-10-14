@@ -80,10 +80,14 @@ impl SourceMap<'_> {
 
         let mut result = input.into_parts();
         result.file = generated.file.map(|file| Cow::Owned(file.into_owned()));
-        result.names.extend(fallback_names.into_iter().map(Cow::Owned));
+        result
+            .names
+            .extend(fallback_names.into_iter().map(Cow::Owned));
         result.tokens = tokens;
         result.token_chunks = None;
-        result.debug_id = generated.debug_id.map(|debug_id| Cow::Owned(debug_id.into_owned()));
+        result.debug_id = generated
+            .debug_id
+            .map(|debug_id| Cow::Owned(debug_id.into_owned()));
         SourceMap::from_parts(result)
     }
 }

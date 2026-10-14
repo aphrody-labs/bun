@@ -113,7 +113,7 @@ pub mod convert {
             pub mod utf32 {
                 pub mod with_errors {
                     use crate::simdutf::{
-                        simdutf__convert_utf8_to_utf32_with_errors, SIMDUTFResult,
+                        SIMDUTFResult, simdutf__convert_utf8_to_utf32_with_errors,
                     };
 
                     pub fn le(input: &[u8], output: &mut [u32]) -> SIMDUTFResult {

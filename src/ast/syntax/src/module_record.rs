@@ -435,12 +435,30 @@ pub trait VisitMutModuleRecord {
         module_record.requested_modules.values_mut().for_each(|e| {
             e.iter_mut().for_each(|e| self.visit_requested_module(e));
         });
-        module_record.import_entries.iter_mut().for_each(|e| self.visit_import_entry(e));
-        module_record.local_export_entries.iter_mut().for_each(|e| self.visit_export_entry(e));
-        module_record.indirect_export_entries.iter_mut().for_each(|e| self.visit_export_entry(e));
-        module_record.star_export_entries.iter_mut().for_each(|e| self.visit_export_entry(e));
-        module_record.dynamic_imports.iter_mut().for_each(|e| self.visit_dynamic_import(e));
-        module_record.import_metas.iter_mut().for_each(|e| self.visit_span(e));
+        module_record
+            .import_entries
+            .iter_mut()
+            .for_each(|e| self.visit_import_entry(e));
+        module_record
+            .local_export_entries
+            .iter_mut()
+            .for_each(|e| self.visit_export_entry(e));
+        module_record
+            .indirect_export_entries
+            .iter_mut()
+            .for_each(|e| self.visit_export_entry(e));
+        module_record
+            .star_export_entries
+            .iter_mut()
+            .for_each(|e| self.visit_export_entry(e));
+        module_record
+            .dynamic_imports
+            .iter_mut()
+            .for_each(|e| self.visit_dynamic_import(e));
+        module_record
+            .import_metas
+            .iter_mut()
+            .for_each(|e| self.visit_span(e));
     }
 
     fn visit_requested_module(&mut self, requested_module: &mut RequestedModule) {

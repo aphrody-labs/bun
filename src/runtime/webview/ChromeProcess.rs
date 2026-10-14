@@ -107,7 +107,12 @@ impl ChromeJob {
 
     fn terminate(&self) {
         if let Err(error) = crate::windows::sys::jobs::terminate(self.0, 1) {
-            scoped_log!(Chrome, "job termination failed: {} ({})", error.call, error.code);
+            scoped_log!(
+                Chrome,
+                "job termination failed: {} ({})",
+                error.call,
+                error.code
+            );
         }
     }
 }
@@ -794,7 +799,11 @@ impl Endpoints {
     }
 
     /// Publishes the singleton and returns our fd for C++ to adopt.
-    fn attach(mut self, process: ProcessHandle, profile: Option<TemporaryProfile>) -> crate::Result<i32> {
+    fn attach(
+        mut self,
+        process: ProcessHandle,
+        profile: Option<TemporaryProfile>,
+    ) -> crate::Result<i32> {
         let self_ptr = bun_core::heap::into_raw(Box::new(ChromeProcess {
             process,
             retired: false,
@@ -932,7 +941,11 @@ impl Endpoints {
     }
 
     /// Moves our ends into a [`ChromeProcess`], starts reading replies, and publishes it.
-    fn attach(mut self, process: ProcessHandle, profile: Option<TemporaryProfile>) -> crate::Result<i32> {
+    fn attach(
+        mut self,
+        process: ProcessHandle,
+        profile: Option<TemporaryProfile>,
+    ) -> crate::Result<i32> {
         let pipes = WindowsPipes {
             cmd: core::mem::replace(&mut self.cmd, ptr::null_mut()),
             reply: core::mem::replace(&mut self.reply, ptr::null_mut()),

@@ -42,7 +42,12 @@ impl Codegen<'_> {
         self.print_property_key_annotation(s.span.start);
         self.add_source_mapping(s.span);
         Quote::Backtick.print(self);
-        self.print_string_body(s.value.as_str(), s.lone_surrogates, Some(Quote::Backtick), true);
+        self.print_string_body(
+            s.value.as_str(),
+            s.lone_surrogates,
+            Some(Quote::Backtick),
+            true,
+        );
     }
 
     pub(super) fn print_string_impl(
@@ -91,7 +96,11 @@ impl Codegen<'_> {
         };
 
         // With `ascii_only`, every UTF-8 lead byte routes to the unicode-escape handler.
-        let table = if self.options.ascii_only { &ESCAPES_ASCII_ONLY.0 } else { &ESCAPES.0 };
+        let table = if self.options.ascii_only {
+            &ESCAPES_ASCII_ONLY.0
+        } else {
+            &ESCAPES.0
+        };
 
         // Loop through bytes.
         while let Some(b) = state.peek() {
@@ -244,7 +253,11 @@ impl PrintStringState<'_> {
     /// is inlined, to create a fast path for when `quote` is `Some`.
     #[inline]
     fn calculate_quote(&mut self, codegen: &mut Codegen) -> Quote {
-        if let Some(quote) = self.quote { quote } else { self.calculate_quote_impl(codegen) }
+        if let Some(quote) = self.quote {
+            quote
+        } else {
+            self.calculate_quote_impl(codegen)
+        }
     }
 
     fn calculate_quote_impl(&mut self, codegen: &mut Codegen) -> Quote {
@@ -321,7 +334,11 @@ impl PrintStringState<'_> {
         }
 
         // Prefer double quote over single quote if cost is the same
-        if single_cost < 0 { Quote::Single } else { Quote::Double }
+        if single_cost < 0 {
+            Quote::Single
+        } else {
+            Quote::Double
+        }
     }
 }
 
@@ -341,8 +358,10 @@ const NBSP_LAST_BYTE: u8 = NBSP_BYTES[1];
 /// Lossy replacement character (U+FFFD) as UTF-8 bytes.
 const LOSSY_REPLACEMENT_CHAR_BYTES: [u8; 3] = to_bytes('\u{FFFD}');
 const _: () = assert!(LOSSY_REPLACEMENT_CHAR_BYTES[0] == 0xEF);
-const LOSSY_REPLACEMENT_CHAR_LAST_2_BYTES: [u8; 2] =
-    [LOSSY_REPLACEMENT_CHAR_BYTES[1], LOSSY_REPLACEMENT_CHAR_BYTES[2]];
+const LOSSY_REPLACEMENT_CHAR_LAST_2_BYTES: [u8; 2] = [
+    LOSSY_REPLACEMENT_CHAR_BYTES[1],
+    LOSSY_REPLACEMENT_CHAR_BYTES[2],
+];
 
 /// Escape codes.
 ///

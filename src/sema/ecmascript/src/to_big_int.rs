@@ -34,9 +34,13 @@ impl<'a> ToBigInt<'a> for Expression<'a> {
                 }
             }
             Expression::UnaryExpression(unary_expr) => match unary_expr.operator {
-                UnaryOperator::LogicalNot => self
-                    .to_boolean(ctx)
-                    .map(|boolean| if boolean { BigInt::one() } else { BigInt::zero() }),
+                UnaryOperator::LogicalNot => self.to_boolean(ctx).map(|boolean| {
+                    if boolean {
+                        BigInt::one()
+                    } else {
+                        BigInt::zero()
+                    }
+                }),
                 UnaryOperator::UnaryNegation => {
                     unary_expr.argument.to_big_int(ctx).map(std::ops::Neg::neg)
                 }
@@ -49,9 +53,9 @@ impl<'a> ToBigInt<'a> for Expression<'a> {
             Expression::StringLiteral(string_literal) => {
                 string_literal.value.as_str().string_to_big_int()
             }
-            Expression::TemplateLiteral(_) => {
-                self.to_js_string(ctx).and_then(|value| value.as_ref().string_to_big_int())
-            }
+            Expression::TemplateLiteral(_) => self
+                .to_js_string(ctx)
+                .and_then(|value| value.as_ref().string_to_big_int()),
             _ => None,
         }
     }

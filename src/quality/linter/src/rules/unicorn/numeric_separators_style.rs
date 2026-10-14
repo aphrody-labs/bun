@@ -101,7 +101,10 @@ impl NumericBaseConfig {
     ) -> Schema {
         let mut schema = Self::json_schema(generator).into_object();
         let properties = &mut schema.object.as_mut().unwrap().properties;
-        for (name, value) in [("groupLength", GROUP_LENGTH), ("minimumDigits", MINIMUM_DIGITS)] {
+        for (name, value) in [
+            ("groupLength", GROUP_LENGTH),
+            ("minimumDigits", MINIMUM_DIGITS),
+        ] {
             if let Schema::Object(property) = properties.get_mut(name).unwrap() {
                 property.metadata().default = Some(value.into());
             }
@@ -117,7 +120,10 @@ impl NumericBaseConfig {
             self.minimum_digits = u32::try_from(minimum_digits).unwrap();
         }
 
-        if let Some(val) = val.get("onlyIfContainsSeparator").map(serde_json::Value::as_bool) {
+        if let Some(val) = val
+            .get("onlyIfContainsSeparator")
+            .map(serde_json::Value::as_bool)
+        {
             self.only_if_contains_separator = val;
         }
     }
@@ -136,8 +142,9 @@ struct NumericNumberConfig {
 impl NumericNumberConfig {
     pub(self) fn set_numeric_number_from_config(&mut self, val: &serde_json::Value) {
         self.base.set_numeric_base_from_config(val);
-        if let Some(fraction_group_length) =
-            val.get("fractionGroupLength").and_then(serde_json::Value::as_u64)
+        if let Some(fraction_group_length) = val
+            .get("fractionGroupLength")
+            .and_then(serde_json::Value::as_u64)
         {
             self.fraction_group_length = u32::try_from(fraction_group_length).unwrap();
         }
@@ -230,8 +237,9 @@ impl Rule for NumericSeparatorsStyle {
                 cfg.octal.set_numeric_base_from_config(config);
             }
 
-            if let Some(val) =
-                config.get("onlyIfContainsSeparator").and_then(serde_json::Value::as_bool)
+            if let Some(val) = config
+                .get("onlyIfContainsSeparator")
+                .and_then(serde_json::Value::as_bool)
             {
                 cfg.only_if_contains_separator = val;
             }
@@ -339,7 +347,12 @@ impl NumericSeparatorsStyle {
 
         let mut to_format = number_raw[2..].cow_replace('_', "").into_owned();
 
-        add_separators(&mut to_format, &SeparatorDir::Right, &self.hexadecimal, None);
+        add_separators(
+            &mut to_format,
+            &SeparatorDir::Right,
+            &self.hexadecimal,
+            None,
+        );
         to_format.insert_str(0, prefix);
         to_format
     }
@@ -488,7 +501,9 @@ fn parse_number_literal(num: &str) -> ParsedNumberLiteral<'_> {
     let mut offset = 0;
 
     // Integer part is everything until the decimal separator or the exponent (exclusive).
-    let integer_part = num.split_once(['.', 'e', 'E']).map_or(num, |(integer, _)| integer);
+    let integer_part = num
+        .split_once(['.', 'e', 'E'])
+        .map_or(num, |(integer, _)| integer);
     offset += integer_part.len();
 
     if !integer_part.is_empty() {
@@ -502,8 +517,9 @@ fn parse_number_literal(num: &str) -> ParsedNumberLiteral<'_> {
         offset += 1;
 
         // Decimal part is everything after the decimal separator until the exponent.
-        let decimal_part =
-            num[offset..].split_once(['e', 'E']).map_or(&num[offset..], |(decimal, _)| decimal);
+        let decimal_part = num[offset..]
+            .split_once(['e', 'E'])
+            .map_or(&num[offset..], |(decimal, _)| decimal);
         offset += decimal_part.len();
         if !decimal_part.is_empty() {
             parsed.decimal_part = Some(decimal_part);
@@ -590,7 +606,10 @@ fn test() {
                 serde_json::json!([{"number": {"minimumDigits": 0, "groupLength": 3, "fractionGroupLength": 5}}]),
             ),
         ),
-        ("const foo = 1.2345", Some(serde_json::json!([{"number": {"fractionGroupLength": 2}}]))),
+        (
+            "const foo = 1.2345",
+            Some(serde_json::json!([{"number": {"fractionGroupLength": 2}}])),
+        ),
         ("const foo = -3000", None),
         ("const foo = -10_000_000", None),
         ("const foo = 1e10_000", None),
@@ -601,12 +620,21 @@ fn test() {
         ("const foo = 3.6e12_000", None),
         ("const foo = 3.6E12_000", None),
         ("const foo = -1_200_000e5", None),
-        ("const foo = -282_932 - (1938 / 10_000) * .1 + 18.1000002", None),
+        (
+            "const foo = -282_932 - (1938 / 10_000) * .1 + 18.1000002",
+            None,
+        ),
         ("const foo = NaN", None),
         ("const foo = Infinity", None),
         (r#"const foo = "1234567n""#, None),
-        ("const foo = 10000", Some(serde_json::json!([{"number": {"minimumDigits": 6}}]))),
-        ("const foo = 100_0000_0000", Some(serde_json::json!([{"number": {"groupLength": 4}}]))),
+        (
+            "const foo = 10000",
+            Some(serde_json::json!([{"number": {"minimumDigits": 6}}])),
+        ),
+        (
+            "const foo = 100_0000_0000",
+            Some(serde_json::json!([{"number": {"groupLength": 4}}])),
+        ),
         (
             "const foo = 0xA_B_C_D_E_1_2_3_4",
             Some(serde_json::json!([{"hexadecimal": {"groupLength": 1}}])),
@@ -748,7 +776,10 @@ fn test() {
         ("const foo = .000000_1", None),
         ("const foo = 12345678..toString()", None),
         ("const foo = 12345678 .toString()", None),
-        ("const foo = 1.234567", Some(serde_json::json!([{"number": {"fractionGroupLength": 3}}]))),
+        (
+            "const foo = 1.234567",
+            Some(serde_json::json!([{"number": {"fractionGroupLength": 3}}])),
+        ),
         (
             "const foo = 1789.123_432_42",
             Some(serde_json::json!([{"number": {"onlyIfContainsSeparator": true}}])),
@@ -767,9 +798,18 @@ fn test() {
         ("const foo = 3.6e12000", None),
         ("const foo = -1200000e5", None),
         ("const foo = 3.65432E12000", None),
-        ("const foo = 1000000", Some(serde_json::json!([{"number": {"minimumDigits": 6}}]))),
-        ("const foo = 10_000_000_000", Some(serde_json::json!([{"number": {"groupLength": 4}}]))),
-        ("const foo = 0xA_B_CD", Some(serde_json::json!([{"hexadecimal": {"groupLength": 1}}]))),
+        (
+            "const foo = 1000000",
+            Some(serde_json::json!([{"number": {"minimumDigits": 6}}])),
+        ),
+        (
+            "const foo = 10_000_000_000",
+            Some(serde_json::json!([{"number": {"groupLength": 4}}])),
+        ),
+        (
+            "const foo = 0xA_B_CD",
+            Some(serde_json::json!([{"hexadecimal": {"groupLength": 1}}])),
+        ),
         (
             "const foo = 0b1_11",
             Some(serde_json::json!([{"number": {"minimumDigits": 3, "groupLength": 2}}])),
@@ -821,29 +861,77 @@ fn test() {
         ("const foo = 0XAB_C_D", "const foo = 0XAB_CD", None),
         ("const foo = 0o12_34_5670", "const foo = 0o1234_5670", None),
         ("const foo = 0o7_7_77", "const foo = 0o7777", None),
-        ("const foo = 0o010101010101", "const foo = 0o0101_0101_0101", None),
-        ("const foo = 0O010101010101", "const foo = 0O0101_0101_0101", None),
+        (
+            "const foo = 0o010101010101",
+            "const foo = 0o0101_0101_0101",
+            None,
+        ),
+        (
+            "const foo = 0O010101010101",
+            "const foo = 0O0101_0101_0101",
+            None,
+        ),
         ("const foo = 0b10_10_0001", "const foo = 0b1010_0001", None),
         ("const foo = 0b0_00_0", "const foo = 0b0000", None),
-        ("const foo = 0b10101010101010", "const foo = 0b10_1010_1010_1010", None),
-        ("const foo = 0B10101010101010", "const foo = 0B10_1010_1010_1010", None),
+        (
+            "const foo = 0b10101010101010",
+            "const foo = 0b10_1010_1010_1010",
+            None,
+        ),
+        (
+            "const foo = 0B10101010101010",
+            "const foo = 0B10_1010_1010_1010",
+            None,
+        ),
         ("const foo = 1_9_223n", "const foo = 19_223n", None),
         ("const foo = 80_7n", "const foo = 807n", None),
-        ("const foo = 123456789_100n", "const foo = 123_456_789_100n", None),
+        (
+            "const foo = 123456789_100n",
+            "const foo = 123_456_789_100n",
+            None,
+        ),
         ("const foo = 12_34_567n", "const foo = 1_234_567n", None),
         ("const foo = 0xA_BCDn", "const foo = 0xAB_CDn", None),
         ("const foo = 1_2_345_678", "const foo = 12_345_678", None),
         ("const foo = 12_3", "const foo = 123", None),
         ("const foo = 1234567890", "const foo = 1_234_567_890", None),
-        ("const foo = 0.552_284_749_83", "const foo = 0.55228474983", None),
-        ("const foo = 3819.123_4325", "const foo = 3819.1234325", None),
-        ("const foo = 138789.12343_2_42", "const foo = 138_789.12343242", None),
+        (
+            "const foo = 0.552_284_749_83",
+            "const foo = 0.55228474983",
+            None,
+        ),
+        (
+            "const foo = 3819.123_4325",
+            "const foo = 3819.1234325",
+            None,
+        ),
+        (
+            "const foo = 138789.12343_2_42",
+            "const foo = 138_789.12343242",
+            None,
+        ),
         ("const foo = .000000_1", "const foo = .0000001", None),
-        ("const foo = 12345678..toString()", "const foo = 12_345_678..toString()", None),
-        ("const foo = 12345678.1.toString()", "const foo = 12_345_678.1.toString()", None),
+        (
+            "const foo = 12345678..toString()",
+            "const foo = 12_345_678..toString()",
+            None,
+        ),
+        (
+            "const foo = 12345678.1.toString()",
+            "const foo = 12_345_678.1.toString()",
+            None,
+        ),
         ("12345678.e10.toString()", "12_345_678e10.toString()", None),
-        ("12345678.1.e10.toString()", "12_345_678.1.e10.toString()", None),
-        ("const foo = 12345678 .toString()", "const foo = 12_345_678 .toString()", None),
+        (
+            "12345678.1.e10.toString()",
+            "12_345_678.1.e10.toString()",
+            None,
+        ),
+        (
+            "const foo = 12345678 .toString()",
+            "const foo = 12_345_678 .toString()",
+            None,
+        ),
         (
             "const foo = 1.234567",
             "const foo = 1.234_567",
@@ -863,12 +951,28 @@ fn test() {
         ("const foo = 1e10000", "const foo = 1e10_000", None),
         ("const foo = 39804e10000", "const foo = 39_804e10_000", None),
         ("const foo = -123456e100", "const foo = -123_456e100", None),
-        ("const foo = -100000e-10000", "const foo = -100_000e-10_000", None),
-        ("const foo = -1000e+10000", "const foo = -1000e+10_000", None),
-        ("const foo = -1000e+00010000", "const foo = -1000e+00_010_000", None),
+        (
+            "const foo = -100000e-10000",
+            "const foo = -100_000e-10_000",
+            None,
+        ),
+        (
+            "const foo = -1000e+10000",
+            "const foo = -1000e+10_000",
+            None,
+        ),
+        (
+            "const foo = -1000e+00010000",
+            "const foo = -1000e+00_010_000",
+            None,
+        ),
         ("const foo = 3.6e12000", "const foo = 3.6e12_000", None),
         ("const foo = -1200000e5", "const foo = -1_200_000e5", None),
-        ("const foo = 3.65432E12000", "const foo = 3.65432E12_000", None),
+        (
+            "const foo = 3.65432E12000",
+            "const foo = 3.65432E12_000",
+            None,
+        ),
         (
             "const foo = 1000000",
             "const foo = 1_000_000",
@@ -944,9 +1048,14 @@ fn test() {
         ),
     ];
 
-    Tester::new(NumericSeparatorsStyle::NAME, NumericSeparatorsStyle::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        NumericSeparatorsStyle::NAME,
+        NumericSeparatorsStyle::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .test_and_snapshot();
 }
 
 #[cfg(test)]

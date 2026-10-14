@@ -110,7 +110,10 @@ impl<'a> IsolatedDeclarations<'a> {
             stmts,
             &self,
         );
-        IsolatedDeclarationsReturn { program, diagnostics: self.take_errors() }
+        IsolatedDeclarationsReturn {
+            program,
+            diagnostics: self.take_errors(),
+        }
     }
 
     fn take_errors(&self) -> Diagnostics {
@@ -126,8 +129,10 @@ impl<'a> IsolatedDeclarations<'a> {
     fn build_internal_annotations(program: &Program<'a>) -> FxHashSet<u32> {
         let mut set = FxHashSet::default();
         for comment in &program.comments {
-            let has_internal =
-                comment.content_span().source_text(program.source_text).contains("@internal");
+            let has_internal = comment
+                .content_span()
+                .source_text(program.source_text)
+                .contains("@internal");
             // Use the first jsdoc comment if there are multiple jsdoc comments for the same node.
             if has_internal && !set.contains(&comment.attached_to) {
                 set.insert(comment.attached_to);
@@ -228,7 +233,8 @@ impl<'a> IsolatedDeclarations<'a> {
                         }
 
                         // We need to visit the module declaration to collect all references
-                        self.scope.visit_ts_external_module_declaration(decl.as_ref());
+                        self.scope
+                            .visit_ts_external_module_declaration(decl.as_ref());
 
                         transformed_stmts[idx] = Some(Statement::TSExternalModuleDeclaration(decl));
                         transformed_count += 1;
@@ -338,7 +344,9 @@ impl<'a> IsolatedDeclarations<'a> {
                 if transformed_stmts[idx].is_some() {
                     continue;
                 }
-                let Some(decl) = stmt.as_declaration() else { continue };
+                let Some(decl) = stmt.as_declaration() else {
+                    continue;
+                };
 
                 if let Declaration::VariableDeclaration(declaration) = decl {
                     let mut all_declarator_has_transformed = true;
@@ -360,7 +368,9 @@ impl<'a> IsolatedDeclarations<'a> {
                     if all_declarator_has_transformed {
                         let declarations = ArenaVec::from_iter_in(
                             declaration.declarations.iter().map(|declarator| {
-                                transformed_variable_declarator.remove(&declarator.span).unwrap()
+                                transformed_variable_declarator
+                                    .remove(&declarator.span)
+                                    .unwrap()
                             }),
                             self,
                         );
@@ -441,7 +451,12 @@ impl<'a> IsolatedDeclarations<'a> {
 
         if need_empty_export_marker {
             let kind = ImportOrExportKind::Value;
-            new_stmts.push(Statement::new_export_named_declaration(SPAN, [], kind, self));
+            new_stmts.push(Statement::new_export_named_declaration(
+                SPAN,
+                [],
+                kind,
+                self,
+            ));
         } else if self.scope.is_ts_module_block() {
             // If we are in a module block and we don't need to add `export {}`, in that case we need to remove `export` keyword from all ExportNamedDeclaration
             // <https://github.com/microsoft/TypeScript/blob/a709f9899c2a544b6de65a0f2623ecbbe1394eab/src/compiler/transformers/declarations.ts#L1556-L1563>
@@ -469,7 +484,10 @@ impl<'a> IsolatedDeclarations<'a> {
                     .into();
 
                 if func.body.is_some() {
-                    if last_function_name.as_ref().is_some_and(|last_name| *last_name == name) {
+                    if last_function_name
+                        .as_ref()
+                        .is_some_and(|last_name| *last_name == name)
+                    {
                         return false;
                     }
                 } else {
@@ -490,7 +508,10 @@ impl<'a> IsolatedDeclarations<'a> {
                         .name
                         .into();
                     if func.body.is_some() {
-                        if last_function_name.as_ref().is_some_and(|last_name| *last_name == name) {
+                        if last_function_name
+                            .as_ref()
+                            .is_some_and(|last_name| *last_name == name)
+                        {
                             return false;
                         }
                     } else {
@@ -530,7 +551,9 @@ impl<'a> IsolatedDeclarations<'a> {
             return;
         }
         let ident = &decl.id;
-        let TSNamespaceDeclarationBody::TSModuleBlock(block) = &decl.body else { return };
+        let TSNamespaceDeclarationBody::TSModuleBlock(block) = &decl.body else {
+            return;
+        };
         for stmt in &block.body {
             let declaration = match stmt {
                 Statement::ExportDeclaration(decl) => Some(&decl.declaration),
@@ -609,7 +632,10 @@ impl<'a> IsolatedDeclarations<'a> {
                         if !is_internal {
                             for declarator in &decl.declarations {
                                 if declarator.type_annotation.is_none()
-                                    && declarator.init.as_ref().is_some_and(Expression::is_function)
+                                    && declarator
+                                        .init
+                                        .as_ref()
+                                        .is_some_and(Expression::is_function)
                                     && let Some(name) = declarator.id.get_identifier_name()
                                 {
                                     can_expando_function_names.insert(name);
@@ -661,7 +687,10 @@ impl<'a> IsolatedDeclarations<'a> {
                     if !is_internal {
                         for declarator in &decl.declarations {
                             if declarator.type_annotation.is_none()
-                                && declarator.init.as_ref().is_some_and(Expression::is_function)
+                                && declarator
+                                    .init
+                                    .as_ref()
+                                    .is_some_and(Expression::is_function)
                                 && let Some(name) = declarator.id.get_identifier_name()
                                 && (include_unexported || self.scope.has_value_reference(name))
                             {

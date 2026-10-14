@@ -54,7 +54,10 @@ pub struct FlagsParser<'a> {
 
 impl<'a> FlagsParser<'a> {
     pub fn new(reader: Reader<'a>, span_offset: u32) -> Self {
-        Self { reader, span_factory: SpanFactory::new(span_offset) }
+        Self {
+            reader,
+            span_factory: SpanFactory::new(span_offset),
+        }
     }
 
     /// Returns: (is_unicode_mode, is_unicode_sets_mode)
@@ -68,8 +71,10 @@ impl<'a> FlagsParser<'a> {
             self.reader.advance();
             let span_end = self.reader.offset();
 
-            let flag =
-                char::try_from(cp).ok().and_then(|c| Flags::try_from(c).ok()).ok_or_else(|| {
+            let flag = char::try_from(cp)
+                .ok()
+                .and_then(|c| Flags::try_from(c).ok())
+                .ok_or_else(|| {
                     diagnostics::unknown_flag(
                         self.span_factory.create(span_start, span_end),
                         &self.reader.str(span_start, span_end),

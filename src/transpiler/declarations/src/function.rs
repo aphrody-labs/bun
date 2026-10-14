@@ -19,7 +19,9 @@ impl<'a> IsolatedDeclarations<'a> {
     ) -> ArenaBox<'a, Function<'a>> {
         let return_type = self.infer_function_return_type(func);
         if return_type.is_none() {
-            self.error(function_must_have_explicit_return_type(get_function_span(func)));
+            self.error(function_must_have_explicit_return_type(get_function_span(
+                func,
+            )));
         }
         let params = self.transform_formal_parameters(&func.params, false);
         Function::boxed(
@@ -193,12 +195,20 @@ impl<'a> IsolatedDeclarations<'a> {
             rest
         });
 
-        FormalParameters::boxed(params.span, FormalParameterKind::Signature, items, rest, self)
+        FormalParameters::boxed(
+            params.span,
+            FormalParameterKind::Signature,
+            items,
+            rest,
+            self,
+        )
     }
 }
 
 pub fn get_function_span(func: &Function<'_>) -> Span {
-    func.id.as_ref().map_or_else(|| Span::empty(func.params.span.start), |id| id.span)
+    func.id
+        .as_ref()
+        .map_or_else(|| Span::empty(func.params.span.start), |id| id.span)
 }
 
 /// Syntax-only categories that remain distinct while folding unions and intersections.
@@ -297,11 +307,12 @@ fn undefined_presence(ts_type: &TSType<'_>) -> UndefinedPresence {
         | TSType::JSDocNullableType(_)
         | TSType::JSDocNonNullableType(_)
         | TSType::JSDocUnknownType(_) => UndefinedPresence::Unresolved,
-        TSType::TSIntersectionType(intersection) => intersection
-            .types
-            .iter()
-            .map(undefined_presence)
-            .fold(UndefinedPresence::UnknownKeyword, UndefinedPresence::intersection),
+        TSType::TSIntersectionType(intersection) => {
+            intersection.types.iter().map(undefined_presence).fold(
+                UndefinedPresence::UnknownKeyword,
+                UndefinedPresence::intersection,
+            )
+        }
     }
 }
 

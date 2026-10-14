@@ -23,7 +23,9 @@ pub struct UnresolvedReferences<'a> {
 
 impl<'a> UnresolvedReferences<'a> {
     pub(crate) fn new() -> Self {
-        Self { references: Vec::new() }
+        Self {
+            references: Vec::new(),
+        }
     }
 
     /// Reserve exactly `additional` more slots in the underlying `Vec`.
@@ -61,6 +63,8 @@ impl<'a> UnresolvedReferences<'a> {
         start: usize,
         mut keep: impl FnMut(&mut UnresolvedReference<'a>) -> bool,
     ) {
-        self.references.extract_if(start.., |reference| !keep(reference)).for_each(drop);
+        self.references
+            .extract_if(start.., |reference| !keep(reference))
+            .for_each(drop);
     }
 }

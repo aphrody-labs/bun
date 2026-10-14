@@ -101,7 +101,9 @@ impl Rule for NoDeprecatedModelDefinition {
     }
 
     fn run<'a>(&self, node: &AstNode<'a>, ctx: &LintContext<'a>) {
-        let AstKind::ObjectProperty(prop) = node.kind() else { return };
+        let AstKind::ObjectProperty(prop) = node.kind() else {
+            return;
+        };
 
         if !prop.key.is_specific_static_name("model") {
             return;
@@ -142,7 +144,9 @@ impl Rule for NoDeprecatedModelDefinition {
 
 fn find_string_property_value(obj: &ObjectExpression<'_>, key: &str) -> Option<String> {
     for property_kind in &obj.properties {
-        let ObjectPropertyKind::ObjectProperty(p) = property_kind else { continue };
+        let ObjectPropertyKind::ObjectProperty(p) = property_kind else {
+            continue;
+        };
         if !p.key.is_specific_static_name(key) {
             continue;
         }
@@ -371,6 +375,11 @@ fn test() {
         ),
     ];
 
-    Tester::new(NoDeprecatedModelDefinition::NAME, NoDeprecatedModelDefinition::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        NoDeprecatedModelDefinition::NAME,
+        NoDeprecatedModelDefinition::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

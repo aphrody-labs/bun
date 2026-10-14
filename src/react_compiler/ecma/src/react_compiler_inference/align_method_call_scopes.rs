@@ -67,8 +67,10 @@ pub fn align_method_call_scopes(func: &mut HirFunction, env: &mut Environment) {
                 | InstructionValue::ObjectMethod { lowered_func, .. } => {
                     // Recurse into inner functions
                     let func_id = lowered_func.func;
-                    let mut inner_func =
-                        replace(&mut env.functions[func_id], placeholder_function(env.allocator));
+                    let mut inner_func = replace(
+                        &mut env.functions[func_id],
+                        placeholder_function(env.allocator),
+                    );
                     align_method_call_scopes(&mut inner_func, env);
                     env.functions[func_id] = inner_func;
                 }
@@ -90,8 +92,9 @@ pub fn align_method_call_scopes(func: &mut HirFunction, env: &mut Environment) {
         let scope_range = env.scopes[scope_id].range;
         let root_range = env.scopes[root_id].range;
 
-        let entry =
-            range_updates.entry(root_id).or_insert_with(|| (root_range.start, root_range.end));
+        let entry = range_updates
+            .entry(root_id)
+            .or_insert_with(|| (root_range.start, root_range.end));
         entry.0 = min(entry.0, scope_range.start);
         entry.1 = max(entry.1, scope_range.end);
     });

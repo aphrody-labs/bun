@@ -146,7 +146,10 @@ struct CharacterSequenceCollector<'a> {
 
 impl CharacterSequenceCollector<'_> {
     fn new() -> Self {
-        Self { sequences: Vec::new(), current_seq: Vec::new() }
+        Self {
+            sequences: Vec::new(),
+            current_seq: Vec::new(),
+        }
     }
 }
 
@@ -306,14 +309,21 @@ fn combining_class_sequences(chars: &[&Character], ctx: &LintContext<'_>) {
 // Reports the span of a zero width joiner sequence detected between two non-ZWJ characters, if any
 fn zwj_sequences(chars: &[&Character], ctx: &LintContext<'_>) {
     for (index, &char) in chars.iter().enumerate() {
-        let previous = if index > 0 { Some(chars[index - 1]) } else { None };
+        let previous = if index > 0 {
+            Some(chars[index - 1])
+        } else {
+            None
+        };
         let next = chars.get(index + 1).copied();
         if let (Some(previous), Some(next)) = (previous, next)
             && char.value == 0x200D
             && previous.value != 0x200D
             && next.value != 0x200D
         {
-            ctx.diagnostic(zwj_diagnostic(Span::new(previous.span.start, next.span.end)));
+            ctx.diagnostic(zwj_diagnostic(Span::new(
+                previous.span.start,
+                next.span.end,
+            )));
         }
     }
 }
@@ -366,7 +376,10 @@ fn is_surrogate_pair(hi: u32, lo: u32) -> bool {
 // tries to align how `oxc_parser` uses `unicode_code_point`
 fn is_unicode_code_point_escape(char: &Character, source_text: &str) -> bool {
     let char_source = char.span.source_text(source_text);
-    let Some(hex) = char_source.strip_prefix("\\u{").and_then(|s| s.strip_suffix('}')) else {
+    let Some(hex) = char_source
+        .strip_prefix("\\u{")
+        .and_then(|s| s.strip_suffix('}'))
+    else {
         return false;
     };
 
@@ -514,8 +527,11 @@ fn fix_regexp_call_or_new<'a>(
     }
 
     let pattern_text = pattern_span.source_text(ctx.source_text());
-    let flags_text =
-        if let Some(flags) = flags_text { format!("{flags}u") } else { "u".to_string() };
+    let flags_text = if let Some(flags) = flags_text {
+        format!("{flags}u")
+    } else {
+        "u".to_string()
+    };
 
     if is_regex_literal {
         if !validate_regex_pattern(pattern_text, true, Some(&flags_text)) {
@@ -539,7 +555,10 @@ fn fix_regexp_call_or_new<'a>(
 fn validate_regex_pattern(pattern: &str, is_regex_literal: bool, flags: Option<&str>) -> bool {
     let allocator = Allocator::default();
     // we do not care about the actual span positions for this validation, so we can set them to 0
-    let options = Options { pattern_span_offset: 0, flags_span_offset: 0 };
+    let options = Options {
+        pattern_span_offset: 0,
+        flags_span_offset: 0,
+    };
 
     if is_regex_literal {
         let parser = LiteralParser::new(&allocator, pattern, flags, options);
@@ -608,20 +627,50 @@ fn test() {
         (r"var r = /[🇯\q{abc}🇵]/v", None), // { "ecmaVersion": 2024 },
         ("var r = /[🇯[A]🇵]/v", None),      // { "ecmaVersion": 2024 },
         ("var r = /[🇯[A--B]🇵]/v", None),   // { "ecmaVersion": 2024 },
-        (r"/[\ud83d\udc4d]/", Some(serde_json::json!([{ "allowEscape": true }]))),
+        (
+            r"/[\ud83d\udc4d]/",
+            Some(serde_json::json!([{ "allowEscape": true }])),
+        ),
         (
             r#"/[�d83d\udc4d]/u // U+D83D + Backslash + "udc4d""#,
             Some(serde_json::json!([{ "allowEscape": true }])),
         ),
-        (r"/[A\u0301]/", Some(serde_json::json!([{ "allowEscape": true }]))),
-        (r"/[👶\u{1f3fb}]/u", Some(serde_json::json!([{ "allowEscape": true }]))),
-        (r"/[\u{1F1EF}\u{1F1F5}]/u", Some(serde_json::json!([{ "allowEscape": true }]))),
-        (r"/[👨\u200d👩\u200d👦]/u", Some(serde_json::json!([{ "allowEscape": true }]))),
-        (r"/[\u00B7\u0300-\u036F]/u", Some(serde_json::json!([{ "allowEscape": true }]))),
-        (r"/[\n\u0305]/", Some(serde_json::json!([{ "allowEscape": true }]))),
-        (r#"RegExp("[\uD83D\uDC4D]")"#, Some(serde_json::json!([{ "allowEscape": true }]))),
-        (r#"RegExp("[A\u0301]")"#, Some(serde_json::json!([{ "allowEscape": true }]))),
-        (r#"RegExp("[\x41\\u0301]")"#, Some(serde_json::json!([{ "allowEscape": true }]))),
+        (
+            r"/[A\u0301]/",
+            Some(serde_json::json!([{ "allowEscape": true }])),
+        ),
+        (
+            r"/[👶\u{1f3fb}]/u",
+            Some(serde_json::json!([{ "allowEscape": true }])),
+        ),
+        (
+            r"/[\u{1F1EF}\u{1F1F5}]/u",
+            Some(serde_json::json!([{ "allowEscape": true }])),
+        ),
+        (
+            r"/[👨\u200d👩\u200d👦]/u",
+            Some(serde_json::json!([{ "allowEscape": true }])),
+        ),
+        (
+            r"/[\u00B7\u0300-\u036F]/u",
+            Some(serde_json::json!([{ "allowEscape": true }])),
+        ),
+        (
+            r"/[\n\u0305]/",
+            Some(serde_json::json!([{ "allowEscape": true }])),
+        ),
+        (
+            r#"RegExp("[\uD83D\uDC4D]")"#,
+            Some(serde_json::json!([{ "allowEscape": true }])),
+        ),
+        (
+            r#"RegExp("[A\u0301]")"#,
+            Some(serde_json::json!([{ "allowEscape": true }])),
+        ),
+        (
+            r#"RegExp("[\x41\\u0301]")"#,
+            Some(serde_json::json!([{ "allowEscape": true }])),
+        ),
         (
             r#"RegExp(`[\uD83D\uDC4D]`) // Backslash + "uD83D" + Backslash + "uDC4D""#,
             Some(serde_json::json!([{ "allowEscape": true }])),
@@ -674,8 +723,14 @@ fn test() {
         ("var r = /[👩‍👦][👩‍👦]/u", None),
         ("var r = /[👨‍👩‍👦]foo[👨‍👩‍👦]/u", None),
         ("var r = /[👨‍👩‍👦👩‍👦]/u", None),
-        (r"var r = /[\uD83D\uDC68\u200D\uD83D\uDC69\u200D\uD83D\uDC66]/u", None),
-        (r"var r = /[\u{1F468}\u{200D}\u{1F469}\u{200D}\u{1F466}]/u", None),
+        (
+            r"var r = /[\uD83D\uDC68\u200D\uD83D\uDC69\u200D\uD83D\uDC66]/u",
+            None,
+        ),
+        (
+            r"var r = /[\u{1F468}\u{200D}\u{1F469}\u{200D}\u{1F466}]/u",
+            None,
+        ),
         (r"var r = /[\uD83D\uDC68\u200D\uD83D\uDC69]/u", None),
         (r"var r = /[\u{1F468}\u{200D}\u{1F469}]/u", None),
         (
@@ -700,7 +755,10 @@ fn test() {
 			[❇️]`)",
             None,
         ),
-        (r#"const flags = ""; var r = new RegExp("[👍]", flags)"#, None),
+        (
+            r#"const flags = ""; var r = new RegExp("[👍]", flags)"#,
+            None,
+        ),
         (r#"var r = RegExp("[\\uD83D\\uDC4D]", "")"#, None),
         (r#"var r = RegExp("before[\\uD83D\\uDC4D]after", "")"#, None),
         (r#"var r = RegExp("[before\\uD83D\\uDC4Dafter]", "")"#, None),
@@ -728,7 +786,10 @@ fn test() {
         (r#"var r = new RegExp("[\\u{2747}\\u{FE0F}]", "u")"#, None),
         (r#"var r = new RegExp("[👶🏻]", "")"#, None),
         (r#"var r = new RegExp("[👶🏻]", "u")"#, None),
-        (r#"var r = new RegExp("[\\uD83D\\uDC76\\uD83C\\uDFFB]", "u")"#, None),
+        (
+            r#"var r = new RegExp("[\\uD83D\\uDC76\\uD83C\\uDFFB]", "u")"#,
+            None,
+        ),
         (r#"var r = new RegExp("[\\u{1F476}\\u{1F3FB}]", "u")"#, None),
         ("var r = RegExp(`			👍[👍]`)", None),
         (r"var r = RegExp(`\t\t\t👍[👍]`)", None),
@@ -741,7 +802,10 @@ fn test() {
         (r#"var r = new RegExp((("[🇯🇵]")))"#, None),
         (r#"var r = new RegExp(("[🇯🇵]"),)"#, None), // { "ecmaVersion": 2017 },
         (r#"var r = new RegExp("[🇯🇵]", "u")"#, None),
-        (r#"var r = new RegExp("[\\uD83C\\uDDEF\\uD83C\\uDDF5]", "u")"#, None),
+        (
+            r#"var r = new RegExp("[\\uD83C\\uDDEF\\uD83C\\uDDF5]", "u")"#,
+            None,
+        ),
         (r#"var r = new RegExp("[\\u{1F1EF}\\u{1F1F5}]", "u")"#, None),
         (r#"var r = new RegExp("[👨‍👩‍👦]", "")"#, None),
         (r#"var r = new RegExp("[👨‍👩‍👦]", "u")"#, None),
@@ -753,7 +817,10 @@ fn test() {
             r#"var r = new RegExp("[\\uD83D\\uDC68\\u200D\\uD83D\\uDC69\\u200D\\uD83D\\uDC66]", "u")"#,
             None,
         ),
-        (r#"var r = new RegExp("[\\u{1F468}\\u{200D}\\u{1F469}\\u{200D}\\u{1F466}]", "u")"#, None),
+        (
+            r#"var r = new RegExp("[\\u{1F468}\\u{200D}\\u{1F469}\\u{200D}\\u{1F466}]", "u")"#,
+            None,
+        ),
         (r#"var r = new globalThis.RegExp("[❇️]", "")"#, None), // { "ecmaVersion": 2020 },
         (r#"var r = new globalThis.RegExp("[👶🏻]", "u")"#, None), // { "ecmaVersion": 2020 },
         (r#"var r = new globalThis.RegExp("[🇯🇵]", "")"#, None), // { "ecmaVersion": 2020 },
@@ -803,14 +870,38 @@ fn test() {
         ),
         ("var r = /[[👶🏻]]/v", None),         // { "ecmaVersion": 2024 },
         ("new RegExp(/^[👍]$/v, '')", None), // { "ecmaVersion": 2024, },
-        (r"/[Á]/", Some(serde_json::json!([{ "allowEscape": false }]))),
-        (r"/[\\̶]/", Some(serde_json::json!([{ "allowEscape": true }]))),
-        (r"/[\n̅]/", Some(serde_json::json!([{ "allowEscape": true }]))),
-        (r"/[\👍]/", Some(serde_json::json!([{ "allowEscape": true }]))),
-        (r"RegExp('[\è]')", Some(serde_json::json!([{ "allowEscape": true }]))),
-        (r"RegExp('[\👍]')", Some(serde_json::json!([{ "allowEscape": true }]))),
-        (r"RegExp('[\\👍]')", Some(serde_json::json!([{ "allowEscape": true }]))),
-        (r"RegExp('[\❇️]')", Some(serde_json::json!([{ "allowEscape": true }]))),
+        (
+            r"/[Á]/",
+            Some(serde_json::json!([{ "allowEscape": false }])),
+        ),
+        (
+            r"/[\\̶]/",
+            Some(serde_json::json!([{ "allowEscape": true }])),
+        ),
+        (
+            r"/[\n̅]/",
+            Some(serde_json::json!([{ "allowEscape": true }])),
+        ),
+        (
+            r"/[\👍]/",
+            Some(serde_json::json!([{ "allowEscape": true }])),
+        ),
+        (
+            r"RegExp('[\è]')",
+            Some(serde_json::json!([{ "allowEscape": true }])),
+        ),
+        (
+            r"RegExp('[\👍]')",
+            Some(serde_json::json!([{ "allowEscape": true }])),
+        ),
+        (
+            r"RegExp('[\\👍]')",
+            Some(serde_json::json!([{ "allowEscape": true }])),
+        ),
+        (
+            r"RegExp('[\❇️]')",
+            Some(serde_json::json!([{ "allowEscape": true }])),
+        ),
         (
             r"RegExp(`[\👍]`) // Backslash + U+D83D + U+DC4D",
             Some(serde_json::json!([{ "allowEscape": true }])),
@@ -827,18 +918,46 @@ fn test() {
 
     let fix = vec![
         ("var r = /[👍]/", "var r = /[👍]/u", None),
-        (r"var r = /[\uD83D\uDC4D]/", r"var r = /[\uD83D\uDC4D]/u", None),
-        (r"var r = /before[\uD83D\uDC4D]after/", r"var r = /before[\uD83D\uDC4D]after/u", None),
-        (r"var r = /[before\uD83D\uDC4Dafter]/", r"var r = /[before\uD83D\uDC4Dafter]/u", None),
-        (r"var r = /\uDC4D[\uD83D\uDC4D]/", r"var r = /\uDC4D[\uD83D\uDC4D]/u", None),
+        (
+            r"var r = /[\uD83D\uDC4D]/",
+            r"var r = /[\uD83D\uDC4D]/u",
+            None,
+        ),
+        (
+            r"var r = /before[\uD83D\uDC4D]after/",
+            r"var r = /before[\uD83D\uDC4D]after/u",
+            None,
+        ),
+        (
+            r"var r = /[before\uD83D\uDC4Dafter]/",
+            r"var r = /[before\uD83D\uDC4Dafter]/u",
+            None,
+        ),
+        (
+            r"var r = /\uDC4D[\uD83D\uDC4D]/",
+            r"var r = /\uDC4D[\uD83D\uDC4D]/u",
+            None,
+        ),
         ("var r = /(?<=[👍])/", "var r = /(?<=[👍])/u", None),
         ("var r = /[👶🏻]/", "var r = /[👶🏻]/u", None),
         ("var r = /[🇯🇵]/", "var r = /[🇯🇵]/u", None),
         ("var r = /[🇯🇵]/i", "var r = /[🇯🇵]/iu", None),
         ("var r = /[👨‍👩‍👦]/", "var r = /[👨‍👩‍👦]/u", None),
-        (r#"var r = RegExp("[👍]", "")"#, r#"var r = RegExp("[👍]", "u")"#, None),
-        (r#"var r = new RegExp("[👍]", "")"#, r#"var r = new RegExp("[👍]", "u")"#, None),
-        (r#"var r = RegExp("[👍]", ``)"#, r#"var r = RegExp("[👍]", `u`)"#, None),
+        (
+            r#"var r = RegExp("[👍]", "")"#,
+            r#"var r = RegExp("[👍]", "u")"#,
+            None,
+        ),
+        (
+            r#"var r = new RegExp("[👍]", "")"#,
+            r#"var r = new RegExp("[👍]", "u")"#,
+            None,
+        ),
+        (
+            r#"var r = RegExp("[👍]", ``)"#,
+            r#"var r = RegExp("[👍]", `u`)"#,
+            None,
+        ),
         (
             "var r = new RegExp(`
                 [👍]`)",
@@ -866,7 +985,11 @@ fn test() {
             r#"var r = RegExp("[before\\uD83D\\uDC4Dafter]", "u")"#,
             None,
         ),
-        (r#"var r = RegExp("\t\t\t👍[👍]")"#, r#"var r = RegExp("\t\t\t👍[👍]", "u")"#, None),
+        (
+            r#"var r = RegExp("\t\t\t👍[👍]")"#,
+            r#"var r = RegExp("\t\t\t👍[👍]", "u")"#,
+            None,
+        ),
         (
             r#"var r = new RegExp("\u1234[\\uD83D\\uDC4D]")"#,
             r#"var r = new RegExp("\u1234[\\uD83D\\uDC4D]", "u")"#,
@@ -887,23 +1010,71 @@ fn test() {
             r#"var r = new RegExp("/(?<=[👍])", "u")"#,
             None,
         ),
-        (r#"var r = new RegExp("[👶🏻]", "")"#, r#"var r = new RegExp("[👶🏻]", "u")"#, None),
-        (r"var r = RegExp(`\t\t\t👍[👍]`)", r#"var r = RegExp(`\t\t\t👍[👍]`, "u")"#, None),
-        (r"var r = RegExp(`\\t\\t\\t👍[👍]`)", r#"var r = RegExp(`\\t\\t\\t👍[👍]`, "u")"#, None),
-        (r#"var r = new RegExp("[🇯🇵]", "")"#, r#"var r = new RegExp("[🇯🇵]", "u")"#, None),
-        (r#"var r = new RegExp("[🇯🇵]", "i")"#, r#"var r = new RegExp("[🇯🇵]", "iu")"#, None),
-        ("var r = new RegExp('[🇯🇵]', `i`)", "var r = new RegExp('[🇯🇵]', `iu`)", None),
-        (r#"var r = new RegExp("[🇯🇵]")"#, r#"var r = new RegExp("[🇯🇵]", "u")"#, None),
-        (r#"var r = new RegExp("[🇯🇵]",)"#, r#"var r = new RegExp("[🇯🇵]", "u",)"#, None),
-        (r#"var r = new RegExp(("[🇯🇵]"))"#, r#"var r = new RegExp(("[🇯🇵]"), "u")"#, None),
-        (r#"var r = new RegExp((("[🇯🇵]")))"#, r#"var r = new RegExp((("[🇯🇵]")), "u")"#, None),
+        (
+            r#"var r = new RegExp("[👶🏻]", "")"#,
+            r#"var r = new RegExp("[👶🏻]", "u")"#,
+            None,
+        ),
+        (
+            r"var r = RegExp(`\t\t\t👍[👍]`)",
+            r#"var r = RegExp(`\t\t\t👍[👍]`, "u")"#,
+            None,
+        ),
+        (
+            r"var r = RegExp(`\\t\\t\\t👍[👍]`)",
+            r#"var r = RegExp(`\\t\\t\\t👍[👍]`, "u")"#,
+            None,
+        ),
+        (
+            r#"var r = new RegExp("[🇯🇵]", "")"#,
+            r#"var r = new RegExp("[🇯🇵]", "u")"#,
+            None,
+        ),
+        (
+            r#"var r = new RegExp("[🇯🇵]", "i")"#,
+            r#"var r = new RegExp("[🇯🇵]", "iu")"#,
+            None,
+        ),
+        (
+            "var r = new RegExp('[🇯🇵]', `i`)",
+            "var r = new RegExp('[🇯🇵]', `iu`)",
+            None,
+        ),
+        (
+            r#"var r = new RegExp("[🇯🇵]")"#,
+            r#"var r = new RegExp("[🇯🇵]", "u")"#,
+            None,
+        ),
+        (
+            r#"var r = new RegExp("[🇯🇵]",)"#,
+            r#"var r = new RegExp("[🇯🇵]", "u",)"#,
+            None,
+        ),
+        (
+            r#"var r = new RegExp(("[🇯🇵]"))"#,
+            r#"var r = new RegExp(("[🇯🇵]"), "u")"#,
+            None,
+        ),
+        (
+            r#"var r = new RegExp((("[🇯🇵]")))"#,
+            r#"var r = new RegExp((("[🇯🇵]")), "u")"#,
+            None,
+        ),
         (
             r#"var r = new RegExp((("[🇯🇵]")) as string)"#,
             r#"var r = new RegExp((("[🇯🇵]")) as string, "u")"#,
             None,
         ),
-        (r#"var r = new RegExp(("[🇯🇵]"),)"#, r#"var r = new RegExp(("[🇯🇵]"), "u",)"#, None),
-        (r#"var r = new RegExp("[👨‍👩‍👦]", "")"#, r#"var r = new RegExp("[👨‍👩‍👦]", "u")"#, None),
+        (
+            r#"var r = new RegExp(("[🇯🇵]"),)"#,
+            r#"var r = new RegExp(("[🇯🇵]"), "u",)"#,
+            None,
+        ),
+        (
+            r#"var r = new RegExp("[👨‍👩‍👦]", "")"#,
+            r#"var r = new RegExp("[👨‍👩‍👦]", "u")"#,
+            None,
+        ),
         (
             r#"var r = new globalThis.RegExp("[🇯🇵]", "")"#,
             r#"var r = new globalThis.RegExp("[🇯🇵]", "u")"#,
@@ -923,8 +1094,16 @@ fn test() {
         ("RegExp(/[👍]/)", "RegExp(/[👍]/u)", None),
         ("RegExp(/[👍]/, 'i');", "RegExp(/[👍]/, 'iu');", None),
         // ("RegExp(/[👍]/, 'g')", "RegExp(/[👍]/u, 'g');", None), // languageOptions: { globals: { RegExp: "off" } },
-        ("new RegExp(/^[👍]$/v, '')", "new RegExp(/^[👍]$/v, 'u')", None),
-        (r"/[\👍]/", r"/[\👍]/", Some(serde_json::json!([{ "allowEscape": true }]))), // no fix, regex would be invalid
+        (
+            "new RegExp(/^[👍]$/v, '')",
+            "new RegExp(/^[👍]$/v, 'u')",
+            None,
+        ),
+        (
+            r"/[\👍]/",
+            r"/[\👍]/",
+            Some(serde_json::json!([{ "allowEscape": true }])),
+        ), // no fix, regex would be invalid
         (r"RegExp('[\👍]')", r#"RegExp('[\👍]', "u")"#, None),
         (
             r"RegExp('[\\👍]')",
@@ -939,7 +1118,12 @@ fn test() {
         ),
     ];
 
-    Tester::new(NoMisleadingCharacterClass::NAME, NoMisleadingCharacterClass::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        NoMisleadingCharacterClass::NAME,
+        NoMisleadingCharacterClass::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

@@ -98,14 +98,26 @@ fn test() {
     ];
 
     let fix = vec![
-        ("var a = test.__iterator__;", "var a = test[Symbol.iterator];"),
+        (
+            "var a = test.__iterator__;",
+            "var a = test[Symbol.iterator];",
+        ),
         (
             "Foo.prototype.__iterator__ = function() {};",
             "Foo.prototype[Symbol.iterator] = function() {};",
         ),
-        ("var a = test['__iterator__'];", "var a = test[Symbol.iterator];"),
-        ("var a = test[`__iterator__`];", "var a = test[Symbol.iterator];"),
-        ("test[`__iterator__`] = function () {};", "test[Symbol.iterator] = function () {};"),
+        (
+            "var a = test['__iterator__'];",
+            "var a = test[Symbol.iterator];",
+        ),
+        (
+            "var a = test[`__iterator__`];",
+            "var a = test[Symbol.iterator];",
+        ),
+        (
+            "test[`__iterator__`] = function () {};",
+            "test[Symbol.iterator] = function () {};",
+        ),
     ];
 
     Tester::new(NoIterator::NAME, NoIterator::PLUGIN, pass, fail)

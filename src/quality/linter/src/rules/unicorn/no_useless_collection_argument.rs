@@ -64,7 +64,8 @@ declare_oxc_lint!(
     style,
     suggestion,
     version = "1.28.0",
-    short_description = "Disallow useless values or fallbacks in `Set`, `Map`, `WeakSet`, or `WeakMap`.",
+    short_description =
+        "Disallow useless values or fallbacks in `Set`, `Map`, `WeakSet`, or `WeakMap`.",
 );
 
 impl Rule for NoUselessCollectionArgument {
@@ -81,7 +82,9 @@ impl Rule for NoUselessCollectionArgument {
             return;
         };
 
-        let Some(first_arg_expr) = first_arg.as_expression() else { return };
+        let Some(first_arg_expr) = first_arg.as_expression() else {
+            return;
+        };
 
         let first_arg_expr_inner = first_arg_expr.get_inner_expression();
 
@@ -89,7 +92,10 @@ impl Rule for NoUselessCollectionArgument {
             first_arg_expr_inner
             && logical_expr.operator.is_coalesce()
         {
-            (logical_expr.right.get_inner_expression(), Some(logical_expr))
+            (
+                logical_expr.right.get_inner_expression(),
+                Some(logical_expr),
+            )
         } else {
             (first_arg_expr_inner, None)
         };
@@ -112,7 +118,12 @@ impl Rule for NoUselessCollectionArgument {
 }
 
 fn is_set_or_map(new_expr: &NewExpression<'_>) -> bool {
-    is_new_expression(new_expr, &["Set", "Map", "WeakSet", "WeakMap"], Some(1), Some(1))
+    is_new_expression(
+        new_expr,
+        &["Set", "Map", "WeakSet", "WeakMap"],
+        Some(1),
+        Some(1),
+    )
 }
 
 fn get_description(expr: &Expression) -> Option<&'static str> {
@@ -282,12 +293,20 @@ fn test() {
         ("new Set( (( (0, foo) ?? [] )) )", "new Set(  (0, foo)  )"),
         ("new Set(document.all ?? [])", "new Set(document.all)"),
         (r#"new Set([] ?? "")"#, "new Set([])"),
-        (r#"new Set( (( (( "" )) ?? (( [] )) )) )"#, r#"new Set(  (( "" ))  )"#),
+        (
+            r#"new Set( (( (( "" )) ?? (( [] )) )) )"#,
+            r#"new Set(  (( "" ))  )"#,
+        ),
         ("new Set(foo ?? bar ?? [])", "new Set(foo ?? bar)"),
     ];
 
-    Tester::new(NoUselessCollectionArgument::NAME, NoUselessCollectionArgument::PLUGIN, pass, fail)
-        .change_rule_path_extension("mjs")
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        NoUselessCollectionArgument::NAME,
+        NoUselessCollectionArgument::PLUGIN,
+        pass,
+        fail,
+    )
+    .change_rule_path_extension("mjs")
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

@@ -96,7 +96,12 @@ impl ScopedWalker {
             target_paths.push(full_path);
         }
 
-        Ok(Self { cwd, paths: target_paths, glob_patterns, exclude_patterns })
+        Ok(Self {
+            cwd,
+            paths: target_paths,
+            glob_patterns,
+            exclude_patterns,
+        })
     }
 
     /// Run the walk across all scopes.
@@ -140,7 +145,9 @@ impl ScopedWalker {
                 // Base paths passed to `WalkBuilder` are not filtered by `filter_entry()`,
                 // so we need to filter them here before passing to the walker.
                 // This is needed for cases like `husky`, may specify ignored paths as staged files.
-                let Ok(metadata) = path.metadata() else { continue };
+                let Ok(metadata) = path.metadata() else {
+                    continue;
+                };
                 let is_dir = metadata.is_dir();
                 if is_ignored(&ignore_file_matchers, path, is_dir, true) {
                     continue;
@@ -204,7 +211,11 @@ impl ScopedWalker {
         // When glob patterns exist, files are matched against them during `visit()`.
         // When no globs, `visit()` has zero overhead.
         let glob_matcher = (!self.glob_patterns.is_empty()).then(|| {
-            Arc::new(GlobMatcher::new(self.cwd.clone(), self.glob_patterns.clone(), &walk_targets))
+            Arc::new(GlobMatcher::new(
+                self.cwd.clone(),
+                self.glob_patterns.clone(),
+                &walk_targets,
+            ))
         });
         let directly_processed: Arc<FxHashSet<PathBuf>> = Arc::new(directly_processed);
         // Only consulted by `ensure_scope_cached` when `detect_nested` is true,
@@ -228,7 +239,10 @@ impl ScopedWalker {
             },
             // Shares the caches with Phase 2 above,
             // so each directory's config load runs at most once walk-wide.
-            WalkConfigState { scopes: config_scopes.clone(), walk_target_roots },
+            WalkConfigState {
+                scopes: config_scopes.clone(),
+                walk_target_roots,
+            },
             WalkSinks {
                 tx_entry: tx_entry.clone(),
                 tx_error: tx_error.clone(),
@@ -288,11 +302,26 @@ impl GlobMatcher {
         // e.g., `*.js` → `**/*.js`, `foo/**/*.js` stays as-is.
         let glob_patterns = glob_patterns
             .into_iter()
-            .map(|pat| if pat.contains('/') { pat } else { format!("**/{pat}") })
+            .map(|pat| {
+                if pat.contains('/') {
+                    pat
+                } else {
+                    format!("**/{pat}")
+                }
+            })
             .collect();
         // Store concrete paths (excluding cwd itself) for dedup and acceptance.
-        let concrete_paths = target_paths.iter().filter(|p| p.as_path() != cwd).cloned().collect();
-        Self { cwd, glob_patterns, concrete_paths, seen: Mutex::new(FxHashSet::default()) }
+        let concrete_paths = target_paths
+            .iter()
+            .filter(|p| p.as_path() != cwd)
+            .cloned()
+            .collect();
+        Self {
+            cwd,
+            glob_patterns,
+            concrete_paths,
+            seen: Mutex::new(FxHashSet::default()),
+        }
     }
 
     /// Returns `true` if the path matches any glob pattern or is a concrete target path.
@@ -303,8 +332,13 @@ impl GlobMatcher {
             return self.seen.lock().unwrap().insert(path.to_path_buf());
         }
 
-        let relative = path.strip_prefix(&self.cwd).unwrap_or(path).to_string_lossy();
-        self.glob_patterns.iter().any(|pattern| glob_match(pattern, relative.as_ref()))
+        let relative = path
+            .strip_prefix(&self.cwd)
+            .unwrap_or(path)
+            .to_string_lossy();
+        self.glob_patterns
+            .iter()
+            .any(|pattern| glob_match(pattern, relative.as_ref()))
     }
 }
 
@@ -391,7 +425,12 @@ fn walk_and_stream(
         true
     });
 
-    let mut builder = WalkVisitorBuilder { cwd: Arc::from(cwd), filters, config_state, sinks };
+    let mut builder = WalkVisitorBuilder {
+        cwd: Arc::from(cwd),
+        filters,
+        config_state,
+        sinks,
+    };
 
     // Git-related settings come from the shared helper to align with Oxlint.
     // NOTE: Prettier only reads `.gitignore` in the cwd and does not respect `.git/info/exclude`.
@@ -456,8 +495,10 @@ impl WalkVisitor {
         // Case 2: Nested config disabled, shares the root scope, no probe needed
         if !self.config_state.scopes.use_nested() {
             let parent_ignored = root_config_resolver.is_path_ignored(parent, true);
-            self.scope_cache
-                .insert(parent.to_path_buf(), (Arc::clone(root_config_resolver), parent_ignored));
+            self.scope_cache.insert(
+                parent.to_path_buf(),
+                (Arc::clone(root_config_resolver), parent_ignored),
+            );
             return Ok(());
         }
 
@@ -728,7 +769,11 @@ mod tests_scope_resolution {
                 scopes,
                 walk_target_roots: Arc::from(vec![walk_root.to_path_buf()]),
             },
-            sinks: WalkSinks { tx_entry, tx_error, fatal_error: Arc::new(OnceLock::new()) },
+            sinks: WalkSinks {
+                tx_entry,
+                tx_error,
+                fatal_error: Arc::new(OnceLock::new()),
+            },
             scope_cache: FxHashMap::default(),
         }
     }
@@ -752,7 +797,9 @@ mod tests_scope_resolution {
         let mut visitor = make_visitor(tmp.path());
         // Pre-register outer as if another visitor got there first
         let ctx = visitor.config_state.scopes.nested_ctx();
-        ctx.probe_dir(&outer).expect("probe outer").expect("outer config");
+        ctx.probe_dir(&outer)
+            .expect("probe outer")
+            .expect("outer config");
 
         visitor.ensure_scope_cached(&leaf_parent).expect("resolve");
 
@@ -780,7 +827,9 @@ mod tests_scope_resolution {
 
         let mut visitor = make_visitor(tmp.path());
         let ctx = visitor.config_state.scopes.nested_ctx();
-        ctx.probe_dir(&outer).expect("probe outer").expect("outer config");
+        ctx.probe_dir(&outer)
+            .expect("probe outer")
+            .expect("outer config");
 
         visitor.ensure_scope_cached(&leaf_parent).expect("resolve");
 
@@ -891,18 +940,37 @@ mod tests_scope_resolution {
             Ok(serde_json::json!({}))
         });
         let scopes = ConfigScopes::load(repo, None, true, Some(&cb)).expect("load scopes");
-        let walker =
-            ScopedWalker::new(repo.to_path_buf(), &[PathBuf::from("file.ts"), PathBuf::from(".")])
-                .expect("create walker");
+        let walker = ScopedWalker::new(
+            repo.to_path_buf(),
+            &[PathBuf::from("file.ts"), PathBuf::from(".")],
+        )
+        .expect("create walker");
         let (tx_entry, rx_entry) = mpsc::channel();
         let (tx_error, rx_error) = mpsc::channel();
-        walker.run(&scopes, &[], false, &tx_entry, &tx_error).expect("walk");
+        walker
+            .run(&scopes, &[], false, &tx_entry, &tx_error)
+            .expect("walk");
 
-        assert_eq!(rx_entry.try_iter().count(), 2, "both config and source must be visited");
+        assert_eq!(
+            rx_entry.try_iter().count(),
+            2,
+            "both config and source must be visited"
+        );
         assert_eq!(rx_error.try_iter().count(), 0);
-        assert_eq!(counter.load(Ordering::Relaxed), 1, "walk must not reload the root config");
-        let probed = scopes.nested_ctx().probe_dir(repo).expect("probe root").expect("root config");
-        assert!(Arc::ptr_eq(&probed, scopes.root()), "root probes must reuse the loaded resolver");
+        assert_eq!(
+            counter.load(Ordering::Relaxed),
+            1,
+            "walk must not reload the root config"
+        );
+        let probed = scopes
+            .nested_ctx()
+            .probe_dir(repo)
+            .expect("probe root")
+            .expect("root config");
+        assert!(
+            Arc::ptr_eq(&probed, scopes.root()),
+            "root probes must reuse the loaded resolver"
+        );
     }
 
     /// `config_load_cache` + `OnceLock` must dedupe NAPI loader invocations
@@ -935,7 +1003,10 @@ mod tests_scope_resolution {
                 let ctx_local = ctx.clone();
                 let dir_local = dir.clone();
                 s.spawn(move || {
-                    ctx_local.probe_dir(&dir_local).expect("probe").expect("loaded");
+                    ctx_local
+                        .probe_dir(&dir_local)
+                        .expect("probe")
+                        .expect("loaded");
                 });
             }
         });
@@ -970,14 +1041,19 @@ mod tests_scope_resolution {
         let ctx = scopes.nested_ctx();
 
         let err1 = ctx.probe_dir(&dir).expect_err("first probe should error");
-        let err2 = ctx.probe_dir(&dir).expect_err("second probe should hit cached Err");
+        let err2 = ctx
+            .probe_dir(&dir)
+            .expect_err("second probe should hit cached Err");
 
         assert_eq!(
             counter.load(Ordering::Relaxed),
             1,
             "loader must not be re-invoked after an Err is cached"
         );
-        assert_eq!(err1, err2, "both errors must come from the same cached load");
+        assert_eq!(
+            err1, err2,
+            "both errors must come from the same cached load"
+        );
         assert!(
             err1.contains("simulated load failure"),
             "cached Err must surface the underlying loader message, got: {err1}"

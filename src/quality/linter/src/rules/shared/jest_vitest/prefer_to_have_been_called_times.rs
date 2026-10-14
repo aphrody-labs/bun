@@ -79,15 +79,20 @@ fn check_and_fix<'a>(
         return;
     }
 
-    let matcher_argument = parsed_expect_call.matcher_arguments.and_then(|args| args.first());
+    let matcher_argument = parsed_expect_call
+        .matcher_arguments
+        .and_then(|args| args.first());
     if matcher_argument.is_none() {
         return;
     }
 
-    let expect_argument = parsed_expect_call.expect_arguments.and_then(|args| args.first());
+    let expect_argument = parsed_expect_call
+        .expect_arguments
+        .and_then(|args| args.first());
 
-    let expect_argument_mem_expr =
-        expect_argument.and_then(|arg| arg.as_expression()).and_then(|arg| match arg {
+    let expect_argument_mem_expr = expect_argument
+        .and_then(|arg| arg.as_expression())
+        .and_then(|arg| match arg {
             expr @ match_member_expression!(Expression) => Some(expr.to_member_expression()),
             _ => None,
         });
@@ -113,28 +118,34 @@ fn check_and_fix<'a>(
         return;
     }
 
-    ctx.diagnostic_with_fix(prefer_to_have_been_called_times_diagnostic(call_expr.span), |fixer| {
-        let matcher_arg_text = if let Some(arg) = matcher_argument {
-            fixer.source_range(arg.span())
-        } else {
-            return fixer.noop();
-        };
+    ctx.diagnostic_with_fix(
+        prefer_to_have_been_called_times_diagnostic(call_expr.span),
+        |fixer| {
+            let matcher_arg_text = if let Some(arg) = matcher_argument {
+                fixer.source_range(arg.span())
+            } else {
+                return fixer.noop();
+            };
 
-        let param_text = build_expect_argument(expect_argument_mem_expr, fixer);
+            let param_text = build_expect_argument(expect_argument_mem_expr, fixer);
 
-        let modifier_text =
-            parsed_expect_call.modifiers().fold(String::new(), |mut acc, modifier| {
-                use std::fmt::Write;
-                write!(&mut acc, ".{}", fixer.source_range(modifier.span)).unwrap();
-                acc
-            });
+            let modifier_text =
+                parsed_expect_call
+                    .modifiers()
+                    .fold(String::new(), |mut acc, modifier| {
+                        use std::fmt::Write;
+                        write!(&mut acc, ".{}", fixer.source_range(modifier.span)).unwrap();
+                        acc
+                    });
 
-        let method_text = "toHaveBeenCalledTimes";
+            let method_text = "toHaveBeenCalledTimes";
 
-        let code = format!("expect({param_text}){modifier_text}.{method_text}({matcher_arg_text})");
+            let code =
+                format!("expect({param_text}){modifier_text}.{method_text}({matcher_arg_text})");
 
-        fixer.replace(call_expr.span, code)
-    });
+            fixer.replace(call_expr.span, code)
+        },
+    );
 }
 
 fn build_expect_argument<'a>(

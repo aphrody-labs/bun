@@ -43,7 +43,9 @@ enum SiblingLookup {
 /// // X → "hello", Y → None (can't auto-increment after string)
 /// ```
 pub fn evaluate_enum_members(decl: &TSEnumDeclaration<'_>, scoping: &mut Scoping) {
-    let Some(scope_id) = decl.body.scope_id.get() else { return };
+    let Some(scope_id) = decl.body.scope_id.get() else {
+        return;
+    };
 
     let enum_symbol_id = decl.id.symbol_id.get();
     if let Some(id) = enum_symbol_id {
@@ -60,7 +62,11 @@ pub fn evaluate_enum_members(decl: &TSEnumDeclaration<'_>, scoping: &mut Scoping
 
     for member in &decl.body.members {
         let value = if let Some(init) = &member.initializer {
-            let ctx = EnumEvalCtx { scope_id, enum_symbol_id, scoping };
+            let ctx = EnumEvalCtx {
+                scope_id,
+                enum_symbol_id,
+                scoping,
+            };
             evaluate_expression(init, &ctx)
         } else {
             match &prev_value {
@@ -163,12 +169,16 @@ fn evaluate_ref(expr: &Expression<'_>, ctx: &EnumEvalCtx<'_>) -> Option<Constant
             None
         }
         Expression::StaticMemberExpression(member_expr) => {
-            let Expression::Identifier(obj_ident) = &member_expr.object else { return None };
+            let Expression::Identifier(obj_ident) = &member_expr.object else {
+                return None;
+            };
             let obj_symbol_id = resolve_identifier_symbol(obj_ident, ctx)?;
             find_in_enum_body_scopes(member_expr.property.name, obj_symbol_id, ctx.scoping)
         }
         Expression::ComputedMemberExpression(member_expr) => {
-            let Expression::Identifier(obj_ident) = &member_expr.object else { return None };
+            let Expression::Identifier(obj_ident) = &member_expr.object else {
+                return None;
+            };
             let Expression::StringLiteral(prop_lit) = &member_expr.expression else {
                 return None;
             };
@@ -190,7 +200,8 @@ fn resolve_identifier_symbol(
     {
         return Some(symbol_id);
     }
-    ctx.scoping.find_binding(ctx.scope_id, ident.name.as_str().into())
+    ctx.scoping
+        .find_binding(ctx.scope_id, ident.name.as_str().into())
 }
 
 fn eval_binary_expression(
@@ -233,15 +244,15 @@ fn eval_binary_expression(
         BinaryOperator::ShiftLeft => Some(ConstantValue::Number(f64::from(
             left.to_int_32().wrapping_shl(right.to_uint_32()),
         ))),
-        BinaryOperator::BitwiseXOR => {
-            Some(ConstantValue::Number(f64::from(left.to_int_32() ^ right.to_int_32())))
-        }
-        BinaryOperator::BitwiseOR => {
-            Some(ConstantValue::Number(f64::from(left.to_int_32() | right.to_int_32())))
-        }
-        BinaryOperator::BitwiseAnd => {
-            Some(ConstantValue::Number(f64::from(left.to_int_32() & right.to_int_32())))
-        }
+        BinaryOperator::BitwiseXOR => Some(ConstantValue::Number(f64::from(
+            left.to_int_32() ^ right.to_int_32(),
+        ))),
+        BinaryOperator::BitwiseOR => Some(ConstantValue::Number(f64::from(
+            left.to_int_32() | right.to_int_32(),
+        ))),
+        BinaryOperator::BitwiseAnd => Some(ConstantValue::Number(f64::from(
+            left.to_int_32() & right.to_int_32(),
+        ))),
         BinaryOperator::Multiplication => Some(ConstantValue::Number(left * right)),
         BinaryOperator::Division => Some(ConstantValue::Number(left / right)),
         BinaryOperator::Addition => Some(ConstantValue::Number(left + right)),
@@ -321,7 +332,9 @@ fn find_in_sibling_enum_scopes(
     enum_symbol_id: Option<SymbolId>,
     scoping: &Scoping,
 ) -> SiblingLookup {
-    let Some(enum_symbol_id) = enum_symbol_id else { return SiblingLookup::Missing };
+    let Some(enum_symbol_id) = enum_symbol_id else {
+        return SiblingLookup::Missing;
+    };
     let Some(body_scopes) = scoping.get_enum_body_scopes(enum_symbol_id) else {
         return SiblingLookup::Missing;
     };

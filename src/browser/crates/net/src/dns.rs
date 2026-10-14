@@ -16,7 +16,9 @@ impl Default for DnsRecon {
 impl DnsRecon {
     pub fn new() -> Self {
         crate::ensure_rustls_crypto_provider();
-        Self { client: Client::new() }
+        Self {
+            client: Client::new(),
+        }
     }
 
     pub async fn fetch_crtsh(&self, domain: &str) -> Result<Vec<String>> {
@@ -46,7 +48,10 @@ impl DnsRecon {
             return Ok(Vec::new());
         }
         let text = resp.text().await?;
-        let results = text.lines().map(|l| l.split(',').next().unwrap_or("").to_string()).collect();
+        let results = text
+            .lines()
+            .map(|l| l.split(',').next().unwrap_or("").to_string())
+            .collect();
         Ok(results)
     }
 

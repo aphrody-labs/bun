@@ -20,7 +20,10 @@ impl Generator for OxlintEnvsGenerator {
     fn generate(&self, _schema: &Schema, _codegen: &Codegen) -> Output {
         let code = generate();
 
-        Output::Javascript { path: format!("{OXLINT_APP_PATH}/src-js/generated/envs.ts"), code }
+        Output::Javascript {
+            path: format!("{OXLINT_APP_PATH}/src-js/generated/envs.ts"),
+            code,
+        }
     }
 }
 

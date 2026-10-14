@@ -31,7 +31,11 @@ impl<T> ESTree for TsNull<T> {
 /// by the parent converter (`BindingPatternKindAndTsFields`) when the binding is annotated, as in
 /// `const x: string = ""`.
 #[ast_meta]
-#[estree(ts_type = "TSTypeAnnotation | null", raw_deser = "null", raw_deser_inline)]
+#[estree(
+    ts_type = "TSTypeAnnotation | null",
+    raw_deser = "null",
+    raw_deser_inline
+)]
 #[ts]
 pub struct TsTypeAnnotationOrNull<T>(pub T);
 

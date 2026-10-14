@@ -66,7 +66,9 @@ declare_oxc_lint!(
 
 impl Rule for PreferGlobalThis {
     fn run<'a>(&self, node: &AstNode<'a>, ctx: &LintContext<'a>) {
-        let AstKind::IdentifierReference(ident) = node.kind() else { return };
+        let AstKind::IdentifierReference(ident) = node.kind() else {
+            return;
+        };
 
         if !matches!(ident.name.as_str(), "window" | "self" | "global")
             || is_computed_member_expression_object(node, ctx)
@@ -96,8 +98,10 @@ impl Rule for PreferGlobalThis {
                     if call_expr.callee.span() != e.span() {
                         return;
                     }
-                    if let Some(Expression::StringLiteral(lit)) =
-                        call_expr.arguments.first().and_then(|arg| arg.as_expression())
+                    if let Some(Expression::StringLiteral(lit)) = call_expr
+                        .arguments
+                        .first()
+                        .and_then(|arg| arg.as_expression())
                         && WINDOW_SPECIFIC_EVENTS.contains(&lit.value.as_str())
                     {
                         return;
@@ -467,8 +471,14 @@ fn test() {
             }",
         ),
         ("window`Hello ${42} World`", "globalThis`Hello ${42} World`"),
-        ("tag`Hello ${window.foo} World`", "tag`Hello ${globalThis.foo} World`"),
-        ("var str = `hello ${window.foo} world!`", "var str = `hello ${globalThis.foo} world!`"),
+        (
+            "tag`Hello ${window.foo} World`",
+            "tag`Hello ${globalThis.foo} World`",
+        ),
+        (
+            "var str = `hello ${window.foo} world!`",
+            "var str = `hello ${globalThis.foo} world!`",
+        ),
         ("delete window.foo", "delete globalThis.foo"),
         ("++window", "++globalThis"),
         ("++window.foo", "++globalThis.foo"),
@@ -540,18 +550,33 @@ fn test() {
             r#"window.addEventListener("play", () => {})"#,
             r#"globalThis.addEventListener("play", () => {})"#,
         ),
-        ("window.onplay = function () {}", "globalThis.onplay = function () {}"),
+        (
+            "window.onplay = function () {}",
+            "globalThis.onplay = function () {}",
+        ),
         (
             "function greet({ name = window.foo }) {}",
             "function greet({ name = globalThis.foo }) {}",
         ),
-        ("({ foo: window.foo } =  {})", "({ foo: globalThis.foo } =  {})"),
+        (
+            "({ foo: window.foo } =  {})",
+            "({ foo: globalThis.foo } =  {})",
+        ),
         ("[window.foo] = []", "[globalThis.foo] = []"),
         ("foo[window]", "foo[globalThis]"),
         ("foo[window.foo]", "foo[globalThis.foo]"),
-        (r#"typeof window !== "undefined""#, r#"typeof globalThis.window !== "undefined""#),
-        (r#"typeof self !== "undefined""#, r#"typeof globalThis.self !== "undefined""#),
-        (r#"typeof global !== "undefined""#, r#"typeof globalThis.global !== "undefined""#),
+        (
+            r#"typeof window !== "undefined""#,
+            r#"typeof globalThis.window !== "undefined""#,
+        ),
+        (
+            r#"typeof self !== "undefined""#,
+            r#"typeof globalThis.self !== "undefined""#,
+        ),
+        (
+            r#"typeof global !== "undefined""#,
+            r#"typeof globalThis.global !== "undefined""#,
+        ),
         (
             r#"typeof window.something === "function""#,
             r#"typeof globalThis.something === "function""#,

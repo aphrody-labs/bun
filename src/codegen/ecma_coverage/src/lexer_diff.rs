@@ -34,7 +34,11 @@ pub fn run_lexer_test262(files: &[Test262File]) -> Vec<CoverageResult> {
                 source_type = source_type.with_module(true);
             }
             let result = lex_diff(&file.code, source_type);
-            CoverageResult { path: file.path.clone(), should_fail: false, result }
+            CoverageResult {
+                path: file.path.clone(),
+                should_fail: false,
+                result,
+            }
         })
         .collect()
 }
@@ -44,7 +48,11 @@ pub fn run_lexer_babel(files: &[BabelFile]) -> Vec<CoverageResult> {
         .par_iter()
         .map(|file| {
             let result = lex_diff(&file.code, file.source_type);
-            CoverageResult { path: file.path.clone(), should_fail: false, result }
+            CoverageResult {
+                path: file.path.clone(),
+                should_fail: false,
+                result,
+            }
         })
         .collect()
 }
@@ -75,7 +83,11 @@ pub fn run_lexer_typescript(files: &[TypeScriptFile]) -> Vec<CoverageResult> {
         .map(|file| {
             let source_type = SourceType::from_path(&file.path).unwrap_or_default();
             let result = lex_diff(&file.code, source_type);
-            CoverageResult { path: file.path.clone(), should_fail: false, result }
+            CoverageResult {
+                path: file.path.clone(),
+                should_fail: false,
+                result,
+            }
         })
         .collect()
 }
@@ -90,7 +102,11 @@ pub fn run_lexer_misc(files: &[MiscFile]) -> Vec<CoverageResult> {
         .filter(|file| !SKIP.iter().any(|skip| file.path.ends_with(skip)))
         .map(|file| {
             let result = lex_diff(&file.code, file.source_type);
-            CoverageResult { path: file.path.clone(), should_fail: false, result }
+            CoverageResult {
+                path: file.path.clone(),
+                should_fail: false,
+                result,
+            }
         })
         .collect()
 }
@@ -127,7 +143,13 @@ fn lex_diff(code: &str, source_type: SourceType) -> TestResult {
         return TestResult::Passed;
     }
 
-    token_mismatch(code, &new_spans, &old_spans, new_error.as_ref(), old_error.as_ref())
+    token_mismatch(
+        code,
+        &new_spans,
+        &old_spans,
+        new_error.as_ref(),
+        old_error.as_ref(),
+    )
 }
 
 /// Get token stream from `oxc_lexer`, plus the first error (if any).
@@ -175,7 +197,9 @@ fn parser_stream(
     source_type: SourceType,
 ) -> Option<(Vec<Span>, Option<OxcDiagnostic>)> {
     let allocator = Allocator::default();
-    let ret = Parser::new(&allocator, code, source_type).with_config(TokensParserConfig).parse();
+    let ret = Parser::new(&allocator, code, source_type)
+        .with_config(TokensParserConfig)
+        .parse();
     if ret.fatal_error {
         return None;
     }
@@ -210,7 +234,9 @@ fn prefix_matches(new_spans: &[Span], old_spans: &[Span], err_start: u32) -> boo
 fn fmt_spans(spans: &[Span], code: &str) -> String {
     let mut out = String::new();
     for &span in spans {
-        let slice = code.get(span.start as usize..span.end as usize).unwrap_or("<out-of-bounds>");
+        let slice = code
+            .get(span.start as usize..span.end as usize)
+            .unwrap_or("<out-of-bounds>");
         writeln!(out, "{}..{} {:?}", span.start, span.end, slice).unwrap();
     }
     out
@@ -239,7 +265,17 @@ fn token_mismatch(
     let mut actual = fmt_spans(new_spans, code);
     let mut expected = fmt_spans(old_spans, code);
     let none = || "(none)".to_string();
-    writeln!(actual, "first error: {}", new_error.map_or_else(none, fmt_diagnostic)).unwrap();
-    writeln!(expected, "first error: {}", old_error.map_or_else(none, fmt_diagnostic)).unwrap();
+    writeln!(
+        actual,
+        "first error: {}",
+        new_error.map_or_else(none, fmt_diagnostic)
+    )
+    .unwrap();
+    writeln!(
+        expected,
+        "first error: {}",
+        old_error.map_or_else(none, fmt_diagnostic)
+    )
+    .unwrap();
     TestResult::Mismatch("Tokens", actual, expected)
 }

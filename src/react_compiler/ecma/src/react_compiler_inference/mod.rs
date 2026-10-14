@@ -62,7 +62,11 @@ fn is_known_pure_tagged_template(
 
     // Include the implicit template object at parameter index zero.
     (0..=substitution_count).all(|index| {
-        signature.positional_params.get(index).copied().or(signature.rest_param)
+        signature
+            .positional_params
+            .get(index)
+            .copied()
+            .or(signature.rest_param)
             == Some(Effect::Read)
     })
 }

@@ -138,7 +138,10 @@ impl Line {
     pub const fn without_expand_parent(mut self) -> Self {
         match self.mode {
             LineMode::Hard => self.mode = LineMode::HardWithoutExpand,
-            _ => debug_assert!(false, "without_expand_parent is only valid on hard_line_break()"),
+            _ => debug_assert!(
+                false,
+                "without_expand_parent is only valid on hard_line_break()"
+            ),
         }
         self
     }
@@ -209,7 +212,9 @@ impl<T> FormatOnce<T> {
     /// Wraps `formatter` in a [`FormatOnce`].
     #[inline]
     pub const fn new(formatter: T) -> Self {
-        Self { formatter: std::cell::Cell::new(Some(formatter)) }
+        Self {
+            formatter: std::cell::Cell::new(Some(formatter)),
+        }
     }
 }
 
@@ -251,7 +256,9 @@ pub fn token(text: &'static str) -> Token {
 
 fn debug_assert_token_ascii_only_and_no_linebreaks(text: &str) {
     debug_assert!(
-        text.as_bytes().iter().all(|&c| c.is_ascii() && !matches!(c, b'\r' | b'\n' | b'\t')),
+        text.as_bytes()
+            .iter()
+            .all(|&c| c.is_ascii() && !matches!(c, b'\r' | b'\n' | b'\t')),
         "`FormatElement::Token` can only contain ASCII characters without line breaks or tab characters. Found invalid content: '{text}'"
     );
 }
@@ -280,7 +287,11 @@ impl std::fmt::Debug for Token {
 /// Creates a text from a dynamic string and a range of the input source
 pub fn text(text: &str) -> Text<'_> {
     debug_assert_no_cr_line_break(text);
-    Text { text, width: None, expand_parent: true }
+    Text {
+        text,
+        width: None,
+        expand_parent: true,
+    }
 }
 
 /// Creates a text from a dynamic string that contains no whitespace characters
@@ -289,7 +300,11 @@ pub fn text_without_whitespace(text: &str) -> Text<'_> {
         text.as_bytes().iter().all(|&b| !b.is_ascii_whitespace()),
         "The content '{text}' contains whitespace characters but text must not contain any whitespace characters."
     );
-    Text { text, width: Some(TextWidth::from_non_whitespace_str(text)), expand_parent: true }
+    Text {
+        text,
+        width: Some(TextWidth::from_non_whitespace_str(text)),
+        expand_parent: true,
+    }
 }
 
 #[derive(Eq, PartialEq)]
@@ -320,8 +335,15 @@ where
         let width = self
             .width
             .unwrap_or_else(|| TextWidth::from_text(self.text, f.options().indent_width()));
-        let width = if self.expand_parent { width } else { width.without_expand_parent() };
-        f.write_element(FormatElement::Text { text: self.text, width });
+        let width = if self.expand_parent {
+            width
+        } else {
+            width.without_expand_parent()
+        };
+        f.write_element(FormatElement::Text {
+            text: self.text,
+            width,
+        });
     }
 }
 
@@ -385,7 +407,9 @@ pub fn line_suffix<'a, 'ast, C, Content>(inner: &'a Content) -> LineSuffix<'a, '
 where
     Content: Format<'ast, C>,
 {
-    LineSuffix { content: Argument::new(inner) }
+    LineSuffix {
+        content: Argument::new(inner),
+    }
 }
 
 #[derive(Copy, Clone)]
@@ -443,7 +467,10 @@ pub fn labelled<'a, 'ast, C, Content>(
 where
     Content: Format<'ast, C>,
 {
-    FormatLabelled { label_id, content: Argument::new(content) }
+    FormatLabelled {
+        label_id,
+        content: Argument::new(content),
+    }
 }
 
 #[derive(Copy, Clone)]
@@ -462,7 +489,10 @@ impl<'ast, C> Format<'ast, C> for FormatLabelled<'_, 'ast, C> {
 
 impl<C> std::fmt::Debug for FormatLabelled<'_, '_, C> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_tuple("Label").field(&self.label_id).field(&"{{content}}").finish()
+        f.debug_tuple("Label")
+            .field(&self.label_id)
+            .field(&"{{content}}")
+            .finish()
     }
 }
 
@@ -483,7 +513,9 @@ pub fn indent<'a, 'ast, C, Content>(content: &'a Content) -> Indent<'a, 'ast, C>
 where
     Content: Format<'ast, C>,
 {
-    Indent { content: Argument::new(content) }
+    Indent {
+        content: Argument::new(content),
+    }
 }
 
 #[derive(Copy, Clone)]
@@ -525,7 +557,10 @@ pub fn dedent<'ast, C, Content>(content: &Content) -> Dedent<'_, 'ast, C>
 where
     Content: Format<'ast, C>,
 {
-    Dedent { content: Argument::new(content), mode: DedentMode::Level }
+    Dedent {
+        content: Argument::new(content),
+        mode: DedentMode::Level,
+    }
 }
 
 /// Resets the indention so that the content prints at the [mark_as_root] indention,
@@ -535,7 +570,10 @@ pub fn dedent_to_root<'ast, C, Content>(content: &Content) -> Dedent<'_, 'ast, C
 where
     Content: Format<'ast, C>,
 {
-    Dedent { content: Argument::new(content), mode: DedentMode::Root }
+    Dedent {
+        content: Argument::new(content),
+        mode: DedentMode::Root,
+    }
 }
 
 /// Marks the current indention as the root that [literal_line_break] and [dedent_to_root]
@@ -549,7 +587,9 @@ pub fn mark_as_root<'ast, C, Content>(content: &Content) -> MarkAsRoot<'_, 'ast,
 where
     Content: Format<'ast, C>,
 {
-    MarkAsRoot { content: Argument::new(content) }
+    MarkAsRoot {
+        content: Argument::new(content),
+    }
 }
 
 #[derive(Copy, Clone)]
@@ -607,7 +647,10 @@ pub fn align<'ast, C, Content>(count: u8, content: &Content) -> Align<'_, 'ast, 
 where
     Content: Format<'ast, C>,
 {
-    Align { count: NonZeroU8::new(count), content: Argument::new(content) }
+    Align {
+        count: NonZeroU8::new(count),
+        content: Argument::new(content),
+    }
 }
 
 #[derive(Copy, Clone)]
@@ -684,7 +727,10 @@ pub fn space_align<'a, 'ast, C, Content>(
 where
     Content: Format<'ast, C>,
 {
-    PrefixAlign { prefix: PrefixKind::Spaces(count), content: Argument::new(content) }
+    PrefixAlign {
+        prefix: PrefixKind::Spaces(count),
+        content: Argument::new(content),
+    }
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -732,14 +778,20 @@ impl<C> std::fmt::Debug for PrefixAlign<'_, '_, C> {
 /// Inserts a hard line break before and after the content and increases the indention level by one.
 #[inline]
 pub fn block_indent<'ast, C>(content: &impl Format<'ast, C>) -> BlockIndent<'_, 'ast, C> {
-    BlockIndent { content: Argument::new(content), mode: IndentMode::Block }
+    BlockIndent {
+        content: Argument::new(content),
+        mode: IndentMode::Block,
+    }
 }
 
 /// Indents the content by inserting a line break before and after the content and increasing
 /// the indention level for the content by one if the enclosing group doesn't fit on a single line.
 #[inline]
 pub fn soft_block_indent<'ast, C>(content: &impl Format<'ast, C>) -> BlockIndent<'_, 'ast, C> {
-    BlockIndent { content: Argument::new(content), mode: IndentMode::Soft }
+    BlockIndent {
+        content: Argument::new(content),
+        mode: IndentMode::Soft,
+    }
 }
 
 /// Conditionally adds spaces around the content if its enclosing group fits within a single line.
@@ -747,7 +799,11 @@ pub fn soft_block_indent_with_maybe_space<'ast, C>(
     content: &impl Format<'ast, C>,
     should_add_space: bool,
 ) -> BlockIndent<'_, 'ast, C> {
-    if should_add_space { soft_space_or_block_indent(content) } else { soft_block_indent(content) }
+    if should_add_space {
+        soft_space_or_block_indent(content)
+    } else {
+        soft_block_indent(content)
+    }
 }
 
 /// If the enclosing `Group` doesn't fit on a single line, inserts a line break and indent.
@@ -756,14 +812,20 @@ pub fn soft_block_indent_with_maybe_space<'ast, C>(
 pub fn soft_line_indent_or_space<'ast, C>(
     content: &impl Format<'ast, C>,
 ) -> BlockIndent<'_, 'ast, C> {
-    BlockIndent { content: Argument::new(content), mode: IndentMode::SoftLineOrSpace }
+    BlockIndent {
+        content: Argument::new(content),
+        mode: IndentMode::SoftLineOrSpace,
+    }
 }
 
 /// Adds spaces around the content if its enclosing group fits on a line, otherwise indents the content and separates it by line breaks.
 pub fn soft_space_or_block_indent<'ast, C>(
     content: &impl Format<'ast, C>,
 ) -> BlockIndent<'_, 'ast, C> {
-    BlockIndent { content: Argument::new(content), mode: IndentMode::SoftSpace }
+    BlockIndent {
+        content: Argument::new(content),
+        mode: IndentMode::SoftSpace,
+    }
 }
 
 #[derive(Copy, Clone)]
@@ -849,7 +911,11 @@ impl<C> std::fmt::Debug for BlockIndent<'_, '_, C> {
 /// Creates a logical `Group` around the content.
 #[inline]
 pub fn group<'ast, C>(content: &impl Format<'ast, C>) -> Group<'_, 'ast, C> {
-    Group { content: Argument::new(content), group_id: None, should_expand: false }
+    Group {
+        content: Argument::new(content),
+        group_id: None,
+        should_expand: false,
+    }
 }
 
 #[derive(Copy, Clone)]
@@ -877,7 +943,11 @@ impl<C> Group<'_, '_, C> {
 
 impl<'ast, C> Format<'ast, C> for Group<'_, 'ast, C> {
     fn fmt(&self, f: &mut Formatter<'_, 'ast, C>) {
-        let mode = if self.should_expand { GroupMode::Expand } else { GroupMode::Flat };
+        let mode = if self.should_expand {
+            GroupMode::Expand
+        } else {
+            GroupMode::Flat
+        };
 
         f.write_element(FormatElement::Tag(StartGroup(
             tag::Group::new().with_id(self.group_id).with_mode(mode),
@@ -938,7 +1008,11 @@ pub fn if_group_breaks<'ast, C, Content>(content: &Content) -> IfGroupBreaks<'_,
 where
     Content: Format<'ast, C>,
 {
-    IfGroupBreaks { content: Argument::new(content), group_id: None, mode: PrintMode::Expanded }
+    IfGroupBreaks {
+        content: Argument::new(content),
+        group_id: None,
+        mode: PrintMode::Expanded,
+    }
 }
 
 /// Adds a conditional content specific for `Group`s that fit on a single line.
@@ -947,7 +1021,11 @@ pub fn if_group_fits_on_line<'ast, C, Content>(flat_content: &Content) -> IfGrou
 where
     Content: Format<'ast, C>,
 {
-    IfGroupBreaks { mode: PrintMode::Flat, group_id: None, content: Argument::new(flat_content) }
+    IfGroupBreaks {
+        mode: PrintMode::Flat,
+        group_id: None,
+        content: Argument::new(flat_content),
+    }
 }
 
 #[derive(Copy, Clone)]
@@ -1004,7 +1082,10 @@ pub fn indent_if_group_breaks<'a, 'ast, C, Content>(
 where
     Content: Format<'ast, C>,
 {
-    IndentIfGroupBreaks { group_id, content: Argument::new(content) }
+    IndentIfGroupBreaks {
+        group_id,
+        content: Argument::new(content),
+    }
 }
 
 #[derive(Copy, Clone)]
@@ -1122,12 +1203,20 @@ where
 {
     /// Creates a new instance that joins the elements without a separator
     pub fn new(fmt: &'fmt mut Formatter<'buf, 'ast, C>) -> Self {
-        Self { fmt, has_elements: false, with: None }
+        Self {
+            fmt,
+            has_elements: false,
+            with: None,
+        }
     }
 
     /// Creates a new instance that prints the passed separator between every two entries.
     pub fn with_separator(fmt: &'fmt mut Formatter<'buf, 'ast, C>, with: Separator) -> Self {
-        Self { fmt, has_elements: false, with: Some(with) }
+        Self {
+            fmt,
+            has_elements: false,
+            with: Some(with),
+        }
     }
 
     /// Adds a new entry to the join output.

@@ -673,15 +673,16 @@ impl PEFile {
             let section = sections
                 .iter()
                 .find(|s| {
-                    dir_rva >= s.virtual_address
-                        && dir_rva - s.virtual_address < s.size_of_raw_data
+                    dir_rva >= s.virtual_address && dir_rva - s.virtual_address < s.size_of_raw_data
                 })
                 .ok_or(Error::InvalidResources)?;
-            let start = section.pointer_to_raw_data as usize
-                + (dir_rva - section.virtual_address) as usize;
+            let start =
+                section.pointer_to_raw_data as usize + (dir_rva - section.virtual_address) as usize;
             let end = section.pointer_to_raw_data as usize + section.size_of_raw_data as usize;
             let bytes = self.data.get(start..end).ok_or(Error::InvalidResources)?;
-            res::parse_tree(bytes, &|rva, size| self.read_rva(rva, size).map(<[u8]>::to_vec))?
+            res::parse_tree(bytes, &|rva, size| {
+                self.read_rva(rva, size).map(<[u8]>::to_vec)
+            })?
         };
         res::apply(&mut tree, meta)?;
 
@@ -706,8 +707,10 @@ impl PEFile {
         let opt = self.get_optional_header_mut()?;
         // SAFETY: opt points into self.data at validated offset
         unsafe {
-            (*opt).data_directories[IMAGE_DIRECTORY_ENTRY_RESOURCE] =
-                DataDirectory { virtual_address: va, size: section_len };
+            (*opt).data_directories[IMAGE_DIRECTORY_ENTRY_RESOURCE] = DataDirectory {
+                virtual_address: va,
+                size: section_len,
+            };
         }
         self.recompute_pe_checksum()?;
         Ok(())

@@ -59,7 +59,11 @@ impl Allocator {
 
 unsafe impl GlobalAlloc for Allocator {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
-        if self.is_returning_null() { core::ptr::null_mut() } else { System.alloc(layout) }
+        if self.is_returning_null() {
+            core::ptr::null_mut()
+        } else {
+            System.alloc(layout)
+        }
     }
 
     unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
@@ -139,51 +143,60 @@ fn main() {
                 assert!(Arena::try_with_capacity(1).is_err());
             });
         }),
-        test!("test try_alloc_layout with and without global allocation failures", || {
-            const NUM_TESTS: usize = 5000;
-            const MAX_BYTES_ALLOCATED: usize = 65536;
+        test!(
+            "test try_alloc_layout with and without global allocation failures",
+            || {
+                const NUM_TESTS: usize = 5000;
+                const MAX_BYTES_ALLOCATED: usize = 65536;
 
-            let mut arena = Arena::new();
-            let mut bytes_allocated = arena.chunk_capacity();
+                let mut arena = Arena::new();
+                let mut bytes_allocated = arena.chunk_capacity();
 
-            // Arena preallocates space in the initial chunk, so we need to
-            // use up this block prior to the actual test
-            let layout = Layout::from_size_align(arena.chunk_capacity(), 1).unwrap();
-            assert!(arena.try_alloc_layout(layout).is_ok());
+                // Arena preallocates space in the initial chunk, so we need to
+                // use up this block prior to the actual test
+                let layout = Layout::from_size_align(arena.chunk_capacity(), 1).unwrap();
+                assert!(arena.try_alloc_layout(layout).is_ok());
 
-            let mut rng = rand::rng();
+                let mut rng = rand::rng();
 
-            for _ in 0..NUM_TESTS {
-                if rng.random() {
-                    GLOBAL_ALLOCATOR.toggle_returning_null();
+                for _ in 0..NUM_TESTS {
+                    if rng.random() {
+                        GLOBAL_ALLOCATOR.toggle_returning_null();
+                    }
+
+                    let layout = Layout::from_size_align(arena.chunk_capacity() + 1, 1).unwrap();
+                    if GLOBAL_ALLOCATOR.is_returning_null() {
+                        assert!(arena.try_alloc_layout(layout).is_err());
+                    } else {
+                        assert!(arena.try_alloc_layout(layout).is_ok());
+                        bytes_allocated += arena.chunk_capacity();
+                    }
+
+                    if bytes_allocated >= MAX_BYTES_ALLOCATED {
+                        arena = GLOBAL_ALLOCATOR.with_successful_allocs(Arena::new);
+                        bytes_allocated = arena.chunk_capacity();
+                    }
                 }
-
-                let layout = Layout::from_size_align(arena.chunk_capacity() + 1, 1).unwrap();
-                if GLOBAL_ALLOCATOR.is_returning_null() {
-                    assert!(arena.try_alloc_layout(layout).is_err());
-                } else {
-                    assert!(arena.try_alloc_layout(layout).is_ok());
-                    bytes_allocated += arena.chunk_capacity();
-                }
-
-                if bytes_allocated >= MAX_BYTES_ALLOCATED {
-                    arena = GLOBAL_ALLOCATOR.with_successful_allocs(Arena::new);
-                    bytes_allocated = arena.chunk_capacity();
-                }
-            }
-        },),
-        test!("test try_alloc with and without global allocation failures", || {
-            test_static_size_alloc(
-                |arena| assert!(arena.try_alloc(1u8).is_ok()),
-                |arena| assert!(arena.try_alloc(1u8).is_err()),
-            );
-        },),
-        test!("test try_alloc_with with and without global allocation failures", || {
-            test_static_size_alloc(
-                |arena| assert!(arena.try_alloc_with(|| 1u8).is_ok()),
-                |arena| assert!(arena.try_alloc_with(|| 1u8).is_err()),
-            );
-        },),
+            },
+        ),
+        test!(
+            "test try_alloc with and without global allocation failures",
+            || {
+                test_static_size_alloc(
+                    |arena| assert!(arena.try_alloc(1u8).is_ok()),
+                    |arena| assert!(arena.try_alloc(1u8).is_err()),
+                );
+            },
+        ),
+        test!(
+            "test try_alloc_with with and without global allocation failures",
+            || {
+                test_static_size_alloc(
+                    |arena| assert!(arena.try_alloc_with(|| 1u8).is_ok()),
+                    |arena| assert!(arena.try_alloc_with(|| 1u8).is_err()),
+                );
+            },
+        ),
     ];
 
     for (name, test) in tests.iter() {

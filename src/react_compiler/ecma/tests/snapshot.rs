@@ -49,7 +49,10 @@ fn snapshots() {
 }
 
 fn normalize_newlines(source: &str) -> String {
-    source.cow_replace("\r\n", "\n").cow_replace('\r', "\n").into_owned()
+    source
+        .cow_replace("\r\n", "\n")
+        .cow_replace('\r', "\n")
+        .into_owned()
 }
 
 /// Parse, analyse, compile, and render the compiled program + diagnostics, plus any
@@ -77,10 +80,16 @@ fn run_fixture(source: &str) -> String {
     // compile-only run; `lint` then re-runs the same pipeline read-only so we can
     // cross-check its diagnostics against `compile`'s below.
     let (output, diagnostics, fatal, lint_result) = {
-        let semantic = SemanticBuilder::new().with_build_nodes(true).build(&program).semantic;
+        let semantic = SemanticBuilder::new()
+            .with_build_nodes(true)
+            .build(&program)
+            .semantic;
         let (output, diagnostics, fatal) =
             match compile(&program, &semantic, &allocator, options.clone()) {
-                CompileResult::Success { output, diagnostics } => (output, diagnostics, false),
+                CompileResult::Success {
+                    output,
+                    diagnostics,
+                } => (output, diagnostics, false),
                 CompileResult::Fatal { diagnostics } => (None, diagnostics, true),
             };
         let lint_result = lint(&program, &semantic, &allocator, options);
@@ -129,10 +138,17 @@ fn run_fixture(source: &str) -> String {
     // compilation still has to agree with lint on diagnostics and fatality.
     if !fatal && lint_body != transform_body {
         out.push_str("\n\nLint-mode diagnostics (differ from transform):\n\n");
-        out.push_str(if lint_body.is_empty() { "(none)\n" } else { &lint_body });
+        out.push_str(if lint_body.is_empty() {
+            "(none)\n"
+        } else {
+            &lint_body
+        });
     }
     if !fatal {
-        assert_eq!(lint_result.fatal, fatal, "lint and compile fatality diverged");
+        assert_eq!(
+            lint_result.fatal, fatal,
+            "lint and compile fatality diverged"
+        );
     }
     out
 }
@@ -250,7 +266,9 @@ fn parse_pragma(source: &str) -> (SourceType, PluginOptions) {
     // let it override whatever the directive loop parsed. Without this, fixtures that set
     // `@enablePreserveExistingMemoizationGuarantees:false` still hit `ValidatePreservedManual-
     // Memoization` and bail with a spurious "memoization could not be preserved" error.
-    options.environment.validate_preserve_existing_memoization_guarantees = source
+    options
+        .environment
+        .validate_preserve_existing_memoization_guarantees = source
         .lines()
         .next()
         .unwrap_or("")
@@ -269,7 +287,11 @@ fn parse_pragma(source: &str) -> (SourceType, PluginOptions) {
 
 /// Strip surrounding double quotes: `"annotation"` → `annotation`.
 fn unquote(value: &str) -> String {
-    value.strip_prefix('"').and_then(|v| v.strip_suffix('"')).unwrap_or(value).to_string()
+    value
+        .strip_prefix('"')
+        .and_then(|v| v.strip_suffix('"'))
+        .unwrap_or(value)
+        .to_string()
 }
 
 /// Apply a non-boolean `EnvironmentConfig` directive, delegating plain booleans to
@@ -375,13 +397,21 @@ fn external_fn(source: &str, import_specifier_name: &str) -> ExternalFunctionCon
 /// The double-quoted strings inside a JSON literal, in order:
 /// `["a","b"]` → `["a", "b"]`, `{"source":"x"}` → `["source", "x"]`.
 fn json_strings(value: &str) -> Vec<String> {
-    value.split('"').skip(1).step_by(2).map(str::to_string).collect()
+    value
+        .split('"')
+        .skip(1)
+        .step_by(2)
+        .map(str::to_string)
+        .collect()
 }
 
 /// The `source` field of a JSON object literal like `{"source":"shared-runtime"}`.
 fn json_source(value: &str) -> Option<String> {
     let parts = json_strings(value);
-    parts.iter().position(|s| s == "source").and_then(|i| parts.get(i + 1).cloned())
+    parts
+        .iter()
+        .position(|s| s == "source")
+        .and_then(|i| parts.get(i + 1).cloned())
 }
 
 /// The upstream snap runner's test `moduleTypeProvider` (`shared-runtime-type-provider`),
@@ -455,17 +485,26 @@ fn test_module_type_provider() -> FxIndexMap<String, TypeConfig> {
                 }),
             )]),
         ),
-        ("useDefaultExportNotTypedAsHook".to_string(), object([("default", type_ref())])),
+        (
+            "useDefaultExportNotTypedAsHook".to_string(),
+            object([("default", type_ref())]),
+        ),
     ])
 }
 
 fn object(properties: impl IntoIterator<Item = (&'static str, TypeConfig)>) -> TypeConfig {
-    let properties = properties.into_iter().map(|(name, config)| (name.to_string(), config));
-    TypeConfig::Object(ObjectTypeConfig { properties: Some(properties.collect()) })
+    let properties = properties
+        .into_iter()
+        .map(|(name, config)| (name.to_string(), config));
+    TypeConfig::Object(ObjectTypeConfig {
+        properties: Some(properties.collect()),
+    })
 }
 
 fn type_ref() -> TypeConfig {
-    TypeConfig::TypeReference(TypeReferenceConfig { name: BuiltInTypeRef::Any })
+    TypeConfig::TypeReference(TypeReferenceConfig {
+        name: BuiltInTypeRef::Any,
+    })
 }
 
 fn hook(

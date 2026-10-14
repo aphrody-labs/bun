@@ -25,7 +25,9 @@ impl<'a> PeepholeOptimizations {
                     if ctx.state.private_member_usage.is_used(&private_id.name) {
                         return true;
                     }
-                    prop.value.as_ref().is_some_and(|value| value.may_have_side_effects(ctx))
+                    prop.value
+                        .as_ref()
+                        .is_some_and(|value| value.may_have_side_effects(ctx))
                 }
                 ClassElement::MethodDefinition(method) => {
                     let PropertyKey::PrivateIdentifier(private_id) = &method.key else {
@@ -40,7 +42,10 @@ impl<'a> PeepholeOptimizations {
                     if ctx.state.private_member_usage.is_used(&private_id.name) {
                         return true;
                     }
-                    accessor.value.as_ref().is_some_and(|value| value.may_have_side_effects(ctx))
+                    accessor
+                        .value
+                        .as_ref()
+                        .is_some_and(|value| value.may_have_side_effects(ctx))
                 }
                 ClassElement::StaticBlock(_) => true,
                 ClassElement::TSIndexSignature(_) => {

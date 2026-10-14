@@ -20,8 +20,10 @@ fn prefer_math_hypot(span: Span) -> OxcDiagnostic {
 }
 
 fn prefer_math_log_n(span: Span, good_method: &str, bad_method: &str) -> OxcDiagnostic {
-    OxcDiagnostic::warn(format!("Prefer `Math.{good_method}(x)` over `{bad_method}`"))
-        .with_label(span)
+    OxcDiagnostic::warn(format!(
+        "Prefer `Math.{good_method}(x)` over `{bad_method}`"
+    ))
+    .with_label(span)
 }
 
 #[derive(Debug, Default, Clone)]
@@ -101,7 +103,10 @@ impl Rule for PreferModernMathApis {
                 };
 
                 let expressions = flat_plus_expression(arg);
-                if expressions.iter().any(|expr| !is_pow_2_expression(expr, ctx)) {
+                if expressions
+                    .iter()
+                    .any(|expr| !is_pow_2_expression(expr, ctx))
+                {
                     return;
                 }
 
@@ -206,7 +211,10 @@ fn check_multiplication<'a, 'b>(
         return;
     };
 
-    if !matches!(member_expr.static_property_name(), Some("LN10" | "LN2" | "LOG10E" | "LOG2E")) {
+    if !matches!(
+        member_expr.static_property_name(),
+        Some("LN10" | "LN2" | "LOG10E" | "LOG2E")
+    ) {
         return;
     }
 
@@ -409,6 +417,11 @@ fn test() {
         // "Math.sqrt((( a ** 2 )) + (( b ** 2 + c ** 2 )) + (( d )) * (( d )) + (( e )) ** (( 2 )))",
     ];
 
-    Tester::new(PreferModernMathApis::NAME, PreferModernMathApis::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        PreferModernMathApis::NAME,
+        PreferModernMathApis::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

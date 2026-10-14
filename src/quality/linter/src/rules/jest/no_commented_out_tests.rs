@@ -9,7 +9,13 @@ use crate::{
 #[derive(Debug, Default, Clone)]
 pub struct NoCommentedOutTests;
 
-declare_oxc_lint!(NoCommentedOutTests, jest, suspicious, docs = DOCUMENTATION, version = "0.0.8",);
+declare_oxc_lint!(
+    NoCommentedOutTests,
+    jest,
+    suspicious,
+    docs = DOCUMENTATION,
+    version = "0.0.8",
+);
 
 impl Rule for NoCommentedOutTests {
     fn run_once(&self, ctx: &LintContext) {
@@ -31,14 +37,20 @@ fn test() {
         ("test('foo', function () {})", None),
         ("test.only('foo', function () {})", None),
         ("test.concurrent('foo', function () {})", None),
-        ("var appliedSkip = describe.skip; appliedSkip.apply(describe)", None),
+        (
+            "var appliedSkip = describe.skip; appliedSkip.apply(describe)",
+            None,
+        ),
         ("var calledSkip = it.skip; calledSkip.call(it)", None),
         ("({ f: function () {} }).f()", None),
         ("(a || b).f()", None),
         ("itHappensToStartWithIt()", None),
         ("testSomething()", None),
         ("// latest(dates)", None),
-        ("// TODO: unify with Git implementation from Shipit (?)", None),
+        (
+            "// TODO: unify with Git implementation from Shipit (?)",
+            None,
+        ),
         ("// test['not a method?']()", None),
         ("#!/usr/bin/env node", None),
         (
@@ -110,7 +122,10 @@ fn test() {
         ("// it()", None),
         ("// test.someNewMethodThatMightBeAddedInTheFuture()", None),
         ("// test.123()", None),
-        ("// test['someNewMethodThatMightBeAddedInTheFuture']()", None),
+        (
+            "// test['someNewMethodThatMightBeAddedInTheFuture']()",
+            None,
+        ),
         ("// test('has title but no callback')", None),
         (
             r"
@@ -124,7 +139,12 @@ fn test() {
         ),
     ];
 
-    Tester::new(NoCommentedOutTests::NAME, NoCommentedOutTests::PLUGIN, pass, fail)
-        .with_jest_plugin(true)
-        .test_and_snapshot();
+    Tester::new(
+        NoCommentedOutTests::NAME,
+        NoCommentedOutTests::PLUGIN,
+        pass,
+        fail,
+    )
+    .with_jest_plugin(true)
+    .test_and_snapshot();
 }

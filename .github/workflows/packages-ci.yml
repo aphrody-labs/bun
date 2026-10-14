@@ -24,7 +24,7 @@ on:
       - "!**/*.md"
 
 env:
-  BUN_VERSION: "canary"
+  BUN_VERSION: "1.4.2"
 
 jobs:
   bun-plugin-svelte:

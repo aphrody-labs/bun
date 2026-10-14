@@ -129,7 +129,8 @@ impl<'a> Visit<'a> for ControlCharacterFinder<'a> {
         //    why we need to do this check here, instead of filtering inside of
         //    visit_character.
         if self.num_capture_groups > 0 && !self.control_chars.is_empty() {
-            self.control_chars.retain(|c| !(c.value > 0x01 && c.value <= self.num_capture_groups));
+            self.control_chars
+                .retain(|c| !(c.value > 0x01 && c.value <= self.num_capture_groups));
         }
     }
 
@@ -173,7 +174,12 @@ mod tests {
             r"let r = /\xff/",
         ];
 
-        let fail = vec![r"new RegExp('\x00')", r"/\x00/", r"new RegExp('\x1f')", r"/\x1f/"];
+        let fail = vec![
+            r"new RegExp('\x00')",
+            r"/\x00/",
+            r"new RegExp('\x1f')",
+            r"/\x1f/",
+        ];
         Tester::new(NoControlRegex::NAME, NoControlRegex::PLUGIN, pass, fail).test();
     }
 

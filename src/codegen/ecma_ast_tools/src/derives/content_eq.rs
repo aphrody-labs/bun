@@ -30,7 +30,10 @@ impl Derive for DeriveContentEq {
     /// Register that accept `#[content_eq]` attr on structs, enums, or struct fields.
     /// Allow attr on structs and enums which don't derive this trait.
     fn attrs(&self) -> &[(&'static str, AttrPositions)] {
-        &[("content_eq", attr_positions!(StructMaybeDerived | EnumMaybeDerived | StructField))]
+        &[(
+            "content_eq",
+            attr_positions!(StructMaybeDerived | EnumMaybeDerived | StructField),
+        )]
     }
 
     /// Parse `#[content_eq(skip)]` attr.

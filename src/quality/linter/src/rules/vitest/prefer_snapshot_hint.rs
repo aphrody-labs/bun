@@ -34,12 +34,24 @@ fn test() {
     use crate::tester::Tester;
 
     let mut pass = vec![
-        ("expect(something).toStrictEqual(somethingElse);", Some(serde_json::json!(["always"]))),
+        (
+            "expect(something).toStrictEqual(somethingElse);",
+            Some(serde_json::json!(["always"])),
+        ),
         ("a().toEqual('b')", Some(serde_json::json!(["always"]))),
         ("expect(a);", Some(serde_json::json!(["always"]))),
-        (r#"expect(1).toMatchSnapshot({}, "my snapshot");"#, Some(serde_json::json!(["always"]))),
-        (r#"expect(1).toMatchSnapshot("my snapshot");"#, Some(serde_json::json!(["always"]))),
-        ("expect(1).toMatchSnapshot(`my snapshot`);", Some(serde_json::json!(["always"]))),
+        (
+            r#"expect(1).toMatchSnapshot({}, "my snapshot");"#,
+            Some(serde_json::json!(["always"])),
+        ),
+        (
+            r#"expect(1).toMatchSnapshot("my snapshot");"#,
+            Some(serde_json::json!(["always"])),
+        ),
+        (
+            "expect(1).toMatchSnapshot(`my snapshot`);",
+            Some(serde_json::json!(["always"])),
+        ),
         (
             r#"const x = {};
             expect(1).toMatchSnapshot(x, "my snapshot");"#,
@@ -49,18 +61,36 @@ fn test() {
             r#"expect(1).toThrowErrorMatchingSnapshot("my snapshot");"#,
             Some(serde_json::json!(["always"])),
         ),
-        ("expect(1).toMatchInlineSnapshot();", Some(serde_json::json!(["always"]))),
-        ("expect(1).toThrowErrorMatchingInlineSnapshot();", Some(serde_json::json!(["always"]))),
-        ("expect(something).toStrictEqual(somethingElse);", Some(serde_json::json!(["multi"]))),
+        (
+            "expect(1).toMatchInlineSnapshot();",
+            Some(serde_json::json!(["always"])),
+        ),
+        (
+            "expect(1).toThrowErrorMatchingInlineSnapshot();",
+            Some(serde_json::json!(["always"])),
+        ),
+        (
+            "expect(something).toStrictEqual(somethingElse);",
+            Some(serde_json::json!(["multi"])),
+        ),
         ("a().toEqual('b')", Some(serde_json::json!(["multi"]))),
         ("expect(a);", Some(serde_json::json!(["multi"]))),
-        (r#"expect(1).toMatchSnapshot({}, "my snapshot");"#, Some(serde_json::json!(["multi"]))),
+        (
+            r#"expect(1).toMatchSnapshot({}, "my snapshot");"#,
+            Some(serde_json::json!(["multi"])),
+        ),
         (
             r#"expect(1).toThrowErrorMatchingSnapshot("my snapshot");"#,
             Some(serde_json::json!(["multi"])),
         ),
-        ("expect(1).toMatchSnapshot({});", Some(serde_json::json!(["multi"]))),
-        ("expect(1).toThrowErrorMatchingSnapshot();", Some(serde_json::json!(["multi"]))),
+        (
+            "expect(1).toMatchSnapshot({});",
+            Some(serde_json::json!(["multi"])),
+        ),
+        (
+            "expect(1).toThrowErrorMatchingSnapshot();",
+            Some(serde_json::json!(["multi"])),
+        ),
         (
             "it('is true', () => {
               expect(1).toMatchSnapshot();
@@ -187,14 +217,23 @@ fn test() {
     ];
 
     let mut fail = vec![
-        ("expect(1).toMatchSnapshot();", Some(serde_json::json!(["always"]))),
-        ("expect(1).toMatchSnapshot({});", Some(serde_json::json!(["always"]))),
+        (
+            "expect(1).toMatchSnapshot();",
+            Some(serde_json::json!(["always"])),
+        ),
+        (
+            "expect(1).toMatchSnapshot({});",
+            Some(serde_json::json!(["always"])),
+        ),
         (
             r#"const x = "we can't know if this is a string or not";
             expect(1).toMatchSnapshot(x);"#,
             Some(serde_json::json!(["always"])),
         ),
-        ("expect(1).toThrowErrorMatchingSnapshot();", Some(serde_json::json!(["always"]))),
+        (
+            "expect(1).toThrowErrorMatchingSnapshot();",
+            Some(serde_json::json!(["always"])),
+        ),
         (
             "it('is true', () => {
               expect(1).toMatchSnapshot();
@@ -454,16 +493,28 @@ fn test() {
     ];
 
     let vitest_pass = vec![
-        ("expect(something).toStrictEqual(somethingElse);", Some(serde_json::json!(["multi"]))),
+        (
+            "expect(something).toStrictEqual(somethingElse);",
+            Some(serde_json::json!(["multi"])),
+        ),
         ("a().toEqual('b')", Some(serde_json::json!(["multi"]))),
         ("expect(a);", Some(serde_json::json!(["multi"]))),
-        (r#"expect(1).toMatchSnapshot({}, "my snapshot");"#, Some(serde_json::json!(["multi"]))),
+        (
+            r#"expect(1).toMatchSnapshot({}, "my snapshot");"#,
+            Some(serde_json::json!(["multi"])),
+        ),
         (
             r#"expect(1).toThrowErrorMatchingSnapshot("my snapshot");"#,
             Some(serde_json::json!(["multi"])),
         ),
-        ("expect(1).toMatchSnapshot({});", Some(serde_json::json!(["multi"]))),
-        ("expect(1).toThrowErrorMatchingSnapshot();", Some(serde_json::json!(["multi"]))),
+        (
+            "expect(1).toMatchSnapshot({});",
+            Some(serde_json::json!(["multi"])),
+        ),
+        (
+            "expect(1).toThrowErrorMatchingSnapshot();",
+            Some(serde_json::json!(["multi"])),
+        ),
         (
             "
                    it('is true', () => {
@@ -766,7 +817,12 @@ fn test() {
 
     fail.extend(vitest_fail);
 
-    Tester::new(PreferSnapshotHint::NAME, PreferSnapshotHint::PLUGIN, pass, fail)
-        .with_vitest_plugin(true)
-        .test_and_snapshot();
+    Tester::new(
+        PreferSnapshotHint::NAME,
+        PreferSnapshotHint::PLUGIN,
+        pass,
+        fail,
+    )
+    .with_vitest_plugin(true)
+    .test_and_snapshot();
 }

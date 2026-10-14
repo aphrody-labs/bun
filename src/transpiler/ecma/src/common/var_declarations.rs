@@ -35,7 +35,10 @@ struct Declarators<'a> {
 
 impl<'a> Declarators<'a> {
     fn new(ast: &AstBuilder<'a>) -> Self {
-        Self { var_declarators: ArenaVec::new_in(ast), let_declarators: ArenaVec::new_in(ast) }
+        Self {
+            var_declarators: ArenaVec::new_in(ast),
+            let_declarators: ArenaVec::new_in(ast),
+        }
     }
 }
 
@@ -43,7 +46,9 @@ impl<'a> Declarators<'a> {
 impl<'a> VarDeclarationsStore<'a> {
     /// Create new `VarDeclarationsStore`.
     pub fn new() -> Self {
-        Self { stack: SparseStack::new() }
+        Self {
+            stack: SparseStack::new(),
+        }
     }
 
     /// Add a `var` declaration to be inserted at top of current enclosing statement block,
@@ -102,7 +107,9 @@ impl<'a> VarDeclarationsStore<'a> {
         ctx: &mut TraverseCtx<'a>,
     ) -> BoundIdentifier<'a> {
         let binding = ctx.generate_uid_in_current_hoist_scope(name);
-        ctx.state.var_declarations.insert_var_with_init(&binding, expression, &ctx.ast);
+        ctx.state
+            .var_declarations
+            .insert_var_with_init(&binding, expression, &ctx.ast);
         binding
     }
 
@@ -223,7 +230,10 @@ impl<'a> VarDeclarationsStore<'a> {
         &mut self,
         ast: &AstBuilder<'a>,
     ) -> Option<(Option<Statement<'a>>, Option<Statement<'a>>)> {
-        let Declarators { var_declarators, let_declarators } = self.stack.pop()?;
+        let Declarators {
+            var_declarators,
+            let_declarators,
+        } = self.stack.pop()?;
 
         let var_statement = (!var_declarators.is_empty())
             .then(|| Self::create_declaration(VariableDeclarationKind::Var, var_declarators, ast));

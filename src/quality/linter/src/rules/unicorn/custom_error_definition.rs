@@ -211,7 +211,10 @@ fn check_class<'a>(class: &Class<'a>, node: &AstNode<'a>, ctx: &LintContext<'a>)
         }
 
         if let Some(prop) = name_property {
-            let span = prop.value.as_ref().map_or(prop.span, oxc_span::GetSpan::span);
+            let span = prop
+                .value
+                .as_ref()
+                .map_or(prop.span, oxc_span::GetSpan::span);
             ctx.diagnostic(invalid_name_property_diagnostic(span, name));
         } else {
             ctx.diagnostic(invalid_name_property_diagnostic(class.span, name));
@@ -227,7 +230,9 @@ fn check_class<'a>(class: &Class<'a>, node: &AstNode<'a>, ctx: &LintContext<'a>)
 
     let has_super = statements.iter().any(|s| is_super_call(s));
 
-    let message_assignment_idx = statements.iter().position(|s| is_this_assignment(s, "message"));
+    let message_assignment_idx = statements
+        .iter()
+        .position(|s| is_this_assignment(s, "message"));
 
     if !has_super {
         ctx.diagnostic(missing_super_call_diagnostic(body.span));
@@ -255,7 +260,10 @@ fn check_class<'a>(class: &Class<'a>, node: &AstNode<'a>, ctx: &LintContext<'a>)
 
         (!is_expected_string_literal(&assign.right, name)).then_some(assign.right.span())
     } else if let Some(prop) = name_property {
-        let span = prop.value.as_ref().map_or(prop.span, oxc_span::GetSpan::span);
+        let span = prop
+            .value
+            .as_ref()
+            .map_or(prop.span, oxc_span::GetSpan::span);
         match &prop.value {
             Some(value) => (!is_expected_string_literal(value, name)).then_some(span),
             None => Some(span),
@@ -357,14 +365,22 @@ fn upper_first(s: &str) -> String {
 }
 
 fn is_super_call(stmt: &Statement) -> bool {
-    let Statement::ExpressionStatement(expr_stmt) = stmt else { return false };
-    let Expression::CallExpression(call) = &expr_stmt.expression else { return false };
+    let Statement::ExpressionStatement(expr_stmt) = stmt else {
+        return false;
+    };
+    let Expression::CallExpression(call) = &expr_stmt.expression else {
+        return false;
+    };
     matches!(&call.callee, Expression::Super(_))
 }
 
 fn is_this_assignment(stmt: &Statement, prop_name: &str) -> bool {
-    let Statement::ExpressionStatement(expr_stmt) = stmt else { return false };
-    let Expression::AssignmentExpression(assign) = &expr_stmt.expression else { return false };
+    let Statement::ExpressionStatement(expr_stmt) = stmt else {
+        return false;
+    };
+    let Expression::AssignmentExpression(assign) = &expr_stmt.expression else {
+        return false;
+    };
 
     if let AssignmentTarget::StaticMemberExpression(member) = &assign.left {
         matches!(&member.object, Expression::ThisExpression(_))
@@ -674,6 +690,11 @@ fn test() {
         }",
     ];
 
-    Tester::new(CustomErrorDefinition::NAME, CustomErrorDefinition::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        CustomErrorDefinition::NAME,
+        CustomErrorDefinition::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

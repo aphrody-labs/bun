@@ -44,13 +44,17 @@ fn no_restricted_default_exports_diagnostic(
         DefaultExportType::NamespaceFrom => "Reexporting namespace as default is restricted.",
     };
 
-    OxcDiagnostic::warn(warn).with_help("Use named export instead.").with_label(span)
+    OxcDiagnostic::warn(warn)
+        .with_help("Use named export instead.")
+        .with_label(span)
 }
 
 fn no_restricted_named_exports_diagnostic(span: Span, name: &str) -> OxcDiagnostic {
-    OxcDiagnostic::warn(format!("'{name}' is restricted from being used as an exported name."))
-        .with_help("Rename this export.")
-        .with_label(span)
+    OxcDiagnostic::warn(format!(
+        "'{name}' is restricted from being used as an exported name."
+    ))
+    .with_help("Rename this export.")
+    .with_label(span)
 }
 
 #[derive(Debug, Default, Clone, Deserialize)]
@@ -199,14 +203,14 @@ enum LocalFromSpecifier {
 
 impl Rule for NoRestrictedExports {
     fn from_configuration(value: serde_json::Value) -> Result<Self, serde_json::error::Error> {
-        DefaultRuleConfig::<Self>::from_value(value).map(DefaultRuleConfig::into_inner).map(
-            |mut c| {
+        DefaultRuleConfig::<Self>::from_value(value)
+            .map(DefaultRuleConfig::into_inner)
+            .map(|mut c| {
                 // Cache if "default" is in restricted_named_exports
                 c.has_default_restricted_named_export =
                     c.restricted_named_exports.contains("default");
                 c
-            },
-        )
+            })
     }
 
     fn should_run(&self, _ctx: &ContextHost) -> bool {
@@ -314,7 +318,9 @@ impl NoRestrictedExports {
                     ctx,
                     export.span,
                     variable.declarations.iter().flat_map(|d| {
-                        d.id.get_binding_identifiers().into_iter().map(|id| id.name.into_string())
+                        d.id.get_binding_identifiers()
+                            .into_iter()
+                            .map(|id| id.name.into_string())
                     }),
                 );
             }
@@ -362,9 +368,9 @@ impl NoRestrictedExports {
                 LocalFromSpecifier::Named => {
                     opts.named_from.then_some(DefaultExportType::NamedFrom)
                 }
-                LocalFromSpecifier::Namespace => {
-                    opts.namespace_from.then_some(DefaultExportType::NamespaceFrom)
-                }
+                LocalFromSpecifier::Namespace => opts
+                    .namespace_from
+                    .then_some(DefaultExportType::NamespaceFrom),
             }),
         } {
             ctx.diagnostic(no_restricted_default_exports_diagnostic(span, type_export));
@@ -415,22 +421,58 @@ fn test() {
         ("var a; export { a };", Some(serde_json::json!([{}]))),
         ("var b; export { b as a };", Some(serde_json::json!([{}]))),
         ("export { a } from 'foo';", Some(serde_json::json!([{}]))),
-        ("export { b as a } from 'foo';", Some(serde_json::json!([{}]))),
-        ("export var a;", Some(serde_json::json!([{ "restrictedNamedExports": [] }]))),
-        ("export function a() {}", Some(serde_json::json!([{ "restrictedNamedExports": [] }]))),
-        ("export class A {}", Some(serde_json::json!([{ "restrictedNamedExports": [] }]))),
-        ("var a; export { a };", Some(serde_json::json!([{ "restrictedNamedExports": [] }]))),
-        ("var b; export { b as a };", Some(serde_json::json!([{ "restrictedNamedExports": [] }]))),
-        ("export { a } from 'foo';", Some(serde_json::json!([{ "restrictedNamedExports": [] }]))),
+        (
+            "export { b as a } from 'foo';",
+            Some(serde_json::json!([{}])),
+        ),
+        (
+            "export var a;",
+            Some(serde_json::json!([{ "restrictedNamedExports": [] }])),
+        ),
+        (
+            "export function a() {}",
+            Some(serde_json::json!([{ "restrictedNamedExports": [] }])),
+        ),
+        (
+            "export class A {}",
+            Some(serde_json::json!([{ "restrictedNamedExports": [] }])),
+        ),
+        (
+            "var a; export { a };",
+            Some(serde_json::json!([{ "restrictedNamedExports": [] }])),
+        ),
+        (
+            "var b; export { b as a };",
+            Some(serde_json::json!([{ "restrictedNamedExports": [] }])),
+        ),
+        (
+            "export { a } from 'foo';",
+            Some(serde_json::json!([{ "restrictedNamedExports": [] }])),
+        ),
         (
             "export { b as a } from 'foo';",
             Some(serde_json::json!([{ "restrictedNamedExports": [] }])),
         ),
-        ("export var a;", Some(serde_json::json!([{ "restrictedNamedExports": ["x"] }]))),
-        ("export let a;", Some(serde_json::json!([{ "restrictedNamedExports": ["x"] }]))),
-        ("export const a = 1;", Some(serde_json::json!([{ "restrictedNamedExports": ["x"] }]))),
-        ("export function a() {}", Some(serde_json::json!([{ "restrictedNamedExports": ["x"] }]))),
-        ("export function *a() {}", Some(serde_json::json!([{ "restrictedNamedExports": ["x"] }]))),
+        (
+            "export var a;",
+            Some(serde_json::json!([{ "restrictedNamedExports": ["x"] }])),
+        ),
+        (
+            "export let a;",
+            Some(serde_json::json!([{ "restrictedNamedExports": ["x"] }])),
+        ),
+        (
+            "export const a = 1;",
+            Some(serde_json::json!([{ "restrictedNamedExports": ["x"] }])),
+        ),
+        (
+            "export function a() {}",
+            Some(serde_json::json!([{ "restrictedNamedExports": ["x"] }])),
+        ),
+        (
+            "export function *a() {}",
+            Some(serde_json::json!([{ "restrictedNamedExports": ["x"] }])),
+        ),
         (
             "export async function a() {}",
             Some(serde_json::json!([{ "restrictedNamedExports": ["x"] }])),
@@ -439,8 +481,14 @@ fn test() {
             "export async function *a() {}",
             Some(serde_json::json!([{ "restrictedNamedExports": ["x"] }])),
         ),
-        ("export class A {}", Some(serde_json::json!([{ "restrictedNamedExports": ["x"] }]))),
-        ("var a; export { a };", Some(serde_json::json!([{ "restrictedNamedExports": ["x"] }]))),
+        (
+            "export class A {}",
+            Some(serde_json::json!([{ "restrictedNamedExports": ["x"] }])),
+        ),
+        (
+            "var a; export { a };",
+            Some(serde_json::json!([{ "restrictedNamedExports": ["x"] }])),
+        ),
         (
             "var b; export { b as a };",
             Some(serde_json::json!([{ "restrictedNamedExports": ["x"] }])),
@@ -469,12 +517,18 @@ fn test() {
             "export { ' a', 'a ' } from 'foo';",
             Some(serde_json::json!([{ "restrictedNamedExports": ["a"] }])),
         ),
-        ("export var b = a;", Some(serde_json::json!([{ "restrictedNamedExports": ["a"] }]))),
+        (
+            "export var b = a;",
+            Some(serde_json::json!([{ "restrictedNamedExports": ["a"] }])),
+        ),
         (
             "export let [b = a] = [];",
             Some(serde_json::json!([{ "restrictedNamedExports": ["a"] }])),
         ),
-        ("export const [b] = [a];", Some(serde_json::json!([{ "restrictedNamedExports": ["a"] }]))),
+        (
+            "export const [b] = [a];",
+            Some(serde_json::json!([{ "restrictedNamedExports": ["a"] }])),
+        ),
         (
             "export var { a: b } = {};",
             Some(serde_json::json!([{ "restrictedNamedExports": ["a"] }])),
@@ -487,7 +541,10 @@ fn test() {
             "export const { c: b = a } = {};",
             Some(serde_json::json!([{ "restrictedNamedExports": ["a"] }])),
         ),
-        ("export function b(a) {}", Some(serde_json::json!([{ "restrictedNamedExports": ["a"] }]))),
+        (
+            "export function b(a) {}",
+            Some(serde_json::json!([{ "restrictedNamedExports": ["a"] }])),
+        ),
         (
             "export class A { a(){} }",
             Some(serde_json::json!([{ "restrictedNamedExports": ["a"] }])),
@@ -516,14 +573,38 @@ fn test() {
             "export { 'a' as 'a ' } from 'foo';",
             Some(serde_json::json!([{ "restrictedNamedExports": ["a"] }])),
         ),
-        ("export { b } from 'a';", Some(serde_json::json!([{ "restrictedNamedExports": ["a"] }]))),
-        ("export * as b from 'a';", Some(serde_json::json!([{ "restrictedNamedExports": ["a"] }]))),
-        ("var a;", Some(serde_json::json!([{ "restrictedNamedExports": ["a"] }]))),
-        ("let a;", Some(serde_json::json!([{ "restrictedNamedExports": ["a"] }]))),
-        ("const a = 1;", Some(serde_json::json!([{ "restrictedNamedExports": ["a"] }]))),
-        ("function a() {}", Some(serde_json::json!([{ "restrictedNamedExports": ["a"] }]))),
-        ("class A {}", Some(serde_json::json!([{ "restrictedNamedExports": ["A"] }]))),
-        ("import a from 'foo';", Some(serde_json::json!([{ "restrictedNamedExports": ["a"] }]))),
+        (
+            "export { b } from 'a';",
+            Some(serde_json::json!([{ "restrictedNamedExports": ["a"] }])),
+        ),
+        (
+            "export * as b from 'a';",
+            Some(serde_json::json!([{ "restrictedNamedExports": ["a"] }])),
+        ),
+        (
+            "var a;",
+            Some(serde_json::json!([{ "restrictedNamedExports": ["a"] }])),
+        ),
+        (
+            "let a;",
+            Some(serde_json::json!([{ "restrictedNamedExports": ["a"] }])),
+        ),
+        (
+            "const a = 1;",
+            Some(serde_json::json!([{ "restrictedNamedExports": ["a"] }])),
+        ),
+        (
+            "function a() {}",
+            Some(serde_json::json!([{ "restrictedNamedExports": ["a"] }])),
+        ),
+        (
+            "class A {}",
+            Some(serde_json::json!([{ "restrictedNamedExports": ["A"] }])),
+        ),
+        (
+            "import a from 'foo';",
+            Some(serde_json::json!([{ "restrictedNamedExports": ["a"] }])),
+        ),
         (
             "import { a } from 'foo';",
             Some(serde_json::json!([{ "restrictedNamedExports": ["a"] }])),
@@ -576,9 +657,18 @@ fn test() {
             "export * as default from 'mod';",
             Some(serde_json::json!([{ "restrictedNamedExportsPattern": "default" }])),
         ),
-        ("export * from 'foo';", Some(serde_json::json!([{ "restrictedNamedExports": ["a"] }]))),
-        ("export * from 'a';", Some(serde_json::json!([{ "restrictedNamedExports": ["a"] }]))),
-        ("export default a;", Some(serde_json::json!([{ "restrictedNamedExports": ["a"] }]))),
+        (
+            "export * from 'foo';",
+            Some(serde_json::json!([{ "restrictedNamedExports": ["a"] }])),
+        ),
+        (
+            "export * from 'a';",
+            Some(serde_json::json!([{ "restrictedNamedExports": ["a"] }])),
+        ),
+        (
+            "export default a;",
+            Some(serde_json::json!([{ "restrictedNamedExports": ["a"] }])),
+        ),
         (
             "export default function a() {}",
             Some(serde_json::json!([{ "restrictedNamedExports": ["a"] }])),
@@ -595,7 +685,10 @@ fn test() {
             "export default (class A {});",
             Some(serde_json::json!([{ "restrictedNamedExports": ["A"] }])),
         ),
-        ("export default 1;", Some(serde_json::json!([{ "restrictedNamedExports": ["default"] }]))),
+        (
+            "export default 1;",
+            Some(serde_json::json!([{ "restrictedNamedExports": ["default"] }])),
+        ),
         (
             "export { default as a } from 'foo';",
             Some(serde_json::json!([{ "restrictedNamedExports": ["default"] }])),
@@ -668,13 +761,34 @@ fn test() {
             "export function someFunction() {}",
             Some(serde_json::json!([{ "restrictedNamedExports": ["someFunction"] }])),
         ),
-        ("export var a;", Some(serde_json::json!([{ "restrictedNamedExports": ["a"] }]))),
-        ("export var a = 1;", Some(serde_json::json!([{ "restrictedNamedExports": ["a"] }]))),
-        ("export let a;", Some(serde_json::json!([{ "restrictedNamedExports": ["a"] }]))),
-        ("export let a = 1;", Some(serde_json::json!([{ "restrictedNamedExports": ["a"] }]))),
-        ("export const a = 1;", Some(serde_json::json!([{ "restrictedNamedExports": ["a"] }]))),
-        ("export function a() {}", Some(serde_json::json!([{ "restrictedNamedExports": ["a"] }]))),
-        ("export function *a() {}", Some(serde_json::json!([{ "restrictedNamedExports": ["a"] }]))),
+        (
+            "export var a;",
+            Some(serde_json::json!([{ "restrictedNamedExports": ["a"] }])),
+        ),
+        (
+            "export var a = 1;",
+            Some(serde_json::json!([{ "restrictedNamedExports": ["a"] }])),
+        ),
+        (
+            "export let a;",
+            Some(serde_json::json!([{ "restrictedNamedExports": ["a"] }])),
+        ),
+        (
+            "export let a = 1;",
+            Some(serde_json::json!([{ "restrictedNamedExports": ["a"] }])),
+        ),
+        (
+            "export const a = 1;",
+            Some(serde_json::json!([{ "restrictedNamedExports": ["a"] }])),
+        ),
+        (
+            "export function a() {}",
+            Some(serde_json::json!([{ "restrictedNamedExports": ["a"] }])),
+        ),
+        (
+            "export function *a() {}",
+            Some(serde_json::json!([{ "restrictedNamedExports": ["a"] }])),
+        ),
         (
             "export async function a() {}",
             Some(serde_json::json!([{ "restrictedNamedExports": ["a"] }])),
@@ -683,9 +797,18 @@ fn test() {
             "export async function *a() {}",
             Some(serde_json::json!([{ "restrictedNamedExports": ["a"] }])),
         ),
-        ("export class A {}", Some(serde_json::json!([{ "restrictedNamedExports": ["A"] }]))),
-        ("let a; export { a };", Some(serde_json::json!([{ "restrictedNamedExports": ["a"] }]))),
-        ("export { a }; var a;", Some(serde_json::json!([{ "restrictedNamedExports": ["a"] }]))),
+        (
+            "export class A {}",
+            Some(serde_json::json!([{ "restrictedNamedExports": ["A"] }])),
+        ),
+        (
+            "let a; export { a };",
+            Some(serde_json::json!([{ "restrictedNamedExports": ["a"] }])),
+        ),
+        (
+            "export { a }; var a;",
+            Some(serde_json::json!([{ "restrictedNamedExports": ["a"] }])),
+        ),
         (
             "let b; export { b as a };",
             Some(serde_json::json!([{ "restrictedNamedExports": ["a"] }])),
@@ -738,8 +861,14 @@ fn test() {
             "export * as 'a' from 'foo';",
             Some(serde_json::json!([{ "restrictedNamedExports": ["a"] }])),
         ),
-        ("export var [a] = [];", Some(serde_json::json!([{ "restrictedNamedExports": ["a"] }]))),
-        ("export let { a } = {};", Some(serde_json::json!([{ "restrictedNamedExports": ["a"] }]))),
+        (
+            "export var [a] = [];",
+            Some(serde_json::json!([{ "restrictedNamedExports": ["a"] }])),
+        ),
+        (
+            "export let { a } = {};",
+            Some(serde_json::json!([{ "restrictedNamedExports": ["a"] }])),
+        ),
         (
             "export const { b: a } = {};",
             Some(serde_json::json!([{ "restrictedNamedExports": ["a"] }])),
@@ -752,15 +881,30 @@ fn test() {
             "export let { b: { c: a = d } = e } = {};",
             Some(serde_json::json!([{ "restrictedNamedExports": ["a"] }])),
         ),
-        ("var a; export var a;", Some(serde_json::json!([{ "restrictedNamedExports": ["a"] }]))),
-        ("export var a; var a;", Some(serde_json::json!([{ "restrictedNamedExports": ["a"] }]))),
-        ("export var a = a;", Some(serde_json::json!([{ "restrictedNamedExports": ["a"] }]))),
-        ("export let b = a, a;", Some(serde_json::json!([{ "restrictedNamedExports": ["a"] }]))),
+        (
+            "var a; export var a;",
+            Some(serde_json::json!([{ "restrictedNamedExports": ["a"] }])),
+        ),
+        (
+            "export var a; var a;",
+            Some(serde_json::json!([{ "restrictedNamedExports": ["a"] }])),
+        ),
+        (
+            "export var a = a;",
+            Some(serde_json::json!([{ "restrictedNamedExports": ["a"] }])),
+        ),
+        (
+            "export let b = a, a;",
+            Some(serde_json::json!([{ "restrictedNamedExports": ["a"] }])),
+        ),
         (
             "export const a = 1, b = a;",
             Some(serde_json::json!([{ "restrictedNamedExports": ["a"] }])),
         ),
-        ("export var [a] = a;", Some(serde_json::json!([{ "restrictedNamedExports": ["a"] }]))),
+        (
+            "export var [a] = a;",
+            Some(serde_json::json!([{ "restrictedNamedExports": ["a"] }])),
+        ),
         (
             "export let { a: a } = {};",
             Some(serde_json::json!([{ "restrictedNamedExports": ["a"] }])),
@@ -829,9 +973,18 @@ fn test() {
             "export { b as a, a as b } from 'foo';",
             Some(serde_json::json!([{ "restrictedNamedExports": ["a"] }])),
         ),
-        ("export * as a from 'a';", Some(serde_json::json!([{ "restrictedNamedExports": ["a"] }]))),
-        ("export var a, b;", Some(serde_json::json!([{ "restrictedNamedExports": ["a"] }]))),
-        ("export let b, a;", Some(serde_json::json!([{ "restrictedNamedExports": ["a"] }]))),
+        (
+            "export * as a from 'a';",
+            Some(serde_json::json!([{ "restrictedNamedExports": ["a"] }])),
+        ),
+        (
+            "export var a, b;",
+            Some(serde_json::json!([{ "restrictedNamedExports": ["a"] }])),
+        ),
+        (
+            "export let b, a;",
+            Some(serde_json::json!([{ "restrictedNamedExports": ["a"] }])),
+        ),
         (
             "export const b = 1, a = 2;",
             Some(serde_json::json!([{ "restrictedNamedExports": ["a", "b"] }])),
@@ -965,6 +1118,11 @@ fn test() {
         ),
     ];
 
-    Tester::new(NoRestrictedExports::NAME, NoRestrictedExports::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        NoRestrictedExports::NAME,
+        NoRestrictedExports::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

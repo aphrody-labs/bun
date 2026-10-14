@@ -5,8 +5,8 @@ use crate::style::{GenericGridPlacement, GridPlacement};
 use crate::{CheapCloneStr, Direction, GridItemStyle};
 use core::cmp::{max, min};
 
-use super::OriginZeroLine;
 use super::types::TrackCounts;
+use super::OriginZeroLine;
 
 /// Estimate the number of rows and columns in the grid
 /// This is used as a performance optimisation to pre-size vectors and reduce allocations. It also forms a necessary step
@@ -84,7 +84,14 @@ fn get_known_child_positions<'a, S: GridItemStyle + 'a>(
     explicit_col_count: u16,
     explicit_row_count: u16,
     direction: Direction,
-) -> (OriginZeroLine, OriginZeroLine, u16, OriginZeroLine, OriginZeroLine, u16) {
+) -> (
+    OriginZeroLine,
+    OriginZeroLine,
+    u16,
+    OriginZeroLine,
+    OriginZeroLine,
+    u16,
+) {
     let (mut col_min, mut col_max, mut col_max_span) = (OriginZeroLine(0), OriginZeroLine(0), 0);
     let (mut row_min, mut row_max, mut row_max_span) = (OriginZeroLine(0), OriginZeroLine(0), 0);
     children_iter.for_each(|child_style| {
@@ -118,7 +125,14 @@ fn get_known_child_positions<'a, S: GridItemStyle + 'a>(
         row_max_span = max(row_max_span, child_row_span);
     });
 
-    (col_min, col_max, col_max_span, row_min, row_max, row_max_span)
+    (
+        col_min,
+        col_max,
+        col_max_span,
+        row_min,
+        row_max,
+        row_max_span,
+    )
 }
 
 /// Helper function for `compute_grid_size_estimate`
@@ -146,8 +160,12 @@ fn child_min_line_max_line_span<S: CheapCloneStr>(
         // Both tracks specified
         (Line(track1), Line(track2)) => {
             // See rules A and B above
-            if track1 == track2 { track1 } else { min(track1, track2) }
-        },
+            if track1 == track2 {
+                track1
+            } else {
+                min(track1, track2)
+            }
+        }
 
         // Start track specified
         (Line(track), Auto) => track,
@@ -166,8 +184,12 @@ fn child_min_line_max_line_span<S: CheapCloneStr>(
         // Both tracks specified
         (Line(track1), Line(track2)) => {
             // See rules A and B above
-            if track1 == track2 { track1 + 1 } else { max(track1, track2) }
-        },
+            if track1 == track2 {
+                track1 + 1
+            } else {
+                max(track1, track2)
+            }
+        }
 
         // Start track specified
         (Line(track), Auto) => track + 1,
@@ -197,15 +219,20 @@ fn child_min_line_max_line_span<S: CheapCloneStr>(
 mod tests {
     mod test_child_min_max_line {
         type S = String;
-        use super::super::OriginZeroLine;
         use super::super::child_min_line_max_line_span;
+        use super::super::OriginZeroLine;
         use crate::geometry::Line;
         use crate::style_helpers::*;
 
         #[test]
         fn child_min_max_line_auto() {
-            let (min_col, max_col, span) =
-                child_min_line_max_line_span::<S>(Line { start: line(5), end: span(6) }, 6);
+            let (min_col, max_col, span) = child_min_line_max_line_span::<S>(
+                Line {
+                    start: line(5),
+                    end: span(6),
+                },
+                6,
+            );
             assert_eq!(min_col, OriginZeroLine(4));
             assert_eq!(max_col, OriginZeroLine(10));
             assert_eq!(span, 1);
@@ -213,8 +240,13 @@ mod tests {
 
         #[test]
         fn child_min_max_line_negative_track() {
-            let (min_col, max_col, span) =
-                child_min_line_max_line_span::<S>(Line { start: line(-5), end: span(3) }, 6);
+            let (min_col, max_col, span) = child_min_line_max_line_span::<S>(
+                Line {
+                    start: line(-5),
+                    end: span(3),
+                },
+                6,
+            );
             assert_eq!(min_col, OriginZeroLine(2));
             assert_eq!(max_col, OriginZeroLine(5));
             assert_eq!(span, 1);
@@ -223,9 +255,9 @@ mod tests {
 
     mod test_initial_grid_sizing {
         use super::super::compute_grid_size_estimate;
-        use crate::Direction;
         use crate::compute::grid::util::test_helpers::*;
         use crate::style_helpers::*;
+        use crate::Direction;
 
         #[test]
         fn explicit_grid_sizing_with_children() {

@@ -119,14 +119,16 @@ enum SentinelNodeType {
 
 impl SentinelNodeType {
     fn test(self, kind: AstKind) -> bool {
-        matches!(kind, AstKind::Program(_) | AstKind::FunctionBody(_) | AstKind::Class(_))
-            || match self {
-                Self::Break => {
-                    kind.is_iteration_statement() || matches!(kind, AstKind::SwitchStatement(_))
-                }
-                Self::Continue => kind.is_iteration_statement(),
-                Self::ReturnThrow => false,
+        matches!(
+            kind,
+            AstKind::Program(_) | AstKind::FunctionBody(_) | AstKind::Class(_)
+        ) || match self {
+            Self::Break => {
+                kind.is_iteration_statement() || matches!(kind, AstKind::SwitchStatement(_))
             }
+            Self::Continue => kind.is_iteration_statement(),
+            Self::ReturnThrow => false,
+        }
     }
 }
 

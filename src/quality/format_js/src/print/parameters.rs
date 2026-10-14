@@ -83,7 +83,10 @@ impl<'a> FormatWrite<'a> for AstNode<'a, FormalParameters<'a>> {
 
         match layout {
             ParameterLayout::NoParameters => {
-                write!(f, format_dangling_comments(self.span()).with_soft_block_indent());
+                write!(
+                    f,
+                    format_dangling_comments(self.span()).with_soft_block_indent()
+                );
             }
             ParameterLayout::Hug => {
                 write!(f, ParameterList::with_layout(self, this_param, layout));
@@ -136,8 +139,10 @@ impl<'a> FormatWrite<'a> for AstNode<'a, FormalParameter<'a>> {
                 // inside `left` are not treated as leading comments of `= right`
                 left.inspect(f);
 
-                let leading_comments =
-                    f.context().comments().own_line_comments_before(initializer.span().start);
+                let leading_comments = f
+                    .context()
+                    .comments()
+                    .own_line_comments_before(initializer.span().start);
                 write!(f, [FormatLeadingComments::Comments(leading_comments)]);
                 write!(f, [group(&left), space(), "=", space(), initializer]);
             } else {
@@ -222,7 +227,10 @@ struct FormalParametersIter<'a, 'b> {
 impl<'a, 'b> From<&'b ParameterList<'a, 'b>> for FormalParametersIter<'a, 'b> {
     fn from(value: &'b ParameterList<'a, 'b>) -> Self {
         Self {
-            this: value.this.map(|param| Parameter::This { param, list: value.list }),
+            this: value.this.map(|param| Parameter::This {
+                param,
+                list: value.list,
+            }),
             params: value.list.items().iter(),
             rest: value.list.rest(),
         }
@@ -288,7 +296,12 @@ impl<'a, 'b> ParameterList<'a, 'b> {
         this: Option<&'b AstNode<'a, TSThisParameter<'a>>>,
         layout: ParameterLayout,
     ) -> Self {
-        Self { list, this, layout: Some(layout), trailing_separator_override: None }
+        Self {
+            list,
+            this,
+            layout: Some(layout),
+            trailing_separator_override: None,
+        }
     }
 
     /// Suppresses trailing commas regardless of the `trailingComma` option.
@@ -377,8 +390,10 @@ pub fn should_hug_function_parameters<'a>(
 
     // `(/* comment before */ only_parameter /* comment after */)`
     let has_comment_around = |span: Span| {
-        f.comments().has_any_comment_in_range(parameters.span.start, span.start)
-            || f.comments().has_any_comment_in_range(span.end, parameters.span.end)
+        f.comments()
+            .has_any_comment_in_range(parameters.span.start, span.start)
+            || f.comments()
+                .has_any_comment_in_range(span.end, parameters.span.end)
     };
 
     if let Some(this_param) = this_param {
@@ -391,7 +406,9 @@ pub fn should_hug_function_parameters<'a>(
     }
 
     // Safe because of the length check above
-    let Some(only_parameter) = list.first() else { return false };
+    let Some(only_parameter) = list.first() else {
+        return false;
+    };
 
     if only_parameter.has_modifier() {
         return false;
@@ -402,9 +419,10 @@ pub fn should_hug_function_parameters<'a>(
             // AssignmentPattern in catch clauses or other contexts
             assignment.left.is_destructuring_pattern() && is_huggable_expression(&assignment.right)
         }
-        BindingPattern::ArrayPattern(_) | BindingPattern::ObjectPattern(_) => {
-            only_parameter.initializer.as_deref().is_none_or(is_huggable_expression)
-        }
+        BindingPattern::ArrayPattern(_) | BindingPattern::ObjectPattern(_) => only_parameter
+            .initializer
+            .as_deref()
+            .is_none_or(is_huggable_expression),
         BindingPattern::BindingIdentifier(_) => {
             only_parameter.initializer.is_none()
                 && (parentheses_not_needed

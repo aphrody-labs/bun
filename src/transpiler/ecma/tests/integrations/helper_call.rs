@@ -6,7 +6,10 @@ use oxc_span::SourceType;
 use crate::test;
 
 fn codegen_options() -> CodegenOptions {
-    CodegenOptions { single_quote: true, ..CodegenOptions::default() }
+    CodegenOptions {
+        single_quote: true,
+        ..CodegenOptions::default()
+    }
 }
 
 /// Verify that transform → codegen is idempotent (the second codegen pass produces the same output).
@@ -35,8 +38,14 @@ fn helper_call_idempotency() {
         let allocator = Allocator::default();
         let source_type = SourceType::default();
         let ret = Parser::new(&allocator, &first, source_type).parse();
-        assert!(ret.diagnostics.is_empty(), "Parse errors on second pass for: {source}");
-        let second = Codegen::new().with_options(codegen_options()).build(&ret.program).code;
+        assert!(
+            ret.diagnostics.is_empty(),
+            "Parse errors on second pass for: {source}"
+        );
+        let second = Codegen::new()
+            .with_options(codegen_options())
+            .build(&ret.program)
+            .code;
 
         assert_eq!(
             first, second,

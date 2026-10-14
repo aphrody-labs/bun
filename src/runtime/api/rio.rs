@@ -3,17 +3,17 @@
 use std::sync::{Arc, Mutex, PoisonError};
 
 use bun_jsc::{
-    bun_string_jsc, ArrayBuffer, CallFrame, IntegerRange, JSGlobalObject, JSType, JSValue, JsCell,
-    JsResult,
+    ArrayBuffer, CallFrame, IntegerRange, JSGlobalObject, JSType, JSValue, JsCell, JsResult,
+    bun_string_jsc,
 };
 use rio_vt::{
     ansi::CursorShape,
     config::colors::AnsiColor,
     crosswords::{
+        Crosswords, CrosswordsSize, Mode,
         grid::Scroll,
         pos::{Column, Line, Pos},
         square::{Square, Wide},
-        Crosswords, CrosswordsSize, Mode,
     },
     event::{EventListener, RioEvent, WindowId},
     performer::handler::Processor,

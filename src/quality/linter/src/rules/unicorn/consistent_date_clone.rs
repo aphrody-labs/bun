@@ -43,7 +43,8 @@ declare_oxc_lint!(
     style,
     fix,
     version = "0.15.13",
-    short_description = "Enforce consistent cloning of `Date` objects without unnecessary `.getTime()` calls.",
+    short_description =
+        "Enforce consistent cloning of `Date` objects without unnecessary `.getTime()` calls.",
 );
 
 impl Rule for ConsistentDateClone {
@@ -131,7 +132,12 @@ fn test() {
         ("new Date(date./* comment */getTime())", "new Date(date)"),
     ];
 
-    Tester::new(ConsistentDateClone::NAME, ConsistentDateClone::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        ConsistentDateClone::NAME,
+        ConsistentDateClone::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

@@ -401,7 +401,11 @@ pub unsafe trait Alloc {
         let (_l, u) = self.usable_size(&layout);
         // _l <= layout.size()                       [guaranteed by usable_size()]
         //       layout.size() <= new_layout.size()  [required by this method]
-        if new_size <= u { Ok(()) } else { Err(CannotReallocInPlace) }
+        if new_size <= u {
+            Ok(())
+        } else {
+            Err(CannotReallocInPlace)
+        }
     }
 
     /// Attempts to shrink the allocation referenced by `ptr` to fit `new_size`.
@@ -446,7 +450,11 @@ pub unsafe trait Alloc {
         let (l, _u) = self.usable_size(&layout);
         //                      layout.size() <= _u  [guaranteed by usable_size()]
         // new_layout.size() <= layout.size()        [required by this method]
-        if l <= new_size { Ok(()) } else { Err(CannotReallocInPlace) }
+        if l <= new_size {
+            Ok(())
+        } else {
+            Err(CannotReallocInPlace)
+        }
     }
 
     // == COMMON USAGE PATTERNS ==
@@ -480,7 +488,11 @@ pub unsafe trait Alloc {
         Self: Sized,
     {
         let k = Layout::new::<T>();
-        if k.size() > 0 { unsafe { self.alloc(k).map(NonNull::cast) } } else { Err(AllocErr) }
+        if k.size() > 0 {
+            unsafe { self.alloc(k).map(NonNull::cast) }
+        } else {
+            Err(AllocErr)
+        }
     }
 
     /// Deallocates a block suitable for holding an instance of `T`.

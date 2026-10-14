@@ -6,9 +6,11 @@ use oxc_span::Span;
 use crate::{AstNode, ast_util::is_method_call, context::LintContext, rule::Rule};
 
 fn no_await_in_promise_methods_diagnostic(span: Span, method_name: &str) -> OxcDiagnostic {
-    OxcDiagnostic::warn(format!("Promise in `Promise.{method_name}()` should not be awaited."))
-        .with_help("Remove the `await`")
-        .with_label(span)
+    OxcDiagnostic::warn(format!(
+        "Promise in `Promise.{method_name}()` should not be awaited."
+    ))
+    .with_help("Remove the `await`")
+    .with_label(span)
 }
 
 #[derive(Debug, Default, Clone)]
@@ -94,8 +96,9 @@ impl Rule for NoAwaitInPromiseMethods {
             if let Some(element_expr) = element.as_expression()
                 && let Expression::AwaitExpression(await_expr) = element_expr.without_parentheses()
             {
-                let property_name =
-                    member_expr.static_property_name().expect("callee is a static property");
+                let property_name = member_expr
+                    .static_property_name()
+                    .expect("callee is a static property");
                 let await_keyword_span = Span::sized(await_expr.span.start, 5);
 
                 ctx.diagnostic_with_suggestion(
@@ -163,24 +166,44 @@ fn test() {
 
     let fix = vec![
         ("Promise.all([await promise])", "Promise.all([promise])"),
-        ("Promise.allSettled([await promise])", "Promise.allSettled([promise])"),
+        (
+            "Promise.allSettled([await promise])",
+            "Promise.allSettled([promise])",
+        ),
         ("Promise.any([await promise])", "Promise.any([promise])"),
         ("Promise.race([await promise])", "Promise.race([promise])"),
         ("Promise.all([, await promise])", "Promise.all([, promise])"),
         ("Promise.all([await promise,])", "Promise.all([promise,])"),
         ("Promise.all([await promise],)", "Promise.all([promise],)"),
-        ("Promise.all([await (0, promise)],)", "Promise.all([(0, promise)],)"),
-        ("Promise.all([await (( promise ))])", "Promise.all([(( promise ))])"),
-        ("Promise.all([await await promise])", "Promise.all([await promise])"),
+        (
+            "Promise.all([await (0, promise)],)",
+            "Promise.all([(0, promise)],)",
+        ),
+        (
+            "Promise.all([await (( promise ))])",
+            "Promise.all([(( promise ))])",
+        ),
+        (
+            "Promise.all([await await promise])",
+            "Promise.all([await promise])",
+        ),
         (
             "Promise.all([...foo, await promise1, await promise2])",
             "Promise.all([...foo, promise1, promise2])",
         ),
-        ("Promise.all([await /* comment*/ promise])", "Promise.all([/* comment*/ promise])"),
+        (
+            "Promise.all([await /* comment*/ promise])",
+            "Promise.all([/* comment*/ promise])",
+        ),
     ];
 
-    Tester::new(NoAwaitInPromiseMethods::NAME, NoAwaitInPromiseMethods::PLUGIN, pass, fail)
-        .change_rule_path_extension("mjs")
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        NoAwaitInPromiseMethods::NAME,
+        NoAwaitInPromiseMethods::PLUGIN,
+        pass,
+        fail,
+    )
+    .change_rule_path_extension("mjs")
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

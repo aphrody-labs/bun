@@ -85,7 +85,11 @@ impl Rule for NoReturnAssign {
 
         // Skip if mode is ExceptParens and the assignment is parenthesized
         if matches!(self.0, NoReturnAssignMode::ExceptParens)
-            && ctx.nodes().parent_kind(node.id()).as_parenthesized_expression().is_some()
+            && ctx
+                .nodes()
+                .parent_kind(node.id())
+                .as_parenthesized_expression()
+                .is_some()
         {
             return;
         }
@@ -103,7 +107,10 @@ impl Rule for NoReturnAssign {
             AstKind::ArrowFunctionExpression(arrow) if arrow.is_expression() => arrow.span(),
             _ => return,
         };
-        ctx.diagnostic(no_return_assign_diagnostic(return_span, self.help_message()));
+        ctx.diagnostic(no_return_assign_diagnostic(
+            return_span,
+            self.help_message(),
+        ));
     }
 }
 
@@ -133,7 +140,10 @@ fn test() {
             "function x() { var result = a * b; return result; }",
             Some(serde_json::json!(["except-parens"])),
         ),
-        ("function x() { return (result = a * b); }", Some(serde_json::json!(["except-parens"]))),
+        (
+            "function x() { return (result = a * b); }",
+            Some(serde_json::json!(["except-parens"])),
+        ),
         (
             "function x() { var result = a * b; return result; }",
             Some(serde_json::json!(["always"])),
@@ -143,8 +153,14 @@ fn test() {
             Some(serde_json::json!(["always"])),
         ),
         ("() => { a = b; }", None),
-        ("() => { return (result = a * b); }", Some(serde_json::json!(["except-parens"]))),
-        ("() => (result = a * b)", Some(serde_json::json!(["except-parens"]))),
+        (
+            "() => { return (result = a * b); }",
+            Some(serde_json::json!(["except-parens"])),
+        ),
+        (
+            "() => (result = a * b)",
+            Some(serde_json::json!(["except-parens"])),
+        ),
         ("const foo = (a,b,c) => ((a = b), c)", None),
         (
             "function foo(){
@@ -187,15 +203,24 @@ const get = () => (
     let fail = vec![
         ("function x() { return result = a * b; };", None),
         ("function x() { return (result) = (a * b); };", None),
-        ("function x() { return result = a * b; };", Some(serde_json::json!(["except-parens"]))),
+        (
+            "function x() { return result = a * b; };",
+            Some(serde_json::json!(["except-parens"])),
+        ),
         (
             "function x() { return (result) = (a * b); };",
             Some(serde_json::json!(["except-parens"])),
         ),
         ("() => { return result = a * b; }", None),
         ("() => result = a * b", None),
-        ("function x() { return result = a * b; };", Some(serde_json::json!(["always"]))),
-        ("function x() { return (result = a * b); };", Some(serde_json::json!(["always"]))),
+        (
+            "function x() { return result = a * b; };",
+            Some(serde_json::json!(["always"])),
+        ),
+        (
+            "function x() { return (result = a * b); };",
+            Some(serde_json::json!(["always"])),
+        ),
         (
             "function x() { return result || (result = a * b); };",
             Some(serde_json::json!(["always"])),

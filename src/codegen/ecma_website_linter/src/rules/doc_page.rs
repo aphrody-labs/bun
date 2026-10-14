@@ -29,7 +29,11 @@ pub(super) struct Context {
 impl Context {
     pub fn new<T: JsonSchema + ?Sized>(mut schemas: SchemaGenerator) -> Self {
         let renderer = Renderer::new(schemas.root_schema_for::<T>());
-        Self { page: HtmlWriter::with_capacity(1024), schemas, renderer }
+        Self {
+            page: HtmlWriter::with_capacity(1024),
+            schemas,
+            renderer,
+        }
     }
 
     pub fn render_rule_docs_page(&mut self, rule: &RuleTableRow) -> Result<String, fmt::Error> {
@@ -45,8 +49,9 @@ impl Context {
             category,
             is_tsgolint_rule,
         } = rule;
-        let resolved =
-            schema.as_ref().map(|schema| self.schemas.dereference(schema).unwrap_or(schema));
+        let resolved = schema
+            .as_ref()
+            .map(|schema| self.schemas.dereference(schema).unwrap_or(schema));
 
         self.page.reserve(
             documentation.map_or(0, str::len) + name.len() + APPROX_FIX_CATEGORY_AND_PLUGIN_LEN,
@@ -56,7 +61,11 @@ impl Context {
         let rule_name = full_rule_name(rule, normalized_plugin_name, true);
 
         // Write frontmatter
-        let default = if *turned_on_by_default { "true" } else { "false" };
+        let default = if *turned_on_by_default {
+            "true"
+        } else {
+            "false"
+        };
         let type_aware = if *is_tsgolint_rule { "true" } else { "false" };
         let fix = autofix.to_string();
         let upstream_line = upstream_docs_url(plugin, name)
@@ -65,7 +74,10 @@ impl Context {
 
         let file = file!();
         #[cfg(windows)]
-        #[expect(clippy::disallowed_methods, reason = "file path always contains slashes")]
+        #[expect(
+            clippy::disallowed_methods,
+            reason = "file path always contains slashes"
+        )]
         let file = &*file.replace('\\', "/");
 
         writeln!(
@@ -118,7 +130,10 @@ const source = `{}`;{}
                 .map(|desc| format!("\n{desc}\n"))
                 .unwrap_or_default();
             if !config_section.trim().is_empty() {
-                writeln!(self.page, "\n## Configuration\n{section_description}{config_section}")?;
+                writeln!(
+                    self.page,
+                    "\n## Configuration\n{section_description}{config_section}"
+                )?;
             }
         }
 
@@ -200,8 +215,11 @@ const source = `{}`;{}
         }
 
         // Check if this is an enum-based config (oneOf with single-value enums)
-        let is_enum_config =
-            schema.subschemas.as_ref().and_then(|s| s.one_of.as_ref()).is_some_and(|variants| {
+        let is_enum_config = schema
+            .subschemas
+            .as_ref()
+            .and_then(|s| s.one_of.as_ref())
+            .is_some_and(|variants| {
                 variants.iter().all(|variant| {
                     if let Schema::Object(obj) = variant {
                         obj.enum_values.as_ref().is_some_and(|vals| vals.len() == 1)
@@ -211,12 +229,19 @@ const source = `{}`;{}
                 })
             });
 
-        if schema.instance_type.as_ref().is_some_and(|it| it.contains(&InstanceType::Object)) {
+        if schema
+            .instance_type
+            .as_ref()
+            .is_some_and(|it| it.contains(&InstanceType::Object))
+        {
             rendered = format!(
                 "\nThis rule accepts a configuration object with the following properties:\n{rendered}\n"
             );
         } else if is_enum_config
-            || (schema.instance_type.as_ref().is_some_and(|it| it.contains(&InstanceType::String))
+            || (schema
+                .instance_type
+                .as_ref()
+                .is_some_and(|it| it.contains(&InstanceType::String))
                 && schema.enum_values.is_some())
         {
             // Handle enum-based configurations (either direct enum or oneOf variants)
@@ -239,7 +264,12 @@ fn rule_source(rule: &RuleTableRow) -> String {
     // Some rules are folders with a mod.rs file, others are just a rust file
     let rule_name = rule.name.replace('-', "_");
     let mut rule_path = format!("{}/{}", rule.plugin, rule_name);
-    if root.join(LINT_RULES_DIR).join(&rule.plugin).join(rule_name).is_dir() {
+    if root
+        .join(LINT_RULES_DIR)
+        .join(&rule.plugin)
+        .join(rule_name)
+        .is_dir()
+    {
         rule_path.push_str("/mod.rs");
     } else {
         rule_path.push_str(".rs");
@@ -266,7 +296,9 @@ fn tsgolint_rule_source(rule: &RuleTableRow) -> String {
 /// - Example: `eslint` -> `eslint`
 /// - Example: `jsx_a11y` -> `jsx-a11y`
 fn get_normalized_plugin_name(plugin: &str) -> &str {
-    LintPlugins::try_from(plugin).unwrap_or(LintPlugins::empty()).into()
+    LintPlugins::try_from(plugin)
+        .unwrap_or(LintPlugins::empty())
+        .into()
 }
 
 // Return the full rule name, including plugin prefix if necessary. For example:

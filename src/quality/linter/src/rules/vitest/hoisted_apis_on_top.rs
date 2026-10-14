@@ -144,8 +144,10 @@ impl HoistedApisOnTop {
             return;
         }
 
-        let Some(member_name) =
-            vitest_fn.members.first().and_then(KnownMemberExpressionProperty::name)
+        let Some(member_name) = vitest_fn
+            .members
+            .first()
+            .and_then(KnownMemberExpressionProperty::name)
         else {
             return;
         };
@@ -190,8 +192,10 @@ impl HoistedApisOnTop {
             let multi_fixer = fixer.for_multifix();
             let mut rule_fixes = multi_fixer.new_fix_with_capacity(2);
 
-            if matches!(ctx.nodes().parent_node(node.id()).kind(), AstKind::ExpressionStatement(_))
-            {
+            if matches!(
+                ctx.nodes().parent_node(node.id()).kind(),
+                AstKind::ExpressionStatement(_)
+            ) {
                 rule_fixes.push(fixer.delete(node));
             } else {
                 rule_fixes.push(fixer.replace(GetSpan::span(node), "undefined"));

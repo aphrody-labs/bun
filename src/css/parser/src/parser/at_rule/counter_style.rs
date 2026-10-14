@@ -14,8 +14,10 @@ impl<'a> Parser<'a> {
         if let InterpolableIdent::Literal(ident) = &ident
             && (util::is_css_wide_keyword(ident.name) || ident.name.eq_ignore_ascii_case("none"))
         {
-            self.recoverable_errors
-                .push(Error { kind: ErrorKind::CSSWideKeywordDisallowed, span: ident.span });
+            self.recoverable_errors.push(Error {
+                kind: ErrorKind::CSSWideKeywordDisallowed,
+                span: ident.span,
+            });
         }
         Ok(ident)
     }

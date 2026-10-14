@@ -73,8 +73,13 @@ impl WalkRunner {
         let start_time = Instant::now();
 
         let cwd = self.cwd;
-        let FormatCommand { paths, mode, config_options, ignore_options, runtime_options } =
-            self.options;
+        let FormatCommand {
+            paths,
+            mode,
+            config_options,
+            ignore_options,
+            runtime_options,
+        } = self.options;
         // If `napi` feature is disabled, there is no other mode.
         #[cfg_attr(not(feature = "napi"), expect(irrefutable_let_patterns))]
         let Mode::Cli(format_mode) = mode else {
@@ -105,7 +110,10 @@ impl WalkRunner {
                 .expect("External services must be set when `napi` feature is enabled")
                 .init(num_of_threads)
         }) {
-            utils::print_and_flush(stderr, &format!("Failed to setup external services.\n{err}\n"));
+            utils::print_and_flush(
+                stderr,
+                &format!("Failed to setup external services.\n{err}\n"),
+            );
             return CliRunResult::InvalidOptionConfig;
         }
 

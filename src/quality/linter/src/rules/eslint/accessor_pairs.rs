@@ -162,9 +162,9 @@ impl AccessorPairs {
         // For expression keys (computed properties), strip parentheses before comparing
         // so that `[a]` and `[(a)]` are considered equivalent
         match (key1.as_expression(), key2.as_expression()) {
-            (Some(expr1), Some(expr2)) => {
-                expr1.get_inner_expression().content_eq(expr2.get_inner_expression())
-            }
+            (Some(expr1), Some(expr2)) => expr1
+                .get_inner_expression()
+                .content_eq(expr2.get_inner_expression()),
             _ => key1.content_eq(key2),
         }
     }
@@ -217,11 +217,17 @@ impl AccessorPairs {
                 continue;
             }
 
-            let accessors =
-                if method.r#static { &mut static_accessors } else { &mut instance_accessors };
+            let accessors = if method.r#static {
+                &mut static_accessors
+            } else {
+                &mut instance_accessors
+            };
 
-            let computed =
-                if method.r#static { &mut computed_static } else { &mut computed_instance };
+            let computed = if method.r#static {
+                &mut computed_static
+            } else {
+                &mut computed_instance
+            };
 
             if let Some(name) = method.key.static_name() {
                 let info = accessors.entry(name.into_owned()).or_default();
@@ -359,7 +365,10 @@ impl AccessorPairs {
         };
 
         // Check if Object/Reflect is the global object (not shadowed by a local variable)
-        let is_global = ctx.scoping().find_binding(node.scope_id(), object_name).is_none();
+        let is_global = ctx
+            .scoping()
+            .find_binding(node.scope_id(), object_name)
+            .is_none();
         if !is_global {
             return None;
         }
@@ -585,7 +594,10 @@ fn test() {
             "var o = { set a(foo) {} };",
             Some(serde_json::json!([{ "setWithoutGet": false, "getWithoutSet": true }])),
         ),
-        ("var o = { set a(foo) {} };", Some(serde_json::json!([{ "setWithoutGet": false }]))),
+        (
+            "var o = { set a(foo) {} };",
+            Some(serde_json::json!([{ "setWithoutGet": false }])),
+        ),
         (
             "var o = { get a() {}, set a(foo) {} };",
             Some(serde_json::json!([{ "setWithoutGet": false, "getWithoutSet": true }])),
@@ -735,22 +747,37 @@ fn test() {
             None,
         ),
         ("var o = {set: function() {}}", None),
-        ("Object.defineProperties(obj, {set: {value: function() {}}});", None),
+        (
+            "Object.defineProperties(obj, {set: {value: function() {}}});",
+            None,
+        ),
         ("Object.create(null, {set: {value: function() {}}});", None),
         // Shadowed Object should not be flagged
-        ("var Object = {}; Object.defineProperty(obj, 'foo', {set: function(value) {}});", None),
+        (
+            "var Object = {}; Object.defineProperty(obj, 'foo', {set: function(value) {}});",
+            None,
+        ),
         (
             "function f(Object) { Object.defineProperty(obj, 'foo', {set: function(value) {}}); }",
             None,
         ),
-        ("var o = {get: function() {}}", Some(serde_json::json!([{ "getWithoutSet": true }]))),
+        (
+            "var o = {get: function() {}}",
+            Some(serde_json::json!([{ "getWithoutSet": true }])),
+        ),
         ("var o = {[set]: function() {}}", None),
         (
             "var set = 'value'; Object.defineProperty(obj, 'foo', {[set]: function(value) {}});",
             None,
         ),
-        ("class A { get a() {} }", Some(serde_json::json!([{ "enforceForClassMembers": true }]))),
-        ("class A { get #a() {} }", Some(serde_json::json!([{ "enforceForClassMembers": true }]))),
+        (
+            "class A { get a() {} }",
+            Some(serde_json::json!([{ "enforceForClassMembers": true }])),
+        ),
+        (
+            "class A { get #a() {} }",
+            Some(serde_json::json!([{ "enforceForClassMembers": true }])),
+        ),
         (
             "class A { set a(foo) {} }",
             Some(serde_json::json!([{ "enforceForClassMembers": false }])),
@@ -1053,7 +1080,10 @@ fn test() {
             "interface I { set prop(value: any), get 'prop'(): any }",
             Some(serde_json::json!([{ "enforceForTSTypes": true }])),
         ),
-        ("interface I {}", Some(serde_json::json!([{ "enforceForTSTypes": true }]))),
+        (
+            "interface I {}",
+            Some(serde_json::json!([{ "enforceForTSTypes": true }])),
+        ),
         (
             "interface I { (...args): void }",
             Some(serde_json::json!([{ "enforceForTSTypes": true }])),
@@ -1066,13 +1096,22 @@ fn test() {
             "interface I { prop: () => any }",
             Some(serde_json::json!([{ "enforceForTSTypes": true }])),
         ),
-        ("interface I { method(): any }", Some(serde_json::json!([{ "enforceForTSTypes": true }]))),
-        ("type T = { get prop(): any }", Some(serde_json::json!([{ "enforceForTSTypes": true }]))),
+        (
+            "interface I { method(): any }",
+            Some(serde_json::json!([{ "enforceForTSTypes": true }])),
+        ),
+        (
+            "type T = { get prop(): any }",
+            Some(serde_json::json!([{ "enforceForTSTypes": true }])),
+        ),
     ];
 
     let fail = vec![
         ("var o = { set a(value) {} };", None),
-        ("var o = { set a(value) {} };", Some(serde_json::json!([{}]))),
+        (
+            "var o = { set a(value) {} };",
+            Some(serde_json::json!([{}])),
+        ),
         (
             "var o = { set a(value) {} };",
             Some(serde_json::json!([{ "setWithoutGet": true, "getWithoutSet": false }])),
@@ -1089,7 +1128,10 @@ fn test() {
             "var o = { get a() {} };",
             Some(serde_json::json!([{ "setWithoutGet": true, "getWithoutSet": true }])),
         ),
-        ("var o = { get a() {} };", Some(serde_json::json!([{ "getWithoutSet": true }]))),
+        (
+            "var o = { get a() {} };",
+            Some(serde_json::json!([{ "getWithoutSet": true }])),
+        ),
         (
             "var o = { get abc() {} };",
             Some(serde_json::json!([{ "setWithoutGet": true, "getWithoutSet": true }])),
@@ -1337,9 +1379,18 @@ fn test() {
 			});",
             None,
         ),
-        ("Reflect.defineProperty(obj, 'foo', {set: function(value) {}});", None),
-        ("Object.defineProperties(obj, {foo: {set: function(value) {}}});", None),
-        ("Object.create(null, {foo: {set: function(value) {}}});", None),
+        (
+            "Reflect.defineProperty(obj, 'foo', {set: function(value) {}});",
+            None,
+        ),
+        (
+            "Object.defineProperties(obj, {foo: {set: function(value) {}}});",
+            None,
+        ),
+        (
+            "Object.create(null, {foo: {set: function(value) {}}});",
+            None,
+        ),
         (
             "var o = {d: 1};
 			 Object?.defineProperty(o, 'c',
@@ -1349,9 +1400,18 @@ fn test() {
 			});",
             None,
         ),
-        ("Reflect?.defineProperty(obj, 'foo', {set: function(value) {}});", None),
-        ("Object?.defineProperties(obj, {foo: {set: function(value) {}}});", None),
-        ("Object?.create(null, {foo: {set: function(value) {}}});", None),
+        (
+            "Reflect?.defineProperty(obj, 'foo', {set: function(value) {}});",
+            None,
+        ),
+        (
+            "Object?.defineProperties(obj, {foo: {set: function(value) {}}});",
+            None,
+        ),
+        (
+            "Object?.create(null, {foo: {set: function(value) {}}});",
+            None,
+        ),
         (
             "var o = {d: 1};
 			 (Object?.defineProperty)(o, 'c',
@@ -1361,11 +1421,23 @@ fn test() {
 			});",
             None,
         ),
-        ("(Reflect?.defineProperty)(obj, 'foo', {set: function(value) {}});", None),
-        ("(Object?.defineProperties)(obj, {foo: {set: function(value) {}}});", None),
-        ("(Object?.create)(null, {foo: {set: function(value) {}}});", None),
+        (
+            "(Reflect?.defineProperty)(obj, 'foo', {set: function(value) {}});",
+            None,
+        ),
+        (
+            "(Object?.defineProperties)(obj, {foo: {set: function(value) {}}});",
+            None,
+        ),
+        (
+            "(Object?.create)(null, {foo: {set: function(value) {}}});",
+            None,
+        ),
         ("class A { set a(foo) {} }", None),
-        ("class A { get a() {} set b(foo) {} }", Some(serde_json::json!([{}]))),
+        (
+            "class A { get a() {} set b(foo) {} }",
+            Some(serde_json::json!([{}])),
+        ),
         (
             "class A { get a() {} }",
             Some(serde_json::json!([{ "setWithoutGet": true, "getWithoutSet": true }])),

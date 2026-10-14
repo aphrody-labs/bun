@@ -40,7 +40,10 @@ pub fn open_or_create(path: impl AsRef<Path>, dim: usize, params_json: &str) -> 
     if path.exists() {
         let index = Index::load(&path)?;
         if dim != 0 && index.dim() != dim {
-            return Err(IndexError::DimensionMismatch { expected: index.dim(), got: dim });
+            return Err(IndexError::DimensionMismatch {
+                expected: index.dim(),
+                got: dim,
+            });
         }
         return Ok(Handle { index, path });
     }
@@ -60,7 +63,10 @@ pub fn create(path: impl AsRef<Path>, dim: usize, params_json: &str) -> Result<H
         params.dim = dim;
     }
     let index = Index::new(params)?;
-    Ok(Handle { index, path: path.as_ref().to_path_buf() })
+    Ok(Handle {
+        index,
+        path: path.as_ref().to_path_buf(),
+    })
 }
 
 /// Number of live vectors (lock-free).
@@ -134,7 +140,10 @@ struct StatsWithPath<'a> {
 /// "mapped_bytes", "mapped", "max_level", "kernels", "params"}`.
 pub fn stats_json(handle: &Handle) -> String {
     let path = handle.path.to_string_lossy();
-    let stats = StatsWithPath { path: &path, stats: handle.index.stats() };
+    let stats = StatsWithPath {
+        path: &path,
+        stats: handle.index.stats(),
+    };
     serde_json::to_string(&stats).unwrap_or_else(|e| format!("{{\"error\":\"{e}\"}}"))
 }
 
@@ -144,7 +153,8 @@ mod tests {
 
     #[test]
     fn facade_round_trip() {
-        let dir = std::env::temp_dir().join(format!("bun-browser-index-ffi-{}", std::process::id()));
+        let dir =
+            std::env::temp_dir().join(format!("bun-browser-index-ffi-{}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
         let path = dir.join("ffi.bxcidx");
         let _ = std::fs::remove_file(&path);
@@ -166,7 +176,10 @@ mod tests {
         close(h);
         let reopened = open_or_create(&path, 0, "").unwrap();
         assert_eq!(reopened.index().len(), 2);
-        assert!(matches!(open_or_create(&path, 5, ""), Err(IndexError::DimensionMismatch { .. })));
+        assert!(matches!(
+            open_or_create(&path, 5, ""),
+            Err(IndexError::DimensionMismatch { .. })
+        ));
         assert!(open_or_create(dir.join("bad.bxcidx"), 4, "{not json").is_err());
         close(reopened);
 

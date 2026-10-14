@@ -14,8 +14,8 @@
 
 // Scanner des hooks Husky (.husky/*) : remplace les commandes pnpm/npm/npx
 // par leurs équivalents Bun. Règles : husky/pnpm-command, husky/npx-command.
-use crate::util::{line_offsets, make_finding};
 use crate::types::{Finding, MakeFindingOpts, Severity};
+use crate::util::{line_offsets, make_finding};
 use once_cell::sync::Lazy;
 use regex::Regex;
 

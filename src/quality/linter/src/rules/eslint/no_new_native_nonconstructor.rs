@@ -7,7 +7,9 @@ use crate::{AstNode, context::LintContext, rule::Rule};
 
 fn no_new_native_nonconstructor_diagnostic(fn_name: &str, span: Span) -> OxcDiagnostic {
     OxcDiagnostic::warn(format!("`{fn_name}` cannot be called as a constructor."))
-        .with_help(format!("Remove the `new` operator to call `{fn_name}` as a function."))
+        .with_help(format!(
+            "Remove the `new` operator to call `{fn_name}` as a function."
+        ))
         .with_label(span)
 }
 
@@ -98,6 +100,11 @@ fn test() {
         "function bar() { return function BigInt() {}; } var baz = new BigInt(9007199254740991);",
     ];
 
-    Tester::new(NoNewNativeNonconstructor::NAME, NoNewNativeNonconstructor::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        NoNewNativeNonconstructor::NAME,
+        NoNewNativeNonconstructor::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

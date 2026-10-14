@@ -35,7 +35,10 @@ pub(super) fn write_less_variable_declaration<'a>(
     let source = f.context().source_text();
     // Prettier's `shouldPrecededBySoftline` matches `css-decl` only,
     // never atrule-variables; see `ValueContext::no_leading_softline`.
-    let value_ctx = ValueContext { no_leading_softline: true, ..ValueContext::default() };
+    let value_ctx = ValueContext {
+        no_leading_softline: true,
+        ..ValueContext::default()
+    };
     write!(f, "@");
     let name_span = to_span(decl.name.name.span());
     write!(f, text(source.text_for(&name_span)));
@@ -43,7 +46,11 @@ pub(super) fn write_less_variable_declaration<'a>(
     // Inline comments around the colon make postcss-less treat this as a plain at-rule:
     // the raw text is kept and the block loses its `;`.
     let value_start = to_span(decl.value.span()).start;
-    let inline_before_colon = f.context().comments().iter_before(colon_end).any(|c| c.inline);
+    let inline_before_colon = f
+        .context()
+        .comments()
+        .iter_before(colon_end)
+        .any(|c| c.inline);
     let inline_after_colon = f
         .context()
         .comments()
@@ -80,7 +87,10 @@ pub(super) fn write_less_variable_declaration<'a>(
     let body = format_with(move |f: &mut CssFormatter<'_, 'a>| {
         if inline_after_colon {
             for &comment in f.context().comments().take_before(value_start) {
-                write!(f, FormatCommentBeforeContent::new(comment, BlockCommentAfter::HardLine));
+                write!(
+                    f,
+                    FormatCommentBeforeContent::new(comment, BlockCommentAfter::HardLine)
+                );
             }
         }
         write_top_level_list_element(&decl.value, value_ctx, f);
@@ -183,7 +193,10 @@ pub(super) fn write_less_mixin_call_statement<'a>(
 ) {
     let source = f.context().source_text();
     let span = to_span(&call.span);
-    let end = call.important.as_ref().map_or(span.end, |imp| to_span(&imp.span).start);
+    let end = call
+        .important
+        .as_ref()
+        .map_or(span.end, |imp| to_span(&imp.span).start);
     let raw = source.slice_range(span.start, end).trim_end();
     let _ = f.context().comments().take_before(end);
     value::write_adjusted_verbatim(raw, f);
@@ -290,7 +303,10 @@ fn write_less_detached_ruleset<'a>(
     // Block comments before `{` stay inline; `//` ends its line.
     let block_start = to_span(&ruleset.block.span).start;
     for &comment in f.context().comments().take_before(block_start) {
-        write!(f, FormatCommentBeforeContent::new(comment, BlockCommentAfter::Space));
+        write!(
+            f,
+            FormatCommentBeforeContent::new(comment, BlockCommentAfter::Space)
+        );
     }
     let was = f.context().in_less_detached().replace(true);
     write_block(&ruleset.block, f);

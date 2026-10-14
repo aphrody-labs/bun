@@ -51,8 +51,11 @@ pub fn name_anonymous_functions<'a>(func: &mut HirFunction<'a>, env: &mut Enviro
         }
         // Whether or not we generated a name for the function at this node,
         // traverse into its nested functions to assign them names
-        let label =
-            node.generated_name.as_deref().or(node.fn_name.as_deref()).unwrap_or("<anonymous>");
+        let label = node
+            .generated_name
+            .as_deref()
+            .or(node.fn_name.as_deref())
+            .unwrap_or("<anonymous>");
         let next_prefix = format!("{}{} > ", prefix, label);
         for inner in &node.inner {
             visit(inner, &next_prefix, updates, allocator);
@@ -91,8 +94,11 @@ fn apply_name_hints_to_instructions<'a>(
     update_map: &FxHashMap<FunctionId, Ident<'a>>,
 ) {
     for instr in instructions.iter_mut() {
-        if let InstructionValue::FunctionExpression { lowered_func, name_hint, .. } =
-            &mut instr.value
+        if let InstructionValue::FunctionExpression {
+            lowered_func,
+            name_hint,
+            ..
+        } = &mut instr.value
             && let Some(new_name) = update_map.get(&lowered_func.func)
         {
             *name_hint = Some(*new_name);
@@ -143,13 +149,17 @@ fn name_anonymous_functions_impl<'a>(
                         functions.insert(lvalue_id, node_idx);
                     }
                 }
-                InstructionValue::PropertyLoad { object, property, .. } => {
+                InstructionValue::PropertyLoad {
+                    object, property, ..
+                } => {
                     if let Some(object_name) = names.get(&object.identifier) {
                         let name = format_ident!(env.allocator, "{}.{}", object_name, property);
                         names.insert(lvalue_id, name);
                     }
                 }
-                InstructionValue::FunctionExpression { name, lowered_func, .. } => {
+                InstructionValue::FunctionExpression {
+                    name, lowered_func, ..
+                } => {
                     let inner_func = &env.functions[lowered_func.func];
                     let inner = name_anonymous_functions_impl(inner_func, env);
                     let node = Node {
@@ -166,8 +176,16 @@ fn name_anonymous_functions_impl<'a>(
                         functions.insert(lvalue_id, idx);
                     }
                 }
-                InstructionValue::StoreContext { lvalue: store_lvalue, value, .. }
-                | InstructionValue::StoreLocal { lvalue: store_lvalue, value, .. } => {
+                InstructionValue::StoreContext {
+                    lvalue: store_lvalue,
+                    value,
+                    ..
+                }
+                | InstructionValue::StoreLocal {
+                    lvalue: store_lvalue,
+                    value,
+                    ..
+                } => {
                     if let Some(&node_idx) = functions.get(&value.identifier) {
                         let node = &mut nodes[node_idx];
                         let var_ident = &env.identifiers[store_lvalue.place.identifier];
@@ -180,16 +198,34 @@ fn name_anonymous_functions_impl<'a>(
                     }
                 }
                 InstructionValue::CallExpression { callee, args, .. } => {
-                    handle_call(env, callee.identifier, args, &mut functions, &names, &mut nodes);
+                    handle_call(
+                        env,
+                        callee.identifier,
+                        args,
+                        &mut functions,
+                        &names,
+                        &mut nodes,
+                    );
                 }
                 InstructionValue::MethodCall { property, args, .. } => {
-                    handle_call(env, property.identifier, args, &mut functions, &names, &mut nodes);
+                    handle_call(
+                        env,
+                        property.identifier,
+                        args,
+                        &mut functions,
+                        &names,
+                        &mut nodes,
+                    );
                 }
                 InstructionValue::JsxExpression { tag, props, .. } => {
                     for attr in props {
                         match attr {
                             JsxAttribute::SpreadAttribute { .. } => continue,
-                            JsxAttribute::Attribute { name: attr_name, place, .. } => {
+                            JsxAttribute::Attribute {
+                                name: attr_name,
+                                place,
+                                ..
+                            } => {
                                 if let Some(&node_idx) = functions.get(&place.identifier) {
                                     let node = &mut nodes[node_idx];
                                     if node.generated_name.is_none() {
@@ -243,12 +279,16 @@ fn handle_call<'a>(
         } else {
             names
                 .get(&callee_id)
-                .map_or(Cow::Borrowed("(anonymous)"), |name| Cow::Borrowed(name.as_str()))
+                .map_or(Cow::Borrowed("(anonymous)"), |name| {
+                    Cow::Borrowed(name.as_str())
+                })
         }
     } else {
         names
             .get(&callee_id)
-            .map_or(Cow::Borrowed("(anonymous)"), |name| Cow::Borrowed(name.as_str()))
+            .map_or(Cow::Borrowed("(anonymous)"), |name| {
+                Cow::Borrowed(name.as_str())
+            })
     };
 
     // Count how many args are tracked functions

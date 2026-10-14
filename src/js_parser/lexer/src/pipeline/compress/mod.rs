@@ -75,7 +75,13 @@ pub unsafe fn compress(
         c += compress_blocks(st, kind, b, b1, stage_pos.add(c), stage_kind.add(c));
         b = b1;
         if c > 1 {
-            w += build_spans(stage_kind, stage_pos, c - 1, out_spans.add(w), out_kinds.add(w));
+            w += build_spans(
+                stage_kind,
+                stage_pos,
+                c - 1,
+                out_spans.add(w),
+                out_kinds.add(w),
+            );
             *stage_pos = *stage_pos.add(c - 1);
             *stage_kind = *stage_kind.add(c - 1);
             c = 1;

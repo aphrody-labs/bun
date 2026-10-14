@@ -37,7 +37,11 @@ fn data() -> (&'static [u8], Header) {
     let events_start = version_table_start + version_count * 2;
     let index_width = if version_count <= 256 { 1 } else { 2 };
     let event_len = 4 + browser_count * index_width;
-    assert_eq!(data.len(), events_start + event_count * event_len, "invalid Baseline data");
+    assert_eq!(
+        data.len(),
+        events_start + event_count * event_len,
+        "invalid Baseline data"
+    );
     (
         data,
         Header {

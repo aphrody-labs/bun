@@ -148,6 +148,9 @@ fn test_displayed_value_is_parsable() {
         if engine == Engine::Es {
             continue;
         }
-        assert!(engine.to_string().parse::<Engine>().is_ok(), "\"{engine}\" should be parsable");
+        assert!(
+            engine.to_string().parse::<Engine>().is_ok(),
+            "\"{engine}\" should be parsable"
+        );
     }
 }

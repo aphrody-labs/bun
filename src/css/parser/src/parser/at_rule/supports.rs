@@ -14,10 +14,17 @@ use crate::{
 //                      | <supports-in-parens> [ or <supports-in-parens> ]*
 impl<'a> Parse<'a> for SupportsCondition<'a> {
     fn parse(input: &mut Parser<'a>) -> PResult<Self> {
-        if input.cursor.peek()?.is_ident_name_eq_ignore_ascii_case(input.source, "not") {
+        if input
+            .cursor
+            .peek()?
+            .is_ident_name_eq_ignore_ascii_case(input.source, "not")
+        {
             let keyword = input.parse::<Ident>()?;
             let condition = input.parse::<SupportsInParens>()?;
-            let span = Span { start: keyword.span.start, end: condition.span().end };
+            let span = Span {
+                start: keyword.span.start,
+                end: condition.span().end,
+            };
             Ok(SupportsCondition {
                 conditions: input.vec1(SupportsConditionKind::Not(SupportsNot {
                     keyword,
@@ -31,10 +38,17 @@ impl<'a> Parse<'a> for SupportsCondition<'a> {
             let mut span = *first.span();
             let mut conditions = input.vec1(SupportsConditionKind::SupportsInParens(first));
             while input.cursor.peek()?.ident(input.source).is_some() {
-                if input.cursor.peek()?.is_ident_name_eq_ignore_ascii_case(input.source, "and") {
+                if input
+                    .cursor
+                    .peek()?
+                    .is_ident_name_eq_ignore_ascii_case(input.source, "and")
+                {
                     let ident = input.parse::<Ident>()?;
                     let condition = input.parse::<SupportsInParens>()?;
-                    let span = Span { start: ident.span.start, end: condition.span().end };
+                    let span = Span {
+                        start: ident.span.start,
+                        end: condition.span().end,
+                    };
                     conditions.push(SupportsConditionKind::And(SupportsAnd {
                         keyword: ident,
                         condition,
@@ -47,7 +61,10 @@ impl<'a> Parse<'a> for SupportsCondition<'a> {
                 {
                     let ident = input.parse::<Ident>()?;
                     let condition = input.parse::<SupportsInParens>()?;
-                    let span = Span { start: ident.span.start, end: condition.span().end };
+                    let span = Span {
+                        start: ident.span.start,
+                        end: condition.span().end,
+                    };
                     conditions.push(SupportsConditionKind::Or(SupportsOr {
                         keyword: ident,
                         condition,
@@ -73,7 +90,10 @@ impl<'a> Parse<'a> for SupportsCondition<'a> {
 impl<'a> Parse<'a> for SupportsInParens<'a> {
     fn parse(input: &mut Parser<'a>) -> PResult<Self> {
         match input.cursor.peek()? {
-            TokenWithSpan { token: Token::LParen(..), .. } => input
+            TokenWithSpan {
+                token: Token::LParen(..),
+                ..
+            } => input
                 .try_parse(|parser| {
                     parser.parse::<SupportsDecl>().map(|supports_decl| {
                         let span = supports_decl.span;
@@ -108,7 +128,10 @@ impl<'a> Parse<'a> for SupportsInParens<'a> {
             // Sass: an interpolation may stand for a whole condition operand
             // (`@supports #{"(a: b)"} and (c: d)`) or splice into a function
             // name (`@supports a#{"b"}c(d)`).
-            TokenWithSpan { token: Token::Ident(..) | Token::HashLBrace(..), .. } => {
+            TokenWithSpan {
+                token: Token::Ident(..) | Token::HashLBrace(..),
+                ..
+            } => {
                 let name = input.parse::<InterpolableIdent>()?;
                 let name_end = name.span().end;
                 match name {
@@ -166,9 +189,10 @@ impl<'a> Parse<'a> for SupportsInParens<'a> {
                     }
                 }
             }
-            TokenWithSpan { token, span } => {
-                Err(Error { kind: ErrorKind::Unexpected("'('", token.symbol()), span: *span })
-            }
+            TokenWithSpan { token, span } => Err(Error {
+                kind: ErrorKind::Unexpected("'('", token.symbol()),
+                span: *span,
+            }),
         }
     }
 }
@@ -182,6 +206,9 @@ impl<'a> Parse<'a> for SupportsDecl<'a> {
         let start = input.cursor.expect_l_paren()?.1.start;
         let decl = input.parse()?;
         let end = input.cursor.expect_r_paren()?.1.end;
-        Ok(SupportsDecl { decl, span: Span { start, end } })
+        Ok(SupportsDecl {
+            decl,
+            span: Span { start, end },
+        })
     }
 }

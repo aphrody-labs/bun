@@ -47,7 +47,11 @@ pub fn create_fake_file_path_from_language_id(
     let file_extension = get_file_extension_from_language_id(language_id)?;
     // Use the authority (if available) or the last segment of the path as the file name, defaulting to "Untitled" if neither is available
     let mut name = uri.authority().map_or_else(
-        || uri.path().rsplit_once('/').map_or_else(|| "Untitled", |(_, s)| s.as_str()),
+        || {
+            uri.path()
+                .rsplit_once('/')
+                .map_or_else(|| "Untitled", |(_, s)| s.as_str())
+        },
         |s| s.as_str(),
     );
     // if the last character is `/`, the name will be empty, so we need to check for that as well

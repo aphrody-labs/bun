@@ -267,7 +267,10 @@ impl WorkerManager {
         {
             let guard = self.workers.read().await;
             if let Some(index) = Self::find_worker_index_for_uri(&guard, uri) {
-                return Some(WorkerGuard { guard: WorkerGuardInner::Vec(guard), index });
+                return Some(WorkerGuard {
+                    guard: WorkerGuardInner::Vec(guard),
+                    index,
+                });
             }
         }
 
@@ -277,7 +280,10 @@ impl WorkerManager {
                 return None;
             };
             // In DynamicWithWorkspaces mode, if no worker matches the URI, fallback to the dynamic worker.
-            return Some(WorkerGuard { guard: WorkerGuardInner::Single(worker), index: 0 });
+            return Some(WorkerGuard {
+                guard: WorkerGuardInner::Single(worker),
+                index: 0,
+            });
         }
 
         None
@@ -393,7 +399,11 @@ impl WorkerManager {
         let worker =
             WorkspaceWorker::new(parent_uri, Arc::clone(&self.tool_builder), diagnostic_mode);
         let client_messages = worker.start_worker(Value::Null).await;
-        let registration = if dynamic_watchers { worker.init_watchers().await } else { None };
+        let registration = if dynamic_watchers {
+            worker.init_watchers().await
+        } else {
+            None
+        };
 
         // Acquire the write lock to insert the worker.  Re-check both the mode
         // flag and the worker list because a concurrent call (e.g., another
@@ -453,7 +463,9 @@ impl WorkerManager {
                 return None;
             }
 
-            let idx = workers.iter().position(|w| w.get_root_uri() == worker_root_uri)?;
+            let idx = workers
+                .iter()
+                .position(|w| w.get_root_uri() == worker_root_uri)?;
             debug!("single file mode: shutting down empty workspace {worker_root_uri}");
             workers.swap_remove(idx)
         }; // write lock released here
@@ -482,7 +494,9 @@ mod tests {
 
     #[cfg(target_os = "windows")]
     fn path_from_fixture(fixture: &str) -> PathBuf {
-        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("fixtures").join(fixture)
+        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("fixtures")
+            .join(fixture)
     }
 
     #[tokio::test]
@@ -505,13 +519,19 @@ mod tests {
         let file_in_deeper = Uri::from_str("file:///path/to/workspace/deeper/file.js").unwrap();
         let worker = manager.get_worker_for_uri(&file_in_deeper).await;
         assert!(worker.is_some());
-        assert_eq!(worker.unwrap().get_root_uri().to_string(), "file:///path/to/workspace/deeper");
+        assert_eq!(
+            worker.unwrap().get_root_uri().to_string(),
+            "file:///path/to/workspace/deeper"
+        );
 
         // File in parent workspace should match the parent worker
         let file_in_parent = Uri::from_str("file:///path/to/workspace/file.js").unwrap();
         let worker = manager.get_worker_for_uri(&file_in_parent).await;
         assert!(worker.is_some());
-        assert_eq!(worker.unwrap().get_root_uri().to_string(), "file:///path/to/workspace");
+        assert_eq!(
+            worker.unwrap().get_root_uri().to_string(),
+            "file:///path/to/workspace"
+        );
 
         // File outside both workspaces should not match any worker
         let file_outside = Uri::from_str("file:///path/to/other/file.js").unwrap();
@@ -539,13 +559,19 @@ mod tests {
         let file_in_workspace2 = Uri::from_str("file:///path/to/workspace-2/file.js").unwrap();
         let worker = manager.get_worker_for_uri(&file_in_workspace2).await;
         assert!(worker.is_some());
-        assert_eq!(worker.unwrap().get_root_uri().to_string(), "file:///path/to/workspace-2");
+        assert_eq!(
+            worker.unwrap().get_root_uri().to_string(),
+            "file:///path/to/workspace-2"
+        );
 
         // File in workspace should match workspace only
         let file_in_workspace = Uri::from_str("file:///path/to/workspace/file.js").unwrap();
         let worker = manager.get_worker_for_uri(&file_in_workspace).await;
         assert!(worker.is_some());
-        assert_eq!(worker.unwrap().get_root_uri().to_string(), "file:///path/to/workspace");
+        assert_eq!(
+            worker.unwrap().get_root_uri().to_string(),
+            "file:///path/to/workspace"
+        );
     }
 
     #[tokio::test]
@@ -563,7 +589,10 @@ mod tests {
         let file_in_workspace = Uri::from_str("file:///path/to/workspace/file.js").unwrap();
         let worker = manager.get_worker_for_uri(&file_in_workspace).await;
         assert!(worker.is_some());
-        assert_eq!(worker.unwrap().get_root_uri().to_string(), "file:///path/to/workspace");
+        assert_eq!(
+            worker.unwrap().get_root_uri().to_string(),
+            "file:///path/to/workspace"
+        );
 
         // File outside workspace should not match
         let file_outside = Uri::from_str("file:///path/to/other/file.js").unwrap();
@@ -597,7 +626,10 @@ mod tests {
         manager.start_manager(workers, DiagnosticMode::None).await;
         let worker = manager.get_worker_for_uri(&vscode_userdata_file).await;
         assert!(worker.is_some());
-        assert_eq!(worker.unwrap().get_root_uri().to_string(), "file:///path/to/workspace");
+        assert_eq!(
+            worker.unwrap().get_root_uri().to_string(),
+            "file:///path/to/workspace"
+        );
     }
 
     #[tokio::test]
@@ -615,7 +647,10 @@ mod tests {
         manager.start_manager(workers, DiagnosticMode::None).await;
         let worker = manager.get_worker_for_uri(&untitled_file).await;
         assert!(worker.is_some());
-        assert_eq!(worker.unwrap().get_root_uri().to_string(), "file:///path/to/workspace");
+        assert_eq!(
+            worker.unwrap().get_root_uri().to_string(),
+            "file:///path/to/workspace"
+        );
     }
 
     #[tokio::test]
@@ -638,7 +673,10 @@ mod tests {
         manager.start_manager(workers, DiagnosticMode::None).await;
         let worker = manager.get_worker_for_uri(&untitled_file).await;
         assert!(worker.is_some());
-        assert_eq!(worker.unwrap().get_root_uri().to_string(), "file:///path/to/workspace1");
+        assert_eq!(
+            worker.unwrap().get_root_uri().to_string(),
+            "file:///path/to/workspace1"
+        );
     }
 
     #[tokio::test]
@@ -673,13 +711,19 @@ mod tests {
         manager.start_manager(workers, DiagnosticMode::None).await;
         let worker = manager.get_worker_for_uri(&untitled_file).await;
         assert!(worker.is_some());
-        assert_eq!(worker.unwrap().get_root_uri().to_string(), "file:///path/to/workspace");
+        assert_eq!(
+            worker.unwrap().get_root_uri().to_string(),
+            "file:///path/to/workspace"
+        );
 
         // File URIs should still use path-based matching
         let file_in_deeper = Uri::from_str("file:///path/to/workspace/deeper/file.js").unwrap();
         let worker = manager.get_worker_for_uri(&file_in_deeper).await;
         assert!(worker.is_some());
-        assert_eq!(worker.unwrap().get_root_uri().to_string(), "file:///path/to/workspace/deeper");
+        assert_eq!(
+            worker.unwrap().get_root_uri().to_string(),
+            "file:///path/to/workspace/deeper"
+        );
     }
 
     #[test]
@@ -774,12 +818,18 @@ mod tests {
         let file_inside = Uri::from_str("file:///path/to/workspace/file.js").unwrap();
         let worker = manager.get_worker_for_uri(&file_inside).await;
         assert!(worker.is_some());
-        assert_eq!(worker.unwrap().get_root_uri().to_string(), "file:///path/to/workspace");
+        assert_eq!(
+            worker.unwrap().get_root_uri().to_string(),
+            "file:///path/to/workspace"
+        );
 
         // Non-file URI should also match first workspace (not dynamic worker)
         let non_file_uri = Uri::from_str("untitled:///Untitled-1").unwrap();
         let worker = manager.get_worker_for_uri(&non_file_uri).await;
         assert!(worker.is_some());
-        assert_eq!(worker.unwrap().get_root_uri().to_string(), "file:///path/to/workspace");
+        assert_eq!(
+            worker.unwrap().get_root_uri().to_string(),
+            "file:///path/to/workspace"
+        );
     }
 }

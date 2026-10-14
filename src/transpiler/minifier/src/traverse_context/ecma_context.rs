@@ -38,11 +38,13 @@ impl<'a> GlobalContext<'a> for TraverseCtx<'a, MinifierState<'a>> {
         &self,
         reference_id: ReferenceId,
     ) -> Option<ConstantValue<'a>> {
-        self.tracked_constant_for_reference_id(reference_id).cloned()
+        self.tracked_constant_for_reference_id(reference_id)
+            .cloned()
     }
 
     fn value_type_for_reference_id(&self, reference_id: ReferenceId) -> Option<ValueType> {
-        self.tracked_constant_for_reference_id(reference_id).map(ConstantValue::value_type)
+        self.tracked_constant_for_reference_id(reference_id)
+            .map(ConstantValue::value_type)
     }
 }
 
@@ -248,7 +250,9 @@ impl<'a> TraverseCtx<'a, MinifierState<'a>> {
         } else {
             return false;
         };
-        self.scoping().find_binding(self.scoping.current_scope_id(), name.into()).is_some()
+        self.scoping()
+            .find_binding(self.scoping.current_scope_id(), name.into())
+            .is_some()
     }
 
     /// `NaN` → `0 / 0`, `Infinity` → `1 / 0`, `-Infinity` → `-1 / 0`: the
@@ -271,8 +275,11 @@ impl<'a> TraverseCtx<'a, MinifierState<'a>> {
                 if !n.is_finite() && self.non_finite_global_shadowed(n) {
                     return self.non_finite_to_division_expr(span, n);
                 }
-                let number_base =
-                    if is_exact_int64(n) { NumberBase::Decimal } else { NumberBase::Float };
+                let number_base = if is_exact_int64(n) {
+                    NumberBase::Decimal
+                } else {
+                    NumberBase::Float
+                };
                 Expression::new_numeric_literal(span, n, None, number_base, self)
             }
             ConstantValue::BigInt(bigint) => {
@@ -361,13 +368,19 @@ impl<'a> TraverseCtx<'a, MinifierState<'a>> {
         // recorded constant is the implicit `undefined` of an uninitialized
         // binding or a direct alias of one.
         let implicit_undefined = implicit_undefined_source
-            && initialized_constant.as_ref().is_some_and(ConstantValue::is_undefined);
+            && initialized_constant
+                .as_ref()
+                .is_some_and(ConstantValue::is_undefined);
 
         let symbol_value = SymbolValue {
             initialized_constant,
             implicit_undefined,
             references,
-            kind: if has_multiple_value_declarations { FreshValueKind::None } else { kind },
+            kind: if has_multiple_value_declarations {
+                FreshValueKind::None
+            } else {
+                kind
+            },
             boolean_falsy,
         };
         self.state.symbols.init_value(symbol_id, symbol_value);
@@ -403,7 +416,11 @@ impl<'a> TraverseCtx<'a, MinifierState<'a>> {
             }
             int_value = int_value.checked_mul(10).and_then(|v| {
                 let n = i32::from(b & 15);
-                if is_negative { v.checked_sub(n) } else { v.checked_add(n) }
+                if is_negative {
+                    v.checked_sub(n)
+                } else {
+                    v.checked_add(n)
+                }
             })?;
         }
         Some(f64::from(int_value))
@@ -503,7 +520,8 @@ impl<'a> TraverseCtx<'a, MinifierState<'a>> {
         slot: &mut AssignmentTargetProperty<'a>,
         new: AssignmentTargetProperty<'a>,
     ) {
-        self.dropped_subtree_collector().visit_assignment_target_property(slot);
+        self.dropped_subtree_collector()
+            .visit_assignment_target_property(slot);
         *slot = new;
         self.state.record_ast_change();
     }
@@ -524,7 +542,8 @@ impl<'a> TraverseCtx<'a, MinifierState<'a>> {
         slot: &mut ForStatementLeft<'a>,
         new: ForStatementLeft<'a>,
     ) {
-        self.dropped_subtree_collector().visit_for_statement_left(slot);
+        self.dropped_subtree_collector()
+            .visit_for_statement_left(slot);
         *slot = new;
         self.state.record_ast_change();
     }
@@ -563,7 +582,8 @@ impl<'a> TraverseCtx<'a, MinifierState<'a>> {
     /// `drop_expression`.
     #[inline]
     pub fn drop_class_element(&mut self, element: &ClassElement<'a>) {
-        self.dropped_subtree_collector().visit_class_element(element);
+        self.dropped_subtree_collector()
+            .visit_class_element(element);
         self.state.record_ast_change();
     }
 
@@ -574,7 +594,8 @@ impl<'a> TraverseCtx<'a, MinifierState<'a>> {
     /// alive elsewhere, `take()` it out of the declarator before calling this.
     #[inline]
     pub fn drop_variable_declarator(&mut self, decl: &VariableDeclarator<'a>) {
-        self.dropped_subtree_collector().visit_variable_declarator(decl);
+        self.dropped_subtree_collector()
+            .visit_variable_declarator(decl);
         self.state.record_ast_change();
     }
 
@@ -584,7 +605,8 @@ impl<'a> TraverseCtx<'a, MinifierState<'a>> {
     /// case vector to properly notify the scope tracking system about dropped references.
     #[inline]
     pub fn drop_switch_case(&mut self, switch_case: &SwitchCase<'a>) {
-        self.dropped_subtree_collector().visit_switch_case(switch_case);
+        self.dropped_subtree_collector()
+            .visit_switch_case(switch_case);
         self.state.record_ast_change();
     }
 }

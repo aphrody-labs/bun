@@ -14,8 +14,10 @@ use crate::{
 };
 
 fn string_literal(span: Span, replacement: &str) -> OxcDiagnostic {
-    OxcDiagnostic::warn(format!("This pattern can be replaced with `{replacement}`."))
-        .with_label(span)
+    OxcDiagnostic::warn(format!(
+        "This pattern can be replaced with `{replacement}`."
+    ))
+    .with_label(span)
 }
 
 fn use_replace_all(span: Span) -> OxcDiagnostic {
@@ -118,8 +120,10 @@ impl Rule for PreferStringReplaceAll {
 }
 
 fn generate_string_literal(fixer: RuleFixer<'_, '_>, value: &str) -> String {
-    let mut codegen =
-        fixer.codegen().with_options(CodegenOptions { single_quote: true, ..Default::default() });
+    let mut codegen = fixer.codegen().with_options(CodegenOptions {
+        single_quote: true,
+        ..Default::default()
+    });
     codegen.print_string(value);
     codegen.into_source_text()
 }
@@ -305,13 +309,19 @@ fn test() {
 		bar
 	)",
         ),
-        (r#"foo.replace(/"'/g, '\'')"#, r#"foo.replaceAll('"\'', '\'')"#),
+        (
+            r#"foo.replace(/"'/g, '\'')"#,
+            r#"foo.replaceAll('"\'', '\'')"#,
+        ),
         (r"foo.replace(/\./g, bar)", r"foo.replaceAll('.', bar)"),
         (r"foo.replace(/\\\./g, bar)", r"foo.replaceAll('\\.', bar)"),
         (r"foo.replace(/\|/g, bar)", r"foo.replaceAll('|', bar)"),
         (r"foo.replace(/a/gu, bar)", r"foo.replaceAll('a', bar)"),
         (r"foo.replace(/a/ug, bar)", r"foo.replaceAll('a', bar)"),
-        (r"foo.replace(/[)-|.*+?^$]/g, '\\$&')", r"foo.replaceAll(/[)-|.*+?^$]/g, '\\$&')"),
+        (
+            r"foo.replace(/[)-|.*+?^$]/g, '\\$&')",
+            r"foo.replaceAll(/[)-|.*+?^$]/g, '\\$&')",
+        ),
         (
             r"foo.replace(/[.*+?^${}()|]\[\]\\]/g, '\\$&')",
             r"foo.replaceAll(/[.*+?^${}()|]\[\]\\]/g, '\\$&')",
@@ -320,10 +330,19 @@ fn test() {
         (r"foo.replace(/.*/g, bar)", r"foo.replaceAll(/.*/g, bar)"),
         (r"foo.replace(/a|b/g, bar)", r"foo.replaceAll(/a|b/g, bar)"),
         (r"foo.replace(/\W/g, bar)", r"foo.replaceAll(/\W/g, bar)"),
-        (r"foo.replace(/\u{61}/g, bar)", r"foo.replaceAll(/\u{61}/g, bar)"),
-        (r#"foo.replace(/]/g, "bar")"#, r#"foo.replaceAll(']', "bar")"#),
+        (
+            r"foo.replace(/\u{61}/g, bar)",
+            r"foo.replaceAll(/\u{61}/g, bar)",
+        ),
+        (
+            r#"foo.replace(/]/g, "bar")"#,
+            r#"foo.replaceAll(']', "bar")"#,
+        ),
         (r"foo.replace(/a/gi, bar)", r"foo.replaceAll(/a/gi, bar)"),
-        (r"foo.replace(/a/dgims, bar)", r"foo.replaceAll(/a/dgims, bar)"),
+        (
+            r"foo.replace(/a/dgims, bar)",
+            r"foo.replaceAll(/a/dgims, bar)",
+        ),
         (r"foo.replace(/a/gy, bar)", r"foo.replaceAll(/a/gy, bar)"),
         (r"foo.replace(/./gs, bar)", r"foo.replaceAll(/./gs, bar)"),
         (r"foo.replace(/^a/gm, bar)", r"foo.replaceAll(/^a/gm, bar)"),
@@ -340,7 +359,10 @@ fn test() {
         (r"foo.replace(/[^a]/g, _)", r"foo.replaceAll(/[^a]/g, _)"),
         (r"foo.replace(/a{1/g, _)", r"foo.replaceAll('a{1', _)"),
         (r"foo.replace(/(a)/g, _)", r"foo.replaceAll(/(a)/g, _)"),
-        (r"foo.replace(/(?:a|b)/g, _)", r"foo.replaceAll(/(?:a|b)/g, _)"),
+        (
+            r"foo.replace(/(?:a|b)/g, _)",
+            r"foo.replaceAll(/(?:a|b)/g, _)",
+        ),
         (r"foo.replace(/\n/g, _)", r"foo.replaceAll('\n', _)"),
         (r"foo.replace(/\8/g, _)", r"foo.replaceAll('8', _)"),
         (r"foo.replace(/\c_/g, _)", r"foo.replaceAll('\\c_', _)"),
@@ -350,9 +372,15 @@ fn test() {
             r"foo.replaceAll(/a very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very long string/g, _)",
             r"foo.replaceAll('a very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very long string', _)",
         ),
-        (r#"foo.replace(/(?!a)+/g, "")"#, r#"foo.replaceAll(/(?!a)+/g, "")"#),
+        (
+            r#"foo.replace(/(?!a)+/g, "")"#,
+            r#"foo.replaceAll(/(?!a)+/g, "")"#,
+        ),
         (r"foo.replaceAll(/a/g, bar)", r"foo.replaceAll('a', bar)"),
-        (r"text.replaceAll(/\\`/g, '`')", r"text.replaceAll('\\`', '`')"),
+        (
+            r"text.replaceAll(/\\`/g, '`')",
+            r"text.replaceAll('\\`', '`')",
+        ),
         (
             r"JSON.stringify(data).replace(/'/g, '&#39')",
             r"JSON.stringify(data).replaceAll('\'', '&#39')",
@@ -575,7 +603,12 @@ fn test() {
         // ),
     ];
 
-    Tester::new(PreferStringReplaceAll::NAME, PreferStringReplaceAll::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        PreferStringReplaceAll::NAME,
+        PreferStringReplaceAll::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

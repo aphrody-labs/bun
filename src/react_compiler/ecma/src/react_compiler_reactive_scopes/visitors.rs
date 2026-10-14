@@ -109,13 +109,21 @@ pub trait ReactiveFunctionVisitor<'a> {
                 self.visit_value(id, left, state);
                 self.visit_value(id, right, state);
             }
-            ReactiveValue::ConditionalExpression { test, consequent, alternate, .. } => {
+            ReactiveValue::ConditionalExpression {
+                test,
+                consequent,
+                alternate,
+                ..
+            } => {
                 self.visit_value(id, test, state);
                 self.visit_value(id, consequent, state);
                 self.visit_value(id, alternate, state);
             }
             ReactiveValue::SequenceExpression {
-                instructions, id: seq_id, value: inner, ..
+                instructions,
+                id: seq_id,
+                value: inner,
+                ..
             } => {
                 for instr in instructions {
                     self.visit_instruction(instr, state);
@@ -166,7 +174,14 @@ pub trait ReactiveFunctionVisitor<'a> {
             ReactiveTerminal::Throw { value, id, .. } => {
                 self.visit_place(*id, value, state);
             }
-            ReactiveTerminal::For { init, test, update, loop_block, id, .. } => {
+            ReactiveTerminal::For {
+                init,
+                test,
+                update,
+                loop_block,
+                id,
+                ..
+            } => {
                 self.visit_value(*id, init, state);
                 self.visit_value(*id, test, state);
                 self.visit_block(loop_block, state);
@@ -174,31 +189,60 @@ pub trait ReactiveFunctionVisitor<'a> {
                     self.visit_value(*id, update, state);
                 }
             }
-            ReactiveTerminal::ForOf { init, test, loop_block, id, .. } => {
+            ReactiveTerminal::ForOf {
+                init,
+                test,
+                loop_block,
+                id,
+                ..
+            } => {
                 self.visit_value(*id, init, state);
                 self.visit_value(*id, test, state);
                 self.visit_block(loop_block, state);
             }
-            ReactiveTerminal::ForIn { init, loop_block, id, .. } => {
+            ReactiveTerminal::ForIn {
+                init,
+                loop_block,
+                id,
+                ..
+            } => {
                 self.visit_value(*id, init, state);
                 self.visit_block(loop_block, state);
             }
-            ReactiveTerminal::DoWhile { loop_block, test, id, .. } => {
+            ReactiveTerminal::DoWhile {
+                loop_block,
+                test,
+                id,
+                ..
+            } => {
                 self.visit_block(loop_block, state);
                 self.visit_value(*id, test, state);
             }
-            ReactiveTerminal::While { test, loop_block, id, .. } => {
+            ReactiveTerminal::While {
+                test,
+                loop_block,
+                id,
+                ..
+            } => {
                 self.visit_value(*id, test, state);
                 self.visit_block(loop_block, state);
             }
-            ReactiveTerminal::If { test, consequent, alternate, id, .. } => {
+            ReactiveTerminal::If {
+                test,
+                consequent,
+                alternate,
+                id,
+                ..
+            } => {
                 self.visit_place(*id, test, state);
                 self.visit_block(consequent, state);
                 if let Some(alt) = alternate {
                     self.visit_block(alt, state);
                 }
             }
-            ReactiveTerminal::Switch { test, cases, id, .. } => {
+            ReactiveTerminal::Switch {
+                test, cases, id, ..
+            } => {
                 self.visit_place(*id, test, state);
                 for case in cases {
                     if let Some(t) = &case.test {
@@ -212,7 +256,13 @@ pub trait ReactiveFunctionVisitor<'a> {
             ReactiveTerminal::Label { block, .. } => {
                 self.visit_block(block, state);
             }
-            ReactiveTerminal::Try { block, handler_binding, handler, id, .. } => {
+            ReactiveTerminal::Try {
+                block,
+                handler_binding,
+                handler,
+                id,
+                ..
+            } => {
                 self.visit_block(block, state);
                 if let Some(binding) = handler_binding {
                     self.visit_place(*id, binding, state);
@@ -353,13 +403,21 @@ pub trait ReactiveFunctionTransform<'a> {
                 self.visit_value(id, left, state)?;
                 self.visit_value(id, right, state)?;
             }
-            ReactiveValue::ConditionalExpression { test, consequent, alternate, .. } => {
+            ReactiveValue::ConditionalExpression {
+                test,
+                consequent,
+                alternate,
+                ..
+            } => {
                 self.visit_value(id, test, state)?;
                 self.visit_value(id, consequent, state)?;
                 self.visit_value(id, alternate, state)?;
             }
             ReactiveValue::SequenceExpression {
-                instructions, id: seq_id, value: inner, ..
+                instructions,
+                id: seq_id,
+                value: inner,
+                ..
             } => {
                 let seq_id = *seq_id;
                 for instr in instructions.iter_mut() {
@@ -431,7 +489,14 @@ pub trait ReactiveFunctionTransform<'a> {
             ReactiveTerminal::Throw { value, id, .. } => {
                 self.visit_place(*id, value, state)?;
             }
-            ReactiveTerminal::For { init, test, update, loop_block, id, .. } => {
+            ReactiveTerminal::For {
+                init,
+                test,
+                update,
+                loop_block,
+                id,
+                ..
+            } => {
                 let id = *id;
                 self.visit_value(id, init, state)?;
                 self.visit_value(id, test, state)?;
@@ -440,35 +505,64 @@ pub trait ReactiveFunctionTransform<'a> {
                 }
                 self.visit_block(loop_block, state)?;
             }
-            ReactiveTerminal::ForOf { init, test, loop_block, id, .. } => {
+            ReactiveTerminal::ForOf {
+                init,
+                test,
+                loop_block,
+                id,
+                ..
+            } => {
                 let id = *id;
                 self.visit_value(id, init, state)?;
                 self.visit_value(id, test, state)?;
                 self.visit_block(loop_block, state)?;
             }
-            ReactiveTerminal::ForIn { init, loop_block, id, .. } => {
+            ReactiveTerminal::ForIn {
+                init,
+                loop_block,
+                id,
+                ..
+            } => {
                 let id = *id;
                 self.visit_value(id, init, state)?;
                 self.visit_block(loop_block, state)?;
             }
-            ReactiveTerminal::DoWhile { loop_block, test, id, .. } => {
+            ReactiveTerminal::DoWhile {
+                loop_block,
+                test,
+                id,
+                ..
+            } => {
                 let id = *id;
                 self.visit_block(loop_block, state)?;
                 self.visit_value(id, test, state)?;
             }
-            ReactiveTerminal::While { test, loop_block, id, .. } => {
+            ReactiveTerminal::While {
+                test,
+                loop_block,
+                id,
+                ..
+            } => {
                 let id = *id;
                 self.visit_value(id, test, state)?;
                 self.visit_block(loop_block, state)?;
             }
-            ReactiveTerminal::If { test, consequent, alternate, id, .. } => {
+            ReactiveTerminal::If {
+                test,
+                consequent,
+                alternate,
+                id,
+                ..
+            } => {
                 self.visit_place(*id, test, state)?;
                 self.visit_block(consequent, state)?;
                 if let Some(alt) = alternate {
                     self.visit_block(alt, state)?;
                 }
             }
-            ReactiveTerminal::Switch { test, cases, id, .. } => {
+            ReactiveTerminal::Switch {
+                test, cases, id, ..
+            } => {
                 let id = *id;
                 self.visit_place(id, test, state)?;
                 for case in cases.iter_mut() {
@@ -483,7 +577,13 @@ pub trait ReactiveFunctionTransform<'a> {
             ReactiveTerminal::Label { block, .. } => {
                 self.visit_block(block, state)?;
             }
-            ReactiveTerminal::Try { block, handler_binding, handler, id, .. } => {
+            ReactiveTerminal::Try {
+                block,
+                handler_binding,
+                handler,
+                id,
+                ..
+            } => {
                 let id = *id;
                 self.visit_block(block, state)?;
                 if let Some(binding) = handler_binding {
@@ -596,7 +696,9 @@ pub trait ReactiveFunctionTransform<'a> {
         // that doesn't restructure the block.
         let mut i = 0;
         let first_change = loop {
-            let Some(stmt) = block.get_mut(i) else { return Ok(()) };
+            let Some(stmt) = block.get_mut(i) else {
+                return Ok(());
+            };
             match self.transform_stmt(stmt, state)? {
                 Transformed::Keep => i += 1,
                 Transformed::Replace(replacement) => {

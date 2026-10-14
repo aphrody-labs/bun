@@ -84,9 +84,10 @@ impl<'a> AstNodeStore<'a> {
     #[inline]
     pub fn ancestry(&self) -> Ancestry<'a, '_> {
         match &self.kind {
-            AstNodeStoreKind::Full(nodes) => {
-                Ancestry::Nodes { nodes, current_node_id: self.current_node_id }
-            }
+            AstNodeStoreKind::Full(nodes) => Ancestry::Nodes {
+                nodes,
+                current_node_id: self.current_node_id,
+            },
             AstNodeStoreKind::Ancestry(stack) => Ancestry::Stack(stack),
         }
     }

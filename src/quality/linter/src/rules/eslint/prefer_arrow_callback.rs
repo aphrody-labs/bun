@@ -39,7 +39,10 @@ struct PreferArrowCallbackConfig {
 
 impl Default for PreferArrowCallbackConfig {
     fn default() -> Self {
-        Self { allow_named_functions: false, allow_unbound_this: true }
+        Self {
+            allow_named_functions: false,
+            allow_unbound_this: true,
+        }
     }
 }
 
@@ -115,7 +118,12 @@ impl Rule for PreferArrowCallback {
             return;
         }
 
-        let mut scanner = ScopeScanner { this: false, sup: false, meta: false, arguments: false };
+        let mut scanner = ScopeScanner {
+            this: false,
+            sup: false,
+            meta: false,
+            arguments: false,
+        };
         scanner.visit_function_body(body);
 
         if scanner.sup || scanner.meta {
@@ -155,8 +163,11 @@ fn get_callback_info<'a>(
     func: &Function<'a>,
     ctx: &LintContext<'a>,
 ) -> CallbackInfo {
-    let mut info =
-        CallbackInfo { is_callback: false, is_lexical_this: false, bind_this_call_span: None };
+    let mut info = CallbackInfo {
+        is_callback: false,
+        is_lexical_this: false,
+        bind_this_call_span: None,
+    };
     let mut current_span = func.span;
     let mut bound = false;
     let mut just_passed_bind = false;
@@ -194,7 +205,8 @@ fn get_callback_info<'a>(
             }
             AstKind::ComputedMemberExpression(m) => {
                 if m.object.span() != current_span
-                    || m.static_property_name().is_none_or(|name| name.as_str() != "bind")
+                    || m.static_property_name()
+                        .is_none_or(|name| name.as_str() != "bind")
                 {
                     return info;
                 }
@@ -246,7 +258,9 @@ fn build_fix<'a>(
     let arrow_text = build_arrow_text(func, fixer);
 
     let (replace_span, effective_span) = if info.is_lexical_this {
-        let Some(call_span) = info.bind_this_call_span else { return fixer.noop() };
+        let Some(call_span) = info.bind_this_call_span else {
+            return fixer.noop();
+        };
         let mut span = call_span;
         // Extend through wrapping ChainExpression if present.
         for ancestor in ctx.nodes().ancestors(node.id()) {
@@ -265,7 +279,11 @@ fn build_fix<'a>(
 
     let needs_parens = needs_paren_wrap(node, effective_span, ctx);
 
-    let replacement = if needs_parens { format!("({arrow_text})") } else { arrow_text };
+    let replacement = if needs_parens {
+        format!("({arrow_text})")
+    } else {
+        arrow_text
+    };
 
     fixer.replace(replace_span, replacement)
 }
@@ -289,7 +307,10 @@ fn build_arrow_text<'a>(func: &Function<'a>, fixer: RuleFixer<'_, 'a>) -> String
         func.params.span.end
     };
     text.push_str(" =>");
-    let body = func.body.as_ref().expect("function expression always has body");
+    let body = func
+        .body
+        .as_ref()
+        .expect("function expression always has body");
     let between = fixer.source_range(Span::new(pre_body_end, body.span.start));
     text.push_str(between);
     text.push_str(fixer.source_range(body.span));
@@ -353,10 +374,12 @@ fn references_function_name(func: &Function<'_>, ctx: &LintContext<'_>) -> bool 
         return false;
     };
     let body_span = func.body.as_ref().map_or(func.span, |body| body.span);
-    ctx.scoping().get_resolved_references(id.symbol_id()).any(|reference| {
-        let ref_node = ctx.nodes().get_node(reference.node_id());
-        body_span.contains_inclusive(ref_node.span())
-    })
+    ctx.scoping()
+        .get_resolved_references(id.symbol_id())
+        .any(|reference| {
+            let ref_node = ctx.nodes().get_node(reference.node_id());
+            body_span.contains_inclusive(ref_node.span())
+        })
 }
 
 struct ScopeScanner {
@@ -401,7 +424,10 @@ fn test() {
         ("foo(function*() {});", None),
         ("foo(function() { this; });", None),
         ("foo(function() { let x: typeof this.foo; });", None),
-        ("foo(function bar() {});", Some(serde_json::json!([{ "allowNamedFunctions": true }]))),
+        (
+            "foo(function bar() {});",
+            Some(serde_json::json!([{ "allowNamedFunctions": true }])),
+        ),
         ("foo(function() { (() => this); });", None),
         ("foo(function() { this; }.bind(obj));", None),
         ("foo(function() { this; }.call(this));", None),
@@ -413,22 +439,40 @@ fn test() {
         ("foo(function bar() { arguments; }.bind(this));", None),
         ("foo(function bar() { new.target; });", None),
         ("foo(function bar() { new.target; }.bind(this));", None),
-        ("foo(function bar() { this; }.bind(this, somethingElse));", None),
+        (
+            "foo(function bar() { this; }.bind(this, somethingElse));",
+            None,
+        ),
         ("foo((function() {}).bind.bar)", None),
-        ("foo((function() { this.bar(); }).bind(obj).bind(this))", None),
+        (
+            "foo((function() { this.bar(); }).bind(obj).bind(this))",
+            None,
+        ),
         ("foo((a:string) => a);", None),
         (
             "foo(function bar(a:string) {});",
             Some(serde_json::json!([{ "allowNamedFunctions": true }])),
         ),
-        ("test('clean', function (this: any) { this.foo = 'Cleaned!';});", None),
-        ("obj.test('clean', function (foo) { this.foo = 'Cleaned!'; });", None),
+        (
+            "test('clean', function (this: any) { this.foo = 'Cleaned!';});",
+            None,
+        ),
+        (
+            "obj.test('clean', function (foo) { this.foo = 'Cleaned!'; });",
+            None,
+        ),
     ];
 
     let fail = vec![
         ("foo(function bar() {});", None),
-        ("foo(function() {});", Some(serde_json::json!([{ "allowNamedFunctions": true }]))),
-        ("foo(function bar() {});", Some(serde_json::json!([{ "allowNamedFunctions": false }]))),
+        (
+            "foo(function() {});",
+            Some(serde_json::json!([{ "allowNamedFunctions": true }])),
+        ),
+        (
+            "foo(function bar() {});",
+            Some(serde_json::json!([{ "allowNamedFunctions": false }])),
+        ),
         ("foo(function() {});", None),
         ("foo(nativeCb || function() {});", None),
         ("foo(bar ? function() {} : function() {});", None),
@@ -439,14 +483,23 @@ fn test() {
         ("foo(function bar(a) { a; });", None),
         ("foo(function(a) { a; });", None),
         ("foo(function(arguments) { arguments; });", None),
-        ("foo(function() { this; });", Some(serde_json::json!([{ "allowUnboundThis": false }]))),
+        (
+            "foo(function() { this; });",
+            Some(serde_json::json!([{ "allowUnboundThis": false }])),
+        ),
         (
             "foo(function() { (() => this); });",
             Some(serde_json::json!([{ "allowUnboundThis": false }])),
         ),
         ("qux(function(foo, bar, baz) { return foo * 2; })", None),
-        ("qux(function(foo, bar, baz) { return foo * bar; }.bind(this))", None),
-        ("qux(function(foo, bar, baz) { return foo * this.qux; }.bind(this))", None),
+        (
+            "qux(function(foo, bar, baz) { return foo * bar; }.bind(this))",
+            None,
+        ),
+        (
+            "qux(function(foo, bar, baz) { return foo * this.qux; }.bind(this))",
+            None,
+        ),
         ("foo(function() {}.bind(this, somethingElse))", None),
         (
             "qux(function(foo = 1, [bar = 2] = [], {qux: baz = 3} = {foo: 'bar'}) { return foo + bar; });",
@@ -458,8 +511,14 @@ fn test() {
             "qux(function( /* a */ foo /* b */ , /* c */ bar /* d */ , /* e */ baz /* f */ ) { return foo; })",
             None,
         ),
-        ("qux(async function (foo = 1, bar = 2, baz = 3) { return baz; })", None),
-        ("qux(async function (foo = 1, bar = 2, baz = 3) { return this; }.bind(this))", None),
+        (
+            "qux(async function (foo = 1, bar = 2, baz = 3) { return baz; })",
+            None,
+        ),
+        (
+            "qux(async function (foo = 1, bar = 2, baz = 3) { return this; }.bind(this))",
+            None,
+        ),
         ("foo((bar || function() {}).bind(this))", None),
         ("foo(function() {}.bind(this).bind(obj))", None),
         ("foo?.(function() {});", None),
@@ -488,7 +547,10 @@ fn test() {
                         ",
             None,
         ),
-        ("foo(function(a:string) {});", Some(serde_json::json!([{ "allowNamedFunctions": true }]))),
+        (
+            "foo(function(a:string) {});",
+            Some(serde_json::json!([{ "allowNamedFunctions": true }])),
+        ),
         ("foo(function bar(a:string) { a; });", None),
         ("foo(function(a:any) { a; });", None),
         ("foo(function(arguments:any) { arguments; });", None),
@@ -496,12 +558,18 @@ fn test() {
             "foo(function(a:string) { this; });",
             Some(serde_json::json!([{ "allowUnboundThis": false }])),
         ),
-        ("qux(function(foo:string, bar:number, baz:string) { return foo * 2; })", None),
+        (
+            "qux(function(foo:string, bar:number, baz:string) { return foo * 2; })",
+            None,
+        ),
         (
             "qux(function(foo:number, bar:number, baz:number) { return foo * bar; }.bind(this))",
             None,
         ),
-        ("qux(function(foo:any, bar:any, baz:any) { return foo * this.qux; }.bind(this))", None),
+        (
+            "qux(function(foo:any, bar:any, baz:any) { return foo * this.qux; }.bind(this))",
+            None,
+        ),
         ("qux(function(baz:string, baz:string) { })", None),
         (
             "qux(function( /* a */ foo:string /* b */ , /* c */ bar:string /* d */ , /* e */ baz:string /* f */ ) { return foo; })",
@@ -534,19 +602,43 @@ fn test() {
             Some(serde_json::json!([{ "allowNamedFunctions": false }])),
         ),
         ("foo(function() {});", "foo(() => {});", None),
-        ("foo(nativeCb || function() {});", "foo(nativeCb || (() => {}));", None),
-        ("foo(bar ? function() {} : function() {});", "foo(bar ? () => {} : () => {});", None),
+        (
+            "foo(nativeCb || function() {});",
+            "foo(nativeCb || (() => {}));",
+            None,
+        ),
+        (
+            "foo(bar ? function() {} : function() {});",
+            "foo(bar ? () => {} : () => {});",
+            None,
+        ),
         (
             "foo(function() { (function() { this; }); });",
             "foo(() => { (function() { this; }); });",
             None,
         ),
-        ("foo(function() { this; }.bind(this));", "foo(() => { this; });", None),
-        ("foo(bar || function() { this; }.bind(this));", "foo(bar || (() => { this; }));", None),
-        ("foo(function() { (() => this); }.bind(this));", "foo(() => { (() => this); });", None),
+        (
+            "foo(function() { this; }.bind(this));",
+            "foo(() => { this; });",
+            None,
+        ),
+        (
+            "foo(bar || function() { this; }.bind(this));",
+            "foo(bar || (() => { this; }));",
+            None,
+        ),
+        (
+            "foo(function() { (() => this); }.bind(this));",
+            "foo(() => { (() => this); });",
+            None,
+        ),
         ("foo(function bar(a) { a; });", "foo((a) => { a; });", None),
         ("foo(function(a) { a; });", "foo((a) => { a; });", None),
-        ("foo(function(arguments) { arguments; });", "foo((arguments) => { arguments; });", None),
+        (
+            "foo(function(arguments) { arguments; });",
+            "foo((arguments) => { arguments; });",
+            None,
+        ),
         (
             "qux(function(foo, bar, baz) { return foo * 2; })",
             "qux((foo, bar, baz) => { return foo * 2; })",
@@ -572,7 +664,11 @@ fn test() {
             "qux((foo = 1, [bar = 2] = [], {qux: baz = 3} = {foo: 'bar'}) => { return foo + bar; });",
             None,
         ),
-        ("qux(function( /* no params */ ) { })", "qux(( /* no params */ ) => { })", None),
+        (
+            "qux(function( /* no params */ ) { })",
+            "qux(( /* no params */ ) => { })",
+            None,
+        ),
         (
             "qux(function( /* a */ foo /* b */ , /* c */ bar /* d */ , /* e */ baz /* f */ ) { return foo; })",
             "qux(( /* a */ foo /* b */ , /* c */ bar /* d */ , /* e */ baz /* f */ ) => { return foo; })",
@@ -588,10 +684,22 @@ fn test() {
             "qux(async (foo = 1, bar = 2, baz = 3) => { return this; })",
             None,
         ),
-        ("foo(function() {}.bind(this).bind(obj))", "foo((() => {}).bind(obj))", None),
+        (
+            "foo(function() {}.bind(this).bind(obj))",
+            "foo((() => {}).bind(obj))",
+            None,
+        ),
         ("foo?.(function() {});", "foo?.(() => {});", None),
-        ("foo?.(function() { return this; }.bind(this));", "foo?.(() => { return this; });", None),
-        ("foo(function() { return this; }?.bind(this));", "foo(() => { return this; });", None),
+        (
+            "foo?.(function() { return this; }.bind(this));",
+            "foo?.(() => { return this; });",
+            None,
+        ),
+        (
+            "foo(function() { return this; }?.bind(this));",
+            "foo(() => { return this; });",
+            None,
+        ),
         (
             "
                         test(
@@ -635,8 +743,16 @@ fn test() {
             "foo((a:string) => {});",
             Some(serde_json::json!([{ "allowNamedFunctions": true }])),
         ),
-        ("foo(function bar(a:string) { a; });", "foo((a:string) => { a; });", None),
-        ("foo(function(a:any) { a; });", "foo((a:any) => { a; });", None),
+        (
+            "foo(function bar(a:string) { a; });",
+            "foo((a:string) => { a; });",
+            None,
+        ),
+        (
+            "foo(function(a:any) { a; });",
+            "foo((a:any) => { a; });",
+            None,
+        ),
         (
             "foo(function(arguments:any) { arguments; });",
             "foo((arguments:any) => { arguments; });",
@@ -672,7 +788,11 @@ fn test() {
             "qux(async (foo:number = 1, bar:number = 2, baz:number = 3) => { return this; })",
             None,
         ),
-        ("foo(function():string { return 'foo' });", "foo(():string => { return 'foo' });", None),
+        (
+            "foo(function():string { return 'foo' });",
+            "foo(():string => { return 'foo' });",
+            None,
+        ),
         (
             "foo(function bar<T>(value: T) { return value; });",
             "foo(<T,>(value: T) => { return value; });",
@@ -680,7 +800,12 @@ fn test() {
         ),
     ];
 
-    Tester::new(PreferArrowCallback::NAME, PreferArrowCallback::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        PreferArrowCallback::NAME,
+        PreferArrowCallback::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

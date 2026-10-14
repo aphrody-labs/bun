@@ -140,6 +140,10 @@ impl<'a> ClassBindings<'a> {
         // TODO(improve-on-babel): If class name var isn't mutated, no need for temp var for
         // class declaration. Can just use class binding.
         let name = name_binding.map_or("Class", |binding| binding.name.as_str());
-        ctx.generate_uid(name, outer_hoist_scope_id, SymbolFlags::FunctionScopedVariable)
+        ctx.generate_uid(
+            name,
+            outer_hoist_scope_id,
+            SymbolFlags::FunctionScopedVariable,
+        )
     }
 }

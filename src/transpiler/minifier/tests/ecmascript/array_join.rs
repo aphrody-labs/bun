@@ -34,12 +34,24 @@ fn test() {
         ast,
     );
     let mut array2 = array.clone_in(&allocator);
-    array2.elements.push(ArrayExpressionElement::ArrayExpression(ArenaBox::new_in(array, ast)));
-    array2.elements.push(ArrayExpressionElement::new_object_expression(SPAN, [], ast));
+    array2
+        .elements
+        .push(ArrayExpressionElement::ArrayExpression(ArenaBox::new_in(
+            array, ast,
+        )));
+    array2
+        .elements
+        .push(ArrayExpressionElement::new_object_expression(SPAN, [], ast));
     let joined = array2.array_join(&WithoutGlobalReferenceInformation {}, Some("_"));
-    assert_eq!(joined, Some("__42_foo_true_42_,,42,foo,true,42_[object Object]".to_string()));
+    assert_eq!(
+        joined,
+        Some("__42_foo_true_42_,,42,foo,true,42_[object Object]".to_string())
+    );
 
     let joined2 = array2.array_join(&WithoutGlobalReferenceInformation {}, None);
     // By default, in `Array.prototype.toString`, the separator is a comma. However, in `Array.prototype.join`, the separator is none if not given.
-    assert_eq!(joined2, Some(",,42,foo,true,42,,,42,foo,true,42,[object Object]".to_string()));
+    assert_eq!(
+        joined2,
+        Some(",,42,foo,true,42,,,42,foo,true,42,[object Object]".to_string())
+    );
 }

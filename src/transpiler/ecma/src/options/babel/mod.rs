@@ -217,21 +217,29 @@ impl BabelOptions {
 
     /// Returns `true` when ambiguous JSX-like syntax should be rejected.
     pub fn has_disallow_ambiguous_jsx_like(&self) -> bool {
-        self.plugins.syntax_typescript.is_some_and(|o| o.disallow_ambiguous_jsx_like)
+        self.plugins
+            .syntax_typescript
+            .is_some_and(|o| o.disallow_ambiguous_jsx_like)
     }
 
     /// Returns `true` when source type is explicitly module.
     pub fn is_module(&self) -> bool {
-        self.source_type.as_ref().is_some_and(|s| s.as_str() == "module")
+        self.source_type
+            .as_ref()
+            .is_some_and(|s| s.as_str() == "module")
     }
 
     /// Returns `true` when source type is Babel's `unambiguous` mode.
     pub fn is_unambiguous(&self) -> bool {
-        self.source_type.as_ref().is_some_and(|s| s.as_str() == "unambiguous")
+        self.source_type
+            .as_ref()
+            .is_some_and(|s| s.as_str() == "unambiguous")
     }
 
     /// Returns `true` when source type is explicitly CommonJS.
     pub fn is_commonjs(&self) -> bool {
-        self.source_type.as_ref().is_some_and(|s| s.as_str() == "commonjs")
+        self.source_type
+            .as_ref()
+            .is_some_and(|s| s.as_str() == "commonjs")
     }
 }

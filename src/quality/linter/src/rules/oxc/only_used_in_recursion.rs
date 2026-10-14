@@ -64,13 +64,18 @@ declare_oxc_lint!(
     correctness,
     dangerous_fix,
     version = "0.1.1",
-    short_description = "Checks for arguments that are only used in recursion with no side effects.",
+    short_description =
+        "Checks for arguments that are only used in recursion with no side effects.",
 );
 
 fn is_exported(id: &BindingIdentifier<'_>, ctx: &LintContext<'_>) -> bool {
     let module_record = ctx.module_record();
-    module_record.exported_bindings.contains_key(id.name.as_str())
-        || module_record.export_default.is_some_and(|default| default == id.span)
+    module_record
+        .exported_bindings
+        .contains_key(id.name.as_str())
+        || module_record
+            .export_default
+            .is_some_and(|default| default == id.span)
 }
 
 impl Rule for OnlyUsedInRecursion {
@@ -162,16 +167,25 @@ fn report_parameter(
 
     ctx.diagnostic_with_dangerous_fix(diagnostic(), |fixer| {
         let mut fix = fixer.new_fix_with_capacity(
-            ctx.semantic().symbol_references(parameter.symbol_id()).count() + 1,
+            ctx.semantic()
+                .symbol_references(parameter.symbol_id())
+                .count()
+                + 1,
         );
 
         // Delete the parameter, including the comma before it
-        fix.push(delete_with_preceding_separator(ctx.source_text(), parameter.span));
+        fix.push(delete_with_preceding_separator(
+            ctx.source_text(),
+            parameter.span,
+        ));
 
         for reference in ctx.semantic().symbol_references(parameter.symbol_id()) {
             let node = ctx.nodes().get_node(reference.node_id());
             // Delete the argument reference, including the comma before it
-            fix.push(delete_with_preceding_separator(ctx.source_text(), node.span()));
+            fix.push(delete_with_preceding_separator(
+                ctx.source_text(),
+                node.span(),
+            ));
         }
 
         // Search for references to the function and remove the argument.
@@ -226,7 +240,10 @@ fn report_jsx_property(
     ctx.diagnostic_with_dangerous_fix(diagnostic(), |fixer| {
         let reference_count = ctx.semantic().symbol_references(property_symbol_id).count();
         let mut fix = fixer.new_fix_with_capacity(reference_count + 1);
-        fix.push(delete_with_surrounding_separators(ctx.source_text(), property.span));
+        fix.push(delete_with_surrounding_separators(
+            ctx.source_text(),
+            property.span,
+        ));
 
         // Search for references to the property and remove the JSX attribute.
         for reference in ctx.semantic().symbol_references(property_symbol_id) {
@@ -259,7 +276,10 @@ fn is_parameter_only_used_in_recursion(
     parameter_index: usize,
     ctx: &LintContext,
 ) -> bool {
-    let mut references = ctx.semantic().symbol_references(parameter.symbol_id()).peekable();
+    let mut references = ctx
+        .semantic()
+        .symbol_references(parameter.symbol_id())
+        .peekable();
 
     // Avoid returning true for an empty iterator
     if references.peek().is_none() {
@@ -298,7 +318,10 @@ fn is_jsx_property_only_used_in_recursion(
     function_ident: &BindingIdentifier,
     ctx: &LintContext,
 ) -> bool {
-    let mut references = ctx.semantic().symbol_references(ident.symbol_id()).peekable();
+    let mut references = ctx
+        .semantic()
+        .symbol_references(ident.symbol_id())
+        .peekable();
     if references.peek().is_none() {
         return false;
     }
@@ -358,25 +381,32 @@ fn is_recursive_call(
     function_symbol_id: SymbolId,
     ctx: &LintContext,
 ) -> bool {
-    let Expression::Identifier(identifier) = &call_expr.callee else { return false };
-    ctx.scoping().get_reference(identifier.reference_id()).symbol_id() == Some(function_symbol_id)
+    let Expression::Identifier(identifier) = &call_expr.callee else {
+        return false;
+    };
+    ctx.scoping()
+        .get_reference(identifier.reference_id())
+        .symbol_id()
+        == Some(function_symbol_id)
 }
 
 fn is_function_reassigned(function_id: &BindingIdentifier, ctx: &LintContext) -> bool {
-    ctx.semantic().symbol_references(function_id.symbol_id()).any(|reference| {
-        let reference_node = ctx.nodes().get_node(reference.node_id());
+    ctx.semantic()
+        .symbol_references(function_id.symbol_id())
+        .any(|reference| {
+            let reference_node = ctx.nodes().get_node(reference.node_id());
 
-        // Check if this reference is on the left side of an assignment
-        let AstKind::AssignmentExpression(assignment) =
-            ctx.nodes().parent_kind(reference.node_id())
-        else {
-            return false;
-        };
-        let AssignmentTarget::AssignmentTargetIdentifier(ident) = &assignment.left else {
-            return false;
-        };
-        ident.span == reference_node.span()
-    })
+            // Check if this reference is on the left side of an assignment
+            let AstKind::AssignmentExpression(assignment) =
+                ctx.nodes().parent_kind(reference.node_id())
+            else {
+                return false;
+            };
+            let AssignmentTarget::AssignmentTargetIdentifier(ident) = &assignment.left else {
+                return false;
+            };
+            ident.span == reference_node.span()
+        })
 }
 
 fn get_jsx_element_symbol_id(node: &JSXElementName<'_>, ctx: &LintContext<'_>) -> Option<SymbolId> {
@@ -388,7 +418,9 @@ fn get_jsx_element_symbol_id(node: &JSXElementName<'_>, ctx: &LintContext<'_>) -
         | JSXElementName::ThisExpression(_) => None,
     }?;
 
-    ctx.scoping().get_reference(identifier.reference_id()).symbol_id()
+    ctx.scoping()
+        .get_reference(identifier.reference_id())
+        .symbol_id()
 }
 
 #[derive(Clone, Copy)]
@@ -843,7 +875,12 @@ function writeChunks(a,callac){writeChunks(m,callac)}writeChunks(i,{})",
         ),
     ];
 
-    Tester::new(OnlyUsedInRecursion::NAME, OnlyUsedInRecursion::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        OnlyUsedInRecursion::NAME,
+        OnlyUsedInRecursion::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

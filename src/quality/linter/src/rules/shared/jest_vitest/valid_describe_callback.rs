@@ -25,11 +25,15 @@ pub struct ValidDescribeCallbackOptions {
 }
 
 impl ValidDescribeCallbackOptions {
-    pub const JEST: Self =
-        Self { allow_async_describe_callback: false, allow_describe_options_argument: false };
+    pub const JEST: Self = Self {
+        allow_async_describe_callback: false,
+        allow_describe_options_argument: false,
+    };
 
-    pub const VITEST: Self =
-        Self { allow_async_describe_callback: true, allow_describe_options_argument: true };
+    pub const VITEST: Self = Self {
+        allow_async_describe_callback: true,
+        allow_describe_options_argument: true,
+    };
 }
 
 pub fn run<'a>(
@@ -44,7 +48,10 @@ pub fn run<'a>(
     let Some(jest_fn_call) = parse_general_jest_fn_call(call_expr, possible_jest_node, ctx) else {
         return;
     };
-    if !matches!(jest_fn_call.kind, JestFnKind::General(JestGeneralFnKind::Describe)) {
+    if !matches!(
+        jest_fn_call.kind,
+        JestFnKind::General(JestGeneralFnKind::Describe)
+    ) {
         return;
     }
 
@@ -122,7 +129,9 @@ pub fn run<'a>(
                 diagnostic(ctx, call_expr.span, Message::UnexpectedReturnInDescribe);
             }
 
-            if let Some(span) = arrow_expr.get_function_body().and_then(find_first_return_stmt_span)
+            if let Some(span) = arrow_expr
+                .get_function_body()
+                .and_then(find_first_return_stmt_span)
             {
                 diagnostic(ctx, span, Message::UnexpectedReturnInDescribe);
             }
@@ -132,7 +141,10 @@ pub fn run<'a>(
 }
 
 fn is_function_argument(arg: &Argument) -> bool {
-    matches!(arg, Argument::FunctionExpression(_) | Argument::ArrowFunctionExpression(_))
+    matches!(
+        arg,
+        Argument::FunctionExpression(_) | Argument::ArrowFunctionExpression(_)
+    )
 }
 
 fn find_first_return_stmt_span(function_body: &FunctionBody) -> Option<Span> {
@@ -166,9 +178,10 @@ impl Message {
                 "Describe requires name and callback arguments",
                 "Add name as first argument and callback as second argument",
             ),
-            Self::SecondArgumentMustBeFunction => {
-                ("Second argument must be a function", "Replace second argument with a function")
-            }
+            Self::SecondArgumentMustBeFunction => (
+                "Second argument must be a function",
+                "Replace second argument with a function",
+            ),
             Self::NoAsyncDescribeCallback => {
                 ("No async describe callback", "Remove `async` keyword")
             }

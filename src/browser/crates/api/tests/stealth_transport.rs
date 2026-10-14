@@ -20,7 +20,9 @@ fn spawn_server() -> (String, mpsc::Receiver<String>) {
 
     std::thread::spawn(move || {
         let (mut stream, _) = listener.accept().unwrap();
-        stream.set_read_timeout(Some(Duration::from_secs(5))).unwrap();
+        stream
+            .set_read_timeout(Some(Duration::from_secs(5)))
+            .unwrap();
 
         let mut request = Vec::new();
         let mut chunk = [0u8; 1024];
@@ -31,7 +33,9 @@ fn spawn_server() -> (String, mpsc::Receiver<String>) {
             }
             request.extend_from_slice(&chunk[..read]);
         }
-        request_tx.send(String::from_utf8(request).unwrap()).unwrap();
+        request_tx
+            .send(String::from_utf8(request).unwrap())
+            .unwrap();
 
         let body = "<!doctype html><html><body>ok</body></html>";
         let response = format!(
@@ -58,7 +62,8 @@ async fn navigate_user_agent(stealth: bool) -> String {
         .lines()
         .filter_map(|line| line.split_once(':'))
         .find_map(|(name, value)| {
-            name.eq_ignore_ascii_case("user-agent").then(|| value.trim().to_string())
+            name.eq_ignore_ascii_case("user-agent")
+                .then(|| value.trim().to_string())
         })
         .expect("request should include a user-agent header")
 }

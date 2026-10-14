@@ -39,7 +39,10 @@ pub(crate) fn test_same(source_text: &str) {
 
 #[track_caller]
 pub(crate) fn test_target(source_text: &str, expected: &str, target: &str) {
-    let options = CompressOptions { target: get_targets(target), ..default_options() };
+    let options = CompressOptions {
+        target: get_targets(target),
+        ..default_options()
+    };
     test_options(source_text, expected, &options);
 }
 
@@ -64,7 +67,10 @@ pub(crate) fn test_options_with_iterations(
     let (first, iterations) =
         run_with_iterations(source_text, SourceType::mjs(), Some(options.clone()));
     let expected = run(expected, SourceType::mjs(), None);
-    assert_eq!(first, expected, "\nfor source\n{source_text}\nexpect\n{expected}\ngot\n{first}");
+    assert_eq!(
+        first, expected,
+        "\nfor source\n{source_text}\nexpect\n{expected}\ngot\n{first}"
+    );
     assert_eq!(
         iterations, expected_iterations,
         "\niteration count for source\n{source_text}\nexpect\n{expected_iterations}\ngot\n{iterations}"
@@ -89,7 +95,10 @@ pub(crate) fn test_options_once_with_iterations(
     let (actual, iterations) =
         run_with_iterations(source_text, SourceType::mjs(), Some(options.clone()));
     let expected = run(expected, SourceType::mjs(), None);
-    assert_eq!(actual, expected, "\nfor source\n{source_text}\nexpect\n{expected}\ngot\n{actual}");
+    assert_eq!(
+        actual, expected,
+        "\nfor source\n{source_text}\nexpect\n{expected}\ngot\n{actual}"
+    );
     assert_eq!(
         iterations, expected_iterations,
         "\niteration count for source\n{source_text}\nexpect\n{expected_iterations}\ngot\n{iterations}"
@@ -120,7 +129,10 @@ pub(crate) fn test_options_source_type(
 ) {
     let first = run(source_text, source_type, Some(options.clone()));
     let expected = run(expected, source_type, None);
-    assert_eq!(first, expected, "\nfor source\n{source_text}\nexpect\n{expected}\ngot\n{first}");
+    assert_eq!(
+        first, expected,
+        "\nfor source\n{source_text}\nexpect\n{expected}\ngot\n{first}"
+    );
 
     // Check idempotency
     let second = run(&first, source_type, Some(options.clone()));
@@ -152,17 +164,26 @@ fn run_with_iterations(
 ) -> (String, u8) {
     let allocator = Allocator::default();
     let ret = Parser::new(&allocator, source_text, source_type)
-        .with_options(ParseOptions { allow_return_outside_function: true, ..Default::default() })
+        .with_options(ParseOptions {
+            allow_return_outside_function: true,
+            ..Default::default()
+        })
         .parse();
     assert!(!ret.fatal_error, "{source_text}");
     assert!(ret.diagnostics.is_empty(), "{source_text}");
     let mut program = ret.program;
     let iterations = options.map_or(0, |options| {
-        let scoping = SemanticBuilder::new().build(&program).semantic.into_scoping();
+        let scoping = SemanticBuilder::new()
+            .build(&program)
+            .semantic
+            .into_scoping();
         Compressor::new(&allocator).build_with_scoping(&mut program, scoping, options)
     });
     let code = Codegen::new()
-        .with_options(CodegenOptions { single_quote: true, ..Default::default() })
+        .with_options(CodegenOptions {
+            single_quote: true,
+            ..Default::default()
+        })
         .build(&program)
         .code;
     (code, iterations)
@@ -187,8 +208,14 @@ fn minified_template_dollar_escapes() {
     for (source, expected) in [
         (r"use(`^${pattern}\$`)", r"use(`^${pattern}$`);"),
         (r"use(`\$${pattern}\$`)", r"use(`$${pattern}$`);"),
-        (r"use(`\${pattern}${suffix}`)", r"use(`\${pattern}${suffix}`);"),
-        (r"use(String.raw`\$${pattern}\$`)", r"use(String.raw`\$${pattern}\$`);"),
+        (
+            r"use(`\${pattern}${suffix}`)",
+            r"use(`\${pattern}${suffix}`);",
+        ),
+        (
+            r"use(String.raw`\$${pattern}\$`)",
+            r"use(String.raw`\$${pattern}\$`);",
+        ),
         (r"use(`\\\$${pattern}\$`)", r"use(`\\$${pattern}$`);"),
     ] {
         let output = minify(source);

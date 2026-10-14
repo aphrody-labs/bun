@@ -257,7 +257,9 @@ pub struct StructsAndEnums<'s> {
 
 impl<'s> StructsAndEnums<'s> {
     fn new(schema: &'s Schema) -> Self {
-        Self { iter: schema.types.iter() }
+        Self {
+            iter: schema.types.iter(),
+        }
     }
 }
 
@@ -288,7 +290,9 @@ pub struct Structs<'s> {
 
 impl<'s> Structs<'s> {
     fn new(schema: &'s Schema) -> Self {
-        Self { iter: schema.types.iter() }
+        Self {
+            iter: schema.types.iter(),
+        }
     }
 }
 
@@ -318,7 +322,9 @@ pub struct StructsMut<'s> {
 
 impl<'s> StructsMut<'s> {
     fn new(schema: &'s mut Schema) -> Self {
-        Self { iter: schema.types.iter_mut() }
+        Self {
+            iter: schema.types.iter_mut(),
+        }
     }
 }
 
@@ -348,7 +354,9 @@ pub struct Enums<'s> {
 
 impl<'s> Enums<'s> {
     fn new(schema: &'s Schema) -> Self {
-        Self { iter: schema.types.iter() }
+        Self {
+            iter: schema.types.iter(),
+        }
     }
 }
 

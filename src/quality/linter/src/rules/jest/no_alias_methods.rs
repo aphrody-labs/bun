@@ -108,9 +108,21 @@ fn test() {
     ];
 
     let fix = vec![
-        ("expect(a).toBeCalled()", "expect(a).toHaveBeenCalled()", None),
-        ("expect(a).not['toThrowError']()", "expect(a).not['toThrow']()", None),
-        ("expect(a).not[`toThrowError`]()", "expect(a).not[`toThrow`]()", None),
+        (
+            "expect(a).toBeCalled()",
+            "expect(a).toHaveBeenCalled()",
+            None,
+        ),
+        (
+            "expect(a).not['toThrowError']()",
+            "expect(a).not['toThrow']()",
+            None,
+        ),
+        (
+            "expect(a).not[`toThrowError`]()",
+            "expect(a).not[`toThrow`]()",
+            None,
+        ),
     ];
 
     Tester::new(NoAliasMethods::NAME, NoAliasMethods::PLUGIN, pass, fail)

@@ -2319,7 +2319,7 @@ function lazyMinimatch() {
       }
       return false;
     }
-    debug() {}
+    debug(..._args) {}
     make() {
       const pattern = this.pattern;
       const options = this.options;

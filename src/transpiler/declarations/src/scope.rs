@@ -26,7 +26,11 @@ struct Scope<'a> {
 
 impl Scope<'_> {
     fn new(flags: ScopeFlags) -> Self {
-        Self { bindings: IdentHashMap::default(), references: IdentHashMap::default(), flags }
+        Self {
+            bindings: IdentHashMap::default(),
+            references: IdentHashMap::default(),
+            flags,
+        }
     }
 }
 
@@ -44,7 +48,10 @@ pub struct ScopeTree<'a> {
 impl<'a> ScopeTree<'a> {
     pub fn new() -> Self {
         let levels = vec![Scope::new(ScopeFlags::Top)];
-        Self { levels, free_scopes: Vec::new() }
+        Self {
+            levels,
+            free_scopes: Vec::new(),
+        }
     }
 
     pub fn is_ts_module_block(&self) -> bool {
@@ -60,7 +67,11 @@ impl<'a> ScopeTree<'a> {
     /// Check if the current scope has a value reference for the given name.
     pub fn has_value_reference(&self, name: Ident<'_>) -> bool {
         let scope = self.levels.last().unwrap();
-        scope.references.get(&name).iter().any(|flags| flags.contains(KindFlags::Value))
+        scope
+            .references
+            .get(&name)
+            .iter()
+            .any(|flags| flags.contains(KindFlags::Value))
     }
 
     fn add_binding(&mut self, name: Ident<'a>, flags: KindFlags) {
@@ -70,7 +81,11 @@ impl<'a> ScopeTree<'a> {
 
     fn add_reference(&mut self, name: Ident<'a>, flags: KindFlags) {
         let scope = self.levels.last_mut().unwrap();
-        scope.references.entry(name).and_modify(|f| *f |= flags).or_insert(flags);
+        scope
+            .references
+            .entry(name)
+            .and_modify(|f| *f |= flags)
+            .or_insert(flags);
     }
 
     /// Resolve references in the current scope, and propagate unresolved ones.
@@ -78,24 +93,38 @@ impl<'a> ScopeTree<'a> {
         debug_assert!(self.levels.len() >= 2);
 
         // Remove the current scope, taking ownership of its maps so they can be recycled.
-        let Scope { mut bindings, mut references, .. } = self.levels.pop().unwrap();
+        let Scope {
+            mut bindings,
+            mut references,
+            ..
+        } = self.levels.pop().unwrap();
 
         // Resolve references in the current scope against its own bindings.
         references.retain(|name, reference_flags| {
-            !bindings.get(name).is_some_and(|flags| flags.contains(*reference_flags))
+            !bindings
+                .get(name)
+                .is_some_and(|flags| flags.contains(*reference_flags))
         });
 
         // Merge unresolved references to the parent scope. `drain` empties the map while keeping
         // its heap allocation, so it can be reused by a later `enter_scope`.
         let parent_scope = self.levels.last_mut().unwrap();
         for (name, flags) in references.drain() {
-            parent_scope.references.entry(name).and_modify(|f| *f |= flags).or_insert(flags);
+            parent_scope
+                .references
+                .entry(name)
+                .and_modify(|f| *f |= flags)
+                .or_insert(flags);
         }
 
         // Recycle both now-empty maps (capacity retained) to avoid re-allocating + re-growing
         // them for the next scope. `flags` is a placeholder; `enter_scope` overwrites it.
         bindings.clear();
-        self.free_scopes.push(Scope { bindings, references, flags: ScopeFlags::empty() });
+        self.free_scopes.push(Scope {
+            bindings,
+            references,
+            flags: ScopeFlags::empty(),
+        });
     }
 }
 

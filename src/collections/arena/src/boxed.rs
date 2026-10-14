@@ -61,8 +61,10 @@ unsafe impl<T: Sync + ?Sized> Sync for Box<'_, T> {}
 impl<T: ?Sized> Box<'_, T> {
     /// Const assertion that `T` is not `Drop`.
     /// Must be referenced in all methods which create a `Box`.
-    const ASSERT_T_IS_NOT_DROP: () =
-        assert!(!std::mem::needs_drop::<T>(), "Cannot create a Box<T> where T is a Drop type");
+    const ASSERT_T_IS_NOT_DROP: () = assert!(
+        !std::mem::needs_drop::<T>(),
+        "Cannot create a Box<T> where T is a Drop type"
+    );
 }
 
 impl<'alloc, T> Box<'alloc, T> {
@@ -98,7 +100,10 @@ impl<'alloc, T> Box<'alloc, T> {
     pub fn new_in(value: T, allocator: &impl GetAllocator<'alloc>) -> Self {
         const { Self::ASSERT_T_IS_NOT_DROP };
 
-        Self(NonNull::from(allocator.allocator().alloc(value)), PhantomData)
+        Self(
+            NonNull::from(allocator.allocator().alloc(value)),
+            PhantomData,
+        )
     }
 
     /// Take ownership of the value stored in this [`Box`], consuming the box in

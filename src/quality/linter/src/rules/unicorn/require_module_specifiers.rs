@@ -91,7 +91,11 @@ fn find_empty_braces_in_span(ctx: &LintContext<'_>, span: Span) -> Option<Span> 
     let close_brace = open_brace + 1 + ctx.find_next_token_within(open_brace + 1, span.end, "}")?;
 
     // Check if braces contain only whitespace
-    if !ctx.source_range(Span::new(open_brace + 1, close_brace)).trim().is_empty() {
+    if !ctx
+        .source_range(Span::new(open_brace + 1, close_brace))
+        .trim()
+        .is_empty()
+    {
         return None;
     }
 
@@ -205,16 +209,27 @@ fn test() {
 
     let fix = vec![
         // neither the `,` nor the `from` inside a comment is the real token
-        (r#"import /* , */ foo, {} from "foo";"#, r#"import /* , */ foo from "foo";"#),
+        (
+            r#"import /* , */ foo, {} from "foo";"#,
+            r#"import /* , */ foo from "foo";"#,
+        ),
         // the comment sits in the removed `, {} ` region, so it goes with it
-        (r#"import foo, {} /* from */ from "foo";"#, r#"import foo from "foo";"#),
+        (
+            r#"import foo, {} /* from */ from "foo";"#,
+            r#"import foo from "foo";"#,
+        ),
         (r#"import foo, {} from "foo";"#, r#"import foo from "foo";"#),
         (r#"import foo,{} from "foo";"#, r#"import foo from "foo";"#),
         ("export {}", ""),
         ("export {};", ""),
     ];
 
-    Tester::new(RequireModuleSpecifiers::NAME, RequireModuleSpecifiers::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        RequireModuleSpecifiers::NAME,
+        RequireModuleSpecifiers::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

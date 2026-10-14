@@ -10,12 +10,17 @@ use crate::{
 };
 
 fn prefer_strict_boolean_matchers_diagnostic(span: Span, value: bool) -> OxcDiagnostic {
-    let (matcher_name, to_be_literal) =
-        if value { ("toBeTruthy", "toBe(true)") } else { ("toBeFalsy", "toBe(false)") };
+    let (matcher_name, to_be_literal) = if value {
+        ("toBeTruthy", "toBe(true)")
+    } else {
+        ("toBeFalsy", "toBe(false)")
+    };
 
-    OxcDiagnostic::warn(format!("Use `{to_be_literal}` instead of `{matcher_name}`."))
-        .with_help("Use strict boolean comparison instead of truthy/falsy coercion.")
-        .with_label(span)
+    OxcDiagnostic::warn(format!(
+        "Use `{to_be_literal}` instead of `{matcher_name}`."
+    ))
+    .with_help("Use strict boolean comparison instead of truthy/falsy coercion.")
+    .with_label(span)
 }
 
 #[derive(Debug, Default, Clone)]
@@ -53,7 +58,8 @@ declare_oxc_lint!(
     style,
     fix,
     version = "1.57.0",
-    short_description = "Enforce using `toBe(true)` and `toBe(false)` over matchers that coerce types to boolean.",
+    short_description =
+        "Enforce using `toBe(true)` and `toBe(false)` over matchers that coerce types to boolean.",
 );
 
 impl Rule for PreferStrictBooleanMatchers {
@@ -94,10 +100,13 @@ impl Rule for PreferStrictBooleanMatchers {
         };
 
         let span = Span::new(matcher.span.start, call_expr.span.end);
-        ctx.diagnostic_with_fix(prefer_strict_boolean_matchers_diagnostic(span, value), |fixer| {
-            let call_name = if is_cmp_mem_expr { "\"toBe\"]" } else { "toBe" };
-            fixer.replace(span, format!("{call_name}({value})"))
-        });
+        ctx.diagnostic_with_fix(
+            prefer_strict_boolean_matchers_diagnostic(span, value),
+            |fixer| {
+                let call_name = if is_cmp_mem_expr { "\"toBe\"]" } else { "toBe" };
+                fixer.replace(span, format!("{call_name}({value})"))
+            },
+        );
     }
 }
 
@@ -151,20 +160,55 @@ fn test() {
     let fix = vec![
         ("expect(false).toBeTruthy();", "expect(false).toBe(true);"),
         ("expect(false).toBeFalsy();", "expect(false).toBe(false);"),
-        ("expectTypeOf(false).toBeTruthy();", "expectTypeOf(false).toBe(true);"),
-        ("expectTypeOf(false).toBeFalsy();", "expectTypeOf(false).toBe(false);"),
-        ("expect(wasSuccessful).toBeTruthy();", "expect(wasSuccessful).toBe(true);"),
-        ("expect(wasSuccessful).toBeFalsy();", "expect(wasSuccessful).toBe(false);"),
-        (r#"expect("a string").not.toBeTruthy();"#, r#"expect("a string").not.toBe(true);"#),
-        (r#"expect("a string").not.toBeFalsy();"#, r#"expect("a string").not.toBe(false);"#),
-        (r#"expect(value)["toBeTruthy"]();"#, r#"expect(value)["toBe"](true);"#),
-        (r#"expect(value)["toBeFalsy"]();"#, r#"expect(value)["toBe"](false);"#),
-        (r#"expect(value).not["toBeTruthy"]();"#, r#"expect(value).not["toBe"](true);"#),
-        (r#"expect(value).not["toBeFalsy"]();"#, r#"expect(value).not["toBe"](false);"#),
+        (
+            "expectTypeOf(false).toBeTruthy();",
+            "expectTypeOf(false).toBe(true);",
+        ),
+        (
+            "expectTypeOf(false).toBeFalsy();",
+            "expectTypeOf(false).toBe(false);",
+        ),
+        (
+            "expect(wasSuccessful).toBeTruthy();",
+            "expect(wasSuccessful).toBe(true);",
+        ),
+        (
+            "expect(wasSuccessful).toBeFalsy();",
+            "expect(wasSuccessful).toBe(false);",
+        ),
+        (
+            r#"expect("a string").not.toBeTruthy();"#,
+            r#"expect("a string").not.toBe(true);"#,
+        ),
+        (
+            r#"expect("a string").not.toBeFalsy();"#,
+            r#"expect("a string").not.toBe(false);"#,
+        ),
+        (
+            r#"expect(value)["toBeTruthy"]();"#,
+            r#"expect(value)["toBe"](true);"#,
+        ),
+        (
+            r#"expect(value)["toBeFalsy"]();"#,
+            r#"expect(value)["toBe"](false);"#,
+        ),
+        (
+            r#"expect(value).not["toBeTruthy"]();"#,
+            r#"expect(value).not["toBe"](true);"#,
+        ),
+        (
+            r#"expect(value).not["toBeFalsy"]();"#,
+            r#"expect(value).not["toBe"](false);"#,
+        ),
     ];
 
-    Tester::new(PreferStrictBooleanMatchers::NAME, PreferStrictBooleanMatchers::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .with_vitest_plugin(true)
-        .test_and_snapshot();
+    Tester::new(
+        PreferStrictBooleanMatchers::NAME,
+        PreferStrictBooleanMatchers::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .with_vitest_plugin(true)
+    .test_and_snapshot();
 }

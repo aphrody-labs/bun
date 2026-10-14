@@ -144,7 +144,10 @@ mod test {
             // `With` copies the current value
             assert_eq!(id.clone_id(CloneInSemanticIds::With), id);
             // `Without` resets to the dummy ID `NodeId(0)`
-            assert_eq!(id.clone_id(CloneInSemanticIds::Without), NodeId::from_usize(0));
+            assert_eq!(
+                id.clone_id(CloneInSemanticIds::Without),
+                NodeId::from_usize(0)
+            );
         }
     }
 
@@ -152,8 +155,14 @@ mod test {
     fn clone_cell_option_id() {
         // `None` is returned unchanged by both variants
         let cell = Cell::new(None);
-        assert_eq!(NodeId::clone_cell_option_id(&cell, CloneInSemanticIds::With).get(), None);
-        assert_eq!(NodeId::clone_cell_option_id(&cell, CloneInSemanticIds::Without).get(), None);
+        assert_eq!(
+            NodeId::clone_cell_option_id(&cell, CloneInSemanticIds::With).get(),
+            None
+        );
+        assert_eq!(
+            NodeId::clone_cell_option_id(&cell, CloneInSemanticIds::Without).get(),
+            None
+        );
 
         for n in INPUTS {
             let id = NodeId::from_usize(n as usize);

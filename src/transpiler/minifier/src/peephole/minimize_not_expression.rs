@@ -57,7 +57,11 @@ impl<'a> PeepholeOptimizations {
             // `!0` => `1`
             // `!1` => `0`
             Expression::NumericLiteral(num) if boolean_context => {
-                num.value = if num.value.is_nan() || num.value == 0.0 { 1.0 } else { 0.0 };
+                num.value = if num.value.is_nan() || num.value == 0.0 {
+                    1.0
+                } else {
+                    0.0
+                };
                 true
             }
             // `true` => `false`
@@ -101,7 +105,9 @@ impl<'a> PeepholeOptimizations {
 
     /// `MaybeSimplifyNot`: <https://github.com/evanw/esbuild/blob/v0.24.2/internal/js_ast/js_ast_helpers.go#L73>
     pub fn minimize_unary(expr: &mut Expression<'a>, ctx: &mut TraverseCtx<'a>) {
-        let Expression::UnaryExpression(e) = expr else { return };
+        let Expression::UnaryExpression(e) = expr else {
+            return;
+        };
         if !e.operator.is_not() {
             return;
         }
@@ -115,7 +121,9 @@ impl<'a> PeepholeOptimizations {
     /// Attempts to unwrap a `UnaryExpression` from an `Expression` enum variant, returning its argument.
     /// E.g. `!x` into `x`. The discarded `!` wrapper contains no references.
     pub fn unwrap_unary(old: Expression<'a>, _ctx: &mut TraverseCtx<'a>) -> Expression<'a> {
-        let Expression::UnaryExpression(e) = old else { unreachable!() };
+        let Expression::UnaryExpression(e) = old else {
+            unreachable!()
+        };
         e.unbox().argument
     }
 
@@ -169,7 +177,10 @@ impl<'a> PeepholeOptimizations {
     }
 
     fn is_typeof_undefined_comparison(e: &BinaryExpression<'_>) -> bool {
-        if !matches!(e.operator, BinaryOperator::LessThan | BinaryOperator::GreaterThan) {
+        if !matches!(
+            e.operator,
+            BinaryOperator::LessThan | BinaryOperator::GreaterThan
+        ) {
             return false;
         }
         match (&e.left, &e.right) {

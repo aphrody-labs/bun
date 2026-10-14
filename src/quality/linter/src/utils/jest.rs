@@ -198,7 +198,10 @@ pub fn iter_possible_jest_call_node<'a, 'c>(
                     && call_expr.callee.address() == semantic.nodes().get_node(id).address()
                 {
                     id = parent.id();
-                    return Some(PossibleJestNode { node: parent, original });
+                    return Some(PossibleJestNode {
+                        node: parent,
+                        original,
+                    });
                 } else if matches!(
                     parent_kind,
                     AstKind::StaticMemberExpression(_)
@@ -237,7 +240,9 @@ fn collect_ids_referenced_to_import<'a, 'c>(
                 ) {
                     let original = find_original_name(import_decl, name);
                     return Some(
-                        reference_ids.iter().map(move |&reference_id| (reference_id, original)),
+                        reference_ids
+                            .iter()
+                            .map(move |&reference_id| (reference_id, original)),
                     );
                 }
             }
@@ -249,15 +254,19 @@ fn collect_ids_referenced_to_import<'a, 'c>(
 
 /// Find name in the Import Declaration, not use name because of lifetime not long enough.
 fn find_original_name<'a>(import_decl: &'a ImportDeclaration<'a>, name: &str) -> Option<&'a str> {
-    import_decl.specifiers.iter().flatten().find_map(|specifier| match specifier {
-        ImportDeclarationSpecifier::ImportSpecifier(import_specifier) => {
-            if import_specifier.local.name.as_str() == name {
-                return Some(import_specifier.imported.name().as_str());
+    import_decl
+        .specifiers
+        .iter()
+        .flatten()
+        .find_map(|specifier| match specifier {
+            ImportDeclarationSpecifier::ImportSpecifier(import_specifier) => {
+                if import_specifier.local.name.as_str() == name {
+                    return Some(import_specifier.imported.name().as_str());
+                }
+                None
             }
-            None
-        }
-        _ => None,
-    })
+            _ => None,
+        })
 }
 
 fn collect_ids_referenced_to_global<'c>(

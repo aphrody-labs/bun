@@ -26,9 +26,10 @@ impl<'a> IsInt32OrUint32<'a> for Expression<'a> {
             Expression::ConditionalExpression(e) => {
                 e.consequent.is_int32_or_uint32(ctx) && e.alternate.is_int32_or_uint32(ctx)
             }
-            Expression::SequenceExpression(e) => {
-                e.expressions.last().is_some_and(|e| e.is_int32_or_uint32(ctx))
-            }
+            Expression::SequenceExpression(e) => e
+                .expressions
+                .last()
+                .is_some_and(|e| e.is_int32_or_uint32(ctx)),
             Expression::ParenthesizedExpression(e) => e.expression.is_int32_or_uint32(ctx),
             _ => false,
         }

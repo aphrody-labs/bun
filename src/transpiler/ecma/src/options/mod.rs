@@ -128,7 +128,10 @@ impl TransformOptions {
     /// * No matching target.
     /// * Invalid version.
     pub fn from_target(s: &str) -> Result<Self, String> {
-        EnvOptions::from_target(s).map(|env| Self { env, ..Self::default() })
+        EnvOptions::from_target(s).map(|env| Self {
+            env,
+            ..Self::default()
+        })
     }
 
     /// Initialize from a list of targets and environments.
@@ -150,7 +153,10 @@ impl TransformOptions {
     /// * No matching target.
     /// * Invalid version.
     pub fn from_target_list<S: AsRef<str>>(list: &[S]) -> Result<Self, String> {
-        EnvOptions::from_target_list(list).map(|env| Self { env, ..Self::default() })
+        EnvOptions::from_target_list(list).map(|env| Self {
+            env,
+            ..Self::default()
+        })
     }
 }
 
@@ -160,7 +166,10 @@ impl From<ESTarget> for TransformOptions {
         let mut engine_targets = EngineTargets::default();
         engine_targets.insert(Engine::Es, target.version());
         let env = EnvOptions::from(engine_targets);
-        Self { env, ..Self::default() }
+        Self {
+            env,
+            ..Self::default()
+        }
     }
 }
 
@@ -213,7 +222,12 @@ impl TryFrom<&BabelOptions> for TransformOptions {
         let env = options.presets.env.unwrap_or_default();
 
         let module = Module::try_from(&options.plugins).unwrap_or_else(|_| {
-            options.presets.env.as_ref().map(|env| env.module).unwrap_or_default()
+            options
+                .presets
+                .env
+                .as_ref()
+                .map(|env| env.module)
+                .unwrap_or_default()
         });
 
         let regexp = RegExpOptions {
@@ -274,7 +288,10 @@ impl TryFrom<&BabelOptions> for TransformOptions {
 
         let es2022 = ES2022Options {
             class_static_block: options.plugins.class_static_block || env.es2022.class_static_block,
-            class_properties: options.plugins.class_properties.or(env.es2022.class_properties),
+            class_properties: options
+                .plugins
+                .class_properties
+                .or(env.es2022.class_properties),
             top_level_await: env.es2022.top_level_await,
         };
 

@@ -17,7 +17,9 @@ fn prefer_default_export_diagnostic(span: Span, target: Target) -> OxcDiagnostic
     } else {
         "Prefer default export to be present on every file that has export."
     };
-    OxcDiagnostic::warn(msg).with_help("Prefer a default export").with_label(span)
+    OxcDiagnostic::warn(msg)
+        .with_help("Prefer a default export")
+        .with_label(span)
 }
 
 #[derive(Debug, Default, PartialEq, Clone, Copy, Deserialize, Serialize, JsonSchema)]
@@ -159,7 +161,10 @@ fn test() {
             ",
             None,
         ),
-        ("export const [CounterProvider,, withCounter] = func()", None),
+        (
+            "export const [CounterProvider,, withCounter] = func()",
+            None,
+        ),
         ("export * from './foo'", None),
         ("export default function bar() {};", None),
         (
@@ -204,7 +209,10 @@ fn test() {
         ("export type UserId = number;", None),
         ("export { a, b } from 'foo.js'", None),
         ("let foo; export { foo as 'default' };", None),
-        ("export default function bar() {};", Some(json!([{"target": "any"}]))),
+        (
+            "export default function bar() {};",
+            Some(json!([{"target": "any"}])),
+        ),
         (
             "
                 export const foo = 'foo';
@@ -231,7 +239,10 @@ fn test() {
             Some(json!([{"target": "any"}])),
         ),
         ("export * from './foo';", Some(json!([{"target": "any"}]))),
-        ("import * as foo from './foo';", Some(json!([{"target": "any"}]))),
+        (
+            "import * as foo from './foo';",
+            Some(json!([{"target": "any"}])),
+        ),
         ("const a = 5;", Some(json!([{"target": "any"}]))),
         (
             "export const a = 4; let foo; export { foo as 'default' };",
@@ -262,7 +273,10 @@ fn test() {
         ("export const foo = 'foo';", None),
         ("const foo = 'foo'; export { foo };", None),
         ("export const { foo } = { foo: 'bar' };", None),
-        ("export const { foo: { bar } } = { foo: { bar: 'baz' } };", None),
+        (
+            "export const { foo: { bar } } = { foo: { bar: 'baz' } };",
+            None,
+        ),
         ("export const [a] = ['foo']", None),
         (
             "
@@ -293,7 +307,10 @@ fn test() {
             ",
             Some(json!([{"target": "any"}])),
         ),
-        ("export { a, b } from 'foo.js'", Some(json!([{"target": "any"}]))),
+        (
+            "export { a, b } from 'foo.js'",
+            Some(json!([{"target": "any"}])),
+        ),
         (
             "
                 const foo = 'foo';
@@ -301,7 +318,10 @@ fn test() {
             ",
             Some(json!([{"target": "any"}])),
         ),
-        ("export const { foo } = { foo: 'bar' };", Some(json!([{"target": "any"}]))),
+        (
+            "export const { foo } = { foo: 'bar' };",
+            Some(json!([{"target": "any"}])),
+        ),
         (
             "export const { foo: { bar } } = { foo: { bar: 'baz' } };",
             Some(json!([{"target": "any"}])),
@@ -316,6 +336,11 @@ fn test() {
         ),
     ];
 
-    Tester::new(PreferDefaultExport::NAME, PreferDefaultExport::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        PreferDefaultExport::NAME,
+        PreferDefaultExport::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

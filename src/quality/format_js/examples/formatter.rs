@@ -30,8 +30,12 @@ fn main() -> Result<(), String> {
     let show_ir = args.contains("--ir");
     // Show diff between original and formatted code
     let show_diff = args.contains("--diff");
-    let print_width = args.opt_value_from_str::<&'static str, u16>("--print-width").unwrap_or(None);
-    let name = args.free_from_str().unwrap_or_else(|_| "test.js".to_string());
+    let print_width = args
+        .opt_value_from_str::<&'static str, u16>("--print-width")
+        .unwrap_or(None);
+    let name = args
+        .free_from_str()
+        .unwrap_or_else(|_| "test.js".to_string());
 
     // Read source file
     let path = Path::new(&name);
@@ -39,12 +43,20 @@ fn main() -> Result<(), String> {
     let source_type = SourceType::from_path(path).unwrap();
 
     // Format the parsed code
-    let semicolons = if no_semi { Semicolons::AsNeeded } else { Semicolons::Always };
+    let semicolons = if no_semi {
+        Semicolons::AsNeeded
+    } else {
+        Semicolons::Always
+    };
     let line_width = match print_width {
         Some(width) => LineWidth::try_from(width).unwrap(),
         None => LineWidth::try_from(80).unwrap(),
     };
-    let jsdoc_options = if jsdoc { Some(JsdocOptions::default()) } else { None };
+    let jsdoc_options = if jsdoc {
+        Some(JsdocOptions::default())
+    } else {
+        None
+    };
     let options = JsFormatOptions {
         bracket_same_line: BracketSameLine::from(true),
         semicolons,

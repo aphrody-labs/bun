@@ -1,4 +1,4 @@
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 
 pub async fn handle(method: &str, _params: &Value) -> Result<Value, String> {
     match method {

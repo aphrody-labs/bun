@@ -58,7 +58,10 @@ pub fn infer_reactive_scope_variables(
             // Initialize scope range from the first member
             let scope = &mut env.scopes[scope_id];
             scope.range = ident_range;
-            ScopeState { scope_id, span: ident_span }
+            ScopeState {
+                scope_id,
+                span: ident_span,
+            }
         });
 
         // Update scope range
@@ -211,7 +214,10 @@ fn may_allocate(value: &InstructionValue, lvalue_type_is_primitive: bool) -> boo
 /// Collect all Place identifiers from a destructure pattern.
 /// Corresponds to TS `eachPatternOperand`.
 fn each_pattern_operand(pattern: &Pattern) -> Vec<IdentifierId> {
-    visitors::each_pattern_operand(pattern).into_iter().map(|p| p.identifier).collect()
+    visitors::each_pattern_operand(pattern)
+        .into_iter()
+        .map(|p| p.identifier)
+        .collect()
 }
 
 /// Collect all operand identifiers from an instruction value.
@@ -220,7 +226,10 @@ fn each_instruction_value_operand(
     value: &InstructionValue,
     env: &Environment,
 ) -> Vec<IdentifierId> {
-    visitors::each_instruction_value_operand(value, env).into_iter().map(|p| p.identifier).collect()
+    visitors::each_instruction_value_operand(value, env)
+        .into_iter()
+        .map(|p| p.identifier)
+        .collect()
 }
 
 // =============================================================================

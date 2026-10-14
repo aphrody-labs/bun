@@ -39,9 +39,7 @@ unsafe fn wasm_writer_write_all(
     Err(bun_core::Error::Unexpected)
 }
 
-unsafe fn wasm_writer_flush(
-    _writer: *mut bun_core::io::Writer,
-) -> Result<(), bun_core::Error> {
+unsafe fn wasm_writer_flush(_writer: *mut bun_core::io::Writer) -> Result<(), bun_core::Error> {
     Err(bun_core::Error::Unexpected)
 }
 
@@ -144,11 +142,9 @@ pub fn shell_parse(src: &[u8]) -> Result<Vec<u8>, Vec<u8>> {
     let mut parser = bun_shell_parser::Parser::new(&arena, lex_result, jsobjs)
         .map_err(|e| e.to_string().into_bytes())?;
     match parser.parse() {
-        Ok(script) => Ok(
-            bun_shell_parser::json_fmt::script_json_fmt(&script)
-                .to_string()
-                .into_bytes(),
-        ),
+        Ok(script) => Ok(bun_shell_parser::json_fmt::script_json_fmt(&script)
+            .to_string()
+            .into_bytes()),
         Err(e) => {
             let msg = parser.combine_errors();
             Err(if msg.is_empty() {
@@ -244,7 +240,13 @@ pub unsafe extern "C" fn bun_wasm_semver_satisfies(
 ) -> u64 {
     // SAFETY: forwarded caller contract.
     let (v, r) = unsafe { (input(v, v_len), input(r, r_len)) };
-    pack_result(semver_satisfies(v, r).map(|ok| if ok { b"true".to_vec() } else { b"false".to_vec() }))
+    pack_result(semver_satisfies(v, r).map(|ok| {
+        if ok {
+            b"true".to_vec()
+        } else {
+            b"false".to_vec()
+        }
+    }))
 }
 
 /// # Safety

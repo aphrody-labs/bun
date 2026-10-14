@@ -150,7 +150,10 @@ fn test() {
         ("var foo = 0; foo=+1;", None),
         ("var foo = 0; foo+=1;", None),
         ("var foo = 0; foo-=1;", None),
-        ("var foo = 0; foo=+1;", Some(serde_json::json!([{ "allowForLoopAfterthoughts": true }]))),
+        (
+            "var foo = 0; foo=+1;",
+            Some(serde_json::json!([{ "allowForLoopAfterthoughts": true }])),
+        ),
         (
             "for (i = 0; i < l; i++) { console.log(i); }",
             Some(serde_json::json!([{ "allowForLoopAfterthoughts": true }])),
@@ -159,8 +162,14 @@ fn test() {
             "for (var i = 0, j = i + 1; j < example.length; i++, j++) {}",
             Some(serde_json::json!([{ "allowForLoopAfterthoughts": true }])),
         ),
-        ("for (;; i--, foo());", Some(serde_json::json!([{ "allowForLoopAfterthoughts": true }]))),
-        ("for (;; foo(), --i);", Some(serde_json::json!([{ "allowForLoopAfterthoughts": true }]))),
+        (
+            "for (;; i--, foo());",
+            Some(serde_json::json!([{ "allowForLoopAfterthoughts": true }])),
+        ),
+        (
+            "for (;; foo(), --i);",
+            Some(serde_json::json!([{ "allowForLoopAfterthoughts": true }])),
+        ),
         (
             "for (;; foo(), ++i, bar);",
             Some(serde_json::json!([{ "allowForLoopAfterthoughts": true }])),
@@ -190,16 +199,34 @@ fn test() {
         ("var foo = 0; ++foo;", None),
         ("for (i = 0; i < l; i++) { console.log(i); }", None),
         ("for (i = 0; i < l; foo, i++) { console.log(i); }", None),
-        ("var foo = 0; foo++;", Some(serde_json::json!([{ "allowForLoopAfterthoughts": true }]))),
+        (
+            "var foo = 0; foo++;",
+            Some(serde_json::json!([{ "allowForLoopAfterthoughts": true }])),
+        ),
         (
             "for (i = 0; i < l; i++) { v++; }",
             Some(serde_json::json!([{ "allowForLoopAfterthoughts": true }])),
         ),
-        ("for (i++;;);", Some(serde_json::json!([{ "allowForLoopAfterthoughts": true }]))),
-        ("for (;--i;);", Some(serde_json::json!([{ "allowForLoopAfterthoughts": true }]))),
-        ("for (;;) ++i;", Some(serde_json::json!([{ "allowForLoopAfterthoughts": true }]))),
-        ("for (;; i = j++);", Some(serde_json::json!([{ "allowForLoopAfterthoughts": true }]))),
-        ("for (;; i++, f(--j));", Some(serde_json::json!([{ "allowForLoopAfterthoughts": true }]))),
+        (
+            "for (i++;;);",
+            Some(serde_json::json!([{ "allowForLoopAfterthoughts": true }])),
+        ),
+        (
+            "for (;--i;);",
+            Some(serde_json::json!([{ "allowForLoopAfterthoughts": true }])),
+        ),
+        (
+            "for (;;) ++i;",
+            Some(serde_json::json!([{ "allowForLoopAfterthoughts": true }])),
+        ),
+        (
+            "for (;; i = j++);",
+            Some(serde_json::json!([{ "allowForLoopAfterthoughts": true }])),
+        ),
+        (
+            "for (;; i++, f(--j));",
+            Some(serde_json::json!([{ "allowForLoopAfterthoughts": true }])),
+        ),
         (
             "for (;; foo + (i++, bar));",
             Some(serde_json::json!([{ "allowForLoopAfterthoughts": true }])),

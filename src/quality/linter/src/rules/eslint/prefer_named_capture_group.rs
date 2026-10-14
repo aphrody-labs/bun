@@ -97,7 +97,10 @@ fn check_pattern(pattern: &Pattern<'_>, ctx: &LintContext<'_>, span_override: Op
 
     let count = collector.unnamed_spans.len();
     for span in collector.unnamed_spans {
-        ctx.diagnostic(prefer_named_capture_group_diagnostic(span_override.unwrap_or(span), count));
+        ctx.diagnostic(prefer_named_capture_group_diagnostic(
+            span_override.unwrap_or(span),
+            count,
+        ));
     }
 }
 
@@ -124,7 +127,10 @@ fn check_static_arguments(arg0: Option<&Argument>, arg1: Option<&Argument>, ctx:
         &allocator,
         &pattern_text,
         flags_text.as_deref(),
-        Options { pattern_span_offset: pattern_expr.span().start, flags_span_offset: 0 },
+        Options {
+            pattern_span_offset: pattern_expr.span().start,
+            flags_span_offset: 0,
+        },
     )
     .parse() else {
         return;
@@ -227,6 +233,11 @@ fn test() {
         "new RegExp('([[A--B]])', 'v')",
     ];
 
-    Tester::new(PreferNamedCaptureGroup::NAME, PreferNamedCaptureGroup::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        PreferNamedCaptureGroup::NAME,
+        PreferNamedCaptureGroup::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

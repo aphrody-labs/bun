@@ -205,7 +205,9 @@ impl<'a> Environment<'a> {
                 continue;
             }
             let return_type = if hook.transitive_mixed_data {
-                Type::Object { shape_id: Some(BUILT_IN_MIXED_READONLY_ID) }
+                Type::Object {
+                    shape_id: Some(BUILT_IN_MIXED_READONLY_ID),
+                }
             } else {
                 Type::Poly
             };
@@ -228,8 +230,10 @@ impl<'a> Environment<'a> {
         let mut module_types: IdentHashMap<'a, Option<Global<'a>>> = IdentHashMap::default();
         if config.enable_custom_type_definition_for_reanimated {
             let reanimated_module_type = globals::get_reanimated_module_type(&mut shapes);
-            module_types
-                .insert(Ident::from("react-native-reanimated"), Some(reanimated_module_type));
+            module_types.insert(
+                Ident::from("react-native-reanimated"),
+                Some(reanimated_module_type),
+            );
         }
 
         Self {
@@ -385,7 +389,9 @@ impl<'a> Environment<'a> {
                 id
             } else {
                 let id = self.aliasing_diagnostic_instances.borrow().next_idx();
-                self.aliasing_diagnostic_instances.borrow_mut().push(diagnostic);
+                self.aliasing_diagnostic_instances
+                    .borrow_mut()
+                    .push(diagnostic);
                 dedup.insert(key, id);
                 id
             }
@@ -407,7 +413,9 @@ impl<'a> Environment<'a> {
     /// In TS, Invariant errors throw immediately from recordError(),
     /// which aborts the current operation.
     pub fn has_invariant_errors(&self) -> bool {
-        self.errors.iter().any(|d| ErrorCategory::Invariant.matches(d))
+        self.errors
+            .iter()
+            .any(|d| ErrorCategory::Invariant.matches(d))
     }
 
     /// Take the accumulated errors, to be returned at the end of the pipeline.
@@ -419,8 +427,9 @@ impl<'a> Environment<'a> {
     /// In TS, Invariant errors throw as a separate error, so only the
     /// Invariant error is surfaced.
     pub fn take_invariant_errors(&mut self) -> Diagnostics {
-        let (invariant, remaining): (Vec<_>, Vec<_>) =
-            take(&mut self.errors).into_iter().partition(|d| ErrorCategory::Invariant.matches(d));
+        let (invariant, remaining): (Vec<_>, Vec<_>) = take(&mut self.errors)
+            .into_iter()
+            .partition(|d| ErrorCategory::Invariant.matches(d));
         self.errors = remaining.into();
         invariant.into()
     }
@@ -460,9 +469,17 @@ impl<'a> Environment<'a> {
                 if let Some(ty) = self.globals.get(name) {
                     return Ok(Some(ty.clone()));
                 }
-                if is_hook_name(name) { Ok(Some(self.get_custom_hook_type())) } else { Ok(None) }
+                if is_hook_name(name) {
+                    Ok(Some(self.get_custom_hook_type()))
+                } else {
+                    Ok(None)
+                }
             }
-            NonLocalBinding::ImportSpecifier { name, module, imported } => {
+            NonLocalBinding::ImportSpecifier {
+                name,
+                module,
+                imported,
+            } => {
                 if self.is_known_react_module(module) {
                     if let Some(ty) = self.globals.get(imported) {
                         return Ok(Some(ty.clone()));
@@ -535,8 +552,11 @@ impl<'a> Environment<'a> {
                     if let Some(imported_type) = imported_type {
                         // Validate hook-name vs hook-type consistency for module name
                         let expect_hook = is_hook_name(module);
-                        let is_hook =
-                            self.get_hook_kind_for_type(&imported_type).ok().flatten().is_some();
+                        let is_hook = self
+                            .get_hook_kind_for_type(&imported_type)
+                            .ok()
+                            .flatten()
+                            .is_some();
                         if expect_hook != is_hook {
                             self.record_error(diagnostics::invalid_module_type(
                                 module.as_str(),
@@ -548,7 +568,11 @@ impl<'a> Environment<'a> {
                     }
                 }
 
-                if is_hook_name(name) { Ok(Some(self.get_custom_hook_type())) } else { Ok(None) }
+                if is_hook_name(name) {
+                    Ok(Some(self.get_custom_hook_type()))
+                } else {
+                    Ok(None)
+                }
             }
         }
     }
@@ -603,7 +627,9 @@ impl<'a> Environment<'a> {
     /// Get the hook kind for a type, if it represents a hook.
     /// Ported from TS `getHookKindForType` in HIR.ts.
     pub fn get_hook_kind_for_type(&self, ty: &Type) -> Result<Option<&HookKind>, OxcDiagnostic> {
-        Ok(self.get_function_signature(ty)?.and_then(|sig| sig.hook_kind.as_ref()))
+        Ok(self
+            .get_function_signature(ty)?
+            .and_then(|sig| sig.hook_kind.as_ref()))
     }
 
     /// Resolve the module type provider for a given module name.
@@ -639,8 +665,10 @@ impl<'a> Environment<'a> {
             }
             ty
         });
-        self.module_types
-            .insert(Ident::from_str_in(module_name, &self.allocator), module_type.clone());
+        self.module_types.insert(
+            Ident::from_str_in(module_name, &self.allocator),
+            module_type.clone(),
+        );
         module_type
     }
 
@@ -722,7 +750,11 @@ impl<'a> Environment<'a> {
         // Strip leading '_' and trailing digits (Babel's generateUid behavior)
         let stripped = camel.trim_start_matches('_');
         let stripped = stripped.trim_end_matches(|c: char| c.is_ascii_digit());
-        let uid_base = if stripped.is_empty() { "temp" } else { stripped };
+        let uid_base = if stripped.is_empty() {
+            "temp"
+        } else {
+            stripped
+        };
 
         // Lazily build the set of known names from existing identifiers.
         // This approximates Babel's hasBinding/hasGlobal/hasReference checks.
@@ -774,7 +806,8 @@ impl<'a> Environment<'a> {
     /// Record an outlined function (extracted during outlineFunctions or outlineJSX).
     /// Corresponds to TS `env.outlineFunction(fn, type)`.
     pub fn outline_function(&mut self, func: HirFunction<'a>, fn_type: Option<ReactFunctionType>) {
-        self.outlined_functions.push(OutlinedFunctionEntry { func, fn_type });
+        self.outlined_functions
+            .push(OutlinedFunctionEntry { func, fn_type });
     }
 
     /// Take the outlined functions, leaving the vec empty.
@@ -808,7 +841,10 @@ impl<'a> Environment<'a> {
     /// Looks up the identifier's type and checks its function signature.
     pub fn has_no_alias_signature(&self, identifier_id: IdentifierId) -> bool {
         let ty = &self.types[self.identifiers[identifier_id].type_];
-        self.get_function_signature(ty).ok().flatten().is_some_and(|sig| sig.no_alias)
+        self.get_function_signature(ty)
+            .ok()
+            .flatten()
+            .is_some_and(|sig| sig.no_alias)
     }
 
     /// Get the hook kind for an identifier, if its type represents a hook.

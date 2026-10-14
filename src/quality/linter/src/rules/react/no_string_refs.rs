@@ -87,7 +87,8 @@ declare_oxc_lint!(
     correctness,
     config = NoStringRefs,
     version = "0.0.15",
-    short_description = "This rule prevents using the deprecated behavior of string literals in ref attributes.",
+    short_description =
+        "This rule prevents using the deprecated behavior of string literals in ref attributes.",
 );
 
 fn contains_string_literal(
@@ -135,7 +136,9 @@ impl Rule for NoStringRefs {
                     return;
                 };
                 if matches!(member_expr.object(), Expression::ThisExpression(_))
-                    && member_expr.static_property_name().is_some_and(|name| name == "refs")
+                    && member_expr
+                        .static_property_name()
+                        .is_some_and(|name| name == "refs")
                     && get_parent_component(node, ctx).is_some()
                 {
                     ctx.diagnostic(this_refs_deprecated(member_expr.span()));

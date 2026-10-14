@@ -139,20 +139,28 @@ fn fix_conditional_expression<'a>(
     // Detect ASI / keyword spacing from what the expression will look like after removing `!`.
     let (needs_space_before, needs_asi_semi, needs_restricted_parens, needs_exposed_expr_parens) =
         if is_unary {
-            let Expression::UnaryExpression(unary) = negated_test else { unreachable!() };
+            let Expression::UnaryExpression(unary) = negated_test else {
+                unreachable!()
+            };
             // Text after deleting the leading `!` (preserves comments between `!` and operand).
             let after_bang = ctx.source_range(Span::new(unary.span.start + 1, unary.span.end));
             let first_significant = after_bang.trim_start().chars().next();
             let has_line_terminator_in_remainder = after_bang.chars().any(is_line_terminator);
 
             let needs_restricted_parens = has_line_terminator_in_remainder
-                && !matches!(conditional_expr.test, Expression::ParenthesizedExpression(_))
+                && !matches!(
+                    conditional_expr.test,
+                    Expression::ParenthesizedExpression(_)
+                )
                 && is_restricted_statement_or_yield_argument(node, ctx);
 
             let needs_space_before = !needs_restricted_parens && {
                 let start = expr_span.start as usize;
                 start > 0
-                    && source[..start].chars().next_back().is_some_and(can_continue_token)
+                    && source[..start]
+                        .chars()
+                        .next_back()
+                        .is_some_and(can_continue_token)
                     && first_significant.is_some_and(needs_separator_after_keyword)
             };
 
@@ -169,7 +177,12 @@ fn fix_conditional_expression<'a>(
                         | Expression::ClassExpression(_)
                 );
 
-            (needs_space_before, needs_asi_semi, needs_restricted_parens, needs_exposed_expr_parens)
+            (
+                needs_space_before,
+                needs_asi_semi,
+                needs_restricted_parens,
+                needs_exposed_expr_parens,
+            )
         } else {
             (false, false, false, false)
         };
@@ -261,8 +274,16 @@ fn push_swap_statement_branches<'a>(
     let alt_is_block = matches!(alternate, Statement::BlockStatement(_));
 
     // Non-block branches must be wrapped after the swap so ASI / dangling `else` stay valid.
-    let new_cons = if alt_is_block { alt_src.to_string() } else { format!("{{{alt_src}}}") };
-    let new_alt = if cons_is_block { cons_src.to_string() } else { format!("{{{cons_src}}}") };
+    let new_cons = if alt_is_block {
+        alt_src.to_string()
+    } else {
+        format!("{{{alt_src}}}")
+    };
+    let new_alt = if cons_is_block {
+        cons_src.to_string()
+    } else {
+        format!("{{{cons_src}}}")
+    };
 
     fixes.push(fixer.replace(cons_span, new_cons));
     fixes.push(fixer.replace(alt_span, new_alt));

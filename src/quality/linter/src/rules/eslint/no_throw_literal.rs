@@ -6,8 +6,11 @@ use oxc_span::{GetSpan, Span};
 use crate::{AstNode, ast_util::could_be_error, context::LintContext, rule::Rule};
 
 fn no_throw_literal_diagnostic(span: Span, is_undef: bool) -> OxcDiagnostic {
-    let message =
-        if is_undef { "Do not throw undefined" } else { "Expected an error object to be thrown" };
+    let message = if is_undef {
+        "Do not throw undefined"
+    } else {
+        "Expected an error object to be thrown"
+    };
 
     OxcDiagnostic::warn(message)
         .with_help("Throwing literals or non-Error objects is not recommended. Use an Error object instead.")
@@ -190,7 +193,10 @@ fn test() {
     let fix = vec![
         ("throw 'error';", "throw new Error('error');"),
         ("throw `${err}`;", "throw new Error(`${err}`);"),
-        ("throw 'error' satisfies Error", "throw new Error('error' satisfies Error)"),
+        (
+            "throw 'error' satisfies Error",
+            "throw new Error('error' satisfies Error)",
+        ),
     ];
 
     Tester::new(NoThrowLiteral::NAME, NoThrowLiteral::PLUGIN, pass, fail)

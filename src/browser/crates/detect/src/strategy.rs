@@ -64,7 +64,12 @@ impl Default for Strategy {
 }
 
 pub fn suggest_strategy(report: &DetectionReport) -> Strategy {
-    let has = |name: &str| report.findings.iter().any(|item| item.name.eq_ignore_ascii_case(name));
+    let has = |name: &str| {
+        report
+            .findings
+            .iter()
+            .any(|item| item.name.eq_ignore_ascii_case(name))
+    };
     let shape = if has("WordPress") {
         SiteShape::Wordpress
     } else if has("Shopify") {
@@ -88,19 +93,44 @@ pub fn suggest_strategy(report: &DetectionReport) -> Strategy {
     };
 
     let challenge = report.challenge.provider;
-    let has_anti_bot =
-        !matches!(challenge, ChallengeProvider::None | ChallengeProvider::JsRequired);
+    let has_anti_bot = !matches!(
+        challenge,
+        ChallengeProvider::None | ChallengeProvider::JsRequired
+    );
     let is_spa = shape == SiteShape::Spa || challenge == ChallengeProvider::JsRequired;
     let (profile, wait_for, why) = if challenge == ChallengeProvider::RateLimit {
-        (ScrapeProfile::Static, WaitFor::None, "rate limited; wait before retry")
+        (
+            ScrapeProfile::Static,
+            WaitFor::None,
+            "rate limited; wait before retry",
+        )
     } else if has_anti_bot {
-        (ScrapeProfile::Http, WaitFor::DomContentLoaded, "anti-bot challenge detected")
+        (
+            ScrapeProfile::Http,
+            WaitFor::DomContentLoaded,
+            "anti-bot challenge detected",
+        )
     } else if is_spa {
-        (ScrapeProfile::Http, WaitFor::WaitHydration, "client-side application requires hydration")
-    } else if matches!(shape, SiteShape::SsrReact | SiteShape::SsrVue | SiteShape::SsrSvelte) {
-        (ScrapeProfile::Http, WaitFor::DomContentLoaded, "SSR framework detected")
+        (
+            ScrapeProfile::Http,
+            WaitFor::WaitHydration,
+            "client-side application requires hydration",
+        )
+    } else if matches!(
+        shape,
+        SiteShape::SsrReact | SiteShape::SsrVue | SiteShape::SsrSvelte
+    ) {
+        (
+            ScrapeProfile::Http,
+            WaitFor::DomContentLoaded,
+            "SSR framework detected",
+        )
     } else {
-        (ScrapeProfile::Static, WaitFor::Load, "static response is sufficient")
+        (
+            ScrapeProfile::Static,
+            WaitFor::Load,
+            "static response is sufficient",
+        )
     };
     let mut block_resources = vec!["image".into(), "media".into(), "font".into()];
     if matches!(

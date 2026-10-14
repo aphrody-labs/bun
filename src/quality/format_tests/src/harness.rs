@@ -62,7 +62,11 @@ pub fn apply_core_options<O: FormatOptions>(options: &mut O, json: &OptionSet) {
             }
             "useTabs" => {
                 if let Some(b) = value.as_bool() {
-                    core.indent_style = if b { IndentStyle::Tab } else { IndentStyle::Space };
+                    core.indent_style = if b {
+                        IndentStyle::Tab
+                    } else {
+                        IndentStyle::Space
+                    };
                 }
             }
             "endOfLine" => {
@@ -153,7 +157,10 @@ pub fn format_options_display(json: &OptionSet) -> String {
 /// the conversion itself is pinned by `it_converts_line_endings` in `oxc_formatter_core`
 /// (and the builders' debug_asserts keep raw `\r` out of `Text`/`Token`, so a stray `\r` can only come from the printer).
 fn assert_line_ending_applied(option_json: &OptionSet, formatted: &str, path: &Path) {
-    let Some(eol) = option_json.get("endOfLine").and_then(serde_json::Value::as_str) else {
+    let Some(eol) = option_json
+        .get("endOfLine")
+        .and_then(serde_json::Value::as_str)
+    else {
         return;
     };
     let bytes = formatted.as_bytes();
@@ -166,7 +173,11 @@ fn assert_line_ending_applied(option_json: &OptionSet, formatted: &str, path: &P
         "cr" => !bytes.contains(&b'\n'),
         _ => !bytes.contains(&b'\r'),
     };
-    assert!(ok, "endOfLine: {eol:?} not applied to every line break in {}", path.display());
+    assert!(
+        ok,
+        "endOfLine: {eol:?} not applied to every line break in {}",
+        path.display()
+    );
 }
 
 /// Generates the canonical snapshot body for `path`/`source_text`.
@@ -189,7 +200,9 @@ fn generate_snapshot<F: FixtureFormatter>(path: &Path, source_text: &str) -> Str
         const PRETTIER_DEFAULT_WIDTH: u64 = 80;
         let oxc_default_width = u64::from(LineWidth::default().value());
 
-        let pinned = original.get("printWidth").and_then(serde_json::Value::as_u64);
+        let pinned = original
+            .get("printWidth")
+            .and_then(serde_json::Value::as_u64);
 
         let mut rows = Vec::with_capacity(3);
         if let Some(w) = pinned
@@ -207,8 +220,10 @@ fn generate_snapshot<F: FixtureFormatter>(path: &Path, source_text: &str) -> Str
         rows.push(with_prettier_width);
 
         let mut with_oxc_width = original;
-        with_oxc_width
-            .insert("printWidth".to_string(), serde_json::Value::Number(oxc_default_width.into()));
+        with_oxc_width.insert(
+            "printWidth".to_string(),
+            serde_json::Value::Number(oxc_default_width.into()),
+        );
         rows.push(with_oxc_width);
 
         rows
@@ -285,5 +300,9 @@ pub fn build_fixture_snapshot<F: FixtureFormatter>(path: &Path) -> FixtureSnapsh
     let body = generate_snapshot::<F>(path, &source_text);
     let snap_dir = current_dir().unwrap().join(path.parent().unwrap());
     let snap_name = path.file_name().unwrap().to_string_lossy().into_owned();
-    FixtureSnapshot { body, path: snap_dir, name: snap_name }
+    FixtureSnapshot {
+        body,
+        path: snap_dir,
+        name: snap_name,
+    }
 }

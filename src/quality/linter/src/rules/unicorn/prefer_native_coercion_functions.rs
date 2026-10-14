@@ -111,7 +111,10 @@ impl Rule for PreferNativeCoercionFunctions {
                     || func.return_type.as_ref().is_some_and(|ret| {
                         matches!(ret.type_annotation, TSType::TSTypePredicate(_))
                     })
-                    || matches!(ctx.nodes().parent_kind(node.id()), AstKind::ObjectProperty(_))
+                    || matches!(
+                        ctx.nodes().parent_kind(node.id()),
+                        AstKind::ObjectProperty(_)
+                    )
                 {
                     return;
                 }
@@ -253,8 +256,15 @@ fn check_array_callback_methods(
 const NATIVE_COERCION_FUNCTION_NAMES: [&str; 5] =
     ["BigInt", "Boolean", "Number", "String", "Symbol"];
 
-const ARRAY_METHODS_WITH_BOOLEAN_CALLBACK: [&str; 7] =
-    ["every", "filter", "find", "findIndex", "findLast", "findLastIndex", "some"];
+const ARRAY_METHODS_WITH_BOOLEAN_CALLBACK: [&str; 7] = [
+    "every",
+    "filter",
+    "find",
+    "findIndex",
+    "findLast",
+    "findLastIndex",
+    "some",
+];
 
 #[test]
 fn test() {

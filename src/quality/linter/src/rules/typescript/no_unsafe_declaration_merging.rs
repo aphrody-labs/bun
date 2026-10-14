@@ -84,12 +84,17 @@ fn check_and_diagnostic(
     ctx: &LintContext<'_>,
 ) {
     if scope_ident.name.as_str() == ident.name.as_str() {
-        ctx.diagnostic(no_unsafe_declaration_merging_diagnostic(ident.span, scope_ident.span));
+        ctx.diagnostic(no_unsafe_declaration_merging_diagnostic(
+            ident.span,
+            scope_ident.span,
+        ));
     }
 }
 
 fn get_symbol_kind<'a>(symbol_id: SymbolId, ctx: &LintContext<'a>) -> AstKind<'a> {
-    ctx.nodes().get_node(ctx.scoping().symbol_declaration(symbol_id)).kind()
+    ctx.nodes()
+        .get_node(ctx.scoping().symbol_declaration(symbol_id))
+        .kind()
 }
 
 #[test]
@@ -160,6 +165,11 @@ fn test() {
                            ",
     ];
 
-    Tester::new(NoUnsafeDeclarationMerging::NAME, NoUnsafeDeclarationMerging::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        NoUnsafeDeclarationMerging::NAME,
+        NoUnsafeDeclarationMerging::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

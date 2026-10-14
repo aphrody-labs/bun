@@ -25,7 +25,10 @@ pub struct TypeScriptEnum {
 
 impl TypeScriptEnum {
     pub fn new(optimize_const_enums: bool, optimize_enums: bool) -> Self {
-        Self { optimize_const_enums, optimize_enums }
+        Self {
+            optimize_const_enums,
+            optimize_enums,
+        }
     }
 }
 
@@ -68,7 +71,9 @@ impl<'a> Traverse<'a, TransformState<'a>> for TypeScriptEnum {
 
         // Transform or remove deferred enum declarations.
         for stmt in stmts.iter_mut() {
-            let Statement::TSEnumDeclaration(decl) = stmt else { continue };
+            let Statement::TSEnumDeclaration(decl) = stmt else {
+                continue;
+            };
             if self.can_remove_enum(decl, ctx) {
                 has_removable_enum = true;
                 continue;
@@ -169,7 +174,9 @@ impl<'a> TypeScriptEnum {
         // with `enum_eval`). Without it, string-valued members are not recognized and
         // the transform emits incorrect reverse mappings (see oxc#21667).
         debug_assert!(
-            ctx.scoping().get_enum_body_scopes(decl.id.symbol_id()).is_some(),
+            ctx.scoping()
+                .get_enum_body_scopes(decl.id.symbol_id())
+                .is_some(),
             "Transformer requires `Scoping` produced with `SemanticBuilder::with_enum_eval(true)` \
              to correctly transform `enum {}`.",
             decl.id.name,
@@ -180,9 +187,14 @@ impl<'a> TypeScriptEnum {
 
         let enum_name: Ident = decl.id.name;
         let func_scope_id = decl.body.scope_id();
-        ctx.scoping_mut().scope_flags_mut(func_scope_id).insert(ScopeFlags::Function);
-        let param_binding =
-            ctx.generate_binding(enum_name, func_scope_id, SymbolFlags::FunctionScopedVariable);
+        ctx.scoping_mut()
+            .scope_flags_mut(func_scope_id)
+            .insert(ScopeFlags::Function);
+        let param_binding = ctx.generate_binding(
+            enum_name,
+            func_scope_id,
+            SymbolFlags::FunctionScopedVariable,
+        );
 
         let id = param_binding.create_binding_pattern(ctx);
 
@@ -233,8 +245,9 @@ impl<'a> TypeScriptEnum {
 
         // Foo[Foo["X"] = 0] = "X";
         let redeclarations = ctx.scoping().symbol_redeclarations(enum_symbol_id);
-        let is_already_declared =
-            redeclarations.first().map_or_else(|| false, |rd| rd.span != decl.id.span);
+        let is_already_declared = redeclarations
+            .first()
+            .map_or_else(|| false, |rd| rd.span != decl.id.span);
 
         let arguments = if (is_export || is_not_top_scope) && !is_already_declared {
             // }({});
@@ -282,9 +295,15 @@ impl<'a> TypeScriptEnum {
         }
 
         let (kind, flags) = if is_export || is_not_top_scope {
-            (VariableDeclarationKind::Let, SymbolFlags::BlockScopedVariable)
+            (
+                VariableDeclarationKind::Let,
+                SymbolFlags::BlockScopedVariable,
+            )
         } else {
-            (VariableDeclarationKind::Var, SymbolFlags::FunctionScopedVariable)
+            (
+                VariableDeclarationKind::Var,
+                SymbolFlags::FunctionScopedVariable,
+            )
         };
         // The symbol flags now describe the emitted `var`/`let` binding.
         *ctx.scoping_mut().symbol_flags_mut(enum_symbol_id) = flags;
@@ -468,7 +487,9 @@ impl<'a> TypeScriptEnum {
         if !self.may_remove_enum(decl, ctx) {
             return false;
         }
-        ctx.scoping().get_resolved_references(decl.id.symbol_id()).all(|r| !r.is_value())
+        ctx.scoping()
+            .get_resolved_references(decl.id.symbol_id())
+            .all(|r| !r.is_value())
     }
 
     /// Check if all members of an enum declaration have known constant values.
@@ -547,7 +568,9 @@ impl<'a> TypeScriptEnum {
         expr: &StaticMemberExpression<'a>,
         ctx: &TraverseCtx<'a>,
     ) -> Option<(ConstantValue, ReferenceId)> {
-        let Expression::Identifier(ident) = &expr.object else { return None };
+        let Expression::Identifier(ident) = &expr.object else {
+            return None;
+        };
         self.resolve_enum_member(ident, expr.property.name.as_str(), ctx)
     }
 
@@ -557,8 +580,12 @@ impl<'a> TypeScriptEnum {
         expr: &ComputedMemberExpression<'a>,
         ctx: &TraverseCtx<'a>,
     ) -> Option<(ConstantValue, ReferenceId)> {
-        let Expression::Identifier(ident) = &expr.object else { return None };
-        let Expression::StringLiteral(prop) = &expr.expression else { return None };
+        let Expression::Identifier(ident) = &expr.object else {
+            return None;
+        };
+        let Expression::StringLiteral(prop) = &expr.expression else {
+            return None;
+        };
         self.resolve_enum_member(ident, prop.value.as_str(), ctx)
     }
 
@@ -588,8 +615,9 @@ impl<'a> TypeScriptEnum {
         }
 
         for &body_scope_id in body_scopes {
-            if let Some(member_symbol_id) =
-                ctx.scoping().get_binding(body_scope_id, property_name.into())
+            if let Some(member_symbol_id) = ctx
+                .scoping()
+                .get_binding(body_scope_id, property_name.into())
                 && let Some(value) = ctx.scoping().get_enum_member_value(member_symbol_id)
             {
                 return Some((value.clone(), ref_id));

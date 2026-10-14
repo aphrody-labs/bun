@@ -29,7 +29,9 @@ fn no_return_wrap_diagnostic(span: Span, issue: &ReturnWrapper) -> OxcDiagnostic
         ReturnWrapper::Reject => "Throw the value being passed into Promise.reject instead",
     };
 
-    OxcDiagnostic::warn(warn_msg).with_help(help_msg).with_label(span)
+    OxcDiagnostic::warn(warn_msg)
+        .with_help(help_msg)
+        .with_label(span)
 }
 
 #[derive(Debug, Default, Clone, JsonSchema, Deserialize)]
@@ -155,7 +157,9 @@ impl Rule for NoReturnWrap {
         }
 
         for argument in &call_expr.arguments {
-            let Some(arg_expr) = argument.as_expression().map(Expression::without_parentheses)
+            let Some(arg_expr) = argument
+                .as_expression()
+                .map(Expression::without_parentheses)
             else {
                 continue;
             };
@@ -278,7 +282,10 @@ fn check_for_resolve_reject(ctx: &LintContext, allow_reject: bool, call_expr: &C
         return;
     };
 
-    if !ctx.semantic().is_reference_to_global_variable(obj_call_ident) {
+    if !ctx
+        .semantic()
+        .is_reference_to_global_variable(obj_call_ident)
+    {
         return;
     }
 
@@ -287,16 +294,24 @@ fn check_for_resolve_reject(ctx: &LintContext, allow_reject: bool, call_expr: &C
     }
 
     if stat_expr.property.name == "resolve" {
-        ctx.diagnostic(no_return_wrap_diagnostic(call_expr.span, &ReturnWrapper::Resolve));
+        ctx.diagnostic(no_return_wrap_diagnostic(
+            call_expr.span,
+            &ReturnWrapper::Resolve,
+        ));
     } else if stat_expr.property.name == "reject" && !allow_reject {
-        ctx.diagnostic(no_return_wrap_diagnostic(call_expr.span, &ReturnWrapper::Reject));
+        ctx.diagnostic(no_return_wrap_diagnostic(
+            call_expr.span,
+            &ReturnWrapper::Reject,
+        ));
     }
 }
 
 /// Return true if this node is inside a `then` or `catch` or `finally` promise callback.
 fn inside_promise_cb<'a, 'b>(node: &'a AstNode<'b>, ctx: &'a LintContext<'b>) -> bool {
     ctx.nodes().ancestors(node.id()).any(|node| {
-        node.kind().as_call_expression().is_some_and(|call_expr| is_promise(call_expr).is_some())
+        node.kind()
+            .as_call_expression()
+            .is_some_and(|call_expr| is_promise(call_expr).is_some())
     })
 }
 
@@ -316,8 +331,14 @@ fn test() {
         ("doThing().catch(null, function() { return 4 })", None),
         ("doThing().catch(null, function() { throw 4 })", None),
         ("doThing().then(() => {}).finally(() => 4)", None),
-        (r#"doThing().then(() => {}).finally(() => { throw "err" })"#, None),
-        ("doThing().then(function() { return Promise.all([a,b,c]) })", None),
+        (
+            r#"doThing().then(() => {}).finally(() => { throw "err" })"#,
+            None,
+        ),
+        (
+            "doThing().then(function() { return Promise.all([a,b,c]) })",
+            None,
+        ),
         ("doThing().then(() => 4)", None),
         ("doThing().then(() => { throw 4 })", None),
         ("doThing().then(() => {}, () => 4)", None),
@@ -333,7 +354,10 @@ fn test() {
             "doThing().then(function() { return Promise.reject(0) })",
             Some(serde_json::json!([{ "allowReject": true }])),
         ),
-        (r#"doThing().then(function () {}).finally(function () { Promise.reject("err") })"#, None),
+        (
+            r#"doThing().then(function () {}).finally(function () { Promise.reject("err") })"#,
+            None,
+        ),
         (
             r#"doThing().then().catch(() => Promise.reject("err"))"#,
             Some(serde_json::json!([{ "allowReject": true }])),
@@ -342,7 +366,10 @@ fn test() {
             r#"doThing().then(function () {}).finally(function () { return Promise.reject("err") })"#,
             Some(serde_json::json!([{ "allowReject": true }])),
         ),
-        ("doThing().then((function() { return Promise.resolve(4) }).toString())", None),
+        (
+            "doThing().then((function() { return Promise.resolve(4) }).toString())",
+            None,
+        ),
         (
             "doThing().then(() => Promise.reject(4))",
             Some(serde_json::json!([{ "allowReject": true }])),
@@ -366,12 +393,30 @@ fn test() {
     ];
 
     let fail = vec![
-        ("doThing().then(function() { return Promise.resolve(4) })", None),
-        ("doThing().then(null, function() { return Promise.resolve(4) })", None),
-        ("doThing().catch(function() { return Promise.resolve(4) })", None),
-        ("doThing().then(function() { return Promise.reject(4) })", None),
-        ("doThing().then(null, function() { return Promise.reject(4) })", None),
-        ("doThing().catch(function() { return Promise.reject(4) })", None),
+        (
+            "doThing().then(function() { return Promise.resolve(4) })",
+            None,
+        ),
+        (
+            "doThing().then(null, function() { return Promise.resolve(4) })",
+            None,
+        ),
+        (
+            "doThing().catch(function() { return Promise.resolve(4) })",
+            None,
+        ),
+        (
+            "doThing().then(function() { return Promise.reject(4) })",
+            None,
+        ),
+        (
+            "doThing().then(null, function() { return Promise.reject(4) })",
+            None,
+        ),
+        (
+            "doThing().catch(function() { return Promise.reject(4) })",
+            None,
+        ),
         ("doThing().finally(() => Promise.resolve(4))", None),
         (
             r#"doThing().then(function () {}).finally(function () { return Promise.reject("err") })"#,
@@ -388,7 +433,10 @@ fn test() {
                 })"#,
             None,
         ),
-        ("doThing().then(function(x) { if (x>1) { return Promise.reject(4) } })", None),
+        (
+            "doThing().then(function(x) { if (x>1) { return Promise.reject(4) } })",
+            None,
+        ),
         (
             "doThing().then(null, function() { if (true && false) { return Promise.resolve() } })",
             None,
@@ -463,9 +511,18 @@ fn test() {
 			 );",
             None,
         ),
-        ("doThing().then((function() { return Promise.resolve(4) }).bind(this))", None),
-        ("doThing().then((function() { return Promise.resolve(4) }).bind(this).bind(this))", None),
-        ("doThing().then(null, (function() { return Promise.resolve(4) }).bind(this))", None),
+        (
+            "doThing().then((function() { return Promise.resolve(4) }).bind(this))",
+            None,
+        ),
+        (
+            "doThing().then((function() { return Promise.resolve(4) }).bind(this).bind(this))",
+            None,
+        ),
+        (
+            "doThing().then(null, (function() { return Promise.resolve(4) }).bind(this))",
+            None,
+        ),
         ("doThing().then(() => { return Promise.resolve(4) })", None),
         (
             "function a () {

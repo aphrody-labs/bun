@@ -54,7 +54,9 @@ pub fn no_shadow_diagnostic(
 
 pub fn no_shadow_global_diagnostic(span: Span, name: &str) -> OxcDiagnostic {
     OxcDiagnostic::warn(format!("'{name}' is already a global variable."))
-        .with_help(format!("Consider renaming '{name}' to avoid shadowing the global variable."))
+        .with_help(format!(
+            "Consider renaming '{name}' to avoid shadowing the global variable."
+        ))
         .with_label(span)
 }
 
@@ -102,7 +104,8 @@ declare_oxc_lint!(
     suspicious,
     config = NoShadowConfig,
     version = "1.48.0",
-    short_description = "Disallows variable declarations from shadowing variables declared in the outer scope.",
+    short_description =
+        "Disallows variable declarations from shadowing variables declared in the outer scope.",
 );
 
 impl Rule for NoShadow {
@@ -163,7 +166,9 @@ impl NoShadow {
         symbol_id: SymbolId,
         symbol_name: &str,
     ) -> bool {
-        self.allow.iter().any(|allowed| allowed.as_str() == symbol_name)
+        self.allow
+            .iter()
+            .any(|allowed| allowed.as_str() == symbol_name)
             || Self::is_declare_in_definition_file(ctx, symbol_id)
             || Self::is_in_global_augmentation(ctx, symbol_id)
     }
@@ -278,7 +283,10 @@ impl NoShadow {
             return false;
         }
 
-        let mut references = ctx.scoping().get_resolved_references(shadowed_symbol_id).peekable();
+        let mut references = ctx
+            .scoping()
+            .get_resolved_references(shadowed_symbol_id)
+            .peekable();
         references.peek().is_some() && references.all(Reference::is_type)
     }
 
@@ -287,36 +295,47 @@ impl NoShadow {
         symbol_id: SymbolId,
     ) -> bool {
         let declaration_id = ctx.scoping().symbol_declaration(symbol_id);
-        ctx.nodes().ancestor_kinds(declaration_id).any(|ancestor_kind| {
-            matches!(
-                ancestor_kind,
-                AstKind::TSCallSignatureDeclaration(_)
-                    | AstKind::TSFunctionType(_)
-                    | AstKind::TSMethodSignature(_)
-                    | AstKind::TSConstructSignatureDeclaration(_)
-                    | AstKind::TSConstructorType(_)
-            ) || matches!(
-                ancestor_kind,
-                AstKind::Function(func)
-                    if matches!(
-                        func.r#type,
-                        FunctionType::TSDeclareFunction
-                            | FunctionType::TSEmptyBodyFunctionExpression
-                    )
-            )
-        })
+        ctx.nodes()
+            .ancestor_kinds(declaration_id)
+            .any(|ancestor_kind| {
+                matches!(
+                    ancestor_kind,
+                    AstKind::TSCallSignatureDeclaration(_)
+                        | AstKind::TSFunctionType(_)
+                        | AstKind::TSMethodSignature(_)
+                        | AstKind::TSConstructSignatureDeclaration(_)
+                        | AstKind::TSConstructorType(_)
+                ) || matches!(
+                    ancestor_kind,
+                    AstKind::Function(func)
+                        if matches!(
+                            func.r#type,
+                            FunctionType::TSDeclareFunction
+                                | FunctionType::TSEmptyBodyFunctionExpression
+                        )
+                )
+            })
     }
 
     fn is_generic_of_static_method_shadow(ctx: &LintContext, symbol_id: SymbolId) -> bool {
-        if !ctx.scoping().symbol_flags(symbol_id).contains(SymbolFlags::TypeParameter) {
+        if !ctx
+            .scoping()
+            .symbol_flags(symbol_id)
+            .contains(SymbolFlags::TypeParameter)
+        {
             return false;
         }
 
         let declaration_id = ctx.scoping().symbol_declaration(symbol_id);
         let Some(type_parameter_decl_id) =
-            ctx.nodes().ancestor_ids(declaration_id).find(|&ancestor_id| {
-                matches!(ctx.nodes().kind(ancestor_id), AstKind::TSTypeParameterDeclaration(_))
-            })
+            ctx.nodes()
+                .ancestor_ids(declaration_id)
+                .find(|&ancestor_id| {
+                    matches!(
+                        ctx.nodes().kind(ancestor_id),
+                        AstKind::TSTypeParameterDeclaration(_)
+                    )
+                })
         else {
             return false;
         };
@@ -402,13 +421,15 @@ impl NoShadow {
 
     fn is_in_global_augmentation(ctx: &LintContext, symbol_id: SymbolId) -> bool {
         let declaration_id = ctx.scoping().symbol_declaration(symbol_id);
-        ctx.nodes().ancestor_kinds(declaration_id).any(|ancestor_kind| match ancestor_kind {
-            AstKind::TSGlobalDeclaration(_) => true,
-            AstKind::TSNamespaceDeclaration(module) => {
-                module.declare && module.id.name.as_str() == "global"
-            }
-            _ => false,
-        })
+        ctx.nodes()
+            .ancestor_kinds(declaration_id)
+            .any(|ancestor_kind| match ancestor_kind {
+                AstKind::TSGlobalDeclaration(_) => true,
+                AstKind::TSNamespaceDeclaration(module) => {
+                    module.declare && module.id.name.as_str() == "global"
+                }
+                _ => false,
+            })
     }
 
     fn function_expression_name_shadow_span(
@@ -427,13 +448,19 @@ impl NoShadow {
         match ctx.nodes().kind(scope_node_id) {
             AstKind::Function(function)
                 if function.is_expression()
-                    && function.id.as_ref().is_some_and(|id| id.name.as_str() == symbol_name) =>
+                    && function
+                        .id
+                        .as_ref()
+                        .is_some_and(|id| id.name.as_str() == symbol_name) =>
             {
                 function.id.as_ref().map(GetSpan::span)
             }
             AstKind::Class(class)
                 if class.is_expression()
-                    && class.id.as_ref().is_some_and(|id| id.name.as_str() == symbol_name) =>
+                    && class
+                        .id
+                        .as_ref()
+                        .is_some_and(|id| id.name.as_str() == symbol_name) =>
             {
                 class.id.as_ref().map(GetSpan::span)
             }
@@ -456,13 +483,16 @@ impl NoShadow {
         }
 
         let shadowed_declaration_id = ctx.scoping().symbol_declaration(shadowed_symbol_id);
-        let import_source = ctx.nodes().ancestor_kinds(shadowed_declaration_id).find_map(|kind| {
-            if let AstKind::ImportDeclaration(declaration) = kind {
-                Some(declaration.source.value.as_str())
-            } else {
-                None
-            }
-        });
+        let import_source = ctx
+            .nodes()
+            .ancestor_kinds(shadowed_declaration_id)
+            .find_map(|kind| {
+                if let AstKind::ImportDeclaration(declaration) = kind {
+                    Some(declaration.source.value.as_str())
+                } else {
+                    None
+                }
+            });
         let Some(import_source) = import_source else {
             return false;
         };
@@ -542,8 +572,10 @@ impl NoShadow {
         if !matches!(
             variable_scope_node_kind,
             AstKind::Function(function) if function.is_expression()
-        ) && !matches!(variable_scope_node_kind, AstKind::ArrowFunctionExpression(_))
-        {
+        ) && !matches!(
+            variable_scope_node_kind,
+            AstKind::ArrowFunctionExpression(_)
+        ) {
             return false;
         }
 
@@ -556,12 +588,12 @@ impl NoShadow {
         }
 
         let call_expression_end =
-            ctx.nodes().ancestor_ids(variable_scope_node_id).find_map(|ancestor_id| {
-                match ctx.nodes().kind(ancestor_id) {
+            ctx.nodes()
+                .ancestor_ids(variable_scope_node_id)
+                .find_map(|ancestor_id| match ctx.nodes().kind(ancestor_id) {
                     AstKind::CallExpression(call_expression) => Some(call_expression.span.end),
                     _ => None,
-                }
-            });
+                });
         let Some(call_expression_end) = call_expression_end else {
             return false;
         };
@@ -747,7 +779,10 @@ fn is_initializer_sentinel(kind: AstKind) -> bool {
 }
 
 fn declaration_or_parent_id(ctx: &LintContext, declaration_id: NodeId) -> NodeId {
-    if matches!(ctx.nodes().kind(declaration_id), AstKind::BindingIdentifier(_)) {
+    if matches!(
+        ctx.nodes().kind(declaration_id),
+        AstKind::BindingIdentifier(_)
+    ) {
         ctx.nodes().parent_id(declaration_id)
     } else {
         declaration_id

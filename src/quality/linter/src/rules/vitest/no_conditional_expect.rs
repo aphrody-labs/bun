@@ -862,7 +862,12 @@ fn test() {
     pass.extend(pass_vitest.into_iter().map(|x| (x, None)));
     fail.extend(fail_vitest.into_iter().map(|x| (x, None)));
 
-    Tester::new(NoConditionalExpect::NAME, NoConditionalExpect::PLUGIN, pass, fail)
-        .with_vitest_plugin(true)
-        .test_and_snapshot();
+    Tester::new(
+        NoConditionalExpect::NAME,
+        NoConditionalExpect::PLUGIN,
+        pass,
+        fail,
+    )
+    .with_vitest_plugin(true)
+    .test_and_snapshot();
 }

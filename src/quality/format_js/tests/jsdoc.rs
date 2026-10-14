@@ -27,7 +27,10 @@ use oxc_span::SourceType;
 use oxc_tasks_common::print_text_diff;
 
 fn fixtures_root() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR")).join("tests").join("jsdoc").join("fixtures")
+    Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("tests")
+        .join("jsdoc")
+        .join("fixtures")
 }
 
 const IGNORED_FIXTURES: &[&str] = &[
@@ -47,9 +50,13 @@ fn jsdoc() {
         let expected = fs::read_to_string(&expected_path).unwrap();
 
         let (jsdoc_options, quote_style, line_width) = load_jsdoc_options(&input_path);
-        let Some(actual) =
-            run_formatter(&source_text, &input_path, &jsdoc_options, quote_style, line_width)
-        else {
+        let Some(actual) = run_formatter(
+            &source_text,
+            &input_path,
+            &jsdoc_options,
+            quote_style,
+            line_width,
+        ) else {
             println!("PARSE ERROR: {rel_path}");
             failures.push(rel_path);
             continue;
@@ -92,7 +99,10 @@ fn collect_fixture_pairs() -> Vec<(PathBuf, PathBuf)> {
         }
 
         // Skip non-source files (options.json, etc.)
-        let ext = path.extension().map(|e| e.to_string_lossy()).unwrap_or_default();
+        let ext = path
+            .extension()
+            .map(|e| e.to_string_lossy())
+            .unwrap_or_default();
         if !matches!(ext.as_ref(), "js" | "ts" | "jsx" | "tsx") {
             continue;
         }
@@ -155,51 +165,100 @@ fn parse_jsdoc_options(path: &Path) -> (JsdocOptions, QuoteStyle, Option<u16>) {
     let mut quote_style = QuoteStyle::default();
     let mut line_width: Option<u16> = None;
 
-    if json.get("capitalize_descriptions").and_then(serde_json::Value::as_bool) == Some(false) {
+    if json
+        .get("capitalize_descriptions")
+        .and_then(serde_json::Value::as_bool)
+        == Some(false)
+    {
         options.capitalize_descriptions = false;
     }
-    if json.get("separate_tag_groups").and_then(serde_json::Value::as_bool) == Some(true) {
+    if json
+        .get("separate_tag_groups")
+        .and_then(serde_json::Value::as_bool)
+        == Some(true)
+    {
         options.separate_tag_groups = true;
     }
-    if json.get("separate_returns_from_param").and_then(serde_json::Value::as_bool) == Some(true) {
+    if json
+        .get("separate_returns_from_param")
+        .and_then(serde_json::Value::as_bool)
+        == Some(true)
+    {
         options.separate_returns_from_param = true;
     }
-    if json.get("bracket_spacing").and_then(serde_json::Value::as_bool) == Some(true) {
+    if json
+        .get("bracket_spacing")
+        .and_then(serde_json::Value::as_bool)
+        == Some(true)
+    {
         options.bracket_spacing = true;
     }
-    if json.get("single_line_when_possible").and_then(serde_json::Value::as_bool) == Some(false) {
+    if json
+        .get("single_line_when_possible")
+        .and_then(serde_json::Value::as_bool)
+        == Some(false)
+    {
         options.comment_line_strategy = CommentLineStrategy::Multiline;
     }
-    if let Some(strategy) = json.get("comment_line_strategy").and_then(serde_json::Value::as_str) {
+    if let Some(strategy) = json
+        .get("comment_line_strategy")
+        .and_then(serde_json::Value::as_str)
+    {
         options.comment_line_strategy = match strategy {
             "multiline" => CommentLineStrategy::Multiline,
             "keep" => CommentLineStrategy::Keep,
             _ => CommentLineStrategy::SingleLine,
         };
     }
-    if json.get("description_with_dot").and_then(serde_json::Value::as_bool) == Some(true) {
+    if json
+        .get("description_with_dot")
+        .and_then(serde_json::Value::as_bool)
+        == Some(true)
+    {
         options.description_with_dot = true;
     }
-    if json.get("add_default_to_description").and_then(serde_json::Value::as_bool) == Some(false) {
+    if json
+        .get("add_default_to_description")
+        .and_then(serde_json::Value::as_bool)
+        == Some(false)
+    {
         options.add_default_to_description = false;
     }
-    if json.get("prefer_code_fences").and_then(serde_json::Value::as_bool) == Some(true) {
+    if json
+        .get("prefer_code_fences")
+        .and_then(serde_json::Value::as_bool)
+        == Some(true)
+    {
         options.prefer_code_fences = true;
     }
-    if let Some(style) = json.get("line_wrapping_style").and_then(serde_json::Value::as_str) {
+    if let Some(style) = json
+        .get("line_wrapping_style")
+        .and_then(serde_json::Value::as_str)
+    {
         options.line_wrapping_style = match style {
             "balance" => LineWrappingStyle::Balance,
             _ => LineWrappingStyle::Greedy,
         };
     }
-    if json.get("description_tag").and_then(serde_json::Value::as_bool) == Some(true) {
+    if json
+        .get("description_tag")
+        .and_then(serde_json::Value::as_bool)
+        == Some(true)
+    {
         options.description_tag = true;
     }
-    if json.get("keep_unparsable_example_indent").and_then(serde_json::Value::as_bool) == Some(true)
+    if json
+        .get("keep_unparsable_example_indent")
+        .and_then(serde_json::Value::as_bool)
+        == Some(true)
     {
         options.keep_unparsable_example_indent = true;
     }
-    if json.get("single_quote").and_then(serde_json::Value::as_bool) == Some(true) {
+    if json
+        .get("single_quote")
+        .and_then(serde_json::Value::as_bool)
+        == Some(true)
+    {
         quote_style = QuoteStyle::Single;
     }
     if let Some(w) = json.get("print_width").and_then(serde_json::Value::as_u64) {
@@ -237,5 +296,10 @@ fn run_formatter(
         jsdoc: Some(jsdoc_options.clone()),
         ..JsFormatOptions::default()
     };
-    Some(format_program(&allocator, &ret.program, options).print().ok()?.into_code())
+    Some(
+        format_program(&allocator, &ret.program, options)
+            .print()
+            .ok()?
+            .into_code(),
+    )
 }

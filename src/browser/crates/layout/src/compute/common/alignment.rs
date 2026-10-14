@@ -42,10 +42,10 @@ pub(crate) fn apply_alignment_fallback(
         (keyword, is_safe) = match keyword {
             AlignContentKeyword::Stretch | AlignContentKeyword::SpaceBetween => {
                 (AlignContentKeyword::FlexStart, true)
-            },
+            }
             AlignContentKeyword::SpaceAround | AlignContentKeyword::SpaceEvenly => {
                 (AlignContentKeyword::Center, true)
-            },
+            }
             other => (other, is_safe),
         };
     }
@@ -82,7 +82,7 @@ pub(crate) fn compute_alignment_offset(
                 } else {
                     0.0
                 }
-            },
+            }
             AlignContentKeyword::End => free_space,
             AlignContentKeyword::FlexEnd => {
                 if layout_is_flex_reversed {
@@ -90,7 +90,7 @@ pub(crate) fn compute_alignment_offset(
                 } else {
                     free_space
                 }
-            },
+            }
             AlignContentKeyword::Center => free_space / 2.0,
             AlignContentKeyword::Stretch => 0.0,
             AlignContentKeyword::SpaceBetween => 0.0,
@@ -100,14 +100,14 @@ pub(crate) fn compute_alignment_offset(
                 } else {
                     free_space / 2.0
                 }
-            },
+            }
             AlignContentKeyword::SpaceEvenly => {
                 if free_space >= 0.0 {
                     free_space / (num_items + 1) as f32
                 } else {
                     free_space / 2.0
                 }
-            },
+            }
         }
     } else {
         let free_space = free_space.max(0.0);

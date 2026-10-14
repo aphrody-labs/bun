@@ -14,9 +14,11 @@ use crate::{
 };
 
 fn no_unnecessary_slice_end_diagnostic(span: Span, arg_str: &str) -> OxcDiagnostic {
-    OxcDiagnostic::warn(format!("Passing `{arg_str}` as the `end` argument is unnecessary."))
-        .with_help("Consider omitting the unnecessary end argument.")
-        .with_label(span)
+    OxcDiagnostic::warn(format!(
+        "Passing `{arg_str}` as the `end` argument is unnecessary."
+    ))
+    .with_help("Consider omitting the unnecessary end argument.")
+    .with_label(span)
 }
 
 #[derive(Debug, Default, Clone)]
@@ -72,14 +74,20 @@ impl Rule for NoUnnecessarySliceEnd {
             return;
         };
         if matches!(member_expr.object, Expression::CallExpression(_))
-            || call_expr.arguments.iter().any(|arg| matches!(arg, Argument::SpreadElement(_)))
+            || call_expr
+                .arguments
+                .iter()
+                .any(|arg| matches!(arg, Argument::SpreadElement(_)))
         {
             return;
         }
         let [first_arg, second_arg] = call_expr.arguments.as_slice() else {
             return;
         };
-        let Some(arg_expr) = second_arg.as_expression().map(Expression::without_parentheses) else {
+        let Some(arg_expr) = second_arg
+            .as_expression()
+            .map(Expression::without_parentheses)
+        else {
             return;
         };
         match arg_expr {
@@ -207,10 +215,18 @@ fn test() {
         ("foo?.slice(1, Number.POSITIVE_INFINITY)", "foo?.slice(1)"),
         ("foo.bar.slice(1, foo.bar.length)", "foo.bar.slice(1)"),
         ("foo?.slice(1, (Number.POSITIVE_INFINITY))", "foo?.slice(1)"),
-        ("a?.slice(1, a?.length /** comments */)", "a?.slice(1 /** comments */)"),
+        (
+            "a?.slice(1, a?.length /** comments */)",
+            "a?.slice(1 /** comments */)",
+        ),
     ];
 
-    Tester::new(NoUnnecessarySliceEnd::NAME, NoUnnecessarySliceEnd::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        NoUnnecessarySliceEnd::NAME,
+        NoUnnecessarySliceEnd::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

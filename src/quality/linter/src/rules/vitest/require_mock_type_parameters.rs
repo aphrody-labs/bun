@@ -167,7 +167,10 @@ impl RequireMockTypeParameters {
             CompactStr::new("fn")
         };
 
-        ctx.diagnostic(require_mock_type_parameters_diagnostic(member.span, method_name.as_str()));
+        ctx.diagnostic(require_mock_type_parameters_diagnostic(
+            member.span,
+            method_name.as_str(),
+        ));
     }
 }
 
@@ -181,7 +184,9 @@ fn is_require_mock_type(
         return member.is_name_equal("fn");
     }
 
-    MOCK_REQUIRED_TYPES.iter().any(|&mock_function_name| member.is_name_equal(mock_function_name))
+    MOCK_REQUIRED_TYPES
+        .iter()
+        .any(|&mock_function_name| member.is_name_equal(mock_function_name))
 }
 
 fn is_member_call_typed(
@@ -221,9 +226,14 @@ fn find_member_call_type_arguments_in_expression(
             ChainElement::CallExpression(inner_call) => {
                 find_member_call_type_arguments(inner_call, member)
             }
-            chain_element => chain_element.member_expression().and_then(|member_expression| {
-                find_member_call_type_arguments_in_expression(member_expression.object(), member)
-            }),
+            chain_element => chain_element
+                .member_expression()
+                .and_then(|member_expression| {
+                    find_member_call_type_arguments_in_expression(
+                        member_expression.object(),
+                        member,
+                    )
+                }),
         },
         expr => expr.get_member_expr().and_then(|member_expression| {
             find_member_call_type_arguments_in_expression(member_expression.object(), member)
@@ -237,11 +247,36 @@ fn test() {
     use std::path::PathBuf;
 
     let pass = vec![
-        ("vi.fn<(...args: any[]) => any>()", None, None, Some(PathBuf::from("test.ts"))),
-        ("vi.fn<(...args: string[]) => any>()", None, None, Some(PathBuf::from("test.ts"))),
-        ("vi.fn<(arg1: string) => string>()", None, None, Some(PathBuf::from("test.ts"))),
-        ("vi.fn<(arg1: any) => string>()", None, None, Some(PathBuf::from("test.ts"))),
-        ("vi.fn<(arg1: string) => void>()", None, None, Some(PathBuf::from("test.ts"))),
+        (
+            "vi.fn<(...args: any[]) => any>()",
+            None,
+            None,
+            Some(PathBuf::from("test.ts")),
+        ),
+        (
+            "vi.fn<(...args: string[]) => any>()",
+            None,
+            None,
+            Some(PathBuf::from("test.ts")),
+        ),
+        (
+            "vi.fn<(arg1: string) => string>()",
+            None,
+            None,
+            Some(PathBuf::from("test.ts")),
+        ),
+        (
+            "vi.fn<(arg1: any) => string>()",
+            None,
+            None,
+            Some(PathBuf::from("test.ts")),
+        ),
+        (
+            "vi.fn<(arg1: string) => void>()",
+            None,
+            None,
+            Some(PathBuf::from("test.ts")),
+        ),
         (
             "vi.fn<(arg1: string, arg2: boolean) => string>()",
             None,
@@ -254,9 +289,19 @@ fn test() {
             None,
             Some(PathBuf::from("test.ts")),
         ),
-        ("vi.fn<MyProcedure>()", None, None, Some(PathBuf::from("test.ts"))),
+        (
+            "vi.fn<MyProcedure>()",
+            None,
+            None,
+            Some(PathBuf::from("test.ts")),
+        ),
         ("vi.fn<any>()", None, None, Some(PathBuf::from("test.ts"))),
-        ("vi.fn<(...args: any[]) => any>(() => {})", None, None, Some(PathBuf::from("test.ts"))),
+        (
+            "vi.fn<(...args: any[]) => any>(() => {})",
+            None,
+            None,
+            Some(PathBuf::from("test.ts")),
+        ),
         (
             r#"vi.fn<() => string | undefined>().mockReturnValue("some error message");"#,
             None,
@@ -275,17 +320,42 @@ fn test() {
             None,
             Some(PathBuf::from("test.ts")),
         ),
-        (r#"vi.importActual<any>("./example.js")"#, None, None, Some(PathBuf::from("test.ts"))),
+        (
+            r#"vi.importActual<any>("./example.js")"#,
+            None,
+            None,
+            Some(PathBuf::from("test.ts")),
+        ),
         (
             r#"vi.importMock<{ default: boolean }>("./example.js")"#,
             None,
             None,
             Some(PathBuf::from("test.ts")),
         ),
-        (r#"vi.importMock<MyModule>("./example.js")"#, None, None, Some(PathBuf::from("test.ts"))),
-        (r#"vi.importMock<any>("./example.js")"#, None, None, Some(PathBuf::from("test.ts"))),
-        (r#"vi.importActual("./example.js")"#, None, None, Some(PathBuf::from("test.ts"))),
-        (r#"vi.importMock("./example.js")"#, None, None, Some(PathBuf::from("test.spec.ts"))),
+        (
+            r#"vi.importMock<MyModule>("./example.js")"#,
+            None,
+            None,
+            Some(PathBuf::from("test.ts")),
+        ),
+        (
+            r#"vi.importMock<any>("./example.js")"#,
+            None,
+            None,
+            Some(PathBuf::from("test.ts")),
+        ),
+        (
+            r#"vi.importActual("./example.js")"#,
+            None,
+            None,
+            Some(PathBuf::from("test.ts")),
+        ),
+        (
+            r#"vi.importMock("./example.js")"#,
+            None,
+            None,
+            Some(PathBuf::from("test.spec.ts")),
+        ),
         //Ignoring js files to avoid false positives
         ("vi.fn()", None, None, Some(PathBuf::from("test.spec.js"))),
         ("vi.fn()", None, None, Some(PathBuf::from("test.jsx"))),
@@ -297,12 +367,22 @@ fn test() {
             None,
             Some(PathBuf::from("test.ts")),
         ),
-        ("vi.fn<() => void>().fn()", None, None, Some(PathBuf::from("test.ts"))),
+        (
+            "vi.fn<() => void>().fn()",
+            None,
+            None,
+            Some(PathBuf::from("test.ts")),
+        ),
     ];
 
     let fail = vec![
         ("vi.fn()", None, None, Some(PathBuf::from("test.ts"))),
-        ("vi.fn(() => {})", None, None, Some(PathBuf::from("test.tsx"))),
+        (
+            "vi.fn(() => {})",
+            None,
+            None,
+            Some(PathBuf::from("test.tsx")),
+        ),
         (
             r#"vi.importActual("./example.js")"#,
             Some(serde_json::json!([{ "checkImportFunctions": true }])),
@@ -326,7 +406,12 @@ fn test() {
         ("vi.fn().fn()", None, None, Some(PathBuf::from("test.ts"))),
     ];
 
-    Tester::new(RequireMockTypeParameters::NAME, RequireMockTypeParameters::PLUGIN, pass, fail)
-        .with_vitest_plugin(true)
-        .test_and_snapshot();
+    Tester::new(
+        RequireMockTypeParameters::NAME,
+        RequireMockTypeParameters::PLUGIN,
+        pass,
+        fail,
+    )
+    .with_vitest_plugin(true)
+    .test_and_snapshot();
 }

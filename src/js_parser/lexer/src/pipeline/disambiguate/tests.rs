@@ -66,20 +66,35 @@ fn lex_checked(code: &str, file_type: FileType) -> (Lexer, usize) {
     let (walk, walk_count) = lex(code, file_type, false, true);
     let (full, full_count) = lex(code, file_type, true, false);
     let tokens = |lx: &Lexer, count: usize| {
-        let kinds = lx.kinds()[..count].iter().zip(&lx.spans).map(|(k, s)| (*k, s.start, s.end));
+        let kinds = lx.kinds()[..count]
+            .iter()
+            .zip(&lx.spans)
+            .map(|(k, s)| (*k, s.start, s.end));
         let diags = lx.lanes.diags.iter().map(|d| (d.code, d.off, d.len));
         (kinds.collect::<Vec<_>>(), diags.collect::<Vec<_>>())
     };
-    assert_eq!(tokens(&lx, count), tokens(&full, full_count), "full walk disagrees on {code:?}");
+    assert_eq!(
+        tokens(&lx, count),
+        tokens(&full, full_count),
+        "full walk disagrees on {code:?}"
+    );
     // The run rules must not hide a walk that answers differently.
-    assert_eq!(tokens(&walk, walk_count), tokens(&full, full_count), "walk disagrees on {code:?}");
+    assert_eq!(
+        tokens(&walk, walk_count),
+        tokens(&full, full_count),
+        "walk disagrees on {code:?}"
+    );
     (lx, count)
 }
 
 #[track_caller]
 pub(super) fn kinds_of(code: &str, file_type: FileType) -> Vec<TokenKind> {
     let (lx, count) = lex_checked(code, file_type);
-    lx.kinds()[..count].iter().copied().filter(|kk| !kk.is_trivia()).collect()
+    lx.kinds()[..count]
+        .iter()
+        .copied()
+        .filter(|kk| !kk.is_trivia())
+        .collect()
 }
 
 /// Assert that the token stream for `code` contains at least one `RegExp` token
@@ -88,10 +103,14 @@ pub(super) fn kinds_of(code: &str, file_type: FileType) -> Vec<TokenKind> {
 pub(super) fn regex(code: &str, file_type: FileType) {
     let ks = kinds_of(code, file_type);
     assert!(
-        !ks.iter().any(|kind| matches!(kind, TokenKind::Slash | TokenKind::SlashEq)),
+        !ks.iter()
+            .any(|kind| matches!(kind, TokenKind::Slash | TokenKind::SlashEq)),
         "expected no division in {code:?}: kinds {ks:?}"
     );
-    assert!(ks.contains(&TokenKind::RegExp), "expected a regex in {code:?}: kinds {ks:?}");
+    assert!(
+        ks.contains(&TokenKind::RegExp),
+        "expected a regex in {code:?}: kinds {ks:?}"
+    );
 }
 
 /// Assert that the token stream for `code` contains at least one `Slash` token
@@ -99,8 +118,14 @@ pub(super) fn regex(code: &str, file_type: FileType) {
 #[track_caller]
 pub(super) fn division(code: &str, file_type: FileType) {
     let ks = kinds_of(code, file_type);
-    assert!(!ks.contains(&TokenKind::RegExp), "expected division in {code:?}: kinds {ks:?}");
-    assert!(ks.contains(&TokenKind::Slash), "expected a `/` in {code:?}: kinds {ks:?}");
+    assert!(
+        !ks.contains(&TokenKind::RegExp),
+        "expected division in {code:?}: kinds {ks:?}"
+    );
+    assert!(
+        ks.contains(&TokenKind::Slash),
+        "expected a `/` in {code:?}: kinds {ks:?}"
+    );
 }
 
 #[test]
@@ -108,7 +133,10 @@ fn long_walks_resolve_exactly() {
     let spine = ["T"; 300].join(" & ");
     regex(&format!("let x: {spine}\n/re/g.exec(s);"), ScriptTS);
     let body: String = (0..400).map(|i| format!("  a{i}: T;\n")).collect();
-    regex(&format!("let x: {{\n{body}}} & U\n/re/g.exec(s);"), ScriptTS);
+    regex(
+        &format!("let x: {{\n{body}}} & U\n/re/g.exec(s);"),
+        ScriptTS,
+    );
     let args: String = (0..3000).map(|i| format!("a{i}, ")).collect();
     division(&format!("f({args}0) / 2"), ScriptJS);
     regex(&format!("if ({args}0) /re/.test(s)"), ScriptJS);
@@ -117,13 +145,27 @@ fn long_walks_resolve_exactly() {
     division(&format!("y = {nested} / 2"), ScriptJS);
     let blocks = format!("{}x\n{}", "{".repeat(deep), "}\n/a/\n".repeat(deep));
     let ks = kinds_of(&blocks, ScriptJS);
-    assert_eq!(ks.iter().filter(|k| **k == TokenKind::RegExp).count(), deep, "{}", ks.len());
+    assert_eq!(
+        ks.iter().filter(|k| **k == TokenKind::RegExp).count(),
+        deep,
+        "{}",
+        ks.len()
+    );
     let heritage: String = (0..100).map(|i| format!("I{i}, ")).collect();
-    division(&format!("x = class extends A implements {heritage}J {{}} / 2"), ScriptTS);
-    let members: String = (0..2000).map(|i| format!("  m{i}(): Foo<Bar<T>> {{}}\n")).collect();
-    let ks = kinds_of(&format!("class C {{\n{members}  m<T = A<B>>() {{}}\n}}"), ScriptTS);
+    division(
+        &format!("x = class extends A implements {heritage}J {{}} / 2"),
+        ScriptTS,
+    );
+    let members: String = (0..2000)
+        .map(|i| format!("  m{i}(): Foo<Bar<T>> {{}}\n"))
+        .collect();
+    let ks = kinds_of(
+        &format!("class C {{\n{members}  m<T = A<B>>() {{}}\n}}"),
+        ScriptTS,
+    );
     assert!(
-        !ks.iter().any(|k| matches!(k, TokenKind::RShift | TokenKind::URShift)),
+        !ks.iter()
+            .any(|k| matches!(k, TokenKind::RShift | TokenKind::URShift)),
         "{}",
         ks.len()
     );
@@ -145,11 +187,20 @@ fn jsx_tag_name_after_comment() {
         "var x = <div></ //c\ndiv>;",
     ] {
         let ks = tsx(code);
-        assert!(!ks.contains(&TokenKind::RegExp), "{code:?} must not invent a regex: {ks:?}");
-        assert!(ks.contains(&TokenKind::JsxLt), "{code:?} must open JSX: {ks:?}");
+        assert!(
+            !ks.contains(&TokenKind::RegExp),
+            "{code:?} must not invent a regex: {ks:?}"
+        );
+        assert!(
+            ks.contains(&TokenKind::JsxLt),
+            "{code:?} must open JSX: {ks:?}"
+        );
     }
     let ks = tsx("var x = a < b / c;");
-    assert!(!ks.contains(&TokenKind::JsxLt), "comparison must stay relational: {ks:?}");
+    assert!(
+        !ks.contains(&TokenKind::JsxLt),
+        "comparison must stay relational: {ks:?}"
+    );
 }
 
 #[test]
@@ -184,14 +235,20 @@ fn jsx_self_close_allows_whitespace() {
         "const a = <N x=\"v\"\t/\t>;\nconst b = 1;",
     ] {
         let ks = jsx(code);
-        assert!(ks.contains(&TokenKind::JsxTagEnd), "{code:?} must self-close: kinds {ks:?}");
+        assert!(
+            ks.contains(&TokenKind::JsxTagEnd),
+            "{code:?} must self-close: kinds {ks:?}"
+        );
         assert!(
             ks.iter().filter(|&&k| k == TokenKind::KwConst).count() == 2,
             "{code:?} must not swallow the next statement: kinds {ks:?}"
         );
     }
     let ks = jsx("const a = <N x=\"v\" / y>;");
-    assert!(!ks.contains(&TokenKind::JsxTagEnd), "lone slash: kinds {ks:?}");
+    assert!(
+        !ks.contains(&TokenKind::JsxTagEnd),
+        "lone slash: kinds {ks:?}"
+    );
 }
 
 #[track_caller]
@@ -201,13 +258,19 @@ pub(super) fn diag_codes_of(code: &str, file_type: FileType) -> Vec<DiagCode> {
 }
 
 pub(super) fn is_fused_gt(k: TokenKind) -> bool {
-    matches!(k, TokenKind::RShift | TokenKind::URShift | TokenKind::RShiftEq | TokenKind::URShiftEq)
+    matches!(
+        k,
+        TokenKind::RShift | TokenKind::URShift | TokenKind::RShiftEq | TokenKind::URShiftEq
+    )
 }
 
 #[track_caller]
 pub(super) fn gt_run_fused(code: &str) {
     let ks = kinds_of(code, ScriptTS);
-    assert!(ks.iter().any(|k| is_fused_gt(*k)), "{code:?} must fuse the `>` run: {ks:?}");
+    assert!(
+        ks.iter().any(|k| is_fused_gt(*k)),
+        "{code:?} must fuse the `>` run: {ks:?}"
+    );
 }
 
 #[track_caller]
@@ -229,25 +292,48 @@ fn jsx_element_type_argument_runs_never_reach_coalesce() {
         "x = <Foo<A<B>>/>\ny = a >> (b);",
     ] {
         let ks = kinds_of(code, ScriptTSX);
-        assert!(!ks.iter().any(|k| is_fused_gt(*k)) || code.contains(">> "), "{code:?}: {ks:?}");
+        assert!(
+            !ks.iter().any(|k| is_fused_gt(*k)) || code.contains(">> "),
+            "{code:?}: {ks:?}"
+        );
         assert!(!ks.contains(&TokenKind::LShift), "{code:?}: {ks:?}");
     }
     let ks = kinds_of("const d = <div<A<B>>>x</div>;", ScriptTSX);
     assert!(ks.contains(&TokenKind::JsxText), "{ks:?}");
-    assert_eq!(ks.iter().filter(|k| **k == TokenKind::Gt).count(), 3, "{ks:?}");
+    assert_eq!(
+        ks.iter().filter(|k| **k == TokenKind::Gt).count(),
+        3,
+        "{ks:?}"
+    );
     let ks = kinds_of("const f = <Foo<A<B>> bar={a >> b} />;", ScriptTSX);
-    assert_eq!(ks.iter().filter(|k| **k == TokenKind::RShift).count(), 1, "{ks:?}");
+    assert_eq!(
+        ks.iter().filter(|k| **k == TokenKind::RShift).count(),
+        1,
+        "{ks:?}"
+    );
     let ks = kinds_of("x = <Foo<A<B>>/>\ny = a >> (b);", ScriptTSX);
-    assert_eq!(ks.iter().filter(|k| **k == TokenKind::RShift).count(), 1, "{ks:?}");
+    assert_eq!(
+        ks.iter().filter(|k| **k == TokenKind::RShift).count(),
+        1,
+        "{ks:?}"
+    );
 }
 
 #[test]
 fn tsx_element_type_arguments_with_generic_function_type() {
     let ks = kinds_of("<Component<<T>(v: T) => void> />", ScriptTSX);
     assert!(!ks.contains(&TokenKind::LShift), "{ks:?}");
-    assert_eq!(ks.iter().filter(|k| **k == TokenKind::JsxLt).count(), 1, "{ks:?}");
+    assert_eq!(
+        ks.iter().filter(|k| **k == TokenKind::JsxLt).count(),
+        1,
+        "{ks:?}"
+    );
     let ks = kinds_of("const a = <Box<(x: T) => Foo<T>> prop={1} />;", ScriptTSX);
-    assert_eq!(ks.iter().filter(|k| **k == TokenKind::JsxLt).count(), 1, "{ks:?}");
+    assert_eq!(
+        ks.iter().filter(|k| **k == TokenKind::JsxLt).count(),
+        1,
+        "{ks:?}"
+    );
 }
 
 fn names_of(code: &str, file_type: FileType) -> String {
@@ -355,7 +441,10 @@ fn jsx_child_element_name_after_trivia() {
             "x = <a>\n  <b/>\n  < c />\n  <d\n  />\n</a>;",
             "IDENT = JSX_LT IDENT > JSX_TEXT JSX_LT IDENT / JSX_TAG_END JSX_TEXT JSX_LT IDENT / JSX_TAG_END JSX_TEXT JSX_LT IDENT / JSX_TAG_END JSX_TEXT JSX_LT / IDENT JSX_TAG_END ;",
         ),
-        ("x = <a>< /a>;", "IDENT = JSX_LT IDENT > JSX_LT / IDENT JSX_TAG_END ;"),
+        (
+            "x = <a>< /a>;",
+            "IDENT = JSX_LT IDENT > JSX_LT / IDENT JSX_TAG_END ;",
+        ),
         (
             "x = <a>< /* c */ b/></a>;",
             "IDENT = JSX_LT IDENT > JSX_LT IDENT / JSX_TAG_END JSX_LT / IDENT JSX_TAG_END ;",
@@ -383,12 +472,18 @@ fn jsx_names_glue_every_hyphen() {
             "IDENT = JSX_LT IDENT IDENT = STRING IDENT = STRING / JSX_TAG_END ;",
         ),
         ("<div-\n    // comment\n/>;", "JSX_LT IDENT / JSX_TAG_END ;"),
-        ("x = <a--b>t</a--b>;", "IDENT = JSX_LT IDENT > JSX_TEXT JSX_LT / IDENT JSX_TAG_END ;"),
+        (
+            "x = <a--b>t</a--b>;",
+            "IDENT = JSX_LT IDENT > JSX_TEXT JSX_LT / IDENT JSX_TAG_END ;",
+        ),
         (
             "x = <a b={c - d} e={-1}/>;",
             "IDENT = JSX_LT IDENT IDENT = { IDENT - IDENT } IDENT = { - NUMBER } / JSX_TAG_END ;",
         ),
-        ("x = <a-b:c-d/>;", "IDENT = JSX_LT IDENT : IDENT / JSX_TAG_END ;"),
+        (
+            "x = <a-b:c-d/>;",
+            "IDENT = JSX_LT IDENT : IDENT / JSX_TAG_END ;",
+        ),
     ] {
         stream(code, ScriptJSX, want);
     }
@@ -442,7 +537,10 @@ fn legacy_octal_literal_ends_before_a_dot() {
 fn type_context_before_a_declaration_keyword() {
     gt_run_split("x = () => {}\n<Map<P>>baz;");
     gt_run_split("x = async () => {}\n<Map<P>>baz;");
-    regex("declare function f(): Foo<T>\nclass C {}\n/re/.test(s);", ScriptTS);
+    regex(
+        "declare function f(): Foo<T>\nclass C {}\n/re/.test(s);",
+        ScriptTS,
+    );
     regex("let x: Foo<T>\nfunction f() {}\n/re/.test(s);", ScriptTS);
     division("x = <T>\nfunction(){} / 2;", ScriptTS);
     stream(
@@ -463,7 +561,10 @@ fn gt_run_heads_after_asi_and_this() {
     gt_run_fused("x = a[0].b<c<d>>[0];");
     let ks = kinds_of("x = [f].#p <\n{ _ }| 's'>= b;", ScriptTS);
     assert!(ks.contains(&TokenKind::Ge), "{ks:?}");
-    regex("type Foo = | {} | bigint\n<import('m').baz<Bar<T<P>>>>/'/.x;", ScriptTS);
+    regex(
+        "type Foo = | {} | bigint\n<import('m').baz<Bar<T<P>>>>/'/.x;",
+        ScriptTS,
+    );
     regex("let x: T\n<U>/re/.test(s);", ScriptTS);
     division("let x = y\n<T>/re/.source;", ScriptTS);
 }
@@ -499,7 +600,11 @@ fn relational_heads_before_a_balanced_run() {
     // `b<c<d>>` is not a type-argument list: its closing `>` is glued to another `>` and rescans as
     // `>>` (tsc's `reScanGreaterToken`), so every `<` compares and the run is `>>>` + `>`.
     let ks = kinds_of("x = a > b<c<d>>>>(e);", ScriptTS);
-    assert_eq!(ks.iter().filter(|k| **k == TokenKind::Gt).count(), 2, "{ks:?}");
+    assert_eq!(
+        ks.iter().filter(|k| **k == TokenKind::Gt).count(),
+        2,
+        "{ks:?}"
+    );
     assert!(ks.contains(&TokenKind::URShift), "{ks:?}");
 }
 
@@ -562,9 +667,10 @@ fn gt_runs_closing_lists_that_open_in_any_context() {
 #[test]
 fn relational_heads_that_look_like_type_references() {
     // The same tokens read as an expression: a `case` label, a property named `function`.
-    for code in
-        ["switch (v) {\n  case (x): a < b < c >> d;\n}", "c ? o.function(x) : a < b < c >> d;"]
-    {
+    for code in [
+        "switch (v) {\n  case (x): a < b < c >> d;\n}",
+        "c ? o.function(x) : a < b < c >> d;",
+    ] {
         gt_run_fused(code);
     }
 }
@@ -604,7 +710,11 @@ fn jsx_child_tag_after_comment_or_unicode_space() {
         ("x = <>x<\u{a0}/>;", "x = <>x</>;"),
         ("x = <>x</\u{a0}>;", "x = <>x</>;"),
     ] {
-        assert_eq!(kinds_of(code, ScriptJSX), kinds_of(plain, ScriptJSX), "{code:?}");
+        assert_eq!(
+            kinds_of(code, ScriptJSX),
+            kinds_of(plain, ScriptJSX),
+            "{code:?}"
+        );
         assert!(diag_codes_of(code, ScriptJSX).is_empty(), "{code:?}");
     }
 }

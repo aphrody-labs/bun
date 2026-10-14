@@ -44,7 +44,11 @@ pub struct ButtonHasType {
 
 impl Default for ButtonHasType {
     fn default() -> Self {
-        Self { button: true, submit: true, reset: true }
+        Self {
+            button: true,
+            submit: true,
+            reset: true,
+        }
     }
 }
 
@@ -243,7 +247,10 @@ fn test() {
         (r#"<button type={condition ? "button" : "submit"}/>"#, None),
         (r"<button type={condition ? 'button' : 'submit'}/>", None),
         (r"<button type={condition ? `button` : `submit`}/>", None),
-        (r#"<button type="button"/>"#, Some(serde_json::json!([{ "reset": false }]))),
+        (
+            r#"<button type="button"/>"#,
+            Some(serde_json::json!([{ "reset": false }])),
+        ),
         (r#"createElement("span")"#, None),
         (r#"React.createElement("span")"#, None),
         (r#"React.createElement("span", {type: "foo"})"#, None),
@@ -256,9 +263,18 @@ fn test() {
         (r#"React.createElement("button", {type: "reset"})"#, None),
         (r#"React.createElement("button", {type: 'reset'})"#, None),
         (r#"React.createElement("button", {type: `reset`})"#, None),
-        (r#"React.createElement("button", {type: condition ? "button" : "submit"})"#, None),
-        (r#"React.createElement("button", {type: condition ? 'button' : 'submit'})"#, None),
-        (r#"React.createElement("button", {type: condition ? `button` : `submit`})"#, None),
+        (
+            r#"React.createElement("button", {type: condition ? "button" : "submit"})"#,
+            None,
+        ),
+        (
+            r#"React.createElement("button", {type: condition ? 'button' : 'submit'})"#,
+            None,
+        ),
+        (
+            r#"React.createElement("button", {type: condition ? `button` : `submit`})"#,
+            None,
+        ),
         (
             r#"React.createElement("button", {type: "button"})"#,
             Some(serde_json::json!([{ "reset": false }])),
@@ -305,7 +321,10 @@ fn test() {
         (r"<button type={'foo'}/>", None),
         (r"<button type={`foo`}/>", None),
         (r"<button type={`button${foo}`}/>", None),
-        (r#"<button type="reset"/>"#, Some(serde_json::json!([{ "reset": false }]))),
+        (
+            r#"<button type="reset"/>"#,
+            Some(serde_json::json!([{ "reset": false }])),
+        ),
         (r#"<button type={condition ? "button" : foo}/>"#, None),
         (r#"<button type={condition ? "button" : "foo"}/>"#, None),
         (
@@ -327,14 +346,26 @@ fn test() {
             r#"React.createElement("button", {type: "reset"})"#,
             Some(serde_json::json!([{ "reset": false }])),
         ),
-        (r#"React.createElement("button", {type: condition ? "button" : foo})"#, None),
-        (r#"React.createElement("button", {type: condition ? "button" : "foo"})"#, None),
+        (
+            r#"React.createElement("button", {type: condition ? "button" : foo})"#,
+            None,
+        ),
+        (
+            r#"React.createElement("button", {type: condition ? "button" : "foo"})"#,
+            None,
+        ),
         (
             r#"React.createElement("button", {type: condition ? "button" : "reset"})"#,
             Some(serde_json::json!([{ "reset": false }])),
         ),
-        (r#"React.createElement("button", {type: condition ? foo : "button"})"#, None),
-        (r#"React.createElement("button", {type: condition ? "foo" : "button"})"#, None),
+        (
+            r#"React.createElement("button", {type: condition ? foo : "button"})"#,
+            None,
+        ),
+        (
+            r#"React.createElement("button", {type: condition ? "foo" : "button"})"#,
+            None,
+        ),
         (
             r#"React.createElement("button", {type: condition ? "reset" : "button"})"#,
             Some(serde_json::json!([{ "reset": false }])),

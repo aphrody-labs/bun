@@ -62,7 +62,10 @@ pub fn is_glued(left: &oxc_css_parser::pos::Span, right: &oxc_css_parser::pos::S
 
 /// Any still-unclaimed comment in `start..end` (a prelude, a selector, a value)
 pub fn has_comments_between(start: u32, end: u32, f: &CssFormatter<'_, '_>) -> bool {
-    f.context().comments().iter_before(end).any(|c| c.span.start >= start)
+    f.context()
+        .comments()
+        .iter_before(end)
+        .any(|c| c.span.start >= start)
 }
 
 /// Collapses any whitespace run in `raw` to a single space.
@@ -109,7 +112,10 @@ pub fn write_stylesheet<'a>(stylesheet: &Stylesheet<'a>, f: &mut CssFormatter<'_
     if !remaining.is_empty() {
         if !stylesheet.statements.is_empty() {
             let source = f.context().source_text();
-            let prev_end = stylesheet.statements.last().map_or(0, |s| statement::stmt_end(s, f));
+            let prev_end = stylesheet
+                .statements
+                .last()
+                .map_or(0, |s| statement::stmt_end(s, f));
             write_gap(source.bytes_range(prev_end, remaining[0].span.start), f);
         }
         let last_end = remaining.last().unwrap().span.end;

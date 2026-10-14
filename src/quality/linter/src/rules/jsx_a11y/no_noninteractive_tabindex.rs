@@ -201,7 +201,11 @@ fn test() {
         (r#"<Article tabIndex="-1" />"#, None, Some(settings())),
         (r"<MyButton tabIndex={0} />", None, Some(settings())),
         (r#"<div role="tabpanel" tabIndex="0" />"#, None, None),
-        (r#"<div role={ROLE_BUTTON} onClick={() => {}} tabIndex="0" />;"#, None, None),
+        (
+            r#"<div role={ROLE_BUTTON} onClick={() => {}} tabIndex="0" />;"#,
+            None,
+            None,
+        ),
         (
             r"<div tabIndex={someVar} />",
             Some(serde_json::json!([{ "allowExpressionValues": true }])),
@@ -278,9 +282,18 @@ fn test() {
             None,
         ),
         (r"<div tabIndex={props.isTabbable ? 1 : 0} />", None, None),
-        (r"<div tabIndex={props.isTabbable ? '1' : '0'} />", None, None),
+        (
+            r"<div tabIndex={props.isTabbable ? '1' : '0'} />",
+            None,
+            None,
+        ),
     ];
 
-    Tester::new(NoNoninteractiveTabindex::NAME, NoNoninteractiveTabindex::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        NoNoninteractiveTabindex::NAME,
+        NoNoninteractiveTabindex::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

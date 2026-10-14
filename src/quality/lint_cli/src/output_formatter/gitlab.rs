@@ -96,13 +96,19 @@ struct GitlabReporter {
 
 impl GitlabReporter {
     fn default() -> Self {
-        Self { diagnostics: Vec::new(), repo_path_prefix: get_repo_path_prefix() }
+        Self {
+            diagnostics: Vec::new(),
+            repo_path_prefix: get_repo_path_prefix(),
+        }
     }
 }
 
 impl DiagnosticReporter for GitlabReporter {
     fn finish(&mut self, _: &DiagnosticResult) -> Option<String> {
-        Some(format_gitlab(&mut self.diagnostics, self.repo_path_prefix.as_deref()))
+        Some(format_gitlab(
+            &mut self.diagnostics,
+            self.repo_path_prefix.as_deref(),
+        ))
     }
 
     fn render_error(&mut self, error: Error) -> Option<String> {
@@ -113,7 +119,14 @@ impl DiagnosticReporter for GitlabReporter {
 
 fn format_gitlab(diagnostics: &mut Vec<Error>, repo_path_prefix: Option<&Path>) -> String {
     let errors = diagnostics.drain(..).map(|error| {
-        let Info { start, end, filename, message, severity, rule_id } = Info::new(&error);
+        let Info {
+            start,
+            end,
+            filename,
+            message,
+            severity,
+            rule_id,
+        } = Info::new(&error);
         let severity = match severity {
             Severity::Error => "critical".to_string(),
             Severity::Warning => "major".to_string(),
@@ -143,7 +156,10 @@ fn format_gitlab(diagnostics: &mut Vec<Error>, repo_path_prefix: Option<&Path>) 
                         #[cfg(windows)]
                         {
                             let combined = prefix.join(&filename);
-                            combined.to_string_lossy().cow_replace('\\', "/").into_owned()
+                            combined
+                                .to_string_lossy()
+                                .cow_replace('\\', "/")
+                                .into_owned()
                         }
                         #[cfg(not(windows))]
                         {
@@ -152,7 +168,10 @@ fn format_gitlab(diagnostics: &mut Vec<Error>, repo_path_prefix: Option<&Path>) 
                     }
                     None => filename,
                 },
-                lines: GitlabErrorLocationLinesJson { begin: start.line, end: end.line },
+                lines: GitlabErrorLocationLinesJson {
+                    begin: start.line,
+                    end: end.line,
+                },
             },
             fingerprint,
             severity,

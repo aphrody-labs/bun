@@ -78,7 +78,18 @@ impl<'a> FormalParameter<'a> {
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
         let builder = builder.builder();
-        FormalParameter::new(span, [], pattern, None, None, false, None, false, false, builder)
+        FormalParameter::new(
+            span,
+            [],
+            pattern,
+            None,
+            None,
+            false,
+            None,
+            false,
+            false,
+            builder,
+        )
     }
 }
 

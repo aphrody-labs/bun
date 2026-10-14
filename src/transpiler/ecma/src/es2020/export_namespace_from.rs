@@ -59,8 +59,13 @@ impl<'a> Traverse<'a, TransformState<'a>> for ExportNamespaceFrom {
                     // Transform `export * as ns from "mod"` to:
                     // `import * as _ns from "mod"; export { _ns as ns };`
 
-                    let ExportAllDeclaration { span, exported, source, export_kind, .. } =
-                        export_all.unbox();
+                    let ExportAllDeclaration {
+                        span,
+                        exported,
+                        source,
+                        export_kind,
+                        ..
+                    } = export_all.unbox();
                     let exported_name = exported.unwrap();
 
                     // Create a unique binding for the import based on the exported name

@@ -90,7 +90,10 @@ impl ValidExpectConfig {
             .and_then(|config| config.get("asyncMatchers"))
             .and_then(serde_json::Value::as_array)
             .map_or(default_async_matchers, |v| {
-                v.iter().filter_map(serde_json::Value::as_str).map(String::from).collect()
+                v.iter()
+                    .filter_map(serde_json::Value::as_str)
+                    .map(String::from)
+                    .collect()
             });
         let min_args = config
             .and_then(|config| config.get("minArgs"))
@@ -109,7 +112,13 @@ impl ValidExpectConfig {
             .and_then(serde_json::Value::as_bool)
             .unwrap_or(false);
 
-        Self { async_matchers, min_args, max_args, allow_string_message_arg: false, always_await }
+        Self {
+            async_matchers,
+            min_args,
+            max_args,
+            allow_string_message_arg: false,
+            always_await,
+        }
     }
 
     pub fn allow_string_message_arg(mut self) -> Self {
@@ -144,7 +153,9 @@ impl ValidExpectConfig {
         };
         let reporting_span = jest_fn_call.expect_error.map_or(call_expr.span, |_| {
             find_top_most_member_expression(node, ctx)
-                .map_or(call_expr.span, |top_most_member_expr| top_most_member_expr.span())
+                .map_or(call_expr.span, |top_most_member_expr| {
+                    top_most_member_expr.span()
+                })
         });
 
         match jest_fn_call.expect_error {
@@ -172,9 +183,16 @@ impl ValidExpectConfig {
 
         let allow_message_arg = self.allow_string_message_arg
             && call_expr.arguments.len() == 2
-            && call_expr.arguments.get(1).and_then(|arg| arg.as_expression()).is_some_and(|expr| {
-                matches!(expr, Expression::StringLiteral(_) | Expression::TemplateLiteral(_))
-            });
+            && call_expr
+                .arguments
+                .get(1)
+                .and_then(|arg| arg.as_expression())
+                .is_some_and(|expr| {
+                    matches!(
+                        expr,
+                        Expression::StringLiteral(_) | Expression::TemplateLiteral(_)
+                    )
+                });
 
         if (call_expr.arguments.len() as u32) > self.max_args && !allow_message_arg {
             let error = format!(
@@ -206,9 +224,10 @@ impl ValidExpectConfig {
 
         let parent = ctx.nodes().parent_node(node.id());
 
-        let should_be_awaited =
-            jest_fn_call.modifiers().any(|modifier| modifier.is_name_unequal("not"))
-                || self.async_matchers.contains(&matcher_name.to_string());
+        let should_be_awaited = jest_fn_call
+            .modifiers()
+            .any(|modifier| modifier.is_name_unequal("not"))
+            || self.async_matchers.contains(&matcher_name.to_string());
 
         if matches!(parent.kind(), AstKind::Program(_)) || !should_be_awaited {
             return;
@@ -238,8 +257,10 @@ impl ValidExpectConfig {
                 Message::PromisesWithAsyncAssertionsMustBeAwaited.details()
             };
             ctx.diagnostic_with_suggestion(valid_expect_diagnostic(error, help, span), |fixer| {
-                let Some(function_scope_node) =
-                    ctx.nodes().ancestors(node.id()).find(|node| node.kind().is_function_like())
+                let Some(function_scope_node) = ctx
+                    .nodes()
+                    .ancestors(node.id())
+                    .find(|node| node.kind().is_function_like())
                 else {
                     return fixer.noop();
                 };
@@ -384,7 +405,10 @@ fn should_skip_parent_node(node: &AstNode, parent: &AstNode) -> bool {
         }
         AstKind::NewExpression(new_expr) => {
             // Skip if this node is one of the new expression arguments
-            new_expr.arguments.iter().any(|arg| arg.span() == node.span())
+            new_expr
+                .arguments
+                .iter()
+                .any(|arg| arg.span() == node.span())
         }
         _ => false,
     }
@@ -425,7 +449,10 @@ fn find_promise_call_expression_node<'a, 'b>(
     let Some((mut parent, is_first_array_item)) = get_parent_with_ignore(node, ctx) else {
         return Some(default_node);
     };
-    if !matches!(parent.kind(), AstKind::CallExpression(_) | AstKind::ArrayExpression(_)) {
+    if !matches!(
+        parent.kind(),
+        AstKind::CallExpression(_) | AstKind::ArrayExpression(_)
+    ) {
         return Some(default_node);
     }
     let Some((grandparent, _)) = get_parent_with_ignore(parent, ctx) else {
@@ -494,12 +521,14 @@ impl Message {
                 "Matchers must be called to assert.",
                 "You need to call your matcher, e.g. `expect(true).toBe(true)`.",
             ),
-            Self::ModifierUnknown => {
-                ("Expect has an unknown modifier.", "Is it a spelling mistake?")
-            }
-            Self::AsyncMustBeAwaited => {
-                ("Async assertions must be awaited.", "Add `await` to your assertion.")
-            }
+            Self::ModifierUnknown => (
+                "Expect has an unknown modifier.",
+                "Is it a spelling mistake?",
+            ),
+            Self::AsyncMustBeAwaited => (
+                "Async assertions must be awaited.",
+                "Add `await` to your assertion.",
+            ),
             Self::PromisesWithAsyncAssertionsMustBeAwaited => (
                 "Promises which return async assertions must be awaited.",
                 "Add `await` to your assertion.",

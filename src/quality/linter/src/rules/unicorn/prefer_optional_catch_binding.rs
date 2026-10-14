@@ -81,9 +81,10 @@ impl Rule for PreferOptionalCatchBinding {
 
 fn get_param_references_count(binding_pat: &BindingPattern, ctx: &LintContext) -> usize {
     match &binding_pat {
-        BindingPattern::BindingIdentifier(binding_ident) => {
-            ctx.semantic().symbol_references(binding_ident.symbol_id()).count()
-        }
+        BindingPattern::BindingIdentifier(binding_ident) => ctx
+            .semantic()
+            .symbol_references(binding_ident.symbol_id())
+            .count(),
         BindingPattern::ObjectPattern(object_pat) => {
             let mut count = 0;
 
@@ -191,11 +192,19 @@ fn test() {
         ("try {} catch (e){}", "try {} catch {}"),
         ("try {} catch ({}) {}", "try {} catch {}"),
         ("try {} catch ({message}) {}", "try {} catch {}"),
-        ("try {} catch ({message: notUsedMessage}) {}", "try {} catch {}"),
+        (
+            "try {} catch ({message: notUsedMessage}) {}",
+            "try {} catch {}",
+        ),
         ("try {} catch ({cause: {message}}) {}", "try {} catch {}"),
     ];
 
-    Tester::new(PreferOptionalCatchBinding::NAME, PreferOptionalCatchBinding::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        PreferOptionalCatchBinding::NAME,
+        PreferOptionalCatchBinding::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

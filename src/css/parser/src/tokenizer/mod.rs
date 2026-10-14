@@ -27,7 +27,10 @@ struct ByteIndices<'a> {
 impl<'a> ByteIndices<'a> {
     #[inline]
     fn new(source: &'a str) -> Self {
-        Self { iter: source.as_bytes().iter(), offset: 0 }
+        Self {
+            iter: source.as_bytes().iter(),
+            offset: 0,
+        }
     }
 }
 
@@ -96,7 +99,11 @@ impl<'a> Tokenizer<'a> {
             state: TokenizerState {
                 chars,
                 current_indent: 0,
-                indents: if syntax == Syntax::Sass { vec![0] } else { vec![] },
+                indents: if syntax == Syntax::Sass {
+                    vec![0]
+                } else {
+                    vec![]
+                },
                 paren_depth: 0,
                 line_comments: true,
                 sass_interpolation_depth: 0,
@@ -146,7 +153,11 @@ impl<'a> Tokenizer<'a> {
 
     #[inline]
     pub fn bump(&mut self) -> PResult<TokenWithSpan<'a>> {
-        if let Some(indent) = self.skip_ws_or_comment() { Ok(indent) } else { self.next() }
+        if let Some(indent) = self.skip_ws_or_comment() {
+            Ok(indent)
+        } else {
+            self.next()
+        }
     }
 
     #[inline]
@@ -155,19 +166,31 @@ impl<'a> Tokenizer<'a> {
     }
 
     pub fn current_offset(&mut self) -> usize {
-        if let Some((offset, _)) = self.state.chars.peek() { *offset } else { self.source.len() }
+        if let Some((offset, _)) = self.state.chars.peek() {
+            *offset
+        } else {
+            self.source.len()
+        }
     }
 
     #[inline]
     fn peek_two_bytes(&self) -> Option<(usize, u8, u8)> {
         let mut iter = self.state.chars.clone();
-        iter.next().zip(iter.next()).map(|((start, first), (_, second))| (start, first, second))
+        iter.next()
+            .zip(iter.next())
+            .map(|((start, first), (_, second))| (start, first, second))
     }
 
     #[cold]
     fn build_eof_error(&mut self) -> Error {
         let offset = self.current_offset();
-        Error { kind: ErrorKind::UnexpectedEof, span: Span { start: offset, end: offset } }
+        Error {
+            kind: ErrorKind::UnexpectedEof,
+            span: Span {
+                start: offset,
+                end: offset,
+            },
+        }
     }
 
     fn next(&mut self) -> PResult<TokenWithSpan<'a>> {
@@ -195,7 +218,10 @@ impl<'a> Tokenizer<'a> {
                 }
                 let token = TokenWithSpan {
                     token: Token::LBrace(LBrace {}),
-                    span: Span { start: *start, end: start + 1 },
+                    span: Span {
+                        start: *start,
+                        end: start + 1,
+                    },
                 };
                 self.state.chars.next();
                 return Ok(token);
@@ -258,7 +284,10 @@ impl<'a> Tokenizer<'a> {
                 let offset = self.current_offset();
                 Ok(TokenWithSpan {
                     token: Token::Eof(Eof {}),
-                    span: Span { start: offset, end: offset },
+                    span: Span {
+                        start: offset,
+                        end: offset,
+                    },
                 })
             }
         }
@@ -272,7 +301,11 @@ impl<'a> Tokenizer<'a> {
         // Sass can dedent more than one level at a time,
         // so we need to produce a dedent token for each level.
         if indent_sensitive
-            && self.state.indents.last().is_some_and(|last| *last > self.state.current_indent)
+            && self
+                .state
+                .indents
+                .last()
+                .is_some_and(|last| *last > self.state.current_indent)
             && let Some((i, _)) = self.state.chars.peek()
         {
             self.state.indents.pop();
@@ -343,22 +376,35 @@ impl<'a> Tokenizer<'a> {
                     match len.cmp(&self.state.indents.last().copied().unwrap_or_default()) {
                         Ordering::Greater => {
                             self.state.indents.push(len);
-                            TokenWithSpan { token: Token::Indent(Indent {}), span }
+                            TokenWithSpan {
+                                token: Token::Indent(Indent {}),
+                                span,
+                            }
                         }
                         Ordering::Less => {
                             self.state.indents.pop();
-                            TokenWithSpan { token: Token::Dedent(Dedent {}), span }
+                            TokenWithSpan {
+                                token: Token::Dedent(Dedent {}),
+                                span,
+                            }
                         }
-                        Ordering::Equal => {
-                            TokenWithSpan { token: Token::Linebreak(Linebreak {}), span }
-                        }
+                        Ordering::Equal => TokenWithSpan {
+                            token: Token::Linebreak(Linebreak {}),
+                            span,
+                        },
                     }
                 });
             }
         }
 
         let offset = self.current_offset();
-        Some(TokenWithSpan { token: Token::Eof(Eof {}), span: Span { start: offset, end: offset } })
+        Some(TokenWithSpan {
+            token: Token::Eof(Eof {}),
+            span: Span {
+                start: offset,
+                end: offset,
+            },
+        })
     }
 
     // A comment: '/*' ... '*/'
@@ -391,7 +437,11 @@ impl<'a> Tokenizer<'a> {
 
         if let Some(comments) = &mut self.comments {
             let content = unsafe { self.source.get_unchecked(start + 2..content_end) };
-            comments.push(Comment { content, kind: CommentKind::Block, span: Span { start, end } });
+            comments.push(Comment {
+                content,
+                kind: CommentKind::Block,
+                span: Span { start, end },
+            });
         }
     }
 
@@ -452,7 +502,11 @@ impl<'a> Tokenizer<'a> {
 
         if let Some(comments) = &mut self.comments {
             let content = unsafe { self.source.get_unchecked(start + 2..end) };
-            comments.push(Comment { content, kind: CommentKind::Line, span: Span { start, end } });
+            comments.push(Comment {
+                content,
+                kind: CommentKind::Line,
+                span: Span { start, end },
+            });
         }
     }
 
@@ -481,7 +535,9 @@ impl<'a> Tokenizer<'a> {
                     }
                 }
             }
-            let Some(content_start) = content_start else { return end };
+            let Some(content_start) = content_start else {
+                return end;
+            };
             if !saw_newline || indent <= base {
                 return end;
             }
@@ -645,7 +701,13 @@ impl<'a> Tokenizer<'a> {
             //   first dot (postcss lexes the word `50.`) and a spread marker
             //   still follows, e.g. `rgba(50 50 50 50....)`
             // (capped at 5: any longer run behaves like 2-3)
-            let dot_run = self.state.chars.clone().take(5).take_while(|(_, c)| *c == b'.').count();
+            let dot_run = self
+                .state
+                .chars
+                .clone()
+                .take(5)
+                .take_while(|(_, c)| *c == b'.')
+                .count();
             if dot_run == 1 || dot_run == 4 {
                 // bump '.'
                 self.state.chars.next();
@@ -713,7 +775,10 @@ impl<'a> Tokenizer<'a> {
                 self.scan_dimension(number, span)
             }
             (Some((_, b'%')), ..) => self.scan_percentage(number, span),
-            _ => Ok(TokenWithSpan { token: Token::Number(NumberMeta {}), span }),
+            _ => Ok(TokenWithSpan {
+                token: Token::Number(NumberMeta {}),
+                span,
+            }),
         }
     }
 
@@ -729,7 +794,10 @@ impl<'a> Tokenizer<'a> {
                 number_end: compact_offset(value_span.end),
                 unit_escaped: unit.escaped,
             }),
-            span: Span { start: value_span.start, end: unit_span.end },
+            span: Span {
+                start: value_span.start,
+                end: unit_span.end,
+            },
         })
     }
 
@@ -738,7 +806,10 @@ impl<'a> Tokenizer<'a> {
         self.state.chars.next();
         Ok(TokenWithSpan {
             token: Token::Percentage(PercentageMeta {}),
-            span: Span { start: span.start, end: span.end + 1 },
+            span: Span {
+                start: span.start,
+                end: span.end + 1,
+            },
         })
     }
 
@@ -750,7 +821,10 @@ impl<'a> Tokenizer<'a> {
             Some((index, _)) => {
                 return Err(Error {
                     kind: ErrorKind::ExpectString,
-                    span: Span { start: index, end: index + 1 },
+                    span: Span {
+                        start: index,
+                        end: index + 1,
+                    },
                 });
             }
             None => return Err(self.build_eof_error()),
@@ -778,7 +852,10 @@ impl<'a> Tokenizer<'a> {
                 None => {
                     return Err(Error {
                         kind: ErrorKind::UnterminatedString,
-                        span: Span { start, end: self.source.len() },
+                        span: Span {
+                            start,
+                            end: self.source.len(),
+                        },
                     });
                 }
             }
@@ -853,7 +930,10 @@ impl<'a> Tokenizer<'a> {
         }
 
         debug_assert!(start + 1 < end);
-        Ok(TokenWithSpan { token: Token::Str(StrMeta { escaped }), span: Span { start, end } })
+        Ok(TokenWithSpan {
+            token: Token::Str(StrMeta { escaped }),
+            span: Span { start, end },
+        })
     }
 
     // Resume a string template after an interpolation, yielding the next static
@@ -867,7 +947,10 @@ impl<'a> Tokenizer<'a> {
                 Some((i, b'\n')) => {
                     return Err(Error {
                         kind: ErrorKind::UnexpectedLinebreak,
-                        span: Span { start: i, end: i + 1 },
+                        span: Span {
+                            start: i,
+                            end: i + 1,
+                        },
                     });
                 }
                 Some((_, b'\\')) => {
@@ -880,14 +963,30 @@ impl<'a> Tokenizer<'a> {
 
                     let raw = unsafe { self.source.get_unchecked(start..i + 1) };
                     let span = Span { start, end };
-                    return Ok((StrTemplate { raw, escaped, head: false, tail: true }, span));
+                    return Ok((
+                        StrTemplate {
+                            raw,
+                            escaped,
+                            head: false,
+                            tail: true,
+                        },
+                        span,
+                    ));
                 }
                 Some((end, c @ b'#' | c @ b'@' | c @ b'$'))
                     if self.is_start_of_interpolation_in_str_template(c) =>
                 {
                     let raw = unsafe { self.source.get_unchecked(start..end) };
                     let span = Span { start, end };
-                    return Ok((StrTemplate { raw, escaped, head: false, tail: false }, span));
+                    return Ok((
+                        StrTemplate {
+                            raw,
+                            escaped,
+                            head: false,
+                            tail: false,
+                        },
+                        span,
+                    ));
                 }
                 Some(..) => {}
                 None => return Err(self.build_eof_error()),
@@ -933,10 +1032,13 @@ impl<'a> Tokenizer<'a> {
     // An ident-like token: <ident-token>, <function-token> (`name(`), or <url-token>.
     // https://drafts.csswg.org/css-syntax-3/#consume-ident-like-token
     fn scan_ident(&mut self) -> PResult<TokenWithSpan<'a>> {
-        self.scan_ident_sequence(false).map(|(ident, span)| TokenWithSpan {
-            token: Token::Ident(IdentMeta { escaped: ident.escaped }),
-            span,
-        })
+        self.scan_ident_sequence(false)
+            .map(|(ident, span)| TokenWithSpan {
+                token: Token::Ident(IdentMeta {
+                    escaped: ident.escaped,
+                }),
+                span,
+            })
     }
 
     // The next static piece of an ident interleaved with interpolation (Sass/Less).
@@ -982,7 +1084,10 @@ impl<'a> Tokenizer<'a> {
                 debug_assert_eq!(c, b'-');
                 Ok(TokenWithSpan {
                     token: Token::Ident(IdentMeta { escaped: false }),
-                    span: Span { start, end: start + 1 },
+                    span: Span {
+                        start,
+                        end: start + 1,
+                    },
                 })
             }
             None => Err(self.build_eof_error()),
@@ -1011,7 +1116,10 @@ impl<'a> Tokenizer<'a> {
                 Some((end, b'#')) if self.is_start_of_interpolation_in_url_template() => {
                     let span = Span { start, end };
                     return Ok(TokenWithSpan {
-                        token: Token::UrlTemplate(UrlTemplateMeta { escaped, tail: false }),
+                        token: Token::UrlTemplate(UrlTemplateMeta {
+                            escaped,
+                            tail: false,
+                        }),
                         span,
                     });
                 }
@@ -1024,7 +1132,10 @@ impl<'a> Tokenizer<'a> {
                 Some((i, b'(' | b'"' | b'\'')) => {
                     return Err(Error {
                         kind: ErrorKind::InvalidUrl,
-                        span: Span { start: i, end: i + 1 },
+                        span: Span {
+                            start: i,
+                            end: i + 1,
+                        },
                     });
                 }
                 Some(..) => {}
@@ -1034,7 +1145,10 @@ impl<'a> Tokenizer<'a> {
 
         debug_assert!(start <= end);
         let span = Span { start, end };
-        Ok(TokenWithSpan { token: Token::UrlRaw(UrlRawMeta { escaped }), span })
+        Ok(TokenWithSpan {
+            token: Token::UrlRaw(UrlRawMeta { escaped }),
+            span,
+        })
     }
 
     /// A whitespace run inside an unquoted url() body: `true` when it ends the body at `)`.
@@ -1049,9 +1163,13 @@ impl<'a> Tokenizer<'a> {
                 Ok(true)
             }
             Some(..) if self.syntax == Syntax::Less => Ok(false),
-            Some((i, _)) => {
-                Err(Error { kind: ErrorKind::InvalidUrl, span: Span { start: *i, end: *i + 1 } })
-            }
+            Some((i, _)) => Err(Error {
+                kind: ErrorKind::InvalidUrl,
+                span: Span {
+                    start: *i,
+                    end: *i + 1,
+                },
+            }),
             None => Err(self.build_eof_error()),
         }
     }
@@ -1072,12 +1190,26 @@ impl<'a> Tokenizer<'a> {
                     self.state.paren_depth = self.state.paren_depth.saturating_sub(1);
                     let raw = unsafe { self.source.get_unchecked(start..end) };
                     let span = Span { start, end };
-                    return Ok((UrlTemplate { raw, escaped, tail: true }, span));
+                    return Ok((
+                        UrlTemplate {
+                            raw,
+                            escaped,
+                            tail: true,
+                        },
+                        span,
+                    ));
                 }
                 Some((end, b'#')) if self.is_start_of_interpolation_in_url_template() => {
                     let raw = unsafe { self.source.get_unchecked(start..end) };
                     let span = Span { start, end };
-                    return Ok((UrlTemplate { raw, escaped, tail: false }, span));
+                    return Ok((
+                        UrlTemplate {
+                            raw,
+                            escaped,
+                            tail: false,
+                        },
+                        span,
+                    ));
                 }
                 Some((end, c)) if c.is_ascii_whitespace() => {
                     if self.url_body_ws_run_ends()? {
@@ -1094,7 +1226,10 @@ impl<'a> Tokenizer<'a> {
                 Some((i, b'(' | b'"' | b'\'')) => {
                     return Err(Error {
                         kind: ErrorKind::InvalidUrl,
-                        span: Span { start: i, end: i + 1 },
+                        span: Span {
+                            start: i,
+                            end: i + 1,
+                        },
                     });
                 }
                 Some(..) => {}
@@ -1134,7 +1269,10 @@ impl<'a> Tokenizer<'a> {
             Some((i, _)) => {
                 return Err(Error {
                     kind: ErrorKind::InvalidHash,
-                    span: Span { start: i, end: i + 1 },
+                    span: Span {
+                        start: i,
+                        end: i + 1,
+                    },
                 });
             }
             None => {
@@ -1164,7 +1302,10 @@ impl<'a> Tokenizer<'a> {
         }
 
         debug_assert!(end > start + 1);
-        Ok(TokenWithSpan { token: Token::Hash(HashMeta { escaped }), span: Span { start, end } })
+        Ok(TokenWithSpan {
+            token: Token::Hash(HashMeta { escaped }),
+            span: Span { start, end },
+        })
     }
 
     // A '$'-prefixed variable token: '$' <ident-sequence> (Sass var / Less property).
@@ -1174,8 +1315,13 @@ impl<'a> Tokenizer<'a> {
         let (ident, span) =
             self.scan_ident_sequence(/* less_name */ self.syntax == Syntax::Less)?;
         Ok(TokenWithSpan {
-            token: Token::DollarVar(IdentMeta { escaped: ident.escaped }),
-            span: Span { start, end: span.end },
+            token: Token::DollarVar(IdentMeta {
+                escaped: ident.escaped,
+            }),
+            span: Span {
+                start,
+                end: span.end,
+            },
         })
     }
 
@@ -1192,19 +1338,26 @@ impl<'a> Tokenizer<'a> {
                 let span = Span { start, end: i + 1 };
                 if first_char == b'@' {
                     Ok(TokenWithSpan {
-                        token: Token::AtLBraceVar(IdentMeta { escaped: ident.escaped }),
+                        token: Token::AtLBraceVar(IdentMeta {
+                            escaped: ident.escaped,
+                        }),
                         span,
                     })
                 } else {
                     Ok(TokenWithSpan {
-                        token: Token::DollarLBraceVar(IdentMeta { escaped: ident.escaped }),
+                        token: Token::DollarLBraceVar(IdentMeta {
+                            escaped: ident.escaped,
+                        }),
                         span,
                     })
                 }
             }
             Some((i, _)) => Err(Error {
                 kind: ErrorKind::ExpectRightBraceForLessVar,
-                span: Span { start: i, end: i + 1 },
+                span: Span {
+                    start: i,
+                    end: i + 1,
+                },
             }),
             None => Err(self.build_eof_error()),
         }
@@ -1219,8 +1372,13 @@ impl<'a> Tokenizer<'a> {
         let (ident, span) =
             self.scan_ident_sequence(/* less_name */ self.syntax == Syntax::Less)?;
         Ok(TokenWithSpan {
-            token: Token::AtKeyword(IdentMeta { escaped: ident.escaped }),
-            span: Span { start, end: span.end },
+            token: Token::AtKeyword(IdentMeta {
+                escaped: ident.escaped,
+            }),
+            span: Span {
+                start,
+                end: span.end,
+            },
         })
     }
 
@@ -1235,10 +1393,19 @@ impl<'a> Tokenizer<'a> {
             while self.current_offset() < end {
                 self.state.chars.next();
             }
-            Ok(TokenWithSpan { token: Token::Placeholder(placeholder), span: Span { start, end } })
+            Ok(TokenWithSpan {
+                token: Token::Placeholder(placeholder),
+                span: Span { start, end },
+            })
         } else {
             self.state.chars.next(); // consume the stray backtick
-            Err(Error { kind: ErrorKind::UnknownToken, span: Span { start, end: start + 1 } })
+            Err(Error {
+                kind: ErrorKind::UnknownToken,
+                span: Span {
+                    start,
+                    end: start + 1,
+                },
+            })
         }
     }
 
@@ -1269,7 +1436,13 @@ impl<'a> Tokenizer<'a> {
             .take_while(|&b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_' || b >= 0x80)
             .count();
         let end = close_end + suffix_len;
-        Some((PlaceholderMeta { index, suffix_start: compact_offset(close_end) }, end))
+        Some((
+            PlaceholderMeta {
+                index,
+                suffix_start: compact_offset(close_end),
+            },
+            end,
+        ))
     }
 
     /// If a placeholder begins exactly at the current position, scan and return
@@ -1286,7 +1459,10 @@ impl<'a> Tokenizer<'a> {
         while self.current_offset() < end {
             self.state.chars.next();
         }
-        Some(TokenWithSpan { token: Token::Placeholder(placeholder), span: Span { start, end } })
+        Some(TokenWithSpan {
+            token: Token::Placeholder(placeholder),
+            span: Span { start, end },
+        })
     }
 
     // A Less inline-JavaScript token: '`' ... '`' (deprecated).
@@ -1335,12 +1511,18 @@ impl<'a> Tokenizer<'a> {
                     self.state.chars.next();
                     Ok(TokenWithSpan {
                         token: Token::DotDotDot(DotDotDot {}),
-                        span: Span { start, end: start + 3 },
+                        span: Span {
+                            start,
+                            end: start + 3,
+                        },
                     })
                 } else {
                     Ok(TokenWithSpan {
                         token: Token::Dot(Dot {}),
-                        span: Span { start, end: start + 1 },
+                        span: Span {
+                            start,
+                            end: start + 1,
+                        },
                     })
                 }
             }
@@ -1349,12 +1531,18 @@ impl<'a> Tokenizer<'a> {
                     self.state.chars.next();
                     Ok(TokenWithSpan {
                         token: Token::ColonColon(ColonColon {}),
-                        span: Span { start, end: start + 2 },
+                        span: Span {
+                            start,
+                            end: start + 2,
+                        },
                     })
                 }
                 _ => Ok(TokenWithSpan {
                     token: Token::Colon(Colon {}),
-                    span: Span { start, end: start + 1 },
+                    span: Span {
+                        start,
+                        end: start + 1,
+                    },
                 }),
             },
             Some((start, b'}')) => {
@@ -1367,21 +1555,30 @@ impl<'a> Tokenizer<'a> {
                 }
                 Ok(TokenWithSpan {
                     token: Token::RBrace(RBrace {}),
-                    span: Span { start, end: start + 1 },
+                    span: Span {
+                        start,
+                        end: start + 1,
+                    },
                 })
             }
             Some((start, b'(')) => {
                 self.state.paren_depth += 1;
                 Ok(TokenWithSpan {
                     token: Token::LParen(LParen {}),
-                    span: Span { start, end: start + 1 },
+                    span: Span {
+                        start,
+                        end: start + 1,
+                    },
                 })
             }
             Some((start, b')')) => {
                 self.state.paren_depth = self.state.paren_depth.saturating_sub(1);
                 Ok(TokenWithSpan {
                     token: Token::RParen(RParen {}),
-                    span: Span { start, end: start + 1 },
+                    span: Span {
+                        start,
+                        end: start + 1,
+                    },
                 })
             }
             Some((start, b'[')) => {
@@ -1391,39 +1588,60 @@ impl<'a> Tokenizer<'a> {
                 self.state.paren_depth += 1;
                 Ok(TokenWithSpan {
                     token: Token::LBracket(LBracket {}),
-                    span: Span { start, end: start + 1 },
+                    span: Span {
+                        start,
+                        end: start + 1,
+                    },
                 })
             }
             Some((start, b']')) => {
                 self.state.paren_depth = self.state.paren_depth.saturating_sub(1);
                 Ok(TokenWithSpan {
                     token: Token::RBracket(RBracket {}),
-                    span: Span { start, end: start + 1 },
+                    span: Span {
+                        start,
+                        end: start + 1,
+                    },
                 })
             }
             Some((start, b'/')) => Ok(TokenWithSpan {
                 token: Token::Solidus(Solidus {}),
-                span: Span { start, end: start + 1 },
+                span: Span {
+                    start,
+                    end: start + 1,
+                },
             }),
             Some((start, b',')) => Ok(TokenWithSpan {
                 token: Token::Comma(Comma {}),
-                span: Span { start, end: start + 1 },
+                span: Span {
+                    start,
+                    end: start + 1,
+                },
             }),
             Some((start, b';')) => Ok(TokenWithSpan {
                 token: Token::Semicolon(Semicolon {}),
-                span: Span { start, end: start + 1 },
+                span: Span {
+                    start,
+                    end: start + 1,
+                },
             }),
             Some((start, b'>')) => match self.state.chars.peek() {
                 Some((_, b'=')) => {
                     self.state.chars.next();
                     Ok(TokenWithSpan {
                         token: Token::GreaterThanEqual(GreaterThanEqual {}),
-                        span: Span { start, end: start + 2 },
+                        span: Span {
+                            start,
+                            end: start + 2,
+                        },
                     })
                 }
                 _ => Ok(TokenWithSpan {
                     token: Token::GreaterThan(GreaterThan {}),
-                    span: Span { start, end: start + 1 },
+                    span: Span {
+                        start,
+                        end: start + 1,
+                    },
                 }),
             },
             Some((start, b'<')) => match self.state.chars.peek() {
@@ -1431,32 +1649,47 @@ impl<'a> Tokenizer<'a> {
                     self.state.chars.next();
                     Ok(TokenWithSpan {
                         token: Token::LessThanEqual(LessThanEqual {}),
-                        span: Span { start, end: start + 2 },
+                        span: Span {
+                            start,
+                            end: start + 2,
+                        },
                     })
                 }
                 Some((_, b'!')) => {
                     let mut chars = self.state.chars.clone();
                     if {
                         chars.next();
-                        matches!((chars.next(), chars.peek()), (Some((_, b'-')), Some((_, b'-'))))
+                        matches!(
+                            (chars.next(), chars.peek()),
+                            (Some((_, b'-')), Some((_, b'-')))
+                        )
                     } {
                         self.state.chars.next();
                         self.state.chars.next();
                         self.state.chars.next();
                         Ok(TokenWithSpan {
                             token: Token::Cdo(Cdo {}),
-                            span: Span { start, end: start + 4 },
+                            span: Span {
+                                start,
+                                end: start + 4,
+                            },
                         })
                     } else {
                         Ok(TokenWithSpan {
                             token: Token::LessThan(LessThan {}),
-                            span: Span { start, end: start + 1 },
+                            span: Span {
+                                start,
+                                end: start + 1,
+                            },
                         })
                     }
                 }
                 _ => Ok(TokenWithSpan {
                     token: Token::LessThan(LessThan {}),
-                    span: Span { start, end: start + 1 },
+                    span: Span {
+                        start,
+                        end: start + 1,
+                    },
                 }),
             },
             Some((start, b'+')) => match self.state.chars.peek() {
@@ -1464,12 +1697,18 @@ impl<'a> Tokenizer<'a> {
                     self.state.chars.next();
                     Ok(TokenWithSpan {
                         token: Token::PlusUnderscore(PlusUnderscore {}),
-                        span: Span { start, end: start + 2 },
+                        span: Span {
+                            start,
+                            end: start + 2,
+                        },
                     })
                 }
                 _ => Ok(TokenWithSpan {
                     token: Token::Plus(Plus {}),
-                    span: Span { start, end: start + 1 },
+                    span: Span {
+                        start,
+                        end: start + 1,
+                    },
                 }),
             },
             Some((start, b'=')) => match self.state.chars.peek() {
@@ -1477,46 +1716,70 @@ impl<'a> Tokenizer<'a> {
                     self.state.chars.next();
                     Ok(TokenWithSpan {
                         token: Token::EqualEqual(EqualEqual {}),
-                        span: Span { start, end: start + 2 },
+                        span: Span {
+                            start,
+                            end: start + 2,
+                        },
                     })
                 }
                 _ => Ok(TokenWithSpan {
                     token: Token::Equal(Equal {}),
-                    span: Span { start, end: start + 1 },
+                    span: Span {
+                        start,
+                        end: start + 1,
+                    },
                 }),
             },
             Some((start, b'-')) => Ok(TokenWithSpan {
                 token: Token::Minus(Minus {}),
-                span: Span { start, end: start + 1 },
+                span: Span {
+                    start,
+                    end: start + 1,
+                },
             }),
             Some((start, b'~')) => match self.state.chars.peek() {
                 Some((_, b'=')) => {
                     self.state.chars.next();
                     Ok(TokenWithSpan {
                         token: Token::TildeEqual(TildeEqual {}),
-                        span: Span { start, end: start + 2 },
+                        span: Span {
+                            start,
+                            end: start + 2,
+                        },
                     })
                 }
                 _ => Ok(TokenWithSpan {
                     token: Token::Tilde(Tilde {}),
-                    span: Span { start, end: start + 1 },
+                    span: Span {
+                        start,
+                        end: start + 1,
+                    },
                 }),
             },
             Some((start, b'&')) => Ok(TokenWithSpan {
                 token: Token::Ampersand(Ampersand {}),
-                span: Span { start, end: start + 1 },
+                span: Span {
+                    start,
+                    end: start + 1,
+                },
             }),
             Some((start, b'*')) => match self.state.chars.peek() {
                 Some((_, b'=')) => {
                     self.state.chars.next();
                     Ok(TokenWithSpan {
                         token: Token::AsteriskEqual(AsteriskEqual {}),
-                        span: Span { start, end: start + 2 },
+                        span: Span {
+                            start,
+                            end: start + 2,
+                        },
                     })
                 }
                 _ => Ok(TokenWithSpan {
                     token: Token::Asterisk(Asterisk {}),
-                    span: Span { start, end: start + 1 },
+                    span: Span {
+                        start,
+                        end: start + 1,
+                    },
                 }),
             },
             Some((start, b'|')) => match self.state.chars.peek() {
@@ -1524,19 +1787,28 @@ impl<'a> Tokenizer<'a> {
                     self.state.chars.next();
                     Ok(TokenWithSpan {
                         token: Token::BarEqual(BarEqual {}),
-                        span: Span { start, end: start + 2 },
+                        span: Span {
+                            start,
+                            end: start + 2,
+                        },
                     })
                 }
                 Some((_, b'|')) => {
                     self.state.chars.next();
                     Ok(TokenWithSpan {
                         token: Token::BarBar(BarBar {}),
-                        span: Span { start, end: start + 2 },
+                        span: Span {
+                            start,
+                            end: start + 2,
+                        },
                     })
                 }
                 _ => Ok(TokenWithSpan {
                     token: Token::Bar(Bar {}),
-                    span: Span { start, end: start + 1 },
+                    span: Span {
+                        start,
+                        end: start + 1,
+                    },
                 }),
             },
             Some((start, b'^')) => match self.state.chars.peek() {
@@ -1544,12 +1816,18 @@ impl<'a> Tokenizer<'a> {
                     self.state.chars.next();
                     Ok(TokenWithSpan {
                         token: Token::CaretEqual(CaretEqual {}),
-                        span: Span { start, end: start + 2 },
+                        span: Span {
+                            start,
+                            end: start + 2,
+                        },
                     })
                 }
                 _ => Ok(TokenWithSpan {
                     token: Token::Unknown(Unknown {}),
-                    span: Span { start, end: start + 1 },
+                    span: Span {
+                        start,
+                        end: start + 1,
+                    },
                 }),
             },
             Some((start, b'$')) => match self.state.chars.peek() {
@@ -1557,12 +1835,18 @@ impl<'a> Tokenizer<'a> {
                     self.state.chars.next();
                     Ok(TokenWithSpan {
                         token: Token::DollarEqual(DollarEqual {}),
-                        span: Span { start, end: start + 2 },
+                        span: Span {
+                            start,
+                            end: start + 2,
+                        },
                     })
                 }
                 _ => Ok(TokenWithSpan {
                     token: Token::Unknown(Unknown {}),
-                    span: Span { start, end: start + 1 },
+                    span: Span {
+                        start,
+                        end: start + 1,
+                    },
                 }),
             },
             Some((start, b'!')) => match self.state.chars.peek() {
@@ -1570,17 +1854,26 @@ impl<'a> Tokenizer<'a> {
                     self.state.chars.next();
                     Ok(TokenWithSpan {
                         token: Token::ExclamationEqual(ExclamationEqual {}),
-                        span: Span { start, end: start + 2 },
+                        span: Span {
+                            start,
+                            end: start + 2,
+                        },
                     })
                 }
                 _ => Ok(TokenWithSpan {
                     token: Token::Exclamation(Exclamation {}),
-                    span: Span { start, end: start + 1 },
+                    span: Span {
+                        start,
+                        end: start + 1,
+                    },
                 }),
             },
             Some((start, b'?')) => Ok(TokenWithSpan {
                 token: Token::Question(Question {}),
-                span: Span { start, end: start + 1 },
+                span: Span {
+                    start,
+                    end: start + 1,
+                },
             }),
             Some((start, b'#')) => match self.state.chars.peek() {
                 Some((_, b'{')) if matches!(self.syntax, Syntax::Scss | Syntax::Sass) => {
@@ -1594,37 +1887,59 @@ impl<'a> Tokenizer<'a> {
                     }
                     Ok(TokenWithSpan {
                         token: Token::HashLBrace(HashLBrace {}),
-                        span: Span { start, end: start + 2 },
+                        span: Span {
+                            start,
+                            end: start + 2,
+                        },
                     })
                 }
                 _ => Ok(TokenWithSpan {
                     token: Token::NumberSign(NumberSign {}),
-                    span: Span { start, end: start + 1 },
+                    span: Span {
+                        start,
+                        end: start + 1,
+                    },
                 }),
             },
             Some((start, b'%')) => Ok(TokenWithSpan {
                 token: Token::Percent(Percent {}),
-                span: Span { start, end: start + 1 },
+                span: Span {
+                    start,
+                    end: start + 1,
+                },
             }),
-            Some((start, b'@')) => {
-                Ok(TokenWithSpan { token: Token::At(At {}), span: Span { start, end: start + 1 } })
-            }
+            Some((start, b'@')) => Ok(TokenWithSpan {
+                token: Token::At(At {}),
+                span: Span {
+                    start,
+                    end: start + 1,
+                },
+            }),
             Some((i, c)) if c.is_ascii_whitespace() => Err(Error {
                 kind: ErrorKind::UnexpectedWhitespace,
-                span: Span { start: i, end: i + 1 },
+                span: Span {
+                    start: i,
+                    end: i + 1,
+                },
             }),
             // CSS Syntax: anything else is a <delim-token>, not a tokenizer
             // error. Typed grammar rules reject it where it doesn't belong;
             // raw component-value contexts preserve it.
             Some((i, _)) => Ok(TokenWithSpan {
                 token: Token::Unknown(Unknown {}),
-                span: Span { start: i, end: i + 1 },
+                span: Span {
+                    start: i,
+                    end: i + 1,
+                },
             }),
             None => {
                 let offset = self.current_offset();
                 Ok(TokenWithSpan {
                     token: Token::Eof(Eof {}),
-                    span: Span { start: offset, end: offset },
+                    span: Span {
+                        start: offset,
+                        end: offset,
+                    },
                 })
             }
         }
@@ -1635,7 +1950,13 @@ impl<'a> Tokenizer<'a> {
         self.state.chars.next();
         self.state.chars.next();
         self.state.chars.next();
-        Ok(TokenWithSpan { token: Token::Cdc(Cdc {}), span: Span { start, end: start + 3 } })
+        Ok(TokenWithSpan {
+            token: Token::Cdc(Cdc {}),
+            span: Span {
+                start,
+                end: start + 3,
+            },
+        })
     }
 
     #[inline]

@@ -54,7 +54,9 @@ impl<'s, 'a> Symbol<'s, 'a> {
     }
 
     pub(super) fn rename(&self, new_name: &CompactStr) -> RuleFix {
-        let Some(fixes) = self.rename_fixes(new_name) else { return Fix::empty().into() };
+        let Some(fixes) = self.rename_fixes(new_name) else {
+            return Fix::empty().into();
+        };
         Self::finish_rename_fix(RuleFix::from(fixes), self.name(), new_name)
     }
 
@@ -63,7 +65,9 @@ impl<'s, 'a> Symbol<'s, 'a> {
         fixer: RuleFixer<'_, 'a>,
         new_name: &CompactStr,
     ) -> RuleFix {
-        let Some(fixes) = self.rename_fixes(new_name) else { return fixer.noop() };
+        let Some(fixes) = self.rename_fixes(new_name) else {
+            return fixer.noop();
+        };
         let mut fix = fixer.for_multifix().new_fix_with_capacity(fixes.len());
         for replacement in fixes {
             fix.push(replacement);
@@ -110,8 +114,11 @@ impl<'s, 'a> Symbol<'s, 'a> {
                     BindingInfo::multi_or_single(arr.rest.as_ref().map(|r| (r.span, true)), true)
                 }
                 1 => {
-                    let own_span =
-                        arr.elements.iter().filter_map(|el| el.as_ref()).find(|el| self == *el);
+                    let own_span = arr
+                        .elements
+                        .iter()
+                        .filter_map(|el| el.as_ref())
+                        .find(|el| self == *el);
                     if let Some(rest) = arr.rest.as_ref() {
                         if rest.span.contains_inclusive(self.span()) {
                             // spreads are after all elements, otherwise it
@@ -150,7 +157,11 @@ impl<'s, 'a> Symbol<'s, 'a> {
                 1 => {
                     let last_property = obj.properties.len() - 1;
                     let own_span = obj.properties.iter().enumerate().find_map(|(idx, el)| {
-                        if self == &el.value { Some((el.span, idx == last_property)) } else { None }
+                        if self == &el.value {
+                            Some((el.span, idx == last_property))
+                        } else {
+                            None
+                        }
                     });
                     if let Some(rest) = obj.rest.as_ref() {
                         if rest.span.contains_inclusive(self.span()) {
@@ -201,7 +212,11 @@ pub(super) enum BindingInfo {
 impl BindingInfo {
     #[inline]
     const fn single_or_missing(found: bool) -> Self {
-        if found { BindingInfo::SingleDestructure } else { BindingInfo::NotFound }
+        if found {
+            BindingInfo::SingleDestructure
+        } else {
+            BindingInfo::NotFound
+        }
     }
 
     fn multi_or_missing(found: Option<(Span, bool)>, is_object: bool) -> Self {

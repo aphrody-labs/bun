@@ -147,15 +147,20 @@ impl Rule for NoDupeElseIf {
                 break;
             };
 
-            if stmt.alternate.as_ref().is_none_or(|stmt| stmt.span() != current_node.kind().span())
+            if stmt
+                .alternate
+                .as_ref()
+                .is_none_or(|stmt| stmt.span() != current_node.kind().span())
             {
                 break;
             }
 
             current_node = parent_node;
 
-            let current_or_operands: Vec<_> =
-                split_by_or(&stmt.test).into_iter().map(split_by_and).collect();
+            let current_or_operands: Vec<_> = split_by_or(&stmt.test)
+                .into_iter()
+                .map(split_by_and)
+                .collect();
 
             list_to_check = list_to_check
                 .into_iter()
@@ -172,7 +177,10 @@ impl Rule for NoDupeElseIf {
                 .collect();
 
             if list_to_check.iter().any(Vec::is_empty) {
-                ctx.diagnostic(no_dupe_else_if_diagnostic(stmt.test.span(), if_stmt.test.span()));
+                ctx.diagnostic(no_dupe_else_if_diagnostic(
+                    stmt.test.span(),
+                    if_stmt.test.span(),
+                ));
                 break;
             }
         }
@@ -205,7 +213,8 @@ fn split_by_logical_operator<'a, 'b>(
 }
 
 fn is_subset<'a, 'b>(a: &'a [&'a Expression<'b>], b: &'a [&'a Expression<'b>]) -> bool {
-    a.iter().all(|expr_a| b.iter().any(|expr_b| is_equal(expr_a, expr_b)))
+    a.iter()
+        .all(|expr_a| b.iter().any(|expr_b| is_equal(expr_a, expr_b)))
 }
 
 fn is_equal<'a, 'b>(a: &'a Expression<'b>, b: &'a Expression<'b>) -> bool {

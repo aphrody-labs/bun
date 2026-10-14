@@ -210,8 +210,10 @@ impl<'a> ClassProperties<'a> {
             Some(constructor_scope_id)
         };
 
-        let insert_scopes =
-            InstanceInitScopes { insert_in_scope_id: super_func_scope_id, constructor_scope_id };
+        let insert_scopes = InstanceInitScopes {
+            insert_in_scope_id: super_func_scope_id,
+            constructor_scope_id,
+        };
 
         (insert_scopes, insert_location)
     }
@@ -233,11 +235,20 @@ impl<'a> ClassProperties<'a> {
         // `constructor(..._args) { super(..._args); /* prop initialization */ }`
         let mut params_rest = None;
         if has_super_class {
-            let args_binding =
-                ctx.generate_uid("args", constructor_scope_id, SymbolFlags::FunctionScopedVariable);
+            let args_binding = ctx.generate_uid(
+                "args",
+                constructor_scope_id,
+                SymbolFlags::FunctionScopedVariable,
+            );
             let rest_element =
                 BindingRestElement::new(SPAN, args_binding.create_binding_pattern(ctx), ctx);
-            params_rest = Some(FormalParameterRest::boxed(SPAN, [], rest_element, None, ctx));
+            params_rest = Some(FormalParameterRest::boxed(
+                SPAN,
+                [],
+                rest_element,
+                None,
+                ctx,
+            ));
             stmts.push(Statement::new_expression_statement(
                 SPAN,
                 create_super_call(&args_binding, ctx),
@@ -274,7 +285,10 @@ impl<'a> ClassProperties<'a> {
 
         // Insert inits into constructor body
         let body_stmts = &mut constructor.body.as_mut().unwrap().statements;
-        body_stmts.splice(insertion_index..insertion_index, exprs_into_stmts(inits, &ctx.ast));
+        body_stmts.splice(
+            insertion_index..insertion_index,
+            exprs_into_stmts(inits, &ctx.ast),
+        );
     }
 
     /// Create `_super` function containing instance property initializers,
@@ -298,14 +312,19 @@ impl<'a> ClassProperties<'a> {
         // rather than an additional `return this` statement.
         // Actually this wouldn't work at present, as `_classPrivateFieldInitSpec(this, _prop, value)`
         // does not return `this`. We could alter it so it does when we have our own helper package.
-        let args_binding =
-            ctx.generate_uid("args", super_func_scope_id, SymbolFlags::FunctionScopedVariable);
+        let args_binding = ctx.generate_uid(
+            "args",
+            super_func_scope_id,
+            SymbolFlags::FunctionScopedVariable,
+        );
         let super_call = create_super_call(&args_binding, ctx);
         let this_expr = Expression::new_this_expression(SPAN, ctx);
         let body_exprs = Expression::new_sequence_expression(
             SPAN,
             ArenaVec::from_iter_in(
-                iter::once(super_call).chain(inits).chain(iter::once(this_expr)),
+                iter::once(super_call)
+                    .chain(inits)
+                    .chain(iter::once(this_expr)),
                 ctx,
             ),
             ctx,
@@ -419,7 +438,9 @@ impl<'a> ClassProperties<'a> {
             self.insert_after_exprs.push(assignment);
             None
         };
-        ctx.state.var_declarations.insert_let(super_binding, init, &ctx.ast);
+        ctx.state
+            .var_declarations
+            .insert_let(super_binding, init, &ctx.ast);
     }
 
     /// Rename any symbols in constructor which clash with symbols used in initializers
@@ -441,7 +462,8 @@ impl<'a> ClassProperties<'a> {
             // Save replacement name in `clashing_symbols`
             *name = new_name;
             // Rename symbol and binding
-            ctx.scoping_mut().rename_symbol(symbol_id, constructor_scope_id, new_name);
+            ctx.scoping_mut()
+                .rename_symbol(symbol_id, constructor_scope_id, new_name);
         }
 
         // Rename identifiers for clashing symbols in constructor params and body
@@ -463,7 +485,10 @@ struct ConstructorParamsSuperReplacer<'a, 'ctx> {
 
 impl<'a, 'ctx> ConstructorParamsSuperReplacer<'a, 'ctx> {
     fn new(ctx: &'ctx mut TraverseCtx<'a>) -> Self {
-        Self { super_binding: None, ctx }
+        Self {
+            super_binding: None,
+            ctx,
+        }
     }
 
     /// Replace `super()` in constructor params with `_super().call(super())`.
@@ -616,7 +641,11 @@ struct ConstructorBodySuperReplacer<'a, 'ctx> {
 
 impl<'a, 'ctx> ConstructorBodySuperReplacer<'a, 'ctx> {
     fn new(constructor_scope_id: ScopeId, ctx: &'ctx mut TraverseCtx<'a>) -> Self {
-        Self { constructor_scope_id, super_binding: None, ctx }
+        Self {
+            constructor_scope_id,
+            super_binding: None,
+            ctx,
+        }
     }
 
     /// If `super()` found first as a top level statement (`constructor() { let x; super(); }`),
@@ -790,7 +819,10 @@ impl<'a, 'v> ConstructorSymbolRenamer<'a, 'v> {
         clashing_symbols: &'v mut FxHashMap<SymbolId, Ident<'a>>,
         ctx: &'v TraverseCtx<'a>,
     ) -> Self {
-        Self { clashing_symbols, ctx }
+        Self {
+            clashing_symbols,
+            ctx,
+        }
     }
 }
 

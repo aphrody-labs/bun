@@ -37,14 +37,22 @@ fn main() {
     println!("{source_text}");
 
     let allocator = Allocator::default();
-    let mut program = Parser::new(&allocator, &source_text, source_type).parse().program;
+    let mut program = Parser::new(&allocator, &source_text, source_type)
+        .parse()
+        .program;
 
     let result = {
-        let semantic = SemanticBuilder::new().with_build_nodes(true).build(&program).semantic;
+        let semantic = SemanticBuilder::new()
+            .with_build_nodes(true)
+            .build(&program)
+            .semantic;
         compile(&program, &semantic, &allocator, PluginOptions::default())
     };
     let (changed, diagnostics, fatal) = match result {
-        CompileResult::Success { output, diagnostics } => {
+        CompileResult::Success {
+            output,
+            diagnostics,
+        } => {
             let changed = output.is_some();
             if let Some(output) = output {
                 output.transform(&mut program);

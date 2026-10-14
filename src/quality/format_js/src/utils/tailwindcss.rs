@@ -130,7 +130,10 @@ pub struct CollapseWhitespace {
 
 impl CollapseWhitespace {
     fn new() -> Self {
-        Self { start: true, end: true }
+        Self {
+            start: true,
+            end: true,
+        }
     }
 }
 
@@ -426,10 +429,15 @@ fn split_template_content(content: &str, is_first: bool, is_last: bool) -> (&str
     let has_suffix = !is_last && !has_trailing_ws;
 
     // Find split points
-    let prefix_end =
-        if has_prefix { content.find(|c: char| c.is_ascii_whitespace()) } else { None };
+    let prefix_end = if has_prefix {
+        content.find(|c: char| c.is_ascii_whitespace())
+    } else {
+        None
+    };
     let suffix_start = if has_suffix {
-        content.rfind(|c: char| c.is_ascii_whitespace()).map(|i| i + 1)
+        content
+            .rfind(|c: char| c.is_ascii_whitespace())
+            .map(|i| i + 1)
     } else {
         None
     };

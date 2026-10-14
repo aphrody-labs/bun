@@ -50,7 +50,10 @@ pub fn generate_rule_runner_impls() -> io::Result<()> {
         get_member_expression_kinds().expect("Failed to get member expression kinds");
     let regex_node_kinds =
         regex_node_kinds::get_regex_node_kinds().expect("Failed to get regex node kinds");
-    let rule_runner_data = RuleRunnerData { member_expression_kinds, regex_node_kinds };
+    let rule_runner_data = RuleRunnerData {
+        member_expression_kinds,
+        regex_node_kinds,
+    };
 
     let mut out = String::new();
     out.push_str("// Auto-generated code, DO NOT EDIT DIRECTLY!\n");
@@ -116,7 +119,11 @@ impl RuleRunner for crate::rules::{plugin_module}::{rule_module}::{rule_struct} 
     if !fs::read(&target_path).is_ok_and(|existing| existing == formatted_out.as_bytes()) {
         fs::write(&target_path, formatted_out)?;
     }
-    println!("Generated {} impls into {}", rule_entries.len(), target_path.display());
+    println!(
+        "Generated {} impls into {}",
+        rule_entries.len(),
+        target_path.display()
+    );
 
     Ok(())
 }
@@ -133,9 +140,15 @@ pub fn generate_rules_enum_file() -> io::Result<()> {
     let mut rule_entries = get_all_rules(&rules_file_contents);
 
     for rule in &mut rule_entries {
-        let Some(path) = find_rule_source_file(&root, rule) else { continue };
-        let Ok(source) = fs::read_to_string(path) else { continue };
-        let Ok(file) = syn::parse_file(&source) else { continue };
+        let Some(path) = find_rule_source_file(&root, rule) else {
+            continue;
+        };
+        let Ok(source) = fs::read_to_string(path) else {
+            continue;
+        };
+        let Ok(file) = syn::parse_file(&source) else {
+            continue;
+        };
         let Some(rule_impl) = find_rule_impl_block(&file, &rule.rule_struct_name()) else {
             continue;
         };
@@ -241,7 +254,11 @@ fn detect_rule_run_implementations(file: &File, rule: &RuleEntry) -> FxHashSet<S
         .items
         .iter()
         .filter_map(|item| {
-            if let syn::ImplItem::Fn(func) = item { Some(func.sig.ident.to_string()) } else { None }
+            if let syn::ImplItem::Fn(func) = item {
+                Some(func.sig.ident.to_string())
+            } else {
+                None
+            }
         })
         .filter(|name| !ignore_funcs.contains(&name.as_str()));
 

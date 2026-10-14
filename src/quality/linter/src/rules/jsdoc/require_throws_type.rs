@@ -119,5 +119,11 @@ fn test() {
                    ",
     ];
 
-    Tester::new(RequireThrowsType::NAME, RequireThrowsType::PLUGIN, pass, fail).test_and_snapshot();
+    Tester::new(
+        RequireThrowsType::NAME,
+        RequireThrowsType::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

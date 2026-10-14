@@ -164,11 +164,24 @@ fn past_raw(tokens: &Tokens, lim: usize, i: usize) -> Option<usize> {
 /// The > closing the < at start, if the brackets inside balance and no ; on its level ends it.
 #[inline(never)]
 fn resolve_lists(tokens: &Tokens, start: usize) -> Option<usize> {
-    let Tokens { src, st, opch, n, closers, .. } = *tokens;
+    let Tokens {
+        src,
+        st,
+        opch,
+        n,
+        closers,
+        ..
+    } = *tokens;
     let budget = start + FORWARD_SCAN_CAP;
     let mut stack = closers.lists.borrow_mut();
     stack.clear();
-    stack.push(Open { pos: start as u32, parens: 0, brackets: 0, braces: 0, dead: 0 });
+    stack.push(Open {
+        pos: start as u32,
+        parens: 0,
+        brackets: 0,
+        braces: 0,
+        dead: 0,
+    });
     let (mut parens, mut brackets, mut braces) = (0i32, 0i32, 0i32);
     let mut i = start + 1;
     while i < n {
@@ -188,7 +201,13 @@ fn resolve_lists(tokens: &Tokens, start: usize) -> Option<usize> {
             match c {
                 b'<' => {
                     if op && src[i + 1] != b'=' {
-                        stack.push(Open { pos: i as u32, parens, brackets, braces, dead: 0 });
+                        stack.push(Open {
+                            pos: i as u32,
+                            parens,
+                            brackets,
+                            braces,
+                            dead: 0,
+                        });
                     }
                 }
                 b'>' => {
@@ -267,13 +286,25 @@ fn kill(stack: &mut Vec<Open>, closers: &Closers, record: bool, doomed: impl Fn(
         stack.pop();
     }
     if dead > 0 {
-        stack.push(Open { pos: 0, parens: 0, brackets: 0, braces: 0, dead });
+        stack.push(Open {
+            pos: 0,
+            parens: 0,
+            brackets: 0,
+            braces: 0,
+            dead,
+        });
     }
 }
 
 #[inline(never)]
 fn resolve_groups(tokens: &Tokens, start: usize) -> Option<usize> {
-    let Tokens { src, st, n, closers, .. } = *tokens;
+    let Tokens {
+        src,
+        st,
+        n,
+        closers,
+        ..
+    } = *tokens;
     let budget = start + FORWARD_SCAN_CAP;
     let mut open = closers.groups.borrow_mut();
     open.clear();

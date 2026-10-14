@@ -84,7 +84,8 @@ impl<'a> ClassProperties<'a> {
         *ctx.scoping_mut().scope_flags_mut(scope_id) = scope_flags;
 
         let outer_scope_id = ctx.current_scope_id();
-        ctx.scoping_mut().change_scope_parent_id(scope_id, Some(outer_scope_id));
+        ctx.scoping_mut()
+            .change_scope_parent_id(scope_id, Some(outer_scope_id));
 
         wrap_statements_in_arrow_function_iife(stmts.take_in(ctx), scope_id, block.span, ctx)
     }
@@ -111,11 +112,15 @@ impl<'a> ClassProperties<'a> {
         // Check identifier is reference to class name
         let class_details = self.current_class_mut();
         let class_name_symbol_id = class_details.bindings.name_symbol_id();
-        let Some(class_name_symbol_id) = class_name_symbol_id else { return };
+        let Some(class_name_symbol_id) = class_name_symbol_id else {
+            return;
+        };
 
         let reference_id = ident.reference_id();
         let reference = ctx.scoping().get_reference(reference_id);
-        let Some(symbol_id) = reference.symbol_id() else { return };
+        let Some(symbol_id) = reference.symbol_id() else {
+            return;
+        };
 
         if symbol_id != class_name_symbol_id {
             return;
@@ -126,7 +131,9 @@ impl<'a> ClassProperties<'a> {
         ident.name = temp_binding.name;
 
         let symbols = ctx.scoping_mut();
-        symbols.get_reference_mut(reference_id).set_symbol_id(temp_binding.symbol_id);
+        symbols
+            .get_reference_mut(reference_id)
+            .set_symbol_id(temp_binding.symbol_id);
         symbols.delete_resolved_reference(symbol_id, reference_id);
         symbols.add_resolved_reference(temp_binding.symbol_id, reference_id);
     }
@@ -270,11 +277,13 @@ impl<'a> VisitMut<'a> for StaticVisitor<'a, '_> {
             }
             // `super.prop`
             Expression::StaticMemberExpression(_) if self.this_depth == 0 => {
-                self.super_converter.transform_static_member_expression(expr, self.ctx);
+                self.super_converter
+                    .transform_static_member_expression(expr, self.ctx);
             }
             // `super[prop]`
             Expression::ComputedMemberExpression(_) if self.this_depth == 0 => {
-                self.super_converter.transform_computed_member_expression(expr, self.ctx);
+                self.super_converter
+                    .transform_computed_member_expression(expr, self.ctx);
             }
             // `super.prop()`
             Expression::CallExpression(call_expr) if self.this_depth == 0 => {
@@ -299,7 +308,9 @@ impl<'a> VisitMut<'a> for StaticVisitor<'a, '_> {
 
     /// Transform reference to class name to temp var
     fn visit_identifier_reference(&mut self, ident: &mut IdentifierReference<'a>) {
-        self.super_converter.class_properties.replace_class_name_with_temp_var(ident, self.ctx);
+        self.super_converter
+            .class_properties
+            .replace_class_name_with_temp_var(ident, self.ctx);
     }
 
     /// Convert scope to sloppy mode if `self.make_sloppy_mode == true`.
@@ -543,7 +554,9 @@ impl<'a> StaticVisitor<'a, '_> {
         if self.scope_depth == 0 {
             let scope_id = scope_id.get().unwrap();
             let current_scope_id = self.ctx.current_scope_id();
-            self.ctx.scoping_mut().change_scope_parent_id(scope_id, Some(current_scope_id));
+            self.ctx
+                .scoping_mut()
+                .change_scope_parent_id(scope_id, Some(current_scope_id));
         }
     }
 }

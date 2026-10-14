@@ -9,8 +9,8 @@ pub type EmbeddedDaemon = mullvad_daemon::Daemon;
 pub async fn start_embedded_daemon() -> Result<EmbeddedDaemon, String> {
     let settings_dir = mullvad_paths::settings_dir().map_err(|error| error.to_string())?;
     let cache_dir = mullvad_paths::cache_dir().map_err(|error| error.to_string())?;
-    let log_handle = mullvad_daemon::logging::detached_log_handle()
-        .map_err(|error| error.to_string())?;
+    let log_handle =
+        mullvad_daemon::logging::detached_log_handle().map_err(|error| error.to_string())?;
     let config = mullvad_daemon::DaemonConfig {
         log_dir: None,
         resource_dir: mullvad_paths::get_resource_dir(),
@@ -26,7 +26,11 @@ pub async fn start_embedded_daemon() -> Result<EmbeddedDaemon, String> {
 }
 
 pub async fn run_embedded_daemon() -> Result<(), String> {
-    start_embedded_daemon().await?.run().await.map_err(|error| error.to_string())
+    start_embedded_daemon()
+        .await?
+        .run()
+        .await
+        .map_err(|error| error.to_string())
 }
 
 /// Controls the installed Mullvad daemon through its native management IPC.

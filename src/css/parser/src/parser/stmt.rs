@@ -33,7 +33,10 @@ impl<'a> Parse<'a> for Declaration<'a> {
         // the token for the normal (failing) parse.
         let name_prefix_start = if input.syntax != Syntax::Css
             && input.state.in_statement
-            && let TokenWithSpan { token: Token::Asterisk(..), span } = input.cursor.peek()?
+            && let TokenWithSpan {
+                token: Token::Asterisk(..),
+                span,
+            } = input.cursor.peek()?
             && input
                 .source
                 .as_bytes()
@@ -61,7 +64,11 @@ impl<'a> Parse<'a> for Declaration<'a> {
         {
             let span = token.span;
             input.cursor.bump()?;
-            InterpolableIdent::Literal(Ident { name: raw, raw, span })
+            InterpolableIdent::Literal(Ident {
+                name: raw,
+                raw,
+                span,
+            })
         } else {
             input
                 .with_state(ParserState {
@@ -72,8 +79,10 @@ impl<'a> Parse<'a> for Declaration<'a> {
         };
 
         // https://tailwindcss.com/docs/theme#overriding-the-default-theme
-        let name_suffix = if let TokenWithSpan { token: Token::Asterisk(..), span } =
-            input.cursor.peek()?
+        let name_suffix = if let TokenWithSpan {
+            token: Token::Asterisk(..),
+            span,
+        } = input.cursor.peek()?
             && name.span().end == span.start
         {
             input.cursor.bump()?;
@@ -84,7 +93,11 @@ impl<'a> Parse<'a> for Declaration<'a> {
 
         // Less property merge (`prop+: v`, `prop+_: v`). In Css the `+` is
         // part of the postcss property name above.
-        let less_property_merge = if input.syntax == Syntax::Less { input.parse()? } else { None };
+        let less_property_merge = if input.syntax == Syntax::Less {
+            input.parse()?
+        } else {
+            None
+        };
 
         let (_, colon_span) = input.cursor.expect_colon()?;
         let is_custom_property = name.is_custom_property();
@@ -100,7 +113,10 @@ impl<'a> Parse<'a> for Declaration<'a> {
             let source = parser.source;
             let starts_with_progid = !is_custom_property
                 && matches!(&name, InterpolableIdent::Literal(..))
-                && parser.cursor.peek()?.is_ident_name_eq_ignore_ascii_case(source, "progid");
+                && parser
+                    .cursor
+                    .peek()?
+                    .is_ident_name_eq_ignore_ascii_case(source, "progid");
             if is_custom_property && matches!(parser.syntax, Syntax::Scss | Syntax::Sass) {
                 // dart-sass reads a custom property as text,
                 // so `//` outside `#{...}` is part of the value
@@ -206,7 +222,10 @@ fn take_raw_important<'a>(
     }
     let (bang_start, important) = match (&value[len - 2], &value[len - 1]) {
         (
-            ComponentValue::TokenWithSpan(TokenWithSpan { token: Token::Exclamation(..), span }),
+            ComponentValue::TokenWithSpan(TokenWithSpan {
+                token: Token::Exclamation(..),
+                span,
+            }),
             ComponentValue::TokenWithSpan(important),
         ) if important.is_ident_name_eq_ignore_ascii_case(input.source, "important") => {
             (span.start, *important)
@@ -228,7 +247,13 @@ fn take_raw_important<'a>(
 
     let ident = input.ident(important.ident(input.source)?, important.span);
     value.truncate(len - 2);
-    Some(ImportantAnnotation { span: Span { start: bang_start, end: important.span.end }, ident })
+    Some(ImportantAnnotation {
+        span: Span {
+            start: bang_start,
+            end: important.span.end,
+        },
+        ident,
+    })
 }
 
 impl<'a> Parser<'a> {
@@ -245,8 +270,11 @@ impl<'a> Parser<'a> {
     /// raw text run.
     fn parse_sass_custom_property_value(
         &mut self,
-    ) -> PResult<(oxc_allocator::Vec<'a, ComponentValue<'a>>, Option<ImportantAnnotation<'a>>, bool)>
-    {
+    ) -> PResult<(
+        oxc_allocator::Vec<'a, ComponentValue<'a>>,
+        Option<ImportantAnnotation<'a>>,
+        bool,
+    )> {
         debug_assert!(self.cursor.cached_token.is_none());
         let line_comments_seen = self.cursor.tokenizer.state.line_comments_seen;
         let typed = self.try_parse(|parser| {
@@ -255,7 +283,10 @@ impl<'a> Parser<'a> {
             // `#{...}`, a comment the typed stream cannot place): rescan as text.
             if parser.cursor.tokenizer.state.line_comments_seen != line_comments_seen {
                 let span = parser.cursor.peek()?.span;
-                return Err(Error { kind: ErrorKind::TryParseError, span });
+                return Err(Error {
+                    kind: ErrorKind::TryParseError,
+                    span,
+                });
             }
             Ok(value)
         });
@@ -279,8 +310,11 @@ impl<'a> Parser<'a> {
     /// the terminator; otherwise the whole value is the raw token run.
     pub(super) fn parse_css_any_value(
         &mut self,
-    ) -> PResult<(oxc_allocator::Vec<'a, ComponentValue<'a>>, Option<ImportantAnnotation<'a>>, bool)>
-    {
+    ) -> PResult<(
+        oxc_allocator::Vec<'a, ComponentValue<'a>>,
+        Option<ImportantAnnotation<'a>>,
+        bool,
+    )> {
         if let Ok((values, important)) = self.try_parse(Parser::parse_whole_declaration_value) {
             return Ok((values, important, false));
         }
@@ -292,7 +326,10 @@ impl<'a> Parser<'a> {
         let values = self.parse_declaration_value_tokens(!in_fn_body)?;
         let next = self.cursor.peek()?;
         if !in_fn_body && let Token::LBrace(..) = next.token {
-            return Err(Error { kind: ErrorKind::BlockInDeclarationValue, span: next.span });
+            return Err(Error {
+                kind: ErrorKind::BlockInDeclarationValue,
+                span: next.span,
+            });
         }
         Ok((values, None, true))
     }
@@ -349,10 +386,17 @@ impl<'a> Parser<'a> {
             self.cursor.bump()?;
         }
         if end == start || Some(end) == ident_only_end || !pairs.is_empty() {
-            return Err(Error { kind: ErrorKind::ExpectRule, span: Span { start, end } });
+            return Err(Error {
+                kind: ErrorKind::ExpectRule,
+                span: Span { start, end },
+            });
         }
         let raw = &self.source[start..end];
-        Ok(InterpolableIdent::Literal(Ident { name: raw, raw, span: Span { start, end } }))
+        Ok(InterpolableIdent::Literal(Ident {
+            name: raw,
+            raw,
+            span: Span { start, end },
+        }))
     }
 
     /// The typed `<declaration-value>` and its `!important`.
@@ -360,8 +404,10 @@ impl<'a> Parser<'a> {
     /// so the caller can fall back to raw tokens for whatever the typed grammar missed.
     pub(super) fn parse_whole_declaration_value(
         &mut self,
-    ) -> PResult<(oxc_allocator::Vec<'a, ComponentValue<'a>>, Option<ImportantAnnotation<'a>>)>
-    {
+    ) -> PResult<(
+        oxc_allocator::Vec<'a, ComponentValue<'a>>,
+        Option<ImportantAnnotation<'a>>,
+    )> {
         let values = self.parse_declaration_value()?;
         let important = match &self.cursor.peek()?.token {
             Token::Exclamation(..) => Some(self.parse::<ImportantAnnotation>()?),
@@ -372,7 +418,10 @@ impl<'a> Parser<'a> {
         if Self::at_statement_value_end(in_statement, &next.token) {
             Ok((values, important))
         } else {
-            Err(Error { kind: ErrorKind::ExpectComponentValue, span: next.span })
+            Err(Error {
+                kind: ErrorKind::ExpectComponentValue,
+                span: next.span,
+            })
         }
     }
 }
@@ -396,11 +445,17 @@ impl<'a> Parse<'a> for ImportantAnnotation<'a> {
         let (_, span) = input.cursor.expect_exclamation()?;
         input.eat_sass_line_continuation()?;
         let ident: Ident = input.parse::<Ident>()?;
-        let span = Span { start: span.start, end: ident.span.end };
+        let span = Span {
+            start: span.start,
+            end: ident.span.end,
+        };
         if ident.name.eq_ignore_ascii_case("important") {
             Ok(ImportantAnnotation { ident, span })
         } else {
-            Err(Error { kind: ErrorKind::ExpectImportantAnnotation, span })
+            Err(Error {
+                kind: ErrorKind::ExpectImportantAnnotation,
+                span,
+            })
         }
     }
 }
@@ -419,8 +474,15 @@ impl<'a> Parse<'a> for QualifiedRule<'a> {
             })
             .parse::<SelectorList>()?;
         let block = input.parse::<SimpleBlock>()?;
-        let span = Span { start: selector_list.span.start, end: block.span.end };
-        Ok(QualifiedRule { selector: selector_list, block, span })
+        let span = Span {
+            start: selector_list.span.start,
+            end: block.span.end,
+        };
+        Ok(QualifiedRule {
+            selector: selector_list,
+            block,
+            span,
+        })
     }
 }
 
@@ -443,8 +505,15 @@ impl<'a> Parse<'a> for UnknownQualifiedRule<'a> {
         // The scan also stops at `;` / statement boundaries;
         // `SimpleBlock`'s `expect_l_brace` rejects those, so only a block opener makes this shape.
         let block = input.parse::<SimpleBlock>()?;
-        let span = Span { start: prelude.span.start, end: block.span.end };
-        Ok(UnknownQualifiedRule { prelude, block, span })
+        let span = Span {
+            start: prelude.span.start,
+            end: block.span.end,
+        };
+        Ok(UnknownQualifiedRule {
+            prelude,
+            block,
+            span,
+        })
     }
 }
 
@@ -479,7 +548,10 @@ impl<'a> Parse<'a> for SimpleBlock<'a> {
                 let offset = input.cursor.peek()?.span.start;
                 return Ok(SimpleBlock {
                     statements: input.vec(),
-                    span: Span { start: offset, end: offset },
+                    span: Span {
+                        start: offset,
+                        end: offset,
+                    },
                 });
             }
         } else {
@@ -495,25 +567,42 @@ impl<'a> Parse<'a> for SimpleBlock<'a> {
         // consumers can tell it apart from a properly closed block.
         if input.syntax == Syntax::Css && matches!(input.cursor.peek()?.token, Token::Eof(..)) {
             let end = input.cursor.peek()?.span.start;
-            input
-                .recoverable_errors
-                .push(Error { kind: ErrorKind::EofInBlock, span: Span { start, end: start + 1 } });
-            return Ok(SimpleBlock { statements, span: Span { start, end } });
+            input.recoverable_errors.push(Error {
+                kind: ErrorKind::EofInBlock,
+                span: Span {
+                    start,
+                    end: start + 1,
+                },
+            });
+            return Ok(SimpleBlock {
+                statements,
+                span: Span { start, end },
+            });
         }
 
         if is_sass {
             match input.cursor.bump()? {
-                TokenWithSpan { token: Token::Dedent(..) | Token::Eof(..), span } => {
+                TokenWithSpan {
+                    token: Token::Dedent(..) | Token::Eof(..),
+                    span,
+                } => {
                     let end = statements.last().map_or(span.start, |last| last.span().end);
-                    Ok(SimpleBlock { statements, span: Span { start, end } })
+                    Ok(SimpleBlock {
+                        statements,
+                        span: Span { start, end },
+                    })
                 }
-                TokenWithSpan { span, .. } => {
-                    Err(Error { kind: ErrorKind::ExpectDedentOrEof, span })
-                }
+                TokenWithSpan { span, .. } => Err(Error {
+                    kind: ErrorKind::ExpectDedentOrEof,
+                    span,
+                }),
             }
         } else {
             let end = input.cursor.expect_r_brace()?.1.end;
-            Ok(SimpleBlock { statements, span: Span { start, end } })
+            Ok(SimpleBlock {
+                statements,
+                span: Span { start, end },
+            })
         }
     }
 }
@@ -527,7 +616,13 @@ impl<'a> Parse<'a> for Stylesheet<'a> {
         let statements =
             input.parse_statements(/* is_top_level */ !input.options.block_contents)?;
         input.cursor.expect_eof()?;
-        Ok(Stylesheet { statements, span: Span { start: 0, end: input.source.len() } })
+        Ok(Stylesheet {
+            statements,
+            span: Span {
+                start: 0,
+                end: input.source.len(),
+            },
+        })
     }
 }
 
@@ -718,8 +813,10 @@ impl<'a> Parser<'a> {
                         Some(ComponentValue::SassNestingDeclaration(..))
                     );
                     if is_top_level {
-                        self.recoverable_errors
-                            .push(Error { kind: ErrorKind::TopLevelDeclaration, span: decl.span });
+                        self.recoverable_errors.push(Error {
+                            kind: ErrorKind::TopLevelDeclaration,
+                            span: decl.span,
+                        });
                     }
                     Ok((Statement::Declaration(decl), is_block_element))
                 }
@@ -727,7 +824,11 @@ impl<'a> Parser<'a> {
                     if let Some(rule) = self.try_declaration_shaped_rule(&error_decl) {
                         return Ok((Statement::UnknownQualifiedRule(rule), true));
                     }
-                    Err(if prefer_rule_error { error_rule } else { error_decl })
+                    Err(if prefer_rule_error {
+                        error_rule
+                    } else {
+                        error_decl
+                    })
                 }
             },
         }
@@ -740,15 +841,18 @@ impl<'a> Parser<'a> {
     fn parse_css_statement(&mut self, is_top_level: bool) -> PResult<(Statement<'a>, bool)> {
         let TokenWithSpan { token, span } = self.cursor.peek()?;
         let span = *span;
-        let numeric =
-            matches!(token, Token::Percentage(..) | Token::Number(..) | Token::Dimension(..));
+        let numeric = matches!(
+            token,
+            Token::Percentage(..) | Token::Number(..) | Token::Dimension(..)
+        );
         // A non-ident lead is first of all a selector, so its rule error is
         // the useful one (`[attr {` reports the attribute matcher, not a colon).
         match self.parse_rule_or_declaration(is_top_level, true) {
             Err(_) if numeric => {
-                let rule = self
-                    .parse::<UnknownQualifiedRule>()
-                    .map_err(|_| Error { kind: ErrorKind::ExpectRule, span })?;
+                let rule = self.parse::<UnknownQualifiedRule>().map_err(|_| Error {
+                    kind: ErrorKind::ExpectRule,
+                    span,
+                })?;
                 Ok((Statement::UnknownQualifiedRule(rule), true))
             }
             result => result,
@@ -758,7 +862,11 @@ impl<'a> Parser<'a> {
     /// Parse a declaration in statement position (`ParserState::in_statement`);
     /// feature-query declarations call `Declaration::parse` directly.
     fn parse_style_rule_declaration(&mut self) -> PResult<Declaration<'a>> {
-        self.with_state(ParserState { in_statement: true, ..self.state.clone() }).parse()
+        self.with_state(ParserState {
+            in_statement: true,
+            ..self.state.clone()
+        })
+        .parse()
     }
 
     // Block contents: a mix of declarations, nested style rules and at-rules
@@ -926,8 +1034,13 @@ impl<'a> Parser<'a> {
                         statements.push(Statement::AtRule(at_rule));
                     }
                     Syntax::Scss | Syntax::Sass => {
-                        let at_keyword_name =
-                            self.cursor.peek()?.at_keyword(self.source).unwrap().ident.name();
+                        let at_keyword_name = self
+                            .cursor
+                            .peek()?
+                            .at_keyword(self.source)
+                            .unwrap()
+                            .ident
+                            .name();
                         match &*at_keyword_name {
                             "if" => {
                                 let sass_if_at_rule = self.parse()?;
@@ -1023,8 +1136,9 @@ impl<'a> Parser<'a> {
                     // statement a raw-prelude rule, use the general Css
                     // rule/declaration disambiguation instead.
                     if let Ok(declaration) = self.try_parse(PostcssSimpleVarDeclaration::parse) {
-                        statements
-                            .push(Statement::PostcssSimpleVarDeclaration(self.alloc(declaration)));
+                        statements.push(Statement::PostcssSimpleVarDeclaration(
+                            self.alloc(declaration),
+                        ));
                     } else {
                         let (stmt, is_block) = self.parse_css_statement(is_top_level)?;
                         is_block_element = is_block;
@@ -1046,9 +1160,16 @@ impl<'a> Parser<'a> {
                             ..self.state.clone()
                         })
                         .parse::<SimpleBlock>()?;
-                    let span = Span { start: eq_span.start, end: block.span.end };
+                    let span = Span {
+                        start: eq_span.start,
+                        end: block.span.end,
+                    };
                     statements.push(Statement::AtRule(AtRule {
-                        name: Ident { name: "mixin", raw: "=", span: eq_span },
+                        name: Ident {
+                            name: "mixin",
+                            raw: "=",
+                            span: eq_span,
+                        },
                         prelude: Some(AtRulePrelude::SassMixin(self.alloc(prelude))),
                         block: Some(block),
                         span,
@@ -1076,11 +1197,20 @@ impl<'a> Parser<'a> {
                     } else {
                         None
                     };
-                    let end = block.as_ref().map_or(prelude.span.end, |block| block.span.end);
-                    let span = Span { start: plus_span.start, end };
+                    let end = block
+                        .as_ref()
+                        .map_or(prelude.span.end, |block| block.span.end);
+                    let span = Span {
+                        start: plus_span.start,
+                        end,
+                    };
                     is_block_element = block.is_some();
                     statements.push(Statement::AtRule(AtRule {
-                        name: Ident { name: "include", raw: "+", span: plus_span },
+                        name: Ident {
+                            name: "include",
+                            raw: "+",
+                            span: plus_span,
+                        },
                         prelude: Some(AtRulePrelude::SassInclude(self.alloc(prelude))),
                         block,
                         span,
@@ -1106,7 +1236,9 @@ impl<'a> Parser<'a> {
                 Token::At(..) if matches!(self.syntax, Syntax::Scss | Syntax::Sass) => {
                     let unknown_sass_at_rule = self.parse::<UnknownSassAtRule>()?;
                     is_block_element = unknown_sass_at_rule.block.is_some();
-                    statements.push(Statement::UnknownSassAtRule(self.alloc(unknown_sass_at_rule)));
+                    statements.push(Statement::UnknownSassAtRule(
+                        self.alloc(unknown_sass_at_rule),
+                    ));
                 }
                 Token::Percentage(..)
                     if self.state.in_keyframes_at_rule
@@ -1133,7 +1265,10 @@ impl<'a> Parser<'a> {
                         comma_spans: self.vec(),
                         span: Span { start, end: start },
                     };
-                    let span = Span { start, end: block.span.end };
+                    let span = Span {
+                        start,
+                        end: block.span.end,
+                    };
                     statements.push(Statement::QualifiedRule(QualifiedRule {
                         selector,
                         block,
@@ -1143,7 +1278,10 @@ impl<'a> Parser<'a> {
                 }
                 // `@3: red` is an at-word to postcss, not a property name.
                 Token::At(..) if self.syntax == Syntax::Css => {
-                    return Err(Error { kind: ErrorKind::ExpectRule, span: *span });
+                    return Err(Error {
+                        kind: ErrorKind::ExpectRule,
+                        span: *span,
+                    });
                 }
                 _ if self.syntax == Syntax::Css && !self.state.in_keyframes_at_rule => {
                     let (stmt, is_block) = self.parse_css_statement(is_top_level)?;

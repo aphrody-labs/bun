@@ -254,8 +254,11 @@ pub(crate) fn run(cli: Cli) -> Result<ExitCode> {
         },
         Some(Cmd::Analyze { paths, issue_limit, top_k, threshold, report, ignore, apply }) => {
             let cwd = std::env::current_dir()?;
-            let paths =
-                if paths.is_empty() { crate::cli::analyze::resolve_default_paths(&cwd) } else { paths };
+            let paths = if paths.is_empty() {
+                crate::cli::analyze::resolve_default_paths(&cwd)
+            } else {
+                paths
+            };
             if paths.is_empty() {
                 anyhow::bail!(
                     "aucun chemin fourni et aucun candidat (discord.js/discordx/nextjs) trouvé \

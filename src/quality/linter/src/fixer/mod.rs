@@ -55,7 +55,11 @@ impl<'c, 'a: 'c> RuleFixer<'c, 'a> {
     const MAX_SNIPPET_LEN: usize = 256;
 
     pub(super) fn new(kind: FixKind, ctx: &'c LintContext<'a>) -> Self {
-        Self { kind, auto_message: true, ctx }
+        Self {
+            kind,
+            auto_message: true,
+            ctx,
+        }
     }
 
     /// Hint to the [`RuleFixer`] that it will be creating [`CompositeFix`]es
@@ -76,7 +80,11 @@ impl<'c, 'a: 'c> RuleFixer<'c, 'a> {
 
     /// Create a new [`RuleFix`] with pre-allocated memory for multiple fixes.
     pub fn new_fix_with_capacity(&self, capacity: usize) -> RuleFix {
-        RuleFix::new(self.kind, None, CompositeFix::Multiple(Vec::with_capacity(capacity)))
+        RuleFix::new(
+            self.kind,
+            None,
+            CompositeFix::Multiple(Vec::with_capacity(capacity)),
+        )
     }
 
     #[inline]
@@ -102,7 +110,8 @@ impl<'c, 'a: 'c> RuleFixer<'c, 'a> {
     pub fn delete_range(&self, span: Span) -> RuleFix {
         self.new_fix(
             CompositeFix::Single(Fix::delete(span)),
-            self.auto_message.then_some(Cow::Borrowed("Delete this code.")),
+            self.auto_message
+                .then_some(Cow::Borrowed("Delete this code.")),
         )
     }
 
@@ -116,7 +125,10 @@ impl<'c, 'a: 'c> RuleFixer<'c, 'a> {
                 let target_text = fixer.possibly_truncate_range(target);
                 let borrowed_replacement = Cow::Borrowed(replacement_text);
                 let replacement_text = fixer.possibly_truncate_snippet(&borrowed_replacement);
-                Cow::Owned(format_replace_message(target_text.as_ref(), replacement_text.as_ref()))
+                Cow::Owned(format_replace_message(
+                    target_text.as_ref(),
+                    replacement_text.as_ref(),
+                ))
             });
 
             fixer.new_fix(CompositeFix::Single(fix), message)
@@ -136,7 +148,10 @@ impl<'c, 'a: 'c> RuleFixer<'c, 'a> {
             let target_text = fixer.possibly_truncate_range(target);
             let content = fixer.possibly_truncate_snippet(&fix.content);
             let message = fixer.auto_message.then(|| {
-                Cow::Owned(format_replace_message(target_text.as_ref(), content.as_ref()))
+                Cow::Owned(format_replace_message(
+                    target_text.as_ref(),
+                    content.as_ref(),
+                ))
             });
 
             fixer.new_fix(CompositeFix::Single(fix), message)
@@ -188,7 +203,9 @@ impl<'c, 'a: 'c> RuleFixer<'c, 'a> {
     fn insert_text_at(&self, index: u32, text: Cow<'static, str>) -> RuleFix {
         let fix = Fix::new(text, Span::empty(index));
         let content = self.possibly_truncate_snippet(&fix.content);
-        let message = self.auto_message.then(|| Cow::Owned(format!("Insert `{content}`")));
+        let message = self
+            .auto_message
+            .then(|| Cow::Owned(format!("Insert `{content}`")));
         self.new_fix(CompositeFix::Single(fix), message)
     }
 
@@ -202,7 +219,10 @@ impl<'c, 'a: 'c> RuleFixer<'c, 'a> {
         Codegen::new()
             .with_source_text(self.source_text())
             .with_source_type(*self.ctx.source_type())
-            .with_options(CodegenOptions { single_quote: true, ..CodegenOptions::default() })
+            .with_options(CodegenOptions {
+                single_quote: true,
+                ..CodegenOptions::default()
+            })
     }
 
     pub fn noop(&self) -> RuleFix {
@@ -426,7 +446,11 @@ impl<'a> Fixer<'a> {
             );
         }
 
-        FixResult { fixed, fixed_code: Cow::Owned(output), messages: filtered_messages }
+        FixResult {
+            fixed,
+            fixed_code: Cow::Owned(output),
+            messages: filtered_messages,
+        }
     }
 }
 
@@ -549,7 +573,10 @@ mod test {
             insert_at_end(),
             PossibleFixes::Single(INSERT_AT_END),
         )]);
-        assert_eq!(result.fixed_code, TEST_CODE.to_string() + INSERT_AT_END.content.as_ref());
+        assert_eq!(
+            result.fixed_code,
+            TEST_CODE.to_string() + INSERT_AT_END.content.as_ref()
+        );
         assert_eq!(result.messages.len(), 0);
     }
 
@@ -559,7 +586,10 @@ mod test {
             insert_at_start(),
             PossibleFixes::Single(INSERT_AT_START),
         )]);
-        assert_eq!(result.fixed_code, INSERT_AT_START.content.to_string() + TEST_CODE);
+        assert_eq!(
+            result.fixed_code,
+            INSERT_AT_START.content.to_string() + TEST_CODE
+        );
         assert_eq!(result.messages.len(), 0);
     }
 
@@ -608,8 +638,10 @@ mod test {
 
     #[test]
     fn replace_at_the_start() {
-        let result =
-            get_fix_result(vec![create_message(replace_var(), PossibleFixes::Single(REPLACE_VAR))]);
+        let result = get_fix_result(vec![create_message(
+            replace_var(),
+            PossibleFixes::Single(REPLACE_VAR),
+        )]);
         assert_eq!(result.fixed_code, TEST_CODE.cow_replace("var", "let"));
         assert_eq!(result.messages.len(), 0);
         assert!(result.fixed);
@@ -617,8 +649,10 @@ mod test {
 
     #[test]
     fn replace_at_the_middle() {
-        let result =
-            get_fix_result(vec![create_message(replace_id(), PossibleFixes::Single(REPLACE_ID))]);
+        let result = get_fix_result(vec![create_message(
+            replace_id(),
+            PossibleFixes::Single(REPLACE_ID),
+        )]);
         assert_eq!(result.fixed_code, TEST_CODE.cow_replace("answer", "foo"));
         assert_eq!(result.messages.len(), 0);
         assert!(result.fixed);
@@ -626,8 +660,10 @@ mod test {
 
     #[test]
     fn replace_at_the_end() {
-        let result =
-            get_fix_result(vec![create_message(replace_num(), PossibleFixes::Single(REPLACE_NUM))]);
+        let result = get_fix_result(vec![create_message(
+            replace_num(),
+            PossibleFixes::Single(REPLACE_NUM),
+        )]);
         assert_eq!(result.fixed_code, TEST_CODE.cow_replace('6', "5"));
         assert_eq!(result.messages.len(), 0);
         assert!(result.fixed);
@@ -670,8 +706,10 @@ mod test {
 
     #[test]
     fn remove_at_the_end() {
-        let result =
-            get_fix_result(vec![create_message(remove_end(), PossibleFixes::Single(REMOVE_END))]);
+        let result = get_fix_result(vec![create_message(
+            remove_end(),
+            PossibleFixes::Single(REMOVE_END),
+        )]);
         assert_eq!(result.fixed_code, TEST_CODE.cow_replace(" * 7", ""));
         assert_eq!(result.messages.len(), 0);
         assert!(result.fixed);
@@ -692,7 +730,10 @@ mod test {
     #[test]
     fn apply_one_fix_when_spans_overlap() {
         let result = get_fix_result(vec![
-            create_message(remove_middle(Span::default()), PossibleFixes::Single(REMOVE_MIDDLE)),
+            create_message(
+                remove_middle(Span::default()),
+                PossibleFixes::Single(REMOVE_MIDDLE),
+            ),
             create_message(replace_id(), PossibleFixes::Single(REPLACE_ID)),
         ]);
         assert_eq!(result.fixed_code, TEST_CODE.cow_replace("answer", "foo"));
@@ -715,7 +756,10 @@ mod test {
     #[test]
     fn apply_one_fix_when_range_overlap_and_one_message_has_no_fix() {
         let result = get_fix_result(vec![
-            create_message(remove_middle(Span::default()), PossibleFixes::Single(REMOVE_MIDDLE)),
+            create_message(
+                remove_middle(Span::default()),
+                PossibleFixes::Single(REMOVE_MIDDLE),
+            ),
             create_message(replace_id(), PossibleFixes::Single(REPLACE_ID)),
             create_message(no_fix(Span::default()), PossibleFixes::None),
         ]);
@@ -729,20 +773,28 @@ mod test {
     #[test]
     fn apply_same_fix_when_span_overlap_regardless_of_order() {
         let result1 = get_fix_result(vec![
-            create_message(remove_middle(Span::default()), PossibleFixes::Single(REMOVE_MIDDLE)),
+            create_message(
+                remove_middle(Span::default()),
+                PossibleFixes::Single(REMOVE_MIDDLE),
+            ),
             create_message(replace_id(), PossibleFixes::Single(REPLACE_ID)),
         ]);
         let result2 = get_fix_result(vec![
             create_message(replace_id(), PossibleFixes::Single(REPLACE_ID)),
-            create_message(remove_middle(Span::default()), PossibleFixes::Single(REMOVE_MIDDLE)),
+            create_message(
+                remove_middle(Span::default()),
+                PossibleFixes::Single(REMOVE_MIDDLE),
+            ),
         ]);
         assert_eq!(result1.fixed_code, result2.fixed_code);
     }
 
     #[test]
     fn should_not_apply_fix_with_one_no_fix() {
-        let result =
-            get_fix_result(vec![create_message(no_fix(Span::default()), PossibleFixes::None)]);
+        let result = get_fix_result(vec![create_message(
+            no_fix(Span::default()),
+            PossibleFixes::None,
+        )]);
         assert_eq!(result.fixed_code, TEST_CODE);
         assert_eq!(result.messages.len(), 1);
         assert_eq!(result.messages[0].error.to_string(), "nofix");
@@ -761,7 +813,10 @@ mod test {
     #[test]
     fn merge_fixes_in_composite_fix() {
         let source_text = "foo bar baz";
-        let fixes = vec![Fix::new("quux", Span::new(0, 3)), Fix::new("qux", Span::new(4, 7))];
+        let fixes = vec![
+            Fix::new("quux", Span::new(0, 3)),
+            Fix::new("qux", Span::new(4, 7)),
+        ];
         let composite_fix = CompositeFix::Multiple(fixes);
         assert_fixed_corrected(source_text, "quux qux baz", composite_fix);
     }
@@ -788,7 +843,10 @@ mod test {
     #[should_panic(expected = "Fix must not be overlapped, last_pos: 3, span.start: 2")]
     fn overlapping_ranges_in_composite_fix() {
         let source_text = "foo bar baz";
-        let fixes = vec![Fix::new("quux", Span::new(0, 3)), Fix::new("qux", Span::new(2, 5))];
+        let fixes = vec![
+            Fix::new("quux", Span::new(0, 3)),
+            Fix::new("qux", Span::new(2, 5)),
+        ];
         let composite_fix = CompositeFix::Multiple(fixes);
         assert_fixed_corrected(source_text, source_text, composite_fix);
     }
@@ -797,7 +855,10 @@ mod test {
     #[should_panic(expected = "Negative range is invalid: Span { start: 5, end: 2 }")]
     fn negative_ranges_in_composite_fix() {
         let source_text = "foo bar baz";
-        let fixes = vec![Fix::new("quux", Span::new(0, 3)), Fix::new("qux", Span::new(5, 2))];
+        let fixes = vec![
+            Fix::new("quux", Span::new(0, 3)),
+            Fix::new("qux", Span::new(5, 2)),
+        ];
         let composite_fix = CompositeFix::Multiple(fixes);
         assert_fixed_corrected(source_text, source_text, composite_fix);
     }
@@ -815,7 +876,10 @@ mod test {
     #[test]
     fn merge_fixes_into_one() {
         let source_text = "foo\nbar";
-        let fixes = vec![Fix::new("foo", Span::new(1, 2)), Fix::new("bar", Span::new(4, 5))];
+        let fixes = vec![
+            Fix::new("foo", Span::new(1, 2)),
+            Fix::new("bar", Span::new(4, 5)),
+        ];
         assert_fixes_merged(fixes, &Fix::new("fooo\nbar", Span::new(1, 5)), source_text);
     }
 
@@ -841,7 +905,10 @@ mod test {
     #[should_panic(expected = "Fix must not be overlapped, last_pos: 3, span.start: 2")]
     fn throw_error_when_ranges_overlap() {
         let source_text = "foo\nbar";
-        let fixes = vec![Fix::new("foo", Span::new(0, 3)), Fix::new("x", Span::new(2, 5))];
+        let fixes = vec![
+            Fix::new("foo", Span::new(0, 3)),
+            Fix::new("x", Span::new(2, 5)),
+        ];
         assert_fixes_merged(fixes, &Fix::default(), source_text);
     }
 
@@ -858,14 +925,20 @@ mod test {
     #[test]
     fn create_new_fix_with_new_range_when_fixes_is_multiple() {
         let source_text = "foo\nbar";
-        let fixes = vec![Fix::new("baz", Span::new(0, 3)), Fix::new("qux", Span::new(4, 7))];
+        let fixes = vec![
+            Fix::new("baz", Span::new(0, 3)),
+            Fix::new("qux", Span::new(4, 7)),
+        ];
 
         assert_fixes_merged(fixes, &Fix::new("baz\nqux", Span::new(0, 7)), source_text);
     }
 
     // Test that debug assertion catches invalid syntax after fixes
     #[test]
-    #[cfg_attr(debug_assertions, should_panic(expected = "Linter fixer produced invalid syntax."))]
+    #[cfg_attr(
+        debug_assertions,
+        should_panic(expected = "Linter fixer produced invalid syntax.")
+    )]
     fn debug_assert_catches_invalid_fix() {
         // This test demonstrates that the debug assertion catches fixes that produce invalid syntax.
         // In debug builds, this will panic. In release builds, it will pass (no assertion).
@@ -874,8 +947,10 @@ mod test {
 
         // Create a fix that produces invalid syntax by replacing 'var' with invalid tokens
         let fix = Fix::new(Cow::Borrowed("!!!INVALID"), Span::new(0, 3));
-        let message =
-            create_message(OxcDiagnostic::warn("Invalid fix test"), PossibleFixes::Single(fix));
+        let message = create_message(
+            OxcDiagnostic::warn("Invalid fix test"),
+            PossibleFixes::Single(fix),
+        );
 
         let fixer = Fixer::new(source_text, vec![message], Some(source_type));
 
@@ -891,8 +966,10 @@ mod test {
 
         // Create a fix that produces valid syntax
         let fix = Fix::new(Cow::Borrowed("let"), Span::new(0, 3));
-        let message =
-            create_message(OxcDiagnostic::warn("Valid fix test"), PossibleFixes::Single(fix));
+        let message = create_message(
+            OxcDiagnostic::warn("Valid fix test"),
+            PossibleFixes::Single(fix),
+        );
 
         let fixer = Fixer::new(source_text, vec![message], Some(source_type));
 
@@ -903,7 +980,10 @@ mod test {
 
     #[test]
     fn format_replace_message_for_non_empty_replacement() {
-        assert_eq!(format_replace_message("{foo}", "bar"), "Replace `{foo}` with `bar`.");
+        assert_eq!(
+            format_replace_message("{foo}", "bar"),
+            "Replace `{foo}` with `bar`."
+        );
     }
 
     #[test]

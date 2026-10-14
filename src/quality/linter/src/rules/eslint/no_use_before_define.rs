@@ -238,9 +238,11 @@ fn is_outer_variable(
     reference_scope_id: ScopeId,
     ctx: &LintContext<'_>,
 ) -> bool {
-    matches!(ctx.symbol_declaration(symbol_id).kind(), AstKind::VariableDeclarator(_))
-        && get_parent_variable_scope(ctx.scoping().symbol_scope_id(symbol_id), ctx)
-            != get_parent_variable_scope(reference_scope_id, ctx)
+    matches!(
+        ctx.symbol_declaration(symbol_id).kind(),
+        AstKind::VariableDeclarator(_)
+    ) && get_parent_variable_scope(ctx.scoping().symbol_scope_id(symbol_id), ctx)
+        != get_parent_variable_scope(reference_scope_id, ctx)
 }
 
 fn is_outer_enum(
@@ -452,7 +454,10 @@ fn is_in_initializer(
 ) -> bool {
     let declaration_span = ctx.scoping().symbol_span(symbol_id);
     initializer_reference_declaration_span(reference_node, ctx, |pattern| {
-        pattern.span().contains_inclusive(declaration_span).then_some(declaration_span)
+        pattern
+            .span()
+            .contains_inclusive(declaration_span)
+            .then_some(declaration_span)
     })
     .is_some()
 }
@@ -475,7 +480,10 @@ fn is_class_ref_in_class_decorator(
     }
 
     let reference_span = reference_node.kind().span();
-    class.decorators.iter().any(|decorator| decorator.span.contains_inclusive(reference_span))
+    class
+        .decorators
+        .iter()
+        .any(|decorator| decorator.span.contains_inclusive(reference_span))
 }
 
 fn is_function_type_scope(scope_id: ScopeId, ctx: &LintContext<'_>) -> bool {
@@ -514,7 +522,10 @@ fn test() {
         ("function b(a) { alert(a); }", None),
         ("Object.hasOwnProperty.call(a);", None),
         ("function a() { alert(arguments);}", None),
-        ("a(); function a() { alert(arguments); }", Some(serde_json::json!(["nofunc"]))),
+        (
+            "a(); function a() { alert(arguments); }",
+            Some(serde_json::json!(["nofunc"])),
+        ),
         ("(() => { var a = 42; alert(a); })();", None), // { "ecmaVersion": 6 },
         ("a(); try { throw new Error() } catch (a) {}", None),
         ("class A {} new A();", None), // { "ecmaVersion": 6 },
@@ -528,9 +539,15 @@ fn test() {
         ("let a; class C { static { a; } }", None), // { "ecmaVersion": 2022 },
         ("class C { static { let a; a; } }", None), // { "ecmaVersion": 2022 },
         (r#""use strict"; a(); { function a() {} }"#, None), // { "ecmaVersion": 6 },
-        (r#""use strict"; { a(); function a() {} }"#, Some(serde_json::json!(["nofunc"]))), // { "ecmaVersion": 6 },
-        ("switch (foo) { case 1:  { a(); } default: { let a; }}", None), // { "ecmaVersion": 6 },
-        ("a(); { let a = function () {}; }", None),                      // { "ecmaVersion": 6 },
+        (
+            r#""use strict"; { a(); function a() {} }"#,
+            Some(serde_json::json!(["nofunc"])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "switch (foo) { case 1:  { a(); } default: { let a; }}",
+            None,
+        ), // { "ecmaVersion": 6 },
+        ("a(); { let a = function () {}; }", None), // { "ecmaVersion": 6 },
         (
             "a(); function a() { alert(arguments); }",
             Some(serde_json::json!([{ "functions": false }])),
@@ -543,69 +560,99 @@ fn test() {
             "function foo() { new A(); } class A {};",
             Some(serde_json::json!([{ "classes": false }])),
         ), // { "ecmaVersion": 6 },
-        ("function foo() { bar; } var bar;", Some(serde_json::json!([{ "variables": false }]))),
-        ("var foo = () => bar; var bar;", Some(serde_json::json!([{ "variables": false }]))), // { "ecmaVersion": 6 },
+        (
+            "function foo() { bar; } var bar;",
+            Some(serde_json::json!([{ "variables": false }])),
+        ),
+        (
+            "var foo = () => bar; var bar;",
+            Some(serde_json::json!([{ "variables": false }])),
+        ), // { "ecmaVersion": 6 },
         (
             "class C { static { () => foo; let foo; } }",
             Some(serde_json::json!([{ "variables": false }])),
         ), // { "ecmaVersion": 2022 },
         ("class C extends (class { method() { C; } }) {}", None), // { "ecmaVersion": 6 },
         ("(class extends (class { method() { C; } }) {});", None), // { "ecmaVersion": 6 },
-        ("const C = (class extends (class { method() { C; } }) {});", None), // { "ecmaVersion": 6 },
-        ("class C extends (class { field = C; }) {}", None), // { "ecmaVersion": 2022 },
-        ("(class extends (class { field = C; }) {});", None), // { "ecmaVersion": 2022 },
+        (
+            "const C = (class extends (class { method() { C; } }) {});",
+            None,
+        ), // { "ecmaVersion": 6 },
+        ("class C extends (class { field = C; }) {}", None),      // { "ecmaVersion": 2022 },
+        ("(class extends (class { field = C; }) {});", None),     // { "ecmaVersion": 2022 },
         ("const C = (class extends (class { field = C; }) {});", None), // { "ecmaVersion": 2022 },
-        ("class C { [() => C](){} }", None),                 // { "ecmaVersion": 6 },
-        ("(class C { [() => C](){} });", None),              // { "ecmaVersion": 6 },
-        ("const C = class { [() => C](){} };", None),        // { "ecmaVersion": 6 },
-        ("class C { static [() => C](){} }", None),          // { "ecmaVersion": 6 },
-        ("(class C { static [() => C](){} });", None),       // { "ecmaVersion": 6 },
-        ("const C = class { static [() => C](){} };", None), // { "ecmaVersion": 6 },
-        ("class C { [() => C]; }", None),                    // { "ecmaVersion": 2022 },
-        ("(class C { [() => C]; });", None),                 // { "ecmaVersion": 2022 },
-        ("const C = class { [() => C]; };", None),           // { "ecmaVersion": 2022 },
-        ("class C { static [() => C]; }", None),             // { "ecmaVersion": 2022 },
-        ("(class C { static [() => C]; });", None),          // { "ecmaVersion": 2022 },
-        ("const C = class { static [() => C]; };", None),    // { "ecmaVersion": 2022 },
-        ("class C { method() { C; } }", None),               // { "ecmaVersion": 6 },
-        ("(class C { method() { C; } });", None),            // { "ecmaVersion": 6 },
-        ("const C = class { method() { C; } };", None),      // { "ecmaVersion": 6 },
-        ("class C { static method() { C; } }", None),        // { "ecmaVersion": 6 },
-        ("(class C { static method() { C; } });", None),     // { "ecmaVersion": 6 },
-        ("const C = class { static method() { C; } };", None), // { "ecmaVersion": 6 },
-        ("class C { field = C; }", None),                    // { "ecmaVersion": 2022 },
-        ("(class C { field = C; });", None),                 // { "ecmaVersion": 2022 },
-        ("const C = class { field = C; };", None),           // { "ecmaVersion": 2022 },
-        ("class C { static field = C; }", None),             // { "ecmaVersion": 2022 },
-        ("(class C { static field = C; });", None),          // { "ecmaVersion": 2022 },
-        ("class C { static field = class { static field = C; }; }", None), // { "ecmaVersion": 2022 },
-        ("(class C { static field = class { static field = C; }; });", None), // { "ecmaVersion": 2022 },
-        ("class C { field = () => C; }", None), // { "ecmaVersion": 2022 },
-        ("(class C { field = () => C; });", None), // { "ecmaVersion": 2022 },
-        ("const C = class { field = () => C; };", None), // { "ecmaVersion": 2022 },
-        ("class C { static field = () => C; }", None), // { "ecmaVersion": 2022 },
-        ("(class C { static field = () => C; });", None), // { "ecmaVersion": 2022 },
-        ("const C = class { static field = () => C; };", None), // { "ecmaVersion": 2022 },
-        ("class C { field = class extends C {}; }", None), // { "ecmaVersion": 2022 },
-        ("(class C { field = class extends C {}; });", None), // { "ecmaVersion": 2022 },
+        ("class C { [() => C](){} }", None),                      // { "ecmaVersion": 6 },
+        ("(class C { [() => C](){} });", None),                   // { "ecmaVersion": 6 },
+        ("const C = class { [() => C](){} };", None),             // { "ecmaVersion": 6 },
+        ("class C { static [() => C](){} }", None),               // { "ecmaVersion": 6 },
+        ("(class C { static [() => C](){} });", None),            // { "ecmaVersion": 6 },
+        ("const C = class { static [() => C](){} };", None),      // { "ecmaVersion": 6 },
+        ("class C { [() => C]; }", None),                         // { "ecmaVersion": 2022 },
+        ("(class C { [() => C]; });", None),                      // { "ecmaVersion": 2022 },
+        ("const C = class { [() => C]; };", None),                // { "ecmaVersion": 2022 },
+        ("class C { static [() => C]; }", None),                  // { "ecmaVersion": 2022 },
+        ("(class C { static [() => C]; });", None),               // { "ecmaVersion": 2022 },
+        ("const C = class { static [() => C]; };", None),         // { "ecmaVersion": 2022 },
+        ("class C { method() { C; } }", None),                    // { "ecmaVersion": 6 },
+        ("(class C { method() { C; } });", None),                 // { "ecmaVersion": 6 },
+        ("const C = class { method() { C; } };", None),           // { "ecmaVersion": 6 },
+        ("class C { static method() { C; } }", None),             // { "ecmaVersion": 6 },
+        ("(class C { static method() { C; } });", None),          // { "ecmaVersion": 6 },
+        ("const C = class { static method() { C; } };", None),    // { "ecmaVersion": 6 },
+        ("class C { field = C; }", None),                         // { "ecmaVersion": 2022 },
+        ("(class C { field = C; });", None),                      // { "ecmaVersion": 2022 },
+        ("const C = class { field = C; };", None),                // { "ecmaVersion": 2022 },
+        ("class C { static field = C; }", None),                  // { "ecmaVersion": 2022 },
+        ("(class C { static field = C; });", None),               // { "ecmaVersion": 2022 },
+        (
+            "class C { static field = class { static field = C; }; }",
+            None,
+        ), // { "ecmaVersion": 2022 },
+        (
+            "(class C { static field = class { static field = C; }; });",
+            None,
+        ), // { "ecmaVersion": 2022 },
+        ("class C { field = () => C; }", None),                   // { "ecmaVersion": 2022 },
+        ("(class C { field = () => C; });", None),                // { "ecmaVersion": 2022 },
+        ("const C = class { field = () => C; };", None),          // { "ecmaVersion": 2022 },
+        ("class C { static field = () => C; }", None),            // { "ecmaVersion": 2022 },
+        ("(class C { static field = () => C; });", None),         // { "ecmaVersion": 2022 },
+        ("const C = class { static field = () => C; };", None),   // { "ecmaVersion": 2022 },
+        ("class C { field = class extends C {}; }", None),        // { "ecmaVersion": 2022 },
+        ("(class C { field = class extends C {}; });", None),     // { "ecmaVersion": 2022 },
         ("const C = class { field = class extends C {}; }", None), // { "ecmaVersion": 2022 },
         ("class C { static field = class extends C {}; }", None), // { "ecmaVersion": 2022 },
         ("(class C { static field = class extends C {}; });", None), // { "ecmaVersion": 2022 },
-        ("class C { static field = class { [C]; }; }", None), // { "ecmaVersion": 2022 },
-        ("(class C { static field = class { [C]; }; });", None), // { "ecmaVersion": 2022 },
-        ("const C = class { static field = class { field = C; }; };", None), // { "ecmaVersion": 2022 },
-        ("class C { method() { a; } } let a;", Some(serde_json::json!([{ "variables": false }]))), // { "ecmaVersion": 6 },
+        ("class C { static field = class { [C]; }; }", None),     // { "ecmaVersion": 2022 },
+        ("(class C { static field = class { [C]; }; });", None),  // { "ecmaVersion": 2022 },
+        (
+            "const C = class { static field = class { field = C; }; };",
+            None,
+        ), // { "ecmaVersion": 2022 },
+        (
+            "class C { method() { a; } } let a;",
+            Some(serde_json::json!([{ "variables": false }])),
+        ), // { "ecmaVersion": 6 },
         (
             "class C { static method() { a; } } let a;",
             Some(serde_json::json!([{ "variables": false }])),
         ), // { "ecmaVersion": 6 },
-        ("class C { field = a; } let a;", Some(serde_json::json!([{ "variables": false }]))), // { "ecmaVersion": 2022 },
-        ("class C { field = D; } class D {}", Some(serde_json::json!([{ "classes": false }]))), // { "ecmaVersion": 2022 },
+        (
+            "class C { field = a; } let a;",
+            Some(serde_json::json!([{ "variables": false }])),
+        ), // { "ecmaVersion": 2022 },
+        (
+            "class C { field = D; } class D {}",
+            Some(serde_json::json!([{ "classes": false }])),
+        ), // { "ecmaVersion": 2022 },
         (
             "class C { field = class extends D {}; } class D {}",
             Some(serde_json::json!([{ "classes": false }])),
         ), // { "ecmaVersion": 2022 },
-        ("class C { field = () => a; } let a;", Some(serde_json::json!([{ "variables": false }]))), // { "ecmaVersion": 2022 },
+        (
+            "class C { field = () => a; } let a;",
+            Some(serde_json::json!([{ "variables": false }])),
+        ), // { "ecmaVersion": 2022 },
         (
             "class C { static field = () => a; } let a;",
             Some(serde_json::json!([{ "variables": false }])),
@@ -622,14 +669,14 @@ fn test() {
             "class C { static field = class { field = a; }; } let a;",
             Some(serde_json::json!([{ "variables": false }])),
         ), // { "ecmaVersion": 2022 },
-        ("class C { static { C; } }", None), // { "ecmaVersion": 2022 },
+        ("class C { static { C; } }", None),                      // { "ecmaVersion": 2022 },
         ("class C { static { C; } static {} static { C; } }", None), // { "ecmaVersion": 2022 },
-        ("(class C { static { C; } })", None), // { "ecmaVersion": 2022 },
-        ("class C { static { class D extends C {} } }", None), // { "ecmaVersion": 2022 },
+        ("(class C { static { C; } })", None),                    // { "ecmaVersion": 2022 },
+        ("class C { static { class D extends C {} } }", None),    // { "ecmaVersion": 2022 },
         ("class C { static { (class { static { C } }) } }", None), // { "ecmaVersion": 2022 },
-        ("class C { static { () => C; } }", None), // { "ecmaVersion": 2022 },
-        ("(class C { static { () => C; } })", None), // { "ecmaVersion": 2022 },
-        ("const C = class { static { () => C; } }", None), // { "ecmaVersion": 2022 },
+        ("class C { static { () => C; } }", None),                // { "ecmaVersion": 2022 },
+        ("(class C { static { () => C; } })", None),              // { "ecmaVersion": 2022 },
+        ("const C = class { static { () => C; } }", None),        // { "ecmaVersion": 2022 },
         (
             "class C { static { () => D; } } class D {}",
             Some(serde_json::json!([{ "classes": false }])),
@@ -638,16 +685,31 @@ fn test() {
             "class C { static { () => a; } } let a;",
             Some(serde_json::json!([{ "variables": false }])),
         ), // { "ecmaVersion": 2022 },
-        ("const C = class C { static { C.x; } }", None), // { "ecmaVersion": 2022 },
-        ("export { a }; const a = 1;", Some(serde_json::json!([{ "allowNamedExports": true }]))), // { "ecmaVersion": 2015, "sourceType": "module" },
+        ("const C = class C { static { C.x; } }", None),          // { "ecmaVersion": 2022 },
+        (
+            "export { a }; const a = 1;",
+            Some(serde_json::json!([{ "allowNamedExports": true }])),
+        ), // { "ecmaVersion": 2015, "sourceType": "module" },
         (
             "export { a as b }; const a = 1;",
             Some(serde_json::json!([{ "allowNamedExports": true }])),
         ), // { "ecmaVersion": 2015, "sourceType": "module" },
-        ("export { a, b }; let a, b;", Some(serde_json::json!([{ "allowNamedExports": true }]))), // { "ecmaVersion": 2015, "sourceType": "module" },
-        ("export { a }; var a;", Some(serde_json::json!([{ "allowNamedExports": true }]))), // { "ecmaVersion": 2015, "sourceType": "module" },
-        ("export { f }; function f() {}", Some(serde_json::json!([{ "allowNamedExports": true }]))), // { "ecmaVersion": 2015, "sourceType": "module" },
-        ("export { C }; class C {}", Some(serde_json::json!([{ "allowNamedExports": true }]))), // { "ecmaVersion": 2015, "sourceType": "module" },
+        (
+            "export { a, b }; let a, b;",
+            Some(serde_json::json!([{ "allowNamedExports": true }])),
+        ), // { "ecmaVersion": 2015, "sourceType": "module" },
+        (
+            "export { a }; var a;",
+            Some(serde_json::json!([{ "allowNamedExports": true }])),
+        ), // { "ecmaVersion": 2015, "sourceType": "module" },
+        (
+            "export { f }; function f() {}",
+            Some(serde_json::json!([{ "allowNamedExports": true }])),
+        ), // { "ecmaVersion": 2015, "sourceType": "module" },
+        (
+            "export { C }; class C {}",
+            Some(serde_json::json!([{ "allowNamedExports": true }])),
+        ), // { "ecmaVersion": 2015, "sourceType": "module" },
         ("const App = () => <div/>; <App />;", None), // { "ecmaVersion": 6, "parserOptions": { "ecmaFeatures": { "jsx": true } }, },
         ("let Foo, Bar; <Foo><Bar /></Foo>;", None), // { "ecmaVersion": 6, "parserOptions": { "ecmaFeatures": { "jsx": true } }, },
         ("function App() { return <div/> } <App />;", None), // { "ecmaVersion": 6, "parserOptions": { "ecmaFeatures": { "jsx": true } }, },
@@ -1273,7 +1335,10 @@ fn test() {
         ("a(); var a=function() {};", None),
         ("alert(a[1]); var a=[1,3];", None),
         ("a(); function a() { alert(b); var b=10; a(); }", None),
-        ("a(); var a=function() {};", Some(serde_json::json!(["nofunc"]))),
+        (
+            "a(); var a=function() {};",
+            Some(serde_json::json!(["nofunc"])),
+        ),
         ("(() => { alert(a); var a = 42; })();", None), // { "ecmaVersion": 6 },
         ("(() => a())(); function a() { }", None),      // { "ecmaVersion": 6 },
         (r#""use strict"; a(); { function a() {} }"#, None),
@@ -1301,7 +1366,10 @@ fn test() {
             "new A(); class A {};",
             Some(serde_json::json!([{ "functions": false, "classes": false }])),
         ), // { "ecmaVersion": 6 },
-        ("new A(); var A = class {};", Some(serde_json::json!([{ "classes": false }]))), // { "ecmaVersion": 6 },
+        (
+            "new A(); var A = class {};",
+            Some(serde_json::json!([{ "classes": false }])),
+        ), // { "ecmaVersion": 6 },
         (
             "function foo() { new A(); } var A = class {};",
             Some(serde_json::json!([{ "classes": false }])),
@@ -1322,7 +1390,10 @@ fn test() {
             "function foo() { bar; var bar = 1; } var bar;",
             Some(serde_json::json!([{ "variables": false }])),
         ),
-        ("foo; var foo;", Some(serde_json::json!([{ "variables": false }]))),
+        (
+            "foo; var foo;",
+            Some(serde_json::json!([{ "variables": false }])),
+        ),
         ("for (let x = x;;); let x = 0", None), // { "ecmaVersion": 2015 },
         ("for (let x in xs); let xs = []", None), // { "ecmaVersion": 2015 },
         ("for (let x of xs); let xs = []", None), // { "ecmaVersion": 2015 },
@@ -1332,9 +1403,18 @@ fn test() {
         ("with (obj) { x } let x = {}", None),  // { "ecmaVersion": 2015 },
         ("with (obj) { if (a) { x } } let x = {}", None), // { "ecmaVersion": 2015 },
         ("with (obj) { (() => { if (a) { x } })() } let x = {}", None), // { "ecmaVersion": 2015 },
-        ("class C extends C {}", Some(serde_json::json!([{ "classes": false }]))), // { "ecmaVersion": 6 },
-        ("const C = class extends C {};", Some(serde_json::json!([{ "variables": false }]))), // { "ecmaVersion": 6 },
-        ("class C extends (class { [C](){} }) {}", Some(serde_json::json!([{ "classes": false }]))), // { "ecmaVersion": 6 },
+        (
+            "class C extends C {}",
+            Some(serde_json::json!([{ "classes": false }])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "const C = class extends C {};",
+            Some(serde_json::json!([{ "variables": false }])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "class C extends (class { [C](){} }) {}",
+            Some(serde_json::json!([{ "classes": false }])),
+        ), // { "ecmaVersion": 6 },
         (
             "const C = class extends (class { [C](){} }) {};",
             Some(serde_json::json!([{ "variables": false }])),
@@ -1347,23 +1427,74 @@ fn test() {
             "const C = class extends (class { static field = C; }) {};",
             Some(serde_json::json!([{ "variables": false }])),
         ), // { "ecmaVersion": 2022 },
-        ("class C { [C](){} }", Some(serde_json::json!([{ "classes": false }]))), // { "ecmaVersion": 6 },
-        ("(class C { [C](){} });", Some(serde_json::json!([{ "classes": false }]))), // { "ecmaVersion": 6 },
-        ("const C = class { [C](){} };", Some(serde_json::json!([{ "variables": false }]))), // { "ecmaVersion": 6 },
-        ("class C { static [C](){} }", Some(serde_json::json!([{ "classes": false }]))), // { "ecmaVersion": 6 },
-        ("(class C { static [C](){} });", Some(serde_json::json!([{ "classes": false }]))), // { "ecmaVersion": 6 },
-        ("const C = class { static [C](){} };", Some(serde_json::json!([{ "variables": false }]))), // { "ecmaVersion": 6 },
-        ("class C { [C]; }", Some(serde_json::json!([{ "classes": false }]))), // { "ecmaVersion": 2022 },
-        ("(class C { [C]; });", Some(serde_json::json!([{ "classes": false }]))), // { "ecmaVersion": 2022 },
-        ("const C = class { [C]; };", Some(serde_json::json!([{ "variables": false }]))), // { "ecmaVersion": 2022 },
-        ("class C { [C] = foo; }", Some(serde_json::json!([{ "classes": false }]))), // { "ecmaVersion": 2022 },
-        ("(class C { [C] = foo; });", Some(serde_json::json!([{ "classes": false }]))), // { "ecmaVersion": 2022 },
-        ("const C = class { [C] = foo; };", Some(serde_json::json!([{ "variables": false }]))), // { "ecmaVersion": 2022 },
-        ("class C { static [C]; }", Some(serde_json::json!([{ "classes": false }]))), // { "ecmaVersion": 2022 },
-        ("(class C { static [C]; });", Some(serde_json::json!([{ "classes": false }]))), // { "ecmaVersion": 2022 },
-        ("const C = class { static [C]; };", Some(serde_json::json!([{ "variables": false }]))), // { "ecmaVersion": 2022 },
-        ("class C { static [C] = foo; }", Some(serde_json::json!([{ "classes": false }]))), // { "ecmaVersion": 2022 },
-        ("(class C { static [C] = foo; });", Some(serde_json::json!([{ "classes": false }]))), // { "ecmaVersion": 2022 },
+        (
+            "class C { [C](){} }",
+            Some(serde_json::json!([{ "classes": false }])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "(class C { [C](){} });",
+            Some(serde_json::json!([{ "classes": false }])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "const C = class { [C](){} };",
+            Some(serde_json::json!([{ "variables": false }])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "class C { static [C](){} }",
+            Some(serde_json::json!([{ "classes": false }])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "(class C { static [C](){} });",
+            Some(serde_json::json!([{ "classes": false }])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "const C = class { static [C](){} };",
+            Some(serde_json::json!([{ "variables": false }])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "class C { [C]; }",
+            Some(serde_json::json!([{ "classes": false }])),
+        ), // { "ecmaVersion": 2022 },
+        (
+            "(class C { [C]; });",
+            Some(serde_json::json!([{ "classes": false }])),
+        ), // { "ecmaVersion": 2022 },
+        (
+            "const C = class { [C]; };",
+            Some(serde_json::json!([{ "variables": false }])),
+        ), // { "ecmaVersion": 2022 },
+        (
+            "class C { [C] = foo; }",
+            Some(serde_json::json!([{ "classes": false }])),
+        ), // { "ecmaVersion": 2022 },
+        (
+            "(class C { [C] = foo; });",
+            Some(serde_json::json!([{ "classes": false }])),
+        ), // { "ecmaVersion": 2022 },
+        (
+            "const C = class { [C] = foo; };",
+            Some(serde_json::json!([{ "variables": false }])),
+        ), // { "ecmaVersion": 2022 },
+        (
+            "class C { static [C]; }",
+            Some(serde_json::json!([{ "classes": false }])),
+        ), // { "ecmaVersion": 2022 },
+        (
+            "(class C { static [C]; });",
+            Some(serde_json::json!([{ "classes": false }])),
+        ), // { "ecmaVersion": 2022 },
+        (
+            "const C = class { static [C]; };",
+            Some(serde_json::json!([{ "variables": false }])),
+        ), // { "ecmaVersion": 2022 },
+        (
+            "class C { static [C] = foo; }",
+            Some(serde_json::json!([{ "classes": false }])),
+        ), // { "ecmaVersion": 2022 },
+        (
+            "(class C { static [C] = foo; });",
+            Some(serde_json::json!([{ "classes": false }])),
+        ), // { "ecmaVersion": 2022 },
         (
             "const C = class { static [C] = foo; };",
             Some(serde_json::json!([{ "variables": false }])),
@@ -1384,7 +1515,10 @@ fn test() {
             "const C = class { static field = class { static field = C; }; };",
             Some(serde_json::json!([{ "variables": false }])),
         ), // { "ecmaVersion": 2022 },
-        ("class C extends D {} class D {}", Some(serde_json::json!([{ "classes": false }]))), // { "ecmaVersion": 6 },
+        (
+            "class C extends D {} class D {}",
+            Some(serde_json::json!([{ "classes": false }])),
+        ), // { "ecmaVersion": 6 },
         (
             "class C extends (class { [a](){} }) {} let a;",
             Some(serde_json::json!([{ "variables": false }])),
@@ -1393,13 +1527,34 @@ fn test() {
             "class C extends (class { static field = a; }) {} let a;",
             Some(serde_json::json!([{ "variables": false }])),
         ), // { "ecmaVersion": 2022 },
-        ("class C { [a]() {} } let a;", Some(serde_json::json!([{ "variables": false }]))), // { "ecmaVersion": 6 },
-        ("class C { static [a]() {} } let a;", Some(serde_json::json!([{ "variables": false }]))), // { "ecmaVersion": 6 },
-        ("class C { [a]; } let a;", Some(serde_json::json!([{ "variables": false }]))), // { "ecmaVersion": 2022 },
-        ("class C { static [a]; } let a;", Some(serde_json::json!([{ "variables": false }]))), // { "ecmaVersion": 2022 },
-        ("class C { [a] = foo; } let a;", Some(serde_json::json!([{ "variables": false }]))), // { "ecmaVersion": 2022 },
-        ("class C { static [a] = foo; } let a;", Some(serde_json::json!([{ "variables": false }]))), // { "ecmaVersion": 2022 },
-        ("class C { static field = a; } let a;", Some(serde_json::json!([{ "variables": false }]))), // { "ecmaVersion": 2022 },
+        (
+            "class C { [a]() {} } let a;",
+            Some(serde_json::json!([{ "variables": false }])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "class C { static [a]() {} } let a;",
+            Some(serde_json::json!([{ "variables": false }])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "class C { [a]; } let a;",
+            Some(serde_json::json!([{ "variables": false }])),
+        ), // { "ecmaVersion": 2022 },
+        (
+            "class C { static [a]; } let a;",
+            Some(serde_json::json!([{ "variables": false }])),
+        ), // { "ecmaVersion": 2022 },
+        (
+            "class C { [a] = foo; } let a;",
+            Some(serde_json::json!([{ "variables": false }])),
+        ), // { "ecmaVersion": 2022 },
+        (
+            "class C { static [a] = foo; } let a;",
+            Some(serde_json::json!([{ "variables": false }])),
+        ), // { "ecmaVersion": 2022 },
+        (
+            "class C { static field = a; } let a;",
+            Some(serde_json::json!([{ "variables": false }])),
+        ), // { "ecmaVersion": 2022 },
         (
             "class C { static field = D; } class D {}",
             Some(serde_json::json!([{ "classes": false }])),
@@ -1416,13 +1571,22 @@ fn test() {
             "class C { static field = class { static field = a; }; } let a;",
             Some(serde_json::json!([{ "variables": false }])),
         ), // { "ecmaVersion": 2022 },
-        ("const C = class { static { C; } };", Some(serde_json::json!([{ "variables": false }]))), // { "ecmaVersion": 2022 },
+        (
+            "const C = class { static { C; } };",
+            Some(serde_json::json!([{ "variables": false }])),
+        ), // { "ecmaVersion": 2022 },
         (
             "const C = class { static { (class extends C {}); } };",
             Some(serde_json::json!([{ "variables": false }])),
         ), // { "ecmaVersion": 2022 },
-        ("class C { static { a; } } let a;", Some(serde_json::json!([{ "variables": false }]))), // { "ecmaVersion": 2022 },
-        ("class C { static { D; } } class D {}", Some(serde_json::json!([{ "classes": false }]))), // { "ecmaVersion": 2022 },
+        (
+            "class C { static { a; } } let a;",
+            Some(serde_json::json!([{ "variables": false }])),
+        ), // { "ecmaVersion": 2022 },
+        (
+            "class C { static { D; } } class D {}",
+            Some(serde_json::json!([{ "classes": false }])),
+        ), // { "ecmaVersion": 2022 },
         (
             "class C { static { (class extends D {}); } } class D {}",
             Some(serde_json::json!([{ "classes": false }])),
@@ -1435,7 +1599,10 @@ fn test() {
             "class C { static { (class { static field = a; }); } } let a;",
             Some(serde_json::json!([{ "variables": false }])),
         ), // { "ecmaVersion": 2022 },
-        ("(class C extends C {});", Some(serde_json::json!([{ "classes": false }]))), // { "ecmaVersion": 6 },
+        (
+            "(class C extends C {});",
+            Some(serde_json::json!([{ "classes": false }])),
+        ), // { "ecmaVersion": 6 },
         (
             "(class C extends (class { [C](){} }) {});",
             Some(serde_json::json!([{ "classes": false }])),
@@ -1444,10 +1611,16 @@ fn test() {
             "(class C extends (class { static field = C; }) {});",
             Some(serde_json::json!([{ "classes": false }])),
         ), // { "ecmaVersion": 2022 },
-        ("export { a }; const a = 1;", None), // { "ecmaVersion": 2015, "sourceType": "module" },
+        ("export { a }; const a = 1;", None),   // { "ecmaVersion": 2015, "sourceType": "module" },
         ("export { a }; const a = 1;", Some(serde_json::json!([{}]))), // { "ecmaVersion": 2015, "sourceType": "module" },
-        ("export { a }; const a = 1;", Some(serde_json::json!([{ "allowNamedExports": false }]))), // { "ecmaVersion": 2015, "sourceType": "module" },
-        ("export { a }; const a = 1;", Some(serde_json::json!(["nofunc"]))), // { "ecmaVersion": 2015, "sourceType": "module" },
+        (
+            "export { a }; const a = 1;",
+            Some(serde_json::json!([{ "allowNamedExports": false }])),
+        ), // { "ecmaVersion": 2015, "sourceType": "module" },
+        (
+            "export { a }; const a = 1;",
+            Some(serde_json::json!(["nofunc"])),
+        ), // { "ecmaVersion": 2015, "sourceType": "module" },
         ("export { a as b }; const a = 1;", None), // { "ecmaVersion": 2015, "sourceType": "module" },
         ("export { a, b }; let a, b;", None), // { "ecmaVersion": 2015, "sourceType": "module" },
         ("export { a }; var a;", None),       // { "ecmaVersion": 2015, "sourceType": "module" },
@@ -1470,7 +1643,10 @@ fn test() {
             Some(serde_json::json!([{ "allowNamedExports": true }])),
         ), // { "ecmaVersion": 2015, "sourceType": "module" },
         ("<App />; const App = () => <div />;", None), // { "ecmaVersion": 6, "parserOptions": { "ecmaFeatures": { "jsx": true } }, },
-        ("function render() { return <Widget /> }; const Widget = () => <span />;", None), // { "ecmaVersion": 6, "parserOptions": { "ecmaFeatures": { "jsx": true } }, },
+        (
+            "function render() { return <Widget /> }; const Widget = () => <span />;",
+            None,
+        ), // { "ecmaVersion": 6, "parserOptions": { "ecmaFeatures": { "jsx": true } }, },
         ("<Foo.Bar />; const Foo = { Bar: () => <div/> };", None), // { "ecmaVersion": 6, "parserOptions": { "ecmaFeatures": { "jsx": true } }, },
         (
             "
@@ -1955,7 +2131,13 @@ fn test() {
         ),
     ];
 
-    Tester::new(NoUseBeforeDefine::NAME, NoUseBeforeDefine::PLUGIN, pass, fail).test_and_snapshot();
+    Tester::new(
+        NoUseBeforeDefine::NAME,
+        NoUseBeforeDefine::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }
 
 #[test]
@@ -2555,7 +2737,10 @@ fn test_typescript_eslint() {
                 ",
             None,
         ),
-        ("a(); function a() { alert(arguments); }", Some(serde_json::json!(["nofunc"]))),
+        (
+            "a(); function a() { alert(arguments); }",
+            Some(serde_json::json!(["nofunc"])),
+        ),
         (
             "
             a();
@@ -2565,7 +2750,10 @@ fn test_typescript_eslint() {
                   ",
             Some(serde_json::json!(["nofunc"])),
         ),
-        (r#""use strict"; { a(); function a() {} }"#, Some(serde_json::json!(["nofunc"]))),
+        (
+            r#""use strict"; { a(); function a() {} }"#,
+            Some(serde_json::json!(["nofunc"])),
+        ),
     ];
 
     let fail = vec![
@@ -3032,7 +3220,10 @@ fn test_typescript_eslint() {
                   ",
             None,
         ),
-        ("a(); var a=function() {};", Some(serde_json::json!(["nofunc"]))),
+        (
+            "a(); var a=function() {};",
+            Some(serde_json::json!(["nofunc"])),
+        ),
         (
             "
             a();
@@ -3040,12 +3231,20 @@ fn test_typescript_eslint() {
                   ",
             Some(serde_json::json!(["nofunc"])),
         ),
-        ("export { a }; const a = 1;", Some(serde_json::json!(["nofunc"]))),
+        (
+            "export { a }; const a = 1;",
+            Some(serde_json::json!(["nofunc"])),
+        ),
     ];
 
-    Tester::new(NoUseBeforeDefine::NAME, NoUseBeforeDefine::PLUGIN, pass, fail)
-        .with_snapshot_suffix("typescript-eslint")
-        .test_and_snapshot();
+    Tester::new(
+        NoUseBeforeDefine::NAME,
+        NoUseBeforeDefine::PLUGIN,
+        pass,
+        fail,
+    )
+    .with_snapshot_suffix("typescript-eslint")
+    .test_and_snapshot();
 }
 
 #[test]
@@ -3055,7 +3254,12 @@ fn test_javascript() {
     let pass = vec!["const a = 1;"];
     let fail = vec!["const a = b; const b = 1;"];
 
-    Tester::new(NoUseBeforeDefine::NAME, NoUseBeforeDefine::PLUGIN, pass, fail)
-        .change_rule_path_extension("js")
-        .test();
+    Tester::new(
+        NoUseBeforeDefine::NAME,
+        NoUseBeforeDefine::PLUGIN,
+        pass,
+        fail,
+    )
+    .change_rule_path_extension("js")
+    .test();
 }

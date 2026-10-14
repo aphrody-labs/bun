@@ -23,8 +23,17 @@ pub fn build<'a>(
     constructs: &Constructs,
     refs: &RefMap,
 ) -> Root<'a> {
-    let cx = Cx { allocator, source, blanks, refs, constructs };
-    Root { children: cx.blocks(irs), span }
+    let cx = Cx {
+        allocator,
+        source,
+        blanks,
+        refs,
+        constructs,
+    };
+    Root {
+        children: cx.blocks(irs),
+        span,
+    }
 }
 
 struct Cx<'x, 'a> {
@@ -53,7 +62,13 @@ impl<'a> Cx<'_, 'a> {
     }
 
     fn inlines(&self, segments: &[super::IrSeg]) -> ArenaVec<'a, Inline<'a>> {
-        crate::inline::inlines(self.allocator, self.source, segments, self.refs, self.constructs)
+        crate::inline::inlines(
+            self.allocator,
+            self.source,
+            segments,
+            self.refs,
+            self.constructs,
+        )
     }
 
     fn block(&self, ir: Ir) -> Block<'a> {
@@ -62,25 +77,44 @@ impl<'a> Cx<'_, 'a> {
                 let lazy_lines = self.lazy_lines(&segments);
                 let children = self.inlines(&segments);
                 Block::Paragraph(ArenaBox::new_in(
-                    Paragraph { children, lazy_lines, span },
+                    Paragraph {
+                        children,
+                        lazy_lines,
+                        span,
+                    },
                     &self.allocator,
                 ))
             }
-            Ir::Heading { level, underline, segments, span } => {
+            Ir::Heading {
+                level,
+                underline,
+                segments,
+                span,
+            } => {
                 let kind = match underline {
-                    Some(underline) => {
-                        HeadingKind::Setext { underline, lazy_lines: self.lazy_lines(&segments) }
-                    }
+                    Some(underline) => HeadingKind::Setext {
+                        underline,
+                        lazy_lines: self.lazy_lines(&segments),
+                    },
                     None => HeadingKind::Atx,
                 };
                 let children = self.inlines(&segments);
                 Block::Heading(ArenaBox::new_in(
-                    Heading { level, kind, children, span },
+                    Heading {
+                        level,
+                        kind,
+                        children,
+                        span,
+                    },
                     &self.allocator,
                 ))
             }
             Ir::ThematicBreak { span } => Block::ThematicBreak(ThematicBreak { span }),
-            Ir::Code { fenced, lines, span } => {
+            Ir::Code {
+                fenced,
+                lines,
+                span,
+            } => {
                 let kind = match fenced {
                     Some((fence, info)) => {
                         let (lang, meta) = info.map_or((None, None), |info| {
@@ -101,31 +135,65 @@ impl<'a> Cx<'_, 'a> {
                     None => CodeBlockKind::Indented,
                 };
                 let lines = ArenaVec::from_iter_in(lines, &self.allocator);
-                Block::CodeBlock(ArenaBox::new_in(CodeBlock { kind, lines, span }, &self.allocator))
+                Block::CodeBlock(ArenaBox::new_in(
+                    CodeBlock { kind, lines, span },
+                    &self.allocator,
+                ))
             }
-            Ir::Html { kind, lines, trailing_newline, span } => {
+            Ir::Html {
+                kind,
+                lines,
+                trailing_newline,
+                span,
+            } => {
                 let lines = ArenaVec::from_iter_in(lines, &self.allocator);
                 Block::HtmlBlock(ArenaBox::new_in(
-                    HtmlBlock { kind, lines, trailing_newline, span },
+                    HtmlBlock {
+                        kind,
+                        lines,
+                        trailing_newline,
+                        span,
+                    },
                     &self.allocator,
                 ))
             }
             Ir::Quote { children, span } => {
                 let children = self.blocks(children);
-                Block::Blockquote(ArenaBox::new_in(Blockquote { children, span }, &self.allocator))
-            }
-            Ir::Definition { label, destination, title, span } => {
-                let label = ArenaVec::from_iter_in(label, &self.allocator);
-                let title = title.map(|t| ArenaVec::from_iter_in(t, &self.allocator));
-                Block::Definition(ArenaBox::new_in(
-                    Definition { label, destination, title, span },
+                Block::Blockquote(ArenaBox::new_in(
+                    Blockquote { children, span },
                     &self.allocator,
                 ))
             }
-            Ir::FootnoteDefinition { label, children, span } => {
+            Ir::Definition {
+                label,
+                destination,
+                title,
+                span,
+            } => {
+                let label = ArenaVec::from_iter_in(label, &self.allocator);
+                let title = title.map(|t| ArenaVec::from_iter_in(t, &self.allocator));
+                Block::Definition(ArenaBox::new_in(
+                    Definition {
+                        label,
+                        destination,
+                        title,
+                        span,
+                    },
+                    &self.allocator,
+                ))
+            }
+            Ir::FootnoteDefinition {
+                label,
+                children,
+                span,
+            } => {
                 let children = self.blocks(children);
                 Block::FootnoteDefinition(ArenaBox::new_in(
-                    FootnoteDefinition { label, children, span },
+                    FootnoteDefinition {
+                        label,
+                        children,
+                        span,
+                    },
                     &self.allocator,
                 ))
             }
@@ -135,30 +203,63 @@ impl<'a> Cx<'_, 'a> {
                 for row in rows {
                     let mut cells = ArenaVec::with_capacity_in(row.cells.len(), &self.allocator);
                     for cell in row.cells {
-                        let seg =
-                            super::IrSeg { seg: crate::pos::Segment::new(cell, 0), lazy: false };
-                        cells.push(TableCell { children: self.inlines(&[seg]), span: cell });
+                        let seg = super::IrSeg {
+                            seg: crate::pos::Segment::new(cell, 0),
+                            lazy: false,
+                        };
+                        cells.push(TableCell {
+                            children: self.inlines(&[seg]),
+                            span: cell,
+                        });
                     }
-                    children.push(TableRow { children: cells, span: row.span });
+                    children.push(TableRow {
+                        children: cells,
+                        span: row.span,
+                    });
                 }
-                Block::Table(ArenaBox::new_in(Table { align, children, span }, &self.allocator))
+                Block::Table(ArenaBox::new_in(
+                    Table {
+                        align,
+                        children,
+                        span,
+                    },
+                    &self.allocator,
+                ))
             }
             Ir::MathBlock { meta, lines, span } => {
                 let lines = ArenaVec::from_iter_in(lines, &self.allocator);
-                Block::MathBlock(ArenaBox::new_in(MathBlock { meta, lines, span }, &self.allocator))
+                Block::MathBlock(ArenaBox::new_in(
+                    MathBlock { meta, lines, span },
+                    &self.allocator,
+                ))
             }
             Ir::Liquid { pieces, span } => {
                 let pieces = ArenaVec::from_iter_in(pieces, &self.allocator);
                 Block::Liquid(ArenaBox::new_in(Liquid { pieces, span }, &self.allocator))
             }
-            Ir::ContainerDirective { opening, closing, children, span } => {
+            Ir::ContainerDirective {
+                opening,
+                closing,
+                children,
+                span,
+            } => {
                 let children = self.blocks(children);
                 Block::ContainerDirective(ArenaBox::new_in(
-                    ContainerDirective { opening, closing, children, span },
+                    ContainerDirective {
+                        opening,
+                        closing,
+                        children,
+                        span,
+                    },
                     &self.allocator,
                 ))
             }
-            Ir::List { ordered, marker, items, span } => {
+            Ir::List {
+                ordered,
+                marker,
+                items,
+                span,
+            } => {
                 // cmark's list-wide looseness: a blank line between two items,
                 // or inside any item between its children (`ListItem::spread`).
                 // Blank lines inside a child (a code block, a nested list) don't count.
@@ -176,7 +277,12 @@ impl<'a> Cx<'_, 'a> {
                 }
                 let tight = !gap && !children.iter().any(|item| item.spread);
                 Block::List(ArenaBox::new_in(
-                    List { marker, tight, children, span },
+                    List {
+                        marker,
+                        tight,
+                        children,
+                        span,
+                    },
                     &self.allocator,
                 ))
             }
@@ -184,7 +290,12 @@ impl<'a> Cx<'_, 'a> {
     }
 
     fn item(&self, item: IrItem) -> ListItem<'a> {
-        let IrItem { marker, padding, mut children, span } = item;
+        let IrItem {
+            marker,
+            padding,
+            mut children,
+            span,
+        } = item;
         let checkbox = if self.constructs.gfm_task_list_item {
             self.take_checkbox(&mut children)
         } else {
@@ -192,7 +303,14 @@ impl<'a> Cx<'_, 'a> {
         };
         let spread = item_is_spread(self.blanks, &children);
         let children = self.blocks(children);
-        ListItem { marker, padding, checkbox, spread, children, span }
+        ListItem {
+            marker,
+            padding,
+            checkbox,
+            spread,
+            children,
+            span,
+        }
     }
 
     /// GFM task list: `[ ]` / `[\t]` / `[x]` / `[X]` at the very start of the item's first content
@@ -215,7 +333,9 @@ impl<'a> Cx<'_, 'a> {
             }
             at += 1;
         }
-        let Some(Ir::Paragraph { segments, span }) = children.get_mut(at) else { return None };
+        let Some(Ir::Paragraph { segments, span }) = children.get_mut(at) else {
+            return None;
+        };
         let multiline = segments.len() > 1;
         let first = segments.first_mut()?;
         let raw = first.seg.span.slice(self.source);
@@ -234,9 +354,16 @@ impl<'a> Cx<'_, 'a> {
         if !multiline && after_ws.is_empty() {
             return None;
         }
-        let checkbox = TaskCheckbox { span: Span::at(first.seg.span.start, 0..3), checked };
+        let checkbox = TaskCheckbox {
+            span: Span::at(first.seg.span.start, 0..3),
+            checked,
+        };
         // Paragraph starts at same-line content, or right after `]` when only whitespace follows
-        let skip = if after_ws.is_empty() { 3 } else { raw.len() - after_ws.len() };
+        let skip = if after_ws.is_empty() {
+            3
+        } else {
+            raw.len() - after_ws.len()
+        };
         first.seg.span.start += u32::try_from(skip).unwrap_or(0);
         span.start = first.seg.span.start;
         Some(checkbox)
@@ -252,5 +379,8 @@ fn item_is_spread(blanks: &[Span], children: &[Ir]) -> bool {
 
 fn has_blank_between(blanks: &[Span], a: u32, b: u32) -> bool {
     let from = blanks.partition_point(|s| s.start < a);
-    blanks[from..].iter().take_while(|s| s.start < b).any(|s| s.end <= b)
+    blanks[from..]
+        .iter()
+        .take_while(|s| s.start < b)
+        .any(|s| s.end <= b)
 }

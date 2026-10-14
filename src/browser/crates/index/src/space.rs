@@ -16,7 +16,10 @@ use crate::{
 /// L2-normalised for cosine, unchanged for L2.
 pub fn prepare_vector(v: &[f32], dim: usize, metric: Metric) -> Result<Vec<f32>> {
     if v.len() != dim {
-        return Err(IndexError::DimensionMismatch { expected: dim, got: v.len() });
+        return Err(IndexError::DimensionMismatch {
+            expected: dim,
+            got: v.len(),
+        });
     }
     if v.iter().any(|x| !x.is_finite()) {
         return Err(IndexError::NonFiniteVector);
@@ -127,7 +130,13 @@ impl Space for I8Space<'_> {
     #[inline]
     fn dist_query(&self, q: &I8Query<'_>, slot: u32) -> f32 {
         let dot = kernels::dot_i8(q.codes, self.codes_of(slot));
-        self.combine(dot, q.scale, self.scales[slot as usize], q.norm, self.norm_of(slot))
+        self.combine(
+            dot,
+            q.scale,
+            self.scales[slot as usize],
+            q.norm,
+            self.norm_of(slot),
+        )
     }
 
     #[inline]
@@ -209,7 +218,10 @@ mod tests {
     fn rejects_bad_vectors() {
         assert!(matches!(
             prepare_vector(&[1.0, 2.0], 3, Metric::Cosine),
-            Err(IndexError::DimensionMismatch { expected: 3, got: 2 })
+            Err(IndexError::DimensionMismatch {
+                expected: 3,
+                got: 2
+            })
         ));
         assert!(matches!(
             prepare_vector(&[1.0, f32::NAN], 2, Metric::Cosine),

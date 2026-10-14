@@ -71,7 +71,8 @@ declare_oxc_lint!(
     restriction, // Restricted because there are false positives for enum bitflags in TypeScript, e.g. in the vscode repo
     suggestion,
     version = "0.0.3",
-    short_description = "This rule applies when bitwise operators are used where logical operators are expected.",
+    short_description =
+        "This rule applies when bitwise operators are used where logical operators are expected.",
 );
 
 impl Rule for BadBitwiseOperator {
@@ -300,65 +301,130 @@ fn test() {
         ("var a = obj & obj.a", "var a = obj && obj.a"),
         ("var a = options | {}", "var a = options || {}"),
         ("var a = options | !{}", "var a = options || !{}"),
-        ("var a = options | typeof {}", "var a = options || typeof {}"),
+        (
+            "var a = options | typeof {}",
+            "var a = options || typeof {}",
+        ),
         ("var a = options | ''", "var a = options || ''"),
         ("var a = options | true", "var a = options || true"),
         ("var a = options | false", "var a = options || false"),
-        ("var a = options | (1 + 2 + typeof {})", "var a = options || (1 + 2 + typeof {})"),
-        ("var a = options | (1 + 2 + (3 + ''))", "var a = options || (1 + 2 + (3 + ''))"),
-        ("var a = options | (1 + 2 + (3 + '4'))", "var a = options || (1 + 2 + (3 + '4'))"),
+        (
+            "var a = options | (1 + 2 + typeof {})",
+            "var a = options || (1 + 2 + typeof {})",
+        ),
+        (
+            "var a = options | (1 + 2 + (3 + ''))",
+            "var a = options || (1 + 2 + (3 + ''))",
+        ),
+        (
+            "var a = options | (1 + 2 + (3 + '4'))",
+            "var a = options || (1 + 2 + (3 + '4'))",
+        ),
         ("input |= ''", "input ||= ''"),
         ("input |= (1 + '')", "input ||= (1 + '')"),
         ("input |= (1 + (3 + '1'))", "input ||= (1 + (3 + '1'))"),
         ("input |= !{}", "input ||= !{}"),
         ("input |= typeof {}", "input ||= typeof {}"),
-        ("var a = obj /* comment */ & obj.a", "var a = obj /* comment */ && obj.a"),
-        ("var a = obj &/* comment */ obj.a", "var a = obj &&/* comment */ obj.a"),
-        ("var a = obj & /* comment */ obj.a", "var a = obj && /* comment */ obj.a"),
-        ("var a = obj/* comment */& obj.a", "var a = obj/* comment */&& obj.a"),
+        (
+            "var a = obj /* comment */ & obj.a",
+            "var a = obj /* comment */ && obj.a",
+        ),
+        (
+            "var a = obj &/* comment */ obj.a",
+            "var a = obj &&/* comment */ obj.a",
+        ),
+        (
+            "var a = obj & /* comment */ obj.a",
+            "var a = obj && /* comment */ obj.a",
+        ),
+        (
+            "var a = obj/* comment */& obj.a",
+            "var a = obj/* comment */&& obj.a",
+        ),
         (
             "var a = obj /* before */ & /* after */ obj.a",
             "var a = obj /* before */ && /* after */ obj.a",
         ),
-        ("var a = options /* comment */ | {}", "var a = options /* comment */ || {}"),
-        ("var a = options |/* comment */ {}", "var a = options ||/* comment */ {}"),
-        ("var a = options | /* comment */ {}", "var a = options || /* comment */ {}"),
+        (
+            "var a = options /* comment */ | {}",
+            "var a = options /* comment */ || {}",
+        ),
+        (
+            "var a = options |/* comment */ {}",
+            "var a = options ||/* comment */ {}",
+        ),
+        (
+            "var a = options | /* comment */ {}",
+            "var a = options || /* comment */ {}",
+        ),
         (
             "var a = options /* before */ | /* after */ {}",
             "var a = options /* before */ || /* after */ {}",
         ),
         ("var a = obj\n  & obj.a", "var a = obj\n  && obj.a"),
         ("var a = obj &\n  obj.a", "var a = obj &&\n  obj.a"),
-        ("var a = obj /* comment */\n  & obj.a", "var a = obj /* comment */\n  && obj.a"),
+        (
+            "var a = obj /* comment */\n  & obj.a",
+            "var a = obj /* comment */\n  && obj.a",
+        ),
         ("var a = options\n  | {}", "var a = options\n  || {}"),
         ("input /* comment */ |= ''", "input /* comment */ ||= ''"),
         ("input |=/* comment */ ''", "input ||=/* comment */ ''"),
         ("input |= /* comment */ ''", "input ||= /* comment */ ''"),
-        ("input /* before */ |= /* after */ ''", "input /* before */ ||= /* after */ ''"),
+        (
+            "input /* before */ |= /* after */ ''",
+            "input /* before */ ||= /* after */ ''",
+        ),
         ("input\n  |= ''", "input\n  ||= ''"),
         ("input |=\n  ''", "input ||=\n  ''"),
-        ("input /* comment */\n  |= ''", "input /* comment */\n  ||= ''"),
+        (
+            "input /* comment */\n  |= ''",
+            "input /* comment */\n  ||= ''",
+        ),
         (
             "var a = obj /* a */ /* b */ & /* c */ /* d */ obj.a",
             "var a = obj /* a */ /* b */ && /* c */ /* d */ obj.a",
         ),
-        ("var a = obj // comment\n  & obj.a", "var a = obj // comment\n  && obj.a"),
-        ("var a = options // comment\n  | {}", "var a = options // comment\n  || {}"),
+        (
+            "var a = obj // comment\n  & obj.a",
+            "var a = obj // comment\n  && obj.a",
+        ),
+        (
+            "var a = options // comment\n  | {}",
+            "var a = options // comment\n  || {}",
+        ),
         (
             "var a = obj /* use & for bitwise */ & obj.a",
             "var a = obj /* use & for bitwise */ && obj.a",
         ),
-        ("var a = options /* | is bitwise */ | {}", "var a = options /* | is bitwise */ || {}"),
-        ("input /* |= assigns */ |= ''", "input /* |= assigns */ ||= ''"),
+        (
+            "var a = options /* | is bitwise */ | {}",
+            "var a = options /* | is bitwise */ || {}",
+        ),
+        (
+            "input /* |= assigns */ |= ''",
+            "input /* |= assigns */ ||= ''",
+        ),
         (
             "var a = obj & /* use & for bitwise */ obj.a",
             "var a = obj && /* use & for bitwise */ obj.a",
         ),
-        ("var a = options | /* | is bitwise */ {}", "var a = options || /* | is bitwise */ {}"),
-        ("input |= /* |= assigns */ ''", "input ||= /* |= assigns */ ''"),
+        (
+            "var a = options | /* | is bitwise */ {}",
+            "var a = options || /* | is bitwise */ {}",
+        ),
+        (
+            "input |= /* |= assigns */ ''",
+            "input ||= /* |= assigns */ ''",
+        ),
     ];
 
-    Tester::new(BadBitwiseOperator::NAME, BadBitwiseOperator::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        BadBitwiseOperator::NAME,
+        BadBitwiseOperator::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

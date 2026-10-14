@@ -23,7 +23,9 @@ pub struct FormatState<'ast, C> {
 
 impl<C: std::fmt::Debug> std::fmt::Debug for FormatState<'_, C> {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        f.debug_struct("FormatState").field("context", &self.context).finish()
+        f.debug_struct("FormatState")
+            .field("context", &self.context)
+            .finish()
     }
 }
 
@@ -40,7 +42,10 @@ impl<'ast, C> FormatState<'ast, C> {
     /// nothing may consult `input_kind` for envelope decisions on those paths
     /// until that channel routes through the dispatcher.
     pub fn new(context: C, allocator: &'ast Allocator) -> Self {
-        Self::new_with_session(context, FormatSession::new(allocator, InputKind::PhysicalFile))
+        Self::new_with_session(
+            context,
+            FormatSession::new(allocator, InputKind::PhysicalFile),
+        )
     }
 
     /// Creates a new state on an existing session, sharing its arena and `GroupId` space.

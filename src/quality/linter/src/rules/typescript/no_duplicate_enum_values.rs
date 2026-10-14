@@ -21,7 +21,11 @@ fn no_duplicate_enum_values_diagnostic(
     let second_name = second_member.id.static_name();
     // Unwrap will never panic since violations are only reported for members
     // with initializers.
-    let second_init_span = second_member.initializer.as_ref().map(GetSpan::span).unwrap();
+    let second_init_span = second_member
+        .initializer
+        .as_ref()
+        .map(GetSpan::span)
+        .unwrap();
 
     OxcDiagnostic::warn(format!("Duplicate enum value `{value}`"))
         .with_help(format!("Give {second_name} a unique value"))
@@ -399,6 +403,11 @@ fn test() {
         // ",
     ];
 
-    Tester::new(NoDuplicateEnumValues::NAME, NoDuplicateEnumValues::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        NoDuplicateEnumValues::NAME,
+        NoDuplicateEnumValues::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

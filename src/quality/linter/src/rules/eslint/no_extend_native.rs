@@ -104,7 +104,11 @@ impl Rule for NoExtendNative {
                     continue;
                 }
                 // If the referenced name is explicitly allowed, skip it.
-                if self.exceptions.iter().any(|exception| name == exception.as_str()) {
+                if self
+                    .exceptions
+                    .iter()
+                    .any(|exception| name == exception.as_str())
+                {
                     continue;
                 }
                 let node = ctx.nodes().get_node(reference.node_id());
@@ -195,7 +199,8 @@ fn get_property_assignment<'a>(
             }
             AstKind::ArrayAssignmentTarget(assign_target)
                 if assign_target.elements.iter().any(|e| {
-                    e.as_ref().is_some_and(|e| e.span().contains_inclusive(node.span()))
+                    e.as_ref()
+                        .is_some_and(|e| e.span().contains_inclusive(node.span()))
                 }) =>
             {
                 return Some(parent);
@@ -268,19 +273,34 @@ fn test() {
         ("o = Object; o.prototype.toString = 0", None),
         ("eval('Object.prototype.toString = 0')", None),
         ("parseFloat.prototype.x = 1", None),
-        ("Object.prototype.g = 0", Some(serde_json::json!([{ "exceptions": ["Object"] }]))),
+        (
+            "Object.prototype.g = 0",
+            Some(serde_json::json!([{ "exceptions": ["Object"] }])),
+        ),
         ("obj[Object.prototype] = 0", None),
         ("Object.defineProperty()", None),
         ("Object.defineProperties()", None),
-        ("function foo() { var Object = function() {}; Object.prototype.p = 0 }", None),
-        ("{ let Object = function() {}; Object.prototype.p = 0 }", None), // { "ecmaVersion": 6 }
+        (
+            "function foo() { var Object = function() {}; Object.prototype.p = 0 }",
+            None,
+        ),
+        (
+            "{ let Object = function() {}; Object.prototype.p = 0 }",
+            None,
+        ), // { "ecmaVersion": 6 }
         ("x = Object.prototype.p", None),
         ("x = Array.prototype.p", None),
         ("Array.#prototype.p = 0", None),
         ("foo(Number.prototype.xyz).x = 1", None),
         ("let { z = Array.prototype.p } = {} ", None),
-        ("Object.x.defineProperty(Array.prototype, 'p', {value: 0})", None),
-        ("Object['defineProperty']['x'](Array.prototype, 'p', {value: 0})", None),
+        (
+            "Object.x.defineProperty(Array.prototype, 'p', {value: 0})",
+            None,
+        ),
+        (
+            "Object['defineProperty']['x'](Array.prototype, 'p', {value: 0})",
+            None,
+        ),
         ("(Object?.x?.['prototype'])['p'] = 0", None),
     ];
 
@@ -293,20 +313,50 @@ fn test() {
         ("Function.prototype['p'] = 0", None),
         ("String['prototype'].p = 0", None),
         ("Number['prototype']['p'] = 0", None),
-        ("Object.defineProperty(Array.prototype, 'p', {value: 0})", None),
-        ("Object['defineProperty'](Array.prototype, 'p', {value: 0})", None),
-        ("Object['defineProperty'](Array['prototype'], 'p', {value: 0})", None),
-        ("Object.defineProperties(Array.prototype, {p: {value: 0}})", None),
-        ("Object.defineProperties(Array.prototype, {p: {value: 0}, q: {value: 0}})", None),
-        ("Number['prototype']['p'] = 0", Some(serde_json::json!([{ "exceptions": ["Object"] }]))),
+        (
+            "Object.defineProperty(Array.prototype, 'p', {value: 0})",
+            None,
+        ),
+        (
+            "Object['defineProperty'](Array.prototype, 'p', {value: 0})",
+            None,
+        ),
+        (
+            "Object['defineProperty'](Array['prototype'], 'p', {value: 0})",
+            None,
+        ),
+        (
+            "Object.defineProperties(Array.prototype, {p: {value: 0}})",
+            None,
+        ),
+        (
+            "Object.defineProperties(Array.prototype, {p: {value: 0}, q: {value: 0}})",
+            None,
+        ),
+        (
+            "Number['prototype']['p'] = 0",
+            Some(serde_json::json!([{ "exceptions": ["Object"] }])),
+        ),
         ("Object.prototype.p = 0; Object.prototype.q = 0", None),
         ("function foo() { Object.prototype.p = 0 }", None),
         ("(Object?.prototype).p = 0", None), // { "ecmaVersion": 2020 },
         ("(Object?.['prototype'])['p'] = 0", None),
-        ("Object.defineProperty(Object?.prototype, 'p', { value: 0 })", None), // { "ecmaVersion": 2020 },
-        ("Object?.defineProperty(Object.prototype, 'p', { value: 0 })", None), // { "ecmaVersion": 2020 },
-        ("Object?.['defineProperty'](Object?.['prototype'], 'p', {value: 0})", None),
-        ("(Object?.defineProperty)(Object.prototype, 'p', { value: 0 })", None), // { "ecmaVersion": 2020 },
+        (
+            "Object.defineProperty(Object?.prototype, 'p', { value: 0 })",
+            None,
+        ), // { "ecmaVersion": 2020 },
+        (
+            "Object?.defineProperty(Object.prototype, 'p', { value: 0 })",
+            None,
+        ), // { "ecmaVersion": 2020 },
+        (
+            "Object?.['defineProperty'](Object?.['prototype'], 'p', {value: 0})",
+            None,
+        ),
+        (
+            "(Object?.defineProperty)(Object.prototype, 'p', { value: 0 })",
+            None,
+        ), // { "ecmaVersion": 2020 },
         ("Array.prototype.p &&= 0", None), // { "ecmaVersion": 2021 },
         ("Array.prototype.p ||= 0", None), // { "ecmaVersion": 2021 },
         ("Array.prototype.p ??= 0", None), // { "ecmaVersion": 2021 }

@@ -279,7 +279,8 @@ impl<'a, State> TraverseCtx<'a, State> {
         scope_id: ScopeId,
         flags: ScopeFlags,
     ) -> ScopeId {
-        self.scoping.insert_scope_below_statement_from_scope_id(stmt, scope_id, flags)
+        self.scoping
+            .insert_scope_below_statement_from_scope_id(stmt, scope_id, flags)
     }
 
     /// Insert a scope into scope tree below an expression.
@@ -343,7 +344,8 @@ impl<'a, State> TraverseCtx<'a, State> {
         child_id: ScopeId,
         flags: ScopeFlags,
     ) -> ScopeId {
-        self.scoping.insert_scope_between(parent_id, child_id, flags)
+        self.scoping
+            .insert_scope_between(parent_id, child_id, flags)
     }
 
     /// Remove scope for an expression from the scope chain.
@@ -389,7 +391,8 @@ impl<'a, State> TraverseCtx<'a, State> {
         scope_id: ScopeId,
         flags: SymbolFlags,
     ) -> BoundIdentifier<'a> {
-        self.scoping.generate_spanned_binding(name, span, scope_id, flags)
+        self.scoping
+            .generate_spanned_binding(name, span, scope_id, flags)
     }
 
     /// Generate binding in current scope.
@@ -496,7 +499,11 @@ impl<'a, State> TraverseCtx<'a, State> {
     /// on how UIDs are generated. There are some potential "gotchas".
     #[inline]
     pub fn generate_uid_in_current_hoist_scope(&mut self, name: &str) -> BoundIdentifier<'a> {
-        self.generate_uid(name, self.current_hoist_scope_id(), SymbolFlags::FunctionScopedVariable)
+        self.generate_uid(
+            name,
+            self.current_hoist_scope_id(),
+            SymbolFlags::FunctionScopedVariable,
+        )
     }
 
     /// Generate UID in current hoist scope based on node.
@@ -673,7 +680,12 @@ impl<'a, State> TraverseCtx<'a, State> {
         let ancestry = TraverseAncestry::new();
         let scoping = TraverseScoping::new(scoping);
         let ast = AstBuilder::new(allocator);
-        Self { state, ancestry, scoping, ast }
+        Self {
+            state,
+            ancestry,
+            scoping,
+            ast,
+        }
     }
 
     /// Shortcut for `self.ancestry.push_stack`, to make `walk_*` methods less verbose.

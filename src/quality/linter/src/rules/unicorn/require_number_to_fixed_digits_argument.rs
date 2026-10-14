@@ -117,7 +117,10 @@ fn test() {
     ];
 
     let fix = vec![
-        ("const string = number.toFixed();", "const string = number.toFixed(0);"),
+        (
+            "const string = number.toFixed();",
+            "const string = number.toFixed(0);",
+        ),
         (
             r#"const string = number?.toFixed() ?? "";"#,
             r#"const string = number?.toFixed(0) ?? "";"#,

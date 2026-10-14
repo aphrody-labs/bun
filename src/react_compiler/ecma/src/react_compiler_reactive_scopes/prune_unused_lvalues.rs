@@ -127,7 +127,11 @@ fn null_unused_in_value<'a>(
     unused: &FxHashSet<DeclarationId>,
 ) {
     match value {
-        ReactiveValue::SequenceExpression { instructions, value: inner, .. } => {
+        ReactiveValue::SequenceExpression {
+            instructions,
+            value: inner,
+            ..
+        } => {
             for instr in instructions.iter_mut() {
                 null_unused_in_instruction(instr, env, unused);
             }
@@ -137,7 +141,12 @@ fn null_unused_in_value<'a>(
             null_unused_in_value(left, env, unused);
             null_unused_in_value(right, env, unused);
         }
-        ReactiveValue::ConditionalExpression { test, consequent, alternate, .. } => {
+        ReactiveValue::ConditionalExpression {
+            test,
+            consequent,
+            alternate,
+            ..
+        } => {
             null_unused_in_value(test, env, unused);
             null_unused_in_value(consequent, env, unused);
             null_unused_in_value(alternate, env, unused);
@@ -157,7 +166,13 @@ fn null_unused_in_terminal<'a>(
     match terminal {
         ReactiveTerminal::Break { .. } | ReactiveTerminal::Continue { .. } => {}
         ReactiveTerminal::Return { .. } | ReactiveTerminal::Throw { .. } => {}
-        ReactiveTerminal::For { init, test, update, loop_block, .. } => {
+        ReactiveTerminal::For {
+            init,
+            test,
+            update,
+            loop_block,
+            ..
+        } => {
             null_unused_in_value(init, env, unused);
             null_unused_in_value(test, env, unused);
             null_unused_lvalues(loop_block, env, unused);
@@ -165,24 +180,39 @@ fn null_unused_in_terminal<'a>(
                 null_unused_in_value(update, env, unused);
             }
         }
-        ReactiveTerminal::ForOf { init, test, loop_block, .. } => {
+        ReactiveTerminal::ForOf {
+            init,
+            test,
+            loop_block,
+            ..
+        } => {
             null_unused_in_value(init, env, unused);
             null_unused_in_value(test, env, unused);
             null_unused_lvalues(loop_block, env, unused);
         }
-        ReactiveTerminal::ForIn { init, loop_block, .. } => {
+        ReactiveTerminal::ForIn {
+            init, loop_block, ..
+        } => {
             null_unused_in_value(init, env, unused);
             null_unused_lvalues(loop_block, env, unused);
         }
-        ReactiveTerminal::DoWhile { loop_block, test, .. } => {
+        ReactiveTerminal::DoWhile {
+            loop_block, test, ..
+        } => {
             null_unused_lvalues(loop_block, env, unused);
             null_unused_in_value(test, env, unused);
         }
-        ReactiveTerminal::While { test, loop_block, .. } => {
+        ReactiveTerminal::While {
+            test, loop_block, ..
+        } => {
             null_unused_in_value(test, env, unused);
             null_unused_lvalues(loop_block, env, unused);
         }
-        ReactiveTerminal::If { consequent, alternate, .. } => {
+        ReactiveTerminal::If {
+            consequent,
+            alternate,
+            ..
+        } => {
             null_unused_lvalues(consequent, env, unused);
             if let Some(alt) = alternate {
                 null_unused_lvalues(alt, env, unused);

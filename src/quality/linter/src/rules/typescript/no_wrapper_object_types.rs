@@ -63,7 +63,11 @@ impl Rule for NoWrapperObjectTypes {
         let (ident_name, ident_span, reference_id) = match node.kind() {
             AstKind::TSTypeReference(type_ref) => {
                 if let TSTypeName::IdentifierReference(type_name) = &type_ref.type_name {
-                    (type_name.name.as_str(), type_name.span, type_name.reference_id())
+                    (
+                        type_name.name.as_str(),
+                        type_name.span,
+                        type_name.reference_id(),
+                    )
                 } else {
                     return;
                 }
@@ -71,7 +75,11 @@ impl Rule for NoWrapperObjectTypes {
             AstKind::TSClassImplements(ts_class_implements) => {
                 if let TSTypeName::IdentifierReference(type_name) = &ts_class_implements.expression
                 {
-                    (type_name.name.as_str(), type_name.span, type_name.reference_id())
+                    (
+                        type_name.name.as_str(),
+                        type_name.span,
+                        type_name.reference_id(),
+                    )
                 } else {
                     return;
                 }
@@ -79,7 +87,11 @@ impl Rule for NoWrapperObjectTypes {
             AstKind::TSInterfaceHeritage(ts_interface_heritage) => {
                 if let TSTypeName::IdentifierReference(type_name) = &ts_interface_heritage.type_name
                 {
-                    (type_name.name.as_str(), type_name.span, type_name.reference_id())
+                    (
+                        type_name.name.as_str(),
+                        type_name.span,
+                        type_name.reference_id(),
+                    )
                 } else {
                     return;
                 }
@@ -87,8 +99,16 @@ impl Rule for NoWrapperObjectTypes {
             _ => return,
         };
 
-        if matches!(ident_name, "BigInt" | "Boolean" | "Number" | "Object" | "String" | "Symbol") {
-            if ctx.scoping().get_reference(reference_id).symbol_id().is_some() {
+        if matches!(
+            ident_name,
+            "BigInt" | "Boolean" | "Number" | "Object" | "String" | "Symbol"
+        ) {
+            if ctx
+                .scoping()
+                .get_reference(reference_id)
+                .symbol_id()
+                .is_some()
+            {
                 return;
             }
 
@@ -194,14 +214,25 @@ fn test() {
         ("let value: String;", "let value: string;"),
         ("let value: Symbol;", "let value: symbol;"),
         ("let value: Number | Symbol;", "let value: number | symbol;"),
-        ("let value: { property: Number };", "let value: { property: number };"),
+        (
+            "let value: { property: Number };",
+            "let value: { property: number };",
+        ),
         ("0 as Number;", "0 as number;"),
         ("type MyType = Number;", "type MyType = number;"),
         ("type MyType = [Number];", "type MyType = [number];"),
-        ("type MyType = Number & String;", "type MyType = number & string;"),
+        (
+            "type MyType = Number & String;",
+            "type MyType = number & string;",
+        ),
     ];
 
-    Tester::new(NoWrapperObjectTypes::NAME, NoWrapperObjectTypes::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        NoWrapperObjectTypes::NAME,
+        NoWrapperObjectTypes::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

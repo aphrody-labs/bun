@@ -54,7 +54,8 @@ declare_oxc_lint!(
     import,
     nursery,
     version = "0.0.21",
-    short_description = "Reports funny business with exports, like repeated exports of names or defaults.",
+    short_description =
+        "Reports funny business with exports, like repeated exports of names or defaults.",
 );
 
 impl Rule for Export {
@@ -67,40 +68,51 @@ impl Rule for Export {
         let mut all_export_names = FxHashMap::default();
         let mut visited = FxHashSet::default();
 
-        module_record.star_export_entries.iter().for_each(|star_export_entry| {
-            if star_export_entry.is_type {
-                return;
-            }
-            let mut export_names = FxHashSet::default();
+        module_record
+            .star_export_entries
+            .iter()
+            .for_each(|star_export_entry| {
+                if star_export_entry.is_type {
+                    return;
+                }
+                let mut export_names = FxHashSet::default();
 
-            let Some(module_request) = &star_export_entry.module_request else {
-                return;
-            };
-            let Some(remote_module_record) = module_record.get_loaded_module(module_request.name())
-            else {
-                return;
-            };
+                let Some(module_request) = &star_export_entry.module_request else {
+                    return;
+                };
+                let Some(remote_module_record) =
+                    module_record.get_loaded_module(module_request.name())
+                else {
+                    return;
+                };
 
-            walk_exported_recursive(&remote_module_record, &mut export_names, &mut visited);
+                walk_exported_recursive(&remote_module_record, &mut export_names, &mut visited);
 
-            if export_names.is_empty() {
-                ctx.diagnostic(no_named_export(module_request.name(), module_request.span));
-            } else {
-                all_export_names.insert(star_export_entry.span, export_names);
-            }
-        });
+                if export_names.is_empty() {
+                    ctx.diagnostic(no_named_export(module_request.name(), module_request.span));
+                } else {
+                    all_export_names.insert(star_export_entry.span, export_names);
+                }
+            });
 
         for (name, span) in named_export {
             let mut spans = all_export_names
                 .iter()
                 .filter_map(|(star_export_entry_span, export_names)| {
-                    if export_names.contains(name) { Some(*star_export_entry_span) } else { None }
+                    if export_names.contains(name) {
+                        Some(*star_export_entry_span)
+                    } else {
+                        None
+                    }
                 })
                 .collect::<Vec<_>>();
 
             if !spans.is_empty() {
                 spans.push(*span);
-                let labels = spans.into_iter().map(LabeledSpan::underline).collect::<Vec<_>>();
+                let labels = spans
+                    .into_iter()
+                    .map(LabeledSpan::underline)
+                    .collect::<Vec<_>>();
 
                 ctx.diagnostic(
                     OxcDiagnostic::warn(format!("Multiple exports of name '{name}'."))
@@ -131,7 +143,10 @@ fn diagnose_duplicate_named_exports(ctx: &LintContext<'_>, module_record: &Modul
 
             let entry = export_names
                 .entry((CompactStr::from(name), export_entry.is_type))
-                .or_insert(ExportNameSpans { spans: Vec::new(), has_named_specifier: false });
+                .or_insert(ExportNameSpans {
+                    spans: Vec::new(),
+                    has_named_specifier: false,
+                });
             entry.spans.push(span);
             entry.has_named_specifier |= is_named_export_specifier(ctx, export_entry);
         });
@@ -141,7 +156,11 @@ fn diagnose_duplicate_named_exports(ctx: &LintContext<'_>, module_record: &Modul
             continue;
         }
 
-        let labels = entry.spans.into_iter().map(LabeledSpan::underline).collect::<Vec<_>>();
+        let labels = entry
+            .spans
+            .into_iter()
+            .map(LabeledSpan::underline)
+            .collect::<Vec<_>>();
         ctx.diagnostic(
             OxcDiagnostic::warn(format!("Multiple exports of name '{name}'."))
                 .with_help(
@@ -166,8 +185,12 @@ fn is_named_export_specifier(ctx: &LintContext<'_>, export_entry: &ExportEntry) 
         return true;
     }
 
-    ctx.find_next_token_within(export_entry.statement_span.start, export_entry.span.start, "{")
-        .is_some()
+    ctx.find_next_token_within(
+        export_entry.statement_span.start,
+        export_entry.span.start,
+        "{",
+    )
+    .is_some()
 }
 
 fn walk_exported_recursive(

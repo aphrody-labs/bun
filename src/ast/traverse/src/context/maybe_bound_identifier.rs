@@ -45,15 +45,22 @@ impl<'a> MaybeBoundIdentifier<'a> {
         ident: &IdentifierReference<'a>,
         ctx: &TraverseCtx<'a, State>,
     ) -> Self {
-        let symbol_id = ctx.scoping().get_reference(ident.reference_id()).symbol_id();
-        Self { name: ident.name, symbol_id }
+        let symbol_id = ctx
+            .scoping()
+            .get_reference(ident.reference_id())
+            .symbol_id();
+        Self {
+            name: ident.name,
+            symbol_id,
+        }
     }
 
     /// Convert `MaybeBoundIdentifier` to `BoundIdentifier`.
     ///
     /// Returns `None` if symbol is not bound.
     pub fn to_bound_identifier(&self) -> Option<BoundIdentifier<'a>> {
-        self.symbol_id.map(|symbol_id| BoundIdentifier::new(self.name, symbol_id))
+        self.symbol_id
+            .map(|symbol_id| BoundIdentifier::new(self.name, symbol_id))
     }
 
     // --- Read only ---

@@ -90,7 +90,9 @@ impl Rule for DefinePropsDestructuring {
     }
 
     fn run<'a>(&self, node: &AstNode<'a>, ctx: &LintContext<'a>) {
-        let AstKind::CallExpression(call_expr) = node.kind() else { return };
+        let AstKind::CallExpression(call_expr) = node.kind() else {
+            return;
+        };
 
         // only check call Expression which is `defineProps`
         if call_expr
@@ -129,11 +131,20 @@ impl Rule for DefinePropsDestructuring {
 }
 
 fn get_parent_with_defaults_call_expression_span(parent: &AstNode<'_>) -> Option<Span> {
-    let AstKind::CallExpression(call_expr) = parent.kind() else { return None };
+    let AstKind::CallExpression(call_expr) = parent.kind() else {
+        return None;
+    };
 
-    call_expr.callee.get_identifier_reference().and_then(|reference| {
-        if reference.name == "withDefaults" { Some(reference.span) } else { None }
-    })
+    call_expr
+        .callee
+        .get_identifier_reference()
+        .and_then(|reference| {
+            if reference.name == "withDefaults" {
+                Some(reference.span)
+            } else {
+                None
+            }
+        })
 }
 
 fn get_parent_variable_declarator<'a>(
@@ -143,7 +154,11 @@ fn get_parent_variable_declarator<'a>(
     match parent.kind() {
         AstKind::VariableDeclarator(var_decl) => Some(var_decl),
         _ => ctx.nodes().ancestor_kinds(parent.id()).find_map(|kind| {
-            if let AstKind::VariableDeclarator(var_decl) = kind { Some(var_decl) } else { None }
+            if let AstKind::VariableDeclarator(var_decl) = kind {
+                Some(var_decl)
+            } else {
+                None
+            }
         }),
     }
 }
@@ -487,6 +502,11 @@ fn test() {
         ), // {        "parserOptions": { "parser": require.resolve("@typescript-eslint/parser") }      }
     ];
 
-    Tester::new(DefinePropsDestructuring::NAME, DefinePropsDestructuring::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        DefinePropsDestructuring::NAME,
+        DefinePropsDestructuring::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

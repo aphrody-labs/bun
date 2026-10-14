@@ -14,7 +14,9 @@ fn test_schema_json() {
     use project_root::get_project_root;
     use std::fs;
 
-    let path = get_project_root().unwrap().join("packages/bun-oxc/adapters/lint/configuration_schema.json");
+    let path = get_project_root()
+        .unwrap()
+        .join("packages/bun-oxc/adapters/lint/configuration_schema.json");
     let json = generate_schema_json::<Oxlintrc>();
     let existing_json = fs::read_to_string(&path).unwrap_or_default();
     assert_eq!(

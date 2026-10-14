@@ -93,7 +93,10 @@ impl Rule for NoAsyncPromiseExecutor {
         if !new_expression.callee.is_specific_id("Promise") {
             return;
         }
-        let Some(expression) = new_expression.arguments.first().and_then(Argument::as_expression)
+        let Some(expression) = new_expression
+            .arguments
+            .first()
+            .and_then(Argument::as_expression)
         else {
             return;
         };
@@ -125,6 +128,11 @@ fn test() {
         "new Promise(((((async () => {})))))",
     ];
 
-    Tester::new(NoAsyncPromiseExecutor::NAME, NoAsyncPromiseExecutor::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        NoAsyncPromiseExecutor::NAME,
+        NoAsyncPromiseExecutor::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

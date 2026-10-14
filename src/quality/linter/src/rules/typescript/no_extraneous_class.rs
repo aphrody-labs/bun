@@ -99,7 +99,9 @@ fn empty_class_diagnostic(span: Span, has_decorators: bool) -> OxcDiagnostic {
     } else {
         "Delete this class"
     };
-    OxcDiagnostic::warn("Unexpected empty class.").with_label(span).with_help(help)
+    OxcDiagnostic::warn("Unexpected empty class.")
+        .with_label(span)
+        .with_help(help)
 }
 
 fn only_static_no_extraneous_class_diagnostic(span: Span) -> OxcDiagnostic {
@@ -160,14 +162,20 @@ impl Rule for NoExtraneousClass {
                 }
             }
             [ClassElement::MethodDefinition(constructor)] if constructor.kind.is_constructor() => {
-                let only_constructor =
-                    !constructor.value.params.items.iter().any(FormalParameter::has_modifier);
+                let only_constructor = !constructor
+                    .value
+                    .params
+                    .items
+                    .iter()
+                    .any(FormalParameter::has_modifier);
                 if only_constructor && !self.allow_constructor_only {
                     ctx.diagnostic(only_constructor_no_extraneous_class_diagnostic(span));
                 }
             }
             _ => {
-                let only_static = body.iter().all(|prop| prop.r#static() && !prop.is_abstract());
+                let only_static = body
+                    .iter()
+                    .all(|prop| prop.r#static() && !prop.is_abstract());
                 if only_static && !self.allow_static_only {
                     ctx.diagnostic(only_static_no_extraneous_class_diagnostic(span));
                 }
@@ -205,7 +213,10 @@ fn test() {
         ),
         ("class Foo { constructor(public bar: string) {} }", None),
         ("class Foo {}", Some(json!([{ "allowEmpty": true }]))),
-        ("class Foo { constructor() {} }", Some(json!([{ "allowConstructorOnly": true }]))),
+        (
+            "class Foo { constructor() {} }",
+            Some(json!([{ "allowConstructorOnly": true }])),
+        ),
         (
             "
             export class Bar {
@@ -227,7 +238,10 @@ fn test() {
             ",
             None,
         ),
-        ("@FooDecorator class Foo {} ", Some(json!([{ "allowWithDecorator": true }]))),
+        (
+            "@FooDecorator class Foo {} ",
+            Some(json!([{ "allowWithDecorator": true }])),
+        ),
         (
             "
             @FooDecorator
@@ -356,7 +370,12 @@ fn test() {
 
     let fix = vec![
         ("class Foo {}", "", None, FixKind::DangerousSuggestion),
-        ("export class Foo {}", "", None, FixKind::DangerousSuggestion),
+        (
+            "export class Foo {}",
+            "",
+            None,
+            FixKind::DangerousSuggestion,
+        ),
         (
             "@foo class Foo {}",
             "@foo class Foo {}",
@@ -371,7 +390,12 @@ fn test() {
         ),
     ];
 
-    Tester::new(NoExtraneousClass::NAME, NoExtraneousClass::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        NoExtraneousClass::NAME,
+        NoExtraneousClass::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

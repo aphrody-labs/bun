@@ -107,7 +107,10 @@ pub fn build_translations(source_text: &str, translations: &mut Vec<Translation>
                     difference_for_this_byte as usize + usize::from(byte >= 0xF0) + 1;
                 #[expect(clippy::cast_possible_truncation)]
                 let utf8_offset = (start_offset + index + bytes_in_char) as u32 + offset;
-                translations.push(Translation { utf8_offset, utf16_difference });
+                translations.push(Translation {
+                    utf8_offset,
+                    utf16_difference,
+                });
             }
         }
     };
@@ -181,7 +184,10 @@ pub fn build_translations(source_text: &str, translations: &mut Vec<Translation>
 
     // Process last chunk
     if remaining_len > 0 {
-        debug_assert_eq!(ptr as usize + remaining_len, bytes.as_ptr() as usize + bytes.len());
+        debug_assert_eq!(
+            ptr as usize + remaining_len,
+            bytes.as_ptr() as usize + bytes.len()
+        );
 
         // SAFETY: `ptr` is within `bytes` and `ptr + remaining_len` is end of `bytes`.
         // `bytes` is a `&[u8]`, so guaranteed initialized and valid for reads.

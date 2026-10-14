@@ -31,14 +31,40 @@ import { createTempDirectoryWithBrokenSymlinks, prepareEntries, tempFixturesDir 
 
 let origAggressiveGC = Bun.unsafe.gcAggressionLevel();
 let tempBrokenSymlinksDir: string;
+let boundedScanDir: ReturnType<typeof tempDir>;
 beforeAll(() => {
   process.chdir(path.join(import.meta.dir, "../../../"));
   tempFixturesDir();
   tempBrokenSymlinksDir = createTempDirectoryWithBrokenSymlinks();
+  boundedScanDir = tempDir("glob-scan-bounded", {
+    "entry.js": "export {};",
+    "entry.ts": "export {};",
+    "nested/entry.js": "export {};",
+    "nested/entry.ts": "export {};",
+    "node_modules/sample/a.js": "export {};",
+    "node_modules/sample/a.d.ts": "export {};",
+    "nested/node_modules/sample/b.js": "export {};",
+    "nested/node_modules/sample/b.d.ts": "export {};",
+    "cache/links/shared/node_modules/shared/index.js": "export {};",
+    "cache/links/shared/node_modules/shared/index.d.ts": "export {};",
+  });
+  const linkType = isWindows ? "junction" : "dir";
+  fs.mkdirSync(path.join(String(boundedScanDir), "node_modules/.bun"));
+  fs.symlinkSync(
+    path.join(String(boundedScanDir), "cache/links/shared"),
+    path.join(String(boundedScanDir), "node_modules/.bun/shared"),
+    linkType,
+  );
+  fs.symlinkSync(
+    path.join(String(boundedScanDir), "node_modules/.bun/shared/node_modules/shared"),
+    path.join(String(boundedScanDir), "node_modules/shared"),
+    linkType,
+  );
   Bun.unsafe.gcAggressionLevel(0);
 });
 
 afterAll(() => {
+  boundedScanDir?.[Symbol.dispose]();
   Bun.unsafe.gcAggressionLevel(origAggressiveGC);
 });
 
@@ -60,14 +86,16 @@ const fgOpts = {
 describe("glob.match", async () => {
   const timeout = 30 * 1000;
   function testWithOpts(namePrefix: string, bunGlobOpts: GlobScanOptions, fgOpts: FgOpts) {
+    const boundedBunOpts = () => ({ ...bunGlobOpts, cwd: String(boundedScanDir) });
+    const boundedFgOpts = () => ({ ...fgOpts, cwd: String(boundedScanDir) });
     test(
       `${namePrefix} recursively search node_modules`,
       async () => {
         const pattern = "**/node_modules/**/*.js";
         const glob = new Glob(pattern);
         const [filepaths, fgFilepths] = await Promise.all([
-          Array.fromAsync(glob.scan(bunGlobOpts)).then(prepareEntries),
-          fg.glob(pattern, fgOpts),
+          Array.fromAsync(glob.scan(boundedBunOpts())).then(prepareEntries),
+          fg.glob(pattern, boundedFgOpts()),
         ]);
 
         // console.error(filepaths);
@@ -88,8 +116,8 @@ describe("glob.match", async () => {
         const pattern = "**/*.js";
         const glob = new Glob(pattern);
         const [filepaths, fgFilepths] = await Promise.all([
-          Array.fromAsync(glob.scan(bunGlobOpts)).then(prepareEntries),
-          fg.glob(pattern, fgOpts),
+          Array.fromAsync(glob.scan(boundedBunOpts())).then(prepareEntries),
+          fg.glob(pattern, boundedFgOpts()),
         ]);
 
         expect(filepaths.length).toEqual(fgFilepths.length);
@@ -109,8 +137,8 @@ describe("glob.match", async () => {
         const pattern = "**/*.ts";
         const glob = new Glob(pattern);
         const [filepaths, fgFilepths] = await Promise.all([
-          Array.fromAsync(glob.scan(bunGlobOpts)).then(prepareEntries),
-          fg.glob(pattern, fgOpts),
+          Array.fromAsync(glob.scan(boundedBunOpts())).then(prepareEntries),
+          fg.glob(pattern, boundedFgOpts()),
         ]);
 
         expect(filepaths.length).toEqual(fgFilepths.length);
@@ -129,13 +157,17 @@ describe("glob.match", async () => {
       async () => {
         const promise = (async () => {
           const glob = new Glob("**/node_modules/**/*.js");
-          const result = Array.fromAsync(glob.scan(bunGlobOpts));
+          const result = Array.fromAsync(glob.scan(boundedBunOpts()));
           Bun.gc(true);
           const result2 = await result;
           return result2;
         })();
         Bun.gc(true);
         const values = await promise;
+        const expected = bunGlobOpts.absolute
+          ? path.join(String(boundedScanDir), "node_modules/sample/a.js")
+          : "node_modules/sample/a.js";
+        expect(prepareEntries(values)).toContain(prepareEntries([expected])[0]);
         Bun.gc(true);
       },
       timeout,
@@ -1224,6 +1256,42 @@ afterAll(() => {
   try {
     fs.rmSync(roDirRoot, { recursive: true, force: true });
   } catch {}
+});
+
+describe("extglob and brace sequences", () => {
+  const scan = (pattern: string, cwd: string) =>
+    Array.from(new Glob(pattern).scanSync({ cwd }))
+      .map(p => p.replaceAll("\\", "/"))
+      .sort();
+
+  test("scan finds the same files that match accepts", () => {
+    using dir = tempDir("glob-extglob", {
+      "a.js": "",
+      "b.js": "",
+      "c.js": "",
+      "a.test.js": "",
+      "1.txt": "",
+      "2.txt": "",
+      "3.txt": "",
+      "a/x.js": "",
+      "b/x.js": "",
+      "ab/x.js": "",
+      "c/x.js": "",
+      "app/(marketing)/page.js": "",
+      "app/marketing/page.js": "",
+    });
+    const cwd = String(dir);
+    expect(scan("@(a|b).js", cwd)).toEqual(["a.js", "b.js"]);
+    expect(scan("+(a|b).js", cwd)).toEqual(["a.js", "b.js"]);
+    expect(scan("!(a|b).js", cwd)).toEqual(["a.test.js", "c.js"]);
+    expect(scan("*.@(txt|md)", cwd)).toEqual(["1.txt", "2.txt", "3.txt"]);
+    expect(scan("{1..2}.txt", cwd)).toEqual(["1.txt", "2.txt"]);
+    expect(scan("@(a|b)/*.js", cwd)).toEqual(["a/x.js", "b/x.js"]);
+    expect(scan("+(a|b)/*.js", cwd)).toEqual(["a/x.js", "ab/x.js", "b/x.js"]);
+    expect(scan("**/!(x|page).js", cwd)).toEqual(["a.js", "a.test.js", "b.js", "c.js"]);
+    expect(scan("app/(marketing)/*.js", cwd)).toEqual(["app/(marketing)/page.js"]);
+    expect(scan("app/(marketing)/**", cwd)).toEqual(["app/(marketing)/page.js"]);
+  });
 });
 
 describe.skipIf(!isWindows)("glob scan descends read-only directories", () => {

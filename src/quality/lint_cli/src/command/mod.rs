@@ -42,7 +42,9 @@ fn validate_paths(paths: &Vec<PathBuf>) -> bool {
     if paths.is_empty() {
         true
     } else {
-        paths.iter().all(|p| p.components().all(|c| c != std::path::Component::ParentDir))
+        paths
+            .iter()
+            .all(|p| p.components().all(|c| c != std::path::Component::ParentDir))
     }
 }
 
@@ -53,8 +55,14 @@ mod misc_options {
     use super::{MiscOptions, lint::lint_command};
 
     fn get_misc_options(arg: &str) -> MiscOptions {
-        let args = arg.split(' ').map(std::string::ToString::to_string).collect::<Vec<_>>();
-        lint_command().run_inner(args.as_slice()).unwrap().misc_options
+        let args = arg
+            .split(' ')
+            .map(std::string::ToString::to_string)
+            .collect::<Vec<_>>();
+        lint_command()
+            .run_inner(args.as_slice())
+            .unwrap()
+            .misc_options
     }
 
     #[test]

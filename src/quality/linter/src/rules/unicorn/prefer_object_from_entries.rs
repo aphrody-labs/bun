@@ -35,7 +35,9 @@ pub struct PreferObjectFromEntriesConfig {
 
 impl Default for PreferObjectFromEntriesConfig {
     fn default() -> Self {
-        Self { functions: vec!["_.fromPairs".into(), "lodash.fromPairs".into()] }
+        Self {
+            functions: vec!["_.fromPairs".into(), "lodash.fromPairs".into()],
+        }
     }
 }
 
@@ -89,18 +91,25 @@ declare_oxc_lint!(
 
 impl Rule for PreferObjectFromEntries {
     fn run<'a>(&self, node: &AstNode<'a>, ctx: &LintContext<'a>) {
-        let AstKind::CallExpression(call_expr) = node.kind() else { return };
+        let AstKind::CallExpression(call_expr) = node.kind() else {
+            return;
+        };
 
         if call_expr.arguments.len() == 1
             && !call_expr.optional
-            && !call_expr.callee.as_member_expression().is_some_and(MemberExpression::optional)
+            && !call_expr
+                .callee
+                .as_member_expression()
+                .is_some_and(MemberExpression::optional)
             && call_expr.arguments[0].is_expression()
             && does_expr_match_any_path(
                 &call_expr.callee,
                 self.functions.iter().map(|fun| fun.split('.')),
             )
         {
-            ctx.diagnostic(prefer_object_from_entries_diagnostic(call_expr.callee.span()));
+            ctx.diagnostic(prefer_object_from_entries_diagnostic(
+                call_expr.callee.span(),
+            ));
             return;
         }
 
@@ -140,11 +149,16 @@ impl Rule for PreferObjectFromEntries {
             return;
         }
 
-        let Some(stmt) = reducer.get_expression() else { return };
+        let Some(stmt) = reducer.get_expression() else {
+            return;
+        };
         let stmt = stmt.get_inner_expression();
 
-        let Some(accumulator_ident) =
-            reducer.params.items.first().and_then(|arg| arg.pattern.get_binding_identifier())
+        let Some(accumulator_ident) = reducer
+            .params
+            .items
+            .first()
+            .and_then(|arg| arg.pattern.get_binding_identifier())
         else {
             return;
         };
@@ -155,7 +169,13 @@ impl Rule for PreferObjectFromEntries {
 
         // `() => Object.assign(object, {key})`
         if let Expression::CallExpression(call_expr) = &stmt {
-            if !is_method_call(call_expr, Some(&["Object"]), Some(&["assign"]), Some(2), Some(2)) {
+            if !is_method_call(
+                call_expr,
+                Some(&["Object"]),
+                Some(&["assign"]),
+                Some(2),
+                Some(2),
+            ) {
                 return;
             }
 
@@ -169,7 +189,10 @@ impl Rule for PreferObjectFromEntries {
                 return;
             };
 
-            if ctx.scoping().get_reference(target.reference_id()).symbol_id()
+            if ctx
+                .scoping()
+                .get_reference(target.reference_id())
+                .symbol_id()
                 != Some(accumulator_ident.symbol_id())
             {
                 return;
@@ -189,7 +212,9 @@ impl Rule for PreferObjectFromEntries {
                 return;
             }
 
-            let ObjectPropertyKind::ObjectProperty(k) = &source.properties[0] else { return };
+            let ObjectPropertyKind::ObjectProperty(k) = &source.properties[0] else {
+                return;
+            };
             if k.kind != PropertyKind::Init || k.method {
                 return;
             }
@@ -205,8 +230,10 @@ impl Rule for PreferObjectFromEntries {
             && let ObjectPropertyKind::SpreadProperty(spread) = &object_expr.properties[0]
             && let Expression::Identifier(spread_ident) = spread.argument.get_inner_expression()
         {
-            let Some(spread_symbol_id) =
-                ctx.scoping().get_reference(spread_ident.reference_id()).symbol_id()
+            let Some(spread_symbol_id) = ctx
+                .scoping()
+                .get_reference(spread_ident.reference_id())
+                .symbol_id()
             else {
                 return;
             };
@@ -265,27 +292,66 @@ fn test() {
 
     let pass = vec![
         ("pairs.reduce(object => ({...object, key}));", None),
-        ("pairs.reduce(object => ({...object, key}), {}, extraArgument);", None),
+        (
+            "pairs.reduce(object => ({...object, key}), {}, extraArgument);",
+            None,
+        ),
         ("pairs.reduce({}, object => ({...object, key}));", None),
         ("reduce(object => ({...object, key}), {});", None),
         ("new reduce(object => ({...object, key}), {});", None),
         ("pairs.reduce?.(object => ({...object, key}), {});", None),
         ("pairs?.reduce(object => ({...object, key}), {});", None),
         ("pairs.notReduce(object => ({...object, key}), {});", None),
-        ("pairs.reduce(object => ({...object, key}), {notEmpty});", None),
+        (
+            "pairs.reduce(object => ({...object, key}), {notEmpty});",
+            None,
+        ),
         ("pairs.reduce(object => ({...object, key}), []);", None),
-        ("pairs.reduce(...[(object => ({...object, key}))], {});", None),
+        (
+            "pairs.reduce(...[(object => ({...object, key}))], {});",
+            None,
+        ),
         ("pairs.reduce(object => ({...object, key}), ...[{}]);", None),
-        ("pairs.reduce(object => ({...object, key}), Object.create());", None),
-        ("pairs.reduce(object => ({...object, key}), Object.create(null, extraArgument));", None),
-        ("pairs.reduce(object => ({...object, key}), Object.create?.(null));", None),
-        ("pairs.reduce(object => ({...object, key}), Object?.create(null));", None),
-        ("pairs.reduce(object => ({...object, key}), window.Object.create(null));", None),
-        ("pairs.reduce(object => ({...object, key}), Object.notCreate(null));", None),
-        ("pairs.reduce(object => ({...object, key}), NotObject.create(null));", None),
-        ("pairs.reduce(object => ({...object, key}), object.create(null));", None),
-        ("pairs.reduce(object => ({...object, key}), object.CREATE(null));", None),
-        (r#"pairs.reduce(object => ({...object, key}), Object.create("null"));"#, None),
+        (
+            "pairs.reduce(object => ({...object, key}), Object.create());",
+            None,
+        ),
+        (
+            "pairs.reduce(object => ({...object, key}), Object.create(null, extraArgument));",
+            None,
+        ),
+        (
+            "pairs.reduce(object => ({...object, key}), Object.create?.(null));",
+            None,
+        ),
+        (
+            "pairs.reduce(object => ({...object, key}), Object?.create(null));",
+            None,
+        ),
+        (
+            "pairs.reduce(object => ({...object, key}), window.Object.create(null));",
+            None,
+        ),
+        (
+            "pairs.reduce(object => ({...object, key}), Object.notCreate(null));",
+            None,
+        ),
+        (
+            "pairs.reduce(object => ({...object, key}), NotObject.create(null));",
+            None,
+        ),
+        (
+            "pairs.reduce(object => ({...object, key}), object.create(null));",
+            None,
+        ),
+        (
+            "pairs.reduce(object => ({...object, key}), object.CREATE(null));",
+            None,
+        ),
+        (
+            r#"pairs.reduce(object => ({...object, key}), Object.create("null"));"#,
+            None,
+        ),
         ("pairs.reduce(callback, {})", None),
         ("pairs.reduce(callback, Object.create(null))", None),
         ("pairs.reduce(async function * () {}, {})", None),
@@ -296,37 +362,106 @@ fn test() {
         ("pairs.notReduce(callback, {})", None),
         ("pairs[reduce](callback, {})", None),
         ("pairs.reduce(...callback, {})", None),
-        ("pairs.reduce(function(object) {Object.assign(object, {key})}, {});", None),
+        (
+            "pairs.reduce(function(object) {Object.assign(object, {key})}, {});",
+            None,
+        ),
         ("pairs.reduce(object => ({...object, key} + 1), {});", None),
         //("pairs.reduce((object = {}) => ({...object, key}), {});", None),
-        ("pairs.reduce((object) => ({...NotSameObject, key}), {});", None),
-        ("pairs.reduce(object => ({...object, key, anotherKey}), {});", None),
+        (
+            "pairs.reduce((object) => ({...NotSameObject, key}), {});",
+            None,
+        ),
+        (
+            "pairs.reduce(object => ({...object, key, anotherKey}), {});",
+            None,
+        ),
         ("pairs.reduce(object => ({}), {});", None),
         ("pairs.reduce(object => ({keyFirst, ...object}), {});", None),
-        ("pairs.reduce(async object => ({...object, key}), {});", None),
-        ("pairs.reduce(async object => await {...object, key}, {});", None),
+        (
+            "pairs.reduce(async object => ({...object, key}), {});",
+            None,
+        ),
+        (
+            "pairs.reduce(async object => await {...object, key}, {});",
+            None,
+        ),
         ("pairs.reduce((...object) => ({...object, key}), {});", None),
         ("pairs.reduce(({object}) => ({...object, key}), {});", None),
         ("pairs.reduce(object => ({...object, ...key}), {});", None),
-        ("pairs.reduce(object => Object.assign(NotSameObject, {key}), {});", None),
-        ("pairs.reduce(object => Object.assign(object, {}), {});", None),
-        ("pairs.reduce(object => Object.assign(object, {...key}), {});", None),
-        ("pairs.reduce(object => Object.assign?.(object, {key}), {});", None),
-        ("pairs.reduce(object => Object?.assign(object, {key}), {});", None),
-        ("pairs.reduce(object => Object.notAssign(object, {key}), {});", None),
-        ("pairs.reduce(object => NotObject.assign(object, {key}), {});", None),
+        (
+            "pairs.reduce(object => Object.assign(NotSameObject, {key}), {});",
+            None,
+        ),
+        (
+            "pairs.reduce(object => Object.assign(object, {}), {});",
+            None,
+        ),
+        (
+            "pairs.reduce(object => Object.assign(object, {...key}), {});",
+            None,
+        ),
+        (
+            "pairs.reduce(object => Object.assign?.(object, {key}), {});",
+            None,
+        ),
+        (
+            "pairs.reduce(object => Object?.assign(object, {key}), {});",
+            None,
+        ),
+        (
+            "pairs.reduce(object => Object.notAssign(object, {key}), {});",
+            None,
+        ),
+        (
+            "pairs.reduce(object => NotObject.assign(object, {key}), {});",
+            None,
+        ),
         ("pairs.reduce(object => ({...object, object}), {});", None),
-        ("pairs.reduce(object => ({...object, key: Object.keys(object)}), {});", None),
-        ("pairs.reduce((object, [key, value = object]) => ({...object, [key]: value}), {});", None),
-        ("pairs.reduce((object) => Object.assign(object, {object}), {});", None),
-        ("pairs.reduce(object => ({...object, key: function () { return object; }}), {});", None),
-        ("pairs.reduce(object => ({...object, method() {}}), {});", None),
-        ("pairs.reduce(object => Object.assign(object, {async * method() {}}), {});", None),
-        ("pairs.reduce(object => ({...object, async method() {}}), {});", None),
-        ("pairs.reduce(object => ({...object, * method() {}}), {});", None),
-        ("pairs.reduce(object => ({...object, async * method() {}}), {});", None),
-        ("pairs.reduce(object => ({...object, get key() {}}), {});", None),
-        ("pairs.reduce(object => ({...object, set key(v) {}}), {});", None),
+        (
+            "pairs.reduce(object => ({...object, key: Object.keys(object)}), {});",
+            None,
+        ),
+        (
+            "pairs.reduce((object, [key, value = object]) => ({...object, [key]: value}), {});",
+            None,
+        ),
+        (
+            "pairs.reduce((object) => Object.assign(object, {object}), {});",
+            None,
+        ),
+        (
+            "pairs.reduce(object => ({...object, key: function () { return object; }}), {});",
+            None,
+        ),
+        (
+            "pairs.reduce(object => ({...object, method() {}}), {});",
+            None,
+        ),
+        (
+            "pairs.reduce(object => Object.assign(object, {async * method() {}}), {});",
+            None,
+        ),
+        (
+            "pairs.reduce(object => ({...object, async method() {}}), {});",
+            None,
+        ),
+        (
+            "pairs.reduce(object => ({...object, * method() {}}), {});",
+            None,
+        ),
+        (
+            "pairs.reduce(object => ({...object, async * method() {}}), {});",
+            None,
+        ),
+        (
+            "pairs.reduce(object => ({...object, get key() {}}), {});",
+            None,
+        ),
+        (
+            "pairs.reduce(object => ({...object, set key(v) {}}), {});",
+            None,
+        ),
         (
             "const flattened = arrayOfObjects.reduce((flattened, next) => Object.assign(flattened, next), {});",
             None,
@@ -338,30 +473,72 @@ fn test() {
         ("new _.fromPairs(pairs)", None),
         ("_.fromPairs(...[pairs])", None),
         ("_?.fromPairs(pairs)", None),
-        ("_.foo(pairs)", Some(serde_json::json!([{"functions": ["foo"]}]))),
-        ("foo(pairs)", Some(serde_json::json!([{"functions": ["utils.object.foo"]}]))),
-        ("object.foo(pairs)", Some(serde_json::json!([{"functions": ["utils.object.foo"]}]))),
-        ("foo(pairs)", Some(serde_json::json!([{"functions": ["", ".foo", "foo."]}]))),
+        (
+            "_.foo(pairs)",
+            Some(serde_json::json!([{"functions": ["foo"]}])),
+        ),
+        (
+            "foo(pairs)",
+            Some(serde_json::json!([{"functions": ["utils.object.foo"]}])),
+        ),
+        (
+            "object.foo(pairs)",
+            Some(serde_json::json!([{"functions": ["utils.object.foo"]}])),
+        ),
+        (
+            "foo(pairs)",
+            Some(serde_json::json!([{"functions": ["", ".foo", "foo."]}])),
+        ),
         (
             "utils.foo(pairs)",
             Some(serde_json::json!([{"functions": ["utils..foo", "utils.foo.extra"]}])),
         ),
-        ("utils.foo.extra(pairs)", Some(serde_json::json!([{"functions": ["utils.foo"]}]))),
-        ("utils['foo'](pairs)", Some(serde_json::json!([{"functions": ["utils.foo"]}]))),
+        (
+            "utils.foo.extra(pairs)",
+            Some(serde_json::json!([{"functions": ["utils.foo"]}])),
+        ),
+        (
+            "utils['foo'](pairs)",
+            Some(serde_json::json!([{"functions": ["utils.foo"]}])),
+        ),
     ];
 
     let fail = vec![
         ("pairs.reduce(object => ({...object, key}), {});", None),
         ("pairs.reduce(object => ({...object, key}), {},);", None),
         ("pairs.reduce(object => ({...object, key,}), {});", None),
-        ("pairs.reduce(object => ({...object, key}), Object.create(null));", None),
-        ("pairs.reduce(object => ({...object, key}), Object.create(null),);", None),
-        ("pairs.reduce(object => ({...object, key}), (( {} )));", None),
-        ("pairs.reduce(object => ({...object, key}), (( Object.create(null) )),);", None),
-        ("pairs.reduce( (( object => ({...object, key}) )) , {});", None),
-        ("pairs.reduce( (( (object) => ({...object, key}) )) , {});", None),
-        ("pairs.reduce( (( (object,) => ({...object, key}) )) , {});", None),
-        ("pairs.reduce(object => ({...object, [((key))] : ((value))}), {});", None),
+        (
+            "pairs.reduce(object => ({...object, key}), Object.create(null));",
+            None,
+        ),
+        (
+            "pairs.reduce(object => ({...object, key}), Object.create(null),);",
+            None,
+        ),
+        (
+            "pairs.reduce(object => ({...object, key}), (( {} )));",
+            None,
+        ),
+        (
+            "pairs.reduce(object => ({...object, key}), (( Object.create(null) )),);",
+            None,
+        ),
+        (
+            "pairs.reduce( (( object => ({...object, key}) )) , {});",
+            None,
+        ),
+        (
+            "pairs.reduce( (( (object) => ({...object, key}) )) , {});",
+            None,
+        ),
+        (
+            "pairs.reduce( (( (object,) => ({...object, key}) )) , {});",
+            None,
+        ),
+        (
+            "pairs.reduce(object => ({...object, [((key))] : ((value))}), {});",
+            None,
+        ),
         (
             "((
                 (( pairs ))
@@ -386,27 +563,90 @@ fn test() {
             None,
         ),
         ("pairs.reduce(object => ({...object, 0: value}), {});", None),
-        ("pairs.reduce(object => ({...object, true: value}), {});", None),
-        ("pairs.reduce(object => ({...object, 0n: value}), {});", None),
-        ("pairs.reduce(object => ({...object, undefined: value}), {});", None),
-        ("pairs.reduce(object => ({...object, null: value}), {});", None),
-        ("pairs.reduce(object => ({...object, var: value}), {});", None),
-        ("pairs.reduce(object => ({...object, for: value}), {});", None),
-        ("pairs.reduce(object => ({...object, default: value}), {});", None),
-        ("pairs.reduce(object => ({...object, string: value}), {});", None),
-        (r#"pairs.reduce(object => ({...object, "string": value}), {});"#, None),
-        ("pairs.reduce(object => ({...object, [0]: value}), {});", None),
-        ("pairs.reduce(object => ({...object, [true]: value}), {});", None),
-        ("pairs.reduce(object => ({...object, [0n]: value}), {});", None),
-        ("pairs.reduce(object => ({...object, [undefined]: value}), {});", None),
-        ("pairs.reduce(object => ({...object, [null]: value}), {});", None),
-        (r#"pairs.reduce(object => ({...object, ["for"]: value}), {});"#, None),
-        ("pairs.reduce(object => ({...object, [string]: value}), {});", None),
-        (r#"pairs.reduce(object => ({...object, ["string"]: value}), {});"#, None),
-        ("pairs.reduce(object => Object.assign(object, {key}), {});", None),
-        ("pairs.reduce(object => Object.assign(object, {key,}), {});", None),
-        ("pairs.reduce(object => Object.assign(object, {[key]: value,}), {});", None),
-        ("pairs.reduce((object, element, index, array) => ({...object, key}), {});", None),
+        (
+            "pairs.reduce(object => ({...object, true: value}), {});",
+            None,
+        ),
+        (
+            "pairs.reduce(object => ({...object, 0n: value}), {});",
+            None,
+        ),
+        (
+            "pairs.reduce(object => ({...object, undefined: value}), {});",
+            None,
+        ),
+        (
+            "pairs.reduce(object => ({...object, null: value}), {});",
+            None,
+        ),
+        (
+            "pairs.reduce(object => ({...object, var: value}), {});",
+            None,
+        ),
+        (
+            "pairs.reduce(object => ({...object, for: value}), {});",
+            None,
+        ),
+        (
+            "pairs.reduce(object => ({...object, default: value}), {});",
+            None,
+        ),
+        (
+            "pairs.reduce(object => ({...object, string: value}), {});",
+            None,
+        ),
+        (
+            r#"pairs.reduce(object => ({...object, "string": value}), {});"#,
+            None,
+        ),
+        (
+            "pairs.reduce(object => ({...object, [0]: value}), {});",
+            None,
+        ),
+        (
+            "pairs.reduce(object => ({...object, [true]: value}), {});",
+            None,
+        ),
+        (
+            "pairs.reduce(object => ({...object, [0n]: value}), {});",
+            None,
+        ),
+        (
+            "pairs.reduce(object => ({...object, [undefined]: value}), {});",
+            None,
+        ),
+        (
+            "pairs.reduce(object => ({...object, [null]: value}), {});",
+            None,
+        ),
+        (
+            r#"pairs.reduce(object => ({...object, ["for"]: value}), {});"#,
+            None,
+        ),
+        (
+            "pairs.reduce(object => ({...object, [string]: value}), {});",
+            None,
+        ),
+        (
+            r#"pairs.reduce(object => ({...object, ["string"]: value}), {});"#,
+            None,
+        ),
+        (
+            "pairs.reduce(object => Object.assign(object, {key}), {});",
+            None,
+        ),
+        (
+            "pairs.reduce(object => Object.assign(object, {key,}), {});",
+            None,
+        ),
+        (
+            "pairs.reduce(object => Object.assign(object, {[key]: value,}), {});",
+            None,
+        ),
+        (
+            "pairs.reduce((object, element, index, array) => ({...object, key}), {});",
+            None,
+        ),
         (
             "pairs.reduce((object, [key, value], index, array,) => ({...object, [key]: value + index + array.length}), {});",
             None,
@@ -415,8 +655,14 @@ fn test() {
             "pairs.reduce(object => ({...object, key: function (object) { return object; }}), {});",
             None,
         ),
-        ("pairs.reduce(object => ({...object, method: async () => {}}), {});", None),
-        ("pairs.reduce(object => ({...object, method: async function * (){}}), {});", None),
+        (
+            "pairs.reduce(object => ({...object, method: async () => {}}), {});",
+            None,
+        ),
+        (
+            "pairs.reduce(object => ({...object, method: async function * (){}}), {});",
+            None,
+        ),
         (
             "array.reduce<Record<string, Data & {b?: string}>>((result, entry) => ({...result, [entry.id]: entry.data}), {});",
             None,
@@ -427,13 +673,21 @@ fn test() {
             "myFromPairsFunction(pairs)",
             Some(serde_json::json!([{"functions": ["myFromPairsFunction"]}])),
         ),
-        ("utils.object.foo(pairs)", Some(serde_json::json!([{"functions": ["utils.object.foo"]}]))),
+        (
+            "utils.object.foo(pairs)",
+            Some(serde_json::json!([{"functions": ["utils.object.foo"]}])),
+        ),
         (
             "utils.foo(pairs)",
             Some(serde_json::json!([{"functions": ["utils", "utils.foo", "utils.foo.extra"]}])),
         ),
     ];
 
-    Tester::new(PreferObjectFromEntries::NAME, PreferObjectFromEntries::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        PreferObjectFromEntries::NAME,
+        PreferObjectFromEntries::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

@@ -80,8 +80,10 @@ fn run<'a>(possible_jest_node: &PossibleJestNode<'a, '_>, ctx: &LintContext<'a>)
             JestFnKind::General(JestGeneralFnKind::Test),
         ],
     ) {
-        let if_statement =
-            ctx.nodes().ancestors(node.id()).find_map(|node| node.kind().as_if_statement())?;
+        let if_statement = ctx
+            .nodes()
+            .ancestors(node.id())
+            .find_map(|node| node.kind().as_if_statement())?;
 
         ctx.diagnostic(no_conditional_tests(if_statement.span));
     }
@@ -140,7 +142,12 @@ fn test() {
                });"#,
     ];
 
-    Tester::new(NoConditionalTests::NAME, NoConditionalTests::PLUGIN, pass, fail)
-        .with_vitest_plugin(true)
-        .test_and_snapshot();
+    Tester::new(
+        NoConditionalTests::NAME,
+        NoConditionalTests::PLUGIN,
+        pass,
+        fail,
+    )
+    .with_vitest_plugin(true)
+    .test_and_snapshot();
 }

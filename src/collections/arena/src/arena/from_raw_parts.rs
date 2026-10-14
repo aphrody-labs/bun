@@ -59,7 +59,13 @@ impl<const MIN_ALIGN: usize> Arena<MIN_ALIGN> {
 
         // Debug assert that the chunk region lies within the backing allocation
         debug_assert!(start_ptr >= backing_alloc_ptr);
-        debug_assert!(backing_alloc_ptr.addr().get().checked_add(layout.size()).is_some());
+        debug_assert!(
+            backing_alloc_ptr
+                .addr()
+                .get()
+                .checked_add(layout.size())
+                .is_some()
+        );
         debug_assert!(
             start_ptr.addr().get() + size <= backing_alloc_ptr.addr().get() + layout.size()
         );

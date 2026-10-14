@@ -20,8 +20,8 @@
 //!   - https://v2.tauri.app/
 //!   - https://v2.tauri.app/start/frontend/nextjs/
 
-use crate::util::make_finding;
 use crate::types::{Finding, MakeFindingOpts, Severity};
+use crate::util::make_finding;
 use serde_json::Value;
 
 pub fn scan_tauri_conf(path: &str, content: &str) -> (Vec<Finding>, String) {

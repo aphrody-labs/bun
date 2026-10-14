@@ -62,11 +62,22 @@ pub fn format_with_session<'a>(
         session.input_kind() == InputKind::PhysicalFile,
         "format_with_session is the physical-root entry; embedded inputs go through format_to_ir"
     );
-    let ParsedCss { stylesheet, comments, source, has_bom, front_matter } =
-        parse_for_format(session.allocator(), source_text, options, CssRoot::Stylesheet)?;
+    let ParsedCss {
+        stylesheet,
+        comments,
+        source,
+        has_bom,
+        front_matter,
+    } = parse_for_format(
+        session.allocator(),
+        source_text,
+        options,
+        CssRoot::Stylesheet,
+    )?;
 
-    let context =
-        CssFormatContext::new(options, source, comments, /* template_placeholders */ false);
+    let context = CssFormatContext::new(
+        options, source, comments, /* template_placeholders */ false,
+    );
     // A root `Document` owns a fresh Tailwind class scope
     let session = session.with_new_tailwind_scope();
     let mut state = FormatState::new_with_session(context, session.clone());
@@ -75,7 +86,14 @@ pub fn format_with_session<'a>(
     let capacity = (source.len() / 2).max(1024);
     let mut buffer = VecBuffer::with_capacity(capacity, &mut state);
 
-    write!(&mut buffer, FormatCssRoot { stylesheet: &stylesheet, has_bom, front_matter });
+    write!(
+        &mut buffer,
+        FormatCssRoot {
+            stylesheet: &stylesheet,
+            has_bom,
+            front_matter
+        }
+    );
 
     let elements = buffer.into_vec();
     let context = state.into_context();
@@ -115,11 +133,20 @@ pub fn parse_for_format<'a>(
 
     // A document root owns front matter;
     // the session's dispatcher decides whether its body actually formats (`write_front_matter`).
-    let PreparedSource { source, parse_source, front_matter } =
-        prepare_source(allocator, source_text);
+    let PreparedSource {
+        source,
+        parse_source,
+        front_matter,
+    } = prepare_source(allocator, source_text);
     let (stylesheet, comments) = parse_stylesheet(allocator, parse_source, options, root)?;
 
-    Ok(ParsedCss { stylesheet, comments, source, has_bom, front_matter })
+    Ok(ParsedCss {
+        stylesheet,
+        comments,
+        source,
+        has_bom,
+        front_matter,
+    })
 }
 
 /// Parse `source_text` and build the formatter IR for embedding into another
@@ -145,9 +172,18 @@ pub fn format_to_ir<'a>(
 ) -> Result<EmbeddedIr<'a>, OxcDiagnostic> {
     // `FormatSession::dispatch` never hands a BOM-headed input to an embedded part,
     // so the BOM split inside `parse_for_format` is a no-op here.
-    let root = if template_placeholders { CssRoot::CssInJsTemplate } else { CssRoot::Fragment };
-    let ParsedCss { stylesheet, comments, source, front_matter, .. } =
-        parse_for_format(session.allocator(), source_text, options, root)?;
+    let root = if template_placeholders {
+        CssRoot::CssInJsTemplate
+    } else {
+        CssRoot::Fragment
+    };
+    let ParsedCss {
+        stylesheet,
+        comments,
+        source,
+        front_matter,
+        ..
+    } = parse_for_format(session.allocator(), source_text, options, root)?;
     if front_matter.is_some() && !session.input_kind().owns_front_matter() {
         // A fragment (css-in-js, JSDoc fence) never acquires file envelope semantics:
         // refuse the whole child instead of partially treating its head as front matter.
@@ -160,9 +196,17 @@ pub fn format_to_ir<'a>(
     let mut state = FormatState::new_with_session(context, session.clone());
     let mut buffer = VecBuffer::new(&mut state);
 
-    write!(&mut buffer, FormatCssEmbedded { stylesheet: &stylesheet, front_matter });
+    write!(
+        &mut buffer,
+        FormatCssEmbedded {
+            stylesheet: &stylesheet,
+            front_matter
+        }
+    );
 
-    Ok(EmbeddedIr { ir: buffer.into_vec() })
+    Ok(EmbeddedIr {
+        ir: buffer.into_vec(),
+    })
 }
 
 /// What a CSS source is parsed as.
@@ -204,7 +248,11 @@ fn prepare_source<'a>(allocator: &'a Allocator, source_text: &str) -> PreparedSo
         None => source,
     };
 
-    PreparedSource { source, parse_source, front_matter }
+    PreparedSource {
+        source,
+        parse_source,
+        front_matter,
+    }
 }
 
 /// Parse the (already normalized, front-matter-blanked) source into an AST
@@ -221,7 +269,10 @@ fn parse_stylesheet<'a>(
     options: CssFormatOptions,
     root: CssRoot,
 ) -> Result<(Stylesheet<'a>, &'a [CssComment]), OxcDiagnostic> {
-    debug_assert!(!parse_source.starts_with('\u{feff}'), "callers must never pass a leading BOM");
+    debug_assert!(
+        !parse_source.starts_with('\u{feff}'),
+        "callers must never pass a leading BOM"
+    );
 
     let mut parser = ParserBuilder::new(allocator, parse_source)
         .syntax(options.variant.to_css_syntax())
@@ -242,7 +293,9 @@ fn parse_stylesheet<'a>(
         .comments()
         .build();
 
-    let stylesheet = parser.parse::<Stylesheet>().map_err(|error| to_diagnostic(&error))?;
+    let stylesheet = parser
+        .parse::<Stylesheet>()
+        .map_err(|error| to_diagnostic(&error))?;
     // Any recoverable error rejects the file, a root declaration included;
     // a fragment never emits one (AGENTS.md "Error semantics").
     if let Some(error) = parser.recoverable_errors().first() {

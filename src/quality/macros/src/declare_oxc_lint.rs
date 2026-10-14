@@ -97,7 +97,10 @@ impl Parse for LintRuleMeta {
             let marker: Ident = content.parse()?;
             if marker == "tsgolint" {
                 if !content.is_empty() {
-                    return Err(Error::new_spanned(marker, "unexpected tokens after 'tsgolint'"));
+                    return Err(Error::new_spanned(
+                        marker,
+                        "unexpected tokens after 'tsgolint'",
+                    ));
                 }
                 is_tsgolint_rule = true;
             } else {
@@ -181,7 +184,10 @@ impl Parse for LintRuleMeta {
                 }
                 _ => {
                     if input.peek(Token!(=)) || fix.is_some() {
-                        return Err(Error::new_spanned(key, "unexpected key in rule declaration"));
+                        return Err(Error::new_spanned(
+                            key,
+                            "unexpected key in rule declaration",
+                        ));
                     }
                     // fix kind shorthand, e.g. `dangerous-suggestion``
                     fix.replace(key);
@@ -239,7 +245,9 @@ impl Parse for LintRuleMeta {
 }
 
 pub fn rule_name_converter() -> Converter {
-    Converter::new().remove_boundary(Boundary::LowerDigit).to_case(Case::Kebab)
+    Converter::new()
+        .remove_boundary(Boundary::LowerDigit)
+        .to_case(Case::Kebab)
 }
 
 pub fn declare_oxc_lint(metadata: LintRuleMeta) -> TokenStream {
@@ -382,7 +390,11 @@ pub fn declare_oxc_lint(metadata: LintRuleMeta) -> TokenStream {
 
 fn parse_doc_attr(attr: &Attribute) -> Result<Option<String>> {
     if let Meta::NameValue(name_value) = &attr.meta {
-        let path_idents = name_value.path.segments.iter().map(|segment| &segment.ident);
+        let path_idents = name_value
+            .path
+            .segments
+            .iter()
+            .map(|segment| &segment.ident);
         if !itertools::equal(path_idents, ["doc"]) {
             return Ok(None);
         }

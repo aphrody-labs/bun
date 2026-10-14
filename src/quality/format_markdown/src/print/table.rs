@@ -27,7 +27,12 @@ struct Cell<'a> {
 
 pub fn write_table<'a>(table: &'a Table<'a>, f: &mut MarkdownFormatter<'_, 'a>) {
     let allocator = f.allocator();
-    let columns = table.children.iter().map(|row| row.children.len()).max().unwrap_or(0);
+    let columns = table
+        .children
+        .iter()
+        .map(|row| row.children.len())
+        .max()
+        .unwrap_or(0);
     let mut widths = ArenaVec::from_iter_in(std::iter::repeat_n(3, columns), &allocator);
     let mut rows = ArenaVec::with_capacity_in(table.children.len(), &allocator);
     for row in &table.children {
@@ -53,7 +58,11 @@ pub fn write_table<'a>(table: &'a Table<'a>, f: &mut MarkdownFormatter<'_, 'a>) 
     write!(
         f,
         group(&format_args!(
-            if_group_breaks(&format_with(|f| write_lines(compact.iter().copied(), separator, f))),
+            if_group_breaks(&format_with(|f| write_lines(
+                compact.iter().copied(),
+                separator,
+                f
+            ))),
             if_group_fits_on_line(&format_with(|f| write_lines(
                 aligned.iter().copied(),
                 separator,

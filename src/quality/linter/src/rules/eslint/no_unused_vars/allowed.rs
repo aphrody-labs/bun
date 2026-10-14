@@ -99,7 +99,10 @@ fn is_ambient_external_module_without_explicit_exports(
         return false;
     }
 
-    module.body.as_ref().is_none_or(|block| !has_explicit_exports(block))
+    module
+        .body
+        .as_ref()
+        .is_none_or(|block| !has_explicit_exports(block))
 }
 
 #[inline]
@@ -153,11 +156,13 @@ impl NoUnusedVars {
         }
         // Segments of a dotted namespace declaration (`namespace A.B.C {}`) are
         // parsed as nested `TSNamespaceDeclaration`s. Don't flag any segment as unused.
-        matches!(&namespace.body, TSNamespaceDeclarationBody::TSNamespaceDeclaration(_))
-            || matches!(
-                symbol.nodes().parent_kind(symbol.declaration().id()),
-                AstKind::TSNamespaceDeclaration(_)
-            )
+        matches!(
+            &namespace.body,
+            TSNamespaceDeclarationBody::TSNamespaceDeclaration(_)
+        ) || matches!(
+            symbol.nodes().parent_kind(symbol.declaration().id()),
+            AstKind::TSNamespaceDeclaration(_)
+        )
     }
 
     /// Returns `true` if this unused variable declaration should be allowed
@@ -246,9 +251,15 @@ impl NoUnusedVars {
             return true;
         }
 
-        let Some(params) = symbol.nodes().parent_kind(argument.node_id()).as_formal_parameters()
+        let Some(params) = symbol
+            .nodes()
+            .parent_kind(argument.node_id())
+            .as_formal_parameters()
         else {
-            debug_assert!(false, "FormalParameter should always have a parent FormalParameters");
+            debug_assert!(
+                false,
+                "FormalParameter should always have a parent FormalParameters"
+            );
             return false;
         };
 
@@ -290,8 +301,12 @@ impl NoUnusedVars {
 
         // find the index of the parameter in the parameters list. We want to
         // check all parameters after this one for usages.
-        let position =
-            params.items.iter().enumerate().find(|(_, p)| p.span == param.span).map(|(i, _)| i);
+        let position = params
+            .items
+            .iter()
+            .enumerate()
+            .find(|(_, p)| p.span == param.span)
+            .map(|(i, _)| i);
         debug_assert!(
             position.is_some(),
             "could not find FormalParameter in a FormalParameters node that is its parent."
@@ -307,7 +322,11 @@ impl NoUnusedVars {
             return false;
         }
 
-        let ctx = BindingContext { options: self, semantic, module_record };
+        let ctx = BindingContext {
+            options: self,
+            semantic,
+            module_record,
+        };
         params
             .items
             .iter()
@@ -360,9 +379,13 @@ impl NoUnusedVars {
             // arguments inside setters are allowed. Without them, the program
             // has invalid syntax
             AstKind::MethodDefinition(MethodDefinition {
-                kind: MethodDefinitionKind::Set, ..
+                kind: MethodDefinitionKind::Set,
+                ..
             })
-            | AstKind::ObjectProperty(ObjectProperty { kind: PropertyKind::Set, .. }) => true,
+            | AstKind::ObjectProperty(ObjectProperty {
+                kind: PropertyKind::Set,
+                ..
+            }) => true,
 
             // Allow unused parameters in function overloads
             AstKind::Function(f)

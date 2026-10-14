@@ -43,7 +43,8 @@ declare_oxc_lint!(
     suspicious,
     pending,
     version = "0.0.16",
-    short_description = "Prefer `.addEventListener()` and `.removeEventListener()` over `on`-functions.",
+    short_description =
+        "Prefer `.addEventListener()` and `.removeEventListener()` over `on`-functions.",
 );
 
 impl Rule for PreferAddEventListener {
@@ -444,7 +445,10 @@ fn test() {
         ("foo.onclick = []", None),
         ("foo.onclick = void 0", None),
         ("foo.onclick = new Handler()", None),
-        ("(el as HTMLElement).onmouseenter = onAnchorMouseEnter;", None),
+        (
+            "(el as HTMLElement).onmouseenter = onAnchorMouseEnter;",
+            None,
+        ),
     ];
 
     // TODO: Implement autofix and use these tests.
@@ -453,6 +457,11 @@ fn test() {
     //     "(el as HTMLElement).addEventListener('mouseenter', onAnchorMouseEnter);",
     // )];
 
-    Tester::new(PreferAddEventListener::NAME, PreferAddEventListener::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        PreferAddEventListener::NAME,
+        PreferAddEventListener::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

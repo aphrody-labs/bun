@@ -98,7 +98,10 @@ impl<'a> FormatWrite<'a> for AstNode<'a, TSMethodSignature<'a>> {
             );
 
             if should_group_parameters {
-                write!(f, group(&format_args!(&format_type_parameters, &format_parameters)));
+                write!(
+                    f,
+                    group(&format_args!(&format_type_parameters, &format_parameters))
+                );
             } else {
                 write!(f, [format_type_parameters, format_parameters]);
             }
@@ -144,7 +147,9 @@ pub fn format_grouped_parameters_with_return_type<'a>(
     group(&format_with(|f| {
         let format_type_parameters = type_parameters.memoized();
         let format_parameters = params.memoized();
-        let format_return_type = return_type.map(FormatNodeWithoutTrailingComments).memoized();
+        let format_return_type = return_type
+            .map(FormatNodeWithoutTrailingComments)
+            .memoized();
 
         // Inspect early, in case the `return_type` is formatted before `parameters`
         // in `should_group_function_parameters`.
@@ -160,12 +165,24 @@ pub fn format_grouped_parameters_with_return_type<'a>(
         );
 
         if group_parameters {
-            write!(f, [group(&format_args!(format_type_parameters, format_parameters))]);
+            write!(
+                f,
+                [group(&format_args!(
+                    format_type_parameters,
+                    format_parameters
+                ))]
+            );
         } else {
             write!(f, [format_type_parameters, format_parameters]);
         }
 
-        write!(f, [is_function_or_constructor_type.then_some(space()), format_return_type]);
+        write!(
+            f,
+            [
+                is_function_or_constructor_type.then_some(space()),
+                format_return_type
+            ]
+        );
     }))
     .fmt(f);
 }

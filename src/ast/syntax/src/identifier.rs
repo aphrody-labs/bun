@@ -169,7 +169,9 @@ fn is_identifier_name_impl<const PATCHED: bool>(name: &str) -> bool {
 
     // Get first byte. Exit if empty string.
     let bytes = name.as_bytes();
-    let Some(&first_byte) = bytes.first() else { return false };
+    let Some(&first_byte) = bytes.first() else {
+        return false;
+    };
 
     let mut chars = if first_byte.is_ascii() {
         // First byte is ASCII

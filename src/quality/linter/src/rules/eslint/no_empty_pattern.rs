@@ -185,7 +185,10 @@ fn test() {
         ("var foo = function({}) {}", Some(serde_json::json!([{}]))), // { "ecmaVersion": 6 },
         ("var foo = ({}) => {}", Some(serde_json::json!([{}]))), // { "ecmaVersion": 6 },
         ("function foo({} = {}) {}", Some(serde_json::json!([{}]))), // { "ecmaVersion": 6 },
-        ("var foo = function({} = {}) {}", Some(serde_json::json!([{}]))), // { "ecmaVersion": 6 },
+        (
+            "var foo = function({} = {}) {}",
+            Some(serde_json::json!([{}])),
+        ), // { "ecmaVersion": 6 },
         ("var foo = ({} = {}) => {}", Some(serde_json::json!([{}]))), // { "ecmaVersion": 6 },
         (
             "var foo = ({a: {}}) => {}",

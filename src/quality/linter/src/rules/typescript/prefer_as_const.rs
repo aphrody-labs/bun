@@ -72,7 +72,10 @@ impl Rule for PreferAsConst {
                     return;
                 };
                 check_and_report_type_annotation(
-                    matches!(&variable_declarator.id, BindingPattern::BindingIdentifier(_)),
+                    matches!(
+                        &variable_declarator.id,
+                        BindingPattern::BindingIdentifier(_)
+                    ),
                     type_annotation,
                     &type_annotation.type_annotation,
                     initial_value_expression,
@@ -114,12 +117,15 @@ fn literal_type_span_if_matches(
     ts_type: &TSType,
     initial_value_expression: &Expression,
 ) -> Option<Span> {
-    let TSType::TSLiteralType(literal_type) = &ts_type else { return None };
+    let TSType::TSLiteralType(literal_type) = &ts_type else {
+        return None;
+    };
     match &literal_type.literal {
         TSLiteral::StringLiteral(string_literal) => match initial_value_expression {
-            Expression::StringLiteral(initial_string) => {
-                string_literal.value.eq(&initial_string.value).then_some(string_literal.span)
-            }
+            Expression::StringLiteral(initial_string) => string_literal
+                .value
+                .eq(&initial_string.value)
+                .then_some(string_literal.span),
             _ => None,
         },
         TSLiteral::NumericLiteral(number_literal) => initial_value_expression
@@ -137,7 +143,9 @@ fn check_and_report_as_expression(
     let Some(span) = literal_type_span_if_matches(ts_type, initial_value_expression) else {
         return;
     };
-    ctx.diagnostic_with_fix(prefer_as_const_diagnostic(span), |fixer| fixer.replace(span, "const"));
+    ctx.diagnostic_with_fix(prefer_as_const_diagnostic(span), |fixer| {
+        fixer.replace(span, "const")
+    });
 }
 
 fn check_and_report_type_annotation(
@@ -306,12 +314,24 @@ fn test() {
     ];
 
     let fix = vec![
-        ("let foo = { bar: 'baz' as 'baz' };", "let foo = { bar: 'baz' as const };"),
-        ("let foo = { bar: 1 as 1 };", "let foo = { bar: 1 as const };"),
-        ("let foo: 'bar' = 'bar' as 'bar';", "let foo: 'bar' = 'bar' as const;"),
+        (
+            "let foo = { bar: 'baz' as 'baz' };",
+            "let foo = { bar: 'baz' as const };",
+        ),
+        (
+            "let foo = { bar: 1 as 1 };",
+            "let foo = { bar: 1 as const };",
+        ),
+        (
+            "let foo: 'bar' = 'bar' as 'bar';",
+            "let foo: 'bar' = 'bar' as const;",
+        ),
         ("let foo: 'bar' = 'bar';", "let foo = 'bar' as const;"),
         ("let foo: 2 = 2;", "let foo = 2 as const;"),
-        ("const example: 'hello' = 'hello';", "const example = 'hello' as const;"),
+        (
+            "const example: 'hello' = 'hello';",
+            "const example = 'hello' as const;",
+        ),
         (r#"let foo: 'bar' = "bar";"#, r#"let foo = "bar" as const;"#),
         ("const foo: 2 = 2;", "const foo = 2 as const;"),
         // ("let foo = <'bar'>'bar';", "let foo = <const>'bar';"),

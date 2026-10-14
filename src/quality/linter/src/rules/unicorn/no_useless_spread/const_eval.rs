@@ -72,9 +72,10 @@ impl ConstEval for Expression<'_> {
             Self::ArrayExpression(_) => ValueHint::NewArray,
             Self::ObjectExpression(_) => ValueHint::NewObject,
             Self::AwaitExpression(expr) => expr.argument.const_eval().r#await(),
-            Self::SequenceExpression(expr) => {
-                expr.expressions.last().map_or(ValueHint::Unknown, ConstEval::const_eval)
-            }
+            Self::SequenceExpression(expr) => expr
+                .expressions
+                .last()
+                .map_or(ValueHint::Unknown, ConstEval::const_eval),
             Self::ConditionalExpression(cond) => cond.const_eval(),
             Self::CallExpression(call) => call.const_eval(),
             Self::NewExpression(new) => new.const_eval(),
@@ -122,7 +123,12 @@ fn is_new_array(new_expr: &NewExpression) -> bool {
 
 /// Matches `new {Set,WeakSet,Map,WeakMap}(iterable?)`
 fn is_new_map_or_set(new_expr: &NewExpression) -> bool {
-    is_new_expression(new_expr, &["Map", "WeakMap", "Set", "WeakSet"], None, Some(1))
+    is_new_expression(
+        new_expr,
+        &["Map", "WeakMap", "Set", "WeakSet"],
+        None,
+        Some(1),
+    )
 }
 
 /// Matches `new Object()` with any number of args.
@@ -153,7 +159,13 @@ pub fn is_new_typed_array(new_expr: &NewExpression) -> bool {
 
 /// Matches `<TypedArray>.from(x)`, whose result is a typed array.
 fn is_typed_array_from(call_expr: &CallExpression) -> bool {
-    is_method_call(call_expr, Some(&TYPED_ARRAY_NAMES), Some(&["from"]), Some(1), Some(1))
+    is_method_call(
+        call_expr,
+        Some(&TYPED_ARRAY_NAMES),
+        Some(&["from"]),
+        Some(1),
+        Some(1),
+    )
 }
 
 /// Matches a clone method called on a typed array, e.g.
@@ -264,20 +276,44 @@ fn is_split_method(call_expr: &CallExpression) -> bool {
 
 /// Matches `Object.{fromEntries,create}(x)`
 fn is_obj_factory(call_expr: &CallExpression) -> bool {
-    is_method_call(call_expr, Some(&["Object"]), Some(&["fromEntries", "create"]), Some(1), Some(1))
+    is_method_call(
+        call_expr,
+        Some(&["Object"]),
+        Some(&["fromEntries", "create"]),
+        Some(1),
+        Some(1),
+    )
 }
 
 /// Matches `Object.{keys,values,entries}(...)`
 fn is_array_producing_obj_method(call_expr: &CallExpression) -> bool {
-    is_method_call(call_expr, Some(&["Object"]), Some(&["keys", "values", "entries"]), None, None)
+    is_method_call(
+        call_expr,
+        Some(&["Object"]),
+        Some(&["keys", "values", "entries"]),
+        None,
+        None,
+    )
 }
 
 /// Matches `Array.{from,of}(...)`
 fn is_array_factory(call_expr: &CallExpression) -> bool {
-    is_method_call(call_expr, Some(&["Array"]), Some(&["from", "of"]), None, None)
+    is_method_call(
+        call_expr,
+        Some(&["Array"]),
+        Some(&["from", "of"]),
+        None,
+        None,
+    )
 }
 
 /// Matches `Promise.{all,allSettled}(x)`
 fn is_promise_array_method(call_expr: &CallExpression) -> bool {
-    is_method_call(call_expr, Some(&["Promise"]), Some(&["all", "allSettled"]), Some(1), Some(1))
+    is_method_call(
+        call_expr,
+        Some(&["Promise"]),
+        Some(&["all", "allSettled"]),
+        Some(1),
+        Some(1),
+    )
 }

@@ -384,7 +384,9 @@ impl ReactCompilerOptions {
             });
         }
         if let Some(dynamic_gating) = self.dynamic_gating {
-            options.dynamic_gating = Some(DynamicGatingConfig { source: dynamic_gating.source });
+            options.dynamic_gating = Some(DynamicGatingConfig {
+                source: dynamic_gating.source,
+            });
         }
         if let Some(environment) = self.environment {
             environment.apply_to(&mut options.environment)?;
@@ -410,7 +412,9 @@ impl From<JsxOptions> for oxc::transformer::JsxOptions {
                 /* "automatic" */ _ => oxc::transformer::JsxRuntime::Automatic,
             },
             development: options.development.unwrap_or(defaults.development),
-            throw_if_namespace: options.throw_if_namespace.unwrap_or(defaults.throw_if_namespace),
+            throw_if_namespace: options
+                .throw_if_namespace
+                .unwrap_or(defaults.throw_if_namespace),
             pure: options.pure.unwrap_or(defaults.pure),
             import_source: options.import_source,
             pragma: options.pragma,
@@ -520,7 +524,9 @@ fn parse<T: FromStr>(value: &str, option: &str) -> Result<T, OxcDiagnostic> {
 }
 
 fn invalid_option(option: &str, value: &str) -> OxcDiagnostic {
-    OxcDiagnostic::error(format!("Invalid React Compiler `{option}` option: `{value}`."))
+    OxcDiagnostic::error(format!(
+        "Invalid React Compiler `{option}` option: `{value}`."
+    ))
 }
 
 fn invalid_jsx_option(value: &str) -> OxcDiagnostic {

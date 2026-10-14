@@ -82,5 +82,11 @@ fn write_object_value<'a>(object: &'a ObjectValue<'a>, f: &mut GraphqlFormatter<
             flush_trailing_inside_comments(last_end, r_curly, f);
         }
     });
-    write!(f, [group(&soft_block_indent_with_maybe_space(&body, bracket_spacing)), "}"]);
+    write!(
+        f,
+        [
+            group(&soft_block_indent_with_maybe_space(&body, bracket_spacing)),
+            "}"
+        ]
+    );
 }

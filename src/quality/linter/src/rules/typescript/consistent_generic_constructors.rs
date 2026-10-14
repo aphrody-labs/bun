@@ -240,8 +240,11 @@ impl ConsistentGenericConstructors {
         // This ensures we don't leave extra whitespace when removing ` : Type`
         let delete_start = {
             let before_colon = &source_text[..colon_pos as usize];
-            let whitespace_len =
-                before_colon.chars().rev().take_while(char::is_ascii_whitespace).count();
+            let whitespace_len = before_colon
+                .chars()
+                .rev()
+                .take_while(char::is_ascii_whitespace)
+                .count();
             #[expect(clippy::cast_possible_truncation)]
             {
                 colon_pos - whitespace_len as u32
@@ -255,8 +258,10 @@ impl ConsistentGenericConstructors {
         // Check if `new Foo;` (no parentheses) - need to handle this case
         // If the expression span ends at the callee span end (or type args if present), no parens
         let expr_end = new_expression.span.end;
-        let callee_or_type_end =
-            new_expression.type_arguments.as_ref().map_or(callee_end, |ta| ta.span.end);
+        let callee_or_type_end = new_expression
+            .type_arguments
+            .as_ref()
+            .map_or(callee_end, |ta| ta.span.end);
         // Look for opening paren after the callee/type args
         let after_callee = &source_text[callee_or_type_end as usize..expr_end as usize];
         let needs_parens = !after_callee.contains('(');
@@ -328,8 +333,11 @@ impl ConsistentGenericConstructors {
         let delete_span = Span::new(callee_end, type_args.span.end);
 
         // Replacement: keep comments but remove type args
-        let replacement =
-            if comments_between.is_empty() { String::new() } else { comments_between };
+        let replacement = if comments_between.is_empty() {
+            String::new()
+        } else {
+            comments_between
+        };
 
         // Build the fix
         let mut fix = fixer.new_fix_with_capacity(2);
@@ -549,16 +557,46 @@ fn test() {
         //           ",
         //     None,
         // ), // { "parserOptions": { "isolatedDeclarations": true, }, },
-        ("const a = new Foo();", Some(serde_json::json!(["type-annotation"]))),
-        ("const a: Foo<string> = new Foo();", Some(serde_json::json!(["type-annotation"]))),
-        ("const a: Foo<string> = new Foo<string>();", Some(serde_json::json!(["type-annotation"]))),
-        ("const a: Foo = new Foo();", Some(serde_json::json!(["type-annotation"]))),
-        ("const a: Bar = new Foo<string>();", Some(serde_json::json!(["type-annotation"]))),
-        ("const a: Bar<string> = new Foo<string>();", Some(serde_json::json!(["type-annotation"]))),
-        ("const a: Foo<string> = Foo<string>();", Some(serde_json::json!(["type-annotation"]))),
-        ("const a: Foo<string> = Foo();", Some(serde_json::json!(["type-annotation"]))),
-        ("const a: Foo = Foo<string>();", Some(serde_json::json!(["type-annotation"]))),
-        ("const a = new (class C<T> {})<string>();", Some(serde_json::json!(["type-annotation"]))),
+        (
+            "const a = new Foo();",
+            Some(serde_json::json!(["type-annotation"])),
+        ),
+        (
+            "const a: Foo<string> = new Foo();",
+            Some(serde_json::json!(["type-annotation"])),
+        ),
+        (
+            "const a: Foo<string> = new Foo<string>();",
+            Some(serde_json::json!(["type-annotation"])),
+        ),
+        (
+            "const a: Foo = new Foo();",
+            Some(serde_json::json!(["type-annotation"])),
+        ),
+        (
+            "const a: Bar = new Foo<string>();",
+            Some(serde_json::json!(["type-annotation"])),
+        ),
+        (
+            "const a: Bar<string> = new Foo<string>();",
+            Some(serde_json::json!(["type-annotation"])),
+        ),
+        (
+            "const a: Foo<string> = Foo<string>();",
+            Some(serde_json::json!(["type-annotation"])),
+        ),
+        (
+            "const a: Foo<string> = Foo();",
+            Some(serde_json::json!(["type-annotation"])),
+        ),
+        (
+            "const a: Foo = Foo<string>();",
+            Some(serde_json::json!(["type-annotation"])),
+        ),
+        (
+            "const a = new (class C<T> {})<string>();",
+            Some(serde_json::json!(["type-annotation"])),
+        ),
         (
             "
             class Foo {
@@ -628,8 +666,14 @@ fn test() {
         ("const a: Map< string, number > = new Map();", None),
         ("const a: Map<string, number> = new Map ();", None),
         ("const a: Foo<number> = new Foo;", None),
-        ("const a: /* comment */ Foo/* another */ <string> = new Foo();", None),
-        ("const a: Foo/* comment */ <string> = new Foo /* another */();", None),
+        (
+            "const a: /* comment */ Foo/* another */ <string> = new Foo();",
+            None,
+        ),
+        (
+            "const a: Foo/* comment */ <string> = new Foo /* another */();",
+            None,
+        ),
         (
             "const a: Foo<string> = new
              Foo
@@ -708,10 +752,22 @@ fn test() {
                   ",
             None,
         ),
-        ("const a = new Foo<string>();", Some(serde_json::json!(["type-annotation"]))),
-        ("const a = new Map<string, number>();", Some(serde_json::json!(["type-annotation"]))),
-        ("const a = new Map <string, number> ();", Some(serde_json::json!(["type-annotation"]))),
-        ("const a = new Map< string, number >();", Some(serde_json::json!(["type-annotation"]))),
+        (
+            "const a = new Foo<string>();",
+            Some(serde_json::json!(["type-annotation"])),
+        ),
+        (
+            "const a = new Map<string, number>();",
+            Some(serde_json::json!(["type-annotation"])),
+        ),
+        (
+            "const a = new Map <string, number> ();",
+            Some(serde_json::json!(["type-annotation"])),
+        ),
+        (
+            "const a = new Map< string, number >();",
+            Some(serde_json::json!(["type-annotation"])),
+        ),
         (
             "const a = new
              Foo<string>
@@ -793,8 +849,16 @@ fn test() {
     ];
 
     let fix = vec![
-        ("const a: Foo<string> = new Foo();", "const a = new Foo<string>();", None),
-        ("const a: Map<string, number> = new Map();", "const a = new Map<string, number>();", None),
+        (
+            "const a: Foo<string> = new Foo();",
+            "const a = new Foo<string>();",
+            None,
+        ),
+        (
+            "const a: Map<string, number> = new Map();",
+            "const a = new Map<string, number>();",
+            None,
+        ),
         (
             "const a: Map <string, number> = new Map();",
             "const a = new Map<string, number>();",
@@ -810,7 +874,11 @@ fn test() {
             "const a = new Map<string, number> ();",
             None,
         ),
-        ("const a: Foo<number> = new Foo;", "const a = new Foo<number>();", None),
+        (
+            "const a: Foo<number> = new Foo;",
+            "const a = new Foo<number>();",
+            None,
+        ),
         (
             "const a: /* comment */ Foo/* another */ <string> = new Foo();",
             "const a = new Foo/* comment *//* another */<string>();",

@@ -11,8 +11,11 @@ pub fn run_rules(
     stdout: &mut dyn std::io::Write,
 ) -> CliRunResult {
     // Build the set of enabled builtin rules from the resolved config.
-    let enabled: FxHashSet<(&str, &str)> =
-        lint_config.rules().iter().map(|(rule, _)| (rule.plugin_name(), rule.name())).collect();
+    let enabled: FxHashSet<(&str, &str)> = lint_config
+        .rules()
+        .iter()
+        .map(|(rule, _)| (rule.plugin_name(), rule.name()))
+        .collect();
 
     if let Some(output) = output_formatter.all_rules(enabled) {
         print_and_flush_stdout(stdout, &output);

@@ -53,7 +53,11 @@ impl NumericLiteral<'_> {
         let int32bit = pos_int % 2f64.powi(32);
 
         // step5
-        if int32bit >= 2f64.powi(31) { (int32bit - 2f64.powi(32)) as i32 } else { int32bit as i32 }
+        if int32bit >= 2f64.powi(31) {
+            (int32bit - 2f64.powi(32)) as i32
+        } else {
+            int32bit as i32
+        }
     }
 
     /// Return raw source code for `NumericLiteral`.
@@ -133,7 +137,10 @@ impl<'a> RegExpLiteral<'a> {
             allocator,
             pattern_text,
             Some(flags_text),
-            oxc_regular_expression::Options { pattern_span_offset, flags_span_offset },
+            oxc_regular_expression::Options {
+                pattern_span_offset,
+                flags_span_offset,
+            },
         )
         .parse()
     }

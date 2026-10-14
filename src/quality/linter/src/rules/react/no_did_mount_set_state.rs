@@ -79,12 +79,18 @@ impl Rule for NoDidMountSetState {
     }
 
     fn run<'a>(&self, node: &AstNode<'a>, ctx: &LintContext<'a>) {
-        let AstKind::CallExpression(call_expr) = node.kind() else { return };
+        let AstKind::CallExpression(call_expr) = node.kind() else {
+            return;
+        };
 
-        let Some(member_expr) = call_expr.callee.as_member_expression() else { return };
+        let Some(member_expr) = call_expr.callee.as_member_expression() else {
+            return;
+        };
 
         if !matches!(member_expr.object(), Expression::ThisExpression(_))
-            || member_expr.static_property_name().is_none_or(|name| name != "setState")
+            || member_expr
+                .static_property_name()
+                .is_none_or(|name| name != "setState")
         {
             return;
         }
@@ -280,8 +286,13 @@ fn test() {
         ",
     ];
 
-    Tester::new(NoDidMountSetState::NAME, NoDidMountSetState::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        NoDidMountSetState::NAME,
+        NoDidMountSetState::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }
 
 #[test]
@@ -368,7 +379,12 @@ fn test_disallow_in_func() {
         ),
     ];
 
-    Tester::new(NoDidMountSetState::NAME, NoDidMountSetState::PLUGIN, pass, fail)
-        .with_snapshot_suffix("disallow_in_func")
-        .test_and_snapshot();
+    Tester::new(
+        NoDidMountSetState::NAME,
+        NoDidMountSetState::PLUGIN,
+        pass,
+        fail,
+    )
+    .with_snapshot_suffix("disallow_in_func")
+    .test_and_snapshot();
 }

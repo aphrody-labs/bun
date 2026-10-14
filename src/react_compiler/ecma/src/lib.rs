@@ -95,7 +95,10 @@ fn run_compiler<'a, const EMIT: bool>(
     // Check for existing runtime imports (file already compiled).
     if has_memo_cache_function_import(program, &get_react_compiler_runtime_module(&options.target))
     {
-        return CompileResult::Success { output: None, diagnostics: Diagnostics::default() };
+        return CompileResult::Success {
+            output: None,
+            diagnostics: Diagnostics::default(),
+        };
     }
 
     // Blocklisted imports bail out the whole file. Whether that aborts the
@@ -106,7 +109,10 @@ fn run_compiler<'a, const EMIT: bool>(
         return if diagnostics::should_panic(&diagnostics, options.panic_threshold) {
             CompileResult::Fatal { diagnostics }
         } else {
-            CompileResult::Success { output: None, diagnostics }
+            CompileResult::Success {
+                output: None,
+                diagnostics,
+            }
         };
     }
 
@@ -131,6 +137,10 @@ pub fn lint<'a>(
         CompileResult::Success { diagnostics, .. } => (diagnostics, false),
         CompileResult::Fatal { diagnostics } => (diagnostics, true),
     };
-    let diagnostics = diagnostics.into_vec().into_iter().map(diagnostics::categorize).collect();
+    let diagnostics = diagnostics
+        .into_vec()
+        .into_iter()
+        .map(diagnostics::categorize)
+        .collect();
     LintResult { diagnostics, fatal }
 }

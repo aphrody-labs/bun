@@ -34,8 +34,14 @@ fn test() {
 
     let pass = vec![
         // String
-        ("expect(() => { throw new Error('a'); }).toThrow('a');", None),
-        ("expect(() => { throw new Error('a'); }).toThrowError('a');", None),
+        (
+            "expect(() => { throw new Error('a'); }).toThrow('a');",
+            None,
+        ),
+        (
+            "expect(() => { throw new Error('a'); }).toThrowError('a');",
+            None,
+        ),
         (
             "
                 test('string', async () => {
@@ -47,8 +53,14 @@ fn test() {
             None,
         ),
         // Template literal
-        ("const a = 'a'; expect(() => { throw new Error('a'); }).toThrow(`${a}`);", None),
-        ("const a = 'a'; expect(() => { throw new Error('a'); }).toThrowError(`${a}`);", None),
+        (
+            "const a = 'a'; expect(() => { throw new Error('a'); }).toThrow(`${a}`);",
+            None,
+        ),
+        (
+            "const a = 'a'; expect(() => { throw new Error('a'); }).toThrowError(`${a}`);",
+            None,
+        ),
         (
             "
                 test('Template literal', async () => {
@@ -61,8 +73,14 @@ fn test() {
             None,
         ),
         // Regex
-        ("expect(() => { throw new Error('a'); }).toThrow(/^a$/);", None),
-        ("expect(() => { throw new Error('a'); }).toThrowError(/^a$/);", None),
+        (
+            "expect(() => { throw new Error('a'); }).toThrow(/^a$/);",
+            None,
+        ),
+        (
+            "expect(() => { throw new Error('a'); }).toThrowError(/^a$/);",
+            None,
+        ),
         (
             "
                 test('Regex', async () => {
@@ -74,8 +92,14 @@ fn test() {
             None,
         ),
         // Function
-        ("expect(() => { throw new Error('a'); }).toThrow((() => { return 'a'; })());", None),
-        ("expect(() => { throw new Error('a'); }).toThrowError((() => { return 'a'; })());", None),
+        (
+            "expect(() => { throw new Error('a'); }).toThrow((() => { return 'a'; })());",
+            None,
+        ),
+        (
+            "expect(() => { throw new Error('a'); }).toThrowError((() => { return 'a'; })());",
+            None,
+        ),
         (
             "
                 test('Function', async () => {
@@ -88,8 +112,14 @@ fn test() {
             None,
         ),
         // Allow no message for `not`.
-        ("expect(() => { throw new Error('a'); }).not.toThrow();", None),
-        ("expect(() => { throw new Error('a'); }).not.toThrowError();", None),
+        (
+            "expect(() => { throw new Error('a'); }).not.toThrow();",
+            None,
+        ),
+        (
+            "expect(() => { throw new Error('a'); }).not.toThrowError();",
+            None,
+        ),
         (
             "
                 test('Allow no message for `not`', async () => {
@@ -107,7 +137,10 @@ fn test() {
         // Empty toThrow
         ("expect(() => { throw new Error('a'); }).toThrow();", None),
         // Empty toThrowError
-        ("expect(() => { throw new Error('a'); }).toThrowError();", None),
+        (
+            "expect(() => { throw new Error('a'); }).toThrowError();",
+            None,
+        ),
         // Empty rejects.toThrow / rejects.toThrowError
         (
             "
@@ -121,7 +154,12 @@ fn test() {
         ),
     ];
 
-    Tester::new(RequireToThrowMessage::NAME, RequireToThrowMessage::PLUGIN, pass, fail)
-        .with_vitest_plugin(true)
-        .test_and_snapshot();
+    Tester::new(
+        RequireToThrowMessage::NAME,
+        RequireToThrowMessage::PLUGIN,
+        pass,
+        fail,
+    )
+    .with_vitest_plugin(true)
+    .test_and_snapshot();
 }

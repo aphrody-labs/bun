@@ -26,7 +26,10 @@ pub struct JSDocCommentPart<'a> {
 
 impl<'a> JSDocCommentPart<'a> {
     pub fn new(part_content: &'a str, span: Span) -> Self {
-        Self { raw: part_content, span }
+        Self {
+            raw: part_content,
+            span,
+        }
     }
 
     // For example, `Span` for the following comment part:
@@ -174,7 +177,10 @@ impl<'a> JSDocTagKindPart<'a> {
         debug_assert!(part_content.starts_with('@'));
         debug_assert_eq!(part_content.trim(), part_content);
 
-        Self { raw: part_content, span }
+        Self {
+            raw: part_content,
+            span,
+        }
     }
 
     /// Returns `kind`, it can be any string like `param`, `type`, `whatever`, ...etc.
@@ -214,7 +220,10 @@ impl<'a> JSDocTagTypePart<'a> {
         debug_assert!(part_content.starts_with('{'));
         debug_assert!(part_content.ends_with('}'));
 
-        Self { raw: part_content, span }
+        Self {
+            raw: part_content,
+            span,
+        }
     }
 
     /// Returns the raw type string including `{` and `}`.
@@ -270,7 +279,12 @@ impl<'a> JSDocTagTypeNamePart<'a> {
         let optional = part_content.starts_with('[') && part_content.ends_with(']');
         let default = optional && part_content.contains('=');
 
-        Self { raw: part_content, span, optional, default }
+        Self {
+            raw: part_content,
+            span,
+            optional,
+            default,
+        }
     }
 
     /// Returns the raw text including brackets for optional/default params.
@@ -283,7 +297,11 @@ impl<'a> JSDocTagTypeNamePart<'a> {
     /// `.raw` may be like `[foo = var]`, so extract the name
     pub fn parsed(&self) -> &'a str {
         if self.optional {
-            let inner = self.raw.trim_start_matches('[').trim_end_matches(']').trim();
+            let inner = self
+                .raw
+                .trim_start_matches('[')
+                .trim_end_matches(']')
+                .trim();
             return inner.split_once('=').map_or(inner, |(v, _)| v.trim());
         }
 
@@ -397,7 +415,10 @@ mod test {
         ] {
             let comment_part =
                 JSDocCommentPart::new(actual, Span::new(0, u32::try_from(actual.len()).unwrap()));
-            assert_eq!(comment_part.span_trimmed_first_line().source_text(actual), expect);
+            assert_eq!(
+                comment_part.span_trimmed_first_line().source_text(actual),
+                expect
+            );
         }
     }
 

@@ -3,12 +3,12 @@
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use bun_browser_dom::parse_html;
 use bun_browser_extract::{
     Extracted, UrlNormalizationOptions, extract_main, normalize_page_url, simhash64,
 };
-use futures::{StreamExt, stream::FuturesUnordered};
-use bun_browser_dom::parse_html;
 use bun_browser_net::BunBrowserHttpClient;
+use futures::{StreamExt, stream::FuturesUnordered};
 use regex::Regex;
 use url::Url;
 
@@ -43,7 +43,9 @@ pub struct BunBrowserTransport {
 
 impl Default for BunBrowserTransport {
     fn default() -> Self {
-        Self { client: BunBrowserHttpClient::new() }
+        Self {
+            client: BunBrowserHttpClient::new(),
+        }
     }
 }
 
@@ -56,7 +58,11 @@ impl BunBrowserTransport {
 
 impl CrawlTransport for BunBrowserTransport {
     async fn fetch(&self, url: &Url) -> Result<FetchResult, String> {
-        let response = self.client.fetch(url).await.map_err(|error| error.to_string())?;
+        let response = self
+            .client
+            .fetch(url)
+            .await
+            .map_err(|error| error.to_string())?;
         Ok(FetchResult {
             url: response.url.clone(),
             status: response.status,
@@ -68,20 +74,35 @@ impl CrawlTransport for BunBrowserTransport {
     async fn fetch_sitemap(&self, url: &Url) -> Result<FetchResult, String> {
         let request = bun_browser_net::ResourceRequest::navigation()
             .with_max_response_bytes(16 * 1024 * 1024);
-        let response = self.client.fetch_resource_with_callbacks(url, request, None)
-            .await.map_err(|error| error.to_string())?;
+        let response = self
+            .client
+            .fetch_resource_with_callbacks(url, request, None)
+            .await
+            .map_err(|error| error.to_string())?;
         let body = crate::sitemap::decode_sitemap_bytes(&response.body)?;
         Ok(FetchResult {
-            url: response.url.clone(), status: response.status,
-            content_type: response.content_type().map(str::to_owned), body,
+            url: response.url.clone(),
+            status: response.status,
+            content_type: response.content_type().map(str::to_owned),
+            body,
         })
     }
     async fn fetch_archive(&self, url: &Url) -> Result<FetchResult, String> {
-        let request = bun_browser_net::ResourceRequest::navigation().with_max_response_bytes(8 * 1024 * 1024);
-        let response = self.client.fetch_resource_with_callbacks(url, request, None).await.map_err(|error| error.to_string())?;
+        let request =
+            bun_browser_net::ResourceRequest::navigation().with_max_response_bytes(8 * 1024 * 1024);
+        let response = self
+            .client
+            .fetch_resource_with_callbacks(url, request, None)
+            .await
+            .map_err(|error| error.to_string())?;
         let content_type = response.content_type().map(str::to_owned);
         let body = String::from_utf8(response.body).map_err(|_| "Archive index is not UTF-8")?;
-        Ok(FetchResult { url: response.url, status: response.status, content_type, body })
+        Ok(FetchResult {
+            url: response.url,
+            status: response.status,
+            content_type,
+            body,
+        })
     }
 }
 
@@ -167,16 +188,50 @@ impl CrawlReport {
     fn page_detail(&mut self, page: CrawlPage, options: &CrawlOptions) {
         let extracted = &page.extracted;
         let mut bytes = 2 * std::mem::size_of::<CrawlPage>() + 2 * page.url.as_str().len();
-        bytes += extracted.title.capacity() + extracted.text.capacity() + extracted.markdown.capacity() + extracted.simhash.capacity();
-        for value in [&extracted.byline, &extracted.published, &extracted.lang, &extracted.canonical, &extracted.site_name, &extracted.description].into_iter().flatten() { bytes = bytes.saturating_add(value.capacity()); }
-        bytes = bytes.saturating_add(extracted.blocks.capacity().saturating_mul(std::mem::size_of::<bun_browser_extract::Block>()));
+        bytes += extracted.title.capacity()
+            + extracted.text.capacity()
+            + extracted.markdown.capacity()
+            + extracted.simhash.capacity();
+        for value in [
+            &extracted.byline,
+            &extracted.published,
+            &extracted.lang,
+            &extracted.canonical,
+            &extracted.site_name,
+            &extracted.description,
+        ]
+        .into_iter()
+        .flatten()
+        {
+            bytes = bytes.saturating_add(value.capacity());
+        }
+        bytes = bytes.saturating_add(
+            extracted
+                .blocks
+                .capacity()
+                .saturating_mul(std::mem::size_of::<bun_browser_extract::Block>()),
+        );
         for block in &extracted.blocks {
-            bytes = bytes.saturating_add(block.text.capacity()).saturating_add(block.heading_path.capacity().saturating_mul(std::mem::size_of::<String>()));
-            for heading in &block.heading_path { bytes = bytes.saturating_add(heading.capacity()); }
+            bytes = bytes.saturating_add(block.text.capacity()).saturating_add(
+                block
+                    .heading_path
+                    .capacity()
+                    .saturating_mul(std::mem::size_of::<String>()),
+            );
+            for heading in &block.heading_path {
+                bytes = bytes.saturating_add(heading.capacity());
+            }
         }
         if self.pages.len() >= options.report_detail_limit.min(1000)
-            || bytes > options.report_max_bytes.min(64 * 1024 * 1024).saturating_sub(self.report_bytes_retained)
-        { self.page_details_dropped += 1; return; }
+            || bytes
+                > options
+                    .report_max_bytes
+                    .min(64 * 1024 * 1024)
+                    .saturating_sub(self.report_bytes_retained)
+        {
+            self.page_details_dropped += 1;
+            return;
+        }
         self.report_bytes_retained += bytes;
         self.pages.push(page);
     }
@@ -187,12 +242,22 @@ impl CrawlReport {
     }
 
     fn error_detail(&mut self, url: String, error: String, options: &CrawlOptions) {
-        let bytes = url.capacity().saturating_add(error.capacity()).saturating_add(2 * std::mem::size_of::<(String,String)>());
+        let bytes = url
+            .capacity()
+            .saturating_add(error.capacity())
+            .saturating_add(2 * std::mem::size_of::<(String, String)>());
         if self.errors.len() >= options.report_detail_limit.min(1000)
-            || bytes > options.report_max_bytes.min(64 * 1024 * 1024).saturating_sub(self.report_bytes_retained)
-        { self.errors_dropped += 1; return; }
+            || bytes
+                > options
+                    .report_max_bytes
+                    .min(64 * 1024 * 1024)
+                    .saturating_sub(self.report_bytes_retained)
+        {
+            self.errors_dropped += 1;
+            return;
+        }
         self.report_bytes_retained += bytes;
-        self.errors.push((url,error));
+        self.errors.push((url, error));
     }
 }
 
@@ -206,37 +271,50 @@ pub async fn crawl_bounded<T: CrawlTransport>(
     let mut report = CrawlReport::default();
     let mut active = FuturesUnordered::new();
     let concurrency = options.max_concurrency.clamp(1, 128);
-    let allowed: HashSet<String> =
-        options.allowed_domains.iter().map(|s| s.to_ascii_lowercase()).collect();
+    let allowed: HashSet<String> = options
+        .allowed_domains
+        .iter()
+        .map(|s| s.to_ascii_lowercase())
+        .collect();
     let include_url_regex = match compile_url_patterns(&options.include_url_regex, "include") {
         Ok(patterns) => patterns,
         Err(error) => {
             report.retain_error("include-url-regex".into(), error, options);
             return Ok(report);
-        },
+        }
     };
     let exclude_url_regex = match compile_url_patterns(&options.exclude_url_regex, "exclude") {
         Ok(patterns) => patterns,
         Err(error) => {
             report.retain_error("exclude-url-regex".into(), error, options);
             return Ok(report);
-        },
+        }
     };
     let mut robots = HashMap::<String, RobotsFile>::new();
     if options.ingest_sitemaps {
-        ingest_seed_sitemaps(frontier, transport, options, &allowed, &mut robots, &mut report)
-            .await?;
+        ingest_seed_sitemaps(
+            frontier,
+            transport,
+            options,
+            &allowed,
+            &mut robots,
+            &mut report,
+        )
+        .await?;
     }
 
     loop {
         while active.len() < concurrency && report.attempts < options.max_requests {
-            let Some(lease) = frontier.lease_next(now_ms())? else { break };
+            let Some(lease) = frontier.lease_next(now_ms())? else {
+                break;
+            };
             report.attempts += 1;
             if !domain_allowed(&lease.url, &allowed) {
                 frontier.mark_rejected(&lease, "URL is outside allowed_domains")?;
-                report
-                    .errors
-                    .push((lease.url.to_string(), "URL is outside allowed_domains".into()));
+                report.errors.push((
+                    lease.url.to_string(),
+                    "URL is outside allowed_domains".into(),
+                ));
                 continue;
             }
             if !url_matches_filters(&lease.url, &include_url_regex, &exclude_url_regex) {
@@ -275,12 +353,16 @@ pub async fn crawl_bounded<T: CrawlTransport>(
             };
             let Some(next) = next else { break };
             let delay = next.saturating_sub(now_ms());
-            tokio::time::sleep(std::time::Duration::from_millis(delay.clamp(1, 1_000) as u64))
-                .await;
+            tokio::time::sleep(std::time::Duration::from_millis(
+                delay.clamp(1, 1_000) as u64
+            ))
+            .await;
             continue;
         }
 
-        let Some((lease, result)) = active.next().await else { break };
+        let Some((lease, result)) = active.next().await else {
+            break;
+        };
         match result {
             Ok(response) if (200..400).contains(&response.status) => {
                 let response_url = normalize_page_url(
@@ -291,7 +373,11 @@ pub async fn crawl_bounded<T: CrawlTransport>(
                 .unwrap_or_else(|_| lease.url.clone());
                 if !domain_allowed(&response_url, &allowed) {
                     frontier.mark_rejected(&lease, "redirect left allowed_domains")?;
-                    report.retain_error(lease.url.to_string(), "redirect left allowed_domains".into(), options);
+                    report.retain_error(
+                        lease.url.to_string(),
+                        "redirect left allowed_domains".into(),
+                        options,
+                    );
                     continue;
                 }
                 let is_html = response
@@ -303,8 +389,11 @@ pub async fn crawl_bounded<T: CrawlTransport>(
                 } else {
                     Extracted::default()
                 };
-                let hash_text =
-                    if extracted.text.trim().is_empty() { &response.body } else { &extracted.text };
+                let hash_text = if extracted.text.trim().is_empty() {
+                    &response.body
+                } else {
+                    &extracted.text
+                };
                 let record = PageRecord {
                     title: extracted.title.clone(),
                     markdown: extracted.markdown.clone(),
@@ -326,26 +415,29 @@ pub async fn crawl_bounded<T: CrawlTransport>(
                 match status {
                     StoredPage::ExactDuplicate => report.exact_duplicates += 1,
                     StoredPage::NearDuplicate => report.near_duplicates += 1,
-                    StoredPage::New => {},
+                    StoredPage::New => {}
                 }
-                report.retain_page(CrawlPage {
-                    url: response_url,
-                    depth: lease.depth,
-                    status: response.status,
-                    extracted,
-                    duplicate: status != StoredPage::New,
-                    discovered_links,
-                }, options);
-            },
+                report.retain_page(
+                    CrawlPage {
+                        url: response_url,
+                        depth: lease.depth,
+                        status: response.status,
+                        extracted,
+                        duplicate: status != StoredPage::New,
+                        discovered_links,
+                    },
+                    options,
+                );
+            }
             Ok(response) => {
                 let error = format!("HTTP {}", response.status);
                 frontier.mark_failed(&lease, &error)?;
                 report.retain_error(lease.url.to_string(), error, options);
-            },
+            }
             Err(error) => {
                 frontier.mark_failed(&lease, &error)?;
                 report.retain_error(lease.url.to_string(), error, options);
-            },
+            }
         }
     }
     report.frontier = frontier.stats()?;
@@ -368,7 +460,10 @@ pub struct CrawlDaemonOptions {
 impl Default for CrawlDaemonOptions {
     fn default() -> Self {
         Self {
-            base: CrawlOptions { wait_for_revisits: true, ..CrawlOptions::default() },
+            base: CrawlOptions {
+                wait_for_revisits: true,
+                ..CrawlOptions::default()
+            },
             idle_poll_ms: 1_000,
             maintenance_interval_ms: 10_000,
             max_iterations: None,
@@ -425,8 +520,12 @@ pub async fn crawl_daemon<T: CrawlTransport>(
         accumulated.sitemaps_pending = step_report.sitemaps_pending;
         accumulated.sitemap_hosts_pending = step_report.sitemap_hosts_pending;
         accumulated.sitemap_budget_exhausted |= step_report.sitemap_budget_exhausted;
-        for (url,error) in step_report.errors { accumulated.error_detail(url,error,&options.base); }
-        for page in step_report.pages { accumulated.page_detail(page,&options.base); }
+        for (url, error) in step_report.errors {
+            accumulated.error_detail(url, error, &options.base);
+        }
+        for page in step_report.pages {
+            accumulated.page_detail(page, &options.base);
+        }
         accumulated.frontier = step_report.frontier;
 
         if pages_count == 0 {
@@ -437,7 +536,7 @@ pub async fn crawl_daemon<T: CrawlTransport>(
                     Some(due) if due > current_time => {
                         let diff = (due - current_time) as u64;
                         diff.min(options.idle_poll_ms)
-                    },
+                    }
                     _ => options.idle_poll_ms,
                 };
                 tokio::time::sleep(std::time::Duration::from_millis(sleep_duration)).await;
@@ -450,14 +549,19 @@ pub async fn crawl_daemon<T: CrawlTransport>(
 }
 
 fn now_ms() -> i64 {
-    let millis = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_millis();
+    let millis = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_millis();
     i64::try_from(millis).unwrap_or(i64::MAX)
 }
 
 fn domain_allowed(url: &Url, allowed: &HashSet<String>) -> bool {
     let host = url.host_str().unwrap_or_default().to_ascii_lowercase();
     allowed.is_empty()
-        || allowed.iter().any(|domain| host == *domain || host.ends_with(&format!(".{domain}")))
+        || allowed
+            .iter()
+            .any(|domain| host == *domain || host.ends_with(&format!(".{domain}")))
 }
 
 fn url_matches_filters(url: &Url, include: &[Regex], exclude: &[Regex]) -> bool {
@@ -484,12 +588,14 @@ async fn load_robots<'a, T: CrawlTransport>(
 ) -> &'a RobotsFile {
     let origin = page_url.origin().ascii_serialization();
     if !cache.contains_key(&origin) {
-        let robots_url = page_url.join("/robots.txt").expect("HTTP page URL has an origin");
+        let robots_url = page_url
+            .join("/robots.txt")
+            .expect("HTTP page URL has an origin");
         let content = match transport.fetch(&robots_url).await {
             Ok(response) if response.status < 400 && response.body.len() <= 1024 * 1024 => {
                 report.robots_fetched += 1;
                 response.body
-            },
+            }
             _ => String::new(),
         };
         cache.insert(origin.clone(), RobotsFile::parse(&robots_url, &content));
@@ -508,7 +614,9 @@ async fn ingest_seed_sitemaps<T: CrawlTransport>(
     let mut origins = HashSet::new();
     let mut scope_hosts: Vec<_> = allowed.iter().cloned().collect();
     scope_hosts.sort_unstable();
-    let scope = blake3::hash(scope_hosts.join("\n").as_bytes()).to_hex().to_string();
+    let scope = blake3::hash(scope_hosts.join("\n").as_bytes())
+        .to_hex()
+        .to_string();
     for raw in frontier.undiscovered_seed_urls(&scope, 32)? {
         let Ok(url) = Url::parse(&raw) else { continue };
         if !domain_allowed(&url, allowed) || !origins.insert(url.origin().ascii_serialization()) {
@@ -526,7 +634,11 @@ async fn ingest_seed_sitemaps<T: CrawlTransport>(
                 frontier.enqueue_sitemap(&fallback)?;
             }
         } else {
-            for sitemap in policy.sitemaps().iter().filter(|url| domain_allowed(url, allowed)) {
+            for sitemap in policy
+                .sitemaps()
+                .iter()
+                .filter(|url| domain_allowed(url, allowed))
+            {
                 frontier.enqueue_sitemap(sitemap)?;
             }
         }
@@ -538,12 +650,20 @@ async fn ingest_seed_sitemaps<T: CrawlTransport>(
     let mut seen = HashSet::new();
     let limit = options.max_sitemaps.min(100);
     let mut sitemap_queue: VecDeque<_> = frontier.pending_sitemaps(allowed, limit)?.into();
-    let mut queued: HashSet<String> = sitemap_queue.iter().map(|(url, _, _)| url.clone()).collect();
+    let mut queued: HashSet<String> = sitemap_queue
+        .iter()
+        .map(|(url, _, _)| url.clone())
+        .collect();
     let mut attempts = 0;
     while attempts < limit {
         let remaining = 50_000usize.saturating_sub(report.sitemap_entries_processed);
-        if remaining == 0 { report.sitemap_budget_exhausted = true; break; }
-        let Some((raw, offset, previous_hash)) = sitemap_queue.pop_front() else { break };
+        if remaining == 0 {
+            report.sitemap_budget_exhausted = true;
+            break;
+        }
+        let Some((raw, offset, previous_hash)) = sitemap_queue.pop_front() else {
+            break;
+        };
         let Ok(url) = Url::parse(&raw) else { continue };
         if !domain_allowed(&url, allowed) || !seen.insert(url.as_str().to_owned()) {
             continue;
@@ -551,18 +671,36 @@ async fn ingest_seed_sitemaps<T: CrawlTransport>(
         attempts += 1;
         let response = match transport.fetch_sitemap(&url).await {
             Ok(response) => response,
-            Err(error) => { report.retain_error(url.to_string(), error, options); continue; },
+            Err(error) => {
+                report.retain_error(url.to_string(), error, options);
+                continue;
+            }
         };
-        if response.status != 200 || response.body.len() > 16 * 1024 * 1024 || !domain_allowed(&response.url, allowed) {
-            report.retain_error(url.to_string(), "Sitemap fetch failed or exceeded its byte bound".into(), options);
+        if response.status != 200
+            || response.body.len() > 16 * 1024 * 1024
+            || !domain_allowed(&response.url, allowed)
+        {
+            report.retain_error(
+                url.to_string(),
+                "Sitemap fetch failed or exceeded its byte bound".into(),
+                options,
+            );
             continue;
         }
         report.sitemaps_fetched += 1;
         let body_hash = blake3::hash(response.body.as_bytes()).to_hex().to_string();
-        let offset = if previous_hash.as_deref().is_some_and(|previous| previous != body_hash) { 0 } else { offset };
+        let offset = if previous_hash
+            .as_deref()
+            .is_some_and(|previous| previous != body_hash)
+        {
+            0
+        } else {
+            offset
+        };
         let parsed = parse_sitemap_page(&response.body, &response.url, offset, remaining);
         if let Some(error) = parsed.error {
-            report.retain_error(url.to_string(), error.into(), options); continue;
+            report.retain_error(url.to_string(), error.into(), options);
+            continue;
         }
         report.sitemap_entries_processed += parsed.entries_processed;
         for nested in parsed.sitemaps {
@@ -593,8 +731,12 @@ async fn ingest_seed_sitemaps<T: CrawlTransport>(
     }
     report.sitemaps_pending = frontier.sitemap_pending_count(allowed)?;
     report.sitemap_hosts_pending = frontier.sitemap_hosts_pending_count(&scope)?;
-    if report.sitemap_hosts_pending > 0 { report.sitemap_budget_exhausted = true; }
-    if attempts >= limit && report.sitemaps_pending > 0 { report.sitemap_budget_exhausted = true; }
+    if report.sitemap_hosts_pending > 0 {
+        report.sitemap_budget_exhausted = true;
+    }
+    if attempts >= limit && report.sitemaps_pending > 0 {
+        report.sitemap_budget_exhausted = true;
+    }
     Ok(())
 }
 
@@ -610,7 +752,8 @@ pub fn extract_links_opts(html: &str, page_url: &Url, skip_nofollow: bool) -> Ve
             (
                 node.get_attribute("href").map(str::to_owned),
                 node.get_attribute("rel").is_some_and(|rel| {
-                    rel.split_ascii_whitespace().any(|part| part.eq_ignore_ascii_case("nofollow"))
+                    rel.split_ascii_whitespace()
+                        .any(|part| part.eq_ignore_ascii_case("nofollow"))
                 }),
             )
         }) else {
@@ -657,7 +800,9 @@ mod tests {
     #[tokio::test]
     async fn bounded_crawl_follows_links_and_respects_host_scope() {
         let mut frontier = Frontier::memory(FrontierOptions::default()).unwrap();
-        frontier.enqueue(AddRequest::seed("https://example.test/"), now_ms()).unwrap();
+        frontier
+            .enqueue(AddRequest::seed("https://example.test/"), now_ms())
+            .unwrap();
         let pages = HashMap::from([
             ("https://example.test/".into(), "<main><h1>Home</h1><p>A useful page with enough content for extraction.</p><a href='/next#part'>Next</a><a href='https://elsewhere.test/'>Elsewhere</a></main>".into()),
             ("https://example.test/next".into(), "<main><h1>Next</h1><p>Another useful page with different content for extraction.</p></main>".into()),
@@ -666,7 +811,9 @@ mod tests {
             allowed_domains: vec!["example.test".into()],
             ..CrawlOptions::default()
         };
-        let report = crawl_bounded(&mut frontier, &Fixture(pages), &options).await.unwrap();
+        let report = crawl_bounded(&mut frontier, &Fixture(pages), &options)
+            .await
+            .unwrap();
         assert_eq!(report.pages.len(), 2);
         assert_eq!(report.frontier.done, 2);
         assert_eq!(report.pages[0].discovered_links, 1);
@@ -675,7 +822,9 @@ mod tests {
     #[tokio::test]
     async fn robots_and_nested_sitemaps_seed_allowed_pages() {
         let mut frontier = Frontier::memory(FrontierOptions::default()).unwrap();
-        frontier.enqueue(AddRequest::seed("https://example.test/private"), now_ms()).unwrap();
+        frontier
+            .enqueue(AddRequest::seed("https://example.test/private"), now_ms())
+            .unwrap();
         let pages = HashMap::from([
             ("https://example.test/robots.txt".into(), "User-agent: *\nDisallow: /private\nCrawl-delay: 0.001\nSitemap: /sitemap.xml".into()),
             ("https://example.test/sitemap.xml".into(), "<sitemapindex><sitemap><loc>https://example.test/more.xml</loc></sitemap></sitemapindex>".into()),
@@ -688,7 +837,9 @@ mod tests {
             allowed_domains: vec!["example.test".into()],
             ..CrawlOptions::default()
         };
-        let report = crawl_bounded(&mut frontier, &Fixture(pages), &options).await.unwrap();
+        let report = crawl_bounded(&mut frontier, &Fixture(pages), &options)
+            .await
+            .unwrap();
         assert_eq!(report.robots_fetched, 1);
         assert_eq!(report.sitemaps_fetched, 2);
         assert_eq!(report.sitemap_urls_enqueued, 1);
@@ -718,29 +869,57 @@ mod tests {
             socket.write_all(b"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nTransfer-Encoding: chunked\r\nConnection: close\r\n\r\n").await.unwrap();
             let chunk = [b'a'; 32768];
             for _ in 0..288 {
-                if socket.write_all(b"8000\r\n").await.is_err() || socket.write_all(&chunk).await.is_err() || socket.write_all(b"\r\n").await.is_err() { return; }
+                if socket.write_all(b"8000\r\n").await.is_err()
+                    || socket.write_all(&chunk).await.is_err()
+                    || socket.write_all(b"\r\n").await.is_err()
+                {
+                    return;
+                }
             }
             let _ = socket.write_all(b"0\r\n\r\n").await;
         });
-        let client = bun_browser_net::BunBrowserHttpClient::with_full_options(std::sync::Arc::new(bun_browser_net::CookieJar::new()), None, true);
-        assert!(BunBrowserTransport::new(client).fetch_archive(&url).await.err().expect("archive byte bound").contains("Response body exceeded 8388608 byte limit"));
+        let client = bun_browser_net::BunBrowserHttpClient::with_full_options(
+            std::sync::Arc::new(bun_browser_net::CookieJar::new()),
+            None,
+            true,
+        );
+        assert!(
+            BunBrowserTransport::new(client)
+                .fetch_archive(&url)
+                .await
+                .err()
+                .expect("archive byte bound")
+                .contains("Response body exceeded 8388608 byte limit")
+        );
         server.await.unwrap();
     }
 
     #[tokio::test]
     async fn page_details_can_be_disabled_without_losing_corpus_or_progress() {
         let mut frontier = Frontier::memory(FrontierOptions::default()).unwrap();
-        frontier.enqueue(AddRequest::seed("https://example.test/"), now_ms()).unwrap();
+        frontier
+            .enqueue(AddRequest::seed("https://example.test/"), now_ms())
+            .unwrap();
         let fixture = Fixture(HashMap::from([("https://example.test/".into(), "<main><h1>Fixture</h1><p>A useful fixture paragraph retained in the corpus.</p></main>".into())]));
-        let options = CrawlOptions { report_detail_limit: 0, max_requests: 1, ..CrawlOptions::default() };
-        let report = crawl_bounded(&mut frontier, &fixture, &options).await.unwrap();
+        let options = CrawlOptions {
+            report_detail_limit: 0,
+            max_requests: 1,
+            ..CrawlOptions::default()
+        };
+        let report = crawl_bounded(&mut frontier, &fixture, &options)
+            .await
+            .unwrap();
         assert!(report.pages.is_empty());
         assert_eq!(report.pages_processed, 1);
         assert_eq!(report.page_details_dropped, 1);
         assert!(frontier.page("https://example.test/").unwrap().is_some());
         let mut aggregate = CrawlReport::default();
         for _ in 0..100 {
-            aggregate.retain_error("https://fixture.test/".into(), "fixture error".into(), &CrawlOptions::default());
+            aggregate.retain_error(
+                "https://fixture.test/".into(),
+                "fixture error".into(),
+                &CrawlOptions::default(),
+            );
         }
         assert_eq!(aggregate.error_count, 100);
         assert_eq!(aggregate.errors.len(), 32);
@@ -750,27 +929,46 @@ mod tests {
     #[tokio::test]
     async fn sitemap_budget_keeps_nested_work_in_the_persistent_frontier() {
         let mut frontier = Frontier::memory(FrontierOptions::default()).unwrap();
-        frontier.enqueue(AddRequest::seed("https://example.test/"), now_ms()).unwrap();
+        frontier
+            .enqueue(AddRequest::seed("https://example.test/"), now_ms())
+            .unwrap();
         let pages = HashMap::from([
             ("https://example.test/robots.txt".into(), "Sitemap: /sitemap.xml".into()),
             ("https://example.test/sitemap.xml".into(), "<sitemapindex><sitemap><loc>/a.xml</loc></sitemap><sitemap><loc>/b.xml</loc></sitemap><sitemap><loc>/c.xml</loc></sitemap></sitemapindex>".into()),
             ("https://example.test/a.xml".into(), "<urlset><url><loc>/leaf-a</loc></url></urlset>".into()),
         ]);
-        let options = CrawlOptions { ingest_sitemaps: true, max_sitemaps: 1, max_requests: 0, allowed_domains: vec!["example.test".into()], ..CrawlOptions::default() };
-        let first = crawl_bounded(&mut frontier, &Fixture(pages.clone()), &options).await.unwrap();
+        let options = CrawlOptions {
+            ingest_sitemaps: true,
+            max_sitemaps: 1,
+            max_requests: 0,
+            allowed_domains: vec!["example.test".into()],
+            ..CrawlOptions::default()
+        };
+        let first = crawl_bounded(&mut frontier, &Fixture(pages.clone()), &options)
+            .await
+            .unwrap();
         assert_eq!(first.sitemaps_fetched, 1);
         assert_eq!(first.sitemaps_pending, 3);
         assert!(first.sitemap_budget_exhausted);
-        let second = crawl_bounded(&mut frontier, &Fixture(pages), &options).await.unwrap();
+        let second = crawl_bounded(&mut frontier, &Fixture(pages), &options)
+            .await
+            .unwrap();
         assert_eq!(second.sitemaps_fetched, 1);
         assert_eq!(second.sitemaps_pending, 2);
-        assert!(frontier.known_urls().unwrap().contains("https://example.test/leaf-a"));
+        assert!(
+            frontier
+                .known_urls()
+                .unwrap()
+                .contains("https://example.test/leaf-a")
+        );
     }
 
     #[tokio::test]
     async fn daemon_crawl_terminates_at_max_iterations_and_accumulates_results() {
         let mut frontier = Frontier::memory(FrontierOptions::default()).unwrap();
-        frontier.enqueue(AddRequest::seed("https://daemon.test/"), now_ms()).unwrap();
+        frontier
+            .enqueue(AddRequest::seed("https://daemon.test/"), now_ms())
+            .unwrap();
         let pages = HashMap::from([(
             "https://daemon.test/".into(),
             "<main><h1>Daemon Home</h1><p>Daemon content is long enough to extract.</p></main>"
@@ -785,7 +983,9 @@ mod tests {
             idle_poll_ms: 10,
             maintenance_interval_ms: 100,
         };
-        let report = crawl_daemon(&mut frontier, &Fixture(pages), &options, None).await.unwrap();
+        let report = crawl_daemon(&mut frontier, &Fixture(pages), &options, None)
+            .await
+            .unwrap();
         assert_eq!(report.pages.len(), 1);
         assert_eq!(report.frontier.done, 1);
     }

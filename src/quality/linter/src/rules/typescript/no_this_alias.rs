@@ -46,7 +46,10 @@ pub struct NoThisAliasConfig {
 
 impl Default for NoThisAliasConfig {
     fn default() -> Self {
-        Self { allow_destructuring: true, allowed_names: FxHashSet::default() }
+        Self {
+            allow_destructuring: true,
+            allowed_names: FxHashSet::default(),
+        }
     }
 }
 
@@ -185,17 +188,32 @@ fn test() {
             "const { props, state } = this;",
             Some(serde_json::json!([{ "allowDestructuring": true }])),
         ),
-        ("const { length } = this;", Some(serde_json::json!([{ "allowDestructuring": true }]))),
+        (
+            "const { length } = this;",
+            Some(serde_json::json!([{ "allowDestructuring": true }])),
+        ),
         (
             "const { length, toString } = this;",
             Some(serde_json::json!([{ "allowDestructuring": true }])),
         ),
-        ("const [foo] = this;", Some(serde_json::json!([{ "allowDestructuring": true }]))),
-        ("const [foo, bar] = this;", Some(serde_json::json!([{ "allowDestructuring": true }]))),
+        (
+            "const [foo] = this;",
+            Some(serde_json::json!([{ "allowDestructuring": true }])),
+        ),
+        (
+            "const [foo, bar] = this;",
+            Some(serde_json::json!([{ "allowDestructuring": true }])),
+        ),
         // allow list
-        ("const self = this;", Some(serde_json::json!([{ "allowedNames": vec!["self"] }]))),
+        (
+            "const self = this;",
+            Some(serde_json::json!([{ "allowedNames": vec!["self"] }])),
+        ),
         // alternative key for backwards compatibility
-        ("const self = this;", Some(serde_json::json!([{ "allowNames": vec!["self"] }]))),
+        (
+            "const self = this;",
+            Some(serde_json::json!([{ "allowNames": vec!["self"] }])),
+        ),
     ];
 
     let fail = vec![
@@ -245,9 +263,15 @@ fn test() {
             Some(serde_json::json!([{ "allowDestructuring": false }])),
         ),
         // allow something else but not self
-        ("const self = this;", Some(serde_json::json!([{ "allowedNames": vec!["bar"] }]))),
+        (
+            "const self = this;",
+            Some(serde_json::json!([{ "allowedNames": vec!["bar"] }])),
+        ),
         // alternative key for backwards compatibility
-        ("const self = this;", Some(serde_json::json!([{ "allowNames": vec!["bar"] }]))),
+        (
+            "const self = this;",
+            Some(serde_json::json!([{ "allowNames": vec!["bar"] }])),
+        ),
     ];
 
     Tester::new(NoThisAlias::NAME, NoThisAlias::PLUGIN, pass, fail).test_and_snapshot();

@@ -7,7 +7,10 @@ pub fn format_number_token(
     text: &str,
     keep_one_trailing_decimal_zero: bool,
 ) -> CleanedNumberLiteralText<'_> {
-    CleanedNumberLiteralText { text, keep_one_trailing_decimal_zero }
+    CleanedNumberLiteralText {
+        text,
+        keep_one_trailing_decimal_zero,
+    }
 }
 
 pub struct CleanedNumberLiteralText<'a> {

@@ -55,7 +55,8 @@ impl<'buf, 'ast> JsFormatterExt<'buf, 'ast> for Formatter<'buf, 'ast, JsFormatCo
     /// of the first not-yet-printed comment. See [`SourceText::get_lines_before`].
     #[inline]
     fn lines_before(&self, span: Span) -> usize {
-        self.source_text().get_lines_before(span, self.comments().first_unprinted_span())
+        self.source_text()
+            .get_lines_before(span, self.comments().first_unprinted_span())
     }
 
     /// Creates a new group id that is unique to this document.
@@ -81,7 +82,9 @@ impl<'buf, 'ast> JsFormatterExt<'buf, 'ast> for Formatter<'buf, 'ast, JsFormatCo
         content: &(impl Format<'ast, JsFormatContext<'ast>> + GetSpan),
     ) -> bool {
         let snapshot = self.context().comments().snapshot();
-        self.context_mut().comments_mut().skip_comments_before(content.span().start);
+        self.context_mut()
+            .comments_mut()
+            .skip_comments_before(content.span().start);
         let will_break = self.intern(content).is_some_and(|e| e.will_break());
         self.context_mut().comments_mut().restore(snapshot);
         will_break

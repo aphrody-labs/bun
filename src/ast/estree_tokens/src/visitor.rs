@@ -98,26 +98,32 @@ impl<'a, C: Context> Visit<'a> for Visitor<C> {
 
     fn visit_identifier_name(&mut self, identifier: &IdentifierName<'a>) {
         if self.ctx.is_ts() && self.ctx.jsx_state().should_emit_jsx_identifier() {
-            self.ctx.emit_jsx_identifier_at(identifier.span.start, &identifier.name);
+            self.ctx
+                .emit_jsx_identifier_at(identifier.span.start, &identifier.name);
         } else {
-            self.ctx.emit_identifier_at(identifier.span.start, &identifier.name);
+            self.ctx
+                .emit_identifier_at(identifier.span.start, &identifier.name);
         }
     }
 
     fn visit_identifier_reference(&mut self, identifier: &IdentifierReference<'a>) {
         if self.ctx.is_ts() && self.ctx.jsx_state().should_emit_jsx_identifier() {
-            self.ctx.emit_jsx_identifier_at(identifier.span.start, &identifier.name);
+            self.ctx
+                .emit_jsx_identifier_at(identifier.span.start, &identifier.name);
         } else {
-            self.ctx.emit_identifier_at(identifier.span.start, &identifier.name);
+            self.ctx
+                .emit_identifier_at(identifier.span.start, &identifier.name);
         }
     }
 
     fn visit_binding_identifier(&mut self, identifier: &BindingIdentifier<'a>) {
-        self.ctx.emit_identifier_at(identifier.span.start, &identifier.name);
+        self.ctx
+            .emit_identifier_at(identifier.span.start, &identifier.name);
     }
 
     fn visit_label_identifier(&mut self, identifier: &LabelIdentifier<'a>) {
-        self.ctx.emit_identifier_at(identifier.span.start, &identifier.name);
+        self.ctx
+            .emit_identifier_at(identifier.span.start, &identifier.name);
     }
 
     fn visit_private_identifier(&mut self, identifier: &PrivateIdentifier<'a>) {
@@ -170,12 +176,14 @@ impl<'a, C: Context> Visit<'a> for Visitor<C> {
     }
 
     fn visit_jsx_identifier(&mut self, identifier: &JSXIdentifier<'a>) {
-        self.ctx.emit_jsx_identifier_at(identifier.span.start, &identifier.name);
+        self.ctx
+            .emit_jsx_identifier_at(identifier.span.start, &identifier.name);
     }
 
     fn visit_jsx_element_name(&mut self, name: &JSXElementName<'a>) {
         if let JSXElementName::IdentifierReference(identifier) = name {
-            self.ctx.emit_jsx_identifier_at(identifier.span.start, &identifier.name);
+            self.ctx
+                .emit_jsx_identifier_at(identifier.span.start, &identifier.name);
         } else {
             walk::walk_jsx_element_name(self, name);
         }
@@ -183,7 +191,8 @@ impl<'a, C: Context> Visit<'a> for Visitor<C> {
 
     fn visit_jsx_member_expression_object(&mut self, object: &JSXMemberExpressionObject<'a>) {
         if let JSXMemberExpressionObject::IdentifierReference(identifier) = object {
-            self.ctx.emit_jsx_identifier_at(identifier.span.start, &identifier.name);
+            self.ctx
+                .emit_jsx_identifier_at(identifier.span.start, &identifier.name);
         } else {
             walk::walk_jsx_member_expression_object(self, object);
         }
@@ -191,8 +200,10 @@ impl<'a, C: Context> Visit<'a> for Visitor<C> {
 
     fn visit_jsx_namespaced_name(&mut self, name: &JSXNamespacedName<'a>) {
         if self.ctx.is_js() {
-            self.ctx.emit_jsx_identifier_at(name.namespace.span.start, &name.namespace.name);
-            self.ctx.emit_jsx_identifier_at(name.name.span.start, &name.name.name);
+            self.ctx
+                .emit_jsx_identifier_at(name.namespace.span.start, &name.namespace.name);
+            self.ctx
+                .emit_jsx_identifier_at(name.name.span.start, &name.name.name);
         } else {
             // In TS mode, these tokens retain their default type (`Identifier`)
         }
@@ -205,7 +216,9 @@ impl<'a, C: Context> Visit<'a> for Visitor<C> {
     }
 
     fn visit_member_expression(&mut self, member_expr: &MemberExpression<'a>) {
-        self.ctx.jsx_state_mut().enter_member_expression(member_expr);
+        self.ctx
+            .jsx_state_mut()
+            .enter_member_expression(member_expr);
         walk::walk_member_expression(self, member_expr);
         self.ctx.jsx_state_mut().exit_member_expression(member_expr);
     }

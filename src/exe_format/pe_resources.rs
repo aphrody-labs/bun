@@ -37,8 +37,17 @@ impl Ord for ResId {
         use core::cmp::Ordering;
         match (self, other) {
             (ResId::Name(a), ResId::Name(b)) => {
-                let upper = |c: &u16| if (u16::from(b'a')..=u16::from(b'z')).contains(c) { *c - 32 } else { *c };
-                a.iter().map(upper).cmp(b.iter().map(upper)).then_with(|| a.cmp(b))
+                let upper = |c: &u16| {
+                    if (u16::from(b'a')..=u16::from(b'z')).contains(c) {
+                        *c - 32
+                    } else {
+                        *c
+                    }
+                };
+                a.iter()
+                    .map(upper)
+                    .cmp(b.iter().map(upper))
+                    .then_with(|| a.cmp(b))
             }
             (ResId::Name(_), ResId::Id(_)) => Ordering::Less,
             (ResId::Id(_), ResId::Name(_)) => Ordering::Greater,
@@ -172,8 +181,10 @@ pub(crate) fn serialize_tree(tree: &Tree, rva: u32) -> Result<Vec<u8>, Error> {
     }
 
     let mut out = vec![0u8; total];
-    let put16 = |out: &mut [u8], at: usize, v: u16| out[at..at + 2].copy_from_slice(&v.to_le_bytes());
-    let put32 = |out: &mut [u8], at: usize, v: u32| out[at..at + 4].copy_from_slice(&v.to_le_bytes());
+    let put16 =
+        |out: &mut [u8], at: usize, v: u16| out[at..at + 2].copy_from_slice(&v.to_le_bytes());
+    let put32 =
+        |out: &mut [u8], at: usize, v: u32| out[at..at + 4].copy_from_slice(&v.to_le_bytes());
 
     let mut next_dir = 0usize;
     let mut next_entry = entries_start;
@@ -214,14 +225,22 @@ pub(crate) fn serialize_tree(tree: &Tree, rva: u32) -> Result<Vec<u8>, Error> {
         next_dir += dir_size(names.len());
         let name_word = write_name(&mut out, ty, &mut next_string);
         put32(&mut out, root + 16 + ti * 8, name_word);
-        put32(&mut out, root + 16 + ti * 8 + 4, 0x8000_0000 | names_dir as u32);
+        put32(
+            &mut out,
+            root + 16 + ti * 8 + 4,
+            0x8000_0000 | names_dir as u32,
+        );
         write_header(&mut out, names_dir, &mut names.keys());
         for (ni, (name, langs)) in names.iter().enumerate() {
             let langs_dir = next_dir;
             next_dir += dir_size(langs.len());
             let name_word = write_name(&mut out, name, &mut next_string);
             put32(&mut out, names_dir + 16 + ni * 8, name_word);
-            put32(&mut out, names_dir + 16 + ni * 8 + 4, 0x8000_0000 | langs_dir as u32);
+            put32(
+                &mut out,
+                names_dir + 16 + ni * 8 + 4,
+                0x8000_0000 | langs_dir as u32,
+            );
             put16(&mut out, langs_dir + 14, langs.len() as u16);
             for (li, (lang, leaf)) in langs.iter().enumerate() {
                 let entry = next_entry;
@@ -277,7 +296,10 @@ pub(crate) fn apply(tree: &mut Tree, meta: &WindowsMetadata<'_>) -> Result<(), E
     let name = names.keys().next().cloned().unwrap_or(ResId::Id(1));
     let langs = names.entry(name).or_default();
     let lang = langs.keys().next().copied().unwrap_or(LANG_EN_US);
-    let leaf = langs.entry(lang).or_insert_with(|| Leaf { code_page: 0, data: Vec::new() });
+    let leaf = langs.entry(lang).or_insert_with(|| Leaf {
+        code_page: 0,
+        data: Vec::new(),
+    });
 
     let mut root = if leaf.data.is_empty() {
         VNode::new("VS_VERSION_INFO", 0, Vec::new())
@@ -301,7 +323,8 @@ pub(crate) fn apply(tree: &mut Tree, meta: &WindowsMetadata<'_>) -> Result<(), E
 }
 
 fn utf16(bytes: &[u8]) -> Result<Vec<u16>, Error> {
-    bun_core::strings::to_utf16_alloc_for_real(bytes, false, false).map_err(|_| Error::InvalidResources)
+    bun_core::strings::to_utf16_alloc_for_real(bytes, false, false)
+        .map_err(|_| Error::InvalidResources)
 }
 
 /// `1`, `1.2`, `1.2.3` or `1.2.3.4`, each part 0 to 65535; missing parts are 0.
@@ -312,7 +335,8 @@ pub(crate) fn parse_version(v: &[u8]) -> Result<[u16; 4], Error> {
         if count == 4 {
             return Err(Error::InvalidVersionFormat);
         }
-        out[count] = bun_core::fmt::parse_unsigned::<u16>(part, 10).map_err(|_| Error::InvalidVersionFormat)?;
+        out[count] = bun_core::fmt::parse_unsigned::<u16>(part, 10)
+            .map_err(|_| Error::InvalidVersionFormat)?;
         count += 1;
     }
     if count == 0 {
@@ -332,11 +356,16 @@ fn set_icon(tree: &mut Tree, ico: &[u8]) -> Result<(), Error> {
     }
     let mut images = Vec::with_capacity(count);
     for i in 0..count {
-        let entry = ico.get(6 + i * 16..6 + i * 16 + 16).ok_or(Error::InvalidIcon)?;
+        let entry = ico
+            .get(6 + i * 16..6 + i * 16 + 16)
+            .ok_or(Error::InvalidIcon)?;
         let size = u32::from_le_bytes([entry[8], entry[9], entry[10], entry[11]]) as usize;
         let offset = u32::from_le_bytes([entry[12], entry[13], entry[14], entry[15]]) as usize;
         let end = offset.checked_add(size).ok_or(Error::InvalidIcon)?;
-        let data = ico.get(offset..end).filter(|d| !d.is_empty()).ok_or(Error::InvalidIcon)?;
+        let data = ico
+            .get(offset..end)
+            .filter(|d| !d.is_empty())
+            .ok_or(Error::InvalidIcon)?;
         images.push((&entry[..12], data));
     }
 
@@ -352,7 +381,9 @@ fn set_icon(tree: &mut Tree, ico: &[u8]) -> Result<(), Error> {
         .find(|(_, langs)| langs.contains_key(&lang))
         .map(|(name, _)| name.clone())
         .unwrap_or(ResId::Id(1));
-    let old_group = groups.get_mut(&group_name).and_then(|langs| langs.remove(&lang));
+    let old_group = groups
+        .get_mut(&group_name)
+        .and_then(|langs| langs.remove(&lang));
 
     let icons = tree.entry(ResId::Id(RT_ICON)).or_default();
     if let Some(old) = old_group {
@@ -378,16 +409,25 @@ fn set_icon(tree: &mut Tree, ico: &[u8]) -> Result<(), Error> {
         // GRPICONDIRENTRY is ICONDIRENTRY with the 4-byte image offset replaced by a 2-byte id.
         group.extend_from_slice(header);
         group.extend_from_slice(&next_id.to_le_bytes());
-        icons
-            .entry(ResId::Id(next_id))
-            .or_default()
-            .insert(lang, Leaf { code_page: 0, data: data.to_vec() });
+        icons.entry(ResId::Id(next_id)).or_default().insert(
+            lang,
+            Leaf {
+                code_page: 0,
+                data: data.to_vec(),
+            },
+        );
     }
     tree.entry(ResId::Id(RT_GROUP_ICON))
         .or_default()
         .entry(group_name)
         .or_default()
-        .insert(lang, Leaf { code_page: 0, data: group });
+        .insert(
+            lang,
+            Leaf {
+                code_page: 0,
+                data: group,
+            },
+        );
     Ok(())
 }
 
@@ -436,7 +476,10 @@ impl VNode {
 
     fn parse(b: &[u8], depth: u8) -> Result<VNode, Error> {
         let len = usize::from(u16_at(b, 0)?);
-        let b = b.get(..len).filter(|_| len >= 6).ok_or(Error::InvalidResources)?;
+        let b = b
+            .get(..len)
+            .filter(|_| len >= 6)
+            .ok_or(Error::InvalidResources)?;
         let value_len = u16_at(b, 2)?;
         let ty = u16_at(b, 4)?;
         let mut key = Vec::new();
@@ -450,11 +493,21 @@ impl VNode {
             key.push(c);
         }
         off = align4(off).min(len);
-        let value_bytes = if ty == 1 { usize::from(value_len) * 2 } else { usize::from(value_len) };
+        let value_bytes = if ty == 1 {
+            usize::from(value_len) * 2
+        } else {
+            usize::from(value_len)
+        };
         let value_end = (off + value_bytes).min(len);
         let value = b[off..value_end].to_vec();
         off = align4(value_end);
-        let mut node = VNode { key, ty, value_len, value, children: Vec::new() };
+        let mut node = VNode {
+            key,
+            ty,
+            value_len,
+            value,
+            children: Vec::new(),
+        };
         // Only VS_VERSION_INFO, StringFileInfo, VarFileInfo and string tables have children.
         if depth == 0 || (node.value.is_empty() && depth < 3) {
             while off + 6 <= len {
@@ -505,7 +558,8 @@ impl VNode {
                 .iter()
                 .position(|c| c.key_is("VarFileInfo"))
                 .unwrap_or(self.children.len());
-            self.children.insert(at, VNode::new("StringFileInfo", 1, Vec::new()));
+            self.children
+                .insert(at, VNode::new("StringFileInfo", 1, Vec::new()));
         }
         if !self.children.iter().any(|c| c.key_is("VarFileInfo")) {
             let translation = u32::from(CODE_PAGE_UNICODE) << 16 | u32::from(LANG_EN_US);
@@ -515,7 +569,11 @@ impl VNode {
             var_file_info.children.push(var);
             self.children.push(var_file_info);
         }
-        let Some(file_info) = self.children.iter_mut().find(|c| c.key_is("StringFileInfo")) else {
+        let Some(file_info) = self
+            .children
+            .iter_mut()
+            .find(|c| c.key_is("StringFileInfo"))
+        else {
             return;
         };
         if file_info.children.is_empty() {

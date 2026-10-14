@@ -31,6 +31,12 @@ static RANGES: &[u16] = &[
     48255u16,
 ];
 pub fn get_usage_by_region(name: &str) -> Option<RegionData> {
-    let index = KEYS.get().binary_search_by(|key| key.as_str().cmp(name)).ok()?;
-    Some(RegionData::new(RANGES[index].into(), RANGES[index + 1].into()))
+    let index = KEYS
+        .get()
+        .binary_search_by(|key| key.as_str().cmp(name))
+        .ok()?;
+    Some(RegionData::new(
+        RANGES[index].into(),
+        RANGES[index + 1].into(),
+    ))
 }

@@ -146,8 +146,9 @@ impl<'a> Transformer<'a> {
         {
             // Only scan comments before the first statement for pragmas,
             // since pragmas are file-level directives (aligned with TypeScript and SWC).
-            let leading_comments_end =
-                program.comments.partition_point(|c| c.span.start < first_statement.span().start);
+            let leading_comments_end = program
+                .comments
+                .partition_point(|c| c.span.start < first_statement.span().start);
             jsx::update_options_with_comments(
                 &program.comments[..leading_comments_end],
                 &mut self.typescript,
@@ -192,7 +193,11 @@ impl<'a> Transformer<'a> {
         let helpers_used = std::mem::take(&mut state.helper_loader.used_helpers);
         let diagnostics = state.take_errors().into();
         #[expect(deprecated)]
-        TransformerReturn { diagnostics, scoping, helpers_used }
+        TransformerReturn {
+            diagnostics,
+            scoping,
+            helpers_used,
+        }
     }
 }
 

@@ -31,7 +31,11 @@ pub fn collect_link<'a>(
 ) {
     parts.push_str("[");
     match &link.kind {
-        LinkKind::Inline { .. } | LinkKind::Reference { kind: ReferenceKind::Full, .. } => {
+        LinkKind::Inline { .. }
+        | LinkKind::Reference {
+            kind: ReferenceKind::Full,
+            ..
+        } => {
             // The text's delimiter runs pair on their own (bracket level).
             // A full reference's text wraps like any text: its `][label]` tail is short.
             // An inline link's does not: its `](url)` tail is unbreakable and usually what overflows,
@@ -47,8 +51,14 @@ pub fn collect_link<'a>(
             }
             let text_end = parts.len();
             push_target(&link.kind, parts, f);
-            parts.mark(Mark::Group { start: text_start, end: text_end });
-            parts.mark(Mark::Opaque { start: text_end, end: parts.len() });
+            parts.mark(Mark::Group {
+                start: text_start,
+                end: text_end,
+            });
+            parts.mark(Mark::Opaque {
+                start: text_end,
+                end: parts.len(),
+            });
         }
         LinkKind::Reference { kind, .. } => {
             // Kept as written, re-split into words for wrapping
@@ -67,7 +77,11 @@ pub fn collect_image<'a>(
     f: &MarkdownFormatter<'_, 'a>,
 ) {
     match &image.kind {
-        LinkKind::Inline { .. } | LinkKind::Reference { kind: ReferenceKind::Full, .. } => {
+        LinkKind::Inline { .. }
+        | LinkKind::Reference {
+            kind: ReferenceKind::Full,
+            ..
+        } => {
             parts.push_str("![");
             parts.push_lines(join_pieces(&image.alt, f), Atom::VerbatimLine);
             push_target(&image.kind, parts, f);
@@ -89,7 +103,11 @@ fn push_target<'a>(kind: &LinkKind<'a>, parts: &mut Parts<'a>, f: &MarkdownForma
             let source = f.context().source_text().as_str();
             let url = decode::destination(source, destination);
             parts.push_str("](");
-            parts.push_str(if url.is_empty() { "<>" } else { print_url(&url, false, f) });
+            parts.push_str(if url.is_empty() {
+                "<>"
+            } else {
+                print_url(&url, false, f)
+            });
             if let Some(title) = title {
                 let cooked = decode::title(source, title);
                 if !cooked.is_empty() {
@@ -112,7 +130,10 @@ fn collect_raw_children<'a>(
     parts: &mut Parts<'a>,
     f: &MarkdownFormatter<'_, 'a>,
 ) {
-    let cx = words::TextContext { is_link: true, ..words::TextContext::default() };
+    let cx = words::TextContext {
+        is_link: true,
+        ..words::TextContext::default()
+    };
     for child in children {
         match child {
             Inline::SoftBreak(_) => {
@@ -128,7 +149,11 @@ pub fn write_definition<'a>(definition: &'a Definition<'a>, f: &mut MarkdownForm
     let source = f.context().source_text().as_str();
     let label = print_label(&definition.label, f);
     let url = decode::destination(source, &definition.destination);
-    let url: &'a str = if url.is_empty() { "<>" } else { print_url(&url, true, f) };
+    let url: &'a str = if url.is_empty() {
+        "<>"
+    } else {
+        print_url(&url, true, f)
+    };
     // An empty title (`""`) is dropped
     let title: Option<&'a str> = definition
         .title

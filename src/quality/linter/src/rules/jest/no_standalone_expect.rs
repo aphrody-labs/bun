@@ -20,9 +20,9 @@ declare_oxc_lint!(
 
 impl Rule for NoStandaloneExpect {
     fn from_configuration(value: serde_json::Value) -> Result<Self, serde_json::error::Error> {
-        Ok(Self(Box::new(SharedNoStandaloneExpect::NoStandaloneExpectConfig::from_configuration(
-            value,
-        )?)))
+        Ok(Self(Box::new(
+            SharedNoStandaloneExpect::NoStandaloneExpectConfig::from_configuration(value)?,
+        )))
     }
 
     fn run_once(&self, ctx: &LintContext<'_>) {
@@ -37,19 +37,34 @@ fn test() {
     let pass = vec![
         ("expect.any(String)", None),
         ("expect.extend({})", None),
-        ("describe('a test', () => { it('an it', () => {expect(1).toBe(1); }); });", None),
+        (
+            "describe('a test', () => { it('an it', () => {expect(1).toBe(1); }); });",
+            None,
+        ),
         (
             "describe('a test', () => { it('an it', () => { const func = () => { expect(1).toBe(1); }; }); });",
             None,
         ),
-        ("describe('a test', () => { const func = () => { expect(1).toBe(1); }; });", None),
-        ("describe('a test', () => { function func() { expect(1).toBe(1); }; });", None),
-        ("describe('a test', () => { const func = function(){ expect(1).toBe(1); }; });", None),
+        (
+            "describe('a test', () => { const func = () => { expect(1).toBe(1); }; });",
+            None,
+        ),
+        (
+            "describe('a test', () => { function func() { expect(1).toBe(1); }; });",
+            None,
+        ),
+        (
+            "describe('a test', () => { const func = function(){ expect(1).toBe(1); }; });",
+            None,
+        ),
         ("it('an it', () => expect(1).toBe(1))", None),
         ("const func = function(){ expect(1).toBe(1); };", None),
         ("const func = () => expect(1).toBe(1);", None),
         ("{}", None),
-        ("it.each([1, true])('trues', value => { expect(value).toBe(true); });", None),
+        (
+            "it.each([1, true])('trues', value => { expect(value).toBe(true); });",
+            None,
+        ),
         (
             "it.each([1, true])('trues', value => { expect(value).toBe(true); }); it('an it', () => { expect(1).toBe(1) });",
             None,
@@ -65,14 +80,38 @@ fn test() {
             ",
             None,
         ),
-        ("it.only('an only', value => { expect(value).toBe(true); });", None),
-        ("it.concurrent('an concurrent', value => { expect(value).toBe(true); });", None),
-        ("it.failing('a failing test', () => expect(1).toBe(2));", None),
-        ("it.only.failing('a failing test', () => expect(1).toBe(2));", None),
-        ("it.skip.failing('a failing test', () => expect(1).toBe(2));", None),
-        ("test.failing('a failing test', () => expect(1).toBe(2));", None),
-        ("test.only.failing('a failing test', () => expect(1).toBe(2));", None),
-        ("test.skip.failing('a failing test', () => expect(1).toBe(2));", None),
+        (
+            "it.only('an only', value => { expect(value).toBe(true); });",
+            None,
+        ),
+        (
+            "it.concurrent('an concurrent', value => { expect(value).toBe(true); });",
+            None,
+        ),
+        (
+            "it.failing('a failing test', () => expect(1).toBe(2));",
+            None,
+        ),
+        (
+            "it.only.failing('a failing test', () => expect(1).toBe(2));",
+            None,
+        ),
+        (
+            "it.skip.failing('a failing test', () => expect(1).toBe(2));",
+            None,
+        ),
+        (
+            "test.failing('a failing test', () => expect(1).toBe(2));",
+            None,
+        ),
+        (
+            "test.only.failing('a failing test', () => expect(1).toBe(2));",
+            None,
+        ),
+        (
+            "test.skip.failing('a failing test', () => expect(1).toBe(2));",
+            None,
+        ),
         (
             "describe.each([1, true])('trues', value => { it('an it', () => expect(value).toBe(true) ); });",
             None,
@@ -188,7 +227,10 @@ fn test() {
     ];
 
     let fail = vec![
-        ("(() => {})('testing', () => expect(true).toBe(false))", None),
+        (
+            "(() => {})('testing', () => expect(true).toBe(false))",
+            None,
+        ),
         ("expect.hasAssertions()", None),
         ("expect().hasAssertions()", None),
         (
@@ -261,8 +303,14 @@ fn test() {
             "it.each([1, true])('trues', value => { expect(value).toBe(true); }); expect(1).toBe(1);",
             None,
         ),
-        ("describe.each([1, true])('trues', value => { expect(value).toBe(true); });", None),
-        (r"describe('App', () => { wrapperFn(() => { expect(true).toBeTruthy(); }); });", None),
+        (
+            "describe.each([1, true])('trues', value => { expect(value).toBe(true); });",
+            None,
+        ),
+        (
+            r"describe('App', () => { wrapperFn(() => { expect(true).toBeTruthy(); }); });",
+            None,
+        ),
         (
             "
                 import { expect as pleaseExpect } from '@jest/globals';
@@ -293,7 +341,12 @@ fn test() {
         ),
     ];
 
-    Tester::new(NoStandaloneExpect::NAME, NoStandaloneExpect::PLUGIN, pass, fail)
-        .with_jest_plugin(true)
-        .test_and_snapshot();
+    Tester::new(
+        NoStandaloneExpect::NAME,
+        NoStandaloneExpect::PLUGIN,
+        pass,
+        fail,
+    )
+    .with_jest_plugin(true)
+    .test_and_snapshot();
 }

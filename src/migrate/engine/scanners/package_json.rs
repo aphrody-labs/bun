@@ -13,8 +13,8 @@
 // limitations under the License.
 
 use crate::rules::cli_commands::apply_cli_rules;
-use crate::util::make_finding;
 use crate::types::{Finding, MakeFindingOpts, Severity};
+use crate::util::make_finding;
 use once_cell::sync::Lazy;
 use regex::Regex;
 use serde_json::Value;

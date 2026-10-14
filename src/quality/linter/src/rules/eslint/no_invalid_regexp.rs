@@ -17,7 +17,9 @@ use crate::{
 // Use the same prefix with `oxc_regular_expression` crate
 fn duplicated_flag_diagnostic(span: Span, flag: &str) -> OxcDiagnostic {
     OxcDiagnostic::warn("Invalid regular expression: Duplicated flag")
-        .with_help(format!("Remove the duplicated '{flag}' flag from the regular expression flags"))
+        .with_help(format!(
+            "Remove the duplicated '{flag}' flag from the regular expression flags"
+        ))
         .with_label(span.label(format!("flag '{flag}' already specified")))
 }
 
@@ -109,8 +111,10 @@ impl Rule for NoInvalidRegexp {
         // And if we omit user defined flags here, `Span` may be incorrect on error reporting.
         if let Some(flags_span) = flags_arg {
             // Strip quotes
-            let flags_text =
-                flags_span.source_text(ctx.source_text()).trim_matches('\'').trim_matches('"');
+            let flags_text = flags_span
+                .source_text(ctx.source_text())
+                .trim_matches('\'')
+                .trim_matches('"');
 
             let mut unique_flags = FxHashSet::default();
             for (idx, ch) in flags_text.char_indices() {
@@ -172,7 +176,10 @@ impl Rule for NoInvalidRegexp {
                 &allocator,
                 pattern_text,
                 flags_text,
-                Options { pattern_span_offset: pattern_span.start, flags_span_offset: 0 },
+                Options {
+                    pattern_span_offset: pattern_span.start,
+                    flags_span_offset: 0,
+                },
             )
             .parse()
             {
@@ -233,7 +240,10 @@ fn test() {
         ("new RegExp('{', flags)", None),
         (r"RegExp('\\u{0}*', flags)", None),
         (r"new RegExp('\\u{0}*', flags)", None),
-        ("RegExp('{', flags)", Some(serde_json::json!([{ "allowConstructorFlags": ["u"] }]))),
+        (
+            "RegExp('{', flags)",
+            Some(serde_json::json!([{ "allowConstructorFlags": ["u"] }])),
+        ),
         (
             r"RegExp('\\u{0}*', flags)",
             Some(serde_json::json!([{ "allowConstructorFlags": ["a"] }])),
@@ -263,7 +273,10 @@ fn test() {
         ("new RegExp('[A--B]', 'v')", None),
         ("new RegExp('[A&&B]', 'v')", None),
         ("new RegExp('[A--[0-9]]', 'v')", None),
-        (r"new RegExp('[\\p{Basic_Emoji}--\\q{a|bc|def}]', 'v')", None),
+        (
+            r"new RegExp('[\\p{Basic_Emoji}--\\q{a|bc|def}]', 'v')",
+            None,
+        ),
         ("new RegExp('[A--B]', flags)", None),
         (r"new RegExp('[[]\\u{0}*', flags)", None),
         // ES2025
@@ -273,11 +286,26 @@ fn test() {
         ("new RegExp('(?-ims:foo)')", None),
         ("new RegExp('(?s-i:foo)')", None),
         // allowConstructorFlags
-        ("new RegExp('.', 'g')", Some(serde_json::json!([{ "allowConstructorFlags": [] }]))),
-        ("new RegExp('.', 'g')", Some(serde_json::json!([{ "allowConstructorFlags": ["a"] }]))),
-        ("new RegExp('.', 'a')", Some(serde_json::json!([{ "allowConstructorFlags": ["a"] }]))),
-        ("new RegExp('.', 'ag')", Some(serde_json::json!([{ "allowConstructorFlags": ["a"] }]))),
-        ("new RegExp('.', 'ga')", Some(serde_json::json!([{ "allowConstructorFlags": ["a"] }]))),
+        (
+            "new RegExp('.', 'g')",
+            Some(serde_json::json!([{ "allowConstructorFlags": [] }])),
+        ),
+        (
+            "new RegExp('.', 'g')",
+            Some(serde_json::json!([{ "allowConstructorFlags": ["a"] }])),
+        ),
+        (
+            "new RegExp('.', 'a')",
+            Some(serde_json::json!([{ "allowConstructorFlags": ["a"] }])),
+        ),
+        (
+            "new RegExp('.', 'ag')",
+            Some(serde_json::json!([{ "allowConstructorFlags": ["a"] }])),
+        ),
+        (
+            "new RegExp('.', 'ga')",
+            Some(serde_json::json!([{ "allowConstructorFlags": ["a"] }])),
+        ),
         (
             "new RegExp(pattern, 'ga')",
             Some(serde_json::json!([{ "allowConstructorFlags": ["a"] }])),
@@ -312,18 +340,39 @@ fn test() {
         ("RegExp('[');", None),
         ("RegExp('.', 'z');", None),
         ("RegExp('.', 'a');", Some(serde_json::json!([{}]))),
-        ("new RegExp('.', 'a');", Some(serde_json::json!([{ "allowConstructorFlags": [] }]))),
-        ("new RegExp('.', 'z');", Some(serde_json::json!([{ "allowConstructorFlags": ["a"] }]))),
-        ("RegExp('.', 'a');", Some(serde_json::json!([{ "allowConstructorFlags": ["A"] }]))),
-        ("RegExp('.', 'A');", Some(serde_json::json!([{ "allowConstructorFlags": ["a"] }]))),
-        ("new RegExp('.', 'az');", Some(serde_json::json!([{ "allowConstructorFlags": ["z"] }]))),
-        ("new RegExp('.', 'aa');", Some(serde_json::json!([{ "allowConstructorFlags": ["a"] }]))),
+        (
+            "new RegExp('.', 'a');",
+            Some(serde_json::json!([{ "allowConstructorFlags": [] }])),
+        ),
+        (
+            "new RegExp('.', 'z');",
+            Some(serde_json::json!([{ "allowConstructorFlags": ["a"] }])),
+        ),
+        (
+            "RegExp('.', 'a');",
+            Some(serde_json::json!([{ "allowConstructorFlags": ["A"] }])),
+        ),
+        (
+            "RegExp('.', 'A');",
+            Some(serde_json::json!([{ "allowConstructorFlags": ["a"] }])),
+        ),
+        (
+            "new RegExp('.', 'az');",
+            Some(serde_json::json!([{ "allowConstructorFlags": ["z"] }])),
+        ),
+        (
+            "new RegExp('.', 'aa');",
+            Some(serde_json::json!([{ "allowConstructorFlags": ["a"] }])),
+        ),
         // Can remove this test once we block duplicate values in this array.
         (
             "new RegExp('.', 'aa');",
             Some(serde_json::json!([{ "allowConstructorFlags": ["a", "a"] }])),
         ),
-        ("new RegExp('.', 'aA');", Some(serde_json::json!([{ "allowConstructorFlags": ["a"] }]))),
+        (
+            "new RegExp('.', 'aA');",
+            Some(serde_json::json!([{ "allowConstructorFlags": ["a"] }])),
+        ),
         (
             "new RegExp('.', 'aaz');",
             Some(serde_json::json!([{ "allowConstructorFlags": ["a", "z"] }])),
@@ -332,12 +381,24 @@ fn test() {
             "new RegExp('.', 'azz');",
             Some(serde_json::json!([{ "allowConstructorFlags": ["a", "z"] }])),
         ),
-        ("new RegExp('.', 'aga');", Some(serde_json::json!([{ "allowConstructorFlags": ["a"] }]))),
-        ("new RegExp('.', 'uu');", Some(serde_json::json!([{ "allowConstructorFlags": ["u"] }]))),
-        ("new RegExp('.', 'ouo');", Some(serde_json::json!([{ "allowConstructorFlags": ["u"] }]))),
+        (
+            "new RegExp('.', 'aga');",
+            Some(serde_json::json!([{ "allowConstructorFlags": ["a"] }])),
+        ),
+        (
+            "new RegExp('.', 'uu');",
+            Some(serde_json::json!([{ "allowConstructorFlags": ["u"] }])),
+        ),
+        (
+            "new RegExp('.', 'ouo');",
+            Some(serde_json::json!([{ "allowConstructorFlags": ["u"] }])),
+        ),
         ("new RegExp(')');", None),
         (r"new RegExp('\\a', 'u');", None),
-        (r"new RegExp('\\a', 'u');", Some(serde_json::json!([{ "allowConstructorFlags": ["u"] }]))),
+        (
+            r"new RegExp('\\a', 'u');",
+            Some(serde_json::json!([{ "allowConstructorFlags": ["u"] }])),
+        ),
         (r"RegExp('\\u{0}*');", None),
         (r"new RegExp('\\u{0}*');", None),
         (r"new RegExp('\\u{0}*', '');", None),
@@ -345,7 +406,10 @@ fn test() {
             r"new RegExp('\\u{0}*', 'a');",
             Some(serde_json::json!([{ "allowConstructorFlags": ["a"] }])),
         ),
-        (r"RegExp('\\u{0}*');", Some(serde_json::json!([{ "allowConstructorFlags": ["a"] }]))),
+        (
+            r"RegExp('\\u{0}*');",
+            Some(serde_json::json!([{ "allowConstructorFlags": ["a"] }])),
+        ),
         (r"new RegExp('\\');", None),
         ("RegExp(')' + '', 'a');", None),
         (
@@ -360,8 +424,14 @@ fn test() {
         ("new RegExp('[[]', 'v');", None),
         ("new RegExp('.', 'uv');", None),
         ("new RegExp(pattern, 'uv');", None),
-        ("new RegExp('[A--B]' /* valid only with `v` flag */, 'u')", None),
-        (r"new RegExp('[[]\\u{0}*' /* valid only with `u` flag */, 'v')", None),
+        (
+            "new RegExp('[A--B]' /* valid only with `v` flag */, 'u')",
+            None,
+        ),
+        (
+            r"new RegExp('[[]\\u{0}*' /* valid only with `u` flag */, 'v')",
+            None,
+        ),
         // ES2025
         ("new RegExp('(?<k>a)(?<k>b)')", None),
         ("new RegExp('(?ii:foo)')", None),

@@ -131,7 +131,11 @@ fn report_label_if_extra(label: &LabelIdentifier, node: &AstNode, ctx: &LintCont
         let delete_span = Span::new(keyword_end, label.span.end);
 
         let diagnostic = no_extra_label_diagnostic(label);
-        if ctx.comments().iter().any(|comment| delete_span.contains_inclusive(comment.span)) {
+        if ctx
+            .comments()
+            .iter()
+            .any(|comment| delete_span.contains_inclusive(comment.span))
+        {
             // No autofix to avoid deleting comments between keyword and label
             // e.g. `break /* comment */ label;`
             ctx.diagnostic(diagnostic);
@@ -206,17 +210,37 @@ fn test() {
 
     let fix = vec![
         ("A: while (a) break A;", "A: while (a) break;", None),
-        ("A: while (a) { B: { continue A; } }", "A: while (a) { B: { continue; } }", None),
+        (
+            "A: while (a) { B: { continue A; } }",
+            "A: while (a) { B: { continue; } }",
+            None,
+        ),
         (
             "X: while (x) { A: while (a) { B: { break A; break B; continue X; } } }",
             "X: while (x) { A: while (a) { B: { break; break B; continue X; } } }",
             None,
         ),
-        ("A: do { break A; } while (a);", "A: do { break; } while (a);", None),
+        (
+            "A: do { break A; } while (a);",
+            "A: do { break; } while (a);",
+            None,
+        ),
         ("A: for (;;) { break A; }", "A: for (;;) { break; }", None),
-        ("A: for (a in obj) { break A; }", "A: for (a in obj) { break; }", None),
-        ("A: for (a of ary) { break A; }", "A: for (a of ary) { break; }", None),
-        ("A: switch (a) { case 0: break A; }", "A: switch (a) { case 0: break; }", None),
+        (
+            "A: for (a in obj) { break A; }",
+            "A: for (a in obj) { break; }",
+            None,
+        ),
+        (
+            "A: for (a of ary) { break A; }",
+            "A: for (a of ary) { break; }",
+            None,
+        ),
+        (
+            "A: switch (a) { case 0: break A; }",
+            "A: switch (a) { case 0: break; }",
+            None,
+        ),
         (
             "X: while (x) { A: switch (a) { case 0: break A; } }",
             "X: while (x) { A: switch (a) { case 0: break; } }",
@@ -246,7 +270,11 @@ fn test() {
             ",
             None,
         ),
-        ("A: while(true) { /*comment*/break A; }", "A: while(true) { /*comment*/break; }", None),
+        (
+            "A: while(true) { /*comment*/break A; }",
+            "A: while(true) { /*comment*/break; }",
+            None,
+        ),
         (
             "A: while(true) { continue A/*comment*/; }",
             "A: while(true) { continue/*comment*/; }",

@@ -260,6 +260,11 @@ fn test() {
         "a.removeChild!(k)",
     ];
 
-    Tester::new(PreferDomNodeRemove::NAME, PreferDomNodeRemove::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        PreferDomNodeRemove::NAME,
+        PreferDomNodeRemove::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

@@ -61,14 +61,20 @@ fn doc_attr(doc: &str, span: Span) -> Attribute {
         meta: Meta::NameValue(MetaNameValue {
             path: Path::from(Ident::new("doc", span)),
             eq_token: token::Eq::default(),
-            value: Expr::Lit(ExprLit { attrs: vec![], lit: Lit::Str(LitStr::new(doc, span)) }),
+            value: Expr::Lit(ExprLit {
+                attrs: vec![],
+                lit: Lit::Str(LitStr::new(doc, span)),
+            }),
         }),
     }
 }
 
 /// Integer literal expression e.g. `8`.
 fn int_expr(value: u8, span: Span) -> Expr {
-    Expr::Lit(ExprLit { attrs: vec![], lit: Lit::Int(LitInt::new(&value.to_string(), span)) })
+    Expr::Lit(ExprLit {
+        attrs: vec![],
+        lit: Lit::Int(LitInt::new(&value.to_string(), span)),
+    })
 }
 
 /// `<name>` or `<name><'a>`.

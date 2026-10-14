@@ -83,7 +83,10 @@ impl Walk {
         options: &IgnoreOptions,
         override_builder: Option<Override>,
     ) -> Self {
-        assert!(!paths.is_empty(), "At least one path must be provided to Walk::new");
+        assert!(
+            !paths.is_empty(),
+            "At least one path must be provided to Walk::new"
+        );
 
         let mut inner = ignore::WalkBuilder::new(
             paths
@@ -112,12 +115,18 @@ impl Walk {
             // Use the same thread count as rayon (controlled by `--threads`)
             .threads(rayon::current_num_threads())
             .build_parallel();
-        Self { inner, extensions: Extensions::default() }
+        Self {
+            inner,
+            extensions: Extensions::default(),
+        }
     }
 
     pub fn paths(self) -> Vec<Arc<OsStr>> {
         let (sender, receiver) = mpsc::channel::<Vec<Arc<OsStr>>>();
-        let mut builder = WalkBuilder { sender, extensions: self.extensions };
+        let mut builder = WalkBuilder {
+            sender,
+            extensions: self.extensions,
+        };
         self.inner.visit(&mut builder);
         drop(builder);
         receiver.into_iter().flatten().collect()
@@ -130,17 +139,26 @@ impl Walk {
     }
 
     fn is_wanted_entry(dir_entry: &DirEntry, extensions: &Extensions) -> bool {
-        let Some(file_type) = dir_entry.file_type() else { return false };
+        let Some(file_type) = dir_entry.file_type() else {
+            return false;
+        };
         if file_type.is_dir() {
             return false;
         }
-        let Some(file_name) = dir_entry.path().file_name() else { return false };
+        let Some(file_name) = dir_entry.path().file_name() else {
+            return false;
+        };
         let file_name = file_name.to_string_lossy();
         let file_name = file_name.as_ref();
-        if [".min.", "-min.", "_min."].iter().any(|e| file_name.contains(e)) {
+        if [".min.", "-min.", "_min."]
+            .iter()
+            .any(|e| file_name.contains(e))
+        {
             return false;
         }
-        let Some(extension) = dir_entry.path().extension() else { return false };
+        let Some(extension) = dir_entry.path().extension() else {
+            return false;
+        };
         let extension = extension.to_string_lossy();
         extensions.0.contains(&extension.as_ref())
     }
@@ -167,7 +185,13 @@ mod test {
         .with_extensions(Extensions(["js"].to_vec()))
         .paths()
         .into_iter()
-        .map(|path| Path::new(&path).strip_prefix(root).unwrap().to_string_lossy().to_string())
+        .map(|path| {
+            Path::new(&path)
+                .strip_prefix(root)
+                .unwrap()
+                .to_string_lossy()
+                .to_string()
+        })
         .collect::<Vec<_>>();
 
         paths.sort();
@@ -199,7 +223,11 @@ mod test {
             .paths()
             .into_iter()
             .map(|path| {
-                Path::new(&path).strip_prefix(&fixture).unwrap().to_string_lossy().to_string()
+                Path::new(&path)
+                    .strip_prefix(&fixture)
+                    .unwrap()
+                    .to_string_lossy()
+                    .to_string()
             })
             .collect::<Vec<_>>();
         paths.sort();
@@ -216,6 +244,9 @@ mod test {
         fs::write(temp_path.join("included.js"), "debugger;").unwrap();
         fs::write(temp_path.join(".jj").join("ignored.js"), "debugger;").unwrap();
 
-        assert_eq!(collect_js_paths(temp_path, &empty_ignore_options()), vec!["included.js"]);
+        assert_eq!(
+            collect_js_paths(temp_path, &empty_ignore_options()),
+            vec!["included.js"]
+        );
     }
 }

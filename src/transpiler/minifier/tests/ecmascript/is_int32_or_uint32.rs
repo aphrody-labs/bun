@@ -13,7 +13,9 @@ fn test(source_text: &str, expected: bool) {
     let Some(Statement::ExpressionStatement(stmt)) = &ret.program.body.first() else {
         panic!("should have a expression statement body: {source_text}");
     };
-    let result = stmt.expression.is_int32_or_uint32(&WithoutGlobalReferenceInformation {});
+    let result = stmt
+        .expression
+        .is_int32_or_uint32(&WithoutGlobalReferenceInformation {});
     assert_eq!(result, expected, "{source_text}");
 }
 

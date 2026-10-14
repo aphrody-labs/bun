@@ -31,7 +31,9 @@ impl<'a> FormatWrite<'a> for AstNode<'a, StaticMemberExpression<'a>> {
         let is_member_chain = {
             let mut recording = f.start_recording();
             write!(recording, [self.object()]);
-            recording.stop().has_label(LabelId::of(JsLabels::MemberChain))
+            recording
+                .stop()
+                .has_label(LabelId::of(JsLabels::MemberChain))
         };
 
         match layout(self, is_member_chain, object_is_cast_target, f) {
@@ -40,7 +42,13 @@ impl<'a> FormatWrite<'a> for AstNode<'a, StaticMemberExpression<'a>> {
                     format_with(|f| write!(f, [operator_token(self.optional()), self.property()]));
 
                 if is_member_chain {
-                    write!(f, [labelled(LabelId::of(JsLabels::MemberChain), &format_no_break)]);
+                    write!(
+                        f,
+                        [labelled(
+                            LabelId::of(JsLabels::MemberChain),
+                            &format_no_break
+                        )]
+                    );
                 } else {
                     write!(f, [format_no_break]);
                 }
@@ -51,7 +59,9 @@ impl<'a> FormatWrite<'a> for AstNode<'a, StaticMemberExpression<'a>> {
                     [group(&indent(&format_args!(
                         soft_line_break(),
                         &format_with(|f| {
-                            if f.comments().has_leading_own_line_comment(self.property.span.start) {
+                            if f.comments()
+                                .has_leading_own_line_comment(self.property.span.start)
+                            {
                                 let comments = f
                                     .context()
                                     .comments()
@@ -92,7 +102,9 @@ fn layout<'a>(
     object_is_cast_target: bool,
     f: &JsFormatter<'_, 'a>,
 ) -> StaticMemberLayout {
-    if f.comments().has_leading_own_line_comment(node.property.span.start) {
+    if f.comments()
+        .has_leading_own_line_comment(node.property.span.start)
+    {
         return StaticMemberLayout::BreakAfterObject;
     }
 
@@ -100,7 +112,10 @@ fn layout<'a>(
     // `TSNonNullExpression` is a wrapper node for `!`, and `ChainExpression` is a wrapper node for `?.`,
     // so we need to skip them to find the real parent node.
     let mut parent = node.parent();
-    while matches!(parent, AstNodes::TSNonNullExpression(_) | AstNodes::ChainExpression(_)) {
+    while matches!(
+        parent,
+        AstNodes::TSNonNullExpression(_) | AstNodes::ChainExpression(_)
+    ) {
         parent = parent.parent();
     }
     let object = &node.object;
@@ -141,7 +156,10 @@ fn layout<'a>(
             StaticMemberLayout::NoBreak
         }
         AstNodes::AssignmentExpression(assignment) => {
-            if matches!(assignment.left, AssignmentTarget::AssignmentTargetIdentifier(_)) {
+            if matches!(
+                assignment.left,
+                AssignmentTarget::AssignmentTargetIdentifier(_)
+            ) {
                 StaticMemberLayout::BreakAfterObject
             } else {
                 StaticMemberLayout::NoBreak
@@ -153,6 +171,14 @@ fn layout<'a>(
 
 impl<'a> FormatWrite<'a> for AstNode<'a, PrivateFieldExpression<'a>> {
     fn write(&self, f: &mut JsFormatter<'_, 'a>) {
-        write!(f, [self.object(), self.optional().then_some("?"), ".", self.field()]);
+        write!(
+            f,
+            [
+                self.object(),
+                self.optional().then_some("?"),
+                ".",
+                self.field()
+            ]
+        );
     }
 }

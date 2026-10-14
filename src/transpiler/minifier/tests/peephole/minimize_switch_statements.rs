@@ -2,9 +2,18 @@ use crate::{test, test_same};
 
 #[test]
 fn test_drop_unreachable_switch_cases_with_sequence_expressions() {
-    test("switch (c, b) { case 2: switch (a) { case 2: foo()}}", "c, b === 2 && a === 2 && foo();");
-    test("switch ((a(), 1)) { case 1: b(); break; default: c(); break; }", "a(), b();");
-    test("switch (1) { case 1: foo(); case (a(), 2): bar(); }", "foo(), bar();");
+    test(
+        "switch (c, b) { case 2: switch (a) { case 2: foo()}}",
+        "c, b === 2 && a === 2 && foo();",
+    );
+    test(
+        "switch ((a(), 1)) { case 1: b(); break; default: c(); break; }",
+        "a(), b();",
+    );
+    test(
+        "switch (1) { case 1: foo(); case (a(), 2): bar(); }",
+        "foo(), bar();",
+    );
     test(
         "switch (2) { case (a(), 1): foo(); break; case 2: bar(); break; }",
         "switch (2) { case a(), 2: bar(); }",
@@ -27,8 +36,14 @@ fn test_drop_unreachable_switch_cases_with_sequence_expressions() {
         "switch (4) { case a(), b(), 2: }",
     );
     // all tests run before `default` are run
-    test("switch (3) { default: foo(); break; case (a(), 1): bar(); break; }", "a(), foo();");
-    test("switch (3) { default: foo(); case (a(), 1): bar(); }", "a(), foo(), bar();");
+    test(
+        "switch (3) { default: foo(); break; case (a(), 1): bar(); break; }",
+        "a(), foo();",
+    );
+    test(
+        "switch (3) { default: foo(); case (a(), 1): bar(); }",
+        "a(), foo(), bar();",
+    );
     test(
         "switch (4) { case (a(), 1): x(); default: foo(); case (b(), 2): bar(); case (c(), 3): baz(); break; }",
         "a(), b(), c(), foo(), bar(), baz();",
@@ -41,12 +56,18 @@ fn test_drop_unreachable_switch_cases_with_hoisted_vars() {
         "switch (3) { case 1: var q = 1; break; case 2: w(); } return q;",
         "if (0) var q; return;",
     );
-    test("switch (3) { case 1: var q = 1; break; default: w(); } return q;", "w(); var q; return;");
+    test(
+        "switch (3) { case 1: var q = 1; break; default: w(); } return q;",
+        "w(); var q; return;",
+    );
     test(
         "switch (3) { default: w(); break; case 1: var q = 1; } return q;",
         "switch (3) { default: w(); break; var q; } return;",
     );
-    test("switch (2) { case 1: var q = 1; break; case 2: w(); } return q;", "w(); var q; return;");
+    test(
+        "switch (2) { case 1: var q = 1; break; case 2: w(); } return q;",
+        "w(); var q; return;",
+    );
     test(
         "switch (1) { case 1: foo(); break; case 2: var z = 1; } return z;",
         "switch (1) { case 1: foo(); break; var z; } return;",

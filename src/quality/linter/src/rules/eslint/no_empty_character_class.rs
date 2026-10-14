@@ -60,7 +60,9 @@ impl Rule for NoEmptyCharacterClass {
                 return;
             }
 
-            let mut finder = EmptyClassFinder { empty_classes: vec![] };
+            let mut finder = EmptyClassFinder {
+                empty_classes: vec![],
+            };
             finder.visit_pattern(pattern);
 
             for span in finder.empty_classes {
@@ -137,6 +139,11 @@ fn test() {
         "var foo = /[[]&&b]/v;",      // { "ecmaVersion": 2024 }
     ];
 
-    Tester::new(NoEmptyCharacterClass::NAME, NoEmptyCharacterClass::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        NoEmptyCharacterClass::NAME,
+        NoEmptyCharacterClass::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

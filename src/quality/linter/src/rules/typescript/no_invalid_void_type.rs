@@ -95,7 +95,10 @@ pub struct NoInvalidVoidTypeConfig {
 
 impl NoInvalidVoidTypeConfig {
     fn allow_in_generic_type_arguments_enabled(&self) -> bool {
-        !matches!(self.allow_in_generic_type_arguments, AllowInGenericTypeArguments::Boolean(false))
+        !matches!(
+            self.allow_in_generic_type_arguments,
+            AllowInGenericTypeArguments::Boolean(false)
+        )
     }
 }
 
@@ -131,7 +134,8 @@ declare_oxc_lint!(
     none,
     config = NoInvalidVoidTypeConfig,
     version = "1.47.0",
-    short_description = "Disallow `void` type usage outside return types and configured generic contexts.",
+    short_description =
+        "Disallow `void` type usage outside return types and configured generic contexts.",
 );
 
 impl Rule for NoInvalidVoidType {
@@ -175,7 +179,10 @@ impl Rule for NoInvalidVoidType {
         if self.0.allow_in_generic_type_arguments_enabled()
             && let AstKind::TSTypeParameter(type_parameter) = parent.kind()
         {
-            if type_parameter.default.as_ref().is_some_and(|default| default.span() == keyword.span)
+            if type_parameter
+                .default
+                .as_ref()
+                .is_some_and(|default| default.span() == keyword.span)
             {
                 return;
             }
@@ -203,7 +210,10 @@ impl Rule for NoInvalidVoidType {
 
         if self.0.allow_as_this_parameter
             && matches!(parent.kind(), AstKind::TSTypeAnnotation(_))
-            && matches!(grand_parent.map(AstNode::kind), Some(AstKind::TSThisParameter(_)))
+            && matches!(
+                grand_parent.map(AstNode::kind),
+                Some(AstKind::TSThisParameter(_))
+            )
         {
             return;
         }
@@ -231,7 +241,10 @@ impl NoInvalidVoidType {
         match &self.0.allow_in_generic_type_arguments {
             AllowInGenericTypeArguments::AllowList(allow_list) => {
                 let normalized_name = remove_spaces(fully_qualified_name);
-                if allow_list.iter().all(|allow| remove_spaces(allow.as_str()) != normalized_name) {
+                if allow_list
+                    .iter()
+                    .all(|allow| remove_spaces(allow.as_str()) != normalized_name)
+                {
                     ctx.diagnostic(invalid_void_for_generic_diagnostic(span, &normalized_name));
                 }
             }
@@ -286,7 +299,9 @@ fn get_generic_type_argument_name<'a>(
             .heritage_type_arguments()
             .filter(|type_arguments| type_arguments.span == type_arguments_span)
             .and_then(|_| {
-                class.heritage_expression().map(|super_class| ctx.source_range(super_class.span()))
+                class
+                    .heritage_expression()
+                    .map(|super_class| ctx.source_range(super_class.span()))
             }),
         _ => None,
     }
@@ -302,23 +317,28 @@ fn is_valid_return_type_annotation(parent: AstKind<'_>, grand_parent: Option<Ast
     };
 
     match grand_parent {
-        AstKind::Function(function) => {
-            function.return_type.as_ref().is_some_and(|ret| ret.span == type_annotation.span)
-        }
-        AstKind::ArrowFunctionExpression(function) => {
-            function.return_type.as_ref().is_some_and(|ret| ret.span == type_annotation.span)
-        }
+        AstKind::Function(function) => function
+            .return_type
+            .as_ref()
+            .is_some_and(|ret| ret.span == type_annotation.span),
+        AstKind::ArrowFunctionExpression(function) => function
+            .return_type
+            .as_ref()
+            .is_some_and(|ret| ret.span == type_annotation.span),
         AstKind::TSFunctionType(function) => function.return_type.span == type_annotation.span,
         AstKind::TSConstructorType(function) => function.return_type.span == type_annotation.span,
-        AstKind::TSCallSignatureDeclaration(signature) => {
-            signature.return_type.as_ref().is_some_and(|ret| ret.span == type_annotation.span)
-        }
-        AstKind::TSMethodSignature(signature) => {
-            signature.return_type.as_ref().is_some_and(|ret| ret.span == type_annotation.span)
-        }
-        AstKind::TSConstructSignatureDeclaration(signature) => {
-            signature.return_type.as_ref().is_some_and(|ret| ret.span == type_annotation.span)
-        }
+        AstKind::TSCallSignatureDeclaration(signature) => signature
+            .return_type
+            .as_ref()
+            .is_some_and(|ret| ret.span == type_annotation.span),
+        AstKind::TSMethodSignature(signature) => signature
+            .return_type
+            .as_ref()
+            .is_some_and(|ret| ret.span == type_annotation.span),
+        AstKind::TSConstructSignatureDeclaration(signature) => signature
+            .return_type
+            .as_ref()
+            .is_some_and(|ret| ret.span == type_annotation.span),
         _ => false,
     }
 }
@@ -371,12 +391,15 @@ fn is_union_within_function_return_type(
     declaration: ParentFunctionDeclarationNode<'_, '_>,
 ) -> bool {
     match declaration {
-        ParentFunctionDeclarationNode::Function(_, function) => {
-            function.return_type.as_ref().is_some_and(|ret| span_contains(ret.span, union_span))
-        }
-        ParentFunctionDeclarationNode::Method(_, method) => {
-            method.value.return_type.as_ref().is_some_and(|ret| span_contains(ret.span, union_span))
-        }
+        ParentFunctionDeclarationNode::Function(_, function) => function
+            .return_type
+            .as_ref()
+            .is_some_and(|ret| span_contains(ret.span, union_span)),
+        ParentFunctionDeclarationNode::Method(_, method) => method
+            .value
+            .return_type
+            .as_ref()
+            .is_some_and(|ret| span_contains(ret.span, union_span)),
     }
 }
 
@@ -510,7 +533,10 @@ fn has_method_overload_signatures(
             return false;
         }
         if candidate.value.body.is_some()
-            && !matches!(candidate.value.r#type, FunctionType::TSEmptyBodyFunctionExpression)
+            && !matches!(
+                candidate.value.r#type,
+                FunctionType::TSEmptyBodyFunctionExpression
+            )
         {
             return false;
         }
@@ -567,8 +593,14 @@ fn test() {
         ("let ughThisThing = void 0;", None),
         ("function takeThing(thing: undefined) {}", None),
         ("takeThing(void 0);", None),
-        ("let voidPromise: Promise<void> = new Promise<void>(() => {});", None),
-        ("let voidMap: Map<string, void> = new Map<string, void>();", None),
+        (
+            "let voidPromise: Promise<void> = new Promise<void>(() => {});",
+            None,
+        ),
+        (
+            "let voidMap: Map<string, void> = new Map<string, void>();",
+            None,
+        ),
         (
             "
                   function returnsVoidPromiseDirectly(): Promise<void> {
@@ -577,14 +609,20 @@ fn test() {
                 ",
             None,
         ),
-        ("async function returnsVoidPromiseAsync(): Promise<void> {}", None),
+        (
+            "async function returnsVoidPromiseAsync(): Promise<void> {}",
+            None,
+        ),
         ("type UnionType = string | number;", None),
         ("type GenericVoid = Generic<void>;", None),
         ("type Generic<T> = [T];", None),
         ("type voidPromiseUnion = void | Promise<void>;", None),
         ("type promiseNeverUnion = Promise<void> | never;", None),
         ("const arrowGeneric1 = <T = void,>(arg: T) => {};", None),
-        ("declare function functionDeclaration1<T = void>(arg: T): void;", None),
+        (
+            "declare function functionDeclaration1<T = void>(arg: T): void;",
+            None,
+        ),
         (
             "
                   class ClassName {
@@ -844,7 +882,10 @@ fn test() {
             "type voidPromiseNeverUnion = void | Promise<void> | never;",
             Some(serde_json::json!([{ "allowInGenericTypeArguments": ["Promise"] }])),
         ),
-        ("function f(this: void) {}", Some(serde_json::json!([{ "allowAsThisParameter": true }]))),
+        (
+            "function f(this: void) {}",
+            Some(serde_json::json!([{ "allowAsThisParameter": true }])),
+        ),
         (
             "
             class Test {
@@ -905,11 +946,23 @@ fn test() {
         ),
         ("function takeVoid(thing: void) {}", None),
         ("const arrowGeneric = <T extends void>(arg: T) => {};", None),
-        ("const arrowGeneric2 = <T extends void = void>(arg: T) => {};", None),
+        (
+            "const arrowGeneric2 = <T extends void = void>(arg: T) => {};",
+            None,
+        ),
         ("function functionGeneric<T extends void>(arg: T) {}", None),
-        ("function functionGeneric2<T extends void = void>(arg: T) {}", None),
-        ("declare function functionDeclaration<T extends void>(arg: T): void;", None),
-        ("declare function functionDeclaration2<T extends void = void>(arg: T): void;", None),
+        (
+            "function functionGeneric2<T extends void = void>(arg: T) {}",
+            None,
+        ),
+        (
+            "declare function functionDeclaration<T extends void>(arg: T): void;",
+            None,
+        ),
+        (
+            "declare function functionDeclaration2<T extends void = void>(arg: T): void;",
+            None,
+        ),
         ("functionGeneric<void>(undefined);", None),
         ("declare function voidArray(args: void[]): void[];", None),
         ("let value = undefined as void;", None),
@@ -952,7 +1005,10 @@ fn test() {
             None,
         ),
         ("type UnionType2 = string | number | void;", None),
-        ("type UnionType3 = string | ((number & any) | (string | void));", None),
+        (
+            "type UnionType3 = string | ((number & any) | (string | void));",
+            None,
+        ),
         ("declare function test(): number | void;", None),
         ("declare function test<T extends number | void>(): T;", None),
         ("type IntersectionType = string & number & void;", None),
@@ -988,7 +1044,10 @@ fn test() {
                   ",
             None,
         ),
-        ("export default function (x?: string): string | void {}", None),
+        (
+            "export default function (x?: string): string | void {}",
+            None,
+        ),
         ("export function f(x?: string): string | void {}", None),
         (
             "
@@ -1080,5 +1139,11 @@ fn test() {
         ),
     ];
 
-    Tester::new(NoInvalidVoidType::NAME, NoInvalidVoidType::PLUGIN, pass, fail).test_and_snapshot();
+    Tester::new(
+        NoInvalidVoidType::NAME,
+        NoInvalidVoidType::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

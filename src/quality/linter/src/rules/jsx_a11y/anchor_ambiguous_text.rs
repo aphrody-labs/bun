@@ -207,7 +207,11 @@ fn test() {
         ),
         ("<a>documentation</a>;", None, None),
         ("<a>${here}</a>;", None, None),
-        (r#"<a aria-label="tutorial on using eslint-plugin-jsx-a11y">click here</a>;"#, None, None),
+        (
+            r#"<a aria-label="tutorial on using eslint-plugin-jsx-a11y">click here</a>;"#,
+            None,
+            None,
+        ),
         (
             r#"<a><span aria-label="tutorial on using eslint-plugin-jsx-a11y">click here</span></a>;"#,
             None,
@@ -276,16 +280,32 @@ fn test() {
         ("<a><i></i>a link</a>;", None, None),
         ("<a><span>click</span> here</a>;", None, None),
         ("<a><span> click </span> here</a>;", None, None),
-        ("<a><span aria-hidden>more text</span>learn more</a>;", None, None),
-        (r#"<a><span aria-hidden="true">more text</span>learn more</a>;"#, None, None),
+        (
+            "<a><span aria-hidden>more text</span>learn more</a>;",
+            None,
+            None,
+        ),
+        (
+            r#"<a><span aria-hidden="true">more text</span>learn more</a>;"#,
+            None,
+            None,
+        ),
         (r#"<a><img alt="click here"/></a>;"#, None, None),
-        (r#"<a alt="tutorial on using eslint-plugin-jsx-a11y">click here</a>;"#, None, None),
+        (
+            r#"<a alt="tutorial on using eslint-plugin-jsx-a11y">click here</a>;"#,
+            None,
+            None,
+        ),
         (
             r#"<a><span alt="tutorial on using eslint-plugin-jsx-a11y">click here</span></a>;"#,
             None,
             None,
         ),
-        ("<a><CustomElement>click</CustomElement> here</a>;", None, None),
+        (
+            "<a><CustomElement>click</CustomElement> here</a>;",
+            None,
+            None,
+        ),
         (
             "<Link>here</Link>",
             None,
@@ -307,6 +327,11 @@ fn test() {
         ),
     ];
 
-    Tester::new(AnchorAmbiguousText::NAME, AnchorAmbiguousText::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        AnchorAmbiguousText::NAME,
+        AnchorAmbiguousText::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

@@ -66,11 +66,16 @@ impl Rule for NoLoneBlocks {
         let parent_node = ctx.nodes().parent_node(node.id());
 
         if stmt.body.is_empty() {
-            let is_comment_in_stmt =
-                ctx.comments_range(stmt.span.start..stmt.span.end).next_back().is_some();
+            let is_comment_in_stmt = ctx
+                .comments_range(stmt.span.start..stmt.span.end)
+                .next_back()
+                .is_some();
 
             if !is_comment_in_stmt
-                && !matches!(parent_node.kind(), AstKind::TryStatement(_) | AstKind::CatchClause(_))
+                && !matches!(
+                    parent_node.kind(),
+                    AstKind::TryStatement(_) | AstKind::CatchClause(_)
+                )
                 && !parent_node.kind().is_iteration_statement()
             {
                 report(ctx, node, parent_node);

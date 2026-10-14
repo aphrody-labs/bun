@@ -22,7 +22,10 @@ use super::FormatWrite;
 /// /* c */ (a, b);
 /// ```
 pub fn sequence_leading_comments_start(sequence: &SequenceExpression<'_>) -> u32 {
-    sequence.expressions.first().map_or(sequence.span.start, |e| e.span().start)
+    sequence
+        .expressions
+        .first()
+        .map_or(sequence.span.start, |e| e.span().start)
 }
 
 impl<'a> FormatWrite<'a> for AstNode<'a, SequenceExpression<'a>> {

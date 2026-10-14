@@ -148,11 +148,17 @@ struct JsVisitAndMut {
 
 impl VisitorOutputs for JsVisitAndMut {
     fn gen_each<F: Fn(bool) -> TokenStream>(f: F) -> Self {
-        Self { visit: f(false), visit_mut: f(true) }
+        Self {
+            visit: f(false),
+            visit_mut: f(true),
+        }
     }
 
     fn map<F: Fn(TokenStream, bool) -> TokenStream>(self, f: F) -> Self {
-        Self { visit: f(self.visit, false), visit_mut: f(self.visit_mut, true) }
+        Self {
+            visit: f(self.visit, false),
+            visit_mut: f(self.visit_mut, true),
+        }
     }
 }
 
@@ -382,7 +388,9 @@ fn generate_struct_visitor(
     if !struct_is_visited(struct_def, schema) {
         return;
     }
-    let Some(visitor_names) = &struct_def.visit.visitor_names else { return };
+    let Some(visitor_names) = &struct_def.visit.visitor_names else {
+        return;
+    };
 
     let struct_ty = struct_def.ty(schema);
     let visit_fn_ident = visitor_names.visitor_ident();
@@ -396,7 +404,10 @@ fn generate_struct_visitor(
         .map(|(arg_name, arg_type_name)| {
             let param_ident = create_ident(arg_name);
             let arg_type_ident = create_ident(arg_type_name);
-            (quote!( , #param_ident: #arg_type_ident ), quote!( , #param_ident ))
+            (
+                quote!( , #param_ident: #arg_type_ident ),
+                quote!( , #param_ident ),
+            )
         })
         .unzip();
 
@@ -470,8 +481,11 @@ fn generate_struct_visitor(
         field_visits_mut.extend(leave_scope);
     }
 
-    let maybe_inline_attr =
-        if field_visits_count <= INLINE_LIMIT { quote!( #[inline] ) } else { quote!() };
+    let maybe_inline_attr = if field_visits_count <= INLINE_LIMIT {
+        quote!( #[inline] )
+    } else {
+        quote!()
+    };
 
     walk_fns.extend(quote! {
         ///@@line_break
@@ -517,7 +531,10 @@ fn generate_struct_field_visit(
     }
 
     let field_ident = field.ident();
-    let JsVisitAndMut { mut visit, mut visit_mut } = generate_visit_type(
+    let JsVisitAndMut {
+        mut visit,
+        mut visit_mut,
+    } = generate_visit_type(
         field_type,
         &Target::Property(quote!( it.#field_ident )),
         &field.visit.visit_args,
@@ -561,7 +578,9 @@ fn generate_enum_visitor(
     if !enum_is_visited(enum_def, schema) {
         return;
     }
-    let Some(visitor_names) = &enum_def.visit.visitor_names else { return };
+    let Some(visitor_names) = &enum_def.visit.visitor_names else {
+        return;
+    };
 
     let enum_ty = enum_def.ty(schema);
     let visit_fn_ident = visitor_names.visitor_ident();
@@ -608,7 +627,10 @@ fn generate_enum_visitor(
 
             let variant_ident = variant.ident();
             let match_pattern = quote!( #enum_ident::#variant_ident(it) );
-            Some((quote!( #match_pattern => #visit, ), quote!( #match_pattern => #visit_mut, )))
+            Some((
+                quote!( #match_pattern => #visit, ),
+                quote!( #match_pattern => #visit_mut, ),
+            ))
         })
         .unzip();
 
@@ -646,8 +668,11 @@ fn generate_enum_visitor(
         quote!()
     };
 
-    let maybe_inline_attr =
-        if match_arm_count <= INLINE_LIMIT { quote!( #[inline] ) } else { quote!() };
+    let maybe_inline_attr = if match_arm_count <= INLINE_LIMIT {
+        quote!( #[inline] )
+    } else {
+        quote!()
+    };
 
     walk_fns.extend(quote! {
         ///@@line_break
@@ -687,7 +712,9 @@ fn generate_vec_visitor(
     walk_mut_fns: &mut TokenStream,
 ) {
     // Exit if this `Vec` does not have its own visitor, or its element type is not visited by `VisitJs`
-    let Some(visitor_names) = &vec_def.visit.visitor_names else { return };
+    let Some(visitor_names) = &vec_def.visit.visitor_names else {
+        return;
+    };
     let inner_type = vec_def.inner_type(schema);
     if !type_is_visited(inner_type, schema) {
         return;

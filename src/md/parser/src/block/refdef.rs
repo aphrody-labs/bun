@@ -13,7 +13,10 @@ use super::ir::{Ir, IrSeg};
 
 /// Splits leading reference definitions off a closing paragraph's segments.
 pub fn strip(source: &str, mut segments: Vec<IrSeg>) -> (Vec<Ir>, Vec<IrSeg>) {
-    if !segments.first().is_some_and(|s| s.seg.span.slice(source).starts_with('[')) {
+    if !segments
+        .first()
+        .is_some_and(|s| s.seg.span.slice(source).starts_with('['))
+    {
         return (Vec::new(), segments);
     }
 
@@ -33,7 +36,11 @@ pub fn strip(source: &str, mut segments: Vec<IrSeg>) -> (Vec<Ir>, Vec<IrSeg>) {
 
     // A definition always ends at a line ending,
     // so `pos` sits at a line start (or past the end); everything before it was consumed.
-    let consumed_lines = if pos >= joined.len() { segments.len() } else { input.lines_before(pos) };
+    let consumed_lines = if pos >= joined.len() {
+        segments.len()
+    } else {
+        input.lines_before(pos)
+    };
     segments.drain(..consumed_lines);
     // A raw continuation line promoted to first line starts the remaining paragraph;
     // its leading whitespace is not content.
@@ -105,7 +112,10 @@ fn parse_one(input: &Input, pos: usize) -> Option<(Ir, usize)> {
 
     let def = Ir::Definition {
         label: input.pieces(label_start..label_end),
-        destination: Destination { span: input.span(dest_start..dest_end), angle_bracketed: angle },
+        destination: Destination {
+            span: input.span(dest_start..dest_end),
+            angle_bracketed: angle,
+        },
         title,
         span: input.span(start..content_end),
     };

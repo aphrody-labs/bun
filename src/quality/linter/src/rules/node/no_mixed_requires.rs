@@ -115,7 +115,10 @@ impl Default for NoMixedRequiresConfig {
 impl From<NoMixedRequiresConfig> for NoMixedRequiresOptions {
     fn from(config: NoMixedRequiresConfig) -> Self {
         match config {
-            NoMixedRequiresConfig::Grouping(grouping) => Self { grouping, allow_call: false },
+            NoMixedRequiresConfig::Grouping(grouping) => Self {
+                grouping,
+                allow_call: false,
+            },
             NoMixedRequiresConfig::Options(options) => options,
         }
     }
@@ -309,29 +312,50 @@ fn test() {
     use crate::tester::Tester;
 
     let pass = vec![
-        ("var a, b = 42, c = doStuff()", Some(serde_json::json!([false]))),
+        (
+            "var a, b = 42, c = doStuff()",
+            Some(serde_json::json!([false])),
+        ),
         (
             "var a = require(42), b = require(), c = require('y'), d = require(doStuff())",
             Some(serde_json::json!([false])),
         ),
-        ("var fs = require('fs'), foo = require('foo')", Some(serde_json::json!([false]))),
+        (
+            "var fs = require('fs'), foo = require('foo')",
+            Some(serde_json::json!([false])),
+        ),
         (
             "var exec = require('child_process').exec, foo = require('foo')",
             Some(serde_json::json!([false])),
         ),
-        ("var fs = require('fs'), foo = require('./foo')", Some(serde_json::json!([false]))),
-        ("var foo = require('foo'), foo2 = require('./foo')", Some(serde_json::json!([false]))),
+        (
+            "var fs = require('fs'), foo = require('./foo')",
+            Some(serde_json::json!([false])),
+        ),
+        (
+            "var foo = require('foo'), foo2 = require('./foo')",
+            Some(serde_json::json!([false])),
+        ),
         (
             "var emitter = require('events').EventEmitter, fs = require('fs')",
             Some(serde_json::json!([false])),
         ),
-        ("var foo = require(42), bar = require(getName())", Some(serde_json::json!([false]))),
-        ("var foo = require(42), bar = require(getName())", Some(serde_json::json!([true]))),
+        (
+            "var foo = require(42), bar = require(getName())",
+            Some(serde_json::json!([false])),
+        ),
+        (
+            "var foo = require(42), bar = require(getName())",
+            Some(serde_json::json!([true])),
+        ),
         (
             "var fs = require('fs'), foo = require('./foo')",
             Some(serde_json::json!([{ "grouping": false }])),
         ),
-        ("var foo = require('foo'), bar = require(getName())", Some(serde_json::json!([false]))),
+        (
+            "var foo = require('foo'), bar = require(getName())",
+            Some(serde_json::json!([false])),
+        ),
         ("var a;", Some(serde_json::json!([true]))),
         (
             "var async = require('async'), debug = require('diagnostics')('my-module')",
@@ -340,13 +364,22 @@ fn test() {
     ];
 
     let fail = vec![
-        ("var fs = require('fs'), foo = 42", Some(serde_json::json!([false]))),
-        ("var fs = require('fs'), foo", Some(serde_json::json!([false]))),
+        (
+            "var fs = require('fs'), foo = 42",
+            Some(serde_json::json!([false])),
+        ),
+        (
+            "var fs = require('fs'), foo",
+            Some(serde_json::json!([false])),
+        ),
         (
             "var a = require(42), b = require(), c = require('y'), d = require(doStuff())",
             Some(serde_json::json!([true])),
         ),
-        ("var fs = require('fs'), foo = require('foo')", Some(serde_json::json!([true]))),
+        (
+            "var fs = require('fs'), foo = require('foo')",
+            Some(serde_json::json!([true])),
+        ),
         (
             "var fs = require('fs'), foo = require('foo')",
             Some(serde_json::json!([{ "grouping": true }])),
@@ -355,9 +388,18 @@ fn test() {
             "var exec = require('child_process').exec, foo = require('foo')",
             Some(serde_json::json!([true])),
         ),
-        ("var fs = require('fs'), foo = require('./foo')", Some(serde_json::json!([true]))),
-        ("var foo = require('foo'), foo2 = require('./foo')", Some(serde_json::json!([true]))),
-        ("var foo = require('foo'), bar = require(getName())", Some(serde_json::json!([true]))),
+        (
+            "var fs = require('fs'), foo = require('./foo')",
+            Some(serde_json::json!([true])),
+        ),
+        (
+            "var foo = require('foo'), foo2 = require('./foo')",
+            Some(serde_json::json!([true])),
+        ),
+        (
+            "var foo = require('foo'), bar = require(getName())",
+            Some(serde_json::json!([true])),
+        ),
         (
             "var async = require('async'), debug = require('diagnostics').someFun('my-module')",
             Some(serde_json::json!([{ "allowCall": true }])),

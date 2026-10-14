@@ -249,7 +249,12 @@ fn test() {
         ),
     ];
 
-    Tester::new(MaxNestedDescribe::NAME, MaxNestedDescribe::PLUGIN, pass, fail)
-        .with_jest_plugin(true)
-        .test_and_snapshot();
+    Tester::new(
+        MaxNestedDescribe::NAME,
+        MaxNestedDescribe::PLUGIN,
+        pass,
+        fail,
+    )
+    .with_jest_plugin(true)
+    .test_and_snapshot();
 }

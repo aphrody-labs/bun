@@ -50,7 +50,9 @@ impl PrintElementArgs {
 
 impl Default for PrintElementArgs {
     fn default() -> Self {
-        Self { mode: PrintMode::Expanded }
+        Self {
+            mode: PrintMode::Expanded,
+        }
     }
 }
 
@@ -73,27 +75,36 @@ pub(super) trait CallStack {
         let last = self.stack_mut().pop();
 
         match last {
-            Some(StackFrame { kind: StackFrameKind::Tag(actual_kind), args })
-                if actual_kind == kind =>
-            {
-                Ok(args)
-            }
+            Some(StackFrame {
+                kind: StackFrameKind::Tag(actual_kind),
+                args,
+            }) if actual_kind == kind => Ok(args),
             // Start / End kind don't match
-            Some(StackFrame { kind: StackFrameKind::Tag(expected_kind), .. }) => {
-                Err(PrintError::InvalidDocument(Self::invalid_document_error(
-                    kind,
-                    Some(expected_kind),
-                )))
-            }
+            Some(StackFrame {
+                kind: StackFrameKind::Tag(expected_kind),
+                ..
+            }) => Err(PrintError::InvalidDocument(Self::invalid_document_error(
+                kind,
+                Some(expected_kind),
+            ))),
             // Tried to pop the outer most stack frame, which is not valid
-            Some(frame @ StackFrame { kind: StackFrameKind::Root, .. }) => {
+            Some(
+                frame @ StackFrame {
+                    kind: StackFrameKind::Root,
+                    ..
+                },
+            ) => {
                 // Put it back in to guarantee that the stack is never empty
                 self.stack_mut().push(frame);
-                Err(PrintError::InvalidDocument(Self::invalid_document_error(kind, None)))
+                Err(PrintError::InvalidDocument(Self::invalid_document_error(
+                    kind, None,
+                )))
             }
 
             // This should be unreachable but having it for completeness. Happens if the stack is empty.
-            None => Err(PrintError::InvalidDocument(Self::invalid_document_error(kind, None))),
+            None => Err(PrintError::InvalidDocument(Self::invalid_document_error(
+                kind, None,
+            ))),
         }
     }
 
@@ -104,18 +115,29 @@ pub(super) trait CallStack {
     ) -> InvalidDocumentError {
         match start_kind {
             None => InvalidDocumentError::StartTagMissing { kind: end_kind },
-            Some(start_kind) => InvalidDocumentError::StartEndTagMismatch { start_kind, end_kind },
+            Some(start_kind) => InvalidDocumentError::StartEndTagMismatch {
+                start_kind,
+                end_kind,
+            },
         }
     }
 
     /// Returns the [PrintElementArgs] for the current stack frame.
     fn top(&self) -> PrintElementArgs {
-        self.stack().top().expect("Expected `stack` to never be empty.").args
+        self.stack()
+            .top()
+            .expect("Expected `stack` to never be empty.")
+            .args
     }
 
     /// Returns the [TagKind] of the current stack frame or [None] if this is the root stack frame.
     fn top_kind(&self) -> Option<TagKind> {
-        match self.stack().top().expect("Expected `stack` to never be empty.").kind {
+        match self
+            .stack()
+            .top()
+            .expect("Expected `stack` to never be empty.")
+            .kind
+        {
             StackFrameKind::Root => None,
             StackFrameKind::Tag(kind) => Some(kind),
         }
@@ -123,7 +145,10 @@ pub(super) trait CallStack {
 
     /// Creates a new stack frame for a [`FormatElement::Tag`](crate::FormatElement::Tag) of `kind` with `args` as the call arguments.
     fn push(&mut self, kind: TagKind, args: PrintElementArgs) {
-        self.stack_mut().push(StackFrame { kind: StackFrameKind::Tag(kind), args });
+        self.stack_mut().push(StackFrame {
+            kind: StackFrameKind::Tag(kind),
+            args,
+        });
     }
 }
 
@@ -133,7 +158,10 @@ pub(super) struct PrintCallStack(Vec<StackFrame>);
 
 impl PrintCallStack {
     pub(super) fn new(args: PrintElementArgs) -> Self {
-        Self(vec![StackFrame { kind: StackFrameKind::Root, args }])
+        Self(vec![StackFrame {
+            kind: StackFrameKind::Root,
+            args,
+        }])
     }
 }
 
@@ -277,7 +305,8 @@ impl PrintIndentStack {
     }
 
     pub fn flush_suffixes(&mut self) {
-        self.indentions.extend(self.suffix_indentions.drain(..).rev());
+        self.indentions
+            .extend(self.suffix_indentions.drain(..).rev());
     }
 }
 impl IndentStack for PrintIndentStack {
@@ -333,7 +362,11 @@ impl<'print> FitsIndentStack<'print> {
         let root_indentions =
             StackedStack::with_vec(&print.root_indentions, saved_root_indent_stack);
 
-        Self { indentions, history_indentions, root_indentions }
+        Self {
+            indentions,
+            history_indentions,
+            root_indentions,
+        }
     }
 
     pub(super) fn finish(self) -> (Vec<Indention>, Vec<Indention>, Vec<Indention>) {

@@ -62,9 +62,9 @@ pub fn create_js_config_loader(cb: JsLoadJsConfigsCb) -> JsConfigLoaderCb {
 
         match res {
             Ok(json) => parse_js_config_response(&json),
-            Err(err) => {
-                Err(vec![OxcDiagnostic::error(format!("`loadJsConfigs` threw an error: {err}"))])
-            }
+            Err(err) => Err(vec![OxcDiagnostic::error(format!(
+                "`loadJsConfigs` threw an error: {err}"
+            ))]),
         }
     })
 }
@@ -109,7 +109,9 @@ fn parse_js_oxlintrc(mut value: serde_json::Value) -> Result<Oxlintrc, OxcDiagno
 /// Parse the JSON response from JS side into `JsConfigResult` structs.
 fn parse_js_config_response(json: &str) -> Result<Vec<JsConfigResult>, Vec<OxcDiagnostic>> {
     let response: LoadJsConfigsResponse = serde_json::from_str(json).map_err(|e| {
-        vec![OxcDiagnostic::error(format!("Failed to parse JS config response: {e}"))]
+        vec![OxcDiagnostic::error(format!(
+            "Failed to parse JS config response: {e}"
+        ))]
     })?;
 
     match response {
@@ -151,13 +153,20 @@ fn parse_js_config_response(json: &str) -> Result<Vec<JsConfigResult>, Vec<OxcDi
                     };
                     let config_dir = config_dir_parent.to_path_buf();
                     oxlintrc.set_config_dir(&config_dir);
-                    configs.push(JsConfigResult { path, config: Some(oxlintrc) });
+                    configs.push(JsConfigResult {
+                        path,
+                        config: Some(oxlintrc),
+                    });
 
                     (configs, errors)
                 },
             );
 
-            if errors.is_empty() { Ok(configs) } else { Err(errors) }
+            if errors.is_empty() {
+                Ok(configs)
+            } else {
+                Err(errors)
+            }
         }
         LoadJsConfigsResponse::Failure { failures } => Err(failures
             .into_iter()
@@ -168,8 +177,8 @@ fn parse_js_config_response(json: &str) -> Result<Vec<JsConfigResult>, Vec<OxcDi
                 ))
             })
             .collect()),
-        LoadJsConfigsResponse::Error { error } => {
-            Err(vec![OxcDiagnostic::error(format!("Failed to load config files:\n\n{error}"))])
-        }
+        LoadJsConfigsResponse::Error { error } => Err(vec![OxcDiagnostic::error(format!(
+            "Failed to load config files:\n\n{error}"
+        ))]),
     }
 }

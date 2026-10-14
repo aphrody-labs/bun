@@ -14,7 +14,10 @@ use tower_lsp_server::gen_lsp_types::Position;
 pub fn offset_to_position(source_text: &str, offset: u32) -> Position {
     let offset = usize::try_from(offset).expect("offset must fit in usize");
     assert!(offset <= source_text.len(), "offset out of bounds");
-    assert!(source_text.is_char_boundary(offset), "offset is not a char boundary");
+    assert!(
+        source_text.is_char_boundary(offset),
+        "offset is not a char boundary"
+    );
 
     let bytes = source_text.as_bytes();
     let mut line = 0;
@@ -24,7 +27,11 @@ pub fn offset_to_position(source_text: &str, offset: u32) -> Position {
     while i < offset {
         match bytes[i] {
             b'\r' => {
-                i += if i + 1 < offset && bytes[i + 1] == b'\n' { 2 } else { 1 };
+                i += if i + 1 < offset && bytes[i + 1] == b'\n' {
+                    2
+                } else {
+                    1
+                };
                 line += 1;
                 line_start = i;
             }
@@ -34,7 +41,10 @@ pub fn offset_to_position(source_text: &str, offset: u32) -> Position {
                 line_start = i;
             }
             _ => {
-                let ch = source_text[i..].chars().next().expect("valid char boundary");
+                let ch = source_text[i..]
+                    .chars()
+                    .next()
+                    .expect("valid char boundary");
                 i += ch.len_utf8();
             }
         }

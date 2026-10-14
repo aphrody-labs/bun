@@ -70,7 +70,11 @@ pub fn run<'a>(node: &oxc_semantic::AstNode<'a>, ctx: &LintContext<'a>) {
     let Some((property_span, property_name)) = mem_expr.static_property_info() else {
         return;
     };
-    let Some(expr) = call_expr.arguments.first().and_then(Argument::as_expression) else {
+    let Some(expr) = call_expr
+        .arguments
+        .first()
+        .and_then(Argument::as_expression)
+    else {
         return;
     };
     let is_once = property_name.ends_with("Once");
@@ -133,10 +137,21 @@ fn report<'a>(
         return;
     }
 
-    let mock_promise_resolve = if is_once { "mockResolvedValueOnce" } else { "mockResolvedValue" };
-    let mock_promise_reject = if is_once { "mockRejectedValueOnce" } else { "mockRejectedValue" };
-    let prefer_name: &'static str =
-        if arg_name.ends_with("reject") { mock_promise_reject } else { mock_promise_resolve };
+    let mock_promise_resolve = if is_once {
+        "mockResolvedValueOnce"
+    } else {
+        "mockResolvedValue"
+    };
+    let mock_promise_reject = if is_once {
+        "mockRejectedValueOnce"
+    } else {
+        "mockRejectedValue"
+    };
+    let prefer_name: &'static str = if arg_name.ends_with("reject") {
+        mock_promise_reject
+    } else {
+        mock_promise_resolve
+    };
     let fix_span = arg_span.unwrap_or(call_expr.span);
 
     if call_expr.arguments.len() <= 1 {
@@ -149,7 +164,10 @@ fn report<'a>(
             },
         );
     } else {
-        ctx.diagnostic(use_mock_shorthand(Str::from(prefer_name).as_str(), property_span));
+        ctx.diagnostic(use_mock_shorthand(
+            Str::from(prefer_name).as_str(),
+            property_span,
+        ));
     }
 }
 

@@ -35,15 +35,34 @@ mod tests {
     fn fence_open() {
         assert_eq!(directive_fence_open(":::note"), Some(3));
         assert_eq!(directive_fence_open(":::日本"), Some(3));
-        assert_eq!(directive_fence_open("::::my-note[Label]{#id .cls}  "), Some(4));
-        assert_eq!(directive_fence_open("::: tip Custom Title"), Some(3), "markdown-it-container");
+        assert_eq!(
+            directive_fence_open("::::my-note[Label]{#id .cls}  "),
+            Some(4)
+        );
+        assert_eq!(
+            directive_fence_open("::: tip Custom Title"),
+            Some(3),
+            "markdown-it-container"
+        );
         assert_eq!(directive_fence_open(":::tip Custom Title"), Some(3));
-        assert_eq!(directive_fence_open("::: {.class}"), Some(3), "Pandoc fenced div");
+        assert_eq!(
+            directive_fence_open("::: {.class}"),
+            Some(3),
+            "Pandoc fenced div"
+        );
         assert_eq!(directive_fence_open(":::_x"), Some(3));
         assert_eq!(directive_fence_open("::x"), None);
-        assert_eq!(directive_fence_open(":::"), None, "a closing fence is not an opener");
+        assert_eq!(
+            directive_fence_open(":::"),
+            None,
+            "a closing fence is not an opener"
+        );
         assert_eq!(directive_fence_open("::: "), None);
-        assert_eq!(directive_fence_open(":::)"), None, "an emoticon is not an opener");
+        assert_eq!(
+            directive_fence_open(":::)"),
+            None,
+            "an emoticon is not an opener"
+        );
         assert_eq!(directive_fence_open("::: -x"), None);
     }
 }

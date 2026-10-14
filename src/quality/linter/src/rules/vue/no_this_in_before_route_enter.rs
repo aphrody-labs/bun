@@ -67,7 +67,9 @@ declare_oxc_lint!(
 
 impl Rule for NoThisInBeforeRouteEnter {
     fn run<'a>(&self, node: &AstNode<'a>, ctx: &LintContext<'a>) {
-        let AstKind::ExportDefaultDeclaration(export_default_decl) = node.kind() else { return };
+        let AstKind::ExportDefaultDeclaration(export_default_decl) = node.kind() else {
+            return;
+        };
         let ExportDefaultDeclarationKind::ObjectExpression(obj_expr) =
             &export_default_decl.declaration
         else {
@@ -326,6 +328,11 @@ fn test() {
         ),
     ];
 
-    Tester::new(NoThisInBeforeRouteEnter::NAME, NoThisInBeforeRouteEnter::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        NoThisInBeforeRouteEnter::NAME,
+        NoThisInBeforeRouteEnter::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

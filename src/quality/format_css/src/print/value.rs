@@ -153,7 +153,10 @@ pub(super) fn adjust_numbers_and_strings<'a>(
 ) -> Cow<'a, str> {
     let bytes = raw.as_bytes();
     // Only strings and numbers ever change: most params / guards have neither
-    if !bytes.iter().any(|b| matches!(b, b'"' | b'\'') || b.is_ascii_digit()) {
+    if !bytes
+        .iter()
+        .any(|b| matches!(b, b'"' | b'\'') || b.is_ascii_digit())
+    {
         return Cow::Borrowed(raw);
     }
     let mut out = String::with_capacity(raw.len());
@@ -283,7 +286,11 @@ pub(super) fn adjust_numbers_and_strings<'a>(
         i += ch.len_utf8();
     }
 
-    if changed { Cow::Owned(out) } else { Cow::Borrowed(raw) }
+    if changed {
+        Cow::Owned(out)
+    } else {
+        Cow::Borrowed(raw)
+    }
 }
 
 /// Re-quotes the OUTER quotes of a raw quoted string per `singleQuote`,
@@ -381,15 +388,33 @@ pub(super) fn token_depth_delta(token: &Token<'_>) -> i32 {
 }
 
 fn is_comma(value: &ComponentValue<'_>) -> bool {
-    matches!(value, ComponentValue::Delimiter(Delimiter { kind: DelimiterKind::Comma, .. }))
+    matches!(
+        value,
+        ComponentValue::Delimiter(Delimiter {
+            kind: DelimiterKind::Comma,
+            ..
+        })
+    )
 }
 
 fn is_solidus(value: &ComponentValue<'_>) -> bool {
-    matches!(value, ComponentValue::Delimiter(Delimiter { kind: DelimiterKind::Solidus, .. }))
+    matches!(
+        value,
+        ComponentValue::Delimiter(Delimiter {
+            kind: DelimiterKind::Solidus,
+            ..
+        })
+    )
 }
 
 fn is_semicolon(value: &ComponentValue<'_>) -> bool {
-    matches!(value, ComponentValue::Delimiter(Delimiter { kind: DelimiterKind::Semicolon, .. }))
+    matches!(
+        value,
+        ComponentValue::Delimiter(Delimiter {
+            kind: DelimiterKind::Semicolon,
+            ..
+        })
+    )
 }
 
 fn is_word_like(value: &ComponentValue<'_>) -> bool {
@@ -495,11 +520,14 @@ impl ValueContext<'_> {
         // Only the declaration's TOP-LEVEL value gets the grid line-structure treatment;
         // inside function arguments (`repeat()`, `minmax()`, `theme()`) the normal separator rules apply.
         !self.in_args
-            && self.decl_prop.is_some_and(|p| p == "grid" || p.starts_with("grid-template"))
+            && self
+                .decl_prop
+                .is_some_and(|p| p == "grid" || p.starts_with("grid-template"))
     }
 
     fn is_font_or_custom(&self) -> bool {
-        self.decl_prop.is_some_and(|p| p == "font" || p.starts_with("--"))
+        self.decl_prop
+            .is_some_and(|p| p == "font" || p.starts_with("--"))
     }
 }
 
@@ -551,7 +579,10 @@ pub(super) fn write_declaration_value<'a>(
 ) {
     // A lone SCSS list/map IS the value (`$var: 1px 2px, 3px;`)
     if values.len() == 1
-        && matches!(values[0], ComponentValue::SassList(_) | ComponentValue::SassMap(_))
+        && matches!(
+            values[0],
+            ComponentValue::SassList(_) | ComponentValue::SassMap(_)
+        )
     {
         scss::write_top_level_value(&values[0], ctx, f);
         return;
@@ -571,8 +602,11 @@ pub(super) fn write_declaration_value<'a>(
     // and the property is not a custom property.
     let value_start = to_span(values[0].span()).start;
     let value_end = to_span(values[values.len() - 1].span()).end;
-    let has_comments =
-        f.context().comments().iter_before(value_end).any(|c| c.span.start >= value_start);
+    let has_comments = f
+        .context()
+        .comments()
+        .iter_before(value_end)
+        .any(|c| c.span.start >= value_start);
     let force_hard_line = !ctx.decl_prop.is_some_and(|p| p.starts_with("--"))
         && (groups.iter().any(|(g, _)| comma_group_is_multi(g)) || has_comments);
 
@@ -616,9 +650,13 @@ pub(super) fn write_group_comma(comma_start: Option<u32>, f: &mut CssFormatter<'
 /// Own-line comments stay pending, they lead what follows the separator.
 /// Returns `true` when a `//` was deferred: the caller must end the line right after the separator.
 fn flush_comments_before_separator(separator_start: u32, f: &mut CssFormatter<'_, '_>) -> bool {
-    flush_trailing_comments_while(0, separator_start, LineCommentAs::Suffix, f, |_, c, source| {
-        !comment_is_own_line(c, source)
-    })
+    flush_trailing_comments_while(
+        0,
+        separator_start,
+        LineCommentAs::Suffix,
+        f,
+        |_, c, source| !comment_is_own_line(c, source),
+    )
 }
 
 /// How a trailing `//` is emitted by [`flush_trailing_comments_while`].
@@ -684,7 +722,9 @@ fn flush_trailing_comments_while(
     keep: impl Fn(u32, comments::CssComment, SourceText<'_>) -> bool,
 ) -> bool {
     loop {
-        let Some(comment) = f.context().comments().peek() else { return false };
+        let Some(comment) = f.context().comments().peek() else {
+            return false;
+        };
         let source = f.context().source_text();
         if comment.span.start < prev_end
             || comment.span.end > upper_bound
@@ -694,10 +734,19 @@ fn flush_trailing_comments_while(
         }
         f.context().comments().take_before(comment.span.end);
         if comment.inline && matches!(line_comment_as, LineCommentAs::Suffix) {
-            write!(f, FormatLineCommentSuffix::new(comment).with_leading_space());
+            write!(
+                f,
+                FormatLineCommentSuffix::new(comment).with_leading_space()
+            );
             return true;
         }
-        write!(f, [space(), FormatCommentBeforeContent::new(comment, BlockCommentAfter::None)]);
+        write!(
+            f,
+            [
+                space(),
+                FormatCommentBeforeContent::new(comment, BlockCommentAfter::None)
+            ]
+        );
         if comment.inline {
             return true;
         }
@@ -721,7 +770,10 @@ pub(super) fn write_comments_before_block(
     }
     write!(f, hard_line_break());
     for &comment in own_line {
-        write!(f, FormatCommentBeforeContent::new(comment, BlockCommentAfter::HardLine));
+        write!(
+            f,
+            FormatCommentBeforeContent::new(comment, BlockCommentAfter::HardLine)
+        );
     }
 }
 
@@ -770,12 +822,21 @@ pub(super) fn write_value_groups<'a>(
                 }
                 let is_last = i + 1 == groups.len();
                 // The declaration tail belongs to the LAST group only
-                let gctx = if is_last { ctx } else { ValueContext { tail_bound: None, ..ctx } };
+                let gctx = if is_last {
+                    ctx
+                } else {
+                    ValueContext {
+                        tail_bound: None,
+                        ..ctx
+                    }
+                };
                 // Comments between groups lead the group they precede
                 // (a `//` on the previous comma's line already went with the comma, see `write_group_comma`);
                 // own-line ones keep their line.
                 let lead: &'a [comments::CssComment] = group_values.first().map_or(&[], |first| {
-                    f.context().comments().take_before(to_span(first.span()).start)
+                    f.context()
+                        .comments()
+                        .take_before(to_span(first.span()).start)
                 });
                 if lead.is_empty() {
                     write_comma_group(group_values, gctx, f);
@@ -806,7 +867,9 @@ pub(super) fn write_value_groups<'a>(
                     let mut x = 4u32; // hardline indent under the value
                     for (k, &comment) in lead.iter().enumerate() {
                         x += comment.span.end - comment.span.start;
-                        let next_w = lead.get(k + 1).map_or(group_w, |c| c.span.end - c.span.start);
+                        let next_w = lead
+                            .get(k + 1)
+                            .map_or(group_w, |c| c.span.end - c.span.start);
                         let fits = x + 1 + next_w <= width;
                         let block_after = if fits {
                             BlockCommentAfter::Space
@@ -833,7 +896,14 @@ pub(super) fn write_value_groups<'a>(
             for (i, &(group_values, comma)) in groups.iter().enumerate() {
                 let is_last = i + 1 == groups.len();
                 // The declaration tail belongs to the LAST group only
-                let gctx = if is_last { ctx } else { ValueContext { tail_bound: None, ..ctx } };
+                let gctx = if is_last {
+                    ctx
+                } else {
+                    ValueContext {
+                        tail_bound: None,
+                        ..ctx
+                    }
+                };
                 let content = format_with(move |f: &mut CssFormatter<'_, 'a>| {
                     write_comma_group(group_values, gctx, f);
                     if !is_last || keep_trailing_comma {
@@ -893,7 +963,10 @@ fn write_paren_tail_comments(
         } else if i > 0 || after_content {
             write!(f, space());
         }
-        write!(f, FormatCommentBeforeContent::new(comment, BlockCommentAfter::None));
+        write!(
+            f,
+            FormatCommentBeforeContent::new(comment, BlockCommentAfter::None)
+        );
         after_inline = comment.inline;
     }
     after_inline
@@ -923,7 +996,11 @@ fn write_bracket_block<'a>(
     // A multi-element list drops it: the separator is comma either way.
     let keep_trailing_comma = groups.len() == 1;
     // Comments before `]` are the tail's; nothing past the bracket belongs inside.
-    let inner_ctx = ValueContext { paren_break: false, tail_bound: None, ..ctx };
+    let inner_ctx = ValueContext {
+        paren_break: false,
+        tail_bound: None,
+        ..ctx
+    };
     // Grid values never break (Prettier keeps them on one line, see `grid_did_break`):
     // a line name stays `[top-end]` however long the declaration.
     let flat = ctx.no_break || ctx.is_grid();
@@ -986,7 +1063,10 @@ pub(super) fn write_verbatim_value(span: Span, f: &mut CssFormatter<'_, '_>) {
 pub(super) fn flush_value_comments(upper_bound: u32, f: &mut CssFormatter<'_, '_>) -> bool {
     let mut last_inline = false;
     for &comment in f.context().comments().take_before(upper_bound) {
-        write!(f, FormatCommentBeforeContent::new(comment, BlockCommentAfter::Space));
+        write!(
+            f,
+            FormatCommentBeforeContent::new(comment, BlockCommentAfter::Space)
+        );
         last_inline = comment.inline;
     }
     last_inline
@@ -1015,7 +1095,10 @@ pub(super) fn flush_same_line_comments(
 pub(super) fn flush_trailing_value_comments(upper_bound: u32, f: &mut CssFormatter<'_, '_>) {
     for &comment in f.context().comments().take_before(upper_bound) {
         write!(f, " ");
-        write!(f, FormatCommentBeforeContent::new(comment, BlockCommentAfter::None));
+        write!(
+            f,
+            FormatCommentBeforeContent::new(comment, BlockCommentAfter::None)
+        );
     }
 }
 
@@ -1140,7 +1223,10 @@ pub(super) fn write_comma_group<'a>(
         let pending: Vec<comments::CssComment> =
             f.context().comments().iter_before(upper_bound).collect();
         let tail_bound = ctx.tail_bound;
-        let ctx = ValueContext { tail_bound: None, ..ctx };
+        let ctx = ValueContext {
+            tail_bound: None,
+            ..ctx
+        };
         let tail_comments: Vec<comments::CssComment> = tail_bound
             .map(|bound| {
                 f.context()
@@ -1155,8 +1241,11 @@ pub(super) fn write_comma_group<'a>(
         while i < values.len() {
             // Separator between the previous component and this one
             // (ignored by the fill builder for the first entry).
-            let mut sep =
-                if i == 0 { Separator::Line } else { separator_between(values, i, ctx, source) };
+            let mut sep = if i == 0 {
+                Separator::Line
+            } else {
+                separator_between(values, i, ctx, source)
+            };
             // An inline comment trailing the PREVIOUS run forces a break
             if i > 0 {
                 let prev_end = to_span(values[i - 1].span()).end;
@@ -1236,7 +1325,11 @@ pub(super) fn write_comma_group<'a>(
                     !c.inline && c.span.start >= run_end_pos && c.span.end <= next_start
                 }) {
                     let entry = format_with(move |f: &mut CssFormatter<'_, 'a>| {
-                        if f.context().comments().peek().is_some_and(|c| c.span == comment.span) {
+                        if f.context()
+                            .comments()
+                            .peek()
+                            .is_some_and(|c| c.span == comment.span)
+                        {
                             f.context().comments().take_before(comment.span.end);
                             write!(
                                 f,
@@ -1253,7 +1346,10 @@ pub(super) fn write_comma_group<'a>(
         for (k, &comment) in tail_comments.iter().enumerate() {
             let entry = format_with(move |f: &mut CssFormatter<'_, 'a>| {
                 f.context().comments().take_before(comment.span.end);
-                write!(f, FormatCommentBeforeContent::new(comment, BlockCommentAfter::None));
+                write!(
+                    f,
+                    FormatCommentBeforeContent::new(comment, BlockCommentAfter::None)
+                );
             });
             if k == 0 && ctx.tail_break {
                 filler.entry(&hard_line_break(), &entry);
@@ -1300,7 +1396,11 @@ fn math_op_token(value: &ComponentValue<'_>) -> bool {
 }
 
 fn raw_token<'b, 'a>(value: &'b ComponentValue<'a>) -> Option<&'b Token<'a>> {
-    if let ComponentValue::TokenWithSpan(token) = value { Some(&token.token) } else { None }
+    if let ComponentValue::TokenWithSpan(token) = value {
+        Some(&token.token)
+    } else {
+        None
+    }
 }
 
 /// The end of the run starting at `values[start]`: tight / non-breaking-space components merge into one fill entry.
@@ -1366,7 +1466,9 @@ fn base_separator(values: &[ComponentValue<'_>], i: usize, ctx: ValueContext<'_>
         // Fully glued `/` (`center/80%`, `12px/1.5`): one postcss word
         if is_solidus(curr)
             && gap_empty
-            && values.get(i + 1).is_none_or(|n| to_span(curr.span()).end == to_span(n.span()).start)
+            && values
+                .get(i + 1)
+                .is_none_or(|n| to_span(curr.span()).end == to_span(n.span()).start)
         {
             return Separator::Tight;
         }
@@ -1407,7 +1509,11 @@ fn base_separator(values: &[ComponentValue<'_>], i: usize, ctx: ValueContext<'_>
             return Separator::Tight;
         }
         // A spaced `/` glues to its left operand and breaks after (Prettier's math operator chunk)
-        return if is_solidus(curr) { Separator::Space } else { Separator::Line };
+        return if is_solidus(curr) {
+            Separator::Space
+        } else {
+            Separator::Line
+        };
     }
 
     // Less lookups: `@var [@result]` loses the gap (`var [@lookup]` rule).
@@ -1533,11 +1639,19 @@ fn base_separator(values: &[ComponentValue<'_>], i: usize, ctx: ValueContext<'_>
         };
         if is_solidus_tok(curr) {
             let require_space = wordish(values.get(i + 1)) || wordish(Some(prev));
-            return if gap_empty && !require_space { Separator::Tight } else { Separator::Space };
+            return if gap_empty && !require_space {
+                Separator::Tight
+            } else {
+                Separator::Space
+            };
         }
         if is_solidus_tok(prev) {
             let require_space = wordish(Some(curr)) || wordish(values.get(i.wrapping_sub(2)));
-            return if gap_empty && !require_space { Separator::Tight } else { Separator::Line };
+            return if gap_empty && !require_space {
+                Separator::Tight
+            } else {
+                Separator::Line
+            };
         }
     }
 
@@ -1556,9 +1670,13 @@ fn base_separator(values: &[ComponentValue<'_>], i: usize, ctx: ValueContext<'_>
     // Raw token fallbacks (postcss-values would have produced operator/word tokens):
     // keep gap-free neighbors tight (`10em+12em`, `-fb-url(/a/b)`).
     if gap_empty
-        && (matches!(prev, ComponentValue::TokenWithSpan(_) | ComponentValue::Placeholder(_))
-            || matches!(curr, ComponentValue::TokenWithSpan(_) | ComponentValue::Placeholder(_))
-            || matches!(prev, ComponentValue::Delimiter(_))
+        && (matches!(
+            prev,
+            ComponentValue::TokenWithSpan(_) | ComponentValue::Placeholder(_)
+        ) || matches!(
+            curr,
+            ComponentValue::TokenWithSpan(_) | ComponentValue::Placeholder(_)
+        ) || matches!(prev, ComponentValue::Delimiter(_))
             || matches!(curr, ComponentValue::Delimiter(_)))
     {
         return Separator::Tight;
@@ -1696,7 +1814,10 @@ pub(super) fn write_component_value<'a>(
                         ComponentValue::SassList(_) | ComponentValue::SassBinaryExpression(_)
                     )
                 });
-            let inner_ctx = ValueContext { paren_break: false, ..ctx };
+            let inner_ctx = ValueContext {
+                paren_break: false,
+                ..ctx
+            };
             let trailing = f.options().allow_trailing_comma();
             let r_paren = to_span(paren.span()).end.saturating_sub(1);
             if ctx.paren_break
@@ -1791,13 +1912,19 @@ pub(super) fn write_component_value<'a>(
             }
             // Only a value that IS the paren group is a map item;
             // a paren nested in a math expression (`$foo: 2 * ($bar + $baz)`) never breaks (Prettier #18530).
-            let ctx = ValueContext { paren_break: false, ..ctx };
+            let ctx = ValueContext {
+                paren_break: false,
+                ..ctx
+            };
             // `$name: value` may break after the colon when too long
             let pair = format_with(move |f: &mut CssFormatter<'_, 'a>| {
                 let mut filler = f.fill();
                 let name_span = to_span(kw.name.span());
                 let key = format_with(move |f: &mut CssFormatter<'_, 'a>| {
-                    write!(f, [text(f.context().source_text().text_for(&name_span)), ":"]);
+                    write!(
+                        f,
+                        [text(f.context().source_text().text_for(&name_span)), ":"]
+                    );
                 });
                 let val = format_with(move |f: &mut CssFormatter<'_, 'a>| {
                     write_component_value(&kw.value, ctx, f);
@@ -2270,7 +2397,10 @@ fn write_parenthesized<'a>(
     if ctx.no_break {
         write!(f, ["(", content, ")"]);
     } else {
-        write!(f, [text("("), group(&soft_block_indent(&content)), text(")")]);
+        write!(
+            f,
+            [text("("), group(&soft_block_indent(&content)), text(")")]
+        );
     }
 }
 
@@ -2306,7 +2436,10 @@ pub(super) fn write_function<'a>(
             let span = to_span(arg.span());
             write!(f, text(source.text_for(&span)));
         } else {
-            let url_ctx = ValueContext { in_url: true, ..ctx };
+            let url_ctx = ValueContext {
+                in_url: true,
+                ..ctx
+            };
             for (i, &(group_values, comma)) in groups.iter().enumerate() {
                 write_comma_group(group_values, url_ctx, f);
                 if i + 1 < groups.len() {
@@ -2364,8 +2497,13 @@ pub(super) fn write_function<'a>(
             if i > 0 {
                 // Preserve a blank line between argument groups,
                 // but only after a multi-part group (Prettier checks `comma_groups`).
-                let prev_end = groups_ref[i - 1].0.last().map_or(0, |v| to_span(v.span()).end);
-                let next_start = group_values.first().map_or(prev_end, |v| to_span(v.span()).start);
+                let prev_end = groups_ref[i - 1]
+                    .0
+                    .last()
+                    .map_or(0, |v| to_span(v.span()).end);
+                let next_start = group_values
+                    .first()
+                    .map_or(prev_end, |v| to_span(v.span()).start);
                 let next_start = f
                     .context()
                     .comments()
@@ -2381,8 +2519,10 @@ pub(super) fn write_function<'a>(
                     write!(f, soft_line_break_or_space());
                 }
             }
-            let arg_ctx =
-                ValueContext { paren_break: first_arg_is_kw && is_kw_arg(group_values), ..ctx };
+            let arg_ctx = ValueContext {
+                paren_break: first_arg_is_kw && is_kw_arg(group_values),
+                ..ctx
+            };
             write_comma_group(group_values, arg_ctx, f);
             // `has_trailing_comma`: the kept `var(--x /* c */,)` comma counts too
             if i + 1 < groups_ref.len() || has_trailing_comma {

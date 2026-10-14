@@ -154,9 +154,15 @@ fn test() {
 
     let fix = vec![
         ("throw Error()", "throw new Error()"),
-        ("throw (( getGlobalThis().Error ))()", "throw new (( getGlobalThis().Error ))()"),
+        (
+            "throw (( getGlobalThis().Error ))()",
+            "throw new (( getGlobalThis().Error ))()",
+        ),
         ("const error = Error()", "const error = new Error()"),
-        ("throw Object.assign(Error(), {foo})", "throw Object.assign(new Error(), {foo})"),
+        (
+            "throw Object.assign(Error(), {foo})",
+            "throw Object.assign(new Error(), {foo})",
+        ),
         (
             "new Promise((resolve, reject) => {\n        reject(Error('message'));\n    });",
             "new Promise((resolve, reject) => {\n        reject(new Error('message'));\n    });",

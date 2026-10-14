@@ -101,7 +101,10 @@ pub struct DerivesIter {
 
 impl DerivesIter {
     fn new(derives: Derives) -> Self {
-        Self { derives, next_id: 0 }
+        Self {
+            derives,
+            next_id: 0,
+        }
     }
 }
 
@@ -130,6 +133,8 @@ impl FusedIterator for DerivesIter {}
 
 impl Debug for Derives {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_list().entries(self.into_iter().map(|id| DERIVES[id].trait_name())).finish()
+        f.debug_list()
+            .entries(self.into_iter().map(|id| DERIVES[id].trait_name()))
+            .finish()
     }
 }

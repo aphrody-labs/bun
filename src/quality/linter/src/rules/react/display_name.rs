@@ -85,7 +85,11 @@ struct VersionCache {
 
 impl VersionCache {
     fn new() -> Self {
-        Self { memo_forwardref_compatible: None, context_objects_compatible: None, version: None }
+        Self {
+            memo_forwardref_compatible: None,
+            context_objects_compatible: None,
+            version: None,
+        }
     }
 
     /// Ensure the cache is fresh for the current version, clearing cached values if version changed.
@@ -155,16 +159,18 @@ impl Rule for DisplayName {
         // Phase 1: Iterate symbols to find components with declarations
         for symbol_id in ctx.scoping().symbol_ids() {
             let component_info =
-                ctx.scoping().symbol_declarations(symbol_id).find_map(|declaration| {
-                    let decl_node = ctx.nodes().get_node(declaration);
-                    is_react_component_node(
-                        decl_node,
-                        ctx,
-                        &mut version_cache,
-                        ignore_transpiler_name,
-                        check_context_objects,
-                    )
-                });
+                ctx.scoping()
+                    .symbol_declarations(symbol_id)
+                    .find_map(|declaration| {
+                        let decl_node = ctx.nodes().get_node(declaration);
+                        is_react_component_node(
+                            decl_node,
+                            ctx,
+                            &mut version_cache,
+                            ignore_transpiler_name,
+                            check_context_objects,
+                        )
+                    });
 
             // First check if the declaration itself is a component
             if let Some(component_info) = component_info {
@@ -184,8 +190,10 @@ impl Rule for DisplayName {
             } else if check_context_objects {
                 // If the declaration isn't a component, check if any write references assign createContext()
                 // This handles: var Hello; Hello = createContext();
-                let context_assignment_info =
-                    ctx.scoping().symbol_declarations(symbol_id).find_map(|declaration| {
+                let context_assignment_info = ctx
+                    .scoping()
+                    .symbol_declarations(symbol_id)
+                    .find_map(|declaration| {
                         let decl_node = ctx.nodes().get_node(declaration);
                         check_context_assignment_references(symbol_id, decl_node, ctx)
                     });
@@ -324,7 +332,8 @@ fn extract_member_expression_path(expr: &Expression) -> String {
 
 /// Check if a call expression is a createContext call
 fn is_create_context_call(call: &oxc_ast::ast::CallExpression) -> bool {
-    call.callee_name().is_some_and(|name| name == "createContext")
+    call.callee_name()
+        .is_some_and(|name| name == "createContext")
 }
 
 /// Check if a class extends React.Component or React.PureComponent
@@ -376,7 +385,9 @@ fn check_context_assignment_references(
     }
 
     let name = if let AstKind::VariableDeclarator(decl) = decl_node.kind() {
-        decl.id.get_identifier_name().map(|s| CompactStr::from(s.as_str()))
+        decl.id
+            .get_identifier_name()
+            .map(|s| CompactStr::from(s.as_str()))
     } else {
         None
     };
@@ -395,7 +406,11 @@ fn check_context_assignment_references(
                 && let Expression::CallExpression(call) = &assign.right
                 && is_create_context_call(call)
             {
-                return Some(ReactComponentInfo { span: assign.span, is_context: true, name });
+                return Some(ReactComponentInfo {
+                    span: assign.span,
+                    is_context: true,
+                    name,
+                });
             }
 
             if matches!(ancestor_kind, AstKind::AssignmentExpression(_)) {
@@ -417,7 +432,10 @@ fn is_react_component_node<'a>(
 ) -> Option<ReactComponentInfo> {
     match node.kind() {
         AstKind::VariableDeclarator(decl) => {
-            let name = decl.id.get_identifier_name().map(|s| CompactStr::from(s.as_str()));
+            let name = decl
+                .id
+                .get_identifier_name()
+                .map(|s| CompactStr::from(s.as_str()));
 
             // If the init is None (e.g., `var Hello;`), we can't detect anything here
             // The actual assignment might happen later via a write reference
@@ -493,7 +511,9 @@ fn is_react_component_node<'a>(
                 // Check if it's a direct component (returns JSX directly)
                 let returns_jsx = expression_returns(expr, ctx).has_jsx();
                 if returns_jsx
-                    && name.as_ref().is_some_and(|name| is_react_component_name(name.as_str()))
+                    && name
+                        .as_ref()
+                        .is_some_and(|name| is_react_component_name(name.as_str()))
                 {
                     return Some(ReactComponentInfo {
                         span: decl.id.span(),
@@ -647,13 +667,21 @@ fn is_anonymous_export_component(
         ExportDefaultDeclarationKind::ArrowFunctionExpression(func)
             if arrow_function_returns(func, ctx).has_jsx() =>
         {
-            return Some(ReactComponentInfo { span: export.span, is_context: false, name: None });
+            return Some(ReactComponentInfo {
+                span: export.span,
+                is_context: false,
+                name: None,
+            });
         }
         ExportDefaultDeclarationKind::FunctionExpression(func)
             if function_returns(func, ctx).has_jsx()
                 && (func.id.is_none() || ignore_transpiler_name) =>
         {
-            return Some(ReactComponentInfo { span: export.span, is_context: false, name: None });
+            return Some(ReactComponentInfo {
+                span: export.span,
+                is_context: false,
+                name: None,
+            });
         }
         ExportDefaultDeclarationKind::FunctionDeclaration(func) => {
             // Named default-export functions are handled in phase 1 via symbols/references.
@@ -697,11 +725,19 @@ fn check_class_component(
 
     // Anonymous class
     if ignore_transpiler_name {
-        return Some(ReactComponentInfo { span, is_context: false, name: None });
+        return Some(ReactComponentInfo {
+            span,
+            is_context: false,
+            name: None,
+        });
     }
 
     if extends_react_component(class) {
-        return Some(ReactComponentInfo { span, is_context: false, name: None });
+        return Some(ReactComponentInfo {
+            span,
+            is_context: false,
+            name: None,
+        });
     }
 
     None

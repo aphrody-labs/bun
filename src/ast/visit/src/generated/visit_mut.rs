@@ -7,7 +7,11 @@
 //! * [visitor pattern](https://rust-unofficial.github.io/patterns/patterns/behavioural/visitor.html)
 //! * [rustc visitor](https://github.com/rust-lang/rust/blob/1.82.0/compiler/rustc_ast/src/visit.rs)
 
-#![expect(unused_variables, clippy::match_same_arms, clippy::semicolon_if_nothing_returned)]
+#![expect(
+    unused_variables,
+    clippy::match_same_arms,
+    clippy::semicolon_if_nothing_returned
+)]
 #![allow(clippy::needless_pass_by_ref_mut, clippy::trivially_copy_pass_by_ref)]
 
 use std::cell::Cell;
@@ -4142,7 +4146,11 @@ pub mod walk_mut {
         visitor.enter_scope(
             {
                 let mut flags = ScopeFlags::TsModuleBlock;
-                if it.body.as_ref().is_some_and(|body| body.has_use_strict_directive()) {
+                if it
+                    .body
+                    .as_ref()
+                    .is_some_and(|body| body.has_use_strict_directive())
+                {
                     flags |= ScopeFlags::StrictMode;
                 }
                 flags

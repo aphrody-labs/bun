@@ -3,8 +3,24 @@
 `packages/web/site/sync.ts` publishes the public Bun site from immutable
 `origin/main`. The same source generates documentation, a SQLite source catalog,
 native extracted graph snapshots, the public Neon projection and static Worker
-assets. The captured upstream homepage uses Bun's real color tokens and explicit
-binary qualification receipts; it does not infer other platforms from the host.
+assets. The captured upstream homepage retains Bun's components, stylesheets,
+fonts and assets, with the Aphrody logo and canonical M3 semantic roles. Fork
+capabilities are a separate island outside upstream React hydration. Original
+and adapted bytes have separate hashes; analytics from upstream remain inert.
+Explicit binary receipts never infer other platforms from the host.
+
+For a fresh homepage capture, use the native Web owner with bounded acquisition:
+
+```sh
+aphrody web mirror https://bun.com/ <capture> --max-pages 1 --max-assets 128 --max-depth 0 --concurrency 2 --delay-ms 300 --allowed-domains bun.com --resolve-cdns false --json
+```
+
+The first capture does not necessarily include lazy modules. Browser qualification
+must exercise search and mobile navigation. Acquire observed missing same-origin
+module dependencies with `scripts/aphrody/site-mirror/capture-module-closure.ts`;
+it retains the native capture's byte counts and BLAKE3 receipts. Homepage builds
+fail closed when the upstream logo component changes, rather than silently
+restoring Bun branding after hydration.
 
 Store a configuration at `~/.aphrody/config/bun-site-sync.json`. Every reference
 must be absolute. For example, on the release host:
@@ -42,10 +58,32 @@ public snapshot source. The sanitized receipts `last-sync.json` and
 Changed binary receipts trigger a rebuild even when main is unchanged. Runtime
 source revisions remain distinct from documentation and graph source revisions.
 
-The existing `aphrody-site-publish.timer` invokes `auto-publish.sh` every fifteen
-minutes. It fetches main, runs the source-pinned script with existing dependencies,
+When provisioned and enabled on a release host, `aphrody-site-publish.timer`
+invokes `auto-publish.sh` every fifteen minutes. It fetches main, runs the source-pinned script with existing dependencies,
 and uses an exclusive publication lock. No Git checkout is reset or cleaned. Its
 configuration and captured public assets must already exist on the host.
+
+## Source-derived guides and blog dossiers
+
+`editorial-generate.ts` uses the existing protected Aphrody Jev credential and
+read-only public Neon connection. The application SDK owns authentication and
+HTTP; the native `bun:yolo.inspect` owner validates every structured response.
+Neither the Worker nor static browser assets import that native adapter or keys.
+Jev judges relevance, injection and evidence support, not free-form authorship.
+The resulting French dossiers disclose their source-derived assembly and retain
+literal excerpts, document hashes and the immutable documentation/graph snapshot.
+
+```sh
+bun packages/web/site/editorial-generate.ts --source <published-source-sha> --snapshot <public-snapshot-sha256> --out <new-absolute-directory>
+```
+
+Defaults resolve protected references below `APHRODY_HOME` or the current user's
+`.aphrody`: `config/bun-site-neon-http.url` and `private/typesafe.api-key`.
+Explicit `--database-url-file` and `--api-key-file` select references, never values.
+The batch is limited to four topics and sixteen structured requests, with no
+model fallback. All topics must pass before any output is created. A stale public
+snapshot, invalid response, unsupported citation, cancellation or failed grounding
+rejects publication; source assembly does not qualify runtime behavior.
 
 NGINX, codec portability, browser rendering, GPU execution and authenticated media
 providers each require their own native receipts. Site publication does not

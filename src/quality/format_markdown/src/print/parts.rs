@@ -88,7 +88,11 @@ impl<'a> Item<'a> {
 
 impl<'a> Parts<'a> {
     pub fn new(allocator: &'a Allocator) -> Self {
-        Self { items: ArenaVec::new_in(&allocator), len: 0, marks: Vec::new() }
+        Self {
+            items: ArenaVec::new_in(&allocator),
+            len: 0,
+            marks: Vec::new(),
+        }
     }
 
     pub fn len(&self) -> u32 {
@@ -97,7 +101,10 @@ impl<'a> Parts<'a> {
 
     pub fn push_str(&mut self, s: &'a str) {
         // A raw newline in content resumes at column 0 (`push_lines` places continuation lines)
-        debug_assert!(!s.contains('\n'), "multi-line content must go through `push_lines`: {s:?}");
+        debug_assert!(
+            !s.contains('\n'),
+            "multi-line content must go through `push_lines`: {s:?}"
+        );
         if !s.is_empty() {
             self.push_atom(Atom::Str(s));
         }

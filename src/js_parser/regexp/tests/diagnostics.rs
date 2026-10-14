@@ -39,7 +39,11 @@ fn test() {
         ("a", Some("gg"), "duplicated_flags"),
         ("a", Some("uv"), "invalid_unicode_flags"),
         // Capturing group errors
-        (r"(?<n>.)(?<n>.)", Some(""), "duplicated_capturing_group_names"),
+        (
+            r"(?<n>.)(?<n>.)",
+            Some(""),
+            "duplicated_capturing_group_names",
+        ),
         (r"(?<>a)", Some(""), "empty_group_specifier"),
         // Quantifier errors
         ("+", Some("u"), "lone_quantifier"),
@@ -58,24 +62,60 @@ fn test() {
         (r"\1", Some("u"), "invalid_indexed_reference_no_groups"),
         (r"()\2", Some("u"), "invalid_indexed_reference_with_groups"),
         (r"\k<a>", Some("u"), "invalid_named_reference_no_groups"),
-        (r"(?<foo>)\k<bar>", Some("u"), "invalid_named_reference_with_groups"),
+        (
+            r"(?<foo>)\k<bar>",
+            Some("u"),
+            "invalid_named_reference_with_groups",
+        ),
         // Unicode property errors
-        (r"\P{Basic_Emoji}", Some("v"), "invalid_unicode_property_name_negative_strings"),
-        (r"\p{Basic_Emoji}", Some("u"), "invalid_unicode_property_of_strings"),
+        (
+            r"\P{Basic_Emoji}",
+            Some("v"),
+            "invalid_unicode_property_name_negative_strings",
+        ),
+        (
+            r"\p{Basic_Emoji}",
+            Some("u"),
+            "invalid_unicode_property_of_strings",
+        ),
         (r"\p{Foo}", Some("u"), "invalid_unicode_property"),
         // Character class errors
         ("[z-a]", Some(""), "character_class_range_out_of_order"),
-        ("[a--b]", Some(""), "character_class_range_dash_not_subtraction"),
+        (
+            "[a--b]",
+            Some(""),
+            "character_class_range_dash_not_subtraction",
+        ),
         (r"[\d-z]", Some("u"), "character_class_range_invalid_atom"),
         (r"[a-\d]", Some("u"), "invalid_class_atom"),
         // Unicode sets mode (v flag) errors
         (r"[&&]", Some("v"), "empty_class_set_expression"),
-        (r"[a&&&b]", Some("v"), "class_intersection_unexpected_ampersand"),
-        (r"[a&&]", Some("v"), "class_set_expression_invalid_character"),
-        (r"[a&&b(]", Some("v"), "class_set_expression_invalid_character"),
-        (r"[[^\q{ng}]]", Some("v"), "character_class_contents_invalid_operands"),
+        (
+            r"[a&&&b]",
+            Some("v"),
+            "class_intersection_unexpected_ampersand",
+        ),
+        (
+            r"[a&&]",
+            Some("v"),
+            "class_set_expression_invalid_character",
+        ),
+        (
+            r"[a&&b(]",
+            Some("v"),
+            "class_set_expression_invalid_character",
+        ),
+        (
+            r"[[^\q{ng}]]",
+            Some("v"),
+            "character_class_contents_invalid_operands",
+        ),
         // Unicode escape errors
-        (r"\u{FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF}", Some("u"), "too_large_number_digits"),
+        (
+            r"\u{FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF}",
+            Some("u"),
+            "too_large_number_digits",
+        ),
         (r"\ua", Some("u"), "invalid_unicode_escape_sequence"),
         (r"\u{110000}", Some("u"), "invalid_surrogate_pair"),
         // Escape errors

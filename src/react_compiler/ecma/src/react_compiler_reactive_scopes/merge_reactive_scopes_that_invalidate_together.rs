@@ -114,7 +114,9 @@ impl<'a, 'e> ReactiveFunctionTransform<'a> for MergeTransform<'a, 'e> {
         scope: &mut ReactiveScopeBlock<'a>,
         state: &mut Self::State,
     ) -> Result<Transformed<ReactiveStatement<'a>>, OxcDiagnostic> {
-        let scope_deps = self.env.scopes[scope.scope].dependencies.clone_in(self.env.allocator);
+        let scope_deps = self.env.scopes[scope.scope]
+            .dependencies
+            .clone_in(self.env.allocator);
         // Save parent state and recurse with this scope's deps as state
         let parent_state = state.take();
         *state = Some(scope_deps.clone_in(self.env.allocator));
@@ -381,7 +383,9 @@ impl<'a, 'e> MergeTransform<'a, 'e> {
                     ReactiveStatement::Scope(inner_scope) => {
                         let inner_scope_id = inner_scope.scope;
                         merged_scope.instructions.extend(inner_scope.instructions);
-                        self.env.scopes[merged_scope.scope].merged.push(inner_scope_id);
+                        self.env.scopes[merged_scope.scope]
+                            .merged
+                            .push(inner_scope_id);
                     }
                     stmt => {
                         merged_scope.instructions.push(stmt);

@@ -21,8 +21,8 @@
 //!
 //! Phase 4 — `crate::scanners` (formerly the `n2b-scanners` crate).
 
-use crate::util::{line_offsets, make_finding};
 use crate::types::{Finding, MakeFindingOpts, Severity};
+use crate::util::{line_offsets, make_finding};
 
 /// Vars connues comme Node-only (pas d'effet sous Bun).
 const NODE_ONLY_VARS: &[(&str, &str)] = &[

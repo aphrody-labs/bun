@@ -17,8 +17,10 @@ use crate::{
 };
 
 fn prefer_math_trunc_diagnostic(span: Span, bad_op: &str) -> OxcDiagnostic {
-    OxcDiagnostic::warn(format!("Prefer `Math.trunc()` over instead of `{bad_op} 0`."))
-        .with_label(span)
+    OxcDiagnostic::warn(format!(
+        "Prefer `Math.trunc()` over instead of `{bad_op} 0`."
+    ))
+    .with_label(span)
 }
 
 #[derive(Debug, Default, Clone)]
@@ -80,7 +82,12 @@ impl Rule for PreferMathTrunc {
                     return;
                 }
 
-                (UnaryOperator::BitwiseNot.as_str(), inner_unary_expr.argument.span(), false, false)
+                (
+                    UnaryOperator::BitwiseNot.as_str(),
+                    inner_unary_expr.argument.span(),
+                    false,
+                    false,
+                )
             }
             AstKind::BinaryExpression(bin_expr) => {
                 let Expression::NumericLiteral(right_num_lit) = &bin_expr.right else {
@@ -99,7 +106,12 @@ impl Rule for PreferMathTrunc {
                     return;
                 }
 
-                (bin_expr.operator.as_str(), bin_expr.left.span(), false, false)
+                (
+                    bin_expr.operator.as_str(),
+                    bin_expr.left.span(),
+                    false,
+                    false,
+                )
             }
             AstKind::AssignmentExpression(assignment_expr) => {
                 let Expression::NumericLiteral(right_num_lit) = &assignment_expr.right else {
@@ -260,8 +272,14 @@ fn test() {
     let fix = vec![
         ("const foo = 1.1 | 0;", "const foo = Math.trunc(1.1);"),
         ("const foo = ~~3.9;", "const foo = Math.trunc(3.9);"),
-        ("function foo() {return.1 | 0;}", "function foo() {return Math.trunc(.1);}"),
-        ("function foo() {return~~3.9;}", "function foo() {return Math.trunc(3.9);}"),
+        (
+            "function foo() {return.1 | 0;}",
+            "function foo() {return Math.trunc(.1);}",
+        ),
+        (
+            "function foo() {return~~3.9;}",
+            "function foo() {return Math.trunc(3.9);}",
+        ),
         ("const foo = bar >> 0;", "const foo = Math.trunc(bar);"),
         ("const foo = bar << 0;", "const foo = Math.trunc(bar);"),
         ("const foo = bar ^ 0;", "const foo = Math.trunc(bar);"),

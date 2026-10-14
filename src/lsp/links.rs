@@ -28,7 +28,10 @@ pub struct Site {
 
 impl Site {
     pub fn contains(&self, path: &str, line: u32, character: u32) -> bool {
-        self.line == line && self.start <= character && character <= self.end && path_key(&self.path) == path
+        self.line == line
+            && self.start <= character
+            && character <= self.end
+            && path_key(&self.path) == path
     }
 }
 
@@ -149,7 +152,10 @@ pub fn word_at(line: &str, character: u32) -> Option<(String, u32, u32)> {
 
 /// Columns of the first whole-word `name` in `line`.
 pub fn find_word(line: &str, name: &str) -> Option<(u32, u32)> {
-    words(line).into_iter().find(|(_, word)| *word == name).map(|(at, word)| range16(line, at, word.len()))
+    words(line)
+        .into_iter()
+        .find(|(_, word)| *word == name)
+        .map(|(at, word)| range16(line, at, word.len()))
 }
 
 /// Whether `line` holds the whole word `name`.
@@ -165,7 +171,10 @@ pub fn snake_case(name: &str) -> String {
         if c.is_ascii_uppercase() && i > 0 {
             let previous = chars[i - 1];
             let next_lower = chars.get(i + 1).is_some_and(char::is_ascii_lowercase);
-            if previous.is_ascii_lowercase() || previous.is_ascii_digit() || (previous.is_ascii_uppercase() && next_lower) {
+            if previous.is_ascii_lowercase()
+                || previous.is_ascii_digit()
+                || (previous.is_ascii_uppercase() && next_lower)
+            {
                 out.push('_');
             }
         }
@@ -176,13 +185,17 @@ pub fn snake_case(name: &str) -> String {
 
 /// `Bun__canonicalizeIP`, `GlobPrototype__match`: Bun's names for symbols that cross languages.
 pub fn is_abi_name(word: &str) -> bool {
-    let Some((head, tail)) = word.split_once("__") else { return false };
+    let Some((head, tail)) = word.split_once("__") else {
+        return false;
+    };
     word.len() >= 5
         && head.chars().next().is_some_and(|c| c.is_ascii_alphabetic())
         && !tail.is_empty()
         && !tail.starts_with('_')
         && !word.ends_with('_')
-        && !word.chars().all(|c| c.is_ascii_uppercase() || c == '_' || c.is_ascii_digit())
+        && !word
+            .chars()
+            .all(|c| c.is_ascii_uppercase() || c == '_' || c.is_ascii_digit())
 }
 
 pub fn is_comment(trimmed: &str) -> bool {
@@ -202,8 +215,12 @@ pub fn defines(family: Family, line: &str, name: &str) -> bool {
         Family::Script => after("function ") || after("const ") || after("let "),
         Family::C => {
             let trimmed = line.trim_end();
-            let call = line.match_indices(name).any(|(at, _)| line[at + name.len()..].trim_start().starts_with('('));
-            (after("DEFINE_HOST_FUNCTION(") || after("define ") || after("DEFINE_HOST_FUNCTION_TYPE("))
+            let call = line
+                .match_indices(name)
+                .any(|(at, _)| line[at + name.len()..].trim_start().starts_with('('));
+            (after("DEFINE_HOST_FUNCTION(")
+                || after("define ")
+                || after("DEFINE_HOST_FUNCTION_TYPE("))
                 || (call
                     && !line.starts_with([' ', '\t'])
                     && !trimmed.ends_with(';')
@@ -231,11 +248,27 @@ pub fn next_string(text: &str, from: usize) -> Option<(usize, &str)> {
 pub fn scan_file(path: &Path, rel: &str, text: &str, labels: &[(String, String)]) -> Scan {
     let mut scan = Scan::default();
     let family = Family::of(rel);
-    let lines: Vec<&str> = text.split('\n').map(|line| line.strip_suffix('\r').unwrap_or(line)).collect();
-    let site = |line: usize, start: u32, end: u32| Site { path: path.to_path_buf(), line: line as u32, start, end };
+    let lines: Vec<&str> = text
+        .split('\n')
+        .map(|line| line.strip_suffix('\r').unwrap_or(line))
+        .collect();
+    let site = |line: usize, start: u32, end: u32| Site {
+        path: path.to_path_buf(),
+        line: line as u32,
+        start,
+        end,
+    };
     for (label, loc) in labels {
-        let Some(line) = loc.strip_prefix('L').and_then(|it| it.parse::<usize>().ok()) else { continue };
-        if let Some(columns) = lines.get(line.wrapping_sub(1)).and_then(|text| find_word(text, bare_name(label))) {
+        let Some(line) = loc
+            .strip_prefix('L')
+            .and_then(|it| it.parse::<usize>().ok())
+        else {
+            continue;
+        };
+        if let Some(columns) = lines
+            .get(line.wrapping_sub(1))
+            .and_then(|text| find_word(text, bare_name(label)))
+        {
             scan.columns.insert((label.clone(), line as u32), columns);
         }
     }
@@ -249,7 +282,10 @@ pub fn scan_file(path: &Path, rel: &str, text: &str, labels: &[(String, String)]
                 let exported = match family {
                     Family::Rust => {
                         line.contains("extern \"C\" fn")
-                            || (line.contains("fn ") && lines[number.saturating_sub(3)..number].iter().any(|it| it.contains("no_mangle")))
+                            || (line.contains("fn ")
+                                && lines[number.saturating_sub(3)..number]
+                                    .iter()
+                                    .any(|it| it.contains("no_mangle")))
                     }
                     Family::Zig => line.contains("export fn "),
                     _ => line.contains("extern \"C\"") && line.contains('('),
@@ -261,19 +297,35 @@ pub fn scan_file(path: &Path, rel: &str, text: &str, labels: &[(String, String)]
                     }
                     let (start, end) = range16(line, at, word.len());
                     let definition = defines(family, line, word);
-                    scan.abi.push((word.to_owned(), AbiSite { site: site(number, start, end), family, definition }));
+                    scan.abi.push((
+                        word.to_owned(),
+                        AbiSite {
+                            site: site(number, start, end),
+                            family,
+                            definition,
+                        },
+                    ));
                 }
             }
         }
         Some(Family::Script) => {
             for (marker, target) in NATIVE_CALLS {
                 for (at, _) in text.match_indices(marker) {
-                    let Some((file_at, file)) = next_string(text, at + marker.len()) else { continue };
-                    let Some((name_at, name)) = next_string(text, file_at + file.len() + 1) else { continue };
+                    let Some((file_at, file)) = next_string(text, at + marker.len()) else {
+                        continue;
+                    };
+                    let Some((name_at, name)) = next_string(text, file_at + file.len() + 1) else {
+                        continue;
+                    };
                     let line = text[..name_at].matches('\n').count();
                     let line_start = text[..name_at].rfind('\n').map_or(0, |it| it + 1);
                     let (start, end) = range16(lines[line], name_at - line_start, name.len());
-                    scan.natives.push(NativeCall { site: site(line, start, end), family: target, file: file.to_owned(), name: name.to_owned() });
+                    scan.natives.push(NativeCall {
+                        site: site(line, start, end),
+                        family: target,
+                        file: file.to_owned(),
+                        name: name.to_owned(),
+                    });
                 }
             }
             if rel.ends_with(".classes.ts") {
@@ -287,7 +339,9 @@ pub fn scan_file(path: &Path, rel: &str, text: &str, labels: &[(String, String)]
                         if at > 0 && line[..at].ends_with(is_word) {
                             continue;
                         }
-                        let Some((value_at, value)) = next_string(line, at + key.len()) else { continue };
+                        let Some((value_at, value)) = next_string(line, at + key.len()) else {
+                            continue;
+                        };
                         if value.is_empty() || !value.chars().all(is_word) {
                             continue;
                         }
@@ -295,7 +349,11 @@ pub fn scan_file(path: &Path, rel: &str, text: &str, labels: &[(String, String)]
                         if key == "name:" {
                             if class.is_none() {
                                 class = Some(value.to_owned());
-                                scan.classes.push(ClassMember { site: site(number, start, end), class: value.to_owned(), member: None });
+                                scan.classes.push(ClassMember {
+                                    site: site(number, start, end),
+                                    class: value.to_owned(),
+                                    member: None,
+                                });
                             }
                         } else if let Some(class) = &class {
                             scan.classes.push(ClassMember {
@@ -323,7 +381,6 @@ pub fn bare_name(label: &str) -> &str {
 mod tests {
     use super::*;
 
-
     #[test]
     fn names() {
         assert_eq!(snake_case("fromVLQ"), "from_vlq");
@@ -333,22 +390,44 @@ mod tests {
         assert!(is_abi_name("GlobPrototype__match"));
         assert!(!is_abi_name("__cplusplus"));
         assert!(!is_abi_name("FOO__BAR"));
-        assert_eq!(word_at("let x = foo_bar(1);", 10), Some(("foo_bar".to_owned(), 8, 15)));
-        assert!(defines(Family::C, "extern \"C\" JSC::EncodedJSValue Bun__x(int a) {", "Bun__x"));
-        assert!(!defines(Family::C, "extern \"C\" void Bun__x(int a);", "Bun__x"));
-        assert!(defines(Family::Rust, "pub extern \"C\" fn Bun__x() {}", "Bun__x"));
+        assert_eq!(
+            word_at("let x = foo_bar(1);", 10),
+            Some(("foo_bar".to_owned(), 8, 15))
+        );
+        assert!(defines(
+            Family::C,
+            "extern \"C\" JSC::EncodedJSValue Bun__x(int a) {",
+            "Bun__x"
+        ));
+        assert!(!defines(
+            Family::C,
+            "extern \"C\" void Bun__x(int a);",
+            "Bun__x"
+        ));
+        assert!(defines(
+            Family::Rust,
+            "pub extern \"C\" fn Bun__x() {}",
+            "Bun__x"
+        ));
     }
 
     #[test]
     fn scans_links() {
         let path = Path::new("/r/a.ts");
-        let text = "export const diff = $newRustFunction(\"patch.rs\", \"TestingAPIs.makeDiff\", 0);
+        let text =
+            "export const diff = $newRustFunction(\"patch.rs\", \"TestingAPIs.makeDiff\", 0);
 ";
         let scan = scan_file(path, "a.ts", text, &[]);
         assert_eq!(scan.natives.len(), 1);
         let call = &scan.natives[0];
-        assert_eq!((call.file.as_str(), call.name.as_str(), call.family), ("patch.rs", "TestingAPIs.makeDiff", Family::Rust));
-        assert_eq!((call.site.line, call.site.start, call.site.end), (0, 50, 70));
+        assert_eq!(
+            (call.file.as_str(), call.name.as_str(), call.family),
+            ("patch.rs", "TestingAPIs.makeDiff", Family::Rust)
+        );
+        assert_eq!(
+            (call.site.line, call.site.start, call.site.end),
+            (0, 50, 70)
+        );
 
         let text = "export default [
   define({
@@ -359,8 +438,17 @@ mod tests {
   }),
 ];
 ";
-        let scan = scan_file(Path::new("/r/glob.classes.ts"), "glob.classes.ts", text, &[]);
-        let members: Vec<(&str, Option<&str>, u32)> = scan.classes.iter().map(|it| (it.class.as_str(), it.member.as_deref(), it.site.line)).collect();
+        let scan = scan_file(
+            Path::new("/r/glob.classes.ts"),
+            "glob.classes.ts",
+            text,
+            &[],
+        );
+        let members: Vec<(&str, Option<&str>, u32)> = scan
+            .classes
+            .iter()
+            .map(|it| (it.class.as_str(), it.member.as_deref(), it.site.line))
+            .collect();
         assert_eq!(members, [("Glob", None, 2), ("Glob", Some("match"), 4)]);
 
         let text = "extern \"C\" unsigned Bun__answer();
@@ -368,8 +456,17 @@ unsigned twice() {
     return Bun__answer() * 2;
 }
 ";
-        let scan = scan_file(Path::new("/r/a.cpp"), "a.cpp", text, &[("twice()".to_owned(), "L2".to_owned())]);
-        let abi: Vec<(&str, u32, bool)> = scan.abi.iter().map(|(name, it)| (name.as_str(), it.site.line, it.definition)).collect();
+        let scan = scan_file(
+            Path::new("/r/a.cpp"),
+            "a.cpp",
+            text,
+            &[("twice()".to_owned(), "L2".to_owned())],
+        );
+        let abi: Vec<(&str, u32, bool)> = scan
+            .abi
+            .iter()
+            .map(|(name, it)| (name.as_str(), it.site.line, it.definition))
+            .collect();
         assert_eq!(abi, [("Bun__answer", 0, false), ("Bun__answer", 2, false)]);
         assert_eq!(scan.columns.get(&("twice()".to_owned(), 2)), Some(&(9, 14)));
     }

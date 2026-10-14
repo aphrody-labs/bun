@@ -132,7 +132,12 @@ pub fn compile_fn<'a, const EMIT: bool>(
         return Ok(None);
     }
 
-    prune_maybe_throws(&mut hir, &mut env.functions, &env.identifiers, env.allocator)?;
+    prune_maybe_throws(
+        &mut hir,
+        &mut env.functions,
+        &env.identifiers,
+        env.allocator,
+    )?;
 
     validate_context_variable_lvalues(&hir, &mut env)?;
 
@@ -184,7 +189,12 @@ pub fn compile_fn<'a, const EMIT: bool>(
 
     dead_code_elimination(&mut hir, &env);
 
-    prune_maybe_throws(&mut hir, &mut env.functions, &env.identifiers, env.allocator)?;
+    prune_maybe_throws(
+        &mut hir,
+        &mut env.functions,
+        &env.identifiers,
+        env.allocator,
+    )?;
 
     infer_mutation_aliasing_ranges(&mut hir, &mut env, false)?;
 
@@ -339,8 +349,14 @@ pub fn compile_fn<'a, const EMIT: bool>(
 
     let output = if EMIT {
         Some(
-            codegen_function(ast, &reactive_fn, &mut env, unique_identifiers, fbt_operands)
-                .map_err(Diagnostics::from)?,
+            codegen_function(
+                ast,
+                &reactive_fn,
+                &mut env,
+                unique_identifiers,
+                fbt_operands,
+            )
+            .map_err(Diagnostics::from)?,
         )
     } else {
         None

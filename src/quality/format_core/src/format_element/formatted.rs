@@ -55,6 +55,7 @@ impl<C: FormatContext> Formatted<'_, C> {
     pub fn print_with_indent(self, indent: u16) -> PrintResult<Printed> {
         let print_options = self.context.options().as_print_options();
         let source_size_hint = self.context.source_code().len();
-        self.document.print_with_indent(source_size_hint, print_options, indent)
+        self.document
+            .print_with_indent(source_size_hint, print_options, indent)
     }
 }

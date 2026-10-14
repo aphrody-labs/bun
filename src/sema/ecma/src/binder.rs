@@ -30,12 +30,14 @@ impl<'a> Binder<'a> for VariableDeclarator<'a> {
                 SymbolFlags::BlockScopedVariable | SymbolFlags::ConstVariable,
                 SymbolFlags::BlockScopedVariableExcludes,
             ),
-            VariableDeclarationKind::Let => {
-                (SymbolFlags::BlockScopedVariable, SymbolFlags::BlockScopedVariableExcludes)
-            }
-            VariableDeclarationKind::Var => {
-                (SymbolFlags::FunctionScopedVariable, SymbolFlags::FunctionScopedVariableExcludes)
-            }
+            VariableDeclarationKind::Let => (
+                SymbolFlags::BlockScopedVariable,
+                SymbolFlags::BlockScopedVariableExcludes,
+            ),
+            VariableDeclarationKind::Var => (
+                SymbolFlags::FunctionScopedVariable,
+                SymbolFlags::FunctionScopedVariableExcludes,
+            ),
         };
 
         if is_declare {
@@ -83,8 +85,12 @@ impl<'a> Binder<'a> for VariableDeclarator<'a> {
                             // remove current scope binding and add to target scope
                             // avoid same symbols appear in multi-scopes
                             builder.scoping.remove_binding(scope_id, name);
-                            builder.scoping.add_binding(target_scope_id, name, symbol_id);
-                            builder.scoping.set_symbol_scope_id(symbol_id, target_scope_id);
+                            builder
+                                .scoping
+                                .add_binding(target_scope_id, name, symbol_id);
+                            builder
+                                .scoping
+                                .set_symbol_scope_id(symbol_id, target_scope_id);
                         }
                         break;
                     }
@@ -101,7 +107,9 @@ impl<'a> Binder<'a> for VariableDeclarator<'a> {
                 // Finally, add the variable to all hoisted scopes
                 // to support redeclaration checks when declaring variables with the same name later.
                 for &scope_id in &var_scope_ids {
-                    builder.hoisting_variables.insert((scope_id, name), symbol_id);
+                    builder
+                        .hoisting_variables
+                        .insert((scope_id, name), symbol_id);
                 }
             });
         }
@@ -196,7 +204,9 @@ impl<'a> Binder<'a> for Function<'a> {
                         var_scope_id,
                         symbol_id,
                     );
-                    builder.hoisting_variables.insert((block_scope_id, ident.name), symbol_id);
+                    builder
+                        .hoisting_variables
+                        .insert((block_scope_id, ident.name), symbol_id);
                 }
             }
 
@@ -247,7 +257,9 @@ impl<'a> Binder<'a> for FormalParameter<'a> {
     // Binds the FormalParameter of a function or method.
     fn bind(&self, builder: &mut SemanticBuilder<'a>) {
         let parent_kind = builder.ancestry().parent_kind();
-        let AstKind::FormalParameters(parameters) = parent_kind else { unreachable!() };
+        let AstKind::FormalParameters(parameters) = parent_kind else {
+            unreachable!()
+        };
 
         let includes = SymbolFlags::FunctionScopedVariable;
 
@@ -282,7 +294,9 @@ impl<'a> Binder<'a> for FormalParameterRest<'a> {
     // Binds the FormalParameter of a function or method.
     fn bind(&self, builder: &mut SemanticBuilder<'a>) {
         let parent_kind = builder.ancestry().parent_kind();
-        let AstKind::FormalParameters(parameters) = parent_kind else { unreachable!() };
+        let AstKind::FormalParameters(parameters) = parent_kind else {
+            unreachable!()
+        };
 
         let includes = SymbolFlags::FunctionScopedVariable;
 
@@ -421,11 +435,21 @@ impl<'a> Binder<'a> for TSInterfaceDeclaration<'a> {
 impl<'a> Binder<'a> for TSEnumDeclaration<'a> {
     fn bind(&self, builder: &mut SemanticBuilder<'a>) {
         let is_const = self.r#const;
-        let includes = if self.declare { SymbolFlags::Ambient } else { SymbolFlags::empty() };
-        let (includes, excludes) = if is_const {
-            (SymbolFlags::ConstEnum | includes, SymbolFlags::ConstEnumExcludes)
+        let includes = if self.declare {
+            SymbolFlags::Ambient
         } else {
-            (SymbolFlags::RegularEnum | includes, SymbolFlags::RegularEnumExcludes)
+            SymbolFlags::empty()
+        };
+        let (includes, excludes) = if is_const {
+            (
+                SymbolFlags::ConstEnum | includes,
+                SymbolFlags::ConstEnumExcludes,
+            )
+        } else {
+            (
+                SymbolFlags::RegularEnum | includes,
+                SymbolFlags::RegularEnumExcludes,
+            )
         };
         let symbol_id = builder.declare_symbol(self.id.span, self.id.name, includes, excludes);
         self.id.symbol_id.set(Some(symbol_id));
@@ -457,7 +481,10 @@ impl<'a> Binder<'a> for TSNamespaceDeclaration<'a> {
         let (mut includes, excludes) = if instantiated {
             (SymbolFlags::ValueModule, SymbolFlags::ValueModuleExcludes)
         } else {
-            (SymbolFlags::NamespaceModule, SymbolFlags::NamespaceModuleExcludes)
+            (
+                SymbolFlags::NamespaceModule,
+                SymbolFlags::NamespaceModuleExcludes,
+            )
         };
 
         if self.declare {
@@ -731,8 +758,11 @@ fn get_module_instance_state_for_alias_target<'a>(
 
         // Walk up the ancestry stack (excluding `current_node_id` itself) to the
         // nearest enclosing block-like node.
-        let Some(kind) =
-            builder.ancestry().ancestor_kinds_from(Some(current_node_id)).skip(1).find(|kind| {
+        let Some(kind) = builder
+            .ancestry()
+            .ancestor_kinds_from(Some(current_node_id))
+            .skip(1)
+            .find(|kind| {
                 matches!(
                     kind,
                     AstKind::Program(_) | AstKind::TSModuleBlock(_) | AstKind::BlockStatement(_)

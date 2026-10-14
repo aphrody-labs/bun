@@ -41,7 +41,13 @@ impl std::error::Error for Error {}
 /// This does not check for semantic errors such as duplicate keys.
 pub fn parse(source: &str) -> Parse {
     let (root, errors) = parse_root(source);
-    Parse { tree: SyntaxTree { root, source: source.to_string() }, errors }
+    Parse {
+        tree: SyntaxTree {
+            root,
+            source: source.to_string(),
+        },
+        errors,
+    }
 }
 
 /// Parse a TOML document, returning just the root node and errors without
@@ -91,7 +97,10 @@ impl Parser<'_> {
         let _ = with_node!(self.builder, KEY, self.parse_key());
 
         Parse {
-            tree: SyntaxTree { root: self.builder.finish_root(), source: source.to_string() },
+            tree: SyntaxTree {
+                root: self.builder.finish_root(),
+                source: source.to_string(),
+            },
             errors: self.errors,
         }
     }
@@ -127,7 +136,10 @@ impl<'p> Parser<'p> {
     fn error(&mut self, message: &str) -> ParserResult<()> {
         let span = self.lexer.span();
 
-        let err = Error { range: text_range(span.start, span.end), message: message.into() };
+        let err = Error {
+            range: text_range(span.start, span.end),
+            message: message.into(),
+        };
 
         let same_error = self.errors.last().is_some_and(|e| e.range == err.range);
 
@@ -151,7 +163,10 @@ impl<'p> Parser<'p> {
     // report error without consuming the current the token
     fn report_error(&mut self, message: &str) -> ParserResult<()> {
         let span = self.lexer.span();
-        self.add_error(&Error { range: text_range(span.start, span.end), message: message.into() });
+        self.add_error(&Error {
+            range: text_range(span.start, span.end),
+            message: message.into(),
+        });
         Err(())
     }
 

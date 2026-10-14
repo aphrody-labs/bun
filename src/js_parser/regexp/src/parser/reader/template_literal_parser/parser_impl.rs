@@ -36,20 +36,39 @@ impl Parser {
 
         if combine_surrogate_pair || (0..=0xffff).contains(&cp) {
             // If the code point is in the BMP or if forced, just push it
-            body.push(CodePoint { span, value: cp, escape_kind });
+            body.push(CodePoint {
+                span,
+                value: cp,
+                escape_kind,
+            });
         } else {
             // Otherwise, split the code point into a surrogate pair, sharing the same span
-            let (lead, trail) =
-                (0xd800 + ((cp - 0x10000) >> 10), 0xdc00 + ((cp - 0x10000) & 0x3ff));
-            body.push(CodePoint { span, value: lead, escape_kind });
-            body.push(CodePoint { span, value: trail, escape_kind });
+            let (lead, trail) = (
+                0xd800 + ((cp - 0x10000) >> 10),
+                0xdc00 + ((cp - 0x10000) & 0x3ff),
+            );
+            body.push(CodePoint {
+                span,
+                value: lead,
+                escape_kind,
+            });
+            body.push(CodePoint {
+                span,
+                value: trail,
+                escape_kind,
+            });
         }
     }
 
     // ---
 
     pub fn new(source_text: &str, options: Options) -> Self {
-        Self { chars: source_text.chars().collect::<Vec<_>>(), index: 0, offset: 0, options }
+        Self {
+            chars: source_text.chars().collect::<Vec<_>>(),
+            index: 0,
+            offset: 0,
+            options,
+        }
     }
 
     // We do not parse TemplateHead, TemplateTail, TemplateSubstitutionTail, TemplateMiddle
@@ -64,7 +83,9 @@ impl Parser {
     // ```
     pub fn parse(mut self) -> Result<ast::TemplateLiteral> {
         if !self.eat('`') {
-            return Err(diagnostics::invalid_input(Span::empty(self.options.span_offset)));
+            return Err(diagnostics::invalid_input(Span::empty(
+                self.options.span_offset,
+            )));
         }
 
         let body = self.parse_template()?;
@@ -80,7 +101,9 @@ impl Parser {
             return Ok(ast::TemplateLiteral { span, body });
         }
 
-        Err(diagnostics::invalid_input(Span::empty(self.options.span_offset + self.offset())))
+        Err(diagnostics::invalid_input(Span::empty(
+            self.options.span_offset + self.offset(),
+        )))
     }
 
     // ---
@@ -127,7 +150,11 @@ impl Parser {
         // $ [lookahead ≠ {]
         if self.peek() == Some('$') && self.peek2() != Some('{') {
             self.advance();
-            return Ok(Some(((offset_start, self.offset()), '$' as u32, EscapeKind::None)));
+            return Ok(Some((
+                (offset_start, self.offset()),
+                '$' as u32,
+                EscapeKind::None,
+            )));
         }
 
         if self.eat('\\') {
@@ -160,7 +187,11 @@ impl Parser {
 
             self.advance();
 
-            return Ok(Some(((offset_start, self.offset()), ch as u32, EscapeKind::None)));
+            return Ok(Some((
+                (offset_start, self.offset()),
+                ch as u32,
+                EscapeKind::None,
+            )));
         }
 
         Ok(None)
@@ -473,8 +504,10 @@ impl Parser {
 
         let mut value = 0;
         for _ in 0..4 {
-            let Some(hex) =
-                self.peek().filter(char::is_ascii_hexdigit).and_then(|ch| ch.to_digit(16))
+            let Some(hex) = self
+                .peek()
+                .filter(char::is_ascii_hexdigit)
+                .and_then(|ch| ch.to_digit(16))
             else {
                 self.rewind(checkpoint);
                 return None;
@@ -491,8 +524,10 @@ impl Parser {
         let checkpoint = self.checkpoint();
 
         let mut value: u32 = 0;
-        while let Some(hex) =
-            self.peek().filter(char::is_ascii_hexdigit).and_then(|ch| ch.to_digit(16))
+        while let Some(hex) = self
+            .peek()
+            .filter(char::is_ascii_hexdigit)
+            .and_then(|ch| ch.to_digit(16))
         {
             // To prevent panic on overflow cases like `\u{FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF}`
             if let Some(v) = value.checked_mul(16).and_then(|v| v.checked_add(hex)) {

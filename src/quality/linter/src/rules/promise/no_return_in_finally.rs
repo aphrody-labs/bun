@@ -84,8 +84,10 @@ impl Rule for NoReturnInFinally {
 }
 
 fn find_return_statement<'a>(func_body: &FunctionBody<'a>, ctx: &LintContext<'a>) {
-    let Some(return_stmt) =
-        func_body.statements.iter().find(|stmt| matches!(stmt, Statement::ReturnStatement(_)))
+    let Some(return_stmt) = func_body
+        .statements
+        .iter()
+        .find(|stmt| matches!(stmt, Statement::ReturnStatement(_)))
     else {
         return;
     };
@@ -116,5 +118,11 @@ fn test() {
         "Promise.resolve(1).finally(function () { return 2 })",
     ];
 
-    Tester::new(NoReturnInFinally::NAME, NoReturnInFinally::PLUGIN, pass, fail).test_and_snapshot();
+    Tester::new(
+        NoReturnInFinally::NAME,
+        NoReturnInFinally::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

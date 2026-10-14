@@ -147,10 +147,22 @@ fn test() {
         (r#"var foo = require("")"#, None),
         (r#"var foo = require("@scope/foo")"#, None),
         // With allow option
-        (r#"import events from "events""#, Some(serde_json::json!([{ "allow": ["events"] }]))),
-        (r#"import path from "path""#, Some(serde_json::json!([{ "allow": ["path"] }]))),
-        (r#"var events = require("events")"#, Some(serde_json::json!([{ "allow": ["events"] }]))),
-        (r#"var path = require("path")"#, Some(serde_json::json!([{ "allow": ["path"] }]))),
+        (
+            r#"import events from "events""#,
+            Some(serde_json::json!([{ "allow": ["events"] }])),
+        ),
+        (
+            r#"import path from "path""#,
+            Some(serde_json::json!([{ "allow": ["path"] }])),
+        ),
+        (
+            r#"var events = require("events")"#,
+            Some(serde_json::json!([{ "allow": ["events"] }])),
+        ),
+        (
+            r#"var path = require("path")"#,
+            Some(serde_json::json!([{ "allow": ["path"] }])),
+        ),
         (
             r#"import path from "path";import events from "events""#,
             Some(serde_json::json!([{ "allow": ["path", "events"] }])),
@@ -164,7 +176,10 @@ fn test() {
             r#"var events = require("node:events")"#,
             Some(serde_json::json!([{ "allow": ["node:events"] }])),
         ),
-        (r#"import path from "node:path""#, Some(serde_json::json!([{ "allow": ["node:path"] }]))),
+        (
+            r#"import path from "node:path""#,
+            Some(serde_json::json!([{ "allow": ["node:path"] }])),
+        ),
         (
             r#"var path = require("node:path")"#,
             Some(serde_json::json!([{ "allow": ["node:path"] }])),
@@ -191,10 +206,22 @@ fn test() {
         (r#"var fs = require("fs")"#, None),
         (r"import(`fs`)", None),
         // With allow option
-        (r#"import fs from "fs""#, Some(serde_json::json!([{ "allow": ["path"] }]))),
-        (r#"import crypto from "crypto""#, Some(serde_json::json!([{ "allow": ["fs"] }]))),
-        (r#"import("util")"#, Some(serde_json::json!([{ "allow": ["path"] }]))),
-        (r#"export * from "fs""#, Some(serde_json::json!([{ "allow": ["path"] }]))),
+        (
+            r#"import fs from "fs""#,
+            Some(serde_json::json!([{ "allow": ["path"] }])),
+        ),
+        (
+            r#"import crypto from "crypto""#,
+            Some(serde_json::json!([{ "allow": ["fs"] }])),
+        ),
+        (
+            r#"import("util")"#,
+            Some(serde_json::json!([{ "allow": ["path"] }])),
+        ),
+        (
+            r#"export * from "fs""#,
+            Some(serde_json::json!([{ "allow": ["path"] }])),
+        ),
         // Node.js protocol
         (r#"import path from "node:path""#, None),
         (r#"var path = require("node:path")"#, None),
@@ -204,8 +231,14 @@ fn test() {
         (r#"import("node:fs")"#, None),
         (r#"export { foo } from "node:path""#, None),
         (r#"import util = require("node:util")"#, None),
-        (r#"import fs from "node:fs""#, Some(serde_json::json!([{ "allow": ["node:path"] }]))),
-        (r#"import("node:crypto")"#, Some(serde_json::json!([{ "allow": ["node:fs"] }]))),
+        (
+            r#"import fs from "node:fs""#,
+            Some(serde_json::json!([{ "allow": ["node:path"] }])),
+        ),
+        (
+            r#"import("node:crypto")"#,
+            Some(serde_json::json!([{ "allow": ["node:fs"] }])),
+        ),
         // TypeScript import equals
         (r#"import fs = require("fs")"#, None),
         (r#"import path = require("path")"#, None),

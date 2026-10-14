@@ -77,17 +77,29 @@ pub trait Def {
     /// Get lifetime (if type has one).
     /// Lifetime is anonymous (`'_`) if `anon` is true.
     fn lifetime_maybe_anon(&self, schema: &Schema, anon: bool) -> TokenStream {
-        if anon { self.lifetime_anon(schema) } else { self.lifetime(schema) }
+        if anon {
+            self.lifetime_anon(schema)
+        } else {
+            self.lifetime(schema)
+        }
     }
 
     /// Get lifetime (if type has one).
     fn lifetime(&self, schema: &Schema) -> TokenStream {
-        if self.has_lifetime(schema) { quote!( <'a> ) } else { quote!() }
+        if self.has_lifetime(schema) {
+            quote!( <'a> )
+        } else {
+            quote!()
+        }
     }
 
     /// Get anonymous lifetime (if type has one).
     fn lifetime_anon(&self, schema: &Schema) -> TokenStream {
-        if self.has_lifetime(schema) { quote!( <'_> ) } else { quote!() }
+        if self.has_lifetime(schema) {
+            quote!( <'_> )
+        } else {
+            quote!()
+        }
     }
 
     /// Get inner type, if type has one.

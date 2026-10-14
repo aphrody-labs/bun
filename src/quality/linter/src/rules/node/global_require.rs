@@ -120,8 +120,10 @@ impl Rule for GlobalRequire {
             return;
         }
 
-        let is_good_require =
-            ctx.nodes().ancestors(node.id()).all(|ancestor| is_acceptable_parent(&ancestor.kind()));
+        let is_good_require = ctx
+            .nodes()
+            .ancestors(node.id())
+            .all(|ancestor| is_acceptable_parent(&ancestor.kind()));
 
         if !is_good_require {
             ctx.diagnostic(global_require_diagnostic(call_expr.span));

@@ -53,7 +53,8 @@ pub use self::float::{ContentSlot, FloatContext, FloatIntrinsicWidthCalculator};
 use crate::geometry::{Line, Point, Size};
 use crate::style::{AvailableSpace, CoreStyle, Overflow};
 use crate::tree::{
-    Layout, LayoutInput, LayoutOutput, LayoutPartialTree, LayoutPartialTreeExt, NodeId, RoundTree, SizingMode,
+    Layout, LayoutInput, LayoutOutput, LayoutPartialTree, LayoutPartialTreeExt, NodeId, RoundTree,
+    SizingMode,
 };
 use crate::util::debug::{debug_log, debug_log_node, debug_pop_node, debug_push_node};
 use crate::util::sys::round;
@@ -61,7 +62,11 @@ use crate::util::ResolveOrZero;
 use crate::{CacheTree, MaybeMath, MaybeResolve};
 
 /// Compute layout for the root node in the tree
-pub fn compute_root_layout(tree: &mut impl LayoutPartialTree, root: NodeId, available_space: Size<AvailableSpace>) {
+pub fn compute_root_layout(
+    tree: &mut impl LayoutPartialTree,
+    root: NodeId,
+    available_space: Size<AvailableSpace>,
+) {
     let mut known_dimensions = Size::NONE;
 
     #[cfg(feature = "block_layout")]
@@ -74,12 +79,21 @@ pub fn compute_root_layout(tree: &mut impl LayoutPartialTree, root: NodeId, avai
         if style.is_block() {
             // Pull these out earlier to avoid borrowing issues
             let aspect_ratio = style.aspect_ratio();
-            let margin = style.margin().resolve_or_zero(parent_size.width, |val, basis| tree.calc(val, basis));
-            let padding = style.padding().resolve_or_zero(parent_size.width, |val, basis| tree.calc(val, basis));
-            let border = style.border().resolve_or_zero(parent_size.width, |val, basis| tree.calc(val, basis));
+            let margin = style
+                .margin()
+                .resolve_or_zero(parent_size.width, |val, basis| tree.calc(val, basis));
+            let padding = style
+                .padding()
+                .resolve_or_zero(parent_size.width, |val, basis| tree.calc(val, basis));
+            let border = style
+                .border()
+                .resolve_or_zero(parent_size.width, |val, basis| tree.calc(val, basis));
             let padding_border_size = (padding + border).sum_axes();
-            let box_sizing_adjustment =
-                if style.box_sizing() == BoxSizing::ContentBox { padding_border_size } else { Size::ZERO };
+            let box_sizing_adjustment = if style.box_sizing() == BoxSizing::ContentBox {
+                padding_border_size
+            } else {
+                Size::ZERO
+            };
 
             let min_size = style
                 .min_size()
@@ -106,7 +120,10 @@ pub fn compute_root_layout(tree: &mut impl LayoutPartialTree, root: NodeId, avai
 
             // Block nodes automatically stretch fit their width to fit available space if available space is definite
             let available_space_based_size = Size {
-                width: available_space.width.into_option().maybe_sub(margin.horizontal_axis_sum()),
+                width: available_space
+                    .width
+                    .into_option()
+                    .maybe_sub(margin.horizontal_axis_sum()),
                 height: None,
             };
 
@@ -130,19 +147,39 @@ pub fn compute_root_layout(tree: &mut impl LayoutPartialTree, root: NodeId, avai
         Line::FALSE,
     );
     let style = tree.get_core_container_style(root);
-    let padding =
-        style.padding().resolve_or_zero(available_space.width.into_option(), |val, basis| tree.calc(val, basis));
-    let border =
-        style.border().resolve_or_zero(available_space.width.into_option(), |val, basis| tree.calc(val, basis));
-    let margin =
-        style.margin().resolve_or_zero(available_space.width.into_option(), |val, basis| tree.calc(val, basis));
+    let padding = style
+        .padding()
+        .resolve_or_zero(available_space.width.into_option(), |val, basis| {
+            tree.calc(val, basis)
+        });
+    let border = style
+        .border()
+        .resolve_or_zero(available_space.width.into_option(), |val, basis| {
+            tree.calc(val, basis)
+        });
+    let margin = style
+        .margin()
+        .resolve_or_zero(available_space.width.into_option(), |val, basis| {
+            tree.calc(val, basis)
+        });
     let scrollbar_size = Size {
-        width: if style.overflow().y == Overflow::Scroll { style.scrollbar_width() } else { 0.0 },
-        height: if style.overflow().x == Overflow::Scroll { style.scrollbar_width() } else { 0.0 },
+        width: if style.overflow().y == Overflow::Scroll {
+            style.scrollbar_width()
+        } else {
+            0.0
+        },
+        height: if style.overflow().x == Overflow::Scroll {
+            style.scrollbar_width()
+        } else {
+            0.0
+        },
     };
     let location = Point {
         x: if style.direction().is_rtl() {
-            available_space.width.into_option().map_or(0.0, |available_width| available_width - output.size.width)
+            available_space
+                .width
+                .into_option()
+                .map_or(0.0, |available_width| available_width - output.size.width)
         } else {
             0.0
         },
@@ -220,7 +257,12 @@ pub fn round_layout(tree: &mut impl RoundTree, node_id: NodeId) {
     return round_layout_inner(tree, node_id, 0.0, 0.0);
 
     /// Recursive function to apply rounding to all descendents
-    fn round_layout_inner(tree: &mut impl RoundTree, node_id: NodeId, cumulative_x: f32, cumulative_y: f32) {
+    fn round_layout_inner(
+        tree: &mut impl RoundTree,
+        node_id: NodeId,
+        cumulative_x: f32,
+        cumulative_y: f32,
+    ) {
         let unrounded_layout = tree.get_unrounded_layout(node_id);
         let mut layout = unrounded_layout;
 
@@ -230,24 +272,33 @@ pub fn round_layout(tree: &mut impl RoundTree, node_id: NodeId) {
         layout.location.x = round(unrounded_layout.location.x);
         layout.location.y = round(unrounded_layout.location.y);
         layout.size.width = round(cumulative_x + unrounded_layout.size.width) - round(cumulative_x);
-        layout.size.height = round(cumulative_y + unrounded_layout.size.height) - round(cumulative_y);
+        layout.size.height =
+            round(cumulative_y + unrounded_layout.size.height) - round(cumulative_y);
         layout.scrollbar_size.width = round(unrounded_layout.scrollbar_size.width);
         layout.scrollbar_size.height = round(unrounded_layout.scrollbar_size.height);
-        layout.border.left = round(cumulative_x + unrounded_layout.border.left) - round(cumulative_x);
+        layout.border.left =
+            round(cumulative_x + unrounded_layout.border.left) - round(cumulative_x);
         layout.border.right = round(cumulative_x + unrounded_layout.size.width)
             - round(cumulative_x + unrounded_layout.size.width - unrounded_layout.border.right);
         layout.border.top = round(cumulative_y + unrounded_layout.border.top) - round(cumulative_y);
         layout.border.bottom = round(cumulative_y + unrounded_layout.size.height)
             - round(cumulative_y + unrounded_layout.size.height - unrounded_layout.border.bottom);
-        layout.padding.left = round(cumulative_x + unrounded_layout.padding.left) - round(cumulative_x);
+        layout.padding.left =
+            round(cumulative_x + unrounded_layout.padding.left) - round(cumulative_x);
         layout.padding.right = round(cumulative_x + unrounded_layout.size.width)
             - round(cumulative_x + unrounded_layout.size.width - unrounded_layout.padding.right);
-        layout.padding.top = round(cumulative_y + unrounded_layout.padding.top) - round(cumulative_y);
+        layout.padding.top =
+            round(cumulative_y + unrounded_layout.padding.top) - round(cumulative_y);
         layout.padding.bottom = round(cumulative_y + unrounded_layout.size.height)
             - round(cumulative_y + unrounded_layout.size.height - unrounded_layout.padding.bottom);
 
         #[cfg(feature = "content_size")]
-        round_content_size(&mut layout, unrounded_layout.content_size, cumulative_x, cumulative_y);
+        round_content_size(
+            &mut layout,
+            unrounded_layout.content_size,
+            cumulative_x,
+            cumulative_y,
+        );
 
         tree.set_final_layout(node_id, &layout);
 
@@ -268,14 +319,19 @@ pub fn round_layout(tree: &mut impl RoundTree, node_id: NodeId) {
         cumulative_x: f32,
         cumulative_y: f32,
     ) {
-        layout.content_size.width = round(cumulative_x + unrounded_content_size.width) - round(cumulative_x);
-        layout.content_size.height = round(cumulative_y + unrounded_content_size.height) - round(cumulative_y);
+        layout.content_size.width =
+            round(cumulative_x + unrounded_content_size.width) - round(cumulative_x);
+        layout.content_size.height =
+            round(cumulative_y + unrounded_content_size.height) - round(cumulative_y);
     }
 }
 
 /// Creates a layout for this node and its children, recursively.
 /// Each hidden node has zero size and is placed at the origin
-pub fn compute_hidden_layout(tree: &mut (impl LayoutPartialTree + CacheTree), node: NodeId) -> LayoutOutput {
+pub fn compute_hidden_layout(
+    tree: &mut (impl LayoutPartialTree + CacheTree),
+    node: NodeId,
+) -> LayoutOutput {
     // Clear cache and set zeroed-out layout for the node
     tree.cache_clear(node);
     tree.set_unrounded_layout(node, &Layout::with_order(0));
@@ -307,18 +363,30 @@ mod tests {
     fn hidden_layout_should_hide_recursively() {
         let mut taffy: TaffyTree<()> = TaffyTree::new();
 
-        let style: Style = Style { display: Display::Flex, size: Size::from_lengths(50.0, 50.0), ..Default::default() };
+        let style: Style = Style {
+            display: Display::Flex,
+            size: Size::from_lengths(50.0, 50.0),
+            ..Default::default()
+        };
 
         let grandchild_00 = taffy.new_leaf(style.clone()).unwrap();
         let grandchild_01 = taffy.new_leaf(style.clone()).unwrap();
-        let child_00 = taffy.new_with_children(style.clone(), &[grandchild_00, grandchild_01]).unwrap();
+        let child_00 = taffy
+            .new_with_children(style.clone(), &[grandchild_00, grandchild_01])
+            .unwrap();
 
         let grandchild_02 = taffy.new_leaf(style.clone()).unwrap();
-        let child_01 = taffy.new_with_children(style.clone(), &[grandchild_02]).unwrap();
+        let child_01 = taffy
+            .new_with_children(style.clone(), &[grandchild_02])
+            .unwrap();
 
         let root = taffy
             .new_with_children(
-                Style { display: Display::None, size: Size::from_lengths(50.0, 50.0), ..Default::default() },
+                Style {
+                    display: Display::None,
+                    size: Size::from_lengths(50.0, 50.0),
+                    ..Default::default()
+                },
                 &[child_00, child_01],
             )
             .unwrap();
@@ -328,7 +396,14 @@ mod tests {
         // Whatever size and display-mode the nodes had previously,
         // all layouts should resolve to ZERO due to the root's DISPLAY::NONE
 
-        for node in [root, child_00, child_01, grandchild_00, grandchild_01, grandchild_02] {
+        for node in [
+            root,
+            child_00,
+            child_01,
+            grandchild_00,
+            grandchild_01,
+            grandchild_02,
+        ] {
             let layout = taffy.layout(node).unwrap();
             assert_eq!(layout.size, Size::zero());
             assert_eq!(layout.location, Point::zero());

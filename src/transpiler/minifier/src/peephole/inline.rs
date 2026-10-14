@@ -15,8 +15,12 @@ impl<'a> PeepholeOptimizations {
             unreachable!();
         };
         let declaration_kind = *declaration.kind();
-        let BindingPattern::BindingIdentifier(ident) = &decl.id else { return };
-        let Some(symbol_id) = ident.symbol_id.get() else { return };
+        let BindingPattern::BindingIdentifier(ident) = &decl.id else {
+            return;
+        };
+        let Some(symbol_id) = ident.symbol_id.get() else {
+            return;
+        };
         // Evaluate the initializer's constant once; reuse it for the value-context
         // constant and the boolean-falsy fact below. `None` for a non-constant or
         // absent initializer.
@@ -47,12 +51,16 @@ impl<'a> PeepholeOptimizations {
             None
         } else {
             // No initializer hoists to `undefined`; otherwise reuse the constant.
-            decl.init.as_ref().map_or(Some(ConstantValue::Undefined), |_| init_constant)
+            decl.init
+                .as_ref()
+                .map_or(Some(ConstantValue::Undefined), |_| init_constant)
         };
         // A conditional `var` may still hold its previous value or hoisted
         // `undefined`, so its initializer alone cannot prove the binding fresh.
         let kind = if declaration_in_body_statement_list {
-            decl.init.as_ref().map_or(FreshValueKind::None, Self::fresh_value_kind)
+            decl.init
+                .as_ref()
+                .map_or(FreshValueKind::None, Self::fresh_value_kind)
         } else {
             FreshValueKind::None
         };
@@ -68,7 +76,11 @@ impl<'a> PeepholeOptimizations {
     /// the alias and can preempt statement-level single-use substitution.
     fn is_direct_implicit_undefined_alias(init: &Expression<'a>, ctx: &TraverseCtx<'a>) -> bool {
         init.get_identifier_reference()
-            .and_then(|ident| ctx.scoping().get_reference(ident.reference_id()).symbol_id())
+            .and_then(|ident| {
+                ctx.scoping()
+                    .get_reference(ident.reference_id())
+                    .symbol_id()
+            })
             .and_then(|symbol_id| ctx.state.symbols.value(symbol_id))
             .is_some_and(|value| value.implicit_undefined)
     }
@@ -142,8 +154,13 @@ impl<'a> PeepholeOptimizations {
             return false;
         }
         // At least one read, and every read crosses a function boundary.
-        let mut reads = ctx.scoping().get_resolved_references(symbol_id).filter(|r| r.is_read());
-        let Some(first) = reads.next() else { return false };
+        let mut reads = ctx
+            .scoping()
+            .get_resolved_references(symbol_id)
+            .filter(|r| r.is_read());
+        let Some(first) = reads.next() else {
+            return false;
+        };
         if !Self::read_crosses_function_boundary(first.scope_id(), frame.scope_id, ctx) {
             return false;
         }
@@ -183,7 +200,11 @@ impl<'a> PeepholeOptimizations {
                                     && p.key.is_specific_static_name("__proto__"))
                     )
                 });
-                if has_side_effects { FreshValueKind::None } else { FreshValueKind::Object }
+                if has_side_effects {
+                    FreshValueKind::None
+                } else {
+                    FreshValueKind::Object
+                }
             }
             Expression::ClassExpression(class) => {
                 if Self::class_may_have_property_side_effects(class) {
@@ -265,7 +286,9 @@ impl<'a> PeepholeOptimizations {
         ctx: &mut TraverseCtx<'a>,
     ) {
         let Some(id) = id else { return };
-        let Some(symbol_id) = id.symbol_id.get() else { return };
+        let Some(symbol_id) = id.symbol_id.get() else {
+            return;
+        };
         ctx.init_value(symbol_id, None, FreshValueKind::Function, false, false);
     }
 
@@ -274,7 +297,9 @@ impl<'a> PeepholeOptimizations {
     /// are not considered fresh because property writes trigger setter side effects.
     pub fn init_class_declaration_symbol_value(class: &Class<'a>, ctx: &mut TraverseCtx<'a>) {
         let Some(id) = &class.id else { return };
-        let Some(symbol_id) = id.symbol_id.get() else { return };
+        let Some(symbol_id) = id.symbol_id.get() else {
+            return;
+        };
         let kind = if Self::class_may_have_property_side_effects(class) {
             FreshValueKind::None
         } else {
@@ -288,9 +313,13 @@ impl<'a> PeepholeOptimizations {
     }
 
     pub fn inline_identifier_reference(expr: &mut Expression<'a>, ctx: &mut TraverseCtx<'a>) {
-        let Expression::Identifier(ident) = expr else { return };
+        let Expression::Identifier(ident) = expr else {
+            return;
+        };
         let reference_id = ident.reference_id();
-        let Some(symbol_id) = ctx.scoping().get_reference(reference_id).symbol_id() else { return };
+        let Some(symbol_id) = ctx.scoping().get_reference(reference_id).symbol_id() else {
+            return;
+        };
         let Some(symbol_value) = ctx.state.symbols.value(symbol_id) else {
             return;
         };

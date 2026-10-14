@@ -19,7 +19,10 @@ pub(super) fn supports(name: &str, kind: Option<SupportKind>, opts: &Opts) -> Qu
                     .map(|(name, stat)| (name, stat, versions))
             })
             .flat_map(|(name, browser_stat, versions)| {
-                let desktop_name = opts.mobile_to_desktop.then(|| to_desktop_name(name)).flatten();
+                let desktop_name = opts
+                    .mobile_to_desktop
+                    .then(|| to_desktop_name(name))
+                    .flatten();
                 let check_desktop = desktop_name.is_some()
                     && browser_stat
                         .version_list

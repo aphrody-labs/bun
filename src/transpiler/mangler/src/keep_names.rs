@@ -18,17 +18,27 @@ pub struct MangleOptionsKeepNames {
 
 impl MangleOptionsKeepNames {
     pub fn all_false() -> Self {
-        Self { function: false, class: false }
+        Self {
+            function: false,
+            class: false,
+        }
     }
 
     pub fn all_true() -> Self {
-        Self { function: true, class: true }
+        Self {
+            function: true,
+            class: true,
+        }
     }
 }
 
 impl From<bool> for MangleOptionsKeepNames {
     fn from(keep_names: bool) -> Self {
-        if keep_names { Self::all_true() } else { Self::all_false() }
+        if keep_names {
+            Self::all_true()
+        } else {
+            Self::all_false()
+        }
     }
 }
 
@@ -57,7 +67,12 @@ impl<'a, 'b: 'a, 't> NameSymbolCollector<'a, 'b, 't> {
         scoping: &'b Scoping,
         ast_nodes: &'b AstNodes<'a>,
     ) -> Self {
-        Self { options, scoping, ast_nodes, allocator }
+        Self {
+            options,
+            scoping,
+            ast_nodes,
+            allocator,
+        }
     }
 
     fn collect(self) -> BitSet<'t> {
@@ -65,8 +80,9 @@ impl<'a, 'b: 'a, 't> NameSymbolCollector<'a, 'b, 't> {
         self.scoping
             .symbol_ids()
             .filter(|symbol_id| {
-                let decl_node =
-                    self.ast_nodes.get_node(self.scoping.symbol_declaration(*symbol_id));
+                let decl_node = self
+                    .ast_nodes
+                    .get_node(self.scoping.symbol_declaration(*symbol_id));
                 self.is_name_set_declare_node(decl_node, *symbol_id)
                     || self.has_name_set_reference_node(*symbol_id)
             })
@@ -85,10 +101,17 @@ impl<'a, 'b: 'a, 't> NameSymbolCollector<'a, 'b, 't> {
         match node.kind() {
             AstKind::Function(function) => {
                 self.options.function
-                    && function.id.as_ref().is_some_and(|id| id.symbol_id() == symbol_id)
+                    && function
+                        .id
+                        .as_ref()
+                        .is_some_and(|id| id.symbol_id() == symbol_id)
             }
             AstKind::Class(cls) => {
-                self.options.class && cls.id.as_ref().is_some_and(|id| id.symbol_id() == symbol_id)
+                self.options.class
+                    && cls
+                        .id
+                        .as_ref()
+                        .is_some_and(|id| id.symbol_id() == symbol_id)
             }
             AstKind::VariableDeclarator(decl) => {
                 if let BindingPattern::BindingIdentifier(id) = &decl.id
@@ -258,14 +281,19 @@ mod test {
         let ret = Parser::new(&allocator, source_text, SourceType::mjs()).parse();
         assert!(!ret.fatal_error, "{source_text}");
         assert!(ret.diagnostics.is_empty(), "{source_text}");
-        let ret = SemanticBuilder::new().with_build_nodes(true).build(&ret.program);
+        let ret = SemanticBuilder::new()
+            .with_build_nodes(true)
+            .build(&ret.program);
         assert!(ret.diagnostics.is_empty(), "{source_text}");
         let semantic = ret.semantic;
         let symbols = collect_name_symbols(opts, &allocator, semantic.scoping(), semantic.nodes());
         symbols
             .ones()
             .map(|symbol_id| {
-                semantic.scoping().symbol_name(SymbolId::from_usize(symbol_id)).to_string()
+                semantic
+                    .scoping()
+                    .symbol_name(SymbolId::from_usize(symbol_id))
+                    .to_string()
             })
             .collect()
     }
@@ -275,11 +303,17 @@ mod test {
     }
 
     fn function_only() -> MangleOptionsKeepNames {
-        MangleOptionsKeepNames { function: true, class: false }
+        MangleOptionsKeepNames {
+            function: true,
+            class: false,
+        }
     }
 
     fn class_only() -> MangleOptionsKeepNames {
-        MangleOptionsKeepNames { function: false, class: true }
+        MangleOptionsKeepNames {
+            function: false,
+            class: true,
+        }
     }
 
     #[test]
@@ -290,38 +324,86 @@ mod test {
 
     #[test]
     fn test_simple_declare_init() {
-        assert_eq!(collect(function_only(), "var foo = function() {}"), data("foo"));
-        assert_eq!(collect(function_only(), "var foo = (function() {})"), data("foo"));
+        assert_eq!(
+            collect(function_only(), "var foo = function() {}"),
+            data("foo")
+        );
+        assert_eq!(
+            collect(function_only(), "var foo = (function() {})"),
+            data("foo")
+        );
         assert_eq!(collect(function_only(), "var foo = () => {}"), data("foo"));
-        assert_eq!(collect(function_only(), "var foo = (() => {})"), data("foo"));
+        assert_eq!(
+            collect(function_only(), "var foo = (() => {})"),
+            data("foo")
+        );
         assert_eq!(collect(class_only(), "var Foo = class {}"), data("Foo"));
         assert_eq!(collect(class_only(), "var Foo = (class {})"), data("Foo"));
     }
 
     #[test]
     fn test_simple_assign() {
-        assert_eq!(collect(function_only(), "var foo; foo = function() {}"), data("foo"));
-        assert_eq!(collect(function_only(), "var foo; foo = () => {}"), data("foo"));
-        assert_eq!(collect(class_only(), "var Foo; Foo = class {}"), data("Foo"));
+        assert_eq!(
+            collect(function_only(), "var foo; foo = function() {}"),
+            data("foo")
+        );
+        assert_eq!(
+            collect(function_only(), "var foo; foo = () => {}"),
+            data("foo")
+        );
+        assert_eq!(
+            collect(class_only(), "var Foo; Foo = class {}"),
+            data("Foo")
+        );
 
-        assert_eq!(collect(function_only(), "var foo; foo ||= function() {}"), data("foo"));
-        assert_eq!(collect(function_only(), "var foo = 1; foo &&= function() {}"), data("foo"));
-        assert_eq!(collect(function_only(), "var foo; foo ??= function() {}"), data("foo"));
+        assert_eq!(
+            collect(function_only(), "var foo; foo ||= function() {}"),
+            data("foo")
+        );
+        assert_eq!(
+            collect(function_only(), "var foo = 1; foo &&= function() {}"),
+            data("foo")
+        );
+        assert_eq!(
+            collect(function_only(), "var foo; foo ??= function() {}"),
+            data("foo")
+        );
     }
 
     #[test]
     fn test_default_declarations() {
-        assert_eq!(collect(function_only(), "var [foo = function() {}] = []"), data("foo"));
-        assert_eq!(collect(function_only(), "var [foo = () => {}] = []"), data("foo"));
-        assert_eq!(collect(class_only(), "var [Foo = class {}] = []"), data("Foo"));
-        assert_eq!(collect(function_only(), "var { foo = function() {} } = {}"), data("foo"));
+        assert_eq!(
+            collect(function_only(), "var [foo = function() {}] = []"),
+            data("foo")
+        );
+        assert_eq!(
+            collect(function_only(), "var [foo = () => {}] = []"),
+            data("foo")
+        );
+        assert_eq!(
+            collect(class_only(), "var [Foo = class {}] = []"),
+            data("Foo")
+        );
+        assert_eq!(
+            collect(function_only(), "var { foo = function() {} } = {}"),
+            data("foo")
+        );
     }
 
     #[test]
     fn test_default_assign() {
-        assert_eq!(collect(function_only(), "var foo; [foo = function() {}] = []"), data("foo"));
-        assert_eq!(collect(function_only(), "var foo; [foo = () => {}] = []"), data("foo"));
-        assert_eq!(collect(class_only(), "var Foo; [Foo = class {}] = []"), data("Foo"));
+        assert_eq!(
+            collect(function_only(), "var foo; [foo = function() {}] = []"),
+            data("foo")
+        );
+        assert_eq!(
+            collect(function_only(), "var foo; [foo = () => {}] = []"),
+            data("foo")
+        );
+        assert_eq!(
+            collect(class_only(), "var Foo; [Foo = class {}] = []"),
+            data("Foo")
+        );
         assert_eq!(
             collect(function_only(), "var foo; ({ foo = function() {} } = {})"),
             data("foo")
@@ -330,8 +412,17 @@ mod test {
 
     #[test]
     fn test_for_in_declaration() {
-        assert_eq!(collect(function_only(), "for (var foo = function() {} in []) {}"), data("foo"));
-        assert_eq!(collect(function_only(), "for (var foo = () => {} in []) {}"), data("foo"));
-        assert_eq!(collect(class_only(), "for (var Foo = class {} in []) {}"), data("Foo"));
+        assert_eq!(
+            collect(function_only(), "for (var foo = function() {} in []) {}"),
+            data("foo")
+        );
+        assert_eq!(
+            collect(function_only(), "for (var foo = () => {} in []) {}"),
+            data("foo")
+        );
+        assert_eq!(
+            collect(class_only(), "for (var Foo = class {} in []) {}"),
+            data("Foo")
+        );
     }
 }

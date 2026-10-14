@@ -217,7 +217,8 @@ impl OwnedSourceMap {
         line: u32,
         col: u32,
     ) -> Option<SourceViewToken<'_, 'static>> {
-        self.inner.lookup_source_view_token_approx(lookup_table, line, col)
+        self.inner
+            .lookup_source_view_token_approx(lookup_table, line, col)
     }
 
     // ---------- structural ----------
@@ -297,7 +298,10 @@ mod tests {
         assert_eq!(sm.get_debug_id(), Some("dbg"));
         assert_eq!(sm.get_names().collect::<Vec<_>>(), vec!["n0"]);
         assert_eq!(sm.get_sources().collect::<Vec<_>>(), vec!["a.js"]);
-        assert_eq!(sm.get_source_contents().collect::<Vec<_>>(), vec![Some("AC")]);
+        assert_eq!(
+            sm.get_source_contents().collect::<Vec<_>>(),
+            vec![Some("AC")]
+        );
         assert_eq!(sm.get_name(0), Some("n0"));
         assert_eq!(sm.get_source(0), Some("a.js"));
         assert_eq!(sm.get_source_content(0), Some("AC"));
@@ -336,7 +340,10 @@ mod tests {
         let sm = OwnedSourceMap::from_json_string(JSON).unwrap();
         assert_eq!(sm.to_json().file.as_deref(), Some("out.js"));
         assert!(sm.to_json_string().contains("\"file\":\"out.js\""));
-        assert!(sm.to_data_url().starts_with("data:application/json;charset=utf-8;base64,"));
+        assert!(
+            sm.to_data_url()
+                .starts_with("data:application/json;charset=utf-8;base64,")
+        );
     }
 
     #[test]

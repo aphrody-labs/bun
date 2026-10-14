@@ -13,9 +13,11 @@ use crate::{
 };
 
 fn require_awaited_expect_poll_diagnostic(span: Span, member_name: &str) -> OxcDiagnostic {
-    OxcDiagnostic::warn(format!("`expect.{member_name}` must be awaited or returned"))
-        .with_help(format!("Add `await` to the `expect.{member_name}` call."))
-        .with_label(span)
+    OxcDiagnostic::warn(format!(
+        "`expect.{member_name}` must be awaited or returned"
+    ))
+    .with_help(format!("Add `await` to the `expect.{member_name}` call."))
+    .with_label(span)
 }
 
 fn require_awaited_expect_poll_return_diagnostic(span: Span, member_name: &str) -> OxcDiagnostic {
@@ -187,7 +189,10 @@ fn is_in_return_context<'a>(node: &AstNode<'a>, ctx: &LintContext<'a>) -> bool {
 fn is_returned_or_awaited<'a>(node: &AstNode<'a>, ctx: &LintContext<'a>) -> bool {
     let parent = ctx.semantic().nodes().parent_node(node.id());
 
-    matches!(parent.kind(), AstKind::ReturnStatement(_) | AstKind::AwaitExpression(_))
+    matches!(
+        parent.kind(),
+        AstKind::ReturnStatement(_) | AstKind::AwaitExpression(_)
+    )
 }
 
 #[test]
@@ -285,7 +290,12 @@ fn test() {
                   "
     ];
 
-    Tester::new(RequireAwaitedExpectPoll::NAME, RequireAwaitedExpectPoll::PLUGIN, pass, fail)
-        .with_vitest_plugin(true)
-        .test_and_snapshot();
+    Tester::new(
+        RequireAwaitedExpectPoll::NAME,
+        RequireAwaitedExpectPoll::PLUGIN,
+        pass,
+        fail,
+    )
+    .with_vitest_plugin(true)
+    .test_and_snapshot();
 }

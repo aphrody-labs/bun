@@ -29,7 +29,10 @@ pub struct ControlFlowGraphBuilder<'a> {
 
 impl<'a> ControlFlowGraphBuilder<'a> {
     pub fn build(self) -> ControlFlowGraph {
-        ControlFlowGraph { graph: self.graph, basic_blocks: self.basic_blocks }
+        ControlFlowGraph {
+            graph: self.graph,
+            basic_blocks: self.basic_blocks,
+        }
     }
 
     pub fn current_basic_block(&mut self) -> &mut BasicBlock {
@@ -78,8 +81,10 @@ impl<'a> ControlFlowGraphBuilder<'a> {
         self.current_node_ix = graph_ix;
 
         // add an error edge to this block.
-        let ErrorHarness(error_edge_kind, error_graph_ix) =
-            self.error_path.last().expect("normal basic blocks need an error harness to attach to");
+        let ErrorHarness(error_edge_kind, error_graph_ix) = self
+            .error_path
+            .last()
+            .expect("normal basic blocks need an error harness to attach to");
         self.add_edge(graph_ix, *error_graph_ix, EdgeType::Error(*error_edge_kind));
 
         if let Some(Some(finalizer)) = self.finalizers.last() {
@@ -96,12 +101,15 @@ impl<'a> ControlFlowGraphBuilder<'a> {
             if self.graph.edges_directed(b, Direction::Incoming).count() == 0 {
                 self.basic_block_mut(b).mark_as_unreachable();
             }
-        } else if !self
-            .basic_block(b)
-            .instructions()
-            .iter()
-            .any(|it| matches!(it, Instruction { kind: InstructionKind::Unreachable, .. }))
-        {
+        } else if !self.basic_block(b).instructions().iter().any(|it| {
+            matches!(
+                it,
+                Instruction {
+                    kind: InstructionKind::Unreachable,
+                    ..
+                }
+            )
+        }) {
             self.basic_block_mut(b).mark_as_reachable();
         }
         self.graph.add_edge(a, b, weight);
@@ -162,7 +170,9 @@ impl<'a> ControlFlowGraphBuilder<'a> {
     /// if last finalizer doesn't match the expected `BasicBlockId`.
     pub fn release_finalizer(&mut self, expect: BlockNodeId) {
         // return early if there is no finalizer.
-        let Some(finalizer) = self.finalizers.pop() else { return };
+        let Some(finalizer) = self.finalizers.pop() else {
+            return;
+        };
         assert_eq!(
             finalizer,
             Some(expect),
@@ -236,7 +246,9 @@ impl<'a> ControlFlowGraphBuilder<'a> {
         kind: InstructionKind,
         node_id: Option<NodeId>,
     ) {
-        self.basic_block_mut(block).instructions.push(Instruction { kind, node_id });
+        self.basic_block_mut(block)
+            .instructions
+            .push(Instruction { kind, node_id });
     }
 
     pub fn enter_statement(&mut self, stmt: NodeId) {

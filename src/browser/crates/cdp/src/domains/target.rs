@@ -1,4 +1,4 @@
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 
 use crate::{dispatch::CdpContext, types::CdpEvent, util::url_is_file_scheme};
 
@@ -41,7 +41,7 @@ pub async fn handle(
                 ));
             }
             Ok(json!({}))
-        },
+        }
         "getTargets" => {
             let targets: Vec<Value> = ctx
                 .pages
@@ -59,9 +59,12 @@ pub async fn handle(
                 })
                 .collect();
             Ok(json!({ "targetInfos": targets }))
-        },
+        }
         "createTarget" => {
-            let url = params.get("url").and_then(|v| v.as_str()).unwrap_or("about:blank");
+            let url = params
+                .get("url")
+                .and_then(|v| v.as_str())
+                .unwrap_or("about:blank");
             let context_id = params.get("browserContextId").and_then(|v| v.as_str());
             let context = match context_id {
                 Some(id) => ctx
@@ -75,9 +78,11 @@ pub async fn handle(
             // and then Runtime.evaluate the body off the created target,
             // bypassing the page-domain check entirely.
             if url_is_file_scheme(url) && !context.allow_file_access {
-                return Err("Target.createTarget to file:// is disabled. Restart with `bun_browser \
+                return Err(
+                    "Target.createTarget to file:// is disabled. Restart with `bun_browser \
                             serve --allow-file-access` to enable."
-                    .to_string());
+                        .to_string(),
+                );
             }
 
             let page_id = ctx.create_page_in_context(context_id)?;
@@ -142,13 +147,14 @@ pub async fn handle(
             }
 
             Ok(json!({ "targetId": page_id }))
-        },
+        }
         "attachToBrowserTarget" => {
             // Playwright calls this on connect to obtain a session for the
             // implicit "browser" target. Returning Unknown method aborts
             // the connect handshake before any user code runs.
             let session_id = format!("browser-{}", uuid::Uuid::new_v4());
-            ctx.sessions.insert(session_id.clone(), "browser".to_string());
+            ctx.sessions
+                .insert(session_id.clone(), "browser".to_string());
 
             ctx.pending_events.push(CdpEvent::new(
                 "Target.attachedToTarget",
@@ -168,15 +174,18 @@ pub async fn handle(
             ));
 
             Ok(json!({ "sessionId": session_id }))
-        },
+        }
         "attachToTarget" => {
-            let target_id =
-                params.get("targetId").and_then(|v| v.as_str()).ok_or("targetId required")?;
+            let target_id = params
+                .get("targetId")
+                .and_then(|v| v.as_str())
+                .ok_or("targetId required")?;
             if ctx.get_page(target_id).is_none() {
                 return Err("Target not found".to_string());
             }
             let session_id = ctx.next_target_session(target_id);
-            ctx.sessions.insert(session_id.clone(), target_id.to_string());
+            ctx.sessions
+                .insert(session_id.clone(), target_id.to_string());
 
             if let Some(page) = ctx.get_page(target_id) {
                 let params = json!({
@@ -204,10 +213,12 @@ pub async fn handle(
             }
 
             Ok(json!({ "sessionId": session_id }))
-        },
+        }
         "closeTarget" => {
-            let target_id =
-                params.get("targetId").and_then(|v| v.as_str()).ok_or("targetId required")?;
+            let target_id = params
+                .get("targetId")
+                .and_then(|v| v.as_str())
+                .ok_or("targetId required")?;
             let mut sessions = ctx
                 .sessions
                 .iter()
@@ -224,12 +235,14 @@ pub async fn handle(
                     }),
                 ));
             }
-            ctx.pending_events
-                .push(CdpEvent::new("Target.targetDestroyed", json!({ "targetId": target_id })));
+            ctx.pending_events.push(CdpEvent::new(
+                "Target.targetDestroyed",
+                json!({ "targetId": target_id }),
+            ));
 
             ctx.remove_page(target_id);
             Ok(json!({ "success": true }))
-        },
+        }
         "setAutoAttach" => Ok(json!({})),
         "detachFromTarget" => {
             if let Some(session_id) = params.get("sessionId").and_then(Value::as_str) {
@@ -253,17 +266,17 @@ pub async fn handle(
                 ctx.screencasts.remove(session_id);
             }
             Ok(json!({}))
-        },
+        }
         "activateTarget" => Ok(json!({})),
         "getBrowserContexts" => {
             let mut ids: Vec<&String> = ctx.browser_contexts.keys().collect();
             ids.sort();
             Ok(json!({ "browserContextIds": ids }))
-        },
+        }
         "createBrowserContext" => {
             let id = ctx.create_browser_context();
             Ok(json!({ "browserContextId": id }))
-        },
+        }
         "disposeBrowserContext" => {
             let context_id = params
                 .get("browserContextId")
@@ -286,11 +299,13 @@ pub async fn handle(
                 ));
             }
             for page_id in page_ids {
-                ctx.pending_events
-                    .push(CdpEvent::new("Target.targetDestroyed", json!({ "targetId": page_id })));
+                ctx.pending_events.push(CdpEvent::new(
+                    "Target.targetDestroyed",
+                    json!({ "targetId": page_id }),
+                ));
             }
             Ok(json!({}))
-        },
+        }
         "getTargetInfo" => {
             let target_id = params.get("targetId").and_then(|v| v.as_str());
             match target_id {
@@ -307,7 +322,7 @@ pub async fn handle(
                             "browserContextId": page.context.id,
                         }
                     }))
-                },
+                }
                 None => {
                     // canAccessOpener is required on every TargetInfo per the
                     // CDP spec. Strict clients (chromiumoxide) panic if it's
@@ -322,9 +337,9 @@ pub async fn handle(
                             "canAccessOpener": false,
                         }
                     }))
-                },
+                }
             }
-        },
+        }
         _ => Err(format!("Unknown Target method: {}", method)),
     }
 }
@@ -336,16 +351,22 @@ mod tests {
     #[tokio::test]
     async fn browser_contexts_are_real_and_do_not_clear_default_cookies() {
         let mut ctx = CdpContext::new();
-        ctx.default_context
-            .cookie_jar
-            .set_cookie("sid=default", &url::Url::parse("https://example.com").unwrap());
+        ctx.default_context.cookie_jar.set_cookie(
+            "sid=default",
+            &url::Url::parse("https://example.com").unwrap(),
+        );
 
         let created = handle("createBrowserContext", &json!({}), &mut ctx, &None)
             .await
             .expect("context creation should succeed");
         let context_id = created["browserContextId"].as_str().unwrap();
         assert_ne!(context_id, "default");
-        assert!(ctx.browser_context(context_id).unwrap().cookie_jar.get_all_cookies().is_empty());
+        assert!(ctx
+            .browser_context(context_id)
+            .unwrap()
+            .cookie_jar
+            .get_all_cookies()
+            .is_empty());
         assert_eq!(ctx.default_context.cookie_jar.get_all_cookies().len(), 1);
 
         let listed = handle("getBrowserContexts", &json!({}), &mut ctx, &None)
@@ -361,9 +382,14 @@ mod tests {
         let isolated_page = ctx.create_page_in_context(Some(&context_id)).unwrap();
         let default_page = ctx.create_page();
 
-        handle("disposeBrowserContext", &json!({"browserContextId": context_id}), &mut ctx, &None)
-            .await
-            .expect("context disposal should succeed");
+        handle(
+            "disposeBrowserContext",
+            &json!({"browserContextId": context_id}),
+            &mut ctx,
+            &None,
+        )
+        .await
+        .expect("context disposal should succeed");
 
         assert!(ctx.get_page(&isolated_page).is_none());
         assert!(ctx.get_page(&default_page).is_some());
@@ -378,7 +404,10 @@ mod tests {
             .expect("attachToBrowserTarget should succeed");
 
         let session_id = result["sessionId"].as_str().unwrap();
-        assert_eq!(ctx.sessions.get(session_id).map(String::as_str), Some("browser"));
+        assert_eq!(
+            ctx.sessions.get(session_id).map(String::as_str),
+            Some("browser")
+        );
 
         // Playwright/Puppeteer expect a Target.attachedToTarget event before
         // they finish wiring up the session — without it the connect promise
@@ -396,12 +425,18 @@ mod tests {
     async fn browser_attachments_detach_independently() {
         let mut ctx = CdpContext::new();
         for detach_second in [false, true] {
-            let first = handle("attachToBrowserTarget", &json!({}), &mut ctx, &None).await.unwrap();
-            let second =
-                handle("attachToBrowserTarget", &json!({}), &mut ctx, &None).await.unwrap();
+            let first = handle("attachToBrowserTarget", &json!({}), &mut ctx, &None)
+                .await
+                .unwrap();
+            let second = handle("attachToBrowserTarget", &json!({}), &mut ctx, &None)
+                .await
+                .unwrap();
             assert_ne!(first["sessionId"], second["sessionId"]);
-            let (removed, retained) =
-                if detach_second { (&second, &first) } else { (&first, &second) };
+            let (removed, retained) = if detach_second {
+                (&second, &first)
+            } else {
+                (&first, &second)
+            };
             handle(
                 "detachFromTarget",
                 &json!({"sessionId": removed["sessionId"]}),
@@ -410,9 +445,13 @@ mod tests {
             )
             .await
             .unwrap();
-            assert!(!ctx.sessions.contains_key(removed["sessionId"].as_str().unwrap()));
+            assert!(!ctx
+                .sessions
+                .contains_key(removed["sessionId"].as_str().unwrap()));
             assert_eq!(
-                ctx.sessions.get(retained["sessionId"].as_str().unwrap()).map(String::as_str),
+                ctx.sessions
+                    .get(retained["sessionId"].as_str().unwrap())
+                    .map(String::as_str),
                 Some("browser")
             );
             handle(
@@ -432,7 +471,8 @@ mod tests {
         let mut ctx = CdpContext::new();
         let page_id = ctx.create_page();
         let managed_session = format!("{page_id}-session");
-        ctx.sessions.insert(managed_session.clone(), page_id.clone());
+        ctx.sessions
+            .insert(managed_session.clone(), page_id.clone());
         let parent_session = Some("browser-session".to_string());
 
         let first = handle(
@@ -446,7 +486,10 @@ mod tests {
         let first_session = first["sessionId"].as_str().unwrap().to_string();
 
         assert_ne!(first_session, managed_session);
-        assert_eq!(ctx.sessions.get(&first_session).map(String::as_str), Some(page_id.as_str()));
+        assert_eq!(
+            ctx.sessions.get(&first_session).map(String::as_str),
+            Some(page_id.as_str())
+        );
         let first_event = ctx.pending_events.last().unwrap();
         assert_eq!(first_event.method, "Target.attachedToTarget");
         assert_eq!(first_event.session_id.as_deref(), Some("browser-session"));
@@ -468,18 +511,30 @@ mod tests {
         let mut ctx = CdpContext::new();
         let page_id = ctx.create_page();
         let parent_session = Some("browser-session".to_string());
-        let attached =
-            handle("attachToTarget", &json!({"targetId": page_id}), &mut ctx, &parent_session)
-                .await
-                .unwrap();
+        let attached = handle(
+            "attachToTarget",
+            &json!({"targetId": page_id}),
+            &mut ctx,
+            &parent_session,
+        )
+        .await
+        .unwrap();
         let session_id = attached["sessionId"].as_str().unwrap().to_string();
         ctx.pending_events.clear();
 
-        handle("detachFromTarget", &json!({"sessionId": session_id}), &mut ctx, &parent_session)
-            .await
-            .expect("detach should succeed");
+        handle(
+            "detachFromTarget",
+            &json!({"sessionId": session_id}),
+            &mut ctx,
+            &parent_session,
+        )
+        .await
+        .expect("detach should succeed");
         assert!(!ctx.sessions.contains_key(&session_id));
-        assert!(ctx.get_page(&page_id).is_some(), "detach must not destroy the target");
+        assert!(
+            ctx.get_page(&page_id).is_some(),
+            "detach must not destroy the target"
+        );
         assert_eq!(ctx.pending_events.len(), 1);
         let event = &ctx.pending_events[0];
         assert_eq!(event.method, "Target.detachedFromTarget");
@@ -517,7 +572,14 @@ mod tests {
             .to_string();
         ctx.pending_events.clear();
 
-        handle("closeTarget", &json!({"targetId": page_id}), &mut ctx, &None).await.unwrap();
+        handle(
+            "closeTarget",
+            &json!({"targetId": page_id}),
+            &mut ctx,
+            &None,
+        )
+        .await
+        .unwrap();
 
         let detached = ctx
             .pending_events

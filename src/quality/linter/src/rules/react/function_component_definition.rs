@@ -18,9 +18,16 @@ use crate::{
 };
 
 fn function_component_definition_diagnostic(span: Span, expected: FunctionStyle) -> OxcDiagnostic {
-    let article = if expected == FunctionStyle::Arrow { "an" } else { "a" };
-    OxcDiagnostic::warn(format!("Function component is not {article} {}", expected.description()))
-        .with_label(span)
+    let article = if expected == FunctionStyle::Arrow {
+        "an"
+    } else {
+        "a"
+    };
+    OxcDiagnostic::warn(format!(
+        "Function component is not {article} {}",
+        expected.description()
+    ))
+    .with_label(span)
 }
 
 #[derive(Debug, Default, Clone, Serialize, Deserialize, JsonSchema)]
@@ -128,9 +135,15 @@ impl Rule for FunctionComponentDefinition {
 
         let named = is_named(node, ctx);
         let (allowed, expected) = if named {
-            (self.0.named_components.allows(actual), self.0.named_components.preferred())
+            (
+                self.0.named_components.allows(actual),
+                self.0.named_components.preferred(),
+            )
         } else {
-            (self.0.unnamed_components.allows(actual), self.0.unnamed_components.preferred())
+            (
+                self.0.unnamed_components.allows(actual),
+                self.0.unnamed_components.preferred(),
+            )
         };
         if allowed {
             return;
@@ -149,13 +162,19 @@ impl Rule for FunctionComponentDefinition {
 }
 
 fn is_function_component<'a>(node: &AstNode<'a>, ctx: &LintContext<'a>) -> bool {
-    if matches!(component_parent_kind(node, ctx), Some(AstKind::ObjectProperty(_))) {
+    if matches!(
+        component_parent_kind(node, ctx),
+        Some(AstKind::ObjectProperty(_))
+    ) {
         return false;
     }
 
     match node.kind() {
         AstKind::Function(function) if function.r#type == FunctionType::FunctionDeclaration => {
-            function.id.as_ref().is_none_or(|id| is_react_component_name(&id.name))
+            function
+                .id
+                .as_ref()
+                .is_none_or(|id| is_react_component_name(&id.name))
                 && function_returns(function, ctx).has_jsx_or_null()
         }
         AstKind::Function(function) => {
@@ -179,9 +198,10 @@ fn is_component_expression_position<'a>(node: &AstNode<'a>, ctx: &LintContext<'a
         return false;
     };
     match parent {
-        AstKind::VariableDeclarator(declaration) => {
-            declaration.id.get_identifier_name().is_some_and(|name| is_react_component_name(&name))
-        }
+        AstKind::VariableDeclarator(declaration) => declaration
+            .id
+            .get_identifier_name()
+            .is_some_and(|name| is_react_component_name(&name)),
         AstKind::ExportDefaultDeclaration(_)
         | AstKind::ReturnStatement(_)
         | AstKind::ArrowFunctionExpression(_) => true,
@@ -203,7 +223,10 @@ fn is_component_expression_position<'a>(node: &AstNode<'a>, ctx: &LintContext<'a
                     expression.get_inner_expression().span() == node.span()
                 })
             });
-            is_first_argument && call.callee_name().is_some_and(|name| is_hoc_call(name, ctx))
+            is_first_argument
+                && call
+                    .callee_name()
+                    .is_some_and(|name| is_hoc_call(name, ctx))
         }
         _ => false,
     }
@@ -260,9 +283,9 @@ impl NamedComponents {
     fn preferred(&self) -> FunctionStyle {
         match self {
             Self::Single(style) => style.style(),
-            Self::Multiple(styles) => {
-                styles.first().map_or(FunctionStyle::Declaration, |style| style.style())
-            }
+            Self::Multiple(styles) => styles
+                .first()
+                .map_or(FunctionStyle::Declaration, |style| style.style()),
         }
     }
 
@@ -288,9 +311,9 @@ impl UnnamedComponents {
     fn preferred(&self) -> FunctionStyle {
         match self {
             Self::Single(style) => style.style(),
-            Self::Multiple(styles) => {
-                styles.first().map_or(FunctionStyle::Expression, |style| style.style())
-            }
+            Self::Multiple(styles) => styles
+                .first()
+                .map_or(FunctionStyle::Expression, |style| style.style()),
         }
     }
 
@@ -601,7 +624,11 @@ mod fix {
     fn parenthesized_arrow_params(params: &FormalParameters<'_>, ctx: &LintContext<'_>) -> String {
         let source = ctx.source_range(params.span);
         // Simple arrow parameter spans omit parentheses; parenthesized arrow spans include them.
-        if source.starts_with('(') { source.to_string() } else { format!("({source})") }
+        if source.starts_with('(') {
+            source.to_string()
+        } else {
+            format!("({source})")
+        }
     }
 }
 
@@ -2081,7 +2108,12 @@ fn test() {
         ),
     ];
 
-    Tester::new(FunctionComponentDefinition::NAME, FunctionComponentDefinition::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        FunctionComponentDefinition::NAME,
+        FunctionComponentDefinition::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

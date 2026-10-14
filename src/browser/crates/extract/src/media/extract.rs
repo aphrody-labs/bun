@@ -4,12 +4,19 @@ use regex::{Regex, RegexBuilder};
 use std::collections::HashMap;
 
 pub fn classify_media(url: &str) -> MediaKind {
-    let path = url.split(['?', '#']).next().unwrap_or(url).to_ascii_lowercase();
+    let path = url
+        .split(['?', '#'])
+        .next()
+        .unwrap_or(url)
+        .to_ascii_lowercase();
     if path.ends_with(".m3u8") {
         MediaKind::Hls
     } else if path.ends_with(".mpd") {
         MediaKind::Dash
-    } else if [".mp4", ".m4v", ".mov"].iter().any(|ext| path.ends_with(ext)) {
+    } else if [".mp4", ".m4v", ".mov"]
+        .iter()
+        .any(|ext| path.ends_with(ext))
+    {
         MediaKind::Mp4
     } else {
         MediaKind::Unknown
@@ -26,7 +33,10 @@ fn clean_url(raw: &str, base: &str) -> Option<String> {
 }
 
 fn pattern(expression: &str) -> Regex {
-    RegexBuilder::new(expression).case_insensitive(true).build().expect("static media pattern")
+    RegexBuilder::new(expression)
+        .case_insensitive(true)
+        .build()
+        .expect("static media pattern")
 }
 
 fn declared_sources(text: &str, base: &str, layer: usize) -> Vec<MediaCandidate> {
@@ -48,15 +58,19 @@ fn declared_sources(text: &str, base: &str, layer: usize) -> Vec<MediaCandidate>
                         end = Some(open + relative + 1);
                         break;
                     }
-                },
-                _ => {},
+                }
+                _ => {}
             }
         }
         let Some(end) = end else { continue };
         let block = &text[open..end];
         for entry in entries.find_iter(block) {
-            let Some(caps) = file.captures(entry.as_str()) else { continue };
-            let Some(url) = clean_url(&caps[1], base) else { continue };
+            let Some(caps) = file.captures(entry.as_str()) else {
+                continue;
+            };
+            let Some(url) = clean_url(&caps[1], base) else {
+                continue;
+            };
             result.push(MediaCandidate {
                 kind: classify_media(&url),
                 url,
@@ -64,7 +78,9 @@ fn declared_sources(text: &str, base: &str, layer: usize) -> Vec<MediaCandidate>
                 confidence: (0.95_f64 - layer as f64 * 0.05).max(0.1),
                 offset: open + entry.start(),
                 layer,
-                label: label.captures(entry.as_str()).map(|caps| caps[1].to_string()),
+                label: label
+                    .captures(entry.as_str())
+                    .map(|caps| caps[1].to_string()),
             });
         }
     }
@@ -97,7 +113,12 @@ const RULES: &[(&str, f64, &str, usize)] = &[
         1,
     ),
     ("sibnet.relative", 0.70, r"(/v/[A-Za-z0-9_%-]+/\d+\.mp4)", 1),
-    ("bare.url", 0.45, r#"https?://[^\s'"<>\\|]+\.(?:m3u8|mpd|mp4|m4v|mov)[^\s'"<>\\|]*"#, 0),
+    (
+        "bare.url",
+        0.45,
+        r#"https?://[^\s'"<>\\|]+\.(?:m3u8|mpd|mp4|m4v|mov)[^\s'"<>\\|]*"#,
+        0,
+    ),
 ];
 
 pub fn extract_media_candidates(source: &str, base_url: &str) -> Vec<MediaCandidate> {
@@ -110,8 +131,12 @@ pub fn extract_media_candidates(source: &str, base_url: &str) -> Vec<MediaCandid
         for (name, confidence, expression, group) in RULES {
             let regex = pattern(expression);
             for caps in regex.captures_iter(&text) {
-                let Some(capture) = caps.get(*group) else { continue };
-                let Some(url) = clean_url(capture.as_str(), base_url) else { continue };
+                let Some(capture) = caps.get(*group) else {
+                    continue;
+                };
+                let Some(url) = clean_url(capture.as_str(), base_url) else {
+                    continue;
+                };
                 let offset = caps.get(0).map(|whole| whole.start()).unwrap_or_default();
                 let candidate = MediaCandidate {
                     kind: classify_media(&url),
@@ -137,7 +162,10 @@ pub fn extract_media_candidates(source: &str, base_url: &str) -> Vec<MediaCandid
 }
 
 fn keep(best: &mut HashMap<String, MediaCandidate>, candidate: MediaCandidate) {
-    if best.get(&candidate.url).is_none_or(|previous| candidate.confidence > previous.confidence) {
+    if best
+        .get(&candidate.url)
+        .is_none_or(|previous| candidate.confidence > previous.confidence)
+    {
         best.insert(candidate.url.clone(), candidate);
     }
 }

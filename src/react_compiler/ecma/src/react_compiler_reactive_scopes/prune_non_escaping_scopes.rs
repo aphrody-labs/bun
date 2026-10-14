@@ -46,8 +46,13 @@ use crate::react_compiler_reactive_scopes::visitors::Transformed;
 use crate::react_compiler_reactive_scopes::visitors::transform_reactive_function;
 use crate::react_compiler_reactive_scopes::visitors::visit_reactive_function;
 
-type IdentifierMemoNode =
-    (MemoizationLevel, bool, FxIndexSet<DeclarationId>, FxIndexSet<ScopeId>, bool);
+type IdentifierMemoNode = (
+    MemoizationLevel,
+    bool,
+    FxIndexSet<DeclarationId>,
+    FxIndexSet<ScopeId>,
+    bool,
+);
 type IdentifierMemoNodes = FxHashMap<DeclarationId, IdentifierMemoNode>;
 type ScopeMemoNodes = FxHashMap<ScopeId, (Vec<DeclarationId>, bool)>;
 
@@ -198,7 +203,10 @@ impl CollectState {
                     .iter()
                     .map(|dep| env.identifiers[dep.identifier].declaration_id)
                     .collect();
-                ScopeNode { dependencies, seen: false }
+                ScopeNode {
+                    dependencies,
+                    seen: false,
+                }
             });
             let identifier_node = self
                 .identifiers
@@ -242,7 +250,11 @@ fn get_place_scope<'a>(
     identifier_id: IdentifierId,
 ) -> Option<ScopeId> {
     let scope_id = env.identifiers[identifier_id].scope?;
-    if env.scopes[scope_id].range.contains(id) { Some(scope_id) } else { None }
+    if env.scopes[scope_id].range.contains(id) {
+        Some(scope_id)
+    } else {
+        None
+    }
 }
 
 // =============================================================================
@@ -327,7 +339,11 @@ impl<'a, 'e> CollectDependenciesVisitor<'a, 'e> {
         state: &mut CollectState,
     ) -> (Vec<LValueMemoization>, Vec<(IdentifierId, EvaluationOrder)>) {
         match value {
-            ReactiveValue::ConditionalExpression { consequent, alternate, .. } => {
+            ReactiveValue::ConditionalExpression {
+                consequent,
+                alternate,
+                ..
+            } => {
                 let (_, cons_rvalues) =
                     self.compute_memoization_inputs(id, consequent, None, state);
                 let (_, alt_rvalues) = self.compute_memoization_inputs(id, alternate, None, state);
@@ -358,7 +374,11 @@ impl<'a, 'e> CollectDependenciesVisitor<'a, 'e> {
                 };
                 (lvalues, rvalues)
             }
-            ReactiveValue::SequenceExpression { instructions, value: inner, .. } => {
+            ReactiveValue::SequenceExpression {
+                instructions,
+                value: inner,
+                ..
+            } => {
                 for instr in instructions {
                     self.visit_value_for_memoization(
                         instr.id,
@@ -407,7 +427,12 @@ impl<'a, 'e> CollectDependenciesVisitor<'a, 'e> {
         let options = &self.options;
 
         match value {
-            InstructionValue::JsxExpression { tag, props, children, .. } => {
+            InstructionValue::JsxExpression {
+                tag,
+                props,
+                children,
+                ..
+            } => {
                 let mut rvalues: Vec<(IdentifierId, EvaluationOrder)> = Vec::new();
                 if let JsxTag::Place(place) = tag {
                     rvalues.push((place.identifier, id));
@@ -433,7 +458,10 @@ impl<'a, 'e> CollectDependenciesVisitor<'a, 'e> {
                     MemoizationLevel::Unmemoized
                 };
                 let lvalues = if let Some(lv) = lvalue {
-                    vec![LValueMemoization { place_identifier: lv, level }]
+                    vec![LValueMemoization {
+                        place_identifier: lv,
+                        level,
+                    }]
                 } else {
                     vec![]
                 };
@@ -448,7 +476,10 @@ impl<'a, 'e> CollectDependenciesVisitor<'a, 'e> {
                 let rvalues: Vec<(IdentifierId, EvaluationOrder)> =
                     children.iter().map(|c| (c.identifier, id)).collect();
                 let lvalues = if let Some(lv) = lvalue {
-                    vec![LValueMemoization { place_identifier: lv, level }]
+                    vec![LValueMemoization {
+                        place_identifier: lv,
+                        level,
+                    }]
                 } else {
                     vec![]
                 };
@@ -456,7 +487,10 @@ impl<'a, 'e> CollectDependenciesVisitor<'a, 'e> {
             }
             InstructionValue::TSEnumDeclaration { .. } => {
                 let lvalues = lvalue.map_or_else(Vec::new, |place_identifier| {
-                    vec![LValueMemoization { place_identifier, level: MemoizationLevel::Never }]
+                    vec![LValueMemoization {
+                        place_identifier,
+                        level: MemoizationLevel::Never,
+                    }]
                 });
                 (lvalues, vec![])
             }
@@ -479,7 +513,10 @@ impl<'a, 'e> CollectDependenciesVisitor<'a, 'e> {
                     let rvalues: Vec<(IdentifierId, EvaluationOrder)> =
                         operands.iter().map(|p| (p.identifier, id)).collect();
                     let lvalues = if let Some(lv) = lvalue {
-                        vec![LValueMemoization { place_identifier: lv, level }]
+                        vec![LValueMemoization {
+                            place_identifier: lv,
+                            level,
+                        }]
                     } else {
                         vec![]
                     };
@@ -487,7 +524,10 @@ impl<'a, 'e> CollectDependenciesVisitor<'a, 'e> {
                 } else {
                     let level = MemoizationLevel::Never;
                     let lvalues = if let Some(lv) = lvalue {
-                        vec![LValueMemoization { place_identifier: lv, level }]
+                        vec![LValueMemoization {
+                            place_identifier: lv,
+                            level,
+                        }]
                     } else {
                         vec![]
                     };
@@ -506,7 +546,11 @@ impl<'a, 'e> CollectDependenciesVisitor<'a, 'e> {
                 };
                 (lvalues, vec![(inner.identifier, id)])
             }
-            InstructionValue::IteratorNext { iterator, collection, .. } => {
+            InstructionValue::IteratorNext {
+                iterator,
+                collection,
+                ..
+            } => {
                 let lvalues = if let Some(lv) = lvalue {
                     vec![LValueMemoization {
                         place_identifier: lv,
@@ -515,7 +559,10 @@ impl<'a, 'e> CollectDependenciesVisitor<'a, 'e> {
                 } else {
                     vec![]
                 };
-                (lvalues, vec![(iterator.identifier, id), (collection.identifier, id)])
+                (
+                    lvalues,
+                    vec![(iterator.identifier, id), (collection.identifier, id)],
+                )
             }
             InstructionValue::GetIterator { collection, .. } => {
                 let lvalues = if let Some(lv) = lvalue {
@@ -550,7 +597,10 @@ impl<'a, 'e> CollectDependenciesVisitor<'a, 'e> {
                 };
                 (lvalues, vec![(place.identifier, id)])
             }
-            InstructionValue::DeclareContext { lvalue: decl_lvalue, .. } => {
+            InstructionValue::DeclareContext {
+                lvalue: decl_lvalue,
+                ..
+            } => {
                 let mut lvalues = vec![LValueMemoization {
                     place_identifier: decl_lvalue.place.identifier,
                     level: MemoizationLevel::Memoized,
@@ -563,7 +613,10 @@ impl<'a, 'e> CollectDependenciesVisitor<'a, 'e> {
                 }
                 (lvalues, vec![])
             }
-            InstructionValue::DeclareLocal { lvalue: decl_lvalue, .. } => {
+            InstructionValue::DeclareLocal {
+                lvalue: decl_lvalue,
+                ..
+            } => {
                 let mut lvalues = vec![LValueMemoization {
                     place_identifier: decl_lvalue.place.identifier,
                     level: MemoizationLevel::Unmemoized,
@@ -576,8 +629,16 @@ impl<'a, 'e> CollectDependenciesVisitor<'a, 'e> {
                 }
                 (lvalues, vec![])
             }
-            InstructionValue::PrefixUpdate { lvalue: upd_lvalue, value: upd_value, .. }
-            | InstructionValue::PostfixUpdate { lvalue: upd_lvalue, value: upd_value, .. } => {
+            InstructionValue::PrefixUpdate {
+                lvalue: upd_lvalue,
+                value: upd_value,
+                ..
+            }
+            | InstructionValue::PostfixUpdate {
+                lvalue: upd_lvalue,
+                value: upd_value,
+                ..
+            } => {
                 let mut lvalues = vec![LValueMemoization {
                     place_identifier: upd_lvalue.identifier,
                     level: MemoizationLevel::Conditional,
@@ -590,7 +651,11 @@ impl<'a, 'e> CollectDependenciesVisitor<'a, 'e> {
                 }
                 (lvalues, vec![(upd_value.identifier, id)])
             }
-            InstructionValue::StoreLocal { lvalue: store_lvalue, value: store_value, .. } => {
+            InstructionValue::StoreLocal {
+                lvalue: store_lvalue,
+                value: store_value,
+                ..
+            } => {
                 let mut lvalues = vec![LValueMemoization {
                     place_identifier: store_lvalue.place.identifier,
                     level: MemoizationLevel::Conditional,
@@ -603,7 +668,11 @@ impl<'a, 'e> CollectDependenciesVisitor<'a, 'e> {
                 }
                 (lvalues, vec![(store_value.identifier, id)])
             }
-            InstructionValue::StoreContext { lvalue: store_lvalue, value: store_value, .. } => {
+            InstructionValue::StoreContext {
+                lvalue: store_lvalue,
+                value: store_value,
+                ..
+            } => {
                 let mut lvalues = vec![LValueMemoization {
                     place_identifier: store_lvalue.place.identifier,
                     level: MemoizationLevel::Memoized,
@@ -616,7 +685,9 @@ impl<'a, 'e> CollectDependenciesVisitor<'a, 'e> {
                 }
                 (lvalues, vec![(store_value.identifier, id)])
             }
-            InstructionValue::StoreGlobal { value: store_value, .. } => {
+            InstructionValue::StoreGlobal {
+                value: store_value, ..
+            } => {
                 let lvalues = if let Some(lv) = lvalue {
                     vec![LValueMemoization {
                         place_identifier: lv,
@@ -627,7 +698,11 @@ impl<'a, 'e> CollectDependenciesVisitor<'a, 'e> {
                 };
                 (lvalues, vec![(store_value.identifier, id)])
             }
-            InstructionValue::Destructure { lvalue: dest_lvalue, value: dest_value, .. } => {
+            InstructionValue::Destructure {
+                lvalue: dest_lvalue,
+                value: dest_value,
+                ..
+            } => {
                 let mut lvalues = Vec::new();
                 if let Some(lv) = lvalue {
                     lvalues.push(LValueMemoization {
@@ -642,13 +717,20 @@ impl<'a, 'e> CollectDependenciesVisitor<'a, 'e> {
             | InstructionValue::PropertyLoad { object, .. } => {
                 let level = MemoizationLevel::Conditional;
                 let lvalues = if let Some(lv) = lvalue {
-                    vec![LValueMemoization { place_identifier: lv, level }]
+                    vec![LValueMemoization {
+                        place_identifier: lv,
+                        level,
+                    }]
                 } else {
                     vec![]
                 };
                 (lvalues, vec![(object.identifier, id)])
             }
-            InstructionValue::ComputedStore { object, value: store_value, .. } => {
+            InstructionValue::ComputedStore {
+                object,
+                value: store_value,
+                ..
+            } => {
                 let mut lvalues = vec![LValueMemoization {
                     place_identifier: object.identifier,
                     level: MemoizationLevel::Conditional,
@@ -827,13 +909,16 @@ impl<'a, 'e> CollectDependenciesVisitor<'a, 'e> {
         for lv in &aliasing_lvalues {
             let lvalue_decl_id = env.identifiers[lv.place_identifier].declaration_id;
             let lvalue_id = state.resolve(lvalue_decl_id);
-            let node = state.identifiers.entry(lvalue_id).or_insert_with(|| IdentifierNode {
-                level: MemoizationLevel::Never,
-                memoized: false,
-                dependencies: FxIndexSet::default(),
-                scopes: FxIndexSet::default(),
-                seen: false,
-            });
+            let node = state
+                .identifiers
+                .entry(lvalue_id)
+                .or_insert_with(|| IdentifierNode {
+                    level: MemoizationLevel::Never,
+                    memoized: false,
+                    dependencies: FxIndexSet::default(),
+                    scopes: FxIndexSet::default(),
+                    seen: false,
+                });
             node.level = join_aliases(node.level, lv.level);
             for (_, operand_id) in &rvalue_data {
                 if *operand_id == lvalue_id {
@@ -864,7 +949,12 @@ impl<'a, 'e> CollectDependenciesVisitor<'a, 'e> {
                     state.definitions.insert(lv_decl, place_decl);
                 }
             } else if let InstructionValue::CallExpression { callee, args, .. } = instr_value {
-                if env.get_hook_kind_for_id(callee.identifier).ok().flatten().is_some() {
+                if env
+                    .get_hook_kind_for_id(callee.identifier)
+                    .ok()
+                    .flatten()
+                    .is_some()
+                {
                     let no_alias = env.has_no_alias_signature(callee.identifier);
                     if !no_alias {
                         for arg in args {
@@ -878,7 +968,11 @@ impl<'a, 'e> CollectDependenciesVisitor<'a, 'e> {
                     }
                 }
             } else if let InstructionValue::MethodCall { property, args, .. } = instr_value
-                && env.get_hook_kind_for_id(property.identifier).ok().flatten().is_some()
+                && env
+                    .get_hook_kind_for_id(property.identifier)
+                    .ok()
+                    .flatten()
+                    .is_some()
             {
                 let no_alias = env.has_no_alias_signature(property.identifier);
                 if !no_alias {
@@ -927,8 +1021,11 @@ impl<'a, 'e> ReactiveFunctionVisitor<'a> for CollectDependenciesVisitor<'a, 'e> 
             state.0.escaping_values.insert(decl);
 
             // If the return is within a scope, associate those scopes with the returned value
-            let identifier_node =
-                state.0.identifiers.get_mut(&decl).expect("Expected identifier to be initialized");
+            let identifier_node = state
+                .0
+                .identifiers
+                .get_mut(&decl)
+                .expect("Expected identifier to be initialized");
             for scope_id in &state.1 {
                 identifier_node.scopes.insert(*scope_id);
             }
@@ -944,8 +1041,11 @@ impl<'a, 'e> ReactiveFunctionVisitor<'a> for CollectDependenciesVisitor<'a, 'e> 
         // of those variables.
         for reassignment_id in &scope_data.reassignments {
             let decl = env.identifiers[*reassignment_id].declaration_id;
-            let identifier_node =
-                state.0.identifiers.get_mut(&decl).expect("Expected identifier to be initialized");
+            let identifier_node = state
+                .0
+                .identifiers
+                .get_mut(&decl)
+                .expect("Expected identifier to be initialized");
             for s in &state.1 {
                 identifier_node.scopes.insert(*s);
             }
@@ -1000,7 +1100,9 @@ fn compute_memoized_identifiers(
         memoized: &mut FxHashSet<DeclarationId>,
     ) -> Result<bool, OxcDiagnostic> {
         let Some(&(level, _, _, _, seen)) = identifier_nodes.get(&id) else {
-            return Err(diagnostics::invariant_expected_node_all_identifiers(id.index()));
+            return Err(diagnostics::invariant_expected_node_all_identifiers(
+                id.index(),
+            ));
         };
         if seen {
             return Ok(identifier_nodes.get(&id).unwrap().1);
@@ -1011,8 +1113,13 @@ fn compute_memoized_identifiers(
         identifier_nodes.get_mut(&id).unwrap().1 = false; // memoized = false
 
         // Visit dependencies
-        let deps: Vec<DeclarationId> =
-            identifier_nodes.get(&id).unwrap().2.iter().copied().collect();
+        let deps: Vec<DeclarationId> = identifier_nodes
+            .get(&id)
+            .unwrap()
+            .2
+            .iter()
+            .copied()
+            .collect();
         let mut has_memoized_dependency = false;
         for dep in deps {
             let is_dep_memoized = visit(dep, false, identifier_nodes, scope_nodes, memoized)?;
@@ -1026,8 +1133,13 @@ fn compute_memoized_identifiers(
         {
             identifier_nodes.get_mut(&id).unwrap().1 = true; // memoized = true
             memoized.insert(id);
-            let scopes: Vec<ScopeId> =
-                identifier_nodes.get(&id).unwrap().3.iter().copied().collect();
+            let scopes: Vec<ScopeId> = identifier_nodes
+                .get(&id)
+                .unwrap()
+                .3
+                .iter()
+                .copied()
+                .collect();
             for scope_id in scopes {
                 force_memoize_scope_dependencies(
                     scope_id,
@@ -1071,7 +1183,13 @@ fn compute_memoized_identifiers(
     // Walk from the "roots" aka returned/escaping identifiers
     let escaping: Vec<DeclarationId> = state.escaping_values.iter().copied().collect();
     for value in escaping {
-        visit(value, false, &mut identifier_nodes, &mut scope_nodes, &mut memoized)?;
+        visit(
+            value,
+            false,
+            &mut identifier_nodes,
+            &mut scope_nodes,
+            &mut memoized,
+        )?;
     }
 
     Ok(memoized)
@@ -1125,7 +1243,9 @@ impl<'a, 'e> ReactiveFunctionTransform<'a> for PruneScopesTransform<'a, 'e> {
         } else {
             self.pruned_scopes.insert(scope_id);
             // ReplaceMany keeps a std `Vec`; drain the arena block into one.
-            Ok(Transformed::ReplaceMany(scope.instructions.drain(..).collect()))
+            Ok(Transformed::ReplaceMany(
+                scope.instructions.drain(..).collect(),
+            ))
         }
     }
 

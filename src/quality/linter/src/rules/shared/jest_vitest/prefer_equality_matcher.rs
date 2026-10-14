@@ -98,7 +98,9 @@ pub fn run_on_jest_node<'a, 'c>(
         return;
     };
 
-    let has_not_modifier = jest_fn_call.modifiers().any(|modifier| modifier.is_name_equal("not"));
+    let has_not_modifier = jest_fn_call
+        .modifiers()
+        .any(|modifier| modifier.is_name_equal("not"));
     let add_not_modifier = (if binary_expr.operator == BinaryOperator::StrictInequality {
         !matcher_arg_value.value
     } else {
@@ -106,23 +108,29 @@ pub fn run_on_jest_node<'a, 'c>(
     }) == has_not_modifier;
 
     let fixer = RuleFixer::new(FixKind::Suggestion, ctx);
-    let suggestions = ["toBe", "toEqual", "toStrictEqual"].into_iter().map(|eq_matcher| {
-        // Preserve trailing commas: expect(a === b,).toBe(true,) -> expect(a,).toBe(b,)
-        let call_span_end =
-            fixer.source_range(Span::new(binary_expr.span.end, expect_call_expr.span.end));
-        let arg_span_end =
-            fixer.source_range(Span::new(matcher_arg_value.span.end, matcher_call_expr.span.end));
-        let content = build_code(
-            binary_expr,
-            call_span_end,
-            arg_span_end,
-            &jest_fn_call,
-            eq_matcher,
-            add_not_modifier,
-            fixer,
-        );
-        fixer.replace(matcher_call_expr.span, content).with_message(format!("Use `{eq_matcher}`"))
-    });
+    let suggestions = ["toBe", "toEqual", "toStrictEqual"]
+        .into_iter()
+        .map(|eq_matcher| {
+            // Preserve trailing commas: expect(a === b,).toBe(true,) -> expect(a,).toBe(b,)
+            let call_span_end =
+                fixer.source_range(Span::new(binary_expr.span.end, expect_call_expr.span.end));
+            let arg_span_end = fixer.source_range(Span::new(
+                matcher_arg_value.span.end,
+                matcher_call_expr.span.end,
+            ));
+            let content = build_code(
+                binary_expr,
+                call_span_end,
+                arg_span_end,
+                &jest_fn_call,
+                eq_matcher,
+                add_not_modifier,
+                fixer,
+            );
+            fixer
+                .replace(matcher_call_expr.span, content)
+                .with_message(format!("Use `{eq_matcher}`"))
+        });
 
     ctx.diagnostic_with_suggestions(use_equality_matcher_diagnostic(matcher.span), suggestions);
 }

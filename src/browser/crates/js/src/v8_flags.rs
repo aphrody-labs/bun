@@ -1,6 +1,6 @@
 use std::sync::{
-    Once,
     atomic::{AtomicBool, Ordering},
+    Once,
 };
 
 static INIT: Once = Once::new();

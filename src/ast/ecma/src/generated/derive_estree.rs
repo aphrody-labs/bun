@@ -1,7 +1,11 @@
 // Auto-generated code, DO NOT EDIT DIRECTLY!
 // To edit this generated file you have to edit `src/codegen/ecma_ast_tools/src/derives/estree.rs`.
 
-#![allow(unused_imports, clippy::match_same_arms, clippy::semicolon_if_nothing_returned)]
+#![allow(
+    unused_imports,
+    clippy::match_same_arms,
+    clippy::semicolon_if_nothing_returned
+)]
 
 use oxc_estree::{
     Concat2, Concat3, ESTree, FlatStructSerializer, JsonSafeString, Serializer, StructSerializer,
@@ -1967,7 +1971,10 @@ impl ESTree for StringLiteral<'_> {
     fn serialize<S: Serializer>(&self, serializer: S) {
         let mut state = serializer.serialize_struct();
         state.serialize_field("type", &JsonSafeString("Literal"));
-        state.serialize_field("value", &crate::serialize::literal::StringLiteralValue(self));
+        state.serialize_field(
+            "value",
+            &crate::serialize::literal::StringLiteralValue(self),
+        );
         state.serialize_field("raw", &self.raw);
         state.serialize_span(self.span);
         state.end();
@@ -1978,9 +1985,15 @@ impl ESTree for BigIntLiteral<'_> {
     fn serialize<S: Serializer>(&self, serializer: S) {
         let mut state = serializer.serialize_struct();
         state.serialize_field("type", &JsonSafeString("Literal"));
-        state.serialize_field("value", &crate::serialize::literal::BigIntLiteralValue(self));
+        state.serialize_field(
+            "value",
+            &crate::serialize::literal::BigIntLiteralValue(self),
+        );
         state.serialize_field("raw", &self.raw.map(|s| JsonSafeString(s.as_str())));
-        state.serialize_field("bigint", &crate::serialize::literal::BigIntLiteralBigint(self));
+        state.serialize_field(
+            "bigint",
+            &crate::serialize::literal::BigIntLiteralBigint(self),
+        );
         state.serialize_span(self.span);
         state.end();
     }
@@ -1990,7 +2003,10 @@ impl ESTree for RegExpLiteral<'_> {
     fn serialize<S: Serializer>(&self, serializer: S) {
         let mut state = serializer.serialize_struct();
         state.serialize_field("type", &JsonSafeString("Literal"));
-        state.serialize_field("value", &crate::serialize::literal::RegExpLiteralValue(self));
+        state.serialize_field(
+            "value",
+            &crate::serialize::literal::RegExpLiteralValue(self),
+        );
         state.serialize_field("raw", &self.raw);
         state.serialize_field("regex", &self.regex);
         state.serialize_span(self.span);
@@ -2352,7 +2368,10 @@ impl ESTree for TSEnumMember<'_> {
         state.serialize_field("type", &JsonSafeString("TSEnumMember"));
         state.serialize_field("id", &self.id);
         state.serialize_field("initializer", &self.initializer);
-        state.serialize_field("computed", &crate::serialize::ts::TSEnumMemberComputed(self));
+        state.serialize_field(
+            "computed",
+            &crate::serialize::ts::TSEnumMemberComputed(self),
+        );
         state.serialize_span(self.span);
         state.end();
     }
@@ -2901,8 +2920,10 @@ impl ESTree for TSIndexSignature<'_> {
     fn serialize<S: Serializer>(&self, serializer: S) {
         let mut state = serializer.serialize_struct();
         state.serialize_field("type", &JsonSafeString("TSIndexSignature"));
-        state
-            .serialize_field("parameters", &crate::serialize::ts::TSIndexSignatureParameters(self));
+        state.serialize_field(
+            "parameters",
+            &crate::serialize::ts::TSIndexSignatureParameters(self),
+        );
         state.serialize_field("typeAnnotation", &self.type_annotation);
         state.serialize_field("readonly", &self.readonly);
         state.serialize_field("static", &self.r#static);
@@ -2946,7 +2967,10 @@ impl ESTree for TSMethodSignature<'_> {
         state.serialize_field("optional", &self.optional);
         state.serialize_field("kind", &self.kind);
         state.serialize_field("typeParameters", &self.type_parameters);
-        state.serialize_field("params", &crate::serialize::ts::TSMethodSignatureParams(self));
+        state.serialize_field(
+            "params",
+            &crate::serialize::ts::TSMethodSignatureParams(self),
+        );
         state.serialize_field("returnType", &self.return_type);
         state.serialize_field("accessibility", &crate::serialize::basic::Null(self));
         state.serialize_field("readonly", &crate::serialize::basic::False(self));
@@ -3178,7 +3202,10 @@ impl ESTree for TSMappedType<'_> {
         state.serialize_field("constraint", &self.constraint);
         state.serialize_field("nameType", &self.name_type);
         state.serialize_field("typeAnnotation", &self.type_annotation);
-        state.serialize_field("optional", &crate::serialize::ts::TSMappedTypeOptional(self));
+        state.serialize_field(
+            "optional",
+            &crate::serialize::ts::TSMappedTypeOptional(self),
+        );
         state.serialize_field("readonly", &self.readonly);
         state.serialize_span(self.span);
         state.end();

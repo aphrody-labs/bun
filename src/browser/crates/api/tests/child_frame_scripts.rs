@@ -158,7 +158,10 @@ async fn a_child_frame_runs_its_own_script() {
         serde_json::json!("RAN-IN-CHILD"),
     );
     // The frame's writes must not reach the parent's document.
-    assert_eq!(page.evaluate("document.title").as_str().unwrap_or(""), "parent",);
+    assert_eq!(
+        page.evaluate("document.title").as_str().unwrap_or(""),
+        "parent",
+    );
     assert_eq!(page.evaluate("window.__ran"), serde_json::Value::Null);
 }
 
@@ -177,7 +180,10 @@ async fn a_child_frame_set_by_attribute_runs_its_own_script() {
         vec![format!("{base}/child.html")],
         "setAttribute('src') did not start the child document"
     );
-    assert_eq!(page.evaluate_in_frame(0, "window.__ran").unwrap(), serde_json::json!("YES"),);
+    assert_eq!(
+        page.evaluate_in_frame(0, "window.__ran").unwrap(),
+        serde_json::json!("YES"),
+    );
 }
 
 #[tokio::test]
@@ -195,7 +201,10 @@ async fn a_shadow_dom_child_frame_stays_alive_and_runs_its_script() {
         vec![format!("{base}/child.html")],
         "a shadow-root iframe realm was released as detached"
     );
-    assert_eq!(page.evaluate_in_frame(0, "window.__ran").unwrap(), serde_json::json!("YES"),);
+    assert_eq!(
+        page.evaluate_in_frame(0, "window.__ran").unwrap(),
+        serde_json::json!("YES"),
+    );
 }
 
 /// The whole point of a child frame having a scripting context: it can report
@@ -216,9 +225,15 @@ async fn a_child_frame_reaches_its_parent_with_post_message() {
         "the child's message never reached the parent"
     );
     // A widget gates on isTrusted and drops anything else without a word.
-    assert_eq!(page.evaluate("window.__res.trusted"), serde_json::json!([true]),);
+    assert_eq!(
+        page.evaluate("window.__res.trusted"),
+        serde_json::json!([true]),
+    );
     // And it replies through event.source, so that has to be the frame's window.
-    assert_eq!(page.evaluate("window.__res.fromChildWindow"), serde_json::json!([true]),);
+    assert_eq!(
+        page.evaluate("window.__res.fromChildWindow"),
+        serde_json::json!([true]),
+    );
 }
 
 /// The other direction: a page talking into its frame.
@@ -262,7 +277,10 @@ async fn window_post_message_delivers_to_the_same_window() {
     page.goto(&base).await.unwrap();
     page.settle(1000).await;
 
-    assert_eq!(page.evaluate("window.__got"), serde_json::json!([["SELF", true]]),);
+    assert_eq!(
+        page.evaluate("window.__got"),
+        serde_json::json!([["SELF", true]]),
+    );
     // postMessage never delivers synchronously.
     assert_eq!(page.evaluate("window.__syncGot").as_f64(), Some(0.0));
 }
@@ -312,7 +330,10 @@ async fn a_static_child_frame_runs_its_own_script() {
         vec![format!("{base}/child.html")],
         "a static iframe never started loading"
     );
-    assert_eq!(page.evaluate_in_frame(0, "window.__ran").unwrap(), serde_json::json!("YES"),);
+    assert_eq!(
+        page.evaluate_in_frame(0, "window.__ran").unwrap(),
+        serde_json::json!("YES"),
+    );
 }
 
 #[tokio::test]
@@ -325,11 +346,18 @@ async fn a_rejected_child_frame_does_not_leave_js_references() {
     page.goto(&base).await.unwrap();
     page.settle(2000).await;
 
-    assert!(page.frame_urls().is_empty(), "the frame cap was not applied");
-    for registry in ["__bun_browser_frameObjects", "__bun_browser_frameWindows", "__bun_browser_frameElements"]
-    {
+    assert!(
+        page.frame_urls().is_empty(),
+        "the frame cap was not applied"
+    );
+    for registry in [
+        "__bun_browser_frameObjects",
+        "__bun_browser_frameWindows",
+        "__bun_browser_frameElements",
+    ] {
         assert_eq!(
-            page.evaluate(&format!("Object.keys(globalThis.{registry}).length")).as_f64(),
+            page.evaluate(&format!("Object.keys(globalThis.{registry}).length"))
+                .as_f64(),
             Some(0.0),
             "rejected frame stayed in {registry}",
         );
@@ -348,7 +376,10 @@ async fn navigating_blank_releases_child_realms() {
     assert_eq!(page.frame_urls().len(), 1);
 
     page.goto("about:blank").await.unwrap();
-    assert!(page.frame_urls().is_empty(), "old frame realm survived navigation");
+    assert!(
+        page.frame_urls().is_empty(),
+        "old frame realm survived navigation"
+    );
 }
 
 #[tokio::test]
@@ -361,10 +392,14 @@ async fn changing_iframe_src_releases_the_previous_realm() {
     page.goto(&base).await.unwrap();
     page.settle(1000).await;
 
-    assert!(page.frame_urls().is_empty(), "old src realm survived replacement");
+    assert!(
+        page.frame_urls().is_empty(),
+        "old src realm survived replacement"
+    );
     for registry in ["__bun_browser_frameWindows", "__bun_browser_frameElements"] {
         assert_eq!(
-            page.evaluate(&format!("Object.keys(globalThis.{registry}).length")).as_f64(),
+            page.evaluate(&format!("Object.keys(globalThis.{registry}).length"))
+                .as_f64(),
             Some(0.0),
             "old iframe stayed in {registry}",
         );

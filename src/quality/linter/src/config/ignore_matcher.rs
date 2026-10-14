@@ -44,7 +44,10 @@ impl LintIgnoreMatcher {
                 }
             })
             .collect();
-        Self { base: base_gi, nested }
+        Self {
+            base: base_gi,
+            nested,
+        }
     }
 
     /// Returns true if the path should be ignored by any config.
@@ -77,8 +80,14 @@ mod tests {
         let base_root = Path::new("/repo");
 
         let nested1 = (vec![], PathBuf::from("/repo/all_allowed"));
-        let nested2 = (vec!["*.ts".to_string()], PathBuf::from("/repo/all_allowed/ts"));
-        let nested3 = (vec!["*.js".to_string()], PathBuf::from("/repo/all_allowed/ts/js"));
+        let nested2 = (
+            vec!["*.ts".to_string()],
+            PathBuf::from("/repo/all_allowed/ts"),
+        );
+        let nested3 = (
+            vec!["*.js".to_string()],
+            PathBuf::from("/repo/all_allowed/ts/js"),
+        );
 
         let matcher =
             LintIgnoreMatcher::new(&base_patterns, base_root, vec![nested1, nested2, nested3]);

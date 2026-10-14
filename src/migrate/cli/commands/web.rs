@@ -6,11 +6,11 @@
 
 use std::{path::PathBuf, process::ExitCode};
 
-use anyhow::{Context, Result};
 use crate::{
     rules::imports_ast::{PageArtifact, analyze_page_artifact},
     types::Report,
 };
+use anyhow::{Context, Result};
 use serde_json::json;
 
 pub(crate) fn run_web(path: PathBuf, report: Report) -> Result<ExitCode> {

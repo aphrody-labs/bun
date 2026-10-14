@@ -70,7 +70,10 @@ pub(crate) fn not_operator_position(tokens: &Tokens, walks: &mut Walks, p: usize
             // A literal ends a value: division, unless TS ASI applies.
             return ts && ends_decl(tokens, walks, qi, tokens.next_start(qi + 1), p);
         }
-        if matches_tk!(k, RegExp | PrivateIdent | PrivateIdentEscaped | JsxTagEnd | JsxLt) {
+        if matches_tk!(
+            k,
+            RegExp | PrivateIdent | PrivateIdentEscaped | JsxTagEnd | JsxLt
+        ) {
             return false;
         }
         if matches_tk!(k, TemplateHead | TemplateMiddle) {
@@ -155,11 +158,16 @@ fn ends_decl(tokens: &Tokens, walks: &mut Walks, q: usize, e: usize, p: usize) -
 fn paren_close_is_regex(tokens: &Tokens, qi: usize) -> bool {
     let word =
         |p: Option<usize>| p.filter(|&w| tokens.kind[w] == tk!(Ident) && !tokens.property_name(w));
-    let Some(w) = tokens.match_delim_back(qi).and_then(|lp| word(tokens.prev_sig(lp))) else {
+    let Some(w) = tokens
+        .match_delim_back(qi)
+        .and_then(|lp| word(tokens.prev_sig(lp)))
+    else {
         return false;
     };
     if tokens.ident_is(w, b"await") {
         return word(tokens.prev_sig(w)).is_some_and(|f| tokens.ident_is(f, b"for"));
     }
-    [b"if" as &[u8], b"while", b"for", b"with"].iter().any(|kw| tokens.ident_is(w, kw))
+    [b"if" as &[u8], b"while", b"for", b"with"]
+        .iter()
+        .any(|kw| tokens.ident_is(w, kw))
 }

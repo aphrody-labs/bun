@@ -80,7 +80,14 @@ pub fn to_estree_tokens_json<O: ESTreeTokenConfig>(
 ) -> String {
     let capacity = estimate_json_len(tokens.len(), source_text.len(), true);
     let mut serializer = CompactTokenSerializer::with_capacity(capacity, false, false);
-    serialize_tokens(&mut serializer, tokens, program, source_text, span_converter, options);
+    serialize_tokens(
+        &mut serializer,
+        tokens,
+        program,
+        source_text,
+        span_converter,
+        options,
+    );
     serializer.into_string()
 }
 
@@ -100,7 +107,14 @@ pub fn to_estree_tokens_pretty_json<O: ESTreeTokenConfig>(
 ) -> String {
     let capacity = estimate_json_len(tokens.len(), source_text.len(), false);
     let mut serializer = PrettyTokenSerializer::with_capacity(capacity, false, false);
-    serialize_tokens(&mut serializer, tokens, program, source_text, span_converter, options);
+    serialize_tokens(
+        &mut serializer,
+        tokens,
+        program,
+        source_text,
+        span_converter,
+        options,
+    );
     serializer.into_string()
 }
 
@@ -282,13 +296,21 @@ impl<'b, O: ESTreeTokenConfig, S: SequenceSerializer> JsonContext<'b, O, S> {
     /// Serialize a token whose value is guaranteed JSON-safe, skipping JSON-encoding.
     fn serialize_safe_token(&mut self, token: &Token, token_type: TokenType, value: &str) {
         let span = self.get_utf16_span(token);
-        self.seq.serialize_element(&ESTreeSafeToken { token_type, value, span });
+        self.seq.serialize_element(&ESTreeSafeToken {
+            token_type,
+            value,
+            span,
+        });
     }
 
     /// Serialize a token whose value may not be JSON-safe.
     fn serialize_unsafe_token(&mut self, token: &Token, token_type: TokenType, value: &str) {
         let span = self.get_utf16_span(token);
-        self.seq.serialize_element(&ESTreeUnsafeToken { token_type, value, span });
+        self.seq.serialize_element(&ESTreeUnsafeToken {
+            token_type,
+            value,
+            span,
+        });
     }
 
     /// Get UTF-16 span for a token.
@@ -444,7 +466,8 @@ impl<O: ESTreeTokenConfig, S: SequenceSerializer> Context for JsonContext<'_, O,
         let regex = RegExpData { pattern, flags };
 
         let span = self.get_utf16_span(token);
-        self.seq.serialize_element(&ESTreeRegExpToken { value, regex, span });
+        self.seq
+            .serialize_element(&ESTreeRegExpToken { value, regex, span });
     }
 
     /// Emit template quasis interleaved with their interpolated parts (expressions or TS types).
@@ -518,15 +541,35 @@ impl ESTree for ESTreeSafeToken<'_> {
         let end = end_buffer.format(self.span.end);
 
         serializer.buffer_mut().print_strs_array([
-            if S::IS_COMPACT { TYPE_PREFIX } else { TYPE_PREFIX_PRETTY },
+            if S::IS_COMPACT {
+                TYPE_PREFIX
+            } else {
+                TYPE_PREFIX_PRETTY
+            },
             self.token_type.as_str(),
-            if S::IS_COMPACT { VALUE_PREFIX } else { VALUE_PREFIX_PRETTY },
+            if S::IS_COMPACT {
+                VALUE_PREFIX
+            } else {
+                VALUE_PREFIX_PRETTY
+            },
             self.value,
-            if S::IS_COMPACT { START_PREFIX } else { START_PREFIX_PRETTY },
+            if S::IS_COMPACT {
+                START_PREFIX
+            } else {
+                START_PREFIX_PRETTY
+            },
             start,
-            if S::IS_COMPACT { END_PREFIX } else { END_PREFIX_PRETTY },
+            if S::IS_COMPACT {
+                END_PREFIX
+            } else {
+                END_PREFIX_PRETTY
+            },
             end,
-            if S::IS_COMPACT { POSTFIX } else { POSTFIX_PRETTY },
+            if S::IS_COMPACT {
+                POSTFIX
+            } else {
+                POSTFIX_PRETTY
+            },
         ]);
     }
 }

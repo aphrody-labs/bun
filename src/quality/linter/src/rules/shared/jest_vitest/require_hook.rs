@@ -157,7 +157,10 @@ impl RequireHookConfig {
             AstKind::CallExpression(call_expr) => {
                 if !is_type_of_jest_fn_call(
                     call_expr,
-                    &PossibleJestNode { node, original: None },
+                    &PossibleJestNode {
+                        node,
+                        original: None,
+                    },
                     ctx,
                     &[JestFnKind::General(JestGeneralFnKind::Describe)],
                 ) || call_expr.arguments.len() < 2

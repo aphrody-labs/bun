@@ -435,7 +435,9 @@ pub fn run(args: &[&[u8]]) -> Result<i32> {
             && package.starts_with('/')
             && package.ends_with(".deb")
             && !bun_core::strings::index_of_any(package.as_bytes(), b"\0\n\r").is_some();
-        let query = command == "search" && !package.starts_with('-') && !bun_core::strings::contains_char(package.as_bytes(), 0);
+        let query = command == "search"
+            && !package.starts_with('-')
+            && !bun_core::strings::contains_char(package.as_bytes(), 0);
         if !selector(package) && !local && !query {
             return Err(invalid(format!(
                 "invalid Debian package selector {package}"

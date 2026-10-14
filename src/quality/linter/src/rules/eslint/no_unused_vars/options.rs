@@ -344,12 +344,12 @@ where
     pub(super) fn diagnostic_help(&self, symbol_kind_plural: &str) -> Cow<'static, str> {
         match self {
             Self::None => Cow::Borrowed(""),
-            Self::Default | Self::PrefixUnderscore => {
-                Cow::Owned(format!(" Unused {symbol_kind_plural} should start with a '_'."))
-            }
-            Self::Some(reg) => {
-                Cow::Owned(format!(" Unused {symbol_kind_plural} should match /{reg}/."))
-            }
+            Self::Default | Self::PrefixUnderscore => Cow::Owned(format!(
+                " Unused {symbol_kind_plural} should start with a '_'."
+            )),
+            Self::Some(reg) => Cow::Owned(format!(
+                " Unused {symbol_kind_plural} should match /{reg}/."
+            )),
         }
     }
 }
@@ -482,8 +482,9 @@ where
 {
     let expected = expected.into_iter();
     let initial_capacity = expected.size_hint().0 * 8;
-    let expected =
-        expected.fold(String::with_capacity(initial_capacity), |acc, s| acc + " or " + s);
+    let expected = expected.fold(String::with_capacity(initial_capacity), |acc, s| {
+        acc + " or " + s
+    });
     let actual = actual.as_ref();
 
     invalid_option_error(option_name, format!("Expected {expected}, got {actual}"))
@@ -494,7 +495,9 @@ fn invalid_option_error<M: Into<Cow<'static, str>>>(
     message: M,
 ) -> OxcDiagnostic {
     let message = message.into();
-    OxcDiagnostic::error(format!("Invalid '{option_name}' option for no-unused-vars: {message}"))
+    OxcDiagnostic::error(format!(
+        "Invalid '{option_name}' option for no-unused-vars: {message}"
+    ))
 }
 
 impl TryFrom<&String> for VarsOption {
@@ -515,7 +518,10 @@ impl TryFrom<&Value> for VarsOption {
     fn try_from(value: &Value) -> Result<Self, Self::Error> {
         match value {
             Value::String(s) => Self::try_from(s),
-            _ => Err(invalid_option_error("vars", format!("Expected a string, got {value}"))),
+            _ => Err(invalid_option_error(
+                "vars",
+                format!("Expected a string, got {value}"),
+            )),
         }
     }
 }
@@ -529,9 +535,16 @@ impl TryFrom<&Value> for ArgsOption {
                 "after-used" => Ok(Self::AfterUsed),
                 "all" => Ok(Self::All),
                 "none" => Ok(Self::None),
-                s => Err(invalid_option_mismatch_error("args", ["after-used", "all", "none"], s)),
+                s => Err(invalid_option_mismatch_error(
+                    "args",
+                    ["after-used", "all", "none"],
+                    s,
+                )),
             },
-            v => Err(invalid_option_error("args", format!("Expected a string, got {v}"))),
+            v => Err(invalid_option_error(
+                "args",
+                format!("Expected a string, got {v}"),
+            )),
         }
     }
 }
@@ -543,7 +556,11 @@ impl TryFrom<&String> for CaughtErrors {
         match value.as_str() {
             "all" => Ok(Self(true)),
             "none" => Ok(Self(false)),
-            v => Err(invalid_option_mismatch_error("caughtErrors", ["all", "none"], v)),
+            v => Err(invalid_option_mismatch_error(
+                "caughtErrors",
+                ["all", "none"],
+                v,
+            )),
         }
     }
 }
@@ -560,7 +577,10 @@ impl TryFrom<&Value> for CaughtErrors {
         match value {
             Value::String(s) => Self::try_from(s),
             Value::Bool(b) => Ok(Self(*b)),
-            v => Err(invalid_option_error("caughtErrors", format!("Expected a string, got {v}"))),
+            v => Err(invalid_option_error(
+                "caughtErrors",
+                format!("Expected a string, got {v}"),
+            )),
         }
     }
 }
@@ -571,7 +591,9 @@ fn parse_unicode_rule(value: Option<&Value>) -> Result<IgnorePattern<Regex>, Str
 }
 
 fn parse_fix_mode(value: Option<&Value>, name: &str) -> Result<NoUnusedVarsFixMode, OxcDiagnostic> {
-    let Some(value) = value else { return Ok(NoUnusedVarsFixMode::default()) };
+    let Some(value) = value else {
+        return Ok(NoUnusedVarsFixMode::default());
+    };
     match value {
         Value::String(mode) => match mode.as_str() {
             "off" => Ok(NoUnusedVarsFixMode::Off),
@@ -584,7 +606,10 @@ fn parse_fix_mode(value: Option<&Value>, name: &str) -> Result<NoUnusedVarsFixMo
                 actual,
             )),
         },
-        _ => Err(invalid_option_error(name, format!("Expected a boolean or string, got {value}"))),
+        _ => Err(invalid_option_error(
+            name,
+            format!("Expected a boolean or string, got {value}"),
+        )),
     }
 }
 
@@ -592,15 +617,23 @@ impl TryFrom<Value> for NoUnusedVarsOptions {
     type Error = OxcDiagnostic;
 
     fn try_from(value: Value) -> Result<Self, Self::Error> {
-        let Some(config) = value.get(0) else { return Ok(Self::default()) };
+        let Some(config) = value.get(0) else {
+            return Ok(Self::default());
+        };
         match config {
             Value::String(vars) => {
                 let vars: VarsOption = vars.try_into()?;
-                Ok(Self { vars, ..Default::default() })
+                Ok(Self {
+                    vars,
+                    ..Default::default()
+                })
             }
             Value::Object(config) => {
-                let vars =
-                    config.get("vars").map(TryInto::try_into).transpose()?.unwrap_or_default();
+                let vars = config
+                    .get("vars")
+                    .map(TryInto::try_into)
+                    .transpose()?
+                    .unwrap_or_default();
 
                 // NOTE: when a configuration object is provided, do not provide
                 // a default ignore pattern here. They've opted into configuring
@@ -608,8 +641,11 @@ impl TryFrom<Value> for NoUnusedVarsOptions {
                 let vars_ignore_pattern = parse_unicode_rule(config.get("varsIgnorePattern"))
                     .map_err(|err| invalid_option_error("varsIgnorePattern", err))?;
 
-                let args: ArgsOption =
-                    config.get("args").map(TryInto::try_into).transpose()?.unwrap_or_default();
+                let args: ArgsOption = config
+                    .get("args")
+                    .map(TryInto::try_into)
+                    .transpose()?
+                    .unwrap_or_default();
 
                 let args_ignore_pattern = parse_unicode_rule(config.get("argsIgnorePattern"))
                     .map_err(|err| invalid_option_error("argsIgnorePattern", err))?;
@@ -773,7 +809,10 @@ mod tests {
         .unwrap();
         // option object provided, no default varsIgnorePattern
         assert!(rule.vars_ignore_pattern.is_none());
-        assert!(matches!(rule.args_ignore_pattern, IgnorePattern::PrefixUnderscore));
+        assert!(matches!(
+            rule.args_ignore_pattern,
+            IgnorePattern::PrefixUnderscore
+        ));
 
         let rule: NoUnusedVarsOptions = json!([
             {
@@ -784,7 +823,10 @@ mod tests {
         .unwrap();
 
         // option object provided, no default argsIgnorePattern
-        assert!(matches!(rule.vars_ignore_pattern, IgnorePattern::PrefixUnderscore));
+        assert!(matches!(
+            rule.vars_ignore_pattern,
+            IgnorePattern::PrefixUnderscore
+        ));
         assert!(rule.args_ignore_pattern.is_none());
     }
 
@@ -855,7 +897,10 @@ mod tests {
         parse_unicode_rule(Some(&pat)).expect("json strings should get parsed into a regex");
 
         let pat = json!("^_");
-        assert!(matches!(parse_unicode_rule(Some(&pat)).unwrap(), IgnorePattern::PrefixUnderscore));
+        assert!(matches!(
+            parse_unicode_rule(Some(&pat)).unwrap(),
+            IgnorePattern::PrefixUnderscore
+        ));
     }
 
     #[test]
@@ -885,7 +930,9 @@ mod tests {
         .unwrap_err();
 
         assert!(
-            error.to_string().starts_with("Invalid 'varsIgnorePattern' option for no-unused-vars:")
+            error
+                .to_string()
+                .starts_with("Invalid 'varsIgnorePattern' option for no-unused-vars:")
         );
     }
 }

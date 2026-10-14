@@ -84,7 +84,9 @@ impl Rule for NoPageCustomFont {
         let AstKind::JSXOpeningElement(element) = node.kind() else {
             return;
         };
-        let JSXElementName::Identifier(ident) = &element.name else { return };
+        let JSXElementName::Identifier(ident) = &element.name else {
+            return;
+        };
 
         if ident.name != "link" {
             return;
@@ -102,7 +104,9 @@ impl Rule for NoPageCustomFont {
         }
 
         let in_document = ctx.file_path().file_name().is_some_and(|file_name| {
-            file_name.to_str().is_some_and(|file_name| file_name.starts_with("_document."))
+            file_name
+                .to_str()
+                .is_some_and(|file_name| file_name.starts_with("_document."))
         });
         let span = ctx.nodes().parent_kind(node.id()).span();
         let diagnostic = if in_document {

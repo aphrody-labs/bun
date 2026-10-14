@@ -204,6 +204,12 @@ mod tests {
 
         // Verify serialization preserves all types
         let serialized = rule.to_configuration().unwrap().unwrap();
-        assert_eq!(serialized["allowForKnownSafeCalls"].as_array().unwrap().len(), 5);
+        assert_eq!(
+            serialized["allowForKnownSafeCalls"]
+                .as_array()
+                .unwrap()
+                .len(),
+            5
+        );
     }
 }

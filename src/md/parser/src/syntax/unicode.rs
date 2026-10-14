@@ -121,8 +121,14 @@ mod tests {
     fn whitespace_is_js_backslash_s() {
         assert!(is_whitespace(' ') && is_whitespace('\t') && is_whitespace('\n'));
         assert!(is_whitespace('\u{A0}') && is_whitespace('\u{3000}'));
-        assert!(is_whitespace('\u{FEFF}'), "BOM is `\\s` in JS but not `White_Space`");
-        assert!(!is_whitespace('\u{85}'), "NEL is `White_Space` but not `\\s` in JS");
+        assert!(
+            is_whitespace('\u{FEFF}'),
+            "BOM is `\\s` in JS but not `White_Space`"
+        );
+        assert!(
+            !is_whitespace('\u{85}'),
+            "NEL is `White_Space` but not `\\s` in JS"
+        );
         assert!(!is_whitespace('a'));
     }
 
@@ -131,12 +137,21 @@ mod tests {
         assert!(is_punctuation('*') && is_punctuation('$'));
         assert!(!is_punctuation('a') && !is_punctuation(' '));
         assert!(is_punctuation('«') && is_punctuation('。') && is_punctuation('→'));
-        assert!(is_punctuation('©'), "symbols (S) count, not only punctuation (P)");
+        assert!(
+            is_punctuation('©'),
+            "symbols (S) count, not only punctuation (P)"
+        );
         assert!(!is_punctuation('é') && !is_punctuation('日'));
         // Range boundaries are inclusive
         assert!(is_punctuation('\u{A1}') && is_punctuation('\u{A9}'));
         assert!(!is_punctuation('\u{AA}'));
-        assert!(is_punctuation('😀'), "astral symbols count (spec), unlike micromark");
-        assert!(!is_punctuation('\u{10000}'), "astral letters (Lo) stay non-punctuation");
+        assert!(
+            is_punctuation('😀'),
+            "astral symbols count (spec), unlike micromark"
+        );
+        assert!(
+            !is_punctuation('\u{10000}'),
+            "astral letters (Lo) stay non-punctuation"
+        );
     }
 }

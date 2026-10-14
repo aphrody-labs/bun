@@ -80,7 +80,10 @@ pub struct NoNamespace {
 
 impl Default for NoNamespace {
     fn default() -> Self {
-        Self { allow_declarations: false, allow_definition_files: true }
+        Self {
+            allow_declarations: false,
+            allow_definition_files: true,
+        }
     }
 }
 
@@ -142,8 +145,9 @@ impl Rule for NoNamespace {
 
         let keyword = declaration.kind.as_str();
         let mut span_start = declaration.span.start;
-        span_start +=
-            ctx.find_next_token_within(span_start, declaration.span.end, keyword).unwrap();
+        span_start += ctx
+            .find_next_token_within(span_start, declaration.span.end, keyword)
+            .unwrap();
         #[expect(clippy::cast_possible_truncation)]
         let span = Span::sized(span_start, keyword.len() as u32);
         ctx.diagnostic(no_namespace_diagnostic(span));
@@ -246,10 +250,30 @@ fn test() {
     let fail = vec![
         ("module foo {}", None, None, None),
         ("namespace foo {}", None, None, None),
-        ("module foo {}", Some(serde_json::json!([{ "allowDeclarations": false }])), None, None),
-        ("namespace foo {}", Some(serde_json::json!([{ "allowDeclarations": false }])), None, None),
-        ("module foo {}", Some(serde_json::json!([{ "allowDeclarations": true }])), None, None),
-        ("namespace foo {}", Some(serde_json::json!([{ "allowDeclarations": true }])), None, None),
+        (
+            "module foo {}",
+            Some(serde_json::json!([{ "allowDeclarations": false }])),
+            None,
+            None,
+        ),
+        (
+            "namespace foo {}",
+            Some(serde_json::json!([{ "allowDeclarations": false }])),
+            None,
+            None,
+        ),
+        (
+            "module foo {}",
+            Some(serde_json::json!([{ "allowDeclarations": true }])),
+            None,
+            None,
+        ),
+        (
+            "namespace foo {}",
+            Some(serde_json::json!([{ "allowDeclarations": true }])),
+            None,
+            None,
+        ),
         ("declare module foo {}", None, None, None),
         ("declare namespace foo {}", None, None, None),
         (

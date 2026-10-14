@@ -21,7 +21,10 @@ impl<'a> PeepholeOptimizations {
         let span = a.span();
         let exprs = if let Expression::SequenceExpression(sequence_expr) = b {
             // `a; (b, c)`
-            ArenaVec::from_iter_in(std::iter::once(a).chain(sequence_expr.unbox().expressions), ctx)
+            ArenaVec::from_iter_in(
+                std::iter::once(a).chain(sequence_expr.unbox().expressions),
+                ctx,
+            )
         } else {
             // `a; b`
             ArenaVec::from_array_in([a, b], ctx)
@@ -37,7 +40,9 @@ impl<'a> PeepholeOptimizations {
     ) -> Option<&'s Expression<'a>> {
         let mut last = seq.expressions.last()?;
         while let Expression::SequenceExpression(inner) = last {
-            let Some(next) = inner.expressions.last() else { break };
+            let Some(next) = inner.expressions.last() else {
+                break;
+            };
             last = next;
         }
         Some(last)

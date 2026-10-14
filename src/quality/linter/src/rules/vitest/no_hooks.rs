@@ -41,7 +41,10 @@ fn test() {
     let mut pass = vec![
         ("test(\"foo\")", None),
         ("describe(\"foo\", () => { it(\"bar\") })", None),
-        ("test(\"foo\", () => { expect(subject.beforeEach()).toBe(true) })", None),
+        (
+            "test(\"foo\", () => { expect(subject.beforeEach()).toBe(true) })",
+            None,
+        ),
         (
             "afterEach(() => {}); afterAll(() => {});",
             Some(serde_json::json!([{ "allow": ["afterEach", "afterAll"] }])),
@@ -71,7 +74,10 @@ fn test() {
     let pass_vitest = vec![
         (r#"test("foo")"#, None),
         (r#"describe("foo", () => { it("bar") })"#, None),
-        (r#"test("foo", () => { expect(subject.beforeEach()).toBe(true) })"#, None),
+        (
+            r#"test("foo", () => { expect(subject.beforeEach()).toBe(true) })"#,
+            None,
+        ),
         (
             "afterEach(() => {}); afterAll(() => {});",
             Some(serde_json::json!([{ "allow": ["afterEach", "afterAll"] }])),
@@ -84,7 +90,10 @@ fn test() {
         ("afterAll(() => {})", None),
         ("afterEach(() => {})", None),
         ("afterEach(() => {})", Some(serde_json::json!([]))),
-        ("afterEach(() => {})", Some(serde_json::json!([{ "allow": [] }]))),
+        (
+            "afterEach(() => {})",
+            Some(serde_json::json!([{ "allow": [] }])),
+        ),
         (
             "beforeEach(() => {}); afterEach(() => { vi.resetModules() });",
             Some(serde_json::json!([{ "allow": ["afterEach"] }])),

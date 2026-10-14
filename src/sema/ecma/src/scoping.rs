@@ -320,7 +320,11 @@ impl Scoping {
 
     /// Iterate all symbol names in insertion order.
     pub fn symbol_names(&self) -> impl ExactSizeIterator<Item = &str> + '_ {
-        self.cell.borrow_dependent().symbol_names.iter().map(Ident::as_str)
+        self.cell
+            .borrow_dependent()
+            .symbol_names
+            .iter()
+            .map(Ident::as_str)
     }
 
     /// Iterate resolved reference ID lists for each symbol.
@@ -407,13 +411,17 @@ impl Scoping {
     #[inline]
     /// Get all redeclarations associated with a symbol.
     pub fn symbol_redeclarations(&self, symbol_id: SymbolId) -> &[Redeclaration] {
-        self.cell.borrow_dependent().symbol_redeclarations.get(&symbol_id).map_or_else(
-            || {
-                static EMPTY: &[Redeclaration] = &[];
-                EMPTY
-            },
-            |v| v.as_slice(),
-        )
+        self.cell
+            .borrow_dependent()
+            .symbol_redeclarations
+            .get(&symbol_id)
+            .map_or_else(
+                || {
+                    static EMPTY: &[Redeclaration] = &[];
+                    EMPTY
+                },
+                |v| v.as_slice(),
+            )
     }
 
     #[inline]
@@ -459,7 +467,11 @@ impl Scoping {
         let redeclarations = self.symbol_redeclarations(symbol_id);
         std::iter::once(self.symbol_declaration(symbol_id))
             .filter(move |_| redeclarations.is_empty())
-            .chain(redeclarations.iter().map(|redeclaration| redeclaration.declaration))
+            .chain(
+                redeclarations
+                    .iter()
+                    .map(|redeclaration| redeclaration.declaration),
+            )
     }
 
     /// Create a new symbol and append symbol metadata to the symbol table.
@@ -488,7 +500,9 @@ impl Scoping {
         binding_scope_id: ScopeId,
         node_id: NodeId,
     ) -> SymbolId {
-        let symbol_id = self.symbol_table.push(span, flags, symbol_scope_id, node_id);
+        let symbol_id = self
+            .symbol_table
+            .push(span, flags, symbol_scope_id, node_id);
         self.cell.with_dependent_mut(|allocator, cell| {
             let name = name.clone_in(allocator);
             cell.symbol_names.push(name);
@@ -506,8 +520,11 @@ impl Scoping {
         declaration: NodeId,
         span: Span,
     ) {
-        let is_first_redeclared =
-            !self.cell.borrow_dependent().symbol_redeclarations.contains_key(&symbol_id);
+        let is_first_redeclared = !self
+            .cell
+            .borrow_dependent()
+            .symbol_redeclarations
+            .contains_key(&symbol_id);
         // Borrow checker doesn't allow us to call `self.symbol_span` in `with_dependent_mut`,
         // so we need construct `Redeclaration` here.
         let first_declaration = is_first_redeclared.then(|| Redeclaration {
@@ -517,7 +534,11 @@ impl Scoping {
         });
 
         self.cell.with_dependent_mut(|allocator, cell| {
-            let redeclaration = Redeclaration { span, declaration, flags };
+            let redeclaration = Redeclaration {
+                span,
+                declaration,
+                flags,
+            };
             match cell.symbol_redeclarations.entry(symbol_id) {
                 Entry::Occupied(occupied) => {
                     occupied.into_mut().push(redeclaration);
@@ -551,7 +572,9 @@ impl Scoping {
             let first = redeclarations.first()?.clone();
             let flags = redeclarations
                 .iter()
-                .fold(SymbolFlags::None, |flags, redeclaration| flags | redeclaration.flags);
+                .fold(SymbolFlags::None, |flags, redeclaration| {
+                    flags | redeclaration.flags
+                });
             let has_redeclarations = redeclarations.len() > 1;
             if !has_redeclarations {
                 cell.symbol_redeclarations.remove(&symbol_id);
@@ -591,7 +614,8 @@ impl Scoping {
     /// not resolved.
     #[inline]
     pub fn get_reference_name(&self, reference_id: ReferenceId) -> Option<&str> {
-        self.symbol_name(self.references[reference_id].symbol_id()?).into()
+        self.symbol_name(self.references[reference_id].symbol_id()?)
+            .into()
     }
 
     /// Returns `true` if the corresponding [`Reference`] is resolved to a symbol.
@@ -626,10 +650,15 @@ impl Scoping {
     /// If symbol is `const`, always returns `false`.
     /// Otherwise, returns `true` if the symbol is assigned to somewhere in AST.
     pub fn symbol_is_mutated(&self, symbol_id: SymbolId) -> bool {
-        if self.symbol_table.symbol_flags(symbol_id).contains(SymbolFlags::ConstVariable) {
+        if self
+            .symbol_table
+            .symbol_flags(symbol_id)
+            .contains(SymbolFlags::ConstVariable)
+        {
             false
         } else {
-            self.get_resolved_references(symbol_id).any(Reference::is_write)
+            self.get_resolved_references(symbol_id)
+                .any(Reference::is_write)
         }
     }
 
@@ -647,7 +676,9 @@ impl Scoping {
 
     /// Delete a reference.
     pub fn delete_reference(&mut self, reference_id: ReferenceId) {
-        let Some(symbol_id) = self.get_reference(reference_id).symbol_id() else { return };
+        let Some(symbol_id) = self.get_reference(reference_id).symbol_id() else {
+            return;
+        };
         self.delete_resolved_reference(symbol_id, reference_id);
     }
 
@@ -658,7 +689,10 @@ impl Scoping {
     pub fn delete_resolved_reference(&mut self, symbol_id: SymbolId, reference_id: ReferenceId) {
         self.cell.with_dependent_mut(|_allocator, cell| {
             let reference_ids = &mut cell.resolved_references[symbol_id.index()];
-            let index = reference_ids.iter().position(|&id| id == reference_id).unwrap();
+            let index = reference_ids
+                .iter()
+                .position(|&id| id == reference_id)
+                .unwrap();
             reference_ids.swap_remove(index);
         });
     }
@@ -772,14 +806,18 @@ impl Scoping {
     /// The first element of this iterator will be the scope itself. This
     /// guarantees the iterator will have at least 1 element.
     pub fn scope_ancestors(&self, scope_id: ScopeId) -> impl Iterator<Item = ScopeId> + '_ {
-        std::iter::successors(Some(scope_id), |&scope_id| *self.scope_table.parent_ids(scope_id))
+        std::iter::successors(Some(scope_id), |&scope_id| {
+            *self.scope_table.parent_ids(scope_id)
+        })
     }
 
     /// Returns `true` if `scope_id` is a descendant of `ancestor_scope_id`.
     ///
     /// A scope is not considered a descendant of itself.
     pub fn scope_is_descendant_of(&self, scope_id: ScopeId, ancestor_scope_id: ScopeId) -> bool {
-        self.scope_ancestors(scope_id).skip(1).any(|scope_id| scope_id == ancestor_scope_id)
+        self.scope_ancestors(scope_id)
+            .skip(1)
+            .any(|scope_id| scope_id == ancestor_scope_id)
     }
 
     /// Iterate all scope IDs from the root scope through all descendants.
@@ -814,7 +852,11 @@ impl Scoping {
     pub fn root_unresolved_references_ids(
         &self,
     ) -> impl Iterator<Item = impl Iterator<Item = ReferenceId> + '_> + '_ {
-        self.cell.borrow_dependent().root_unresolved_references.values().map(|v| v.iter().copied())
+        self.cell
+            .borrow_dependent()
+            .root_unresolved_references
+            .values()
+            .map(|v| v.iter().copied())
     }
 
     /// Delete an unresolved reference.
@@ -827,12 +869,18 @@ impl Scoping {
     #[inline]
     pub fn delete_root_unresolved_reference(&mut self, name: Ident<'_>, reference_id: ReferenceId) {
         self.cell.with_dependent_mut(|_allocator, cell| {
-            let reference_ids = cell.root_unresolved_references.get_mut(name.as_str()).unwrap();
+            let reference_ids = cell
+                .root_unresolved_references
+                .get_mut(name.as_str())
+                .unwrap();
             if reference_ids.len() == 1 {
                 assert_eq!(reference_ids[0], reference_id);
                 cell.root_unresolved_references.remove(name.as_str());
             } else {
-                let index = reference_ids.iter().position(|&id| id == reference_id).unwrap();
+                let index = reference_ids
+                    .iter()
+                    .position(|&id| id == reference_id)
+                    .unwrap();
                 reference_ids.swap_remove(index);
             }
         });
@@ -906,7 +954,9 @@ impl Scoping {
     /// [`find_binding`]: Scoping::find_binding
     #[inline]
     pub fn get_binding(&self, scope_id: ScopeId, name: Ident<'_>) -> Option<SymbolId> {
-        self.cell.borrow_dependent().bindings[scope_id].get(&name).copied()
+        self.cell.borrow_dependent().bindings[scope_id]
+            .get(&name)
+            .copied()
     }
 
     /// Find a binding by name in a scope or its ancestors.
@@ -953,7 +1003,9 @@ impl Scoping {
         &self,
         scope_id: ScopeId,
     ) -> impl ExactSizeIterator<Item = SymbolId> + '_ {
-        self.cell.borrow_dependent().bindings[scope_id].values().copied()
+        self.cell.borrow_dependent().bindings[scope_id]
+            .values()
+            .copied()
     }
 
     /// Create a scope.
@@ -1087,11 +1139,13 @@ impl Scoping {
                     .retain(|reference_id| !is_typescript_reference(&references[*reference_id]));
             }
 
-            cell.root_unresolved_references.retain(|_name, reference_ids| {
-                reference_ids
-                    .retain(|reference_id| !is_typescript_reference(&references[*reference_id]));
-                !reference_ids.is_empty()
-            });
+            cell.root_unresolved_references
+                .retain(|_name, reference_ids| {
+                    reference_ids.retain(|reference_id| {
+                        !is_typescript_reference(&references[*reference_id])
+                    });
+                    !reference_ids.is_empty()
+                });
 
             for bindings in &mut cell.bindings {
                 bindings.retain(|_name, symbol_id| {

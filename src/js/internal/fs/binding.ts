@@ -72,16 +72,7 @@ type PathPromiseMethod =
   | "writeFile";
 
 type FdPromiseMethod =
-  | "close"
-  | "exists"
-  | "fchmod"
-  | "fchown"
-  | "fdatasync"
-  | "fstat"
-  | "fsync"
-  | "ftruncate"
-  | "futimes"
-  | "open";
+  "close" | "exists" | "fchmod" | "fchown" | "fdatasync" | "fstat" | "fsync" | "ftruncate" | "futimes" | "open";
 
 type Promisified = { [K in FdPromiseMethod]: NodeFS[K]["__promisify__"] };
 

@@ -53,7 +53,10 @@ fn test() {
         ("1foo-bar", "FooBar"),
         ("1-foo-bar", "FooBar"),
         ("-- --", "_"),
-        ("_output$headers$x-amzn-requestid", "_output$headers$xAmznRequestid"),
+        (
+            "_output$headers$x-amzn-requestid",
+            "_output$headers$xAmznRequestid",
+        ),
     ];
 
     for &(input, expected) in cases {

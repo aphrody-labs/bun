@@ -71,7 +71,9 @@ fn validate_use_memo_impl(
                         react.insert(lvalue.identifier);
                     }
                 }
-                InstructionValue::PropertyLoad { object, property, .. } => {
+                InstructionValue::PropertyLoad {
+                    object, property, ..
+                } => {
                     if react.contains(&object.identifier)
                         && let PropertyLiteral::String(prop_name) = property
                         && prop_name == "useMemo"
@@ -79,10 +81,15 @@ fn validate_use_memo_impl(
                         use_memos.insert(lvalue.identifier);
                     }
                 }
-                InstructionValue::FunctionExpression { lowered_func, span, .. } => {
+                InstructionValue::FunctionExpression {
+                    lowered_func, span, ..
+                } => {
                     func_exprs.insert(
                         lvalue.identifier,
-                        FuncExprInfo { func_id: lowered_func.func, span: *span },
+                        FuncExprInfo {
+                            func_id: lowered_func.func,
+                            span: *span,
+                        },
                     );
                 }
                 InstructionValue::CallExpression { callee, args, .. } => {
@@ -189,12 +196,16 @@ fn handle_possible_use_memo_call(
     validate_no_context_variable_assignment(body_func, identifiers, errors);
 
     if validate_no_void_use_memo && !has_non_void_return(body_func) {
-        void_memo_errors
-            .push(diagnostics::use_memo_no_return(body_func.diagnostic_span().or(body_info.span)));
+        void_memo_errors.push(diagnostics::use_memo_no_return(
+            body_func.diagnostic_span().or(body_info.span),
+        ));
     } else if validate_no_void_use_memo && let Some(callee_span) = callee.span {
         // The callee is always useMemo/React.useMemo since we checked is_use_memo above.
         // The identifierName in Babel's AST Span is "useMemo".
-        unused_use_memos.insert(lvalue.identifier, (callee_span, Some("useMemo".to_string())));
+        unused_use_memos.insert(
+            lvalue.identifier,
+            (callee_span, Some("useMemo".to_string())),
+        );
     }
 }
 
@@ -206,7 +217,12 @@ fn validate_no_context_variable_assignment(
     let context: FxHashMap<IdentifierId, Option<Span>> = func
         .context
         .iter()
-        .map(|place| (place.identifier, identifiers[place.identifier].span.or(place.span)))
+        .map(|place| {
+            (
+                place.identifier,
+                identifiers[place.identifier].span.or(place.span),
+            )
+        })
         .collect();
 
     for (_block_id, block) in &func.body.blocks {
@@ -227,7 +243,10 @@ fn validate_no_context_variable_assignment(
 fn has_non_void_return(func: &HirFunction) -> bool {
     for (_block_id, block) in &func.body.blocks {
         if let Terminal::Return { return_variant, .. } = &block.terminal
-            && matches!(return_variant, ReturnVariant::Explicit | ReturnVariant::Implicit)
+            && matches!(
+                return_variant,
+                ReturnVariant::Explicit | ReturnVariant::Implicit
+            )
         {
             return true;
         }
@@ -250,5 +269,8 @@ fn each_instruction_value_operand_ids(
 /// Collect all operand IdentifierIds from a Terminal.
 /// Thin wrapper around canonical `each_terminal_operand` that maps to ids.
 fn each_terminal_operand_ids(terminal: &Terminal) -> Vec<IdentifierId> {
-    each_terminal_operand(terminal).into_iter().map(|p| p.identifier).collect()
+    each_terminal_operand(terminal)
+        .into_iter()
+        .map(|p| p.identifier)
+        .collect()
 }

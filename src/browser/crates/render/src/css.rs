@@ -142,17 +142,17 @@ fn relational_key_may_match(
             dom_node.get_attribute("id").is_some_and(|actual| {
                 actual == expected || (quirks && actual.eq_ignore_ascii_case(expected))
             })
-        },
+        }
         Some(RelationalSelectorKey::Class(expected)) => {
             dom_node.get_attribute("class").is_some_and(|classes| {
                 classes.split_whitespace().any(|actual| {
                     actual == expected || (quirks && actual.eq_ignore_ascii_case(expected))
                 })
             })
-        },
+        }
         Some(RelationalSelectorKey::Attribute(expected)) => {
             dom_node.get_attribute(expected).is_some()
-        },
+        }
         Some(RelationalSelectorKey::LocalName(expected)) => dom_node
             .as_element()
             .is_some_and(|element| (&*element.local).eq_ignore_ascii_case(expected)),
@@ -177,14 +177,14 @@ impl RelationalInvalidation {
                 dom_node.get_attribute("id").is_some_and(|actual| {
                     actual == expected || (quirks && actual.eq_ignore_ascii_case(expected))
                 })
-            },
+            }
             RelationalSelectorKey::Class(expected) => {
                 dom_node.get_attribute("class").is_some_and(|classes| {
                     classes.split_whitespace().any(|actual| {
                         actual == expected || (quirks && actual.eq_ignore_ascii_case(expected))
                     })
                 })
-            },
+            }
             RelationalSelectorKey::Attribute(expected) => dom_node.attrs().is_some_and(|attrs| {
                 attrs
                     .iter()
@@ -192,7 +192,7 @@ impl RelationalInvalidation {
             }),
             RelationalSelectorKey::LocalName(expected) => {
                 (&*element.local).eq_ignore_ascii_case(expected)
-            },
+            }
         })
     }
 }
@@ -230,15 +230,24 @@ impl InvalidationMap {
     }
 
     pub fn attribute_dependencies(&self, attribute: &str) -> &[InvalidationDependency] {
-        self.attributes.get(&attribute.to_ascii_lowercase()).map(Vec::as_slice).unwrap_or(&[])
+        self.attributes
+            .get(&attribute.to_ascii_lowercase())
+            .map(Vec::as_slice)
+            .unwrap_or(&[])
     }
 
     pub fn local_name_dependencies(&self, local_name: &str) -> &[InvalidationDependency] {
-        self.local_names.get(&local_name.to_ascii_lowercase()).map(Vec::as_slice).unwrap_or(&[])
+        self.local_names
+            .get(&local_name.to_ascii_lowercase())
+            .map(Vec::as_slice)
+            .unwrap_or(&[])
     }
 
     pub fn state_dependencies(&self, state: &str) -> &[InvalidationDependency] {
-        self.states.get(&state.to_ascii_lowercase()).map(Vec::as_slice).unwrap_or(&[])
+        self.states
+            .get(&state.to_ascii_lowercase())
+            .map(Vec::as_slice)
+            .unwrap_or(&[])
     }
 
     pub fn conservative_rule_orders(&self) -> &[usize] {
@@ -294,11 +303,16 @@ impl InvalidationMap {
                 .iter()
                 .any(|dependency| dependency.reaches.contains(InvalidationReaches::SIBLINGS))
         };
-        if node.get_attribute("id").is_some_and(|id| reaches_sibling(self.id_dependencies(id))) {
+        if node
+            .get_attribute("id")
+            .is_some_and(|id| reaches_sibling(self.id_dependencies(id)))
+        {
             return true;
         }
         if node.get_attribute("class").is_some_and(|classes| {
-            classes.split_whitespace().any(|class| reaches_sibling(self.class_dependencies(class)))
+            classes
+                .split_whitespace()
+                .any(|class| reaches_sibling(self.class_dependencies(class)))
         }) {
             return true;
         }
@@ -332,12 +346,16 @@ impl InvalidationMap {
         reaches: InvalidationReaches,
     ) {
         let dependencies = map.entry(key).or_default();
-        if let Some(existing) =
-            dependencies.iter_mut().find(|dependency| dependency.rule_order == rule_order)
+        if let Some(existing) = dependencies
+            .iter_mut()
+            .find(|dependency| dependency.rule_order == rule_order)
         {
             existing.reaches = existing.reaches.union(reaches);
         } else {
-            dependencies.push(InvalidationDependency { rule_order, reaches });
+            dependencies.push(InvalidationDependency {
+                rule_order,
+                reaches,
+            });
         }
     }
 
@@ -350,15 +368,30 @@ impl InvalidationMap {
     }
 
     fn push_attribute(&mut self, key: String, rule_order: usize, reaches: InvalidationReaches) {
-        Self::push(&mut self.attributes, key.to_ascii_lowercase(), rule_order, reaches);
+        Self::push(
+            &mut self.attributes,
+            key.to_ascii_lowercase(),
+            rule_order,
+            reaches,
+        );
     }
 
     fn push_local_name(&mut self, key: String, rule_order: usize, reaches: InvalidationReaches) {
-        Self::push(&mut self.local_names, key.to_ascii_lowercase(), rule_order, reaches);
+        Self::push(
+            &mut self.local_names,
+            key.to_ascii_lowercase(),
+            rule_order,
+            reaches,
+        );
     }
 
     fn push_state(&mut self, key: String, rule_order: usize, reaches: InvalidationReaches) {
-        Self::push(&mut self.states, key.to_ascii_lowercase(), rule_order, reaches);
+        Self::push(
+            &mut self.states,
+            key.to_ascii_lowercase(),
+            rule_order,
+            reaches,
+        );
     }
 
     fn mark_conservative(&mut self, rule_order: usize) {
@@ -530,7 +563,7 @@ fn invalidation_compounds(selector: &str) -> (Vec<(String, InvalidationReaches)>
                 } else {
                     paren_depth -= 1;
                 }
-            },
+            }
             '[' => bracket_depth += 1,
             ']' => {
                 if bracket_depth == 0 {
@@ -538,7 +571,7 @@ fn invalidation_compounds(selector: &str) -> (Vec<(String, InvalidationReaches)>
                 } else {
                     bracket_depth -= 1;
                 }
-            },
+            }
             '>' | '+' | '~' if paren_depth == 0 && bracket_depth == 0 => {
                 let reaches = if ch == '>' {
                     InvalidationReaches::DESCENDANTS
@@ -554,7 +587,7 @@ fn invalidation_compounds(selector: &str) -> (Vec<(String, InvalidationReaches)>
                 }
                 start = index;
                 continue;
-            },
+            }
             ',' if paren_depth == 0 && bracket_depth == 0 => malformed = true,
             _ if ch.is_whitespace() && paren_depth == 0 && bracket_depth == 0 => {
                 let whitespace = index;
@@ -565,15 +598,20 @@ fn invalidation_compounds(selector: &str) -> (Vec<(String, InvalidationReaches)>
                     continue;
                 }
                 if index < chars.len() {
-                    if !push(start, whitespace, InvalidationReaches::DESCENDANTS, &mut compounds) {
+                    if !push(
+                        start,
+                        whitespace,
+                        InvalidationReaches::DESCENDANTS,
+                        &mut compounds,
+                    ) {
                         malformed = true;
                     }
                     start = index;
                     continue;
                 }
                 break;
-            },
-            _ => {},
+            }
+            _ => {}
         }
         index += 1;
     }
@@ -620,7 +658,7 @@ fn nth_of_selector(arguments: &str) -> Option<&str> {
             ']' => bracket_depth = bracket_depth.saturating_sub(1),
             '(' => paren_depth += 1,
             ')' => paren_depth = paren_depth.saturating_sub(1),
-            _ => {},
+            _ => {}
         }
         if bracket_depth == 0
             && paren_depth == 0
@@ -629,8 +667,10 @@ fn nth_of_selector(arguments: &str) -> Option<&str> {
             && chars[index + 1].eq_ignore_ascii_case(&'f')
             && chars.get(index + 2).is_none_or(|ch| ch.is_whitespace())
         {
-            let byte_index =
-                arguments.char_indices().nth(index + 2).map_or(arguments.len(), |(byte, _)| byte);
+            let byte_index = arguments
+                .char_indices()
+                .nth(index + 2)
+                .map_or(arguments.len(), |(byte, _)| byte);
             return Some(arguments[byte_index..].trim());
         }
         index += 1;
@@ -763,14 +803,14 @@ fn relational_anchor_key(compound: &str) -> Option<RelationalSelectorKey> {
                     return Some(RelationalSelectorKey::Id(id));
                 }
                 index = next.max(index + 1);
-            },
+            }
             '.' => {
                 let (class, next) = consume_css_identifier(&chars, index + 1);
                 if !class.is_empty() {
                     return Some(RelationalSelectorKey::Class(class));
                 }
                 index = next.max(index + 1);
-            },
+            }
             '[' => {
                 let close = matching_delimiter(&chars, index, '[', ']')?;
                 let mut name_index = index + 1;
@@ -791,10 +831,12 @@ fn relational_anchor_key(compound: &str) -> Option<RelationalSelectorKey> {
                 }
                 let (attribute, end) = (first, first_end);
                 if !attribute.is_empty() && end <= close {
-                    return Some(RelationalSelectorKey::Attribute(attribute.to_ascii_lowercase()));
+                    return Some(RelationalSelectorKey::Attribute(
+                        attribute.to_ascii_lowercase(),
+                    ));
                 }
                 index = close + 1;
-            },
+            }
             ':' => {
                 let pseudo_start = index + usize::from(chars.get(index + 1) == Some(&':')) + 1;
                 let (_, next) = consume_css_identifier(&chars, pseudo_start);
@@ -804,7 +846,7 @@ fn relational_anchor_key(compound: &str) -> Option<RelationalSelectorKey> {
                 } else {
                     index = next.max(index + 1);
                 }
-            },
+            }
             '\\' => index = (index + 2).min(chars.len()),
             _ => index += 1,
         }
@@ -850,14 +892,14 @@ fn collect_relational_compound_keys(compound: &str, keys: &mut Vec<RelationalSel
                     push_relational_selector_key(keys, RelationalSelectorKey::Id(id));
                 }
                 index = next.max(index + 1);
-            },
+            }
             '.' => {
                 let (class, next) = consume_css_identifier(&chars, index + 1);
                 if !class.is_empty() {
                     push_relational_selector_key(keys, RelationalSelectorKey::Class(class));
                 }
                 index = next.max(index + 1);
-            },
+            }
             '[' => {
                 let Some(close) = matching_delimiter(&chars, index, '[', ']') else {
                     return;
@@ -883,7 +925,7 @@ fn collect_relational_compound_keys(compound: &str, keys: &mut Vec<RelationalSel
                     );
                 }
                 index = close + 1;
-            },
+            }
             ':' => {
                 let pseudo_start = index + usize::from(chars.get(index + 1) == Some(&':')) + 1;
                 let (name, next) = consume_css_identifier(&chars, pseudo_start);
@@ -900,18 +942,18 @@ fn collect_relational_compound_keys(compound: &str, keys: &mut Vec<RelationalSel
                         for alternative in split_selector_list(&arguments) {
                             collect_relational_selector_keys(alternative.trim(), keys);
                         }
-                    },
+                    }
                     "nth-child" | "nth-last-child" | "nth-of-type" | "nth-last-of-type" => {
                         if let Some(of_selector) = nth_of_selector(&arguments) {
                             for alternative in split_selector_list(of_selector) {
                                 collect_relational_selector_keys(alternative.trim(), keys);
                             }
                         }
-                    },
-                    _ => {},
+                    }
+                    _ => {}
                 }
                 index = close + 1;
-            },
+            }
             '\\' => index = (index + 2).min(chars.len()),
             _ => index += 1,
         }
@@ -942,13 +984,16 @@ fn selector_contains_pseudo(selector: &str, names: &[&str]) -> bool {
             ']' => bracket_depth = bracket_depth.saturating_sub(1),
             ':' if bracket_depth == 0 && chars.get(index + 1) != Some(&':') => {
                 let (name, next) = consume_css_identifier(&chars, index + 1);
-                if names.iter().any(|expected| name.eq_ignore_ascii_case(expected)) {
+                if names
+                    .iter()
+                    .any(|expected| name.eq_ignore_ascii_case(expected))
+                {
                     return true;
                 }
                 index = next.max(index + 1);
                 continue;
-            },
-            _ => {},
+            }
+            _ => {}
         }
         index += 1;
     }
@@ -978,7 +1023,7 @@ fn selector_contains_adjacent_combinator(selector: &str) -> bool {
             '[' => bracket_depth += 1,
             ']' => bracket_depth = bracket_depth.saturating_sub(1),
             '+' if bracket_depth == 0 => return true,
-            _ => {},
+            _ => {}
         }
         index += 1;
     }
@@ -1020,7 +1065,7 @@ fn selector_sibling_combinators(selector: &str) -> (bool, bool) {
             ')' if bracket_depth == 0 => paren_depth = paren_depth.saturating_sub(1),
             '+' if bracket_depth == 0 && paren_depth == 0 => adjacent = true,
             '~' if bracket_depth == 0 && paren_depth == 0 => general = true,
-            _ => {},
+            _ => {}
         }
         index += 1;
     }
@@ -1049,7 +1094,7 @@ fn note_compound_dependencies(
                     map.push_id(id, rule_order, reaches);
                 }
                 index = next.max(index + 1);
-            },
+            }
             '.' => {
                 let (class, next) = consume_css_identifier(&chars, index + 1);
                 if class.is_empty() {
@@ -1058,7 +1103,7 @@ fn note_compound_dependencies(
                     map.push_class(class, rule_order, reaches);
                 }
                 index = next.max(index + 1);
-            },
+            }
             '[' => {
                 let Some(close) = matching_delimiter(&chars, index, '[', ']') else {
                     map.mark_conservative(rule_order);
@@ -1083,7 +1128,7 @@ fn note_compound_dependencies(
                     map.push_attribute(attribute, rule_order, reaches);
                 }
                 index = close + 1;
-            },
+            }
             ':' => {
                 if chars.get(index + 1) == Some(&':') {
                     let (_, next) = consume_css_identifier(&chars, index + 2);
@@ -1157,7 +1202,7 @@ fn note_compound_dependencies(
                                 !inside_relational,
                             );
                         }
-                    },
+                    }
                     "has" => {
                         // Relative selectors invalidate anchors upwards, which
                         // Self/Descendants/Siblings cannot express soundly.
@@ -1220,7 +1265,7 @@ fn note_compound_dependencies(
                                 false,
                             );
                         }
-                    },
+                    }
                     "nth-child" | "nth-last-child" | "nth-of-type" | "nth-last-of-type" => {
                         map.push_state(name.clone(), rule_order, reaches);
                         map.push_structural_invalidation(StructuralInvalidation {
@@ -1244,7 +1289,7 @@ fn note_compound_dependencies(
                                 );
                             }
                         }
-                    },
+                    }
                     "dir" | "lang" => {
                         // The corresponding HTML attributes inherit through
                         // descendants, while the functional selector may
@@ -1253,16 +1298,16 @@ fn note_compound_dependencies(
                         // the retained planner's sound full fallback.
                         map.push_state(name, rule_order, InvalidationReaches::CONSERVATIVE);
                         map.mark_conservative(rule_order);
-                    },
+                    }
                     _ => {
                         // A compiled functional pseudo outside the explicitly
                         // modeled set may hide selector or document state.
                         map.push_state(name, rule_order, reaches);
                         map.mark_conservative(rule_order);
-                    },
+                    }
                 }
                 index = close + 1;
-            },
+            }
             '\\' => index = (index + 2).min(chars.len()),
             _ => index += 1,
         }
@@ -1320,7 +1365,11 @@ fn note_declaration_attribute_dependencies(
     // Avoid another declaration-vector allocation on the stylesheet hot path:
     // almost every rule exits through this byte scan, and the uncommon rule
     // containing `attr` pays for the balanced character walk below.
-    if !declarations.as_bytes().windows(4).any(|window| window.eq_ignore_ascii_case(b"attr")) {
+    if !declarations
+        .as_bytes()
+        .windows(4)
+        .any(|window| window.eq_ignore_ascii_case(b"attr"))
+    {
         return;
     }
     let chars: Vec<char> = declarations.chars().collect();
@@ -1539,7 +1588,9 @@ fn declaration_stream_flags(css: &str) -> DeclarationStreamFlags {
             flags.has_color_scheme = true;
         }
         if name.eq_ignore_ascii_case("animation")
-            || name.get(..10).is_some_and(|prefix| prefix.eq_ignore_ascii_case("animation-"))
+            || name
+                .get(..10)
+                .is_some_and(|prefix| prefix.eq_ignore_ascii_case("animation-"))
         {
             flags.has_animation = true;
         }
@@ -1592,13 +1643,15 @@ impl PseudoRuleMap {
                 SelectorKey::Id(value) => self.by_id.entry(value.clone()).or_default().push(index),
                 SelectorKey::Class(value) => {
                     self.by_class.entry(value.clone()).or_default().push(index)
-                },
-                SelectorKey::Attribute(value) => {
-                    self.by_attribute.entry(value.clone()).or_default().push(index)
-                },
+                }
+                SelectorKey::Attribute(value) => self
+                    .by_attribute
+                    .entry(value.clone())
+                    .or_default()
+                    .push(index),
                 SelectorKey::Local(value) => {
                     self.by_local.entry(value.clone()).or_default().push(index)
-                },
+                }
                 SelectorKey::Universal => self.universal.push(index),
             }
         }
@@ -1760,7 +1813,7 @@ fn compare_layer_order(
         (Some(left), Some(right)) => {
             for (a, b) in left.0.iter().zip(&right.0) {
                 match a.cmp(b) {
-                    Ordering::Equal => {},
+                    Ordering::Equal => {}
                     ordering => return ordering,
                 }
             }
@@ -1771,7 +1824,7 @@ fn compare_layer_order(
                 Ordering::Greater => Ordering::Less,
                 Ordering::Equal => Ordering::Equal,
             }
-        },
+        }
     }
 }
 
@@ -1786,7 +1839,9 @@ fn compare_rule_cascade(
 ) -> std::cmp::Ordering {
     let layer = compare_layer_order(left_layer, right_layer);
     let layer = if important { layer.reverse() } else { layer };
-    layer.then(left_specificity.cmp(&right_specificity)).then(left_order.cmp(&right_order))
+    layer
+        .then(left_specificity.cmp(&right_specificity))
+        .then(left_order.cmp(&right_order))
 }
 
 const PROPERTY_REGISTRATION_SELECTOR_PREFIX: &str = "\0property:";
@@ -1855,13 +1910,13 @@ impl AnimatedProperty {
             Opacity | Color | BackgroundColor | BorderTopColor | BorderRightColor
             | BorderBottomColor | BorderLeftColor | BackgroundPosition | Visibility => {
                 crate::AnimationEffectImpact::Paint
-            },
+            }
             Transform | Translate | Rotate | Scale | Width | Height | MinWidth | MinHeight
             | MaxWidth | MaxHeight | Top | Right | Bottom | Left | MarginTop | MarginRight
             | MarginBottom | MarginLeft | PaddingTop | PaddingRight | PaddingBottom
             | PaddingLeft | RowGap | ColumnGap | FlexBasis => {
                 crate::AnimationEffectImpact::Geometry
-            },
+            }
         }
     }
 }
@@ -1910,12 +1965,12 @@ impl PartialEq for ContainerBox {
             crate::ContainerType::Normal => true,
             crate::ContainerType::InlineSize => {
                 self.content_width == other.content_width && self.font_size == other.font_size
-            },
+            }
             crate::ContainerType::Size => {
                 self.content_width == other.content_width
                     && self.content_height == other.content_height
                     && self.font_size == other.font_size
-            },
+            }
         }
     }
 }
@@ -1999,11 +2054,21 @@ pub(crate) struct ContainerQueryEvaluator<'a> {
 
 impl<'a> ContainerQueryEvaluator<'a> {
     pub(crate) fn new(tree: &'a DomTree, snapshot: &'a ContainerSnapshot) -> Self {
-        Self { tree, snapshot, cache: HashMap::new(), stats: ContainerQueryStats::default() }
+        Self {
+            tree,
+            snapshot,
+            cache: HashMap::new(),
+            stats: ContainerQueryStats::default(),
+        }
     }
 
     pub(crate) fn finish(self) -> (ContainerDecisionSignature, ContainerQueryStats) {
-        (ContainerDecisionSignature { decisions: self.cache }, self.stats)
+        (
+            ContainerDecisionSignature {
+                decisions: self.cache,
+            },
+            self.stats,
+        )
     }
 
     fn condition_matches(
@@ -2013,7 +2078,8 @@ impl<'a> ContainerQueryEvaluator<'a> {
         condition: ContainerConditionId,
         kind: ContainerQuerySubjectKind,
     ) -> bool {
-        self.evaluate_condition_chain(sheet, subject, condition, kind).truth
+        self.evaluate_condition_chain(sheet, subject, condition, kind)
+            .truth
             == ContainerQueryTruth::True
     }
 
@@ -2030,7 +2096,11 @@ impl<'a> ContainerQueryEvaluator<'a> {
                 selected_containers: Vec::new(),
             };
         }
-        let key = ContainerQueryCacheKey { subject, condition, kind };
+        let key = ContainerQueryCacheKey {
+            subject,
+            condition,
+            kind,
+        };
         if let Some(decision) = self.cache.get(&key) {
             self.stats.cache_hits += 1;
             return decision.clone();
@@ -2048,15 +2118,19 @@ impl<'a> ContainerQueryEvaluator<'a> {
             }
         }
         if own_truth == ContainerQueryTruth::False {
-            let decision =
-                ContainerQueryDecision { truth: ContainerQueryTruth::False, selected_containers };
+            let decision = ContainerQueryDecision {
+                truth: ContainerQueryTruth::False,
+                selected_containers,
+            };
             self.cache.insert(key, decision.clone());
             return decision;
         }
         let parent = self.evaluate_condition_chain(sheet, subject, node.parent, kind);
         selected_containers.extend(parent.selected_containers);
-        let decision =
-            ContainerQueryDecision { truth: own_truth.and(parent.truth), selected_containers };
+        let decision = ContainerQueryDecision {
+            truth: own_truth.and(parent.truth),
+            selected_containers,
+        };
         self.cache.insert(key, decision.clone());
         decision
     }
@@ -2067,12 +2141,15 @@ impl<'a> ContainerQueryEvaluator<'a> {
         kind: ContainerQuerySubjectKind,
         query: &ContainerQuery,
     ) -> (ContainerQueryTruth, Option<NodeId>) {
-        let required_axes =
-            query.condition.as_ref().map(container_query_required_axes).unwrap_or_default();
+        let required_axes = query
+            .condition
+            .as_ref()
+            .map(container_query_required_axes)
+            .unwrap_or_default();
         let mut candidate = match kind {
             ContainerQuerySubjectKind::Element => {
                 self.tree.borrow_node(subject).and_then(|node| node.parent)
-            },
+            }
             ContainerQuerySubjectKind::OriginatingPseudo => Some(subject),
         };
         while let Some(id) = candidate {
@@ -2092,7 +2169,7 @@ impl<'a> ContainerQueryEvaluator<'a> {
                     let axis_available = match container.available_type {
                         crate::ContainerType::Normal => {
                             !required_axes.inline && !required_axes.block
-                        },
+                        }
                         crate::ContainerType::InlineSize => !required_axes.block,
                         crate::ContainerType::Size => true,
                     };
@@ -2100,13 +2177,16 @@ impl<'a> ContainerQueryEvaluator<'a> {
                         return (ContainerQueryTruth::Unknown, Some(id));
                     }
                     let truth =
-                        query.condition.as_ref().map_or(ContainerQueryTruth::True, |condition| {
-                            evaluate_container_query_expr(
-                                condition,
-                                container,
-                                self.snapshot.root_font_size,
-                            )
-                        });
+                        query
+                            .condition
+                            .as_ref()
+                            .map_or(ContainerQueryTruth::True, |condition| {
+                                evaluate_container_query_expr(
+                                    condition,
+                                    container,
+                                    self.snapshot.root_font_size,
+                                )
+                            });
                     return (truth, Some(id));
                 }
             }
@@ -2126,22 +2206,30 @@ fn container_query_required_axes(expr: &ContainerQueryExpr) -> ContainerQueryReq
     match expr {
         ContainerQueryExpr::Feature(feature) => match feature.axis {
             ContainerQueryAxis::Width | ContainerQueryAxis::InlineSize => {
-                ContainerQueryRequiredAxes { inline: true, block: false }
-            },
+                ContainerQueryRequiredAxes {
+                    inline: true,
+                    block: false,
+                }
+            }
             ContainerQueryAxis::Height | ContainerQueryAxis::BlockSize => {
-                ContainerQueryRequiredAxes { inline: false, block: true }
-            },
+                ContainerQueryRequiredAxes {
+                    inline: false,
+                    block: true,
+                }
+            }
         },
         ContainerQueryExpr::Unknown => ContainerQueryRequiredAxes::default(),
         ContainerQueryExpr::Not(inner) => container_query_required_axes(inner),
         ContainerQueryExpr::And(items) | ContainerQueryExpr::Or(items) => {
-            items.iter().fold(ContainerQueryRequiredAxes::default(), |mut axes, item| {
-                let item = container_query_required_axes(item);
-                axes.inline |= item.inline;
-                axes.block |= item.block;
-                axes
-            })
-        },
+            items
+                .iter()
+                .fold(ContainerQueryRequiredAxes::default(), |mut axes, item| {
+                    let item = container_query_required_axes(item);
+                    axes.inline |= item.inline;
+                    axes.block |= item.block;
+                    axes
+                })
+        }
     }
 }
 
@@ -2155,10 +2243,10 @@ fn evaluate_container_query_expr(
             let actual = match feature.axis {
                 ContainerQueryAxis::Width | ContainerQueryAxis::InlineSize => {
                     container.content_width
-                },
+                }
                 ContainerQueryAxis::Height | ContainerQueryAxis::BlockSize => {
                     container.content_height
-                },
+                }
             };
             let threshold = match feature.length {
                 ContainerQueryLength::Px(value) => value,
@@ -2175,32 +2263,44 @@ fn evaluate_container_query_expr(
                 ContainerQueryComparison::LessThan => actual < threshold,
                 ContainerQueryComparison::Equal => actual == threshold,
             };
-            if matches { ContainerQueryTruth::True } else { ContainerQueryTruth::False }
-        },
+            if matches {
+                ContainerQueryTruth::True
+            } else {
+                ContainerQueryTruth::False
+            }
+        }
         ContainerQueryExpr::Unknown => ContainerQueryTruth::Unknown,
         ContainerQueryExpr::Not(inner) => {
             evaluate_container_query_expr(inner, container, root_font_size).not()
-        },
+        }
         ContainerQueryExpr::And(items) => {
             let mut truth = ContainerQueryTruth::True;
             for item in items {
-                truth = truth.and(evaluate_container_query_expr(item, container, root_font_size));
+                truth = truth.and(evaluate_container_query_expr(
+                    item,
+                    container,
+                    root_font_size,
+                ));
                 if truth == ContainerQueryTruth::False {
                     break;
                 }
             }
             truth
-        },
+        }
         ContainerQueryExpr::Or(items) => {
             let mut truth = ContainerQueryTruth::False;
             for item in items {
-                truth = truth.or(evaluate_container_query_expr(item, container, root_font_size));
+                truth = truth.or(evaluate_container_query_expr(
+                    item,
+                    container,
+                    root_font_size,
+                ));
                 if truth == ContainerQueryTruth::True {
                     break;
                 }
             }
             truth
-        },
+        }
     }
 }
 
@@ -2295,10 +2395,12 @@ impl StylesheetCache {
         }
 
         self.misses = self.misses.saturating_add(1);
-        let sheet =
-            Arc::new(Stylesheet::parse_for_viewport_and_media(tree, sources, viewport, media_type));
-        let source_bytes =
-            sources.iter().try_fold(0usize, |total, source| total.checked_add(source.len()));
+        let sheet = Arc::new(Stylesheet::parse_for_viewport_and_media(
+            tree, sources, viewport, media_type,
+        ));
+        let source_bytes = sources
+            .iter()
+            .try_fold(0usize, |total, source| total.checked_add(source.len()));
         let compiled_rules = sheet.rules.len()
             + sheet.before_rules.rules.len()
             + sheet.after_rules.rules.len()
@@ -2359,7 +2461,9 @@ impl Stylesheet {
     }
 
     pub(crate) fn has_container_queries(&self) -> bool {
-        self.rules.iter().any(|rule| rule.container_condition_id != ContainerConditionId::NONE)
+        self.rules
+            .iter()
+            .any(|rule| rule.container_condition_id != ContainerConditionId::NONE)
             || self
                 .before_rules
                 .rules
@@ -2451,10 +2555,16 @@ impl Stylesheet {
             .as_element()
             .is_some_and(|element| matches!(element.local.as_ref(), "input" | "textarea"));
         normal_match
-            || self.before_rules.node_matches_container_query_rule(tree, matcher, nid)
-            || self.after_rules.node_matches_container_query_rule(tree, matcher, nid)
+            || self
+                .before_rules
+                .node_matches_container_query_rule(tree, matcher, nid)
+            || self
+                .after_rules
+                .node_matches_container_query_rule(tree, matcher, nid)
             || (supports_placeholder
-                && self.placeholder_rules.node_matches_container_query_rule(tree, matcher, nid))
+                && self
+                    .placeholder_rules
+                    .node_matches_container_query_rule(tree, matcher, nid))
     }
 
     pub(crate) fn container_condition_depth(&self) -> usize {
@@ -2561,8 +2671,12 @@ impl Stylesheet {
                 &mut layers,
                 None,
             );
-            for ParsedRule { selector, declarations: decls, container_condition_id, layer } in
-                parsed
+            for ParsedRule {
+                selector,
+                declarations: decls,
+                container_condition_id,
+                layer,
+            } in parsed
             {
                 let keyframe = selector
                     .strip_prefix(KEYFRAMES_SELECTOR_PREFIX)
@@ -2594,7 +2708,9 @@ impl Stylesheet {
                 }
                 if let Some(name) = selector.strip_prefix(PROPERTY_REGISTRATION_SELECTOR_PREFIX) {
                     if let Some(registration) = parse_property_registration(&decls) {
-                        sheet.registered_custom_properties.insert(name.to_string(), registration);
+                        sheet
+                            .registered_custom_properties
+                            .insert(name.to_string(), registration);
                     }
                     continue;
                 }
@@ -2734,13 +2850,13 @@ impl Stylesheet {
                         SelectorKey::Id(v) => sheet.by_id.entry(v.clone()).or_default().push(idx),
                         SelectorKey::Class(v) => {
                             sheet.by_class.entry(v.clone()).or_default().push(idx)
-                        },
+                        }
                         SelectorKey::Attribute(v) => {
                             sheet.by_attribute.entry(v.clone()).or_default().push(idx)
-                        },
+                        }
                         SelectorKey::Local(v) => {
                             sheet.by_local.entry(v.clone()).or_default().push(idx)
-                        },
+                        }
                         SelectorKey::Universal => sheet.universal.push(idx),
                     }
                 }
@@ -2783,7 +2899,11 @@ impl Stylesheet {
         props: &HashMap<String, String>,
         host_style: &LayoutStyle,
         evaluator: Option<&mut ContainerQueryEvaluator<'_>>,
-    ) -> (Option<LayoutStyle>, Option<LayoutStyle>, Option<LayoutStyle>) {
+    ) -> (
+        Option<LayoutStyle>,
+        Option<LayoutStyle>,
+        Option<LayoutStyle>,
+    ) {
         self.pseudo_styles_internal(tree, matcher, nid, props, host_style, evaluator)
     }
 
@@ -2795,7 +2915,11 @@ impl Stylesheet {
         props: &HashMap<String, String>,
         host_style: &LayoutStyle,
         mut evaluator: Option<&mut ContainerQueryEvaluator<'_>>,
-    ) -> (Option<LayoutStyle>, Option<LayoutStyle>, Option<LayoutStyle>) {
+    ) -> (
+        Option<LayoutStyle>,
+        Option<LayoutStyle>,
+        Option<LayoutStyle>,
+    ) {
         let mut build = |rules: &PseudoRuleMap, matcher: &mut Matcher, is_placeholder: bool| {
             let mut normal_matched: Vec<(u32, usize, usize)> = Vec::new();
             let mut important_matched: Vec<(u32, usize, usize)> = Vec::new();
@@ -2846,7 +2970,11 @@ impl Stylesheet {
                     );
                 }
                 if let Some(id) = node.get_attribute("id") {
-                    consider(rules.by_id.get(id), &mut normal_matched, &mut important_matched);
+                    consider(
+                        rules.by_id.get(id),
+                        &mut normal_matched,
+                        &mut important_matched,
+                    );
                 }
                 if let Some(classes) = node.get_attribute("class") {
                     for class in classes.split_whitespace() {
@@ -2915,7 +3043,10 @@ impl Stylesheet {
             // by default. LayoutStyle's general default is block because it
             // primarily represents ordinary DOM boxes, so set the pseudo
             // initial value explicitly before applying author declarations.
-            let mut style = LayoutStyle { display: crate::Display::Inline, ..Default::default() };
+            let mut style = LayoutStyle {
+                display: crate::Display::Inline,
+                ..Default::default()
+            };
             style.color_scheme_dark = host_style.color_scheme_dark;
             if is_placeholder {
                 // Chromium's light native-control placeholder color. Author
@@ -2974,8 +3105,9 @@ impl Stylesheet {
                     generated_content = value;
                 }
             }
-            style.before_content =
-                generated_content.as_ref().map(|items| generated_content_with_zero_counters(items));
+            style.before_content = generated_content
+                .as_ref()
+                .map(|items| generated_content_with_zero_counters(items));
             style.generated_content = generated_content;
             if is_placeholder {
                 // `color` is inherited on the pseudo. The declaration parser
@@ -2998,7 +3130,9 @@ impl Stylesheet {
         (
             build(&self.before_rules, matcher, false),
             build(&self.after_rules, matcher, false),
-            supports_placeholder.then(|| build(&self.placeholder_rules, matcher, true)).flatten(),
+            supports_placeholder
+                .then(|| build(&self.placeholder_rules, matcher, true))
+                .flatten(),
         )
     }
 
@@ -3425,7 +3559,11 @@ impl Stylesheet {
                 }
             };
 
-        consider(self.by_local.get(local), &mut normal_matched, &mut important_matched);
+        consider(
+            self.by_local.get(local),
+            &mut normal_matched,
+            &mut important_matched,
+        );
         if is_root_element(tree, nid) {
             consider(
                 (!self.by_root.is_empty()).then_some(&self.by_root),
@@ -3434,10 +3572,18 @@ impl Stylesheet {
             );
         }
         if let Some(id) = id {
-            consider(self.by_id.get(id), &mut normal_matched, &mut important_matched);
+            consider(
+                self.by_id.get(id),
+                &mut normal_matched,
+                &mut important_matched,
+            );
         }
         for c in classes {
-            consider(self.by_class.get(c), &mut normal_matched, &mut important_matched);
+            consider(
+                self.by_class.get(c),
+                &mut normal_matched,
+                &mut important_matched,
+            );
         }
         if !self.by_attribute.is_empty() {
             if let Some(node) = tree.borrow_node(nid) {
@@ -3453,7 +3599,11 @@ impl Stylesheet {
             }
         }
         if !self.universal.is_empty() {
-            consider(Some(&self.universal), &mut normal_matched, &mut important_matched);
+            consider(
+                Some(&self.universal),
+                &mut normal_matched,
+                &mut important_matched,
+            );
         }
 
         if normal_matched.len() > 1 {
@@ -3487,8 +3637,9 @@ impl Stylesheet {
             });
         }
 
-        let (inline_normal, inline_important) =
-            inline_css.map(crate::style::partition_declarations).unwrap_or_default();
+        let (inline_normal, inline_important) = inline_css
+            .map(crate::style::partition_declarations)
+            .unwrap_or_default();
 
         // Pass 1: collect this element's own custom properties (`--x: value`),
         // in cascade order (last wins), layered over the inherited map. Custom
@@ -3516,15 +3667,17 @@ impl Stylesheet {
         // custom-property map. This follows the browser rule-tree model where
         // unchanged computed values are shared down the tree.
         let registrations_change_parent =
-            self.registered_custom_properties.iter().any(|(name, registration)| {
-                if registration.inherits && parent_props.contains_key(name) {
-                    return false;
-                }
-                match &registration.initial_value {
-                    Some(initial) => parent_props.get(name) != Some(initial),
-                    None => parent_props.contains_key(name),
-                }
-            });
+            self.registered_custom_properties
+                .iter()
+                .any(|(name, registration)| {
+                    if registration.inherits && parent_props.contains_key(name) {
+                        return false;
+                    }
+                    match &registration.initial_value {
+                        Some(initial) => parent_props.get(name) != Some(initial),
+                        None => parent_props.contains_key(name),
+                    }
+                });
         let effective = if !has_own_custom_properties && !registrations_change_parent {
             None
         } else {
@@ -3608,7 +3761,7 @@ impl Stylesheet {
                         if registration.is_some_and(|entry| !entry.inherits) =>
                     {
                         set_initial(&mut resolved_props);
-                    },
+                    }
                     "unset" | "revert" | "revert-layer" => inherit(&mut resolved_props),
                     _ => {
                         let valid = registration.is_none_or(|entry| {
@@ -3620,7 +3773,7 @@ impl Stylesheet {
                         } else {
                             set_initial(&mut resolved_props);
                         }
-                    },
+                    }
                 }
             }
             // Custom properties inherit their computed value, not their original
@@ -3646,7 +3799,11 @@ impl Stylesheet {
                     resolved_props.remove(&name);
                 }
             }
-            if has_own || registration_changed_props { Some(resolved_props) } else { None }
+            if has_own || registration_changed_props {
+                Some(resolved_props)
+            } else {
+                None
+            }
         };
         let props = effective.as_ref().unwrap_or(parent_props);
 
@@ -3790,7 +3947,9 @@ impl Stylesheet {
                         .unwrap_or_default();
                     let local_sample = animation_timeline.sample_for(
                         nid,
-                        crate::AnimationInstanceKey { name: name.to_string() },
+                        crate::AnimationInstanceKey {
+                            name: name.to_string(),
+                        },
                         animation_style.animation_timing.play_state,
                         animation_sample,
                     );
@@ -3817,8 +3976,10 @@ impl Stylesheet {
         // author !important. Keep the renderer-side effect separate from the
         // authored declaration block so cancel() reveals the exact underlying
         // value and CSSOM never observes a synthetic inline rewrite.
-        let has_waapi =
-            animation_timeline.waapi_for_node(nid, animation_sample.time).next().is_some();
+        let has_waapi = animation_timeline
+            .waapi_for_node(nid, animation_sample.time)
+            .next()
+            .is_some();
         let waapi_underlying_transform_ops = has_waapi.then(|| style.transform_ops.clone());
         let waapi_underlying_opacity = style.opacity;
         sample_waapi_properties(animation_timeline, nid, style, animation_sample);
@@ -3830,7 +3991,9 @@ impl Stylesheet {
                 .any(|&(_, _, i)| self.rules[i].important_flags.has_transform);
         let important_has_opacity = shadow_important_flags.has_opacity
             || inline_important_flags.has_opacity
-            || important_matched.iter().any(|&(_, _, i)| self.rules[i].important_flags.has_opacity);
+            || important_matched
+                .iter()
+                .any(|&(_, _, i)| self.rules[i].important_flags.has_opacity);
 
         for &(_, _, i) in &important_matched {
             let rule = &self.rules[i];
@@ -3877,18 +4040,29 @@ pub(crate) fn resample_visual_waapi(
     sample: crate::AnimationSample,
 ) -> Option<ResampledVisualWaapi> {
     let retained = style.waapi_sample_state.as_deref()?;
-    let animations = timeline.waapi_for_node(node, sample.time).collect::<Vec<_>>();
+    let animations = timeline
+        .waapi_for_node(node, sample.time)
+        .collect::<Vec<_>>();
     if animations.is_empty() {
         return None;
     }
-    let has_transform_effect = animations
-        .iter()
-        .any(|(animation, _)| animation.keyframes.iter().any(|frame| frame.transform.is_some()));
-    let has_opacity_effect = animations
-        .iter()
-        .any(|(animation, _)| animation.keyframes.iter().any(|frame| frame.opacity.is_some()));
+    let has_transform_effect = animations.iter().any(|(animation, _)| {
+        animation
+            .keyframes
+            .iter()
+            .any(|frame| frame.transform.is_some())
+    });
+    let has_opacity_effect = animations.iter().any(|(animation, _)| {
+        animation
+            .keyframes
+            .iter()
+            .any(|frame| frame.opacity.is_some())
+    });
     let all_effects_supported = animations.iter().all(|(animation, _)| {
-        animation.keyframes.iter().any(|frame| frame.transform.is_some() || frame.opacity.is_some())
+        animation
+            .keyframes
+            .iter()
+            .any(|frame| frame.transform.is_some() || frame.opacity.is_some())
     });
     if !all_effects_supported
         || (has_transform_effect && !retained.transform_fast_path)
@@ -4038,7 +4212,11 @@ fn sample_waapi_track<T: Clone>(
     // At a duplicate offset the later keyframe is the outgoing value. The
     // first duplicate remains the incoming interpolation endpoint just before
     // the boundary, so do not deduplicate the track.
-    if let Some((_, value)) = resolved.iter().rev().find(|(offset, _)| progress == *offset) {
+    if let Some((_, value)) = resolved
+        .iter()
+        .rev()
+        .find(|(offset, _)| progress == *offset)
+    {
         return Some(value.clone());
     }
     if progress < resolved[0].0 {
@@ -4068,7 +4246,9 @@ fn sample_waapi_track<T: Clone>(
 fn compile_keyframe_body(css: &str) -> Keyframes {
     let mut stops = Vec::new();
     for (source_order, (selector, declarations)) in
-        parse_stylesheet_for_viewport(css, (1280.0, 720.0)).into_iter().enumerate()
+        parse_stylesheet_for_viewport(css, (1280.0, 720.0))
+            .into_iter()
+            .enumerate()
     {
         for part in selector.split(',') {
             if let Some(offset) = parse_keyframe_offset(part) {
@@ -4100,7 +4280,10 @@ fn compile_keyframe_body(css: &str) -> Keyframes {
             {
                 continue;
             }
-            let declaration = AnimatedDeclaration { name: name.clone(), value: value.to_string() };
+            let declaration = AnimatedDeclaration {
+                name: name.clone(),
+                value: value.to_string(),
+            };
             for property in animated_properties_for_declaration(&name) {
                 declarations.insert(property, declaration.clone());
             }
@@ -4115,7 +4298,9 @@ fn compile_keyframe_body(css: &str) -> Keyframes {
     }
     for track in tracks.values_mut() {
         track.sort_by(|left, right| {
-            left.offset.total_cmp(&right.offset).then(left.source_order.cmp(&right.source_order))
+            left.offset
+                .total_cmp(&right.offset)
+                .then(left.source_order.cmp(&right.source_order))
         });
         let mut merged = Vec::<PropertyTrackStop>::with_capacity(track.len());
         for stop in track.drain(..) {
@@ -4203,9 +4388,19 @@ fn animated_properties_for_declaration(name: &str) -> Vec<AnimatedProperty> {
         "background-color" => vec![BackgroundColor],
         "background" => vec![BackgroundColor, BackgroundPosition],
         "border-color" => {
-            vec![BorderTopColor, BorderRightColor, BorderBottomColor, BorderLeftColor]
-        },
-        "border" => vec![BorderTopColor, BorderRightColor, BorderBottomColor, BorderLeftColor],
+            vec![
+                BorderTopColor,
+                BorderRightColor,
+                BorderBottomColor,
+                BorderLeftColor,
+            ]
+        }
+        "border" => vec![
+            BorderTopColor,
+            BorderRightColor,
+            BorderBottomColor,
+            BorderLeftColor,
+        ],
         "border-top" | "border-top-color" => vec![BorderTopColor],
         "border-right" | "border-right-color" => vec![BorderRightColor],
         "border-bottom" | "border-bottom-color" => vec![BorderBottomColor],
@@ -4348,12 +4543,14 @@ fn animation_value_from_style(
                     expression: style.individual_translate_expressions[1].clone(),
                 },
             ))
-        },
-        Rotate => Some(AnimationValue::Rotate(style.individual_rotate.unwrap_or(0.0))),
+        }
+        Rotate => Some(AnimationValue::Rotate(
+            style.individual_rotate.unwrap_or(0.0),
+        )),
         Scale => {
             let (x, y) = style.individual_scale.unwrap_or((1.0, 1.0));
             Some(AnimationValue::Scale(x, y))
-        },
+        }
         Width | Height | MinWidth | MinHeight | MaxWidth | MaxHeight => {
             let index = match property {
                 Width => 0,
@@ -4380,24 +4577,26 @@ fn animation_value_from_style(
                 dimension,
                 &style.size_expressions[index],
             )))
-        },
+        }
         Top | Right | Bottom | Left => {
             let index = physical_side_index(property);
-            Some(AnimationValue::Length(match &style.inset_expressions[index] {
-                Some(expression) => AnimatedLength::Expression(expression.clone()),
-                None => style.inset[index]
-                    .map(AnimatedLength::Dimension)
-                    .unwrap_or(AnimatedLength::Auto),
-            }))
-        },
+            Some(AnimationValue::Length(
+                match &style.inset_expressions[index] {
+                    Some(expression) => AnimatedLength::Expression(expression.clone()),
+                    None => style.inset[index]
+                        .map(AnimatedLength::Dimension)
+                        .unwrap_or(AnimatedLength::Auto),
+                },
+            ))
+        }
         MarginTop | MarginRight | MarginBottom | MarginLeft => {
             let index = physical_side_index(property);
             Some(AnimationValue::Length(margin_length(style, index)))
-        },
+        }
         PaddingTop | PaddingRight | PaddingBottom | PaddingLeft => {
             let index = physical_side_index(property);
             Some(AnimationValue::Length(padding_length(style, index)))
-        },
+        }
         RowGap | ColumnGap => {
             let (value, expression) = if property == RowGap {
                 (style.row_gap, &style.row_gap_expression)
@@ -4410,13 +4609,17 @@ fn animation_value_from_style(
                     .map(|value| AnimatedLength::Dimension(crate::Dimension::Px(value)))
                     .unwrap_or(AnimatedLength::Auto),
             }))
-        },
-        FlexBasis => Some(AnimationValue::Length(AnimatedLength::Dimension(style.flex_basis))),
-        Opacity => Some(AnimationValue::Number(style.opacity.unwrap_or(1.0).clamp(0.0, 1.0))),
+        }
+        FlexBasis => Some(AnimationValue::Length(AnimatedLength::Dimension(
+            style.flex_basis,
+        ))),
+        Opacity => Some(AnimationValue::Number(
+            style.opacity.unwrap_or(1.0).clamp(0.0, 1.0),
+        )),
         Color => Some(AnimationValue::Color(style.color.unwrap_or([0, 0, 0, 255]))),
-        BackgroundColor => {
-            Some(AnimationValue::Color(style.background_color.unwrap_or([0, 0, 0, 0])))
-        },
+        BackgroundColor => Some(AnimationValue::Color(
+            style.background_color.unwrap_or([0, 0, 0, 0]),
+        )),
         BorderTopColor | BorderRightColor | BorderBottomColor | BorderLeftColor => {
             let colors = style.border_model.colors;
             let color = match property {
@@ -4429,9 +4632,13 @@ fn animation_value_from_style(
             .or(style.color)
             .unwrap_or([0, 0, 0, 255]);
             Some(AnimationValue::Color(color))
-        },
-        BackgroundPosition => Some(AnimationValue::BackgroundPosition(style.background_position)),
-        Visibility => Some(AnimationValue::Visibility(!style.visibility_hidden.unwrap_or(false))),
+        }
+        BackgroundPosition => Some(AnimationValue::BackgroundPosition(
+            style.background_position,
+        )),
+        Visibility => Some(AnimationValue::Visibility(
+            !style.visibility_hidden.unwrap_or(false),
+        )),
     }
 }
 
@@ -4449,70 +4656,70 @@ fn apply_animation_value(
                 crate::CB_TRIGGER_TRANSFORM,
                 !style.transform_ops.is_empty(),
             );
-        },
+        }
         (Translate, AnimationValue::Translate(x, y)) => {
             style.individual_translate = Some((x.value, y.value));
             style.individual_translate_expressions = [x.expression, y.expression];
             set_animation_containing_block_trigger(style, crate::CB_TRIGGER_TRANSLATE, true);
-        },
+        }
         (Rotate, AnimationValue::Rotate(value)) => {
             style.individual_rotate = Some(value);
             set_animation_containing_block_trigger(style, crate::CB_TRIGGER_ROTATE, true);
-        },
+        }
         (Scale, AnimationValue::Scale(x, y)) => {
             style.individual_scale = Some((x, y));
             set_animation_containing_block_trigger(style, crate::CB_TRIGGER_SCALE, true);
-        },
+        }
         (
             Width | Height | MinWidth | MinHeight | MaxWidth | MaxHeight,
             AnimationValue::Length(value),
         ) => {
             set_size_animation_value(style, property, value);
-        },
+        }
         (Top | Right | Bottom | Left, AnimationValue::Length(value)) => {
             let index = physical_side_index(property);
             set_inset_animation_value(style, index, value);
-        },
+        }
         (MarginTop | MarginRight | MarginBottom | MarginLeft, AnimationValue::Length(value)) => {
             let index = physical_side_index(property);
             set_margin_animation_value(style, index, value);
-        },
+        }
         (
             PaddingTop | PaddingRight | PaddingBottom | PaddingLeft,
             AnimationValue::Length(value),
         ) => {
             let index = physical_side_index(property);
             set_padding_animation_value(style, index, value);
-        },
+        }
         (RowGap | ColumnGap, AnimationValue::Length(value)) => {
             set_gap_animation_value(style, property == RowGap, value);
-        },
+        }
         (FlexBasis, AnimationValue::Length(AnimatedLength::Dimension(value))) => {
             style.flex_basis = value;
-        },
+        }
         (Opacity, AnimationValue::Number(value)) => {
             style.opacity = Some(value.clamp(0.0, 1.0));
-        },
+        }
         (Color, AnimationValue::Color(value)) => style.color = Some(value),
         (BackgroundColor, AnimationValue::Color(value)) => style.background_color = Some(value),
         (BorderTopColor, AnimationValue::Color(value)) => {
             style.border_model.colors.top = Some(value)
-        },
+        }
         (BorderRightColor, AnimationValue::Color(value)) => {
             style.border_model.colors.right = Some(value)
-        },
+        }
         (BorderBottomColor, AnimationValue::Color(value)) => {
             style.border_model.colors.bottom = Some(value)
-        },
+        }
         (BorderLeftColor, AnimationValue::Color(value)) => {
             style.border_model.colors.left = Some(value)
-        },
+        }
         (BackgroundPosition, AnimationValue::BackgroundPosition(value)) => {
             style.background_position = value
-        },
+        }
         (Visibility, AnimationValue::Visibility(visible)) => {
             style.visibility_hidden = Some(!visible)
-        },
+        }
         _ => return,
     }
     let colors = style.border_model.colors;
@@ -4530,16 +4737,16 @@ fn interpolate_animation_value(
     match (from, to) {
         (AnimationValue::Length(from), AnimationValue::Length(to)) => {
             AnimationValue::Length(interpolate_animated_length(from, to, position))
-        },
+        }
         (AnimationValue::Number(from), AnimationValue::Number(to)) => {
             AnimationValue::Number(from + (to - from) * position)
-        },
+        }
         (AnimationValue::Color(from), AnimationValue::Color(to)) => {
             AnimationValue::Color(interpolate_color(*from, *to, position))
-        },
+        }
         (AnimationValue::Transform(from), AnimationValue::Transform(to)) => {
             AnimationValue::Transform(interpolate_transform_list(from, to, position))
-        },
+        }
         (AnimationValue::Translate(from_x, from_y), AnimationValue::Translate(to_x, to_y)) => {
             let x = interpolate_transform_length(from_x, to_x, position);
             let y = interpolate_transform_length(from_y, to_y, position);
@@ -4548,19 +4755,19 @@ fn interpolate_animation_value(
                 _ if position < 0.5 => from.clone(),
                 _ => to.clone(),
             }
-        },
+        }
         (AnimationValue::Rotate(from), AnimationValue::Rotate(to)) => {
             AnimationValue::Rotate(from + (to - from) * position)
-        },
+        }
         (AnimationValue::Scale(from_x, from_y), AnimationValue::Scale(to_x, to_y)) => {
             AnimationValue::Scale(
                 from_x + (to_x - from_x) * position,
                 from_y + (to_y - from_y) * position,
             )
-        },
+        }
         (AnimationValue::BackgroundPosition(from), AnimationValue::BackgroundPosition(to)) => {
             AnimationValue::BackgroundPosition(from.interpolate(*to, position))
-        },
+        }
         (AnimationValue::Visibility(from), AnimationValue::Visibility(to)) => {
             // visibility has a special discrete interpolation: if either end
             // is visible, every interior value is visible.
@@ -4569,7 +4776,7 @@ fn interpolate_animation_value(
             } else {
                 false
             })
-        },
+        }
         _ if position < 0.5 => from.clone(),
         _ => to.clone(),
     }
@@ -4668,11 +4875,11 @@ fn set_size_animation_value(
             style.width = dimension;
             style.width_set = true;
             style.width_fit_content = false;
-        },
+        }
         Height => {
             style.height = dimension;
             style.height_set = true;
-        },
+        }
         MinWidth => style.min_width = dimension,
         MinHeight => style.min_height = dimension,
         MaxWidth => style.max_width = dimension,
@@ -4686,15 +4893,15 @@ fn set_inset_animation_value(style: &mut LayoutStyle, index: usize, value: Anima
         AnimatedLength::Auto => {
             style.inset[index] = None;
             style.inset_expressions[index] = None;
-        },
+        }
         AnimatedLength::Dimension(value) => {
             style.inset[index] = Some(value);
             style.inset_expressions[index] = None;
-        },
+        }
         AnimatedLength::Expression(value) => {
             style.inset[index] = None;
             style.inset_expressions[index] = Some(value);
-        },
+        }
     }
 }
 
@@ -4708,10 +4915,10 @@ fn set_margin_animation_value(style: &mut LayoutStyle, index: usize, value: Anim
         AnimatedLength::Auto => style.margin_auto[index] = true,
         AnimatedLength::Dimension(crate::Dimension::Px(value)) => {
             *edge_value_mut(&mut style.margin, index) = value
-        },
+        }
         AnimatedLength::Dimension(crate::Dimension::Percent(value)) => {
             style.margin_percent[index] = Some(value)
-        },
+        }
         AnimatedLength::Dimension(crate::Dimension::Auto) => style.margin_auto[index] = true,
         AnimatedLength::Dimension(value) => style.margin_relative[index] = Some(value),
         AnimatedLength::Expression(value) => style.margin_expressions[index] = Some(value),
@@ -4724,13 +4931,13 @@ fn set_padding_animation_value(style: &mut LayoutStyle, index: usize, value: Ani
     style.padding_expressions[index] = None;
     *edge_value_mut(&mut style.padding, index) = 0.0;
     match value {
-        AnimatedLength::Auto | AnimatedLength::Dimension(crate::Dimension::Auto) => {},
+        AnimatedLength::Auto | AnimatedLength::Dimension(crate::Dimension::Auto) => {}
         AnimatedLength::Dimension(crate::Dimension::Px(value)) => {
             *edge_value_mut(&mut style.padding, index) = value
-        },
+        }
         AnimatedLength::Dimension(crate::Dimension::Percent(value)) => {
             style.padding_percent[index] = Some(value)
-        },
+        }
         AnimatedLength::Dimension(value) => style.padding_relative[index] = Some(value),
         AnimatedLength::Expression(value) => style.padding_expressions[index] = Some(value),
     }
@@ -4746,19 +4953,19 @@ fn set_gap_animation_value(style: &mut LayoutStyle, row: bool, value: AnimatedLe
         AnimatedLength::Auto | AnimatedLength::Dimension(crate::Dimension::Auto) => {
             *slot = None;
             *expression = None;
-        },
+        }
         AnimatedLength::Dimension(crate::Dimension::Px(value)) => {
             *slot = Some(value);
             *expression = None;
-        },
+        }
         AnimatedLength::Dimension(value) => {
             *slot = None;
             *expression = Some(dimension_to_css(value));
-        },
+        }
         AnimatedLength::Expression(value) => {
             *slot = None;
             *expression = Some(value);
-        },
+        }
     }
 }
 
@@ -4789,11 +4996,11 @@ fn interpolate_animated_length(
                 .unwrap_or_else(|| {
                     AnimatedLength::Dimension(if position < 0.5 { *from } else { *to })
                 })
-        },
+        }
         (AnimatedLength::Auto, AnimatedLength::Auto) => AnimatedLength::Auto,
         (AnimatedLength::Expression(from), AnimatedLength::Expression(to)) if from == to => {
             AnimatedLength::Expression(from.clone())
-        },
+        }
         _ if position < 0.5 => from.clone(),
         _ => to.clone(),
     }
@@ -4823,8 +5030,9 @@ fn interpolate_dimension(
 
 fn interpolate_color(from: [u8; 4], to: [u8; 4], position: f32) -> [u8; 4] {
     let channel = |from: u8, to: u8| {
-        (f32::from(from) + (f32::from(to) - f32::from(from)) * position).round().clamp(0.0, 255.0)
-            as u8
+        (f32::from(from) + (f32::from(to) - f32::from(from)) * position)
+            .round()
+            .clamp(0.0, 255.0) as u8
     };
     [
         channel(from[0], to[0]),
@@ -4849,7 +5057,7 @@ fn interpolate_transform_length(
                 value: interpolate_dimension(from.value, to.value, position).unwrap_or(from.value),
                 expression: Some(from_expression.clone()),
             })
-        },
+        }
         _ => None,
     }
 }
@@ -4860,12 +5068,16 @@ fn interpolate_transform_list(
     position: f32,
 ) -> Vec<crate::TransformOp> {
     let from_list = if from.is_empty() && !to.is_empty() {
-        to.iter().map(identity_transform_operation).collect::<Vec<_>>()
+        to.iter()
+            .map(identity_transform_operation)
+            .collect::<Vec<_>>()
     } else {
         from.to_vec()
     };
     let to_list = if to.is_empty() && !from.is_empty() {
-        from.iter().map(identity_transform_operation).collect::<Vec<_>>()
+        from.iter()
+            .map(identity_transform_operation)
+            .collect::<Vec<_>>()
     } else {
         to.to_vec()
     };
@@ -4886,7 +5098,7 @@ fn identity_transform_operation(operation: &crate::TransformOp) -> crate::Transf
     match operation {
         crate::TransformOp::Translate(x, y) => {
             crate::TransformOp::Translate(zero_transform_length(x), zero_transform_length(y))
-        },
+        }
         crate::TransformOp::Scale(..) => crate::TransformOp::Scale(1.0, 1.0),
         crate::TransformOp::Rotate(_) => crate::TransformOp::Rotate(0.0),
         crate::TransformOp::Skew(..) => crate::TransformOp::Skew(0.0, 0.0),
@@ -4927,13 +5139,13 @@ fn interpolate_transform_operation(
         ),
         (crate::TransformOp::Scale(from_x, from_y), crate::TransformOp::Scale(to_x, to_y)) => {
             crate::TransformOp::Scale(lerp(*from_x, *to_x), lerp(*from_y, *to_y))
-        },
+        }
         (crate::TransformOp::Rotate(from), crate::TransformOp::Rotate(to)) => {
             crate::TransformOp::Rotate(lerp(*from, *to))
-        },
+        }
         (crate::TransformOp::Skew(from_x, from_y), crate::TransformOp::Skew(to_x, to_y)) => {
             crate::TransformOp::Skew(lerp(*from_x, *to_x), lerp(*from_y, *to_y))
-        },
+        }
         (crate::TransformOp::Matrix(from), crate::TransformOp::Matrix(to)) => {
             crate::TransformOp::Matrix(crate::Affine2 {
                 a: lerp(from.a, to.a),
@@ -4943,7 +5155,7 @@ fn interpolate_transform_operation(
                 e: lerp(from.e, to.e),
                 f: lerp(from.f, to.f),
             })
-        },
+        }
         _ => return None,
     })
 }
@@ -4962,8 +5174,11 @@ fn animation_directed_progress(
 ) -> Option<f32> {
     let duration = timing.duration_ms.max(0.0);
     let iterations = timing.iteration_count.max(0.0);
-    let active_duration =
-        if duration == 0.0 || iterations == 0.0 { 0.0 } else { duration * iterations };
+    let active_duration = if duration == 0.0 || iterations == 0.0 {
+        0.0
+    } else {
+        duration * iterations
+    };
     // The timeline owns pause/resume hold time. Keeping that state outside the
     // sampler lets a running animation freeze at its current progress and
     // later resume without manufacturing a new instance.
@@ -4990,7 +5205,7 @@ fn animation_directed_progress(
                 return None;
             }
             (local_time - timing.delay_ms).max(0.0)
-        },
+        }
         AnimationPhase::Active => local_time - timing.delay_ms,
         AnimationPhase::After => {
             if !matches!(
@@ -5000,11 +5215,15 @@ fn animation_directed_progress(
                 return None;
             }
             (local_time - timing.delay_ms).clamp(0.0, active_duration)
-        },
+        }
     };
 
     let overall_progress = if duration == 0.0 {
-        if phase == AnimationPhase::Before { 0.0 } else { iterations }
+        if phase == AnimationPhase::Before {
+            0.0
+        } else {
+            iterations
+        }
     } else {
         active_time / duration
     };
@@ -5026,7 +5245,11 @@ fn animation_directed_progress(
         crate::AnimationDirection::Alternate => current_iteration.rem_euclid(2.0) >= 1.0,
         crate::AnimationDirection::AlternateReverse => current_iteration.rem_euclid(2.0) < 1.0,
     };
-    Some(if reverse { 1.0 - simple_progress } else { simple_progress })
+    Some(if reverse {
+        1.0 - simple_progress
+    } else {
+        simple_progress
+    })
 }
 
 fn normalized_keyframe_offsets(stops: &[KeyframeStop]) -> Vec<(f32, &KeyframeStop)> {
@@ -5064,7 +5287,11 @@ fn normalized_keyframe_offsets(stops: &[KeyframeStop]) -> Vec<(f32, &KeyframeSto
         }
         index = end + 1;
     }
-    stops.iter().zip(offsets).map(|(stop, offset)| (offset.unwrap(), stop)).collect()
+    stops
+        .iter()
+        .zip(offsets)
+        .map(|(stop, offset)| (offset.unwrap(), stop))
+        .collect()
 }
 
 /// Resolve variables one declaration at a time. An invalid variable poisons
@@ -5129,8 +5356,8 @@ pub(crate) fn substitute_var_value(
                         end = Some(i);
                         break;
                     }
-                },
-                _ => {},
+                }
+                _ => {}
             }
         }
         let Some(end) = end else {
@@ -5141,14 +5368,15 @@ pub(crate) fn substitute_var_value(
             Some((n, f)) => (n.trim(), Some(f.trim())),
             None => (inner.trim(), None),
         };
-        let resolved =
-            props.get(name).and_then(|value| substitute_var_value(value, props, depth + 1));
+        let resolved = props
+            .get(name)
+            .and_then(|value| substitute_var_value(value, props, depth + 1));
         let replacement = match resolved {
             Some(value) => value,
             None => {
                 let fallback = fallback?;
                 substitute_var_value(fallback, props, depth + 1)?
-            },
+            }
         };
         // `var()` substitutes a token sequence, not source text. Insert a
         // separator only where reparsing would merge boundary tokens:
@@ -5265,10 +5493,12 @@ fn generated_content_with_zero_counters(items: &[crate::GeneratedContentItem]) -
             crate::GeneratedContentItem::Text(value) => text.push_str(value),
             crate::GeneratedContentItem::Counter { style, .. } => {
                 text.push_str(&format_counter_value(0, *style));
-            },
-            crate::GeneratedContentItem::Counters { style, separator: _, .. } => {
-                text.push_str(&format_counter_value(0, *style))
-            },
+            }
+            crate::GeneratedContentItem::Counters {
+                style,
+                separator: _,
+                ..
+            } => text.push_str(&format_counter_value(0, *style)),
         }
     }
     text
@@ -5312,14 +5542,16 @@ fn parse_generated_content_items(
         let (arguments, tail) = take_css_function_arguments(after_name)?;
         match name.to_ascii_lowercase().as_str() {
             "attr" => {
-                let attribute =
-                    arguments.split_whitespace().next().filter(|name| !name.is_empty())?;
+                let attribute = arguments
+                    .split_whitespace()
+                    .next()
+                    .filter(|name| !name.is_empty())?;
                 let value = tree
                     .borrow_node(nid)
                     .and_then(|node| node.get_attribute(attribute).map(str::to_owned))
                     .unwrap_or_default();
                 items.push(crate::GeneratedContentItem::Text(value));
-            },
+            }
             "counter" => {
                 let arguments = split_function_arguments(arguments);
                 let name = arguments.first()?.trim();
@@ -5330,8 +5562,11 @@ fn parse_generated_content_items(
                     Some(style) => parse_generated_counter_style(style.trim())?,
                     None => crate::GeneratedCounterStyle::default(),
                 };
-                items.push(crate::GeneratedContentItem::Counter { name: name.to_string(), style });
-            },
+                items.push(crate::GeneratedContentItem::Counter {
+                    name: name.to_string(),
+                    style,
+                });
+            }
             "counters" => {
                 let arguments = split_function_arguments(arguments);
                 if !(2..=3).contains(&arguments.len()) {
@@ -5354,7 +5589,7 @@ fn parse_generated_content_items(
                     separator: unescape_css_string(separator),
                     style,
                 });
-            },
+            }
             _ => return None,
         }
         rest = tail;
@@ -5376,7 +5611,10 @@ fn take_css_quoted(value: &str) -> Option<(&str, &str)> {
             escaped = true;
         } else if ch == quote {
             let end = quote.len_utf8() + offset;
-            return Some((&value[quote.len_utf8()..end], &value[end + quote.len_utf8()..]));
+            return Some((
+                &value[quote.len_utf8()..end],
+                &value[end + quote.len_utf8()..],
+            ));
         }
     }
     None
@@ -5405,8 +5643,8 @@ fn take_css_function_arguments(value: &str) -> Option<(&str, &str)> {
                 if depth == 0 {
                     return Some((&value[1..offset], &value[offset + 1..]));
                 }
-            },
-            _ => {},
+            }
+            _ => {}
         }
     }
     None
@@ -5436,8 +5674,8 @@ fn split_function_arguments(value: &str) -> Vec<&str> {
             ',' if depth == 0 => {
                 result.push(value[start..offset].trim());
                 start = offset + 1;
-            },
-            _ => {},
+            }
+            _ => {}
         }
     }
     result.push(value[start..].trim());
@@ -5464,8 +5702,12 @@ pub(crate) fn format_counter_value(value: i32, style: crate::GeneratedCounterSty
     match style {
         crate::GeneratedCounterStyle::Decimal => value.to_string(),
         crate::GeneratedCounterStyle::DecimalLeadingZero if (-9..=9).contains(&value) => {
-            if value < 0 { format!("-{:02}", value.unsigned_abs()) } else { format!("{value:02}") }
-        },
+            if value < 0 {
+                format!("-{:02}", value.unsigned_abs())
+            } else {
+                format!("{value:02}")
+            }
+        }
         crate::GeneratedCounterStyle::DecimalLeadingZero => value.to_string(),
         crate::GeneratedCounterStyle::LowerAlpha => alpha_counter(value, false),
         crate::GeneratedCounterStyle::UpperAlpha => alpha_counter(value, true),
@@ -5487,7 +5729,11 @@ fn alpha_counter(value: i32, uppercase: bool) -> String {
     }
     result.reverse();
     let result: String = result.into_iter().collect();
-    if uppercase { result.to_ascii_uppercase() } else { result }
+    if uppercase {
+        result.to_ascii_uppercase()
+    } else {
+        result
+    }
 }
 
 fn roman_counter(value: i32, uppercase: bool) -> String {
@@ -5516,7 +5762,11 @@ fn roman_counter(value: i32, uppercase: bool) -> String {
             result.push_str(numeral);
         }
     }
-    if uppercase { result } else { result.to_ascii_lowercase() }
+    if uppercase {
+        result
+    } else {
+        result.to_ascii_lowercase()
+    }
 }
 
 /// Decode CSS string escapes: `\` followed by 1-6 hex digits is a Unicode
@@ -5540,7 +5790,7 @@ fn unescape_css_string(s: &str) -> String {
                 Some(h) if h.is_ascii_hexdigit() => {
                     hex.push(*h);
                     chars.next();
-                },
+                }
                 _ => break,
             }
         }
@@ -5628,59 +5878,6 @@ fn parse_stylesheet_for_viewport_preserving_containers_in_layer(
             let sel = rule.prelude.trim();
             if let Some(decls) = rule.body.as_deref() {
                 if let Some(at) = sel.strip_prefix('@') {
-                    flush_at_rule(at, sel, decls, &mut rules, viewport, media_type,
-                        container_conditions, container_condition_id, layers, current_layer.as_ref());
-                } else {
-                    denest(sel, decls, &mut rules, viewport, media_type,
-                        container_conditions, container_condition_id, layers, current_layer.as_ref());
-                }
-            } else if let Some(at) = sel.strip_prefix('@') {
-                if let Some(prelude) = at_rule_prelude(at, "layer") {
-                    layers.register_statement(current_layer.as_ref(), prelude);
-                }
-            }
-        }
-        return rules;
-    }
-    #[cfg(not(feature = "bun-css"))]
-    {
-    let mut current_selector = String::new();
-    let mut current_decls = String::new();
-    let mut block_depth = 0;
-    let mut in_comment = false;
-    let mut chars = css.chars().peekable();
-
-    while let Some(c) = chars.next() {
-        if in_comment {
-            if c == '*' && chars.peek() == Some(&'/') {
-                chars.next();
-                in_comment = false;
-            }
-            continue;
-        }
-        if c == '/' && chars.peek() == Some(&'*') {
-            chars.next();
-            in_comment = true;
-            continue;
-        }
-
-        if c == '{' {
-            if block_depth != 0 {
-                current_decls.push(c);
-            }
-            block_depth += 1;
-        } else if c == '}' && block_depth == 0 {
-            // Stray top-level close brace (unbalanced author CSS; remoteok.com
-            // ships one mid-sheet). Browsers error-recover and keep parsing;
-            // without this block_depth goes negative and the state machine
-            // inverts, scrambling and losing every rule in the rest of the sheet.
-            current_selector.clear();
-        } else if c == '}' {
-            block_depth -= 1;
-            if block_depth == 0 {
-                let sel = current_selector.trim();
-                let decls = current_decls.trim();
-                if let Some(at) = sel.strip_prefix('@') {
                     flush_at_rule(
                         at,
                         sel,
@@ -5694,10 +5891,6 @@ fn parse_stylesheet_for_viewport_preserving_containers_in_layer(
                         current_layer.as_ref(),
                     );
                 } else {
-                    // The body may contain nested rules (CSS Nesting, ubiquitous
-                    // in Tailwind v4 / modern frameworks: `.a{ &:hover{} .b{} }`).
-                    // Flatten them against this selector; denest also handles the
-                    // no-nesting case (just emits the rule's own declarations).
                     denest(
                         sel,
                         decls,
@@ -5710,28 +5903,104 @@ fn parse_stylesheet_for_viewport_preserving_containers_in_layer(
                         current_layer.as_ref(),
                     );
                 }
-                current_selector.clear();
-                current_decls.clear();
-            } else {
-                current_decls.push(c);
-            }
-        } else if c == ';' && block_depth == 0 {
-            // Layer ordering statements establish slots even though they emit
-            // no selector rules. All other statement at-rules are discarded so
-            // their prelude cannot bleed into the next selector.
-            if let Some(at) = current_selector.trim().strip_prefix('@') {
+            } else if let Some(at) = sel.strip_prefix('@') {
                 if let Some(prelude) = at_rule_prelude(at, "layer") {
                     layers.register_statement(current_layer.as_ref(), prelude);
                 }
             }
-            current_selector.clear();
-        } else if block_depth > 0 {
-            current_decls.push(c);
-        } else {
-            current_selector.push(c);
         }
+        return rules;
     }
-    rules
+    #[cfg(not(feature = "bun-css"))]
+    {
+        let mut current_selector = String::new();
+        let mut current_decls = String::new();
+        let mut block_depth = 0;
+        let mut in_comment = false;
+        let mut chars = css.chars().peekable();
+
+        while let Some(c) = chars.next() {
+            if in_comment {
+                if c == '*' && chars.peek() == Some(&'/') {
+                    chars.next();
+                    in_comment = false;
+                }
+                continue;
+            }
+            if c == '/' && chars.peek() == Some(&'*') {
+                chars.next();
+                in_comment = true;
+                continue;
+            }
+
+            if c == '{' {
+                if block_depth != 0 {
+                    current_decls.push(c);
+                }
+                block_depth += 1;
+            } else if c == '}' && block_depth == 0 {
+                // Stray top-level close brace (unbalanced author CSS; remoteok.com
+                // ships one mid-sheet). Browsers error-recover and keep parsing;
+                // without this block_depth goes negative and the state machine
+                // inverts, scrambling and losing every rule in the rest of the sheet.
+                current_selector.clear();
+            } else if c == '}' {
+                block_depth -= 1;
+                if block_depth == 0 {
+                    let sel = current_selector.trim();
+                    let decls = current_decls.trim();
+                    if let Some(at) = sel.strip_prefix('@') {
+                        flush_at_rule(
+                            at,
+                            sel,
+                            decls,
+                            &mut rules,
+                            viewport,
+                            media_type,
+                            container_conditions,
+                            container_condition_id,
+                            layers,
+                            current_layer.as_ref(),
+                        );
+                    } else {
+                        // The body may contain nested rules (CSS Nesting, ubiquitous
+                        // in Tailwind v4 / modern frameworks: `.a{ &:hover{} .b{} }`).
+                        // Flatten them against this selector; denest also handles the
+                        // no-nesting case (just emits the rule's own declarations).
+                        denest(
+                            sel,
+                            decls,
+                            &mut rules,
+                            viewport,
+                            media_type,
+                            container_conditions,
+                            container_condition_id,
+                            layers,
+                            current_layer.as_ref(),
+                        );
+                    }
+                    current_selector.clear();
+                    current_decls.clear();
+                } else {
+                    current_decls.push(c);
+                }
+            } else if c == ';' && block_depth == 0 {
+                // Layer ordering statements establish slots even though they emit
+                // no selector rules. All other statement at-rules are discarded so
+                // their prelude cannot bleed into the next selector.
+                if let Some(at) = current_selector.trim().strip_prefix('@') {
+                    if let Some(prelude) = at_rule_prelude(at, "layer") {
+                        layers.register_statement(current_layer.as_ref(), prelude);
+                    }
+                }
+                current_selector.clear();
+            } else if block_depth > 0 {
+                current_decls.push(c);
+            } else {
+                current_selector.push(c);
+            }
+        }
+        rules
     }
 }
 
@@ -5751,27 +6020,31 @@ fn flush_at_rule(
 ) {
     if let Some(prelude) = at_rule_prelude(at, "media") {
         if media_query_applies_for_viewport_and_type(prelude, viewport, media_type) {
-            rules.extend(parse_stylesheet_for_viewport_preserving_containers_in_layer(
-                inner,
-                viewport,
-                media_type,
-                container_conditions,
-                container_condition_id,
-                layers,
-                current_layer.cloned(),
-            ));
+            rules.extend(
+                parse_stylesheet_for_viewport_preserving_containers_in_layer(
+                    inner,
+                    viewport,
+                    media_type,
+                    container_conditions,
+                    container_condition_id,
+                    layers,
+                    current_layer.cloned(),
+                ),
+            );
         }
     } else if let Some(prelude) = at_rule_prelude(at, "supports") {
         if supports_condition_applies(prelude) {
-            rules.extend(parse_stylesheet_for_viewport_preserving_containers_in_layer(
-                inner,
-                viewport,
-                media_type,
-                container_conditions,
-                container_condition_id,
-                layers,
-                current_layer.cloned(),
-            ));
+            rules.extend(
+                parse_stylesheet_for_viewport_preserving_containers_in_layer(
+                    inner,
+                    viewport,
+                    media_type,
+                    container_conditions,
+                    container_condition_id,
+                    layers,
+                    current_layer.cloned(),
+                ),
+            );
         }
     } else if let Some(prelude) = at_rule_prelude(at, "container") {
         if let Some(alternatives) = parse_container_query_list(prelude) {
@@ -5779,17 +6052,21 @@ fn flush_at_rule(
                 return;
             };
             let id = ContainerConditionId(raw_id);
-            container_conditions
-                .push(ContainerConditionNode { parent: container_condition_id, alternatives });
-            rules.extend(parse_stylesheet_for_viewport_preserving_containers_in_layer(
-                inner,
-                viewport,
-                media_type,
-                container_conditions,
-                id,
-                layers,
-                current_layer.cloned(),
-            ));
+            container_conditions.push(ContainerConditionNode {
+                parent: container_condition_id,
+                alternatives,
+            });
+            rules.extend(
+                parse_stylesheet_for_viewport_preserving_containers_in_layer(
+                    inner,
+                    viewport,
+                    media_type,
+                    container_conditions,
+                    id,
+                    layers,
+                    current_layer.cloned(),
+                ),
+            );
         }
     } else if let Some((name, prefixed)) = at_rule_prelude(at, "keyframes")
         .map(|name| (name, false))
@@ -5831,15 +6108,17 @@ fn flush_at_rule(
         } else {
             return;
         };
-        rules.extend(parse_stylesheet_for_viewport_preserving_containers_in_layer(
-            inner,
-            viewport,
-            media_type,
-            container_conditions,
-            container_condition_id,
-            layers,
-            Some(layer),
-        ));
+        rules.extend(
+            parse_stylesheet_for_viewport_preserving_containers_in_layer(
+                inner,
+                viewport,
+                media_type,
+                container_conditions,
+                container_condition_id,
+                layers,
+                Some(layer),
+            ),
+        );
     }
     // Other at-rules (@font-face, @import, ...) carry no
     // layout-relevant rules for us, so drop them.
@@ -5856,33 +6135,44 @@ fn parse_property_registration(descriptors: &str) -> Option<RegisteredCustomProp
         let value = value.trim();
         match name.trim().to_ascii_lowercase().as_str() {
             "syntax" => {
-                let unquoted =
-                    value.strip_prefix('"').and_then(|value| value.strip_suffix('"')).or_else(
-                        || value.strip_prefix('\'').and_then(|value| value.strip_suffix('\'')),
-                    )?;
+                let unquoted = value
+                    .strip_prefix('"')
+                    .and_then(|value| value.strip_suffix('"'))
+                    .or_else(|| {
+                        value
+                            .strip_prefix('\'')
+                            .and_then(|value| value.strip_suffix('\''))
+                    })?;
                 if !unquoted.is_empty() {
                     syntax = Some(unquoted.to_string());
                 }
-            },
+            }
             "inherits" => {
                 inherits = match value.to_ascii_lowercase().as_str() {
                     "true" => Some(true),
                     "false" => Some(false),
                     _ => None,
                 };
-            },
+            }
             "initial-value" if !value.is_empty() => initial_value = Some(value.to_string()),
-            _ => {},
+            _ => {}
         }
     }
     let syntax = syntax?;
-    if !matches!(syntax.as_str(), "*" | "<percentage>" | "<length>" | "<number>" | "<color>") {
+    if !matches!(
+        syntax.as_str(),
+        "*" | "<percentage>" | "<length>" | "<number>" | "<color>"
+    ) {
         return None;
     }
     if initial_value.is_none() && syntax != "*" {
         return None;
     }
-    let registration = RegisteredCustomProperty { syntax, inherits: inherits?, initial_value };
+    let registration = RegisteredCustomProperty {
+        syntax,
+        inherits: inherits?,
+        initial_value,
+    };
     if registration
         .initial_value
         .as_deref()
@@ -5904,7 +6194,11 @@ fn registered_value_matches(registration: &RegisteredCustomProperty, value: &str
         "<number>" => value.parse::<f32>().ok().is_some_and(f32::is_finite),
         "<color>" => crate::style::parse_color(value).is_some(),
         "<length>" => {
-            if value.parse::<f32>().ok().is_some_and(|number| number == 0.0) {
+            if value
+                .parse::<f32>()
+                .ok()
+                .is_some_and(|number| number == 0.0)
+            {
                 return true;
             }
             let lower = value.to_ascii_lowercase();
@@ -5919,7 +6213,7 @@ fn registered_value_matches(registration: &RegisteredCustomProperty, value: &str
                     .and_then(|number| number.trim().parse::<f32>().ok())
                     .is_some_and(f32::is_finite)
             })
-        },
+        }
         _ => false,
     }
 }
@@ -6047,10 +6341,9 @@ fn parse_container_query_expr_at_depth(input: &str, depth: usize) -> Option<Cont
         ));
     }
     if let Some(rest) = strip_ascii_keyword(input, "not") {
-        return Some(ContainerQueryExpr::Not(Box::new(parse_container_query_in_parens(
-            rest,
-            depth + 1,
-        )?)));
+        return Some(ContainerQueryExpr::Not(Box::new(
+            parse_container_query_in_parens(rest, depth + 1)?,
+        )));
     }
     parse_container_query_in_parens(input, depth + 1)
 }
@@ -6071,7 +6364,10 @@ fn parse_container_query_in_parens(input: &str, depth: usize) -> Option<Containe
 fn is_general_enclosed_container_query(input: &str) -> bool {
     let mut input = cssparser::ParserInput::new(input.trim());
     let mut parser = cssparser::Parser::new(&mut input);
-    matches!(parser.next(), Ok(cssparser::Token::Ident(_)) | Ok(cssparser::Token::Function(_)))
+    matches!(
+        parser.next(),
+        Ok(cssparser::Token::Ident(_)) | Ok(cssparser::Token::Function(_))
+    )
 }
 
 fn strip_ascii_keyword<'a>(input: &'a str, keyword: &str) -> Option<&'a str> {
@@ -6079,7 +6375,10 @@ fn strip_ascii_keyword<'a>(input: &'a str, keyword: &str) -> Option<&'a str> {
         return None;
     }
     let rest = &input[keyword.len()..];
-    rest.chars().next().filter(|character| character.is_whitespace()).map(|_| rest.trim_start())
+    rest.chars()
+        .next()
+        .filter(|character| character.is_whitespace())
+        .map(|_| rest.trim_start())
 }
 
 fn parse_container_size_feature(input: &str) -> Option<ContainerQueryExpr> {
@@ -6098,12 +6397,24 @@ fn parse_container_size_feature(input: &str) -> Option<ContainerQueryExpr> {
             "min-height" => (ContainerQueryComparison::Min, ContainerQueryAxis::Height),
             "max-height" => (ContainerQueryComparison::Max, ContainerQueryAxis::Height),
             "height" => (ContainerQueryComparison::Equal, ContainerQueryAxis::Height),
-            "min-inline-size" => (ContainerQueryComparison::Min, ContainerQueryAxis::InlineSize),
-            "max-inline-size" => (ContainerQueryComparison::Max, ContainerQueryAxis::InlineSize),
-            "inline-size" => (ContainerQueryComparison::Equal, ContainerQueryAxis::InlineSize),
+            "min-inline-size" => (
+                ContainerQueryComparison::Min,
+                ContainerQueryAxis::InlineSize,
+            ),
+            "max-inline-size" => (
+                ContainerQueryComparison::Max,
+                ContainerQueryAxis::InlineSize,
+            ),
+            "inline-size" => (
+                ContainerQueryComparison::Equal,
+                ContainerQueryAxis::InlineSize,
+            ),
             "min-block-size" => (ContainerQueryComparison::Min, ContainerQueryAxis::BlockSize),
             "max-block-size" => (ContainerQueryComparison::Max, ContainerQueryAxis::BlockSize),
-            "block-size" => (ContainerQueryComparison::Equal, ContainerQueryAxis::BlockSize),
+            "block-size" => (
+                ContainerQueryComparison::Equal,
+                ContainerQueryAxis::BlockSize,
+            ),
             _ => return None,
         };
         return Some(ContainerQueryExpr::Feature(ContainerSizeFeature {
@@ -6138,7 +6449,7 @@ fn parse_container_size_feature(input: &str) -> Option<ContainerQueryExpr> {
                 let axis = parse_container_query_axis(right)?;
                 make_feature(axis, operator, left, false)
             }
-        },
+        }
         ([lower, middle, upper], [lower_operator, upper_operator]) => {
             // Chained ranges must point consistently through the feature:
             // `10px < width <= 20px` or the fully reversed equivalent.
@@ -6156,7 +6467,7 @@ fn parse_container_size_feature(input: &str) -> Option<ContainerQueryExpr> {
                 make_feature(axis, lower_operator, lower, false)?,
                 make_feature(axis, upper_operator, upper, true)?,
             ]))
-        },
+        }
         _ => None,
     }
 }
@@ -6179,7 +6490,11 @@ fn split_container_range(input: &str) -> Option<(Vec<&str>, Vec<&str>)> {
     let mut index = 0usize;
     while index < bytes.len() {
         if matches!(bytes[index], b'<' | b'>' | b'=') {
-            let end = if bytes.get(index + 1) == Some(&b'=') { index + 2 } else { index + 1 };
+            let end = if bytes.get(index + 1) == Some(&b'=') {
+                index + 2
+            } else {
+                index + 1
+            };
             let operand = input[start..index].trim();
             if operand.is_empty() {
                 return None;
@@ -6215,7 +6530,9 @@ fn parse_container_query_length(input: &str) -> Option<ContainerQueryLength> {
     if let Some(value) = input.strip_suffix("px").and_then(number) {
         return Some(ContainerQueryLength::Px(value));
     }
-    number(&input).filter(|value| *value == 0.0).map(ContainerQueryLength::Px)
+    number(&input)
+        .filter(|value| *value == 0.0)
+        .map(ContainerQueryLength::Px)
 }
 
 /// Evaluate the boolean subset of CSS Conditional Rules used by modern
@@ -6241,8 +6558,13 @@ fn eval_supports_condition(condition: &str) -> Option<bool> {
     if let Some(inner) = enclosing_parenthesized(condition) {
         return eval_supports_condition(inner);
     }
-    if condition.get(..3).is_some_and(|prefix| prefix.eq_ignore_ascii_case("not"))
-        && condition.as_bytes().get(3).is_some_and(u8::is_ascii_whitespace)
+    if condition
+        .get(..3)
+        .is_some_and(|prefix| prefix.eq_ignore_ascii_case("not"))
+        && condition
+            .as_bytes()
+            .get(3)
+            .is_some_and(u8::is_ascii_whitespace)
     {
         return eval_supports_condition(condition[3..].trim()).map(|result| !result);
     }
@@ -6255,11 +6577,17 @@ fn eval_supports_condition(condition: &str) -> Option<bool> {
         return None;
     }
     if let Some(parts) = or_parts {
-        let results = parts.into_iter().map(eval_supports_condition).collect::<Option<Vec<_>>>()?;
+        let results = parts
+            .into_iter()
+            .map(eval_supports_condition)
+            .collect::<Option<Vec<_>>>()?;
         return Some(results.into_iter().any(|result| result));
     }
     if let Some(parts) = and_parts {
-        let results = parts.into_iter().map(eval_supports_condition).collect::<Option<Vec<_>>>()?;
+        let results = parts
+            .into_iter()
+            .map(eval_supports_condition)
+            .collect::<Option<Vec<_>>>()?;
         return Some(results.into_iter().all(|result| result));
     }
     let lower = condition.to_ascii_lowercase();
@@ -6304,7 +6632,7 @@ fn balanced_supports_syntax(condition: &str) -> bool {
             '(' => stack.push(')'),
             '[' => stack.push(']'),
             ')' | ']' if stack.pop() != Some(character) => return false,
-            _ => {},
+            _ => {}
         }
     }
     !escaped && quote.is_none() && stack.is_empty()
@@ -6338,8 +6666,8 @@ fn enclosing_parenthesized(condition: &str) -> Option<&str> {
                     return (index + character.len_utf8() == condition.len())
                         .then_some(&condition[1..index]);
                 }
-            },
-            _ => {},
+            }
+            _ => {}
         }
     }
     None
@@ -6372,13 +6700,15 @@ fn split_supports_operator<'a>(condition: &'a str, operator: &str) -> Option<Vec
                 if depth < 0 {
                     return None;
                 }
-            },
+            }
             _ if depth == 0
                 && index + operator.len() <= bytes.len()
                 && bytes[index..index + operator.len()].eq_ignore_ascii_case(operator)
                 && index > 0
                 && bytes[index - 1].is_ascii_whitespace()
-                && bytes.get(index + operator.len()).is_some_and(u8::is_ascii_whitespace) =>
+                && bytes
+                    .get(index + operator.len())
+                    .is_some_and(u8::is_ascii_whitespace) =>
             {
                 let part = condition[start..index].trim();
                 if part.is_empty() {
@@ -6388,8 +6718,8 @@ fn split_supports_operator<'a>(condition: &'a str, operator: &str) -> Option<Vec
                 index += operator.len();
                 start = index;
                 continue;
-            },
-            _ => {},
+            }
+            _ => {}
         }
         index += 1;
     }
@@ -6437,8 +6767,11 @@ fn single_media_query_applies_for_viewport(
     let viewport_w = viewport.0;
     let viewport_h = viewport.1;
     let query = query.trim().strip_prefix("@media").unwrap_or(query).trim();
-    let compact: String =
-        query.chars().filter(|c| !c.is_whitespace()).flat_map(|c| c.to_lowercase()).collect();
+    let compact: String = query
+        .chars()
+        .filter(|c| !c.is_whitespace())
+        .flat_map(|c| c.to_lowercase())
+        .collect();
 
     // A leading `not` negates the complete media query. This covers both
     // Tailwind's `not all and (...)` breakpoints and ordinary `not print` /
@@ -6449,11 +6782,19 @@ fn single_media_query_applies_for_viewport(
     }
     let compact = compact.strip_prefix("only").unwrap_or(&compact);
 
-    let medium = compact.split_once("and").map_or(compact, |(medium, _)| medium);
+    let medium = compact
+        .split_once("and")
+        .map_or(compact, |(medium, _)| medium);
     let medium_matches = match medium {
         "all" => true,
-        "screen" => matches!(media_type, CssMediaType::Screen | CssMediaType::ScreenReducedMotion),
-        "print" => matches!(media_type, CssMediaType::Print | CssMediaType::PrintReducedMotion),
+        "screen" => matches!(
+            media_type,
+            CssMediaType::Screen | CssMediaType::ScreenReducedMotion
+        ),
+        "print" => matches!(
+            media_type,
+            CssMediaType::Print | CssMediaType::PrintReducedMotion
+        ),
         medium if medium.starts_with('(') => true,
         // Unknown named media such as `speech` do not match either visual
         // rendering mode.
@@ -6703,7 +7044,9 @@ fn denest(
                     }
                     j += 1;
                 }
-                let inner: String = chars[i + 1..j.saturating_sub(1).max(i + 1)].iter().collect();
+                let inner: String = chars[i + 1..j.saturating_sub(1).max(i + 1)]
+                    .iter()
+                    .collect();
                 let pre = prelude.trim();
                 if let Some(at) = pre.strip_prefix('@') {
                     // A nested at-rule keeps the enclosing selector for its body.
@@ -6794,7 +7137,7 @@ fn denest(
                 i = j;
                 seg = i;
                 continue;
-            },
+            }
             ';' if paren == 0 => {
                 let d: String = chars[seg..i].iter().collect();
                 let d = d.trim();
@@ -6809,8 +7152,8 @@ fn denest(
                 i += 1;
                 seg = i;
                 continue;
-            },
-            _ => {},
+            }
+            _ => {}
         }
         i += 1;
     }
@@ -6853,34 +7196,34 @@ fn split_selector_list(sel: &str) -> Vec<String> {
                 if let Some(n) = chars.next() {
                     cur.push(n);
                 }
-            },
+            }
             _ if quote == Some(c) => {
                 quote = None;
                 cur.push(c);
-            },
+            }
             '"' | '\'' if quote.is_none() => {
                 quote = Some(c);
                 cur.push(c);
-            },
+            }
             '(' if quote.is_none() => {
                 depth_paren += 1;
                 cur.push(c);
-            },
+            }
             ')' if quote.is_none() => {
                 depth_paren -= 1;
                 cur.push(c);
-            },
+            }
             '[' if quote.is_none() => {
                 depth_brack += 1;
                 cur.push(c);
-            },
+            }
             ']' if quote.is_none() => {
                 depth_brack -= 1;
                 cur.push(c);
-            },
+            }
             ',' if quote.is_none() && depth_paren == 0 && depth_brack == 0 => {
                 out.push(std::mem::take(&mut cur));
-            },
+            }
             _ => cur.push(c),
         }
     }
@@ -6918,7 +7261,7 @@ fn matching_paren_end(input: &str) -> Option<usize> {
             '(' => depth += 1,
             ')' if depth == 0 => return Some(index),
             ')' => depth -= 1,
-            _ => {},
+            _ => {}
         }
     }
     None
@@ -6942,8 +7285,8 @@ fn extract_length_before(
             '(' | ':' | ',' if depth == 0 => {
                 start = index + character.len_utf8();
                 break;
-            },
-            _ => {},
+            }
+            _ => {}
         }
     }
     let value = prefix[start..].trim();
@@ -6964,8 +7307,10 @@ fn parse_length_prefix(input: &str, viewport: (f32, f32), axis: LengthAxis) -> O
         return None;
     }
     let value = input[..numeric_len].parse::<f32>().ok()?;
-    let unit: String =
-        input[numeric_len..].chars().take_while(|c| c.is_ascii_alphabetic() || *c == '%').collect();
+    let unit: String = input[numeric_len..]
+        .chars()
+        .take_while(|c| c.is_ascii_alphabetic() || *c == '%')
+        .collect();
     let px = match unit.as_str() {
         "" | "px" => value,
         "em" | "rem" => value * 16.0,
@@ -7021,8 +7366,8 @@ fn split_media_query_list(query: &str) -> Vec<&str> {
             ',' if quote.is_none() && depth == 0 => {
                 parts.push(query[start..idx].trim());
                 start = idx + 1;
-            },
-            _ => {},
+            }
+            _ => {}
         }
     }
     parts.push(query[start..].trim());
@@ -7035,14 +7380,18 @@ mod tests {
 
     fn test_invalidation_map(css: &str) -> InvalidationMap {
         let tree = bun_browser_dom::parse_html("<html><body></body></html>");
-        Stylesheet::parse(&tree, &[css.to_string()]).invalidation_map().clone()
+        Stylesheet::parse(&tree, &[css.to_string()])
+            .invalidation_map()
+            .clone()
     }
 
     fn dependencies_reach(
         dependencies: &[InvalidationDependency],
         reaches: InvalidationReaches,
     ) -> bool {
-        dependencies.iter().any(|dependency| dependency.reaches.contains(reaches))
+        dependencies
+            .iter()
+            .any(|dependency| dependency.reaches.contains(reaches))
     }
 
     #[test]
@@ -7058,7 +7407,10 @@ mod tests {
             "#,
         );
 
-        assert!(dependencies_reach(map.id_dependencies("self"), InvalidationReaches::SELF,));
+        assert!(dependencies_reach(
+            map.id_dependencies("self"),
+            InvalidationReaches::SELF,
+        ));
         assert!(dependencies_reach(
             map.id_dependencies("ancestor"),
             InvalidationReaches::DESCENDANTS,
@@ -7067,14 +7419,20 @@ mod tests {
             map.id_dependencies("parent"),
             InvalidationReaches::DESCENDANTS,
         ));
-        assert!(
-            dependencies_reach(map.id_dependencies("previous"), InvalidationReaches::SIBLINGS,)
-        );
-        assert!(dependencies_reach(map.id_dependencies("earlier"), InvalidationReaches::SIBLINGS,));
+        assert!(dependencies_reach(
+            map.id_dependencies("previous"),
+            InvalidationReaches::SIBLINGS,
+        ));
+        assert!(dependencies_reach(
+            map.id_dependencies("earlier"),
+            InvalidationReaches::SIBLINGS,
+        ));
         let repeated = map.class_dependencies("repeat");
         assert_eq!(repeated.len(), 1, "same-rule dependencies must merge");
         assert!(repeated[0].reaches.contains(InvalidationReaches::SELF));
-        assert!(repeated[0].reaches.contains(InvalidationReaches::DESCENDANTS));
+        assert!(repeated[0]
+            .reaches
+            .contains(InvalidationReaches::DESCENDANTS));
         assert!(!map.requires_conservative_invalidation());
     }
 
@@ -7112,13 +7470,22 @@ mod tests {
             map.attribute_dependencies("DATA-THEME"),
             InvalidationReaches::DESCENDANTS,
         ));
-        assert!(dependencies_reach(map.class_dependencies("panel"), InvalidationReaches::SELF,));
-        assert!(dependencies_reach(map.state_dependencies("hover"), InvalidationReaches::SELF,));
+        assert!(dependencies_reach(
+            map.class_dependencies("panel"),
+            InvalidationReaches::SELF,
+        ));
+        assert!(dependencies_reach(
+            map.state_dependencies("hover"),
+            InvalidationReaches::SELF,
+        ));
         assert!(dependencies_reach(
             map.class_dependencies("alpha"),
             InvalidationReaches::DESCENDANTS,
         ));
-        assert!(dependencies_reach(map.id_dependencies("beta"), InvalidationReaches::DESCENDANTS,));
+        assert!(dependencies_reach(
+            map.id_dependencies("beta"),
+            InvalidationReaches::DESCENDANTS,
+        ));
         assert!(dependencies_reach(
             map.state_dependencies("focus-visible"),
             InvalidationReaches::SELF,
@@ -7206,7 +7573,10 @@ mod tests {
         assert!(!map.state_dependencies("nth-of-type").is_empty());
         let trigger = map.class_dependencies("trigger");
         assert!(dependencies_reach(trigger, InvalidationReaches::SIBLINGS,));
-        assert!(!dependencies_reach(trigger, InvalidationReaches::CONSERVATIVE,));
+        assert!(!dependencies_reach(
+            trigger,
+            InvalidationReaches::CONSERVATIVE,
+        ));
         assert!(dependencies_reach(
             map.class_dependencies("branch"),
             InvalidationReaches::DESCENDANTS,
@@ -7226,25 +7596,24 @@ mod tests {
              .choice:has(:is(.yes,button)) { color:red }",
         );
         assert!(!keyed.has_unkeyed_relational_rules());
-        assert!(
-            keyed
-                .class_dependencies("badge")
-                .iter()
-                .any(|dependency| keyed.is_relational_rule(dependency.rule_order))
-        );
-        assert!(
-            keyed
-                .local_name_dependencies("span")
-                .iter()
-                .any(|dependency| keyed.is_relational_rule(dependency.rule_order))
-        );
+        assert!(keyed
+            .class_dependencies("badge")
+            .iter()
+            .any(|dependency| keyed.is_relational_rule(dependency.rule_order)));
+        assert!(keyed
+            .local_name_dependencies("span")
+            .iter()
+            .any(|dependency| keyed.is_relational_rule(dependency.rule_order)));
 
         for selector in [
             ".card:has(> *){color:red}",
             ".card:has(:is(.badge,*)){color:red}",
             ".card:has(:empty){color:red}",
         ] {
-            assert!(test_invalidation_map(selector).has_unkeyed_relational_rules(), "{selector}");
+            assert!(
+                test_invalidation_map(selector).has_unkeyed_relational_rules(),
+                "{selector}"
+            );
         }
     }
 
@@ -7261,7 +7630,9 @@ mod tests {
         );
         let entries = map.relational_invalidations();
         assert_eq!(entries.len(), 5);
-        assert!(entries[0].anchor_reaches.contains(InvalidationReaches::DESCENDANTS));
+        assert!(entries[0]
+            .anchor_reaches
+            .contains(InvalidationReaches::DESCENDANTS));
         assert!(!entries[0].unkeyed_subject);
         assert!(entries[1].sibling_side_effect);
         assert!(!entries[1].unkeyed_subject);
@@ -7269,7 +7640,9 @@ mod tests {
         assert!(!entries[2].text_side_effect);
         assert!(entries[3].structural_side_effect);
         assert!(entries[3].text_side_effect);
-        assert!(entries[4].anchor_reaches.contains(InvalidationReaches::SIBLINGS));
+        assert!(entries[4]
+            .anchor_reaches
+            .contains(InvalidationReaches::SIBLINGS));
         assert!(!entries[4].unrepresentable_outer_path);
 
         let tree = bun_browser_dom::parse_html(
@@ -7281,9 +7654,11 @@ mod tests {
 
     #[test]
     fn relational_anchor_filter_never_unqualifies_namespaced_attributes() {
-        for compound in
-            ["[xlink|href]:has(.signal)", "[*|href]:has(.signal)", "[|href]:has(.signal)"]
-        {
+        for compound in [
+            "[xlink|href]:has(.signal)",
+            "[*|href]:has(.signal)",
+            "[|href]:has(.signal)",
+        ] {
             assert_eq!(relational_anchor_key(compound), None, "{compound}");
         }
         assert_eq!(
@@ -7309,9 +7684,18 @@ mod tests {
             map.attribute_dependencies("data-open"),
             InvalidationReaches::DESCENDANTS,
         ));
-        assert!(dependencies_reach(map.class_dependencies("button"), InvalidationReaches::SELF,));
-        assert!(dependencies_reach(map.state_dependencies("hover"), InvalidationReaches::SELF,));
-        assert!(dependencies_reach(map.id_dependencies("status"), InvalidationReaches::SELF,));
+        assert!(dependencies_reach(
+            map.class_dependencies("button"),
+            InvalidationReaches::SELF,
+        ));
+        assert!(dependencies_reach(
+            map.state_dependencies("hover"),
+            InvalidationReaches::SELF,
+        ));
+        assert!(dependencies_reach(
+            map.id_dependencies("status"),
+            InvalidationReaches::SELF,
+        ));
     }
 
     fn condition_arena_root() -> Vec<ContainerConditionNode> {
@@ -7327,7 +7711,10 @@ mod tests {
     ) -> (LayoutStyle, HashMap<String, String>, Option<LayoutStyle>) {
         let tree = bun_browser_dom::parse_html(r#"<div id="target" class="target"></div>"#);
         let target = tree.get_element_by_id("target").unwrap();
-        let source_strings = sources.iter().map(|source| (*source).to_string()).collect::<Vec<_>>();
+        let source_strings = sources
+            .iter()
+            .map(|source| (*source).to_string())
+            .collect::<Vec<_>>();
         let sheet = Stylesheet::parse(&tree, &source_strings);
         let mut matcher = tree.matcher();
         let mut style = LayoutStyle::default();
@@ -7344,7 +7731,9 @@ mod tests {
                 inline_css,
             )
             .unwrap_or_default();
-        let before = sheet.pseudo_styles(&tree, &mut matcher, target, &effective, &style).0;
+        let before = sheet
+            .pseudo_styles(&tree, &mut matcher, target, &effective, &style)
+            .0;
         (style, effective, before)
     }
 
@@ -7444,7 +7833,10 @@ mod tests {
         );
         let (_, _, class_keys, _, _, universal) = sheet.debug_stats();
         assert_eq!(class_keys, 1);
-        assert_eq!(universal, 0, ":root must not remain in the universal bucket");
+        assert_eq!(
+            universal, 0,
+            ":root must not remain in the universal bucket"
+        );
 
         let root = tree.query_selector("html").unwrap().unwrap();
         let body = tree.query_selector("body").unwrap().unwrap();
@@ -7511,7 +7903,10 @@ mod tests {
 
         assert_eq!(sheet.before_rules.rules.len(), 2);
         assert_eq!(sheet.before_rules.by_class.get("alpha").unwrap(), &[0]);
-        assert_eq!(sheet.before_rules.by_attribute.get("data-kind").unwrap(), &[0]);
+        assert_eq!(
+            sheet.before_rules.by_attribute.get("data-kind").unwrap(),
+            &[0]
+        );
         assert_eq!(sheet.before_rules.rules[0].candidate_slot, 0);
         assert_eq!(sheet.before_rules.candidate_slot_count, 1);
 
@@ -7562,8 +7957,10 @@ mod tests {
             r#"<div id="target" class="alpha" data-kind="both"></div><div data-kind="attribute"></div>"#,
         );
         let target = tree.get_element_by_id("target").unwrap();
-        let sheet =
-            Stylesheet::parse(&tree, &[":is(.alpha, [data-kind]) { width:47px }".to_string()]);
+        let sheet = Stylesheet::parse(
+            &tree,
+            &[":is(.alpha, [data-kind]) { width:47px }".to_string()],
+        );
 
         assert!(sheet.universal.is_empty());
         assert_eq!(sheet.by_class.get("alpha").unwrap(), &[0]);
@@ -7710,7 +8107,10 @@ mod tests {
             None,
         );
         assert_eq!(props.get("--normal-size").map(String::as_str), Some("30px"));
-        assert_eq!(props.get("--critical-size").map(String::as_str), Some("11px"));
+        assert_eq!(
+            props.get("--critical-size").map(String::as_str),
+            Some("11px")
+        );
         assert_eq!(style.width, crate::Dimension::Px(30.0));
         assert_eq!(style.height, crate::Dimension::Px(11.0));
         let before = before.expect("the layered ::before content should materialize");
@@ -7769,9 +8169,14 @@ mod tests {
         let cta = tree.query_selector("#cta").unwrap().unwrap();
         assert_eq!(
             extract_content("content:attr(data-label)", &tree, cta),
-            Some(Some(vec![crate::GeneratedContentItem::Text("Get Started".to_string())]))
+            Some(Some(vec![crate::GeneratedContentItem::Text(
+                "Get Started".to_string()
+            )]))
         );
-        assert_eq!(extract_content(r#"content:"fallback";content:none"#, &tree, cta), Some(None));
+        assert_eq!(
+            extract_content(r#"content:"fallback";content:none"#, &tree, cta),
+            Some(None)
+        );
     }
 
     #[test]
@@ -7798,8 +8203,14 @@ mod tests {
                 },
             ]))
         );
-        assert_eq!(format_counter_value(27, crate::GeneratedCounterStyle::LowerAlpha), "aa");
-        assert_eq!(format_counter_value(14, crate::GeneratedCounterStyle::UpperRoman), "XIV");
+        assert_eq!(
+            format_counter_value(27, crate::GeneratedCounterStyle::LowerAlpha),
+            "aa"
+        );
+        assert_eq!(
+            format_counter_value(14, crate::GeneratedCounterStyle::UpperRoman),
+            "XIV"
+        );
         assert_eq!(
             format_counter_value(-4, crate::GeneratedCounterStyle::DecimalLeadingZero),
             "-04"
@@ -7821,11 +8232,20 @@ mod tests {
         "#;
         let keyframes: HashMap<_, _> = extract_keyframes(css).into_iter().collect();
         let dismiss = normalized_keyframe_offsets(&keyframes["dismiss"].stops);
-        assert_eq!(dismiss.iter().map(|(offset, _)| *offset).collect::<Vec<_>>(), [0.0, 0.5, 1.0]);
+        assert_eq!(
+            dismiss
+                .iter()
+                .map(|(offset, _)| *offset)
+                .collect::<Vec<_>>(),
+            [0.0, 0.5, 1.0]
+        );
         assert!(dismiss[0].1.declarations.contains("opacity: 1"));
         assert!(dismiss[2].1.declarations.contains("visibility: hidden"));
         let slide = normalized_keyframe_offsets(&keyframes["slide"].stops);
-        assert_eq!(slide.iter().map(|(offset, _)| *offset).collect::<Vec<_>>(), [0.0, 1.0]);
+        assert_eq!(
+            slide.iter().map(|(offset, _)| *offset).collect::<Vec<_>>(),
+            [0.0, 1.0]
+        );
         assert!(slide[1].1.declarations.contains("translateX(20px)"));
     }
 
@@ -7836,7 +8256,9 @@ mod tests {
             &tree,
             &[css.to_string()],
             (1280.0, 720.0),
-            crate::AnimationSampleTime { milliseconds: sample_ms },
+            crate::AnimationSampleTime {
+                milliseconds: sample_ms,
+            },
         );
         let node = tree.get_node(target).unwrap();
         let element = node.as_element().unwrap();
@@ -7867,11 +8289,16 @@ mod tests {
                 }}
             "#
         );
-        sampled_animation_style(&css, sample_ms, "target").opacity.unwrap_or(1.0)
+        sampled_animation_style(&css, sample_ms, "target")
+            .opacity
+            .unwrap_or(1.0)
     }
 
     fn assert_opacity(actual: f32, expected: f32) {
-        assert!((actual - expected).abs() < 0.0001, "expected opacity {expected}, got {actual}");
+        assert!(
+            (actual - expected).abs() < 0.0001,
+            "expected opacity {expected}, got {actual}"
+        );
     }
 
     #[test]
@@ -7914,7 +8341,10 @@ mod tests {
                 "{declarations}",
             );
         }
-        assert_eq!(sampled("--unsupported:1"), crate::AnimationEffectImpact::None,);
+        assert_eq!(
+            sampled("--unsupported:1"),
+            crate::AnimationEffectImpact::None,
+        );
     }
 
     #[test]
@@ -8219,7 +8649,10 @@ mod tests {
             .transform_ops;
             let mut fresh_timeline = make_timeline();
             let fresh = apply(time, &mut fresh_timeline);
-            assert_eq!(format!("{resampled:?}"), format!("{:?}", fresh.transform_ops));
+            assert_eq!(
+                format!("{resampled:?}"),
+                format!("{:?}", fresh.transform_ops)
+            );
         }
 
         let important_tree = bun_browser_dom::parse_html(
@@ -8263,15 +8696,13 @@ mod tests {
             crate::AnimationSample::document(0.0),
             &mut important_timeline,
         );
-        assert!(
-            resample_visual_waapi(
-                &important_timeline,
-                important_target,
-                &important_style,
-                crate::AnimationSample::document(500.0),
-            )
-            .is_none()
-        );
+        assert!(resample_visual_waapi(
+            &important_timeline,
+            important_target,
+            &important_style,
+            crate::AnimationSample::document(500.0),
+        )
+        .is_none());
     }
 
     #[test]
@@ -8286,14 +8717,20 @@ mod tests {
             }
             #target { width:50px; animation:chosen 1s both }
         "#;
-        assert_eq!(sampled_animation_style(css, 0.0, "target").width, crate::Dimension::Px(222.0));
+        assert_eq!(
+            sampled_animation_style(css, 0.0, "target").width,
+            crate::Dimension::Px(222.0)
+        );
 
         let empty = r#"
             @keyframes cleared { from, to { width:300px } }
             @keyframes cleared {}
             #target { width:50px; animation:cleared 1s both }
         "#;
-        assert_eq!(sampled_animation_style(empty, 0.0, "target").width, crate::Dimension::Px(50.0));
+        assert_eq!(
+            sampled_animation_style(empty, 0.0, "target").width,
+            crate::Dimension::Px(50.0)
+        );
     }
 
     #[test]
@@ -8353,7 +8790,10 @@ mod tests {
         );
         assert_opacity(sampled_fade("animation-delay:-250ms", 0.0), 0.25);
         assert_opacity(sampled_fade("animation-delay:-1s", 0.0), 0.0);
-        assert_opacity(sampled_fade("animation-delay:-1s;animation-direction:alternate", 0.0), 1.0);
+        assert_opacity(
+            sampled_fade("animation-delay:-1s;animation-direction:alternate", 0.0),
+            1.0,
+        );
         assert_opacity(
             sampled_fade(
                 "animation-delay:-1s;animation-iteration-count:1;animation-fill-mode:none",
@@ -8385,7 +8825,10 @@ mod tests {
             0.0,
         );
         assert_opacity(
-            sampled_fade("animation-iteration-count:0;animation-fill-mode:forwards", 0.0),
+            sampled_fade(
+                "animation-iteration-count:0;animation-fill-mode:forwards",
+                0.0,
+            ),
             0.0,
         );
         assert_opacity(
@@ -8420,7 +8863,10 @@ mod tests {
         assert_opacity(sampled_fade("animation-play-state:paused", 500.0), 0.0);
         assert_opacity(sampled_fade("", 500.0), 0.5);
         assert_opacity(
-            sampled_fade("animation-delay:-250ms !important;opacity:.8 !important", 0.0),
+            sampled_fade(
+                "animation-delay:-250ms !important;opacity:.8 !important",
+                0.0,
+            ),
             0.8,
         );
     }
@@ -8432,11 +8878,15 @@ mod tests {
             #target { opacity:.4; animation:middle 1s linear 1 both }
         "#;
         assert_opacity(
-            sampled_animation_style(missing_endpoints, 250.0, "target").opacity.unwrap(),
+            sampled_animation_style(missing_endpoints, 250.0, "target")
+                .opacity
+                .unwrap(),
             0.7,
         );
         assert_opacity(
-            sampled_animation_style(missing_endpoints, 750.0, "target").opacity.unwrap(),
+            sampled_animation_style(missing_endpoints, 750.0, "target")
+                .opacity
+                .unwrap(),
             0.7,
         );
         let exact_boundary = r#"
@@ -8448,7 +8898,9 @@ mod tests {
             #target { opacity:.4; animation:peak 1s linear 1 both }
         "#;
         assert_opacity(
-            sampled_animation_style(exact_boundary, 500.0, "target").opacity.unwrap(),
+            sampled_animation_style(exact_boundary, 500.0, "target")
+                .opacity
+                .unwrap(),
             1.0,
         );
     }
@@ -8470,7 +8922,13 @@ mod tests {
                 .collect::<Vec<_>>(),
             [0.0, 1.0]
         );
-        let distributed = [stop(Some(0.0)), stop(None), stop(None), stop(Some(0.75)), stop(None)];
+        let distributed = [
+            stop(Some(0.0)),
+            stop(None),
+            stop(None),
+            stop(Some(0.75)),
+            stop(None),
+        ];
         assert_eq!(
             normalized_keyframe_offsets(&distributed)
                 .iter()
@@ -8485,9 +8943,15 @@ mod tests {
         let track = [(0.0, 0.0), (0.5, 10.0), (0.5, 20.0), (1.0, 30.0)];
         assert_eq!(sample_numeric_waapi_track(&track, -1.0, 0.5), Some(20.0));
         let before = sample_numeric_waapi_track(&track, -1.0, 0.499).unwrap();
-        assert!(before < 10.0, "incoming segment must end at the first duplicate");
+        assert!(
+            before < 10.0,
+            "incoming segment must end at the first duplicate"
+        );
         let after = sample_numeric_waapi_track(&track, -1.0, 0.501).unwrap();
-        assert!(after > 20.0, "outgoing segment must start at the later duplicate");
+        assert!(
+            after > 20.0,
+            "outgoing segment must start at the later duplicate"
+        );
     }
 
     #[test]
@@ -8577,11 +9041,13 @@ mod tests {
         let css = ".card { display:block; @media (max-width: 950px) { width:100%; } }";
         let narrow = parse_stylesheet_for_viewport(css, (900.0, 1000.0));
         let wide = parse_stylesheet_for_viewport(css, (1280.0, 720.0));
-        assert!(
-            narrow.iter().any(|(selector, declarations)| selector == ".card"
-                && declarations.contains("width:100%"))
-        );
-        assert!(!wide.iter().any(|(_, declarations)| declarations.contains("width:100%")));
+        assert!(narrow
+            .iter()
+            .any(|(selector, declarations)| selector == ".card"
+                && declarations.contains("width:100%")));
+        assert!(!wide
+            .iter()
+            .any(|(_, declarations)| declarations.contains("width:100%")));
     }
 
     #[test]
@@ -8662,11 +9128,9 @@ mod tests {
         assert_eq!(conditions.len(), 4);
         assert_eq!(parsed.len(), 3, "unknown prefix at-rules must be dropped");
         assert!(parsed.iter().any(|rule| rule.selector == ".top-level"));
-        assert!(
-            parsed.iter().any(|rule| {
-                rule.selector == ".host" && rule.declarations.contains("width:2px")
-            })
-        );
+        assert!(parsed
+            .iter()
+            .any(|rule| { rule.selector == ".host" && rule.declarations.contains("width:2px") }));
         assert!(parsed.iter().any(|rule| {
             rule.selector == ".comment-host" && rule.declarations.contains("height:5px")
         }));
@@ -8702,7 +9166,10 @@ mod tests {
                 rule.selector == format!("{PROPERTY_REGISTRATION_SELECTOR_PREFIX}--cq-token")
             })
             .expect("@property initial value should be registered");
-        assert_eq!(registration.container_condition_id, ContainerConditionId::NONE);
+        assert_eq!(
+            registration.container_condition_id,
+            ContainerConditionId::NONE
+        );
         assert!(registration.declarations.contains("initial-value: 17px"));
         let conditional = parsed
             .iter()
@@ -8722,7 +9189,12 @@ mod tests {
         let element = node.as_element().unwrap();
         let classes = node
             .get_attribute("class")
-            .map(|value| value.split_whitespace().map(str::to_string).collect::<Vec<_>>())
+            .map(|value| {
+                value
+                    .split_whitespace()
+                    .map(str::to_string)
+                    .collect::<Vec<_>>()
+            })
             .unwrap_or_default();
         let mut matcher = tree.matcher();
         let mut style = LayoutStyle::default();
@@ -8934,7 +9406,15 @@ mod tests {
         let target = tree.get_element_by_id("target").unwrap();
         let (style, _) =
             apply_registered_property_test_style(&sheet, &tree, target, &HashMap::new());
-        assert_eq!(style.border, crate::Edges { top: 2.0, right: 2.0, bottom: 2.0, left: 2.0 });
+        assert_eq!(
+            style.border,
+            crate::Edges {
+                top: 2.0,
+                right: 2.0,
+                bottom: 2.0,
+                left: 2.0
+            }
+        );
         assert_eq!(style.border_color, Some([0x12, 0x34, 0x56, 0xff]));
         assert_eq!(style.height, crate::Dimension::Px(6.0));
     }
@@ -9085,7 +9565,10 @@ mod tests {
         assert!(
             matches!(
                 parse_container_query("not (min-width:1px)"),
-                Some(ContainerQuery { name: None, condition: Some(ContainerQueryExpr::Not(_)) })
+                Some(ContainerQuery {
+                    name: None,
+                    condition: Some(ContainerQueryExpr::Not(_))
+                })
             ),
             "`not` is reserved as a name but valid as the unary query operator"
         );
@@ -9105,7 +9588,10 @@ mod tests {
         assert_eq!(queries.len(), 2);
         assert_eq!(queries[0].condition, Some(ContainerQueryExpr::Unknown));
         assert_eq!(queries[1].name.as_deref(), Some("main"));
-        assert!(matches!(queries[1].condition, Some(ContainerQueryExpr::Feature(_))));
+        assert!(matches!(
+            queries[1].condition,
+            Some(ContainerQueryExpr::Feature(_))
+        ));
 
         let mut conditions = condition_arena_root();
         let parsed = parse_stylesheet_for_viewport_preserving_containers(
@@ -9191,7 +9677,8 @@ mod tests {
 
     #[test]
     fn container_evaluator_honors_tailwind_threshold_and_cache() {
-        let tree = bun_browser_dom::parse_html(r#"<div id="container"><div id="target"></div></div>"#);
+        let tree =
+            bun_browser_dom::parse_html(r#"<div id="container"><div id="target"></div></div>"#);
         let container = tree.get_element_by_id("container").unwrap();
         let target = tree.get_element_by_id("target").unwrap();
         let sheet = Stylesheet::parse(
@@ -9207,7 +9694,10 @@ mod tests {
         );
 
         let snapshot = |width| {
-            let mut snapshot = ContainerSnapshot { root_font_size: 16.0, ..Default::default() };
+            let mut snapshot = ContainerSnapshot {
+                root_font_size: 16.0,
+                ..Default::default()
+            };
             snapshot.boxes.insert(
                 container,
                 container_box(crate::ContainerType::InlineSize, &[], width, 16.0),
@@ -9227,7 +9717,8 @@ mod tests {
 
     #[test]
     fn container_evaluator_matches_selector_before_ancestor_lookup() {
-        let tree = bun_browser_dom::parse_html(r#"<div id="container"><div id="target"></div></div>"#);
+        let tree =
+            bun_browser_dom::parse_html(r#"<div id="container"><div id="target"></div></div>"#);
         let container = tree.get_element_by_id("container").unwrap();
         let target = tree.get_element_by_id("target").unwrap();
         let sheet = Stylesheet::parse(
@@ -9239,10 +9730,14 @@ mod tests {
             "#
             .to_string()],
         );
-        let mut snapshot = ContainerSnapshot { root_font_size: 16.0, ..Default::default() };
-        snapshot
-            .boxes
-            .insert(container, container_box(crate::ContainerType::InlineSize, &[], 500.0, 16.0));
+        let mut snapshot = ContainerSnapshot {
+            root_font_size: 16.0,
+            ..Default::default()
+        };
+        snapshot.boxes.insert(
+            container,
+            container_box(crate::ContainerType::InlineSize, &[], 500.0, 16.0),
+        );
         let (_, signature, stats) = evaluate_container_styles(&tree, &sheet, target, &snapshot);
         assert_eq!(stats.evaluations, 0);
         assert_eq!(stats.ancestor_steps, 0);
@@ -9266,7 +9761,10 @@ mod tests {
             "#
             .to_string()],
         );
-        let mut snapshot = ContainerSnapshot { root_font_size: 16.0, ..Default::default() };
+        let mut snapshot = ContainerSnapshot {
+            root_font_size: 16.0,
+            ..Default::default()
+        };
         snapshot.boxes.insert(
             outer,
             container_box(crate::ContainerType::InlineSize, &["shell"], 600.0, 16.0),
@@ -9283,7 +9781,8 @@ mod tests {
 
     #[test]
     fn container_query_em_uses_container_font_and_rem_uses_root_font() {
-        let tree = bun_browser_dom::parse_html(r#"<div id="container"><div id="target"></div></div>"#);
+        let tree =
+            bun_browser_dom::parse_html(r#"<div id="container"><div id="target"></div></div>"#);
         let container = tree.get_element_by_id("container").unwrap();
         let target = tree.get_element_by_id("target").unwrap();
         let sheet = Stylesheet::parse(
@@ -9295,10 +9794,14 @@ mod tests {
             "#
             .to_string()],
         );
-        let mut snapshot = ContainerSnapshot { root_font_size: 20.0, ..Default::default() };
-        snapshot
-            .boxes
-            .insert(container, container_box(crate::ContainerType::InlineSize, &[], 400.0, 10.0));
+        let mut snapshot = ContainerSnapshot {
+            root_font_size: 20.0,
+            ..Default::default()
+        };
+        snapshot.boxes.insert(
+            container,
+            container_box(crate::ContainerType::InlineSize, &[], 400.0, 10.0),
+        );
         let (style, ..) = evaluate_container_styles(&tree, &sheet, target, &snapshot);
         assert_eq!(style.width, crate::Dimension::Px(3.0));
         assert_eq!(style.height, crate::Dimension::Px(1.0));
@@ -9340,14 +9843,22 @@ mod tests {
             .to_string()],
         );
         let snapshot = |inner_width| {
-            let mut snapshot = ContainerSnapshot { root_font_size: 16.0, ..Default::default() };
+            let mut snapshot = ContainerSnapshot {
+                root_font_size: 16.0,
+                ..Default::default()
+            };
             snapshot.boxes.insert(
                 outer,
                 container_box(crate::ContainerType::InlineSize, &["outer"], 600.0, 16.0),
             );
             snapshot.boxes.insert(
                 inner,
-                container_box(crate::ContainerType::InlineSize, &["inner"], inner_width, 16.0),
+                container_box(
+                    crate::ContainerType::InlineSize,
+                    &["inner"],
+                    inner_width,
+                    16.0,
+                ),
             );
             snapshot
         };
@@ -9359,7 +9870,8 @@ mod tests {
 
     #[test]
     fn unknown_container_alternative_does_not_mask_true_alternative() {
-        let tree = bun_browser_dom::parse_html(r#"<div id="container"><div id="target"></div></div>"#);
+        let tree =
+            bun_browser_dom::parse_html(r#"<div id="container"><div id="target"></div></div>"#);
         let container = tree.get_element_by_id("container").unwrap();
         let target = tree.get_element_by_id("target").unwrap();
         let sheet = Stylesheet::parse(
@@ -9372,10 +9884,14 @@ mod tests {
             "#
             .to_string()],
         );
-        let mut snapshot = ContainerSnapshot { root_font_size: 16.0, ..Default::default() };
-        snapshot
-            .boxes
-            .insert(container, container_box(crate::ContainerType::InlineSize, &[], 100.0, 16.0));
+        let mut snapshot = ContainerSnapshot {
+            root_font_size: 16.0,
+            ..Default::default()
+        };
+        snapshot.boxes.insert(
+            container,
+            container_box(crate::ContainerType::InlineSize, &[], 100.0, 16.0),
+        );
         let (style, ..) = evaluate_container_styles(&tree, &sheet, target, &snapshot);
         assert_eq!(style.width, crate::Dimension::Px(7.0));
     }
@@ -9443,9 +9959,12 @@ mod tests {
                 "{query}"
             );
         }
-        for query in
-            ["(width > 200px)", "(width < 200px)", "(200px < width < 300px)", "(height > 100px)"]
-        {
+        for query in [
+            "(width > 200px)",
+            "(width < 200px)",
+            "(200px < width < 300px)",
+            "(height > 100px)",
+        ] {
             let expression = parse_container_query_expr(query).expect("valid range query");
             assert_eq!(
                 evaluate_container_query_expr(&expression, &container, 16.0),
@@ -9468,7 +9987,8 @@ mod tests {
 
     #[test]
     fn block_axis_query_requires_size_container() {
-        let tree = bun_browser_dom::parse_html(r#"<div id="container"><div id="target"></div></div>"#);
+        let tree =
+            bun_browser_dom::parse_html(r#"<div id="container"><div id="target"></div></div>"#);
         let container = tree.get_element_by_id("container").unwrap();
         let target = tree.get_element_by_id("target").unwrap();
         let sheet = Stylesheet::parse(
@@ -9480,8 +10000,13 @@ mod tests {
             .to_string()],
         );
         let snapshot = |container_type| {
-            let mut snapshot = ContainerSnapshot { root_font_size: 16.0, ..Default::default() };
-            snapshot.boxes.insert(container, container_box(container_type, &[], 300.0, 16.0));
+            let mut snapshot = ContainerSnapshot {
+                root_font_size: 16.0,
+                ..Default::default()
+            };
+            snapshot
+                .boxes
+                .insert(container, container_box(container_type, &[], 300.0, 16.0));
             snapshot
         };
         let (inline_only, ..) = evaluate_container_styles(
@@ -9574,7 +10099,9 @@ mod tests {
             ContainerConditionId::NONE,
         );
         assert_eq!(conditions.len(), 1);
-        assert!(rich.iter().all(|rule| rule.container_condition_id == ContainerConditionId::NONE));
+        assert!(rich
+            .iter()
+            .all(|rule| rule.container_condition_id == ContainerConditionId::NONE));
     }
 
     #[test]
@@ -9582,8 +10109,12 @@ mod tests {
         let legacy_probe = "(((-webkit-hyphens:none)) and (not (margin-trim:inline))) or \
                             ((-moz-orient:inline) and (not (color:rgb(from red r g b))))";
         assert!(!supports_condition_applies(legacy_probe));
-        assert!(supports_condition_applies("(display:grid) and (selector(.card > *))"));
-        assert!(supports_condition_applies("not (unknown-engine-prop:value)"));
+        assert!(supports_condition_applies(
+            "(display:grid) and (selector(.card > *))"
+        ));
+        assert!(supports_condition_applies(
+            "not (unknown-engine-prop:value)"
+        ));
 
         let css = format!(
             "@supports {legacy_probe} {{ .legacy {{ line-height:1.5 }} }}@supports (display:grid) \
@@ -9607,8 +10138,12 @@ mod tests {
 
     #[test]
     fn supports_conditions_reject_invalid_boolean_grammar() {
-        assert!(supports_condition_applies("(display:grid) and (word-break:break-all)"));
-        assert!(supports_condition_applies("(display:grid) or (unknown:value)"));
+        assert!(supports_condition_applies(
+            "(display:grid) and (word-break:break-all)"
+        ));
+        assert!(supports_condition_applies(
+            "(display:grid) or (unknown:value)"
+        ));
         assert!(!supports_condition_applies(
             "(display:grid) and (word-break:break-all) or (display:flex)"
         ));
@@ -9640,22 +10175,49 @@ mod tests {
 
     #[test]
     fn media_breakpoints_support_font_relative_lengths_and_ranges() {
-        assert!(!media_query_applies_for_viewport("@media (min-width: 64rem)", (900.0, 1000.0)));
-        assert!(media_query_applies_for_viewport("@media (min-width: 64rem)", (1024.0, 768.0)));
-        assert!(media_query_applies_for_viewport("@media (56.25rem <= width)", (900.0, 1000.0)));
+        assert!(!media_query_applies_for_viewport(
+            "@media (min-width: 64rem)",
+            (900.0, 1000.0)
+        ));
+        assert!(media_query_applies_for_viewport(
+            "@media (min-width: 64rem)",
+            (1024.0, 768.0)
+        ));
+        assert!(media_query_applies_for_viewport(
+            "@media (56.25rem <= width)",
+            (900.0, 1000.0)
+        ));
         assert!(!media_query_applies_for_viewport(
             "@media (width > calc(60em - 1px))",
             (900.0, 1000.0)
         ));
         let two_sidebar_breakpoint = "@media (width < calc(1rem * 2 + (15rem + 2rem) * 2 + 31rem))";
-        assert!(media_query_applies_for_viewport(two_sidebar_breakpoint, (1000.0, 900.0)));
-        assert!(!media_query_applies_for_viewport(two_sidebar_breakpoint, (1440.0, 1000.0)));
+        assert!(media_query_applies_for_viewport(
+            two_sidebar_breakpoint,
+            (1000.0, 900.0)
+        ));
+        assert!(!media_query_applies_for_viewport(
+            two_sidebar_breakpoint,
+            (1440.0, 1000.0)
+        ));
         let left_width_calc = "@media (calc(1rem * 2 + (15rem + 2rem) * 2 + 31rem) <= width)";
-        assert!(!media_query_applies_for_viewport(left_width_calc, (1000.0, 900.0)));
-        assert!(media_query_applies_for_viewport(left_width_calc, (1440.0, 1000.0)));
+        assert!(!media_query_applies_for_viewport(
+            left_width_calc,
+            (1000.0, 900.0)
+        ));
+        assert!(media_query_applies_for_viewport(
+            left_width_calc,
+            (1440.0, 1000.0)
+        ));
         let left_height_calc = "@media (calc(40rem + (2rem * 2)) < height)";
-        assert!(!media_query_applies_for_viewport(left_height_calc, (1280.0, 704.0)));
-        assert!(media_query_applies_for_viewport(left_height_calc, (1280.0, 705.0)));
+        assert!(!media_query_applies_for_viewport(
+            left_height_calc,
+            (1280.0, 704.0)
+        ));
+        assert!(media_query_applies_for_viewport(
+            left_height_calc,
+            (1280.0, 705.0)
+        ));
     }
 
     #[test]
@@ -9675,8 +10237,14 @@ mod tests {
         assert!(applies("speech, print", CssMediaType::Print));
         assert!(!applies("speech, print", CssMediaType::Screen));
         assert!(applies("print and (min-width: 700px)", CssMediaType::Print));
-        assert!(!applies("print and (min-width: 900px)", CssMediaType::Print));
-        assert!(applies("not all and (min-width: 900px)", CssMediaType::Screen));
+        assert!(!applies(
+            "print and (min-width: 900px)",
+            CssMediaType::Print
+        ));
+        assert!(applies(
+            "not all and (min-width: 900px)",
+            CssMediaType::Screen
+        ));
     }
 
     #[test]
@@ -9700,8 +10268,12 @@ mod tests {
             }
         "#;
         let desktop = parse_stylesheet_for_viewport(css, (1280.0, 900.0));
-        assert!(!desktop.iter().any(|(selector, _)| selector == r".max-sm\:inline"));
-        assert!(desktop.iter().any(|(selector, _)| selector == r".xl\:inline"));
+        assert!(!desktop
+            .iter()
+            .any(|(selector, _)| selector == r".max-sm\:inline"));
+        assert!(desktop
+            .iter()
+            .any(|(selector, _)| selector == r".xl\:inline"));
     }
 
     #[test]
@@ -9728,9 +10300,13 @@ mod tests {
         assert!(narrow.iter().any(|(selector, declarations)| {
             selector == "header .menu-toolkit" && declarations.contains("display: none")
         }));
-        assert!(!narrow.iter().any(|(_, declarations)| declarations.contains("display: flex")));
+        assert!(!narrow
+            .iter()
+            .any(|(_, declarations)| declarations.contains("display: flex")));
 
         let wide = parse_stylesheet_for_viewport(css, (1024.0, 768.0));
-        assert!(wide.iter().any(|(_, declarations)| declarations.contains("display: flex")));
+        assert!(wide
+            .iter()
+            .any(|(_, declarations)| declarations.contains("display: flex")));
     }
 }

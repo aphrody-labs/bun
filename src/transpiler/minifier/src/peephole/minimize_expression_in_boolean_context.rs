@@ -29,9 +29,19 @@ impl<'a> PeepholeOptimizations {
                     && e.left.is_int32_or_uint32(ctx) =>
             {
                 ctx.replace_expression_with(expr, |e, ctx| {
-                    let Expression::BinaryExpression(e) = e else { unreachable!() };
-                    let BinaryExpression { operator: op, left, span, .. } = e.unbox();
-                    if matches!(op, BinaryOperator::StrictInequality | BinaryOperator::Inequality) {
+                    let Expression::BinaryExpression(e) = e else {
+                        unreachable!()
+                    };
+                    let BinaryExpression {
+                        operator: op,
+                        left,
+                        span,
+                        ..
+                    } = e.unbox();
+                    if matches!(
+                        op,
+                        BinaryOperator::StrictInequality | BinaryOperator::Inequality
+                    ) {
                         // `if ((a | b) !== 0)` -> `if (a | b);`
                         left
                     } else {
@@ -48,7 +58,9 @@ impl<'a> PeepholeOptimizations {
                 if e.right.get_side_free_boolean_value(ctx) == Some(true) {
                     ctx.drop_expression(&e.right);
                     ctx.replace_expression_with(expr, |e, _ctx| {
-                        let Expression::LogicalExpression(e) = e else { unreachable!() };
+                        let Expression::LogicalExpression(e) = e else {
+                            unreachable!()
+                        };
                         e.unbox().left
                     });
                 }
@@ -61,7 +73,9 @@ impl<'a> PeepholeOptimizations {
                 if e.right.get_side_free_boolean_value(ctx) == Some(false) {
                     ctx.drop_expression(&e.right);
                     ctx.replace_expression_with(expr, |e, _ctx| {
-                        let Expression::LogicalExpression(e) = e else { unreachable!() };
+                        let Expression::LogicalExpression(e) = e else {
+                            unreachable!()
+                        };
                         e.unbox().left
                     });
                 }
@@ -73,14 +87,24 @@ impl<'a> PeepholeOptimizations {
                 if let Some(boolean) = e.consequent.get_side_free_boolean_value(ctx) {
                     ctx.drop_expression(&e.consequent);
                     ctx.replace_expression_with(expr, |e, ctx| {
-                        let Expression::ConditionalExpression(e) = e else { unreachable!() };
-                        let ConditionalExpression { test, alternate, span, .. } = e.unbox();
+                        let Expression::ConditionalExpression(e) = e else {
+                            unreachable!()
+                        };
+                        let ConditionalExpression {
+                            test,
+                            alternate,
+                            span,
+                            ..
+                        } = e.unbox();
                         let (op, left) = if boolean {
                             // "if (anything1 ? truthyNoSideEffects : anything2)" => "if (anything1 || anything2)"
                             (LogicalOperator::Or, test)
                         } else {
                             // "if (anything1 ? falsyNoSideEffects : anything2)" => "if (!anything1 && anything2)"
-                            (LogicalOperator::And, Self::minimize_not(test.span(), test, ctx, true))
+                            (
+                                LogicalOperator::And,
+                                Self::minimize_not(test.span(), test, ctx, true),
+                            )
                         };
                         Self::join_with_left_associative_op(span, op, left, alternate, ctx)
                     });
@@ -89,11 +113,21 @@ impl<'a> PeepholeOptimizations {
                 if let Some(boolean) = e.alternate.get_side_free_boolean_value(ctx) {
                     ctx.drop_expression(&e.alternate);
                     ctx.replace_expression_with(expr, |e, ctx| {
-                        let Expression::ConditionalExpression(e) = e else { unreachable!() };
-                        let ConditionalExpression { test, consequent, span, .. } = e.unbox();
+                        let Expression::ConditionalExpression(e) = e else {
+                            unreachable!()
+                        };
+                        let ConditionalExpression {
+                            test,
+                            consequent,
+                            span,
+                            ..
+                        } = e.unbox();
                         let (op, left) = if boolean {
                             // "if (anything1 ? anything2 : truthyNoSideEffects)" => "if (!anything1 || anything2)"
-                            (LogicalOperator::Or, Self::minimize_not(test.span(), test, ctx, true))
+                            (
+                                LogicalOperator::Or,
+                                Self::minimize_not(test.span(), test, ctx, true),
+                            )
                         } else {
                             // "if (anything1 ? anything2 : falsyNoSideEffects)" => "if (anything1 && anything2)"
                             (LogicalOperator::And, test)
@@ -116,7 +150,11 @@ impl<'a> PeepholeOptimizations {
                 let reference_id = ident.reference_id();
                 let span = ident.span;
                 if let Some(symbol_id) = ctx.scoping().get_reference(reference_id).symbol_id()
-                    && ctx.state.symbols.value(symbol_id).is_some_and(|sv| sv.boolean_falsy)
+                    && ctx
+                        .state
+                        .symbols
+                        .value(symbol_id)
+                        .is_some_and(|sv| sv.boolean_falsy)
                 {
                     let new_expr = Expression::new_number_0(span, ctx);
                     ctx.replace_expression(expr, new_expr);

@@ -38,7 +38,10 @@ pub fn outline_functions<'a>(
         /// Recurse into an inner function (FunctionExpression or ObjectMethod)
         Recurse(FunctionId),
         /// Recurse then outline a FunctionExpression
-        RecurseAndOutline { instr_idx: usize, function_id: FunctionId },
+        RecurseAndOutline {
+            instr_idx: usize,
+            function_id: FunctionId,
+        },
     }
 
     let mut actions: Vec<Action> = Vec::new();
@@ -83,15 +86,22 @@ pub fn outline_functions<'a>(
     for action in actions {
         match action {
             Action::Recurse(function_id) => {
-                let mut inner_func =
-                    replace(&mut env.functions[function_id], placeholder_function(env.allocator));
+                let mut inner_func = replace(
+                    &mut env.functions[function_id],
+                    placeholder_function(env.allocator),
+                );
                 outline_functions(&mut inner_func, env, fbt_operands);
                 env.functions[function_id] = inner_func;
             }
-            Action::RecurseAndOutline { instr_idx, function_id } => {
+            Action::RecurseAndOutline {
+                instr_idx,
+                function_id,
+            } => {
                 // First recurse into the inner function (depth-first)
-                let mut inner_func =
-                    replace(&mut env.functions[function_id], placeholder_function(env.allocator));
+                let mut inner_func = replace(
+                    &mut env.functions[function_id],
+                    placeholder_function(env.allocator),
+                );
                 outline_functions(&mut inner_func, env, fbt_operands);
                 env.functions[function_id] = inner_func;
 
@@ -110,7 +120,9 @@ pub fn outline_functions<'a>(
                 // Replace the instruction value with LoadGlobal
                 let span = func.instructions[instr_idx].value.span().cloned();
                 func.instructions[instr_idx].value = InstructionValue::LoadGlobal {
-                    binding: NonLocalBinding::Global { name: generated_name },
+                    binding: NonLocalBinding::Global {
+                        name: generated_name,
+                    },
                     span,
                 };
             }

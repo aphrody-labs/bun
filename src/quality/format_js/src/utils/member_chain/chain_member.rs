@@ -77,7 +77,9 @@ impl<'a> Format<'a, JsFormatContext<'a>> for ChainMember<'a, '_> {
                     f,
                     [
                         FormatLeadingComments::Comments(
-                            f.context().comments().comments_before(member.property().span().start)
+                            f.context()
+                                .comments()
+                                .comments_before(member.property().span().start)
                         ),
                         member.optional().then_some("?"),
                         ".",
@@ -99,7 +101,10 @@ impl<'a> Format<'a, JsFormatContext<'a>> for ChainMember<'a, '_> {
                 write!(f, ["!"]);
                 e.format_trailing_comments(f);
             }
-            Self::CallExpression { expression, position } => match *position {
+            Self::CallExpression {
+                expression,
+                position,
+            } => match *position {
                 CallExpressionPosition::Start => write!(f, expression),
                 CallExpressionPosition::Middle => {
                     expression.format_leading_comments(f);
@@ -149,15 +154,24 @@ impl<'a> Deref for FormatComputedMemberExpressionWithoutObject<'a, '_> {
 
 impl<'a> Format<'a, JsFormatContext<'a>> for FormatComputedMemberExpressionWithoutObject<'a, '_> {
     fn fmt(&self, f: &mut JsFormatter<'_, 'a>) {
-        let comments = f.context().comments().comments_before_character(self.span.start, b'[');
+        let comments = f
+            .context()
+            .comments()
+            .comments_before_character(self.span.start, b'[');
         if !comments.is_empty() {
-            write!(f, [soft_line_break(), FormatLeadingComments::Comments(comments)]);
+            write!(
+                f,
+                [soft_line_break(), FormatLeadingComments::Comments(comments)]
+            );
         }
 
         if matches!(self.expression, Expression::NumericLiteral(_))
             && !f.comments().has_comment_before(self.span.end)
         {
-            write!(f, [self.optional().then_some("?."), "[", self.expression(), "]"]);
+            write!(
+                f,
+                [self.optional().then_some("?."), "[", self.expression(), "]"]
+            );
         } else {
             write!(
                 f,

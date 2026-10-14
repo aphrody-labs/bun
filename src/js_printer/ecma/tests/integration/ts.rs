@@ -48,18 +48,30 @@ fn accessor_modifier_combinations() {
         "abstract class C extends B {\n\tprotected abstract override accessor x: number;\n}\n",
         "abstract class C extends B{protected abstract override accessor x:number}",
     );
-    check("class C {\n\tpublic static accessor x = 1;\n}\n", "class C{public static accessor x=1}");
+    check(
+        "class C {\n\tpublic static accessor x = 1;\n}\n",
+        "class C{public static accessor x=1}",
+    );
     check(
         "class C {\n\tprotected static accessor x = 1;\n}\n",
         "class C{protected static accessor x=1}",
     );
-    check("class C {\n\tprivate accessor x = 1;\n}\n", "class C{private accessor x=1}");
+    check(
+        "class C {\n\tprivate accessor x = 1;\n}\n",
+        "class C{private accessor x=1}",
+    );
     check(
         "class C extends B {\n\tpublic override accessor x = 1;\n}\n",
         "class C extends B{public override accessor x=1}",
     );
-    check("class C {\n\taccessor #x = 1;\n}\n", "class C{accessor#x=1}");
-    check("class C {\n\tpublic accessor x!: number;\n}\n", "class C{public accessor x!:number}");
+    check(
+        "class C {\n\taccessor #x = 1;\n}\n",
+        "class C{accessor#x=1}",
+    );
+    check(
+        "class C {\n\tpublic accessor x!: number;\n}\n",
+        "class C{public accessor x!:number}",
+    );
 }
 
 #[test]
@@ -109,22 +121,58 @@ fn cases() {
 
 #[test]
 fn quoted_type_import_names() {
-    test(r#"import type { "foo" as foo } from "m";"#, "import type { foo } from \"m\";\n");
-    test(r#"import { type "foo" as foo } from "m";"#, "import { type foo } from \"m\";\n");
-    test(r#"import type { "a\u0062" as ab } from "m";"#, "import type { ab } from \"m\";\n");
-    test(r#"import { type "a\u0062" as ab } from "m";"#, "import { type ab } from \"m\";\n");
-    test(r#"import type { foo as foo } from "m";"#, "import type { foo } from \"m\";\n");
-    test(r#"import { type foo as foo } from "m";"#, "import { type foo } from \"m\";\n");
+    test(
+        r#"import type { "foo" as foo } from "m";"#,
+        "import type { foo } from \"m\";\n",
+    );
+    test(
+        r#"import { type "foo" as foo } from "m";"#,
+        "import { type foo } from \"m\";\n",
+    );
+    test(
+        r#"import type { "a\u0062" as ab } from "m";"#,
+        "import type { ab } from \"m\";\n",
+    );
+    test(
+        r#"import { type "a\u0062" as ab } from "m";"#,
+        "import { type ab } from \"m\";\n",
+    );
+    test(
+        r#"import type { foo as foo } from "m";"#,
+        "import type { foo } from \"m\";\n",
+    );
+    test(
+        r#"import { type foo as foo } from "m";"#,
+        "import { type foo } from \"m\";\n",
+    );
 
     let min = |source: &str, expected: &str| {
         test_options_with_source_type(source, expected, SourceType::ts(), CodegenOptions::minify());
     };
-    min(r#"import type { "foo" as foo } from "m";"#, r#"import type{foo}from"m";"#);
-    min(r#"import { type "foo" as foo } from "m";"#, r#"import{type foo}from"m";"#);
-    min(r#"import type { "a\u0062" as ab } from "m";"#, r#"import type{ab}from"m";"#);
-    min(r#"import { type "a\u0062" as ab } from "m";"#, r#"import{type ab}from"m";"#);
-    min(r#"import type { foo as foo } from "m";"#, r#"import type{foo}from"m";"#);
-    min(r#"import { type foo as foo } from "m";"#, r#"import{type foo}from"m";"#);
+    min(
+        r#"import type { "foo" as foo } from "m";"#,
+        r#"import type{foo}from"m";"#,
+    );
+    min(
+        r#"import { type "foo" as foo } from "m";"#,
+        r#"import{type foo}from"m";"#,
+    );
+    min(
+        r#"import type { "a\u0062" as ab } from "m";"#,
+        r#"import type{ab}from"m";"#,
+    );
+    min(
+        r#"import { type "a\u0062" as ab } from "m";"#,
+        r#"import{type ab}from"m";"#,
+    );
+    min(
+        r#"import type { foo as foo } from "m";"#,
+        r#"import type{foo}from"m";"#,
+    );
+    min(
+        r#"import { type foo as foo } from "m";"#,
+        r#"import{type foo}from"m";"#,
+    );
 }
 
 #[test]
@@ -135,7 +183,10 @@ fn export_default_interface() {
 #[test]
 fn decorators() {
     test_same("@a abstract class C {}\n");
-    test_tsx("@a @b export default abstract class {}", "export default @a @b abstract class {}\n");
+    test_tsx(
+        "@a @b export default abstract class {}",
+        "export default @a @b abstract class {}\n",
+    );
 }
 
 #[test]
@@ -265,8 +316,14 @@ fn minify_export_default() {
         test_options_with_source_type(src, expected, SourceType::ts(), CodegenOptions::minify());
     };
     // A leading `interface`/`abstract`/keyword needs the space; `{`/`<` does not.
-    min("export default interface I { x: number }", "export default interface I{x:number;}");
-    min("export default abstract class {}", "export default abstract class{}");
+    min(
+        "export default interface I { x: number }",
+        "export default interface I{x:number;}",
+    );
+    min(
+        "export default abstract class {}",
+        "export default abstract class{}",
+    );
     min("export default <const>x;", "export default<const>x;");
 }
 
@@ -277,12 +334,18 @@ fn minify_return_type_colon() {
     };
     // No space after `:` in a function return type / `this` param annotation,
     // matching method/arrow return types.
-    min("function f(): Promise<void> {}", "function f():Promise<void>{}");
+    min(
+        "function f(): Promise<void> {}",
+        "function f():Promise<void>{}",
+    );
     min(
         "function g(a: string): boolean { return true; }",
         "function g(a:string):boolean{return true}",
     );
-    min("function h(this: Foo): void {}", "function h(this:Foo):void{}");
+    min(
+        "function h(this: Foo): void {}",
+        "function h(this:Foo):void{}",
+    );
 }
 
 #[test]
@@ -295,10 +358,19 @@ fn minify_ts_type_space() {
     min("type T = A extends {} ? B : C;", "type T=A extends{}?B:C;");
     // Constructor type: no space after `new` before `(`/`<`.
     min("type N = new () => Foo;", "type N=new()=>Foo;");
-    min("type N = abstract new (x: number) => Foo;", "type N=abstract new(x:number)=>Foo;");
+    min(
+        "type N = abstract new (x: number) => Foo;",
+        "type N=abstract new(x:number)=>Foo;",
+    );
     // A JSDoc-nullable branch must not merge into `??`.
-    min("type T = A extends B ? ?C : D;", "type T=A extends B? ?C:D;");
-    min("type T = A extends C? ? D : E;", "type T=A extends C? ?D:E;");
+    min(
+        "type T = A extends B ? ?C : D;",
+        "type T=A extends B? ?C:D;",
+    );
+    min(
+        "type T = A extends C? ? D : E;",
+        "type T=A extends C? ?D:E;",
+    );
 }
 
 #[test]
@@ -357,19 +429,43 @@ fn minify_conditional_type_space() {
         test_options_with_source_type(src, expected, SourceType::ts(), CodegenOptions::minify());
     };
     // `extends`/`?`/`:` need no surrounding space next to non-identifier tokens.
-    min("type A<T> = T extends string ? 1 : 2;", "type A<T>=T extends string?1:2;");
-    min("type B<T> = Foo<T> extends string ? X : Y;", "type B<T>=Foo<T>extends string?X:Y;");
-    min("type C<T> = T[K] extends string ? X : Y;", "type C<T>=T[K]extends string?X:Y;");
+    min(
+        "type A<T> = T extends string ? 1 : 2;",
+        "type A<T>=T extends string?1:2;",
+    );
+    min(
+        "type B<T> = Foo<T> extends string ? X : Y;",
+        "type B<T>=Foo<T>extends string?X:Y;",
+    );
+    min(
+        "type C<T> = T[K] extends string ? X : Y;",
+        "type C<T>=T[K]extends string?X:Y;",
+    );
     // A prefix JSDoc nullable true branch must keep the `? ` separator (no `??`).
-    min("type D<T> = T extends B ? ?C : D;", "type D<T>=T extends B? ?C:D;");
+    min(
+        "type D<T> = T extends B ? ?C : D;",
+        "type D<T>=T extends B? ?C:D;",
+    );
     // `extends`/`keyof` need no trailing space before a punctuation-starting type.
-    min("type E<T> = T extends [infer U] ? U : never;", "type E<T>=T extends[infer U]?U:never;");
-    min("type F<T> = T extends { a: 1 } ? 1 : 2;", "type F<T>=T extends{a:1;}?1:2;");
+    min(
+        "type E<T> = T extends [infer U] ? U : never;",
+        "type E<T>=T extends[infer U]?U:never;",
+    );
+    min(
+        "type F<T> = T extends { a: 1 } ? 1 : 2;",
+        "type F<T>=T extends{a:1;}?1:2;",
+    );
     min("type G = keyof [a, b];", "type G=keyof[a,b];");
     // ...but keep it before an identifier-starting type.
-    min("type H<T> = T extends Base ? 1 : 2;", "type H<T>=T extends Base?1:2;");
+    min(
+        "type H<T> = T extends Base ? 1 : 2;",
+        "type H<T>=T extends Base?1:2;",
+    );
     // `readonly`/`extends` before a parenthesized array element need no trailing space.
-    min("type I<T> = readonly (keyof T)[];", "type I<T>=readonly(keyof T)[];");
+    min(
+        "type I<T> = readonly (keyof T)[];",
+        "type I<T>=readonly(keyof T)[];",
+    );
     min(
         "type J<T> = T extends (infer A)[] ? A : never;",
         "type J<T>=T extends(infer A)[]?A:never;",
@@ -377,13 +473,22 @@ fn minify_conditional_type_space() {
     min("type K = readonly string[];", "type K=readonly string[];");
     // `new` constructor type needs no space before `(`/`<`.
     min("type L = new () => Foo;", "type L=new()=>Foo;");
-    min("type M = abstract new (x: number) => Bar;", "type M=abstract new(x:number)=>Bar;");
+    min(
+        "type M = abstract new (x: number) => Bar;",
+        "type M=abstract new(x:number)=>Bar;",
+    );
     // A type-parameter constraint needs no trailing space before a punctuation-starting type.
-    min("type N<T extends (...a: any) => any> = T;", "type N<T extends(...a:any)=>any>=T;");
+    min(
+        "type N<T extends (...a: any) => any> = T;",
+        "type N<T extends(...a:any)=>any>=T;",
+    );
     min("type O<T extends [a, b]> = T;", "type O<T extends[a,b]>=T;");
     min("type P<T extends Base> = T;", "type P<T extends Base>=T;");
     // `as`/`satisfies` before a union/intersection whose first member starts with punctuation.
-    min("x = res as { a: 1 } | undefined;", "x=res as{a:1;}|undefined;");
+    min(
+        "x = res as { a: 1 } | undefined;",
+        "x=res as{a:1;}|undefined;",
+    );
     min("x = res as Foo | Bar;", "x=res as Foo|Bar;");
 }
 
@@ -394,7 +499,10 @@ fn minify_export_type_star() {
     };
     min("export type * from \"m\";", "export type*from\"m\";");
     min("export * from \"m\";", "export*from\"m\";");
-    min("export type * as ns from \"m\";", "export type*as ns from\"m\";");
+    min(
+        "export type * as ns from \"m\";",
+        "export type*as ns from\"m\";",
+    );
 }
 
 #[test]
@@ -407,7 +515,10 @@ fn minify_heritage_and_mapped_space() {
         "class A<T> extends Base<T> implements I, J {}",
         "class A<T>extends Base<T>implements I,J{}",
     );
-    min("class B extends Base implements I {}", "class B extends Base implements I{}");
+    min(
+        "class B extends Base implements I {}",
+        "class B extends Base implements I{}",
+    );
     min(
         "interface I<T = string> extends Omit<A, B>, C {}",
         "interface I<T=string>extends Omit<A,B>,C{}",
@@ -488,9 +599,14 @@ fn ts_instantiation_expression() {
 
 #[test]
 fn ts_instantiation_expression_precedence() {
-    for source in
-        ["(f<T>).x", "(f<T>)[x]", "(f<T>)()", "new (f<T>)()", "(f<T>)`text`", "((a ?? b)<T>).x"]
-    {
+    for source in [
+        "(f<T>).x",
+        "(f<T>)[x]",
+        "(f<T>)()",
+        "new (f<T>)()",
+        "(f<T>)`text`",
+        "((a ?? b)<T>).x",
+    ] {
         test_ts(source, &format!("{source};\n"));
         test_idempotency(source);
         test_idempotency_options(source, &CodegenOptions::minify());
@@ -522,7 +638,10 @@ fn ts_satisfies_expression() {
 
 #[test]
 fn type_codegen_with_preserve_parens_off() {
-    let parse_options = ParseOptions { preserve_parens: false, ..Default::default() };
+    let parse_options = ParseOptions {
+        preserve_parens: false,
+        ..Default::default()
+    };
 
     test_with_parse_options(
         "type T = keyof (EventMap & Extra);",
@@ -534,7 +653,11 @@ fn type_codegen_with_preserve_parens_off() {
         "type T = [(Anno | undefined)?];\n",
         parse_options,
     );
-    test_with_parse_options("const foo = (a ?? b)!;", "const foo = (a ?? b)!;\n", parse_options);
+    test_with_parse_options(
+        "const foo = (a ?? b)!;",
+        "const foo = (a ?? b)!;\n",
+        parse_options,
+    );
     test_with_parse_options(
         "type T = (Out & (Step extends A ? B : C)) & (Step extends D ? E : F);",
         "type T = (Out & (Step extends A ? B : C)) & (Step extends D ? E : F);\n",
@@ -547,7 +670,11 @@ fn type_codegen_with_preserve_parens_off() {
     );
     // `type t = (intrinsic)` is a reference to a type named `intrinsic`, but `type t = intrinsic`
     // is the `intrinsic` keyword, so the parentheses must be kept to preserve the meaning.
-    test_with_parse_options("type t = (intrinsic);", "type t = (intrinsic);\n", parse_options);
+    test_with_parse_options(
+        "type t = (intrinsic);",
+        "type t = (intrinsic);\n",
+        parse_options,
+    );
     test_with_parse_options(
         "type t = (intrinsic.foo);",
         "type t = intrinsic.foo;\n",
@@ -555,7 +682,11 @@ fn type_codegen_with_preserve_parens_off() {
     );
     // A leftmost bare `intrinsic` reference inside a compound type must also keep parentheses,
     // otherwise the body re-parses as the `intrinsic` keyword and then fails before `[]`/`|`/`&`/`extends`.
-    test_with_parse_options("type t = (intrinsic)[];", "type t = (intrinsic[]);\n", parse_options);
+    test_with_parse_options(
+        "type t = (intrinsic)[];",
+        "type t = (intrinsic[]);\n",
+        parse_options,
+    );
     test_with_parse_options(
         "type t = (intrinsic)[\"x\"];",
         "type t = (intrinsic[\"x\"]);\n",

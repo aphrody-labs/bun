@@ -44,12 +44,19 @@ fn main() -> std::io::Result<()> {
     println!("Original:\n");
     println!("{source_text}\n");
 
-    let id_ret =
-        IsolatedDeclarations::new(&allocator, IsolatedDeclarationsOptions { strip_internal: true })
-            .build(&ret.program);
+    let id_ret = IsolatedDeclarations::new(
+        &allocator,
+        IsolatedDeclarationsOptions {
+            strip_internal: true,
+        },
+    )
+    .build(&ret.program);
     let printed = Codegen::new()
         .with_options(CodegenOptions {
-            comments: CommentOptions { jsdoc: true, ..CommentOptions::disabled() },
+            comments: CommentOptions {
+                jsdoc: true,
+                ..CommentOptions::disabled()
+            },
             ..CodegenOptions::default()
         })
         .build(&id_ret.program)

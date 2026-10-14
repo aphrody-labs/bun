@@ -41,7 +41,10 @@ impl ManglePropertyCache {
         if let Some(target) = &target
             && !is_valid_property_mangle_cache_target(target)
         {
-            return Err(InvalidManglePropertyCacheTarget { original, target: target.clone() });
+            return Err(InvalidManglePropertyCacheTarget {
+                original,
+                target: target.clone(),
+            });
         }
         self.0.insert(original, target);
         Ok(())
@@ -137,7 +140,9 @@ impl ManglePropertiesOptions {
     ///
     /// Returns the regex parser's message when `include` is invalid.
     pub fn from_pattern(include: &str) -> Result<Self, String> {
-        lazy_regex::Regex::new(include).map(Self::new).map_err(|error| error.to_string())
+        lazy_regex::Regex::new(include)
+            .map(Self::new)
+            .map_err(|error| error.to_string())
     }
 }
 
@@ -151,7 +156,11 @@ fn is_hard_reserved(name: &str) -> bool {
 }
 
 fn numeric_key_string(value: f64) -> String {
-    if value == 0.0 { "0".to_string() } else { value.to_js_string() }
+    if value == 0.0 {
+        "0".to_string()
+    } else {
+        value.to_js_string()
+    }
 }
 
 fn is_canonical_numeric_string(name: &str) -> bool {
@@ -224,7 +233,10 @@ fn is_eligible(options: &ManglePropertiesOptions, name: &str) -> bool {
         || is_canonical_numeric_string(name)
         || options.reserved.contains(name)
         || !options.include.is_match(name)
-        || options.exclude.as_ref().is_some_and(|regex| regex.is_match(name))
+        || options
+            .exclude
+            .as_ref()
+            .is_some_and(|regex| regex.is_match(name))
     {
         return false;
     }
@@ -240,7 +252,12 @@ impl<'o, 'a> PropertyCollector<'o, 'a> {
         key_annotated: &'o FxHashSet<u32>,
         allocator: &'a Allocator,
     ) -> Self {
-        Self { options, key_annotated, allocator, state: PropertyCollectState::new_in(allocator) }
+        Self {
+            options,
+            key_annotated,
+            allocator,
+            state: PropertyCollectState::new_in(allocator),
+        }
     }
 
     fn candidate(&mut self, name: Ident<'a>) {
@@ -430,19 +447,33 @@ fn assign<'a>(
     allocator: &'a Allocator,
 ) -> (PropertyMapping<'a>, ManglePropertyCache) {
     // Eligibility depends only on the name, so evaluate it once after collection.
-    let mut names: Vec<_> =
-        state.frequencies.iter().filter(|(name, _)| is_eligible(options, name.as_str())).collect();
+    let mut names: Vec<_> = state
+        .frequencies
+        .iter()
+        .filter(|(name, _)| is_eligible(options, name.as_str()))
+        .collect();
     names.sort_unstable_by(|(name_a, count_a), (name_b, count_b)| {
-        count_b.cmp(count_a).then_with(|| name_a.as_str().cmp(name_b.as_str()))
+        count_b
+            .cmp(count_a)
+            .then_with(|| name_a.as_str().cmp(name_b.as_str()))
     });
 
     // Generated names must avoid collected names, reservations, cache keys, and pinned targets.
     let mut occupied = ArenaIdentHashSet::from_iter_in(state.occupied.iter().copied(), allocator);
     occupied.extend(state.frequencies.keys().copied());
-    occupied
-        .extend(options.reserved.iter().map(|name| Ident::from_str_in(name.as_str(), &allocator)));
-    occupied
-        .extend(options.cache.0.keys().map(|name| Ident::from_str_in(name.as_str(), &allocator)));
+    occupied.extend(
+        options
+            .reserved
+            .iter()
+            .map(|name| Ident::from_str_in(name.as_str(), &allocator)),
+    );
+    occupied.extend(
+        options
+            .cache
+            .0
+            .keys()
+            .map(|name| Ident::from_str_in(name.as_str(), &allocator)),
+    );
     occupied.extend(
         options
             .cache
@@ -466,13 +497,16 @@ fn assign<'a>(
         let target = loop {
             let candidate = if options.debug {
                 let candidate = debug_name(original.as_str(), debug_attempt, allocator);
-                debug_attempt =
-                    debug_attempt.checked_add(1).expect("debug property name space exhausted");
+                debug_attempt = debug_attempt
+                    .checked_add(1)
+                    .expect("debug property name space exhausted");
                 candidate
             } else {
                 let name = base54(counter);
                 let candidate = Ident::from_str_in(name.as_str(), &allocator);
-                counter = counter.checked_add(1).expect("property name space exhausted");
+                counter = counter
+                    .checked_add(1)
+                    .expect("property name space exhausted");
                 candidate
             };
             if !occupied.contains(&candidate) && !is_hard_reserved(candidate.as_str()) {
@@ -842,7 +876,9 @@ impl<'a> PropertyMangler<'a> {
             let total = self.state.frequencies.entry(name).or_default();
             *total = total.saturating_add(frequency);
         }
-        self.state.occupied.extend(collection.0.occupied.iter().copied());
+        self.state
+            .occupied
+            .extend(collection.0.occupied.iter().copied());
     }
 
     /// Assign deterministic names by descending occurrence frequency and lexical tie-break.
@@ -981,12 +1017,19 @@ mod tests {
     fn invalid_cache_targets_cannot_enter_the_rust_engine() {
         let mut cache = ManglePropertyCache::default();
         for target in ["a-b", "__proto__", "constructor", "prototype", ""] {
-            let error = cache.insert("_field".into(), Some(target.into())).unwrap_err();
+            let error = cache
+                .insert("_field".into(), Some(target.into()))
+                .unwrap_err();
             assert_eq!(error.original.as_str(), "_field");
             assert_eq!(error.target.as_str(), target);
             assert!(cache.is_empty());
         }
-        cache.insert("_field".into(), Some("valid$name".into())).unwrap();
-        assert_eq!(cache.get("_field").and_then(Option::as_deref), Some("valid$name"));
+        cache
+            .insert("_field".into(), Some("valid$name".into()))
+            .unwrap();
+        assert_eq!(
+            cache.get("_field").and_then(Option::as_deref),
+            Some("valid$name")
+        );
     }
 }

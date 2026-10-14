@@ -31,7 +31,9 @@ fn main() -> std::io::Result<()> {
 
     let sourcemap = args.contains("--sourcemap");
 
-    let name = args.free_from_str().unwrap_or_else(|_| "test.js".to_string());
+    let name = args
+        .free_from_str()
+        .unwrap_or_else(|_| "test.js".to_string());
     let path = Path::new(&name);
     let sourcemap = sourcemap.then_some(path);
 
@@ -40,7 +42,10 @@ fn main() -> std::io::Result<()> {
     let allocator = Allocator::default();
 
     let mut program = parse(&allocator, &source_text, source_type);
-    let scoping = SemanticBuilder::new().build(&program).semantic.into_scoping();
+    let scoping = SemanticBuilder::new()
+        .build(&program)
+        .semantic
+        .into_scoping();
     let config = ReplaceGlobalDefinesConfig::new(&defines).unwrap();
     let _ = ReplaceGlobalDefines::new(&allocator, config).build(scoping, &mut program);
     let printed = codegen(&program, sourcemap);

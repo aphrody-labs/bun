@@ -200,10 +200,16 @@ impl IdLength {
         // If identifier is all ASCII, then we can use .len() instead of counting graphemes
         let (is_too_long, is_too_short) = if ident_name.is_ascii() {
             let ident_length = ident_name.len();
-            (self.is_too_long(ident_length), self.is_too_short(ident_length))
+            (
+                self.is_too_long(ident_length),
+                self.is_too_short(ident_length),
+            )
         } else {
             let graphemes_length = ident_name.graphemes(true).count();
-            (self.is_too_long(graphemes_length), self.is_too_short(graphemes_length))
+            (
+                self.is_too_long(graphemes_length),
+                self.is_too_short(graphemes_length),
+            )
         };
 
         if !is_too_long && !is_too_short {
@@ -212,7 +218,10 @@ impl IdLength {
 
         let parent_node = ctx.nodes().parent_node(node.id());
         if !self.check_generic
-            && matches!(parent_node.kind(), AstKind::TSTypeParameter(_) | AstKind::TSMappedType(_))
+            && matches!(
+                parent_node.kind(),
+                AstKind::TSTypeParameter(_) | AstKind::TSMappedType(_)
+            )
         {
             return;
         }
@@ -230,8 +239,10 @@ impl IdLength {
                 if let AstKind::ObjectPattern(object_pattern) =
                     ctx.nodes().parent_kind(parent_node.id())
                 {
-                    let binding_property_option =
-                        object_pattern.properties.iter().find(|x| x.span == ident.span);
+                    let binding_property_option = object_pattern
+                        .properties
+                        .iter()
+                        .find(|x| x.span == ident.span);
 
                     if IdLength::is_binding_identifier_or_object_pattern(binding_property_option)
                         && self.properties == AlwaysNever::Never
@@ -262,10 +273,16 @@ impl IdLength {
 
         let (is_too_long, is_too_short) = if ident_name.is_ascii() {
             let ident_length = ident_name.len();
-            (self.is_too_long(ident_length), self.is_too_short(ident_length))
+            (
+                self.is_too_long(ident_length),
+                self.is_too_short(ident_length),
+            )
         } else {
             let graphemes_length = ident_name.graphemes(true).count();
-            (self.is_too_long(graphemes_length), self.is_too_short(graphemes_length))
+            (
+                self.is_too_long(graphemes_length),
+                self.is_too_short(graphemes_length),
+            )
         };
 
         if !is_too_long && !is_too_short {
@@ -370,10 +387,16 @@ impl IdLength {
 
         let (is_too_long, is_too_short) = if ident_name.is_ascii() {
             let ident_length = ident_name.len();
-            (self.is_too_long(ident_length), self.is_too_short(ident_length))
+            (
+                self.is_too_long(ident_length),
+                self.is_too_short(ident_length),
+            )
         } else {
             let graphemes_length = ident_name.graphemes(true).count();
-            (self.is_too_long(graphemes_length), self.is_too_short(graphemes_length))
+            (
+                self.is_too_long(graphemes_length),
+                self.is_too_short(graphemes_length),
+            )
         };
 
         if is_too_long {
@@ -401,7 +424,11 @@ impl IdLength {
         if self.exceptions.iter().any(|exc| exc == identifier) {
             return true;
         }
-        if self.exception_patterns.iter().any(|regex| regex.is_match(identifier)) {
+        if self
+            .exception_patterns
+            .iter()
+            .any(|regex| regex.is_match(identifier))
+        {
             return true;
         }
 
@@ -476,7 +503,10 @@ fn test() {
         ("var x = Foo(42)", Some(serde_json::json!([{ "min": 1 }]))),
         ("var x = Foo(42)", Some(serde_json::json!([{ "min": 0 }]))),
         ("foo.$x = Foo(42)", Some(serde_json::json!([{ "min": 1 }]))),
-        ("var lalala = Foo(42)", Some(serde_json::json!([{ "max": 6 }]))),
+        (
+            "var lalala = Foo(42)",
+            Some(serde_json::json!([{ "max": 6 }])),
+        ),
         (
             "for (var q, h=0; h < 10; h++) { console.log(h); q++; }",
             Some(serde_json::json!([{ "exceptions": ["h", "q"] }])),
@@ -488,31 +518,64 @@ fn test() {
         ("function foo(...args) { }", None), // { "ecmaVersion": 6 },
         ("var { prop } = {};", None),      // { "ecmaVersion": 6 },
         ("var { [a]: prop } = {};", None), // { "ecmaVersion": 6 },
-        ("var { a: foo } = {};", Some(serde_json::json!([{ "min": 3 }]))), // { "ecmaVersion": 6 },
-        ("var { prop: foo } = {};", Some(serde_json::json!([{ "max": 3 }]))), // { "ecmaVersion": 6 },
-        ("var { longName: foo } = {};", Some(serde_json::json!([{ "min": 3, "max": 5 }]))), // { "ecmaVersion": 6 },
-        ("var { foo: a } = {};", Some(serde_json::json!([{ "exceptions": ["a"] }]))), // { "ecmaVersion": 6 },
+        (
+            "var { a: foo } = {};",
+            Some(serde_json::json!([{ "min": 3 }])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "var { prop: foo } = {};",
+            Some(serde_json::json!([{ "max": 3 }])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "var { longName: foo } = {};",
+            Some(serde_json::json!([{ "min": 3, "max": 5 }])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "var { foo: a } = {};",
+            Some(serde_json::json!([{ "exceptions": ["a"] }])),
+        ), // { "ecmaVersion": 6 },
         ("var { a: { b: { c: longName } } } = {};", None), // { "ecmaVersion": 6 },
-        ("({ a: obj.x.y.z } = {});", Some(serde_json::json!([{ "properties": "never" }]))), // { "ecmaVersion": 6 },
+        (
+            "({ a: obj.x.y.z } = {});",
+            Some(serde_json::json!([{ "properties": "never" }])),
+        ), // { "ecmaVersion": 6 },
         ("import something from 'y';", None), // { "ecmaVersion": 6, "sourceType": "module" },
-        ("export var num = 0;", None),        // { "ecmaVersion": 6, "sourceType": "module" },
+        ("export var num = 0;", None),     // { "ecmaVersion": 6, "sourceType": "module" },
         ("import * as something from 'y';", None), // { "ecmaVersion": 6, "sourceType": "module" },
-        ("import { x } from 'y';", None),     // { "ecmaVersion": 6, "sourceType": "module" },
+        ("import { x } from 'y';", None),  // { "ecmaVersion": 6, "sourceType": "module" },
         ("import { x as x } from 'y';", None), // { "ecmaVersion": 6, "sourceType": "module" },
         ("import { 'x' as x } from 'y';", None), // { "ecmaVersion": 2022, "sourceType": "module" },
         ("import { x as foo } from 'y';", None), // { "ecmaVersion": 6, "sourceType": "module" },
-        ("import { longName } from 'y';", Some(serde_json::json!([{ "max": 5 }]))), // { "ecmaVersion": 6, "sourceType": "module" },
-        ("import { x as bar } from 'y';", Some(serde_json::json!([{ "max": 5 }]))), // { "ecmaVersion": 6, "sourceType": "module" },
+        (
+            "import { longName } from 'y';",
+            Some(serde_json::json!([{ "max": 5 }])),
+        ), // { "ecmaVersion": 6, "sourceType": "module" },
+        (
+            "import { x as bar } from 'y';",
+            Some(serde_json::json!([{ "max": 5 }])),
+        ), // { "ecmaVersion": 6, "sourceType": "module" },
         ("({ prop: obj.x.y.something } = {});", None), // { "ecmaVersion": 6 },
-        ("({ prop: obj.longName } = {});", None),      // { "ecmaVersion": 6 },
-        ("var obj = { a: 1, bc: 2 };", Some(serde_json::json!([{ "properties": "never" }]))),
-        ("var obj = { [a]: 2 };", Some(serde_json::json!([{ "properties": "never" }]))), // { "ecmaVersion": 6 },
+        ("({ prop: obj.longName } = {});", None), // { "ecmaVersion": 6 },
+        (
+            "var obj = { a: 1, bc: 2 };",
+            Some(serde_json::json!([{ "properties": "never" }])),
+        ),
+        (
+            "var obj = { [a]: 2 };",
+            Some(serde_json::json!([{ "properties": "never" }])),
+        ), // { "ecmaVersion": 6 },
         (
             "var obj = {}; obj.a = 1; obj.bc = 2;",
             Some(serde_json::json!([{ "properties": "never" }])),
         ),
-        ("({ prop: obj.x } = {});", Some(serde_json::json!([{ "properties": "never" }]))), // { "ecmaVersion": 6 },
-        ("var obj = { aaaaa: 1 };", Some(serde_json::json!([{ "max": 4, "properties": "never" }]))),
+        (
+            "({ prop: obj.x } = {});",
+            Some(serde_json::json!([{ "properties": "never" }])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "var obj = { aaaaa: 1 };",
+            Some(serde_json::json!([{ "max": 4, "properties": "never" }])),
+        ),
         (
             "var obj = {}; obj.aaaaa = 1;",
             Some(serde_json::json!([{ "max": 4, "properties": "never" }])),
@@ -527,10 +590,22 @@ fn test() {
         ), // { "ecmaVersion": 6 },
         ("var arr = [i,j,f,b]", None),    // { "ecmaVersion": 6 },
         ("function foo([arr]) {}", None), // { "ecmaVersion": 6 },
-        ("var {x} = foo;", Some(serde_json::json!([{ "properties": "never" }]))), // { "ecmaVersion": 6 },
-        ("var {x, y: {z}} = foo;", Some(serde_json::json!([{ "properties": "never" }]))), // { "ecmaVersion": 6 },
-        ("let foo = { [a]: 1 };", Some(serde_json::json!([{ "properties": "always" }]))), // { "ecmaVersion": 6 },
-        ("let foo = { [a + b]: 1 };", Some(serde_json::json!([{ "properties": "always" }]))), // { "ecmaVersion": 6 },
+        (
+            "var {x} = foo;",
+            Some(serde_json::json!([{ "properties": "never" }])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "var {x, y: {z}} = foo;",
+            Some(serde_json::json!([{ "properties": "never" }])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "let foo = { [a]: 1 };",
+            Some(serde_json::json!([{ "properties": "always" }])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "let foo = { [a + b]: 1 };",
+            Some(serde_json::json!([{ "properties": "always" }])),
+        ), // { "ecmaVersion": 6 },
         (
             "function BEFORE_send() {};",
             Some(serde_json::json!([{ "min": 3, "max": 5, "exceptionPatterns": ["^BEFORE_"] }])),
@@ -560,9 +635,18 @@ fn test() {
         ("class Foo { #xyz() {} }", None), // { "ecmaVersion": 2022 },
         ("class Foo { xyz = 1 }", None),   // { "ecmaVersion": 2022 },
         ("class Foo { #xyz = 1 }", None),  // { "ecmaVersion": 2022 },
-        ("class Foo { #abc() {} }", Some(serde_json::json!([{ "max": 3 }]))), // { "ecmaVersion": 2022 },
-        ("class Foo { abc = 1 }", Some(serde_json::json!([{ "max": 3 }]))), // { "ecmaVersion": 2022 },
-        ("class Foo { #abc = 1 }", Some(serde_json::json!([{ "max": 3 }]))), // { "ecmaVersion": 2022 },
+        (
+            "class Foo { #abc() {} }",
+            Some(serde_json::json!([{ "max": 3 }])),
+        ), // { "ecmaVersion": 2022 },
+        (
+            "class Foo { abc = 1 }",
+            Some(serde_json::json!([{ "max": 3 }])),
+        ), // { "ecmaVersion": 2022 },
+        (
+            "class Foo { #abc = 1 }",
+            Some(serde_json::json!([{ "max": 3 }])),
+        ), // { "ecmaVersion": 2022 },
         (
             "export type Example<T> = T extends Array<infer U> ? U : never;",
             Some(serde_json::json!([{ "min": 2, "checkGeneric": false }])),
@@ -571,23 +655,74 @@ fn test() {
             "type Foo<T> = { [K in keyof T]: unknown };",
             Some(serde_json::json!([{ "min": 2, "checkGeneric": false }])),
         ),
-        ("var 𠮟 = 2", Some(serde_json::json!([{ "min": 1, "max": 1 }]))), // { "ecmaVersion": 6 },
-        ("var 葛󠄀 = 2", Some(serde_json::json!([{ "min": 1, "max": 1 }]))), // { "ecmaVersion": 6 },
-        ("var a = { 𐌘: 1 };", Some(serde_json::json!([{ "min": 1, "max": 1 }]))), // { "ecmaVersion": 6, },
-        ("(𐌘) => { 𐌘 * 𐌘 };", Some(serde_json::json!([{ "min": 1, "max": 1 }]))), // { "ecmaVersion": 6, },
-        ("class 𠮟 { }", Some(serde_json::json!([{ "min": 1, "max": 1 }]))), // { "ecmaVersion": 6, },
-        ("class F { 𐌘() {} }", Some(serde_json::json!([{ "min": 1, "max": 1 }]))), // { "ecmaVersion": 6, },
-        ("class F { #𐌘() {} }", Some(serde_json::json!([{ "min": 1, "max": 1 }]))), // { "ecmaVersion": 2022, },
-        ("class F { 𐌘 = 1 }", Some(serde_json::json!([{ "min": 1, "max": 1 }]))), // { "ecmaVersion": 2022, },
-        ("class F { #𐌘 = 1 }", Some(serde_json::json!([{ "min": 1, "max": 1 }]))), // { "ecmaVersion": 2022, },
-        ("function f(...𐌘) { }", Some(serde_json::json!([{ "min": 1, "max": 1 }]))), // { "ecmaVersion": 6, },
-        ("function f([𐌘]) { }", Some(serde_json::json!([{ "min": 1, "max": 1 }]))), // { "ecmaVersion": 6, },
-        ("var [ 𐌘 ] = a;", Some(serde_json::json!([{ "min": 1, "max": 1 }]))), // { "ecmaVersion": 6, },
-        ("var { p: [𐌘]} = {};", Some(serde_json::json!([{ "min": 1, "max": 1 }]))), // { "ecmaVersion": 6, },
-        ("function f({𐌘}) { }", Some(serde_json::json!([{ "min": 1, "max": 1 }]))), // { "ecmaVersion": 6, },
-        ("var { 𐌘 } = {};", Some(serde_json::json!([{ "min": 1, "max": 1 }]))), // { "ecmaVersion": 6, },
-        ("var { p: 𐌘} = {};", Some(serde_json::json!([{ "min": 1, "max": 1 }]))), // { "ecmaVersion": 6, },
-        ("({ prop: o.𐌘 } = {});", Some(serde_json::json!([{ "min": 1, "max": 1 }]))), // { "ecmaVersion": 6, },
+        (
+            "var 𠮟 = 2",
+            Some(serde_json::json!([{ "min": 1, "max": 1 }])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "var 葛󠄀 = 2",
+            Some(serde_json::json!([{ "min": 1, "max": 1 }])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "var a = { 𐌘: 1 };",
+            Some(serde_json::json!([{ "min": 1, "max": 1 }])),
+        ), // { "ecmaVersion": 6, },
+        (
+            "(𐌘) => { 𐌘 * 𐌘 };",
+            Some(serde_json::json!([{ "min": 1, "max": 1 }])),
+        ), // { "ecmaVersion": 6, },
+        (
+            "class 𠮟 { }",
+            Some(serde_json::json!([{ "min": 1, "max": 1 }])),
+        ), // { "ecmaVersion": 6, },
+        (
+            "class F { 𐌘() {} }",
+            Some(serde_json::json!([{ "min": 1, "max": 1 }])),
+        ), // { "ecmaVersion": 6, },
+        (
+            "class F { #𐌘() {} }",
+            Some(serde_json::json!([{ "min": 1, "max": 1 }])),
+        ), // { "ecmaVersion": 2022, },
+        (
+            "class F { 𐌘 = 1 }",
+            Some(serde_json::json!([{ "min": 1, "max": 1 }])),
+        ), // { "ecmaVersion": 2022, },
+        (
+            "class F { #𐌘 = 1 }",
+            Some(serde_json::json!([{ "min": 1, "max": 1 }])),
+        ), // { "ecmaVersion": 2022, },
+        (
+            "function f(...𐌘) { }",
+            Some(serde_json::json!([{ "min": 1, "max": 1 }])),
+        ), // { "ecmaVersion": 6, },
+        (
+            "function f([𐌘]) { }",
+            Some(serde_json::json!([{ "min": 1, "max": 1 }])),
+        ), // { "ecmaVersion": 6, },
+        (
+            "var [ 𐌘 ] = a;",
+            Some(serde_json::json!([{ "min": 1, "max": 1 }])),
+        ), // { "ecmaVersion": 6, },
+        (
+            "var { p: [𐌘]} = {};",
+            Some(serde_json::json!([{ "min": 1, "max": 1 }])),
+        ), // { "ecmaVersion": 6, },
+        (
+            "function f({𐌘}) { }",
+            Some(serde_json::json!([{ "min": 1, "max": 1 }])),
+        ), // { "ecmaVersion": 6, },
+        (
+            "var { 𐌘 } = {};",
+            Some(serde_json::json!([{ "min": 1, "max": 1 }])),
+        ), // { "ecmaVersion": 6, },
+        (
+            "var { p: 𐌘} = {};",
+            Some(serde_json::json!([{ "min": 1, "max": 1 }])),
+        ), // { "ecmaVersion": 6, },
+        (
+            "({ prop: o.𐌘 } = {});",
+            Some(serde_json::json!([{ "min": 1, "max": 1 }])),
+        ), // { "ecmaVersion": 6, },
         (
             "import foo from 'foo.json' with { type: 'json' }",
             Some(serde_json::json!([{ "min": 1, "max": 3, "properties": "always" }])),
@@ -600,10 +735,22 @@ fn test() {
             "export { default } from 'foo.json' with { type: 'json' }",
             Some(serde_json::json!([{ "min": 1, "max": 3, "properties": "always" }])),
         ), // { "ecmaVersion": 2025 },
-        ("interface Foo { a: string; }", Some(serde_json::json!([{ "properties": "never" }]))),
-        ("interface Foo { a(): void; }", Some(serde_json::json!([{ "properties": "never" }]))),
-        ("type Foo = { a: string };", Some(serde_json::json!([{ "properties": "never" }]))),
-        ("type Foo = { a(): void };", Some(serde_json::json!([{ "properties": "never" }]))),
+        (
+            "interface Foo { a: string; }",
+            Some(serde_json::json!([{ "properties": "never" }])),
+        ),
+        (
+            "interface Foo { a(): void; }",
+            Some(serde_json::json!([{ "properties": "never" }])),
+        ),
+        (
+            "type Foo = { a: string };",
+            Some(serde_json::json!([{ "properties": "never" }])),
+        ),
+        (
+            "type Foo = { a(): void };",
+            Some(serde_json::json!([{ "properties": "never" }])),
+        ),
         // TODO:
         // (
         //     "import('foo.json', { with: { type: 'json' } })",
@@ -638,11 +785,26 @@ fn test() {
         ("import { foo as z } from 'module';", None), // { "ecmaVersion": 6 },
         ("import { 'foo' as z } from 'module';", None), // { "ecmaVersion": 2022 },
         ("import * as x from 'module';", None),     // { "ecmaVersion": 6 },
-        ("import longName from 'module';", Some(serde_json::json!([{ "max": 5 }]))), // { "ecmaVersion": 6 },
-        ("import * as longName from 'module';", Some(serde_json::json!([{ "max": 5 }]))), // { "ecmaVersion": 6 },
-        ("import { foo as longName } from 'module';", Some(serde_json::json!([{ "max": 5 }]))), // { "ecmaVersion": 6 },
-        ("var _$xt_$ = Foo(42)", Some(serde_json::json!([{ "min": 2, "max": 4 }]))),
-        ("var _$x$_t$ = Foo(42)", Some(serde_json::json!([{ "min": 2, "max": 4 }]))),
+        (
+            "import longName from 'module';",
+            Some(serde_json::json!([{ "max": 5 }])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "import * as longName from 'module';",
+            Some(serde_json::json!([{ "max": 5 }])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "import { foo as longName } from 'module';",
+            Some(serde_json::json!([{ "max": 5 }])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "var _$xt_$ = Foo(42)",
+            Some(serde_json::json!([{ "min": 2, "max": 4 }])),
+        ),
+        (
+            "var _$x$_t$ = Foo(42)",
+            Some(serde_json::json!([{ "min": 2, "max": 4 }])),
+        ),
         ("var toString;", Some(serde_json::json!([{ "max": 5 }]))),
         ("(a) => { a * a };", None),        // { "ecmaVersion": 6 },
         ("function foo(x = 0) { }", None),  // { "ecmaVersion": 6 },
@@ -652,33 +814,66 @@ fn test() {
         ("function foo({x}) { }", None),    // { "ecmaVersion": 6 },
         ("function foo({x: a}) { }", None), // { "ecmaVersion": 6 },
         ("function foo({x: a, longName}) { }", None), // { "ecmaVersion": 6 },
-        ("function foo({ longName: a }) {}", Some(serde_json::json!([{ "min": 3, "max": 5 }]))), // { "ecmaVersion": 6 },
-        ("function foo({ prop: longName }) {};", Some(serde_json::json!([{ "min": 3, "max": 5 }]))), // { "ecmaVersion": 6 },
-        ("function foo({ a: b }) {};", Some(serde_json::json!([{ "exceptions": ["a"] }]))), // { "ecmaVersion": 6 },
-        ("var hasOwnProperty;", Some(serde_json::json!([{ "max": 10, "exceptions": [] }]))),
+        (
+            "function foo({ longName: a }) {}",
+            Some(serde_json::json!([{ "min": 3, "max": 5 }])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "function foo({ prop: longName }) {};",
+            Some(serde_json::json!([{ "min": 3, "max": 5 }])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "function foo({ a: b }) {};",
+            Some(serde_json::json!([{ "exceptions": ["a"] }])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "var hasOwnProperty;",
+            Some(serde_json::json!([{ "max": 10, "exceptions": [] }])),
+        ),
         ("function foo({ a: { b: { c: d, e } } }) { }", None), // { "ecmaVersion": 6 },
         ("var { x} = {};", None),                              // { "ecmaVersion": 6 },
         ("var { x: a} = {};", None),                           // { "ecmaVersion": 6 },
         ("var { a: a} = {};", None),                           // { "ecmaVersion": 6 },
         ("var { prop: a } = {};", None),                       // { "ecmaVersion": 6 },
-        ("var { longName: a } = {};", Some(serde_json::json!([{ "min": 3, "max": 5 }]))), // { "ecmaVersion": 6 },
-        ("var { prop: [x] } = {};", None), // { "ecmaVersion": 6 },
-        ("var { prop: [[x]] } = {};", None), // { "ecmaVersion": 6 },
-        ("var { prop: longName } = {};", Some(serde_json::json!([{ "min": 3, "max": 5 }]))), // { "ecmaVersion": 6 },
-        ("var { x: a} = {};", Some(serde_json::json!([{ "exceptions": ["x"] }]))), // { "ecmaVersion": 6 },
-        ("var { a: { b: { c: d } } } = {};", None), // { "ecmaVersion": 6 },
-        ("var { a: { b: { c: d, e } } } = {};", None), // { "ecmaVersion": 6 },
-        ("var { a: { b: { c, e: longName } } } = {};", None), // { "ecmaVersion": 6 },
+        (
+            "var { longName: a } = {};",
+            Some(serde_json::json!([{ "min": 3, "max": 5 }])),
+        ), // { "ecmaVersion": 6 },
+        ("var { prop: [x] } = {};", None),                     // { "ecmaVersion": 6 },
+        ("var { prop: [[x]] } = {};", None),                   // { "ecmaVersion": 6 },
+        (
+            "var { prop: longName } = {};",
+            Some(serde_json::json!([{ "min": 3, "max": 5 }])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "var { x: a} = {};",
+            Some(serde_json::json!([{ "exceptions": ["x"] }])),
+        ), // { "ecmaVersion": 6 },
+        ("var { a: { b: { c: d } } } = {};", None),            // { "ecmaVersion": 6 },
+        ("var { a: { b: { c: d, e } } } = {};", None),         // { "ecmaVersion": 6 },
+        ("var { a: { b: { c, e: longName } } } = {};", None),  // { "ecmaVersion": 6 },
         ("var { a: { b: { c: d, e: longName } } } = {};", None), // { "ecmaVersion": 6 },
-        ("var { a, b: { c: d, e: longName } } = {};", None), // { "ecmaVersion": 6 },
-        ("import x from 'y';", None),               // { "ecmaVersion": 6, "sourceType": "module" },
-        ("export var x = 0;", None),                // { "ecmaVersion": 6, "sourceType": "module" },
-        ("({ a: obj.x.y.z } = {});", None),         // { "ecmaVersion": 6 },
-        ("({ prop: obj.x } = {});", None),          // { "ecmaVersion": 6 },
-        ("var x = 1;", Some(serde_json::json!([{ "properties": "never" }]))),
-        ("var {prop: x} = foo;", Some(serde_json::json!([{ "properties": "never" }]))), // { "ecmaVersion": 6 },
-        ("var foo = {x: prop};", Some(serde_json::json!([{ "properties": "always" }]))), // { "ecmaVersion": 6 },
-        ("function BEFORE_send() {};", Some(serde_json::json!([{ "min": 3, "max": 5 }]))),
+        ("var { a, b: { c: d, e: longName } } = {};", None),   // { "ecmaVersion": 6 },
+        ("import x from 'y';", None), // { "ecmaVersion": 6, "sourceType": "module" },
+        ("export var x = 0;", None),  // { "ecmaVersion": 6, "sourceType": "module" },
+        ("({ a: obj.x.y.z } = {});", None), // { "ecmaVersion": 6 },
+        ("({ prop: obj.x } = {});", None), // { "ecmaVersion": 6 },
+        (
+            "var x = 1;",
+            Some(serde_json::json!([{ "properties": "never" }])),
+        ),
+        (
+            "var {prop: x} = foo;",
+            Some(serde_json::json!([{ "properties": "never" }])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "var foo = {x: prop};",
+            Some(serde_json::json!([{ "properties": "always" }])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "function BEFORE_send() {};",
+            Some(serde_json::json!([{ "min": 3, "max": 5 }])),
+        ),
         (
             "function NOTMATCHED_send() {};",
             Some(serde_json::json!([{ "min": 3, "max": 5, "exceptionPatterns": ["^BEFORE_"] }])),
@@ -690,9 +885,18 @@ fn test() {
         ("class Foo { #x() {} }", None), // { "ecmaVersion": 2022 },
         ("class Foo { x = 1 }", None),   // { "ecmaVersion": 2022 },
         ("class Foo { #x = 1 }", None),  // { "ecmaVersion": 2022 },
-        ("class Foo { #abcdefg() {} }", Some(serde_json::json!([{ "max": 3 }]))), // { "ecmaVersion": 2022 },
-        ("class Foo { abcdefg = 1 }", Some(serde_json::json!([{ "max": 3 }]))), // { "ecmaVersion": 2022 },
-        ("class Foo { #abcdefg = 1 }", Some(serde_json::json!([{ "max": 3 }]))), // { "ecmaVersion": 2022 },
+        (
+            "class Foo { #abcdefg() {} }",
+            Some(serde_json::json!([{ "max": 3 }])),
+        ), // { "ecmaVersion": 2022 },
+        (
+            "class Foo { abcdefg = 1 }",
+            Some(serde_json::json!([{ "max": 3 }])),
+        ), // { "ecmaVersion": 2022 },
+        (
+            "class Foo { #abcdefg = 1 }",
+            Some(serde_json::json!([{ "max": 3 }])),
+        ), // { "ecmaVersion": 2022 },
         (
             "export type Example<T> = T extends Array<infer U> ? U : never;",
             Some(serde_json::json!([{ "min": 2, "checkGeneric": true }])),

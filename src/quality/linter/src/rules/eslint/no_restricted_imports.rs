@@ -708,14 +708,22 @@ struct ReportedGeneralImport {
 
 impl ReportedGeneralImport {
     fn new(config_index: usize, span: Span) -> Self {
-        Self { config_index, span_start: span.start, span_end: span.end }
+        Self {
+            config_index,
+            span_start: span.start,
+            span_end: span.end,
+        }
     }
 }
 
 impl RestrictedPath {
     fn is_name_span_allowed(&self, name: &CompactStr) -> NameSpanAllowedResult {
         // fast check if this name is allowed
-        if self.allow_import_names.as_ref().is_some_and(|allowed| allowed.contains(name)) {
+        if self
+            .allow_import_names
+            .as_ref()
+            .is_some_and(|allowed| allowed.contains(name))
+        {
             return NameSpanAllowedResult::Allowed;
         }
 
@@ -729,7 +737,11 @@ impl RestrictedPath {
         }
 
         // the name is found is the importNames list
-        if self.import_names.as_ref().is_some_and(|disallowed| disallowed.contains(name)) {
+        if self
+            .import_names
+            .as_ref()
+            .is_some_and(|disallowed| disallowed.contains(name))
+        {
             return NameSpanAllowedResult::NameDisallowed;
         }
 
@@ -810,7 +822,11 @@ impl RestrictedPath {
 impl RestrictedPattern {
     fn is_name_span_allowed(&self, name: &CompactStr) -> NameSpanAllowedResult {
         // fast check if this name is allowed
-        if self.allow_import_names.as_ref().is_some_and(|allowed| allowed.contains(name)) {
+        if self
+            .allow_import_names
+            .as_ref()
+            .is_some_and(|allowed| allowed.contains(name))
+        {
             return NameSpanAllowedResult::Allowed;
         }
 
@@ -829,7 +845,11 @@ impl RestrictedPattern {
         }
 
         // the name is found is the importNames list
-        if self.import_names.as_ref().is_some_and(|disallowed| disallowed.contains(name)) {
+        if self
+            .import_names
+            .as_ref()
+            .is_some_and(|disallowed| disallowed.contains(name))
+        {
             return NameSpanAllowedResult::NameDisallowed;
         }
 
@@ -944,7 +964,11 @@ impl RestrictedPattern {
             };
 
             if fast_glob::glob_match(pat.as_ref(), name.as_ref()) {
-                decision = if negated { GlobResult::Whitelist } else { GlobResult::Found };
+                decision = if negated {
+                    GlobResult::Whitelist
+                } else {
+                    GlobResult::Found
+                };
             }
         }
 
@@ -952,15 +976,21 @@ impl RestrictedPattern {
     }
 
     fn get_regex_result(&self, name: &str) -> bool {
-        self.regex.as_ref().is_some_and(|regex| regex.is_match(name))
+        self.regex
+            .as_ref()
+            .is_some_and(|regex| regex.is_match(name))
     }
 
     fn get_import_name_pattern_result(&self, name: &CompactStr) -> bool {
-        self.import_name_pattern.as_ref().is_some_and(|regex| regex.is_match(name))
+        self.import_name_pattern
+            .as_ref()
+            .is_some_and(|regex| regex.is_match(name))
     }
 
     fn get_allow_import_name_pattern_result(&self, name: &CompactStr) -> bool {
-        self.allow_import_name_pattern.as_ref().is_some_and(|regex| regex.is_match(name))
+        self.allow_import_name_pattern
+            .as_ref()
+            .is_some_and(|regex| regex.is_match(name))
     }
 }
 
@@ -1014,7 +1044,10 @@ impl Rule for NoRestrictedImports {
             _ => {}
         }
 
-        Ok(Self(Box::new(NoRestrictedImportsConfig { paths, patterns })))
+        Ok(Self(Box::new(NoRestrictedImportsConfig {
+            paths,
+            patterns,
+        })))
     }
 
     fn should_run(&self, _ctx: &ContextHost) -> bool {
@@ -1088,14 +1121,20 @@ impl NoRestrictedImports {
             return;
         }
 
-        let import_statement_spans: FxHashSet<Span> =
-            module_record.import_entries.iter().map(|entry| entry.statement_span).collect();
+        let import_statement_spans: FxHashSet<Span> = module_record
+            .import_entries
+            .iter()
+            .map(|entry| entry.statement_span)
+            .collect();
         let mut side_effect_import_map: FxHashMap<&CompactStr, Vec<Span>> = FxHashMap::default();
 
         for (source, requests) in &module_record.requested_modules {
             for request in requests {
                 if request.is_import && !import_statement_spans.contains(&request.statement_span) {
-                    side_effect_import_map.entry(source).or_default().push(request.statement_span);
+                    side_effect_import_map
+                        .entry(source)
+                        .or_default()
+                        .push(request.statement_span);
                 }
             }
         }
@@ -1203,8 +1242,10 @@ impl NoRestrictedImports {
                 }
                 GlobResult::Found => {
                     if *result == ImportNameResult::GeneralDisallowed
-                        && !reported_general_patterns
-                            .insert(ReportedGeneralImport::new(pattern_index, entry.statement_span))
+                        && !reported_general_patterns.insert(ReportedGeneralImport::new(
+                            pattern_index,
+                            entry.statement_span,
+                        ))
                     {
                         continue;
                     }
@@ -1223,8 +1264,10 @@ impl NoRestrictedImports {
 
             if pattern.get_regex_result(entry.module_request.name()) {
                 if *result == ImportNameResult::GeneralDisallowed
-                    && !reported_general_patterns
-                        .insert(ReportedGeneralImport::new(pattern_index, entry.statement_span))
+                    && !reported_general_patterns.insert(ReportedGeneralImport::new(
+                        pattern_index,
+                        entry.statement_span,
+                    ))
                 {
                     continue;
                 }
@@ -1370,7 +1413,10 @@ impl NoRestrictedImports {
         reported_general_paths: &mut FxHashSet<ReportedGeneralImport>,
         reported_general_patterns: &mut FxHashSet<ReportedGeneralImport>,
     ) {
-        let Some(source) = entry.module_request.as_ref().map(crate::module_record::NameSpan::name)
+        let Some(source) = entry
+            .module_request
+            .as_ref()
+            .map(crate::module_record::NameSpan::name)
         else {
             return;
         };
@@ -1424,8 +1470,10 @@ impl NoRestrictedImports {
                 }
                 GlobResult::Found => {
                     if *result == ImportNameResult::GeneralDisallowed
-                        && !reported_general_patterns
-                            .insert(ReportedGeneralImport::new(pattern_index, entry.statement_span))
+                        && !reported_general_patterns.insert(ReportedGeneralImport::new(
+                            pattern_index,
+                            entry.statement_span,
+                        ))
                     {
                         continue;
                     }
@@ -1444,8 +1492,10 @@ impl NoRestrictedImports {
 
             if pattern.get_regex_result(module_request.name()) {
                 if *result == ImportNameResult::GeneralDisallowed
-                    && !reported_general_patterns
-                        .insert(ReportedGeneralImport::new(pattern_index, entry.statement_span))
+                    && !reported_general_patterns.insert(ReportedGeneralImport::new(
+                        pattern_index,
+                        entry.statement_span,
+                    ))
                 {
                     continue;
                 }
@@ -1603,8 +1653,14 @@ fn test() {
     let mut pass = vec![
         (r#"import os from "os";"#, None),
         (r#"import os from "os";"#, Some(serde_json::json!(["osx"]))),
-        (r#"import fs from "fs";"#, Some(serde_json::json!(["crypto"]))),
-        (r#"import path from "path";"#, Some(serde_json::json!(["crypto", "stream", "os"]))),
+        (
+            r#"import fs from "fs";"#,
+            Some(serde_json::json!(["crypto"])),
+        ),
+        (
+            r#"import path from "path";"#,
+            Some(serde_json::json!(["crypto", "stream", "os"])),
+        ),
         (r#"import async from "async";"#, None),
         (r#"import "foo""#, Some(serde_json::json!(["crypto"]))),
         (r#"import "foo/bar";"#, Some(serde_json::json!(["foo"]))),
@@ -1616,13 +1672,28 @@ fn test() {
             r#"import withPatterns from "foo/bar";"#,
             Some(serde_json::json!([{ "patterns": ["foo/c*"] }])),
         ),
-        ("import foo from 'foo';", Some(serde_json::json!(["../foo"]))),
-        ("import foo from 'foo';", Some(serde_json::json!([{ "paths": ["../foo"] }]))),
-        ("import foo from 'foo';", Some(serde_json::json!([{ "patterns": ["../foo"] }]))),
+        (
+            "import foo from 'foo';",
+            Some(serde_json::json!(["../foo"])),
+        ),
+        (
+            "import foo from 'foo';",
+            Some(serde_json::json!([{ "paths": ["../foo"] }])),
+        ),
+        (
+            "import foo from 'foo';",
+            Some(serde_json::json!([{ "patterns": ["../foo"] }])),
+        ),
         ("import foo from 'foo';", Some(serde_json::json!(["/foo"]))),
-        ("import foo from 'foo';", Some(serde_json::json!([{ "paths": ["/foo"] }]))),
+        (
+            "import foo from 'foo';",
+            Some(serde_json::json!([{ "paths": ["/foo"] }])),
+        ),
         ("import relative from '../foo';", None),
-        ("import relative from '../foo';", Some(serde_json::json!(["../notFoo"]))),
+        (
+            "import relative from '../foo';",
+            Some(serde_json::json!(["../notFoo"])),
+        ),
         (
             "import relativeWithPaths from '../foo';",
             Some(serde_json::json!([{ "paths": ["../notFoo"] }])),
@@ -1632,7 +1703,10 @@ fn test() {
             Some(serde_json::json!([{ "patterns": ["notFoo"] }])),
         ),
         ("import absolute from '/foo';", None),
-        ("import absolute from '/foo';", Some(serde_json::json!(["/notFoo"]))),
+        (
+            "import absolute from '/foo';",
+            Some(serde_json::json!(["/notFoo"])),
+        ),
         (
             "import absoluteWithPaths from '/foo';",
             Some(serde_json::json!([{ "paths": ["/notFoo"] }])),
@@ -2025,7 +2099,10 @@ fn test() {
         ),
         // dynamic `import()` with a string-literal source
         ("import('os');", Some(serde_json::json!(["fs"]))),
-        ("import('foo/bar');", Some(serde_json::json!([{ "patterns": ["foo/baz"] }]))),
+        (
+            "import('foo/bar');",
+            Some(serde_json::json!([{ "patterns": ["foo/baz"] }])),
+        ),
         // non-literal dynamic import sources are ignored
         ("import(foo);", Some(serde_json::json!(["foo"]))),
         ("import(`foo`);", Some(serde_json::json!(["foo"]))),
@@ -2056,15 +2133,30 @@ fn test() {
         ("import foo from 'foo';", None),
         ("import foo = require('foo');", None),
         ("import 'foo';", None),
-        ("import foo from 'foo';", Some(serde_json::json!(["import1", "import2"]))),
-        ("import foo = require('foo');", Some(serde_json::json!(["import1", "import2"]))),
-        ("export { foo } from 'foo';", Some(serde_json::json!(["import1", "import2"]))),
-        ("import foo from 'foo';", Some(serde_json::json!([{ "paths": ["import1", "import2"] }]))),
+        (
+            "import foo from 'foo';",
+            Some(serde_json::json!(["import1", "import2"])),
+        ),
+        (
+            "import foo = require('foo');",
+            Some(serde_json::json!(["import1", "import2"])),
+        ),
+        (
+            "export { foo } from 'foo';",
+            Some(serde_json::json!(["import1", "import2"])),
+        ),
+        (
+            "import foo from 'foo';",
+            Some(serde_json::json!([{ "paths": ["import1", "import2"] }])),
+        ),
         (
             "export { foo } from 'foo';",
             Some(serde_json::json!([{ "paths": ["import1", "import2"] }])),
         ),
-        ("import 'foo';", Some(serde_json::json!(["import1", "import2"]))),
+        (
+            "import 'foo';",
+            Some(serde_json::json!(["import1", "import2"])),
+        ),
         (
             "import foo from 'foo';",
             Some(serde_json::json!([
@@ -2348,14 +2440,26 @@ fn test() {
             ])),
         ),
         ("import foo from 'foo';", Some(serde_json::json!([]))),
-        ("import foo from 'foo';", Some(serde_json::json!([{"paths": [],},]))),
-        ("import foo from 'foo';", Some(serde_json::json!([{"patterns": [],},]))),
-        ("import foo from 'foo';", Some(serde_json::json!([{"paths": [], "patterns": [],},]))),
+        (
+            "import foo from 'foo';",
+            Some(serde_json::json!([{"paths": [],},])),
+        ),
+        (
+            "import foo from 'foo';",
+            Some(serde_json::json!([{"patterns": [],},])),
+        ),
+        (
+            "import foo from 'foo';",
+            Some(serde_json::json!([{"paths": [], "patterns": [],},])),
+        ),
     ];
 
     let mut fail = vec![
         (r#"import "fs""#, Some(serde_json::json!(["fs"]))),
-        (r#"import os from "os";"#, Some(serde_json::json!(["fs", "crypto ", "stream", "os"]))),
+        (
+            r#"import os from "os";"#,
+            Some(serde_json::json!(["fs", "crypto ", "stream", "os"])),
+        ),
         (r#"import "foo/bar";"#, Some(serde_json::json!(["foo/bar"]))),
         (
             r#"import withPaths from "foo/bar";"#,
@@ -2394,7 +2498,10 @@ fn test() {
             Some(serde_json::json!([{ "patterns": ["foo/*", "!foo/baz"] }])),
         ),
         (r#"export * from "fs";"#, Some(serde_json::json!(["fs"]))),
-        (r#"export * as ns from "fs";"#, Some(serde_json::json!(["fs"]))),
+        (
+            r#"export * as ns from "fs";"#,
+            Some(serde_json::json!(["fs"])),
+        ),
         (r#"export {a} from "fs";"#, Some(serde_json::json!(["fs"]))),
         (
             r#"export {foo as b} from "fs";"#,
@@ -2831,7 +2938,10 @@ fn test() {
                 }]
             }])),
         ),
-        ("import * as bar from 'foo';", Some(serde_json::json!(["foo"]))),
+        (
+            "import * as bar from 'foo';",
+            Some(serde_json::json!(["foo"])),
+        ),
         (
             "import { a, a as b } from 'mod';",
             Some(serde_json::json!([{
@@ -2859,7 +2969,10 @@ fn test() {
                 }]
             }])),
         ),
-        ("import relative from '../foo';", Some(serde_json::json!(["../foo"]))),
+        (
+            "import relative from '../foo';",
+            Some(serde_json::json!(["../foo"])),
+        ),
         (
             "import relativeWithPaths from '../foo';",
             Some(serde_json::json!([{ "paths": ["../foo"] }])),
@@ -2868,8 +2981,14 @@ fn test() {
             "import relativeWithPatterns from '../foo';",
             Some(serde_json::json!([{ "patterns": ["../foo"] }])),
         ),
-        ("import absolute from '/foo';", Some(serde_json::json!(["/foo"]))),
-        ("import absoluteWithPaths from '/foo';", Some(serde_json::json!([{ "paths": ["/foo"] }]))),
+        (
+            "import absolute from '/foo';",
+            Some(serde_json::json!(["/foo"])),
+        ),
+        (
+            "import absoluteWithPaths from '/foo';",
+            Some(serde_json::json!([{ "paths": ["/foo"] }])),
+        ),
         (
             "import absoluteWithPatterns from '/foo';",
             Some(serde_json::json!([{ "patterns": ["foo"] }])),
@@ -3324,7 +3443,10 @@ fn test() {
         ),
         // dynamic `import()` with a string-literal source
         ("import('fs');", Some(serde_json::json!(["fs"]))),
-        ("import('foo/bar');", Some(serde_json::json!([{ "patterns": ["foo/*"] }]))),
+        (
+            "import('foo/bar');",
+            Some(serde_json::json!([{ "patterns": ["foo/*"] }])),
+        ),
         (
             "import('@anthropic-ai/sdk');",
             Some(serde_json::json!([{
@@ -3341,9 +3463,18 @@ fn test() {
     ];
 
     let fail_typescript = vec![
-        ("import foo from 'import1';", Some(serde_json::json!(["import1", "import2"]))),
-        ("import foo = require('import1');", Some(serde_json::json!(["import1", "import2"]))),
-        ("export { foo } from 'import1';", Some(serde_json::json!(["import1", "import2"]))),
+        (
+            "import foo from 'import1';",
+            Some(serde_json::json!(["import1", "import2"])),
+        ),
+        (
+            "import foo = require('import1');",
+            Some(serde_json::json!(["import1", "import2"])),
+        ),
+        (
+            "export { foo } from 'import1';",
+            Some(serde_json::json!(["import1", "import2"])),
+        ),
         (
             "import foo from 'import1';",
             Some(serde_json::json!([{ "paths": ["import1", "import2"] }])),
@@ -3564,7 +3695,10 @@ fn test() {
                 },
             ])),
         ),
-        ("export * from 'import1';", Some(serde_json::json!(["import1"]))),
+        (
+            "export * from 'import1';",
+            Some(serde_json::json!(["import1"])),
+        ),
         (
             "import type { InvalidTestCase } from '@typescript-eslint/utils/dist/ts-eslint';",
             Some(serde_json::json!([{"patterns": ["@typescript-eslint/utils/dist/*"]}])),
@@ -3609,7 +3743,10 @@ fn test() {
             r"import 'foo'; import { bar } from 'foo'; export { baz } from 'foo'; import('foo');",
             None,
         ),
-        (r"import 'foo'; import foo = require('foo');", Some(serde_json::json!([]))),
+        (
+            r"import 'foo'; import foo = require('foo');",
+            Some(serde_json::json!([])),
+        ),
         (
             r"import 'foo'; import { bar } from 'foo'; export * from 'foo'; import('foo');",
             Some(serde_json::json!([{ "paths": [], "patterns": [] }])),
@@ -3631,6 +3768,11 @@ fn test() {
         ),
     ]);
 
-    Tester::new(NoRestrictedImports::NAME, NoRestrictedImports::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        NoRestrictedImports::NAME,
+        NoRestrictedImports::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

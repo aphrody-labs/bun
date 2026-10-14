@@ -93,13 +93,18 @@ impl Rule for NoDoneCallback {
 
 fn run<'a>(possible_jest_node: &PossibleJestNode<'a, '_>, ctx: &LintContext<'a>) {
     let node = possible_jest_node.node;
-    let AstKind::CallExpression(call_expr) = node.kind() else { return };
+    let AstKind::CallExpression(call_expr) = node.kind() else {
+        return;
+    };
     let Some(jest_fn_call) = parse_general_jest_fn_call(call_expr, possible_jest_node, ctx) else {
         return;
     };
 
     let kind = jest_fn_call.kind;
-    if !matches!(kind, JestFnKind::General(JestGeneralFnKind::Test | JestGeneralFnKind::Hook)) {
+    if !matches!(
+        kind,
+        JestFnKind::General(JestGeneralFnKind::Test | JestGeneralFnKind::Hook)
+    ) {
         return;
     }
 
@@ -286,8 +291,14 @@ fn test() {
             ",
             None,
         ),
-        ("test.each``('something', ({ a, b }, done) => { done(); })", None),
-        ("it.each``('something', ({ a, b }, done) => { done(); })", None),
+        (
+            "test.each``('something', ({ a, b }, done) => { done(); })",
+            None,
+        ),
+        (
+            "it.each``('something', ({ a, b }, done) => { done(); })",
+            None,
+        ),
     ];
 
     Tester::new(NoDoneCallback::NAME, NoDoneCallback::PLUGIN, pass, fail)

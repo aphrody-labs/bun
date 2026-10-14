@@ -44,7 +44,12 @@ impl StdinRunner {
         let stderr = &mut BufWriter::new(io::stderr());
 
         let cwd = self.cwd;
-        let FormatCommand { mode, config_options, ignore_options, .. } = self.options;
+        let FormatCommand {
+            mode,
+            config_options,
+            ignore_options,
+            ..
+        } = self.options;
 
         let Mode::Stdin(filepath) = mode else {
             unreachable!("`StdinRunner::run()` called with non-Stdin mode");
@@ -77,7 +82,10 @@ impl StdinRunner {
         if let Err(err) =
             tokio::task::block_in_place(|| self.external_services.init(num_of_threads))
         {
-            utils::print_and_flush(stderr, &format!("Failed to setup external services.\n{err}\n"));
+            utils::print_and_flush(
+                stderr,
+                &format!("Failed to setup external services.\n{err}\n"),
+            );
             return CliRunResult::InvalidOptionConfig;
         }
 

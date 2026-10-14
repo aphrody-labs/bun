@@ -149,7 +149,10 @@ mod test {
             "plugins": ["typescript", "react"],
         }))
         .unwrap();
-        assert_eq!(config.plugins, Some(LintPlugins::REACT | LintPlugins::TYPESCRIPT));
+        assert_eq!(
+            config.plugins,
+            Some(LintPlugins::REACT | LintPlugins::TYPESCRIPT)
+        );
     }
 
     #[test]
@@ -180,7 +183,10 @@ mod test {
         }))
         .unwrap();
 
-        assert_eq!(*config.globals.unwrap().get("Foo").unwrap(), GlobalValue::Readonly);
+        assert_eq!(
+            *config.globals.unwrap().get("Foo").unwrap(),
+            GlobalValue::Readonly
+        );
     }
 
     #[test]

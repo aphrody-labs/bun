@@ -75,7 +75,12 @@ impl<'a> StringBuilder<'a> {
     #[inline(always)]
     pub fn new_in(allocator: &'a Allocator) -> Self {
         let start_ptr = NonNull::dangling();
-        Self { start_ptr, end_ptr: start_ptr, end_capacity_ptr: start_ptr, allocator }
+        Self {
+            start_ptr,
+            end_ptr: start_ptr,
+            end_capacity_ptr: start_ptr,
+            allocator,
+        }
     }
 
     /// Create new [`StringBuilder`], with capacity of `capacity` bytes,
@@ -104,7 +109,12 @@ impl<'a> StringBuilder<'a> {
         // SAFETY: We just allocated `capacity` bytes, starting at `start_ptr`
         let end_capacity_ptr = unsafe { start_ptr.add(capacity) };
 
-        Self { start_ptr, end_ptr: start_ptr, end_capacity_ptr, allocator }
+        Self {
+            start_ptr,
+            end_ptr: start_ptr,
+            end_capacity_ptr,
+            allocator,
+        }
     }
 
     /// Create new [`StringBuilder`], and copy provided `&str` into it,
@@ -132,7 +142,12 @@ impl<'a> StringBuilder<'a> {
         // SAFETY: We just allocated `s.len()` bytes, starting at `start_ptr`
         let end_ptr = unsafe { start_ptr.add(s.len()) };
 
-        Self { start_ptr, end_ptr, end_capacity_ptr: end_ptr, allocator }
+        Self {
+            start_ptr,
+            end_ptr,
+            end_capacity_ptr: end_ptr,
+            allocator,
+        }
     }
 
     /// Create new [`StringBuilder`] from a fixed-size array of `&str`s concatenated together,
@@ -237,9 +252,17 @@ impl<'a> StringBuilder<'a> {
             end_ptr = unsafe { end_ptr.add(len) };
         }
 
-        debug_assert_eq!(end_ptr.as_ptr() as usize - start_ptr.as_ptr() as usize, total_len);
+        debug_assert_eq!(
+            end_ptr.as_ptr() as usize - start_ptr.as_ptr() as usize,
+            total_len
+        );
 
-        Self { start_ptr, end_ptr, end_capacity_ptr: end_ptr, allocator }
+        Self {
+            start_ptr,
+            end_ptr,
+            end_capacity_ptr: end_ptr,
+            allocator,
+        }
     }
 
     /// Get number of bytes in the string.
@@ -343,7 +366,11 @@ impl<'a> StringBuilder<'a> {
         // Therefore writing `self.len()` bytes from `start_ptr + 1` is in bounds of the allocation,
         // and `end_ptr + 1` cannot exceed `end_capacity_ptr`.
         unsafe {
-            ptr::copy(self.start_ptr.as_ptr(), self.start_ptr.as_ptr().add(1), self.len());
+            ptr::copy(
+                self.start_ptr.as_ptr(),
+                self.start_ptr.as_ptr().add(1),
+                self.len(),
+            );
             self.start_ptr.write(byte);
             self.end_ptr = self.end_ptr.add(1);
         }
@@ -487,8 +514,11 @@ impl<'a> StringBuilder<'a> {
 
             // SAFETY: Previously allocated at `start_ptr` with `old_layout`.
             // `new_layout` is larger than `old_layout`.
-            let new_start_ptr =
-                unsafe { self.allocator.arena().grow(self.start_ptr, old_layout, new_layout) };
+            let new_start_ptr = unsafe {
+                self.allocator
+                    .arena()
+                    .grow(self.start_ptr, old_layout, new_layout)
+            };
 
             self.start_ptr = new_start_ptr;
             // SAFETY: `len` is always less than or equal to capacity.
@@ -539,8 +569,11 @@ impl<'a> StringBuilder<'a> {
 
             // SAFETY: Previously allocated at `start_ptr` with `old_layout`.
             // `new_layout` is larger than `old_layout`.
-            let new_start_ptr =
-                unsafe { self.allocator.arena().grow(self.start_ptr, old_layout, new_layout) };
+            let new_start_ptr = unsafe {
+                self.allocator
+                    .arena()
+                    .grow(self.start_ptr, old_layout, new_layout)
+            };
 
             self.start_ptr = new_start_ptr;
             // SAFETY: `len` is always less than or equal to capacity.

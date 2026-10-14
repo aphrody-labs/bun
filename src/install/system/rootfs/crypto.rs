@@ -93,14 +93,17 @@ pub fn hex_decode(hex: &[u8]) -> Option<Vec<u8>> {
             _ => None,
         }
     };
-    hex.chunks(2).map(|p| Some((nib(p[0])? << 4) | nib(p[1])?)).collect()
+    hex.chunks(2)
+        .map(|p| Some((nib(p[0])? << 4) | nib(p[1])?))
+        .collect()
 }
 
 unsafe extern "C" {
     fn d2i_PUBKEY(out: *mut *mut c_void, inp: *mut *const u8, len: c_long) -> *mut c_void;
     fn EVP_PKEY_id(pkey: *const c_void) -> c_int;
     fn EVP_PKEY_get1_RSA(pkey: *const c_void) -> *mut c_void;
-    fn EVP_PKEY_get_raw_public_key(pkey: *const c_void, out: *mut u8, out_len: *mut usize) -> c_int;
+    fn EVP_PKEY_get_raw_public_key(pkey: *const c_void, out: *mut u8, out_len: *mut usize)
+    -> c_int;
     fn RSA_verify(
         hash_nid: c_int,
         digest: *const u8,
@@ -112,7 +115,12 @@ unsafe extern "C" {
     fn RSA_new_public_key(n: *const c_void, e: *const c_void) -> *mut c_void;
     fn BN_bin2bn(input: *const u8, len: usize, ret: *mut c_void) -> *mut c_void;
     fn BN_free(bn: *mut c_void);
-    fn ED25519_verify(message: *const u8, message_len: usize, signature: *const u8, public_key: *const u8) -> c_int;
+    fn ED25519_verify(
+        message: *const u8,
+        message_len: usize,
+        signature: *const u8,
+        public_key: *const u8,
+    ) -> c_int;
     fn ERR_clear_error();
 }
 
@@ -128,7 +136,11 @@ impl Drop for RsaKey {
 
 /// A public key usable for verification.
 pub enum PublicKey {
-    Rsa { n: Vec<u8>, e: Vec<u8>, der: Vec<u8> },
+    Rsa {
+        n: Vec<u8>,
+        e: Vec<u8>,
+        der: Vec<u8>,
+    },
     Ed25519([u8; 32]),
 }
 
@@ -157,12 +169,17 @@ impl PublicKey {
         });
         // SAFETY: `pkey` is a live EVP_PKEY.
         match unsafe { EVP_PKEY_id(pkey) } {
-            EVP_PKEY_RSA => Some(PublicKey::Rsa { n: Vec::new(), e: Vec::new(), der }),
+            EVP_PKEY_RSA => Some(PublicKey::Rsa {
+                n: Vec::new(),
+                e: Vec::new(),
+                der,
+            }),
             EVP_PKEY_ED25519 => {
                 let mut raw = [0u8; 32];
                 let mut len = raw.len();
                 // SAFETY: `raw` has room for `len` bytes; `pkey` is a live Ed25519 key.
-                let ok = unsafe { EVP_PKEY_get_raw_public_key(pkey, raw.as_mut_ptr(), &raw mut len) };
+                let ok =
+                    unsafe { EVP_PKEY_get_raw_public_key(pkey, raw.as_mut_ptr(), &raw mut len) };
                 (ok == 1 && len == 32).then_some(PublicKey::Ed25519(raw))
             }
             _ => None,
@@ -171,7 +188,11 @@ impl PublicKey {
 
     /// RSA key from its big-endian modulus and exponent (OpenPGP key packets).
     pub fn rsa_from_parts(n: &[u8], e: &[u8]) -> PublicKey {
-        PublicKey::Rsa { n: n.to_vec(), e: e.to_vec(), der: Vec::new() }
+        PublicKey::Rsa {
+            n: n.to_vec(),
+            e: e.to_vec(),
+            der: Vec::new(),
+        }
     }
 
     fn rsa(&self) -> Option<RsaKey> {
@@ -181,7 +202,8 @@ impl PublicKey {
         if !der.is_empty() {
             let mut p = der.as_ptr();
             // SAFETY: `p` points into `der`; the EVP_PKEY is freed before returning.
-            let pkey = unsafe { d2i_PUBKEY(core::ptr::null_mut(), &raw mut p, der.len() as c_long) };
+            let pkey =
+                unsafe { d2i_PUBKEY(core::ptr::null_mut(), &raw mut p, der.len() as c_long) };
             if pkey.is_null() {
                 return None;
             }
@@ -225,7 +247,14 @@ impl PublicKey {
                 };
                 // SAFETY: buffers are valid for their lengths; `rsa.0` is a live RSA key.
                 let ok = unsafe {
-                    RSA_verify(alg.nid(), digest.as_ptr(), digest.len(), sig.as_ptr(), sig.len(), rsa.0)
+                    RSA_verify(
+                        alg.nid(),
+                        digest.as_ptr(),
+                        digest.len(),
+                        sig.as_ptr(),
+                        sig.len(),
+                        rsa.0,
+                    )
                 };
                 if ok != 1 {
                     // SAFETY: plain FFI call clearing the error queue left by a failed verify.

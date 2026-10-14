@@ -101,9 +101,12 @@ pub async fn run_cli(
             ("lsp".to_string(), Some(0))
         }
         Mode::Stdin(_) => {
-            let result =
-                StdinRunner::new(command, Arc::clone(&js_config_loader), external_services.clone())
-                    .run();
+            let result = StdinRunner::new(
+                command,
+                Arc::clone(&js_config_loader),
+                external_services.clone(),
+            )
+            .run();
 
             ("stdin".to_string(), Some(result.exit_code()))
         }

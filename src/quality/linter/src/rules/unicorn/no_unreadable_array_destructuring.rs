@@ -47,14 +47,19 @@ declare_oxc_lint!(
     style,
     pending,
     version = "0.0.19",
-    short_description = "Disallows destructuring values from an array in ways that are difficult to read.",
+    short_description =
+        "Disallows destructuring values from an array in ways that are difficult to read.",
 );
 
 fn is_unreadable_array_destructuring<T, U>(
     elements: &ArenaVec<'_, Option<T>>,
     rest: Option<&U>,
 ) -> bool {
-    if elements.len() >= 3 && elements.windows(2).any(|window| window.iter().all(Option::is_none)) {
+    if elements.len() >= 3
+        && elements
+            .windows(2)
+            .any(|window| window.iter().all(Option::is_none))
+    {
         return true;
     }
 
@@ -74,7 +79,9 @@ impl Rule for NoUnreadableArrayDestructuring {
                     array_pattern.rest.as_ref(),
                 ) =>
             {
-                ctx.diagnostic(no_unreadable_array_destructuring_diagnostic(array_pattern.span));
+                ctx.diagnostic(no_unreadable_array_destructuring_diagnostic(
+                    array_pattern.span,
+                ));
             }
             AstKind::ArrayAssignmentTarget(array_pattern)
                 if is_unreadable_array_destructuring(
@@ -82,7 +89,9 @@ impl Rule for NoUnreadableArrayDestructuring {
                     array_pattern.rest.as_ref(),
                 ) =>
             {
-                ctx.diagnostic(no_unreadable_array_destructuring_diagnostic(array_pattern.span));
+                ctx.diagnostic(no_unreadable_array_destructuring_diagnostic(
+                    array_pattern.span,
+                ));
             }
             _ => {}
         }

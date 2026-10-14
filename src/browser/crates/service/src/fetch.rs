@@ -296,9 +296,10 @@ fn client() -> Result<&'static reqwest::Client> {
             })
     }) {
         Ok(c) => Ok(c),
-        Err(detail) => {
-            Err(WebError::Http { url: "<client init>".to_owned(), source: detail.clone().into() })
-        },
+        Err(detail) => Err(WebError::Http {
+            url: "<client init>".to_owned(),
+            source: detail.clone().into(),
+        }),
     }
 }
 
@@ -333,7 +334,9 @@ pub fn truncate(text: &str, max_bytes: usize) -> (String, bool) {
 /// the direct path, and browser errors for browser profiles.
 pub async fn fetch(request: &Request) -> Result<Fetched> {
     if !(request.url.starts_with("http://") || request.url.starts_with("https://")) {
-        return Err(WebError::BadUrl { url: request.url.clone() });
+        return Err(WebError::BadUrl {
+            url: request.url.clone(),
+        });
     }
     match request.profile {
         Some(Profile::Static | Profile::Http) | None => fetch_direct(request).await,
@@ -343,15 +346,20 @@ pub async fn fetch(request: &Request) -> Result<Fetched> {
 
 /// The default path: Aphrody fetches and the local Rust extractor converts.
 async fn fetch_direct(request: &Request) -> Result<Fetched> {
-    let mut path_taken =
-        vec![format!("aphrody http GET (rustls, {}s budget)", request.timeout.as_secs())];
+    let mut path_taken = vec![format!(
+        "aphrody http GET (rustls, {}s budget)",
+        request.timeout.as_secs()
+    )];
 
     let response = client()?
         .get(&request.url)
         .timeout(request.timeout)
         .send()
         .await
-        .map_err(|e| WebError::Http { url: request.url.clone(), source: Box::new(e) })?;
+        .map_err(|e| WebError::Http {
+            url: request.url.clone(),
+            source: Box::new(e),
+        })?;
 
     let status = response.status();
     let final_url = response.url().to_string();
@@ -365,13 +373,16 @@ async fn fetch_direct(request: &Request) -> Result<Fetched> {
     // The status is checked, unlike the proxy path this replaces, where a 402 from the reader
     // arrived as page content.
     if !status.is_success() {
-        return Err(WebError::HttpStatus { url: final_url, status: status.as_u16() });
+        return Err(WebError::HttpStatus {
+            url: final_url,
+            status: status.as_u16(),
+        });
     }
 
-    let text = response
-        .text()
-        .await
-        .map_err(|e| WebError::Http { url: request.url.clone(), source: Box::new(e) })?;
+    let text = response.text().await.map_err(|e| WebError::Http {
+        url: request.url.clone(),
+        source: Box::new(e),
+    })?;
     let bytes_in = text.len();
 
     let (rendering, body) = if is_html(&content_type) || looks_like_html(&text) {
@@ -379,7 +390,11 @@ async fn fetch_direct(request: &Request) -> Result<Fetched> {
     } else {
         path_taken.push(format!(
             "verbatim ({})",
-            if content_type.is_empty() { "no content-type" } else { &content_type }
+            if content_type.is_empty() {
+                "no content-type"
+            } else {
+                &content_type
+            }
         ));
         (
             Rendering::Verbatim {
@@ -398,7 +413,10 @@ async fn fetch_direct(request: &Request) -> Result<Fetched> {
         url: request.url.clone(),
         profile_requested: request.profile,
         profile_obtained: request.profile.unwrap_or(Profile::Static),
-        transport: Transport::Direct { final_url, status: status.as_u16() },
+        transport: Transport::Direct {
+            final_url,
+            status: status.as_u16(),
+        },
         rendering,
         body,
         bytes_in,
@@ -410,7 +428,9 @@ async fn fetch_direct(request: &Request) -> Result<Fetched> {
 fn markdown_body(html: String, path_taken: &mut Vec<String>) -> (Rendering, String) {
     let (cleaned, noise_blocks) = strip_noise_blocks(&html);
     if noise_blocks > 0 {
-        path_taken.push(format!("dropped {noise_blocks} script/style/noscript block(s)"));
+        path_taken.push(format!(
+            "dropped {noise_blocks} script/style/noscript block(s)"
+        ));
     }
     let markdown = bun_browser_extract::html_to_markdown(&cleaned, None);
     path_taken.push("bun_browser_extract (in-process Rust)".to_owned());
@@ -427,7 +447,12 @@ fn markdown_body(html: String, path_taken: &mut Vec<String>) -> (Rendering, Stri
             html,
         )
     } else {
-        (Rendering::Markdown { via: "bun_browser_extract".to_owned() }, markdown)
+        (
+            Rendering::Markdown {
+                via: "bun_browser_extract".to_owned(),
+            },
+            markdown,
+        )
     }
 }
 
@@ -435,7 +460,9 @@ fn markdown_body(html: String, path_taken: &mut Vec<String>) -> (Rendering, Stri
 async fn fetch_browser(request: &Request, profile: Profile) -> Result<Fetched> {
     let stealth = matches!(profile, Profile::Stealth | Profile::Max);
     if stealth && !cfg!(feature = "stealth") {
-        return Err(WebError::BrowserFeatureMissing { profile: profile.as_str() });
+        return Err(WebError::BrowserFeatureMissing {
+            profile: profile.as_str(),
+        });
     }
 
     let url = request.url.clone();
@@ -457,7 +484,10 @@ async fn fetch_browser(request: &Request, profile: Profile) -> Result<Fetched> {
                         .allow_private_network(allow_private_network)
                         .build()
                         .map_err(|error| error.to_string())?;
-                    let mut page = browser.new_page().await.map_err(|error| error.to_string())?;
+                    let mut page = browser
+                        .new_page()
+                        .await
+                        .map_err(|error| error.to_string())?;
                     tokio::time::timeout(budget, page.goto(&url))
                         .await
                         .map_err(|_| "navigation deadline exceeded".to_owned())?
@@ -481,12 +511,18 @@ async fn fetch_browser(request: &Request, profile: Profile) -> Result<Fetched> {
 
     let (html, final_url) = tokio::time::timeout(budget, receiver)
         .await
-        .map_err(|_| WebError::BrowserTimeout { url: request.url.clone(), secs: budget.as_secs() })?
+        .map_err(|_| WebError::BrowserTimeout {
+            url: request.url.clone(),
+            secs: budget.as_secs(),
+        })?
         .map_err(|_| WebError::Browser {
             url: request.url.clone(),
             detail: "browser worker ended without a result".to_owned(),
         })?
-        .map_err(|detail| WebError::Browser { url: request.url.clone(), detail })?;
+        .map_err(|detail| WebError::Browser {
+            url: request.url.clone(),
+            detail,
+        })?;
 
     let bytes_in = html.len();
     let mut path_taken = vec![format!(
@@ -551,7 +587,10 @@ pub fn strip_noise_blocks(html: &str) -> (String, usize) {
             open.len() > 1 + name.len()
                 && open[0] == b'<'
                 && open[1..=name.len()] == *name
-                && matches!(open[1 + name.len()], b'>' | b'/' | b' ' | b'\t' | b'\n' | b'\r')
+                && matches!(
+                    open[1 + name.len()],
+                    b'>' | b'/' | b' ' | b'\t' | b'\n' | b'\r'
+                )
         });
 
         let Some(tag) = tag else {
@@ -568,7 +607,9 @@ pub fn strip_noise_blocks(html: &str) -> (String, usize) {
             continue;
         };
         let close_start = lt + close_offset;
-        cursor = lower[close_start..].find('>').map_or(html.len(), |gt| close_start + gt + 1);
+        cursor = lower[close_start..]
+            .find('>')
+            .map_or(html.len(), |gt| close_start + gt + 1);
         removed += 1;
     }
 
@@ -594,7 +635,10 @@ mod tests {
         use std::io::{Read, Write};
 
         let listener = std::net::TcpListener::bind("127.0.0.1:0").expect("local listener");
-        let url = format!("http://{}/", listener.local_addr().expect("listener address"));
+        let url = format!(
+            "http://{}/",
+            listener.local_addr().expect("listener address")
+        );
         let server = std::thread::spawn(move || {
             let (mut stream, _) = listener.accept().expect("local connection");
             let mut request = [0_u8; 1024];
@@ -604,14 +648,21 @@ mod tests {
                 "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{html}",
                 html.len()
             );
-            stream.write_all(response.as_bytes()).expect("response bytes");
+            stream
+                .write_all(response.as_bytes())
+                .expect("response bytes");
         });
 
         let fetched = fetch(&Request::new(url)).await.expect("local fetch");
         server.join().expect("server thread");
         assert!(matches!(fetched.rendering, Rendering::Markdown { .. }));
         assert!(fetched.body.contains("# Rust owner"), "{}", fetched.body);
-        assert!(fetched.path_taken.iter().any(|step| step.contains("bun_browser_extract")));
+        assert!(
+            fetched
+                .path_taken
+                .iter()
+                .any(|step| step.contains("bun_browser_extract"))
+        );
     }
 
     #[test]
@@ -626,7 +677,13 @@ mod tests {
 
     #[test]
     fn profiles_round_trip_and_browser_profiles_are_flagged() {
-        for p in [Profile::Static, Profile::Fast, Profile::Http, Profile::Stealth, Profile::Max] {
+        for p in [
+            Profile::Static,
+            Profile::Fast,
+            Profile::Http,
+            Profile::Stealth,
+            Profile::Max,
+        ] {
             assert_eq!(Profile::parse(p.as_str()), Some(p));
         }
         assert_eq!(Profile::parse("  STEALTH "), Some(Profile::Stealth));
@@ -648,7 +705,10 @@ mod tests {
         assert!(!out.contains("background"), "CSS survived: {out}");
         assert!(!out.contains("var a"), "JS survived: {out}");
         assert!(!out.contains("enable js"), "noscript survived: {out}");
-        assert!(out.contains("<h1>Title</h1>") && out.contains("Prose."), "prose lost: {out}");
+        assert!(
+            out.contains("<h1>Title</h1>") && out.contains("Prose."),
+            "prose lost: {out}"
+        );
     }
 
     #[test]
@@ -683,7 +743,10 @@ mod tests {
         let html = "<h1>T</h1><p>Multibyte: \u{e9}\u{4e2d}\u{6587} &amp; more</p>";
         let (out, removed) = strip_noise_blocks(html);
         assert_eq!(removed, 0);
-        assert_eq!(out, html, "non-ASCII bytes must survive the ASCII-lowercase index trick");
+        assert_eq!(
+            out, html,
+            "non-ASCII bytes must survive the ASCII-lowercase index trick"
+        );
     }
 
     #[test]
@@ -715,7 +778,10 @@ mod tests {
             url: "https://example.com".into(),
             profile_requested: None,
             profile_obtained: Profile::Static,
-            transport: Transport::Direct { final_url: "https://example.com/".into(), status: 200 },
+            transport: Transport::Direct {
+                final_url: "https://example.com/".into(),
+                status: 200,
+            },
             rendering: Rendering::RawHtml {
                 reason: "bun_browser_extract produced no text from 6 HTML bytes".into(),
             },
@@ -729,7 +795,10 @@ mod tests {
         };
         let banner = fetched.banner();
         assert!(banner.contains("raw HTML, not Markdown"), "{banner}");
-        assert!(banner.contains("produced no text"), "the reason must reach the banner: {banner}");
+        assert!(
+            banner.contains("produced no text"),
+            "the reason must reach the banner: {banner}"
+        );
         assert!(fetched.to_report().contains("<html>"));
     }
 
@@ -739,8 +808,13 @@ mod tests {
             url: "https://example.com".into(),
             profile_requested: Some(Profile::Static),
             profile_obtained: Profile::Static,
-            transport: Transport::Direct { final_url: "https://example.com/".into(), status: 200 },
-            rendering: Rendering::Markdown { via: "bun_browser_extract".into() },
+            transport: Transport::Direct {
+                final_url: "https://example.com/".into(),
+                status: 200,
+            },
+            rendering: Rendering::Markdown {
+                via: "bun_browser_extract".into(),
+            },
             body: "# Example".into(),
             bytes_in: 1256,
             truncated: false,
@@ -751,7 +825,10 @@ mod tests {
         };
         let banner = fetched.banner();
         assert!(banner.contains("bun_browser_extract"), "{banner}");
-        assert!(!banner.contains("NOTE:"), "a clean path must not warn: {banner}");
+        assert!(
+            !banner.contains("NOTE:"),
+            "a clean path must not warn: {banner}"
+        );
         // No third party may appear anywhere in the itinerary.
         assert!(!banner.contains("jina"), "{banner}");
     }

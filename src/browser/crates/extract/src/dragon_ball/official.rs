@@ -32,10 +32,17 @@ pub fn parse_official_articles(html: &str, source: &Url) -> Vec<OfficialArticle>
         let title = text(&dom, ".news-post__title, p.title, h1, h2, h3")
             .or_else(|| attribute(&dom, "meta[property='og:title']", "content"))
             .unwrap_or_else(|| {
-                dom.text_content(dom.document()).split_whitespace().collect::<Vec<_>>().join(" ")
+                dom.text_content(dom.document())
+                    .split_whitespace()
+                    .collect::<Vec<_>>()
+                    .join(" ")
             });
-        let title =
-            title.split("| DRAGON BALL OFFICIAL SITE").next().unwrap_or(&title).trim().to_owned();
+        let title = title
+            .split("| DRAGON BALL OFFICIAL SITE")
+            .next()
+            .unwrap_or(&title)
+            .trim()
+            .to_owned();
         let body = dom
             .query_selector(".entry-article, .news-post__body")
             .ok()
@@ -56,8 +63,9 @@ pub fn parse_official_articles(html: &str, source: &Url) -> Vec<OfficialArticle>
             )
             .unwrap_or_default()
         {
-            if let Some(raw) =
-                dom.with_node(id, |node| node.get_attribute("src").map(str::to_owned)).flatten()
+            if let Some(raw) = dom
+                .with_node(id, |node| node.get_attribute("src").map(str::to_owned))
+                .flatten()
                 && !raw.contains("assets/img")
                 && let Ok(image) = url.join(&raw)
                 && matches!(image.scheme(), "http" | "https")
@@ -76,7 +84,13 @@ pub fn parse_official_articles(html: &str, source: &Url) -> Vec<OfficialArticle>
             id: url
                 .path()
                 .chars()
-                .map(|c| if c.is_ascii_alphanumeric() || c == '_' || c == '-' { c } else { '_' })
+                .map(|c| {
+                    if c.is_ascii_alphanumeric() || c == '_' || c == '-' {
+                        c
+                    } else {
+                        '_'
+                    }
+                })
                 .collect(),
             title,
             url: url.to_string(),
@@ -84,7 +98,8 @@ pub fn parse_official_articles(html: &str, source: &Url) -> Vec<OfficialArticle>
             date: attribute(&dom, "time[datetime]", "datetime")
                 .or_else(|| text(&dom, "time"))
                 .or_else(|| {
-                    date.find(&dom.text_content(dom.document())).map(|value| value.as_str().into())
+                    date.find(&dom.text_content(dom.document()))
+                        .map(|value| value.as_str().into())
                 }),
             image_url: image,
             summary: body.as_ref().map(|value| value.chars().take(300).collect()),
@@ -98,9 +113,13 @@ pub fn parse_official_articles(html: &str, source: &Url) -> Vec<OfficialArticle>
         return vec![make(source, html)];
     }
     let mut articles = BTreeMap::new();
-    for id in dom.query_selector_all("a[href*='/news/']").unwrap_or_default() {
-        let Some(raw) =
-            dom.with_node(id, |node| node.get_attribute("href").map(str::to_owned)).flatten()
+    for id in dom
+        .query_selector_all("a[href*='/news/']")
+        .unwrap_or_default()
+    {
+        let Some(raw) = dom
+            .with_node(id, |node| node.get_attribute("href").map(str::to_owned))
+            .flatten()
         else {
             continue;
         };
@@ -131,6 +150,12 @@ mod tests {
             articles[0].gallery_urls,
             vec!["https://dragon-ball-official.com/news/2026/10/photo.jpg"]
         );
-        assert!(articles[0].content_markdown.as_ref().unwrap().contains("Recorded evidence."));
+        assert!(
+            articles[0]
+                .content_markdown
+                .as_ref()
+                .unwrap()
+                .contains("Recorded evidence.")
+        );
     }
 }

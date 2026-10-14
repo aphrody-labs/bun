@@ -42,7 +42,10 @@ fn assert_value(value: JSStr<'_>, units: &[u16]) {
         }
     }
     assert_eq!(value.encode_utf16().collect::<Vec<_>>(), units);
-    assert_eq!(value.chars().map(JSChar::to_u32).collect::<Vec<_>>(), expected_points);
+    assert_eq!(
+        value.chars().map(JSChar::to_u32).collect::<Vec<_>>(),
+        expected_points
+    );
     assert_eq!(value.as_bytes(), expected_bytes);
     assert_eq!(value.len(), expected_bytes.len());
     assert_eq!(value.len_utf16(), units.len());
@@ -54,7 +57,14 @@ fn assert_value(value: JSStr<'_>, units: &[u16]) {
 #[test]
 fn layouts_and_traits() {
     assert_eq!(size_of::<JSChar>(), 4);
-    assert_eq!(size_of::<JSStr<'_>>(), if cfg!(target_pointer_width = "64") { 16 } else { 12 });
+    assert_eq!(
+        size_of::<JSStr<'_>>(),
+        if cfg!(target_pointer_width = "64") {
+            16
+        } else {
+            12
+        }
+    );
     assert_eq!(size_of::<Option<JSStr<'_>>>(), size_of::<JSStr<'_>>());
     assert_eq!(align_of::<JSStr<'_>>(), align_of::<usize>());
 
@@ -103,8 +113,11 @@ fn js_char_range_and_encoding() {
         0, 0x7F, 0x80, 0x7FF, 0x800, 0xD7FF, 0xD800, 0xDBFF, 0xDC00, 0xDFFF, 0xE000, 0xFFFF,
         0x10000, 0x10_FFFF,
     ];
-    let values: Box<dyn Iterator<Item = u32>> =
-        if cfg!(miri) { Box::new(boundaries.into_iter()) } else { Box::new(0..=0x10_FFFF) };
+    let values: Box<dyn Iterator<Item = u32>> = if cfg!(miri) {
+        Box::new(boundaries.into_iter())
+    } else {
+        Box::new(0..=0x10_FFFF)
+    };
     let mut allocator = Allocator::new();
     for value in values {
         allocator.reset();
@@ -114,7 +127,10 @@ fn js_char_range_and_encoding() {
         let mut builder = JSStrBuilder::new_in(&&allocator);
         builder.push_js_char(js_char);
         if let Some(c) = char::from_u32(value) {
-            assert_eq!(builder.into_js_str().as_str(), Some(c.encode_utf8(&mut [0; 4]) as &str));
+            assert_eq!(
+                builder.into_js_str().as_str(),
+                Some(c.encode_utf8(&mut [0; 4]) as &str)
+            );
         } else {
             assert_value(builder.into_js_str(), &[u16::try_from(value).unwrap()]);
         }
@@ -177,8 +193,14 @@ fn clone_survives_original_arena() {
 fn empty_builders_and_into_js_str_do_not_allocate() {
     let allocator = Allocator::new();
     let before = allocator.used_bytes();
-    assert_eq!(JSStrBuilder::new_in(&&allocator).into_js_str(), JSStr::empty());
-    assert_eq!(JSStrBuilder::with_capacity_in(0, &&allocator).into_js_str(), JSStr::empty());
+    assert_eq!(
+        JSStrBuilder::new_in(&&allocator).into_js_str(),
+        JSStr::empty()
+    );
+    assert_eq!(
+        JSStrBuilder::with_capacity_in(0, &&allocator).into_js_str(),
+        JSStr::empty()
+    );
     assert_eq!(allocator.used_bytes(), before);
 
     let mut builder = JSStrBuilder::new_in(&&allocator);
@@ -191,7 +213,10 @@ fn empty_builders_and_into_js_str_do_not_allocate() {
     builder.push_str("hello");
     builder.push_code_unit(0xD800);
     let before = allocator.used_bytes();
-    assert_value(builder.into_js_str(), &[0x68, 0x65, 0x6C, 0x6C, 0x6F, 0xD800]);
+    assert_value(
+        builder.into_js_str(),
+        &[0x68, 0x65, 0x6C, 0x6C, 0x6F, 0xD800],
+    );
     assert_eq!(allocator.used_bytes(), before);
 }
 
@@ -458,7 +483,10 @@ fn reference_wtf8(units: &[u16]) -> Vec<u8> {
         if point < 0x80 {
             bytes.push((point & 0x7F) as u8);
         } else if point < 0x800 {
-            bytes.extend([0xC0 | ((point >> 6) & 0x1F) as u8, 0x80 | (point & 0x3F) as u8]);
+            bytes.extend([
+                0xC0 | ((point >> 6) & 0x1F) as u8,
+                0x80 | (point & 0x3F) as u8,
+            ]);
         } else if point < 0x10000 {
             bytes.extend([
                 0xE0 | ((point >> 12) & 0x0F) as u8,
@@ -481,15 +509,24 @@ fn reference_wtf8(units: &[u16]) -> Vec<u8> {
 fn assert_invariants(value: JSStr<'_>) {
     let bytes = value.as_bytes();
     let units = value.encode_utf16().collect::<Vec<_>>();
-    assert_eq!(bytes, reference_wtf8(&units), "bytes are not canonical WTF-8");
+    assert_eq!(
+        bytes,
+        reference_wtf8(&units),
+        "bytes are not canonical WTF-8"
+    );
     let paired = bytes.windows(5).any(|window| {
         window[0] == 0xED
             && (0xA0..=0xAF).contains(&window[1])
             && window[3] == 0xED
             && (0xB0..=0xBF).contains(&window[4])
     });
-    assert!(!paired, "lead surrogate encoding followed by a trail encoding: {bytes:x?}");
-    let has_lone = bytes.windows(2).any(|window| window[0] == 0xED && window[1] >= 0xA0);
+    assert!(
+        !paired,
+        "lead surrogate encoding followed by a trail encoding: {bytes:x?}"
+    );
+    let has_lone = bytes
+        .windows(2)
+        .any(|window| window[0] == 0xED && window[1] >= 0xA0);
     assert_eq!(value.has_lone_surrogate(), has_lone);
     assert_eq!(value.as_str().is_some(), !has_lone);
 }

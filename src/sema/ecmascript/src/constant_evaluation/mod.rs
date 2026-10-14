@@ -52,17 +52,20 @@ pub trait ConstantEvaluation<'a>: MayHaveSideEffects<'a> {
 
     /// Evaluate the expression to a constant value and convert it to a number.
     fn evaluate_value_to_number(&self, ctx: &impl ConstantEvaluationCtx<'a>) -> Option<f64> {
-        self.evaluate_value_to(ctx, Some(ValueType::Number))?.to_number(ctx)
+        self.evaluate_value_to(ctx, Some(ValueType::Number))?
+            .to_number(ctx)
     }
 
     /// Evaluate the expression to a constant value and convert it to a bigint.
     fn evaluate_value_to_bigint(&self, ctx: &impl ConstantEvaluationCtx<'a>) -> Option<BigInt> {
-        self.evaluate_value_to(ctx, Some(ValueType::BigInt))?.into_bigint()
+        self.evaluate_value_to(ctx, Some(ValueType::BigInt))?
+            .into_bigint()
     }
 
     /// Evaluate the expression to a constant value and convert it to a boolean.
     fn evaluate_value_to_boolean(&self, ctx: &impl ConstantEvaluationCtx<'a>) -> Option<bool> {
-        self.evaluate_value_to(ctx, Some(ValueType::Boolean))?.to_boolean(ctx)
+        self.evaluate_value_to(ctx, Some(ValueType::Boolean))?
+            .to_boolean(ctx)
     }
 
     /// Evaluate the expression to a constant value and convert it to a string.
@@ -70,7 +73,8 @@ pub trait ConstantEvaluation<'a>: MayHaveSideEffects<'a> {
         &self,
         ctx: &impl ConstantEvaluationCtx<'a>,
     ) -> Option<Cow<'a, str>> {
-        self.evaluate_value_to(ctx, Some(ValueType::String))?.to_js_string(ctx)
+        self.evaluate_value_to(ctx, Some(ValueType::String))?
+            .to_js_string(ctx)
     }
 
     fn get_side_free_number_value(&self, ctx: &impl ConstantEvaluationCtx<'a>) -> Option<f64> {
@@ -111,7 +115,8 @@ impl<'a, T: ConstantEvaluation<'a>> ConstantEvaluation<'a> for Option<T> {
         ctx: &impl ConstantEvaluationCtx<'a>,
         target_ty: Option<ValueType>,
     ) -> Option<ConstantValue<'a>> {
-        self.as_ref().and_then(|t| t.evaluate_value_to(ctx, target_ty))
+        self.as_ref()
+            .and_then(|t| t.evaluate_value_to(ctx, target_ty))
     }
 }
 
@@ -176,7 +181,9 @@ impl<'a> ConstantEvaluation<'a> for Expression<'a> {
             Expression::CallExpression(e) => e.evaluate_value_to(ctx, target_ty),
             Expression::SequenceExpression(e) => {
                 // For sequence expression, the value is the value of the RHS.
-                e.expressions.last().and_then(|e| e.evaluate_value_to(ctx, target_ty))
+                e.expressions
+                    .last()
+                    .and_then(|e| e.evaluate_value_to(ctx, target_ty))
             }
             _ => None,
         }
@@ -253,7 +260,11 @@ fn binary_operation_evaluate_value_to<'a>(
         BinaryOperator::Remainder => {
             let lval = left.evaluate_value_to_number(ctx)?;
             let rval = right.evaluate_value_to_number(ctx)?;
-            Some(ConstantValue::Number(if rval.is_zero() { f64::NAN } else { lval % rval }))
+            Some(ConstantValue::Number(if rval.is_zero() {
+                f64::NAN
+            } else {
+                lval % rval
+            }))
         }
         BinaryOperator::Multiplication => {
             let lval = left.evaluate_value_to_number(ctx)?;
@@ -483,12 +494,15 @@ impl<'a> ConstantEvaluation<'a> for UnaryExpression<'a> {
                 Some(ConstantValue::String(Cow::Borrowed(s)))
             }
             UnaryOperator::Void => Some(ConstantValue::Undefined),
-            UnaryOperator::LogicalNot => {
-                self.argument.evaluate_value_to_boolean(ctx).map(|b| !b).map(ConstantValue::Boolean)
-            }
-            UnaryOperator::UnaryPlus => {
-                self.argument.evaluate_value_to_number(ctx).map(ConstantValue::Number)
-            }
+            UnaryOperator::LogicalNot => self
+                .argument
+                .evaluate_value_to_boolean(ctx)
+                .map(|b| !b)
+                .map(ConstantValue::Boolean),
+            UnaryOperator::UnaryPlus => self
+                .argument
+                .evaluate_value_to_number(ctx)
+                .map(ConstantValue::Number),
             UnaryOperator::UnaryNegation => match self.argument.value_type(ctx) {
                 ValueType::BigInt => self
                     .argument
@@ -555,9 +569,15 @@ fn evaluate_value_length<'a>(
     ctx: &impl ConstantEvaluationCtx<'a>,
 ) -> Option<ConstantValue<'a>> {
     if let Some(ConstantValue::String(s)) = object.evaluate_value(ctx) {
-        Some(ConstantValue::Number(s.encode_utf16().count().to_f64().unwrap()))
+        Some(ConstantValue::Number(
+            s.encode_utf16().count().to_f64().unwrap(),
+        ))
     } else if let Expression::ArrayExpression(arr) = object {
-        if arr.elements.iter().any(|e| matches!(e, ArrayExpressionElement::SpreadElement(_))) {
+        if arr
+            .elements
+            .iter()
+            .any(|e| matches!(e, ArrayExpressionElement::SpreadElement(_)))
+        {
             None
         } else {
             Some(ConstantValue::Number(arr.elements.len().to_f64().unwrap()))

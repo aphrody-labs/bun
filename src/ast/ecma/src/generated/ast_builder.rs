@@ -139,7 +139,13 @@ impl<'a> Expression<'a> {
         base: NumberBase,
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
-        Self::NumericLiteral(NumericLiteral::boxed(span, value, raw, base, builder.builder()))
+        Self::NumericLiteral(NumericLiteral::boxed(
+            span,
+            value,
+            raw,
+            base,
+            builder.builder(),
+        ))
     }
 
     /// Build an [`Expression::BigIntLiteral`].
@@ -159,7 +165,13 @@ impl<'a> Expression<'a> {
         base: BigintBase,
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
-        Self::BigIntLiteral(BigIntLiteral::boxed(span, value, raw, base, builder.builder()))
+        Self::BigIntLiteral(BigIntLiteral::boxed(
+            span,
+            value,
+            raw,
+            base,
+            builder.builder(),
+        ))
     }
 
     /// Build an [`Expression::RegExpLiteral`].
@@ -239,7 +251,12 @@ impl<'a> Expression<'a> {
         expressions: impl IntoIn<'a, ArenaVec<'a, Expression<'a>>>,
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
-        Self::TemplateLiteral(TemplateLiteral::boxed(span, quasis, expressions, builder.builder()))
+        Self::TemplateLiteral(TemplateLiteral::boxed(
+            span,
+            quasis,
+            expressions,
+            builder.builder(),
+        ))
     }
 
     /// Build an [`Expression::Identifier`].
@@ -904,7 +921,11 @@ impl<'a> Expression<'a> {
         expressions: impl IntoIn<'a, ArenaVec<'a, Expression<'a>>>,
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
-        Self::SequenceExpression(SequenceExpression::boxed(span, expressions, builder.builder()))
+        Self::SequenceExpression(SequenceExpression::boxed(
+            span,
+            expressions,
+            builder.builder(),
+        ))
     }
 
     /// Build an [`Expression::TaggedTemplateExpression`].
@@ -959,7 +980,12 @@ impl<'a> Expression<'a> {
         argument: Expression<'a>,
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
-        Self::UnaryExpression(UnaryExpression::boxed(span, operator, argument, builder.builder()))
+        Self::UnaryExpression(UnaryExpression::boxed(
+            span,
+            operator,
+            argument,
+            builder.builder(),
+        ))
     }
 
     /// Build an [`Expression::UpdateExpression`].
@@ -1003,7 +1029,12 @@ impl<'a> Expression<'a> {
         argument: Option<Expression<'a>>,
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
-        Self::YieldExpression(YieldExpression::boxed(span, delegate, argument, builder.builder()))
+        Self::YieldExpression(YieldExpression::boxed(
+            span,
+            delegate,
+            argument,
+            builder.builder(),
+        ))
     }
 
     /// Build an [`Expression::PrivateInExpression`].
@@ -1021,7 +1052,12 @@ impl<'a> Expression<'a> {
         right: Expression<'a>,
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
-        Self::PrivateInExpression(PrivateInExpression::boxed(span, left, right, builder.builder()))
+        Self::PrivateInExpression(PrivateInExpression::boxed(
+            span,
+            left,
+            right,
+            builder.builder(),
+        ))
     }
 
     /// Build an [`Expression::ImportMeta`].
@@ -1180,7 +1216,11 @@ impl<'a> Expression<'a> {
         expression: Expression<'a>,
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
-        Self::TSNonNullExpression(TSNonNullExpression::boxed(span, expression, builder.builder()))
+        Self::TSNonNullExpression(TSNonNullExpression::boxed(
+            span,
+            expression,
+            builder.builder(),
+        ))
     }
 
     /// Build an [`Expression::TSInstantiationExpression`].
@@ -1320,7 +1360,11 @@ impl<'a> IdentifierName<'a> {
     #[inline]
     pub fn new(span: Span, name: impl Into<Ident<'a>>, builder: &impl GetAstBuilder<'a>) -> Self {
         let builder = builder.builder();
-        IdentifierName { node_id: Cell::new(builder.node_id()), span, name: name.into() }
+        IdentifierName {
+            node_id: Cell::new(builder.node_id()),
+            span,
+            name: name.into(),
+        }
     }
 
     /// Build an [`IdentifierName`], and store it in the memory arena.
@@ -1525,7 +1569,11 @@ impl<'a> LabelIdentifier<'a> {
     #[inline]
     pub fn new(span: Span, name: impl Into<Ident<'a>>, builder: &impl GetAstBuilder<'a>) -> Self {
         let builder = builder.builder();
-        LabelIdentifier { node_id: Cell::new(builder.node_id()), span, name: name.into() }
+        LabelIdentifier {
+            node_id: Cell::new(builder.node_id()),
+            span,
+            name: name.into(),
+        }
     }
 }
 
@@ -1540,7 +1588,10 @@ impl ThisExpression {
     #[inline]
     pub fn new<'a>(span: Span, builder: &impl GetAstBuilder<'a>) -> Self {
         let builder = builder.builder();
-        ThisExpression { node_id: Cell::new(builder.node_id()), span }
+        ThisExpression {
+            node_id: Cell::new(builder.node_id()),
+            span,
+        }
     }
 
     /// Build a [`ThisExpression`], and store it in the memory arena.
@@ -1667,7 +1718,13 @@ impl<'a> ArrayExpressionElement<'a> {
         base: NumberBase,
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
-        Self::NumericLiteral(NumericLiteral::boxed(span, value, raw, base, builder.builder()))
+        Self::NumericLiteral(NumericLiteral::boxed(
+            span,
+            value,
+            raw,
+            base,
+            builder.builder(),
+        ))
     }
 
     /// Build an [`ArrayExpressionElement::BigIntLiteral`].
@@ -1687,7 +1744,13 @@ impl<'a> ArrayExpressionElement<'a> {
         base: BigintBase,
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
-        Self::BigIntLiteral(BigIntLiteral::boxed(span, value, raw, base, builder.builder()))
+        Self::BigIntLiteral(BigIntLiteral::boxed(
+            span,
+            value,
+            raw,
+            base,
+            builder.builder(),
+        ))
     }
 
     /// Build an [`ArrayExpressionElement::RegExpLiteral`].
@@ -1767,7 +1830,12 @@ impl<'a> ArrayExpressionElement<'a> {
         expressions: impl IntoIn<'a, ArenaVec<'a, Expression<'a>>>,
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
-        Self::TemplateLiteral(TemplateLiteral::boxed(span, quasis, expressions, builder.builder()))
+        Self::TemplateLiteral(TemplateLiteral::boxed(
+            span,
+            quasis,
+            expressions,
+            builder.builder(),
+        ))
     }
 
     /// Build an [`ArrayExpressionElement::Identifier`].
@@ -2432,7 +2500,11 @@ impl<'a> ArrayExpressionElement<'a> {
         expressions: impl IntoIn<'a, ArenaVec<'a, Expression<'a>>>,
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
-        Self::SequenceExpression(SequenceExpression::boxed(span, expressions, builder.builder()))
+        Self::SequenceExpression(SequenceExpression::boxed(
+            span,
+            expressions,
+            builder.builder(),
+        ))
     }
 
     /// Build an [`ArrayExpressionElement::TaggedTemplateExpression`].
@@ -2487,7 +2559,12 @@ impl<'a> ArrayExpressionElement<'a> {
         argument: Expression<'a>,
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
-        Self::UnaryExpression(UnaryExpression::boxed(span, operator, argument, builder.builder()))
+        Self::UnaryExpression(UnaryExpression::boxed(
+            span,
+            operator,
+            argument,
+            builder.builder(),
+        ))
     }
 
     /// Build an [`ArrayExpressionElement::UpdateExpression`].
@@ -2531,7 +2608,12 @@ impl<'a> ArrayExpressionElement<'a> {
         argument: Option<Expression<'a>>,
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
-        Self::YieldExpression(YieldExpression::boxed(span, delegate, argument, builder.builder()))
+        Self::YieldExpression(YieldExpression::boxed(
+            span,
+            delegate,
+            argument,
+            builder.builder(),
+        ))
     }
 
     /// Build an [`ArrayExpressionElement::PrivateInExpression`].
@@ -2549,7 +2631,12 @@ impl<'a> ArrayExpressionElement<'a> {
         right: Expression<'a>,
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
-        Self::PrivateInExpression(PrivateInExpression::boxed(span, left, right, builder.builder()))
+        Self::PrivateInExpression(PrivateInExpression::boxed(
+            span,
+            left,
+            right,
+            builder.builder(),
+        ))
     }
 
     /// Build an [`ArrayExpressionElement::ImportMeta`].
@@ -2708,7 +2795,11 @@ impl<'a> ArrayExpressionElement<'a> {
         expression: Expression<'a>,
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
-        Self::TSNonNullExpression(TSNonNullExpression::boxed(span, expression, builder.builder()))
+        Self::TSNonNullExpression(TSNonNullExpression::boxed(
+            span,
+            expression,
+            builder.builder(),
+        ))
     }
 
     /// Build an [`ArrayExpressionElement::TSInstantiationExpression`].
@@ -2847,7 +2938,10 @@ impl Elision {
     #[inline]
     pub fn new<'a>(span: Span, builder: &impl GetAstBuilder<'a>) -> Self {
         let builder = builder.builder();
-        Elision { node_id: Cell::new(builder.node_id()), span }
+        Elision {
+            node_id: Cell::new(builder.node_id()),
+            span,
+        }
     }
 
     /// Build an [`Elision`], and store it in the memory arena.
@@ -3102,7 +3196,13 @@ impl<'a> PropertyKey<'a> {
         base: NumberBase,
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
-        Self::NumericLiteral(NumericLiteral::boxed(span, value, raw, base, builder.builder()))
+        Self::NumericLiteral(NumericLiteral::boxed(
+            span,
+            value,
+            raw,
+            base,
+            builder.builder(),
+        ))
     }
 
     /// Build a [`PropertyKey::BigIntLiteral`].
@@ -3122,7 +3222,13 @@ impl<'a> PropertyKey<'a> {
         base: BigintBase,
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
-        Self::BigIntLiteral(BigIntLiteral::boxed(span, value, raw, base, builder.builder()))
+        Self::BigIntLiteral(BigIntLiteral::boxed(
+            span,
+            value,
+            raw,
+            base,
+            builder.builder(),
+        ))
     }
 
     /// Build a [`PropertyKey::RegExpLiteral`].
@@ -3202,7 +3308,12 @@ impl<'a> PropertyKey<'a> {
         expressions: impl IntoIn<'a, ArenaVec<'a, Expression<'a>>>,
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
-        Self::TemplateLiteral(TemplateLiteral::boxed(span, quasis, expressions, builder.builder()))
+        Self::TemplateLiteral(TemplateLiteral::boxed(
+            span,
+            quasis,
+            expressions,
+            builder.builder(),
+        ))
     }
 
     /// Build a [`PropertyKey::Identifier`].
@@ -3867,7 +3978,11 @@ impl<'a> PropertyKey<'a> {
         expressions: impl IntoIn<'a, ArenaVec<'a, Expression<'a>>>,
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
-        Self::SequenceExpression(SequenceExpression::boxed(span, expressions, builder.builder()))
+        Self::SequenceExpression(SequenceExpression::boxed(
+            span,
+            expressions,
+            builder.builder(),
+        ))
     }
 
     /// Build a [`PropertyKey::TaggedTemplateExpression`].
@@ -3922,7 +4037,12 @@ impl<'a> PropertyKey<'a> {
         argument: Expression<'a>,
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
-        Self::UnaryExpression(UnaryExpression::boxed(span, operator, argument, builder.builder()))
+        Self::UnaryExpression(UnaryExpression::boxed(
+            span,
+            operator,
+            argument,
+            builder.builder(),
+        ))
     }
 
     /// Build a [`PropertyKey::UpdateExpression`].
@@ -3966,7 +4086,12 @@ impl<'a> PropertyKey<'a> {
         argument: Option<Expression<'a>>,
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
-        Self::YieldExpression(YieldExpression::boxed(span, delegate, argument, builder.builder()))
+        Self::YieldExpression(YieldExpression::boxed(
+            span,
+            delegate,
+            argument,
+            builder.builder(),
+        ))
     }
 
     /// Build a [`PropertyKey::PrivateInExpression`].
@@ -3984,7 +4109,12 @@ impl<'a> PropertyKey<'a> {
         right: Expression<'a>,
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
-        Self::PrivateInExpression(PrivateInExpression::boxed(span, left, right, builder.builder()))
+        Self::PrivateInExpression(PrivateInExpression::boxed(
+            span,
+            left,
+            right,
+            builder.builder(),
+        ))
     }
 
     /// Build a [`PropertyKey::ImportMeta`].
@@ -4143,7 +4273,11 @@ impl<'a> PropertyKey<'a> {
         expression: Expression<'a>,
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
-        Self::TSNonNullExpression(TSNonNullExpression::boxed(span, expression, builder.builder()))
+        Self::TSNonNullExpression(TSNonNullExpression::boxed(
+            span,
+            expression,
+            builder.builder(),
+        ))
     }
 
     /// Build a [`PropertyKey::TSInstantiationExpression`].
@@ -4314,7 +4448,10 @@ impl<'a> TemplateLiteral<'a> {
         builder: &impl GetAstBuilder<'a>,
     ) -> ArenaBox<'a, Self> {
         let builder = builder.builder();
-        ArenaBox::new_in(Self::new(span, quasis, expressions, builder), &builder.allocator())
+        ArenaBox::new_in(
+            Self::new(span, quasis, expressions, builder),
+            &builder.allocator(),
+        )
     }
 }
 
@@ -4366,7 +4503,10 @@ impl<'a> TaggedTemplateExpression<'a> {
         builder: &impl GetAstBuilder<'a>,
     ) -> ArenaBox<'a, Self> {
         let builder = builder.builder();
-        ArenaBox::new_in(Self::new(span, tag, type_arguments, quasi, builder), &builder.allocator())
+        ArenaBox::new_in(
+            Self::new(span, tag, type_arguments, quasi, builder),
+            &builder.allocator(),
+        )
     }
 }
 
@@ -4603,7 +4743,10 @@ impl<'a> StaticMemberExpression<'a> {
         builder: &impl GetAstBuilder<'a>,
     ) -> ArenaBox<'a, Self> {
         let builder = builder.builder();
-        ArenaBox::new_in(Self::new(span, object, property, optional, builder), &builder.allocator())
+        ArenaBox::new_in(
+            Self::new(span, object, property, optional, builder),
+            &builder.allocator(),
+        )
     }
 }
 
@@ -4655,7 +4798,10 @@ impl<'a> PrivateFieldExpression<'a> {
         builder: &impl GetAstBuilder<'a>,
     ) -> ArenaBox<'a, Self> {
         let builder = builder.builder();
-        ArenaBox::new_in(Self::new(span, object, field, optional, builder), &builder.allocator())
+        ArenaBox::new_in(
+            Self::new(span, object, field, optional, builder),
+            &builder.allocator(),
+        )
     }
 }
 
@@ -4777,7 +4923,15 @@ impl<'a> CallExpression<'a> {
     ) -> ArenaBox<'a, Self> {
         let builder = builder.builder();
         ArenaBox::new_in(
-            Self::new_with_pure(span, callee, type_arguments, arguments, optional, pure, builder),
+            Self::new_with_pure(
+                span,
+                callee,
+                type_arguments,
+                arguments,
+                optional,
+                pure,
+                builder,
+            ),
             &builder.allocator(),
         )
     }
@@ -4908,7 +5062,10 @@ impl ImportMeta {
     #[inline]
     pub fn new<'a>(span: Span, builder: &impl GetAstBuilder<'a>) -> Self {
         let builder = builder.builder();
-        ImportMeta { node_id: Cell::new(builder.node_id()), span }
+        ImportMeta {
+            node_id: Cell::new(builder.node_id()),
+            span,
+        }
     }
 
     /// Build an [`ImportMeta`], and store it in the memory arena.
@@ -4936,7 +5093,10 @@ impl NewTarget {
     #[inline]
     pub fn new<'a>(span: Span, builder: &impl GetAstBuilder<'a>) -> Self {
         let builder = builder.builder();
-        NewTarget { node_id: Cell::new(builder.node_id()), span }
+        NewTarget {
+            node_id: Cell::new(builder.node_id()),
+            span,
+        }
     }
 
     /// Build a [`NewTarget`], and store it in the memory arena.
@@ -4965,7 +5125,11 @@ impl<'a> SpreadElement<'a> {
     #[inline]
     pub fn new(span: Span, argument: Expression<'a>, builder: &impl GetAstBuilder<'a>) -> Self {
         let builder = builder.builder();
-        SpreadElement { node_id: Cell::new(builder.node_id()), span, argument }
+        SpreadElement {
+            node_id: Cell::new(builder.node_id()),
+            span,
+            argument,
+        }
     }
 
     /// Build a [`SpreadElement`], and store it in the memory arena.
@@ -5044,7 +5208,13 @@ impl<'a> Argument<'a> {
         base: NumberBase,
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
-        Self::NumericLiteral(NumericLiteral::boxed(span, value, raw, base, builder.builder()))
+        Self::NumericLiteral(NumericLiteral::boxed(
+            span,
+            value,
+            raw,
+            base,
+            builder.builder(),
+        ))
     }
 
     /// Build an [`Argument::BigIntLiteral`].
@@ -5064,7 +5234,13 @@ impl<'a> Argument<'a> {
         base: BigintBase,
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
-        Self::BigIntLiteral(BigIntLiteral::boxed(span, value, raw, base, builder.builder()))
+        Self::BigIntLiteral(BigIntLiteral::boxed(
+            span,
+            value,
+            raw,
+            base,
+            builder.builder(),
+        ))
     }
 
     /// Build an [`Argument::RegExpLiteral`].
@@ -5144,7 +5320,12 @@ impl<'a> Argument<'a> {
         expressions: impl IntoIn<'a, ArenaVec<'a, Expression<'a>>>,
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
-        Self::TemplateLiteral(TemplateLiteral::boxed(span, quasis, expressions, builder.builder()))
+        Self::TemplateLiteral(TemplateLiteral::boxed(
+            span,
+            quasis,
+            expressions,
+            builder.builder(),
+        ))
     }
 
     /// Build an [`Argument::Identifier`].
@@ -5809,7 +5990,11 @@ impl<'a> Argument<'a> {
         expressions: impl IntoIn<'a, ArenaVec<'a, Expression<'a>>>,
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
-        Self::SequenceExpression(SequenceExpression::boxed(span, expressions, builder.builder()))
+        Self::SequenceExpression(SequenceExpression::boxed(
+            span,
+            expressions,
+            builder.builder(),
+        ))
     }
 
     /// Build an [`Argument::TaggedTemplateExpression`].
@@ -5864,7 +6049,12 @@ impl<'a> Argument<'a> {
         argument: Expression<'a>,
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
-        Self::UnaryExpression(UnaryExpression::boxed(span, operator, argument, builder.builder()))
+        Self::UnaryExpression(UnaryExpression::boxed(
+            span,
+            operator,
+            argument,
+            builder.builder(),
+        ))
     }
 
     /// Build an [`Argument::UpdateExpression`].
@@ -5908,7 +6098,12 @@ impl<'a> Argument<'a> {
         argument: Option<Expression<'a>>,
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
-        Self::YieldExpression(YieldExpression::boxed(span, delegate, argument, builder.builder()))
+        Self::YieldExpression(YieldExpression::boxed(
+            span,
+            delegate,
+            argument,
+            builder.builder(),
+        ))
     }
 
     /// Build an [`Argument::PrivateInExpression`].
@@ -5926,7 +6121,12 @@ impl<'a> Argument<'a> {
         right: Expression<'a>,
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
-        Self::PrivateInExpression(PrivateInExpression::boxed(span, left, right, builder.builder()))
+        Self::PrivateInExpression(PrivateInExpression::boxed(
+            span,
+            left,
+            right,
+            builder.builder(),
+        ))
     }
 
     /// Build an [`Argument::ImportMeta`].
@@ -6085,7 +6285,11 @@ impl<'a> Argument<'a> {
         expression: Expression<'a>,
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
-        Self::TSNonNullExpression(TSNonNullExpression::boxed(span, expression, builder.builder()))
+        Self::TSNonNullExpression(TSNonNullExpression::boxed(
+            span,
+            expression,
+            builder.builder(),
+        ))
     }
 
     /// Build an [`Argument::TSInstantiationExpression`].
@@ -6233,7 +6437,13 @@ impl<'a> UpdateExpression<'a> {
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
         let builder = builder.builder();
-        UpdateExpression { node_id: Cell::new(builder.node_id()), span, operator, prefix, argument }
+        UpdateExpression {
+            node_id: Cell::new(builder.node_id()),
+            span,
+            operator,
+            prefix,
+            argument,
+        }
     }
 
     /// Build an [`UpdateExpression`], and store it in the memory arena.
@@ -6255,7 +6465,10 @@ impl<'a> UpdateExpression<'a> {
         builder: &impl GetAstBuilder<'a>,
     ) -> ArenaBox<'a, Self> {
         let builder = builder.builder();
-        ArenaBox::new_in(Self::new(span, operator, prefix, argument, builder), &builder.allocator())
+        ArenaBox::new_in(
+            Self::new(span, operator, prefix, argument, builder),
+            &builder.allocator(),
+        )
     }
 }
 
@@ -6277,7 +6490,12 @@ impl<'a> UnaryExpression<'a> {
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
         let builder = builder.builder();
-        UnaryExpression { node_id: Cell::new(builder.node_id()), span, operator, argument }
+        UnaryExpression {
+            node_id: Cell::new(builder.node_id()),
+            span,
+            operator,
+            argument,
+        }
     }
 
     /// Build a [`UnaryExpression`], and store it in the memory arena.
@@ -6297,7 +6515,10 @@ impl<'a> UnaryExpression<'a> {
         builder: &impl GetAstBuilder<'a>,
     ) -> ArenaBox<'a, Self> {
         let builder = builder.builder();
-        ArenaBox::new_in(Self::new(span, operator, argument, builder), &builder.allocator())
+        ArenaBox::new_in(
+            Self::new(span, operator, argument, builder),
+            &builder.allocator(),
+        )
     }
 }
 
@@ -6321,7 +6542,13 @@ impl<'a> BinaryExpression<'a> {
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
         let builder = builder.builder();
-        BinaryExpression { node_id: Cell::new(builder.node_id()), span, left, operator, right }
+        BinaryExpression {
+            node_id: Cell::new(builder.node_id()),
+            span,
+            left,
+            operator,
+            right,
+        }
     }
 
     /// Build a [`BinaryExpression`], and store it in the memory arena.
@@ -6343,7 +6570,10 @@ impl<'a> BinaryExpression<'a> {
         builder: &impl GetAstBuilder<'a>,
     ) -> ArenaBox<'a, Self> {
         let builder = builder.builder();
-        ArenaBox::new_in(Self::new(span, left, operator, right, builder), &builder.allocator())
+        ArenaBox::new_in(
+            Self::new(span, left, operator, right, builder),
+            &builder.allocator(),
+        )
     }
 }
 
@@ -6365,7 +6595,12 @@ impl<'a> PrivateInExpression<'a> {
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
         let builder = builder.builder();
-        PrivateInExpression { node_id: Cell::new(builder.node_id()), span, left, right }
+        PrivateInExpression {
+            node_id: Cell::new(builder.node_id()),
+            span,
+            left,
+            right,
+        }
     }
 
     /// Build a [`PrivateInExpression`], and store it in the memory arena.
@@ -6409,7 +6644,13 @@ impl<'a> LogicalExpression<'a> {
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
         let builder = builder.builder();
-        LogicalExpression { node_id: Cell::new(builder.node_id()), span, left, operator, right }
+        LogicalExpression {
+            node_id: Cell::new(builder.node_id()),
+            span,
+            left,
+            operator,
+            right,
+        }
     }
 
     /// Build a [`LogicalExpression`], and store it in the memory arena.
@@ -6431,7 +6672,10 @@ impl<'a> LogicalExpression<'a> {
         builder: &impl GetAstBuilder<'a>,
     ) -> ArenaBox<'a, Self> {
         let builder = builder.builder();
-        ArenaBox::new_in(Self::new(span, left, operator, right, builder), &builder.allocator())
+        ArenaBox::new_in(
+            Self::new(span, left, operator, right, builder),
+            &builder.allocator(),
+        )
     }
 }
 
@@ -6510,7 +6754,13 @@ impl<'a> AssignmentExpression<'a> {
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
         let builder = builder.builder();
-        AssignmentExpression { node_id: Cell::new(builder.node_id()), span, operator, left, right }
+        AssignmentExpression {
+            node_id: Cell::new(builder.node_id()),
+            span,
+            operator,
+            left,
+            right,
+        }
     }
 
     /// Build an [`AssignmentExpression`], and store it in the memory arena.
@@ -6532,7 +6782,10 @@ impl<'a> AssignmentExpression<'a> {
         builder: &impl GetAstBuilder<'a>,
     ) -> ArenaBox<'a, Self> {
         let builder = builder.builder();
-        ArenaBox::new_in(Self::new(span, operator, left, right, builder), &builder.allocator())
+        ArenaBox::new_in(
+            Self::new(span, operator, left, right, builder),
+            &builder.allocator(),
+        )
     }
 }
 
@@ -6635,7 +6888,11 @@ impl<'a> AssignmentTarget<'a> {
         expression: Expression<'a>,
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
-        Self::TSNonNullExpression(TSNonNullExpression::boxed(span, expression, builder.builder()))
+        Self::TSNonNullExpression(TSNonNullExpression::boxed(
+            span,
+            expression,
+            builder.builder(),
+        ))
     }
 
     /// Build an [`AssignmentTarget::TSTypeAssertion`].
@@ -6885,7 +7142,11 @@ impl<'a> SimpleAssignmentTarget<'a> {
         expression: Expression<'a>,
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
-        Self::TSNonNullExpression(TSNonNullExpression::boxed(span, expression, builder.builder()))
+        Self::TSNonNullExpression(TSNonNullExpression::boxed(
+            span,
+            expression,
+            builder.builder(),
+        ))
     }
 
     /// Build a [`SimpleAssignmentTarget::TSTypeAssertion`].
@@ -7081,7 +7342,10 @@ impl<'a> ArrayAssignmentTarget<'a> {
         builder: &impl GetAstBuilder<'a>,
     ) -> ArenaBox<'a, Self> {
         let builder = builder.builder();
-        ArenaBox::new_in(Self::new(span, elements, rest, builder), &builder.allocator())
+        ArenaBox::new_in(
+            Self::new(span, elements, rest, builder),
+            &builder.allocator(),
+        )
     }
 }
 
@@ -7128,7 +7392,10 @@ impl<'a> ObjectAssignmentTarget<'a> {
         builder: &impl GetAstBuilder<'a>,
     ) -> ArenaBox<'a, Self> {
         let builder = builder.builder();
-        ArenaBox::new_in(Self::new(span, properties, rest, builder), &builder.allocator())
+        ArenaBox::new_in(
+            Self::new(span, properties, rest, builder),
+            &builder.allocator(),
+        )
     }
 }
 
@@ -7144,7 +7411,11 @@ impl<'a> AssignmentTargetRest<'a> {
     #[inline]
     pub fn new(span: Span, target: AssignmentTarget<'a>, builder: &impl GetAstBuilder<'a>) -> Self {
         let builder = builder.builder();
-        AssignmentTargetRest { node_id: Cell::new(builder.node_id()), span, target }
+        AssignmentTargetRest {
+            node_id: Cell::new(builder.node_id()),
+            span,
+            target,
+        }
     }
 
     /// Build an [`AssignmentTargetRest`], and store it in the memory arena.
@@ -7288,7 +7559,11 @@ impl<'a> AssignmentTargetMaybeDefault<'a> {
         expression: Expression<'a>,
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
-        Self::TSNonNullExpression(TSNonNullExpression::boxed(span, expression, builder.builder()))
+        Self::TSNonNullExpression(TSNonNullExpression::boxed(
+            span,
+            expression,
+            builder.builder(),
+        ))
     }
 
     /// Build an [`AssignmentTargetMaybeDefault::TSTypeAssertion`].
@@ -7457,7 +7732,12 @@ impl<'a> AssignmentTargetWithDefault<'a> {
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
         let builder = builder.builder();
-        AssignmentTargetWithDefault { node_id: Cell::new(builder.node_id()), span, binding, init }
+        AssignmentTargetWithDefault {
+            node_id: Cell::new(builder.node_id()),
+            span,
+            binding,
+            init,
+        }
     }
 
     /// Build an [`AssignmentTargetWithDefault`], and store it in the memory arena.
@@ -7477,7 +7757,10 @@ impl<'a> AssignmentTargetWithDefault<'a> {
         builder: &impl GetAstBuilder<'a>,
     ) -> ArenaBox<'a, Self> {
         let builder = builder.builder();
-        ArenaBox::new_in(Self::new(span, binding, init, builder), &builder.allocator())
+        ArenaBox::new_in(
+            Self::new(span, binding, init, builder),
+            &builder.allocator(),
+        )
     }
 }
 
@@ -7575,7 +7858,10 @@ impl<'a> AssignmentTargetPropertyIdentifier<'a> {
         builder: &impl GetAstBuilder<'a>,
     ) -> ArenaBox<'a, Self> {
         let builder = builder.builder();
-        ArenaBox::new_in(Self::new(span, binding, init, builder), &builder.allocator())
+        ArenaBox::new_in(
+            Self::new(span, binding, init, builder),
+            &builder.allocator(),
+        )
     }
 }
 
@@ -7627,7 +7913,10 @@ impl<'a> AssignmentTargetPropertyProperty<'a> {
         builder: &impl GetAstBuilder<'a>,
     ) -> ArenaBox<'a, Self> {
         let builder = builder.builder();
-        ArenaBox::new_in(Self::new(span, name, binding, computed, builder), &builder.allocator())
+        ArenaBox::new_in(
+            Self::new(span, name, binding, computed, builder),
+            &builder.allocator(),
+        )
     }
 }
 
@@ -7684,7 +7973,10 @@ impl Super {
     #[inline]
     pub fn new<'a>(span: Span, builder: &impl GetAstBuilder<'a>) -> Self {
         let builder = builder.builder();
-        Super { node_id: Cell::new(builder.node_id()), span }
+        Super {
+            node_id: Cell::new(builder.node_id()),
+            span,
+        }
     }
 
     /// Build a [`Super`], and store it in the memory arena.
@@ -7713,7 +8005,11 @@ impl<'a> AwaitExpression<'a> {
     #[inline]
     pub fn new(span: Span, argument: Expression<'a>, builder: &impl GetAstBuilder<'a>) -> Self {
         let builder = builder.builder();
-        AwaitExpression { node_id: Cell::new(builder.node_id()), span, argument }
+        AwaitExpression {
+            node_id: Cell::new(builder.node_id()),
+            span,
+            argument,
+        }
     }
 
     /// Build an [`AwaitExpression`], and store it in the memory arena.
@@ -7747,7 +8043,11 @@ impl<'a> ChainExpression<'a> {
     #[inline]
     pub fn new(span: Span, expression: ChainElement<'a>, builder: &impl GetAstBuilder<'a>) -> Self {
         let builder = builder.builder();
-        ChainExpression { node_id: Cell::new(builder.node_id()), span, expression }
+        ChainExpression {
+            node_id: Cell::new(builder.node_id()),
+            span,
+            expression,
+        }
     }
 
     /// Build a [`ChainExpression`], and store it in the memory arena.
@@ -7844,7 +8144,11 @@ impl<'a> ChainElement<'a> {
         expression: Expression<'a>,
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
-        Self::TSNonNullExpression(TSNonNullExpression::boxed(span, expression, builder.builder()))
+        Self::TSNonNullExpression(TSNonNullExpression::boxed(
+            span,
+            expression,
+            builder.builder(),
+        ))
     }
 
     /// Build a [`ChainElement::ComputedMemberExpression`].
@@ -7938,7 +8242,11 @@ impl<'a> ParenthesizedExpression<'a> {
     #[inline]
     pub fn new(span: Span, expression: Expression<'a>, builder: &impl GetAstBuilder<'a>) -> Self {
         let builder = builder.builder();
-        ParenthesizedExpression { node_id: Cell::new(builder.node_id()), span, expression }
+        ParenthesizedExpression {
+            node_id: Cell::new(builder.node_id()),
+            span,
+            expression,
+        }
     }
 
     /// Build a [`ParenthesizedExpression`], and store it in the memory arena.
@@ -8085,7 +8393,11 @@ impl<'a> Statement<'a> {
         expression: Expression<'a>,
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
-        Self::ExpressionStatement(ExpressionStatement::boxed(span, expression, builder.builder()))
+        Self::ExpressionStatement(ExpressionStatement::boxed(
+            span,
+            expression,
+            builder.builder(),
+        ))
     }
 
     /// Build a [`Statement::ForInStatement`].
@@ -8105,7 +8417,13 @@ impl<'a> Statement<'a> {
         body: Statement<'a>,
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
-        Self::ForInStatement(ForInStatement::boxed(span, left, right, body, builder.builder()))
+        Self::ForInStatement(ForInStatement::boxed(
+            span,
+            left,
+            right,
+            body,
+            builder.builder(),
+        ))
     }
 
     /// Build a [`Statement::ForInStatement`] with `scope_id`.
@@ -8217,7 +8535,14 @@ impl<'a> Statement<'a> {
         body: Statement<'a>,
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
-        Self::ForStatement(ForStatement::boxed(span, init, test, update, body, builder.builder()))
+        Self::ForStatement(ForStatement::boxed(
+            span,
+            init,
+            test,
+            update,
+            body,
+            builder.builder(),
+        ))
     }
 
     /// Build a [`Statement::ForStatement`] with `scope_id`.
@@ -8269,7 +8594,13 @@ impl<'a> Statement<'a> {
         alternate: Option<Statement<'a>>,
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
-        Self::IfStatement(IfStatement::boxed(span, test, consequent, alternate, builder.builder()))
+        Self::IfStatement(IfStatement::boxed(
+            span,
+            test,
+            consequent,
+            alternate,
+            builder.builder(),
+        ))
     }
 
     /// Build a [`Statement::LabeledStatement`].
@@ -8287,7 +8618,12 @@ impl<'a> Statement<'a> {
         body: Statement<'a>,
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
-        Self::LabeledStatement(LabeledStatement::boxed(span, label, body, builder.builder()))
+        Self::LabeledStatement(LabeledStatement::boxed(
+            span,
+            label,
+            body,
+            builder.builder(),
+        ))
     }
 
     /// Build a [`Statement::ReturnStatement`].
@@ -8321,7 +8657,12 @@ impl<'a> Statement<'a> {
         cases: impl IntoIn<'a, ArenaVec<'a, SwitchCase<'a>>>,
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
-        Self::SwitchStatement(SwitchStatement::boxed(span, discriminant, cases, builder.builder()))
+        Self::SwitchStatement(SwitchStatement::boxed(
+            span,
+            discriminant,
+            cases,
+            builder.builder(),
+        ))
     }
 
     /// Build a [`Statement::SwitchStatement`] with `scope_id`.
@@ -8383,7 +8724,13 @@ impl<'a> Statement<'a> {
         finalizer: Option<ArenaBox<'a, BlockStatement<'a>>>,
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
-        Self::TryStatement(TryStatement::boxed(span, block, handler, finalizer, builder.builder()))
+        Self::TryStatement(TryStatement::boxed(
+            span,
+            block,
+            handler,
+            finalizer,
+            builder.builder(),
+        ))
     }
 
     /// Build a [`Statement::WhileStatement`].
@@ -9116,7 +9463,11 @@ impl<'a> Statement<'a> {
         declaration: Declaration<'a>,
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
-        Self::ExportDeclaration(ExportDeclaration::boxed(span, declaration, builder.builder()))
+        Self::ExportDeclaration(ExportDeclaration::boxed(
+            span,
+            declaration,
+            builder.builder(),
+        ))
     }
 
     /// Build a [`Statement::ExportNamedDeclaration`].
@@ -9184,7 +9535,11 @@ impl<'a> Statement<'a> {
         expression: Expression<'a>,
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
-        Self::TSExportAssignment(TSExportAssignment::boxed(span, expression, builder.builder()))
+        Self::TSExportAssignment(TSExportAssignment::boxed(
+            span,
+            expression,
+            builder.builder(),
+        ))
     }
 
     /// Build a [`Statement::TSNamespaceExportDeclaration`].
@@ -9241,7 +9596,11 @@ impl<'a> Hashbang<'a> {
     #[inline]
     pub fn new(span: Span, value: impl Into<Str<'a>>, builder: &impl GetAstBuilder<'a>) -> Self {
         let builder = builder.builder();
-        Hashbang { node_id: Cell::new(builder.node_id()), span, value: value.into() }
+        Hashbang {
+            node_id: Cell::new(builder.node_id()),
+            span,
+            value: value.into(),
+        }
     }
 }
 
@@ -10008,7 +10367,10 @@ impl EmptyStatement {
     #[inline]
     pub fn new<'a>(span: Span, builder: &impl GetAstBuilder<'a>) -> Self {
         let builder = builder.builder();
-        EmptyStatement { node_id: Cell::new(builder.node_id()), span }
+        EmptyStatement {
+            node_id: Cell::new(builder.node_id()),
+            span,
+        }
     }
 
     /// Build an [`EmptyStatement`], and store it in the memory arena.
@@ -10037,7 +10399,11 @@ impl<'a> ExpressionStatement<'a> {
     #[inline]
     pub fn new(span: Span, expression: Expression<'a>, builder: &impl GetAstBuilder<'a>) -> Self {
         let builder = builder.builder();
-        ExpressionStatement { node_id: Cell::new(builder.node_id()), span, expression }
+        ExpressionStatement {
+            node_id: Cell::new(builder.node_id()),
+            span,
+            expression,
+        }
     }
 
     /// Build an [`ExpressionStatement`], and store it in the memory arena.
@@ -10079,7 +10445,13 @@ impl<'a> IfStatement<'a> {
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
         let builder = builder.builder();
-        IfStatement { node_id: Cell::new(builder.node_id()), span, test, consequent, alternate }
+        IfStatement {
+            node_id: Cell::new(builder.node_id()),
+            span,
+            test,
+            consequent,
+            alternate,
+        }
     }
 
     /// Build an [`IfStatement`], and store it in the memory arena.
@@ -10126,7 +10498,12 @@ impl<'a> DoWhileStatement<'a> {
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
         let builder = builder.builder();
-        DoWhileStatement { node_id: Cell::new(builder.node_id()), span, body, test }
+        DoWhileStatement {
+            node_id: Cell::new(builder.node_id()),
+            span,
+            body,
+            test,
+        }
     }
 
     /// Build a [`DoWhileStatement`], and store it in the memory arena.
@@ -10168,7 +10545,12 @@ impl<'a> WhileStatement<'a> {
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
         let builder = builder.builder();
-        WhileStatement { node_id: Cell::new(builder.node_id()), span, test, body }
+        WhileStatement {
+            node_id: Cell::new(builder.node_id()),
+            span,
+            test,
+            body,
+        }
     }
 
     /// Build a [`WhileStatement`], and store it in the memory arena.
@@ -10246,7 +10628,10 @@ impl<'a> ForStatement<'a> {
         builder: &impl GetAstBuilder<'a>,
     ) -> ArenaBox<'a, Self> {
         let builder = builder.builder();
-        ArenaBox::new_in(Self::new(span, init, test, update, body, builder), &builder.allocator())
+        ArenaBox::new_in(
+            Self::new(span, init, test, update, body, builder),
+            &builder.allocator(),
+        )
     }
 
     /// Build a [`ForStatement`] with `scope_id`.
@@ -10380,7 +10765,13 @@ impl<'a> ForStatementInit<'a> {
         base: NumberBase,
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
-        Self::NumericLiteral(NumericLiteral::boxed(span, value, raw, base, builder.builder()))
+        Self::NumericLiteral(NumericLiteral::boxed(
+            span,
+            value,
+            raw,
+            base,
+            builder.builder(),
+        ))
     }
 
     /// Build a [`ForStatementInit::BigIntLiteral`].
@@ -10400,7 +10791,13 @@ impl<'a> ForStatementInit<'a> {
         base: BigintBase,
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
-        Self::BigIntLiteral(BigIntLiteral::boxed(span, value, raw, base, builder.builder()))
+        Self::BigIntLiteral(BigIntLiteral::boxed(
+            span,
+            value,
+            raw,
+            base,
+            builder.builder(),
+        ))
     }
 
     /// Build a [`ForStatementInit::RegExpLiteral`].
@@ -10480,7 +10877,12 @@ impl<'a> ForStatementInit<'a> {
         expressions: impl IntoIn<'a, ArenaVec<'a, Expression<'a>>>,
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
-        Self::TemplateLiteral(TemplateLiteral::boxed(span, quasis, expressions, builder.builder()))
+        Self::TemplateLiteral(TemplateLiteral::boxed(
+            span,
+            quasis,
+            expressions,
+            builder.builder(),
+        ))
     }
 
     /// Build a [`ForStatementInit::Identifier`].
@@ -11145,7 +11547,11 @@ impl<'a> ForStatementInit<'a> {
         expressions: impl IntoIn<'a, ArenaVec<'a, Expression<'a>>>,
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
-        Self::SequenceExpression(SequenceExpression::boxed(span, expressions, builder.builder()))
+        Self::SequenceExpression(SequenceExpression::boxed(
+            span,
+            expressions,
+            builder.builder(),
+        ))
     }
 
     /// Build a [`ForStatementInit::TaggedTemplateExpression`].
@@ -11200,7 +11606,12 @@ impl<'a> ForStatementInit<'a> {
         argument: Expression<'a>,
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
-        Self::UnaryExpression(UnaryExpression::boxed(span, operator, argument, builder.builder()))
+        Self::UnaryExpression(UnaryExpression::boxed(
+            span,
+            operator,
+            argument,
+            builder.builder(),
+        ))
     }
 
     /// Build a [`ForStatementInit::UpdateExpression`].
@@ -11244,7 +11655,12 @@ impl<'a> ForStatementInit<'a> {
         argument: Option<Expression<'a>>,
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
-        Self::YieldExpression(YieldExpression::boxed(span, delegate, argument, builder.builder()))
+        Self::YieldExpression(YieldExpression::boxed(
+            span,
+            delegate,
+            argument,
+            builder.builder(),
+        ))
     }
 
     /// Build a [`ForStatementInit::PrivateInExpression`].
@@ -11262,7 +11678,12 @@ impl<'a> ForStatementInit<'a> {
         right: Expression<'a>,
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
-        Self::PrivateInExpression(PrivateInExpression::boxed(span, left, right, builder.builder()))
+        Self::PrivateInExpression(PrivateInExpression::boxed(
+            span,
+            left,
+            right,
+            builder.builder(),
+        ))
     }
 
     /// Build a [`ForStatementInit::ImportMeta`].
@@ -11421,7 +11842,11 @@ impl<'a> ForStatementInit<'a> {
         expression: Expression<'a>,
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
-        Self::TSNonNullExpression(TSNonNullExpression::boxed(span, expression, builder.builder()))
+        Self::TSNonNullExpression(TSNonNullExpression::boxed(
+            span,
+            expression,
+            builder.builder(),
+        ))
     }
 
     /// Build a [`ForStatementInit::TSInstantiationExpression`].
@@ -11598,7 +12023,10 @@ impl<'a> ForInStatement<'a> {
         builder: &impl GetAstBuilder<'a>,
     ) -> ArenaBox<'a, Self> {
         let builder = builder.builder();
-        ArenaBox::new_in(Self::new(span, left, right, body, builder), &builder.allocator())
+        ArenaBox::new_in(
+            Self::new(span, left, right, body, builder),
+            &builder.allocator(),
+        )
     }
 
     /// Build a [`ForInStatement`] with `scope_id`.
@@ -11785,7 +12213,11 @@ impl<'a> ForStatementLeft<'a> {
         expression: Expression<'a>,
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
-        Self::TSNonNullExpression(TSNonNullExpression::boxed(span, expression, builder.builder()))
+        Self::TSNonNullExpression(TSNonNullExpression::boxed(
+            span,
+            expression,
+            builder.builder(),
+        ))
     }
 
     /// Build a [`ForStatementLeft::TSTypeAssertion`].
@@ -11990,7 +12422,10 @@ impl<'a> ForOfStatement<'a> {
         builder: &impl GetAstBuilder<'a>,
     ) -> ArenaBox<'a, Self> {
         let builder = builder.builder();
-        ArenaBox::new_in(Self::new(span, r#await, left, right, body, builder), &builder.allocator())
+        ArenaBox::new_in(
+            Self::new(span, r#await, left, right, body, builder),
+            &builder.allocator(),
+        )
     }
 
     /// Build a [`ForOfStatement`] with `scope_id`.
@@ -12073,7 +12508,11 @@ impl<'a> ContinueStatement<'a> {
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
         let builder = builder.builder();
-        ContinueStatement { node_id: Cell::new(builder.node_id()), span, label }
+        ContinueStatement {
+            node_id: Cell::new(builder.node_id()),
+            span,
+            label,
+        }
     }
 
     /// Build a [`ContinueStatement`], and store it in the memory arena.
@@ -12111,7 +12550,11 @@ impl<'a> BreakStatement<'a> {
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
         let builder = builder.builder();
-        BreakStatement { node_id: Cell::new(builder.node_id()), span, label }
+        BreakStatement {
+            node_id: Cell::new(builder.node_id()),
+            span,
+            label,
+        }
     }
 
     /// Build a [`BreakStatement`], and store it in the memory arena.
@@ -12149,7 +12592,11 @@ impl<'a> ReturnStatement<'a> {
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
         let builder = builder.builder();
-        ReturnStatement { node_id: Cell::new(builder.node_id()), span, argument }
+        ReturnStatement {
+            node_id: Cell::new(builder.node_id()),
+            span,
+            argument,
+        }
     }
 
     /// Build a [`ReturnStatement`], and store it in the memory arena.
@@ -12316,7 +12763,10 @@ impl<'a> SwitchStatement<'a> {
         builder: &impl GetAstBuilder<'a>,
     ) -> ArenaBox<'a, Self> {
         let builder = builder.builder();
-        ArenaBox::new_in(Self::new(span, discriminant, cases, builder), &builder.allocator())
+        ArenaBox::new_in(
+            Self::new(span, discriminant, cases, builder),
+            &builder.allocator(),
+        )
     }
 
     /// Build a [`SwitchStatement`] with `scope_id`.
@@ -12415,7 +12865,12 @@ impl<'a> LabeledStatement<'a> {
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
         let builder = builder.builder();
-        LabeledStatement { node_id: Cell::new(builder.node_id()), span, label, body }
+        LabeledStatement {
+            node_id: Cell::new(builder.node_id()),
+            span,
+            label,
+            body,
+        }
     }
 
     /// Build a [`LabeledStatement`], and store it in the memory arena.
@@ -12451,7 +12906,11 @@ impl<'a> ThrowStatement<'a> {
     #[inline]
     pub fn new(span: Span, argument: Expression<'a>, builder: &impl GetAstBuilder<'a>) -> Self {
         let builder = builder.builder();
-        ThrowStatement { node_id: Cell::new(builder.node_id()), span, argument }
+        ThrowStatement {
+            node_id: Cell::new(builder.node_id()),
+            span,
+            argument,
+        }
     }
 
     /// Build a [`ThrowStatement`], and store it in the memory arena.
@@ -12493,7 +12952,13 @@ impl<'a> TryStatement<'a> {
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
         let builder = builder.builder();
-        TryStatement { node_id: Cell::new(builder.node_id()), span, block, handler, finalizer }
+        TryStatement {
+            node_id: Cell::new(builder.node_id()),
+            span,
+            block,
+            handler,
+            finalizer,
+        }
     }
 
     /// Build a [`TryStatement`], and store it in the memory arena.
@@ -12515,7 +12980,10 @@ impl<'a> TryStatement<'a> {
         builder: &impl GetAstBuilder<'a>,
     ) -> ArenaBox<'a, Self> {
         let builder = builder.builder();
-        ArenaBox::new_in(Self::new(span, block, handler, finalizer, builder), &builder.allocator())
+        ArenaBox::new_in(
+            Self::new(span, block, handler, finalizer, builder),
+            &builder.allocator(),
+        )
     }
 }
 
@@ -12635,7 +13103,12 @@ impl<'a> CatchParameter<'a> {
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
         let builder = builder.builder();
-        CatchParameter { node_id: Cell::new(builder.node_id()), span, pattern, type_annotation }
+        CatchParameter {
+            node_id: Cell::new(builder.node_id()),
+            span,
+            pattern,
+            type_annotation,
+        }
     }
 }
 
@@ -12650,7 +13123,10 @@ impl DebuggerStatement {
     #[inline]
     pub fn new<'a>(span: Span, builder: &impl GetAstBuilder<'a>) -> Self {
         let builder = builder.builder();
-        DebuggerStatement { node_id: Cell::new(builder.node_id()), span }
+        DebuggerStatement {
+            node_id: Cell::new(builder.node_id()),
+            span,
+        }
     }
 
     /// Build a [`DebuggerStatement`], and store it in the memory arena.
@@ -12722,7 +13198,12 @@ impl<'a> BindingPattern<'a> {
         rest: Option<ArenaBox<'a, BindingRestElement<'a>>>,
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
-        Self::ObjectPattern(ObjectPattern::boxed(span, properties, rest, builder.builder()))
+        Self::ObjectPattern(ObjectPattern::boxed(
+            span,
+            properties,
+            rest,
+            builder.builder(),
+        ))
     }
 
     /// Build a [`BindingPattern::ArrayPattern`].
@@ -12758,7 +13239,12 @@ impl<'a> BindingPattern<'a> {
         right: Expression<'a>,
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
-        Self::AssignmentPattern(AssignmentPattern::boxed(span, left, right, builder.builder()))
+        Self::AssignmentPattern(AssignmentPattern::boxed(
+            span,
+            left,
+            right,
+            builder.builder(),
+        ))
     }
 }
 
@@ -12780,7 +13266,12 @@ impl<'a> AssignmentPattern<'a> {
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
         let builder = builder.builder();
-        AssignmentPattern { node_id: Cell::new(builder.node_id()), span, left, right }
+        AssignmentPattern {
+            node_id: Cell::new(builder.node_id()),
+            span,
+            left,
+            right,
+        }
     }
 
     /// Build an [`AssignmentPattern`], and store it in the memory arena.
@@ -12847,7 +13338,10 @@ impl<'a> ObjectPattern<'a> {
         builder: &impl GetAstBuilder<'a>,
     ) -> ArenaBox<'a, Self> {
         let builder = builder.builder();
-        ArenaBox::new_in(Self::new(span, properties, rest, builder), &builder.allocator())
+        ArenaBox::new_in(
+            Self::new(span, properties, rest, builder),
+            &builder.allocator(),
+        )
     }
 }
 
@@ -12924,7 +13418,10 @@ impl<'a> ArrayPattern<'a> {
         builder: &impl GetAstBuilder<'a>,
     ) -> ArenaBox<'a, Self> {
         let builder = builder.builder();
-        ArenaBox::new_in(Self::new(span, elements, rest, builder), &builder.allocator())
+        ArenaBox::new_in(
+            Self::new(span, elements, rest, builder),
+            &builder.allocator(),
+        )
     }
 }
 
@@ -12940,7 +13437,11 @@ impl<'a> BindingRestElement<'a> {
     #[inline]
     pub fn new(span: Span, argument: BindingPattern<'a>, builder: &impl GetAstBuilder<'a>) -> Self {
         let builder = builder.builder();
-        BindingRestElement { node_id: Cell::new(builder.node_id()), span, argument }
+        BindingRestElement {
+            node_id: Cell::new(builder.node_id()),
+            span,
+            argument,
+        }
     }
 
     /// Build a [`BindingRestElement`], and store it in the memory arena.
@@ -13235,7 +13736,10 @@ impl<'a> FormalParameters<'a> {
         builder: &impl GetAstBuilder<'a>,
     ) -> ArenaBox<'a, Self> {
         let builder = builder.builder();
-        ArenaBox::new_in(Self::new(span, kind, items, rest, builder), &builder.allocator())
+        ArenaBox::new_in(
+            Self::new(span, kind, items, rest, builder),
+            &builder.allocator(),
+        )
     }
 }
 
@@ -13379,7 +13883,10 @@ impl<'a> FunctionBody<'a> {
         builder: &impl GetAstBuilder<'a>,
     ) -> ArenaBox<'a, Self> {
         let builder = builder.builder();
-        ArenaBox::new_in(Self::new(span, directives, statements, builder), &builder.allocator())
+        ArenaBox::new_in(
+            Self::new(span, directives, statements, builder),
+            &builder.allocator(),
+        )
     }
 }
 
@@ -13399,7 +13906,12 @@ impl<'a> ArrowFunctionBody<'a> {
         statements: impl IntoIn<'a, ArenaVec<'a, Statement<'a>>>,
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
-        Self::FunctionBody(FunctionBody::boxed(span, directives, statements, builder.builder()))
+        Self::FunctionBody(FunctionBody::boxed(
+            span,
+            directives,
+            statements,
+            builder.builder(),
+        ))
     }
 
     /// Build an [`ArrowFunctionBody::BooleanLiteral`].
@@ -13442,7 +13954,13 @@ impl<'a> ArrowFunctionBody<'a> {
         base: NumberBase,
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
-        Self::NumericLiteral(NumericLiteral::boxed(span, value, raw, base, builder.builder()))
+        Self::NumericLiteral(NumericLiteral::boxed(
+            span,
+            value,
+            raw,
+            base,
+            builder.builder(),
+        ))
     }
 
     /// Build an [`ArrowFunctionBody::BigIntLiteral`].
@@ -13462,7 +13980,13 @@ impl<'a> ArrowFunctionBody<'a> {
         base: BigintBase,
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
-        Self::BigIntLiteral(BigIntLiteral::boxed(span, value, raw, base, builder.builder()))
+        Self::BigIntLiteral(BigIntLiteral::boxed(
+            span,
+            value,
+            raw,
+            base,
+            builder.builder(),
+        ))
     }
 
     /// Build an [`ArrowFunctionBody::RegExpLiteral`].
@@ -13542,7 +14066,12 @@ impl<'a> ArrowFunctionBody<'a> {
         expressions: impl IntoIn<'a, ArenaVec<'a, Expression<'a>>>,
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
-        Self::TemplateLiteral(TemplateLiteral::boxed(span, quasis, expressions, builder.builder()))
+        Self::TemplateLiteral(TemplateLiteral::boxed(
+            span,
+            quasis,
+            expressions,
+            builder.builder(),
+        ))
     }
 
     /// Build an [`ArrowFunctionBody::Identifier`].
@@ -14207,7 +14736,11 @@ impl<'a> ArrowFunctionBody<'a> {
         expressions: impl IntoIn<'a, ArenaVec<'a, Expression<'a>>>,
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
-        Self::SequenceExpression(SequenceExpression::boxed(span, expressions, builder.builder()))
+        Self::SequenceExpression(SequenceExpression::boxed(
+            span,
+            expressions,
+            builder.builder(),
+        ))
     }
 
     /// Build an [`ArrowFunctionBody::TaggedTemplateExpression`].
@@ -14262,7 +14795,12 @@ impl<'a> ArrowFunctionBody<'a> {
         argument: Expression<'a>,
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
-        Self::UnaryExpression(UnaryExpression::boxed(span, operator, argument, builder.builder()))
+        Self::UnaryExpression(UnaryExpression::boxed(
+            span,
+            operator,
+            argument,
+            builder.builder(),
+        ))
     }
 
     /// Build an [`ArrowFunctionBody::UpdateExpression`].
@@ -14306,7 +14844,12 @@ impl<'a> ArrowFunctionBody<'a> {
         argument: Option<Expression<'a>>,
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
-        Self::YieldExpression(YieldExpression::boxed(span, delegate, argument, builder.builder()))
+        Self::YieldExpression(YieldExpression::boxed(
+            span,
+            delegate,
+            argument,
+            builder.builder(),
+        ))
     }
 
     /// Build an [`ArrowFunctionBody::PrivateInExpression`].
@@ -14324,7 +14867,12 @@ impl<'a> ArrowFunctionBody<'a> {
         right: Expression<'a>,
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
-        Self::PrivateInExpression(PrivateInExpression::boxed(span, left, right, builder.builder()))
+        Self::PrivateInExpression(PrivateInExpression::boxed(
+            span,
+            left,
+            right,
+            builder.builder(),
+        ))
     }
 
     /// Build an [`ArrowFunctionBody::ImportMeta`].
@@ -14483,7 +15031,11 @@ impl<'a> ArrowFunctionBody<'a> {
         expression: Expression<'a>,
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
-        Self::TSNonNullExpression(TSNonNullExpression::boxed(span, expression, builder.builder()))
+        Self::TSNonNullExpression(TSNonNullExpression::boxed(
+            span,
+            expression,
+            builder.builder(),
+        ))
     }
 
     /// Build an [`ArrowFunctionBody::TSInstantiationExpression`].
@@ -14673,7 +15225,15 @@ impl<'a> ArrowFunctionExpression<'a> {
     ) -> ArenaBox<'a, Self> {
         let builder = builder.builder();
         ArenaBox::new_in(
-            Self::new(span, r#async, type_parameters, params, return_type, body, builder),
+            Self::new(
+                span,
+                r#async,
+                type_parameters,
+                params,
+                return_type,
+                body,
+                builder,
+            ),
             &builder.allocator(),
         )
     }
@@ -14786,7 +15346,12 @@ impl<'a> YieldExpression<'a> {
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
         let builder = builder.builder();
-        YieldExpression { node_id: Cell::new(builder.node_id()), span, delegate, argument }
+        YieldExpression {
+            node_id: Cell::new(builder.node_id()),
+            span,
+            delegate,
+            argument,
+        }
     }
 
     /// Build a [`YieldExpression`], and store it in the memory arena.
@@ -14806,7 +15371,10 @@ impl<'a> YieldExpression<'a> {
         builder: &impl GetAstBuilder<'a>,
     ) -> ArenaBox<'a, Self> {
         let builder = builder.builder();
-        ArenaBox::new_in(Self::new(span, delegate, argument, builder), &builder.allocator())
+        ArenaBox::new_in(
+            Self::new(span, delegate, argument, builder),
+            &builder.allocator(),
+        )
     }
 }
 
@@ -15023,7 +15591,10 @@ impl<'a> ClassHeritage<'a> {
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
         let builder = builder.builder();
-        ClassHeritage { expression, type_arguments }
+        ClassHeritage {
+            expression,
+            type_arguments,
+        }
     }
 }
 
@@ -15101,7 +15672,12 @@ impl<'a> ClassElement<'a> {
         scope_id: ScopeId,
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
-        Self::StaticBlock(StaticBlock::boxed_with_scope_id(span, body, scope_id, builder.builder()))
+        Self::StaticBlock(StaticBlock::boxed_with_scope_id(
+            span,
+            body,
+            scope_id,
+            builder.builder(),
+        ))
     }
 
     /// Build a [`ClassElement::MethodDefinition`].
@@ -15520,7 +16096,11 @@ impl<'a> PrivateIdentifier<'a> {
     #[inline]
     pub fn new(span: Span, name: impl Into<Ident<'a>>, builder: &impl GetAstBuilder<'a>) -> Self {
         let builder = builder.builder();
-        PrivateIdentifier { node_id: Cell::new(builder.node_id()), span, name: name.into() }
+        PrivateIdentifier {
+            node_id: Cell::new(builder.node_id()),
+            span,
+            name: name.into(),
+        }
     }
 
     /// Build a [`PrivateIdentifier`], and store it in the memory arena.
@@ -15728,7 +16308,11 @@ impl<'a> ModuleDeclaration<'a> {
         declaration: Declaration<'a>,
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
-        Self::ExportDeclaration(ExportDeclaration::boxed(span, declaration, builder.builder()))
+        Self::ExportDeclaration(ExportDeclaration::boxed(
+            span,
+            declaration,
+            builder.builder(),
+        ))
     }
 
     /// Build a [`ModuleDeclaration::ExportNamedDeclaration`].
@@ -15796,7 +16380,11 @@ impl<'a> ModuleDeclaration<'a> {
         expression: Expression<'a>,
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
-        Self::TSExportAssignment(TSExportAssignment::boxed(span, expression, builder.builder()))
+        Self::TSExportAssignment(TSExportAssignment::boxed(
+            span,
+            expression,
+            builder.builder(),
+        ))
     }
 
     /// Build a [`ModuleDeclaration::TSNamespaceExportDeclaration`].
@@ -15943,7 +16531,13 @@ impl<'a> ImportExpression<'a> {
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
         let builder = builder.builder();
-        ImportExpression { node_id: Cell::new(builder.node_id()), span, source, options, phase }
+        ImportExpression {
+            node_id: Cell::new(builder.node_id()),
+            span,
+            source,
+            options,
+            phase,
+        }
     }
 
     /// Build an [`ImportExpression`], and store it in the memory arena.
@@ -15965,7 +16559,10 @@ impl<'a> ImportExpression<'a> {
         builder: &impl GetAstBuilder<'a>,
     ) -> ArenaBox<'a, Self> {
         let builder = builder.builder();
-        ArenaBox::new_in(Self::new(span, source, options, phase, builder), &builder.allocator())
+        ArenaBox::new_in(
+            Self::new(span, source, options, phase, builder),
+            &builder.allocator(),
+        )
     }
 }
 
@@ -16028,7 +16625,15 @@ impl<'a> ImportDeclaration<'a> {
     ) -> ArenaBox<'a, Self> {
         let builder = builder.builder();
         ArenaBox::new_in(
-            Self::new(span, specifiers, source, phase, with_clause, import_kind, builder),
+            Self::new(
+                span,
+                specifiers,
+                source,
+                phase,
+                with_clause,
+                import_kind,
+                builder,
+            ),
             &builder.allocator(),
         )
     }
@@ -16074,7 +16679,11 @@ impl<'a> ImportDeclarationSpecifier<'a> {
         local: BindingIdentifier<'a>,
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
-        Self::ImportDefaultSpecifier(ImportDefaultSpecifier::boxed(span, local, builder.builder()))
+        Self::ImportDefaultSpecifier(ImportDefaultSpecifier::boxed(
+            span,
+            local,
+            builder.builder(),
+        ))
     }
 
     /// Build an [`ImportDeclarationSpecifier::ImportNamespaceSpecifier`].
@@ -16165,7 +16774,11 @@ impl<'a> ImportDefaultSpecifier<'a> {
     #[inline]
     pub fn new(span: Span, local: BindingIdentifier<'a>, builder: &impl GetAstBuilder<'a>) -> Self {
         let builder = builder.builder();
-        ImportDefaultSpecifier { node_id: Cell::new(builder.node_id()), span, local }
+        ImportDefaultSpecifier {
+            node_id: Cell::new(builder.node_id()),
+            span,
+            local,
+        }
     }
 
     /// Build an [`ImportDefaultSpecifier`], and store it in the memory arena.
@@ -16199,7 +16812,11 @@ impl<'a> ImportNamespaceSpecifier<'a> {
     #[inline]
     pub fn new(span: Span, local: BindingIdentifier<'a>, builder: &impl GetAstBuilder<'a>) -> Self {
         let builder = builder.builder();
-        ImportNamespaceSpecifier { node_id: Cell::new(builder.node_id()), span, local }
+        ImportNamespaceSpecifier {
+            node_id: Cell::new(builder.node_id()),
+            span,
+            local,
+        }
     }
 
     /// Build an [`ImportNamespaceSpecifier`], and store it in the memory arena.
@@ -16264,7 +16881,10 @@ impl<'a> WithClause<'a> {
         builder: &impl GetAstBuilder<'a>,
     ) -> ArenaBox<'a, Self> {
         let builder = builder.builder();
-        ArenaBox::new_in(Self::new(span, keyword, with_entries, builder), &builder.allocator())
+        ArenaBox::new_in(
+            Self::new(span, keyword, with_entries, builder),
+            &builder.allocator(),
+        )
     }
 }
 
@@ -16283,7 +16903,12 @@ impl<'a> ImportAttribute<'a> {
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
         let builder = builder.builder();
-        ImportAttribute { node_id: Cell::new(builder.node_id()), span, key, value }
+        ImportAttribute {
+            node_id: Cell::new(builder.node_id()),
+            span,
+            key,
+            value,
+        }
     }
 }
 
@@ -16355,7 +16980,11 @@ impl<'a> ExportDeclaration<'a> {
     #[inline]
     pub fn new(span: Span, declaration: Declaration<'a>, builder: &impl GetAstBuilder<'a>) -> Self {
         let builder = builder.builder();
-        ExportDeclaration { node_id: Cell::new(builder.node_id()), span, declaration }
+        ExportDeclaration {
+            node_id: Cell::new(builder.node_id()),
+            span,
+            declaration,
+        }
     }
 
     /// Build an [`ExportDeclaration`], and store it in the memory arena.
@@ -16420,7 +17049,10 @@ impl<'a> ExportNamedDeclaration<'a> {
         builder: &impl GetAstBuilder<'a>,
     ) -> ArenaBox<'a, Self> {
         let builder = builder.builder();
-        ArenaBox::new_in(Self::new(span, specifiers, export_kind, builder), &builder.allocator())
+        ArenaBox::new_in(
+            Self::new(span, specifiers, export_kind, builder),
+            &builder.allocator(),
+        )
     }
 }
 
@@ -16500,7 +17132,11 @@ impl<'a> ExportDefaultDeclaration<'a> {
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
         let builder = builder.builder();
-        ExportDefaultDeclaration { node_id: Cell::new(builder.node_id()), span, declaration }
+        ExportDefaultDeclaration {
+            node_id: Cell::new(builder.node_id()),
+            span,
+            declaration,
+        }
     }
 
     /// Build an [`ExportDefaultDeclaration`], and store it in the memory arena.
@@ -16911,7 +17547,13 @@ impl<'a> ExportDefaultDeclarationKind<'a> {
         base: NumberBase,
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
-        Self::NumericLiteral(NumericLiteral::boxed(span, value, raw, base, builder.builder()))
+        Self::NumericLiteral(NumericLiteral::boxed(
+            span,
+            value,
+            raw,
+            base,
+            builder.builder(),
+        ))
     }
 
     /// Build an [`ExportDefaultDeclarationKind::BigIntLiteral`].
@@ -16931,7 +17573,13 @@ impl<'a> ExportDefaultDeclarationKind<'a> {
         base: BigintBase,
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
-        Self::BigIntLiteral(BigIntLiteral::boxed(span, value, raw, base, builder.builder()))
+        Self::BigIntLiteral(BigIntLiteral::boxed(
+            span,
+            value,
+            raw,
+            base,
+            builder.builder(),
+        ))
     }
 
     /// Build an [`ExportDefaultDeclarationKind::RegExpLiteral`].
@@ -17011,7 +17659,12 @@ impl<'a> ExportDefaultDeclarationKind<'a> {
         expressions: impl IntoIn<'a, ArenaVec<'a, Expression<'a>>>,
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
-        Self::TemplateLiteral(TemplateLiteral::boxed(span, quasis, expressions, builder.builder()))
+        Self::TemplateLiteral(TemplateLiteral::boxed(
+            span,
+            quasis,
+            expressions,
+            builder.builder(),
+        ))
     }
 
     /// Build an [`ExportDefaultDeclarationKind::Identifier`].
@@ -17676,7 +18329,11 @@ impl<'a> ExportDefaultDeclarationKind<'a> {
         expressions: impl IntoIn<'a, ArenaVec<'a, Expression<'a>>>,
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
-        Self::SequenceExpression(SequenceExpression::boxed(span, expressions, builder.builder()))
+        Self::SequenceExpression(SequenceExpression::boxed(
+            span,
+            expressions,
+            builder.builder(),
+        ))
     }
 
     /// Build an [`ExportDefaultDeclarationKind::TaggedTemplateExpression`].
@@ -17731,7 +18388,12 @@ impl<'a> ExportDefaultDeclarationKind<'a> {
         argument: Expression<'a>,
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
-        Self::UnaryExpression(UnaryExpression::boxed(span, operator, argument, builder.builder()))
+        Self::UnaryExpression(UnaryExpression::boxed(
+            span,
+            operator,
+            argument,
+            builder.builder(),
+        ))
     }
 
     /// Build an [`ExportDefaultDeclarationKind::UpdateExpression`].
@@ -17775,7 +18437,12 @@ impl<'a> ExportDefaultDeclarationKind<'a> {
         argument: Option<Expression<'a>>,
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
-        Self::YieldExpression(YieldExpression::boxed(span, delegate, argument, builder.builder()))
+        Self::YieldExpression(YieldExpression::boxed(
+            span,
+            delegate,
+            argument,
+            builder.builder(),
+        ))
     }
 
     /// Build an [`ExportDefaultDeclarationKind::PrivateInExpression`].
@@ -17793,7 +18460,12 @@ impl<'a> ExportDefaultDeclarationKind<'a> {
         right: Expression<'a>,
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
-        Self::PrivateInExpression(PrivateInExpression::boxed(span, left, right, builder.builder()))
+        Self::PrivateInExpression(PrivateInExpression::boxed(
+            span,
+            left,
+            right,
+            builder.builder(),
+        ))
     }
 
     /// Build an [`ExportDefaultDeclarationKind::ImportMeta`].
@@ -17952,7 +18624,11 @@ impl<'a> ExportDefaultDeclarationKind<'a> {
         expression: Expression<'a>,
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
-        Self::TSNonNullExpression(TSNonNullExpression::boxed(span, expression, builder.builder()))
+        Self::TSNonNullExpression(TSNonNullExpression::boxed(
+            span,
+            expression,
+            builder.builder(),
+        ))
     }
 
     /// Build an [`ExportDefaultDeclarationKind::TSInstantiationExpression`].
@@ -18214,7 +18890,10 @@ impl<'a> V8IntrinsicExpression<'a> {
         builder: &impl GetAstBuilder<'a>,
     ) -> ArenaBox<'a, Self> {
         let builder = builder.builder();
-        ArenaBox::new_in(Self::new(span, name, arguments, builder), &builder.allocator())
+        ArenaBox::new_in(
+            Self::new(span, name, arguments, builder),
+            &builder.allocator(),
+        )
     }
 }
 
@@ -18230,7 +18909,11 @@ impl BooleanLiteral {
     #[inline]
     pub fn new<'a>(span: Span, value: bool, builder: &impl GetAstBuilder<'a>) -> Self {
         let builder = builder.builder();
-        BooleanLiteral { node_id: Cell::new(builder.node_id()), span, value }
+        BooleanLiteral {
+            node_id: Cell::new(builder.node_id()),
+            span,
+            value,
+        }
     }
 
     /// Build a [`BooleanLiteral`], and store it in the memory arena.
@@ -18263,7 +18946,10 @@ impl NullLiteral {
     #[inline]
     pub fn new<'a>(span: Span, builder: &impl GetAstBuilder<'a>) -> Self {
         let builder = builder.builder();
-        NullLiteral { node_id: Cell::new(builder.node_id()), span }
+        NullLiteral {
+            node_id: Cell::new(builder.node_id()),
+            span,
+        }
     }
 
     /// Build a [`NullLiteral`], and store it in the memory arena.
@@ -18300,7 +18986,13 @@ impl<'a> NumericLiteral<'a> {
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
         let builder = builder.builder();
-        NumericLiteral { node_id: Cell::new(builder.node_id()), span, value, raw, base }
+        NumericLiteral {
+            node_id: Cell::new(builder.node_id()),
+            span,
+            value,
+            raw,
+            base,
+        }
     }
 
     /// Build a [`NumericLiteral`], and store it in the memory arena.
@@ -18322,7 +19014,10 @@ impl<'a> NumericLiteral<'a> {
         builder: &impl GetAstBuilder<'a>,
     ) -> ArenaBox<'a, Self> {
         let builder = builder.builder();
-        ArenaBox::new_in(Self::new(span, value, raw, base, builder), &builder.allocator())
+        ArenaBox::new_in(
+            Self::new(span, value, raw, base, builder),
+            &builder.allocator(),
+        )
     }
 }
 
@@ -18475,7 +19170,10 @@ impl<'a> BigIntLiteral<'a> {
         builder: &impl GetAstBuilder<'a>,
     ) -> ArenaBox<'a, Self> {
         let builder = builder.builder();
-        ArenaBox::new_in(Self::new(span, value, raw, base, builder), &builder.allocator())
+        ArenaBox::new_in(
+            Self::new(span, value, raw, base, builder),
+            &builder.allocator(),
+        )
     }
 }
 
@@ -18497,7 +19195,12 @@ impl<'a> RegExpLiteral<'a> {
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
         let builder = builder.builder();
-        RegExpLiteral { node_id: Cell::new(builder.node_id()), span, regex, raw }
+        RegExpLiteral {
+            node_id: Cell::new(builder.node_id()),
+            span,
+            regex,
+            raw,
+        }
     }
 
     /// Build a [`RegExpLiteral`], and store it in the memory arena.
@@ -18643,7 +19346,11 @@ impl<'a> JSXClosingElement<'a> {
     #[inline]
     pub fn new(span: Span, name: JSXElementName<'a>, builder: &impl GetAstBuilder<'a>) -> Self {
         let builder = builder.builder();
-        JSXClosingElement { node_id: Cell::new(builder.node_id()), span, name }
+        JSXClosingElement {
+            node_id: Cell::new(builder.node_id()),
+            span,
+            name,
+        }
     }
 
     /// Build a [`JSXClosingElement`], and store it in the memory arena.
@@ -18728,7 +19435,10 @@ impl JSXOpeningFragment {
     #[inline]
     pub fn new<'a>(span: Span, builder: &impl GetAstBuilder<'a>) -> Self {
         let builder = builder.builder();
-        JSXOpeningFragment { node_id: Cell::new(builder.node_id()), span }
+        JSXOpeningFragment {
+            node_id: Cell::new(builder.node_id()),
+            span,
+        }
     }
 }
 
@@ -18740,7 +19450,10 @@ impl JSXClosingFragment {
     #[inline]
     pub fn new<'a>(span: Span, builder: &impl GetAstBuilder<'a>) -> Self {
         let builder = builder.builder();
-        JSXClosingFragment { node_id: Cell::new(builder.node_id()), span }
+        JSXClosingFragment {
+            node_id: Cell::new(builder.node_id()),
+            span,
+        }
     }
 }
 
@@ -18815,7 +19528,12 @@ impl<'a> JSXElementName<'a> {
         name: JSXIdentifier<'a>,
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
-        Self::NamespacedName(JSXNamespacedName::boxed(span, namespace, name, builder.builder()))
+        Self::NamespacedName(JSXNamespacedName::boxed(
+            span,
+            namespace,
+            name,
+            builder.builder(),
+        ))
     }
 
     /// Build a [`JSXElementName::MemberExpression`].
@@ -18871,7 +19589,12 @@ impl<'a> JSXNamespacedName<'a> {
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
         let builder = builder.builder();
-        JSXNamespacedName { node_id: Cell::new(builder.node_id()), span, namespace, name }
+        JSXNamespacedName {
+            node_id: Cell::new(builder.node_id()),
+            span,
+            namespace,
+            name,
+        }
     }
 
     /// Build a [`JSXNamespacedName`], and store it in the memory arena.
@@ -18891,7 +19614,10 @@ impl<'a> JSXNamespacedName<'a> {
         builder: &impl GetAstBuilder<'a>,
     ) -> ArenaBox<'a, Self> {
         let builder = builder.builder();
-        ArenaBox::new_in(Self::new(span, namespace, name, builder), &builder.allocator())
+        ArenaBox::new_in(
+            Self::new(span, namespace, name, builder),
+            &builder.allocator(),
+        )
     }
 }
 
@@ -18913,7 +19639,12 @@ impl<'a> JSXMemberExpression<'a> {
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
         let builder = builder.builder();
-        JSXMemberExpression { node_id: Cell::new(builder.node_id()), span, object, property }
+        JSXMemberExpression {
+            node_id: Cell::new(builder.node_id()),
+            span,
+            object,
+            property,
+        }
     }
 
     /// Build a [`JSXMemberExpression`], and store it in the memory arena.
@@ -18933,7 +19664,10 @@ impl<'a> JSXMemberExpression<'a> {
         builder: &impl GetAstBuilder<'a>,
     ) -> ArenaBox<'a, Self> {
         let builder = builder.builder();
-        ArenaBox::new_in(Self::new(span, object, property, builder), &builder.allocator())
+        ArenaBox::new_in(
+            Self::new(span, object, property, builder),
+            &builder.allocator(),
+        )
     }
 }
 
@@ -19028,7 +19762,11 @@ impl<'a> JSXExpressionContainer<'a> {
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
         let builder = builder.builder();
-        JSXExpressionContainer { node_id: Cell::new(builder.node_id()), span, expression }
+        JSXExpressionContainer {
+            node_id: Cell::new(builder.node_id()),
+            span,
+            expression,
+        }
     }
 
     /// Build a [`JSXExpressionContainer`], and store it in the memory arena.
@@ -19102,7 +19840,13 @@ impl<'a> JSXExpression<'a> {
         base: NumberBase,
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
-        Self::NumericLiteral(NumericLiteral::boxed(span, value, raw, base, builder.builder()))
+        Self::NumericLiteral(NumericLiteral::boxed(
+            span,
+            value,
+            raw,
+            base,
+            builder.builder(),
+        ))
     }
 
     /// Build a [`JSXExpression::BigIntLiteral`].
@@ -19122,7 +19866,13 @@ impl<'a> JSXExpression<'a> {
         base: BigintBase,
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
-        Self::BigIntLiteral(BigIntLiteral::boxed(span, value, raw, base, builder.builder()))
+        Self::BigIntLiteral(BigIntLiteral::boxed(
+            span,
+            value,
+            raw,
+            base,
+            builder.builder(),
+        ))
     }
 
     /// Build a [`JSXExpression::RegExpLiteral`].
@@ -19202,7 +19952,12 @@ impl<'a> JSXExpression<'a> {
         expressions: impl IntoIn<'a, ArenaVec<'a, Expression<'a>>>,
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
-        Self::TemplateLiteral(TemplateLiteral::boxed(span, quasis, expressions, builder.builder()))
+        Self::TemplateLiteral(TemplateLiteral::boxed(
+            span,
+            quasis,
+            expressions,
+            builder.builder(),
+        ))
     }
 
     /// Build a [`JSXExpression::Identifier`].
@@ -19867,7 +20622,11 @@ impl<'a> JSXExpression<'a> {
         expressions: impl IntoIn<'a, ArenaVec<'a, Expression<'a>>>,
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
-        Self::SequenceExpression(SequenceExpression::boxed(span, expressions, builder.builder()))
+        Self::SequenceExpression(SequenceExpression::boxed(
+            span,
+            expressions,
+            builder.builder(),
+        ))
     }
 
     /// Build a [`JSXExpression::TaggedTemplateExpression`].
@@ -19922,7 +20681,12 @@ impl<'a> JSXExpression<'a> {
         argument: Expression<'a>,
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
-        Self::UnaryExpression(UnaryExpression::boxed(span, operator, argument, builder.builder()))
+        Self::UnaryExpression(UnaryExpression::boxed(
+            span,
+            operator,
+            argument,
+            builder.builder(),
+        ))
     }
 
     /// Build a [`JSXExpression::UpdateExpression`].
@@ -19966,7 +20730,12 @@ impl<'a> JSXExpression<'a> {
         argument: Option<Expression<'a>>,
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
-        Self::YieldExpression(YieldExpression::boxed(span, delegate, argument, builder.builder()))
+        Self::YieldExpression(YieldExpression::boxed(
+            span,
+            delegate,
+            argument,
+            builder.builder(),
+        ))
     }
 
     /// Build a [`JSXExpression::PrivateInExpression`].
@@ -19984,7 +20753,12 @@ impl<'a> JSXExpression<'a> {
         right: Expression<'a>,
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
-        Self::PrivateInExpression(PrivateInExpression::boxed(span, left, right, builder.builder()))
+        Self::PrivateInExpression(PrivateInExpression::boxed(
+            span,
+            left,
+            right,
+            builder.builder(),
+        ))
     }
 
     /// Build a [`JSXExpression::ImportMeta`].
@@ -20143,7 +20917,11 @@ impl<'a> JSXExpression<'a> {
         expression: Expression<'a>,
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
-        Self::TSNonNullExpression(TSNonNullExpression::boxed(span, expression, builder.builder()))
+        Self::TSNonNullExpression(TSNonNullExpression::boxed(
+            span,
+            expression,
+            builder.builder(),
+        ))
     }
 
     /// Build a [`JSXExpression::TSInstantiationExpression`].
@@ -20282,7 +21060,10 @@ impl JSXEmptyExpression {
     #[inline]
     pub fn new<'a>(span: Span, builder: &impl GetAstBuilder<'a>) -> Self {
         let builder = builder.builder();
-        JSXEmptyExpression { node_id: Cell::new(builder.node_id()), span }
+        JSXEmptyExpression {
+            node_id: Cell::new(builder.node_id()),
+            span,
+        }
     }
 
     /// Build a [`JSXEmptyExpression`], and store it in the memory arena.
@@ -20353,7 +21134,12 @@ impl<'a> JSXAttribute<'a> {
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
         let builder = builder.builder();
-        JSXAttribute { node_id: Cell::new(builder.node_id()), span, name, value }
+        JSXAttribute {
+            node_id: Cell::new(builder.node_id()),
+            span,
+            name,
+            value,
+        }
     }
 
     /// Build a [`JSXAttribute`], and store it in the memory arena.
@@ -20389,7 +21175,11 @@ impl<'a> JSXSpreadAttribute<'a> {
     #[inline]
     pub fn new(span: Span, argument: Expression<'a>, builder: &impl GetAstBuilder<'a>) -> Self {
         let builder = builder.builder();
-        JSXSpreadAttribute { node_id: Cell::new(builder.node_id()), span, argument }
+        JSXSpreadAttribute {
+            node_id: Cell::new(builder.node_id()),
+            span,
+            argument,
+        }
     }
 
     /// Build a [`JSXSpreadAttribute`], and store it in the memory arena.
@@ -20443,7 +21233,12 @@ impl<'a> JSXAttributeName<'a> {
         name: JSXIdentifier<'a>,
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
-        Self::NamespacedName(JSXNamespacedName::boxed(span, namespace, name, builder.builder()))
+        Self::NamespacedName(JSXNamespacedName::boxed(
+            span,
+            namespace,
+            name,
+            builder.builder(),
+        ))
     }
 }
 
@@ -20577,7 +21372,11 @@ impl<'a> JSXIdentifier<'a> {
     #[inline]
     pub fn new(span: Span, name: impl Into<Str<'a>>, builder: &impl GetAstBuilder<'a>) -> Self {
         let builder = builder.builder();
-        JSXIdentifier { node_id: Cell::new(builder.node_id()), span, name: name.into() }
+        JSXIdentifier {
+            node_id: Cell::new(builder.node_id()),
+            span,
+            name: name.into(),
+        }
     }
 
     /// Build a [`JSXIdentifier`], and store it in the memory arena.
@@ -20719,7 +21518,11 @@ impl<'a> JSXSpreadChild<'a> {
     #[inline]
     pub fn new(span: Span, expression: Expression<'a>, builder: &impl GetAstBuilder<'a>) -> Self {
         let builder = builder.builder();
-        JSXSpreadChild { node_id: Cell::new(builder.node_id()), span, expression }
+        JSXSpreadChild {
+            node_id: Cell::new(builder.node_id()),
+            span,
+            expression,
+        }
     }
 
     /// Build a [`JSXSpreadChild`], and store it in the memory arena.
@@ -20759,7 +21562,12 @@ impl<'a> JSXText<'a> {
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
         let builder = builder.builder();
-        JSXText { node_id: Cell::new(builder.node_id()), span, value: value.into(), raw }
+        JSXText {
+            node_id: Cell::new(builder.node_id()),
+            span,
+            value: value.into(),
+            raw,
+        }
     }
 
     /// Build a [`JSXText`], and store it in the memory arena.
@@ -20801,7 +21609,12 @@ impl<'a> TSThisParameter<'a> {
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
         let builder = builder.builder();
-        TSThisParameter { node_id: Cell::new(builder.node_id()), span, this_span, type_annotation }
+        TSThisParameter {
+            node_id: Cell::new(builder.node_id()),
+            span,
+            this_span,
+            type_annotation,
+        }
     }
 
     /// Build a [`TSThisParameter`], and store it in the memory arena.
@@ -20821,7 +21634,10 @@ impl<'a> TSThisParameter<'a> {
         builder: &impl GetAstBuilder<'a>,
     ) -> ArenaBox<'a, Self> {
         let builder = builder.builder();
-        ArenaBox::new_in(Self::new(span, this_span, type_annotation, builder), &builder.allocator())
+        ArenaBox::new_in(
+            Self::new(span, this_span, type_annotation, builder),
+            &builder.allocator(),
+        )
     }
 }
 
@@ -20878,7 +21694,10 @@ impl<'a> TSEnumDeclaration<'a> {
         builder: &impl GetAstBuilder<'a>,
     ) -> ArenaBox<'a, Self> {
         let builder = builder.builder();
-        ArenaBox::new_in(Self::new(span, id, body, r#const, declare, builder), &builder.allocator())
+        ArenaBox::new_in(
+            Self::new(span, id, body, r#const, declare, builder),
+            &builder.allocator(),
+        )
     }
 }
 
@@ -20941,7 +21760,12 @@ impl<'a> TSEnumMember<'a> {
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
         let builder = builder.builder();
-        TSEnumMember { node_id: Cell::new(builder.node_id()), span, id, initializer }
+        TSEnumMember {
+            node_id: Cell::new(builder.node_id()),
+            span,
+            id,
+            initializer,
+        }
     }
 }
 
@@ -21086,7 +21910,11 @@ impl<'a> TSTypeAnnotation<'a> {
     #[inline]
     pub fn new(span: Span, type_annotation: TSType<'a>, builder: &impl GetAstBuilder<'a>) -> Self {
         let builder = builder.builder();
-        TSTypeAnnotation { node_id: Cell::new(builder.node_id()), span, type_annotation }
+        TSTypeAnnotation {
+            node_id: Cell::new(builder.node_id()),
+            span,
+            type_annotation,
+        }
     }
 
     /// Build a [`TSTypeAnnotation`], and store it in the memory arena.
@@ -21104,7 +21932,10 @@ impl<'a> TSTypeAnnotation<'a> {
         builder: &impl GetAstBuilder<'a>,
     ) -> ArenaBox<'a, Self> {
         let builder = builder.builder();
-        ArenaBox::new_in(Self::new(span, type_annotation, builder), &builder.allocator())
+        ArenaBox::new_in(
+            Self::new(span, type_annotation, builder),
+            &builder.allocator(),
+        )
     }
 }
 
@@ -21120,7 +21951,11 @@ impl<'a> TSLiteralType<'a> {
     #[inline]
     pub fn new(span: Span, literal: TSLiteral<'a>, builder: &impl GetAstBuilder<'a>) -> Self {
         let builder = builder.builder();
-        TSLiteralType { node_id: Cell::new(builder.node_id()), span, literal }
+        TSLiteralType {
+            node_id: Cell::new(builder.node_id()),
+            span,
+            literal,
+        }
     }
 
     /// Build a [`TSLiteralType`], and store it in the memory arena.
@@ -21172,7 +22007,13 @@ impl<'a> TSLiteral<'a> {
         base: NumberBase,
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
-        Self::NumericLiteral(NumericLiteral::boxed(span, value, raw, base, builder.builder()))
+        Self::NumericLiteral(NumericLiteral::boxed(
+            span,
+            value,
+            raw,
+            base,
+            builder.builder(),
+        ))
     }
 
     /// Build a [`TSLiteral::BigIntLiteral`].
@@ -21192,7 +22033,13 @@ impl<'a> TSLiteral<'a> {
         base: BigintBase,
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
-        Self::BigIntLiteral(BigIntLiteral::boxed(span, value, raw, base, builder.builder()))
+        Self::BigIntLiteral(BigIntLiteral::boxed(
+            span,
+            value,
+            raw,
+            base,
+            builder.builder(),
+        ))
     }
 
     /// Build a [`TSLiteral::StringLiteral`].
@@ -21254,7 +22101,12 @@ impl<'a> TSLiteral<'a> {
         expressions: impl IntoIn<'a, ArenaVec<'a, Expression<'a>>>,
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
-        Self::TemplateLiteral(TemplateLiteral::boxed(span, quasis, expressions, builder.builder()))
+        Self::TemplateLiteral(TemplateLiteral::boxed(
+            span,
+            quasis,
+            expressions,
+            builder.builder(),
+        ))
     }
 
     /// Build a [`TSLiteral::UnaryExpression`].
@@ -21272,7 +22124,12 @@ impl<'a> TSLiteral<'a> {
         argument: Expression<'a>,
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
-        Self::UnaryExpression(UnaryExpression::boxed(span, operator, argument, builder.builder()))
+        Self::UnaryExpression(UnaryExpression::boxed(
+            span,
+            operator,
+            argument,
+            builder.builder(),
+        ))
     }
 }
 
@@ -21948,7 +22805,12 @@ impl<'a> TSType<'a> {
         type_arguments: Option<ArenaBox<'a, TSTypeParameterInstantiation<'a>>>,
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
-        Self::TSTypeQuery(TSTypeQuery::boxed(span, expr_name, type_arguments, builder.builder()))
+        Self::TSTypeQuery(TSTypeQuery::boxed(
+            span,
+            expr_name,
+            type_arguments,
+            builder.builder(),
+        ))
     }
 
     /// Build a [`TSType::TSTypeReference`].
@@ -22123,7 +22985,14 @@ impl<'a> TSConditionalType<'a> {
     ) -> ArenaBox<'a, Self> {
         let builder = builder.builder();
         ArenaBox::new_in(
-            Self::new(span, check_type, extends_type, true_type, false_type, builder),
+            Self::new(
+                span,
+                check_type,
+                extends_type,
+                true_type,
+                false_type,
+                builder,
+            ),
             &builder.allocator(),
         )
     }
@@ -22296,7 +23165,11 @@ impl<'a> TSParenthesizedType<'a> {
     #[inline]
     pub fn new(span: Span, type_annotation: TSType<'a>, builder: &impl GetAstBuilder<'a>) -> Self {
         let builder = builder.builder();
-        TSParenthesizedType { node_id: Cell::new(builder.node_id()), span, type_annotation }
+        TSParenthesizedType {
+            node_id: Cell::new(builder.node_id()),
+            span,
+            type_annotation,
+        }
     }
 
     /// Build a [`TSParenthesizedType`], and store it in the memory arena.
@@ -22314,7 +23187,10 @@ impl<'a> TSParenthesizedType<'a> {
         builder: &impl GetAstBuilder<'a>,
     ) -> ArenaBox<'a, Self> {
         let builder = builder.builder();
-        ArenaBox::new_in(Self::new(span, type_annotation, builder), &builder.allocator())
+        ArenaBox::new_in(
+            Self::new(span, type_annotation, builder),
+            &builder.allocator(),
+        )
     }
 }
 
@@ -22336,7 +23212,12 @@ impl<'a> TSTypeOperator<'a> {
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
         let builder = builder.builder();
-        TSTypeOperator { node_id: Cell::new(builder.node_id()), span, operator, type_annotation }
+        TSTypeOperator {
+            node_id: Cell::new(builder.node_id()),
+            span,
+            operator,
+            type_annotation,
+        }
     }
 
     /// Build a [`TSTypeOperator`], and store it in the memory arena.
@@ -22356,7 +23237,10 @@ impl<'a> TSTypeOperator<'a> {
         builder: &impl GetAstBuilder<'a>,
     ) -> ArenaBox<'a, Self> {
         let builder = builder.builder();
-        ArenaBox::new_in(Self::new(span, operator, type_annotation, builder), &builder.allocator())
+        ArenaBox::new_in(
+            Self::new(span, operator, type_annotation, builder),
+            &builder.allocator(),
+        )
     }
 }
 
@@ -22372,7 +23256,11 @@ impl<'a> TSArrayType<'a> {
     #[inline]
     pub fn new(span: Span, element_type: TSType<'a>, builder: &impl GetAstBuilder<'a>) -> Self {
         let builder = builder.builder();
-        TSArrayType { node_id: Cell::new(builder.node_id()), span, element_type }
+        TSArrayType {
+            node_id: Cell::new(builder.node_id()),
+            span,
+            element_type,
+        }
     }
 
     /// Build a [`TSArrayType`], and store it in the memory arena.
@@ -22412,7 +23300,12 @@ impl<'a> TSIndexedAccessType<'a> {
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
         let builder = builder.builder();
-        TSIndexedAccessType { node_id: Cell::new(builder.node_id()), span, object_type, index_type }
+        TSIndexedAccessType {
+            node_id: Cell::new(builder.node_id()),
+            span,
+            object_type,
+            index_type,
+        }
     }
 
     /// Build a [`TSIndexedAccessType`], and store it in the memory arena.
@@ -22432,7 +23325,10 @@ impl<'a> TSIndexedAccessType<'a> {
         builder: &impl GetAstBuilder<'a>,
     ) -> ArenaBox<'a, Self> {
         let builder = builder.builder();
-        ArenaBox::new_in(Self::new(span, object_type, index_type, builder), &builder.allocator())
+        ArenaBox::new_in(
+            Self::new(span, object_type, index_type, builder),
+            &builder.allocator(),
+        )
     }
 }
 
@@ -22474,7 +23370,10 @@ impl<'a> TSTupleType<'a> {
         builder: &impl GetAstBuilder<'a>,
     ) -> ArenaBox<'a, Self> {
         let builder = builder.builder();
-        ArenaBox::new_in(Self::new(span, element_types, builder), &builder.allocator())
+        ArenaBox::new_in(
+            Self::new(span, element_types, builder),
+            &builder.allocator(),
+        )
     }
 }
 
@@ -22545,7 +23444,11 @@ impl<'a> TSOptionalType<'a> {
     #[inline]
     pub fn new(span: Span, type_annotation: TSType<'a>, builder: &impl GetAstBuilder<'a>) -> Self {
         let builder = builder.builder();
-        TSOptionalType { node_id: Cell::new(builder.node_id()), span, type_annotation }
+        TSOptionalType {
+            node_id: Cell::new(builder.node_id()),
+            span,
+            type_annotation,
+        }
     }
 
     /// Build a [`TSOptionalType`], and store it in the memory arena.
@@ -22563,7 +23466,10 @@ impl<'a> TSOptionalType<'a> {
         builder: &impl GetAstBuilder<'a>,
     ) -> ArenaBox<'a, Self> {
         let builder = builder.builder();
-        ArenaBox::new_in(Self::new(span, type_annotation, builder), &builder.allocator())
+        ArenaBox::new_in(
+            Self::new(span, type_annotation, builder),
+            &builder.allocator(),
+        )
     }
 }
 
@@ -22579,7 +23485,11 @@ impl<'a> TSRestType<'a> {
     #[inline]
     pub fn new(span: Span, type_annotation: TSType<'a>, builder: &impl GetAstBuilder<'a>) -> Self {
         let builder = builder.builder();
-        TSRestType { node_id: Cell::new(builder.node_id()), span, type_annotation }
+        TSRestType {
+            node_id: Cell::new(builder.node_id()),
+            span,
+            type_annotation,
+        }
     }
 
     /// Build a [`TSRestType`], and store it in the memory arena.
@@ -22597,7 +23507,10 @@ impl<'a> TSRestType<'a> {
         builder: &impl GetAstBuilder<'a>,
     ) -> ArenaBox<'a, Self> {
         let builder = builder.builder();
-        ArenaBox::new_in(Self::new(span, type_annotation, builder), &builder.allocator())
+        ArenaBox::new_in(
+            Self::new(span, type_annotation, builder),
+            &builder.allocator(),
+        )
     }
 }
 
@@ -22615,7 +23528,11 @@ impl<'a> TSTupleElement<'a> {
         type_annotation: TSType<'a>,
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
-        Self::TSOptionalType(TSOptionalType::boxed(span, type_annotation, builder.builder()))
+        Self::TSOptionalType(TSOptionalType::boxed(
+            span,
+            type_annotation,
+            builder.builder(),
+        ))
     }
 
     /// Build a [`TSTupleElement::TSRestType`].
@@ -23305,7 +24222,12 @@ impl<'a> TSTupleElement<'a> {
         type_arguments: Option<ArenaBox<'a, TSTypeParameterInstantiation<'a>>>,
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
-        Self::TSTypeQuery(TSTypeQuery::boxed(span, expr_name, type_arguments, builder.builder()))
+        Self::TSTypeQuery(TSTypeQuery::boxed(
+            span,
+            expr_name,
+            type_arguments,
+            builder.builder(),
+        ))
     }
 
     /// Build a [`TSTupleElement::TSTypeReference`].
@@ -23436,7 +24358,10 @@ impl TSAnyKeyword {
     #[inline]
     pub fn new<'a>(span: Span, builder: &impl GetAstBuilder<'a>) -> Self {
         let builder = builder.builder();
-        TSAnyKeyword { node_id: Cell::new(builder.node_id()), span }
+        TSAnyKeyword {
+            node_id: Cell::new(builder.node_id()),
+            span,
+        }
     }
 
     /// Build a [`TSAnyKeyword`], and store it in the memory arena.
@@ -23464,7 +24389,10 @@ impl TSStringKeyword {
     #[inline]
     pub fn new<'a>(span: Span, builder: &impl GetAstBuilder<'a>) -> Self {
         let builder = builder.builder();
-        TSStringKeyword { node_id: Cell::new(builder.node_id()), span }
+        TSStringKeyword {
+            node_id: Cell::new(builder.node_id()),
+            span,
+        }
     }
 
     /// Build a [`TSStringKeyword`], and store it in the memory arena.
@@ -23492,7 +24420,10 @@ impl TSBooleanKeyword {
     #[inline]
     pub fn new<'a>(span: Span, builder: &impl GetAstBuilder<'a>) -> Self {
         let builder = builder.builder();
-        TSBooleanKeyword { node_id: Cell::new(builder.node_id()), span }
+        TSBooleanKeyword {
+            node_id: Cell::new(builder.node_id()),
+            span,
+        }
     }
 
     /// Build a [`TSBooleanKeyword`], and store it in the memory arena.
@@ -23520,7 +24451,10 @@ impl TSNumberKeyword {
     #[inline]
     pub fn new<'a>(span: Span, builder: &impl GetAstBuilder<'a>) -> Self {
         let builder = builder.builder();
-        TSNumberKeyword { node_id: Cell::new(builder.node_id()), span }
+        TSNumberKeyword {
+            node_id: Cell::new(builder.node_id()),
+            span,
+        }
     }
 
     /// Build a [`TSNumberKeyword`], and store it in the memory arena.
@@ -23548,7 +24482,10 @@ impl TSNeverKeyword {
     #[inline]
     pub fn new<'a>(span: Span, builder: &impl GetAstBuilder<'a>) -> Self {
         let builder = builder.builder();
-        TSNeverKeyword { node_id: Cell::new(builder.node_id()), span }
+        TSNeverKeyword {
+            node_id: Cell::new(builder.node_id()),
+            span,
+        }
     }
 
     /// Build a [`TSNeverKeyword`], and store it in the memory arena.
@@ -23576,7 +24513,10 @@ impl TSIntrinsicKeyword {
     #[inline]
     pub fn new<'a>(span: Span, builder: &impl GetAstBuilder<'a>) -> Self {
         let builder = builder.builder();
-        TSIntrinsicKeyword { node_id: Cell::new(builder.node_id()), span }
+        TSIntrinsicKeyword {
+            node_id: Cell::new(builder.node_id()),
+            span,
+        }
     }
 
     /// Build a [`TSIntrinsicKeyword`], and store it in the memory arena.
@@ -23604,7 +24544,10 @@ impl TSUnknownKeyword {
     #[inline]
     pub fn new<'a>(span: Span, builder: &impl GetAstBuilder<'a>) -> Self {
         let builder = builder.builder();
-        TSUnknownKeyword { node_id: Cell::new(builder.node_id()), span }
+        TSUnknownKeyword {
+            node_id: Cell::new(builder.node_id()),
+            span,
+        }
     }
 
     /// Build a [`TSUnknownKeyword`], and store it in the memory arena.
@@ -23632,7 +24575,10 @@ impl TSNullKeyword {
     #[inline]
     pub fn new<'a>(span: Span, builder: &impl GetAstBuilder<'a>) -> Self {
         let builder = builder.builder();
-        TSNullKeyword { node_id: Cell::new(builder.node_id()), span }
+        TSNullKeyword {
+            node_id: Cell::new(builder.node_id()),
+            span,
+        }
     }
 
     /// Build a [`TSNullKeyword`], and store it in the memory arena.
@@ -23660,7 +24606,10 @@ impl TSUndefinedKeyword {
     #[inline]
     pub fn new<'a>(span: Span, builder: &impl GetAstBuilder<'a>) -> Self {
         let builder = builder.builder();
-        TSUndefinedKeyword { node_id: Cell::new(builder.node_id()), span }
+        TSUndefinedKeyword {
+            node_id: Cell::new(builder.node_id()),
+            span,
+        }
     }
 
     /// Build a [`TSUndefinedKeyword`], and store it in the memory arena.
@@ -23688,7 +24637,10 @@ impl TSVoidKeyword {
     #[inline]
     pub fn new<'a>(span: Span, builder: &impl GetAstBuilder<'a>) -> Self {
         let builder = builder.builder();
-        TSVoidKeyword { node_id: Cell::new(builder.node_id()), span }
+        TSVoidKeyword {
+            node_id: Cell::new(builder.node_id()),
+            span,
+        }
     }
 
     /// Build a [`TSVoidKeyword`], and store it in the memory arena.
@@ -23716,7 +24668,10 @@ impl TSSymbolKeyword {
     #[inline]
     pub fn new<'a>(span: Span, builder: &impl GetAstBuilder<'a>) -> Self {
         let builder = builder.builder();
-        TSSymbolKeyword { node_id: Cell::new(builder.node_id()), span }
+        TSSymbolKeyword {
+            node_id: Cell::new(builder.node_id()),
+            span,
+        }
     }
 
     /// Build a [`TSSymbolKeyword`], and store it in the memory arena.
@@ -23744,7 +24699,10 @@ impl TSThisType {
     #[inline]
     pub fn new<'a>(span: Span, builder: &impl GetAstBuilder<'a>) -> Self {
         let builder = builder.builder();
-        TSThisType { node_id: Cell::new(builder.node_id()), span }
+        TSThisType {
+            node_id: Cell::new(builder.node_id()),
+            span,
+        }
     }
 
     /// Build a [`TSThisType`], and store it in the memory arena.
@@ -23772,7 +24730,10 @@ impl TSObjectKeyword {
     #[inline]
     pub fn new<'a>(span: Span, builder: &impl GetAstBuilder<'a>) -> Self {
         let builder = builder.builder();
-        TSObjectKeyword { node_id: Cell::new(builder.node_id()), span }
+        TSObjectKeyword {
+            node_id: Cell::new(builder.node_id()),
+            span,
+        }
     }
 
     /// Build a [`TSObjectKeyword`], and store it in the memory arena.
@@ -23800,7 +24761,10 @@ impl TSBigIntKeyword {
     #[inline]
     pub fn new<'a>(span: Span, builder: &impl GetAstBuilder<'a>) -> Self {
         let builder = builder.builder();
-        TSBigIntKeyword { node_id: Cell::new(builder.node_id()), span }
+        TSBigIntKeyword {
+            node_id: Cell::new(builder.node_id()),
+            span,
+        }
     }
 
     /// Build a [`TSBigIntKeyword`], and store it in the memory arena.
@@ -23835,7 +24799,12 @@ impl<'a> TSTypeReference<'a> {
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
         let builder = builder.builder();
-        TSTypeReference { node_id: Cell::new(builder.node_id()), span, type_name, type_arguments }
+        TSTypeReference {
+            node_id: Cell::new(builder.node_id()),
+            span,
+            type_name,
+            type_arguments,
+        }
     }
 
     /// Build a [`TSTypeReference`], and store it in the memory arena.
@@ -23855,7 +24824,10 @@ impl<'a> TSTypeReference<'a> {
         builder: &impl GetAstBuilder<'a>,
     ) -> ArenaBox<'a, Self> {
         let builder = builder.builder();
-        ArenaBox::new_in(Self::new(span, type_name, type_arguments, builder), &builder.allocator())
+        ArenaBox::new_in(
+            Self::new(span, type_name, type_arguments, builder),
+            &builder.allocator(),
+        )
     }
 }
 
@@ -23947,7 +24919,12 @@ impl<'a> TSQualifiedName<'a> {
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
         let builder = builder.builder();
-        TSQualifiedName { node_id: Cell::new(builder.node_id()), span, left, right }
+        TSQualifiedName {
+            node_id: Cell::new(builder.node_id()),
+            span,
+            left,
+            right,
+        }
     }
 
     /// Build a [`TSQualifiedName`], and store it in the memory arena.
@@ -24525,7 +25502,15 @@ impl<'a> TSPropertySignature<'a> {
     ) -> ArenaBox<'a, Self> {
         let builder = builder.builder();
         ArenaBox::new_in(
-            Self::new(span, computed, optional, readonly, key, type_annotation, builder),
+            Self::new(
+                span,
+                computed,
+                optional,
+                readonly,
+                key,
+                type_annotation,
+                builder,
+            ),
             &builder.allocator(),
         )
     }
@@ -24849,7 +25834,14 @@ impl<'a> TSIndexSignature<'a> {
     ) -> ArenaBox<'a, Self> {
         let builder = builder.builder();
         ArenaBox::new_in(
-            Self::new(span, parameter, type_annotation, readonly, r#static, builder),
+            Self::new(
+                span,
+                parameter,
+                type_annotation,
+                readonly,
+                r#static,
+                builder,
+            ),
             &builder.allocator(),
         )
     }
@@ -24910,7 +25902,14 @@ impl<'a> TSCallSignatureDeclaration<'a> {
     ) -> ArenaBox<'a, Self> {
         let builder = builder.builder();
         ArenaBox::new_in(
-            Self::new(span, type_parameters, this_param, params, return_type, builder),
+            Self::new(
+                span,
+                type_parameters,
+                this_param,
+                params,
+                return_type,
+                builder,
+            ),
             &builder.allocator(),
         )
     }
@@ -25282,7 +26281,14 @@ impl<'a> TSConstructSignatureDeclaration<'a> {
     ) -> ArenaBox<'a, Self> {
         let builder = builder.builder();
         ArenaBox::new_in(
-            Self::new_with_scope_id(span, type_parameters, params, return_type, scope_id, builder),
+            Self::new_with_scope_id(
+                span,
+                type_parameters,
+                params,
+                return_type,
+                scope_id,
+                builder,
+            ),
             &builder.allocator(),
         )
     }
@@ -25469,7 +26475,10 @@ impl<'a> TSExternalModuleDeclaration<'a> {
         builder: &impl GetAstBuilder<'a>,
     ) -> ArenaBox<'a, Self> {
         let builder = builder.builder();
-        ArenaBox::new_in(Self::new(span, id, body, declare, builder), &builder.allocator())
+        ArenaBox::new_in(
+            Self::new(span, id, body, declare, builder),
+            &builder.allocator(),
+        )
     }
 
     /// Build a [`TSExternalModuleDeclaration`] with `scope_id`.
@@ -25585,7 +26594,10 @@ impl<'a> TSNamespaceDeclaration<'a> {
         builder: &impl GetAstBuilder<'a>,
     ) -> ArenaBox<'a, Self> {
         let builder = builder.builder();
-        ArenaBox::new_in(Self::new(span, id, body, kind, declare, builder), &builder.allocator())
+        ArenaBox::new_in(
+            Self::new(span, id, body, kind, declare, builder),
+            &builder.allocator(),
+        )
     }
 
     /// Build a [`TSNamespaceDeclaration`] with `scope_id`.
@@ -25729,7 +26741,12 @@ impl<'a> TSNamespaceDeclarationBody<'a> {
         body: impl IntoIn<'a, ArenaVec<'a, Statement<'a>>>,
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
-        Self::TSModuleBlock(TSModuleBlock::boxed(span, directives, body, builder.builder()))
+        Self::TSModuleBlock(TSModuleBlock::boxed(
+            span,
+            directives,
+            body,
+            builder.builder(),
+        ))
     }
 }
 
@@ -25782,7 +26799,10 @@ impl<'a> TSGlobalDeclaration<'a> {
         builder: &impl GetAstBuilder<'a>,
     ) -> ArenaBox<'a, Self> {
         let builder = builder.builder();
-        ArenaBox::new_in(Self::new(span, global_span, body, declare, builder), &builder.allocator())
+        ArenaBox::new_in(
+            Self::new(span, global_span, body, declare, builder),
+            &builder.allocator(),
+        )
     }
 
     /// Build a [`TSGlobalDeclaration`] with `scope_id`.
@@ -25887,7 +26907,10 @@ impl<'a> TSModuleBlock<'a> {
         builder: &impl GetAstBuilder<'a>,
     ) -> ArenaBox<'a, Self> {
         let builder = builder.builder();
-        ArenaBox::new_in(Self::new(span, directives, body, builder), &builder.allocator())
+        ArenaBox::new_in(
+            Self::new(span, directives, body, builder),
+            &builder.allocator(),
+        )
     }
 }
 
@@ -25949,7 +26972,11 @@ impl<'a> TSInferType<'a> {
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
         let builder = builder.builder();
-        TSInferType { node_id: Cell::new(builder.node_id()), span, type_parameter }
+        TSInferType {
+            node_id: Cell::new(builder.node_id()),
+            span,
+            type_parameter,
+        }
     }
 
     /// Build a [`TSInferType`], and store it in the memory arena.
@@ -25967,7 +26994,10 @@ impl<'a> TSInferType<'a> {
         builder: &impl GetAstBuilder<'a>,
     ) -> ArenaBox<'a, Self> {
         let builder = builder.builder();
-        ArenaBox::new_in(Self::new(span, type_parameter, builder), &builder.allocator())
+        ArenaBox::new_in(
+            Self::new(span, type_parameter, builder),
+            &builder.allocator(),
+        )
     }
 }
 
@@ -25989,7 +27019,12 @@ impl<'a> TSTypeQuery<'a> {
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
         let builder = builder.builder();
-        TSTypeQuery { node_id: Cell::new(builder.node_id()), span, expr_name, type_arguments }
+        TSTypeQuery {
+            node_id: Cell::new(builder.node_id()),
+            span,
+            expr_name,
+            type_arguments,
+        }
     }
 
     /// Build a [`TSTypeQuery`], and store it in the memory arena.
@@ -26009,7 +27044,10 @@ impl<'a> TSTypeQuery<'a> {
         builder: &impl GetAstBuilder<'a>,
     ) -> ArenaBox<'a, Self> {
         let builder = builder.builder();
-        ArenaBox::new_in(Self::new(span, expr_name, type_arguments, builder), &builder.allocator())
+        ArenaBox::new_in(
+            Self::new(span, expr_name, type_arguments, builder),
+            &builder.allocator(),
+        )
     }
 }
 
@@ -26204,7 +27242,12 @@ impl<'a> TSImportTypeQualifier<'a> {
         right: IdentifierName<'a>,
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
-        Self::QualifiedName(TSImportTypeQualifiedName::boxed(span, left, right, builder.builder()))
+        Self::QualifiedName(TSImportTypeQualifiedName::boxed(
+            span,
+            left,
+            right,
+            builder.builder(),
+        ))
     }
 }
 
@@ -26226,7 +27269,12 @@ impl<'a> TSImportTypeQualifiedName<'a> {
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
         let builder = builder.builder();
-        TSImportTypeQualifiedName { node_id: Cell::new(builder.node_id()), span, left, right }
+        TSImportTypeQualifiedName {
+            node_id: Cell::new(builder.node_id()),
+            span,
+            left,
+            right,
+        }
     }
 
     /// Build a [`TSImportTypeQualifiedName`], and store it in the memory arena.
@@ -26305,7 +27353,14 @@ impl<'a> TSFunctionType<'a> {
     ) -> ArenaBox<'a, Self> {
         let builder = builder.builder();
         ArenaBox::new_in(
-            Self::new(span, type_parameters, this_param, params, return_type, builder),
+            Self::new(
+                span,
+                type_parameters,
+                this_param,
+                params,
+                return_type,
+                builder,
+            ),
             &builder.allocator(),
         )
     }
@@ -26437,7 +27492,14 @@ impl<'a> TSConstructorType<'a> {
     ) -> ArenaBox<'a, Self> {
         let builder = builder.builder();
         ArenaBox::new_in(
-            Self::new(span, r#abstract, type_parameters, params, return_type, builder),
+            Self::new(
+                span,
+                r#abstract,
+                type_parameters,
+                params,
+                return_type,
+                builder,
+            ),
             &builder.allocator(),
         )
     }
@@ -26720,7 +27782,10 @@ impl<'a> TSTemplateLiteralType<'a> {
         builder: &impl GetAstBuilder<'a>,
     ) -> ArenaBox<'a, Self> {
         let builder = builder.builder();
-        ArenaBox::new_in(Self::new(span, quasis, types, builder), &builder.allocator())
+        ArenaBox::new_in(
+            Self::new(span, quasis, types, builder),
+            &builder.allocator(),
+        )
     }
 }
 
@@ -26742,7 +27807,12 @@ impl<'a> TSAsExpression<'a> {
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
         let builder = builder.builder();
-        TSAsExpression { node_id: Cell::new(builder.node_id()), span, expression, type_annotation }
+        TSAsExpression {
+            node_id: Cell::new(builder.node_id()),
+            span,
+            expression,
+            type_annotation,
+        }
     }
 
     /// Build a [`TSAsExpression`], and store it in the memory arena.
@@ -26837,7 +27907,12 @@ impl<'a> TSTypeAssertion<'a> {
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
         let builder = builder.builder();
-        TSTypeAssertion { node_id: Cell::new(builder.node_id()), span, type_annotation, expression }
+        TSTypeAssertion {
+            node_id: Cell::new(builder.node_id()),
+            span,
+            type_annotation,
+            expression,
+        }
     }
 
     /// Build a [`TSTypeAssertion`], and store it in the memory arena.
@@ -27014,7 +28089,11 @@ impl<'a> TSExternalModuleReference<'a> {
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
         let builder = builder.builder();
-        TSExternalModuleReference { node_id: Cell::new(builder.node_id()), span, expression }
+        TSExternalModuleReference {
+            node_id: Cell::new(builder.node_id()),
+            span,
+            expression,
+        }
     }
 
     /// Build a [`TSExternalModuleReference`], and store it in the memory arena.
@@ -27048,7 +28127,11 @@ impl<'a> TSNonNullExpression<'a> {
     #[inline]
     pub fn new(span: Span, expression: Expression<'a>, builder: &impl GetAstBuilder<'a>) -> Self {
         let builder = builder.builder();
-        TSNonNullExpression { node_id: Cell::new(builder.node_id()), span, expression }
+        TSNonNullExpression {
+            node_id: Cell::new(builder.node_id()),
+            span,
+            expression,
+        }
     }
 
     /// Build a [`TSNonNullExpression`], and store it in the memory arena.
@@ -27079,7 +28162,11 @@ impl<'a> Decorator<'a> {
     #[inline]
     pub fn new(span: Span, expression: Expression<'a>, builder: &impl GetAstBuilder<'a>) -> Self {
         let builder = builder.builder();
-        Decorator { node_id: Cell::new(builder.node_id()), span, expression }
+        Decorator {
+            node_id: Cell::new(builder.node_id()),
+            span,
+            expression,
+        }
     }
 }
 
@@ -27095,7 +28182,11 @@ impl<'a> TSExportAssignment<'a> {
     #[inline]
     pub fn new(span: Span, expression: Expression<'a>, builder: &impl GetAstBuilder<'a>) -> Self {
         let builder = builder.builder();
-        TSExportAssignment { node_id: Cell::new(builder.node_id()), span, expression }
+        TSExportAssignment {
+            node_id: Cell::new(builder.node_id()),
+            span,
+            expression,
+        }
     }
 
     /// Build a [`TSExportAssignment`], and store it in the memory arena.
@@ -27129,7 +28220,11 @@ impl<'a> TSNamespaceExportDeclaration<'a> {
     #[inline]
     pub fn new(span: Span, id: IdentifierName<'a>, builder: &impl GetAstBuilder<'a>) -> Self {
         let builder = builder.builder();
-        TSNamespaceExportDeclaration { node_id: Cell::new(builder.node_id()), span, id }
+        TSNamespaceExportDeclaration {
+            node_id: Cell::new(builder.node_id()),
+            span,
+            id,
+        }
     }
 
     /// Build a [`TSNamespaceExportDeclaration`], and store it in the memory arena.
@@ -27194,7 +28289,10 @@ impl<'a> TSInstantiationExpression<'a> {
         builder: &impl GetAstBuilder<'a>,
     ) -> ArenaBox<'a, Self> {
         let builder = builder.builder();
-        ArenaBox::new_in(Self::new(span, expression, type_arguments, builder), &builder.allocator())
+        ArenaBox::new_in(
+            Self::new(span, expression, type_arguments, builder),
+            &builder.allocator(),
+        )
     }
 }
 
@@ -27216,7 +28314,12 @@ impl<'a> JSDocNullableType<'a> {
         builder: &impl GetAstBuilder<'a>,
     ) -> Self {
         let builder = builder.builder();
-        JSDocNullableType { node_id: Cell::new(builder.node_id()), span, type_annotation, postfix }
+        JSDocNullableType {
+            node_id: Cell::new(builder.node_id()),
+            span,
+            type_annotation,
+            postfix,
+        }
     }
 
     /// Build a [`JSDocNullableType`], and store it in the memory arena.
@@ -27236,7 +28339,10 @@ impl<'a> JSDocNullableType<'a> {
         builder: &impl GetAstBuilder<'a>,
     ) -> ArenaBox<'a, Self> {
         let builder = builder.builder();
-        ArenaBox::new_in(Self::new(span, type_annotation, postfix, builder), &builder.allocator())
+        ArenaBox::new_in(
+            Self::new(span, type_annotation, postfix, builder),
+            &builder.allocator(),
+        )
     }
 }
 
@@ -27283,7 +28389,10 @@ impl<'a> JSDocNonNullableType<'a> {
         builder: &impl GetAstBuilder<'a>,
     ) -> ArenaBox<'a, Self> {
         let builder = builder.builder();
-        ArenaBox::new_in(Self::new(span, type_annotation, postfix, builder), &builder.allocator())
+        ArenaBox::new_in(
+            Self::new(span, type_annotation, postfix, builder),
+            &builder.allocator(),
+        )
     }
 }
 
@@ -27298,7 +28407,10 @@ impl JSDocUnknownType {
     #[inline]
     pub fn new<'a>(span: Span, builder: &impl GetAstBuilder<'a>) -> Self {
         let builder = builder.builder();
-        JSDocUnknownType { node_id: Cell::new(builder.node_id()), span }
+        JSDocUnknownType {
+            node_id: Cell::new(builder.node_id()),
+            span,
+        }
     }
 
     /// Build a [`JSDocUnknownType`], and store it in the memory arena.

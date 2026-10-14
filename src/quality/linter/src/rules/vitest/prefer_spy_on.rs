@@ -11,7 +11,14 @@ use crate::{
 #[derive(Debug, Default, Clone)]
 pub struct PreferSpyOn;
 
-declare_oxc_lint!(PreferSpyOn, vitest, style, suggestion, docs = DOCUMENTATION, version = "0.2.14",);
+declare_oxc_lint!(
+    PreferSpyOn,
+    vitest,
+    style,
+    suggestion,
+    docs = DOCUMENTATION,
+    version = "0.2.14",
+);
 
 impl Rule for PreferSpyOn {
     fn run<'a>(&self, node: &AstNode<'a>, ctx: &LintContext<'a>) {
@@ -50,7 +57,10 @@ fn tests() {
             "obj.a.b = jest.fn(() => ({})).mockReturnValue('default').mockReturnValueOnce('first call'); test();",
             None,
         ),
-        ("window.fetch = jest.fn(() => ({})).one.two().three().four", None),
+        (
+            "window.fetch = jest.fn(() => ({})).one.two().three().four",
+            None,
+        ),
         ("foo[bar] = jest.fn().mockReturnValue(undefined)", None),
         (
             "
@@ -67,7 +77,11 @@ fn tests() {
             "jest.spyOn(obj, 'a').mockImplementation(); const test = 10;",
             None,
         ),
-        ("Date['now'] = jest['fn']()", "jest.spyOn(Date, 'now').mockImplementation()", None),
+        (
+            "Date['now'] = jest['fn']()",
+            "jest.spyOn(Date, 'now').mockImplementation()",
+            None,
+        ),
         (
             "window[`${name}`] = jest[`fn`]()",
             "jest.spyOn(window, `${name}`).mockImplementation()",
@@ -83,7 +97,11 @@ fn tests() {
             "jest.spyOn(obj.one, 'two').mockImplementation(); const test = 10;",
             None,
         ),
-        ("obj.a = jest.fn(() => 10,)", "jest.spyOn(obj, 'a').mockImplementation(() => 10)", None),
+        (
+            "obj.a = jest.fn(() => 10,)",
+            "jest.spyOn(obj, 'a').mockImplementation(() => 10)",
+            None,
+        ),
         (
             "obj.a.b = jest.fn(() => ({})).mockReturnValue('default').mockReturnValueOnce('first call'); test();",
             "jest.spyOn(obj.a, 'b').mockImplementation(() => ({})).mockReturnValue('default').mockReturnValueOnce('first call'); test();",
@@ -135,7 +153,10 @@ fn tests() {
             "obj.a.b = vi.fn(() => ({})).mockReturnValue('default').mockReturnValueOnce('first call'); test();",
             None,
         ),
-        ("window.fetch = vi.fn(() => ({})).one.two().three().four", None),
+        (
+            "window.fetch = vi.fn(() => ({})).one.two().three().four",
+            None,
+        ),
         ("foo[bar] = vi.fn().mockReturnValue(undefined)", None),
         (
             "
@@ -152,19 +173,31 @@ fn tests() {
             "vi.spyOn(obj, 'a').mockImplementation(); const test = 10;",
             None,
         ),
-        ("Date['now'] = vi['fn']()", "vi.spyOn(Date, 'now').mockImplementation()", None),
+        (
+            "Date['now'] = vi['fn']()",
+            "vi.spyOn(Date, 'now').mockImplementation()",
+            None,
+        ),
         (
             "window[`${name}`] = vi[`fn`]()",
             "vi.spyOn(window, `${name}`).mockImplementation()",
             None,
         ),
-        ("obj['prop' + 1] = vi['fn']()", "vi.spyOn(obj, 'prop' + 1).mockImplementation()", None),
+        (
+            "obj['prop' + 1] = vi['fn']()",
+            "vi.spyOn(obj, 'prop' + 1).mockImplementation()",
+            None,
+        ),
         (
             "obj.one.two = vi.fn(); const test = 10;",
             "vi.spyOn(obj.one, 'two').mockImplementation(); const test = 10;",
             None,
         ),
-        ("obj.a = vi.fn(() => 10,)", "vi.spyOn(obj, 'a').mockImplementation(() => 10)", None),
+        (
+            "obj.a = vi.fn(() => 10,)",
+            "vi.spyOn(obj, 'a').mockImplementation(() => 10)",
+            None,
+        ),
         (
             "obj.a.b = vi.fn(() => ({})).mockReturnValue('default').mockReturnValueOnce('first call'); test();",
             "vi.spyOn(obj.a, 'b').mockImplementation(() => ({})).mockReturnValue('default').mockReturnValueOnce('first call'); test();",

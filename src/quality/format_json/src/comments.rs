@@ -97,7 +97,10 @@ pub struct FormatLineCommentSuffix {
 
 impl FormatLineCommentSuffix {
     pub const fn new(comment: Comment) -> Self {
-        Self { comment, leading_space: false }
+        Self {
+            comment,
+            leading_space: false,
+        }
     }
 
     pub const fn with_leading_space(mut self) -> Self {
@@ -124,7 +127,9 @@ impl<'a> Format<'a, JsonFormatContext<'a>> for FormatLineCommentSuffix {
 /// These comments are "alignable":
 /// their interior lines can be re-indented so the stars line up with the opening `/*`.
 fn is_alignable_comment(content: &str) -> bool {
-    LineTerminatorSplitter::new(content).skip(1).all(|line| line.trim_start().starts_with('*'))
+    LineTerminatorSplitter::new(content)
+        .skip(1)
+        .all(|line| line.trim_start().starts_with('*'))
 }
 
 /// Emit comments that precede an AST value,
@@ -325,7 +330,10 @@ pub fn is_suppression_comment(source: SourceText<'_>, comment: &Comment) -> bool
 /// `before` is typically the next AST node's `span.start`.
 pub fn is_suppressed_before(f: &JsonFormatter<'_, '_>, before: u32) -> bool {
     let source = f.context().source_text();
-    f.context().comments().iter_before(before).any(|c| is_suppression_comment(source, &c))
+    f.context()
+        .comments()
+        .iter_before(before)
+        .any(|c| is_suppression_comment(source, &c))
 }
 
 /// `Format` adapter that emits a node's leading comments, then the node's source
@@ -387,13 +395,26 @@ mod tests {
     #[test]
     fn has_line_terminator_after_skipping_comments_is_ls_ps_aware() {
         // `text` is the slice just after `{`. A bare terminator before the first token → true.
-        for src in ["\nx", "\rx", "\r\nx", "\u{2028}x", "\u{2029}x", "  \u{2028}x"] {
+        for src in [
+            "\nx",
+            "\rx",
+            "\r\nx",
+            "\u{2028}x",
+            "\u{2029}x",
+            "  \u{2028}x",
+        ] {
             assert!(has_line_terminator_after_skipping_comments(src), "{src:?}");
         }
         // Terminator hidden behind a comment is still detected.
-        assert!(has_line_terminator_after_skipping_comments(" /* c */\u{2028}x"));
-        assert!(has_line_terminator_after_skipping_comments(" /* c\u{2029} */ x"));
-        assert!(has_line_terminator_after_skipping_comments(" // c\u{2028}x"));
+        assert!(has_line_terminator_after_skipping_comments(
+            " /* c */\u{2028}x"
+        ));
+        assert!(has_line_terminator_after_skipping_comments(
+            " /* c\u{2029} */ x"
+        ));
+        assert!(has_line_terminator_after_skipping_comments(
+            " // c\u{2028}x"
+        ));
         // No terminator before the next token (incl. other 0xE2-led chars).
         for src in [" x", " /* c */ x", "\u{2014}x"] {
             assert!(!has_line_terminator_after_skipping_comments(src), "{src:?}");

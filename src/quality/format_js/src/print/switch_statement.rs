@@ -133,8 +133,10 @@ impl<'a> FormatWrite<'a> for AstNode<'a, SwitchCase<'a>> {
             // NOTE: relies on `:` being in `end_of_line_comments_after`'s trivia allowlist.
             #[expect(clippy::cast_possible_truncation)]
             const DEFAULT_LEN: u32 = "default".len() as u32;
-            let comments =
-                f.context().comments().end_of_line_comments_after(self.span.start + DEFAULT_LEN);
+            let comments = f
+                .context()
+                .comments()
+                .end_of_line_comments_after(self.span.start + DEFAULT_LEN);
             if !comments.is_empty() {
                 write!(
                     f,

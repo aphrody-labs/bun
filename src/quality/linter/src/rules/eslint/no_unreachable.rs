@@ -62,7 +62,8 @@ declare_oxc_lint!(
     eslint,
     correctness,
     version = "0.4.4",
-    short_description = "Disallow unreachable code after `return`, `throw`, `continue`, and `break` statements.",
+    short_description =
+        "Disallow unreachable code after `return`, `throw`, `continue`, and `break` statements.",
 );
 
 impl Rule for NoUnreachable {
@@ -81,8 +82,12 @@ impl Rule for NoUnreachable {
                 continue;
             }
 
-            unreachable_statement_ids
-                .extend(cfg.basic_block(node).instructions().iter().filter_map(statement_node_id));
+            unreachable_statement_ids.extend(
+                cfg.basic_block(node)
+                    .instructions()
+                    .iter()
+                    .filter_map(statement_node_id),
+            );
         }
 
         report_unreachable_statements(ctx, unreachable_statement_ids);
@@ -143,7 +148,10 @@ fn has_reported_unreachable_ancestor(
             "ancestor nodes must be assigned lower NodeIds than descendants"
         );
 
-        if matches!(nodes.kind(ancestor_id), AstKind::FunctionBody(_) | AstKind::StaticBlock(_)) {
+        if matches!(
+            nodes.kind(ancestor_id),
+            AstKind::FunctionBody(_) | AstKind::StaticBlock(_)
+        ) {
             return false;
         }
 

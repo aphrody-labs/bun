@@ -31,7 +31,10 @@ impl DomTree {
     // is the node itself.
     fn content_source(&self, node_id: NodeId) -> NodeId {
         self.with_node(node_id, |n| match &n.data {
-            NodeData::Element { template_contents: Some(contents), .. } => Some(*contents),
+            NodeData::Element {
+                template_contents: Some(contents),
+                ..
+            } => Some(*contents),
             _ => None,
         })
         .flatten()
@@ -40,7 +43,11 @@ impl DomTree {
 
     // Children as work items in document order (top of the LIFO stack first).
     fn child_work(&self, node_id: NodeId) -> Vec<SerializeWork> {
-        self.children(node_id).into_iter().rev().map(|c| SerializeWork::Node(c, true)).collect()
+        self.children(node_id)
+            .into_iter()
+            .rev()
+            .map(|c| SerializeWork::Node(c, true))
+            .collect()
     }
 
     fn serialize_worklist(&self, mut stack: Vec<SerializeWork>, buf: &mut String) {
@@ -65,7 +72,7 @@ impl DomTree {
                     buf.push_str(&tag);
                     buf.push('>');
                     continue;
-                },
+                }
                 SerializeWork::Node(node_id, include_self) => (node_id, include_self),
             };
 
@@ -79,21 +86,29 @@ impl DomTree {
                     for w in self.child_work(node_id) {
                         stack.push(w);
                     }
-                },
+                }
                 NodeData::Doctype { name, .. } => {
                     buf.push_str("<!DOCTYPE ");
                     buf.push_str(name);
                     buf.push('>');
-                },
-                NodeData::Element { name, attrs, template_contents, .. } => {
+                }
+                NodeData::Element {
+                    name,
+                    attrs,
+                    template_contents,
+                    ..
+                } => {
                     let tag = name.local.as_ref();
                     if include_self {
                         buf.push('<');
                         buf.push_str(tag);
                         for attr in attrs {
                             buf.push(' ');
-                            if let Some(prefix) =
-                                attr.name.prefix.as_ref().filter(|prefix| !prefix.is_empty())
+                            if let Some(prefix) = attr
+                                .name
+                                .prefix
+                                .as_ref()
+                                .filter(|prefix| !prefix.is_empty())
                             {
                                 buf.push_str(prefix);
                                 buf.push(':');
@@ -121,7 +136,7 @@ impl DomTree {
                             stack.push(w);
                         }
                     }
-                },
+                }
                 NodeData::Text { contents } => {
                     let parent_is_raw = node
                         .parent
@@ -139,7 +154,7 @@ impl DomTree {
                     } else {
                         escape_text(contents, buf);
                     }
-                },
+                }
                 NodeData::Comment { contents } => {
                     buf.push_str("<!--");
                     // The HTML parser can never produce a comment that closes early,
@@ -159,14 +174,14 @@ impl DomTree {
                         buf.push_str(contents);
                     }
                     buf.push_str("-->");
-                },
+                }
                 NodeData::ProcessingInstruction { target, data } => {
                     buf.push_str("<?");
                     buf.push_str(target);
                     buf.push(' ');
                     buf.push_str(data);
                     buf.push('>');
-                },
+                }
             }
         }
     }
@@ -233,14 +248,24 @@ mod tests {
         );
         let svg = tree.query_selector("svg").unwrap().unwrap();
         tree.with_node(svg, |node| {
-            assert_eq!(node.get_attribute("xmlns"), Some("http://www.w3.org/2000/svg"));
+            assert_eq!(
+                node.get_attribute("xmlns"),
+                Some("http://www.w3.org/2000/svg")
+            );
             assert_eq!(node.get_attribute(":xmlns"), None);
             assert_eq!(
                 node.get_attribute_ns("http://www.w3.org/2000/xmlns/", "xmlns"),
                 Some("http://www.w3.org/2000/svg")
             );
-            assert!(node.attrs().unwrap().iter().any(|attr| attr.qualified_name() == "xmlns"));
-            assert_eq!(node.get_attribute("xmlns:xlink"), Some("http://www.w3.org/1999/xlink"));
+            assert!(node
+                .attrs()
+                .unwrap()
+                .iter()
+                .any(|attr| attr.qualified_name() == "xmlns"));
+            assert_eq!(
+                node.get_attribute("xmlns:xlink"),
+                Some("http://www.w3.org/1999/xlink")
+            );
         });
         let use_node = tree.query_selector("use").unwrap().unwrap();
         tree.with_node(use_node, |node| {
@@ -320,7 +345,9 @@ mod tests {
         for payload in payloads {
             let tree = parse_html(r#"<div id="host"></div>"#);
             let host = tree.get_element_by_id("host").unwrap();
-            let comment = tree.new_node(NodeData::Comment { contents: payload.to_string() });
+            let comment = tree.new_node(NodeData::Comment {
+                contents: payload.to_string(),
+            });
             tree.append_child(host, comment);
 
             let serialized = tree.outer_html(host);
@@ -335,7 +362,10 @@ mod tests {
             // And the serialized comment data must carry no raw ">".
             let inner = &serialized[serialized.find("<!--").unwrap() + 4..];
             let inner = &inner[..inner.find("-->").unwrap()];
-            assert!(!inner.contains('>'), "comment data still contains a raw '>': {serialized}");
+            assert!(
+                !inner.contains('>'),
+                "comment data still contains a raw '>': {serialized}"
+            );
         }
     }
 
@@ -350,7 +380,9 @@ mod tests {
             template_contents: None,
             mathml_annotation_xml_integration_point: false,
         });
-        let shadow_text = tree.new_node(NodeData::Text { contents: "shadow".to_string() });
+        let shadow_text = tree.new_node(NodeData::Text {
+            contents: "shadow".to_string(),
+        });
         tree.append_child(root, shadow);
         tree.append_child(shadow, shadow_text);
 

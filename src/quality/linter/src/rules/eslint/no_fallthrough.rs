@@ -247,7 +247,7 @@ declare_oxc_lint!(
     NoFallthrough,
     eslint,
     pedantic, // Fall through code are still incorrect.
-    pending, // TODO: add a dangerous suggestion for this rule.
+    pending,  // TODO: add a dangerous suggestion for this rule.
     config = NoFallthroughConfig,
     version = "0.0.14",
     short_description = "Disallow fallthrough of `case` statements.",
@@ -259,7 +259,9 @@ impl Rule for NoFallthrough {
     }
 
     fn run<'a>(&self, node: &AstNode<'a>, ctx: &LintContext<'a>) {
-        let AstKind::SwitchStatement(switch) = node.kind() else { return };
+        let AstKind::SwitchStatement(switch) = node.kind() else {
+            return;
+        };
 
         let cfg = ctx.cfg();
         let switch_id = ctx.nodes().cfg_id(node.id());
@@ -317,7 +319,9 @@ impl Rule for NoFallthrough {
 
         let mut iter = switch.cases.iter().zip(cfg_ids).peekable();
         while let Some((case, _)) = iter.next() {
-            let Some((next_case, next_cfg_id)) = iter.peek() else { continue };
+            let Some((next_case, next_cfg_id)) = iter.peek() else {
+                continue;
+            };
             if !fallthroughs.contains(next_cfg_id) {
                 if self.0.report_unused_fallthrough_comment
                     && let Some(span) = self.maybe_allow_fallthrough_trivia(ctx, case, next_case)
@@ -331,7 +335,9 @@ impl Rule for NoFallthrough {
                     || (!self.0.allow_empty_case
                         && Self::has_blanks_between(ctx, case.span.end..next_case.span.start));
                 is_fallthrough
-                    && self.maybe_allow_fallthrough_trivia(ctx, case, next_case).is_none()
+                    && self
+                        .maybe_allow_fallthrough_trivia(ctx, case, next_case)
+                        .is_none()
             };
 
             if is_illegal_fallthrough {
@@ -365,7 +371,11 @@ impl NoFallthrough {
     fn has_blanks_between(ctx: &LintContext, range: Range<u32>) -> bool {
         let in_between = &ctx.source_text()[range.start as usize..range.end as usize];
         // check for at least 2 new lines, we allow the first new line for formatting.
-        in_between.bytes().filter(|it| *it == b'\n').nth(1).is_some()
+        in_between
+            .bytes()
+            .filter(|it| *it == b'\n')
+            .nth(1)
+            .is_some()
     }
 
     fn maybe_allow_fallthrough_trivia(
@@ -489,7 +499,11 @@ fn get_switch_semantic_cases(
             }
         });
 
-    let (default, exit) = if has_default { (exit, None) } else { (None, exit) };
+    let (default, exit) = if has_default {
+        (exit, None)
+    } else {
+        (None, exit)
+    };
     cfg_ids.reverse();
     (cfg_ids, FxHashMap::from_iter(tests), default, exit)
 }
@@ -499,24 +513,75 @@ fn test() {
     use crate::tester::Tester;
 
     let pass = vec![
-        ("switch(foo) { case 0: a(); /* falls through */ case 1: b(); }", None),
-        ("switch(foo) { case 0: a()\n /* falls through */ case 1: b(); }", None),
-        ("switch(foo) { case 0: a(); /* fall through */ case 1: b(); }", None),
-        ("switch(foo) { case 0: a(); /* fallthrough */ case 1: b(); }", None),
-        ("switch(foo) { case 0: a(); /* FALLS THROUGH */ case 1: b(); }", None),
-        ("switch(foo) { case 0: { a(); /* falls through */ } case 1: b(); }", None),
-        ("switch(foo) { case 0: { a()\n /* falls through */ } case 1: b(); }", None),
-        ("switch(foo) { case 0: { a(); /* fall through */ } case 1: b(); }", None),
-        ("switch(foo) { case 0: { a(); /* fallthrough */ } case 1: b(); }", None),
-        ("switch(foo) { case 0: { a(); /* FALLS THROUGH */ } case 1: b(); }", None),
-        ("switch(foo) { case 0: { a(); } /* falls through */ case 1: b(); }", None),
-        ("switch(foo) { case 0: { a(); /* falls through */ } /* comment */ case 1: b(); }", None),
-        ("switch(foo) { case 0: { /* falls through */ } case 1: b(); }", None),
-        ("function foo() { switch(foo) { case 0: a(); return; case 1: b(); }; }", None),
-        ("switch(foo) { case 0: a(); throw 'foo'; case 1: b(); }", None),
-        ("while (a) { switch(foo) { case 0: a(); continue; case 1: b(); } }", None),
+        (
+            "switch(foo) { case 0: a(); /* falls through */ case 1: b(); }",
+            None,
+        ),
+        (
+            "switch(foo) { case 0: a()\n /* falls through */ case 1: b(); }",
+            None,
+        ),
+        (
+            "switch(foo) { case 0: a(); /* fall through */ case 1: b(); }",
+            None,
+        ),
+        (
+            "switch(foo) { case 0: a(); /* fallthrough */ case 1: b(); }",
+            None,
+        ),
+        (
+            "switch(foo) { case 0: a(); /* FALLS THROUGH */ case 1: b(); }",
+            None,
+        ),
+        (
+            "switch(foo) { case 0: { a(); /* falls through */ } case 1: b(); }",
+            None,
+        ),
+        (
+            "switch(foo) { case 0: { a()\n /* falls through */ } case 1: b(); }",
+            None,
+        ),
+        (
+            "switch(foo) { case 0: { a(); /* fall through */ } case 1: b(); }",
+            None,
+        ),
+        (
+            "switch(foo) { case 0: { a(); /* fallthrough */ } case 1: b(); }",
+            None,
+        ),
+        (
+            "switch(foo) { case 0: { a(); /* FALLS THROUGH */ } case 1: b(); }",
+            None,
+        ),
+        (
+            "switch(foo) { case 0: { a(); } /* falls through */ case 1: b(); }",
+            None,
+        ),
+        (
+            "switch(foo) { case 0: { a(); /* falls through */ } /* comment */ case 1: b(); }",
+            None,
+        ),
+        (
+            "switch(foo) { case 0: { /* falls through */ } case 1: b(); }",
+            None,
+        ),
+        (
+            "function foo() { switch(foo) { case 0: a(); return; case 1: b(); }; }",
+            None,
+        ),
+        (
+            "switch(foo) { case 0: a(); throw 'foo'; case 1: b(); }",
+            None,
+        ),
+        (
+            "while (a) { switch(foo) { case 0: a(); continue; case 1: b(); } }",
+            None,
+        ),
         ("switch(foo) { case 0: a(); break; case 1: b(); }", None),
-        ("switch(foo) { case 0: case 1: a(); break; case 2: b(); }", None),
+        (
+            "switch(foo) { case 0: case 1: a(); break; case 2: b(); }",
+            None,
+        ),
         ("switch(foo) { case 0: case 1: break; case 2: b(); }", None),
         ("switch(foo) { case 0: case 1: break; default: b(); }", None),
         ("switch(foo) { case 0: case 1: a(); }", None),
@@ -524,27 +589,60 @@ fn test() {
         ("switch(foo) { case 0: case 1: break; }", None),
         ("switch(foo) { case 0:\n case 1: break; }", None),
         ("switch(foo) { case 0: // comment\n case 1: break; }", None),
-        ("function foo() { switch(foo) { case 0: case 1: return; } }", None),
-        ("function foo() { switch(foo) { case 0: {return;}\n case 1: {return;} } }", None),
+        (
+            "function foo() { switch(foo) { case 0: case 1: return; } }",
+            None,
+        ),
+        (
+            "function foo() { switch(foo) { case 0: {return;}\n case 1: {return;} } }",
+            None,
+        ),
         ("switch(foo) { case 0: case 1: {break;} }", None),
         ("switch(foo) { }", None),
         (
             "switch(foo) { case 0: switch(bar) { case 2: break; } /* falls through */ case 1: break; }",
             None,
         ),
-        ("function foo() { switch(foo) { case 1: return a; a++; }}", None),
-        ("switch (foo) { case 0: a(); /* falls through */ default:  b(); /* comment */ }", None),
-        ("switch (foo) { case 0: a(); /* falls through */ default: /* comment */ b(); }", None),
-        ("switch (foo) { case 0: if (a) { break; } else { throw 0; } default: b(); }", None),
-        ("switch (foo) { case 0: try { break; } finally {} default: b(); }", None),
-        ("switch (foo) { case 0: try {} finally { break; } default: b(); }", None),
-        ("switch (foo) { case 0: try { throw 0; } catch (err) { break; } default: b(); }", None),
-        ("switch (foo) { case 0: do { throw 0; } while(a); default: b(); }", None),
+        (
+            "function foo() { switch(foo) { case 1: return a; a++; }}",
+            None,
+        ),
+        (
+            "switch (foo) { case 0: a(); /* falls through */ default:  b(); /* comment */ }",
+            None,
+        ),
+        (
+            "switch (foo) { case 0: a(); /* falls through */ default: /* comment */ b(); }",
+            None,
+        ),
+        (
+            "switch (foo) { case 0: if (a) { break; } else { throw 0; } default: b(); }",
+            None,
+        ),
+        (
+            "switch (foo) { case 0: try { break; } finally {} default: b(); }",
+            None,
+        ),
+        (
+            "switch (foo) { case 0: try {} finally { break; } default: b(); }",
+            None,
+        ),
+        (
+            "switch (foo) { case 0: try { throw 0; } catch (err) { break; } default: b(); }",
+            None,
+        ),
+        (
+            "switch (foo) { case 0: do { throw 0; } while(a); default: b(); }",
+            None,
+        ),
         (
             "switch (foo) { case 0: a(); \n// eslint-disable-next-line no-fallthrough\n case 1: }",
             None,
         ),
-        ("switch(foo) { case 0: default: a(); break; case 1: b(); }", None),
+        (
+            "switch(foo) { case 0: default: a(); break; case 1: b(); }",
+            None,
+        ),
         (
             "switch(foo) { case 0: a(); /* no break */ case 1: b(); }",
             Some(serde_json::json!([{
@@ -605,8 +703,14 @@ fn test() {
         // Default in middle with break
         ("switch(foo) { default: a(); break; case 1: b(); }", None),
         // Issue #6417: switch with logical operators should work correctly with break
-        ("switch(true) { case x === 1 || x === 2: a(); break; case x === 3: b(); }", None),
-        ("switch(true) { case x === 1 && y: a(); break; case x === 3: b(); }", None),
+        (
+            "switch(true) { case x === 1 || x === 2: a(); break; case x === 3: b(); }",
+            None,
+        ),
+        (
+            "switch(true) { case x === 1 && y: a(); break; case x === 3: b(); }",
+            None,
+        ),
         (
             r#"c.map(c => { switch (true) {
         case c.f === 'qux' && xCount > 1: { return <td key="foo">Foo</td>; }
@@ -617,26 +721,59 @@ fn test() {
             None,
         ),
         // Issue #21320: breaks on multi-line case statements
-        ("switch(foo) {\n  case A\n    .B:\n  case B.A:\n    break;\n}", None),
+        (
+            "switch(foo) {\n  case A\n    .B:\n  case B.A:\n    break;\n}",
+            None,
+        ),
     ];
 
     let fail = vec![
         ("switch(foo) { case 0: a();\ncase 1: b() }", None),
         ("switch(foo) { case 0: a();\ndefault: b() }", None),
         ("switch(foo) { case 0: a(); default: b() }", None),
-        ("switch(foo) { case 0: if (a) { break; } default: b() }", None),
-        ("switch(foo) { case 0: try { throw 0; } catch (err) {} default: b() }", None),
-        ("switch(foo) { case 0: while (a) { break; } default: b() }", None),
-        ("switch(foo) { case 0: do { break; } while (a); default: b() }", None),
+        (
+            "switch(foo) { case 0: if (a) { break; } default: b() }",
+            None,
+        ),
+        (
+            "switch(foo) { case 0: try { throw 0; } catch (err) {} default: b() }",
+            None,
+        ),
+        (
+            "switch(foo) { case 0: while (a) { break; } default: b() }",
+            None,
+        ),
+        (
+            "switch(foo) { case 0: do { break; } while (a); default: b() }",
+            None,
+        ),
         ("switch(foo) { case 0:\n\n default: b() }", None),
         ("switch(foo) { case 0: {} default: b() }", None),
-        ("switch(foo) { case 0: a(); { /* falls through */ } default: b() }", None),
-        ("switch(foo) { case 0: { /* falls through */ } a(); default: b() }", None),
-        ("switch(foo) { case 0: if (a) { /* falls through */ } default: b() }", None),
-        ("switch(foo) { case 0: { { /* falls through */ } } default: b() }", None),
-        ("switch(foo) { case 0: { /* comment */ } default: b() }", None),
+        (
+            "switch(foo) { case 0: a(); { /* falls through */ } default: b() }",
+            None,
+        ),
+        (
+            "switch(foo) { case 0: { /* falls through */ } a(); default: b() }",
+            None,
+        ),
+        (
+            "switch(foo) { case 0: if (a) { /* falls through */ } default: b() }",
+            None,
+        ),
+        (
+            "switch(foo) { case 0: { { /* falls through */ } } default: b() }",
+            None,
+        ),
+        (
+            "switch(foo) { case 0: { /* comment */ } default: b() }",
+            None,
+        ),
         ("switch(foo) { case 0:\n // comment\n default: b() }", None),
-        ("switch(foo) { case 0: a(); /* falling through */ default: b() }", None),
+        (
+            "switch(foo) { case 0: a(); /* falling through */ default: b() }",
+            None,
+        ),
         (
             "switch(foo) { case 0: a();\n/* no break */\ncase 1: b(); }",
             Some(serde_json::json!([{
@@ -655,14 +792,20 @@ fn test() {
                 "commentPattern": "no break"
             }])),
         ),
-        ("switch(foo) { case 0: \n /* with comments */  \ncase 1: b(); }", None),
+        (
+            "switch(foo) { case 0: \n /* with comments */  \ncase 1: b(); }",
+            None,
+        ),
         (
             "switch(foo) { case 0:\n\ncase 1: b(); }",
             Some(serde_json::json!([{
                 "allowEmptyCase": false
             }])),
         ),
-        ("switch(foo) { case 0:\n\ncase 1: b(); }", Some(serde_json::json!([{}]))),
+        (
+            "switch(foo) { case 0:\n\ncase 1: b(); }",
+            Some(serde_json::json!([{}])),
+        ),
         (
             "switch (a) { case 1: \n ; case 2:  }",
             Some(serde_json::json!([{ "allowEmptyCase": false }])),
@@ -684,10 +827,19 @@ fn test() {
         // Issue #11340: default falls through to next case
         ("switch(foo) { default: a(); case 1: b(); }", None),
         // Issue #11340: default in middle, falls through both directions
-        ("switch(foo) { case 0: a(); default: b(); case 1: c(); }", None),
+        (
+            "switch(foo) { case 0: a(); default: b(); case 1: c(); }",
+            None,
+        ),
         // Issue #6417: switch with logical operators should detect fallthrough
-        ("switch(true) { case x === 1 || x === 2: a(); case x === 3: b(); }", None),
-        ("switch(true) { case x === 1 && y: a(); case x === 3: b(); }", None),
+        (
+            "switch(true) { case x === 1 || x === 2: a(); case x === 3: b(); }",
+            None,
+        ),
+        (
+            "switch(true) { case x === 1 && y: a(); case x === 3: b(); }",
+            None,
+        ),
         // TODO: it should fail but doesn't, we ignore conditional discriminants for now.
         // ("switch (a === b ? c : d) { case 1: ; case 2: ; case 3: ; }", None)
     ];

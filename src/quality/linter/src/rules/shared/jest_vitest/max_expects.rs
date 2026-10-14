@@ -13,7 +13,9 @@ use crate::{
 
 fn exceeded_max_assertion(count: u32, max: u32, span: Span) -> OxcDiagnostic {
     OxcDiagnostic::warn("Enforces a maximum number assertion calls in a test body.")
-        .with_help(format!("Too many assertion calls ({count}) - maximum allowed is {max}"))
+        .with_help(format!(
+            "Too many assertion calls ({count}) - maximum allowed is {max}"
+        ))
         .with_label(span)
 }
 

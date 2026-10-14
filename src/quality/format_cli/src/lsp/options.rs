@@ -118,11 +118,16 @@ mod test {
         let options = FormatOptions::default();
         assert!(options.use_nested_configs());
 
-        let options =
-            FormatOptions { config_path: Some("config.json".into()), ..Default::default() };
+        let options = FormatOptions {
+            config_path: Some("config.json".into()),
+            ..Default::default()
+        };
         assert!(!options.use_nested_configs());
 
-        let options = FormatOptions { disable_nested_config: true, ..Default::default() };
+        let options = FormatOptions {
+            disable_nested_config: true,
+            ..Default::default()
+        };
         assert!(!options.use_nested_configs());
     }
 }

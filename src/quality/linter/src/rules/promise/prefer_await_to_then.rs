@@ -69,11 +69,15 @@ declare_oxc_lint!(
     style,
     config = PreferAwaitToThenConfig,
     version = "0.7.1",
-    short_description = "Prefer `await` to `then()`/`catch()`/`finally()` for reading Promise values.",
+    short_description =
+        "Prefer `await` to `then()`/`catch()`/`finally()` for reading Promise values.",
 );
 
 fn is_inside_yield_or_await(node: &AstNode) -> bool {
-    matches!(node.kind(), AstKind::YieldExpression(_) | AstKind::AwaitExpression(_))
+    matches!(
+        node.kind(),
+        AstKind::YieldExpression(_) | AstKind::AwaitExpression(_)
+    )
 }
 
 impl Rule for PreferAwaitToThen {
@@ -94,13 +98,20 @@ impl Rule for PreferAwaitToThen {
             return;
         }
 
-        if matches!(ctx.nodes().parent_kind(node.id()), AstKind::ReturnStatement(_)) {
+        if matches!(
+            ctx.nodes().parent_kind(node.id()),
+            AstKind::ReturnStatement(_)
+        ) {
             return;
         }
 
         if !self.strict {
             // Already inside a yield or await
-            if ctx.nodes().ancestors(node.id()).any(is_inside_yield_or_await) {
+            if ctx
+                .nodes()
+                .ancestors(node.id())
+                .any(is_inside_yield_or_await)
+            {
                 return;
             }
         }
@@ -171,8 +182,14 @@ fn test() {
     let fail = vec![
         ("function foo() { hey.then(x => {}) }", None),
         ("function foo() { hey.then(function() { }).then() }", None),
-        ("function foo() { hey.then(function() { }).then(x).catch() }", None),
-        ("async function a() { hey.then(function() { }).then(function() { }) }", None),
+        (
+            "function foo() { hey.then(function() { }).then(x).catch() }",
+            None,
+        ),
+        (
+            "async function a() { hey.then(function() { }).then(function() { }) }",
+            None,
+        ),
         ("function foo() { hey.catch(x => {}) }", None),
         ("function foo() { hey.finally(x => {}) }", None),
         ("something().then(async () => await somethingElse())", None),
@@ -180,12 +197,21 @@ fn test() {
             "async function foo() { await thing().then() }",
             Some(serde_json::json!([{ "strict": true }])),
         ),
-        ("async function foo() { thing().then() }", Some(serde_json::json!([{ "strict": false }]))),
+        (
+            "async function foo() { thing().then() }",
+            Some(serde_json::json!([{ "strict": false }])),
+        ),
         (
             "async function hi() { await thing().then(x => {}) }",
             Some(serde_json::json!([{ "strict": true }])),
         ),
     ];
 
-    Tester::new(PreferAwaitToThen::NAME, PreferAwaitToThen::PLUGIN, pass, fail).test_and_snapshot();
+    Tester::new(
+        PreferAwaitToThen::NAME,
+        PreferAwaitToThen::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

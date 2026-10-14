@@ -25,7 +25,10 @@ impl<S: SourceCode> NamedSource<S> {
     /// a name.
     #[must_use]
     pub fn new(name: impl AsRef<str>, source: S) -> Self {
-        Self { source, name: name.as_ref().to_string() }
+        Self {
+            source,
+            name: name.as_ref().to_string(),
+        }
     }
 }
 

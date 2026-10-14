@@ -179,12 +179,19 @@ impl<'a> LintContext<'a> {
     pub fn is_reference_to_global_variable(&self, ident: &IdentifierReference) -> bool {
         let name = ident.name.as_str();
         ident.is_global_reference(self.scoping())
-            && !self.globals().get(name).is_some_and(|value| *value == GlobalValue::Off)
+            && !self
+                .globals()
+                .get(name)
+                .is_some_and(|value| *value == GlobalValue::Off)
     }
 
     /// Checks if the provided identifier is a reference to a global variable.
     pub fn get_global_variable_value(&self, name: &str) -> Option<GlobalValue> {
-        if !self.scoping().root_unresolved_references().contains_key(name) {
+        if !self
+            .scoping()
+            .root_unresolved_references()
+            .contains_key(name)
+        {
             return None;
         }
 
@@ -228,7 +235,11 @@ impl<'a> LintContext<'a> {
     /// - `is_global_defined("globalThis")` returns `true` only if the `es2020` environment or higher is enabled.
     /// - `is_global_defined("myGlobalVar")` returns `true` only if it is defined in the `globals` section as a non "off" value.
     pub fn is_global_defined(&self, var: &str) -> bool {
-        if !self.scoping().root_unresolved_references().contains_key(var) {
+        if !self
+            .scoping()
+            .root_unresolved_references()
+            .contains_key(var)
+        {
             return false;
         }
         if self.globals().is_enabled(var) {
@@ -238,7 +249,11 @@ impl<'a> LintContext<'a> {
     }
 
     pub fn is_ecma_script_global(&self, var: &str) -> bool {
-        if !self.scoping().root_unresolved_references().contains_key(var) {
+        if !self
+            .scoping()
+            .root_unresolved_references()
+            .contains_key(var)
+        {
             return false;
         }
 
@@ -264,7 +279,11 @@ impl<'a> LintContext<'a> {
     /// Add a diagnostic message to the list of diagnostics. Outputs a diagnostic with the current rule
     /// name, severity, and a link to the rule's documentation URL.
     fn add_diagnostic(&self, mut message: Message) {
-        if self.parent.disable_directives().contains(self.current_rule_name, message.span) {
+        if self
+            .parent
+            .disable_directives()
+            .contains(self.current_rule_name, message.span)
+        {
             return;
         }
         message.error = message
@@ -434,7 +453,10 @@ impl<'a> LintContext<'a> {
         if fixes_result.is_empty() {
             self.diagnostic(diagnostic);
         } else {
-            self.add_diagnostic(Message::new(diagnostic, PossibleFixes::Multiple(fixes_result)));
+            self.add_diagnostic(Message::new(
+                diagnostic,
+                PossibleFixes::Multiple(fixes_result),
+            ));
         }
     }
 
@@ -472,7 +494,10 @@ impl<'a> LintContext<'a> {
         if fixes_result.is_empty() {
             self.diagnostic(diagnostic);
         } else {
-            self.add_diagnostic(Message::new(diagnostic, PossibleFixes::Multiple(fixes_result)));
+            self.add_diagnostic(Message::new(
+                diagnostic,
+                PossibleFixes::Multiple(fixes_result),
+            ));
         }
     }
 

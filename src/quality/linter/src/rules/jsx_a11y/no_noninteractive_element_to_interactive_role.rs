@@ -64,7 +64,10 @@ fn default_allowed_roles() -> FxHashMap<CompactStr, Vec<CompactStr>> {
     );
     map.insert(
         CompactStr::new("fieldset"),
-        vec![CompactStr::new("radiogroup"), CompactStr::new("presentation")],
+        vec![
+            CompactStr::new("radiogroup"),
+            CompactStr::new("presentation"),
+        ],
     );
     map
 }
@@ -95,7 +98,9 @@ struct NoNoninteractiveElementToInteractiveRoleConfig {
 
 impl Default for NoNoninteractiveElementToInteractiveRoleConfig {
     fn default() -> Self {
-        Self { allowed_roles: default_allowed_roles() }
+        Self {
+            allowed_roles: default_allowed_roles(),
+        }
     }
 }
 
@@ -142,7 +147,8 @@ declare_oxc_lint!(
     correctness,
     config = NoNoninteractiveElementToInteractiveRoleConfig,
     version = "1.64.0",
-    short_description = "Disallow using an interactive WAI-ARIA role on a non-interactive HTML element.",
+    short_description =
+        "Disallow using an interactive WAI-ARIA role on a non-interactive HTML element.",
 );
 
 impl Rule for NoNoninteractiveElementToInteractiveRole {
@@ -185,7 +191,9 @@ impl Rule for NoNoninteractiveElementToInteractiveRole {
 
         // Skip if this element-role combination is allowed by config.
         if let Some(allowed) = self.0.allowed_roles.get(element_type.as_ref())
-            && allowed.iter().any(|r: &CompactStr| r.as_str() == first_role)
+            && allowed
+                .iter()
+                .any(|r: &CompactStr| r.as_str() == first_role)
         {
             return;
         }
@@ -228,7 +236,11 @@ fn test() {
         // Interactive elements with interactive roles (allowed)
         (r#"<a tabIndex="0" role="button" />"#, None, None),
         (r#"<a href="http://x.y.z" role="button" />"#, None, None),
-        (r#"<a href="http://x.y.z" tabIndex="0" role="button" />"#, None, None),
+        (
+            r#"<a href="http://x.y.z" tabIndex="0" role="button" />"#,
+            None,
+            None,
+        ),
         (r#"<area role="button" />"#, None, None),
         (r#"<area role="menuitem" />"#, None, None),
         (r#"<button className="foo" role="button" />"#, None, None),
@@ -244,7 +256,11 @@ fn test() {
         (r#"<input type="color" role="button" />"#, None, None),
         (r#"<input type="date" role="button" />"#, None, None),
         (r#"<input type="datetime" role="button" />"#, None, None),
-        (r#"<input type="datetime-local" role="button" />"#, None, None),
+        (
+            r#"<input type="datetime-local" role="button" />"#,
+            None,
+            None,
+        ),
         (r#"<input type="email" role="button" />"#, None, None),
         (r#"<input type="file" role="button" />"#, None, None),
         (r#"<input type="hidden" role="button" />"#, None, None),
@@ -317,7 +333,11 @@ fn test() {
         // Custom component not in settings (skipped)
         (r#"<Article role="button" />"#, None, None),
         // Custom component mapped via settings to interactive element (allowed)
-        (r#"<Input role="button" />"#, None, Some(components_settings())),
+        (
+            r#"<Input role="button" />"#,
+            None,
+            Some(components_settings()),
+        ),
         // Recommended allowed overrides (default config)
         (r#"<ul role="menu" />"#, None, None),
         (r#"<ul role="menubar" />"#, None, None),
@@ -339,7 +359,11 @@ fn test() {
         (r#"<li role="treeitem" />"#, None, None),
         (r#"<fieldset role="radiogroup" />"#, None, None),
         (r#"<fieldset role="presentation" />"#, None, None),
-        (r#"<table role="grid" />"#, Some(custom_allowed_roles_config()), None),
+        (
+            r#"<table role="grid" />"#,
+            Some(custom_allowed_roles_config()),
+            None,
+        ),
     ];
 
     let fail = vec![
@@ -400,7 +424,11 @@ fn test() {
         (r#"<time role="button" />"#, None, None),
         (r#"<ul role="button" />"#, None, None),
         (r#"<p role="button" />"#, None, None),
-        (r#"<section role="button" aria-label="Aardvark" />"#, None, None),
+        (
+            r#"<section role="button" aria-label="Aardvark" />"#,
+            None,
+            None,
+        ),
         // Non-interactive elements with menuitem role
         (r#"<main role="menuitem" />"#, None, None),
         (r#"<article role="menuitem" />"#, None, None),
@@ -425,28 +453,76 @@ fn test() {
         (r#"<tfoot role="menuitem" />"#, None, None),
         (r#"<thead role="menuitem" />"#, None, None),
         // Custom component mapped via settings to non-interactive element
-        (r#"<Article role="button" />"#, None, Some(components_settings())),
-        (r#"<table role="button" />"#, Some(custom_allowed_roles_config()), None),
+        (
+            r#"<Article role="button" />"#,
+            None,
+            Some(components_settings()),
+        ),
+        (
+            r#"<table role="button" />"#,
+            Some(custom_allowed_roles_config()),
+            None,
+        ),
     ];
 
     // Strict mode tests: recommended allowed overrides become invalid.
     let strict_fail = vec![
         (r#"<ul role="menu" />"#, Some(serde_json::json!([{}])), None),
-        (r#"<ul role="menubar" />"#, Some(serde_json::json!([{}])), None),
-        (r#"<ul role="radiogroup" />"#, Some(serde_json::json!([{}])), None),
-        (r#"<ul role="tablist" />"#, Some(serde_json::json!([{}])), None),
+        (
+            r#"<ul role="menubar" />"#,
+            Some(serde_json::json!([{}])),
+            None,
+        ),
+        (
+            r#"<ul role="radiogroup" />"#,
+            Some(serde_json::json!([{}])),
+            None,
+        ),
+        (
+            r#"<ul role="tablist" />"#,
+            Some(serde_json::json!([{}])),
+            None,
+        ),
         (r#"<ul role="tree" />"#, Some(serde_json::json!([{}])), None),
-        (r#"<ul role="treegrid" />"#, Some(serde_json::json!([{}])), None),
+        (
+            r#"<ul role="treegrid" />"#,
+            Some(serde_json::json!([{}])),
+            None,
+        ),
         (r#"<ol role="menu" />"#, Some(serde_json::json!([{}])), None),
-        (r#"<ol role="menubar" />"#, Some(serde_json::json!([{}])), None),
-        (r#"<ol role="radiogroup" />"#, Some(serde_json::json!([{}])), None),
-        (r#"<ol role="tablist" />"#, Some(serde_json::json!([{}])), None),
+        (
+            r#"<ol role="menubar" />"#,
+            Some(serde_json::json!([{}])),
+            None,
+        ),
+        (
+            r#"<ol role="radiogroup" />"#,
+            Some(serde_json::json!([{}])),
+            None,
+        ),
+        (
+            r#"<ol role="tablist" />"#,
+            Some(serde_json::json!([{}])),
+            None,
+        ),
         (r#"<ol role="tree" />"#, Some(serde_json::json!([{}])), None),
-        (r#"<ol role="treegrid" />"#, Some(serde_json::json!([{}])), None),
+        (
+            r#"<ol role="treegrid" />"#,
+            Some(serde_json::json!([{}])),
+            None,
+        ),
         (r#"<li role="tab" />"#, Some(serde_json::json!([{}])), None),
-        (r#"<li role="menuitem" />"#, Some(serde_json::json!([{}])), None),
+        (
+            r#"<li role="menuitem" />"#,
+            Some(serde_json::json!([{}])),
+            None,
+        ),
         (r#"<li role="row" />"#, Some(serde_json::json!([{}])), None),
-        (r#"<li role="treeitem" />"#, Some(serde_json::json!([{}])), None),
+        (
+            r#"<li role="treeitem" />"#,
+            Some(serde_json::json!([{}])),
+            None,
+        ),
     ];
 
     let mut all_fail = fail;

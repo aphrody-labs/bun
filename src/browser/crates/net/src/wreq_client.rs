@@ -16,11 +16,11 @@ use url::Url;
 
 #[cfg(feature = "stealth")]
 use crate::client::{
-    CallbackRegistry, InFlightGuard, BunBrowserNetError, RequestInfo, RequestMode, ResourceRequest,
-    Response, SsrfGuardResolver, cors_required, env_allows_private_network, error_chain,
-    fetch_file_url, is_forbidden_ip, redirect_taints_origin, request_fetch_site, request_referrer,
-    response_too_large, same_site_context, serialized_request_origin, validate_cors_response,
-    validate_request_mode, validate_url,
+    cors_required, env_allows_private_network, error_chain, fetch_file_url, is_forbidden_ip,
+    redirect_taints_origin, request_fetch_site, request_referrer, response_too_large,
+    same_site_context, serialized_request_origin, validate_cors_response, validate_request_mode,
+    validate_url, BunBrowserNetError, CallbackRegistry, InFlightGuard, RequestInfo, RequestMode,
+    ResourceRequest, Response, SsrfGuardResolver,
 };
 #[cfg(feature = "stealth")]
 use crate::cookies::{CookieJar, SameSiteContext};
@@ -97,12 +97,14 @@ fn wreq_response_header_value<'a>(
         return Ok(None);
     };
     if values.next().is_some() {
-        return Err(BunBrowserNetError::Cors(format!("{} returned multiple {} headers", url, name)));
+        return Err(BunBrowserNetError::Cors(format!(
+            "{} returned multiple {} headers",
+            url, name
+        )));
     }
-    first
-        .to_str()
-        .map(Some)
-        .map_err(|_| BunBrowserNetError::Cors(format!("{} returned an invalid {} header", url, name)))
+    first.to_str().map(Some).map_err(|_| {
+        BunBrowserNetError::Cors(format!("{} returned an invalid {} header", url, name))
+    })
 }
 
 #[cfg(feature = "stealth")]
@@ -118,7 +120,13 @@ fn validate_wreq_cors_response(
     let allow_origin = wreq_response_header_value(headers, "access-control-allow-origin", target)?;
     let allow_credentials =
         wreq_response_header_value(headers, "access-control-allow-credentials", target)?;
-    validate_cors_response(request, target, serialized_origin, allow_origin, allow_credentials)
+    validate_cors_response(
+        request,
+        target,
+        serialized_origin,
+        allow_origin,
+        allow_credentials,
+    )
 }
 
 #[cfg(feature = "stealth")]
@@ -170,7 +178,7 @@ async fn send_get_with_connection_reset_retry(
             };
             tracing::debug!(%url, "retrying GET after connection reset");
             retry.send().await
-        },
+        }
         result => result,
     }
 }
@@ -251,7 +259,10 @@ impl StealthHttpClient {
             std::env::var_os("SSL_CERT_FILE").as_deref(),
             std::env::var_os("SSL_CERT_DIR").as_deref(),
         ) {
-            match wreq::tls::trust::CertStore::builder().set_default_paths().build() {
+            match wreq::tls::trust::CertStore::builder()
+                .set_default_paths()
+                .build()
+            {
                 Ok(store) => builder = builder.tls_cert_store(store),
                 Err(error) => tracing::warn!(
                     %error,
@@ -267,7 +278,9 @@ impl StealthHttpClient {
             }
         }
 
-        let client = builder.build().expect("failed to build wreq stealth client");
+        let client = builder
+            .build()
+            .expect("failed to build wreq stealth client");
 
         StealthHttpClient {
             client,
@@ -290,7 +303,8 @@ impl StealthHttpClient {
         url: &Url,
         callbacks: Option<&CallbackRegistry>,
     ) -> Result<Response, BunBrowserNetError> {
-        self.fetch_with_profile(url, ResourceRequest::navigation(), callbacks).await
+        self.fetch_with_profile(url, ResourceRequest::navigation(), callbacks)
+            .await
     }
 
     pub async fn fetch_resource_with_callbacks(
@@ -343,7 +357,9 @@ impl StealthHttpClient {
                 .header("sec-fetch-mode", request.mode.header_value())
                 .header("sec-fetch-dest", request.destination());
             if request.mode == RequestMode::Navigate {
-                req = req.header("upgrade-insecure-requests", "1").header("sec-fetch-user", "?1");
+                req = req
+                    .header("upgrade-insecure-requests", "1")
+                    .header("sec-fetch-user", "?1");
             }
             if let Some(referer) = request_referrer(&request, &current_url) {
                 req = req.header("referer", referer);
@@ -390,8 +406,9 @@ impl StealthHttpClient {
             }
 
             let in_flight = InFlightGuard::new(&self.in_flight);
-            let resp =
-                send_get_with_connection_reset_retry(req, &current_url).await.map_err(|e| {
+            let resp = send_get_with_connection_reset_retry(req, &current_url)
+                .await
+                .map_err(|e| {
                     BunBrowserNetError::Network(format!("{}: {}", current_url, error_chain(&e)))
                 })?;
 
@@ -527,9 +544,9 @@ impl StealthHttpClient {
             });
         }
 
-        let req_method = method
-            .parse::<wreq::Method>()
-            .map_err(|e| BunBrowserNetError::Network(format!("invalid method '{}': {}", method, e)))?;
+        let req_method = method.parse::<wreq::Method>().map_err(|e| {
+            BunBrowserNetError::Network(format!("invalid method '{}': {}", method, e))
+        })?;
         let mut req = self.client.request(req_method, url.as_str());
 
         if let Some(context) = cookie_context {
@@ -565,7 +582,12 @@ impl StealthHttpClient {
         let response_headers: HashMap<String, String> = resp
             .headers()
             .iter()
-            .map(|(k, v)| (k.as_str().to_lowercase(), v.to_str().unwrap_or("").to_string()))
+            .map(|(k, v)| {
+                (
+                    k.as_str().to_lowercase(),
+                    v.to_str().unwrap_or("").to_string(),
+                )
+            })
             .collect();
         let body_url = url.clone();
         Ok(StealthResponseHeaders {
@@ -604,8 +626,8 @@ mod tests {
     use wreq::dns::{Name, Resolve};
 
     use super::{
-        StealthHttpClient, is_tracker_blocked, send_get_with_connection_reset_retry,
-        tracker_blocking_enabled,
+        is_tracker_blocked, send_get_with_connection_reset_retry, tracker_blocking_enabled,
+        StealthHttpClient,
     };
     use crate::{
         client::{BunBrowserNetError, SsrfGuardResolver},
@@ -632,7 +654,7 @@ mod tests {
         // Tolerate a no-network sandbox: only an actual SSRF rejection fails.
         let resolver = SsrfGuardResolver::new(false);
         match resolver.resolve(Name::from("example.com")).await {
-            Ok(_) => {},
+            Ok(_) => {}
             Err(e) => assert!(
                 !e.to_string().contains("SSRF blocked"),
                 "example.com wrongly SSRF-blocked: {e}"
@@ -644,16 +666,31 @@ mod tests {
 
     #[test]
     fn tracker_blocking_environment_defaults_to_enabled() {
-        for value in
-            [None, Some(""), Some("1"), Some("true"), Some("yes"), Some("on"), Some("invalid")]
-        {
+        for value in [
+            None,
+            Some(""),
+            Some("1"),
+            Some("true"),
+            Some("yes"),
+            Some("on"),
+            Some("invalid"),
+        ] {
             assert!(
                 tracker_blocking_enabled(value),
                 "{value:?} must leave tracker blocking enabled"
             );
         }
-        for value in [Some("0"), Some("false"), Some(" NO "), Some("off"), Some(" FALSE ")] {
-            assert!(!tracker_blocking_enabled(value), "{value:?} must disable tracker blocking");
+        for value in [
+            Some("0"),
+            Some("false"),
+            Some(" NO "),
+            Some("off"),
+            Some(" FALSE "),
+        ] {
+            assert!(
+                !tracker_blocking_enabled(value),
+                "{value:?} must disable tracker blocking"
+            );
         }
     }
 
@@ -663,8 +700,14 @@ mod tests {
 
         assert!(is_tracker_blocked(&url, true));
         assert!(!is_tracker_blocked(&url, false));
-        assert!(!is_tracker_blocked(&Url::parse("https://example.com/").unwrap(), true,));
-        assert!(!is_tracker_blocked(&Url::parse("file:///tmp/page.html").unwrap(), true,));
+        assert!(!is_tracker_blocked(
+            &Url::parse("https://example.com/").unwrap(),
+            true,
+        ));
+        assert!(!is_tracker_blocked(
+            &Url::parse("file:///tmp/page.html").unwrap(),
+            true,
+        ));
     }
 
     #[test]
@@ -685,14 +728,20 @@ mod tests {
 
         client.block_trackers = true;
         let blocked = if scripted {
-            client.send_single("GET", &url, &headers, &[], false, false).await
+            client
+                .send_single("GET", &url, &headers, &[], false, false)
+                .await
         } else {
             client.fetch(&url).await
         }
         .expect("blocked tracker returns an empty response");
         assert_eq!(blocked.status, 0);
         assert!(blocked.body.is_empty());
-        assert!(tokio::time::timeout(Duration::from_millis(50), listener.accept()).await.is_err());
+        assert!(
+            tokio::time::timeout(Duration::from_millis(50), listener.accept())
+                .await
+                .is_err()
+        );
 
         let server = tokio::spawn(async move {
             let (mut stream, _) = tokio::time::timeout(Duration::from_secs(5), listener.accept())
@@ -709,11 +758,9 @@ mod tests {
                 assert_ne!(count, 0);
                 request.extend_from_slice(&buffer[..count]);
             }
-            assert!(
-                String::from_utf8(request)
-                    .unwrap()
-                    .starts_with("GET http://www.google-analytics.com/collect HTTP/1.1\r\n",)
-            );
+            assert!(String::from_utf8(request)
+                .unwrap()
+                .starts_with("GET http://www.google-analytics.com/collect HTTP/1.1\r\n",));
             stream
                 .write_all(b"HTTP/1.1 200 OK\r\ncontent-length: 2\r\nconnection: close\r\n\r\nok")
                 .await
@@ -722,7 +769,9 @@ mod tests {
 
         client.block_trackers = false;
         let allowed = if scripted {
-            client.send_single("GET", &url, &headers, &[], false, false).await
+            client
+                .send_single("GET", &url, &headers, &[], false, false)
+                .await
         } else {
             client.fetch(&url).await
         }
@@ -759,7 +808,9 @@ mod tests {
             let attempts = if respond_after_reset { 2 } else { 1 };
             for attempt in 0..attempts {
                 let (mut stream, _) = listener.accept().unwrap();
-                stream.set_read_timeout(Some(Duration::from_secs(5))).unwrap();
+                stream
+                    .set_read_timeout(Some(Duration::from_secs(5)))
+                    .unwrap();
                 let mut request = Vec::new();
                 let mut buf = [0u8; 1024];
                 while !request.windows(4).any(|bytes| bytes == b"\r\n\r\n") {
@@ -814,7 +865,14 @@ mod tests {
         };
         let url = Url::parse(&format!("http://127.0.0.1:{port}/")).unwrap();
         let error = client
-            .send_single("POST", &url, &std::collections::HashMap::new(), b"payload", false, false)
+            .send_single(
+                "POST",
+                &url,
+                &std::collections::HashMap::new(),
+                b"payload",
+                false,
+                false,
+            )
             .await
             .expect_err("POST must not be retried after a connection reset");
 
@@ -839,7 +897,10 @@ mod tests {
         let client = StealthHttpClient::with_proxy(Arc::new(CookieJar::new()), None, true);
         let url = Url::parse(&format!("http://127.0.0.1:{port}/")).unwrap();
 
-        let resp = client.fetch(&url).await.expect("a folded header must not fail the response");
+        let resp = client
+            .fetch(&url)
+            .await
+            .expect("a folded header must not fail the response");
         assert_eq!(resp.status, 200);
         assert_eq!(resp.text(), "folded");
     }
@@ -849,10 +910,18 @@ mod tests {
         // A port nobody listens on: the message must say the connection was
         // refused instead of only "error sending request", and must not be a
         // Debug dump of the error structs.
-        let port = std::net::TcpListener::bind("127.0.0.1:0").unwrap().local_addr().unwrap().port();
+        let port = std::net::TcpListener::bind("127.0.0.1:0")
+            .unwrap()
+            .local_addr()
+            .unwrap()
+            .port();
         let client = StealthHttpClient::with_proxy(Arc::new(CookieJar::new()), None, true);
         let url = Url::parse(&format!("http://127.0.0.1:{port}/")).unwrap();
-        let message = client.fetch(&url).await.expect_err("nothing listens").to_string();
+        let message = client
+            .fetch(&url)
+            .await
+            .expect_err("nothing listens")
+            .to_string();
         assert!(message.to_lowercase().contains("refused"), "{message}");
         assert!(!message.contains("source: Some("), "{message}");
     }
@@ -908,8 +977,10 @@ mod tests {
         let client = StealthHttpClient::with_proxy(Arc::new(CookieJar::new()), None, true);
         let url = Url::parse(&format!("http://localhost:{port}/")).unwrap();
 
-        let resp =
-            client.fetch(&url).await.expect("loopback hostname must be reachable with the opt-in");
+        let resp = client
+            .fetch(&url)
+            .await
+            .expect("loopback hostname must be reachable with the opt-in");
         assert_eq!(resp.status, 200);
     }
 }

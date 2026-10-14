@@ -200,7 +200,10 @@ fn test() {
         ("let a = true;", Some(serde_json::json!(["always"]))), // { "ecmaVersion": 6 },
         ("const a = {};", Some(serde_json::json!(["always"]))), // { "ecmaVersion": 6 },
         ("using a = foo();", Some(serde_json::json!(["always"]))), // { "ecmaVersion": 2026 },
-        ("await using a = foo();", Some(serde_json::json!(["always"]))), // { "ecmaVersion": 2026 },
+        (
+            "await using a = foo();",
+            Some(serde_json::json!(["always"])),
+        ), // { "ecmaVersion": 2026 },
         (
             "function foo() { let a = 1, b = false; if (a) { let c = 3, d = null; } }",
             Some(serde_json::json!(["always"])),
@@ -215,15 +218,24 @@ fn test() {
         ), // { "ecmaVersion": 6 },
         ("var foo;", Some(serde_json::json!(["never"]))), // { "ecmaVersion": 6 },
         ("var foo, bar, baz;", Some(serde_json::json!(["never"]))), // { "ecmaVersion": 6 },
-        ("function foo() { var foo; var bar; }", Some(serde_json::json!(["never"]))), // { "ecmaVersion": 6 },
+        (
+            "function foo() { var foo; var bar; }",
+            Some(serde_json::json!(["never"])),
+        ), // { "ecmaVersion": 6 },
         ("let a;", Some(serde_json::json!(["never"]))), // { "ecmaVersion": 6 },
         ("const a = 1;", Some(serde_json::json!(["never"]))), // { "ecmaVersion": 6 },
-        ("function foo() { let a, b; if (a) { let c, d; } }", Some(serde_json::json!(["never"]))), // { "ecmaVersion": 6 },
+        (
+            "function foo() { let a, b; if (a) { let c, d; } }",
+            Some(serde_json::json!(["never"])),
+        ), // { "ecmaVersion": 6 },
         (
             "function foo() { const a = 1, b = true; if (a) { const c = 3, d = null; } }",
             Some(serde_json::json!(["never"])),
         ), // { "ecmaVersion": 6 },
-        ("function foo() { let a; const b = false; var c; }", Some(serde_json::json!(["never"]))), // { "ecmaVersion": 6 },
+        (
+            "function foo() { let a; const b = false; var c; }",
+            Some(serde_json::json!(["never"])),
+        ), // { "ecmaVersion": 6 },
         (
             "for(var i = 0; i < 1; i++){}",
             Some(serde_json::json!(["never", { "ignoreForLoopInit": true }])),
@@ -241,8 +253,14 @@ fn test() {
             Some(serde_json::json!(["never", { "ignoreForLoopInit": true }])),
         ),
         // typescript-eslint
-        ("declare const foo: number;", Some(serde_json::json!(["always"]))),
-        ("declare const foo: number;", Some(serde_json::json!(["never"]))),
+        (
+            "declare const foo: number;",
+            Some(serde_json::json!(["always"])),
+        ),
+        (
+            "declare const foo: number;",
+            Some(serde_json::json!(["never"])),
+        ),
         (
             "declare namespace myLib {
                 let numberOfGreetings: number;
@@ -263,7 +281,10 @@ fn test() {
             }",
             Some(serde_json::json!(["never"])),
         ),
-        ("type GreetingLike = string | (() => string) | Greeter;", None),
+        (
+            "type GreetingLike = string | (() => string) | Greeter;",
+            None,
+        ),
         (
             "type GreetingLike = string | (() => string) | Greeter;",
             Some(serde_json::json!(["never"])),
@@ -336,20 +357,41 @@ fn test() {
 
     let fail = vec![
         ("var foo;", Some(serde_json::json!(["always"]))),
-        ("for (var a in []) var foo;", Some(serde_json::json!(["always"]))),
-        ("var foo, bar = false, baz;", Some(serde_json::json!(["always"]))), // { "ecmaVersion": 6 },
-        ("function foo() { var foo = 0; var bar; }", Some(serde_json::json!(["always"]))), // { "ecmaVersion": 6 },
-        ("function foo() { var foo; var bar = foo; }", Some(serde_json::json!(["always"]))), // { "ecmaVersion": 6 },
+        (
+            "for (var a in []) var foo;",
+            Some(serde_json::json!(["always"])),
+        ),
+        (
+            "var foo, bar = false, baz;",
+            Some(serde_json::json!(["always"])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "function foo() { var foo = 0; var bar; }",
+            Some(serde_json::json!(["always"])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "function foo() { var foo; var bar = foo; }",
+            Some(serde_json::json!(["always"])),
+        ), // { "ecmaVersion": 6 },
         ("let a;", Some(serde_json::json!(["always"]))), // { "ecmaVersion": 6 },
         (
             "function foo() { let a = 1, b; if (a) { let c = 3, d = null; } }",
             Some(serde_json::json!(["always"])),
         ), // { "ecmaVersion": 6 },
-        ("function foo() { let a; const b = false; var c; }", Some(serde_json::json!(["always"]))), // { "ecmaVersion": 6 },
+        (
+            "function foo() { let a; const b = false; var c; }",
+            Some(serde_json::json!(["always"])),
+        ), // { "ecmaVersion": 6 },
         ("var foo = bar = 2;", Some(serde_json::json!(["never"]))), // { "ecmaVersion": 6 },
-        ("var foo = true;", Some(serde_json::json!(["never"]))),    // { "ecmaVersion": 6 },
-        ("var foo, bar = 5, baz = 3;", Some(serde_json::json!(["never"]))), // { "ecmaVersion": 6 },
-        ("function foo() { var foo; var bar = foo; }", Some(serde_json::json!(["never"]))), // { "ecmaVersion": 6 },
+        ("var foo = true;", Some(serde_json::json!(["never"]))), // { "ecmaVersion": 6 },
+        (
+            "var foo, bar = 5, baz = 3;",
+            Some(serde_json::json!(["never"])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "function foo() { var foo; var bar = foo; }",
+            Some(serde_json::json!(["never"])),
+        ), // { "ecmaVersion": 6 },
         ("let a = 1;", Some(serde_json::json!(["never"]))), // { "ecmaVersion": 6 },
         (
             "function foo() { let a = 'foo', b; if (a) { let c, d; } }",
@@ -359,12 +401,21 @@ fn test() {
             "function foo() { let a; const b = false; var c = 1; }",
             Some(serde_json::json!(["never"])),
         ), // { "ecmaVersion": 6 },
-        ("for(var i = 0; i < 1; i++){}", Some(serde_json::json!(["never"]))),
+        (
+            "for(var i = 0; i < 1; i++){}",
+            Some(serde_json::json!(["never"])),
+        ),
         ("for (var foo in []) {}", Some(serde_json::json!(["never"]))),
         ("for (var foo of []) {}", Some(serde_json::json!(["never"]))), // { "ecmaVersion": 6 }
-        ("for (var a, b = 2; a < 100; a++) {}", Some(serde_json::json!(["never"]))),
+        (
+            "for (var a, b = 2; a < 100; a++) {}",
+            Some(serde_json::json!(["never"])),
+        ),
         // typescript-eslint
-        ("let arr: string[] = ['arr', 'ar'];", Some(serde_json::json!(["never"]))),
+        (
+            "let arr: string[] = ['arr', 'ar'];",
+            Some(serde_json::json!(["never"])),
+        ),
         (
             "const class1 = class NAME {
                 constructor() {

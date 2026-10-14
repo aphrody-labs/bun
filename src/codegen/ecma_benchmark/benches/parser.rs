@@ -95,7 +95,9 @@ fn bench_estree_tokens(criterion: &mut Criterion) {
                     })
                     .with_config(config)
                     .parse();
-                let ParserReturn { program, tokens, .. } = ret;
+                let ParserReturn {
+                    program, tokens, ..
+                } = ret;
 
                 // Creating span converter is not performed in measured section, as we only want to measure tokens.
                 // Span converter needs to be created anyway for serializing AST.

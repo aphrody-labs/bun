@@ -46,7 +46,10 @@ impl TryFrom<BabelTargets> for EngineTargets {
                         continue;
                     }
                     // TODO: Implement `Version::from_number`
-                    if matches!(value, BabelTargetsValue::Int(_) | BabelTargetsValue::Float(_)) {
+                    if matches!(
+                        value,
+                        BabelTargetsValue::Int(_) | BabelTargetsValue::Float(_)
+                    ) {
                         continue;
                     }
                     let BabelTargetsValue::String(v) = value else {

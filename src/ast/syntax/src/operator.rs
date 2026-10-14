@@ -75,7 +75,10 @@ impl AssignmentOperator {
 
     /// Returns `true` for '||=`, `&&=`, and `??=`.
     pub fn is_logical(self) -> bool {
-        matches!(self, Self::LogicalOr | Self::LogicalAnd | Self::LogicalNullish)
+        matches!(
+            self,
+            Self::LogicalOr | Self::LogicalAnd | Self::LogicalNullish
+        )
     }
 
     /// Returns `true` for `+=`, `-=`, `*=`, `/=`, `%=`, and `**=`.
@@ -255,7 +258,10 @@ impl BinaryOperator {
     /// Returns `true` for multiplication (`*`), division (`/`), and remainder
     /// (`%`) operators
     pub fn is_multiplicative(self) -> bool {
-        matches!(self, Self::Multiplication | Self::Division | Self::Remainder)
+        matches!(
+            self,
+            Self::Multiplication | Self::Division | Self::Remainder
+        )
     }
 
     /// Returns `true` for object relation operators
@@ -281,7 +287,10 @@ impl BinaryOperator {
 
     /// Returns `true` for any bitshift operator
     pub fn is_bitshift(self) -> bool {
-        matches!(self, Self::ShiftLeft | Self::ShiftRight | Self::ShiftRightZeroFill)
+        matches!(
+            self,
+            Self::ShiftLeft | Self::ShiftRight | Self::ShiftRightZeroFill
+        )
     }
 
     /// Returns `true` for any numeric or string binary operator

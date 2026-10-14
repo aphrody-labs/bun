@@ -2,7 +2,10 @@ use crate::{test, test_same, test_target};
 
 #[track_caller]
 fn test_value(code: &str, expected: &str) {
-    test(format!("x = {code}").as_str(), format!("x = {expected}").as_str());
+    test(
+        format!("x = {code}").as_str(),
+        format!("x = {expected}").as_str(),
+    );
 }
 
 #[track_caller]
@@ -39,7 +42,10 @@ fn test_string_index_of() {
 
     test_same("x = 1 .indexOf('bcd');");
     test_same("x = NaN.indexOf('bcd')");
-    test("x = undefined.indexOf('bcd')", "x = (void 0).indexOf('bcd')");
+    test(
+        "x = undefined.indexOf('bcd')",
+        "x = (void 0).indexOf('bcd')",
+    );
     test_same("x = null.indexOf('bcd')");
     test_same("x = (!0).indexOf('bcd')");
     test_same("x = (!1).indexOf('bcd')");
@@ -75,9 +81,18 @@ fn test_string_join_add() {
     test("x = [].join(',')", "x = \"\"");
     test("x = ['a'].join(',')", "x = \"a\"");
     test("x = ['a', 'b', 'c'].join(',')", "x = \"a,b,c\"");
-    test("x = ['a', foo, 'b', 'c'].join(',')", "x = [\"a\",foo,\"b,c\"].join()");
-    test("x = [foo, 'a', 'b', 'c'].join(',')", "x = [foo,\"a,b,c\"].join()");
-    test("x = ['a', 'b', 'c', foo].join(',')", "x = [\"a,b,c\",foo].join()");
+    test(
+        "x = ['a', foo, 'b', 'c'].join(',')",
+        "x = [\"a\",foo,\"b,c\"].join()",
+    );
+    test(
+        "x = [foo, 'a', 'b', 'c'].join(',')",
+        "x = [foo,\"a,b,c\"].join()",
+    );
+    test(
+        "x = ['a', 'b', 'c', foo].join(',')",
+        "x = [\"a,b,c\",foo].join()",
+    );
 
     // Works with numbers
     test("x = ['a=', 5].join('')", "x = \"a=5\"");
@@ -356,12 +371,30 @@ fn test_join_spread1() {
 #[ignore = "TODO: Array.join with spread syntax optimization not yet implemented"]
 fn test_join_spread2() {
     test("var x = [...foo].join(',');", "var x = [...foo].join();");
-    test("var x = [...someMap.keys()].join(',');", "var x = [...someMap.keys()].join();");
-    test("var x = [foo, ...bar].join(',');", "var x = [foo, ...bar].join();");
-    test("var x = [...foo, bar].join(',');", "var x = [...foo, bar].join();");
-    test("var x = [...foo, 'bar'].join(',');", "var x = [...foo, 'bar'].join();");
-    test("var x = ['1', ...'2', '3'].join(',');", "var x = ['1', ...'2', '3'].join();");
-    test("var x = ['1', ...['2'], '3'].join(',');", "var x = ['1', ...['2'], '3'].join();");
+    test(
+        "var x = [...someMap.keys()].join(',');",
+        "var x = [...someMap.keys()].join();",
+    );
+    test(
+        "var x = [foo, ...bar].join(',');",
+        "var x = [foo, ...bar].join();",
+    );
+    test(
+        "var x = [...foo, bar].join(',');",
+        "var x = [...foo, bar].join();",
+    );
+    test(
+        "var x = [...foo, 'bar'].join(',');",
+        "var x = [...foo, 'bar'].join();",
+    );
+    test(
+        "var x = ['1', ...'2', '3'].join(',');",
+        "var x = ['1', ...'2', '3'].join();",
+    );
+    test(
+        "var x = ['1', ...['2'], '3'].join(',');",
+        "var x = ['1', ...['2'], '3'].join();",
+    );
 }
 
 #[test]
@@ -389,7 +422,10 @@ fn test_to_upper() {
     test("x = '\u{0069}'.toUpperCase()", "x = '\u{0049}'");
     test("x = '\u{0130}'.toUpperCase()", "x = '\u{0130}'");
     test("x = '\u{0131}'.toUpperCase()", "x = '\u{0049}'");
-    test("x = '\u{0049}\u{0307}'.toUpperCase()", "x = '\u{0049}\u{0307}'");
+    test(
+        "x = '\u{0049}\u{0307}'.toUpperCase()",
+        "x = '\u{0049}\u{0307}'",
+    );
     test("x = 'ß'.toUpperCase()", "x = 'SS'");
     test("x = 'SS'.toUpperCase()", "x = 'SS'");
     test("x = 'σ'.toUpperCase()", "x = 'Σ'");
@@ -422,7 +458,10 @@ fn test_to_lower() {
     test("x = '\u{0069}'.toLowerCase()", "x = '\u{0069}'");
     test("x = '\u{0130}'.toLowerCase()", "x = '\u{0069}\u{0307}'");
     test("x = '\u{0131}'.toLowerCase()", "x = '\u{0131}'");
-    test("x = '\u{0049}\u{0307}'.toLowerCase()", "x = '\u{0069}\u{0307}'");
+    test(
+        "x = '\u{0049}\u{0307}'.toLowerCase()",
+        "x = '\u{0069}\u{0307}'",
+    );
     test("x = 'ß'.toLowerCase()", "x = 'ß'");
     test("x = 'SS'.toLowerCase()", "x = 'ss'");
     test("x = 'Σ'.toLowerCase()", "x = 'σ'");
@@ -477,8 +516,14 @@ fn test_fold_math_functions_imul() {
     test_value("Math.imul(2,3,5)", "6");
     test_value("Math.imul(0xfffffffe, 5)", "-10");
     test_value("Math.imul(0xffffffff, 5)", "-5");
-    test_value("Math.imul(0xfffffffffffff34f, 0xfffffffffff342)", "13369344");
-    test_value("Math.imul(0xfffffffffffff34f, -0xfffffffffff342)", "-13369344");
+    test_value(
+        "Math.imul(0xfffffffffffff34f, 0xfffffffffff342)",
+        "13369344",
+    );
+    test_value(
+        "Math.imul(0xfffffffffffff34f, -0xfffffffffff342)",
+        "-13369344",
+    );
     test_value("Math.imul(NaN, 2)", "0");
 }
 
@@ -744,10 +789,16 @@ fn test_fold_parse_numbers() {
     test("x = parseInt('15px', 10)", "x = 15"); // Parses '15', stops at 'p'
     test("x = parseInt('-0x08')", "x = -8");
     test("x = parseInt('1', -1)", "x = NaN");
-    test("x = parseFloat('3.14more non-digit characters')", "x = 3.14"); // Parses '3.14', stops at 'm'
+    test(
+        "x = parseFloat('3.14more non-digit characters')",
+        "x = 3.14",
+    ); // Parses '3.14', stops at 'm'
     test("x = parseFloat('314e-2')", "x = 3.14");
     test("x = parseFloat('0.0314E+2')", "x = 3.14");
-    test("x = parseFloat('3.333333333333333333333333')", "x = 3.3333333333333335");
+    test(
+        "x = parseFloat('3.333333333333333333333333')",
+        "x = 3.3333333333333335",
+    );
 
     test("x = parseInt('0xa', 10)", "x = 0"); // Parses '0' in base 10, stops at 'x'
     test("x = parseInt('')", "x = NaN");
@@ -801,7 +852,10 @@ fn test_replace_with_char_at() {
 
     fold_string_typed("a.slice(4, 5)", "a.charAt(4)");
     test_same_string_typed("a.slice(-2, -1)");
-    fold_string_typed("var /** number */ i; a.slice(0, 1)", "var /** number */ i; a.charAt(0)");
+    fold_string_typed(
+        "var /** number */ i; a.slice(0, 1)",
+        "var /** number */ i; a.charAt(0)",
+    );
     test_same_string_typed("a.slice(i, j + 1)");
     test_same_string_typed("a.slice(i, i + 1)");
     test_same_string_typed("a.slice(1, 2, 3)");
@@ -834,25 +888,55 @@ fn test_replace_with_char_at() {
 #[test]
 fn test_fold_concat_chaining() {
     // array
-    test("x = [1,2].concat(1).concat(2,['abc']).concat('abc')", "x = [1,2,1,2,'abc','abc']");
-    test("x = [].concat(['abc']).concat(1).concat([2,3])", "x = ['abc',1,2,3]");
-    test("x = [].concat(1).concat(2).join(',')", "x = [1,2].join(',')");
+    test(
+        "x = [1,2].concat(1).concat(2,['abc']).concat('abc')",
+        "x = [1,2,1,2,'abc','abc']",
+    );
+    test(
+        "x = [].concat(['abc']).concat(1).concat([2,3])",
+        "x = ['abc',1,2,3]",
+    );
+    test(
+        "x = [].concat(1).concat(2).join(',')",
+        "x = [1,2].join(',')",
+    );
 
-    test("var x, y; [1].concat(x).concat(y)", "var x, y; [1].concat(x, y)");
+    test(
+        "var x, y; [1].concat(x).concat(y)",
+        "var x, y; [1].concat(x, y)",
+    );
     test("var y; [1].concat(x).concat(y)", "var y; [1].concat(x, y)"); // x might have a getter that updates y, but that side effect is preserved correctly
-    test("var x; [1].concat(x.a).concat(x)", "var x; [1].concat(x.a, x)"); // x.a might have a getter that updates x, but that side effect is preserved correctly
+    test(
+        "var x; [1].concat(x.a).concat(x)",
+        "var x; [1].concat(x.a, x)",
+    ); // x.a might have a getter that updates x, but that side effect is preserved correctly
     test_same("x = [].map(a => a + 1).concat(1)");
 
     // string
-    test("x = '1'.concat(1).concat(2,['abc']).concat('abc')", "x = '112abcabc'");
-    test("x = ''.concat(['abc']).concat(1).concat([2,3])", "x = 'abc12,3'");
+    test(
+        "x = '1'.concat(1).concat(2,['abc']).concat('abc')",
+        "x = '112abcabc'",
+    );
+    test(
+        "x = ''.concat(['abc']).concat(1).concat([2,3])",
+        "x = 'abc12,3'",
+    );
     test("x = ''.concat(1)", "x = '1'");
-    test("x = ''.concat('a', ' ').concat('b').split(/[\\s\\n]+/)", "x = 'a b'.split(/[\\s\\n]+/)");
+    test(
+        "x = ''.concat('a', ' ').concat('b').split(/[\\s\\n]+/)",
+        "x = 'a b'.split(/[\\s\\n]+/)",
+    );
     test_same("x = ''.split().concat(1)");
 
-    test("var x, y; v = ''.concat(x).concat(y)", "var x, y; v = `${x}${y}`");
+    test(
+        "var x, y; v = ''.concat(x).concat(y)",
+        "var x, y; v = `${x}${y}`",
+    );
     test("var y; v = ''.concat(x).concat(y)", "var y; v = `${x}${y}`"); // x might have a getter that updates y, but that side effect is preserved correctly
-    test("var x; v = ''.concat(x.a).concat(x)", "var x; v = `${x.a}${x}`"); // x.a might have a getter that updates x, but that side effect is preserved correctly
+    test(
+        "var x; v = ''.concat(x.a).concat(x)",
+        "var x; v = `${x.a}${x}`",
+    ); // x.a might have a getter that updates x, but that side effect is preserved correctly
 
     // other
     test("x = []['concat'](1)", "x = [1]");
@@ -899,7 +983,10 @@ fn test_array_of_spread() {
     // Here, since our tests are fully opened, the dce may automatically optimize it into a simple array, instead of simply substitute the function call.
     test("x = Array.of(...['a', 'b', 'c'])", "x = ['a', 'b', 'c']");
     test("x = Array.of(...['a', 'b', 'c',])", "x = ['a', 'b', 'c']");
-    test("x = Array.of(...['a'], ...['b', 'c'])", "x = ['a', 'b', 'c']");
+    test(
+        "x = Array.of(...['a'], ...['b', 'c'])",
+        "x = ['a', 'b', 'c']",
+    );
     test("x = Array.of('a', ...['b', 'c'])", "x = ['a', 'b', 'c']");
     test("x = Array.of('a', ...['b', 'c'])", "x = ['a', 'b', 'c']");
 }
@@ -1050,8 +1137,16 @@ fn test_number_constants() {
     test_same("Number.MIN_SAFE_INTEGER = 1");
     test_same("Number.EPSILON = 1");
 
-    test_target("v = Number.MAX_SAFE_INTEGER", "v = 9007199254740991", "chrome51");
-    test_target("v = Number.MIN_SAFE_INTEGER", "v = -9007199254740991", "chrome51");
+    test_target(
+        "v = Number.MAX_SAFE_INTEGER",
+        "v = 9007199254740991",
+        "chrome51",
+    );
+    test_target(
+        "v = Number.MIN_SAFE_INTEGER",
+        "v = -9007199254740991",
+        "chrome51",
+    );
     test_target("v = Number.EPSILON", "v = Number.EPSILON", "chrome51");
 }
 
@@ -1123,8 +1218,14 @@ fn test_fold_encode_uri() {
         "x = encodeURI('http://example.com/path?a=1&b=2#hash')",
         "x = 'http://example.com/path?a=1&b=2#hash'",
     );
-    test("x = encodeURI('a;b,c/d?e:f@g&h=i+j$k')", "x = 'a;b,c/d?e:f@g&h=i+j$k'");
-    test("x = encodeURI('ABC-_abc.!~*()123')", "x = 'ABC-_abc.!~*()123'");
+    test(
+        "x = encodeURI('a;b,c/d?e:f@g&h=i+j$k')",
+        "x = 'a;b,c/d?e:f@g&h=i+j$k'",
+    );
+    test(
+        "x = encodeURI('ABC-_abc.!~*()123')",
+        "x = 'ABC-_abc.!~*()123'",
+    );
     test("x = encodeURI('hello<>\"')", "x = 'hello%3C%3E%22'");
     test("x = encodeURI('hello\\t\\n')", "x = 'hello%09%0A'");
     test("x = encodeURI('café')", "x = 'caf%C3%A9'"); // spellchecker:disable-line
@@ -1138,14 +1239,23 @@ fn test_fold_encode_uri() {
 fn test_fold_encode_uri_component() {
     test("x = encodeURIComponent()", "x = 'undefined'");
     test("x = encodeURIComponent('hello')", "x = 'hello'");
-    test("x = encodeURIComponent('ABC-_abc.!~*()123')", "x = 'ABC-_abc.!~*()123'");
+    test(
+        "x = encodeURIComponent('ABC-_abc.!~*()123')",
+        "x = 'ABC-_abc.!~*()123'",
+    );
     test(
         "x = encodeURIComponent('a;b,c/d?e:f@g&h=i+j$k')",
         "x = 'a%3Bb%2Cc%2Fd%3Fe%3Af%40g%26h%3Di%2Bj%24k'",
     );
     test("x = encodeURIComponent('#')", "x = '%23'");
-    test("x = encodeURIComponent('hello world')", "x = 'hello%20world'");
-    test("x = encodeURIComponent('hello<>\"')", "x = 'hello%3C%3E%22'");
+    test(
+        "x = encodeURIComponent('hello world')",
+        "x = 'hello%20world'",
+    );
+    test(
+        "x = encodeURIComponent('hello<>\"')",
+        "x = 'hello%3C%3E%22'",
+    );
     test("x = encodeURIComponent('café')", "x = 'caf%C3%A9'"); // spellchecker:disable-line
     test("x = encodeURIComponent('测试')", "x = '%E6%B5%8B%E8%AF%95'");
 
@@ -1180,7 +1290,10 @@ fn test_fold_decode_uri() {
 #[test]
 fn test_fold_decode_uri_component() {
     test("x = decodeURIComponent()", "x = 'undefined'");
-    test("x = decodeURIComponent('hello%20world')", "x = 'hello world'");
+    test(
+        "x = decodeURIComponent('hello%20world')",
+        "x = 'hello world'",
+    );
     test("x = decodeURIComponent('hello')", "x = 'hello'");
     test(
         "x = decodeURIComponent('a%3Bb%2Cc%2Fd%3Fe%3Af%40g%26h%3Di%2Bj%24k')",
@@ -1188,7 +1301,10 @@ fn test_fold_decode_uri_component() {
     );
     test("x = decodeURIComponent('%23')", "x = '#'");
     test("x = decodeURIComponent('%23hash')", "x = '#hash'");
-    test("x = decodeURIComponent('hello%3C%3E%22')", "x = 'hello<>\"'");
+    test(
+        "x = decodeURIComponent('hello%3C%3E%22')",
+        "x = 'hello<>\"'",
+    );
     test("x = decodeURIComponent('hello%09%0A')", "x = 'hello\\t\\n'");
     test("x = decodeURIComponent('caf%C3%A9')", "x = 'café'"); // spellchecker:disable-line
     test("x = decodeURIComponent('%E6%B5%8B%E8%AF%95')", "x = '测试'");
@@ -1202,14 +1318,23 @@ fn test_fold_decode_uri_component() {
 
 #[test]
 fn test_fold_uri_roundtrip() {
-    test("x = decodeURI(encodeURI('hello world'))", "x = 'hello world'");
-    test("x = decodeURIComponent(encodeURIComponent('hello world'))", "x = 'hello world'");
+    test(
+        "x = decodeURI(encodeURI('hello world'))",
+        "x = 'hello world'",
+    );
+    test(
+        "x = decodeURIComponent(encodeURIComponent('hello world'))",
+        "x = 'hello world'",
+    );
     test(
         "x = decodeURIComponent(encodeURIComponent('a;b,c/d?e:f@g&h=i+j$k'))",
         "x = 'a;b,c/d?e:f@g&h=i+j$k'",
     );
     test("x = decodeURI(encodeURI('café'))", "x = 'café'");
-    test("x = decodeURIComponent(encodeURIComponent('测试'))", "x = '测试'");
+    test(
+        "x = decodeURIComponent(encodeURIComponent('测试'))",
+        "x = '测试'",
+    );
 }
 
 #[test]
@@ -1269,10 +1394,25 @@ fn test_fold_regex_source() {
         ("x = /a/s.source", "x = 'a'", "es2017", "es2018"),
         ("x = /a/d.source", "x = 'a'", "es2021", "es2022"),
         ("x = /a/v.source", "x = 'a'", "es2023", "es2024"),
-        ("x = /(?<name>a)/.source", "x = '(?<name>a)'", "es2017", "es2018"),
-        (r"x = /\p{Ll}/u.source", r"x = '\\p{Ll}'", "es2017", "es2018"),
+        (
+            "x = /(?<name>a)/.source",
+            "x = '(?<name>a)'",
+            "es2017",
+            "es2018",
+        ),
+        (
+            r"x = /\p{Ll}/u.source",
+            r"x = '\\p{Ll}'",
+            "es2017",
+            "es2018",
+        ),
         ("x = /(?<=a)b/.source", "x = '(?<=a)b'", "es2017", "es2018"),
-        ("x = /(?<name>a)|(?<name>b)/.source", "x = '(?<name>a)|(?<name>b)'", "es2024", "es2025"),
+        (
+            "x = /(?<name>a)|(?<name>b)/.source",
+            "x = '(?<name>a)|(?<name>b)'",
+            "es2024",
+            "es2025",
+        ),
         ("x = /(?i:a)/.source", "x = '(?i:a)'", "es2024", "es2025"),
     ] {
         test_target(source, source, unsupported_target);

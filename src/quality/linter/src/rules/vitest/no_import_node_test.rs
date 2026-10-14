@@ -73,11 +73,20 @@ fn test() {
 
     let pass = vec![r#"import { test } from "vitest""#];
 
-    let fail = vec![r#"import { test } from "node:test""#, "import * as foo from 'node:test'"];
+    let fail = vec![
+        r#"import { test } from "node:test""#,
+        "import * as foo from 'node:test'",
+    ];
 
     let fix = vec![
-        (r#"import { test } from "node:test""#, r#"import { test } from "vitest""#),
-        ("import * as foo from 'node:test'", r#"import * as foo from "vitest""#),
+        (
+            r#"import { test } from "node:test""#,
+            r#"import { test } from "vitest""#,
+        ),
+        (
+            "import * as foo from 'node:test'",
+            r#"import * as foo from "vitest""#,
+        ),
     ];
 
     Tester::new(NoImportNodeTest::NAME, NoImportNodeTest::PLUGIN, pass, fail)

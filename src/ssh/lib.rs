@@ -24,12 +24,12 @@
 pub mod auth;
 pub mod cli;
 pub mod config;
+pub mod delta;
 pub mod forward;
 pub mod keys;
 pub mod known_hosts;
 pub mod native;
 pub mod rsync;
-pub mod delta;
 pub mod server;
 pub mod system;
 pub mod term;
@@ -110,7 +110,9 @@ mod stdio {
             // SAFETY: `bytes` is a live slice; fd 1/2 belong to the process.
             let n = unsafe { libc::write(fd, bytes.as_ptr().cast(), bytes.len()) };
             if n <= 0 {
-                if n < 0 && std::io::Error::last_os_error().kind() == std::io::ErrorKind::Interrupted {
+                if n < 0
+                    && std::io::Error::last_os_error().kind() == std::io::ErrorKind::Interrupted
+                {
                     continue;
                 }
                 return;
@@ -141,7 +143,15 @@ mod stdio {
             while !bytes.is_empty() {
                 let mut written = 0u32;
                 let len = u32::try_from(bytes.len()).unwrap_or(u32::MAX);
-                if WriteFile(handle, bytes.as_ptr(), len, &raw mut written, core::ptr::null_mut()) == 0 || written == 0 {
+                if WriteFile(
+                    handle,
+                    bytes.as_ptr(),
+                    len,
+                    &raw mut written,
+                    core::ptr::null_mut(),
+                ) == 0
+                    || written == 0
+                {
                     return;
                 }
                 bytes = &bytes[written as usize..];
@@ -156,7 +166,15 @@ mod stdio {
         let mut read = 0u32;
         let len = u32::try_from(buf.len()).unwrap_or(u32::MAX);
         // SAFETY: the handle comes from GetStdHandle and `buf` is a live, writable slice.
-        let ok = unsafe { ReadFile(GetStdHandle(STD_INPUT_HANDLE), buf.as_mut_ptr(), len, &raw mut read, core::ptr::null_mut()) };
+        let ok = unsafe {
+            ReadFile(
+                GetStdHandle(STD_INPUT_HANDLE),
+                buf.as_mut_ptr(),
+                len,
+                &raw mut read,
+                core::ptr::null_mut(),
+            )
+        };
         if ok == 0 { 0 } else { read as usize }
     }
 

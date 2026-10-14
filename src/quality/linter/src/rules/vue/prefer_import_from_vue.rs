@@ -45,8 +45,12 @@ declare_oxc_lint!(
     short_description = "Enforce imports from `vue` instead of `@vue/*`.",
 );
 
-const VUE_MODULES: &[&str; 4] =
-    &["@vue/reactivity", "@vue/runtime-core", "@vue/runtime-dom", "@vue/shared"];
+const VUE_MODULES: &[&str; 4] = &[
+    "@vue/reactivity",
+    "@vue/runtime-core",
+    "@vue/runtime-dom",
+    "@vue/shared",
+];
 impl Rule for PreferImportFromVue {
     fn run_once(&self, ctx: &LintContext) {
         let records = ctx.module_record();
@@ -95,7 +99,12 @@ fn test() {
 
     let pass = vec![
         ("import { createApp } from 'vue'", None, None, None),
-        ("import { ref, reactive } from '@vue/composition-api'", None, None, None),
+        (
+            "import { ref, reactive } from '@vue/composition-api'",
+            None,
+            None,
+            None,
+        ),
         ("export { createApp } from 'vue'", None, None, None),
         ("export * from 'vue'", None, None, None),
         ("import Foo from 'foo'", None, None, None),
@@ -115,40 +124,127 @@ fn test() {
     ];
 
     let fail = vec![
-        ("import { createApp } from '@vue/runtime-dom'", None, None, None),
-        ("import { computed } from '@vue/runtime-core'", None, None, None),
-        ("import { computed } from '@vue/reactivity'", None, None, None),
-        ("import { normalizeClass } from '@vue/shared'", None, None, None),
-        ("import { unknown } from '@vue/reactivity'", None, None, None),
-        ("import { unknown } from '@vue/runtime-dom'", None, None, None),
+        (
+            "import { createApp } from '@vue/runtime-dom'",
+            None,
+            None,
+            None,
+        ),
+        (
+            "import { computed } from '@vue/runtime-core'",
+            None,
+            None,
+            None,
+        ),
+        (
+            "import { computed } from '@vue/reactivity'",
+            None,
+            None,
+            None,
+        ),
+        (
+            "import { normalizeClass } from '@vue/shared'",
+            None,
+            None,
+            None,
+        ),
+        (
+            "import { unknown } from '@vue/reactivity'",
+            None,
+            None,
+            None,
+        ),
+        (
+            "import { unknown } from '@vue/runtime-dom'",
+            None,
+            None,
+            None,
+        ),
         ("import * as Foo from '@vue/reactivity'", None, None, None),
         ("import * as Foo from '@vue/runtime-dom'", None, None, None),
         ("export * from '@vue/reactivity'", None, None, None),
         ("export * from '@vue/runtime-dom'", None, None, None),
-        ("export { computed } from '@vue/reactivity'", None, None, None),
-        ("export { computed } from '@vue/runtime-dom'", None, None, None),
-        ("export { unknown } from '@vue/reactivity'", None, None, None),
-        ("export { unknown } from '@vue/runtime-dom'", None, None, None),
+        (
+            "export { computed } from '@vue/reactivity'",
+            None,
+            None,
+            None,
+        ),
+        (
+            "export { computed } from '@vue/runtime-dom'",
+            None,
+            None,
+            None,
+        ),
+        (
+            "export { unknown } from '@vue/reactivity'",
+            None,
+            None,
+            None,
+        ),
+        (
+            "export { unknown } from '@vue/runtime-dom'",
+            None,
+            None,
+            None,
+        ),
         ("import unknown from '@vue/reactivity'", None, None, None),
         ("import unknown from '@vue/runtime-dom'", None, None, None),
     ];
 
     let fix = vec![
-        ("import { createApp } from '@vue/runtime-dom'", "import { createApp } from 'vue'", None),
-        ("import { computed } from '@vue/runtime-core'", "import { computed } from 'vue'", None),
-        ("import { computed } from '@vue/reactivity'", "import { computed } from 'vue'", None),
+        (
+            "import { createApp } from '@vue/runtime-dom'",
+            "import { createApp } from 'vue'",
+            None,
+        ),
+        (
+            "import { computed } from '@vue/runtime-core'",
+            "import { computed } from 'vue'",
+            None,
+        ),
+        (
+            "import { computed } from '@vue/reactivity'",
+            "import { computed } from 'vue'",
+            None,
+        ),
         (
             "import { normalizeClass } from '@vue/shared'",
             "import { normalizeClass } from 'vue'",
             None,
         ),
-        ("import { unknown } from '@vue/runtime-dom'", "import { unknown } from 'vue'", None),
-        ("import * as Foo from '@vue/runtime-dom'", "import * as Foo from 'vue'", None),
-        ("export { computed } from '@vue/reactivity'", "export { computed } from 'vue'", None),
-        ("export { computed } from '@vue/runtime-dom'", "export { computed } from 'vue'", None),
-        ("import unknown from '@vue/runtime-dom'", "import unknown from 'vue'", None),
+        (
+            "import { unknown } from '@vue/runtime-dom'",
+            "import { unknown } from 'vue'",
+            None,
+        ),
+        (
+            "import * as Foo from '@vue/runtime-dom'",
+            "import * as Foo from 'vue'",
+            None,
+        ),
+        (
+            "export { computed } from '@vue/reactivity'",
+            "export { computed } from 'vue'",
+            None,
+        ),
+        (
+            "export { computed } from '@vue/runtime-dom'",
+            "export { computed } from 'vue'",
+            None,
+        ),
+        (
+            "import unknown from '@vue/runtime-dom'",
+            "import unknown from 'vue'",
+            None,
+        ),
     ];
-    Tester::new(PreferImportFromVue::NAME, PreferImportFromVue::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        PreferImportFromVue::NAME,
+        PreferImportFromVue::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

@@ -9,9 +9,11 @@ use oxc_span::{GetSpan, Span};
 use crate::{AstNode, context::LintContext, frameworks::FrameworkOptions, rule::Rule};
 
 fn no_import_compiler_macros_diagnostic(span: Span, name: &str) -> OxcDiagnostic {
-    OxcDiagnostic::warn(format!("'{name}' is a compiler macro and doesn't need to be imported."))
-        .with_help("Remove the import statement for this macro.")
-        .with_label(span)
+    OxcDiagnostic::warn(format!(
+        "'{name}' is a compiler macro and doesn't need to be imported."
+    ))
+    .with_help("Remove the import statement for this macro.")
+    .with_label(span)
 }
 
 fn invalid_import_compiler_macros_diagnostic(span: Span, name: &str) -> OxcDiagnostic {
@@ -107,7 +109,10 @@ impl Rule for NoImportCompilerMacros {
 
             // named specifiers are always a contiguous suffix: `import def, { a, b }`
             let has_prev_named = index > 0
-                && matches!(specifiers[index - 1], ImportDeclarationSpecifier::ImportSpecifier(_));
+                && matches!(
+                    specifiers[index - 1],
+                    ImportDeclarationSpecifier::ImportSpecifier(_)
+                );
             let has_next_named = index + 1 < specifiers.len();
 
             let fixer = |fixer: crate::fixer::RuleFixer<'_, 'a>| {
@@ -263,12 +268,32 @@ fn test() {
 
     let fix = vec![
         // a default import before the only named specifier: the braces go too
-        ("import vue, { defineProps } from 'vue'", "import vue from 'vue'", None),
-        ("import vue, { defineProps, ref } from 'vue'", "import vue, {  ref } from 'vue'", None),
-        ("import vue, { ref, defineProps } from 'vue'", "import vue, { ref } from 'vue'", None),
+        (
+            "import vue, { defineProps } from 'vue'",
+            "import vue from 'vue'",
+            None,
+        ),
+        (
+            "import vue, { defineProps, ref } from 'vue'",
+            "import vue, {  ref } from 'vue'",
+            None,
+        ),
+        (
+            "import vue, { ref, defineProps } from 'vue'",
+            "import vue, { ref } from 'vue'",
+            None,
+        ),
         // a `,` inside a comment is not the separator between specifiers
-        ("import { defineProps /* , */, ref } from 'vue'", "import {  ref } from 'vue'", None),
-        ("import { ref, /* , */ defineProps } from 'vue'", "import { ref } from 'vue'", None),
+        (
+            "import { defineProps /* , */, ref } from 'vue'",
+            "import {  ref } from 'vue'",
+            None,
+        ),
+        (
+            "import { ref, /* , */ defineProps } from 'vue'",
+            "import { ref } from 'vue'",
+            None,
+        ),
         (
             "import { ref /* keep */, defineProps } from 'vue'",
             "import { ref /* keep */ } from 'vue'",
@@ -321,7 +346,12 @@ fn test() {
             None,
         ),
     ];
-    Tester::new(NoImportCompilerMacros::NAME, NoImportCompilerMacros::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        NoImportCompilerMacros::NAME,
+        NoImportCompilerMacros::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

@@ -11,7 +11,9 @@ fn render(markup: &str) -> tiny_skia::Pixmap {
 }
 
 fn decorated(lines: &str) -> tiny_skia::Pixmap {
-    render(&format!("<span style='text-decoration:{lines}'>MMMM</span>"))
+    render(&format!(
+        "<span style='text-decoration:{lines}'>MMMM</span>"
+    ))
 }
 
 fn changed_rows(baseline: &tiny_skia::Pixmap, actual: &tiny_skia::Pixmap) -> Vec<usize> {
@@ -42,7 +44,11 @@ fn all_three_text_decoration_lines_paint_in_distinct_vertical_bands() {
 #[test]
 fn combined_text_decoration_lines_preserve_each_individual_stroke() {
     let baseline = decorated("none");
-    let individual = [decorated("underline"), decorated("overline"), decorated("line-through")];
+    let individual = [
+        decorated("underline"),
+        decorated("overline"),
+        decorated("line-through"),
+    ];
     let combined = decorated("underline overline line-through");
     for (index, expected) in combined.pixels().iter().enumerate() {
         let painted = individual
@@ -83,8 +89,9 @@ fn text_decoration_respects_transparency_and_wrapped_lines() {
     assert_eq!(transparent.data(), empty.data());
     let plain = render("<div style='width:90px'>MMMM MMMM</div>");
     for lines in ["overline", "line-through"] {
-        let wrapped =
-            render(&format!("<div style='width:90px;text-decoration:{lines}'>MMMM MMMM</div>"));
+        let wrapped = render(&format!(
+            "<div style='width:90px;text-decoration:{lines}'>MMMM MMMM</div>"
+        ));
         let rows = changed_rows(&plain, &wrapped);
         assert!(rows.iter().any(|row| *row < 56), "first line {lines}");
         assert!(rows.iter().any(|row| *row >= 56), "second line {lines}");

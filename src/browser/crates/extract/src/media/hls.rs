@@ -11,7 +11,9 @@ pub fn is_master_playlist(text: &str) -> bool {
 }
 
 pub fn label_from_height(height: Option<u32>) -> Option<String> {
-    height.filter(|height| *height > 0).map(|height| format!("{height}p"))
+    height
+        .filter(|height| *height > 0)
+        .map(|height| format!("{height}p"))
 }
 
 fn parse_attributes(line: &str) -> HashMap<String, String> {
@@ -48,9 +50,13 @@ pub fn parse_master_playlist(text: &str, base_url: &str) -> Vec<MediaVariant> {
         if !line.to_ascii_uppercase().starts_with("#EXT-X-STREAM-INF:") {
             continue;
         }
-        let Some((_, attrs)) = line.split_once(':') else { continue };
-        let Some(uri) =
-            lines.by_ref().map(str::trim).find(|line| !line.is_empty() && !line.starts_with('#'))
+        let Some((_, attrs)) = line.split_once(':') else {
+            continue;
+        };
+        let Some(uri) = lines
+            .by_ref()
+            .map(str::trim)
+            .find(|line| !line.is_empty() && !line.starts_with('#'))
         else {
             continue;
         };
@@ -63,7 +69,9 @@ pub fn parse_master_playlist(text: &str, base_url: &str) -> Vec<MediaVariant> {
         variants.push(MediaVariant {
             url: absolute(uri, base_url).unwrap_or_else(|| uri.to_string()),
             bandwidth: attributes.get("BANDWIDTH").and_then(|v| v.parse().ok()),
-            average_bandwidth: attributes.get("AVERAGE-BANDWIDTH").and_then(|v| v.parse().ok()),
+            average_bandwidth: attributes
+                .get("AVERAGE-BANDWIDTH")
+                .and_then(|v| v.parse().ok()),
             width,
             height,
             codecs: attributes.get("CODECS").cloned(),
@@ -72,7 +80,11 @@ pub fn parse_master_playlist(text: &str, base_url: &str) -> Vec<MediaVariant> {
             label: label_from_height(height),
         });
     }
-    variants.sort_by(|a, b| b.height.cmp(&a.height).then_with(|| b.bandwidth.cmp(&a.bandwidth)));
+    variants.sort_by(|a, b| {
+        b.height
+            .cmp(&a.height)
+            .then_with(|| b.bandwidth.cmp(&a.bandwidth))
+    });
     let mut counts = HashMap::new();
     for variant in &variants {
         if let Some(label) = &variant.label {
@@ -83,8 +95,10 @@ pub fn parse_master_playlist(text: &str, base_url: &str) -> Vec<MediaVariant> {
         if let (Some(label), Some(bandwidth)) = (&variant.label, variant.bandwidth)
             && counts.get(label).copied().unwrap_or_default() > 1
         {
-            variant.label =
-                Some(format!("{label} ({} kbps)", (bandwidth as f64 / 1000.0).round() as u64));
+            variant.label = Some(format!(
+                "{label} ({} kbps)",
+                (bandwidth as f64 / 1000.0).round() as u64
+            ));
         }
     }
     variants

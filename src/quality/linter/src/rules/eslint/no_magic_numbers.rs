@@ -88,7 +88,10 @@ impl TryFrom<&serde_json::Value> for NoMagicNumbersConfig {
             },
             |object| {
                 fn get_bool_property(object: &serde_json::Value, index: &str) -> bool {
-                    object.get(index).and_then(serde_json::Value::as_bool).unwrap_or_default()
+                    object
+                        .get(index)
+                        .and_then(serde_json::Value::as_bool)
+                        .unwrap_or_default()
                 }
                 Ok(Self {
                     ignore: object
@@ -306,7 +309,9 @@ impl InternConfig<'_> {
 
 impl Rule for NoMagicNumbers {
     fn from_configuration(value: serde_json::Value) -> Result<Self, serde_json::error::Error> {
-        Ok(Self(Box::new(NoMagicNumbersConfig::try_from(&value).unwrap())))
+        Ok(Self(Box::new(
+            NoMagicNumbersConfig::try_from(&value).unwrap(),
+        )))
     }
 
     fn run<'a>(&self, node: &AstNode<'a>, ctx: &LintContext<'a>) {
@@ -364,7 +369,10 @@ fn is_class_field_initial_value(current_kind: &AstKind<'_>, parent_kind: &AstKin
 }
 
 fn is_detectable_object(parent_kind: &AstKind<'_>) -> bool {
-    matches!(parent_kind, AstKind::ObjectExpression(_) | AstKind::ObjectProperty(_))
+    matches!(
+        parent_kind,
+        AstKind::ObjectExpression(_) | AstKind::ObjectProperty(_)
+    )
 }
 
 fn is_parse_int_radix(parent_kind: &AstKind<'_>) -> bool {
@@ -418,7 +426,9 @@ fn is_array_index<'a>(ast_kind: &AstKind<'a>, parent_kind: &AstKind<'a>) -> bool
         },
         AstKind::NumericLiteral(numeric) => match parent_kind {
             AstKind::ComputedMemberExpression(computed_expression) => {
-                computed_expression.expression.is_number_value(numeric.value)
+                computed_expression
+                    .expression
+                    .is_number_value(numeric.value)
                     && numeric.value.fract() == 0.0
                     && numeric.value < f64::from(u32::MAX)
             }
@@ -531,7 +541,10 @@ impl NoMagicNumbers {
                 None
             }
             AstKind::AssignmentExpression(expression) => {
-                if matches!(expression.left, AssignmentTarget::AssignmentTargetIdentifier(_)) {
+                if matches!(
+                    expression.left,
+                    AssignmentTarget::AssignmentTargetIdentifier(_)
+                ) {
                     return Some(NoMagicNumberReportReason::NoMagicNumber);
                 }
 
@@ -562,13 +575,28 @@ fn test() {
         ("var x = Number.parseInt(y, 10);", None),
         ("const MY_NUMBER = +42;", None),
         ("const foo = 42;", None), // { "ecmaVersion": 6 },
-        ("var foo = 42;", Some(serde_json::json!([{ "enforceConst": false }]))), // { "ecmaVersion": 6 },
+        (
+            "var foo = 42;",
+            Some(serde_json::json!([{ "enforceConst": false }])),
+        ), // { "ecmaVersion": 6 },
         ("var foo = -42;", None),
-        ("var foo = 0 + 1 - 2 + -2;", Some(serde_json::json!([{ "ignore": [0, 1, 2, -2] }]))),
-        ("var foo = 0 + 1 + 2 + 3 + 4;", Some(serde_json::json!([{ "ignore": [0, 1, 2, 3, 4] }]))),
+        (
+            "var foo = 0 + 1 - 2 + -2;",
+            Some(serde_json::json!([{ "ignore": [0, 1, 2, -2] }])),
+        ),
+        (
+            "var foo = 0 + 1 + 2 + 3 + 4;",
+            Some(serde_json::json!([{ "ignore": [0, 1, 2, 3, 4] }])),
+        ),
         ("var foo = { bar:10 }", None),
-        ("setTimeout(function() {return 1;}, 0);", Some(serde_json::json!([{ "ignore": [0, 1] }]))),
-        ("var data = ['foo', 'bar', 'baz']; var third = data[3];", ignore_array_indexes.clone()),
+        (
+            "setTimeout(function() {return 1;}, 0);",
+            Some(serde_json::json!([{ "ignore": [0, 1] }])),
+        ),
+        (
+            "var data = ['foo', 'bar', 'baz']; var third = data[3];",
+            ignore_array_indexes.clone(),
+        ),
         ("foo[0]", ignore_array_indexes.clone()),
         ("foo[-0]", ignore_array_indexes.clone()),
         ("foo[1]", ignore_array_indexes.clone()),
@@ -592,21 +620,54 @@ fn test() {
         ("var a = <input maxLength={10} />;", None), // {                "parserOptions": {                    "ecmaFeatures": {                        "jsx": true                    }                }            },
         ("var a = <div objectProp={{ test: 1}}></div>;", None), // {                "parserOptions": {                    "ecmaFeatures": {                        "jsx": true                    }                }            },
         ("f(100n)", Some(serde_json::json!([{ "ignore": ["100n"] }]))), // { "ecmaVersion": 2020 },
-        ("f(-100n)", Some(serde_json::json!([{ "ignore": ["-100n"] }]))), // { "ecmaVersion": 2020 },
-        ("const { param = 123 } = sourceObject;", ignore_default_values.clone()), // { "ecmaVersion": 6 },
-        ("const func = (param = 123) => {}", ignore_default_values.clone()), // { "ecmaVersion": 6 },
-        ("const func = ({ param = 123 }) => {}", ignore_default_values.clone()), // { "ecmaVersion": 6 },
-        ("const [one = 1, two = 2] = []", ignore_default_values.clone()), // { "ecmaVersion": 6 },
-        ("var one, two; [one = 1, two = 2] = []", ignore_default_values), // { "ecmaVersion": 6 },
-        ("var x = parseInt?.(y, 10);", None), // { "ecmaVersion": 2020 },
-        ("var x = Number?.parseInt(y, 10);", None), // { "ecmaVersion": 2020 },
-        ("var x = (Number?.parseInt)(y, 10);", None), // { "ecmaVersion": 2020 },
-        ("foo?.[777]", ignore_array_indexes.clone()), // { "ecmaVersion": 2020 },
-        ("class C { foo = 2; }", ignore_class_field_initial_values.clone()), // { "ecmaVersion": 2022 },
-        ("class C { foo = -2; }", ignore_class_field_initial_values.clone()), // { "ecmaVersion": 2022 },
-        ("class C { static foo = 2; }", ignore_class_field_initial_values.clone()), // { "ecmaVersion": 2022 },
-        ("class C { #foo = 2; }", ignore_class_field_initial_values.clone()), // { "ecmaVersion": 2022 },
-        ("class C { static #foo = 2; }", ignore_class_field_initial_values.clone()), // { "ecmaVersion": 2022 }
+        (
+            "f(-100n)",
+            Some(serde_json::json!([{ "ignore": ["-100n"] }])),
+        ), // { "ecmaVersion": 2020 },
+        (
+            "const { param = 123 } = sourceObject;",
+            ignore_default_values.clone(),
+        ), // { "ecmaVersion": 6 },
+        (
+            "const func = (param = 123) => {}",
+            ignore_default_values.clone(),
+        ), // { "ecmaVersion": 6 },
+        (
+            "const func = ({ param = 123 }) => {}",
+            ignore_default_values.clone(),
+        ), // { "ecmaVersion": 6 },
+        (
+            "const [one = 1, two = 2] = []",
+            ignore_default_values.clone(),
+        ), // { "ecmaVersion": 6 },
+        (
+            "var one, two; [one = 1, two = 2] = []",
+            ignore_default_values,
+        ), // { "ecmaVersion": 6 },
+        ("var x = parseInt?.(y, 10);", None),                   // { "ecmaVersion": 2020 },
+        ("var x = Number?.parseInt(y, 10);", None),             // { "ecmaVersion": 2020 },
+        ("var x = (Number?.parseInt)(y, 10);", None),           // { "ecmaVersion": 2020 },
+        ("foo?.[777]", ignore_array_indexes.clone()),           // { "ecmaVersion": 2020 },
+        (
+            "class C { foo = 2; }",
+            ignore_class_field_initial_values.clone(),
+        ), // { "ecmaVersion": 2022 },
+        (
+            "class C { foo = -2; }",
+            ignore_class_field_initial_values.clone(),
+        ), // { "ecmaVersion": 2022 },
+        (
+            "class C { static foo = 2; }",
+            ignore_class_field_initial_values.clone(),
+        ), // { "ecmaVersion": 2022 },
+        (
+            "class C { #foo = 2; }",
+            ignore_class_field_initial_values.clone(),
+        ), // { "ecmaVersion": 2022 },
+        (
+            "class C { static #foo = 2; }",
+            ignore_class_field_initial_values.clone(),
+        ), // { "ecmaVersion": 2022 }
         ("const FOO = 10;", ignore_numeric_literal_types.clone()),
         // TODO: Get these two passing?
         // ("foo[+0]", ignore_array_indexes.clone()),
@@ -617,7 +678,10 @@ fn test() {
         ("type Foo = true;", None),
         ("type Foo = 1;", ignore_numeric_literal_types.clone()),
         ("type Foo = -1;", ignore_numeric_literal_types.clone()),
-        ("type Foo = 1 | 2 | 3;", ignore_numeric_literal_types.clone()),
+        (
+            "type Foo = 1 | 2 | 3;",
+            ignore_numeric_literal_types.clone(),
+        ),
         ("type Foo = 1 | -1;", ignore_numeric_literal_types),
         (
             "
@@ -651,11 +715,23 @@ fn test() {
         ("type Foo = Bar[10n];", ignore_typed_index_arrays.clone()),
         ("type Foo = Bar[1 | -2];", ignore_typed_index_arrays.clone()),
         ("type Foo = Bar[1 & -2];", ignore_typed_index_arrays.clone()),
-        ("type Foo = Bar[1 & number];", ignore_typed_index_arrays.clone()),
-        ("type Foo = Bar[((1 & -2) | 3) | 4];", ignore_typed_index_arrays.clone()),
-        ("type Foo = Parameters<Bar>[2];", ignore_typed_index_arrays.clone()),
+        (
+            "type Foo = Bar[1 & number];",
+            ignore_typed_index_arrays.clone(),
+        ),
+        (
+            "type Foo = Bar[((1 & -2) | 3) | 4];",
+            ignore_typed_index_arrays.clone(),
+        ),
+        (
+            "type Foo = Parameters<Bar>[2];",
+            ignore_typed_index_arrays.clone(),
+        ),
         ("type Foo = Bar['baz'];", ignore_typed_index_arrays),
-        ("type Foo = Bar['baz'];", Some(serde_json::json!([{ "ignoreTypeIndexes": false }]))),
+        (
+            "type Foo = Bar['baz'];",
+            Some(serde_json::json!([{ "ignoreTypeIndexes": false }])),
+        ),
         (
             "
 			type Others = [['a'], ['b']];
@@ -666,22 +742,70 @@ fn test() {
 			      ",
             Some(serde_json::json!([{ "ignoreTypeIndexes": true }])),
         ),
-        ("type Foo = 1;", Some(serde_json::json!([{ "ignore": [1] }]))),
-        ("type Foo = -2;", Some(serde_json::json!([{ "ignore": [-2] }]))),
-        ("type Foo = 3n;", Some(serde_json::json!([{ "ignore": ["3n"] }]))),
-        ("type Foo = -4n;", Some(serde_json::json!([{ "ignore": ["-4n"] }]))),
-        ("type Foo = 5.6;", Some(serde_json::json!([{ "ignore": [5.6] }]))),
-        ("type Foo = -7.8;", Some(serde_json::json!([{ "ignore": [-7.8] }]))),
-        ("type Foo = 0x0a;", Some(serde_json::json!([{ "ignore": [0x0a] }]))),
-        ("type Foo = -0xbc;", Some(serde_json::json!([{ "ignore": [-0xbc] }]))),
-        ("type Foo = 1e2;", Some(serde_json::json!([{ "ignore": [1e2] }]))),
-        ("type Foo = -3e4;", Some(serde_json::json!([{ "ignore": [-3e4] }]))),
-        ("type Foo = 5e-6;", Some(serde_json::json!([{ "ignore": [5e-6] }]))),
-        ("type Foo = -7e-8;", Some(serde_json::json!([{ "ignore": [-7e-8] }]))),
-        ("type Foo = 1.1e2;", Some(serde_json::json!([{ "ignore": [1.1e2] }]))),
-        ("type Foo = -3.1e4;", Some(serde_json::json!([{ "ignore": [-3.1e4] }]))),
-        ("type Foo = 5.1e-6;", Some(serde_json::json!([{ "ignore": [5.1e-6] }]))),
-        ("type Foo = -7.1e-8;", Some(serde_json::json!([{ "ignore": [-7.1e-8] }]))),
+        (
+            "type Foo = 1;",
+            Some(serde_json::json!([{ "ignore": [1] }])),
+        ),
+        (
+            "type Foo = -2;",
+            Some(serde_json::json!([{ "ignore": [-2] }])),
+        ),
+        (
+            "type Foo = 3n;",
+            Some(serde_json::json!([{ "ignore": ["3n"] }])),
+        ),
+        (
+            "type Foo = -4n;",
+            Some(serde_json::json!([{ "ignore": ["-4n"] }])),
+        ),
+        (
+            "type Foo = 5.6;",
+            Some(serde_json::json!([{ "ignore": [5.6] }])),
+        ),
+        (
+            "type Foo = -7.8;",
+            Some(serde_json::json!([{ "ignore": [-7.8] }])),
+        ),
+        (
+            "type Foo = 0x0a;",
+            Some(serde_json::json!([{ "ignore": [0x0a] }])),
+        ),
+        (
+            "type Foo = -0xbc;",
+            Some(serde_json::json!([{ "ignore": [-0xbc] }])),
+        ),
+        (
+            "type Foo = 1e2;",
+            Some(serde_json::json!([{ "ignore": [1e2] }])),
+        ),
+        (
+            "type Foo = -3e4;",
+            Some(serde_json::json!([{ "ignore": [-3e4] }])),
+        ),
+        (
+            "type Foo = 5e-6;",
+            Some(serde_json::json!([{ "ignore": [5e-6] }])),
+        ),
+        (
+            "type Foo = -7e-8;",
+            Some(serde_json::json!([{ "ignore": [-7e-8] }])),
+        ),
+        (
+            "type Foo = 1.1e2;",
+            Some(serde_json::json!([{ "ignore": [1.1e2] }])),
+        ),
+        (
+            "type Foo = -3.1e4;",
+            Some(serde_json::json!([{ "ignore": [-3.1e4] }])),
+        ),
+        (
+            "type Foo = 5.1e-6;",
+            Some(serde_json::json!([{ "ignore": [5.1e-6] }])),
+        ),
+        (
+            "type Foo = -7.1e-8;",
+            Some(serde_json::json!([{ "ignore": [-7.1e-8] }])),
+        ),
         (
             "
 			interface Foo {
@@ -744,15 +868,33 @@ fn test() {
         ("a = a + 5;", None),
         ("a += 5;", None),
         ("var foo = 0 + 1 + -2 + 2;", None),
-        ("var foo = 0 + 1 + 2;", Some(serde_json::json!([{ "ignore": [0, 1] }]))),
-        ("var foo = { bar:10 }", Some(serde_json::json!([{ "detectObjects": true }]))),
+        (
+            "var foo = 0 + 1 + 2;",
+            Some(serde_json::json!([{ "ignore": [0, 1] }])),
+        ),
+        (
+            "var foo = { bar:10 }",
+            Some(serde_json::json!([{ "detectObjects": true }])),
+        ),
         ("console.log(0x1A + 0x02); console.log(071);", None), // { "sourceType": "script" },
-        ("var stats = {avg: 42};", Some(serde_json::json!([{ "detectObjects": true }]))),
-        ("var colors = {}; colors.RED = 2; colors.YELLOW = 3; colors.BLUE = 4 + 5;", None),
+        (
+            "var stats = {avg: 42};",
+            Some(serde_json::json!([{ "detectObjects": true }])),
+        ),
+        (
+            "var colors = {}; colors.RED = 2; colors.YELLOW = 3; colors.BLUE = 4 + 5;",
+            None,
+        ),
         ("function getSecondsInMinute() {return 60;}", None),
         ("function getNegativeSecondsInMinute() {return -60;}", None),
-        ("var data = ['foo', 'bar', 'baz']; var third = data[3];", None),
-        ("var data = ['foo', 'bar', 'baz']; var third = data[3];", Some(serde_json::json!([{}]))),
+        (
+            "var data = ['foo', 'bar', 'baz']; var third = data[3];",
+            None,
+        ),
+        (
+            "var data = ['foo', 'bar', 'baz']; var third = data[3];",
+            Some(serde_json::json!([{}])),
+        ),
         (
             "var data = ['foo', 'bar', 'baz']; var third = data[3];",
             Some(serde_json::json!([{"ignoreArrayIndexes": false}])),
@@ -789,16 +931,28 @@ fn test() {
         ("100 .toString()", ignore_array_indexes.clone()),
         ("200[100]", ignore_array_indexes),
         ("var a = <div arrayProp={[1,2,3]}></div>;", None), // { "parserOptions": { "ecmaFeatures": { "jsx": true } } },
-        ("var min, max, mean; min = 1; max = 10; mean = 4;", Some(serde_json::json!([{}]))),
+        (
+            "var min, max, mean; min = 1; max = 10; mean = 4;",
+            Some(serde_json::json!([{}])),
+        ),
         ("f(100n)", Some(serde_json::json!([{ "ignore": [100] }]))), // { "ecmaVersion": 2020 },
-        ("f(-100n)", Some(serde_json::json!([{ "ignore": ["100n"] }]))), // { "ecmaVersion": 2020 },
-        ("f(100n)", Some(serde_json::json!([{ "ignore": ["-100n"] }]))), // { "ecmaVersion": 2020 },
+        (
+            "f(-100n)",
+            Some(serde_json::json!([{ "ignore": ["100n"] }])),
+        ), // { "ecmaVersion": 2020 },
+        (
+            "f(100n)",
+            Some(serde_json::json!([{ "ignore": ["-100n"] }])),
+        ), // { "ecmaVersion": 2020 },
         ("f(100)", Some(serde_json::json!([{ "ignore": ["100n"] }]))),
         (
             "const func = (param = 123) => {}",
             Some(serde_json::json!([{ "ignoreDefaultValues": false }])),
         ), // { "ecmaVersion": 6 },
-        ("const { param = 123 } = sourceObject;", Some(serde_json::json!([{}]))), // { "ecmaVersion": 6 },
+        (
+            "const { param = 123 } = sourceObject;",
+            Some(serde_json::json!([{}])),
+        ), // { "ecmaVersion": 6 },
         ("const { param = 123 } = sourceObject;", None), // { "ecmaVersion": 6 },
         (
             "const { param = 123 } = sourceObject;",
@@ -834,16 +988,28 @@ fn test() {
             "class C { static #foo = 2; }",
             Some(serde_json::json!([{ "ignoreClassFieldInitialValues": false }])),
         ), // { "ecmaVersion": 2022 },
-        ("class C { foo = 2 + 3; }", ignore_class_field_initial_values.clone()), // { "ecmaVersion": 2022 },
+        (
+            "class C { foo = 2 + 3; }",
+            ignore_class_field_initial_values.clone(),
+        ), // { "ecmaVersion": 2022 },
         ("class C { 2; }", ignore_class_field_initial_values.clone()), // { "ecmaVersion": 2022 },
-        ("class C { [2]; }", ignore_class_field_initial_values),       // { "ecmaVersion": 2022 }
-        ("type Foo = 1;", Some(serde_json::json!([{ "ignoreNumericLiteralTypes": false }]))),
-        ("type Foo = -1;", Some(serde_json::json!([{ "ignoreNumericLiteralTypes": false }]))),
+        ("class C { [2]; }", ignore_class_field_initial_values), // { "ecmaVersion": 2022 }
+        (
+            "type Foo = 1;",
+            Some(serde_json::json!([{ "ignoreNumericLiteralTypes": false }])),
+        ),
+        (
+            "type Foo = -1;",
+            Some(serde_json::json!([{ "ignoreNumericLiteralTypes": false }])),
+        ),
         (
             "type Foo = 1 | 2 | 3;",
             Some(serde_json::json!([{ "ignoreNumericLiteralTypes": false }])),
         ),
-        ("type Foo = 1 | -1;", Some(serde_json::json!([{ "ignoreNumericLiteralTypes": false }]))),
+        (
+            "type Foo = 1 | -1;",
+            Some(serde_json::json!([{ "ignoreNumericLiteralTypes": false }])),
+        ),
         (
             "
 			interface Foo {
@@ -877,14 +1043,35 @@ fn test() {
 			      ",
             Some(serde_json::json!([{ "ignoreReadonlyClassProperties": false }])),
         ),
-        ("type Foo = Bar[0];", Some(serde_json::json!([{ "ignoreTypeIndexes": false }]))),
-        ("type Foo = Bar[-1];", Some(serde_json::json!([{ "ignoreTypeIndexes": false }]))),
-        ("type Foo = Bar[0xab];", Some(serde_json::json!([{ "ignoreTypeIndexes": false }]))),
-        ("type Foo = Bar[5.6e1];", Some(serde_json::json!([{ "ignoreTypeIndexes": false }]))),
+        (
+            "type Foo = Bar[0];",
+            Some(serde_json::json!([{ "ignoreTypeIndexes": false }])),
+        ),
+        (
+            "type Foo = Bar[-1];",
+            Some(serde_json::json!([{ "ignoreTypeIndexes": false }])),
+        ),
+        (
+            "type Foo = Bar[0xab];",
+            Some(serde_json::json!([{ "ignoreTypeIndexes": false }])),
+        ),
+        (
+            "type Foo = Bar[5.6e1];",
+            Some(serde_json::json!([{ "ignoreTypeIndexes": false }])),
+        ),
         // ("type Foo = Bar[10n];", Some(serde_json::json!([{ "ignoreTypeIndexes": false }]))),
-        ("type Foo = Bar[1 | -2];", Some(serde_json::json!([{ "ignoreTypeIndexes": false }]))),
-        ("type Foo = Bar[1 & -2];", Some(serde_json::json!([{ "ignoreTypeIndexes": false }]))),
-        ("type Foo = Bar[1 & number];", Some(serde_json::json!([{ "ignoreTypeIndexes": false }]))),
+        (
+            "type Foo = Bar[1 | -2];",
+            Some(serde_json::json!([{ "ignoreTypeIndexes": false }])),
+        ),
+        (
+            "type Foo = Bar[1 & -2];",
+            Some(serde_json::json!([{ "ignoreTypeIndexes": false }])),
+        ),
+        (
+            "type Foo = Bar[1 & number];",
+            Some(serde_json::json!([{ "ignoreTypeIndexes": false }])),
+        ),
         (
             "type Foo = Bar[((1 & -2) | 3) | 4];",
             Some(serde_json::json!([{ "ignoreTypeIndexes": false }])),
@@ -923,22 +1110,70 @@ fn test() {
 			      ",
             Some(serde_json::json!([{ "ignoreTypeIndexes": true }])),
         ),
-        ("type Foo = 1;", Some(serde_json::json!([{ "ignore": [-1] }]))),
-        ("type Foo = -2;", Some(serde_json::json!([{ "ignore": [2] }]))),
-        ("type Foo = 3n;", Some(serde_json::json!([{ "ignore": ["-3n"] }]))),
-        ("type Foo = -4n;", Some(serde_json::json!([{ "ignore": ["4n"] }]))),
-        ("type Foo = 5.6;", Some(serde_json::json!([{ "ignore": [-5.6] }]))),
-        ("type Foo = -7.8;", Some(serde_json::json!([{ "ignore": [7.8] }]))),
-        ("type Foo = 0x0a;", Some(serde_json::json!([{ "ignore": [-0x0a] }]))),
-        ("type Foo = -0xbc;", Some(serde_json::json!([{ "ignore": [0xbc] }]))),
-        ("type Foo = 1e2;", Some(serde_json::json!([{ "ignore": [-1e2] }]))),
-        ("type Foo = -3e4;", Some(serde_json::json!([{ "ignore": [3e4] }]))),
-        ("type Foo = 5e-6;", Some(serde_json::json!([{ "ignore": [-5e-6] }]))),
-        ("type Foo = -7e-8;", Some(serde_json::json!([{ "ignore": [7e-8] }]))),
-        ("type Foo = 1.1e2;", Some(serde_json::json!([{ "ignore": [-1.1e2] }]))),
-        ("type Foo = -3.1e4;", Some(serde_json::json!([{ "ignore": [3.1e4] }]))),
-        ("type Foo = 5.1e-6;", Some(serde_json::json!([{ "ignore": [-5.1e-6] }]))),
-        ("type Foo = -7.1e-8;", Some(serde_json::json!([{ "ignore": [7.1e-8] }]))),
+        (
+            "type Foo = 1;",
+            Some(serde_json::json!([{ "ignore": [-1] }])),
+        ),
+        (
+            "type Foo = -2;",
+            Some(serde_json::json!([{ "ignore": [2] }])),
+        ),
+        (
+            "type Foo = 3n;",
+            Some(serde_json::json!([{ "ignore": ["-3n"] }])),
+        ),
+        (
+            "type Foo = -4n;",
+            Some(serde_json::json!([{ "ignore": ["4n"] }])),
+        ),
+        (
+            "type Foo = 5.6;",
+            Some(serde_json::json!([{ "ignore": [-5.6] }])),
+        ),
+        (
+            "type Foo = -7.8;",
+            Some(serde_json::json!([{ "ignore": [7.8] }])),
+        ),
+        (
+            "type Foo = 0x0a;",
+            Some(serde_json::json!([{ "ignore": [-0x0a] }])),
+        ),
+        (
+            "type Foo = -0xbc;",
+            Some(serde_json::json!([{ "ignore": [0xbc] }])),
+        ),
+        (
+            "type Foo = 1e2;",
+            Some(serde_json::json!([{ "ignore": [-1e2] }])),
+        ),
+        (
+            "type Foo = -3e4;",
+            Some(serde_json::json!([{ "ignore": [3e4] }])),
+        ),
+        (
+            "type Foo = 5e-6;",
+            Some(serde_json::json!([{ "ignore": [-5e-6] }])),
+        ),
+        (
+            "type Foo = -7e-8;",
+            Some(serde_json::json!([{ "ignore": [7e-8] }])),
+        ),
+        (
+            "type Foo = 1.1e2;",
+            Some(serde_json::json!([{ "ignore": [-1.1e2] }])),
+        ),
+        (
+            "type Foo = -3.1e4;",
+            Some(serde_json::json!([{ "ignore": [3.1e4] }])),
+        ),
+        (
+            "type Foo = 5.1e-6;",
+            Some(serde_json::json!([{ "ignore": [-5.1e-6] }])),
+        ),
+        (
+            "type Foo = -7.1e-8;",
+            Some(serde_json::json!([{ "ignore": [7.1e-8] }])),
+        ),
         (
             "type Foo = { bar: 42 };",
             Some(serde_json::json!([{ "ignoreNumericLiteralTypes": true }])),

@@ -84,16 +84,22 @@ fn format_rule_timing_table(rule_timings: &[RuleTimingRecord]) -> String {
         .max()
         .unwrap_or("Source".len())
         .max("Source".len());
-    let rule_width =
-        rule_names.iter().map(String::len).max().unwrap_or("Rule".len()).max("Rule".len());
+    let rule_width = rule_names
+        .iter()
+        .map(String::len)
+        .max()
+        .unwrap_or("Rule".len())
+        .max("Rule".len());
     let calls_width = rule_timings
         .iter()
         .map(|record| record.calls.to_string().len())
         .max()
         .unwrap_or("Calls".len())
         .max("Calls".len());
-    let total_millis =
-        rule_timings.iter().map(|record| record.duration.as_secs_f64() * 1000.0).sum::<f64>();
+    let total_millis = rule_timings
+        .iter()
+        .map(|record| record.duration.as_secs_f64() * 1000.0)
+        .sum::<f64>();
 
     let mut output = String::new();
     output.push_str("Rule timings:\n");
@@ -112,7 +118,11 @@ fn format_rule_timing_table(rule_timings: &[RuleTimingRecord]) -> String {
 
     for (record, rule_name) in rule_timings.iter().zip(rule_names) {
         let millis = record.duration.as_secs_f64() * 1000.0;
-        let relative = if total_millis > 0.0 { millis / total_millis * 100.0 } else { 0.0 };
+        let relative = if total_millis > 0.0 {
+            millis / total_millis * 100.0
+        } else {
+            0.0
+        };
         writeln!(
             output,
             "{:<rule_width$}  {:>10.3}  {:>7.1}%  {:>calls_width$}  {}",
@@ -138,7 +148,9 @@ struct GraphicalReporter {
 
 impl Default for GraphicalReporter {
     fn default() -> Self {
-        Self { handler: GraphicalReportHandler::new() }
+        Self {
+            handler: GraphicalReportHandler::new(),
+        }
     }
 }
 
@@ -149,7 +161,9 @@ impl DiagnosticReporter for GraphicalReporter {
 
     fn render_error(&mut self, error: Error) -> Option<String> {
         let mut output = String::with_capacity(384);
-        self.handler.render_report(&mut output, error.as_ref()).unwrap();
+        self.handler
+            .render_report(&mut output, error.as_ref())
+            .unwrap();
         Some(output)
     }
 
@@ -159,7 +173,9 @@ impl DiagnosticReporter for GraphicalReporter {
         self.handler
             .render_reports(
                 &mut output,
-                errors.iter().map(|error| error.as_ref() as &dyn oxc_diagnostics::Diagnostic),
+                errors
+                    .iter()
+                    .map(|error| error.as_ref() as &dyn oxc_diagnostics::Diagnostic),
             )
             .unwrap();
         emit(&output);
@@ -172,7 +188,9 @@ impl DiagnosticReporter for GraphicalReporter {
     ) {
         self.handler
             .render_reports_until(
-                errors.iter().map(|error| error.as_ref() as &dyn oxc_diagnostics::Diagnostic),
+                errors
+                    .iter()
+                    .map(|error| error.as_ref() as &dyn oxc_diagnostics::Diagnostic),
                 &mut |diagnostic, rendered| {
                     let source_name = diagnostic.source_code().and_then(|source| source.name());
                     keep(source_name, rendered)
@@ -193,7 +211,11 @@ pub(super) fn get_diagnostic_result_output(result: &DiagnosticResult) -> String 
         format!(
             "Found {} warning{} and {} error{}.\n",
             result.warnings_count(),
-            if result.warnings_count() == 1 { "" } else { "s" },
+            if result.warnings_count() == 1 {
+                ""
+            } else {
+                "s"
+            },
             result.errors_count(),
             if result.errors_count() == 1 { "" } else { "s" },
         )
@@ -202,8 +224,11 @@ pub(super) fn get_diagnostic_result_output(result: &DiagnosticResult) -> String 
 
     if result.max_warnings_exceeded() {
         output.push_str(
-            format!("Exceeded maximum number of warnings. Found {}.\n", result.warnings_count())
-                .as_str(),
+            format!(
+                "Exceeded maximum number of warnings. Found {}.\n",
+                result.warnings_count()
+            )
+            .as_str(),
         );
     }
 
@@ -233,11 +258,19 @@ mod test_implementation {
 
             self.diagnostics.sort_by_cached_key(|diagnostic| {
                 let info = Info::new(diagnostic);
-                (info.filename, info.start, info.end, info.rule_id, info.message)
+                (
+                    info.filename,
+                    info.start,
+                    info.end,
+                    info.rule_id,
+                    info.message,
+                )
             });
 
             for diagnostic in &self.diagnostics {
-                handler.render_report(&mut output, diagnostic.as_ref()).unwrap();
+                handler
+                    .render_report(&mut output, diagnostic.as_ref())
+                    .unwrap();
             }
 
             output.push_str(&get_diagnostic_result_output(result));
@@ -304,7 +337,10 @@ mod test {
         });
 
         assert!(result.is_some());
-        assert_eq!(result.unwrap(), "Finished in 1.0s on 5 files using 12 threads.\n");
+        assert_eq!(
+            result.unwrap(),
+            "Finished in 1.0s on 5 files using 12 threads.\n"
+        );
     }
 
     #[test]

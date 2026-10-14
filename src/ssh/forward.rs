@@ -31,8 +31,8 @@ fn split_spec(spec: &str) -> Vec<String> {
             ':' if depth == 0 => {
                 parts.push(std::mem::take(&mut current));
                 continue;
-            },
-            _ => {},
+            }
+            _ => {}
         }
         if c != '[' && c != ']' {
             current.push(c);
@@ -43,7 +43,9 @@ fn split_spec(spec: &str) -> Vec<String> {
 }
 
 fn port(value: &str, spec: &str) -> Result<u16> {
-    value.parse().map_err(|_| Error::InvalidInput(format!("invalid port in forward `{spec}`")))
+    value
+        .parse()
+        .map_err(|_| Error::InvalidInput(format!("invalid port in forward `{spec}`")))
 }
 
 impl Spec {
@@ -59,12 +61,20 @@ impl Spec {
                     other => other.to_owned(),
                 };
                 (bind, &parts[1..])
-            },
+            }
             _ => return Err(bad()),
         };
         let bind_port = port(&rest[0], spec)?;
-        let target = if dynamic { None } else { Some((rest[1].clone(), port(&rest[2], spec)?)) };
-        Ok(Self { bind_address, bind_port, target })
+        let target = if dynamic {
+            None
+        } else {
+            Some((rest[1].clone(), port(&rest[2], spec)?))
+        };
+        Ok(Self {
+            bind_address,
+            bind_port,
+            target,
+        })
     }
 }
 
@@ -75,7 +85,9 @@ async fn pipe(session: &Session, mut socket: TcpStream, host: &str, port: u16) -
         .channel_open_direct_tcpip(
             host.to_owned(),
             u32::from(port),
-            origin.map(|a| a.ip().to_string()).unwrap_or_else(|| "127.0.0.1".into()),
+            origin
+                .map(|a| a.ip().to_string())
+                .unwrap_or_else(|| "127.0.0.1".into()),
             origin.map(|a| u32::from(a.port())).unwrap_or(0),
         )
         .await?;
@@ -86,7 +98,10 @@ async fn pipe(session: &Session, mut socket: TcpStream, host: &str, port: u16) -
 
 /// Serves a local forward until the session ends. Returns the bound port through `on_bound`.
 pub async fn local(session: Arc<Session>, spec: &Spec, on_bound: impl FnOnce(u16)) -> Result<()> {
-    let (host, port) = spec.target.clone().ok_or_else(|| Error::InvalidInput("missing forward target".into()))?;
+    let (host, port) = spec
+        .target
+        .clone()
+        .ok_or_else(|| Error::InvalidInput("missing forward target".into()))?;
     let listener = TcpListener::bind((spec.bind_address.as_str(), spec.bind_port)).await?;
     on_bound(listener.local_addr()?.port());
     loop {
@@ -102,10 +117,22 @@ pub async fn local(session: Arc<Session>, spec: &Spec, on_bound: impl FnOnce(u16
 /// Asks the server to listen on `spec.bind_address:spec.bind_port` and connects every incoming
 /// connection to the local target.
 pub async fn remote(mut session: Session, spec: &Spec, on_bound: impl FnOnce(u16)) -> Result<()> {
-    let (host, port) = spec.target.clone().ok_or_else(|| Error::InvalidInput("missing forward target".into()))?;
-    let mut incoming = session.take_forwarded().ok_or_else(|| crate::other("remote forwards already taken"))?;
-    let bound = session.handle.tcpip_forward(spec.bind_address.clone(), u32::from(spec.bind_port)).await?;
-    let bound = if spec.bind_port == 0 { bound } else { u32::from(spec.bind_port) };
+    let (host, port) = spec
+        .target
+        .clone()
+        .ok_or_else(|| Error::InvalidInput("missing forward target".into()))?;
+    let mut incoming = session
+        .take_forwarded()
+        .ok_or_else(|| crate::other("remote forwards already taken"))?;
+    let bound = session
+        .handle
+        .tcpip_forward(spec.bind_address.clone(), u32::from(spec.bind_port))
+        .await?;
+    let bound = if spec.bind_port == 0 {
+        bound
+    } else {
+        u32::from(spec.bind_port)
+    };
     on_bound(u16::try_from(bound).unwrap_or(spec.bind_port));
     let _session = session;
     while let Some(connection) = incoming.recv().await {
@@ -140,32 +167,36 @@ async fn socks5(session: &Session, mut socket: TcpStream) -> Result<()> {
             let mut ip = [0u8; 4];
             socket.read_exact(&mut ip).await?;
             std::net::Ipv4Addr::from(ip).to_string()
-        },
+        }
         3 => {
             let len = socket.read_u8().await?;
             let mut name = vec![0u8; usize::from(len)];
             socket.read_exact(&mut name).await?;
             String::from_utf8(name).map_err(|_| crate::other("invalid SOCKS host name"))?
-        },
+        }
         4 => {
             let mut ip = [0u8; 16];
             socket.read_exact(&mut ip).await?;
             std::net::Ipv6Addr::from(ip).to_string()
-        },
+        }
         _ => return Err(crate::other("invalid SOCKS address type")),
     };
     let port = socket.read_u16().await?;
-    match session.handle.channel_open_direct_tcpip(host, u32::from(port), "127.0.0.1", 0).await {
+    match session
+        .handle
+        .channel_open_direct_tcpip(host, u32::from(port), "127.0.0.1", 0)
+        .await
+    {
         Ok(channel) => {
             socket.write_all(&[5, 0, 0, 1, 0, 0, 0, 0, 0, 0]).await?;
             let mut stream = channel.into_stream();
             tokio::io::copy_bidirectional(&mut socket, &mut stream).await?;
             Ok(())
-        },
+        }
         Err(err) => {
             socket.write_all(&[5, 5, 0, 1, 0, 0, 0, 0, 0, 0]).await?;
             Err(err.into())
-        },
+        }
     }
 }
 

@@ -89,7 +89,8 @@ declare_oxc_lint!(
     conditional_fix_dangerous,
     config = ConsistentTypeDefinitionsConfig,
     version = "0.2.17",
-    short_description = "Enforce type definitions to consistently use either `interface` or `type`.",
+    short_description =
+        "Enforce type definitions to consistently use either `interface` or `type`.",
 );
 
 impl Rule for ConsistentTypeDefinitions {
@@ -108,9 +109,11 @@ impl Rule for ConsistentTypeDefinitions {
                         let start = if decl.declare {
                             let base_start = decl.span.start + 7;
 
-                            ctx.find_next_token_within(base_start, decl.span.end, "type").expect(
-                                "declared type aliases must contain the `type` keyword token",
-                            ) + base_start
+                            ctx.find_next_token_within(base_start, decl.span.end, "type")
+                                .expect(
+                                    "declared type aliases must contain the `type` keyword token",
+                                )
+                                + base_start
                         } else {
                             decl.span.start
                         };
@@ -268,8 +271,14 @@ fn test() {
             Some(serde_json::json!(["interface"])),
         ),
         ("type U = string;", Some(serde_json::json!(["interface"]))),
-        ("type V = { x: number } | { y: string };", Some(serde_json::json!(["interface"]))),
-        ("interface T { x: \"interface\" | \"type\"; }", Some(serde_json::json!(["interface"]))),
+        (
+            "type V = { x: number } | { y: string };",
+            Some(serde_json::json!(["interface"])),
+        ),
+        (
+            "interface T { x: \"interface\" | \"type\"; }",
+            Some(serde_json::json!(["interface"])),
+        ),
         (
             "
             type Record<T, U> = {
@@ -279,8 +288,14 @@ fn test() {
             Some(serde_json::json!(["interface"])),
         ),
         ("type T = { x: number };", Some(serde_json::json!(["type"]))),
-        ("type A = { x: number } & B & C;", Some(serde_json::json!(["type"]))),
-        ("type A = { x: number } & B<T1> & C<T2>;", Some(serde_json::json!(["type"]))),
+        (
+            "type A = { x: number } & B & C;",
+            Some(serde_json::json!(["type"])),
+        ),
+        (
+            "type A = { x: number } & B<T1> & C<T2>;",
+            Some(serde_json::json!(["type"])),
+        ),
         (
             "
             export type W<T> = {
@@ -292,9 +307,18 @@ fn test() {
     ];
 
     let fail = vec![
-        ("type T = { x: number; };", Some(serde_json::json!(["interface"]))),
-        ("type T={ x: number; };", Some(serde_json::json!(["interface"]))),
-        ("type T=                         { x: number; };", Some(serde_json::json!(["interface"]))),
+        (
+            "type T = { x: number; };",
+            Some(serde_json::json!(["interface"])),
+        ),
+        (
+            "type T={ x: number; };",
+            Some(serde_json::json!(["interface"])),
+        ),
+        (
+            "type T=                         { x: number; };",
+            Some(serde_json::json!(["interface"])),
+        ),
         (
             "
             export type W<T> = {
@@ -303,12 +327,30 @@ fn test() {
                   ",
             Some(serde_json::json!(["interface"])),
         ),
-        ("interface T { x: number; }", Some(serde_json::json!(["type"]))),
-        ("interface T{ x: number; }", Some(serde_json::json!(["type"]))),
-        ("interface T                          { x: number; }", Some(serde_json::json!(["type"]))),
-        ("type T = { x: \"interface\" | \"type\"; };", Some(serde_json::json!(["interface"]))),
-        ("interface A extends B, C { x: number; };", Some(serde_json::json!(["type"]))),
-        ("interface A extends B<T1>, C<T2> { x: number; };", Some(serde_json::json!(["type"]))),
+        (
+            "interface T { x: number; }",
+            Some(serde_json::json!(["type"])),
+        ),
+        (
+            "interface T{ x: number; }",
+            Some(serde_json::json!(["type"])),
+        ),
+        (
+            "interface T                          { x: number; }",
+            Some(serde_json::json!(["type"])),
+        ),
+        (
+            "type T = { x: \"interface\" | \"type\"; };",
+            Some(serde_json::json!(["interface"])),
+        ),
+        (
+            "interface A extends B, C { x: number; };",
+            Some(serde_json::json!(["type"])),
+        ),
+        (
+            "interface A extends B<T1>, C<T2> { x: number; };",
+            Some(serde_json::json!(["type"])),
+        ),
         (
             "
             export interface W<T> {
@@ -387,13 +429,28 @@ fn test() {
         // Issue: <https://github.com/oxc-project/oxc/issues/7552>
         ("declaretype S={}", Some(serde_json::json!(["interface"]))),
         ("declareinterface S {}", Some(serde_json::json!(["type"]))),
-        ("export declaretype S={}", Some(serde_json::json!(["interface"]))),
-        ("export declareinterface S {}", Some(serde_json::json!(["type"]))),
-        ("declare /* interface */ interface T { x: number; };", Some(serde_json::json!(["type"]))),
-        ("declare /* type */ type T =  { x: number; };", Some(serde_json::json!(["interface"]))),
+        (
+            "export declaretype S={}",
+            Some(serde_json::json!(["interface"])),
+        ),
+        (
+            "export declareinterface S {}",
+            Some(serde_json::json!(["type"])),
+        ),
+        (
+            "declare /* interface */ interface T { x: number; };",
+            Some(serde_json::json!(["type"])),
+        ),
+        (
+            "declare /* type */ type T =  { x: number; };",
+            Some(serde_json::json!(["interface"])),
+        ),
         ("type foo = ({});", Some(serde_json::json!(["interface"]))),
         ("type foo = (({}));", Some(serde_json::json!(["interface"]))),
-        ("type foo = ({ x: number });", Some(serde_json::json!(["interface"]))),
+        (
+            "type foo = ({ x: number });",
+            Some(serde_json::json!(["interface"])),
+        ),
     ];
 
     let fix = vec![
@@ -431,7 +488,11 @@ fn test() {
             "type T = { x: number; }",
             Some(serde_json::json!(["type"])),
         ),
-        ("interface T{ x: number; }", "type T = { x: number; }", Some(serde_json::json!(["type"]))),
+        (
+            "interface T{ x: number; }",
+            "type T = { x: number; }",
+            Some(serde_json::json!(["type"])),
+        ),
         (
             "interface A extends B, C { x: number; };",
             "type A = { x: number; } & B & C;",
@@ -540,8 +601,16 @@ export declare type Test = {
             Some(serde_json::json!(["type"])),
         ),
         // Issue: <https://github.com/oxc-project/oxc/issues/7552>
-        ("declaretype S={}", "declareinterface S {}", Some(serde_json::json!(["interface"]))),
-        ("declareinterface S {}", "declaretype S = {}", Some(serde_json::json!(["type"]))),
+        (
+            "declaretype S={}",
+            "declareinterface S {}",
+            Some(serde_json::json!(["interface"])),
+        ),
+        (
+            "declareinterface S {}",
+            "declaretype S = {}",
+            Some(serde_json::json!(["type"])),
+        ),
         (
             "export declaretype S={}",
             "export declareinterface S {}",
@@ -552,8 +621,16 @@ export declare type Test = {
             "export declaretype S = {}",
             Some(serde_json::json!(["type"])),
         ),
-        ("type foo = ({});", "interface foo {}", Some(serde_json::json!(["interface"]))),
-        ("type foo = (({}));", "interface foo {}", Some(serde_json::json!(["interface"]))),
+        (
+            "type foo = ({});",
+            "interface foo {}",
+            Some(serde_json::json!(["interface"])),
+        ),
+        (
+            "type foo = (({}));",
+            "interface foo {}",
+            Some(serde_json::json!(["interface"])),
+        ),
         (
             "type foo = ({ x: number });",
             "interface foo { x: number }",
@@ -596,8 +673,13 @@ export declare type Test = {
         ),
     ];
 
-    Tester::new(ConsistentTypeDefinitions::NAME, ConsistentTypeDefinitions::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .expect_fix(fix_dangerous)
-        .test_and_snapshot();
+    Tester::new(
+        ConsistentTypeDefinitions::NAME,
+        ConsistentTypeDefinitions::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .expect_fix(fix_dangerous)
+    .test_and_snapshot();
 }

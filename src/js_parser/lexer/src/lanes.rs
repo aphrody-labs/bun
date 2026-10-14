@@ -1,5 +1,9 @@
 // Kernel lint policy - see the note in `pipeline/mod.rs`.
-#![allow(unsafe_op_in_unsafe_fn, clippy::missing_safety_doc, clippy::undocumented_unsafe_blocks)]
+#![allow(
+    unsafe_op_in_unsafe_fn,
+    clippy::missing_safety_doc,
+    clippy::undocumented_unsafe_blocks
+)]
 #![allow(clippy::pedantic, clippy::nursery)]
 #![allow(clippy::needless_range_loop, clippy::manual_range_contains)]
 
@@ -94,7 +98,12 @@ impl Lanes {
     #[cold]
     #[inline(never)]
     pub fn push_diag(&mut self, off: u32, len: u32, code: DiagCode) {
-        self.diags.push(Diagnostic { off, len, code, severity: DiagSeverity::Error });
+        self.diags.push(Diagnostic {
+            off,
+            len,
+            code,
+            severity: DiagSeverity::Error,
+        });
     }
 
     /// Line terminator in a string, with oxc_parser's exact span: opener
@@ -126,7 +135,11 @@ impl Lanes {
                 _ => i += 1,
             }
         }
-        self.push_diag(s as u32, (term_end - s) as u32, DiagCode::LineTerminatorInString);
+        self.push_diag(
+            s as u32,
+            (term_end - s) as u32,
+            DiagCode::LineTerminatorInString,
+        );
     }
 
     /// IdentifierStart or digit right after a numeric literal (`1.5n`,
@@ -146,12 +159,18 @@ impl Lanes {
     #[cold]
     #[inline(never)]
     pub fn push_num_end_diag_unicode(&mut self, src: &[u8], e2: usize) {
-        let Some(ch) = decode_char_at(src, e2) else { return };
+        let Some(ch) = decode_char_at(src, e2) else {
+            return;
+        };
         if !is_identifier_start(ch) {
             return;
         }
         let end = ident_start_run_end(src, e2 + ch.len_utf8());
-        self.push_diag(e2 as u32, (end - e2) as u32, DiagCode::InvalidNumericLiteral);
+        self.push_diag(
+            e2 as u32,
+            (end - e2) as u32,
+            DiagCode::InvalidNumericLiteral,
+        );
     }
 
     #[inline]
@@ -225,7 +244,8 @@ impl Lanes {
         // A NotEscapeSequence means cooked = None per the grammar; legality
         // depends on tagged-ness (parser context), so the span carries a
         // marker instead of a diagnostic.
-        self.templates.push(if nes { sp.with_cooked_invalid() } else { sp });
+        self.templates
+            .push(if nes { sp.with_cooked_invalid() } else { sp });
     }
 
     /// Push a string value verbatim. JSX attribute strings have no backslash
@@ -234,7 +254,8 @@ impl Lanes {
     pub fn push_string_raw(&mut self, src: &[u8], bs: usize, be: usize) {
         let ss = self.cooked.len() as u32;
         if be <= bs {
-            self.strings.push(StringSpan::new(ss, ss & StringSpan::END_MASK, false));
+            self.strings
+                .push(StringSpan::new(ss, ss & StringSpan::END_MASK, false));
             return;
         }
         let body_len = be - bs;
@@ -245,7 +266,8 @@ impl Lanes {
             self.cooked.set_len(ss as usize + body_len);
         }
         let we = ss + body_len as u32;
-        self.strings.push(StringSpan::new(ss, we & StringSpan::END_MASK, false));
+        self.strings
+            .push(StringSpan::new(ss, we & StringSpan::END_MASK, false));
     }
 
     #[inline]
@@ -264,8 +286,14 @@ impl Lanes {
     #[cold]
     #[inline(never)]
     fn check_escaped_ident_char(&mut self, value: u32, at_start: bool, end: usize) {
-        let Some(ch) = char::from_u32(value) else { return }; // surrogates handled by caller
-        let ok = if at_start { is_identifier_start(ch) } else { is_identifier_part(ch) };
+        let Some(ch) = char::from_u32(value) else {
+            return;
+        }; // surrogates handled by caller
+        let ok = if at_start {
+            is_identifier_start(ch)
+        } else {
+            is_identifier_part(ch)
+        };
         if !ok {
             self.push_diag(end as u32, 0, DiagCode::UnexpectedCharacter);
         }
@@ -285,7 +313,9 @@ impl Lanes {
                 if k >= be {
                     return (None, k);
                 }
-                let Some(h) = hexd(src[k]) else { return (None, k) };
+                let Some(h) = hexd(src[k]) else {
+                    return (None, k);
+                };
                 v = (v << 4) | u32::from(h);
                 k += 1;
             }
@@ -390,7 +420,11 @@ impl Lanes {
                 // Not a valid low: fall through - the parser rewinds and
                 // reports the first escape alone.
             }
-            self.push_diag(start as u32, (k - start) as u32, DiagCode::InvalidIdentifierEscape);
+            self.push_diag(
+                start as u32,
+                (k - start) as u32,
+                DiagCode::InvalidIdentifierEscape,
+            );
             i = k;
         }
     }
@@ -656,9 +690,10 @@ pub(crate) fn decode_char_at(s: &[u8], i: usize) -> Option<char> {
     match str::from_utf8(slice) {
         Ok(t) => t.chars().next(),
         // a multi-byte char cut at `end` still has a decodable valid prefix
-        Err(e) if e.valid_up_to() > 0 => {
-            str::from_utf8(&slice[..e.valid_up_to()]).ok()?.chars().next()
-        }
+        Err(e) if e.valid_up_to() > 0 => str::from_utf8(&slice[..e.valid_up_to()])
+            .ok()?
+            .chars()
+            .next(),
         Err(_) => None,
     }
 }
@@ -756,7 +791,10 @@ fn parse_number(src: &[u8], s: usize, e: usize) -> f64 {
         buf[bl] = c;
         bl += 1;
     }
-    str::from_utf8(&buf[..bl]).ok().and_then(|st| st.parse::<f64>().ok()).unwrap_or(0.0)
+    str::from_utf8(&buf[..bl])
+        .ok()
+        .and_then(|st| st.parse::<f64>().ok())
+        .unwrap_or(0.0)
 }
 
 #[inline]
@@ -779,7 +817,9 @@ fn radix_digit(c: u8) -> Option<u8> {
 #[inline(never)]
 fn validate_number(src: &[u8], s: usize, e: usize) -> DiagCode {
     let bytes = &src[s..e];
-    let Some((&last, head)) = bytes.split_last() else { return DiagCode::Ok };
+    let Some((&last, head)) = bytes.split_last() else {
+        return DiagCode::Ok;
+    };
     let is_bigint = last == b'n';
     let body = if is_bigint { head } else { bytes };
     if body.is_empty() {
@@ -830,7 +870,11 @@ fn validate_number(src: &[u8], s: usize, e: usize) -> DiagCode {
             // Only the integer part is checked here. A fraction or exponent after an `8`/`9`
             // is ordinary digits, so separators there are valid (`09.1_1`, `09e1_1`),
             // and the generic checks below catch any that are misplaced.
-            if bytes.iter().take_while(|&&c| c.is_ascii_digit() || c == b'_').any(|&c| c == b'_') {
+            if bytes
+                .iter()
+                .take_while(|&&c| c.is_ascii_digit() || c == b'_')
+                .any(|&c| c == b'_')
+            {
                 return DiagCode::InvalidNumericSeparator;
             }
             if is_bigint {

@@ -138,7 +138,10 @@ struct UidName {
 impl<'a> UidGenerator<'a> {
     /// Create [`UidGenerator`].
     pub(super) fn new(scoping: &Scoping, allocator: &'a Allocator) -> Self {
-        let mut generator = Self { names: FxHashMap::default(), allocator };
+        let mut generator = Self {
+            names: FxHashMap::default(),
+            allocator,
+        };
 
         for name in scoping.symbol_names() {
             generator.add(name);
@@ -164,7 +167,10 @@ impl<'a> UidGenerator<'a> {
         let mut name = name.trim_start_matches('_');
         #[expect(clippy::cast_possible_truncation)]
         let underscore_count = (original_len - name.len()) as u32;
-        let mut uid_name = UidName { underscore_count, postfix: 1 };
+        let mut uid_name = UidName {
+            underscore_count,
+            postfix: 1,
+        };
 
         // Find digits on end of `name`
         let last_non_digit_index = name.as_bytes().iter().rposition(|&b| !b.is_ascii_digit());
@@ -176,7 +182,11 @@ impl<'a> UidGenerator<'a> {
                 } else {
                     // Name ends with digits
                     let digit_index = last_non_digit_index + 1;
-                    debug_assert!(name.as_bytes().get(digit_index).is_some_and(u8::is_ascii_digit));
+                    debug_assert!(
+                        name.as_bytes()
+                            .get(digit_index)
+                            .is_some_and(u8::is_ascii_digit)
+                    );
                     // SAFETY: There's an ASCII digit at `digit_index`, so slicing `name` at that index
                     // is guaranteed to yield 2 valid UTF-8 strings. `digit_index` cannot be out of bounds.
                     unsafe {
@@ -300,7 +310,13 @@ impl<'a> UidGenerator<'a> {
             let uid = Ident::from_strs_array_in(["_", base], &self.allocator);
             // SAFETY: String starts with `_`, so trimming off that byte leaves a valid UTF-8 string
             let base = unsafe { uid.as_str().get_unchecked(1..) };
-            self.names.insert(base, UidName { underscore_count: 1, postfix: 1 });
+            self.names.insert(
+                base,
+                UidName {
+                    underscore_count: 1,
+                    postfix: 1,
+                },
+            );
             uid
         }
     }
@@ -318,16 +334,53 @@ fn uids() {
             &[("foo", "_foo"), ("foo", "_foo2"), ("foo", "_foo3")],
         ),
         (
-            &["_foo0", "_foo1", "__foo0", "____foo1", "_foo01", "_foo012345", "_foo000000"],
+            &[
+                "_foo0",
+                "_foo1",
+                "__foo0",
+                "____foo1",
+                "_foo01",
+                "_foo012345",
+                "_foo000000",
+            ],
             &[("foo", "_foo"), ("foo", "_foo2"), ("foo", "_foo3")],
         ),
-        (&[], &[("_foo", "_foo"), ("__foo", "_foo2"), ("_____foo", "_foo3")]),
-        (&[], &[("_foo123", "_foo"), ("__foo456", "_foo2"), ("_____foo789", "_foo3")]),
-        (&["_foo"], &[("foo", "_foo2"), ("foo", "_foo3"), ("foo", "_foo4")]),
-        (&["_foo3"], &[("foo", "_foo4"), ("foo", "_foo5"), ("foo", "_foo6")]),
-        (&["__foo"], &[("foo", "__foo2"), ("foo", "__foo3"), ("foo", "__foo4")]),
-        (&["__foo8"], &[("foo", "__foo9"), ("foo", "__foo10"), ("foo", "__foo11")]),
-        (&["_foo999", "____foo"], &[("foo", "____foo2"), ("foo", "____foo3"), ("foo", "____foo4")]),
+        (
+            &[],
+            &[("_foo", "_foo"), ("__foo", "_foo2"), ("_____foo", "_foo3")],
+        ),
+        (
+            &[],
+            &[
+                ("_foo123", "_foo"),
+                ("__foo456", "_foo2"),
+                ("_____foo789", "_foo3"),
+            ],
+        ),
+        (
+            &["_foo"],
+            &[("foo", "_foo2"), ("foo", "_foo3"), ("foo", "_foo4")],
+        ),
+        (
+            &["_foo3"],
+            &[("foo", "_foo4"), ("foo", "_foo5"), ("foo", "_foo6")],
+        ),
+        (
+            &["__foo"],
+            &[("foo", "__foo2"), ("foo", "__foo3"), ("foo", "__foo4")],
+        ),
+        (
+            &["__foo8"],
+            &[("foo", "__foo9"), ("foo", "__foo10"), ("foo", "__foo11")],
+        ),
+        (
+            &["_foo999", "____foo"],
+            &[
+                ("foo", "____foo2"),
+                ("foo", "____foo3"),
+                ("foo", "____foo4"),
+            ],
+        ),
         (
             &["_foo4294967293"],
             &[
@@ -355,13 +408,19 @@ fn uids() {
         (&["_"], &[("_", "_2"), ("_", "_3"), ("_", "_4")]),
         (&["_4"], &[("_", "_5"), ("_", "_6"), ("_", "_7")]),
         (&["___"], &[("_", "___2"), ("_", "___3"), ("_", "___4")]),
-        (&["___99"], &[("_", "___100"), ("_", "___101"), ("_", "___102")]),
+        (
+            &["___99"],
+            &[("_", "___100"), ("_", "___101"), ("_", "___102")],
+        ),
         (&["_"], &[("_123", "_2"), ("__456", "_3"), ("___789", "_4")]),
     ];
 
     let allocator = Allocator::default();
     for &(used_names, created) in cases {
-        let mut generator = UidGenerator { names: FxHashMap::default(), allocator: &allocator };
+        let mut generator = UidGenerator {
+            names: FxHashMap::default(),
+            allocator: &allocator,
+        };
         for &used_name in used_names {
             generator.add(used_name);
         }

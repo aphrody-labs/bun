@@ -7,9 +7,11 @@ use oxc_syntax::operator::{BinaryOperator, UnaryOperator};
 use crate::{AstNode, context::LintContext, rule::Rule};
 
 fn no_compare_neg_zero_diagnostic(operator: &str, span: Span) -> OxcDiagnostic {
-    OxcDiagnostic::warn(format!("Do not use the {operator} operator to compare against -0."))
-        .with_help("Use Object.is(x, -0) to test equality with -0 and use 0 for other cases")
-        .with_label(span)
+    OxcDiagnostic::warn(format!(
+        "Do not use the {operator} operator to compare against -0."
+    ))
+    .with_help("Use Object.is(x, -0) to test equality with -0 and use 0 for other cases")
+    .with_label(span)
 }
 
 #[derive(Debug, Default, Clone)]
@@ -203,7 +205,11 @@ fn test() {
         ("(-0) > x", "(0) > x", None),
         ("x <= (-0n)", "x <= (0n)", None),
         ("x > (-0 as number)", "x > (0 as number)", None),
-        ("(-0 satisfies number) > x", "(0 satisfies number) > x", None),
+        (
+            "(-0 satisfies number) > x",
+            "(0 satisfies number) > x",
+            None,
+        ),
     ];
 
     Tester::new(NoCompareNegZero::NAME, NoCompareNegZero::PLUGIN, pass, fail)

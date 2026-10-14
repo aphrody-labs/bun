@@ -912,9 +912,14 @@ const _: () = {
 impl VirtualMachine {
     /// Register a JS-thread-owned native realm/resource and return a
     /// VM-local ID plus the weak poster used by its GC finalizer.
-    pub fn register_browser_realm<T: Any>(&mut self, resource: T) -> (u64, bun_event_loop::JsPoster) {
+    pub fn register_browser_realm<T: Any>(
+        &mut self,
+        resource: T,
+    ) -> (u64, bun_event_loop::JsPoster) {
         let id = self.next_browser_realm_id;
-        self.next_browser_realm_id = self.next_browser_realm_id.checked_add(1)
+        self.next_browser_realm_id = self
+            .next_browser_realm_id
+            .checked_add(1)
             .expect("BrowserRealm ID space exhausted");
         let previous = self.browser_realms.insert(id, Box::new(resource));
         debug_assert!(previous.is_none());
@@ -2362,6 +2367,40 @@ impl VirtualMachine {
             self.close_sqlite_databases_for_exit();
         }
         bun_core::Global::exit(u32::from(self.exit_handler.exit_code))
+    }
+
+    /// Ends this thread's VM, which is not the main thread's: its exit handlers,
+    /// [`teardown`](Self::teardown), and the storage `init` put on the global heap.
+    /// Returns its exit code.
+    ///
+    /// # Safety
+    /// `this` is this thread's VM, made without a caller's `log`; this thread holds
+    /// its API lock and abandons it; nothing else can reach the VM.
+    pub unsafe fn exit_and_free(this: *mut Self) -> u8 {
+        // SAFETY: fn contract (statement-scoped exclusive access: the handlers run script).
+        let exit_code = unsafe {
+            (*this).is_shutting_down = true;
+            (*this).on_exit();
+            (*this).exit_handler.exit_code
+        };
+        // SAFETY: fn contract.
+        unsafe { Self::teardown(this, Teardown::Worker) };
+        // SAFETY: sole owner; nothing past this point dereferences the VM.
+        unsafe {
+            let console = core::mem::replace(&mut (*this).console, core::ptr::null_mut());
+            if !console.is_null() {
+                bun_core::heap::destroy(console);
+            }
+            if let Some(log) = (*this).log.take() {
+                bun_core::heap::destroy(log.as_ptr());
+            }
+            VMHolder::set_vm(None);
+            // The VM was `alloc_zeroed(Layout::<VirtualMachine>())` in
+            // `init`, NOT `Box::new` — dealloc the raw storage directly so
+            // field `Drop`s do not re-run on already-`deinit`'d state.
+            std::alloc::dealloc(this.cast::<u8>(), core::alloc::Layout::new::<Self>());
+        }
+        exit_code
     }
 
     /// Checkpoint + close the sqlite connections *this* VM opened, while it is
@@ -6204,9 +6243,15 @@ impl VirtualMachine {
         macro_rules! write_msg {
             ($msg:expr, $w:expr, $color:expr) => {
                 if $color {
-                    let _ = $msg.write_format_with_hyperlinks::<true>(&mut bun_io::AsFmt::new($w), hyperlinks);
+                    let _ = $msg.write_format_with_hyperlinks::<true>(
+                        &mut bun_io::AsFmt::new($w),
+                        hyperlinks,
+                    );
                 } else {
-                    let _ = $msg.write_format_with_hyperlinks::<false>(&mut bun_io::AsFmt::new($w), hyperlinks);
+                    let _ = $msg.write_format_with_hyperlinks::<false>(
+                        &mut bun_io::AsFmt::new($w),
+                        hyperlinks,
+                    );
                 }
             };
         }
@@ -7369,7 +7414,12 @@ impl VirtualMachine {
             }
         }
 
-        Self::print_stack_trace(writer, &exception.stack, allow_ansi_color, formatter.hyperlinks)?;
+        Self::print_stack_trace(
+            writer,
+            &exception.stack,
+            allow_ansi_color,
+            formatter.hyperlinks,
+        )?;
 
         if !exception.browser_url.is_empty() {
             pretty_write!(

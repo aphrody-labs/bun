@@ -84,7 +84,8 @@ impl Rule for PreferModule {
     }
 
     fn should_run(&self, ctx: &ContextHost) -> bool {
-        !ctx.file_extension().is_some_and(|ext| ext.eq_ignore_ascii_case("cjs"))
+        !ctx.file_extension()
+            .is_some_and(|ext| ext.eq_ignore_ascii_case("cjs"))
     }
 }
 
@@ -105,7 +106,12 @@ fn test() {
         (r#"("use strict")"#, None, None, None),
         (r#""use strong";"#, None, None, None),
         (r#"eval("'use strict'; var x = 42; x;");"#, None, None, None),
-        (r#"new Function("'use strict'; var x = 42; return x;");"#, None, None, None),
+        (
+            r#"new Function("'use strict'; var x = 42; return x;");"#,
+            None,
+            None,
+            None,
+        ),
         (
             "function a() {
                 return;
@@ -128,7 +134,12 @@ fn test() {
             None,
             None,
         ),
-        (r#"import {__filename as filename} from "foo.mjs""#, None, None, None),
+        (
+            r#"import {__filename as filename} from "foo.mjs""#,
+            None,
+            None,
+            None,
+        ),
         ("const foo = 1;export {foo as __dirname}", None, None, None),
         (
             r#"import {createRequire} from 'module';
@@ -176,16 +187,36 @@ fn test() {
         ),
         ("const module = 1;", None, None, None),
         ("type module = number[];", None, None, None),
-        ("type ModuleRegistry = { [module: string]: string };", None, None, None),
-        ("const module = 1; type ModuleRegistry = { [module: string]: string };", None, None, None),
+        (
+            "type ModuleRegistry = { [module: string]: string };",
+            None,
+            None,
+            None,
+        ),
+        (
+            "const module = 1; type ModuleRegistry = { [module: string]: string };",
+            None,
+            None,
+            None,
+        ),
         (
             "type module = number[]; type ModuleRegistry = { [module: string]: string };",
             None,
             None,
             None,
         ),
-        ("type Data = { [module in keyof string]: number; };", None, None, None),
-        ("type ModuleRegistry = { [exports: string]: string };", None, None, None),
+        (
+            "type Data = { [module in keyof string]: number; };",
+            None,
+            None,
+            None,
+        ),
+        (
+            "type ModuleRegistry = { [exports: string]: string };",
+            None,
+            None,
+            None,
+        ),
         ("__dirname", None, None, Some(PathBuf::from("foo.cjs"))),
         ("__dirname", None, None, Some(PathBuf::from("foo.cjS"))),
     ];
@@ -234,7 +265,12 @@ fn test() {
         ("const dirname = __filename;", None, None, None),
         ("const foo = { __dirname};", None, None, None),
         ("const foo = {__filename, };", None, None, None),
-        (r#"if (__dirname.startsWith("/project/src/")) {}"#, None, None, None),
+        (
+            r#"if (__dirname.startsWith("/project/src/")) {}"#,
+            None,
+            None,
+            None,
+        ),
         (r#"if (__filename.endsWith(".js")) {}"#, None, None, None),
         (r#"require("foo");"#, None, None, None),
         ("require('foo');", None, None, None),
@@ -278,9 +314,24 @@ fn test() {
             None,
         ),
         (r#"const {foo: foo} = require("foo");"#, None, None, None),
-        (r#"const {foo: foo} = require( (("foo")) );"#, None, None, None),
-        (r#"const {foo: foo} = ((require))("foo");"#, None, None, None),
-        (r#"const {foo: foo} = (( require("foo") ));"#, None, None, None),
+        (
+            r#"const {foo: foo} = require( (("foo")) );"#,
+            None,
+            None,
+            None,
+        ),
+        (
+            r#"const {foo: foo} = ((require))("foo");"#,
+            None,
+            None,
+            None,
+        ),
+        (
+            r#"const {foo: foo} = (( require("foo") ));"#,
+            None,
+            None,
+            None,
+        ),
         (r#"const {foo:bar}=require("foo");"#, None, None, None),
         (
             r#"const {foo:bar}
@@ -291,10 +342,25 @@ fn test() {
             None,
         ),
         (r#"const {foo:bar} = require("foo");"#, None, None, None),
-        (r#"const {foo:bar} = require( (("foo")) );"#, None, None, None),
+        (
+            r#"const {foo:bar} = require( (("foo")) );"#,
+            None,
+            None,
+            None,
+        ),
         (r#"const {foo:bar} = ((require))("foo");"#, None, None, None),
-        (r#"const {foo:bar} = (( require("foo") ));"#, None, None, None),
-        (r#"const {a   :foo, b:   bar, default   :   baz}=require("foo");"#, None, None, None),
+        (
+            r#"const {foo:bar} = (( require("foo") ));"#,
+            None,
+            None,
+            None,
+        ),
+        (
+            r#"const {a   :foo, b:   bar, default   :   baz}=require("foo");"#,
+            None,
+            None,
+            None,
+        ),
         (
             r#"const {
                 a   :foo,
@@ -307,7 +373,12 @@ fn test() {
             None,
             None,
         ),
-        (r#"const {a   :foo, b:   bar, default   :   baz} = require("foo");"#, None, None, None),
+        (
+            r#"const {a   :foo, b:   bar, default   :   baz} = require("foo");"#,
+            None,
+            None,
+            None,
+        ),
         (
             r#"const {a   :foo, b:   bar, default   :   baz} = require( (("foo")) );"#,
             None,
@@ -350,9 +421,19 @@ fn test() {
         (r#"a = require("foo")"#, None, None, None),
         (r#"function a(a = require("foo")) {}"#, None, None, None),
         (r#"let foo = require("foo");"#, None, None, None),
-        (r#"const foo = require("foo"), bar = require("bar");"#, None, None, None),
+        (
+            r#"const foo = require("foo"), bar = require("bar");"#,
+            None,
+            None,
+            None,
+        ),
         (r#"const {[foo]: foo} = require("foo");"#, None, None, None),
-        (r#"const {["foo"]: foo} = require("foo");"#, None, None, None),
+        (
+            r#"const {["foo"]: foo} = require("foo");"#,
+            None,
+            None,
+            None,
+        ),
         (r#"if (foo) require("foo");"#, None, None, None),
         ("const foo = require`foo`;", None, None, None),
         (
@@ -389,7 +470,12 @@ fn test() {
         ("module[exports] = foo;", None, None, None),
         ("module.exports.foo.bar = foo;", None, None, None),
         ("const foo = 1;exports.default = foo;", None, None, None),
-        ("const foo = 1;module.exports.default = foo;", None, None, None),
+        (
+            "const foo = 1;module.exports.default = foo;",
+            None,
+            None,
+            None,
+        ),
         ("exports.foo.bar = foo;", None, None, None),
         ("exports = 1;", None, None, None),
         ("exports.foo = [];", None, None, None),
@@ -408,8 +494,18 @@ fn test() {
             None,
         ),
         ("__filename", None, None, Some(PathBuf::from("foo.mjs"))),
-        (r#"require("lodash")"#, None, None, Some(PathBuf::from("foo.js"))),
-        (r#"require("lodash")"#, None, None, Some(PathBuf::from("foo.cjs/foo.js"))),
+        (
+            r#"require("lodash")"#,
+            None,
+            None,
+            Some(PathBuf::from("foo.js")),
+        ),
+        (
+            r#"require("lodash")"#,
+            None,
+            None,
+            Some(PathBuf::from("foo.cjs/foo.js")),
+        ),
     ];
 
     Tester::new(PreferModule::NAME, PreferModule::PLUGIN, pass, fail).test_and_snapshot();

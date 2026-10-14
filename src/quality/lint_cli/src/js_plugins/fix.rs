@@ -47,7 +47,10 @@ pub fn apply_fixes(source_text: String, fixes_json: String) -> Option<String> {
         .collect::<Option<Vec<_>>>()?;
 
     // Apply all the fixes
-    let fixed_code = Fixer::new(&source_text, messages, None).fix().fixed_code.into_owned();
+    let fixed_code = Fixer::new(&source_text, messages, None)
+        .fix()
+        .fixed_code
+        .into_owned();
 
     Some(fixed_code)
 }

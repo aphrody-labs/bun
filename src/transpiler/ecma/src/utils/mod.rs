@@ -20,6 +20,9 @@ pub fn sync_function_symbol_flags<'a>(func: &Function<'a>, ctx: &mut TraverseCtx
         return;
     };
     let flags = ctx.scoping_mut().symbol_flags_mut(symbol_id);
-    flags.set(SymbolFlags::AsyncOrGeneratorFunction, func.r#async || func.generator);
+    flags.set(
+        SymbolFlags::AsyncOrGeneratorFunction,
+        func.r#async || func.generator,
+    );
     flags.set(SymbolFlags::FunctionExpression, func.is_expression());
 }

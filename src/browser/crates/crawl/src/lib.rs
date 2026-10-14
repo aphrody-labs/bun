@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 //! Shared crawl frontier, page processing and injectable network transport.
 
-mod blocking;
 pub mod archive;
+mod blocking;
 pub mod cli;
 /// Native acquisition of Material Design's published structured documents.
 pub mod design;
@@ -37,8 +37,10 @@ pub use revisit::{
 };
 pub use robots::RobotsFile;
 pub use runner::{
-    CrawlDaemonOptions, CrawlOptions, CrawlPage, CrawlReport, CrawlTransport, FetchResult,
-    BunBrowserTransport, crawl_bounded, crawl_daemon, extract_links_opts,
+    BunBrowserTransport, CrawlDaemonOptions, CrawlOptions, CrawlPage, CrawlReport, CrawlTransport,
+    FetchResult, crawl_bounded, crawl_daemon, extract_links_opts,
 };
 pub use scoring::{anchor_relevance, frontier_score};
-pub use sitemap::{ParsedSitemap, SitemapEntry, SitemapKind, parse_sitemap, parse_sitemap_page, seed_boost};
+pub use sitemap::{
+    ParsedSitemap, SitemapEntry, SitemapKind, parse_sitemap, parse_sitemap_page, seed_boost,
+};

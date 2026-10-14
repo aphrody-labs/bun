@@ -155,7 +155,9 @@ fn calculate_expression_jsx_depth(
             .scoping()
             .get_reference(ident.reference_id())
             .symbol_id()
-            .map_or(0, |symbol_id| calculate_variable_jsx_depth(symbol_id, ctx, visited)),
+            .map_or(0, |symbol_id| {
+                calculate_variable_jsx_depth(symbol_id, ctx, visited)
+            }),
         Expression::ParenthesizedExpression(paren) => {
             calculate_expression_jsx_depth(&paren.expression, ctx, visited)
         }
@@ -224,7 +226,9 @@ fn is_leaf_jsx_node(node: &AstNode<'_>) -> bool {
         _ => return true,
     };
 
-    !children.iter().any(|child| matches!(child, JSXChild::Element(_) | JSXChild::Fragment(_)))
+    !children
+        .iter()
+        .any(|child| matches!(child, JSXChild::Element(_) | JSXChild::Fragment(_)))
 }
 
 #[expect(clippy::cast_possible_truncation)] // the length of ancestors can't be over u32::MAX, because the source code is already limited by u32::MAX.
@@ -232,7 +236,10 @@ fn jsx_ancestor_depth(node: &AstNode<'_>, ctx: &LintContext<'_>) -> u32 {
     ctx.nodes()
         .ancestors(node.id())
         .filter(|ancestor| {
-            matches!(ancestor.kind(), AstKind::JSXElement(_) | AstKind::JSXFragment(_))
+            matches!(
+                ancestor.kind(),
+                AstKind::JSXElement(_) | AstKind::JSXFragment(_)
+            )
         })
         .count() as u32
 }
@@ -283,7 +290,10 @@ fn test() {
 			      ",
             Some(serde_json::json!([{ "max": 2 }])),
         ),
-        ("const foo = (x) => <div><em>{x}</em></div>;", Some(serde_json::json!([{ "max": 2 }]))),
+        (
+            "const foo = (x) => <div><em>{x}</em></div>;",
+            Some(serde_json::json!([{ "max": 2 }])),
+        ),
         (
             "
 			        <></>

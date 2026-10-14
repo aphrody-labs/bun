@@ -356,7 +356,9 @@ impl NoLoopFunc {
         }
 
         let scoping = ctx.scoping();
-        let border = Self::get_top_loop_node(loop_node, Some(symbol_decl_node), ctx).span().start;
+        let border = Self::get_top_loop_node(loop_node, Some(symbol_decl_node), ctx)
+            .span()
+            .start;
         let symbol_variable_scope_id =
             Self::get_enclosing_variable_scope_id(scoping.symbol_scope_id(symbol_id), ctx);
 
@@ -572,7 +574,11 @@ struct NestedFunctionFinder<'a, 'ctx> {
 
 impl<'a, 'ctx> NestedFunctionFinder<'a, 'ctx> {
     fn new(root_node_id: NodeId, ctx: &'ctx LintContext<'a>) -> Self {
-        Self { ctx, root_node_id, found: false }
+        Self {
+            ctx,
+            root_node_id,
+            found: false,
+        }
     }
 
     fn should_walk_function(&mut self, node_id: NodeId, is_async_or_generator: bool) -> bool {
@@ -625,7 +631,13 @@ struct UnsafeReferenceFinder<'a, 'ctx> {
 
 impl<'a, 'ctx> UnsafeReferenceFinder<'a, 'ctx> {
     fn new(func_span: Span, loop_node: &'ctx AstNode<'a>, ctx: &'ctx LintContext<'a>) -> Self {
-        Self { ctx, loop_node, func_span, seen_symbols: FxHashSet::default(), found: false }
+        Self {
+            ctx,
+            loop_node,
+            func_span,
+            seen_symbols: FxHashSet::default(),
+            found: false,
+        }
     }
 }
 
@@ -651,7 +663,10 @@ impl<'a> VisitJs<'a> for UnsafeReferenceFinder<'a, '_> {
             return;
         }
 
-        let symbol_decl_node = self.ctx.nodes().get_node(scoping.symbol_declaration(symbol_id));
+        let symbol_decl_node = self
+            .ctx
+            .nodes()
+            .get_node(scoping.symbol_declaration(symbol_id));
         if self.func_span.contains_inclusive(symbol_decl_node.span()) {
             return;
         }

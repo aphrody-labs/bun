@@ -38,7 +38,10 @@ pub struct ComplexityConfig {
 
 impl Default for ComplexityConfig {
     fn default() -> Self {
-        Self { max: THRESHOLD_DEFAULT, variant: Variant::Classic }
+        Self {
+            max: THRESHOLD_DEFAULT,
+            variant: Variant::Classic,
+        }
     }
 }
 
@@ -155,7 +158,10 @@ impl Rule for Complexity {
             .and_then(serde_json::Number::as_u64)
             .and_then(|v| u32::try_from(v).ok())
         {
-            Ok(Self(Box::new(ComplexityConfig { max, variant: Variant::Classic })))
+            Ok(Self(Box::new(ComplexityConfig {
+                max,
+                variant: Variant::Classic,
+            })))
         } else {
             DefaultRuleConfig::<Self>::from_value(value).map(DefaultRuleConfig::into_inner)
         }
@@ -237,7 +243,11 @@ struct ComplexityVisitor {
 
 impl ComplexityVisitor {
     fn new(variant: Variant) -> Self {
-        Self { variant, complexity: 1, has_entered_complexity_evaluation: false }
+        Self {
+            variant,
+            complexity: 1,
+            has_entered_complexity_evaluation: false,
+        }
     }
 }
 
@@ -393,8 +403,14 @@ fn test() {
     let pass = vec![
         ("function a(x) {}", None),
         ("function b(x) {}", Some(serde_json::json!([1]))),
-        ("function a(x) {if (true) {return x;}}", Some(serde_json::json!([2]))),
-        ("function a(x) {if (true) {return x;} else {return x+1;}}", Some(serde_json::json!([2]))),
+        (
+            "function a(x) {if (true) {return x;}}",
+            Some(serde_json::json!([2])),
+        ),
+        (
+            "function a(x) {if (true) {return x;} else {return x+1;}}",
+            Some(serde_json::json!([2])),
+        ),
         (
             "function a(x) {if (true) {return x;} else if (false) {return x+1;} else {return 4;}}",
             Some(serde_json::json!([3])),
@@ -403,7 +419,10 @@ fn test() {
             "function a(x) {for(var i = 0; i < 5; i ++) {x ++;} return x;}",
             Some(serde_json::json!([2])),
         ),
-        ("function a(obj) {for(var i in obj) {obj[i] = 3;}}", Some(serde_json::json!([2]))),
+        (
+            "function a(obj) {for(var i in obj) {obj[i] = 3;}}",
+            Some(serde_json::json!([2])),
+        ),
         (
             "function a(x) {for(var i = 0; i < 5; i ++) {if(i % 2 === 0) {x ++;}} return x;}",
             Some(serde_json::json!([3])),
@@ -416,9 +435,18 @@ fn test() {
             "function a(x) {try {x.getThis();} catch (e) {x.getThat();}}",
             Some(serde_json::json!([2])),
         ),
-        ("function a(x) {return x === 4 ? 3 : 5;}", Some(serde_json::json!([2]))),
-        ("function a(x) {return x === 4 ? 3 : (x === 3 ? 2 : 1);}", Some(serde_json::json!([3]))),
-        ("function a(x) {return x || 4;}", Some(serde_json::json!([2]))),
+        (
+            "function a(x) {return x === 4 ? 3 : 5;}",
+            Some(serde_json::json!([2])),
+        ),
+        (
+            "function a(x) {return x === 4 ? 3 : (x === 3 ? 2 : 1);}",
+            Some(serde_json::json!([3])),
+        ),
+        (
+            "function a(x) {return x || 4;}",
+            Some(serde_json::json!([2])),
+        ),
         ("function a(x) {x && 4;}", Some(serde_json::json!([2]))),
         ("function a(x) {x ?? 4;}", Some(serde_json::json!([2]))),
         ("function a(x) {x ||= 4;}", Some(serde_json::json!([2]))),
@@ -440,10 +468,19 @@ fn test() {
             "function a(x) {switch(x){case 1: 1; break; case 2: 2; break; default: if(x == 'foo') {5;};}}",
             Some(serde_json::json!([4])),
         ),
-        ("function a(x) {while(true) {'foo';}}", Some(serde_json::json!([2]))),
-        ("function a(x) {do {'foo';} while (true)}", Some(serde_json::json!([2]))),
+        (
+            "function a(x) {while(true) {'foo';}}",
+            Some(serde_json::json!([2])),
+        ),
+        (
+            "function a(x) {do {'foo';} while (true)}",
+            Some(serde_json::json!([2])),
+        ),
         ("if (foo) { bar(); }", Some(serde_json::json!([3]))),
-        ("var a = (x) => {do {'foo';} while (true)}", Some(serde_json::json!([2]))), // { "ecmaVersion": 6 },
+        (
+            "var a = (x) => {do {'foo';} while (true)}",
+            Some(serde_json::json!([2])),
+        ), // { "ecmaVersion": 6 },
         (
             "function a(x) {switch(x){case 1: 1; break; case 2: 2; break; default: 3;}}",
             Some(serde_json::json!([{ "max": 2, "variant": "modified" }])),
@@ -452,7 +489,10 @@ fn test() {
             "function a(x) {switch(x){case 1: 1; break; case 2: 2; break; default: if(x == 'foo') {5;};}}",
             Some(serde_json::json!([{ "max": 3, "variant": "modified" }])),
         ),
-        ("function foo() { class C { x = a || b; y = c || d; } }", Some(serde_json::json!([2]))), // { "ecmaVersion": 2022 },
+        (
+            "function foo() { class C { x = a || b; y = c || d; } }",
+            Some(serde_json::json!([2])),
+        ), // { "ecmaVersion": 2022 },
         (
             "function foo() { class C { static x = a || b; static y = c || d; } }",
             Some(serde_json::json!([2])),
@@ -465,54 +505,132 @@ fn test() {
             "function foo() { a || b; class C { x = c || d; y = e || f; } }",
             Some(serde_json::json!([2])),
         ), // { "ecmaVersion": 2022 },
-        ("function foo() { class C { [x || y] = a || b; } }", Some(serde_json::json!([2]))), // { "ecmaVersion": 2022 },
-        ("class C { x = a || b; y() { c || d; } z = e || f; }", Some(serde_json::json!([2]))), // { "ecmaVersion": 2022 },
-        ("class C { x() { a || b; } y = c || d; z() { e || f; } }", Some(serde_json::json!([2]))), // { "ecmaVersion": 2022 },
-        ("class C { x = (() => { a || b }) || (() => { c || d }) }", Some(serde_json::json!([2]))), // { "ecmaVersion": 2022 },
-        ("class C { x = () => { a || b }; y = () => { c || d } }", Some(serde_json::json!([2]))), // { "ecmaVersion": 2022 },
-        ("class C { x = a || (() => { b || c }); }", Some(serde_json::json!([2]))), // { "ecmaVersion": 2022 },
-        ("class C { x = class { y = a || b; z = c || d; }; }", Some(serde_json::json!([2]))), // { "ecmaVersion": 2022 },
-        ("class C { x = a || class { y = b || c; z = d || e; }; }", Some(serde_json::json!([2]))), // { "ecmaVersion": 2022 },
-        ("class C { x; y = a; static z; static q = b; }", Some(serde_json::json!([1]))), // { "ecmaVersion": 2022 },
+        (
+            "function foo() { class C { [x || y] = a || b; } }",
+            Some(serde_json::json!([2])),
+        ), // { "ecmaVersion": 2022 },
+        (
+            "class C { x = a || b; y() { c || d; } z = e || f; }",
+            Some(serde_json::json!([2])),
+        ), // { "ecmaVersion": 2022 },
+        (
+            "class C { x() { a || b; } y = c || d; z() { e || f; } }",
+            Some(serde_json::json!([2])),
+        ), // { "ecmaVersion": 2022 },
+        (
+            "class C { x = (() => { a || b }) || (() => { c || d }) }",
+            Some(serde_json::json!([2])),
+        ), // { "ecmaVersion": 2022 },
+        (
+            "class C { x = () => { a || b }; y = () => { c || d } }",
+            Some(serde_json::json!([2])),
+        ), // { "ecmaVersion": 2022 },
+        (
+            "class C { x = a || (() => { b || c }); }",
+            Some(serde_json::json!([2])),
+        ), // { "ecmaVersion": 2022 },
+        (
+            "class C { x = class { y = a || b; z = c || d; }; }",
+            Some(serde_json::json!([2])),
+        ), // { "ecmaVersion": 2022 },
+        (
+            "class C { x = a || class { y = b || c; z = d || e; }; }",
+            Some(serde_json::json!([2])),
+        ), // { "ecmaVersion": 2022 },
+        (
+            "class C { x; y = a; static z; static q = b; }",
+            Some(serde_json::json!([1])),
+        ), // { "ecmaVersion": 2022 },
         (
             "function foo() { class C { static { a || b; } static { c || d; } } }",
             Some(serde_json::json!([2])),
         ), // { "ecmaVersion": 2022 },
-        ("function foo() { a || b; class C { static { c || d; } } }", Some(serde_json::json!([2]))), // { "ecmaVersion": 2022 },
-        ("function foo() { class C { static { a || b; } } c || d; }", Some(serde_json::json!([2]))), // { "ecmaVersion": 2022 },
+        (
+            "function foo() { a || b; class C { static { c || d; } } }",
+            Some(serde_json::json!([2])),
+        ), // { "ecmaVersion": 2022 },
+        (
+            "function foo() { class C { static { a || b; } } c || d; }",
+            Some(serde_json::json!([2])),
+        ), // { "ecmaVersion": 2022 },
         (
             "function foo() { class C { static { a || b; } } class D { static { c || d; } } }",
             Some(serde_json::json!([2])),
         ), // { "ecmaVersion": 2022 },
-        ("class C { static { a || b; } static { c || d; } }", Some(serde_json::json!([2]))), // { "ecmaVersion": 2022 },
+        (
+            "class C { static { a || b; } static { c || d; } }",
+            Some(serde_json::json!([2])),
+        ), // { "ecmaVersion": 2022 },
         (
             "class C { static { a || b; } static { c || d; } static { e || f; } }",
             Some(serde_json::json!([2])),
         ), // { "ecmaVersion": 2022 },
-        ("class C { static { () => a || b; c || d; } }", Some(serde_json::json!([2]))), // { "ecmaVersion": 2022 },
+        (
+            "class C { static { () => a || b; c || d; } }",
+            Some(serde_json::json!([2])),
+        ), // { "ecmaVersion": 2022 },
         (
             "class C { static { a || b; () => c || d; } static { c || d; } }",
             Some(serde_json::json!([2])),
         ), // { "ecmaVersion": 2022 },
         ("class C { static { a } }", Some(serde_json::json!([1]))), // { "ecmaVersion": 2022 },
-        ("class C { static { a } static { b } }", Some(serde_json::json!([1]))), // { "ecmaVersion": 2022 },
+        (
+            "class C { static { a } static { b } }",
+            Some(serde_json::json!([1])),
+        ), // { "ecmaVersion": 2022 },
         (
             "class C { static { a || b; } } class D { static { c || d; } }",
             Some(serde_json::json!([2])),
         ), // { "ecmaVersion": 2022 },
-        ("class C { static { a || b; } static c = d || e; }", Some(serde_json::json!([2]))), // { "ecmaVersion": 2022 },
-        ("class C { static a = b || c; static { c || d; } }", Some(serde_json::json!([2]))), // { "ecmaVersion": 2022 },
-        ("class C { static { a || b; } c = d || e; }", Some(serde_json::json!([2]))), // { "ecmaVersion": 2022 },
-        ("class C { a = b || c; static { d || e; } }", Some(serde_json::json!([2]))), // { "ecmaVersion": 2022 },
-        ("class C { static { a || b; c || d; } }", Some(serde_json::json!([3]))), // { "ecmaVersion": 2022 },
-        ("class C { static { if (a || b) c = d || e; } }", Some(serde_json::json!([4]))), // { "ecmaVersion": 2022 },
+        (
+            "class C { static { a || b; } static c = d || e; }",
+            Some(serde_json::json!([2])),
+        ), // { "ecmaVersion": 2022 },
+        (
+            "class C { static a = b || c; static { c || d; } }",
+            Some(serde_json::json!([2])),
+        ), // { "ecmaVersion": 2022 },
+        (
+            "class C { static { a || b; } c = d || e; }",
+            Some(serde_json::json!([2])),
+        ), // { "ecmaVersion": 2022 },
+        (
+            "class C { a = b || c; static { d || e; } }",
+            Some(serde_json::json!([2])),
+        ), // { "ecmaVersion": 2022 },
+        (
+            "class C { static { a || b; c || d; } }",
+            Some(serde_json::json!([3])),
+        ), // { "ecmaVersion": 2022 },
+        (
+            "class C { static { if (a || b) c = d || e; } }",
+            Some(serde_json::json!([4])),
+        ), // { "ecmaVersion": 2022 },
         ("function b(x) {}", Some(serde_json::json!([{ "max": 1 }]))),
-        ("function b(x) {}", Some(serde_json::json!([{ "maximum": 1 }]))),
-        ("function a(x) {if (true) {return x;}}", Some(serde_json::json!([{ "maximum": 2 }]))),
-        ("function a(b) { b?.c; }", Some(serde_json::json!([{ "max": 2 }]))),
-        ("function a(b = '') {}", Some(serde_json::json!([{ "max": 2 }]))),
-        ("function a(b) { const { c = '' } = b; }", Some(serde_json::json!([{ "max": 2 }]))),
-        ("function a(b) { const [ c = '' ] = b; }", Some(serde_json::json!([{ "max": 2 }]))),
+        (
+            "function b(x) {}",
+            Some(serde_json::json!([{ "maximum": 1 }])),
+        ),
+        (
+            "function a(x) {if (true) {return x;}}",
+            Some(serde_json::json!([{ "maximum": 2 }])),
+        ),
+        (
+            "function a(b) { b?.c; }",
+            Some(serde_json::json!([{ "max": 2 }])),
+        ),
+        (
+            "function a(b = '') {}",
+            Some(serde_json::json!([{ "max": 2 }])),
+        ),
+        (
+            "function a(b) { const { c = '' } = b; }",
+            Some(serde_json::json!([{ "max": 2 }])),
+        ),
+        (
+            "function a(b) { const [ c = '' ] = b; }",
+            Some(serde_json::json!([{ "max": 2 }])),
+        ),
     ];
 
     let fail = vec![
@@ -524,9 +642,18 @@ fn test() {
         ("var func = function () {}", Some(serde_json::json!([0]))),
         ("var obj = { a(x) {} }", Some(serde_json::json!([0]))), // { "ecmaVersion": 6 },
         ("class Test { a(x) {} }", Some(serde_json::json!([0]))), // { "ecmaVersion": 6 },
-        ("var a = (x) => {if (true) {return x;}}", Some(serde_json::json!([1]))), // { "ecmaVersion": 6 },
-        ("function a(x) {if (true) {return x;}}", Some(serde_json::json!([1]))),
-        ("function a(x) {if (true) {return x;} else {return x+1;}}", Some(serde_json::json!([1]))),
+        (
+            "var a = (x) => {if (true) {return x;}}",
+            Some(serde_json::json!([1])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "function a(x) {if (true) {return x;}}",
+            Some(serde_json::json!([1])),
+        ),
+        (
+            "function a(x) {if (true) {return x;} else {return x+1;}}",
+            Some(serde_json::json!([1])),
+        ),
         (
             "function a(x) {if (true) {return x;} else if (false) {return x+1;} else {return 4;}}",
             Some(serde_json::json!([2])),
@@ -535,8 +662,14 @@ fn test() {
             "function a(x) {for(var i = 0; i < 5; i ++) {x ++;} return x;}",
             Some(serde_json::json!([1])),
         ),
-        ("function a(obj) {for(var i in obj) {obj[i] = 3;}}", Some(serde_json::json!([1]))),
-        ("function a(obj) {for(var i of obj) {obj[i] = 3;}}", Some(serde_json::json!([1]))), // { "ecmaVersion": 6 },
+        (
+            "function a(obj) {for(var i in obj) {obj[i] = 3;}}",
+            Some(serde_json::json!([1])),
+        ),
+        (
+            "function a(obj) {for(var i of obj) {obj[i] = 3;}}",
+            Some(serde_json::json!([1])),
+        ), // { "ecmaVersion": 6 },
         (
             "function a(x) {for(var i = 0; i < 5; i ++) {if(i % 2 === 0) {x ++;}} return x;}",
             Some(serde_json::json!([2])),
@@ -549,9 +682,18 @@ fn test() {
             "function a(x) {try {x.getThis();} catch (e) {x.getThat();}}",
             Some(serde_json::json!([1])),
         ),
-        ("function a(x) {return x === 4 ? 3 : 5;}", Some(serde_json::json!([1]))),
-        ("function a(x) {return x === 4 ? 3 : (x === 3 ? 2 : 1);}", Some(serde_json::json!([2]))),
-        ("function a(x) {return x || 4;}", Some(serde_json::json!([1]))),
+        (
+            "function a(x) {return x === 4 ? 3 : 5;}",
+            Some(serde_json::json!([1])),
+        ),
+        (
+            "function a(x) {return x === 4 ? 3 : (x === 3 ? 2 : 1);}",
+            Some(serde_json::json!([2])),
+        ),
+        (
+            "function a(x) {return x || 4;}",
+            Some(serde_json::json!([1])),
+        ),
         ("function a(x) {x && 4;}", Some(serde_json::json!([1]))),
         ("function a(x) {x ?? 4;}", Some(serde_json::json!([1]))),
         ("function a(x) {x ||= 4;}", Some(serde_json::json!([1]))),
@@ -565,8 +707,14 @@ fn test() {
             "function a(x) {switch(x){case 1: 1; break; case 2: 2; break; default: if(x == 'foo') {5;};}}",
             Some(serde_json::json!([3])),
         ),
-        ("function a(x) {while(true) {'foo';}}", Some(serde_json::json!([1]))),
-        ("function a(x) {do {'foo';} while (true)}", Some(serde_json::json!([1]))),
+        (
+            "function a(x) {while(true) {'foo';}}",
+            Some(serde_json::json!([1])),
+        ),
+        (
+            "function a(x) {do {'foo';} while (true)}",
+            Some(serde_json::json!([1])),
+        ),
         (
             "function a(x) {(function() {while(true){'foo';}})(); (function() {while(true){'bar';}})();}",
             Some(serde_json::json!([1])),
@@ -575,8 +723,14 @@ fn test() {
             "function a(x) {(function() {while(true){'foo';}})(); (function() {'bar';})();}",
             Some(serde_json::json!([1])),
         ),
-        ("var obj = { a(x) { return x ? 0 : 1; } };", Some(serde_json::json!([1]))), // { "ecmaVersion": 6 },
-        ("var obj = { a: function b(x) { return x ? 0 : 1; } };", Some(serde_json::json!([1]))),
+        (
+            "var obj = { a(x) { return x ? 0 : 1; } };",
+            Some(serde_json::json!([1])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "var obj = { a: function b(x) { return x ? 0 : 1; } };",
+            Some(serde_json::json!([1])),
+        ),
         (
             "function a(x) {switch(x){case 1: 1; break; case 2: 2; break; default: 3;}}",
             Some(serde_json::json!([{ "max": 1, "variant": "modified" }])),
@@ -585,13 +739,34 @@ fn test() {
             "function a(x) {switch(x){case 1: 1; break; case 2: 2; break; default: if(x == 'foo') {5;};}}",
             Some(serde_json::json!([{ "max": 2, "variant": "modified" }])),
         ),
-        ("function foo () { a || b; class C { x; } c || d; }", Some(serde_json::json!([2]))), // { "ecmaVersion": 2022 },
-        ("function foo () { a || b; class C { x = c; } d || e; }", Some(serde_json::json!([2]))), // { "ecmaVersion": 2022 },
-        ("function foo () { a || b; class C { [x || y]; } }", Some(serde_json::json!([2]))), // { "ecmaVersion": 2022 },
-        ("function foo () { a || b; class C { [x || y] = c; } }", Some(serde_json::json!([2]))), // { "ecmaVersion": 2022 },
-        ("function foo () { class C { [x || y]; } a || b; }", Some(serde_json::json!([2]))), // { "ecmaVersion": 2022 },
-        ("function foo () { class C { [x || y] = a; } b || c; }", Some(serde_json::json!([2]))), // { "ecmaVersion": 2022 },
-        ("function foo () { class C { [x || y]; [z || q]; } }", Some(serde_json::json!([2]))), // { "ecmaVersion": 2022 },
+        (
+            "function foo () { a || b; class C { x; } c || d; }",
+            Some(serde_json::json!([2])),
+        ), // { "ecmaVersion": 2022 },
+        (
+            "function foo () { a || b; class C { x = c; } d || e; }",
+            Some(serde_json::json!([2])),
+        ), // { "ecmaVersion": 2022 },
+        (
+            "function foo () { a || b; class C { [x || y]; } }",
+            Some(serde_json::json!([2])),
+        ), // { "ecmaVersion": 2022 },
+        (
+            "function foo () { a || b; class C { [x || y] = c; } }",
+            Some(serde_json::json!([2])),
+        ), // { "ecmaVersion": 2022 },
+        (
+            "function foo () { class C { [x || y]; } a || b; }",
+            Some(serde_json::json!([2])),
+        ), // { "ecmaVersion": 2022 },
+        (
+            "function foo () { class C { [x || y] = a; } b || c; }",
+            Some(serde_json::json!([2])),
+        ), // { "ecmaVersion": 2022 },
+        (
+            "function foo () { class C { [x || y]; [z || q]; } }",
+            Some(serde_json::json!([2])),
+        ), // { "ecmaVersion": 2022 },
         (
             "function foo () { class C { [x || y] = a; [z || q] = b; } }",
             Some(serde_json::json!([2])),
@@ -604,37 +779,94 @@ fn test() {
             "class C { x(){ a || b; } y = c || d || e; z() { f || g; } }",
             Some(serde_json::json!([2])),
         ), // { "ecmaVersion": 2022 },
-        ("class C { x = a || b; y() { c || d || e; } z = f || g; }", Some(serde_json::json!([2]))), // { "ecmaVersion": 2022 },
-        ("class C { x; y() { c || d || e; } z; }", Some(serde_json::json!([2]))), // { "ecmaVersion": 2022 },
+        (
+            "class C { x = a || b; y() { c || d || e; } z = f || g; }",
+            Some(serde_json::json!([2])),
+        ), // { "ecmaVersion": 2022 },
+        (
+            "class C { x; y() { c || d || e; } z; }",
+            Some(serde_json::json!([2])),
+        ), // { "ecmaVersion": 2022 },
         ("class C { x = a || b; }", Some(serde_json::json!([1]))), // { "ecmaVersion": 2022 },
         ("(class { x = a || b; })", Some(serde_json::json!([1]))), // { "ecmaVersion": 2022 },
-        ("class C { static x = a || b; }", Some(serde_json::json!([1]))), // { "ecmaVersion": 2022 },
+        (
+            "class C { static x = a || b; }",
+            Some(serde_json::json!([1])),
+        ), // { "ecmaVersion": 2022 },
         ("(class { x = a ? b : c; })", Some(serde_json::json!([1]))), // { "ecmaVersion": 2022 },
         ("class C { x = a || b || c; }", Some(serde_json::json!([2]))), // { "ecmaVersion": 2022 },
-        ("class C { x = a || b; y = b || c || d; z = e || f; }", Some(serde_json::json!([2]))), // { "ecmaVersion": 2022 },
-        ("class C { x = a || b || c; y = d || e; z = f || g || h; }", Some(serde_json::json!([2]))), // { "ecmaVersion": 2022 },
-        ("class C { x = () => a || b || c; }", Some(serde_json::json!([2]))), // { "ecmaVersion": 2022 },
-        ("class C { x = (() => a || b || c) || d; }", Some(serde_json::json!([2]))), // { "ecmaVersion": 2022 },
-        ("class C { x = () => a || b || c; y = d || e; }", Some(serde_json::json!([2]))), // { "ecmaVersion": 2022 },
-        ("class C { x = () => a || b || c; y = d || e || f; }", Some(serde_json::json!([2]))), // { "ecmaVersion": 2022 },
+        (
+            "class C { x = a || b; y = b || c || d; z = e || f; }",
+            Some(serde_json::json!([2])),
+        ), // { "ecmaVersion": 2022 },
+        (
+            "class C { x = a || b || c; y = d || e; z = f || g || h; }",
+            Some(serde_json::json!([2])),
+        ), // { "ecmaVersion": 2022 },
+        (
+            "class C { x = () => a || b || c; }",
+            Some(serde_json::json!([2])),
+        ), // { "ecmaVersion": 2022 },
+        (
+            "class C { x = (() => a || b || c) || d; }",
+            Some(serde_json::json!([2])),
+        ), // { "ecmaVersion": 2022 },
+        (
+            "class C { x = () => a || b || c; y = d || e; }",
+            Some(serde_json::json!([2])),
+        ), // { "ecmaVersion": 2022 },
+        (
+            "class C { x = () => a || b || c; y = d || e || f; }",
+            Some(serde_json::json!([2])),
+        ), // { "ecmaVersion": 2022 },
         (
             "class C { x = function () { a || b }; y = function () { c || d }; }",
             Some(serde_json::json!([1])),
         ), // { "ecmaVersion": 2022 },
-        ("class C { x = class { [y || z]; }; }", Some(serde_json::json!([1]))), // { "ecmaVersion": 2022 },
-        ("class C { x = class { [y || z] = a; }; }", Some(serde_json::json!([1]))), // { "ecmaVersion": 2022 },
-        ("class C { x = class { y = a || b; }; }", Some(serde_json::json!([1]))), // { "ecmaVersion": 2022 },
-        ("function foo () { a || b; class C { static {} } c || d; }", Some(serde_json::json!([2]))), // { "ecmaVersion": 2022 },
+        (
+            "class C { x = class { [y || z]; }; }",
+            Some(serde_json::json!([1])),
+        ), // { "ecmaVersion": 2022 },
+        (
+            "class C { x = class { [y || z] = a; }; }",
+            Some(serde_json::json!([1])),
+        ), // { "ecmaVersion": 2022 },
+        (
+            "class C { x = class { y = a || b; }; }",
+            Some(serde_json::json!([1])),
+        ), // { "ecmaVersion": 2022 },
+        (
+            "function foo () { a || b; class C { static {} } c || d; }",
+            Some(serde_json::json!([2])),
+        ), // { "ecmaVersion": 2022 },
         (
             "function foo () { a || b; class C { static { c || d; } } e || f; }",
             Some(serde_json::json!([2])),
         ), // { "ecmaVersion": 2022 },
-        ("class C { static { a || b; }  }", Some(serde_json::json!([1]))), // { "ecmaVersion": 2022 },
-        ("class C { static { a || b || c; }  }", Some(serde_json::json!([2]))), // { "ecmaVersion": 2022 },
-        ("class C { static { a || b; c || d; }  }", Some(serde_json::json!([2]))), // { "ecmaVersion": 2022 },
-        ("class C { static { a || b; c || d; e || f; }  }", Some(serde_json::json!([3]))), // { "ecmaVersion": 2022 },
-        ("class C { static { a || b; c || d; { e || f; } }  }", Some(serde_json::json!([3]))), // { "ecmaVersion": 2022 },
-        ("class C { static { if (a || b) c = d || e; } }", Some(serde_json::json!([3]))), // { "ecmaVersion": 2022 },
+        (
+            "class C { static { a || b; }  }",
+            Some(serde_json::json!([1])),
+        ), // { "ecmaVersion": 2022 },
+        (
+            "class C { static { a || b || c; }  }",
+            Some(serde_json::json!([2])),
+        ), // { "ecmaVersion": 2022 },
+        (
+            "class C { static { a || b; c || d; }  }",
+            Some(serde_json::json!([2])),
+        ), // { "ecmaVersion": 2022 },
+        (
+            "class C { static { a || b; c || d; e || f; }  }",
+            Some(serde_json::json!([3])),
+        ), // { "ecmaVersion": 2022 },
+        (
+            "class C { static { a || b; c || d; { e || f; } }  }",
+            Some(serde_json::json!([3])),
+        ), // { "ecmaVersion": 2022 },
+        (
+            "class C { static { if (a || b) c = d || e; } }",
+            Some(serde_json::json!([3])),
+        ), // { "ecmaVersion": 2022 },
         (
             "class C { static { if (a || b) c = (d => e || f)() || (g => h || i)(); } }",
             Some(serde_json::json!([3])),
@@ -675,26 +907,71 @@ fn test() {
             "class C { static { a || b || c || d; } static { e || f || g || h; } }",
             Some(serde_json::json!([3])),
         ), // { "ecmaVersion": 2022 },
-        ("class C { x = () => a || b || c; y = f || g || h; }", Some(serde_json::json!([2]))), // { "ecmaVersion": 2022 },
+        (
+            "class C { x = () => a || b || c; y = f || g || h; }",
+            Some(serde_json::json!([2])),
+        ), // { "ecmaVersion": 2022 },
         ("function a(x) {}", Some(serde_json::json!([{ "max": 0 }]))),
-        ("function a(x) {}", Some(serde_json::json!([{ "maximum": 0 }]))),
-        ("function a(x) {if (true) {return x;}}", Some(serde_json::json!([{ "maximum": 1 }]))),
+        (
+            "function a(x) {}",
+            Some(serde_json::json!([{ "maximum": 0 }])),
+        ),
+        (
+            "function a(x) {if (true) {return x;}}",
+            Some(serde_json::json!([{ "maximum": 1 }])),
+        ),
         (
             "const obj = { b: (a) => a?.b?.c, c: function (a) { return a?.b?.c; } };",
             Some(serde_json::json!([{ "max": 2 }])),
         ),
-        ("function a(b) { b?.c; }", Some(serde_json::json!([{ "max": 1 }]))),
-        ("function a(b) { b?.['c']; }", Some(serde_json::json!([{ "max": 1 }]))),
-        ("function a(b) { b?.c; d || e; }", Some(serde_json::json!([{ "max": 2 }]))),
-        ("function a(b) { b?.c?.d; }", Some(serde_json::json!([{ "max": 2 }]))),
-        ("function a(b) { b?.['c']?.['d']; }", Some(serde_json::json!([{ "max": 2 }]))),
-        ("function a(b) { b?.c?.['d']; }", Some(serde_json::json!([{ "max": 2 }]))),
-        ("function a(b) { b?.c.d?.e; }", Some(serde_json::json!([{ "max": 2 }]))),
-        ("function a(b) { b?.c?.(); }", Some(serde_json::json!([{ "max": 2 }]))),
-        ("function a(b) { b?.c?.()?.(); }", Some(serde_json::json!([{ "max": 3 }]))),
-        ("function a(b = '') {}", Some(serde_json::json!([{ "max": 1 }]))),
-        ("function a(b) { const { c = '' } = b; }", Some(serde_json::json!([{ "max": 1 }]))),
-        ("function a(b) { const [ c = '' ] = b; }", Some(serde_json::json!([{ "max": 1 }]))),
+        (
+            "function a(b) { b?.c; }",
+            Some(serde_json::json!([{ "max": 1 }])),
+        ),
+        (
+            "function a(b) { b?.['c']; }",
+            Some(serde_json::json!([{ "max": 1 }])),
+        ),
+        (
+            "function a(b) { b?.c; d || e; }",
+            Some(serde_json::json!([{ "max": 2 }])),
+        ),
+        (
+            "function a(b) { b?.c?.d; }",
+            Some(serde_json::json!([{ "max": 2 }])),
+        ),
+        (
+            "function a(b) { b?.['c']?.['d']; }",
+            Some(serde_json::json!([{ "max": 2 }])),
+        ),
+        (
+            "function a(b) { b?.c?.['d']; }",
+            Some(serde_json::json!([{ "max": 2 }])),
+        ),
+        (
+            "function a(b) { b?.c.d?.e; }",
+            Some(serde_json::json!([{ "max": 2 }])),
+        ),
+        (
+            "function a(b) { b?.c?.(); }",
+            Some(serde_json::json!([{ "max": 2 }])),
+        ),
+        (
+            "function a(b) { b?.c?.()?.(); }",
+            Some(serde_json::json!([{ "max": 3 }])),
+        ),
+        (
+            "function a(b = '') {}",
+            Some(serde_json::json!([{ "max": 1 }])),
+        ),
+        (
+            "function a(b) { const { c = '' } = b; }",
+            Some(serde_json::json!([{ "max": 1 }])),
+        ),
+        (
+            "function a(b) { const [ c = '' ] = b; }",
+            Some(serde_json::json!([{ "max": 1 }])),
+        ),
         (
             "function a(b) { const [ { c: d = '' } = {} ] = b; }",
             Some(serde_json::json!([{ "max": 1 }])),

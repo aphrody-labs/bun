@@ -510,7 +510,12 @@ pub(super) unsafe fn carve_jsx(
                     }
                     b'>' => {
                         // opening tag ends; children begin
-                        if let Some(f @ JFrame { kind: JFrameKind::JsxTag, .. }) = stack.last_mut()
+                        if let Some(
+                            f @ JFrame {
+                                kind: JFrameKind::JsxTag,
+                                ..
+                            },
+                        ) = stack.last_mut()
                         {
                             f.kind = JFrameKind::JsxElem;
                         }
@@ -569,7 +574,11 @@ pub(super) unsafe fn carve_jsx(
                     let direct = c1 == b'>'
                         || (c1 == b'/' && c2 != b'*' && c2 != b'/')
                         || (c1 < 0x80 && is_id_start(c1));
-                    let tpos = if direct { s + 1 } else { jsx_skip_trivia(src, n, s + 1) };
+                    let tpos = if direct {
+                        s + 1
+                    } else {
+                        jsx_skip_trivia(src, n, s + 1)
+                    };
                     let tc = if tpos < n { *src.add(tpos) } else { 0 };
                     if tc == b'/' {
                         // closing tag `</name>` or `</>`; the name stays IDENT
@@ -663,7 +672,11 @@ pub(super) unsafe fn carve_jsx(
                 lanes.push_diag(f.start, ne - f.start, DiagCode::UnterminatedJsxElement);
             }
             JFrameKind::JsxCont => {
-                lanes.push_diag(f.start, n as u32 - f.start, DiagCode::UnterminatedJsxContainer);
+                lanes.push_diag(
+                    f.start,
+                    n as u32 - f.start,
+                    DiagCode::UnterminatedJsxContainer,
+                );
             }
             JFrameKind::TemplateSub => {}
         }

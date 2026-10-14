@@ -10,7 +10,9 @@ use core::ptr::null_mut;
 use core::sync::atomic::{AtomicBool, Ordering};
 use std::alloc::System;
 
-use super::{Heap, MI_MAX_ALIGN_SIZE, Option as MiOption, mi_block_visit_fun, mi_heap_area_t, mi_output_fun};
+use super::{
+    Heap, MI_MAX_ALIGN_SIZE, Option as MiOption, mi_block_visit_fun, mi_heap_area_t, mi_output_fun,
+};
 
 #[repr(C)]
 struct Header {
@@ -146,7 +148,12 @@ unsafe fn release(header: *mut Header, unlink: bool) {
 
 /// # Safety
 /// `p` must be null or a live block from this module.
-unsafe fn realloc_in(heap: *mut HeapState, p: *mut c_void, newsize: usize, align: usize) -> *mut c_void {
+unsafe fn realloc_in(
+    heap: *mut HeapState,
+    p: *mut c_void,
+    newsize: usize,
+    align: usize,
+) -> *mut c_void {
     if p.is_null() {
         return alloc_in(heap, newsize, align, false);
     }
@@ -224,8 +231,7 @@ pub unsafe fn mi_on_thread_idle_start() -> bool {
 pub fn mi_on_thread_idle_end() {}
 /// # Safety
 /// No-op.
-pub unsafe fn mi_stats_print_out(_out: core::option::Option<mi_output_fun>, _arg: *mut c_void) {
-}
+pub unsafe fn mi_stats_print_out(_out: core::option::Option<mi_output_fun>, _arg: *mut c_void) {}
 /// # Safety
 /// Every pointer must be valid for a `usize` write.
 #[allow(clippy::too_many_arguments)]
@@ -327,12 +333,20 @@ pub unsafe fn mi_heap_realloc(heap: *mut Heap, p: *mut c_void, newsize: usize) -
 }
 /// # Safety
 /// `heap` must be live.
-pub unsafe fn mi_heap_malloc_aligned(heap: *mut Heap, size: usize, alignment: usize) -> *mut c_void {
+pub unsafe fn mi_heap_malloc_aligned(
+    heap: *mut Heap,
+    size: usize,
+    alignment: usize,
+) -> *mut c_void {
     alloc_in(tracked(heap), size, alignment, false)
 }
 /// # Safety
 /// `heap` must be live.
-pub(super) unsafe fn mi_heap_zalloc_aligned(heap: *mut Heap, size: usize, alignment: usize) -> *mut c_void {
+pub(super) unsafe fn mi_heap_zalloc_aligned(
+    heap: *mut Heap,
+    size: usize,
+    alignment: usize,
+) -> *mut c_void {
     alloc_in(tracked(heap), size, alignment, true)
 }
 /// # Safety

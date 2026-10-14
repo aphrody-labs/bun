@@ -67,11 +67,17 @@ impl Rule for ReactInJsxScope {
             _ => return,
         };
         let scope = ctx.scoping();
-        if scope.get_binding(scope.root_scope_id(), static_ident!("React")).is_some() {
+        if scope
+            .get_binding(scope.root_scope_id(), static_ident!("React"))
+            .is_some()
+        {
             return;
         }
 
-        if scope.find_binding(node.scope_id(), static_ident!("React")).is_none() {
+        if scope
+            .find_binding(node.scope_id(), static_ident!("React"))
+            .is_none()
+        {
             ctx.diagnostic(react_in_jsx_scope_diagnostic(node_span));
         }
     }
@@ -91,7 +97,10 @@ fn test() {
         ("var React; <>fragment</>;", None),
         ("var React; <x-gif />;", None),
         ("var React, App, a=1; <App attr={a} />;", None),
-        ("var React, App, a=1; function elem() { return <App attr={a} />; }", None),
+        (
+            "var React, App, a=1; function elem() { return <App attr={a} />; }",
+            None,
+        ),
         ("var React, App; <App />;", None),
         (
             "

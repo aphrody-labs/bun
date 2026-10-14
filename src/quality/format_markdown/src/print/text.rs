@@ -119,7 +119,13 @@ pub fn push_text<'a>(
                     Some(glued) if is_last => glued,
                     _ => word,
                 };
-                Some(NextWord { word, line: "", escaped, in_sentence: true, header: None })
+                Some(NextWord {
+                    word,
+                    line: "",
+                    escaped,
+                    in_sentence: true,
+                    header: None,
+                })
             };
             let cx = TextContext {
                 next_word: next,
@@ -210,7 +216,9 @@ pub fn push_whitespace<'a>(
     let (prev, next) = if cx.has_cjk && (newline || prose_wrap == ProseWrap::Always) {
         (
             cx.prev_word.and_then(cjk::last_kind),
-            cx.next_word.filter(|w| w.in_sentence).and_then(|w| cjk::first_kind(w.word)),
+            cx.next_word
+                .filter(|w| w.in_sentence)
+                .and_then(|w| cjk::first_kind(w.word)),
         )
     } else {
         (None, None)
@@ -266,7 +274,11 @@ fn looks_like_block_start(next: NextWord<'_>, exact: bool) -> bool {
     // the word alone (`***` is a break, `-|-` a delimiter row)
     // and the word with content after it (`- x` interrupts a paragraph where an empty `-` does not).
     let target = if exact { next.line } else { next.word };
-    if !target.as_bytes().first().is_some_and(|&b| may_open_block(b)) {
+    if !target
+        .as_bytes()
+        .first()
+        .is_some_and(|&b| may_open_block(b))
+    {
         return false;
     }
     if exact {

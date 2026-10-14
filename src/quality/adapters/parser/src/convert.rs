@@ -46,12 +46,19 @@ impl From<&ModuleRecord<'_>> for EcmaScriptModule {
             .map(|e| (e.statement_span, StaticExportEntry::from(e)))
             .collect::<Vec<_>>()
             .into_iter()
-            .fold(FxHashMap::<_, Vec<StaticExportEntry>>::default(), |mut acc, (span, e)| {
-                acc.entry(span).or_default().push(e);
-                acc
-            })
+            .fold(
+                FxHashMap::<_, Vec<StaticExportEntry>>::default(),
+                |mut acc, (span, e)| {
+                    acc.entry(span).or_default().push(e);
+                    acc
+                },
+            )
             .into_iter()
-            .map(|(span, entries)| StaticExport { start: span.start, end: span.end, entries })
+            .map(|(span, entries)| StaticExport {
+                start: span.start,
+                end: span.end,
+                entries,
+            })
             .collect::<Vec<_>>();
         static_exports.sort_unstable_by_key(|e| e.start);
 
@@ -79,7 +86,10 @@ impl From<&ModuleRecord<'_>> for EcmaScriptModule {
 
 impl From<&oxc::span::Span> for Span {
     fn from(span: &oxc::span::Span) -> Self {
-        Self { start: span.start, end: span.end }
+        Self {
+            start: span.start,
+            end: span.end,
+        }
     }
 }
 
@@ -119,11 +129,19 @@ impl From<&module_record::ImportImportName<'_>> for ImportName {
             module_record::ImportImportName::NamespaceObject => {
                 (ImportNameKind::NamespaceObject, None, None, None)
             }
-            module_record::ImportImportName::Default(span) => {
-                (ImportNameKind::Default, None, Some(span.start), Some(span.end))
-            }
+            module_record::ImportImportName::Default(span) => (
+                ImportNameKind::Default,
+                None,
+                Some(span.start),
+                Some(span.end),
+            ),
         };
-        Self { kind, name, start, end }
+        Self {
+            kind,
+            name,
+            start,
+            end,
+        }
     }
 }
 
@@ -152,7 +170,12 @@ impl From<&module_record::ExportImportName<'_>> for ExportImportName {
             }
             module_record::ExportImportName::Null => (ExportImportNameKind::None, None, None, None),
         };
-        Self { kind, name, start, end }
+        Self {
+            kind,
+            name,
+            start,
+            end,
+        }
     }
 }
 
@@ -165,12 +188,20 @@ impl From<&module_record::ExportExportName<'_>> for ExportExportName {
                 Some(name_span.span.start),
                 Some(name_span.span.end),
             ),
-            module_record::ExportExportName::Default(span) => {
-                (ExportExportNameKind::Default, None, Some(span.start), Some(span.end))
-            }
+            module_record::ExportExportName::Default(span) => (
+                ExportExportNameKind::Default,
+                None,
+                Some(span.start),
+                Some(span.end),
+            ),
             module_record::ExportExportName::Null => (ExportExportNameKind::None, None, None, None),
         };
-        Self { kind, name, start, end }
+        Self {
+            kind,
+            name,
+            start,
+            end,
+        }
     }
 }
 
@@ -191,6 +222,11 @@ impl From<&module_record::ExportLocalName<'_>> for ExportLocalName {
             ),
             module_record::ExportLocalName::Null => (ExportLocalNameKind::None, None, None, None),
         };
-        Self { kind, name, start, end }
+        Self {
+            kind,
+            name,
+            start,
+            end,
+        }
     }
 }

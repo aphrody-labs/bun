@@ -57,12 +57,20 @@ fn test() {
     let fix: Vec<ExpectFixTestCase> = vec![
         (
             "expect(a === b).toBe(true);",
-            ("expect(a).toBe(b);", "expect(a).toEqual(b);", "expect(a).toStrictEqual(b);"),
+            (
+                "expect(a).toBe(b);",
+                "expect(a).toEqual(b);",
+                "expect(a).toStrictEqual(b);",
+            ),
         )
             .into(),
         (
             "expect(a === b,).toBe(true,);",
-            ("expect(a,).toBe(b,);", "expect(a,).toEqual(b,);", "expect(a,).toStrictEqual(b,);"),
+            (
+                "expect(a,).toBe(b,);",
+                "expect(a,).toEqual(b,);",
+                "expect(a,).toStrictEqual(b,);",
+            ),
         )
             .into(),
         (
@@ -103,7 +111,11 @@ fn test() {
             .into(),
         (
             "expect(a === b).not.toBe(false);",
-            ("expect(a).toBe(b);", "expect(a).toEqual(b);", "expect(a).toStrictEqual(b);"),
+            (
+                "expect(a).toBe(b);",
+                "expect(a).toEqual(b);",
+                "expect(a).toStrictEqual(b);",
+            ),
         )
             .into(),
         (
@@ -153,7 +165,11 @@ fn test() {
             .into(),
         (
             "expect(a !== b).toBe(false);",
-            ("expect(a).toBe(b);", "expect(a).toEqual(b);", "expect(a).toStrictEqual(b);"),
+            (
+                "expect(a).toBe(b);",
+                "expect(a).toEqual(b);",
+                "expect(a).toStrictEqual(b);",
+            ),
         )
             .into(),
         (
@@ -176,7 +192,11 @@ fn test() {
             .into(),
         (
             "expect(a !== b).not.toBe(true);",
-            ("expect(a).toBe(b);", "expect(a).toEqual(b);", "expect(a).toStrictEqual(b);"),
+            (
+                "expect(a).toBe(b);",
+                "expect(a).toEqual(b);",
+                "expect(a).toStrictEqual(b);",
+            ),
         )
             .into(),
         (
@@ -208,8 +228,13 @@ fn test() {
             .into(),
     ];
 
-    Tester::new(PreferEqualityMatcher::NAME, PreferEqualityMatcher::PLUGIN, pass, fail)
-        .with_jest_plugin(true)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        PreferEqualityMatcher::NAME,
+        PreferEqualityMatcher::PLUGIN,
+        pass,
+        fail,
+    )
+    .with_jest_plugin(true)
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

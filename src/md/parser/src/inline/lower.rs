@@ -10,7 +10,10 @@ use super::{PLinkKind, PN};
 
 /// Siblings are emitted in source order
 fn push<'a>(out: &mut ArenaVec<'a, Inline<'a>>, node: Inline<'a>) {
-    debug_assert!(out.last().is_none_or(|prev| prev.span().end <= node.span().start));
+    debug_assert!(
+        out.last()
+            .is_none_or(|prev| prev.span().end <= node.span().start)
+    );
     out.push(node);
 }
 
@@ -37,17 +40,31 @@ pub(super) fn push_ast<'a>(
             push(out, Inline::Text(Text { span, contains_cjk }));
         }
         PN::SoftBreak(p) => {
-            push(out, Inline::SoftBreak(SoftBreak { span: Span::empty(input.offset(p)) }));
+            push(
+                out,
+                Inline::SoftBreak(SoftBreak {
+                    span: Span::empty(input.offset(p)),
+                }),
+            );
         }
         PN::HardBreak { kind, r } => {
-            push(out, Inline::HardBreak(HardBreak { kind, span: input.span(r) }));
+            push(
+                out,
+                Inline::HardBreak(HardBreak {
+                    kind,
+                    span: input.span(r),
+                }),
+            );
         }
         PN::Code { r, content } => {
             let pieces = input.pieces_in(content, allocator);
             push(
                 out,
                 Inline::CodeSpan(ArenaBox::new_in(
-                    CodeSpan { pieces, span: input.span(r) },
+                    CodeSpan {
+                        pieces,
+                        span: input.span(r),
+                    },
                     &allocator,
                 )),
             );
@@ -57,22 +74,39 @@ pub(super) fn push_ast<'a>(
             push(
                 out,
                 Inline::HtmlInline(ArenaBox::new_in(
-                    HtmlInline { pieces, span: input.span(r) },
+                    HtmlInline {
+                        pieces,
+                        span: input.span(r),
+                    },
                     &allocator,
                 )),
             );
         }
         PN::Autolink { r, email } => {
-            push(out, Inline::Autolink(Autolink { span: input.span(r), email }));
+            push(
+                out,
+                Inline::Autolink(Autolink {
+                    span: input.span(r),
+                    email,
+                }),
+            );
         }
         PN::AutolinkLiteral(r) => {
-            push(out, Inline::AutolinkLiteral(AutolinkLiteral { span: input.span(r) }));
+            push(
+                out,
+                Inline::AutolinkLiteral(AutolinkLiteral {
+                    span: input.span(r),
+                }),
+            );
         }
         PN::FootnoteRef { label, r } => {
             push(
                 out,
                 Inline::FootnoteReference(ArenaBox::new_in(
-                    FootnoteReference { label: input.span(label), span: input.span(r) },
+                    FootnoteReference {
+                        label: input.span(label),
+                        span: input.span(r),
+                    },
                     &allocator,
                 )),
             );
@@ -82,25 +116,41 @@ pub(super) fn push_ast<'a>(
             push(
                 out,
                 Inline::MathSpan(ArenaBox::new_in(
-                    MathSpan { pieces, span: input.span(r) },
+                    MathSpan {
+                        pieces,
+                        span: input.span(r),
+                    },
                     &allocator,
                 )),
             );
         }
         PN::WikiLink(r) => {
-            push(out, Inline::WikiLink(WikiLink { span: input.span(r) }));
+            push(
+                out,
+                Inline::WikiLink(WikiLink {
+                    span: input.span(r),
+                }),
+            );
         }
         PN::Liquid(r) => {
             let pieces = input.pieces_in(r.clone(), allocator);
             push(
                 out,
                 Inline::Liquid(ArenaBox::new_in(
-                    Liquid { pieces, span: input.span(r) },
+                    Liquid {
+                        pieces,
+                        span: input.span(r),
+                    },
                     &allocator,
                 )),
             );
         }
-        PN::Emph { marker, len, children, r } => {
+        PN::Emph {
+            marker,
+            len,
+            children,
+            r,
+        } => {
             let mut inner = ArenaVec::new_in(&allocator);
             for child in children {
                 push_ast(allocator, input, child, &mut inner);
@@ -110,7 +160,11 @@ pub(super) fn push_ast<'a>(
                 push(
                     out,
                     Inline::Strikethrough(ArenaBox::new_in(
-                        Strikethrough { tildes: len, children: inner, span },
+                        Strikethrough {
+                            tildes: len,
+                            children: inner,
+                            span,
+                        },
                         &allocator,
                     )),
                 );
@@ -118,7 +172,11 @@ pub(super) fn push_ast<'a>(
                 push(
                     out,
                     Inline::Strong(ArenaBox::new_in(
-                        Strong { marker, children: inner, span },
+                        Strong {
+                            marker,
+                            children: inner,
+                            span,
+                        },
                         &allocator,
                     )),
                 );
@@ -126,26 +184,44 @@ pub(super) fn push_ast<'a>(
                 push(
                     out,
                     Inline::Emphasis(ArenaBox::new_in(
-                        Emphasis { marker, children: inner, span },
+                        Emphasis {
+                            marker,
+                            children: inner,
+                            span,
+                        },
                         &allocator,
                     )),
                 );
             }
         }
-        PN::Link { image, kind, children, text, r } => {
+        PN::Link {
+            image,
+            kind,
+            children,
+            text,
+            r,
+        } => {
             let mut inner = ArenaVec::new_in(&allocator);
             for child in children {
                 push_ast(allocator, input, child, &mut inner);
             }
             let span = input.span(r);
             let kind = match kind {
-                PLinkKind::Inline { dest, angle_bracketed, title } => LinkKind::Inline {
-                    destination: Destination { span: input.span(dest), angle_bracketed },
+                PLinkKind::Inline {
+                    dest,
+                    angle_bracketed,
+                    title,
+                } => LinkKind::Inline {
+                    destination: Destination {
+                        span: input.span(dest),
+                        angle_bracketed,
+                    },
                     title: title.map(|tr| input.pieces_in(tr, allocator)),
                 },
-                PLinkKind::Reference { kind, label } => {
-                    LinkKind::Reference { kind, label: input.pieces_in(label, allocator) }
-                }
+                PLinkKind::Reference { kind, label } => LinkKind::Reference {
+                    kind,
+                    label: input.pieces_in(label, allocator),
+                },
             };
             if image {
                 push(
@@ -164,7 +240,11 @@ pub(super) fn push_ast<'a>(
                 push(
                     out,
                     Inline::Link(ArenaBox::new_in(
-                        Link { kind, children: inner, span },
+                        Link {
+                            kind,
+                            children: inner,
+                            span,
+                        },
                         &allocator,
                     )),
                 );

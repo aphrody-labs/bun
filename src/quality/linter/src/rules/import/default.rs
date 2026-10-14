@@ -5,9 +5,11 @@ use oxc_span::{Span, VALID_EXTENSIONS};
 use crate::{context::LintContext, module_record::ImportImportName, rule::Rule};
 
 fn default_diagnostic(imported_name: &str, span: Span) -> OxcDiagnostic {
-    OxcDiagnostic::warn(format!("No default export found in imported module {imported_name:?}"))
-        .with_help(format!("Does {imported_name:?} have the default export?"))
-        .with_label(span)
+    OxcDiagnostic::warn(format!(
+        "No default export found in imported module {imported_name:?}"
+    ))
+    .with_help(format!("Does {imported_name:?} have the default export?"))
+    .with_label(span)
 }
 
 /// <https://github.com/import-js/eslint-plugin-import/blob/v2.29.1/docs/rules/default.md>
@@ -77,7 +79,9 @@ impl Rule for Default {
                 continue;
             }
             if remote_module_record.export_default.is_none()
-                && !remote_module_record.exported_bindings.contains_key("default")
+                && !remote_module_record
+                    .exported_bindings
+                    .contains_key("default")
             {
                 ctx.diagnostic(default_diagnostic(specifier, default_span));
             }

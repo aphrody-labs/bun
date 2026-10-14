@@ -3,7 +3,9 @@ use super::GridTrack;
 use crate::compute::grid::OriginZeroLine;
 use crate::geometry::AbstractAxis;
 use crate::geometry::{Line, Point, Rect, Size};
-use crate::style::{AlignItems, AlignSelf, AvailableSpace, Dimension, LengthPercentageAuto, Overflow};
+use crate::style::{
+    AlignItems, AlignSelf, AvailableSpace, Dimension, LengthPercentageAuto, Overflow,
+};
 use crate::tree::{LayoutPartialTree, LayoutPartialTreeExt, NodeId, SizingMode};
 use crate::util::{MaybeMath, MaybeResolve, ResolveOrZero};
 use crate::{BoxSizing, GridItemStyle, LengthPercentage};
@@ -204,13 +206,19 @@ impl GridItem {
     ) -> Option<f32> {
         let spanned_tracks = &axis_tracks[self.track_range_excluding_lines(axis)];
         let tracks_all_fixed = spanned_tracks.iter().all(|track| {
-            track.max_track_sizing_function.definite_limit(axis_parent_size, resolve_calc_value).is_some()
+            track
+                .max_track_sizing_function
+                .definite_limit(axis_parent_size, resolve_calc_value)
+                .is_some()
         });
         if tracks_all_fixed {
             let limit: f32 = spanned_tracks
                 .iter()
                 .map(|track| {
-                    track.max_track_sizing_function.definite_limit(axis_parent_size, resolve_calc_value).unwrap()
+                    track
+                        .max_track_sizing_function
+                        .definite_limit(axis_parent_size, resolve_calc_value)
+                        .unwrap()
                 })
                 .sum();
             Some(limit)
@@ -230,13 +238,19 @@ impl GridItem {
     ) -> Option<f32> {
         let spanned_tracks = &axis_tracks[self.track_range_excluding_lines(axis)];
         let tracks_all_fixed = spanned_tracks.iter().all(|track| {
-            track.max_track_sizing_function.definite_value(axis_parent_size, resolve_calc_value).is_some()
+            track
+                .max_track_sizing_function
+                .definite_value(axis_parent_size, resolve_calc_value)
+                .is_some()
         });
         if tracks_all_fixed {
             let limit: f32 = spanned_tracks
                 .iter()
                 .map(|track| {
-                    track.max_track_sizing_function.definite_value(axis_parent_size, resolve_calc_value).unwrap()
+                    track
+                        .max_track_sizing_function
+                        .definite_value(axis_parent_size, resolve_calc_value)
+                        .unwrap()
                 })
                 .sum();
             Some(limit)
@@ -262,11 +276,18 @@ impl GridItem {
         // Spec:
         // https://www.w3.org/TR/css-grid-1/#item-margins
         // https://www.w3.org/TR/CSS22/box.html#padding-properties
-        let padding = self.padding.resolve_or_zero(grid_area_size.width, |val, basis| tree.calc(val, basis));
-        let border = self.border.resolve_or_zero(grid_area_size.width, |val, basis| tree.calc(val, basis));
+        let padding = self
+            .padding
+            .resolve_or_zero(grid_area_size.width, |val, basis| tree.calc(val, basis));
+        let border = self
+            .border
+            .resolve_or_zero(grid_area_size.width, |val, basis| tree.calc(val, basis));
         let padding_border_size = (padding + border).sum_axes();
-        let box_sizing_adjustment =
-            if self.box_sizing == BoxSizing::ContentBox { padding_border_size } else { Size::ZERO };
+        let box_sizing_adjustment = if self.box_sizing == BoxSizing::ContentBox {
+            padding_border_size
+        } else {
+            Size::ZERO
+        };
         let aspect_ratio_adjustment = if self.aspect_ratio_uses_content_box {
             padding_border_size
         } else {
@@ -429,11 +450,23 @@ impl GridItem {
         tree: &impl LayoutPartialTree,
     ) -> Size<f32> {
         Rect {
-            left: self.margin.left.resolve_or_zero(Some(0.0), |val, basis| tree.calc(val, basis)),
-            right: self.margin.right.resolve_or_zero(Some(0.0), |val, basis| tree.calc(val, basis)),
-            top: self.margin.top.resolve_or_zero(inner_node_width, |val, basis| tree.calc(val, basis))
+            left: self
+                .margin
+                .left
+                .resolve_or_zero(Some(0.0), |val, basis| tree.calc(val, basis)),
+            right: self
+                .margin
+                .right
+                .resolve_or_zero(Some(0.0), |val, basis| tree.calc(val, basis)),
+            top: self
+                .margin
+                .top
+                .resolve_or_zero(inner_node_width, |val, basis| tree.calc(val, basis))
                 + self.baseline_shim,
-            bottom: self.margin.bottom.resolve_or_zero(inner_node_width, |val, basis| tree.calc(val, basis)),
+            bottom: self
+                .margin
+                .bottom
+                .resolve_or_zero(inner_node_width, |val, basis| tree.calc(val, basis)),
         }
         .sum_axes()
     }
@@ -448,11 +481,15 @@ impl GridItem {
     ) -> f32 {
         let known_dimensions = self.known_dimensions(tree, grid_area_size);
         if self.intrinsic_size_containment.get(axis) {
-            let padding =
-                self.padding.resolve_or_zero(grid_area_size.width, |val, basis| tree.calc(val, basis));
-            let border =
-                self.border.resolve_or_zero(grid_area_size.width, |val, basis| tree.calc(val, basis));
-            return known_dimensions.get(axis).unwrap_or((padding + border).sum_axes().get(axis));
+            let padding = self
+                .padding
+                .resolve_or_zero(grid_area_size.width, |val, basis| tree.calc(val, basis));
+            let border = self
+                .border
+                .resolve_or_zero(grid_area_size.width, |val, basis| tree.calc(val, basis));
+            return known_dimensions
+                .get(axis)
+                .unwrap_or((padding + border).sum_axes().get(axis));
         }
         // The child sees the grid area as its containing block during intrinsic measurement, so
         // percentage box properties resolve against the grid area when that size is definite.
@@ -482,11 +519,14 @@ impl GridItem {
         grid_area_size: Size<Option<f32>>,
         available_space: Size<Option<f32>>,
     ) -> f32 {
-        self.min_content_contribution_cache.get(axis).unwrap_or_else(|| {
-            let size = self.min_content_contribution(axis, tree, grid_area_size, available_space);
-            self.min_content_contribution_cache.set(axis, Some(size));
-            size
-        })
+        self.min_content_contribution_cache
+            .get(axis)
+            .unwrap_or_else(|| {
+                let size =
+                    self.min_content_contribution(axis, tree, grid_area_size, available_space);
+                self.min_content_contribution_cache.set(axis, Some(size));
+                size
+            })
     }
 
     /// Compute the item's max content contribution from the provided parameters
@@ -499,11 +539,15 @@ impl GridItem {
     ) -> f32 {
         let known_dimensions = self.known_dimensions(tree, grid_area_size);
         if self.intrinsic_size_containment.get(axis) {
-            let padding =
-                self.padding.resolve_or_zero(grid_area_size.width, |val, basis| tree.calc(val, basis));
-            let border =
-                self.border.resolve_or_zero(grid_area_size.width, |val, basis| tree.calc(val, basis));
-            return known_dimensions.get(axis).unwrap_or((padding + border).sum_axes().get(axis));
+            let padding = self
+                .padding
+                .resolve_or_zero(grid_area_size.width, |val, basis| tree.calc(val, basis));
+            let border = self
+                .border
+                .resolve_or_zero(grid_area_size.width, |val, basis| tree.calc(val, basis));
+            return known_dimensions
+                .get(axis)
+                .unwrap_or((padding + border).sum_axes().get(axis));
         }
         // See the min-content path above. Max-content measurement uses the same containing-block
         // basis so percentage-dependent item geometry is measured from the grid area rather than
@@ -531,11 +575,14 @@ impl GridItem {
         grid_area_size: Size<Option<f32>>,
         available_space: Size<Option<f32>>,
     ) -> f32 {
-        self.max_content_contribution_cache.get(axis).unwrap_or_else(|| {
-            let size = self.max_content_contribution(axis, tree, grid_area_size, available_space);
-            self.max_content_contribution_cache.set(axis, Some(size));
-            size
-        })
+        self.max_content_contribution_cache
+            .get(axis)
+            .unwrap_or_else(|| {
+                let size =
+                    self.max_content_contribution(axis, tree, grid_area_size, available_space);
+                self.max_content_contribution_cache.set(axis, Some(size));
+                size
+            })
     }
 
     /// The minimum contribution of an item is the smallest outer size it can have.
@@ -554,11 +601,18 @@ impl GridItem {
         grid_area_size: Size<Option<f32>>,
         inner_node_size: Size<Option<f32>>,
     ) -> f32 {
-        let padding = self.padding.resolve_or_zero(grid_area_size.width, |val, basis| tree.calc(val, basis));
-        let border = self.border.resolve_or_zero(grid_area_size.width, |val, basis| tree.calc(val, basis));
+        let padding = self
+            .padding
+            .resolve_or_zero(grid_area_size.width, |val, basis| tree.calc(val, basis));
+        let border = self
+            .border
+            .resolve_or_zero(grid_area_size.width, |val, basis| tree.calc(val, basis));
         let padding_border_size = (padding + border).sum_axes();
-        let box_sizing_adjustment =
-            if self.box_sizing == BoxSizing::ContentBox { padding_border_size } else { Size::ZERO };
+        let box_sizing_adjustment = if self.box_sizing == BoxSizing::ContentBox {
+            padding_border_size
+        } else {
+            Size::ZERO
+        };
         let size = self
             .size
             .maybe_resolve(grid_area_size, |val, basis| tree.calc(val, basis))
@@ -591,24 +645,36 @@ impl GridItem {
 
                 // if it spans more than one track in that axis, none of those tracks are flexible
                 let only_span_one_track = item_axis_tracks.len() == 1;
-                let spans_a_flexible_track = axis_tracks.iter().any(|track| track.max_track_sizing_function.is_fr());
+                let spans_a_flexible_track = axis_tracks
+                    .iter()
+                    .any(|track| track.max_track_sizing_function.is_fr());
 
                 let use_content_based_minimum =
                     spans_auto_min_track && (only_span_one_track || !spans_a_flexible_track);
 
                 // Otherwise, the automatic minimum size is zero, as usual.
                 if use_content_based_minimum {
-                    let mut minimum_contribution =
-                        self.min_content_contribution_cached(axis, tree, grid_area_size, grid_area_size);
+                    let mut minimum_contribution = self.min_content_contribution_cached(
+                        axis,
+                        tree,
+                        grid_area_size,
+                        grid_area_size,
+                    );
 
                     // If the item is a compressible replaced element, and has a definite preferred size or maximum size in the
                     // relevant axis, the size suggestion is capped by those sizes; for this purpose, any indefinite percentages
                     // in these sizes are resolved against zero (and considered definite).
                     if self.is_compressible_replaced {
-                        let size = self.size.get(axis).maybe_resolve(Some(0.0), |val, basis| tree.calc(val, basis));
-                        let max_size =
-                            self.max_size.get(axis).maybe_resolve(Some(0.0), |val, basis| tree.calc(val, basis));
-                        minimum_contribution = minimum_contribution.maybe_min(size).maybe_min(max_size);
+                        let size = self
+                            .size
+                            .get(axis)
+                            .maybe_resolve(Some(0.0), |val, basis| tree.calc(val, basis));
+                        let max_size = self
+                            .max_size
+                            .get(axis)
+                            .maybe_resolve(Some(0.0), |val, basis| tree.calc(val, basis));
+                        minimum_contribution =
+                            minimum_contribution.maybe_min(size).maybe_min(max_size);
                     }
 
                     minimum_contribution
@@ -620,9 +686,12 @@ impl GridItem {
         // In all cases, the size suggestion is additionally clamped by the maximum size in the affected axis, if it’s definite.
         // Note: The argument to fit-content() does not clamp the content-based minimum size in the same way as a fixed max track
         // sizing function.
-        let limit = self.spanned_fixed_track_limit(axis, axis_tracks, inner_node_size.get(axis), &|val, basis| {
-            tree.resolve_calc_value(val, basis)
-        });
+        let limit = self.spanned_fixed_track_limit(
+            axis,
+            axis_tracks,
+            inner_node_size.get(axis),
+            &|val, basis| tree.resolve_calc_value(val, basis),
+        );
         size.maybe_min(limit)
     }
 
@@ -636,10 +705,18 @@ impl GridItem {
         grid_area_size: Size<Option<f32>>,
         inner_node_size: Size<Option<f32>>,
     ) -> f32 {
-        self.minimum_contribution_cache.get(axis).unwrap_or_else(|| {
-            let size = self.minimum_contribution(tree, axis, axis_tracks, grid_area_size, inner_node_size);
-            self.minimum_contribution_cache.set(axis, Some(size));
-            size
-        })
+        self.minimum_contribution_cache
+            .get(axis)
+            .unwrap_or_else(|| {
+                let size = self.minimum_contribution(
+                    tree,
+                    axis,
+                    axis_tracks,
+                    grid_area_size,
+                    inner_node_size,
+                );
+                self.minimum_contribution_cache.set(axis, Some(size));
+                size
+            })
     }
 }

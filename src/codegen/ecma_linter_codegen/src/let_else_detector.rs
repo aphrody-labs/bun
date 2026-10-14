@@ -22,26 +22,37 @@ impl<'a> LetElseDetector<'a> {
         let stmts = executable_stmts(&run_func.block);
         let first_stmt = *stmts.first()?;
         // Must be a local `let` statement
-        let Stmt::Local(local) = first_stmt else { return None };
+        let Stmt::Local(local) = first_stmt else {
+            return None;
+        };
         // Must have an initializer that is a `node.kind()` call
         let Some(init) = &local.init else { return None };
         if !(is_node_kind_call(&init.expr) || is_node_kind_as_call(&init.expr)) {
             return None;
         }
         // Must have a diverging `else` block
-        let Some(diverge) = &init.diverge else { return None };
+        let Some(diverge) = &init.diverge else {
+            return None;
+        };
         let diverge_expr = &*diverge.1;
-        let Expr::Block(else_block) = diverge_expr else { return None };
+        let Expr::Block(else_block) = diverge_expr else {
+            return None;
+        };
         // The else block must have exactly one statement and it must be a `return`
         if else_block.block.stmts.len() != 1 {
             return None;
         }
-        let Stmt::Expr(expr, _) = &else_block.block.stmts[0] else { return None };
+        let Stmt::Expr(expr, _) = &else_block.block.stmts[0] else {
+            return None;
+        };
         if !matches!(expr, Expr::Return(_)) {
             return None;
         }
 
-        let mut detector = Self { node_types: NodeTypeSet::new(), rule_runner_data };
+        let mut detector = Self {
+            node_types: NodeTypeSet::new(),
+            rule_runner_data,
+        };
 
         if is_node_kind_as_call(&init.expr) {
             // If the initializer is `node.kind().as_<variant>()`, extract that variant.

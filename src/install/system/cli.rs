@@ -29,7 +29,10 @@ pub fn run(source: &[u8], args: &[&[u8]]) -> i32 {
             "bun pm {}: not implemented yet",
             lossy(source)
         ))),
-        _ => Err(Error::Unsupported(format!("unknown system source \"{}\"", lossy(source)))),
+        _ => Err(Error::Unsupported(format!(
+            "unknown system source \"{}\"",
+            lossy(source)
+        ))),
     };
     let code = match code {
         Ok(code) => code,
@@ -53,7 +56,9 @@ fn install_cache_dir(env: &bun_dotenv::Loader) -> Vec<u8> {
     if let Some(dir) = get(b"XDG_CACHE_HOME") {
         return join(&dir, &[b".bun", b"install", b"cache"]);
     }
-    let home = get(b"HOME").or_else(|| get(b"USERPROFILE")).unwrap_or_else(|| b".".to_vec());
+    let home = get(b"HOME")
+        .or_else(|| get(b"USERPROFILE"))
+        .unwrap_or_else(|| b".".to_vec());
     join(&home, &[b".bun", b"install", b"cache"])
 }
 
@@ -74,7 +79,10 @@ fn out(line: &str) {
 }
 
 fn run_apk(args: &[&[u8]]) -> Result<i32> {
-    let mut s = Settings { root: b"/".to_vec(), ..Settings::default() };
+    let mut s = Settings {
+        root: b"/".to_vec(),
+        ..Settings::default()
+    };
     let mut verbose = false;
     let mut command: Option<String> = None;
     let mut rest: Vec<String> = Vec::new();
@@ -82,12 +90,17 @@ fn run_apk(args: &[&[u8]]) -> Result<i32> {
     let mut i = 0;
     let value = |i: &mut usize, name: &str| -> Result<String> {
         *i += 1;
-        args.get(*i).map(|v| lossy(v)).ok_or_else(|| Error::Parse(format!("{name} needs a value\n{USAGE}")))
+        args.get(*i)
+            .map(|v| lossy(v))
+            .ok_or_else(|| Error::Parse(format!("{name} needs a value\n{USAGE}")))
     };
     while i < args.len() {
         let raw = lossy(args[i]);
         let (flag, inline) = match strings::index_of_char(raw.as_bytes(), b'=') {
-            Some(eq) if raw.starts_with("--") => (raw[..eq as usize].to_owned(), Some(raw[eq as usize + 1..].to_owned())),
+            Some(eq) if raw.starts_with("--") => (
+                raw[..eq as usize].to_owned(),
+                Some(raw[eq as usize + 1..].to_owned()),
+            ),
             _ => (raw.clone(), None),
         };
         let take = |i: &mut usize, name: &str| -> Result<String> {
@@ -115,7 +128,9 @@ fn run_apk(args: &[&[u8]]) -> Result<i32> {
                 return Ok(0);
             }
             _ if raw.starts_with('-') && command.is_some() => flags.push(raw),
-            _ if raw.starts_with('-') => return Err(Error::Parse(format!("unknown option {raw}\n{USAGE}"))),
+            _ if raw.starts_with('-') => {
+                return Err(Error::Parse(format!("unknown option {raw}\n{USAGE}")));
+            }
             _ if command.is_none() => command = Some(raw),
             _ => rest.push(raw),
         }
@@ -129,7 +144,8 @@ fn run_apk(args: &[&[u8]]) -> Result<i32> {
 
     let mut env = bun_dotenv::Loader::init();
     env.quiet = true;
-    env.load_process().map_err(|_| Error::Io("out of memory".to_owned()))?;
+    env.load_process()
+        .map_err(|_| Error::Io("out of memory".to_owned()))?;
     let cache = install_cache_dir(&env);
     let mut ctx = Ctx::new(&env, &cache, verbose);
     if s.update_cache {
@@ -173,13 +189,28 @@ fn run_apk(args: &[&[u8]]) -> Result<i32> {
                 .db
                 .installed
                 .iter()
-                .map(|p| format!("{} {} {{{}}} ({}) [installed]", p.name_version(), p.arch, p.origin, p.license))
+                .map(|p| {
+                    format!(
+                        "{} {} {{{}}} ({}) [installed]",
+                        p.name_version(),
+                        p.arch,
+                        p.origin,
+                        p.license
+                    )
+                })
                 .collect();
             if !installed_only {
-                let names: Vec<String> = engine.db.installed.iter().map(|p| p.name.clone()).collect();
+                let names: Vec<String> =
+                    engine.db.installed.iter().map(|p| p.name.clone()).collect();
                 for p in engine.search(&rest, false)? {
                     if !names.contains(&p.name) {
-                        rows.push(format!("{} {} {{{}}} ({})", p.name_version(), p.arch, p.origin, p.license));
+                        rows.push(format!(
+                            "{} {} {{{}}} ({})",
+                            p.name_version(),
+                            p.arch,
+                            p.origin,
+                            p.license
+                        ));
                     }
                 }
             }
@@ -194,14 +225,23 @@ fn run_apk(args: &[&[u8]]) -> Result<i32> {
                 out(&format!("{code} {path}"));
             }
         }
-        other => return Err(Error::Parse(format!("unknown command \"{other}\"\n{USAGE}"))),
+        other => {
+            return Err(Error::Parse(format!(
+                "unknown command \"{other}\"\n{USAGE}"
+            )));
+        }
     }
     Ok(0)
 }
 
 fn info(engine: &mut Engine<'_, '_>, names: &[String], contents: bool) -> Result<()> {
     if names.is_empty() {
-        let mut list: Vec<&str> = engine.db.installed.iter().map(|p| p.name.as_str()).collect();
+        let mut list: Vec<&str> = engine
+            .db
+            .installed
+            .iter()
+            .map(|p| p.name.as_str())
+            .collect();
         list.sort_unstable();
         for name in list {
             out(name);
@@ -212,7 +252,10 @@ fn info(engine: &mut Engine<'_, '_>, names: &[String], contents: bool) -> Result
         let pkg = match engine.db.installed_by_name(name) {
             Some(p) => p.clone(),
             None => {
-                let found = engine.search(&[], false)?.into_iter().find(|p| p.name == *name);
+                let found = engine
+                    .search(&[], false)?
+                    .into_iter()
+                    .find(|p| p.name == *name);
                 found.ok_or_else(|| Error::NotFound(format!("apk package \"{name}\"")))?
             }
         };
@@ -227,7 +270,10 @@ fn info(engine: &mut Engine<'_, '_>, names: &[String], contents: bool) -> Result
         }
         out(&format!("{nv} description:\n{}\n", pkg.description));
         out(&format!("{nv} webpage:\n{}\n", pkg.url));
-        out(&format!("{nv} installed size:\n{}\n", human_size(pkg.installed_size)));
+        out(&format!(
+            "{nv} installed size:\n{}\n",
+            human_size(pkg.installed_size)
+        ));
     }
     Ok(())
 }

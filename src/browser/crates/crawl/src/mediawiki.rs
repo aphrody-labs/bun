@@ -82,11 +82,11 @@ impl std::fmt::Display for MediaWikiError {
             Self::InvalidOptions(message) => write!(f, "invalid MediaWiki options: {message}"),
             Self::InvalidArticlePath(message) => {
                 write!(f, "invalid MediaWiki article path: {message}")
-            },
+            }
             Self::Http(message) => write!(f, "MediaWiki request failed: {message}"),
             Self::HttpStatus { url, status } => {
                 write!(f, "MediaWiki request returned HTTP {status}: {url}")
-            },
+            }
             Self::Api(message) => write!(f, "MediaWiki API error: {message}"),
             Self::InvalidResponse(message) => write!(f, "invalid MediaWiki response: {message}"),
         }
@@ -146,7 +146,11 @@ pub async fn crawl_mediawiki_with_transport<T: CrawlTransport>(
             ("list", "allpages".to_owned()),
             ("aplimit", limit.to_string()),
         ];
-        if let Some(prefix) = options.prefix.as_deref().filter(|prefix| !prefix.is_empty()) {
+        if let Some(prefix) = options
+            .prefix
+            .as_deref()
+            .filter(|prefix| !prefix.is_empty())
+        {
             params.push(("apprefix", prefix.to_owned()));
         }
         if let Some((apcontinue, generic_continue)) = continuation.as_ref() {
@@ -208,7 +212,12 @@ pub async fn crawl_mediawiki_with_transport<T: CrawlTransport>(
             } else {
                 extracted.markdown
             };
-            documents.push(MediaWikiDocument { page_id, title, url: page_url, markdown });
+            documents.push(MediaWikiDocument {
+                page_id,
+                title,
+                url: page_url,
+                markdown,
+            });
         }
 
         continuation = response.get("continue").and_then(|value| {
@@ -230,10 +239,14 @@ const MAX_ALLPAGES_BATCH: usize = 500;
 
 pub(crate) fn validate_options(options: &MediaWikiOptions) -> Result<(), MediaWikiError> {
     if options.api_url.scheme() != "http" && options.api_url.scheme() != "https" {
-        return Err(MediaWikiError::InvalidResponse("api_url must use HTTP or HTTPS".into()));
+        return Err(MediaWikiError::InvalidResponse(
+            "api_url must use HTTP or HTTPS".into(),
+        ));
     }
     if !options.article_path.contains("$1") {
-        return Err(MediaWikiError::InvalidArticlePath("expected a $1 title placeholder".into()));
+        return Err(MediaWikiError::InvalidArticlePath(
+            "expected a $1 title placeholder".into(),
+        ));
     }
     if !options.article_path.starts_with('/')
         || options.article_path.starts_with("//")
@@ -281,7 +294,9 @@ fn article_url(options: &MediaWikiOptions, title: &str) -> Result<Url, MediaWiki
         .collect::<String>()
         .replace('+', "%20");
     let path = options.article_path.replace("$1", &encoded_title);
-    wiki_root.join(&path).map_err(|error| MediaWikiError::InvalidArticlePath(error.to_string()))
+    wiki_root
+        .join(&path)
+        .map_err(|error| MediaWikiError::InvalidArticlePath(error.to_string()))
 }
 
 pub(crate) async fn request_json(
@@ -314,10 +329,15 @@ async fn request_json_with_transport<T: CrawlTransport>(
         }
     }
     *last_request = Some(Instant::now());
-    let response =
-        client.fetch(&url).await.map_err(|error| MediaWikiError::Http(error.to_string()))?;
+    let response = client
+        .fetch(&url)
+        .await
+        .map_err(|error| MediaWikiError::Http(error.to_string()))?;
     if !(200..300).contains(&response.status) {
-        return Err(MediaWikiError::HttpStatus { url: url.to_string(), status: response.status });
+        return Err(MediaWikiError::HttpStatus {
+            url: url.to_string(),
+            status: response.status,
+        });
     }
     serde_json::from_str(&response.body)
         .map_err(|error| MediaWikiError::InvalidResponse(error.to_string()))
@@ -325,7 +345,13 @@ async fn request_json_with_transport<T: CrawlTransport>(
 
 pub(crate) fn api_error(response: &Value) -> Option<String> {
     let error = response.get("error")?;
-    let code = error.get("code").and_then(Value::as_str).unwrap_or("unknown");
-    let info = error.get("info").and_then(Value::as_str).unwrap_or("no details");
+    let code = error
+        .get("code")
+        .and_then(Value::as_str)
+        .unwrap_or("unknown");
+    let info = error
+        .get("info")
+        .and_then(Value::as_str)
+        .unwrap_or("no details");
     Some(format!("{code}: {info}"))
 }

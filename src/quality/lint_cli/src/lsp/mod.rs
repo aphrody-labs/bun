@@ -32,11 +32,13 @@ pub async fn run_lsp(
     run_server(
         "oxlint".to_string(),
         version,
-        WorkerManager::new(Arc::new(crate::lsp::server_linter::ServerLinterBuilder::new(
-            external_linter,
-            #[cfg(feature = "napi")]
-            js_config_loader,
-        ))),
+        WorkerManager::new(Arc::new(
+            crate::lsp::server_linter::ServerLinterBuilder::new(
+                external_linter,
+                #[cfg(feature = "napi")]
+                js_config_loader,
+            ),
+        )),
     )
     .await;
 }

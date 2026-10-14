@@ -50,7 +50,9 @@ pub struct ExponentiationOperator<'a> {
 
 impl ExponentiationOperator<'_> {
     pub fn new() -> Self {
-        Self { _marker: std::marker::PhantomData }
+        Self {
+            _marker: std::marker::PhantomData,
+        }
     }
 }
 
@@ -131,7 +133,9 @@ impl<'a> ExponentiationOperator<'a> {
     // `#[inline]` so compiler knows `expr` is an `AssignmentExpression` with `IdentifierReference` on left
     #[inline]
     fn convert_identifier_assignment(&self, expr: &mut Expression<'a>, ctx: &mut TraverseCtx<'a>) {
-        let Expression::AssignmentExpression(assign_expr) = expr else { unreachable!() };
+        let Expression::AssignmentExpression(assign_expr) = expr else {
+            unreachable!()
+        };
         let span = assign_expr.span;
         let AssignmentTarget::AssignmentTargetIdentifier(ident) = &mut assign_expr.left else {
             unreachable!()
@@ -156,7 +160,10 @@ impl<'a> ExponentiationOperator<'a> {
         let mut temp_var_inits = ArenaVec::new_in(ctx);
 
         // Make sure side-effects of evaluating `left` only happen once
-        let reference = ctx.scoping.scoping_mut().get_reference_mut(ident.reference_id());
+        let reference = ctx
+            .scoping
+            .scoping_mut()
+            .get_reference_mut(ident.reference_id());
 
         // `left **= right` is being transformed to `left = Math.pow(left, right)`,
         // so `left` in `left =` is no longer being read from
@@ -202,7 +209,9 @@ impl<'a> ExponentiationOperator<'a> {
         expr: &mut Expression<'a>,
         ctx: &mut TraverseCtx<'a>,
     ) {
-        let Expression::AssignmentExpression(assign_expr) = expr else { unreachable!() };
+        let Expression::AssignmentExpression(assign_expr) = expr else {
+            unreachable!()
+        };
         let span = assign_expr.span;
         let AssignmentTarget::StaticMemberExpression(member_expr) = &mut assign_expr.left else {
             unreachable!()
@@ -302,7 +311,9 @@ impl<'a> ExponentiationOperator<'a> {
         expr: &mut Expression<'a>,
         ctx: &mut TraverseCtx<'a>,
     ) {
-        let Expression::AssignmentExpression(assign_expr) = expr else { unreachable!() };
+        let Expression::AssignmentExpression(assign_expr) = expr else {
+            unreachable!()
+        };
         let span = assign_expr.span;
         let AssignmentTarget::ComputedMemberExpression(member_expr) = &mut assign_expr.left else {
             unreachable!()
@@ -384,7 +395,9 @@ impl<'a> ExponentiationOperator<'a> {
         expr: &mut Expression<'a>,
         ctx: &mut TraverseCtx<'a>,
     ) {
-        let Expression::AssignmentExpression(assign_expr) = expr else { unreachable!() };
+        let Expression::AssignmentExpression(assign_expr) = expr else {
+            unreachable!()
+        };
         let span = assign_expr.span;
         let AssignmentTarget::PrivateFieldExpression(member_expr) = &mut assign_expr.left else {
             unreachable!()
@@ -486,7 +499,10 @@ impl<'a> ExponentiationOperator<'a> {
         match obj {
             Expression::Super(super_) => return Expression::new_super(super_.span, ctx),
             Expression::Identifier(ident) => {
-                let symbol_id = ctx.scoping().get_reference(ident.reference_id()).symbol_id();
+                let symbol_id = ctx
+                    .scoping()
+                    .get_reference(ident.reference_id())
+                    .symbol_id();
                 if let Some(symbol_id) = symbol_id {
                     // This variable is declared in scope so evaluating it multiple times can't trigger a getter.
                     // No need for a temp var.
@@ -517,7 +533,9 @@ impl<'a> ExponentiationOperator<'a> {
         ctx: &mut TraverseCtx<'a>,
     ) {
         let span = assign_expr.span;
-        assign_expr.right.replace_with(|pow_right| Self::math_pow(span, pow_left, pow_right, ctx));
+        assign_expr
+            .right
+            .replace_with(|pow_right| Self::math_pow(span, pow_left, pow_right, ctx));
         assign_expr.operator = AssignmentOperator::Assign;
     }
 

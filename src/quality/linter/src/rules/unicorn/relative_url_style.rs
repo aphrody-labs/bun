@@ -93,7 +93,11 @@ impl Rule for RelativeUrlStyle {
             return;
         }
 
-        if new_expr.arguments.last().is_some_and(oxc_ast::ast::Argument::is_spread) {
+        if new_expr
+            .arguments
+            .last()
+            .is_some_and(oxc_ast::ast::Argument::is_spread)
+        {
             return;
         }
 
@@ -149,7 +153,9 @@ impl Rule for RelativeUrlStyle {
                     ctx.diagnostic_with_suggestion(never_diagnostic(template_lit.span), |fixer| {
                         let dot_slash_start = template_lit.span.start + 1;
                         let dot_slash_span = Span::sized(dot_slash_start, 2);
-                        fixer.delete_range(dot_slash_span).with_message("Remove leading `./`")
+                        fixer
+                            .delete_range(dot_slash_span)
+                            .with_message("Remove leading `./`")
                     });
                 }
             }
@@ -206,7 +212,9 @@ fn is_safe_to_add_dot_slash_to_url(url: &str, base: &str) -> bool {
 }
 
 fn is_safe_to_add_dot_slash(url: &str, bases: &[&str]) -> bool {
-    bases.iter().all(|base| is_safe_to_add_dot_slash_to_url(url, base))
+    bases
+        .iter()
+        .all(|base| is_safe_to_add_dot_slash_to_url(url, base))
 }
 
 fn is_safe_to_remove_dot_slash(url: &str, bases: &[&str]) -> bool {
@@ -214,7 +222,9 @@ fn is_safe_to_remove_dot_slash(url: &str, bases: &[&str]) -> bool {
         return false;
     };
 
-    bases.iter().all(|base| is_safe_to_add_dot_slash_to_url(url_without_prefix, base))
+    bases
+        .iter()
+        .all(|base| is_safe_to_add_dot_slash_to_url(url_without_prefix, base))
 }
 
 #[test]
@@ -250,23 +260,59 @@ fn test() {
         (r"new URL('\u002E/foo', base)", None),
         // "always" option
         (r#"URL("foo", base)"#, Some(serde_json::json!(["always"]))),
-        (r#"new URL(...["foo"], base)"#, Some(serde_json::json!(["always"]))),
-        (r#"new URL(["foo"], base)"#, Some(serde_json::json!(["always"]))),
+        (
+            r#"new URL(...["foo"], base)"#,
+            Some(serde_json::json!(["always"])),
+        ),
+        (
+            r#"new URL(["foo"], base)"#,
+            Some(serde_json::json!(["always"])),
+        ),
         (r#"new URL("foo")"#, Some(serde_json::json!(["always"]))),
-        (r#"new URL("foo", base, extra)"#, Some(serde_json::json!(["always"]))),
-        (r#"new URL("foo", ...[base])"#, Some(serde_json::json!(["always"]))),
-        (r#"new NOT_URL("foo", base)"#, Some(serde_json::json!(["always"]))),
+        (
+            r#"new URL("foo", base, extra)"#,
+            Some(serde_json::json!(["always"])),
+        ),
+        (
+            r#"new URL("foo", ...[base])"#,
+            Some(serde_json::json!(["always"])),
+        ),
+        (
+            r#"new NOT_URL("foo", base)"#,
+            Some(serde_json::json!(["always"])),
+        ),
         (r#"new URL("", base)"#, Some(serde_json::json!(["always"]))),
-        (r#"new URL("", "https://example.com/a/b.html")"#, Some(serde_json::json!(["always"]))),
+        (
+            r#"new URL("", "https://example.com/a/b.html")"#,
+            Some(serde_json::json!(["always"])),
+        ),
         (r"/* 2 */ new URL", Some(serde_json::json!(["always"]))),
         (r"new URL(0, base2)", Some(serde_json::json!(["always"]))),
         // Not checking this case
-        (r#"new globalThis.URL("foo", base)"#, Some(serde_json::json!(["always"]))),
-        (r"new URL(`${foo}`, base2)", Some(serde_json::json!(["always"]))),
-        (r"new URL(`.${foo}`, base2)", Some(serde_json::json!(["always"]))),
-        (r#"new URL(".", base2)"#, Some(serde_json::json!(["always"]))),
-        (r#"new URL("//example.org", "https://example.com")"#, Some(serde_json::json!(["always"]))),
-        (r#"new URL("//example.org", "ftp://example.com")"#, Some(serde_json::json!(["always"]))),
+        (
+            r#"new globalThis.URL("foo", base)"#,
+            Some(serde_json::json!(["always"])),
+        ),
+        (
+            r"new URL(`${foo}`, base2)",
+            Some(serde_json::json!(["always"])),
+        ),
+        (
+            r"new URL(`.${foo}`, base2)",
+            Some(serde_json::json!(["always"])),
+        ),
+        (
+            r#"new URL(".", base2)"#,
+            Some(serde_json::json!(["always"])),
+        ),
+        (
+            r#"new URL("//example.org", "https://example.com")"#,
+            Some(serde_json::json!(["always"])),
+        ),
+        (
+            r#"new URL("//example.org", "ftp://example.com")"#,
+            Some(serde_json::json!(["always"])),
+        ),
         (
             r#"new URL("ftp://example.org", "https://example.com")"#,
             Some(serde_json::json!(["always"])),
@@ -276,12 +322,30 @@ fn test() {
             Some(serde_json::json!(["always"])),
         ),
         (r#"new URL("/", base)"#, Some(serde_json::json!(["always"]))),
-        (r#"new URL("/foo", base)"#, Some(serde_json::json!(["always"]))),
-        (r#"new URL("../foo", base)"#, Some(serde_json::json!(["always"]))),
-        (r#"new URL(".././foo", base)"#, Some(serde_json::json!(["always"]))),
-        (r#"new URL("C:\foo", base)"#, Some(serde_json::json!(["always"]))),
-        (r#"new URL("\u002E/foo", base)"#, Some(serde_json::json!(["always"]))),
-        (r#"new URL("\u002Ffoo", base)"#, Some(serde_json::json!(["always"]))),
+        (
+            r#"new URL("/foo", base)"#,
+            Some(serde_json::json!(["always"])),
+        ),
+        (
+            r#"new URL("../foo", base)"#,
+            Some(serde_json::json!(["always"])),
+        ),
+        (
+            r#"new URL(".././foo", base)"#,
+            Some(serde_json::json!(["always"])),
+        ),
+        (
+            r#"new URL("C:\foo", base)"#,
+            Some(serde_json::json!(["always"])),
+        ),
+        (
+            r#"new URL("\u002E/foo", base)"#,
+            Some(serde_json::json!(["always"])),
+        ),
+        (
+            r#"new URL("\u002Ffoo", base)"#,
+            Some(serde_json::json!(["always"])),
+        ),
     ];
 
     let fail = vec![
@@ -292,16 +356,26 @@ fn test() {
         (r"new URL(`./${foo}`, base)", None),
         (r#"new URL("", "https://example.com/a/b/")"#, None),
         // "always" option
-        (r#"new URL("foo", base)"#, Some(serde_json::json!(["always"]))),
+        (
+            r#"new URL("foo", base)"#,
+            Some(serde_json::json!(["always"])),
+        ),
         (r"new URL('foo', base)", Some(serde_json::json!(["always"]))),
-        (r#"new URL("", "https://example.com/a/b/")"#, Some(serde_json::json!(["always"]))),
+        (
+            r#"new URL("", "https://example.com/a/b/")"#,
+            Some(serde_json::json!(["always"])),
+        ),
     ];
 
     let fix = vec![
         (r#"new URL("./foo", base)"#, r#"new URL("foo", base)"#, None),
         (r"new URL('./foo', base)", r"new URL('foo', base)", None),
         (r#"new URL("././a", base)"#, r#"new URL("./a", base)"#, None),
-        (r"new URL(`./${foo}`, base)", r"new URL(`${foo}`, base)", None),
+        (
+            r"new URL(`./${foo}`, base)",
+            r"new URL(`${foo}`, base)",
+            None,
+        ),
         (
             r#"new URL("", "https://example.com/a/b/")"#,
             r#"new URL("", "https://example.com/a/b/")"#,
@@ -312,7 +386,11 @@ fn test() {
             r#"new URL("./foo", base)"#,
             Some(serde_json::json!(["always"])),
         ),
-        (r"new URL('foo', base)", r"new URL('./foo', base)", Some(serde_json::json!(["always"]))),
+        (
+            r"new URL('foo', base)",
+            r"new URL('./foo', base)",
+            Some(serde_json::json!(["always"])),
+        ),
         (
             r#"new URL("", "https://example.com/a/b/")"#,
             r#"new URL("", "https://example.com/a/b/")"#,

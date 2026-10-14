@@ -919,7 +919,10 @@ pub enum Ancestor<'a, 't> {
 impl<'a, 't> Ancestor<'a, 't> {
     #[inline]
     pub fn is_program(self) -> bool {
-        matches!(self, Self::ProgramHashbang(_) | Self::ProgramDirectives(_) | Self::ProgramBody(_))
+        matches!(
+            self,
+            Self::ProgramHashbang(_) | Self::ProgramDirectives(_) | Self::ProgramBody(_)
+        )
     }
 
     #[inline]
@@ -934,12 +937,18 @@ impl<'a, 't> Ancestor<'a, 't> {
 
     #[inline]
     pub fn is_object_property(self) -> bool {
-        matches!(self, Self::ObjectPropertyKey(_) | Self::ObjectPropertyValue(_))
+        matches!(
+            self,
+            Self::ObjectPropertyKey(_) | Self::ObjectPropertyValue(_)
+        )
     }
 
     #[inline]
     pub fn is_template_literal(self) -> bool {
-        matches!(self, Self::TemplateLiteralQuasis(_) | Self::TemplateLiteralExpressions(_))
+        matches!(
+            self,
+            Self::TemplateLiteralQuasis(_) | Self::TemplateLiteralExpressions(_)
+        )
     }
 
     #[inline]
@@ -970,7 +979,10 @@ impl<'a, 't> Ancestor<'a, 't> {
 
     #[inline]
     pub fn is_private_field_expression(self) -> bool {
-        matches!(self, Self::PrivateFieldExpressionObject(_) | Self::PrivateFieldExpressionField(_))
+        matches!(
+            self,
+            Self::PrivateFieldExpressionObject(_) | Self::PrivateFieldExpressionField(_)
+        )
     }
 
     #[inline]
@@ -1010,17 +1022,26 @@ impl<'a, 't> Ancestor<'a, 't> {
 
     #[inline]
     pub fn is_binary_expression(self) -> bool {
-        matches!(self, Self::BinaryExpressionLeft(_) | Self::BinaryExpressionRight(_))
+        matches!(
+            self,
+            Self::BinaryExpressionLeft(_) | Self::BinaryExpressionRight(_)
+        )
     }
 
     #[inline]
     pub fn is_private_in_expression(self) -> bool {
-        matches!(self, Self::PrivateInExpressionLeft(_) | Self::PrivateInExpressionRight(_))
+        matches!(
+            self,
+            Self::PrivateInExpressionLeft(_) | Self::PrivateInExpressionRight(_)
+        )
     }
 
     #[inline]
     pub fn is_logical_expression(self) -> bool {
-        matches!(self, Self::LogicalExpressionLeft(_) | Self::LogicalExpressionRight(_))
+        matches!(
+            self,
+            Self::LogicalExpressionLeft(_) | Self::LogicalExpressionRight(_)
+        )
     }
 
     #[inline]
@@ -1035,12 +1056,18 @@ impl<'a, 't> Ancestor<'a, 't> {
 
     #[inline]
     pub fn is_assignment_expression(self) -> bool {
-        matches!(self, Self::AssignmentExpressionLeft(_) | Self::AssignmentExpressionRight(_))
+        matches!(
+            self,
+            Self::AssignmentExpressionLeft(_) | Self::AssignmentExpressionRight(_)
+        )
     }
 
     #[inline]
     pub fn is_array_assignment_target(self) -> bool {
-        matches!(self, Self::ArrayAssignmentTargetElements(_) | Self::ArrayAssignmentTargetRest(_))
+        matches!(
+            self,
+            Self::ArrayAssignmentTargetElements(_) | Self::ArrayAssignmentTargetRest(_)
+        )
     }
 
     #[inline]
@@ -1144,12 +1171,18 @@ impl<'a, 't> Ancestor<'a, 't> {
 
     #[inline]
     pub fn is_do_while_statement(self) -> bool {
-        matches!(self, Self::DoWhileStatementBody(_) | Self::DoWhileStatementTest(_))
+        matches!(
+            self,
+            Self::DoWhileStatementBody(_) | Self::DoWhileStatementTest(_)
+        )
     }
 
     #[inline]
     pub fn is_while_statement(self) -> bool {
-        matches!(self, Self::WhileStatementTest(_) | Self::WhileStatementBody(_))
+        matches!(
+            self,
+            Self::WhileStatementTest(_) | Self::WhileStatementBody(_)
+        )
     }
 
     #[inline]
@@ -1200,22 +1233,34 @@ impl<'a, 't> Ancestor<'a, 't> {
 
     #[inline]
     pub fn is_with_statement(self) -> bool {
-        matches!(self, Self::WithStatementObject(_) | Self::WithStatementBody(_))
+        matches!(
+            self,
+            Self::WithStatementObject(_) | Self::WithStatementBody(_)
+        )
     }
 
     #[inline]
     pub fn is_switch_statement(self) -> bool {
-        matches!(self, Self::SwitchStatementDiscriminant(_) | Self::SwitchStatementCases(_))
+        matches!(
+            self,
+            Self::SwitchStatementDiscriminant(_) | Self::SwitchStatementCases(_)
+        )
     }
 
     #[inline]
     pub fn is_switch_case(self) -> bool {
-        matches!(self, Self::SwitchCaseTest(_) | Self::SwitchCaseConsequent(_))
+        matches!(
+            self,
+            Self::SwitchCaseTest(_) | Self::SwitchCaseConsequent(_)
+        )
     }
 
     #[inline]
     pub fn is_labeled_statement(self) -> bool {
-        matches!(self, Self::LabeledStatementLabel(_) | Self::LabeledStatementBody(_))
+        matches!(
+            self,
+            Self::LabeledStatementLabel(_) | Self::LabeledStatementBody(_)
+        )
     }
 
     #[inline]
@@ -1240,27 +1285,42 @@ impl<'a, 't> Ancestor<'a, 't> {
 
     #[inline]
     pub fn is_catch_parameter(self) -> bool {
-        matches!(self, Self::CatchParameterPattern(_) | Self::CatchParameterTypeAnnotation(_))
+        matches!(
+            self,
+            Self::CatchParameterPattern(_) | Self::CatchParameterTypeAnnotation(_)
+        )
     }
 
     #[inline]
     pub fn is_assignment_pattern(self) -> bool {
-        matches!(self, Self::AssignmentPatternLeft(_) | Self::AssignmentPatternRight(_))
+        matches!(
+            self,
+            Self::AssignmentPatternLeft(_) | Self::AssignmentPatternRight(_)
+        )
     }
 
     #[inline]
     pub fn is_object_pattern(self) -> bool {
-        matches!(self, Self::ObjectPatternProperties(_) | Self::ObjectPatternRest(_))
+        matches!(
+            self,
+            Self::ObjectPatternProperties(_) | Self::ObjectPatternRest(_)
+        )
     }
 
     #[inline]
     pub fn is_binding_property(self) -> bool {
-        matches!(self, Self::BindingPropertyKey(_) | Self::BindingPropertyValue(_))
+        matches!(
+            self,
+            Self::BindingPropertyKey(_) | Self::BindingPropertyValue(_)
+        )
     }
 
     #[inline]
     pub fn is_array_pattern(self) -> bool {
-        matches!(self, Self::ArrayPatternElements(_) | Self::ArrayPatternRest(_))
+        matches!(
+            self,
+            Self::ArrayPatternElements(_) | Self::ArrayPatternRest(_)
+        )
     }
 
     #[inline]
@@ -1283,7 +1343,10 @@ impl<'a, 't> Ancestor<'a, 't> {
 
     #[inline]
     pub fn is_formal_parameters(self) -> bool {
-        matches!(self, Self::FormalParametersItems(_) | Self::FormalParametersRest(_))
+        matches!(
+            self,
+            Self::FormalParametersItems(_) | Self::FormalParametersRest(_)
+        )
     }
 
     #[inline]
@@ -1309,7 +1372,10 @@ impl<'a, 't> Ancestor<'a, 't> {
 
     #[inline]
     pub fn is_function_body(self) -> bool {
-        matches!(self, Self::FunctionBodyDirectives(_) | Self::FunctionBodyStatements(_))
+        matches!(
+            self,
+            Self::FunctionBodyDirectives(_) | Self::FunctionBodyStatements(_)
+        )
     }
 
     #[inline]
@@ -1343,7 +1409,10 @@ impl<'a, 't> Ancestor<'a, 't> {
 
     #[inline]
     pub fn is_class_heritage(self) -> bool {
-        matches!(self, Self::ClassHeritageExpression(_) | Self::ClassHeritageTypeArguments(_))
+        matches!(
+            self,
+            Self::ClassHeritageExpression(_) | Self::ClassHeritageTypeArguments(_)
+        )
     }
 
     #[inline]
@@ -1390,7 +1459,10 @@ impl<'a, 't> Ancestor<'a, 't> {
 
     #[inline]
     pub fn is_import_expression(self) -> bool {
-        matches!(self, Self::ImportExpressionSource(_) | Self::ImportExpressionOptions(_))
+        matches!(
+            self,
+            Self::ImportExpressionSource(_) | Self::ImportExpressionOptions(_)
+        )
     }
 
     #[inline]
@@ -1405,7 +1477,10 @@ impl<'a, 't> Ancestor<'a, 't> {
 
     #[inline]
     pub fn is_import_specifier(self) -> bool {
-        matches!(self, Self::ImportSpecifierImported(_) | Self::ImportSpecifierLocal(_))
+        matches!(
+            self,
+            Self::ImportSpecifierImported(_) | Self::ImportSpecifierLocal(_)
+        )
     }
 
     #[inline]
@@ -1425,7 +1500,10 @@ impl<'a, 't> Ancestor<'a, 't> {
 
     #[inline]
     pub fn is_import_attribute(self) -> bool {
-        matches!(self, Self::ImportAttributeKey(_) | Self::ImportAttributeValue(_))
+        matches!(
+            self,
+            Self::ImportAttributeKey(_) | Self::ImportAttributeValue(_)
+        )
     }
 
     #[inline]
@@ -1465,12 +1543,18 @@ impl<'a, 't> Ancestor<'a, 't> {
 
     #[inline]
     pub fn is_export_specifier(self) -> bool {
-        matches!(self, Self::ExportSpecifierLocal(_) | Self::ExportSpecifierExported(_))
+        matches!(
+            self,
+            Self::ExportSpecifierLocal(_) | Self::ExportSpecifierExported(_)
+        )
     }
 
     #[inline]
     pub fn is_v8_intrinsic_expression(self) -> bool {
-        matches!(self, Self::V8IntrinsicExpressionName(_) | Self::V8IntrinsicExpressionArguments(_))
+        matches!(
+            self,
+            Self::V8IntrinsicExpressionName(_) | Self::V8IntrinsicExpressionArguments(_)
+        )
     }
 
     #[inline]
@@ -1510,12 +1594,18 @@ impl<'a, 't> Ancestor<'a, 't> {
 
     #[inline]
     pub fn is_jsx_namespaced_name(self) -> bool {
-        matches!(self, Self::JSXNamespacedNameNamespace(_) | Self::JSXNamespacedNameName(_))
+        matches!(
+            self,
+            Self::JSXNamespacedNameNamespace(_) | Self::JSXNamespacedNameName(_)
+        )
     }
 
     #[inline]
     pub fn is_jsx_member_expression(self) -> bool {
-        matches!(self, Self::JSXMemberExpressionObject(_) | Self::JSXMemberExpressionProperty(_))
+        matches!(
+            self,
+            Self::JSXMemberExpressionObject(_) | Self::JSXMemberExpressionProperty(_)
+        )
     }
 
     #[inline]
@@ -1545,7 +1635,10 @@ impl<'a, 't> Ancestor<'a, 't> {
 
     #[inline]
     pub fn is_ts_enum_declaration(self) -> bool {
-        matches!(self, Self::TSEnumDeclarationId(_) | Self::TSEnumDeclarationBody(_))
+        matches!(
+            self,
+            Self::TSEnumDeclarationId(_) | Self::TSEnumDeclarationBody(_)
+        )
     }
 
     #[inline]
@@ -1555,7 +1648,10 @@ impl<'a, 't> Ancestor<'a, 't> {
 
     #[inline]
     pub fn is_ts_enum_member(self) -> bool {
-        matches!(self, Self::TSEnumMemberId(_) | Self::TSEnumMemberInitializer(_))
+        matches!(
+            self,
+            Self::TSEnumMemberId(_) | Self::TSEnumMemberInitializer(_)
+        )
     }
 
     #[inline]
@@ -1619,7 +1715,10 @@ impl<'a, 't> Ancestor<'a, 't> {
 
     #[inline]
     pub fn is_ts_named_tuple_member(self) -> bool {
-        matches!(self, Self::TSNamedTupleMemberLabel(_) | Self::TSNamedTupleMemberElementType(_))
+        matches!(
+            self,
+            Self::TSNamedTupleMemberLabel(_) | Self::TSNamedTupleMemberElementType(_)
+        )
     }
 
     #[inline]
@@ -1634,12 +1733,18 @@ impl<'a, 't> Ancestor<'a, 't> {
 
     #[inline]
     pub fn is_ts_type_reference(self) -> bool {
-        matches!(self, Self::TSTypeReferenceTypeName(_) | Self::TSTypeReferenceTypeArguments(_))
+        matches!(
+            self,
+            Self::TSTypeReferenceTypeName(_) | Self::TSTypeReferenceTypeArguments(_)
+        )
     }
 
     #[inline]
     pub fn is_ts_qualified_name(self) -> bool {
-        matches!(self, Self::TSQualifiedNameLeft(_) | Self::TSQualifiedNameRight(_))
+        matches!(
+            self,
+            Self::TSQualifiedNameLeft(_) | Self::TSQualifiedNameRight(_)
+        )
     }
 
     #[inline]
@@ -1698,12 +1803,18 @@ impl<'a, 't> Ancestor<'a, 't> {
 
     #[inline]
     pub fn is_ts_property_signature(self) -> bool {
-        matches!(self, Self::TSPropertySignatureKey(_) | Self::TSPropertySignatureTypeAnnotation(_))
+        matches!(
+            self,
+            Self::TSPropertySignatureKey(_) | Self::TSPropertySignatureTypeAnnotation(_)
+        )
     }
 
     #[inline]
     pub fn is_ts_index_signature(self) -> bool {
-        matches!(self, Self::TSIndexSignatureParameter(_) | Self::TSIndexSignatureTypeAnnotation(_))
+        matches!(
+            self,
+            Self::TSIndexSignatureParameter(_) | Self::TSIndexSignatureTypeAnnotation(_)
+        )
     }
 
     #[inline]
@@ -1770,7 +1881,10 @@ impl<'a, 't> Ancestor<'a, 't> {
 
     #[inline]
     pub fn is_ts_namespace_declaration(self) -> bool {
-        matches!(self, Self::TSNamespaceDeclarationId(_) | Self::TSNamespaceDeclarationBody(_))
+        matches!(
+            self,
+            Self::TSNamespaceDeclarationId(_) | Self::TSNamespaceDeclarationBody(_)
+        )
     }
 
     #[inline]
@@ -1780,7 +1894,10 @@ impl<'a, 't> Ancestor<'a, 't> {
 
     #[inline]
     pub fn is_ts_module_block(self) -> bool {
-        matches!(self, Self::TSModuleBlockDirectives(_) | Self::TSModuleBlockBody(_))
+        matches!(
+            self,
+            Self::TSModuleBlockDirectives(_) | Self::TSModuleBlockBody(_)
+        )
     }
 
     #[inline]
@@ -1795,7 +1912,10 @@ impl<'a, 't> Ancestor<'a, 't> {
 
     #[inline]
     pub fn is_ts_type_query(self) -> bool {
-        matches!(self, Self::TSTypeQueryExprName(_) | Self::TSTypeQueryTypeArguments(_))
+        matches!(
+            self,
+            Self::TSTypeQueryExprName(_) | Self::TSTypeQueryTypeArguments(_)
+        )
     }
 
     #[inline]
@@ -1851,12 +1971,18 @@ impl<'a, 't> Ancestor<'a, 't> {
 
     #[inline]
     pub fn is_ts_template_literal_type(self) -> bool {
-        matches!(self, Self::TSTemplateLiteralTypeQuasis(_) | Self::TSTemplateLiteralTypeTypes(_))
+        matches!(
+            self,
+            Self::TSTemplateLiteralTypeQuasis(_) | Self::TSTemplateLiteralTypeTypes(_)
+        )
     }
 
     #[inline]
     pub fn is_ts_as_expression(self) -> bool {
-        matches!(self, Self::TSAsExpressionExpression(_) | Self::TSAsExpressionTypeAnnotation(_))
+        matches!(
+            self,
+            Self::TSAsExpressionExpression(_) | Self::TSAsExpressionTypeAnnotation(_)
+        )
     }
 
     #[inline]
@@ -1869,7 +1995,10 @@ impl<'a, 't> Ancestor<'a, 't> {
 
     #[inline]
     pub fn is_ts_type_assertion(self) -> bool {
-        matches!(self, Self::TSTypeAssertionTypeAnnotation(_) | Self::TSTypeAssertionExpression(_))
+        matches!(
+            self,
+            Self::TSTypeAssertionTypeAnnotation(_) | Self::TSTypeAssertionExpression(_)
+        )
     }
 
     #[inline]
@@ -2101,7 +2230,10 @@ impl<'a, 't> Ancestor<'a, 't> {
 
     #[inline]
     pub fn is_parent_of_for_statement_left(self) -> bool {
-        matches!(self, Self::ForInStatementLeft(_) | Self::ForOfStatementLeft(_))
+        matches!(
+            self,
+            Self::ForInStatementLeft(_) | Self::ForOfStatementLeft(_)
+        )
     }
 
     #[inline]
@@ -2147,12 +2279,18 @@ impl<'a, 't> Ancestor<'a, 't> {
 
     #[inline]
     pub fn is_parent_of_jsx_child(self) -> bool {
-        matches!(self, Self::JSXElementChildren(_) | Self::JSXFragmentChildren(_))
+        matches!(
+            self,
+            Self::JSXElementChildren(_) | Self::JSXFragmentChildren(_)
+        )
     }
 
     #[inline]
     pub fn is_parent_of_jsx_element_name(self) -> bool {
-        matches!(self, Self::JSXOpeningElementName(_) | Self::JSXClosingElementName(_))
+        matches!(
+            self,
+            Self::JSXOpeningElementName(_) | Self::JSXClosingElementName(_)
+        )
     }
 
     #[inline]
@@ -2226,7 +2364,10 @@ impl<'a, 't> Ancestor<'a, 't> {
 
     #[inline]
     pub fn is_parent_of_ts_tuple_element(self) -> bool {
-        matches!(self, Self::TSTupleTypeElementTypes(_) | Self::TSNamedTupleMemberElementType(_))
+        matches!(
+            self,
+            Self::TSTupleTypeElementTypes(_) | Self::TSNamedTupleMemberElementType(_)
+        )
     }
 
     #[inline]
@@ -2242,7 +2383,10 @@ impl<'a, 't> Ancestor<'a, 't> {
 
     #[inline]
     pub fn is_parent_of_ts_signature(self) -> bool {
-        matches!(self, Self::TSInterfaceBodyBody(_) | Self::TSTypeLiteralMembers(_))
+        matches!(
+            self,
+            Self::TSInterfaceBodyBody(_) | Self::TSTypeLiteralMembers(_)
+        )
     }
 
     #[inline]
@@ -2262,7 +2406,10 @@ impl<'a, 't> Ancestor<'a, 't> {
 
     #[inline]
     pub fn is_parent_of_ts_import_type_qualifier(self) -> bool {
-        matches!(self, Self::TSImportTypeQualifier(_) | Self::TSImportTypeQualifiedNameLeft(_))
+        matches!(
+            self,
+            Self::TSImportTypeQualifier(_) | Self::TSImportTypeQualifiedNameLeft(_)
+        )
     }
 
     #[inline]

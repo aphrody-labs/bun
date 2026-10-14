@@ -333,6 +333,11 @@ fn test() {
         ),
     ];
 
-    Tester::new(RequireRenderReturn::NAME, RequireRenderReturn::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        RequireRenderReturn::NAME,
+        RequireRenderReturn::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

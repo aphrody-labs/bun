@@ -84,7 +84,9 @@ impl Rule for NoArrayFillWithReferenceType {
             return;
         }
 
-        ctx.diagnostic(no_array_fill_with_reference_type_diagnostic(fill_value.span()));
+        ctx.diagnostic(no_array_fill_with_reference_type_diagnostic(
+            fill_value.span(),
+        ));
     }
 }
 
@@ -147,7 +149,9 @@ fn is_same_binding_identifier(
     binding: &BindingPattern<'_>,
     ident: &IdentifierReference<'_>,
 ) -> bool {
-    binding.get_binding_identifier().is_some_and(|binding_ident| binding_ident.name == ident.name)
+    binding
+        .get_binding_identifier()
+        .is_some_and(|binding_ident| binding_ident.name == ident.name)
 }
 
 #[test]

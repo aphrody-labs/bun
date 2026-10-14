@@ -63,7 +63,11 @@ fn email(t: &str, pos: usize, prev: Option<char>) -> Option<usize> {
     }
     let bytes = t.as_bytes();
     let mut i = pos;
-    while bytes.get(i).copied().is_some_and(|b| is_atext(b as char) && b.is_ascii()) {
+    while bytes
+        .get(i)
+        .copied()
+        .is_some_and(|b| is_atext(b as char) && b.is_ascii())
+    {
         i += 1;
     }
     if i == pos || bytes.get(i) != Some(&b'@') {
@@ -75,7 +79,11 @@ fn email(t: &str, pos: usize, prev: Option<char>) -> Option<usize> {
         match bytes.get(i) {
             Some(b'.') => {
                 // The dot joins the domain only when followed by more of it
-                if !bytes.get(i + 1).copied().is_some_and(|b| b.is_ascii_alphanumeric()) {
+                if !bytes
+                    .get(i + 1)
+                    .copied()
+                    .is_some_and(|b| b.is_ascii_alphanumeric())
+                {
                     break;
                 }
                 dot = true;
@@ -93,13 +101,22 @@ fn email(t: &str, pos: usize, prev: Option<char>) -> Option<usize> {
         }
     }
     // The domain must end with a letter
-    (data && dot && bytes.get(i - 1).copied().is_some_and(|b| b.is_ascii_alphabetic())).then_some(i)
+    (data
+        && dot
+        && bytes
+            .get(i - 1)
+            .copied()
+            .is_some_and(|b| b.is_ascii_alphabetic()))
+    .then_some(i)
 }
 
 fn www(t: &str, pos: usize, prev: Option<char>) -> Option<usize> {
     // micromark's `previousWww`: a few ASCII punctuation marks
     // or `markdownLineEndingOrSpace` (ASCII space/tab/line ending only, so NBSP blocks the link).
-    if !matches!(prev, None | Some('(' | '*' | '_' | '[' | ']' | '~' | ' ' | '\t' | '\n')) {
+    if !matches!(
+        prev,
+        None | Some('(' | '*' | '_' | '[' | ']' | '~' | ' ' | '\t' | '\n')
+    ) {
         return None;
     }
     let bytes = t.as_bytes();
@@ -120,7 +137,12 @@ fn http(t: &str, pos: usize, prev: Option<char>) -> Option<usize> {
     }
     let bytes = t.as_bytes();
     let mut i = pos;
-    while bytes.get(i).copied().is_some_and(|b| b.is_ascii_alphabetic()) && i - pos < 5 {
+    while bytes
+        .get(i)
+        .copied()
+        .is_some_and(|b| b.is_ascii_alphabetic())
+        && i - pos < 5
+    {
         i += 1;
     }
     if !t[pos..i].eq_ignore_ascii_case("http") && !t[pos..i].eq_ignore_ascii_case("https") {
@@ -216,14 +238,19 @@ fn path(t: &str, i: &mut usize) {
 fn trail_check(t: &str, mut i: usize) -> Result<(), usize> {
     let bytes = t.as_bytes();
     loop {
-        let Some(c) = char_at(t, i) else { return Ok(()) };
+        let Some(c) = char_at(t, i) else {
+            return Ok(());
+        };
         match c {
             '<' => return Ok(()),
             c if is_whitespace(c) => return Ok(()),
             '!' | '"' | '\'' | ')' | '*' | ',' | '.' | ':' | ';' | '?' | '_' | '~' => i += 1,
             '&' => {
                 i += 1;
-                let run = bytes[i..].iter().take_while(|b| b.is_ascii_alphabetic()).count();
+                let run = bytes[i..]
+                    .iter()
+                    .take_while(|b| b.is_ascii_alphabetic())
+                    .count();
                 if run == 0 || bytes.get(i + run) != Some(&b';') {
                     return Err(i + run);
                 }
@@ -252,26 +279,46 @@ mod tests {
         assert_eq!(literal_kind("HTTPS://x.y"), LiteralKind::Http);
         assert_eq!(literal_kind("www.x.y"), LiteralKind::Www);
         assert_eq!(literal_kind("a@b.cd"), LiteralKind::Email);
-        assert_eq!(literal_kind("www.aa日x"), LiteralKind::Www, "non-ASCII must not panic");
+        assert_eq!(
+            literal_kind("www.aa日x"),
+            LiteralKind::Www,
+            "non-ASCII must not panic"
+        );
     }
 
     #[test]
     fn scans_with_trailing_punctuation_trimmed() {
         assert_eq!(scan("www.x.y.", 0, None), Some(7));
         assert_eq!(scan("http://x.y/p(q)", 0, None), Some(15));
-        assert_eq!(scan("http://x.y/p)", 0, None), Some(12), "unbalanced paren excluded");
+        assert_eq!(
+            scan("http://x.y/p)", 0, None),
+            Some(12),
+            "unbalanced paren excluded"
+        );
         assert_eq!(scan("a@b.cd,", 0, None), Some(6));
     }
 
     #[test]
     fn previous_character_gates() {
         assert_eq!(scan("www.x.y", 0, Some(' ')), Some(7));
-        assert_eq!(scan("www.x.y", 0, Some('_')), Some(7), "micromark's `previousWww` admits `_`");
+        assert_eq!(
+            scan("www.x.y", 0, Some('_')),
+            Some(7),
+            "micromark's `previousWww` admits `_`"
+        );
         assert_eq!(scan("www.x.y", 0, Some('a')), None);
-        assert_eq!(scan("www.x.y", 0, Some('\u{A0}')), None, "NBSP is not a markdown space");
+        assert_eq!(
+            scan("www.x.y", 0, Some('\u{A0}')),
+            None,
+            "NBSP is not a markdown space"
+        );
         assert_eq!(scan("http://x.y", 0, Some('a')), None);
         assert_eq!(scan("http://x.y", 0, Some('1')), Some(10));
         assert_eq!(scan("a@b.cd", 0, Some('/')), None);
-        assert_eq!(scan("a@b.cd", 0, Some('.')), None, "atext before an email is part of it");
+        assert_eq!(
+            scan("a@b.cd", 0, Some('.')),
+            None,
+            "atext before an email is part of it"
+        );
     }
 }

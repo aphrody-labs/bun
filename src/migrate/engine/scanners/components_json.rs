@@ -18,8 +18,8 @@
 //!   - https://ui.shadcn.com/docs/components-json
 //!   - https://ui.shadcn.com/docs/registry/getting-started
 
-use crate::util::make_finding;
 use crate::types::{Finding, MakeFindingOpts, Severity};
+use crate::util::make_finding;
 use serde_json::Value;
 
 pub fn scan_components_json(path: &str, content: &str) -> (Vec<Finding>, String) {

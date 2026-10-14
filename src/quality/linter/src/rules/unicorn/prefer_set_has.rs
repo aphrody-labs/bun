@@ -71,7 +71,8 @@ declare_oxc_lint!(
     perf,
     dangerous_fix,
     version = "0.13.2",
-    short_description = "Prefer `Set#has()` over `Array#includes()` when checking for existence or non-existence.",
+    short_description =
+        "Prefer `Set#has()` over `Array#includes()` when checking for existence or non-existence.",
 );
 
 fn is_array_of_or_from(callee: &MemberExpression) -> bool {
@@ -81,9 +82,10 @@ fn is_array_of_or_from(callee: &MemberExpression) -> bool {
 
 fn is_kind_of_array_expr(expr: &Expression) -> bool {
     match expr {
-        Expression::NewExpression(new_expr) => {
-            new_expr.callee.get_identifier_reference().is_some_and(|ident| ident.name == "Array")
-        }
+        Expression::NewExpression(new_expr) => new_expr
+            .callee
+            .get_identifier_reference()
+            .is_some_and(|ident| ident.name == "Array"),
         Expression::CallExpression(call_expr) => {
             let Some(callee) = call_expr.callee.get_member_expr() else {
                 return call_expr.callee_name().is_some_and(|name| name == "Array");
@@ -93,7 +95,9 @@ fn is_kind_of_array_expr(expr: &Expression) -> bool {
                 return false;
             }
 
-            let Some(name) = callee.static_property_name() else { return false };
+            let Some(name) = callee.static_property_name() else {
+                return false;
+            };
 
             is_array_of_or_from(callee) || ARRAY_METHODS_RETURNS_ARRAY.contains(&name)
         }
@@ -157,8 +161,12 @@ impl Rule for PreferSetHas {
         let symbol_id = ident.symbol_id();
 
         let module_record = ctx.module_record();
-        if module_record.exported_bindings.contains_key(ident.name.as_str())
-            || module_record.export_default.is_some_and(|default| default == ident.span)
+        if module_record
+            .exported_bindings
+            .contains_key(ident.name.as_str())
+            || module_record
+                .export_default
+                .is_some_and(|default| default == ident.span)
         {
             return;
         }

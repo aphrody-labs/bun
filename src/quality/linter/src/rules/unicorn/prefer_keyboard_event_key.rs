@@ -167,7 +167,10 @@ impl PreferKeyboardEventKey {
                     BindingPattern::BindingIdentifier(ident) => ident.span,
                     _ => return,
                 };
-                ctx.diagnostic(prefer_keyboard_event_key_diagnostic(value_span, deprecated_name));
+                ctx.diagnostic(prefer_keyboard_event_key_diagnostic(
+                    value_span,
+                    deprecated_name,
+                ));
             }
             return;
         };
@@ -187,7 +190,10 @@ impl PreferKeyboardEventKey {
             return;
         };
 
-        ctx.diagnostic(prefer_keyboard_event_key_diagnostic(ident.span, deprecated_name));
+        ctx.diagnostic(prefer_keyboard_event_key_diagnostic(
+            ident.span,
+            deprecated_name,
+        ));
     }
 
     /// Check if this property is directly in the event parameter destructuring
@@ -275,7 +281,10 @@ impl PreferKeyboardEventKey {
     ) -> bool {
         match expr {
             Expression::Identifier(ident) => {
-                ctx.scoping().get_reference(ident.reference_id()).symbol_id() == Some(symbol_id)
+                ctx.scoping()
+                    .get_reference(ident.reference_id())
+                    .symbol_id()
+                    == Some(symbol_id)
             }
             _ => false,
         }
@@ -379,7 +388,10 @@ impl PreferKeyboardEventKey {
         let parent = ctx.nodes().parent_node(member_node.id());
 
         let AstKind::BinaryExpression(binary) = parent.kind() else {
-            ctx.diagnostic(prefer_keyboard_event_key_diagnostic(property_span, property_name));
+            ctx.diagnostic(prefer_keyboard_event_key_diagnostic(
+                property_span,
+                property_name,
+            ));
             return;
         };
 
@@ -388,7 +400,10 @@ impl PreferKeyboardEventKey {
             binary.operator,
             oxc_ast::ast::BinaryOperator::Equality | oxc_ast::ast::BinaryOperator::StrictEquality
         ) {
-            ctx.diagnostic(prefer_keyboard_event_key_diagnostic(property_span, property_name));
+            ctx.diagnostic(prefer_keyboard_event_key_diagnostic(
+                property_span,
+                property_name,
+            ));
             return;
         }
 
@@ -401,13 +416,19 @@ impl PreferKeyboardEventKey {
         };
 
         let Some((code_value, number_span)) = number_value else {
-            ctx.diagnostic(prefer_keyboard_event_key_diagnostic(property_span, property_name));
+            ctx.diagnostic(prefer_keyboard_event_key_diagnostic(
+                property_span,
+                property_name,
+            ));
             return;
         };
 
         // Get the key name for this code
         let Some(key_name) = get_key_from_code(code_value) else {
-            ctx.diagnostic(prefer_keyboard_event_key_diagnostic(property_span, property_name));
+            ctx.diagnostic(prefer_keyboard_event_key_diagnostic(
+                property_span,
+                property_name,
+            ));
             return;
         };
 
@@ -415,9 +436,10 @@ impl PreferKeyboardEventKey {
         ctx.diagnostic_with_fix(
             prefer_keyboard_event_key_diagnostic(property_span, property_name),
             |fixer| {
-                let mut codegen = fixer
-                    .codegen()
-                    .with_options(CodegenOptions { single_quote: true, ..Default::default() });
+                let mut codegen = fixer.codegen().with_options(CodegenOptions {
+                    single_quote: true,
+                    ..Default::default()
+                });
                 codegen.print_string(&key_name);
                 let key_str = codegen.into_source_text();
 
@@ -1126,7 +1148,12 @@ fn test() {
             });",
         ),
     ];
-    Tester::new(PreferKeyboardEventKey::NAME, PreferKeyboardEventKey::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        PreferKeyboardEventKey::NAME,
+        PreferKeyboardEventKey::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

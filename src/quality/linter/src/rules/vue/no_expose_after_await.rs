@@ -15,12 +15,14 @@ use oxc_span::Span;
 use crate::{AstNode, context::LintContext, frameworks::FrameworkOptions, rule::Rule};
 
 fn no_expose_after_await_diagnostic(span: Span, name: &str) -> OxcDiagnostic {
-    OxcDiagnostic::warn(format!("`{name}` is forbidden after an `await` expression."))
-        .with_help(
-            "`expose` should be called synchronously in `setup()` \
+    OxcDiagnostic::warn(format!(
+        "`{name}` is forbidden after an `await` expression."
+    ))
+    .with_help(
+        "`expose` should be called synchronously in `setup()` \
             (or `defineExpose()` in `<script setup>`). Move the call before the first `await`.",
-        )
-        .with_label(span)
+    )
+    .with_label(span)
 }
 
 #[derive(Debug, Default, Clone)]
@@ -101,7 +103,11 @@ fn check_setup_in_object<'a>(obj_expr: &ObjectExpression<'a>, ctx: &LintContext<
         let ObjectPropertyKind::ObjectProperty(obj_prop) = prop else {
             return None;
         };
-        obj_prop.key.static_name().is_some_and(|name| name == "setup").then_some(obj_prop)
+        obj_prop
+            .key
+            .static_name()
+            .is_some_and(|name| name == "setup")
+            .then_some(obj_prop)
     }) else {
         return;
     };
@@ -160,10 +166,16 @@ fn check_script_setup<'a>(program: &Program<'a>, ctx: &LintContext<'a>) {
         if after_await
             && let Statement::ExpressionStatement(expr_stmt) = stmt
             && let Some(call_expr) = extract_call_expression(&expr_stmt.expression)
-            && let Some(ident) = call_expr.callee.get_inner_expression().get_identifier_reference()
+            && let Some(ident) = call_expr
+                .callee
+                .get_inner_expression()
+                .get_identifier_reference()
             && ident.name == "defineExpose"
         {
-            ctx.diagnostic(no_expose_after_await_diagnostic(call_expr.span, "defineExpose"));
+            ctx.diagnostic(no_expose_after_await_diagnostic(
+                call_expr.span,
+                "defineExpose",
+            ));
         }
 
         if !after_await {
@@ -218,7 +230,12 @@ struct ExposeAfterAwaitVisitor<'a> {
 
 impl<'a> ExposeAfterAwaitVisitor<'a> {
     fn new(scoping: &'a Scoping, binding: ExposeBinding) -> Self {
-        Self { found: false, errors: Vec::new(), scoping, binding }
+        Self {
+            found: false,
+            errors: Vec::new(),
+            scoping,
+            binding,
+        }
     }
 
     fn matches_target(&self, call_expr: &CallExpression<'a>) -> bool {
@@ -239,8 +256,10 @@ impl<'a> ExposeAfterAwaitVisitor<'a> {
                 if member.property.name != "expose" {
                     return false;
                 }
-                let Some(obj_ident) =
-                    member.object.get_inner_expression().get_identifier_reference()
+                let Some(obj_ident) = member
+                    .object
+                    .get_inner_expression()
+                    .get_identifier_reference()
                 else {
                     return false;
                 };
@@ -502,6 +521,11 @@ fn test() {
         ),
     ];
 
-    Tester::new(NoExposeAfterAwait::NAME, NoExposeAfterAwait::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        NoExposeAfterAwait::NAME,
+        NoExposeAfterAwait::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

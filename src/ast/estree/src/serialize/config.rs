@@ -21,7 +21,10 @@ pub struct ConfigNoFixes {
 impl Config for ConfigNoFixes {
     #[inline(always)]
     fn new(include_ts_fields: bool, ranges: bool) -> Self {
-        Self { include_ts_fields, ranges }
+        Self {
+            include_ts_fields,
+            ranges,
+        }
     }
 
     #[inline(always)]
@@ -49,7 +52,10 @@ pub struct ConfigFixes {
 impl Config for ConfigFixes {
     #[inline(always)]
     fn new(include_ts_fields: bool, ranges: bool) -> Self {
-        Self { include_ts_fields, ranges }
+        Self {
+            include_ts_fields,
+            ranges,
+        }
     }
 
     #[inline(always)]

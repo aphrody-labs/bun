@@ -39,7 +39,11 @@ fn matches_eslint_disable_next_line<S: AsRef<str>>(value: &str, rule_names: &[S]
     value
         .strip_prefix("eslint-disable-next-line ")
         .or_else(|| value.strip_prefix("oxlint-disable-next-line "))
-        .is_some_and(|rest| rule_names.iter().any(|name| rest.starts_with(name.as_ref())))
+        .is_some_and(|rest| {
+            rule_names
+                .iter()
+                .any(|name| rest.starts_with(name.as_ref()))
+        })
 }
 
 /// Check if a comment value matches `eslint-disable <rule>` for any rule in `rule_names`.
@@ -47,7 +51,11 @@ fn matches_eslint_disable<S: AsRef<str>>(value: &str, rule_names: &[S]) -> bool 
     value
         .strip_prefix("eslint-disable ")
         .or_else(|| value.strip_prefix("oxlint-disable "))
-        .is_some_and(|rest| rule_names.iter().any(|name| rest.starts_with(name.as_ref())))
+        .is_some_and(|rest| {
+            rule_names
+                .iter()
+                .any(|name| rest.starts_with(name.as_ref()))
+        })
 }
 
 /// Check if a comment value matches `eslint-enable <rule>` for any rule in `rule_names`.
@@ -55,7 +63,11 @@ fn matches_eslint_enable<S: AsRef<str>>(value: &str, rule_names: &[S]) -> bool {
     value
         .strip_prefix("eslint-enable ")
         .or_else(|| value.strip_prefix("oxlint-enable "))
-        .is_some_and(|rest| rule_names.iter().any(|name| rest.starts_with(name.as_ref())))
+        .is_some_and(|rest| {
+            rule_names
+                .iter()
+                .any(|name| rest.starts_with(name.as_ref()))
+        })
 }
 
 /// Check if a comment value matches a Flow suppression pattern.
@@ -71,7 +83,9 @@ fn matches_flow_suppression(value: &str) -> bool {
     // Match FlowFixMe (with optional word chars), FlowExpectedError, or FlowIssue
     let after_kind = if let Some(rest) = after_dollar_flow.strip_prefix("FixMe") {
         // Skip "FixMe" + any word characters
-        let word_end = rest.find(|c: char| !c.is_alphanumeric() && c != '_').unwrap_or(rest.len());
+        let word_end = rest
+            .find(|c: char| !c.is_alphanumeric() && c != '_')
+            .unwrap_or(rest.len());
         &rest[word_end..]
     } else if let Some(rest) = after_dollar_flow.strip_prefix("ExpectedError") {
         rest
@@ -182,7 +196,10 @@ pub fn suppressions_to_diagnostics(
     suppressions: &[SuppressionRange],
     source_text: &str,
 ) -> Diagnostics {
-    assert!(!suppressions.is_empty(), "Expected at least one suppression comment source range");
+    assert!(
+        !suppressions.is_empty(),
+        "Expected at least one suppression comment source range"
+    );
 
     let mut error = Diagnostics::new();
 
@@ -201,7 +218,11 @@ pub fn suppressions_to_diagnostics(
             comment_value(suppression.disable_comment, source_text)
         );
 
-        error.push(diagnostics::suppression(reason, description, suppression.disable_comment.span));
+        error.push(diagnostics::suppression(
+            reason,
+            description,
+            suppression.disable_comment.span,
+        ));
     }
 
     error

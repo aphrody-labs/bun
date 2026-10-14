@@ -16,7 +16,11 @@ pub struct UnusedLabels<'a> {
 
 impl<'a> UnusedLabels<'a> {
     pub fn add(&mut self, name: Ident<'a>, node_id: NodeId) {
-        self.stack.push(LabeledScope { name, used: false, node_id });
+        self.stack.push(LabeledScope {
+            name,
+            used: false,
+            node_id,
+        });
     }
 
     pub fn reference(&mut self, name: Ident<'_>) {

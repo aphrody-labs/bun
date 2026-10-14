@@ -484,7 +484,13 @@ fn is_valid_data_attr(name: &str) -> bool {
 
 /// Checks if a tag name matches the HTML tag conventions.
 fn matches_html_tag_conventions(tag: &str) -> bool {
-    tag.char_indices().all(|(i, c)| if i == 0 { c.is_ascii_lowercase() } else { c != '-' })
+    tag.char_indices().all(|(i, c)| {
+        if i == 0 {
+            c.is_ascii_lowercase()
+        } else {
+            c != '-'
+        }
+    })
 }
 
 fn normalize_attribute_case(name: &str) -> &str {
@@ -605,28 +611,70 @@ fn test() {
         (r#"<div className="bar"></div>;"#, None),
         (r"<div onMouseDown={this._onMouseDown}></div>;", None),
         (r"<div onScrollEnd={this._onScrollEnd}></div>;", None),
-        (r"<div onFullscreenChange={this._onFullscreenChange}></div>;", None),
-        (r"<div onFullscreenError={this._onFullscreenError}></div>;", None),
-        (r"<div onFullscreenChangeCapture={this._onFullscreenChange}></div>;", None),
-        (r"<div onFullscreenErrorCapture={this._onFullscreenError}></div>;", None),
-        (r"<div onTransitionCancel={this._onTransitionCancel}></div>;", None),
-        (r"<div onTransitionCancelCapture={this._onTransitionCancelCapture}></div>;", None),
-        (r"<div onTransitionRun={this._onTransitionRun}></div>;", None),
-        (r"<div onTransitionRunCapture={this._onTransitionRunCapture}></div>;", None),
-        (r"<div onTransitionStart={this._onTransitionStart}></div>;", None),
-        (r"<div onTransitionStartCapture={this._onTransitionStartCapture}></div>;", None),
-        (r#"<iframe credentialless src="https://example.com" />"#, None),
+        (
+            r"<div onFullscreenChange={this._onFullscreenChange}></div>;",
+            None,
+        ),
+        (
+            r"<div onFullscreenError={this._onFullscreenError}></div>;",
+            None,
+        ),
+        (
+            r"<div onFullscreenChangeCapture={this._onFullscreenChange}></div>;",
+            None,
+        ),
+        (
+            r"<div onFullscreenErrorCapture={this._onFullscreenError}></div>;",
+            None,
+        ),
+        (
+            r"<div onTransitionCancel={this._onTransitionCancel}></div>;",
+            None,
+        ),
+        (
+            r"<div onTransitionCancelCapture={this._onTransitionCancelCapture}></div>;",
+            None,
+        ),
+        (
+            r"<div onTransitionRun={this._onTransitionRun}></div>;",
+            None,
+        ),
+        (
+            r"<div onTransitionRunCapture={this._onTransitionRunCapture}></div>;",
+            None,
+        ),
+        (
+            r"<div onTransitionStart={this._onTransitionStart}></div>;",
+            None,
+        ),
+        (
+            r"<div onTransitionStartCapture={this._onTransitionStartCapture}></div>;",
+            None,
+        ),
+        (
+            r#"<iframe credentialless src="https://example.com" />"#,
+            None,
+        ),
         (r#"<mask maskType="alpha" />"#, None),
-        (r"<div onScrollEndCapture={this._onScrollEndCapture}></div>;", None),
+        (
+            r"<div onScrollEndCapture={this._onScrollEndCapture}></div>;",
+            None,
+        ),
         (r#"<a href="someLink" download="foo">Read more</a>"#, None),
         (r#"<area download="foo" />"#, None),
-        (r#"<img src="cat_keyboard.jpeg" alt="A cat sleeping on a keyboard" align="top" />"#, None),
+        (
+            r#"<img src="cat_keyboard.jpeg" alt="A cat sleeping on a keyboard" align="top" />"#,
+            None,
+        ),
         (r#"<input type="password" required />"#, None),
         (r#"<input ref={this.input} type="radio" />"#, None),
         (r#"<input type="file" webkitdirectory="" />"#, None),
         (r#"<input type="file" webkitDirectory="" />"#, None),
         (r#"<div inert children="anything" />"#, None),
-        (r#"<iframe scrolling="?" onLoad={a} onError={b} align="top" />"#, None),
+        (
+            r#"<iframe scrolling="?" onLoad={a} onError={b} align="top" />"#,
+            None,
+        ),
         (r#"<input key="bar" type="radio" />"#, None),
         (r"<button disabled>You cannot click me</button>;", None),
         (
@@ -643,7 +691,10 @@ fn test() {
         ),
         (r"<video playsInline />", None),
         (r"<img onError={foo} onLoad={bar} />", None),
-        (r"<picture inert={false} onError={foo} onLoad={bar} />", None),
+        (
+            r"<picture inert={false} onError={foo} onLoad={bar} />",
+            None,
+        ),
         (r"<iframe onError={foo} onLoad={bar} />", None),
         (r"<script onLoad={bar} onError={foo} />", None),
         (r"<source onLoad={bar} onError={foo} />", None),
@@ -653,13 +704,25 @@ fn test() {
             None,
         ),
         (r"<object onLoad={bar} />", None),
-        (r"<video allowFullScreen webkitAllowFullScreen mozAllowFullScreen />", None),
-        (r"<iframe allowFullScreen webkitAllowFullScreen mozAllowFullScreen />", None),
+        (
+            r"<video allowFullScreen webkitAllowFullScreen mozAllowFullScreen />",
+            None,
+        ),
+        (
+            r"<iframe allowFullScreen webkitAllowFullScreen mozAllowFullScreen />",
+            None,
+        ),
         (r#"<table border="1" />"#, None),
         (r#"<th abbr="abbr" />"#, None),
         (r#"<td abbr="abbr" />"#, None),
-        (r"<div onPointerDown={this.onDown} onPointerUp={this.onUp} />", None),
-        (r#"<input type="checkbox" defaultChecked={this.state.checkbox} />"#, None),
+        (
+            r"<div onPointerDown={this.onDown} onPointerUp={this.onUp} />",
+            None,
+        ),
+        (
+            r#"<input type="checkbox" defaultChecked={this.state.checkbox} />"#,
+            None,
+        ),
         (
             r"<div onTouchStart={this.startAnimation} onTouchEnd={this.stopAnimation} onTouchCancel={this.cancel} onTouchMove={this.move} onMouseMoveCapture={this.capture} onTouchCancelCapture={this.log} />",
             None,
@@ -667,7 +730,10 @@ fn test() {
         (r#"<meta charset="utf-8" />;"#, None),
         (r#"<meta charSet="utf-8" />;"#, None),
         (r#"<div class="foo" is="my-elem"></div>;"#, None),
-        (r#"<div {...this.props} class="foo" is="my-elem"></div>;"#, None),
+        (
+            r#"<div {...this.props} class="foo" is="my-elem"></div>;"#,
+            None,
+        ),
         (r#"<atom-panel class="foo"></atom-panel>;"#, None),
         (r#"<div data-foo="bar"></div>;"#, None),
         (r#"<div data-foo-bar="baz"></div>;"#, None),
@@ -679,20 +745,41 @@ fn test() {
             r#"<div data-testID="bar" data-under_sCoRe="bar" />;"#,
             Some(serde_json::json!([{ "requireDataLowercase": false }])),
         ),
-        (r#"<div class="bar"></div>;"#, Some(serde_json::json!([{ "ignore": ["class"] }]))),
-        (r#"<div someProp="bar"></div>;"#, Some(serde_json::json!([{ "ignore": ["someProp"] }]))),
-        (r"<div css={{flex: 1}}></div>;", Some(serde_json::json!([{ "ignore": ["css"] }]))),
-        (r#"<button aria-haspopup="true">Click me to open pop up</button>;"#, None),
-        (r#"<button aria-label="Close" onClick={someThing.close} />;"#, None),
+        (
+            r#"<div class="bar"></div>;"#,
+            Some(serde_json::json!([{ "ignore": ["class"] }])),
+        ),
+        (
+            r#"<div someProp="bar"></div>;"#,
+            Some(serde_json::json!([{ "ignore": ["someProp"] }])),
+        ),
+        (
+            r"<div css={{flex: 1}}></div>;",
+            Some(serde_json::json!([{ "ignore": ["css"] }])),
+        ),
+        (
+            r#"<button aria-haspopup="true">Click me to open pop up</button>;"#,
+            None,
+        ),
+        (
+            r#"<button aria-label="Close" onClick={someThing.close} />;"#,
+            None,
+        ),
         (r"<script crossOrigin noModule />", None),
         (r"<audio crossOrigin />", None),
         (r"<svg focusable><image crossOrigin /></svg>", None),
-        (r"<details onToggle={this.onToggle}>Some details</details>", None),
+        (
+            r"<details onToggle={this.onToggle}>Some details</details>",
+            None,
+        ),
         (
             r#"<path fill="pink" d="M 10,30 A 20,20 0,0,1 50,30 A 20,20 0,0,1 90,30 Q 90,60 50,90 Q 10,60 10,30 z"></path>"#,
             None,
         ),
-        (r#"<line fill="pink" x1="0" y1="80" x2="100" y2="20"></line>"#, None),
+        (
+            r#"<line fill="pink" x1="0" y1="80" x2="100" y2="20"></line>"#,
+            None,
+        ),
         (r#"<link as="audio">Audio content</link>"#, None),
         (
             r#"<video controlsList="nodownload" controls={this.controls} loop={true} muted={false} src={this.videoSrc} playsInline={true} onResize={this.onResize}></video>"#,
@@ -706,8 +793,14 @@ fn test() {
             r#"<marker id={markerId} viewBox="0 0 2 2" refX="1" refY="1" markerWidth="1" markerHeight="1" orient="auto" />"#,
             None,
         ),
-        (r#"<pattern id="pattern" viewBox="0,0,10,10" width="10%" height="10%" />"#, None),
-        (r#"<symbol id="myDot" width="10" height="10" viewBox="0 0 2 2" />"#, None),
+        (
+            r#"<pattern id="pattern" viewBox="0,0,10,10" width="10%" height="10%" />"#,
+            None,
+        ),
+        (
+            r#"<symbol id="myDot" width="10" height="10" viewBox="0 0 2 2" />"#,
+            None,
+        ),
         (r#"<view id="one" viewBox="0 0 100 100" />"#, None),
         (r#"<hr align="top" />"#, None),
         (r#"<applet align="top" />"#, None),
@@ -717,7 +810,10 @@ fn test() {
             None,
         ),
         (r#"<div popover="auto" />"#, None),
-        (r#"<button popoverTarget="locale-switcher" popoverTargetAction="show" />"#, None),
+        (
+            r#"<button popoverTarget="locale-switcher" popoverTargetAction="show" />"#,
+            None,
+        ),
         (
             r#"<input type="button" popoverTarget="locale-switcher" popoverTargetAction="show" />"#,
             None,
@@ -726,7 +822,10 @@ fn test() {
         (r#"<img fetchPriority="high" src="foo.jpg" />"#, None),
         (r#"<img fetchPriority="low" src="foo.jpg" />"#, None),
         (r#"<img fetchPriority="auto" src="foo.jpg" />"#, None),
-        (r#"<link fetchPriority="high" href="style.css" rel="stylesheet" />"#, None),
+        (
+            r#"<link fetchPriority="high" href="style.css" rel="stylesheet" />"#,
+            None,
+        ),
         (r#"<script fetchPriority="high" src="script.js" />"#, None),
         (
             r#"
@@ -801,9 +900,15 @@ fn test() {
 
     let fail = vec![
         (r#"<div allowTransparency="true" />"#, None),
-        (r#"<div hasOwnProperty="should not be allowed property"></div>;"#, None),
+        (
+            r#"<div hasOwnProperty="should not be allowed property"></div>;"#,
+            None,
+        ),
         (r#"<div abc="should not be allowed property"></div>;"#, None),
-        (r#"<div aria-fake="should not be allowed property"></div>;"#, None),
+        (
+            r#"<div aria-fake="should not be allowed property"></div>;"#,
+            None,
+        ),
         (r#"<div someProp="bar"></div>;"#, None),
         (r#"<div class="bar"></div>;"#, None),
         (r#"<div for="bar"></div>;"#, None),
@@ -836,7 +941,10 @@ fn test() {
         (r#"<div popoverTargetAction="show" />"#, None),
         (r#"<div fetchPriority="high" />"#, None),
         (r#"<img fetchpriority="high" src="foo.jpg" />"#, None),
-        (r#"<link fetchpriority="high" href="style.css" rel="stylesheet" />"#, None),
+        (
+            r#"<link fetchpriority="high" href="style.css" rel="stylesheet" />"#,
+            None,
+        ),
         (r#"<script fetchpriority="high" src="script.js" />"#, None),
         (r#"<div data-xml-anything="invalid" />"#, None),
         (
@@ -857,30 +965,65 @@ fn test() {
         ("<t onChñnge/>", None),
         (r#"<div precedence="default" />"#, None),
         (r"<div credentialless />", None),
-        (r#"<iframe credentialLess src="https://example.com" />"#, None),
+        (
+            r#"<iframe credentialLess src="https://example.com" />"#,
+            None,
+        ),
         (r#"<mask mask-type="alpha" />"#, None),
         (r#"<script precedence="high" src="foo.js" />"#, None),
     ];
 
     let fix = vec![
-        (r#"<div class="bar"></div>;"#, r#"<div className="bar"></div>;"#),
+        (
+            r#"<div class="bar"></div>;"#,
+            r#"<div className="bar"></div>;"#,
+        ),
         (r#"<div for="bar"></div>;"#, r#"<div htmlFor="bar"></div>;"#),
-        (r#"<div accept-charset="bar"></div>;"#, r#"<div acceptCharset="bar"></div>;"#),
-        (r#"<div http-equiv="bar"></div>;"#, r#"<div httpEquiv="bar"></div>;"#),
-        (r#"<div accesskey="bar"></div>;"#, r#"<div accessKey="bar"></div>;"#),
-        (r#"<div onclick="bar"></div>;"#, r#"<div onClick="bar"></div>;"#),
-        (r#"<div onmousedown="bar"></div>;"#, r#"<div onMouseDown="bar"></div>;"#),
-        (r#"<div onMousedown="bar"></div>;"#, r#"<div onMouseDown="bar"></div>;"#),
-        (r#"<use xlink:href="bar" />;"#, r#"<use xlinkHref="bar" />;"#),
+        (
+            r#"<div accept-charset="bar"></div>;"#,
+            r#"<div acceptCharset="bar"></div>;"#,
+        ),
+        (
+            r#"<div http-equiv="bar"></div>;"#,
+            r#"<div httpEquiv="bar"></div>;"#,
+        ),
+        (
+            r#"<div accesskey="bar"></div>;"#,
+            r#"<div accessKey="bar"></div>;"#,
+        ),
+        (
+            r#"<div onclick="bar"></div>;"#,
+            r#"<div onClick="bar"></div>;"#,
+        ),
+        (
+            r#"<div onmousedown="bar"></div>;"#,
+            r#"<div onMouseDown="bar"></div>;"#,
+        ),
+        (
+            r#"<div onMousedown="bar"></div>;"#,
+            r#"<div onMouseDown="bar"></div>;"#,
+        ),
+        (
+            r#"<use xlink:href="bar" />;"#,
+            r#"<use xlinkHref="bar" />;"#,
+        ),
         (
             r#"<rect clip-path="bar" transform-origin="center" />;"#,
             r#"<rect clipPath="bar" transform-origin="center" />;"#,
         ),
-        ("<script crossorigin nomodule />", "<script crossOrigin noModule />"),
+        (
+            "<script crossorigin nomodule />",
+            "<script crossOrigin noModule />",
+        ),
         ("<div crossorigin />", "<div crossOrigin />"),
     ];
 
-    Tester::new(NoUnknownProperty::NAME, NoUnknownProperty::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        NoUnknownProperty::NAME,
+        NoUnknownProperty::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

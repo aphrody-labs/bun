@@ -31,10 +31,7 @@ fn convert(expr: &Expr, source: &[u8], bump: &bun_alloc::Arena, depth: u32) -> V
         ExprData::EObject(_) | ExprData::EObjectJSON(_) => {
             let mut rows = Vec::new();
             expr.for_each_property(|key, _, value| {
-                rows.push((
-                    super::lossy(key),
-                    convert(&value, source, bump, depth + 1),
-                ));
+                rows.push((super::lossy(key), convert(&value, source, bump, depth + 1)));
             });
             Value::Object(rows)
         }

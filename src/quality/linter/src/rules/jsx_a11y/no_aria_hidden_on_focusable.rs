@@ -138,15 +138,26 @@ fn test() {
     ];
 
     let fix = vec![
-        (r#"<div aria-hidden="true" tabIndex="0" />;"#, r#"<div  tabIndex="0" />;"#),
+        (
+            r#"<div aria-hidden="true" tabIndex="0" />;"#,
+            r#"<div  tabIndex="0" />;"#,
+        ),
         (r#"<input aria-hidden="true" />;"#, "<input  />;"),
         (r#"<a href="/" aria-hidden="true" />"#, r#"<a href="/"  />"#),
         (r#"<button aria-hidden="true" />"#, "<button  />"),
         (r#"<textarea aria-hidden="true" />"#, "<textarea  />"),
-        (r#"<p tabIndex="0" aria-hidden="true">text</p>;"#, r#"<p tabIndex="0" >text</p>;"#),
+        (
+            r#"<p tabIndex="0" aria-hidden="true">text</p>;"#,
+            r#"<p tabIndex="0" >text</p>;"#,
+        ),
     ];
 
-    Tester::new(NoAriaHiddenOnFocusable::NAME, NoAriaHiddenOnFocusable::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        NoAriaHiddenOnFocusable::NAME,
+        NoAriaHiddenOnFocusable::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

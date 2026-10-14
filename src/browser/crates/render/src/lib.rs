@@ -13,9 +13,9 @@
 
 use taffy::prelude::*;
 
-pub mod css;
 #[cfg(feature = "bun-css")]
 mod bun_css;
+pub mod css;
 pub use css::{CssMediaType, Stylesheet, StylesheetCache};
 
 pub mod style;
@@ -29,8 +29,8 @@ pub use border::{
 
 pub mod dom;
 pub use dom::{
-    AttributeStyleMutation, DomLayout, RetainedStyleMutation, StickyLayout, TreeStyleMutation,
-    layout_dom, layout_dom_with_images, layout_dom_with_resources,
+    layout_dom, layout_dom_with_images, layout_dom_with_resources, AttributeStyleMutation,
+    DomLayout, RetainedStyleMutation, StickyLayout, TreeStyleMutation,
 };
 
 /// Whether an image MIME type names a format supported by the renderer build.
@@ -40,7 +40,10 @@ pub use dom::{
 /// are ASCII case-insensitive. Keep this list aligned with the `image` crate
 /// features in `Cargo.toml` plus the SVG path in `paint.rs`.
 pub(crate) fn source_type_supported(value: &str) -> bool {
-    let essence = value.split_once(';').map_or(value, |(essence, _)| essence).trim();
+    let essence = value
+        .split_once(';')
+        .map_or(value, |(essence, _)| essence)
+        .trim();
     [
         "image/apng",
         "image/bmp",
@@ -79,9 +82,14 @@ mod image_capability_tests {
         ] {
             assert!(source_type_supported(supported), "{supported}");
         }
-        for unsupported in
-            ["", "image/avif", "image/jxl", "image/png,image/webp", "text/html", ";image/png"]
-        {
+        for unsupported in [
+            "",
+            "image/avif",
+            "image/jxl",
+            "image/png,image/webp",
+            "text/html",
+            ";image/png",
+        ] {
             assert!(!source_type_supported(unsupported), "{unsupported}");
         }
     }
@@ -91,9 +99,6 @@ mod image_capability_tests {
 mod paint;
 #[cfg(feature = "paint")]
 pub use paint::{
-    CanvasSurface, CanvasSurfaceSource, CaptureError, CaptureRegion, DynamicFontFace,
-    ElementScrollMetrics, ImageRequestProfile, MAX_CAPTURE_DIMENSION, MAX_CAPTURE_PIXELS,
-    PreparedRender, RenderResourceCache, RenderResourceLoader, ResolvedScrollState, SelectedImage,
     image_intrinsic_dimensions, paint_dom, paint_dom_scrolled,
     paint_dom_scrolled_at_animation_time, paint_dom_scrolled_at_animation_time_with_surface_color,
     paint_dom_scrolled_at_animation_time_with_surface_color_and_resources, paint_prepared,
@@ -119,6 +124,10 @@ pub use paint::{
     screenshot_prepared_region_with_scroll_and_surface_color_and_canvas_surfaces,
     screenshot_prepared_with_scroll, screenshot_prepared_with_scroll_and_surface_color,
     screenshot_prepared_with_scroll_and_surface_color_and_canvas_surfaces, validate_capture_region,
+    CanvasSurface, CanvasSurfaceSource, CaptureError, CaptureRegion, DynamicFontFace,
+    ElementScrollMetrics, ImageRequestProfile, PreparedRender, RenderResourceCache,
+    RenderResourceLoader, ResolvedScrollState, SelectedImage, MAX_CAPTURE_DIMENSION,
+    MAX_CAPTURE_PIXELS,
 };
 #[cfg(feature = "paint")]
 pub use tiny_skia::Pixmap;
@@ -181,7 +190,8 @@ pub mod inline {
                         .as_deref()
                         .is_some_and(|expression| expression.contains('%'))
                 });
-            self.controls.push((taffy::Size { width, height }, zero_min_content));
+            self.controls
+                .push((taffy::Size { width, height }, zero_min_content));
             (1usize << (usize::BITS - 1)) | index
         }
 
@@ -262,7 +272,7 @@ pub mod inline {
                 crate::LineHeight::Px(value) => value,
                 crate::LineHeight::Relative(crate::Dimension::Percent(value)) => {
                     style.font_size.unwrap_or(16.0) * value
-                },
+                }
                 crate::LineHeight::Relative(crate::Dimension::Px(value)) => value,
                 crate::LineHeight::Relative(_) => style.font_size.unwrap_or(16.0),
             }
@@ -360,20 +370,23 @@ pub mod inline {
         let min_width = px(style.min_width).unwrap_or(0.0);
         let min_height = px(style.min_height).unwrap_or(0.0);
         let max_width = px(style.max_width).unwrap_or(f32::INFINITY).max(min_width);
-        let max_height = px(style.max_height).unwrap_or(f32::INFINITY).max(min_height);
+        let max_height = px(style.max_height)
+            .unwrap_or(f32::INFINITY)
+            .max(min_height);
 
         let (width, height) = match (preferred_width, preferred_height) {
-            (Some(width), Some(height)) => {
-                (width.min(max_width).max(min_width), height.min(max_height).max(min_height))
-            },
+            (Some(width), Some(height)) => (
+                width.min(max_width).max(min_width),
+                height.min(max_height).max(min_height),
+            ),
             (Some(width), None) => {
                 let width = width.min(max_width).max(min_width);
                 (width, (width / ratio).min(max_height).max(min_height))
-            },
+            }
             (None, Some(height)) => {
                 let height = height.min(max_height).max(min_height);
                 ((height * ratio).min(max_width).max(min_width), height)
-            },
+            }
             (None, None) => {
                 let height_at_max_width = (max_width / ratio).max(min_height);
                 let height_at_min_width = (min_width / ratio).min(max_height);
@@ -406,7 +419,7 @@ pub mod inline {
                 } else {
                     (width, height)
                 }
-            },
+            }
         };
 
         taffy::Size { width, height }
@@ -445,7 +458,14 @@ impl Default for Affine2 {
 }
 
 impl Affine2 {
-    pub const IDENTITY: Self = Self { a: 1.0, b: 0.0, c: 0.0, d: 1.0, e: 0.0, f: 0.0 };
+    pub const IDENTITY: Self = Self {
+        a: 1.0,
+        b: 0.0,
+        c: 0.0,
+        d: 1.0,
+        e: 0.0,
+        f: 0.0,
+    };
 
     /// Compose `self(other(point))`.
     pub fn then(self, other: Self) -> Self {
@@ -460,16 +480,31 @@ impl Affine2 {
     }
 
     pub fn translate(x: f32, y: f32) -> Self {
-        Self { e: x, f: y, ..Self::IDENTITY }
+        Self {
+            e: x,
+            f: y,
+            ..Self::IDENTITY
+        }
     }
 
     pub fn scale(x: f32, y: f32) -> Self {
-        Self { a: x, d: y, ..Self::IDENTITY }
+        Self {
+            a: x,
+            d: y,
+            ..Self::IDENTITY
+        }
     }
 
     pub fn rotate(degrees: f32) -> Self {
         let (sin, cos) = degrees.to_radians().sin_cos();
-        Self { a: cos, b: sin, c: -sin, d: cos, e: 0.0, f: 0.0 }
+        Self {
+            a: cos,
+            b: sin,
+            c: -sin,
+            d: cos,
+            e: 0.0,
+            f: 0.0,
+        }
     }
 
     pub fn skew(x_degrees: f32, y_degrees: f32) -> Self {
@@ -484,11 +519,16 @@ impl Affine2 {
     }
 
     pub fn around(self, origin: (f32, f32)) -> Self {
-        Self::translate(origin.0, origin.1).then(self).then(Self::translate(-origin.0, -origin.1))
+        Self::translate(origin.0, origin.1)
+            .then(self)
+            .then(Self::translate(-origin.0, -origin.1))
     }
 
     pub fn map_point(self, x: f32, y: f32) -> (f32, f32) {
-        (self.a * x + self.c * y + self.e, self.b * x + self.d * y + self.f)
+        (
+            self.a * x + self.c * y + self.e,
+            self.b * x + self.d * y + self.f,
+        )
     }
 
     pub fn map_rect(self, rect: Rect) -> Rect {
@@ -498,11 +538,28 @@ impl Affine2 {
             self.map_point(rect.x, rect.y + rect.height),
             self.map_point(rect.x + rect.width, rect.y + rect.height),
         ];
-        let left = points.iter().map(|point| point.0).fold(f32::INFINITY, f32::min);
-        let top = points.iter().map(|point| point.1).fold(f32::INFINITY, f32::min);
-        let right = points.iter().map(|point| point.0).fold(f32::NEG_INFINITY, f32::max);
-        let bottom = points.iter().map(|point| point.1).fold(f32::NEG_INFINITY, f32::max);
-        Rect { x: left, y: top, width: (right - left).max(0.0), height: (bottom - top).max(0.0) }
+        let left = points
+            .iter()
+            .map(|point| point.0)
+            .fold(f32::INFINITY, f32::min);
+        let top = points
+            .iter()
+            .map(|point| point.1)
+            .fold(f32::INFINITY, f32::min);
+        let right = points
+            .iter()
+            .map(|point| point.0)
+            .fold(f32::NEG_INFINITY, f32::max);
+        let bottom = points
+            .iter()
+            .map(|point| point.1)
+            .fold(f32::NEG_INFINITY, f32::max);
+        Rect {
+            x: left,
+            y: top,
+            width: (right - left).max(0.0),
+            height: (bottom - top).max(0.0),
+        }
     }
 
     pub fn inverse(self) -> Option<Self> {
@@ -546,7 +603,10 @@ pub struct TransformLength {
 
 impl TransformLength {
     pub fn px(value: f32) -> Self {
-        Self { value: Dimension::Px(value), expression: None }
+        Self {
+            value: Dimension::Px(value),
+            expression: None,
+        }
     }
 }
 
@@ -572,7 +632,12 @@ impl Rect {
         let x1 = (self.x + self.width).min(other.x + other.width);
         let y1 = (self.y + self.height).min(other.y + other.height);
         if x1 > x0 && y1 > y0 {
-            Some(Rect { x: x0, y: y0, width: x1 - x0, height: y1 - y0 })
+            Some(Rect {
+                x: x0,
+                y: y0,
+                width: x1 - x0,
+                height: y1 - y0,
+            })
         } else {
             None
         }
@@ -585,7 +650,12 @@ impl Rect {
         let y0 = self.y.min(other.y);
         let x1 = (self.x + self.width).max(other.x + other.width);
         let y1 = (self.y + self.height).max(other.y + other.height);
-        Rect { x: x0, y: y0, width: x1 - x0, height: y1 - y0 }
+        Rect {
+            x: x0,
+            y: y0,
+            width: x1 - x0,
+            height: y1 - y0,
+        }
     }
 }
 
@@ -726,11 +796,17 @@ pub struct BackgroundPositionAxis {
 
 impl BackgroundPositionAxis {
     pub const fn pixels(length: f32) -> Self {
-        Self { length, percentage: 0.0 }
+        Self {
+            length,
+            percentage: 0.0,
+        }
     }
 
     pub const fn percentage(percentage: f32) -> Self {
-        Self { length: 0.0, percentage }
+        Self {
+            length: 0.0,
+            percentage,
+        }
     }
 
     pub const fn length_percentage(length: f32, percentage: f32) -> Self {
@@ -738,7 +814,10 @@ impl BackgroundPositionAxis {
     }
 
     pub const fn from_end_offset(offset: Self) -> Self {
-        Self { length: -offset.length, percentage: 1.0 - offset.percentage }
+        Self {
+            length: -offset.length,
+            percentage: 1.0 - offset.percentage,
+        }
     }
 
     pub fn resolve(self, leftover_space: f32) -> f32 {
@@ -788,7 +867,10 @@ impl BackgroundPosition {
     }
 
     pub(crate) fn interpolate(self, other: Self, position: f32) -> Self {
-        Self { x: self.x.interpolate(other.x, position), y: self.y.interpolate(other.y, position) }
+        Self {
+            x: self.x.interpolate(other.x, position),
+            y: self.y.interpolate(other.y, position),
+        }
     }
 }
 
@@ -854,7 +936,10 @@ pub(crate) struct RadialGradientGeometry {
 
 impl Default for RadialGradientGeometry {
     fn default() -> Self {
-        Self { shape: RadialGradientShape::Ellipse, size: RadialGradientSize::FarthestCorner }
+        Self {
+            shape: RadialGradientShape::Ellipse,
+            size: RadialGradientSize::FarthestCorner,
+        }
     }
 }
 
@@ -898,8 +983,15 @@ pub enum GeneratedCounterStyle {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum GeneratedContentItem {
     Text(String),
-    Counter { name: String, style: GeneratedCounterStyle },
-    Counters { name: String, separator: String, style: GeneratedCounterStyle },
+    Counter {
+        name: String,
+        style: GeneratedCounterStyle,
+    },
+    Counters {
+        name: String,
+        separator: String,
+        style: GeneratedCounterStyle,
+    },
 }
 
 /// Sparse retained provenance for direct transform-only WAAPI sampling.
@@ -1623,7 +1715,9 @@ impl ReplacedIntrinsic {
     /// fallback and transfers through the intrinsic ratio.
     pub fn natural_size(self) -> Option<(f32, f32)> {
         let width = self.width.filter(|value| value.is_finite() && *value > 0.0);
-        let height = self.height.filter(|value| value.is_finite() && *value > 0.0);
+        let height = self
+            .height
+            .filter(|value| value.is_finite() && *value > 0.0);
         let ratio = self.ratio.filter(|value| value.is_finite() && *value > 0.0);
         match (width, height, ratio) {
             (Some(width), Some(height), _) => Some((width, height)),
@@ -1691,11 +1785,19 @@ impl LayoutStyle {
     }
 
     pub(crate) fn clips_overflow_x(&self) -> bool {
-        if self.overflow_axes_set { self.overflow_clip_x } else { self.overflow_hidden }
+        if self.overflow_axes_set {
+            self.overflow_clip_x
+        } else {
+            self.overflow_hidden
+        }
     }
 
     pub(crate) fn clips_overflow_y(&self) -> bool {
-        if self.overflow_axes_set { self.overflow_clip_y } else { self.overflow_hidden }
+        if self.overflow_axes_set {
+            self.overflow_clip_y
+        } else {
+            self.overflow_hidden
+        }
     }
 }
 
@@ -1891,7 +1993,10 @@ pub enum AnimationEffectImpact {
 
 impl AnimationSample {
     pub fn document(milliseconds: f32) -> Self {
-        Self { time: AnimationSampleTime { milliseconds }, mode: AnimationSampleMode::DocumentTime }
+        Self {
+            time: AnimationSampleTime { milliseconds },
+            mode: AnimationSampleMode::DocumentTime,
+        }
     }
 
     pub fn local_override(milliseconds: f32) -> Self {
@@ -2014,7 +2119,11 @@ pub struct AnimationTimelineState {
 }
 
 impl AnimationTimelineState {
-    pub fn note_start_candidate(&mut self, node: bun_browser_dom::tree::NodeId, document_time_ms: f32) {
+    pub fn note_start_candidate(
+        &mut self,
+        node: bun_browser_dom::tree::NodeId,
+        document_time_ms: f32,
+    ) {
         if document_time_ms.is_finite() && document_time_ms >= 0.0 {
             self.start_candidates.insert(node, document_time_ms);
         }
@@ -2073,7 +2182,10 @@ impl AnimationTimelineState {
     /// The render preparation boundary additionally filters disconnected
     /// targets against the current DOM before producing restyle damage.
     pub fn waapi_nodes(&self) -> std::collections::HashSet<bun_browser_dom::tree::NodeId> {
-        self.waapi.values().map(|animation| animation.node).collect()
+        self.waapi
+            .values()
+            .map(|animation| animation.node)
+            .collect()
     }
 
     /// New animation instance epochs must reach a style flush. Retained
@@ -2118,10 +2230,10 @@ impl AnimationTimelineState {
             WaapiPlayState::Running => {
                 animation.start_time_ms = document_time_ms - current;
                 animation.hold_time_ms = None;
-            },
+            }
             WaapiPlayState::Paused | WaapiPlayState::Finished => {
                 animation.hold_time_ms = Some(current);
-            },
+            }
         }
         animation.play_state = state;
         true
@@ -2150,12 +2262,19 @@ impl AnimationTimelineState {
             let local = animation
                 .hold_time_ms
                 .unwrap_or_else(|| (document_time.milliseconds - animation.start_time_ms).max(0.0));
-            Some((animation, AnimationSampleTime { milliseconds: local }))
+            Some((
+                animation,
+                AnimationSampleTime {
+                    milliseconds: local,
+                },
+            ))
         })
     }
 
     pub(crate) fn has_active_waapi(&self, document_time: AnimationSampleTime) -> bool {
-        self.waapi.values().any(|animation| waapi_is_active(animation, document_time))
+        self.waapi
+            .values()
+            .any(|animation| waapi_is_active(animation, document_time))
     }
 
     pub(crate) fn active_waapi_effect_impact(
@@ -2166,11 +2285,19 @@ impl AnimationTimelineState {
             .values()
             .filter(|animation| waapi_is_active(animation, document_time))
             .map(|animation| {
-                if animation.keyframes.iter().any(|frame| frame.transform.is_some()) {
+                if animation
+                    .keyframes
+                    .iter()
+                    .any(|frame| frame.transform.is_some())
+                {
                     // A specified WAAPI transform remains geometry-affecting
                     // even when this renderer cannot parse its value.
                     AnimationEffectImpact::Geometry
-                } else if animation.keyframes.iter().any(|frame| frame.opacity.is_some()) {
+                } else if animation
+                    .keyframes
+                    .iter()
+                    .any(|frame| frame.opacity.is_some())
+                {
                     AnimationEffectImpact::Paint
                 } else {
                     AnimationEffectImpact::None
@@ -2193,7 +2320,10 @@ impl AnimationTimelineState {
         let document_time_ms = sample.time.milliseconds;
         let was_suppressed = self.display_suppressed.remove(&node);
         let transition_time_ms = self.start_candidates.remove(&node);
-        let retained = self.instances.get_mut(&node).filter(|instance| instance.key == key);
+        let retained = self
+            .instances
+            .get_mut(&node)
+            .filter(|instance| instance.key == key);
         let instance = match retained {
             Some(instance) => instance,
             None => {
@@ -2212,8 +2342,10 @@ impl AnimationTimelineState {
                         was_paused: paused,
                     },
                 );
-                self.instances.get_mut(&node).expect("inserted animation instance")
-            },
+                self.instances
+                    .get_mut(&node)
+                    .expect("inserted animation instance")
+            }
         };
 
         let paused = play_state == AnimationPlayState::Paused;
@@ -2327,7 +2459,11 @@ pub struct LayoutNode {
 
 impl LayoutNode {
     pub fn leaf(style: LayoutStyle) -> Self {
-        LayoutNode { style, text: None, children: Vec::new() }
+        LayoutNode {
+            style,
+            text: None,
+            children: Vec::new(),
+        }
     }
 }
 
@@ -2390,7 +2526,8 @@ fn build_node(tree: &mut TaffyTree, node: &LayoutNode) -> NodeId {
         tree.new_leaf(style).expect("taffy new_leaf")
     } else {
         let child_ids: Vec<NodeId> = node.children.iter().map(|c| build_node(tree, c)).collect();
-        tree.new_with_children(style, &child_ids).expect("taffy new_with_children")
+        tree.new_with_children(style, &child_ids)
+            .expect("taffy new_with_children")
     }
 }
 
@@ -2458,7 +2595,10 @@ pub(crate) fn to_taffy_style(style: &LayoutStyle) -> Style {
     } else {
         s.flex_wrap = taffy::FlexWrap::NoWrap;
     }
-    s.size = taffy::Size { width: dimension(style.width), height: dimension(style.height) };
+    s.size = taffy::Size {
+        width: dimension(style.width),
+        height: dimension(style.height),
+    };
     // Tell taffy's layout algorithm about computed overflow, not just our
     // paint-time clips: a flex/grid automatic minimum depends on the relevant
     // axis. Overflow propagated from html/body belongs to the viewport and
@@ -2481,10 +2621,14 @@ pub(crate) fn to_taffy_style(style: &LayoutStyle) -> Style {
             },
         };
     }
-    s.min_size =
-        taffy::Size { width: dimension(style.min_width), height: dimension(style.min_height) };
-    s.max_size =
-        taffy::Size { width: dimension(style.max_width), height: dimension(style.max_height) };
+    s.min_size = taffy::Size {
+        width: dimension(style.min_width),
+        height: dimension(style.min_height),
+    };
+    s.max_size = taffy::Size {
+        width: dimension(style.max_width),
+        height: dimension(style.max_height),
+    };
     // Two definite replaced axes size independently of the preferred ratio.
     // Keep the decoded ratio in LayoutStyle for object fitting, but do not let
     // Taffy transfer min/max constraints to the other authored axis. Percentage
@@ -2501,11 +2645,18 @@ pub(crate) fn to_taffy_style(style: &LayoutStyle) -> Style {
         }
     }
     if style.ignores_used_box_sizes() {
-        s.size = taffy::Size { width: taffy::Dimension::auto(), height: taffy::Dimension::auto() };
-        s.min_size =
-            taffy::Size { width: taffy::Dimension::auto(), height: taffy::Dimension::auto() };
-        s.max_size =
-            taffy::Size { width: taffy::Dimension::auto(), height: taffy::Dimension::auto() };
+        s.size = taffy::Size {
+            width: taffy::Dimension::auto(),
+            height: taffy::Dimension::auto(),
+        };
+        s.min_size = taffy::Size {
+            width: taffy::Dimension::auto(),
+            height: taffy::Dimension::auto(),
+        };
+        s.max_size = taffy::Size {
+            width: taffy::Dimension::auto(),
+            height: taffy::Dimension::auto(),
+        };
         s.aspect_ratio = None;
     }
     if style.display != Display::Block {
@@ -2638,7 +2789,7 @@ fn dimension(v: Dimension) -> taffy::style::Dimension {
         Dimension::Ex(v) => taffy::style::Dimension::length(v * 16.0 * 0.528_320_3),
         Dimension::Vw(v) | Dimension::Vh(v) | Dimension::Vmin(v) | Dimension::Vmax(v) => {
             taffy::style::Dimension::length(v)
-        },
+        }
     }
 }
 
@@ -2733,7 +2884,10 @@ mod tests {
             ),
         );
         let child = || {
-            LayoutNode::leaf(crate::style::compute_style("div", Some("display:block;height:10px")))
+            LayoutNode::leaf(crate::style::compute_style(
+                "div",
+                Some("display:block;height:10px"),
+            ))
         };
         let output = layout(
             &LayoutNode {
@@ -2749,7 +2903,11 @@ mod tests {
         assert!((output.children[1].border_box.width - 1088.0).abs() < 0.01);
 
         let resized = layout(
-            &LayoutNode { style: grid, text: None, children: vec![child(), child(), child()] },
+            &LayoutNode {
+                style: grid,
+                text: None,
+                children: vec![child(), child(), child()],
+            },
             (1000.0, 100.0),
         );
         assert!((resized.children[0].border_box.width - 220.0).abs() < 0.01);
@@ -2770,7 +2928,10 @@ mod tests {
             display: Display::Block,
             width: Dimension::Px(200.0),
             height: Dimension::Px(40.0),
-            margin: Edges { right: 50.0, ..Default::default() },
+            margin: Edges {
+                right: 50.0,
+                ..Default::default()
+            },
             margin_auto: [false, false, false, true],
             ..Default::default()
         };
@@ -2791,7 +2952,10 @@ mod tests {
             display: Display::Flex,
             width: Dimension::Px(225.0),
             height: Dimension::Px(180.0),
-            margin: Edges { left: -900.0, ..Default::default() },
+            margin: Edges {
+                left: -900.0,
+                ..Default::default()
+            },
             ..Default::default()
         };
         let root = LayoutNode {
@@ -2846,7 +3010,12 @@ mod tests {
                 display: Display::Block,
                 width: Dimension::Px(100.0),
                 height: Dimension::Px(100.0),
-                padding: Edges { top: 10.0, right: 10.0, bottom: 10.0, left: 10.0 },
+                padding: Edges {
+                    top: 10.0,
+                    right: 10.0,
+                    bottom: 10.0,
+                    left: 10.0,
+                },
                 ..Default::default()
             },
             text: None,

@@ -11,16 +11,19 @@ pub struct ClassTester<'a> {
 
 impl<'a> ClassTester<'a> {
     pub(super) fn has_class(semantic: Semantic<'a>, name: &str) -> Self {
-        let class_id = semantic.classes().iter_enumerated().find_map(|(class_id, &node_id)| {
-            let kind = semantic.nodes().kind(node_id);
-            let class = kind.as_class()?;
+        let class_id = semantic
+            .classes()
+            .iter_enumerated()
+            .find_map(|(class_id, &node_id)| {
+                let kind = semantic.nodes().kind(node_id);
+                let class = kind.as_class()?;
 
-            if class.id.clone().is_some_and(|id| id.name == name) {
-                return Some(class_id);
-            }
+                if class.id.clone().is_some_and(|id| id.name == name) {
+                    return Some(class_id);
+                }
 
-            None
-        });
+                None
+            });
         ClassTester {
             semantic: Rc::new(semantic),
             class_id: class_id.unwrap_or_else(|| panic!("Cannot find {name} class")),
@@ -29,7 +32,10 @@ impl<'a> ClassTester<'a> {
 
     pub fn has_number_of_elements(&self, len: usize) -> &Self {
         let element_len = self.semantic.classes().elements[self.class_id].len();
-        debug_assert!(element_len == len, "Expected {len} elements, found {element_len}");
+        debug_assert!(
+            element_len == len,
+            "Expected {len} elements, found {element_len}"
+        );
         self
     }
 

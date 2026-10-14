@@ -21,6 +21,12 @@ writes nothing and exits with code `1` when formatting differs. Without
 dependency directories and protected stores; explicit protected or
 parent-traversing paths are rejected.
 
+Native discovery reads nested `.gitignore` files consistently for implicit and
+explicit roots. A Prettier configuration instead selects Prettier's
+case-insensitive working-directory ignore files. An explicit `--ignore-path`
+replaces the native default Gitignore search. Explicit symbolic-link operands
+fail with code `2` without following or writing their targets.
+
 ## Format standard input
 
 `--stdin-filepath` supplies a virtual name to select the parser. Bun reads UTF-8
@@ -33,10 +39,11 @@ printf 'const answer=42' | bun fmt --stdin-filepath input.ts --check
 ```
 
 In this mode `--check` produces no source output and returns `1` on a difference.
-Filesystem operands, `--write` and repeated virtual-name options are rejected.
+`--write` alone still prints formatted standard input; it never writes the
+virtual file. Filesystem operands and repeated virtual-name options are rejected.
 Invalid UTF-8, syntax, unsupported formats and invalid options return code `2`.
-Configuration discovery is disabled for stdin. Pass `--config` explicitly to
-apply project formatting options.
+The virtual filename selects configuration discovery. Pass `--config` to choose
+project formatting options explicitly.
 
 ## Configuration
 

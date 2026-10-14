@@ -125,7 +125,11 @@ fn modify_enum_impl(item: &mut ItemEnum) -> Result<TokenStream, &'static str> {
             // marker's field type (so it carries the source span of `EnumName` in `INHERIT(EnumName<'a>)`).
             // This makes "go to definition" on that `EnumName` resolve to the enum - otherwise the
             // marker variant is removed, so the source token would resolve to nothing.
-            let generics = if has_lifetime { quote!(<'static>) } else { quote!() };
+            let generics = if has_lifetime {
+                quote!(<'static>)
+            } else {
+                quote!()
+            };
             inherit_links.extend(quote! {
                 const _: Option<#inner_ident #generics> = None;
             });
@@ -133,7 +137,11 @@ fn modify_enum_impl(item: &mut ItemEnum) -> Result<TokenStream, &'static str> {
     }
 
     // Fieldless enums are `#[repr(u8)]`. Enums with any non-unit variant are `#[repr(C, u8)]`.
-    let repr = if enum_details.is_fieldless { quote!(#[repr(u8)]) } else { quote!(#[repr(C, u8)]) };
+    let repr = if enum_details.is_fieldless {
+        quote!(#[repr(u8)])
+    } else {
+        quote!(#[repr(C, u8)])
+    };
 
     let assertions = assert_generated_derives(&item.attrs);
 
@@ -158,12 +166,22 @@ fn is_inherit_marker(variant: &Variant) -> bool {
 /// and its `arguments` indicate whether the type has a lifetime.
 fn inherit_marker_inner_segment(variant: &Variant) -> &PathSegment {
     let Fields::Unnamed(fields) = &variant.fields else {
-        unreachable!("`INHERIT` marker must be a tuple variant: `{}`", variant.ident);
+        unreachable!(
+            "`INHERIT` marker must be a tuple variant: `{}`",
+            variant.ident
+        );
     };
     let Some(Type::Path(type_path)) = fields.unnamed.first().map(|field| &field.ty) else {
-        unreachable!("`INHERIT` marker must contain a single path type: `{}`", variant.ident);
+        unreachable!(
+            "`INHERIT` marker must contain a single path type: `{}`",
+            variant.ident
+        );
     };
-    type_path.path.segments.last().expect("`INHERIT` marker type has empty path")
+    type_path
+        .path
+        .segments
+        .last()
+        .expect("`INHERIT` marker type has empty path")
 }
 
 /// Details of how `#[ast]` macro should modify a struct.
@@ -234,8 +252,11 @@ fn modify_struct_impl(
     };
 
     // `#[non_exhaustive]` on AST node types
-    let non_exhaustive =
-        if struct_details.is_node { Some(quote!(#[non_exhaustive])) } else { None };
+    let non_exhaustive = if struct_details.is_node {
+        Some(quote!(#[non_exhaustive]))
+    } else {
+        None
+    };
 
     Ok(quote! {
         #repr
@@ -271,7 +292,11 @@ fn reorder_struct_fields(
     // 1st set are the fields in original order, each prefixed with `#[cfg(doc)]`.
     // 2nd set are the fields in new order, each prefixed with `#[cfg(not(doc))]`.
     // This is necessary so that fields are listed in original source order in docs.
-    let mut fields = named.clone().into_pairs().zip(field_order).collect::<Vec<_>>();
+    let mut fields = named
+        .clone()
+        .into_pairs()
+        .zip(field_order)
+        .collect::<Vec<_>>();
     fields.sort_unstable_by_key(|(_, index)| **index);
 
     for field in named.iter_mut() {
@@ -279,7 +304,9 @@ fn reorder_struct_fields(
     }
 
     named.extend(fields.into_iter().map(|(mut pair, _)| {
-        pair.value_mut().attrs.insert(0, parse_quote!( #[cfg(not(doc))]));
+        pair.value_mut()
+            .attrs
+            .insert(0, parse_quote!( #[cfg(not(doc))]));
         pair
     }));
 

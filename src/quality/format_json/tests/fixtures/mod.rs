@@ -37,7 +37,9 @@ impl FixtureFormatter for JsonHarness {
     fn fingerprint(source: &str, _path: &Path, options: &Self::Options) -> Fingerprint {
         let allocator = Allocator::default();
         let parsed = parse_for_format(&allocator, source, *options).expect("source should parse");
-        Fingerprint { comments: parsed.comments.len() }
+        Fingerprint {
+            comments: parsed.comments.len(),
+        }
     }
 }
 

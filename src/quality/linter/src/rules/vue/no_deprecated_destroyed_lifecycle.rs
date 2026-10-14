@@ -69,7 +69,9 @@ declare_oxc_lint!(
 
 impl Rule for NoDeprecatedDestroyedLifecycle {
     fn run<'a>(&self, node: &oxc_semantic::AstNode<'a>, ctx: &LintContext<'a>) {
-        let AstKind::ExportDefaultDeclaration(export_default_decl) = node.kind() else { return };
+        let AstKind::ExportDefaultDeclaration(export_default_decl) = node.kind() else {
+            return;
+        };
 
         match &export_default_decl.declaration {
             ExportDefaultDeclarationKind::ObjectExpression(obj_expr) => {
@@ -187,15 +189,21 @@ fn get_property_key_info(
     prop: &oxc_ast::ast::ObjectProperty,
 ) -> Option<(String, Span, bool, KeyType)> {
     match &prop.key {
-        PropertyKey::StaticIdentifier(ident) => {
-            Some((ident.name.to_string(), ident.span, prop.shorthand, KeyType::Identifier))
-        }
-        PropertyKey::StringLiteral(lit) => {
-            Some((lit.value.to_string(), lit.span, false, KeyType::StringLiteral))
-        }
-        PropertyKey::TemplateLiteral(tpl) if tpl.is_no_substitution_template() => {
-            tpl.single_quasi().map(|s| (s.to_string(), tpl.span, false, KeyType::TemplateLiteral))
-        }
+        PropertyKey::StaticIdentifier(ident) => Some((
+            ident.name.to_string(),
+            ident.span,
+            prop.shorthand,
+            KeyType::Identifier,
+        )),
+        PropertyKey::StringLiteral(lit) => Some((
+            lit.value.to_string(),
+            lit.span,
+            false,
+            KeyType::StringLiteral,
+        )),
+        PropertyKey::TemplateLiteral(tpl) if tpl.is_no_substitution_template() => tpl
+            .single_quasi()
+            .map(|s| (s.to_string(), tpl.span, false, KeyType::TemplateLiteral)),
         _ => None,
     }
 }

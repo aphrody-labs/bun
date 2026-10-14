@@ -21,23 +21,34 @@ use crate::{
 };
 
 fn must_be_tabbable_diagnostic(role: &str, span: Span) -> OxcDiagnostic {
-    OxcDiagnostic::warn(format!("Elements with the '{role}' interactive role must be tabbable."))
-        .with_help(
-            "Add `tabIndex={0}` to make the element reachable via sequential keyboard navigation.",
-        )
-        .with_label(span)
+    OxcDiagnostic::warn(format!(
+        "Elements with the '{role}' interactive role must be tabbable."
+    ))
+    .with_help(
+        "Add `tabIndex={0}` to make the element reachable via sequential keyboard navigation.",
+    )
+    .with_label(span)
 }
 
 fn must_be_focusable_diagnostic(role: &str, span: Span) -> OxcDiagnostic {
-    OxcDiagnostic::warn(format!("Elements with the '{role}' interactive role must be focusable."))
-        .with_help("Add `tabIndex={0}` or `tabIndex={-1}` to make the element focusable.")
-        .with_label(span)
+    OxcDiagnostic::warn(format!(
+        "Elements with the '{role}' interactive role must be focusable."
+    ))
+    .with_help("Add `tabIndex={0}` or `tabIndex={-1}` to make the element focusable.")
+    .with_label(span)
 }
 
 const EVENT_HANDLERS: &[&[&str]] = &[MOUSE_EVENT_HANDLERS, KEYBOARD_EVENT_HANDLERS];
 
-const DEFAULT_TABBABLE: &[&str] =
-    &["button", "checkbox", "link", "searchbox", "spinbutton", "switch", "textbox"];
+const DEFAULT_TABBABLE: &[&str] = &[
+    "button",
+    "checkbox",
+    "link",
+    "searchbox",
+    "spinbutton",
+    "switch",
+    "textbox",
+];
 
 #[derive(Debug, Default, Clone, Deserialize)]
 pub struct InteractiveSupportsFocus(Box<InteractiveSupportsFocusConfig>);
@@ -53,7 +64,12 @@ pub struct InteractiveSupportsFocusConfig {
 
 impl Default for InteractiveSupportsFocusConfig {
     fn default() -> Self {
-        Self { tabbable: DEFAULT_TABBABLE.iter().map(|s| CompactStr::new(s)).collect() }
+        Self {
+            tabbable: DEFAULT_TABBABLE
+                .iter()
+                .map(|s| CompactStr::new(s))
+                .collect(),
+        }
     }
 }
 
@@ -182,55 +198,211 @@ fn test() {
     let pass = vec![
         (r"<div />", None, None),
         (r"<div aria-hidden onClick={() => void 0} />", None, None),
-        (r"<div aria-hidden={true == true} onClick={() => void 0} />", None, None),
-        (r"<div aria-hidden={true === true} onClick={() => void 0} />", None, None),
-        (r"<div aria-hidden={hidden !== false} onClick={() => void 0} />", None, None),
-        (r"<div aria-hidden={hidden != false} onClick={() => void 0} />", None, None),
-        (r"<div aria-hidden={1 < 2} onClick={() => void 0} />", None, None),
-        (r"<div aria-hidden={1 <= 2} onClick={() => void 0} />", None, None),
-        (r"<div aria-hidden={2 > 1} onClick={() => void 0} />", None, None),
-        (r"<div aria-hidden={2 >= 1} onClick={() => void 0} />", None, None),
+        (
+            r"<div aria-hidden={true == true} onClick={() => void 0} />",
+            None,
+            None,
+        ),
+        (
+            r"<div aria-hidden={true === true} onClick={() => void 0} />",
+            None,
+            None,
+        ),
+        (
+            r"<div aria-hidden={hidden !== false} onClick={() => void 0} />",
+            None,
+            None,
+        ),
+        (
+            r"<div aria-hidden={hidden != false} onClick={() => void 0} />",
+            None,
+            None,
+        ),
+        (
+            r"<div aria-hidden={1 < 2} onClick={() => void 0} />",
+            None,
+            None,
+        ),
+        (
+            r"<div aria-hidden={1 <= 2} onClick={() => void 0} />",
+            None,
+            None,
+        ),
+        (
+            r"<div aria-hidden={2 > 1} onClick={() => void 0} />",
+            None,
+            None,
+        ),
+        (
+            r"<div aria-hidden={2 >= 1} onClick={() => void 0} />",
+            None,
+            None,
+        ),
         (r"<div onClick={() => void 0} />;", None, None),
-        (r"<div onClick={() => void 0} tabIndex={undefined} />;", None, None),
-        (r#"<div onClick={() => void 0} tabIndex="bad" />;"#, None, None),
-        (r"<div onClick={() => void 0} role={undefined} />;", None, None),
-        (r#"<div role="section" onClick={() => void 0} />"#, None, None),
-        (r"<div onClick={() => void 0} aria-hidden={false} />;", None, None),
+        (
+            r"<div onClick={() => void 0} tabIndex={undefined} />;",
+            None,
+            None,
+        ),
+        (
+            r#"<div onClick={() => void 0} tabIndex="bad" />;"#,
+            None,
+            None,
+        ),
+        (
+            r"<div onClick={() => void 0} role={undefined} />;",
+            None,
+            None,
+        ),
+        (
+            r#"<div role="section" onClick={() => void 0} />"#,
+            None,
+            None,
+        ),
+        (
+            r"<div onClick={() => void 0} aria-hidden={false} />;",
+            None,
+            None,
+        ),
         (r"<div onClick={() => void 0} {...props} />;", None, None),
-        (r#"<input type="text" onClick={() => void 0} />"#, None, None),
-        (r#"<input type="hidden" onClick={() => void 0} tabIndex="-1" />"#, None, None),
-        (r"<input type={`hidden`} onClick={() => void 0} tabIndex={-1} />", None, None),
+        (
+            r#"<input type="text" onClick={() => void 0} />"#,
+            None,
+            None,
+        ),
+        (
+            r#"<input type="hidden" onClick={() => void 0} tabIndex="-1" />"#,
+            None,
+            None,
+        ),
+        (
+            r"<input type={`hidden`} onClick={() => void 0} tabIndex={-1} />",
+            None,
+            None,
+        ),
         (r"<input onClick={() => void 0} />", None, None),
-        (r#"<input onClick={() => void 0} role="combobox" />"#, None, None),
-        (r#"<button onClick={() => void 0} className="foo" />"#, None, None),
-        (r#"<option onClick={() => void 0} className="foo" />"#, None, None),
-        (r#"<select onClick={() => void 0} className="foo" />"#, None, None),
-        (r"<area href='#' onClick={() => void 0} className='foo' />", None, None),
-        (r#"<area onClick={() => void 0} className="foo" />"#, None, None),
+        (
+            r#"<input onClick={() => void 0} role="combobox" />"#,
+            None,
+            None,
+        ),
+        (
+            r#"<button onClick={() => void 0} className="foo" />"#,
+            None,
+            None,
+        ),
+        (
+            r#"<option onClick={() => void 0} className="foo" />"#,
+            None,
+            None,
+        ),
+        (
+            r#"<select onClick={() => void 0} className="foo" />"#,
+            None,
+            None,
+        ),
+        (
+            r"<area href='#' onClick={() => void 0} className='foo' />",
+            None,
+            None,
+        ),
+        (
+            r#"<area onClick={() => void 0} className="foo" />"#,
+            None,
+            None,
+        ),
         (r"<summary onClick={() => void 0} />", None, None),
-        (r#"<textarea onClick={() => void 0} className="foo" />"#, None, None),
+        (
+            r#"<textarea onClick={() => void 0} className="foo" />"#,
+            None,
+            None,
+        ),
         (r#"<a onClick="showNextPage();">Next page</a>"#, None, None),
-        (r#"<a onClick="showNextPage();" tabIndex={undefined}>Next page</a>"#, None, None),
-        (r#"<a onClick="showNextPage();" tabIndex="bad">Next page</a>"#, None, None),
+        (
+            r#"<a onClick="showNextPage();" tabIndex={undefined}>Next page</a>"#,
+            None,
+            None,
+        ),
+        (
+            r#"<a onClick="showNextPage();" tabIndex="bad">Next page</a>"#,
+            None,
+            None,
+        ),
         (r"<a onClick={() => void 0} />", None, None),
         (r#"<a tabIndex="0" onClick={() => void 0} />"#, None, None),
-        (r"<a tabIndex={dynamicTabIndex} onClick={() => void 0} />", None, None),
+        (
+            r"<a tabIndex={dynamicTabIndex} onClick={() => void 0} />",
+            None,
+            None,
+        ),
         (r"<a tabIndex={0} onClick={() => void 0} />", None, None),
-        (r"<a role='button' href='#' onClick={() => void 0} />", None, None),
-        (r#"<a onClick={() => void 0} href="http://x.y.z" />"#, None, None),
-        (r#"<a onClick={() => void 0} href="http://x.y.z" tabIndex="0" />"#, None, None),
-        (r#"<a onClick={() => void 0} href="http://x.y.z" tabIndex={0} />"#, None, None),
-        (r#"<a onClick={() => void 0} href="http://x.y.z" role="button" />"#, None, None),
+        (
+            r"<a role='button' href='#' onClick={() => void 0} />",
+            None,
+            None,
+        ),
+        (
+            r#"<a onClick={() => void 0} href="http://x.y.z" />"#,
+            None,
+            None,
+        ),
+        (
+            r#"<a onClick={() => void 0} href="http://x.y.z" tabIndex="0" />"#,
+            None,
+            None,
+        ),
+        (
+            r#"<a onClick={() => void 0} href="http://x.y.z" tabIndex={0} />"#,
+            None,
+            None,
+        ),
+        (
+            r#"<a onClick={() => void 0} href="http://x.y.z" role="button" />"#,
+            None,
+            None,
+        ),
         (r"<TestComponent onClick={doFoo} />", None, None),
-        (r#"<HigherLevelComponent role="button" onClick={() => void 0} />"#, None, None),
-        (r#"<Foo.Bar role="button" onClick={() => void 0} />"#, None, None),
-        (r#"<input onClick={() => void 0} type="hidden" />;"#, None, None),
+        (
+            r#"<HigherLevelComponent role="button" onClick={() => void 0} />"#,
+            None,
+            None,
+        ),
+        (
+            r#"<Foo.Bar role="button" onClick={() => void 0} />"#,
+            None,
+            None,
+        ),
+        (
+            r#"<input onClick={() => void 0} type="hidden" />;"#,
+            None,
+            None,
+        ),
         (r"<span onClick='submitForm();'>Submit</span>", None, None),
-        (r"<span onClick='submitForm();' tabIndex={undefined}>Submit</span>", None, None),
-        (r"<span onClick='submitForm();' tabIndex='bad'>Submit</span>", None, None),
-        (r"<span onClick='doSomething();' tabIndex='0'>Click me!</span>", None, None),
-        (r"<span onClick='doSomething();' tabIndex={0}>Click me!</span>", None, None),
-        (r"<span onClick='doSomething();' tabIndex='-1'>Click me too!</span>", None, None),
+        (
+            r"<span onClick='submitForm();' tabIndex={undefined}>Submit</span>",
+            None,
+            None,
+        ),
+        (
+            r"<span onClick='submitForm();' tabIndex='bad'>Submit</span>",
+            None,
+            None,
+        ),
+        (
+            r"<span onClick='doSomething();' tabIndex='0'>Click me!</span>",
+            None,
+            None,
+        ),
+        (
+            r"<span onClick='doSomething();' tabIndex={0}>Click me!</span>",
+            None,
+            None,
+        ),
+        (
+            r"<span onClick='doSomething();' tabIndex='-1'>Click me too!</span>",
+            None,
+            None,
+        ),
         (
             r#"<a href="javascript:void(0);" onClick='doSomething();'>Click ALL the things!</a>"#,
             None,
@@ -241,70 +413,282 @@ fn test() {
         (r"<article onClick={() => void 0} />;", None, None),
         (r"<header onClick={() => void 0} />;", None, None),
         (r"<footer onClick={() => void 0} />;", None, None),
-        (r#"<div role="button" tabIndex="0" onClick={() => void 0} />"#, None, None),
-        (r#"<div role="checkbox" tabIndex="0" onClick={() => void 0} />"#, None, None),
-        (r#"<div role="link" tabIndex="0" onClick={() => void 0} />"#, None, None),
-        (r#"<div role="menuitem" tabIndex="0" onClick={() => void 0} />"#, None, None),
-        (r#"<div role="menuitemcheckbox" tabIndex="0" onClick={() => void 0} />"#, None, None),
-        (r#"<div role="menuitemradio" tabIndex="0" onClick={() => void 0} />"#, None, None),
-        (r#"<div role="option" tabIndex="0" onClick={() => void 0} />"#, None, None),
-        (r#"<div role="radio" tabIndex="0" onClick={() => void 0} />"#, None, None),
-        (r#"<div role="spinbutton" tabIndex="0" onClick={() => void 0} />"#, None, None),
-        (r#"<div role="switch" tabIndex="0" onClick={() => void 0} />"#, None, None),
-        (r#"<div role="tablist" tabIndex="0" onClick={() => void 0} />"#, None, None),
-        (r#"<div role="tab" tabIndex="0" onClick={() => void 0} />"#, None, None),
-        (r#"<div role="textbox" tabIndex="0" onClick={() => void 0} />"#, None, None),
-        (r#"<div role="textbox" aria-disabled="true" onClick={() => void 0} />"#, None, None),
-        (r"<Foo.Bar onClick={() => void 0} aria-hidden={false} />;", None, None),
-        (r"<Input onClick={() => void 0} type='hidden' />;", None, None),
-        (r"<Div onClick={() => void 0} role='button' tabIndex='0' />", None, Some(settings())),
+        (
+            r#"<div role="button" tabIndex="0" onClick={() => void 0} />"#,
+            None,
+            None,
+        ),
+        (
+            r#"<div role="checkbox" tabIndex="0" onClick={() => void 0} />"#,
+            None,
+            None,
+        ),
+        (
+            r#"<div role="link" tabIndex="0" onClick={() => void 0} />"#,
+            None,
+            None,
+        ),
+        (
+            r#"<div role="menuitem" tabIndex="0" onClick={() => void 0} />"#,
+            None,
+            None,
+        ),
+        (
+            r#"<div role="menuitemcheckbox" tabIndex="0" onClick={() => void 0} />"#,
+            None,
+            None,
+        ),
+        (
+            r#"<div role="menuitemradio" tabIndex="0" onClick={() => void 0} />"#,
+            None,
+            None,
+        ),
+        (
+            r#"<div role="option" tabIndex="0" onClick={() => void 0} />"#,
+            None,
+            None,
+        ),
+        (
+            r#"<div role="radio" tabIndex="0" onClick={() => void 0} />"#,
+            None,
+            None,
+        ),
+        (
+            r#"<div role="spinbutton" tabIndex="0" onClick={() => void 0} />"#,
+            None,
+            None,
+        ),
+        (
+            r#"<div role="switch" tabIndex="0" onClick={() => void 0} />"#,
+            None,
+            None,
+        ),
+        (
+            r#"<div role="tablist" tabIndex="0" onClick={() => void 0} />"#,
+            None,
+            None,
+        ),
+        (
+            r#"<div role="tab" tabIndex="0" onClick={() => void 0} />"#,
+            None,
+            None,
+        ),
+        (
+            r#"<div role="textbox" tabIndex="0" onClick={() => void 0} />"#,
+            None,
+            None,
+        ),
+        (
+            r#"<div role="textbox" aria-disabled="true" onClick={() => void 0} />"#,
+            None,
+            None,
+        ),
+        (
+            r"<Foo.Bar onClick={() => void 0} aria-hidden={false} />;",
+            None,
+            None,
+        ),
+        (
+            r"<Input onClick={() => void 0} type='hidden' />;",
+            None,
+            None,
+        ),
+        (
+            r"<Div onClick={() => void 0} role='button' tabIndex='0' />",
+            None,
+            Some(settings()),
+        ),
         // interactive roles with non-triggering handlers (onFocus)
-        (r#"<div role="button" onFocus={() => void 0} />"#, None, None),
-        (r#"<div role="checkbox" onFocus={() => void 0} />"#, None, None),
+        (
+            r#"<div role="button" onFocus={() => void 0} />"#,
+            None,
+            None,
+        ),
+        (
+            r#"<div role="checkbox" onFocus={() => void 0} />"#,
+            None,
+            None,
+        ),
         (r#"<div role="link" onFocus={() => void 0} />"#, None, None),
-        (r#"<div role="gridcell" onFocus={() => void 0} />"#, None, None),
-        (r#"<div role="menuitem" onFocus={() => void 0} />"#, None, None),
-        (r#"<div role="menuitemcheckbox" onFocus={() => void 0} />"#, None, None),
-        (r#"<div role="menuitemradio" onFocus={() => void 0} />"#, None, None),
-        (r#"<div role="option" onFocus={() => void 0} />"#, None, None),
+        (
+            r#"<div role="gridcell" onFocus={() => void 0} />"#,
+            None,
+            None,
+        ),
+        (
+            r#"<div role="menuitem" onFocus={() => void 0} />"#,
+            None,
+            None,
+        ),
+        (
+            r#"<div role="menuitemcheckbox" onFocus={() => void 0} />"#,
+            None,
+            None,
+        ),
+        (
+            r#"<div role="menuitemradio" onFocus={() => void 0} />"#,
+            None,
+            None,
+        ),
+        (
+            r#"<div role="option" onFocus={() => void 0} />"#,
+            None,
+            None,
+        ),
         (r#"<div role="radio" onFocus={() => void 0} />"#, None, None),
-        (r#"<div role="searchbox" onFocus={() => void 0} />"#, None, None),
-        (r#"<div role="slider" onFocus={() => void 0} />"#, None, None),
-        (r#"<div role="spinbutton" onFocus={() => void 0} />"#, None, None),
-        (r#"<div role="switch" onFocus={() => void 0} />"#, None, None),
+        (
+            r#"<div role="searchbox" onFocus={() => void 0} />"#,
+            None,
+            None,
+        ),
+        (
+            r#"<div role="slider" onFocus={() => void 0} />"#,
+            None,
+            None,
+        ),
+        (
+            r#"<div role="spinbutton" onFocus={() => void 0} />"#,
+            None,
+            None,
+        ),
+        (
+            r#"<div role="switch" onFocus={() => void 0} />"#,
+            None,
+            None,
+        ),
         (r#"<div role="tab" onFocus={() => void 0} />"#, None, None),
-        (r#"<div role="textbox" onFocus={() => void 0} />"#, None, None),
-        (r#"<div role="treeitem" onFocus={() => void 0} />"#, None, None),
+        (
+            r#"<div role="textbox" onFocus={() => void 0} />"#,
+            None,
+            None,
+        ),
+        (
+            r#"<div role="treeitem" onFocus={() => void 0} />"#,
+            None,
+            None,
+        ),
         // interactive roles with triggering handler + tabIndex="0"
-        (r#"<div role="gridcell" onClick={() => void 0} tabIndex="0" />"#, None, None),
-        (r#"<div role="menuitem" onClick={() => void 0} tabIndex="0" />"#, None, None),
-        (r#"<div role="menuitemcheckbox" onClick={() => void 0} tabIndex="0" />"#, None, None),
-        (r#"<div role="menuitemradio" onClick={() => void 0} tabIndex="0" />"#, None, None),
-        (r#"<div role="option" onClick={() => void 0} tabIndex="0" />"#, None, None),
-        (r#"<div role="radio" onClick={() => void 0} tabIndex="0" />"#, None, None),
-        (r#"<div role="slider" onClick={() => void 0} tabIndex="0" />"#, None, None),
-        (r#"<div role="tab" onClick={() => void 0} tabIndex="0" />"#, None, None),
-        (r#"<div role="treeitem" onClick={() => void 0} tabIndex="0" />"#, None, None),
+        (
+            r#"<div role="gridcell" onClick={() => void 0} tabIndex="0" />"#,
+            None,
+            None,
+        ),
+        (
+            r#"<div role="menuitem" onClick={() => void 0} tabIndex="0" />"#,
+            None,
+            None,
+        ),
+        (
+            r#"<div role="menuitemcheckbox" onClick={() => void 0} tabIndex="0" />"#,
+            None,
+            None,
+        ),
+        (
+            r#"<div role="menuitemradio" onClick={() => void 0} tabIndex="0" />"#,
+            None,
+            None,
+        ),
+        (
+            r#"<div role="option" onClick={() => void 0} tabIndex="0" />"#,
+            None,
+            None,
+        ),
+        (
+            r#"<div role="radio" onClick={() => void 0} tabIndex="0" />"#,
+            None,
+            None,
+        ),
+        (
+            r#"<div role="slider" onClick={() => void 0} tabIndex="0" />"#,
+            None,
+            None,
+        ),
+        (
+            r#"<div role="tab" onClick={() => void 0} tabIndex="0" />"#,
+            None,
+            None,
+        ),
+        (
+            r#"<div role="treeitem" onClick={() => void 0} tabIndex="0" />"#,
+            None,
+            None,
+        ),
     ];
 
     let fail = vec![
-        (r"<Div onClick={() => void 0} role='button' />", None, Some(settings())),
-        (r#"<div role="button" onClick={() => void 0} />"#, None, None),
-        (r#"<div role="checkbox" onClick={() => void 0} />"#, None, None),
+        (
+            r"<Div onClick={() => void 0} role='button' />",
+            None,
+            Some(settings()),
+        ),
+        (
+            r#"<div role="button" onClick={() => void 0} />"#,
+            None,
+            None,
+        ),
+        (
+            r#"<div role="checkbox" onClick={() => void 0} />"#,
+            None,
+            None,
+        ),
         (r#"<div role="link" onClick={() => void 0} />"#, None, None),
-        (r#"<div role="searchbox" onClick={() => void 0} />"#, None, None),
-        (r#"<div role="spinbutton" onClick={() => void 0} />"#, None, None),
-        (r#"<div role="switch" onClick={() => void 0} />"#, None, None),
-        (r#"<div role="textbox" onClick={() => void 0} />"#, None, None),
-        (r#"<div role="gridcell" onClick={() => void 0} />"#, None, None),
-        (r#"<div role="menuitem" onClick={() => void 0} />"#, None, None),
-        (r#"<div role="menuitemcheckbox" onClick={() => void 0} />"#, None, None),
-        (r#"<div role="menuitemradio" onClick={() => void 0} />"#, None, None),
-        (r#"<div role="option" onClick={() => void 0} />"#, None, None),
+        (
+            r#"<div role="searchbox" onClick={() => void 0} />"#,
+            None,
+            None,
+        ),
+        (
+            r#"<div role="spinbutton" onClick={() => void 0} />"#,
+            None,
+            None,
+        ),
+        (
+            r#"<div role="switch" onClick={() => void 0} />"#,
+            None,
+            None,
+        ),
+        (
+            r#"<div role="textbox" onClick={() => void 0} />"#,
+            None,
+            None,
+        ),
+        (
+            r#"<div role="gridcell" onClick={() => void 0} />"#,
+            None,
+            None,
+        ),
+        (
+            r#"<div role="menuitem" onClick={() => void 0} />"#,
+            None,
+            None,
+        ),
+        (
+            r#"<div role="menuitemcheckbox" onClick={() => void 0} />"#,
+            None,
+            None,
+        ),
+        (
+            r#"<div role="menuitemradio" onClick={() => void 0} />"#,
+            None,
+            None,
+        ),
+        (
+            r#"<div role="option" onClick={() => void 0} />"#,
+            None,
+            None,
+        ),
         (r#"<div role="radio" onClick={() => void 0} />"#, None, None),
-        (r#"<div role="slider" onClick={() => void 0} />"#, None, None),
+        (
+            r#"<div role="slider" onClick={() => void 0} />"#,
+            None,
+            None,
+        ),
         (r#"<div role="tab" onClick={() => void 0} />"#, None, None),
-        (r#"<div role="treeitem" onClick={() => void 0} />"#, None, None),
+        (
+            r#"<div role="treeitem" onClick={() => void 0} />"#,
+            None,
+            None,
+        ),
     ];
 
     let fix_tabbable = vec![(
@@ -319,8 +703,13 @@ fn test() {
         ),
     )];
 
-    Tester::new(InteractiveSupportsFocus::NAME, InteractiveSupportsFocus::PLUGIN, pass, fail)
-        .expect_fix(fix_tabbable)
-        .expect_fix(fix_focusable)
-        .test_and_snapshot();
+    Tester::new(
+        InteractiveSupportsFocus::NAME,
+        InteractiveSupportsFocus::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix_tabbable)
+    .expect_fix(fix_focusable)
+    .test_and_snapshot();
 }

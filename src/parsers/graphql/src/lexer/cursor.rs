@@ -13,7 +13,14 @@ pub(crate) struct Cursor<'a> {
 
 impl<'a> Cursor<'a> {
     pub(crate) fn new(input: &'a str) -> Cursor<'a> {
-        Cursor { index: 0, offset: 0, source: input, bytes: input.as_bytes(), next: 0, err: None }
+        Cursor {
+            index: 0,
+            offset: 0,
+            source: input,
+            bytes: input.as_bytes(),
+            next: 0,
+            err: None,
+        }
     }
 }
 
@@ -60,8 +67,11 @@ impl<'a> Cursor<'a> {
     pub(crate) fn current_str(&mut self) -> &'a str {
         let slice = &self.source[self.index..self.next];
         // Preserve the previous EOF-adjacent cursor position used by token-limit diagnostics.
-        self.index =
-            if self.next == self.source.len() && self.next > 0 { self.next - 1 } else { self.next };
+        self.index = if self.next == self.source.len() && self.next > 0 {
+            self.next - 1
+        } else {
+            self.next
+        };
         slice
     }
 

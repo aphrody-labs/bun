@@ -246,14 +246,22 @@ impl ExplicitModuleBoundaryTypes {
             // const foo = arg => arg;
             // export default [foo];
             Expression::ArrayExpression(arr) if inside_export => {
-                for el in arr.elements.iter().filter_map(ArrayExpressionElement::as_expression) {
+                for el in arr
+                    .elements
+                    .iter()
+                    .filter_map(ArrayExpressionElement::as_expression)
+                {
                     self.run_on_exported_expression_inner(ctx, el, false);
                 }
             }
             // const foo = arg => arg;
             // export default { foo };
             Expression::ObjectExpression(obj) if inside_export => {
-                for el in obj.properties.iter().filter_map(ObjectPropertyKind::as_property) {
+                for el in obj
+                    .properties
+                    .iter()
+                    .filter_map(ObjectPropertyKind::as_property)
+                {
                     self.run_on_exported_expression_inner(ctx, &el.value, false);
                 }
             }
@@ -374,8 +382,11 @@ impl<'a, 'c> ExplicitTypesChecker<'a, 'c> {
             return false;
         };
         if let Some(Cow::Borrowed(name)) = id.static_name() {
-            self.target_symbol =
-                Some(TargetSymbol { span: id.span(), name, kind: TargetSymbolKind::Property });
+            self.target_symbol = Some(TargetSymbol {
+                span: id.span(),
+                name,
+                kind: TargetSymbolKind::Property,
+            });
             true
         } else {
             false
@@ -395,9 +406,12 @@ impl<'a, 'c> ExplicitTypesChecker<'a, 'c> {
         let target = self.target_symbol.as_ref();
         let target_name = target.map(|t| t.name);
         #[expect(clippy::cast_possible_truncation)]
-        let span = target.map_or(Span::sized(func.span.start, "function".len() as u32), |t| t.span);
+        let span = target.map_or(Span::sized(func.span.start, "function".len() as u32), |t| {
+            t.span
+        });
         let is_allowed = || {
-            self.rule.is_some_allowed_name(func.name().map(|name| name.as_str()).or(target_name))
+            self.rule
+                .is_some_allowed_name(func.name().map(|name| name.as_str()).or(target_name))
         };
 
         if self.rule.allow_overload_functions && self.function_has_overload_signatures(func) {
@@ -429,14 +443,19 @@ impl<'a, 'c> ExplicitTypesChecker<'a, 'c> {
 
     fn function_has_overload_signatures(&self, func: &Function<'a>) -> bool {
         if let Some(id) = &func.id {
-            return self.ctx.scoping().symbol_declarations(id.symbol_id()).any(|declaration| {
-                let AstKind::Function(candidate) = self.ctx.nodes().get_node(declaration).kind()
-                else {
-                    return false;
-                };
+            return self
+                .ctx
+                .scoping()
+                .symbol_declarations(id.symbol_id())
+                .any(|declaration| {
+                    let AstKind::Function(candidate) =
+                        self.ctx.nodes().get_node(declaration).kind()
+                    else {
+                        return false;
+                    };
 
-                candidate.span != func.span && candidate.is_typescript_syntax()
-            });
+                    candidate.span != func.span && candidate.is_typescript_syntax()
+                });
         }
 
         self.has_unnamed_default_overload_signature(func)
@@ -503,7 +522,11 @@ impl<'a, 'c> ExplicitTypesChecker<'a, 'c> {
         let target = self.target_symbol.as_ref();
         let target_name = target.map(|t| t.name);
         let span = match target {
-            Some(TargetSymbol { span, kind: TargetSymbolKind::Property, .. }) => *span,
+            Some(TargetSymbol {
+                span,
+                kind: TargetSymbolKind::Property,
+                ..
+            }) => *span,
             // Match typescript-eslint's function-head location for the exported arrow itself.
             _ if self.fns.len() == 1 => {
                 let arrow_token_start = self
@@ -707,8 +730,12 @@ impl<'a> VisitJs<'a> for ExplicitTypesChecker<'a, '_> {
 
     fn visit_class_element(&mut self, el: &ClassElement<'a>) {
         // only skip private members
-        if el.accessibility().is_some_and(|a| a == TSAccessibility::Private)
-            || el.property_key().is_some_and(|key| matches!(key, PropertyKey::PrivateIdentifier(_)))
+        if el
+            .accessibility()
+            .is_some_and(|a| a == TSAccessibility::Private)
+            || el
+                .property_key()
+                .is_some_and(|key| matches!(key, PropertyKey::PrivateIdentifier(_)))
         {
             return;
         }
@@ -801,7 +828,8 @@ impl<'a> VisitJs<'a> for ExplicitTypesChecker<'a, '_> {
                 if !self.rule.allow_arguments_explicitly_typed_as_any
                     && matches!(ty.type_annotation, TSType::TSAnyKeyword(_))
                 {
-                    self.ctx.diagnostic(func_argument_is_explicitly_any(it.span));
+                    self.ctx
+                        .diagnostic(func_argument_is_explicitly_any(it.span));
                 }
                 return;
             }
@@ -813,7 +841,8 @@ impl<'a> VisitJs<'a> for ExplicitTypesChecker<'a, '_> {
             if !self.rule.allow_arguments_explicitly_typed_as_any
                 && matches!(ty.type_annotation, TSType::TSAnyKeyword(_))
             {
-                self.ctx.diagnostic(func_argument_is_explicitly_any(it.span));
+                self.ctx
+                    .diagnostic(func_argument_is_explicitly_any(it.span));
             }
             return;
         }
@@ -1726,7 +1755,10 @@ mod test {
         ];
 
         let fail = vec![
-            ("export function test(a: number, b: number) { return; }", None),
+            (
+                "export function test(a: number, b: number) { return; }",
+                None,
+            ),
             ("export function test() { return; }", None),
             ("export var fn = function () { return 1; };", None),
             ("export var arrowFn = () => 'test';", None),
@@ -1785,7 +1817,10 @@ mod test {
             ",
                 None,
             ),
-            ("export default () => (true ? () => {} : (): void => {});", None),
+            (
+                "export default () => (true ? () => {} : (): void => {});",
+                None,
+            ),
             (
                 "export var arrowFn = () => 'test';",
                 Some(json!([{ "allowTypedFunctionExpressions": true }])),
@@ -1927,7 +1962,10 @@ mod test {
             ",
                 None,
             ),
-            ("export const fn = (one: number, two): string => '123';", None),
+            (
+                "export const fn = (one: number, two): string => '123';",
+                None,
+            ),
             (
                 "
             export function foo(outer) {

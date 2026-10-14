@@ -101,7 +101,9 @@ pub fn write_lines<'a>(
 /// Trailing spaces and tabs go, as Prettier's printer trims them before each hard line break.
 pub fn write_indented_lines<'a>(value: &'a str, f: &mut MarkdownFormatter<'_, 'a>) {
     write_lines(
-        value.split('\n').map(|line| line.trim_end_matches([' ', '\t'])),
+        value
+            .split('\n')
+            .map(|line| line.trim_end_matches([' ', '\t'])),
         exact_line_breaks(1),
         f,
     );
@@ -145,7 +147,11 @@ pub fn join_pieces<'a>(pieces: &[Segment], f: &MarkdownFormatter<'_, 'a>) -> &'a
 /// the only prefixes that lead a line are container markers and ASCII whitespace,
 /// where bytes == characters.
 pub fn column_of(source: &str, offset: u32) -> usize {
-    source.as_bytes()[..offset as usize].iter().rev().take_while(|&&b| b != b'\n').count()
+    source.as_bytes()[..offset as usize]
+        .iter()
+        .rev()
+        .take_while(|&&b| b != b'\n')
+        .count()
 }
 
 /// The longest run of `ch` in `text`.
@@ -176,5 +182,9 @@ pub fn fence_run(ch: u8, n: usize) -> Cow<'static, str> {
     const BACKTICKS: &str = "````````````````````````````````";
     const TILDES: &str = "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
     let run = if ch == b'`' { BACKTICKS } else { TILDES };
-    if n <= run.len() { Cow::Borrowed(&run[..n]) } else { Cow::Owned(run[..1].repeat(n)) }
+    if n <= run.len() {
+        Cow::Borrowed(&run[..n])
+    } else {
+        Cow::Owned(run[..1].repeat(n))
+    }
 }

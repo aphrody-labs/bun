@@ -83,7 +83,10 @@ impl Rule for NoConfusingArrayWith {
             return;
         }
 
-        let Some(index_argument) = call_expr.arguments.first().and_then(|arg| arg.as_expression())
+        let Some(index_argument) = call_expr
+            .arguments
+            .first()
+            .and_then(|arg| arg.as_expression())
         else {
             return;
         };
@@ -138,7 +141,11 @@ fn get_static_number_value(expression: &Expression) -> Option<f64> {
             ) =>
         {
             let value = get_static_number_value(&unary.argument)?;
-            Some(if unary.operator == UnaryOperator::UnaryNegation { -value } else { value })
+            Some(if unary.operator == UnaryOperator::UnaryNegation {
+                -value
+            } else {
+                value
+            })
         }
         _ => None,
     }
@@ -164,7 +171,11 @@ fn is_length_member_for<'a>(
         return false;
     }
 
-    is_same_expression(member.object().get_inner_expression(), object.get_inner_expression(), ctx)
+    is_same_expression(
+        member.object().get_inner_expression(),
+        object.get_inner_expression(),
+        ctx,
+    )
 }
 
 #[test]
@@ -229,6 +240,11 @@ fn test() {
         "(object satisfies {items: unknown[]}).items.with(object.items.length, value)",
     ];
 
-    Tester::new(NoConfusingArrayWith::NAME, NoConfusingArrayWith::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        NoConfusingArrayWith::NAME,
+        NoConfusingArrayWith::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

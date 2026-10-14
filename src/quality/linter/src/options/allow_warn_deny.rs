@@ -157,8 +157,13 @@ impl JsonSchema for AllowWarnDeny {
 
     fn json_schema(r#gen: &mut schemars::r#gen::SchemaGenerator) -> schemars::schema::Schema {
         let mut string_schema = <String as JsonSchema>::json_schema(r#gen).into_object();
-        string_schema.enum_values =
-            Some(vec!["allow".into(), "off".into(), "warn".into(), "error".into(), "deny".into()]);
+        string_schema.enum_values = Some(vec![
+            "allow".into(),
+            "off".into(),
+            "warn".into(),
+            "error".into(),
+            "deny".into(),
+        ]);
         string_schema.metadata().description = Some(
             r#"Oxlint rule.
 - "allow" or "off": Turn off the rule.

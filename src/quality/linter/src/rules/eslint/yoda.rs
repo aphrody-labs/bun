@@ -22,7 +22,9 @@ use crate::{
 fn yoda_diagnostic(span: Span, never: bool, operator: &str) -> OxcDiagnostic {
     let expected_side = if never { "right" } else { "left" };
     OxcDiagnostic::warn("Require or disallow \"Yoda\" conditions")
-        .with_help(format!("Expected literal to be on the {expected_side} side of {operator}."))
+        .with_help(format!(
+            "Expected literal to be on the {expected_side} side of {operator}."
+        ))
         .with_label(span)
 }
 
@@ -58,7 +60,13 @@ enum AllowYoda {
 
 impl Default for Yoda {
     fn default() -> Self {
-        Self(AllowYoda::Never, YodaOptions { except_range: false, only_equality: false })
+        Self(
+            AllowYoda::Never,
+            YodaOptions {
+                except_range: false,
+                only_equality: false,
+            },
+        )
     }
 }
 
@@ -401,9 +409,10 @@ fn is_range(expr: &LogicalExpression, ctx: &LintContext) -> bool {
             return true;
         }
 
-        if let (Some(left_left), Some(right_right)) =
-            (get_string_literal(left_left), get_string_literal(right_right))
-        {
+        if let (Some(left_left), Some(right_right)) = (
+            get_string_literal(left_left),
+            get_string_literal(right_right),
+        ) {
             return left_left <= right_right;
         }
 
@@ -435,9 +444,10 @@ fn is_range(expr: &LogicalExpression, ctx: &LintContext) -> bool {
             return true;
         }
 
-        if let (Some(left_right), Some(right_left)) =
-            (get_string_literal(left_right), get_string_literal(right_left))
-        {
+        if let (Some(left_right), Some(right_left)) = (
+            get_string_literal(left_right),
+            get_string_literal(right_left),
+        ) {
             return left_right <= right_left;
         }
 
@@ -523,35 +533,92 @@ fn test() {
     use crate::tester::Tester;
 
     let pass = vec![
-        (r#"if (value === "red") {}"#, Some(serde_json::json!(["never"]))),
-        ("if (value === value) {}", Some(serde_json::json!(["never"]))),
+        (
+            r#"if (value === "red") {}"#,
+            Some(serde_json::json!(["never"])),
+        ),
+        (
+            "if (value === value) {}",
+            Some(serde_json::json!(["never"])),
+        ),
         ("if (value != 5) {}", Some(serde_json::json!(["never"]))),
         ("if (5 & foo) {}", Some(serde_json::json!(["never"]))),
         ("if (5 === 4) {}", Some(serde_json::json!(["never"]))),
-        ("if (value === `red`) {}", Some(serde_json::json!(["never"]))), // { "ecmaVersion": 2015 },
-        ("if (`red` === `red`) {}", Some(serde_json::json!(["never"]))), // { "ecmaVersion": 2015 },
-        ("if (`${foo}` === `red`) {}", Some(serde_json::json!(["never"]))), // { "ecmaVersion": 2015 },
-        (r#"if (`${""}` === `red`) {}"#, Some(serde_json::json!(["never"]))), // { "ecmaVersion": 2015 },
-        (r#"if (`${"red"}` === foo) {}"#, Some(serde_json::json!(["never"]))), // { "ecmaVersion": 2015 },
-        ("if (b > `a` && b > `a`) {}", Some(serde_json::json!(["never"]))), // { "ecmaVersion": 2015 },
-        (r#"if (`b` > `a` && "b" > "a") {}"#, Some(serde_json::json!(["never"]))), // { "ecmaVersion": 2015 },
-        (r#"if ("blue" === value) {}"#, Some(serde_json::json!(["always"]))),
-        ("if (value === value) {}", Some(serde_json::json!(["always"]))),
+        (
+            "if (value === `red`) {}",
+            Some(serde_json::json!(["never"])),
+        ), // { "ecmaVersion": 2015 },
+        (
+            "if (`red` === `red`) {}",
+            Some(serde_json::json!(["never"])),
+        ), // { "ecmaVersion": 2015 },
+        (
+            "if (`${foo}` === `red`) {}",
+            Some(serde_json::json!(["never"])),
+        ), // { "ecmaVersion": 2015 },
+        (
+            r#"if (`${""}` === `red`) {}"#,
+            Some(serde_json::json!(["never"])),
+        ), // { "ecmaVersion": 2015 },
+        (
+            r#"if (`${"red"}` === foo) {}"#,
+            Some(serde_json::json!(["never"])),
+        ), // { "ecmaVersion": 2015 },
+        (
+            "if (b > `a` && b > `a`) {}",
+            Some(serde_json::json!(["never"])),
+        ), // { "ecmaVersion": 2015 },
+        (
+            r#"if (`b` > `a` && "b" > "a") {}"#,
+            Some(serde_json::json!(["never"])),
+        ), // { "ecmaVersion": 2015 },
+        (
+            r#"if ("blue" === value) {}"#,
+            Some(serde_json::json!(["always"])),
+        ),
+        (
+            "if (value === value) {}",
+            Some(serde_json::json!(["always"])),
+        ),
         ("if (4 != value) {}", Some(serde_json::json!(["always"]))),
         ("if (foo & 4) {}", Some(serde_json::json!(["always"]))),
         ("if (5 === 4) {}", Some(serde_json::json!(["always"]))),
-        ("if (`red` === value) {}", Some(serde_json::json!(["always"]))), // { "ecmaVersion": 2015 },
-        ("if (`red` === `red`) {}", Some(serde_json::json!(["always"]))), // { "ecmaVersion": 2015 },
-        ("if (`red` === `${foo}`) {}", Some(serde_json::json!(["always"]))), // { "ecmaVersion": 2015 },
-        (r#"if (`red` === `${""}`) {}"#, Some(serde_json::json!(["always"]))), // { "ecmaVersion": 2015 },
-        (r#"if (foo === `${"red"}`) {}"#, Some(serde_json::json!(["always"]))), // { "ecmaVersion": 2015 },
-        ("if (`a` > b && `a` > b) {}", Some(serde_json::json!(["always"]))), // { "ecmaVersion": 2015 },
-        (r#"if (`b` > `a` && "b" > "a") {}"#, Some(serde_json::json!(["always"]))), // { "ecmaVersion": 2015 },
+        (
+            "if (`red` === value) {}",
+            Some(serde_json::json!(["always"])),
+        ), // { "ecmaVersion": 2015 },
+        (
+            "if (`red` === `red`) {}",
+            Some(serde_json::json!(["always"])),
+        ), // { "ecmaVersion": 2015 },
+        (
+            "if (`red` === `${foo}`) {}",
+            Some(serde_json::json!(["always"])),
+        ), // { "ecmaVersion": 2015 },
+        (
+            r#"if (`red` === `${""}`) {}"#,
+            Some(serde_json::json!(["always"])),
+        ), // { "ecmaVersion": 2015 },
+        (
+            r#"if (foo === `${"red"}`) {}"#,
+            Some(serde_json::json!(["always"])),
+        ), // { "ecmaVersion": 2015 },
+        (
+            "if (`a` > b && `a` > b) {}",
+            Some(serde_json::json!(["always"])),
+        ), // { "ecmaVersion": 2015 },
+        (
+            r#"if (`b` > `a` && "b" > "a") {}"#,
+            Some(serde_json::json!(["always"])),
+        ), // { "ecmaVersion": 2015 },
         (
             r#"if ("a" < x && x < MAX ) {}"#,
             Some(serde_json::json!(["never", { "exceptRange": true }])),
         ),
-        ("if (1 < x && x < MAX ) {}", Some(serde_json::json!(["never", { "exceptRange": true }]))),
+        (
+            "if (1 < x && x < MAX ) {}",
+            Some(serde_json::json!(["never", { "exceptRange": true }])),
+        ),
         (
             "if ('a' < x && x < MAX ) {}",
             Some(serde_json::json!(["never", { "exceptRange": true }])),
@@ -560,8 +627,14 @@ fn test() {
             "if (x < `x` || `x` <= x) {}",
             Some(serde_json::json!(["never", { "exceptRange": true }])),
         ), // { "ecmaVersion": 2015 },
-        ("if (0 < x && x <= 1) {}", Some(serde_json::json!(["never", { "exceptRange": true }]))),
-        ("if (0 <= x && x < 1) {}", Some(serde_json::json!(["always", { "exceptRange": true }]))),
+        (
+            "if (0 < x && x <= 1) {}",
+            Some(serde_json::json!(["never", { "exceptRange": true }])),
+        ),
+        (
+            "if (0 <= x && x < 1) {}",
+            Some(serde_json::json!(["always", { "exceptRange": true }])),
+        ),
         (
             "if ('blue' < x.y && x.y < 'green') {}",
             Some(serde_json::json!(["never", { "exceptRange": true }])),
@@ -590,7 +663,10 @@ fn test() {
             "if ((0 < a && a < 1) && b < 0) {}",
             Some(serde_json::json!(["never", { "exceptRange": true }])),
         ),
-        ("if (-1 < x && x < 0) {}", Some(serde_json::json!(["never", { "exceptRange": true }]))),
+        (
+            "if (-1 < x && x < 0) {}",
+            Some(serde_json::json!(["never", { "exceptRange": true }])),
+        ),
         (
             "if (0 <= this.prop && this.prop <= 1) {}",
             Some(serde_json::json!(["never", { "exceptRange": true }])),
@@ -619,7 +695,10 @@ fn test() {
             "if (0 <= a.b && a[`b`] <= 100) {}",
             Some(serde_json::json!(["never", { "exceptRange": true }])),
         ), // { "ecmaVersion": 2015 },
-        ("if (-1n < x && x <= 1n) {}", Some(serde_json::json!(["never", { "exceptRange": true }]))), // { "ecmaVersion": 2020 },
+        (
+            "if (-1n < x && x <= 1n) {}",
+            Some(serde_json::json!(["never", { "exceptRange": true }])),
+        ), // { "ecmaVersion": 2020 },
         (
             "if (-1n <= x && x < 1n) {}",
             Some(serde_json::json!(["always", { "exceptRange": true }])),
@@ -640,12 +719,18 @@ fn test() {
             "if ('a' < x && x < MAX ) {}",
             Some(serde_json::json!(["always", { "exceptRange": true }])),
         ), // { "ecmaVersion": 2015 },
-        ("if ('a' < x && x < MAX ) {}", Some(serde_json::json!(["always"]))), // { "ecmaVersion": 2015 },
+        (
+            "if ('a' < x && x < MAX ) {}",
+            Some(serde_json::json!(["always"])),
+        ), // { "ecmaVersion": 2015 },
         (
             "if (MIN < x && x < 'a' ) {}",
             Some(serde_json::json!(["never", { "exceptRange": true }])),
         ), // { "ecmaVersion": 2015 },
-        ("if (MIN < x && x < 'a' ) {}", Some(serde_json::json!(["never"]))), // { "ecmaVersion": 2015 },
+        (
+            "if (MIN < x && x < 'a' ) {}",
+            Some(serde_json::json!(["never"])),
+        ), // { "ecmaVersion": 2015 },
         (
             "if (`blue` < x.y && x.y < `green`) {}",
             Some(serde_json::json!(["never", { "exceptRange": true }])),
@@ -662,24 +747,42 @@ fn test() {
             "if ('a' <= x && x < 'b') {}",
             Some(serde_json::json!(["never", { "exceptRange": true }])),
         ),
-        ("if (x < -1n || 1n <= x) {}", Some(serde_json::json!(["never", { "exceptRange": true }]))), // { "ecmaVersion": 2020 },
+        (
+            "if (x < -1n || 1n <= x) {}",
+            Some(serde_json::json!(["never", { "exceptRange": true }])),
+        ), // { "ecmaVersion": 2020 },
         (
             "if (x < -1n || 1n <= x) {}",
             Some(serde_json::json!(["always", { "exceptRange": true }])),
         ), // { "ecmaVersion": 2020 },
-        ("if (1 < a && a <= 2) {}", Some(serde_json::json!(["never", { "exceptRange": true }]))),
-        ("if (x < -1 || 1 < x) {}", Some(serde_json::json!(["never", { "exceptRange": true }]))),
+        (
+            "if (1 < a && a <= 2) {}",
+            Some(serde_json::json!(["never", { "exceptRange": true }])),
+        ),
+        (
+            "if (x < -1 || 1 < x) {}",
+            Some(serde_json::json!(["never", { "exceptRange": true }])),
+        ),
         (
             "if (x <= 'bar' || 'foo' < x) {}",
             Some(serde_json::json!(["always", { "exceptRange": true }])),
         ),
-        ("if (x < 0 || 1 <= x) {}", Some(serde_json::json!(["never", { "exceptRange": true }]))),
-        ("if('a' <= x && x < MAX) {}", Some(serde_json::json!(["never", { "exceptRange": true }]))),
+        (
+            "if (x < 0 || 1 <= x) {}",
+            Some(serde_json::json!(["never", { "exceptRange": true }])),
+        ),
+        (
+            "if('a' <= x && x < MAX) {}",
+            Some(serde_json::json!(["never", { "exceptRange": true }])),
+        ),
         (
             "if (0 <= obj?.a && obj?.a < 1) {}",
             Some(serde_json::json!(["never", { "exceptRange": true }])),
         ), // { "ecmaVersion": 2020 },
-        ("if (0 < x && x <= 1) {}", Some(serde_json::json!(["never", { "onlyEquality": true }]))),
+        (
+            "if (0 < x && x <= 1) {}",
+            Some(serde_json::json!(["never", { "onlyEquality": true }])),
+        ),
         (
             "if (x !== 'foo' && 'foo' !== x) {}",
             Some(serde_json::json!(["never", { "onlyEquality": true }])),
@@ -703,24 +806,57 @@ fn test() {
             "if (x <= 'foo' || 'bar' < x) {}",
             Some(serde_json::json!(["always", { "exceptRange": true }])),
         ),
-        (r#"if ("red" == value) {}"#, Some(serde_json::json!(["never"]))),
+        (
+            r#"if ("red" == value) {}"#,
+            Some(serde_json::json!(["never"])),
+        ),
         ("if (true === value) {}", Some(serde_json::json!(["never"]))),
         ("if (5 != value) {}", Some(serde_json::json!(["never"]))),
         ("if (5n != value) {}", Some(serde_json::json!(["never"]))), // { "ecmaVersion": 2020 },
         ("if (null !== value) {}", Some(serde_json::json!(["never"]))),
-        (r#"if ("red" <= value) {}"#, Some(serde_json::json!(["never"]))),
+        (
+            r#"if ("red" <= value) {}"#,
+            Some(serde_json::json!(["never"])),
+        ),
         ("if (`red` <= value) {}", Some(serde_json::json!(["never"]))), // { "ecmaVersion": 2015 },
-        ("if (`red` <= `${foo}`) {}", Some(serde_json::json!(["never"]))), // { "ecmaVersion": 2015 },
-        (r#"if (`red` <= `${"red"}`) {}"#, Some(serde_json::json!(["never"]))), // { "ecmaVersion": 2015 },
+        (
+            "if (`red` <= `${foo}`) {}",
+            Some(serde_json::json!(["never"])),
+        ), // { "ecmaVersion": 2015 },
+        (
+            r#"if (`red` <= `${"red"}`) {}"#,
+            Some(serde_json::json!(["never"])),
+        ), // { "ecmaVersion": 2015 },
         ("if (true >= value) {}", Some(serde_json::json!(["never"]))),
-        ("var foo = (5 < value) ? true : false", Some(serde_json::json!(["never"]))),
-        ("function foo() { return (null > value); }", Some(serde_json::json!(["never"]))),
-        ("if (-1 < str.indexOf(substr)) {}", Some(serde_json::json!(["never"]))),
-        (r#"if (value == "red") {}"#, Some(serde_json::json!(["always"]))),
-        ("if (value == `red`) {}", Some(serde_json::json!(["always"]))), // { "ecmaVersion": 2015 },
-        ("if (value === true) {}", Some(serde_json::json!(["always"]))),
+        (
+            "var foo = (5 < value) ? true : false",
+            Some(serde_json::json!(["never"])),
+        ),
+        (
+            "function foo() { return (null > value); }",
+            Some(serde_json::json!(["never"])),
+        ),
+        (
+            "if (-1 < str.indexOf(substr)) {}",
+            Some(serde_json::json!(["never"])),
+        ),
+        (
+            r#"if (value == "red") {}"#,
+            Some(serde_json::json!(["always"])),
+        ),
+        (
+            "if (value == `red`) {}",
+            Some(serde_json::json!(["always"])),
+        ), // { "ecmaVersion": 2015 },
+        (
+            "if (value === true) {}",
+            Some(serde_json::json!(["always"])),
+        ),
         ("if (value === 5n) {}", Some(serde_json::json!(["always"]))), // { "ecmaVersion": 2020 },
-        (r#"if (`${"red"}` <= `red`) {}"#, Some(serde_json::json!(["always"]))), // { "ecmaVersion": 2015 },
+        (
+            r#"if (`${"red"}` <= `red`) {}"#,
+            Some(serde_json::json!(["always"])),
+        ), // { "ecmaVersion": 2015 },
         (
             "if (a < 0 && 0 <= b && b < 1) {}",
             Some(serde_json::json!(["never", { "exceptRange": true }])),
@@ -729,10 +865,22 @@ fn test() {
             "if (0 <= a && a < 1 && b < 1) {}",
             Some(serde_json::json!(["never", { "exceptRange": true }])),
         ),
-        ("if (1 < a && a < 0) {}", Some(serde_json::json!(["never", { "exceptRange": true }]))),
-        ("0 < a && a < 1", Some(serde_json::json!(["never", { "exceptRange": true }]))),
-        ("var a = b < 0 || 1 <= b;", Some(serde_json::json!(["never", { "exceptRange": true }]))),
-        ("if (0 <= x && x < -1) {}", Some(serde_json::json!(["never", { "exceptRange": true }]))),
+        (
+            "if (1 < a && a < 0) {}",
+            Some(serde_json::json!(["never", { "exceptRange": true }])),
+        ),
+        (
+            "0 < a && a < 1",
+            Some(serde_json::json!(["never", { "exceptRange": true }])),
+        ),
+        (
+            "var a = b < 0 || 1 <= b;",
+            Some(serde_json::json!(["never", { "exceptRange": true }])),
+        ),
+        (
+            "if (0 <= x && x < -1) {}",
+            Some(serde_json::json!(["never", { "exceptRange": true }])),
+        ),
         (
             "var a = (b < 0 && 0 <= b);",
             Some(serde_json::json!(["always", { "exceptRange": true }])),
@@ -797,58 +945,142 @@ fn test() {
             "if (0 <= a.null && a[/(?<zero>0)/] <= 1) {}",
             Some(serde_json::json!(["never", { "exceptRange": true }])),
         ), // { "ecmaVersion": 2018 },
-        ("if (3 == a) {}", Some(serde_json::json!(["never", { "onlyEquality": true }]))),
-        ("foo(3 === a);", Some(serde_json::json!(["never", { "onlyEquality": true }]))),
-        ("foo(a === 3);", Some(serde_json::json!(["always", { "onlyEquality": true }]))),
-        ("foo(a === `3`);", Some(serde_json::json!(["always", { "onlyEquality": true }]))), // { "ecmaVersion": 2015 },
+        (
+            "if (3 == a) {}",
+            Some(serde_json::json!(["never", { "onlyEquality": true }])),
+        ),
+        (
+            "foo(3 === a);",
+            Some(serde_json::json!(["never", { "onlyEquality": true }])),
+        ),
+        (
+            "foo(a === 3);",
+            Some(serde_json::json!(["always", { "onlyEquality": true }])),
+        ),
+        (
+            "foo(a === `3`);",
+            Some(serde_json::json!(["always", { "onlyEquality": true }])),
+        ), // { "ecmaVersion": 2015 },
         ("if (0 <= x && x < 1) {}", None),
-        ("if ( /* a */ 0 /* b */ < /* c */ foo /* d */ ) {}", Some(serde_json::json!(["never"]))),
-        ("if ( /* a */ foo /* b */ > /* c */ 0 /* d */ ) {}", Some(serde_json::json!(["always"]))),
+        (
+            "if ( /* a */ 0 /* b */ < /* c */ foo /* d */ ) {}",
+            Some(serde_json::json!(["never"])),
+        ),
+        (
+            "if ( /* a */ foo /* b */ > /* c */ 0 /* d */ ) {}",
+            Some(serde_json::json!(["always"])),
+        ),
         ("if (foo()===1) {}", Some(serde_json::json!(["always"]))),
-        ("if (foo()     === 1) {}", Some(serde_json::json!(["always"]))),
+        (
+            "if (foo()     === 1) {}",
+            Some(serde_json::json!(["always"])),
+        ),
         ("while (0 === (a));", Some(serde_json::json!(["never"]))),
         ("while (0 === (a = b));", Some(serde_json::json!(["never"]))),
         ("while ((a) === 0);", Some(serde_json::json!(["always"]))),
-        ("while ((a = b) === 0);", Some(serde_json::json!(["always"]))),
-        ("if (((((((((((foo)))))))))) === ((((((5)))))));", Some(serde_json::json!(["always"]))),
-        ("function *foo() { yield(1) < a }", Some(serde_json::json!(["never"]))), // { "ecmaVersion": 2015 },
-        ("function *foo() { yield((1)) < a }", Some(serde_json::json!(["never"]))), // { "ecmaVersion": 2015 },
-        ("function *foo() { yield 1 < a }", Some(serde_json::json!(["never"]))), // { "ecmaVersion": 2015 },
-        ("function *foo() { yield/**/1 < a }", Some(serde_json::json!(["never"]))), // { "ecmaVersion": 2015 },
-        ("function *foo() { yield(1) < ++a }", Some(serde_json::json!(["never"]))), // { "ecmaVersion": 2015 },
-        ("function *foo() { yield(1) < (a) }", Some(serde_json::json!(["never"]))), // { "ecmaVersion": 2015 },
+        (
+            "while ((a = b) === 0);",
+            Some(serde_json::json!(["always"])),
+        ),
+        (
+            "if (((((((((((foo)))))))))) === ((((((5)))))));",
+            Some(serde_json::json!(["always"])),
+        ),
+        (
+            "function *foo() { yield(1) < a }",
+            Some(serde_json::json!(["never"])),
+        ), // { "ecmaVersion": 2015 },
+        (
+            "function *foo() { yield((1)) < a }",
+            Some(serde_json::json!(["never"])),
+        ), // { "ecmaVersion": 2015 },
+        (
+            "function *foo() { yield 1 < a }",
+            Some(serde_json::json!(["never"])),
+        ), // { "ecmaVersion": 2015 },
+        (
+            "function *foo() { yield/**/1 < a }",
+            Some(serde_json::json!(["never"])),
+        ), // { "ecmaVersion": 2015 },
+        (
+            "function *foo() { yield(1) < ++a }",
+            Some(serde_json::json!(["never"])),
+        ), // { "ecmaVersion": 2015 },
+        (
+            "function *foo() { yield(1) < (a) }",
+            Some(serde_json::json!(["never"])),
+        ), // { "ecmaVersion": 2015 },
         ("x=1 < a", Some(serde_json::json!(["never"]))),
-        ("function *foo() { yield++a < 1 }", Some(serde_json::json!(["always"]))), // { "ecmaVersion": 2015 },
-        ("function *foo() { yield(a) < 1 }", Some(serde_json::json!(["always"]))), // { "ecmaVersion": 2015 },
-        ("function *foo() { yield a < 1 }", Some(serde_json::json!(["always"]))), // { "ecmaVersion": 2015 },
-        ("function *foo() { yield/**/a < 1 }", Some(serde_json::json!(["always"]))), // { "ecmaVersion": 2015 },
-        ("function *foo() { yield++a < (1) }", Some(serde_json::json!(["always"]))), // { "ecmaVersion": 2015 },
+        (
+            "function *foo() { yield++a < 1 }",
+            Some(serde_json::json!(["always"])),
+        ), // { "ecmaVersion": 2015 },
+        (
+            "function *foo() { yield(a) < 1 }",
+            Some(serde_json::json!(["always"])),
+        ), // { "ecmaVersion": 2015 },
+        (
+            "function *foo() { yield a < 1 }",
+            Some(serde_json::json!(["always"])),
+        ), // { "ecmaVersion": 2015 },
+        (
+            "function *foo() { yield/**/a < 1 }",
+            Some(serde_json::json!(["always"])),
+        ), // { "ecmaVersion": 2015 },
+        (
+            "function *foo() { yield++a < (1) }",
+            Some(serde_json::json!(["always"])),
+        ), // { "ecmaVersion": 2015 },
         ("x=a < 1", Some(serde_json::json!(["always"]))),
         ("0 < f()in obj", None),
         ("1 > x++instanceof foo", Some(serde_json::json!(["never"]))),
         ("x < ('foo')in bar", Some(serde_json::json!(["always"]))),
         ("false <= ((x))in foo", Some(serde_json::json!(["never"]))),
-        ("x >= (1)instanceof foo", Some(serde_json::json!(["always"]))),
+        (
+            "x >= (1)instanceof foo",
+            Some(serde_json::json!(["always"])),
+        ),
         ("false <= ((x)) in foo", Some(serde_json::json!(["never"]))),
         ("x >= 1 instanceof foo", Some(serde_json::json!(["always"]))),
-        ("x >= 1/**/instanceof foo", Some(serde_json::json!(["always"]))),
-        ("(x >= 1)instanceof foo", Some(serde_json::json!(["always"]))),
-        ("(x) >= (1)instanceof foo", Some(serde_json::json!(["always"]))),
+        (
+            "x >= 1/**/instanceof foo",
+            Some(serde_json::json!(["always"])),
+        ),
+        (
+            "(x >= 1)instanceof foo",
+            Some(serde_json::json!(["always"])),
+        ),
+        (
+            "(x) >= (1)instanceof foo",
+            Some(serde_json::json!(["always"])),
+        ),
         ("1 > x===foo", Some(serde_json::json!(["never"]))),
         ("1 > x", Some(serde_json::json!(["never"]))),
         (
             "if (`green` < x.y && x.y < `blue`) {}",
             Some(serde_json::json!(["always", { "exceptRange": true }])),
         ), // { "ecmaVersion": 2015 },
-        ("if('a' <= x && x < 'b') {}", Some(serde_json::json!(["always"]))),
+        (
+            "if('a' <= x && x < 'b') {}",
+            Some(serde_json::json!(["always"])),
+        ),
         (
             "if ('b' <= x && x < 'a') {}",
             Some(serde_json::json!(["never", { "exceptRange": true }])),
         ),
-        ("if('a' <= x && x < 1) {}", Some(serde_json::json!(["never", { "exceptRange": true }]))),
-        ("if (0 < a && b < max) {}", Some(serde_json::json!(["never", { "exceptRange": true }]))),
+        (
+            "if('a' <= x && x < 1) {}",
+            Some(serde_json::json!(["never", { "exceptRange": true }])),
+        ),
+        (
+            "if (0 < a && b < max) {}",
+            Some(serde_json::json!(["never", { "exceptRange": true }])),
+        ),
         // Issue: <https://github.com/oxc-project/oxc/issues/7714>
-        ("{( t=='' )}", Some(serde_json::json!(["always", { "onlyEquality": true }]))),
+        (
+            "{( t=='' )}",
+            Some(serde_json::json!(["always", { "onlyEquality": true }])),
+        ),
     ];
 
     let fix = vec![
@@ -862,16 +1094,36 @@ fn test() {
             r#"if (value == "red") {}"#,
             Some(serde_json::json!(["never"])),
         ),
-        ("if (true === value) {}", "if (value === true) {}", Some(serde_json::json!(["never"]))),
-        ("if (5 != value) {}", "if (value != 5) {}", Some(serde_json::json!(["never"]))),
-        ("if (5n != value) {}", "if (value != 5n) {}", Some(serde_json::json!(["never"]))),
-        ("if (null !== value) {}", "if (value !== null) {}", Some(serde_json::json!(["never"]))),
+        (
+            "if (true === value) {}",
+            "if (value === true) {}",
+            Some(serde_json::json!(["never"])),
+        ),
+        (
+            "if (5 != value) {}",
+            "if (value != 5) {}",
+            Some(serde_json::json!(["never"])),
+        ),
+        (
+            "if (5n != value) {}",
+            "if (value != 5n) {}",
+            Some(serde_json::json!(["never"])),
+        ),
+        (
+            "if (null !== value) {}",
+            "if (value !== null) {}",
+            Some(serde_json::json!(["never"])),
+        ),
         (
             r#"if ("red" <= value) {}"#,
             r#"if (value >= "red") {}"#,
             Some(serde_json::json!(["never"])),
         ),
-        ("if (`red` <= value) {}", "if (value >= `red`) {}", Some(serde_json::json!(["never"]))),
+        (
+            "if (`red` <= value) {}",
+            "if (value >= `red`) {}",
+            Some(serde_json::json!(["never"])),
+        ),
         (
             "if (`red` <= `${foo}`) {}",
             "if (`${foo}` >= `red`) {}",
@@ -882,7 +1134,11 @@ fn test() {
             r#"if (`${"red"}` >= `red`) {}"#,
             Some(serde_json::json!(["never"])),
         ),
-        ("if (true >= value) {}", "if (value <= true) {}", Some(serde_json::json!(["never"]))),
+        (
+            "if (true >= value) {}",
+            "if (value <= true) {}",
+            Some(serde_json::json!(["never"])),
+        ),
         (
             "var foo = (5 < value) ? true : false",
             "var foo = (value > 5) ? true : false",
@@ -903,9 +1159,21 @@ fn test() {
             r#"if ("red" == value) {}"#,
             Some(serde_json::json!(["always"])),
         ),
-        ("if (value == `red`) {}", "if (`red` == value) {}", Some(serde_json::json!(["always"]))),
-        ("if (value === true) {}", "if (true === value) {}", Some(serde_json::json!(["always"]))),
-        ("if (value === 5n) {}", "if (5n === value) {}", Some(serde_json::json!(["always"]))),
+        (
+            "if (value == `red`) {}",
+            "if (`red` == value) {}",
+            Some(serde_json::json!(["always"])),
+        ),
+        (
+            "if (value === true) {}",
+            "if (true === value) {}",
+            Some(serde_json::json!(["always"])),
+        ),
+        (
+            "if (value === 5n) {}",
+            "if (5n === value) {}",
+            Some(serde_json::json!(["always"])),
+        ),
         (
             r#"if (`${"red"}` <= `red`) {}"#,
             r#"if (`red` >= `${"red"}`) {}"#,
@@ -1057,12 +1325,36 @@ fn test() {
             "if ( /* a */ 0 /* b */ < /* c */ foo /* d */ ) {}",
             Some(serde_json::json!(["always"])),
         ),
-        ("if (foo()===1) {}", "if (1===foo()) {}", Some(serde_json::json!(["always"]))),
-        ("if (foo()     === 1) {}", "if (1     === foo()) {}", Some(serde_json::json!(["always"]))),
-        ("while (0 === (a));", "while ((a) === 0);", Some(serde_json::json!(["never"]))),
-        ("while (0 === (a = b));", "while ((a = b) === 0);", Some(serde_json::json!(["never"]))),
-        ("while ((a) === 0);", "while (0 === (a));", Some(serde_json::json!(["always"]))),
-        ("while ((a = b) === 0);", "while (0 === (a = b));", Some(serde_json::json!(["always"]))),
+        (
+            "if (foo()===1) {}",
+            "if (1===foo()) {}",
+            Some(serde_json::json!(["always"])),
+        ),
+        (
+            "if (foo()     === 1) {}",
+            "if (1     === foo()) {}",
+            Some(serde_json::json!(["always"])),
+        ),
+        (
+            "while (0 === (a));",
+            "while ((a) === 0);",
+            Some(serde_json::json!(["never"])),
+        ),
+        (
+            "while (0 === (a = b));",
+            "while ((a = b) === 0);",
+            Some(serde_json::json!(["never"])),
+        ),
+        (
+            "while ((a) === 0);",
+            "while (0 === (a));",
+            Some(serde_json::json!(["always"])),
+        ),
+        (
+            "while ((a = b) === 0);",
+            "while (0 === (a = b));",
+            Some(serde_json::json!(["always"])),
+        ),
         (
             "if (((((((((((foo)))))))))) === ((((((5)))))));",
             "if (((((((5)))))) === ((((((((((foo)))))))))));",
@@ -1126,24 +1418,56 @@ fn test() {
         ),
         ("x=a < 1", "x=1 > a", Some(serde_json::json!(["always"]))),
         ("0 < f()in obj", "f() > 0 in obj", None),
-        ("1 > x++instanceof foo", "x++ < 1 instanceof foo", Some(serde_json::json!(["never"]))),
-        ("x < ('foo')in bar", "('foo') > x in bar", Some(serde_json::json!(["always"]))),
-        ("false <= ((x))in foo", "((x)) >= false in foo", Some(serde_json::json!(["never"]))),
-        ("x >= (1)instanceof foo", "(1) <= x instanceof foo", Some(serde_json::json!(["always"]))),
-        ("false <= ((x)) in foo", "((x)) >= false in foo", Some(serde_json::json!(["never"]))),
-        ("x >= 1 instanceof foo", "1 <= x instanceof foo", Some(serde_json::json!(["always"]))),
+        (
+            "1 > x++instanceof foo",
+            "x++ < 1 instanceof foo",
+            Some(serde_json::json!(["never"])),
+        ),
+        (
+            "x < ('foo')in bar",
+            "('foo') > x in bar",
+            Some(serde_json::json!(["always"])),
+        ),
+        (
+            "false <= ((x))in foo",
+            "((x)) >= false in foo",
+            Some(serde_json::json!(["never"])),
+        ),
+        (
+            "x >= (1)instanceof foo",
+            "(1) <= x instanceof foo",
+            Some(serde_json::json!(["always"])),
+        ),
+        (
+            "false <= ((x)) in foo",
+            "((x)) >= false in foo",
+            Some(serde_json::json!(["never"])),
+        ),
+        (
+            "x >= 1 instanceof foo",
+            "1 <= x instanceof foo",
+            Some(serde_json::json!(["always"])),
+        ),
         (
             "x >= 1/**/instanceof foo",
             "1 <= x/**/instanceof foo",
             Some(serde_json::json!(["always"])),
         ),
-        ("(x >= 1)instanceof foo", "(1 <= x)instanceof foo", Some(serde_json::json!(["always"]))),
+        (
+            "(x >= 1)instanceof foo",
+            "(1 <= x)instanceof foo",
+            Some(serde_json::json!(["always"])),
+        ),
         (
             "(x) >= (1)instanceof foo",
             "(1) <= (x)instanceof foo",
             Some(serde_json::json!(["always"])),
         ),
-        ("1 > x===foo", "x < 1===foo", Some(serde_json::json!(["never"]))),
+        (
+            "1 > x===foo",
+            "x < 1===foo",
+            Some(serde_json::json!(["never"])),
+        ),
         ("1 > x", "x < 1", Some(serde_json::json!(["never"]))),
         (
             "if (`green` < x.y && x.y < `blue`) {}",
@@ -1170,7 +1494,11 @@ fn test() {
             "if (a > 0 && b < max) {}",
             Some(serde_json::json!(["never", { "exceptRange": true }])),
         ),
-        ("y>E>1", "1<y>E", Some(serde_json::json!(["always", { "exceptRange": false }]))),
+        (
+            "y>E>1",
+            "1<y>E",
+            Some(serde_json::json!(["always", { "exceptRange": false }])),
+        ),
         // Issue: <https://github.com/oxc-project/oxc/issues/7714>
         (
             "{( t=='' )}",
@@ -1210,5 +1538,7 @@ fn test() {
         ),
     ];
 
-    Tester::new(Yoda::NAME, Yoda::PLUGIN, pass, fail).expect_fix(fix).test_and_snapshot();
+    Tester::new(Yoda::NAME, Yoda::PLUGIN, pass, fail)
+        .expect_fix(fix)
+        .test_and_snapshot();
 }

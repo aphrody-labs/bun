@@ -48,7 +48,10 @@ pub struct NoArraySort {
 
 impl Default for NoArraySort {
     fn default() -> Self {
-        Self { allow_expression_statement: true, allow_after_spread: false }
+        Self {
+            allow_expression_statement: true,
+            allow_after_spread: false,
+        }
     }
 }
 
@@ -208,8 +211,14 @@ fn test() {
         ("sorted = array.sort(...[])", None),
         ("sorted = array.sort(...[compareFn])", None),
         ("sorted = array.sort(compareFn, extraArgument)", None),
-        (r#"import { Chunk } from "effect"; const sorted = Chunk.sort(compareFn)"#, None),
-        (r#"import { Chunk as C } from "effect"; const sorted = C.sort(compareFn)"#, None),
+        (
+            r#"import { Chunk } from "effect"; const sorted = Chunk.sort(compareFn)"#,
+            None,
+        ),
+        (
+            r#"import { Chunk as C } from "effect"; const sorted = C.sort(compareFn)"#,
+            None,
+        ),
         ("sorted = collection.sort({field: 1})", None),
         (r#"sorted = query.sort("field")"#, None),
         ("sorted = query.sort(1)", None),
@@ -217,7 +226,10 @@ fn test() {
         ("sorted = query.sort(+1)", None),
         ("sorted = query.sort(`field`)", None),
         ("sorted = query.sort([criteria])", None),
-        ("const docs = collection.find({id}).sort({expireAt: -1}).limit(1).toArray()", None),
+        (
+            "const docs = collection.find({id}).sort({expireAt: -1}).limit(1).toArray()",
+            None,
+        ),
         ("[...array].sort({field: 1})", None),
         (
             "collection.sort({field: 1})",
@@ -225,17 +237,32 @@ fn test() {
         ),
         ("User.find().sort({ createdAt: -1 })", None),
         (r#"User.find().sort("-createdAt")"#, None),
-        (r#"Post.find({ published: true }).sort({ updatedAt: "desc" })"#, None),
+        (
+            r#"Post.find({ published: true }).sort({ updatedAt: "desc" })"#,
+            None,
+        ),
         ("sorted = collection.sort(({field: 1}))", None),
         (r#"sorted = query.sort(("field"))"#, None),
-        ("sorted = [...mySet].sort()", Some(serde_json::json!([{ "allowAfterSpread": true }]))),
-        ("sorted = [...array].sort()", Some(serde_json::json!([{ "allowAfterSpread": true }]))),
-        ("sorted = [...array]?.sort()", Some(serde_json::json!([{ "allowAfterSpread": true }]))),
+        (
+            "sorted = [...mySet].sort()",
+            Some(serde_json::json!([{ "allowAfterSpread": true }])),
+        ),
+        (
+            "sorted = [...array].sort()",
+            Some(serde_json::json!([{ "allowAfterSpread": true }])),
+        ),
+        (
+            "sorted = [...array]?.sort()",
+            Some(serde_json::json!([{ "allowAfterSpread": true }])),
+        ),
         (
             "sorted = [...array].sort(compareFn)",
             Some(serde_json::json!([{ "allowAfterSpread": true }])),
         ),
-        ("[...array].sort()", Some(serde_json::json!([{ "allowAfterSpread": true }]))),
+        (
+            "[...array].sort()",
+            Some(serde_json::json!([{ "allowAfterSpread": true }])),
+        ),
     ];
 
     let fail = vec![
@@ -247,17 +274,40 @@ fn test() {
         ("sorted = [...array]?.sort(compareFn)", None),
         ("sorted = array.sort(compareFn)", None),
         ("sorted = array?.sort(compareFn)", None),
-        ("array.sort()", Some(serde_json::json!([{ "allowExpressionStatement": false }]))),
-        ("array?.sort()", Some(serde_json::json!([{ "allowExpressionStatement": false }]))),
-        ("[...array].sort()", Some(serde_json::json!([{ "allowExpressionStatement": false }]))),
+        (
+            "array.sort()",
+            Some(serde_json::json!([{ "allowExpressionStatement": false }])),
+        ),
+        (
+            "array?.sort()",
+            Some(serde_json::json!([{ "allowExpressionStatement": false }])),
+        ),
+        (
+            "[...array].sort()",
+            Some(serde_json::json!([{ "allowExpressionStatement": false }])),
+        ),
         ("sorted = [...(0, array)].sort()", None),
-        ("sorted = array.sort()", Some(serde_json::json!([{ "allowAfterSpread": true }]))),
-        ("sorted = [...array].sort()", Some(serde_json::json!([{ "allowAfterSpread": false }]))),
+        (
+            "sorted = array.sort()",
+            Some(serde_json::json!([{ "allowAfterSpread": true }])),
+        ),
+        (
+            "sorted = [...array].sort()",
+            Some(serde_json::json!([{ "allowAfterSpread": false }])),
+        ),
     ];
 
     let fix = vec![
-        ("sorted = [...array].sort()", "sorted = [...array].toSorted()", None),
-        ("sorted = [...array]?.sort()", "sorted = [...array]?.toSorted()", None),
+        (
+            "sorted = [...array].sort()",
+            "sorted = [...array].toSorted()",
+            None,
+        ),
+        (
+            "sorted = [...array]?.sort()",
+            "sorted = [...array]?.toSorted()",
+            None,
+        ),
         (
             "a.sort()",
             "a.toSorted()",

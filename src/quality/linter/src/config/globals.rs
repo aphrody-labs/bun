@@ -47,7 +47,9 @@ impl OxlintGlobals {
         String: borrow::Borrow<Q>,
         Q: ?Sized + Eq + hash::Hash,
     {
-        self.0.get(name).is_some_and(|value| *value != GlobalValue::Off)
+        self.0
+            .get(name)
+            .is_some_and(|value| *value != GlobalValue::Off)
     }
 
     pub(crate) fn override_globals(&self, globals_to_override: &mut OxlintGlobals) {
@@ -87,7 +89,11 @@ impl<'de> Deserialize<'de> for GlobalValue {
 impl From<bool> for GlobalValue {
     #[inline]
     fn from(value: bool) -> Self {
-        if value { GlobalValue::Writable } else { GlobalValue::Readonly }
+        if value {
+            GlobalValue::Writable
+        } else {
+            GlobalValue::Readonly
+        }
     }
 }
 

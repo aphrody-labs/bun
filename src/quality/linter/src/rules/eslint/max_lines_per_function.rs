@@ -178,13 +178,22 @@ impl Rule for MaxLinesPerFunction {
         } else {
             // Intentionally counting newline bytes instead of using .lines() for performance (see PR 11242)
             let newlines = code.bytes().filter(|ch| *ch == b'\n').count();
-            if code.ends_with('\n') { newlines } else { newlines + 1 }
+            if code.ends_with('\n') {
+                newlines
+            } else {
+                newlines + 1
+            }
         };
 
         let final_lines = lines_in_function.saturating_sub(comment_lines) as u32;
         if final_lines > self.max {
             let name = get_function_name_with_kind(node, ctx.nodes().parent_node(node.id()));
-            ctx.diagnostic(max_lines_per_function_diagnostic(&name, final_lines, self.max, span));
+            ctx.diagnostic(max_lines_per_function_diagnostic(
+                &name,
+                final_lines,
+                self.max,
+                span,
+            ));
         }
     }
 }
@@ -615,6 +624,11 @@ fn test() {
         ),
     ];
 
-    Tester::new(MaxLinesPerFunction::NAME, MaxLinesPerFunction::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        MaxLinesPerFunction::NAME,
+        MaxLinesPerFunction::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

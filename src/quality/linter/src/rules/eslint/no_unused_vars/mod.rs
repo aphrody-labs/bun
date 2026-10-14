@@ -205,7 +205,8 @@ declare_oxc_lint!(
     fix = conditional_dangerous_fix_or_suggestion,
     config = NoUnusedVarsConfig,
     version = "0.7.0",
-    short_description = "Disallows variable declarations, imports, or type declarations that are not used in code.",
+    short_description =
+        "Disallows variable declarations, imports, or type declarations that are not used in code.",
 );
 
 impl Deref for NoUnusedVars {
@@ -288,10 +289,13 @@ impl NoUnusedVars {
             | AstKind::ImportNamespaceSpecifier(_) => {
                 let diagnostic = diagnostic::imported(symbol);
                 let declaration =
-                    symbol.iter_self_and_parents().map(AstNode::kind).find_map(|kind| match kind {
-                        AstKind::ImportDeclaration(import) => Some(import),
-                        _ => None,
-                    });
+                    symbol
+                        .iter_self_and_parents()
+                        .map(AstNode::kind)
+                        .find_map(|kind| match kind {
+                            AstKind::ImportDeclaration(import) => Some(import),
+                            _ => None,
+                        });
 
                 if let Some(declaration) = declaration {
                     Self::report_with_fix_mode(self.fix.imports, ctx, diagnostic, |fixer| {
@@ -364,25 +368,41 @@ impl NoUnusedVars {
                 if NoUnusedVars::is_allowed_binding_rest_element(symbol) {
                     return;
                 }
-                ctx.diagnostic(diagnostic::declared(symbol, &self.vars_ignore_pattern, false));
+                ctx.diagnostic(diagnostic::declared(
+                    symbol,
+                    &self.vars_ignore_pattern,
+                    false,
+                ));
             }
             AstKind::TSNamespaceDeclaration(namespace) => {
                 if self.is_allowed_ts_namespace(symbol, namespace) {
                     return;
                 }
-                ctx.diagnostic(diagnostic::declared(symbol, &IgnorePattern::<&str>::None, false));
+                ctx.diagnostic(diagnostic::declared(
+                    symbol,
+                    &IgnorePattern::<&str>::None,
+                    false,
+                ));
             }
             AstKind::TSInterfaceDeclaration(_) | AstKind::TSTypeAliasDeclaration(_) => {
                 if symbol.is_in_declared_module() {
                     return;
                 }
-                ctx.diagnostic(diagnostic::declared(symbol, &IgnorePattern::<&str>::None, false));
+                ctx.diagnostic(diagnostic::declared(
+                    symbol,
+                    &IgnorePattern::<&str>::None,
+                    false,
+                ));
             }
             AstKind::TSTypeParameter(_) => {
                 if self.is_allowed_type_parameter(symbol, declaration.id()) {
                     return;
                 }
-                ctx.diagnostic(diagnostic::declared(symbol, &self.vars_ignore_pattern, false));
+                ctx.diagnostic(diagnostic::declared(
+                    symbol,
+                    &self.vars_ignore_pattern,
+                    false,
+                ));
             }
             // Mapped type keys are always used within the type definition
             AstKind::TSMappedType(_) => {}
@@ -396,7 +416,11 @@ impl NoUnusedVars {
                     |fixer| remove_unused_catch_parameter(fixer, ctx, catch),
                 );
             }
-            _ => ctx.diagnostic(diagnostic::declared(symbol, &IgnorePattern::<&str>::None, false)),
+            _ => ctx.diagnostic(diagnostic::declared(
+                symbol,
+                &IgnorePattern::<&str>::None,
+                false,
+            )),
         }
     }
 
@@ -502,7 +526,8 @@ impl Symbol<'_, '_> {
             })
             .any(|ambient_module_scope_id| {
                 matches!(
-                    self.nodes().kind(self.scoping().get_node_id(ambient_module_scope_id)),
+                    self.nodes()
+                        .kind(self.scoping().get_node_id(ambient_module_scope_id)),
                     AstKind::TSGlobalDeclaration(_)
                 )
             })

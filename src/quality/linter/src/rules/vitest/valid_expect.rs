@@ -11,7 +11,9 @@ pub struct ValidExpect(Box<ValidExpectConfig>);
 
 impl Default for ValidExpect {
     fn default() -> Self {
-        Self(Box::new(ValidExpectConfig::default().allow_string_message_arg()))
+        Self(Box::new(
+            ValidExpectConfig::default().allow_string_message_arg(),
+        ))
     }
 }
 
@@ -28,7 +30,9 @@ declare_oxc_lint!(
 
 impl Rule for ValidExpect {
     fn from_configuration(value: serde_json::Value) -> Result<Self, serde_json::error::Error> {
-        Ok(Self(Box::new(ValidExpectConfig::from_configuration(&value).allow_string_message_arg())))
+        Ok(Self(Box::new(
+            ValidExpectConfig::from_configuration(&value).allow_string_message_arg(),
+        )))
     }
 
     fn run_once(&self, ctx: &LintContext) {

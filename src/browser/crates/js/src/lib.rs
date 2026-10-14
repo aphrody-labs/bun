@@ -6,20 +6,20 @@ pub mod module_loader;
 pub mod ops;
 pub mod runtime;
 pub mod v8_flags;
-mod write_stream;
 mod websocket;
+mod write_stream;
 
 pub use markdown::HTML_TO_MARKDOWN_JS;
 // Screenshot rasterization (PNG bytes) from the render layer. Available when the
 // render feature (which enables bun_browser_render/paint) is compiled in.
 #[cfg(feature = "render")]
 pub use bun_browser_render::{
-    AnimationSample, AnimationSampleMode, AnimationSampleTime, CaptureError, CaptureRegion,
-    CssMediaType, ImageRequestProfile, MAX_CAPTURE_DIMENSION, MAX_CAPTURE_PIXELS,
-    RenderResourceCache, configure_font_directories, screenshot_png, screenshot_png_scrolled,
+    configure_font_directories, screenshot_png, screenshot_png_scrolled,
     screenshot_png_scrolled_at_animation_time,
     screenshot_png_scrolled_at_animation_time_with_surface_color,
     screenshot_png_scrolled_at_animation_time_with_surface_color_and_resources,
-    validate_capture_region,
+    validate_capture_region, AnimationSample, AnimationSampleMode, AnimationSampleTime,
+    CaptureError, CaptureRegion, CssMediaType, ImageRequestProfile, RenderResourceCache,
+    MAX_CAPTURE_DIMENSION, MAX_CAPTURE_PIXELS,
 };
 pub use v8_flags::set_v8_flags;

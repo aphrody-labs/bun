@@ -170,6 +170,28 @@ interface ProxyHandler<T extends object> {
   __proto__?: null;
 }
 
+interface TextDecoderOptions {
+  __proto__?: null;
+}
+
+// These are native Bun extensions, including when DOM declarations supply the web interfaces.
+interface MessagePort {
+  ref: import("node:worker_threads").MessagePort["ref"];
+  unref: import("node:worker_threads").MessagePort["unref"];
+}
+
+interface Worker {
+  threadId: Bun.Worker["threadId"];
+  ref: Bun.Worker["ref"];
+  unref: Bun.Worker["unref"];
+}
+
+// The runtime Blob constructor accepts Bun's buffer sources, including shared backing buffers.
+type BunBuiltinBlobConstructor = {
+  prototype: Blob;
+  new (parts?: Bun.BlobPart[], options?: BlobPropertyBag): Blob;
+};
+
 declare namespace NodeJS {
   interface Process {
     /** The `-e` / `--eval` source, which `node:child_process` reads when it forks the current script. */

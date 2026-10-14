@@ -18,18 +18,28 @@ fn temp_path(name: &str) -> PathBuf {
 
 fn random_vectors(n: usize, dim: usize, seed: u64) -> Vec<Vec<f32>> {
     let mut rng = SplitMix64::new(seed);
-    (0..n).map(|_| (0..dim).map(|_| rng.gaussian()).collect()).collect()
+    (0..n)
+        .map(|_| (0..dim).map(|_| rng.gaussian()).collect())
+        .collect()
 }
 
 fn small_params(dim: usize) -> IndexParams {
-    IndexParams { m: 12, ef_construction: 64, ef_search: 64, ..IndexParams::new(dim) }
+    IndexParams {
+        m: 12,
+        ef_construction: 64,
+        ef_search: 64,
+        ..IndexParams::new(dim)
+    }
 }
 
 fn build(n: usize, dim: usize, params: IndexParams, seed: u64) -> (Index, Vec<Vec<f32>>) {
     let index = Index::new(params).unwrap();
     let vectors = random_vectors(n, dim, seed);
-    let items: Vec<(u64, Vec<f32>)> =
-        vectors.iter().enumerate().map(|(i, v)| (i as u64, v.clone())).collect();
+    let items: Vec<(u64, Vec<f32>)> = vectors
+        .iter()
+        .enumerate()
+        .map(|(i, v)| (i as u64, v.clone()))
+        .collect();
     index.add_batch(&items).unwrap();
     (index, vectors)
 }
@@ -39,7 +49,12 @@ fn empty_index_search_returns_nothing() {
     let index = Index::new(IndexParams::new(8)).unwrap();
     assert!(index.is_empty());
     assert!(index.search(&[1.0; 8], 10, None).unwrap().is_empty());
-    assert!(index.search_filtered(&[1.0; 8], 10, Some(5), |_| true).unwrap().is_empty());
+    assert!(
+        index
+            .search_filtered(&[1.0; 8], 10, Some(5), |_| true)
+            .unwrap()
+            .is_empty()
+    );
     index.add(1, &[1.0; 8]).unwrap();
     assert!(index.search(&[1.0; 8], 0, None).unwrap().is_empty());
     assert!(!index.remove(42));
@@ -47,9 +62,15 @@ fn empty_index_search_returns_nothing() {
 
 #[test]
 fn invalid_params_are_rejected() {
-    assert!(matches!(Index::new(IndexParams::new(0)), Err(IndexError::InvalidParams(_))));
     assert!(matches!(
-        Index::new(IndexParams { m: 1, ..IndexParams::new(4) }),
+        Index::new(IndexParams::new(0)),
+        Err(IndexError::InvalidParams(_))
+    ));
+    assert!(matches!(
+        Index::new(IndexParams {
+            m: 1,
+            ..IndexParams::new(4)
+        }),
         Err(IndexError::InvalidParams(_))
     ));
 }
@@ -59,7 +80,10 @@ fn dimension_mismatch_errors() {
     let index = Index::new(IndexParams::new(4)).unwrap();
     assert!(matches!(
         index.add(1, &[1.0, 2.0, 3.0]),
-        Err(IndexError::DimensionMismatch { expected: 4, got: 3 })
+        Err(IndexError::DimensionMismatch {
+            expected: 4,
+            got: 3
+        })
     ));
     assert!(matches!(
         index.add_batch_flat(&[1, 2], &[1.0; 7]),
@@ -68,17 +92,32 @@ fn dimension_mismatch_errors() {
     index.add(1, &[1.0, 2.0, 3.0, 4.0]).unwrap();
     assert!(matches!(
         index.search(&[1.0; 5], 1, None),
-        Err(IndexError::DimensionMismatch { expected: 4, got: 5 })
+        Err(IndexError::DimensionMismatch {
+            expected: 4,
+            got: 5
+        })
     ));
 }
 
 #[test]
 fn non_finite_and_zero_vectors_are_rejected_atomically() {
     let index = Index::new(IndexParams::new(3)).unwrap();
-    assert!(matches!(index.add(1, &[f32::NAN, 0.0, 1.0]), Err(IndexError::NonFiniteVector)));
-    assert!(matches!(index.add(1, &[f32::INFINITY, 0.0, 1.0]), Err(IndexError::NonFiniteVector)));
-    assert!(matches!(index.add(1, &[0.0, 0.0, 0.0]), Err(IndexError::ZeroVector)));
-    let batch = vec![(1u64, vec![1.0, 0.0, 0.0]), (2u64, vec![0.0, f32::NEG_INFINITY, 0.0])];
+    assert!(matches!(
+        index.add(1, &[f32::NAN, 0.0, 1.0]),
+        Err(IndexError::NonFiniteVector)
+    ));
+    assert!(matches!(
+        index.add(1, &[f32::INFINITY, 0.0, 1.0]),
+        Err(IndexError::NonFiniteVector)
+    ));
+    assert!(matches!(
+        index.add(1, &[0.0, 0.0, 0.0]),
+        Err(IndexError::ZeroVector)
+    ));
+    let batch = vec![
+        (1u64, vec![1.0, 0.0, 0.0]),
+        (2u64, vec![0.0, f32::NEG_INFINITY, 0.0]),
+    ];
     assert!(index.add_batch(&batch).is_err());
     assert_eq!(index.len(), 0, "a failing batch must not insert anything");
     assert!(matches!(
@@ -105,7 +144,9 @@ fn upsert_replaces_previous_vector() {
     assert!(hits.iter().all(|&(_, s)| s < 0.5));
 
     // Duplicate keys inside one batch: last one wins.
-    index.add_batch(&[(5, vec![1.0, 1.0, 0.0]), (5, vec![0.0, 1.0, 1.0])]).unwrap();
+    index
+        .add_batch(&[(5, vec![1.0, 1.0, 0.0]), (5, vec![0.0, 1.0, 1.0])])
+        .unwrap();
     assert_eq!(index.len(), 3);
     let hits = index.search(&[0.0, 1.0, 1.0], 1, None).unwrap();
     assert_eq!(hits[0].0, 5);
@@ -131,10 +172,14 @@ fn tombstones_are_filtered_and_filters_apply() {
         let hits = index.search(&vectors[key as usize], 1, None).unwrap();
         assert_eq!(hits[0].0, key, "live vector must find itself");
     }
-    let hits = index.search_filtered(&vectors[7], 10, None, |k| k % 2 == 0).unwrap();
+    let hits = index
+        .search_filtered(&vectors[7], 10, None, |k| k % 2 == 0)
+        .unwrap();
     assert_eq!(hits.len(), 10);
     assert!(hits.iter().all(|&(k, _)| k % 2 == 0 && k % 3 != 0));
-    let hits = index.search_filtered(&vectors[7], 10, None, |k| k == 1000).unwrap();
+    let hits = index
+        .search_filtered(&vectors[7], 10, None, |k| k == 1000)
+        .unwrap();
     assert_eq!(hits.len(), 1);
     assert_eq!(hits[0].0, 1000);
 }
@@ -143,7 +188,10 @@ fn tombstones_are_filtered_and_filters_apply() {
 fn compact_drops_tombstones_and_keeps_results() {
     let dim = 24;
     for keep_float in [true, false] {
-        let params = IndexParams { keep_float, ..small_params(dim) };
+        let params = IndexParams {
+            keep_float,
+            ..small_params(dim)
+        };
         let (index, vectors) = build(2000, dim, params, 5);
         for key in 0..1000u64 {
             index.remove(key);
@@ -174,12 +222,19 @@ fn save_load_round_trip_is_identical() {
         (Metric::Cosine, Quantization::None, true),
         (Metric::L2, Quantization::Int8, true),
     ] {
-        let params = IndexParams { metric, quantization, keep_float, ..small_params(dim) };
+        let params = IndexParams {
+            metric,
+            quantization,
+            keep_float,
+            ..small_params(dim)
+        };
         let (index, vectors) = build(2500, dim, params, 99);
         for key in (0..2500u64).step_by(10) {
             index.remove(key);
         }
-        let path = temp_path(&format!("rt-{metric:?}-{quantization:?}-{keep_float}.bxcidx"));
+        let path = temp_path(&format!(
+            "rt-{metric:?}-{quantization:?}-{keep_float}.bxcidx"
+        ));
         index.save(&path).unwrap();
         let loaded = Index::load(&path).unwrap();
         assert!(loaded.stats().mapped);
@@ -188,10 +243,17 @@ fn save_load_round_trip_is_identical() {
         assert_eq!(loaded.params(), index.params());
         let queries = random_vectors(50, dim, 1234);
         for q in &queries {
-            assert_eq!(index.search(q, 10, None).unwrap(), loaded.search(q, 10, None).unwrap());
             assert_eq!(
-                index.search_filtered(q, 5, Some(32), |k| k % 2 == 1).unwrap(),
-                loaded.search_filtered(q, 5, Some(32), |k| k % 2 == 1).unwrap()
+                index.search(q, 10, None).unwrap(),
+                loaded.search(q, 10, None).unwrap()
+            );
+            assert_eq!(
+                index
+                    .search_filtered(q, 5, Some(32), |k| k % 2 == 1)
+                    .unwrap(),
+                loaded
+                    .search_filtered(q, 5, Some(32), |k| k % 2 == 1)
+                    .unwrap()
             );
         }
         assert!(loaded.contains(1) && !loaded.contains(10));
@@ -210,7 +272,10 @@ fn save_load_round_trip_is_identical() {
         let again = Index::load(&path).unwrap();
         assert_eq!(again.len(), loaded.len());
         for q in queries.iter().take(10) {
-            assert_eq!(again.search(q, 10, None).unwrap(), loaded.search(q, 10, None).unwrap());
+            assert_eq!(
+                again.search(q, 10, None).unwrap(),
+                loaded.search(q, 10, None).unwrap()
+            );
         }
         let _ = std::fs::remove_file(&path);
     }
@@ -219,7 +284,10 @@ fn save_load_round_trip_is_identical() {
 #[test]
 fn empty_index_round_trip() {
     let path = temp_path("empty.bxcidx");
-    Index::new(IndexParams::new(7)).unwrap().save(&path).unwrap();
+    Index::new(IndexParams::new(7))
+        .unwrap()
+        .save(&path)
+        .unwrap();
     let loaded = Index::load(&path).unwrap();
     assert!(loaded.is_empty());
     assert_eq!(loaded.dim(), 7);
@@ -242,10 +310,26 @@ fn corrupt_files_are_detected_without_panicking() {
     let good = std::fs::read(&path).unwrap();
     let bad_path = temp_path("bad.bxcidx");
 
-    assert!(matches!(Index::load(temp_path("missing.bxcidx")), Err(IndexError::Io(_))));
+    assert!(matches!(
+        Index::load(temp_path("missing.bxcidx")),
+        Err(IndexError::Io(_))
+    ));
 
-    for len in [0, 4, 8, 100, 255, 263, good.len() / 2, good.len() - 9, good.len() - 1] {
-        assert!(corrupted_load(&bad_path, &good[..len]).is_err(), "truncated to {len} bytes");
+    for len in [
+        0,
+        4,
+        8,
+        100,
+        255,
+        263,
+        good.len() / 2,
+        good.len() - 9,
+        good.len() - 1,
+    ] {
+        assert!(
+            corrupted_load(&bad_path, &good[..len]).is_err(),
+            "truncated to {len} bytes"
+        );
     }
 
     let mut rng = SplitMix64::new(77);
@@ -282,13 +366,22 @@ fn corrupt_files_are_detected_without_panicking() {
     let mut bytes = good.clone();
     let links0 = section_offset(&bytes, 6);
     bytes[links0 + 4..links0 + 8].copy_from_slice(&1_000_000u32.to_le_bytes());
-    assert!(matches!(corrupted_load(&bad_path, &reseal(bytes)), Err(IndexError::Corrupt(_))));
+    assert!(matches!(
+        corrupted_load(&bad_path, &reseal(bytes)),
+        Err(IndexError::Corrupt(_))
+    ));
     let mut bytes = good.clone();
     bytes[links0..links0 + 4].copy_from_slice(&999u32.to_le_bytes());
-    assert!(matches!(corrupted_load(&bad_path, &reseal(bytes)), Err(IndexError::Corrupt(_))));
+    assert!(matches!(
+        corrupted_load(&bad_path, &reseal(bytes)),
+        Err(IndexError::Corrupt(_))
+    ));
     let mut bytes = good.clone();
     bytes[56..64].copy_from_slice(&(u64::MAX / 2).to_le_bytes());
-    assert!(matches!(corrupted_load(&bad_path, &reseal(bytes)), Err(IndexError::Corrupt(_))));
+    assert!(matches!(
+        corrupted_load(&bad_path, &reseal(bytes)),
+        Err(IndexError::Corrupt(_))
+    ));
     let mut bytes = good.clone();
     bytes[8..12].copy_from_slice(&9u32.to_le_bytes());
     assert!(matches!(
@@ -297,7 +390,10 @@ fn corrupt_files_are_detected_without_panicking() {
     ));
     let mut bytes = good.clone();
     bytes[20] = 7;
-    assert!(matches!(corrupted_load(&bad_path, &reseal(bytes)), Err(IndexError::Corrupt(_))));
+    assert!(matches!(
+        corrupted_load(&bad_path, &reseal(bytes)),
+        Err(IndexError::Corrupt(_))
+    ));
 
     assert!(Index::load(&path).is_ok());
     let _ = std::fs::remove_file(&path);
@@ -307,7 +403,10 @@ fn corrupt_files_are_detected_without_panicking() {
 #[test]
 fn concurrent_searches_during_inserts() {
     let dim = 32;
-    let params = IndexParams { build_threads: 4, ..small_params(dim) };
+    let params = IndexParams {
+        build_threads: 4,
+        ..small_params(dim)
+    };
     let index = Arc::new(Index::new(params).unwrap());
     let vectors = Arc::new(random_vectors(12_000, dim, 21));
     index.add(0, &vectors[0]).unwrap();
@@ -316,15 +415,21 @@ fn concurrent_searches_during_inserts() {
 
     let readers: Vec<_> = (0..4)
         .map(|t| {
-            let (index, vectors, done, searches) =
-                (index.clone(), vectors.clone(), done.clone(), searches.clone());
+            let (index, vectors, done, searches) = (
+                index.clone(),
+                vectors.clone(),
+                done.clone(),
+                searches.clone(),
+            );
             std::thread::spawn(move || {
                 let mut i = t * 97;
                 while !done.load(Ordering::Relaxed) {
                     let q = &vectors[i % vectors.len()];
                     let hits = index.search(q, 10, None).unwrap();
                     assert!(hits.len() <= 10);
-                    let _ = index.search_filtered(q, 5, Some(20), |k| k % 2 == 0).unwrap();
+                    let _ = index
+                        .search_filtered(q, 5, Some(20), |k| k % 2 == 0)
+                        .unwrap();
                     let _ = index.contains(i as u64);
                     searches.fetch_add(1, Ordering::Relaxed);
                     i += 1;
@@ -340,8 +445,9 @@ fn concurrent_searches_during_inserts() {
                 index.add(key, &vectors[key as usize]).unwrap();
             }
             for start in (2000..12_000usize).step_by(1000) {
-                let batch: Vec<(u64, Vec<f32>)> =
-                    (start..start + 1000).map(|k| (k as u64, vectors[k].clone())).collect();
+                let batch: Vec<(u64, Vec<f32>)> = (start..start + 1000)
+                    .map(|k| (k as u64, vectors[k].clone()))
+                    .collect();
                 index.add_batch(&batch).unwrap();
                 index.remove(start as u64);
             }
@@ -371,7 +477,10 @@ fn serial_builds_are_deterministic() {
     };
     let (a, b) = (make(), make());
     for q in random_vectors(20, dim, 9) {
-        assert_eq!(a.search(&q, 10, None).unwrap(), b.search(&q, 10, None).unwrap());
+        assert_eq!(
+            a.search(&q, 10, None).unwrap(),
+            b.search(&q, 10, None).unwrap()
+        );
     }
 }
 
@@ -379,7 +488,11 @@ fn serial_builds_are_deterministic() {
 fn l2_metric_matches_brute_force() {
     let dim = 8;
     for quantization in [Quantization::Int8, Quantization::None] {
-        let params = IndexParams { metric: Metric::L2, quantization, ..small_params(dim) };
+        let params = IndexParams {
+            metric: Metric::L2,
+            quantization,
+            ..small_params(dim)
+        };
         let (index, vectors) = build(1500, dim, params, 17);
         let mut rng = SplitMix64::new(4);
         let mut correct = 0;
@@ -412,16 +525,40 @@ fn search_options_override_rescoring() {
     let (index, vectors) = build(1000, dim, small_params(dim), 2);
     let q = &vectors[10];
     let exact = index
-        .search_with(q, SearchOptions { k: 5, ef: Some(64), rescore_multiplier: Some(8) }, None)
+        .search_with(
+            q,
+            SearchOptions {
+                k: 5,
+                ef: Some(64),
+                rescore_multiplier: Some(8),
+            },
+            None,
+        )
         .unwrap();
     let approx = index
-        .search_with(q, SearchOptions { k: 5, ef: Some(64), rescore_multiplier: Some(0) }, None)
+        .search_with(
+            q,
+            SearchOptions {
+                k: 5,
+                ef: Some(64),
+                rescore_multiplier: Some(0),
+            },
+            None,
+        )
         .unwrap();
     assert_eq!(exact[0].0, 10);
     assert_eq!(approx[0].0, 10);
     assert!((exact[0].1 - 1.0).abs() < 1e-5, "rescored score is exact");
     let filter = |k: u64| k != 10;
-    let filtered =
-        index.search_with(q, SearchOptions { k: 3, ..Default::default() }, Some(&filter)).unwrap();
+    let filtered = index
+        .search_with(
+            q,
+            SearchOptions {
+                k: 3,
+                ..Default::default()
+            },
+            Some(&filter),
+        )
+        .unwrap();
     assert!(filtered.iter().all(|&(k, _)| k != 10));
 }

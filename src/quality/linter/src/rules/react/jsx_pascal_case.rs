@@ -225,7 +225,9 @@ fn check_pascal_case(check_name: &str) -> bool {
 }
 
 fn check_ignore(ignore: &[CompactStr], check_name: &str) -> bool {
-    ignore.iter().any(|entry| entry == check_name || glob_match(entry.as_str(), check_name))
+    ignore
+        .iter()
+        .any(|entry| entry == check_name || glob_match(entry.as_str(), check_name))
 }
 
 #[test]
@@ -249,13 +251,25 @@ fn test() {
         ("<Año />", None),
         ("<Søknad />", None),
         ("<T />", None),
-        ("<YMCA />", Some(serde_json::json!([{ "allowAllCaps": true }]))),
-        ("<TEST_COMPONENT />", Some(serde_json::json!([{ "allowAllCaps": true }]))),
+        (
+            "<YMCA />",
+            Some(serde_json::json!([{ "allowAllCaps": true }])),
+        ),
+        (
+            "<TEST_COMPONENT />",
+            Some(serde_json::json!([{ "allowAllCaps": true }])),
+        ),
         ("<Modal.Header />", None),
         ("<qualification.T3StComp0Nent />", None),
         ("<Modal:Header />", None),
-        ("<IGNORED />", Some(serde_json::json!([{ "ignore": ["IGNORED"] }]))),
-        ("<Foo_DEPRECATED />", Some(serde_json::json!([{ "ignore": ["*_DEPRECATED"] }]))),
+        (
+            "<IGNORED />",
+            Some(serde_json::json!([{ "ignore": ["IGNORED"] }])),
+        ),
+        (
+            "<Foo_DEPRECATED />",
+            Some(serde_json::json!([{ "ignore": ["*_DEPRECATED"] }])),
+        ),
         (
             "<Foo_DEPRECATED />",
             Some(serde_json::json!([{ "ignore": ["*_*[DEPRECATED,IGNORED]"] }])),
@@ -264,38 +278,74 @@ fn test() {
         ("<_ />", None),
         ("<H1>Hello!</H1>", None),
         ("<Typography.P />", None),
-        ("<Styled.h1 />", Some(serde_json::json!([{ "allowNamespace": true }]))),
+        (
+            "<Styled.h1 />",
+            Some(serde_json::json!([{ "allowNamespace": true }])),
+        ),
         ("<Styled.H1.H2 />", None),
         (
             "<_TEST_COMPONENT />",
             Some(serde_json::json!([{ "allowAllCaps": true, "allowLeadingUnderscore": true }])),
         ),
-        ("<_TestComponent />", Some(serde_json::json!([{ "allowLeadingUnderscore": true }]))),
-        ("<Component_ />", Some(serde_json::json!([{ "ignore": ["Component_"] }]))),
+        (
+            "<_TestComponent />",
+            Some(serde_json::json!([{ "allowLeadingUnderscore": true }])),
+        ),
+        (
+            "<Component_ />",
+            Some(serde_json::json!([{ "ignore": ["Component_"] }])),
+        ),
     ];
 
     let fail = vec![
         ("<Test_component />", None),
         ("<TEST_COMPONENT />", None),
         ("<YMCA />", None),
-        ("<_TEST_COMPONENT />", Some(serde_json::json!([{ "allowAllCaps": true }]))),
-        ("<TEST_COMPONENT_ />", Some(serde_json::json!([{ "allowAllCaps": true }]))),
-        ("<TEST-COMPONENT />", Some(serde_json::json!([{ "allowAllCaps": true }]))),
-        ("<__ />", Some(serde_json::json!([{ "allowAllCaps": true }]))),
-        ("<_div />", Some(serde_json::json!([{ "allowLeadingUnderscore": true }]))),
+        (
+            "<_TEST_COMPONENT />",
+            Some(serde_json::json!([{ "allowAllCaps": true }])),
+        ),
+        (
+            "<TEST_COMPONENT_ />",
+            Some(serde_json::json!([{ "allowAllCaps": true }])),
+        ),
+        (
+            "<TEST-COMPONENT />",
+            Some(serde_json::json!([{ "allowAllCaps": true }])),
+        ),
+        (
+            "<__ />",
+            Some(serde_json::json!([{ "allowAllCaps": true }])),
+        ),
+        (
+            "<_div />",
+            Some(serde_json::json!([{ "allowLeadingUnderscore": true }])),
+        ),
         (
             "<__ />",
             Some(serde_json::json!([{ "allowAllCaps": true, "allowLeadingUnderscore": true }])),
         ),
         ("<$a />", None),
-        ("<Foo_DEPRECATED />", Some(serde_json::json!([{ "ignore": ["*_FOO"] }]))),
+        (
+            "<Foo_DEPRECATED />",
+            Some(serde_json::json!([{ "ignore": ["*_FOO"] }])),
+        ),
         ("<Styled.h1 />", None),
         ("<Styled.H1.h2 />", None),
         ("<Styled.h1.H2 />", None),
         ("<$Typography.P />", None),
-        ("<STYLED.h1 />", Some(serde_json::json!([{ "allowNamespace": true }]))),
-        ("<_camelCase />", Some(serde_json::json!([{ "allowLeadingUnderscore": true }]))),
-        ("<_Test_Component />", Some(serde_json::json!([{ "allowLeadingUnderscore": true }]))),
+        (
+            "<STYLED.h1 />",
+            Some(serde_json::json!([{ "allowNamespace": true }])),
+        ),
+        (
+            "<_camelCase />",
+            Some(serde_json::json!([{ "allowLeadingUnderscore": true }])),
+        ),
+        (
+            "<_Test_Component />",
+            Some(serde_json::json!([{ "allowLeadingUnderscore": true }])),
+        ),
     ];
 
     Tester::new(JsxPascalCase::NAME, JsxPascalCase::PLUGIN, pass, fail).test_and_snapshot();

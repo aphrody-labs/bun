@@ -405,7 +405,11 @@ impl<'a> LegacyDecorator<'a> {
             };
 
             // For static accessors, use class name reference; for instance accessors, use `this`.
-            let object_binding = if is_static { static_class_binding.as_ref() } else { None };
+            let object_binding = if is_static {
+                static_class_binding.as_ref()
+            } else {
+                None
+            };
 
             // 1. Private backing field: `#<name>_accessor_storage = <value>`
             new_body.push(ClassElement::new_property_definition(
@@ -485,7 +489,11 @@ impl<'a> LegacyDecorator<'a> {
         let is_getter = kind == MethodDefinitionKind::Get;
         let scope_flags = ScopeFlags::Function
             | ScopeFlags::StrictMode
-            | if is_getter { ScopeFlags::GetAccessor } else { ScopeFlags::SetAccessor };
+            | if is_getter {
+                ScopeFlags::GetAccessor
+            } else {
+                ScopeFlags::SetAccessor
+            };
         let scope_id = ctx.create_child_scope(class_scope_id, scope_flags);
 
         // For static accessors use class name, for instance accessors use `this`.
@@ -600,7 +608,10 @@ impl<'a> LegacyDecorator<'a> {
         let decorator_stmt = self.create_decorator(decorations, prefix, name, descriptor, ctx);
 
         // Push to current decoration stack
-        self.class_decorations_stack.last_mut().decoration_stmts.push(decorator_stmt);
+        self.class_decorations_stack
+            .last_mut()
+            .decoration_stmts
+            .push(decorator_stmt);
     }
     /// Transforms a statement that is a class declaration
     ///
@@ -630,9 +641,14 @@ impl<'a> LegacyDecorator<'a> {
     // `#[inline]` so that compiler sees that `stmt` is a `Statement::ClassDeclaration`.
     #[inline]
     fn transform_class_statement(&mut self, stmt: &mut Statement<'a>, ctx: &mut TraverseCtx<'a>) {
-        let Statement::ClassDeclaration(class) = stmt else { unreachable!() };
+        let Statement::ClassDeclaration(class) = stmt else {
+            unreachable!()
+        };
 
-        let Some(ClassDecoratedData { binding, alias_binding }) = self.class_decorated_data.take()
+        let Some(ClassDecoratedData {
+            binding,
+            alias_binding,
+        }) = self.class_decorated_data.take()
         else {
             return;
         };
@@ -640,7 +656,9 @@ impl<'a> LegacyDecorator<'a> {
         let new_stmt =
             Self::transform_class_decorated(class, &binding, alias_binding.as_ref(), ctx);
 
-        ctx.state.statement_injector.move_insertions(stmt, &new_stmt);
+        ctx.state
+            .statement_injector
+            .move_insertions(stmt, &new_stmt);
         *stmt = new_stmt;
     }
 
@@ -677,11 +695,16 @@ impl<'a> LegacyDecorator<'a> {
         stmt: &mut Statement<'a>,
         ctx: &mut TraverseCtx<'a>,
     ) {
-        let Statement::ExportDefaultDeclaration(export) = stmt else { unreachable!() };
+        let Statement::ExportDefaultDeclaration(export) = stmt else {
+            unreachable!()
+        };
         let ExportDefaultDeclarationKind::ClassDeclaration(class) = &mut export.declaration else {
             return;
         };
-        let Some(ClassDecoratedData { binding, alias_binding }) = self.class_decorated_data.take()
+        let Some(ClassDecoratedData {
+            binding,
+            alias_binding,
+        }) = self.class_decorated_data.take()
         else {
             return;
         };
@@ -692,8 +715,12 @@ impl<'a> LegacyDecorator<'a> {
         // `export default Class`
         let export_default_class_reference =
             Self::create_export_default_class_reference(&binding, ctx);
-        ctx.state.statement_injector.move_insertions(stmt, &new_stmt);
-        ctx.state.statement_injector.insert_after(&new_stmt, export_default_class_reference);
+        ctx.state
+            .statement_injector
+            .move_insertions(stmt, &new_stmt);
+        ctx.state
+            .statement_injector
+            .insert_after(&new_stmt, export_default_class_reference);
         *stmt = new_stmt;
     }
 
@@ -730,10 +757,17 @@ impl<'a> LegacyDecorator<'a> {
         stmt: &mut Statement<'a>,
         ctx: &mut TraverseCtx<'a>,
     ) {
-        let Statement::ExportDeclaration(export) = stmt else { unreachable!() };
-        let Declaration::ClassDeclaration(class) = &mut export.declaration else { return };
+        let Statement::ExportDeclaration(export) = stmt else {
+            unreachable!()
+        };
+        let Declaration::ClassDeclaration(class) = &mut export.declaration else {
+            return;
+        };
 
-        let Some(ClassDecoratedData { binding, alias_binding }) = self.class_decorated_data.take()
+        let Some(ClassDecoratedData {
+            binding,
+            alias_binding,
+        }) = self.class_decorated_data.take()
         else {
             return;
         };
@@ -743,8 +777,12 @@ impl<'a> LegacyDecorator<'a> {
 
         // `export { Class }`
         let export_class_reference = Self::create_export_named_class_reference(&binding, ctx);
-        ctx.state.statement_injector.move_insertions(stmt, &new_stmt);
-        ctx.state.statement_injector.insert_after(&new_stmt, export_class_reference);
+        ctx.state
+            .statement_injector
+            .move_insertions(stmt, &new_stmt);
+        ctx.state
+            .statement_injector
+            .insert_after(&new_stmt, export_class_reference);
         *stmt = new_stmt;
     }
 
@@ -894,7 +932,8 @@ impl<'a> LegacyDecorator<'a> {
             let old_class_symbol_id = ident.symbol_id.replace(Some(new_class_binding.symbol_id));
             let old_class_symbol_id = old_class_symbol_id.expect("class always has a symbol id");
 
-            ctx.scoping_mut().set_symbol_span(old_class_symbol_id, binding_span);
+            ctx.scoping_mut()
+                .set_symbol_span(old_class_symbol_id, binding_span);
             *ctx.scoping_mut().symbol_flags_mut(old_class_symbol_id) =
                 SymbolFlags::BlockScopedVariable;
             BoundIdentifier::new(ident.name, old_class_symbol_id)
@@ -929,35 +968,38 @@ impl<'a> LegacyDecorator<'a> {
             // If we're emitting to ES2022 or later then we need to reassign the class alias before
             // static initializers are evaluated.
             // <https://github.com/microsoft/TypeScript/blob/b86ab7dbe0eb2f1c9a624486d72590d638495c97/src/compiler/transformers/legacyDecorators.ts#L345-L366>
-            class_alias_binding.as_ref().and_then(|class_alias_binding| {
-                let has_static_field_or_block = class.body.body.iter().any(|element| {
-                    matches!(element, ClassElement::StaticBlock(_))
-                        || matches!(element, ClassElement::PropertyDefinition(prop)
-                                if prop.r#static
-                        )
-                });
+            class_alias_binding
+                .as_ref()
+                .and_then(|class_alias_binding| {
+                    let has_static_field_or_block = class.body.body.iter().any(|element| {
+                        matches!(element, ClassElement::StaticBlock(_))
+                            || matches!(element, ClassElement::PropertyDefinition(prop)
+                                    if prop.r#static
+                            )
+                    });
 
-                if has_static_field_or_block {
-                    // `_Class = this`;
-                    let class_alias_with_this_assignment = Statement::new_expression_statement(
-                        SPAN,
-                        create_assignment(
-                            class_alias_binding,
-                            Expression::new_this_expression(SPAN, ctx),
+                    if has_static_field_or_block {
+                        // `_Class = this`;
+                        let class_alias_with_this_assignment = Statement::new_expression_statement(
                             SPAN,
+                            create_assignment(
+                                class_alias_binding,
+                                Expression::new_this_expression(SPAN, ctx),
+                                SPAN,
+                                ctx,
+                            ),
                             ctx,
-                        ),
-                        ctx,
-                    );
-                    let body = [class_alias_with_this_assignment];
-                    let scope_id = ctx.create_child_scope_of_current(ScopeFlags::ClassStaticBlock);
-                    let element =
-                        ClassElement::new_static_block_with_scope_id(SPAN, body, scope_id, ctx);
-                    Some(element)
-                } else {
-                    None
-                }
-            })
+                        );
+                        let body = [class_alias_with_this_assignment];
+                        let scope_id =
+                            ctx.create_child_scope_of_current(ScopeFlags::ClassStaticBlock);
+                        let element =
+                            ClassElement::new_static_block_with_scope_id(SPAN, body, scope_id, ctx);
+                        Some(element)
+                    } else {
+                        None
+                    }
+                })
         };
 
         if class_has_private_in_expression_in_decorator {
@@ -972,7 +1014,10 @@ impl<'a> LegacyDecorator<'a> {
             };
 
             decoration_stmts.push(constructor_decoration);
-            self.decorations.entry(address).or_default().append(&mut decoration_stmts);
+            self.decorations
+                .entry(address)
+                .or_default()
+                .append(&mut decoration_stmts);
             self.class_decorated_data = Some(ClassDecoratedData {
                 binding: class_binding,
                 // If the class alias has reassigned to `this` in the static block, then
@@ -1066,7 +1111,10 @@ impl<'a> LegacyDecorator<'a> {
                 // `Class` is always stored in a `Box`, so has a stable memory location
                 _ => class.unstable_address(),
             };
-            self.decorations.entry(stmt_address).or_default().append(&mut decoration_stmts);
+            self.decorations
+                .entry(stmt_address)
+                .or_default()
+                .append(&mut decoration_stmts);
         }
     }
 
@@ -1098,10 +1146,16 @@ impl<'a> LegacyDecorator<'a> {
         ctx: &mut TraverseCtx<'a>,
     ) -> Statement<'a> {
         // Find first constructor method from the class
-        let constructor = class.body.body.iter_mut().find_map(|element| match element {
-            ClassElement::MethodDefinition(method) if method.kind.is_constructor() => Some(method),
-            _ => None,
-        });
+        let constructor = class
+            .body
+            .body
+            .iter_mut()
+            .find_map(|element| match element {
+                ClassElement::MethodDefinition(method) if method.kind.is_constructor() => {
+                    Some(method)
+                }
+                _ => None,
+            });
 
         let decorations = if let Some(constructor) = constructor {
             // Constructor cannot have decorators, swap decorators of class and constructor to use
@@ -1209,7 +1263,9 @@ impl<'a> LegacyDecorator<'a> {
     /// all transformed fields are injected before the class decorator statements.
     pub fn exit_class_at_end(&mut self, _class: &mut Class<'a>, ctx: &mut TraverseCtx<'a>) {
         for (address, stmts) in mem::take(&mut self.decorations) {
-            ctx.state.statement_injector.insert_many_after(&address, stmts);
+            ctx.state
+                .statement_injector
+                .insert_many_after(&address, stmts);
         }
     }
 
@@ -1247,8 +1303,10 @@ impl<'a> LegacyDecorator<'a> {
         ctx: &mut TraverseCtx<'a>,
     ) -> Option<Expression<'a>> {
         let params = &mut method.value.params;
-        let param_decoration_count =
-            params.items.iter().fold(0, |acc, param| acc + param.decorators.len());
+        let param_decoration_count = params
+            .items
+            .iter()
+            .fold(0, |acc, param| acc + param.decorators.len());
         let method_decoration_count = method.decorators.len() + param_decoration_count;
 
         if method_decoration_count == 0 {
@@ -1333,7 +1391,10 @@ impl<'a> LegacyDecorator<'a> {
 
     /// Check if a class method parameter is decorated.
     fn class_method_parameter_is_decorated(func: &Function<'a>) -> bool {
-        func.params.items.iter().any(|param| !param.decorators.is_empty())
+        func.params
+            .items
+            .iter()
+            .any(|param| !param.decorators.is_empty())
     }
 
     /// * is_static is `true`: `Class`
@@ -1344,7 +1405,11 @@ impl<'a> LegacyDecorator<'a> {
         ctx: &mut TraverseCtx<'a>,
     ) -> Expression<'a> {
         let ident = class_binding.create_read_expression(ctx);
-        if is_static { ident } else { create_prototype_member(ident, SPAN, ctx) }
+        if is_static {
+            ident
+        } else {
+            create_prototype_member(ident, SPAN, ctx)
+        }
     }
 
     /// Get the name of the property key.
@@ -1508,7 +1573,11 @@ struct ClassReferenceChanger<'a, 'ctx> {
 
 impl<'a, 'ctx> ClassReferenceChanger<'a, 'ctx> {
     fn new(class_binding: BoundIdentifier<'a>, ctx: &'ctx mut TraverseCtx<'a>) -> Self {
-        Self { class_binding, class_alias_binding: None, ctx }
+        Self {
+            class_binding,
+            class_alias_binding: None,
+            ctx,
+        }
     }
 
     fn get_class_alias_if_needed(

@@ -37,9 +37,11 @@ fn extension_should_not_be_included_in_diagnostic(
 fn extension_missing_diagnostic(span: Span, is_import: bool) -> OxcDiagnostic {
     let import_or_export = if is_import { "import" } else { "export" };
 
-    OxcDiagnostic::warn(format!("Missing file extension in {import_or_export} declaration."))
-        .with_help(format!("Add a file extension to this {import_or_export}."))
-        .with_label(span)
+    OxcDiagnostic::warn(format!(
+        "Missing file extension in {import_or_export} declaration."
+    ))
+    .with_help(format!("Add a file extension to this {import_or_export}."))
+    .with_label(span)
 }
 
 /// Extension rule configuration; Copy to avoid extra indirection.
@@ -361,10 +363,14 @@ impl ExtensionsConfig {
                 (default, false)
             };
 
-        let ignore_packages =
-            value.get("ignorePackages").and_then(Value::as_bool).unwrap_or(default_ignore_packages);
-        let check_type_imports =
-            value.get("checkTypeImports").and_then(Value::as_bool).unwrap_or_default();
+        let ignore_packages = value
+            .get("ignorePackages")
+            .and_then(Value::as_bool)
+            .unwrap_or(default_ignore_packages);
+        let check_type_imports = value
+            .get("checkTypeImports")
+            .and_then(Value::as_bool)
+            .unwrap_or_default();
 
         // Parse pathGroupOverrides if present
         let path_group_overrides = value
@@ -547,8 +553,12 @@ impl Rule for Extensions {
 
     fn run<'a>(&self, node: &AstNode<'a>, ctx: &LintContext<'a>) {
         // Process require() calls
-        let AstKind::CallExpression(call_expr) = node.kind() else { return };
-        let Expression::Identifier(ident) = &call_expr.callee else { return };
+        let AstKind::CallExpression(call_expr) = node.kind() else {
+            return;
+        };
+        let Expression::Identifier(ident) = &call_expr.callee else {
+            return;
+        };
         if ident.name.as_str() != "require" {
             return;
         }
@@ -834,8 +844,12 @@ fn is_package_import(module_name: &str) -> bool {
 /// - `"./foo.bar/"` → `None` (directory path)
 fn get_file_extension_from_module_name(module_name: &str) -> Option<Cow<'_, str>> {
     use cow_utils::CowUtils;
-    let path = module_name.split_once('?').map_or(module_name, |(path, _)| path);
-    let file_name = path.rsplit_once('/').map_or(path, |(_, file_name)| file_name);
+    let path = module_name
+        .split_once('?')
+        .map_or(module_name, |(path, _)| path);
+    let file_name = path
+        .rsplit_once('/')
+        .map_or(path, |(_, file_name)| file_name);
     let (_, extension) = file_name.rsplit_once('.')?;
     if extension.is_empty() {
         return None;
@@ -861,13 +875,15 @@ fn get_resolved_extension(
     module_name: &str,
 ) -> Option<String> {
     use cow_utils::CowUtils;
-    module_record.get_loaded_module(module_name).and_then(|loaded_module| {
-        loaded_module
-            .resolved_absolute_path
-            .extension()
-            .and_then(|ext| ext.to_str())
-            .map(|s| s.cow_to_ascii_lowercase().into_owned())
-    })
+    module_record
+        .get_loaded_module(module_name)
+        .and_then(|loaded_module| {
+            loaded_module
+                .resolved_absolute_path
+                .extension()
+                .and_then(|ext| ext.to_str())
+                .map(|s| s.cow_to_ascii_lowercase().into_owned())
+        })
 }
 
 #[test]
@@ -883,7 +899,10 @@ fn test() {
         (r#"import a from "a/index.js""#, None),
         // 'always': require extensions for all imports
         (r#"import a from "a/index.js""#, Some(json!(["always"]))),
-        (r#"import dot from "./file.with.dot.js""#, Some(json!(["always"]))),
+        (
+            r#"import dot from "./file.with.dot.js""#,
+            Some(json!(["always"])),
+        ),
         (
             r#"
                 import a from "a";
@@ -916,9 +935,15 @@ fn test() {
         (r#"import path from "path";"#, None),
         (r#"import path from "path";"#, Some(json!(["never"]))),
         (r#"import path from "path";"#, Some(json!(["always"]))),
-        (r#"import thing from "./fake-file.js";"#, Some(json!(["always"]))),
+        (
+            r#"import thing from "./fake-file.js";"#,
+            Some(json!(["always"])),
+        ),
         // 'never': no extensions allowed
-        (r#"import thing from "non-package";"#, Some(json!(["never"]))),
+        (
+            r#"import thing from "non-package";"#,
+            Some(json!(["never"])),
+        ),
         // Package subpaths are treated as packages (when ignorePackages is true)
         (
             r#"import thing from "non-package/test";"#,
@@ -1198,11 +1223,20 @@ fn test() {
             ])),
         ),
         // Edge case: Query strings with multiple ? characters
-        (r"import x from './foo.js?v=1?extra=2';", Some(json!(["always"]))),
+        (
+            r"import x from './foo.js?v=1?extra=2';",
+            Some(json!(["always"])),
+        ),
         // Edge case: Fragment identifiers
-        (r"import x from './foo.js#section';", Some(json!(["always"]))),
+        (
+            r"import x from './foo.js#section';",
+            Some(json!(["always"])),
+        ),
         // Edge case: Combined query + fragment
-        (r"import x from './foo.js?v=1#top';", Some(json!(["always"]))),
+        (
+            r"import x from './foo.js?v=1#top';",
+            Some(json!(["always"])),
+        ),
         // Edge case: Encoded characters in paths
         (r"import x from './foo%20bar.js';", Some(json!(["always"]))),
         // Edge case: Unicode in file names (Chinese)
@@ -1212,7 +1246,10 @@ fn test() {
         // Edge case: Special chars (brackets)
         (r"import x from './file[1].js';", Some(json!(["always"]))),
         // Edge case: Nested path aliases
-        (r"import x from '@/components/ui/Button.js';", Some(json!(["always"]))),
+        (
+            r"import x from '@/components/ui/Button.js';",
+            Some(json!(["always"])),
+        ),
         // Edge case: Multiple alias types in one import block
         (
             r"
@@ -1228,7 +1265,10 @@ fn test() {
             Some(json!(["always", { "css": "always" }])),
         ),
         // Edge case: Path aliases with dots in filename
-        (r"import x from '@/file.with.dots.js';", Some(json!(["always"]))),
+        (
+            r"import x from '@/file.with.dots.js';",
+            Some(json!(["always"])),
+        ),
         // Edge case: Scoped packages vs aliases
         (
             r"
@@ -1245,13 +1285,25 @@ fn test() {
             Some(json!(["always", { "ignorePackages": true }])),
         ),
         // Edge case: Monorepo workspace protocol
-        (r"import x from 'workspace:*';", Some(json!(["ignorePackages"]))),
+        (
+            r"import x from 'workspace:*';",
+            Some(json!(["ignorePackages"])),
+        ),
         // Edge case: File protocol
-        (r"import x from 'file:../relative/path.js';", Some(json!(["always"]))),
+        (
+            r"import x from 'file:../relative/path.js';",
+            Some(json!(["always"])),
+        ),
         // Edge case: Link protocol
-        (r"import x from 'link:../../package';", Some(json!(["ignorePackages"]))),
+        (
+            r"import x from 'link:../../package';",
+            Some(json!(["ignorePackages"])),
+        ),
         // Edge case: Multiple dots in package names
-        (r"import x from 'pkg.name.with.dots';", Some(json!(["ignorePackages"]))),
+        (
+            r"import x from 'pkg.name.with.dots';",
+            Some(json!(["ignorePackages"])),
+        ),
         // Edge case: Numbers in package names
         (
             r"
@@ -1266,9 +1318,15 @@ fn test() {
             Some(json!(["always", { "ignorePackages": true }])),
         ),
         // Edge case: export * as namespace from
-        (r"export * as namespace from './module.js';", Some(json!(["always"]))),
+        (
+            r"export * as namespace from './module.js';",
+            Some(json!(["always"])),
+        ),
         // Edge case: export { default as name } from
-        (r"export { default as name } from './module.js';", Some(json!(["always"]))),
+        (
+            r"export { default as name } from './module.js';",
+            Some(json!(["always"])),
+        ),
         // Edge case: Re-exports with type
         (
             r"export type * from './types.ts';",
@@ -1283,11 +1341,20 @@ fn test() {
             Some(json!(["always"])),
         ),
         // Edge case: Case-insensitive extension matching (uppercase extension)
-        (r"import x from './foo.JS';", Some(json!(["always", { "js": "always" }]))),
+        (
+            r"import x from './foo.JS';",
+            Some(json!(["always", { "js": "always" }])),
+        ),
         // Edge case: Case-insensitive extension matching (mixed case)
-        (r"import x from './foo.Ts';", Some(json!(["always", { "ts": "always" }]))),
+        (
+            r"import x from './foo.Ts';",
+            Some(json!(["always", { "ts": "always" }])),
+        ),
         // 'react' import when ignorePackages is true should be allowed
-        (r"import React from 'react';", Some(json!(["always", { "ignorePackages": true }]))),
+        (
+            r"import React from 'react';",
+            Some(json!(["always", { "ignorePackages": true }])),
+        ),
         (
             r"import React from 'react';",
             Some(json!(["ignorePackages"])), // equivalent to the above
@@ -1303,29 +1370,59 @@ fn test() {
         (r"import crypto from 'crypto';", Some(json!(["always"]))),
         // import starting with 'node:' should be treated specially and always be allowed without extension.
         (r"import fs from 'node:fs';", Some(json!(["always"]))),
-        (r"import crypto from 'node:crypto';", Some(json!(["always"]))),
-        (r"import crypto from 'node:crypto';", Some(json!(["always", { "ignorePackages": true }]))),
+        (
+            r"import crypto from 'node:crypto';",
+            Some(json!(["always"])),
+        ),
+        (
+            r"import crypto from 'node:crypto';",
+            Some(json!(["always", { "ignorePackages": true }])),
+        ),
         (r"import crypto from 'node:crypto';", Some(json!(["never"]))),
-        (r"import * as crypto from 'node:crypto';", Some(json!(["always"]))),
-        (r"import { default as foo } from 'node:crypto';", Some(json!(["always"]))),
+        (
+            r"import * as crypto from 'node:crypto';",
+            Some(json!(["always"])),
+        ),
+        (
+            r"import { default as foo } from 'node:crypto';",
+            Some(json!(["always"])),
+        ),
         // Ensure that import attributes like "type: json" work fine
         (
             r#"import data from "./data.json" with { type: "json" };"#,
             Some(json!(["always", { "json": "always" }])),
         ),
-        (r#"import data from "./data" with { type: "json" };"#, Some(json!(["never"]))),
-        (r#"import data from "./data.json" with { type: "json" };"#, Some(json!(["always"]))),
+        (
+            r#"import data from "./data" with { type: "json" };"#,
+            Some(json!(["never"])),
+        ),
+        (
+            r#"import data from "./data.json" with { type: "json" };"#,
+            Some(json!(["always"])),
+        ),
         (
             r#"import data from "./data.json" with { type: "json" };"#,
             Some(json!(["ignorePackages"])),
         ),
         // Files with multiple extensions (e.g., Component.stories.tsx)
         // These test cases use actual fixture files for proper module resolution
-        (r"import { Component } from './Component.stories';", Some(json!([{ "tsx": "never" }]))),
-        (r"import { testUtil } from './utils.test';", Some(json!([{ "ts": "never" }]))),
-        (r"import { helper } from './helper.spec';", Some(json!([{ "js": "never" }]))),
+        (
+            r"import { Component } from './Component.stories';",
+            Some(json!([{ "tsx": "never" }])),
+        ),
+        (
+            r"import { testUtil } from './utils.test';",
+            Some(json!([{ "ts": "never" }])),
+        ),
+        (
+            r"import { helper } from './helper.spec';",
+            Some(json!([{ "js": "never" }])),
+        ),
         // `./typescript.js` resolves to `typescript.ts`; the written `.js` is allowed under `js: always`.
-        (r#"import x from "./typescript.js";"#, Some(json!(["always", { "js": "always" }]))),
+        (
+            r#"import x from "./typescript.js";"#,
+            Some(json!(["always", { "js": "always" }])),
+        ),
         // Subpath imports
         // https://nodejs.org/api/packages.html#subpath-imports
         // (
@@ -1371,7 +1468,10 @@ fn test() {
             "#,
             Some(json!([{ "json": "always", "js": "never", "jsx": "never" }])),
         ),
-        (r#"import "./bar.coffee""#, Some(json!(["never", { "js": "always", "jsx": "always" }]))),
+        (
+            r#"import "./bar.coffee""#,
+            Some(json!(["never", { "js": "always", "jsx": "always" }])),
+        ),
         // https://github.com/oxc-project/oxc/issues/12220
         (
             r"
@@ -1477,8 +1577,14 @@ fn test() {
             Some(json!(["never"])),
         ),
         // Query strings: extension detected before '?' should fail
-        (r#"import withExtension from "./foo.js?a=True";"#, Some(json!(["never"]))),
-        (r#"import withoutExtension from "./foo?a=True.ext";"#, Some(json!(["always"]))),
+        (
+            r#"import withExtension from "./foo.js?a=True";"#,
+            Some(json!(["never"])),
+        ),
+        (
+            r#"import withoutExtension from "./foo?a=True.ext";"#,
+            Some(json!(["always"])),
+        ),
         // Require statements: same rules apply as import statements
         (
             r#"
@@ -1758,7 +1864,10 @@ fn test() {
         // Edge case fail: Fragment without extension
         (r"import x from './foo#section';", Some(json!(["always"]))),
         // Edge case fail: Path alias without extension
-        (r"import x from '@/components/Button';", Some(json!(["always"]))),
+        (
+            r"import x from '@/components/Button';",
+            Some(json!(["always"])),
+        ),
         // Edge case fail: Dot in a directory segment is not a written file extension
         (r"import x from './foo.bar/baz';", Some(json!(["always"]))),
         (r"import x from './foo.bar/';", Some(json!(["always"]))),
@@ -1771,23 +1880,44 @@ fn test() {
             Some(json!(["always"])),
         ),
         // Edge case fail: Special protocol without extension
-        (r"import x from 'workspace:packages/core';", Some(json!(["always"]))),
+        (
+            r"import x from 'workspace:packages/core';",
+            Some(json!(["always"])),
+        ),
         // Edge case fail: Trailing slash (directory import) without extension
         (r"import x from '@/utils/';", Some(json!(["always"]))),
         // Edge case fail: Case-insensitive - uppercase extension should still fail with "never"
-        (r"import x from './foo.JS';", Some(json!(["never", { "js": "never" }]))),
+        (
+            r"import x from './foo.JS';",
+            Some(json!(["never", { "js": "never" }])),
+        ),
         // Edge case fail: Case-insensitive - mixed case extension should still fail with "never"
-        (r"import x from './foo.Ts';", Some(json!(["never", { "ts": "never" }]))),
+        (
+            r"import x from './foo.Ts';",
+            Some(json!(["never", { "ts": "never" }])),
+        ),
         // Fails because ignorePackages defaults to false. (not great default behavior, but matches ESLint)
         (r"import React from 'react';", Some(json!(["always"]))),
         // Not a real node: protocol import, so should fail when extension is required and ignorePackages is false.
-        (r"import crypto from 'node_crypto';", Some(json!(["always"]))),
+        (
+            r"import crypto from 'node_crypto';",
+            Some(json!(["always"])),
+        ),
         // If an import has the same name as a built-in module, but isn't actually _from_ a built-in module,
         // it should fail (assuming ignorePackages is false).
         (r"import fs from 'some-package';", Some(json!(["always"]))),
-        (r"import fs from '@fs/some-package';", Some(json!(["always"]))),
-        (r"import { default as crypto } from '@fs/some-package';", Some(json!(["always"]))),
-        (r"import * as fs from '@fs/some-package';", Some(json!(["always"]))),
+        (
+            r"import fs from '@fs/some-package';",
+            Some(json!(["always"])),
+        ),
+        (
+            r"import { default as crypto } from '@fs/some-package';",
+            Some(json!(["always"])),
+        ),
+        (
+            r"import * as fs from '@fs/some-package';",
+            Some(json!(["always"])),
+        ),
         // When requiring no extension but ignoring packages, still fail when the import is a package subpath.
         (
             r"import useState from 'react/useState.ts';",
@@ -1806,15 +1936,27 @@ fn test() {
             r"import Component from './Component.test.ts';",
             Some(json!(["never", { "ts": "never" }])),
         ),
-        (r"import utils from './utils.spec.js';", Some(json!(["never", { "js": "never" }]))),
+        (
+            r"import utils from './utils.spec.js';",
+            Some(json!(["never", { "js": "never" }])),
+        ),
         // `./typescript.js` resolves to `typescript.ts`, but the written `.js` must still be flagged under `never`.
         (
             r#"import def from "./typescript.js";"#,
             Some(json!(["never", { "checkTypeImports": true, "js": "never" }])),
         ),
-        (r#"import x from "./typescript.js";"#, Some(json!(["never"]))),
-        (r#"import x from "./typescript.js";"#, Some(json!([{ "js": "never" }]))),
-        (r#"import x from "./typescript.js";"#, Some(json!(["always", { "js": "never" }]))),
+        (
+            r#"import x from "./typescript.js";"#,
+            Some(json!(["never"])),
+        ),
+        (
+            r#"import x from "./typescript.js";"#,
+            Some(json!([{ "js": "never" }])),
+        ),
+        (
+            r#"import x from "./typescript.js";"#,
+            Some(json!(["always", { "js": "never" }])),
+        ),
         // TODO: This should probably fail? Needs further investigation.
         // (
         //     r"import useState from '@foo/bar/useState';",

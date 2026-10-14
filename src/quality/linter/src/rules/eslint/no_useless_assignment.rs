@@ -159,7 +159,9 @@ impl Rule for NoUselessAssignment {
 
         for symbol_id in ctx.scoping().symbol_ids() {
             let decl_node = ctx.symbol_declaration(symbol_id);
-            let AstKind::VariableDeclarator(var_decl) = decl_node.kind() else { continue };
+            let AstKind::VariableDeclarator(var_decl) = decl_node.kind() else {
+                continue;
+            };
             if let AstKind::VariableDeclaration(var_declaration) =
                 ctx.nodes().parent_node(decl_node.id()).kind()
                 && var_declaration.kind == VariableDeclarationKind::Const
@@ -360,8 +362,9 @@ impl Rule for NoUselessAssignment {
         let mut scratch_loop_visited = BitSet::new_in(num_blocks, &allocator);
         let mut scratch_loop_killed = BitSet::new_in(num_tracked, &allocator);
         let mut scratch_find_loop = BitSet::new_in(graph.node_count(), &allocator);
-        let mut cached_loop_liveness: Vec<Option<BitSet<'_>>> =
-            std::iter::repeat_with(|| None).take(graph.node_count()).collect();
+        let mut cached_loop_liveness: Vec<Option<BitSet<'_>>> = std::iter::repeat_with(|| None)
+            .take(graph.node_count())
+            .collect();
 
         depth_first_search(
             graph,
@@ -501,7 +504,9 @@ impl Rule for NoUselessAssignment {
 
 impl NoUselessAssignment {
     fn block_id_for_node(ctx: &LintContext, graph: &Graph, node_id: NodeId) -> BasicBlockId {
-        *graph.node_weight(ctx.nodes().cfg_id(node_id)).expect("expected a valid node id in graph")
+        *graph
+            .node_weight(ctx.nodes().cfg_id(node_id))
+            .expect("expected a valid node id in graph")
     }
 
     fn push_op(
@@ -513,7 +518,11 @@ impl NoUselessAssignment {
         compact_idx: u32,
     ) {
         let block_id = Self::block_id_for_node(ctx, graph, node);
-        cfg_ops[block_id].push(OpAtNode { op, node, compact_idx });
+        cfg_ops[block_id].push(OpAtNode {
+            op,
+            node,
+            compact_idx,
+        });
     }
 
     fn is_exported(
@@ -522,8 +531,14 @@ impl NoUselessAssignment {
         decl_node: &oxc_semantic::AstNode,
     ) -> bool {
         let symbol_name = ctx.scoping().symbol_name(symbol_id);
-        ctx.module_record().exported_bindings.contains_key(symbol_name)
-            || ctx.module_record().local_export_entries.iter().any(|e| e.span == decl_node.span())
+        ctx.module_record()
+            .exported_bindings
+            .contains_key(symbol_name)
+            || ctx
+                .module_record()
+                .local_export_entries
+                .iter()
+                .any(|e| e.span == decl_node.span())
     }
 
     #[expect(clippy::too_many_arguments)]
@@ -647,7 +662,9 @@ impl NoUselessAssignment {
 
         let mut enclosing = None;
         for ancestor in ctx.nodes().ancestors(node.id()) {
-            let AstKind::AssignmentExpression(assignment) = ancestor.kind() else { continue };
+            let AstKind::AssignmentExpression(assignment) = ancestor.kind() else {
+                continue;
+            };
             if matches!(
                 &assignment.left,
                 AstAssignmentTarget::ArrayAssignmentTarget(_)
@@ -664,10 +681,15 @@ impl NoUselessAssignment {
         symbol_id: SymbolId,
     ) -> SmallVec<[NodeId; 1]> {
         let mut usages = SmallVec::<[DestructuringAssignmentUsage; 1]>::new();
-        for reference in ctx.symbol_references(symbol_id).filter(|reference| reference.is_write()) {
+        for reference in ctx
+            .symbol_references(symbol_id)
+            .filter(|reference| reference.is_write())
+        {
             if let Some(assignment_node_id) =
                 Self::get_enclosing_destructuring_assignment(ctx, reference)
-                && usages.last().is_none_or(|usage| usage.node_id != assignment_node_id)
+                && usages
+                    .last()
+                    .is_none_or(|usage| usage.node_id != assignment_node_id)
             {
                 let AstKind::AssignmentExpression(assignment) =
                     ctx.nodes().get_node(assignment_node_id).kind()
@@ -738,7 +760,10 @@ impl NoUselessAssignment {
 
                 if usage.right_span.contains_inclusive(reference_span) {
                     let cfg_id = ctx.nodes().cfg_id(reference.node_id());
-                    if usage.rhs_cfg_id.is_some_and(|rhs_cfg_id| rhs_cfg_id != cfg_id) {
+                    if usage
+                        .rhs_cfg_id
+                        .is_some_and(|rhs_cfg_id| rhs_cfg_id != cfg_id)
+                    {
                         usage.rhs_crosses_cfg_blocks = true;
                     } else {
                         usage.rhs_cfg_id = Some(cfg_id);
@@ -759,16 +784,23 @@ impl NoUselessAssignment {
                 let target_cfg_id = ctx.nodes().cfg_id(target_node_id);
                 (!usage.can_defer_target
                     || usage.rhs_crosses_cfg_blocks
-                    || usage.rhs_cfg_id.is_some_and(|rhs_cfg_id| rhs_cfg_id != target_cfg_id))
+                    || usage
+                        .rhs_cfg_id
+                        .is_some_and(|rhs_cfg_id| rhs_cfg_id != target_cfg_id))
                 .then_some(usage.node_id)
             })
             .collect()
     }
 
     fn is_in_try_block(graph: &Graph, block_node_id: BlockNodeId) -> bool {
-        graph.edges_directed(block_node_id, Direction::Outgoing).any(|e| {
-            matches!(e.weight(), EdgeType::Error(ErrorEdgeKind::Explicit) | EdgeType::Finalize)
-        })
+        graph
+            .edges_directed(block_node_id, Direction::Outgoing)
+            .any(|e| {
+                matches!(
+                    e.weight(),
+                    EdgeType::Error(ErrorEdgeKind::Explicit) | EdgeType::Finalize
+                )
+            })
     }
 
     fn get_parent_variable_scope(ctx: &LintContext, scope_id: ScopeId) -> ScopeId {
@@ -797,7 +829,9 @@ impl NoUselessAssignment {
         killed_on_path: &mut BitSet,
         visited: &mut BitSet,
     ) {
-        let block_id = *graph.node_weight(node).expect("expected a valid node id in graph");
+        let block_id = *graph
+            .node_weight(node)
+            .expect("expected a valid node id in graph");
 
         if visited.has_bit(block_id.index()) {
             return;
@@ -1866,6 +1900,11 @@ function useResource(unsafe: (resource: { readonly release: () => void }) => voi
                     use(local);",
     ];
 
-    Tester::new(NoUselessAssignment::NAME, NoUselessAssignment::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        NoUselessAssignment::NAME,
+        NoUselessAssignment::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

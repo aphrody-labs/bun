@@ -91,8 +91,12 @@ declare_oxc_lint!(
     short_description = "Disallows calling a callback function (`cb()`) inside a `Promise.prototype.then()` or `Promise.prototype.catch()`.",
 );
 
-const TIMEOUT_WHITELIST: [&str; 4] =
-    ["setImmediate", "setTimeout", "requestAnimationFrame", "nextTick"];
+const TIMEOUT_WHITELIST: [&str; 4] = [
+    "setImmediate",
+    "setTimeout",
+    "requestAnimationFrame",
+    "nextTick",
+];
 
 impl Rule for NoCallbackInPromise {
     fn from_configuration(value: serde_json::Value) -> Result<Self, serde_json::error::Error> {
@@ -101,7 +105,9 @@ impl Rule for NoCallbackInPromise {
             .and_then(|arr| arr.first())
             .and_then(|value| serde_json::from_value(value.clone()).ok())
             .unwrap_or_default();
-        config.callbacks.retain(|item| !config.exceptions.contains(item));
+        config
+            .callbacks
+            .retain(|item| !config.exceptions.contains(item));
         Ok(Self(Box::new(config)))
     }
 
@@ -113,14 +119,17 @@ impl Rule for NoCallbackInPromise {
         let is_not_callback = call_expr
             .callee
             .get_identifier_reference()
-            .is_none_or(|id| self.callbacks.binary_search(&id.name.as_str().into()).is_err());
+            .is_none_or(|id| {
+                self.callbacks
+                    .binary_search(&id.name.as_str().into())
+                    .is_err()
+            });
 
         if is_not_callback {
-            let Some(id) = call_expr
-                .arguments
-                .first()
-                .and_then(|arg| arg.as_expression().and_then(Expression::get_identifier_reference))
-            else {
+            let Some(id) = call_expr.arguments.first().and_then(|arg| {
+                arg.as_expression()
+                    .and_then(Expression::get_identifier_reference)
+            }) else {
                 return;
             };
             let name = id.name.as_str();
@@ -149,7 +158,10 @@ impl Rule for NoCallbackInPromise {
 
 impl NoCallbackInPromise {
     fn is_inside_promise(node: &AstNode, ctx: &LintContext) -> bool {
-        if !matches!(node.kind(), AstKind::Function(_) | AstKind::ArrowFunctionExpression(_)) {
+        if !matches!(
+            node.kind(),
+            AstKind::Function(_) | AstKind::ArrowFunctionExpression(_)
+        ) {
             return false;
         }
 
@@ -204,9 +216,15 @@ fn test() {
         ("a.then(doSomething)", None),
         ("a.then(() => doSomething())", None),
         ("a.then(function(err) { doSomething(err) })", None),
-        ("a.then(function(data) { doSomething(data) }, function(err) { doSomething(err) })", None),
+        (
+            "a.then(function(data) { doSomething(data) }, function(err) { doSomething(err) })",
+            None,
+        ),
         ("a.catch(function(err) { doSomething(err) })", None),
-        ("whatever.then((err) => { process.nextTick(() => cb()) })", None),
+        (
+            "whatever.then((err) => { process.nextTick(() => cb()) })",
+            None,
+        ),
         ("whatever.then((err) => { setImmediate(() => cb()) })", None),
         ("whatever.then((err) => setImmediate(() => cb()))", None),
         ("whatever.then((err) => process.nextTick(() => cb()))", None),
@@ -214,25 +232,40 @@ fn test() {
         ("whatever.then((err) => setImmediate(cb))", None),
         ("let thing = (cb) => cb()", None),
         ("doSomething(err => cb(err))", None),
-        ("a.then(() => next())", Some(serde_json::json!([{ "exceptions": ["next"] }]))),
+        (
+            "a.then(() => next())",
+            Some(serde_json::json!([{ "exceptions": ["next"] }])),
+        ),
         (
             "a.then(() => next()).catch((err) => next(err))",
             Some(serde_json::json!([{ "exceptions": ["next"] }])),
         ),
-        ("a.then(next)", Some(serde_json::json!([{ "exceptions": ["next"] }]))),
-        ("a.then(next).catch(next)", Some(serde_json::json!([{ "exceptions": ["next"] }]))),
+        (
+            "a.then(next)",
+            Some(serde_json::json!([{ "exceptions": ["next"] }])),
+        ),
+        (
+            "a.then(next).catch(next)",
+            Some(serde_json::json!([{ "exceptions": ["next"] }])),
+        ),
     ];
 
     let fail = vec![
         ("a.then(cb)", None),
         ("a.then(() => cb())", None),
         ("a.then(function(err) { cb(err) })", None),
-        ("a.then(function(data) { cb(data) }, function(err) { cb(err) })", None),
+        (
+            "a.then(function(data) { cb(data) }, function(err) { cb(err) })",
+            None,
+        ),
         ("a.catch(function(err) { cb(err) })", None),
         ("a.then(callback)", None),
         ("a.then(() => callback())", None),
         ("a.then(function(err) { callback(err) })", None),
-        ("a.then(function(data) { callback(data) }, function(err) { callback(err) })", None),
+        (
+            "a.then(function(data) { callback(data) }, function(err) { callback(err) })",
+            None,
+        ),
         ("a.catch(function(err) { callback(err) })", None),
         ("a.then(() => doSomething(cb))", None),
         (
@@ -279,6 +312,11 @@ fn test() {
         ),
     ];
 
-    Tester::new(NoCallbackInPromise::NAME, NoCallbackInPromise::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        NoCallbackInPromise::NAME,
+        NoCallbackInPromise::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

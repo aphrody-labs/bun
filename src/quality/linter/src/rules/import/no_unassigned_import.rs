@@ -129,7 +129,9 @@ impl Rule for NoUnassignedImport {
 
 impl NoUnassignedImportConfig {
     fn is_match_allow_globs(&self, source: &str) -> bool {
-        self.globs.iter().any(|glob| fast_glob::glob_match(glob.as_str(), source))
+        self.globs
+            .iter()
+            .any(|glob| fast_glob::glob_match(glob.as_str(), source))
     }
 }
 
@@ -151,28 +153,60 @@ fn test() {
         ("const [a, b] = require('lodash')", None),
         ("import 'app.css'", Some(json!([{ "allow": ["**/*.css"]}]))),
         ("import 'app.css'", Some(json!([{ "allow": ["*.css"]}]))),
-        ("import './app.css'", Some(json!([{ "allow": ["**/*.css"]}]))),
-        ("import '../dist/app.css'", Some(json!([{ "allow": ["**/*.css"]}]))),
-        ("import '../dist/app.js'", Some(json!([{ "allow": ["**/dist/**"]}]))),
+        (
+            "import './app.css'",
+            Some(json!([{ "allow": ["**/*.css"]}])),
+        ),
+        (
+            "import '../dist/app.css'",
+            Some(json!([{ "allow": ["**/*.css"]}])),
+        ),
+        (
+            "import '../dist/app.js'",
+            Some(json!([{ "allow": ["**/dist/**"]}])),
+        ),
         ("import 'foo/bar'", Some(json!([{ "allow": ["foo/**"]}]))),
         ("import 'foo/bar'", Some(json!([{ "allow": ["foo/bar"]}]))),
-        ("import 'babel-register'", Some(json!([{ "allow": ["babel-register"]}]))),
-        ("require('./app.css')", Some(json!([{ "allow": ["**/*.css"]}]))),
-        ("import './styles/app.css'", Some(json!([{ "allow": ["**/styles/*.css"]}]))),
+        (
+            "import 'babel-register'",
+            Some(json!([{ "allow": ["babel-register"]}])),
+        ),
+        (
+            "require('./app.css')",
+            Some(json!([{ "allow": ["**/*.css"]}])),
+        ),
+        (
+            "import './styles/app.css'",
+            Some(json!([{ "allow": ["**/styles/*.css"]}])),
+        ),
     ];
 
     let fail = vec![
         ("require('should')", None),
         ("import 'foo'", None),
-        ("import './styles/app.css'", Some(json!([{ "allow": ["styles/*.css"]}]))),
+        (
+            "import './styles/app.css'",
+            Some(json!([{ "allow": ["styles/*.css"]}])),
+        ),
         ("import './app.css'", Some(json!([{ "allow": ["**/*.js"]}]))),
-        ("import './app.css'", Some(json!([{ "allow": ["**/dir/**"]}]))),
+        (
+            "import './app.css'",
+            Some(json!([{ "allow": ["**/dir/**"]}])),
+        ),
         ("import './app.js'", None),
-        ("require('./app.css')", Some(json!([{ "allow": ["**/*.js"]}]))),
+        (
+            "require('./app.css')",
+            Some(json!([{ "allow": ["**/*.js"]}])),
+        ),
     ];
 
-    Tester::new(NoUnassignedImport::NAME, NoUnassignedImport::PLUGIN, pass, fail)
-        .change_rule_path("no-unassigned-import.js")
-        .with_import_plugin(true)
-        .test_and_snapshot();
+    Tester::new(
+        NoUnassignedImport::NAME,
+        NoUnassignedImport::PLUGIN,
+        pass,
+        fail,
+    )
+    .change_rule_path("no-unassigned-import.js")
+    .with_import_plugin(true)
+    .test_and_snapshot();
 }

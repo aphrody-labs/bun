@@ -266,8 +266,12 @@ fn execute_rules<'a, const TIMINGS: bool>(
     }
 
     if TIMINGS {
-        let timing_recorder = timing_recorder.as_mut().expect("missing rule timing recorder");
-        for ((rule, _), stat) in rules.iter().zip(timing_stats.expect("missing rule timing stats"))
+        let timing_recorder = timing_recorder
+            .as_mut()
+            .expect("missing rule timing recorder");
+        for ((rule, _), stat) in rules
+            .iter()
+            .zip(timing_stats.expect("missing rule timing stats"))
         {
             timing_recorder.record_native(rule.plugin_name(), rule.name(), stat);
         }
@@ -292,7 +296,12 @@ impl Linter {
         config: ConfigStore,
         external_linter: Option<ExternalLinter>,
     ) -> Self {
-        Self { options, config, external_linter, workspace_uri: None }
+        Self {
+            options,
+            config,
+            external_linter,
+            workspace_uri: None,
+        }
     }
 
     #[must_use]
@@ -342,7 +351,8 @@ impl Linter {
         context_sub_hosts: Vec<ContextSubHost<'a>>,
         allocator: &'a Allocator,
     ) -> Vec<Message> {
-        self.run_with_disable_directives::<false>(path, context_sub_hosts, allocator, None, None).0
+        self.run_with_disable_directives::<false>(path, context_sub_hosts, allocator, None, None)
+            .0
     }
 
     /// Same as `run` but also returns the disable directives for the file
@@ -362,11 +372,20 @@ impl Linter {
         js_allocator_pool: Option<&AllocatorPool>,
         rule_timing_store: Option<&RuleTimingStore>,
     ) -> (Vec<Message>, Option<DisableDirectives>) {
-        let ResolvedLinterState { rules, config, external_rules } = self.config.resolve(path);
+        let ResolvedLinterState {
+            rules,
+            config,
+            external_rules,
+        } = self.config.resolve(path);
         let mut timing_recorder = TIMINGS.then(|| RuleTimingRecorder::with_capacity(rules.len()));
 
-        let mut ctx_host =
-            Rc::new(ContextHost::new(path, context_sub_hosts, allocator, self.options, config));
+        let mut ctx_host = Rc::new(ContextHost::new(
+            path,
+            context_sub_hosts,
+            allocator,
+            self.options,
+            config,
+        ));
 
         #[cfg(debug_assertions)]
         let mut current_diagnostic_index = 0;
@@ -530,13 +549,16 @@ impl Linter {
         if TIMINGS {
             let timing_recorder = timing_recorder.expect("missing rule timing recorder");
             rule_timing_store.expect("missing rule timing store").merge(
-                timing_recorder.into_timings().into_iter().map(|(key, stat)| RuleTimingRecord {
-                    source: key.source,
-                    plugin_name: key.plugin_name.into_owned(),
-                    rule_name: key.rule_name.into_owned(),
-                    duration: stat.duration,
-                    calls: stat.calls,
-                }),
+                timing_recorder
+                    .into_timings()
+                    .into_iter()
+                    .map(|(key, stat)| RuleTimingRecord {
+                        source: key.source,
+                        plugin_name: key.plugin_name.into_owned(),
+                        rule_name: key.rule_name.into_owned(),
+                        duration: stat.duration,
+                        calls: stat.calls,
+                    }),
             );
         }
         result
@@ -608,14 +630,18 @@ impl Linter {
         }
 
         // `allocator` is a fixed-size allocator, so no need to clone AST into a new one
-        let tokens = ctx_host.parser_tokens_mut().take_in(&allocator).into_arena_slice_mut();
+        let tokens = ctx_host
+            .parser_tokens_mut()
+            .take_in(&allocator)
+            .into_arena_slice_mut();
 
         // If file has a hashbang, add it to comments.
         // It will be converted to a `Shebang` comment on JS side.
         if let Some(hashbang) = &program.hashbang {
-            program
-                .comments
-                .insert(0, Comment::new(hashbang.span.start, hashbang.span.end, CommentKind::Line));
+            program.comments.insert(
+                0,
+                Comment::new(hashbang.span.start, hashbang.span.end, CommentKind::Line),
+            );
         }
 
         self.convert_and_call_external_linter(
@@ -761,8 +787,12 @@ impl Linter {
         }
 
         #[expect(clippy::cast_possible_truncation)]
-        let source_text_utf8_end =
-            source_text.len() as u32 + if has_bom { BOM_LEN as u32 } else { trim_leading };
+        let source_text_utf8_end = source_text.len() as u32
+            + if has_bom {
+                BOM_LEN as u32
+            } else {
+                trim_leading
+            };
 
         // Create span converter.
         // If source starts with BOM, create converter which ignores the BOM.
@@ -832,7 +862,10 @@ impl Linter {
                 .sub(size_of::<RawTransferMetadata>())
                 .cast::<RawTransferMetadata>();
             debug_assert!(
-                metadata_ptr.addr().get().is_multiple_of(align_of::<RawTransferMetadata>())
+                metadata_ptr
+                    .addr()
+                    .get()
+                    .is_multiple_of(align_of::<RawTransferMetadata>())
             );
             metadata_ptr.write(metadata);
         }
@@ -855,8 +888,10 @@ impl Linter {
         let globals_and_envs = GlobalsAndEnvs::new(ctx_host);
         let globals_json = serde_json::to_string(&globals_and_envs).unwrap_or_else(|e| {
             let message = format!("Error serializing globals.\nFile path: {path_string}\n{e}");
-            ctx_host
-                .push_diagnostic(Message::new(OxcDiagnostic::error(message), PossibleFixes::None));
+            ctx_host.push_diagnostic(Message::new(
+                OxcDiagnostic::error(message),
+                PossibleFixes::None,
+            ));
             "{}".to_string()
         });
 
@@ -866,8 +901,14 @@ impl Linter {
         // Pass AST and rule IDs + options IDs to JS
         let result = (external_linter.lint_file)(
             path_string.to_owned(),
-            external_rules.iter().map(|(rule_id, _, _)| rule_id.raw()).collect(),
-            external_rules.iter().map(|(_, options_id, _)| options_id.raw()).collect(),
+            external_rules
+                .iter()
+                .map(|(rule_id, _, _)| rule_id.raw())
+                .collect(),
+            external_rules
+                .iter()
+                .map(|(_, options_id, _)| options_id.raw())
+                .collect(),
             settings_json,
             globals_json,
             rule_timing_store.is_some(),
@@ -875,7 +916,10 @@ impl Linter {
             allocator,
         );
         match result {
-            Ok(LintFileOutput { diagnostics, timings }) => {
+            Ok(LintFileOutput {
+                diagnostics,
+                timings,
+            }) => {
                 self.record_external_timings(rule_timing_store, external_rules, timings);
 
                 for diagnostic in diagnostics {
@@ -929,7 +973,9 @@ impl Linter {
                     };
 
                     // Convert fix
-                    let fix = diagnostic.fixes.and_then(|fixes| create_fix(fixes, FixKind::Fix));
+                    let fix = diagnostic
+                        .fixes
+                        .and_then(|fixes| create_fix(fixes, FixKind::Fix));
 
                     // Convert suggestions (only if fix kind allows suggestions), and combine with fix
                     let possible_fixes = if let Some(suggestions) = diagnostic.suggestions
@@ -959,7 +1005,10 @@ impl Linter {
                     ));
                 }
             }
-            Err(LintFileFailure { message: error, timings }) => {
+            Err(LintFileFailure {
+                message: error,
+                timings,
+            }) => {
                 self.record_external_timings(rule_timing_store, external_rules, timings);
 
                 let message =
@@ -978,7 +1027,9 @@ impl Linter {
         external_rules: &[(ExternalRuleId, ExternalOptionsId, AllowWarnDeny)],
         timings: Option<LintFileTimings>,
     ) {
-        let Some(rule_timing_store) = rule_timing_store else { return };
+        let Some(rule_timing_store) = rule_timing_store else {
+            return;
+        };
 
         let Some(timings) = timings else { return };
 
@@ -1052,6 +1103,13 @@ impl RawTransferMetadata {
         tokens_len: u32,
     ) -> Self {
         #[expect(clippy::inconsistent_struct_constructor)] // `#[ast]` macro reorders fields
-        Self { data_offset, is_ts, is_jsx, has_bom, tokens_offset, tokens_len }
+        Self {
+            data_offset,
+            is_ts,
+            is_jsx,
+            has_bom,
+            tokens_offset,
+            tokens_len,
+        }
     }
 }

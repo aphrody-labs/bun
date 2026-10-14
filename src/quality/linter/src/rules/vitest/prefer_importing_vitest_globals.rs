@@ -131,8 +131,9 @@ impl Rule for PreferImportingVitestGlobals {
                 continue;
             }
 
-            let AstKind::ImportDeclaration(import_decl) =
-                ctx.nodes().parent_kind(scoping.symbol_declaration(symbol_id))
+            let AstKind::ImportDeclaration(import_decl) = ctx
+                .nodes()
+                .parent_kind(scoping.symbol_declaration(symbol_id))
             else {
                 continue;
             };
@@ -252,7 +253,9 @@ impl PreferImportingVitestGlobals {
         for &ref_id in require_refs {
             let reference = ctx.scoping().get_reference(ref_id);
             let parent = ctx.nodes().parent_node(reference.node_id());
-            let AstKind::CallExpression(call) = parent.kind() else { continue };
+            let AstKind::CallExpression(call) = parent.kind() else {
+                continue;
+            };
 
             let is_vitest_require = call.arguments.len() == 1
                 && call.arguments.first().is_some_and(|arg| {
@@ -284,10 +287,16 @@ impl PreferImportingVitestGlobals {
                 .map(|property| ctx.source_range(property.span))
                 .join(", ");
 
-            let rest_variable =
-                pattern.rest.as_ref().map_or("", |rest| ctx.source_range(rest.span));
+            let rest_variable = pattern
+                .rest
+                .as_ref()
+                .map_or("", |rest| ctx.source_range(rest.span));
 
-            let comma_before_globals = if properties_joined.is_empty() { "" } else { ", " };
+            let comma_before_globals = if properties_joined.is_empty() {
+                ""
+            } else {
+                ", "
+            };
             let comma_after_globals = if rest_variable.is_empty() { "" } else { ", " };
 
             let text = format!(
@@ -306,7 +315,9 @@ impl PreferImportingVitestGlobals {
         for &ref_id in require_refs {
             let reference = ctx.scoping().get_reference(ref_id);
             let parent = ctx.nodes().parent_node(reference.node_id());
-            let AstKind::CallExpression(call) = parent.kind() else { continue };
+            let AstKind::CallExpression(call) = parent.kind() else {
+                continue;
+            };
 
             if call.arguments.len() != 1 {
                 continue;

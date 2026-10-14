@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { mkdirSync, symlinkSync } from "node:fs";
+import { mkdirSync, symlinkSync, unlinkSync } from "node:fs";
 import { join, posix, resolve } from "node:path";
 import { tempDir } from "../../../test/harness";
 import { GitTree } from "./collect";
@@ -238,4 +238,53 @@ test("Cloudflare dependency reuse binds the real installed version to its captur
     JSON.stringify({ ...manifest, dependencies: { wrangler: "0.9.0" } }),
   );
   await expect(verifyJitCloudflareDependencies(root, out, "a".repeat(40))).rejects.toThrow("pins differ");
+});
+
+test("Cloudflare dependency reuse accepts only its configured native shared store", async () => {
+  using fixture = tempDir("site-jit-global-store", {});
+  const root = String(fixture),
+    out = join(root, "jit"),
+    cache = join(root, "shared-cache");
+  const installed = join(root, "packages/bun-cloudflare");
+  const captured = join(out, "packages/bun-cloudflare");
+  const manifest = { name: "cloudflare-owner", dependencies: { wrangler: "1.0.0" } };
+  const lock = JSON.stringify({ packages: { wrangler: ["wrangler@1.0.0"] } });
+  for (const owner of [installed, captured]) {
+    await Bun.write(join(owner, "package.json"), JSON.stringify(manifest));
+    await Bun.write(join(owner, "bun.lock"), lock);
+    mkdirSync(join(owner, "src"));
+  }
+  await Bun.write(
+    join(installed, "bunfig.toml"),
+    Bun.TOML.stringify({ install: { cache, linker: "isolated", globalStore: true } })!,
+  );
+  const entry = join(cache, "links/wrangler@1.0.0-0123456789abcdef/node_modules/wrangler");
+  await Bun.write(join(entry, "package.json"), '{"name":"wrangler","version":"1.0.0"}');
+  mkdirSync(join(installed, "node_modules"));
+  const type = process.platform === "win32" ? "junction" : "dir";
+  symlinkSync(entry, join(installed, "node_modules/wrangler"), type);
+  symlinkSync(join(installed, "node_modules"), join(captured, "node_modules"), type);
+  let selectedCache = cache;
+  const ownerCache = async (owner: string) => {
+    expect(owner).toBe(installed);
+    return selectedCache;
+  };
+  const receipt = await verifyJitCloudflareDependencies(root, out, "a".repeat(40), ownerCache);
+  expect(receipt.version).toBe("1.0.0");
+  expect(receipt.manifestSha256).toBe(
+    new Bun.CryptoHasher("sha256").update(await Bun.file(join(entry, "package.json")).bytes()).digest("hex"),
+  );
+  await Bun.write(join(entry, "package.json"), '{"name":"foreign","version":"1.0.0"}');
+  await expect(verifyJitCloudflareDependencies(root, out, "a".repeat(40), ownerCache)).rejects.toThrow(
+    "captured version",
+  );
+  await Bun.write(join(entry, "package.json"), '{"name":"wrangler","version":"1.0.0"}');
+  selectedCache = join(root, "foreign-cache");
+  mkdirSync(selectedCache);
+  await expect(verifyJitCloudflareDependencies(root, out, "a".repeat(40), ownerCache)).rejects.toThrow("owner store");
+  unlinkSync(join(captured, "node_modules"));
+  await Bun.write(join(captured, "node_modules/wrangler/package.json"), '{"name":"wrangler","version":"1.0.0"}');
+  await expect(verifyJitCloudflareDependencies(root, out, "a".repeat(40), ownerCache)).rejects.toThrow(
+    "Cloudflare owner",
+  );
 });

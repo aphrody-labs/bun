@@ -10,7 +10,9 @@ use super::PeepholeOptimizations;
 
 impl<'a> PeepholeOptimizations {
     pub fn minimize_logical_expression(expr: &mut Expression<'a>, ctx: &mut TraverseCtx<'a>) {
-        let Expression::LogicalExpression(e) = expr else { return };
+        let Expression::LogicalExpression(e) = expr else {
+            return;
+        };
         if let Some(changed) = Self::try_compress_is_null_or_undefined(e, ctx) {
             ctx.replace_expression(expr, changed);
         }
@@ -54,7 +56,11 @@ impl<'a> PeepholeOptimizations {
         if left.operator != op {
             return None;
         }
-        let new_span = left.right.span().merge_within(expr.right.span(), expr.span).unwrap_or(SPAN);
+        let new_span = left
+            .right
+            .span()
+            .merge_within(expr.right.span(), expr.span)
+            .unwrap_or(SPAN);
         Self::try_compress_is_null_or_undefined_for_left_and_right(
             &mut left.right,
             &mut expr.right,
@@ -129,7 +135,11 @@ impl<'a> PeepholeOptimizations {
                 LeftPairValueResult::Undefined => a.is_null().then_some(Some(a.span())),
             },
             |b| {
-                if let Expression::Identifier(id) = b { Some(id) } else { None }
+                if let Expression::Identifier(id) = b {
+                    Some(id)
+                } else {
+                    None
+                }
             },
         )?;
 
@@ -233,7 +243,9 @@ impl<'a> PeepholeOptimizations {
         if !ctx.supports_feature(ESFeature::ES2021LogicalAssignmentOperators) {
             return;
         }
-        let Expression::LogicalExpression(e) = expr else { return };
+        let Expression::LogicalExpression(e) = expr else {
+            return;
+        };
         if let Expression::SequenceExpression(sequence_expr) = &e.right {
             let Some(Expression::AssignmentExpression(assignment_expr)) =
                 Self::last_expression_in_sequence(sequence_expr)
@@ -247,7 +259,9 @@ impl<'a> PeepholeOptimizations {
                 return;
             }
 
-            let Expression::SequenceExpression(sequence_expr) = &mut e.right else { return };
+            let Expression::SequenceExpression(sequence_expr) = &mut e.right else {
+                return;
+            };
             let Some(Expression::AssignmentExpression(assignment_expr)) =
                 Self::pop_expression_from_sequence(sequence_expr)
             else {
@@ -321,9 +335,14 @@ impl<'a> PeepholeOptimizations {
             _ => return,
         };
         if let Expression::Identifier(ident) = object
-            && let Some(symbol_id) = ctx.scoping().get_reference(ident.reference_id()).symbol_id()
+            && let Some(symbol_id) = ctx
+                .scoping()
+                .get_reference(ident.reference_id())
+                .symbol_id()
         {
-            ctx.state.symbols.record_member_write_effect(symbol_id, MemberWriteEffect::Hazard);
+            ctx.state
+                .symbols
+                .record_member_write_effect(symbol_id, MemberWriteEffect::Hazard);
         }
     }
 }

@@ -71,7 +71,10 @@ fn allocated_and_used_bytes() {
     let huge = Layout::from_size_align(DEFAULT_CHUNK_SIZE_WITHOUT_FOOTER * 2, 1).unwrap();
     b.alloc_layout(huge);
     let three_chunks = b.allocated_bytes();
-    assert_eq!(three_chunks, DEFAULT_CHUNK_SIZE_WITHOUT_FOOTER + SECOND_CHUNK + THIRD_CHUNK);
+    assert_eq!(
+        three_chunks,
+        DEFAULT_CHUNK_SIZE_WITHOUT_FOOTER + SECOND_CHUNK + THIRD_CHUNK
+    );
     assert_eq!(b.used_bytes(), small.size() * 2 + big.size() + huge.size());
     assert_eq!(chunk_count(&mut b), 3);
 

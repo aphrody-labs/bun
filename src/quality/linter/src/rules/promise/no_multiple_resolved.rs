@@ -85,8 +85,12 @@ declare_oxc_lint!(
 
 impl Rule for NoMultipleResolved {
     fn run<'a>(&self, node: &AstNode<'a>, ctx: &LintContext<'a>) {
-        let Some(new_expr) = node.kind().as_new_expression() else { return };
-        let Some(executor_expr) = get_promise_constructor_inline_executor(new_expr) else { return };
+        let Some(new_expr) = node.kind().as_new_expression() else {
+            return;
+        };
+        let Some(executor_expr) = get_promise_constructor_inline_executor(new_expr) else {
+            return;
+        };
         let (resolve_symbol_id, reject_symbol_id) = get_resolve_symbol_id(executor_expr);
         let resolve_findler =
             ResolveFinder::new(ctx.scoping(), resolve_symbol_id, reject_symbol_id);
@@ -130,7 +134,11 @@ impl<'a> BlockResolvedInfo<'a> {
         kind: ResolvedKind,
         throwable_after_resolved: bool,
     ) -> Self {
-        Self { resolved, kind, throwable_after_resolved }
+        Self {
+            resolved,
+            kind,
+            throwable_after_resolved,
+        }
     }
 }
 
@@ -178,7 +186,11 @@ struct MultipleResolvedChecker<'a, 'b: 'a> {
 
 impl<'a, 'b> MultipleResolvedChecker<'a, 'b> {
     fn new(ctx: &'a LintContext<'b>, resolve_finder: ResolveFinder<'a>) -> Self {
-        Self { ctx, resolve_finder, func_resolved_info_stack: vec![] }
+        Self {
+            ctx,
+            resolve_finder,
+            func_resolved_info_stack: vec![],
+        }
     }
 
     #[inline]
@@ -212,7 +224,9 @@ impl<'a, 'b> MultipleResolvedChecker<'a, 'b> {
     }
 
     fn insert_block_resolved_info(&mut self, block_id: BlockNodeId, info: BlockResolvedInfo<'a>) {
-        let Some(resolved_infos) = self.resolved_infos_mut() else { return };
+        let Some(resolved_infos) = self.resolved_infos_mut() else {
+            return;
+        };
         resolved_infos.insert(block_id, info);
     }
 
@@ -277,10 +291,16 @@ impl<'a, 'b> MultipleResolvedChecker<'a, 'b> {
                 continue;
             }
             let prev_dominators = sets_intersection(&prev_block_nodes_dominators);
-            block_nodes_dominators.entry(block_id).or_default().extend(prev_dominators);
+            block_nodes_dominators
+                .entry(block_id)
+                .or_default()
+                .extend(prev_dominators);
         }
-        let block_nodes_sort: FxHashMap<_, _> =
-            block_ids.iter().enumerate().map(|(i, &block_id)| (block_id, i)).collect();
+        let block_nodes_sort: FxHashMap<_, _> = block_ids
+            .iter()
+            .enumerate()
+            .map(|(i, &block_id)| (block_id, i))
+            .collect();
         let mut block_nodes_immediate_dominator: FxHashMap<BlockNodeId, BlockNodeId> =
             FxHashMap::default();
         for (block_node_id, dominators) in &block_nodes_dominators {
@@ -348,21 +368,23 @@ impl<'a, 'b> MultipleResolvedChecker<'a, 'b> {
     fn out_going_block_ids(&self, block_id: BlockNodeId) -> Vec<BlockNodeId> {
         let graph = self.ctx.cfg().graph();
         let mut outgoming_block_ids: Vec<BlockNodeId> = Vec::new();
-        graph.edges_directed(block_id, Direction::Outgoing).for_each(|edge| match edge.weight() {
-            EdgeType::Normal
-            | EdgeType::Jump
-            | EdgeType::Join
-            | EdgeType::Error(ErrorEdgeKind::Explicit)
-            | EdgeType::Finalize => {
-                outgoming_block_ids.push(edge.target());
-            }
-            EdgeType::Backedge => {
-                if let Some(next_target) = self.backedge_next_target(edge.source()) {
-                    outgoming_block_ids.push(next_target);
+        graph
+            .edges_directed(block_id, Direction::Outgoing)
+            .for_each(|edge| match edge.weight() {
+                EdgeType::Normal
+                | EdgeType::Jump
+                | EdgeType::Join
+                | EdgeType::Error(ErrorEdgeKind::Explicit)
+                | EdgeType::Finalize => {
+                    outgoming_block_ids.push(edge.target());
                 }
-            }
-            _ => {}
-        });
+                EdgeType::Backedge => {
+                    if let Some(next_target) = self.backedge_next_target(edge.source()) {
+                        outgoming_block_ids.push(next_target);
+                    }
+                }
+                _ => {}
+            });
         outgoming_block_ids.reverse();
         outgoming_block_ids
     }
@@ -370,31 +392,33 @@ impl<'a, 'b> MultipleResolvedChecker<'a, 'b> {
     fn in_coming_block_ids(&self, block_id: BlockNodeId) -> Vec<BlockNodeId> {
         let graph = self.ctx.cfg().graph();
         let mut incoming_block_ids: Vec<BlockNodeId> = Vec::new();
-        graph.edges_directed(block_id, Direction::Incoming).for_each(|edge| match edge.weight() {
-            EdgeType::Normal => {
-                let source = edge.source();
-                if let Some(prev_source) = self.prev_backedge_source(source) {
-                    incoming_block_ids.push(prev_source);
-                }
-                incoming_block_ids.push(source);
-            }
-            EdgeType::Jump
-            | EdgeType::Join
-            | EdgeType::Error(ErrorEdgeKind::Explicit)
-            | EdgeType::Finalize => {
-                incoming_block_ids.push(edge.source());
-            }
-            EdgeType::Backedge => {
-                let source = edge.source();
-                if graph
-                    .edges_directed(block_id, Direction::Outgoing)
-                    .any(|edge| matches!(edge.weight(), EdgeType::Backedge))
-                {
+        graph
+            .edges_directed(block_id, Direction::Incoming)
+            .for_each(|edge| match edge.weight() {
+                EdgeType::Normal => {
+                    let source = edge.source();
+                    if let Some(prev_source) = self.prev_backedge_source(source) {
+                        incoming_block_ids.push(prev_source);
+                    }
                     incoming_block_ids.push(source);
                 }
-            }
-            _ => {}
-        });
+                EdgeType::Jump
+                | EdgeType::Join
+                | EdgeType::Error(ErrorEdgeKind::Explicit)
+                | EdgeType::Finalize => {
+                    incoming_block_ids.push(edge.source());
+                }
+                EdgeType::Backedge => {
+                    let source = edge.source();
+                    if graph
+                        .edges_directed(block_id, Direction::Outgoing)
+                        .any(|edge| matches!(edge.weight(), EdgeType::Backedge))
+                    {
+                        incoming_block_ids.push(source);
+                    }
+                }
+                _ => {}
+            });
         incoming_block_ids.reverse();
         incoming_block_ids
     }
@@ -518,14 +542,23 @@ impl<'a, 'b> MultipleResolvedChecker<'a, 'b> {
             if resolved_info.kind == ResolvedKind::Certain {
                 match prev_resolved_kind {
                     ResolvedKind::Certain => {
-                        let Some(prev_resolved) = prev_resolved else { continue };
-                        let Some(resolved) = resolved_info.resolved else { continue };
+                        let Some(prev_resolved) = prev_resolved else {
+                            continue;
+                        };
+                        let Some(resolved) = resolved_info.resolved else {
+                            continue;
+                        };
                         let line = get_span_line(self.ctx.source_text(), prev_resolved.span);
-                        self.ctx.diagnostic(already_resolved_diagnostic(line, resolved.span));
+                        self.ctx
+                            .diagnostic(already_resolved_diagnostic(line, resolved.span));
                     }
                     ResolvedKind::Potential => {
-                        let Some(prev_resolved) = prev_resolved else { continue };
-                        let Some(resolved) = resolved_info.resolved else { continue };
+                        let Some(prev_resolved) = prev_resolved else {
+                            continue;
+                        };
+                        let Some(resolved) = resolved_info.resolved else {
+                            continue;
+                        };
                         let line = get_span_line(self.ctx.source_text(), prev_resolved.span);
                         self.ctx.diagnostic(potentially_already_resolved_diagnostic(
                             line,
@@ -550,23 +583,30 @@ impl<'a, 'b> MultipleResolvedChecker<'a, 'b> {
         if self.is_catch_start_block(block_id) {
             self.resolve_finder.try_block_end();
         }
-        self.ctx.cfg().basic_block(block_id).instructions().iter().for_each(|instruction| {
-            if !matches!(instruction.kind, InstructionKind::Statement) {
-                return;
-            }
-            let Some(node_id) = instruction.node_id else { return };
-            let node = self.ctx.nodes().get_node(node_id);
-            match node.kind() {
-                AstKind::ExpressionStatement(expr_stmt) => {
-                    self.resolve_finder.visit_expression_statement(expr_stmt);
-                    resolved.append(&mut self.resolve_finder.take_resolved());
+        self.ctx
+            .cfg()
+            .basic_block(block_id)
+            .instructions()
+            .iter()
+            .for_each(|instruction| {
+                if !matches!(instruction.kind, InstructionKind::Statement) {
+                    return;
                 }
-                AstKind::TryStatement(try_stmt) if try_stmt.handler.is_some() => {
-                    self.resolve_finder.try_block_start();
+                let Some(node_id) = instruction.node_id else {
+                    return;
+                };
+                let node = self.ctx.nodes().get_node(node_id);
+                match node.kind() {
+                    AstKind::ExpressionStatement(expr_stmt) => {
+                        self.resolve_finder.visit_expression_statement(expr_stmt);
+                        resolved.append(&mut self.resolve_finder.take_resolved());
+                    }
+                    AstKind::TryStatement(try_stmt) if try_stmt.handler.is_some() => {
+                        self.resolve_finder.try_block_start();
+                    }
+                    _ => {}
                 }
-                _ => {}
-            }
-        });
+            });
         resolved
     }
 
@@ -600,7 +640,8 @@ impl<'a, 'b> MultipleResolvedChecker<'a, 'b> {
             if resolved.len() > 1 {
                 let line = get_span_line(self.ctx.source_text(), first_resolved.span);
                 resolved.iter().skip(1).for_each(|&multi_resolved| {
-                    self.ctx.diagnostic(already_resolved_diagnostic(line, multi_resolved.span));
+                    self.ctx
+                        .diagnostic(already_resolved_diagnostic(line, multi_resolved.span));
                 });
             }
             self.insert_block_resolved_info(
@@ -628,12 +669,15 @@ fn get_resolve_symbol_id(expr: &Expression) -> (Option<SymbolId>, Option<SymbolI
         }
         _ => None,
     };
-    let Some(params) = params else { return (None, None) };
-    let mut symbol_ids = params
-        .items
-        .iter()
-        .take(2)
-        .map(|param| param.pattern.get_binding_identifier().map(BindingIdentifier::symbol_id));
+    let Some(params) = params else {
+        return (None, None);
+    };
+    let mut symbol_ids = params.items.iter().take(2).map(|param| {
+        param
+            .pattern
+            .get_binding_identifier()
+            .map(BindingIdentifier::symbol_id)
+    });
     (symbol_ids.next().flatten(), symbol_ids.next().flatten())
 }
 
@@ -1124,6 +1168,11 @@ fn test() {
 })",
     ];
 
-    Tester::new(NoMultipleResolved::NAME, NoMultipleResolved::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        NoMultipleResolved::NAME,
+        NoMultipleResolved::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

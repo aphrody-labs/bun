@@ -254,12 +254,16 @@ fn get_assignment_direction(assign: &AssignmentExpression) -> Option<UpdateDirec
     };
 
     match operator {
-        AssignmentOperator::Addition => {
-            Some(if is_positive { UpdateDirection::Forward } else { UpdateDirection::Backward })
-        }
-        AssignmentOperator::Subtraction => {
-            Some(if is_positive { UpdateDirection::Backward } else { UpdateDirection::Forward })
-        }
+        AssignmentOperator::Addition => Some(if is_positive {
+            UpdateDirection::Forward
+        } else {
+            UpdateDirection::Backward
+        }),
+        AssignmentOperator::Subtraction => Some(if is_positive {
+            UpdateDirection::Backward
+        } else {
+            UpdateDirection::Forward
+        }),
         _ => None,
     }
 }
@@ -357,18 +361,51 @@ fn test() {
     ];
 
     let fix = vec![
-        ("for(var i = 0; i < 10; i--){}", "for(var i = 0; i < 10; i++){}"),
-        ("for(var i = 10; i > 0; i++){}", "for(var i = 10; i > 0; i--){}"),
-        ("for(var i = 0; i < 10; i-=1){}", "for(var i = 0; i < 10; i+=1){}"),
-        ("for(var i = 10; i > 0; i+=1){}", "for(var i = 10; i > 0; i-=1){}"),
-        ("for(var i = 0; i < 10; i+=-1){}", "for(var i = 0; i < 10; i-=-1){}"),
-        ("for(var i = 10; i > 0; i-=-1){}", "for(var i = 10; i > 0; i+=-1){}"),
-        ("for(var i = 0; i < 10; --i){}", "for(var i = 0; i < 10; ++i){}"),
-        ("for(var i = 0; i < 10; -- i){}", "for(var i = 0; i < 10; ++i){}"),
-        ("for(var i = 0; i < 10; i -= 1){}", "for(var i = 0; i < 10; i+=1){}"),
+        (
+            "for(var i = 0; i < 10; i--){}",
+            "for(var i = 0; i < 10; i++){}",
+        ),
+        (
+            "for(var i = 10; i > 0; i++){}",
+            "for(var i = 10; i > 0; i--){}",
+        ),
+        (
+            "for(var i = 0; i < 10; i-=1){}",
+            "for(var i = 0; i < 10; i+=1){}",
+        ),
+        (
+            "for(var i = 10; i > 0; i+=1){}",
+            "for(var i = 10; i > 0; i-=1){}",
+        ),
+        (
+            "for(var i = 0; i < 10; i+=-1){}",
+            "for(var i = 0; i < 10; i-=-1){}",
+        ),
+        (
+            "for(var i = 10; i > 0; i-=-1){}",
+            "for(var i = 10; i > 0; i+=-1){}",
+        ),
+        (
+            "for(var i = 0; i < 10; --i){}",
+            "for(var i = 0; i < 10; ++i){}",
+        ),
+        (
+            "for(var i = 0; i < 10; -- i){}",
+            "for(var i = 0; i < 10; ++i){}",
+        ),
+        (
+            "for(var i = 0; i < 10; i -= 1){}",
+            "for(var i = 0; i < 10; i+=1){}",
+        ),
         // variables of different lengths
-        ("for(var ii = 0; ii < 10; ii--){}", "for(var ii = 0; ii < 10; ii++){}"),
-        ("for(var ii = 10; ii > 0; ii+=1){}", "for(var ii = 10; ii > 0; ii-=1){}"),
+        (
+            "for(var ii = 0; ii < 10; ii--){}",
+            "for(var ii = 0; ii < 10; ii++){}",
+        ),
+        (
+            "for(var ii = 10; ii > 0; ii+=1){}",
+            "for(var ii = 10; ii > 0; ii-=1){}",
+        ),
     ];
 
     Tester::new(ForDirection::NAME, ForDirection::PLUGIN, pass, fail)

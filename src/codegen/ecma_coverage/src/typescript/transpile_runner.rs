@@ -23,7 +23,11 @@ pub fn run(filter: Option<&str>, detail: bool) {
     let results = run_transpile(filter);
     print_coverage("transpile", &results, detail);
     if filter.is_none() {
-        snapshot_results("transpile", &Path::new(CASES_PATH).join("transpile"), &results);
+        snapshot_results(
+            "transpile",
+            &Path::new(CASES_PATH).join("transpile"),
+            &results,
+        );
     }
 }
 
@@ -35,7 +39,9 @@ fn run_transpile(filter: Option<&str>) -> Vec<CoverageResult> {
         .filter_map(Result::ok)
         .filter(|e| !e.file_type().is_dir())
         .filter(|e| {
-            e.path().extension().is_some_and(|ext| ext == "ts" || ext == "tsx" || ext == "mts")
+            e.path()
+                .extension()
+                .is_some_and(|ext| ext == "ts" || ext == "tsx" || ext == "mts")
         })
         .map(|e| e.path().to_owned())
         .filter(|path| filter.is_none_or(|q| path.to_string_lossy().contains(q)))
@@ -54,17 +60,25 @@ fn run_transpile(filter: Option<&str>) -> Vec<CoverageResult> {
 
             let result = compare_baseline(&path, &content);
             let rel_path = path.strip_prefix(workspace_root()).ok()?.to_owned();
-            Some(CoverageResult { path: rel_path, should_fail: false, result })
+            Some(CoverageResult {
+                path: rel_path,
+                should_fail: false,
+                result,
+            })
         })
         .collect()
 }
 
 fn compare_baseline(path: &Path, content: &TestCaseContent) -> TestResult {
     // Get expected baseline
-    let rel_path =
-        path.strip_prefix(workspace_root().join(CASES_PATH).join("transpile")).unwrap_or(path);
+    let rel_path = path
+        .strip_prefix(workspace_root().join(CASES_PATH).join("transpile"))
+        .unwrap_or(path);
     let filename = change_extension(rel_path.to_str().unwrap_or_default());
-    let baseline_path = workspace_root().join(BASELINES_PATH).join("transpile").join(&filename);
+    let baseline_path = workspace_root()
+        .join(BASELINES_PATH)
+        .join("transpile")
+        .join(&filename);
 
     let expected = BaselineFile::parse(&baseline_path);
     let actual = run_isolated_declarations(path, content);
@@ -151,12 +165,19 @@ fn transpile(path: &Path, source_text: &str) -> (String, oxc::diagnostics::Diagn
     let allocator = Allocator::default();
     let source_type = SourceType::from_path(path).unwrap_or_default();
     let ret = Parser::new(&allocator, source_text, source_type).parse();
-    let ret =
-        IsolatedDeclarations::new(&allocator, IsolatedDeclarationsOptions { strip_internal: true })
-            .build(&ret.program);
+    let ret = IsolatedDeclarations::new(
+        &allocator,
+        IsolatedDeclarationsOptions {
+            strip_internal: true,
+        },
+    )
+    .build(&ret.program);
     let printed = Codegen::new()
         .with_options(CodegenOptions {
-            comments: CommentOptions { jsdoc: true, ..CommentOptions::disabled() },
+            comments: CommentOptions {
+                jsdoc: true,
+                ..CommentOptions::disabled()
+            },
             ..CodegenOptions::default()
         })
         .build(&ret.program)

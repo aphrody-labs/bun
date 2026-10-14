@@ -8,10 +8,10 @@ use std::{
     time::{Duration, Instant},
 };
 
-use bun_browser_extract::extract_main;
-use futures::{StreamExt, stream::FuturesUnordered};
 use bun_browser_dom::{NodeData, parse_html};
+use bun_browser_extract::extract_main;
 use bun_browser_net::{BunBrowserHttpClient, ResourceRequest, ResourceType};
+use futures::{StreamExt, stream::FuturesUnordered};
 use regex::Regex;
 use tokio::sync::Mutex;
 use url::Url;
@@ -143,7 +143,11 @@ struct Scheduler<'a> {
 
 impl<'a> Scheduler<'a> {
     fn new(options: &'a MirrorOptions) -> Self {
-        let seed_host = options.seed_url.host_str().unwrap_or_default().to_ascii_lowercase();
+        let seed_host = options
+            .seed_url
+            .host_str()
+            .unwrap_or_default()
+            .to_ascii_lowercase();
         Self {
             options,
             queue: VecDeque::new(),
@@ -169,13 +173,13 @@ impl<'a> Scheduler<'a> {
                     return false;
                 }
                 self.page_count += 1;
-            },
+            }
             JobKind::Asset => {
                 if self.asset_count >= self.options.max_assets {
                     return false;
                 }
                 self.asset_count += 1;
-            },
+            }
         }
         self.scheduled.insert(key);
         self.queue.push_back(MirrorJob { url, depth, kind });
@@ -195,7 +199,11 @@ impl<'a> Scheduler<'a> {
             })
         };
         in_allowed
-            || self.options.cdn_domains.iter().any(|domain| host.eq_ignore_ascii_case(domain))
+            || self
+                .options
+                .cdn_domains
+                .iter()
+                .any(|domain| host.eq_ignore_ascii_case(domain))
             || (self.options.resolve_cdns && is_common_cdn_host(&host))
     }
 }
@@ -227,7 +235,9 @@ pub async fn mirror_site(
 
     while !scheduler.queue.is_empty() || !active.is_empty() {
         while active.len() < concurrency {
-            let Some(job) = scheduler.queue.pop_front() else { break };
+            let Some(job) = scheduler.queue.pop_front() else {
+                break;
+            };
             let pacer = Arc::clone(&pacer);
             let delay = options.request_delay;
             active.push(async move {
@@ -238,12 +248,16 @@ pub async fn mirror_site(
                     JobKind::Asset => ResourceRequest::subresource(ResourceType::Other, &job.url)
                         .with_max_response_bytes(options.max_response_bytes),
                 };
-                let response = client.fetch_resource_with_callbacks(&job.url, request, None).await;
+                let response = client
+                    .fetch_resource_with_callbacks(&job.url, request, None)
+                    .await;
                 (job, response)
             });
         }
 
-        let Some((job, result)) = active.next().await else { break };
+        let Some((job, result)) = active.next().await else {
+            break;
+        };
         report.requests += 1;
         let response = match result {
             Ok(response) if (200..400).contains(&response.status) => response,
@@ -253,13 +267,14 @@ pub async fn mirror_site(
                     error: format!("HTTP {}", response.status),
                 });
                 continue;
-            },
+            }
             Err(error) => {
-                report
-                    .failures
-                    .push(MirrorFailure { url: job.url.to_string(), error: error.to_string() });
+                report.failures.push(MirrorFailure {
+                    url: job.url.to_string(),
+                    error: error.to_string(),
+                });
                 continue;
-            },
+            }
         };
 
         if !valid_http_url(&response.url)
@@ -272,7 +287,10 @@ pub async fn mirror_site(
             continue;
         }
 
-        let content_type = response.content_type().unwrap_or_default().to_ascii_lowercase();
+        let content_type = response
+            .content_type()
+            .unwrap_or_default()
+            .to_ascii_lowercase();
         let is_html = content_type.contains("text/html")
             || (content_type.is_empty()
                 && (job.kind == JobKind::Page || looks_like_html(&response.body)));
@@ -285,13 +303,25 @@ pub async fn mirror_site(
             let title = extract_main(&source, Some(response.url.as_str())).title;
             let rewritten =
                 rewrite_html(&source, &response.url, job.depth, options, &mut scheduler);
-            (local_relative_path(&response.url, true), rewritten.into_bytes(), Some(title))
+            (
+                local_relative_path(&response.url, true),
+                rewritten.into_bytes(),
+                Some(title),
+            )
         } else if is_css {
             let source = response.text();
             let rewritten = rewrite_css(&source, &response.url, job.depth, &mut scheduler);
-            (local_relative_path(&response.url, false), rewritten.into_bytes(), None)
+            (
+                local_relative_path(&response.url, false),
+                rewritten.into_bytes(),
+                None,
+            )
         } else {
-            (local_relative_path(&response.url, job.kind == JobKind::Page), response.body, None)
+            (
+                local_relative_path(&response.url, job.kind == JobKind::Page),
+                response.body,
+                None,
+            )
         };
 
         let destination = options.output_dir.join(&relative_path);
@@ -321,7 +351,7 @@ pub async fn mirror_site(
                     blake3: blake3::hash(&bytes).to_hex().to_string(),
                     title: title.filter(|title| !title.trim().is_empty()),
                 });
-            },
+            }
             Err(error) => report.failures.push(MirrorFailure {
                 url: response.url.to_string(),
                 error: format!("write {}: {error}", destination.display()),
@@ -353,7 +383,13 @@ pub async fn mirror_site(
     });
     let manifest_bytes =
         serde_json::to_vec_pretty(&manifest).map_err(|error| MirrorError::Io(error.to_string()))?;
-    match safe_write(&options.output_dir, Path::new("manifest.json"), &manifest_bytes).await {
+    match safe_write(
+        &options.output_dir,
+        Path::new("manifest.json"),
+        &manifest_bytes,
+    )
+    .await
+    {
         Ok(()) => report.files.push("manifest.json".into()),
         Err(error) => report.failures.push(MirrorFailure {
             url: options.seed_url.to_string(),
@@ -377,20 +413,29 @@ fn validate_options(options: &MirrorOptions) -> Result<(), MirrorError> {
         return Err(MirrorError::InvalidSeed("output directory is empty".into()));
     }
     if options.max_pages == 0 || options.max_pages > MAX_PAGES {
-        return Err(MirrorError::InvalidBounds(format!("max_pages must be 1..={MAX_PAGES}")));
+        return Err(MirrorError::InvalidBounds(format!(
+            "max_pages must be 1..={MAX_PAGES}"
+        )));
     }
     if options.max_assets > MAX_ASSETS {
-        return Err(MirrorError::InvalidBounds(format!("max_assets must be <= {MAX_ASSETS}")));
+        return Err(MirrorError::InvalidBounds(format!(
+            "max_assets must be <= {MAX_ASSETS}"
+        )));
     }
     if options.additional_assets.len() > MAX_ASSETS
-        || options.additional_assets.iter().any(|url| !valid_http_url(url))
+        || options
+            .additional_assets
+            .iter()
+            .any(|url| !valid_http_url(url))
     {
         return Err(MirrorError::InvalidBounds(
             "additional_assets must be bounded credential-free HTTP(S) URLs".into(),
         ));
     }
     if options.max_response_bytes == 0 || options.max_response_bytes > 128 * 1024 * 1024 {
-        return Err(MirrorError::InvalidBounds("max_response_bytes must be 1..=134217728".into()));
+        return Err(MirrorError::InvalidBounds(
+            "max_response_bytes must be 1..=134217728".into(),
+        ));
     }
     if options.allowed_domains.iter().any(|domain| {
         domain.trim().is_empty()
@@ -416,9 +461,16 @@ fn validate_options(options: &MirrorOptions) -> Result<(), MirrorError> {
 }
 
 fn is_common_cdn_host(host: &str) -> bool {
-    ["cdn", "static", "assets", "cloudfront", "google", "googleapis"]
-        .iter()
-        .any(|marker| host.contains(marker))
+    [
+        "cdn",
+        "static",
+        "assets",
+        "cloudfront",
+        "google",
+        "googleapis",
+    ]
+    .iter()
+    .any(|marker| host.contains(marker))
 }
 
 pub(crate) async fn safe_write(
@@ -446,17 +498,17 @@ pub(crate) async fn safe_write(
                     std::io::ErrorKind::PermissionDenied,
                     format!("refusing symlinked mirror directory {}", parent.display()),
                 ));
-            },
+            }
             Ok(metadata) if !metadata.is_dir() => {
                 return Err(std::io::Error::new(
                     std::io::ErrorKind::InvalidInput,
                     format!("mirror parent is not a directory: {}", parent.display()),
                 ));
-            },
-            Ok(_) => {},
+            }
+            Ok(_) => {}
             Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
                 tokio::fs::create_dir(&parent).await?;
-            },
+            }
             Err(error) => return Err(error),
         }
     }
@@ -472,7 +524,10 @@ pub(crate) async fn safe_write(
     {
         return Err(std::io::Error::new(
             std::io::ErrorKind::PermissionDenied,
-            format!("refusing non-regular mirror destination {}", destination.display()),
+            format!(
+                "refusing non-regular mirror destination {}",
+                destination.display()
+            ),
         ));
     }
     tokio::fs::write(destination, bytes).await
@@ -539,7 +594,8 @@ fn rewrite_html(
                 let in_style = parent
                     .and_then(|parent| {
                         tree.with_node(parent, |node| {
-                            node.as_element().is_some_and(|name| (&*name.local) == "style")
+                            node.as_element()
+                                .is_some_and(|name| (&*name.local) == "style")
                         })
                     })
                     .unwrap_or(false);
@@ -594,7 +650,9 @@ fn rewrite_html(
             if !is_anchor && !is_resource {
                 continue;
             }
-            let Some(target) = resolve_url(page_url, &value) else { continue };
+            let Some(target) = resolve_url(page_url, &value) else {
+                continue;
+            };
             if is_anchor {
                 if options.recursive && depth < options.max_depth {
                     let local = scheduler.enqueue(target.clone(), depth + 1, JobKind::Page);
@@ -638,7 +696,9 @@ fn rewrite_srcset(
         .split(',')
         .map(|candidate| {
             let mut parts = candidate.split_whitespace();
-            let Some(raw_url) = parts.next() else { return candidate.trim().to_owned() };
+            let Some(raw_url) = parts.next() else {
+                return candidate.trim().to_owned();
+            };
             let Some(target) = resolve_url(page_url, raw_url) else {
                 return candidate.trim().to_owned();
             };
@@ -646,7 +706,10 @@ fn rewrite_srcset(
             else {
                 return candidate.trim().to_owned();
             };
-            std::iter::once(rewritten).chain(parts.map(str::to_owned)).collect::<Vec<_>>().join(" ")
+            std::iter::once(rewritten)
+                .chain(parts.map(str::to_owned))
+                .collect::<Vec<_>>()
+                .join(" ")
         })
         .collect::<Vec<_>>()
         .join(", ")
@@ -676,13 +739,19 @@ fn rewrite_css(
 ) -> String {
     let mut replacements = Vec::<(std::ops::Range<usize>, String)>::new();
     for captures in css_url_regex().captures_iter(css) {
-        let Some(full) = captures.get(0) else { continue };
-        let Some(inner) = captures.get(1) else { continue };
+        let Some(full) = captures.get(0) else {
+            continue;
+        };
+        let Some(inner) = captures.get(1) else {
+            continue;
+        };
         let raw = inner.as_str().trim().trim_matches(['\'', '"']).trim();
         if raw.is_empty() || raw.starts_with("data:") || raw.starts_with('#') {
             continue;
         }
-        let Some(target) = resolve_url(stylesheet_url, raw) else { continue };
+        let Some(target) = resolve_url(stylesheet_url, raw) else {
+            continue;
+        };
         let Some(rewritten) = schedule_asset_and_rewrite(&target, stylesheet_url, depth, scheduler)
         else {
             continue;
@@ -690,10 +759,16 @@ fn rewrite_css(
         replacements.push((full.start()..full.end(), format!("url(\"{rewritten}\")")));
     }
     for captures in css_import_regex().captures_iter(css) {
-        let Some(full) = captures.get(0) else { continue };
-        let Some(target_capture) = captures.get(1) else { continue };
+        let Some(full) = captures.get(0) else {
+            continue;
+        };
+        let Some(target_capture) = captures.get(1) else {
+            continue;
+        };
         let raw = target_capture.as_str().trim();
-        let Some(target) = resolve_url(stylesheet_url, raw) else { continue };
+        let Some(target) = resolve_url(stylesheet_url, raw) else {
+            continue;
+        };
         let Some(rewritten) = schedule_asset_and_rewrite(&target, stylesheet_url, depth, scheduler)
         else {
             continue;
@@ -748,8 +823,15 @@ pub(crate) fn local_relative_path(url: &Url, page: bool) -> PathBuf {
     if let Some(port) = url.port() {
         path.push(format!("port-{port}"));
     }
-    let segments = url.path_segments().into_iter().flatten().collect::<Vec<_>>();
-    let non_empty = segments.iter().filter(|segment| !segment.is_empty()).collect::<Vec<_>>();
+    let segments = url
+        .path_segments()
+        .into_iter()
+        .flatten()
+        .collect::<Vec<_>>();
+    let non_empty = segments
+        .iter()
+        .filter(|segment| !segment.is_empty())
+        .collect::<Vec<_>>();
     for segment in &non_empty {
         path.push(safe_component(segment));
     }
@@ -758,11 +840,17 @@ pub(crate) fn local_relative_path(url: &Url, page: bool) -> PathBuf {
         path.push("index.html");
     } else if let Some(filename) = non_empty.last() {
         let filename = safe_component(filename);
-        let ext = Path::new(&filename).extension().and_then(|value| value.to_str()).unwrap_or("");
+        let ext = Path::new(&filename)
+            .extension()
+            .and_then(|value| value.to_str())
+            .unwrap_or("");
         if ext.is_empty() {
             path.push("index.html");
         } else if page
-            && matches!(ext.to_ascii_lowercase().as_str(), "php" | "asp" | "aspx" | "jsp")
+            && matches!(
+                ext.to_ascii_lowercase().as_str(),
+                "php" | "asp" | "aspx" | "jsp"
+            )
         {
             path.set_file_name(format!("{filename}.html"));
         }
@@ -770,7 +858,10 @@ pub(crate) fn local_relative_path(url: &Url, page: bool) -> PathBuf {
 
     if let Some(query) = url.query() {
         let hash = blake3::hash(query.as_bytes()).to_hex().to_string();
-        let filename = path.file_name().and_then(|name| name.to_str()).unwrap_or("index.html");
+        let filename = path
+            .file_name()
+            .and_then(|name| name.to_str())
+            .unwrap_or("index.html");
         let (stem, extension) = filename.rsplit_once('.').unwrap_or((filename, ""));
         let decorated = if extension.is_empty() {
             format!("{stem}.q-{}", &hash[..10])
@@ -808,8 +899,11 @@ fn safe_component(raw: &str) -> String {
         let hash = blake3::hash(raw.as_bytes()).to_hex().to_string();
         let suffix = format!(".h{}", &hash[..10]);
         let (stem, extension) = component.rsplit_once('.').unwrap_or((&component, ""));
-        let extension_suffix =
-            if extension.is_empty() { String::new() } else { format!(".{extension}") };
+        let extension_suffix = if extension.is_empty() {
+            String::new()
+        } else {
+            format!(".{extension}")
+        };
         let stem_limit = 120usize.saturating_sub(suffix.len() + extension_suffix.len());
         let mut truncated_stem = String::new();
         for character in stem.chars() {
@@ -827,7 +921,11 @@ fn safe_component(raw: &str) -> String {
 }
 
 fn is_windows_reserved_name(value: &str) -> bool {
-    let stem = value.split('.').next().unwrap_or_default().to_ascii_uppercase();
+    let stem = value
+        .split('.')
+        .next()
+        .unwrap_or_default()
+        .to_ascii_uppercase();
     matches!(stem.as_str(), "CON" | "PRN" | "AUX" | "NUL")
         || (stem.len() == 4
             && (stem.starts_with("COM") || stem.starts_with("LPT"))
@@ -838,13 +936,26 @@ fn relative_link(from_file: &Path, target_file: &Path) -> String {
     let from_parent = from_file.parent().unwrap_or_else(|| Path::new(""));
     let from = from_parent.components().collect::<Vec<_>>();
     let target = target_file.components().collect::<Vec<_>>();
-    let common = from.iter().zip(&target).take_while(|(left, right)| left == right).count();
+    let common = from
+        .iter()
+        .zip(&target)
+        .take_while(|(left, right)| left == right)
+        .count();
     let mut parts = vec!["..".to_owned(); from.len().saturating_sub(common)];
-    parts.extend(target.iter().skip(common).filter_map(|component| match component {
-        Component::Normal(value) => value.to_str().map(str::to_owned),
-        _ => None,
-    }));
-    if parts.is_empty() { "./".into() } else { parts.join("/") }
+    parts.extend(
+        target
+            .iter()
+            .skip(common)
+            .filter_map(|component| match component {
+                Component::Normal(value) => value.to_str().map(str::to_owned),
+                _ => None,
+            }),
+    );
+    if parts.is_empty() {
+        "./".into()
+    } else {
+        parts.join("/")
+    }
 }
 
 #[cfg(test)]

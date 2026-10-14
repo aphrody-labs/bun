@@ -205,14 +205,24 @@ impl ControlFlowGraph {
 
     /// # Panics
     pub fn basic_block(&self, id: BlockNodeId) -> &BasicBlock {
-        let ix = *self.graph.node_weight(id).expect("expected a valid node id in self.graph");
-        self.basic_blocks.get(ix).expect("expected a valid node id in self.basic_blocks")
+        let ix = *self
+            .graph
+            .node_weight(id)
+            .expect("expected a valid node id in self.graph");
+        self.basic_blocks
+            .get(ix)
+            .expect("expected a valid node id in self.basic_blocks")
     }
 
     /// # Panics
     pub fn basic_block_mut(&mut self, id: BlockNodeId) -> &mut BasicBlock {
-        let ix = *self.graph.node_weight(id).expect("expected a valid node id in self.graph");
-        self.basic_blocks.get_mut(ix).expect("expected a valid node id in self.basic_blocks")
+        let ix = *self
+            .graph
+            .node_weight(id)
+            .expect("expected a valid node id in self.graph");
+        self.basic_blocks
+            .get_mut(ix)
+            .expect("expected a valid node id in self.basic_blocks")
     }
 
     pub fn is_reachable(&self, from: BlockNodeId, to: BlockNodeId) -> bool {
@@ -315,7 +325,10 @@ impl ControlFlowGraph {
                 .instructions()
                 .iter()
                 .exactly_one()
-                .map_or_else(|_| EvalConstConditionResult::NotFound, try_eval_const_condition),
+                .map_or_else(
+                    |_| EvalConstConditionResult::NotFound,
+                    try_eval_const_condition
+                ),
             EvalConstConditionResult::Eval(true)
         ) {
             get_jump_target(&self.graph, node).map(|it| (node, it))

@@ -195,9 +195,9 @@ impl<'de> Deserialize<'de> for ModuleStylesOverride {
 
         match RawModuleStylesOverride::deserialize(deserializer)? {
             RawModuleStylesOverride::Disabled(false) => Ok(Self::Disabled(false)),
-            RawModuleStylesOverride::Disabled(true) => {
-                Err(de::Error::custom("module style override boolean must be `false`"))
-            }
+            RawModuleStylesOverride::Disabled(true) => Err(de::Error::custom(
+                "module style override boolean must be `false`",
+            )),
             RawModuleStylesOverride::Styles(styles) => Ok(Self::Styles(styles)),
         }
     }
@@ -217,8 +217,10 @@ impl JsonSchema for ModuleStylesOverride {
         false_schema.enum_values = Some(vec![false.into()]);
 
         let mut schema = SchemaObject::default();
-        schema.subschemas().one_of =
-            Some(vec![false_schema.into(), <RawStyleSet as JsonSchema>::json_schema(r#gen)]);
+        schema.subschemas().one_of = Some(vec![
+            false_schema.into(),
+            <RawStyleSet as JsonSchema>::json_schema(r#gen),
+        ]);
         schema.into()
     }
 }
@@ -313,7 +315,9 @@ impl Rule for ImportStyle {
                 if is_assigned_dynamic_import(node, ctx) {
                     return;
                 }
-                let Some(source) = get_module_name(&import_expr.source) else { return };
+                let Some(source) = get_module_name(&import_expr.source) else {
+                    return;
+                };
                 self.report_if_needed(
                     import_expr.span,
                     source.as_ref(),
@@ -329,8 +333,12 @@ impl Rule for ImportStyle {
                 self.check_export_named_declaration(export_decl, ctx);
             }
             AstKind::ExpressionStatement(statement) if self.check_require => {
-                let Expression::CallExpression(call_expr) = &statement.expression else { return };
-                let Some(source) = get_require_module_name(call_expr) else { return };
+                let Expression::CallExpression(call_expr) = &statement.expression else {
+                    return;
+                };
+                let Some(source) = get_require_module_name(call_expr) else {
+                    return;
+                };
                 self.report_if_needed(
                     call_expr.span,
                     source.as_ref(),
@@ -430,7 +438,9 @@ impl ImportStyle {
         source_kind: SourceKind,
         ctx: &LintContext<'_>,
     ) {
-        let Some(allowed_styles) = self.allowed_styles(module_name) else { return };
+        let Some(allowed_styles) = self.allowed_styles(module_name) else {
+            return;
+        };
 
         let allowed_styles = if source_kind == SourceKind::Require
             && allowed_styles.default_style
@@ -456,7 +466,10 @@ impl ImportStyle {
             return None;
         }
 
-        let base = self.extend_default_styles.then(|| default_style_for(module_name)).flatten();
+        let base = self
+            .extend_default_styles
+            .then(|| default_style_for(module_name))
+            .flatten();
         let allowed_styles =
             if let Some(ModuleStylesOverride::Styles(style_override)) = override_styles {
                 style_override.apply_to(base.unwrap_or_default())
@@ -584,7 +597,10 @@ fn is_assigned_dynamic_import(node: &AstNode<'_>, ctx: &LintContext<'_>) -> bool
     let AstKind::VariableDeclarator(declarator) = grandparent.kind() else {
         return false;
     };
-    declarator.init.as_ref().is_some_and(|init| init.span() == await_expr.span)
+    declarator
+        .init
+        .as_ref()
+        .is_some_and(|init| init.span() == await_expr.span)
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -603,19 +619,39 @@ struct StyleSet {
 
 impl StyleSet {
     const fn named() -> Self {
-        Self { named: true, namespace: false, default_style: false, unassigned: false }
+        Self {
+            named: true,
+            namespace: false,
+            default_style: false,
+            unassigned: false,
+        }
     }
 
     const fn namespace() -> Self {
-        Self { named: false, namespace: true, default_style: false, unassigned: false }
+        Self {
+            named: false,
+            namespace: true,
+            default_style: false,
+            unassigned: false,
+        }
     }
 
     const fn default_style() -> Self {
-        Self { named: false, namespace: false, default_style: true, unassigned: false }
+        Self {
+            named: false,
+            namespace: false,
+            default_style: true,
+            unassigned: false,
+        }
     }
 
     const fn unassigned() -> Self {
-        Self { named: false, namespace: false, default_style: false, unassigned: true }
+        Self {
+            named: false,
+            namespace: false,
+            default_style: false,
+            unassigned: true,
+        }
     }
 
     fn is_empty(self) -> bool {
@@ -630,7 +666,10 @@ impl StyleSet {
     }
 
     fn with_namespace(self) -> Self {
-        Self { namespace: true, ..self }
+        Self {
+            namespace: true,
+            ..self
+        }
     }
 
     fn format_for_diagnostic(self) -> String {
@@ -691,7 +730,10 @@ fn test() {
         ("import('unassigned')", Some(options.clone())),
         ("export {} from 'unassigned'", Some(options.clone())),
         ("const x = require('default')", Some(options.clone())),
-        ("const {default: x} = require('default')", Some(options.clone())),
+        (
+            "const {default: x} = require('default')",
+            Some(options.clone()),
+        ),
         ("const [] = require('default')", Some(options.clone())),
         ("import x from 'default'", Some(options.clone())),
         (
@@ -741,7 +783,10 @@ fn test() {
         ("import {default as chalk} from 'chalk'", None),
         ("export {promisify, callbackify} from 'util'", None),
         ("export {promisify, callbackify} from 'node:util'", None),
-        ("require('chalk')", Some(json!([{ "styles": {}, "extendDefaultStyles": false }]))),
+        (
+            "require('chalk')",
+            Some(json!([{ "styles": {}, "extendDefaultStyles": false }])),
+        ),
         ("import 'chalk'", Some(json!([{ "checkImport": false }]))),
         (
             "async () => {
@@ -749,9 +794,15 @@ fn test() {
             }",
             Some(json!([{ "checkDynamicImport": false }])),
         ),
-        ("import('chalk')", Some(json!([{ "checkDynamicImport": false }]))),
+        (
+            "import('chalk')",
+            Some(json!([{ "checkDynamicImport": false }])),
+        ),
         ("require('chalk')", Some(json!([{ "checkRequire": false }]))),
-        ("const {red} = require('chalk')", Some(json!([{ "checkRequire": false }]))),
+        (
+            "const {red} = require('chalk')",
+            Some(json!([{ "checkRequire": false }])),
+        ),
         (
             "import util, {inspect} from 'named-or-default'",
             Some(json!([{ "styles": { "named-or-default": { "named": true, "default": true } } }])),
@@ -777,7 +828,10 @@ fn test() {
 
     let fail = vec![
         ("const {x} = require('unassigned')", Some(options.clone())),
-        ("const {default: x} = require('unassigned')", Some(options.clone())),
+        (
+            "const {default: x} = require('unassigned')",
+            Some(options.clone()),
+        ),
         ("import x from 'unassigned'", Some(options.clone())),
         (
             "async () => {
@@ -793,7 +847,10 @@ fn test() {
             }",
             Some(options.clone()),
         ),
-        ("const {x: y} = require('unassigned')", Some(options.clone())),
+        (
+            "const {x: y} = require('unassigned')",
+            Some(options.clone()),
+        ),
         ("import {x} from 'unassigned'", Some(options.clone())),
         ("import {x as y} from 'unassigned'", Some(options.clone())),
         (
@@ -808,7 +865,10 @@ fn test() {
             }",
             Some(options.clone()),
         ),
-        ("const {...rest} = require('unassigned')", Some(options.clone())),
+        (
+            "const {...rest} = require('unassigned')",
+            Some(options.clone()),
+        ),
         ("const [] = require('unassigned')", Some(options.clone())),
         ("export * from 'unassigned'", Some(options.clone())),
         ("export {x} from 'unassigned'", Some(options.clone())),
@@ -816,7 +876,10 @@ fn test() {
         ("export {default} from 'unassigned'", Some(options.clone())),
         ("require('default')", Some(options.clone())),
         ("const {} = require('default')", Some(options.clone())),
-        ("const {...rest} = require('default')", Some(options.clone())),
+        (
+            "const {...rest} = require('default')",
+            Some(options.clone()),
+        ),
         ("import 'default'", Some(options.clone())),
         ("import {} from 'default'", Some(options.clone())),
         ("import('default')", Some(options.clone())),
@@ -851,8 +914,14 @@ fn test() {
         ("import 'namespace'", Some(options.clone())),
         ("import {} from 'namespace'", Some(options.clone())),
         ("import('namespace')", Some(options.clone())),
-        ("const {default: x} = require('namespace')", Some(options.clone())),
-        ("const {...rest} = require('namespace')", Some(options.clone())),
+        (
+            "const {default: x} = require('namespace')",
+            Some(options.clone()),
+        ),
+        (
+            "const {...rest} = require('namespace')",
+            Some(options.clone()),
+        ),
         ("import x from 'namespace'", Some(options.clone())),
         ("const {x} = require('namespace')", Some(options.clone())),
         ("const {x: y} = require('namespace')", Some(options.clone())),
@@ -880,7 +949,10 @@ fn test() {
         ("import {} from 'named'", Some(options.clone())),
         ("import('named')", Some(options.clone())),
         ("const x = require('named')", Some(options.clone())),
-        ("const {default: x} = require('named')", Some(options.clone())),
+        (
+            "const {default: x} = require('named')",
+            Some(options.clone()),
+        ),
         ("import x from 'named'", Some(options.clone())),
         (
             "async () => {

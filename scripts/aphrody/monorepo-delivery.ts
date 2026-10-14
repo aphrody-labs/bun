@@ -179,7 +179,7 @@ export async function submitDeliveryJob(
     launch?: boolean;
     spawn?: (
       command: string[],
-      options: Parameters<typeof Bun.spawn>[1],
+      options: Bun.SpawnOptions.SpawnOptions<"ignore", Bun.BunFile, Bun.BunFile>,
     ) => Pick<ReturnType<typeof Bun.spawn>, "unref">;
   } = {},
 ) {

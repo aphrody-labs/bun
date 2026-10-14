@@ -62,7 +62,8 @@ declare_oxc_lint!(
     style,
     suggestion,
     version = "0.0.18",
-    short_description = "Prefer `includes()` over `indexOf()` when checking for existence/non-existence.",
+    short_description =
+        "Prefer `includes()` over `indexOf()` when checking for existence/non-existence.",
 );
 
 impl Rule for PreferIncludes {
@@ -111,13 +112,21 @@ impl Rule for PreferIncludes {
                 None
             }
         } else if bin_expr.operator == BinaryOperator::GreaterEqualThan {
-            if bin_expr.right.without_parentheses().is_specific_raw_number_literal("0") {
+            if bin_expr
+                .right
+                .without_parentheses()
+                .is_specific_raw_number_literal("0")
+            {
                 Some(ComparisonKind::ExistsOnly)
             } else {
                 None
             }
         } else if bin_expr.operator == BinaryOperator::LessThan {
-            if bin_expr.right.without_parentheses().is_specific_raw_number_literal("0") {
+            if bin_expr
+                .right
+                .without_parentheses()
+                .is_specific_raw_number_literal("0")
+            {
                 Some(ComparisonKind::NotExistsOnly)
             } else {
                 None
@@ -134,7 +143,10 @@ impl Rule for PreferIncludes {
         let callee_span = callee_info.0;
 
         // Get the object (receiver) text.
-        let Some(member_expr) = left_call_expr.callee.get_inner_expression().as_member_expression()
+        let Some(member_expr) = left_call_expr
+            .callee
+            .get_inner_expression()
+            .as_member_expression()
         else {
             return;
         };
@@ -146,8 +158,11 @@ impl Rule for PreferIncludes {
 
         let fix_span = bin_expr.span;
         ctx.diagnostic_with_suggestion(prefer_includes_diagnostic(callee_span), |fixer| {
-            let args_text =
-                left_call_expr.arguments.iter().map(|arg| ctx.source_range(arg.span())).join(", ");
+            let args_text = left_call_expr
+                .arguments
+                .iter()
+                .map(|arg| ctx.source_range(arg.span()))
+                .join(", ");
 
             let includes_call =
                 format!("{object_text}{member_operator}includes{call_operator}{args_text})");
@@ -178,7 +193,10 @@ fn is_negative_one(expr: &Expression) -> bool {
         return false;
     }
 
-    unary_expr.argument.without_parentheses().is_specific_raw_number_literal("1")
+    unary_expr
+        .argument
+        .without_parentheses()
+        .is_specific_raw_number_literal("1")
 }
 
 #[test]
@@ -220,7 +238,10 @@ fn test() {
     ];
 
     let fix = vec![
-        (r"'foobar'.indexOf('foo') !== -1", r"'foobar'.includes('foo')"),
+        (
+            r"'foobar'.indexOf('foo') !== -1",
+            r"'foobar'.includes('foo')",
+        ),
         (r"str.indexOf('foo') != -1", r"str.includes('foo')"),
         (r"str.indexOf('foo') > -1", r"str.includes('foo')"),
         (r"str.indexOf('foo') == -1", r"!str.includes('foo')"),
@@ -231,8 +252,14 @@ fn test() {
         (r"foo.indexOf(bar, 0) !== -1", r"foo.includes(bar, 0)"),
         (r"foo.indexOf(bar, 1) !== -1", r"foo.includes(bar, 1)"),
         (r"foo?.indexOf('x') !== -1", r"foo?.includes('x') !== false"),
-        (r"foo.indexOf?.('x') === -1", r"foo.includes?.('x') === false"),
-        (r"foo?.indexOf?.('x') == -1", r"foo?.includes?.('x') === false"),
+        (
+            r"foo.indexOf?.('x') === -1",
+            r"foo.includes?.('x') === false",
+        ),
+        (
+            r"foo?.indexOf?.('x') == -1",
+            r"foo?.includes?.('x') === false",
+        ),
         (r"foo?.indexOf('x') > -1", r"foo?.includes('x') === true"),
         (r"foo?.indexOf('x') >= 0", r"foo?.includes('x') === true"),
         (r"foo?.indexOf('x') < 0", r"foo?.includes('x') === false"),

@@ -58,19 +58,25 @@ impl Rule for NoRelativeParentImports {
             AstKind::ImportDeclaration(import_decl)
                 if is_parent_import(import_decl.source.value.as_str()) =>
             {
-                ctx.diagnostic(no_relative_parent_imports_diagnostic(import_decl.source.span));
+                ctx.diagnostic(no_relative_parent_imports_diagnostic(
+                    import_decl.source.span,
+                ));
             }
             // ESM export { } from '...'
             AstKind::ExportFromDeclaration(export_decl) => {
                 if is_parent_import(export_decl.source.value.as_str()) {
-                    ctx.diagnostic(no_relative_parent_imports_diagnostic(export_decl.source.span));
+                    ctx.diagnostic(no_relative_parent_imports_diagnostic(
+                        export_decl.source.span,
+                    ));
                 }
             }
             // ESM export * from '...'
             AstKind::ExportAllDeclaration(export_decl)
                 if is_parent_import(export_decl.source.value.as_str()) =>
             {
-                ctx.diagnostic(no_relative_parent_imports_diagnostic(export_decl.source.span));
+                ctx.diagnostic(no_relative_parent_imports_diagnostic(
+                    export_decl.source.span,
+                ));
             }
             // Dynamic import expressions: import('../foo')
             AstKind::ImportExpression(import_expr) => {
@@ -146,8 +152,13 @@ fn test() {
         r#"(require)("../plugin.js")"#,
     ];
 
-    Tester::new(NoRelativeParentImports::NAME, NoRelativeParentImports::PLUGIN, pass, fail)
-        .change_rule_path("index.js")
-        .with_import_plugin(true)
-        .test_and_snapshot();
+    Tester::new(
+        NoRelativeParentImports::NAME,
+        NoRelativeParentImports::PLUGIN,
+        pass,
+        fail,
+    )
+    .change_rule_path("index.js")
+    .with_import_plugin(true)
+    .test_and_snapshot();
 }

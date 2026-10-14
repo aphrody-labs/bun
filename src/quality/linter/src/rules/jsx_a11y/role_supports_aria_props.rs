@@ -96,7 +96,10 @@ impl Rule for RoleSupportsAriaProps {
                     let name = get_jsx_attribute_name(&attr.name);
                     let name = name.cow_to_ascii_lowercase();
                     if is_valid_aria_property(&name)
-                        && attr.value.as_ref().is_none_or(|value| !is_nullish_value(value))
+                        && attr
+                            .value
+                            .as_ref()
+                            .is_none_or(|value| !is_nullish_value(value))
                         && !is_valid_aria_property_for_role(role_value, &name)
                     {
                         ctx.diagnostic(if is_implicit {
@@ -177,7 +180,9 @@ fn get_implicit_role<'a>(
         _ => "",
     };
 
-    VALID_ARIA_ROLES.contains(implicit_role).then_some(implicit_role)
+    VALID_ARIA_ROLES
+        .contains(implicit_role)
+        .then_some(implicit_role)
 }
 
 const ALERT_ETC_PROPS: &[AriaProperty] = &[
@@ -1440,7 +1445,11 @@ fn test() {
         (r"<link aria-checked />", None, None),
         (r#"<img alt="" aria-checked />"#, None, None),
         (r#"<img alt="foobar" aria-busy />"#, None, None),
-        (r#"<menu type="toolbar" aria-activedescendant />"#, None, None),
+        (
+            r#"<menu type="toolbar" aria-activedescendant />"#,
+            None,
+            None,
+        ),
         (r#"<menu type="toolbar" aria-atomic />"#, None, None),
         (r#"<menu type="toolbar" aria-busy />"#, None, None),
         (r#"<menu type="toolbar" aria-controls />"#, None, None),
@@ -1459,7 +1468,11 @@ fn test() {
         (r#"<menuitem type="command" aria-atomic />"#, None, None),
         (r#"<menuitem type="command" aria-busy />"#, None, None),
         (r#"<menuitem type="command" aria-controls />"#, None, None),
-        (r#"<menuitem type="command" aria-describedby />"#, None, None),
+        (
+            r#"<menuitem type="command" aria-describedby />"#,
+            None,
+            None,
+        ),
         (r#"<menuitem type="command" aria-disabled />"#, None, None),
         (r#"<menuitem type="command" aria-dropeffect />"#, None, None),
         (r#"<menuitem type="command" aria-flowto />"#, None, None),
@@ -1474,15 +1487,27 @@ fn test() {
         (r#"<menuitem type="checkbox" aria-atomic />"#, None, None),
         (r#"<menuitem type="checkbox" aria-busy />"#, None, None),
         (r#"<menuitem type="checkbox" aria-controls />"#, None, None),
-        (r#"<menuitem type="checkbox" aria-describedby />"#, None, None),
+        (
+            r#"<menuitem type="checkbox" aria-describedby />"#,
+            None,
+            None,
+        ),
         (r#"<menuitem type="checkbox" aria-disabled />"#, None, None),
-        (r#"<menuitem type="checkbox" aria-dropeffect />"#, None, None),
+        (
+            r#"<menuitem type="checkbox" aria-dropeffect />"#,
+            None,
+            None,
+        ),
         (r#"<menuitem type="checkbox" aria-flowto />"#, None, None),
         (r#"<menuitem type="checkbox" aria-grabbed />"#, None, None),
         (r#"<menuitem type="checkbox" aria-hidden />"#, None, None),
         (r#"<menuitem type="checkbox" aria-invalid />"#, None, None),
         (r#"<menuitem type="checkbox" aria-label />"#, None, None),
-        (r#"<menuitem type="checkbox" aria-labelledby />"#, None, None),
+        (
+            r#"<menuitem type="checkbox" aria-labelledby />"#,
+            None,
+            None,
+        ),
         (r#"<menuitem type="checkbox" aria-live />"#, None, None),
         (r#"<menuitem type="checkbox" aria-owns />"#, None, None),
         (r#"<menuitem type="checkbox" aria-relevant />"#, None, None),
@@ -1632,8 +1657,16 @@ fn test() {
         (r#"<input type="tel" aria-disabled />"#, None, None),
         (r#"<input type="url" aria-disabled />"#, None, None),
         (r"<input aria-disabled />", None, None),
-        (r#"<h2 role="presentation" aria-level={null} />"#, None, None),
-        (r#"<h2 role="presentation" aria-level={undefined} />"#, None, None),
+        (
+            r#"<h2 role="presentation" aria-level={null} />"#,
+            None,
+            None,
+        ),
+        (
+            r#"<h2 role="presentation" aria-level={undefined} />"#,
+            None,
+            None,
+        ),
         (r"<button aria-pressed />", None, None),
         (r"<form aria-hidden />", None, None),
         (r"<h1 aria-hidden />", None, None),
@@ -1653,7 +1686,11 @@ fn test() {
         (r#"<div role="heading" aria-level />"#, None, None),
         (r#"<div role="heading" aria-level="1" />"#, None, None),
         (r#"<option aria-posinset="1" />"#, None, None),
-        (r#"<input role="combobox" aria-haspopup="listbox" />"#, None, None),
+        (
+            r#"<input role="combobox" aria-haspopup="listbox" />"#,
+            None,
+            None,
+        ),
     ];
 
     let fail = vec![
@@ -1695,6 +1732,11 @@ fn test() {
         (r#"<Link href="/" aria-checked />"#, None, Some(settings())),
     ];
 
-    Tester::new(RoleSupportsAriaProps::NAME, RoleSupportsAriaProps::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        RoleSupportsAriaProps::NAME,
+        RoleSupportsAriaProps::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

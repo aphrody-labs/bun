@@ -37,7 +37,9 @@ impl FixtureFormatter for YamlHarness {
     fn fingerprint(source: &str, _path: &Path, _options: &Self::Options) -> Fingerprint {
         let allocator = Allocator::default();
         let parsed = parse_for_format(&allocator, source).expect("source should parse");
-        Fingerprint { comments: parsed.comments.len() }
+        Fingerprint {
+            comments: parsed.comments.len(),
+        }
     }
 }
 
@@ -77,10 +79,14 @@ fn parse_error_is_err() {
 #[test]
 fn bom_is_preserved() {
     let allocator = Allocator::default();
-    let formatted = format(&allocator, "\u{feff}key: value", YamlFormatOptions::default())
-        .expect("BOM input should parse")
-        .print()
-        .expect("print should succeed")
-        .into_code();
+    let formatted = format(
+        &allocator,
+        "\u{feff}key: value",
+        YamlFormatOptions::default(),
+    )
+    .expect("BOM input should parse")
+    .print()
+    .expect("print should succeed")
+    .into_code();
     assert_eq!(formatted, "\u{feff}key: value\n");
 }

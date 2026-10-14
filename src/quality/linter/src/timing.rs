@@ -46,7 +46,10 @@ impl RuleTimingKey {
                 plugin_name: Cow::Owned(record.plugin_name),
                 rule_name: Cow::Owned(record.rule_name),
             },
-            RuleTimingStat { duration: record.duration, calls: record.calls },
+            RuleTimingStat {
+                duration: record.duration,
+                calls: record.calls,
+            },
         )
     }
 }
@@ -95,7 +98,9 @@ pub(crate) struct RuleTimingRecorder {
 
 impl RuleTimingRecorder {
     pub(crate) fn with_capacity(capacity: usize) -> Self {
-        Self { timings: FxHashMap::with_capacity_and_hasher(capacity, FxBuildHasher) }
+        Self {
+            timings: FxHashMap::with_capacity_and_hasher(capacity, FxBuildHasher),
+        }
     }
 
     #[inline]
@@ -105,7 +110,10 @@ impl RuleTimingRecorder {
         rule_name: &'static str,
         stat: RuleTimingStat,
     ) {
-        self.timings.entry(RuleTimingKey::native(plugin_name, rule_name)).or_default().add(stat);
+        self.timings
+            .entry(RuleTimingKey::native(plugin_name, rule_name))
+            .or_default()
+            .add(stat);
     }
 
     pub(crate) fn into_timings(self) -> FxHashMap<RuleTimingKey, RuleTimingStat> {
@@ -133,7 +141,10 @@ impl RuleTimingStore {
             return;
         }
 
-        let mut timings = self.timings.lock().expect("rule timing store mutex poisoned");
+        let mut timings = self
+            .timings
+            .lock()
+            .expect("rule timing store mutex poisoned");
         timings.reserve(local_timings.size_hint().0);
         for record in local_timings {
             let (key, stat) = RuleTimingKey::from_record(record);
@@ -142,7 +153,10 @@ impl RuleTimingStore {
     }
 
     pub(crate) fn record_js_plugin_runtime(&self, duration: Duration) {
-        *self.js_plugin_runtime.lock().expect("JS plugin runtime mutex poisoned") += duration;
+        *self
+            .js_plugin_runtime
+            .lock()
+            .expect("JS plugin runtime mutex poisoned") += duration;
     }
 
     /// Returns the cumulative time spent executing JS plugin linting on the JS thread.
@@ -150,7 +164,10 @@ impl RuleTimingStore {
     /// # Panics
     /// Panics if the JS plugin runtime mutex is poisoned.
     pub fn js_plugin_runtime(&self) -> Duration {
-        *self.js_plugin_runtime.lock().expect("JS plugin runtime mutex poisoned")
+        *self
+            .js_plugin_runtime
+            .lock()
+            .expect("JS plugin runtime mutex poisoned")
     }
 
     /// Collects all rule timings sorted by descending duration.
@@ -158,7 +175,10 @@ impl RuleTimingStore {
     /// # Panics
     /// Panics if the rule timing mutex is poisoned.
     pub fn collect(&self) -> Vec<RuleTimingRecord> {
-        let timings = self.timings.lock().expect("rule timing store mutex poisoned");
+        let timings = self
+            .timings
+            .lock()
+            .expect("rule timing store mutex poisoned");
         let mut records = timings
             .iter()
             .map(|(key, stat)| RuleTimingRecord {

@@ -28,7 +28,14 @@ pub struct ClusterSpec {
 impl ClusterSpec {
     /// The configuration used by tests and benchmarks.
     pub fn embedding_like(dim: usize, clusters: usize, seed: u64) -> Self {
-        Self { dim, clusters, rank: 16, subspace_norm: 0.6, noise_norm: 0.25, seed }
+        Self {
+            dim,
+            clusters,
+            rank: 16,
+            subspace_norm: 0.6,
+            noise_norm: 0.25,
+            seed,
+        }
     }
 }
 
@@ -44,11 +51,13 @@ impl ClusteredGenerator {
         let mut rng = SplitMix64::new(spec.seed);
         let d = spec.dim;
         let inv_sqrt_d = 1.0 / (d as f32).sqrt();
-        let centers: Vec<f32> =
-            (0..spec.clusters * d).map(|_| rng.gaussian() * inv_sqrt_d).collect();
+        let centers: Vec<f32> = (0..spec.clusters * d)
+            .map(|_| rng.gaussian() * inv_sqrt_d)
+            .collect();
         let basis_scale = spec.subspace_norm / (spec.rank.max(1) as f32).sqrt() * inv_sqrt_d;
-        let bases: Vec<f32> =
-            (0..spec.clusters * spec.rank * d).map(|_| rng.gaussian() * basis_scale).collect();
+        let bases: Vec<f32> = (0..spec.clusters * spec.rank * d)
+            .map(|_| rng.gaussian() * basis_scale)
+            .collect();
         let mut acc = 0f64;
         let cumulative = (0..spec.clusters)
             .map(|c| {
@@ -56,7 +65,12 @@ impl ClusteredGenerator {
                 acc
             })
             .collect();
-        Self { spec, centers, bases, cumulative }
+        Self {
+            spec,
+            centers,
+            bases,
+            cumulative,
+        }
     }
 
     pub fn dim(&self) -> usize {
@@ -68,7 +82,10 @@ impl ClusteredGenerator {
         let d = self.spec.dim;
         let total = *self.cumulative.last().unwrap_or(&1.0);
         let u = rng.next_open01() * total;
-        let c = self.cumulative.partition_point(|&w| w < u).min(self.spec.clusters - 1);
+        let c = self
+            .cumulative
+            .partition_point(|&w| w < u)
+            .min(self.spec.clusters - 1);
         out.copy_from_slice(&self.centers[c * d..(c + 1) * d]);
         for j in 0..self.spec.rank {
             let z = rng.gaussian();
@@ -81,7 +98,12 @@ impl ClusteredGenerator {
         for o in out.iter_mut() {
             *o += rng.gaussian() * noise_scale;
         }
-        let norm = out.iter().map(|x| x * x).sum::<f32>().sqrt().max(f32::MIN_POSITIVE);
+        let norm = out
+            .iter()
+            .map(|x| x * x)
+            .sum::<f32>()
+            .sqrt()
+            .max(f32::MIN_POSITIVE);
         for o in out.iter_mut() {
             *o /= norm;
         }
@@ -141,7 +163,10 @@ impl PartialOrd for Hit {
 impl Ord for Hit {
     // Reversed so that `BinaryHeap` is a min-heap on score.
     fn cmp(&self, other: &Self) -> Ordering {
-        other.score.total_cmp(&self.score).then_with(|| self.id.cmp(&other.id))
+        other
+            .score
+            .total_cmp(&self.score)
+            .then_with(|| self.id.cmp(&other.id))
     }
 }
 
@@ -158,8 +183,9 @@ pub fn brute_force_topk(base: &[f32], queries: &[f32], dim: usize, k: usize) -> 
         for (t, out) in results.chunks_mut(per_thread).enumerate() {
             scope.spawn(move || {
                 let q0 = t * per_thread;
-                let mut heaps: Vec<BinaryHeap<Hit>> =
-                    (0..out.len()).map(|_| BinaryHeap::with_capacity(k + 1)).collect();
+                let mut heaps: Vec<BinaryHeap<Hit>> = (0..out.len())
+                    .map(|_| BinaryHeap::with_capacity(k + 1))
+                    .collect();
                 let mut start = 0;
                 while start < nb {
                     let end = (start + BASE_BLOCK).min(nb);
@@ -168,10 +194,16 @@ pub fn brute_force_topk(base: &[f32], queries: &[f32], dim: usize, k: usize) -> 
                         for i in start..end {
                             let score = dot_f32(q, &base[i * dim..(i + 1) * dim]);
                             if heap.len() < k {
-                                heap.push(Hit { score, id: i as u32 });
+                                heap.push(Hit {
+                                    score,
+                                    id: i as u32,
+                                });
                             } else if heap.peek().is_some_and(|w| score > w.score) {
                                 heap.pop();
-                                heap.push(Hit { score, id: i as u32 });
+                                heap.push(Hit {
+                                    score,
+                                    id: i as u32,
+                                });
                             }
                         }
                     }

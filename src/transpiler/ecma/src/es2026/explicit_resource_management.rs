@@ -56,7 +56,10 @@ pub struct ExplicitResourceManagement<'a> {
 
 impl ExplicitResourceManagement<'_> {
     pub fn new() -> Self {
-        Self { top_level_using: FxHashMap::default(), _marker: std::marker::PhantomData }
+        Self {
+            top_level_using: FxHashMap::default(),
+            _marker: std::marker::PhantomData,
+        }
     }
 }
 
@@ -71,7 +74,9 @@ impl<'a> Traverse<'a, TransformState<'a>> for ExplicitResourceManagement<'a> {
         ctx: &mut TraverseCtx<'a>,
     ) {
         let for_of_stmt_scope_id = for_of_stmt.scope_id();
-        let ForStatementLeft::VariableDeclaration(decl) = &mut for_of_stmt.left else { return };
+        let ForStatementLeft::VariableDeclaration(decl) = &mut for_of_stmt.left else {
+            return;
+        };
         if !matches!(
             decl.kind,
             VariableDeclarationKind::Using | VariableDeclarationKind::AwaitUsing
@@ -99,8 +104,10 @@ impl<'a> Traverse<'a, TransformState<'a>> for ExplicitResourceManagement<'a> {
             SymbolFlags::ConstVariable | SymbolFlags::BlockScopedVariable,
         );
 
-        let binding_pattern =
-            mem::replace(&mut variable_declarator.id, temp_id.create_binding_pattern(ctx));
+        let binding_pattern = mem::replace(
+            &mut variable_declarator.id,
+            temp_id.create_binding_pattern(ctx),
+        );
 
         // `for (using x of y)` -> `for (const _x of y)`
         decl.kind = VariableDeclarationKind::Const;
@@ -127,7 +134,10 @@ impl<'a> Traverse<'a, TransformState<'a>> for ExplicitResourceManagement<'a> {
             // the `for` loop body must be wrapped in a new block to avoid having two bindings with
             // the same name in the same scope, which would cause redeclaration errors.
             // `for (using x of y) { const x = z; }` -> `for (const _x of y) { using x = _x; { const x = z; } }`
-            if ctx.scoping().get_binding(body_scope_id, variable_declarator_binding_name).is_some()
+            if ctx
+                .scoping()
+                .get_binding(body_scope_id, variable_declarator_binding_name)
+                .is_some()
             {
                 let scope_id = ctx.insert_scope_between(
                     for_of_stmt_scope_id,
@@ -625,7 +635,8 @@ impl<'a> ExplicitResourceManagement<'a> {
                 using_ctx.symbol_id,
             );
 
-            ctx.scoping_mut().change_scope_parent_id(scope_id, Some(block_stmt_scope_id));
+            ctx.scoping_mut()
+                .change_scope_parent_id(scope_id, Some(block_stmt_scope_id));
         }
     }
 
@@ -636,7 +647,9 @@ impl<'a> ExplicitResourceManagement<'a> {
         while let Statement::LabeledStatement(labeled) = loop_stmt {
             loop_stmt = &mut labeled.body;
         }
-        let Statement::ForStatement(for_stmt) = loop_stmt else { return };
+        let Statement::ForStatement(for_stmt) = loop_stmt else {
+            return;
+        };
         let Some(ForStatementInit::VariableDeclaration(decl)) = &mut for_stmt.init else {
             return;
         };
@@ -661,7 +674,11 @@ impl<'a> ExplicitResourceManagement<'a> {
                         using_ctx.create_read_expression(ctx),
                         IdentifierName::new(
                             SPAN,
-                            if is_await_using { static_ident!("a") } else { static_ident!("u") },
+                            if is_await_using {
+                                static_ident!("a")
+                            } else {
+                                static_ident!("u")
+                            },
                             ctx,
                         ),
                         false,
@@ -686,7 +703,14 @@ impl<'a> ExplicitResourceManagement<'a> {
                 SPAN,
                 using_ctx.create_binding_pattern(ctx),
                 None,
-                Some(Expression::new_call_expression(SPAN, callee, None, [], false, ctx)),
+                Some(Expression::new_call_expression(
+                    SPAN,
+                    callee,
+                    None,
+                    [],
+                    false,
+                    ctx,
+                )),
                 false,
                 ctx,
             )],
@@ -730,7 +754,9 @@ impl<'a> ExplicitResourceManagement<'a> {
     /// }
     /// ```
     fn transform_block_statement(&mut self, stmt: &mut Statement<'a>, ctx: &mut TraverseCtx<'a>) {
-        let Statement::BlockStatement(block_stmt) = stmt else { unreachable!() };
+        let Statement::BlockStatement(block_stmt) = stmt else {
+            unreachable!()
+        };
         let span = block_stmt.span;
 
         if let Some((new_stmts, needs_await, using_ctx)) =
@@ -784,13 +810,17 @@ impl<'a> ExplicitResourceManagement<'a> {
         let mut needs_await = false;
         let current_scope_id = ctx.current_scope_id();
 
-        let Statement::SwitchStatement(switch_stmt) = stmt else { unreachable!() };
+        let Statement::SwitchStatement(switch_stmt) = stmt else {
+            unreachable!()
+        };
         let span = switch_stmt.span;
         let switch_stmt_scope_id = switch_stmt.scope_id();
 
         for case in &mut switch_stmt.cases {
             for case_stmt in &mut case.consequent {
-                let Statement::VariableDeclaration(var_decl) = case_stmt else { continue };
+                let Statement::VariableDeclaration(var_decl) = case_stmt else {
+                    continue;
+                };
                 if !matches!(
                     var_decl.kind,
                     VariableDeclarationKind::Using | VariableDeclarationKind::AwaitUsing
@@ -845,7 +875,8 @@ impl<'a> ExplicitResourceManagement<'a> {
 
         let block_stmt_sid = ctx.create_child_scope_of_current(ScopeFlags::empty());
 
-        ctx.scoping_mut().change_scope_parent_id(switch_stmt_scope_id, Some(block_stmt_sid));
+        ctx.scoping_mut()
+            .change_scope_parent_id(switch_stmt_scope_id, Some(block_stmt_sid));
 
         let callee = helper_load(Helper::UsingCtx, ctx);
 
@@ -926,7 +957,9 @@ impl<'a> ExplicitResourceManagement<'a> {
 
         for stmt in stmts.iter_mut() {
             let address = stmt.address();
-            let Statement::VariableDeclaration(variable_declaration) = stmt else { continue };
+            let Statement::VariableDeclaration(variable_declaration) = stmt else {
+                continue;
+            };
             if !matches!(
                 variable_declaration.kind,
                 VariableDeclarationKind::Using | VariableDeclarationKind::AwaitUsing
@@ -994,7 +1027,14 @@ impl<'a> ExplicitResourceManagement<'a> {
                 SPAN,
                 using_ctx.create_binding_pattern(ctx),
                 None,
-                Some(Expression::new_call_expression(SPAN, callee, None, [], false, ctx)),
+                Some(Expression::new_call_expression(
+                    SPAN,
+                    callee,
+                    None,
+                    [],
+                    false,
+                    ctx,
+                )),
                 false,
                 ctx,
             )],
@@ -1096,8 +1136,11 @@ impl<'a> ExplicitResourceManagement<'a> {
             ctx,
         );
 
-        let stmt =
-            if needs_await { Expression::new_await_expression(SPAN, expr, ctx) } else { expr };
+        let stmt = if needs_await {
+            Expression::new_await_expression(SPAN, expr, ctx)
+        } else {
+            expr
+        };
 
         BlockStatement::boxed_with_scope_id(
             SPAN,
@@ -1144,7 +1187,10 @@ impl<'a> ExplicitResourceManagement<'a> {
         class_decl: &Class<'a>,
         ctx: &mut TraverseCtx<'a>,
     ) -> (BoundIdentifier<'a>, Span) {
-        let id = class_decl.id.as_ref().expect("ClassDeclaration should have an id");
+        let id = class_decl
+            .id
+            .as_ref()
+            .expect("ClassDeclaration should have an id");
         let original_span = id.span;
         let class_scope_id = class_decl.scope_id();
         let scoping = ctx.scoping_mut();
@@ -1156,9 +1202,14 @@ impl<'a> ExplicitResourceManagement<'a> {
             NodeId::DUMMY,
         );
         scoping.add_binding(class_scope_id, id.name, inner_symbol_id);
-        let outer_symbol_id =
-            id.symbol_id.replace(Some(inner_symbol_id)).expect("class always has a symbol id");
+        let outer_symbol_id = id
+            .symbol_id
+            .replace(Some(inner_symbol_id))
+            .expect("class always has a symbol id");
         *scoping.symbol_flags_mut(outer_symbol_id) = SymbolFlags::FunctionScopedVariable;
-        (BoundIdentifier::new(id.name, outer_symbol_id), original_span)
+        (
+            BoundIdentifier::new(id.name, outer_symbol_id),
+            original_span,
+        )
     }
 }

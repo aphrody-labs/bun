@@ -28,7 +28,7 @@
 
 use core::ops::Range;
 
-use crate::{AvailableSpace, Clear, FloatDirection, Point, Size, debug::debug_log, sys::Vec};
+use crate::{debug::debug_log, sys::Vec, AvailableSpace, Clear, FloatDirection, Point, Size};
 
 /// An empty "slot" that avoids floats that is suitable for non-floated content
 /// to be laid out into
@@ -201,7 +201,10 @@ impl FloatContext {
     /// vertical start and end at exact segment boundaries
     fn subdivide_segment(&mut self, idx: usize, divide_at_y: f32) {
         let old_segment = &mut self.segments[idx];
-        let new_segment = Segment { insets: old_segment.insets, y: divide_at_y..old_segment.y.end };
+        let new_segment = Segment {
+            insets: old_segment.insets,
+            y: divide_at_y..old_segment.y.end,
+        };
         if !old_segment.y.contains(&divide_at_y) || old_segment.y.start == divide_at_y {
             debug_log!("old_segment", dbg:&mut *old_segment);
             debug_log!("divide_at_y", dbg:divide_at_y);
@@ -209,7 +212,8 @@ impl FloatContext {
         }
         old_segment.y.end = divide_at_y;
 
-        self.segments.splice((idx + 1)..(idx + 1), core::iter::once(new_segment));
+        self.segments
+            .splice((idx + 1)..(idx + 1), core::iter::once(new_segment));
     }
 
     /// Position a floated box with the context, returning the (x, y) coordinates
@@ -242,11 +246,14 @@ impl FloatContext {
             FloatDirection::Left => {
                 self.left_floats.push(placed_floated_box);
                 Point { x: x_inset, y }
-            },
+            }
             FloatDirection::Right => {
                 self.right_floats.push(placed_floated_box);
-                Point { x: self.available_width - x_inset - floated_box.width, y }
-            },
+                Point {
+                    x: self.available_width - x_inset - floated_box.width,
+                    y,
+                }
+            }
         }
     }
 
@@ -260,8 +267,12 @@ impl FloatContext {
         clear: Clear,
     ) -> PlacedFloatedBox {
         let slot = direction as usize;
-        let min_y = self.cleared_threshold(clear).map_or(min_y, |threshold| min_y.max(threshold));
-        let min_y = self.last_float_top.map_or(min_y, |last_top| min_y.max(last_top));
+        let min_y = self
+            .cleared_threshold(clear)
+            .map_or(min_y, |threshold| min_y.max(threshold));
+        let min_y = self
+            .last_float_top
+            .map_or(min_y, |last_top| min_y.max(last_top));
 
         // Ensure that float:
         //    - Starts at or after the last float placed in source order
@@ -271,7 +282,10 @@ impl FloatContext {
 
         // Ensure that float is placed in a segment at or below "min_y"
         // (ensuring that it is placed at or below min_y within it's segment happens below)
-        let start_idx = self.segments.iter().position(|segment| segment.y.end > min_y);
+        let start_idx = self
+            .segments
+            .iter()
+            .position(|segment| segment.y.end > min_y);
 
         let mut start_idx = start_idx.unwrap_or(self.segments.len());
         let mut start_y = min_y;
@@ -360,14 +374,20 @@ impl FloatContext {
         if start.is_none() {
             let last_y_end = self.segments.last().map(|seg| seg.y.end).unwrap_or(0.0);
             if start_y > last_y_end {
-                self.segments.push(Segment { y: last_y_end..start_y, insets: [0.0, 0.0] });
+                self.segments.push(Segment {
+                    y: last_y_end..start_y,
+                    insets: [0.0, 0.0],
+                });
             }
 
             let start_y = last_y_end.max(start_y);
 
             let mut insets = containing_block_insets;
             insets[slot] += floated_box.width;
-            self.segments.push(Segment { y: start_y..(start_y + floated_box.height), insets });
+            self.segments.push(Segment {
+                y: start_y..(start_y + floated_box.height),
+                insets,
+            });
 
             return PlacedFloatedBox {
                 width: floated_box.width,
@@ -395,10 +415,13 @@ impl FloatContext {
             None => {
                 let last_y_end = self.segments.last().map(|seg| seg.y.end).unwrap_or(0.0);
                 if min_y > last_y_end {
-                    self.segments.push(Segment { y: last_y_end..min_y, insets: [0.0, 0.0] });
+                    self.segments.push(Segment {
+                        y: last_y_end..min_y,
+                        insets: [0.0, 0.0],
+                    });
                 }
                 self.segments.len() - 1
-            },
+            }
             Some(end_idx) => {
                 let end_y = start_y + floated_box.height;
                 if end_y != self.segments[end_idx].y.end {
@@ -406,7 +429,7 @@ impl FloatContext {
                 }
 
                 end_idx
-            },
+            }
         };
 
         // Update inset for the range of segments that the float is placed in
@@ -444,7 +467,9 @@ impl FloatContext {
         clear: Clear,
         after: Option<usize>,
     ) -> ContentSlot {
-        let min_y = self.cleared_threshold(clear).map_or(min_y, |threshold| min_y.max(threshold));
+        let min_y = self
+            .cleared_threshold(clear)
+            .map_or(min_y, |threshold| min_y.max(threshold));
         if !self.has_active_floats(min_y) {
             return ContentSlot {
                 segment_id: None,
@@ -461,7 +486,10 @@ impl FloatContext {
         let at_least = after.map(|idx| idx + 1).unwrap_or(0);
 
         let start_idx = self.segments.get(at_least..).and_then(|segments| {
-            segments.iter().position(|segment| segment.y.end > min_y).map(|idx| idx + at_least)
+            segments
+                .iter()
+                .position(|segment| segment.y.end > min_y)
+                .map(|idx| idx + at_least)
         });
         let start_idx = start_idx.unwrap_or(self.segments.len());
         let segment = self.segments.get(start_idx);
@@ -476,7 +504,7 @@ impl FloatContext {
                     width: self.available_width - inset_left - inset_right,
                     height: f32::INFINITY,
                 }
-            },
+            }
             None => ContentSlot {
                 segment_id: None,
                 x: containing_block_insets[0],
@@ -501,7 +529,10 @@ pub struct FloatIntrinsicWidthCalculator {
 impl FloatIntrinsicWidthCalculator {
     /// Create a new `FloatIntrinsicWidthCalculator`
     pub fn new(available_width: AvailableSpace) -> Self {
-        Self { available_width, contribution: 0.0 }
+        Self {
+            available_width,
+            contribution: 0.0,
+        }
     }
 
     /// Add a float to the computation
@@ -509,7 +540,7 @@ impl FloatIntrinsicWidthCalculator {
         match self.available_width {
             AvailableSpace::Definite(_) => {
                 // We will never hit this code path with definite available space
-            },
+            }
             AvailableSpace::MinContent => self.contribution = self.contribution.max(width),
             AvailableSpace::MaxContent => self.contribution += width,
         };
@@ -532,7 +563,13 @@ mod tests {
         min_y: f32,
         direction: FloatDirection,
     ) -> Point<f32> {
-        context.place_floated_box(Size { width, height }, min_y, [0.0, 0.0], direction, Clear::None)
+        context.place_floated_box(
+            Size { width, height },
+            min_y,
+            [0.0, 0.0],
+            direction,
+            Clear::None,
+        )
     }
 
     fn place(context: &mut FloatContext, width: f32, height: f32, direction: FloatDirection) {
@@ -583,7 +620,10 @@ mod tests {
         assert_eq!(slot.y, 100.0);
 
         let cleared = context.place_floated_box(
-            Size { width: 100.0, height: 20.0 },
+            Size {
+                width: 100.0,
+                height: 20.0,
+            },
             0.0,
             [0.0, 0.0],
             FloatDirection::Right,

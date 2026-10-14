@@ -32,9 +32,13 @@ fn main() -> Result<(), String> {
     let mut args = Arguments::from_env();
     // Show diff between original and formatted code
     let show_diff = args.contains("--diff");
-    let print_width = args.opt_value_from_str::<&'static str, u16>("--print-width").unwrap_or(None);
+    let print_width = args
+        .opt_value_from_str::<&'static str, u16>("--print-width")
+        .unwrap_or(None);
     let variant_arg: Option<String> = args.opt_value_from_str("--variant").unwrap();
-    let name = args.free_from_str().unwrap_or_else(|_| "test.json".to_string());
+    let name = args
+        .free_from_str()
+        .unwrap_or_else(|_| "test.json".to_string());
 
     // Read source file
     let path = Path::new(&name);
@@ -59,7 +63,11 @@ fn main() -> Result<(), String> {
         Some(width) => LineWidth::try_from(width).unwrap(),
         None => LineWidth::try_from(80).unwrap(),
     };
-    let options = JsonFormatOptions { variant, line_width, ..Default::default() };
+    let options = JsonFormatOptions {
+        variant,
+        line_width,
+        ..Default::default()
+    };
 
     let allocator = Allocator::new();
     let formatted = match oxc_formatter_json::format(&allocator, &source_text, options) {

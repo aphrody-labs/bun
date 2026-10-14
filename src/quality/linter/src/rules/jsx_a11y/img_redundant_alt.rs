@@ -122,11 +122,20 @@ impl Rule for ImgRedundantAlt {
             },
         );
         let words =
-            config.get("words").and_then(Value::as_array).map_or(Vec::from(REDUNDANT_WORDS), |v| {
-                v.iter().filter_map(Value::as_str).chain(REDUNDANT_WORDS).collect::<Vec<_>>()
-            });
+            config
+                .get("words")
+                .and_then(Value::as_array)
+                .map_or(Vec::from(REDUNDANT_WORDS), |v| {
+                    v.iter()
+                        .filter_map(Value::as_str)
+                        .chain(REDUNDANT_WORDS)
+                        .collect::<Vec<_>>()
+                });
 
-        Ok(Self(Box::new(ImgRedundantAltConfig::new(components, words.as_slice()))))
+        Ok(Self(Box::new(ImgRedundantAltConfig::new(
+            components,
+            words.as_slice(),
+        ))))
     }
 
     fn run<'a>(&self, node: &AstNode<'a>, ctx: &LintContext<'a>) {
@@ -242,7 +251,11 @@ fn test() {
 
     let pass = vec![
         (r"<img alt='foo' />;", None, None),
-        (r"<img alt='picture of me taking a photo of an image' aria-hidden />", None, None),
+        (
+            r"<img alt='picture of me taking a photo of an image' aria-hidden />",
+            None,
+            None,
+        ),
         (r"<img aria-hidden alt='photo of image' />", None, None),
         (r"<img ALt='foo' />;", None, None),
         (r"<img {...this.props} alt='foo' />", None, None),
@@ -255,21 +268,37 @@ fn test() {
         (r"<img alt={`this should pass for ${now}`} />", None, None),
         (r"<img alt={`this should pass for ${photo}`} />", None, None),
         (r"<img alt={`this should pass for ${image}`} />", None, None),
-        (r"<img alt={`this should pass for ${picture}`} />", None, None),
+        (
+            r"<img alt={`this should pass for ${picture}`} />",
+            None,
+            None,
+        ),
         (r"<img alt={`${photo}`} />", None, None),
         (r"<img alt={`${image}`} />", None, None),
         (r"<img alt={`${picture}`} />", None, None),
         (r"<img alt={'undefined'} />", None, None),
         (r"<img alt={() => {}} />", None, None),
         (r"<img alt={function(e){}} />", None, None),
-        (r"<img aria-hidden={false} alt='Doing cool things.' />", None, None),
-        (r"<img alt='photo of cool person' aria-hidden={true} />", None, None),
+        (
+            r"<img aria-hidden={false} alt='Doing cool things.' />",
+            None,
+            None,
+        ),
+        (
+            r"<img alt='photo of cool person' aria-hidden={true} />",
+            None,
+            None,
+        ),
         (r"<UX.Layout>test</UX.Layout>", None, None),
         (r"<img alt />", None, None),
         (r"<img alt={imageAlt} />", None, None),
         (r"<img alt={imageAlt.name} />", None, None),
         (r"<img alt={imageAlt?.name} />", None, None),
-        (r"<img alt='Doing cool things' aria-hidden={foo?.bar}/>", None, None),
+        (
+            r"<img alt='Doing cool things' aria-hidden={foo?.bar}/>",
+            None,
+            None,
+        ),
         (r"<img alt='Photography' />;", None, None),
         (r"<img alt='ImageMagick' />;", None, None),
         (r"<img alt='helloImage' />;", None, None),
@@ -300,19 +329,59 @@ fn test() {
         (r"<img alt={'photo'} />;", None, None),
         (r"<img alt='piCTUre of friend.' />;", None, None),
         (r"<img alt='imAGE of friend.' />;", None, None),
-        (r"<img alt='photo of cool person' aria-hidden={false} />", None, None),
-        (r"<img alt='picture of cool person' aria-hidden={false} />", None, None),
-        (r"<img alt='image of cool person' aria-hidden={false} />", None, None),
+        (
+            r"<img alt='photo of cool person' aria-hidden={false} />",
+            None,
+            None,
+        ),
+        (
+            r"<img alt='picture of cool person' aria-hidden={false} />",
+            None,
+            None,
+        ),
+        (
+            r"<img alt='image of cool person' aria-hidden={false} />",
+            None,
+            None,
+        ),
         (r"<img alt='photo' {...this.props} />", None, None),
         (r"<img alt='image' {...this.props} />", None, None),
         (r"<img alt='picture' {...this.props} />", None, None),
-        (r"<img alt={`picture doing ${things}`} {...this.props} />", None, None),
-        (r"<img alt={`photo doing ${things}`} {...this.props} />", None, None),
-        (r"<img alt={`image doing ${things}`} {...this.props} />", None, None),
-        (r"<img alt={`picture doing ${picture}`} {...this.props} />", None, None),
-        (r"<img alt={`photo doing ${photo}`} {...this.props} />", None, None),
-        (r"<img alt={`image doing ${image}`} {...this.props} />", None, None),
-        (r"<Image alt='Photo of a friend' />", Some(config_array()), None),
+        (
+            r"<img alt={`picture doing ${things}`} {...this.props} />",
+            None,
+            None,
+        ),
+        (
+            r"<img alt={`photo doing ${things}`} {...this.props} />",
+            None,
+            None,
+        ),
+        (
+            r"<img alt={`image doing ${things}`} {...this.props} />",
+            None,
+            None,
+        ),
+        (
+            r"<img alt={`picture doing ${picture}`} {...this.props} />",
+            None,
+            None,
+        ),
+        (
+            r"<img alt={`photo doing ${photo}`} {...this.props} />",
+            None,
+            None,
+        ),
+        (
+            r"<img alt={`image doing ${image}`} {...this.props} />",
+            None,
+            None,
+        ),
+        (
+            r"<Image alt='Photo of a friend' />",
+            Some(config_array()),
+            None,
+        ),
         (r"<Image alt='Photo of a friend' />", None, Some(settings())),
         // TESTS FOR ARRAY OPTION TESTS
         (r"<img alt='Word1' />;", Some(config_array()), None),

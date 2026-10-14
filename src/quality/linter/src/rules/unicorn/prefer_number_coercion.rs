@@ -179,16 +179,33 @@ fn test() {
         ("Number.parseFloat(value);", "Number(value);"),
         ("Number['parseFloat'](value);", "Number(value);"),
         ("parseInt(value, 10);", "Math.trunc(Number(value));"),
-        ("parseInt(getValue(), 10);", "Math.trunc(Number(getValue()));"),
-        ("parseInt(parseInt(value, 10), 10);", "Math.trunc(Number(parseInt(value, 10)));"),
-        ("parseInt(value as string, 10);", "Math.trunc(Number(value as string));"),
+        (
+            "parseInt(getValue(), 10);",
+            "Math.trunc(Number(getValue()));",
+        ),
+        (
+            "parseInt(parseInt(value, 10), 10);",
+            "Math.trunc(Number(parseInt(value, 10)));",
+        ),
+        (
+            "parseInt(value as string, 10);",
+            "Math.trunc(Number(value as string));",
+        ),
         ("Number.parseInt(value, 10);", "Math.trunc(Number(value));"),
         ("parseInt(value, 10.0);", "Math.trunc(Number(value));"),
         ("(parseInt)(value, 10);", "Math.trunc(Number(value));"),
-        ("Number.parseInt((value), 10);", "Math.trunc(Number((value)));"),
+        (
+            "Number.parseInt((value), 10);",
+            "Math.trunc(Number((value)));",
+        ),
     ];
 
-    Tester::new(PreferNumberCoercion::NAME, PreferNumberCoercion::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        PreferNumberCoercion::NAME,
+        PreferNumberCoercion::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

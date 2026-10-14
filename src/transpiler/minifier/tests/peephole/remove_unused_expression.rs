@@ -28,7 +28,10 @@ fn test_remove_unused_expression() {
 
 #[test]
 fn test_remove_unused_optional_chain_keeps_base_side_effects() {
-    test("let log = []; (log.push('base'), null)?.x;", "[].push('base')");
+    test(
+        "let log = []; (log.push('base'), null)?.x;",
+        "[].push('base')",
+    );
 }
 
 #[test]
@@ -46,7 +49,10 @@ fn test_remove_unused_this() {
     );
 
     // Non-derived constructors always have `this` initialized — safe to drop.
-    test("export class Foo { constructor() { this; } }", "export class Foo { constructor() {} }");
+    test(
+        "export class Foo { constructor() { this; } }",
+        "export class Foo { constructor() {} }",
+    );
     // Derived constructor, but `this` is after `super()` — safe to drop.
     test(
         "export class Foo extends Bar { constructor() { super(); this; } }",
@@ -98,12 +104,30 @@ fn test_remove_unused_this() {
 
     // In all other positions `this` is always initialized and can be dropped.
     test("{ this; }", "");
-    test("export class Foo { foo() { this; } }", "export class Foo { foo() {} }");
-    test("export class Foo { static foo() { this; } }", "export class Foo { static foo() {} }");
-    test("export class Foo { static { this; } }", "export class Foo {}");
-    test("export function foo() { this; }", "export function foo() {}");
-    test("export class Foo { get bar() { this; } }", "export class Foo { get bar() {} }");
-    test("export class Foo { set bar(v) { this; } }", "export class Foo { set bar(v) {} }");
+    test(
+        "export class Foo { foo() { this; } }",
+        "export class Foo { foo() {} }",
+    );
+    test(
+        "export class Foo { static foo() { this; } }",
+        "export class Foo { static foo() {} }",
+    );
+    test(
+        "export class Foo { static { this; } }",
+        "export class Foo {}",
+    );
+    test(
+        "export function foo() { this; }",
+        "export function foo() {}",
+    );
+    test(
+        "export class Foo { get bar() { this; } }",
+        "export class Foo { get bar() {} }",
+    );
+    test(
+        "export class Foo { set bar(v) { this; } }",
+        "export class Foo { set bar(v) {} }",
+    );
 }
 
 #[test]
@@ -269,7 +293,10 @@ fn test_fold_sequence_expr() {
     test("(() => {}, bar(), baz())", "bar(), baz()");
     test("(function k() {}, k(), baz())", "k(), baz()");
     test_same("(0, o.f)();");
-    test("var obj = Object((null, 2, 3), 1, 2);", "var obj = Object(3, 1, 2);");
+    test(
+        "var obj = Object((null, 2, 3), 1, 2);",
+        "var obj = Object(3, 1, 2);",
+    );
     test_same("(0 instanceof 0, foo)");
     test_same("(0 in 0, foo)");
     test_same(
@@ -279,12 +306,24 @@ fn test_fold_sequence_expr() {
 
 #[test]
 fn test_logical_expression() {
-    test("v = function(a) { a != null && a.b() }", "v = function(a) { a?.b() }");
-    test("v = function(a) { a == null || a.b() }", "v = function(a) { a?.b() }");
+    test(
+        "v = function(a) { a != null && a.b() }",
+        "v = function(a) { a?.b() }",
+    );
+    test(
+        "v = function(a) { a == null || a.b() }",
+        "v = function(a) { a?.b() }",
+    );
     test_same("a != null && a.b()"); // a may have a getter
     test_same("a == null || a.b()"); // a may have a getter
-    test("v = function(a) { null != a && a.b() }", "v = function(a) { a?.b() }");
-    test("v = function(a) { null == a || a.b() }", "v = function(a) { a?.b() }");
+    test(
+        "v = function(a) { null != a && a.b() }",
+        "v = function(a) { a?.b() }",
+    );
+    test(
+        "v = function(a) { null == a || a.b() }",
+        "v = function(a) { a?.b() }",
+    );
 
     test("x == null && y", "x ?? y");
     test("x != null || y", "x ?? y");
@@ -298,8 +337,14 @@ fn test_logical_expression() {
 
     // https://github.com/oxc-project/oxc/pull/16802#discussion_r2619369597
     // Don't transform to ??= when base object may be mutated, but ?? is safe
-    test("var x = {}; x.y != null || (x = {}, x.y = 3)", "var x = {}; x.y ?? (x = {}, x.y = 3)");
-    test("var x = {}; x.y == null && (x = {}, x.y = 3)", "var x = {}; x.y ?? (x = {}, x.y = 3)");
+    test(
+        "var x = {}; x.y != null || (x = {}, x.y = 3)",
+        "var x = {}; x.y ?? (x = {}, x.y = 3)",
+    );
+    test(
+        "var x = {}; x.y == null && (x = {}, x.y = 3)",
+        "var x = {}; x.y ?? (x = {}, x.y = 3)",
+    );
     test(
         "var x = {}; x.y != null || (a, x = {}, x.y = 3)",
         "var x = {}; x.y ?? (a, x = {}, x.y = 3)",
@@ -313,10 +358,19 @@ fn test_logical_expression() {
         "import { x, mutate } from 'm'; x.y ?? (mutate(), x.y = 3)",
     );
     // Safe to transform to ??= when base object is not mutated
-    test("var x = {}; x.y != null || (foo(), x.y = 3)", "var x = {}; x.y ??= (foo(), 3)");
-    test("var x = {}; x.y != null || (new Foo(), x.y = 3)", "var x = {}; x.y ??= (new Foo(), 3)");
+    test(
+        "var x = {}; x.y != null || (foo(), x.y = 3)",
+        "var x = {}; x.y ??= (foo(), 3)",
+    );
+    test(
+        "var x = {}; x.y != null || (new Foo(), x.y = 3)",
+        "var x = {}; x.y ??= (new Foo(), 3)",
+    );
     // x is not mutated, only x.y.z is assigned (doesn't affect x)
-    test("var x = {}; x.y != null || (x.y.z = {}, x.y = 3)", "var x = {}; x.y ??= (x.y.z = {}, 3)");
+    test(
+        "var x = {}; x.y != null || (x.y.z = {}, x.y = 3)",
+        "var x = {}; x.y ??= (x.y.z = {}, 3)",
+    );
 
     test("typeof x != 'undefined' && x", "");
     test("typeof x == 'undefined' || x", "");
@@ -417,9 +471,18 @@ fn test_fold_conditional_expression() {
 #[test]
 fn test_fold_binary_expression() {
     test("v = function(a, b) { a === b }", "v = function(a, b) {}");
-    test("v = function(a, b) { a() === b }", "v = function(a, b) { a() }");
-    test("v = function(a, b) { a === b() }", "v = function(a, b) { b() }");
-    test("v = function(a, b) { a() === b() }", "v = function(a, b) { a(), b() }");
+    test(
+        "v = function(a, b) { a() === b }",
+        "v = function(a, b) { a() }",
+    );
+    test(
+        "v = function(a, b) { a === b() }",
+        "v = function(a, b) { b() }",
+    );
+    test(
+        "v = function(a, b) { a() === b() }",
+        "v = function(a, b) { a(), b() }",
+    );
 
     test("v = function(a, b) { a !== b }", "v = function(a, b) {}");
     test("v = function(a, b) { a == b }", "v = function(a, b) {}");
@@ -430,12 +493,24 @@ fn test_fold_binary_expression() {
     test("v = function(a, b) { a >= b }", "v = function(a, b) {}");
 
     test_same("v = function(a, b) { a + b }");
-    test("v = function(a, b) { 'a' + b }", "v = function(a, b) { '' + b }");
+    test(
+        "v = function(a, b) { 'a' + b }",
+        "v = function(a, b) { '' + b }",
+    );
     test_same("v = function(a, b) { a + '' + b }");
-    test("v = function(a, b, c) { 'a' + (b === c) }", "v = function(a, b, c) {}");
-    test("v = function(a, b) { 'a' + +b }", "v = function(a, b) { '' + +b }"); // can be improved to `+b`
+    test(
+        "v = function(a, b, c) { 'a' + (b === c) }",
+        "v = function(a, b, c) {}",
+    );
+    test(
+        "v = function(a, b) { 'a' + +b }",
+        "v = function(a, b) { '' + +b }",
+    ); // can be improved to `+b`
     test_same("v = function(a, b) { a + ('' + b) }");
-    test("v = function(a, b, c) { a + ('' + (b === c)) }", "v = function(a, b, c) { a + '' }");
+    test(
+        "v = function(a, b, c) { a + ('' + (b === c)) }",
+        "v = function(a, b, c) { a + '' }",
+    );
 
     test("0.1 + 0.2", "");
     test_same("v = function(a) { a + ('' + foo()) }");
@@ -483,7 +558,10 @@ fn test_fold_iife() {
     test("(() => { let b = a; return b() })()", "a();");
     test("(async () => {})()", "");
     test_same("(async () => { a() })()");
-    test("(async () => { let b = a; b() })()", "(async () => { a() })();");
+    test(
+        "(async () => { let b = a; b() })()",
+        "(async () => { a() })();",
+    );
     test("var a = (function() {})()", "var a = void 0;");
     test("a((() => b())());", "a(b())");
     test("a((() => true)());", "a(!0)");
@@ -523,7 +601,10 @@ fn test_fold_iife() {
 
     test("var a = /* @__PURE__ */ (() => x)()", "var a = x");
     test_same("var a = /* @__PURE__ */ (() => x)(y, z)");
-    test("(/* @__PURE__ */ (() => !0)() ? () => x() : () => {})();", "x();");
+    test(
+        "(/* @__PURE__ */ (() => !0)() ? () => x() : () => {})();",
+        "x();",
+    );
     test("/* @__PURE__ */ (() => x)()", "");
     test("/* @__PURE__ */ (() => { return x })()", "");
     test("/* @__PURE__ */ (() => x)(y, z)", "y, z;");
@@ -541,7 +622,10 @@ fn test_fold_iife() {
         "function foo(x) { return x && 42 }",
     );
     test("/* @__PURE__ */ (() => 42)()", "");
-    test("function foo() { /* @__PURE__ */ (() => 42)() }", "function foo() {}");
+    test(
+        "function foo() { /* @__PURE__ */ (() => 42)() }",
+        "function foo() {}",
+    );
     test(
         "function foo(x) { if (x) { return (/* @__PURE__ */ (() => 42)(), foo) } return x }",
         "function foo(x) { return x && foo }",
@@ -585,14 +669,24 @@ fn test_remove_side_effect_free_iife() {
     test("(function () { var x = 1; return x })()", "");
     test("(function () { let a = 1, b = 2; return a + b })()", "");
     test("(function () { return new.target })()", "");
-    test("(function () { if (1) { return 2 } else { return 3 } })()", "");
+    test(
+        "(function () { if (1) { return 2 } else { return 3 } })()",
+        "",
+    );
     test("(function foo() { return foo })()", "");
     // Args that are themselves side-effect-free drop with the call.
     test("(function (a, b) { return a })(1, 2)", "");
     test("(function (...rest) { return rest })()", "");
     // The exact issue reproduction: an unused `var` initialized by the IIFE.
-    let remove = CompressOptions { unused: CompressOptionsUnused::Remove, ..default_options() };
-    test_options("var unused = (function () { function test() {} return test })()", "", &remove);
+    let remove = CompressOptions {
+        unused: CompressOptionsUnused::Remove,
+        ..default_options()
+    };
+    test_options(
+        "var unused = (function () { function test() {} return test })()",
+        "",
+        &remove,
+    );
 
     // Negative cases — the call has real side effects and must be kept.
     test_same("(function () { sideEffect() })()"); // global call in body
@@ -641,18 +735,32 @@ fn no_side_effects() {
 #[test]
 fn treeshake_options_annotations_false() {
     let options = CompressOptions {
-        treeshake: TreeShakeOptions { annotations: false, ..TreeShakeOptions::default() },
+        treeshake: TreeShakeOptions {
+            annotations: false,
+            ..TreeShakeOptions::default()
+        },
         ..default_options()
     };
     test_same_options("function test() { bar } /* @__PURE__ */ test()", &options);
     test_same_options("function test() {} /* @__PURE__ */ new test()", &options);
 
     let options = CompressOptions {
-        treeshake: TreeShakeOptions { annotations: true, ..TreeShakeOptions::default() },
+        treeshake: TreeShakeOptions {
+            annotations: true,
+            ..TreeShakeOptions::default()
+        },
         ..default_options()
     };
-    test_options("function test() {} /* @__PURE__ */ test()", "function test() {}", &options);
-    test_options("function test() {} /* @__PURE__ */ new test()", "function test() {}", &options);
+    test_options(
+        "function test() {} /* @__PURE__ */ test()",
+        "function test() {}",
+        &options,
+    );
+    test_options(
+        "function test() {} /* @__PURE__ */ new test()",
+        "function test() {}",
+        &options,
+    );
 }
 
 #[test]
@@ -691,7 +799,10 @@ fn remove_unused_assignment_expression() {
     test_same_options("for (let i;;) foo(i)", &options);
     test_same_options("for (let i;;) i = 0, foo(i)", &options);
     test_same_options("for (let i in []) foo(i)", &options);
-    test_same_options("for (let element of list) element && (element.foo = bar)", &options);
+    test_same_options(
+        "for (let element of list) element && (element.foo = bar)",
+        &options,
+    );
     test_same_options("for (let key in obj) key && (obj[key] = bar)", &options);
 
     test_options("var a; ({ a: a } = {})", "var a; ({ a } = {})", &options);
@@ -753,7 +864,11 @@ fn remove_unused_class_expression() {
     test_options("(class { accessor [foo] = 1 })", "foo", &options);
 
     // order
-    test_options("(class extends A { [B] = C; [D]() {} })", "A, B, D", &options);
+    test_options(
+        "(class extends A { [B] = C; [D]() {} })",
+        "A, B, D",
+        &options,
+    );
     test_options("(class extends (A(), B) {})", "A(), B", &options);
 
     // decorators
@@ -795,7 +910,11 @@ fn test_property_write_side_effects() {
     // Assignment RHS with side effects: the RHS is hoisted, the write dropped
     // (same as the default path — see
     // `test_drop_write_only_property_assignments_by_default`).
-    test_options("function A() {} A.foo = sideEffect();", "sideEffect();", &options);
+    test_options(
+        "function A() {} A.foo = sideEffect();",
+        "sideEffect();",
+        &options,
+    );
 
     // Property assignment on global (not local binding) should be kept
     test_same_options("globalObj.foo = 1;", &options);
@@ -844,10 +963,16 @@ fn test_property_write_side_effects() {
     test_same_options("export function A() {} A.foo = 1;", &options);
 
     // Classes with static setters should NOT be dropped — setters trigger side effects
-    test_same_options("class A { static set foo(v) { console.log(v); } } A.foo = 1;", &options);
+    test_same_options(
+        "class A { static set foo(v) { console.log(v); } } A.foo = 1;",
+        &options,
+    );
 
     // Object literals with setters should NOT be dropped
-    test_same_options("const obj = { set foo(v) { console.log(v); } }; obj.foo = 1;", &options);
+    test_same_options(
+        "const obj = { set foo(v) { console.log(v); } }; obj.foo = 1;",
+        &options,
+    );
 
     // Class expression with static setter should NOT be dropped
     test_same_options(
@@ -902,12 +1027,19 @@ fn test_property_write_side_effects() {
     );
 
     // Non-static setters are fine — property writes on the class itself won't trigger them
-    test_options("class A { set foo(v) { console.log(v); } } A.bar = 1;", "", &options);
+    test_options(
+        "class A { set foo(v) { console.log(v); } } A.bar = 1;",
+        "",
+        &options,
+    );
 
     // A static getter (get-only) makes a write to its key throw in strict mode,
     // so a class with any static accessor is no longer treated as a fresh value —
     // its writes are kept (conservative for an unrelated key like `bar`, sound).
-    test_same_options("class A { static get foo() { return 1; } } A.bar = 1;", &options);
+    test_same_options(
+        "class A { static get foo() { return 1; } } A.bar = 1;",
+        &options,
+    );
 
     // __proto__ assignment can install setters that make subsequent property writes
     // side-effectful. When both __proto__ write and property write exist, preserve all.
@@ -981,8 +1113,10 @@ fn test_property_write_side_effects() {
 
     // Default options (property_write_side_effects: true) also drop these now —
     // see `test_drop_write_only_property_assignments_by_default`.
-    let default_opts =
-        CompressOptions { unused: CompressOptionsUnused::Remove, ..CompressOptions::smallest() };
+    let default_opts = CompressOptions {
+        unused: CompressOptionsUnused::Remove,
+        ..CompressOptions::smallest()
+    };
     test_options("function A() {} A.from = () => {};", "", &default_opts);
 }
 
@@ -1028,10 +1162,16 @@ fn test_drop_write_only_property_assignments_by_default() {
     test_same_smallest("var o = {}; o[k()] = 1;");
     test_same_smallest("var o = {}; o[b] = 1;");
     test_same_smallest("var o = {}; o.__proto__ = x;");
-    test_smallest("var o = {}; o['__proto__'] = x;", "var o = {}; o.__proto__ = x;");
+    test_smallest(
+        "var o = {}; o['__proto__'] = x;",
+        "var o = {}; o.__proto__ = x;",
+    );
 
     // Escapes: any non-member-write use of the binding blocks the drop.
-    test_smallest("var o = {}; o.x = 1; use(o);", "var o = {}; o.x = 1, use(o);");
+    test_smallest(
+        "var o = {}; o.x = 1; use(o);",
+        "var o = {}; o.x = 1, use(o);",
+    );
     test_same_smallest("var o = {}; o.x = o;");
     test_same_smallest("var o = {}; o.x = () => o;");
     test_same_smallest("export var o = {}; o.x = 1;");
@@ -1045,16 +1185,25 @@ fn test_drop_write_only_property_assignments_by_default() {
         "var o = {}; o.x = { valueOf: f }, o.x += 1;",
     );
     test_same_smallest("var o = {}; o.x += 1;");
-    test_smallest("var o = {}; o.y ||= 2; o.x = 1;", "var o = {}; o.y ||= 2, o.x = 1;");
+    test_smallest(
+        "var o = {}; o.y ||= 2; o.x = 1;",
+        "var o = {}; o.y ||= 2, o.x = 1;",
+    );
     test_smallest("var o = {}; o.x++; o.y = 1;", "var o = {}; o.x++, o.y = 1;");
     // Formed-compound staleness: the loop rewrites `o.y = o.y + 1` to
     // `o.y += 1` (dropping the plain read that blocked the counts predicate);
     // the hazard set must still block the sibling plain write.
-    test_smallest("var o = {}; o.x = evil; o.y = o.y + 1;", "var o = {}; o.x = evil, o.y += 1;");
+    test_smallest(
+        "var o = {}; o.x = evil; o.y = o.y + 1;",
+        "var o = {}; o.x = evil, o.y += 1;",
+    );
 
     // Chained-write base (hazard): dropping `a.b = {}` while `a.b.c = 1`
     // survives would throw at runtime.
-    test_smallest("var a = {}; a.b = {}; a.b.c = 1;", "var a = {}; a.b = {}, a.b.c = 1;");
+    test_smallest(
+        "var a = {}; a.b = {}; a.b.c = 1;",
+        "var a = {}; a.b = {}, a.b.c = 1;",
+    );
 
     // `__proto__` write in a hoisted function runs before the property write —
     // the hazard scan is execution-order independent because `Normalize` seeds
@@ -1066,9 +1215,15 @@ fn test_drop_write_only_property_assignments_by_default() {
 
     // Single-level `delete` neither reads the property nor triggers setters:
     // the plain write drops, the delete stays.
-    test_smallest("var o = {}; o.x = 1; delete o.x;", "var o = {}; delete o.x;");
+    test_smallest(
+        "var o = {}; o.x = 1; delete o.x;",
+        "var o = {}; delete o.x;",
+    );
     // Chained delete reads the intermediate object — everything stays.
-    test_smallest("var a = {}; a.b = {}; delete a.b.c;", "var a = {}; a.b = {}, delete a.b.c;");
+    test_smallest(
+        "var a = {}; a.b = {}; delete a.b.c;",
+        "var a = {}; a.b = {}, delete a.b.c;",
+    );
 
     // Setter observation via the object itself: not a fresh value.
     test_same_smallest("class A { static set foo(v) { console.log(v); } } A.foo = 1;");

@@ -83,7 +83,10 @@ impl Rule for NoUselessCatch {
                     throw_stmt.span,
                 ));
             } else {
-                ctx.diagnostic(no_useless_catch_diagnostic(binding_ident.span, throw_stmt.span));
+                ctx.diagnostic(no_useless_catch_diagnostic(
+                    binding_ident.span,
+                    throw_stmt.span,
+                ));
             }
         }
     }

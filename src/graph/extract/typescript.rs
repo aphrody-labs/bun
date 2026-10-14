@@ -574,7 +574,11 @@ impl<'a> Visit<'a> for Identifiers<'_> {
 /// Byte spans of every identifier token spelled `name` in a JS/TS source (bindings, references,
 /// property and member names, labels, JSX names), sorted and deduplicated; strings, comments and
 /// template text never match. `rel_path` picks the dialect from its extension.
-pub fn identifier_spans(rel_path: &str, source: &str, name: &str) -> core::result::Result<Vec<(usize, usize)>, String> {
+pub fn identifier_spans(
+    rel_path: &str,
+    source: &str,
+    name: &str,
+) -> core::result::Result<Vec<(usize, usize)>, String> {
     let types = parse_source_types(rel_path);
     if types.is_empty() {
         return Err(format!("{rel_path}: not a JavaScript or TypeScript file"));
@@ -585,17 +589,27 @@ pub fn identifier_spans(rel_path: &str, source: &str, name: &str) -> core::resul
         let parsed = Parser::new(&allocator, source, source_type).parse();
         if parsed.fatal_error || parsed.diagnostics.errors().next().is_some() {
             if first_error.is_none() {
-                first_error = parsed.diagnostics.errors().next().map(|error| error.message.to_string());
+                first_error = parsed
+                    .diagnostics
+                    .errors()
+                    .next()
+                    .map(|error| error.message.to_string());
             }
             continue;
         }
-        let mut found = Identifiers { name, spans: Vec::new() };
+        let mut found = Identifiers {
+            name,
+            spans: Vec::new(),
+        };
         found.visit_program(&parsed.program);
         found.spans.sort_unstable();
         found.spans.dedup();
         return Ok(found.spans);
     }
-    Err(format!("{rel_path}: Oxc could not parse the file: {}", first_error.unwrap_or_default()))
+    Err(format!(
+        "{rel_path}: Oxc could not parse the file: {}",
+        first_error.unwrap_or_default()
+    ))
 }
 
 #[cfg(test)]

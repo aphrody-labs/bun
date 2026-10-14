@@ -124,11 +124,17 @@ fn run<'a>(
         return;
     };
 
-    if matches!(jest_fn_call.kind, JestFnKind::General(JestGeneralFnKind::Describe)) {
+    if matches!(
+        jest_fn_call.kind,
+        JestFnKind::General(JestGeneralFnKind::Describe)
+    ) {
         hook_contexts.insert(node.id(), Vec::default());
     }
 
-    if !matches!(jest_fn_call.kind, JestFnKind::General(JestGeneralFnKind::Hook)) {
+    if !matches!(
+        jest_fn_call.kind,
+        JestFnKind::General(JestGeneralFnKind::Hook)
+    ) {
         return;
     }
 

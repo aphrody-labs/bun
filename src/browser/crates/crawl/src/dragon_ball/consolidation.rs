@@ -78,11 +78,13 @@ pub fn consolidate_bxc(
             ];
             let projection = fields
                 .iter()
-                .map(
-                    |field| {
-                        if columns.iter().any(|column| column == field) { *field } else { "NULL" }
-                    },
-                )
+                .map(|field| {
+                    if columns.iter().any(|column| column == field) {
+                        *field
+                    } else {
+                        "NULL"
+                    }
+                })
                 .collect::<Vec<_>>()
                 .join(",");
             let mut query = source
@@ -91,7 +93,9 @@ pub fn consolidate_bxc(
             let mut rows = query.query([]).map_err(|error| error.to_string())?;
             while let Some(row) = rows.next().map_err(|error| error.to_string())? {
                 let url: Option<String> = row.get(0).map_err(|error| error.to_string())?;
-                let Some(url) = url.filter(|url| !url.is_empty()) else { continue };
+                let Some(url) = url.filter(|url| !url.is_empty()) else {
+                    continue;
+                };
                 let metadata: Option<String> = row.get(4).map_err(|error| error.to_string())?;
                 let mut metadata_value = metadata
                     .as_deref()
@@ -108,7 +112,9 @@ pub fn consolidate_bxc(
         }
         transaction.execute_batch("INSERT INTO scrapes_fts(rowid,url,title,markdown) SELECT id,url,coalesce(json_extract(metadata,'$.title'),''),coalesce(markdown,'') FROM scrapes;").map_err(|error|error.to_string())?;
         let records = transaction
-            .query_row("SELECT count(*) FROM scrapes", [], |row| row.get::<_, i64>(0))
+            .query_row("SELECT count(*) FROM scrapes", [], |row| {
+                row.get::<_, i64>(0)
+            })
             .map_err(|error| error.to_string())?;
         let records = usize::try_from(records).map_err(|error| error.to_string())?;
         transaction.commit().map_err(|error| error.to_string())?;
@@ -142,8 +148,10 @@ mod tests {
     use super::*;
     #[test]
     fn raw_consolidation_preserves_original_fields_and_source_databases() {
-        let dir = std::env::temp_dir()
-            .join(format!("aphrody-dragon-ball-consolidation-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!(
+            "aphrody-dragon-ball-consolidation-{}",
+            std::process::id()
+        ));
         std::fs::create_dir_all(&dir).unwrap();
         let input = dir.join("source.sqlite");
         let source = Connection::open(&input).unwrap();
@@ -158,7 +166,9 @@ mod tests {
         let db = Connection::open_with_flags(&report.database, OpenFlags::SQLITE_OPEN_READ_ONLY)
             .unwrap();
         assert_eq!(
-            db.query_row("SELECT vector FROM scrapes", [], |row| row.get::<_, String>(0)).unwrap(),
+            db.query_row("SELECT vector FROM scrapes", [], |row| row
+                .get::<_, String>(0))
+                .unwrap(),
             "vector2"
         );
         assert!(consolidate_bxc(&[input], &dir.join("merged")).is_err());

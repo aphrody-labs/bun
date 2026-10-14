@@ -309,9 +309,15 @@ fn transform<'a>(
 
                     // Output leading lines and import line
                     for line in &sorted_import.leading_lines {
-                        line.write(prev_elements, &mut next_elements, options.partition_by_newline);
+                        line.write(
+                            prev_elements,
+                            &mut next_elements,
+                            options.partition_by_newline,
+                        );
                     }
-                    sorted_import.import_line.write(prev_elements, &mut next_elements, false);
+                    sorted_import
+                        .import_line
+                        .write(prev_elements, &mut next_elements, false);
 
                     // Output orphan content that belongs after this slot
                     for orphan in &orphan_contents {
@@ -344,15 +350,20 @@ fn transform<'a>(
                 //
                 // import C from "c"; // chunk2
                 // ```
-                let next_chunk_is_boundary =
-                    chunks_iter.peek().is_some_and(|c| matches!(c, PartitionedChunk::Boundary(_)));
+                let next_chunk_is_boundary = chunks_iter
+                    .peek()
+                    .is_some_and(|c| matches!(c, PartitionedChunk::Boundary(_)));
                 for (idx, line) in trailing_lines.iter().enumerate() {
                     let is_last_empty_line =
                         idx == trailing_lines.len() - 1 && matches!(line, SourceLine::Empty);
                     line.write(
                         prev_elements,
                         &mut next_elements,
-                        if is_last_empty_line { next_chunk_is_boundary } else { true },
+                        if is_last_empty_line {
+                            next_chunk_is_boundary
+                        } else {
+                            true
+                        },
                     );
                 }
             }
@@ -396,7 +407,11 @@ fn should_insert_newline_between(
     }
 
     for idx in prev_group_idx..current_group_idx {
-        if newline_boundary_overrides.get(idx).copied().flatten().unwrap_or(global_newlines_between)
+        if newline_boundary_overrides
+            .get(idx)
+            .copied()
+            .flatten()
+            .unwrap_or(global_newlines_between)
         {
             return true;
         }

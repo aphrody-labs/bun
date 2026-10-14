@@ -91,7 +91,11 @@ fn test_ts(source_text: &str, expected: bool) {
     let Some(Statement::ExpressionStatement(stmt)) = &ret.program.body.first() else {
         panic!("should have a expression statement body: {source_text}");
     };
-    assert_eq!(stmt.expression.may_have_side_effects(&ctx), expected, "{source_text}");
+    assert_eq!(
+        stmt.expression.may_have_side_effects(&ctx),
+        expected,
+        "{source_text}"
+    );
 }
 
 #[track_caller]
@@ -110,7 +114,10 @@ fn test_with_global_variables(
 #[track_caller]
 fn test_with_target(source_text: &str, target: &str, expected: bool) {
     let target = EngineTargets::from_target(target).unwrap();
-    let ctx = Ctx { target: Some(target), ..Default::default() };
+    let ctx = Ctx {
+        target: Some(target),
+        ..Default::default()
+    };
     test_with_ctx(source_text, &ctx, expected);
 }
 
@@ -124,7 +131,11 @@ fn test_with_ctx(source_text: &str, ctx: &Ctx, expected: bool) {
     let Some(Statement::ExpressionStatement(stmt)) = &ret.program.body.first() else {
         panic!("should have a expression statement body: {source_text}");
     };
-    assert_eq!(stmt.expression.may_have_side_effects(ctx), expected, "{source_text}");
+    assert_eq!(
+        stmt.expression.may_have_side_effects(ctx),
+        expected,
+        "{source_text}"
+    );
 }
 
 #[track_caller]
@@ -138,13 +149,21 @@ fn test_in_function(source_text: &str, expected: bool) {
     let Some(Statement::FunctionDeclaration(stmt)) = &ret.program.body.first() else {
         panic!("should have a function declaration: {source_text}");
     };
-    let Some(Statement::ExpressionStatement(stmt)) =
-        &stmt.body.as_ref().expect("should have a body").statements.first()
+    let Some(Statement::ExpressionStatement(stmt)) = &stmt
+        .body
+        .as_ref()
+        .expect("should have a body")
+        .statements
+        .first()
     else {
         panic!("should have a expression statement body: {source_text}");
     };
 
-    assert_eq!(stmt.expression.may_have_side_effects(&ctx), expected, "{source_text}");
+    assert_eq!(
+        stmt.expression.may_have_side_effects(&ctx),
+        expected,
+        "{source_text}"
+    );
 }
 
 #[track_caller]
@@ -175,7 +194,11 @@ fn test_assign_target_with_global_variables(
         panic!("should have a assignment expression: {source_text}");
     };
 
-    assert_eq!(assign_expr.left.may_have_side_effects(&ctx), expected, "{source_text}");
+    assert_eq!(
+        assign_expr.left.may_have_side_effects(&ctx),
+        expected,
+        "{source_text}"
+    );
 }
 
 /// <https://github.com/google/closure-compiler/blob/v20240609/test/com/google/javascript/jscomp/AstAnalyzerTest.java#L362>
@@ -718,7 +741,10 @@ fn test_binary_expressions() {
     test("0n >>> 1n", true); // `>>>` throws an error even when both operands are bigint
 
     test("[] instanceof 1", true); // throws an error
-    test("[] instanceof { [Symbol.hasInstance]() { throw 'foo' } }", true);
+    test(
+        "[] instanceof { [Symbol.hasInstance]() { throw 'foo' } }",
+        true,
+    );
     test("[] instanceof Object", false);
     test("a instanceof Object", true); // a maybe a proxy that has a side effectful "getPrototypeOf" trap
 
@@ -738,8 +764,14 @@ fn test_object_expression() {
     test("({[1n]: 1})", false);
     test("({['1']: 1})", false);
     // These actually have a side effect, but this treated as side-effect free.
-    test("({[{ toString() { console.log('sideeffect') } }]: 1})", false);
-    test("({[{ valueOf() { console.log('sideeffect') } }]: 1})", false);
+    test(
+        "({[{ toString() { console.log('sideeffect') } }]: 1})",
+        false,
+    );
+    test(
+        "({[{ valueOf() { console.log('sideeffect') } }]: 1})",
+        false,
+    );
     test("({[{ [s]() { console.log('sideeffect') } }]: 1})", false); // assuming s is Symbol.toPrimitive
     test("({[foo]: 1})", false);
     test("({[foo()]: 1 })", true);
@@ -1434,9 +1466,15 @@ fn test_call_like_expressions() {
     test("/* #__PURE__ */ new Foo(...`${1}`)", false);
     test("/* #__PURE__ */ new Foo(...`${bar}`)", true);
     test("/* #__PURE__ */ new Foo(...`${bar()}`)", true);
-    test("/* #__PURE__ */ new class { constructor() { foo() } }()", false);
+    test(
+        "/* #__PURE__ */ new class { constructor() { foo() } }()",
+        false,
+    );
 
-    let ctx = Ctx { annotation: false, ..Default::default() };
+    let ctx = Ctx {
+        annotation: false,
+        ..Default::default()
+    };
     test_with_ctx("/* #__PURE__ */ foo()", &ctx, true);
     test_with_ctx("/* #__PURE__ */ new Foo()", &ctx, true);
 }
@@ -1463,12 +1501,18 @@ fn test_is_pure_call_support() {
 
 #[test]
 fn test_manual_pure_functions_with_dotted_names() {
-    let ctx = Ctx { pure_function_names: vec!["console".to_string()], ..Default::default() };
+    let ctx = Ctx {
+        pure_function_names: vec!["console".to_string()],
+        ..Default::default()
+    };
     test_with_ctx("console()", &ctx, false);
     test_with_ctx("console.log()", &ctx, false);
     test_with_ctx("console.log(bar())", &ctx, true);
     test_with_ctx("other.log()", &ctx, true);
-    let ctx = Ctx { pure_function_names: vec!["console.log".to_string()], ..Default::default() };
+    let ctx = Ctx {
+        pure_function_names: vec!["console.log".to_string()],
+        ..Default::default()
+    };
     test_with_ctx("console.log()", &ctx, false);
     test_with_ctx("console.warn()", &ctx, true);
     test_with_ctx("console.log.foo()", &ctx, false);
@@ -1476,10 +1520,14 @@ fn test_manual_pure_functions_with_dotted_names() {
 
 #[test]
 fn test_property_read_side_effects_support() {
-    let all_ctx =
-        Ctx { property_read_side_effects: PropertyReadSideEffects::All, ..Default::default() };
-    let none_ctx =
-        Ctx { property_read_side_effects: PropertyReadSideEffects::None, ..Default::default() };
+    let all_ctx = Ctx {
+        property_read_side_effects: PropertyReadSideEffects::All,
+        ..Default::default()
+    };
+    let none_ctx = Ctx {
+        property_read_side_effects: PropertyReadSideEffects::None,
+        ..Default::default()
+    };
 
     test_with_ctx("foo.bar", &all_ctx, true);
     test_with_ctx("foo.bar", &none_ctx, false);
@@ -1545,7 +1593,10 @@ fn test_object_with_to_primitive_related_properties_overridden() {
     test("+{ ...`foo${foo()}` }", true);
     test("+{ ...{ toString() { return Symbol() } } }", true);
     test("+{ ...{ valueOf() { return Symbol() } } }", true);
-    test("+{ ...{ [Symbol.toPrimitive]() { return Symbol() } } }", true);
+    test(
+        "+{ ...{ [Symbol.toPrimitive]() { return Symbol() } } }",
+        true,
+    );
 }
 
 #[test]
@@ -1618,7 +1669,10 @@ fn test_assignment_targets() {
 #[test]
 fn test_property_write_side_effects_support() {
     // With property_write_side_effects: true (default), all writes have side effects
-    let write_ctx = Ctx { property_write_side_effects: true, ..Default::default() };
+    let write_ctx = Ctx {
+        property_write_side_effects: true,
+        ..Default::default()
+    };
     test_with_ctx("a.b = 1", &write_ctx, true);
     test_with_ctx("a.b += 1", &write_ctx, true);
     test_with_ctx("a.b++", &write_ctx, true);

@@ -1,5 +1,5 @@
 use bun_browser_browser::lifecycle::WaitUntil;
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 
 #[cfg(feature = "render")]
 use crate::dispatch::{ScreencastFormat, ScreencastState};
@@ -21,7 +21,7 @@ fn is_localhost(url: &url::Url) -> bool {
         Some(url::Host::Domain(host)) => {
             host.eq_ignore_ascii_case("localhost")
                 || host.to_ascii_lowercase().ends_with(".localhost")
-        },
+        }
         Some(url::Host::Ipv4(address)) => address.is_loopback(),
         Some(url::Host::Ipv6(address)) => address.is_loopback(),
         None => false,
@@ -51,7 +51,10 @@ pub(crate) fn frame_value(
         .as_ref()
         .map(|url| url.origin().ascii_serialization())
         .unwrap_or_else(|| "null".to_string());
-    let secure_context = parsed_url.as_ref().map(secure_context_type).unwrap_or("InsecureScheme");
+    let secure_context = parsed_url
+        .as_ref()
+        .map(secure_context_type)
+        .unwrap_or("InsecureScheme");
     let mut frame = json!({
         "id": id,
         "loaderId": loader_id,
@@ -77,14 +80,24 @@ fn child_frame_value(page_frame_id: &str, frame: &bun_browser_js::frame::FrameRe
     } else {
         child_frame_id(page_frame_id, frame.parent_frame_id())
     };
-    frame_value(&id, Some(&parent_id), &format!("{id}-loader"), frame.url(), "text/html")
+    frame_value(
+        &id,
+        Some(&parent_id),
+        &format!("{id}-loader"),
+        frame.url(),
+        "text/html",
+    )
 }
 
 /// The page's child frames, flattened with each parent ahead of its children
 /// so an attach event never names a parent the client has not seen yet.
 pub fn child_frame_values(page: &bun_browser_browser::Page) -> Vec<Value> {
     fn walk(page: &bun_browser_browser::Page, parent_frame_id: u32, out: &mut Vec<Value>) {
-        for frame in page.frames.iter().filter(|frame| frame.parent_frame_id() == parent_frame_id) {
+        for frame in page
+            .frames
+            .iter()
+            .filter(|frame| frame.parent_frame_id() == parent_frame_id)
+        {
             out.push(child_frame_value(&page.frame_id, frame));
             walk(page, frame.frame_id(), out);
         }
@@ -208,8 +221,11 @@ fn parse_screenshot_options(params: &Value) -> Result<ScreenshotOptions, String>
     };
     // Chromium accepts an int32 outside [0, 100], but deliberately falls back
     // to its default quality instead of rejecting the request.
-    let quality =
-        if (0..=100).contains(&quality) { quality } else { DEFAULT_SCREENSHOT_QUALITY } as u8;
+    let quality = if (0..=100).contains(&quality) {
+        quality
+    } else {
+        DEFAULT_SCREENSHOT_QUALITY
+    } as u8;
 
     let clip = match params.get("clip") {
         None => None,
@@ -240,7 +256,7 @@ fn parse_screenshot_options(params: &Value) -> Result<ScreenshotOptions, String>
                 return Err("Cannot take screenshot with non-positive scale.".to_string());
             }
             Some(clip)
-        },
+        }
         Some(_) => return Err("Invalid parameters: clip must be an object".to_string()),
     };
 
@@ -260,16 +276,18 @@ fn capture_error_message(error: bun_browser_browser::CaptureError) -> String {
     match error {
         bun_browser_browser::CaptureError::InvalidRegion => {
             "Page.captureScreenshot received an invalid capture region".to_string()
-        },
+        }
         bun_browser_browser::CaptureError::AllocationLimitExceeded => {
             "Page.captureScreenshot bitmap is too large".to_string()
-        },
-        bun_browser_browser::CaptureError::PaintFailed => "Page.captureScreenshot failed: the page \
+        }
+        bun_browser_browser::CaptureError::PaintFailed => {
+            "Page.captureScreenshot failed: the page \
                                                        has no retained DOM surface to render"
-            .to_string(),
+                .to_string()
+        }
         bun_browser_browser::CaptureError::EncodeFailed => {
             "Page.captureScreenshot renderer PNG encoding failed".to_string()
-        },
+        }
     }
 }
 
@@ -355,15 +373,17 @@ fn encode_screenshot(
                     image::ExtendedColorType::Rgba8,
                 )
                 .map_err(|error| format!("PNG screenshot encoding failed: {error}"))?;
-        },
+        }
         ScreenshotFormat::Jpeg => {
             output = encode_jpeg(image, options.quality)?;
-        },
+        }
         ScreenshotFormat::Webp => {
             if options.quality_supplied {
-                return Err("WebP screenshot quality is not supported by the current lossless \
+                return Err(
+                    "WebP screenshot quality is not supported by the current lossless \
                             encoder"
-                    .to_string());
+                        .to_string(),
+                );
             }
             image::codecs::webp::WebPEncoder::new_lossless(&mut output)
                 .write_image(
@@ -373,7 +393,7 @@ fn encode_screenshot(
                     image::ExtendedColorType::Rgba8,
                 )
                 .map_err(|error| format!("WebP screenshot encoding failed: {error}"))?;
-        },
+        }
     }
     Ok(output)
 }
@@ -446,8 +466,10 @@ fn encode_long_full_page_png(
     }
     // Keep each decoded strip materially below the renderer's absolute limit.
     // This leaves headroom for the encoder's scanlines and compressed output.
-    let target_output_rows =
-        max_output_rows.min(native_bounded_output_rows).min(4096).max(1) as u32;
+    let target_output_rows = max_output_rows
+        .min(native_bounded_output_rows)
+        .min(4096)
+        .max(1) as u32;
 
     let mut encoded = Vec::new();
     let mut encoder = png::Encoder::new(&mut encoded, output_width, output_height);
@@ -466,7 +488,9 @@ fn encode_long_full_page_png(
         })?;
         let mut output_y = 0u32;
         while output_y < output_height {
-            let next_output_y = output_y.saturating_add(target_output_rows).min(output_height);
+            let next_output_y = output_y
+                .saturating_add(target_output_rows)
+                .min(output_height);
             // Derive document-space boundaries from global output rows. The
             // neighboring strips therefore share the exact same rounded edge,
             // rather than accumulating independent per-strip rounding error.
@@ -561,14 +585,19 @@ fn parse_screencast_state(params: &Value, session_id: i64) -> Result<ScreencastS
         Some(Value::String(value)) if value == "jpeg" => ScreencastFormat::Jpeg,
         Some(Value::String(_)) => {
             return Err("Invalid parameters: screencast format must be png or jpeg".into());
-        },
+        }
         Some(_) => return Err("Invalid parameters: format must be a string".into()),
     };
     let quality = screencast_int32(params, "quality")?.unwrap_or(DEFAULT_SCREENSHOT_QUALITY);
-    let quality =
-        if (0..=100).contains(&quality) { quality } else { DEFAULT_SCREENSHOT_QUALITY } as u8;
+    let quality = if (0..=100).contains(&quality) {
+        quality
+    } else {
+        DEFAULT_SCREENSHOT_QUALITY
+    } as u8;
     let dimension = |name: &str| -> Result<Option<u32>, String> {
-        Ok(screencast_int32(params, name)?.filter(|value| *value > 0).map(|value| value as u32))
+        Ok(screencast_int32(params, name)?
+            .filter(|value| *value > 0)
+            .map(|value| value as u32))
     };
     let every_nth_frame = screencast_int32(params, "everyNthFrame")?.unwrap_or(1);
     if every_nth_frame <= 0 {
@@ -628,11 +657,16 @@ fn resize_screencast_frame(
     output: (u32, u32),
 ) -> Result<image::RgbaImage, String> {
     use fast_image_resize::{
-        FilterType, PixelType, ResizeAlg, ResizeOptions, Resizer,
         images::{Image, ImageRef},
+        FilterType, PixelType, ResizeAlg, ResizeOptions, Resizer,
     };
-    let source = ImageRef::new(raster.width(), raster.height(), raster.as_raw(), PixelType::U8x4)
-        .map_err(|error| error.to_string())?;
+    let source = ImageRef::new(
+        raster.width(),
+        raster.height(),
+        raster.as_raw(),
+        PixelType::U8x4,
+    )
+    .map_err(|error| error.to_string())?;
     let mut destination = Image::new(output.0, output.1, PixelType::U8x4);
     // Adaptive bilinear convolution matches image's Triangle downsampling.
     // Keep its existing RGBA-channel policy, including transparent PNG frames.
@@ -698,7 +732,9 @@ pub(crate) fn queue_screencast_frame(
     };
     let attached_session = Some(cdp_session_id.to_string());
     let (viewport, scroll, raster, activity_generation) = {
-        let page = ctx.get_session_page_mut(&attached_session).ok_or("No page for session")?;
+        let page = ctx
+            .get_session_page_mut(&attached_session)
+            .ok_or("No page for session")?;
         let animation_sample = page.live_animation_sample();
         let viewport = page.viewport;
         let scroll = page.screenshot_scroll_offset();
@@ -711,7 +747,11 @@ pub(crate) fn queue_screencast_frame(
         } else {
             resize_screencast_frame(&raster, output)?
         };
-        let activity_generation = page.js.as_ref().map(|js| js.activity_generation()).unwrap_or(0);
+        let activity_generation = page
+            .js
+            .as_ref()
+            .map(|js| js.activity_generation())
+            .unwrap_or(0);
         (viewport, scroll, raster, activity_generation)
     };
     let encoded = encode_screencast_frame(&raster, &state)?;
@@ -812,8 +852,9 @@ pub(crate) fn command_can_change_screencast_frame(method: &str) -> bool {
 
 #[cfg(feature = "render")]
 pub(crate) fn schedule_screencast_frame(ctx: &mut CdpContext, cdp_session_id: &Option<String>) {
-    if let Some(state) =
-        cdp_session_id.as_deref().and_then(|session_id| ctx.screencasts.get_mut(session_id))
+    if let Some(state) = cdp_session_id
+        .as_deref()
+        .and_then(|session_id| ctx.screencasts.get_mut(session_id))
     {
         state.autonomous_frame_pending = true;
     }
@@ -848,7 +889,8 @@ pub fn emit_navigation_events(
     reached_network_idle: bool,
 ) {
     let event_start = ctx.pending_events.len();
-    ctx.current_loader_ids.insert(page_id.to_string(), loader_id.to_string());
+    ctx.current_loader_ids
+        .insert(page_id.to_string(), loader_id.to_string());
     ctx.nav_events_emitted.insert(page_id.to_string());
     let es = session_id.clone();
     let ts = timestamp();
@@ -870,8 +912,9 @@ pub fn emit_navigation_events(
             })
             .collect()
     };
-    let nav_idx: Option<usize> =
-        network_events.iter().position(|ev| ev.resource_type == "Document" && ev.url == page_url);
+    let nav_idx: Option<usize> = network_events
+        .iter()
+        .position(|ev| ev.resource_type == "Document" && ev.url == page_url);
 
     // The main resource's body is stored under its internal request id, but the
     // client sees it as `loader_id` (the requestId we report above). Alias it so
@@ -989,7 +1032,12 @@ pub fn emit_navigation_events(
             });
         }
         if let Some(error_text) = &net_event.error_text {
-            ctx.pending_events.push(network_loading_failed(net_event, rid, es.clone(), error_text));
+            ctx.pending_events.push(network_loading_failed(
+                net_event,
+                rid,
+                es.clone(),
+                error_text,
+            ));
             continue;
         }
         ctx.pending_events.push(CdpEvent {
@@ -1008,7 +1056,10 @@ pub fn emit_navigation_events(
     // document a compositor opportunity before publishing that boundary,
     // through the normal sampling and bounded acknowledgement window.
     #[cfg(feature = "render")]
-    if session_id.as_ref().is_some_and(|id| ctx.screencasts.contains_key(id)) {
+    if session_id
+        .as_ref()
+        .is_some_and(|id| ctx.screencasts.contains_key(id))
+    {
         schedule_screencast_frame(ctx, session_id);
         if let Err(error) = queue_screencast_frame(ctx, session_id, false) {
             tracing::warn!("could not produce navigation screencast frame: {error}");
@@ -1052,8 +1103,10 @@ pub fn emit_navigation_events(
     // attachedToTarget and only refresh it on this event. Without it they keep
     // reporting the pre-navigation url/title (about:blank) and never see the
     // loaded page. Emit it browser-level (no sessionId) with the new url/title.
-    let (tic_title, tic_ctx) =
-        ctx.get_page(page_id).map(|p| (p.title.clone(), p.context.id.clone())).unwrap_or_default();
+    let (tic_title, tic_ctx) = ctx
+        .get_page(page_id)
+        .map(|p| (p.title.clone(), p.context.id.clone()))
+        .unwrap_or_default();
     ctx.pending_events.push(CdpEvent::new(
         "Target.targetInfoChanged",
         json!({
@@ -1293,15 +1346,19 @@ async fn do_navigate(
         .map(|page| page.context.allow_file_access)
         .unwrap_or(ctx.default_context.allow_file_access);
     if url_is_file_scheme(url) && !allow_file_access {
-        return Err("Page.navigate to file:// is disabled. Restart with `bun_browser serve \
+        return Err(
+            "Page.navigate to file:// is disabled. Restart with `bun_browser serve \
                     --allow-file-access` to enable."
-            .to_string());
+                .to_string(),
+        );
     }
 
     let preload_scripts: Vec<String> = ctx.preload_scripts.iter().map(|(_, s)| s.clone()).collect();
 
     let (frame_id, loader_id, network_events, page_url, page_id, reached_network_idle) = {
-        let page = ctx.get_session_page_mut(session_id).ok_or("No page for session")?;
+        let page = ctx
+            .get_session_page_mut(session_id)
+            .ok_or("No page for session")?;
         let frame_id = page.frame_id.clone();
         let loader_id = format!("loader-{}", uuid::Uuid::new_v4());
 
@@ -1310,14 +1367,19 @@ async fn do_navigate(
         // the page so navigate_single can inject them at the right point.
         page.set_preload_scripts(preload_scripts);
 
-        let nav_method = params.get("__method").and_then(|v| v.as_str()).unwrap_or("GET");
+        let nav_method = params
+            .get("__method")
+            .and_then(|v| v.as_str())
+            .unwrap_or("GET");
         let nav_body = params.get("__body").and_then(|v| v.as_str()).unwrap_or("");
         if nav_method == "POST" && !nav_body.is_empty() {
             page.navigate_with_wait_post(url, wait_until, nav_method, nav_body)
                 .await
                 .map_err(|e| e.to_string())?;
         } else {
-            page.navigate_with_wait(url, wait_until).await.map_err(|e| e.to_string())?;
+            page.navigate_with_wait(url, wait_until)
+                .await
+                .map_err(|e| e.to_string())?;
         }
 
         let reached_network_idle = page.lifecycle.is_network_idle();
@@ -1327,7 +1389,14 @@ async fn do_navigate(
         let network_events: Vec<_> = page.network_events.drain(..).collect();
         let page_url = page.url_string();
         let page_id = page.id.clone();
-        (frame_id, loader_id, network_events, page_url, page_id, reached_network_idle)
+        (
+            frame_id,
+            loader_id,
+            network_events,
+            page_url,
+            page_id,
+            reached_network_idle,
+        )
     };
 
     emit_navigation_events(
@@ -1427,11 +1496,14 @@ pub async fn handle(
                 ctx.pending_events.extend(events);
             }
             Ok(json!({}))
-        },
+        }
         "navigate" => {
-            let url = params.get("url").and_then(|v| v.as_str()).ok_or("url required")?;
+            let url = params
+                .get("url")
+                .and_then(|v| v.as_str())
+                .ok_or("url required")?;
             do_navigate(url, params, ctx, session_id).await
-        },
+        }
         "reload" => {
             let current_url = ctx
                 .get_session_page(session_id)
@@ -1441,19 +1513,23 @@ pub async fn handle(
                 "waitUntil": params.get("waitUntil").cloned().unwrap_or(json!("load"))
             });
             do_navigate(&current_url, &reload_params, ctx, session_id).await
-        },
+        }
         "getFrameTree" => {
-            let page = ctx.get_session_page(session_id).ok_or("No page for session")?;
+            let page = ctx
+                .get_session_page(session_id)
+                .ok_or("No page for session")?;
             let loader_id = ctx
                 .current_loader_ids
                 .get(&page.id)
                 .cloned()
                 .unwrap_or_else(|| format!("loader-blank-{}", page.id));
             Ok(json!({ "frameTree": frame_tree(page, &loader_id) }))
-        },
+        }
         "createIsolatedWorld" => {
             let (frame_id_param, world_name, origin, page_id, persist_across_navigation) = {
-                let page = ctx.get_session_page(session_id).ok_or("No page for session")?;
+                let page = ctx
+                    .get_session_page(session_id)
+                    .ok_or("No page for session")?;
                 let frame_id = params
                     .get("frameId")
                     .and_then(|v| v.as_str())
@@ -1472,13 +1548,18 @@ pub async fn handle(
                 };
                 (
                     frame_id,
-                    params.get("worldName").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+                    params
+                        .get("worldName")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("")
+                        .to_string(),
                     origin,
                     page.id.clone(),
                     persist,
                 )
             };
-            ctx.ensure_default_context(&page_id).ok_or("No page for session")?;
+            ctx.ensure_default_context(&page_id)
+                .ok_or("No page for session")?;
             let (context, created) = ctx.create_isolated_context(
                 &page_id,
                 &frame_id_param,
@@ -1488,15 +1569,16 @@ pub async fn handle(
             );
             if created {
                 for runtime_session in ctx.runtime_sessions_for_page(&page_id) {
-                    ctx.pending_events.push(super::runtime::execution_context_created_event(
-                        &context,
-                        Some(runtime_session),
-                    ));
+                    ctx.pending_events
+                        .push(super::runtime::execution_context_created_event(
+                            &context,
+                            Some(runtime_session),
+                        ));
                 }
             }
 
             Ok(json!({ "executionContextId": context.id }))
-        },
+        }
         "setLifecycleEventsEnabled" => {
             let enabled = params
                 .get("enabled")
@@ -1513,11 +1595,13 @@ pub async fn handle(
                 }
             }
             Ok(json!({}))
-        },
+        }
         "addScriptToEvaluateOnNewDocument" => {
             let source = params.get("source").and_then(|v| v.as_str()).unwrap_or("");
-            let run_immediately =
-                params.get("runImmediately").and_then(Value::as_bool).unwrap_or(false);
+            let run_immediately = params
+                .get("runImmediately")
+                .and_then(Value::as_bool)
+                .unwrap_or(false);
             if run_immediately
                 && params
                     .get("worldName")
@@ -1530,7 +1614,9 @@ pub async fn handle(
             let identifier = format!("{}", ctx.preload_counter);
             if !source.is_empty() {
                 if run_immediately {
-                    let page = ctx.get_session_page_mut(session_id).ok_or("No page for session")?;
+                    let page = ctx
+                        .get_session_page_mut(session_id)
+                        .ok_or("No page for session")?;
                     // Script exceptions do not reject the registration. Dispatch
                     // supplies the V8 lock and watchdog for this command.
                     if let Err(error) = page.execute_preload_script(source) {
@@ -1546,11 +1632,15 @@ pub async fn handle(
                 }
             }
             // Store empty sources too: Chrome returns a removable id for them.
-            ctx.preload_scripts.push((identifier.clone(), source.to_string()));
+            ctx.preload_scripts
+                .push((identifier.clone(), source.to_string()));
             Ok(json!({ "identifier": identifier }))
-        },
+        }
         "removeScriptToEvaluateOnNewDocument" => {
-            let identifier = params.get("identifier").and_then(|v| v.as_str()).unwrap_or("");
+            let identifier = params
+                .get("identifier")
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
             // Chrome reports an unknown or already removed id as an error.
             let before = ctx.preload_scripts.len();
             ctx.preload_scripts.retain(|(id, _)| id != identifier);
@@ -1558,7 +1648,7 @@ pub async fn handle(
                 return Err("Script not found".to_string());
             }
             Ok(json!({}))
-        },
+        }
         "setInterceptFileChooserDialog" => Ok(json!({})),
         // BunBrowser does not enforce Content-Security-Policy, so there is
         // nothing to bypass; acknowledge it like Chrome does. Playwright sends
@@ -1624,9 +1714,11 @@ pub async fn handle(
                 "cssVisualViewport": visual_viewport,
                 "cssContentSize": content_size,
             }))
-        },
+        }
         "getNavigationHistory" => {
-            let page = ctx.get_session_page(session_id).ok_or("No page for session")?;
+            let page = ctx
+                .get_session_page(session_id)
+                .ok_or("No page for session")?;
             // Synthesize an entry for the current page when history is empty
             // (initial about:blank, never-navigated targets). Puppeteer's
             // goBack reads `currentIndex` and `entries[currentIndex-1]`;
@@ -1652,14 +1744,16 @@ pub async fn handle(
                 "currentIndex": if page.history.is_empty() { 0 } else { page.history_index },
                 "entries": entries,
             }))
-        },
+        }
         "navigateToHistoryEntry" => {
             let entry_id = params.get("entryId").and_then(|v| v.as_u64()).unwrap_or(0) as usize;
             // Snapshot history and the current cursor BEFORE moving it, so a
             // navigation that fails can roll back to where the page actually is
             // instead of leaving currentIndex on an entry it never reached (#920).
             let (target_url, saved_history, prev_index) = {
-                let page = ctx.get_session_page_mut(session_id).ok_or("No page for session")?;
+                let page = ctx
+                    .get_session_page_mut(session_id)
+                    .ok_or("No page for session")?;
                 let url = page.history.get(entry_id).cloned();
                 let snapshot = (page.history.clone(), page.history_index);
                 if url.is_some() {
@@ -1671,10 +1765,13 @@ pub async fn handle(
                 let preload_scripts: Vec<String> =
                     ctx.preload_scripts.iter().map(|(_, s)| s.clone()).collect();
                 let nav_result = {
-                    let page = ctx.get_session_page_mut(session_id).ok_or("No page for session")?;
+                    let page = ctx
+                        .get_session_page_mut(session_id)
+                        .ok_or("No page for session")?;
                     // Same as do_navigate: the page keeps its own copy, so refresh it.
                     page.set_preload_scripts(preload_scripts);
-                    page.navigate_with_wait(&url, WaitUntil::DomContentLoaded).await
+                    page.navigate_with_wait(&url, WaitUntil::DomContentLoaded)
+                        .await
                 };
                 // navigate_with_wait's push_history rewrote history during the
                 // load, so restore the snapshot either way. On failure the page
@@ -1688,7 +1785,9 @@ pub async fn handle(
                     return Err(e.to_string());
                 }
                 let (frame_id, page_id, network_events, page_url, reached_idle) = {
-                    let page = ctx.get_session_page_mut(session_id).ok_or("No page for session")?;
+                    let page = ctx
+                        .get_session_page_mut(session_id)
+                        .ok_or("No page for session")?;
                     page.set_history(saved_history, entry_id);
                     // Flush script-initiated network events before draining,
                     // matching do_navigate — otherwise fetch/XHR requests the
@@ -1716,13 +1815,13 @@ pub async fn handle(
                 );
             }
             Ok(json!({}))
-        },
+        }
         "resetNavigationHistory" => {
             if let Some(page) = ctx.get_session_page_mut(session_id) {
                 page.set_history(Vec::new(), 0);
             }
             Ok(json!({}))
-        },
+        }
         "printToPDF" => crate::domains::pdf::print_to_pdf(params, ctx, session_id).await,
         "startScreencast" => {
             #[cfg(feature = "render")]
@@ -1731,7 +1830,9 @@ pub async fn handle(
                     .as_ref()
                     .ok_or("Page.startScreencast requires an attached target session")?
                     .clone();
-                let page = ctx.get_session_page_mut(session_id).ok_or("No page for session")?;
+                let page = ctx
+                    .get_session_page_mut(session_id)
+                    .ok_or("No page for session")?;
                 prepare_capture_resources_if_requested(page).await;
                 let stream_id = ctx.next_screencast_session();
                 let state = parse_screencast_state(params, stream_id)?;
@@ -1755,7 +1856,7 @@ pub async fn handle(
             }
             #[cfg(not(feature = "render"))]
             Err("Page.startScreencast requires a build with the render feature".into())
-        },
+        }
         "stopScreencast" => {
             #[cfg(feature = "render")]
             {
@@ -1766,7 +1867,7 @@ pub async fn handle(
             }
             #[cfg(not(feature = "render"))]
             Err("Page.stopScreencast requires a build with the render feature".into())
-        },
+        }
         "screencastFrameAck" => {
             #[cfg(feature = "render")]
             {
@@ -1784,15 +1885,17 @@ pub async fn handle(
             }
             #[cfg(not(feature = "render"))]
             Err("Page.screencastFrameAck requires a build with the render feature".into())
-        },
+        }
         "captureScreenshot" => {
             #[cfg(feature = "render")]
             {
                 let options = parse_screenshot_options(params)?;
                 if !options.from_surface {
-                    return Err("Page.captureScreenshot fromSurface=false is not supported: \
+                    return Err(
+                        "Page.captureScreenshot fromSurface=false is not supported: \
                                 BunBrowser has no separate browser-window compositor surface"
-                        .to_string());
+                            .to_string(),
+                    );
                 }
                 if options.format == ScreenshotFormat::Webp && options.quality_supplied {
                     return Err("WebP screenshot quality is not supported by the current \
@@ -1800,7 +1903,9 @@ pub async fn handle(
                         .to_string());
                 }
 
-                let page = ctx.get_session_page_mut(session_id).ok_or("No page for session")?;
+                let page = ctx
+                    .get_session_page_mut(session_id)
+                    .ok_or("No page for session")?;
                 prepare_capture_resources_if_requested(page).await;
                 let animation_sample = page.live_animation_sample();
                 let viewport = page.viewport;
@@ -1813,7 +1918,10 @@ pub async fn handle(
                         .ok_or_else(|| {
                             "Page.captureScreenshot failed: no retained document size".to_string()
                         })?;
-                    Some((content_size.0.max(viewport.0), content_size.1.max(viewport.1)))
+                    Some((
+                        content_size.0.max(viewport.0),
+                        content_size.1.max(viewport.1),
+                    ))
                 } else {
                     None
                 };
@@ -1861,7 +1969,7 @@ pub async fn handle(
                                 )?,
                                 true,
                             )
-                        },
+                        }
                         Err(error) => return Err(capture_error_message(error)),
                     },
                     None => {
@@ -1883,7 +1991,7 @@ pub async fn handle(
                                 })?,
                             false,
                         )
-                    },
+                    }
                 };
 
                 // Keep the common path allocation-free and byte-for-byte
@@ -1907,7 +2015,7 @@ pub async fn handle(
             }
             #[cfg(not(feature = "render"))]
             Err("Page.captureScreenshot requires a build with the render feature".to_string())
-        },
+        }
         "captureSnapshot" => {
             // A DOM/layer-tree snapshot (not a raster image). Distinct from
             // captureScreenshot; keep the clear error so clients fail fast.
@@ -1916,7 +2024,7 @@ pub async fn handle(
                  snapshots, drive a real headless Chromium for the screenshot leg of your \
                  pipeline and use BunBrowser for the scraping leg."
             ))
-        },
+        }
         _ => Err(format!("Unknown Page method: {}", method)),
     }
 }
@@ -1933,8 +2041,12 @@ mod tests {
     use super::*;
     use crate::dispatch::CdpContext;
 
-    fn observer_fixture() -> (CdpContext, String, Option<String>, Vec<bun_browser_browser::NetworkEvent>)
-    {
+    fn observer_fixture() -> (
+        CdpContext,
+        String,
+        Option<String>,
+        Vec<bun_browser_browser::NetworkEvent>,
+    ) {
         let mut ctx = CdpContext::new();
         let page = ctx.create_page();
         let unrelated_page = ctx.create_page();
@@ -1948,23 +2060,30 @@ mod tests {
             ctx.sessions.insert(session.into(), target.clone());
         }
         let events = [
-            ("document-internal", "Document", "https://example.test/", 200),
+            (
+                "document-internal",
+                "Document",
+                "https://example.test/",
+                200,
+            ),
             ("script-1", "Script", "https://example.test/app.js", 404),
         ]
         .into_iter()
-        .map(|(id, kind, url, status)| bun_browser_browser::NetworkEvent {
-            request_id: id.into(),
-            intercepted: false,
-            url: url.into(),
-            method: "GET".into(),
-            resource_type: kind.into(),
-            status,
-            headers: Default::default(),
-            response_headers: std::sync::Arc::new(Default::default()),
-            body_size: 12,
-            timestamp: 42.0,
-            error_text: None,
-        })
+        .map(
+            |(id, kind, url, status)| bun_browser_browser::NetworkEvent {
+                request_id: id.into(),
+                intercepted: false,
+                url: url.into(),
+                method: "GET".into(),
+                resource_type: kind.into(),
+                status,
+                headers: Default::default(),
+                response_headers: std::sync::Arc::new(Default::default()),
+                body_size: 12,
+                timestamp: 42.0,
+                error_text: None,
+            },
+        )
         .collect();
         (ctx, page, driver, events)
     }
@@ -2055,9 +2174,9 @@ mod tests {
             &events[1..],
         );
         assert_eq!(ctx.pending_events.len() - start, 9);
-        assert!(
-            ctx.pending_events[start..].iter().all(|event| event.params["requestId"] == "script-1")
-        );
+        assert!(ctx.pending_events[start..]
+            .iter()
+            .all(|event| event.params["requestId"] == "script-1"));
     }
 
     #[test]
@@ -2127,7 +2246,10 @@ mod tests {
             &events[..1],
         );
         assert_eq!(ctx.pending_events.len(), 4);
-        assert!(ctx.pending_events.iter().all(|event| event.method != "Network.requestWillBeSent"));
+        assert!(ctx
+            .pending_events
+            .iter()
+            .all(|event| event.method != "Network.requestWillBeSent"));
         assert_eq!(
             ctx.pending_events
                 .iter()
@@ -2135,11 +2257,10 @@ mod tests {
                 .count(),
             2
         );
-        assert!(
-            !ctx.pending_events
-                .iter()
-                .any(|event| event.session_id.as_deref() == Some("observer-b"))
-        );
+        assert!(!ctx
+            .pending_events
+            .iter()
+            .any(|event| event.session_id.as_deref() == Some("observer-b")));
     }
 
     #[tokio::test(flavor = "current_thread")]
@@ -2148,7 +2269,14 @@ mod tests {
         let page_id = ctx.create_page();
         let session = Some(format!("{page_id}-session"));
         ctx.sessions.insert(session.clone().unwrap(), page_id);
-        handle("navigate", &json!({"url":"about:blank"}), &mut ctx, &session).await.unwrap();
+        handle(
+            "navigate",
+            &json!({"url":"about:blank"}),
+            &mut ctx,
+            &session,
+        )
+        .await
+        .unwrap();
         {
             let page = ctx.get_session_page_mut(&session).unwrap();
             let frame = bun_browser_js::frame::FrameRealm::new(
@@ -2196,11 +2324,18 @@ mod tests {
         {
             let page = ctx.get_session_page_mut(&session).unwrap();
             assert_eq!(
-                page.js.as_mut().unwrap().evaluate("globalThis.immediate ?? 0").unwrap().as_f64(),
+                page.js
+                    .as_mut()
+                    .unwrap()
+                    .evaluate("globalThis.immediate ?? 0")
+                    .unwrap()
+                    .as_f64(),
                 Some(1.0)
             );
             assert_eq!(
-                page.evaluate_in_frame(0, "globalThis.immediate ?? 0").unwrap().as_f64(),
+                page.evaluate_in_frame(0, "globalThis.immediate ?? 0")
+                    .unwrap()
+                    .as_f64(),
                 Some(1.0)
             );
         }
@@ -2223,14 +2358,26 @@ mod tests {
             json!([1, 1])
         );
         for registration in [deferred, immediate] {
-            handle("removeScriptToEvaluateOnNewDocument", &registration, &mut ctx, &session)
-                .await
-                .unwrap();
+            handle(
+                "removeScriptToEvaluateOnNewDocument",
+                &registration,
+                &mut ctx,
+                &session,
+            )
+            .await
+            .unwrap();
         }
         let throwing = handle("addScriptToEvaluateOnNewDocument", &json!({
             "source":"throw new Error('script error is not a protocol error')", "runImmediately":true,
         }), &mut ctx, &session).await.unwrap();
-        handle("removeScriptToEvaluateOnNewDocument", &throwing, &mut ctx, &session).await.unwrap();
+        handle(
+            "removeScriptToEvaluateOnNewDocument",
+            &throwing,
+            &mut ctx,
+            &session,
+        )
+        .await
+        .unwrap();
         handle(
             "navigate",
             &json!({"url":"data:text/html,<title>removed</title>"}),
@@ -2297,32 +2444,72 @@ mod tests {
         .await
         .unwrap();
         // An empty source still gets an identifier, so it must be removable.
-        let empty =
-            handle("addScriptToEvaluateOnNewDocument", &json!({"source":""}), &mut ctx, &session)
-                .await
-                .unwrap();
-        handle("navigate", &json!({"url":"data:text/html,<title>one</title>"}), &mut ctx, &session)
-            .await
-            .unwrap();
+        let empty = handle(
+            "addScriptToEvaluateOnNewDocument",
+            &json!({"source":""}),
+            &mut ctx,
+            &session,
+        )
+        .await
+        .unwrap();
+        handle(
+            "navigate",
+            &json!({"url":"data:text/html,<title>one</title>"}),
+            &mut ctx,
+            &session,
+        )
+        .await
+        .unwrap();
         assert_eq!(preload_state(&mut ctx, &session).await, json!([1, 1]));
 
-        handle("removeScriptToEvaluateOnNewDocument", &a, &mut ctx, &session).await.unwrap();
-        handle("removeScriptToEvaluateOnNewDocument", &empty, &mut ctx, &session).await.unwrap();
-        handle("navigate", &json!({"url":"data:text/html,<title>two</title>"}), &mut ctx, &session)
-            .await
-            .unwrap();
+        handle(
+            "removeScriptToEvaluateOnNewDocument",
+            &a,
+            &mut ctx,
+            &session,
+        )
+        .await
+        .unwrap();
+        handle(
+            "removeScriptToEvaluateOnNewDocument",
+            &empty,
+            &mut ctx,
+            &session,
+        )
+        .await
+        .unwrap();
+        handle(
+            "navigate",
+            &json!({"url":"data:text/html,<title>two</title>"}),
+            &mut ctx,
+            &session,
+        )
+        .await
+        .unwrap();
         assert_eq!(preload_state(&mut ctx, &session).await, json!([0, 1]));
         assert_eq!(ctx.preload_scripts.len(), 1);
 
         // Chrome: "Script not found" for an id that is unknown or already removed.
         for params in [a, json!({"identifier":"nope"}), json!({})] {
-            let error = handle("removeScriptToEvaluateOnNewDocument", &params, &mut ctx, &session)
-                .await
-                .unwrap_err();
+            let error = handle(
+                "removeScriptToEvaluateOnNewDocument",
+                &params,
+                &mut ctx,
+                &session,
+            )
+            .await
+            .unwrap_err();
             assert_eq!(error, "Script not found");
         }
         assert_eq!(ctx.preload_scripts.len(), 1);
-        handle("removeScriptToEvaluateOnNewDocument", &b, &mut ctx, &session).await.unwrap();
+        handle(
+            "removeScriptToEvaluateOnNewDocument",
+            &b,
+            &mut ctx,
+            &session,
+        )
+        .await
+        .unwrap();
         assert!(ctx.preload_scripts.is_empty());
     }
 
@@ -2360,8 +2547,22 @@ mod tests {
         )
         .await
         .unwrap();
-        handle("removeScriptToEvaluateOnNewDocument", &a, &mut ctx, &session).await.unwrap();
-        handle("navigateToHistoryEntry", &json!({"entryId":0}), &mut ctx, &session).await.unwrap();
+        handle(
+            "removeScriptToEvaluateOnNewDocument",
+            &a,
+            &mut ctx,
+            &session,
+        )
+        .await
+        .unwrap();
+        handle(
+            "navigateToHistoryEntry",
+            &json!({"entryId":0}),
+            &mut ctx,
+            &session,
+        )
+        .await
+        .unwrap();
         assert_eq!(preload_state(&mut ctx, &session).await, json!([0, 1]));
     }
 
@@ -2377,13 +2578,24 @@ mod tests {
 
         {
             let page = ctx.get_session_page_mut(&session).unwrap();
-            page.history = vec!["data:text/html,<p>ok</p>".to_string(), "not-a-url".to_string()];
+            page.history = vec![
+                "data:text/html,<p>ok</p>".to_string(),
+                "not-a-url".to_string(),
+            ];
             page.history_index = 0;
         }
 
-        let res =
-            handle("navigateToHistoryEntry", &json!({ "entryId": 1 }), &mut ctx, &session).await;
-        assert!(res.is_err(), "navigating to an invalid entry URL must fail, got {res:?}");
+        let res = handle(
+            "navigateToHistoryEntry",
+            &json!({ "entryId": 1 }),
+            &mut ctx,
+            &session,
+        )
+        .await;
+        assert!(
+            res.is_err(),
+            "navigating to an invalid entry URL must fail, got {res:?}"
+        );
 
         let index = ctx.get_session_page(&session).unwrap().history_index;
         assert_eq!(
@@ -2410,13 +2622,25 @@ mod tests {
             page.history_index = 1;
         }
 
-        handle("navigateToHistoryEntry", &json!({ "entryId": 0 }), &mut ctx, &session)
-            .await
-            .expect("navigating back to a valid entry must succeed");
+        handle(
+            "navigateToHistoryEntry",
+            &json!({ "entryId": 0 }),
+            &mut ctx,
+            &session,
+        )
+        .await
+        .expect("navigating back to a valid entry must succeed");
 
         let page = ctx.get_session_page(&session).unwrap();
-        assert_eq!(page.history_index, 0, "currentIndex must move to the target entry");
-        assert_eq!(page.history.len(), 2, "history must be preserved across the navigation");
+        assert_eq!(
+            page.history_index, 0,
+            "currentIndex must move to the target entry"
+        );
+        assert_eq!(
+            page.history.len(),
+            2,
+            "history must be preserved across the navigation"
+        );
     }
 
     // #833: chromiumoxide's new_page waits for the initial target's "load"
@@ -2430,8 +2654,14 @@ mod tests {
         let session = Some(format!("{page_id}-session"));
         ctx.sessions.insert(session.clone().unwrap(), page_id);
 
-        handle("enable", &json!({}), &mut ctx, &session).await.expect("enable must succeed");
-        let names: Vec<&str> = ctx.pending_events.iter().map(|e| e.method.as_str()).collect();
+        handle("enable", &json!({}), &mut ctx, &session)
+            .await
+            .expect("enable must succeed");
+        let names: Vec<&str> = ctx
+            .pending_events
+            .iter()
+            .map(|e| e.method.as_str())
+            .collect();
         assert!(
             names.contains(&"Page.frameNavigated"),
             "frameNavigated must be emitted, got {names:?}"
@@ -2446,15 +2676,24 @@ mod tests {
             .find(|e| e.method == "Page.frameNavigated")
             .expect("frameNavigated present");
         let frame = &frame_navigated.params["frame"];
-        for field in
-            ["id", "loaderId", "url", "secureContextType", "crossOriginIsolatedContextType"]
-        {
-            assert!(!frame[field].is_null(), "frameNavigated frame must carry {field}: {frame}");
+        for field in [
+            "id",
+            "loaderId",
+            "url",
+            "secureContextType",
+            "crossOriginIsolatedContextType",
+        ] {
+            assert!(
+                !frame[field].is_null(),
+                "frameNavigated frame must carry {field}: {frame}"
+            );
         }
         assert!(ctx.pending_events.is_empty() == false);
 
         ctx.pending_events.clear();
-        handle("enable", &json!({}), &mut ctx, &session).await.expect("second enable must succeed");
+        handle("enable", &json!({}), &mut ctx, &session)
+            .await
+            .expect("second enable must succeed");
         assert!(
             ctx.pending_events.is_empty(),
             "the initial sequence must not replay on a second enable"
@@ -2466,8 +2705,10 @@ mod tests {
         let mut ctx = CdpContext::new();
         let page_id = ctx.create_page();
         let session_id = Some(format!("{page_id}-session"));
-        ctx.sessions.insert(session_id.clone().unwrap(), page_id.clone());
-        ctx.current_loader_ids.insert(page_id.clone(), "loader-current".into());
+        ctx.sessions
+            .insert(session_id.clone().unwrap(), page_id.clone());
+        ctx.current_loader_ids
+            .insert(page_id.clone(), "loader-current".into());
         let event = bun_browser_browser::NetworkEvent {
             request_id: "fetch-7".into(),
             intercepted: false,
@@ -2501,13 +2742,19 @@ mod tests {
         assert_eq!(ctx.pending_events[1].params["loaderId"], "loader-current");
         assert_eq!(ctx.pending_events[2].method, "Network.loadingFinished");
         assert!(ctx.pending_events.iter().all(|event| {
-            !matches!(event.method.as_str(), "Page.frameNavigated" | "Page.lifecycleEvent")
+            !matches!(
+                event.method.as_str(),
+                "Page.frameNavigated" | "Page.lifecycleEvent"
+            )
         }));
 
         // Live interception already sent requestWillBeSent/requestPaused.
         // Replaying either leaves Playwright waiting for a second request.
         ctx.pending_events.clear();
-        let event = bun_browser_browser::NetworkEvent { intercepted: true, ..event };
+        let event = bun_browser_browser::NetworkEvent {
+            intercepted: true,
+            ..event
+        };
         emit_runtime_network_events(
             &mut ctx,
             &session_id,
@@ -2517,10 +2764,16 @@ mod tests {
             std::slice::from_ref(&event),
         );
         assert_eq!(
-            ctx.pending_events.iter().map(|e| e.method.as_str()).collect::<Vec<_>>(),
+            ctx.pending_events
+                .iter()
+                .map(|e| e.method.as_str())
+                .collect::<Vec<_>>(),
             ["Network.responseReceived", "Network.loadingFinished"]
         );
-        assert!(ctx.pending_events.iter().all(|e| e.params["requestId"] == "fetch-7"));
+        assert!(ctx
+            .pending_events
+            .iter()
+            .all(|e| e.params["requestId"] == "fetch-7"));
 
         ctx.pending_events.clear();
         ctx.fetch_intercept.enabled = true;
@@ -2541,7 +2794,10 @@ mod tests {
             .filter(|e| e.method.starts_with("Network.") || e.method.starts_with("Fetch."))
             .collect::<Vec<_>>();
         assert_eq!(
-            network.iter().map(|e| e.method.as_str()).collect::<Vec<_>>(),
+            network
+                .iter()
+                .map(|e| e.method.as_str())
+                .collect::<Vec<_>>(),
             ["Network.responseReceived", "Network.loadingFinished"]
         );
         assert!(network.iter().all(|e| e.params["requestId"] == "fetch-7"));
@@ -2562,11 +2818,17 @@ mod tests {
             std::slice::from_ref(&failed),
         );
         assert_eq!(
-            ctx.pending_events.iter().map(|e| e.method.as_str()).collect::<Vec<_>>(),
+            ctx.pending_events
+                .iter()
+                .map(|e| e.method.as_str())
+                .collect::<Vec<_>>(),
             ["Network.requestWillBeSent", "Network.loadingFailed"]
         );
         assert_eq!(ctx.pending_events[1].params["requestId"], "fetch-7");
-        assert_eq!(ctx.pending_events[1].params["errorText"], "net::ERR_ABORTED");
+        assert_eq!(
+            ctx.pending_events[1].params["errorText"],
+            "net::ERR_ABORTED"
+        );
         assert_eq!(ctx.pending_events[1].params["canceled"], true);
         ctx.pending_events.clear();
         emit_navigation_events(
@@ -2621,18 +2883,30 @@ mod tests {
             (vec![r"*/value/\?"], vec![]),
             (
                 vec!["*"],
-                vec![page_url, "https://example.test/image.png", "https://example.test/value/1"],
+                vec![
+                    page_url,
+                    "https://example.test/image.png",
+                    "https://example.test/value/1",
+                ],
             ),
         ] {
             let mut ctx = CdpContext::new();
             let page_id = ctx.create_page();
             let session_id = Some(format!("{page_id}-session"));
-            ctx.sessions.insert(session_id.clone().unwrap(), page_id.clone());
+            ctx.sessions
+                .insert(session_id.clone().unwrap(), page_id.clone());
             ctx.fetch_intercept.enabled = true;
             ctx.fetch_intercept.patterns = patterns.iter().map(|p| p.to_string()).collect();
             emit_navigation_events(
-                &mut ctx, &session_id, "frame-1", "loader-1", page_url, &page_id,
-                &events, WaitUntil::Load, true,
+                &mut ctx,
+                &session_id,
+                "frame-1",
+                "loader-1",
+                page_url,
+                &page_id,
+                &events,
+                WaitUntil::Load,
+                true,
             );
             let paused = ctx
                 .pending_events
@@ -2642,9 +2916,16 @@ mod tests {
                 .collect::<Vec<_>>();
             assert_eq!(paused, expected, "patterns {patterns:?}");
             // Network reporting is independent of interception patterns.
-            for method in ["Network.requestWillBeSent", "Network.responseReceived", "Network.loadingFinished"] {
+            for method in [
+                "Network.requestWillBeSent",
+                "Network.responseReceived",
+                "Network.loadingFinished",
+            ] {
                 assert_eq!(
-                    ctx.pending_events.iter().filter(|event| event.method == method).count(),
+                    ctx.pending_events
+                        .iter()
+                        .filter(|event| event.method == method)
+                        .count(),
                     3,
                     "{method} with patterns {patterns:?}"
                 );
@@ -2657,7 +2938,8 @@ mod tests {
         let mut ctx = CdpContext::new();
         let page_id = ctx.create_page();
         let session_id = Some(format!("{page_id}-session"));
-        ctx.sessions.insert(session_id.clone().unwrap(), page_id.clone());
+        ctx.sessions
+            .insert(session_id.clone().unwrap(), page_id.clone());
         ctx.fetch_intercept.enabled = true;
         let page_url = "https://example.test/";
         let event = bun_browser_browser::NetworkEvent {
@@ -2686,11 +2968,23 @@ mod tests {
             true,
         );
 
-        let methods =
-            ctx.pending_events.iter().map(|event| event.method.as_str()).collect::<Vec<_>>();
-        let paused = methods.iter().position(|method| *method == "Fetch.requestPaused").unwrap();
-        let committed = methods.iter().position(|method| *method == "Page.frameNavigated").unwrap();
-        assert!(paused < committed, "document pause must precede frame commit: {methods:?}");
+        let methods = ctx
+            .pending_events
+            .iter()
+            .map(|event| event.method.as_str())
+            .collect::<Vec<_>>();
+        let paused = methods
+            .iter()
+            .position(|method| *method == "Fetch.requestPaused")
+            .unwrap();
+        let committed = methods
+            .iter()
+            .position(|method| *method == "Page.frameNavigated")
+            .unwrap();
+        assert!(
+            paused < committed,
+            "document pause must precede frame commit: {methods:?}"
+        );
     }
 
     #[tokio::test]
@@ -2737,7 +3031,9 @@ mod tests {
         let session_id = format!("{page_id}-session");
         ctx.sessions.insert(session_id.clone(), page_id);
         let session = Some(session_id);
-        ctx.get_session_page_mut(&session).expect("page").set_viewport((100.0, 80.0));
+        ctx.get_session_page_mut(&session)
+            .expect("page")
+            .set_viewport((100.0, 80.0));
 
         handle(
             "navigate",
@@ -2751,19 +3047,24 @@ mod tests {
         .await
         .expect("navigate");
 
-        let top =
-            handle("captureScreenshot", &json!({}), &mut ctx, &session).await.expect("top capture");
+        let top = handle("captureScreenshot", &json!({}), &mut ctx, &session)
+            .await
+            .expect("top capture");
         ctx.get_session_page_mut(&session)
             .expect("page")
             .evaluate("return (window.scrollTo(0, 80), window.scrollY)");
 
-        let metrics =
-            handle("getLayoutMetrics", &json!({}), &mut ctx, &session).await.expect("metrics");
+        let metrics = handle("getLayoutMetrics", &json!({}), &mut ctx, &session)
+            .await
+            .expect("metrics");
         assert_eq!(metrics["layoutViewport"]["pageY"].as_f64(), Some(80.0));
         assert_eq!(metrics["visualViewport"]["pageY"].as_f64(), Some(80.0));
         assert_eq!(metrics["contentSize"]["width"].as_f64(), Some(100.0));
         assert!(
-            metrics["contentSize"]["height"].as_f64().unwrap_or_default() >= 160.0,
+            metrics["contentSize"]["height"]
+                .as_f64()
+                .unwrap_or_default()
+                >= 160.0,
             "contentSize must expose the scrollable document: {metrics}"
         );
 
@@ -2785,7 +3086,9 @@ mod tests {
             .decode(result["data"].as_str().expect("screenshot data"))
             .expect("base64 screenshot");
         let format = image::guess_format(&bytes).expect("image format");
-        let raster = image::load_from_memory(&bytes).expect("decodable screenshot").to_rgba8();
+        let raster = image::load_from_memory(&bytes)
+            .expect("decodable screenshot")
+            .to_rgba8();
         (format, raster)
     }
 
@@ -2800,7 +3103,10 @@ mod tests {
         assert_eq!(decoded.dimensions(), (32, 24));
         for pixel in decoded.pixels() {
             for (actual, expected) in pixel.0.into_iter().zip([20u8, 40, 60]) {
-                assert!(actual.abs_diff(expected) <= 3, "JPEG changed the frame color: {pixel:?}");
+                assert!(
+                    actual.abs_diff(expected) <= 3,
+                    "JPEG changed the frame color: {pixel:?}"
+                );
             }
         }
     }
@@ -2812,7 +3118,9 @@ mod tests {
         let session_id = format!("{page_id}-session");
         ctx.sessions.insert(session_id.clone(), page_id);
         let session = Some(session_id);
-        ctx.get_session_page_mut(&session).expect("page").set_viewport((100.0, 80.0));
+        ctx.get_session_page_mut(&session)
+            .expect("page")
+            .set_viewport((100.0, 80.0));
         handle(
             "navigate",
             &json!({
@@ -2834,7 +3142,9 @@ mod tests {
         let session_id = format!("{page_id}-session");
         ctx.sessions.insert(session_id.clone(), page_id);
         let session = Some(session_id);
-        ctx.get_session_page_mut(&session).expect("page").set_viewport((100.0, 80.0));
+        ctx.get_session_page_mut(&session)
+            .expect("page")
+            .set_viewport((100.0, 80.0));
         handle(
             "navigate",
             &json!({
@@ -2955,9 +3265,12 @@ mod tests {
         let (mut ctx, first_session) = transparent_surface_fixture(80).await;
         let second_page_id = ctx.create_page();
         let second_session_id = format!("{second_page_id}-session");
-        ctx.sessions.insert(second_session_id.clone(), second_page_id);
+        ctx.sessions
+            .insert(second_session_id.clone(), second_page_id);
         let second_session = Some(second_session_id);
-        ctx.get_session_page_mut(&second_session).expect("second page").set_viewport((100.0, 80.0));
+        ctx.get_session_page_mut(&second_session)
+            .expect("second page")
+            .set_viewport((100.0, 80.0));
         handle(
             "navigate",
             &json!({
@@ -3023,7 +3336,9 @@ mod tests {
             assert!(raster.pixels().all(|pixel| pixel.0 == [7, 19, 31, 255]));
         }
 
-        ctx.get_session_page_mut(&session).expect("page").evaluate("window.scrollTo(0, 80)");
+        ctx.get_session_page_mut(&session)
+            .expect("page")
+            .evaluate("window.scrollTo(0, 80)");
         let (_, above_scroll) = decode_capture(
             &handle(
                 "captureScreenshot",
@@ -3038,7 +3353,9 @@ mod tests {
         );
         assert_eq!(above_scroll.get_pixel(10, 10).0, [7, 19, 31, 255]);
         assert_eq!(
-            ctx.get_session_page(&session).expect("page").screenshot_scroll_offset(),
+            ctx.get_session_page(&session)
+                .expect("page")
+                .screenshot_scroll_offset(),
             (0.0, 80.0),
             "clip capture must not mutate live scroll"
         );
@@ -3057,7 +3374,9 @@ mod tests {
         assert_eq!(full_page.get_pixel(50, 140).0, [7, 19, 31, 255]);
 
         ctx.pending_events.clear();
-        handle("startScreencast", &json!({}), &mut ctx, &session).await.expect("start screencast");
+        handle("startScreencast", &json!({}), &mut ctx, &session)
+            .await
+            .expect("start screencast");
         ctx.pending_events.clear();
         let response = crate::dispatch::dispatch(
             &crate::types::CdpRequest {
@@ -3098,7 +3417,10 @@ mod tests {
         assert_eq!(result["bun_browserFrameSource"], "activity-driven");
         assert_eq!(result["bun_browserAutonomousFrames"], true);
         assert_eq!(ctx.pending_events.len(), 2);
-        assert_eq!(ctx.pending_events[0].method, "Page.screencastVisibilityChanged");
+        assert_eq!(
+            ctx.pending_events[0].method,
+            "Page.screencastVisibilityChanged"
+        );
         let frame = &ctx.pending_events[1];
         assert_eq!(frame.method, "Page.screencastFrame");
         assert_eq!(frame.session_id, session);
@@ -3108,16 +3430,26 @@ mod tests {
         assert_eq!(frame.params["metadata"]["deviceWidth"], 100.0);
         assert_eq!(frame.params["metadata"]["deviceHeight"], 80.0);
         assert_eq!(frame.params["metadata"]["scrollOffsetY"], 0.0);
-        assert!(frame.params["metadata"]["timestamp"].as_f64().unwrap_or(0.0) > 0.0);
+        assert!(
+            frame.params["metadata"]["timestamp"]
+                .as_f64()
+                .unwrap_or(0.0)
+                > 0.0
+        );
         assert_eq!(frame.params["sessionId"], 1);
 
         // Chromium's PageHandler::DetermineSnapshotSize scales the surface
         // through gfx::ToRoundedSize. Preserve the fractional 40.8px height
         // instead of truncating it to 40px.
         ctx.pending_events.clear();
-        handle("startScreencast", &json!({"format": "png", "maxWidth": 51}), &mut ctx, &session)
-            .await
-            .expect("start fractionally scaled screencast");
+        handle(
+            "startScreencast",
+            &json!({"format": "png", "maxWidth": 51}),
+            &mut ctx,
+            &session,
+        )
+        .await
+        .expect("start fractionally scaled screencast");
         let rounded_frame = ctx
             .pending_events
             .iter()
@@ -3156,7 +3488,9 @@ mod tests {
     #[tokio::test]
     async fn scaled_screencast_does_not_allocate_the_native_viewport() {
         let (mut ctx, session) = screenshot_fixture().await;
-        ctx.get_session_page_mut(&session).expect("page").set_viewport((4097.0, 4097.0));
+        ctx.get_session_page_mut(&session)
+            .expect("page")
+            .set_viewport((4097.0, 4097.0));
         ctx.pending_events.clear();
 
         handle(
@@ -3185,7 +3519,9 @@ mod tests {
         let session_id = format!("{page_id}-session");
         ctx.sessions.insert(session_id.clone(), page_id);
         let session = Some(session_id);
-        ctx.get_session_page_mut(&session).expect("page").set_viewport((80.0, 60.0));
+        ctx.get_session_page_mut(&session)
+            .expect("page")
+            .set_viewport((80.0, 60.0));
         handle(
             "navigate",
             &json!({
@@ -3199,7 +3535,9 @@ mod tests {
         .expect("navigate animation fixture");
 
         ctx.pending_events.clear();
-        handle("startScreencast", &json!({}), &mut ctx, &session).await.expect("start screencast");
+        handle("startScreencast", &json!({}), &mut ctx, &session)
+            .await
+            .expect("start screencast");
         let initial = ctx
             .pending_events
             .iter()
@@ -3209,8 +3547,13 @@ mod tests {
             .as_str()
             .unwrap()
             .to_string();
-        let generation =
-            ctx.get_session_page_mut(&session).unwrap().js.as_ref().unwrap().activity_generation();
+        let generation = ctx
+            .get_session_page_mut(&session)
+            .unwrap()
+            .js
+            .as_ref()
+            .unwrap()
+            .activity_generation();
 
         ctx.pending_events.clear();
         tokio::time::sleep(std::time::Duration::from_millis(30)).await;
@@ -3228,7 +3571,12 @@ mod tests {
         };
         assert_ne!(animated, initial);
         assert_eq!(
-            ctx.get_session_page_mut(&session).unwrap().js.as_ref().unwrap().activity_generation(),
+            ctx.get_session_page_mut(&session)
+                .unwrap()
+                .js
+                .as_ref()
+                .unwrap()
+                .activity_generation(),
             generation,
             "CSS timeline damage must not depend on DOM or task activity"
         );
@@ -3247,14 +3595,24 @@ mod tests {
         tokio::time::sleep(std::time::Duration::from_millis(100)).await;
         pump_screencast_frames(&mut ctx).await;
         assert!(
-            ctx.pending_events.iter().any(|event| event.method == "Page.screencastFrame"),
+            ctx.pending_events
+                .iter()
+                .any(|event| event.method == "Page.screencastFrame"),
             "the stream must emit the finite animation's final frame"
         );
-        assert!(!ctx.get_session_page_mut(&session).unwrap().prepared_has_active_css_animations());
+        assert!(!ctx
+            .get_session_page_mut(&session)
+            .unwrap()
+            .prepared_has_active_css_animations());
 
-        handle("screencastFrameAck", &json!({"sessionId": frame_session_id}), &mut ctx, &session)
-            .await
-            .expect("ack final frame");
+        handle(
+            "screencastFrameAck",
+            &json!({"sessionId": frame_session_id}),
+            &mut ctx,
+            &session,
+        )
+        .await
+        .expect("ack final frame");
         ctx.pending_events.clear();
         pump_screencast_frames(&mut ctx).await;
         assert!(
@@ -3268,9 +3626,14 @@ mod tests {
     async fn screencast_sampling_backpressure_and_stale_acks_are_bounded() {
         let (mut ctx, session) = screenshot_fixture().await;
         ctx.pending_events.clear();
-        handle("startScreencast", &json!({"everyNthFrame": 2}), &mut ctx, &session)
-            .await
-            .expect("start sampled stream");
+        handle(
+            "startScreencast",
+            &json!({"everyNthFrame": 2}),
+            &mut ctx,
+            &session,
+        )
+        .await
+        .expect("start sampled stream");
         let old_id = ctx.pending_events[1].params["sessionId"].as_i64().unwrap();
         ctx.pending_events.clear();
         assert!(!queue_screencast_frame(&mut ctx, &session, false).unwrap());
@@ -3280,24 +3643,43 @@ mod tests {
             "two unacknowledged frames must apply backpressure before capture"
         );
         let key = session.as_ref().unwrap();
-        handle("screencastFrameAck", &json!({"sessionId": old_id + 99}), &mut ctx, &session)
-            .await
-            .expect("stale ack");
+        handle(
+            "screencastFrameAck",
+            &json!({"sessionId": old_id + 99}),
+            &mut ctx,
+            &session,
+        )
+        .await
+        .expect("stale ack");
         assert_eq!(ctx.screencasts[key].frames_in_flight, 2);
-        handle("screencastFrameAck", &json!({"sessionId": old_id}), &mut ctx, &session)
-            .await
-            .expect("current ack");
+        handle(
+            "screencastFrameAck",
+            &json!({"sessionId": old_id}),
+            &mut ctx,
+            &session,
+        )
+        .await
+        .expect("current ack");
         assert_eq!(ctx.screencasts[key].frames_in_flight, 1);
 
         ctx.pending_events.clear();
-        handle("startScreencast", &json!({}), &mut ctx, &session).await.expect("restart");
+        handle("startScreencast", &json!({}), &mut ctx, &session)
+            .await
+            .expect("restart");
         let new_id = ctx.pending_events[1].params["sessionId"].as_i64().unwrap();
         assert!(new_id > old_id);
-        handle("screencastFrameAck", &json!({"sessionId": old_id}), &mut ctx, &session)
-            .await
-            .expect("old generation ack");
+        handle(
+            "screencastFrameAck",
+            &json!({"sessionId": old_id}),
+            &mut ctx,
+            &session,
+        )
+        .await
+        .expect("old generation ack");
         assert_eq!(ctx.screencasts[key].frames_in_flight, 1);
-        handle("stopScreencast", &json!({}), &mut ctx, &session).await.expect("stop");
+        handle("stopScreencast", &json!({}), &mut ctx, &session)
+            .await
+            .expect("stop");
         assert!(!ctx.screencasts.contains_key(key));
         assert!(!queue_screencast_frame(&mut ctx, &session, false).unwrap());
     }
@@ -3335,30 +3717,33 @@ mod tests {
                         );
                         let _ = stream.write_all(response.as_bytes());
                         let _ = stream.write_all(body);
-                    },
+                    }
                     Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {
                         std::thread::sleep(std::time::Duration::from_millis(2));
-                    },
+                    }
                     Err(_) => break,
                 }
             }
         });
 
-        let context =
-            std::sync::Arc::new(bun_browser_browser::BrowserContext::with_storage_and_network(
+        let context = std::sync::Arc::new(
+            bun_browser_browser::BrowserContext::with_storage_and_network(
                 "capture-without-warmup".to_string(),
                 None,
                 false,
                 None,
                 None,
                 true,
-            ));
+            ),
+        );
         let mut ctx = CdpContext::new_with_shared_context(context);
         let page_id = ctx.create_page();
         let session_id = format!("{page_id}-session");
         ctx.sessions.insert(session_id.clone(), page_id);
         let session = Some(session_id);
-        ctx.get_session_page_mut(&session).expect("page").set_viewport((100.0, 80.0));
+        ctx.get_session_page_mut(&session)
+            .expect("page")
+            .set_viewport((100.0, 80.0));
         handle(
             "navigate",
             &json!({
@@ -3371,8 +3756,9 @@ mod tests {
         .await
         .expect("navigate capture fixture");
 
-        for (index, method) in
-            ["captureScreenshot", "startScreencast", "printToPDF"].into_iter().enumerate()
+        for (index, method) in ["captureScreenshot", "startScreencast", "printToPDF"]
+            .into_iter()
+            .enumerate()
         {
             let asset = format!("http://{address}/capture-{index}.svg");
             let script = format!(
@@ -3381,7 +3767,9 @@ mod tests {
                  10px;background-image:url('+{}+')');document.body.appendChild(box);}})()",
                 serde_json::to_string(&asset).unwrap()
             );
-            ctx.get_session_page_mut(&session).expect("page").evaluate(&script);
+            ctx.get_session_page_mut(&session)
+                .expect("page")
+                .evaluate(&script);
             handle(method, &json!({}), &mut ctx, &session)
                 .await
                 .unwrap_or_else(|error| panic!("{method} failed: {error}"));
@@ -3471,7 +3859,9 @@ mod tests {
     #[ignore = "release performance check; run alone on the evaluation host"]
     async fn screencast_frame_budget_keeps_raster_work_below_ten_ms() {
         let (mut ctx, session) = screenshot_fixture().await;
-        ctx.get_session_page_mut(&session).unwrap().set_viewport((1280.0, 720.0));
+        ctx.get_session_page_mut(&session)
+            .unwrap()
+            .set_viewport((1280.0, 720.0));
         handle(
             "startScreencast",
             &json!({
@@ -3485,7 +3875,10 @@ mod tests {
         let mut samples = Vec::new();
         for _ in 0..21 {
             ctx.pending_events.clear();
-            ctx.screencasts.get_mut(session.as_ref().unwrap()).unwrap().frames_in_flight = 0;
+            ctx.screencasts
+                .get_mut(session.as_ref().unwrap())
+                .unwrap()
+                .frames_in_flight = 0;
             let started = std::time::Instant::now();
             assert!(queue_screencast_frame(&mut ctx, &session, true).unwrap());
             samples.push(started.elapsed());
@@ -3573,7 +3966,9 @@ mod tests {
             "captureBeyondViewport must paint off-viewport document content: {center:?}"
         );
 
-        ctx.get_session_page_mut(&session).expect("page").evaluate("window.scrollTo(0, 80)");
+        ctx.get_session_page_mut(&session)
+            .expect("page")
+            .evaluate("window.scrollTo(0, 80)");
         let page_coordinate_clip = handle(
             "captureScreenshot",
             &json!({
@@ -3596,7 +3991,9 @@ mod tests {
     #[tokio::test]
     async fn default_capture_rejects_oversized_viewport_before_raster_allocation() {
         let (mut ctx, session) = screenshot_fixture().await;
-        ctx.get_session_page_mut(&session).expect("page").set_viewport((32_768.0, 32_768.0));
+        ctx.get_session_page_mut(&session)
+            .expect("page")
+            .set_viewport((32_768.0, 32_768.0));
 
         let error = handle("captureScreenshot", &json!({}), &mut ctx, &session)
             .await
@@ -3612,7 +4009,9 @@ mod tests {
         let session_id = format!("{page_id}-session");
         ctx.sessions.insert(session_id.clone(), page_id);
         let session = Some(session_id);
-        ctx.get_session_page_mut(&session).expect("page").set_viewport((1000.0, 700.0));
+        ctx.get_session_page_mut(&session)
+            .expect("page")
+            .set_viewport((1000.0, 700.0));
         handle(
             "navigate",
             &json!({
@@ -3632,9 +4031,13 @@ mod tests {
         )
         .await
         .expect("long-page surface override");
-        ctx.get_session_page_mut(&session).expect("page").evaluate("window.scrollTo(0, 8000)");
+        ctx.get_session_page_mut(&session)
+            .expect("page")
+            .evaluate("window.scrollTo(0, 8000)");
         assert_eq!(
-            ctx.get_session_page(&session).expect("page").screenshot_scroll_offset(),
+            ctx.get_session_page(&session)
+                .expect("page")
+                .screenshot_scroll_offset(),
             (0.0, 8000.0)
         );
 
@@ -3672,7 +4075,9 @@ mod tests {
             }
         }
         assert_eq!(
-            ctx.get_session_page(&session).expect("page").screenshot_scroll_offset(),
+            ctx.get_session_page(&session)
+                .expect("page")
+                .screenshot_scroll_offset(),
             (0.0, 8000.0),
             "full-page capture must not mutate the live scroll position"
         );
@@ -3686,7 +4091,9 @@ mod tests {
         let session_id = format!("{page_id}-session");
         ctx.sessions.insert(session_id.clone(), page_id);
         let session = Some(session_id);
-        ctx.get_session_page_mut(&session).expect("page").set_viewport((1000.0, 500.0));
+        ctx.get_session_page_mut(&session)
+            .expect("page")
+            .set_viewport((1000.0, 500.0));
         handle(
             "navigate",
             &json!({
@@ -3741,7 +4148,9 @@ mod tests {
         let session_id = format!("{page_id}-session");
         ctx.sessions.insert(session_id.clone(), page_id);
         let session = Some(session_id);
-        ctx.get_session_page_mut(&session).expect("page").set_viewport((1000.0, 700.0));
+        ctx.get_session_page_mut(&session)
+            .expect("page")
+            .set_viewport((1000.0, 700.0));
         handle(
             "navigate",
             &json!({
@@ -3784,17 +4193,26 @@ mod tests {
         assert_eq!(format, image::ImageFormat::Jpeg);
         assert_eq!(raster.dimensions(), (100, 80));
 
-        let fast_png =
-            handle("captureScreenshot", &json!({"optimizeForSpeed": true}), &mut ctx, &session)
-                .await
-                .expect("fast PNG screenshot");
+        let fast_png = handle(
+            "captureScreenshot",
+            &json!({"optimizeForSpeed": true}),
+            &mut ctx,
+            &session,
+        )
+        .await
+        .expect("fast PNG screenshot");
         let (format, raster) = decode_capture(&fast_png);
         assert_eq!(format, image::ImageFormat::Png);
         assert_eq!(raster.dimensions(), (100, 80));
 
-        let webp = handle("captureScreenshot", &json!({"format": "webp"}), &mut ctx, &session)
-            .await
-            .expect("lossless webp screenshot");
+        let webp = handle(
+            "captureScreenshot",
+            &json!({"format": "webp"}),
+            &mut ctx,
+            &session,
+        )
+        .await
+        .expect("lossless webp screenshot");
         let (format, raster) = decode_capture(&webp);
         assert_eq!(format, image::ImageFormat::WebP);
         assert_eq!(raster.dimensions(), (100, 80));
@@ -3829,21 +4247,15 @@ mod tests {
             parse_screenshot_options(&json!({"format": "gif"})).expect_err("bad format"),
             "Invalid image format"
         );
-        assert!(
-            parse_screenshot_options(&json!({"format": 3}))
-                .expect_err("format type")
-                .contains("format must be a string")
-        );
-        assert!(
-            parse_screenshot_options(&json!({"quality": 50.5}))
-                .expect_err("quality type")
-                .contains("quality must be an integer")
-        );
-        assert!(
-            parse_screenshot_options(&json!({"fromSurface": "false"}))
-                .expect_err("fromSurface type")
-                .contains("fromSurface must be a boolean")
-        );
+        assert!(parse_screenshot_options(&json!({"format": 3}))
+            .expect_err("format type")
+            .contains("format must be a string"));
+        assert!(parse_screenshot_options(&json!({"quality": 50.5}))
+            .expect_err("quality type")
+            .contains("quality must be an integer"));
+        assert!(parse_screenshot_options(&json!({"fromSurface": "false"}))
+            .expect_err("fromSurface type")
+            .contains("fromSurface must be a boolean"));
         assert!(
             parse_screenshot_options(&json!({"captureBeyondViewport": 1}))
                 .expect_err("captureBeyondViewport type")
@@ -3856,13 +4268,11 @@ mod tests {
             .expect_err("zero width"),
             "Cannot take screenshot with 0 width."
         );
-        assert!(
-            parse_screenshot_options(&json!({
-                "clip": {"x": 0, "y": 0, "width": 10, "height": 10}
-            }))
-            .expect_err("missing scale")
-            .contains("mandatory clip.scale field missing")
-        );
+        assert!(parse_screenshot_options(&json!({
+            "clip": {"x": 0, "y": 0, "width": 10, "height": 10}
+        }))
+        .expect_err("missing scale")
+        .contains("mandatory clip.scale field missing"));
     }
 
     #[cfg(feature = "render")]
@@ -3889,10 +4299,14 @@ mod tests {
             "full-page capture must include below-fold content: {bottom:?}"
         );
 
-        let off_surface =
-            handle("captureScreenshot", &json!({"fromSurface": false}), &mut ctx, &session)
-                .await
-                .expect_err("browser-window compositor is unsupported");
+        let off_surface = handle(
+            "captureScreenshot",
+            &json!({"fromSurface": false}),
+            &mut ctx,
+            &session,
+        )
+        .await
+        .expect_err("browser-window compositor is unsupported");
         assert!(off_surface.contains("fromSurface=false"), "{off_surface}");
 
         let off_viewport = handle(
@@ -3988,7 +4402,10 @@ mod tests {
         #[cfg(feature = "render")]
         assert!(err.contains("No page for session"), "{err}");
         #[cfg(not(feature = "render"))]
-        assert!(err.contains("requires a build with the render feature"), "{err}");
+        assert!(
+            err.contains("requires a build with the render feature"),
+            "{err}"
+        );
     }
 
     /// Regression for #45: same idea as printToPDF for captureScreenshot.
@@ -4046,7 +4463,10 @@ mod tests {
             .expect("navigation must emit Target.targetInfoChanged");
         // Browser-level event (no sessionId) so the root connection's
         // targetInfoChanged handler receives it.
-        assert!(evt.session_id.is_none(), "targetInfoChanged must be browser-level (no sessionId)");
+        assert!(
+            evt.session_id.is_none(),
+            "targetInfoChanged must be browser-level (no sessionId)"
+        );
         let info = evt.params["targetInfo"].clone();
 
         // The payload must carry the live post-navigation url/title and the
@@ -4060,7 +4480,10 @@ mod tests {
         assert_eq!(info["url"], json!(exp_url));
         assert_eq!(info["title"], json!(exp_title));
         assert!(
-            info["url"].as_str().unwrap_or_default().starts_with("data:"),
+            info["url"]
+                .as_str()
+                .unwrap_or_default()
+                .starts_with("data:"),
             "url should reflect the navigated page, got {}",
             info["url"]
         );

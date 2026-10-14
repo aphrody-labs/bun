@@ -18,8 +18,12 @@ async fn runtime_futures_can_be_interleaved_on_one_thread() {
     let mut first = BunBrowserJsRuntime::new();
     let mut second = BunBrowserJsRuntime::new();
 
-    first.execute_script("first", "setTimeout(() => globalThis.done = 1, 1)").unwrap();
-    second.execute_script("second", "setTimeout(() => globalThis.done = 2, 1)").unwrap();
+    first
+        .execute_script("first", "setTimeout(() => globalThis.done = 1, 1)")
+        .unwrap();
+    second
+        .execute_script("second", "setTimeout(() => globalThis.done = 2, 1)")
+        .unwrap();
 
     let (first_result, second_result) =
         tokio::join!(first.run_event_loop(), second.run_event_loop());
@@ -48,6 +52,12 @@ async fn module_loads_can_be_interleaved_on_one_thread() {
     );
     first_result.unwrap();
     second_result.unwrap();
-    assert_eq!(first.evaluate("moduleResult").unwrap(), serde_json::json!(11.0));
-    assert_eq!(second.evaluate("moduleResult").unwrap(), serde_json::json!(22.0));
+    assert_eq!(
+        first.evaluate("moduleResult").unwrap(),
+        serde_json::json!(11.0)
+    );
+    assert_eq!(
+        second.evaluate("moduleResult").unwrap(),
+        serde_json::json!(22.0)
+    );
 }

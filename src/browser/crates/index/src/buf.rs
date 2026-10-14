@@ -60,20 +60,27 @@ impl<T: Pod> Buf<T> {
         if !(ptr as usize).is_multiple_of(std::mem::align_of::<T>()) {
             return None;
         }
-        Some(Buf::Mapped { map, offset, len, _marker: PhantomData })
+        Some(Buf::Mapped {
+            map,
+            offset,
+            len,
+            _marker: PhantomData,
+        })
     }
 
     #[inline]
     pub fn as_slice(&self) -> &[T] {
         match self {
             Buf::Owned(v) => v.as_slice(),
-            Buf::Mapped { map, offset, len, .. } => {
+            Buf::Mapped {
+                map, offset, len, ..
+            } => {
                 let bytes = &map[*offset..*offset + *len * std::mem::size_of::<T>()];
                 // SAFETY: bounds and alignment were validated in `mapped`; `T`
                 // is a sealed POD scalar for which every bit pattern is valid;
                 // the mapping is kept alive by the `Arc` borrowed from `self`.
                 unsafe { std::slice::from_raw_parts(bytes.as_ptr() as *const T, *len) }
-            },
+            }
         }
     }
 

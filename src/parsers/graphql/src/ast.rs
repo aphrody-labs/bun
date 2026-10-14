@@ -41,7 +41,14 @@ impl<'a, T> Ast<'a, T> {
         recursion_limit: LimitTracker,
         token_limit: LimitTracker,
     ) -> Self {
-        Self { source, root, errors, comments, recursion_limit, token_limit }
+        Self {
+            source,
+            root,
+            errors,
+            comments,
+            recursion_limit,
+            token_limit,
+        }
     }
 
     pub fn root(&self) -> &T {

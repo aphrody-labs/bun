@@ -70,6 +70,8 @@ fn format_markdown(_path: &Path, source_text: &str, spec: &OptionSet) -> Option<
 
 #[test]
 fn prettier_conformance() {
-    let Some(report) = run_conformance(&CONFIG, format_markdown) else { return };
+    let Some(report) = run_conformance(&CONFIG, format_markdown) else {
+        return;
+    };
     insta::assert_snapshot!("prettier-markdown", report);
 }

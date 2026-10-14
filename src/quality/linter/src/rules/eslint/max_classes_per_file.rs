@@ -10,9 +10,11 @@ use crate::{
 };
 
 fn max_classes_per_file_diagnostic(total: u32, max: u32, span: Span) -> OxcDiagnostic {
-    OxcDiagnostic::warn(format!("File has too many classes ({total}). Maximum allowed is {max}"))
-        .with_help("Reduce the number of classes in this file")
-        .with_label(span)
+    OxcDiagnostic::warn(format!(
+        "File has too many classes ({total}). Maximum allowed is {max}"
+    ))
+    .with_help("Reduce the number of classes in this file")
+    .with_label(span)
 }
 
 #[derive(Debug, Default, Clone, Deserialize)]
@@ -37,7 +39,10 @@ impl std::ops::Deref for MaxClassesPerFile {
 
 impl Default for MaxClassesPerFileConfig {
     fn default() -> Self {
-        Self { max: 1, ignore_expressions: false }
+        Self {
+            max: 1,
+            ignore_expressions: false,
+        }
     }
 }
 
@@ -92,7 +97,10 @@ impl Rule for MaxClassesPerFile {
             .and_then(serde_json::Number::as_u64)
             .and_then(|v| u32::try_from(v).ok())
         {
-            Ok(Self(Box::new(MaxClassesPerFileConfig { max, ignore_expressions: false })))
+            Ok(Self(Box::new(MaxClassesPerFileConfig {
+                max,
+                ignore_expressions: false,
+            })))
         } else {
             DefaultRuleConfig::<Self>::from_value(value).map(DefaultRuleConfig::into_inner)
         }
@@ -117,7 +125,12 @@ impl Rule for MaxClassesPerFile {
 
         let program = ctx.nodes().program();
         let start = program.directives.first().map_or_else(
-            || program.body.first().map_or(program.span.start, |statement| statement.span().start),
+            || {
+                program
+                    .body
+                    .first()
+                    .map_or(program.span.start, |statement| statement.span().start)
+            },
             |directive| directive.span.start,
         );
         let span = Span::sized(start, 1);
@@ -193,7 +206,10 @@ fn test() {
             None,
         ),
         ("class Foo {} class Bar {}", Some(serde_json::json!([1]))),
-        ("class Foo {} class Bar {} class Baz {}", Some(serde_json::json!([2]))),
+        (
+            "class Foo {} class Bar {} class Baz {}",
+            Some(serde_json::json!([2])),
+        ),
         (
             "
                 class Foo {}
@@ -211,5 +227,11 @@ fn test() {
         ),
     ];
 
-    Tester::new(MaxClassesPerFile::NAME, MaxClassesPerFile::PLUGIN, pass, fail).test_and_snapshot();
+    Tester::new(
+        MaxClassesPerFile::NAME,
+        MaxClassesPerFile::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

@@ -7,7 +7,9 @@ use crate::context::LintContext;
 
 fn padding_around_jest_block_diagnostic(span: Span, name: &str) -> OxcDiagnostic {
     OxcDiagnostic::warn(format!("Missing padding before {name} block"))
-        .with_help(format!("Make sure there is an empty new line before the {name} block"))
+        .with_help(format!(
+            "Make sure there is an empty new line before the {name} block"
+        ))
         .with_label(span)
 }
 
@@ -16,11 +18,15 @@ pub fn report_missing_padding_before_jest_block<'a>(
     ctx: &LintContext<'a>,
     name: &str,
 ) {
-    let scope_node = ctx.nodes().get_node(ctx.scoping().get_node_id(node.scope_id()));
+    let scope_node = ctx
+        .nodes()
+        .get_node(ctx.scoping().get_node_id(node.scope_id()));
     let prev_statement_span = match scope_node.kind() {
         AstKind::Program(program) => get_statement_span_before_node(node, program.body.as_slice()),
         AstKind::ArrowFunctionExpression(arrow_func_expr) => {
-            let Some(body) = arrow_func_expr.get_function_body() else { return };
+            let Some(body) = arrow_func_expr.get_function_body() else {
+                return;
+            };
             get_statement_span_before_node(node, body.statements.as_slice())
         }
         AstKind::Function(function) => {
@@ -63,8 +69,9 @@ pub fn report_missing_padding_before_jest_block<'a>(
                 name,
             ),
             |fixer| {
-                let whitespace_after_last_line =
-                    content.rfind('\n').map_or("", |index| content.split_at(index + 1).1);
+                let whitespace_after_last_line = content
+                    .rfind('\n')
+                    .map_or("", |index| content.split_at(index + 1).1);
                 fixer.replace(span_between, format!("\n\n{whitespace_after_last_line}"))
             },
         );
@@ -75,7 +82,11 @@ fn get_statement_span_before_node(node: &AstNode, statements: &[Statement]) -> O
     statements
         .iter()
         .filter_map(|statement| {
-            if statement.span().end <= node.span().start { Some(statement.span()) } else { None }
+            if statement.span().end <= node.span().start {
+                Some(statement.span())
+            } else {
+                None
+            }
         })
         .next_back()
 }

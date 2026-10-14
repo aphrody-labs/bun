@@ -127,7 +127,9 @@ fn find_jsx_pragma(mut comment_str: &str) -> Option<(PragmaType, &str, &str)> {
         // Check `@` is start of `@jsx`.
         // Note: Checking 4 bytes including leading `@` is faster than checking the 3 bytes after `@`,
         // because 4 bytes is a `u32`.
-        let next4 = comment_str.as_bytes().get(at_sign_index..at_sign_index + 4)?;
+        let next4 = comment_str
+            .as_bytes()
+            .get(at_sign_index..at_sign_index + 4)?;
         if next4 != b"@jsx" {
             // Not `@jsx`. Trim off up to and including `@` and search again.
             // SAFETY: Byte at `at_sign_index` is `@`, so `at_sign_index + 1` is either within string
@@ -142,7 +144,10 @@ fn find_jsx_pragma(mut comment_str: &str) -> Option<(PragmaType, &str, &str)> {
         comment_str = unsafe { comment_str.get_unchecked(at_sign_index + 4..) };
 
         // Get rest of keyword e.g. `Runtime` in `@jsxRuntime`
-        let space_index = comment_str.as_bytes().iter().position(|&b| matches!(b, b' ' | b'\t'))?;
+        let space_index = comment_str
+            .as_bytes()
+            .iter()
+            .position(|&b| matches!(b, b' ' | b'\t'))?;
         // SAFETY: Byte at `space_index` is ASCII, so `space_index` is in bounds and on a UTF-8 char boundary
         let keyword_str = unsafe { comment_str.get_unchecked(..space_index) };
         // SAFETY: Byte at `space_index` is ASCII, so `space_index + 1` is in bounds and on a UTF-8 char boundary
@@ -172,7 +177,10 @@ fn find_jsx_pragma(mut comment_str: &str) -> Option<(PragmaType, &str, &str)> {
     }
 
     // Get value
-    let space_index = comment_str.as_bytes().iter().position(|&b| is_ascii_whitespace(b));
+    let space_index = comment_str
+        .as_bytes()
+        .iter()
+        .position(|&b| is_ascii_whitespace(b));
     let value;
     if let Some(space_index) = space_index {
         // SAFETY: Byte at `space_index` is ASCII, so `space_index` is in bounds and on a UTF-8 char boundary
@@ -184,7 +192,11 @@ fn find_jsx_pragma(mut comment_str: &str) -> Option<(PragmaType, &str, &str)> {
         comment_str = "";
     }
 
-    if value.is_empty() { None } else { Some((pragma_type, value, comment_str)) }
+    if value.is_empty() {
+        None
+    } else {
+        Some((pragma_type, value, comment_str))
+    }
 }
 
 /// Test if a byte is ASCII whitespace, using the same group of ASCII chars that `std::str::trim_start` uses.
@@ -211,9 +223,18 @@ mod tests {
             ("@jsxDonkey abc", &[]),
             // Single pragma
             ("@jsx h", &[(PragmaType::Jsx, "h")]),
-            ("@jsx React.createDumpling", &[(PragmaType::Jsx, "React.createDumpling")]),
-            ("@jsxRuntime classic", &[(PragmaType::JsxRuntime, "classic")]),
-            ("@jsxImportSource preact", &[(PragmaType::JsxImportSource, "preact")]),
+            (
+                "@jsx React.createDumpling",
+                &[(PragmaType::Jsx, "React.createDumpling")],
+            ),
+            (
+                "@jsxRuntime classic",
+                &[(PragmaType::JsxRuntime, "classic")],
+            ),
+            (
+                "@jsxImportSource preact",
+                &[(PragmaType::JsxImportSource, "preact")],
+            ),
             ("@jsxFrag Fraggy", &[(PragmaType::JsxFrag, "Fraggy")]),
             // Multiple pragmas
             (
@@ -264,7 +285,10 @@ mod tests {
             // Pragma inside backticks (inline code span) should not be recognized
             ("`@jsxImportSource custom/source`", &[]),
             ("`@jsx h`", &[]),
-            ("This mentions `@jsxImportSource custom/source` in docs", &[]),
+            (
+                "This mentions `@jsxImportSource custom/source` in docs",
+                &[],
+            ),
             // But valid pragma before backtick-wrapped text should still work
             (
                 "@jsxImportSource react\n * This mentions `@jsxImportSource custom/source` in docs",

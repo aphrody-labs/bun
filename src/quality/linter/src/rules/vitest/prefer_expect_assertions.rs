@@ -71,7 +71,12 @@ impl Rule for PreferExpectAssertions {
         let mut covered_describe_ids: Vec<NodeId> = Vec::new();
 
         for jest_node in &possible_jest_nodes {
-            self.check_node(jest_node, &file_expect_prefix, &mut covered_describe_ids, ctx);
+            self.check_node(
+                jest_node,
+                &file_expect_prefix,
+                &mut covered_describe_ids,
+                ctx,
+            );
         }
     }
 }
@@ -158,14 +163,19 @@ fn resolve_used_parameterized_context_prefix(callback: &Expression<'_>) -> Optio
         _ => return None,
     };
 
-    params.items.iter().enumerate().rev().find_map(|(index, param)| {
-        if index == 0 && !matches!(&param.pattern, BindingPattern::ObjectPattern(_)) {
-            return None;
-        }
+    params
+        .items
+        .iter()
+        .enumerate()
+        .rev()
+        .find_map(|(index, param)| {
+            if index == 0 && !matches!(&param.pattern, BindingPattern::ObjectPattern(_)) {
+                return None;
+            }
 
-        let prefix = resolve_expect_parameter_prefix_from_pattern(&param.pattern)?;
-        callback_uses_expect_prefix(callback, &prefix).then_some(prefix)
-    })
+            let prefix = resolve_expect_parameter_prefix_from_pattern(&param.pattern)?;
+            callback_uses_expect_prefix(callback, &prefix).then_some(prefix)
+        })
 }
 
 struct ExpectPrefixScanner<'p> {
@@ -217,7 +227,9 @@ fn parameterized_context_parameter_index(call_expr: &CallExpression<'_>) -> Opti
 
     let mut argument_counts = rows.elements.iter().map(each_row_argument_count);
     let argument_count = argument_counts.next()??;
-    argument_counts.all(|count| count == Some(argument_count)).then_some(argument_count)
+    argument_counts
+        .all(|count| count == Some(argument_count))
+        .then_some(argument_count)
 }
 
 fn each_row_argument_count(row: &ArrayExpressionElement<'_>) -> Option<usize> {
@@ -450,7 +462,10 @@ fn test() {
             None,
         ),
         ("it('resolves', () => expect(staged()).toBe(true));", None),
-        ("it('resolves', async () => expect(await staged()).toBe(true));", None),
+        (
+            "it('resolves', async () => expect(await staged()).toBe(true));",
+            None,
+        ),
         (r#"it("it1", () => {})"#, None),
         (r#"it("it1", () => { foo()})"#, None),
         (r#"it("it1", function() {var a = 2;})"#, None),
@@ -458,9 +473,18 @@ fn test() {
         (r#"it("it1", function() {expect.assertions(1,2);})"#, None),
         (r#"it("it1", function() {expect.assertions(1,2,);})"#, None),
         (r#"it("it1", function() {expect.assertions("1");})"#, None),
-        (r#"it("it1", function() {expect.hasAssertions("1");})"#, None),
-        (r#"it("it1", function() {expect.hasAssertions("1",);})"#, None),
-        (r#"it("it1", function() {expect.hasAssertions("1", "2");})"#, None),
+        (
+            r#"it("it1", function() {expect.hasAssertions("1");})"#,
+            None,
+        ),
+        (
+            r#"it("it1", function() {expect.hasAssertions("1",);})"#,
+            None,
+        ),
+        (
+            r#"it("it1", function() {expect.hasAssertions("1", "2");})"#,
+            None,
+        ),
         (
             r#"it("it1", () => {
                 expect.hasAssertions();
@@ -981,10 +1005,15 @@ fn test() {
         ),
     ];
 
-    Tester::new(PreferExpectAssertions::NAME, PreferExpectAssertions::PLUGIN, pass, fail)
-        .with_vitest_plugin(true)
-        .expect_fix(fix_two_suggestions)
-        .expect_fix(fix_import_reassignment)
-        .expect_fix(fix_remove_args)
-        .test_and_snapshot();
+    Tester::new(
+        PreferExpectAssertions::NAME,
+        PreferExpectAssertions::PLUGIN,
+        pass,
+        fail,
+    )
+    .with_vitest_plugin(true)
+    .expect_fix(fix_two_suggestions)
+    .expect_fix(fix_import_reassignment)
+    .expect_fix(fix_remove_args)
+    .test_and_snapshot();
 }

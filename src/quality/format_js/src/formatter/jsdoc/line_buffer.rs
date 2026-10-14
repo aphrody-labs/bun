@@ -11,7 +11,10 @@ pub(super) struct LineBuffer {
 
 impl LineBuffer {
     pub(super) fn new() -> Self {
-        Self { buf: String::new(), has_content: false }
+        Self {
+            buf: String::new(),
+            has_content: false,
+        }
     }
 
     /// Push a line (or multiple lines if the string contains embedded `\n`).
@@ -61,7 +64,10 @@ impl LineBuffer {
     /// Count how many `\n` separators exist in content written after `from_byte`.
     pub(super) fn line_count_since(&self, from_byte: usize) -> usize {
         // Each \n before from_byte is a prior separator; count new ones.
-        self.buf[from_byte..].bytes().filter(|&b| b == b'\n').count()
+        self.buf[from_byte..]
+            .bytes()
+            .filter(|&b| b == b'\n')
+            .count()
     }
 
     /// Check if the last non-empty line ends a block-level element (list item

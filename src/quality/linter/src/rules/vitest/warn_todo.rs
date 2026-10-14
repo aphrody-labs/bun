@@ -49,7 +49,8 @@ declare_oxc_lint!(
     vitest,
     correctness,
     version = "1.37.0",
-    short_description = "This rule warns about usage of `.todo` in `describe`, `it`, or `test` functions.",
+    short_description =
+        "This rule warns about usage of `.todo` in `describe`, `it`, or `test` functions.",
 );
 
 impl Rule for WarnTodo {
@@ -83,8 +84,10 @@ impl WarnTodo {
                 return;
             };
 
-            let warn_modifier =
-                parsed_vi_fn_call.members.iter().find(|member| member.is_name_equal("todo"));
+            let warn_modifier = parsed_vi_fn_call
+                .members
+                .iter()
+                .find(|member| member.is_name_equal("todo"));
 
             if let Some(modifier) = warn_modifier {
                 ctx.diagnostic(warn_todo_diagnostic(modifier.span));

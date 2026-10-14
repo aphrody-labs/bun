@@ -128,7 +128,10 @@ impl RequireTestTimeout {
 
         match vi_node.kind {
             JestFnKind::General(JestGeneralFnKind::Vitest) => {
-                if !vi_node.members.first().is_some_and(|member| member.is_name_equal("setConfig"))
+                if !vi_node
+                    .members
+                    .first()
+                    .is_some_and(|member| member.is_name_equal("setConfig"))
                 {
                     return;
                 }
@@ -307,7 +310,12 @@ fn test() {
         r#"vi.setConfig({ testTimeout: 1000 }); test("a", () => {}, -1)"#,
     ];
 
-    Tester::new(RequireTestTimeout::NAME, RequireTestTimeout::PLUGIN, pass, fail)
-        .with_vitest_plugin(true)
-        .test_and_snapshot();
+    Tester::new(
+        RequireTestTimeout::NAME,
+        RequireTestTimeout::PLUGIN,
+        pass,
+        fail,
+    )
+    .with_vitest_plugin(true)
+    .test_and_snapshot();
 }

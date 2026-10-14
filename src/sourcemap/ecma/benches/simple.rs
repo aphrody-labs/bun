@@ -22,7 +22,10 @@ impl Fixture {
 fn load_perf_fixtures() -> Vec<Fixture> {
     let perf_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/perf");
     let entries = fs::read_dir(&perf_dir).unwrap_or_else(|err| {
-        panic!("failed to read perf fixtures at {}: {err}", perf_dir.display());
+        panic!(
+            "failed to read perf fixtures at {}: {err}",
+            perf_dir.display()
+        );
     });
 
     let mut fixture_paths = entries
@@ -31,7 +34,11 @@ fn load_perf_fixtures() -> Vec<Fixture> {
         .filter(|path| path.extension().and_then(|ext| ext.to_str()) == Some("map"))
         .collect::<Vec<PathBuf>>();
     fixture_paths.sort_unstable();
-    assert!(!fixture_paths.is_empty(), "no perf fixtures found at {}", perf_dir.display());
+    assert!(
+        !fixture_paths.is_empty(),
+        "no perf fixtures found at {}",
+        perf_dir.display()
+    );
 
     let mut fixtures: Vec<Fixture> = fixture_paths
         .into_iter()
@@ -39,8 +46,11 @@ fn load_perf_fixtures() -> Vec<Fixture> {
             let json = fs::read_to_string(&path).unwrap_or_else(|err| {
                 panic!("failed to read fixture {}: {err}", path.display());
             });
-            let name =
-                path.file_stem().and_then(|stem| stem.to_str()).unwrap_or("unnamed").to_string();
+            let name = path
+                .file_stem()
+                .and_then(|stem| stem.to_str())
+                .unwrap_or("unnamed")
+                .to_string();
             Fixture { name, json }
         })
         .collect();
@@ -52,7 +62,10 @@ fn load_perf_fixtures() -> Vec<Fixture> {
     if let Some(large) = fixtures.iter().find(|f| f.name == "real_large").cloned() {
         const REPEATS: usize = 40;
         let xlarge_json = synthesize_xlarge(&large.json, REPEATS);
-        fixtures.push(Fixture { name: "real_xlarge".to_string(), json: xlarge_json });
+        fixtures.push(Fixture {
+            name: "real_xlarge".to_string(),
+            json: xlarge_json,
+        });
     }
 
     fixtures
@@ -80,8 +93,12 @@ fn synthesize_xlarge(base_json: &str, repeats: usize) -> String {
                 "chunk_{chunk}/{}",
                 src.as_str().unwrap_or("source.js")
             )));
-            sources_content
-                .push(base_sources_content.get(i).cloned().unwrap_or(serde_json::Value::Null));
+            sources_content.push(
+                base_sources_content
+                    .get(i)
+                    .cloned()
+                    .unwrap_or(serde_json::Value::Null),
+            );
         }
         for (i, n) in base_names.iter().enumerate() {
             names.push(serde_json::Value::String(format!(
@@ -110,7 +127,9 @@ fn synthesize_xlarge(base_json: &str, repeats: usize) -> String {
 }
 
 fn token_line_span(sm: &SourceMap) -> u32 {
-    sm.get_tokens().last().map_or(1, |token| token.get_dst_line() + 1)
+    sm.get_tokens()
+        .last()
+        .map_or(1, |token| token.get_dst_line() + 1)
 }
 
 pub fn bench(c: &mut Criterion) {
@@ -203,8 +222,10 @@ pub fn bench(c: &mut Criterion) {
     let mut token_lookup_group = c.benchmark_group("lookup_token");
     for (name, _bytes, sourcemap) in &parsed_fixtures {
         let table = sourcemap.generate_lookup_table();
-        let keys: Vec<(u32, u32)> =
-            sourcemap.get_tokens().map(|t| (t.get_dst_line(), t.get_dst_col())).collect();
+        let keys: Vec<(u32, u32)> = sourcemap
+            .get_tokens()
+            .map(|t| (t.get_dst_line(), t.get_dst_col()))
+            .collect();
         token_lookup_group.throughput(Throughput::Elements(keys.len() as u64));
         token_lookup_group.bench_with_input(
             BenchmarkId::from_parameter(name),

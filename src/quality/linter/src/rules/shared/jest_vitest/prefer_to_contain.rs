@@ -70,8 +70,10 @@ pub fn run<'a>(possible_jest_node: &PossibleJestNode<'a, '_>, ctx: &LintContext<
         return;
     }
 
-    let Some(jest_expect_first_arg) =
-        jest_expect_fn_call.args.first().and_then(Argument::as_expression)
+    let Some(jest_expect_first_arg) = jest_expect_fn_call
+        .args
+        .first()
+        .and_then(Argument::as_expression)
     else {
         return;
     };
@@ -81,7 +83,10 @@ pub fn run<'a>(possible_jest_node: &PossibleJestNode<'a, '_>, ctx: &LintContext<
 
     // handle "expect()"
     if expect_call_expr.arguments.is_empty()
-        || !matches!(jest_expect_first_arg.get_inner_expression(), Expression::BooleanLiteral(_))
+        || !matches!(
+            jest_expect_first_arg.get_inner_expression(),
+            Expression::BooleanLiteral(_)
+        )
     {
         return;
     }
@@ -111,8 +116,9 @@ pub fn run<'a>(possible_jest_node: &PossibleJestNode<'a, '_>, ctx: &LintContext<
                 .get_inner_expression()
                 .to_boolean(&WithoutGlobalReferenceInformation {})
                 .unwrap_or(false);
-            let has_not =
-                jest_expect_fn_call.modifiers().any(|modifier| modifier.is_name_equal("not"));
+            let has_not = jest_expect_fn_call
+                .modifiers()
+                .any(|modifier| modifier.is_name_equal("not"));
 
             match (boolean_value, has_not) {
                 (false, true) | (true, false) => "",

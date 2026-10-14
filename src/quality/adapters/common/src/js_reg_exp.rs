@@ -21,7 +21,11 @@ pub struct JsRegExp {
 impl JsRegExp {
     /// Creates a regular expression with `lastIndex` set to zero.
     pub fn new(source: String, flags: String) -> Self {
-        Self { source, flags, last_index: 0 }
+        Self {
+            source,
+            flags,
+            last_index: 0,
+        }
     }
 }
 
@@ -45,13 +49,18 @@ impl FromNapiValue for JsRegExp {
         let constructor = global.get_named_property::<Function<Unknown, ()>>("RegExp")?;
 
         if !object.instanceof(constructor)? {
-            return Err(Error::new(Status::ObjectExpected, "Expected a RegExp object"));
+            return Err(Error::new(
+                Status::ObjectExpected,
+                "Expected a RegExp object",
+            ));
         }
 
         Ok(Self {
             source: object.get_named_property::<String>("source")?,
             flags: object.get_named_property::<String>("flags")?,
-            last_index: object.get_named_property::<u32>("lastIndex").unwrap_or_default(),
+            last_index: object
+                .get_named_property::<u32>("lastIndex")
+                .unwrap_or_default(),
         })
     }
 }

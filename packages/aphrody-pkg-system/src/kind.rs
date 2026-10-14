@@ -15,8 +15,12 @@ pub enum SourceKind {
 }
 
 impl SourceKind {
-    pub const ALL: [SourceKind; 4] =
-        [SourceKind::Winget, SourceKind::Apk, SourceKind::Deb, SourceKind::Pacman];
+    pub const ALL: [SourceKind; 4] = [
+        SourceKind::Winget,
+        SourceKind::Apk,
+        SourceKind::Deb,
+        SourceKind::Pacman,
+    ];
 
     pub fn name(self) -> &'static str {
         match self {
@@ -76,7 +80,11 @@ fn split_source(spec: &[u8]) -> Option<(SourceKind, &[u8])> {
 }
 
 fn range_or_star(range: &str) -> String {
-    if range.is_empty() { "*".to_owned() } else { range.to_owned() }
+    if range.is_empty() {
+        "*".to_owned()
+    } else {
+        range.to_owned()
+    }
 }
 
 /// Parses `<source>:<id>[@<range>]`. The range separator is the last `@` that
@@ -92,7 +100,11 @@ pub fn parse_spec(spec: &[u8]) -> Option<Spec> {
     }
     let id = core::str::from_utf8(id).ok()?;
     let range = core::str::from_utf8(range).ok()?;
-    Some(Spec { source, id: id.to_owned(), range: range_or_star(range) })
+    Some(Spec {
+        source,
+        id: id.to_owned(),
+        range: range_or_star(range),
+    })
 }
 
 /// Parses a `systemDependencies` key (`"winget:Microsoft.PowerToys"`) plus its range value.
@@ -100,7 +112,11 @@ pub fn parse_entry(key: &[u8], range: &[u8]) -> Option<Spec> {
     let (source, id) = split_source(key)?;
     let id = core::str::from_utf8(id).ok()?;
     let range = core::str::from_utf8(range).ok()?.trim();
-    Some(Spec { source, id: id.to_owned(), range: range_or_star(range) })
+    Some(Spec {
+        source,
+        id: id.to_owned(),
+        range: range_or_star(range),
+    })
 }
 
 pub fn lock_key(source: SourceKind, id: &str) -> String {
@@ -127,6 +143,9 @@ mod tests {
         assert!(parse_spec(b"winget:bad id").is_none());
         assert!(parse_spec(b"npm:react").is_none());
         assert!(!is_system_spec(b"winget:"));
-        assert_eq!(parse_entry(b"pacman:git", b" >=2 ").unwrap().key(), "pacman:git");
+        assert_eq!(
+            parse_entry(b"pacman:git", b" >=2 ").unwrap().key(),
+            "pacman:git"
+        );
     }
 }

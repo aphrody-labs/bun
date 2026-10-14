@@ -43,7 +43,10 @@ pub fn table_row_cells(line: &str) -> Vec<Range<usize>> {
 /// No pipe is required, all-dash rows never reach here because setext/thematic-break/list probes win first.
 /// Returns per-column alignment.
 pub fn table_delimiter_row(tail: &str) -> Option<Vec<TableAlign>> {
-    if tail.bytes().any(|b| !matches!(b, b'|' | b'-' | b':' | b' ' | b'\t')) {
+    if tail
+        .bytes()
+        .any(|b| !matches!(b, b'|' | b'-' | b':' | b' ' | b'\t'))
+    {
         return None;
     }
     let cells = table_row_cells(tail);
@@ -88,10 +91,22 @@ mod tests {
     fn delimiter_rows() {
         assert_eq!(
             table_delimiter_row("| --- | :-- | --: | :-: |"),
-            Some(vec![TableAlign::None, TableAlign::Left, TableAlign::Right, TableAlign::Center])
+            Some(vec![
+                TableAlign::None,
+                TableAlign::Left,
+                TableAlign::Right,
+                TableAlign::Center
+            ])
         );
-        assert_eq!(table_delimiter_row("-|-"), Some(vec![TableAlign::None, TableAlign::None]));
-        assert_eq!(table_delimiter_row("| : |"), None, "a colon alone is not a column");
+        assert_eq!(
+            table_delimiter_row("-|-"),
+            Some(vec![TableAlign::None, TableAlign::None])
+        );
+        assert_eq!(
+            table_delimiter_row("| : |"),
+            None,
+            "a colon alone is not a column"
+        );
         assert_eq!(table_delimiter_row("| a |"), None);
         assert_eq!(table_delimiter_row("|"), None);
     }

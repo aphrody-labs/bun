@@ -82,9 +82,19 @@ pub(crate) fn is_always_reserved_word(s: &str) -> bool {
 // ---------------------------------------------------------------------------
 
 enum Scope<'a> {
-    Loop { label: Option<Ident<'a>>, continue_block: BlockId, break_block: BlockId },
-    Label { label: Ident<'a>, break_block: BlockId },
-    Switch { label: Option<Ident<'a>>, break_block: BlockId },
+    Loop {
+        label: Option<Ident<'a>>,
+        continue_block: BlockId,
+        break_block: BlockId,
+    },
+    Label {
+        label: Ident<'a>,
+        break_block: BlockId,
+    },
+    Switch {
+        label: Option<Ident<'a>>,
+        break_block: BlockId,
+    },
 }
 
 impl Scope<'_> {
@@ -116,7 +126,11 @@ pub struct WipBlock {
 }
 
 fn new_block(id: BlockId, kind: BlockKind) -> WipBlock {
-    WipBlock { id, kind, instructions: Vec::new() }
+    WipBlock {
+        id,
+        kind,
+        instructions: Vec::new(),
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -213,7 +227,9 @@ impl<'a, 'b> HirBuilder<'a, 'b> {
     /// compiled function have their own function_scope but still consider
     /// the outer component's variables as local.
     fn is_scope_within_compiled_function(&self, scope_id: ScopeId) -> bool {
-        self.scope.ancestors(scope_id).any(|id| id == self.component_scope)
+        self.scope
+            .ancestors(scope_id)
+            .any(|id| id == self.component_scope)
     }
 
     /// Access the environment.
@@ -365,8 +381,10 @@ impl<'a, 'b> HirBuilder<'a, 'b> {
         // next_block_kind is None, meaning this is the final terminate() call.
         // It will never be read or completed because build() consumes self
         // immediately after, and no further operations should occur on the builder.
-        let wip =
-            std::mem::replace(&mut self.current, new_block(BlockId::PLACEHOLDER, BlockKind::Block));
+        let wip = std::mem::replace(
+            &mut self.current,
+            new_block(BlockId::PLACEHOLDER, BlockKind::Block),
+        );
         let block_id = wip.id;
 
         self.complete_block(wip, terminal);
@@ -443,11 +461,22 @@ impl<'a, 'b> HirBuilder<'a, 'b> {
         break_block: BlockId,
         f: impl FnOnce(&mut Self) -> Result<T, OxcDiagnostic>,
     ) -> Result<T, OxcDiagnostic> {
-        self.scopes.push(Scope::Loop { label, continue_block, break_block });
+        self.scopes.push(Scope::Loop {
+            label,
+            continue_block,
+            break_block,
+        });
         let value = f(self)?;
-        let last = self.scopes.pop().expect("Mismatched loop scope: stack empty");
+        let last = self
+            .scopes
+            .pop()
+            .expect("Mismatched loop scope: stack empty");
         match &last {
-            Scope::Loop { label: l, continue_block: c, break_block: b } => {
+            Scope::Loop {
+                label: l,
+                continue_block: c,
+                break_block: b,
+            } => {
                 assert!(
                     *l == label && *c == continue_block && *b == break_block,
                     "Mismatched loop scope"
@@ -469,9 +498,15 @@ impl<'a, 'b> HirBuilder<'a, 'b> {
     ) -> Result<T, OxcDiagnostic> {
         self.scopes.push(Scope::Label { label, break_block });
         let value = f(self)?;
-        let last = self.scopes.pop().expect("Mismatched label scope: stack empty");
+        let last = self
+            .scopes
+            .pop()
+            .expect("Mismatched label scope: stack empty");
         match &last {
-            Scope::Label { label: l, break_block: b } => {
+            Scope::Label {
+                label: l,
+                break_block: b,
+            } => {
                 assert!(*l == label && *b == break_block, "Mismatched label scope");
             }
             _ => {
@@ -492,9 +527,15 @@ impl<'a, 'b> HirBuilder<'a, 'b> {
     ) -> Result<T, OxcDiagnostic> {
         self.scopes.push(Scope::Switch { label, break_block });
         let value = f(self)?;
-        let last = self.scopes.pop().expect("Mismatched switch scope: stack empty");
+        let last = self
+            .scopes
+            .pop()
+            .expect("Mismatched switch scope: stack empty");
         match &last {
-            Scope::Switch { label: l, break_block: b } => {
+            Scope::Switch {
+                label: l,
+                break_block: b,
+            } => {
                 assert!(*l == label && *b == break_block, "Mismatched switch scope");
             }
             _ => {
@@ -528,7 +569,11 @@ impl<'a, 'b> HirBuilder<'a, 'b> {
     pub fn lookup_continue(&self, label: Option<&str>) -> Result<BlockId, OxcDiagnostic> {
         for scope in self.scopes.iter().rev() {
             match scope {
-                Scope::Loop { label: scope_label, continue_block, .. } => {
+                Scope::Loop {
+                    label: scope_label,
+                    continue_block,
+                    ..
+                } => {
                     if label.is_none() || label == scope_label.as_deref() {
                         return Ok(*continue_block);
                     }
@@ -570,7 +615,10 @@ impl<'a, 'b> HirBuilder<'a, 'b> {
     ) -> Result<Option<IdentifierId>, OxcDiagnostic> {
         let symbol_id = span.map_or_else(
             || self.scope.find_binding(self.function_scope, name),
-            |span| self.scope.find_binding_at_position(name, self.component_scope, span.start),
+            |span| {
+                self.scope
+                    .find_binding_at_position(name, self.component_scope, span.start)
+            },
         );
         let Some(symbol_id) = symbol_id else {
             return Ok(None);
@@ -589,7 +637,8 @@ impl<'a, 'b> HirBuilder<'a, 'b> {
             self.resolve_binding_with_span(name, symbol_id, span)?;
             return Ok(None);
         }
-        self.resolve_binding_with_span(name, symbol_id, span).map(Some)
+        self.resolve_binding_with_span(name, symbol_id, span)
+            .map(Some)
     }
 
     /// Return the kind of the current block.
@@ -608,7 +657,10 @@ impl<'a, 'b> HirBuilder<'a, 'b> {
     /// 6. Number all instructions and terminals
     /// 7. Mark predecessor blocks
     pub fn build(mut self) -> BuildResult<'a> {
-        let mut hir = HIR { blocks: std::mem::take(&mut self.completed), entry: self.entry };
+        let mut hir = HIR {
+            blocks: std::mem::take(&mut self.completed),
+            entry: self.entry,
+        };
 
         let mut instructions = std::mem::take(&mut self.instruction_table);
 
@@ -806,17 +858,19 @@ impl<'a, 'b> HirBuilder<'a, 'b> {
             // Module-level binding: check import info
             Ok(match self.scope.import_data(symbol_id) {
                 Some(import_info) => match import_info.kind {
-                    ImportBindingKind::Default => {
-                        VariableBinding::ImportDefault { name, module: import_info.source }
-                    }
+                    ImportBindingKind::Default => VariableBinding::ImportDefault {
+                        name,
+                        module: import_info.source,
+                    },
                     ImportBindingKind::Named => VariableBinding::ImportSpecifier {
                         name,
                         module: import_info.source,
                         imported: import_info.imported.unwrap_or(name),
                     },
-                    ImportBindingKind::Namespace => {
-                        VariableBinding::ImportNamespace { name, module: import_info.source }
-                    }
+                    ImportBindingKind::Namespace => VariableBinding::ImportNamespace {
+                        name,
+                        module: import_info.source,
+                    },
                 },
                 None => VariableBinding::ModuleLocal { name },
             })
@@ -827,7 +881,10 @@ impl<'a, 'b> HirBuilder<'a, 'b> {
                 &self.scope.binding_kind(symbol_id),
             );
             let identifier_id = self.resolve_binding_with_span(name, symbol_id, Some(span))?;
-            Ok(VariableBinding::Identifier { identifier: identifier_id, binding_kind })
+            Ok(VariableBinding::Identifier {
+                identifier: identifier_id,
+                binding_kind,
+            })
         }
     }
 
@@ -889,8 +946,10 @@ impl<'a, 'b> HirBuilder<'a, 'b> {
         };
         let mut current = Some(function_scope);
         while let Some(id) = current {
-            let mut found =
-                self.scope.bindings_in(id).find(|&sid| resolved_name_matches(sid) == Some(true));
+            let mut found = self
+                .scope
+                .bindings_in(id)
+                .find(|&sid| resolved_name_matches(sid) == Some(true));
             if found.is_none()
                 && let Some(sid) = self.scope.get_binding(id, name)
             {
@@ -972,7 +1031,15 @@ pub fn get_reverse_postordered_blocks<'a>(
             visit(hir, ft, false, visited, used, used_fallthroughs, postorder);
         }
         for successor in successors {
-            visit(hir, successor, is_used, visited, used, used_fallthroughs, postorder);
+            visit(
+                hir,
+                successor,
+                is_used,
+                visited,
+                used,
+                used_fallthroughs,
+                postorder,
+            );
         }
 
         if !was_visited {
@@ -980,7 +1047,15 @@ pub fn get_reverse_postordered_blocks<'a>(
         }
     }
 
-    visit(hir, hir.entry, true, &mut visited, &mut used, &mut used_fallthroughs, &mut postorder);
+    visit(
+        hir,
+        hir.entry,
+        true,
+        &mut visited,
+        &mut used,
+        &mut used_fallthroughs,
+        &mut postorder,
+    );
 
     let mut blocks = OrderedMap::default();
     for block_id in postorder.into_iter().rev() {
@@ -1034,13 +1109,25 @@ pub fn remove_dead_do_while_statements(hir: &mut HIR) {
             false
         };
         if should_replace
-            && let Terminal::DoWhile { loop_block, id, span, .. } = std::mem::replace(
+            && let Terminal::DoWhile {
+                loop_block,
+                id,
+                span,
+                ..
+            } = std::mem::replace(
                 &mut block.terminal,
-                Terminal::Unreachable { id: EvaluationOrder::UNSET, span: None },
+                Terminal::Unreachable {
+                    id: EvaluationOrder::UNSET,
+                    span: None,
+                },
             )
         {
-            block.terminal =
-                Terminal::Goto { block: loop_block, variant: GotoVariant::Break, id, span };
+            block.terminal = Terminal::Goto {
+                block: loop_block,
+                variant: GotoVariant::Break,
+                id,
+                span,
+            };
         }
     }
 }
@@ -1058,8 +1145,13 @@ pub fn remove_unnecessary_try_catch(hir: &mut HIR) {
         .blocks
         .iter()
         .filter_map(|(&block_id, block)| {
-            if let Terminal::Try { block: try_block, handler, fallthrough, span, .. } =
-                &block.terminal
+            if let Terminal::Try {
+                block: try_block,
+                handler,
+                fallthrough,
+                span,
+                ..
+            } = &block.terminal
                 && !block_ids.contains(handler)
             {
                 return Some((block_id, *try_block, *handler, *fallthrough, *span));
@@ -1100,7 +1192,9 @@ pub fn mark_instruction_ids(hir: &mut HIR, instructions: &mut [Instruction]) {
             instructions[instr_id.index()].id = EvaluationOrder::from_usize(order as usize);
         }
         order += 1;
-        block.terminal.set_evaluation_order(EvaluationOrder::from_usize(order as usize));
+        block
+            .terminal
+            .set_evaluation_order(EvaluationOrder::from_usize(order as usize));
     }
 }
 
@@ -1163,5 +1257,10 @@ pub fn create_temporary_place(env: &mut Environment<'_>, span: Option<Span>) -> 
     let id = env.next_identifier_id();
     // Update the span on the allocated identifier
     env.identifiers[id].span = span;
-    Place { identifier: id, reactive: false, effect: Effect::Unknown, span: None }
+    Place {
+        identifier: id,
+        reactive: false,
+        effect: Effect::Unknown,
+        span: None,
+    }
 }

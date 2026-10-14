@@ -192,7 +192,8 @@ declare_oxc_lint!(
     conditional_fix,
     config = BanTsCommentConfig,
     version = "0.0.8",
-    short_description = "This rule lets you set which directive comments you want to allow in your codebase.",
+    short_description =
+        "This rule lets you set which directive comments you want to allow in your codebase.",
 );
 
 impl Rule for BanTsComment {
@@ -292,15 +293,23 @@ pub fn find_ts_comment_directive(raw: &str, single_line: bool) -> Option<(&str, 
         return None;
     }
 
-    let multi_len = if single_line { 0 } else { raw.rfind('\n').map_or(0, |i| i + 1) };
+    let multi_len = if single_line {
+        0
+    } else {
+        raw.rfind('\n').map_or(0, |i| i + 1)
+    };
     let line = &raw[multi_len..];
 
     // Check the content before the prefix
     let index = line.find(prefix)?;
-    if !line[..index]
-        .chars()
-        .all(|c| c.is_whitespace() || if single_line { c == '/' } else { c == '*' || c == '/' })
-    {
+    if !line[..index].chars().all(|c| {
+        c.is_whitespace()
+            || if single_line {
+                c == '/'
+            } else {
+                c == '*' || c == '/'
+            }
+    }) {
         return None;
     }
 
@@ -328,7 +337,10 @@ fn test() {
     // A total of 51 test cases passed successfully.
     let pass = vec![
         // ts-expect-error
-        ("// just a comment containing @ts-expect-error somewhere", None),
+        (
+            "// just a comment containing @ts-expect-error somewhere",
+            None,
+        ),
         (
             r"
             /*
@@ -367,7 +379,10 @@ fn test() {
         ",
             None,
         ),
-        ("// @ts-expect-error", Some(serde_json::json!([{ "ts-expect-error": false }]))),
+        (
+            "// @ts-expect-error",
+            Some(serde_json::json!([{ "ts-expect-error": false }])),
+        ),
         (
             "// @ts-expect-error here is why the error is expected",
             Some(serde_json::json!([{"ts-expect-error": "allow-with-description"},])),
@@ -429,7 +444,10 @@ fn test() {
         ),
         // ts-ignore
         ("// just a comment containing @ts-ignore somewhere", None),
-        ("// @ts-ignore", Some(serde_json::json!([{ "ts-ignore": false}]))),
+        (
+            "// @ts-ignore",
+            Some(serde_json::json!([{ "ts-ignore": false}])),
+        ),
         (
             "// @ts-ignore I think that I am exempted from any need to follow the rules!",
             Some(serde_json::json!([{ "ts-ignore": "allow-with-description" }])),
@@ -544,7 +562,10 @@ fn test() {
         ),
         // ts-nocheck
         ("// just a comment containing @ts-nocheck somewhere", None),
-        ("// @ts-nocheck", Some(serde_json::json!([{ "ts-nocheck": false}]))),
+        (
+            "// @ts-nocheck",
+            Some(serde_json::json!([{ "ts-nocheck": false}])),
+        ),
         (
             "// @ts-nocheck no doubt, people will put nonsense here from time to time just to get the rule to stop reporting, perhaps even long messages with other nonsense in them like other // @ts-nocheck or // @ts-ignore things",
             Some(serde_json::json!([{ "ts-nocheck": "allow-with-description" }])),
@@ -580,7 +601,10 @@ fn test() {
                 },
             ])),
         ),
-        ("//// @ts-nocheck - pragma comments may contain 2 or 3 leading slashes", None),
+        (
+            "//// @ts-nocheck - pragma comments may contain 2 or 3 leading slashes",
+            None,
+        ),
         (
             r"
             /**
@@ -609,7 +633,10 @@ fn test() {
         ",
             None,
         ),
-        ("// @ts-check", Some(serde_json::json!([{ "ts-check": false}]))),
+        (
+            "// @ts-check",
+            Some(serde_json::json!([{ "ts-check": false}])),
+        ),
         (
             "// @ts-check with a description and also with a no-op // @ts-ignore",
             Some(serde_json::json!([
@@ -688,8 +715,14 @@ fn test() {
     // A total of 57 test cases failed.
     let fail = vec![
         // ts-expect-error
-        ("// @ts-expect-error", Some(serde_json::json!([{ "ts-expect-error": true }]))),
-        ("/* @ts-expect-error */", Some(serde_json::json!([{ "ts-expect-error": true}]))),
+        (
+            "// @ts-expect-error",
+            Some(serde_json::json!([{ "ts-expect-error": true }])),
+        ),
+        (
+            "/* @ts-expect-error */",
+            Some(serde_json::json!([{ "ts-expect-error": true}])),
+        ),
         (
             r"
 /*
@@ -754,7 +787,10 @@ fn test() {
               },
             }])),
         ),
-        ("/** @ts-expect-error */", Some(serde_json::json!([{ "ts-expect-error": true}]))),
+        (
+            "/** @ts-expect-error */",
+            Some(serde_json::json!([{ "ts-expect-error": true}])),
+        ),
         (
             "// @ts-expect-error: Suppress next line",
             Some(serde_json::json!([{ "ts-expect-error": true}])),
@@ -832,7 +868,10 @@ if (false) {
             ),
         ),
         ("// @ts-ignore", None),
-        ("/* @ts-ignore */", Some(serde_json::json!([{ "ts-ignore": true}]))),
+        (
+            "/* @ts-ignore */",
+            Some(serde_json::json!([{ "ts-ignore": true}])),
+        ),
         (
             r"
 /*
@@ -890,7 +929,10 @@ if (false) {
             ",
             None,
         ),
-        ("// @ts-ignore", Some(serde_json::json!([{ "ts-ignore": "allow-with-description" }]))),
+        (
+            "// @ts-ignore",
+            Some(serde_json::json!([{ "ts-ignore": "allow-with-description" }])),
+        ),
         (
             "// @ts-ignore         ",
             Some(serde_json::json!([{ "ts-ignore": "allow-with-description" }])),
@@ -931,7 +973,10 @@ if (false) {
             ])),
         ),
         // ts-nocheck
-        ("// @ts-nocheck", Some(serde_json::json!([{ "ts-nocheck": true}]))),
+        (
+            "// @ts-nocheck",
+            Some(serde_json::json!([{ "ts-nocheck": true}])),
+        ),
         ("// @ts-nocheck", None),
         ("// @ts-nocheck: Suppress next line", None),
         (
@@ -943,7 +988,10 @@ if (false) {
             ",
             None,
         ),
-        ("// @ts-nocheck", Some(serde_json::json!([{ "ts-nocheck": "allow-with-description" }]))),
+        (
+            "// @ts-nocheck",
+            Some(serde_json::json!([{ "ts-nocheck": "allow-with-description" }])),
+        ),
         (
             "// @ts-nocheck: TS1234 because xyz",
             Some(serde_json::json!([
@@ -976,8 +1024,14 @@ if (false) {
             ])),
         ),
         // ts-check
-        ("// @ts-check", Some(serde_json::json!([{ "ts-check": true}]))),
-        ("// @ts-check: Suppress next line", Some(serde_json::json!([{ "ts-check":true}]))),
+        (
+            "// @ts-check",
+            Some(serde_json::json!([{ "ts-check": true}])),
+        ),
+        (
+            "// @ts-check: Suppress next line",
+            Some(serde_json::json!([{ "ts-check":true}])),
+        ),
         (
             r"
 if (false) {
@@ -987,7 +1041,10 @@ if (false) {
             ",
             Some(serde_json::json!([{ "ts-check":true}])),
         ),
-        ("// @ts-check", Some(serde_json::json!([{ "ts-check": "allow-with-description" }]))),
+        (
+            "// @ts-check",
+            Some(serde_json::json!([{ "ts-check": "allow-with-description" }])),
+        ),
         (
             "// @ts-check: TS1234 because xyz",
             Some(serde_json::json!([
@@ -1024,9 +1081,15 @@ if (false) {
     let fix = vec![
         ("// @ts-ignore", r"// @ts-expect-error"),
         ("/* @ts-ignore */", r"/* @ts-expect-error */"),
-        ("// @ts-ignore: TS1234 because xyz", r"// @ts-expect-error: TS1234 because xyz"),
+        (
+            "// @ts-ignore: TS1234 because xyz",
+            r"// @ts-expect-error: TS1234 because xyz",
+        ),
         ("// @ts-ignore: TS1234", r"// @ts-expect-error: TS1234"),
-        ("// @ts-ignore    : TS1234 because xyz", r"// @ts-expect-error    : TS1234 because xyz"),
+        (
+            "// @ts-ignore    : TS1234 because xyz",
+            r"// @ts-expect-error    : TS1234 because xyz",
+        ),
     ];
 
     Tester::new(BanTsComment::NAME, BanTsComment::PLUGIN, pass, fail)
@@ -1043,5 +1106,8 @@ fn invalid_description_format_is_rejected() {
     }]));
 
     let error = result.expect_err("invalid descriptionFormat should be rejected");
-    assert!(error.to_string().contains("regex parse error"), "unexpected error: {error}");
+    assert!(
+        error.to_string().contains("regex parse error"),
+        "unexpected error: {error}"
+    );
 }

@@ -112,7 +112,9 @@ impl ReactPluginSettings {
     }
 
     pub fn is_component_wrapper_function(&self, name: &str) -> bool {
-        self.component_wrapper_functions.iter().any(|func| func == name)
+        self.component_wrapper_functions
+            .iter()
+            .any(|func| func == name)
     }
 }
 
@@ -143,14 +145,16 @@ fn get_component_attrs_by_name<'c>(
             CustomComponent::NameOnly(comp_name) if comp_name == name => {
                 return Some(Cow::Owned(vec![]));
             }
-            CustomComponent::ObjectWithOneAttr { name: comp_name, attribute }
-                if comp_name == name =>
-            {
+            CustomComponent::ObjectWithOneAttr {
+                name: comp_name,
+                attribute,
+            } if comp_name == name => {
                 return Some(Cow::Owned(vec![attribute.clone()]));
             }
-            CustomComponent::ObjectWithManyAttrs { name: comp_name, attributes }
-                if comp_name == name =>
-            {
+            CustomComponent::ObjectWithManyAttrs {
+                name: comp_name,
+                attributes,
+            } if comp_name == name => {
                 return Some(Cow::Borrowed(attributes));
             }
             _ => {}
@@ -255,7 +259,11 @@ impl<'de> Deserialize<'de> for ReactVersion {
                     ));
                 }
 
-                Ok(ReactVersion { major, minor, patch })
+                Ok(ReactVersion {
+                    major,
+                    minor,
+                    patch,
+                })
             }
         }
 
@@ -292,13 +300,21 @@ mod test {
 
     #[test]
     fn test_react_version_serialize() {
-        let v = ReactVersion { major: 18, minor: 2, patch: 1 };
+        let v = ReactVersion {
+            major: 18,
+            minor: 2,
+            patch: 1,
+        };
         assert_eq!(serde_json::to_string(&v).unwrap(), r#""18.2.1""#);
     }
 
     #[test]
     fn test_react_version_display() {
-        let v = ReactVersion { major: 18, minor: 2, patch: 1 };
+        let v = ReactVersion {
+            major: 18,
+            minor: 2,
+            patch: 1,
+        };
         assert_eq!(v.to_string(), "18.2.1");
     }
 
@@ -347,12 +363,18 @@ mod test {
 
         let valid_versions = vec!["18.2.0", "17.0", "16", "1.0.0", "10.20.30", "2.5"];
         for version in valid_versions {
-            assert!(re.is_match(version), "Expected version '{version}' to match regex");
+            assert!(
+                re.is_match(version),
+                "Expected version '{version}' to match regex"
+            );
         }
 
         let invalid_versions = vec!["018.2.0", "17.-1", "18.2.0.1", "invalid", "", " "];
         for version in invalid_versions {
-            assert!(!re.is_match(version), "Expected version '{version}' to not match regex");
+            assert!(
+                !re.is_match(version),
+                "Expected version '{version}' to not match regex"
+            );
         }
     }
 }

@@ -28,14 +28,26 @@ pub struct Alloc {
 
 impl Alloc {
     /// [`Alloc`] representing zero cost.
-    pub const ZERO: Self = Self { bytes_64: 0, bytes_32: 0, count: 0 };
+    pub const ZERO: Self = Self {
+        bytes_64: 0,
+        bytes_32: 0,
+        count: 0,
+    };
 
     /// Sentinel value for [`Alloc`], indicating that it's not been calculated yet.
-    pub const NOT_CALCULATED: Self = Self { bytes_64: u32::MAX, bytes_32: 0, count: 0 };
+    pub const NOT_CALCULATED: Self = Self {
+        bytes_64: u32::MAX,
+        bytes_32: 0,
+        count: 0,
+    };
 
     /// Sentinel value for [`Alloc`], indicating that it currently being calculated.
     /// Used for preventing infinite cycles.
-    pub const CALCULATING: Self = Self { bytes_64: 0, bytes_32: u32::MAX, count: 0 };
+    pub const CALCULATING: Self = Self {
+        bytes_64: 0,
+        bytes_32: u32::MAX,
+        count: 0,
+    };
 }
 
 impl Default for Alloc {

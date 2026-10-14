@@ -22,7 +22,9 @@ fn no_console_diagnostic(span: Span, allow: &[CompactStr]) -> OxcDiagnostic {
         format!("Supported methods are: {}.", allow.join(", "))
     };
 
-    OxcDiagnostic::warn("Unexpected console statement.").with_label(span).with_help(only_msg)
+    OxcDiagnostic::warn("Unexpected console statement.")
+        .with_label(span)
+        .with_help(only_msg)
 }
 
 #[derive(Debug, Default, Clone, Deserialize)]
@@ -125,7 +127,11 @@ impl Rule for NoConsole {
             _ => unreachable!(),
         };
 
-        if self.allow.iter().any(|allowed_name| allowed_name == prop_name) {
+        if self
+            .allow
+            .iter()
+            .any(|allowed_name| allowed_name == prop_name)
+        {
             return;
         }
 
@@ -191,7 +197,11 @@ fn test() {
 
     let pass = vec![
         ("Console.info(foo)", None, None),
-        ("console.info(foo)", Some(serde_json::json!([{ "allow": ["info"] }])), None),
+        (
+            "console.info(foo)",
+            Some(serde_json::json!([{ "allow": ["info"] }])),
+            None,
+        ),
         (
             "console.info(foo)",
             Some(serde_json::json!([{ "allow": ["info"] }])),
@@ -202,15 +212,51 @@ fn test() {
             Some(serde_json::json!([{ "allow": ["info"] }])),
             Some(serde_json::json!({ "globals": { "console": "readonly" }})),
         ),
-        ("console.warn(foo)", Some(serde_json::json!([{ "allow": ["warn"] }])), None),
-        ("console.error(foo)", Some(serde_json::json!([{ "allow": ["error"] }])), None),
-        ("console.log(foo)", Some(serde_json::json!([{ "allow": ["log"] }])), None),
-        ("console.info(foo)", Some(serde_json::json!([{ "allow": ["warn", "info"] }])), None),
-        ("console.warn(foo)", Some(serde_json::json!([{ "allow": ["error", "warn"] }])), None),
-        ("console.error(foo)", Some(serde_json::json!([{ "allow": ["log", "error"] }])), None),
-        ("console.log(foo)", Some(serde_json::json!([{ "allow": ["info", "log", "warn"] }])), None),
-        ("var console = require('myconsole'); console.log(foo)", None, None),
-        ("import console from 'myconsole'; console.log(foo)", None, None),
+        (
+            "console.warn(foo)",
+            Some(serde_json::json!([{ "allow": ["warn"] }])),
+            None,
+        ),
+        (
+            "console.error(foo)",
+            Some(serde_json::json!([{ "allow": ["error"] }])),
+            None,
+        ),
+        (
+            "console.log(foo)",
+            Some(serde_json::json!([{ "allow": ["log"] }])),
+            None,
+        ),
+        (
+            "console.info(foo)",
+            Some(serde_json::json!([{ "allow": ["warn", "info"] }])),
+            None,
+        ),
+        (
+            "console.warn(foo)",
+            Some(serde_json::json!([{ "allow": ["error", "warn"] }])),
+            None,
+        ),
+        (
+            "console.error(foo)",
+            Some(serde_json::json!([{ "allow": ["log", "error"] }])),
+            None,
+        ),
+        (
+            "console.log(foo)",
+            Some(serde_json::json!([{ "allow": ["info", "log", "warn"] }])),
+            None,
+        ),
+        (
+            "var console = require('myconsole'); console.log(foo)",
+            None,
+            None,
+        ),
+        (
+            "import console from 'myconsole'; console.log(foo)",
+            None,
+            None,
+        ),
         (
             "var c = console; function f(myLogger) { const console = myLogger; console.log(foo); }",
             None,
@@ -238,18 +284,58 @@ fn test() {
             None,
             None,
         ),
-        ("console.warn(foo)", Some(serde_json::json!([{ "allow": [] }])), None),
+        (
+            "console.warn(foo)",
+            Some(serde_json::json!([{ "allow": [] }])),
+            None,
+        ),
         ("console['log'](foo)", None, None),
         ("console[`log`](foo)", None, None),
-        ("console['lo\\x67'](foo)", Some(serde_json::json!([{ "allow": ["lo\\x67"] }])), None),
-        ("console[`lo\\x67`](foo)", Some(serde_json::json!([{ "allow": ["lo\\x67"] }])), None),
-        ("console.log()", None, Some(serde_json::json!({ "env": { "browser": true }}))),
-        ("console.log()", None, Some(serde_json::json!({ "globals": { "console": "off" }}))),
-        ("console.log(foo)", Some(serde_json::json!([{ "allow": ["error"] }])), None),
-        ("console.error(foo)", Some(serde_json::json!([{ "allow": ["warn"] }])), None),
-        ("console.info(foo)", Some(serde_json::json!([{ "allow": ["log"] }])), None),
-        ("console.warn(foo)", Some(serde_json::json!([{ "allow": ["error"] }])), None),
-        ("console.log(foo)", Some(serde_json::json!([{ "allow": ["warn", "info"] }])), None),
+        (
+            "console['lo\\x67'](foo)",
+            Some(serde_json::json!([{ "allow": ["lo\\x67"] }])),
+            None,
+        ),
+        (
+            "console[`lo\\x67`](foo)",
+            Some(serde_json::json!([{ "allow": ["lo\\x67"] }])),
+            None,
+        ),
+        (
+            "console.log()",
+            None,
+            Some(serde_json::json!({ "env": { "browser": true }})),
+        ),
+        (
+            "console.log()",
+            None,
+            Some(serde_json::json!({ "globals": { "console": "off" }})),
+        ),
+        (
+            "console.log(foo)",
+            Some(serde_json::json!([{ "allow": ["error"] }])),
+            None,
+        ),
+        (
+            "console.error(foo)",
+            Some(serde_json::json!([{ "allow": ["warn"] }])),
+            None,
+        ),
+        (
+            "console.info(foo)",
+            Some(serde_json::json!([{ "allow": ["log"] }])),
+            None,
+        ),
+        (
+            "console.warn(foo)",
+            Some(serde_json::json!([{ "allow": ["error"] }])),
+            None,
+        ),
+        (
+            "console.log(foo)",
+            Some(serde_json::json!([{ "allow": ["warn", "info"] }])),
+            None,
+        ),
         (
             "console.error(foo)",
             Some(serde_json::json!([{ "allow": ["warn", "info", "log"] }])),
@@ -260,23 +346,61 @@ fn test() {
             Some(serde_json::json!([{ "allow": ["warn", "error", "log"] }])),
             None,
         ),
-        ("console.warn(foo)", Some(serde_json::json!([{ "allow": ["info", "log"] }])), None),
+        (
+            "console.warn(foo)",
+            Some(serde_json::json!([{ "allow": ["info", "log"] }])),
+            None,
+        ),
     ];
 
     let fix = vec![
-        ("function foo() { console.log(bar); }", "function foo() {  }", None),
-        ("function foo() { console.log(bar) }", "function foo() {  }", None),
-        ("const x = () => console.log(foo)", "const x = () => {}", None),
-        ("const x = () => { console.log(foo) }", "const x = () => {  }", None),
-        ("const x = () => { console.log(foo); }", "const x = () => {  }", None),
-        ("const x = () => { ((console.log(foo))); }", "const x = () => {  }", None),
-        ("const x = () => { console.log(foo); return 5 }", "const x = () => {  return 5 }", None),
+        (
+            "function foo() { console.log(bar); }",
+            "function foo() {  }",
+            None,
+        ),
+        (
+            "function foo() { console.log(bar) }",
+            "function foo() {  }",
+            None,
+        ),
+        (
+            "const x = () => console.log(foo)",
+            "const x = () => {}",
+            None,
+        ),
+        (
+            "const x = () => { console.log(foo) }",
+            "const x = () => {  }",
+            None,
+        ),
+        (
+            "const x = () => { console.log(foo); }",
+            "const x = () => {  }",
+            None,
+        ),
+        (
+            "const x = () => { ((console.log(foo))); }",
+            "const x = () => {  }",
+            None,
+        ),
+        (
+            "const x = () => { console.log(foo); return 5 }",
+            "const x = () => {  return 5 }",
+            None,
+        ),
         ("if (foo) { console.log(foo) }", "if (foo) {  }", None),
         ("foo ? console.log(foo) : 5", "foo ? undefined : 5", None),
         ("(console.log(foo), 5)", "(undefined, 5)", None),
         ("(5, console.log(foo))", "(5, undefined)", None),
-        ("const x = { foo: console.log(bar) }", "const x = { foo: undefined }", None),
+        (
+            "const x = { foo: console.log(bar) }",
+            "const x = { foo: undefined }",
+            None,
+        ),
     ];
 
-    Tester::new(NoConsole::NAME, NoConsole::PLUGIN, pass, fail).expect_fix(fix).test_and_snapshot();
+    Tester::new(NoConsole::NAME, NoConsole::PLUGIN, pass, fail)
+        .expect_fix(fix)
+        .test_and_snapshot();
 }

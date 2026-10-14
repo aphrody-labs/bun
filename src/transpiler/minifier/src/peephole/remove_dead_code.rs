@@ -19,7 +19,9 @@ impl<'a> PeepholeOptimizations {
     /// Remove block from single line blocks
     /// `{ block } -> block`
     pub fn try_optimize_block(stmt: &mut Statement<'a>, ctx: &mut TraverseCtx<'a>) {
-        let Statement::BlockStatement(s) = stmt else { return };
+        let Statement::BlockStatement(s) = stmt else {
+            return;
+        };
         match s.body.len() {
             0 => {
                 let parent = ctx.parent();
@@ -57,7 +59,9 @@ impl<'a> PeepholeOptimizations {
 
     #[expect(clippy::float_cmp)]
     pub fn try_fold_if(stmt: &mut Statement<'a>, ctx: &mut TraverseCtx<'a>) {
-        let Statement::IfStatement(if_stmt) = stmt else { return };
+        let Statement::IfStatement(if_stmt) = stmt else {
+            return;
+        };
         // Descend and remove `else` blocks first.
         match &mut if_stmt.alternate {
             Some(Statement::IfStatement(_)) => {
@@ -117,8 +121,10 @@ impl<'a> PeepholeOptimizations {
                 // that slot and produce a structurally-equivalent fresh allocation; routing
                 // through `replace_statement` would re-record a mutation indefinitely.
                 if boolean {
-                    let already_canonical =
-                        if_stmt.alternate.as_ref().is_some_and(Self::is_keep_var_canonical);
+                    let already_canonical = if_stmt
+                        .alternate
+                        .as_ref()
+                        .is_some_and(Self::is_keep_var_canonical);
                     if !already_canonical {
                         if let Some(alternate) = if_stmt.alternate.as_mut() {
                             ctx.replace_statement(alternate, var_stmt);
@@ -176,7 +182,9 @@ impl<'a> PeepholeOptimizations {
     }
 
     pub fn try_fold_for(stmt: &mut Statement<'a>, ctx: &mut TraverseCtx<'a>) {
-        let Statement::ForStatement(for_stmt) = stmt else { return };
+        let Statement::ForStatement(for_stmt) = stmt else {
+            return;
+        };
         if let Some(init) = &mut for_stmt.init
             && let Some(init_expr) = init.as_expression_mut()
             && Self::remove_unused_expression(init_expr, ctx)
@@ -191,9 +199,15 @@ impl<'a> PeepholeOptimizations {
             for_stmt.update = None;
         }
 
-        let test_boolean =
-            for_stmt.test.as_ref().and_then(|test| test.evaluate_value_to_boolean(ctx));
-        if for_stmt.test.as_ref().is_some_and(|test| test.may_have_side_effects(ctx)) {
+        let test_boolean = for_stmt
+            .test
+            .as_ref()
+            .and_then(|test| test.evaluate_value_to_boolean(ctx));
+        if for_stmt
+            .test
+            .as_ref()
+            .is_some_and(|test| test.may_have_side_effects(ctx))
+        {
             return;
         }
         match test_boolean {
@@ -213,7 +227,9 @@ impl<'a> PeepholeOptimizations {
                             else {
                                 unreachable!()
                             };
-                            var_decl.declarations.splice(0..0, var_init.declarations.take_in(ctx));
+                            var_decl
+                                .declarations
+                                .splice(0..0, var_init.declarations.take_in(ctx));
                         } else {
                             let Some(ForStatementInit::VariableDeclaration(var_init)) =
                                 for_stmt.init.take()
@@ -256,7 +272,9 @@ impl<'a> PeepholeOptimizations {
     /// a: break a;
     /// ```
     pub fn try_fold_labeled(stmt: &mut Statement<'a>, ctx: &mut TraverseCtx<'a>) {
-        let Statement::LabeledStatement(s) = stmt else { return };
+        let Statement::LabeledStatement(s) = stmt else {
+            return;
+        };
         let id = s.label.name;
 
         if ctx.options().drop_labels.contains(id.as_str()) {
@@ -286,7 +304,9 @@ impl<'a> PeepholeOptimizations {
     }
 
     pub fn try_fold_expression_stmt(stmt: &mut Statement<'a>, ctx: &mut TraverseCtx<'a>) {
-        let Statement::ExpressionStatement(expr_stmt) = stmt else { return };
+        let Statement::ExpressionStatement(expr_stmt) = stmt else {
+            return;
+        };
         if Self::remove_unused_expression(&mut expr_stmt.expression, ctx) {
             let new_stmt = Statement::new_empty_statement(expr_stmt.span, ctx);
             ctx.replace_statement(stmt, new_stmt);
@@ -294,7 +314,9 @@ impl<'a> PeepholeOptimizations {
     }
 
     pub fn try_fold_switch(stmt: &mut Statement<'a>, ctx: &mut TraverseCtx<'a>) {
-        let Statement::SwitchStatement(switch_stmt) = stmt else { return };
+        let Statement::SwitchStatement(switch_stmt) = stmt else {
+            return;
+        };
 
         // Remove empty case clauses that don't affect behavior.
         // Handles fall-through semantics: remove empty cases before default or at end (if no default).
@@ -313,7 +335,10 @@ impl<'a> PeepholeOptimizations {
             // 2. default exists and is non-removable and last: check only cases before that default.
             // 3. default exists, is non-removable, and is not last: skip this optimization (`end = 0`).
             // 4. no default case: check the full switch and allow a trailing unlabeled `break`.
-            let default_pos = switch_stmt.cases.iter().rposition(SwitchCase::is_default_case);
+            let default_pos = switch_stmt
+                .cases
+                .iter()
+                .rposition(SwitchCase::is_default_case);
             let (end, allow_break) = if let Some(default_pos) = default_pos {
                 if Self::is_switch_case_removable(&switch_stmt.cases[default_pos], true) {
                     (case_count, true)
@@ -382,7 +407,9 @@ impl<'a> PeepholeOptimizations {
     }
 
     pub fn try_fold_try(stmt: &mut Statement<'a>, ctx: &mut TraverseCtx<'a>) {
-        let Statement::TryStatement(s) = stmt else { return };
+        let Statement::TryStatement(s) = stmt else {
+            return;
+        };
         if let Some(handler) = &s.handler
             && s.block.body.is_empty()
         {
@@ -392,7 +419,9 @@ impl<'a> PeepholeOptimizations {
             if !is_canonical_body {
                 let mut var = KeepVar::new();
                 var.visit_block_statement(&handler.body);
-                let Some(handler) = &mut s.handler else { return };
+                let Some(handler) = &mut s.handler else {
+                    return;
+                };
 
                 for dropped in handler.body.body.take_in(ctx) {
                     ctx.drop_statement(&dropped);
@@ -411,7 +440,9 @@ impl<'a> PeepholeOptimizations {
         }
 
         if s.block.body.is_empty()
-            && s.handler.as_ref().is_none_or(|handler| handler.body.body.is_empty())
+            && s.handler
+                .as_ref()
+                .is_none_or(|handler| handler.body.body.is_empty())
         {
             let new_stmt = if let Some(finalizer) = s.finalizer.take() {
                 Statement::BlockStatement(finalizer)
@@ -424,8 +455,12 @@ impl<'a> PeepholeOptimizations {
 
     /// Try folding conditional expression (?:) if the condition results of the condition is known.
     pub fn try_fold_conditional_expression(expr: &mut Expression<'a>, ctx: &mut TraverseCtx<'a>) {
-        let Expression::ConditionalExpression(e) = expr else { return };
-        let Some(v) = e.test.evaluate_value_to_boolean(ctx) else { return };
+        let Expression::ConditionalExpression(e) = expr else {
+            return;
+        };
+        let Some(v) = e.test.evaluate_value_to_boolean(ctx) else {
+            return;
+        };
 
         ctx.drop_expression(if v { &e.alternate } else { &e.consequent });
         ctx.replace_expression_with(expr, |e, ctx| {
@@ -451,7 +486,9 @@ impl<'a> PeepholeOptimizations {
     }
 
     pub fn remove_sequence_expression(expr: &mut Expression<'a>, ctx: &mut TraverseCtx<'a>) {
-        let Expression::SequenceExpression(e) = expr else { return };
+        let Expression::SequenceExpression(e) = expr else {
+            return;
+        };
         let should_keep_as_sequence_expr = e
             .expressions
             .last()
@@ -504,7 +541,9 @@ impl<'a> PeepholeOptimizations {
                         &f.params,
                         f.r#async,
                         f.generator,
-                        body.statements.iter().any(|stmt| stmt.may_have_side_effects(ctx)),
+                        body.statements
+                            .iter()
+                            .any(|stmt| stmt.may_have_side_effects(ctx)),
                         body.is_empty(),
                         ctx,
                     );
@@ -576,14 +615,19 @@ impl<'a> PeepholeOptimizations {
         // `No TDZ Violation` assumption.
         if !params.items.iter().all(|param| {
             param.pattern.is_binding_identifier()
-                && param.initializer.as_ref().is_none_or(|init| !init.may_have_side_effects(ctx))
+                && param
+                    .initializer
+                    .as_ref()
+                    .is_none_or(|init| !init.may_have_side_effects(ctx))
         }) {
             return;
         }
         if body_has_side_effects {
             return;
         }
-        let Some(symbol_id) = id.and_then(|id| id.symbol_id.get()) else { return };
+        let Some(symbol_id) = id.and_then(|id| id.symbol_id.get()) else {
+            return;
+        };
         let binding_scope_id = ctx.scoping().symbol_scope_id(symbol_id);
         let binding_scope_flags = ctx.scoping().scope_flags(binding_scope_id);
         // Redeclarations are span-only in semantic and create no references,
@@ -603,7 +647,11 @@ impl<'a> PeepholeOptimizations {
             ctx.state.symbols.clear_function_summary(symbol_id);
             return;
         }
-        if ctx.scoping().get_resolved_references(symbol_id).all(|r| r.flags().is_read_only()) {
+        if ctx
+            .scoping()
+            .get_resolved_references(symbol_id)
+            .all(|r| r.flags().is_read_only())
+        {
             ctx.state.symbols.set_function_summary(
                 symbol_id,
                 if returns_undefined {
@@ -616,11 +664,17 @@ impl<'a> PeepholeOptimizations {
     }
 
     pub fn remove_dead_code_call_expression(expr: &mut Expression<'a>, ctx: &mut TraverseCtx<'a>) {
-        let Expression::CallExpression(e) = expr else { return };
+        let Expression::CallExpression(e) = expr else {
+            return;
+        };
         if let Expression::Identifier(ident) = &e.callee {
             let reference_id = ident.reference_id();
             if let Some(symbol_id) = ctx.scoping().get_reference(reference_id).symbol_id()
-                && ctx.state.symbols.function_summary(symbol_id).returns_undefined()
+                && ctx
+                    .state
+                    .symbols
+                    .function_summary(symbol_id)
+                    .returns_undefined()
             {
                 let mut exprs = Self::fold_arguments_into_needed_expressions(&mut e.arguments, ctx);
                 if exprs.is_empty() {
@@ -703,15 +757,20 @@ impl<'a> PeepholeOptimizations {
     }
 
     pub fn remove_dead_code_exit_class_body(body: &mut ClassBody<'a>, _ctx: &mut TraverseCtx<'a>) {
-        body.body.retain(|e| !matches!(e, ClassElement::StaticBlock(s) if s.body.is_empty()));
+        body.body
+            .retain(|e| !matches!(e, ClassElement::StaticBlock(s) if s.body.is_empty()));
     }
 
     pub fn remove_empty_spread_arguments(args: &mut ArenaVec<'a, Argument<'a>>) {
         if args.len() != 1 {
             return;
         }
-        let Argument::SpreadElement(e) = &args[0] else { return };
-        let Expression::ArrayExpression(e) = &e.argument else { return };
+        let Argument::SpreadElement(e) = &args[0] else {
+            return;
+        };
+        let Expression::ArrayExpression(e) = &e.argument else {
+            return;
+        };
         if e.elements.is_empty() {
             args.drain(..);
         }

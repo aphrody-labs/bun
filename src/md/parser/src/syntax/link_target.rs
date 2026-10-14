@@ -111,7 +111,11 @@ pub fn footnote_label(t: &str, start: usize) -> Option<(Range<usize>, usize)> {
             b'[' | b' ' | b'\t' | b'\n' => return None,
             b'\\' => {
                 data = true;
-                i += if matches!(bytes.get(i + 1), Some(b'[' | b'\\' | b']')) { 2 } else { 1 };
+                i += if matches!(bytes.get(i + 1), Some(b'[' | b'\\' | b']')) {
+                    2
+                } else {
+                    1
+                };
             }
             _ => {
                 data = true;
@@ -156,7 +160,11 @@ mod tests {
     fn labels() {
         assert_eq!(label_end("[a]", 0), Some(3));
         assert_eq!(label_end("[a\\]b]", 0), Some(6));
-        assert_eq!(label_end("[ ]", 0), None, "needs a non-whitespace character");
+        assert_eq!(
+            label_end("[ ]", 0),
+            None,
+            "needs a non-whitespace character"
+        );
         assert_eq!(label_end("[a[b]]", 0), None);
         assert_eq!(label_end("[a", 0), None);
         let long = format!("[{}]", "x".repeat(1000));

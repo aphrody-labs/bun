@@ -66,19 +66,28 @@ impl<'a> PeepholeOptimizations {
     // `x >> +y !== 0` -> `!!(x >> +y)`
     //  ^^^^^^^ `e.left.is_int32_or_uint32(ctx)` is `true`.
     pub fn minimize_binary(expr: &mut Expression<'a>, ctx: &mut TraverseCtx<'a>) {
-        let Expression::BinaryExpression(e) = expr else { return };
+        let Expression::BinaryExpression(e) = expr else {
+            return;
+        };
         if !e.operator.is_equality() {
             return;
         }
         // `NaN == 0` and `!NaN` differ, so require proof that the left side is a non-NaN Number.
         if e.right.is_number_0() && e.left.is_int32_or_uint32(ctx) {
-            let inequal =
-                matches!(e.operator, BinaryOperator::Inequality | BinaryOperator::StrictInequality);
+            let inequal = matches!(
+                e.operator,
+                BinaryOperator::Inequality | BinaryOperator::StrictInequality
+            );
             ctx.replace_expression_with(expr, |old, ctx| {
-                let Expression::BinaryExpression(e) = old else { unreachable!() };
+                let Expression::BinaryExpression(e) = old else {
+                    unreachable!()
+                };
                 let e = e.unbox();
-                let value =
-                    if inequal { Self::minimize_not(e.span, e.left, ctx, true) } else { e.left };
+                let value = if inequal {
+                    Self::minimize_not(e.span, e.left, ctx, true)
+                } else {
+                    e.left
+                };
                 Expression::new_unary_expression(e.span, UnaryOperator::LogicalNot, value, ctx)
             });
             return;
@@ -102,7 +111,11 @@ impl<'a> PeepholeOptimizations {
         if !left.is_boolean() || e.right.may_have_side_effects(ctx) {
             return;
         }
-        let Some(mut b) = e.right.evaluate_value(ctx).and_then(ConstantValue::into_boolean) else {
+        let Some(mut b) = e
+            .right
+            .evaluate_value(ctx)
+            .and_then(ConstantValue::into_boolean)
+        else {
             return;
         };
         if matches!(e.operator, BinaryOperator::Inequality) {
@@ -111,9 +124,15 @@ impl<'a> PeepholeOptimizations {
 
         ctx.drop_expression(&e.right);
         ctx.replace_expression_with(expr, |old, ctx| {
-            let Expression::BinaryExpression(e) = old else { unreachable!() };
+            let Expression::BinaryExpression(e) = old else {
+                unreachable!()
+            };
             let e = e.unbox();
-            if b { e.left } else { Self::minimize_not(e.span, e.left, ctx, false) }
+            if b {
+                e.left
+            } else {
+                Self::minimize_not(e.span, e.left, ctx, false)
+            }
         });
     }
 
@@ -125,8 +144,13 @@ impl<'a> PeepholeOptimizations {
     /// In `IsLooselyEqual`, `true` and `false` are converted to `1` and `0` first.
     /// <https://tc39.es/ecma262/multipage/abstract-operations.html#sec-islooselyequal>
     pub fn minimize_loose_boolean(e: &mut Expression<'a>, ctx: &mut TraverseCtx<'a>) {
-        let Expression::BinaryExpression(e) = e else { return };
-        if !matches!(e.operator, BinaryOperator::Equality | BinaryOperator::Inequality) {
+        let Expression::BinaryExpression(e) = e else {
+            return;
+        };
+        if !matches!(
+            e.operator,
+            BinaryOperator::Equality | BinaryOperator::Inequality
+        ) {
             return;
         }
         if let Some(ConstantValue::Boolean(left_bool)) = e.left.evaluate_value(ctx)
@@ -187,7 +211,9 @@ impl<'a> PeepholeOptimizations {
             return;
         }
 
-        let Expression::LogicalExpression(logical_expr) = &mut expr.right else { return };
+        let Expression::LogicalExpression(logical_expr) = &mut expr.right else {
+            return;
+        };
         // NOTE: if the right hand side is an anonymous function, applying this compression will
         // set the `name` property of that function.
         // Since codes relying on the fact that function's name is undefined should be rare,
@@ -206,13 +232,17 @@ impl<'a> PeepholeOptimizations {
             return;
         }
 
-        let reference = ctx.scoping_mut().get_reference_mut(write_id_ref.reference_id());
+        let reference = ctx
+            .scoping_mut()
+            .get_reference_mut(write_id_ref.reference_id());
         reference.flags_mut().insert(ReferenceFlags::Read);
 
         expr.operator = logical_expr.operator.to_assignment_operator();
         ctx.drop_expression(&logical_expr.left);
         ctx.replace_expression_with(&mut expr.right, |e, _ctx| {
-            let Expression::LogicalExpression(e) = e else { unreachable!() };
+            let Expression::LogicalExpression(e) = e else {
+                unreachable!()
+            };
             e.unbox().right
         });
     }
@@ -225,8 +255,12 @@ impl<'a> PeepholeOptimizations {
         if !matches!(expr.operator, AssignmentOperator::Assign) {
             return;
         }
-        let Expression::BinaryExpression(binary_expr) = &expr.right else { return };
-        let Some(new_op) = binary_expr.operator.to_assignment_operator() else { return };
+        let Expression::BinaryExpression(binary_expr) = &expr.right else {
+            return;
+        };
+        let Some(new_op) = binary_expr.operator.to_assignment_operator() else {
+            return;
+        };
         if !Self::has_no_side_effect_for_evaluation_same_target(&expr.left, &binary_expr.left, ctx)
         {
             return;
@@ -237,7 +271,9 @@ impl<'a> PeepholeOptimizations {
         expr.operator = new_op;
         ctx.drop_expression(&binary_expr.left);
         ctx.replace_expression_with(&mut expr.right, |e, _ctx| {
-            let Expression::BinaryExpression(e) = e else { unreachable!() };
+            let Expression::BinaryExpression(e) = e else {
+                unreachable!()
+            };
             e.unbox().right
         });
     }
@@ -248,7 +284,9 @@ impl<'a> PeepholeOptimizations {
         expr: &mut Expression<'a>,
         ctx: &mut TraverseCtx<'a>,
     ) {
-        let Expression::AssignmentExpression(e) = expr else { return };
+        let Expression::AssignmentExpression(e) = expr else {
+            return;
+        };
         if e.operator != AssignmentOperator::Subtraction || !e.left.is_simple_assignment_target() {
             return;
         }

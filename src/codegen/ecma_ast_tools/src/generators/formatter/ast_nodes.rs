@@ -49,7 +49,11 @@ impl Generator for FormatterAstNodesGenerator {
                 StructOrEnum::Struct(struct_def)
                     if struct_def.visit.has_visitor() && !struct_def.builder.skip =>
                 {
-                    Some(generate_struct_impls(struct_def, &no_following_node_type_ids, schema))
+                    Some(generate_struct_impls(
+                        struct_def,
+                        &no_following_node_type_ids,
+                        schema,
+                    ))
                 }
                 StructOrEnum::Enum(enum_def) if enum_def.visit.has_visitor() => {
                     Some(generate_enum_impls(enum_def, schema))
@@ -168,7 +172,10 @@ impl Generator for FormatterAstNodesGenerator {
             #impls
         };
 
-        Output::Rust { path: formatter_output_path("ast_nodes"), tokens: output }
+        Output::Rust {
+            path: formatter_output_path("ast_nodes"),
+            tokens: output,
+        }
     }
 }
 
@@ -218,12 +225,18 @@ fn generate_struct_impls(
 
         let field_type_def = field.type_def(schema);
         let is_option = field_type_def.is_option();
-        let (original_field_type, is_box) = if let TypeDef::Box(box_def) =
-            field_type_def.as_option().map_or(field_type_def, |opt| opt.inner_type(schema))
+        let (original_field_type, is_box) = if let TypeDef::Box(box_def) = field_type_def
+            .as_option()
+            .map_or(field_type_def, |opt| opt.inner_type(schema))
         {
             (box_def.inner_type(schema), true)
         } else {
-            (field_type_def.as_option().map_or(field_type_def, |opt| opt.inner_type(schema)), false)
+            (
+                field_type_def
+                    .as_option()
+                    .map_or(field_type_def, |opt| opt.inner_type(schema)),
+                false,
+            )
         };
 
         let field_name = &field.ident();
@@ -236,9 +249,12 @@ fn generate_struct_impls(
             }
             TypeDef::Enum(e_def) => (!e_def.visit.has_visitor(), is_copyable(&e_def.derives)),
             TypeDef::Primitive(_) => (true, true),
-            TypeDef::Vec(vec) => {
-                (vec.inner_type(schema).as_struct().is_some_and(|s| !s.visit.has_visitor()), false)
-            }
+            TypeDef::Vec(vec) => (
+                vec.inner_type(schema)
+                    .as_struct()
+                    .is_some_and(|s| !s.visit.has_visitor()),
+                false,
+            ),
             TypeDef::Cell(_) => {
                 if field.name == "node_id" {
                     return Some(quote! {

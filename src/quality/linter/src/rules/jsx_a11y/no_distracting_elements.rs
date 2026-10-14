@@ -44,7 +44,9 @@ pub struct NoDistractingElementsConfig {
 
 impl Default for NoDistractingElementsConfig {
     fn default() -> Self {
-        Self { elements: default_elements() }
+        Self {
+            elements: default_elements(),
+        }
     }
 }
 
@@ -116,10 +118,16 @@ impl Rule for NoDistractingElements {
 
         match element_type.as_ref() {
             "marquee" if self.check_marquee => {
-                ctx.diagnostic(no_distracting_elements_diagnostic(jsx_el.name.span(), "marquee"));
+                ctx.diagnostic(no_distracting_elements_diagnostic(
+                    jsx_el.name.span(),
+                    "marquee",
+                ));
             }
             "blink" if self.check_blink => {
-                ctx.diagnostic(no_distracting_elements_diagnostic(jsx_el.name.span(), "blink"));
+                ctx.diagnostic(no_distracting_elements_diagnostic(
+                    jsx_el.name.span(),
+                    "blink",
+                ));
             }
             _ => {}
         }
@@ -128,7 +136,10 @@ impl Rule for NoDistractingElements {
 
 impl Default for NoDistractingElements {
     fn default() -> Self {
-        Self { check_marquee: true, check_blink: true }
+        Self {
+            check_marquee: true,
+            check_blink: true,
+        }
     }
 }
 
@@ -153,8 +164,16 @@ fn test() {
         (r"<div marquee />", None, None),
         (r"<Blink />", None, None),
         (r"<div blink />", None, None),
-        (r"<marquee />", Some(serde_json::json!([{ "elements": [] }])), None),
-        (r"<blink />", Some(serde_json::json!([{ "elements": ["marquee"] }])), None),
+        (
+            r"<marquee />",
+            Some(serde_json::json!([{ "elements": [] }])),
+            None,
+        ),
+        (
+            r"<blink />",
+            Some(serde_json::json!([{ "elements": ["marquee"] }])),
+            None,
+        ),
     ];
 
     let fail = vec![
@@ -164,12 +183,25 @@ fn test() {
         (r"<blink />", None, None),
         (r"<blink {...props} />", None, None),
         (r"<blink foo={undefined} />", None, None),
-        (r"<marquee />", Some(serde_json::json!([{ "elements": ["marquee"] }])), None),
-        (r"<blink />", Some(serde_json::json!([{ "elements": ["blink"] }])), None),
+        (
+            r"<marquee />",
+            Some(serde_json::json!([{ "elements": ["marquee"] }])),
+            None,
+        ),
+        (
+            r"<blink />",
+            Some(serde_json::json!([{ "elements": ["blink"] }])),
+            None,
+        ),
         (r"<Blink />", None, Some(settings())),
         (r"<Marquee />", None, Some(settings())),
     ];
 
-    Tester::new(NoDistractingElements::NAME, NoDistractingElements::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        NoDistractingElements::NAME,
+        NoDistractingElements::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

@@ -171,7 +171,9 @@ impl fmt::Display for TSAccessibility {
 impl TSExternalModuleDeclaration<'_> {
     /// Returns `true` if this module's body exists and has a `"use strict"` directive.
     pub fn has_use_strict_directive(&self) -> bool {
-        self.body.as_ref().is_some_and(|body| body.has_use_strict_directive())
+        self.body
+            .as_ref()
+            .is_some_and(|body| body.has_use_strict_directive())
     }
 }
 

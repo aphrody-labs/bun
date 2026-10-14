@@ -119,9 +119,13 @@ fn is_single_character_access(expr: &Expression, ctx: &LintContext) -> bool {
             is_method_call(call_expr, None, Some(&["charAt"]), Some(1), Some(1))
                 || (!call_expr.optional
                     && is_method_call(call_expr, None, Some(&["at"]), Some(1), Some(1))
-                    && call_expr.callee.get_member_expr().is_some_and(|member_expr| {
-                        !member_expr.optional() && is_definitely_string(member_expr.object(), ctx)
-                    }))
+                    && call_expr
+                        .callee
+                        .get_member_expr()
+                        .is_some_and(|member_expr| {
+                            !member_expr.optional()
+                                && is_definitely_string(member_expr.object(), ctx)
+                        }))
         }
         Expression::ComputedMemberExpression(member_expr) if !member_expr.optional => {
             is_static_string_index(&member_expr.expression)
@@ -135,13 +139,17 @@ fn is_definitely_string(expr: &Expression, ctx: &LintContext) -> bool {
     match expr.without_parentheses() {
         Expression::StringLiteral(_) => true,
         Expression::Identifier(identifier) => {
-            let Some(symbol_id) =
-                ctx.scoping().get_reference(identifier.reference_id()).symbol_id()
+            let Some(symbol_id) = ctx
+                .scoping()
+                .get_reference(identifier.reference_id())
+                .symbol_id()
             else {
                 return false;
             };
-            let declaration =
-                ctx.nodes().get_node(ctx.scoping().symbol_declaration(symbol_id)).kind();
+            let declaration = ctx
+                .nodes()
+                .get_node(ctx.scoping().symbol_declaration(symbol_id))
+                .kind();
 
             declaration
                 .as_variable_declarator()
@@ -182,7 +190,9 @@ fn is_static_string_index(expr: &Expression) -> bool {
             value == "0"
                 || (!value.starts_with('0')
                     && value.bytes().all(|byte| byte.is_ascii_digit())
-                    && value.parse::<u64>().is_ok_and(|index| index <= MAX_SAFE_INTEGER))
+                    && value
+                        .parse::<u64>()
+                        .is_ok_and(|index| index <= MAX_SAFE_INTEGER))
         }
         _ => false,
     }
@@ -229,6 +239,11 @@ fn test() {
         r#"const value = "abc"; value.at(0) === "ab""#,
     ];
 
-    Tester::new(BadCharAtComparison::NAME, BadCharAtComparison::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        BadCharAtComparison::NAME,
+        BadCharAtComparison::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

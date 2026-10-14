@@ -90,7 +90,9 @@ impl Phase {
 impl MetaData {
     pub fn from_str(s: &str) -> Self {
         let yamls = Yaml::load_from_str(s).unwrap_or_default();
-        let Some(yaml) = yamls.first() else { return Self::default() };
+        let Some(yaml) = yamls.first() else {
+            return Self::default();
+        };
         Self {
             // description: yaml["description"].as_str().unwrap_or_default().into(),
             esid: yaml

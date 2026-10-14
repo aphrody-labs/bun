@@ -93,7 +93,12 @@ pub fn run_on_jest_node<'a, 'c>(
         return;
     };
 
-    let ParsedGeneralJestFnCall { kind, members, name, .. } = jest_fn_call;
+    let ParsedGeneralJestFnCall {
+        kind,
+        members,
+        name,
+        ..
+    } = jest_fn_call;
     // `test('foo')`
     let kind = match kind {
         JestFnKind::Expect
@@ -119,7 +124,11 @@ pub fn run_on_jest_node<'a, 'c>(
         } else {
             Message::DisabledTestWithX.details()
         };
-        ctx.diagnostic(no_disabled_tests_diagnostic(error, help, call_expr.callee.span()));
+        ctx.diagnostic(no_disabled_tests_diagnostic(
+            error,
+            help,
+            call_expr.callee.span(),
+        ));
         return;
     }
 
@@ -131,6 +140,10 @@ pub fn run_on_jest_node<'a, 'c>(
         } else {
             Message::DisabledTestWithSkip.details()
         };
-        ctx.diagnostic(no_disabled_tests_diagnostic(error, help, call_expr.callee.span()));
+        ctx.diagnostic(no_disabled_tests_diagnostic(
+            error,
+            help,
+            call_expr.callee.span(),
+        ));
     }
 }

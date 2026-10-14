@@ -167,6 +167,11 @@ fn test() {
         ), // {        "parser": require("vue-eslint-parser"),        "parserOptions": {          "parser": require.resolve("@typescript-eslint/parser")        }      }
     ];
 
-    Tester::new(NoExportInScriptSetup::NAME, NoExportInScriptSetup::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        NoExportInScriptSetup::NAME,
+        NoExportInScriptSetup::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

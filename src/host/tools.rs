@@ -26,7 +26,10 @@ pub fn secret_from_env() -> Result<Option<Secret>, String> {
     if let Some(file) = std::env::var_os("BUN_HOST_SECRET_FILE").filter(|f| !f.is_empty()) {
         return Secret::from_file(Path::new(&file)).map(Some);
     }
-    if let Some(name) = std::env::var("BUN_HOST_SECRET_ENV").ok().filter(|n| !n.is_empty()) {
+    if let Some(name) = std::env::var("BUN_HOST_SECRET_ENV")
+        .ok()
+        .filter(|n| !n.is_empty())
+    {
         return Secret::from_env(&name).map(Some);
     }
     Ok(None)
@@ -57,19 +60,28 @@ pub fn inventory(args: &Value) -> Result<String, String> {
         .iter()
         .filter(|(id, _)| only.is_none_or(|h| h == id.as_str()))
         .filter(|(_, e)| {
-            let at = e.info.get("collected_at").and_then(Value::as_u64).unwrap_or(0);
+            let at = e
+                .info
+                .get("collected_at")
+                .and_then(Value::as_u64)
+                .unwrap_or(0);
             max_age.is_none_or(|m| now.saturating_sub(at) / 1000 <= m)
         })
         .map(|(_, e)| {
             let mut info = e.info.clone();
-            let at = info.get("collected_at").and_then(Value::as_u64).unwrap_or(0);
+            let at = info
+                .get("collected_at")
+                .and_then(Value::as_u64)
+                .unwrap_or(0);
             info["age_s"] = json!(now.saturating_sub(at) / 1000);
             info["signed"] = json!(e.sig.is_some());
             info
         })
         .collect();
-    serde_json::to_string_pretty(&json!({ "schema": schema::SCHEMA, "hosts": hosts, "rejected": rejected }))
-        .map_err(|e| e.to_string())
+    serde_json::to_string_pretty(
+        &json!({ "schema": schema::SCHEMA, "hosts": hosts, "rejected": rejected }),
+    )
+    .map_err(|e| e.to_string())
 }
 
 pub fn find(args: &Value) -> Result<String, String> {
@@ -82,9 +94,15 @@ pub fn find(args: &Value) -> Result<String, String> {
         gpu: args.get("gpu").and_then(Value::as_str).map(str::to_owned),
         os: args.get("os").and_then(Value::as_str).map(str::to_owned),
         cuda: bool_arg(args, "cuda", false),
-        max_age_s: Some(args.get("max_age_s").and_then(Value::as_u64).unwrap_or(DEFAULT_MAX_AGE_S)),
+        max_age_s: Some(
+            args.get("max_age_s")
+                .and_then(Value::as_u64)
+                .unwrap_or(DEFAULT_MAX_AGE_S),
+        ),
     };
     let matches = registry::find(&inventory, &query, collect::now_ms());
-    serde_json::to_string_pretty(&json!({ "count": matches.len(), "matches": matches, "rejected": rejected }))
-        .map_err(|e| e.to_string())
+    serde_json::to_string_pretty(
+        &json!({ "count": matches.len(), "matches": matches, "rejected": rejected }),
+    )
+    .map_err(|e| e.to_string())
 }

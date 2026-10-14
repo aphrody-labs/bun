@@ -371,6 +371,11 @@ fn test() {
         ",
     ];
 
-    Tester::new(NoDirectMutationState::NAME, NoDirectMutationState::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        NoDirectMutationState::NAME,
+        NoDirectMutationState::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

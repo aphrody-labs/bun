@@ -9,7 +9,13 @@ use crate::{
 #[derive(Debug, Default, Clone)]
 pub struct PreferHooksInOrder;
 
-declare_oxc_lint!(PreferHooksInOrder, jest, style, docs = DOCUMENTATION, version = "0.6.0",);
+declare_oxc_lint!(
+    PreferHooksInOrder,
+    jest,
+    style,
+    docs = DOCUMENTATION,
+    version = "0.6.0",
+);
 
 impl Rule for PreferHooksInOrder {
     fn run_once(&self, ctx: &LintContext) {
@@ -596,7 +602,12 @@ fn test() {
         ),
     ];
 
-    Tester::new(PreferHooksInOrder::NAME, PreferHooksInOrder::PLUGIN, pass, fail)
-        .with_jest_plugin(true)
-        .test_and_snapshot();
+    Tester::new(
+        PreferHooksInOrder::NAME,
+        PreferHooksInOrder::PLUGIN,
+        pass,
+        fail,
+    )
+    .with_jest_plugin(true)
+    .test_and_snapshot();
 }

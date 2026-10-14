@@ -21,10 +21,12 @@
 
 pub(super) const PH_A: [u8; 16] = [4, 13, 19, 20, 0, 14, 7, 8, 10, 26, 22, 0, 29, 23, 3, 2];
 pub(super) const PH_B: [u8; 16] = [24, 26, 2, 16, 31, 25, 19, 30, 0, 0, 0, 0, 0, 0, 0, 0];
-pub(super) const PH_T0: [u8; 16] =
-    [68, 38, 58, 76, 255, 72, 42, 52, 34, 33, 255, 255, 70, 48, 37, 55];
-pub(super) const PH_T1: [u8; 16] =
-    [40, 255, 43, 50, 64, 61, 255, 255, 35, 36, 80, 89, 255, 82, 32, 41];
+pub(super) const PH_T0: [u8; 16] = [
+    68, 38, 58, 76, 255, 72, 42, 52, 34, 33, 255, 255, 70, 48, 37, 55,
+];
+pub(super) const PH_T1: [u8; 16] = [
+    40, 255, 43, 50, 64, 61, 255, 255, 35, 36, 80, 89, 255, 82, 32, 41,
+];
 
 #[cfg(test)]
 mod tests {
@@ -50,7 +52,10 @@ mod tests {
             if is_word(cb) || is_ws(cb) {
                 continue;
             }
-            assert!(punct1_hash(cb) == punct1_ord[c], "PH_A/B/T wrong at byte {c:#04x}");
+            assert!(
+                punct1_hash(cb) == punct1_ord[c],
+                "PH_A/B/T wrong at byte {c:#04x}"
+            );
         }
     }
 
@@ -59,6 +64,10 @@ mod tests {
             return tk!(Invalid);
         }
         let h = (PH_A[(c & 15) as usize] ^ PH_B[((c >> 4) & 15) as usize]) & 31;
-        if h < 16 { PH_T0[h as usize] } else { PH_T1[(h & 15) as usize] }
+        if h < 16 {
+            PH_T0[h as usize]
+        } else {
+            PH_T1[(h & 15) as usize]
+        }
     }
 }

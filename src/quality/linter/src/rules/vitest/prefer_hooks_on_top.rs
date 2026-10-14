@@ -9,7 +9,13 @@ use crate::{
 #[derive(Debug, Default, Clone)]
 pub struct PreferHooksOnTop;
 
-declare_oxc_lint!(PreferHooksOnTop, vitest, style, docs = DOCUMENTATION, version = "0.4.2",);
+declare_oxc_lint!(
+    PreferHooksOnTop,
+    vitest,
+    style,
+    docs = DOCUMENTATION,
+    version = "0.4.2",
+);
 
 impl Rule for PreferHooksOnTop {
     fn run_once(&self, ctx: &LintContext) {

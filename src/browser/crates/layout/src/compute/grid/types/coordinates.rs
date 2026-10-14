@@ -1,7 +1,7 @@
 //! Taffy uses two coordinate systems to refer to grid lines (the gaps/gutters between rows/columns):
 use super::super::types::TrackCounts;
 use crate::geometry::Line;
-use core::cmp::{Ordering, max};
+use core::cmp::{max, Ordering};
 use core::ops::{Add, AddAssign, Sub};
 
 /// Represents a grid line position in "CSS Grid Line" coordinates
@@ -87,17 +87,18 @@ impl Sub<u16> for OriginZeroLine {
 impl OriginZeroLine {
     /// Converts a grid line in OriginZero coordinates into the index of that same grid line in the GridTrackVec.
     pub(crate) fn into_track_vec_index(self, track_counts: TrackCounts) -> usize {
-        self.try_into_track_vec_index(track_counts).unwrap_or_else(|| {
-            if self.0 > 0 {
-                panic!(
+        self.try_into_track_vec_index(track_counts)
+            .unwrap_or_else(|| {
+                if self.0 > 0 {
+                    panic!(
                     "OriginZero grid line cannot be more than the number of positive grid lines"
                 );
-            } else {
-                panic!(
+                } else {
+                    panic!(
                     "OriginZero grid line cannot be less than the number of negative grid lines"
                 );
-            }
-        })
+                }
+            })
     }
 
     /// Converts a grid line in OriginZero coordinates into the index of that same grid line in the GridTrackVec.
@@ -124,12 +125,20 @@ impl OriginZeroLine {
 
     /// The minimum number of negative implicit track there must be if a grid item starts at this line.
     pub(crate) fn implied_negative_implicit_tracks(self) -> u16 {
-        if self.0 < 0 { self.0.unsigned_abs() } else { 0 }
+        if self.0 < 0 {
+            self.0.unsigned_abs()
+        } else {
+            0
+        }
     }
 
     /// The minimum number of positive implicit track there must be if a grid item end at this line.
     pub(crate) fn implied_positive_implicit_tracks(self, explicit_track_count: u16) -> u16 {
-        if self.0 > explicit_track_count as i16 { self.0 as u16 - explicit_track_count } else { 0 }
+        if self.0 > explicit_track_count as i16 {
+            self.0 as u16 - explicit_track_count
+        } else {
+            0
+        }
     }
 }
 

@@ -31,7 +31,10 @@ fn test_vars_simple() {
         ("let a = 1; let b = a + 1; console.log(b)", None),
         ("let a = 1; if (true) { console.log(a) }", None),
         ("let _a = 1", Some(json!([{ "varsIgnorePattern": "^_" }]))),
-        ("const { foo: _foo, baz } = obj; f(baz);", Some(json!([{ "varsIgnorePattern": "^_" }]))),
+        (
+            "const { foo: _foo, baz } = obj; f(baz);",
+            Some(json!([{ "varsIgnorePattern": "^_" }])),
+        ),
         (
             r"export const rendered = marked(markdown, {
                   renderer: new (class CustomRenderer extends Renderer {})(),
@@ -94,7 +97,12 @@ fn test_vars_simple() {
         // unused vars should be removed
         ("let a = 1;", "", None, FixKind::DangerousSuggestion),
         // FIXME: b should be deleted as well.
-        ("let a = 1, b = 2;", "let b = 2;", None, FixKind::DangerousSuggestion),
+        (
+            "let a = 1, b = 2;",
+            "let b = 2;",
+            None,
+            FixKind::DangerousSuggestion,
+        ),
         (
             "let a = 1; let b = 2; console.log(a);",
             "let a = 1;  console.log(a);",
@@ -132,7 +140,12 @@ fn test_vars_simple() {
             FixKind::DangerousSuggestion,
         ),
         // vars initialized to `await` are not removed
-        ("const x = await foo();", "const x = await foo();", None, FixKind::DangerousSuggestion),
+        (
+            "const x = await foo();",
+            "const x = await foo();",
+            None,
+            FixKind::DangerousSuggestion,
+        ),
         (
             "const x = (await foo()) as unknown as MyType",
             "const x = (await foo()) as unknown as MyType",
@@ -140,7 +153,12 @@ fn test_vars_simple() {
             FixKind::DangerousSuggestion,
         ),
         // vars with references get renamed
-        ("let x = 1; x = 2;", "let _x = 1; _x = 2;", None, FixKind::DangerousFix),
+        (
+            "let x = 1; x = 2;",
+            "let _x = 1; _x = 2;",
+            None,
+            FixKind::DangerousFix,
+        ),
         (
             "let a = 1; a = 2; a = 3;",
             "let _a = 1; _a = 2; _a = 3;",
@@ -154,7 +172,12 @@ fn test_vars_simple() {
             FixKind::DangerousFix,
         ),
         // type annotations do not get clobbered
-        ("let x: number = 1; x = 2;", "let _x: number = 1; _x = 2;", None, FixKind::DangerousFix),
+        (
+            "let x: number = 1; x = 2;",
+            "let _x: number = 1; _x = 2;",
+            None,
+            FixKind::DangerousFix,
+        ),
     ];
 
     Tester::new(NoUnusedVars::NAME, NoUnusedVars::PLUGIN, pass, fail)
@@ -442,8 +465,14 @@ fn test_vars_destructure() {
         ),
     ];
     let fail = vec![
-        ("const { a, ...rest } = obj", Some(json!( [{ "ignoreRestSiblings": true }] ))),
-        ("const [a, ...rest] = arr", Some(json!( [{ "ignoreRestSiblings": true }] ))),
+        (
+            "const { a, ...rest } = obj",
+            Some(json!( [{ "ignoreRestSiblings": true }] )),
+        ),
+        (
+            "const [a, ...rest] = arr",
+            Some(json!( [{ "ignoreRestSiblings": true }] )),
+        ),
         (
             "const { a: { b }, ...rest } = obj; console.log(a)",
             Some(json!( [{ "ignoreRestSiblings": true }] )),
@@ -467,15 +496,30 @@ fn test_vars_destructure() {
             None,
             FixKind::DangerousSuggestion,
         ),
-        ("const [a, b] = arr; f(b)", "const [,b] = arr; f(b)", None, FixKind::DangerousSuggestion),
-        ("const [a, b] = arr; f(a)", "const [a] = arr; f(a)", None, FixKind::DangerousSuggestion),
+        (
+            "const [a, b] = arr; f(b)",
+            "const [,b] = arr; f(b)",
+            None,
+            FixKind::DangerousSuggestion,
+        ),
+        (
+            "const [a, b] = arr; f(a)",
+            "const [a] = arr; f(a)",
+            None,
+            FixKind::DangerousSuggestion,
+        ),
         (
             "const [a, b, c] = arr; f(a, c)",
             "const [a, ,c] = arr; f(a, c)",
             None,
             FixKind::DangerousSuggestion,
         ),
-        ("let [f,\u{a0}a]=p", "let [,a]=p", None, FixKind::DangerousSuggestion),
+        (
+            "let [f,\u{a0}a]=p",
+            "let [,a]=p",
+            None,
+            FixKind::DangerousSuggestion,
+        ),
         (
             "const [a, b, c, d, e] = arr; f(a, e)",
             "const [a, ,c, ,e] = arr; f(a, e)",
@@ -515,13 +559,19 @@ fn test_vars_destructure() {
 fn test_vars_catch() {
     let pass = vec![
         ("try {} catch (e) { throw e }", None),
-        ("try {} catch (e) { }", Some(json!([{ "caughtErrors": "none" }]))),
+        (
+            "try {} catch (e) { }",
+            Some(json!([{ "caughtErrors": "none" }])),
+        ),
         (
             "try {} catch (err) { console.error(err) }",
             Some(json!([{ "caughtErrors": "none", "reportUsedIgnorePattern": true }])),
         ),
         ("try {} catch { }", None),
-        ("try {} catch(_) { }", Some(json!([{ "caughtErrorsIgnorePattern": "^_" }]))),
+        (
+            "try {} catch(_) { }",
+            Some(json!([{ "caughtErrorsIgnorePattern": "^_" }])),
+        ),
         (
             "try {} catch(_) { }",
             Some(json!([{ "caughtErrors": "all", "caughtErrorsIgnorePattern": "^_" }])),
@@ -533,7 +583,10 @@ fn test_vars_catch() {
     ];
 
     let fail = vec![
-        ("try {} catch (e) { }", Some(json!([{ "caughtErrors": "all" }]))),
+        (
+            "try {} catch (e) { }",
+            Some(json!([{ "caughtErrors": "all" }])),
+        ),
         ("try {} catch(_) { }", None),
         (
             "try {} catch(_) { }",
@@ -553,22 +606,62 @@ fn test_vars_catch() {
 
     // these suggestion fixes are safe
     let fix = vec![
-        ("try {} catch (error) { }", "try {} catch  { }", None, FixKind::Suggestion),
+        (
+            "try {} catch (error) { }",
+            "try {} catch  { }",
+            None,
+            FixKind::Suggestion,
+        ),
         (
             "try { const x = (1 + 1); } catch (error) { }",
             "try { const x = (1 + 1); } catch  { }",
             None,
             FixKind::Suggestion,
         ),
-        ("try {} catch ({ msg }) { }", "try {} catch  { }", None, FixKind::Suggestion),
+        (
+            "try {} catch ({ msg }) { }",
+            "try {} catch  { }",
+            None,
+            FixKind::Suggestion,
+        ),
         // spacing
-        ("try {} catch (e) { }", "try {} catch  { }", None, FixKind::Suggestion),
-        ("try {} catch(e){ }", "try {} catch{ }", None, FixKind::Suggestion),
-        ("try {} catch (      e) { }", "try {} catch  { }", None, FixKind::Suggestion),
-        ("try {} catch (      e \t\n ) { }", "try {} catch  { }", None, FixKind::Suggestion),
+        (
+            "try {} catch (e) { }",
+            "try {} catch  { }",
+            None,
+            FixKind::Suggestion,
+        ),
+        (
+            "try {} catch(e){ }",
+            "try {} catch{ }",
+            None,
+            FixKind::Suggestion,
+        ),
+        (
+            "try {} catch (      e) { }",
+            "try {} catch  { }",
+            None,
+            FixKind::Suggestion,
+        ),
+        (
+            "try {} catch (      e \t\n ) { }",
+            "try {} catch  { }",
+            None,
+            FixKind::Suggestion,
+        ),
         // comments
-        ("try {} catch (/* comment() */ e) { }", "try {} catch  { }", None, FixKind::Suggestion),
-        ("try {} catch (e /* comment() */) { }", "try {} catch  { }", None, FixKind::Suggestion),
+        (
+            "try {} catch (/* comment() */ e) { }",
+            "try {} catch  { }",
+            None,
+            FixKind::Suggestion,
+        ),
+        (
+            "try {} catch (e /* comment() */) { }",
+            "try {} catch  { }",
+            None,
+            FixKind::Suggestion,
+        ),
         (
             "try {} catch /* comment */ (e) { }",
             "try {} catch /* comment */  { }",
@@ -585,7 +678,12 @@ fn test_vars_catch() {
             FixKind::Suggestion,
         ),
         // typescript
-        ("try {} catch (error: Error) { }", "try {} catch  { }", None, FixKind::Suggestion),
+        (
+            "try {} catch (error: Error) { }",
+            "try {} catch  { }",
+            None,
+            FixKind::Suggestion,
+        ),
         (
             "try {} catch (error: (typeof thing)[number]) { }",
             "try {} catch  { }",
@@ -604,8 +702,14 @@ fn test_vars_catch() {
 fn test_vars_using() {
     let pass = vec![
         ("using a = 1; console.log(a)", None),
-        ("using a = 1;", Some(serde_json::json!([{ "ignoreUsingDeclarations": true }]))),
-        ("await using a = 1;", Some(serde_json::json!([{ "ignoreUsingDeclarations": true }]))),
+        (
+            "using a = 1;",
+            Some(serde_json::json!([{ "ignoreUsingDeclarations": true }])),
+        ),
+        (
+            "await using a = 1;",
+            Some(serde_json::json!([{ "ignoreUsingDeclarations": true }])),
+        ),
     ];
 
     let fail = vec![("using a = 1;", None), ("await using a = 1;", None)];
@@ -736,7 +840,12 @@ fn test_functions() {
 
     let fix = vec![
         // function declarations are never removed
-        ("function foo() {}", "function foo() {}", None, FixKind::DangerousSuggestion),
+        (
+            "function foo() {}",
+            "function foo() {}",
+            None,
+            FixKind::DangerousSuggestion,
+        ),
         (
             "function foo() { function bar() {} }",
             "function foo() { function bar() {} }",
@@ -757,7 +866,12 @@ fn test_functions() {
             None,
             FixKind::DangerousSuggestion,
         ),
-        (r"const foo = () => {}", r"const foo = () => {}", None, FixKind::DangerousSuggestion),
+        (
+            r"const foo = () => {}",
+            r"const foo = () => {}",
+            None,
+            FixKind::DangerousSuggestion,
+        ),
         // function expressions + arrow functions are removed if not declared in
         // root scope
         (
@@ -870,10 +984,30 @@ fn test_imports() {
 
     let fix = vec![
         // None used
-        ("import foo from './foo';", "", None, FixKind::DangerousSuggestion),
-        ("import * as foo from './foo';", "", None, FixKind::DangerousSuggestion),
-        ("import { Foo } from './foo';", "", None, FixKind::DangerousSuggestion),
-        ("import { Foo as Bar } from './foo';", "", None, FixKind::DangerousSuggestion),
+        (
+            "import foo from './foo';",
+            "",
+            None,
+            FixKind::DangerousSuggestion,
+        ),
+        (
+            "import * as foo from './foo';",
+            "",
+            None,
+            FixKind::DangerousSuggestion,
+        ),
+        (
+            "import { Foo } from './foo';",
+            "",
+            None,
+            FixKind::DangerousSuggestion,
+        ),
+        (
+            "import { Foo as Bar } from './foo';",
+            "",
+            None,
+            FixKind::DangerousSuggestion,
+        ),
         // Some used
         (
             "import foo, { bar } from './foo'; bar();",
@@ -936,8 +1070,14 @@ fn test_imports() {
 fn test_fix_options() {
     let pass = vec![];
     let fail = vec![
-        ("import foo from './foo';", Some(json!([{ "fix": { "imports": "off" } }]))),
-        ("let a = 1;", Some(json!([{ "fix": { "variables": "off" } }]))),
+        (
+            "import foo from './foo';",
+            Some(json!([{ "fix": { "imports": "off" } }])),
+        ),
+        (
+            "let a = 1;",
+            Some(json!([{ "fix": { "variables": "off" } }])),
+        ),
     ];
 
     let fix = vec![
@@ -953,14 +1093,24 @@ fn test_fix_options() {
             Some(json!([{ "fix": { "variables": "off" } }])),
             FixKind::DangerousSuggestion,
         ),
-        ("import foo from './foo';", "", None, FixKind::DangerousSuggestion),
+        (
+            "import foo from './foo';",
+            "",
+            None,
+            FixKind::DangerousSuggestion,
+        ),
         (
             "import foo from './foo';",
             "",
             Some(json!([{ "fix": { "imports": "fix" } }])),
             FixKind::DangerousFix,
         ),
-        ("let a = 1;", "", Some(json!([{ "fix": { "variables": "fix" } }])), FixKind::DangerousFix),
+        (
+            "let a = 1;",
+            "",
+            Some(json!([{ "fix": { "variables": "fix" } }])),
+            FixKind::DangerousFix,
+        ),
         (
             "import foo from './foo';",
             "",
@@ -975,7 +1125,9 @@ fn test_fix_options() {
         ),
     ];
 
-    Tester::new(NoUnusedVars::NAME, NoUnusedVars::PLUGIN, pass, fail).expect_fix(fix).test();
+    Tester::new(NoUnusedVars::NAME, NoUnusedVars::PLUGIN, pass, fail)
+        .expect_fix(fix)
+        .test();
 }
 
 #[test]
@@ -1097,8 +1249,14 @@ fn test_react() {
 fn test_arguments() {
     let pass = vec![
         ("function foo(a) { return a } foo()", None),
-        ("function foo(a, b) { return b } foo()", Some(json!([{ "args": "after-used" }]))),
-        ("function foo(_) {} foo()", Some(json!([{ "argsIgnorePattern": "^_" }]))),
+        (
+            "function foo(a, b) { return b } foo()",
+            Some(json!([{ "args": "after-used" }])),
+        ),
+        (
+            "function foo(_) {} foo()",
+            Some(json!([{ "argsIgnorePattern": "^_" }])),
+        ),
         ("let a; a = function(a = a) {}; a();", None),
         ("let ids = arr.map(el => el.id); f(ids)", None),
         (
@@ -1123,10 +1281,22 @@ fn test_arguments() {
             "let count = 0; export function a(c = count++) { console.log(c) } export function b(c = ++count) { console.log(c) } export function c(d = count--) { console.log(d) } export function d(c = --count) { console.log(c) }",
             None,
         ),
-        ("items.reduce((acc, item) => (acc[item.action]++, acc), {})", None),
-        ("items.reduce((acc, item) => (acc[item.action]--, acc), {})", None),
-        ("items.reduce((acc, item) => (++acc[item.action], acc), {})", None),
-        ("items.reduce((acc, item) => (--acc[item.action], acc), {})", None),
+        (
+            "items.reduce((acc, item) => (acc[item.action]++, acc), {})",
+            None,
+        ),
+        (
+            "items.reduce((acc, item) => (acc[item.action]--, acc), {})",
+            None,
+        ),
+        (
+            "items.reduce((acc, item) => (++acc[item.action], acc), {})",
+            None,
+        ),
+        (
+            "items.reduce((acc, item) => (--acc[item.action], acc), {})",
+            None,
+        ),
         (
             "export function fn(array: number[], index: number) { const array2 = array.slice(); array2[index]!++; return array2; }",
             None,
@@ -1144,17 +1314,35 @@ fn test_arguments() {
             None,
         ),
         // AssignmentExpression cases
-        ("items.reduce((acc, item) => (acc[item.action] = 1, acc), {})", None),
-        ("items.reduce((acc, item) => (acc.x[item.action] = 1, acc), {})", None),
-        ("items.reduce((acc, item) => (acc[item.action] += 1, acc), {})", None),
-        ("items.reduce((acc, item) => (acc[item.action] ||= 1, acc), {})", None),
+        (
+            "items.reduce((acc, item) => (acc[item.action] = 1, acc), {})",
+            None,
+        ),
+        (
+            "items.reduce((acc, item) => (acc.x[item.action] = 1, acc), {})",
+            None,
+        ),
+        (
+            "items.reduce((acc, item) => (acc[item.action] += 1, acc), {})",
+            None,
+        ),
+        (
+            "items.reduce((acc, item) => (acc[item.action] ||= 1, acc), {})",
+            None,
+        ),
         // Nested member expressions
         ("foo.bar((a, b, c) => (a[b.x][c.y]++, a))", None),
         ("foo.bar((a, b) => (a.foo[b.bar].baz++, a))", None),
         // Multiple parameters used in sequence
         ("foo.bar((a, b, c) => (b[c.x]++, a[b.y]++, a))", None),
-        ("function foo(...args) { return 1 } foo()", Some(json!([{ "args": "none" }]))),
-        ("function foo(...args: unknown[]) { return 1 } foo()", Some(json!([{ "args": "none" }]))),
+        (
+            "function foo(...args) { return 1 } foo()",
+            Some(json!([{ "args": "none" }])),
+        ),
+        (
+            "function foo(...args: unknown[]) { return 1 } foo()",
+            Some(json!([{ "args": "none" }])),
+        ),
         (
             "function foo(a, ...args: unknown[]) { return a } foo()",
             Some(json!([{ "args": "none" }])),
@@ -1178,15 +1366,36 @@ fn test_arguments() {
     ];
     let fail = vec![
         ("function foo(a) {} foo()", None),
-        ("window.addEventListener('logModel', function (_) { doSomething() })", None),
+        (
+            "window.addEventListener('logModel', function (_) { doSomething() })",
+            None,
+        ),
         ("function foo(a: number) {} foo()", None),
-        ("function foo({ a }, b) { return b } foo()", Some(json!([{ "args": "after-used" }]))),
+        (
+            "function foo({ a }, b) { return b } foo()",
+            Some(json!([{ "args": "after-used" }])),
+        ),
         ("function foo(...args: typeof args) {} foo()", None),
-        ("function foo(...args: unknown[]): args is string[] { return true } foo()", None),
-        ("function foo(...unused) {} foo()", Some(json!([{ "argsIgnorePattern": "^ignored" }]))),
-        ("function foo(...args) { return 1 } foo()", Some(json!([{ "args": "after-used" }]))),
-        ("function foo(...args: unknown[]) { return 1 } foo()", Some(json!([{ "args": "all" }]))),
-        ("let count = 0; function foo(c = (count++, 0)) { console.log(c) } foo()", None),
+        (
+            "function foo(...args: unknown[]): args is string[] { return true } foo()",
+            None,
+        ),
+        (
+            "function foo(...unused) {} foo()",
+            Some(json!([{ "argsIgnorePattern": "^ignored" }])),
+        ),
+        (
+            "function foo(...args) { return 1 } foo()",
+            Some(json!([{ "args": "after-used" }])),
+        ),
+        (
+            "function foo(...args: unknown[]) { return 1 } foo()",
+            Some(json!([{ "args": "all" }])),
+        ),
+        (
+            "let count = 0; function foo(c = (count++, 0)) { console.log(c) } foo()",
+            None,
+        ),
         (
             "function foo(a, ...[_ignored]) {} foo()",
             Some(json!([{ "args": "after-used", "destructuredArrayIgnorePattern": "^_" }])),
@@ -1314,7 +1523,12 @@ fn test_argument_parameter_rename_fix() {
             None,
             FixKind::None,
         ),
-        ("function foo([unused]) {} foo()", "function foo([unused]) {} foo()", None, FixKind::None),
+        (
+            "function foo([unused]) {} foo()",
+            "function foo([unused]) {} foo()",
+            None,
+            FixKind::None,
+        ),
         (
             "function foo(...unused) {} foo()",
             "function foo(...unused) {} foo()",
@@ -1329,7 +1543,9 @@ fn test_argument_parameter_rename_fix() {
         ),
     ];
 
-    Tester::new(NoUnusedVars::NAME, NoUnusedVars::PLUGIN, pass, fail).expect_fix(fix).test();
+    Tester::new(NoUnusedVars::NAME, NoUnusedVars::PLUGIN, pass, fail)
+        .expect_fix(fix)
+        .test();
 }
 
 #[test]
@@ -1667,8 +1883,14 @@ fn test_loops() {
 
     let fail: Vec<&str> = vec!["for (let len = 10;;) {}"];
     let fix = vec![
-        ("for (const unused of arr) {}", "for (const _unused of arr) {}"),
-        ("for (const unused in arr) {}", "for (const _unused in arr) {}"),
+        (
+            "for (const unused of arr) {}",
+            "for (const _unused of arr) {}",
+        ),
+        (
+            "for (const unused in arr) {}",
+            "for (const _unused in arr) {}",
+        ),
         (
             "for (const foo of arr) { console.log(foo); const unused = 1; }",
             "for (const foo of arr) { console.log(foo);  }",
@@ -1676,7 +1898,9 @@ fn test_loops() {
         ("for (let len = 10;;) {}", "for (;;) {}"),
     ];
 
-    Tester::new(NoUnusedVars::NAME, NoUnusedVars::PLUGIN, pass, fail).expect_fix(fix).test();
+    Tester::new(NoUnusedVars::NAME, NoUnusedVars::PLUGIN, pass, fail)
+        .expect_fix(fix)
+        .test();
 }
 
 #[test]
@@ -1762,7 +1986,10 @@ fn test_jsx_non_ascii() {
 #[test]
 fn test_ignore() {
     let pass = vec![
-        ("arr.map(({ x, ...rest }) => rest)", Some(json!([{ "ignoreRestSiblings": true }]))),
+        (
+            "arr.map(({ x, ...rest }) => rest)",
+            Some(json!([{ "ignoreRestSiblings": true }])),
+        ),
         (
             "arr.map(({ x, ...rest }) => rest)",
             Some(json!([{ "ignoreRestSiblings": true, "reportUsedIgnorePattern": false }])),
@@ -1772,7 +1999,10 @@ fn test_ignore() {
             "arr.map(({ x, ...rest }) => ({ x, ...rest }))",
             Some(json!([{ "ignoreRestSiblings": true, "reportUsedIgnorePattern": true }])),
         ),
-        ("const { x: _x, y } = obj; console.log(y)", Some(json!([{ "varsIgnorePattern": "^_" }]))),
+        (
+            "const { x: _x, y } = obj; console.log(y)",
+            Some(json!([{ "varsIgnorePattern": "^_" }])),
+        ),
         (
             "const { a: { b: [c, _d] }, ...rest } = obj; console.log(c, rest);",
             Some(
@@ -1795,8 +2025,14 @@ fn test_ignore() {
                 json!([{ "ignoreRestSiblings": true, "reportUsedIgnorePattern": true, "varsIgnorePattern": "^_" }]),
             ),
         ),
-        ("const _x = 1;", Some(json!([{ "varsIgnorePattern": "^_" }]))),
-        ("function foo(_bar) {}; foo()", Some(json!([{ "argsIgnorePattern": "^_" }]))),
+        (
+            "const _x = 1;",
+            Some(json!([{ "varsIgnorePattern": "^_" }])),
+        ),
+        (
+            "function foo(_bar) {}; foo()",
+            Some(json!([{ "argsIgnorePattern": "^_" }])),
+        ),
         (
             "const [a, _b] = arr; console.log(a)",
             Some(json!([{ "destructuredArrayIgnorePattern": "^_" }])),
@@ -1809,12 +2045,18 @@ fn test_ignore() {
         ),
         // top-level var matches default _ prefix and is used — but reportUsedIgnorePattern
         // only fires when varsIgnorePattern is explicitly set, not the default prefix
-        ("const _x = 1; console.log(_x)", Some(json!([{ "reportUsedIgnorePattern": true }]))),
+        (
+            "const _x = 1; console.log(_x)",
+            Some(json!([{ "reportUsedIgnorePattern": true }])),
+        ),
     ];
 
     let fail = vec![
         // not a rest sibling
-        ("const { x, y } = obj; console.log(y)", Some(json!([{ "ignoreRestSiblings": true }]))),
+        (
+            "const { x, y } = obj; console.log(y)",
+            Some(json!([{ "ignoreRestSiblings": true }])),
+        ),
         (
             "function _foo() {} _foo()",
             Some(json!([{ "reportUsedIgnorePattern": true, "varsIgnorePattern": "^_" }])),
@@ -1938,9 +2180,14 @@ fn test_remove_array_element_before_rest() {
         FixKind::DangerousSuggestion,
     )];
 
-    Tester::new(NoUnusedVars::NAME, NoUnusedVars::PLUGIN, Vec::<&str>::new(), vec![])
-        .expect_fix(fix)
-        .test();
+    Tester::new(
+        NoUnusedVars::NAME,
+        NoUnusedVars::PLUGIN,
+        Vec::<&str>::new(),
+        vec![],
+    )
+    .expect_fix(fix)
+    .test();
 }
 
 #[test]
@@ -1966,9 +2213,14 @@ fn removing_an_import_preserves_comments_before_the_separator() {
         ),
     ];
 
-    Tester::new(NoUnusedVars::NAME, NoUnusedVars::PLUGIN, Vec::<&str>::new(), Vec::<&str>::new())
-        .expect_fix(fix)
-        .test();
+    Tester::new(
+        NoUnusedVars::NAME,
+        NoUnusedVars::PLUGIN,
+        Vec::<&str>::new(),
+        Vec::<&str>::new(),
+    )
+    .expect_fix(fix)
+    .test();
 }
 
 #[test]
@@ -2061,7 +2313,10 @@ fn ignore_patterns_in_array_rest() {
     let pass = vec![
         ("const [...[_rest]] = items;", array_options.clone()),
         ("function f([...[_rest]]) {} f();", array_options.clone()),
-        ("const [...{length, ...rest}] = items; use(rest);", object_options.clone()),
+        (
+            "const [...{length, ...rest}] = items; use(rest);",
+            object_options.clone(),
+        ),
     ];
     let fail = vec![
         // A rest identifier itself is not an array element covered by this option.
@@ -2081,7 +2336,10 @@ fn disabled_arguments_do_not_report_used_ignore_patterns() {
     }]));
     let pass = vec![
         ("function f(_a) { return _a; } f();", options.clone()),
-        ("function f(..._args) { return _args; } f();", options.clone()),
+        (
+            "function f(..._args) { return _args; } f();",
+            options.clone(),
+        ),
         ("function f({_a}) { return _a; } f();", options.clone()),
         ("function f([_a]) { return _a; } f();", options),
     ];

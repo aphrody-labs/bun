@@ -107,7 +107,11 @@ fn get_non_negative_integer_argument(argument: &Argument<'_>) -> Option<f64> {
         return None;
     };
 
-    if number.value >= 0.0 && number.value.fract() == 0.0 { Some(number.value) } else { None }
+    if number.value >= 0.0 && number.value.fract() == 0.0 {
+        Some(number.value)
+    } else {
+        None
+    }
 }
 
 #[test]
@@ -264,7 +268,12 @@ fn test() {
         ),
     ];
 
-    Tester::new(PreferStringSlice::NAME, PreferStringSlice::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        PreferStringSlice::NAME,
+        PreferStringSlice::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

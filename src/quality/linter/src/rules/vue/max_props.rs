@@ -155,7 +155,11 @@ impl MaxProps {
 
             let all_key_len = get_type_argument_keys(ctx, first_type_argument).len() as u32;
             if all_key_len > self.max_props {
-                ctx.diagnostic(max_props_diagnostic(call_expr.span, all_key_len, self.max_props));
+                ctx.diagnostic(max_props_diagnostic(
+                    call_expr.span,
+                    all_key_len,
+                    self.max_props,
+                ));
             }
         }
     }

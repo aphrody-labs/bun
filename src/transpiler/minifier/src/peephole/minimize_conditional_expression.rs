@@ -22,9 +22,9 @@ impl<'a> PeepholeOptimizations {
         // "(a, b) ? c : d" => "a, b ? c : d"
         if let Expression::SequenceExpression(mut sequence_expr) = test {
             if let Some(test) = sequence_expr.expressions.pop() {
-                sequence_expr
-                    .expressions
-                    .push(Self::minimize_conditional(span, test, consequent, alternate, ctx));
+                sequence_expr.expressions.push(Self::minimize_conditional(
+                    span, test, consequent, alternate, ctx,
+                ));
             }
             return Expression::SequenceExpression(sequence_expr);
         }
@@ -37,7 +37,9 @@ impl<'a> PeepholeOptimizations {
         // `b == null ? c : b` -> `b ?? c`) would never reach `PassChanges`.
         let mut as_expr =
             Expression::new_conditional_expression(span, test, consequent, alternate, ctx);
-        let Expression::ConditionalExpression(cond_box) = &mut as_expr else { unreachable!() };
+        let Expression::ConditionalExpression(cond_box) = &mut as_expr else {
+            unreachable!()
+        };
         let folded = Self::minimize_conditional_expression(cond_box, ctx);
         if let Some(new_expr) = folded {
             ctx.replace_expression(&mut as_expr, new_expr);
@@ -55,9 +57,16 @@ impl<'a> PeepholeOptimizations {
             Expression::SequenceExpression(sequence_expr)
                 if sequence_expr.expressions.len() > 1 =>
             {
-                let ConditionalExpression { test, consequent, alternate, span, .. } =
-                    expr.take_in(ctx);
-                return Some(Self::minimize_conditional(span, test, consequent, alternate, ctx));
+                let ConditionalExpression {
+                    test,
+                    consequent,
+                    alternate,
+                    span,
+                    ..
+                } = expr.take_in(ctx);
+                return Some(Self::minimize_conditional(
+                    span, test, consequent, alternate, ctx,
+                ));
             }
             // "!a ? b : c" => "a ? c : b"
             Expression::UnaryExpression(test_expr) if test_expr.operator.is_not() => {
@@ -360,8 +369,11 @@ impl<'a> PeepholeOptimizations {
                     // `a != null ? a : b` -> `a ?? b`
                     // `(a = foo) == null ? b : a` -> `(a = foo) ?? b`
                     // `(a = foo) != null ? a : b` -> `(a = foo) ?? b`
-                    let maybe_same_id_expr =
-                        if is_negate { &mut expr.consequent } else { &mut expr.alternate };
+                    let maybe_same_id_expr = if is_negate {
+                        &mut expr.consequent
+                    } else {
+                        &mut expr.alternate
+                    };
                     if maybe_same_id_expr.is_specific_id(&target_id_name) {
                         return Some(Expression::new_logical_expression(
                             expr.span,
@@ -381,11 +393,17 @@ impl<'a> PeepholeOptimizations {
                     // "a != null ? a.b.c[d](e) : undefined" => "a?.b.c[d](e)"
                     // "(a = foo) == null ? undefined : a.b.c[d](e)" => "(a = foo)?.b.c[d](e)"
                     // "(a = foo) != null ? a.b.c[d](e) : undefined" => "(a = foo)?.b.c[d](e)"
-                    let maybe_undefined_expr =
-                        if is_negate { &expr.alternate } else { &expr.consequent };
+                    let maybe_undefined_expr = if is_negate {
+                        &expr.alternate
+                    } else {
+                        &expr.consequent
+                    };
                     if ctx.is_expression_undefined(maybe_undefined_expr) {
-                        let expr_to_inject_optional_chaining =
-                            if is_negate { &mut expr.consequent } else { &mut expr.alternate };
+                        let expr_to_inject_optional_chaining = if is_negate {
+                            &mut expr.consequent
+                        } else {
+                            &mut expr.alternate
+                        };
                         if Self::inject_optional_chaining_if_matched(
                             &target_id_name,
                             value_expr,
@@ -586,7 +604,11 @@ impl<'a> PeepholeOptimizations {
 
             // "a ? b : b" => "a, b"
             let expressions = [expr.test.take_in(ctx), expr.consequent.take_in(ctx)];
-            return Some(Expression::new_sequence_expression(expr.span, expressions, ctx));
+            return Some(Expression::new_sequence_expression(
+                expr.span,
+                expressions,
+                ctx,
+            ));
         }
 
         None
@@ -660,9 +682,10 @@ impl<'a> PeepholeOptimizations {
                     AssignmentTarget::AssignmentTargetIdentifier(id) => {
                         !id.may_have_side_effects(ctx)
                     }
-                    match_member_expression!(AssignmentTarget) => {
-                        !consequent.left.to_member_expression().may_have_side_effects(ctx)
-                    }
+                    match_member_expression!(AssignmentTarget) => !consequent
+                        .left
+                        .to_member_expression()
+                        .may_have_side_effects(ctx),
                     _ => false,
                 }
         };
@@ -855,7 +878,10 @@ impl<'a> PeepholeOptimizations {
             // nesting (flattened by `join_with_left_associative_op`), do not.
             Expression::LogicalExpression(e) => {
                 matches!(e.operator, LogicalOperator::Coalesce)
-                    || matches!((e.operator, op), (LogicalOperator::Or, LogicalOperator::And))
+                    || matches!(
+                        (e.operator, op),
+                        (LogicalOperator::Or, LogicalOperator::And)
+                    )
             }
             _ => false,
         }

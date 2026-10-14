@@ -170,55 +170,68 @@ impl Rule for PreferSingleCall {
         } else {
             Span::new(first_stmt_end, second_stmt_end)
         };
-        let has_gap_comments = ctx.comments_range(removal_span.start..removal_span.end).count() > 0;
+        let has_gap_comments = ctx
+            .comments_range(removal_span.start..removal_span.end)
+            .count()
+            > 0;
 
         if has_state_dep_args || has_gap_comments {
             ctx.diagnostic(prefer_single_call_diagnostic(diag_span, description));
             return;
         }
 
-        ctx.diagnostic_with_fix(prefer_single_call_diagnostic(diag_span, description), |fixer| {
-            let mut fix = fixer
-                .new_fix_with_capacity(2)
-                .with_message(format!("Merge into previous `{description}` call"));
+        ctx.diagnostic_with_fix(
+            prefer_single_call_diagnostic(diag_span, description),
+            |fixer| {
+                let mut fix = fixer
+                    .new_fix_with_capacity(2)
+                    .with_message(format!("Merge into previous `{description}` call"));
 
-            // Insert the source call's arguments into the target call.
-            if !source_args.is_empty() {
-                let args_text = source_args.iter().map(|a| a.span().source_text(src)).join(", ");
+                // Insert the source call's arguments into the target call.
+                if !source_args.is_empty() {
+                    let args_text = source_args
+                        .iter()
+                        .map(|a| a.span().source_text(src))
+                        .join(", ");
 
-                // Determine separator. Check whether the target call ends with a
-                // trailing comma (like `push(a,)`) to avoid generating `push(a,, b)`.
-                let target_src = target_call.span.source_text(src);
-                let before_paren = target_src[..target_src.len().saturating_sub(1)].trim_end();
-                let separator = if target_call.arguments.is_empty() {
-                    ""
-                } else if before_paren.ends_with(',') {
-                    " "
+                    // Determine separator. Check whether the target call ends with a
+                    // trailing comma (like `push(a,)`) to avoid generating `push(a,, b)`.
+                    let target_src = target_call.span.source_text(src);
+                    let before_paren = target_src[..target_src.len().saturating_sub(1)].trim_end();
+                    let separator = if target_call.arguments.is_empty() {
+                        ""
+                    } else if before_paren.ends_with(',') {
+                        " "
+                    } else {
+                        ", "
+                    };
+
+                    // Replace the closing ')' of the target call with `{sep}{args})`.
+                    let target_span = if keep_second_call {
+                        second_call_span
+                    } else {
+                        first_call_span
+                    };
+                    let close_paren = Span::new(target_span.end - 1, target_span.end);
+                    fix.push(Fix::new(format!("{separator}{args_text})"), close_paren));
+                }
+
+                // Delete the second statement (from end of first stmt to end of
+                // second stmt, including any whitespace/newline in between).
+                //
+                // ASI handling: if the first statement has no semicolon but the
+                // second does, preserve the semicolon so the result stays valid.
+                let first_has_semi = prev_es.span.source_text(src).trim_end().ends_with(';');
+                let second_has_semi = curr_es.span.source_text(src).trim_end().ends_with(';');
+                if !keep_second_call && !first_has_semi && second_has_semi {
+                    fix.push(Fix::new(";", removal_span));
                 } else {
-                    ", "
-                };
+                    fix.push(Fix::delete(removal_span));
+                }
 
-                // Replace the closing ')' of the target call with `{sep}{args})`.
-                let target_span = if keep_second_call { second_call_span } else { first_call_span };
-                let close_paren = Span::new(target_span.end - 1, target_span.end);
-                fix.push(Fix::new(format!("{separator}{args_text})"), close_paren));
-            }
-
-            // Delete the second statement (from end of first stmt to end of
-            // second stmt, including any whitespace/newline in between).
-            //
-            // ASI handling: if the first statement has no semicolon but the
-            // second does, preserve the semicolon so the result stays valid.
-            let first_has_semi = prev_es.span.source_text(src).trim_end().ends_with(';');
-            let second_has_semi = curr_es.span.source_text(src).trim_end().ends_with(';');
-            if !keep_second_call && !first_has_semi && second_has_semi {
-                fix.push(Fix::new(";", removal_span));
-            } else {
-                fix.push(Fix::delete(removal_span));
-            }
-
-            fix
-        });
+                fix
+            },
+        );
     }
 }
 
@@ -324,8 +337,11 @@ fn classify_call<'a>(
                     if !is_stable_receiver(&obj_member.object) {
                         return None;
                     }
-                    let receiver_text =
-                        obj_member.object.without_parentheses().span().source_text(src);
+                    let receiver_text = obj_member
+                        .object
+                        .without_parentheses()
+                        .span()
+                        .source_text(src);
                     let description = if method == "add" {
                         "Element#classList.add()"
                     } else {
@@ -382,10 +398,16 @@ fn arg_references_receiver(arg_src: &str, receiver: &str) -> bool {
                 i += 1;
                 continue;
             }
-            let before_ok =
-                i == 0 || !arg_src[..i].chars().next_back().is_some_and(is_identifier_part);
+            let before_ok = i == 0
+                || !arg_src[..i]
+                    .chars()
+                    .next_back()
+                    .is_some_and(is_identifier_part);
             let after_ok = end >= abytes.len()
-                || !arg_src[end..].chars().next().is_some_and(is_identifier_part);
+                || !arg_src[end..]
+                    .chars()
+                    .next()
+                    .is_some_and(is_identifier_part);
             if before_ok && after_ok {
                 return true;
             }
@@ -501,7 +523,10 @@ mod tests {
             ("foo.push(1)\nfoo.push(2);", "foo.push(1, 2);"),
             ("foo.push(...a); foo.push(...b);", "foo.push(...a, ...b);"),
             ("foo.unshift(1); foo.unshift(2);", "foo.unshift(2, 1);"),
-            ("foo.unshift(1, 2); foo.unshift(3, 4);", "foo.unshift(3, 4, 1, 2);"),
+            (
+                "foo.unshift(1, 2); foo.unshift(3, 4);",
+                "foo.unshift(3, 4, 1, 2);",
+            ),
             ("foo.unshift(1); foo.unshift();", "foo.unshift(1);"),
             ("foo.unshift(); foo.unshift(1);", "foo.unshift(1);"),
             (
@@ -512,12 +537,24 @@ mod tests {
                 "el.classList.remove('foo'); el.classList.remove('bar');",
                 "el.classList.remove('foo', 'bar');",
             ),
-            ("importScripts('a.js'); importScripts('b.js');", "importScripts('a.js', 'b.js');"),
-            ("function f() { foo.push(1); foo.push(2); }", "function f() { foo.push(1, 2); }"),
+            (
+                "importScripts('a.js'); importScripts('b.js');",
+                "importScripts('a.js', 'b.js');",
+            ),
+            (
+                "function f() { foo.push(1); foo.push(2); }",
+                "function f() { foo.push(1, 2); }",
+            ),
             ("a.b.push(1); a.b.push(2);", "a.b.push(1, 2);"),
-            ("this.arr.push(1); this.arr.push(2);", "this.arr.push(1, 2);"),
+            (
+                "this.arr.push(1); this.arr.push(2);",
+                "this.arr.push(1, 2);",
+            ),
             // Three calls: first fix merges calls 1+2; the third call is left for the next pass.
-            ("foo.push(1); foo.push(2); foo.push(3);", "foo.push(1, 2); foo.push(3);"),
+            (
+                "foo.push(1); foo.push(2); foo.push(3);",
+                "foo.push(1, 2); foo.push(3);",
+            ),
             // Parenthesized receiver — keeps the paren form of whichever call is first.
             ("(foo).push(1); foo.push(2);", "(foo).push(1, 2);"),
             ("foo.push(1); (foo).push(2);", "foo.push(1, 2);"),
@@ -525,7 +562,10 @@ mod tests {
 
         let mut pass = pass.into_iter().map(TestCase::from).collect::<Vec<_>>();
         pass.extend([
-            ("foo.push(1); foo.push(2);", Some(serde_json::json!([{ "ignore": ["foo.push"] }])))
+            (
+                "foo.push(1); foo.push(2);",
+                Some(serde_json::json!([{ "ignore": ["foo.push"] }])),
+            )
                 .into(),
             (
                 "foo.unshift(1); foo.unshift(2);",

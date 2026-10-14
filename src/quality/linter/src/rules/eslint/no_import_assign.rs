@@ -54,22 +54,31 @@ declare_oxc_lint!(
     short_description = "Disallow assigning to imported bindings.",
 );
 
-const OBJECT_MUTATION_METHODS: [&str; 5] =
-    ["assign", "defineProperty", "defineProperties", "freeze", "setPrototypeOf"];
+const OBJECT_MUTATION_METHODS: [&str; 5] = [
+    "assign",
+    "defineProperty",
+    "defineProperties",
+    "freeze",
+    "setPrototypeOf",
+];
 
 const REFLECT_MUTATION_METHODS: [&str; 4] =
     ["defineProperty", "deleteProperty", "set", "setPrototypeOf"];
 
 impl Rule for NoImportAssign {
     fn run<'a>(&self, node: &AstNode<'a>, ctx: &LintContext<'a>) {
-        let AstKind::ImportDeclaration(import_decl) = node.kind() else { return };
+        let AstKind::ImportDeclaration(import_decl) = node.kind() else {
+            return;
+        };
 
         let symbol_table = ctx.scoping();
         if let Some(specifiers) = &import_decl.specifiers {
             for specifier in specifiers {
                 let symbol_id = specifier.local().symbol_id();
-                let is_namespace_specifier =
-                    matches!(specifier, ImportDeclarationSpecifier::ImportNamespaceSpecifier(_));
+                let is_namespace_specifier = matches!(
+                    specifier,
+                    ImportDeclarationSpecifier::ImportNamespaceSpecifier(_)
+                );
                 for reference in symbol_table.get_resolved_references(symbol_id) {
                     if is_namespace_specifier {
                         let parent_node = ctx.nodes().parent_node(reference.node_id());
@@ -205,7 +214,9 @@ fn check_namespace_member_assignment(
         return;
     }
 
-    let Expression::Identifier(obj_ident) = member_expr else { return };
+    let Expression::Identifier(obj_ident) = member_expr else {
+        return;
+    };
 
     let ref_node = ctx.nodes().get_node(reference.node_id());
     if let AstKind::IdentifierReference(ref_ident) = ref_node.kind()

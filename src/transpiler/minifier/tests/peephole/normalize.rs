@@ -42,7 +42,11 @@ fn test_void_ident() {
 #[test]
 fn test_void_ident_does_not_leak_reference() {
     let options = CompressOptions::smallest();
-    test_options("let x = 1; void x; console.log(2);", "console.log(2);", &options);
+    test_options(
+        "let x = 1; void x; console.log(2);",
+        "console.log(2);",
+        &options,
+    );
 }
 
 #[test]
@@ -53,14 +57,21 @@ fn parens() {
 
 #[test]
 fn drop_console() {
-    let options = CompressOptions { drop_console: true, ..default_options() };
+    let options = CompressOptions {
+        drop_console: true,
+        ..default_options()
+    };
     test_options("console.log()", "", &options);
     test_options("(() => console.log())()", "", &options);
     // After `console.log()` is dropped the IIFE body is side-effect-free, so
     // the whole dead call is removed. An empty result still proves the
     // return-position `console.*` call was dropped (otherwise the call would
     // keep the IIFE alive).
-    test_options("(() => { try { return console.log() } catch {} })()", "", &options);
+    test_options(
+        "(() => { try { return console.log() } catch {} })()",
+        "",
+        &options,
+    );
 }
 
 // Same leak class as `test_void_ident_does_not_leak_reference`: dropped
@@ -68,7 +79,10 @@ fn drop_console() {
 // argument subtrees whose resolved references must be deleted from scoping.
 #[test]
 fn drop_console_does_not_leak_references() {
-    let options = CompressOptions { drop_console: true, ..CompressOptions::smallest() };
+    let options = CompressOptions {
+        drop_console: true,
+        ..CompressOptions::smallest()
+    };
     // Statement position.
     test_options("let x = 1; console.log(x); foo(2);", "foo(2);", &options);
     // Expression position: the call is replaced with `void 0`.
@@ -77,7 +91,10 @@ fn drop_console_does_not_leak_references() {
 
 #[test]
 fn drop_debugger() {
-    let options = CompressOptions { drop_debugger: true, ..default_options() };
+    let options = CompressOptions {
+        drop_debugger: true,
+        ..default_options()
+    };
     test_options("debugger", "", &options);
 }
 
@@ -305,7 +322,10 @@ fn remove_unused_use_strict_directive() {
         source_type,
         &options,
     );
-    test("'use strict'; function _() { 'use strict' }", "function _() {}");
+    test(
+        "'use strict'; function _() { 'use strict' }",
+        "function _() {}",
+    );
     test("'use strict';", "");
 }
 

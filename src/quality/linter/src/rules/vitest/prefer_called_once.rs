@@ -84,12 +84,16 @@ impl PreferCalledOnce {
             return;
         };
 
-        if parsed_expect.matcher_arguments.is_some_and(|arguments| arguments.len() != 1) {
+        if parsed_expect
+            .matcher_arguments
+            .is_some_and(|arguments| arguments.len() != 1)
+        {
             return;
         }
 
-        let Some(Argument::NumericLiteral(called_times_value)) =
-            parsed_expect.matcher_arguments.and_then(|arguments| arguments.first())
+        let Some(Argument::NumericLiteral(called_times_value)) = parsed_expect
+            .matcher_arguments
+            .and_then(|arguments| arguments.first())
         else {
             return;
         };
@@ -100,10 +104,15 @@ impl PreferCalledOnce {
             return;
         };
 
-        if called_times_value.raw.is_some_and(|value| value.as_ref() == "1") {
+        if called_times_value
+            .raw
+            .is_some_and(|value| value.as_ref() == "1")
+        {
             let new_matcher_name = {
-                let span_matcher_without_suffix =
-                    Span::new(matcher_to_be_fixed.span.start, matcher_to_be_fixed.span.end - 5);
+                let span_matcher_without_suffix = Span::new(
+                    matcher_to_be_fixed.span.start,
+                    matcher_to_be_fixed.span.end - 5,
+                );
 
                 format!("{}Once", ctx.source_range(span_matcher_without_suffix))
             };
@@ -122,8 +131,11 @@ impl PreferCalledOnce {
                         )
                         .map(|i| Span::sized(called_times_value.span.end + i, 1));
 
-                    let number_of_fixes =
-                        if argument_without_parenthesis_span.is_some() { 3 } else { 2 };
+                    let number_of_fixes = if argument_without_parenthesis_span.is_some() {
+                        3
+                    } else {
+                        2
+                    };
 
                     let multi_fix = fixer.for_multifix();
                     let mut fixes = multi_fix.new_fix_with_capacity(number_of_fixes);
@@ -176,11 +188,26 @@ fn test() {
     ];
 
     let fix = vec![
-        ("expect(fn).toBeCalledTimes(1);", "expect(fn).toBeCalledOnce();"),
-        ("expect(fn).toHaveBeenCalledTimes(1);", "expect(fn).toHaveBeenCalledOnce();"),
-        ("expect(fn).not.toBeCalledTimes(1);", "expect(fn).not.toBeCalledOnce();"),
-        ("expect(fn).not.toHaveBeenCalledTimes(1);", "expect(fn).not.toHaveBeenCalledOnce();"),
-        ("expect(fn).resolves.toBeCalledTimes(1);", "expect(fn).resolves.toBeCalledOnce();"),
+        (
+            "expect(fn).toBeCalledTimes(1);",
+            "expect(fn).toBeCalledOnce();",
+        ),
+        (
+            "expect(fn).toHaveBeenCalledTimes(1);",
+            "expect(fn).toHaveBeenCalledOnce();",
+        ),
+        (
+            "expect(fn).not.toBeCalledTimes(1);",
+            "expect(fn).not.toBeCalledOnce();",
+        ),
+        (
+            "expect(fn).not.toHaveBeenCalledTimes(1);",
+            "expect(fn).not.toHaveBeenCalledOnce();",
+        ),
+        (
+            "expect(fn).resolves.toBeCalledTimes(1);",
+            "expect(fn).resolves.toBeCalledOnce();",
+        ),
         (
             "expect(fn).resolves.toHaveBeenCalledTimes(1);",
             "expect(fn).resolves.toHaveBeenCalledOnce();",

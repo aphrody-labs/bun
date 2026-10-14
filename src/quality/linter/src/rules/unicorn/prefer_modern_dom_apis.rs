@@ -269,7 +269,10 @@ fn test() {
             "parentNode.replaceChild(newChildNode, oldChildNode);",
             "oldChildNode.replaceWith(newChildNode);",
         ),
-        ("parentNode.insertBefore(newNode, referenceNode);", "referenceNode.before(newNode);"),
+        (
+            "parentNode.insertBefore(newNode, referenceNode);",
+            "referenceNode.before(newNode);",
+        ),
         (
             r#"referenceNode.insertAdjacentText("beforebegin", "text");"#,
             r#"referenceNode.before("text");"#,
@@ -340,7 +343,12 @@ fn test() {
         ),
     ];
 
-    Tester::new(PreferModernDomApis::NAME, PreferModernDomApis::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        PreferModernDomApis::NAME,
+        PreferModernDomApis::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

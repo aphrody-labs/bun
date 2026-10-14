@@ -23,7 +23,10 @@ fn test_keep_names(source_text: &str, expected: &str) {
     test_options(
         source_text,
         expected,
-        &CompressOptions { keep_names: CompressOptionsKeepNames::all_true(), ..default_options() },
+        &CompressOptions {
+            keep_names: CompressOptionsKeepNames::all_true(),
+            ..default_options()
+        },
     );
 }
 
@@ -33,8 +36,14 @@ fn test_inline_single_use_variable() {
     test_same("async function wrapper(arg0, arg1) { await using x = foo; return x}");
     test_same("function wrapper(arg0) { eval('x'); var x = arg0; return x }");
 
-    test("{ let _; eval('_ = () => 1'); _() }", "{ let _; eval('_ = () => 1'), _() }");
-    test("{ let x = 1; eval('x = 2'); log(x) }", "{ let x = 1; eval('x = 2'), log(x) }");
+    test(
+        "{ let _; eval('_ = () => 1'); _() }",
+        "{ let _; eval('_ = () => 1'), _() }",
+    );
+    test(
+        "{ let x = 1; eval('x = 2'); log(x) }",
+        "{ let x = 1; eval('x = 2'), log(x) }",
+    );
     test(
         "function f() { let x; eval('x = 1'); return x }",
         "function f() { let x; return eval('x = 1'), x }",
@@ -513,7 +522,10 @@ fn keep_names() {
         "console.log(function foo() {}.name)",
     );
 
-    test("var x = class {}; var y = x; console.log(y.name)", "console.log(class {}.name)");
+    test(
+        "var x = class {}; var y = x; console.log(y.name)",
+        "console.log(class {}.name)",
+    );
     test_keep_names(
         "var x = class {}; var y = x; console.log(y.name)",
         "var x = class {}; console.log(x.name)",

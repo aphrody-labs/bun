@@ -86,7 +86,10 @@ pub fn collect_phrasing<'a>(
         parts
     };
     let consistent = |parts: &Parts<'a>, f: &MarkdownFormatter<'_, 'a>| {
-        !parts.marks.iter().any(|m| matches!(m, Mark::Delimiter { .. }))
+        !parts
+            .marks
+            .iter()
+            .any(|m| matches!(m, Mark::Delimiter { .. }))
             || pairing::consistent(parts.flat(f.allocator()), &parts.marks)
     };
     let initial = if raw { Raw::Text } else { Raw::No };
@@ -115,7 +118,9 @@ fn code_span_literal_runs<'a>(
     f: &MarkdownFormatter<'_, 'a>,
 ) {
     out.clear();
-    let (Some(first), Some(last)) = (children.first(), children.last()) else { return };
+    let (Some(first), Some(last)) = (children.first(), children.last()) else {
+        return;
+    };
     let source = f.context().source_text();
     if !source.bytes_contain(first.span().start, last.span().end, b'`') {
         return;
@@ -165,7 +170,9 @@ fn collect_opaque_spans<'a>(children: &'a [Inline<'a>], out: &mut Vec<(Span, boo
 fn collect_link_kind_spans(kind: &LinkKind<'_>, out: &mut Vec<(Span, bool)>) {
     let pieces = match kind {
         LinkKind::Reference { label, .. } => label,
-        LinkKind::Inline { title: Some(title), .. } => title,
+        LinkKind::Inline {
+            title: Some(title), ..
+        } => title,
         LinkKind::Inline { title: None, .. } => return,
     };
     out.extend(pieces.iter().map(|piece| (piece.span, false)));
@@ -183,7 +190,10 @@ fn emphasis_style<'a>(
 ) -> &'static str {
     let source = if e.marker == b'_' { "_" } else { "*" };
     if markers_as_written(f)
-        || matches!(e.children.first(), Some(Inline::Autolink(_) | Inline::AutolinkLiteral(_)))
+        || matches!(
+            e.children.first(),
+            Some(Inline::Autolink(_) | Inline::AutolinkLiteral(_))
+        )
     {
         return source;
     }
@@ -195,7 +205,11 @@ fn emphasis_style<'a>(
 
 /// `**`; `__` stays as written.
 fn strong_style<'a>(s: &'a Strong<'a>, f: &MarkdownFormatter<'_, 'a>) -> &'static str {
-    if s.marker == b'_' && markers_as_written(f) { "__" } else { "**" }
+    if s.marker == b'_' && markers_as_written(f) {
+        "__"
+    } else {
+        "**"
+    }
 }
 
 /// On a raw line, or when normalized markers would pair differently (`pairing`).
@@ -213,10 +227,17 @@ fn wiki_link_risk<'a>(
     opaque: &[(Span, bool)],
     f: &MarkdownFormatter<'_, 'a>,
 ) -> bool {
-    let (Some(first), Some(last)) = (children.first(), children.last()) else { return false };
+    let (Some(first), Some(last)) = (children.first(), children.last()) else {
+        return false;
+    };
     let start = first.span().start;
-    let raw = f.context().source_text().slice_range(start, last.span().end);
-    let Some(last_close) = raw.rfind("]]") else { return false };
+    let raw = f
+        .context()
+        .source_text()
+        .slice_range(start, last.span().end);
+    let Some(last_close) = raw.rfind("]]") else {
+        return false;
+    };
     raw[..last_close].match_indices("[[").any(|(at, _)| {
         let abs = start + u32::try_from(at).unwrap_or(u32::MAX);
         !opaque.iter().any(|(span, _)| span.contains(abs))
@@ -246,7 +267,13 @@ pub fn collect_inlines<'a>(
     };
     let raw_line = |j: usize, f: &MarkdownFormatter<'_, 'a>| -> Raw {
         let first_line = parent.paragraph && j == 0;
-        raw_for(line_shape(children, j, first_line, first_line && parent.first_in_container, f))
+        raw_for(line_shape(
+            children,
+            j,
+            first_line,
+            first_line && parent.first_in_container,
+            f,
+        ))
     };
     if parent.paragraph {
         f.context().raw_text().set(raw_line(0, f));
@@ -439,7 +466,9 @@ pub fn collect_inlines<'a>(
             Inline::Link(l) => {
                 link::collect_link(l, parts, f);
                 // A title keeps its newlines (a label's are collapsed): as after an opaque node
-                if let LinkKind::Inline { title: Some(title), .. } = &l.kind
+                if let LinkKind::Inline {
+                    title: Some(title), ..
+                } = &l.kind
                     && let (Some(first), Some(last)) = (title.first(), title.last())
                     && let Some(risky) =
                         tail_line_risky(children, first.span.start, last.span.end, None, f)
@@ -490,7 +519,10 @@ pub fn collect_inlines<'a>(
                     // Printed as written; single-line by construction.
                     _ => parts.push_str(raw),
                 }
-                parts.mark(Mark::Opaque { start, end: parts.len() });
+                parts.mark(Mark::Opaque {
+                    start,
+                    end: parts.len(),
+                });
                 // A newline inside the node starts a source line with the node's tail;
                 // what follows on that line may be cut by wrapping (`$$\n$$ text`: `$$` alone opens math),
                 // so such a line stays as written.
@@ -520,7 +552,11 @@ fn tail_line_risky<'a>(
     tail: Option<&'a str>,
     f: &MarkdownFormatter<'_, 'a>,
 ) -> Option<bool> {
-    let newline = f.context().source_text().slice_range(start, end).rfind('\n')?;
+    let newline = f
+        .context()
+        .source_text()
+        .slice_range(start, end)
+        .rfind('\n')?;
     let line_start = start + u32::try_from(newline).unwrap_or(0) + 1;
     let line = line_from(children, line_start, tail.map(|tail| (tail, end)), f);
     Some(is_line_shape_start(&line.text) || line_or_prefix_opens_block(&line, true, f))
@@ -529,7 +565,11 @@ fn tail_line_risky<'a>(
 /// Records a delimiter node whose opening marker was pushed at `open` and whose closing marker
 /// is about to be pushed.
 fn mark_delimiter(open: u32, parts: &mut Parts<'_>, strong: bool) {
-    parts.mark(Mark::Delimiter { open, close: parts.len(), strong });
+    parts.mark(Mark::Delimiter {
+        open,
+        close: parts.len(),
+        strong,
+    });
 }
 
 /// Bit `n - 1` set: a run of exactly `n` `ch`s occurs in `bytes` (runs past 64 count as 64).
@@ -618,7 +658,13 @@ fn next_word_of<'a>(
     } else {
         None
     };
-    Some(words::NextWord { word, line, escaped, in_sentence, header })
+    Some(words::NextWord {
+        word,
+        line,
+        escaped,
+        in_sentence,
+        header,
+    })
 }
 
 fn first_word(line: &str) -> Option<&str> {
@@ -635,15 +681,22 @@ fn edge_char<'a>(
     before: bool,
     f: &MarkdownFormatter<'_, 'a>,
 ) -> Option<char> {
-    let neighbor =
-        if before { i.checked_sub(1).map(|j| &children[j]) } else { children.get(i + 1) };
+    let neighbor = if before {
+        i.checked_sub(1).map(|j| &children[j])
+    } else {
+        children.get(i + 1)
+    };
     match neighbor {
         Some(Inline::SoftBreak(_) | Inline::HardBreak(_)) => Some(' '),
         // An autolink's extent depends on what follows it: escaping there changes the URL
         Some(Inline::Autolink(_) | Inline::AutolinkLiteral(_)) => None,
         Some(node) => {
             let raw = f.context().slice(node.span());
-            if before { raw.chars().next_back() } else { raw.chars().next() }
+            if before {
+                raw.chars().next_back()
+            } else {
+                raw.chars().next()
+            }
         }
         // A paragraph edge is a boundary, whitespace to the flanking rules
         None => delimiter.map_or(Some(' '), |m| Some(char::from(m))),
@@ -676,15 +729,24 @@ fn prev_word_of<'a>(
     i: usize,
     f: &MarkdownFormatter<'_, 'a>,
 ) -> Option<&'a str> {
-    let Some(Inline::Text(t)) = children.get(i.checked_sub(1)?) else { return None };
-    f.context().slice(t.span).rsplit(is_split_whitespace).find(|w| !w.is_empty())
+    let Some(Inline::Text(t)) = children.get(i.checked_sub(1)?) else {
+        return None;
+    };
+    f.context()
+        .slice(t.span)
+        .rsplit(is_split_whitespace)
+        .find(|w| !w.is_empty())
 }
 
 /// Bytes at the start of text `i` (`raw`) that may still extend the autolink literal before it,
 /// its trailing punctuation stretch: up to the first whitespace or `<`; 0 after any other node.
 fn autolink_stretch(children: &[Inline<'_>], i: usize, raw: &str) -> usize {
-    if matches!(children.get(i.wrapping_sub(1)), Some(Inline::AutolinkLiteral(_))) {
-        raw.find(|c: char| unicode::is_whitespace(c) || c == '<').unwrap_or(raw.len())
+    if matches!(
+        children.get(i.wrapping_sub(1)),
+        Some(Inline::AutolinkLiteral(_))
+    ) {
+        raw.find(|c: char| unicode::is_whitespace(c) || c == '<')
+            .unwrap_or(raw.len())
     } else {
         0
     }
@@ -698,9 +760,18 @@ fn follows_liquid(children: &[Inline<'_>], i: usize) -> bool {
 /// without it, the common case, the CJK rules are skipped.
 fn sentence_has_cjk_at(children: &[Inline<'_>], i: usize) -> bool {
     let in_sentence = |c: &Inline<'_>| matches!(c, Inline::Text(_) | Inline::SoftBreak(_));
-    let start = (0..i).rev().take_while(|&j| in_sentence(&children[j])).last().unwrap_or(i);
-    let end = (i..children.len()).take_while(|&j| in_sentence(&children[j])).last().unwrap_or(i);
-    children[start..=end].iter().any(|c| matches!(c, Inline::Text(t) if t.contains_cjk))
+    let start = (0..i)
+        .rev()
+        .take_while(|&j| in_sentence(&children[j]))
+        .last()
+        .unwrap_or(i);
+    let end = (i..children.len())
+        .take_while(|&j| in_sentence(&children[j]))
+        .last()
+        .unwrap_or(i);
+    children[start..=end]
+        .iter()
+        .any(|c| matches!(c, Inline::Text(t) if t.contains_cjk))
 }
 
 /// A word character directly before or after node `i`.
@@ -735,8 +806,9 @@ pub fn print_code_span<'a>(code: &'a CodeSpan<'a>, f: &MarkdownFormatter<'_, 'a>
         joined.cow_replace('\n', " ")
     };
     let runs = f.context().code_span_literal_runs().borrow();
-    let literal_runs =
-        runs.binary_search_by_key(&code.span.start, |&(start, _)| start).map_or(0, |i| runs[i].1);
+    let literal_runs = runs
+        .binary_search_by_key(&code.span.start, |&(start, _)| start)
+        .map_or(0, |i| runs[i].1);
     let mut len = min_absent_run(&value, b'`');
     while len <= 64 && literal_runs & (1u64 << (len - 1)) != 0 {
         len += 1;
@@ -749,5 +821,6 @@ pub fn print_code_span<'a>(code: &'a CodeSpan<'a>, f: &MarkdownFormatter<'_, 'a>
             && value.ends_with(is_space_or_newline)
             && value.chars().any(|c| !is_space_or_newline(c)));
     let padding = if padding { " " } else { "" };
-    f.allocator().alloc_concat_strs_array([&fence, padding, &value, padding, &fence])
+    f.allocator()
+        .alloc_concat_strs_array([&fence, padding, &value, padding, &fence])
 }

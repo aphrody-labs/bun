@@ -211,18 +211,39 @@ fn test() {
         (r"<input type='checkbox' onChange={noop} />", None),
         (r"<input type='checkbox' readOnly />", None),
         (r"<input type='checkbox' checked onChange={noop} />", None),
-        (r"<input type='checkbox' checked={true} onChange={noop} />", None),
-        (r"<input type='checkbox' checked={false} onChange={noop} />", None),
+        (
+            r"<input type='checkbox' checked={true} onChange={noop} />",
+            None,
+        ),
+        (
+            r"<input type='checkbox' checked={false} onChange={noop} />",
+            None,
+        ),
         (r"<input type='checkbox' checked readOnly />", None),
         (r"<input type='checkbox' checked={true} readOnly />", None),
         (r"<input type='checkbox' checked={false} readOnly />", None),
         (r"<input type='checkbox' defaultChecked />", None),
         (r"React.createElement('input')", None),
-        (r"React.createElement('input', { checked: true, onChange: noop })", None),
-        (r"React.createElement('input', { checked: false, onChange: noop })", None),
-        (r"React.createElement('input', { checked: true, readOnly: true })", None),
-        (r"React.createElement('input', { checked: true, onChange: noop, readOnly: true })", None),
-        (r"React.createElement('input', { checked: foo, onChange: noop, readOnly: true })", None),
+        (
+            r"React.createElement('input', { checked: true, onChange: noop })",
+            None,
+        ),
+        (
+            r"React.createElement('input', { checked: false, onChange: noop })",
+            None,
+        ),
+        (
+            r"React.createElement('input', { checked: true, readOnly: true })",
+            None,
+        ),
+        (
+            r"React.createElement('input', { checked: true, onChange: noop, readOnly: true })",
+            None,
+        ),
+        (
+            r"React.createElement('input', { checked: foo, onChange: noop, readOnly: true })",
+            None,
+        ),
         (
             r"<input type='checkbox' checked />",
             Some(serde_json::json!([{ "ignoreMissingProperties": true }])),
@@ -255,10 +276,16 @@ fn test() {
         (r"<input type='radio' checked={true} />", None),
         (r"<input type='checkbox' checked />", None),
         (r"<input type='checkbox' checked={true} />", None),
-        (r"<input type='checkbox' checked={condition ? true : false} />", None),
+        (
+            r"<input type='checkbox' checked={condition ? true : false} />",
+            None,
+        ),
         (r"<input type='checkbox' checked defaultChecked />", None),
         (r"React.createElement('input', { checked: false })", None),
-        (r"React.createElement('input', { checked: true, defaultChecked: true })", None),
+        (
+            r"React.createElement('input', { checked: true, defaultChecked: true })",
+            None,
+        ),
         (
             r"<input type='checkbox' checked defaultChecked />",
             Some(serde_json::json!([{ "ignoreMissingProperties": true }])),

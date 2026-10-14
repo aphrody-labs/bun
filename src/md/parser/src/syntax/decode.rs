@@ -37,7 +37,9 @@ pub fn decode(raw: &str, escapes: bool) -> Cow<'_, str> {
                 }
             }
             _ => {
-                let Some(c) = raw[i..].chars().next() else { break };
+                let Some(c) = raw[i..].chars().next() else {
+                    break;
+                };
                 out.push(c);
                 i += c.len_utf8();
             }
@@ -75,7 +77,10 @@ pub fn entity(raw: &str, at: usize) -> Option<(Cow<'static, str>, usize)> {
     // Named: letters/digits then `;`. micromark caps the scan at 31 chars;
     // any larger bound behaves the same because the lookup rejects unknown
     // names and the longest real entity is 31 chars. 48 leaves slack.
-    let len = rest.iter().take_while(|b| b.is_ascii_alphanumeric()).count();
+    let len = rest
+        .iter()
+        .take_while(|b| b.is_ascii_alphanumeric())
+        .count();
     if len == 0 || len > 48 || rest.get(len) != Some(&b';') {
         return None;
     }
@@ -135,7 +140,11 @@ fn join_stripped(source: &str, pieces: &[Segment], max: usize) -> String {
 /// angle brackets stripped, escapes and entities decoded.
 pub fn destination<'s>(source: &'s str, destination: &Destination) -> Cow<'s, str> {
     let raw = destination.span.slice(source);
-    let raw = if destination.angle_bracketed { &raw[1..raw.len() - 1] } else { raw };
+    let raw = if destination.angle_bracketed {
+        &raw[1..raw.len() - 1]
+    } else {
+        raw
+    };
     decode(raw, true)
 }
 
@@ -148,7 +157,10 @@ mod tests {
     fn decodes_escapes_and_entities() {
         assert!(matches!(decode("plain", true), Cow::Borrowed(_)));
         assert_eq!(decode(r"\*a\\b\c", true), r"*a\b\c");
-        assert_eq!(decode("&amp; &#35; &#x41; &unknown; &", true), "& # A &unknown; &");
+        assert_eq!(
+            decode("&amp; &#35; &#x41; &unknown; &", true),
+            "& # A &unknown; &"
+        );
         // `escapes: false` keeps backslashes but still decodes entities
         assert_eq!(decode(r"\&amp;", false), r"\&");
         assert_eq!(decode(r"\&amp;", true), "&amp;");
@@ -167,14 +179,23 @@ mod tests {
     #[test]
     fn title_and_html_inline() {
         let source = "\"a\n    b\"";
-        let pieces = [Segment::new(Span::new(0, 2), 0), Segment::new(Span::new(3, 9), 0)];
+        let pieces = [
+            Segment::new(Span::new(0, 2), 0),
+            Segment::new(Span::new(3, 9), 0),
+        ];
         assert_eq!(title(source, &pieces), "a\nb");
 
         // Continuation lines lose up to 3 columns; padding counts as columns
         let source = "<b\n     c>";
-        let pieces = [Segment::new(Span::new(0, 2), 0), Segment::new(Span::new(3, 10), 0)];
+        let pieces = [
+            Segment::new(Span::new(0, 2), 0),
+            Segment::new(Span::new(3, 10), 0),
+        ];
         assert_eq!(html_inline(source, &pieces), "<b\n  c>");
-        let pieces = [Segment::new(Span::new(0, 2), 0), Segment::new(Span::new(8, 10), 2)];
+        let pieces = [
+            Segment::new(Span::new(0, 2), 0),
+            Segment::new(Span::new(8, 10), 2),
+        ];
         assert_eq!(html_inline(source, &pieces), "<b\nc>");
     }
 }

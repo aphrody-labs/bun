@@ -68,8 +68,11 @@ fn collect_scope_rewrites(
     env: &mut Environment,
 ) -> Result<Vec<TerminalRewriteInfo>, OxcDiagnostic> {
     let scope_ids = get_scopes(func, env);
-    let mut context =
-        ScopeTraversalContext { fallthroughs: FxHashMap::default(), rewrites: Vec::new(), env };
+    let mut context = ScopeTraversalContext {
+        fallthroughs: FxHashMap::default(),
+        rewrites: Vec::new(),
+        env,
+    };
     recursively_traverse_items(
         scope_ids,
         |scope_id, context| {
@@ -103,9 +106,15 @@ fn push_start_scope_terminal(scope_id: ScopeId, context: &mut ScopeTraversalCont
 }
 
 fn push_end_scope_terminal(scope_id: ScopeId, context: &mut ScopeTraversalContext<'_, '_>) {
-    let fallthrough_id = *context.fallthroughs.get(&scope_id).expect("Expected scope to exist");
+    let fallthrough_id = *context
+        .fallthroughs
+        .get(&scope_id)
+        .expect("Expected scope to exist");
     let instr_id = context.env.scopes[scope_id].range.end;
-    context.rewrites.push(TerminalRewriteInfo::EndScope { instr_id, fallthrough_id });
+    context.rewrites.push(TerminalRewriteInfo::EndScope {
+        instr_id,
+        fallthrough_id,
+    });
 }
 
 // =============================================================================
@@ -127,16 +136,22 @@ fn handle_rewrite<'a>(
     context: &mut RewriteContext<'a>,
 ) {
     let terminal: Terminal = match terminal_info {
-        TerminalRewriteInfo::StartScope { block_id, fallthrough_id, instr_id, scope_id } => {
-            Terminal::Scope {
-                fallthrough: *fallthrough_id,
-                block: *block_id,
-                scope: *scope_id,
-                id: *instr_id,
-                span: None,
-            }
-        }
-        TerminalRewriteInfo::EndScope { instr_id, fallthrough_id } => Terminal::Goto {
+        TerminalRewriteInfo::StartScope {
+            block_id,
+            fallthrough_id,
+            instr_id,
+            scope_id,
+        } => Terminal::Scope {
+            fallthrough: *fallthrough_id,
+            block: *block_id,
+            scope: *scope_id,
+            id: *instr_id,
+            span: None,
+        },
+        TerminalRewriteInfo::EndScope {
+            instr_id,
+            fallthrough_id,
+        } => Terminal::Goto {
             variant: GotoVariant::Break,
             block: *fallthrough_id,
             id: *instr_id,
@@ -157,7 +172,9 @@ fn handle_rewrite<'a>(
         ArenaVec::new_in(&context.alloc)
     };
     let instructions = ArenaVec::from_iter_in(
-        source_block.instructions[context.instr_slice_idx..idx].iter().copied(),
+        source_block.instructions[context.instr_slice_idx..idx]
+            .iter()
+            .copied(),
         &context.alloc,
     );
 
@@ -243,7 +260,9 @@ pub fn build_reactive_scope_terminals_hir<'a>(
                 preds: final_preds,
                 terminal: block.terminal.clone_in(env.allocator),
                 instructions: ArenaVec::from_iter_in(
-                    block.instructions[context.instr_slice_idx..].iter().copied(),
+                    block.instructions[context.instr_slice_idx..]
+                        .iter()
+                        .copied(),
                     &env.allocator,
                 ),
                 phis: ArenaVec::new_in(&env.allocator),
@@ -268,7 +287,9 @@ pub fn build_reactive_scope_terminals_hir<'a>(
                 .operands
                 .keys()
                 .filter_map(|original_id| {
-                    rewritten_final_blocks.get(original_id).map(|new_id| (*original_id, *new_id))
+                    rewritten_final_blocks
+                        .get(original_id)
+                        .map(|new_id| (*original_id, *new_id))
                 })
                 .collect();
             for (old_id, new_id) in updates {
@@ -314,8 +335,18 @@ fn fix_scope_and_identifier_ranges(func: &HirFunction, env: &mut Environment) {
 
     for (_block_id, block) in &func.body.blocks {
         match &block.terminal {
-            Terminal::Scope { fallthrough, scope, id, .. }
-            | Terminal::PrunedScope { fallthrough, scope, id, .. } => {
+            Terminal::Scope {
+                fallthrough,
+                scope,
+                id,
+                ..
+            }
+            | Terminal::PrunedScope {
+                fallthrough,
+                scope,
+                id,
+                ..
+            } => {
                 let fallthrough_block = func.body.blocks.get(fallthrough).unwrap();
                 let first_id = if !fallthrough_block.instructions.is_empty() {
                     func.instructions[fallthrough_block.instructions[0].index()].id

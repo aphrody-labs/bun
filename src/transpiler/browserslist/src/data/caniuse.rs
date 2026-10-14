@@ -45,8 +45,9 @@ pub type CaniuseData = FxHashMap<BrowserName, BrowserStat>;
 /// The canonical version-string table: every version string any dataset references, stored once.
 /// It must stay lexicographically sorted — `features` binary-searches resolved indices, and the
 /// region pair order depends on monotone index remaps across data updates.
-static VERSION_TABLE: LazyData<Vec<String>> =
-    LazyData::new(include_bytes!("../generated/caniuse_version_table.bin.deflate"));
+static VERSION_TABLE: LazyData<Vec<String>> = LazyData::new(include_bytes!(
+    "../generated/caniuse_version_table.bin.deflate"
+));
 
 pub(crate) fn version_table() -> &'static [String] {
     VERSION_TABLE.get()
@@ -88,8 +89,9 @@ fn decode_browsers(data: &[u8], table: &'static [String]) -> CaniuseCore {
     let usage_count = read_varint(data, &mut pos);
     let mut usage_table = Vec::with_capacity(usage_count);
     for _ in 0..usage_count {
-        usage_table
-            .push(f32::from_bits(u32::from_le_bytes(data[pos..pos + 4].try_into().unwrap())));
+        usage_table.push(f32::from_bits(u32::from_le_bytes(
+            data[pos..pos + 4].try_into().unwrap(),
+        )));
         pos += 4;
     }
 
@@ -98,25 +100,32 @@ fn decode_browsers(data: &[u8], table: &'static [String]) -> CaniuseCore {
     pos += 1;
     let ids = &data[pos..pos + browser_count];
     pos += browser_count;
-    let version_counts: Vec<usize> =
-        (0..browser_count).map(|_| read_varint(data, &mut pos)).collect();
-    let released_counts: Vec<usize> =
-        (0..browser_count).map(|_| read_varint(data, &mut pos)).collect();
+    let version_counts: Vec<usize> = (0..browser_count)
+        .map(|_| read_varint(data, &mut pos))
+        .collect();
+    let released_counts: Vec<usize> = (0..browser_count)
+        .map(|_| read_varint(data, &mut pos))
+        .collect();
     let total_versions: usize = version_counts.iter().sum();
 
     // Each browser's version list as canonical-table indices, indexed by browser id.
     let max_id = usize::from(ids.iter().copied().max().unwrap_or(0));
     let mut version_orders: Vec<Vec<u16>> = vec![Vec::new(); max_id + 1];
     for (&id, &count) in ids.iter().zip(&version_counts) {
-        version_orders[usize::from(id)] =
-            (0..count).map(|_| u16::try_from(read_varint(data, &mut pos)).unwrap()).collect();
+        version_orders[usize::from(id)] = (0..count)
+            .map(|_| u16::try_from(read_varint(data, &mut pos)).unwrap())
+            .collect();
     }
 
     // Per-version usage values, one flat list in browser order (index 0 means "no usage").
     let mut usages = Vec::with_capacity(total_versions);
     for _ in 0..total_versions {
         let index = read_varint(data, &mut pos);
-        usages.push(if index == 0 { 0.0 } else { usage_table[index - 1] });
+        usages.push(if index == 0 {
+            0.0
+        } else {
+            usage_table[index - 1]
+        });
     }
 
     // Assemble the stats map, reading the release-date section as we go (it is the next
@@ -155,7 +164,11 @@ fn decode_browsers(data: &[u8], table: &'static [String]) -> CaniuseCore {
     }
     assert_eq!(pos, data.len(), "trailing caniuse browsers data");
 
-    CaniuseCore { browsers, global_usage, version_orders }
+    CaniuseCore {
+        browsers,
+        global_usage,
+        version_orders,
+    }
 }
 
 pub fn caniuse_browsers() -> &'static CaniuseData {
@@ -189,10 +202,17 @@ pub fn browser_version_aliases()
                         aliases.insert(top, version.version());
                     }
                 }
-                if aliases.is_empty() { None } else { Some((name.clone(), aliases)) }
+                if aliases.is_empty() {
+                    None
+                } else {
+                    Some((name.clone(), aliases))
+                }
             })
             .collect::<FxHashMap<Cow<'static, str>, _>>();
-        aliases.insert(Cow::Borrowed("op_mob"), FxHashMap::from_iter([("59", "58")]));
+        aliases.insert(
+            Cow::Borrowed("op_mob"),
+            FxHashMap::from_iter([("59", "58")]),
+        );
         aliases
     })
 }
@@ -221,7 +241,10 @@ fn android_to_desktop() -> &'static BrowserStat {
         // Add chrome versions from evergreen point onwards
         version_list.extend(chrome.version_list.iter().skip(chrome_skip_index).cloned());
 
-        BrowserStat { name: android.name.clone(), version_list }
+        BrowserStat {
+            name: android.name.clone(),
+            version_list,
+        }
     })
 }
 
@@ -241,7 +264,10 @@ fn find_chrome_evergreen_start(chrome: &BrowserStat) -> usize {
         .version_list
         .iter()
         .position(|version| {
-            version.version().parse::<usize>().is_ok_and(|v| v == ANDROID_EVERGREEN_FIRST as usize)
+            version
+                .version()
+                .parse::<usize>()
+                .is_ok_and(|v| v == ANDROID_EVERGREEN_FIRST as usize)
         })
         .unwrap_or(0)
 }
@@ -260,7 +286,9 @@ pub fn get_browser_stat(
     if mobile_to_desktop {
         get_browser_stat_mobile_to_desktop(normalized_name.as_ref())
     } else {
-        caniuse_browsers().get(&normalized_name).map(|stat| (stat.name.as_ref(), stat))
+        caniuse_browsers()
+            .get(&normalized_name)
+            .map(|stat| (stat.name.as_ref(), stat))
     }
 }
 
@@ -269,12 +297,18 @@ fn get_browser_stat_mobile_to_desktop(name: &str) -> Option<(&'static str, &'sta
     // Reproduce original logic: first check if we have a desktop mapping
     match name {
         // Browsers that have desktop equivalents
-        "and_chr" => caniuse_browsers().get("chrome").map(|stat| ("and_chr", stat)),
+        "and_chr" => caniuse_browsers()
+            .get("chrome")
+            .map(|stat| ("and_chr", stat)),
         "android" => Some(("android", android_to_desktop())), // Special case for android
-        "and_ff" => caniuse_browsers().get("firefox").map(|stat| ("and_ff", stat)),
+        "and_ff" => caniuse_browsers()
+            .get("firefox")
+            .map(|stat| ("and_ff", stat)),
         "ie_mob" => caniuse_browsers().get("ie").map(|stat| ("ie_mob", stat)),
         // All other browsers (including op_mob) return their own data
-        _ => caniuse_browsers().get(name).map(|stat| (stat.name.as_ref(), stat)),
+        _ => caniuse_browsers()
+            .get(name)
+            .map(|stat| (stat.name.as_ref(), stat)),
     }
 }
 
@@ -328,12 +362,15 @@ pub fn to_desktop_name(name: &str) -> Option<&'static str> {
 pub fn normalize_version<'a>(stat: &'static BrowserStat, version: &'a str) -> Option<Cow<'a, str>> {
     if stat.version_list.iter().any(|v| v.version() == version) {
         Some(Cow::Borrowed(version))
-    } else if let Some(version) =
-        browser_version_aliases().get(&stat.name).and_then(|aliases| aliases.get(version))
+    } else if let Some(version) = browser_version_aliases()
+        .get(&stat.name)
+        .and_then(|aliases| aliases.get(version))
     {
         Some(Cow::Borrowed(version))
     } else if stat.version_list.len() == 1 {
-        stat.version_list.first().map(|s| Cow::Owned(s.version().to_string()))
+        stat.version_list
+            .first()
+            .map(|s| Cow::Owned(s.version().to_string()))
     } else {
         None
     }

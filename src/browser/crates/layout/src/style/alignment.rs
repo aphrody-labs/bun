@@ -134,36 +134,75 @@ pub struct AlignItems {
 
 impl AlignItems {
     /// Use the layout mode's normal alignment behavior.
-    pub const NORMAL: Self = Self { keyword: AlignItemsKeyword::Normal, safety: AlignmentSafety::Unsafe };
+    pub const NORMAL: Self = Self {
+        keyword: AlignItemsKeyword::Normal,
+        safety: AlignmentSafety::Unsafe,
+    };
     /// Items are packed toward the start of the axis.
-    pub const START: Self = Self { keyword: AlignItemsKeyword::Start, safety: AlignmentSafety::Unsafe };
+    pub const START: Self = Self {
+        keyword: AlignItemsKeyword::Start,
+        safety: AlignmentSafety::Unsafe,
+    };
     /// Items are packed toward the end of the axis.
-    pub const END: Self = Self { keyword: AlignItemsKeyword::End, safety: AlignmentSafety::Unsafe };
+    pub const END: Self = Self {
+        keyword: AlignItemsKeyword::End,
+        safety: AlignmentSafety::Unsafe,
+    };
     /// Items are packed towards the flex-relative start of the axis.
-    pub const FLEX_START: Self = Self { keyword: AlignItemsKeyword::FlexStart, safety: AlignmentSafety::Unsafe };
+    pub const FLEX_START: Self = Self {
+        keyword: AlignItemsKeyword::FlexStart,
+        safety: AlignmentSafety::Unsafe,
+    };
     /// Items are packed towards the flex-relative end of the axis.
-    pub const FLEX_END: Self = Self { keyword: AlignItemsKeyword::FlexEnd, safety: AlignmentSafety::Unsafe };
+    pub const FLEX_END: Self = Self {
+        keyword: AlignItemsKeyword::FlexEnd,
+        safety: AlignmentSafety::Unsafe,
+    };
     /// Items are packed along the center of the cross axis.
-    pub const CENTER: Self = Self { keyword: AlignItemsKeyword::Center, safety: AlignmentSafety::Unsafe };
+    pub const CENTER: Self = Self {
+        keyword: AlignItemsKeyword::Center,
+        safety: AlignmentSafety::Unsafe,
+    };
     /// Items are aligned such as their baselines align.
-    pub const BASELINE: Self = Self { keyword: AlignItemsKeyword::Baseline, safety: AlignmentSafety::Unsafe };
+    pub const BASELINE: Self = Self {
+        keyword: AlignItemsKeyword::Baseline,
+        safety: AlignmentSafety::Unsafe,
+    };
     /// Stretch to fill the container.
-    pub const STRETCH: Self = Self { keyword: AlignItemsKeyword::Stretch, safety: AlignmentSafety::Unsafe };
+    pub const STRETCH: Self = Self {
+        keyword: AlignItemsKeyword::Stretch,
+        safety: AlignmentSafety::Unsafe,
+    };
     /// Like [`AlignItems::START`], but falls back to [`AlignItems::START`] when the
     /// alignment subject overflows the alignment container, to avoid data loss.
-    pub const SAFE_START: Self = Self { keyword: AlignItemsKeyword::Start, safety: AlignmentSafety::Safe };
+    pub const SAFE_START: Self = Self {
+        keyword: AlignItemsKeyword::Start,
+        safety: AlignmentSafety::Safe,
+    };
     /// Like [`AlignItems::END`], but falls back to [`AlignItems::START`] when the
     /// alignment subject overflows the alignment container, to avoid data loss.
-    pub const SAFE_END: Self = Self { keyword: AlignItemsKeyword::End, safety: AlignmentSafety::Safe };
+    pub const SAFE_END: Self = Self {
+        keyword: AlignItemsKeyword::End,
+        safety: AlignmentSafety::Safe,
+    };
     /// Like [`AlignItems::FLEX_START`], but falls back to [`AlignItems::START`] when the
     /// alignment subject overflows the alignment container, to avoid data loss.
-    pub const SAFE_FLEX_START: Self = Self { keyword: AlignItemsKeyword::FlexStart, safety: AlignmentSafety::Safe };
+    pub const SAFE_FLEX_START: Self = Self {
+        keyword: AlignItemsKeyword::FlexStart,
+        safety: AlignmentSafety::Safe,
+    };
     /// Like [`AlignItems::FLEX_END`], but falls back to [`AlignItems::START`] when the
     /// alignment subject overflows the alignment container, to avoid data loss.
-    pub const SAFE_FLEX_END: Self = Self { keyword: AlignItemsKeyword::FlexEnd, safety: AlignmentSafety::Safe };
+    pub const SAFE_FLEX_END: Self = Self {
+        keyword: AlignItemsKeyword::FlexEnd,
+        safety: AlignmentSafety::Safe,
+    };
     /// Like [`AlignItems::CENTER`], but falls back to [`AlignItems::START`] when the
     /// alignment subject overflows the alignment container, to avoid data loss.
-    pub const SAFE_CENTER: Self = Self { keyword: AlignItemsKeyword::Center, safety: AlignmentSafety::Safe };
+    pub const SAFE_CENTER: Self = Self {
+        keyword: AlignItemsKeyword::Center,
+        safety: AlignmentSafety::Safe,
+    };
 
     /// Returns `true` iff this carries the `safe` overflow-position modifier.
     #[inline]
@@ -180,7 +219,11 @@ impl AlignItems {
     /// Resolve the context-dependent `normal` keyword to its used alignment.
     #[inline]
     pub const fn resolve_normal(self, normal: Self) -> Self {
-        if matches!(self.keyword, AlignItemsKeyword::Normal) { normal } else { self }
+        if matches!(self.keyword, AlignItemsKeyword::Normal) {
+            normal
+        } else {
+            self
+        }
     }
 }
 
@@ -265,39 +308,80 @@ pub struct AlignContent {
 
 impl AlignContent {
     /// Items are packed toward the start of the axis.
-    pub const START: Self = Self { keyword: AlignContentKeyword::Start, safety: AlignmentSafety::Unsafe };
+    pub const START: Self = Self {
+        keyword: AlignContentKeyword::Start,
+        safety: AlignmentSafety::Unsafe,
+    };
     /// Items are packed toward the end of the axis.
-    pub const END: Self = Self { keyword: AlignContentKeyword::End, safety: AlignmentSafety::Unsafe };
+    pub const END: Self = Self {
+        keyword: AlignContentKeyword::End,
+        safety: AlignmentSafety::Unsafe,
+    };
     /// Items are packed towards the flex-relative start of the axis.
-    pub const FLEX_START: Self = Self { keyword: AlignContentKeyword::FlexStart, safety: AlignmentSafety::Unsafe };
+    pub const FLEX_START: Self = Self {
+        keyword: AlignContentKeyword::FlexStart,
+        safety: AlignmentSafety::Unsafe,
+    };
     /// Items are packed towards the flex-relative end of the axis.
-    pub const FLEX_END: Self = Self { keyword: AlignContentKeyword::FlexEnd, safety: AlignmentSafety::Unsafe };
+    pub const FLEX_END: Self = Self {
+        keyword: AlignContentKeyword::FlexEnd,
+        safety: AlignmentSafety::Unsafe,
+    };
     /// Items are centered around the middle of the axis.
-    pub const CENTER: Self = Self { keyword: AlignContentKeyword::Center, safety: AlignmentSafety::Unsafe };
+    pub const CENTER: Self = Self {
+        keyword: AlignContentKeyword::Center,
+        safety: AlignmentSafety::Unsafe,
+    };
     /// Items are stretched to fill the container.
-    pub const STRETCH: Self = Self { keyword: AlignContentKeyword::Stretch, safety: AlignmentSafety::Unsafe };
+    pub const STRETCH: Self = Self {
+        keyword: AlignContentKeyword::Stretch,
+        safety: AlignmentSafety::Unsafe,
+    };
     /// The first and last items are aligned flush with the edges of the container.
-    pub const SPACE_BETWEEN: Self =
-        Self { keyword: AlignContentKeyword::SpaceBetween, safety: AlignmentSafety::Unsafe };
+    pub const SPACE_BETWEEN: Self = Self {
+        keyword: AlignContentKeyword::SpaceBetween,
+        safety: AlignmentSafety::Unsafe,
+    };
     /// The gap between the first and last items equals the gap between items.
-    pub const SPACE_EVENLY: Self = Self { keyword: AlignContentKeyword::SpaceEvenly, safety: AlignmentSafety::Unsafe };
+    pub const SPACE_EVENLY: Self = Self {
+        keyword: AlignContentKeyword::SpaceEvenly,
+        safety: AlignmentSafety::Unsafe,
+    };
     /// The gap between the first and last items is half the gap between items.
-    pub const SPACE_AROUND: Self = Self { keyword: AlignContentKeyword::SpaceAround, safety: AlignmentSafety::Unsafe };
+    pub const SPACE_AROUND: Self = Self {
+        keyword: AlignContentKeyword::SpaceAround,
+        safety: AlignmentSafety::Unsafe,
+    };
     /// Like [`AlignContent::START`], but falls back to [`AlignContent::START`] when the
     /// content overflows the alignment container, to avoid data loss.
-    pub const SAFE_START: Self = Self { keyword: AlignContentKeyword::Start, safety: AlignmentSafety::Safe };
+    pub const SAFE_START: Self = Self {
+        keyword: AlignContentKeyword::Start,
+        safety: AlignmentSafety::Safe,
+    };
     /// Like [`AlignContent::END`], but falls back to [`AlignContent::START`] when the
     /// content overflows the alignment container, to avoid data loss.
-    pub const SAFE_END: Self = Self { keyword: AlignContentKeyword::End, safety: AlignmentSafety::Safe };
+    pub const SAFE_END: Self = Self {
+        keyword: AlignContentKeyword::End,
+        safety: AlignmentSafety::Safe,
+    };
     /// Like [`AlignContent::FLEX_START`], but falls back to [`AlignContent::START`] when
     /// the content overflows the alignment container, to avoid data loss.
-    pub const SAFE_FLEX_START: Self = Self { keyword: AlignContentKeyword::FlexStart, safety: AlignmentSafety::Safe };
+    pub const SAFE_FLEX_START: Self = Self {
+        keyword: AlignContentKeyword::FlexStart,
+        safety: AlignmentSafety::Safe,
+    };
     /// Like [`AlignContent::FLEX_END`], but falls back to [`AlignContent::START`] when the
     /// content overflows the alignment container, to avoid data loss.
-    pub const SAFE_FLEX_END: Self = Self { keyword: AlignContentKeyword::FlexEnd, safety: AlignmentSafety::Safe };
+    pub const SAFE_FLEX_END: Self = Self {
+        keyword: AlignContentKeyword::FlexEnd,
+        safety: AlignmentSafety::Safe,
+    };
     /// Like [`AlignContent::CENTER`], but falls back to [`AlignContent::START`] when the
     /// content overflows the alignment container, to avoid data loss.
-    pub const SAFE_CENTER: Self = Self { keyword: AlignContentKeyword::Center, safety: AlignmentSafety::Safe };
+    pub const SAFE_CENTER: Self = Self {
+        keyword: AlignContentKeyword::Center,
+        safety: AlignmentSafety::Safe,
+    };
 
     /// Returns `true` iff this carries the `safe` overflow-position modifier.
     #[inline]
@@ -527,8 +611,16 @@ mod tests {
     // Pre-refactor each was a single-byte enum; spec §V13 caps regression at +2B.
     #[test]
     fn align_types_within_size_budget() {
-        assert!(size_of::<AlignItems>() <= 2, "AlignItems grew to {}", size_of::<AlignItems>());
-        assert!(size_of::<AlignContent>() <= 2, "AlignContent grew to {}", size_of::<AlignContent>());
+        assert!(
+            size_of::<AlignItems>() <= 2,
+            "AlignItems grew to {}",
+            size_of::<AlignItems>()
+        );
+        assert!(
+            size_of::<AlignContent>() <= 2,
+            "AlignContent grew to {}",
+            size_of::<AlignContent>()
+        );
         assert!(size_of::<Option<AlignItems>>() <= 3);
         assert!(size_of::<Option<AlignContent>>() <= 3);
     }
@@ -553,8 +645,14 @@ mod tests {
     fn align_items_keyword_strips_safe() {
         assert_eq!(AlignItems::SAFE_START.keyword(), AlignItemsKeyword::Start);
         assert_eq!(AlignItems::SAFE_END.keyword(), AlignItemsKeyword::End);
-        assert_eq!(AlignItems::SAFE_FLEX_START.keyword(), AlignItemsKeyword::FlexStart);
-        assert_eq!(AlignItems::SAFE_FLEX_END.keyword(), AlignItemsKeyword::FlexEnd);
+        assert_eq!(
+            AlignItems::SAFE_FLEX_START.keyword(),
+            AlignItemsKeyword::FlexStart
+        );
+        assert_eq!(
+            AlignItems::SAFE_FLEX_END.keyword(),
+            AlignItemsKeyword::FlexEnd
+        );
         assert_eq!(AlignItems::SAFE_CENTER.keyword(), AlignItemsKeyword::Center);
     }
 
@@ -563,7 +661,10 @@ mod tests {
         assert_eq!(AlignItems::START.keyword(), AlignItemsKeyword::Start);
         assert_eq!(AlignItems::STRETCH.keyword(), AlignItemsKeyword::Stretch);
         assert_eq!(AlignItems::BASELINE.keyword(), AlignItemsKeyword::Baseline);
-        assert_eq!(AlignItems::FLEX_START.keyword(), AlignItemsKeyword::FlexStart);
+        assert_eq!(
+            AlignItems::FLEX_START.keyword(),
+            AlignItemsKeyword::FlexStart
+        );
     }
 
     #[test]
@@ -576,24 +677,63 @@ mod tests {
 
     #[test]
     fn align_content_keyword_strips_safe() {
-        assert_eq!(AlignContent::SAFE_START.keyword(), AlignContentKeyword::Start);
-        assert_eq!(AlignContent::SAFE_FLEX_END.keyword(), AlignContentKeyword::FlexEnd);
-        assert_eq!(AlignContent::SAFE_CENTER.keyword(), AlignContentKeyword::Center);
-        assert_eq!(AlignContent::SPACE_BETWEEN.keyword(), AlignContentKeyword::SpaceBetween);
+        assert_eq!(
+            AlignContent::SAFE_START.keyword(),
+            AlignContentKeyword::Start
+        );
+        assert_eq!(
+            AlignContent::SAFE_FLEX_END.keyword(),
+            AlignContentKeyword::FlexEnd
+        );
+        assert_eq!(
+            AlignContent::SAFE_CENTER.keyword(),
+            AlignContentKeyword::Center
+        );
+        assert_eq!(
+            AlignContent::SPACE_BETWEEN.keyword(),
+            AlignContentKeyword::SpaceBetween
+        );
     }
 
     #[test]
     fn align_content_keyword_reversed_swaps_start_end() {
-        assert_eq!(AlignContentKeyword::Start.reversed(), AlignContentKeyword::End);
-        assert_eq!(AlignContentKeyword::End.reversed(), AlignContentKeyword::Start);
-        assert_eq!(AlignContentKeyword::FlexStart.reversed(), AlignContentKeyword::FlexEnd);
-        assert_eq!(AlignContentKeyword::FlexEnd.reversed(), AlignContentKeyword::FlexStart);
+        assert_eq!(
+            AlignContentKeyword::Start.reversed(),
+            AlignContentKeyword::End
+        );
+        assert_eq!(
+            AlignContentKeyword::End.reversed(),
+            AlignContentKeyword::Start
+        );
+        assert_eq!(
+            AlignContentKeyword::FlexStart.reversed(),
+            AlignContentKeyword::FlexEnd
+        );
+        assert_eq!(
+            AlignContentKeyword::FlexEnd.reversed(),
+            AlignContentKeyword::FlexStart
+        );
         // Stretch reverses to End — preserves pre-refactor behaviour.
-        assert_eq!(AlignContentKeyword::Stretch.reversed(), AlignContentKeyword::End);
-        assert_eq!(AlignContentKeyword::Center.reversed(), AlignContentKeyword::Center);
-        assert_eq!(AlignContentKeyword::SpaceBetween.reversed(), AlignContentKeyword::SpaceBetween);
-        assert_eq!(AlignContentKeyword::SpaceEvenly.reversed(), AlignContentKeyword::SpaceEvenly);
-        assert_eq!(AlignContentKeyword::SpaceAround.reversed(), AlignContentKeyword::SpaceAround);
+        assert_eq!(
+            AlignContentKeyword::Stretch.reversed(),
+            AlignContentKeyword::End
+        );
+        assert_eq!(
+            AlignContentKeyword::Center.reversed(),
+            AlignContentKeyword::Center
+        );
+        assert_eq!(
+            AlignContentKeyword::SpaceBetween.reversed(),
+            AlignContentKeyword::SpaceBetween
+        );
+        assert_eq!(
+            AlignContentKeyword::SpaceEvenly.reversed(),
+            AlignContentKeyword::SpaceEvenly
+        );
+        assert_eq!(
+            AlignContentKeyword::SpaceAround.reversed(),
+            AlignContentKeyword::SpaceAround
+        );
     }
 
     #[cfg(feature = "parse")]
@@ -601,36 +741,75 @@ mod tests {
     fn parse_align_items_plain() {
         assert_eq!("start".parse::<AlignItems>().unwrap(), AlignItems::START);
         assert_eq!("end".parse::<AlignItems>().unwrap(), AlignItems::END);
-        assert_eq!("flex-start".parse::<AlignItems>().unwrap(), AlignItems::FLEX_START);
-        assert_eq!("flex-end".parse::<AlignItems>().unwrap(), AlignItems::FLEX_END);
+        assert_eq!(
+            "flex-start".parse::<AlignItems>().unwrap(),
+            AlignItems::FLEX_START
+        );
+        assert_eq!(
+            "flex-end".parse::<AlignItems>().unwrap(),
+            AlignItems::FLEX_END
+        );
         assert_eq!("center".parse::<AlignItems>().unwrap(), AlignItems::CENTER);
-        assert_eq!("baseline".parse::<AlignItems>().unwrap(), AlignItems::BASELINE);
-        assert_eq!("stretch".parse::<AlignItems>().unwrap(), AlignItems::STRETCH);
+        assert_eq!(
+            "baseline".parse::<AlignItems>().unwrap(),
+            AlignItems::BASELINE
+        );
+        assert_eq!(
+            "stretch".parse::<AlignItems>().unwrap(),
+            AlignItems::STRETCH
+        );
     }
 
     #[cfg(feature = "parse")]
     #[test]
     fn parse_align_items_safe() {
-        assert_eq!("safe start".parse::<AlignItems>().unwrap(), AlignItems::SAFE_START);
-        assert_eq!("safe end".parse::<AlignItems>().unwrap(), AlignItems::SAFE_END);
-        assert_eq!("safe flex-start".parse::<AlignItems>().unwrap(), AlignItems::SAFE_FLEX_START);
-        assert_eq!("safe flex-end".parse::<AlignItems>().unwrap(), AlignItems::SAFE_FLEX_END);
-        assert_eq!("safe center".parse::<AlignItems>().unwrap(), AlignItems::SAFE_CENTER);
+        assert_eq!(
+            "safe start".parse::<AlignItems>().unwrap(),
+            AlignItems::SAFE_START
+        );
+        assert_eq!(
+            "safe end".parse::<AlignItems>().unwrap(),
+            AlignItems::SAFE_END
+        );
+        assert_eq!(
+            "safe flex-start".parse::<AlignItems>().unwrap(),
+            AlignItems::SAFE_FLEX_START
+        );
+        assert_eq!(
+            "safe flex-end".parse::<AlignItems>().unwrap(),
+            AlignItems::SAFE_FLEX_END
+        );
+        assert_eq!(
+            "safe center".parse::<AlignItems>().unwrap(),
+            AlignItems::SAFE_CENTER
+        );
     }
 
     #[cfg(feature = "parse")]
     #[test]
     fn parse_align_items_safe_case_insensitive() {
-        assert_eq!("SAFE Start".parse::<AlignItems>().unwrap(), AlignItems::SAFE_START);
-        assert_eq!("Safe FLEX-end".parse::<AlignItems>().unwrap(), AlignItems::SAFE_FLEX_END);
+        assert_eq!(
+            "SAFE Start".parse::<AlignItems>().unwrap(),
+            AlignItems::SAFE_START
+        );
+        assert_eq!(
+            "Safe FLEX-end".parse::<AlignItems>().unwrap(),
+            AlignItems::SAFE_FLEX_END
+        );
     }
 
     #[cfg(feature = "parse")]
     #[test]
     fn parse_align_items_unsafe_drops_modifier() {
-        assert_eq!("unsafe start".parse::<AlignItems>().unwrap(), AlignItems::START);
+        assert_eq!(
+            "unsafe start".parse::<AlignItems>().unwrap(),
+            AlignItems::START
+        );
         assert_eq!("unsafe end".parse::<AlignItems>().unwrap(), AlignItems::END);
-        assert_eq!("unsafe center".parse::<AlignItems>().unwrap(), AlignItems::CENTER);
+        assert_eq!(
+            "unsafe center".parse::<AlignItems>().unwrap(),
+            AlignItems::CENTER
+        );
     }
 
     #[cfg(feature = "parse")]
@@ -648,28 +827,64 @@ mod tests {
     #[cfg(feature = "parse")]
     #[test]
     fn parse_align_content_plain() {
-        assert_eq!("start".parse::<AlignContent>().unwrap(), AlignContent::START);
-        assert_eq!("space-between".parse::<AlignContent>().unwrap(), AlignContent::SPACE_BETWEEN);
-        assert_eq!("space-evenly".parse::<AlignContent>().unwrap(), AlignContent::SPACE_EVENLY);
-        assert_eq!("space-around".parse::<AlignContent>().unwrap(), AlignContent::SPACE_AROUND);
-        assert_eq!("stretch".parse::<AlignContent>().unwrap(), AlignContent::STRETCH);
+        assert_eq!(
+            "start".parse::<AlignContent>().unwrap(),
+            AlignContent::START
+        );
+        assert_eq!(
+            "space-between".parse::<AlignContent>().unwrap(),
+            AlignContent::SPACE_BETWEEN
+        );
+        assert_eq!(
+            "space-evenly".parse::<AlignContent>().unwrap(),
+            AlignContent::SPACE_EVENLY
+        );
+        assert_eq!(
+            "space-around".parse::<AlignContent>().unwrap(),
+            AlignContent::SPACE_AROUND
+        );
+        assert_eq!(
+            "stretch".parse::<AlignContent>().unwrap(),
+            AlignContent::STRETCH
+        );
     }
 
     #[cfg(feature = "parse")]
     #[test]
     fn parse_align_content_safe() {
-        assert_eq!("safe start".parse::<AlignContent>().unwrap(), AlignContent::SAFE_START);
-        assert_eq!("safe end".parse::<AlignContent>().unwrap(), AlignContent::SAFE_END);
-        assert_eq!("safe flex-start".parse::<AlignContent>().unwrap(), AlignContent::SAFE_FLEX_START);
-        assert_eq!("safe flex-end".parse::<AlignContent>().unwrap(), AlignContent::SAFE_FLEX_END);
-        assert_eq!("safe center".parse::<AlignContent>().unwrap(), AlignContent::SAFE_CENTER);
+        assert_eq!(
+            "safe start".parse::<AlignContent>().unwrap(),
+            AlignContent::SAFE_START
+        );
+        assert_eq!(
+            "safe end".parse::<AlignContent>().unwrap(),
+            AlignContent::SAFE_END
+        );
+        assert_eq!(
+            "safe flex-start".parse::<AlignContent>().unwrap(),
+            AlignContent::SAFE_FLEX_START
+        );
+        assert_eq!(
+            "safe flex-end".parse::<AlignContent>().unwrap(),
+            AlignContent::SAFE_FLEX_END
+        );
+        assert_eq!(
+            "safe center".parse::<AlignContent>().unwrap(),
+            AlignContent::SAFE_CENTER
+        );
     }
 
     #[cfg(feature = "parse")]
     #[test]
     fn parse_align_content_unsafe_drops_modifier() {
-        assert_eq!("unsafe start".parse::<AlignContent>().unwrap(), AlignContent::START);
-        assert_eq!("unsafe flex-end".parse::<AlignContent>().unwrap(), AlignContent::FLEX_END);
+        assert_eq!(
+            "unsafe start".parse::<AlignContent>().unwrap(),
+            AlignContent::START
+        );
+        assert_eq!(
+            "unsafe flex-end".parse::<AlignContent>().unwrap(),
+            AlignContent::FLEX_END
+        );
     }
 
     #[cfg(feature = "parse")]

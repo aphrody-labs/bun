@@ -131,6 +131,11 @@ fn test() {
         "#,
     ];
 
-    Tester::new(JsxNoDuplicateProps::NAME, JsxNoDuplicateProps::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        JsxNoDuplicateProps::NAME,
+        JsxNoDuplicateProps::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

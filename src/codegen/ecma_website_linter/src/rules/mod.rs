@@ -48,9 +48,15 @@ pub fn print_rules(mut args: Arguments) {
     }
 
     let git_ref: Option<String> = args.opt_value_from_str("--git-ref").unwrap();
-    let rules_json_path = args.opt_value_from_str::<_, PathBuf>(["-j", "--rules-json"]).unwrap();
-    let rules_dir = args.opt_value_from_str::<_, PathBuf>(["-r", "--rule-docs"]).unwrap();
-    let rule_count_dir = args.opt_value_from_str::<_, PathBuf>(["-c", "--rule-count"]).unwrap();
+    let rules_json_path = args
+        .opt_value_from_str::<_, PathBuf>(["-j", "--rules-json"])
+        .unwrap();
+    let rules_dir = args
+        .opt_value_from_str::<_, PathBuf>(["-r", "--rule-docs"])
+        .unwrap();
+    let rule_count_dir = args
+        .opt_value_from_str::<_, PathBuf>(["-c", "--rule-count"])
+        .unwrap();
 
     let mut generator = SchemaGenerator::new(SchemaSettings::default());
     let table = RuleTable::new(Some(&mut generator));
@@ -88,7 +94,9 @@ pub fn print_rules(mut args: Arguments) {
 
     eprintln!(
         "Done. Written rules to {}",
-        rules_dir.as_ref().map_or_else(|| "none".to_string(), |p| format!("{}", p.display()))
+        rules_dir
+            .as_ref()
+            .map_or_else(|| "none".to_string(), |p| format!("{}", p.display()))
     );
 }
 
@@ -97,11 +105,15 @@ fn render_rule_doc_pages(
     table: &RuleTable,
 ) -> impl Iterator<Item = (String, String, &RuleTableRow)> + '_ {
     let mut ctx = Context::new::<Oxlintrc>(g);
-    table.sections.iter().flat_map(|section| &section.rows).map(move |rule| {
-        let key = format!("{}/{}.md", rule.plugin, rule.name);
-        let docs = ctx.render_rule_docs_page(rule).unwrap();
-        (key, docs, rule)
-    })
+    table
+        .sections
+        .iter()
+        .flat_map(|section| &section.rows)
+        .map(move |rule| {
+            let key = format!("{}/{}.md", rule.plugin, rule.name);
+            let docs = ctx.render_rule_docs_page(rule).unwrap();
+            (key, docs, rule)
+        })
 }
 
 fn write_rule_doc_pages(g: SchemaGenerator, table: &RuleTable, outdir: &Path) {

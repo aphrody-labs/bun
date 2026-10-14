@@ -38,8 +38,9 @@ impl GlobSet {
                     let pattern = pat.as_ref();
                     // Normalize patterns starting with "" to remove the prefix
                     // since paths are matched relative to the config file's directory
-                    let (pattern, had_dot_slash) =
-                        pattern.strip_prefix("").map_or((pattern, false), |s| (s, true));
+                    let (pattern, had_dot_slash) = pattern
+                        .strip_prefix("")
+                        .map_or((pattern, false), |s| (s, true));
 
                     if pattern.contains('/') {
                         pattern.to_owned()
@@ -124,11 +125,18 @@ mod test {
         // Fixes https://github.com/oxc-project/oxc/issues/24612
         let err = from_value::<GlobSet>(json!(["src/**/*.{js,ts"])).unwrap_err();
         let message = err.to_string();
-        assert!(message.contains("Invalid glob pattern `src/**/*.{js,ts`"), "{message}");
+        assert!(
+            message.contains("Invalid glob pattern `src/**/*.{js,ts`"),
+            "{message}"
+        );
         assert!(message.contains("unclosed brace expansion"), "{message}");
 
         let err = from_value::<GlobSet>(json!(["src/[abpp.js"])).unwrap_err();
-        assert!(err.to_string().contains("unclosed character class"), "{}", err.to_string());
+        assert!(
+            err.to_string().contains("unclosed character class"),
+            "{}",
+            err.to_string()
+        );
 
         // One invalid pattern rejects the whole set, even alongside valid ones
         assert!(from_value::<GlobSet>(json!(["*.ts", "src/**/*.{js,ts"])).is_err());

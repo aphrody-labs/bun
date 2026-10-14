@@ -31,7 +31,10 @@ impl RuntimeSuppressionMap {
         let mut map = self.inner.lock().unwrap();
         let entry = map.entry(filename).or_default();
         for (rule, diagnostic) in counts {
-            entry.entry(rule).or_insert(DiagnosticCounts { count: 0 }).count += diagnostic.count;
+            entry
+                .entry(rule)
+                .or_insert(DiagnosticCounts { count: 0 })
+                .count += diagnostic.count;
         }
     }
 
@@ -89,8 +92,11 @@ impl SuppressionManager {
                 OxlintSuppressionFileAction::None
             };
 
-            let suppressions_by_file =
-                if suppress_all { Some(SuppressionTracking::default()) } else { None };
+            let suppressions_by_file = if suppress_all {
+                Some(SuppressionTracking::default())
+            } else {
+                None
+            };
 
             return Self {
                 suppressions_by_file,
@@ -322,7 +328,10 @@ impl SuppressionManager {
     }
 
     fn concurrent_map(&self) -> StaticSuppressionMap {
-        self.suppressions_by_file.as_ref().map(|f| Arc::clone(f.suppressions())).unwrap_or_default()
+        self.suppressions_by_file
+            .as_ref()
+            .map(|f| Arc::clone(f.suppressions()))
+            .unwrap_or_default()
     }
 
     fn is_updating_file(&self) -> bool {

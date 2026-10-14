@@ -144,7 +144,11 @@ impl Rule for NoUnwantedPolyfillio {
                     &format!(
                         "{} {}",
                         unwanted_features.join(", "),
-                        if unwanted_features.len() > 1 { "are" } else { "is" }
+                        if unwanted_features.len() > 1 {
+                            "are"
+                        } else {
+                            "is"
+                        }
                     ),
                     src.span,
                 ));
@@ -232,6 +236,11 @@ fn test() {
         }",
     ];
 
-    Tester::new(NoUnwantedPolyfillio::NAME, NoUnwantedPolyfillio::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        NoUnwantedPolyfillio::NAME,
+        NoUnwantedPolyfillio::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

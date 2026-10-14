@@ -2,8 +2,11 @@ use super::{Distrib, QueryResult};
 use crate::{data::caniuse::region::get_usage_by_region, error::Error};
 
 pub(super) fn cover_by_region(coverage: f32, region: &str) -> QueryResult {
-    let normalized_region =
-        if region.len() == 2 { region.to_ascii_uppercase() } else { region.to_ascii_lowercase() };
+    let normalized_region = if region.len() == 2 {
+        region.to_ascii_uppercase()
+    } else {
+        region.to_ascii_lowercase()
+    };
 
     if let Some(region_data) = get_usage_by_region(&normalized_region) {
         let mut distribs = vec![];

@@ -199,7 +199,10 @@ fn test() {
               import { z } from './baz';",
             None,
         ),
-        (r"import { x } from './foo'; import { y } from 'bar'", Some(json!(["absolute-first"]))),
+        (
+            r"import { x } from './foo'; import { y } from 'bar'",
+            Some(json!(["absolute-first"])),
+        ),
         (
             r"import { x } from 'foo';
               'use directive';

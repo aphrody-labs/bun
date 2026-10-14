@@ -1,8 +1,9 @@
 //! Code for resolving name grid lines and areas
 
 use crate::{
-    CheapCloneStr, GenericGridTemplateComponent, GenericRepetition as _, GridAreaAxis, GridAreaEnd, GridContainerStyle,
-    GridPlacement, GridTemplateArea, Line, NonNamedGridPlacement, RepetitionCount,
+    CheapCloneStr, GenericGridTemplateComponent, GenericRepetition as _, GridAreaAxis, GridAreaEnd,
+    GridContainerStyle, GridPlacement, GridTemplateArea, Line, NonNamedGridPlacement,
+    RepetitionCount,
 };
 use core::{borrow::Borrow, cmp::Ordering, fmt::Debug};
 
@@ -66,8 +67,14 @@ pub(crate) struct NamedLineResolver<S: CheapCloneStr> {
 }
 
 /// Utility function to create or update an entry in a line name map
-fn upsert_line_name_map<S: CheapCloneStr>(map: &mut Map<StrHasher<S>, Vec<u16>>, key: S, value: u16) {
-    map.entry(StrHasher(key)).and_modify(|lines| lines.push(value)).or_insert_with(|| single_value_vec(value));
+fn upsert_line_name_map<S: CheapCloneStr>(
+    map: &mut Map<StrHasher<S>, Vec<u16>>,
+    key: S,
+    value: u16,
+) {
+    map.entry(StrHasher(key))
+        .and_modify(|lines| lines.push(value))
+        .or_insert_with(|| single_value_vec(value));
 }
 
 impl<S: CheapCloneStr> NamedLineResolver<S> {
@@ -116,16 +123,23 @@ impl<S: CheapCloneStr> NamedLineResolver<S> {
                             .or_insert_with(|| single_value_vec(current_line));
                     }
 
-                    if let Some(GenericGridTemplateComponent::Repeat(repeat)) = column_tracks.next() {
+                    if let Some(GenericGridTemplateComponent::Repeat(repeat)) = column_tracks.next()
+                    {
                         let repeat_count = match repeat.count() {
                             RepetitionCount::Count(count) => count,
-                            RepetitionCount::AutoFill | RepetitionCount::AutoFit => column_auto_repetitions,
+                            RepetitionCount::AutoFill | RepetitionCount::AutoFit => {
+                                column_auto_repetitions
+                            }
                         };
 
                         for _ in 0..repeat_count {
                             for line_name_set in repeat.lines_names() {
                                 for line_name in line_name_set {
-                                    upsert_line_name_map(&mut column_lines, line_name.clone(), current_line);
+                                    upsert_line_name_map(
+                                        &mut column_lines,
+                                        line_name.clone(),
+                                        current_line,
+                                    );
                                 }
                                 current_line += 1;
                             }
@@ -159,13 +173,19 @@ impl<S: CheapCloneStr> NamedLineResolver<S> {
                     if let Some(GenericGridTemplateComponent::Repeat(repeat)) = row_tracks.next() {
                         let repeat_count = match repeat.count() {
                             RepetitionCount::Count(count) => count,
-                            RepetitionCount::AutoFill | RepetitionCount::AutoFit => row_auto_repetitions,
+                            RepetitionCount::AutoFill | RepetitionCount::AutoFit => {
+                                row_auto_repetitions
+                            }
                         };
 
                         for _ in 0..repeat_count {
                             for line_name_set in repeat.lines_names() {
                                 for line_name in line_name_set {
-                                    upsert_line_name_map(&mut row_lines, line_name.clone(), current_line);
+                                    upsert_line_name_map(
+                                        &mut row_lines,
+                                        line_name.clone(),
+                                        current_line,
+                                    );
                                 }
                                 current_line += 1;
                             }
@@ -197,13 +217,19 @@ impl<S: CheapCloneStr> NamedLineResolver<S> {
 
     /// Resolve named lines for both the `start` and `end` of a row-axis grid placement
     #[inline(always)]
-    pub(crate) fn resolve_row_names(&self, line: &Line<GridPlacement<S>>) -> Line<NonNamedGridPlacement> {
+    pub(crate) fn resolve_row_names(
+        &self,
+        line: &Line<GridPlacement<S>>,
+    ) -> Line<NonNamedGridPlacement> {
         self.resolve_line_names(line, GridAreaAxis::Row)
     }
 
     /// Resolve named lines for both the `start` and `end` of a column-axis grid placement
     #[inline(always)]
-    pub(crate) fn resolve_column_names(&self, line: &Line<GridPlacement<S>>) -> Line<NonNamedGridPlacement> {
+    pub(crate) fn resolve_column_names(
+        &self,
+        line: &Line<GridPlacement<S>>,
+    ) -> Line<NonNamedGridPlacement> {
         self.resolve_line_names(line, GridAreaAxis::Column)
     }
 
@@ -216,8 +242,13 @@ impl<S: CheapCloneStr> NamedLineResolver<S> {
     ) -> Line<NonNamedGridPlacement> {
         let start_holder;
         let start_line_resolved = if let GridPlacement::NamedLine(name, idx) = &line.start {
-            start_holder =
-                GridPlacement::Line(self.find_line_index(name, *idx, axis, GridAreaEnd::Start, &|lines| lines));
+            start_holder = GridPlacement::Line(self.find_line_index(
+                name,
+                *idx,
+                axis,
+                GridAreaEnd::Start,
+                &|lines| lines,
+            ));
             &start_holder
         } else {
             &line.start
@@ -225,7 +256,13 @@ impl<S: CheapCloneStr> NamedLineResolver<S> {
 
         let end_holder;
         let end_line_resolved = if let GridPlacement::NamedLine(name, idx) = &line.end {
-            end_holder = GridPlacement::Line(self.find_line_index(name, *idx, axis, GridAreaEnd::End, &|lines| lines));
+            end_holder = GridPlacement::Line(self.find_line_index(
+                name,
+                *idx,
+                axis,
+                GridAreaEnd::End,
+                &|lines| lines,
+            ));
             &end_holder
         } else {
             &line.end
@@ -249,11 +286,15 @@ impl<S: CheapCloneStr> NamedLineResolver<S> {
                 } else {
                     (explicit_track_count + 1 + start_line.as_i16()).max(0) as u16
                 };
-                let end_line = self.find_line_index(name, *idx as i16, axis, GridAreaEnd::End, &|lines| {
-                    let point = lines.partition_point(|line| *line <= normalized_start_line);
-                    &lines[point..]
-                });
-                Line { start: NonNamedGridPlacement::Line(*start_line), end: NonNamedGridPlacement::Line(end_line) }
+                let end_line =
+                    self.find_line_index(name, *idx as i16, axis, GridAreaEnd::End, &|lines| {
+                        let point = lines.partition_point(|line| *line <= normalized_start_line);
+                        &lines[point..]
+                    });
+                Line {
+                    start: NonNamedGridPlacement::Line(*start_line),
+                    end: NonNamedGridPlacement::Line(end_line),
+                }
             }
             (GridPlacement::NamedSpan(name, idx), GridPlacement::Line(end_line)) => {
                 let explicit_track_count = match axis {
@@ -265,11 +306,15 @@ impl<S: CheapCloneStr> NamedLineResolver<S> {
                 } else {
                     (explicit_track_count + 1 + end_line.as_i16()).max(0) as u16
                 };
-                let start_line = self.find_line_index(name, *idx as i16, axis, GridAreaEnd::Start, &|lines| {
-                    let point = lines.partition_point(|line| *line < normalized_end_line);
-                    &lines[..point]
-                });
-                Line { start: NonNamedGridPlacement::Line(start_line), end: NonNamedGridPlacement::Line(*end_line) }
+                let start_line =
+                    self.find_line_index(name, *idx as i16, axis, GridAreaEnd::Start, &|lines| {
+                        let point = lines.partition_point(|line| *line < normalized_end_line);
+                        &lines[..point]
+                    });
+                Line {
+                    start: NonNamedGridPlacement::Line(start_line),
+                    end: NonNamedGridPlacement::Line(*end_line),
+                }
             }
             (start, end) => Line {
                 start: match start {
@@ -344,14 +389,22 @@ impl<S: CheapCloneStr> NamedLineResolver<S> {
                     let implicit_name = format!("{name}-start");
                     if let Some(lines) = line_lookup.get(&*implicit_name) {
                         // println!("IMPLICIT COL {implicit_name}");
-                        return GridLine::from(get_line(filter_lines(lines), explicit_track_count, idx));
+                        return GridLine::from(get_line(
+                            filter_lines(lines),
+                            explicit_track_count,
+                            idx,
+                        ));
                     }
                 }
                 GridAreaEnd::End => {
                     let implicit_name = format!("{name}-end");
                     if let Some(lines) = line_lookup.get(&*implicit_name) {
                         // println!("IMPLICIT ROW {implicit_name}");
-                        return GridLine::from(get_line(filter_lines(lines), explicit_track_count, idx));
+                        return GridLine::from(get_line(
+                            filter_lines(lines),
+                            explicit_track_count,
+                            idx,
+                        ));
                     }
                 }
             }
@@ -364,7 +417,11 @@ impl<S: CheapCloneStr> NamedLineResolver<S> {
         // grid line than it has tracks. And the fallback line is the line *after* that.
         //
         // See: <https://github.com/w3c/csswg-drafts/issues/966#issuecomment-277042153>
-        let line = if idx > 0 { (explicit_track_count + 1) + idx } else { -((explicit_track_count + 1) + idx) };
+        let line = if idx > 0 {
+            (explicit_track_count + 1) + idx
+        } else {
+            -((explicit_track_count + 1) + idx)
+        };
 
         GridLine::from(line)
     }

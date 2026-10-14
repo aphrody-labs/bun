@@ -36,7 +36,10 @@ pub(super) fn reorder_param_tags(
         .collect();
 
     // Check that ALL @param tags have type annotations and names
-    if !parsed.iter().all(|(has_type, name)| *has_type && name.is_some()) {
+    if !parsed
+        .iter()
+        .all(|(has_type, name)| *has_type && name.is_some())
+    {
         return;
     }
 
@@ -50,7 +53,11 @@ pub(super) fn reorder_param_tags(
     }
 
     // Already in order?
-    if names.iter().zip(fn_params.iter()).all(|(name, p)| *name == *p) {
+    if names
+        .iter()
+        .zip(fn_params.iter())
+        .all(|(name, p)| *name == *p)
+    {
         return;
     }
 
@@ -64,7 +71,10 @@ pub(super) fn reorder_param_tags(
     effective_tags[param_start..param_end].sort_by_cached_key(|(tag, _)| {
         let (_, name_part, _) = tag.type_name_comment();
         let name = name_part.map_or("", |n| n.parsed());
-        fn_params.iter().position(|p| *p == name).unwrap_or(usize::MAX)
+        fn_params
+            .iter()
+            .position(|p| *p == name)
+            .unwrap_or(usize::MAX)
     });
 }
 
@@ -351,7 +361,11 @@ fn parse_param_names(params_str: &str) -> Vec<&str> {
         // check above because the extracted fn_params won't include an entry
         // for the destructured position, making the counts differ.
         if bytes[i] == b'{' || bytes[i] == b'[' {
-            let (open, close) = if bytes[i] == b'{' { (b'{', b'}') } else { (b'[', b']') };
+            let (open, close) = if bytes[i] == b'{' {
+                (b'{', b'}')
+            } else {
+                (b'[', b']')
+            };
             let mut depth = 0;
             while i < len {
                 if bytes[i] == open {

@@ -25,7 +25,9 @@ fn main() {
         eprintln!(
             "[bun_browser_js build.rs] Cross-compilation detected (host={host}, target={target})"
         );
-        eprintln!("[bun_browser_js build.rs] Using cross-mksnapshot for target-compatible snapshot");
+        eprintln!(
+            "[bun_browser_js build.rs] Using cross-mksnapshot for target-compatible snapshot"
+        );
 
         // Locate the cross-mksnapshot binary.
         // OUT_DIR is under target/<triple>/<profile>/build/bun_browser_js-*/out,
@@ -48,14 +50,17 @@ fn main() {
         let cross_mksnapshot = find_cross_mksnapshot(target_dir, &target, profile);
         let cross_mksnapshot = match cross_mksnapshot {
             Some(p) => {
-                eprintln!("[bun_browser_js build.rs] Found cross-mksnapshot: {}", p.display());
+                eprintln!(
+                    "[bun_browser_js build.rs] Found cross-mksnapshot: {}",
+                    p.display()
+                );
                 p
-            },
+            }
             None => {
                 panic!(
                     "cross-mksnapshot for {target} is required: refusing to embed a host V8 snapshot in the target browser"
                 );
-            },
+            }
         };
 
         // Step 1: Generate a host snapshot to extract the deno_core sidecar data.
@@ -99,7 +104,10 @@ fn main() {
             .arg(&bootstrap_path)
             .status()
             .expect("Failed to run cross-mksnapshot");
-        assert!(status.success(), "cross-mksnapshot failed with status: {status}");
+        assert!(
+            status.success(),
+            "cross-mksnapshot failed with status: {status}"
+        );
 
         let mut raw_blob =
             std::fs::read(&raw_blob_path).expect("Failed to read cross-mksnapshot output");
@@ -133,7 +141,10 @@ fn main() {
             sidecar.len()
         );
 
-        println!("cargo:rustc-env=OBSCURA_SNAPSHOT_PATH={}", snapshot_path.display());
+        println!(
+            "cargo:rustc-env=OBSCURA_SNAPSHOT_PATH={}",
+            snapshot_path.display()
+        );
 
         // Mark bootstrap.js as a dependency.
         println!("cargo:rerun-if-changed=js/bootstrap.js");
@@ -164,7 +175,10 @@ fn generate_host_snapshot(bootstrap_js: &str, snapshot_path: &PathBuf) {
     .expect("Failed to create V8 snapshot");
 
     std::fs::write(&snapshot_path, &*output.output).expect("Failed to write snapshot");
-    println!("cargo:rustc-env=OBSCURA_SNAPSHOT_PATH={}", snapshot_path.display());
+    println!(
+        "cargo:rustc-env=OBSCURA_SNAPSHOT_PATH={}",
+        snapshot_path.display()
+    );
 
     for file in &output.files_loaded_during_snapshot {
         println!("cargo:rerun-if-changed={}", file.display());

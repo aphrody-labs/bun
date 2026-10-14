@@ -218,7 +218,10 @@ impl Rule for GroupedAccessorPairs {
                     // although the set access property is computed, but its key is Literal
                     let (key_name, is_literal) = get_key_name_and_check_literal(ctx, &obj_prop.key);
                     let is_computed = if is_literal { false } else { obj_prop.computed };
-                    prop_map.entry((key_name, is_computed)).or_default().push((idx, obj_prop));
+                    prop_map
+                        .entry((key_name, is_computed))
+                        .or_default()
+                        .push((idx, obj_prop));
                 }
 
                 for ((key, is_computed), val) in prop_map {
@@ -270,7 +273,11 @@ impl Rule for GroupedAccessorPairs {
                     }
                     let (key_name, is_literal) =
                         get_key_name_and_check_literal(ctx, &method_define.key);
-                    let is_computed = if is_literal { false } else { method_define.computed };
+                    let is_computed = if is_literal {
+                        false
+                    } else {
+                        method_define.computed
+                    };
                     let is_private = matches!(method_define.key, PropertyKey::PrivateIdentifier(_));
                     // for Class we need to focus on whether the key is static or private
                     // 1) class foo { static set [a+b](val){} static get [a+b](){} }
@@ -355,12 +362,22 @@ impl GroupedAccessorPairs {
             let TSSignature::TSMethodSignature(method_sig) = signature else {
                 continue;
             };
-            if !matches!(method_sig.kind, TSMethodSignatureKind::Get | TSMethodSignatureKind::Set) {
+            if !matches!(
+                method_sig.kind,
+                TSMethodSignatureKind::Get | TSMethodSignatureKind::Set
+            ) {
                 continue;
             }
             let (key_name, is_literal) = get_key_name_and_check_literal(ctx, &method_sig.key);
-            let is_computed = if is_literal { false } else { method_sig.computed };
-            prop_map.entry((key_name, is_computed)).or_default().push((idx, method_sig));
+            let is_computed = if is_literal {
+                false
+            } else {
+                method_sig.computed
+            };
+            prop_map
+                .entry((key_name, is_computed))
+                .or_default()
+                .push((idx, method_sig));
         }
 
         for ((key, is_computed), val) in prop_map {
@@ -402,25 +419,32 @@ fn get_key_name_and_check_literal<'a>(
     let key_name = prop_key
         .name()
         .unwrap_or_else(|| {
-            Cow::Borrowed(prop_key.as_expression().unwrap().span().source_text(ctx.source_text()))
+            Cow::Borrowed(
+                prop_key
+                    .as_expression()
+                    .unwrap()
+                    .span()
+                    .source_text(ctx.source_text()),
+            )
         })
         .to_string();
-    let is_literal =
-        if matches!(prop_key, PropertyKey::StaticIdentifier(_) | PropertyKey::PrivateIdentifier(_))
-        {
-            false
-        } else {
-            matches!(
-                prop_key.as_expression().unwrap(),
-                Expression::BooleanLiteral(_)
-                    | Expression::NullLiteral(_)
-                    | Expression::StringLiteral(_)
-                    | Expression::RegExpLiteral(_)
-                    | Expression::BigIntLiteral(_)
-                    | Expression::NumericLiteral(_)
-                    | Expression::TemplateLiteral(_)
-            )
-        };
+    let is_literal = if matches!(
+        prop_key,
+        PropertyKey::StaticIdentifier(_) | PropertyKey::PrivateIdentifier(_)
+    ) {
+        false
+    } else {
+        matches!(
+            prop_key.as_expression().unwrap(),
+            Expression::BooleanLiteral(_)
+                | Expression::NullLiteral(_)
+                | Expression::StringLiteral(_)
+                | Expression::RegExpLiteral(_)
+                | Expression::BigIntLiteral(_)
+                | Expression::NumericLiteral(_)
+                | Expression::TemplateLiteral(_)
+        )
+    };
     (key_name, is_literal)
 }
 
@@ -506,7 +530,10 @@ fn test() {
         ("({ get a(){} })", None),
         ("({ set a(foo){} })", None),
         ("({ a: 1, get b(){}, c, ...d })", None),
-        ("({ get a(){}, get b(){}, set c(foo){}, set d(foo){} })", None),
+        (
+            "({ get a(){}, get b(){}, set c(foo){}, set d(foo){} })",
+            None,
+        ),
         ("({ get a(){}, b: 1, set c(foo){} })", None),
         ("({ set a(foo){}, b: 1, a: 2 })", None),
         ("({ get a(){}, b: 1, a })", None),
@@ -516,47 +543,95 @@ fn test() {
         ("({ get a(){}, b: 1, ...a })", None),
         ("({ set a(foo){}, b: 1 }, { get a(){} })", None),
         ("({ get a(){}, b: 1, ...{ set a(foo){} } })", None),
-        ("({ set a(foo){}, get b(){} })", Some(serde_json::json!(["getBeforeSet"]))),
-        ("({ get a(){}, set b(foo){} })", Some(serde_json::json!(["setBeforeGet"]))),
+        (
+            "({ set a(foo){}, get b(){} })",
+            Some(serde_json::json!(["getBeforeSet"])),
+        ),
+        (
+            "({ get a(){}, set b(foo){} })",
+            Some(serde_json::json!(["setBeforeGet"])),
+        ),
         ("class A { get a(){} }", None),
         ("(class { set a(foo){} })", None),
         ("class A { static set a(foo){} }", None),
         ("(class { static get a(){} })", None),
         ("class A { a(){} set b(foo){} c(){} }", None),
         ("(class { a(){} get b(){} c(){} })", None),
-        ("class A { get a(){} static get b(){} set c(foo){} static set d(bar){} }", None),
+        (
+            "class A { get a(){} static get b(){} set c(foo){} static set d(bar){} }",
+            None,
+        ),
         ("(class { get a(){} b(){} a(foo){} })", None),
         ("class A { static set a(foo){} b(){} static a(){} }", None),
         ("(class { get a(){} static b(){} set [a](foo){} })", None),
-        ("class A { static set a(foo){} b(){} static get ' a'(){} }", None),
+        (
+            "class A { static set a(foo){} b(){} static get ' a'(){} }",
+            None,
+        ),
         ("(class { set a(foo){} b(){} static get a(){} })", None),
         ("class A { static set a(foo){} b(){} get a(){} }", None),
         ("(class { get a(){} }, class { b(){} set a(foo){} })", None),
         ("({ get a(){}, set a(foo){} })", None),
         ("({ a: 1, set b(foo){}, get b(){}, c: 2 })", None),
-        ("({ get a(){}, set a(foo){}, set b(bar){}, get b(){} })", None),
+        (
+            "({ get a(){}, set a(foo){}, set b(bar){}, get b(){} })",
+            None,
+        ),
         ("({ get [a](){}, set [a](foo){} })", None),
         ("({ set a(foo){}, get 'a'(){} })", None),
-        ("({ a: 1, b: 2, get a(){}, set a(foo){}, c: 3, a: 4 })", None),
+        (
+            "({ a: 1, b: 2, get a(){}, set a(foo){}, c: 3, a: 4 })",
+            None,
+        ),
         ("({ get a(){}, set a(foo){}, set b(bar){} })", None),
         ("({ get a(){}, get b(){}, set b(bar){} })", None),
         ("class A { get a(){} set a(foo){} }", None),
         ("(class { set a(foo){} get a(){} })", None),
         ("class A { static set a(foo){} static get a(){} }", None),
         ("(class { static get a(){} static set a(foo){} })", None),
-        ("class A { a(){} set b(foo){} get b(){} c(){} get d(){} set d(bar){} }", None),
-        ("(class { set a(foo){} get a(){} get b(){} set b(bar){} })", None),
+        (
+            "class A { a(){} set b(foo){} get b(){} c(){} get d(){} set d(bar){} }",
+            None,
+        ),
+        (
+            "(class { set a(foo){} get a(){} get b(){} set b(bar){} })",
+            None,
+        ),
         ("class A { static set [a](foo){} static get [a](){} }", None),
         ("(class { get a(){} set [`a`](foo){} })", None),
-        ("class A { static get a(){} static set a(foo){} set a(bar){} static get a(){} }", None),
+        (
+            "class A { static get a(){} static set a(foo){} set a(bar){} static get a(){} }",
+            None,
+        ),
         ("(class { static get a(){} get a(){} set a(foo){} })", None),
-        ("({ get a(){}, set a(foo){} })", Some(serde_json::json!(["anyOrder"]))),
-        ("({ set a(foo){}, get a(){} })", Some(serde_json::json!(["anyOrder"]))),
-        ("({ get a(){}, set a(foo){} })", Some(serde_json::json!(["getBeforeSet"]))),
-        ("({ set a(foo){}, get a(){} })", Some(serde_json::json!(["setBeforeGet"]))),
-        ("class A { get a(){} set a(foo){} }", Some(serde_json::json!(["anyOrder"]))),
-        ("(class { set a(foo){} get a(){} })", Some(serde_json::json!(["anyOrder"]))),
-        ("class A { get a(){} set a(foo){} }", Some(serde_json::json!(["getBeforeSet"]))),
+        (
+            "({ get a(){}, set a(foo){} })",
+            Some(serde_json::json!(["anyOrder"])),
+        ),
+        (
+            "({ set a(foo){}, get a(){} })",
+            Some(serde_json::json!(["anyOrder"])),
+        ),
+        (
+            "({ get a(){}, set a(foo){} })",
+            Some(serde_json::json!(["getBeforeSet"])),
+        ),
+        (
+            "({ set a(foo){}, get a(){} })",
+            Some(serde_json::json!(["setBeforeGet"])),
+        ),
+        (
+            "class A { get a(){} set a(foo){} }",
+            Some(serde_json::json!(["anyOrder"])),
+        ),
+        (
+            "(class { set a(foo){} get a(){} })",
+            Some(serde_json::json!(["anyOrder"])),
+        ),
+        (
+            "class A { get a(){} set a(foo){} }",
+            Some(serde_json::json!(["getBeforeSet"])),
+        ),
         (
             "(class { static set a(foo){} static get a(){} })",
             Some(serde_json::json!(["setBeforeGet"])),
@@ -564,17 +639,32 @@ fn test() {
         ("({ get a(){}, b: 1, get a(){} })", None),
         ("({ set a(foo){}, b: 1, set a(foo){} })", None),
         ("({ get a(){}, b: 1, set a(foo){}, c: 2, get a(){} })", None),
-        ("({ set a(foo){}, b: 1, set 'a'(bar){}, c: 2, get a(){} })", None),
-        ("class A { get [a](){} b(){} get [a](){} c(){} set [a](foo){} }", None),
+        (
+            "({ set a(foo){}, b: 1, set 'a'(bar){}, c: 2, get a(){} })",
+            None,
+        ),
+        (
+            "class A { get [a](){} b(){} get [a](){} c(){} set [a](foo){} }",
+            None,
+        ),
         (
             "(class { static set a(foo){} b(){} static get a(){} static c(){} static set a(bar){} })",
             None,
         ),
         ("class A { get '#abc'(){} b(){} set #abc(foo){} }", None),
         ("class A { get #abc(){} b(){} set '#abc'(foo){} }", None),
-        ("class A { set '#abc'(foo){} get #abc(){} }", Some(serde_json::json!(["getBeforeSet"]))),
-        ("class A { set #abc(foo){} get '#abc'(){} }", Some(serde_json::json!(["getBeforeSet"]))),
-        ("class faoo { set abc(val){} get #abc(){} }", Some(serde_json::json!(["getBeforeSet"]))),
+        (
+            "class A { set '#abc'(foo){} get #abc(){} }",
+            Some(serde_json::json!(["getBeforeSet"])),
+        ),
+        (
+            "class A { set #abc(foo){} get '#abc'(){} }",
+            Some(serde_json::json!(["getBeforeSet"])),
+        ),
+        (
+            "class faoo { set abc(val){} get #abc(){} }",
+            Some(serde_json::json!(["getBeforeSet"])),
+        ),
         (
             "class foo {
             static set ['#a+b'](val) {
@@ -644,15 +734,36 @@ fn test() {
         ("({ get [a](){}, b:1, set [a](foo){} })", None),
         ("class A { get abc(){} b(){} set abc(foo){} }", None),
         ("(class { set abc(foo){} b(){} get abc(){} })", None),
-        ("class A { static set a(foo){} b(){} static get a(){} }", None),
-        ("(class { static get 123(){} b(){} static set 123(foo){} })", None),
-        ("class A { static get [a](){} b(){} static set [a](foo){} }", None),
+        (
+            "class A { static set a(foo){} b(){} static get a(){} }",
+            None,
+        ),
+        (
+            "(class { static get 123(){} b(){} static set 123(foo){} })",
+            None,
+        ),
+        (
+            "class A { static get [a](){} b(){} static set [a](foo){} }",
+            None,
+        ),
         ("class A { get '#abc'(){} b(){} set '#abc'(foo){} }", None),
         ("class A { get #abc(){} b(){} set #abc(foo){} }", None),
-        ("({ set a(foo){}, get a(){} })", Some(serde_json::json!(["getBeforeSet"]))),
-        ("({ get 123(){}, set 123(foo){} })", Some(serde_json::json!(["setBeforeGet"]))),
-        ("({ get [a](){}, set [a](foo){} })", Some(serde_json::json!(["setBeforeGet"]))),
-        ("class A { set abc(foo){} get abc(){} }", Some(serde_json::json!(["getBeforeSet"]))),
+        (
+            "({ set a(foo){}, get a(){} })",
+            Some(serde_json::json!(["getBeforeSet"])),
+        ),
+        (
+            "({ get 123(){}, set 123(foo){} })",
+            Some(serde_json::json!(["setBeforeGet"])),
+        ),
+        (
+            "({ get [a](){}, set [a](foo){} })",
+            Some(serde_json::json!(["setBeforeGet"])),
+        ),
+        (
+            "class A { set abc(foo){} get abc(){} }",
+            Some(serde_json::json!(["getBeforeSet"])),
+        ),
         (
             "(class { get [`abc`](){} set [`abc`](foo){} })",
             Some(serde_json::json!(["setBeforeGet"])),
@@ -669,31 +780,79 @@ fn test() {
             "class A { static set [abc](foo){} static get [abc](){} }",
             Some(serde_json::json!(["getBeforeSet"])),
         ),
-        ("class A { set '#abc'(foo){} get '#abc'(){} }", Some(serde_json::json!(["getBeforeSet"]))),
-        ("class A { set #abc(foo){} get #abc(){} }", Some(serde_json::json!(["getBeforeSet"]))),
-        ("({ get a(){}, b: 1, set a(foo){} })", Some(serde_json::json!(["anyOrder"]))),
-        ("({ get a(){}, b: 1, set a(foo){} })", Some(serde_json::json!(["setBeforeGet"]))),
-        ("({ get a(){}, b: 1, set a(foo){} })", Some(serde_json::json!(["getBeforeSet"]))),
-        ("class A { set a(foo){} b(){} get a(){} }", Some(serde_json::json!(["getBeforeSet"]))),
+        (
+            "class A { set '#abc'(foo){} get '#abc'(){} }",
+            Some(serde_json::json!(["getBeforeSet"])),
+        ),
+        (
+            "class A { set #abc(foo){} get #abc(){} }",
+            Some(serde_json::json!(["getBeforeSet"])),
+        ),
+        (
+            "({ get a(){}, b: 1, set a(foo){} })",
+            Some(serde_json::json!(["anyOrder"])),
+        ),
+        (
+            "({ get a(){}, b: 1, set a(foo){} })",
+            Some(serde_json::json!(["setBeforeGet"])),
+        ),
+        (
+            "({ get a(){}, b: 1, set a(foo){} })",
+            Some(serde_json::json!(["getBeforeSet"])),
+        ),
+        (
+            "class A { set a(foo){} b(){} get a(){} }",
+            Some(serde_json::json!(["getBeforeSet"])),
+        ),
         (
             "(class { static set a(foo){} b(){} static get a(){} })",
             Some(serde_json::json!(["setBeforeGet"])),
         ),
         ("({ get 'abc'(){}, d(){}, set 'abc'(foo){} })", None),
-        ("({ set ''(foo){}, get [''](){} })", Some(serde_json::json!(["getBeforeSet"]))),
-        ("class A { set abc(foo){} get 'abc'(){} }", Some(serde_json::json!(["getBeforeSet"]))),
-        ("(class { set [`abc`](foo){} get abc(){} })", Some(serde_json::json!(["getBeforeSet"]))),
-        ("({ set ['abc'](foo){}, get [`abc`](){} })", Some(serde_json::json!(["getBeforeSet"]))),
-        ("({ set 123(foo){}, get [123](){} })", Some(serde_json::json!(["getBeforeSet"]))),
+        (
+            "({ set ''(foo){}, get [''](){} })",
+            Some(serde_json::json!(["getBeforeSet"])),
+        ),
+        (
+            "class A { set abc(foo){} get 'abc'(){} }",
+            Some(serde_json::json!(["getBeforeSet"])),
+        ),
+        (
+            "(class { set [`abc`](foo){} get abc(){} })",
+            Some(serde_json::json!(["getBeforeSet"])),
+        ),
+        (
+            "({ set ['abc'](foo){}, get [`abc`](){} })",
+            Some(serde_json::json!(["getBeforeSet"])),
+        ),
+        (
+            "({ set 123(foo){}, get [123](){} })",
+            Some(serde_json::json!(["getBeforeSet"])),
+        ),
         (
             "class A { static set '123'(foo){} static get 123(){} }",
             Some(serde_json::json!(["getBeforeSet"])),
         ),
-        ("(class { set [a+b](foo){} get [a+b](){} })", Some(serde_json::json!(["getBeforeSet"]))),
-        ("({ set [f(a)](foo){}, get [f(a)](){} })", Some(serde_json::json!(["getBeforeSet"]))),
-        ("({ get a(){}, b: 1, set a(foo){}, set c(foo){}, d(){}, get c(){} })", None),
-        ("({ get a(){}, set b(foo){}, set a(bar){}, get b(){} })", None),
-        ("({ get a(){}, set [a](foo){}, set a(bar){}, get [a](){} })", None),
+        (
+            "(class { set [a+b](foo){} get [a+b](){} })",
+            Some(serde_json::json!(["getBeforeSet"])),
+        ),
+        (
+            "({ set [f(a)](foo){}, get [f(a)](){} })",
+            Some(serde_json::json!(["getBeforeSet"])),
+        ),
+        (
+            "({ get a(){}, b: 1, set a(foo){}, set c(foo){}, d(){}, get c(){} })",
+            None,
+        ),
+        (
+            "({ get a(){}, set b(foo){}, set a(bar){}, get b(){} })",
+            None,
+        ),
+        (
+            "({ get a(){}, set [a](foo){}, set a(bar){}, get [a](){} })",
+            None,
+        ),
         (
             "({ a(){}, set b(foo){}, ...c, get b(){}, set c(bar){}, get c(){} })",
             Some(serde_json::json!(["getBeforeSet"])),
@@ -706,13 +865,22 @@ fn test() {
             "class A { get a(){} constructor (){} set a(foo){} get b(){} static c(){} set b(bar){} }",
             None,
         ),
-        ("(class { set a(foo){} static get a(){} get a(){} static set a(bar){} })", None),
+        (
+            "(class { set a(foo){} static get a(){} get a(){} static set a(bar){} })",
+            None,
+        ),
         (
             "class A { get a(){} set a(foo){} static get b(){} static set b(bar){} }",
             Some(serde_json::json!(["setBeforeGet"])),
         ),
-        ("(class { set [a+b](foo){} get [a-b](){} get [a+b](){} set [a-b](bar){} })", None),
-        ("({ get a(){}, set a(foo){}, get b(){}, c: function(){}, set b(bar){} })", None),
+        (
+            "(class { set [a+b](foo){} get [a-b](){} get [a+b](){} set [a-b](bar){} })",
+            None,
+        ),
+        (
+            "({ get a(){}, set a(foo){}, get b(){}, c: function(){}, set b(bar){} })",
+            None,
+        ),
         ("({ get a(){}, get b(){}, set a(foo){} })", None),
         ("({ set a(foo){}, get [a](){}, get a(){} })", None),
         ("({ set [a](foo){}, set a(bar){}, get [a](){} })", None),
@@ -720,14 +888,23 @@ fn test() {
             "({ get a(){}, set a(foo){}, set b(bar){}, get b(){} })",
             Some(serde_json::json!(["getBeforeSet"])),
         ),
-        ("class A { get a(){} static set b(foo){} static get b(){} set a(foo){} }", None),
-        ("(class { static get a(){} set a(foo){} static set a(bar){} })", None),
+        (
+            "class A { get a(){} static set b(foo){} static get b(){} set a(foo){} }",
+            None,
+        ),
+        (
+            "(class { static get a(){} set a(foo){} static set a(bar){} })",
+            None,
+        ),
         (
             "class A { set a(foo){} get a(){} static get a(){} static set a(bar){} }",
             Some(serde_json::json!(["setBeforeGet"])),
         ),
         ("({ get a(){}, a: 1, set a(foo){} })", None),
-        ("({ a(){}, set a(foo){}, get a(){} })", Some(serde_json::json!(["getBeforeSet"]))),
+        (
+            "({ a(){}, set a(foo){}, get a(){} })",
+            Some(serde_json::json!(["getBeforeSet"])),
+        ),
         ("class A { get a(){} a(){} set a(foo){} }", None),
         ("class A { get a(){} a; set a(foo){} }", None), // { "ecmaVersion": 2022 },
         (
@@ -841,6 +1018,11 @@ fn test() {
         ),
     ];
 
-    Tester::new(GroupedAccessorPairs::NAME, GroupedAccessorPairs::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        GroupedAccessorPairs::NAME,
+        GroupedAccessorPairs::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

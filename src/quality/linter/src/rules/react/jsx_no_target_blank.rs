@@ -138,7 +138,11 @@ impl JsxNoTargetBlank {
             return fixer.noop();
         }
 
-        let rel_value = if self.allow_referrer { "noopener" } else { "noreferrer" };
+        let rel_value = if self.allow_referrer {
+            "noopener"
+        } else {
+            "noreferrer"
+        };
 
         let Some(rel_attribute) = rel_attribute else {
             let Some(last_attribute) = jsx_ele.attributes.last() else {
@@ -174,7 +178,11 @@ impl JsxNoTargetBlank {
         if tag_name == "a" {
             return true;
         }
-        return ctx.settings().react.get_link_component_attrs(tag_name).is_some();
+        return ctx
+            .settings()
+            .react
+            .get_link_component_attrs(tag_name)
+            .is_some();
     }
 
     fn check_is_forms(&self, tag_name: &str, ctx: &LintContext) -> bool {
@@ -184,7 +192,11 @@ impl JsxNoTargetBlank {
         if tag_name == "form" {
             return true;
         }
-        return ctx.settings().react.get_form_component_attrs(tag_name).is_some();
+        return ctx
+            .settings()
+            .react
+            .get_form_component_attrs(tag_name)
+            .is_some();
     }
 }
 
@@ -252,54 +264,62 @@ impl Rule for JsxNoTargetBlank {
                 let mut target_span = None;
                 let mut spread_span = Span::default();
 
-                jsx_ele.attributes.iter().for_each(|attribute| match attribute {
-                    JSXAttributeItem::Attribute(attribute) => {
-                        if let JSXAttributeName::Identifier(identifier) = &attribute.deref().name {
-                            let attribute_name = identifier.name.as_str();
-                            if attribute_name == "target" {
-                                if let Some(val) = attribute.deref().value.as_ref() {
-                                    target_blank_tuple = check_target(val);
-                                    target_span = attribute.value.as_ref().map(GetSpan::span);
-                                }
-                            } else if attribute_name == "href"
-                                || attribute_name == "action"
-                                || ctx
-                                    .settings()
-                                    .react
-                                    .get_link_component_attrs(tag_name)
-                                    .is_some_and(|link_attribute| {
-                                        link_attribute.contains(&CompactStr::new(attribute_name))
-                                    })
-                                || ctx
-                                    .settings()
-                                    .react
-                                    .get_form_component_attrs(tag_name)
-                                    .is_some_and(|form_attribute| {
-                                        form_attribute.contains(&CompactStr::new(attribute_name))
-                                    })
+                jsx_ele
+                    .attributes
+                    .iter()
+                    .for_each(|attribute| match attribute {
+                        JSXAttributeItem::Attribute(attribute) => {
+                            if let JSXAttributeName::Identifier(identifier) =
+                                &attribute.deref().name
                             {
-                                if let Some(val) = attribute.value.as_ref() {
-                                    has_href_value = true;
-                                    is_href_valid = check_href(val, &self.enforce_dynamic_links);
+                                let attribute_name = identifier.name.as_str();
+                                if attribute_name == "target" {
+                                    if let Some(val) = attribute.deref().value.as_ref() {
+                                        target_blank_tuple = check_target(val);
+                                        target_span = attribute.value.as_ref().map(GetSpan::span);
+                                    }
+                                } else if attribute_name == "href"
+                                    || attribute_name == "action"
+                                    || ctx
+                                        .settings()
+                                        .react
+                                        .get_link_component_attrs(tag_name)
+                                        .is_some_and(|link_attribute| {
+                                            link_attribute
+                                                .contains(&CompactStr::new(attribute_name))
+                                        })
+                                    || ctx
+                                        .settings()
+                                        .react
+                                        .get_form_component_attrs(tag_name)
+                                        .is_some_and(|form_attribute| {
+                                            form_attribute
+                                                .contains(&CompactStr::new(attribute_name))
+                                        })
+                                {
+                                    if let Some(val) = attribute.value.as_ref() {
+                                        has_href_value = true;
+                                        is_href_valid =
+                                            check_href(val, &self.enforce_dynamic_links);
+                                    }
+                                } else if attribute_name == "rel"
+                                    && let Some(val) = attribute.value.as_ref()
+                                {
+                                    rel_valid_tuple = check_rel(val, self.allow_referrer);
                                 }
-                            } else if attribute_name == "rel"
-                                && let Some(val) = attribute.value.as_ref()
-                            {
-                                rel_valid_tuple = check_rel(val, self.allow_referrer);
                             }
                         }
-                    }
-                    JSXAttributeItem::SpreadAttribute(_) => {
-                        if self.warn_on_spread_attributes {
-                            is_warn_on_spread_attributes = true;
-                            spread_span = attribute.span();
-                            target_blank_tuple = (false, None, false, false);
-                            rel_valid_tuple = (false, None, false, false);
-                            is_href_valid = false;
-                            has_href_value = true;
+                        JSXAttributeItem::SpreadAttribute(_) => {
+                            if self.warn_on_spread_attributes {
+                                is_warn_on_spread_attributes = true;
+                                spread_span = attribute.span();
+                                target_blank_tuple = (false, None, false, false);
+                                rel_valid_tuple = (false, None, false, false);
+                                is_href_valid = false;
+                                has_href_value = true;
+                            }
                         }
-                    }
-                });
+                    });
 
                 if is_warn_on_spread_attributes {
                     if (has_href_value && is_href_valid) || rel_valid_tuple.0 {
@@ -344,7 +364,10 @@ impl Rule for JsxNoTargetBlank {
 fn append_noreferrer(raw: &str) -> String {
     let quote = &raw[..1];
     let content = &raw[1..raw.len() - 1];
-    let mut parts = content.split("noreferrer").filter(|part| !part.is_empty()).collect::<Vec<_>>();
+    let mut parts = content
+        .split("noreferrer")
+        .filter(|part| !part.is_empty())
+        .collect::<Vec<_>>();
     parts.push("noreferrer");
     format!("{quote}{}{quote}", parts.join(" "))
 }
@@ -430,7 +453,12 @@ fn match_rel_expression<'a>(
         Expression::ConditionalExpression(expr) => {
             let consequent = match_rel_expression(&expr.consequent, allow_referrer);
             let alternate = match_rel_expression(&expr.alternate, allow_referrer);
-            (consequent.0 && alternate.0, Some(&expr.test), consequent.0, alternate.0)
+            (
+                consequent.0 && alternate.0,
+                Some(&expr.test),
+                consequent.0,
+                alternate.0,
+            )
         }
         _ => default,
     }
@@ -466,7 +494,12 @@ fn match_target_expression<'a>(
         Expression::ConditionalExpression(expr) => {
             let consequent = match_target_expression(&expr.consequent);
             let alternate = match_target_expression(&expr.alternate);
-            (consequent.0 || alternate.0, Some(&expr.test), consequent.0, alternate.0)
+            (
+                consequent.0 || alternate.0,
+                Some(&expr.test),
+                consequent.0,
+                alternate.0,
+            )
         }
         _ => default,
     }
@@ -499,18 +532,66 @@ fn test() {
         (r#"<a href="foobar"></a>"#, None, None),
         (r"<a randomTag></a>", None, None),
         (r"<a target />", None, None),
-        (r#"<a href="foobar" target="_blank" rel="noopener noreferrer"></a>"#, None, None),
-        (r#"<a href="foobar" target="_blank" rel="noreferrer"></a>"#, None, None),
-        (r#"<a href="foobar" target="_blank" rel={"noopener noreferrer"}></a>"#, None, None),
-        (r#"<a href="foobar" target="_blank" rel={"noreferrer"}></a>"#, None, None),
-        (r#"<a href={"foobar"} target={"_blank"} rel={"noopener noreferrer"}></a>"#, None, None),
-        (r#"<a href={"foobar"} target={"_blank"} rel={"noreferrer"}></a>"#, None, None),
-        (r"<a href={'foobar'} target={'_blank'} rel={'noopener noreferrer'}></a>", None, None),
-        (r"<a href={'foobar'} target={'_blank'} rel={'noreferrer'}></a>", None, None),
-        (r"<a href={`foobar`} target={`_blank`} rel={`noopener noreferrer`}></a>", None, None),
-        (r"<a href={`foobar`} target={`_blank`} rel={`noreferrer`}></a>", None, None),
-        (r#"<a target="_blank" {...spreadProps} rel="noopener noreferrer"></a>"#, None, None),
-        (r#"<a target="_blank" {...spreadProps} rel="noreferrer"></a>"#, None, None),
+        (
+            r#"<a href="foobar" target="_blank" rel="noopener noreferrer"></a>"#,
+            None,
+            None,
+        ),
+        (
+            r#"<a href="foobar" target="_blank" rel="noreferrer"></a>"#,
+            None,
+            None,
+        ),
+        (
+            r#"<a href="foobar" target="_blank" rel={"noopener noreferrer"}></a>"#,
+            None,
+            None,
+        ),
+        (
+            r#"<a href="foobar" target="_blank" rel={"noreferrer"}></a>"#,
+            None,
+            None,
+        ),
+        (
+            r#"<a href={"foobar"} target={"_blank"} rel={"noopener noreferrer"}></a>"#,
+            None,
+            None,
+        ),
+        (
+            r#"<a href={"foobar"} target={"_blank"} rel={"noreferrer"}></a>"#,
+            None,
+            None,
+        ),
+        (
+            r"<a href={'foobar'} target={'_blank'} rel={'noopener noreferrer'}></a>",
+            None,
+            None,
+        ),
+        (
+            r"<a href={'foobar'} target={'_blank'} rel={'noreferrer'}></a>",
+            None,
+            None,
+        ),
+        (
+            r"<a href={`foobar`} target={`_blank`} rel={`noopener noreferrer`}></a>",
+            None,
+            None,
+        ),
+        (
+            r"<a href={`foobar`} target={`_blank`} rel={`noreferrer`}></a>",
+            None,
+            None,
+        ),
+        (
+            r#"<a target="_blank" {...spreadProps} rel="noopener noreferrer"></a>"#,
+            None,
+            None,
+        ),
+        (
+            r#"<a target="_blank" {...spreadProps} rel="noreferrer"></a>"#,
+            None,
+            None,
+        ),
         (
             r#"<a {...spreadProps} target="_blank" rel="noopener noreferrer" href="https://example.com">s</a>"#,
             None,
@@ -521,20 +602,68 @@ fn test() {
             None,
             None,
         ),
-        (r#"<a target="_blank" rel="noopener noreferrer" {...spreadProps}></a>"#, None, None),
-        (r#"<a target="_blank" rel="noreferrer" {...spreadProps}></a>"#, None, None),
+        (
+            r#"<a target="_blank" rel="noopener noreferrer" {...spreadProps}></a>"#,
+            None,
+            None,
+        ),
+        (
+            r#"<a target="_blank" rel="noreferrer" {...spreadProps}></a>"#,
+            None,
+            None,
+        ),
         (r#"<p target="_blank"></p>"#, None, None),
-        (r#"<a href="foobar" target="_BLANK" rel="NOOPENER noreferrer"></a>"#, None, None),
-        (r#"<a href="foobar" target="_BLANK" rel="NOREFERRER"></a>"#, None, None),
+        (
+            r#"<a href="foobar" target="_BLANK" rel="NOOPENER noreferrer"></a>"#,
+            None,
+            None,
+        ),
+        (
+            r#"<a href="foobar" target="_BLANK" rel="NOREFERRER"></a>"#,
+            None,
+            None,
+        ),
         (r#"<a target="_blank" rel={relValue}></a>"#, None, None),
-        (r#"<a target={targetValue} rel="noopener noreferrer"></a>"#, None, None),
-        (r#"<a target={targetValue} rel="noreferrer"></a>"#, None, None),
-        (r#"<a target={targetValue} rel={"noopener noreferrer"}></a>"#, None, None),
-        (r#"<a target={targetValue} rel={"noreferrer"}></a>"#, None, None),
-        (r#"<a target={targetValue} href="relative/path"></a>"#, None, None),
-        (r#"<a target={targetValue} href="/absolute/path"></a>"#, None, None),
-        (r#"<a target={'targetValue'} href="/absolute/path"></a>"#, None, None),
-        (r#"<a target={"targetValue"} href="/absolute/path"></a>"#, None, None),
+        (
+            r#"<a target={targetValue} rel="noopener noreferrer"></a>"#,
+            None,
+            None,
+        ),
+        (
+            r#"<a target={targetValue} rel="noreferrer"></a>"#,
+            None,
+            None,
+        ),
+        (
+            r#"<a target={targetValue} rel={"noopener noreferrer"}></a>"#,
+            None,
+            None,
+        ),
+        (
+            r#"<a target={targetValue} rel={"noreferrer"}></a>"#,
+            None,
+            None,
+        ),
+        (
+            r#"<a target={targetValue} href="relative/path"></a>"#,
+            None,
+            None,
+        ),
+        (
+            r#"<a target={targetValue} href="/absolute/path"></a>"#,
+            None,
+            None,
+        ),
+        (
+            r#"<a target={'targetValue'} href="/absolute/path"></a>"#,
+            None,
+            None,
+        ),
+        (
+            r#"<a target={"targetValue"} href="/absolute/path"></a>"#,
+            None,
+            None,
+        ),
         (r#"<a target={null} href="//example.com"></a>"#, None, None),
         (
             r#"<a {...someObject} href="/absolute/path"></a>"#,
@@ -609,8 +738,16 @@ fn test() {
             None,
         ),
         (r"<a target={3} />", None, None),
-        (r#"<a href="some-link" {...otherProps} target="some-non-blank-target"></a>"#, None, None),
-        (r#"<a href="some-link" target="some-non-blank-target" {...otherProps}></a>"#, None, None),
+        (
+            r#"<a href="some-link" {...otherProps} target="some-non-blank-target"></a>"#,
+            None,
+            None,
+        ),
+        (
+            r#"<a href="some-link" target="some-non-blank-target" {...otherProps}></a>"#,
+            None,
+            None,
+        ),
         (
             r#"<a target="_blank" href="/absolute/path"></a>"#,
             Some(serde_json::json!([{ "forms": false }])),
@@ -682,7 +819,11 @@ fn test() {
             None,
             None,
         ),
-        (r"<form action={action} />", Some(serde_json::json!([{ "forms": true }])), None),
+        (
+            r"<form action={action} />",
+            Some(serde_json::json!([{ "forms": true }])),
+            None,
+        ),
         (
             r"<form action={action} {...spread} />",
             Some(serde_json::json!([{ "forms": true }])),
@@ -691,24 +832,76 @@ fn test() {
     ];
 
     let fail = vec![
-        (r#"<a target="_blank" href="https://example.com/1"></a>"#, None, None),
-        (r#"<a target="_blank" rel="" href="https://example.com/2"></a>"#, None, None),
-        (r#"<a target="_blank" rel={0} href="https://example.com/3"></a>"#, None, None),
-        (r#"<a target="_blank" rel={1} href="https://example.com/3"></a>"#, None, None),
-        (r#"<a target="_blank" rel={false} href="https://example.com/4"></a>"#, None, None),
-        (r#"<a target="_blank" rel={null} href="https://example.com/5"></a>"#, None, None),
+        (
+            r#"<a target="_blank" href="https://example.com/1"></a>"#,
+            None,
+            None,
+        ),
+        (
+            r#"<a target="_blank" rel="" href="https://example.com/2"></a>"#,
+            None,
+            None,
+        ),
+        (
+            r#"<a target="_blank" rel={0} href="https://example.com/3"></a>"#,
+            None,
+            None,
+        ),
+        (
+            r#"<a target="_blank" rel={1} href="https://example.com/3"></a>"#,
+            None,
+            None,
+        ),
+        (
+            r#"<a target="_blank" rel={false} href="https://example.com/4"></a>"#,
+            None,
+            None,
+        ),
+        (
+            r#"<a target="_blank" rel={null} href="https://example.com/5"></a>"#,
+            None,
+            None,
+        ),
         (
             r#"<a target="_blank" rel="noopenernoreferrer" href="https://example.com/6"></a>"#,
             None,
             None,
         ),
-        (r#"<a target="_blank" rel="no referrer" href="https://example.com/7"></a>"#, None, None),
-        (r#"<a target="_BLANK" href="https://example.com/8"></a>"#, None, None),
-        (r#"<a target="_blank" href="//example.com/9"></a>"#, None, None),
-        (r#"<a target="_blank" href="//example.com/10" rel={true}></a>"#, None, None),
-        (r#"<a target="_blank" href="//example.com/11" rel={3}></a>"#, None, None),
-        (r#"<a target="_blank" href="//example.com/12" rel={null}></a>"#, None, None),
-        (r#"<a target="_blank" href="//example.com/13" rel={getRel()}></a>"#, None, None),
+        (
+            r#"<a target="_blank" rel="no referrer" href="https://example.com/7"></a>"#,
+            None,
+            None,
+        ),
+        (
+            r#"<a target="_BLANK" href="https://example.com/8"></a>"#,
+            None,
+            None,
+        ),
+        (
+            r#"<a target="_blank" href="//example.com/9"></a>"#,
+            None,
+            None,
+        ),
+        (
+            r#"<a target="_blank" href="//example.com/10" rel={true}></a>"#,
+            None,
+            None,
+        ),
+        (
+            r#"<a target="_blank" href="//example.com/11" rel={3}></a>"#,
+            None,
+            None,
+        ),
+        (
+            r#"<a target="_blank" href="//example.com/12" rel={null}></a>"#,
+            None,
+            None,
+        ),
+        (
+            r#"<a target="_blank" href="//example.com/13" rel={getRel()}></a>"#,
+            None,
+            None,
+        ),
         (
             r#"<a target="_blank" href="//example.com/14" rel={"noopenernoreferrer"}></a>"#,
             None,
@@ -724,10 +917,26 @@ fn test() {
             None,
             None,
         ),
-        (r#"<a target="_blank" href="//example.com/17" rel></a>"#, None, None),
-        (r#"<a target="_blank" href={ dynamicLink }></a>"#, None, None),
-        (r#"<a target={'_blank'} href="//example.com/18"></a>"#, None, None),
-        (r#"<a target={"_blank"} href="//example.com/19"></a>"#, None, None),
+        (
+            r#"<a target="_blank" href="//example.com/17" rel></a>"#,
+            None,
+            None,
+        ),
+        (
+            r#"<a target="_blank" href={ dynamicLink }></a>"#,
+            None,
+            None,
+        ),
+        (
+            r#"<a target={'_blank'} href="//example.com/18"></a>"#,
+            None,
+            None,
+        ),
+        (
+            r#"<a target={"_blank"} href="//example.com/19"></a>"#,
+            None,
+            None,
+        ),
         (
             r#"<a href="https://example.com/20" target="_blank" rel></a>"#,
             Some(serde_json::json!([{ "allowReferrer": true }])),
@@ -887,7 +1096,12 @@ fn test() {
         ),
     ];
 
-    let fix: Vec<(&str, &str, Option<serde_json::Value>, Option<serde_json::Value>)> = vec![
+    let fix: Vec<(
+        &str,
+        &str,
+        Option<serde_json::Value>,
+        Option<serde_json::Value>,
+    )> = vec![
         (
             r#"<a target="_blank" href="https://example.com/1"></a>"#,
             r#"<a target="_blank" href="https://example.com/1" rel="noreferrer"></a>"#,

@@ -94,28 +94,70 @@ fn test() {
             None,
         ),
         ("describe(42)", None),
-        ("describe(42)", Some(serde_json::json!([{ "ignore": [], "allowedPrefixes": [] }]))),
-        ("describe('Foo', function () {})", Some(serde_json::json!([{ "ignore": ["describe"] }]))),
+        (
+            "describe(42)",
+            Some(serde_json::json!([{ "ignore": [], "allowedPrefixes": [] }])),
+        ),
+        (
+            "describe('Foo', function () {})",
+            Some(serde_json::json!([{ "ignore": ["describe"] }])),
+        ),
         (
             "describe(\"Foo\", function () {})",
             Some(serde_json::json!([{ "ignore": ["describe"] }])),
         ),
-        ("describe(`Foo`, function () {})", Some(serde_json::json!([{ "ignore": ["describe"] }]))),
-        ("fdescribe(`Foo`, function () {})", Some(serde_json::json!([{ "ignore": ["describe"] }]))),
+        (
+            "describe(`Foo`, function () {})",
+            Some(serde_json::json!([{ "ignore": ["describe"] }])),
+        ),
+        (
+            "fdescribe(`Foo`, function () {})",
+            Some(serde_json::json!([{ "ignore": ["describe"] }])),
+        ),
         (
             "describe.skip(`Foo`, function () {})",
             Some(serde_json::json!([{ "ignore": ["describe"] }])),
         ),
-        ("test('Foo', function () {})", Some(serde_json::json!([{ "ignore": ["test"] }]))),
-        ("test(\"Foo\", function () {})", Some(serde_json::json!([{ "ignore": ["test"] }]))),
-        ("test(`Foo`, function () {})", Some(serde_json::json!([{ "ignore": ["test"] }]))),
-        ("xtest(`Foo`, function () {})", Some(serde_json::json!([{ "ignore": ["test"] }]))),
-        ("test.only(`Foo`, function () {})", Some(serde_json::json!([{ "ignore": ["test"] }]))),
-        ("it('Foo', function () {})", Some(serde_json::json!([{ "ignore": ["it"] }]))),
-        ("it(\"Foo\", function () {})", Some(serde_json::json!([{ "ignore": ["it"] }]))),
-        ("it(`Foo`, function () {})", Some(serde_json::json!([{ "ignore": ["it"] }]))),
-        ("fit(`Foo`, function () {})", Some(serde_json::json!([{ "ignore": ["it"] }]))),
-        ("it.skip(`Foo`, function () {})", Some(serde_json::json!([{ "ignore": ["it"] }]))),
+        (
+            "test('Foo', function () {})",
+            Some(serde_json::json!([{ "ignore": ["test"] }])),
+        ),
+        (
+            "test(\"Foo\", function () {})",
+            Some(serde_json::json!([{ "ignore": ["test"] }])),
+        ),
+        (
+            "test(`Foo`, function () {})",
+            Some(serde_json::json!([{ "ignore": ["test"] }])),
+        ),
+        (
+            "xtest(`Foo`, function () {})",
+            Some(serde_json::json!([{ "ignore": ["test"] }])),
+        ),
+        (
+            "test.only(`Foo`, function () {})",
+            Some(serde_json::json!([{ "ignore": ["test"] }])),
+        ),
+        (
+            "it('Foo', function () {})",
+            Some(serde_json::json!([{ "ignore": ["it"] }])),
+        ),
+        (
+            "it(\"Foo\", function () {})",
+            Some(serde_json::json!([{ "ignore": ["it"] }])),
+        ),
+        (
+            "it(`Foo`, function () {})",
+            Some(serde_json::json!([{ "ignore": ["it"] }])),
+        ),
+        (
+            "fit(`Foo`, function () {})",
+            Some(serde_json::json!([{ "ignore": ["it"] }])),
+        ),
+        (
+            "it.skip(`Foo`, function () {})",
+            Some(serde_json::json!([{ "ignore": ["it"] }])),
+        ),
         (
             "it('GET /live', function () {})",
             Some(serde_json::json!([{ "allowedPrefixes": ["GET"] }])),
@@ -182,16 +224,46 @@ fn test() {
         ),
         ("describe(`Some longer description`, function () {})", None),
         ("fdescribe(`Some longer description`, function () {})", None),
-        ("it.each(['green', 'black'])('Should return %', () => {})", None),
-        ("describe.each(['green', 'black'])('Should return %', () => {})", None),
-        ("test('Foo', function () {})", Some(serde_json::json!([{ "ignore": ["describe"] }]))),
-        ("xit('Foo', function () {})", Some(serde_json::json!([{ "ignore": ["describe"] }]))),
-        ("describe('Foo', function () {})", Some(serde_json::json!([{ "ignore": ["test"] }]))),
-        ("it('Foo', function () {})", Some(serde_json::json!([{ "ignore": ["test"] }]))),
-        ("xit('Foo', function () {})", Some(serde_json::json!([{ "ignore": ["test"] }]))),
-        ("describe('Foo', function () {})", Some(serde_json::json!([{ "ignore": ["it"] }]))),
-        ("test('Foo', function () {})", Some(serde_json::json!([{ "ignore": ["it"] }]))),
-        ("xtest('Foo', function () {})", Some(serde_json::json!([{ "ignore": ["it"] }]))),
+        (
+            "it.each(['green', 'black'])('Should return %', () => {})",
+            None,
+        ),
+        (
+            "describe.each(['green', 'black'])('Should return %', () => {})",
+            None,
+        ),
+        (
+            "test('Foo', function () {})",
+            Some(serde_json::json!([{ "ignore": ["describe"] }])),
+        ),
+        (
+            "xit('Foo', function () {})",
+            Some(serde_json::json!([{ "ignore": ["describe"] }])),
+        ),
+        (
+            "describe('Foo', function () {})",
+            Some(serde_json::json!([{ "ignore": ["test"] }])),
+        ),
+        (
+            "it('Foo', function () {})",
+            Some(serde_json::json!([{ "ignore": ["test"] }])),
+        ),
+        (
+            "xit('Foo', function () {})",
+            Some(serde_json::json!([{ "ignore": ["test"] }])),
+        ),
+        (
+            "describe('Foo', function () {})",
+            Some(serde_json::json!([{ "ignore": ["it"] }])),
+        ),
+        (
+            "test('Foo', function () {})",
+            Some(serde_json::json!([{ "ignore": ["it"] }])),
+        ),
+        (
+            "xtest('Foo', function () {})",
+            Some(serde_json::json!([{ "ignore": ["it"] }])),
+        ),
         (
             "it(\"Works!\", () => {});",
             Some(serde_json::json!([{ "ignoreTopLevelDescribe": true }])),
@@ -235,17 +307,61 @@ fn test() {
         ),
     ];
     let fix_jest = vec![
-        ("it('Foo', function () {})", "it('foo', function () {})", None),
-        ("xit('Foo', function () {})", "xit('foo', function () {})", None),
-        ("it(\"Foo\", function () {})", "it(\"foo\", function () {})", None),
-        ("it(`Foo`, function () {})", "it(`foo`, function () {})", None),
-        ("test('Foo', function () {})", "test('foo', function () {})", None),
-        ("xtest('Foo', function () {})", "xtest('foo', function () {})", None),
-        ("test(\"Foo\", function () {})", "test(\"foo\", function () {})", None),
-        ("test(`Foo`, function () {})", "test(`foo`, function () {})", None),
-        ("describe('Foo', function () {})", "describe('foo', function () {})", None),
-        ("describe(\"Foo\", function () {})", "describe(\"foo\", function () {})", None),
-        ("describe(`Foo`, function () {})", "describe(`foo`, function () {})", None),
+        (
+            "it('Foo', function () {})",
+            "it('foo', function () {})",
+            None,
+        ),
+        (
+            "xit('Foo', function () {})",
+            "xit('foo', function () {})",
+            None,
+        ),
+        (
+            "it(\"Foo\", function () {})",
+            "it(\"foo\", function () {})",
+            None,
+        ),
+        (
+            "it(`Foo`, function () {})",
+            "it(`foo`, function () {})",
+            None,
+        ),
+        (
+            "test('Foo', function () {})",
+            "test('foo', function () {})",
+            None,
+        ),
+        (
+            "xtest('Foo', function () {})",
+            "xtest('foo', function () {})",
+            None,
+        ),
+        (
+            "test(\"Foo\", function () {})",
+            "test(\"foo\", function () {})",
+            None,
+        ),
+        (
+            "test(`Foo`, function () {})",
+            "test(`foo`, function () {})",
+            None,
+        ),
+        (
+            "describe('Foo', function () {})",
+            "describe('foo', function () {})",
+            None,
+        ),
+        (
+            "describe(\"Foo\", function () {})",
+            "describe(\"foo\", function () {})",
+            None,
+        ),
+        (
+            "describe(`Foo`, function () {})",
+            "describe(`foo`, function () {})",
+            None,
+        ),
         (
             "
                 import { describe as context } from '@jest/globals';
@@ -422,8 +538,16 @@ fn test() {
     fail.extend(fail_jest);
 
     let mut fix: Vec<(&str, &str, Option<serde_json::Value>)> = vec![
-        (r#"it("Foo MM mm", function () {})"#, r#"it("foo MM mm", function () {})"#, None),
-        ("test(`Foo MM mm`, function () {})", "test(`foo MM mm`, function () {})", None),
+        (
+            r#"it("Foo MM mm", function () {})"#,
+            r#"it("foo MM mm", function () {})"#,
+            None,
+        ),
+        (
+            "test(`Foo MM mm`, function () {})",
+            "test(`foo MM mm`, function () {})",
+            None,
+        ),
         (
             "test(`SFC Compile`, function () {})",
             "test(`sfc compile`, function () {})",
@@ -434,13 +558,22 @@ fn test() {
             "test(`sfc compile`, function () {})",
             Some(serde_json::json!([{ "lowercaseFirstCharacterOnly": false }])),
         ),
-        ("bench(`Foo MM mm`, function () {})", "bench(`foo MM mm`, function () {})", None),
+        (
+            "bench(`Foo MM mm`, function () {})",
+            "bench(`foo MM mm`, function () {})",
+            None,
+        ),
     ];
     fix.extend(fix_jest);
 
-    Tester::new(PreferLowercaseTitle::NAME, PreferLowercaseTitle::PLUGIN, pass, fail)
-        .with_jest_plugin(true)
-        .with_vitest_plugin(true)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        PreferLowercaseTitle::NAME,
+        PreferLowercaseTitle::PLUGIN,
+        pass,
+        fail,
+    )
+    .with_jest_plugin(true)
+    .with_vitest_plugin(true)
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

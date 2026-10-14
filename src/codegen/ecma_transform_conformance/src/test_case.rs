@@ -59,14 +59,20 @@ impl TestCase {
         let kind = if path
             .extension()
             .is_some_and(|ext| VALID_EXTENSIONS.contains(&ext.to_str().unwrap()))
-            && (path.parent().is_some_and(|path| path.file_name().is_some_and(|n| n == "exec"))
+            && (path
+                .parent()
+                .is_some_and(|path| path.file_name().is_some_and(|n| n == "exec"))
                 || path.file_stem().is_some_and(|name| name == "exec"))
         {
             TestCaseKind::Exec
         }
         // named `input.[ext]` or `input.d.ts`
-        else if path.file_stem().is_some_and(|name| name == "input" || name == "input.d")
-            && path.extension().is_some_and(|ext| VALID_EXTENSIONS.contains(&ext.to_str().unwrap()))
+        else if path
+            .file_stem()
+            .is_some_and(|name| name == "input" || name == "input.d")
+            && path
+                .extension()
+                .is_some_and(|ext| VALID_EXTENSIONS.contains(&ext.to_str().unwrap()))
         {
             TestCaseKind::Conformance
         } else {
@@ -89,7 +95,9 @@ impl TestCase {
     fn source_type(path: &Path, options: &BabelOptions) -> SourceType {
         // Some babel test cases have a js extension, but contain typescript code.
         // Therefore, if the typescript plugin exists, enable typescript.
-        let mut source_type = SourceType::from_path(path).unwrap().with_jsx(options.is_jsx());
+        let mut source_type = SourceType::from_path(path)
+            .unwrap()
+            .with_jsx(options.is_jsx());
         source_type = match options.source_type.as_deref() {
             Some("unambiguous") => source_type.with_unambiguous(true),
             Some("script") => source_type.with_script(true),
@@ -104,16 +112,23 @@ impl TestCase {
     }
 
     fn convert_to_override_path(path: &Path) -> Option<PathBuf> {
-        path.strip_prefix(packages_root()).ok().map(|p| override_root().join(p))
+        path.strip_prefix(packages_root())
+            .ok()
+            .map(|p| override_root().join(p))
     }
 
     fn get_output_path(&self) -> Option<PathBuf> {
         let babel_output_path =
-            self.path.parent().unwrap().read_dir().unwrap().find_map(|entry| {
-                let path = entry.ok()?.path();
-                let file_stem = path.file_stem()?;
-                (file_stem == "output").then_some(path)
-            })?;
+            self.path
+                .parent()
+                .unwrap()
+                .read_dir()
+                .unwrap()
+                .find_map(|entry| {
+                    let path = entry.ok()?.path();
+                    let file_stem = path.file_stem()?;
+                    (file_stem == "output").then_some(path)
+                })?;
 
         // Try to find the override output path
         if let Some(output_path) = Self::convert_to_override_path(&babel_output_path)
@@ -180,7 +195,10 @@ impl TestCase {
         if let Ok(path) = self.path.strip_prefix(packages_root()) {
             // babel skip test cases that in a directory starting with a dot
             // https://github.com/babel/babel/blob/0effd92d886b7135469d23612ceba6414c721673/packages/babel-helper-fixtures/src/index.ts#L223
-            if path.components().any(|c| c.as_os_str().to_str().unwrap().starts_with('.')) {
+            if path
+                .components()
+                .any(|c| c.as_os_str().to_str().unwrap().starts_with('.'))
+            {
                 return true;
             }
             // Skip tests that are known to fail
@@ -197,7 +215,12 @@ impl TestCase {
         }
 
         // Skip custom preset and flow
-        if options.presets.unsupported.iter().any(|s| s.starts_with("") || s == "flow") {
+        if options
+            .presets
+            .unsupported
+            .iter()
+            .any(|s| s.starts_with("") || s == "flow")
+        {
             return true;
         }
 
@@ -230,7 +253,11 @@ impl TestCase {
         let transform_options = match &self.transform_options {
             Ok(transform_options) => transform_options,
             Err(json_err) => {
-                let error = json_err.iter().map(ToString::to_string).collect::<Vec<_>>().join("\n");
+                let error = json_err
+                    .iter()
+                    .map(ToString::to_string)
+                    .collect::<Vec<_>>()
+                    .join("\n");
                 return Err(error);
             }
         };
@@ -243,7 +270,11 @@ impl TestCase {
             .options
             .cwd
             .as_ref()
-            .and_then(|cwd| path.strip_prefix(cwd).ok().map(|p| Path::new("<CWD>").join(p)))
+            .and_then(|cwd| {
+                path.strip_prefix(cwd)
+                    .ok()
+                    .map(|p| Path::new("<CWD>").join(p))
+            })
             .unwrap_or(path.clone());
         let mut driver = Driver::new(
             false,
@@ -315,12 +346,14 @@ impl TestCase {
         let passed = if let Some(throws) = &babel_options.throws {
             output = throws.cow_replace(" (1:6)", "").into_owned();
             !output.is_empty()
-                && actual_errors.as_ref().is_some_and(|errors| errors.contains(&output))
+                && actual_errors
+                    .as_ref()
+                    .is_some_and(|errors| errors.contains(&output))
         } else {
             // Get output.js by using our code gen so code comparison can match.
-            output = output_path.and_then(|path| fs::read_to_string(path).ok()).map_or_else(
-                String::default,
-                |output| {
+            output = output_path
+                .and_then(|path| fs::read_to_string(path).ok())
+                .map_or_else(String::default, |output| {
                     // Get expected code by parsing the source text, so we can get the same code generated result.
                     let mut ret = Parser::new(&allocator, &output, self.source_type)
                         .with_options(ParseOptions {
@@ -347,8 +380,7 @@ impl TestCase {
                         })
                         .build(&ret.program)
                         .code
-                },
-            );
+                });
 
             if self.transformed_code == output {
                 actual_errors.is_none()
@@ -442,8 +474,10 @@ impl TestCase {
         } else {
             unreachable!()
         };
-        let new_file_name: String =
-            normalize_path(unprefixed_path).split('/').collect::<Vec<&str>>().join("-");
+        let new_file_name: String = normalize_path(unprefixed_path)
+            .split('/')
+            .collect::<Vec<&str>>()
+            .join("-");
         let mut target_path = fixture_root().join(name).join(new_file_name);
         target_path.set_extension("test.js");
         let content = Self::template(content);

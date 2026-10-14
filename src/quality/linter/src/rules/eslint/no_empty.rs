@@ -13,7 +13,9 @@ use crate::{
 
 fn no_empty_diagnostic(stmt_kind: &str, span: Span) -> OxcDiagnostic {
     OxcDiagnostic::warn("Unexpected empty block statements")
-        .with_help(format!("Remove this {stmt_kind} or add a comment inside it"))
+        .with_help(format!(
+            "Remove this {stmt_kind} or add a comment inside it"
+        ))
         .with_label(span)
 }
 
@@ -152,12 +154,18 @@ fn test() {
         ("try { foo() } catch (ex) {// empty\n}", None),
         ("try { foo() } finally {// empty\n}", None),
         ("try { foo() } finally {// test\n}", None),
-        ("try { foo() } finally {\n \n // hi i am off no use\n}", None),
+        (
+            "try { foo() } finally {\n \n // hi i am off no use\n}",
+            None,
+        ),
         ("try { foo() } catch (ex) {/* test111 */}", None),
         ("if (foo) { bar() } else { // nothing in me \n}", None),
         ("if (foo) { bar() } else { /**/ \n}", None),
         ("if (foo) { bar() } else { // \n}", None),
-        ("try { foo(); } catch (ex) {}", Some(json!([ { "allowEmptyCatch": true }]))),
+        (
+            "try { foo(); } catch (ex) {}",
+            Some(json!([ { "allowEmptyCatch": true }])),
+        ),
         (
             "try { foo(); } catch (ex) {} finally { bar(); }",
             Some(json!([ { "allowEmptyCatch": true }])),
@@ -173,9 +181,18 @@ fn test() {
         ("for (;foo;) {}", None),
         ("switch(foo) {}", None),
         ("switch (foo) { /* empty */ }", None),
-        ("try {} catch (ex) {}", Some(json!([ { "allowEmptyCatch": true }]))),
-        ("try { foo(); } catch (ex) {} finally {}", Some(json!([ { "allowEmptyCatch": true }]))),
-        ("try {} catch (ex) {} finally {}", Some(json!([ { "allowEmptyCatch": true }]))),
+        (
+            "try {} catch (ex) {}",
+            Some(json!([ { "allowEmptyCatch": true }])),
+        ),
+        (
+            "try { foo(); } catch (ex) {} finally {}",
+            Some(json!([ { "allowEmptyCatch": true }])),
+        ),
+        (
+            "try {} catch (ex) {} finally {}",
+            Some(json!([ { "allowEmptyCatch": true }])),
+        ),
         ("try { foo(); } catch (ex) {} finally {}", None),
     ];
 
@@ -187,21 +204,39 @@ fn test() {
             None,
         ),
         // we can't fix this because removing the `catch` block would change the semantics of the code
-        ("try { foo() } catch (ex) {}", "try { foo() } catch (ex) {}", None),
+        (
+            "try { foo() } catch (ex) {}",
+            "try { foo() } catch (ex) {}",
+            None,
+        ),
         ("if (foo) {}", "", None),
         ("while (foo) {}", "", None),
         ("for (;foo;) {}", "", None),
         ("switch(foo) {}", "", None),
         ("switch (foo) { /* empty */ }", "", None),
-        ("try {} catch (ex) {}", "", Some(json!([ { "allowEmptyCatch": true }]))),
+        (
+            "try {} catch (ex) {}",
+            "",
+            Some(json!([ { "allowEmptyCatch": true }])),
+        ),
         (
             "try { foo(); } catch (ex) {} finally {}",
             "try { foo(); } catch (ex) {} ",
             Some(json!([ { "allowEmptyCatch": true }])),
         ),
-        ("try {} catch (ex) {} finally {}", "", Some(json!([ { "allowEmptyCatch": true }]))),
-        ("try { foo(); } catch (ex) {} finally {}", "try { foo(); } catch (ex) {} ", None),
+        (
+            "try {} catch (ex) {} finally {}",
+            "",
+            Some(json!([ { "allowEmptyCatch": true }])),
+        ),
+        (
+            "try { foo(); } catch (ex) {} finally {}",
+            "try { foo(); } catch (ex) {} ",
+            None,
+        ),
     ];
 
-    Tester::new(NoEmpty::NAME, NoEmpty::PLUGIN, pass, fail).expect_fix(fix).test_and_snapshot();
+    Tester::new(NoEmpty::NAME, NoEmpty::PLUGIN, pass, fail)
+        .expect_fix(fix)
+        .test_and_snapshot();
 }

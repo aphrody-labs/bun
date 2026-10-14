@@ -77,8 +77,10 @@ impl Rule for NoZeroFractions {
             |fixer| {
                 let mut fixed = fmt.clone();
                 let is_decimal_integer = fmt.bytes().all(|b| b.is_ascii_digit() || b == b'_');
-                let is_member_expression =
-                    ctx.nodes().parent_kind(node.id()).is_member_expression_kind();
+                let is_member_expression = ctx
+                    .nodes()
+                    .parent_kind(node.id())
+                    .is_member_expression_kind();
 
                 if is_member_expression && is_decimal_integer {
                     fixed = format!("({fixed})");
@@ -119,8 +121,16 @@ fn format_raw(raw: &str) -> Option<(String, bool)> {
     let fixed_dot_and_fractions = dot_and_fractions.trim_end_matches(['0', '.', '_']);
     let formatted = format!(
         "{}{}{}{}",
-        if before.is_empty() && fixed_dot_and_fractions.is_empty() { "0" } else { before },
-        if fixed_dot_and_fractions.is_empty() { "" } else { "." },
+        if before.is_empty() && fixed_dot_and_fractions.is_empty() {
+            "0"
+        } else {
+            before
+        },
+        if fixed_dot_and_fractions.is_empty() {
+            ""
+        } else {
+            "."
+        },
         fixed_dot_and_fractions,
         after
     );
@@ -197,34 +207,64 @@ fn test() {
         (r"const foo = 1.e10", r"const foo = 1e10"),
         (r"const foo = +1.e-10", r"const foo = +1e-10"),
         (r"const foo = -1.e+10", r"const foo = -1e+10"),
-        (r"const foo = (1.).toString()", r"const foo = (1).toString()"),
+        (
+            r"const foo = (1.).toString()",
+            r"const foo = (1).toString()",
+        ),
         (r"1.00.toFixed(2)", r"(1).toFixed(2)"),
         (r"1.010.toFixed(2)", r"1.01.toFixed(2)"),
         (r"1.00 .toFixed(2)", r"(1) .toFixed(2)"),
         (r"(1.00).toFixed(2)", r"(1).toFixed(2)"),
         (r"1.00?.toFixed(2)", r"(1)?.toFixed(2)"),
         (r"1_000.0.toFixed(2)", r"(1_000).toFixed(2)"),
-        (r"10000000000000000000.0.toFixed(2)", r"(10000000000000000000).toFixed(2)"),
+        (
+            r"10000000000000000000.0.toFixed(2)",
+            r"(10000000000000000000).toFixed(2)",
+        ),
         (r"a = .0;", r"a = 0;"),
         (r"a = .0.toString()", r"a = (0).toString()"),
         (r"function foo(){return.0}", r"function foo(){return 0}"),
-        (r"function foo(){return.0.toString()}", r"function foo(){return (0).toString()}"),
-        (r"function foo(){return.0+.1}", r"function foo(){return 0+.1}"),
+        (
+            r"function foo(){return.0.toString()}",
+            r"function foo(){return (0).toString()}",
+        ),
+        (
+            r"function foo(){return.0+.1}",
+            r"function foo(){return 0+.1}",
+        ),
         (r"typeof.0", r"typeof 0"),
-        (r"function foo(){typeof.0.toString()}", r"function foo(){typeof (0).toString()}"),
+        (
+            r"function foo(){typeof.0.toString()}",
+            r"function foo(){typeof (0).toString()}",
+        ),
         (r"typeof.0+.1", r"typeof 0+.1"),
         (r"function foo(){throw.0;}", r"function foo(){throw 0;}"),
-        (r"function foo(){throw.0+.1;}", r"function foo(){throw 0+.1;}"),
+        (
+            r"function foo(){throw.0+.1;}",
+            r"function foo(){throw 0+.1;}",
+        ),
         (r"void.0", r"void 0"),
-        (r"function foo(){void.0.toString()}", r"function foo(){void (0).toString()}"),
+        (
+            r"function foo(){void.0.toString()}",
+            r"function foo(){void (0).toString()}",
+        ),
         (r"function foo(){void.0+.1;}", r"function foo(){void 0+.1;}"),
         ("ôTest(0.)", "ôTest(0)"),
-        (r"switch (x) { case.0: break; }", r"switch (x) { case 0: break; }"),
-        (r"function foo(){do.0;while(x)}", r"function foo(){do 0;while(x)}"),
+        (
+            r"switch (x) { case.0: break; }",
+            r"switch (x) { case 0: break; }",
+        ),
+        (
+            r"function foo(){do.0;while(x)}",
+            r"function foo(){do 0;while(x)}",
+        ),
         (r"for (const x of.0);", r"for (const x of 0);"),
         (r"if (x in.0) {}", r"if (x in 0) {}"),
         (r"x instanceof.0", r"x instanceof 0"),
-        (r"async function foo(){await.0}", r"async function foo(){await 0}"),
+        (
+            r"async function foo(){await.0}",
+            r"async function foo(){await 0}",
+        ),
         (r"function* foo(){yield.0}", r"function* foo(){yield 0}"),
         (r"delete.0", r"delete 0"),
     ];

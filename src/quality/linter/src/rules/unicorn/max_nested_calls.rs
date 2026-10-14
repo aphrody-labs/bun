@@ -13,9 +13,11 @@ use crate::{
 };
 
 fn max_nested_calls_diagnostic(max: u32, span: Span) -> OxcDiagnostic {
-    OxcDiagnostic::warn(format!("Call is nested too deeply. Maximum allowed is {max}."))
-        .with_help("Extract intermediate results into named variables to reduce nesting.")
-        .with_label(span)
+    OxcDiagnostic::warn(format!(
+        "Call is nested too deeply. Maximum allowed is {max}."
+    ))
+    .with_help("Extract intermediate results into named variables to reduce nesting.")
+    .with_label(span)
 }
 
 #[derive(Debug, Clone, JsonSchema, Deserialize)]
@@ -29,7 +31,9 @@ const DEFAULT_MAX_NESTED_CALLS: u32 = 3;
 
 impl Default for MaxNestedCalls {
     fn default() -> Self {
-        Self { max: DEFAULT_MAX_NESTED_CALLS }
+        Self {
+            max: DEFAULT_MAX_NESTED_CALLS,
+        }
     }
 }
 
@@ -94,7 +98,10 @@ impl Rule for MaxNestedCalls {
                 | AstKind::JSXElement(_)
                 | AstKind::JSXFragment(_) => break,
                 AstKind::CallExpression(call)
-                    if call.arguments.iter().any(|argument| argument.span() == child_span) =>
+                    if call
+                        .arguments
+                        .iter()
+                        .any(|argument| argument.span() == child_span) =>
                 {
                     depth += 1;
                 }
@@ -153,7 +160,10 @@ fn test() {
             );",
             None,
         ),
-        ("foo(bar(baz(qux())));", Some(serde_json::json!([{"max": 4}]))),
+        (
+            "foo(bar(baz(qux())));",
+            Some(serde_json::json!([{"max": 4}])),
+        ),
     ];
 
     let fail = vec![

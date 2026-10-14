@@ -1,11 +1,16 @@
 // SPDX-License-Identifier: Apache-2.0
 import { readFile } from "node:fs/promises";
 import { isAbsolute, join, relative, resolve } from "node:path";
-import { adaptProductHome } from "../../../scripts/aphrody/site-mirror/fuse";
-import { rewriteCapturedLinks } from "../../../scripts/aphrody/site-mirror/mirror";
-import { HOME_THEME_BOOTSTRAP, HOME_THEME_SCRIPT, homeThemeCss, parseBunHomeTheme } from "./home-theme";
+import {
+  externalizeInlineScripts,
+  M3_JS,
+  rewriteCapturedLinks,
+  rewriteInstallers,
+} from "../../../scripts/aphrody/site-mirror/mirror";
+import { BRAND } from "./brand";
+import { adaptHomeDocumentationLinks, homeDocumentationHref } from "./home-routes";
+import { HOME_THEME_BOOTSTRAP, parseBunHomeTheme } from "./home-theme";
 import { escapeHtml } from "./mdx";
-import { MATERIAL_SYMBOLS_CSS } from "./icons";
 import { WEBMCP_SCRIPT } from "./webmcp";
 
 const sha = (value: Uint8Array | string) => new Bun.CryptoHasher("sha256").update(value).digest("hex");
@@ -241,16 +246,12 @@ function detailsSurface(facts: readonly RuntimeHomeFact[], graph?: HomeGraphFact
 }
 
 export const HOME_UI_CSS = `
-html[data-aphrody-home] .fusion-brand{display:inline-flex;align-items:center;gap:.65rem;font:700 1.1rem var(--font-display)}
-html[data-aphrody-home] .fusion-brand img{width:40px;height:40px;object-fit:contain}
-html[data-aphrody-home] .site-header nav[aria-label="Primary"]{align-items:center;gap:1.25rem}
 .home-lead{font-size:clamp(1.1rem,2vw,1.4rem);line-height:1.5;color:rgb(var(--c-fg-muted));max-width:36ch;margin:1.5rem 0}
-.home-hero-heading{font-size:clamp(3rem,6.4vw,6.5rem);margin:1.5rem 0}
-.home-hero-actions{display:flex;flex-wrap:wrap;gap:1rem;margin:2rem 0}.home-hero-actions a,.home-search-input button{display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:.7rem 1.2rem;font-weight:600;border:1px solid rgb(var(--c-line-strong));border-radius:var(--md-sys-shape-corner-full);background:var(--md-sys-color-primary);color:var(--md-sys-color-on-primary);text-decoration:none}
+.home-hero-actions{display:flex;flex-wrap:wrap;gap:1rem;margin:2rem 0}.home-hero-actions a,.home-search-input button{display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:.7rem 1.2rem;font-weight:600;border:1px solid rgb(var(--c-line-strong));border-radius:999px;background:rgb(var(--c-accent));color:rgb(var(--c-on-slab));text-decoration:none}
 .home-hero-actions a+a{background:rgb(var(--c-canvas));color:rgb(var(--c-fg))}.home-kicker{font:500 .75rem var(--font-mono);color:rgb(var(--c-accent-strong));letter-spacing:.06em;text-transform:uppercase}
-.home-code{background:rgb(var(--c-code-bg));border:1px solid rgb(var(--c-line-strong));border-radius:var(--md-sys-shape-corner-large);overflow:hidden;margin:2rem 0}.home-code header{padding:1rem 1.25rem;border-bottom:1px solid rgb(var(--c-line));font:500 .75rem var(--font-mono);display:flex;gap:1rem;justify-content:space-between}.home-code pre{padding:1.25rem;font-size:.8rem;line-height:1.9;overflow:auto;color:rgb(var(--c-code-fg));margin:0}.home-code .home-copy{background:none;color:inherit;border:1px solid rgb(var(--c-line));padding:.4rem .7rem;min-height:32px}
+.home-code{background:rgb(var(--c-code-bg));border:1px solid rgb(var(--c-line-strong));border-radius:16px;overflow:hidden;margin:2rem 0}.home-code header{padding:1rem 1.25rem;border-bottom:1px solid rgb(var(--c-line));font:500 .75rem var(--font-mono);display:flex;gap:1rem;justify-content:space-between}.home-code pre{padding:1.25rem;font-size:.8rem;line-height:1.9;overflow:auto;color:rgb(var(--c-code-fg));margin:0}.home-code .home-copy{background:none;color:inherit;border:1px solid rgb(var(--c-line));padding:.4rem .7rem;min-height:32px}
 .home-section{border-top:1px solid rgb(var(--c-line));padding:clamp(3rem,7vw,6rem) 0}.home-section-heading{font-size:clamp(2rem,4.5vw,4rem);margin:0 0 2rem;max-width:20ch}.home-section p{line-height:1.7;max-width:85ch}.home-section a{color:rgb(var(--c-accent-strong));text-underline-offset:.2em}
-.home-runtime-facts{list-style:none;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,19rem),1fr));gap:1rem;margin:2rem 0}.home-runtime-facts li{border:1px solid rgb(var(--c-line));border-radius:var(--md-sys-shape-corner-large);padding:1.5rem;background:rgb(var(--c-subtle))}.home-runtime-facts h3{font:700 1.2rem var(--font-display);margin:0 0 .75rem}.home-runtime-facts dl{display:grid;grid-template-columns:auto 1fr;gap:.4rem 1rem;font-size:.85rem}.home-runtime-facts dd{margin:0}.home-status{font-size:.8rem;font-weight:600}.home-status-ready{color:rgb(var(--c-fg));border-left:3px solid rgb(var(--c-success));padding-left:.6rem}.home-status-pending{color:rgb(var(--c-fg-muted))}
+.home-runtime-facts{list-style:none;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,19rem),1fr));gap:1rem;margin:2rem 0}.home-runtime-facts li{border:1px solid rgb(var(--c-line));border-radius:16px;padding:1.5rem;background:rgb(var(--c-subtle))}.home-runtime-facts h3{font:700 1.2rem var(--font-display);margin:0 0 .75rem}.home-runtime-facts dl{display:grid;grid-template-columns:auto 1fr;gap:.4rem 1rem;font-size:.85rem}.home-runtime-facts dd{margin:0}.home-status{font-size:.8rem;font-weight:600}.home-status-ready{color:rgb(var(--c-fg));border-left:3px solid rgb(var(--c-success));padding-left:.6rem}.home-status-pending{color:rgb(var(--c-fg-muted))}
 .home-search-form label{display:block;font-weight:600}.home-search-input{display:flex;flex-wrap:wrap;gap:.75rem;margin-top:1rem}.home-search-input input{flex:1 1 24rem;min-width:0;min-height:48px;border:1px solid rgb(var(--c-fg-faint));border-radius:999px;padding:.75rem 1rem;background:rgb(var(--c-canvas));color:rgb(var(--c-fg));font:inherit}.home-search-input [hidden],[hidden]{display:none!important}
 #home-search-status{min-height:1.7em;color:rgb(var(--c-fg-muted));margin:1rem 0}#home-answer{border:1px solid rgb(var(--c-line));border-radius:16px;background:rgb(var(--c-subtle));padding:1.5rem;margin-top:2rem}#home-answer h3{font:700 1.5rem var(--font-display)}#home-answer-text{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.7}#home-answer-citations li{margin:.75rem 0}#home-answer-citations small{display:block;overflow-wrap:anywhere;color:rgb(var(--c-fg-muted))}#home-answer-mode,#home-answer-source,#home-answer-graph{font-size:.85rem;color:rgb(var(--c-fg-muted));overflow-wrap:anywhere}
 .home-settings{display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;padding:1.5rem 0}.home-settings select{min-height:44px;max-width:100%;padding:.5rem .75rem;border:1px solid rgb(var(--c-fg-faint));background:rgb(var(--c-canvas));color:rgb(var(--c-fg));font:inherit}.home-mobile{display:none}.home-mobile summary{min-height:44px;cursor:pointer;padding:.6rem}.home-mobile nav{position:absolute;right:1rem;background:rgb(var(--c-canvas));border:1px solid rgb(var(--c-line));padding:1rem;z-index:50}.home-mobile a{display:block;padding:.75rem;min-height:44px}
@@ -270,11 +271,15 @@ const list=byId('home-answer-citations');list.replaceChildren();const fragment=d
 text('home-answer-mode',data.generation?.status==='complete'?'Answer grounded in the cited snapshot':'Source excerpts from the cited snapshot');text('home-answer-source','Snapshot '+data.snapshot.id.slice(0,12)+' · source '+data.snapshot.source);text('home-answer-text',data.answer);
 const coverage=data.graph?.native?.coverage;text('home-answer-graph',coverage&&Number.isSafeInteger(coverage.nodes)&&coverage.nodes>=0&&Number.isSafeInteger(coverage.edges)&&coverage.edges>=0?'Source graph: '+coverage.nodes+' nodes, '+coverage.edges+' edges'+(coverage.truncated?' · sampled coverage':''):Array.isArray(data.graph?.links)?'Source graph sample: '+data.graph.links.length+' relationships.':'Source graph unavailable.');answer.hidden=false;status.textContent=data.citations.length?data.citations.length+' cited sources.':'No matching source in this snapshot.';
 }catch(error){if(current===sequence){answer.hidden=true;status.textContent=controller.signal.aborted?'Search cancelled. Submit again to retry.':error instanceof Error&&['The source snapshot is unavailable. Browse the docs while it is refreshed.','Search is unavailable. Please try again.'].includes(error.message)?error.message:'Search unavailable. Browse the docs and retry.'}}finally{clearTimeout(timer);if(current===sequence){active=null;form.removeAttribute('aria-busy');cancel.hidden=true}}});
-cancel.addEventListener('click',()=>active?.abort());for(const button of document.querySelectorAll('button[aria-label="Search"]'))button.addEventListener('click',()=>{document.getElementById('home-search').scrollIntoView({block:'start'});input.focus({preventScroll:true})});document.addEventListener('keydown',event=>{if(event.key==='Escape'&&active)active.abort();if(event.key==='/'&&!event.ctrlKey&&!event.metaKey&&!event.altKey&&!(event.target instanceof Element&&event.target.closest('input,textarea,select,[contenteditable]'))){event.preventDefault();input.focus()}});
+cancel.addEventListener('click',()=>active?.abort());document.addEventListener('keydown',event=>{if(event.key==='Escape'&&active)active.abort()});
+document.addEventListener('click',event=>{const button=event.target instanceof Element&&event.target.closest('button[aria-label="Ask AI about Bun"]');if(!button)return;event.preventDefault();event.stopImmediatePropagation();document.getElementById('home-search').scrollIntoView({block:'start'});input.focus({preventScroll:true})},true);
 for(const button of document.querySelectorAll('[data-home-copy]'))button.addEventListener('click',async()=>{try{await navigator.clipboard.writeText(document.getElementById(button.dataset.homeCopy).textContent);status.textContent='Code copied.'}catch{status.textContent='Select and copy the code manually.'}});
 })();`;
 
-/** Adapt the captured tree using the existing mirror/fusion owner; no upstream JavaScript is executed. */
+/** Pagefind-compatible surface over the site's existing generated documentation inventory. */
+export const HOME_DOC_SEARCH_MODULE = `let index;const escape=s=>String(s).replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));const load=()=>index??=fetch('/docs/search.json').then(async r=>{if(!r.ok)throw Error('Documentation index unavailable');const rows=await r.json();if(!Array.isArray(rows))throw Error('Invalid documentation index');return rows.filter(d=>typeof d.t==='string'&&typeof d.u==='string'&&d.u.startsWith('/')&&!d.u.startsWith('//'))});export const options=async()=>{};export const init=async()=>{await load()};export const preload=()=>{};export async function debouncedSearch(query,options={}){const terms=query.toLowerCase().split(/\\s+/).filter(Boolean),rows=await load(),section=d=>d.u.startsWith('/guides')?'Guides':d.u.startsWith('/reference')?'Reference':d.u.startsWith('/blog')?'Blog':'Docs';return {results:rows.filter(d=>!options.filters?.section||section(d)===options.filters.section).map(d=>{const title=d.t.toLowerCase(),body=[d.d,...(d.h||[]),d.x].join(' ').toLowerCase();let score=0;for(const term of terms){if(title.includes(term))score+=title.startsWith(term)?12:8;else if(body.includes(term))score++;else return null}return {id:d.u,score,data:async()=>({url:d.u,meta:{title:d.t},filters:{section:[section(d)]},excerpt:escape(d.d||d.x||''),sub_results:[]})}}).filter(Boolean).sort((a,b)=>b.score-a.score).slice(0,40)}};`;
+
+/** Retain the captured components and assets; fork capabilities are separate additions. */
 export function adaptUpstreamHome(
   html: string,
   options: {
@@ -288,239 +293,191 @@ export function adaptUpstreamHome(
   },
 ) {
   if (!commit.test(options.source)) throw new Error("Homepage requires its source commit");
-  const clean = new HTMLRewriter()
-    .on(
-      "script,iframe,object,embed,link[rel=preconnect],link[rel=dns-prefetch],link[rel=modulepreload],link[rel=manifest],meta[name=color-scheme]",
-      {
+  return (
+    new HTMLRewriter()
+      .on("script", {
+        element(element) {
+          const src = element.getAttribute("src");
+          if (
+            src &&
+            (/analytics|plausible|cloudflareinsights/.test(src) ||
+              src.startsWith("https:") ||
+              src.startsWith("http:") ||
+              src.startsWith("//"))
+          )
+            element.remove();
+        },
+      })
+      .on("link[rel=preconnect],link[rel=dns-prefetch],meta[name=color-scheme]", {
         element(element) {
           element.remove();
         },
-      },
-    )
-    .transform(html);
-  const fused = new HTMLRewriter()
-    .on(
-      `script,link[href*=fusion],link[href="${MATERIAL_SYMBOLS_CSS}"],.fusion-symbol,.fusion-release,.aphrody-fork,[aria-hidden=true][class*=fixed],a[href*="bun-joins-anthropic"]`,
-      {
+      })
+      .on("html", {
         element(element) {
-          element.remove();
+          element.setAttribute("data-aphrody-home", "bun");
         },
-      },
-    )
-    .transform(adaptProductHome(clean, options.source, options.origin));
-  const cards = [
-    {
-      title: "Metadata",
-      code: "await video.metadata()",
-      text: "Source dimensions, rational frame rate, codec and audio streams.",
-      href: "/docs/runtime/video#sources-and-metadata",
-    },
-    {
-      title: "A frame. Your image pipeline.",
-      code: "video.frame(1).resize(320, 180).png()",
-      text: "Resize, crop and encode with the same native Bun.Image worker.",
-      href: "/docs/runtime/video#frame-transformations-and-raw-pixels",
-    },
-    {
-      title: "Bounded batches",
-      code: "await video.frames({ maxFrames: 3, … })",
-      text: "A single decoder session returns source-resolution PNG frames.",
-      href: "/docs/runtime/video#bounded-frame-batches",
-    },
-    {
-      title: "Audio, GIF and remux",
-      code: "await video.audio({ duration: 1 })",
-      text: "Short WAV and GIF exports, plus a new MP4 within the documented remux limits.",
-      href: "/docs/runtime/video#audio-gif-and-mp4-remux",
-    },
-  ];
-  let section = 0,
-    card = 0;
-  const adapted = new HTMLRewriter()
-    .on("script,link[href*=fusion],link[href*=material-symbols],.fusion-release,.aphrody-fork", {
-      element(element) {
-        element.remove();
-      },
-    })
-    .on("html", {
-      element(element) {
-        element.setAttribute("lang", "en");
-        element.setAttribute("data-aphrody-home", "bun-video");
-        element.removeAttribute("class");
-      },
-    })
-    .on("title", {
-      element(element) {
-        element.setInnerContent("Bun.Video · Bun by Aphrody Labs");
-      },
-    })
-    .on('meta[name="description"],meta[property="og:description"]', {
-      element(element) {
-        element.setAttribute(
-          "content",
-          "Native video metadata, frames and the Bun.Image pipeline. Source-backed docs, graph search and target-specific runtime measurements.",
-        );
-      },
-    })
-    .on('meta[property="og:title"],meta[property="og:site_name"]', {
-      element(element) {
-        element.setAttribute("content", "Bun.Video · Aphrody Labs");
-      },
-    })
-    .on('meta[property="og:image"],meta[name="twitter:image"]', {
-      element(element) {
-        element.setAttribute("content", options.origin + "/icon.svg");
-      },
-    })
-    .on("head", {
-      element(element) {
-        element.prepend(
-          `<meta name="color-scheme" content="light dark"><script src="${options.bootstrapPath}"></script>`,
-          { html: true },
-        );
-        element.append(
-          `<link rel="stylesheet" href="${options.cssPath}"><script src="${options.scriptPath}" defer></script>`,
-          { html: true },
-        );
-      },
-    })
-    .on("main", {
-      element(element) {
-        element.setAttribute("id", "content");
-        element.setAttribute("tabindex", "-1");
-      },
-    })
-    .on("a.skip-link", {
-      element(element) {
-        element.setAttribute("href", "#content");
-      },
-    })
-    .on("section", {
-      element(element) {
-        const index = section++;
-        if (index > 1) element.remove();
-      },
-    })
-    .on("section.register > div:not(:first-child)", {
-      element(element) {
-        element.remove();
-      },
-    })
-    .on("section.register > div:first-child > div:first-child", {
-      element(element) {
-        element.setInnerContent(
-          `<p class="home-kicker">Bun by Aphrody Labs · Native media</p><h1 class="display home-hero-heading">Bun.Video.<br>One fluent<br>image pipeline.</h1><p class="home-lead">Go from a local movie to metadata, frames and transformed images directly in TypeScript.</p><div class="home-hero-actions"><a href="/docs/runtime/video">Explore Bun.Video</a><a href="/downloads">Downloads</a></div><p><a href="/docs/runtime/image">Built on Bun.Image</a> · <a href="#home-search">Find docs and source</a></p>`,
-          { html: true },
-        );
-      },
-    })
-    .on("section.register > div:first-child > div:nth-child(2)", {
-      element(element) {
-        element.setInnerContent(
-          `<div class="home-code"><header><span>native-video.ts</span><button class="home-copy" type="button" data-home-copy="home-code-ts">Copy code</button></header><pre tabindex="0"><code id="home-code-ts">${escapeHtml(featureCode)}</code></pre></div><div class="home-code"><header><span>Command line</span><button class="home-copy" type="button" data-home-copy="home-code-cli">Copy commands</button></header><pre tabindex="0"><code id="home-code-cli">${escapeHtml(cliCode)}</code></pre></div>`,
-          { html: true },
-        );
-      },
-    })
-    .on("section.register h1", {
-      element(element) {
-        element.setAttribute("style", "font-size:clamp(3rem,6.4vw,6.5rem)");
-      },
-    })
-    .on('section[aria-labelledby="toolkit-heading"] h2', {
-      element(element) {
-        element.setInnerContent("Read. Select. Transform. Export.");
-      },
-    })
-    .on('section[aria-labelledby="toolkit-heading"] > div > div:first-child > p', {
-      element(element) {
-        element.setInnerContent(
-          "Start with the source metadata. Select bounded frames, transform with Bun.Image, then export within the documented provider limits.",
-        );
-      },
-    })
-    .on('section[aria-labelledby="toolkit-heading"] a', {
-      element(element) {
-        const item = cards[card++];
-        if (!item) {
-          element.remove();
-          return;
-        }
-        element.setAttribute("href", item.href);
-        element.setAttribute("class", (element.getAttribute("class") ?? "") + " home-api-card");
-        element.setInnerContent(
-          `<h3>${escapeHtml(item.title)}</h3><p>${escapeHtml(item.text)}</p><code>${escapeHtml(item.code)}</code>`,
-          { html: true },
-        );
-      },
-    })
-    .on("main", {
-      element(element) {
-        element.append(searchSurface() + detailsSurface(options.facts, options.graph), { html: true });
-      },
-    })
-    .on('nav[aria-label="Primary"]', {
-      element(element) {
-        element.setInnerContent(
-          '<a href="/docs/runtime/video">Bun.Video</a><a href="/docs">Docs</a><a href="/graph/">Source graph</a><a href="/downloads">Downloads</a>',
-          { html: true },
-        );
-      },
-    })
-    .on('button[aria-label="Open menu"]', {
-      element(element) {
-        element.replace(
-          '<details class="home-mobile"><summary>Menu</summary><nav aria-label="Mobile"><a href="/docs/runtime/video">Bun.Video</a><a href="/docs">Docs</a><a href="/graph/">Source graph</a><a href="/downloads">Downloads</a></nav></details>',
-          { html: true },
-        );
-      },
-    })
-    .on(
-      'button[aria-label="Close menu"],nav[aria-label="Mobile"],a[aria-label="Discord"],a[aria-label="X (Twitter)"]',
-      {
+      })
+      .on("title", {
         element(element) {
-          element.remove();
+          element.setInnerContent("Bun by Aphrody Labs");
         },
-      },
-    )
-    .on('a[aria-label="GitHub"]', {
-      element(element) {
-        element.setAttribute("href", "https://github.com/aphrody-labs/bun");
-      },
-    })
-    .on(".fusion-brand", {
-      element(element) {
-        element.setAttribute("aria-label", "Bun by Aphrody Labs — home");
-        element.setInnerContent('<img src="/icon.svg" alt="" width="40" height="40"><span>Bun</span>', { html: true });
-      },
-    })
-    .on("footer", {
-      element(element) {
-        element.setInnerContent(
-          `<div class="mx-auto max-w-container px-gutter"><p>Bun by Aphrody Labs · <a href="/docs/runtime/video">Bun.Video docs</a> · <a href="https://github.com/aphrody-labs/bun">Source</a></p><div class="home-settings"><label for="home-theme">Color scheme</label><select id="home-theme"><option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option></select></div><p>Interface adapted from the captured Bun homepage. <a href="/home-provenance.json">Source and asset hashes</a>.</p></div>`,
-          { html: true },
-        );
-      },
-    })
-    .on("*", {
-      element(element) {
-        // Snapshot attributes before removing entries from the native iterator.
-        // oxlint-disable-next-line unicorn/no-useless-spread
-        for (const [name, value] of [...element.attributes]) {
-          if (name.toLowerCase().startsWith("on") || /^javascript:/i.test(value)) element.removeAttribute(name);
-        }
-        const classes = element.getAttribute("class");
-        if (classes)
-          element.setAttribute(
-            "class",
-            classes
-              .split(/\s+/)
-              .filter(name => name !== "dark")
-              .join(" "),
+      })
+      .on('a[href="/blog/bun-joins-anthropic"]', {
+        element(element) {
+          element.setAttribute("href", "https://bun.com/blog/bun-joins-anthropic");
+          element.setInnerContent("Upstream Bun news: Bun has joined Anthropic");
+        },
+      })
+      .on('a[href="/get"]', {
+        element(element) {
+          element.setAttribute("href", "/downloads");
+          element.setInnerContent("Install Aphrody Bun");
+        },
+      })
+      .on('link[rel="canonical"]', {
+        element(element) {
+          element.setAttribute("href", options.origin + "/");
+        },
+      })
+      .on('a[aria-label="Bun — home"]', {
+        element(element) {
+          element.setAttribute("aria-label", "Aphrody — home");
+          element.setInnerContent(
+            '<picture><source media="(prefers-color-scheme:dark)" srcset="/aphrody-logo-dark.svg"><img src="/aphrody-logo.svg" alt="Aphrody" width="88" height="32"></picture>',
+            { html: true },
           );
-      },
-    });
-  return adapted.transform(fused);
+        },
+      })
+      .on('a[aria-label="GitHub"]', {
+        element(element) {
+          element.setAttribute("href", "https://github.com/aphrody-labs/bun");
+        },
+      })
+      .on('a[href="/docs/runtime"]', {
+        text(text) {
+          if (text.text === "Reference" || text.text === "API Reference") text.replace("Native APIs");
+        },
+      })
+      .on('a[class*="group/pill"]', {
+        element(element) {
+          element.setAttribute("href", "/downloads");
+        },
+      })
+      .on('a[class*="group/pill"] span:first-child', {
+        element(element) {
+          element.setInnerContent("FORK");
+        },
+      })
+      .on('a[class*="group/pill"] span:nth-child(2)', {
+        element(element) {
+          element.setInnerContent("Published Aphrody releases");
+        },
+      })
+      .on("head", {
+        element(element) {
+          element.append(
+            `<link rel="stylesheet" href="${BRAND.tokensCss}"><link rel="stylesheet" href="${BRAND.fontsCss}"><link rel="stylesheet" href="${options.cssPath}"><script src="${options.scriptPath}" defer></script>`,
+            { html: true },
+          );
+        },
+      })
+      // Keep the fork island outside React's captured __bun root, so hydration owns only upstream components.
+      .on("body", {
+        element(element) {
+          element.prepend(
+            '<p class="mx-auto max-w-container px-gutter py-2 text-[12px] text-fg-muted">Aphrody Bun · Components, benchmarks and customer references below are attributed to <a href="https://bun.com/">upstream Bun</a>. Fork capabilities and measured targets are listed separately.</p>',
+            { html: true },
+          );
+          element.append(
+            `<section class="home-section"><div class="mx-auto max-w-container px-gutter"><h2 class="display home-section-heading">Bun by Aphrody Labs</h2><p>The components, benchmarks and customer references above come from upstream Bun. They are not fork measurements or endorsements. <a href="/home-provenance.json">Source and asset hashes</a>.</p><h3>Bun.Video. One fluent image pipeline.</h3><p>Native video metadata, frames and transformed images directly in TypeScript.</p><div class="home-code"><header>native-video.ts</header><pre><code>${escapeHtml(featureCode)}</code></pre></div><div class="home-code"><header>Command line</header><pre><code>${escapeHtml(cliCode)}</code></pre></div><p><a href="/docs/runtime/video">Bun.Video docs</a> · <a href="/docs/runtime/image">Bun.Image</a> · <a href="/downloads">Fork downloads</a></p></div></section>` +
+              searchSurface() +
+              detailsSurface(options.facts, options.graph),
+            { html: true },
+          );
+        },
+      })
+      .on("*", {
+        element(element) {
+          // Snapshot attributes before mutating the native iterator.
+          // oxlint-disable-next-line unicorn/no-useless-spread
+          for (const [name, value] of [...element.attributes]) {
+            if (name === "href" && element.tagName === "a") element.setAttribute(name, homeDocumentationHref(value));
+            if (name.toLowerCase().startsWith("on") || /^javascript:/i.test(value)) element.removeAttribute(name);
+            if (name === "style")
+              element.setAttribute(
+                name,
+                value.replace(/url\((?:&quot;|["']?)logos\/([^\)"'&]+)(?:&quot;|["']?)\)/g, "url(/logos/$1)"),
+              );
+            if (value.includes("https://bun.sh/install") || value.includes("https://github.com/oven-sh/bun"))
+              element.setAttribute(
+                name,
+                value
+                  .replace("https://bun.sh/install.ps1", options.origin + "/install.ps1")
+                  .replace(/https:\/\/bun\.sh\/install(?![\w.])/g, options.origin + "/install.sh")
+                  .replace("https://github.com/oven-sh/bun", "https://github.com/aphrody-labs/bun"),
+              );
+          }
+        },
+      })
+      .transform(adaptHomeDocumentationLinks(rewriteInstallers(html, options.origin)))
+  );
+}
+
+/** Adapt the captured logo component itself, rather than patching React's DOM after hydration. */
+export function adaptHomeModule(code: string, origin: string): string {
+  let output = adaptHomeDocumentationLinks(rewriteInstallers(code, origin));
+  output = output
+    .replaceAll('label:"Reference"', 'label:"Native APIs"')
+    .replaceAll('label:"API Reference"', 'label:"Native APIs"');
+  output = output
+    .replace("function He({releaseHref:d}){", 'function He({releaseHref:d}){d="/downloads";')
+    .replace('children:["Bun v",T," released"]', 'children:"Published Aphrody releases"')
+    .replace('children:"NEW"', 'children:"FORK"');
+  output = output
+    .replace("function Wr(h){if(qr)", 'function Wr(h){if(new URL(h,location.href).pathname!=="/")return;if(qr)')
+    .replace(
+      "function W(h,k){if(qr)",
+      'function W(h,k){if(new URL(h,location.href).pathname!=="/"){location.assign(h);return}if(qr)',
+    );
+  output = output
+    .replaceAll('children:["Install Bun v",T]', 'children:"Install Aphrody Bun"')
+    .replaceAll('href:"/get"', 'href:"/downloads"')
+    .replaceAll(
+      "Bun has joined Anthropic — and Anthropic is betting on Bun",
+      "Upstream Bun news: Bun has joined Anthropic",
+    )
+    .replaceAll('href:"/blog/bun-joins-anthropic"', 'href:"https://bun.com/blog/bun-joins-anthropic"')
+    .replaceAll('"Bun in production"', '"Upstream Bun in production"');
+  if (output.includes("function we(){") && output.includes('"_pagefind"')) {
+    const start = output.indexOf("function we(){"),
+      end = output.indexOf("var Pe=", start);
+    if (end < 0) throw Error("Captured search module boundary changed");
+    output =
+      output.slice(0, start) +
+      'function we(){return J??=import("./aphrody-doc-search.js").then(async m=>(await m.init(),m))}' +
+      output.slice(end);
+    output = output
+      .replace(/function ce\(\)\{.*?return X\}/, "function ce(){return Promise.resolve(null)}")
+      .replace(/function \$e\(\)\{.*?return Y\}/, "function $e(){return Promise.resolve(null)}");
+  }
+  const label = '"aria-label":"Bun — home"';
+  const at = output.indexOf(label);
+  if (at < 0) return output;
+  const start = output.lastIndexOf("function ", at);
+  const end = output.indexOf("function ", at);
+  if (start < 0 || end < 0) throw new Error("Captured logo component boundary changed");
+  const component = output.slice(start, end);
+  const children = /children:\[e\("img",\{[^}]*\}\),e\(\w+,\{[^}]*\}\)\]/;
+  if (!children.test(component)) throw new Error("Captured logo component structure changed");
+  const adapted = component
+    .replace(label, '"aria-label":"Aphrody — home"')
+    .replace(
+      children,
+      'children:t("picture",{children:[e("source",{media:"(prefers-color-scheme:dark)",srcSet:"/aphrody-logo-dark.svg"}),e("img",{src:"/aphrody-logo.svg",alt:"Aphrody",width:88,height:32,className:"h-[34px] w-auto"})]})',
+    );
+  output = output.slice(0, start) + adapted + output.slice(end);
+  return output;
 }
 
 export async function buildUpstreamHome(options: UpstreamHomeOptions) {
@@ -579,14 +536,7 @@ export async function buildUpstreamHome(options: UpstreamHomeOptions) {
     if (isAbsolute(within) || within.startsWith("..")) throw new Error("Captured asset path escapes its source");
     return result;
   };
-  const entries = manifest.files.filter(
-    (entry: { url: string; path: string; kind: string }) =>
-      entry.url === "https://bun.com/" ||
-      (new URL(entry.url).origin === "https://bun.com" &&
-        (entry.path.endsWith(".css") ||
-          /\/fonts\/.+\.woff2$/.test(entry.path) ||
-          /\/(?:logo\.svg|favicon\.ico|icons\/.+\.png)$/.test(entry.path))),
-  );
+  const entries = manifest.files;
   const assets: HomeAsset[] = [],
     inputs: { url: string; path: string; sha256: string; captureDeclaredBlake3: string; bytes: number }[] = [];
   let html = "",
@@ -594,7 +544,7 @@ export async function buildUpstreamHome(options: UpstreamHomeOptions) {
     htmlPath = "";
   for (const entry of entries) {
     if (
-      !entry.path.startsWith("bun.com/") ||
+      !entry.path.startsWith(new URL(entry.url).hostname + "/") ||
       !digest.test(entry.blake3) ||
       !Number.isSafeInteger(entry.bytes) ||
       entry.bytes < 1 ||
@@ -609,7 +559,16 @@ export async function buildUpstreamHome(options: UpstreamHomeOptions) {
       html = new TextDecoder().decode(bytes);
       htmlPath = confined(entry.path);
     } else {
-      assets.push({ path: entry.path.slice("bun.com/".length), bytes, sha256 });
+      const inert = new URL(entry.url).origin !== "https://bun.com" || /analytics/.test(entry.path);
+      const moduleBytes =
+        !inert && entry.path.endsWith(".js")
+          ? new TextEncoder().encode(adaptHomeModule(new TextDecoder().decode(bytes), origin.origin))
+          : bytes;
+      assets.push({
+        path: inert ? "_upstream/" + entry.path : entry.path.slice("bun.com/".length),
+        bytes: moduleBytes,
+        sha256: sha(moduleBytes),
+      });
       if (entry.kind === "css") stylesheet += new TextDecoder().decode(bytes);
     }
   }
@@ -626,11 +585,39 @@ export async function buildUpstreamHome(options: UpstreamHomeOptions) {
       sha256: sha(new Uint8Array(await readFile(join(options.sourceRoot, path)))),
     })),
   );
-  const icon = new Uint8Array(await readFile(join(options.sourceRoot, "docs/logo/icon.svg")));
-  assets.push({ path: "icon.svg", bytes: icon, sha256: sha(icon) });
+  const icon = new Uint8Array(await readFile(join(options.sourceRoot, "docs/logo/logo-wordmark-light.svg")));
+  assets.push({ path: "aphrody-logo.svg", bytes: icon, sha256: sha(icon) });
+  const darkIcon = new Uint8Array(await readFile(join(options.sourceRoot, "docs/logo/logo-wordmark-dark.svg")));
+  assets.push({ path: "aphrody-logo-dark.svg", bytes: darkIcon, sha256: sha(darkIcon) });
+  const searchBytes = new TextEncoder().encode(HOME_DOC_SEARCH_MODULE);
+  assets.push({ path: "_assets/aphrody-doc-search.js", bytes: searchBytes, sha256: sha(searchBytes) });
+  const brandedFiles: Record<string, string> = {
+    "favicon.ico": "favicon.ico",
+    "manifest.json": "site.webmanifest",
+    "icons/favicon-32x32.png": "icon-192.png",
+    "icons/icon-192x192.png": "icon-192.png",
+    "icons/apple-touch-icon.png": "apple-touch-icon.png",
+  };
+  for (const [path, name] of Object.entries(brandedFiles)) {
+    const original = assets.find(asset => asset.path === path);
+    if (original) original.path = "_upstream/bun.com/" + path;
+    const bytes = new Uint8Array(await readFile(join(options.sourceRoot, "docs/logo", name)));
+    assets.push({ path, bytes, sha256: sha(bytes) });
+  }
+  for (const name of [
+    "icon.svg",
+    "icon-192.png",
+    "icon-512.png",
+    "maskable-192.png",
+    "maskable-512.png",
+    "apple-touch-icon.png",
+  ]) {
+    const bytes = new Uint8Array(await readFile(join(options.sourceRoot, "docs/logo", name)));
+    assets.push({ path: name, bytes, sha256: sha(bytes) });
+  }
   const theme = parseBunHomeTheme(stylesheet),
-    css = homeThemeCss(theme) + HOME_UI_CSS,
-    script = HOME_THEME_SCRIPT + HOME_SEARCH_SCRIPT + WEBMCP_SCRIPT;
+    css = HOME_UI_CSS,
+    script = M3_JS + HOME_SEARCH_SCRIPT + WEBMCP_SCRIPT;
   const add = (kind: string, body: string) => {
     const sha256 = sha(body),
       path = `_assets/aphrody-home-${kind}-${sha256.slice(0, 16)}.${kind === "style" ? "css" : "js"}`;
@@ -640,31 +627,44 @@ export async function buildUpstreamHome(options: UpstreamHomeOptions) {
   const cssPath = add("style", css),
     scriptPath = add("controls", script),
     bootstrapPath = add("scheme", HOME_THEME_BOOTSTRAP);
-  const adapted = adaptUpstreamHome(rewriteCapturedLinks(html, htmlPath, root), {
-    source: options.source,
-    origin: origin.origin,
-    facts,
-    ...(graph ? { graph } : {}),
-    cssPath,
-    scriptPath,
-    bootstrapPath,
-  });
-  const allowed = new Set(assets.map(asset => "/" + asset.path));
+  const adaptedInline = externalizeInlineScripts(
+    adaptUpstreamHome(rewriteCapturedLinks(html, htmlPath, root), {
+      source: options.source,
+      origin: origin.origin,
+      facts,
+      ...(graph ? { graph } : {}),
+      cssPath,
+      scriptPath,
+      bootstrapPath,
+    }),
+  );
+  const adapted = adaptedInline.html;
+  for (const asset of adaptedInline.assets) {
+    const bytes = new TextEncoder().encode(asset.content);
+    assets.push({ path: asset.file, bytes, sha256: sha(bytes) });
+  }
+  const allowed = new Set([...assets.map(asset => "/" + asset.path), BRAND.tokensCss, BRAND.fontsCss]);
   const violations: string[] = [];
   new HTMLRewriter()
     .on("script[src],link[rel=stylesheet],link[rel=preload],img[src],source[src],video[src]", {
       element(element) {
         const href = element.getAttribute(element.tagName === "link" ? "href" : "src");
-        if (href && !allowed.has(href)) violations.push(href);
+        if (href && !allowed.has(href) && !allowed.has(new URL(href, origin).pathname)) violations.push(href);
       },
     })
     .on("script:not([src]),iframe,object,embed", {
       element(element) {
+        if (
+          element.tagName === "script" &&
+          ["application/json", "application/ld+json"].includes(element.getAttribute("type") ?? "")
+        )
+          return;
         violations.push(element.tagName);
       },
     })
     .transform(adapted);
-  if (violations.length) throw new Error("Adapted homepage contains an unapproved executable or fetched asset");
+  if (violations.length)
+    throw new Error("Adapted homepage contains an unapproved executable or fetched asset: " + violations.join(", "));
   const provenance = {
     schema: 1,
     source: options.source,
@@ -678,7 +678,13 @@ export async function buildUpstreamHome(options: UpstreamHomeOptions) {
     documentation,
     runtime: facts,
     graph: graph ?? null,
-    theme: { light: theme.light, dark: theme.dark, roleMapping: "M3 roles use the captured Bun colors" },
+    theme: {
+      light: theme.light,
+      dark: theme.dark,
+      roleMapping: "Canonical Aphrody M3 roles",
+      tokensCss: BRAND.tokensCss,
+      fontsCss: BRAND.fontsCss,
+    },
     qualification:
       "Measured surfaces and supplied gates per target; no claim that every target, codec, package, browser or GPU is qualified",
     generated: {

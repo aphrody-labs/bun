@@ -40,9 +40,13 @@ struct Options {
 pub fn run() -> Result<(), io::Error> {
     let mut args = Arguments::from_env();
 
-    let options = Options { compress_only: args.contains("--compress-only") };
+    let options = Options {
+        compress_only: args.contains("--compress-only"),
+    };
 
-    let marker = args.free_from_str().unwrap_or_else(|_| "default".to_string());
+    let marker = args
+        .free_from_str()
+        .unwrap_or_else(|_| "default".to_string());
 
     let files = TestFiles::minifier();
 
@@ -167,7 +171,10 @@ fn minify(
     let ret = Parser::new(&allocator, source_text, source_type).parse();
     assert!(ret.diagnostics.is_empty());
     let mut program = ret.program;
-    let scoping = SemanticBuilder::new().build(&program).semantic.into_scoping();
+    let scoping = SemanticBuilder::new()
+        .build(&program)
+        .semantic
+        .into_scoping();
     let _ = ReplaceGlobalDefines::new(
         &allocator,
         ReplaceGlobalDefinesConfig::new(&[("process.env.NODE_ENV", "'development'")]).unwrap(),
@@ -181,7 +188,10 @@ fn minify(
     })
     .minify(&allocator, &mut program);
     let code = Codegen::new()
-        .with_options(CodegenOptions { minify: !options.compress_only, ..CodegenOptions::minify() })
+        .with_options(CodegenOptions {
+            minify: !options.compress_only,
+            ..CodegenOptions::minify()
+        })
         .with_scoping(ret.scoping)
         .build(&program)
         .code;
@@ -210,5 +220,7 @@ fn assert_eq_minified_code(s1: &str, s2: &str, filename: &str) {
 }
 
 fn normalize_minified_code(code: &str) -> String {
-    code.cow_replace(";", ";\n").cow_replace(",", ",\n").into_owned()
+    code.cow_replace(";", ";\n")
+        .cow_replace(",", ",\n")
+        .into_owned()
 }

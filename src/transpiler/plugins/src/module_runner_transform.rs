@@ -136,7 +136,12 @@ impl<'a> ModuleRunnerTransform<'a> {
         for stmt in program.body.drain(..) {
             match stmt {
                 Statement::ImportDeclaration(import) => {
-                    let ImportDeclaration { span, source, specifiers, .. } = import.unbox();
+                    let ImportDeclaration {
+                        span,
+                        source,
+                        specifiers,
+                        ..
+                    } = import.unbox();
                     let import_statement = self.transform_import(span, source, specifiers, ctx);
                     hoist_imports.push(import_statement);
                 }
@@ -259,7 +264,12 @@ impl<'a> ModuleRunnerTransform<'a> {
                 unreachable!();
             };
 
-            let ImportExpression { span, source, options, .. } = import_expr.unbox();
+            let ImportExpression {
+                span,
+                source,
+                options,
+                ..
+            } = import_expr.unbox();
 
             if let Expression::StringLiteral(source) = &source {
                 self.dynamic_deps.insert(source.value.to_string());
@@ -325,7 +335,9 @@ impl<'a> ModuleRunnerTransform<'a> {
 
         // ['vue', { importedNames: ['foo'] }]`
         let mut arguments = ArenaVec::with_capacity_in(1 + usize::from(specifiers.is_some()), ctx);
-        arguments.push(Argument::from(Expression::StringLiteral(ArenaBox::new_in(source, ctx))));
+        arguments.push(Argument::from(Expression::StringLiteral(ArenaBox::new_in(
+            source, ctx,
+        ))));
         let pattern = if let Some(mut specifiers) = specifiers {
             // `import * as vue from 'vue';` -> `const __vite_ssr_import_0__ = await __vite_ssr_import__('vue');`
             if matches!(
@@ -342,8 +354,10 @@ impl<'a> ModuleRunnerTransform<'a> {
                 let mut local = ctx.alloc(specifier.unbox().local);
                 local.name = self.generate_import_binding_name(ctx);
                 let binding = BoundIdentifier::from_binding_ident(&local);
-                ctx.scoping_mut().set_symbol_name(binding.symbol_id, binding.name);
-                self.import_bindings.insert(binding.symbol_id, (binding, None));
+                ctx.scoping_mut()
+                    .set_symbol_name(binding.symbol_id, binding.name);
+                self.import_bindings
+                    .insert(binding.symbol_id, (binding, None));
 
                 BindingPattern::BindingIdentifier(local)
             } else {
@@ -398,7 +412,9 @@ impl<'a> ModuleRunnerTransform<'a> {
         export: ArenaBox<'a, ExportDeclaration<'a>>,
         ctx: &mut TraverseCtx<'a>,
     ) {
-        let ExportDeclaration { span, declaration, .. } = export.unbox();
+        let ExportDeclaration {
+            span, declaration, ..
+        } = export.unbox();
         let export_expression = match &declaration {
             // `export const [foo, bar] = [1, 2];`
             Declaration::VariableDeclaration(variable) => {
@@ -445,7 +461,9 @@ impl<'a> ModuleRunnerTransform<'a> {
         export: ArenaBox<'a, ExportFromDeclaration<'a>>,
         ctx: &mut TraverseCtx<'a>,
     ) {
-        let ExportFromDeclaration { source, specifiers, .. } = export.unbox();
+        let ExportFromDeclaration {
+            source, specifiers, ..
+        } = export.unbox();
         self.transform_export_specifiers(
             Some(source),
             specifiers,
@@ -488,7 +506,12 @@ impl<'a> ModuleRunnerTransform<'a> {
         });
 
         hoist_exports.extend(specifiers.into_iter().map(|specifier| {
-            let ExportSpecifier { span, exported, local, .. } = specifier;
+            let ExportSpecifier {
+                span,
+                exported,
+                local,
+                ..
+            } = specifier;
             let expr = if let Some(import_binding) = &import_binding {
                 let object = import_binding.create_read_expression(ctx);
                 let property = local.name();
@@ -500,7 +523,9 @@ impl<'a> ModuleRunnerTransform<'a> {
                     create_compute_property_access(SPAN, object, &property, ctx)
                 }
             } else {
-                let ModuleExportName::IdentifierReference(ident) = local else { unreachable!() };
+                let ModuleExportName::IdentifierReference(ident) = local else {
+                    unreachable!()
+                };
                 Expression::Identifier(ArenaBox::new_in(ident, ctx))
             };
             Self::create_export(span, expr, exported.name().into(), ctx)
@@ -531,7 +556,12 @@ impl<'a> ModuleRunnerTransform<'a> {
         export: ArenaBox<'a, ExportAllDeclaration<'a>>,
         ctx: &mut TraverseCtx<'a>,
     ) {
-        let ExportAllDeclaration { span, source, exported, .. } = export.unbox();
+        let ExportAllDeclaration {
+            span,
+            source,
+            exported,
+            ..
+        } = export.unbox();
         self.deps.insert(source.value.to_string());
         let binding = self.generate_import_binding(ctx);
         let pattern = binding.create_binding_pattern(ctx);
@@ -594,7 +624,9 @@ impl<'a> ModuleRunnerTransform<'a> {
         export: ArenaBox<'a, ExportDefaultDeclaration<'a>>,
         ctx: &mut TraverseCtx<'a>,
     ) {
-        let ExportDefaultDeclaration { span, declaration, .. } = export.unbox();
+        let ExportDefaultDeclaration {
+            span, declaration, ..
+        } = export.unbox();
         let expr = match declaration {
             ExportDefaultDeclarationKind::FunctionDeclaration(mut func) => {
                 if let Some(id) = &func.id {
@@ -654,7 +686,12 @@ impl<'a> ModuleRunnerTransform<'a> {
         let elements = ArenaVec::from_iter_in(
             specifiers.into_iter().map(|specifier| match specifier {
                 ImportDeclarationSpecifier::ImportSpecifier(specifier) => {
-                    let ImportSpecifier { span, local, imported, .. } = specifier.unbox();
+                    let ImportSpecifier {
+                        span,
+                        local,
+                        imported,
+                        ..
+                    } = specifier.unbox();
                     self.insert_import_binding(span, binding, local, imported.name(), ctx)
                 }
                 ImportDeclarationSpecifier::ImportDefaultSpecifier(specifier) => {
@@ -685,7 +722,9 @@ impl<'a> ModuleRunnerTransform<'a> {
         key: Str<'a>,
         ctx: &mut TraverseCtx<'a>,
     ) -> ArrayExpressionElement<'a> {
-        let BindingIdentifier { name, symbol_id, .. } = ident;
+        let BindingIdentifier {
+            name, symbol_id, ..
+        } = ident;
 
         let scopes = ctx.scoping_mut();
         scopes.remove_binding(scopes.root_scope_id(), name);
@@ -693,7 +732,8 @@ impl<'a> ModuleRunnerTransform<'a> {
         let symbol_id = symbol_id.get().unwrap();
         // Do not need to insert if there no identifiers that point to this symbol
         if !ctx.scoping().symbol_is_unused(symbol_id) {
-            self.import_bindings.insert(symbol_id, (binding.clone(), Some(key)));
+            self.import_bindings
+                .insert(symbol_id, (binding.clone(), Some(key)));
         }
 
         ArrayExpressionElement::new_string_literal(span, key, None, ctx)
@@ -956,7 +996,10 @@ mod test {
         let allocator = Allocator::default();
         let ret = Parser::new(&allocator, source_text, source_type).parse();
         let mut program = ret.program;
-        let mut scoping = SemanticBuilder::new().build(&program).semantic.into_scoping();
+        let mut scoping = SemanticBuilder::new()
+            .build(&program)
+            .semantic
+            .into_scoping();
         if is_jsx {
             let mut options = TransformOptions::default();
             options.jsx.runtime = JsxRuntime::Classic;
@@ -979,7 +1022,11 @@ mod test {
             .build(&program)
             .code;
 
-        Ok(TransformReturn { code, deps, dynamic_deps })
+        Ok(TransformReturn {
+            code,
+            deps,
+            dynamic_deps,
+        })
     }
 
     fn format_expected_code(source_text: &str) -> String {
@@ -1021,8 +1068,11 @@ mod test {
     #[track_caller]
     fn test_same_and_deps(source_text: &str, expected: &str, deps: &[&str], dynamic_deps: &[&str]) {
         let expected = format_expected_code(expected);
-        let TransformReturn { code, deps: result_deps, dynamic_deps: result_dynamic_deps } =
-            transform(source_text, false).unwrap();
+        let TransformReturn {
+            code,
+            deps: result_deps,
+            dynamic_deps: result_dynamic_deps,
+        } = transform(source_text, false).unwrap();
         if code != expected {
             print_diff_in_terminal(&expected, &code);
             panic!("Expected code does not match the result");
@@ -1349,7 +1399,10 @@ __vite_ssr_import_0__.default.resolve('server.js');",
 
     #[test]
     fn import_meta() {
-        test_same("console.log(import.meta.url)", "console.log(__vite_ssr_import_meta__.url);");
+        test_same(
+            "console.log(import.meta.url)",
+            "console.log(__vite_ssr_import_meta__.url);",
+        );
     }
 
     #[test]
@@ -1705,7 +1758,10 @@ function g() {
 
     #[test]
     fn empty_array_pattern() {
-        test_same("const [, LHS, RHS] = inMatch;", "const [, LHS, RHS] = inMatch;");
+        test_same(
+            "const [, LHS, RHS] = inMatch;",
+            "const [, LHS, RHS] = inMatch;",
+        );
     }
 
     #[test]

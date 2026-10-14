@@ -44,7 +44,11 @@ pub struct NullLiteralRaw<'b>(pub &'b NullLiteral);
 impl ESTree for NullLiteralRaw<'_> {
     fn serialize<S: Serializer>(&self, serializer: S) {
         #[expect(clippy::collection_is_never_read)] // Clippy is wrong!
-        let raw = if self.0.span.is_unspanned() { None } else { Some(JsonSafeString("null")) };
+        let raw = if self.0.span.is_unspanned() {
+            None
+        } else {
+            Some(JsonSafeString("null"))
+        };
         raw.serialize(serializer);
     }
 }
@@ -263,7 +267,10 @@ impl TemplateElementValue<'_, '_> {
         let mut state = serializer.serialize_struct();
         state.serialize_field("raw", &value.raw);
 
-        let cooked = value.cooked.as_ref().map(|cooked| LoneSurrogatesString(cooked.as_str()));
+        let cooked = value
+            .cooked
+            .as_ref()
+            .map(|cooked| LoneSurrogatesString(cooked.as_str()));
         state.serialize_field("cooked", &cooked);
 
         state.end();

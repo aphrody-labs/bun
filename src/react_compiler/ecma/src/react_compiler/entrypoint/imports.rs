@@ -85,7 +85,8 @@ impl<'a> ProgramContext<'a> {
         // avoids name conflicts with any binding in the file. This matches
         // Babel's generateUid() which checks all scopes.
         for symbol_id in scope.symbols() {
-            self.known_referenced_names.insert(scope.symbol_ident(symbol_id));
+            self.known_referenced_names
+                .insert(scope.symbol_ident(symbol_id));
         }
     }
 
@@ -155,8 +156,13 @@ impl<'a> ProgramContext<'a> {
     /// Register the memo cache import (the `c` function from the compiler runtime) under
     /// the local name reserved by [`Self::reserve_memo_cache_name`].
     pub fn add_memo_cache_import(&mut self) {
-        let name = self.memo_cache_name.expect("memo cache name reserved in compile_program");
-        let binding = NonLocalImportSpecifier { name, imported: Ident::from("c") };
+        let name = self
+            .memo_cache_name
+            .expect("memo cache name reserved in compile_program");
+        let binding = NonLocalImportSpecifier {
+            name,
+            imported: Ident::from("c"),
+        };
         self.imports
             .entry(self.react_runtime_module.to_string())
             .or_default()
@@ -186,7 +192,10 @@ impl<'a> ProgramContext<'a> {
             imported: Ident::from_str_in(specifier, &self.allocator),
         };
 
-        self.imports.entry(module.to_string()).or_default().insert(specifier.to_string(), binding);
+        self.imports
+            .entry(module.to_string())
+            .or_default()
+            .insert(specifier.to_string(), binding);
 
         binding
     }
@@ -242,7 +251,11 @@ pub fn validate_restricted_imports(
         }
     }
 
-    if diagnostics.is_empty() { None } else { Some(diagnostics) }
+    if diagnostics.is_empty() {
+        None
+    } else {
+        Some(diagnostics)
+    }
 }
 
 /// Whether the program already imports the `c` memo-cache helper from `module_name`
@@ -280,7 +293,9 @@ fn is_hook_name(name: &str) -> bool {
         && bytes[0] == b'u'
         && bytes[1] == b's'
         && bytes[2] == b'e'
-        && bytes.get(3).is_some_and(|c| c.is_ascii_uppercase() || c.is_ascii_digit())
+        && bytes
+            .get(3)
+            .is_some_and(|c| c.is_ascii_uppercase() || c.is_ascii_digit())
 }
 
 /// Get the runtime module name based on the compiler target.

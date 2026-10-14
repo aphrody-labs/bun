@@ -9,28 +9,45 @@ use oxc_span::SourceType;
 use crate::tester::{default_options, test_options};
 
 fn ascii() -> CodegenOptions {
-    CodegenOptions { ascii_only: true, ..default_options() }
+    CodegenOptions {
+        ascii_only: true,
+        ..default_options()
+    }
 }
 
 fn ascii_min() -> CodegenOptions {
-    CodegenOptions { ascii_only: true, minify: true, ..CodegenOptions::default() }
+    CodegenOptions {
+        ascii_only: true,
+        minify: true,
+        ..CodegenOptions::default()
+    }
 }
 
 #[track_caller]
 fn test(source: &str, expected: &str) {
-    assert!(expected.is_ascii(), "expected output must itself be ASCII: {expected:?}");
+    assert!(
+        expected.is_ascii(),
+        "expected output must itself be ASCII: {expected:?}"
+    );
     test_options(source, expected, ascii());
 }
 
 #[track_caller]
 fn test_minify(source: &str, expected: &str) {
-    assert!(expected.is_ascii(), "expected output must itself be ASCII: {expected:?}");
+    assert!(
+        expected.is_ascii(),
+        "expected output must itself be ASCII: {expected:?}"
+    );
     test_options(source, expected, ascii_min());
 }
 
 #[test]
 fn off_by_default() {
-    test_options("let café = 'naïve';", "let café = \"naïve\";\n", default_options());
+    test_options(
+        "let café = 'naïve';",
+        "let café = \"naïve\";\n",
+        default_options(),
+    );
 }
 
 #[test]
@@ -43,7 +60,10 @@ fn string_literals() {
     test("let x = '\\u00E9';", "let x = \"\\u00E9\";\n");
     test("let x = '\u{2028}';", "let x = \"\\u2028\";\n");
     // `</script` handling is preserved inside the same literal.
-    test("let x = 'a</script>é';", "let x = \"a<\\/script>\\u00E9\";\n");
+    test(
+        "let x = 'a</script>é';",
+        "let x = \"a<\\/script>\\u00E9\";\n",
+    );
     // Directives keep their raw text, with non-ASCII characters escaped in place.
     test_minify(
         "'use strict'; 'caf\\é'; let x = 'é';",
@@ -62,14 +82,23 @@ fn lone_surrogates_and_replacement_characters() {
         // A three-byte character sharing U+FFFD's lead byte is not a surrogate marker.
         (r"\uD800\uFEFF\uFFFF😀", r"\ud800\uFEFF\uFFFF\u{1F600}"),
     ] {
-        test(&format!("let x = '{value}';"), &format!("let x = \"{escaped}\";\n"));
-        test_minify(&format!("let x = '{value}';"), &format!("let x=`{escaped}`;"));
+        test(
+            &format!("let x = '{value}';"),
+            &format!("let x = \"{escaped}\";\n"),
+        );
+        test_minify(
+            &format!("let x = '{value}';"),
+            &format!("let x=`{escaped}`;"),
+        );
     }
 }
 
 #[test]
 fn identifiers() {
-    test("let café = 1; café++;", "let caf\\u00E9 = 1;\ncaf\\u00E9++;\n");
+    test(
+        "let café = 1; café++;",
+        "let caf\\u00E9 = 1;\ncaf\\u00E9++;\n",
+    );
     // Above the BMP an identifier escape must be a code point escape, not a surrogate pair.
     test("let 𠮷 = 1;", "let \\u{20BB7} = 1;\n");
     test(
@@ -104,7 +133,9 @@ fn renamed_destructuring_assignment() {
             let semantic = SemanticBuilder::new().build(&parsed.program);
             assert!(semantic.diagnostics.is_empty());
             let mut scoping = semantic.semantic.into_scoping();
-            let symbol_id = scoping.get_binding(scoping.root_scope_id(), "ñame".into()).unwrap();
+            let symbol_id = scoping
+                .get_binding(scoping.root_scope_id(), "ñame".into())
+                .unwrap();
             scoping.set_symbol_name(symbol_id, name.into());
             let code = Codegen::new()
                 .with_options(CodegenOptions { minify, ..ascii() })
@@ -129,10 +160,22 @@ fn renamed_destructuring_assignment() {
 fn minified_identifier_boundaries() {
     for (source, expected) in [
         ("for (𐀀 of xs) {}", r"for(\u{10000} of xs){}"),
-        ("𐀀 in obj; 𐀀 instanceof C;", r"\u{10000} in obj;\u{10000} instanceof C;"),
-        ("𐀀 as T; 𐀀 satisfies T;", r"\u{10000} as T;\u{10000} satisfies T;"),
-        ("import { 𐀀 as x } from 'm';", r#"import{\u{10000} as x}from"m";"#),
-        ("export { x as 𐀀 } from 'm';", r#"export{x as \u{10000}}from"m";"#),
+        (
+            "𐀀 in obj; 𐀀 instanceof C;",
+            r"\u{10000} in obj;\u{10000} instanceof C;",
+        ),
+        (
+            "𐀀 as T; 𐀀 satisfies T;",
+            r"\u{10000} as T;\u{10000} satisfies T;",
+        ),
+        (
+            "import { 𐀀 as x } from 'm';",
+            r#"import{\u{10000} as x}from"m";"#,
+        ),
+        (
+            "export { x as 𐀀 } from 'm';",
+            r#"export{x as \u{10000}}from"m";"#,
+        ),
         // Punctuation must end the escaped-identifier boundary state.
         ("𐀀; f(𐀀); class A {}", r"\u{10000};f(\u{10000});class A{}"),
     ] {
@@ -142,15 +185,27 @@ fn minified_identifier_boundaries() {
 
 #[test]
 fn typescript() {
-    test("let x: import('m').Тип;", "let x: import(\"m\").\\u0422\\u0438\\u043F;\n");
+    test(
+        "let x: import('m').Тип;",
+        "let x: import(\"m\").\\u0422\\u0438\\u043F;\n",
+    );
     test("let x: A.Б;", "let x: A.\\u0411;\n");
-    test("let x: import('m').А.Б;", "let x: import(\"m\").\\u0410.\\u0411;\n");
+    test(
+        "let x: import('m').А.Б;",
+        "let x: import(\"m\").\\u0410.\\u0411;\n",
+    );
     test(
         "interface I { [ключ: string]: number }",
         "interface I {\n\t[\\u043A\\u043B\\u044E\\u0447: string]: number;\n}\n",
     );
-    test("type T = `préfixe-${string}`;", "type T = `pr\\u00E9fixe-${string}`;\n");
-    test("enum E { [`clé`] = 1 }", "enum E {\n\t[`cl\\u00E9`] = 1\n}\n");
+    test(
+        "type T = `préfixe-${string}`;",
+        "type T = `pr\\u00E9fixe-${string}`;\n",
+    );
+    test(
+        "enum E { [`clé`] = 1 }",
+        "enum E {\n\t[`cl\\u00E9`] = 1\n}\n",
+    );
 }
 
 #[test]
@@ -167,7 +222,10 @@ fn regular_expressions() {
 
 #[test]
 fn template_literals() {
-    test("let x = `café ${y} naïve`;", "let x = `caf\\u00E9 ${y} na\\u00EFve`;\n");
+    test(
+        "let x = `café ${y} naïve`;",
+        "let x = `caf\\u00E9 ${y} na\\u00EFve`;\n",
+    );
     // NonEscapeCharacter: `\é` cooks to `é`; the backslash is consumed so the cooked value is kept.
     test("let x = `caf\\é`;", "let x = `caf\\u00E9`;\n");
     // LineContinuation with LS: still a LineContinuation (cooks to nothing), spelled with LF so
@@ -177,17 +235,35 @@ fn template_literals() {
     test("let x = `\\0\\\u{2029}1`;", "let x = `\\0\\\n1`;\n");
     test("let x = `a\\\\é`;", "let x = `a\\\\\\u00E9`;\n");
     // Exercise both the ASCII chunk before a Unicode escape and the final suffix.
-    test("let x = `</script>é</script>`;", "let x = `<\\/script>\\u00E9<\\/script>`;\n");
-    test_minify("let x = `</script>é</script>`;", "let x=`<\\/script>\\u00E9<\\/script>`;");
+    test(
+        "let x = `</script>é</script>`;",
+        "let x = `<\\/script>\\u00E9<\\/script>`;\n",
+    );
+    test_minify(
+        "let x = `</script>é</script>`;",
+        "let x=`<\\/script>\\u00E9<\\/script>`;",
+    );
 }
 
 #[test]
 fn tagged_template_is_not_escaped() {
     // Asserted separately because the expected output is intentionally not ASCII.
-    test_options("let x = tag`café ${`naïve`}`;", "let x = tag`café ${`na\\u00EFve`}`;\n", ascii());
+    test_options(
+        "let x = tag`café ${`naïve`}`;",
+        "let x = tag`café ${`na\\u00EFve`}`;\n",
+        ascii(),
+    );
     let source = "tag`é${tag`ü${`ñ`}ö`}ø${`á`}å`; `é`;";
-    test_options(source, "tag`é${tag`ü${`\\u00F1`}ö`}ø${`\\u00E1`}å`;\n`\\u00E9`;\n", ascii());
-    test_options(source, "tag`é${tag`ü${`\\u00F1`}ö`}ø${`\\u00E1`}å`;`\\u00E9`;", ascii_min());
+    test_options(
+        source,
+        "tag`é${tag`ü${`\\u00F1`}ö`}ø${`\\u00E1`}å`;\n`\\u00E9`;\n",
+        ascii(),
+    );
+    test_options(
+        source,
+        "tag`é${tag`ü${`\\u00F1`}ö`}ø${`\\u00E1`}å`;`\\u00E9`;",
+        ascii_min(),
+    );
 }
 
 #[test]

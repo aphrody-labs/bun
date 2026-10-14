@@ -55,7 +55,10 @@ impl<'s> Cursor<'s> {
     }
 
     pub fn segment(&self, line_content_end: u32) -> Segment {
-        Segment::new(Span::new(self.offset().min(line_content_end), line_content_end), self.partial)
+        Segment::new(
+            Span::new(self.offset().min(line_content_end), line_content_end),
+            self.partial,
+        )
     }
 
     /// Columns of whitespace available at the cursor (without consuming).

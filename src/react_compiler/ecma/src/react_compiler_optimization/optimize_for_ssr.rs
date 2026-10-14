@@ -63,7 +63,11 @@ pub fn optimize_for_ssr<'a>(func: &mut HirFunction<'a>, env: &Environment<'a>) {
                     }
                 }
                 InstructionValue::MethodCall { property, args, .. }
-                | InstructionValue::CallExpression { callee: property, args, .. } => {
+                | InstructionValue::CallExpression {
+                    callee: property,
+                    args,
+                    ..
+                } => {
                     // Determine callee based on instruction kind
                     let callee_id = property.identifier;
                     let hook_kind = get_hook_kind(env, callee_id);
@@ -155,15 +159,22 @@ pub fn optimize_for_ssr<'a>(func: &mut HirFunction<'a>, env: &Environment<'a>) {
         for &instr_id in &block.instructions {
             let instr = &mut func.instructions[instr_id.index()];
             match &instr.value {
-                InstructionValue::FunctionExpression { lowered_func, span, .. } => {
+                InstructionValue::FunctionExpression {
+                    lowered_func, span, ..
+                } => {
                     let inner_func = &env.functions[lowered_func.func];
                     if has_known_non_render_call(inner_func, env) {
                         let span = *span;
-                        instr.value =
-                            InstructionValue::Primitive { value: PrimitiveValue::Undefined, span };
+                        instr.value = InstructionValue::Primitive {
+                            value: PrimitiveValue::Undefined,
+                            span,
+                        };
                     }
                 }
-                InstructionValue::JsxExpression { tag: JsxTag::Builtin(builtin), .. } => {
+                InstructionValue::JsxExpression {
+                    tag: JsxTag::Builtin(builtin),
+                    ..
+                } => {
                     // Only optimize non-custom-element builtin tags
                     if !builtin.name.contains('-') {
                         // Retain only props that are not known event handlers and not "ref"
@@ -177,7 +188,11 @@ pub fn optimize_for_ssr<'a>(func: &mut HirFunction<'a>, env: &Environment<'a>) {
                         }
                     }
                 }
-                InstructionValue::Destructure { value, lvalue, span } => {
+                InstructionValue::Destructure {
+                    value,
+                    lvalue,
+                    span,
+                } => {
                     let value_id = env.identifiers[value.identifier].id;
                     if inlined_state.contains_key(&value_id) {
                         // Invariant: destructuring pattern must be ArrayPattern with at least one Identifier item
@@ -188,7 +203,10 @@ pub fn optimize_for_ssr<'a>(func: &mut HirFunction<'a>, env: &Environment<'a>) {
                             let span = *span;
                             let kind = lvalue.kind;
                             let store = InstructionValue::StoreLocal {
-                                lvalue: LValue { place: *first_place, kind },
+                                lvalue: LValue {
+                                    place: *first_place,
+                                    kind,
+                                },
                                 value: *value,
                                 span,
                             };
@@ -196,8 +214,18 @@ pub fn optimize_for_ssr<'a>(func: &mut HirFunction<'a>, env: &Environment<'a>) {
                         }
                     }
                 }
-                InstructionValue::MethodCall { property, args, span, .. }
-                | InstructionValue::CallExpression { callee: property, args, span, .. } => {
+                InstructionValue::MethodCall {
+                    property,
+                    args,
+                    span,
+                    ..
+                }
+                | InstructionValue::CallExpression {
+                    callee: property,
+                    args,
+                    span,
+                    ..
+                } => {
                     let callee_id = property.identifier;
                     let hook_kind = get_hook_kind(env, callee_id);
                     match hook_kind {
@@ -225,7 +253,10 @@ pub fn optimize_for_ssr<'a>(func: &mut HirFunction<'a>, env: &Environment<'a>) {
                             if let Some(replacement) = inlined_state.get(&lvalue_id) {
                                 instr.value = match replacement {
                                     InlinedStateReplacement::LoadLocal { place, span } => {
-                                        InstructionValue::LoadLocal { place: *place, span: *span }
+                                        InstructionValue::LoadLocal {
+                                            place: *place,
+                                            span: *span,
+                                        }
                                     }
                                     InlinedStateReplacement::CallExpression {
                                         callee,
@@ -257,7 +288,11 @@ enum InlinedStateReplacement {
     /// Replace with `LoadLocal { place }` — used for useState and useReducer(reducer, initialArg)
     LoadLocal { place: Place, span: Option<Span> },
     /// Replace with `CallExpression { callee, args: [arg] }` — used for useReducer(reducer, initialArg, init)
-    CallExpression { callee: Place, arg: Place, span: Option<Span> },
+    CallExpression {
+        callee: Place,
+        arg: Place,
+        span: Option<Span>,
+    },
 }
 
 /// Returns true if the function body contains a call to setState or startTransition.
@@ -294,5 +329,8 @@ fn is_known_event_handler(prop: &str) -> bool {
 
 /// Get the hook kind for an identifier, if its type represents a hook.
 fn get_hook_kind(env: &Environment, identifier_id: IdentifierId) -> Option<HookKind> {
-    env.get_hook_kind_for_id(identifier_id).ok().flatten().cloned()
+    env.get_hook_kind_for_id(identifier_id)
+        .ok()
+        .flatten()
+        .cloned()
 }

@@ -14,7 +14,10 @@ pub struct JSDocFinder<'a> {
 
 impl<'a> JSDocFinder<'a> {
     pub fn new(attached: FxHashMap<u32, Vec<JSDoc<'a>>>, not_attached: Vec<JSDoc<'a>>) -> Self {
-        Self { attached, not_attached }
+        Self {
+            attached,
+            not_attached,
+        }
     }
 
     pub fn get_one_by_node<'b>(
@@ -47,7 +50,10 @@ impl<'a> JSDocFinder<'a> {
     }
 
     pub fn iter_all<'b>(&'b self) -> impl Iterator<Item = &'b JSDoc<'a>> + 'b {
-        self.attached.values().flatten().chain(self.not_attached.iter())
+        self.attached
+            .values()
+            .flatten()
+            .chain(self.not_attached.iter())
     }
 }
 
@@ -71,7 +77,10 @@ mod test {
     ) -> Semantic<'a> {
         let source_type = source_type.unwrap_or_default();
         let ret = Parser::new(allocator, source_text, source_type).parse();
-        SemanticBuilder::new().with_build_nodes(true).build(allocator.alloc(ret.program)).semantic
+        SemanticBuilder::new()
+            .with_build_nodes(true)
+            .build(allocator.alloc(ret.program))
+            .semantic
     }
 
     fn get_jsdocs<'a>(
@@ -83,7 +92,10 @@ mod test {
         let semantic = build_semantic(allocator, source_text, source_type);
         let start = u32::try_from(source_text.find(symbol).unwrap_or(0)).unwrap();
         let span = Span::sized(start, u32::try_from(symbol.len()).unwrap());
-        semantic.jsdoc().get_all_by_span(span).map(<[JSDoc]>::to_vec)
+        semantic
+            .jsdoc()
+            .get_all_by_span(span)
+            .map(<[JSDoc]>::to_vec)
     }
 
     fn test_jsdoc_found(source_text: &str, symbol: &str, source_type: Option<SourceType>) {
@@ -108,8 +120,14 @@ mod test {
             ("function f1() {}", "function f1() {}"),
             ("// test", "function f2() {}"),
             ("/* test */function f3() {}", "function f3() {}"),
-            ("/** for 4a */ ; function f4a() {} function f4b() {}", "function f4b() {}"),
-            ("function f4a() {} /** for 4b */ ; function f4b() {} ", "function f4a() {}"),
+            (
+                "/** for 4a */ ; function f4a() {} function f4b() {}",
+                "function f4b() {}",
+            ),
+            (
+                "function f4a() {} /** for 4b */ ; function f4b() {} ",
+                "function f4a() {}",
+            ),
             ("function f5() {} /** test */", "function f5() {}"),
             (
                 "/** for o */
@@ -198,13 +216,22 @@ mod test {
             ("/** test */ (() => {})", "(() => {})"),
             ("/** test */ let v1 = 1", "let v1 = 1"),
             ("let v2a = 1, /** for v2b */ v2b = 2", "v2b = 2"),
-            ("/** for v3a */ const v3a = 1, v3b = 2;", "const v3a = 1, v3b = 2;"),
+            (
+                "/** for v3a */ const v3a = 1, v3b = 2;",
+                "const v3a = 1, v3b = 2;",
+            ),
             ("/** test */ export const e1 = 1;", "export const e1 = 1;"),
-            ("/** test */ export { x } from \"m\";", "export { x } from \"m\";"),
+            (
+                "/** test */ export { x } from \"m\";",
+                "export { x } from \"m\";",
+            ),
             ("/** test */ export default {};", "export default {};"),
             ("/** test */ import 'i1'", "import 'i1'"),
             ("/** test */ import I from 'i2'", "import I from 'i2'"),
-            ("/** test */ import { I } from 'i3'", "import { I } from 'i3'"),
+            (
+                "/** test */ import { I } from 'i3'",
+                "import { I } from 'i3'",
+            ),
         ];
         for (source_text, target) in source_texts {
             test_jsdoc_found(source_text, target, None);
@@ -471,7 +498,11 @@ line2
         let (type_part, name_part, comment_part) = tag.type_name_comment();
         let (type_part, name_part) = (type_part.unwrap(), name_part.unwrap());
         assert_eq!(
-            (type_part.parsed(), name_part.parsed(), comment_part.parsed()),
+            (
+                type_part.parsed(),
+                name_part.parsed(),
+                comment_part.parsed()
+            ),
             ("Object", "User", "- a User account".to_string())
         );
 
@@ -480,8 +511,16 @@ line2
         let (type_part, name_part, comment_part) = tag.type_name_comment();
         let (type_part, name_part) = (type_part.unwrap(), name_part.unwrap());
         assert_eq!(
-            (type_part.parsed(), name_part.parsed(), comment_part.parsed()),
-            ("string", "displayName", "- the name used to show the user".to_string())
+            (
+                type_part.parsed(),
+                name_part.parsed(),
+                comment_part.parsed()
+            ),
+            (
+                "string",
+                "displayName",
+                "- the name used to show the user".to_string()
+            )
         );
 
         let tag = tags.next().unwrap();
@@ -489,7 +528,11 @@ line2
         let (type_part, name_part, comment_part) = tag.type_name_comment();
         let (type_part, name_part) = (type_part.unwrap(), name_part.unwrap());
         assert_eq!(
-            (type_part.parsed(), name_part.parsed(), comment_part.parsed()),
+            (
+                type_part.parsed(),
+                name_part.parsed(),
+                comment_part.parsed()
+            ),
             ("number", "id", "- a unique id".to_string())
         );
     }
@@ -530,7 +573,11 @@ line2
         let (type_part, name_part, comment_part) = tag.type_name_comment();
         let (type_part, name_part) = (type_part.unwrap(), name_part.unwrap());
         assert_eq!(
-            (type_part.parsed(), name_part.parsed(), comment_part.parsed()),
+            (
+                type_part.parsed(),
+                name_part.parsed(),
+                comment_part.parsed()
+            ),
             ("*", "data", ": table data".to_string())
         );
 
@@ -539,8 +586,16 @@ line2
         let (type_part, name_part, comment_part) = tag.type_name_comment();
         let (type_part, name_part) = (type_part.unwrap(), name_part.unwrap());
         assert_eq!(
-            (type_part.parsed(), name_part.parsed(), comment_part.parsed()),
-            ("string", "childrenColumnName", ": 指定树形结构的列名".to_string())
+            (
+                type_part.parsed(),
+                name_part.parsed(),
+                comment_part.parsed()
+            ),
+            (
+                "string",
+                "childrenColumnName",
+                ": 指定树形结构的列名".to_string()
+            )
         );
 
         let tag = tags.next().unwrap();
@@ -548,8 +603,16 @@ line2
         let (type_part, name_part, comment_part) = tag.type_name_comment();
         let (type_part, name_part) = (type_part.unwrap(), name_part.unwrap());
         assert_eq!(
-            (type_part.parsed(), name_part.parsed(), comment_part.parsed()),
-            ("Set<Key>", "expandedKeys", ": 展开的行对应的keys".to_string())
+            (
+                type_part.parsed(),
+                name_part.parsed(),
+                comment_part.parsed()
+            ),
+            (
+                "Set<Key>",
+                "expandedKeys",
+                ": 展开的行对应的keys".to_string()
+            )
         );
 
         let tag = tags.next().unwrap();
@@ -557,14 +620,25 @@ line2
         let (type_part, name_part, comment_part) = tag.type_name_comment();
         let (type_part, name_part) = (type_part.unwrap(), name_part.unwrap());
         assert_eq!(
-            (type_part.parsed(), name_part.parsed(), comment_part.parsed()),
-            ("GetRowKey<T>", "getRowKey", ": 获取当前rowKey的方法".to_string())
+            (
+                type_part.parsed(),
+                name_part.parsed(),
+                comment_part.parsed()
+            ),
+            (
+                "GetRowKey<T>",
+                "getRowKey",
+                ": 获取当前rowKey的方法".to_string()
+            )
         );
 
         let tag = tags.next().unwrap();
         assert_eq!(tag.kind.parsed(), "returns");
         let (type_part, comment_part) = tag.type_comment();
-        assert_eq!((type_part, comment_part.parsed()), (None, "flattened data".to_string()));
+        assert_eq!(
+            (type_part, comment_part.parsed()),
+            (None, "flattened data".to_string())
+        );
     }
 
     #[test]
@@ -703,7 +777,10 @@ line2
              */",
                 ("c3a\nc3b", " c3a\n             * c3b\n             "),
             ),
-            ("/**@k5 c5 w/ {@inline}!*/", ("c5 w/ {@inline}!", " c5 w/ {@inline}!")),
+            (
+                "/**@k5 c5 w/ {@inline}!*/",
+                ("c5 w/ {@inline}!", " c5 w/ {@inline}!"),
+            ),
             (" /**@k6 */ ", ("", " ")),
             (" /**@*/ ", ("", "")),
             (" /**@@*/ ", ("", "")),
@@ -715,7 +792,10 @@ line2
 
             let comment = jsdocs.next().unwrap().tags().first().unwrap().comment();
             assert_eq!(
-                (comment.parsed().as_str(), comment.span.source_text(source_text)),
+                (
+                    comment.parsed().as_str(),
+                    comment.span.source_text(source_text)
+                ),
                 parsed_comment_part
             );
         }
@@ -773,20 +853,32 @@ c5 */",
                 Some(("t5", "{t5}")),
                 ("c5", "\nc5 "),
             ),
-            ("/** @k6 {t6} - c6 */", Some(("t6", "{t6}")), ("- c6", " - c6 ")),
+            (
+                "/** @k6 {t6} - c6 */",
+                Some(("t6", "{t6}")),
+                ("- c6", " - c6 "),
+            ),
         ] {
             let allocator = Allocator::default();
             let semantic = build_semantic_default(&allocator, source_text);
             let mut jsdocs = semantic.jsdoc().iter_all();
 
-            let (type_part, comment_part) =
-                jsdocs.next().unwrap().tags().first().unwrap().type_comment();
+            let (type_part, comment_part) = jsdocs
+                .next()
+                .unwrap()
+                .tags()
+                .first()
+                .unwrap()
+                .type_comment();
             assert_eq!(
                 type_part.map(|t| (t.parsed(), t.span.source_text(source_text))),
                 parsed_type_part
             );
             assert_eq!(
-                (comment_part.parsed().as_str(), comment_part.span.source_text(source_text)),
+                (
+                    comment_part.parsed().as_str(),
+                    comment_part.span.source_text(source_text)
+                ),
                 parsed_comment_part
             );
         }
@@ -797,8 +889,18 @@ c5 */",
         for (source_text, parsed_type_part, parsed_type_name_part, parsed_comment_part) in [
             ("/** @k */", None, None, ("", " ")),
             ("/** @k\n\n*/", None, None, ("", "\n\n")),
-            ("/** @k1 {t1} n1 c1 */", Some(("t1", "{t1}")), Some(("n1", "n1")), ("c1", " c1 ")),
-            ("/** @k2 {t2} n2*/", Some(("t2", "{t2}")), Some(("n2", "n2")), ("", "")),
+            (
+                "/** @k1 {t1} n1 c1 */",
+                Some(("t1", "{t1}")),
+                Some(("n1", "n1")),
+                ("c1", " c1 "),
+            ),
+            (
+                "/** @k2 {t2} n2*/",
+                Some(("t2", "{t2}")),
+                Some(("n2", "n2")),
+                ("", ""),
+            ),
             ("/** @k3 n3 c3 */", None, Some(("n3", "n3")), ("c3", " c3 ")),
             (
                 "/** @k4 n4 c4
@@ -836,8 +938,18 @@ c7 */",
             ),
             ("/** @k8 {t8} */", Some(("t8", "{t8}")), None, ("", " ")),
             ("/** @k9 n9 */", None, Some(("n9", "n9")), ("", " ")),
-            ("/** @property n[].n10 */", None, Some(("n[].n10", "n[].n10")), ("", " ")),
-            ("/** @property n.n11 */", None, Some(("n.n11", "n.n11")), ("", " ")),
+            (
+                "/** @property n[].n10 */",
+                None,
+                Some(("n[].n10", "n[].n10")),
+                ("", " "),
+            ),
+            (
+                "/** @property n.n11 */",
+                None,
+                Some(("n.n11", "n.n11")),
+                ("", " "),
+            ),
             (
                 r#"/** @property [cfg.n12="default value"] */"#,
                 None,
@@ -856,13 +968,26 @@ c7 */",
                 Some(("n14", "[n14]")),
                 ("- opt", " - opt "),
             ),
-            ("/** @param {t15}a */", Some(("t15", "{t15}")), Some(("a", "a")), ("", " ")),
-            ("/** @type{t16}n16*/", Some(("t16", "{t16}")), Some(("n16", "n16")), ("", "")),
+            (
+                "/** @param {t15}a */",
+                Some(("t15", "{t15}")),
+                Some(("a", "a")),
+                ("", " "),
+            ),
+            (
+                "/** @type{t16}n16*/",
+                Some(("t16", "{t16}")),
+                Some(("n16", "n16")),
+                ("", ""),
+            ),
             (
                 "/** @param entries Entries in the {@link SearchableMap} */",
                 None,
                 Some(("entries", "entries")),
-                ("Entries in the {@link SearchableMap}", " Entries in the {@link SearchableMap} "),
+                (
+                    "Entries in the {@link SearchableMap}",
+                    " Entries in the {@link SearchableMap} ",
+                ),
             ),
             (
                 "/** @param bar - With braces {} */",
@@ -881,8 +1006,13 @@ c7 */",
             let semantic = build_semantic_default(&allocator, source_text);
             let mut jsdocs = semantic.jsdoc().iter_all();
 
-            let (type_part, type_name_part, comment_part) =
-                jsdocs.next().unwrap().tags().first().unwrap().type_name_comment();
+            let (type_part, type_name_part, comment_part) = jsdocs
+                .next()
+                .unwrap()
+                .tags()
+                .first()
+                .unwrap()
+                .type_name_comment();
             assert_eq!(
                 type_part.map(|t| (t.parsed(), t.span.source_text(source_text))),
                 parsed_type_part,
@@ -894,7 +1024,10 @@ c7 */",
                 "type_name_part failed to assert in {source_text}"
             );
             assert_eq!(
-                (comment_part.parsed().as_str(), comment_part.span.source_text(source_text)),
+                (
+                    comment_part.parsed().as_str(),
+                    comment_part.span.source_text(source_text)
+                ),
                 parsed_comment_part,
                 "comment_part failed to assert in {source_text}"
             );

@@ -256,7 +256,9 @@ impl Runtime {
         #[cfg(not(all(target_pointer_width = "64", target_endian = "little")))]
         let allocator_pool = AllocatorPool::new(thread_count);
 
-        let resolver = options.cross_module.then(|| Self::get_resolver(options.tsconfig));
+        let resolver = options
+            .cross_module
+            .then(|| Self::get_resolver(options.tsconfig));
 
         Self {
             allocator_pool,
@@ -311,7 +313,10 @@ impl Runtime {
             ]
         });
         Resolver::new(ResolveOptions {
-            extensions: VALID_EXTENSIONS.iter().map(|ext| format!(".{ext}")).collect(),
+            extensions: VALID_EXTENSIONS
+                .iter()
+                .map(|ext| format!(".{ext}"))
+                .collect(),
             main_fields: vec!["module".into(), "main".into()],
             condition_names: vec!["module".into(), "import".into()],
             extension_alias,
@@ -327,8 +332,9 @@ impl Runtime {
         allocator: &'a Allocator,
     ) -> Option<Result<(SourceType, &'a str), Error>> {
         let source_type = SourceType::from_path(path);
-        let not_supported_yet =
-            source_type.as_ref().is_err_and(|_| !LINT_PARTIAL_LOADER_EXTENSIONS.contains(&ext));
+        let not_supported_yet = source_type
+            .as_ref()
+            .is_err_and(|_| !LINT_PARTIAL_LOADER_EXTENSIONS.contains(&ext));
         if not_supported_yet {
             return None;
         }
@@ -525,7 +531,9 @@ impl Runtime {
                         .section_module_records
                         .iter()
                         .filter_map(|resolved_module_record| {
-                            Some(Arc::clone(&resolved_module_record.as_ref().ok()?.module_record))
+                            Some(Arc::clone(
+                                &resolved_module_record.as_ref().ok()?.module_record,
+                            ))
                         })
                         .collect(),
                 );
@@ -540,7 +548,9 @@ impl Runtime {
                         .section_module_records
                         .iter_mut()
                         .filter_map(|record_result| {
-                            Some(take(&mut record_result.as_mut().ok()?.resolved_module_requests))
+                            Some(take(
+                                &mut record_result.as_mut().ok()?.resolved_module_requests,
+                            ))
                         })
                         .collect(),
                 ));
@@ -599,7 +609,13 @@ impl Runtime {
         diff_manager: &Arc<DiffManager>,
         rule_timing_store: Option<&RuleTimingStore>,
     ) {
-        self.run_impl::<TIMINGS>(file_system, paths, tx_error, diff_manager, rule_timing_store);
+        self.run_impl::<TIMINGS>(
+            file_system,
+            paths,
+            tx_error,
+            diff_manager,
+            rule_timing_store,
+        );
     }
 
     fn run_impl<const TIMINGS: bool>(
@@ -621,125 +637,131 @@ impl Runtime {
                 true,
                 Some(tx_error),
                 move |me, mut module_to_lint| {
-                    module_to_lint.content.with_dependent_mut(|allocator_guard, dep| {
-                        // If there are fixes, we will accumulate all of them and write to the file at the end.
-                        // This means we do not write multiple times to the same file if there are multiple sources
-                        // in the same file (for example, multiple scripts in an `.astro` file).
-                        let mut new_source_text = Cow::from(dep.source_text);
+                    module_to_lint
+                        .content
+                        .with_dependent_mut(|allocator_guard, dep| {
+                            // If there are fixes, we will accumulate all of them and write to the file at the end.
+                            // This means we do not write multiple times to the same file if there are multiple sources
+                            // in the same file (for example, multiple scripts in an `.astro` file).
+                            let mut new_source_text = Cow::from(dep.source_text);
 
-                        let path = Path::new(&module_to_lint.path);
+                            let path = Path::new(&module_to_lint.path);
 
-                        assert_eq!(
-                            module_to_lint.section_module_records.len(),
-                            dep.section_contents.len()
-                        );
-
-                        let respect_eslint_disable_directives =
-                            me.linter.respect_eslint_disable_directives();
-                        let context_sub_hosts: Vec<ContextSubHost<'_>> = module_to_lint
-                            .section_module_records
-                            .into_iter()
-                            .zip(dep.section_contents.drain(..))
-                            .filter_map(|(record_result, section)| match record_result {
-                                Ok(module_record) => Some(ContextSubHost::new(
-                                    section.semantic.unwrap(),
-                                    Arc::clone(&module_record),
-                                    section.source.start,
-                                    ContextSubHostOptions {
-                                        framework_options: section.source.framework_options,
-                                        parser_tokens: section.parser_tokens,
-                                        respect_eslint_disable_directives,
-                                        ..Default::default()
-                                    },
-                                )),
-                                Err(messages) => {
-                                    if !messages.is_empty() {
-                                        let diagnostics = DiagnosticService::wrap_diagnostics(
-                                            &me.cwd,
-                                            path,
-                                            dep.source_text,
-                                            messages,
-                                        );
-                                        tx_error.send(diagnostics).unwrap();
-                                    }
-                                    None
-                                }
-                            })
-                            .collect();
-
-                        if context_sub_hosts.is_empty() {
-                            return;
-                        }
-
-                        let (mut messages, disable_directives) =
-                            me.linter.run_with_disable_directives::<TIMINGS>(
-                                path,
-                                context_sub_hosts,
-                                allocator_guard,
-                                me.js_allocator_pool(),
-                                rule_timing_store,
+                            assert_eq!(
+                                module_to_lint.section_module_records.len(),
+                                dep.section_contents.len()
                             );
 
-                        // Store the disable directives for this file
-                        if let Some(disable_directives) = disable_directives {
-                            me.disable_directives_map
-                                .lock()
-                                .expect("disable_directives_map mutex poisoned")
-                                .insert(path.to_path_buf(), disable_directives);
-                        }
+                            let respect_eslint_disable_directives =
+                                me.linter.respect_eslint_disable_directives();
+                            let context_sub_hosts: Vec<ContextSubHost<'_>> = module_to_lint
+                                .section_module_records
+                                .into_iter()
+                                .zip(dep.section_contents.drain(..))
+                                .filter_map(|(record_result, section)| match record_result {
+                                    Ok(module_record) => Some(ContextSubHost::new(
+                                        section.semantic.unwrap(),
+                                        Arc::clone(&module_record),
+                                        section.source.start,
+                                        ContextSubHostOptions {
+                                            framework_options: section.source.framework_options,
+                                            parser_tokens: section.parser_tokens,
+                                            respect_eslint_disable_directives,
+                                            ..Default::default()
+                                        },
+                                    )),
+                                    Err(messages) => {
+                                        if !messages.is_empty() {
+                                            let diagnostics = DiagnosticService::wrap_diagnostics(
+                                                &me.cwd,
+                                                path,
+                                                dep.source_text,
+                                                messages,
+                                            );
+                                            tx_error.send(diagnostics).unwrap();
+                                        }
+                                        None
+                                    }
+                                })
+                                .collect();
 
-                        if me.linter.options().fix.is_some() {
-                            let fix_result = Fixer::new(
-                                dep.source_text,
-                                messages,
-                                SourceType::from_path(path).ok().map(|st| {
-                                    if st.is_javascript() { st.with_jsx(true) } else { st }
-                                }),
-                            )
-                            .fix();
-                            if fix_result.fixed {
-                                // write to file, replacing only the changed part
-                                let start = 0;
-                                let end = start + dep.source_text.len();
-                                new_source_text
-                                    .to_mut()
-                                    .replace_range(start..end, &fix_result.fixed_code);
+                            if context_sub_hosts.is_empty() {
+                                return;
                             }
 
-                            messages = fix_result.messages;
-                        }
+                            let (mut messages, disable_directives) =
+                                me.linter.run_with_disable_directives::<TIMINGS>(
+                                    path,
+                                    context_sub_hosts,
+                                    allocator_guard,
+                                    me.js_allocator_pool(),
+                                    rule_timing_store,
+                                );
 
-                        if !diff_manager.skip() {
-                            messages = diff_manager.collect_file(path, &self.cwd, messages);
-                        }
+                            // Store the disable directives for this file
+                            if let Some(disable_directives) = disable_directives {
+                                me.disable_directives_map
+                                    .lock()
+                                    .expect("disable_directives_map mutex poisoned")
+                                    .insert(path.to_path_buf(), disable_directives);
+                            }
 
-                        if !messages.is_empty() {
-                            let errors = messages.into_iter().map(Into::into).collect();
-                            let diagnostics = DiagnosticService::wrap_diagnostics(
-                                &me.cwd,
-                                path,
-                                dep.source_text,
-                                errors,
-                            );
-                            tx_error.send(diagnostics).unwrap();
-                        }
+                            if me.linter.options().fix.is_some() {
+                                let fix_result = Fixer::new(
+                                    dep.source_text,
+                                    messages,
+                                    SourceType::from_path(path).ok().map(|st| {
+                                        if st.is_javascript() {
+                                            st.with_jsx(true)
+                                        } else {
+                                            st
+                                        }
+                                    }),
+                                )
+                                .fix();
+                                if fix_result.fixed {
+                                    // write to file, replacing only the changed part
+                                    let start = 0;
+                                    let end = start + dep.source_text.len();
+                                    new_source_text
+                                        .to_mut()
+                                        .replace_range(start..end, &fix_result.fixed_code);
+                                }
 
-                        // If the new source text is owned, that means it was modified,
-                        // so we write the new source text to the file.
-                        if let Cow::Owned(new_source_text) = &new_source_text
-                            && let Err(error) = file_system.write_file(path, new_source_text)
-                        {
-                            tx_error
-                                .send(vec![
-                                    OxcDiagnostic::error(format!(
-                                        "Failed to write file {} with error \"{error}\"",
-                                        path.display()
-                                    ))
-                                    .into(),
-                                ])
-                                .unwrap();
-                        }
-                    });
+                                messages = fix_result.messages;
+                            }
+
+                            if !diff_manager.skip() {
+                                messages = diff_manager.collect_file(path, &self.cwd, messages);
+                            }
+
+                            if !messages.is_empty() {
+                                let errors = messages.into_iter().map(Into::into).collect();
+                                let diagnostics = DiagnosticService::wrap_diagnostics(
+                                    &me.cwd,
+                                    path,
+                                    dep.source_text,
+                                    errors,
+                                );
+                                tx_error.send(diagnostics).unwrap();
+                            }
+
+                            // If the new source text is owned, that means it was modified,
+                            // so we write the new source text to the file.
+                            if let Cow::Owned(new_source_text) = &new_source_text
+                                && let Err(error) = file_system.write_file(path, new_source_text)
+                            {
+                                tx_error
+                                    .send(vec![
+                                        OxcDiagnostic::error(format!(
+                                            "Failed to write file {} with error \"{error}\"",
+                                            path.display()
+                                        ))
+                                        .into(),
+                                    ])
+                                    .unwrap();
+                            }
+                        });
                 },
             );
         });
@@ -769,7 +791,10 @@ impl Runtime {
                 |me, mut module_to_lint| {
                     module_to_lint.content.with_dependent_mut(
                         |allocator_guard,
-                         ModuleContentDependent { source_text: _, section_contents }| {
+                         ModuleContentDependent {
+                             source_text: _,
+                             section_contents,
+                         }| {
                             assert_eq!(
                                 module_to_lint.section_module_records.len(),
                                 section_contents.len()
@@ -857,7 +882,10 @@ impl Runtime {
                 |me, mut module_to_lint| {
                     module_to_lint.content.with_dependent_mut(
                         |_allocator_guard,
-                         ModuleContentDependent { source_text, section_contents }| {
+                         ModuleContentDependent {
+                             source_text,
+                             section_contents,
+                         }| {
                             assert_eq!(
                                 module_to_lint.section_module_records.len(),
                                 section_contents.len()
@@ -912,51 +940,56 @@ impl Runtime {
                 check_syntax_errors,
                 Some(tx_error),
                 |me, mut module| {
-                    module.content.with_dependent_mut(|allocator_guard, ModuleContentDependent {
-                        source_text: _,
-                        section_contents,
-                    }| {
-                        assert_eq!(module.section_module_records.len(), section_contents.len());
+                    module.content.with_dependent_mut(
+                        |allocator_guard,
+                         ModuleContentDependent {
+                             source_text: _,
+                             section_contents,
+                         }| {
+                            assert_eq!(module.section_module_records.len(), section_contents.len());
 
-                        let respect_eslint_disable_directives =
-                            me.linter.respect_eslint_disable_directives();
-                        let context_sub_hosts: Vec<ContextSubHost<'_>> = module
-                            .section_module_records
-                            .into_iter()
-                            .zip(section_contents.drain(..))
-                            .filter_map(|(record_result, section)| match record_result {
-                                Ok(module_record) => Some(ContextSubHost::new(
-                                    section.semantic.unwrap(),
-                                    Arc::clone(&module_record),
-                                    section.source.start,
-                                    ContextSubHostOptions {
-                                        framework_options: section.source.framework_options,
-                                        parser_tokens: section.parser_tokens,
-                                        respect_eslint_disable_directives,
-                                        ..Default::default()
-                                    },
-                                )),
-                                Err(errors) => {
-                                    if !errors.is_empty() {
-                                        messages.lock().unwrap().extend(
-                                            errors.into_iter().map(|err| {
-                                                Message::new(err, PossibleFixes::None)
-                                            }),
-                                        );
+                            let respect_eslint_disable_directives =
+                                me.linter.respect_eslint_disable_directives();
+                            let context_sub_hosts: Vec<ContextSubHost<'_>> = module
+                                .section_module_records
+                                .into_iter()
+                                .zip(section_contents.drain(..))
+                                .filter_map(|(record_result, section)| match record_result {
+                                    Ok(module_record) => Some(ContextSubHost::new(
+                                        section.semantic.unwrap(),
+                                        Arc::clone(&module_record),
+                                        section.source.start,
+                                        ContextSubHostOptions {
+                                            framework_options: section.source.framework_options,
+                                            parser_tokens: section.parser_tokens,
+                                            respect_eslint_disable_directives,
+                                            ..Default::default()
+                                        },
+                                    )),
+                                    Err(errors) => {
+                                        if !errors.is_empty() {
+                                            messages.lock().unwrap().extend(
+                                                errors.into_iter().map(|err| {
+                                                    Message::new(err, PossibleFixes::None)
+                                                }),
+                                            );
+                                        }
+                                        None
                                     }
-                                    None
-                                }
-                            })
-                            .collect();
+                                })
+                                .collect();
 
-                        if context_sub_hosts.is_empty() {
-                            return;
-                        }
+                            if context_sub_hosts.is_empty() {
+                                return;
+                            }
 
-                        messages.lock().unwrap().extend(
-                            me.linter.run(Path::new(&module.path), context_sub_hosts, allocator_guard),
-                        );
-                    });
+                            messages.lock().unwrap().extend(me.linter.run(
+                                Path::new(&module.path),
+                                context_sub_hosts,
+                                allocator_guard,
+                            ));
+                        },
+                    );
                 },
             );
         });
@@ -974,7 +1007,10 @@ impl Runtime {
         let processed_module = self
             .process_path_to_module(file_system, paths, path, check_syntax_errors, tx_error)
             .unwrap_or_default();
-        ModuleProcessOutput { path: Arc::clone(path), processed_module }
+        ModuleProcessOutput {
+            path: Arc::clone(path),
+            processed_module,
+        }
     }
 
     fn process_path_to_module<'a>(
@@ -1030,11 +1066,17 @@ impl Runtime {
                     Some(&mut section_contents),
                 );
 
-                Ok(ModuleContentDependent { source_text, section_contents })
+                Ok(ModuleContentDependent {
+                    source_text,
+                    section_contents,
+                })
             });
             let module_content = module_content.ok()?;
 
-            Some(ProcessedModule { section_module_records: records, content: Some(module_content) })
+            Some(ProcessedModule {
+                section_module_records: records,
+                content: Some(module_content),
+            })
         } else {
             let allocator = &*allocator_guard;
 
@@ -1060,7 +1102,10 @@ impl Runtime {
                 None,
             );
 
-            Some(ProcessedModule { section_module_records: records, content: None })
+            Some(ProcessedModule {
+                section_module_records: records,
+                content: None,
+            })
         }
     }
 
@@ -1145,7 +1190,11 @@ impl Runtime {
             .parse();
 
         if !ret.diagnostics.is_empty() {
-            return Err(if ret.is_flow_language { vec![] } else { ret.diagnostics.into() });
+            return Err(if ret.is_flow_language {
+                vec![]
+            } else {
+                ret.diagnostics.into()
+            });
         }
 
         let semantic_ret = SemanticBuilder::new_linter()
@@ -1180,6 +1229,13 @@ impl Runtime {
                 })
                 .collect();
         }
-        Ok((ResolvedModuleRecord { module_record, resolved_module_requests }, semantic, tokens))
+        Ok((
+            ResolvedModuleRecord {
+                module_record,
+                resolved_module_requests,
+            },
+            semantic,
+            tokens,
+        ))
     }
 }

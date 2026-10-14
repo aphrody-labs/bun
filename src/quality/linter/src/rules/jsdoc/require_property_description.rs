@@ -203,6 +203,11 @@ fn test() {
         ),
     ];
 
-    Tester::new(RequirePropertyDescription::NAME, RequirePropertyDescription::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        RequirePropertyDescription::NAME,
+        RequirePropertyDescription::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

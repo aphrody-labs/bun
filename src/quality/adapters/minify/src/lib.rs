@@ -102,7 +102,10 @@ fn minify_impl(filename: &str, source_text: &str, options: Option<MinifyOptions>
 
     let mut codegen_options = match &options.codegen {
         // Need to remove all comments.
-        Some(Either::A(false)) => CodegenOptions { minify: false, ..CodegenOptions::minify() },
+        Some(Either::A(false)) => CodegenOptions {
+            minify: false,
+            ..CodegenOptions::minify()
+        },
         None | Some(Either::A(true)) => CodegenOptions::minify(),
         Some(Either::B(o)) => match o.to_codegen_options() {
             Ok(opts) => opts,
@@ -129,8 +132,11 @@ fn minify_impl(filename: &str, source_text: &str, options: Option<MinifyOptions>
         .with_private_member_mappings(class_private_mappings)
         .build(&program);
 
-    let legal_comments =
-        ret.legal_comments.iter().map(|c| c.span.source_text(source_text).to_string()).collect();
+    let legal_comments = ret
+        .legal_comments
+        .iter()
+        .map(|c| c.span.source_text(source_text).to_string())
+        .collect();
 
     MinifyResult {
         code: ret.code,
@@ -163,7 +169,11 @@ impl Task for MinifyTask {
     type Output = MinifyResult;
 
     fn compute(&mut self) -> napi::Result<Self::Output> {
-        Ok(minify_impl(&self.filename, &self.source_text, self.options.take()))
+        Ok(minify_impl(
+            &self.filename,
+            &self.source_text,
+            self.options.take(),
+        ))
     }
 
     fn resolve(&mut self, _: napi::Env, result: Self::Output) -> napi::Result<Self::JsValue> {
@@ -180,5 +190,9 @@ pub fn minify(
     source_text: String,
     options: Option<MinifyOptions>,
 ) -> AsyncTask<MinifyTask> {
-    AsyncTask::new(MinifyTask { filename, source_text, options })
+    AsyncTask::new(MinifyTask {
+        filename,
+        source_text,
+        options,
+    })
 }

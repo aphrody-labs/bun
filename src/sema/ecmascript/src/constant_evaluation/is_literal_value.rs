@@ -51,9 +51,10 @@ impl<'a> IsLiteralValue<'a, '_> for Expression<'a> {
             Self::ParenthesizedExpression(e) => {
                 e.expression.is_literal_value(include_functions, ctx)
             }
-            Self::SequenceExpression(e) => {
-                e.expressions.iter().all(|expr| expr.is_literal_value(include_functions, ctx))
-            }
+            Self::SequenceExpression(e) => e
+                .expressions
+                .iter()
+                .all(|expr| expr.is_literal_value(include_functions, ctx)),
             _ => false,
         }
     }
@@ -67,13 +68,17 @@ impl<'a> IsLiteralValue<'a, '_> for TemplateLiteral<'a> {
 
 impl<'a> IsLiteralValue<'a, '_> for ArrayExpression<'a> {
     fn is_literal_value(&self, include_functions: bool, ctx: &impl GlobalContext<'a>) -> bool {
-        self.elements.iter().all(|element| element.is_literal_value(include_functions, ctx))
+        self.elements
+            .iter()
+            .all(|element| element.is_literal_value(include_functions, ctx))
     }
 }
 
 impl<'a> IsLiteralValue<'a, '_> for ObjectExpression<'a> {
     fn is_literal_value(&self, include_functions: bool, ctx: &impl GlobalContext<'a>) -> bool {
-        self.properties.iter().all(|property| property.is_literal_value(include_functions, ctx))
+        self.properties
+            .iter()
+            .all(|property| property.is_literal_value(include_functions, ctx))
     }
 }
 
@@ -164,9 +169,9 @@ impl<'a> IsLiteralValue<'a, '_> for ArrayExpressionElement<'a> {
             // spread element triggers `Symbol.iterator` call
             Self::SpreadElement(_) => false,
             Self::Elision(_) => true,
-            match_expression!(Self) => {
-                self.to_expression().is_literal_value(include_functions, ctx)
-            }
+            match_expression!(Self) => self
+                .to_expression()
+                .is_literal_value(include_functions, ctx),
         }
     }
 }
@@ -293,7 +298,9 @@ fn can_convert_to_number_transparently<'a>(
         }
         Expression::SequenceExpression(e) => {
             can_convert_to_number_transparently(
-                e.expressions.last().expect("should have at least one element"),
+                e.expressions
+                    .last()
+                    .expect("should have at least one element"),
                 include_functions,
                 ctx,
             ) && e
@@ -342,7 +349,9 @@ fn can_convert_to_string_transparently<'a>(
         }
         Expression::SequenceExpression(e) => {
             can_convert_to_string_transparently(
-                e.expressions.last().expect("should have at least one element"),
+                e.expressions
+                    .last()
+                    .expect("should have at least one element"),
                 include_functions,
                 ctx,
             ) && e

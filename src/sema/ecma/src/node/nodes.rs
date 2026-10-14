@@ -209,7 +209,10 @@ impl<'a> AstNodes<'a> {
         #[cfg(feature = "cfg")] cfg_id: BlockNodeId,
         flags: NodeFlags,
     ) {
-        assert!(self.parent_ids.is_empty(), "Program node must be the first node in the AST.");
+        assert!(
+            self.parent_ids.is_empty(),
+            "Program node must be the first node in the AST."
+        );
         debug_assert!(
             matches!(kind, AstKind::Program(_)),
             "Program node must be of kind `AstKind::Program`"
@@ -326,7 +329,10 @@ pub struct AstNodeIdAncestorsIter<'n> {
 
 impl<'n> AstNodeIdAncestorsIter<'n> {
     fn new(node_id: NodeId, nodes: &'n AstNodes<'_>) -> Self {
-        Self { current_node_id: node_id, parent_ids: nodes.parent_ids.as_slice() }
+        Self {
+            current_node_id: node_id,
+            parent_ids: nodes.parent_ids.as_slice(),
+        }
     }
 }
 

@@ -46,7 +46,10 @@ impl ProblemKind {
 
 fn prefer_import_meta_diagnostic(span: Span, kind: ProblemKind) -> OxcDiagnostic {
     OxcDiagnostic::warn(kind.message())
-        .with_help(format!("Replace this expression with `import.meta.{}`.", kind.property()))
+        .with_help(format!(
+            "Replace this expression with `import.meta.{}`.",
+            kind.property()
+        ))
         .with_label(span)
 }
 
@@ -96,12 +99,15 @@ declare_oxc_lint!(
     pedantic,
     fix,
     version = "1.59.0",
-    short_description = "Prefer `import.meta.{dirname,filename}` over legacy techniques for getting file paths.",
+    short_description =
+        "Prefer `import.meta.{dirname,filename}` over legacy techniques for getting file paths.",
 );
 
 impl Rule for PreferImportMetaProperties {
     fn run<'a>(&self, node: &oxc_semantic::AstNode<'a>, ctx: &LintContext<'a>) {
-        let AstKind::ImportMeta(meta_property) = node.kind() else { return };
+        let AstKind::ImportMeta(meta_property) = node.kind() else {
+            return;
+        };
 
         let member_expression_id = ctx.nodes().parent_id(meta_property.node_id());
         let AstKind::StaticMemberExpression(member_expression) =
@@ -167,11 +173,15 @@ fn is_process_get_builtin_module_call(call: &CallExpression<'_>, modules: &[&str
     if call.optional || call.arguments.len() != 1 || call.arguments[0].is_spread() {
         return false;
     }
-    let Expression::StaticMemberExpression(callee_member) = &call.callee else { return false };
+    let Expression::StaticMemberExpression(callee_member) = &call.callee else {
+        return false;
+    };
     if callee_member.optional {
         return false;
     }
-    let Expression::Identifier(process_ident) = &callee_member.object else { return false };
+    let Expression::Identifier(process_ident) = &callee_member.object else {
+        return false;
+    };
     if process_ident.name != "process" || callee_member.property.name != "getBuiltinModule" {
         return false;
     }
@@ -200,12 +210,17 @@ fn is_url_constructor(new_expression: &NewExpression<'_>, ctx: &LintContext<'_>)
         return false;
     }
 
-    let Expression::Identifier(identifier) = &new_expression.callee else { return false };
+    let Expression::Identifier(identifier) = &new_expression.callee else {
+        return false;
+    };
     if identifier.name != "URL" {
         return false;
     }
 
-    ctx.scoping().get_reference(identifier.reference_id()).symbol_id().is_none()
+    ctx.scoping()
+        .get_reference(identifier.reference_id())
+        .symbol_id()
+        .is_none()
 }
 
 fn is_url_file_url_to_path_call(
@@ -229,7 +244,14 @@ fn is_node_builtin_module_function_call(
         return false;
     }
     let mut visited = FxHashSet::default();
-    check_expression(&node.callee, CheckKind::Property, modules, function_name, ctx, &mut visited)
+    check_expression(
+        &node.callee,
+        CheckKind::Property,
+        modules,
+        function_name,
+        ctx,
+        &mut visited,
+    )
 }
 
 fn check_expression(
@@ -264,7 +286,9 @@ fn check_expression(
         }
         Expression::Identifier(identifier) => {
             let reference = ctx.scoping().get_reference(identifier.reference_id());
-            let Some(symbol_id) = reference.symbol_id() else { return false };
+            let Some(symbol_id) = reference.symbol_id() else {
+                return false;
+            };
             if !visited.insert(symbol_id) {
                 return false;
             }
@@ -333,7 +357,9 @@ fn check_variable_declarator(
         return false;
     }
 
-    let Some(init) = &variable_declarator.init else { return false };
+    let Some(init) = &variable_declarator.init else {
+        return false;
+    };
 
     match &variable_declarator.id {
         BindingPattern::BindingIdentifier(binding_identifier)
@@ -352,7 +378,9 @@ fn check_variable_declarator(
                 if binding_identifier.symbol_id() != symbol_id {
                     continue;
                 }
-                let Some(property_name) = property.key.static_name() else { return false };
+                let Some(property_name) = property.key.static_name() else {
+                    return false;
+                };
                 if !matches!(check_kind, CheckKind::Property) || property_name != function_name {
                     return false;
                 }
@@ -391,16 +419,25 @@ fn iterate_problems_from_filename(
         report_problem(ctx, ctx.nodes().kind(node_id).span(), ProblemKind::Filename);
     }
 
-    let AstKind::VariableDeclarator(parent) = ctx.nodes().kind(parent_id) else { return };
+    let AstKind::VariableDeclarator(parent) = ctx.nodes().kind(parent_id) else {
+        return;
+    };
     if !variable_declaration_kind(parent, ctx).is_const()
-        || parent.init.as_ref().is_none_or(|init| init.span() != node_span)
+        || parent
+            .init
+            .as_ref()
+            .is_none_or(|init| init.span() != node_span)
     {
         return;
     }
 
-    let BindingPattern::BindingIdentifier(binding_identifier) = &parent.id else { return };
-    for reference in
-        ctx.semantic().symbol_references(binding_identifier.symbol_id()).filter(|r| r.is_read())
+    let BindingPattern::BindingIdentifier(binding_identifier) = &parent.id else {
+        return;
+    };
+    for reference in ctx
+        .semantic()
+        .symbol_references(binding_identifier.symbol_id())
+        .filter(|r| r.is_read())
     {
         let reference_parent_id = ctx.nodes().parent_id(reference.node_id());
         let AstKind::CallExpression(parent) = ctx.nodes().kind(reference_parent_id) else {
@@ -584,7 +621,12 @@ fn test() {
             .into(),
     ];
 
-    Tester::new(PreferImportMetaProperties::NAME, PreferImportMetaProperties::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        PreferImportMetaProperties::NAME,
+        PreferImportMetaProperties::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

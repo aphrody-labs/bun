@@ -46,7 +46,10 @@ pub struct MaxStatementsConfig {
 
 impl Default for MaxStatementsConfig {
     fn default() -> Self {
-        Self { max: DEFAULT_MAX_STATEMENTS, ignore_top_level_functions: false }
+        Self {
+            max: DEFAULT_MAX_STATEMENTS,
+            ignore_top_level_functions: false,
+        }
     }
 }
 
@@ -234,7 +237,10 @@ impl Rule for MaxStatements {
             .and_then(Value::as_bool)
             .unwrap_or(false);
 
-        Ok(Self(Box::new(MaxStatementsConfig { max, ignore_top_level_functions })))
+        Ok(Self(Box::new(MaxStatementsConfig {
+            max,
+            ignore_top_level_functions,
+        })))
     }
 
     fn run_once(&self, ctx: &LintContext<'_>) {
@@ -302,7 +308,11 @@ impl<'a> VisitJs<'a> for StatementCounter<'a> {
     fn visit_function(&mut self, func: &Function<'a>, flags: ScopeFlags) {
         self.start_function();
         walk_function(self, func, flags);
-        self.end_function(func.id.as_ref().map(|id| id.name.as_str()), func.span(), false);
+        self.end_function(
+            func.id.as_ref().map(|id| id.name.as_str()),
+            func.span(),
+            false,
+        );
     }
 
     fn visit_arrow_function_expression(&mut self, arrow: &ArrowFunctionExpression<'a>) {
@@ -379,9 +389,18 @@ fn test() {
             "var foo = { thing: function() { var bar = 1; var baz = 2; } }",
             Some(serde_json::json!([2])),
         ),
-        ("var foo = { thing() { var bar = 1; var baz = 2; } }", Some(serde_json::json!([2]))), // { "ecmaVersion": 6 },
-        ("var foo = { ['thing']() { var bar = 1; var baz = 2; } }", Some(serde_json::json!([2]))), // { "ecmaVersion": 6 },
-        ("var foo = { thing: () => { var bar = 1; var baz = 2; } }", Some(serde_json::json!([2]))), // { "ecmaVersion": 6 },
+        (
+            "var foo = { thing() { var bar = 1; var baz = 2; } }",
+            Some(serde_json::json!([2])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "var foo = { ['thing']() { var bar = 1; var baz = 2; } }",
+            Some(serde_json::json!([2])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "var foo = { thing: () => { var bar = 1; var baz = 2; } }",
+            Some(serde_json::json!([2])),
+        ), // { "ecmaVersion": 6 },
         (
             "var foo = { thing: function() { var bar = 1; var baz = 2; } }",
             Some(serde_json::json!([{ "max": 2 }])),
@@ -421,7 +440,10 @@ fn test() {
     ];
 
     let fail = vec![
-        ("function foo() { var bar = 1; var baz = 2; var qux = 3; }", Some(serde_json::json!([2]))),
+        (
+            "function foo() { var bar = 1; var baz = 2; var qux = 3; }",
+            Some(serde_json::json!([2])),
+        ),
         (
             "var foo = () => { var bar = 1; var baz = 2; var qux = 3; };",
             Some(serde_json::json!([2])),
@@ -494,8 +516,14 @@ fn test() {
             "var foo = { thing: function() { var bar = 1; var baz = 2; var baz2; } }",
             Some(serde_json::json!([{ "max": 2 }])),
         ),
-        ("function foo() { 1; 2; 3; 4; 5; 6; 7; 8; 9; 10; 11; }", Some(serde_json::json!([{}]))),
-        ("function foo() { 1; }", Some(serde_json::json!([{ "max": 0 }]))),
+        (
+            "function foo() { 1; 2; 3; 4; 5; 6; 7; 8; 9; 10; 11; }",
+            Some(serde_json::json!([{}])),
+        ),
+        (
+            "function foo() { 1; }",
+            Some(serde_json::json!([{ "max": 0 }])),
+        ),
         (
             "function foo() { foo_1; /* foo_ 2 */ class C { static { one; two; three; four; { five; six; seven; eight; } } } foo_3 }",
             Some(serde_json::json!([2])),

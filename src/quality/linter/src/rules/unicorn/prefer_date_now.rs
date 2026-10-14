@@ -16,9 +16,11 @@ fn prefer_date_now(span: Span) -> OxcDiagnostic {
 }
 
 fn prefer_date_now_over_methods(span: Span, bad_method: &str) -> OxcDiagnostic {
-    OxcDiagnostic::warn(format!("Prefer `Date.now()` over `new Date().{bad_method}()`"))
-        .with_help("Change to `Date.now()`.")
-        .with_label(span)
+    OxcDiagnostic::warn(format!(
+        "Prefer `Date.now()` over `new Date().{bad_method}()`"
+    ))
+    .with_help("Change to `Date.now()`.")
+    .with_label(span)
 }
 
 fn prefer_date_now_over_number_date_object(span: Span, kind: &str) -> OxcDiagnostic {
@@ -56,7 +58,8 @@ declare_oxc_lint!(
     pedantic,
     fix,
     version = "0.0.16",
-    short_description = "Prefers use of `Date.now()` over `new Date().getTime()` or `new Date().valueOf()`.",
+    short_description =
+        "Prefers use of `Date.now()` over `new Date().getTime()` or `new Date().valueOf()`.",
 );
 
 impl Rule for PreferDateNow {
@@ -64,11 +67,16 @@ impl Rule for PreferDateNow {
         match node.kind() {
             AstKind::CallExpression(call_expr) => {
                 // `new Date().{getTime,valueOf}()`
-                if let Some(member_expr) =
-                    call_expr.callee.get_inner_expression().as_member_expression()
+                if let Some(member_expr) = call_expr
+                    .callee
+                    .get_inner_expression()
+                    .as_member_expression()
                     && call_expr.arguments.is_empty()
                     && !member_expr.is_computed()
-                    && matches!(member_expr.static_property_name(), Some("getTime" | "valueOf"))
+                    && matches!(
+                        member_expr.static_property_name(),
+                        Some("getTime" | "valueOf")
+                    )
                     && is_new_date(member_expr.object().get_inner_expression())
                 {
                     ctx.diagnostic_with_fix(
@@ -84,8 +92,10 @@ impl Rule for PreferDateNow {
                 if let Expression::Identifier(ident) = &call_expr.callee
                     && matches!(ident.name.as_str(), "Number" | "BigInt")
                     && call_expr.arguments.len() == 1
-                    && let Some(expr) =
-                        call_expr.arguments.first().and_then(Argument::as_expression)
+                    && let Some(expr) = call_expr
+                        .arguments
+                        .first()
+                        .and_then(Argument::as_expression)
                     && is_new_date(expr.get_inner_expression())
                 {
                     ctx.diagnostic_with_fix(

@@ -157,7 +157,8 @@ declare_oxc_lint!(
     fix,
     config = ObjectShorthandTupleConfig,
     version = "1.59.0",
-    short_description = "Require or disallow method and property shorthand syntax for object literals.",
+    short_description =
+        "Require or disallow method and property shorthand syntax for object literals.",
 );
 
 impl Rule for ObjectShorthand {
@@ -233,7 +234,10 @@ fn make_function_shorthand<'a>(
                 return fixer.noop();
             };
             let paren_start = property.span.start + paren_start_offset;
-            ctx.source_range(Span::new(paren_start, property_key_span.end + paren_end_offset + 1))
+            ctx.source_range(Span::new(
+                paren_start,
+                property_key_span.end + paren_end_offset + 1,
+            ))
         } else {
             ctx.source_range(property_key_span)
         };
@@ -268,7 +272,9 @@ fn make_function_shorthand<'a>(
                 ));
                 let old_param_text = ctx.source_range(Span::new(
                     func.params.span.start,
-                    func.return_type.as_ref().map_or(func.params.span.end, |p| p.span.end),
+                    func.return_type
+                        .as_ref()
+                        .map_or(func.params.span.end, |p| p.span.end),
                 ));
                 let should_add_parens = if func.r#async {
                     if let Some(first) = func.params.items.first()
@@ -295,8 +301,10 @@ fn make_function_shorthand<'a>(
                 } else {
                     old_param_text.to_string()
                 };
-                let type_param =
-                    func.type_parameters.as_ref().map_or("", |t| ctx.source_range(t.span()));
+                let type_param = func
+                    .type_parameters
+                    .as_ref()
+                    .map_or("", |t| ctx.source_range(t.span()));
                 let ret = format!("{key_prefix}{key_text}{type_param}{new_param_text}{arrow_body}");
                 fixer.replace(property.span, ret)
             }
@@ -359,9 +367,10 @@ fn check_longform_methods<'a>(
         return;
     }
 
-    if let (Some(pattern), Some(static_name)) =
-        (rule.methods_ignore_pattern.as_ref(), property.key.static_name())
-        && pattern.is_match(static_name.as_ref())
+    if let (Some(pattern), Some(static_name)) = (
+        rule.methods_ignore_pattern.as_ref(),
+        property.key.static_name(),
+    ) && pattern.is_match(static_name.as_ref())
     {
         return;
     }
@@ -434,17 +443,22 @@ fn check_consistency<'a>(
     obj_expr: &ObjectExpression<'a>,
     check_redundancy: bool,
 ) {
-    let properties = obj_expr.properties.iter().filter_map(|property_kind| match property_kind {
-        ObjectPropertyKind::ObjectProperty(property) => {
-            can_property_have_shorthand(property).then_some(property)
-        }
-        ObjectPropertyKind::SpreadProperty(_) => None,
-    });
+    let properties = obj_expr
+        .properties
+        .iter()
+        .filter_map(|property_kind| match property_kind {
+            ObjectPropertyKind::ObjectProperty(property) => {
+                can_property_have_shorthand(property).then_some(property)
+            }
+            ObjectPropertyKind::SpreadProperty(_) => None,
+        });
 
     let properties_count = properties.clone().count();
     if properties_count > 0 {
-        let shorthand_properties_count =
-            properties.clone().filter(|p| is_shorthand_property(p)).count();
+        let shorthand_properties_count = properties
+            .clone()
+            .filter(|p| is_shorthand_property(p))
+            .count();
 
         if shorthand_properties_count != properties_count {
             if shorthand_properties_count > 0 {
@@ -498,7 +512,10 @@ struct ArrowFunctionLexicalIdentifierVisitor<'a, 'c> {
 
 impl<'a, 'c> ArrowFunctionLexicalIdentifierVisitor<'a, 'c> {
     fn new(ctx: &'c LintContext<'a>) -> Self {
-        Self { ctx, has_lexical_identifier: false }
+        Self {
+            ctx,
+            has_lexical_identifier: false,
+        }
     }
 }
 
@@ -531,9 +548,17 @@ impl<'a> Visit<'a> for ArrowFunctionLexicalIdentifierVisitor<'a, '_> {
     }
 
     fn visit_identifier_reference(&mut self, it: &oxc_ast::ast::IdentifierReference<'a>) {
-        if self.ctx.scoping().root_unresolved_references().get("arguments").is_some_and(
-            |references| references.iter().any(|&reference_id| reference_id == it.reference_id()),
-        ) {
+        if self
+            .ctx
+            .scoping()
+            .root_unresolved_references()
+            .get("arguments")
+            .is_some_and(|references| {
+                references
+                    .iter()
+                    .any(|&reference_id| reference_id == it.reference_id())
+            })
+        {
             self.has_lexical_identifier = true;
         }
     }
@@ -580,7 +605,10 @@ fn is_property_value_anonymous_function(property: &ObjectProperty) -> bool {
 }
 
 fn is_property_key_string_literal(property: &ObjectProperty) -> bool {
-    matches!(property.key.as_expression(), Some(Expression::StringLiteral(_)))
+    matches!(
+        property.key.as_expression(),
+        Some(Expression::StringLiteral(_))
+    )
 }
 
 fn is_shorthand_property(property: &ObjectProperty) -> bool {
@@ -654,17 +682,35 @@ fn test() {
         ("doSomething({set y(z) {}})", None),
         ("doSomething({get y() {}, set y(z) {}})", None),
         ("var x = {[y]: y}", Some(serde_json::json!(["properties"]))),
-        ("var x = {['y']: 'y'}", Some(serde_json::json!(["properties"]))),
-        ("var x = {['y']: y}", Some(serde_json::json!(["properties"]))),
+        (
+            "var x = {['y']: 'y'}",
+            Some(serde_json::json!(["properties"])),
+        ),
+        (
+            "var x = {['y']: y}",
+            Some(serde_json::json!(["properties"])),
+        ),
         ("var x = {[y]() {}}", Some(serde_json::json!(["methods"]))),
-        ("var x = {[y]: function x() {}}", Some(serde_json::json!(["methods"]))),
+        (
+            "var x = {[y]: function x() {}}",
+            Some(serde_json::json!(["methods"])),
+        ),
         ("var x = {[y]: y}", Some(serde_json::json!(["methods"]))),
         ("var x = {y() {}}", Some(serde_json::json!(["methods"]))),
-        ("var x = {x, y() {}, a:b}", Some(serde_json::json!(["methods"]))),
+        (
+            "var x = {x, y() {}, a:b}",
+            Some(serde_json::json!(["methods"])),
+        ),
         ("var x = {y}", Some(serde_json::json!(["properties"]))),
         ("var x = {y: {b}}", Some(serde_json::json!(["properties"]))),
-        ("var x = {a: n, c: d, f: g}", Some(serde_json::json!(["never"]))),
-        ("var x = {a: function(){}, b: {c: d}}", Some(serde_json::json!(["never"]))),
+        (
+            "var x = {a: n, c: d, f: g}",
+            Some(serde_json::json!(["never"])),
+        ),
+        (
+            "var x = {a: function(){}, b: {c: d}}",
+            Some(serde_json::json!(["never"])),
+        ),
         (
             "var x = {ConstructorFunction: function(){}, a: b}",
             Some(serde_json::json!(["always", { "ignoreConstructors": true }])),
@@ -713,7 +759,10 @@ fn test() {
             "var x = {notConstructorFunction(){}, b: c}",
             Some(serde_json::json!(["methods", { "ignoreConstructors": true }])),
         ),
-        ("var x = {ConstructorFunction: function(){}, a: b}", Some(serde_json::json!(["never"]))),
+        (
+            "var x = {ConstructorFunction: function(){}, a: b}",
+            Some(serde_json::json!(["never"])),
+        ),
         (
             "var x = {notConstructorFunction: function(){}, b: c}",
             Some(serde_json::json!(["never"])),
@@ -772,31 +821,88 @@ fn test() {
             "var x = {['a']: function(){}}",
             Some(serde_json::json!(["methods", { "avoidQuotes": true }])),
         ),
-        ("var x = {'y': y}", Some(serde_json::json!(["properties", { "avoidQuotes": true }]))),
+        (
+            "var x = {'y': y}",
+            Some(serde_json::json!(["properties", { "avoidQuotes": true }])),
+        ),
         ("let {a, b} = o;", Some(serde_json::json!(["never"]))),
-        ("var x = {foo: foo, bar: bar, ...baz}", Some(serde_json::json!(["never"]))), // { "ecmaVersion": 2018 },
-        ("var x = {a: a, b: b}", Some(serde_json::json!(["consistent"]))),
-        ("var x = {a: b, c: d, f: g}", Some(serde_json::json!(["consistent"]))),
+        (
+            "var x = {foo: foo, bar: bar, ...baz}",
+            Some(serde_json::json!(["never"])),
+        ), // { "ecmaVersion": 2018 },
+        (
+            "var x = {a: a, b: b}",
+            Some(serde_json::json!(["consistent"])),
+        ),
+        (
+            "var x = {a: b, c: d, f: g}",
+            Some(serde_json::json!(["consistent"])),
+        ),
         ("var x = {a, b}", Some(serde_json::json!(["consistent"]))),
-        ("var x = {a, b, get test() { return 1; }}", Some(serde_json::json!(["consistent"]))),
-        ("var x = {...bar}", Some(serde_json::json!(["consistent-as-needed"]))), // { "ecmaVersion": 2018 },
-        ("var x = {foo, bar, ...baz}", Some(serde_json::json!(["consistent"]))), // { "ecmaVersion": 2018 },
-        ("var x = {bar: baz, ...qux}", Some(serde_json::json!(["consistent"]))), // { "ecmaVersion": 2018 },
-        ("var x = {...foo, bar: bar, baz: baz}", Some(serde_json::json!(["consistent"]))), // { "ecmaVersion": 2018 },
-        ("var x = {a, b}", Some(serde_json::json!(["consistent-as-needed"]))),
+        (
+            "var x = {a, b, get test() { return 1; }}",
+            Some(serde_json::json!(["consistent"])),
+        ),
+        (
+            "var x = {...bar}",
+            Some(serde_json::json!(["consistent-as-needed"])),
+        ), // { "ecmaVersion": 2018 },
+        (
+            "var x = {foo, bar, ...baz}",
+            Some(serde_json::json!(["consistent"])),
+        ), // { "ecmaVersion": 2018 },
+        (
+            "var x = {bar: baz, ...qux}",
+            Some(serde_json::json!(["consistent"])),
+        ), // { "ecmaVersion": 2018 },
+        (
+            "var x = {...foo, bar: bar, baz: baz}",
+            Some(serde_json::json!(["consistent"])),
+        ), // { "ecmaVersion": 2018 },
+        (
+            "var x = {a, b}",
+            Some(serde_json::json!(["consistent-as-needed"])),
+        ),
         (
             "var x = {a, b, get test(){return 1;}}",
             Some(serde_json::json!(["consistent-as-needed"])),
         ),
-        ("var x = {0: 'foo'}", Some(serde_json::json!(["consistent-as-needed"]))),
-        ("var x = {'key': 'baz'}", Some(serde_json::json!(["consistent-as-needed"]))),
-        ("var x = {foo: 'foo'}", Some(serde_json::json!(["consistent-as-needed"]))),
-        ("var x = {[foo]: foo}", Some(serde_json::json!(["consistent-as-needed"]))),
-        ("var x = {foo: function foo() {}}", Some(serde_json::json!(["consistent-as-needed"]))),
-        ("var x = {[foo]: 'foo'}", Some(serde_json::json!(["consistent-as-needed"]))),
-        ("var x = {bar, ...baz}", Some(serde_json::json!(["consistent-as-needed"]))), // { "ecmaVersion": 2018 },
-        ("var x = {bar: baz, ...qux}", Some(serde_json::json!(["consistent-as-needed"]))), // { "ecmaVersion": 2018 },
-        ("var x = {...foo, bar, baz}", Some(serde_json::json!(["consistent-as-needed"]))), // { "ecmaVersion": 2018 },
+        (
+            "var x = {0: 'foo'}",
+            Some(serde_json::json!(["consistent-as-needed"])),
+        ),
+        (
+            "var x = {'key': 'baz'}",
+            Some(serde_json::json!(["consistent-as-needed"])),
+        ),
+        (
+            "var x = {foo: 'foo'}",
+            Some(serde_json::json!(["consistent-as-needed"])),
+        ),
+        (
+            "var x = {[foo]: foo}",
+            Some(serde_json::json!(["consistent-as-needed"])),
+        ),
+        (
+            "var x = {foo: function foo() {}}",
+            Some(serde_json::json!(["consistent-as-needed"])),
+        ),
+        (
+            "var x = {[foo]: 'foo'}",
+            Some(serde_json::json!(["consistent-as-needed"])),
+        ),
+        (
+            "var x = {bar, ...baz}",
+            Some(serde_json::json!(["consistent-as-needed"])),
+        ), // { "ecmaVersion": 2018 },
+        (
+            "var x = {bar: baz, ...qux}",
+            Some(serde_json::json!(["consistent-as-needed"])),
+        ), // { "ecmaVersion": 2018 },
+        (
+            "var x = {...foo, bar, baz}",
+            Some(serde_json::json!(["consistent-as-needed"])),
+        ), // { "ecmaVersion": 2018 },
         (
             "({ x: () => foo })",
             Some(serde_json::json!(["always", { "avoidExplicitReturnArrows": false }])),
@@ -972,11 +1078,20 @@ fn test() {
         ),
         ("({ __proto__: function() {} })", None),
         ("({ '__proto__': function() {} })", None),
-        ("({ __proto__: __proto__ })", Some(serde_json::json!(["properties"]))),
-        ("({ '__proto__': __proto__ })", Some(serde_json::json!(["properties"]))),
+        (
+            "({ __proto__: __proto__ })",
+            Some(serde_json::json!(["properties"])),
+        ),
+        (
+            "({ '__proto__': __proto__ })",
+            Some(serde_json::json!(["properties"])),
+        ),
         ("({ __proto__() {} })", Some(serde_json::json!(["never"]))),
         ("({ __proto__ })", Some(serde_json::json!(["never"]))),
-        ("({ '__proto__'() {} })", Some(serde_json::json!(["always", { "avoidQuotes": true }]))),
+        (
+            "({ '__proto__'() {} })",
+            Some(serde_json::json!(["always", { "avoidQuotes": true }])),
+        ),
         (
             "({ __proto__: () => {} })",
             Some(serde_json::json!([
@@ -1089,32 +1204,86 @@ fn test() {
         ("({ foo: function *() {} })", None),
         ("({ [  foo   ]: function() {} })", None),
         ("({ [  foo]: function() {} })", None),
-        ("var x = {y: function() {}}", Some(serde_json::json!(["methods"]))),
-        ("var x = {x, y() {}, z: function() {}}", Some(serde_json::json!(["methods"]))),
-        ("var x = {ConstructorFunction: function(){}, a: b}", Some(serde_json::json!(["methods"]))),
-        ("var x = {[y]: function() {}}", Some(serde_json::json!(["methods"]))),
+        (
+            "var x = {y: function() {}}",
+            Some(serde_json::json!(["methods"])),
+        ),
+        (
+            "var x = {x, y() {}, z: function() {}}",
+            Some(serde_json::json!(["methods"])),
+        ),
+        (
+            "var x = {ConstructorFunction: function(){}, a: b}",
+            Some(serde_json::json!(["methods"])),
+        ),
+        (
+            "var x = {[y]: function() {}}",
+            Some(serde_json::json!(["methods"])),
+        ),
         ("({ [(foo)]: function() { return; } })", None),
         ("({ [(foo)]: async function() { return; } })", None), // { "ecmaVersion": 8 },
         ("({ [(((((((foo)))))))]: function() { return; } })", None),
-        ("({ [(foo)]() { return; } })", Some(serde_json::json!(["never"]))),
-        ("({ async [(foo)]() { return; } })", Some(serde_json::json!(["never"]))), // { "ecmaVersion": 8 },
-        ("({ *[((foo))]() { return; } })", Some(serde_json::json!(["never"]))),
-        ("({ [(((((((foo)))))))]() { return; } })", Some(serde_json::json!(["never"]))),
-        ("({ 'foo bar'() { return; } })", Some(serde_json::json!(["never"]))),
-        ("({ *foo() { return; } })", Some(serde_json::json!(["never"]))),
-        ("({ async foo() { return; } })", Some(serde_json::json!(["never"]))), // { "ecmaVersion": 8 },
-        ("({ *['foo bar']() { return; } })", Some(serde_json::json!(["never"]))), // { "ecmaVersion": 8 },
+        (
+            "({ [(foo)]() { return; } })",
+            Some(serde_json::json!(["never"])),
+        ),
+        (
+            "({ async [(foo)]() { return; } })",
+            Some(serde_json::json!(["never"])),
+        ), // { "ecmaVersion": 8 },
+        (
+            "({ *[((foo))]() { return; } })",
+            Some(serde_json::json!(["never"])),
+        ),
+        (
+            "({ [(((((((foo)))))))]() { return; } })",
+            Some(serde_json::json!(["never"])),
+        ),
+        (
+            "({ 'foo bar'() { return; } })",
+            Some(serde_json::json!(["never"])),
+        ),
+        (
+            "({ *foo() { return; } })",
+            Some(serde_json::json!(["never"])),
+        ),
+        (
+            "({ async foo() { return; } })",
+            Some(serde_json::json!(["never"])),
+        ), // { "ecmaVersion": 8 },
+        (
+            "({ *['foo bar']() { return; } })",
+            Some(serde_json::json!(["never"])),
+        ), // { "ecmaVersion": 8 },
         ("var x = {x: x}", Some(serde_json::json!(["properties"]))),
-        ("var x = {a, b, c(){}, x: x}", Some(serde_json::json!(["properties"]))),
+        (
+            "var x = {a, b, c(){}, x: x}",
+            Some(serde_json::json!(["properties"])),
+        ),
         ("var x = {y() {}}", Some(serde_json::json!(["never"]))),
         ("var x = {*y() {}}", Some(serde_json::json!(["never"]))),
         ("var x = {y}", Some(serde_json::json!(["never"]))),
-        ("var x = {y, a: b, *x(){}}", Some(serde_json::json!(["never"]))),
+        (
+            "var x = {y, a: b, *x(){}}",
+            Some(serde_json::json!(["never"])),
+        ),
         ("var x = {y: {x}}", Some(serde_json::json!(["never"]))),
-        ("var x = {ConstructorFunction(){}, a: b}", Some(serde_json::json!(["never"]))),
-        ("var x = {notConstructorFunction(){}, b: c}", Some(serde_json::json!(["never"]))),
-        ("var x = {foo: foo, bar: baz, ...qux}", Some(serde_json::json!(["always"]))), // { "ecmaVersion": 2018 },
-        ("var x = {foo, bar: baz, ...qux}", Some(serde_json::json!(["never"]))), // { "ecmaVersion": 2018 },
+        (
+            "var x = {ConstructorFunction(){}, a: b}",
+            Some(serde_json::json!(["never"])),
+        ),
+        (
+            "var x = {notConstructorFunction(){}, b: c}",
+            Some(serde_json::json!(["never"])),
+        ),
+        (
+            "var x = {foo: foo, bar: baz, ...qux}",
+            Some(serde_json::json!(["always"])),
+        ), // { "ecmaVersion": 2018 },
+        (
+            "var x = {foo, bar: baz, ...qux}",
+            Some(serde_json::json!(["never"])),
+        ), // { "ecmaVersion": 2018 },
         (
             "var x = {y: function() {}}",
             Some(serde_json::json!(["methods", { "ignoreConstructors": true }])),
@@ -1163,7 +1332,10 @@ fn test() {
             "var x = { foo: foo }",
             Some(serde_json::json!(["always", { "methodsIgnorePattern": "^foo$" }])),
         ),
-        ("var x = {a: a}", Some(serde_json::json!(["always", { "avoidQuotes": true }]))),
+        (
+            "var x = {a: a}",
+            Some(serde_json::json!(["always", { "avoidQuotes": true }])),
+        ),
         (
             "var x = {a: function(){}}",
             Some(serde_json::json!(["methods", { "avoidQuotes": true }])),
@@ -1172,16 +1344,43 @@ fn test() {
             "var x = {[a]: function(){}}",
             Some(serde_json::json!(["methods", { "avoidQuotes": true }])),
         ),
-        ("var x = {'a'(){}}", Some(serde_json::json!(["always", { "avoidQuotes": true }]))),
-        ("var x = {['a'](){}}", Some(serde_json::json!(["methods", { "avoidQuotes": true }]))),
+        (
+            "var x = {'a'(){}}",
+            Some(serde_json::json!(["always", { "avoidQuotes": true }])),
+        ),
+        (
+            "var x = {['a'](){}}",
+            Some(serde_json::json!(["methods", { "avoidQuotes": true }])),
+        ),
         ("var x = {a: a, b}", Some(serde_json::json!(["consistent"]))),
-        ("var x = {b, c: d, f: g}", Some(serde_json::json!(["consistent"]))),
-        ("var x = {foo, bar: baz, ...qux}", Some(serde_json::json!(["consistent"]))), // { "ecmaVersion": 2018 },
-        ("var x = {a: a, b: b}", Some(serde_json::json!(["consistent-as-needed"]))),
-        ("var x = {a, z: function z(){}}", Some(serde_json::json!(["consistent-as-needed"]))),
-        ("var x = {foo: function() {}}", Some(serde_json::json!(["consistent-as-needed"]))),
-        ("var x = {a: a, b: b, ...baz}", Some(serde_json::json!(["consistent-as-needed"]))), // { "ecmaVersion": 2018 },
-        ("var x = {foo, bar: bar, ...qux}", Some(serde_json::json!(["consistent-as-needed"]))), // { "ecmaVersion": 2018 },
+        (
+            "var x = {b, c: d, f: g}",
+            Some(serde_json::json!(["consistent"])),
+        ),
+        (
+            "var x = {foo, bar: baz, ...qux}",
+            Some(serde_json::json!(["consistent"])),
+        ), // { "ecmaVersion": 2018 },
+        (
+            "var x = {a: a, b: b}",
+            Some(serde_json::json!(["consistent-as-needed"])),
+        ),
+        (
+            "var x = {a, z: function z(){}}",
+            Some(serde_json::json!(["consistent-as-needed"])),
+        ),
+        (
+            "var x = {foo: function() {}}",
+            Some(serde_json::json!(["consistent-as-needed"])),
+        ),
+        (
+            "var x = {a: a, b: b, ...baz}",
+            Some(serde_json::json!(["consistent-as-needed"])),
+        ), // { "ecmaVersion": 2018 },
+        (
+            "var x = {foo, bar: bar, ...qux}",
+            Some(serde_json::json!(["consistent-as-needed"])),
+        ), // { "ecmaVersion": 2018 },
         (
             "({ x: (arg => { return; }) })",
             Some(serde_json::json!(["always", { "avoidExplicitReturnArrows": true }])),
@@ -1323,7 +1522,10 @@ fn test() {
             "({ a: (async (arg, arg2) => { return foo; }) })",
             Some(serde_json::json!(["always", { "avoidExplicitReturnArrows": true }])),
         ),
-        ("({ a: async function*() {} })", Some(serde_json::json!(["always"]))),
+        (
+            "({ a: async function*() {} })",
+            Some(serde_json::json!(["always"])),
+        ),
         ("({ async* a() {} })", Some(serde_json::json!(["never"]))),
         (
             "
@@ -1427,7 +1629,11 @@ fn test() {
         ("var x = {x: x}", "var x = {x}", None),
         ("var x = {'x': x}", "var x = {x}", None),
         ("var x = {y: y, x: x}", "var x = {y, x}", None),
-        ("var x = {y: z, x: x, a: b}", "var x = {y: z, x, a: b}", None),
+        (
+            "var x = {y: z, x: x, a: b}",
+            "var x = {y: z, x, a: b}",
+            None,
+        ),
         (
             "var x = {y: z,
              x: x,
@@ -1523,7 +1729,11 @@ fn test() {
         ),
         ("var x = {y: function() {}}", "var x = {y() {}}", None),
         ("var x = {y: function*() {}}", "var x = {*y() {}}", None),
-        ("var x = {x: y, y: z, a: a}", "var x = {x: y, y: z, a}", None),
+        (
+            "var x = {x: y, y: z, a: a}",
+            "var x = {x: y, y: z, a}",
+            None,
+        ),
         (
             "var x = {ConstructorFunction: function(){}, a: b}",
             "var x = {ConstructorFunction(){}, a: b}",
@@ -1534,23 +1744,71 @@ fn test() {
             "var x = {x: y, y: z, a(){}, b() {}}",
             None,
         ),
-        ("var x = {x: x, y: function() {}}", "var x = {x, y() {}}", None),
+        (
+            "var x = {x: x, y: function() {}}",
+            "var x = {x, y() {}}",
+            None,
+        ),
         ("doSomething({x: x})", "doSomething({x})", None),
         ("doSomething({'x': x})", "doSomething({x})", None),
-        ("doSomething({a: 'a', 'x': x})", "doSomething({a: 'a', x})", None),
-        ("doSomething({y: function() {}})", "doSomething({y() {}})", None),
-        ("doSomething({[y]: function() {}})", "doSomething({[y]() {}})", None),
-        ("doSomething({['y']: function() {}})", "doSomething({['y']() {}})", None),
-        ("({ foo: async function () {} })", "({ async foo () {} })", None),
-        ("({ 'foo': async function() {} })", "({ async 'foo'() {} })", None),
-        ("({ [foo]: async function() {} })", "({ async [foo]() {} })", None),
-        ("({ [foo.bar]: function*() {} })", "({ *[foo.bar]() {} })", None),
+        (
+            "doSomething({a: 'a', 'x': x})",
+            "doSomething({a: 'a', x})",
+            None,
+        ),
+        (
+            "doSomething({y: function() {}})",
+            "doSomething({y() {}})",
+            None,
+        ),
+        (
+            "doSomething({[y]: function() {}})",
+            "doSomething({[y]() {}})",
+            None,
+        ),
+        (
+            "doSomething({['y']: function() {}})",
+            "doSomething({['y']() {}})",
+            None,
+        ),
+        (
+            "({ foo: async function () {} })",
+            "({ async foo () {} })",
+            None,
+        ),
+        (
+            "({ 'foo': async function() {} })",
+            "({ async 'foo'() {} })",
+            None,
+        ),
+        (
+            "({ [foo]: async function() {} })",
+            "({ async [foo]() {} })",
+            None,
+        ),
+        (
+            "({ [foo.bar]: function*() {} })",
+            "({ *[foo.bar]() {} })",
+            None,
+        ),
         ("({ [foo   ]: function() {} })", "({ [foo   ]() {} })", None),
-        ("({ [ foo ]: async function() {} })", "({ async [ foo ]() {} })", None),
+        (
+            "({ [ foo ]: async function() {} })",
+            "({ async [ foo ]() {} })",
+            None,
+        ),
         ("({ foo: function *() {} })", "({ *foo() {} })", None),
-        ("({ [  foo   ]: function() {} })", "({ [  foo   ]() {} })", None),
+        (
+            "({ [  foo   ]: function() {} })",
+            "({ [  foo   ]() {} })",
+            None,
+        ),
         ("({ [  foo]: function() {} })", "({ [  foo]() {} })", None),
-        ("var x = {y: function() {}}", "var x = {y() {}}", Some(serde_json::json!(["methods"]))),
+        (
+            "var x = {y: function() {}}",
+            "var x = {y() {}}",
+            Some(serde_json::json!(["methods"])),
+        ),
         (
             "var x = {x, y() {}, z: function() {}}",
             "var x = {x, y() {}, z() {}}",
@@ -1566,8 +1824,16 @@ fn test() {
             "var x = {[y]() {}}",
             Some(serde_json::json!(["methods"])),
         ),
-        ("({ [(foo)]: function() { return; } })", "({ [(foo)]() { return; } })", None),
-        ("({ [(foo)]: async function() { return; } })", "({ async [(foo)]() { return; } })", None),
+        (
+            "({ [(foo)]: function() { return; } })",
+            "({ [(foo)]() { return; } })",
+            None,
+        ),
+        (
+            "({ [(foo)]: async function() { return; } })",
+            "({ async [(foo)]() { return; } })",
+            None,
+        ),
         (
             "({ [(((((((foo)))))))]: function() { return; } })",
             "({ [(((((((foo)))))))]() { return; } })",
@@ -1613,21 +1879,41 @@ fn test() {
             "({ ['foo bar']: function*() { return; } })",
             Some(serde_json::json!(["never"])),
         ),
-        ("var x = {x: x}", "var x = {x}", Some(serde_json::json!(["properties"]))),
+        (
+            "var x = {x: x}",
+            "var x = {x}",
+            Some(serde_json::json!(["properties"])),
+        ),
         (
             "var x = {a, b, c(){}, x: x}",
             "var x = {a, b, c(){}, x}",
             Some(serde_json::json!(["properties"])),
         ),
-        ("var x = {y() {}}", "var x = {y: function() {}}", Some(serde_json::json!(["never"]))),
-        ("var x = {*y() {}}", "var x = {y: function*() {}}", Some(serde_json::json!(["never"]))),
-        ("var x = {y}", "var x = {y: y}", Some(serde_json::json!(["never"]))),
+        (
+            "var x = {y() {}}",
+            "var x = {y: function() {}}",
+            Some(serde_json::json!(["never"])),
+        ),
+        (
+            "var x = {*y() {}}",
+            "var x = {y: function*() {}}",
+            Some(serde_json::json!(["never"])),
+        ),
+        (
+            "var x = {y}",
+            "var x = {y: y}",
+            Some(serde_json::json!(["never"])),
+        ),
         (
             "var x = {y, a: b, *x(){}}",
             "var x = {y: y, a: b, x: function*(){}}",
             Some(serde_json::json!(["never"])),
         ),
-        ("var x = {y: {x}}", "var x = {y: {x: x}}", Some(serde_json::json!(["never"]))),
+        (
+            "var x = {y: {x}}",
+            "var x = {y: {x: x}}",
+            Some(serde_json::json!(["never"])),
+        ),
         (
             "var x = {ConstructorFunction(){}, a: b}",
             "var x = {ConstructorFunction: function(){}, a: b}",
@@ -1905,7 +2191,11 @@ fn test() {
                         ",
             Some(serde_json::json!(["always", { "avoidExplicitReturnArrows": true }])),
         ),
-        ("({ a: (function(){ return foo; }) })", "({ a(){ return foo; } })", None),
+        (
+            "({ a: (function(){ return foo; }) })",
+            "({ a(){ return foo; } })",
+            None,
+        ),
         (
             "({ a: (() => { return foo; }) })",
             "({ a() { return foo; } })",
@@ -2025,7 +2315,11 @@ fn test() {
                         ",
             Some(serde_json::json!(["always", { "avoidExplicitReturnArrows": true }])),
         ),
-        ("({ ['__proto__']: function() {} })", "({ ['__proto__']() {} })", None),
+        (
+            "({ ['__proto__']: function() {} })",
+            "({ ['__proto__']() {} })",
+            None,
+        ),
         (
             "({ ['__proto__']() {} })",
             "({ ['__proto__']: function() {} })",

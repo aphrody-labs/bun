@@ -84,7 +84,10 @@ impl<'a, C: Config> ParserImpl<'a, C> {
     pub(crate) fn set_fatal_error(&mut self, error: ParserDiagnostic<'a>) {
         if self.fatal_error.is_none() {
             self.lexer.advance_to_end();
-            self.fatal_error = Some(FatalError { error, errors_len: self.errors.len() });
+            self.fatal_error = Some(FatalError {
+                error,
+                errors_len: self.errors.len(),
+            });
         }
     }
 

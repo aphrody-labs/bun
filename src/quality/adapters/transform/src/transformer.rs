@@ -373,13 +373,20 @@ impl From<TypeScriptOptions> for oxc::transformer::TypeScriptOptions {
         let ops = oxc::transformer::TypeScriptOptions::default();
         oxc::transformer::TypeScriptOptions {
             jsx_pragma: options.jsx_pragma.map(Into::into).unwrap_or(ops.jsx_pragma),
-            jsx_pragma_frag: options.jsx_pragma_frag.map(Into::into).unwrap_or(ops.jsx_pragma_frag),
+            jsx_pragma_frag: options
+                .jsx_pragma_frag
+                .map(Into::into)
+                .unwrap_or(ops.jsx_pragma_frag),
             only_remove_type_imports: options
                 .only_remove_type_imports
                 .unwrap_or(ops.only_remove_type_imports),
             allow_namespaces: options.allow_namespaces.unwrap_or(ops.allow_namespaces),
-            allow_declare_fields: options.allow_declare_fields.unwrap_or(ops.allow_declare_fields),
-            optimize_const_enums: options.optimize_const_enums.unwrap_or(ops.optimize_const_enums),
+            allow_declare_fields: options
+                .allow_declare_fields
+                .unwrap_or(ops.allow_declare_fields),
+            optimize_const_enums: options
+                .optimize_const_enums
+                .unwrap_or(ops.optimize_const_enums),
             optimize_enums: options.optimize_enums.unwrap_or(ops.optimize_enums),
             remove_class_fields_without_initializer: options
                 .remove_class_fields_without_initializer
@@ -669,7 +676,9 @@ impl From<ReactRefreshOptions> for oxc::transformer::ReactRefreshOptions {
         oxc::transformer::ReactRefreshOptions {
             refresh_reg: options.refresh_reg.unwrap_or(ops.refresh_reg),
             refresh_sig: options.refresh_sig.unwrap_or(ops.refresh_sig),
-            emit_full_signatures: options.emit_full_signatures.unwrap_or(ops.emit_full_signatures),
+            emit_full_signatures: options
+                .emit_full_signatures
+                .unwrap_or(ops.emit_full_signatures),
         }
     }
 }
@@ -687,7 +696,9 @@ pub struct ArrowFunctionsOptions {
 
 impl From<ArrowFunctionsOptions> for oxc::transformer::ArrowFunctionsOptions {
     fn from(options: ArrowFunctionsOptions) -> Self {
-        oxc::transformer::ArrowFunctionsOptions { spec: options.spec.unwrap_or_default() }
+        oxc::transformer::ArrowFunctionsOptions {
+            spec: options.spec.unwrap_or_default(),
+        }
     }
 }
 
@@ -699,7 +710,9 @@ pub struct Es2015Options {
 
 impl From<Es2015Options> for oxc::transformer::ES2015Options {
     fn from(options: Es2015Options) -> Self {
-        oxc::transformer::ES2015Options { arrow_function: options.arrow_function.map(Into::into) }
+        oxc::transformer::ES2015Options {
+            arrow_function: options.arrow_function.map(Into::into),
+        }
     }
 }
 
@@ -780,7 +793,10 @@ impl Compiler {
             .and_then(|o| o.declaration)
             .map(oxc::isolated_declarations::IsolatedDeclarationsOptions::from);
 
-        let sourcemap = options.as_ref().and_then(|o| o.sourcemap).unwrap_or_default();
+        let sourcemap = options
+            .as_ref()
+            .and_then(|o| o.sourcemap)
+            .unwrap_or_default();
 
         let define = options
             .as_mut()
@@ -913,7 +929,9 @@ pub fn transform_sync(
     let source_type = get_source_type(
         &filename,
         options.as_ref().and_then(|options| options.lang.as_deref()),
-        options.as_ref().and_then(|options| options.source_type.as_deref()),
+        options
+            .as_ref()
+            .and_then(|options| options.source_type.as_deref()),
     );
 
     let mut compiler = match Compiler::new(options) {
@@ -954,8 +972,12 @@ impl Task for TransformTask {
 
         let source_type = get_source_type(
             &self.filename,
-            self.options.as_ref().and_then(|options| options.lang.as_deref()),
-            self.options.as_ref().and_then(|options| options.source_type.as_deref()),
+            self.options
+                .as_ref()
+                .and_then(|options| options.lang.as_deref()),
+            self.options
+                .as_ref()
+                .and_then(|options| options.source_type.as_deref()),
         );
 
         let mut compiler = match Compiler::new(self.options.take()) {
@@ -1003,7 +1025,11 @@ pub fn transform(
     source_text: String,
     options: Option<TransformOptions>,
 ) -> AsyncTask<TransformTask> {
-    AsyncTask::new(TransformTask { filename, source_text, options })
+    AsyncTask::new(TransformTask {
+        filename,
+        source_text,
+        options,
+    })
 }
 
 #[derive(Default)]
@@ -1080,8 +1106,10 @@ fn module_runner_transform_impl(
     let mut parser_ret = Parser::new(&allocator, source_text, source_type).parse();
     let mut program = parser_ret.program;
 
-    let SemanticBuilderReturn { semantic, diagnostics } =
-        SemanticBuilder::new_compiler().build(&program);
+    let SemanticBuilderReturn {
+        semantic,
+        diagnostics,
+    } = SemanticBuilder::new_compiler().build(&program);
     parser_ret.diagnostics.extend(diagnostics);
 
     let scoping = semantic.into_scoping();
@@ -1091,7 +1119,9 @@ fn module_runner_transform_impl(
     let CodegenReturn { code, map, .. } = Codegen::new()
         .with_options(CodegenOptions {
             source_map_path: options.and_then(|opts| {
-                opts.sourcemap.as_ref().and_then(|s| s.then(|| file_path.to_path_buf()))
+                opts.sourcemap
+                    .as_ref()
+                    .and_then(|s| s.then(|| file_path.to_path_buf()))
             }),
             ..Default::default()
         })
@@ -1129,7 +1159,11 @@ impl Task for ModuleRunnerTransformTask {
     type Output = ModuleRunnerTransformResult;
 
     fn compute(&mut self) -> napi::Result<Self::Output> {
-        Ok(module_runner_transform_impl(&self.filename, &self.source_text, self.options.take()))
+        Ok(module_runner_transform_impl(
+            &self.filename,
+            &self.source_text,
+            self.options.take(),
+        ))
     }
 
     fn resolve(&mut self, _: napi::Env, result: Self::Output) -> napi::Result<Self::JsValue> {
@@ -1156,5 +1190,9 @@ pub fn module_runner_transform(
     source_text: String,
     options: Option<ModuleRunnerTransformOptions>,
 ) -> AsyncTask<ModuleRunnerTransformTask> {
-    AsyncTask::new(ModuleRunnerTransformTask { filename, source_text, options })
+    AsyncTask::new(ModuleRunnerTransformTask {
+        filename,
+        source_text,
+        options,
+    })
 }

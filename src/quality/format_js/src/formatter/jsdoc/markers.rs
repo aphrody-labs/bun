@@ -38,9 +38,9 @@ pub(super) fn list_marker(line: &str) -> Option<ListMarker> {
                 return None;
             }
             match bytes[digits] {
-                b'.' | b')' => {
-                    Some(ListMarker::Ordered { starts_at_one: digits == 1 && *first == b'1' })
-                }
+                b'.' | b')' => Some(ListMarker::Ordered {
+                    starts_at_one: digits == 1 && *first == b'1',
+                }),
                 b'-' => Some(ListMarker::LegacyOrdered),
                 _ => None,
             }
@@ -85,10 +85,30 @@ mod tests {
         assert_eq!(list_marker("* item"), Some(ListMarker::Unordered));
         assert_eq!(list_marker("+ item"), Some(ListMarker::Unordered));
         assert_eq!(list_marker("  - indented"), Some(ListMarker::Unordered));
-        assert_eq!(list_marker("1. item"), Some(ListMarker::Ordered { starts_at_one: true }));
-        assert_eq!(list_marker("1) item"), Some(ListMarker::Ordered { starts_at_one: true }));
-        assert_eq!(list_marker("2. item"), Some(ListMarker::Ordered { starts_at_one: false }));
-        assert_eq!(list_marker("12) item"), Some(ListMarker::Ordered { starts_at_one: false }));
+        assert_eq!(
+            list_marker("1. item"),
+            Some(ListMarker::Ordered {
+                starts_at_one: true
+            })
+        );
+        assert_eq!(
+            list_marker("1) item"),
+            Some(ListMarker::Ordered {
+                starts_at_one: true
+            })
+        );
+        assert_eq!(
+            list_marker("2. item"),
+            Some(ListMarker::Ordered {
+                starts_at_one: false
+            })
+        );
+        assert_eq!(
+            list_marker("12) item"),
+            Some(ListMarker::Ordered {
+                starts_at_one: false
+            })
+        );
         assert_eq!(list_marker("1- legacy"), Some(ListMarker::LegacyOrdered));
         assert_eq!(list_marker("prose"), None);
         assert_eq!(list_marker("-dash"), None);

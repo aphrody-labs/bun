@@ -25,7 +25,10 @@ pub fn load_file(file_id: FileId, file_path: &str, root_path: &Path) -> Vec<Skel
     let content = fs::read_to_string(root_path.join(file_path)).unwrap();
 
     let file = parse_file(content.as_str()).unwrap();
-    file.items.into_iter().filter_map(|item| parse_item(item, file_id)).collect()
+    file.items
+        .into_iter()
+        .filter_map(|item| parse_item(item, file_id))
+        .collect()
 }
 
 fn parse_item(item: Item, file_id: FileId) -> Option<Skeleton> {
@@ -39,22 +42,37 @@ fn parse_item(item: Item, file_id: FileId) -> Option<Skeleton> {
 
 fn parse_struct(item: ItemStruct, file_id: FileId) -> Option<Skeleton> {
     let (name, is_foreign, is_meta) = get_type_name(&item.attrs, &item.ident)?;
-    let skeleton = StructSkeleton { name, file_id, is_foreign, is_meta, item };
+    let skeleton = StructSkeleton {
+        name,
+        file_id,
+        is_foreign,
+        is_meta,
+        item,
+    };
     Some(Skeleton::Struct(skeleton))
 }
 
 fn parse_enum(item: ItemEnum, file_id: FileId) -> Option<Skeleton> {
     let (name, is_foreign, is_meta) = get_type_name(&item.attrs, &item.ident)?;
-    let skeleton = EnumSkeleton { name, file_id, is_foreign, is_meta, item };
+    let skeleton = EnumSkeleton {
+        name,
+        file_id,
+        is_foreign,
+        is_meta,
+        item,
+    };
     Some(Skeleton::Enum(skeleton))
 }
 
 fn parse_macro(item: &ItemMacro, file_id: FileId) -> Option<Skeleton> {
-    item.mac.path.get_ident().and_then(|macro_name| match macro_name.to_string().as_str() {
-        "define_nonmax_u32_index_type" => parse_index_type_macro(item, file_id, true),
-        "define_index_type" => parse_index_type_macro(item, file_id, false),
-        _ => None,
-    })
+    item.mac
+        .path
+        .get_ident()
+        .and_then(|macro_name| match macro_name.to_string().as_str() {
+            "define_nonmax_u32_index_type" => parse_index_type_macro(item, file_id, true),
+            "define_index_type" => parse_index_type_macro(item, file_id, false),
+            _ => None,
+        })
 }
 
 fn parse_index_type_macro(
@@ -91,7 +109,13 @@ fn parse_index_type_macro(
                 #vis struct #ident (#ty_ident);
             };
 
-            Ok(Some(Skeleton::Struct(StructSkeleton { name, file_id, is_foreign, is_meta, item })))
+            Ok(Some(Skeleton::Struct(StructSkeleton {
+                name,
+                file_id,
+                is_foreign,
+                is_meta,
+                item,
+            })))
         })
         .unwrap()
 }
@@ -110,12 +134,18 @@ fn parse_index_type_macro(
 fn get_type_name(
     attrs: &[Attribute],
     ident: &Ident,
-) -> Option<(/* type name */ String, /* is_foreign */ bool, /* is_meta */ bool)> {
+) -> Option<(
+    /* type name */ String,
+    /* is_foreign */ bool,
+    /* is_meta */ bool,
+)> {
     let mut has_ast_attr = false;
     let mut has_meta_attr = false;
     let mut foreign_name = None;
     for attr in attrs {
-        let Some(attr_ident) = attr.path().get_ident() else { continue };
+        let Some(attr_ident) = attr.path().get_ident() else {
+            continue;
+        };
 
         if attr_ident == "ast" {
             has_ast_attr = true;
@@ -131,7 +161,10 @@ fn get_type_name(
                 matches!(&attr.meta, Meta::Path(_)),
                 "Unable to parse `#[ast_meta]` attribute on type: `{ident}`"
             );
-            assert!(!has_meta_attr, "Multiple `#[ast_meta]` attributes on type: `{ident}`");
+            assert!(
+                !has_meta_attr,
+                "Multiple `#[ast_meta]` attributes on type: `{ident}`"
+            );
             has_meta_attr = true;
         }
     }

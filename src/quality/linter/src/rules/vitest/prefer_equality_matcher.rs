@@ -82,7 +82,10 @@ fn test() {
         ("expect(a === b).resolves.not.toBe(true);", None),
         ("expect(a === b).resolves.not.toBe(false);", None),
         (r#"expect(a === b)["resolves"].not.toBe(false);"#, None),
-        (r#"expect(a === b)["resolves"]["not"]["toBe"](false);"#, None),
+        (
+            r#"expect(a === b)["resolves"]["not"]["toBe"](false);"#,
+            None,
+        ),
         ("expect(a !== b).toBe(true);", None),
         ("expect(a !== b).toBe(false);", None),
         ("expect(a !== b).resolves.toBe(true);", None),
@@ -96,12 +99,20 @@ fn test() {
     let fix: Vec<ExpectFixTestCase> = vec![
         (
             "expect(a === b).toBe(true);",
-            ("expect(a).toBe(b);", "expect(a).toEqual(b);", "expect(a).toStrictEqual(b);"),
+            (
+                "expect(a).toBe(b);",
+                "expect(a).toEqual(b);",
+                "expect(a).toStrictEqual(b);",
+            ),
         )
             .into(),
         (
             "expect(a === b,).toBe(true,);",
-            ("expect(a,).toBe(b,);", "expect(a,).toEqual(b,);", "expect(a,).toStrictEqual(b,);"),
+            (
+                "expect(a,).toBe(b,);",
+                "expect(a,).toEqual(b,);",
+                "expect(a,).toStrictEqual(b,);",
+            ),
         )
             .into(),
         (
@@ -142,7 +153,11 @@ fn test() {
             .into(),
         (
             "expect(a === b).not.toBe(false);",
-            ("expect(a).toBe(b);", "expect(a).toEqual(b);", "expect(a).toStrictEqual(b);"),
+            (
+                "expect(a).toBe(b);",
+                "expect(a).toEqual(b);",
+                "expect(a).toStrictEqual(b);",
+            ),
         )
             .into(),
         (
@@ -192,7 +207,11 @@ fn test() {
             .into(),
         (
             "expect(a !== b).toBe(false);",
-            ("expect(a).toBe(b);", "expect(a).toEqual(b);", "expect(a).toStrictEqual(b);"),
+            (
+                "expect(a).toBe(b);",
+                "expect(a).toEqual(b);",
+                "expect(a).toStrictEqual(b);",
+            ),
         )
             .into(),
         (
@@ -215,7 +234,11 @@ fn test() {
             .into(),
         (
             "expect(a !== b).not.toBe(true);",
-            ("expect(a).toBe(b);", "expect(a).toEqual(b);", "expect(a).toStrictEqual(b);"),
+            (
+                "expect(a).toBe(b);",
+                "expect(a).toEqual(b);",
+                "expect(a).toStrictEqual(b);",
+            ),
         )
             .into(),
         (
@@ -250,8 +273,13 @@ fn test() {
     pass.extend(pass_vitest);
     fail.extend(fail_vitest);
 
-    Tester::new(PreferEqualityMatcher::NAME, PreferEqualityMatcher::PLUGIN, pass, fail)
-        .with_vitest_plugin(true)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        PreferEqualityMatcher::NAME,
+        PreferEqualityMatcher::PLUGIN,
+        pass,
+        fail,
+    )
+    .with_vitest_plugin(true)
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

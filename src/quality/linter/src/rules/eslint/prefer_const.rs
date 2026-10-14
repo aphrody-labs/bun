@@ -124,8 +124,10 @@ impl Rule for PreferConst {
 
         // Get parent to check if we're in a for-in or for-of loop initializer
         let parent = ctx.nodes().parent_node(node.id());
-        let is_for_in_of_init =
-            matches!(parent.kind(), AstKind::ForInStatement(_) | AstKind::ForOfStatement(_));
+        let is_for_in_of_init = matches!(
+            parent.kind(),
+            AstKind::ForInStatement(_) | AstKind::ForOfStatement(_)
+        );
 
         // For regular for loops (for (let i = 0, j = 1; ...)), we need special handling
         // If ANY variable in the declaration is reassigned, we can't fix the whole declaration
@@ -203,7 +205,8 @@ impl Rule for PreferConst {
 
     fn should_run(&self, ctx: &crate::context::ContextHost) -> bool {
         // ignore svelte/vue: their templates can reassign a binding, which we can't see.
-        !ctx.file_extension().is_some_and(|ext| ext == "svelte" || ext == "vue")
+        !ctx.file_extension()
+            .is_some_and(|ext| ext == "svelte" || ext == "vue")
     }
 }
 
@@ -239,7 +242,11 @@ impl PreferConst {
 
         if let Some(let_pos) = fixer.find_next_token_within(decl_span.start, decl_span.end, "let") {
             let let_pos = let_pos as usize;
-            let new_text = format!("{}const{}", &decl_text[..let_pos], &decl_text[let_pos + 3..]);
+            let new_text = format!(
+                "{}const{}",
+                &decl_text[..let_pos],
+                &decl_text[let_pos + 3..]
+            );
             fixer.replace(decl_span, new_text)
         } else {
             fixer.noop()
@@ -255,10 +262,12 @@ impl PreferConst {
             AssignmentTargetMaybeDefault::AssignmentTargetWithDefault(t) => {
                 Self::has_member_expression_in_assignment_target(&t.binding)
             }
-            AssignmentTargetMaybeDefault::ArrayAssignmentTarget(array) => array
-                .elements
-                .iter()
-                .any(|elem| elem.as_ref().is_some_and(Self::has_member_expression_target)),
+            AssignmentTargetMaybeDefault::ArrayAssignmentTarget(array) => {
+                array.elements.iter().any(|elem| {
+                    elem.as_ref()
+                        .is_some_and(Self::has_member_expression_target)
+                })
+            }
             AssignmentTargetMaybeDefault::ObjectAssignmentTarget(obj) => {
                 obj.properties.iter().any(|prop| match prop {
                     AssignmentTargetProperty::AssignmentTargetPropertyProperty(p) => {
@@ -277,10 +286,10 @@ impl PreferConst {
             AssignmentTarget::ComputedMemberExpression(_)
             | AssignmentTarget::StaticMemberExpression(_)
             | AssignmentTarget::PrivateFieldExpression(_) => true,
-            AssignmentTarget::ArrayAssignmentTarget(array) => array
-                .elements
-                .iter()
-                .any(|elem| elem.as_ref().is_some_and(Self::has_member_expression_target)),
+            AssignmentTarget::ArrayAssignmentTarget(array) => array.elements.iter().any(|elem| {
+                elem.as_ref()
+                    .is_some_and(Self::has_member_expression_target)
+            }),
             AssignmentTarget::ObjectAssignmentTarget(obj) => {
                 obj.properties.iter().any(|prop| match prop {
                     AssignmentTargetProperty::AssignmentTargetPropertyProperty(p) => {
@@ -305,7 +314,10 @@ impl PreferConst {
         // Check if this symbol is a parameter
         // Parameters can't be changed to const
         let decl_node = symbol_table.symbol_declaration(symbol_id);
-        if matches!(ctx.nodes().kind(decl_node), oxc_ast::AstKind::FormalParameter(_)) {
+        if matches!(
+            ctx.nodes().kind(decl_node),
+            oxc_ast::AstKind::FormalParameter(_)
+        ) {
             return false;
         }
 
@@ -353,8 +365,11 @@ impl PreferConst {
     ) -> bool {
         match target {
             AssignmentTargetMaybeDefault::AssignmentTargetIdentifier(ident) => {
-                if let Some(symbol_id) =
-                    ctx.semantic().scoping().get_reference(ident.reference_id()).symbol_id()
+                if let Some(symbol_id) = ctx
+                    .semantic()
+                    .scoping()
+                    .get_reference(ident.reference_id())
+                    .symbol_id()
                 {
                     return self.can_identifier_be_const(symbol_id, symbol_table, ctx);
                 }
@@ -381,8 +396,11 @@ impl PreferConst {
     ) -> bool {
         match target {
             AssignmentTarget::AssignmentTargetIdentifier(ident) => {
-                if let Some(symbol_id) =
-                    ctx.semantic().scoping().get_reference(ident.reference_id()).symbol_id()
+                if let Some(symbol_id) = ctx
+                    .semantic()
+                    .scoping()
+                    .get_reference(ident.reference_id())
+                    .symbol_id()
                 {
                     return self.can_identifier_be_const(symbol_id, symbol_table, ctx);
                 }
@@ -649,7 +667,8 @@ impl PreferConst {
                         AssignmentTarget::ArrayAssignmentTarget(array_target) => {
                             // Check if the array contains any member expressions (recursively)
                             if array_target.elements.iter().any(|elem| {
-                                elem.as_ref().is_some_and(Self::has_member_expression_target)
+                                elem.as_ref()
+                                    .is_some_and(Self::has_member_expression_target)
                             }) {
                                 is_invalid_destructuring = true;
                                 break;
@@ -951,11 +970,20 @@ fn test() {
         ("let [x = -1, y] = [1,2]; y = 0;", None),
         ("let {a: x = -1, b: y} = {a:1,b:2}; y = 0;", None),
         ("(function() { let x = 1; foo(x); })();", None),
-        ("(function() { for (let i in [1,2,3]) { foo(i); } })();", None),
-        ("(function() { for (let x of [1,2,3]) { foo(x); } })();", None),
+        (
+            "(function() { for (let i in [1,2,3]) { foo(i); } })();",
+            None,
+        ),
+        (
+            "(function() { for (let x of [1,2,3]) { foo(x); } })();",
+            None,
+        ),
         ("(function() { let [x = -1, y] = [1,2]; y = 0; })();", None),
         ("let f = (function() { let g = x; })(); f = 1;", None),
-        ("(function() { let {a: x = -1, b: y} = {a:1,b:2}; y = 0; })();", None),
+        (
+            "(function() { let {a: x = -1, b: y} = {a:1,b:2}; y = 0; })();",
+            None,
+        ),
         ("let x = 0; { let x = 1; foo(x); } x = 0;", None),
         ("for (let i = 0; i < 10; ++i) { let x = 1; foo(x); }", None),
         ("for (let i in [1,2,3]) { let x = 1; foo(x); }", None),
@@ -996,7 +1024,10 @@ fn test() {
             "let a, b; ({a = 0, b} = obj); b = 0; foo(a, b);",
             Some(serde_json::json!([{ "destructuring": "any" }])),
         ),
-        ("let {a = 0, b} = obj; foo(a, b);", Some(serde_json::json!([{ "destructuring": "all" }]))),
+        (
+            "let {a = 0, b} = obj; foo(a, b);",
+            Some(serde_json::json!([{ "destructuring": "all" }])),
+        ),
         ("let [a] = [1]", Some(serde_json::json!([]))),
         ("let {a} = obj", Some(serde_json::json!([]))),
         (
@@ -1025,14 +1056,29 @@ fn test() {
         ("let { foo, bar } = baz;", None),
         ("const x = [1,2]; let [,y] = x;", None),
         ("const x = [1,2,3]; let [y,,z] = x;", None),
-        ("let predicate; [, {foo:returnType, predicate}] = foo();", None), // { "ecmaVersion": 2018 },
-        ("let predicate; [, {foo:returnType, predicate}, ...bar ] = foo();", None), // { "ecmaVersion": 2018 },
-        ("let predicate; [, {foo:returnType, ...predicate} ] = foo();", None), // { "ecmaVersion": 2018 },
+        (
+            "let predicate; [, {foo:returnType, predicate}] = foo();",
+            None,
+        ), // { "ecmaVersion": 2018 },
+        (
+            "let predicate; [, {foo:returnType, predicate}, ...bar ] = foo();",
+            None,
+        ), // { "ecmaVersion": 2018 },
+        (
+            "let predicate; [, {foo:returnType, ...predicate} ] = foo();",
+            None,
+        ), // { "ecmaVersion": 2018 },
         ("let x = 'x', y = 'y';", None),
         ("let x = 'x', y = 'y'; x = 1", None),
         ("let x = 1, y = 'y'; let z = 1;", None),
-        ("let { a, b, c} = obj; let { x, y, z} = anotherObj; x = 2;", None),
-        ("let x = 'x', y = 'y'; function someFunc() { let a = 1, b = 2; foo(a, b) }", None),
+        (
+            "let { a, b, c} = obj; let { x, y, z} = anotherObj; x = 2;",
+            None,
+        ),
+        (
+            "let x = 'x', y = 'y'; function someFunc() { let a = 1, b = 2; foo(a, b) }",
+            None,
+        ),
         ("let someFunc = () => { let a = 1, b = 2; foo(a, b) }", None),
         ("let {a, b} = c, d;", None),
         ("let {a, b, c} = {}, e, f;", None),
@@ -1059,7 +1105,10 @@ fn test() {
         ("class C { static { let a; a = 1; } }", None), // { "ecmaVersion": 2022 },
         ("class C { static { let { a, b } = foo; } }", None), // { "ecmaVersion": 2022 },
         ("class C { static { let a, b; ({ a, b } = foo); } }", None), // { "ecmaVersion": 2022 },
-        ("class C { static { let a; let b; ({ a, b } = foo); } }", None), // { "ecmaVersion": 2022 },
+        (
+            "class C { static { let a; let b; ({ a, b } = foo); } }",
+            None,
+        ), // { "ecmaVersion": 2022 },
         ("class C { static { let a; a = 0; console.log(a); } }", None), // { "ecmaVersion": 2022 },
         (
             "
@@ -1100,8 +1149,16 @@ fn test() {
 
     let fix = vec![
         ("let x = 1; foo(x);", "const x = 1; foo(x);", None),
-        ("for (let i in [1,2,3]) { foo(i); }", "for (const i in [1,2,3]) { foo(i); }", None),
-        ("for (let x of [1,2,3]) { foo(x); }", "for (const x of [1,2,3]) { foo(x); }", None),
+        (
+            "for (let i in [1,2,3]) { foo(i); }",
+            "for (const i in [1,2,3]) { foo(i); }",
+            None,
+        ),
+        (
+            "for (let x of [1,2,3]) { foo(x); }",
+            "for (const x of [1,2,3]) { foo(x); }",
+            None,
+        ),
         (
             "(function() { let x = 1; foo(x); })();",
             "(function() { const x = 1; foo(x); })();",
@@ -1147,8 +1204,16 @@ fn test() {
             "const {a = 0, b} = obj; foo(a, b);",
             Some(serde_json::json!([{ "destructuring": "all" }])),
         ),
-        ("let [a] = [1]", "const [a] = [1]", Some(serde_json::json!([]))),
-        ("let {a} = obj", "const {a} = obj", Some(serde_json::json!([]))),
+        (
+            "let [a] = [1]",
+            "const [a] = [1]",
+            Some(serde_json::json!([])),
+        ),
+        (
+            "let {a} = obj",
+            "const {a} = obj",
+            Some(serde_json::json!([])),
+        ),
         (
             "/*eslint custom/use-x:error*/ let x = 1",
             "/*eslint custom/use-x:error*/ const x = 1",
@@ -1160,10 +1225,22 @@ fn test() {
             None,
         ),
         ("let { foo, bar } = baz;", "const { foo, bar } = baz;", None),
-        ("const x = [1,2]; let [,y] = x;", "const x = [1,2]; const [,y] = x;", None),
-        ("const x = [1,2,3]; let [y,,z] = x;", "const x = [1,2,3]; const [y,,z] = x;", None),
+        (
+            "const x = [1,2]; let [,y] = x;",
+            "const x = [1,2]; const [,y] = x;",
+            None,
+        ),
+        (
+            "const x = [1,2,3]; let [y,,z] = x;",
+            "const x = [1,2,3]; const [y,,z] = x;",
+            None,
+        ),
         ("let x = 'x', y = 'y';", "const x = 'x', y = 'y';", None),
-        ("let x = 1, y = 'y'; let z = 1;", "const x = 1, y = 'y'; const z = 1;", None),
+        (
+            "let x = 1, y = 'y'; let z = 1;",
+            "const x = 1, y = 'y'; const z = 1;",
+            None,
+        ),
         (
             "let { a, b, c} = obj; let { x, y, z} = anotherObj; x = 2;",
             "const { a, b, c} = obj; let { x, y, z} = anotherObj; x = 2;",
@@ -1184,9 +1261,21 @@ fn test() {
             None,
         ),
         ("let foo = undefined;", "const foo = undefined;", None),
-        ("let a = 1; class C { static { a; } }", "const a = 1; class C { static { a; } }", None),
-        ("class C { static { a; } } let a = 1;", "class C { static { a; } } const a = 1;", None),
-        ("class C { static { let a = 1; } }", "class C { static { const a = 1; } }", None),
+        (
+            "let a = 1; class C { static { a; } }",
+            "const a = 1; class C { static { a; } }",
+            None,
+        ),
+        (
+            "class C { static { a; } } let a = 1;",
+            "class C { static { a; } } const a = 1;",
+            None,
+        ),
+        (
+            "class C { static { let a = 1; } }",
+            "class C { static { const a = 1; } }",
+            None,
+        ),
         (
             "class C { static { if (foo) { let a = 1; } } }",
             "class C { static { if (foo) { const a = 1; } } }",
@@ -1637,7 +1726,11 @@ fn test_oxc() {
         // For example, you cannot have a const that is defined without a value.
         ("let x: number; x = 0;", "let x: number; x = 0;", None),
         ("let x; x = 0;", "let x; x = 0;", None),
-        ("switch (a) { case 0: let x; x = 0; }", "switch (a) { case 0: let x; x = 0; }", None),
+        (
+            "switch (a) { case 0: let x; x = 0; }",
+            "switch (a) { case 0: let x; x = 0; }",
+            None,
+        ),
         (
             "let {a = 0, b} = obj; b = 0; foo(a, b);",
             "let {a = 0, b} = obj; b = 0; foo(a, b);",
@@ -1678,9 +1771,17 @@ fn test_oxc() {
             "(function() { let [x = -1, y] = [1,2]; y = 0; })();",
             None,
         ),
-        ("let [x = -1, y] = [1,2]; y = 0;", "let [x = -1, y] = [1,2]; y = 0;", None),
+        (
+            "let [x = -1, y] = [1,2]; y = 0;",
+            "let [x = -1, y] = [1,2]; y = 0;",
+            None,
+        ),
         ("let {a, b} = c, d;", "let {a, b} = c, d;", None),
-        ("let {a, b, c} = {}, e, f;", "let {a, b, c} = {}, e, f;", None),
+        (
+            "let {a, b, c} = {}, e, f;",
+            "let {a, b, c} = {}, e, f;",
+            None,
+        ),
     ];
 
     Tester::new(PreferConst::NAME, PreferConst::PLUGIN, pass, fail)

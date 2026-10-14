@@ -160,7 +160,10 @@ fn verify(expr: &AssignmentExpression, mode: &AlwaysNever, ctx: &LintContext) {
                         .source_text(ctx.source_text());
                     let right_text = Span::new(binary_operator_span.end, binary_expr.span.end)
                         .source_text(ctx.source_text());
-                    fixer.replace(expr.span, format!("{left_text}{replace_operator}{right_text}"))
+                    fixer.replace(
+                        expr.span,
+                        format!("{left_text}{replace_operator}{right_text}"),
+                    )
                 },
             );
         } else if check_is_same_reference(left, &binary_expr.right, ctx) && is_commutative_operator
@@ -257,9 +260,14 @@ operator_assignment_diagnostic(mode, expr.span, expr.operator.as_str(), true),
 }
 
 fn can_be_fixed(target: &AssignmentTarget) -> bool {
-    let Some(simple_assignment_target) = target.as_simple_assignment_target() else { return false };
+    let Some(simple_assignment_target) = target.as_simple_assignment_target() else {
+        return false;
+    };
 
-    if matches!(simple_assignment_target, SimpleAssignmentTarget::AssignmentTargetIdentifier(_)) {
+    if matches!(
+        simple_assignment_target,
+        SimpleAssignmentTarget::AssignmentTargetIdentifier(_)
+    ) {
         return true;
     }
     let Some(expr) = simple_assignment_target.as_member_expression() else {
@@ -273,7 +281,10 @@ fn can_be_fixed(target: &AssignmentTarget) -> bool {
             ) && computed_expr.expression.is_literal()
         }
         MemberExpression::StaticMemberExpression(static_expr) => {
-            matches!(static_expr.object, Expression::Identifier(_) | Expression::ThisExpression(_))
+            matches!(
+                static_expr.object,
+                Expression::Identifier(_) | Expression::ThisExpression(_)
+            )
         }
         MemberExpression::PrivateFieldExpression(_) => false,
     }
@@ -289,7 +300,9 @@ fn get_operator_span(search_span: Span, operator: &str, ctx: &LintContext) -> Sp
 }
 
 fn check_is_same_reference(left: &AssignmentTarget, right: &Expression, ctx: &LintContext) -> bool {
-    let Some(simple_assignment_target) = left.as_simple_assignment_target() else { return false };
+    let Some(simple_assignment_target) = left.as_simple_assignment_target() else {
+        return false;
+    };
     if let SimpleAssignmentTarget::AssignmentTargetIdentifier(id1) = simple_assignment_target {
         return matches!(right, Expression::Identifier(id2) if id2.name == id1.name);
     }
@@ -301,11 +314,19 @@ fn check_is_same_reference(left: &AssignmentTarget, right: &Expression, ctx: &Li
         return false;
     };
     // x.y vs x['y']
-    if (matches!(left_member_expr, MemberExpression::ComputedMemberExpression(_))
-        && !matches!(right_member_expr, MemberExpression::ComputedMemberExpression(_)))
-        || (!matches!(left_member_expr, MemberExpression::ComputedMemberExpression(_))
-            && matches!(right_member_expr, MemberExpression::ComputedMemberExpression(_)))
-    {
+    if (matches!(
+        left_member_expr,
+        MemberExpression::ComputedMemberExpression(_)
+    ) && !matches!(
+        right_member_expr,
+        MemberExpression::ComputedMemberExpression(_)
+    )) || (!matches!(
+        left_member_expr,
+        MemberExpression::ComputedMemberExpression(_)
+    ) && matches!(
+        right_member_expr,
+        MemberExpression::ComputedMemberExpression(_)
+    )) {
         return false;
     }
     is_same_member_expression(left_member_expr, right_member_expr, ctx)
@@ -382,7 +403,10 @@ fn test() {
         ("x = x * y + z", None),
         ("this.x = this.y + z", Some(serde_json::json!(["always"]))),
         ("this.x = foo.x + y", Some(serde_json::json!(["always"]))),
-        ("this.x = foo.this.x + y", Some(serde_json::json!(["always"]))),
+        (
+            "this.x = foo.this.x + y",
+            Some(serde_json::json!(["always"])),
+        ),
         ("const foo = 0; class C { foo = foo + 1; }", None),
         ("x = x && y", Some(serde_json::json!(["always"]))),
         ("x = x || y", Some(serde_json::json!(["always"]))),
@@ -480,7 +504,10 @@ fn test() {
 			 y +=  z",
             Some(serde_json::json!(["never"])),
         ),
-        ("(foo.bar) ^= ((((((((((((((((baz))))))))))))))))", Some(serde_json::json!(["never"]))),
+        (
+            "(foo.bar) ^= ((((((((((((((((baz))))))))))))))))",
+            Some(serde_json::json!(["never"])),
+        ),
         ("foo = foo ** bar", None),
         ("foo **= bar", Some(serde_json::json!(["never"]))),
         ("foo *= bar + 1", Some(serde_json::json!(["never"]))),
@@ -504,7 +531,10 @@ fn test() {
         ("(obj?.a).b = (obj?.a).b + y", None),
         ("obj.a = obj?.a + b", None),
         ("x += + (() => {})", Some(serde_json::json!(["never"]))),
-        ("x += + /** fooo */ (() => {})", Some(serde_json::json!(["never"]))),
+        (
+            "x += + /** fooo */ (() => {})",
+            Some(serde_json::json!(["never"])),
+        ),
     ];
 
     let fix = vec![
@@ -524,13 +554,29 @@ fn test() {
         ("x[0] = x[0] - y", "x[0] -= y", None),
         ("x = x + y", "x += y", Some(serde_json::json!(["always"]))),
         ("x = (x + y)", "x += y", Some(serde_json::json!(["always"]))),
-        ("x = x + (y)", "x += (y)", Some(serde_json::json!(["always"]))),
-        ("x += (y)", "x = x + (y)", Some(serde_json::json!(["never"]))),
+        (
+            "x = x + (y)",
+            "x += (y)",
+            Some(serde_json::json!(["always"])),
+        ),
+        (
+            "x += (y)",
+            "x = x + (y)",
+            Some(serde_json::json!(["never"])),
+        ),
         ("x += y", "x = x + y", Some(serde_json::json!(["never"]))),
         ("foo.bar = foo.bar + baz", "foo.bar += baz", None),
-        ("foo.bar += baz", "foo.bar = foo.bar + baz", Some(serde_json::json!(["never"]))),
+        (
+            "foo.bar += baz",
+            "foo.bar = foo.bar + baz",
+            Some(serde_json::json!(["never"])),
+        ),
         ("this.foo = this.foo + bar", "this.foo += bar", None),
-        ("this.foo += bar", "this.foo = this.foo + bar", Some(serde_json::json!(["never"]))),
+        (
+            "this.foo += bar",
+            "this.foo = this.foo + bar",
+            Some(serde_json::json!(["never"])),
+        ),
         ("foo[5] = foo[5] / baz", "foo[5] /= baz", None),
         ("this[5] = this[5] / foo", "this[5] /= foo", None),
         (
@@ -555,7 +601,11 @@ fn test() {
     		 w;",
             Some(serde_json::json!(["always"])),
         ),
-        ("/*1*/x +=/*2*/y/*3*/;", "/*1*/x = x +/*2*/y/*3*/;", Some(serde_json::json!(["never"]))),
+        (
+            "/*1*/x +=/*2*/y/*3*/;",
+            "/*1*/x = x +/*2*/y/*3*/;",
+            Some(serde_json::json!(["never"])),
+        ),
         (
             "x +=//1
     		 y",
@@ -563,22 +613,62 @@ fn test() {
     		 y",
             Some(serde_json::json!(["never"])),
         ),
-        ("(/*1*/x += y)", "(/*1*/x = x + y)", Some(serde_json::json!(["never"]))),
+        (
+            "(/*1*/x += y)",
+            "(/*1*/x = x + y)",
+            Some(serde_json::json!(["never"])),
+        ),
         (
             "(foo.bar) ^= ((((((((((((((((baz))))))))))))))))",
             "(foo.bar) = (foo.bar) ^ ((((((((((((((((baz))))))))))))))))",
             Some(serde_json::json!(["never"])),
         ),
         ("foo = foo ** bar", "foo **= bar", None),
-        ("foo **= bar", "foo = foo ** bar", Some(serde_json::json!(["never"]))),
-        ("foo *= bar + 1", "foo = foo * (bar + 1)", Some(serde_json::json!(["never"]))),
-        ("foo -= bar - baz", "foo = foo - (bar - baz)", Some(serde_json::json!(["never"]))),
-        ("foo += bar + baz", "foo = foo + (bar + baz)", Some(serde_json::json!(["never"]))),
-        ("foo += bar = 1", "foo = foo + (bar = 1)", Some(serde_json::json!(["never"]))),
-        ("foo *= (bar + 1)", "foo = foo * (bar + 1)", Some(serde_json::json!(["never"]))),
-        ("foo+=-bar", "foo= foo+-bar", Some(serde_json::json!(["never"]))),
-        ("foo/=bar", "foo= foo/bar", Some(serde_json::json!(["never"]))),
-        ("foo/=/**/bar", "foo= foo/ /**/bar", Some(serde_json::json!(["never"]))),
+        (
+            "foo **= bar",
+            "foo = foo ** bar",
+            Some(serde_json::json!(["never"])),
+        ),
+        (
+            "foo *= bar + 1",
+            "foo = foo * (bar + 1)",
+            Some(serde_json::json!(["never"])),
+        ),
+        (
+            "foo -= bar - baz",
+            "foo = foo - (bar - baz)",
+            Some(serde_json::json!(["never"])),
+        ),
+        (
+            "foo += bar + baz",
+            "foo = foo + (bar + baz)",
+            Some(serde_json::json!(["never"])),
+        ),
+        (
+            "foo += bar = 1",
+            "foo = foo + (bar = 1)",
+            Some(serde_json::json!(["never"])),
+        ),
+        (
+            "foo *= (bar + 1)",
+            "foo = foo * (bar + 1)",
+            Some(serde_json::json!(["never"])),
+        ),
+        (
+            "foo+=-bar",
+            "foo= foo+-bar",
+            Some(serde_json::json!(["never"])),
+        ),
+        (
+            "foo/=bar",
+            "foo= foo/bar",
+            Some(serde_json::json!(["never"])),
+        ),
+        (
+            "foo/=/**/bar",
+            "foo= foo/ /**/bar",
+            Some(serde_json::json!(["never"])),
+        ),
         (
             "foo/=//
     		bar",
@@ -586,20 +676,53 @@ fn test() {
     		bar",
             Some(serde_json::json!(["never"])),
         ),
-        ("foo/=/^bar$/", "foo= foo/ /^bar$/", Some(serde_json::json!(["never"]))),
-        ("foo+=+bar", "foo= foo+ +bar", Some(serde_json::json!(["never"]))),
-        ("foo+= +bar", "foo= foo+ +bar", Some(serde_json::json!(["never"]))),
-        ("foo+=/**/+bar", "foo= foo+/**/+bar", Some(serde_json::json!(["never"]))),
-        ("foo+=+bar===baz", "foo= foo+(+bar===baz)", Some(serde_json::json!(["never"]))),
-        ("x += () => {}", "x = x + (() => {})", Some(serde_json::json!(["never"]))),
-        ("x += + (() => {})", "x = x + + (() => {})", Some(serde_json::json!(["never"]))),
+        (
+            "foo/=/^bar$/",
+            "foo= foo/ /^bar$/",
+            Some(serde_json::json!(["never"])),
+        ),
+        (
+            "foo+=+bar",
+            "foo= foo+ +bar",
+            Some(serde_json::json!(["never"])),
+        ),
+        (
+            "foo+= +bar",
+            "foo= foo+ +bar",
+            Some(serde_json::json!(["never"])),
+        ),
+        (
+            "foo+=/**/+bar",
+            "foo= foo+/**/+bar",
+            Some(serde_json::json!(["never"])),
+        ),
+        (
+            "foo+=+bar===baz",
+            "foo= foo+(+bar===baz)",
+            Some(serde_json::json!(["never"])),
+        ),
+        (
+            "x += () => {}",
+            "x = x + (() => {})",
+            Some(serde_json::json!(["never"])),
+        ),
+        (
+            "x += + (() => {})",
+            "x = x + + (() => {})",
+            Some(serde_json::json!(["never"])),
+        ),
         (
             "x += + /** fooo */ (() => {})",
             "x = x + + /** fooo */ (() => {})",
             Some(serde_json::json!(["never"])),
         ),
     ];
-    Tester::new(OperatorAssignment::NAME, OperatorAssignment::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        OperatorAssignment::NAME,
+        OperatorAssignment::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

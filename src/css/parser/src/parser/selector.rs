@@ -20,12 +20,15 @@ fn parse_ndashdigit_b(name: &str, prefix: &str, digits_span: Span) -> Option<PRe
         return None;
     }
     Some(if digits.bytes().any(|b| !b.is_ascii_digit()) {
-        Err(Error { kind: ErrorKind::ExpectUnsignedInteger, span: digits_span })
+        Err(Error {
+            kind: ErrorKind::ExpectUnsignedInteger,
+            span: digits_span,
+        })
     } else {
-        digits
-            .parse::<i32>()
-            .map(|b| -b)
-            .map_err(|_| Error { kind: ErrorKind::ExpectInteger, span: digits_span })
+        digits.parse::<i32>().map(|b| -b).map_err(|_| Error {
+            kind: ErrorKind::ExpectInteger,
+            span: digits_span,
+        })
     })
 }
 
@@ -39,9 +42,15 @@ fn parse_ndashdigit_b(name: &str, prefix: &str, digits_span: Span) -> Option<PRe
 impl<'a> Parse<'a> for AnPlusB {
     fn parse(input: &mut Parser<'a>) -> PResult<Self> {
         match input.cursor.peek()? {
-            TokenWithSpan { token: Token::Dimension(..), .. } => {
+            TokenWithSpan {
+                token: Token::Dimension(..),
+                ..
+            } => {
                 let (token::Dimension { value, unit }, span) = input.cursor.expect_dimension()?;
-                let value_span = Span { start: span.start, end: span.start + value.raw.len() };
+                let value_span = Span {
+                    start: span.start,
+                    end: span.start + value.raw.len(),
+                };
                 let unit_name = unit.name();
                 if unit_name.eq_ignore_ascii_case("n") {
                     match &input.cursor.peek()?.token {
@@ -51,14 +60,20 @@ impl<'a> Parse<'a> for AnPlusB {
                             let sign = if let Token::Plus(..) = sign { 1 } else { -1 };
                             input.cursor.bump()?;
                             let (number, number_span) = expect_unsigned_int(input)?;
-                            let span = Span { start: span.start, end: number_span.end };
+                            let span = Span {
+                                start: span.start,
+                                end: number_span.end,
+                            };
                             Ok(AnPlusB {
-                                a: value
-                                    .try_into()
-                                    .map_err(|kind| Error { kind, span: value_span })?,
+                                a: value.try_into().map_err(|kind| Error {
+                                    kind,
+                                    span: value_span,
+                                })?,
                                 b: sign
-                                    * i32::try_from(number)
-                                        .map_err(|kind| Error { kind, span: number_span })?,
+                                    * i32::try_from(number).map_err(|kind| Error {
+                                        kind,
+                                        span: number_span,
+                                    })?,
                                 span,
                             })
                         }
@@ -67,14 +82,19 @@ impl<'a> Parse<'a> for AnPlusB {
                         // examples: '1n +1', '1n -1'
                         Token::Number(..) => {
                             let (number, number_span) = input.cursor.expect_number()?;
-                            let span = Span { start: span.start, end: number_span.end };
+                            let span = Span {
+                                start: span.start,
+                                end: number_span.end,
+                            };
                             Ok(AnPlusB {
-                                a: value
-                                    .try_into()
-                                    .map_err(|kind| Error { kind, span: value_span })?,
-                                b: number
-                                    .try_into()
-                                    .map_err(|kind| Error { kind, span: number_span })?,
+                                a: value.try_into().map_err(|kind| Error {
+                                    kind,
+                                    span: value_span,
+                                })?,
+                                b: number.try_into().map_err(|kind| Error {
+                                    kind,
+                                    span: number_span,
+                                })?,
                                 span,
                             })
                         }
@@ -82,7 +102,10 @@ impl<'a> Parse<'a> for AnPlusB {
                         // syntax: <n-dimension>
                         // examples: '1n'
                         _ => Ok(AnPlusB {
-                            a: value.try_into().map_err(|kind| Error { kind, span: value_span })?,
+                            a: value.try_into().map_err(|kind| Error {
+                                kind,
+                                span: value_span,
+                            })?,
                             b: 0,
                             span,
                         }),
@@ -91,31 +114,51 @@ impl<'a> Parse<'a> for AnPlusB {
                     // syntax: <ndash-dimension> <signless-integer>
                     // examples: '1n- 1'
                     let (number, number_span) = expect_unsigned_int(input)?;
-                    let span = Span { start: span.start, end: number_span.end };
+                    let span = Span {
+                        start: span.start,
+                        end: number_span.end,
+                    };
                     Ok(AnPlusB {
-                        a: value.try_into().map_err(|kind| Error { kind, span: value_span })?,
-                        b: -i32::try_from(number)
-                            .map_err(|kind| Error { kind, span: number_span })?,
+                        a: value.try_into().map_err(|kind| Error {
+                            kind,
+                            span: value_span,
+                        })?,
+                        b: -i32::try_from(number).map_err(|kind| Error {
+                            kind,
+                            span: number_span,
+                        })?,
                         span,
                     })
                 } else if let Some(b) = parse_ndashdigit_b(
                     &unit_name,
                     "n-",
-                    Span { start: span.start + value.raw.len() + 2, end: span.end },
+                    Span {
+                        start: span.start + value.raw.len() + 2,
+                        end: span.end,
+                    },
                 ) {
                     // syntax: <ndashdigit-dimension>
                     // examples: '1n-1'
                     Ok(AnPlusB {
-                        a: value.try_into().map_err(|kind| Error { kind, span: value_span })?,
+                        a: value.try_into().map_err(|kind| Error {
+                            kind,
+                            span: value_span,
+                        })?,
                         b: b?,
                         span,
                     })
                 } else {
-                    Err(Error { kind: ErrorKind::InvalidAnPlusB, span })
+                    Err(Error {
+                        kind: ErrorKind::InvalidAnPlusB,
+                        span,
+                    })
                 }
             }
 
-            TokenWithSpan { token: Token::Plus(..), .. } => {
+            TokenWithSpan {
+                token: Token::Plus(..),
+                ..
+            } => {
                 let plus_span = input.cursor.bump()?.span;
                 let (ident, ident_span) = input.cursor.expect_ident_without_ws_or_comments()?;
                 let ident_name = ident.name();
@@ -127,12 +170,17 @@ impl<'a> Parse<'a> for AnPlusB {
                             let sign = if let Token::Plus(..) = sign { 1 } else { -1 };
                             input.cursor.bump()?;
                             let (number, number_span) = expect_unsigned_int(input)?;
-                            let span = Span { start: plus_span.start, end: number_span.end };
+                            let span = Span {
+                                start: plus_span.start,
+                                end: number_span.end,
+                            };
                             Ok(AnPlusB {
                                 a: 1,
                                 b: sign
-                                    * i32::try_from(number)
-                                        .map_err(|kind| Error { kind, span: number_span })?,
+                                    * i32::try_from(number).map_err(|kind| Error {
+                                        kind,
+                                        span: number_span,
+                                    })?,
                                 span,
                             })
                         }
@@ -141,12 +189,16 @@ impl<'a> Parse<'a> for AnPlusB {
                         // examples: '+n +1', '+n -1'
                         Token::Number(..) => {
                             let (number, number_span) = input.cursor.expect_number()?;
-                            let span = Span { start: plus_span.start, end: number_span.end };
+                            let span = Span {
+                                start: plus_span.start,
+                                end: number_span.end,
+                            };
                             Ok(AnPlusB {
                                 a: 1,
-                                b: number
-                                    .try_into()
-                                    .map_err(|kind| Error { kind, span: number_span })?,
+                                b: number.try_into().map_err(|kind| Error {
+                                    kind,
+                                    span: number_span,
+                                })?,
                                 span,
                             })
                         }
@@ -155,41 +207,61 @@ impl<'a> Parse<'a> for AnPlusB {
                         _ => Ok(AnPlusB {
                             a: 1,
                             b: 0,
-                            span: Span { start: plus_span.start, end: ident_span.end },
+                            span: Span {
+                                start: plus_span.start,
+                                end: ident_span.end,
+                            },
                         }),
                     }
                 } else if ident_name.eq_ignore_ascii_case("n-") {
                     // syntax: +n- <signless-integer>
                     // examples: '+n- 1'
                     let (number, number_span) = expect_unsigned_int(input)?;
-                    let span = Span { start: plus_span.start, end: number_span.end };
+                    let span = Span {
+                        start: plus_span.start,
+                        end: number_span.end,
+                    };
                     Ok(AnPlusB {
                         a: 1,
-                        b: -i32::try_from(number)
-                            .map_err(|kind| Error { kind, span: number_span })?,
+                        b: -i32::try_from(number).map_err(|kind| Error {
+                            kind,
+                            span: number_span,
+                        })?,
                         span,
                     })
                 } else if let Some(b) = parse_ndashdigit_b(
                     &ident_name,
                     "n-",
-                    Span { start: ident_span.start + 2, end: ident_span.end },
+                    Span {
+                        start: ident_span.start + 2,
+                        end: ident_span.end,
+                    },
                 ) {
                     // syntax: +<ndashdigit-ident>
                     // examples: '+n-1'
                     Ok(AnPlusB {
                         a: 1,
                         b: b?,
-                        span: Span { start: plus_span.start, end: ident_span.end },
+                        span: Span {
+                            start: plus_span.start,
+                            end: ident_span.end,
+                        },
                     })
                 } else {
                     Err(Error {
                         kind: ErrorKind::InvalidAnPlusB,
-                        span: Span { start: plus_span.start, end: ident_span.end },
+                        span: Span {
+                            start: plus_span.start,
+                            end: ident_span.end,
+                        },
                     })
                 }
             }
 
-            TokenWithSpan { token: Token::Ident(..), .. } => {
+            TokenWithSpan {
+                token: Token::Ident(..),
+                ..
+            } => {
                 let (ident, ident_span) = input.cursor.expect_ident()?;
                 let ident_name = ident.name();
                 if ident_name.eq_ignore_ascii_case("n") {
@@ -200,12 +272,17 @@ impl<'a> Parse<'a> for AnPlusB {
                             let sign = if let Token::Plus(..) = sign { 1 } else { -1 };
                             input.cursor.bump()?;
                             let (number, number_span) = expect_unsigned_int(input)?;
-                            let span = Span { start: ident_span.start, end: number_span.end };
+                            let span = Span {
+                                start: ident_span.start,
+                                end: number_span.end,
+                            };
                             Ok(AnPlusB {
                                 a: 1,
                                 b: sign
-                                    * i32::try_from(number)
-                                        .map_err(|kind| Error { kind, span: number_span })?,
+                                    * i32::try_from(number).map_err(|kind| Error {
+                                        kind,
+                                        span: number_span,
+                                    })?,
                                 span,
                             })
                         }
@@ -214,38 +291,58 @@ impl<'a> Parse<'a> for AnPlusB {
                         // examples: 'n +1', 'n -1'
                         Token::Number(..) => {
                             let (number, number_span) = input.cursor.expect_number()?;
-                            let span = Span { start: ident_span.start, end: number_span.end };
+                            let span = Span {
+                                start: ident_span.start,
+                                end: number_span.end,
+                            };
                             Ok(AnPlusB {
                                 a: 1,
-                                b: number
-                                    .try_into()
-                                    .map_err(|kind| Error { kind, span: number_span })?,
+                                b: number.try_into().map_err(|kind| Error {
+                                    kind,
+                                    span: number_span,
+                                })?,
                                 span,
                             })
                         }
 
                         // syntax: n
-                        _ => Ok(AnPlusB { a: 1, b: 0, span: ident_span }),
+                        _ => Ok(AnPlusB {
+                            a: 1,
+                            b: 0,
+                            span: ident_span,
+                        }),
                     }
                 } else if ident_name.eq_ignore_ascii_case("n-") {
                     // syntax: n- <signless-integer>
                     // examples: 'n- 1'
                     let (number, number_span) = expect_unsigned_int(input)?;
-                    let span = Span { start: ident_span.start, end: number_span.end };
+                    let span = Span {
+                        start: ident_span.start,
+                        end: number_span.end,
+                    };
                     Ok(AnPlusB {
                         a: 1,
-                        b: -i32::try_from(number)
-                            .map_err(|kind| Error { kind, span: number_span })?,
+                        b: -i32::try_from(number).map_err(|kind| Error {
+                            kind,
+                            span: number_span,
+                        })?,
                         span,
                     })
                 } else if let Some(b) = parse_ndashdigit_b(
                     &ident_name,
                     "n-",
-                    Span { start: ident_span.start + 2, end: ident_span.end },
+                    Span {
+                        start: ident_span.start + 2,
+                        end: ident_span.end,
+                    },
                 ) {
                     // syntax: <ndashdigit-ident>
                     // examples: 'n-1'
-                    Ok(AnPlusB { a: 1, b: b?, span: ident_span })
+                    Ok(AnPlusB {
+                        a: 1,
+                        b: b?,
+                        span: ident_span,
+                    })
                 } else if ident_name.eq_ignore_ascii_case("-n") {
                     match &input.cursor.peek()?.token {
                         // syntax: -n ['+' | '-'] <signless-integer>
@@ -254,12 +351,17 @@ impl<'a> Parse<'a> for AnPlusB {
                             let sign = if let Token::Plus(..) = sign { 1 } else { -1 };
                             input.cursor.bump()?;
                             let (number, number_span) = expect_unsigned_int(input)?;
-                            let span = Span { start: ident_span.start, end: number_span.end };
+                            let span = Span {
+                                start: ident_span.start,
+                                end: number_span.end,
+                            };
                             Ok(AnPlusB {
                                 a: -1,
                                 b: sign
-                                    * i32::try_from(number)
-                                        .map_err(|kind| Error { kind, span: number_span })?,
+                                    * i32::try_from(number).map_err(|kind| Error {
+                                        kind,
+                                        span: number_span,
+                                    })?,
                                 span,
                             })
                         }
@@ -268,46 +370,70 @@ impl<'a> Parse<'a> for AnPlusB {
                         // examples: '-n +1', '-n -1'
                         Token::Number(..) => {
                             let (number, number_span) = input.cursor.expect_number()?;
-                            let span = Span { start: ident_span.start, end: number_span.end };
+                            let span = Span {
+                                start: ident_span.start,
+                                end: number_span.end,
+                            };
                             Ok(AnPlusB {
                                 a: -1,
-                                b: number
-                                    .try_into()
-                                    .map_err(|kind| Error { kind, span: number_span })?,
+                                b: number.try_into().map_err(|kind| Error {
+                                    kind,
+                                    span: number_span,
+                                })?,
                                 span,
                             })
                         }
 
                         // syntax: -n
-                        _ => Ok(AnPlusB { a: -1, b: 0, span: ident_span }),
+                        _ => Ok(AnPlusB {
+                            a: -1,
+                            b: 0,
+                            span: ident_span,
+                        }),
                     }
                 } else if ident_name.eq_ignore_ascii_case("-n-") {
                     // syntax: -n- <signless-integer>
                     // examples: '-n- 1'
                     let (number, number_span) = expect_unsigned_int(input)?;
-                    let span = Span { start: ident_span.start, end: number_span.end };
+                    let span = Span {
+                        start: ident_span.start,
+                        end: number_span.end,
+                    };
                     Ok(AnPlusB {
                         a: -1,
-                        b: -i32::try_from(number)
-                            .map_err(|kind| Error { kind, span: number_span })?,
+                        b: -i32::try_from(number).map_err(|kind| Error {
+                            kind,
+                            span: number_span,
+                        })?,
                         span,
                     })
                 } else if let Some(b) = parse_ndashdigit_b(
                     &ident_name,
                     "-n-",
-                    Span { start: ident_span.start + 3, end: ident_span.end },
+                    Span {
+                        start: ident_span.start + 3,
+                        end: ident_span.end,
+                    },
                 ) {
                     // syntax: -n-<ndashdigit-ident>
                     // examples: '-n-1'
-                    Ok(AnPlusB { a: -1, b: b?, span: ident_span })
+                    Ok(AnPlusB {
+                        a: -1,
+                        b: b?,
+                        span: ident_span,
+                    })
                 } else {
-                    Err(Error { kind: ErrorKind::InvalidAnPlusB, span: ident_span })
+                    Err(Error {
+                        kind: ErrorKind::InvalidAnPlusB,
+                        span: ident_span,
+                    })
                 }
             }
 
-            TokenWithSpan { span, .. } => {
-                Err(Error { kind: ErrorKind::InvalidAnPlusB, span: *span })
-            }
+            TokenWithSpan { span, .. } => Err(Error {
+                kind: ErrorKind::InvalidAnPlusB,
+                span: *span,
+            }),
         }
     }
 }
@@ -339,16 +465,26 @@ impl<'a> Parse<'a> for AttributeSelector<'a> {
                         name,
                         prefix: Some(NsPrefix {
                             kind: Some(NsPrefixKind::Ident(ident)),
-                            span: Span { start, end: bar_token_span.end },
+                            span: Span {
+                                start,
+                                end: bar_token_span.end,
+                            },
                         }),
                         span: Span { start, end },
                     }
                 } else {
                     let span = *ident_span;
-                    WqName { name: ident, prefix: None, span }
+                    WqName {
+                        name: ident,
+                        prefix: None,
+                        span,
+                    }
                 }
             }
-            TokenWithSpan { token: Token::Asterisk(..), .. } => {
+            TokenWithSpan {
+                token: Token::Asterisk(..),
+                ..
+            } => {
                 let asterisk_span = input.cursor.bump()?.span;
                 let bar_token_span = input.cursor.expect_bar()?.1;
                 let name = input.parse::<InterpolableIdent>()?;
@@ -361,12 +497,18 @@ impl<'a> Parse<'a> for AttributeSelector<'a> {
                         kind: Some(NsPrefixKind::Universal(NsPrefixUniversal {
                             span: asterisk_span,
                         })),
-                        span: Span { start, end: bar_token_span.end },
+                        span: Span {
+                            start,
+                            end: bar_token_span.end,
+                        },
                     }),
                     span: Span { start, end },
                 }
             }
-            TokenWithSpan { token: Token::Bar(..), .. } => {
+            TokenWithSpan {
+                token: Token::Bar(..),
+                ..
+            } => {
                 let bar_token_span = input.cursor.bump()?.span;
                 let name = input.parse::<InterpolableIdent>()?;
 
@@ -376,46 +518,74 @@ impl<'a> Parse<'a> for AttributeSelector<'a> {
                     name,
                     prefix: Some(NsPrefix {
                         kind: None,
-                        span: Span { start, end: bar_token_span.end },
+                        span: Span {
+                            start,
+                            end: bar_token_span.end,
+                        },
                     }),
                     span: Span { start, end },
                 }
             }
             TokenWithSpan { span, .. } => {
-                return Err(Error { kind: ErrorKind::ExpectWqName, span: *span });
+                return Err(Error {
+                    kind: ErrorKind::ExpectWqName,
+                    span: *span,
+                });
             }
         };
 
         let matcher = match input.cursor.peek()? {
-            TokenWithSpan { token: Token::RBracket(..), .. } => None,
-            TokenWithSpan { token: Token::Equal(..), .. } => Some(AttributeSelectorMatcher {
+            TokenWithSpan {
+                token: Token::RBracket(..),
+                ..
+            } => None,
+            TokenWithSpan {
+                token: Token::Equal(..),
+                ..
+            } => Some(AttributeSelectorMatcher {
                 kind: AttributeSelectorMatcherKind::Exact,
                 span: input.cursor.bump()?.span,
             }),
-            TokenWithSpan { token: Token::TildeEqual(..), .. } => Some(AttributeSelectorMatcher {
+            TokenWithSpan {
+                token: Token::TildeEqual(..),
+                ..
+            } => Some(AttributeSelectorMatcher {
                 kind: AttributeSelectorMatcherKind::MatchWord,
                 span: input.cursor.bump()?.span,
             }),
-            TokenWithSpan { token: Token::BarEqual(..), .. } => Some(AttributeSelectorMatcher {
+            TokenWithSpan {
+                token: Token::BarEqual(..),
+                ..
+            } => Some(AttributeSelectorMatcher {
                 kind: AttributeSelectorMatcherKind::ExactOrPrefixThenHyphen,
                 span: input.cursor.bump()?.span,
             }),
-            TokenWithSpan { token: Token::CaretEqual(..), .. } => Some(AttributeSelectorMatcher {
+            TokenWithSpan {
+                token: Token::CaretEqual(..),
+                ..
+            } => Some(AttributeSelectorMatcher {
                 kind: AttributeSelectorMatcherKind::Prefix,
                 span: input.cursor.bump()?.span,
             }),
-            TokenWithSpan { token: Token::DollarEqual(..), .. } => Some(AttributeSelectorMatcher {
+            TokenWithSpan {
+                token: Token::DollarEqual(..),
+                ..
+            } => Some(AttributeSelectorMatcher {
                 kind: AttributeSelectorMatcherKind::Suffix,
                 span: input.cursor.bump()?.span,
             }),
-            TokenWithSpan { token: Token::AsteriskEqual(..), .. } => {
-                Some(AttributeSelectorMatcher {
-                    kind: AttributeSelectorMatcherKind::Substring,
-                    span: input.cursor.bump()?.span,
-                })
-            }
+            TokenWithSpan {
+                token: Token::AsteriskEqual(..),
+                ..
+            } => Some(AttributeSelectorMatcher {
+                kind: AttributeSelectorMatcherKind::Substring,
+                span: input.cursor.bump()?.span,
+            }),
             TokenWithSpan { span, .. } => {
-                return Err(Error { kind: ErrorKind::ExpectAttributeSelectorMatcher, span: *span });
+                return Err(Error {
+                    kind: ErrorKind::ExpectAttributeSelectorMatcher,
+                    span: *span,
+                });
             }
         };
 
@@ -429,30 +599,41 @@ impl<'a> Parse<'a> for AttributeSelector<'a> {
                         | Token::Placeholder(..),
                     ..
                 } => Some(AttributeSelectorValue::Ident(input.parse()?)),
-                TokenWithSpan { token: Token::Str(..) | Token::StrTemplate(..), .. } => {
-                    Some(AttributeSelectorValue::Str(input.parse()?))
-                }
+                TokenWithSpan {
+                    token: Token::Str(..) | Token::StrTemplate(..),
+                    ..
+                } => Some(AttributeSelectorValue::Str(input.parse()?)),
                 // Unquoted numeric values such as `[size=1]` or `[size=1px]` are
                 // technically non-conforming (Selectors wants an ident or string), but
                 // browsers accept them and they appear in real CSS (incl. UA stylesheets).
-                TokenWithSpan { token: Token::Number(..), .. } => {
-                    Some(AttributeSelectorValue::Number(input.parse()?))
-                }
-                TokenWithSpan { token: Token::Dimension(..), .. } => {
-                    Some(AttributeSelectorValue::Dimension(input.parse()?))
-                }
-                TokenWithSpan { token: Token::Percentage(..), .. }
-                    if input.syntax == Syntax::Less =>
-                {
+                TokenWithSpan {
+                    token: Token::Number(..),
+                    ..
+                } => Some(AttributeSelectorValue::Number(input.parse()?)),
+                TokenWithSpan {
+                    token: Token::Dimension(..),
+                    ..
+                } => Some(AttributeSelectorValue::Dimension(input.parse()?)),
+                TokenWithSpan {
+                    token: Token::Percentage(..),
+                    ..
+                } if input.syntax == Syntax::Less => {
                     Some(AttributeSelectorValue::Percentage(input.parse()?))
                 }
-                TokenWithSpan { token: Token::Tilde(..), .. } if input.syntax == Syntax::Less => {
+                TokenWithSpan {
+                    token: Token::Tilde(..),
+                    ..
+                } if input.syntax == Syntax::Less => {
                     Some(AttributeSelectorValue::LessEscapedStr(input.parse()?))
                 }
-                TokenWithSpan { token: Token::RBracket(..), span } => {
-                    input
-                        .recoverable_errors
-                        .push(Error { kind: ErrorKind::ExpectAttributeSelectorValue, span: *span });
+                TokenWithSpan {
+                    token: Token::RBracket(..),
+                    span,
+                } => {
+                    input.recoverable_errors.push(Error {
+                        kind: ErrorKind::ExpectAttributeSelectorValue,
+                        span: *span,
+                    });
                     None
                 }
                 // An unusual value like `[attr=;]` is invalid per the
@@ -498,7 +679,13 @@ impl<'a> Parse<'a> for AttributeSelector<'a> {
         };
 
         let end = input.cursor.expect_r_bracket()?.1.end;
-        Ok(AttributeSelector { name, matcher, value, modifier, span: Span { start, end } })
+        Ok(AttributeSelector {
+            name,
+            matcher,
+            value,
+            modifier,
+            span: Span { start, end },
+        })
     }
 }
 
@@ -536,7 +723,10 @@ impl<'a> Parse<'a> for ClassSelector<'a> {
             ident
         };
 
-        Ok(ClassSelector { name, span: Span { start, end } })
+        Ok(ClassSelector {
+            name,
+            span: Span { start, end },
+        })
     }
 }
 
@@ -553,7 +743,11 @@ impl<'a> Parse<'a> for ComplexSelector<'a> {
         {
             let end = input.cursor.tokenizer.current_offset();
             if let Some(combinator) = input.parse_combinator(end)? {
-                (combinator.span, ComplexSelectorChild::Combinator(combinator), true)
+                (
+                    combinator.span,
+                    ComplexSelectorChild::Combinator(combinator),
+                    true,
+                )
             } else {
                 return Err(Error {
                     kind: ErrorKind::ExpectSimpleSelector,
@@ -617,7 +811,10 @@ impl<'a> Parse<'a> for ComplexSelector<'a> {
             is_previous_combinator = !is_previous_combinator;
         }
 
-        Ok(ComplexSelector { children, span: Span { start, end } })
+        Ok(ComplexSelector {
+            children,
+            span: Span { start, end },
+        })
     }
 }
 
@@ -655,17 +852,20 @@ impl<'a> Parse<'a> for CompoundSelector<'a> {
                     end = child.span().end;
                     children.push(child);
                 }
-                TokenWithSpan { token: Token::Percent(..), span }
-                    if matches!(input.syntax, Syntax::Scss | Syntax::Sass)
-                        && !util::has_ws(input.source, end, span.start) =>
+                TokenWithSpan {
+                    token: Token::Percent(..),
+                    span,
+                } if matches!(input.syntax, Syntax::Scss | Syntax::Sass)
+                    && !util::has_ws(input.source, end, span.start) =>
                 {
                     let child = input.parse::<SimpleSelector>()?;
                     end = child.span().end;
                     children.push(child);
                 }
-                TokenWithSpan { token: Token::Placeholder(..), span }
-                    if !util::has_ws(input.source, end, span.start) =>
-                {
+                TokenWithSpan {
+                    token: Token::Placeholder(..),
+                    span,
+                } if !util::has_ws(input.source, end, span.start) => {
                     let child = input.parse::<SimpleSelector>()?;
                     end = child.span().end;
                     children.push(child);
@@ -674,7 +874,10 @@ impl<'a> Parse<'a> for CompoundSelector<'a> {
             }
         }
 
-        Ok(CompoundSelector { children, span: Span { start, end } })
+        Ok(CompoundSelector {
+            children,
+            span: Span { start, end },
+        })
     }
 }
 
@@ -697,7 +900,11 @@ impl<'a> Parse<'a> for CompoundSelectorList<'a> {
             let index = selectors.len() - 1;
             selectors.get_unchecked(index).span().end
         };
-        Ok(CompoundSelectorList { selectors, comma_spans, span })
+        Ok(CompoundSelectorList {
+            selectors,
+            comma_spans,
+            span,
+        })
     }
 }
 
@@ -705,24 +912,40 @@ impl<'a> Parse<'a> for CompoundSelectorList<'a> {
 impl<'a> Parse<'a> for IdSelector<'a> {
     fn parse(input: &mut Parser<'a>) -> PResult<Self> {
         match input.cursor.bump()? {
-            token @ TokenWithSpan { token: Token::Hash(..), span } => {
+            token @ TokenWithSpan {
+                token: Token::Hash(..),
+                span,
+            } => {
                 let token = token.hash(input.source).unwrap();
-                let first_span = Span { start: span.start + 1, end: span.end };
+                let first_span = Span {
+                    start: span.start + 1,
+                    end: span.end,
+                };
                 let raw = token.raw;
                 if raw.starts_with(|c: char| c.is_ascii_digit())
                     || matches!(raw.as_bytes(), [b'-'] | [b'-', b'0'..=b'9', ..])
                 {
-                    input
-                        .recoverable_errors
-                        .push(Error { kind: ErrorKind::InvalidIdSelectorName, span });
+                    input.recoverable_errors.push(Error {
+                        kind: ErrorKind::InvalidIdSelectorName,
+                        span,
+                    });
                 }
-                let value =
-                    if token.escaped { util::handle_escape_in(raw, input.allocator) } else { raw };
-                let first = Ident { name: value, raw: token.raw, span: first_span };
+                let value = if token.escaped {
+                    util::handle_escape_in(raw, input.allocator)
+                } else {
+                    raw
+                };
+                let first = Ident {
+                    name: value,
+                    raw: token.raw,
+                    span: first_span,
+                };
                 let name = match input.cursor.peek()? {
-                    TokenWithSpan { token: Token::HashLBrace(..), span }
-                        if matches!(input.syntax, Syntax::Scss | Syntax::Sass)
-                            && first.span.end == span.start =>
+                    TokenWithSpan {
+                        token: Token::HashLBrace(..),
+                        span,
+                    } if matches!(input.syntax, Syntax::Scss | Syntax::Sass)
+                        && first.span.end == span.start =>
                     {
                         match input.parse()? {
                             InterpolableIdent::SassInterpolated(mut interpolation) => {
@@ -743,15 +966,27 @@ impl<'a> Parse<'a> for IdSelector<'a> {
                     }
                     _ => InterpolableIdent::Literal(first),
                 };
-                let span = Span { start: span.start, end: name.span().end };
+                let span = Span {
+                    start: span.start,
+                    end: name.span().end,
+                };
                 Ok(IdSelector { name, span })
             }
-            TokenWithSpan { token: Token::NumberSign(..), span } => {
+            TokenWithSpan {
+                token: Token::NumberSign(..),
+                span,
+            } => {
                 let name = input.parse::<InterpolableIdent>()?;
-                let span = Span { start: span.start, end: name.span().end };
+                let span = Span {
+                    start: span.start,
+                    end: name.span().end,
+                };
                 Ok(IdSelector { name, span })
             }
-            TokenWithSpan { span, .. } => Err(Error { kind: ErrorKind::ExpectIdSelector, span }),
+            TokenWithSpan { span, .. } => Err(Error {
+                kind: ErrorKind::ExpectIdSelector,
+                span,
+            }),
         }
     }
 }
@@ -783,7 +1018,11 @@ impl<'a> Parse<'a> for LanguageRangeList<'a> {
         if let Some(end) = ranges.last() {
             span.end = end.span().end;
         }
-        Ok(LanguageRangeList { ranges, comma_spans, span })
+        Ok(LanguageRangeList {
+            ranges,
+            comma_spans,
+            span,
+        })
     }
 }
 
@@ -811,7 +1050,10 @@ impl<'a> Parse<'a> for NestingSelector<'a> {
                 } else {
                     Some(InterpolableIdent::SassInterpolated(SassInterpolatedIdent {
                         elements,
-                        span: Span { start, end: span.end },
+                        span: Span {
+                            start,
+                            end: span.end,
+                        },
                     }))
                 }
             }
@@ -823,7 +1065,10 @@ impl<'a> Parse<'a> for NestingSelector<'a> {
                 } else {
                     Some(InterpolableIdent::LessInterpolated(LessInterpolatedIdent {
                         elements,
-                        span: Span { start, end: span.end },
+                        span: Span {
+                            start,
+                            end: span.end,
+                        },
                     }))
                 }
             }
@@ -839,7 +1084,10 @@ impl<'a> Parse<'a> for Nth<'a> {
     fn parse(input: &mut Parser<'a>) -> PResult<Self> {
         let index = input.parse::<NthIndex>()?;
         let mut span = *index.span();
-        let matcher = if input.cursor.peek()?.is_ident_name_eq_ignore_ascii_case(input.source, "of")
+        let matcher = if input
+            .cursor
+            .peek()?
+            .is_ident_name_eq_ignore_ascii_case(input.source, "of")
         {
             let matcher = input.parse::<NthMatcher>()?;
             span.end = matcher.span.end;
@@ -848,7 +1096,11 @@ impl<'a> Parse<'a> for Nth<'a> {
             None
         };
 
-        Ok(Nth { index, matcher, span })
+        Ok(Nth {
+            index,
+            matcher,
+            span,
+        })
     }
 }
 
@@ -869,7 +1121,10 @@ impl<'a> Parse<'a> for NthIndex<'a> {
             if number.value.fract() == 0.0 {
                 Ok(NthIndex::Integer(number))
             } else {
-                Err(Error { kind: ErrorKind::ExpectInteger, span: number.span })
+                Err(Error {
+                    kind: ErrorKind::ExpectInteger,
+                    span: number.span,
+                })
             }
         } else {
             input.parse().map(NthIndex::AnPlusB)
@@ -882,7 +1137,10 @@ impl<'a> Parse<'a> for NthMatcher<'a> {
     fn parse(input: &mut Parser<'a>) -> PResult<Self> {
         let (ident, mut span) = input.cursor.expect_ident()?;
         if !ident.name().eq_ignore_ascii_case("of") {
-            return Err(Error { kind: ErrorKind::ExpectNthOf, span });
+            return Err(Error {
+                kind: ErrorKind::ExpectNthOf,
+                span,
+            });
         }
 
         let selector = if matches!(&input.cursor.peek()?.token, Token::RParen(..)) {
@@ -911,7 +1169,10 @@ impl<'a> Parse<'a> for PseudoClassSelector<'a> {
         let mut end = name_span.end;
 
         let arg = match input.cursor.peek()? {
-            TokenWithSpan { token: Token::LParen(..), span: l_paren } if l_paren.start == end => {
+            TokenWithSpan {
+                token: Token::LParen(..),
+                span: l_paren,
+            } if l_paren.start == end => {
                 let l_paren = *l_paren;
                 input.cursor.bump()?;
                 let kind = match &name {
@@ -945,9 +1206,10 @@ impl<'a> Parse<'a> for PseudoClassSelector<'a> {
                                 .map(PseudoClassSelectorArgKind::TokenSeq)?;
                         };
                         if let Some(NthMatcher { span, .. }) = &nth.matcher {
-                            input
-                                .recoverable_errors
-                                .push(Error { kind: ErrorKind::UnexpectedNthMatcher, span: *span });
+                            input.recoverable_errors.push(Error {
+                                kind: ErrorKind::UnexpectedNthMatcher,
+                                span: *span,
+                            });
                         }
                         PseudoClassSelectorArgKind::Nth(nth)
                     }
@@ -958,12 +1220,16 @@ impl<'a> Parse<'a> for PseudoClassSelector<'a> {
                             || name.eq_ignore_ascii_case("matches")
                             || name.eq_ignore_ascii_case("global") =>
                     {
-                        input.parse().map(PseudoClassSelectorArgKind::SelectorList)?
+                        input
+                            .parse()
+                            .map(PseudoClassSelectorArgKind::SelectorList)?
                     }
                     InterpolableIdent::Literal(Ident { name, .. })
                         if name.eq_ignore_ascii_case("has") =>
                     {
-                        input.parse().map(PseudoClassSelectorArgKind::RelativeSelectorList)?
+                        input
+                            .parse()
+                            .map(PseudoClassSelectorArgKind::RelativeSelectorList)?
                     }
                     InterpolableIdent::Literal(Ident { name, .. })
                         if name.eq_ignore_ascii_case("dir") =>
@@ -973,7 +1239,9 @@ impl<'a> Parse<'a> for PseudoClassSelector<'a> {
                     InterpolableIdent::Literal(Ident { name, .. })
                         if name.eq_ignore_ascii_case("lang") =>
                     {
-                        input.parse().map(PseudoClassSelectorArgKind::LanguageRangeList)?
+                        input
+                            .parse()
+                            .map(PseudoClassSelectorArgKind::LanguageRangeList)?
                     }
                     InterpolableIdent::Literal(Ident { name, .. })
                         if name.eq_ignore_ascii_case("-moz-any")
@@ -982,14 +1250,18 @@ impl<'a> Parse<'a> for PseudoClassSelector<'a> {
                     {
                         // formally compound selectors, but real-world usage
                         // includes complex ones (`:-moz-any(ol p.blah, ul)`)
-                        input.parse().map(PseudoClassSelectorArgKind::SelectorList)?
+                        input
+                            .parse()
+                            .map(PseudoClassSelectorArgKind::SelectorList)?
                     }
                     InterpolableIdent::Literal(Ident { name, .. })
                         if name.eq_ignore_ascii_case("current")
                             || name.eq_ignore_ascii_case("past")
                             || name.eq_ignore_ascii_case("future") =>
                     {
-                        input.parse().map(PseudoClassSelectorArgKind::CompoundSelectorList)?
+                        input
+                            .parse()
+                            .map(PseudoClassSelectorArgKind::CompoundSelectorList)?
                     }
                     InterpolableIdent::Literal(Ident { name, .. })
                         if name.eq_ignore_ascii_case("host")
@@ -997,27 +1269,42 @@ impl<'a> Parse<'a> for PseudoClassSelector<'a> {
                     {
                         // formally a single compound selector, but Angular's ShadowCss
                         // supports combinators and lists (`:host-context(.parent .child)`)
-                        input.parse().map(PseudoClassSelectorArgKind::SelectorList)?
+                        input
+                            .parse()
+                            .map(PseudoClassSelectorArgKind::SelectorList)?
                     }
                     InterpolableIdent::Literal(Ident { name, .. })
                         if input.syntax == Syntax::Less && *name == "extend" =>
                     {
-                        input.parse().map(PseudoClassSelectorArgKind::LessExtendList)?
+                        input
+                            .parse()
+                            .map(PseudoClassSelectorArgKind::LessExtendList)?
                     }
-                    _ => {
-                        input.parse_tokens_in_parens().map(PseudoClassSelectorArgKind::TokenSeq)?
-                    }
+                    _ => input
+                        .parse_tokens_in_parens()
+                        .map(PseudoClassSelectorArgKind::TokenSeq)?,
                 };
 
                 let r_paren = input.cursor.expect_r_paren()?.1;
                 end = r_paren.end;
-                let span = Span { start: l_paren.start, end: r_paren.end };
-                Some(PseudoClassSelectorArg { kind, l_paren, r_paren, span })
+                let span = Span {
+                    start: l_paren.start,
+                    end: r_paren.end,
+                };
+                Some(PseudoClassSelectorArg {
+                    kind,
+                    l_paren,
+                    r_paren,
+                    span,
+                })
             }
             _ => None,
         };
 
-        let span = Span { start: colon_span.start, end };
+        let span = Span {
+            start: colon_span.start,
+            end,
+        };
         Ok(PseudoClassSelector { name, arg, span })
     }
 }
@@ -1044,7 +1331,10 @@ impl<'a> Parse<'a> for PseudoElementSelector<'a> {
         };
 
         let arg = match input.cursor.peek()? {
-            TokenWithSpan { token: Token::LParen(..), span: l_paren } if l_paren.start == end => {
+            TokenWithSpan {
+                token: Token::LParen(..),
+                span: l_paren,
+            } if l_paren.start == end => {
                 let l_paren = *l_paren;
                 input.cursor.bump()?;
                 let kind = match &name {
@@ -1078,14 +1368,18 @@ impl<'a> Parse<'a> for PseudoElementSelector<'a> {
                         if name.eq_ignore_ascii_case("cue")
                             || name.eq_ignore_ascii_case("cue-region") =>
                     {
-                        input.parse().map(PseudoElementSelectorArgKind::CompoundSelector)?
+                        input
+                            .parse()
+                            .map(PseudoElementSelectorArgKind::CompoundSelector)?
                     }
                     InterpolableIdent::Literal(Ident { name, .. })
                         if name.eq_ignore_ascii_case("slotted") =>
                     {
                         // formally a single compound selector, but sass extend
                         // output produces lists (`::slotted(.c.d, .d.e)`)
-                        input.parse().map(PseudoElementSelectorArgKind::CompoundSelectorList)?
+                        input
+                            .parse()
+                            .map(PseudoElementSelectorArgKind::CompoundSelectorList)?
                     }
                     _ => input
                         .parse_tokens_in_parens()
@@ -1094,13 +1388,24 @@ impl<'a> Parse<'a> for PseudoElementSelector<'a> {
 
                 let r_paren = input.cursor.expect_r_paren()?.1;
                 end = r_paren.end;
-                let span = Span { start: l_paren.start, end: r_paren.end };
-                Some(PseudoElementSelectorArg { kind, l_paren, r_paren, span })
+                let span = Span {
+                    start: l_paren.start,
+                    end: r_paren.end,
+                };
+                Some(PseudoElementSelectorArg {
+                    kind,
+                    l_paren,
+                    r_paren,
+                    span,
+                })
             }
             _ => None,
         };
 
-        let span = Span { start: colon_colon_span.start, end };
+        let span = Span {
+            start: colon_colon_span.start,
+            end,
+        };
         Ok(PseudoElementSelector { name, arg, span })
     }
 }
@@ -1110,7 +1415,10 @@ impl<'a> Parse<'a> for RelativeSelector<'a> {
     fn parse(input: &mut Parser<'a>) -> PResult<Self> {
         let pos = input.cursor.tokenizer.current_offset();
         let combinator = match input.parse_combinator(pos)? {
-            Some(Combinator { kind: CombinatorKind::Descendant, .. }) => None,
+            Some(Combinator {
+                kind: CombinatorKind::Descendant,
+                ..
+            }) => None,
             combinator => combinator,
         };
         let complex_selector = input.parse::<ComplexSelector>()?;
@@ -1118,7 +1426,11 @@ impl<'a> Parse<'a> for RelativeSelector<'a> {
         if let Some(combinator) = &combinator {
             span.start = combinator.span.start;
         }
-        Ok(RelativeSelector { combinator, complex_selector, span })
+        Ok(RelativeSelector {
+            combinator,
+            complex_selector,
+            span,
+        })
     }
 }
 
@@ -1140,7 +1452,11 @@ impl<'a> Parse<'a> for RelativeSelectorList<'a> {
             let index = selectors.len() - 1;
             selectors.get_unchecked(index).span().end
         };
-        Ok(RelativeSelectorList { selectors, comma_spans, span })
+        Ok(RelativeSelectorList {
+            selectors,
+            comma_spans,
+            span,
+        })
     }
 }
 
@@ -1197,7 +1513,11 @@ impl<'a> Parse<'a> for SelectorList<'a> {
             selectors.len() <= comma_spans.len() + 1
         });
 
-        Ok(SelectorList { selectors, comma_spans, span })
+        Ok(SelectorList {
+            selectors,
+            comma_spans,
+            span,
+        })
     }
 }
 
@@ -1209,19 +1529,32 @@ impl<'a> Parse<'a> for SelectorList<'a> {
 impl<'a> Parse<'a> for SimpleSelector<'a> {
     fn parse(input: &mut Parser<'a>) -> PResult<Self> {
         match input.cursor.peek()? {
-            TokenWithSpan { token: Token::Dot(..), .. } => input.parse().map(SimpleSelector::Class),
-            TokenWithSpan { token: Token::Hash(..) | Token::NumberSign(..), .. } => {
-                input.parse().map(SimpleSelector::Id)
-            }
-            TokenWithSpan { token: Token::LBracket(..), .. } => {
+            TokenWithSpan {
+                token: Token::Dot(..),
+                ..
+            } => input.parse().map(SimpleSelector::Class),
+            TokenWithSpan {
+                token: Token::Hash(..) | Token::NumberSign(..),
+                ..
+            } => input.parse().map(SimpleSelector::Id),
+            TokenWithSpan {
+                token: Token::LBracket(..),
+                ..
+            } => {
                 let selector = input.parse()?;
                 Ok(SimpleSelector::Attribute(input.alloc(selector)))
             }
-            TokenWithSpan { token: Token::Colon(..), .. } => {
+            TokenWithSpan {
+                token: Token::Colon(..),
+                ..
+            } => {
                 let selector = input.parse()?;
                 Ok(SimpleSelector::PseudoClass(input.alloc(selector)))
             }
-            TokenWithSpan { token: Token::ColonColon(..), .. } => {
+            TokenWithSpan {
+                token: Token::ColonColon(..),
+                ..
+            } => {
                 let selector = input.parse()?;
                 Ok(SimpleSelector::PseudoElement(input.alloc(selector)))
             }
@@ -1234,29 +1567,41 @@ impl<'a> Parse<'a> for SimpleSelector<'a> {
                     | Token::AtLBraceVar(..),
                 ..
             } => input.parse().map(SimpleSelector::Type),
-            TokenWithSpan { token: Token::Ampersand(..), .. } => {
-                input.parse().map(SimpleSelector::Nesting)
-            }
+            TokenWithSpan {
+                token: Token::Ampersand(..),
+                ..
+            } => input.parse().map(SimpleSelector::Nesting),
             // Css too: postcss-extend-rule uses Sass-style placeholders in
             // plain CSS (`%thick-border {}` + `@extend %thick-border;`), and
             // postcss parses `%x` as an ordinary selector. A selector-position
             // `%` is invalid per spec, so accepting it is purely additive.
-            TokenWithSpan { token: Token::Percent(..), .. }
-                if matches!(input.syntax, Syntax::Scss | Syntax::Sass | Syntax::Css) =>
-            {
+            TokenWithSpan {
+                token: Token::Percent(..),
+                ..
+            } if matches!(input.syntax, Syntax::Scss | Syntax::Sass | Syntax::Css) => {
                 input.parse().map(SimpleSelector::SassPlaceholder)
             }
-            TokenWithSpan { token: Token::Placeholder(..), .. } => {
+            TokenWithSpan {
+                token: Token::Placeholder(..),
+                ..
+            } => {
                 let name = input.parse::<InterpolableIdent>()?;
                 let span = *name.span();
-                Ok(SimpleSelector::Type(TypeSelector::TagName(TagNameSelector {
-                    name: WqName { name, prefix: None, span },
-                    span,
-                })))
+                Ok(SimpleSelector::Type(TypeSelector::TagName(
+                    TagNameSelector {
+                        name: WqName {
+                            name,
+                            prefix: None,
+                            span,
+                        },
+                        span,
+                    },
+                )))
             }
-            token_with_span => {
-                Err(Error { kind: ErrorKind::ExpectSimpleSelector, span: token_with_span.span })
-            }
+            token_with_span => Err(Error {
+                kind: ErrorKind::ExpectSimpleSelector,
+                span: token_with_span.span,
+            }),
         }
     }
 }
@@ -1281,18 +1626,20 @@ impl<'a> Parse<'a> for TypeSelector<'a> {
         };
 
         match input.cursor.peek()? {
-            TokenWithSpan { token: Token::Bar(..), span }
-                if ident_or_asterisk
-                    .as_ref()
-                    .map(|t| match t {
-                        IdentOrAsterisk::Ident(ident) => {
-                            !util::has_ws(input.source, ident.span().end, span.start)
-                        }
-                        IdentOrAsterisk::Asterisk(asterisk_span) => {
-                            !util::has_ws(input.source, asterisk_span.end, span.start)
-                        }
-                    })
-                    .unwrap_or(true) =>
+            TokenWithSpan {
+                token: Token::Bar(..),
+                span,
+            } if ident_or_asterisk
+                .as_ref()
+                .map(|t| match t {
+                    IdentOrAsterisk::Ident(ident) => {
+                        !util::has_ws(input.source, ident.span().end, span.start)
+                    }
+                    IdentOrAsterisk::Asterisk(asterisk_span) => {
+                        !util::has_ws(input.source, asterisk_span.end, span.start)
+                    }
+                })
+                .unwrap_or(true) =>
             {
                 let bar_token_span = input.cursor.bump()?.span;
 
@@ -1300,7 +1647,10 @@ impl<'a> Parse<'a> for TypeSelector<'a> {
                     Some(IdentOrAsterisk::Ident(ident)) => {
                         let mut span = *ident.span();
                         span.end = bar_token_span.end;
-                        NsPrefix { kind: Some(NsPrefixKind::Ident(ident)), span }
+                        NsPrefix {
+                            kind: Some(NsPrefixKind::Ident(ident)),
+                            span,
+                        }
                     }
                     Some(IdentOrAsterisk::Asterisk(asterisk_span)) => {
                         let mut span = asterisk_span;
@@ -1312,32 +1662,52 @@ impl<'a> Parse<'a> for TypeSelector<'a> {
                             span,
                         }
                     }
-                    None => NsPrefix { kind: None, span: bar_token_span },
+                    None => NsPrefix {
+                        kind: None,
+                        span: bar_token_span,
+                    },
                 };
 
                 match input.cursor.peek()? {
-                    TokenWithSpan { token: Token::Ident(..) | Token::HashLBrace(..), .. } => {
+                    TokenWithSpan {
+                        token: Token::Ident(..) | Token::HashLBrace(..),
+                        ..
+                    } => {
                         let name = input.parse::<InterpolableIdent>()?;
                         let name_span = name.span();
                         util::assert_no_ws(input.source, &prefix.span, name_span)?;
-                        let span = Span { start: prefix.span.start, end: name_span.end };
+                        let span = Span {
+                            start: prefix.span.start,
+                            end: name_span.end,
+                        };
                         Ok(TypeSelector::TagName(TagNameSelector {
-                            name: WqName { name, prefix: Some(prefix), span },
+                            name: WqName {
+                                name,
+                                prefix: Some(prefix),
+                                span,
+                            },
                             span,
                         }))
                     }
-                    TokenWithSpan { token: Token::Asterisk(..), .. } => {
+                    TokenWithSpan {
+                        token: Token::Asterisk(..),
+                        ..
+                    } => {
                         let asterisk_span = input.cursor.bump()?.span;
                         util::assert_no_ws(input.source, &prefix.span, &asterisk_span)?;
-                        let span = Span { start: prefix.span.start, end: asterisk_span.end };
+                        let span = Span {
+                            start: prefix.span.start,
+                            end: asterisk_span.end,
+                        };
                         Ok(TypeSelector::Universal(UniversalSelector {
                             prefix: Some(prefix),
                             span,
                         }))
                     }
-                    TokenWithSpan { span, .. } => {
-                        Err(Error { kind: ErrorKind::ExpectTypeSelector, span: *span })
-                    }
+                    TokenWithSpan { span, .. } => Err(Error {
+                        kind: ErrorKind::ExpectTypeSelector,
+                        span: *span,
+                    }),
                 }
             }
 
@@ -1345,12 +1715,19 @@ impl<'a> Parse<'a> for TypeSelector<'a> {
                 Some(IdentOrAsterisk::Ident(ident)) => {
                     let span = *ident.span();
                     Ok(TypeSelector::TagName(TagNameSelector {
-                        name: WqName { name: ident, prefix: None, span },
+                        name: WqName {
+                            name: ident,
+                            prefix: None,
+                            span,
+                        },
                         span,
                     }))
                 }
                 Some(IdentOrAsterisk::Asterisk(span)) => {
-                    Ok(TypeSelector::Universal(UniversalSelector { prefix: None, span }))
+                    Ok(TypeSelector::Universal(UniversalSelector {
+                        prefix: None,
+                        span,
+                    }))
                 }
                 None => unreachable!(),
             },
@@ -1495,7 +1872,10 @@ impl<'a> Parser<'a> {
 fn expect_unsigned_int<'a>(input: &mut Parser<'a>) -> PResult<(token::Number<'a>, Span)> {
     let (number, span) = input.cursor.expect_number()?;
     if number.raw.chars().any(|c| !c.is_ascii_digit()) {
-        Err(Error { kind: ErrorKind::ExpectUnsignedInteger, span })
+        Err(Error {
+            kind: ErrorKind::ExpectUnsignedInteger,
+            span,
+        })
     } else {
         Ok((number, span))
     }
@@ -1520,7 +1900,9 @@ mod tests {
             ("-N-1", -1, -1),
         ] {
             let allocator = Allocator::default();
-            let nth = Parser::new(&allocator, source, Syntax::Css).parse::<AnPlusB>().unwrap();
+            let nth = Parser::new(&allocator, source, Syntax::Css)
+                .parse::<AnPlusB>()
+                .unwrap();
             assert_eq!((nth.a, nth.b), (a, b), "{source}");
         }
     }

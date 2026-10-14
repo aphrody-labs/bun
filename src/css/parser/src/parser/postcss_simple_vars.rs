@@ -43,8 +43,17 @@ impl<'a> Parse<'a> for PostcssSimpleVarDeclaration<'a> {
         }
 
         let end = value.last().map(|v| v.span().end).unwrap_or(colon_span.end);
-        let span = Span { start: name.span.start, end };
+        let span = Span {
+            start: name.span.start,
+            end,
+        };
 
-        Ok(PostcssSimpleVarDeclaration { name, colon_span, value, value_is_raw, span })
+        Ok(PostcssSimpleVarDeclaration {
+            name,
+            colon_span,
+            value,
+            value_is_raw,
+            span,
+        })
     }
 }

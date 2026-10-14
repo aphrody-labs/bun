@@ -359,11 +359,16 @@ fn serialize_paragraph(
         && let Some(position) = para.position.as_ref()
     {
         let raw = &opts.source[position.start.offset..position.end.offset];
-        let original_lines: Vec<&str> =
-            raw.lines().map(str::trim).filter(|l| !l.is_empty()).collect();
+        let original_lines: Vec<&str> = raw
+            .lines()
+            .map(str::trim)
+            .filter(|l| !l.is_empty())
+            .collect();
 
         if original_lines.len() > 1
-            && original_lines.iter().all(|l| super::super::wrap::str_width(l) <= effective_width)
+            && original_lines
+                .iter()
+                .all(|l| super::super::wrap::str_width(l) <= effective_width)
         {
             // Preserve original line breaks
             let total = original_lines.len();
@@ -396,7 +401,13 @@ fn serialize_paragraph(
     }
 
     let mut para_buf = LineBuffer::new();
-    wrap_paragraph(&inline_text, effective_width, first_line_offset, 0, &mut para_buf);
+    wrap_paragraph(
+        &inline_text,
+        effective_width,
+        first_line_offset,
+        0,
+        &mut para_buf,
+    );
     let para_str = para_buf.into_string();
 
     let mut para_iter = para_str.split('\n').peekable();
@@ -769,8 +780,9 @@ fn format_code_value<'a>(
     if let Some(l) = lang
         && !is_js_ts_lang(l)
     {
-        if let Some(language) =
-            EMBEDDED_FENCE_LANGUAGES.into_iter().find(|name| l.eq_ignore_ascii_case(name))
+        if let Some(language) = EMBEDDED_FENCE_LANGUAGES
+            .into_iter()
+            .find(|name| l.eq_ignore_ascii_case(name))
             && let Some(embed) = opts.session.string_embedder()
             && let Ok(formatted) = embed(language, code, width)
         {

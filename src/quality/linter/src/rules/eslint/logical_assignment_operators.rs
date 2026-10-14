@@ -98,7 +98,9 @@ impl<'de> Deserialize<'de> for LogicalAssignmentOperators {
             [first, second] if first.is_string() && second.is_object() => {
                 mode = serde_json::from_value(first.clone()).map_err(de::Error::custom)?;
                 if mode == AlwaysNever::Never {
-                    return Err(de::Error::custom(r#"options object is only valid with "always""#));
+                    return Err(de::Error::custom(
+                        r#"options object is only valid with "always""#,
+                    ));
                 }
                 options = serde_json::from_value(second.clone()).map_err(de::Error::custom)?;
             }
@@ -381,7 +383,11 @@ fn get_existence<'a>(expression: &'a Expression<'a>, ctx: &LintContext) -> Optio
     if is_reference(base) {
         return Some(Existence {
             reference: base,
-            operator: if is_negated { LogicalOperator::Or } else { LogicalOperator::And },
+            operator: if is_negated {
+                LogicalOperator::Or
+            } else {
+                LogicalOperator::And
+            },
         });
     }
 
@@ -397,21 +403,34 @@ fn get_existence<'a>(expression: &'a Expression<'a>, ctx: &LintContext) -> Optio
 
     if let Expression::CallExpression(call_expression) = base
         && is_boolean_cast(call_expression, ctx)
-        && let Some(reference) = call_expression.arguments.first().and_then(Argument::as_expression)
+        && let Some(reference) = call_expression
+            .arguments
+            .first()
+            .and_then(Argument::as_expression)
         && is_reference(reference)
     {
         return Some(Existence {
             reference: reference.get_inner_expression(),
-            operator: if is_negated { LogicalOperator::Or } else { LogicalOperator::And },
+            operator: if is_negated {
+                LogicalOperator::Or
+            } else {
+                LogicalOperator::And
+            },
         });
     }
 
     if let Some(reference) = is_implicit_nullish_comparison(expression, ctx) {
-        return Some(Existence { reference, operator: LogicalOperator::Coalesce });
+        return Some(Existence {
+            reference,
+            operator: LogicalOperator::Coalesce,
+        });
     }
 
     if let Some(reference) = is_explicit_nullish_comparison(expression, ctx) {
-        return Some(Existence { reference, operator: LogicalOperator::Coalesce });
+        return Some(Existence {
+            reference,
+            operator: LogicalOperator::Coalesce,
+        });
     }
 
     None
@@ -564,10 +583,19 @@ fn test() {
         ("fn() || (a = b)", None),
         ("a.b || (a = b)", None),
         ("a?.b || (a.b = b)", None),
-        ("class Class { #prop; constructor() { this.#prop || (this.prop = value) } }", None), // { "ecmaVersion": 2022 },
-        ("class Class { #prop; constructor() { this.prop || (this.#prop = value) } }", None), // { "ecmaVersion": 2022 },
+        (
+            "class Class { #prop; constructor() { this.#prop || (this.prop = value) } }",
+            None,
+        ), // { "ecmaVersion": 2022 },
+        (
+            "class Class { #prop; constructor() { this.prop || (this.#prop = value) } }",
+            None,
+        ), // { "ecmaVersion": 2022 },
         ("if (a) a = b", None),
-        ("if (a) a = b", Some(serde_json::json!(["always", { "enforceForIfStatements": false }]))),
+        (
+            "if (a) a = b",
+            Some(serde_json::json!(["always", { "enforceForIfStatements": false }])),
+        ),
         (
             "if (a) { a = b } else {}",
             Some(serde_json::json!(["always", { "enforceForIfStatements": true }])),
@@ -584,7 +612,10 @@ fn test() {
             "if (unrelated) {} else if (a) a = b; else if (unrelated) {}",
             Some(serde_json::json!(["always", { "enforceForIfStatements": true }])),
         ),
-        ("if (a) {}", Some(serde_json::json!(["always", { "enforceForIfStatements": true }]))),
+        (
+            "if (a) {}",
+            Some(serde_json::json!(["always", { "enforceForIfStatements": true }])),
+        ),
         (
             "if (a) { before; a = b }",
             Some(serde_json::json!(["always", { "enforceForIfStatements": true }])),
@@ -597,10 +628,22 @@ fn test() {
             "if (a) throw new Error()",
             Some(serde_json::json!(["always", { "enforceForIfStatements": true }])),
         ),
-        ("if (a) a", Some(serde_json::json!(["always", { "enforceForIfStatements": true }]))),
-        ("if (a) a ||= b", Some(serde_json::json!(["always", { "enforceForIfStatements": true }]))),
-        ("if (a) b = a", Some(serde_json::json!(["always", { "enforceForIfStatements": true }]))),
-        ("if (a) { a() }", Some(serde_json::json!(["always", { "enforceForIfStatements": true }]))),
+        (
+            "if (a) a",
+            Some(serde_json::json!(["always", { "enforceForIfStatements": true }])),
+        ),
+        (
+            "if (a) a ||= b",
+            Some(serde_json::json!(["always", { "enforceForIfStatements": true }])),
+        ),
+        (
+            "if (a) b = a",
+            Some(serde_json::json!(["always", { "enforceForIfStatements": true }])),
+        ),
+        (
+            "if (a) { a() }",
+            Some(serde_json::json!(["always", { "enforceForIfStatements": true }])),
+        ),
         (
             "if (a) { a += a || b }",
             Some(serde_json::json!(["always", { "enforceForIfStatements": true }])),
@@ -793,9 +836,18 @@ fn test() {
             }",
             Some(serde_json::json!(["always", { "enforceForIfStatements": true }])),
         ),
-        ("if (a) b = c", Some(serde_json::json!(["always", { "enforceForIfStatements": true }]))),
-        ("if (!a) b = c", Some(serde_json::json!(["always", { "enforceForIfStatements": true }]))),
-        ("if (!!a) b = c", Some(serde_json::json!(["always", { "enforceForIfStatements": true }]))),
+        (
+            "if (a) b = c",
+            Some(serde_json::json!(["always", { "enforceForIfStatements": true }])),
+        ),
+        (
+            "if (!a) b = c",
+            Some(serde_json::json!(["always", { "enforceForIfStatements": true }])),
+        ),
+        (
+            "if (!!a) b = c",
+            Some(serde_json::json!(["always", { "enforceForIfStatements": true }])),
+        ),
         (
             "if (a == null) b = c",
             Some(serde_json::json!(["always", { "enforceForIfStatements": true }])),
@@ -899,7 +951,10 @@ fn test() {
         ("a /* between */ || (a = b)", None),
         ("a || /* between */ (a = b)", None),
         ("a.b || (a.b = c)", None),
-        ("class Class { #prop; constructor() { this.#prop || (this.#prop = value) } }", None), // { "ecmaVersion": 2022 },
+        (
+            "class Class { #prop; constructor() { this.#prop || (this.#prop = value) } }",
+            None,
+        ), // { "ecmaVersion": 2022 },
         ("a['b'] || (a['b'] = c)", None),
         ("a[0] || (a[0] = b)", None),
         ("a[this] || (a[this] = b)", None),
@@ -915,13 +970,22 @@ fn test() {
         ("a = b || (b = c)", None),
         ("a || (a = 0) ? b : c", None),
         ("fn(a || (a = 0))", None),
-        ("if (a) a = b", Some(serde_json::json!(["always", { "enforceForIfStatements": true }]))),
+        (
+            "if (a) a = b",
+            Some(serde_json::json!(["always", { "enforceForIfStatements": true }])),
+        ),
         (
             "if (Boolean(a)) a = b",
             Some(serde_json::json!(["always", { "enforceForIfStatements": true }])),
         ),
-        ("if (!!a) a = b", Some(serde_json::json!(["always", { "enforceForIfStatements": true }]))),
-        ("if (!a) a = b", Some(serde_json::json!(["always", { "enforceForIfStatements": true }]))),
+        (
+            "if (!!a) a = b",
+            Some(serde_json::json!(["always", { "enforceForIfStatements": true }])),
+        ),
+        (
+            "if (!a) a = b",
+            Some(serde_json::json!(["always", { "enforceForIfStatements": true }])),
+        ),
         (
             "if (!Boolean(a)) a = b",
             Some(serde_json::json!(["always", { "enforceForIfStatements": true }])),
@@ -996,10 +1060,22 @@ fn test() {
             "if (null === a || undefined === a) a = b",
             Some(serde_json::json!(["always", { "enforceForIfStatements": true }])),
         ),
-        ("if ((a)) a = b", Some(serde_json::json!(["always", { "enforceForIfStatements": true }]))),
-        ("if (a) (a) = b", Some(serde_json::json!(["always", { "enforceForIfStatements": true }]))),
-        ("if (a) a = (b)", Some(serde_json::json!(["always", { "enforceForIfStatements": true }]))),
-        ("if (a) (a = b)", Some(serde_json::json!(["always", { "enforceForIfStatements": true }]))),
+        (
+            "if ((a)) a = b",
+            Some(serde_json::json!(["always", { "enforceForIfStatements": true }])),
+        ),
+        (
+            "if (a) (a) = b",
+            Some(serde_json::json!(["always", { "enforceForIfStatements": true }])),
+        ),
+        (
+            "if (a) a = (b)",
+            Some(serde_json::json!(["always", { "enforceForIfStatements": true }])),
+        ),
+        (
+            "if (a) (a = b)",
+            Some(serde_json::json!(["always", { "enforceForIfStatements": true }])),
+        ),
         (
             ";if (a) (a) = b",
             Some(serde_json::json!(["always", { "enforceForIfStatements": true }])),
@@ -1064,7 +1140,10 @@ fn test() {
             } fn();",
             Some(serde_json::json!(["always", { "enforceForIfStatements": true }])),
         ),
-        ("if (a) a  =  b", Some(serde_json::json!(["always", { "enforceForIfStatements": true }]))),
+        (
+            "if (a) a  =  b",
+            Some(serde_json::json!(["always", { "enforceForIfStatements": true }])),
+        ),
         (
             "if (a)
              a = b",
@@ -1230,9 +1309,15 @@ fn test() {
         ("a = a || b || c && d", Some(serde_json::json!(["always"]))),
         ("a = a || b && c || d", Some(serde_json::json!(["always"]))),
         ("a = (a) || b || c", Some(serde_json::json!(["always"]))),
-        ("a = a || (b || c) || d", Some(serde_json::json!(["always"]))),
+        (
+            "a = a || (b || c) || d",
+            Some(serde_json::json!(["always"])),
+        ),
         ("a = (a || b || c)", Some(serde_json::json!(["always"]))),
-        ("a = ((a) || (b || c) || d)", Some(serde_json::json!(["always"]))),
+        (
+            "a = ((a) || (b || c) || d)",
+            Some(serde_json::json!(["always"])),
+        ),
     ];
 
     // TODO: Implement a suggestion for this rule
@@ -1254,8 +1339,16 @@ fn test() {
         ("(a = a || b)", "(a ||= b)", None),
         ("a = a || (f(), b)", "a ||= (f(), b)", None),
         ("with (a = a || b) {}", "with (a ||= b) {}", None),
-        ("with (object) {} a = a || b", "with (object) {} a ||= b", None),
-        ("a = a || b; with (object) {}", "a ||= b; with (object) {}", None),
+        (
+            "with (object) {} a = a || b",
+            "with (object) {} a ||= b",
+            None,
+        ),
+        (
+            "a = a || b; with (object) {}",
+            "a ||= b; with (object) {}",
+            None,
+        ),
         ("if (condition) a = a || b", "if (condition) a ||= b", None),
         ("fn(a = a || b)", "fn(a ||= b)", None),
         ("fn((a = a || b))", "fn((a ||= b))", None),
@@ -1596,34 +1689,146 @@ fn test() {
         ("a ||= b", "a = a || b", Some(serde_json::json!(["never"]))),
         ("a &&= b", "a = a && b", Some(serde_json::json!(["never"]))),
         ("a ??= b", "a = a ?? b", Some(serde_json::json!(["never"]))),
-        ("foo ||= bar", "foo = foo || bar", Some(serde_json::json!(["never"]))),
-        ("(a) ||= b", "(a) = a || b", Some(serde_json::json!(["never"]))),
-        ("a ||= (b)", "a = a || (b)", Some(serde_json::json!(["never"]))),
-        ("(a ||= b)", "(a = a || b)", Some(serde_json::json!(["never"]))),
-        ("/* before */ a ||= b", "/* before */ a = a || b", Some(serde_json::json!(["never"]))),
-        ("a ||= b // after", "a = a || b // after", Some(serde_json::json!(["never"]))),
-        ("a ||= b && c", "a = a || b && c", Some(serde_json::json!(["never"]))),
-        ("a &&= b || c", "a = a && (b || c)", Some(serde_json::json!(["never"]))),
-        ("a ||= b || c", "a = a || (b || c)", Some(serde_json::json!(["never"]))),
-        ("a &&= b && c", "a = a && (b && c)", Some(serde_json::json!(["never"]))),
-        ("a ??= b || c", "a = a ?? (b || c)", Some(serde_json::json!(["never"]))),
-        ("a ??= b && c", "a = a ?? (b && c)", Some(serde_json::json!(["never"]))),
-        ("a ??= b ?? c", "a = a ?? (b ?? c)", Some(serde_json::json!(["never"]))),
-        ("a ??= (b || c)", "a = a ?? (b || c)", Some(serde_json::json!(["never"]))),
-        ("a ??= b + c", "a = a ?? b + c", Some(serde_json::json!(["never"]))),
-        ("a ||= b as number;", "a = a || (b as number);", Some(serde_json::json!(["never"]))),
-        ("a = a || b || c", "a ||= b || c", Some(serde_json::json!(["always"]))),
-        ("a = a && b && c", "a &&= b && c", Some(serde_json::json!(["always"]))),
-        ("a = a ?? b ?? c", "a ??= b ?? c", Some(serde_json::json!(["always"]))),
-        ("a = a || b && c", "a ||= b && c", Some(serde_json::json!(["always"]))),
-        ("a = a || b || c || d", "a ||= b || c || d", Some(serde_json::json!(["always"]))),
-        ("a = a && b && c && d", "a &&= b && c && d", Some(serde_json::json!(["always"]))),
-        ("a = a ?? b ?? c ?? d", "a ??= b ?? c ?? d", Some(serde_json::json!(["always"]))),
-        ("a = a || b || c && d", "a ||= b || c && d", Some(serde_json::json!(["always"]))),
-        ("a = a || b && c || d", "a ||= b && c || d", Some(serde_json::json!(["always"]))),
-        ("a = (a) || b || c", "a ||= b || c", Some(serde_json::json!(["always"]))),
-        ("a = a || (b || c) || d", "a ||= (b || c) || d", Some(serde_json::json!(["always"]))),
-        ("a = (a || b || c)", "a ||= (b || c)", Some(serde_json::json!(["always"]))),
+        (
+            "foo ||= bar",
+            "foo = foo || bar",
+            Some(serde_json::json!(["never"])),
+        ),
+        (
+            "(a) ||= b",
+            "(a) = a || b",
+            Some(serde_json::json!(["never"])),
+        ),
+        (
+            "a ||= (b)",
+            "a = a || (b)",
+            Some(serde_json::json!(["never"])),
+        ),
+        (
+            "(a ||= b)",
+            "(a = a || b)",
+            Some(serde_json::json!(["never"])),
+        ),
+        (
+            "/* before */ a ||= b",
+            "/* before */ a = a || b",
+            Some(serde_json::json!(["never"])),
+        ),
+        (
+            "a ||= b // after",
+            "a = a || b // after",
+            Some(serde_json::json!(["never"])),
+        ),
+        (
+            "a ||= b && c",
+            "a = a || b && c",
+            Some(serde_json::json!(["never"])),
+        ),
+        (
+            "a &&= b || c",
+            "a = a && (b || c)",
+            Some(serde_json::json!(["never"])),
+        ),
+        (
+            "a ||= b || c",
+            "a = a || (b || c)",
+            Some(serde_json::json!(["never"])),
+        ),
+        (
+            "a &&= b && c",
+            "a = a && (b && c)",
+            Some(serde_json::json!(["never"])),
+        ),
+        (
+            "a ??= b || c",
+            "a = a ?? (b || c)",
+            Some(serde_json::json!(["never"])),
+        ),
+        (
+            "a ??= b && c",
+            "a = a ?? (b && c)",
+            Some(serde_json::json!(["never"])),
+        ),
+        (
+            "a ??= b ?? c",
+            "a = a ?? (b ?? c)",
+            Some(serde_json::json!(["never"])),
+        ),
+        (
+            "a ??= (b || c)",
+            "a = a ?? (b || c)",
+            Some(serde_json::json!(["never"])),
+        ),
+        (
+            "a ??= b + c",
+            "a = a ?? b + c",
+            Some(serde_json::json!(["never"])),
+        ),
+        (
+            "a ||= b as number;",
+            "a = a || (b as number);",
+            Some(serde_json::json!(["never"])),
+        ),
+        (
+            "a = a || b || c",
+            "a ||= b || c",
+            Some(serde_json::json!(["always"])),
+        ),
+        (
+            "a = a && b && c",
+            "a &&= b && c",
+            Some(serde_json::json!(["always"])),
+        ),
+        (
+            "a = a ?? b ?? c",
+            "a ??= b ?? c",
+            Some(serde_json::json!(["always"])),
+        ),
+        (
+            "a = a || b && c",
+            "a ||= b && c",
+            Some(serde_json::json!(["always"])),
+        ),
+        (
+            "a = a || b || c || d",
+            "a ||= b || c || d",
+            Some(serde_json::json!(["always"])),
+        ),
+        (
+            "a = a && b && c && d",
+            "a &&= b && c && d",
+            Some(serde_json::json!(["always"])),
+        ),
+        (
+            "a = a ?? b ?? c ?? d",
+            "a ??= b ?? c ?? d",
+            Some(serde_json::json!(["always"])),
+        ),
+        (
+            "a = a || b || c && d",
+            "a ||= b || c && d",
+            Some(serde_json::json!(["always"])),
+        ),
+        (
+            "a = a || b && c || d",
+            "a ||= b && c || d",
+            Some(serde_json::json!(["always"])),
+        ),
+        (
+            "a = (a) || b || c",
+            "a ||= b || c",
+            Some(serde_json::json!(["always"])),
+        ),
+        (
+            "a = a || (b || c) || d",
+            "a ||= (b || c) || d",
+            Some(serde_json::json!(["always"])),
+        ),
+        (
+            "a = (a || b || c)",
+            "a ||= (b || c)",
+            Some(serde_json::json!(["always"])),
+        ),
         (
             "a = ((a) || (b || c) || d)",
             "a ||= ((b || c) || d)",
@@ -1631,6 +1836,11 @@ fn test() {
         ),
     ];
 
-    Tester::new(LogicalAssignmentOperators::NAME, LogicalAssignmentOperators::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        LogicalAssignmentOperators::NAME,
+        LogicalAssignmentOperators::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

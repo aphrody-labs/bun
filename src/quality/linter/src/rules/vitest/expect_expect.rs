@@ -285,7 +285,10 @@ fn test() {
         //     ",
         //     Some(serde_json::json!([{ "additionalTestBlockFunctions": ["theoretically"] }])),
         // ),
-        ("it(\"should fail\", () => { somePromise.then(() => {}); });", None),
+        (
+            "it(\"should fail\", () => { somePromise.then(() => {}); });",
+            None,
+        ),
         (
             "test(\"should fail\", () => { foo(true).toBe(true); })",
             Some(serde_json::json!([{ "assertFunctionNames": ["expect"] }])),

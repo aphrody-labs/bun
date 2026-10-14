@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //! Debian version ordering, deliberately distinct from npm semantic versions.
-use std::cmp::Ordering;
 use super::AsciiFields;
+use std::cmp::Ordering;
 
 fn integer(a: &[u8], b: &[u8]) -> Ordering {
     let a = &a[a.iter().position(|c| *c != b'0').unwrap_or(a.len())..];

@@ -190,7 +190,10 @@ mod tests {
             "/../../test/integration/expo-app/assets/fonts/SpaceMono-Regular.ttf"
         ))
         .unwrap();
-        assert_eq!(super::load_font(font).unwrap(), b"[\"Space Mono\"]".to_vec());
+        assert_eq!(
+            super::load_font(font).unwrap(),
+            b"[\"Space Mono\"]".to_vec()
+        );
         let options = super::TextOptions {
             text: "Hello\nBun",
             font_size: 20.0,
@@ -208,7 +211,13 @@ mod tests {
         assert!(layout.contains("\"height\":48"), "{layout}");
         let image = super::render(&options, None, None, 0).unwrap();
         assert_eq!(image.height, 48);
-        assert!(image.rgba.chunks(4).filter(|p| p[3] > 0).all(|p| p[..3] == [255, 0, 0]));
+        assert!(
+            image
+                .rgba
+                .chunks(4)
+                .filter(|p| p[3] > 0)
+                .all(|p| p[..3] == [255, 0, 0])
+        );
         assert!(image.rgba.chunks(4).filter(|p| p[3] > 0).count() > 50);
     }
 }

@@ -42,7 +42,9 @@ pub fn check_ts_type_annotation(annotation: &TSTypeAnnotation<'_>, ctx: &Semanti
 
 pub fn check_ts_type_predicate(predicate: &TSTypePredicate<'_>, ctx: &SemanticBuilder<'_>) {
     if !is_allowed_type_predicate_position(ctx) {
-        ctx.error(diagnostics::type_predicate_only_in_return_type(predicate.span));
+        ctx.error(diagnostics::type_predicate_only_in_return_type(
+            predicate.span,
+        ));
     }
 }
 
@@ -74,7 +76,10 @@ fn is_allowed_type_predicate_position(ctx: &SemanticBuilder<'_>) -> bool {
 pub fn check_ts_infer_type<'a>(infer_type: &TSInferType<'a>, ctx: &SemanticBuilder<'a>) {
     let is_in_conditional_extends_clause = ctx.ancestry().ancestor_kinds().any(|kind| {
         kind.as_ts_conditional_type().is_some_and(|conditional| {
-            conditional.extends_type.span().contains_inclusive(infer_type.span)
+            conditional
+                .extends_type
+                .span()
+                .contains_inclusive(infer_type.span)
         })
     });
 
@@ -93,7 +98,11 @@ fn check_duplicate_bound_names<'a, T: BoundNames<'a>>(bound_names: &T, ctx: &Sem
     let mut idents: FxHashMap<Str<'a>, Span> = FxHashMap::default();
     bound_names.bound_names(&mut |ident| {
         if let Some(old_span) = idents.insert(ident.name.into(), ident.span) {
-            ctx.error(diagnostics::redeclaration(&ident.name, old_span, ident.span));
+            ctx.error(diagnostics::redeclaration(
+                &ident.name,
+                old_span,
+                ident.span,
+            ));
         }
     });
 }
@@ -120,9 +129,9 @@ pub fn check_ts_global_declaration<'a>(decl: &TSGlobalDeclaration<'a>, ctx: &Sem
     check_ts_module_or_global_declaration(decl.span, ctx);
 
     if !decl.declare && !ctx.in_ambient_context() {
-        ctx.error(diagnostics::global_scope_augmentation_should_have_declare_modifier(
-            decl.global_span,
-        ));
+        ctx.error(
+            diagnostics::global_scope_augmentation_should_have_declare_modifier(decl.global_span),
+        );
     }
 }
 
@@ -149,8 +158,10 @@ fn check_ts_module_or_global_declaration(span: Span, ctx: &SemanticBuilder<'_>) 
 }
 
 fn check_ambient_module_declaration(span: Span, ctx: &SemanticBuilder<'_>) {
-    let mut ancestors =
-        ctx.ancestry().ancestor_kinds().filter(|kind| !kind.is_module_declaration());
+    let mut ancestors = ctx
+        .ancestry()
+        .ancestor_kinds()
+        .filter(|kind| !kind.is_module_declaration());
 
     match ancestors.next() {
         Some(AstKind::Program(_)) => {}
@@ -210,15 +221,26 @@ pub fn check_class<'a>(class: &Class<'a>, ctx: &SemanticBuilder<'a>) {
     if !class.r#abstract {
         for elem in &class.body.body {
             if elem.is_abstract() {
-                let span = elem.property_key().map_or_else(|| elem.span(), GetSpan::span);
-                ctx.error(diagnostics::abstract_elem_in_concrete_class(elem.is_property(), span));
+                let span = elem
+                    .property_key()
+                    .map_or_else(|| elem.span(), GetSpan::span);
+                ctx.error(diagnostics::abstract_elem_in_concrete_class(
+                    elem.is_property(),
+                    span,
+                ));
             }
         }
     }
 
     if !ctx.in_ambient_context() {
         let mut is_in_overload_group = false;
-        for (a, b) in class.body.body.iter().map(Some).chain(std::iter::once(None)).tuple_windows()
+        for (a, b) in class
+            .body
+            .body
+            .iter()
+            .map(Some)
+            .chain(std::iter::once(None))
+            .tuple_windows()
         {
             if let Some(ClassElement::MethodDefinition(a)) = a
                 && !a.r#type.is_abstract()
@@ -238,7 +260,9 @@ pub fn check_class<'a>(class: &Class<'a>, ctx: &SemanticBuilder<'a>) {
                     // 1. Methods with static names that are not followed by an implementation
                     // 2. The last overload in a computed-name overload group (e.g. [Symbol.iterator])
                     if a.kind.is_constructor() {
-                        ctx.error(diagnostics::constructor_implementation_missing(a.key.span()));
+                        ctx.error(diagnostics::constructor_implementation_missing(
+                            a.key.span(),
+                        ));
                     } else {
                         ctx.error(diagnostics::function_implementation_missing(a.key.span()));
                     }
@@ -261,7 +285,9 @@ pub fn check_method_definition<'a>(method: &MethodDefinition<'a>, ctx: &Semantic
     if method.kind.is_constructor() && is_empty_body {
         for param in &method.value.params.items {
             if param.has_modifier() {
-                ctx.error(diagnostics::parameter_property_only_in_constructor_impl(param.span));
+                ctx.error(diagnostics::parameter_property_only_in_constructor_impl(
+                    param.span,
+                ));
             }
         }
     }

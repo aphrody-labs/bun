@@ -70,8 +70,10 @@ where
     // Process each inner function
     for func_id in inner_func_ids {
         // Take the inner function out of the arena to avoid borrow conflicts
-        let mut inner_func =
-            replace(&mut env.functions[func_id], placeholder_function(env.allocator));
+        let mut inner_func = replace(
+            &mut env.functions[func_id],
+            placeholder_function(env.allocator),
+        );
 
         lower_with_mutation_aliasing(&mut inner_func, env, debug_logger)?;
 

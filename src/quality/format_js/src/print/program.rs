@@ -29,7 +29,11 @@ impl<'a> FormatWrite<'a> for AstNode<'a, Program<'a>> {
 
         write!(
             f,
-            [has_bom.then_some(text("\u{feff}")), FormatProgramBody(self), hard_line_break()]
+            [
+                has_bom.then_some(text("\u{feff}")),
+                FormatProgramBody(self),
+                hard_line_break()
+            ]
         );
     }
 }
@@ -77,7 +81,9 @@ impl<'a> Format<'a, JsFormatContext<'a>> for FormatStatementsWithImports<'a, '_>
 
         let mut join = f.join_nodes_with_hardline();
 
-        let mut stmts_iter = self.iter().filter(|stmt| !is_dropped_statement(stmt.as_ref()));
+        let mut stmts_iter = self
+            .iter()
+            .filter(|stmt| !is_dropped_statement(stmt.as_ref()));
         while let Some(mut stmt) = stmts_iter.next() {
             // Suppressed imports are emitted verbatim and act as partition boundaries,
             // so they are excluded from the sortable run.
@@ -154,8 +160,9 @@ fn format_import_decls_with_sort<'a, 'iter>(
 /// An `ImportDeclaration` is suppressed if it has a leading or trailing suppression comment,
 /// which causes it to be emitted verbatim and act as a partition boundary, excluding it from the sortable run.
 fn is_import_suppressed(stmt: &AstNode<'_, Statement<'_>>, f: &JsFormatter<'_, '_>) -> bool {
-    f.comments()
-        .is_node_suppressed(stmt.span(), || suppressed_statement_content_end(stmt.as_ref(), f))
+    f.comments().is_node_suppressed(stmt.span(), || {
+        suppressed_statement_content_end(stmt.as_ref(), f)
+    })
 }
 
 impl<'a> Format<'a, JsFormatContext<'a>> for AstNode<'a, ArenaVec<'a, Directive<'a>>> {
@@ -191,7 +198,14 @@ impl<'a> Format<'a, JsFormatContext<'a>> for AstNode<'a, ArenaVec<'a, Directive<
 
         f.join_nodes_with_hardline().entries(self);
 
-        write!(f, if need_extra_empty_line { empty_line() } else { hard_line_break() });
+        write!(
+            f,
+            if need_extra_empty_line {
+                empty_line()
+            } else {
+                hard_line_break()
+            }
+        );
     }
 }
 

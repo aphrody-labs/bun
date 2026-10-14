@@ -41,7 +41,10 @@ impl DirectivePrefix {
 
     #[must_use]
     pub fn unused_disable_message(self) -> String {
-        format!("Unused {} directive (no problems were reported).", self.disable_directive_name())
+        format!(
+            "Unused {} directive (no problems were reported).",
+            self.disable_directive_name()
+        )
     }
 
     #[must_use]
@@ -168,8 +171,12 @@ impl DisabledRule {
 
     pub fn directive_prefix(&self) -> DirectivePrefix {
         match self {
-            DisabledRule::All { directive_prefix, .. }
-            | DisabledRule::Single { directive_prefix, .. } => *directive_prefix,
+            DisabledRule::All {
+                directive_prefix, ..
+            }
+            | DisabledRule::Single {
+                directive_prefix, ..
+            } => *directive_prefix,
         }
     }
 }
@@ -251,14 +258,18 @@ impl RuleCommentRule {
     }
 
     fn previous_token_is_rule(&self, text: &str) -> bool {
-        let Some(token) =
-            text.rsplit(|ch: char| ch == ',' || ch.is_whitespace()).find(|token| !token.is_empty())
+        let Some(token) = text
+            .rsplit(|ch: char| ch == ',' || ch.is_whitespace())
+            .find(|token| !token.is_empty())
         else {
             return false;
         };
 
         let directive_name = self.directive_prefix.disable_directive_name();
-        !matches!(token.strip_prefix(directive_name), Some("" | "-next-line" | "-line"))
+        !matches!(
+            token.strip_prefix(directive_name),
+            Some("" | "-next-line" | "-line")
+        )
     }
 }
 
@@ -300,7 +311,9 @@ pub struct DisableDirectives {
 
 impl DisableDirectives {
     fn mark_disable_directive_used(&self, disable_directive: DisabledRule) {
-        self.used_disable_comments.borrow_mut().push(disable_directive);
+        self.used_disable_comments
+            .borrow_mut()
+            .push(disable_directive);
     }
 
     pub fn contains(&self, rule_name: &str, span: Span) -> bool {
@@ -329,11 +342,15 @@ impl DisableDirectives {
                 // rather than doing a substring match. Otherwise unrelated rules like
                 // `canonical/no-re-export` would accidentally match oxlint's `export`
                 // rule because `"no-re-export".contains("export")` is true.
-                DisabledRule::Single { rule_name: name, .. } => {
+                DisabledRule::Single {
+                    rule_name: name, ..
+                } => {
                     if rule_name.contains('/') {
                         name == rule_name
                     } else {
-                        name.rsplit_once('/').map_or(name.as_str(), |(_, rule)| rule) == rule_name
+                        name.rsplit_once('/')
+                            .map_or(name.as_str(), |(_, rule)| rule)
+                            == rule_name
                     }
                 }
             };
@@ -400,13 +417,15 @@ impl DisableDirectives {
                             return None;
                         }
                         match &interval.val {
-                            DisabledRule::Single { rule_name, name_span, .. } => {
-                                Some(RuleCommentRule {
-                                    directive_prefix: interval.val.directive_prefix(),
-                                    rule_name: rule_name.clone(),
-                                    name_span: *name_span,
-                                })
-                            }
+                            DisabledRule::Single {
+                                rule_name,
+                                name_span,
+                                ..
+                            } => Some(RuleCommentRule {
+                                directive_prefix: interval.val.directive_prefix(),
+                                rule_name: rule_name.clone(),
+                                name_span: *name_span,
+                            }),
                             DisabledRule::All { .. } => Some(RuleCommentRule {
                                 directive_prefix: interval.val.directive_prefix(),
                                 rule_name: "all".to_string(),
@@ -509,8 +528,9 @@ impl DisableDirectivesBuilder {
         let line_start = source_text[..outer_start].rfind('\n').map_or(0, |i| i + 1);
 
         // Find the end of the current line, including the newline character itself.
-        let line_end =
-            source_text[outer_end..].find('\n').map_or(source_text.len(), |i| outer_end + i + 1);
+        let line_end = source_text[outer_end..]
+            .find('\n')
+            .map_or(source_text.len(), |i| outer_end + i + 1);
 
         let before_on_line = &source_text[line_start..outer_start];
         let after_on_line = source_text[outer_end..line_end].trim_end_matches(['\r', '\n']);
@@ -584,13 +604,15 @@ impl DisableDirectivesBuilder {
                         let mut rules = vec![];
                         for (rule_name, name_span) in rule_names {
                             let name_span = name_span.move_right(rule_list_start);
-                            self.disable_start_map.entry(rule_name.to_string()).or_insert((
-                                comment_span.end,
-                                directive_prefix,
-                                name_span,
-                                outer_span,
-                                comment_fix_span,
-                            ));
+                            self.disable_start_map
+                                .entry(rule_name.to_string())
+                                .or_insert((
+                                    comment_span.end,
+                                    directive_prefix,
+                                    name_span,
+                                    outer_span,
+                                    comment_fix_span,
+                                ));
                             rules.push(RuleCommentRule {
                                 directive_prefix,
                                 rule_name: rule_name.to_string(),
@@ -779,7 +801,12 @@ impl DisableDirectivesBuilder {
             self.add_interval(
                 start,
                 source_len,
-                DisabledRule::All { directive_prefix, comment_span, fix_span, is_next_line: false },
+                DisabledRule::All {
+                    directive_prefix,
+                    comment_span,
+                    fix_span,
+                    is_next_line: false,
+                },
             );
         }
 
@@ -1381,8 +1408,9 @@ pub fn create_unused_directives_diagnostics(
             }
             RuleCommentType::Single(rules) => {
                 for rule in rules {
-                    let rule_message =
-                        rule.directive_prefix.unused_disable_rule_message(&rule.rule_name);
+                    let rule_message = rule
+                        .directive_prefix
+                        .unused_disable_rule_message(&rule.rule_name);
                     diagnostics.push(
                         OxcDiagnostic::warn(rule_message)
                             .with_label(rule.name_span)
@@ -1401,7 +1429,11 @@ pub fn create_unused_directives_diagnostics(
         } else {
             directive_prefix.unused_enable_message()
         };
-        diagnostics.push(OxcDiagnostic::warn(message).with_label(*span).with_severity(severity));
+        diagnostics.push(
+            OxcDiagnostic::warn(message)
+                .with_label(*span)
+                .with_severity(severity),
+        );
     }
 
     diagnostics
@@ -1436,7 +1468,11 @@ mod tests {
 
     fn directive_prefix_for_comment(comment: &Comment, source_text: &str) -> DirectivePrefix {
         let text = comment.content_span().source_text(source_text).trim_start();
-        if text.starts_with("oxlint-") { DirectivePrefix::Oxlint } else { DirectivePrefix::Eslint }
+        if text.starts_with("oxlint-") {
+            DirectivePrefix::Oxlint
+        } else {
+            DirectivePrefix::Eslint
+        }
     }
 
     fn test_directives(
@@ -1489,7 +1525,10 @@ mod tests {
 
         let debugger_span = Span::sized(source_text.rfind("debugger").unwrap() as u32, 8);
         for rule in expected_rules {
-            assert!(directives.contains(rule, debugger_span), "{directive} should disable {rule}");
+            assert!(
+                directives.contains(rule, debugger_span),
+                "{directive} should disable {rule}"
+            );
             if let Some((_, rule_without_plugin)) = rule.rsplit_once('/') {
                 assert!(
                     directives.contains(rule_without_plugin, debugger_span),
@@ -1748,8 +1787,16 @@ mod tests {
         test_directive_span("// eslint-disable-next-line max-params    \r\n", 42, 44);
         test_directive_span("// eslint-disable-next-line max-params    \n ABC", 42, 47);
         test_directive_span("// eslint-disable-next-line max-params    \r\n ABC", 42, 48);
-        test_directive_span("// eslint-disable-next-line max-params    \n ABC \n", 42, 48);
-        test_directive_span("// eslint-disable-next-line max-params    \r\n ABC \r\n", 42, 49);
+        test_directive_span(
+            "// eslint-disable-next-line max-params    \n ABC \n",
+            42,
+            48,
+        );
+        test_directive_span(
+            "// eslint-disable-next-line max-params    \r\n ABC \r\n",
+            42,
+            49,
+        );
     }
 
     #[test]
@@ -1777,7 +1824,10 @@ mod tests {
                 "// oxlint-disable-next-line no-debugger no-unused-vars -- description",
                 &["no-debugger", "no-unused-vars"],
             ),
-            ("// oxlint-disable-next-line no-debugger-- description", &["no-debugger"]),
+            (
+                "// oxlint-disable-next-line no-debugger-- description",
+                &["no-debugger"],
+            ),
             (
                 "// oxlint-disable-next-line typescript/unbound-method - bound later",
                 &["typescript/unbound-method"],
@@ -1832,7 +1882,10 @@ mod tests {
         let fix = rules[0].create_fix(source_text, unused[0].span);
         assert_eq!(
             apply_delete(source_text, fix.span),
-            concat!("// eslint-disable-next-line no-bitwise - intentional\n", "const x = 1;\n",)
+            concat!(
+                "// eslint-disable-next-line no-bitwise - intentional\n",
+                "const x = 1;\n",
+            )
         );
     }
 
@@ -1892,7 +1945,10 @@ mod tests {
         }
         .create_fix(source_text, comment_span);
 
-        assert_eq!(no_bitwise_fix.span, Span::new(no_bitwise_start, no_implicit_start));
+        assert_eq!(
+            no_bitwise_fix.span,
+            Span::new(no_bitwise_start, no_implicit_start)
+        );
         assert_eq!(
             apply_delete(source_text, no_bitwise_fix.span),
             "// eslint-disable-next-line no-implicit-coercion"
@@ -1905,7 +1961,10 @@ mod tests {
         }
         .create_fix(source_text, comment_span);
 
-        assert_eq!(no_implicit_fix.span, Span::new(no_bitwise_end, no_implicit_end));
+        assert_eq!(
+            no_implicit_fix.span,
+            Span::new(no_bitwise_end, no_implicit_end)
+        );
         assert_eq!(
             apply_delete(source_text, no_implicit_fix.span),
             "// eslint-disable-next-line no-bitwise"
@@ -1961,7 +2020,10 @@ function test() {
         // A diagnostic that starts on the disabled line (line 4) SHOULD be suppressed
         // The first console.log on line 4 starts at position 59
         let first_console_log_span = Span::new(55, 66);
-        assert_eq!(first_console_log_span.source_text(source_text), "console.log");
+        assert_eq!(
+            first_console_log_span.source_text(source_text),
+            "console.log"
+        );
         assert!(
             directives.contains("no-console", first_console_log_span),
             "eslint-disable-next-line should suppress diagnostics on the next line"
@@ -1970,7 +2032,10 @@ function test() {
         // A diagnostic that starts on a non-disabled line (line 5) should NOT be suppressed
         // The second console.log on line 5 starts at position 102
         let second_console_log_span = Span::new(97, 109);
-        assert_eq!(second_console_log_span.source_text(source_text), "console.warn");
+        assert_eq!(
+            second_console_log_span.source_text(source_text),
+            "console.warn"
+        );
         assert!(
             !directives.contains("no-console", second_console_log_span),
             "eslint-disable-next-line should NOT suppress diagnostics on lines after the next line"
@@ -2052,10 +2117,19 @@ function test() {
 
         // fix_span deletes only the comment; code on the same line is preserved.
         let result = apply_delete(source_text, unused[0].fix_span);
-        assert!(result.contains("const x = 1;"), "code on the line must not be removed");
-        assert!(!result.contains("eslint-disable"), "directive must be removed");
+        assert!(
+            result.contains("const x = 1;"),
+            "code on the line must not be removed"
+        );
+        assert!(
+            !result.contains("eslint-disable"),
+            "directive must be removed"
+        );
         // Must not leave `//` behind.
-        assert!(!result.contains("//"), "must not leave an empty `//` behind");
+        assert!(
+            !result.contains("//"),
+            "must not leave an empty `//` behind"
+        );
     }
 
     #[test]

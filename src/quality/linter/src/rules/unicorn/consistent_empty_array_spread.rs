@@ -179,7 +179,12 @@ fn test() {
         ),
     ];
 
-    Tester::new(ConsistentEmptyArraySpread::NAME, ConsistentEmptyArraySpread::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        ConsistentEmptyArraySpread::NAME,
+        ConsistentEmptyArraySpread::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

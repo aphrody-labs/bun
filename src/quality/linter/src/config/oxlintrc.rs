@@ -326,7 +326,10 @@ impl Oxlintrc {
 
         // jsonc support
         json_strip_comments::strip(&mut string).map_err(|err| {
-            OxcDiagnostic::error(format!("Failed to parse jsonc file {}: {err:?}", path.display()))
+            OxcDiagnostic::error(format!(
+                "Failed to parse jsonc file {}: {err:?}",
+                path.display()
+            ))
         })?;
 
         let json = serde_json::from_str::<serde_json::Value>(&string).map_err(|err| {
@@ -361,8 +364,11 @@ impl Oxlintrc {
         config.path = path.to_path_buf();
 
         #[expect(clippy::missing_panics_doc)]
-        let config_dir =
-            config.path.parent().expect("config path should have a parent directory").to_path_buf();
+        let config_dir = config
+            .path
+            .parent()
+            .expect("config path should have a parent directory")
+            .to_path_buf();
         config.set_config_dir(&config_dir);
 
         Ok(config)
@@ -456,9 +462,13 @@ impl Oxlintrc {
         };
 
         let external_plugins = match (&self.external_plugins, &other.external_plugins) {
-            (Some(self_external), Some(other_external)) => {
-                Some(self_external.iter().chain(other_external.iter()).cloned().collect())
-            }
+            (Some(self_external), Some(other_external)) => Some(
+                self_external
+                    .iter()
+                    .chain(other_external.iter())
+                    .cloned()
+                    .collect(),
+            ),
             (Some(self_external), None) => Some(self_external.clone()),
             (None, Some(other_external)) => Some(other_external.clone()),
             (None, None) => None,
@@ -600,7 +610,10 @@ mod test {
             json!({ "options": { "reportUnusedDisableDirectives": "warn" } }),
         )
         .unwrap();
-        assert_eq!(config.options.report_unused_disable_directives, Some(AllowWarnDeny::Warn));
+        assert_eq!(
+            config.options.report_unused_disable_directives,
+            Some(AllowWarnDeny::Warn)
+        );
 
         // error and deny
 
@@ -608,13 +621,19 @@ mod test {
             json!({ "options": { "reportUnusedDisableDirectives": "error" } }),
         )
         .unwrap();
-        assert_eq!(config.options.report_unused_disable_directives, Some(AllowWarnDeny::Deny));
+        assert_eq!(
+            config.options.report_unused_disable_directives,
+            Some(AllowWarnDeny::Deny)
+        );
 
         let config: Oxlintrc = serde_json::from_value(
             json!({ "options": { "reportUnusedDisableDirectives": "deny" } }),
         )
         .unwrap();
-        assert_eq!(config.options.report_unused_disable_directives, Some(AllowWarnDeny::Deny));
+        assert_eq!(
+            config.options.report_unused_disable_directives,
+            Some(AllowWarnDeny::Deny)
+        );
 
         // off and allow
 
@@ -622,19 +641,28 @@ mod test {
             json!({ "options": { "reportUnusedDisableDirectives": "off" } }),
         )
         .unwrap();
-        assert_eq!(config.options.report_unused_disable_directives, Some(AllowWarnDeny::Allow));
+        assert_eq!(
+            config.options.report_unused_disable_directives,
+            Some(AllowWarnDeny::Allow)
+        );
 
         let config: Oxlintrc = serde_json::from_value(
             json!({ "options": { "reportUnusedDisableDirectives": "allow" } }),
         )
         .unwrap();
-        assert_eq!(config.options.report_unused_disable_directives, Some(AllowWarnDeny::Allow));
+        assert_eq!(
+            config.options.report_unused_disable_directives,
+            Some(AllowWarnDeny::Allow)
+        );
 
         let config: Oxlintrc = serde_json::from_value(
             json!({ "options": { "respectEslintDisableDirectives": false } }),
         )
         .unwrap();
-        assert_eq!(config.options.respect_eslint_disable_directives, Some(false));
+        assert_eq!(
+            config.options.respect_eslint_disable_directives,
+            Some(false)
+        );
 
         let config: Oxlintrc = serde_json::from_value(
             json!({ "options": { "respectEslintDisableDirectives": true } }),
@@ -698,7 +726,10 @@ mod test {
         .unwrap();
         base.path = PathBuf::from("/root/base.json");
         let merged = root.merge(base);
-        assert_eq!(merged.options.report_unused_disable_directives, Some(AllowWarnDeny::Deny));
+        assert_eq!(
+            merged.options.report_unused_disable_directives,
+            Some(AllowWarnDeny::Deny)
+        );
 
         // base value propagates when root does not set the field
         let mut root: Oxlintrc = serde_json::from_value(json!({})).unwrap();
@@ -709,7 +740,10 @@ mod test {
         .unwrap();
         base.path = PathBuf::from("/root/base.json");
         let merged = root.merge(base);
-        assert_eq!(merged.options.report_unused_disable_directives, Some(AllowWarnDeny::Warn));
+        assert_eq!(
+            merged.options.report_unused_disable_directives,
+            Some(AllowWarnDeny::Warn)
+        );
 
         // root wins over base for respectEslintDisableDirectives
         let mut root: Oxlintrc = serde_json::from_value(
@@ -723,7 +757,10 @@ mod test {
         .unwrap();
         base.path = PathBuf::from("/root/base.json");
         let merged = root.merge(base);
-        assert_eq!(merged.options.respect_eslint_disable_directives, Some(false));
+        assert_eq!(
+            merged.options.respect_eslint_disable_directives,
+            Some(false)
+        );
 
         // base value propagates when root does not set the field
         let mut root: Oxlintrc = serde_json::from_value(json!({})).unwrap();
@@ -734,7 +771,10 @@ mod test {
         .unwrap();
         base.path = PathBuf::from("/root/base.json");
         let merged = root.merge(base);
-        assert_eq!(merged.options.respect_eslint_disable_directives, Some(false));
+        assert_eq!(
+            merged.options.respect_eslint_disable_directives,
+            Some(false)
+        );
     }
 
     #[test]
@@ -756,7 +796,10 @@ mod test {
         assert_eq!(config.plugins, Some(LintPlugins::REACT | LintPlugins::OXC));
         let config: Oxlintrc =
             serde_json::from_str(r#"{ "plugins": ["typescript", "unicorn"] }"#).unwrap();
-        assert_eq!(config.plugins, Some(LintPlugins::TYPESCRIPT | LintPlugins::UNICORN));
+        assert_eq!(
+            config.plugins,
+            Some(LintPlugins::TYPESCRIPT | LintPlugins::UNICORN)
+        );
         let config: Oxlintrc =
             serde_json::from_str(r#"{ "plugins": ["typescript", "unicorn", "react", "oxc", "import", "jsdoc", "jest", "vitest", "jsx-a11y", "nextjs", "react-perf", "promise", "node", "vue"] }"#).unwrap();
         assert_eq!(config.plugins, Some(LintPlugins::all()));
@@ -906,8 +949,14 @@ mod test {
             assert_eq!(entry.config_dir, PathBuf::new());
         }
 
-        let override_plugins =
-            config.overrides.iter().next().unwrap().external_plugins.as_ref().unwrap();
+        let override_plugins = config
+            .overrides
+            .iter()
+            .next()
+            .unwrap()
+            .external_plugins
+            .as_ref()
+            .unwrap();
         assert_eq!(override_plugins.len(), 1);
         for entry in override_plugins {
             assert_eq!(entry.config_dir, PathBuf::new());
@@ -925,8 +974,14 @@ mod test {
         }
 
         // Assert that all override plugins have the new config_dir
-        let override_plugins =
-            config.overrides.iter().next().unwrap().external_plugins.as_ref().unwrap();
+        let override_plugins = config
+            .overrides
+            .iter()
+            .next()
+            .unwrap()
+            .external_plugins
+            .as_ref()
+            .unwrap();
         assert_eq!(override_plugins.len(), 1);
         for entry in override_plugins {
             assert_eq!(entry.config_dir, new_config_dir);

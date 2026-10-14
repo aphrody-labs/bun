@@ -108,9 +108,13 @@ async fn resolve_mailru(
     };
     let mut request = MediaRequest::get(&metadata_url, Some(current_url), opts.timeout_ms);
     if let Some(user_agent) = opts.user_agent {
-        request.headers.insert("User-Agent".to_string(), user_agent.to_string());
+        request
+            .headers
+            .insert("User-Agent".to_string(), user_agent.to_string());
     }
-    let Ok(response) = opts.transport.fetch(request).await else { return Vec::new() };
+    let Ok(response) = opts.transport.fetch(request).await else {
+        return Vec::new();
+    };
     if response.status >= 400 {
         return Vec::new();
     }
@@ -131,7 +135,10 @@ async fn resolve_mailru(
                 confidence: 1.0,
                 offset: 0,
                 layer: 0,
-                label: video.get("key").and_then(serde_json::Value::as_str).map(str::to_string),
+                label: video
+                    .get("key")
+                    .and_then(serde_json::Value::as_str)
+                    .map(str::to_string),
             })
         })
         .collect();
@@ -155,11 +162,16 @@ async fn resolve_mailru(
 pub async fn resolve_variants(playlist_url: &str, opts: &ResolveOptions<'_>) -> Vec<MediaVariant> {
     let mut request = MediaRequest::get(playlist_url, opts.referer, opts.timeout_ms);
     request.headers = playback_headers(playlist_url, opts.user_agent);
-    let Ok(response) = opts.transport.fetch(request).await else { return Vec::new() };
+    let Ok(response) = opts.transport.fetch(request).await else {
+        return Vec::new();
+    };
     if response.status >= 400 || !is_master_playlist(&response.body) {
         return Vec::new();
     }
-    parse_master_playlist(&response.body, response.url.as_deref().unwrap_or(playlist_url))
+    parse_master_playlist(
+        &response.body,
+        response.url.as_deref().unwrap_or(playlist_url),
+    )
 }
 
 pub async fn resolve_embed(embed_url: &str, opts: &ResolveOptions<'_>) -> ResolvedMedia {
@@ -186,17 +198,23 @@ pub async fn resolve_embed(embed_url: &str, opts: &ResolveOptions<'_>) -> Resolv
     }
     let mut current_url = normalized.clone();
     for hop in 0..=opts.max_hops.min(8) {
-        let referer = if hop == 0 { opts.referer } else { Some(normalized.as_str()) };
+        let referer = if hop == 0 {
+            opts.referer
+        } else {
+            Some(normalized.as_str())
+        };
         let mut request = MediaRequest::get(&current_url, referer, opts.timeout_ms);
         if let Some(user_agent) = opts.user_agent {
-            request.headers.insert("User-Agent".to_string(), user_agent.to_string());
+            request
+                .headers
+                .insert("User-Agent".to_string(), user_agent.to_string());
         }
         let response = match opts.transport.fetch(request).await {
             Ok(response) => response,
             Err(error) => {
                 resolved.error = Some(format!("embed page unreachable: {error}"));
                 return resolved;
-            },
+            }
         };
         if response.status >= 400 {
             resolved.error = Some(format!("embed returned {}", response.status));
@@ -207,7 +225,9 @@ pub async fn resolve_embed(embed_url: &str, opts: &ResolveOptions<'_>) -> Resolv
         if candidates.is_empty() && traits.name == "mailru" {
             candidates = resolve_mailru(&response.body, final_url, opts).await;
         }
-        resolved.poster = resolved.poster.or_else(|| extract_poster(&response.body, final_url));
+        resolved.poster = resolved
+            .poster
+            .or_else(|| extract_poster(&response.body, final_url));
         if let Some(best) = candidates.first().cloned() {
             resolved.host = host_from_url(final_url);
             resolved.embed_url = final_url.to_string();
@@ -229,8 +249,9 @@ pub async fn resolve_embed(embed_url: &str, opts: &ResolveOptions<'_>) -> Resolv
             }
             return resolved;
         }
-        let Some(next) =
-            (hop < opts.max_hops).then(|| next_hop(&response.body, final_url)).flatten()
+        let Some(next) = (hop < opts.max_hops)
+            .then(|| next_hop(&response.body, final_url))
+            .flatten()
         else {
             break;
         };
@@ -238,7 +259,10 @@ pub async fn resolve_embed(embed_url: &str, opts: &ResolveOptions<'_>) -> Resolv
         resolved.embed_url = current_url.clone();
     }
     resolved.error = Some(if traits.obfuscated {
-        format!("{} masks its source; static extraction requires page execution", resolved.host)
+        format!(
+            "{} masks its source; static extraction requires page execution",
+            resolved.host
+        )
     } else {
         "no media candidate found in embed page".to_string()
     });
@@ -256,7 +280,10 @@ mod tests {
     #[async_trait]
     impl MediaTransport for Fake {
         async fn fetch(&self, request: MediaRequest) -> Result<MediaResponse, String> {
-            self.pages.get(&request.url).cloned().ok_or_else(|| "missing fixture".to_string())
+            self.pages
+                .get(&request.url)
+                .cloned()
+                .ok_or_else(|| "missing fixture".to_string())
         }
     }
 
@@ -303,9 +330,14 @@ mod tests {
 
     #[tokio::test]
     async fn proprietary_player_skips_transport() {
-        let fake = Fake { pages: HashMap::new() };
-        let media =
-            resolve_embed("https://www.youtube.com/embed/x", &ResolveOptions::new(&fake)).await;
+        let fake = Fake {
+            pages: HashMap::new(),
+        };
+        let media = resolve_embed(
+            "https://www.youtube.com/embed/x",
+            &ResolveOptions::new(&fake),
+        )
+        .await;
         assert_eq!(media.host, "youtube");
         assert!(media.error.is_some());
     }

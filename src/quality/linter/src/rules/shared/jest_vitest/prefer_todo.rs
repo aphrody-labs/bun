@@ -110,7 +110,10 @@ fn should_filter_case(expr: &CallExpression) -> bool {
 }
 
 fn is_string_type(arg: &Argument) -> bool {
-    matches!(arg, Argument::StringLiteral(_) | Argument::TemplateLiteral(_))
+    matches!(
+        arg,
+        Argument::StringLiteral(_) | Argument::TemplateLiteral(_)
+    )
 }
 
 fn is_empty_function(expr: &CallExpression) -> bool {

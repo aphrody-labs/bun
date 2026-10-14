@@ -10,7 +10,14 @@ use crate::{
 #[derive(Debug, Default, Clone)]
 pub struct PreferExpectResolves;
 
-declare_oxc_lint!(PreferExpectResolves, jest, style, fix, docs = DOCUMENTATION, version = "0.2.14",);
+declare_oxc_lint!(
+    PreferExpectResolves,
+    jest,
+    style,
+    fix,
+    docs = DOCUMENTATION,
+    version = "0.2.14",
+);
 
 impl Rule for PreferExpectResolves {
     fn run_on_jest_node<'a, 'c>(
@@ -144,8 +151,13 @@ fn tests() {
         ),
     ];
 
-    Tester::new(PreferExpectResolves::NAME, PreferExpectResolves::PLUGIN, pass, fail)
-        .with_jest_plugin(true)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        PreferExpectResolves::NAME,
+        PreferExpectResolves::PLUGIN,
+        pass,
+        fail,
+    )
+    .with_jest_plugin(true)
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

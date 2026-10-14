@@ -39,7 +39,10 @@ use crate::{
 /// the printer coalesces consecutive spaces and drops them at a line start.
 pub fn write_head_body_separator(body_start: u32, f: &mut JsFormatter<'_, '_>) {
     let comments = f.context().comments().comments_before(body_start);
-    if comments.first().is_some_and(|comment| comment.preceded_by_newline()) {
+    if comments
+        .first()
+        .is_some_and(|comment| comment.preceded_by_newline())
+    {
         write!(f, hard_line_break());
     } else {
         write!(f, space());
@@ -104,7 +107,10 @@ where
 /// Prints the pending comments before a call's `opener` (`?.`, `<` or `(`) on the callee side,
 /// the same as before a `}`-to-keyword gap's keyword ([`write_comments_between_blocks`]).
 pub fn write_comments_before_opener(start: u32, opener: u8, f: &mut JsFormatter<'_, '_>) {
-    let comments = f.context().comments().comments_before_character(start, opener);
+    let comments = f
+        .context()
+        .comments()
+        .comments_before_character(start, opener);
     write_comments_between_blocks(comments, f);
 }
 
@@ -118,9 +124,14 @@ pub fn write_trailing_comments_before(
     character: u8,
     f: &mut JsFormatter<'_, '_>,
 ) -> bool {
-    let comments = f.context().comments().comments_before_character(start, character);
-    let same_line_count =
-        comments.iter().take_while(|comment| !comment.preceded_by_newline()).count();
+    let comments = f
+        .context()
+        .comments()
+        .comments_before_character(start, character);
+    let same_line_count = comments
+        .iter()
+        .take_while(|comment| !comment.preceded_by_newline())
+        .count();
     let (same_line, own_line) = comments.split_at(same_line_count);
 
     FormatTrailingComments::Comments(same_line).fmt(f);
@@ -156,8 +167,10 @@ pub fn write_comments_between_blocks<'a>(
     comments: &'a [Comment],
     f: &mut JsFormatter<'_, 'a>,
 ) -> bool {
-    let same_line_count =
-        comments.iter().take_while(|comment| !comment.preceded_by_newline()).count();
+    let same_line_count = comments
+        .iter()
+        .take_while(|comment| !comment.preceded_by_newline())
+        .count();
     let (same_line, own_line) = comments.split_at(same_line_count);
 
     if !same_line.is_empty() {
@@ -188,7 +201,10 @@ pub struct FormatStatementBody<'a, 'b> {
 
 impl<'a, 'b> FormatStatementBody<'a, 'b> {
     pub fn new(body: &'b AstNode<'a, Statement<'a>>) -> Self {
-        Self { body, force_space: false }
+        Self {
+            body,
+            force_space: false,
+        }
     }
 
     /// Prevents that the consequent is formatted on its own line and indented by one level and
@@ -232,8 +248,10 @@ impl<'a> Format<'a, JsFormatContext<'a>> for FormatStatementBody<'a, '_> {
                         if !write_suppressed_statement(self.body, f) {
                             write!(f, FormatNodeWithoutTrailingComments(self.body));
                         }
-                        let comments =
-                            f.context().comments().end_of_line_comments_after(body_span.end);
+                        let comments = f
+                            .context()
+                            .comments()
+                            .end_of_line_comments_after(body_span.end);
                         FormatTrailingComments::Comments(comments).fmt(f);
                     } else {
                         write!(f, self.body);

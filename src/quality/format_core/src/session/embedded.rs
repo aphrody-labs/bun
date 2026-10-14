@@ -90,7 +90,10 @@ pub struct EmbeddedIr<'a> {
 
 impl<'a> From<EmbeddedIr<'a>> for DispatchPayload<'a> {
     fn from(embedded: EmbeddedIr<'a>) -> Self {
-        Self { doc: embedded.ir, child_context: None }
+        Self {
+            doc: embedded.ir,
+            child_context: None,
+        }
     }
 }
 
@@ -117,7 +120,12 @@ pub fn dispatch_fragment_ir<'a, C: FormatContext>(
 ) -> Option<ArenaVec<'a, FormatElement<'a>>> {
     dispatch_ir(
         f,
-        DispatchRequest { language, text, input_kind: InputKind::Fragment, parent_context },
+        DispatchRequest {
+            language,
+            text,
+            input_kind: InputKind::Fragment,
+            parent_context,
+        },
     )
 }
 

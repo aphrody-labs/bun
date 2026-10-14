@@ -12,19 +12,31 @@ impl LabeledSpan {
     /// Creates a labeled span.
     #[must_use]
     pub const fn new(label: Option<String>, offset: u32, len: u32) -> Self {
-        Self { label, span: Span::sized(offset, len), primary: false }
+        Self {
+            label,
+            span: Span::sized(offset, len),
+            primary: false,
+        }
     }
 
     /// Creates a labeled span from an existing span.
     #[must_use]
     pub fn new_with_span(label: Option<String>, span: impl Into<Span>) -> Self {
-        Self { label, span: span.into(), primary: false }
+        Self {
+            label,
+            span: span.into(),
+            primary: false,
+        }
     }
 
     /// Creates a primary labeled span from an existing span.
     #[must_use]
     pub fn new_primary_with_span(label: Option<String>, span: impl Into<Span>) -> Self {
-        Self { label, span: span.into(), primary: true }
+        Self {
+            label,
+            span: span.into(),
+            primary: true,
+        }
     }
 
     /// Changes the offset of the span while preserving its length.

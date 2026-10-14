@@ -48,7 +48,8 @@ declare_oxc_lint!(
     correctness,
     dangerous_suggestion,
     version = "0.0.21",
-    short_description = "Enforces that positive values for the `tabIndex` attribute are not used in JSX.",
+    short_description =
+        "Enforces that positive values for the `tabIndex` attribute are not used in JSX.",
 );
 
 impl Rule for TabindexNoPositive {
@@ -119,7 +120,12 @@ fn test() {
         (r"<div tabIndex={1.589} />", r#"<div tabIndex="0" />"#),
     ];
 
-    Tester::new(TabindexNoPositive::NAME, TabindexNoPositive::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        TabindexNoPositive::NAME,
+        TabindexNoPositive::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

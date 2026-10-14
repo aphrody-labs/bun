@@ -144,7 +144,11 @@ impl<'a> Minifier {
         program: &mut Program<'a>,
     ) -> MinifierReturn {
         let Self { options } = self;
-        let MinifierOptions { mangle, mangle_properties, compress } = options;
+        let MinifierOptions {
+            mangle,
+            mangle_properties,
+            compress,
+        } = options;
 
         // Run property mangling first because compression can change which strings are property
         // keys.
@@ -177,8 +181,9 @@ impl<'a> Minifier {
             .unwrap_or_default();
         let (scoping, class_private_mappings) = mangle
             .map(|options| {
-                let mut builder =
-                    SemanticBuilder::new().with_build_nodes(true).with_class_table(true);
+                let mut builder = SemanticBuilder::new()
+                    .with_build_nodes(true)
+                    .with_class_table(true);
                 if let Some(stats) = stats {
                     builder = builder.with_stats(stats);
                 }
@@ -188,7 +193,14 @@ impl<'a> Minifier {
                     .build_with_semantic(&mut semantic, program);
                 (semantic.into_scoping(), class_private_mappings)
             })
-            .map_or((None, None), |(scoping, mappings)| (Some(scoping), Some(mappings)));
-        MinifierReturn { scoping, class_private_mappings, property_mangle_cache, iterations }
+            .map_or((None, None), |(scoping, mappings)| {
+                (Some(scoping), Some(mappings))
+            });
+        MinifierReturn {
+            scoping,
+            class_private_mappings,
+            property_mangle_cache,
+            iterations,
+        }
     }
 }

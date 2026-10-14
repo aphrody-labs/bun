@@ -72,7 +72,8 @@ declare_oxc_lint!(
     vue,
     correctness,
     version = "1.62.0",
-    short_description = "Disallow using deprecated Events API (`$on`, `$off`, `$once`) in Vue.js 3.0.0+.",
+    short_description =
+        "Disallow using deprecated Events API (`$on`, `$off`, `$once`) in Vue.js 3.0.0+.",
 );
 
 impl Rule for NoDeprecatedEventsApi {
@@ -107,7 +108,9 @@ impl Rule for NoDeprecatedEventsApi {
         if is_this_object(&member_expr.object, ctx)
             && is_in_vue_component_instance_method(node, ctx)
         {
-            ctx.diagnostic(no_deprecated_events_api_diagnostic(member_expr.property.span));
+            ctx.diagnostic(no_deprecated_events_api_diagnostic(
+                member_expr.property.span,
+            ));
         }
     }
 }
@@ -421,6 +424,11 @@ fn test() {
         ),
     ];
 
-    Tester::new(NoDeprecatedEventsApi::NAME, NoDeprecatedEventsApi::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        NoDeprecatedEventsApi::NAME,
+        NoDeprecatedEventsApi::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

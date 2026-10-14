@@ -10,8 +10,9 @@ impl StringLastIndexOf for &str {
     #[expect(clippy::cast_possible_wrap, clippy::cast_sign_loss)]
     fn last_index_of(&self, search_value: Option<&str>, from_index: Option<f64>) -> isize {
         let search_value = search_value.unwrap_or("undefined");
-        let from_index =
-            from_index.map_or(usize::MAX, |x| x.to_int_32().max(0) as usize + search_value.len());
+        let from_index = from_index.map_or(usize::MAX, |x| {
+            x.to_int_32().max(0) as usize + search_value.len()
+        });
         self.chars()
             .take(from_index)
             .collect::<String>()
@@ -33,7 +34,10 @@ mod test {
         assert_eq!("test test test".last_index_of(Some("test"), Some(5.0)), 5);
         assert_eq!("test test test".last_index_of(Some("test"), Some(4.0)), 0);
         assert_eq!("test test test".last_index_of(Some("test"), Some(0.0)), 0);
-        assert_eq!("test test test".last_index_of(Some("notpresent"), Some(0.0)), -1);
+        assert_eq!(
+            "test test test".last_index_of(Some("notpresent"), Some(0.0)),
+            -1
+        );
         assert_eq!("undefined".last_index_of(None, None), 0);
         assert_eq!("test test test".last_index_of(None, None), -1);
         assert_eq!("abcdef".last_index_of(Some("b"), None), 1);

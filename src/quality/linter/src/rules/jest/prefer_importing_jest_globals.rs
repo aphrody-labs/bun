@@ -76,7 +76,10 @@ impl JestFnType {
         matches!(
             (self, kind),
             (Self::Hook, JestFnKind::General(JestGeneralFnKind::Hook))
-                | (Self::Describe, JestFnKind::General(JestGeneralFnKind::Describe))
+                | (
+                    Self::Describe,
+                    JestFnKind::General(JestGeneralFnKind::Describe)
+                )
                 | (Self::Test, JestFnKind::General(JestGeneralFnKind::Test))
                 | (Self::Expect, JestFnKind::Expect | JestFnKind::ExpectTypeOf)
                 | (
@@ -276,7 +279,9 @@ fn try_merge_cjs_require<'a>(
     for &ref_id in require_refs {
         let reference = ctx.scoping().get_reference(ref_id);
         let call_node = ctx.nodes().parent_node(reference.node_id());
-        let AstKind::CallExpression(call) = call_node.kind() else { continue };
+        let AstKind::CallExpression(call) = call_node.kind() else {
+            continue;
+        };
 
         let is_jest_require =
             call.arguments.len() == 1 && is_string_arg_matching(&call.arguments[0], IMPORT_SOURCE);
@@ -303,7 +308,9 @@ fn try_merge_cjs_require<'a>(
                 if prop.computed {
                     continue;
                 }
-                let Some(key_name) = prop.key.static_name() else { continue };
+                let Some(key_name) = prop.key.static_name() else {
+                    continue;
+                };
                 let BindingPattern::BindingIdentifier(value_ident) = &prop.value else {
                     continue;
                 };
@@ -320,9 +327,10 @@ fn try_merge_cjs_require<'a>(
         // VariableDeclaration is the direct parent of VariableDeclarator
         let var_decl_node = ctx.nodes().parent_node(var_declarator_node.id());
 
-        return Some(
-            fixer.replace(var_decl_node.span(), create_import_text(is_module, functions_to_import)),
-        );
+        return Some(fixer.replace(
+            var_decl_node.span(),
+            create_import_text(is_module, functions_to_import),
+        ));
     }
 
     None
@@ -1061,8 +1069,13 @@ fn test() {
         ),
     ];
 
-    Tester::new(PreferImportingJestGlobals::NAME, PreferImportingJestGlobals::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .with_jest_plugin(true)
-        .test_and_snapshot();
+    Tester::new(
+        PreferImportingJestGlobals::NAME,
+        PreferImportingJestGlobals::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .with_jest_plugin(true)
+    .test_and_snapshot();
 }

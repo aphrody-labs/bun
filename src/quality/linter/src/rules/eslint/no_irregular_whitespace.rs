@@ -245,30 +245,102 @@ fn test() {
         ("//  ", Some(serde_json::json!([{ "skipComments": true }]))),
         ("//  ", Some(serde_json::json!([{ "skipComments": true }]))),
         ("// 　", Some(serde_json::json!([{ "skipComments": true }]))),
-        ("/*  */", Some(serde_json::json!([{ "skipComments": true }]))),
-        ("/*  */", Some(serde_json::json!([{ "skipComments": true }]))),
-        ("/*  */", Some(serde_json::json!([{ "skipComments": true }]))),
-        ("/*   */", Some(serde_json::json!([{ "skipComments": true }]))),
-        ("/* ᠎ */", Some(serde_json::json!([{ "skipComments": true }]))),
-        ("/* ﻿ */", Some(serde_json::json!([{ "skipComments": true }]))),
-        ("/*   */", Some(serde_json::json!([{ "skipComments": true }]))),
-        ("/*   */", Some(serde_json::json!([{ "skipComments": true }]))),
-        ("/*   */", Some(serde_json::json!([{ "skipComments": true }]))),
-        ("/*   */", Some(serde_json::json!([{ "skipComments": true }]))),
-        ("/*   */", Some(serde_json::json!([{ "skipComments": true }]))),
-        ("/*   */", Some(serde_json::json!([{ "skipComments": true }]))),
-        ("/*   */", Some(serde_json::json!([{ "skipComments": true }]))),
-        ("/*   */", Some(serde_json::json!([{ "skipComments": true }]))),
-        ("/*   */", Some(serde_json::json!([{ "skipComments": true }]))),
-        ("/*   */", Some(serde_json::json!([{ "skipComments": true }]))),
-        ("/*   */", Some(serde_json::json!([{ "skipComments": true }]))),
-        ("/* ​ */", Some(serde_json::json!([{ "skipComments": true }]))),
-        ("/*   */", Some(serde_json::json!([{ "skipComments": true }]))),
-        ("/*   */", Some(serde_json::json!([{ "skipComments": true }]))),
-        ("/*   */", Some(serde_json::json!([{ "skipComments": true }]))),
-        ("/*   */", Some(serde_json::json!([{ "skipComments": true }]))),
-        ("/* 　 */", Some(serde_json::json!([{ "skipComments": true }]))),
-        ("#!/usr/bin/env​node", Some(serde_json::json!([{ "skipComments": true }]))),
+        (
+            "/*  */",
+            Some(serde_json::json!([{ "skipComments": true }])),
+        ),
+        (
+            "/*  */",
+            Some(serde_json::json!([{ "skipComments": true }])),
+        ),
+        (
+            "/*  */",
+            Some(serde_json::json!([{ "skipComments": true }])),
+        ),
+        (
+            "/*   */",
+            Some(serde_json::json!([{ "skipComments": true }])),
+        ),
+        (
+            "/* ᠎ */",
+            Some(serde_json::json!([{ "skipComments": true }])),
+        ),
+        (
+            "/* ﻿ */",
+            Some(serde_json::json!([{ "skipComments": true }])),
+        ),
+        (
+            "/*   */",
+            Some(serde_json::json!([{ "skipComments": true }])),
+        ),
+        (
+            "/*   */",
+            Some(serde_json::json!([{ "skipComments": true }])),
+        ),
+        (
+            "/*   */",
+            Some(serde_json::json!([{ "skipComments": true }])),
+        ),
+        (
+            "/*   */",
+            Some(serde_json::json!([{ "skipComments": true }])),
+        ),
+        (
+            "/*   */",
+            Some(serde_json::json!([{ "skipComments": true }])),
+        ),
+        (
+            "/*   */",
+            Some(serde_json::json!([{ "skipComments": true }])),
+        ),
+        (
+            "/*   */",
+            Some(serde_json::json!([{ "skipComments": true }])),
+        ),
+        (
+            "/*   */",
+            Some(serde_json::json!([{ "skipComments": true }])),
+        ),
+        (
+            "/*   */",
+            Some(serde_json::json!([{ "skipComments": true }])),
+        ),
+        (
+            "/*   */",
+            Some(serde_json::json!([{ "skipComments": true }])),
+        ),
+        (
+            "/*   */",
+            Some(serde_json::json!([{ "skipComments": true }])),
+        ),
+        (
+            "/* ​ */",
+            Some(serde_json::json!([{ "skipComments": true }])),
+        ),
+        (
+            "/*   */",
+            Some(serde_json::json!([{ "skipComments": true }])),
+        ),
+        (
+            "/*   */",
+            Some(serde_json::json!([{ "skipComments": true }])),
+        ),
+        (
+            "/*   */",
+            Some(serde_json::json!([{ "skipComments": true }])),
+        ),
+        (
+            "/*   */",
+            Some(serde_json::json!([{ "skipComments": true }])),
+        ),
+        (
+            "/* 　 */",
+            Some(serde_json::json!([{ "skipComments": true }])),
+        ),
+        (
+            "#!/usr/bin/env​node",
+            Some(serde_json::json!([{ "skipComments": true }])),
+        ),
         ("//", None),
         ("//", None),
         ("//", None),
@@ -391,8 +463,14 @@ fn test() {
             var third 　 = 'thing';",
             None,
         ),
-        ("var any = '　', other = '';", Some(serde_json::json!([{ "skipStrings": false }]))),
-        ("var any = `　`, other = ``;", Some(serde_json::json!([{ "skipTemplates": false }]))), // { "ecmaVersion": 6 },
+        (
+            "var any = '　', other = '';",
+            Some(serde_json::json!([{ "skipStrings": false }])),
+        ),
+        (
+            "var any = `　`, other = ``;",
+            Some(serde_json::json!([{ "skipTemplates": false }])),
+        ), // { "ecmaVersion": 6 },
         ("`something ${　 10} another thing`", None), // { "ecmaVersion": 6 },
         ("`something ${10　} another thing`", None),  // { "ecmaVersion": 6 },
         (
@@ -468,20 +546,37 @@ fn test() {
         ("foo ", None),
         ("// 　", None),
         ("/* 　 */", None),
-        ("var any = /　/, other = /​/;", Some(serde_json::json!([{ "skipRegExps": false }]))),
-        ("var any = `　`, other = `​`;", Some(serde_json::json!([{ "skipTemplates": false }]))),
-        ("<div>　</div>;", Some(serde_json::json!([{ "skipJSXText": false }]))),
+        (
+            "var any = /　/, other = /​/;",
+            Some(serde_json::json!([{ "skipRegExps": false }])),
+        ),
+        (
+            "var any = `　`, other = `​`;",
+            Some(serde_json::json!([{ "skipTemplates": false }])),
+        ),
+        (
+            "<div>　</div>;",
+            Some(serde_json::json!([{ "skipJSXText": false }])),
+        ),
     ];
 
-    Tester::new(NoIrregularWhitespace::NAME, NoIrregularWhitespace::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        NoIrregularWhitespace::NAME,
+        NoIrregularWhitespace::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 
     Tester::new(
         NoIrregularWhitespace::NAME,
         NoIrregularWhitespace::PLUGIN,
         vec![],
         vec![
-            ("export const ZERO_SPACE = String.fromCharCode(0x200b) // '​'", None),
+            (
+                "export const ZERO_SPACE = String.fromCharCode(0x200b) // '​'",
+                None,
+            ),
             ("#!/usr/bin/env​node", None),
         ],
     )

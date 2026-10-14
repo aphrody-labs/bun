@@ -47,7 +47,11 @@ impl<'de> Deserialize<'de> for ExternalPluginEntry {
             PluginEntry::String(specifier) => (specifier, None),
             PluginEntry::Object(obj) => (obj.specifier, Some(obj.name)),
         };
-        Ok(ExternalPluginEntry { config_dir: PathBuf::default(), specifier, name })
+        Ok(ExternalPluginEntry {
+            config_dir: PathBuf::default(),
+            specifier,
+            name,
+        })
     }
 }
 
@@ -63,8 +67,11 @@ impl Serialize for ExternalPluginEntry {
         }
 
         if let Some(name) = &self.name {
-            PluginObject { name: name.as_str(), specifier: self.specifier.as_str() }
-                .serialize(serializer)
+            PluginObject {
+                name: name.as_str(),
+                specifier: self.specifier.as_str(),
+            }
+            .serialize(serializer)
         } else {
             self.specifier.serialize(serializer)
         }
@@ -174,7 +181,9 @@ impl JsonSchema for ExternalPluginEntry {
             })),
             object: Some(Box::new(ObjectValidation {
                 properties: object_properties,
-                required: vec!["name".to_string(), "specifier".to_string()].into_iter().collect(),
+                required: vec!["name".to_string(), "specifier".to_string()]
+                    .into_iter()
+                    .collect(),
                 additional_properties: Some(Box::new(Schema::Bool(false))),
                 ..Default::default()
             })),

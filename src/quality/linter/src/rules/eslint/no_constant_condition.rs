@@ -236,7 +236,10 @@ fn has_yield_before_loop_exit_in_same_generator(
         return false;
     }
 
-    let mut finder = YieldBeforeLoopExitFinder { found: false, after_span };
+    let mut finder = YieldBeforeLoopExitFinder {
+        found: false,
+        after_span,
+    };
     visit_loop(&mut finder);
     finder.found
 }
@@ -248,7 +251,10 @@ struct YieldBeforeLoopExitFinder {
 
 impl<'a> VisitJs<'a> for YieldBeforeLoopExitFinder {
     fn visit_yield_expression(&mut self, expr: &YieldExpression<'a>) {
-        if self.after_span.is_none_or(|after_span| expr.span.start > after_span.start) {
+        if self
+            .after_span
+            .is_none_or(|after_span| expr.span.start > after_span.start)
+        {
             self.found = true;
         }
     }
@@ -331,7 +337,10 @@ fn test() {
         ("if(a === 'str' && typeof b){}", None),
         ("typeof a == typeof b", None),
         ("typeof 'a' === 'string'|| typeof b === 'string'", None),
-        ("`${typeof 'a'}` === 'string'|| `${typeof b}` === 'string'", None),
+        (
+            "`${typeof 'a'}` === 'string'|| `${typeof b}` === 'string'",
+            None,
+        ),
         ("if (void a || a);", None),
         ("if (a || void a);", None),
         ("if(xyz === 'str1' && abc==='str2'){}", None),
@@ -405,21 +414,39 @@ fn test() {
         ("while(true);", Some(json!([{ "checkLoops": "none" }]))),
         ("for(;true;);", Some(json!([{ "checkLoops": "none" }]))),
         ("do{ }while(x);", Some(json!([{ "checkLoops": "all" }]))),
-        ("while(true);", Some(json!([{ "checkLoops": "allExceptWhileTrue" }]))),
+        (
+            "while(true);",
+            Some(json!([{ "checkLoops": "allExceptWhileTrue" }])),
+        ),
         ("while(true);", None),
         ("while(a == b);", Some(json!([{ "checkLoops": "all" }]))),
-        ("for (let x = 0; x <= 10; x++) {};", Some(json!([{ "checkLoops": "all" }]))),
+        (
+            "for (let x = 0; x <= 10; x++) {};",
+            Some(json!([{ "checkLoops": "all" }])),
+        ),
         ("do{}while(true)", Some(json!([{ "checkLoops": false }]))),
         ("function* foo(){while(true){yield 'foo';}}", None),
         ("function* foo(){for(;true;){yield 'foo';}}", None),
         ("function* foo(){do{yield 'foo';}while(true)}", None),
-        ("function* foo(){while (true) { while(true) {yield;}}}", None),
+        (
+            "function* foo(){while (true) { while(true) {yield;}}}",
+            None,
+        ),
         ("function* foo() {for (; yield; ) {}}", None),
         ("function* foo() {for (; ; yield) {}}", None),
         ("function* foo() {for (; true; yield) {}}", None),
-        ("function* foo() {while (true) {function* foo() {yield;}yield;}}", None),
-        ("function* foo() { for (let x = yield; x < 10; x++) {yield;}yield;}", None),
-        ("function* foo() { for (let x = yield; ; x++) { yield; }}", None),
+        (
+            "function* foo() {while (true) {function* foo() {yield;}yield;}}",
+            None,
+        ),
+        (
+            "function* foo() { for (let x = yield; x < 10; x++) {yield;}yield;}",
+            None,
+        ),
+        (
+            "function* foo() { for (let x = yield; ; x++) { yield; }}",
+            None,
+        ),
     ];
 
     let fail = vec![
@@ -479,7 +506,10 @@ fn test() {
         ("if(typeof 'abc' === 'string'){}", None),
         ("if(a = typeof b){}", None),
         ("if(a, typeof b){}", None),
-        ("if(typeof 'a' == 'string' || typeof 'b' == 'string'){}", None),
+        (
+            "if(typeof 'a' == 'string' || typeof 'b' == 'string'){}",
+            None,
+        ),
         ("while(typeof x){}", None),
         ("if(1 || void x);", None),
         ("if(void x);", None),
@@ -564,8 +594,14 @@ fn test() {
         ("while(`${'foo' + 'bar'}`);", None),
         ("do{ }while(x = 1)", Some(json!([{ "checkLoops": "all" }]))),
         ("for (;true;) {};", Some(json!([{ "checkLoops": "all" }]))),
-        ("function* foo(){while(true){} yield 'foo';}", Some(json!([{ "checkLoops": "all" }]))),
-        ("function* foo(){while(true){} yield 'foo';}", Some(json!([{ "checkLoops": true }]))),
+        (
+            "function* foo(){while(true){} yield 'foo';}",
+            Some(json!([{ "checkLoops": "all" }])),
+        ),
+        (
+            "function* foo(){while(true){} yield 'foo';}",
+            Some(json!([{ "checkLoops": true }])),
+        ),
         (
             "function* foo(){while(true){if (true) {yield 'foo';}}}",
             Some(json!([{ "checkLoops": "all" }])),
@@ -590,8 +626,14 @@ fn test() {
             "var a = function* foo(){while(true){} yield 'foo';}",
             Some(json!([{ "checkLoops": true }])),
         ),
-        ("while (true) { function* foo() {yield;}}", Some(json!([{ "checkLoops": "all" }]))),
-        ("while (true) { function* foo() {yield;}}", Some(json!([{ "checkLoops": true }]))),
+        (
+            "while (true) { function* foo() {yield;}}",
+            Some(json!([{ "checkLoops": "all" }])),
+        ),
+        (
+            "while (true) { function* foo() {yield;}}",
+            Some(json!([{ "checkLoops": true }])),
+        ),
         ("function* foo(){if (true) {yield 'foo';}}", None),
         ("function* foo() {for (let foo = yield; true;) {}}", None),
         ("function* foo() {for (foo = yield; true;) {}}", None),
@@ -603,9 +645,17 @@ fn test() {
             "function foo() {while (true) {const bar = function*() {while (true) {yield;}}}}",
             Some(json!([{ "checkLoops": "all" }])),
         ),
-        ("function* foo() { for (let foo = 1 + 2 + 3 + (yield); true; baz) {}}", None),
+        (
+            "function* foo() { for (let foo = 1 + 2 + 3 + (yield); true; baz) {}}",
+            None,
+        ),
     ];
 
-    Tester::new(NoConstantCondition::NAME, NoConstantCondition::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        NoConstantCondition::NAME,
+        NoConstantCondition::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

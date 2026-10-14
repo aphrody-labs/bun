@@ -16,9 +16,13 @@ fn no_named_as_default_member_diagnostic(
     export_name: &str,
     suggested_module_name: &str,
 ) -> OxcDiagnostic {
-    OxcDiagnostic::warn(format!("{module_name:?} also has a named export {export_name:?}"))
-        .with_help(format!("Check if you meant to write `import {{ {export_name} }} from {suggested_module_name:?}`"))
-        .with_label(span)
+    OxcDiagnostic::warn(format!(
+        "{module_name:?} also has a named export {export_name:?}"
+    ))
+    .with_help(format!(
+        "Check if you meant to write `import {{ {export_name} }} from {suggested_module_name:?}`"
+    ))
+    .with_label(span)
 }
 
 // <https://github.com/import-js/eslint-plugin-import/blob/v2.29.1/docs/rules/no-named-as-default-member.md>
@@ -71,7 +75,9 @@ fn get_symbol_id_from_ident(
     ctx: &LintContext<'_>,
     ident: &IdentifierReference,
 ) -> Option<SymbolId> {
-    ctx.scoping().get_reference(ident.reference_id()).symbol_id()
+    ctx.scoping()
+        .get_reference(ident.reference_id())
+        .symbol_id()
 }
 
 impl Rule for NoNamedAsDefaultMember {
@@ -93,14 +99,17 @@ impl Rule for NoNamedAsDefaultMember {
                 continue;
             }
 
-            let Some(symbol_id) =
-                ctx.scoping().get_root_binding(import_entry.local_name.name().into())
+            let Some(symbol_id) = ctx
+                .scoping()
+                .get_root_binding(import_entry.local_name.name().into())
             else {
                 return;
             };
 
-            has_members_map
-                .insert(symbol_id, (remote_module_record, import_entry.module_request.clone()));
+            has_members_map.insert(
+                symbol_id,
+                (remote_module_record, import_entry.module_request.clone()),
+            );
         }
 
         if has_members_map.is_empty() {
@@ -208,8 +217,13 @@ fn test() {
         r#"import baz from "./named-and-default-export"; const {foo: _foo} = baz"#,
     ];
 
-    Tester::new(NoNamedAsDefaultMember::NAME, NoNamedAsDefaultMember::PLUGIN, pass, fail)
-        .change_rule_path("index.js")
-        .with_import_plugin(true)
-        .test_and_snapshot();
+    Tester::new(
+        NoNamedAsDefaultMember::NAME,
+        NoNamedAsDefaultMember::PLUGIN,
+        pass,
+        fail,
+    )
+    .change_rule_path("index.js")
+    .with_import_plugin(true)
+    .test_and_snapshot();
 }

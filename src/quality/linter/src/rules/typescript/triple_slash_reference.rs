@@ -90,7 +90,8 @@ declare_oxc_lint!(
     correctness,
     config = TripleSlashReferenceConfig,
     version = "0.2.0",
-    short_description = "Disallow certain triple slash directives in favor of ES module import declarations.",
+    short_description =
+        "Disallow certain triple slash directives in favor of ES module import declarations.",
 );
 
 impl Rule for TripleSlashReference {
@@ -103,7 +104,10 @@ impl Rule for TripleSlashReference {
 
         // We don't need to iterate over all comments since Triple-slash directives are only valid at the top of their containing file.
         // We are trying to get the first statement start potioin, falling back to the program end if statement does not exist
-        let comments_range_end = program.body.first().map_or(program.span.end, |v| v.span().start);
+        let comments_range_end = program
+            .body
+            .first()
+            .map_or(program.span.end, |v| v.span().start);
         let mut refs_for_import = FxHashMap::default();
 
         for comment in ctx.comments_range(0..comments_range_end) {
@@ -181,7 +185,10 @@ fn get_attr_key_and_value(raw: &str) -> Option<(&str, &str)> {
         if value.contains('=') {
             return None;
         }
-        return Some((key.trim().trim_matches('"'), value.trim_matches('"').trim_end_matches('/')));
+        return Some((
+            key.trim().trim_matches('"'),
+            value.trim_matches('"').trim_end_matches('/'),
+        ));
     }
     None
 }
@@ -257,14 +264,38 @@ fn test() {
                   "#,
             Some(serde_json::json!([{ "lib": "always", "path": "always", "types": "always" }])),
         ),
-        ("import * as foo from 'foo';", Some(serde_json::json!([{ "path": "never" }]))),
-        ("import foo = require('foo');", Some(serde_json::json!([{ "path": "never" }]))),
-        ("import * as foo from 'foo';", Some(serde_json::json!([{ "types": "never" }]))),
-        ("import foo = require('foo');", Some(serde_json::json!([{ "types": "never" }]))),
-        ("import * as foo from 'foo';", Some(serde_json::json!([{ "lib": "never" }]))),
-        ("import foo = require('foo');", Some(serde_json::json!([{ "lib": "never" }]))),
-        ("import * as foo from 'foo';", Some(serde_json::json!([{ "types": "prefer-import" }]))),
-        ("import foo = require('foo');", Some(serde_json::json!([{ "types": "prefer-import" }]))),
+        (
+            "import * as foo from 'foo';",
+            Some(serde_json::json!([{ "path": "never" }])),
+        ),
+        (
+            "import foo = require('foo');",
+            Some(serde_json::json!([{ "path": "never" }])),
+        ),
+        (
+            "import * as foo from 'foo';",
+            Some(serde_json::json!([{ "types": "never" }])),
+        ),
+        (
+            "import foo = require('foo');",
+            Some(serde_json::json!([{ "types": "never" }])),
+        ),
+        (
+            "import * as foo from 'foo';",
+            Some(serde_json::json!([{ "lib": "never" }])),
+        ),
+        (
+            "import foo = require('foo');",
+            Some(serde_json::json!([{ "lib": "never" }])),
+        ),
+        (
+            "import * as foo from 'foo';",
+            Some(serde_json::json!([{ "types": "prefer-import" }])),
+        ),
+        (
+            "import foo = require('foo');",
+            Some(serde_json::json!([{ "types": "prefer-import" }])),
+        ),
         (
             r#"
                     /// <reference types="foo" />
@@ -298,13 +329,27 @@ fn test() {
                   "#,
             Some(serde_json::json!([{ "types": "prefer-import" }])),
         ),
-        (r#"/// <reference path="foo" />"#, Some(serde_json::json!([{ "path": "never" }]))),
-        (r#"/// <reference types="foo" />"#, Some(serde_json::json!([{ "types": "never" }]))),
-        (r#"/// <reference lib="foo" />"#, Some(serde_json::json!([{ "lib": "never" }]))),
+        (
+            r#"/// <reference path="foo" />"#,
+            Some(serde_json::json!([{ "path": "never" }])),
+        ),
+        (
+            r#"/// <reference types="foo" />"#,
+            Some(serde_json::json!([{ "types": "never" }])),
+        ),
+        (
+            r#"/// <reference lib="foo" />"#,
+            Some(serde_json::json!([{ "lib": "never" }])),
+        ),
     ];
 
-    Tester::new(TripleSlashReference::NAME, TripleSlashReference::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        TripleSlashReference::NAME,
+        TripleSlashReference::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }
 
 #[test]
@@ -313,7 +358,16 @@ fn test_first_reference_attribute() {
         get_attr_key_and_value(r#"/ <reference types="first" path="second" />"#),
         Some(("types", "first")),
     );
-    assert_eq!(get_attr_key_and_value(r#"/ <reference types="a=b" path="valid" />"#), None);
-    assert_eq!(get_attr_key_and_value(r#"/ <reference unrelated="value" />"#), None);
-    assert_eq!(get_attr_key_and_value(r#"/ <reference path="pkg"/>"#), Some(("path", "pkg")),);
+    assert_eq!(
+        get_attr_key_and_value(r#"/ <reference types="a=b" path="valid" />"#),
+        None
+    );
+    assert_eq!(
+        get_attr_key_and_value(r#"/ <reference unrelated="value" />"#),
+        None
+    );
+    assert_eq!(
+        get_attr_key_and_value(r#"/ <reference path="pkg"/>"#),
+        Some(("path", "pkg")),
+    );
 }

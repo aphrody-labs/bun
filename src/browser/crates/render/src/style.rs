@@ -92,7 +92,12 @@ pub fn ua_style(tag: &str) -> LayoutStyle {
         // HTML's UA sheet preserves source whitespace in preformatted blocks.
         style.white_space = Some(crate::WhiteSpace::Pre);
     } else if tag == "body" {
-        style.margin = Edges { top: 8.0, right: 8.0, bottom: 8.0, left: 8.0 };
+        style.margin = Edges {
+            top: 8.0,
+            right: 8.0,
+            bottom: 8.0,
+            left: 8.0,
+        };
     } else if tag == "h1" {
         style.font_size = None;
         style.font_size_raw = Some(crate::Dimension::Em(2.0));
@@ -155,7 +160,12 @@ pub fn ua_style(tag: &str) -> LayoutStyle {
     } else if tag == "iframe" {
         // HTML's UA sheet gives frames a two-pixel inset border. The paint
         // and geometry models share the same four-side used state.
-        style.border = Edges { top: 2.0, right: 2.0, bottom: 2.0, left: 2.0 };
+        style.border = Edges {
+            top: 2.0,
+            right: 2.0,
+            bottom: 2.0,
+            left: 2.0,
+        };
         style.border_model.specified_widths = crate::Sides::all(2.0);
         style.border_model.styles = crate::Sides::all(crate::BorderStyle::Inset);
     } else if tag == "button" {
@@ -172,7 +182,12 @@ pub fn ua_style(tag: &str) -> LayoutStyle {
         // remove the native border/background but intentionally retain this
         // padding; percentage-height icon children therefore resolve against
         // the padded content box (44px border box -> 42px content box).
-        style.padding = Edges { top: 1.0, right: 6.0, bottom: 1.0, left: 6.0 };
+        style.padding = Edges {
+            top: 1.0,
+            right: 6.0,
+            bottom: 1.0,
+            left: 6.0,
+        };
     } else if tag == "select" {
         // A closed native select is an atomic inline control. Its option
         // children belong to the popup (and remain display:none in our frame
@@ -183,8 +198,18 @@ pub fn ua_style(tag: &str) -> LayoutStyle {
         style.font_size = Some(13.333_333);
         style.font_family = Some("arial".to_string());
         style.line_height = Some(crate::LineHeight::Normal);
-        style.padding = Edges { top: 1.0, right: 20.0, bottom: 1.0, left: 2.0 };
-        style.border = Edges { top: 1.0, right: 1.0, bottom: 1.0, left: 1.0 };
+        style.padding = Edges {
+            top: 1.0,
+            right: 20.0,
+            bottom: 1.0,
+            left: 2.0,
+        };
+        style.border = Edges {
+            top: 1.0,
+            right: 1.0,
+            bottom: 1.0,
+            left: 1.0,
+        };
         style.border_model.specified_widths = crate::Sides::all(1.0);
         style.border_model.styles = crate::Sides::all(crate::BorderStyle::Solid);
         style.border_model.colors = crate::Sides::all(Some([118, 118, 118, 255]));
@@ -202,8 +227,18 @@ pub fn ua_style(tag: &str) -> LayoutStyle {
         style.font_size = Some(13.333_333);
         style.font_family = Some("arial".to_string());
         style.line_height = Some(crate::LineHeight::Normal);
-        style.padding = Edges { top: 1.0, right: 2.0, bottom: 1.0, left: 2.0 };
-        style.border = Edges { top: 2.0, right: 2.0, bottom: 2.0, left: 2.0 };
+        style.padding = Edges {
+            top: 1.0,
+            right: 2.0,
+            bottom: 1.0,
+            left: 2.0,
+        };
+        style.border = Edges {
+            top: 2.0,
+            right: 2.0,
+            bottom: 2.0,
+            left: 2.0,
+        };
         style.border_model.specified_widths = crate::Sides::all(2.0);
         style.border_model.styles = crate::Sides::all(crate::BorderStyle::Solid);
         style.border_model.colors = crate::Sides::all(Some([118, 118, 118, 255]));
@@ -224,8 +259,18 @@ pub fn ua_style(tag: &str) -> LayoutStyle {
         style.line_height = Some(crate::LineHeight::Normal);
         style.white_space = Some(crate::WhiteSpace::PreWrap);
         style.box_sizing = crate::BoxSizing::BorderBox;
-        style.padding = Edges { top: 2.0, right: 2.0, bottom: 2.0, left: 2.0 };
-        style.border = Edges { top: 1.0, right: 1.0, bottom: 1.0, left: 1.0 };
+        style.padding = Edges {
+            top: 2.0,
+            right: 2.0,
+            bottom: 2.0,
+            left: 2.0,
+        };
+        style.border = Edges {
+            top: 1.0,
+            right: 1.0,
+            bottom: 1.0,
+            left: 1.0,
+        };
         style.border_model.specified_widths = crate::Sides::all(1.0);
         style.border_model.styles = crate::Sides::all(crate::BorderStyle::Solid);
         style.border_model.colors = crate::Sides::all(Some([118, 118, 118, 255]));
@@ -236,11 +281,11 @@ pub fn ua_style(tag: &str) -> LayoutStyle {
         style.internal_flex_container = true;
         style.flex_direction = Some(taffy::FlexDirection::Column);
         style.align_items = Some(taffy::AlignItems::STRETCH); // stretch rows to fill table width
-        // Rows fill the table width and may shrink below their content's
-        // min-content size (the flexbox automatic-minimum-size gotcha), so a
-        // width-constrained taxobox contains its content instead of blowing
-        // out sideways. (Fully matching CSS auto table layout, where a table
-        // grows to fit unshrinkable content, needs real table layout.)
+                                                              // Rows fill the table width and may shrink below their content's
+                                                              // min-content size (the flexbox automatic-minimum-size gotcha), so a
+                                                              // width-constrained taxobox contains its content instead of blowing
+                                                              // out sideways. (Fully matching CSS auto table layout, where a table
+                                                              // grows to fit unshrinkable content, needs real table layout.)
         style.min_width = crate::Dimension::Px(0.0);
         if tag == "table" {
             style.is_table_box = true;
@@ -271,7 +316,12 @@ pub fn ua_style(tag: &str) -> LayoutStyle {
         style.is_table_cell_box = true;
         style.flex_direction = Some(taffy::FlexDirection::Column);
         style.align_items = Some(taffy::AlignItems::FLEX_START);
-        style.padding = Edges { top: 1.0, right: 1.0, bottom: 1.0, left: 1.0 };
+        style.padding = Edges {
+            top: 1.0,
+            right: 1.0,
+            bottom: 1.0,
+            left: 1.0,
+        };
         style.min_width = crate::Dimension::Px(0.0);
         if tag == "th" {
             style.font_weight = Some("bold".to_string());
@@ -320,7 +370,11 @@ pub(crate) fn partition_declarations(css: &str) -> (String, String) {
                 is_important = true;
             }
         }
-        let out = if is_important { &mut important } else { &mut normal };
+        let out = if is_important {
+            &mut important
+        } else {
+            &mut normal
+        };
         out.push_str(name.trim());
         out.push(':');
         out.push_str(value);
@@ -387,13 +441,21 @@ pub(crate) fn apply_animation_property_value(style: &mut LayoutStyle, name: &str
 }
 
 fn apply_color_scheme(style: &mut LayoutStyle, value: &str, inherited_scheme: bool) {
-    let tokens: Vec<String> =
-        value.split_whitespace().map(|token| token.to_ascii_lowercase()).collect();
-    if tokens.iter().any(|token| token == "inherit" || token == "unset") {
+    let tokens: Vec<String> = value
+        .split_whitespace()
+        .map(|token| token.to_ascii_lowercase())
+        .collect();
+    if tokens
+        .iter()
+        .any(|token| token == "inherit" || token == "unset")
+    {
         style.color_scheme_dark = inherited_scheme;
         return;
     }
-    if tokens.iter().any(|token| matches!(token.as_str(), "initial" | "revert" | "revert-layer")) {
+    if tokens
+        .iter()
+        .any(|token| matches!(token.as_str(), "initial" | "revert" | "revert-layer"))
+    {
         style.color_scheme_dark = false;
         return;
     }
@@ -438,8 +500,8 @@ pub(crate) fn split_declarations(css: &str) -> Vec<&str> {
             ';' if depth == 0 => {
                 parts.push(&css[start..i]);
                 start = i + 1;
-            },
-            _ => {},
+            }
+            _ => {}
         }
     }
     parts.push(&css[start..]);
@@ -474,9 +536,12 @@ pub fn inline_style_change_preserves_box_metrics(old: Option<&str>, new: Option<
     let mut old = old.into_iter().flat_map(split_declarations);
     let mut new = new.into_iter().flat_map(split_declarations);
     loop {
-        match (next_layout_declaration(&mut old), next_layout_declaration(&mut new)) {
+        match (
+            next_layout_declaration(&mut old),
+            next_layout_declaration(&mut new),
+        ) {
             (Some((old_name, old_value)), Some((new_name, new_value)))
-                if old_name.eq_ignore_ascii_case(new_name) && old_value == new_value => {},
+                if old_name.eq_ignore_ascii_case(new_name) && old_value == new_value => {}
             (None, None) => return true,
             _ => return false,
         }
@@ -491,7 +556,7 @@ fn parse_containment(value: &str) -> Option<u8> {
         "inherit" => return Some(crate::CONTAIN_INHERIT),
         "strict" => return Some(CONTAIN_SIZE | CONTAIN_LAYOUT | CONTAIN_STYLE | CONTAIN_PAINT),
         "content" => return Some(CONTAIN_LAYOUT | CONTAIN_STYLE | CONTAIN_PAINT),
-        _ => {},
+        _ => {}
     }
     let mut flags = 0;
     for token in value.split_ascii_whitespace() {
@@ -629,7 +694,7 @@ fn parse_overflow_declaration(
                 first
             };
             Some((Some(first), Some(second)))
-        },
+        }
         _ => None,
     }
 }
@@ -638,10 +703,18 @@ pub(crate) fn computed_overflow_axes(style: &LayoutStyle) -> (u8, u8) {
     let mut computed_x = style.overflow_specified_x;
     let mut computed_y = style.overflow_specified_y;
     if computed_x <= OVERFLOW_CLIP && computed_y > OVERFLOW_CLIP {
-        computed_x = if computed_x == OVERFLOW_VISIBLE { OVERFLOW_AUTO } else { OVERFLOW_HIDDEN };
+        computed_x = if computed_x == OVERFLOW_VISIBLE {
+            OVERFLOW_AUTO
+        } else {
+            OVERFLOW_HIDDEN
+        };
     }
     if computed_y <= OVERFLOW_CLIP && computed_x > OVERFLOW_CLIP {
-        computed_y = if computed_y == OVERFLOW_VISIBLE { OVERFLOW_AUTO } else { OVERFLOW_HIDDEN };
+        computed_y = if computed_y == OVERFLOW_VISIBLE {
+            OVERFLOW_AUTO
+        } else {
+            OVERFLOW_HIDDEN
+        };
     }
     (computed_x, computed_y)
 }
@@ -708,10 +781,15 @@ fn parse_font_variation_number(parser: &mut cssparser::Parser<'_, '_>) -> Option
     let cssparser::Token::Function(name) = token else {
         return None;
     };
-    if !matches!(name.to_ascii_lowercase().as_str(), "calc" | "min" | "max" | "clamp" | "round") {
+    if !matches!(
+        name.to_ascii_lowercase().as_str(),
+        "calc" | "min" | "max" | "clamp" | "round"
+    ) {
         return None;
     }
-    parser.parse_nested_block(|input| unitless_math_tokens(input, 0)).ok()?;
+    parser
+        .parse_nested_block(|input| unitless_math_tokens(input, 0))
+        .ok()?;
     let expression = parser.slice_from(start);
     resolve_contextual_length(expression, 0.0, 0.0, 0.0, 0.0, 0.0).filter(|value| value.is_finite())
 }
@@ -733,7 +811,7 @@ fn unitless_math_tokens<'i, 't>(
             | cssparser::Token::Delim('+')
             | cssparser::Token::Delim('-')
             | cssparser::Token::Delim('*')
-            | cssparser::Token::Delim('/') => {},
+            | cssparser::Token::Delim('/') => {}
             cssparser::Token::Function(name)
                 if matches!(
                     name.to_ascii_lowercase().as_str(),
@@ -741,10 +819,10 @@ fn unitless_math_tokens<'i, 't>(
                 ) =>
             {
                 parser.parse_nested_block(|input| unitless_math_tokens(input, depth + 1))?;
-            },
+            }
             cssparser::Token::ParenthesisBlock => {
                 parser.parse_nested_block(|input| unitless_math_tokens(input, depth + 1))?;
-            },
+            }
             _ => return Err(parser.new_custom_error(())),
         }
     }
@@ -757,13 +835,13 @@ fn apply_value(style: &mut LayoutStyle, name: &str, value: &str) {
             match value.trim().to_ascii_lowercase().as_str() {
                 "ltr" | "initial" | "revert" | "revert-layer" => {
                     style.direction = Some(taffy::Direction::Ltr);
-                },
+                }
                 "rtl" => style.direction = Some(taffy::Direction::Rtl),
                 "inherit" | "unset" => style.direction = None,
                 _ => return,
             }
             resolve_logical_borders(style);
-        },
+        }
         "display" => {
             let value = value.trim().to_ascii_lowercase();
             if matches!(
@@ -806,22 +884,22 @@ fn apply_value(style: &mut LayoutStyle, name: &str, value: &str) {
                 "inline-flex" => {
                     style.display = crate::Display::Flex;
                     style.is_inline_block = true;
-                },
+                }
                 "inline" => style.display = crate::Display::Inline,
                 "inline-block" => {
                     style.display = crate::Display::Inline;
                     style.is_inline_block = true;
-                },
+                }
                 "grid" => style.display = crate::Display::Grid,
                 "inline-grid" => {
                     style.display = crate::Display::Grid;
                     style.is_inline_block = true;
-                },
+                }
                 "block" => style.display = crate::Display::Block,
                 "flow-root" => {
                     style.display = crate::Display::Block;
                     style.flow_root = true;
-                },
+                }
                 // Taffy has no table formatting mode. Preserve the important
                 // outer-display and BFC semantics instead of ignoring these
                 // values and retaining a stale earlier `display` winner.
@@ -830,13 +908,13 @@ fn apply_value(style: &mut LayoutStyle, name: &str, value: &str) {
                     style.display = crate::Display::Block;
                     style.flow_root = true;
                     style.is_table_box = true;
-                },
+                }
                 "inline-table" => {
                     style.display = crate::Display::Inline;
                     style.is_inline_block = true;
                     style.flow_root = true;
                     style.is_table_box = true;
-                },
+                }
                 "table-cell" => {
                     // A table cell establishes an internal flow container. A
                     // column flexbox is our cell-content wrapper stand-in; it
@@ -847,7 +925,7 @@ fn apply_value(style: &mut LayoutStyle, name: &str, value: &str) {
                     style.flex_direction = Some(taffy::FlexDirection::Column);
                     style.align_items = Some(taffy::AlignItems::FLEX_START);
                     style.is_table_cell_box = true;
-                },
+                }
                 "-webkit-box" => {
                     // The unclamped legacy display is an old flexbox. When it
                     // forms a vertical line-clamp root, the post-declaration
@@ -855,12 +933,12 @@ fn apply_value(style: &mut LayoutStyle, name: &str, value: &str) {
                     // Blink and Gecko do at computed-value time.
                     style.display = crate::Display::Flex;
                     style.webkit_box_display = Some(false);
-                },
+                }
                 "-webkit-inline-box" => {
                     style.display = crate::Display::Flex;
                     style.is_inline_block = true;
                     style.webkit_box_display = Some(true);
-                },
+                }
                 "contents" => {
                     // `display:contents` can override an earlier `display:none`
                     // in the cascade (responsive desktop/mobile wrappers do
@@ -869,7 +947,7 @@ fn apply_value(style: &mut LayoutStyle, name: &str, value: &str) {
                     // parent formatting context.
                     style.display = crate::Display::Block;
                     style.display_contents = true;
-                },
+                }
                 "inherit" => {
                     // Keep a valid initial-display placeholder until the
                     // parent computed style is available. The top-down pass
@@ -877,15 +955,15 @@ fn apply_value(style: &mut LayoutStyle, name: &str, value: &str) {
                     // but never its engine-only native-layout flags.
                     style.display = crate::Display::Inline;
                     style.display_inherit = true;
-                },
+                }
                 "initial" | "unset" => {
                     // `display` is not inherited and its CSS initial value is
                     // `inline`, independent of the element's HTML UA display.
                     style.display = crate::Display::Inline;
-                },
-                _ => {},
+                }
+                _ => {}
             }
-        },
+        }
         "container-type" => {
             if value.eq_ignore_ascii_case("inherit") {
                 style.container_type = crate::ContainerType::Normal;
@@ -894,7 +972,7 @@ fn apply_value(style: &mut LayoutStyle, name: &str, value: &str) {
                 style.container_type = kind;
                 style.container_type_inherit = false;
             }
-        },
+        }
         "container-name" => {
             if value.eq_ignore_ascii_case("inherit") {
                 style.container_names.clear();
@@ -903,7 +981,7 @@ fn apply_value(style: &mut LayoutStyle, name: &str, value: &str) {
                 style.container_names = names;
                 style.container_names_inherit = false;
             }
-        },
+        }
         "container" => {
             if value.eq_ignore_ascii_case("inherit") {
                 style.container_names.clear();
@@ -916,7 +994,7 @@ fn apply_value(style: &mut LayoutStyle, name: &str, value: &str) {
                 style.container_names_inherit = false;
                 style.container_type_inherit = false;
             }
-        },
+        }
         // The renderer currently supports the initial horizontal-tb writing
         // mode. In that mode logical inline/block sizing is exactly the
         // physical width/height pair, including declaration-order overrides
@@ -926,12 +1004,12 @@ fn apply_value(style: &mut LayoutStyle, name: &str, value: &str) {
             style.width_fit_content = value.trim().eq_ignore_ascii_case("fit-content");
             style.size_expressions[0] = deferred_length_expression(value);
             style.width_set = true;
-        },
+        }
         "height" | "block-size" => {
             style.height = dimension_value(value);
             style.size_expressions[1] = deferred_length_expression(value);
             style.height_set = true;
-        },
+        }
         "box-sizing" => {
             let value = value.trim();
             style.box_sizing = if value.eq_ignore_ascii_case("border-box") {
@@ -958,28 +1036,28 @@ fn apply_value(style: &mut LayoutStyle, name: &str, value: &str) {
             } else {
                 style.box_sizing
             };
-        },
+        }
         "min-width" | "min-inline-size" => {
             style.min_width = dimension_value(value);
             style.size_expressions[2] = deferred_length_expression(value);
-        },
+        }
         "min-height" | "min-block-size" => {
             style.min_height = dimension_value(value);
             style.size_expressions[3] = deferred_length_expression(value);
-        },
+        }
         "max-width" | "max-inline-size" => {
             style.max_width = dimension_value(value);
             style.size_expressions[4] = deferred_length_expression(value);
-        },
+        }
         "max-height" | "max-block-size" => {
             style.max_height = dimension_value(value);
             style.size_expressions[5] = deferred_length_expression(value);
-        },
+        }
         "aspect-ratio" => {
             style.aspect_ratio = parse_aspect_ratio(value);
             style.aspect_ratio_is_mapped = false;
             style.aspect_ratio_is_intrinsic = false;
-        },
+        }
         "margin" => apply_margin_shorthand(style, value),
         "margin-top" => set_margin_side(style, 0, value),
         "margin-right" => set_margin_side(style, 1, value),
@@ -990,14 +1068,14 @@ fn apply_value(style: &mut LayoutStyle, name: &str, value: &str) {
             let (s, e) = two(value);
             set_margin_side(style, 3, s);
             set_margin_side(style, 1, e);
-        },
+        }
         "margin-inline-start" => set_margin_side(style, 3, value),
         "margin-inline-end" => set_margin_side(style, 1, value),
         "margin-block" => {
             let (s, e) = two(value);
             set_margin_side(style, 0, s);
             set_margin_side(style, 2, e);
-        },
+        }
         "margin-block-start" => set_margin_side(style, 0, value),
         "margin-block-end" => set_margin_side(style, 2, value),
         "padding" => apply_padding_shorthand(style, value),
@@ -1009,14 +1087,14 @@ fn apply_value(style: &mut LayoutStyle, name: &str, value: &str) {
             let (s, e) = two(value);
             set_padding_side(style, 3, s);
             set_padding_side(style, 1, e);
-        },
+        }
         "padding-inline-start" => set_padding_side(style, 3, value),
         "padding-inline-end" => set_padding_side(style, 1, value),
         "padding-block" => {
             let (s, e) = two(value);
             set_padding_side(style, 0, s);
             set_padding_side(style, 2, e);
-        },
+        }
         "padding-block-start" => set_padding_side(style, 0, value),
         "padding-block-end" => set_padding_side(style, 2, value),
         "border-radius" => apply_border_radius_shorthand(style, value),
@@ -1026,12 +1104,15 @@ fn apply_value(style: &mut LayoutStyle, name: &str, value: &str) {
         "border-bottom-left-radius" => set_corner_radius(style, 3, value),
         "clip-path" | "-webkit-clip-path" => {
             let lower = value.trim().to_ascii_lowercase();
-            if matches!(lower.as_str(), "none" | "initial" | "unset" | "revert" | "revert-layer") {
+            if matches!(
+                lower.as_str(),
+                "none" | "initial" | "unset" | "revert" | "revert-layer"
+            ) {
                 style.clip_path = None;
             } else if let Some(polygon) = parse_clip_path_polygon(value) {
                 style.clip_path = Some(polygon);
             }
-        },
+        }
         "border" => apply_border_shorthand(style, None, value),
         "border-top" => apply_border_shorthand(style, Some(Side::Top), value),
         "border-right" => apply_border_shorthand(style, Some(Side::Right), value),
@@ -1083,7 +1164,7 @@ fn apply_value(style: &mut LayoutStyle, name: &str, value: &str) {
         "outline-offset" => set_outline_offset(style, value),
         "background-color" => {
             style.background_color = parse_color_for_scheme(value, style.color_scheme_dark)
-        },
+        }
         "background" => {
             // A shorthand resets every omitted background longhand to its
             // initial value before applying the layers it does name.
@@ -1115,24 +1196,24 @@ fn apply_value(style: &mut LayoutStyle, name: &str, value: &str) {
                 }
                 style.background_clip_text = style.background_clip == crate::BackgroundClip::Text;
             }
-        },
+        }
         "background-image" => {
             set_background_gradients(style, value);
             style.background_image = parse_url(value);
-        },
+        }
         "background-size" => {
             style.background_size = parse_background_size(value);
             style.background_size_expression =
                 (!value.trim().is_empty()).then(|| value.trim().to_string());
             style.background_size_fit = parse_background_size_fit(value);
-        },
+        }
         "background-position" => style.background_position = parse_background_position(value),
         "background-repeat" => {
             style.background_repeat = parse_image_repeat(value);
-        },
+        }
         "background-origin" => {
             style.background_origin = parse_background_origin(value).unwrap_or_default();
-        },
+        }
         // On replaced elements, an image-valued `content` replaces the
         // ordinary source and participates in intrinsic sizing. String-valued
         // generated content is handled separately for pseudo-elements.
@@ -1141,34 +1222,40 @@ fn apply_value(style: &mut LayoutStyle, name: &str, value: &str) {
         "mask-size" | "-webkit-mask-size" => style.mask_size = parse_background_size(value),
         "mask-repeat" | "-webkit-mask-repeat" => {
             style.mask_repeat = parse_image_repeat(value);
-        },
+        }
         "background-clip" | "-webkit-background-clip" => {
             style.background_clip = parse_background_clip(value).unwrap_or_default();
             style.background_clip_text = style.background_clip == crate::BackgroundClip::Text;
-        },
+        }
         // Blink/WebKit gradient text commonly makes the glyph fill
         // transparent through this inherited property while clipping a
         // background gradient to the text. We model one effective text color,
         // so the vendor fill color is the paint-time color winner.
         "color" | "-webkit-text-fill-color" => {
             style.color = parse_color_for_scheme(value, style.color_scheme_dark)
-        },
+        }
         // Inline SVG is rasterized as a standalone SVG document. Preserve
         // author-CSS presentation values verbatim so paint can carry the
         // computed cascade into that document (including currentColor,
         // `none`, and paint-server URLs).
         "fill" => {
-            style.svg_fill = Some(resolve_svg_presentation_color(value, style.color_scheme_dark))
-        },
+            style.svg_fill = Some(resolve_svg_presentation_color(
+                value,
+                style.color_scheme_dark,
+            ))
+        }
         "stroke" => {
-            style.svg_stroke = Some(resolve_svg_presentation_color(value, style.color_scheme_dark))
-        },
+            style.svg_stroke = Some(resolve_svg_presentation_color(
+                value,
+                style.color_scheme_dark,
+            ))
+        }
         "stroke-width" => style.svg_stroke_width = Some(value.trim().to_string()),
         "font-size" => {
             // Absolute lengths resolve now; font/viewport-relative ones defer
             // to the inheritance pass (they need parent/root font-size).
             apply_font_size(style, value);
-        },
+        }
         "letter-spacing" => apply_letter_spacing(style, value),
         "word-spacing" => apply_word_spacing(style, value),
         "font" => apply_font_shorthand(style, value),
@@ -1181,29 +1268,29 @@ fn apply_value(style: &mut LayoutStyle, name: &str, value: &str) {
                 // an inherited property.
                 "inherit" | "unset" => {
                     style.font_weight = Some("inherit".to_string());
-                },
+                }
                 // The initial font weight is normal, independent of both the
                 // parent and a heading's bold UA rule.
                 "initial" => {
                     style.font_weight = Some("400".to_string());
-                },
+                }
                 // The compact cascade does not retain origin/layer history,
                 // so leave its current state unchanged instead of pretending
                 // the revert forms mean inherit or initial.
-                "revert" | "revert-layer" => {},
+                "revert" | "revert-layer" => {}
                 _ => {
                     if let Some(weight) = specified_font_weight(&lower) {
                         style.font_weight = Some(weight);
                     }
-                },
+                }
             }
-        },
+        }
         "font-family" => {
             let v = value.trim().to_ascii_lowercase();
             if !v.is_empty() && v != "inherit" {
                 style.font_family = Some(v);
             }
-        },
+        }
         "font-optical-sizing" => {
             let parsed = match value.trim().to_ascii_lowercase().as_str() {
                 "inherit" | "unset" | "revert" | "revert-layer" => Some(None),
@@ -1214,17 +1301,20 @@ fn apply_value(style: &mut LayoutStyle, name: &str, value: &str) {
             if let Some(value) = parsed {
                 style.font_optical_sizing = value;
             }
-        },
+        }
         "font-variation-settings" => {
             let lower = value.trim().to_ascii_lowercase();
-            if matches!(lower.as_str(), "inherit" | "unset" | "revert" | "revert-layer") {
+            if matches!(
+                lower.as_str(),
+                "inherit" | "unset" | "revert" | "revert-layer"
+            ) {
                 style.font_variation_settings = None;
             } else if matches!(lower.as_str(), "normal" | "initial") {
                 style.font_variation_settings = Some(Vec::new());
             } else if let Some(settings) = parse_font_variation_settings(value) {
                 style.font_variation_settings = Some(settings);
             }
-        },
+        }
         // Text alignment is inherited and applies to inline line boxes. It is
         // deliberately separate from flex/grid `align-items`, which positions
         // child boxes rather than text inside them.
@@ -1232,55 +1322,55 @@ fn apply_value(style: &mut LayoutStyle, name: &str, value: &str) {
             "right" | "end" => {
                 style.text_align = Some(taffy::AlignItems::FLEX_END);
                 style.legacy_center = false;
-            },
+            }
             "center" => {
                 style.text_align = Some(taffy::AlignItems::CENTER);
                 style.legacy_center = false;
-            },
+            }
             "left" | "start" | "justify" => {
                 style.text_align = Some(taffy::AlignItems::FLEX_START);
                 style.legacy_center = false;
-            },
-            _ => {},
+            }
+            _ => {}
         },
         "text-indent" => apply_text_indent(style, value),
         "align-items" => {
             if let Some(Some(value)) = self_alignment_value(value) {
                 style.align_items = Some(value);
             }
-        },
+        }
         "justify-items" => {
             if let Some(Some(value)) = self_alignment_value(value) {
                 style.justify_items = Some(value);
             }
-        },
+        }
         "place-items" => {
             if let Some((Some(align), Some(justify))) = self_alignment_pair(value) {
                 style.align_items = Some(align);
                 style.justify_items = Some(justify);
             }
-        },
+        }
         "align-self" => {
             if let Some(value) = self_alignment_value(value) {
                 style.align_self = value;
             }
-        },
+        }
         "justify-self" => {
             if let Some(value) = self_alignment_value(value) {
                 style.justify_self = value;
             }
-        },
+        }
         "place-self" => {
             if let Some((align, justify)) = self_alignment_pair(value) {
                 style.align_self = align;
                 style.justify_self = justify;
             }
-        },
+        }
         "align-content" => {
             if let Some(value) = content_alignment_value(value) {
                 style.align_content = Some(value);
             }
-        },
+        }
         "justify-content" => {
             let value = match value.trim().to_ascii_lowercase().as_str() {
                 "left" => Some(taffy::JustifyContent::START),
@@ -1290,13 +1380,13 @@ fn apply_value(style: &mut LayoutStyle, name: &str, value: &str) {
             if let Some(value) = value {
                 style.justify_content = Some(value);
             }
-        },
+        }
         "place-content" => {
             if let Some((align, justify)) = content_alignment_pair(value) {
                 style.align_content = Some(align);
                 style.justify_content = Some(justify);
             }
-        },
+        }
         "flex-flow" => {
             if let Some((direction, wrap)) = parse_flex_flow_shorthand(value) {
                 // A shorthand always assigns both longhands. In particular,
@@ -1305,100 +1395,100 @@ fn apply_value(style: &mut LayoutStyle, name: &str, value: &str) {
                 style.flex_direction = Some(direction);
                 style.flex_wrap = Some(wrap);
             }
-        },
+        }
         "flex-direction" => match value {
             "row" => style.flex_direction = Some(taffy::FlexDirection::Row),
             "row-reverse" => style.flex_direction = Some(taffy::FlexDirection::RowReverse),
             "column" => style.flex_direction = Some(taffy::FlexDirection::Column),
             "column-reverse" => style.flex_direction = Some(taffy::FlexDirection::ColumnReverse),
-            _ => {},
+            _ => {}
         },
         "flex-wrap" => match value {
             "wrap" => style.flex_wrap = Some(taffy::FlexWrap::Wrap),
             "nowrap" => style.flex_wrap = Some(taffy::FlexWrap::NoWrap),
             "wrap-reverse" => style.flex_wrap = Some(taffy::FlexWrap::WrapReverse),
-            _ => {},
+            _ => {}
         },
         "flex-grow" => {
             if let Some(v) = token(value).and_then(|t| t.parse::<f32>().ok()) {
                 style.flex_grow = Some(v);
             }
-        },
+        }
         "flex-shrink" => {
             if let Some(v) = token(value).and_then(|t| t.parse::<f32>().ok()) {
                 style.flex_shrink = Some(v);
             }
-        },
+        }
         "order" => {
             if let Ok(order) = value.trim().parse::<i32>() {
                 style.order = order;
             }
-        },
+        }
         "flex-basis" => {
             style.flex_basis = dimension_value(value.trim());
-        },
+        }
         "flex" => parse_flex_shorthand(style, value),
         "position" => match value {
             "absolute" => {
                 style.position = Some(taffy::Position::Absolute);
                 style.position_fixed = false;
                 style.position_sticky = false;
-            },
+            }
             "fixed" => {
                 style.position = Some(taffy::Position::Absolute);
                 style.position_fixed = true;
                 style.position_sticky = false;
-            },
+            }
             "relative" => {
                 style.position = Some(taffy::Position::Relative);
                 style.position_fixed = false;
                 style.position_sticky = false;
-            },
+            }
             "sticky" => {
                 style.position = Some(taffy::Position::Relative);
                 style.position_fixed = false;
                 style.position_sticky = true;
-            },
+            }
             "static" => {
                 style.position = None;
                 style.position_fixed = false;
                 style.position_sticky = false;
-            },
-            _ => {},
+            }
+            _ => {}
         },
         "float" => match value {
             "left" => style.float = Some(crate::Float::Left),
             "right" => style.float = Some(crate::Float::Right),
             "none" => style.float = None,
-            _ => {},
+            _ => {}
         },
         "counter-reset" => {
             if let Some(counters) = parse_counter_directives(value, 0) {
                 style.counter_reset = counters;
             }
-        },
+        }
         "counter-increment" => {
             if let Some(counters) = parse_counter_directives(value, 1) {
                 style.counter_increment = counters;
             }
-        },
+        }
         "counter-set" => {
             if let Some(counters) = parse_counter_directives(value, 0) {
                 style.counter_set = counters;
             }
-        },
+        }
         "object-fit" => match value.trim().to_ascii_lowercase().as_str() {
             "fill" => style.object_fit = crate::ObjectFit::Fill,
             "contain" => style.object_fit = crate::ObjectFit::Contain,
             "cover" => style.object_fit = crate::ObjectFit::Cover,
             "scale-down" => style.object_fit = crate::ObjectFit::ScaleDown,
             "none" => style.object_fit = crate::ObjectFit::None,
-            _ => {},
+            _ => {}
         },
         "object-position" => {
             let position = parse_background_position(value);
             style.object_position = crate::ObjectPosition::new(position.x, position.y);
-        },
+        }
         "top" => set_inset_side(style, 0, value),
         "right" => set_inset_side(style, 1, value),
         "bottom" => set_inset_side(style, 2, value),
@@ -1411,14 +1501,14 @@ fn apply_value(style: &mut LayoutStyle, name: &str, value: &str) {
             let (start, end) = two(value);
             set_inset_side(style, 3, start);
             set_inset_side(style, 1, end);
-        },
+        }
         "inset-inline-start" => set_inset_side(style, 3, value),
         "inset-inline-end" => set_inset_side(style, 1, value),
         "inset-block" => {
             let (start, end) = two(value);
             set_inset_side(style, 0, start);
             set_inset_side(style, 2, end);
-        },
+        }
         "inset-block-start" => set_inset_side(style, 0, value),
         "inset-block-end" => set_inset_side(style, 2, value),
         "inset" => {
@@ -1435,7 +1525,7 @@ fn apply_value(style: &mut LayoutStyle, name: &str, value: &str) {
             set_inset_side(style, 1, r);
             set_inset_side(style, 2, b);
             set_inset_side(style, 3, l);
-        },
+        }
         "overflow" | "overflow-x" | "overflow-y" => {
             let Some((x, y)) = parse_overflow_declaration(name, value) else {
                 return;
@@ -1450,28 +1540,37 @@ fn apply_value(style: &mut LayoutStyle, name: &str, value: &str) {
             }
             style.overflow_axes_set = true;
             recompute_overflow(style);
-        },
+        }
         "scrollbar-gutter" => {
             let lower = value.to_ascii_lowercase();
-            style.scrollbar_gutters =
-                if lower.split_ascii_whitespace().any(|token| token == "stable") {
-                    if lower.split_ascii_whitespace().any(|token| token == "both-edges") {
-                        2
-                    } else {
-                        1
-                    }
+            style.scrollbar_gutters = if lower
+                .split_ascii_whitespace()
+                .any(|token| token == "stable")
+            {
+                if lower
+                    .split_ascii_whitespace()
+                    .any(|token| token == "both-edges")
+                {
+                    2
                 } else {
-                    0
-                };
-        },
+                    1
+                }
+            } else {
+                0
+            };
+        }
         "visibility" => style.visibility_hidden = Some(value.eq_ignore_ascii_case("hidden")),
         "pointer-events" => {
             style.pointer_events_none = Some(value.eq_ignore_ascii_case("none"));
-        },
+        }
         "opacity" => style.opacity = value.trim().parse::<f32>().ok(),
         "animation" => apply_animation_shorthand(style, value),
         "animation-name" => {
-            let first = split_top_level(value, ',').into_iter().next().unwrap_or("").trim();
+            let first = split_top_level(value, ',')
+                .into_iter()
+                .next()
+                .unwrap_or("")
+                .trim();
             style.animation_name = if first.is_empty()
                 || matches!(
                     first.to_ascii_lowercase().as_str(),
@@ -1481,9 +1580,13 @@ fn apply_value(style: &mut LayoutStyle, name: &str, value: &str) {
             } else {
                 Some(first.to_string())
             };
-        },
+        }
         "animation-duration" => {
-            let first = split_top_level(value, ',').into_iter().next().unwrap_or("").trim();
+            let first = split_top_level(value, ',')
+                .into_iter()
+                .next()
+                .unwrap_or("")
+                .trim();
             if matches!(
                 first.to_ascii_lowercase().as_str(),
                 "initial" | "inherit" | "unset" | "revert" | "revert-layer"
@@ -1494,9 +1597,13 @@ fn apply_value(style: &mut LayoutStyle, name: &str, value: &str) {
             {
                 style.animation_timing.duration_ms = milliseconds;
             }
-        },
+        }
         "animation-delay" => {
-            let first = split_top_level(value, ',').into_iter().next().unwrap_or("").trim();
+            let first = split_top_level(value, ',')
+                .into_iter()
+                .next()
+                .unwrap_or("")
+                .trim();
             if matches!(
                 first.to_ascii_lowercase().as_str(),
                 "initial" | "inherit" | "unset" | "revert" | "revert-layer"
@@ -1505,9 +1612,13 @@ fn apply_value(style: &mut LayoutStyle, name: &str, value: &str) {
             } else if let Some(milliseconds) = parse_animation_time_ms(first) {
                 style.animation_timing.delay_ms = milliseconds;
             }
-        },
+        }
         "animation-fill-mode" => {
-            let first = split_top_level(value, ',').into_iter().next().unwrap_or("").trim();
+            let first = split_top_level(value, ',')
+                .into_iter()
+                .next()
+                .unwrap_or("")
+                .trim();
             if matches!(
                 first.to_ascii_lowercase().as_str(),
                 "initial" | "inherit" | "unset" | "revert" | "revert-layer"
@@ -1516,9 +1627,13 @@ fn apply_value(style: &mut LayoutStyle, name: &str, value: &str) {
             } else if let Some(fill) = parse_animation_fill_mode(first) {
                 style.animation_timing.fill_mode = fill;
             }
-        },
+        }
         "animation-iteration-count" => {
-            let first = split_top_level(value, ',').into_iter().next().unwrap_or("").trim();
+            let first = split_top_level(value, ',')
+                .into_iter()
+                .next()
+                .unwrap_or("")
+                .trim();
             if matches!(
                 first.to_ascii_lowercase().as_str(),
                 "initial" | "inherit" | "unset" | "revert" | "revert-layer"
@@ -1527,9 +1642,13 @@ fn apply_value(style: &mut LayoutStyle, name: &str, value: &str) {
             } else if let Some(iterations) = parse_animation_iteration_count(first) {
                 style.animation_timing.iteration_count = iterations;
             }
-        },
+        }
         "animation-direction" => {
-            let first = split_top_level(value, ',').into_iter().next().unwrap_or("").trim();
+            let first = split_top_level(value, ',')
+                .into_iter()
+                .next()
+                .unwrap_or("")
+                .trim();
             if matches!(
                 first.to_ascii_lowercase().as_str(),
                 "initial" | "inherit" | "unset" | "revert" | "revert-layer"
@@ -1538,9 +1657,13 @@ fn apply_value(style: &mut LayoutStyle, name: &str, value: &str) {
             } else if let Some(direction) = parse_animation_direction(first) {
                 style.animation_timing.direction = direction;
             }
-        },
+        }
         "animation-play-state" => {
-            let first = split_top_level(value, ',').into_iter().next().unwrap_or("").trim();
+            let first = split_top_level(value, ',')
+                .into_iter()
+                .next()
+                .unwrap_or("")
+                .trim();
             if matches!(
                 first.to_ascii_lowercase().as_str(),
                 "initial" | "inherit" | "unset" | "revert" | "revert-layer"
@@ -1549,13 +1672,13 @@ fn apply_value(style: &mut LayoutStyle, name: &str, value: &str) {
             } else if let Some(play_state) = parse_animation_play_state(first) {
                 style.animation_timing.play_state = play_state;
             }
-        },
+        }
         "z-index" => {
             style.z_index = match value.trim() {
                 "auto" | "inherit" | "initial" => None,
                 v => v.parse::<i32>().ok(),
             };
-        },
+        }
         "clear" => {
             style.clear = match value.trim().to_ascii_lowercase().as_str() {
                 "left" | "inline-start" => Some(crate::Clear::Left),
@@ -1563,7 +1686,7 @@ fn apply_value(style: &mut LayoutStyle, name: &str, value: &str) {
                 "both" => Some(crate::Clear::Both),
                 _ => None,
             };
-        },
+        }
         "vertical-align" => {
             style.vertical_align = match value.trim().to_ascii_lowercase().as_str() {
                 "top" | "baseline" | "text-top" => Some(crate::VerticalAlign::Top),
@@ -1572,11 +1695,11 @@ fn apply_value(style: &mut LayoutStyle, name: &str, value: &str) {
                 // sub/super/lengths are text-level; leave the cell default.
                 _ => style.vertical_align,
             };
-        },
+        }
         "list-style-type" => {
             style.list_style =
                 Some(list_style_keyword(value.trim()).unwrap_or(crate::ListStyle::Disc));
-        },
+        }
         "list-style" => {
             // Shorthand: type | position | image in any order. We only track
             // the type keyword (and `none`, which suppresses the marker, the
@@ -1586,7 +1709,7 @@ fn apply_value(style: &mut LayoutStyle, name: &str, value: &str) {
                     style.list_style = Some(ls);
                 }
             }
-        },
+        }
         "line-height" => {
             let v = value.trim();
             if v.contains('(') {
@@ -1612,7 +1735,7 @@ fn apply_value(style: &mut LayoutStyle, name: &str, value: &str) {
                 // Unitless number: a multiple of font-size (the common case).
                 v.parse::<f32>().ok().map(crate::LineHeight::Ratio)
             };
-        },
+        }
         "white-space" => {
             style.white_space = match value.trim().to_ascii_lowercase().as_str() {
                 "normal" | "initial" | "revert" | "revert-layer" => Some(crate::WhiteSpace::Normal),
@@ -1625,30 +1748,30 @@ fn apply_value(style: &mut LayoutStyle, name: &str, value: &str) {
                 "inherit" | "unset" => None,
                 _ => style.white_space,
             };
-        },
+        }
         "text-overflow" => {
             style.text_overflow = match value.trim().to_ascii_lowercase().as_str() {
                 "ellipsis" => crate::TextOverflow::Ellipsis,
                 "clip" | "initial" | "unset" | "revert" | "revert-layer" => {
                     crate::TextOverflow::Clip
-                },
+                }
                 _ => style.text_overflow,
             };
-        },
+        }
         "-webkit-line-clamp" => {
             if let Some(lines) = webkit_line_clamp_value(value) {
                 style.webkit_line_clamp = lines;
             }
-        },
+        }
         "-webkit-box-orient" => {
             style.webkit_box_orient_vertical = match value.trim().to_ascii_lowercase().as_str() {
                 "vertical" | "block-axis" => true,
                 "horizontal" | "inline-axis" | "initial" | "unset" | "revert" | "revert-layer" => {
                     false
-                },
+                }
                 _ => style.webkit_box_orient_vertical,
             };
-        },
+        }
         "overflow-wrap" | "word-wrap" => {
             style.overflow_wrap = match value.trim().to_ascii_lowercase().as_str() {
                 "normal" | "initial" => Some(crate::OverflowWrap::Normal),
@@ -1660,7 +1783,7 @@ fn apply_value(style: &mut LayoutStyle, name: &str, value: &str) {
                 "inherit" | "unset" | "revert" | "revert-layer" => None,
                 _ => style.overflow_wrap,
             };
-        },
+        }
         "word-break" => {
             style.word_break = match value.trim().to_ascii_lowercase().as_str() {
                 "normal" | "initial" => Some(crate::WordBreak::Normal),
@@ -1670,18 +1793,18 @@ fn apply_value(style: &mut LayoutStyle, name: &str, value: &str) {
                 "inherit" | "unset" | "revert" | "revert-layer" => None,
                 _ => style.word_break,
             };
-        },
+        }
         "text-wrap" => {
             style.text_wrap_style = match value.trim().to_ascii_lowercase().as_str() {
                 "auto" | "wrap" | "initial" | "revert" | "revert-layer" => {
                     Some(crate::TextWrapStyle::Auto)
-                },
+                }
                 "balance" | "wrap balance" | "balance wrap" => Some(crate::TextWrapStyle::Balance),
                 // `text-wrap` inherits, so unset behaves as inherit.
                 "inherit" | "unset" => None,
                 _ => style.text_wrap_style,
             };
-        },
+        }
         "text-wrap-style" => {
             style.text_wrap_style = match value.trim().to_ascii_lowercase().as_str() {
                 "auto" | "initial" | "revert" | "revert-layer" => Some(crate::TextWrapStyle::Auto),
@@ -1690,11 +1813,11 @@ fn apply_value(style: &mut LayoutStyle, name: &str, value: &str) {
                 "inherit" | "unset" => None,
                 _ => style.text_wrap_style,
             };
-        },
+        }
         "font-style" => {
             let v = value.trim().to_ascii_lowercase();
             style.font_style_italic = Some(v.starts_with("italic") || v.starts_with("oblique"));
-        },
+        }
         "text-transform" => {
             style.text_transform = Some(match value.trim().to_ascii_lowercase().as_str() {
                 "uppercase" => crate::TextTransform::Uppercase,
@@ -1702,49 +1825,55 @@ fn apply_value(style: &mut LayoutStyle, name: &str, value: &str) {
                 "capitalize" => crate::TextTransform::Capitalize,
                 _ => crate::TextTransform::None,
             });
-        },
+        }
         "text-decoration" | "text-decoration-line" => {
-            let toks: Vec<String> =
-                value.split_whitespace().map(|t| t.to_ascii_lowercase()).collect();
+            let toks: Vec<String> = value
+                .split_whitespace()
+                .map(|t| t.to_ascii_lowercase())
+                .collect();
             let underline = toks.iter().any(|t| t == "underline");
             let none = toks.iter().any(|t| t == "none");
             style.underline = Some(underline && !none);
             style.overline = Some(!none && toks.iter().any(|token| token == "overline"));
             style.line_through = Some(!none && toks.iter().any(|token| token == "line-through"));
-        },
+        }
         "gap" | "grid-gap" => {
             let values = split_ws_paren(value);
             if let Some(row) = values.first() {
                 apply_gap_value(style, true, row);
                 apply_gap_value(style, false, values.get(1).copied().unwrap_or(row));
             }
-        },
+        }
         "row-gap" | "grid-row-gap" => apply_gap_value(style, true, value),
         "column-gap" | "grid-column-gap" | "-webkit-column-gap" => {
             apply_gap_value(style, false, value)
-        },
+        }
         "column-count" | "-webkit-column-count" => {
             style.column_count = parse_column_count(value);
-        },
+        }
         "columns" | "-webkit-columns" => {
             // `columns` is `column-width || column-count`; width remains auto
             // in our box-fragmentation subset, but the shorthand still resets
             // an earlier count when it contains no positive integer.
-            style.column_count = split_ws_paren(value).into_iter().find_map(parse_column_count);
-        },
+            style.column_count = split_ws_paren(value)
+                .into_iter()
+                .find_map(parse_column_count);
+        }
         "break-inside" => {
-            style.break_inside_avoid =
-                matches!(value.trim().to_ascii_lowercase().as_str(), "avoid" | "avoid-column");
-        },
+            style.break_inside_avoid = matches!(
+                value.trim().to_ascii_lowercase().as_str(),
+                "avoid" | "avoid-column"
+            );
+        }
         "-webkit-column-break-inside" => {
             style.break_inside_avoid = value.trim().eq_ignore_ascii_case("avoid");
-        },
+        }
         "border-spacing" => {
             let dims: Vec<f32> = value.split_whitespace().filter_map(px_value).collect();
             if let Some(&h) = dims.first() {
                 style.border_spacing = Some((h, *dims.get(1).unwrap_or(&h)));
             }
-        },
+        }
         "border-collapse" => {
             style.border_collapse = match value.trim().to_ascii_lowercase().as_str() {
                 "collapse" => Some(true),
@@ -1754,13 +1883,13 @@ fn apply_value(style: &mut LayoutStyle, name: &str, value: &str) {
                 "inherit" | "unset" => None,
                 _ => style.border_collapse,
             };
-        },
+        }
         "table-layout" => match value.trim().to_ascii_lowercase().as_str() {
             "fixed" => style.table_layout_fixed = true,
             "auto" | "initial" | "unset" | "revert" | "revert-layer" => {
                 style.table_layout_fixed = false;
-            },
-            _ => {},
+            }
+            _ => {}
         },
         "grid-template-columns" => {
             let (tracks, names, calc_expressions) = parse_track_list_named(value);
@@ -1768,13 +1897,13 @@ fn apply_value(style: &mut LayoutStyle, name: &str, value: &str) {
             style.grid_template_columns = tracks;
             style.grid_calc_expressions[0] = calc_expressions;
             style.grid_col_line_names = (!names.is_empty()).then(|| build_line_map(names));
-        },
+        }
         "grid-template-rows" => {
             let (tracks, names, calc_expressions) = parse_track_list_named(value);
             style.grid_template_rows = tracks;
             style.grid_calc_expressions[1] = calc_expressions;
             style.grid_row_line_names = (!names.is_empty()).then(|| build_line_map(names));
-        },
+        }
         "grid-auto-columns" => apply_grid_auto_tracks(style, value, true),
         "grid-auto-rows" => apply_grid_auto_tracks(style, value, false),
         "grid-template-areas" => style.grid_areas = Some(parse_grid_areas(value)),
@@ -1795,7 +1924,7 @@ fn apply_value(style: &mut LayoutStyle, name: &str, value: &str) {
         "scale" => parse_individual_scale(style, value),
         "filter" => {
             set_containing_block_trigger(style, crate::CB_TRIGGER_FILTER, non_none_value(value))
-        },
+        }
         "backdrop-filter" | "-webkit-backdrop-filter" => set_containing_block_trigger(
             style,
             crate::CB_TRIGGER_BACKDROP_FILTER,
@@ -1815,7 +1944,7 @@ fn apply_value(style: &mut LayoutStyle, name: &str, value: &str) {
                     flags & (crate::CONTAIN_LAYOUT | crate::CONTAIN_PAINT) != 0,
                 );
             }
-        },
+        }
         "will-change" => {
             let establishes = value.split([',', ' ']).map(str::trim).any(|v| {
                 matches!(
@@ -1824,7 +1953,7 @@ fn apply_value(style: &mut LayoutStyle, name: &str, value: &str) {
                 )
             });
             set_containing_block_trigger(style, crate::CB_TRIGGER_WILL_CHANGE, establishes);
-        },
+        }
         "content-visibility" => set_containing_block_trigger(
             style,
             crate::CB_TRIGGER_CONTENT_VISIBILITY,
@@ -1832,8 +1961,8 @@ fn apply_value(style: &mut LayoutStyle, name: &str, value: &str) {
         ),
         "box-shadow" | "-webkit-box-shadow" => {
             style.box_shadow = parse_box_shadow(value, style.color, style.color_scheme_dark);
-        },
-        _ => {},
+        }
+        _ => {}
     }
     normalize_webkit_line_clamp_display(style);
 }
@@ -1875,7 +2004,10 @@ fn webkit_line_clamp_value(value: &str) -> Option<Option<u32>> {
     }
     let first_nonzero = value.bytes().find(|byte| *byte != b'0')?;
     debug_assert!(first_nonzero.is_ascii_digit());
-    let lines = value.parse::<u64>().unwrap_or(u64::MAX).min(i32::MAX as u64) as u32;
+    let lines = value
+        .parse::<u64>()
+        .unwrap_or(u64::MAX)
+        .min(i32::MAX as u64) as u32;
     Some(Some(lines))
 }
 
@@ -2197,7 +2329,10 @@ pub fn supports_declaration(name: &str, value: &str) -> bool {
             value.to_ascii_lowercase().as_str(),
             "static" | "relative" | "absolute" | "fixed" | "sticky"
         ),
-        "box-sizing" => matches!(value.to_ascii_lowercase().as_str(), "content-box" | "border-box"),
+        "box-sizing" => matches!(
+            value.to_ascii_lowercase().as_str(),
+            "content-box" | "border-box"
+        ),
         "table-layout" => matches!(value.to_ascii_lowercase().as_str(), "auto" | "fixed"),
         "container-type" => parse_container_type(value).is_some(),
         "container-name" => parse_container_names(value).is_some(),
@@ -2205,7 +2340,7 @@ pub fn supports_declaration(name: &str, value: &str) -> bool {
         "font-optical-sizing" => matches!(value.to_ascii_lowercase().as_str(), "auto" | "none"),
         "font-variation-settings" => {
             value.eq_ignore_ascii_case("normal") || parse_font_variation_settings(value).is_some()
-        },
+        }
         "white-space" => matches!(
             value.to_ascii_lowercase().as_str(),
             "normal" | "nowrap" | "pre" | "pre-wrap" | "pre-line" | "break-spaces"
@@ -2217,8 +2352,11 @@ pub fn supports_declaration(name: &str, value: &str) -> bool {
             "horizontal" | "vertical" | "inline-axis" | "block-axis"
         ),
         "overflow-wrap" | "word-wrap" => {
-            matches!(value.to_ascii_lowercase().as_str(), "normal" | "break-word" | "anywhere")
-        },
+            matches!(
+                value.to_ascii_lowercase().as_str(),
+                "normal" | "break-word" | "anywhere"
+            )
+        }
         "word-break" => matches!(
             value.to_ascii_lowercase().as_str(),
             "normal" | "break-all" | "keep-all" | "break-word"
@@ -2235,20 +2373,23 @@ pub fn supports_declaration(name: &str, value: &str) -> bool {
         "animation-direction" => parse_animation_direction(value).is_some(),
         "clip-path" | "-webkit-clip-path" => {
             value.eq_ignore_ascii_case("none") || parse_clip_path_polygon(value).is_some()
-        },
+        }
         // These properties currently participate only in containing-block
         // bookkeeping. Advertising an effect that is not painted is worse
         // than a conservative false result because feature queries commonly
         // use them to select the only visible implementation of an effect.
         "filter" | "backdrop-filter" | "-webkit-backdrop-filter" | "perspective" => {
             value.eq_ignore_ascii_case("none")
-        },
+        }
         "contain" => value.eq_ignore_ascii_case("none"),
         "content-visibility" => value.eq_ignore_ascii_case("visible"),
         "content" => supports_content_value(value),
         "animation-fill-mode" => parse_animation_fill_mode(value).is_some(),
         "animation-play-state" => parse_animation_play_state(value).is_some(),
-        "float" => matches!(value.to_ascii_lowercase().as_str(), "none" | "left" | "right"),
+        "float" => matches!(
+            value.to_ascii_lowercase().as_str(),
+            "none" | "left" | "right"
+        ),
         "object-fit" => matches!(
             value.to_ascii_lowercase().as_str(),
             "fill" | "contain" | "cover" | "none" | "scale-down"
@@ -2265,27 +2406,38 @@ pub fn supports_declaration(name: &str, value: &str) -> bool {
                             .is_some_and(f32::is_finite)
                         || px_value(token).is_some_and(f32::is_finite)
                 })
-        },
+        }
         "visibility" => {
-            matches!(value.to_ascii_lowercase().as_str(), "visible" | "hidden" | "collapse")
-        },
+            matches!(
+                value.to_ascii_lowercase().as_str(),
+                "visible" | "hidden" | "collapse"
+            )
+        }
         "pointer-events" => matches!(value.to_ascii_lowercase().as_str(), "auto" | "none"),
         "scrollbar-gutter" => {
-            matches!(value.to_ascii_lowercase().as_str(), "auto" | "stable" | "stable both-edges")
-        },
+            matches!(
+                value.to_ascii_lowercase().as_str(),
+                "auto" | "stable" | "stable both-edges"
+            )
+        }
         "overflow" | "overflow-x" | "overflow-y" => {
             parse_overflow_declaration(&name, value).is_some()
-        },
+        }
         "grid-area" => {
-            let parts = split_top_level(value, '/').into_iter().map(str::trim).collect::<Vec<_>>();
+            let parts = split_top_level(value, '/')
+                .into_iter()
+                .map(str::trim)
+                .collect::<Vec<_>>();
             !parts.is_empty()
                 && parts.len() <= 4
-                && parts.iter().all(|part| !part.is_empty() && parse_grid_line_kind(part).is_some())
-        },
+                && parts
+                    .iter()
+                    .all(|part| !part.is_empty() && parse_grid_line_kind(part).is_some())
+        }
         "grid-auto-columns" | "grid-auto-rows" => parse_grid_auto_track_list(value).is_some(),
         "border" | "border-top" | "border-right" | "border-bottom" | "border-left" => {
             parse_border_shorthand(value, false).is_some()
-        },
+        }
         "border-inline"
         | "border-block"
         | "border-inline-start"
@@ -2315,8 +2467,10 @@ pub fn supports_declaration(name: &str, value: &str) -> bool {
                 .iter()
                 .map(|token| border_width(token))
                 .collect::<Option<Vec<_>>>();
-            values.and_then(|values| crate::border::expand_sides(&values)).is_some()
-        },
+            values
+                .and_then(|values| crate::border::expand_sides(&values))
+                .is_some()
+        }
         "border-top-width"
         | "border-right-width"
         | "border-bottom-width"
@@ -2327,11 +2481,13 @@ pub fn supports_declaration(name: &str, value: &str) -> bool {
                 .iter()
                 .map(|token| border_style(token))
                 .collect::<Option<Vec<_>>>();
-            values.and_then(|values| crate::border::expand_sides(&values)).is_some()
-        },
+            values
+                .and_then(|values| crate::border::expand_sides(&values))
+                .is_some()
+        }
         "border-top-style" | "border-right-style" | "border-bottom-style" | "border-left-style" => {
             border_style(value).is_some()
-        },
+        }
         "border-color" => parse_border_colors(value, false).is_some(),
         "border-top-color"
         | "border-right-color"
@@ -2346,7 +2502,7 @@ pub fn supports_declaration(name: &str, value: &str) -> bool {
             let tokens = split_ws_paren(value);
             matches!(tokens.as_slice(), [one] if radius_value(one).is_some())
                 || matches!(tokens.as_slice(), [x, y] if radius_value(x).is_some() && radius_value(y).is_some())
-        },
+        }
         "outline" => parse_outline_shorthand(value, false).is_some(),
         "outline-style" => outline_style(value).is_some(),
         "outline-offset" => strict_border_length(value).is_some(),
@@ -2361,9 +2517,12 @@ pub fn supports_declaration(name: &str, value: &str) -> bool {
                     )
                 })
                 && tokens.iter().any(|token| {
-                    matches!(token.to_ascii_lowercase().as_str(), "normal" | "light" | "dark")
+                    matches!(
+                        token.to_ascii_lowercase().as_str(),
+                        "normal" | "light" | "dark"
+                    )
                 })
-        },
+        }
         _ => supports_conservative_known_value(&name, value),
     }
 }
@@ -2398,7 +2557,7 @@ fn has_invalid_supports_value_syntax(value: &str) -> bool {
                 if depth < 0 {
                     return true;
                 }
-            },
+            }
             b';' | b'{' | b'}' if depth == 0 => return true,
             b'!' if depth == 0
                 && value[index + 1..]
@@ -2407,8 +2566,8 @@ fn has_invalid_supports_value_syntax(value: &str) -> bool {
                     .is_some_and(|word| word.eq_ignore_ascii_case("important")) =>
             {
                 return true;
-            },
-            _ => {},
+            }
+            _ => {}
         }
         index += 1;
     }
@@ -2521,15 +2680,15 @@ fn matching_parenthesis(value: &str, open: usize) -> Option<usize> {
                 b'\\' => {
                     index += 2;
                     continue;
-                },
+                }
                 b'(' => depth += 1,
                 b')' => {
                     depth -= 1;
                     if depth == 0 {
                         return Some(index);
                     }
-                },
-                _ => {},
+                }
+                _ => {}
             }
         }
         index += 1;
@@ -2558,7 +2717,7 @@ fn split_variable_arguments(arguments: &str) -> Option<(&str, Option<&str>)> {
                 b'\\' => {
                     index += 2;
                     continue;
-                },
+                }
                 b'(' | b'[' | b'{' => stack.push(byte),
                 close @ (b')' | b']' | b'}') => {
                     let expected = match close {
@@ -2569,11 +2728,11 @@ fn split_variable_arguments(arguments: &str) -> Option<(&str, Option<&str>)> {
                     if stack.pop() != Some(expected) {
                         return None;
                     }
-                },
+                }
                 b',' if stack.is_empty() => {
                     return Some((&arguments[..index], Some(&arguments[index + 1..])));
-                },
-                _ => {},
+                }
+                _ => {}
             }
         }
         index += 1;
@@ -2602,7 +2761,7 @@ fn has_top_level_variable_forbidden_token(value: &str) -> Option<bool> {
                 b'\\' => {
                     index += 2;
                     continue;
-                },
+                }
                 b'(' | b'[' | b'{' => stack.push(byte),
                 close @ (b')' | b']' | b'}') => {
                     let expected = match close {
@@ -2613,9 +2772,9 @@ fn has_top_level_variable_forbidden_token(value: &str) -> Option<bool> {
                     if stack.pop() != Some(expected) {
                         return None;
                     }
-                },
+                }
                 b'!' | b';' if stack.is_empty() => return Some(true),
-                _ => {},
+                _ => {}
             }
         }
         index += 1;
@@ -2727,8 +2886,8 @@ fn supports_content_value(value: &str) -> bool {
                         end = Some(offset + 1);
                         break;
                     }
-                },
-                _ => {},
+                }
+                _ => {}
             }
         }
         let Some(end) = end else { return false };
@@ -2744,7 +2903,9 @@ fn supports_content_value(value: &str) -> bool {
 
 fn supports_single_url(value: &str) -> bool {
     let value = value.trim();
-    if !value.get(..4).is_some_and(|prefix| prefix.eq_ignore_ascii_case("url("))
+    if !value
+        .get(..4)
+        .is_some_and(|prefix| prefix.eq_ignore_ascii_case("url("))
         || !value.ends_with(')')
     {
         return false;
@@ -2776,8 +2937,8 @@ fn supports_single_url(value: &str) -> bool {
                     return index + character.len_utf8() == value.len()
                         && parse_url(value).is_some();
                 }
-            },
-            _ => {},
+            }
+            _ => {}
         }
     }
     false
@@ -2811,7 +2972,7 @@ fn supports_content_function(name: &str, arguments: &str) -> bool {
             (1..=2).contains(&arguments.len())
                 && ident(arguments[0])
                 && arguments.get(1).is_none_or(|value| counter_style(value))
-        },
+        }
         "counters" => {
             (2..=3).contains(&arguments.len())
                 && ident(arguments[0])
@@ -2822,15 +2983,20 @@ fn supports_content_function(name: &str, arguments: &str) -> bool {
                         && separator.as_bytes().last() == separator.as_bytes().first()
                 }
                 && arguments.get(2).is_none_or(|value| counter_style(value))
-        },
+        }
         _ => false,
     }
 }
 
 fn supports_conservative_known_value(name: &str, value: &str) -> bool {
     let lower = value.trim().to_ascii_lowercase();
-    let finite_number =
-        |input: &str| input.trim().parse::<f32>().ok().is_some_and(|number| number.is_finite());
+    let finite_number = |input: &str| {
+        input
+            .trim()
+            .parse::<f32>()
+            .ok()
+            .is_some_and(|number| number.is_finite())
+    };
     let dimension = |input: &str, auto: bool| {
         let input = input.trim();
         (auto && input.eq_ignore_ascii_case("auto"))
@@ -2871,28 +3037,35 @@ fn supports_conservative_known_value(name: &str, value: &str) -> bool {
         | "padding-block-end" => dimension(value, false),
         "top" | "right" | "bottom" | "left" | "inset-inline" | "inset-block" => {
             dimensions(value, true, 2)
-        },
+        }
         "inset-inline-start" | "inset-inline-end" | "inset-block-start" | "inset-block-end" => {
             dimension(value, true)
-        },
+        }
         "aspect-ratio" => lower == "auto" || parse_aspect_ratio(value).is_some(),
         "align-items" | "justify-items" | "align-self" | "justify-self" => {
             self_alignment_value(value).is_some()
-        },
+        }
         "place-items" | "place-self" => self_alignment_pair(value).is_some(),
         "align-content" => content_alignment_value(value).is_some(),
         "justify-content" => {
             matches!(lower.as_str(), "left" | "right") || content_alignment_value(value).is_some()
-        },
+        }
         "place-content" => content_alignment_pair(value).is_some(),
         "flex-flow" => parse_flex_flow_shorthand(value).is_some(),
         "flex-direction" => {
-            matches!(lower.as_str(), "row" | "row-reverse" | "column" | "column-reverse")
-        },
+            matches!(
+                lower.as_str(),
+                "row" | "row-reverse" | "column" | "column-reverse"
+            )
+        }
         "flex-wrap" => matches!(lower.as_str(), "nowrap" | "wrap" | "wrap-reverse"),
         "flex-grow" | "flex-shrink" => {
-            finite_number(value) && value.trim().parse::<f32>().is_ok_and(|number| number >= 0.0)
-        },
+            finite_number(value)
+                && value
+                    .trim()
+                    .parse::<f32>()
+                    .is_ok_and(|number| number >= 0.0)
+        }
         "flex" => supports_flex_value(value),
         "order" => value.trim().parse::<i32>().is_ok(),
         "opacity" => finite_number(value),
@@ -2909,29 +3082,31 @@ fn supports_conservative_known_value(name: &str, value: &str) -> bool {
         "border-spacing" => dimensions(value, false, 2),
         "column-count" | "-webkit-column-count" => {
             lower == "auto" || parse_column_count(value).is_some()
-        },
-        "columns" | "-webkit-columns" => {
-            split_ws_paren(value).into_iter().any(|token| parse_column_count(token).is_some())
-        },
+        }
+        "columns" | "-webkit-columns" => split_ws_paren(value)
+            .into_iter()
+            .any(|token| parse_column_count(token).is_some()),
         "break-inside" => matches!(lower.as_str(), "auto" | "avoid" | "avoid-column"),
         "-webkit-column-break-inside" => matches!(lower.as_str(), "auto" | "avoid"),
         "grid-auto-flow" => {
             let tokens = lower.split_whitespace().collect::<Vec<_>>();
             !tokens.is_empty()
                 && tokens.len() <= 2
-                && tokens.iter().all(|token| matches!(*token, "row" | "column" | "dense"))
-        },
+                && tokens
+                    .iter()
+                    .all(|token| matches!(*token, "row" | "column" | "dense"))
+        }
         "grid-template-columns" | "grid-template-rows" => {
             let (tracks, ..) = parse_track_list_named(value);
             !tracks.is_empty() || lower.starts_with("subgrid")
-        },
+        }
         "grid-template-areas" => !parse_grid_areas(value).is_empty() || lower == "none",
         "grid-column" | "grid-row" => split_top_level(value, '/')
             .into_iter()
             .all(|part| parse_grid_line_kind(part.trim()).is_some()),
         "grid-column-start" | "grid-column-end" | "grid-row-start" | "grid-row-end" => {
             parse_grid_line_kind(value).is_some()
-        },
+        }
         "transform-origin" => parse_transform_origin(value).is_some(),
         "translate" => lower == "none" || dimensions(value, false, 3),
         "rotate" => lower == "none" || angle_degrees(value).is_some(),
@@ -2942,21 +3117,21 @@ fn supports_conservative_known_value(name: &str, value: &str) -> bool {
                     && values.len() <= 2
                     && values.iter().all(|value| scale_number(value).is_some())
             }
-        },
+        }
         "transform" => supports_transform_value(value),
         "background-color" | "color" | "-webkit-text-fill-color" => parse_color(value).is_some(),
         "background-image" | "mask-image" | "-webkit-mask-image" => {
             lower == "none"
                 || parse_url(value).is_some()
                 || !parse_background_gradient_layers(value, false).0.is_empty()
-        },
+        }
         "background-repeat" | "mask-repeat" | "-webkit-mask-repeat" => {
             parse_image_repeat(value).is_some()
-        },
+        }
         "background-size" | "mask-size" | "-webkit-mask-size" => {
             matches!(lower.as_str(), "auto" | "cover" | "contain")
                 || parse_background_size(value).is_some()
-        },
+        }
         "background-origin" => parse_background_origin(value).is_some(),
         "background-clip" | "-webkit-background-clip" => parse_background_clip(value).is_some(),
         "font-size" => is_font_size_token(value),
@@ -2964,11 +3139,17 @@ fn supports_conservative_known_value(name: &str, value: &str) -> bool {
         "font-family" => !value.trim().is_empty(),
         "font-style" => lower == "normal" || lower == "italic" || lower.starts_with("oblique"),
         "text-align" => {
-            matches!(lower.as_str(), "left" | "right" | "start" | "end" | "center" | "justify")
-        },
+            matches!(
+                lower.as_str(),
+                "left" | "right" | "start" | "end" | "center" | "justify"
+            )
+        }
         "text-transform" => {
-            matches!(lower.as_str(), "none" | "uppercase" | "lowercase" | "capitalize")
-        },
+            matches!(
+                lower.as_str(),
+                "none" | "uppercase" | "lowercase" | "capitalize"
+            )
+        }
         "text-decoration" | "text-decoration-line" => lower
             .split_whitespace()
             .all(|token| matches!(token, "none" | "underline" | "overline" | "line-through")),
@@ -2976,12 +3157,14 @@ fn supports_conservative_known_value(name: &str, value: &str) -> bool {
         "gap" | "grid-gap" => dimensions(value, false, 2),
         "row-gap" | "grid-row-gap" | "column-gap" | "grid-column-gap" | "-webkit-column-gap" => {
             lower == "normal" || dimension(value, false)
-        },
+        }
         "counter-reset" | "counter-increment" | "counter-set" => {
             parse_counter_directives(value, 0).is_some()
-        },
+        }
         "list-style-type" => list_style_keyword(value.trim()).is_some(),
-        "list-style" => value.split_whitespace().any(|token| list_style_keyword(token).is_some()),
+        "list-style" => value
+            .split_whitespace()
+            .any(|token| list_style_keyword(token).is_some()),
         "animation" | "animation-name" => !value.trim().is_empty(),
         "background" | "font" | "grid-template" | "grid" | "box-shadow" | "-webkit-box-shadow"
         | "fill" | "stroke" | "stroke-width" | "letter-spacing" | "will-change" => false,
@@ -3000,7 +3183,11 @@ fn supports_flex_value(value: &str) -> bool {
     }
     let mut numbers = 0usize;
     for token in tokens {
-        if token.parse::<f32>().ok().is_some_and(|number| number.is_finite() && number >= 0.0) {
+        if token
+            .parse::<f32>()
+            .ok()
+            .is_some_and(|number| number.is_finite() && number >= 0.0)
+        {
             numbers += 1;
         } else if matches!(dimension_value(token), crate::Dimension::Auto)
             && !token.eq_ignore_ascii_case("auto")
@@ -3019,7 +3206,11 @@ fn supports_transform_value(value: &str) -> bool {
 }
 
 fn apply_animation_shorthand(style: &mut LayoutStyle, value: &str) {
-    let first = split_top_level(value, ',').into_iter().next().unwrap_or("").trim();
+    let first = split_top_level(value, ',')
+        .into_iter()
+        .next()
+        .unwrap_or("")
+        .trim();
     if first.is_empty() {
         return;
     }
@@ -3037,11 +3228,12 @@ fn apply_animation_shorthand(style: &mut LayoutStyle, value: &str) {
     let mut time_count = 0usize;
     for token in split_ws_paren(first) {
         let lower = token.to_ascii_lowercase();
-        let timing_keyword =
-            matches!(lower.as_str(), "linear" | "ease" | "ease-in" | "ease-out" | "ease-in-out")
-                || lower.starts_with("cubic-bezier(")
-                || lower.starts_with("steps(")
-                || lower.starts_with("linear(");
+        let timing_keyword = matches!(
+            lower.as_str(),
+            "linear" | "ease" | "ease-in" | "ease-out" | "ease-in-out"
+        ) || lower.starts_with("cubic-bezier(")
+            || lower.starts_with("steps(")
+            || lower.starts_with("linear(");
         if let Some(time) = parse_animation_time_ms(&lower) {
             if time_count == 0 {
                 if time < 0.0 {
@@ -3111,7 +3303,10 @@ fn parse_animation_iteration_count(value: &str) -> Option<f32> {
     if value.eq_ignore_ascii_case("infinite") {
         return Some(f32::INFINITY);
     }
-    value.parse::<f32>().ok().filter(|count| count.is_finite() && *count >= 0.0)
+    value
+        .parse::<f32>()
+        .ok()
+        .filter(|count| count.is_finite() && *count >= 0.0)
 }
 
 #[derive(Clone, Copy)]
@@ -3134,7 +3329,7 @@ impl AnimationCalcValue {
             (Self::Number(left), Self::Number(right)) => Some(Self::Number(left + sign * right)),
             (Self::Milliseconds(left), Self::Milliseconds(right)) => {
                 Some(Self::Milliseconds(left + sign * right))
-            },
+            }
             _ => None,
         }
     }
@@ -3145,7 +3340,7 @@ impl AnimationCalcValue {
             (Self::Milliseconds(time), Self::Number(number))
             | (Self::Number(number), Self::Milliseconds(time)) => {
                 Some(Self::Milliseconds(time * number))
-            },
+            }
             _ => None,
         }
     }
@@ -3156,10 +3351,10 @@ impl AnimationCalcValue {
             (Self::Number(left), Self::Number(right)) => Some(Self::Number(left / right)),
             (Self::Milliseconds(time), Self::Number(number)) => {
                 Some(Self::Milliseconds(time / number))
-            },
+            }
             (Self::Milliseconds(left), Self::Milliseconds(right)) if right != 0.0 => {
                 Some(Self::Number(left / right))
-            },
+            }
             _ => None,
         }
     }
@@ -3172,7 +3367,11 @@ struct AnimationCalcParser<'a> {
 
 impl AnimationCalcParser<'_> {
     fn skip_whitespace(&mut self) {
-        while self.input.get(self.position).is_some_and(u8::is_ascii_whitespace) {
+        while self
+            .input
+            .get(self.position)
+            .is_some_and(u8::is_ascii_whitespace)
+        {
             self.position += 1;
         }
     }
@@ -3249,8 +3448,10 @@ impl AnimationCalcParser<'_> {
         if !saw_digit {
             return None;
         }
-        let number =
-            std::str::from_utf8(&self.input[start..self.position]).ok()?.parse::<f32>().ok()?;
+        let number = std::str::from_utf8(&self.input[start..self.position])
+            .ok()?
+            .parse::<f32>()
+            .ok()?;
         if self.input.get(self.position..self.position + 2) == Some(b"ms") {
             self.position += 2;
             Some(AnimationCalcValue::Milliseconds(number))
@@ -3266,12 +3467,22 @@ impl AnimationCalcParser<'_> {
 pub(crate) fn parse_animation_time_ms(value: &str) -> Option<f32> {
     let normalized = value.trim().to_ascii_lowercase();
     let is_calc = normalized.starts_with("calc(") && normalized.ends_with(')');
-    if !is_calc && normalized.bytes().any(|byte| matches!(byte, b'+' | b'*' | b'/' | b'(' | b')')) {
+    if !is_calc
+        && normalized
+            .bytes()
+            .any(|byte| matches!(byte, b'+' | b'*' | b'/' | b'(' | b')'))
+    {
         return None;
     }
-    let expression =
-        if is_calc { &normalized[5..normalized.len() - 1] } else { normalized.as_str() };
-    let mut parser = AnimationCalcParser { input: expression.as_bytes(), position: 0 };
+    let expression = if is_calc {
+        &normalized[5..normalized.len() - 1]
+    } else {
+        normalized.as_str()
+    };
+    let mut parser = AnimationCalcParser {
+        input: expression.as_bytes(),
+        position: 0,
+    };
     let result = parser.sum()?;
     parser.skip_whitespace();
     if parser.position != parser.input.len() {
@@ -3280,7 +3491,7 @@ pub(crate) fn parse_animation_time_ms(value: &str) -> Option<f32> {
     match result {
         AnimationCalcValue::Milliseconds(milliseconds) if milliseconds.is_finite() => {
             Some(milliseconds)
-        },
+        }
         _ => None,
     }
 }
@@ -3369,9 +3580,10 @@ fn content_alignment_pair(value: &str) -> Option<(taffy::AlignContent, taffy::Ju
     for split in 1..tokens.len() {
         let align = tokens[..split].join(" ");
         let justify = tokens[split..].join(" ");
-        if let (Some(align), Some(justify)) =
-            (content_alignment_value(&align), content_alignment_value(&justify))
-        {
+        if let (Some(align), Some(justify)) = (
+            content_alignment_value(&align),
+            content_alignment_value(&justify),
+        ) {
             return Some((align, justify));
         }
     }
@@ -3410,7 +3622,7 @@ fn parse_transform_length(value: &str) -> Option<crate::TransformLength> {
             "calc" | "min" | "max" | "clamp" => {
                 resolve_contextual_length(value, 16.0, 16.0, 10.0, 10.0, 100.0)
                     .is_some_and(f32::is_finite)
-            },
+            }
             "var" => {
                 let parts = split_top_level(arguments, ',');
                 (1..=2).contains(&parts.len())
@@ -3419,7 +3631,7 @@ fn parse_transform_length(value: &str) -> Option<crate::TransformLength> {
                     && parts.get(1).is_none_or(|fallback| {
                         !fallback.trim().is_empty() && parse_transform_length(fallback).is_some()
                     })
-            },
+            }
             _ => false,
         };
         if !valid {
@@ -3431,8 +3643,10 @@ fn parse_transform_length(value: &str) -> Option<crate::TransformLength> {
         });
     }
     let value = dimension_value(value);
-    (!matches!(value, crate::Dimension::Auto))
-        .then_some(crate::TransformLength { value, expression: None })
+    (!matches!(value, crate::Dimension::Auto)).then_some(crate::TransformLength {
+        value,
+        expression: None,
+    })
 }
 
 fn parse_transform_z_length(value: &str) -> Option<crate::TransformLength> {
@@ -3463,7 +3677,7 @@ fn parse_transform_ops(value: &str) -> Option<Vec<crate::TransformOp>> {
                     crate::TransformLength::px(0.0)
                 };
                 crate::TransformOp::Translate(parse_transform_length(values[0])?, y)
-            },
+            }
             "translatex" if values.len() == 1 => crate::TransformOp::Translate(
                 parse_transform_length(values[0])?,
                 crate::TransformLength::px(0.0),
@@ -3481,44 +3695,47 @@ fn parse_transform_ops(value: &str) -> Option<Vec<crate::TransformOp>> {
                     parse_transform_length(values[0])?,
                     parse_transform_length(values[1])?,
                 )
-            },
+            }
             "translatez" if values.len() == 1 => {
                 parse_transform_z_length(values[0])?;
                 crate::TransformOp::Matrix(crate::Affine2::IDENTITY)
-            },
+            }
             "scale" if (1..=2).contains(&values.len()) => {
                 let x = scale_number(values[0])?;
                 crate::TransformOp::Scale(
                     x,
-                    values.get(1).and_then(|value| scale_number(value)).unwrap_or(x),
+                    values
+                        .get(1)
+                        .and_then(|value| scale_number(value))
+                        .unwrap_or(x),
                 )
-            },
+            }
             "scalex" if values.len() == 1 => {
                 crate::TransformOp::Scale(scale_number(values[0])?, 1.0)
-            },
+            }
             "scaley" if values.len() == 1 => {
                 crate::TransformOp::Scale(1.0, scale_number(values[0])?)
-            },
+            }
             "scale3d" if values.len() == 3 => {
                 let x = scale_number(values[0])?;
                 let y = scale_number(values[1])?;
                 scale_number(values[2])?;
                 crate::TransformOp::Scale(x, y)
-            },
+            }
             "scalez" if values.len() == 1 && scale_number(values[0]).is_some() => {
                 crate::TransformOp::Matrix(crate::Affine2::IDENTITY)
-            },
+            }
             "rotate" | "rotatez" if values.len() == 1 => {
                 crate::TransformOp::Rotate(angle_degrees(values[0])?)
-            },
+            }
             "rotatex" if values.len() == 1 => {
                 let radians = angle_degrees(values[0])?.to_radians();
                 crate::TransformOp::Scale(1.0, radians.cos())
-            },
+            }
             "rotatey" if values.len() == 1 => {
                 let radians = angle_degrees(values[0])?.to_radians();
                 crate::TransformOp::Scale(radians.cos(), 1.0)
-            },
+            }
             "rotate3d" if values.len() == 4 => {
                 let x = values[0].parse::<f32>().ok()?;
                 let y = values[1].parse::<f32>().ok()?;
@@ -3538,17 +3755,20 @@ fn parse_transform_ops(value: &str) -> Option<Vec<crate::TransformOp>> {
                     // affine renderer without tracking Z between operations.
                     return None;
                 }
-            },
+            }
             "skew" if (1..=2).contains(&values.len()) => crate::TransformOp::Skew(
                 angle_degrees(values[0])?,
-                values.get(1).and_then(|value| angle_degrees(value)).unwrap_or(0.0),
+                values
+                    .get(1)
+                    .and_then(|value| angle_degrees(value))
+                    .unwrap_or(0.0),
             ),
             "skewx" if values.len() == 1 => {
                 crate::TransformOp::Skew(angle_degrees(values[0])?, 0.0)
-            },
+            }
             "skewy" if values.len() == 1 => {
                 crate::TransformOp::Skew(0.0, angle_degrees(values[0])?)
-            },
+            }
             "matrix" if values.len() == 6 => {
                 let numbers = values
                     .iter()
@@ -3565,7 +3785,7 @@ fn parse_transform_ops(value: &str) -> Option<Vec<crate::TransformOp>> {
                     e: numbers[4],
                     f: numbers[5],
                 })
-            },
+            }
             "matrix3d" if values.len() == 16 => {
                 let numbers = values
                     .iter()
@@ -3593,7 +3813,7 @@ fn parse_transform_ops(value: &str) -> Option<Vec<crate::TransformOp>> {
                     e: numbers[12],
                     f: numbers[13],
                 })
-            },
+            }
             _ => return None,
         };
         operations.push(operation);
@@ -3620,14 +3840,19 @@ fn angle_degrees(value: &str) -> Option<f32> {
     }
 
     let value = value.trim();
-    let Some(inner) = value.strip_prefix("calc(").and_then(|value| value.strip_suffix(')')) else {
+    let Some(inner) = value
+        .strip_prefix("calc(")
+        .and_then(|value| value.strip_suffix(')'))
+    else {
         return primitive(value).filter(|value| value.is_finite());
     };
     let result = if let Some((angle, factor)) = inner.split_once('*') {
         Some(primitive(angle)? * factor.trim().parse::<f32>().ok()?)
     } else if let Some((angle, divisor)) = inner.split_once('/') {
         let divisor = divisor.trim().parse::<f32>().ok()?;
-        (divisor != 0.0).then(|| primitive(angle).map(|angle| angle / divisor)).flatten()
+        (divisor != 0.0)
+            .then(|| primitive(angle).map(|angle| angle / divisor))
+            .flatten()
     } else {
         primitive(inner)
     };
@@ -3652,7 +3877,10 @@ fn parse_transform_origin(value: &str) -> Option<(crate::Dimension, crate::Dimen
     if x.is_none() && y.is_none() {
         return None;
     }
-    Some((x.unwrap_or(crate::Dimension::Percent(0.5)), y.unwrap_or(crate::Dimension::Percent(0.5))))
+    Some((
+        x.unwrap_or(crate::Dimension::Percent(0.5)),
+        y.unwrap_or(crate::Dimension::Percent(0.5)),
+    ))
 }
 
 fn parse_individual_scale(style: &mut LayoutStyle, value: &str) {
@@ -3664,7 +3892,11 @@ fn parse_individual_scale(style: &mut LayoutStyle, value: &str) {
         set_containing_block_trigger(style, crate::CB_TRIGGER_SCALE, false);
         return;
     }
-    let values: Vec<f32> = value.split_whitespace().take(2).filter_map(scale_number).collect();
+    let values: Vec<f32> = value
+        .split_whitespace()
+        .take(2)
+        .filter_map(scale_number)
+        .collect();
     let Some(&x) = values.first() else { return };
     let y = values.get(1).copied().unwrap_or(x);
     style.individual_scale = Some((x, y));
@@ -3725,7 +3957,10 @@ fn parse_individual_translate(style: &mut LayoutStyle, value: &str) {
     // The optional third component is a z translation. The scoped renderer is
     // two-dimensional, but accepting a valid value still preserves x/y like
     // transform:translate3d() does.
-    if values.get(2).is_some_and(|value| component(value).is_none()) {
+    if values
+        .get(2)
+        .is_some_and(|value| component(value).is_none())
+    {
         return;
     }
     style.individual_translate = Some((x, y));
@@ -3783,8 +4018,8 @@ fn transform_functions(value: &str) -> Vec<(String, String)> {
                         end = Some(cursor + offset);
                         break;
                     }
-                },
-                _ => {},
+                }
+                _ => {}
             }
         }
         let Some(end) = end else { return Vec::new() };
@@ -3966,10 +4201,18 @@ pub(crate) fn parse_track_list_named(
     let mut line: i16 = 1;
     // A subgridded axis owns line names but no sizing functions. Do not turn
     // the keyword into the generic unknown-token => auto-track fallback.
-    let is_subgrid =
-        tokens.first().map(|token| token.eq_ignore_ascii_case("subgrid")).unwrap_or(false);
+    let is_subgrid = tokens
+        .first()
+        .map(|token| token.eq_ignore_ascii_case("subgrid"))
+        .unwrap_or(false);
     for tok in tokens.into_iter().skip(usize::from(is_subgrid)) {
-        expand_track_token(&tok, &mut tracks, &mut names, &mut calc_expressions, &mut line);
+        expand_track_token(
+            &tok,
+            &mut tracks,
+            &mut names,
+            &mut calc_expressions,
+            &mut line,
+        );
     }
     (tracks, names, calc_expressions)
 }
@@ -4005,11 +4248,13 @@ fn expand_track_token(
                     .filter(|st| !st.trim_start().starts_with('['))
                     .map(|st| track(st, calc_expressions))
                     .collect();
-                tracks.push(taffy::GridTemplateComponent::Repeat(taffy::GridTemplateRepetition {
-                    count,
-                    tracks: repeated_tracks,
-                    line_names: Vec::new(),
-                }));
+                tracks.push(taffy::GridTemplateComponent::Repeat(
+                    taffy::GridTemplateRepetition {
+                        count,
+                        tracks: repeated_tracks,
+                        line_names: Vec::new(),
+                    },
+                ));
                 *line += 1;
                 return;
             }
@@ -4022,7 +4267,10 @@ fn expand_track_token(
         }
         return;
     }
-    tracks.push(taffy::GridTemplateComponent::Single(track(t, calc_expressions)));
+    tracks.push(taffy::GridTemplateComponent::Single(track(
+        t,
+        calc_expressions,
+    )));
     *line += 1;
 }
 
@@ -4046,24 +4294,24 @@ fn tokenize_tracks(value: &str) -> Vec<String> {
             '[' => {
                 in_bracket = true;
                 cur.push(c);
-            },
+            }
             ']' => {
                 in_bracket = false;
                 cur.push(c);
-            },
+            }
             '(' => {
                 depth += 1;
                 cur.push(c);
-            },
+            }
             ')' => {
                 depth -= 1;
                 cur.push(c);
-            },
+            }
             c if c.is_whitespace() && depth == 0 && !in_bracket => {
                 if !cur.is_empty() {
                     out.push(std::mem::take(&mut cur));
                 }
-            },
+            }
             c => cur.push(c),
         }
     }
@@ -4080,7 +4328,10 @@ fn track(
     use taffy::MinMax;
     let t = tok.trim();
     let lower = t.to_ascii_lowercase();
-    if let Some(inner) = lower.strip_prefix("minmax(").and_then(|s| s.strip_suffix(')')) {
+    if let Some(inner) = lower
+        .strip_prefix("minmax(")
+        .and_then(|s| s.strip_suffix(')'))
+    {
         let arguments = split_top_level(inner, ',');
         if let [a, b] = arguments.as_slice() {
             return MinMax {
@@ -4089,10 +4340,14 @@ fn track(
             };
         }
     }
-    if let Some(inner) = lower.strip_prefix("fit-content(").and_then(|s| s.strip_suffix(')')) {
+    if let Some(inner) = lower
+        .strip_prefix("fit-content(")
+        .and_then(|s| s.strip_suffix(')'))
+    {
         let limit = inner.trim();
-        let max = if let Some(percent) =
-            limit.strip_suffix('%').and_then(|number| number.trim().parse::<f32>().ok())
+        let max = if let Some(percent) = limit
+            .strip_suffix('%')
+            .and_then(|number| number.trim().parse::<f32>().ok())
         {
             taffy::MaxTrackSizingFunction::fit_content_percent(percent / 100.0)
         } else if let Some(px) = px_value(limit) {
@@ -4103,9 +4358,15 @@ fn track(
             // than turning a valid expression into fit-content(0px).
             taffy::MaxTrackSizingFunction::auto()
         };
-        return MinMax { min: taffy::MinTrackSizingFunction::auto(), max };
+        return MinMax {
+            min: taffy::MinTrackSizingFunction::auto(),
+            max,
+        };
     }
-    MinMax { min: min_track(t, calc_expressions), max: max_track(t, calc_expressions) }
+    MinMax {
+        min: min_track(t, calc_expressions),
+        max: max_track(t, calc_expressions),
+    }
 }
 
 /// Parse the `<track-size>+` grammar shared by `grid-auto-columns` and
@@ -4114,7 +4375,10 @@ fn track(
 /// needed for successive implicit tracks.
 fn parse_grid_auto_track_list(
     value: &str,
-) -> Option<(Vec<taffy::TrackSizingFunction>, Vec<std::sync::Arc<GridCalcExpression>>)> {
+) -> Option<(
+    Vec<taffy::TrackSizingFunction>,
+    Vec<std::sync::Arc<GridCalcExpression>>,
+)> {
     let tokens = tokenize_tracks(value);
     if tokens.is_empty()
         || tokens.iter().any(|token| {
@@ -4132,7 +4396,10 @@ fn parse_grid_auto_track_list(
         return None;
     }
     let mut calc_expressions = Vec::new();
-    let tracks = tokens.iter().map(|token| track(token, &mut calc_expressions)).collect();
+    let tracks = tokens
+        .iter()
+        .map(|token| track(token, &mut calc_expressions))
+        .collect();
     Some((tracks, calc_expressions))
 }
 
@@ -4140,15 +4407,19 @@ fn valid_grid_auto_track(value: &str) -> bool {
     if matches!(value, "auto" | "min-content" | "max-content") {
         return true;
     }
-    if let Some(inner) = value.strip_prefix("minmax(").and_then(|inner| inner.strip_suffix(')')) {
+    if let Some(inner) = value
+        .strip_prefix("minmax(")
+        .and_then(|inner| inner.strip_suffix(')'))
+    {
         let Some((min, max)) = inner.split_once(',') else {
             return false;
         };
         return valid_grid_track_breadth(min.trim(), false)
             && valid_grid_track_breadth(max.trim(), true);
     }
-    if let Some(inner) =
-        value.strip_prefix("fit-content(").and_then(|inner| inner.strip_suffix(')'))
+    if let Some(inner) = value
+        .strip_prefix("fit-content(")
+        .and_then(|inner| inner.strip_suffix(')'))
     {
         return valid_grid_track_length_percentage(inner.trim());
     }
@@ -4173,7 +4444,9 @@ fn valid_grid_track_length_percentage(value: &str) -> bool {
     if lower == "0" {
         return true;
     }
-    for suffix in ["rem", "vmin", "vmax", "px", "pt", "em", "ex", "vw", "vh", "%"] {
+    for suffix in [
+        "rem", "vmin", "vmax", "px", "pt", "em", "ex", "vw", "vh", "%",
+    ] {
         if let Some(number) = lower.strip_suffix(suffix) {
             return number
                 .trim()
@@ -4199,7 +4472,7 @@ fn apply_grid_auto_tracks(style: &mut LayoutStyle, value: &str, columns: bool) {
                 return;
             };
             (tracks, false, calc_expressions)
-        },
+        }
     };
     if columns {
         style.grid_auto_columns = tracks;
@@ -4226,8 +4499,9 @@ fn min_track(
             if other.ends_with("fr") {
                 // Flexible tracks have an automatic minimum.
                 M::auto()
-            } else if let Some(p) =
-                other.strip_suffix('%').and_then(|n| n.trim().parse::<f32>().ok())
+            } else if let Some(p) = other
+                .strip_suffix('%')
+                .and_then(|n| n.trim().parse::<f32>().ok())
             {
                 M::percent(p / 100.0)
             } else if let Some(px) = px_value(other) {
@@ -4240,7 +4514,7 @@ fn min_track(
             } else {
                 M::auto()
             }
-        },
+        }
     }
 }
 
@@ -4255,10 +4529,14 @@ fn max_track(
         "max-content" => M::max_content(),
         "auto" => M::auto(),
         other => {
-            if let Some(fr) = other.strip_suffix("fr").and_then(|n| n.trim().parse::<f32>().ok()) {
+            if let Some(fr) = other
+                .strip_suffix("fr")
+                .and_then(|n| n.trim().parse::<f32>().ok())
+            {
                 M::fr(fr)
-            } else if let Some(p) =
-                other.strip_suffix('%').and_then(|n| n.trim().parse::<f32>().ok())
+            } else if let Some(p) = other
+                .strip_suffix('%')
+                .and_then(|n| n.trim().parse::<f32>().ok())
             {
                 M::percent(p / 100.0)
             } else if let Some(px) = px_value(other) {
@@ -4271,7 +4549,7 @@ fn max_track(
             } else {
                 M::auto()
             }
-        },
+        }
     }
 }
 
@@ -4284,15 +4562,19 @@ fn parse_grid_areas(value: &str) -> Vec<Vec<String>> {
         match c {
             '\'' | '"' => {
                 if in_str {
-                    rows.push(cur.split_whitespace().map(|s| s.to_string()).collect::<Vec<_>>());
+                    rows.push(
+                        cur.split_whitespace()
+                            .map(|s| s.to_string())
+                            .collect::<Vec<_>>(),
+                    );
                     cur.clear();
                     in_str = false;
                 } else {
                     in_str = true;
                 }
-            },
+            }
             _ if in_str => cur.push(c),
-            _ => {},
+            _ => {}
         }
     }
     rows
@@ -4403,19 +4685,33 @@ fn set_grid_area(style: &mut LayoutStyle, value: &str) {
         return;
     }
 
-    let parts = split_top_level(value, '/').into_iter().map(str::trim).collect::<Vec<_>>();
+    let parts = split_top_level(value, '/')
+        .into_iter()
+        .map(str::trim)
+        .collect::<Vec<_>>();
     if parts.is_empty()
         || parts.len() > 4
         || parts.iter().any(|part| part.is_empty())
-        || parts.iter().any(|part| parse_grid_line_kind(part).is_none())
+        || parts
+            .iter()
+            .any(|part| parse_grid_line_kind(part).is_none())
     {
         return;
     }
 
     let row_start = parts[0];
-    let column_start = parts.get(1).copied().unwrap_or_else(|| grid_area_omitted_side(row_start));
-    let row_end = parts.get(2).copied().unwrap_or_else(|| grid_area_omitted_side(row_start));
-    let column_end = parts.get(3).copied().unwrap_or_else(|| grid_area_omitted_side(column_start));
+    let column_start = parts
+        .get(1)
+        .copied()
+        .unwrap_or_else(|| grid_area_omitted_side(row_start));
+    let row_end = parts
+        .get(2)
+        .copied()
+        .unwrap_or_else(|| grid_area_omitted_side(row_start));
+    let column_end = parts
+        .get(3)
+        .copied()
+        .unwrap_or_else(|| grid_area_omitted_side(column_start));
 
     // Preserve the compact named-area representation used by
     // `resolve_grid_areas`, while also retaining the generated `name-start` /
@@ -4431,7 +4727,11 @@ fn set_grid_area(style: &mut LayoutStyle, value: &str) {
 }
 
 fn grid_area_omitted_side(start: &str) -> &str {
-    if is_grid_custom_ident(start) { start } else { "auto" }
+    if is_grid_custom_ident(start) {
+        start
+    } else {
+        "auto"
+    }
 }
 
 fn is_grid_custom_ident(value: &str) -> bool {
@@ -4455,7 +4755,9 @@ fn parse_grid_line_kind(value: &str) -> Option<GridLineKind> {
     // auto
     {
         let state = parser.state();
-        if parser.expect_ident_cloned().is_ok_and(|ident| ident.eq_ignore_ascii_case("auto"))
+        if parser
+            .expect_ident_cloned()
+            .is_ok_and(|ident| ident.eq_ignore_ascii_case("auto"))
             && parser.is_exhausted()
         {
             return Some(GridLineKind::Other);
@@ -4466,7 +4768,10 @@ fn parse_grid_line_kind(value: &str) -> Option<GridLineKind> {
     // span && [ <positive-integer> || <custom-ident> ]
     {
         let state = parser.state();
-        if parser.expect_ident_cloned().is_ok_and(|ident| ident.eq_ignore_ascii_case("span")) {
+        if parser
+            .expect_ident_cloned()
+            .is_ok_and(|ident| ident.eq_ignore_ascii_case("span"))
+        {
             let mut saw_integer = consume_grid_integer(&mut parser, true);
             let mut saw_ident = consume_grid_custom_ident(&mut parser);
             if !saw_integer {
@@ -4520,9 +4825,13 @@ fn parse_grid_line_kind(value: &str) -> Option<GridLineKind> {
 
 fn consume_grid_integer(parser: &mut cssparser::Parser<'_, '_>, positive_only: bool) -> bool {
     let state = parser.state();
-    let valid = parser
-        .expect_integer()
-        .is_ok_and(|integer| if positive_only { integer > 0 } else { integer != 0 });
+    let valid = parser.expect_integer().is_ok_and(|integer| {
+        if positive_only {
+            integer > 0
+        } else {
+            integer != 0
+        }
+    });
     if !valid {
         parser.reset(&state);
     }
@@ -4546,7 +4855,10 @@ fn consume_grid_custom_ident(parser: &mut cssparser::Parser<'_, '_>) -> bool {
 fn consume_grid_integer_math(parser: &mut cssparser::Parser<'_, '_>) -> bool {
     let state = parser.state();
     let is_math = parser.expect_function().is_ok_and(|name| {
-        matches!(name.to_ascii_lowercase().as_str(), "calc" | "min" | "max" | "clamp")
+        matches!(
+            name.to_ascii_lowercase().as_str(),
+            "calc" | "min" | "max" | "clamp"
+        )
     });
     if !is_math {
         parser.reset(&state);
@@ -4602,12 +4914,16 @@ fn set_grid_placement(style: &mut LayoutStyle, value: &str, is_col: bool) {
 /// auto-placed track.
 fn set_grid_placement_side(style: &mut LayoutStyle, value: &str, is_col: bool, is_start: bool) {
     if grid_line_has_name(value) {
-        let raw_slot = if is_col { &mut style.grid_column_raw } else { &mut style.grid_row_raw };
+        let raw_slot = if is_col {
+            &mut style.grid_column_raw
+        } else {
+            &mut style.grid_row_raw
+        };
         let (mut start, mut end) = match raw_slot.as_deref() {
             Some(raw) if raw.contains('/') => {
                 let (start, end) = raw.split_once('/').unwrap();
                 (start.trim().to_string(), end.trim().to_string())
-            },
+            }
             // A single named grid-area shorthand contributes its `-start`
             // and `-end` lines. Preserve both logical sides when a later
             // longhand overrides only one of them (`grid-column:content`
@@ -4687,7 +5003,9 @@ fn parse_grid_line(value: &str) -> Option<taffy::Line<taffy::GridPlacement>> {
         None => (value, None),
     };
     let start = parse_grid_placement(a);
-    let end = b.map(parse_grid_placement).unwrap_or(taffy::GridPlacement::Auto);
+    let end = b
+        .map(parse_grid_placement)
+        .unwrap_or(taffy::GridPlacement::Auto);
     Some(taffy::Line { start, end })
 }
 
@@ -4748,18 +5066,26 @@ fn parse_color_for_scheme(value: &str, dark_scheme: bool) -> Option<[u8; 4]> {
         return None;
     }
     // rgb()/rgba() functional notation.
-    if let Some(rest) = lower_full.strip_prefix("rgb(").or_else(|| lower_full.strip_prefix("rgba("))
+    if let Some(rest) = lower_full
+        .strip_prefix("rgb(")
+        .or_else(|| lower_full.strip_prefix("rgba("))
     {
         let inner = rest.strip_suffix(')').unwrap_or(rest);
-        let parts: Vec<&str> =
-            inner.split([',', '/', ' ']).filter(|p| !p.trim().is_empty()).collect();
+        let parts: Vec<&str> = inner
+            .split([',', '/', ' '])
+            .filter(|p| !p.trim().is_empty())
+            .collect();
         if parts.len() >= 3 {
             let c = |s: &str| -> Option<u8> {
                 let s = s.trim();
                 if let Some(pct) = s.strip_suffix('%') {
-                    pct.parse::<f32>().ok().map(|v| (v * 2.55).round().clamp(0.0, 255.0) as u8)
+                    pct.parse::<f32>()
+                        .ok()
+                        .map(|v| (v * 2.55).round().clamp(0.0, 255.0) as u8)
                 } else {
-                    s.parse::<f32>().ok().map(|v| v.round().clamp(0.0, 255.0) as u8)
+                    s.parse::<f32>()
+                        .ok()
+                        .map(|v| v.round().clamp(0.0, 255.0) as u8)
                 }
             };
             let r = c(parts[0])?;
@@ -4775,21 +5101,33 @@ fn parse_color_for_scheme(value: &str, dark_scheme: bool) -> Option<[u8; 4]> {
         return None;
     }
     // hsl()/hsla() functional notation.
-    if let Some(rest) = lower_full.strip_prefix("hsl(").or_else(|| lower_full.strip_prefix("hsla("))
+    if let Some(rest) = lower_full
+        .strip_prefix("hsl(")
+        .or_else(|| lower_full.strip_prefix("hsla("))
     {
         let inner = rest.strip_suffix(')').unwrap_or(rest);
-        let parts: Vec<&str> =
-            inner.split([',', '/', ' ']).filter(|p| !p.trim().is_empty()).collect();
+        let parts: Vec<&str> = inner
+            .split([',', '/', ' '])
+            .filter(|p| !p.trim().is_empty())
+            .collect();
         if parts.len() >= 3 {
-            let h = parts[0].trim().trim_end_matches("deg").parse::<f32>().ok()?;
+            let h = parts[0]
+                .trim()
+                .trim_end_matches("deg")
+                .parse::<f32>()
+                .ok()?;
             let s = parts[1].trim().trim_end_matches('%').parse::<f32>().ok()? / 100.0;
             let l = parts[2].trim().trim_end_matches('%').parse::<f32>().ok()? / 100.0;
             let a = parts
                 .get(3)
                 .and_then(|s| s.trim().trim_end_matches('%').parse::<f32>().ok())
                 .map(|v| {
-                    if parts[3].contains('%') { (v * 2.55).round() } else { (v * 255.0).round() }
-                        .clamp(0.0, 255.0) as u8
+                    if parts[3].contains('%') {
+                        (v * 2.55).round()
+                    } else {
+                        (v * 255.0).round()
+                    }
+                    .clamp(0.0, 255.0) as u8
                 })
                 .unwrap_or(255);
             return Some(hsl_to_rgba(h, s.clamp(0.0, 1.0), l.clamp(0.0, 1.0), a));
@@ -4806,7 +5144,10 @@ fn parse_color_for_scheme(value: &str, dark_scheme: bool) -> Option<[u8; 4]> {
             Some((m, a)) => (m, Some(a)),
             None => (inner, None),
         };
-        let comps: Vec<&str> = main.split([',', ' ']).filter(|p| !p.trim().is_empty()).collect();
+        let comps: Vec<&str> = main
+            .split([',', ' '])
+            .filter(|p| !p.trim().is_empty())
+            .collect();
         if comps.len() >= 3 {
             let num = |s: &str| -> Option<f32> {
                 let s = s.trim();
@@ -4827,13 +5168,22 @@ fn parse_color_for_scheme(value: &str, dark_scheme: bool) -> Option<[u8; 4]> {
                 })
                 .unwrap_or(1.0);
             let (oa, ob) = if is_lch {
-                let h = comps[2].trim().trim_end_matches("deg").parse::<f32>().ok()?;
+                let h = comps[2]
+                    .trim()
+                    .trim_end_matches("deg")
+                    .parse::<f32>()
+                    .ok()?;
                 let hr = h.to_radians();
                 (c * hr.cos(), c * hr.sin())
             } else {
                 (c, comps[2].trim().parse::<f32>().ok()?)
             };
-            return Some(oklab_to_rgba(l, oa, ob, (a * 255.0).round().clamp(0.0, 255.0) as u8));
+            return Some(oklab_to_rgba(
+                l,
+                oa,
+                ob,
+                (a * 255.0).round().clamp(0.0, 255.0) as u8,
+            ));
         }
         return None;
     }
@@ -4885,7 +5235,9 @@ fn parse_color_for_scheme(value: &str, dark_scheme: bool) -> Option<[u8; 4]> {
                     ]);
                 }
                 let m = |i: usize| {
-                    (c1[i] as f32 * w1 + c2[i] as f32 * w2).round().clamp(0.0, 255.0) as u8
+                    (c1[i] as f32 * w1 + c2[i] as f32 * w2)
+                        .round()
+                        .clamp(0.0, 255.0) as u8
                 };
                 return Some([m(0), m(1), m(2), m(3)]);
             }
@@ -5092,7 +5444,7 @@ fn is_complete_color_token(value: &str) -> bool {
                     first_open = Some(index);
                 }
                 depth += 1;
-            },
+            }
             ')' => {
                 depth -= 1;
                 if depth < 0 {
@@ -5101,8 +5453,8 @@ fn is_complete_color_token(value: &str) -> bool {
                 if depth == 0 {
                     outer_close = Some(index);
                 }
-            },
-            _ => {},
+            }
+            _ => {}
         }
     }
     if depth != 0 {
@@ -5115,7 +5467,7 @@ fn is_complete_color_token(value: &str) -> bool {
                     .chars()
                     .all(|character| character.is_ascii_alphanumeric() || character == '-')
                 && outer_close == Some(value.len() - 1)
-        },
+        }
         None => !value.chars().any(char::is_whitespace),
     }
 }
@@ -5133,7 +5485,11 @@ fn oklab_to_rgba(l: f32, a: f32, b: f32, alpha: u8) -> [u8; 4] {
     let lb = -0.0041960863 * lc - 0.7034186147 * mc + 1.7076147010 * sc;
     let enc = |x: f32| {
         let x = x.clamp(0.0, 1.0);
-        let s = if x <= 0.0031308 { 12.92 * x } else { 1.055 * x.powf(1.0 / 2.4) - 0.055 };
+        let s = if x <= 0.0031308 {
+            12.92 * x
+        } else {
+            1.055 * x.powf(1.0 / 2.4) - 0.055
+        };
         (s * 255.0).round().clamp(0.0, 255.0) as u8
     };
     [enc(lr), enc(lg), enc(lb), alpha]
@@ -5152,8 +5508,8 @@ fn split_top_commas(s: &str) -> Vec<&str> {
             ',' if depth == 0 => {
                 out.push(&s[start..i]);
                 start = i + 1;
-            },
-            _ => {},
+            }
+            _ => {}
         }
     }
     out.push(&s[start..]);
@@ -5221,7 +5577,10 @@ fn border_width(value: &str) -> Option<f32> {
         "thick" => 5.0,
         _ => strict_border_length(value)?,
     };
-    width.is_finite().then_some(width).filter(|width| *width >= 0.0)
+    width
+        .is_finite()
+        .then_some(width)
+        .filter(|width| *width >= 0.0)
 }
 
 fn strict_border_length(value: &str) -> Option<f32> {
@@ -5238,7 +5597,10 @@ fn strict_border_length(value: &str) -> Option<f32> {
     }
     const UNITS: [&str; 5] = ["rem", "px", "pt", "em", "ex"];
     let unit = UNITS.iter().find(|unit| lower.ends_with(**unit))?;
-    let number = lower[..lower.len() - unit.len()].trim().parse::<f32>().ok()?;
+    let number = lower[..lower.len() - unit.len()]
+        .trim()
+        .parse::<f32>()
+        .ok()?;
     number.is_finite().then(|| px(value)).flatten()
 }
 
@@ -5252,7 +5614,12 @@ fn border_color(value: &str, dark_scheme: bool) -> Option<Option<[u8; 4]>> {
 
 fn sync_used_border(style: &mut LayoutStyle) {
     let used = style.border_model.used_widths();
-    style.border = Edges { top: used.top, right: used.right, bottom: used.bottom, left: used.left };
+    style.border = Edges {
+        top: used.top,
+        right: used.right,
+        bottom: used.bottom,
+        left: used.left,
+    };
 }
 
 fn side_widths_mut(model: &mut crate::BorderModel, side: Side) -> &mut f32 {
@@ -5293,28 +5660,32 @@ fn for_each_border_cascade_side(
         Logical::Right => apply(Side::Right),
         Logical::Bottom => apply(Side::Bottom),
         Logical::Left => apply(Side::Left),
-        Logical::InlineStart => {
-            apply(if direction == taffy::Direction::Rtl { Side::Right } else { Side::Left })
-        },
-        Logical::InlineEnd => {
-            apply(if direction == taffy::Direction::Rtl { Side::Left } else { Side::Right })
-        },
+        Logical::InlineStart => apply(if direction == taffy::Direction::Rtl {
+            Side::Right
+        } else {
+            Side::Left
+        }),
+        Logical::InlineEnd => apply(if direction == taffy::Direction::Rtl {
+            Side::Left
+        } else {
+            Side::Right
+        }),
         Logical::BlockStart => apply(Side::Top),
         Logical::BlockEnd => apply(Side::Bottom),
         Logical::Inline => {
             apply(Side::Left);
             apply(Side::Right);
-        },
+        }
         Logical::Block => {
             apply(Side::Top);
             apply(Side::Bottom);
-        },
+        }
         Logical::All => {
             apply(Side::Top);
             apply(Side::Right);
             apply(Side::Bottom);
             apply(Side::Left);
-        },
+        }
     }
 }
 
@@ -5338,7 +5709,12 @@ fn record_physical_border_component(
     }
     record_border_cascade_op(
         style,
-        crate::BorderCascadeOp { side, width, style: line_style, color },
+        crate::BorderCascadeOp {
+            side,
+            width,
+            style: line_style,
+            color,
+        },
     );
 }
 
@@ -5354,7 +5730,12 @@ fn record_logical_border_component(
     }
     record_border_cascade_op(
         style,
-        crate::BorderCascadeOp { side, width, style: line_style, color },
+        crate::BorderCascadeOp {
+            side,
+            width,
+            style: line_style,
+            color,
+        },
     );
 }
 
@@ -5508,8 +5889,10 @@ fn set_border_style(style: &mut LayoutStyle, side: Side, value: &str) {
 
 fn parse_border_colors(value: &str, dark_scheme: bool) -> Option<crate::Sides<Option<[u8; 4]>>> {
     let tokens = split_ws_paren(value);
-    let values =
-        tokens.iter().map(|token| border_color(token, dark_scheme)).collect::<Option<Vec<_>>>()?;
+    let values = tokens
+        .iter()
+        .map(|token| border_color(token, dark_scheme))
+        .collect::<Option<Vec<_>>>()?;
     crate::border::expand_sides(&values)
 }
 
@@ -5576,7 +5959,10 @@ struct BorderShorthand {
 
 fn parse_border_shorthand(value: &str, dark_scheme: bool) -> Option<BorderShorthand> {
     let lower = value.trim().to_ascii_lowercase();
-    if matches!(lower.as_str(), "initial" | "unset" | "revert" | "revert-layer") {
+    if matches!(
+        lower.as_str(),
+        "initial" | "unset" | "revert" | "revert-layer"
+    ) {
         return Some(BorderShorthand {
             width: crate::border::MEDIUM_BORDER_WIDTH,
             style: crate::BorderStyle::None,
@@ -5657,12 +6043,14 @@ fn logical_border_sides(
     name: &str,
 ) -> Option<(crate::BorderCascadeSide, crate::BorderCascadeSide)> {
     match name {
-        "border-inline-width" | "border-inline-style" | "border-inline-color" => {
-            Some((crate::BorderCascadeSide::InlineStart, crate::BorderCascadeSide::InlineEnd))
-        },
-        "border-block-width" | "border-block-style" | "border-block-color" => {
-            Some((crate::BorderCascadeSide::BlockStart, crate::BorderCascadeSide::BlockEnd))
-        },
+        "border-inline-width" | "border-inline-style" | "border-inline-color" => Some((
+            crate::BorderCascadeSide::InlineStart,
+            crate::BorderCascadeSide::InlineEnd,
+        )),
+        "border-block-width" | "border-block-style" | "border-block-color" => Some((
+            crate::BorderCascadeSide::BlockStart,
+            crate::BorderCascadeSide::BlockEnd,
+        )),
         _ => None,
     }
 }
@@ -5687,7 +6075,7 @@ fn apply_logical_border(style: &mut LayoutStyle, name: &str, value: &str) {
         "border-block" => Some(crate::BorderCascadeSide::Block),
         "border-inline-start" | "border-inline-end" | "border-block-start" | "border-block-end" => {
             logical_border_single_side(name)
-        },
+        }
         _ => None,
     };
     if let Some(side) = shorthand_side {
@@ -5808,7 +6196,9 @@ fn supports_logical_border_declaration(name: &str, value: &str) -> bool {
     } else if name.ends_with("-style") {
         tokens.iter().all(|token| border_style(token).is_some())
     } else if name.ends_with("-color") {
-        tokens.iter().all(|token| border_color(token, false).is_some())
+        tokens
+            .iter()
+            .all(|token| border_color(token, false).is_some())
     } else {
         false
     }
@@ -5877,10 +6267,22 @@ fn parsed_border_radii(value: &str) -> Option<crate::BorderRadii> {
         horizontal
     };
     Some(crate::BorderRadii {
-        top_left: crate::CornerRadius { x: horizontal.top, y: vertical.top },
-        top_right: crate::CornerRadius { x: horizontal.right, y: vertical.right },
-        bottom_right: crate::CornerRadius { x: horizontal.bottom, y: vertical.bottom },
-        bottom_left: crate::CornerRadius { x: horizontal.left, y: vertical.left },
+        top_left: crate::CornerRadius {
+            x: horizontal.top,
+            y: vertical.top,
+        },
+        top_right: crate::CornerRadius {
+            x: horizontal.right,
+            y: vertical.right,
+        },
+        bottom_right: crate::CornerRadius {
+            x: horizontal.bottom,
+            y: vertical.bottom,
+        },
+        bottom_left: crate::CornerRadius {
+            x: horizontal.left,
+            y: vertical.left,
+        },
     })
 }
 
@@ -5905,9 +6307,9 @@ fn set_corner_radius(style: &mut LayoutStyle, corner: usize, value: &str) {
         let tokens = split_ws_paren(value);
         match tokens.as_slice() {
             [x] => radius_value(x).map(crate::CornerRadius::circular),
-            [x, y] => {
-                radius_value(x).zip(radius_value(y)).map(|(x, y)| crate::CornerRadius { x, y })
-            },
+            [x, y] => radius_value(x)
+                .zip(radius_value(y))
+                .map(|(x, y)| crate::CornerRadius { x, y }),
             _ => None,
         }
     };
@@ -5917,13 +6319,16 @@ fn set_corner_radius(style: &mut LayoutStyle, corner: usize, value: &str) {
         1 => style.border_model.radii.top_right = parsed,
         2 => style.border_model.radii.bottom_right = parsed,
         3 => style.border_model.radii.bottom_left = parsed,
-        _ => {},
+        _ => {}
     }
 }
 
 fn parse_outline_shorthand(value: &str, dark_scheme: bool) -> Option<crate::OutlineModel> {
     let lower = value.trim().to_ascii_lowercase();
-    if matches!(lower.as_str(), "initial" | "unset" | "revert" | "revert-layer") {
+    if matches!(
+        lower.as_str(),
+        "initial" | "unset" | "revert" | "revert-layer"
+    ) {
         return Some(crate::OutlineModel::default());
     }
     if value.trim().is_empty() || lower == "inherit" {
@@ -6051,7 +6456,13 @@ pub(crate) fn resolve_contextual_length(
     vh: f32,
     percent_base: f32,
 ) -> Option<f32> {
-    let context = LengthContext { em_px, rem_px, vw, vh, percent_base };
+    let context = LengthContext {
+        em_px,
+        rem_px,
+        vw,
+        vh,
+        percent_base,
+    };
     resolve_contextual(value, &context)
 }
 
@@ -6102,9 +6513,9 @@ fn css_math_nesting_is_safe(value: &str) -> bool {
                 if depth > MAX_CSS_MATH_NESTING {
                     return false;
                 }
-            },
+            }
             ')' => depth = depth.saturating_sub(1),
-            _ => {},
+            _ => {}
         }
     }
     true
@@ -6134,11 +6545,16 @@ fn resolve_contextual(value: &str, context: &LengthContext) -> Option<f32> {
     if value.starts_with("env(") {
         return resolve_environment_length(value, |fallback| resolve_contextual(fallback, context));
     }
-    if let Some(rest) = value.strip_prefix("max(").or_else(|| value.strip_prefix("min(")) {
+    if let Some(rest) = value
+        .strip_prefix("max(")
+        .or_else(|| value.strip_prefix("min("))
+    {
         let is_max = value.starts_with("max(");
         let end = find_matching_paren(rest)?;
         let args = split_top_level(&rest[..end], ',');
-        let mut values = args.iter().filter_map(|arg| eval_contextual_calc(arg, context));
+        let mut values = args
+            .iter()
+            .filter_map(|arg| eval_contextual_calc(arg, context));
         let mut best = values.next()?;
         for candidate in values {
             if (is_max && candidate > best) || (!is_max && candidate < best) {
@@ -6200,8 +6616,9 @@ fn resolve_environment_length(
     if end + 5 != value.len() {
         return None;
     }
-    let (name, fallback) =
-        rest[..end].split_once(',').map_or((rest[..end].trim(), None), |(name, fallback)| {
+    let (name, fallback) = rest[..end]
+        .split_once(',')
+        .map_or((rest[..end].trim(), None), |(name, fallback)| {
             (name.trim(), Some(fallback.trim()))
         });
     match name {
@@ -6279,11 +6696,11 @@ fn eval_contextual_calc(expr: &str, context: &LengthContext) -> Option<f32> {
             '(' => {
                 depth += 1;
                 current.push(character);
-            },
+            }
             ')' => {
                 depth -= 1;
                 current.push(character);
-            },
+            }
             '+' | '-' if depth == 0 => {
                 let follows_product_operator = current
                     .chars()
@@ -6298,7 +6715,7 @@ fn eval_contextual_calc(expr: &str, context: &LengthContext) -> Option<f32> {
                     }
                     sign = if character == '-' { -1.0 } else { 1.0 };
                 }
-            },
+            }
             _ => current.push(character),
         }
     }
@@ -6326,18 +6743,18 @@ fn eval_contextual_product(term: &str, context: &LengthContext) -> Option<f32> {
             '(' => {
                 depth += 1;
                 current.push(character);
-            },
+            }
             ')' => {
                 depth -= 1;
                 current.push(character);
-            },
+            }
             '*' | '/' if depth == 0 => {
                 if current.trim().is_empty() {
                     return None;
                 }
                 factors.push((operator, std::mem::take(&mut current)));
                 operator = character;
-            },
+            }
             _ => current.push(character),
         }
     }
@@ -6445,8 +6862,8 @@ fn find_matching_paren(s: &str) -> Option<usize> {
                 if depth == 0 {
                     return Some(i);
                 }
-            },
-            _ => {},
+            }
+            _ => {}
         }
     }
     None
@@ -6474,8 +6891,8 @@ fn split_top_level(s: &str, sep: char) -> Vec<&str> {
             c if c == sep && depth == 0 => {
                 parts.push(&s[start..i]);
                 start = i + 1;
-            },
-            _ => {},
+            }
+            _ => {}
         }
     }
     parts.push(&s[start..]);
@@ -6495,11 +6912,11 @@ fn eval_calc(expr: &str) -> Option<f32> {
             '(' => {
                 depth += 1;
                 cur.push(c);
-            },
+            }
             ')' => {
                 depth -= 1;
                 cur.push(c);
-            },
+            }
             '+' | '-' if depth == 0 => {
                 let follows_product_operator = cur
                     .chars()
@@ -6514,7 +6931,7 @@ fn eval_calc(expr: &str) -> Option<f32> {
                     }
                     sign = if c == '-' { -1.0 } else { 1.0 };
                 }
-            },
+            }
             _ => cur.push(c),
         }
     }
@@ -6544,18 +6961,18 @@ fn eval_product(term: &str) -> Option<f32> {
             '(' => {
                 depth += 1;
                 cur.push(c);
-            },
+            }
             ')' => {
                 depth -= 1;
                 cur.push(c);
-            },
+            }
             '*' | '/' if depth == 0 => {
                 if cur.trim().is_empty() {
                     return None;
                 }
                 factors.push((op, std::mem::take(&mut cur)));
                 op = c;
-            },
+            }
             _ => cur.push(c),
         }
     }
@@ -6658,7 +7075,10 @@ fn parse_counter_directives(
                 value
             })
             .unwrap_or(default_value);
-        result.push(crate::CounterDirective { name: name.to_string(), value });
+        result.push(crate::CounterDirective {
+            name: name.to_string(),
+            value,
+        });
     }
     Some(result)
 }
@@ -6698,18 +7118,18 @@ fn apply_font_size(style: &mut LayoutStyle, value: &str) {
             style.font_size_raw = None;
             style.font_size_expression = None;
             return;
-        },
+        }
         "initial" => {
             style.font_size = Some(16.0);
             style.font_size_raw = None;
             style.font_size_expression = None;
             return;
-        },
+        }
         // The compact cascade does not retain origin/layer history. Preserve
         // the already-applied lower-origin value instead of treating revert
         // as inherit or initial.
         "revert" | "revert-layer" => return,
-        _ => {},
+        _ => {}
     }
     if value.contains('(') {
         style.font_size = None;
@@ -6722,7 +7142,7 @@ fn apply_font_size(style: &mut LayoutStyle, value: &str) {
         crate::Dimension::Px(p) => {
             style.font_size = Some(p);
             style.font_size_raw = None;
-        },
+        }
         crate::Dimension::Auto => {
             // Keyword sizes (medium/small/large/...) or unknown; map the
             // common ones, else leave to inherit.
@@ -6730,18 +7150,21 @@ fn apply_font_size(style: &mut LayoutStyle, value: &str) {
                 style.font_size = Some(px);
                 style.font_size_raw = None;
             }
-        },
+        }
         rel => {
             style.font_size = None;
             style.font_size_raw = Some(rel);
-        },
+        }
     }
 }
 
 fn apply_word_spacing(style: &mut LayoutStyle, value: &str) {
     let value = value.trim();
     let lower = value.to_ascii_lowercase();
-    if matches!(lower.as_str(), "inherit" | "unset" | "revert" | "revert-layer") {
+    if matches!(
+        lower.as_str(),
+        "inherit" | "unset" | "revert" | "revert-layer"
+    ) {
         style.word_spacing = None;
         style.word_spacing_raw = None;
         return;
@@ -6756,12 +7179,12 @@ fn apply_word_spacing(style: &mut LayoutStyle, value: &str) {
         Some(crate::Dimension::Px(pixels)) => {
             style.word_spacing = Some(pixels);
             style.word_spacing_raw = None;
-        },
+        }
         Some(relative) => {
             style.word_spacing = None;
             style.word_spacing_raw = Some(relative);
-        },
-        None => {},
+        }
+        None => {}
     }
 }
 
@@ -6772,7 +7195,7 @@ fn parse_word_spacing_length(value: &str) -> Option<crate::Dimension> {
         cssparser::Token::Number { value, .. } if *value == 0.0 => crate::Dimension::Px(0.0),
         cssparser::Token::Dimension { value, unit, .. } if value.is_finite() => {
             dimension_value(&format!("{value}{unit}"))
-        },
+        }
         _ => return None,
     };
     if !parser.is_exhausted() {
@@ -6787,7 +7210,10 @@ fn parse_word_spacing_length(value: &str) -> Option<crate::Dimension> {
 fn apply_letter_spacing(style: &mut LayoutStyle, value: &str) {
     let value = value.trim();
     let lower = value.to_ascii_lowercase();
-    if matches!(lower.as_str(), "normal" | "initial" | "revert" | "revert-layer") {
+    if matches!(
+        lower.as_str(),
+        "normal" | "initial" | "revert" | "revert-layer"
+    ) {
         style.letter_spacing = Some(0.0);
         style.letter_spacing_raw = None;
         style.letter_spacing_expression = None;
@@ -6816,17 +7242,17 @@ fn apply_letter_spacing(style: &mut LayoutStyle, value: &str) {
         crate::Dimension::Px(pixels) if pixels.is_finite() => {
             style.letter_spacing = Some(pixels);
             style.letter_spacing_raw = None;
-        },
+        }
         crate::Dimension::Percent(_) | crate::Dimension::Auto => {
             // Percentages and keywords other than `normal` are invalid.
             style.letter_spacing = None;
             style.letter_spacing_raw = None;
             style.letter_spacing_non_normal = None;
-        },
+        }
         relative => {
             style.letter_spacing = None;
             style.letter_spacing_raw = Some(relative);
-        },
+        }
     }
 }
 
@@ -6849,7 +7275,7 @@ fn apply_text_indent(style: &mut LayoutStyle, value: &str) {
             if let Some(indent) = parse_text_indent(value) {
                 style.text_indent = Some(indent);
             }
-        },
+        }
     }
 }
 
@@ -6858,14 +7284,19 @@ fn apply_gap_value(style: &mut LayoutStyle, row: bool, value: &str) {
     let lower = value.to_ascii_lowercase();
     let contextual = lower.contains('(')
         || lower.ends_with('%')
-        || ["rem", "em", "ex", "vw", "vh", "vmin", "vmax"].iter().any(|unit| lower.ends_with(unit));
+        || ["rem", "em", "ex", "vw", "vh", "vmin", "vmax"]
+            .iter()
+            .any(|unit| lower.ends_with(unit));
     let expression = if value.eq_ignore_ascii_case("normal") || value.is_empty() || !contextual {
         None
     } else {
         Some(value.to_string())
     };
-    let immediate =
-        if value.eq_ignore_ascii_case("normal") || value.is_empty() { None } else { px(value) };
+    let immediate = if value.eq_ignore_ascii_case("normal") || value.is_empty() {
+        None
+    } else {
+        px(value)
+    };
     if row {
         style.row_gap = immediate;
         style.row_gap_expression = expression;
@@ -6886,9 +7317,11 @@ fn parse_column_count(value: &str) -> Option<u16> {
 pub(crate) fn line_height_expression_is_length(value: &str) -> bool {
     let lower = value.to_ascii_lowercase();
     lower.contains('%')
-        || ["px", "pt", "pc", "in", "cm", "mm", "rem", "em", "ex", "vw", "vh", "vmin", "vmax"]
-            .iter()
-            .any(|unit| lower.contains(unit))
+        || [
+            "px", "pt", "pc", "in", "cm", "mm", "rem", "em", "ex", "vw", "vh", "vmin", "vmax",
+        ]
+        .iter()
+        .any(|unit| lower.contains(unit))
 }
 
 /// Parse the layout-relevant portion of the CSS `font` shorthand:
@@ -7034,7 +7467,12 @@ fn is_font_size_token(value: &str) -> bool {
         "vmin", "vmax", "%",
     ]
     .iter()
-    .any(|unit| lower.strip_suffix(unit).and_then(|number| number.parse::<f32>().ok()).is_some())
+    .any(|unit| {
+        lower
+            .strip_suffix(unit)
+            .and_then(|number| number.parse::<f32>().ok())
+            .is_some()
+    })
 }
 
 fn dimension_value(tok: &str) -> crate::Dimension {
@@ -7208,7 +7646,7 @@ fn set_margin_side(style: &mut LayoutStyle, idx: usize, value: &str) {
         crate::Dimension::Px(px) => {
             set_margin_px(&mut style.margin, idx, px);
             style.margin_relative[idx] = None;
-        },
+        }
         crate::Dimension::Em(_)
         | crate::Dimension::Ex(_)
         | crate::Dimension::Rem(_)
@@ -7218,11 +7656,11 @@ fn set_margin_side(style: &mut LayoutStyle, idx: usize, value: &str) {
         | crate::Dimension::Vmax(_) => {
             set_margin_px(&mut style.margin, idx, 0.0);
             style.margin_relative[idx] = Some(dimension);
-        },
+        }
         _ => {
             set_margin_px(&mut style.margin, idx, 0.0);
             style.margin_relative[idx] = None;
-        },
+        }
     }
     style.margin_auto[idx] = is_auto;
     style.margin_percent[idx] = None;
@@ -7234,7 +7672,7 @@ fn set_margin_px(margin: &mut Edges, idx: usize, px: f32) {
         1 => margin.right = px,
         2 => margin.bottom = px,
         3 => margin.left = px,
-        _ => {},
+        _ => {}
     }
 }
 
@@ -7263,7 +7701,7 @@ fn set_padding_side(style: &mut LayoutStyle, idx: usize, value: &str) {
             set_padding_px(&mut style.padding, idx, px);
             style.padding_relative[idx] = None;
             style.padding_percent[idx] = None;
-        },
+        }
         crate::Dimension::Em(_)
         | crate::Dimension::Ex(_)
         | crate::Dimension::Rem(_)
@@ -7274,8 +7712,8 @@ fn set_padding_side(style: &mut LayoutStyle, idx: usize, value: &str) {
             set_padding_px(&mut style.padding, idx, 0.0);
             style.padding_relative[idx] = Some(dimension);
             style.padding_percent[idx] = None;
-        },
-        _ => {},
+        }
+        _ => {}
     }
 }
 
@@ -7285,7 +7723,7 @@ fn set_padding_px(padding: &mut Edges, idx: usize, px: f32) {
         1 => padding.right = px,
         2 => padding.bottom = px,
         3 => padding.left = px,
-        _ => {},
+        _ => {}
     }
 }
 
@@ -7311,7 +7749,11 @@ fn apply_padding_shorthand(style: &mut LayoutStyle, value: &str) {
 fn percent_fraction(tok: &str) -> Option<f32> {
     let num = tok.trim().strip_suffix('%')?;
     let v: f32 = num.trim().parse().ok()?;
-    if v.is_finite() { Some(v / 100.0) } else { None }
+    if v.is_finite() {
+        Some(v / 100.0)
+    } else {
+        None
+    }
 }
 
 /// `margin: <t> <r>? <b>? <l>?` with per-side `auto` (so `margin: 0 auto`
@@ -7353,7 +7795,9 @@ fn px_value(tok: &str) -> Option<f32> {
         n = n.trim_end_matches(|c: char| c.is_ascii_alphabetic());
     }
 
-    if n.chars().any(|c| !(c.is_ascii_digit() || c == '.' || c == '-')) {
+    if n.chars()
+        .any(|c| !(c.is_ascii_digit() || c == '.' || c == '-'))
+    {
         return None;
     }
     n.parse::<f32>().ok().map(|v| v * scale)
@@ -7369,7 +7813,7 @@ fn set_background_gradients(style: &mut LayoutStyle, value: &str) {
     style.background_gradient = layers.iter().find_map(|layer| match layer {
         crate::BackgroundGradientLayer::Linear { angle, stops, .. } => {
             Some((*angle, stops.clone()))
-        },
+        }
         _ => None,
     });
     style.background_radial_gradient = layers.iter().find_map(|layer| match layer {
@@ -7377,15 +7821,20 @@ fn set_background_gradients(style: &mut LayoutStyle, value: &str) {
         _ => None,
     });
     style.background_radial_gradient_geometry =
-        layers.iter().zip(&radial_geometries).find_map(|(layer, geometry)| {
-            matches!(layer, crate::BackgroundGradientLayer::Radial { .. })
-                .then_some(*geometry)
-                .flatten()
-        });
+        layers
+            .iter()
+            .zip(&radial_geometries)
+            .find_map(|(layer, geometry)| {
+                matches!(layer, crate::BackgroundGradientLayer::Radial { .. })
+                    .then_some(*geometry)
+                    .flatten()
+            });
     style.background_conic_gradient = layers.iter().find_map(|layer| match layer {
-        crate::BackgroundGradientLayer::Conic { angle, center, stops } => {
-            Some((*angle, *center, stops.clone()))
-        },
+        crate::BackgroundGradientLayer::Conic {
+            angle,
+            center,
+            stops,
+        } => Some((*angle, *center, stops.clone())),
         _ => None,
     });
     style.background_gradient_layers = layers;
@@ -7395,7 +7844,10 @@ fn set_background_gradients(style: &mut LayoutStyle, value: &str) {
 fn parse_background_gradient_layers(
     value: &str,
     dark_scheme: bool,
-) -> (Vec<crate::BackgroundGradientLayer>, Vec<Option<crate::RadialGradientGeometry>>) {
+) -> (
+    Vec<crate::BackgroundGradientLayer>,
+    Vec<Option<crate::RadialGradientGeometry>>,
+) {
     let mut layers = Vec::new();
     let mut radial_geometries = Vec::new();
     for authored_layer in split_top_level(value, ',') {
@@ -7416,7 +7868,11 @@ fn parse_background_gradient_layers(
         } else if let Some((angle, center, stops)) =
             parse_conic_gradient(authored_layer, dark_scheme)
         {
-            layers.push(crate::BackgroundGradientLayer::Conic { angle, center, stops });
+            layers.push(crate::BackgroundGradientLayer::Conic {
+                angle,
+                center,
+                stops,
+            });
             radial_geometries.push(None);
         }
     }
@@ -7456,7 +7912,7 @@ fn parse_linear_gradient(value: &str, dark_scheme: bool) -> Option<ParsedLinearG
         match bytes[end] {
             b'(' => depth += 1,
             b')' => depth -= 1,
-            _ => {},
+            _ => {}
         }
         end += 1;
     }
@@ -7470,14 +7926,14 @@ fn parse_linear_gradient(value: &str, dark_scheme: bool) -> Option<ParsedLinearG
             '(' => {
                 d += 1;
                 cur.push(c);
-            },
+            }
             ')' => {
                 d -= 1;
                 cur.push(c);
-            },
+            }
             ',' if d == 0 => {
                 parts.push(std::mem::take(&mut cur));
-            },
+            }
             _ => cur.push(c),
         }
     }
@@ -7527,7 +7983,9 @@ fn parse_linear_gradient(value: &str, dark_scheme: bool) -> Option<ParsedLinearG
         let parsed = (1..=tokens.len()).find_map(|color_tokens| {
             let position_tokens = &tokens[color_tokens..];
             if position_tokens.len() > 2
-                || !position_tokens.iter().all(|position| gradient_position_is_valid(position))
+                || !position_tokens
+                    .iter()
+                    .all(|position| gradient_position_is_valid(position))
             {
                 return None;
             }
@@ -7555,7 +8013,12 @@ fn parse_linear_gradient(value: &str, dark_scheme: bool) -> Option<ParsedLinearG
         // to background_color instead (return None so parse_color runs).
         return None;
     }
-    Some(ParsedLinearGradient { angle, stops, stop_positions, repeating })
+    Some(ParsedLinearGradient {
+        angle,
+        stops,
+        stop_positions,
+        repeating,
+    })
 }
 
 fn gradient_position_is_valid(value: &str) -> bool {
@@ -7614,7 +8077,11 @@ fn parse_radial_gradient(value: &str, dark_scheme: bool) -> Option<ParsedRadialG
             stops.push((color, position));
         }
     }
-    (stops.len() >= 2).then_some(ParsedRadialGradient { center, stops, geometry })
+    (stops.len() >= 2).then_some(ParsedRadialGradient {
+        center,
+        stops,
+        geometry,
+    })
 }
 
 fn parse_radial_gradient_geometry(value: &str) -> Option<crate::RadialGradientGeometry> {
@@ -7637,7 +8104,12 @@ fn parse_radial_gradient_geometry(value: &str) -> Option<crate::RadialGradientGe
         "ellipse" => Some(Shape::Ellipse),
         _ => None,
     });
-    if tokens.iter().filter(|token| matches!(**token, "circle" | "ellipse")).count() > 1 {
+    if tokens
+        .iter()
+        .filter(|token| matches!(**token, "circle" | "ellipse"))
+        .count()
+        > 1
+    {
         return None;
     }
 
@@ -7684,7 +8156,10 @@ fn parse_radial_gradient_geometry(value: &str) -> Option<crate::RadialGradientGe
         })
         .map(|token| dimension_value(token))
         .collect::<Vec<_>>();
-    if dimensions.iter().any(|dimension| !radial_radius_is_non_negative(*dimension)) {
+    if dimensions
+        .iter()
+        .any(|dimension| !radial_radius_is_non_negative(*dimension))
+    {
         return None;
     }
     if extent.is_some() && !dimensions.is_empty() {
@@ -7701,11 +8176,15 @@ fn parse_radial_gradient_geometry(value: &str) -> Option<crate::RadialGradientGe
             if matches!(radius, crate::Dimension::Percent(_)) {
                 return None;
             }
-            Some(Geometry { shape: Shape::Circle, size: Size::Explicit(*radius, *radius) })
-        },
-        [x, y] if explicit_shape != Some(Shape::Circle) => {
-            Some(Geometry { shape: Shape::Ellipse, size: Size::Explicit(*x, *y) })
-        },
+            Some(Geometry {
+                shape: Shape::Circle,
+                size: Size::Explicit(*radius, *radius),
+            })
+        }
+        [x, y] if explicit_shape != Some(Shape::Circle) => Some(Geometry {
+            shape: Shape::Ellipse,
+            size: Size::Explicit(*x, *y),
+        }),
         _ => None,
     }
 }
@@ -7741,7 +8220,7 @@ fn parse_gradient_center(value: &str) -> (f32, f32) {
             "top" => center.1 = 0.0,
             "bottom" => center.1 = 1.0,
             // `center` leaves the corresponding unspecified axis at 50%.
-            _ => {},
+            _ => {}
         }
     }
     center
@@ -7771,7 +8250,10 @@ fn parse_conic_gradient(
     let prelude = parts[0].trim().to_ascii_lowercase();
     if prelude.starts_with("from ") || prelude.starts_with("at ") {
         if let Some(from) = prelude.find("from ") {
-            let token = prelude[from + 5..].split_whitespace().next().unwrap_or_default();
+            let token = prelude[from + 5..]
+                .split_whitespace()
+                .next()
+                .unwrap_or_default();
             angle = parse_css_angle(token).unwrap_or(0.0).rem_euclid(360.0);
         }
         if let Some(at) = prelude.find(" at ") {
@@ -7828,12 +8310,15 @@ fn parse_css_angle(value: &str) -> Option<f32> {
 fn split_color_stop(value: &str) -> (&str, Option<f32>) {
     if let Some(idx) = value.rfind(char::is_whitespace) {
         let tail = value[idx + 1..].trim();
-        if let Some(percent) = tail.strip_suffix('%').and_then(|number| number.parse::<f32>().ok())
+        if let Some(percent) = tail
+            .strip_suffix('%')
+            .and_then(|number| number.parse::<f32>().ok())
         {
             return (value[..idx].trim(), Some((percent / 100.0).clamp(0.0, 1.0)));
         }
-        if let Some(degrees) =
-            tail.strip_suffix("deg").and_then(|number| number.parse::<f32>().ok())
+        if let Some(degrees) = tail
+            .strip_suffix("deg")
+            .and_then(|number| number.parse::<f32>().ok())
         {
             return (value[..idx].trim(), Some((degrees / 360.0).clamp(0.0, 1.0)));
         }
@@ -7900,13 +8385,17 @@ fn parse_url(value: &str) -> Option<String> {
                     end = Some(start + offset);
                     break;
                 }
-            },
-            _ => {},
+            }
+            _ => {}
         }
     }
     let inner = value[start..end?].trim();
     let unquoted = inner.trim_matches(|c| c == '"' || c == '\'');
-    if unquoted.is_empty() { None } else { Some(unquoted.to_string()) }
+    if unquoted.is_empty() {
+        None
+    } else {
+        Some(unquoted.to_string())
+    }
 }
 
 /// `flex: none|auto|<grow>|<grow> <shrink>|<grow> <shrink> <basis>`. This is
@@ -7924,20 +8413,20 @@ fn parse_flex_shorthand(style: &mut LayoutStyle, value: &str) {
             style.flex_shrink = Some(0.0);
             style.flex_basis = crate::Dimension::Auto;
             return;
-        },
+        }
         "auto" => {
             style.flex_grow = Some(1.0);
             style.flex_shrink = Some(1.0);
             style.flex_basis = crate::Dimension::Auto;
             return;
-        },
+        }
         "initial" => {
             style.flex_grow = Some(0.0);
             style.flex_shrink = Some(1.0);
             style.flex_basis = crate::Dimension::Auto;
             return;
-        },
-        _ => {},
+        }
+        _ => {}
     }
     // Grammar: `flex: <grow> <shrink>? || <basis>`. Bare numbers are grow then
     // shrink; a token with a unit / `auto` / a third numeric is the basis
@@ -7959,12 +8448,12 @@ fn parse_flex_shorthand(style: &mut LayoutStyle, value: &str) {
         [grow] => {
             style.flex_grow = Some(*grow);
             style.flex_shrink = Some(1.0);
-        },
+        }
         [grow, shrink, ..] => {
             style.flex_grow = Some(*grow);
             style.flex_shrink = Some(*shrink);
-        },
-        [] => {},
+        }
+        [] => {}
     }
     // Explicit basis wins; otherwise numbers-only shorthand implies basis 0
     // (per spec `flex: 1` == `1 1 0%`), while a bare basis keeps grow/shrink 1.
@@ -7975,7 +8464,7 @@ fn parse_flex_shorthand(style: &mut LayoutStyle, value: &str) {
             style.flex_grow = Some(1.0);
             style.flex_shrink = Some(1.0);
             crate::Dimension::Auto
-        },
+        }
     };
 }
 
@@ -7985,7 +8474,10 @@ fn parse_flex_shorthand(style: &mut LayoutStyle, value: &str) {
 /// retaining an earlier longhand winner.
 fn parse_flex_flow_shorthand(value: &str) -> Option<(taffy::FlexDirection, taffy::FlexWrap)> {
     let lower = value.trim().to_ascii_lowercase();
-    if matches!(lower.as_str(), "initial" | "unset" | "revert" | "revert-layer") {
+    if matches!(
+        lower.as_str(),
+        "initial" | "unset" | "revert" | "revert-layer"
+    ) {
         return Some((taffy::FlexDirection::Row, taffy::FlexWrap::NoWrap));
     }
 
@@ -8023,7 +8515,10 @@ fn parse_flex_flow_shorthand(value: &str) -> Option<(taffy::FlexDirection, taffy
             return None;
         }
     }
-    Some((direction.unwrap_or(taffy::FlexDirection::Row), wrap.unwrap_or(taffy::FlexWrap::NoWrap)))
+    Some((
+        direction.unwrap_or(taffy::FlexDirection::Row),
+        wrap.unwrap_or(taffy::FlexWrap::NoWrap),
+    ))
 }
 
 /// `background-size: 10px` / `0.857em` / `10px 20px` -> explicit px pair.
@@ -8064,13 +8559,14 @@ fn parse_image_repeat(value: &str) -> Option<(bool, bool)> {
     match tokens.as_slice() {
         [token, ..] if token.eq_ignore_ascii_case("repeat-x") => Some((true, false)),
         [token, ..] if token.eq_ignore_ascii_case("repeat-y") => Some((false, true)),
-        [x, y, ..] => {
-            Some((!x.eq_ignore_ascii_case("no-repeat"), !y.eq_ignore_ascii_case("no-repeat")))
-        },
+        [x, y, ..] => Some((
+            !x.eq_ignore_ascii_case("no-repeat"),
+            !y.eq_ignore_ascii_case("no-repeat"),
+        )),
         [both] => {
             let repeat = !both.eq_ignore_ascii_case("no-repeat");
             Some((repeat, repeat))
-        },
+        }
         _ => None,
     }
 }
@@ -8108,9 +8604,10 @@ fn parse_background_box_shorthand(
         .collect::<Vec<_>>();
     match boxes.as_slice() {
         [] => None,
-        [(_, crate::BackgroundClip::Text)] => {
-            Some((crate::BackgroundOrigin::default(), crate::BackgroundClip::Text))
-        },
+        [(_, crate::BackgroundClip::Text)] => Some((
+            crate::BackgroundOrigin::default(),
+            crate::BackgroundClip::Text,
+        )),
         [(token, clip)] => Some((parse_background_origin(token)?, *clip)),
         [(origin, _), (_, clip)] => Some((parse_background_origin(origin)?, *clip)),
         _ => None,
@@ -8128,8 +8625,8 @@ fn background_size_expression(value: &str) -> Option<String> {
             _ if depth == 0 && ch == ',' => {
                 end = index;
                 break;
-            },
-            _ => {},
+            }
+            _ => {}
         }
     }
     let size = size[..end].trim();
@@ -8146,7 +8643,11 @@ fn background_size_expression(value: &str) -> Option<String> {
 fn parse_background_position(value: &str) -> crate::BackgroundPosition {
     use crate::{BackgroundPosition, BackgroundPositionAxis};
 
-    let first_layer = split_top_level(value, ',').into_iter().next().unwrap_or(value).trim();
+    let first_layer = split_top_level(value, ',')
+        .into_iter()
+        .next()
+        .unwrap_or(value)
+        .trim();
     let tokens = split_ws_paren(first_layer);
     let center = BackgroundPositionAxis::percentage(0.5);
     let start = BackgroundPositionAxis::percentage(0.0);
@@ -8156,9 +8657,13 @@ fn parse_background_position(value: &str) -> crate::BackgroundPosition {
         let token = token.trim();
         if let Some(number) = token.strip_suffix('%') {
             let percentage = number.parse::<f32>().ok()? / 100.0;
-            return percentage.is_finite().then(|| BackgroundPositionAxis::percentage(percentage));
+            return percentage
+                .is_finite()
+                .then(|| BackgroundPositionAxis::percentage(percentage));
         }
-        px_value(token).filter(|length| length.is_finite()).map(BackgroundPositionAxis::pixels)
+        px_value(token)
+            .filter(|length| length.is_finite())
+            .map(BackgroundPositionAxis::pixels)
     };
     let horizontal_keyword = |token: &str| match token {
         "left" => Some(start),
@@ -8183,7 +8688,7 @@ fn parse_background_position(value: &str) -> crate::BackgroundPosition {
                     .unwrap_or(center);
                 BackgroundPosition::new(x, center)
             }
-        },
+        }
         [first, second] => {
             if let Some(y) = vertical_keyword(first) {
                 let x = horizontal_keyword(second)
@@ -8204,14 +8709,16 @@ fn parse_background_position(value: &str) -> crate::BackgroundPosition {
                     .unwrap_or(center);
                 return BackgroundPosition::new(x, y);
             }
-            let x =
-                (*first == "center").then_some(center).or_else(|| numeric(first)).unwrap_or(center);
+            let x = (*first == "center")
+                .then_some(center)
+                .or_else(|| numeric(first))
+                .unwrap_or(center);
             let y = vertical_keyword(second)
                 .or_else(|| (*second == "center").then_some(center))
                 .or_else(|| numeric(second))
                 .unwrap_or(center);
             BackgroundPosition::new(x, y)
-        },
+        }
         _ => {
             // Three/four-value syntax anchors an offset to a named edge:
             // `right 10px bottom 20px` => `calc(100% - 10px)
@@ -8234,7 +8741,7 @@ fn parse_background_position(value: &str) -> crate::BackgroundPosition {
                         }
                         index += 1;
                         continue;
-                    },
+                    }
                     _ => (None, false),
                 };
                 if let Some(vertical) = axis {
@@ -8261,7 +8768,7 @@ fn parse_background_position(value: &str) -> crate::BackgroundPosition {
                 index += 1;
             }
             BackgroundPosition::new(x.unwrap_or(center), y.unwrap_or(center))
-        },
+        }
     }
 }
 
@@ -8337,7 +8844,7 @@ fn split_ws_paren(s: &str) -> Vec<&str> {
         match c {
             '(' => depth += 1,
             ')' => depth = (depth - 1).max(0),
-            _ => {},
+            _ => {}
         }
         if start.is_none() {
             start = Some(i);
@@ -8363,7 +8870,10 @@ mod tests {
             compute_style("div", Some("direction:rtl;direction:initial")).direction,
             Some(taffy::Direction::Ltr)
         );
-        assert_eq!(compute_style("div", Some("direction:rtl;direction:inherit")).direction, None);
+        assert_eq!(
+            compute_style("div", Some("direction:rtl;direction:inherit")).direction,
+            None
+        );
         assert!(supports_declaration("direction", "rtl"));
         assert!(supports_declaration("direction", "ltr"));
         assert!(!supports_declaration("direction", "auto"));
@@ -8379,7 +8889,10 @@ mod tests {
             ),
         );
         assert_eq!(later_logical.border.right, 12.0);
-        assert_eq!(later_logical.border_model.colors.right, Some([0x86, 0x2e, 0x9c, 255]));
+        assert_eq!(
+            later_logical.border_model.colors.right,
+            Some([0x86, 0x2e, 0x9c, 255])
+        );
 
         let later_physical = compute_style(
             "div",
@@ -8389,10 +8902,15 @@ mod tests {
             ),
         );
         assert_eq!(later_physical.border.right, 4.0);
-        assert_eq!(later_physical.border_model.colors.right, Some([0x0b, 0x72, 0x85, 255]));
+        assert_eq!(
+            later_physical.border_model.colors.right,
+            Some([0x0b, 0x72, 0x85, 255])
+        );
 
-        let late_direction =
-            compute_style("div", Some("border-inline-start:10px solid red;direction:rtl"));
+        let late_direction = compute_style(
+            "div",
+            Some("border-inline-start:10px solid red;direction:rtl"),
+        );
         assert_eq!(late_direction.border.left, 0.0);
         assert_eq!(late_direction.border.right, 10.0);
     }
@@ -8411,7 +8929,10 @@ mod tests {
         assert_eq!(style.border_model.styles.left, crate::BorderStyle::Solid);
         assert_eq!(style.border_model.styles.top, crate::BorderStyle::Dashed);
         assert_eq!(style.border_model.colors.top, Some([0xe0, 0x31, 0x31, 255]));
-        assert_eq!(style.border_model.colors.bottom, Some([0x2f, 0x9e, 0x44, 255]));
+        assert_eq!(
+            style.border_model.colors.bottom,
+            Some([0x2f, 0x9e, 0x44, 255])
+        );
 
         for (property, value) in [
             ("border-inline", "1px solid red"),
@@ -8421,8 +8942,14 @@ mod tests {
         ] {
             assert!(supports_declaration(property, value), "{property}:{value}");
         }
-        assert!(!supports_declaration("border-inline-start-width", "1px 2px"));
-        assert!(!supports_declaration("border-block-color", "red blue green"));
+        assert!(!supports_declaration(
+            "border-inline-start-width",
+            "1px 2px"
+        ));
+        assert!(!supports_declaration(
+            "border-block-color",
+            "red blue green"
+        ));
         assert!(!supports_declaration("border-inline-style", "solid banana"));
     }
 
@@ -8453,9 +8980,13 @@ mod tests {
         assert!(!supports_declaration("perspective", "800px"));
         assert!(!supports_declaration("contain", "paint"));
         assert!(!supports_declaration("content-visibility", "auto"));
-        for content in
-            ["none", "\"new\"", "attr(data-label)", "counter(item) '. '", "url(icon.svg)"]
-        {
+        for content in [
+            "none",
+            "\"new\"",
+            "attr(data-label)",
+            "counter(item) '. '",
+            "url(icon.svg)",
+        ] {
             assert!(supports_declaration("content", content), "{content}");
         }
         assert!(!supports_declaration("content", "unknown-function(x)"));
@@ -8541,7 +9072,10 @@ mod tests {
 
     #[test]
     fn clip_path_polygon_supports_only_geometry_it_can_resolve() {
-        assert!(supports_declaration("clip-path", "polygon(0 0, 100% 0, 50% 90px)"));
+        assert!(supports_declaration(
+            "clip-path",
+            "polygon(0 0, 100% 0, 50% 90px)"
+        ));
         assert!(supports_declaration(
             "-webkit-clip-path",
             "polygon(evenodd, 0 0, 10rem 0, 10rem 10vh) border-box"
@@ -8560,8 +9094,10 @@ mod tests {
             );
         }
 
-        let style =
-            compute_style("div", Some("clip-path:polygon(evenodd, -10px 0, 100% 0, 50% 2em)"));
+        let style = compute_style(
+            "div",
+            Some("clip-path:polygon(evenodd, -10px 0, 100% 0, 50% 2em)"),
+        );
         let polygon = style.clip_path.expect("computed polygon");
         assert_eq!(polygon.fill_rule, crate::ClipPathFillRule::Evenodd);
         assert_eq!(
@@ -8628,16 +9164,25 @@ mod tests {
 
     #[test]
     fn animation_shorthand_parses_the_first_timing_contract() {
-        let finite = compute_style("div", Some("animation: dismiss-overlay .6s ease-out forwards"));
+        let finite = compute_style(
+            "div",
+            Some("animation: dismiss-overlay .6s ease-out forwards"),
+        );
         assert_eq!(finite.animation_name.as_deref(), Some("dismiss-overlay"));
         assert_eq!(finite.animation_timing.duration_ms, 600.0);
-        assert_eq!(finite.animation_timing.fill_mode, crate::AnimationFillMode::Forwards);
+        assert_eq!(
+            finite.animation_timing.fill_mode,
+            crate::AnimationFillMode::Forwards
+        );
         assert_eq!(finite.animation_timing.iteration_count, 1.0);
 
         let infinite = compute_style("div", Some("animation: pulse 1s linear infinite"));
         assert_eq!(infinite.animation_name.as_deref(), Some("pulse"));
         assert_eq!(infinite.animation_timing.duration_ms, 1000.0);
-        assert_eq!(infinite.animation_timing.fill_mode, crate::AnimationFillMode::None);
+        assert_eq!(
+            infinite.animation_timing.fill_mode,
+            crate::AnimationFillMode::None
+        );
         assert!(infinite.animation_timing.iteration_count.is_infinite());
 
         let calculated = compute_style(
@@ -8653,8 +9198,14 @@ mod tests {
             calculated.animation_timing.direction,
             crate::AnimationDirection::AlternateReverse
         );
-        assert_eq!(calculated.animation_timing.fill_mode, crate::AnimationFillMode::Both);
-        assert_eq!(calculated.animation_timing.play_state, crate::AnimationPlayState::Paused);
+        assert_eq!(
+            calculated.animation_timing.fill_mode,
+            crate::AnimationFillMode::Both
+        );
+        assert_eq!(
+            calculated.animation_timing.play_state,
+            crate::AnimationPlayState::Paused
+        );
         assert_eq!(parse_animation_time_ms("calc(1s / 2 + 25ms)"), Some(525.0));
         assert_eq!(parse_animation_time_ms("1s * 2"), None);
 
@@ -8726,11 +9277,21 @@ mod tests {
         assert_eq!(table.border_collapse, Some(false));
 
         let cell = compute_style("td", None);
-        assert_eq!(cell.padding, Edges { top: 1.0, right: 1.0, bottom: 1.0, left: 1.0 });
+        assert_eq!(
+            cell.padding,
+            Edges {
+                top: 1.0,
+                right: 1.0,
+                bottom: 1.0,
+                left: 1.0
+            }
+        );
         assert_eq!(cell.vertical_align, None);
 
-        let collapsed =
-            compute_style("table", Some("border-spacing:8px; border-collapse:collapse"));
+        let collapsed = compute_style(
+            "table",
+            Some("border-spacing:8px; border-collapse:collapse"),
+        );
         assert_eq!(collapsed.border_spacing, Some((8.0, 8.0)));
         assert_eq!(collapsed.border_collapse, Some(true));
     }
@@ -8742,7 +9303,15 @@ mod tests {
         assert!(button.is_inline_block);
         assert_eq!(button.text_align, Some(taffy::AlignItems::CENTER));
         assert_eq!(button.box_sizing, crate::BoxSizing::BorderBox);
-        assert_eq!(button.padding, Edges { top: 1.0, right: 6.0, bottom: 1.0, left: 6.0 });
+        assert_eq!(
+            button.padding,
+            Edges {
+                top: 1.0,
+                right: 6.0,
+                bottom: 1.0,
+                left: 6.0
+            }
+        );
     }
 
     #[test]
@@ -8775,10 +9344,15 @@ mod tests {
     #[test]
     fn border_radius_expands_ellipses_and_scales_overlaps() {
         let percentage = compute_style("div", Some("border-radius:50%"));
-        assert_eq!(percentage.border_model.radii.resolve(80.0, 40.0).top_left, (40.0, 20.0));
+        assert_eq!(
+            percentage.border_model.radii.resolve(80.0, 40.0).top_left,
+            (40.0, 20.0)
+        );
 
-        let elliptical =
-            compute_style("div", Some("border-radius:80px 60px 40px 20px/50px 40px 30px 10px"));
+        let elliptical = compute_style(
+            "div",
+            Some("border-radius:80px 60px 40px 20px/50px 40px 30px 10px"),
+        );
         let resolved = elliptical.border_model.radii.resolve(100.0, 50.0);
         assert!((resolved.top_left.0 - 80.0 * 5.0 / 7.0).abs() < 0.001);
         assert!((resolved.bottom_right.1 - 30.0 * 5.0 / 7.0).abs() < 0.001);
@@ -8797,10 +9371,27 @@ mod tests {
                  orange;border-radius:12px;border-radius:10px/",
             ),
         );
-        assert_eq!(style.border, Edges { top: 4.0, right: 4.0, bottom: 4.0, left: 4.0 });
-        assert_eq!(style.border_model.styles, crate::Sides::all(crate::BorderStyle::Dashed));
-        assert_eq!(style.border_model.colors, crate::Sides::all(Some([255, 0, 0, 255])));
-        assert_eq!(style.border_model.radii.top_left.x, crate::RadiusValue::pixels(12.0));
+        assert_eq!(
+            style.border,
+            Edges {
+                top: 4.0,
+                right: 4.0,
+                bottom: 4.0,
+                left: 4.0
+            }
+        );
+        assert_eq!(
+            style.border_model.styles,
+            crate::Sides::all(crate::BorderStyle::Dashed)
+        );
+        assert_eq!(
+            style.border_model.colors,
+            crate::Sides::all(Some([255, 0, 0, 255]))
+        );
+        assert_eq!(
+            style.border_model.radii.top_left.x,
+            crate::RadiusValue::pixels(12.0)
+        );
         assert!(!supports_declaration("border-width", "10%"));
         assert!(!supports_declaration("border-width", "4"));
     }
@@ -8811,8 +9402,19 @@ mod tests {
             "div",
             Some("border:10px dashed red;border:solid;outline:8px dotted blue;outline:green"),
         );
-        assert_eq!(style.border, Edges { top: 3.0, right: 3.0, bottom: 3.0, left: 3.0 });
-        assert_eq!(style.border_model.styles, crate::Sides::all(crate::BorderStyle::Solid));
+        assert_eq!(
+            style.border,
+            Edges {
+                top: 3.0,
+                right: 3.0,
+                bottom: 3.0,
+                left: 3.0
+            }
+        );
+        assert_eq!(
+            style.border_model.styles,
+            crate::Sides::all(crate::BorderStyle::Solid)
+        );
         assert_eq!(style.border_model.colors, crate::Sides::all(None));
         assert_eq!(style.outline.specified_width, 3.0);
         assert_eq!(style.outline.style, crate::BorderStyle::None);
@@ -8847,9 +9449,14 @@ mod tests {
         assert_eq!(parent.align_items, Some(taffy::AlignItems::END));
         assert_eq!(parent.justify_items, Some(taffy::JustifyItems::CENTER));
 
-        let content =
-            compute_style("div", Some("align-content:space-between;place-content:safe center end"));
-        assert_eq!(content.align_content, Some(taffy::AlignContent::SAFE_CENTER));
+        let content = compute_style(
+            "div",
+            Some("align-content:space-between;place-content:safe center end"),
+        );
+        assert_eq!(
+            content.align_content,
+            Some(taffy::AlignContent::SAFE_CENTER)
+        );
         assert_eq!(content.justify_content, Some(taffy::JustifyContent::END));
     }
 
@@ -8866,7 +9473,10 @@ mod tests {
         assert_eq!(s.line_height, Some(crate::LineHeight::Px(60.0)));
         assert_eq!(s.font_weight.as_deref(), Some("500"));
         assert_eq!(s.font_style_italic, Some(false));
-        assert_eq!(s.font_family.as_deref(), Some("\"google sans\", sans-serif"));
+        assert_eq!(
+            s.font_family.as_deref(),
+            Some("\"google sans\", sans-serif")
+        );
 
         let reset = compute_style(
             "div",
@@ -8904,7 +9514,10 @@ mod tests {
     fn font_weight_css_wide_keywords_override_heading_ua_weight() {
         let inherited = compute_style("h1", Some("font-weight:inherit"));
         assert_eq!(inherited.font_weight.as_deref(), Some("inherit"));
-        assert_eq!(computed_font_weight(inherited.font_weight.as_deref(), 500), 500);
+        assert_eq!(
+            computed_font_weight(inherited.font_weight.as_deref(), 500),
+            500
+        );
 
         let unset = compute_style("h1", Some("font-weight:unset"));
         assert_eq!(unset.font_weight.as_deref(), Some("inherit"));
@@ -8912,7 +9525,10 @@ mod tests {
 
         let initial = compute_style("h1", Some("font-weight:initial"));
         assert_eq!(initial.font_weight.as_deref(), Some("400"));
-        assert_eq!(computed_font_weight(initial.font_weight.as_deref(), 500), 400);
+        assert_eq!(
+            computed_font_weight(initial.font_weight.as_deref(), 500),
+            400
+        );
     }
 
     #[test]
@@ -8924,26 +9540,43 @@ mod tests {
                    font-variation-settings:"wght" 500, "\6f psz" 14, "wght" 650"#,
             ),
         );
-        assert_eq!(style.font_optical_sizing, Some(crate::FontOpticalSizing::None));
+        assert_eq!(
+            style.font_optical_sizing,
+            Some(crate::FontOpticalSizing::None)
+        );
         assert_eq!(
             style.font_variation_settings.as_deref(),
             Some(
                 [
-                    crate::FontVariationSetting { tag: *b"opsz", value: 14.0 },
-                    crate::FontVariationSetting { tag: *b"wght", value: 650.0 },
+                    crate::FontVariationSetting {
+                        tag: *b"opsz",
+                        value: 14.0
+                    },
+                    crate::FontVariationSetting {
+                        tag: *b"wght",
+                        value: 650.0
+                    },
                 ]
                 .as_slice()
             )
         );
 
-        let case_sensitive =
-            compute_style("span", Some(r#"font-variation-settings:"wght" 400, "WGHT" 700"#));
+        let case_sensitive = compute_style(
+            "span",
+            Some(r#"font-variation-settings:"wght" 400, "WGHT" 700"#),
+        );
         assert_eq!(
             case_sensitive.font_variation_settings.as_deref(),
             Some(
                 [
-                    crate::FontVariationSetting { tag: *b"WGHT", value: 700.0 },
-                    crate::FontVariationSetting { tag: *b"wght", value: 400.0 },
+                    crate::FontVariationSetting {
+                        tag: *b"WGHT",
+                        value: 700.0
+                    },
+                    crate::FontVariationSetting {
+                        tag: *b"wght",
+                        value: 400.0
+                    },
                 ]
                 .as_slice()
             )
@@ -8962,7 +9595,13 @@ mod tests {
             let unchanged = compute_style("span", Some(&css));
             assert_eq!(
                 unchanged.font_variation_settings.as_deref(),
-                Some([crate::FontVariationSetting { tag: *b"opsz", value: 20.0 }].as_slice()),
+                Some(
+                    [crate::FontVariationSetting {
+                        tag: *b"opsz",
+                        value: 20.0
+                    }]
+                    .as_slice()
+                ),
                 "invalid declaration was not atomic: {malformed}"
             );
         }
@@ -8987,7 +9626,10 @@ mod tests {
                    font-variation-settings:"wght" 700;font-variation-settings:normal"#,
             ),
         );
-        assert_eq!(reset.font_optical_sizing, Some(crate::FontOpticalSizing::Auto));
+        assert_eq!(
+            reset.font_optical_sizing,
+            Some(crate::FontOpticalSizing::Auto)
+        );
         assert_eq!(reset.font_variation_settings, Some(Vec::new()));
 
         let reverted = compute_style(
@@ -9007,13 +9649,22 @@ mod tests {
                    font:italic 500 20px/1.2 Inter"#,
             ),
         );
-        assert_eq!(shorthand.font_optical_sizing, Some(crate::FontOpticalSizing::Auto));
+        assert_eq!(
+            shorthand.font_optical_sizing,
+            Some(crate::FontOpticalSizing::Auto)
+        );
         assert_eq!(shorthand.font_variation_settings, Some(Vec::new()));
 
         assert!(supports_declaration("font-optical-sizing", "auto"));
         assert!(!supports_declaration("font-optical-sizing", "enabled"));
-        assert!(supports_declaration("font-variation-settings", r#""opsz" 18, "wght" 500"#));
-        assert!(supports_declaration("font-variation-settings", r#""opsz" calc(18)"#));
+        assert!(supports_declaration(
+            "font-variation-settings",
+            r#""opsz" 18, "wght" 500"#
+        ));
+        assert!(supports_declaration(
+            "font-variation-settings",
+            r#""opsz" calc(18)"#
+        ));
 
         let calculated = compute_style(
             "span",
@@ -9023,27 +9674,41 @@ mod tests {
             calculated.font_variation_settings.as_deref(),
             Some(
                 [
-                    crate::FontVariationSetting { tag: *b"opsz", value: 20.0 },
-                    crate::FontVariationSetting { tag: *b"wght", value: 500.0 },
+                    crate::FontVariationSetting {
+                        tag: *b"opsz",
+                        value: 20.0
+                    },
+                    crate::FontVariationSetting {
+                        tag: *b"wght",
+                        value: 500.0
+                    },
                 ]
                 .as_slice()
             )
         );
-        assert!(!supports_declaration("font-variation-settings", r#""opsz" calc(18px)"#));
+        assert!(!supports_declaration(
+            "font-variation-settings",
+            r#""opsz" calc(18px)"#
+        ));
     }
 
     #[test]
     fn letter_spacing_preserves_units_resets_and_invalid_cascade_values() {
         let relative = compute_style("span", Some("letter-spacing:-.05em"));
-        assert_eq!(relative.letter_spacing_raw, Some(crate::Dimension::Em(-0.05)));
+        assert_eq!(
+            relative.letter_spacing_raw,
+            Some(crate::Dimension::Em(-0.05))
+        );
         assert_eq!(relative.letter_spacing_non_normal, Some(true));
 
         let reset = compute_style("span", Some("letter-spacing:4px;letter-spacing:normal"));
         assert_eq!(reset.letter_spacing, Some(0.0));
         assert_eq!(reset.letter_spacing_non_normal, Some(false));
 
-        let invalid =
-            compute_style("span", Some("letter-spacing:3px;letter-spacing:calc(10% + 1px)"));
+        let invalid = compute_style(
+            "span",
+            Some("letter-spacing:3px;letter-spacing:calc(10% + 1px)"),
+        );
         assert_eq!(invalid.letter_spacing, Some(3.0));
         assert_eq!(invalid.letter_spacing_non_normal, Some(true));
 
@@ -9058,7 +9723,10 @@ mod tests {
         assert_eq!(relative.text_indent, Some(crate::Dimension::Em(2.0)));
 
         let percentage = compute_style("p", Some("text-indent:25%"));
-        assert_eq!(percentage.text_indent, Some(crate::Dimension::Percent(0.25)));
+        assert_eq!(
+            percentage.text_indent,
+            Some(crate::Dimension::Percent(0.25))
+        );
 
         let inherited = compute_style("p", Some("text-indent:18px;text-indent:unset"));
         assert_eq!(inherited.text_indent, None);
@@ -9083,7 +9751,10 @@ mod tests {
             assert!(supports_declaration("-webkit-line-clamp", value), "{value}");
         }
         for value in ["0", "-1", "1.5", "2px", ""] {
-            assert!(!supports_declaration("-webkit-line-clamp", value), "{value}");
+            assert!(
+                !supports_declaration("-webkit-line-clamp", value),
+                "{value}"
+            );
         }
         for value in ["horizontal", "vertical", "inline-axis", "block-axis"] {
             assert!(supports_declaration("-webkit-box-orient", value), "{value}");
@@ -9206,7 +9877,10 @@ mod tests {
         let s = compute_style("div", Some("filter:blur(0);transform:none"));
         assert!(s.establishes_positioning_containing_block());
 
-        let s = compute_style("div", Some("contain:layout;content-visibility:visible;filter:none"));
+        let s = compute_style(
+            "div",
+            Some("contain:layout;content-visibility:visible;filter:none"),
+        );
         assert!(s.establishes_positioning_containing_block());
 
         let s = compute_style(
@@ -9222,8 +9896,10 @@ mod tests {
         assert_eq!(defaults.container_type, crate::ContainerType::Normal);
         assert!(defaults.container_names.is_empty());
 
-        let longhands =
-            compute_style("div", Some("container-name:main sidebar;container-type:inline-size"));
+        let longhands = compute_style(
+            "div",
+            Some("container-name:main sidebar;container-type:inline-size"),
+        );
         assert_eq!(longhands.container_type, crate::ContainerType::InlineSize);
         assert_eq!(longhands.container_names, ["main", "sidebar"]);
 
@@ -9239,8 +9915,10 @@ mod tests {
         let inherited = compute_style("div", Some("container:outer/size;container:inherit"));
         assert!(inherited.container_type_inherit);
         assert!(inherited.container_names_inherit);
-        let reset =
-            compute_style("div", Some("container:outer/size;container:inherit;container:none"));
+        let reset = compute_style(
+            "div",
+            Some("container:outer/size;container:inherit;container:none"),
+        );
         assert!(!reset.container_type_inherit);
         assert!(!reset.container_names_inherit);
     }
@@ -9265,7 +9943,15 @@ mod tests {
     #[test]
     fn margin_shorthand_expands() {
         let s = compute_style("div", Some("margin: 10px 20px"));
-        assert_eq!(s.margin, Edges { top: 10.0, right: 20.0, bottom: 10.0, left: 20.0 });
+        assert_eq!(
+            s.margin,
+            Edges {
+                top: 10.0,
+                right: 20.0,
+                bottom: 10.0,
+                left: 20.0
+            }
+        );
     }
 
     #[test]
@@ -9274,14 +9960,33 @@ mod tests {
             "button",
             Some("border-style:solid;border-width:calc(1 * 1px);border-color:rgba(208,217,251,.4)"),
         );
-        assert_eq!(style.border, Edges { top: 1.0, right: 1.0, bottom: 1.0, left: 1.0 });
-        assert_eq!(style.border_model.colors, crate::Sides::all(Some([208, 217, 251, 102])));
+        assert_eq!(
+            style.border,
+            Edges {
+                top: 1.0,
+                right: 1.0,
+                bottom: 1.0,
+                left: 1.0
+            }
+        );
+        assert_eq!(
+            style.border_model.colors,
+            crate::Sides::all(Some([208, 217, 251, 102]))
+        );
 
         let asymmetric = compute_style(
             "div",
             Some("border-style:solid;border-width:calc(1px * 2) 3px calc(2px + 2px) 5px"),
         );
-        assert_eq!(asymmetric.border, Edges { top: 2.0, right: 3.0, bottom: 4.0, left: 5.0 });
+        assert_eq!(
+            asymmetric.border,
+            Edges {
+                top: 2.0,
+                right: 3.0,
+                bottom: 4.0,
+                left: 5.0
+            }
+        );
     }
 
     #[test]
@@ -9340,7 +10045,10 @@ mod tests {
         assert_eq!(style.inset[1], Some(crate::Dimension::Percent(0.2)));
         assert_eq!(style.inset[0], Some(crate::Dimension::Rem(1.0)));
         assert!(style.inset[2].is_none());
-        assert_eq!(style.inset_expressions[2].as_deref(), Some("calc(100vh - 2px)"));
+        assert_eq!(
+            style.inset_expressions[2].as_deref(),
+            Some("calc(100vh - 2px)")
+        );
         assert!(supports_declaration("inset-inline", "0"));
         assert!(supports_declaration("inset-block-end", "2rem"));
     }
@@ -9362,8 +10070,10 @@ mod tests {
         assert_eq!(logical_last.max_width, crate::Dimension::Px(52.0));
         assert_eq!(logical_last.max_height, crate::Dimension::Px(62.0));
 
-        let physical_last =
-            compute_style("div", Some("inline-size:70px;width:71px;block-size:80px;height:81px"));
+        let physical_last = compute_style(
+            "div",
+            Some("inline-size:70px;width:71px;block-size:80px;height:81px"),
+        );
         assert_eq!(physical_last.width, crate::Dimension::Px(71.0));
         assert_eq!(physical_last.height, crate::Dimension::Px(81.0));
 
@@ -9374,10 +10084,16 @@ mod tests {
                  10px);block-size:20vh;min-inline-size:2rem;max-block-size:calc(100vh - 5px)",
             ),
         );
-        assert_eq!(deferred.size_expressions[0].as_deref(), Some("calc(50vw - 10px)"));
+        assert_eq!(
+            deferred.size_expressions[0].as_deref(),
+            Some("calc(50vw - 10px)")
+        );
         assert_eq!(deferred.height, crate::Dimension::Vh(20.0));
         assert_eq!(deferred.min_width, crate::Dimension::Rem(2.0));
-        assert_eq!(deferred.size_expressions[5].as_deref(), Some("calc(100vh - 5px)"));
+        assert_eq!(
+            deferred.size_expressions[5].as_deref(),
+            Some("calc(100vh - 5px)")
+        );
 
         for name in [
             "inline-size",
@@ -9402,7 +10118,10 @@ mod tests {
             ),
         );
         let pairs = |pairs: &[crate::CounterDirective]| {
-            pairs.iter().map(|pair| (pair.name.clone(), pair.value)).collect::<Vec<_>>()
+            pairs
+                .iter()
+                .map(|pair| (pair.name.clone(), pair.value))
+                .collect::<Vec<_>>()
         };
 
         assert_eq!(
@@ -9429,10 +10148,12 @@ mod tests {
         );
         assert!(matches!(
             auto.grid_template_columns.as_slice(),
-            [taffy::GridTemplateComponent::Repeat(taffy::GridTemplateRepetition {
-                count: taffy::RepetitionCount::AutoFit,
-                ..
-            })]
+            [taffy::GridTemplateComponent::Repeat(
+                taffy::GridTemplateRepetition {
+                    count: taffy::RepetitionCount::AutoFit,
+                    ..
+                }
+            )]
         ));
 
         let shorthand = compute_style("div", Some("display:grid;grid:auto-flow/repeat(3,1fr)"));
@@ -9496,7 +10217,10 @@ mod tests {
         );
         assert_eq!(tracks.grid_auto_columns.len(), 2);
         assert_eq!(tracks.grid_auto_rows.len(), 2);
-        assert!(supports_declaration("grid-auto-columns", "50px minmax(20px,1fr)"));
+        assert!(supports_declaration(
+            "grid-auto-columns",
+            "50px minmax(20px,1fr)"
+        ));
         assert!(supports_declaration("grid-auto-rows", "min-content 25%"));
         assert!(!supports_declaration("grid-auto-columns", "repeat(2,50px)"));
 
@@ -9516,8 +10240,10 @@ mod tests {
             assert!(!reset.grid_auto_rows_inherit);
         }
 
-        let inherited =
-            compute_style("div", Some("grid-auto-columns:inherit;grid-auto-rows:inherit"));
+        let inherited = compute_style(
+            "div",
+            Some("grid-auto-columns:inherit;grid-auto-rows:inherit"),
+        );
         assert!(inherited.grid_auto_columns_inherit);
         assert!(inherited.grid_auto_rows_inherit);
     }
@@ -9557,7 +10283,10 @@ mod tests {
         assert_eq!(style.grid_column_raw, None);
 
         let named = compute_style("div", Some("grid-column:content-start / content-end"));
-        assert_eq!(named.grid_column_raw.as_deref(), Some("content-start / content-end"));
+        assert_eq!(
+            named.grid_column_raw.as_deref(),
+            Some("content-start / content-end")
+        );
         assert_eq!(named.grid_column, None);
 
         let reset = compute_style("div", Some("grid-column:2 / span 4;grid-column:initial"));
@@ -9663,7 +10392,10 @@ mod tests {
                 end: taffy::style_helpers::line(3),
             })
         );
-        assert_eq!(copied_column_ident.grid_column_raw.as_deref(), Some("col / col"));
+        assert_eq!(
+            copied_column_ident.grid_column_raw.as_deref(),
+            Some("col / col")
+        );
 
         let uppercase_span = compute_style("div", Some("grid-area:SPAN 2"));
         assert_eq!(
@@ -9674,7 +10406,15 @@ mod tests {
             })
         );
 
-        for invalid in ["0", "span", "span 0", "span -1", "foo bar", "1 / inherit", "1.5"] {
+        for invalid in [
+            "0",
+            "span",
+            "span 0",
+            "span -1",
+            "foo bar",
+            "1 / inherit",
+            "1.5",
+        ] {
             let style = compute_style(
                 "div",
                 Some(&format!("grid-area:7 / 8 / 9 / 10;grid-area:{invalid}")),
@@ -9786,7 +10526,10 @@ mod tests {
 
     #[test]
     fn background_clip_text_flag() {
-        let s = compute_style("h1", Some("color: transparent; -webkit-background-clip: text"));
+        let s = compute_style(
+            "h1",
+            Some("color: transparent; -webkit-background-clip: text"),
+        );
         assert!(s.background_clip_text);
         let vendor_fill = compute_style(
             "h1",
@@ -9835,7 +10578,10 @@ mod tests {
         );
         assert_eq!(style.color, Some([0x12, 0x34, 0x56, 255]));
         assert_eq!(style.background_color, Some([1, 2, 3, 255]));
-        assert_eq!(style.border_model.colors, crate::Sides::all(Some([255, 0, 0, 255])));
+        assert_eq!(
+            style.border_model.colors,
+            crate::Sides::all(Some([255, 0, 0, 255]))
+        );
         assert!(supports_declaration(
             "color",
             "light-dark(rgb(1, 2, 3), color-mix(in srgb, white 50%, black))"
@@ -9885,7 +10631,10 @@ mod tests {
         assert_eq!(s.background_clip, crate::BackgroundClip::BorderBox);
         assert!(!s.background_clip_text);
 
-        let cover = compute_style("div", Some("background:url(hero.svg) center/cover no-repeat"));
+        let cover = compute_style(
+            "div",
+            Some("background:url(hero.svg) center/cover no-repeat"),
+        );
         assert_eq!(cover.background_size_fit, Some(crate::ObjectFit::Cover));
         let contain = compute_style("div", Some("background-size:contain"));
         assert_eq!(contain.background_size_fit, Some(crate::ObjectFit::Contain));
@@ -9901,9 +10650,14 @@ mod tests {
 
     #[test]
     fn background_box_longhands_and_shorthand_retain_independent_geometry() {
-        let longhands =
-            compute_style("div", Some("background-origin:content-box;background-clip:padding-box"));
-        assert_eq!(longhands.background_origin, crate::BackgroundOrigin::ContentBox);
+        let longhands = compute_style(
+            "div",
+            Some("background-origin:content-box;background-clip:padding-box"),
+        );
+        assert_eq!(
+            longhands.background_origin,
+            crate::BackgroundOrigin::ContentBox
+        );
         assert_eq!(longhands.background_clip, crate::BackgroundClip::PaddingBox);
         assert!(!longhands.background_clip_text);
 
@@ -9911,14 +10665,23 @@ mod tests {
             "div",
             Some("background:linear-gradient(90deg,red,blue) content-box padding-box no-repeat"),
         );
-        assert_eq!(shorthand.background_origin, crate::BackgroundOrigin::ContentBox);
+        assert_eq!(
+            shorthand.background_origin,
+            crate::BackgroundOrigin::ContentBox
+        );
         assert_eq!(shorthand.background_clip, crate::BackgroundClip::PaddingBox);
 
         let one_box = compute_style("div", Some("background:red content-box"));
-        assert_eq!(one_box.background_origin, crate::BackgroundOrigin::ContentBox);
+        assert_eq!(
+            one_box.background_origin,
+            crate::BackgroundOrigin::ContentBox
+        );
         assert_eq!(one_box.background_clip, crate::BackgroundClip::ContentBox);
 
-        let text = compute_style("h1", Some("background-origin:border-box;background-clip:text"));
+        let text = compute_style(
+            "h1",
+            Some("background-origin:border-box;background-clip:text"),
+        );
         assert_eq!(text.background_origin, crate::BackgroundOrigin::BorderBox);
         assert_eq!(text.background_clip, crate::BackgroundClip::Text);
         assert!(text.background_clip_text);
@@ -9955,7 +10718,10 @@ mod tests {
                 _ => None,
             })
             .collect();
-        assert_eq!(centers, vec![(0.0, 0.0), (1.0, 0.0), (1.0, 0.5), (0.0, 0.5)]);
+        assert_eq!(
+            centers,
+            vec![(0.0, 0.0), (1.0, 0.0), (1.0, 0.5), (0.0, 0.5)]
+        );
     }
 
     #[test]
@@ -9978,7 +10744,10 @@ mod tests {
             })
         );
         assert_eq!(
-            explicit.background_radial_gradient.as_ref().map(|value| value.0),
+            explicit
+                .background_radial_gradient
+                .as_ref()
+                .map(|value| value.0),
             Some((0.8746, 0.5527))
         );
 
@@ -10037,8 +10806,11 @@ mod tests {
             ),
         );
         assert_eq!(style.background_repeat, Some((true, false)));
-        let crate::BackgroundGradientLayer::Linear { stop_positions, repeating, .. } =
-            &style.background_gradient_layers[0]
+        let crate::BackgroundGradientLayer::Linear {
+            stop_positions,
+            repeating,
+            ..
+        } = &style.background_gradient_layers[0]
         else {
             panic!("expected a linear gradient layer");
         };
@@ -10097,8 +10869,9 @@ mod tests {
                  rotate(-60)'></g></svg>\");mask-size:22px 22px;mask-repeat:repeat",
             ),
         );
-        let (angle, center, stops) =
-            style.background_conic_gradient.expect("conic gradient should parse");
+        let (angle, center, stops) = style
+            .background_conic_gradient
+            .expect("conic gradient should parse");
         assert_eq!(angle, 122.0);
         assert_eq!(center, (0.5, 0.5));
         assert_eq!(stops.len(), 4);
@@ -10174,7 +10947,10 @@ mod tests {
 
     #[test]
     fn box_sizing_parses_values_and_css_wide_keywords() {
-        assert_eq!(compute_style("div", None).box_sizing, crate::BoxSizing::ContentBox);
+        assert_eq!(
+            compute_style("div", None).box_sizing,
+            crate::BoxSizing::ContentBox
+        );
         assert_eq!(
             compute_style("div", Some("box-sizing:border-box")).box_sizing,
             crate::BoxSizing::BorderBox
@@ -10189,8 +10965,11 @@ mod tests {
         );
         for keyword in ["initial", "unset", "revert", "revert-layer"] {
             assert_eq!(
-                compute_style("div", Some(&format!("box-sizing:border-box;box-sizing:{keyword}")))
-                    .box_sizing,
+                compute_style(
+                    "div",
+                    Some(&format!("box-sizing:border-box;box-sizing:{keyword}"))
+                )
+                .box_sizing,
                 crate::BoxSizing::ContentBox,
                 "{keyword} must not retain the preceding border-box value"
             );
@@ -10244,12 +11023,18 @@ mod tests {
     #[test]
     fn environment_lengths_preserve_safe_area_and_contextual_fallbacks() {
         assert_eq!(resolve_length("env(safe-area-inset-bottom)"), Some(0.0));
-        assert_eq!(resolve_length("env(safe-area-inset-bottom, 42px)"), Some(0.0));
+        assert_eq!(
+            resolve_length("env(safe-area-inset-bottom, 42px)"),
+            Some(0.0)
+        );
         assert_eq!(
             resolve_length("calc(80px + env(safe-area-inset-bottom) + 4.25rem)"),
             Some(148.0)
         );
-        assert_eq!(resolve_length("env(unknown-inset, calc(10px + 2px))"), Some(12.0));
+        assert_eq!(
+            resolve_length("env(unknown-inset, calc(10px + 2px))"),
+            Some(12.0)
+        );
         assert_eq!(
             resolve_contextual_length("env(unknown-inset, 2em)", 20.0, 16.0, 3.9, 8.44, 390.0),
             Some(40.0)
@@ -10312,7 +11097,10 @@ mod tests {
         }
 
         assert_eq!(resolve_length(&expression), None);
-        assert_eq!(resolve_contextual_length(&expression, 16.0, 16.0, 10.0, 10.0, 100.0), None);
+        assert_eq!(
+            resolve_contextual_length(&expression, 16.0, 16.0, 10.0, 10.0, 100.0),
+            None
+        );
 
         let mut ordinary = "1px".to_string();
         for _ in 0..8 {
@@ -10368,12 +11156,22 @@ mod tests {
         ] {
             assert!(supports_declaration("flex-flow", value), "{value}");
         }
-        for value in ["", "none", "row column", "nowrap wrap-reverse", "row wrap extra", "10px"] {
+        for value in [
+            "",
+            "none",
+            "row column",
+            "nowrap wrap-reverse",
+            "row wrap extra",
+            "10px",
+        ] {
             assert!(!supports_declaration("flex-flow", value), "{value}");
         }
 
         let direction_only = compute_style("div", Some("flex-wrap:wrap;flex-flow:column"));
-        assert_eq!(direction_only.flex_direction, Some(taffy::FlexDirection::Column));
+        assert_eq!(
+            direction_only.flex_direction,
+            Some(taffy::FlexDirection::Column)
+        );
         assert_eq!(direction_only.flex_wrap, Some(taffy::FlexWrap::NoWrap));
 
         let wrap_only = compute_style("div", Some("flex-direction:column;flex-flow:wrap"));
@@ -10381,12 +11179,18 @@ mod tests {
         assert_eq!(wrap_only.flex_wrap, Some(taffy::FlexWrap::Wrap));
 
         let reversed = compute_style("div", Some("flex-flow:wrap column-reverse"));
-        assert_eq!(reversed.flex_direction, Some(taffy::FlexDirection::ColumnReverse));
+        assert_eq!(
+            reversed.flex_direction,
+            Some(taffy::FlexDirection::ColumnReverse)
+        );
         assert_eq!(reversed.flex_wrap, Some(taffy::FlexWrap::Wrap));
 
         let invalid_later =
             compute_style("div", Some("flex-flow:column wrap;flex-flow:row column"));
-        assert_eq!(invalid_later.flex_direction, Some(taffy::FlexDirection::Column));
+        assert_eq!(
+            invalid_later.flex_direction,
+            Some(taffy::FlexDirection::Column)
+        );
         assert_eq!(invalid_later.flex_wrap, Some(taffy::FlexWrap::Wrap));
     }
 

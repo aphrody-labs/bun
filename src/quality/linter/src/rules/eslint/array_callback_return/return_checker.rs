@@ -52,7 +52,10 @@ impl StatementReturnStatus {
     }
 
     pub fn must_return(self) -> bool {
-        matches!(self, Self::AlwaysExplicit | Self::AlwaysImplicit | Self::AlwaysMixed)
+        matches!(
+            self,
+            Self::AlwaysExplicit | Self::AlwaysImplicit | Self::AlwaysMixed
+        )
     }
 
     pub fn may_return_explicit(self) -> bool {
@@ -172,9 +175,15 @@ pub fn check_function_body(function_node_id: NodeId, semantic: &Semantic) -> Sta
     }
 
     StatementReturnStatus::create(
-        terminal_states.iter().all(|exit| !matches!(exit, PendingExit::None)),
-        terminal_states.iter().any(|exit| matches!(exit, PendingExit::Explicit)),
-        terminal_states.iter().any(|exit| matches!(exit, PendingExit::Implicit)),
+        terminal_states
+            .iter()
+            .all(|exit| !matches!(exit, PendingExit::None)),
+        terminal_states
+            .iter()
+            .any(|exit| matches!(exit, PendingExit::Explicit)),
+        terminal_states
+            .iter()
+            .any(|exit| matches!(exit, PendingExit::Implicit)),
     )
 }
 
@@ -196,7 +205,10 @@ pub fn get_explicit_return_spans(function: &FunctionBody) -> Vec<Span> {
 /// This method returns a boolean to know if the empty return span is due a filtering or not.
 /// For example arrow functions like this () => x, returns 0 entries.
 pub fn get_no_voided_return_spans(function: &FunctionBody, allow_void: bool) -> (Vec<Span>, bool) {
-    let mut finder = ReturnStatementFinder { allow_void, ..Default::default() };
+    let mut finder = ReturnStatementFinder {
+        allow_void,
+        ..Default::default()
+    };
 
     finder.visit_function_body(function);
     (finder.spans, finder.has_void_expression)

@@ -149,7 +149,9 @@ impl<'a> Format<'a, JsFormatContext<'a>> for FormatLeadingComments<'a> {
         ) {
             let mut leading_comments_iter = comments.into_iter().peekable();
             while let Some(comment) = leading_comments_iter.next() {
-                f.context_mut().comments_mut().increment_printed_count(comment);
+                f.context_mut()
+                    .comments_mut()
+                    .increment_printed_count(comment);
                 write!(f, format_comment_text(comment));
 
                 let lines_after = f
@@ -186,9 +188,10 @@ impl<'a> Format<'a, JsFormatContext<'a>> for FormatLeadingComments<'a> {
         }
 
         let (comments, terminator_limit) = match self {
-            Self::Node(span) => {
-                (f.context().comments().comments_before(span.start), Some(span.start))
-            }
+            Self::Node(span) => (
+                f.context().comments().comments_before(span.start),
+                Some(span.start),
+            ),
             Self::Comments(comments) => (*comments, None),
             Self::CommentsOfNode(comments, node_start) => (*comments, Some(*node_start)),
         };
@@ -265,7 +268,9 @@ impl<'a> Format<'a, JsFormatContext<'a>> for FormatTrailingComments<'a> {
             let mut previous_comment: Option<&Comment> = None;
 
             for comment in comments {
-                f.context_mut().comments_mut().increment_printed_count(comment);
+                f.context_mut()
+                    .comments_mut()
+                    .increment_printed_count(comment);
 
                 let lines_before = f.lines_before(comment.span);
                 total_lines_before += lines_before;
@@ -315,7 +320,10 @@ impl<'a> Format<'a, JsFormatContext<'a>> for FormatTrailingComments<'a> {
                     );
                 } else {
                     let content = format_with(|f| {
-                        write!(f, [maybe_space(!should_nestle), format_comment_text(comment)]);
+                        write!(
+                            f,
+                            [maybe_space(!should_nestle), format_comment_text(comment)]
+                        );
                     });
 
                     if comment.is_line() {
@@ -357,13 +365,22 @@ impl<'a> Format<'a, JsFormatContext<'a>> for FormatTrailingComments<'a> {
 /// Formats the dangling comments of `node`.
 #[inline]
 pub const fn format_dangling_comments<'a>(span: Span) -> FormatDanglingComments<'a> {
-    FormatDanglingComments::Node { span, indent: DanglingIndentMode::None }
+    FormatDanglingComments::Node {
+        span,
+        indent: DanglingIndentMode::None,
+    }
 }
 
 /// Formats the dangling trivia of `token`.
 pub enum FormatDanglingComments<'a> {
-    Node { span: Span, indent: DanglingIndentMode },
-    Comments { comments: &'a [Comment], indent: DanglingIndentMode },
+    Node {
+        span: Span,
+        indent: DanglingIndentMode,
+    },
+    Comments {
+        comments: &'a [Comment],
+        indent: DanglingIndentMode,
+    },
 }
 
 /// How an empty container indents its dangling comments.
@@ -447,7 +464,9 @@ impl<'a> Format<'a, JsFormatContext<'a>> for FormatDanglingComments<'a> {
                 let mut previous_comment: Option<&Comment> = None;
 
                 for comment in comments {
-                    f.context_mut().comments_mut().increment_printed_count(comment);
+                    f.context_mut()
+                        .comments_mut()
+                        .increment_printed_count(comment);
 
                     let should_nestle = previous_comment.is_some_and(|previous_comment| {
                         should_nestle_adjacent_comments(previous_comment, comment, f.source_text())
@@ -517,7 +536,9 @@ impl<'a> Format<'a, JsFormatContext<'a>> for FormatCommentText<'_> {
         // and suppress any internal line breaks (e.g. multi-line block / JSDoc).
         let wrap = f.options().sort_imports.is_some();
         if wrap {
-            f.write_element(FormatElement::Tag(Tag::StartLabelled(LabelId::of(JsLabels::Comment))));
+            f.write_element(FormatElement::Tag(Tag::StartLabelled(LabelId::of(
+                JsLabels::Comment,
+            ))));
         }
 
         // JSDoc formatting: if enabled, try to format JSDoc comments
@@ -603,7 +624,9 @@ impl<'a> FormatCommentBeforeContent<'a> {
 
 impl<'a> Format<'a, JsFormatContext<'a>> for FormatCommentBeforeContent<'_> {
     fn fmt(&self, f: &mut JsFormatter<'_, 'a>) {
-        f.context_mut().comments_mut().increment_printed_count(self.0);
+        f.context_mut()
+            .comments_mut()
+            .increment_printed_count(self.0);
         write!(f, format_comment_text(self.0));
         if self.0.is_line() {
             write!(f, hard_line_break());
@@ -642,7 +665,9 @@ impl<'a> Format<'a, JsFormatContext<'a>> for FormatCommentBeforeContent<'_> {
 /// "#)));
 /// ```
 fn is_alignable_comment(lines: &str) -> bool {
-    LineTerminatorSplitter::new(lines).skip(1).all(|line| line.trim_start().starts_with('*'))
+    LineTerminatorSplitter::new(lines)
+        .skip(1)
+        .all(|line| line.trim_start().starts_with('*'))
 }
 
 /// A multi-line block comment that [`is_alignable_comment`].
@@ -655,5 +680,8 @@ pub fn is_alignable_block_comment(comment: &Comment, source_text: SourceText) ->
 /// Not `Comment::is_jsdoc()`, which is leading only.
 /// For `/***`, see `DIVERGENCES.md#triple-star-jsdoc-hard-break`.
 pub fn is_jsdoc_comment(comment: &Comment) -> bool {
-    matches!(comment.content, CommentContent::Jsdoc | CommentContent::JsdocLegal)
+    matches!(
+        comment.content,
+        CommentContent::Jsdoc | CommentContent::JsdocLegal
+    )
 }

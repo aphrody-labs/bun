@@ -72,7 +72,12 @@ fn oxc_positions(unit_name: &str, content: &str, source_type: oxc::span::SourceT
                 None
             };
             // Convert to TypeScript's 1-based line/col.
-            Some(Pos { file: unit_name.to_string(), line: line + 1, col: col + 1, code })
+            Some(Pos {
+                file: unit_name.to_string(),
+                line: line + 1,
+                col: col + 1,
+                code,
+            })
         })
         .collect()
 }
@@ -90,7 +95,13 @@ fn positions_text(positions: &[Pos]) -> String {
     let mut lines: Vec<String> = positions
         .iter()
         .map(|p| {
-            format!("{}({}, {}): TS{}", p.file, p.line, p.col, p.code.as_deref().unwrap_or("-"))
+            format!(
+                "{}({}, {}): TS{}",
+                p.file,
+                p.line,
+                p.col,
+                p.code.as_deref().unwrap_or("-")
+            )
         })
         .collect();
     lines.sort();
@@ -123,8 +134,9 @@ pub fn run_errors_typescript(files: &[TypeScriptFile]) -> Vec<CoverageResult> {
                     // actually emitted here (i.e. the syntax errors oxc is capable of reporting).
                     let oxc_codes: FxHashSet<&str> =
                         oxc.iter().filter_map(|p| p.code.as_deref()).collect();
-                    let no_false_positives =
-                        oxc.iter().all(|o| baseline.iter().any(|b| pos_matches(o, b, ignore_file)));
+                    let no_false_positives = oxc
+                        .iter()
+                        .all(|o| baseline.iter().any(|b| pos_matches(o, b, ignore_file)));
                     let found_reachable = baseline
                         .iter()
                         .filter(|b| b.code.as_deref().is_some_and(|c| oxc_codes.contains(c)))
@@ -140,7 +152,11 @@ pub fn run_errors_typescript(files: &[TypeScriptFile]) -> Vec<CoverageResult> {
                     }
                 }
             };
-            Some(CoverageResult { path: f.path.clone(), should_fail: false, result })
+            Some(CoverageResult {
+                path: f.path.clone(),
+                should_fail: false,
+                result,
+            })
         })
         .collect()
 }

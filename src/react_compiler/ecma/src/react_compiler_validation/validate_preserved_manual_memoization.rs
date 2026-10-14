@@ -107,7 +107,11 @@ fn visit_statement<'h>(stmt: &ReactiveStatement<'h>, state: &mut VisitorState<'_
 
 fn visit_terminal<'h>(terminal: &ReactiveTerminalStatement<'h>, state: &mut VisitorState<'_, 'h>) {
     match &terminal.terminal {
-        ReactiveTerminal::If { consequent, alternate, .. } => {
+        ReactiveTerminal::If {
+            consequent,
+            alternate,
+            ..
+        } => {
             visit_block(consequent, state);
             if let Some(alt) = alternate {
                 visit_block(alt, state);
@@ -153,8 +157,11 @@ fn visit_scope<'h>(scope_block: &ReactiveScopeBlock<'h>, state: &mut VisitorStat
         let deps_span = memo_state.deps_span;
         let decls = memo_state.decls.clone();
         let deps_from_source = deps_from_source.clone_in(alloc);
-        let temporaries: FxHashMap<IdentifierId, ManualMemoDependency> =
-            state.temporaries.iter().map(|(k, v)| (*k, v.clone_in(alloc))).collect();
+        let temporaries: FxHashMap<IdentifierId, ManualMemoDependency> = state
+            .temporaries
+            .iter()
+            .map(|(k, v)| (*k, v.clone_in(alloc)))
+            .collect();
         for dep in &deps {
             validate_inferred_dep(
                 dep,
@@ -243,15 +250,21 @@ fn visit_instruction<'h>(instr: &ReactiveInstruction<'h>, state: &mut VisitorSta
             }
 
             // TS: Diagnostics.invariant(state.manualMemoState.manualMemoId === value.manualMemoId, ...)
-            if state.manual_memo_state.as_ref().is_none_or(|s| s.manual_memo_id != *manual_memo_id)
+            if state
+                .manual_memo_state
+                .as_ref()
+                .is_none_or(|s| s.manual_memo_id != *manual_memo_id)
             {
                 state.manual_memo_state = None;
                 return;
             }
 
             let memo_state = state.manual_memo_state.take().unwrap();
-            let unmemoized_span =
-                memo_state.callee_span.or(memo_state.deps_span).or(memo_state.span).or(decl.span);
+            let unmemoized_span = memo_state
+                .callee_span
+                .or(memo_state.deps_span)
+                .or(memo_state.span)
+                .or(decl.span);
             // A full callback span can cover dozens of lines. The first source token is enough to
             // connect the hook callee to its callback without expanding the diagnostic codeframe.
             let callback_start_span = memo_state.span.and_then(|span| {
@@ -293,7 +306,11 @@ fn visit_instruction<'h>(instr: &ReactiveInstruction<'h>, state: &mut VisitorSta
                 && lvalue.kind == InstructionKind::Reassign
             {
                 let decl_id = state.env.identifiers[lvalue.place.identifier].declaration_id;
-                memo_state.reassignments.entry(decl_id).or_default().insert(value.identifier);
+                memo_state
+                    .reassignments
+                    .entry(decl_id)
+                    .or_default()
+                    .insert(value.identifier);
             }
         }
         ReactiveValue::Instruction(InstructionValue::LoadLocal { place, .. })
@@ -353,7 +370,10 @@ fn record_temporaries<'h>(instr: &ReactiveInstruction<'h>, state: &mut VisitorSt
         state.temporaries.insert(
             lvalue.identifier,
             ManualMemoDependency {
-                root: ManualMemoDependencyRoot::NamedLocal { value: *lvalue, constant: false },
+                root: ManualMemoDependencyRoot::NamedLocal {
+                    value: *lvalue,
+                    constant: false,
+                },
                 path: ArenaVec::new_in(&alloc),
                 span: lvalue.span,
             },
@@ -366,7 +386,11 @@ fn record_temporaries<'h>(instr: &ReactiveInstruction<'h>, state: &mut VisitorSt
 fn record_deps_in_value<'h>(value: &ReactiveValue<'h>, state: &mut VisitorState<'_, 'h>) {
     let alloc = state.env.allocator;
     match value {
-        ReactiveValue::SequenceExpression { instructions, value, .. } => {
+        ReactiveValue::SequenceExpression {
+            instructions,
+            value,
+            ..
+        } => {
             for instr in instructions {
                 visit_instruction(instr, state);
             }
@@ -375,7 +399,12 @@ fn record_deps_in_value<'h>(value: &ReactiveValue<'h>, state: &mut VisitorState<
         ReactiveValue::OptionalExpression { value: inner, .. } => {
             record_deps_in_value(inner, state);
         }
-        ReactiveValue::ConditionalExpression { test, consequent, alternate, .. } => {
+        ReactiveValue::ConditionalExpression {
+            test,
+            consequent,
+            alternate,
+            ..
+        } => {
             record_deps_in_value(test, state);
             record_deps_in_value(consequent, state);
             record_deps_in_value(alternate, state);
@@ -495,7 +524,11 @@ fn is_unmemoized(
     identifiers: &IndexSlice<IdentifierId, [Identifier]>,
 ) -> bool {
     let ident = &identifiers[id];
-    if let Some(scope_id) = ident.scope { !completed_scopes.contains(&scope_id) } else { false }
+    if let Some(scope_id) = ident.scope {
+        !completed_scopes.contains(&scope_id)
+    } else {
+        false
+    }
 }
 
 // =============================================================================
@@ -544,12 +577,18 @@ fn compare_deps(
     if is_subpath
         && (source.path.len() == inferred.path.len()
             || (inferred.path.len() >= source.path.len()
-                && !inferred.path.iter().any(|t| t.property.is_string("current"))))
+                && !inferred
+                    .path
+                    .iter()
+                    .any(|t| t.property.is_string("current"))))
     {
         CompareDependencyResult::Ok
     } else if is_subpath {
         if source.path.iter().any(|t| t.property.is_string("current"))
-            || inferred.path.iter().any(|t| t.property.is_string("current"))
+            || inferred
+                .path
+                .iter()
+                .any(|t| t.property.is_string("current"))
         {
             CompareDependencyResult::RefAccessDifference
         } else {
@@ -604,7 +643,11 @@ fn print_manual_memo_dependency(
         .path
         .iter()
         .map(|entry| {
-            let prefix = if with_optional && entry.optional { "?." } else { "." };
+            let prefix = if with_optional && entry.optional {
+                "?."
+            } else {
+                "."
+            };
             match &entry.property {
                 PropertyLiteral::String(s) => format!("{prefix}{s}"),
                 PropertyLiteral::Number(n) => format!("{prefix}{n}"),
@@ -643,7 +686,11 @@ fn validate_inferred_dep<'h>(
     let normalized_dep = if let Some(temp) = temporaries.get(&dep_id) {
         let mut path = temp.path.clone_in(alloc);
         path.extend_from_slice(dep_path);
-        ManualMemoDependency { root: temp.root, path, span: temp.span }
+        ManualMemoDependency {
+            root: temp.root,
+            path,
+            span: temp.span,
+        }
     } else {
         let ident = &env.identifiers[dep_id];
         // TS: Diagnostics.invariant(dep.identifier.name?.kind === 'named', ...)

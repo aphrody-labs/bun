@@ -30,7 +30,12 @@ impl GraphicalReportHandler {
             write_repeated_char(f, ' ', width.saturating_sub(linum.len()))?;
             f.write_str(linum)?;
         } else {
-            write!(f, "{:width$}", linum.style(self.theme.styles.linum), width = width)?;
+            write!(
+                f,
+                "{:width$}",
+                linum.style(self.theme.styles.linum),
+                width = width
+            )?;
         }
         f.write_char(' ')?;
         f.write_char(self.theme.characters.vbar)?;
@@ -66,7 +71,11 @@ impl GraphicalReportHandler {
                 write!(
                     gutter,
                     "{}",
-                    chars.hbar.to_string().repeat(max_gutter.saturating_sub(i)).style(hl.style)
+                    chars
+                        .hbar
+                        .to_string()
+                        .repeat(max_gutter.saturating_sub(i))
+                        .style(hl.style)
                 )?;
                 write!(gutter, "{}", chars.rarrow.style(hl.style))?;
                 arrow = true;
@@ -80,7 +89,11 @@ impl GraphicalReportHandler {
                 write!(
                     gutter,
                     "{}",
-                    chars.hbar.to_string().repeat(max_gutter.saturating_sub(i)).style(hl.style)
+                    chars
+                        .hbar
+                        .to_string()
+                        .repeat(max_gutter.saturating_sub(i))
+                        .style(hl.style)
                 )?;
                 write!(gutter, "{}", chars.rarrow.style(hl.style))?;
                 arrow = true;

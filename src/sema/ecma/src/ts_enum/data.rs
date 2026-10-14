@@ -34,7 +34,10 @@ impl EnumData {
     }
 
     pub(crate) fn add_body_scope(&mut self, symbol_id: SymbolId, scope_id: ScopeId) {
-        self.body_scopes.entry(symbol_id).or_default().push(scope_id);
+        self.body_scopes
+            .entry(symbol_id)
+            .or_default()
+            .push(scope_id);
     }
 
     pub fn is_const_enum(&self, symbol_id: SymbolId) -> bool {

@@ -87,7 +87,8 @@ declare_oxc_lint!(
     unicorn,
     restriction,
     version = "0.0.18",
-    short_description = "Disallows `oxlint-disable` or `eslint-disable` comments without specifying rules.",
+    short_description =
+        "Disallows `oxlint-disable` or `eslint-disable` comments without specifying rules.",
 );
 
 impl Rule for NoAbusiveEslintDisable {
@@ -223,6 +224,11 @@ fn test() {
         ",
     ];
 
-    Tester::new(NoAbusiveEslintDisable::NAME, NoAbusiveEslintDisable::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        NoAbusiveEslintDisable::NAME,
+        NoAbusiveEslintDisable::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

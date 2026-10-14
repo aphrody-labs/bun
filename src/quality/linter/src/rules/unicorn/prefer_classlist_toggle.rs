@@ -324,9 +324,10 @@ fn is_classlist_access(expr: &Expression) -> bool {
 }
 
 fn check_add_remove_ternary(consequent: &Expression, alternate: &Expression) -> Option<bool> {
-    let (Expression::StringLiteral(cons_str), Expression::StringLiteral(alt_str)) =
-        (consequent.get_inner_expression(), alternate.get_inner_expression())
-    else {
+    let (Expression::StringLiteral(cons_str), Expression::StringLiteral(alt_str)) = (
+        consequent.get_inner_expression(),
+        alternate.get_inner_expression(),
+    ) else {
         return None;
     };
 
@@ -360,7 +361,11 @@ fn fix_if_statement<'a>(
     let class_name_text = class_name_arg.span().source_text(ctx.source_text());
 
     let test_text = test.span().source_text(ctx.source_text());
-    let condition = if is_add_first { test_text.to_string() } else { format!("!({test_text})") };
+    let condition = if is_add_first {
+        test_text.to_string()
+    } else {
+        format!("!({test_text})")
+    };
 
     let replacement = format!("{classlist_text}.toggle({class_name_text}, {condition});");
     fixer.replace(node.span(), replacement)
@@ -387,7 +392,11 @@ fn fix_conditional_expression<'a>(
     let class_name_text = class_name_arg.span().source_text(ctx.source_text());
 
     let test_text = test.span().source_text(ctx.source_text());
-    let condition = if is_add_first { test_text.to_string() } else { format!("!({test_text})") };
+    let condition = if is_add_first {
+        test_text.to_string()
+    } else {
+        format!("!({test_text})")
+    };
 
     let replacement = format!("{classlist_text}.toggle({class_name_text}, {condition})");
     fixer.replace(node.span(), replacement)
@@ -416,7 +425,11 @@ fn fix_computed_member_call<'a>(
     let class_name_text = class_name_arg.span().source_text(ctx.source_text());
 
     let test_text = test.span().source_text(ctx.source_text());
-    let condition = if is_add_first { test_text.to_string() } else { format!("!({test_text})") };
+    let condition = if is_add_first {
+        test_text.to_string()
+    } else {
+        format!("!({test_text})")
+    };
 
     let replacement = format!("{classlist_text}.toggle({class_name_text}, {condition})");
     fixer.replace(call_expr.span, replacement)
@@ -731,7 +744,12 @@ fn test() {
         ),
     ];
 
-    Tester::new(PreferClasslistToggle::NAME, PreferClasslistToggle::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        PreferClasslistToggle::NAME,
+        PreferClasslistToggle::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

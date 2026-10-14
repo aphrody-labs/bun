@@ -22,7 +22,11 @@ impl<'a> AstNodes<'a> {
         std::iter::successors(Some(self), |node| {
             // Continue iteration until we've yielded Program (root node)
             // After Program, parent() would still return Program, so stop there
-            if matches!(node, AstNodes::Program(_)) { None } else { Some(node.parent()) }
+            if matches!(node, AstNodes::Program(_)) {
+                None
+            } else {
+                Some(node.parent())
+            }
         })
     }
 

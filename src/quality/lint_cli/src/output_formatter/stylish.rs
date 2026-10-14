@@ -28,7 +28,10 @@ struct StylishReporter {
 
 impl Default for StylishReporter {
     fn default() -> Self {
-        Self { diagnostics: Vec::new(), no_color: std::env::var("NO_COLOR").is_ok() }
+        Self {
+            diagnostics: Vec::new(),
+            no_color: std::env::var("NO_COLOR").is_ok(),
+        }
     }
 }
 
@@ -61,22 +64,29 @@ impl StylishReporter {
         let mut total_errors = 0;
         let mut total_warnings = 0;
 
-        let mut entries: Vec<(Info, &Error)> =
-            self.diagnostics.iter().map(|diagnostic| (Info::new(diagnostic), diagnostic)).collect();
+        let mut entries: Vec<(Info, &Error)> = self
+            .diagnostics
+            .iter()
+            .map(|diagnostic| (Info::new(diagnostic), diagnostic))
+            .collect();
 
         entries.sort_by_key(|(info, _)| info.start.line);
 
         let mut grouped: FxHashMap<String, Vec<(Info, &Error)>> = FxHashMap::default();
         for (info, diagnostic) in entries {
-            grouped.entry(info.filename.clone()).or_default().push((info, diagnostic));
+            grouped
+                .entry(info.filename.clone())
+                .or_default()
+                .push((info, diagnostic));
         }
 
         let cwd = std::env::current_dir().ok();
 
         for diagnostics in grouped.values() {
             let filename = &diagnostics[0].0.filename;
-            let filename = if let Some(path) =
-                cwd.as_ref().and_then(|d| d.join(filename).canonicalize().ok())
+            let filename = if let Some(path) = cwd
+                .as_ref()
+                .and_then(|d| d.join(filename).canonicalize().ok())
             {
                 path.display().to_string()
             } else {
@@ -104,12 +114,22 @@ impl StylishReporter {
                 }
 
                 let severity_str = if diagnostic.severity() == Some(Severity::Error) {
-                    if no_color { "error" } else { "\u{1b}[31merror\u{1b}[0m" }
+                    if no_color {
+                        "error"
+                    } else {
+                        "\u{1b}[31merror\u{1b}[0m"
+                    }
                 } else {
-                    if no_color { "warning" } else { "\u{1b}[33mwarning\u{1b}[0m" }
+                    if no_color {
+                        "warning"
+                    } else {
+                        "\u{1b}[33mwarning\u{1b}[0m"
+                    }
                 };
 
-                let rule = diagnostic.code().map_or_else(String::new, |code| code.to_string());
+                let rule = diagnostic
+                    .code()
+                    .map_or_else(String::new, |code| code.to_string());
                 let position = format!("{}:{}", info.start.line, info.start.column);
                 if no_color {
                     writeln!(
@@ -173,12 +193,30 @@ mod test {
 
         let output = reporter.finish(&DiagnosticResult::default()).unwrap();
 
-        assert!(output.contains("error message"), "Output should contain 'error message'");
-        assert!(output.contains("warning message"), "Output should contain 'warning message'");
-        assert!(output.contains("\u{2716}"), "Output should contain the ✖ character");
-        assert!(output.contains("2 problems"), "Output should mention total problems");
-        assert!(output.contains("1 error"), "Output should mention error count");
-        assert!(output.contains("1 warning"), "Output should mention warning count");
+        assert!(
+            output.contains("error message"),
+            "Output should contain 'error message'"
+        );
+        assert!(
+            output.contains("warning message"),
+            "Output should contain 'warning message'"
+        );
+        assert!(
+            output.contains("\u{2716}"),
+            "Output should contain the ✖ character"
+        );
+        assert!(
+            output.contains("2 problems"),
+            "Output should mention total problems"
+        );
+        assert!(
+            output.contains("1 error"),
+            "Output should mention error count"
+        );
+        assert!(
+            output.contains("1 warning"),
+            "Output should mention warning count"
+        );
         assert!(
             !output.contains("\u{1b}[31m\u{2716}"),
             "Output should not color the ✖ character red"
@@ -197,6 +235,9 @@ mod test {
 
         let output = reporter.finish(&DiagnosticResult::default()).unwrap();
 
-        assert!(output.contains("\u{1b}[31m\u{2716}"), "Output should color the ✖ character red");
+        assert!(
+            output.contains("\u{1b}[31m\u{2716}"),
+            "Output should color the ✖ character red"
+        );
     }
 }

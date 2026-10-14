@@ -196,10 +196,7 @@ pub type RuleOverrideMap = HashMap<String, RuleOverride>;
 /// Applique les overrides de règles à un set de FileFix. Phase 4 §4.7 :
 /// `"off"` → drop le finding ; sévérité différente → ré-ajuste ; autofix
 /// override → ré-ajuste. Ne touche pas aux findings sans override.
-pub fn apply_rule_overrides(
-    fixes: &mut [crate::types::FileFix],
-    overrides: &RuleOverrideMap,
-) {
+pub fn apply_rule_overrides(fixes: &mut [crate::types::FileFix], overrides: &RuleOverrideMap) {
     use crate::types::Severity;
 
     for fix in fixes.iter_mut() {

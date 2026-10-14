@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { Terminal as RioTerminal } from "bun:rio";
-import { bunEnv, bunExe, isLinux, isWindows, tempDir } from "harness";
+import { bunEnv, bunExe, isASAN, isDebug, isLinux, isWindows, tempDir } from "harness";
 import { readFileSync } from "node:fs";
 import { builtinModules, isBuiltin } from "node:module";
 import { join } from "node:path";
@@ -748,29 +748,26 @@ describe("Bun.Terminal", () => {
     // than 5005 with no slave reader, and on Apple Silicon CHUNK_SIZE is 16K,
     // so neither constraint is satisfiable there. The branch under test has no
     // target-specific code, so Linux is the regression guard.
-    test.skipIf(!isLinux)(
-      "drain fires when a second write flushes what the first buffered",
-      async () => {
-        const { promise, resolve } = Promise.withResolvers<void>();
-        let drainCount = 0;
+    test.skipIf(!isLinux)("drain fires when a second write flushes what the first buffered", async () => {
+      const { promise, resolve } = Promise.withResolvers<void>();
+      let drainCount = 0;
 
-        const terminal = new Bun.Terminal({
-          drain() {
-            drainCount++;
-            resolve();
-          },
-        });
-        terminal.setRawMode(true);
+      const terminal = new Bun.Terminal({
+        drain() {
+          drainCount++;
+          resolve();
+        },
+      });
+      terminal.setRawMode(true);
 
-        expect(terminal.write("hello")).toBe(5);
-        expect(terminal.write(Buffer.alloc(5000, 66))).toBe(5000);
+      expect(terminal.write("hello")).toBe(5);
+      expect(terminal.write(Buffer.alloc(5000, 66))).toBe(5000);
 
-        await promise;
-        terminal.close();
+      await promise;
+      terminal.close();
 
-        expect(drainCount).toBeGreaterThan(0);
-      },
-    );
+      expect(drainCount).toBeGreaterThan(0);
+    });
 
     // Input the child never read can never drain once the last slave fd is
     // gone, because a Linux pty master answers EAGAIN instead of EPIPE. The
@@ -787,10 +784,8 @@ describe("Bun.Terminal", () => {
     // reports as an error and which closes the whole terminal, so the queue
     // never gets stuck and a post-EOF write throws there instead. The code
     // under test is shared.
-    test.skipIf(!isLinux)(
-      "terminal is released after the child exits with input it never read",
-      async () => {
-        const childSrc = /* js */ `
+    test.skipIf(!isLinux)("terminal is released after the child exits with input it never read", async () => {
+      const childSrc = /* js */ `
         const { readdirSync } = require("node:fs");
         const openFds = () => readdirSync("/dev/fd").length;
         const N = 4;
@@ -854,27 +849,22 @@ describe("Bun.Terminal", () => {
         console.log(JSON.stringify({ exits, collected, callbacksAfterExit, leakedFds: Math.max(0, fdsAfter - fdsBefore) }));
       `;
 
-        await using proc = Bun.spawn({
-          cmd: [bunExe(), "-e", childSrc],
-          env: bunEnv,
-          stdout: "pipe",
-          stderr: "pipe",
-        });
-        const [stdout, stderr, exitCode] = await Promise.all([
-          proc.stdout.text(),
-          proc.stderr.text(),
-          proc.exited,
-        ]);
-        expect(stderr).toBe("");
-        expect(JSON.parse(stdout)).toEqual({
-          exits: 4,
-          collected: 4,
-          callbacksAfterExit: 0,
-          leakedFds: 0,
-        });
-        expect(exitCode).toBe(0);
-      },
-    );
+      await using proc = Bun.spawn({
+        cmd: [bunExe(), "-e", childSrc],
+        env: bunEnv,
+        stdout: "pipe",
+        stderr: "pipe",
+      });
+      const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+      expect(stderr).toBe("");
+      expect(JSON.parse(stdout)).toEqual({
+        exits: 4,
+        collected: 4,
+        callbacksAfterExit: 0,
+        leakedFds: 0,
+      });
+      expect(exitCode).toBe(0);
+    });
 
     // On Windows the child's exit leaves the writer open, and the next write()
     // fails with EPIPE inside the call. The writer reports the error, the
@@ -934,11 +924,7 @@ describe("Bun.Terminal", () => {
         stdout: "pipe",
         stderr: "pipe",
       });
-      const [stdout, stderr, exitCode] = await Promise.all([
-        proc.stdout.text(),
-        proc.stderr.text(),
-        proc.exited,
-      ]);
+      const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
       expect(stderr).toBe("");
       expect(JSON.parse(stdout)).toEqual({ exits: 4, collected: 4 });
       expect(exitCode).toBe(0);
@@ -1300,8 +1286,7 @@ describe.concurrent("Bun.spawn with terminal option", () => {
         rows: 24,
         data: (terminal: Bun.Terminal, data: Uint8Array) => {
           dataChunks.push(data);
-          if (Buffer.concat(dataChunks).toString().includes("hello from terminal"))
-            gotMarker.resolve();
+          if (Buffer.concat(dataChunks).toString().includes("hello from terminal")) gotMarker.resolve();
         },
       },
     });
@@ -1328,22 +1313,19 @@ describe.concurrent("Bun.spawn with terminal option", () => {
     const gotMarker = Promise.withResolvers<void>();
 
     // Note: TERM env var needs to be set manually - it's not set automatically from terminal.name
-    const proc = Bun.spawn(
-      [bunExe(), "-e", "console.log('TERM=' + process.env.TERM, 'TTY=' + process.stdout.isTTY)"],
-      {
-        env: { ...bunEnv, TERM: "xterm-256color" },
-        terminal: {
-          cols: 120,
-          rows: 40,
-          name: "xterm-256color",
-          data: (terminal: Bun.Terminal, data: Uint8Array) => {
-            terminalFromCallback = terminal;
-            dataChunks.push(data);
-            if (Buffer.concat(dataChunks).toString().includes("TTY=true")) gotMarker.resolve();
-          },
+    const proc = Bun.spawn([bunExe(), "-e", "console.log('TERM=' + process.env.TERM, 'TTY=' + process.stdout.isTTY)"], {
+      env: { ...bunEnv, TERM: "xterm-256color" },
+      terminal: {
+        cols: 120,
+        rows: 40,
+        name: "xterm-256color",
+        data: (terminal: Bun.Terminal, data: Uint8Array) => {
+          terminalFromCallback = terminal;
+          dataChunks.push(data);
+          if (Buffer.concat(dataChunks).toString().includes("TTY=true")) gotMarker.resolve();
         },
       },
-    );
+    });
 
     await gotMarker.promise;
     await proc.exited;
@@ -1535,14 +1517,12 @@ describe.concurrent("Bun.spawn with terminal option", () => {
   // later poll tick. POSIX-only assertions: on Windows EOF arrives
   // asynchronously once conhost self-exits, so the exit callback may not have
   // fired by the time child.exited resolves.
-  test.skipIf(isWindows)(
-    "process exits after subprocess with inline terminal (no terminal.close)",
-    async () => {
-      await using proc = Bun.spawn({
-        cmd: [
-          bunExe(),
-          "-e",
-          `
+  test.skipIf(isWindows)("process exits after subprocess with inline terminal (no terminal.close)", async () => {
+    await using proc = Bun.spawn({
+      cmd: [
+        bunExe(),
+        "-e",
+        `
           let out = "";
           let exitCount = 0;
           const child = Bun.spawn([process.execPath, "-e", "console.log('hi from pty')"], {
@@ -1563,25 +1543,20 @@ describe.concurrent("Bun.spawn with terminal option", () => {
             exitCount,
           }));
         `,
-        ],
-        env: bunEnv,
-        stdout: "pipe",
-        stderr: "pipe",
-      });
-      const [stdout, stderr, exitCode] = await Promise.all([
-        proc.stdout.text(),
-        proc.stderr.text(),
-        proc.exited,
-      ]);
-      // On main this times out: the reader/writer polls kept loop.active > 0 and
-      // nothing triggered the GC that would finalize the Terminal.
-      expect({ stdout, stderr, exitCode }).toEqual({
-        stdout: JSON.stringify({ gotOutput: true, exitedSync: true, exitCount: 1 }),
-        stderr: expect.any(String),
-        exitCode: 0,
-      });
-    },
-  );
+      ],
+      env: bunEnv,
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+    // On main this times out: the reader/writer polls kept loop.active > 0 and
+    // nothing triggered the GC that would finalize the Terminal.
+    expect({ stdout, stderr, exitCode }).toEqual({
+      stdout: JSON.stringify({ gotOutput: true, exitedSync: true, exitCount: 1 }),
+      stderr: expect.any(String),
+      exitCode: 0,
+    });
+  });
 
   // On Windows, Subprocess::on_process_exit used to fire ClosePseudoConsole
   // immediately; that routes teardown through conhost's PtySignalInputThread,
@@ -1639,11 +1614,7 @@ describe.concurrent("Bun.spawn with terminal option", () => {
       stdout: "pipe",
       stderr: "pipe",
     });
-    const [stdout, stderr, exitCode] = await Promise.all([
-      proc.stdout.text(),
-      proc.stderr.text(),
-      proc.exited,
-    ]);
+    const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
     expect({ stdout, stderr, exitCode }).toEqual({
       stdout: "",
       stderr: expect.any(String),
@@ -1677,6 +1648,61 @@ describe.concurrent("Bun.spawn with terminal option", () => {
     await Promise.all(Array.from({ length: N }, one));
     expect(outcomes).toEqual(Array.from({ length: N }, () => "data"));
   });
+
+  // https://github.com/oven-sh/bun/issues/42171
+  // On macOS a pty's session leader can't finish exiting until the parent reads what it wrote to the terminal.
+  // If it got that far before the parent's kqueue watch (ESRCH), the parent used to block in wait4() on the
+  // thread that reads the pty, forever. The worker and the garbage slow the parent down into that window.
+  const limit = isDebug || isASAN ? 60_000 : 20_000;
+  test.skipIf(isWindows)(
+    "a pty child that exits before the parent watches it is still reaped",
+    async () => {
+      using dir = tempDir("pty-early-exit", {
+        "churn.js": `
+          let keep = [];
+          (function churn() {
+            for (let i = 0; i < 2000; i++) {
+              keep.push(new Uint8Array(1 + ((i * 7919) % 65536)), { s: Buffer.alloc(i % 300, "x").toString() });
+              if (keep.length > 4000) keep = [];
+            }
+            setTimeout(churn, 0);
+          })();
+        `,
+        "spawn.js": `
+          new Worker(new URL("./churn.js", import.meta.url).href);
+          let exited = 0;
+          async function lane() {
+            for (let i = 0; i < 10; i++) {
+              const garbage = Array.from({ length: 20_000 }, (_, n) => ({ n }));
+              const proc = Bun.spawn({ cmd: ["sh", "-c", "echo hi"], terminal: { data() {} } });
+              if ((await proc.exited) === 0 && garbage.length) exited++;
+            }
+          }
+          await Promise.all([lane(), lane(), lane(), lane()]);
+          console.log(exited + " exited");
+          process.exit(0);
+        `,
+      });
+      // The deadlock blocks the event loop, so only another process can notice it.
+      await using proc = Bun.spawn({
+        cmd: [bunExe(), "spawn.js"],
+        env: bunEnv,
+        cwd: String(dir),
+        stdout: "pipe",
+        stderr: "pipe",
+        timeout: limit,
+        killSignal: "SIGKILL",
+      });
+      const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+      expect({ stdout, stderr, signalCode: proc.signalCode }).toEqual({
+        stdout: "40 exited\n",
+        stderr: "",
+        signalCode: null,
+      });
+      expect(exitCode).toBe(0);
+    },
+    limit + 10_000,
+  );
 });
 
 describe("Bun.TerminalScreen", () => {
@@ -1735,20 +1761,12 @@ describe("Bun.TerminalScreen", () => {
   });
 
   test("validates arguments", () => {
-    expect(() => new Bun.TerminalScreen({ cols: 0 })).toThrow(
-      expect.objectContaining({ code: "ERR_OUT_OF_RANGE" }),
-    );
-    expect(() => new Bun.TerminalScreen({ rows: 5000 })).toThrow(
-      expect.objectContaining({ code: "ERR_OUT_OF_RANGE" }),
-    );
+    expect(() => new Bun.TerminalScreen({ cols: 0 })).toThrow(expect.objectContaining({ code: "ERR_OUT_OF_RANGE" }));
+    expect(() => new Bun.TerminalScreen({ rows: 5000 })).toThrow(expect.objectContaining({ code: "ERR_OUT_OF_RANGE" }));
     const screen = new Bun.TerminalScreen({ cols: 2, rows: 2 });
     // @ts-expect-error
-    expect(() => screen.write(123)).toThrow(
-      expect.objectContaining({ code: "ERR_INVALID_ARG_TYPE" }),
-    );
-    expect(() => screen.resize(0, 1)).toThrow(
-      expect.objectContaining({ code: "ERR_OUT_OF_RANGE" }),
-    );
+    expect(() => screen.write(123)).toThrow(expect.objectContaining({ code: "ERR_INVALID_ARG_TYPE" }));
+    expect(() => screen.resize(0, 1)).toThrow(expect.objectContaining({ code: "ERR_OUT_OF_RANGE" }));
   });
 
   test("renders a program running in Bun.Terminal", async () => {
@@ -1765,17 +1783,13 @@ describe("Bun.TerminalScreen", () => {
       },
     });
     const proc = Bun.spawn({
-      cmd: [
-        bunExe(),
-        "-e",
-        String.raw`process.stdout.write("\x1b[31mred\x1b[0m\r\n\x1b[1mDONE\x1b[0m")`,
-      ],
+      cmd: [bunExe(), "-e", String.raw`process.stdout.write("\x1b[31mred\x1b[0m\r\n\x1b[1mDONE\x1b[0m")`],
       env: bunEnv,
       terminal,
     });
     await done.promise;
     const lines = screen.text().split("\n");
-    const row = lines.findIndex((line) => line.includes("red"));
+    const row = lines.findIndex(line => line.includes("red"));
     expect(lines[row + 1]).toContain("DONE");
     expect(cell(screen, lines[row].indexOf("red"), row).fg).not.toBe(0);
     expect(await proc.exited).toBe(0);
@@ -1889,9 +1903,7 @@ describe("bun:rio", () => {
     const cells = terminal.cells();
     expect(terminal.text().startsWith("é中!")).toBe(true);
     expect([cells[0], cells[4], cells[8], cells[12]]).toEqual([0xe9, 0x4e2d, 32, 0x21]);
-    expect([cells[3] >>> 24, cells[7] >>> 24, cells[11] >>> 24, cells[15] >>> 24]).toEqual([
-      1, 2, 0, 1,
-    ]);
+    expect([cells[3] >>> 24, cells[7] >>> 24, cells[11] >>> 24, cells[15] >>> 24]).toEqual([1, 2, 0, 1]);
     expect(cells[1]).toBe(0x02010203);
   });
 
@@ -1926,22 +1938,14 @@ describe("bun:rio", () => {
   });
 
   test("validates dimensions and accepts BufferSource input", () => {
-    expect(() => new RioTerminal({ cols: 0 })).toThrow(
-      expect.objectContaining({ code: "ERR_OUT_OF_RANGE" }),
-    );
-    expect(() => new RioTerminal({ rows: 5000 })).toThrow(
-      expect.objectContaining({ code: "ERR_OUT_OF_RANGE" }),
-    );
+    expect(() => new RioTerminal({ cols: 0 })).toThrow(expect.objectContaining({ code: "ERR_OUT_OF_RANGE" }));
+    expect(() => new RioTerminal({ rows: 5000 })).toThrow(expect.objectContaining({ code: "ERR_OUT_OF_RANGE" }));
 
     const terminal = new RioTerminal({ cols: 2, rows: 2 });
     expect(terminal.write(new TextEncoder().encode("é"))).toBe(2);
-    expect(() => terminal.resize(0, 1)).toThrow(
-      expect.objectContaining({ code: "ERR_OUT_OF_RANGE" }),
-    );
+    expect(() => terminal.resize(0, 1)).toThrow(expect.objectContaining({ code: "ERR_OUT_OF_RANGE" }));
     // @ts-expect-error
-    expect(() => terminal.write(123)).toThrow(
-      expect.objectContaining({ code: "ERR_INVALID_ARG_TYPE" }),
-    );
+    expect(() => terminal.write(123)).toThrow(expect.objectContaining({ code: "ERR_INVALID_ARG_TYPE" }));
   });
 
   test("returns complete graphemes at visible cell positions", () => {
@@ -1965,13 +1969,9 @@ describe("bun:rio", () => {
       [0, -1],
       [0, 2],
     ] as const) {
-      expect(() => terminal.cellText(col, row)).toThrow(
-        expect.objectContaining({ code: "ERR_OUT_OF_RANGE" }),
-      );
+      expect(() => terminal.cellText(col, row)).toThrow(expect.objectContaining({ code: "ERR_OUT_OF_RANGE" }));
     }
-    expect(() => terminal.cellText(1.5, 0)).toThrow(
-      expect.objectContaining({ code: "ERR_INVALID_ARG_TYPE" }),
-    );
+    expect(() => terminal.cellText(1.5, 0)).toThrow(expect.objectContaining({ code: "ERR_INVALID_ARG_TYPE" }));
   });
 
   test("omits wide-character wrap placeholders from text and cell widths", () => {

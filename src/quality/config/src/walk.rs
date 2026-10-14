@@ -72,7 +72,9 @@ impl GitignoreChecker {
     /// Relative paths are resolved against `cwd`.
     pub fn is_gitignored(&mut self, path: &Path, cwd: &Path) -> bool {
         let path = resolve_against_cwd(path, cwd);
-        let is_dir = path.symlink_metadata().is_ok_and(|metadata| metadata.is_dir());
+        let is_dir = path
+            .symlink_metadata()
+            .is_ok_and(|metadata| metadata.is_dir());
 
         // Match from the VCS boundary so ignored ancestors between it and the target are checked.
         // Without a boundary, start at the filesystem root
@@ -82,14 +84,18 @@ impl GitignoreChecker {
         let root = vcs_root
             .unwrap_or_else(|| path.ancestors().last().unwrap_or(path.as_path()))
             .to_path_buf();
-        let Ok(relative) = path.strip_prefix(&root) else { return false };
+        let Ok(relative) = path.strip_prefix(&root) else {
+            return false;
+        };
 
         let matcher = match self.matchers.entry(root) {
             Entry::Occupied(entry) => entry.into_mut(),
             Entry::Vacant(entry) => {
                 let mut builder = WalkBuilder::new(entry.key());
                 configure_walk_builder(&mut builder, has_vcs_boundary);
-                let Some(matcher) = builder.build_matchers().pop() else { return false };
+                let Some(matcher) = builder.build_matchers().pop() else {
+                    return false;
+                };
                 entry.insert(matcher)
             }
         };
@@ -116,7 +122,9 @@ impl GitignoreChecker {
 /// When `paths` is empty, returns `true`.
 pub fn all_paths_have_vcs_boundary(paths: &[PathBuf], cwd: &Path) -> bool {
     let mut cache = FxHashMap::default();
-    paths.iter().all(|path| has_vcs_boundary(path, cwd, &mut cache))
+    paths
+        .iter()
+        .all(|path| has_vcs_boundary(path, cwd, &mut cache))
 }
 
 fn has_vcs_boundary(path: &Path, cwd: &Path, cache: &mut FxHashMap<PathBuf, bool>) -> bool {
@@ -130,11 +138,19 @@ fn has_vcs_marker(dir: &Path) -> bool {
 }
 
 fn resolve_against_cwd(path: &Path, cwd: &Path) -> PathBuf {
-    if path.is_absolute() { path.to_path_buf() } else { cwd.join(path) }
+    if path.is_absolute() {
+        path.to_path_buf()
+    } else {
+        cwd.join(path)
+    }
 }
 
 fn find_vcs_boundary<'a>(path: &'a Path, cache: &mut FxHashMap<PathBuf, bool>) -> Option<&'a Path> {
-    let start = if path.is_file() { path.parent().unwrap_or(path) } else { path };
+    let start = if path.is_file() {
+        path.parent().unwrap_or(path)
+    } else {
+        path
+    };
     start.ancestors().find(|dir| {
         if let Some(&has) = cache.get(*dir) {
             return has;
@@ -271,10 +287,17 @@ mod test {
         fs::create_dir_all(common_git_dir.join("info")).unwrap();
         fs::create_dir_all(&worktree_git_dir).unwrap();
         fs::create_dir(&worktree_path).unwrap();
-        fs::write(worktree_path.join(".git"), format!("gitdir: {}\n", worktree_git_dir.display()))
-            .unwrap();
+        fs::write(
+            worktree_path.join(".git"),
+            format!("gitdir: {}\n", worktree_git_dir.display()),
+        )
+        .unwrap();
         fs::write(worktree_git_dir.join("commondir"), "../..\n").unwrap();
-        fs::write(common_git_dir.join("info").join("exclude"), "ignored.js\nignored/\n").unwrap();
+        fs::write(
+            common_git_dir.join("info").join("exclude"),
+            "ignored.js\nignored/\n",
+        )
+        .unwrap();
 
         let ignored_dir = worktree_path.join("ignored");
         fs::create_dir(&ignored_dir).unwrap();

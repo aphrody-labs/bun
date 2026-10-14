@@ -266,6 +266,11 @@ fn test() {
         ),
     ];
 
-    Tester::new(RequireDefaultExport::NAME, RequireDefaultExport::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        RequireDefaultExport::NAME,
+        RequireDefaultExport::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

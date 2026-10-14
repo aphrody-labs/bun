@@ -40,7 +40,13 @@ impl Token {
     /// round-trip in the concat hot loop.
     #[inline]
     pub(crate) fn translated(self, line_offset: u32, source_offset: u32, name_offset: u32) -> Self {
-        let shift = |id: u32, offset: u32| if id == INVALID_ID { INVALID_ID } else { id + offset };
+        let shift = |id: u32, offset: u32| {
+            if id == INVALID_ID {
+                INVALID_ID
+            } else {
+                id + offset
+            }
+        };
         Self {
             dst_line: self.dst_line + line_offset,
             source_id: shift(self.source_id, source_offset),
@@ -71,12 +77,20 @@ impl Token {
 
     #[inline]
     pub fn get_name_id(&self) -> Option<u32> {
-        if self.name_id == INVALID_ID { None } else { Some(self.name_id) }
+        if self.name_id == INVALID_ID {
+            None
+        } else {
+            Some(self.name_id)
+        }
     }
 
     #[inline]
     pub fn get_source_id(&self) -> Option<u32> {
-        if self.source_id == INVALID_ID { None } else { Some(self.source_id) }
+        if self.source_id == INVALID_ID {
+            None
+        } else {
+            Some(self.source_id)
+        }
     }
 }
 
@@ -159,24 +173,33 @@ impl<'sm, 'data> SourceViewToken<'sm, 'data> {
     }
 
     pub fn get_name(&self) -> Option<&'sm str> {
-        self.get_name_id().and_then(|id| self.sourcemap.get_name(id))
+        self.get_name_id()
+            .and_then(|id| self.sourcemap.get_name(id))
     }
 
     pub fn get_source(&self) -> Option<&'sm str> {
-        self.get_source_id().and_then(|id| self.sourcemap.get_source(id))
+        self.get_source_id()
+            .and_then(|id| self.sourcemap.get_source(id))
     }
 
     pub fn get_source_content(&self) -> Option<&'sm str> {
-        self.get_source_id().and_then(|id| self.sourcemap.get_source_content(id))
+        self.get_source_id()
+            .and_then(|id| self.sourcemap.get_source_content(id))
     }
 
     pub fn get_source_and_content(&self) -> Option<(&'sm str, &'sm str)> {
-        self.get_source_id().and_then(|id| self.sourcemap.get_source_and_content(id))
+        self.get_source_id()
+            .and_then(|id| self.sourcemap.get_source_and_content(id))
     }
 
     #[expect(clippy::wrong_self_convention)]
     pub fn to_tuple(&self) -> (Option<&'sm str>, u32, u32, Option<&'sm str>) {
-        (self.get_source(), self.get_src_line(), self.get_src_col(), self.get_name())
+        (
+            self.get_source(),
+            self.get_src_line(),
+            self.get_src_col(),
+            self.get_name(),
+        )
     }
 }
 
@@ -216,7 +239,10 @@ mod tests {
     #[test]
     fn token_translated() {
         let token = Token::new(1, 2, 3, 4, Some(5), Some(6));
-        assert_eq!(token.translated(10, 100, 1000), Token::new(11, 2, 3, 4, Some(105), Some(1006)));
+        assert_eq!(
+            token.translated(10, 100, 1000),
+            Token::new(11, 2, 3, 4, Some(105), Some(1006))
+        );
 
         // The missing-id sentinel survives translation rather than wrapping.
         let missing = Token::new(0, 0, 0, 0, None, None);
@@ -239,7 +265,10 @@ mod tests {
         assert_eq!(token.get_name(), Some("name0"));
         assert_eq!(token.get_source(), Some("src0.js"));
         assert_eq!(token.get_source_content(), Some("the source content"));
-        assert_eq!(token.get_source_and_content(), Some(("src0.js", "the source content")));
+        assert_eq!(
+            token.get_source_and_content(),
+            Some(("src0.js", "the source content"))
+        );
         assert_eq!(token.to_tuple(), (Some("src0.js"), 4, 5, Some("name0")));
     }
 

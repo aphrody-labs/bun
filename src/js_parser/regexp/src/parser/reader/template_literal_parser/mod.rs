@@ -65,7 +65,10 @@ mod test {
             r"`Dollar: ${{}`", // should fail, as `${` is not supported
         ] {
             let result = Parser::new(source_text, Options::default()).parse();
-            assert!(result.is_err(), "Expect to fail: {source_text} but passed...");
+            assert!(
+                result.is_err(),
+                "Expect to fail: {source_text} but passed..."
+            );
         }
     }
 }

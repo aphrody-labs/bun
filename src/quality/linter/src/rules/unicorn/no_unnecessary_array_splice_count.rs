@@ -65,7 +65,13 @@ impl Rule for NoUnnecessaryArraySpliceCount {
         };
 
         if call_expr.optional
-            || !is_method_call(call_expr, None, Some(&["splice", "toSpliced"]), Some(2), Some(2))
+            || !is_method_call(
+                call_expr,
+                None,
+                Some(&["splice", "toSpliced"]),
+                Some(2),
+                Some(2),
+            )
         {
             return;
         }
@@ -77,7 +83,10 @@ impl Rule for NoUnnecessaryArraySpliceCount {
         };
 
         if matches!(member_expr.object, Expression::CallExpression(_))
-            || call_expr.arguments.iter().any(|arg| matches!(arg, Argument::SpreadElement(_)))
+            || call_expr
+                .arguments
+                .iter()
+                .any(|arg| matches!(arg, Argument::SpreadElement(_)))
         {
             return;
         }
@@ -86,7 +95,10 @@ impl Rule for NoUnnecessaryArraySpliceCount {
             return;
         };
 
-        let Some(arg_expr) = second_arg.as_expression().map(Expression::without_parentheses) else {
+        let Some(arg_expr) = second_arg
+            .as_expression()
+            .map(Expression::without_parentheses)
+        else {
             return;
         };
 
@@ -244,8 +256,14 @@ fn test() {
         ("foo.toSpliced(1, foo?.length)", "foo.toSpliced(1)"),
         ("foo?.toSpliced(1, foo?.length)", "foo?.toSpliced(1)"),
         ("foo?.toSpliced(1, Infinity)", "foo?.toSpliced(1)"),
-        ("foo?.toSpliced(1, Number.POSITIVE_INFINITY)", "foo?.toSpliced(1)"),
-        ("foo.bar.toSpliced(1, foo.bar.length)", "foo.bar.toSpliced(1)"),
+        (
+            "foo?.toSpliced(1, Number.POSITIVE_INFINITY)",
+            "foo?.toSpliced(1)",
+        ),
+        (
+            "foo.bar.toSpliced(1, foo.bar.length)",
+            "foo.bar.toSpliced(1)",
+        ),
     ];
 
     Tester::new(

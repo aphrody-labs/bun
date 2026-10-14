@@ -71,8 +71,11 @@ pub fn codegen(
     source_text: String,
     options: Option<Options>,
 ) -> napi::Result<Option<CodegenResult>> {
-    let options =
-        options.unwrap_or(Options { lang: None, source_type: None, preserve_parens: None });
+    let options = options.unwrap_or(Options {
+        lang: None,
+        source_type: None,
+        preserve_parens: None,
+    });
 
     // Oxc should never panic, but a panic in a Node addon aborts the process, which would throw
     // away the whole conformance run. Contain it, surfacing it as a JS error. `null` is reserved
@@ -126,7 +129,10 @@ fn codegen_impl(
     let ret = Codegen::new().with_options(codegen_options).build(&program);
     let map = ret.map.expect("source map generation was enabled").into();
 
-    Some(CodegenResult { code: ret.code, map })
+    Some(CodegenResult {
+        code: ret.code,
+        map,
+    })
 }
 
 /// Erases the parts of Oxc's AST which its own ESTree representation cannot carry.
@@ -172,7 +178,11 @@ impl<'a> VisitMut<'a> for Normalize {
     ///  It also does not record which keyword introduced the attributes, so `assert {...}` and `with {...}`
     /// are indistinguishable.
     fn visit_import_declaration(&mut self, decl: &mut ImportDeclaration<'a>) {
-        if decl.specifiers.as_ref().is_some_and(|specifiers| specifiers.is_empty()) {
+        if decl
+            .specifiers
+            .as_ref()
+            .is_some_and(|specifiers| specifiers.is_empty())
+        {
             decl.specifiers = None;
         }
         normalize_with_clause(&mut decl.with_clause);

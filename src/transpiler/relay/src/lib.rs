@@ -129,9 +129,17 @@ impl<'a> Relay<'a> {
     pub fn new(options: RelayOptions, source_path: &Path) -> Self {
         let relative_artifact_dir = options.artifact_directory.as_ref().map(|artifact_dir| {
             let source_dir = source_path.parent().unwrap_or_else(|| Path::new(""));
-            relative_path(&source_dir.to_string_lossy(), &artifact_dir.to_string_lossy())
+            relative_path(
+                &source_dir.to_string_lossy(),
+                &artifact_dir.to_string_lossy(),
+            )
         });
-        Self { options, relative_artifact_dir, imports: vec![], diagnostics: Diagnostics::new() }
+        Self {
+            options,
+            relative_artifact_dir,
+            imports: vec![],
+            diagnostics: Diagnostics::new(),
+        }
     }
 
     /// Run the transform on `program`.
@@ -142,7 +150,10 @@ impl<'a> Relay<'a> {
         scoping: Scoping,
     ) -> RelayReturn {
         let scoping = traverse_mut(&mut self, allocator, program, scoping, ());
-        RelayReturn { scoping, diagnostics: self.diagnostics }
+        RelayReturn {
+            scoping,
+            diagnostics: self.diagnostics,
+        }
     }
 
     /// Import path for the artifact of the GraphQL definition `name`.
@@ -165,8 +176,12 @@ impl<'a> Relay<'a> {
 impl<'a> Traverse<'a, ()> for Relay<'a> {
     #[inline] // Fast path: most expressions are not tagged templates.
     fn enter_expression(&mut self, expr: &mut Expression<'a>, ctx: &mut TraverseCtx<'a>) {
-        let Expression::TaggedTemplateExpression(tagged) = expr else { return };
-        let Expression::Identifier(tag) = &tagged.tag else { return };
+        let Expression::TaggedTemplateExpression(tagged) = expr else {
+            return;
+        };
+        let Expression::Identifier(tag) = &tagged.tag else {
+            return;
+        };
         if tag.name != "graphql" {
             return;
         }
@@ -225,7 +240,10 @@ impl<'a> Traverse<'a, ()> for Relay<'a> {
 
 /// Find the first GraphQL definition name across the template's quasis.
 fn extract_definition_name<'a>(template: &TemplateLiteral<'a>) -> Option<&'a str> {
-    template.quasis.iter().find_map(|quasi| find_definition_name(quasi.value.raw.as_str()))
+    template
+        .quasis
+        .iter()
+        .find_map(|quasi| find_definition_name(quasi.value.raw.as_str()))
 }
 
 const KEYWORDS: [&str; 4] = ["fragment", "mutation", "query", "subscription"];
@@ -297,16 +315,30 @@ fn find_definition_name(text: &str) -> Option<&str> {
 fn relative_path(from: &str, to: &str) -> String {
     let from = normalize(from);
     let to = normalize(to);
-    let is_windows = from.first().is_some_and(|component| is_windows_drive(component))
-        && to.first().is_some_and(|component| is_windows_drive(component));
+    let is_windows = from
+        .first()
+        .is_some_and(|component| is_windows_drive(component))
+        && to
+            .first()
+            .is_some_and(|component| is_windows_drive(component));
     let common = from
         .iter()
         .zip(&to)
-        .take_while(|(a, b)| if is_windows { a.eq_ignore_ascii_case(b) } else { a == b })
+        .take_while(|(a, b)| {
+            if is_windows {
+                a.eq_ignore_ascii_case(b)
+            } else {
+                a == b
+            }
+        })
         .count();
     let mut components = vec![".."; from.len() - common];
     components.extend_from_slice(&to[common..]);
-    if components.is_empty() { ".".to_string() } else { components.join("/") }
+    if components.is_empty() {
+        ".".to_string()
+    } else {
+        components.join("/")
+    }
 }
 
 fn is_windows_drive(component: &str) -> bool {
@@ -338,9 +370,18 @@ mod test {
 
     #[test]
     fn definition_name() {
-        assert_eq!(find_definition_name("query FooQuery { id }"), Some("FooQuery"));
-        assert_eq!(find_definition_name("fragment Foo_bar on User { id }"), Some("Foo_bar"));
-        assert_eq!(find_definition_name("# query Hidden\nquery Real { id }"), Some("Real"));
+        assert_eq!(
+            find_definition_name("query FooQuery { id }"),
+            Some("FooQuery")
+        );
+        assert_eq!(
+            find_definition_name("fragment Foo_bar on User { id }"),
+            Some("Foo_bar")
+        );
+        assert_eq!(
+            find_definition_name("# query Hidden\nquery Real { id }"),
+            Some("Real")
+        );
         assert_eq!(find_definition_name("query { id }"), None);
         assert_eq!(find_definition_name("myquery Foo { id }"), None);
     }
@@ -349,8 +390,14 @@ mod test {
     fn relative_paths() {
         assert_eq!(relative_path("/a/b", "/a/b"), ".");
         assert_eq!(relative_path("/a/b/c", "/a/d/e"), "../../d/e");
-        assert_eq!(relative_path("src/pages", "src/__generated__"), "../__generated__");
+        assert_eq!(
+            relative_path("src/pages", "src/__generated__"),
+            "../__generated__"
+        );
         assert_eq!(relative_path("C:\\a\\b", "C:\\a\\c"), "../c");
-        assert_eq!(relative_path("C:\\Repo\\src", "c:\\repo\\src\\__generated__"), "__generated__");
+        assert_eq!(
+            relative_path("C:\\Repo\\src", "c:\\repo\\src\\__generated__"),
+            "__generated__"
+        );
     }
 }

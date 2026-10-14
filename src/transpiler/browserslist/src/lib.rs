@@ -148,7 +148,12 @@ fn sort_and_dedup_distribs(distribs: &mut Vec<Distrib>) {
 
     let mut keyed: Vec<(semver::Version, Distrib)> = std::mem::take(distribs)
         .into_iter()
-        .map(|d| (d.version().parse::<semver::Version>().unwrap_or_default(), d))
+        .map(|d| {
+            (
+                d.version().parse::<semver::Version>().unwrap_or_default(),
+                d,
+            )
+        })
         .collect();
     keyed.sort_unstable_by(|(va, a), (vb, b)| a.name().cmp(b.name()).then_with(|| vb.cmp(va)));
     distribs.extend(keyed.into_iter().map(|(_, d)| d));

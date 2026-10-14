@@ -36,19 +36,22 @@ fn es_target() {
 
     #[cfg_attr(miri, expect(unused_variables))]
     let snapshot =
-        cases.into_iter().enumerate().fold(String::new(), |mut w, (i, (target, case))| {
-            let options = TransformOptions::from_target(target).unwrap();
-            let result = match test(case, &options) {
-                Ok(code) => code,
-                Err(errors) => errors
-                    .into_iter()
-                    .map(|error| error.render_with_source_code(case.to_string()))
-                    .collect::<Vec<_>>()
-                    .join("\n"),
-            };
-            write!(w, "########## {i} {target}\n{case}\n----------\n{result}\n").unwrap();
-            w
-        });
+        cases
+            .into_iter()
+            .enumerate()
+            .fold(String::new(), |mut w, (i, (target, case))| {
+                let options = TransformOptions::from_target(target).unwrap();
+                let result = match test(case, &options) {
+                    Ok(code) => code,
+                    Err(errors) => errors
+                        .into_iter()
+                        .map(|error| error.render_with_source_code(case.to_string()))
+                        .collect::<Vec<_>>()
+                        .join("\n"),
+                };
+                write!(w, "########## {i} {target}\n{case}\n----------\n{result}\n").unwrap();
+                w
+            });
 
     #[cfg(not(miri))]
     {

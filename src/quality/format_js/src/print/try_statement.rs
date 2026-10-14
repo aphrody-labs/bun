@@ -34,8 +34,10 @@ impl<'a> FormatWrite<'a> for AstNode<'a, TryStatement<'a>> {
         if let Some(finalizer) = finalizer {
             // Lexical scan for the keyword's first byte: the gap holds only trivia and `finally`.
             let previous_end = handler.map_or(block.span().end, |handler| handler.span().end);
-            let before_keyword =
-                f.context().comments().comments_before_character(previous_end, b'f');
+            let before_keyword = f
+                .context()
+                .comments()
+                .comments_before_character(previous_end, b'f');
             // The pending space is dropped at a line start and coalesced otherwise
             write_comments_between_blocks(before_keyword, f);
             write!(f, [space(), "finally"]);
@@ -84,8 +86,10 @@ impl<'a> FormatWrite<'a> for AstNode<'a, CatchParameter<'a>> {
             .iter()
             .any(|comment| comment.is_line() || comment.followed_by_newline());
 
-        let trailing_comments =
-            f.context().comments().comments_before_character(self.span().end, b')');
+        let trailing_comments = f
+            .context()
+            .comments()
+            .comments_before_character(self.span().end, b')');
         let trailing_comment_with_break = trailing_comments
             .iter()
             .any(|comment| comment.is_line() || comment.preceded_by_newline());
@@ -99,8 +103,10 @@ impl<'a> FormatWrite<'a> for AstNode<'a, CatchParameter<'a>> {
                     write!(f, self.type_annotation());
                     // Re-queried after the cursor advanced:
                     // the pattern may have printed part of the earlier `trailing_comments` slice already
-                    let remaining =
-                        f.context().comments().comments_before_character(self.span().end, b')');
+                    let remaining = f
+                        .context()
+                        .comments()
+                        .comments_before_character(self.span().end, b')');
                     write!(f, FormatTrailingComments::Comments(remaining));
                 }))
             );
@@ -112,7 +118,10 @@ impl<'a> FormatWrite<'a> for AstNode<'a, CatchParameter<'a>> {
         // Bound the trailing print at the `)`:
         // the generic pass would claim an end-of-line comment past it and flush it beyond the catch body's `{`.
         // (Re-queried again: the branch above advances the cursor.)
-        let remaining = f.context().comments().comments_before_character(self.span().end, b')');
+        let remaining = f
+            .context()
+            .comments()
+            .comments_before_character(self.span().end, b')');
         write!(f, FormatTrailingComments::Comments(remaining));
 
         write!(f, ")");

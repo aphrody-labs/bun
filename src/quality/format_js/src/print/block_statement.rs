@@ -12,8 +12,10 @@ use crate::{
 
 impl<'a> Format<'a, JsFormatContext<'a>> for AstNode<'a, ArenaVec<'a, Statement<'a>>> {
     fn fmt(&self, f: &mut JsFormatter<'_, 'a>) {
-        f.join_nodes_with_hardline()
-            .entries(self.iter().filter(|stmt| !is_dropped_statement(stmt.as_ref())));
+        f.join_nodes_with_hardline().entries(
+            self.iter()
+                .filter(|stmt| !is_dropped_statement(stmt.as_ref())),
+        );
     }
 }
 

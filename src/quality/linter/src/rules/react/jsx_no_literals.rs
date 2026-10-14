@@ -163,12 +163,17 @@ impl Rule for JsxNoLiterals {
 
 impl JsxNoLiterals {
     fn is_allowed_string(str_literal: &str, cfg: &JsxNoLiteralsOptions) -> bool {
-        cfg.allowed_strings.iter().any(|allowed| allowed.as_str().trim() == str_literal.trim())
+        cfg.allowed_strings
+            .iter()
+            .any(|allowed| allowed.as_str().trim() == str_literal.trim())
     }
 
     fn has_parent_jsx_element(node: &AstNode, ctx: &LintContext) -> bool {
         ctx.nodes().ancestors(node.id()).any(|ancestor| {
-            matches!(ancestor.kind(), AstKind::JSXElement(_) | AstKind::JSXFragment(_))
+            matches!(
+                ancestor.kind(),
+                AstKind::JSXElement(_) | AstKind::JSXFragment(_)
+            )
         })
     }
 
@@ -176,7 +181,9 @@ impl JsxNoLiterals {
         binding: &BindingPattern,
         symbol_id: SymbolId,
     ) -> Option<CompactStr> {
-        let BindingPattern::ObjectPattern(obj) = binding else { return None };
+        let BindingPattern::ObjectPattern(obj) = binding else {
+            return None;
+        };
 
         for prop in &obj.properties {
             if let BindingPattern::BindingIdentifier(local) = &prop.value
@@ -221,7 +228,10 @@ impl JsxNoLiterals {
                 }
             }
             AstKind::VariableDeclarator(declarator)
-                if declarator.init.as_ref().is_some_and(Self::is_require_statement) =>
+                if declarator
+                    .init
+                    .as_ref()
+                    .is_some_and(Self::is_require_statement) =>
             {
                 if let Some(name) = Self::resolve_from_object_pattern(&declarator.id, symbol_id) {
                     return name;
@@ -398,7 +408,10 @@ impl JsxNoLiterals {
         // For member expressions (e.g. `React.Fragment`), the full dotted name is
         // tried first, then the bare last-property name (`Fragment`) as a fallback.
         if let JSXElementName::MemberExpression(member_expr) = &jsx_el.opening_element.name {
-            return self.0.element_overrides.get(&member_expr.property.name.to_compact_str());
+            return self
+                .0
+                .element_overrides
+                .get(&member_expr.property.name.to_compact_str());
         }
 
         None
@@ -411,7 +424,10 @@ impl JsxNoLiterals {
         ctx: &LintContext,
     ) {
         let (options, allow_element) = if let Some(element_override_opts) = element_override_opts {
-            (&element_override_opts.options, element_override_opts.allow_element)
+            (
+                &element_override_opts.options,
+                element_override_opts.allow_element,
+            )
         } else {
             (&self.0.options, false)
         };
@@ -449,7 +465,12 @@ struct JsxNoLiteralsVisitor<'rule, 'ctx, 'a> {
 
 impl<'rule, 'ctx, 'a> JsxNoLiteralsVisitor<'rule, 'ctx, 'a> {
     fn new(rule: &'rule JsxNoLiterals, ctx: &'ctx LintContext<'a>) -> Self {
-        Self { rule, ctx, current_element_opts: None, inherited_opts: None }
+        Self {
+            rule,
+            ctx,
+            current_element_opts: None,
+            inherited_opts: None,
+        }
     }
 }
 
@@ -462,8 +483,9 @@ impl<'a> Visit<'a> for JsxNoLiteralsVisitor<'_, '_, 'a> {
         let previous_element_opts = self.current_element_opts;
         let previous_inherited_opts = self.inherited_opts;
         self.current_element_opts = element_opts;
-        self.inherited_opts =
-            own_opts.filter(|opts| opts.apply_to_nested_elements).or(previous_inherited_opts);
+        self.inherited_opts = own_opts
+            .filter(|opts| opts.apply_to_nested_elements)
+            .or(previous_inherited_opts);
 
         walk::walk_jsx_element(self, jsx_el);
 
@@ -472,7 +494,8 @@ impl<'a> Visit<'a> for JsxNoLiteralsVisitor<'_, '_, 'a> {
     }
 
     fn visit_jsx_fragment(&mut self, fragment: &JSXFragment<'a>) {
-        self.rule.check_fragment(fragment, self.current_element_opts, self.ctx);
+        self.rule
+            .check_fragment(fragment, self.current_element_opts, self.ctx);
         walk::walk_jsx_fragment(self, fragment);
     }
 }
@@ -621,11 +644,26 @@ fn test() {
             "<Foo bar={'test'} />",
             Some(serde_json::json!([{ "noStrings": true, "ignoreProps": true }])),
         ),
-        ("<Foo bar={true} />", Some(serde_json::json!([{ "noStrings": true }]))),
-        ("<Foo bar={false} />", Some(serde_json::json!([{ "noStrings": true }]))),
-        ("<Foo bar={100} />", Some(serde_json::json!([{ "noStrings": true }]))),
-        ("<Foo bar={null} />", Some(serde_json::json!([{ "noStrings": true }]))),
-        ("<Foo bar={{}} />", Some(serde_json::json!([{ "noStrings": true }]))),
+        (
+            "<Foo bar={true} />",
+            Some(serde_json::json!([{ "noStrings": true }])),
+        ),
+        (
+            "<Foo bar={false} />",
+            Some(serde_json::json!([{ "noStrings": true }])),
+        ),
+        (
+            "<Foo bar={100} />",
+            Some(serde_json::json!([{ "noStrings": true }])),
+        ),
+        (
+            "<Foo bar={null} />",
+            Some(serde_json::json!([{ "noStrings": true }])),
+        ),
+        (
+            "<Foo bar={{}} />",
+            Some(serde_json::json!([{ "noStrings": true }])),
+        ),
         (
             "
                     class Comp1 extends Component {

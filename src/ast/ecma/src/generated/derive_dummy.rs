@@ -99,7 +99,10 @@ impl<'a> Dummy<'a> for ThisExpression {
     ///
     /// Does not allocate any data into arena.
     fn dummy(allocator: &'a Allocator) -> Self {
-        Self { node_id: Dummy::dummy(allocator), span: Dummy::dummy(allocator) }
+        Self {
+            node_id: Dummy::dummy(allocator),
+            span: Dummy::dummy(allocator),
+        }
     }
 }
 
@@ -130,7 +133,10 @@ impl<'a> Dummy<'a> for Elision {
     ///
     /// Does not allocate any data into arena.
     fn dummy(allocator: &'a Allocator) -> Self {
-        Self { node_id: Dummy::dummy(allocator), span: Dummy::dummy(allocator) }
+        Self {
+            node_id: Dummy::dummy(allocator),
+            span: Dummy::dummy(allocator),
+        }
     }
 }
 
@@ -242,7 +248,10 @@ impl<'a> Dummy<'a> for TemplateElementValue<'a> {
     ///
     /// Does not allocate any data into arena.
     fn dummy(allocator: &'a Allocator) -> Self {
-        Self { raw: Dummy::dummy(allocator), cooked: Dummy::dummy(allocator) }
+        Self {
+            raw: Dummy::dummy(allocator),
+            cooked: Dummy::dummy(allocator),
+        }
     }
 }
 
@@ -338,7 +347,10 @@ impl<'a> Dummy<'a> for ImportMeta {
     ///
     /// Does not allocate any data into arena.
     fn dummy(allocator: &'a Allocator) -> Self {
-        Self { node_id: Dummy::dummy(allocator), span: Dummy::dummy(allocator) }
+        Self {
+            node_id: Dummy::dummy(allocator),
+            span: Dummy::dummy(allocator),
+        }
     }
 }
 
@@ -347,7 +359,10 @@ impl<'a> Dummy<'a> for NewTarget {
     ///
     /// Does not allocate any data into arena.
     fn dummy(allocator: &'a Allocator) -> Self {
-        Self { node_id: Dummy::dummy(allocator), span: Dummy::dummy(allocator) }
+        Self {
+            node_id: Dummy::dummy(allocator),
+            span: Dummy::dummy(allocator),
+        }
     }
 }
 
@@ -623,7 +638,10 @@ impl<'a> Dummy<'a> for Super {
     ///
     /// Does not allocate any data into arena.
     fn dummy(allocator: &'a Allocator) -> Self {
-        Self { node_id: Dummy::dummy(allocator), span: Dummy::dummy(allocator) }
+        Self {
+            node_id: Dummy::dummy(allocator),
+            span: Dummy::dummy(allocator),
+        }
     }
 }
 
@@ -780,7 +798,10 @@ impl<'a> Dummy<'a> for EmptyStatement {
     ///
     /// Does not allocate any data into arena.
     fn dummy(allocator: &'a Allocator) -> Self {
-        Self { node_id: Dummy::dummy(allocator), span: Dummy::dummy(allocator) }
+        Self {
+            node_id: Dummy::dummy(allocator),
+            span: Dummy::dummy(allocator),
+        }
     }
 }
 
@@ -1067,7 +1088,10 @@ impl<'a> Dummy<'a> for DebuggerStatement {
     ///
     /// Does not allocate any data into arena.
     fn dummy(allocator: &'a Allocator) -> Self {
-        Self { node_id: Dummy::dummy(allocator), span: Dummy::dummy(allocator) }
+        Self {
+            node_id: Dummy::dummy(allocator),
+            span: Dummy::dummy(allocator),
+        }
     }
 }
 
@@ -1330,7 +1354,10 @@ impl<'a> Dummy<'a> for ClassHeritage<'a> {
     ///
     /// Has cost of making 1 allocation (16 bytes).
     fn dummy(allocator: &'a Allocator) -> Self {
-        Self { expression: Dummy::dummy(allocator), type_arguments: Dummy::dummy(allocator) }
+        Self {
+            expression: Dummy::dummy(allocator),
+            type_arguments: Dummy::dummy(allocator),
+        }
     }
 }
 
@@ -1787,7 +1814,10 @@ impl<'a> Dummy<'a> for NullLiteral {
     ///
     /// Does not allocate any data into arena.
     fn dummy(allocator: &'a Allocator) -> Self {
-        Self { node_id: Dummy::dummy(allocator), span: Dummy::dummy(allocator) }
+        Self {
+            node_id: Dummy::dummy(allocator),
+            span: Dummy::dummy(allocator),
+        }
     }
 }
 
@@ -1855,7 +1885,10 @@ impl<'a> Dummy<'a> for RegExp<'a> {
     ///
     /// Does not allocate any data into arena.
     fn dummy(allocator: &'a Allocator) -> Self {
-        Self { pattern: Dummy::dummy(allocator), flags: Dummy::dummy(allocator) }
+        Self {
+            pattern: Dummy::dummy(allocator),
+            flags: Dummy::dummy(allocator),
+        }
     }
 }
 
@@ -1864,7 +1897,10 @@ impl<'a> Dummy<'a> for RegExpPattern<'a> {
     ///
     /// Does not allocate any data into arena.
     fn dummy(allocator: &'a Allocator) -> Self {
-        Self { text: Dummy::dummy(allocator), pattern: Dummy::dummy(allocator) }
+        Self {
+            text: Dummy::dummy(allocator),
+            pattern: Dummy::dummy(allocator),
+        }
     }
 }
 
@@ -1931,7 +1967,10 @@ impl<'a> Dummy<'a> for JSXOpeningFragment {
     ///
     /// Does not allocate any data into arena.
     fn dummy(allocator: &'a Allocator) -> Self {
-        Self { node_id: Dummy::dummy(allocator), span: Dummy::dummy(allocator) }
+        Self {
+            node_id: Dummy::dummy(allocator),
+            span: Dummy::dummy(allocator),
+        }
     }
 }
 
@@ -1940,7 +1979,10 @@ impl<'a> Dummy<'a> for JSXClosingFragment {
     ///
     /// Does not allocate any data into arena.
     fn dummy(allocator: &'a Allocator) -> Self {
-        Self { node_id: Dummy::dummy(allocator), span: Dummy::dummy(allocator) }
+        Self {
+            node_id: Dummy::dummy(allocator),
+            span: Dummy::dummy(allocator),
+        }
     }
 }
 
@@ -2017,7 +2059,10 @@ impl<'a> Dummy<'a> for JSXEmptyExpression {
     ///
     /// Does not allocate any data into arena.
     fn dummy(allocator: &'a Allocator) -> Self {
-        Self { node_id: Dummy::dummy(allocator), span: Dummy::dummy(allocator) }
+        Self {
+            node_id: Dummy::dummy(allocator),
+            span: Dummy::dummy(allocator),
+        }
     }
 }
 
@@ -2410,7 +2455,10 @@ impl<'a> Dummy<'a> for TSAnyKeyword {
     ///
     /// Does not allocate any data into arena.
     fn dummy(allocator: &'a Allocator) -> Self {
-        Self { node_id: Dummy::dummy(allocator), span: Dummy::dummy(allocator) }
+        Self {
+            node_id: Dummy::dummy(allocator),
+            span: Dummy::dummy(allocator),
+        }
     }
 }
 
@@ -2419,7 +2467,10 @@ impl<'a> Dummy<'a> for TSStringKeyword {
     ///
     /// Does not allocate any data into arena.
     fn dummy(allocator: &'a Allocator) -> Self {
-        Self { node_id: Dummy::dummy(allocator), span: Dummy::dummy(allocator) }
+        Self {
+            node_id: Dummy::dummy(allocator),
+            span: Dummy::dummy(allocator),
+        }
     }
 }
 
@@ -2428,7 +2479,10 @@ impl<'a> Dummy<'a> for TSBooleanKeyword {
     ///
     /// Does not allocate any data into arena.
     fn dummy(allocator: &'a Allocator) -> Self {
-        Self { node_id: Dummy::dummy(allocator), span: Dummy::dummy(allocator) }
+        Self {
+            node_id: Dummy::dummy(allocator),
+            span: Dummy::dummy(allocator),
+        }
     }
 }
 
@@ -2437,7 +2491,10 @@ impl<'a> Dummy<'a> for TSNumberKeyword {
     ///
     /// Does not allocate any data into arena.
     fn dummy(allocator: &'a Allocator) -> Self {
-        Self { node_id: Dummy::dummy(allocator), span: Dummy::dummy(allocator) }
+        Self {
+            node_id: Dummy::dummy(allocator),
+            span: Dummy::dummy(allocator),
+        }
     }
 }
 
@@ -2446,7 +2503,10 @@ impl<'a> Dummy<'a> for TSNeverKeyword {
     ///
     /// Does not allocate any data into arena.
     fn dummy(allocator: &'a Allocator) -> Self {
-        Self { node_id: Dummy::dummy(allocator), span: Dummy::dummy(allocator) }
+        Self {
+            node_id: Dummy::dummy(allocator),
+            span: Dummy::dummy(allocator),
+        }
     }
 }
 
@@ -2455,7 +2515,10 @@ impl<'a> Dummy<'a> for TSIntrinsicKeyword {
     ///
     /// Does not allocate any data into arena.
     fn dummy(allocator: &'a Allocator) -> Self {
-        Self { node_id: Dummy::dummy(allocator), span: Dummy::dummy(allocator) }
+        Self {
+            node_id: Dummy::dummy(allocator),
+            span: Dummy::dummy(allocator),
+        }
     }
 }
 
@@ -2464,7 +2527,10 @@ impl<'a> Dummy<'a> for TSUnknownKeyword {
     ///
     /// Does not allocate any data into arena.
     fn dummy(allocator: &'a Allocator) -> Self {
-        Self { node_id: Dummy::dummy(allocator), span: Dummy::dummy(allocator) }
+        Self {
+            node_id: Dummy::dummy(allocator),
+            span: Dummy::dummy(allocator),
+        }
     }
 }
 
@@ -2473,7 +2539,10 @@ impl<'a> Dummy<'a> for TSNullKeyword {
     ///
     /// Does not allocate any data into arena.
     fn dummy(allocator: &'a Allocator) -> Self {
-        Self { node_id: Dummy::dummy(allocator), span: Dummy::dummy(allocator) }
+        Self {
+            node_id: Dummy::dummy(allocator),
+            span: Dummy::dummy(allocator),
+        }
     }
 }
 
@@ -2482,7 +2551,10 @@ impl<'a> Dummy<'a> for TSUndefinedKeyword {
     ///
     /// Does not allocate any data into arena.
     fn dummy(allocator: &'a Allocator) -> Self {
-        Self { node_id: Dummy::dummy(allocator), span: Dummy::dummy(allocator) }
+        Self {
+            node_id: Dummy::dummy(allocator),
+            span: Dummy::dummy(allocator),
+        }
     }
 }
 
@@ -2491,7 +2563,10 @@ impl<'a> Dummy<'a> for TSVoidKeyword {
     ///
     /// Does not allocate any data into arena.
     fn dummy(allocator: &'a Allocator) -> Self {
-        Self { node_id: Dummy::dummy(allocator), span: Dummy::dummy(allocator) }
+        Self {
+            node_id: Dummy::dummy(allocator),
+            span: Dummy::dummy(allocator),
+        }
     }
 }
 
@@ -2500,7 +2575,10 @@ impl<'a> Dummy<'a> for TSSymbolKeyword {
     ///
     /// Does not allocate any data into arena.
     fn dummy(allocator: &'a Allocator) -> Self {
-        Self { node_id: Dummy::dummy(allocator), span: Dummy::dummy(allocator) }
+        Self {
+            node_id: Dummy::dummy(allocator),
+            span: Dummy::dummy(allocator),
+        }
     }
 }
 
@@ -2509,7 +2587,10 @@ impl<'a> Dummy<'a> for TSThisType {
     ///
     /// Does not allocate any data into arena.
     fn dummy(allocator: &'a Allocator) -> Self {
-        Self { node_id: Dummy::dummy(allocator), span: Dummy::dummy(allocator) }
+        Self {
+            node_id: Dummy::dummy(allocator),
+            span: Dummy::dummy(allocator),
+        }
     }
 }
 
@@ -2518,7 +2599,10 @@ impl<'a> Dummy<'a> for TSObjectKeyword {
     ///
     /// Does not allocate any data into arena.
     fn dummy(allocator: &'a Allocator) -> Self {
-        Self { node_id: Dummy::dummy(allocator), span: Dummy::dummy(allocator) }
+        Self {
+            node_id: Dummy::dummy(allocator),
+            span: Dummy::dummy(allocator),
+        }
     }
 }
 
@@ -2527,7 +2611,10 @@ impl<'a> Dummy<'a> for TSBigIntKeyword {
     ///
     /// Does not allocate any data into arena.
     fn dummy(allocator: &'a Allocator) -> Self {
-        Self { node_id: Dummy::dummy(allocator), span: Dummy::dummy(allocator) }
+        Self {
+            node_id: Dummy::dummy(allocator),
+            span: Dummy::dummy(allocator),
+        }
     }
 }
 
@@ -3277,6 +3364,9 @@ impl<'a> Dummy<'a> for JSDocUnknownType {
     ///
     /// Does not allocate any data into arena.
     fn dummy(allocator: &'a Allocator) -> Self {
-        Self { node_id: Dummy::dummy(allocator), span: Dummy::dummy(allocator) }
+        Self {
+            node_id: Dummy::dummy(allocator),
+            span: Dummy::dummy(allocator),
+        }
     }
 }

@@ -37,7 +37,10 @@ fn has_duplicates<T: AsRef<str>>(modifiers: &[T]) -> bool {
 
 fn is_valid_bench_chain<T: AsRef<str>>(modifiers: &[T]) -> bool {
     for modifier in modifiers {
-        if !matches!(modifier.as_ref(), "only" | "runIf" | "skip" | "skipIf" | "todo") {
+        if !matches!(
+            modifier.as_ref(),
+            "only" | "runIf" | "skip" | "skipIf" | "todo"
+        ) {
             return false;
         }
     }
@@ -144,7 +147,12 @@ mod tests {
         assert!(is_valid_vitest_call(&["describe", "only"]));
         assert!(is_valid_vitest_call(&["describe", "for"]));
         assert!(is_valid_vitest_call(&["describe", "concurrent", "each"]));
-        assert!(is_valid_vitest_call(&["describe", "only", "concurrent", "each"]));
+        assert!(is_valid_vitest_call(&[
+            "describe",
+            "only",
+            "concurrent",
+            "each"
+        ]));
 
         // each must be at the end
         assert!(!is_valid_vitest_call(&["describe", "each", "only"]));

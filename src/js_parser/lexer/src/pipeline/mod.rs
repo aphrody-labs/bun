@@ -1,7 +1,11 @@
 // Kernel lint policy (this module tree and `lanes`):
 // the `unsafe fn` boundary is the reviewed surface, and the pedantic/nursery
 // style lints fight the SIMD idiom. API modules keep the full workspace bar.
-#![allow(unsafe_op_in_unsafe_fn, clippy::missing_safety_doc, clippy::undocumented_unsafe_blocks)]
+#![allow(
+    unsafe_op_in_unsafe_fn,
+    clippy::missing_safety_doc,
+    clippy::undocumented_unsafe_blocks
+)]
 #![allow(clippy::pedantic, clippy::nursery)]
 #![allow(clippy::needless_range_loop, clippy::manual_range_contains)]
 
@@ -138,7 +142,10 @@ impl Lexer {
         module: bool,
         vutf8: bool,
     ) -> usize {
-        debug_assert!(src.len() >= n + PAD, "source must extend PAD zeroed bytes past n");
+        debug_assert!(
+            src.len() >= n + PAD,
+            "source must extend PAD zeroed bytes past n"
+        );
         self.ensure(n);
         self.lanes.clear();
         self.lanes.module = module;
@@ -163,10 +170,38 @@ impl Lexer {
         // Keyword recognition is mode-scoped: the TS set (and its wider
         // kwinit letter class) only ever sees TS input, so JS lexing is
         // byte-identical to a build without it.
-        classify(ts, sp, n, nb, word, st, kwinit, opch, digit, dot, misc, kind);
+        classify(
+            ts, sp, n, nb, word, st, kwinit, opch, digit, dot, misc, kind,
+        );
         let nesc = misc_pre(sp, n, nb, st, word, misc, kind, vutf8, &mut self.lanes);
-        carve(src, n, st, kind, opch, word, digit, dot, kwinit, jsx, ts, &mut self.lanes);
-        coalesce(sp, n, st, opch, word, digit, dot, kwinit, kind, kwpos, ts, &mut self.lanes);
+        carve(
+            src,
+            n,
+            st,
+            kind,
+            opch,
+            word,
+            digit,
+            dot,
+            kwinit,
+            jsx,
+            ts,
+            &mut self.lanes,
+        );
+        coalesce(
+            sp,
+            n,
+            st,
+            opch,
+            word,
+            digit,
+            dot,
+            kwinit,
+            kind,
+            kwpos,
+            ts,
+            &mut self.lanes,
+        );
         misc_post(sp, n, st, word, misc, kind, nesc);
         let w = compress(
             src,

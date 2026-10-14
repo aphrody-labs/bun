@@ -186,12 +186,21 @@ fn test() {
 
     let fix = vec![
         (r"foo.join()", r#"foo.join(",")"#),
-        (r"foo.join                 ()", r#"foo.join                 (",")"#),
+        (
+            r"foo.join                 ()",
+            r#"foo.join                 (",")"#,
+        ),
         (r"[].join.call(foo)", r#"[].join.call(foo, ",")"#),
         (r"[].join.call(foo,)", r#"[].join.call(foo, ",",)"#),
         (r"[].join.call(foo , );", r#"[].join.call(foo, "," , );"#),
-        (r"Array.prototype.join.call(foo)", r#"Array.prototype.join.call(foo, ",")"#),
-        (r"Array.prototype.join.call(foo, )", r#"Array.prototype.join.call(foo, ",", )"#),
+        (
+            r"Array.prototype.join.call(foo)",
+            r#"Array.prototype.join.call(foo, ",")"#,
+        ),
+        (
+            r"Array.prototype.join.call(foo, )",
+            r#"Array.prototype.join.call(foo, ",", )"#,
+        ),
         (r"foo?.join()", r#"foo?.join(",")"#),
         // a multi-byte callee must not shift the search for `(`
         ("аrr.join()", r#"аrr.join(",")"#),
@@ -200,7 +209,12 @@ fn test() {
         ("foo.join/* ( */()", r#"foo.join/* ( */(",")"#),
     ];
 
-    Tester::new(RequireArrayJoinSeparator::NAME, RequireArrayJoinSeparator::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        RequireArrayJoinSeparator::NAME,
+        RequireArrayJoinSeparator::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

@@ -271,7 +271,9 @@ struct StableSidemap {
 
 impl StableSidemap {
     fn new(identifier_count: usize) -> Self {
-        StableSidemap { map: IndexVec::from_vec(vec![None; identifier_count]) }
+        StableSidemap {
+            map: IndexVec::from_vec(vec![None; identifier_count]),
+        }
     }
 
     fn handle_instruction(&mut self, instr: &Instruction, env: &Environment) {
@@ -327,7 +329,9 @@ impl StableSidemap {
                     }
                 }
             }
-            InstructionValue::StoreLocal { lvalue, value: val, .. } => {
+            InstructionValue::StoreLocal {
+                lvalue, value: val, ..
+            } => {
                 if let Some(entry) = self.map[val.identifier] {
                     self.map[lvalue_id] = Some(entry);
                     self.map[lvalue.place.identifier] = Some(entry);
@@ -398,7 +402,9 @@ fn get_hook_kind_for_type<'a>(
 
 fn is_stable_type(ty: &Type) -> bool {
     match ty {
-        Type::Function { shape_id: Some(id), .. } => {
+        Type::Function {
+            shape_id: Some(id), ..
+        } => {
             matches!(
                 id.as_str(),
                 "BuiltInSetState"
@@ -575,7 +581,10 @@ fn apply_reactive_flags_replay(
             match &instr.value {
                 InstructionValue::CallExpression { callee, .. } => {
                     let callee_ty = &env.types[env.identifiers[callee.identifier].type_];
-                    if get_hook_kind_for_type(env, callee_ty).ok().flatten().is_some()
+                    if get_hook_kind_for_type(env, callee_ty)
+                        .ok()
+                        .flatten()
+                        .is_some()
                         || is_use_operator_type(callee_ty)
                     {
                         has_reactive_input = true;
@@ -587,7 +596,10 @@ fn apply_reactive_flags_replay(
                 }
                 InstructionValue::MethodCall { property, .. } => {
                     let property_ty = &env.types[env.identifiers[property.identifier].type_];
-                    if get_hook_kind_for_type(env, property_ty).ok().flatten().is_some()
+                    if get_hook_kind_for_type(env, property_ty)
+                        .ok()
+                        .flatten()
+                        .is_some()
                         || is_use_operator_type(property_ty)
                     {
                         has_reactive_input = true;

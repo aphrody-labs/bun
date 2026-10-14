@@ -137,12 +137,26 @@ pub fn align_reactive_scopes_to_block_scopes_hir(func: &mut HirFunction, env: &m
 
             let lvalue_ids = each_instruction_lvalue_ids(instr);
             for lvalue_id in lvalue_ids {
-                record_place_id(eval_order, lvalue_id, &node, env, &mut active_scopes, &mut seen);
+                record_place_id(
+                    eval_order,
+                    lvalue_id,
+                    &node,
+                    env,
+                    &mut active_scopes,
+                    &mut seen,
+                );
             }
 
             let operand_ids = each_instruction_value_operand_ids(&instr.value, env);
             for operand_id in operand_ids {
-                record_place_id(eval_order, operand_id, &node, env, &mut active_scopes, &mut seen);
+                record_place_id(
+                    eval_order,
+                    operand_id,
+                    &node,
+                    env,
+                    &mut active_scopes,
+                    &mut seen,
+                );
             }
         }
 
@@ -202,8 +216,9 @@ pub fn align_reactive_scopes_to_block_scopes_hir(func: &mut HirFunction, env: &m
             }
         } else if let Some(goto_block) = is_goto {
             // Handle goto to label
-            let start_pos =
-                active_block_fallthrough_ranges.iter().position(|r| r.fallthrough == goto_block);
+            let start_pos = active_block_fallthrough_ranges
+                .iter()
+                .position(|r| r.fallthrough == goto_block);
             let top_idx = if active_block_fallthrough_ranges.is_empty() {
                 None
             } else {
@@ -293,7 +308,11 @@ fn record_place_id(
     let scope_id = match env.identifiers[identifier_id].scope {
         Some(scope_id) => {
             let scope = &env.scopes[scope_id];
-            if id >= scope.range.start && id < scope.range.end { Some(scope_id) } else { None }
+            if id >= scope.range.start && id < scope.range.end {
+                Some(scope_id)
+            } else {
+                None
+            }
         }
         None => None,
     };

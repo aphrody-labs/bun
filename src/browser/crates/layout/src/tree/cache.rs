@@ -64,21 +64,24 @@ fn available_space_cache_key(input: AvailableSpace) -> u32 {
 #[inline(always)]
 #[allow(dead_code)]
 fn size_available_space_cache_key(input: Size<AvailableSpace>) -> u64 {
-    (available_space_cache_key(input.width) as u64) << 32 | available_space_cache_key(input.height) as u64
+    (available_space_cache_key(input.width) as u64) << 32
+        | available_space_cache_key(input.height) as u64
 }
 
 /// Encodes combination of a `known_dimension` (Option<f32>) and `AvailableSpace` in
 /// a single dimension into a cache key in a single dimension.
 #[inline(always)]
 fn mixed_cache_key(kd: Option<f32>, avs: AvailableSpace) -> u32 {
-    kd.map(|kd| kd.to_bits()).unwrap_or_else(|| available_space_cache_key(avs))
+    kd.map(|kd| kd.to_bits())
+        .unwrap_or_else(|| available_space_cache_key(avs))
 }
 
 /// Encodes combination of a `known_dimension` (Option<f32>) and `AvailableSpace` in
 /// two dimensions into a cache key in a single dimension.
 #[inline(always)]
 fn size_mixed_cache_key(kd: Size<Option<f32>>, avs: Size<AvailableSpace>) -> u64 {
-    (mixed_cache_key(kd.width, avs.width) as u64) << 32 | mixed_cache_key(kd.height, avs.height) as u64
+    (mixed_cache_key(kd.width, avs.width) as u64) << 32
+        | mixed_cache_key(kd.height, avs.height) as u64
 }
 
 #[inline(always)]
@@ -123,7 +126,8 @@ impl From<&LayoutInput> for CacheKey {
 
         Self {
             kd_available_space: size_mixed_cache_key(input.known_dimensions, input.available_space),
-            parent_size: (size_option_cache_key(input.parent_size) & NON_SIGN_BITS_MASK) | extra_bits,
+            parent_size: (size_option_cache_key(input.parent_size) & NON_SIGN_BITS_MASK)
+                | extra_bits,
         }
     }
 }
@@ -193,7 +197,11 @@ impl Default for Cache {
 impl Cache {
     /// Create a new empty cache
     pub const fn new() -> Self {
-        Self { final_layout_entry: None, measure_entries: [None; CACHE_SIZE], is_empty: true }
+        Self {
+            final_layout_entry: None,
+            measure_entries: [None; CACHE_SIZE],
+            is_empty: true,
+        }
     }
 
     /// Return the cache slot to cache the current computed result in
@@ -224,7 +232,10 @@ impl Cache {
     ///   - Slot 7: x-axis available space is MinContent and y-axis available space is MaxContent or Definite
     ///   - Slot 8: x-axis available space is MinContent and y-axis available space is MinContent
     #[inline]
-    fn compute_cache_slot(known_dimensions: Size<Option<f32>>, available_space: Size<AvailableSpace>) -> usize {
+    fn compute_cache_slot(
+        known_dimensions: Size<Option<f32>>,
+        available_space: Size<AvailableSpace>,
+    ) -> usize {
         use AvailableSpace::{Definite, MaxContent, MinContent};
 
         let has_known_width = known_dimensions.width.is_some();
@@ -265,7 +276,10 @@ impl Cache {
     pub fn get(&self, input: &LayoutInput) -> Option<LayoutOutput> {
         let key = CacheKey::from(input);
         match input.run_mode {
-            RunMode::PerformLayout => self.final_layout_entry.filter(|entry| entry.key == key).map(|e| e.content),
+            RunMode::PerformLayout => self
+                .final_layout_entry
+                .filter(|entry| entry.key == key)
+                .map(|e| e.content),
             RunMode::ComputeSize => {
                 for entry in self.measure_entries.iter().flatten() {
                     if entry.key.kd_available_space == key.kd_available_space
@@ -289,13 +303,19 @@ impl Cache {
         match input.run_mode {
             RunMode::PerformLayout => {
                 self.is_empty = false;
-                self.final_layout_entry = Some(CacheEntry { key, content: layout_output })
+                self.final_layout_entry = Some(CacheEntry {
+                    key,
+                    content: layout_output,
+                })
             }
             RunMode::ComputeSize => {
                 self.is_empty = false;
-                let cache_slot = Self::compute_cache_slot(input.known_dimensions, input.available_space);
-                self.measure_entries[cache_slot] =
-                    Some(CacheEntry { key, content: MeasureOutput::new(input, layout_output) });
+                let cache_slot =
+                    Self::compute_cache_slot(input.known_dimensions, input.available_space);
+                self.measure_entries[cache_slot] = Some(CacheEntry {
+                    key,
+                    content: MeasureOutput::new(input, layout_output),
+                });
             }
             RunMode::PerformHiddenLayout => {}
         }
@@ -314,7 +334,8 @@ impl Cache {
 
     /// Returns true if all cache entries are None, else false
     pub fn is_empty(&self) -> bool {
-        self.final_layout_entry.is_none() && !self.measure_entries.iter().any(|entry| entry.is_some())
+        self.final_layout_entry.is_none()
+            && !self.measure_entries.iter().any(|entry| entry.is_some())
     }
 }
 

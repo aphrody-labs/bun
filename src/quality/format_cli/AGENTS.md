@@ -2,7 +2,7 @@
 
 Use Bun's native `bun check`, `bun lint`, `bun fmt` and `bun n2b` commands directly. Build checkout changes with `bun bd --ci=on -j1`.
 
-The formatter belongs to Bun's root Cargo workspace. The runtime entry point is `src/runtime/cli/native_quality_command.rs`; the in-process facade is `src/quality/src`. The shared addon is built with `bun scripts/aphrody/build-napi.ts packages/bun-oxc` from the repository root.
+The formatter belongs to Bun's root Cargo workspace. The runtime CLI entry point is `src/runtime/cli/format_command.rs`, backed by `src/format`; the API facade remains `src/quality/src`. The shared addon is built with `bun scripts/aphrody/build-napi.ts packages/bun-oxc` from the repository root.
 
 Retained conformance inputs and language adapters document the imported formatter contracts. Preserve their fixtures, snapshots and licenses. Native formatting reports unsupported embedded languages and JavaScript configuration explicitly.
 
@@ -19,7 +19,7 @@ When working with file paths in CLI code, be aware of Windows path differences:
 
 ## CLI implementations
 
-Formatting and linting share Bun's native quality dispatch and configuration owners under `src/quality`.
+Native CLI formatting and linting use `src/format` and `src/lint`. The addon and API integrations retain their configuration owners under `src/quality`.
 
 ### Ignore architecture
 

@@ -112,7 +112,10 @@ fn test_function_level_strict() {
             }
         })
         .test();
-    tester.has_some_symbol("foo").not_in_scope(ScopeFlags::StrictMode).test();
+    tester
+        .has_some_symbol("foo")
+        .not_in_scope(ScopeFlags::StrictMode)
+        .test();
 }
 
 #[test]
@@ -143,9 +146,15 @@ fn test_function_parameters() {
         ",
     );
 
-    tester.has_root_symbol("foo").has_number_of_references(1).test();
+    tester
+        .has_root_symbol("foo")
+        .has_number_of_references(1)
+        .test();
     // b = c should reference the third parameter, so root symbol `c`` should have 0 reference
-    tester.has_root_symbol("c").has_number_of_references(0).test();
+    tester
+        .has_root_symbol("c")
+        .has_number_of_references(0)
+        .test();
 }
 
 #[test]
@@ -174,8 +183,12 @@ fn test_enums() {
             Z
         }",
     );
-    test.has_root_symbol("A").contains_flags(SymbolFlags::RegularEnum).test();
-    test.has_some_symbol("X").contains_flags(SymbolFlags::EnumMember).test();
+    test.has_root_symbol("A")
+        .contains_flags(SymbolFlags::RegularEnum)
+        .test();
+    test.has_some_symbol("X")
+        .contains_flags(SymbolFlags::EnumMember)
+        .test();
 
     let semantic = test.build();
     let program = semantic
@@ -199,7 +212,11 @@ fn test_enums() {
         program.scope_id(),
         "Expected `enum A` to be created in the top-level scope."
     );
-    let enum_body_scope_id = enum_decl.body.scope_id.get().expect("Enum body has no scope id");
+    let enum_body_scope_id = enum_decl
+        .body
+        .scope_id
+        .get()
+        .expect("Enum body has no scope id");
     assert_ne!(
         enum_node.scope_id(),
         enum_body_scope_id,

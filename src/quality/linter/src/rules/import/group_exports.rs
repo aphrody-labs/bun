@@ -61,7 +61,8 @@ declare_oxc_lint!(
     import,
     style,
     version = "0.16.6",
-    short_description = "Reports when named exports are not grouped together in a single export declaration.",
+    short_description =
+        "Reports when named exports are not grouped together in a single export declaration.",
 );
 
 impl Rule for GroupExports {

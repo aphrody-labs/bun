@@ -377,7 +377,11 @@ fn expression_text_for_as(expression: &Expression, source_text: &str) -> String 
     if matches!(expression, Expression::ParenthesizedExpression(_)) {
         return text.to_string();
     }
-    if expression_needs_parens_for_as(expression) { format!("({text})") } else { text.to_string() }
+    if expression_needs_parens_for_as(expression) {
+        format!("({text})")
+    } else {
+        text.to_string()
+    }
 }
 
 fn expression_needs_parens_for_as(expression: &Expression) -> bool {
@@ -396,7 +400,10 @@ fn expression_needs_parens_for_as(expression: &Expression) -> bool {
 }
 
 fn is_parenthesized(node: &AstNode, ctx: &LintContext) -> bool {
-    matches!(ctx.nodes().parent_kind(node.id()), AstKind::ParenthesizedExpression(_))
+    matches!(
+        ctx.nodes().parent_kind(node.id()),
+        AstKind::ParenthesizedExpression(_)
+    )
 }
 
 fn needs_parens_for_parent(node: &AstNode, ctx: &LintContext) -> bool {
@@ -421,9 +428,9 @@ fn needs_parens_for_parent(node: &AstNode, ctx: &LintContext) -> bool {
         AstKind::StaticMemberExpression(member) => member.object.span() == node_span,
         AstKind::ComputedMemberExpression(member) => member.object.span() == node_span,
         AstKind::TaggedTemplateExpression(tagged) => tagged.tag.span() == node_span,
-        AstKind::ArrowFunctionExpression(arrow) => {
-            arrow.get_expression().is_some_and(|expr| expr.span() == node_span)
-        }
+        AstKind::ArrowFunctionExpression(arrow) => arrow
+            .get_expression()
+            .is_some_and(|expr| expr.span() == node_span),
         AstKind::ExpressionStatement(expr_stmt) => {
             let mut ancestor = ctx.nodes().parent_node(parent.id());
             if matches!(ancestor.kind(), AstKind::FunctionBody(_)) {
@@ -470,8 +477,10 @@ fn expression_text_for_replacement<'a>(
     if matches!(expression, Expression::ParenthesizedExpression(_)) {
         return text.to_string();
     }
-    if matches!(expression.without_parentheses(), Expression::ObjectExpression(_))
-        && needs_parens_for_object_literal_replacement(node, ctx)
+    if matches!(
+        expression.without_parentheses(),
+        Expression::ObjectExpression(_)
+    ) && needs_parens_for_object_literal_replacement(node, ctx)
     {
         return format!("({text})");
     }
@@ -489,7 +498,9 @@ fn needs_parens_for_object_literal_replacement<'a>(
         AstKind::ExpressionStatement(_) => true,
         AstKind::ArrowFunctionExpression(arrow) => {
             let node_span = node.kind().span();
-            arrow.get_expression().is_some_and(|expr| expr.span() == node_span)
+            arrow
+                .get_expression()
+                .is_some_and(|expr| expr.span() == node_span)
         }
         _ => false,
     }
@@ -538,8 +549,9 @@ fn get_suggestions<'a>(
     let mut fix = fixer.new_fix_with_capacity(2);
     fix.push(fixer.replace(node.kind().span(), expression_text));
     fix.push(fixer.insert_text_after_range(node.kind().span(), format!(" satisfies {type_text}")));
-    suggestions
-        .push(fix.with_message(format!("Use const x = {literal} satisfies {type_text} instead.")));
+    suggestions.push(fix.with_message(format!(
+        "Use const x = {literal} satisfies {type_text} instead."
+    )));
 
     suggestions
 }
@@ -552,12 +564,18 @@ fn check_expression_for_object_assertion<'a>(
     config: &ConsistentTypeAssertionsConfig,
 ) {
     if matches!(config.assertion_style, AssertionStyle::Never)
-        || matches!(config.object_literal_type_assertions, ObjectLiteralTypeAssertions::Allow)
+        || matches!(
+            config.object_literal_type_assertions,
+            ObjectLiteralTypeAssertions::Allow
+        )
     {
         return;
     }
 
-    if !matches!(expression.without_parentheses(), Expression::ObjectExpression(_)) {
+    if !matches!(
+        expression.without_parentheses(),
+        Expression::ObjectExpression(_)
+    ) {
         return;
     }
 
@@ -587,17 +605,25 @@ fn check_expression_for_array_assertion<'a>(
     config: &ConsistentTypeAssertionsConfig,
 ) {
     if matches!(config.assertion_style, AssertionStyle::Never)
-        || matches!(config.array_literal_type_assertions, ArrayLiteralTypeAssertions::Allow)
+        || matches!(
+            config.array_literal_type_assertions,
+            ArrayLiteralTypeAssertions::Allow
+        )
     {
         return;
     }
 
-    if !matches!(expression.without_parentheses(), Expression::ArrayExpression(_)) {
+    if !matches!(
+        expression.without_parentheses(),
+        Expression::ArrayExpression(_)
+    ) {
         return;
     }
 
-    if matches!(config.array_literal_type_assertions, ArrayLiteralTypeAssertions::AllowAsParameter)
-        && is_as_parameter(node, ctx)
+    if matches!(
+        config.array_literal_type_assertions,
+        ArrayLiteralTypeAssertions::AllowAsParameter
+    ) && is_as_parameter(node, ctx)
     {
         return;
     }
@@ -995,7 +1021,10 @@ fn test() {
                 serde_json::json!([ { "assertionStyle": "angle-bracket", "objectLiteralTypeAssertions": "allow-as-parameter", }, ]),
             ),
         ),
-        ("const x = [] as string[];", Some(serde_json::json!([ { "assertionStyle": "as", }, ]))),
+        (
+            "const x = [] as string[];",
+            Some(serde_json::json!([ { "assertionStyle": "as", }, ])),
+        ),
         (
             "const x = ['a'] as Array<string>;",
             Some(serde_json::json!([ { "assertionStyle": "as", }, ])),
@@ -1100,8 +1129,14 @@ fn test() {
                 serde_json::json!([ { "arrayLiteralTypeAssertions": "allow-as-parameter", "assertionStyle": "angle-bracket", }, ]),
             ),
         ),
-        ("const x = <const>[1];", Some(serde_json::json!([{ "assertionStyle": "never" }]))),
-        ("const x = [1] as const;", Some(serde_json::json!([{ "assertionStyle": "never" }]))),
+        (
+            "const x = <const>[1];",
+            Some(serde_json::json!([{ "assertionStyle": "never" }])),
+        ),
+        (
+            "const x = [1] as const;",
+            Some(serde_json::json!([{ "assertionStyle": "never" }])),
+        ),
         (
             "
             const x = { key: 'value' } as any;
@@ -1149,7 +1184,10 @@ fn test() {
             "const x = new Generic<int>() as Foo;",
             Some(serde_json::json!([{ "assertionStyle": "angle-bracket" }])),
         ),
-        ("const x = b as A;", Some(serde_json::json!([{ "assertionStyle": "angle-bracket" }]))),
+        (
+            "const x = b as A;",
+            Some(serde_json::json!([{ "assertionStyle": "angle-bracket" }])),
+        ),
         (
             "const x = [1] as readonly number[];",
             Some(serde_json::json!([{ "assertionStyle": "angle-bracket" }])),
@@ -1198,14 +1236,26 @@ fn test() {
             "const x = <Foo>new Generic<int>();",
             Some(serde_json::json!([{ "assertionStyle": "as" }])),
         ),
-        ("const x = <A>b;", Some(serde_json::json!([{ "assertionStyle": "as" }]))),
+        (
+            "const x = <A>b;",
+            Some(serde_json::json!([{ "assertionStyle": "as" }])),
+        ),
         (
             "const x = <readonly number[]>[1];",
             Some(serde_json::json!([{ "assertionStyle": "as" }])),
         ),
-        ("const x = <a | b>'string';", Some(serde_json::json!([{ "assertionStyle": "as" }]))),
-        ("const x = <A>!'string';", Some(serde_json::json!([{ "assertionStyle": "as" }]))),
-        ("const x = <A>a + b;", Some(serde_json::json!([{ "assertionStyle": "as" }]))),
+        (
+            "const x = <a | b>'string';",
+            Some(serde_json::json!([{ "assertionStyle": "as" }])),
+        ),
+        (
+            "const x = <A>!'string';",
+            Some(serde_json::json!([{ "assertionStyle": "as" }])),
+        ),
+        (
+            "const x = <A>a + b;",
+            Some(serde_json::json!([{ "assertionStyle": "as" }])),
+        ),
         (
             "const x = <Foo>new Generic<string>();",
             Some(serde_json::json!([{ "assertionStyle": "as" }])),
@@ -1218,8 +1268,14 @@ fn test() {
             "const x = new (<Foo>Generic<string>)('string');",
             Some(serde_json::json!([{ "assertionStyle": "as" }])),
         ),
-        ("const x = () => <Foo>{ bar: 5 };", Some(serde_json::json!([{ "assertionStyle": "as" }]))),
-        ("const x = () => <Foo>bar;", Some(serde_json::json!([{ "assertionStyle": "as" }]))),
+        (
+            "const x = () => <Foo>{ bar: 5 };",
+            Some(serde_json::json!([{ "assertionStyle": "as" }])),
+        ),
+        (
+            "const x = () => <Foo>bar;",
+            Some(serde_json::json!([{ "assertionStyle": "as" }])),
+        ),
         (
             "const x = <Foo>bar<string>`${'baz'}`;",
             Some(serde_json::json!([{ "assertionStyle": "as" }])),
@@ -1232,14 +1288,26 @@ fn test() {
             "const x = new Generic<int>() as Foo;",
             Some(serde_json::json!([{ "assertionStyle": "never" }])),
         ),
-        ("const x = b as A;", Some(serde_json::json!([{ "assertionStyle": "never" }]))),
+        (
+            "const x = b as A;",
+            Some(serde_json::json!([{ "assertionStyle": "never" }])),
+        ),
         (
             "const x = [1] as readonly number[];",
             Some(serde_json::json!([{ "assertionStyle": "never" }])),
         ),
-        ("const x = 'string' as a | b;", Some(serde_json::json!([{ "assertionStyle": "never" }]))),
-        ("const x = !'string' as A;", Some(serde_json::json!([{ "assertionStyle": "never" }]))),
-        ("const x = (a as A) + b;", Some(serde_json::json!([{ "assertionStyle": "never" }]))),
+        (
+            "const x = 'string' as a | b;",
+            Some(serde_json::json!([{ "assertionStyle": "never" }])),
+        ),
+        (
+            "const x = !'string' as A;",
+            Some(serde_json::json!([{ "assertionStyle": "never" }])),
+        ),
+        (
+            "const x = (a as A) + b;",
+            Some(serde_json::json!([{ "assertionStyle": "never" }])),
+        ),
         (
             "const x = new Generic<string>() as Foo;",
             Some(serde_json::json!([{ "assertionStyle": "never" }])),
@@ -1256,7 +1324,10 @@ fn test() {
             "const x = () => ({ bar: 5 }) as Foo;",
             Some(serde_json::json!([{ "assertionStyle": "never" }])),
         ),
-        ("const x = () => bar as Foo;", Some(serde_json::json!([{ "assertionStyle": "never" }]))),
+        (
+            "const x = () => bar as Foo;",
+            Some(serde_json::json!([{ "assertionStyle": "never" }])),
+        ),
         (
             "const x = bar<string>`${'baz'}` as Foo;",
             Some(serde_json::json!([{ "assertionStyle": "never" }])),
@@ -1265,14 +1336,26 @@ fn test() {
             "const x = <Foo>new Generic<int>();",
             Some(serde_json::json!([{ "assertionStyle": "never" }])),
         ),
-        ("const x = <A>b;", Some(serde_json::json!([{ "assertionStyle": "never" }]))),
+        (
+            "const x = <A>b;",
+            Some(serde_json::json!([{ "assertionStyle": "never" }])),
+        ),
         (
             "const x = <readonly number[]>[1];",
             Some(serde_json::json!([{ "assertionStyle": "never" }])),
         ),
-        ("const x = <a | b>'string';", Some(serde_json::json!([{ "assertionStyle": "never" }]))),
-        ("const x = <A>!'string';", Some(serde_json::json!([{ "assertionStyle": "never" }]))),
-        ("const x = <A>a + b;", Some(serde_json::json!([{ "assertionStyle": "never" }]))),
+        (
+            "const x = <a | b>'string';",
+            Some(serde_json::json!([{ "assertionStyle": "never" }])),
+        ),
+        (
+            "const x = <A>!'string';",
+            Some(serde_json::json!([{ "assertionStyle": "never" }])),
+        ),
+        (
+            "const x = <A>a + b;",
+            Some(serde_json::json!([{ "assertionStyle": "never" }])),
+        ),
         (
             "const x = <Foo>new Generic<string>();",
             Some(serde_json::json!([{ "assertionStyle": "never" }])),
@@ -1289,7 +1372,10 @@ fn test() {
             "const x = () => <Foo>{ bar: 5 };",
             Some(serde_json::json!([{ "assertionStyle": "never" }])),
         ),
-        ("const x = () => <Foo>bar;", Some(serde_json::json!([{ "assertionStyle": "never" }]))),
+        (
+            "const x = () => <Foo>bar;",
+            Some(serde_json::json!([{ "assertionStyle": "never" }])),
+        ),
         (
             "const x = <Foo>bar<string>`${'baz'}`;",
             Some(serde_json::json!([{ "assertionStyle": "never" }])),
@@ -1458,8 +1544,14 @@ fn test() {
                 serde_json::json!([ { "assertionStyle": "angle-bracket", "objectLiteralTypeAssertions": "never", }, ]),
             ),
         ),
-        ("const a = <any>(b, c);", Some(serde_json::json!([ { "assertionStyle": "as", }, ]))),
-        ("const f = <any>(() => {});", Some(serde_json::json!([ { "assertionStyle": "as", }, ]))),
+        (
+            "const a = <any>(b, c);",
+            Some(serde_json::json!([ { "assertionStyle": "as", }, ])),
+        ),
+        (
+            "const f = <any>(() => {});",
+            Some(serde_json::json!([ { "assertionStyle": "as", }, ])),
+        ),
         (
             "const f = <any>function () {};",
             Some(serde_json::json!([ { "assertionStyle": "as", }, ])),
@@ -1487,13 +1579,22 @@ fn test() {
             "const ternary = <any>(true ? x : y);",
             Some(serde_json::json!([ { "assertionStyle": "as", }, ])),
         ),
-        ("const x = [] as string[];", Some(serde_json::json!([ { "assertionStyle": "never", }, ]))),
-        ("const x = <string[]>[];", Some(serde_json::json!([ { "assertionStyle": "never", }, ]))),
+        (
+            "const x = [] as string[];",
+            Some(serde_json::json!([ { "assertionStyle": "never", }, ])),
+        ),
+        (
+            "const x = <string[]>[];",
+            Some(serde_json::json!([ { "assertionStyle": "never", }, ])),
+        ),
         (
             "const x = [] as string[];",
             Some(serde_json::json!([ { "assertionStyle": "angle-bracket", }, ])),
         ),
-        ("const x = <string[]>[];", Some(serde_json::json!([ { "assertionStyle": "as", }, ]))),
+        (
+            "const x = <string[]>[];",
+            Some(serde_json::json!([ { "assertionStyle": "as", }, ])),
+        ),
         (
             "const x = [] as string[];",
             Some(
@@ -1714,8 +1815,13 @@ fn test() {
         ),
     ];
 
-    Tester::new(ConsistentTypeAssertions::NAME, ConsistentTypeAssertions::PLUGIN, pass, fail)
-        .change_rule_path_extension("ts")
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        ConsistentTypeAssertions::NAME,
+        ConsistentTypeAssertions::PLUGIN,
+        pass,
+        fail,
+    )
+    .change_rule_path_extension("ts")
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

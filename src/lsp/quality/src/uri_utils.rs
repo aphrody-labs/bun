@@ -30,7 +30,10 @@ fn strict_canonicalize<P: AsRef<Path>>(path: P) -> std::io::Result<PathBuf> {
     use std::io;
 
     fn impl_(path: PathBuf) -> std::io::Result<PathBuf> {
-        let head = path.components().next().ok_or(io::Error::other("empty path"))?;
+        let head = path
+            .components()
+            .next()
+            .ok_or(io::Error::other("empty path"))?;
         let disk_;
         let head = if let std::path::Component::Prefix(prefix) = head {
             if let std::path::Prefix::VerbatimDisk(disk) = prefix.kind() {
@@ -45,7 +48,9 @@ fn strict_canonicalize<P: AsRef<Path>>(path: P) -> std::io::Result<PathBuf> {
         } else {
             head
         };
-        Ok(std::iter::once(head).chain(path.components().skip(1)).collect())
+        Ok(std::iter::once(head)
+            .chain(path.components().skip(1))
+            .collect())
     }
 
     let canon = std::fs::canonicalize(path)?;
@@ -98,7 +103,10 @@ pub fn uri_to_file_path(uri: &Uri) -> Option<Cow<'_, Path>> {
 
         Some(Cow::Owned(
             // `file://server/...` becomes `server:/`
-            Path::new(&format!("{auth_host}:")).components().chain(path.components()).collect(),
+            Path::new(&format!("{auth_host}:"))
+                .components()
+                .chain(path.components())
+                .collect(),
         ))
     } else {
         Some(path)
@@ -208,11 +216,18 @@ mod tests {
 
         for uri in uris {
             let path = uri_to_file_path(&uri).unwrap();
-            assert_eq!(&path, Path::new("C:\\some\\path\\to\\file.txt"), "uri={uri:?}");
+            assert_eq!(
+                &path,
+                Path::new("C:\\some\\path\\to\\file.txt"),
+                "uri={uri:?}"
+            );
 
             let conv = file_path_to_uri(&path).unwrap();
 
-            assert_eq!(final_uri, conv, "path={path:?} left={final_uri} right={conv}",);
+            assert_eq!(
+                final_uri, conv,
+                "path={path:?} left={final_uri} right={conv}",
+            );
         }
     }
 

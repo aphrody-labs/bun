@@ -427,7 +427,10 @@ impl<T: ?Sized> NonNullConst<T> {
     #[inline(always)]
     pub unsafe fn map_addr_usize(self, f: impl FnOnce(usize) -> usize) -> Self {
         // SAFETY: Caller guarantees `f` returns a non-zero value
-        Self(self.0.map_addr(|addr| unsafe { NonZeroUsize::new_unchecked(f(addr.get())) }))
+        Self(
+            self.0
+                .map_addr(|addr| unsafe { NonZeroUsize::new_unchecked(f(addr.get())) }),
+        )
     }
 }
 
@@ -958,7 +961,10 @@ impl<T: ?Sized> NonNullMut<T> {
     #[inline(always)]
     pub unsafe fn map_addr_usize(self, f: impl FnOnce(usize) -> usize) -> Self {
         // SAFETY: Caller guarantees `f` returns a non-zero value
-        Self(self.0.map_addr(|addr| unsafe { NonZeroUsize::new_unchecked(f(addr.get())) }))
+        Self(
+            self.0
+                .map_addr(|addr| unsafe { NonZeroUsize::new_unchecked(f(addr.get())) }),
+        )
     }
 }
 
@@ -1259,7 +1265,10 @@ impl<T: ?Sized> Eq for NonNullMut<T> {}
 // We also use `PartialOrd` impls which just delegate to `NonNull`'s implementations.
 // Clippy flags these, but it seems safest to delegate direct to stdlib.
 
-#[expect(clippy::non_canonical_partial_ord_impl, ambiguous_wide_pointer_comparisons)]
+#[expect(
+    clippy::non_canonical_partial_ord_impl,
+    ambiguous_wide_pointer_comparisons
+)]
 impl<T: ?Sized> PartialOrd for NonNullConst<T> {
     #[inline(always)]
     fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
@@ -1275,7 +1284,10 @@ impl<T: ?Sized> Ord for NonNullConst<T> {
     }
 }
 
-#[expect(clippy::non_canonical_partial_ord_impl, ambiguous_wide_pointer_comparisons)]
+#[expect(
+    clippy::non_canonical_partial_ord_impl,
+    ambiguous_wide_pointer_comparisons
+)]
 impl<T: ?Sized> PartialOrd for NonNullMut<T> {
     #[inline(always)]
     fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {

@@ -26,7 +26,9 @@ pub struct NoConstantBinaryExpressionConfig {
 
 impl Default for NoConstantBinaryExpressionConfig {
     fn default() -> Self {
-        Self { check_relational_comparisons: true }
+        Self {
+            check_relational_comparisons: true,
+        }
     }
 }
 
@@ -150,12 +152,20 @@ impl Rule for NoConstantBinaryExpression {
                     Self::find_binary_expression_constant_operand(right, left, operator, ctx);
 
                 if right_constant_operand.is_some() {
-                    ctx.diagnostic(constant_binary_operand("left", operator.as_str(), expr.span));
+                    ctx.diagnostic(constant_binary_operand(
+                        "left",
+                        operator.as_str(),
+                        expr.span,
+                    ));
                     return;
                 }
 
                 if left_constant_operand.is_some() {
-                    ctx.diagnostic(constant_binary_operand("right", operator.as_str(), expr.span));
+                    ctx.diagnostic(constant_binary_operand(
+                        "right",
+                        operator.as_str(),
+                        expr.span,
+                    ));
                     return;
                 }
 
@@ -168,8 +178,10 @@ impl Rule for NoConstantBinaryExpression {
                     return;
                 }
 
-                if matches!(operator, BinaryOperator::Equality | BinaryOperator::Inequality)
-                    && Self::is_always_new(left, ctx)
+                if matches!(
+                    operator,
+                    BinaryOperator::Equality | BinaryOperator::Inequality
+                ) && Self::is_always_new(left, ctx)
                     && Self::is_always_new(right, ctx)
                 {
                     ctx.diagnostic(constant_both_always_new(expr.span));
@@ -305,7 +317,12 @@ impl NoConstantBinaryExpression {
             | Expression::FunctionExpression(_) => true,
             Expression::ArrayExpression(array_expr) => {
                 array_expr.elements.is_empty()
-                    || array_expr.elements.iter().filter(|e| e.is_expression()).count() > 1
+                    || array_expr
+                        .elements
+                        .iter()
+                        .filter(|e| e.is_expression())
+                        .count()
+                        > 1
             }
             Expression::UnaryExpression(unary_expr) => match unary_expr.operator {
                 UnaryOperator::Void | UnaryOperator::Typeof => true,
@@ -490,15 +507,42 @@ fn test() {
 
     pass.extend(
         [
-            ("5 < 10", Some(serde_json::json!([{ "checkRelationalComparisons": false }]))),
-            ("5 <= 10", Some(serde_json::json!([{ "checkRelationalComparisons": false }]))),
-            ("10 > 5", Some(serde_json::json!([{ "checkRelationalComparisons": false }]))),
-            ("10 >= 5", Some(serde_json::json!([{ "checkRelationalComparisons": false }]))),
-            ("'a' < 'b'", Some(serde_json::json!([{ "checkRelationalComparisons": false }]))),
-            ("undefined >= 5", Some(serde_json::json!([{ "checkRelationalComparisons": false }]))),
-            ("`` < ``", Some(serde_json::json!([{ "checkRelationalComparisons": false }]))),
-            ("1n < 2n", Some(serde_json::json!([{ "checkRelationalComparisons": false }]))),
-            ("null >= 5", Some(serde_json::json!([{ "checkRelationalComparisons": false }]))),
+            (
+                "5 < 10",
+                Some(serde_json::json!([{ "checkRelationalComparisons": false }])),
+            ),
+            (
+                "5 <= 10",
+                Some(serde_json::json!([{ "checkRelationalComparisons": false }])),
+            ),
+            (
+                "10 > 5",
+                Some(serde_json::json!([{ "checkRelationalComparisons": false }])),
+            ),
+            (
+                "10 >= 5",
+                Some(serde_json::json!([{ "checkRelationalComparisons": false }])),
+            ),
+            (
+                "'a' < 'b'",
+                Some(serde_json::json!([{ "checkRelationalComparisons": false }])),
+            ),
+            (
+                "undefined >= 5",
+                Some(serde_json::json!([{ "checkRelationalComparisons": false }])),
+            ),
+            (
+                "`` < ``",
+                Some(serde_json::json!([{ "checkRelationalComparisons": false }])),
+            ),
+            (
+                "1n < 2n",
+                Some(serde_json::json!([{ "checkRelationalComparisons": false }])),
+            ),
+            (
+                "null >= 5",
+                Some(serde_json::json!([{ "checkRelationalComparisons": false }])),
+            ),
             ("x < 5", check_relational_comparisons.clone()),
             ("5 < x", check_relational_comparisons.clone()),
             ("x > y", check_relational_comparisons.clone()),
@@ -783,6 +827,11 @@ fn test() {
         .map(Into::into),
     );
 
-    Tester::new(NoConstantBinaryExpression::NAME, NoConstantBinaryExpression::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        NoConstantBinaryExpression::NAME,
+        NoConstantBinaryExpression::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

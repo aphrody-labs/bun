@@ -10,7 +10,11 @@ use crate::{
 pub(super) fn browser_accurate(name: &str, version: &str, opts: &Opts) -> QueryResult {
     let original_name = name;
     let original_version = version;
-    let version = if original_version.eq_ignore_ascii_case("tp") { "TP" } else { version };
+    let version = if original_version.eq_ignore_ascii_case("tp") {
+        "TP"
+    } else {
+        version
+    };
 
     let (name, stat) = get_browser_stat(name, opts.mobile_to_desktop)
         .ok_or_else(|| Error::BrowserNotFound(name.to_string()))?;

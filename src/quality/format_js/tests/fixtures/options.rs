@@ -20,7 +20,11 @@ pub fn apply_js_options(options: &mut JsFormatOptions, json: &OptionSet) {
         match key.as_str() {
             "semi" => {
                 if let Some(b) = value.as_bool() {
-                    options.semicolons = if b { Semicolons::Always } else { Semicolons::AsNeeded };
+                    options.semicolons = if b {
+                        Semicolons::Always
+                    } else {
+                        Semicolons::AsNeeded
+                    };
                 }
             }
             "bracketSpacing" => {
@@ -38,13 +42,20 @@ pub fn apply_js_options(options: &mut JsFormatOptions, json: &OptionSet) {
             }
             "singleQuote" => {
                 if let Some(b) = value.as_bool() {
-                    options.quote_style = if b { QuoteStyle::Single } else { QuoteStyle::Double };
+                    options.quote_style = if b {
+                        QuoteStyle::Single
+                    } else {
+                        QuoteStyle::Double
+                    };
                 }
             }
             "jsxSingleQuote" => {
                 if let Some(b) = value.as_bool() {
-                    options.jsx_quote_style =
-                        if b { QuoteStyle::Single } else { QuoteStyle::Double };
+                    options.jsx_quote_style = if b {
+                        QuoteStyle::Single
+                    } else {
+                        QuoteStyle::Double
+                    };
                 }
             }
             "experimentalTernaries" => {
@@ -54,8 +65,11 @@ pub fn apply_js_options(options: &mut JsFormatOptions, json: &OptionSet) {
             }
             "singleAttributePerLine" => {
                 if let Some(b) = value.as_bool() {
-                    options.attribute_position =
-                        if b { AttributePosition::Multiline } else { AttributePosition::Auto };
+                    options.attribute_position = if b {
+                        AttributePosition::Multiline
+                    } else {
+                        AttributePosition::Auto
+                    };
                 }
             }
             "trailingComma" => {

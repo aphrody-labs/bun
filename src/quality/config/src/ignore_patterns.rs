@@ -9,7 +9,11 @@
 pub fn validate_ignore_pattern(pattern: &str) -> Result<(), String> {
     let path_part = pattern.strip_prefix('!').unwrap_or(pattern);
     // gitignore ignores unescaped trailing spaces; a trailing `\ ` escapes a literal space
-    let path_part = if path_part.ends_with("\\ ") { path_part } else { path_part.trim_end() };
+    let path_part = if path_part.ends_with("\\ ") {
+        path_part
+    } else {
+        path_part.trim_end()
+    };
     // Split by `/` instead of `Path::components()`,
     // since gitignore patterns use `/` as the separator on all platforms.
     if path_part.split('/').any(|segment| segment == "..") {
@@ -38,7 +42,9 @@ mod test {
     fn accepts_patterns_without_parent_dir_segments() {
         // `..` is only special as a whole path segment.
         // `..\ ` (escaped trailing space) literally matches a file named `.. `, not a parent directory.
-        for pattern in ["dist", "*.min.js", "**/dist", "!dist", "..foo", "a..b", "foo..", "..\\ "] {
+        for pattern in [
+            "dist", "*.min.js", "**/dist", "!dist", "..foo", "a..b", "foo..", "..\\ ",
+        ] {
             assert!(
                 validate_ignore_pattern(pattern).is_ok(),
                 "pattern `{pattern}` should be accepted"

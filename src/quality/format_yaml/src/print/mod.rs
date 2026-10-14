@@ -54,8 +54,11 @@ where
 /// both sides' line prefixes are whitespace and ASCII indicators (`- `, `? `),
 /// where bytes == characters.
 pub fn column_of(source: &str, offset: u32) -> u32 {
-    let count =
-        source.as_bytes()[..offset as usize].iter().rev().take_while(|&&b| b != b'\n').count();
+    let count = source.as_bytes()[..offset as usize]
+        .iter()
+        .rev()
+        .take_while(|&&b| b != b'\n')
+        .count();
     u32::try_from(count).unwrap_or(u32::MAX)
 }
 
@@ -112,8 +115,11 @@ pub fn write_node<'a>(node: &'a Node<'a>, f: &mut YamlFormatter<'_, 'a>) {
     let is_block_collection = matches!(content, Content::Mapping(_) | Content::Sequence(_));
     // Middle comments (between the props and the node body, `&a # c`)
     // keep the props separator a space even for block collections.
-    let has_middle_comments =
-        f.context().comments().peek().is_some_and(|c| c.span.end <= content_start);
+    let has_middle_comments = f
+        .context()
+        .comments()
+        .peek()
+        .is_some_and(|c| c.span.end <= content_start);
     write_props(&node.props, is_block_collection && !has_middle_comments, f);
 
     // Prettier: `[middles.len() == 1 ? "" : hardline, join(hardline, middles), hardline]`.
@@ -152,7 +158,10 @@ pub fn write_node<'a>(node: &'a Node<'a>, f: &mut YamlFormatter<'_, 'a>) {
         }
         Content::Alias(alias) => {
             // Verbatim: `*name` has no layout freedom, and no comment can lie inside
-            write!(f, text(f.context().source_text().text_for(&to_span(alias.span))));
+            write!(
+                f,
+                text(f.context().source_text().text_for(&to_span(alias.span)))
+            );
         }
         Content::BlockLiteral(block) => block::write_block_scalar(block, false, f),
         Content::BlockFolded(block) => block::write_block_scalar(block, true, f),
@@ -166,10 +175,16 @@ pub fn write_node<'a>(node: &'a Node<'a>, f: &mut YamlFormatter<'_, 'a>) {
         }
         Content::Sequence(sequence) => block_collection::write_sequence(sequence, f),
         Content::FlowMapping(flow) => {
-            write!(f, group(&format_with(|f| flow::write_flow_mapping(flow, f))));
+            write!(
+                f,
+                group(&format_with(|f| flow::write_flow_mapping(flow, f)))
+            );
         }
         Content::FlowSequence(flow) => {
-            write!(f, group(&format_with(|f| flow::write_flow_sequence(flow, f))));
+            write!(
+                f,
+                group(&format_with(|f| flow::write_flow_sequence(flow, f)))
+            );
         }
     }
 }

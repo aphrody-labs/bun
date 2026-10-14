@@ -12,8 +12,11 @@ fn run(enum_eval: bool) {
     let allocator = Allocator::default();
     let ret = Parser::new(&allocator, source_text, source_type).parse();
     let mut program = ret.program;
-    let scoping =
-        SemanticBuilder::new().with_enum_eval(enum_eval).build(&program).semantic.into_scoping();
+    let scoping = SemanticBuilder::new()
+        .with_enum_eval(enum_eval)
+        .build(&program)
+        .semantic
+        .into_scoping();
     let _ret = Transformer::new(&allocator, Path::new(""), &TransformOptions::default())
         .build_with_scoping(scoping, &mut program);
 }

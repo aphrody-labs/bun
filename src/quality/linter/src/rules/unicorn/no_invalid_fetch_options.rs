@@ -195,7 +195,9 @@ fn is_invalid_fetch_options<'a>(
                             type_annotation: Some(annotation),
                             ..
                         }) => {
-                            let TSTypeAnnotation { type_annotation, .. } = &**annotation;
+                            let TSTypeAnnotation {
+                                type_annotation, ..
+                            } = &**annotation;
                             match type_annotation {
                                 TSType::TSUnionType(union_type) => {
                                     if !union_type.types.iter().any(|ty| {
@@ -355,7 +357,12 @@ fn test() {
           });"#,
     ];
 
-    Tester::new(NoInvalidFetchOptions::NAME, NoInvalidFetchOptions::PLUGIN, pass, fail)
-        .change_rule_path_extension("mts")
-        .test_and_snapshot();
+    Tester::new(
+        NoInvalidFetchOptions::NAME,
+        NoInvalidFetchOptions::PLUGIN,
+        pass,
+        fail,
+    )
+    .change_rule_path_extension("mts")
+    .test_and_snapshot();
 }

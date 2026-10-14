@@ -21,9 +21,11 @@ fn no_redeclare_diagnostic(name: &str, decl_span: Span, re_decl_span: Span) -> O
 }
 
 fn no_redeclare_as_builtin_in_diagnostic(name: &str, span: Span) -> OxcDiagnostic {
-    OxcDiagnostic::warn(format!("'{name}' is already defined as a built-in global variable."))
-        .with_help("Use a different variable name to avoid shadowing the built-in global.")
-        .with_label(span)
+    OxcDiagnostic::warn(format!(
+        "'{name}' is already defined as a built-in global variable."
+    ))
+    .with_help("Use a different variable name to avoid shadowing the built-in global.")
+    .with_label(span)
 }
 
 #[derive(Debug, Clone, JsonSchema, Deserialize)]
@@ -35,7 +37,9 @@ pub struct NoRedeclare {
 
 impl Default for NoRedeclare {
     fn default() -> Self {
-        Self { builtin_globals: true }
+        Self {
+            builtin_globals: true,
+        }
     }
 }
 
@@ -98,21 +102,27 @@ impl Rule for NoRedeclare {
             }
 
             if ctx.source_type().is_typescript() {
-                let mut iter = ctx.scoping().symbol_redeclarations(symbol_id).iter().filter(|rd| {
-                    if is_builtin {
-                        if rd.span != decl_span {
-                            ctx.diagnostic(no_redeclare_as_builtin_in_diagnostic(name, rd.span));
+                let mut iter = ctx
+                    .scoping()
+                    .symbol_redeclarations(symbol_id)
+                    .iter()
+                    .filter(|rd| {
+                        if is_builtin {
+                            if rd.span != decl_span {
+                                ctx.diagnostic(no_redeclare_as_builtin_in_diagnostic(
+                                    name, rd.span,
+                                ));
+                            }
+                            return false;
                         }
-                        return false;
-                    }
-                    if rd.flags.is_function() {
-                        let node = ctx.nodes().get_node(rd.declaration);
-                        if let Some(func) = node.kind().as_function() {
-                            return !func.is_ts_declare_function();
+                        if rd.flags.is_function() {
+                            let node = ctx.nodes().get_node(rd.declaration);
+                            if let Some(func) = node.kind().as_function() {
+                                return !func.is_ts_declare_function();
+                            }
                         }
-                    }
-                    true
-                });
+                        true
+                    });
 
                 if let Some(first) = iter.next() {
                     iter.fold(first, |prev, next| {
@@ -128,7 +138,11 @@ impl Rule for NoRedeclare {
                 if is_builtin {
                     ctx.diagnostic(no_redeclare_as_builtin_in_diagnostic(name, windows[1].span));
                 } else {
-                    ctx.diagnostic(no_redeclare_diagnostic(name, windows[0].span, windows[1].span));
+                    ctx.diagnostic(no_redeclare_diagnostic(
+                        name,
+                        windows[0].span,
+                        windows[1].span,
+                    ));
                 }
             }
         }
@@ -145,30 +159,72 @@ fn test() {
     let pass = vec![
         ("var a = 3; var b = function() { var a = 10; };", None),
         ("var a = 3; a = 10;", None),
-        ("if (true) {\n    let b = 2;\n} else {    \nlet b = 3;\n}", None),
+        (
+            "if (true) {\n    let b = 2;\n} else {    \nlet b = 3;\n}",
+            None,
+        ),
         ("var a; class C { static { var a; } }", None),
         ("class C { static { var a; } } var a; ", None),
         ("function a(){} class C { static { var a; } }", None),
         ("var a; class C { static { function a(){} } }", None),
         ("class C { static { var a; } static { var a; } }", None),
-        ("class C { static { function a(){} } static { function a(){} } }", None),
+        (
+            "class C { static { function a(){} } static { function a(){} } }",
+            None,
+        ),
         ("class C { static { var a; { function a(){} } } }", None),
-        ("class C { static { function a(){}; { function a(){} } } }", None),
+        (
+            "class C { static { function a(){}; { function a(){} } } }",
+            None,
+        ),
         ("class C { static { var a; { let a; } } }", None),
         ("class C { static { let a; { let a; } } }", None),
         ("class C { static { { let a; } { let a; } } }", None),
-        ("var Object = 0;", Some(serde_json::json!([{ "builtinGlobals": false }]))),
-        ("var Object = 0;", Some(serde_json::json!([{ "builtinGlobals": false }]))),
-        ("var Object = 0;", Some(serde_json::json!([{ "builtinGlobals": false }]))),
-        ("var top = 0;", Some(serde_json::json!([{ "builtinGlobals": false }]))),
-        ("var top = 0;", Some(serde_json::json!([{ "builtinGlobals": false }]))),
-        ("var top = 0;", Some(serde_json::json!([{ "builtinGlobals": false }]))),
-        ("var self = 1", Some(serde_json::json!([{ "builtinGlobals": false }]))),
-        ("var globalThis = foo", Some(serde_json::json!([{ "builtinGlobals": false }]))),
-        ("var globalThis = foo", Some(serde_json::json!([{ "builtinGlobals": false }]))),
+        (
+            "var Object = 0;",
+            Some(serde_json::json!([{ "builtinGlobals": false }])),
+        ),
+        (
+            "var Object = 0;",
+            Some(serde_json::json!([{ "builtinGlobals": false }])),
+        ),
+        (
+            "var Object = 0;",
+            Some(serde_json::json!([{ "builtinGlobals": false }])),
+        ),
+        (
+            "var top = 0;",
+            Some(serde_json::json!([{ "builtinGlobals": false }])),
+        ),
+        (
+            "var top = 0;",
+            Some(serde_json::json!([{ "builtinGlobals": false }])),
+        ),
+        (
+            "var top = 0;",
+            Some(serde_json::json!([{ "builtinGlobals": false }])),
+        ),
+        (
+            "var self = 1",
+            Some(serde_json::json!([{ "builtinGlobals": false }])),
+        ),
+        (
+            "var globalThis = foo",
+            Some(serde_json::json!([{ "builtinGlobals": false }])),
+        ),
+        (
+            "var globalThis = foo",
+            Some(serde_json::json!([{ "builtinGlobals": false }])),
+        ),
         // Issue: <https://github.com/oxc-project/oxc/issues/10396>
-        ("export function foo(): void; export function foo() { }", None),
-        ("function foo(arg: string): void; function foo(arg: number): any {}", None),
+        (
+            "export function foo(): void; export function foo() { }",
+            None,
+        ),
+        (
+            "function foo(arg: string): void; function foo(arg: number): any {}",
+            None,
+        ),
     ];
 
     let fail = vec![
@@ -194,15 +250,25 @@ fn test() {
         ("function f() { var a; if (test) { var a; } }", None),
         ("for (var a, a;;);", None),
         // Issue: <https://github.com/oxc-project/oxc/issues/10396>
-        ("export function undefined(): void; export function undefined() { }", None),
-        ("type foo = 1; export function foo(): void; export function foo() { }", None),
+        (
+            "export function undefined(): void; export function undefined() { }",
+            None,
+        ),
+        (
+            "type foo = 1; export function foo(): void; export function foo() { }",
+            None,
+        ),
     ];
 
     Tester::new(NoRedeclare::NAME, NoRedeclare::PLUGIN, pass, fail)
         .change_rule_path_extension(".cts")
         .test_and_snapshot();
 
-    let fail = vec![("var foo;", None, Some(serde_json::json!({ "globals": { "foo": false }})))];
+    let fail = vec![(
+        "var foo;",
+        None,
+        Some(serde_json::json!({ "globals": { "foo": false }})),
+    )];
 
     Tester::new(NoRedeclare::NAME, NoRedeclare::PLUGIN, vec![], fail)
         .change_rule_path_extension(".cts")
@@ -226,13 +292,19 @@ fn test() {
         ("export {}; var Object = 0;", None),
         ("export {}; var globalThis = 0;", None),
         ("export {}; var a = 3; a = 10;", None),
-        ("export {}; function foo(arg: string): void; function foo(arg: number): any {}", None),
+        (
+            "export {}; function foo(arg: string): void; function foo(arg: number): any {}",
+            None,
+        ),
     ];
 
     let fail = vec![
         ("export {}; var a = 3; var a = 10;", None),
         ("export {}; function f() { var a; var a; }", None),
-        ("type foo = 1; export function foo(): void; export function foo() { }", None),
+        (
+            "type foo = 1; export function foo(): void; export function foo() { }",
+            None,
+        ),
         ("export {}; var Object = 0; var Object = 0;", None),
     ];
 

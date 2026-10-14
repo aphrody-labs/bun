@@ -63,7 +63,9 @@ impl<'a> ClassProperties<'a> {
     ) {
         // Ignore TS class declarations
         // TODO: Is this correct?
-        let Ancestor::ClassBody(class) = ctx.parent() else { unreachable!() };
+        let Ancestor::ClassBody(class) = ctx.parent() else {
+            unreachable!()
+        };
         if *class.declare() {
             return;
         }
@@ -131,7 +133,10 @@ impl<'a> ClassProperties<'a> {
                             MethodDefinitionKind::Constructor => unreachable!(),
                         };
                         let (scope_id, flags) = if private_method_helpers_in_class_sequence {
-                            (ctx.current_hoist_scope_id(), SymbolFlags::FunctionScopedVariable)
+                            (
+                                ctx.current_hoist_scope_id(),
+                                SymbolFlags::FunctionScopedVariable,
+                            )
                         } else {
                             (ctx.current_block_scope_id(), SymbolFlags::Function)
                         };
@@ -183,7 +188,11 @@ impl<'a> ClassProperties<'a> {
                 is_declaration,
                 private_method_helpers_in_class_sequence,
                 is_transform_required: false,
-                private_props: if private_props.is_empty() { None } else { Some(private_props) },
+                private_props: if private_props.is_empty() {
+                    None
+                } else {
+                    Some(private_props)
+                },
                 bindings: ClassBindings::dummy(),
             });
             return;
@@ -210,7 +219,9 @@ impl<'a> ClassProperties<'a> {
                 // TODO(improve-on-babel): Inserting the temp var `var _Class` statement here is only
                 // to match Babel's output. It'd be simpler just to insert it at the end and get rid of
                 // `temp_var_is_created` that tracks whether it's done already or not.
-                ctx.state.var_declarations.insert_var(&temp_binding, &ctx.ast);
+                ctx.state
+                    .var_declarations
+                    .insert_var(&temp_binding, &ctx.ast);
             }
             Some(temp_binding)
         } else {
@@ -219,7 +230,9 @@ impl<'a> ClassProperties<'a> {
 
         let class_brand_binding = has_instance_private_method.then(|| {
             // `_Class_brand`
-            let name = class_name_binding.as_ref().map_or_else(|| "Class", |binding| &binding.name);
+            let name = class_name_binding
+                .as_ref()
+                .map_or_else(|| "Class", |binding| &binding.name);
             let name = &format!("_{name}_brand");
             ctx.generate_uid_in_current_hoist_scope(name)
         });
@@ -239,7 +252,11 @@ impl<'a> ClassProperties<'a> {
             is_declaration,
             private_method_helpers_in_class_sequence,
             is_transform_required: true,
-            private_props: if private_props.is_empty() { None } else { Some(private_props) },
+            private_props: if private_props.is_empty() {
+                None
+            } else {
+                Some(private_props)
+            },
             bindings: class_bindings,
         });
 
@@ -446,7 +463,9 @@ impl<'a> ClassProperties<'a> {
         ctx: &mut TraverseCtx<'a>,
     ) {
         // Static properties and static blocks
-        self.current_class_mut().bindings.static_private_fields_use_temp = true;
+        self.current_class_mut()
+            .bindings
+            .static_private_fields_use_temp = true;
 
         // Transform static properties, remove static and instance properties, and move computed keys
         // to before class
@@ -462,7 +481,9 @@ impl<'a> ClassProperties<'a> {
                 if !class_details.bindings.temp_var_is_created
                     || ident.symbol_id() != temp_binding.symbol_id
                 {
-                    ctx.state.var_declarations.insert_var(temp_binding, &ctx.ast);
+                    ctx.state
+                        .var_declarations
+                        .insert_var(temp_binding, &ctx.ast);
                 }
 
                 // Insert `_Class = Class` after class.
@@ -525,7 +546,9 @@ impl<'a> ClassProperties<'a> {
                         let value = Self::create_private_prop_key_loose(name, ctx);
                         stmts.push(create_variable_declaration(&binding, value, ctx));
                     }
-                    ctx.state.statement_injector.insert_many_before(&stmt_address, stmts);
+                    ctx.state
+                        .statement_injector
+                        .insert_many_before(&stmt_address, stmts);
                 }
             } else {
                 let mut weakmap_symbol_id = None;
@@ -548,7 +571,9 @@ impl<'a> ClassProperties<'a> {
                     }
                 }
                 if !stmts.is_empty() {
-                    ctx.state.statement_injector.insert_many_before(&stmt_address, stmts);
+                    ctx.state
+                        .statement_injector
+                        .insert_many_before(&stmt_address, stmts);
                 }
             }
         }
@@ -585,7 +610,9 @@ impl<'a> ClassProperties<'a> {
         expr: &mut Expression<'a>,
         ctx: &mut TraverseCtx<'a>,
     ) {
-        let Expression::ClassExpression(class) = expr else { unreachable!() };
+        let Expression::ClassExpression(class) = expr else {
+            unreachable!()
+        };
 
         // Ignore TS class declarations
         // TODO: Is this correct?
@@ -615,7 +642,9 @@ impl<'a> ClassProperties<'a> {
         expr: &mut Expression<'a>,
         ctx: &mut TraverseCtx<'a>,
     ) {
-        let Expression::ClassExpression(class) = expr else { unreachable!() };
+        let Expression::ClassExpression(class) = expr else {
+            unreachable!()
+        };
 
         // Transform static properties, remove static and instance properties, and move computed keys
         // to before class
@@ -675,7 +704,9 @@ impl<'a> ClassProperties<'a> {
                     }
 
                     // Insert `var _prop;` declaration
-                    ctx.state.var_declarations.insert_var(&prop.binding, &ctx.ast);
+                    ctx.state
+                        .var_declarations
+                        .insert_var(&prop.binding, &ctx.ast);
 
                     // `_prop = _classPrivateFieldLooseKey("prop")`
                     let value = Self::create_private_prop_key_loose(name, ctx);
@@ -702,7 +733,9 @@ impl<'a> ClassProperties<'a> {
                     }
 
                     // Insert `var _prop;` declaration
-                    ctx.state.var_declarations.insert_var(&prop.binding, &ctx.ast);
+                    ctx.state
+                        .var_declarations
+                        .insert_var(&prop.binding, &ctx.ast);
 
                     if prop.is_static {
                         return None;
@@ -726,7 +759,10 @@ impl<'a> ClassProperties<'a> {
                         "class expression private methods are always function declarations"
                     );
                 };
-                let id = func.id.take().expect("private method binding always has an id");
+                let id = func
+                    .id
+                    .take()
+                    .expect("private method binding always has an id");
                 let binding = BoundIdentifier::from_binding_ident(&id);
                 ctx.state.var_declarations.insert_var(&binding, &ctx.ast);
                 func.r#type = FunctionType::FunctionExpression;
@@ -878,7 +914,9 @@ impl<'a> ClassProperties<'a> {
     pub(super) fn flag_entering_static_property_or_block(&mut self) {
         // No need to check if class is a declaration, because `static_private_fields_use_temp`
         // is always `true` for class expressions anyway
-        self.current_class_mut().bindings.static_private_fields_use_temp = true;
+        self.current_class_mut()
+            .bindings
+            .static_private_fields_use_temp = true;
     }
 
     /// Flag that static private fields should be transpiled using name binding again
@@ -904,7 +942,8 @@ impl<'a> ClassProperties<'a> {
     /// Insert an expression after the class.
     pub(super) fn insert_expr_after_class(&mut self, expr: Expression<'a>, ctx: &TraverseCtx<'a>) {
         if self.current_class().is_declaration {
-            self.insert_after_stmts.push(Statement::new_expression_statement(SPAN, expr, ctx));
+            self.insert_after_stmts
+                .push(Statement::new_expression_statement(SPAN, expr, ctx));
         } else {
             self.insert_after_exprs.push(expr);
         }

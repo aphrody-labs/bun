@@ -170,35 +170,79 @@ fn test() {
         (r"<Item list={new Array()} />", None),
         (r"<Item list={Array()} />", None),
         (r"<Item list={this.props.list || []} />", None),
-        (r"<Item list={this.props.list ? this.props.list : []} />", None),
-        (r"<Item list={this.props.list || (this.props.arr ? this.props.arr : [])} />", None),
+        (
+            r"<Item list={this.props.list ? this.props.list : []} />",
+            None,
+        ),
+        (
+            r"<Item list={this.props.list || (this.props.arr ? this.props.arr : [])} />",
+            None,
+        ),
         (r"const Foo = () => <Item list={this.props.list} />", None),
         (r"const x = []; const Foo = () => <Item list={x} />", None),
-        (r"const DEFAULT_X = []; const Foo = ({ x = DEFAULT_X }) => <Item list={x} />", None),
-        (r"const Foo = () => <div list={[]} />", Some(json!([{ "nativeAllowList": "all" }]))),
-        (r"const Foo = () => <div list={[]} />", Some(json!([{ "nativeAllowList": ["list"] }]))),
+        (
+            r"const DEFAULT_X = []; const Foo = ({ x = DEFAULT_X }) => <Item list={x} />",
+            None,
+        ),
+        (
+            r"const Foo = () => <div list={[]} />",
+            Some(json!([{ "nativeAllowList": "all" }])),
+        ),
+        (
+            r"const Foo = () => <div list={[]} />",
+            Some(json!([{ "nativeAllowList": ["list"] }])),
+        ),
     ];
 
     let fail = vec![
         (r"const Foo = () => (<Item list={[]} />)", None),
         (r"const Foo = () => (<Item list={new Array()} />)", None),
         (r"const Foo = () => (<Item list={Array()} />)", None),
-        (r"const Foo = () => (<Item list={arr1.concat(arr2)} />)", None),
-        (r"const Foo = () => (<Item list={arr1.filter(x => x > 0)} />)", None),
-        (r"const Foo = () => (<Item list={arr1.map(x => x * x)} />)", None),
-        (r"const Foo = () => (<Item list={this.props.list || []} />)", None),
-        (r"const Foo = () => (<Item list={this.props.list ? this.props.list : []} />)", None),
+        (
+            r"const Foo = () => (<Item list={arr1.concat(arr2)} />)",
+            None,
+        ),
+        (
+            r"const Foo = () => (<Item list={arr1.filter(x => x > 0)} />)",
+            None,
+        ),
+        (
+            r"const Foo = () => (<Item list={arr1.map(x => x * x)} />)",
+            None,
+        ),
+        (
+            r"const Foo = () => (<Item list={this.props.list || []} />)",
+            None,
+        ),
+        (
+            r"const Foo = () => (<Item list={this.props.list ? this.props.list : []} />)",
+            None,
+        ),
         (
             r"const Foo = () => (<Item list={this.props.list || (this.props.arr ? this.props.arr : [])} />)",
             None,
         ),
-        (r"const Foo = () => { let x = []; return <Item list={x} /> }", None),
+        (
+            r"const Foo = () => { let x = []; return <Item list={x} /> }",
+            None,
+        ),
         (r"const Foo = ({ x = [] }) => <Item list={x} />", None),
-        (r"const Foo = () => <div list={[]} />", Some(json!([{ "nativeAllowList": ["style"] }]))),
+        (
+            r"const Foo = () => <div list={[]} />",
+            Some(json!([{ "nativeAllowList": ["style"] }])),
+        ),
         // components are never exempt, even with `"all"`
-        (r"const Foo = () => <Item list={[]} />", Some(json!([{ "nativeAllowList": "all" }]))),
+        (
+            r"const Foo = () => <Item list={[]} />",
+            Some(json!([{ "nativeAllowList": "all" }])),
+        ),
     ];
 
-    Tester::new(JsxNoNewArrayAsProp::NAME, JsxNoNewArrayAsProp::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        JsxNoNewArrayAsProp::NAME,
+        JsxNoNewArrayAsProp::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

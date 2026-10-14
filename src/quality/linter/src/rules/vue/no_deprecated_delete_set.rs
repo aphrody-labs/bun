@@ -72,7 +72,9 @@ impl Rule for NoDeprecatedDeleteSet {
     }
 
     fn run<'a>(&self, node: &AstNode<'a>, ctx: &LintContext<'a>) {
-        let AstKind::CallExpression(call) = node.kind() else { return };
+        let AstKind::CallExpression(call) = node.kind() else {
+            return;
+        };
 
         // Phase 1+2: `Vue.set` / `Vue.delete` and `this.$set` / `this.$delete`
         if let Some(member) = static_member_callee(&call.callee) {
@@ -440,6 +442,11 @@ fn test() {
         ),
     ];
 
-    Tester::new(NoDeprecatedDeleteSet::NAME, NoDeprecatedDeleteSet::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        NoDeprecatedDeleteSet::NAME,
+        NoDeprecatedDeleteSet::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

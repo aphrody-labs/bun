@@ -65,9 +65,14 @@ fn transform_impl(
     let source_type = get_source_type(
         filename,
         options.as_ref().and_then(|options| options.lang.as_deref()),
-        options.as_ref().and_then(|options| options.source_type.as_deref()),
+        options
+            .as_ref()
+            .and_then(|options| options.source_type.as_deref()),
     );
-    let sourcemap = options.as_ref().and_then(|options| options.sourcemap).unwrap_or(false);
+    let sourcemap = options
+        .as_ref()
+        .and_then(|options| options.sourcemap)
+        .unwrap_or(false);
 
     let options = options.unwrap_or_default();
     let report_diagnostics = options.report_react_compiler_diagnostics();
@@ -91,12 +96,14 @@ fn transform_impl(
         return error_result(filename, source_text, diagnostics);
     }
 
-    let SemanticBuilderReturn { semantic, diagnostics: semantic_diagnostics } =
-        SemanticBuilder::new_compiler()
-            .with_excess_capacity(2.0)
-            .with_enum_eval(true)
-            .with_build_nodes(react_compiler_options.is_some())
-            .build(&program);
+    let SemanticBuilderReturn {
+        semantic,
+        diagnostics: semantic_diagnostics,
+    } = SemanticBuilder::new_compiler()
+        .with_excess_capacity(2.0)
+        .with_enum_eval(true)
+        .with_build_nodes(react_compiler_options.is_some())
+        .build(&program);
     if !semantic_diagnostics.is_empty() {
         diagnostics.extend(semantic_diagnostics);
         return error_result(filename, source_text, diagnostics);
@@ -106,13 +113,18 @@ fn transform_impl(
         None => None,
         Some(options) => match react_compiler_compile(&program, &semantic, &allocator, options) {
             // Include recoverable diagnostics only when requested.
-            CompileResult::Success { output, diagnostics: react_diagnostics } => {
+            CompileResult::Success {
+                output,
+                diagnostics: react_diagnostics,
+            } => {
                 if report_diagnostics {
                     diagnostics.extend(react_diagnostics);
                 }
                 output
             }
-            CompileResult::Fatal { diagnostics: react_diagnostics } => {
+            CompileResult::Fatal {
+                diagnostics: react_diagnostics,
+            } => {
                 diagnostics.extend(react_diagnostics);
                 return error_result(filename, source_text, diagnostics);
             }
@@ -122,8 +134,11 @@ fn transform_impl(
     let mut scoping = semantic.into_scoping();
     if let Some(output) = react_output {
         output.transform(&mut program);
-        scoping =
-            SemanticBuilder::new().with_enum_eval(true).build(&program).semantic.into_scoping();
+        scoping = SemanticBuilder::new()
+            .with_enum_eval(true)
+            .build(&program)
+            .semantic
+            .into_scoping();
     }
 
     let transformer_return = Transformer::new(&allocator, Path::new(filename), &transform_options)
@@ -181,7 +196,11 @@ impl Task for TransformTask {
     type Output = TransformResult;
 
     fn compute(&mut self) -> napi::Result<Self::Output> {
-        Ok(transform_impl(&self.filename, &self.source_text, self.options.take()))
+        Ok(transform_impl(
+            &self.filename,
+            &self.source_text,
+            self.options.take(),
+        ))
     }
 
     fn resolve(&mut self, _: napi::Env, result: Self::Output) -> napi::Result<Self::JsValue> {
@@ -199,5 +218,9 @@ pub fn transform(
     source_text: String,
     options: Option<TransformOptions>,
 ) -> AsyncTask<TransformTask> {
-    AsyncTask::new(TransformTask { filename, source_text, options })
+    AsyncTask::new(TransformTask {
+        filename,
+        source_text,
+        options,
+    })
 }

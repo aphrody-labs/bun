@@ -60,9 +60,17 @@ fn no_non_null_assertion_diagnostic(span: Span, is_member_expression: bool) -> O
 
 impl Rule for NoNonNullAssertion {
     fn run<'a>(&self, node: &AstNode<'a>, ctx: &LintContext<'a>) {
-        let AstKind::TSNonNullExpression(expr) = node.kind() else { return };
-        let is_member_expression = ctx.nodes().parent_kind(node.id()).is_member_expression_kind();
-        ctx.diagnostic(no_non_null_assertion_diagnostic(expr.span, is_member_expression));
+        let AstKind::TSNonNullExpression(expr) = node.kind() else {
+            return;
+        };
+        let is_member_expression = ctx
+            .nodes()
+            .parent_kind(node.id())
+            .is_member_expression_kind();
+        ctx.diagnostic(no_non_null_assertion_diagnostic(
+            expr.span,
+            is_member_expression,
+        ));
     }
 
     fn should_run(&self, ctx: &ContextHost) -> bool {
@@ -121,6 +129,11 @@ fn test() {
                   ",
     ];
 
-    Tester::new(NoNonNullAssertion::NAME, NoNonNullAssertion::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        NoNonNullAssertion::NAME,
+        NoNonNullAssertion::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

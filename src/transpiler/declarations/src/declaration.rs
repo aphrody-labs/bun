@@ -72,8 +72,9 @@ impl<'a> IsolatedDeclarations<'a> {
                 // if kind is const and it doesn't need to infer type from expression
                 if kind.is_const() && !Self::is_need_to_infer_type_from_expression(init_expr) {
                     if let Expression::TemplateLiteral(lit) = init_expr {
-                        init =
-                            self.transform_template_to_string(lit).map(Expression::StringLiteral);
+                        init = self
+                            .transform_template_to_string(lit)
+                            .map(Expression::StringLiteral);
                     } else {
                         init = Some(init_expr.clone_in(self.allocator()));
                     }
@@ -100,7 +101,14 @@ impl<'a> IsolatedDeclarations<'a> {
         let type_annotation =
             binding_type.map(|ts_type| TSTypeAnnotation::boxed(SPAN, ts_type, self));
 
-        Some(VariableDeclarator::new(decl.span, id, type_annotation, init, decl.definite, self))
+        Some(VariableDeclarator::new(
+            decl.span,
+            id,
+            type_annotation,
+            init,
+            decl.definite,
+            self,
+        ))
     }
 
     fn transform_ts_module_block(
@@ -109,7 +117,8 @@ impl<'a> IsolatedDeclarations<'a> {
     ) -> ArenaBox<'a, TSModuleBlock<'a>> {
         // We need to enter a new scope for the module block, avoid add binding to the parent scope
         // TODO: doesn't have a scope_id!
-        self.scope.enter_scope(ScopeFlags::TsModuleBlock, &Cell::default());
+        self.scope
+            .enter_scope(ScopeFlags::TsModuleBlock, &Cell::default());
         let stmts = self.transform_statements_on_demand(&block.body);
         self.scope.leave_scope();
         TSModuleBlock::boxed(SPAN, [], stmts, self)
@@ -123,7 +132,10 @@ impl<'a> IsolatedDeclarations<'a> {
             return decl.clone_in(self.allocator());
         }
 
-        let body = decl.body.as_ref().map(|block| self.transform_ts_module_block(block));
+        let body = decl
+            .body
+            .as_ref()
+            .map(|block| self.transform_ts_module_block(block));
         TSExternalModuleDeclaration::boxed(
             decl.span,
             decl.id.clone_in(self.allocator()),
@@ -177,7 +189,10 @@ impl<'a> IsolatedDeclarations<'a> {
         match decl {
             Declaration::FunctionDeclaration(func) => {
                 let needs_transform = !check_binding
-                    || func.id.as_ref().is_some_and(|id| self.scope.has_value_reference(id.name));
+                    || func
+                        .id
+                        .as_ref()
+                        .is_some_and(|id| self.scope.has_value_reference(id.name));
                 needs_transform
                     .then(|| Declaration::FunctionDeclaration(self.transform_function(func, None)))
             }
@@ -186,7 +201,10 @@ impl<'a> IsolatedDeclarations<'a> {
                 .map(Declaration::VariableDeclaration),
             Declaration::ClassDeclaration(decl) => {
                 let needs_transform = !check_binding
-                    || decl.id.as_ref().is_some_and(|id| self.scope.has_reference(id.name));
+                    || decl
+                        .id
+                        .as_ref()
+                        .is_some_and(|id| self.scope.has_reference(id.name));
                 needs_transform
                     .then(|| Declaration::ClassDeclaration(self.transform_class(decl, None)))
             }
@@ -233,12 +251,14 @@ impl<'a> IsolatedDeclarations<'a> {
                     None
                 }
             }
-            Declaration::TSGlobalDeclaration(decl) => {
-                Some(Declaration::TSGlobalDeclaration(decl.clone_in(self.allocator())))
-            }
+            Declaration::TSGlobalDeclaration(decl) => Some(Declaration::TSGlobalDeclaration(
+                decl.clone_in(self.allocator()),
+            )),
             Declaration::TSImportEqualsDeclaration(decl) => {
                 if !check_binding || self.scope.has_reference(decl.id.name) {
-                    Some(Declaration::TSImportEqualsDeclaration(decl.clone_in(self.allocator())))
+                    Some(Declaration::TSImportEqualsDeclaration(
+                        decl.clone_in(self.allocator()),
+                    ))
                 } else {
                     None
                 }
@@ -279,7 +299,9 @@ impl<'a> VisitMut<'a> for IsolatedDeclarations<'a> {
                     self.error(inferred_type_of_expression(signature.span));
                 }
                 TSMethodSignatureKind::Get => {
-                    self.error(accessor_must_have_explicit_return_type(signature.key.span()));
+                    self.error(accessor_must_have_explicit_return_type(
+                        signature.key.span(),
+                    ));
                 }
                 TSMethodSignatureKind::Set => {
                     // setter method don't need return type

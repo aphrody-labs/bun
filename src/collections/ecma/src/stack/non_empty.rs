@@ -163,7 +163,10 @@ impl<T> NonEmptyStack<T> {
     #[inline]
     pub fn with_capacity(capacity: usize, initial_value: T) -> Self {
         assert!(capacity > 0, "`capacity` cannot be zero");
-        assert!(capacity <= Self::MAX_CAPACITY, "`capacity` must not exceed `Self::MAX_CAPACITY`");
+        assert!(
+            capacity <= Self::MAX_CAPACITY,
+            "`capacity` must not exceed `Self::MAX_CAPACITY`"
+        );
         // SAFETY: Assertions above ensure `capacity` satisfies requirements
         unsafe { Self::with_capacity_unchecked(capacity, initial_value) }
     }
@@ -217,7 +220,12 @@ impl<T> NonEmptyStack<T> {
         unsafe { start.as_ptr().write(initial_value) };
 
         // `cursor` is positioned at start i.e. pointing at initial value
-        Self { cursor: start, start, end, _marker: PhantomData }
+        Self {
+            cursor: start,
+            start,
+            end,
+            _marker: PhantomData,
+        }
     }
 
     /// Get reference to first value on stack.

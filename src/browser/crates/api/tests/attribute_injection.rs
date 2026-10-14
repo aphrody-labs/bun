@@ -10,12 +10,16 @@ use bun_browser::Browser;
 async fn attribute_name_cannot_inject_js() {
     let browser = Browser::new().unwrap();
     let mut page = browser.new_page().await.unwrap();
-    page.goto("data:text/html,<div id=x data-safe=ok></div>").await.unwrap();
+    page.goto("data:text/html,<div id=x data-safe=ok></div>")
+        .await
+        .unwrap();
 
     // Canary the injection would flip from 0 to 1.
     page.evaluate("globalThis.__pwned = 0");
 
-    let el = page.query_selector("#x").expect("element #x should be found");
+    let el = page
+        .query_selector("#x")
+        .expect("element #x should be found");
 
     // Payload breaks out of `getAttribute('{name}')` while staying a single
     // valid expression (the wrapper places it inside `el ? ... : null`, which
@@ -35,9 +39,13 @@ async fn attribute_name_cannot_inject_js() {
 async fn attribute_reads_ordinary_names() {
     let browser = Browser::new().unwrap();
     let mut page = browser.new_page().await.unwrap();
-    page.goto("data:text/html,<div id=x data-safe=ok></div>").await.unwrap();
+    page.goto("data:text/html,<div id=x data-safe=ok></div>")
+        .await
+        .unwrap();
 
-    let el = page.query_selector("#x").expect("element #x should be found");
+    let el = page
+        .query_selector("#x")
+        .expect("element #x should be found");
     assert_eq!(
         el.attribute("data-safe").as_deref(),
         Some("ok"),

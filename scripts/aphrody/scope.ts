@@ -7,6 +7,7 @@
 //   bun scripts/aphrody/scope.ts --write   rewrite them in place
 
 import { join } from "node:path";
+import { existsSync } from "node:fs";
 
 export const SCOPE = "@aphrody";
 
@@ -139,22 +140,207 @@ export function rewrite(path: string, text: string): string {
 // datasets and native artifacts never enter the scan.
 export function candidates(root: string): string[] {
   const pattern = ["@types/bun", ...RENAMED].map(escape).join("|");
-  const proc = Bun.spawnSync([
-    "rg", "--files-with-matches", "--no-messages", "--threads", "2",
-    "--glob", "*.{js,jsx,ts,tsx,cjs,cjsx,cts,ctsx,mjs,mjsx,mts,mtsx,md,mdx,svelte,html}",
-    "--glob", "package.json", "--glob", "bunfig.toml", "--glob", "!**/node_modules/**",
-    "-e", pattern, "packages",
-  ], {
+  const inventory = Bun.spawnSync(["git", "--literal-pathspecs", "ls-files", "--cached", "-z", "--", "packages"], {
     cwd: root,
+    env: { ...process.env, GIT_OPTIONAL_LOCKS: "0" },
     stdout: "pipe",
     stderr: "pipe",
+    timeout: 2_000,
+    maxBuffer: 32 * 1024 * 1024,
   });
+  if (inventory.exitCode === 0) {
+    // Collapse wholly untracked directories: Git need not inspect native build/cache trees.
+    const untracked = Bun.spawnSync(
+      [
+        "git",
+        "--literal-pathspecs",
+        "ls-files",
+        "--others",
+        "--directory",
+        "--exclude-standard",
+        "--exclude=**/node_modules/",
+        "--exclude=**/target/",
+        "--exclude=**/.pytest_cache/",
+        "--exclude=**/__pycache__/",
+        "--exclude=**/.venv/",
+        "-z",
+        "--",
+        "packages",
+      ],
+      {
+        cwd: root,
+        env: { ...process.env, GIT_OPTIONAL_LOCKS: "0" },
+        stdout: "pipe",
+        stderr: "pipe",
+        timeout: 2_000,
+        maxBuffer: 32 * 1024 * 1024,
+      },
+    );
+    if (untracked.exitCode !== 0) {
+      throw new Error(
+        `git untracked inventory failed with exit code ${untracked.exitCode}: ${untracked.stderr.toString()}`,
+      );
+    }
+    const extra = untracked.stdout.toString().split("\0").filter(Boolean);
+    const directories = extra.filter(file => file.endsWith("/") && !file.includes("/node_modules/"));
+    if (directories.length) {
+      const discovered = Bun.spawnSync(
+        [
+          "rg",
+          "--files",
+          "--null",
+          "--no-messages",
+          "--threads",
+          "2",
+          "--glob",
+          "*.{js,jsx,ts,tsx,cjs,cjsx,cts,ctsx,mjs,mjsx,mts,mtsx,md,mdx,svelte,html}",
+          "--glob",
+          "package.json",
+          "--glob",
+          "bunfig.toml",
+          "--glob",
+          "!**/node_modules/**",
+          "--",
+          ...directories,
+        ],
+        {
+          cwd: root,
+          stdout: "pipe",
+          stderr: "pipe",
+          timeout: 2_000,
+          maxBuffer: 32 * 1024 * 1024,
+        },
+      );
+      if (discovered.exitCode !== 0 && discovered.exitCode !== 1) {
+        throw new Error(
+          `rg untracked inventory failed with exit code ${discovered.exitCode}: ${discovered.stderr.toString()}`,
+        );
+      }
+      extra.push(...discovered.stdout.toString().split("\0"));
+    }
+    // Git searches tracked working files without passing thousands of filenames through argv.
+    const trackedMatches = Bun.spawnSync(
+      [
+        "git",
+        "grep",
+        "--files-with-matches",
+        "--null",
+        "--threads=2",
+        "-E",
+        "-e",
+        pattern,
+        "--",
+        ...[
+          "js",
+          "jsx",
+          "ts",
+          "tsx",
+          "cjs",
+          "cjsx",
+          "cts",
+          "ctsx",
+          "mjs",
+          "mjsx",
+          "mts",
+          "mtsx",
+          "md",
+          "mdx",
+          "svelte",
+          "html",
+        ].map(extension => `:(glob)packages/**/*.${extension}`),
+        ":(glob)packages/**/package.json",
+        ":(glob)packages/**/bunfig.toml",
+        ":(exclude,glob)packages/**/node_modules/**",
+      ],
+      {
+        cwd: root,
+        env: { ...process.env, GIT_OPTIONAL_LOCKS: "0" },
+        stdout: "pipe",
+        stderr: "pipe",
+        timeout: 10_000,
+        maxBuffer: 32 * 1024 * 1024,
+      },
+    );
+    if (trackedMatches.exitCode !== 0 && trackedMatches.exitCode !== 1) {
+      throw new Error(
+        `git content selection failed with exit code ${trackedMatches.exitCode}: ${trackedMatches.stderr.toString()}`,
+      );
+    }
+    const files = [...new Set(extra.filter(isManaged))].filter(file => existsSync(join(root, file))).sort();
+    const found = new Set(trackedMatches.stdout.toString().split("\0").filter(isManaged));
+    const scan = (batch: string[]) => {
+      if (!batch.length) return;
+      const result = Bun.spawnSync(
+        ["rg", "--files-with-matches", "--null", "--no-messages", "--threads", "2", "-e", pattern, "--", ...batch],
+        {
+          cwd: root,
+          stdout: "pipe",
+          stderr: "pipe",
+          timeout: 2_000,
+          maxBuffer: 32 * 1024 * 1024,
+        },
+      );
+      if (result.exitCode !== 0 && result.exitCode !== 1) {
+        throw new Error(`rg failed with exit code ${result.exitCode}: ${result.stderr.toString()}`);
+      }
+      for (const file of result.stdout.toString().split("\0").filter(Boolean)) {
+        found.add(file.replaceAll("\\", "/"));
+      }
+    };
+    // Bound argv below Windows' command-line ceiling, including quoting overhead.
+    let batch: string[] = [];
+    let size = 0;
+    for (const file of files) {
+      const length = file.length + (file.match(/["\\]/g)?.length ?? 0) + 3;
+      if (size + length > 28_000) {
+        scan(batch);
+        batch = [];
+        size = 0;
+      }
+      batch.push(file);
+      size += length;
+    }
+    scan(batch);
+    return [...found].sort();
+  }
+  if (!inventory.stderr.toString().includes("not a git repository")) {
+    throw new Error(`git ls-files failed with exit code ${inventory.exitCode}: ${inventory.stderr.toString()}`);
+  }
+  // Standalone fixtures have no Git inventory. Apply managed globs before reading contents.
+  const proc = Bun.spawnSync(
+    [
+      "rg",
+      "--files-with-matches",
+      "--null",
+      "--no-messages",
+      "--threads",
+      "2",
+      "--glob",
+      "*.{js,jsx,ts,tsx,cjs,cjsx,cts,ctsx,mjs,mjsx,mts,mtsx,md,mdx,svelte,html}",
+      "--glob",
+      "package.json",
+      "--glob",
+      "bunfig.toml",
+      "--glob",
+      "!**/node_modules/**",
+      "-e",
+      pattern,
+      "packages",
+    ],
+    {
+      cwd: root,
+      stdout: "pipe",
+      stderr: "pipe",
+      timeout: 2_000,
+      maxBuffer: 32 * 1024 * 1024,
+    },
+  );
   if (proc.exitCode !== 0 && proc.exitCode !== 1) {
     throw new Error(`rg failed with exit code ${proc.exitCode}: ${proc.stderr.toString()}`);
   }
   return proc.stdout
     .toString()
-    .split(/\r?\n/)
+    .split("\0")
     .filter(Boolean)
     .map(f => f.replaceAll("\\", "/"))
     .filter(isManaged)

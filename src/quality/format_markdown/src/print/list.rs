@@ -41,9 +41,15 @@ pub fn write_list<'a>(
     let min_indent = required_indent(next, f);
     let indent_width = usize::from(f.options().indent_width.value());
     let ordered = is_ordered(list);
-    let start = list.children.first().map_or(1, |item| marker_number(item, f));
+    let start = list
+        .children
+        .first()
+        .map_or(1, |item| marker_number(item, f));
 
-    f.context().lists().borrow_mut().push(ListFrame { alternate_marker, aligned });
+    f.context().lists().borrow_mut().push(ListFrame {
+        alternate_marker,
+        aligned,
+    });
 
     let mut previous_loose = false;
     for (i, item) in list.children.iter().enumerate() {
@@ -109,7 +115,10 @@ fn write_list_item<'a>(
     // capped at 3 (4+ would read as indented code).
     let indent_width = usize::from(f.options().indent_width.value());
     let alignment = indent_width.saturating_sub(list_prefix_len).min(3);
-    let parent = block::Parent::ListItem { loose, after_checkbox: false };
+    let parent = block::Parent::ListItem {
+        loose,
+        after_checkbox: false,
+    };
 
     for (i, child) in item.children.iter().enumerate() {
         if i > 0 {
@@ -129,7 +138,10 @@ fn write_list_item<'a>(
         }
         // The first block follows the checkbox on its line: its first line is not a line start
         let child_parent = if i == 0 && !checkbox.is_empty() {
-            block::Parent::ListItem { loose, after_checkbox: true }
+            block::Parent::ListItem {
+                loose,
+                after_checkbox: true,
+            }
         } else {
             parent
         };
@@ -148,7 +160,10 @@ fn write_list_item<'a>(
         if i == 0 && !matches!(child, Block::List(_)) {
             write!(f, space_align(checkbox.len(), &body));
         } else {
-            write!(f, [token(&"   "[..alignment]), space_align(alignment, &body)]);
+            write!(
+                f,
+                [token(&"   "[..alignment]), space_align(alignment, &body)]
+            );
         }
     }
 }
@@ -160,7 +175,10 @@ fn is_loose_item(
     f: &MarkdownFormatter<'_, '_>,
 ) -> bool {
     item.spread
-        || next.is_some_and(|next| f.context().has_blank_between(item.span.end, next.span.start))
+        || next.is_some_and(|next| {
+            f.context()
+                .has_blank_between(item.span.end, next.span.start)
+        })
 }
 
 /// Whether this list prints the alternate marker (`*` / `)`).
@@ -208,7 +226,9 @@ fn has_git_diff_friendly_ordered_list(list: &List<'_>, f: &MarkdownFormatter<'_,
     if marker_number(&list.children[0], f) != 0 {
         return true;
     }
-    list.children.get(2).is_some_and(|third| marker_number(third, f) == 1)
+    list.children
+        .get(2)
+        .is_some_and(|third| marker_number(third, f) == 1)
 }
 
 /// Whether ordered markers are padded to the tab width.
@@ -218,7 +238,12 @@ fn is_aligned(list: &List<'_>, next: Option<&Block<'_>>, f: &MarkdownFormatter<'
     }
     // An unaligned ancestor list makes every descendant unaligned
     // (each frame carries its ancestors' verdict)
-    if f.context().lists().borrow().last().is_some_and(|frame| !frame.aligned) {
+    if f.context()
+        .lists()
+        .borrow()
+        .last()
+        .is_some_and(|frame| !frame.aligned)
+    {
         return false;
     }
     // Hard to align when followed by indented code
@@ -232,13 +257,19 @@ fn is_aligned(list: &List<'_>, next: Option<&Block<'_>>, f: &MarkdownFormatter<'
     // padding the marker would land inside the code (`>2.     foo`,
     // where the code starts at a tab stop only because of the `>`).
     // See DIVERGENCES.md#ordered-marker-before-indented-code.
-    if list.children.iter().any(|item| item.children.first().is_some_and(is_indented_code)) {
+    if list
+        .children
+        .iter()
+        .any(|item| item.children.first().is_some_and(is_indented_code))
+    {
         return false;
     }
 
     let source = f.context().source_text().as_str();
     let item_start = |item: &ListItem<'_>| -> Option<usize> {
-        item.children.first().map(|child| column_of(source, child.span().start))
+        item.children
+            .first()
+            .map(|child| column_of(source, child.span().start))
     };
     let indent_width = usize::from(f.options().indent_width.value());
 
@@ -246,7 +277,9 @@ fn is_aligned(list: &List<'_>, next: Option<&Block<'_>>, f: &MarkdownFormatter<'
     if first.padding > 1 {
         return true;
     }
-    let Some(first_start) = item_start(first) else { return false };
+    let Some(first_start) = item_start(first) else {
+        return false;
+    };
     // `x % 0` is `NaN` in Prettier, never equal to 0
     let at_tab_stop = |column: usize| indent_width != 0 && column.is_multiple_of(indent_width);
     let Some(second) = list.children.get(1) else {
@@ -277,11 +310,15 @@ fn align_list_prefix(prefix: &mut String, indent_width: usize) {
 /// A list followed by an indented code block must indent its content deeper than the code
 /// (4 + the code's own leading whitespace + 1), or the code would join the list.
 fn required_indent(next: Option<&Block<'_>>, f: &MarkdownFormatter<'_, '_>) -> usize {
-    let Some(Block::CodeBlock(code)) = next else { return 0 };
+    let Some(Block::CodeBlock(code)) = next else {
+        return 0;
+    };
     if !matches!(code.kind, CodeBlockKind::Indented) {
         return 0;
     }
-    let Some(first) = code.lines.first() else { return 0 };
+    let Some(first) = code.lines.first() else {
+        return 0;
+    };
     let raw = f.context().slice(first.span);
     let leading: usize = raw
         .bytes()

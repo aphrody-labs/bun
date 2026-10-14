@@ -53,7 +53,10 @@ impl NeedsParentheses<'_> for AstNode<'_, TSFunctionType<'_>> {
         //
         // https://github.com/prettier/prettier/blob/812a4d0071270f61a7aa549d625b618be7e09d71/src/language-js/parentheses/needs-parentheses.js#L514-L525
         if let AstNodes::TSTypeAnnotation(type_annotation) = parent
-            && matches!(type_annotation.parent(), AstNodes::ArrowFunctionExpression(_))
+            && matches!(
+                type_annotation.parent(),
+                AstNodes::ArrowFunctionExpression(_)
+            )
         {
             return true;
         }

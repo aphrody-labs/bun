@@ -35,7 +35,9 @@ pub(super) fn exprs_into_stmts<'a, E>(
 where
     E: IntoIterator<Item = Expression<'a>>,
 {
-    exprs.into_iter().map(move |expr| Statement::new_expression_statement(SPAN, expr, ast))
+    exprs
+        .into_iter()
+        .map(move |expr| Statement::new_expression_statement(SPAN, expr, ast))
 }
 
 /// Create `IdentifierName` for `_`.

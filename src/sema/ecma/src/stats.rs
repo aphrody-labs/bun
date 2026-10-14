@@ -74,7 +74,12 @@ pub struct Stats {
 impl Stats {
     /// Create new [`Stats`] from specified counts.
     pub fn new(nodes: u32, scopes: u32, symbols: u32, references: u32) -> Self {
-        Stats { nodes, scopes, symbols, references }
+        Stats {
+            nodes,
+            scopes,
+            symbols,
+            references,
+        }
     }
 
     /// Gather [`Stats`] by visiting AST and counting nodes, scopes, symbols, and references.
@@ -105,7 +110,11 @@ impl Stats {
         }
 
         let factor = excess + 1.0;
-        #[expect(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::cast_lossless)]
+        #[expect(
+            clippy::cast_possible_truncation,
+            clippy::cast_sign_loss,
+            clippy::cast_lossless
+        )]
         let increase = |n: u32| (n as f64 * factor) as u32;
 
         self.scopes = increase(self.scopes);
@@ -122,7 +131,10 @@ impl Stats {
     pub fn assert_accurate(self, actual: Self) {
         assert_eq!(self.nodes, actual.nodes, "nodes count mismatch");
         assert_eq!(self.scopes, actual.scopes, "scopes count mismatch");
-        assert_eq!(self.references, actual.references, "references count mismatch");
+        assert_eq!(
+            self.references, actual.references,
+            "references count mismatch"
+        );
         // `Counter` may overestimate number of symbols, because multiple `BindingIdentifier`s
         // can result in only a single symbol.
         // e.g. `var x; var x;` = 2 x `BindingIdentifier` but 1 x symbol.

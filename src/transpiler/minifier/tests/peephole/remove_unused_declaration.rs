@@ -190,12 +190,18 @@ fn remove_unused_pure_iife_init() {
     test_smallest("var x = /* @__PURE__ */ (() => foo()?.bar())()", "");
     test_smallest("var x = /* @__PURE__ */ (() => a ? b : c)()", "");
 
-    test_smallest("var x = /* @__PURE__ */ (function() { return foo() })()", "");
+    test_smallest(
+        "var x = /* @__PURE__ */ (function() { return foo() })()",
+        "",
+    );
 
     test_smallest("let x = /* @__PURE__ */ (() => g.x)()", "");
     test_smallest("const x = /* @__PURE__ */ (() => g.x)()", "");
 
-    test_smallest("var x = /* @__PURE__ */ foo(), y = bar(); use(y);", "var y = bar(); use(y);");
+    test_smallest(
+        "var x = /* @__PURE__ */ foo(), y = bar(); use(y);",
+        "var y = bar(); use(y);",
+    );
 
     // Referenced bindings keep the declarator — `symbol_is_unused` blocks
     // the drop. Propagation still inlines the IIFE body.
@@ -204,7 +210,10 @@ fn remove_unused_pure_iife_init() {
         "var x = /* @__PURE__ */ (() => foo())(); use(x);",
         "var x = /* @__PURE__ */ foo(); use(x);",
     );
-    test_smallest("var x = /* @__PURE__ */ (() => g.x)(); use(x);", "var x = g.x; use(x);");
+    test_smallest(
+        "var x = /* @__PURE__ */ (() => g.x)(); use(x);",
+        "var x = g.x; use(x);",
+    );
     test_smallest(
         "var x = /* @__PURE__ */ (() => { return foo() })(); use(x);",
         "var x = /* @__PURE__ */ foo(); use(x);",
@@ -218,18 +227,27 @@ fn remove_unused_pure_iife_init() {
 
     // Exported bindings are cross-module reachable — the export-ancestor
     // check blocks the early drop.
-    test_smallest("export var x = /* @__PURE__ */ foo()", "export var x = /* @__PURE__ */ foo();");
+    test_smallest(
+        "export var x = /* @__PURE__ */ foo()",
+        "export var x = /* @__PURE__ */ foo();",
+    );
     test_smallest(
         "export const x = /* @__PURE__ */ (() => foo())();",
         "export const x = /* @__PURE__ */ foo();",
     );
-    test_smallest("export const x = /* @__PURE__ */ (() => g.x)();", "export const x = g.x;");
+    test_smallest(
+        "export const x = /* @__PURE__ */ (() => g.x)();",
+        "export const x = g.x;",
+    );
     test_same_smallest("var x = /* @__PURE__ */ foo(); export { x }");
 
     test_smallest("var x = (() => g.x)();", "g.x;");
 
     // `using` runs `[Symbol.dispose]` at scope exit, so the declarator stays.
-    test_smallest("using x = /* @__PURE__ */ (() => foo())()", "using x = /* @__PURE__ */ foo();");
+    test_smallest(
+        "using x = /* @__PURE__ */ (() => foo())()",
+        "using x = /* @__PURE__ */ foo();",
+    );
     test_smallest(
         "await using x = /* @__PURE__ */ (() => foo())()",
         "await using x = /* @__PURE__ */ foo();",
@@ -357,7 +375,11 @@ fn remove_unused_class_declaration() {
     test_options("class C { accessor [foo] = 1 }", "foo", &options);
 
     // order
-    test_options("class _ extends A { [B] = C; [D]() {} }", "A, B, D", &options);
+    test_options(
+        "class _ extends A { [B] = C; [D]() {} }",
+        "A, B, D",
+        &options,
+    );
 
     // decorators
     test_same_options("class C { @dec foo() {} }", &options);
@@ -396,7 +418,10 @@ fn remove_recursive_unused_function_declaration() {
     test_smallest("function f() { return f }", "");
     test_smallest("function f() { g(f) }", "");
     // The cycle's only external reference is inside dead code.
-    test_smallest("if (false) c(); function c() { d() } function d() { c() }", "");
+    test_smallest(
+        "if (false) c(); function c() { d() } function d() { c() }",
+        "",
+    );
 }
 
 // Ownership is determined from each reference's current semantic scope, not
@@ -523,10 +548,19 @@ fn remove_recursive_unused_mutual_declarator_cycles() {
 #[test]
 #[ignore = "TODO: extend recursive reachability to class declarations"]
 fn remove_recursive_unused_class_cycles() {
-    test_smallest("class A { m() { new B() } } class B { m() { new A() } }", "");
-    test_smallest("function a() { b() } const b = () => { new C() }; class C { m() { a() } }", "");
+    test_smallest(
+        "class A { m() { new B() } } class B { m() { new A() } }",
+        "",
+    );
+    test_smallest(
+        "function a() { b() } const b = () => { new C() }; class C { m() { a() } }",
+        "",
+    );
     test_smallest("function F() {} class A extends F { m() { new A() } }", "");
-    test_smallest("function F() {} class A extends (0 || F) { m() { new A() } }", "");
+    test_smallest(
+        "function F() {} class A extends (0 || F) { m() { new A() } }",
+        "",
+    );
 }
 
 // ---- References from live code ----
@@ -568,14 +602,20 @@ fn keep_recursive_cycle_with_side_effectful_evaluation() {
 #[test]
 fn remove_unused_class_identifier_heritage_under_assumptions() {
     // ASSUMPTIONS.md excludes TDZ violations and side effects from extending a class.
-    test_smallest("var A = class {}; var B = class extends A {}; var C = class extends B {};", "");
+    test_smallest(
+        "var A = class {}; var B = class extends A {}; var C = class extends B {};",
+        "",
+    );
     test_smallest("(class extends g() {});", "g();");
 }
 
 #[test]
 fn keep_class_cycle_with_wrapped_arrow_heritage() {
     // The arrow check sees through a sequence wrapper.
-    test_smallest("class C extends (0, () => {}) {}", "class C extends (() => {}) {}");
+    test_smallest(
+        "class C extends (0, () => {}) {}",
+        "class C extends (() => {}) {}",
+    );
 }
 
 #[test]
@@ -666,7 +706,10 @@ fn recursive_function_var_redeclaration_converges_on_count_pass() {
     // The first pass removes the function using published graph deadness.
     // Its body reference is pruned only at the following flush, so a capped
     // run conservatively retains the sibling `var` declaration.
-    let options = CompressOptions { max_iterations: Some(0), ..CompressOptions::smallest() };
+    let options = CompressOptions {
+        max_iterations: Some(0),
+        ..CompressOptions::smallest()
+    };
     test_options_once_with_iterations("function f() { f() } var f;", "var f;", 0, &options);
 }
 
@@ -900,7 +943,11 @@ fn remove_recursive_function_after_direct_eval_dropped() {
 #[test]
 fn keep_non_module_recursive_functions_reachable_by_eval() {
     let options = CompressOptions::smallest();
-    test_same_options_source_type("eval('f()'); function f() { f() }", SourceType::cjs(), &options);
+    test_same_options_source_type(
+        "eval('f()'); function f() { f() }",
+        SourceType::cjs(),
+        &options,
+    );
     test_same_options_source_type(
         "function outer() { eval('f()'); function f() { f() } }",
         SourceType::script(),
@@ -941,7 +988,10 @@ fn for_head_reachability_uses_ordinary_references() {
         "var f = 1; function d1() { f; d2() } function d2() { d1() } if (false) for (var f of xs) {} export {};",
         "export {};",
     );
-    test_smallest("if (false) for (var f of xs) {} f = 1; export {};", "export {};");
+    test_smallest(
+        "if (false) for (var f of xs) {} f = 1; export {};",
+        "export {};",
+    );
 }
 
 // References in `using` initializers participate normally in function
@@ -984,8 +1034,10 @@ fn keep_using_member_write_observed_by_disposal() {
 
 #[test]
 fn keep_recursive_function_with_unused_keep_option() {
-    let options =
-        CompressOptions { unused: CompressOptionsUnused::Keep, ..CompressOptions::smallest() };
+    let options = CompressOptions {
+        unused: CompressOptionsUnused::Keep,
+        ..CompressOptions::smallest()
+    };
     test_same_options("function f() { f() }", &options);
     test_same_options("const f = () => f()", &options);
     // The graph is disabled, but export observability still protects the
@@ -1038,14 +1090,26 @@ fn remove_unused_import_specifiers() {
     test_same_options("import * as a from 'a'; foo(a);", &options);
     test_same_options("import a, { b } from 'a'; foo(a, b);", &options);
 
-    test_options("import { a, b } from 'a'; foo(a);", "import { a } from 'a'; foo(a);", &options);
+    test_options(
+        "import { a, b } from 'a'; foo(a);",
+        "import { a } from 'a'; foo(a);",
+        &options,
+    );
     test_options(
         "import { a, b, c } from 'a'; foo(b);",
         "import { b } from 'a'; foo(b);",
         &options,
     );
-    test_options("import a, { b } from 'a'; foo(a);", "import a from 'a'; foo(a);", &options);
-    test_options("import a, { b } from 'a'; foo(b);", "import { b } from 'a'; foo(b);", &options);
+    test_options(
+        "import a, { b } from 'a'; foo(a);",
+        "import a from 'a'; foo(a);",
+        &options,
+    );
+    test_options(
+        "import a, { b } from 'a'; foo(b);",
+        "import { b } from 'a'; foo(b);",
+        &options,
+    );
 
     test_options(
         "import a from 'a'; import { b } from 'b'; if (false) { console.log(b) }",
@@ -1071,12 +1135,19 @@ fn remove_unused_import_specifiers() {
     test_options("import { a as b } from 'a'", "import 'a';", &options);
     test_same_options("import { a as b } from 'a'; foo(b);", &options);
 
-    test_options("import { a } from 'a'; export { a };", "export { a } from 'a';", &options);
+    test_options(
+        "import { a } from 'a'; export { a };",
+        "export { a } from 'a';",
+        &options,
+    );
     // Keep imports when direct eval is present
     test_same_options("import { a } from 'a'; eval('a');", &options);
     test_same_options("import a from 'a'; eval('a');", &options);
     test_same_options("import * as a from 'a'; eval('a');", &options);
-    test_same_options("import { a } from 'a'; function f() { eval('a'); }", &options);
+    test_same_options(
+        "import { a } from 'a'; function f() { eval('a'); }",
+        &options,
+    );
 }
 
 #[test]
@@ -1084,7 +1155,11 @@ fn remove_unused_import_source_statement() {
     let options = CompressOptions::smallest();
 
     test_options("import source a from 'a'", "", &options);
-    test_options("import source a from 'a'; if (false) { console.log(a) }", "", &options);
+    test_options(
+        "import source a from 'a'; if (false) { console.log(a) }",
+        "",
+        &options,
+    );
     test_same_options("import source a from 'a'; foo(a);", &options);
     test_same_options(
         "import source a from 'a'",
@@ -1103,7 +1178,11 @@ fn remove_unused_import_defer_statements() {
     let options = CompressOptions::smallest();
 
     test_options("import defer * as a from 'a'", "", &options);
-    test_options("import defer * as a from 'a'; if (false) { console.log(a.foo) }", "", &options);
+    test_options(
+        "import defer * as a from 'a'; if (false) { console.log(a.foo) }",
+        "",
+        &options,
+    );
     test_same_options("import defer * as a from 'a'; foo(a);", &options);
     test_same_options("import defer * as a from 'a'; foo(a.bar);", &options);
     test_same_options(

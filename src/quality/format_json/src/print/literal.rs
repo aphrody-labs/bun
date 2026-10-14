@@ -19,7 +19,11 @@ pub struct FmtJsonString<'a, 'b> {
 impl<'a> Format<'a, JsonFormatContext<'a>> for FmtJsonString<'a, '_> {
     fn fmt(&self, f: &mut JsonFormatter<'_, 'a>) {
         // The parser always populates `raw` (see `oxc_parser::js::expression`)
-        let raw = self.lit.raw.as_ref().unwrap_or_else(|| unreachable!("parser always sets `raw`"));
+        let raw = self
+            .lit
+            .raw
+            .as_ref()
+            .unwrap_or_else(|| unreachable!("parser always sets `raw`"));
         let raw_str = raw.as_str();
 
         // Detect the outer quote.
@@ -65,7 +69,11 @@ pub struct FmtJsonNumber<'a, 'b> {
 
 impl<'a> Format<'a, JsonFormatContext<'a>> for FmtJsonNumber<'a, '_> {
     fn fmt(&self, f: &mut JsonFormatter<'_, 'a>) {
-        let raw = self.lit.raw.as_ref().unwrap_or_else(|| unreachable!("parser always sets `raw`"));
+        let raw = self
+            .lit
+            .raw
+            .as_ref()
+            .unwrap_or_else(|| unreachable!("parser always sets `raw`"));
         // Apply Prettier's number normalization: `.1` → `0.1`, `1.0e+2` → `1.0e2`,
         // `1e00` → `1`, `1.00000` → `1.0`, trailing `.` removal, etc.
         // `keep_one_trailing_decimal_zero` matches Prettier's JS/JSON behavior (`1.00000` → `1.0`, not `1`).

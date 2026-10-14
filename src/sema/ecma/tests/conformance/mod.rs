@@ -81,7 +81,9 @@ impl SemanticConformance {
 
         let mut output = String::new();
         for result in results {
-            self.reporter.render_report(&mut output, result.as_ref()).unwrap();
+            self.reporter
+                .render_report(&mut output, result.as_ref())
+                .unwrap();
         }
 
         output
@@ -124,7 +126,9 @@ impl SemanticConformance {
     ) {
         if let TestResult::Fail(reasons) = result {
             diagnostics.extend(
-                reasons.into_iter().map(|reason| reason.with_error_code_scope(test.name())),
+                reasons
+                    .into_iter()
+                    .map(|reason| reason.with_error_code_scope(test.name())),
             );
         }
     }

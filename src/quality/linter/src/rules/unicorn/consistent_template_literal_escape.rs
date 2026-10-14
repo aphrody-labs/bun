@@ -47,7 +47,9 @@ declare_oxc_lint!(
 
 impl Rule for ConsistentTemplateLiteralEscape {
     fn run<'a>(&self, node: &AstNode<'a>, ctx: &LintContext<'a>) {
-        let AstKind::TemplateLiteral(template_literal) = node.kind() else { return };
+        let AstKind::TemplateLiteral(template_literal) = node.kind() else {
+            return;
+        };
 
         if let AstKind::TaggedTemplateExpression(_) =
             ctx.nodes().parent_kind(template_literal.node_id())
@@ -58,9 +60,16 @@ impl Rule for ConsistentTemplateLiteralEscape {
         for quasis in &template_literal.quasis {
             let value = quasis.value.raw.as_ref();
             for (start, _) in value.match_indices("$\\{") {
-                let backslash_count =
-                    value.as_bytes()[..start].iter().rev().take_while(|&&b| b == b'\\').count();
-                let start = if backslash_count % 2 == 1 { start - 1 } else { start };
+                let backslash_count = value.as_bytes()[..start]
+                    .iter()
+                    .rev()
+                    .take_while(|&&b| b == b'\\')
+                    .count();
+                let start = if backslash_count % 2 == 1 {
+                    start - 1
+                } else {
+                    start
+                };
                 let end = start + if backslash_count % 2 == 1 { 4 } else { 3 };
                 let start = u32::try_from(start).expect("Unable to convert to u32");
                 let end = u32::try_from(end).expect("Unable to convert to u32");
@@ -109,12 +118,18 @@ fn test() {
     let fix = vec![
         (r"const foo = `$\{a}`", r"const foo = `\${a}`"),
         (r"const foo = `\$\{a}`", r"const foo = `\${a}`"),
-        (r"const foo = `$\{a} and $\{b}`", r"const foo = `\${a} and \${b}`"),
+        (
+            r"const foo = `$\{a} and $\{b}`",
+            r"const foo = `\${a} and \${b}`",
+        ),
         (r"const foo = `\\$\{a}`", r"const foo = `\\\${a}`"),
         (r"const foo = `\\\$\{a}`", r"const foo = `\\\${a}`"),
         (r"const foo = `$\{a}${expr}`", r"const foo = `\${a}${expr}`"),
         (r"const foo = `${expr}$\{a}`", r"const foo = `${expr}\${a}`"),
-        (r"const foo = `$\{a}${expr}$\{b}`", r"const foo = `\${a}${expr}\${b}`"),
+        (
+            r"const foo = `$\{a}${expr}$\{b}`",
+            r"const foo = `\${a}${expr}\${b}`",
+        ),
         (r"const foo = `ééé$\{a}`", r"const foo = `ééé\${a}`"),
         (r"const foo = `ééé\\$\{a}`", r"const foo = `ééé\\\${a}`"),
     ];

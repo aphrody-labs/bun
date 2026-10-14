@@ -44,9 +44,11 @@ fn computed_reference(span: Span, namespace_name: &str) -> OxcDiagnostic {
 }
 
 fn assignment(span: Span, namespace_name: &str) -> OxcDiagnostic {
-    OxcDiagnostic::warn(format!("Assignment to member of namespace {namespace_name:?}.'"))
-        .with_help("Imported namespace members are read-only. Assign to a local variable instead.")
-        .with_label(span)
+    OxcDiagnostic::warn(format!(
+        "Assignment to member of namespace {namespace_name:?}.'"
+    ))
+    .with_help("Imported namespace members are read-only. Assign to a local variable instead.")
+    .with_label(span)
 }
 
 // <https://github.com/import-js/eslint-plugin-import/blob/v2.29.1/docs/rules/namespace.md>
@@ -112,7 +114,8 @@ declare_oxc_lint!(
     correctness,
     config = Namespace,
     version = "0.2.11",
-    short_description = "Ensure imported namespaces contain dereferenced properties as they are dereferenced.",
+    short_description =
+        "Ensure imported namespaces contain dereferenced properties as they are dereferenced.",
 );
 
 impl Rule for Namespace {
@@ -162,66 +165,72 @@ impl Rule for Namespace {
                 continue;
             }
 
-            let Some(symbol_id) = ctx.scoping().get_root_binding(entry.local_name.name().into())
+            let Some(symbol_id) = ctx
+                .scoping()
+                .get_root_binding(entry.local_name.name().into())
             else {
                 continue;
             };
 
-            ctx.scoping().get_resolved_references(symbol_id).for_each(|reference| {
-                let parent = ctx.nodes().parent_node(reference.node_id());
-                let name = entry.local_name.name();
+            ctx.scoping()
+                .get_resolved_references(symbol_id)
+                .for_each(|reference| {
+                    let parent = ctx.nodes().parent_node(reference.node_id());
+                    let name = entry.local_name.name();
 
-                match parent.kind() {
-                    member if member.is_member_expression_kind() => {
-                        let parent_kind = ctx.nodes().parent_kind(parent.id());
-                        let is_assignment = match parent_kind {
-                            AstKind::AssignmentExpression(assign_expr) => {
-                                assign_expr.left.span() == parent.span()
+                    match parent.kind() {
+                        member if member.is_member_expression_kind() => {
+                            let parent_kind = ctx.nodes().parent_kind(parent.id());
+                            let is_assignment = match parent_kind {
+                                AstKind::AssignmentExpression(assign_expr) => {
+                                    assign_expr.left.span() == parent.span()
+                                }
+                                _ => false,
+                            };
+                            if is_assignment
+                                || matches!(parent_kind, AstKind::IdentifierReference(_))
+                            {
+                                ctx.diagnostic(assignment(member.span(), name));
                             }
-                            _ => false,
-                        };
-                        if is_assignment || matches!(parent_kind, AstKind::IdentifierReference(_)) {
-                            ctx.diagnostic(assignment(member.span(), name));
+
+                            if !self.allow_computed
+                                && matches!(member, AstKind::ComputedMemberExpression(_))
+                            {
+                                return ctx.diagnostic(computed_reference(member.span(), name));
+                            }
+
+                            check_deep_namespace_for_node(
+                                parent,
+                                &source,
+                                vec![entry.local_name.name().to_string()].as_slice(),
+                                &module,
+                                ctx,
+                            );
                         }
-
-                        if !self.allow_computed
-                            && matches!(member, AstKind::ComputedMemberExpression(_))
-                        {
-                            return ctx.diagnostic(computed_reference(member.span(), name));
+                        AstKind::JSXMemberExpression(expr) => {
+                            check_binding_exported(
+                                &expr.property.name,
+                                || no_export(expr.property.span, &expr.property.name, &source),
+                                &module,
+                                ctx,
+                            );
                         }
+                        AstKind::VariableDeclarator(decl) => {
+                            let BindingPattern::ObjectPattern(pattern) = &decl.id else {
+                                return;
+                            };
 
-                        check_deep_namespace_for_node(
-                            parent,
-                            &source,
-                            vec![entry.local_name.name().to_string()].as_slice(),
-                            &module,
-                            ctx,
-                        );
+                            check_deep_namespace_for_object_pattern(
+                                pattern,
+                                &source,
+                                &[entry.local_name.name().to_string()],
+                                &module,
+                                ctx,
+                            );
+                        }
+                        _ => {}
                     }
-                    AstKind::JSXMemberExpression(expr) => {
-                        check_binding_exported(
-                            &expr.property.name,
-                            || no_export(expr.property.span, &expr.property.name, &source),
-                            &module,
-                            ctx,
-                        );
-                    }
-                    AstKind::VariableDeclarator(decl) => {
-                        let BindingPattern::ObjectPattern(pattern) = &decl.id else {
-                            return;
-                        };
-
-                        check_deep_namespace_for_object_pattern(
-                            pattern,
-                            &source,
-                            &[entry.local_name.name().to_string()],
-                            &module,
-                            ctx,
-                        );
-                    }
-                    _ => {}
-                }
-            });
+                });
         }
     }
 }
@@ -240,24 +249,31 @@ impl Rule for Namespace {
 ///
 fn get_module_request_name(name: &str, module_record: &ModuleRecord) -> Option<String> {
     if let Some(entry) =
-        module_record.indirect_export_entries.iter().find(|e| match &e.import_name {
-            ExportImportName::All => {
-                if let ExportExportName::Name(name_span) = &e.export_name {
-                    return name_span.name() == name;
-                }
+        module_record
+            .indirect_export_entries
+            .iter()
+            .find(|e| match &e.import_name {
+                ExportImportName::All => {
+                    if let ExportExportName::Name(name_span) = &e.export_name {
+                        return name_span.name() == name;
+                    }
 
-                false
-            }
-            ExportImportName::Name(name_span) => {
-                name_span.name() == name
-                    && module_record.import_entries.iter().any(|entry| {
-                        entry.local_name.name() == name && entry.import_name.is_namespace_object()
-                    })
-            }
-            _ => false,
-        })
+                    false
+                }
+                ExportImportName::Name(name_span) => {
+                    name_span.name() == name
+                        && module_record.import_entries.iter().any(|entry| {
+                            entry.local_name.name() == name
+                                && entry.import_name.is_namespace_object()
+                        })
+                }
+                _ => false,
+            })
     {
-        return entry.module_request.as_ref().map(|name| name.name().to_string());
+        return entry
+            .module_request
+            .as_ref()
+            .map(|name| name.name().to_string());
     }
 
     module_record
@@ -382,9 +398,18 @@ fn test() {
     let pass = vec![
         (r#"import "./malformed.js""#, None),
         (r"import * as foo from './empty-folder';", None),
-        (r#"import * as names from "./named-exports"; console.log((names.b).c);"#, None),
-        (r#"import * as names from "./named-exports"; console.log(names.a);"#, None),
-        (r#"import * as names from "./re-export-names"; console.log(names.foo);"#, None),
+        (
+            r#"import * as names from "./named-exports"; console.log((names.b).c);"#,
+            None,
+        ),
+        (
+            r#"import * as names from "./named-exports"; console.log(names.a);"#,
+            None,
+        ),
+        (
+            r#"import * as names from "./re-export-names"; console.log(names.foo);"#,
+            None,
+        ),
         (r"import * as elements from './jsx';", None),
         (
             r#"import * as foo from "./jsx/re-export.js";
@@ -400,8 +425,14 @@ fn test() {
             None,
         ),
         (r"import * as foo from './common';", None),
-        (r#"import * as names from "./named-exports"; const { a } = names"#, None),
-        (r#"import * as names from "./named-exports"; const { d: c } = names"#, None),
+        (
+            r#"import * as names from "./named-exports"; const { a } = names"#,
+            None,
+        ),
+        (
+            r#"import * as names from "./named-exports"; const { d: c } = names"#,
+            None,
+        ),
         (
             r#"import * as names from "./named-exports";
         const { c } = foo,
@@ -433,16 +464,28 @@ fn test() {
             None,
         ),
         (r"import * as names from './default-export';", None),
-        (r"import * as names from './default-export'; console.log(names.default)", None),
+        (
+            r"import * as names from './default-export'; console.log(names.default)",
+            None,
+        ),
         (r#"export * as names from "./default-export""#, None),
         // r#"export defport, * as names from "./default-export""#,
         (
             r"import * as names from './named-exports'; console.log(names['a']);",
             Some(json!([{ "allowComputed": true }])),
         ),
-        (r"import * as names from './named-exports'; const {a, b, ...rest} = names;", None),
-        (r"import * as ns from './re-export-common'; const {foo} = ns;", None),
-        (r#"import * as Names from "./named-exports"; const Foo = <Names.a/>"#, None),
+        (
+            r"import * as names from './named-exports'; const {a, b, ...rest} = names;",
+            None,
+        ),
+        (
+            r"import * as ns from './re-export-common'; const {foo} = ns;",
+            None,
+        ),
+        (
+            r#"import * as Names from "./named-exports"; const Foo = <Names.a/>"#,
+            None,
+        ),
         // r#"import * as foo from "./typescript-declare-nested"
         // foo.bar.MyFunction()"#,
         // r#"import { foobar } from "./typescript-declare-interface""#,
@@ -476,20 +519,59 @@ fn test() {
         // r#"import * as names from './default-export-string'; console.log(names.default)"#,
         // r#"import * as names from './default-export-namespace-string';"#,
         // r#"import * as names from './default-export-namespace-string'; console.log(names.default)"#,
-        (r#"import { "b" as b } from "./deep/a"; console.log(b.c.d.e)"#, None),
-        (r#"import { "b" as b } from "./deep/a"; var {c:{d:{e}}} = b"#, None),
-        (r#"import * as a from "./deep/a"; console.log(a.b.c.d.e)"#, None),
-        (r#"import { b } from "./deep/a"; console.log(b.c.d.e)"#, None),
-        (r#"import * as a from "./deep/a"; console.log(a.b.c.d.e.f)"#, None),
-        (r#"import * as a from "./deep/a"; var {b:{c:{d:{e}}}} = a"#, None),
+        (
+            r#"import { "b" as b } from "./deep/a"; console.log(b.c.d.e)"#,
+            None,
+        ),
+        (
+            r#"import { "b" as b } from "./deep/a"; var {c:{d:{e}}} = b"#,
+            None,
+        ),
+        (
+            r#"import * as a from "./deep/a"; console.log(a.b.c.d.e)"#,
+            None,
+        ),
+        (
+            r#"import { b } from "./deep/a"; console.log(b.c.d.e)"#,
+            None,
+        ),
+        (
+            r#"import * as a from "./deep/a"; console.log(a.b.c.d.e.f)"#,
+            None,
+        ),
+        (
+            r#"import * as a from "./deep/a"; var {b:{c:{d:{e}}}} = a"#,
+            None,
+        ),
         (r#"import { b } from "./deep/a"; var {c:{d:{e}}} = b"#, None),
-        (r#"import * as a from "./unresolvable-namespace"; var {missing:{x}} = a"#, None),
-        (r#"import * as a from "./deep-es7/a"; console.log(a.b.c.d.e)"#, None),
-        (r#"import { b } from "./deep-es7/a"; console.log(b.c.d.e)"#, None),
-        (r#"import * as a from "./deep-es7/a"; console.log(a.b.c.d.e.f)"#, None),
-        (r#"import * as a from "./deep-es7/a"; var {b:{c:{d:{e}}}} = a"#, None),
-        (r#"import { b } from "./deep-es7/a"; var {c:{d:{e}}} = b"#, None),
-        (r"import { a } from './oxc/indirect-export'; console.log(a.nothing)", None),
+        (
+            r#"import * as a from "./unresolvable-namespace"; var {missing:{x}} = a"#,
+            None,
+        ),
+        (
+            r#"import * as a from "./deep-es7/a"; console.log(a.b.c.d.e)"#,
+            None,
+        ),
+        (
+            r#"import { b } from "./deep-es7/a"; console.log(b.c.d.e)"#,
+            None,
+        ),
+        (
+            r#"import * as a from "./deep-es7/a"; console.log(a.b.c.d.e.f)"#,
+            None,
+        ),
+        (
+            r#"import * as a from "./deep-es7/a"; var {b:{c:{d:{e}}}} = a"#,
+            None,
+        ),
+        (
+            r#"import { b } from "./deep-es7/a"; var {c:{d:{e}}} = b"#,
+            None,
+        ),
+        (
+            r"import { a } from './oxc/indirect-export'; console.log(a.nothing)",
+            None,
+        ),
         // Issue: <https://github.com/oxc-project/oxc/issues/7696>
         (r"import * as acorn from 'acorn'; acorn.parse()", None),
         // https://github.com/oxc-project/oxc/issues/10318
@@ -500,36 +582,96 @@ fn test() {
     ];
 
     let fail = vec![
-        (r"import * as names from './named-exports'; console.log(names.c)", None),
-        (r"import * as names from './named-exports'; console.log(names['a']);", None),
+        (
+            r"import * as names from './named-exports'; console.log(names.c)",
+            None,
+        ),
+        (
+            r"import * as names from './named-exports'; console.log(names['a']);",
+            None,
+        ),
         (r"import * as foo from './bar'; foo.foo = 'y';", None),
         (r"import * as foo from './bar'; foo.x = 'y';", None),
-        (r#"import * as names from "./named-exports"; const { c } = names"#, None),
-        (r#"import * as names from "./named-exports"; function b() { const { c } = names }"#, None),
-        (r#"import * as names from "./named-exports"; const { c: d } = names"#, None),
-        (r#"import * as names from "./named-exports"; const { c: { d } } = names"#, None),
+        (
+            r#"import * as names from "./named-exports"; const { c } = names"#,
+            None,
+        ),
+        (
+            r#"import * as names from "./named-exports"; function b() { const { c } = names }"#,
+            None,
+        ),
+        (
+            r#"import * as names from "./named-exports"; const { c: d } = names"#,
+            None,
+        ),
+        (
+            r#"import * as names from "./named-exports"; const { c: { d } } = names"#,
+            None,
+        ),
         // r#"import * as Endpoints from "./issue-195/Endpoints"; console.log(Endpoints.Foo)"#,
         // r#"import * as namespace from './malformed.js';"#,
         // TODO: Hard to confirm if it's a namespace object
         // r"import b from './deep/default'; console.log(b.e)",
-        (r"console.log(names.c); import * as names from './named-exports';", None),
-        (r"function x() { console.log(names.c) } import * as names from './named-exports';", None),
-        (r#"import * as ree from "./re-export"; console.log(ree.default)"#, None),
-        (r#"import * as Names from "./named-exports"; const Foo = <Names.e/>"#, None),
-        (r#"import { "b" as b } from "./deep/a"; console.log(b.e)"#, None),
-        (r#"import { "b" as b } from "./deep/a"; console.log(b.c.e)"#, None),
+        (
+            r"console.log(names.c); import * as names from './named-exports';",
+            None,
+        ),
+        (
+            r"function x() { console.log(names.c) } import * as names from './named-exports';",
+            None,
+        ),
+        (
+            r#"import * as ree from "./re-export"; console.log(ree.default)"#,
+            None,
+        ),
+        (
+            r#"import * as Names from "./named-exports"; const Foo = <Names.e/>"#,
+            None,
+        ),
+        (
+            r#"import { "b" as b } from "./deep/a"; console.log(b.e)"#,
+            None,
+        ),
+        (
+            r#"import { "b" as b } from "./deep/a"; console.log(b.c.e)"#,
+            None,
+        ),
         (r#"import * as a from "./deep/a"; console.log(a.b.e)"#, None),
         (r#"import { b } from "./deep/a"; console.log(b.e)"#, None),
-        (r#"import * as a from "./deep/a"; console.log(a.b.c.e)"#, None),
+        (
+            r#"import * as a from "./deep/a"; console.log(a.b.c.e)"#,
+            None,
+        ),
         (r#"import { b } from "./deep/a"; console.log(b.c.e)"#, None),
-        (r#"import * as a from "./deep-es7/a"; console.log(a.b.e)"#, None),
-        (r#"import { b } from "./deep-es7/a"; console.log(b.e)"#, None),
-        (r#"import * as a from "./deep-es7/a"; console.log(a.b.c.e)"#, None),
-        (r#"import { b } from "./deep-es7/a"; console.log(b.c.e)"#, None),
-        (r#"import * as a from "./deep-es7/a"; var {b:{ e }} = a"#, None),
-        (r#"import * as a from "./deep-es7/a"; var {b:{c:{ e }, e: { c }}} = a"#, None),
+        (
+            r#"import * as a from "./deep-es7/a"; console.log(a.b.e)"#,
+            None,
+        ),
+        (
+            r#"import { b } from "./deep-es7/a"; console.log(b.e)"#,
+            None,
+        ),
+        (
+            r#"import * as a from "./deep-es7/a"; console.log(a.b.c.e)"#,
+            None,
+        ),
+        (
+            r#"import { b } from "./deep-es7/a"; console.log(b.c.e)"#,
+            None,
+        ),
+        (
+            r#"import * as a from "./deep-es7/a"; var {b:{ e }} = a"#,
+            None,
+        ),
+        (
+            r#"import * as a from "./deep-es7/a"; var {b:{c:{ e }, e: { c }}} = a"#,
+            None,
+        ),
         // Issue: <https://github.com/oxc-project/oxc/issues/24073>
-        (r#"import { lib } from "./issue-24073/module"; console.log(lib["~unstable"]);"#, None),
+        (
+            r#"import { lib } from "./issue-24073/module"; console.log(lib["~unstable"]);"#,
+            None,
+        ),
         (
             concat!(
                 r#"import { otherExport } from "./issue-24073/module"; console.log(otherExport);"#,

@@ -39,13 +39,18 @@ pub fn write_code_block<'a>(code: &'a CodeBlock<'a>, f: &mut MarkdownFormatter<'
             );
         }
         CodeBlockKind::Fenced { lang, meta, .. } => {
-            let (lang, meta) =
-                (lang.map(|s| f.context().slice(s)), meta.map(|s| f.context().slice(s)));
+            let (lang, meta) = (
+                lang.map(|s| f.context().slice(s)),
+                meta.map(|s| f.context().slice(s)),
+            );
             // Backtick fences; tildes inside a JS template literal
             // or when the info string has a backtick (only a `~~~` fence allows one)
             let info_has_backtick = [lang, meta].iter().flatten().any(|part| part.contains('`'));
-            let fence_char =
-                if info_has_backtick || f.context().in_js_template() { b'~' } else { b'`' };
+            let fence_char = if info_has_backtick || f.context().in_js_template() {
+                b'~'
+            } else {
+                b'`'
+            };
 
             let embedded = lang.and_then(|lang| format_embedded(lang, meta, value, fence_char, f));
             // Whitespace-only content of a formattable language prints an empty block:
@@ -54,7 +59,9 @@ pub fn write_code_block<'a>(code: &'a CodeBlock<'a>, f: &mut MarkdownFormatter<'
                 Some(_) if value.trim().is_empty() => (None, ""),
                 embedded => (embedded, value),
             };
-            let content_run = embedded.as_ref().map_or_else(|| max_run(value, fence_char), |e| e.1);
+            let content_run = embedded
+                .as_ref()
+                .map_or_else(|| max_run(value, fence_char), |e| e.1);
             let fence: &'a str = arena_cow_str(&fence_run(fence_char, (content_run + 1).max(3)), f);
             // Single-use, so the child IR moves into the buffer instead of being cloned
             let fenced = FormatOnce::new(|f: &mut MarkdownFormatter<'_, 'a>| {
@@ -145,9 +152,15 @@ fn format_embedded<'a>(
     // A run may span texts, so count it on the printed content.
     // The child's `TailwindClass` elements index the session's scope; unsorted is enough to count.
     let classes = f.session().unsorted_tailwind_classes();
-    let probe = Document::new(ArenaVec::from_iter_in(ir.iter().cloned(), &f.allocator()), classes);
+    let probe = Document::new(
+        ArenaVec::from_iter_in(ir.iter().cloned(), &f.allocator()),
+        classes,
+    );
     // Unlimited width, as Prettier's: a run is counted on the content, not on how it breaks
-    let options = f.options().as_print_options().with_print_width(PrintWidth::new(u32::MAX));
+    let options = f
+        .options()
+        .as_print_options()
+        .with_print_width(PrintWidth::new(u32::MAX));
     let printed = probe.print(value.len(), options).ok()?;
     let run = max_run(printed.as_code(), fence_char);
     Some((ir, run))
@@ -189,14 +202,20 @@ fn scan_texts(ir: &[FormatElement<'_>], fence_char: u8) -> (bool, bool) {
 /// Whether the meta addresses lines by number (`{1,3-5}`, VitePress / Docusaurus line highlighting),
 /// which formatting the content would shift.
 fn has_line_ranges(meta: &str) -> bool {
-    meta.split('{').skip(1).filter_map(|rest| rest.split_once('}')).any(|(ranges, _)| {
-        ranges.bytes().any(|b| b.is_ascii_digit())
-            && ranges.bytes().all(|b| b.is_ascii_digit() || matches!(b, b',' | b'-' | b' '))
-    })
+    meta.split('{')
+        .skip(1)
+        .filter_map(|rest| rest.split_once('}'))
+        .any(|(ranges, _)| {
+            ranges.bytes().any(|b| b.is_ascii_digit())
+                && ranges
+                    .bytes()
+                    .all(|b| b.is_ascii_digit() || matches!(b, b',' | b'-' | b' '))
+        })
 }
 
 /// An info string part decoded; a backslash left by decoding is escaped again,
 /// or the next parse would apply it to what it protected (`\\[` printed as `\[` decodes to `[`).
 fn cooked_info<'a>(part: &'a str, f: &MarkdownFormatter<'_, 'a>) -> &'a str {
-    f.allocator().alloc_str(&decode::decode(part, true).cow_replace('\\', "\\\\"))
+    f.allocator()
+        .alloc_str(&decode::decode(part, true).cow_replace('\\', "\\\\"))
 }

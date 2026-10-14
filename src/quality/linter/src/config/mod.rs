@@ -68,7 +68,9 @@ mod test {
 
     #[test]
     fn test_from_file() {
-        let fixture_path = env::current_dir().unwrap().join("fixtures/eslint_config.json");
+        let fixture_path = env::current_dir()
+            .unwrap()
+            .join("fixtures/eslint_config.json");
         let config = Oxlintrc::from_file(&fixture_path).unwrap();
         assert!(!config.rules.is_empty());
         assert!(config.path.ends_with("fixtures/eslint_config.json"));
@@ -106,10 +108,20 @@ mod test {
         }));
         assert!(config.is_ok());
 
-        let Oxlintrc { rules, settings, env, globals, .. } = config.unwrap();
+        let Oxlintrc {
+            rules,
+            settings,
+            env,
+            globals,
+            ..
+        } = config.unwrap();
         assert!(!rules.is_empty());
         assert_eq!(
-            settings.jsx_a11y.polymorphic_prop_name.as_ref().map(CompactStr::as_str),
+            settings
+                .jsx_a11y
+                .polymorphic_prop_name
+                .as_ref()
+                .map(CompactStr::as_str),
             Some("role")
         );
         assert_eq!(env.iter().count(), 1);
@@ -147,8 +159,9 @@ mod test {
 
     #[test]
     fn test_vitest_rule_replace() {
-        let fixture_path: std::path::PathBuf =
-            env::current_dir().unwrap().join("fixtures/eslint_config_vitest_replace.json");
+        let fixture_path: std::path::PathBuf = env::current_dir()
+            .unwrap()
+            .join("fixtures/eslint_config_vitest_replace.json");
         let config = Oxlintrc::from_file(&fixture_path).unwrap();
         let mut set = FxHashMap::default();
         let mut external_rules_for_override = FxHashMap::default();

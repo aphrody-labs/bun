@@ -113,7 +113,9 @@ impl JSDocPluginSettings {
     /// Return `Some(reason)` if replacement found or default aliased
     pub fn check_preferred_tag_name(&self, original_name: &str) -> Option<Cow<'_, str>> {
         let reason = |preferred_name: &str| -> Cow<str> {
-            Cow::Owned(format!("Replace tag `@{original_name}` with `@{preferred_name}`."))
+            Cow::Owned(format!(
+                "Replace tag `@{original_name}` with `@{preferred_name}`."
+            ))
         };
 
         match self.tag_name_preference.get(original_name) {
@@ -184,8 +186,13 @@ impl JSDocPluginSettings {
 #[serde(untagged)]
 enum TagNamePreference {
     TagNameOnly(String),
-    ObjectWithMessageAndReplacement { message: String, replacement: String },
-    ObjectWithMessage { message: String },
+    ObjectWithMessageAndReplacement {
+        message: String,
+        replacement: String,
+    },
+    ObjectWithMessage {
+        message: String,
+    },
     FalseOnly(bool), // Should care `true`...?
 }
 
@@ -249,10 +256,16 @@ mod test {
         }))
         .unwrap();
         assert_eq!(settings.resolve_tag_name("foo"), "bar".to_string());
-        assert_eq!(settings.resolve_tag_name("virtual"), "overridedefault".to_string());
+        assert_eq!(
+            settings.resolve_tag_name("virtual"),
+            "overridedefault".to_string()
+        );
         assert_eq!(settings.resolve_tag_name("replace"), "noop".to_string());
         assert_eq!(settings.resolve_tag_name("blocked"), "blocked".to_string());
-        assert_eq!(settings.resolve_tag_name("blocked2"), "blocked2".to_string());
+        assert_eq!(
+            settings.resolve_tag_name("blocked2"),
+            "blocked2".to_string()
+        );
     }
 
     #[test]
@@ -292,7 +305,10 @@ mod test {
             settings.check_blocked_tag_name("foo"),
             Some(Cow::Borrowed("Unexpected tag `@foo`."))
         );
-        assert_eq!(settings.check_blocked_tag_name("bar"), Some(Cow::Borrowed("do not use bar")));
+        assert_eq!(
+            settings.check_blocked_tag_name("bar"),
+            Some(Cow::Borrowed("do not use bar"))
+        );
         assert_eq!(settings.check_blocked_tag_name("baz"), None);
     }
 
@@ -312,7 +328,10 @@ mod test {
         .unwrap();
         assert_eq!(settings.check_preferred_tag_name("foo"), None,);
         assert_eq!(settings.check_preferred_tag_name("bar"), None);
-        assert_eq!(settings.check_preferred_tag_name("baz"), Some("baz is noop now".into()));
+        assert_eq!(
+            settings.check_preferred_tag_name("baz"),
+            Some("baz is noop now".into())
+        );
         assert_eq!(
             settings.check_preferred_tag_name("qux"),
             Some("Replace tag `@qux` with `@quux`.".into())

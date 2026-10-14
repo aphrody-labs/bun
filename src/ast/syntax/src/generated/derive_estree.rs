@@ -1,7 +1,11 @@
 // Auto-generated code, DO NOT EDIT DIRECTLY!
 // To edit this generated file you have to edit `src/codegen/ecma_ast_tools/src/derives/estree.rs`.
 
-#![allow(unused_imports, clippy::match_same_arms, clippy::semicolon_if_nothing_returned)]
+#![allow(
+    unused_imports,
+    clippy::match_same_arms,
+    clippy::semicolon_if_nothing_returned
+)]
 
 use oxc_estree::{
     Concat2, Concat3, ESTree, FlatStructSerializer, JsonSafeString, Serializer, StructSerializer,

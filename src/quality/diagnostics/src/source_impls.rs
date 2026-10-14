@@ -23,7 +23,13 @@ impl<'a> SpanContents<'a> {
         column: usize,
         line_count: usize,
     ) -> Self {
-        Self { data, span, line, column, line_count }
+        Self {
+            data,
+            span,
+            line,
+            column,
+            line_count,
+        }
     }
 
     pub const fn data(&self) -> &'a [u8] {
@@ -68,7 +74,10 @@ struct SpanRequest {
 
 impl SpanRequest {
     fn new(span: Span) -> Self {
-        Self { offset: span.start as usize, len: span.size() as usize }
+        Self {
+            offset: span.start as usize,
+            len: span.size() as usize,
+        }
     }
 
     /// Boundary between the bulk prefix scan and the detailed span scan.
@@ -102,8 +111,11 @@ struct LineBreak {
 
 impl LineBreak {
     fn ending_at(input: &[u8], end: usize) -> Self {
-        let start =
-            if end > 0 && input[end] == b'\n' && input[end - 1] == b'\r' { end - 1 } else { end };
+        let start = if end > 0 && input[end] == b'\n' && input[end - 1] == b'\r' {
+            end - 1
+        } else {
+            end
+        };
         Self { start, end }
     }
 
@@ -112,7 +124,10 @@ impl LineBreak {
     }
 
     const fn shifted(self, offset: usize) -> Self {
-        Self { start: self.start + offset, end: self.end + offset }
+        Self {
+            start: self.start + offset,
+            end: self.end + offset,
+        }
     }
 }
 
@@ -125,7 +140,10 @@ struct LineBreaks<'a> {
 
 impl<'a> LineBreaks<'a> {
     fn new(input: &'a [u8]) -> Self {
-        Self { input, positions: memchr::memchr2_iter(b'\r', b'\n', input) }
+        Self {
+            input,
+            positions: memchr::memchr2_iter(b'\r', b'\n', input),
+        }
     }
 }
 
@@ -172,11 +190,19 @@ impl LeadingContext {
         } else {
             RetainedLineStarts::Many(VecDeque::new())
         };
-        Self { limit, start_line: 0, line_starts }
+        Self {
+            limit,
+            start_line: 0,
+            line_starts,
+        }
     }
 
     fn one(start_line: usize, line_start: Option<usize>) -> Self {
-        Self { limit: 1, start_line, line_starts: RetainedLineStarts::One(line_start) }
+        Self {
+            limit: 1,
+            start_line,
+            line_starts: RetainedLineStarts::One(line_start),
+        }
     }
 
     fn len(&self) -> usize {
@@ -219,7 +245,8 @@ impl LeadingContext {
     }
 
     fn starting_offset(&self, span_offset: usize) -> usize {
-        self.first().unwrap_or(if self.limit == 0 { span_offset } else { 0 })
+        self.first()
+            .unwrap_or(if self.limit == 0 { span_offset } else { 0 })
     }
 
     fn append_to(self, target: &mut Vec<usize>) {
@@ -284,7 +311,11 @@ impl PrefixScan {
         }
 
         let leading = LeadingContext::one(line_count.saturating_sub(1), previous_line_start);
-        Self { line_count, leading, current_line_start }
+        Self {
+            line_count,
+            leading,
+            current_line_start,
+        }
     }
 }
 
@@ -346,8 +377,11 @@ impl<'a> SpanReader<'a> {
 
     fn new(input: &'a [u8], request: SpanRequest, context: ContextLines) -> Self {
         let offset = request.prefix_end(input);
-        let PrefixScan { line_count, leading, current_line_start } =
-            PrefixScan::new(input, offset, context.before);
+        let PrefixScan {
+            line_count,
+            leading,
+            current_line_start,
+        } = PrefixScan::new(input, offset, context.before);
         Self {
             input,
             request,
@@ -425,7 +459,11 @@ impl<'a> SpanReader<'a> {
             data,
             Span::sized(span_start, span_len),
             self.leading.start_line,
-            if self.context.before == 0 { self.start_column } else { 0 },
+            if self.context.before == 0 {
+                self.start_column
+            } else {
+                0
+            },
             self.line_count,
         ))
     }
@@ -493,7 +531,12 @@ struct LineIndex<'a> {
 
 impl<'a> LineIndex<'a> {
     fn new(input: &'a [u8]) -> Self {
-        Self { input, line_starts: Vec::new(), base_line: 0, frontier: 0 }
+        Self {
+            input,
+            line_starts: Vec::new(),
+            base_line: 0,
+            frontier: 0,
+        }
     }
 
     fn is_empty(&self) -> bool {
@@ -507,8 +550,11 @@ impl<'a> LineIndex<'a> {
     /// First query: retain the line starts in its leading context window and
     /// use them as the origin of the reusable index.
     fn init(&mut self, cut: usize, context_lines_before: usize) {
-        let PrefixScan { line_count, leading, current_line_start } =
-            PrefixScan::new(self.input, cut, context_lines_before);
+        let PrefixScan {
+            line_count,
+            leading,
+            current_line_start,
+        } = PrefixScan::new(self.input, cut, context_lines_before);
         debug_assert_eq!(leading.start_line + leading.len(), line_count);
         self.base_line = leading.start_line;
         self.line_starts.reserve(leading.len() + 8);
@@ -531,7 +577,8 @@ impl<'a> LineIndex<'a> {
             return;
         }
         for line_break in LineBreaks::new(&self.input[self.frontier..target]) {
-            self.line_starts.push(line_break.shifted(self.frontier).next_line_start());
+            self.line_starts
+                .push(line_break.shifted(self.frontier).next_line_start());
         }
         self.frontier = target;
     }
@@ -589,7 +636,11 @@ struct IndexedLeadingContext {
 impl IndexedLeadingContext {
     fn new(current_line: usize, limit: usize) -> Self {
         let start_line = current_line - limit.min(current_line);
-        Self { limit, start_line, len: current_line - start_line }
+        Self {
+            limit,
+            start_line,
+            len: current_line - start_line,
+        }
     }
 
     fn push(&mut self) {
@@ -694,7 +745,9 @@ impl<'index, 'source> IndexedReader<'index, 'source> {
         if window_end < self.request.end_threshold() {
             return None;
         }
-        let start = self.leading.starting_offset(self.index, self.request.offset);
+        let start = self
+            .leading
+            .starting_offset(self.index, self.request.offset);
         let Some(data) = self.index.input.get(start..window_end) else {
             return None;
         };
@@ -704,7 +757,11 @@ impl<'index, 'source> IndexedReader<'index, 'source> {
             data,
             Span::sized(span_start, span_len),
             self.leading.start_line,
-            if self.context.before == 0 { self.start_column } else { 0 },
+            if self.context.before == 0 {
+                self.start_column
+            } else {
+                0
+            },
             self.line_count,
         ))
     }
@@ -745,7 +802,12 @@ impl<'a> SpanScanner<'a> {
         if self.index.is_empty() {
             self.index.init(cut, self.context.before);
         } else {
-            if cut < self.index.origin().expect("a non-empty index has an origin") {
+            if cut
+                < self
+                    .index
+                    .origin()
+                    .expect("a non-empty index has an origin")
+            {
                 return self.read_unindexed(request);
             }
             self.index.cover(cut);
@@ -804,17 +866,25 @@ mod tests {
             let fast = PrefixScan::new(input, cut, 1);
             let generic = PrefixScan::new(input, cut, 2);
             assert_eq!(fast.line_count, generic.line_count, "cut={cut}");
-            assert_eq!(fast.current_line_start, generic.current_line_start, "cut={cut}");
+            assert_eq!(
+                fast.current_line_start, generic.current_line_start,
+                "cut={cut}"
+            );
             assert_eq!(fast.leading.first(), generic.leading.last(), "cut={cut}");
-            assert_eq!(fast.leading.start_line, fast.line_count.saturating_sub(1), "cut={cut}");
+            assert_eq!(
+                fast.leading.start_line,
+                fast.line_count.saturating_sub(1),
+                "cut={cut}"
+            );
         }
     }
 
     #[test]
     fn basic() {
         let src = String::from("foo\n");
-        let contents =
-            SpanReader::from_span(src.as_bytes(), Span::sized(0, 4), 0, 0).read().unwrap();
+        let contents = SpanReader::from_span(src.as_bytes(), Span::sized(0, 4), 0, 0)
+            .read()
+            .unwrap();
         assert_eq!("foo\n", from_utf8(contents.data()).unwrap());
         assert_eq!(0, contents.line());
         assert_eq!(0, contents.column());
@@ -823,8 +893,9 @@ mod tests {
     #[test]
     fn shifted() {
         let src = String::from("foobar");
-        let contents =
-            SpanReader::from_span(src.as_bytes(), Span::sized(3, 3), 1, 1).read().unwrap();
+        let contents = SpanReader::from_span(src.as_bytes(), Span::sized(3, 3), 1, 1)
+            .read()
+            .unwrap();
         assert_eq!("foobar", from_utf8(contents.data()).unwrap());
         assert_eq!(0, contents.line());
         assert_eq!(0, contents.column());
@@ -833,8 +904,9 @@ mod tests {
     #[test]
     fn middle() {
         let src = String::from("foo\nbar\nbaz\n");
-        let contents =
-            SpanReader::from_span(src.as_bytes(), Span::sized(4, 4), 0, 0).read().unwrap();
+        let contents = SpanReader::from_span(src.as_bytes(), Span::sized(4, 4), 0, 0)
+            .read()
+            .unwrap();
         assert_eq!("bar\n", from_utf8(contents.data()).unwrap());
         assert_eq!(1, contents.line());
         assert_eq!(0, contents.column());
@@ -843,8 +915,9 @@ mod tests {
     #[test]
     fn middle_of_line() {
         let src = String::from("foo\nbarbar\nbaz\n");
-        let contents =
-            SpanReader::from_span(src.as_bytes(), Span::sized(7, 4), 0, 0).read().unwrap();
+        let contents = SpanReader::from_span(src.as_bytes(), Span::sized(7, 4), 0, 0)
+            .read()
+            .unwrap();
         assert_eq!("bar\n", from_utf8(contents.data()).unwrap());
         assert_eq!(1, contents.line());
         assert_eq!(3, contents.column());
@@ -853,8 +926,9 @@ mod tests {
     #[test]
     fn with_crlf() {
         let src = String::from("foo\r\nbar\r\nbaz\r\n");
-        let contents =
-            SpanReader::from_span(src.as_bytes(), Span::sized(5, 5), 0, 0).read().unwrap();
+        let contents = SpanReader::from_span(src.as_bytes(), Span::sized(5, 5), 0, 0)
+            .read()
+            .unwrap();
         assert_eq!("bar\r\n", from_utf8(contents.data()).unwrap());
         assert_eq!(1, contents.line());
         assert_eq!(0, contents.column());
@@ -863,8 +937,9 @@ mod tests {
     #[test]
     fn with_context() {
         let src = String::from("xxx\nfoo\nbar\nbaz\n\nyyy\n");
-        let contents =
-            SpanReader::from_span(src.as_bytes(), Span::sized(8, 3), 1, 1).read().unwrap();
+        let contents = SpanReader::from_span(src.as_bytes(), Span::sized(8, 3), 1, 1)
+            .read()
+            .unwrap();
         assert_eq!("foo\nbar\nbaz\n", from_utf8(contents.data()).unwrap());
         assert_eq!(1, contents.line());
         assert_eq!(0, contents.column());
@@ -873,8 +948,9 @@ mod tests {
     #[test]
     fn multiline_with_context() {
         let src = String::from("aaa\nxxx\n\nfoo\nbar\nbaz\n\nyyy\nbbb\n");
-        let contents =
-            SpanReader::from_span(src.as_bytes(), Span::sized(9, 11), 1, 1).read().unwrap();
+        let contents = SpanReader::from_span(src.as_bytes(), Span::sized(9, 11), 1, 1)
+            .read()
+            .unwrap();
         assert_eq!("\nfoo\nbar\nbaz\n\n", from_utf8(contents.data()).unwrap());
         assert_eq!(2, contents.line());
         assert_eq!(0, contents.column());
@@ -887,16 +963,25 @@ mod tests {
         // Used to panic with a slice out-of-range instead of returning an
         // error (found by differential fuzzing).
         let src = String::from("a");
-        assert!(SpanReader::from_span(src.as_bytes(), Span::sized(2, 0), 0, 0).read().is_none());
+        assert!(
+            SpanReader::from_span(src.as_bytes(), Span::sized(2, 0), 0, 0)
+                .read()
+                .is_none()
+        );
         let src = String::new();
-        assert!(SpanReader::from_span(src.as_bytes(), Span::sized(1, 0), 0, 0).read().is_none());
+        assert!(
+            SpanReader::from_span(src.as_bytes(), Span::sized(1, 0), 0, 0)
+                .read()
+                .is_none()
+        );
     }
 
     #[test]
     fn multiline_with_context_line_start() {
         let src = String::from("one\ntwo\n\nthree\nfour\nfive\n\nsix\nseven\n");
-        let contents =
-            SpanReader::from_span(src.as_bytes(), Span::sized(2, 0), 2, 2).read().unwrap();
+        let contents = SpanReader::from_span(src.as_bytes(), Span::sized(2, 0), 2, 2)
+            .read()
+            .unwrap();
         assert_eq!("one\ntwo\n\n", from_utf8(contents.data()).unwrap());
         assert_eq!(0, contents.line());
         assert_eq!(0, contents.column());
@@ -938,10 +1023,13 @@ mod line_column_tests {
     /// (a label past the snippet, e.g. `off == src.len() + 1`). Returns whether
     /// a case was actually checked (the context read succeeded).
     fn check(src: &str, off: usize, len: usize, ctx: usize) -> bool {
-        let Some(contents) =
-            SpanReader::from_span(src.as_bytes(), Span::sized(off as u32, len as u32), ctx, ctx)
-                .read()
-        else {
+        let Some(contents) = SpanReader::from_span(
+            src.as_bytes(),
+            Span::sized(off as u32, len as u32),
+            ctx,
+            ctx,
+        )
+        .read() else {
             return false;
         };
         let got = contents.line_column_at(off);
@@ -1003,7 +1091,10 @@ mod line_column_tests {
                 }
             }
         }
-        assert!(checked > 100_000, "expected a broad sweep, only checked {checked}");
+        assert!(
+            checked > 100_000,
+            "expected a broad sweep, only checked {checked}"
+        );
     }
 }
 
@@ -1046,9 +1137,12 @@ mod scanner_tests {
         history: &[(usize, usize)],
     ) {
         let source_span = Span::sized(span.0 as u32, span.1 as u32);
-        let expected =
-            SpanReader::new(input, SpanRequest::new(source_span), ContextLines::new(before, after))
-                .read();
+        let expected = SpanReader::new(
+            input,
+            SpanRequest::new(source_span),
+            ContextLines::new(before, after),
+        )
+        .read();
         let got = scanner.read_span(source_span);
         let src = String::from_utf8_lossy(input);
         match (&expected, &got) {
@@ -1132,7 +1226,10 @@ mod scanner_tests {
                 }
             }
         }
-        assert!(checked > 100_000, "expected a broad sweep, only checked {checked}");
+        assert!(
+            checked > 100_000,
+            "expected a broad sweep, only checked {checked}"
+        );
     }
 
     /// The empty-source and just-past-EOF edge cases `SpanReader` special

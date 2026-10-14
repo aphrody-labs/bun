@@ -70,8 +70,14 @@ fn test() {
                     format!("expect({} {} {}).not.{}(true)", b, operator, a, matcher),
                     format!("expect({} {} {}).not.{}(false)", b, operator, a, matcher),
                     format!("expect({} {} {}).not.{}(false)", b, operator, b, matcher),
-                    format!("expect({} {} {}).resolves.not.{}(false)", b, operator, b, matcher),
-                    format!("expect({} {} {}).resolves.{}(false)", b, operator, b, matcher),
+                    format!(
+                        "expect({} {} {}).resolves.not.{}(false)",
+                        b, operator, b, matcher
+                    ),
+                    format!(
+                        "expect({} {} {}).resolves.{}(false)",
+                        b, operator, b, matcher
+                    ),
                 ]
             })
             .collect()
@@ -88,12 +94,27 @@ fn test() {
             format!("expect(value {} 1).resolves.{}(false);", operator, matcher),
             format!("expect(value {} 1).not.{}(true);", operator, matcher),
             format!("expect(value {} 1)['not'].{}(true);", operator, matcher),
-            format!("expect(value {} 1).resolves.not.{}(true);", operator, matcher),
+            format!(
+                "expect(value {} 1).resolves.not.{}(true);",
+                operator, matcher
+            ),
             format!("expect(value {} 1).not.{}(false);", operator, matcher),
-            format!("expect(value {} 1).resolves.not.{}(false);", operator, matcher),
-            format!("expect(value {} 1)[\"resolves\"].not.{}(false);", operator, matcher),
-            format!("expect(value {} 1)[\"resolves\"][\"not\"].{}(false);", operator, matcher),
-            format!("expect(value {} 1)[\"resolves\"][\"not\"]['{}'](false);", operator, matcher),
+            format!(
+                "expect(value {} 1).resolves.not.{}(false);",
+                operator, matcher
+            ),
+            format!(
+                "expect(value {} 1)[\"resolves\"].not.{}(false);",
+                operator, matcher
+            ),
+            format!(
+                "expect(value {} 1)[\"resolves\"][\"not\"].{}(false);",
+                operator, matcher
+            ),
+            format!(
+                "expect(value {} 1)[\"resolves\"][\"not\"]['{}'](false);",
+                operator, matcher
+            ),
         ]
     }
 
@@ -286,8 +307,13 @@ fn test() {
         fix.push((case.as_str(), fixer.as_str(), None));
     }
 
-    Tester::new(PreferComparisonMatcher::NAME, PreferComparisonMatcher::PLUGIN, pass, fail)
-        .with_jest_plugin(true)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        PreferComparisonMatcher::NAME,
+        PreferComparisonMatcher::PLUGIN,
+        pass,
+        fail,
+    )
+    .with_jest_plugin(true)
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

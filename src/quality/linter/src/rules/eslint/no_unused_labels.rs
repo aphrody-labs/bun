@@ -130,7 +130,10 @@ fn test() {
             "A: for (var i = 0; i < 10; ++i) { B: break A; }",
             "A: for (var i = 0; i < 10; ++i) { break A; }",
         ),
-        ("A: { var A = 0; console.log(A); }", "{ var A = 0; console.log(A); }"),
+        (
+            "A: { var A = 0; console.log(A); }",
+            "{ var A = 0; console.log(A); }",
+        ),
         ("if (foo) { bar: 'baz' }", "if (foo) { 'baz' }"),
         ("A: B: 'foo'", "B: 'foo'"),
         ("A: B: C: 'foo'", "B: C: 'foo'"),

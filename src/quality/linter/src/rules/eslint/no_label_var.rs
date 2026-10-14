@@ -6,12 +6,14 @@ use oxc_span::Span;
 use crate::{AstNode, context::LintContext, rule::Rule};
 
 fn no_label_var_diagnostic(name: &str, id_span: Span, label_span: Span) -> OxcDiagnostic {
-    OxcDiagnostic::warn(format!("Found identifier '{name}' with the same name as a label."))
-        .with_help("Rename either the variable or the label to avoid confusion.")
-        .with_labels([
-            id_span.label(format!("Identifier '{name}' found here.")),
-            label_span.label("Label with the same name."),
-        ])
+    OxcDiagnostic::warn(format!(
+        "Found identifier '{name}' with the same name as a label."
+    ))
+    .with_help("Rename either the variable or the label to avoid confusion.")
+    .with_labels([
+        id_span.label(format!("Identifier '{name}' found here.")),
+        label_span.label("Label with the same name."),
+    ])
 }
 
 #[derive(Debug, Default, Clone)]
@@ -64,10 +66,13 @@ declare_oxc_lint!(
 
 impl Rule for NoLabelVar {
     fn run<'a>(&self, node: &AstNode<'a>, ctx: &LintContext<'a>) {
-        let AstKind::LabeledStatement(labeled_stmt) = node.kind() else { return };
+        let AstKind::LabeledStatement(labeled_stmt) = node.kind() else {
+            return;
+        };
 
-        if let Some(symbol_id) =
-            ctx.scoping().find_binding(node.scope_id(), labeled_stmt.label.name)
+        if let Some(symbol_id) = ctx
+            .scoping()
+            .find_binding(node.scope_id(), labeled_stmt.label.name)
         {
             let decl_span = ctx.scoping().symbol_span(symbol_id);
             let label_decl = labeled_stmt.span.start;

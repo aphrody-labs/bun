@@ -39,7 +39,11 @@ pub fn is_reserved_name(name: &str) -> bool {
 ///
 /// [`Ident`]: struct@Ident
 pub fn create_ident(name: &str) -> Ident {
-    if is_reserved_name(name) { format_ident!("r#{name}") } else { create_safe_ident(name) }
+    if is_reserved_name(name) {
+        format_ident!("r#{name}")
+    } else {
+        create_safe_ident(name)
+    }
 }
 
 /// Create an [`Ident`] from a string, without checking it's not a reserved word.
@@ -70,7 +74,11 @@ pub fn create_ident_tokens(name: &str) -> TokenStream {
 /// [`Ident`]: struct@Ident
 pub fn ident_name(ident: &Ident) -> String {
     let name = ident.to_string();
-    if let Some(unprefixed) = name.strip_prefix("r#") { unprefixed.to_string() } else { name }
+    if let Some(unprefixed) = name.strip_prefix("r#") {
+        unprefixed.to_string()
+    } else {
+        name
+    }
 }
 
 /// Convert integer to [`LitInt`].

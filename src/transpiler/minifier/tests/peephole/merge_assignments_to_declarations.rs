@@ -16,7 +16,10 @@ fn merge_assignments_to_declarations_var() {
     test("var a, b; a = c(); b = d()", "var a = c(), b = d()");
     test("var a, b; a = b", "var a = b, b");
 
-    test("var a, b, c; a = 0, b = 1, c = 2", "var a = 0, b = 1, c = 2");
+    test(
+        "var a, b, c; a = 0, b = 1, c = 2",
+        "var a = 0, b = 1, c = 2",
+    );
     test("var a, b; a = 0, b = 1, foo()", "var a = 0, b = 1; foo()");
     test("var a; a = 0, foo(), bar()", "var a = 0; foo(), bar()");
     test_same("var a, b; foo(), bar()");
@@ -49,8 +52,14 @@ fn merge_assignments_to_declarations_other() {
 
 #[test]
 fn take_leading_assignments_from_statements() {
-    test("function f() { let a; return a = 0, a }", "function f() { let a = 0; return 0 }");
-    test("function f() { var a; return a = b(), a }", "function f() { return b() }");
+    test(
+        "function f() { let a; return a = 0, a }",
+        "function f() { let a = 0; return 0 }",
+    );
+    test(
+        "function f() { var a; return a = b(), a }",
+        "function f() { return b() }",
+    );
     test(
         "function f() { var a, b; return a = 1, b = 2, c }",
         "function f() { var a = 1, b = 2; return c }",
@@ -60,8 +69,14 @@ fn take_leading_assignments_from_statements() {
     // the last expression is never taken, its value is needed
     test_same("function f() { var a; return a = 1 }");
 
-    test("function f() { var a; throw a = 1, e }", "function f() { var a = 1; throw e }");
-    test("function f() { var a; if (a = 1, c) foo() }", "function f() { var a = 1; c && foo() }");
+    test(
+        "function f() { var a; throw a = 1, e }",
+        "function f() { var a = 1; throw e }",
+    );
+    test(
+        "function f() { var a; if (a = 1, c) foo() }",
+        "function f() { var a = 1; c && foo() }",
+    );
     test(
         "function f() { var a; switch (a = 1, c) { case 1: foo() } }",
         "function f() { var a = 1; c === 1 && foo() }",
@@ -84,7 +99,10 @@ fn take_leading_assignments_from_statements() {
         "function f() { var a; for (x in (a = 1, b)) foo() }",
         "function f() { var a = 1; for (x in b) foo() }",
     );
-    test("function f() { var a; var b = (a = 1, 2) }", "function f() { var a = 1, b = 2 }");
+    test(
+        "function f() { var a; var b = (a = 1, 2) }",
+        "function f() { var a = 1, b = 2 }",
+    );
     test(
         "function f() { var a; var b = (a = 1, c) ? d : e }",
         "function f() { var a = 1, b = c ? d : e }",

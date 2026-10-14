@@ -88,13 +88,22 @@ fn test() {
 
     let fix = vec![
         ("expect(true).toBe(false);", "expect(true).toBeFalsy();"),
-        ("expect(wasSuccessful).toEqual(false);", "expect(wasSuccessful).toBeFalsy();"),
+        (
+            "expect(wasSuccessful).toEqual(false);",
+            "expect(wasSuccessful).toBeFalsy();",
+        ),
         (
             "expect(fs.existsSync('/path/to/file')).toStrictEqual(false);",
             "expect(fs.existsSync('/path/to/file')).toBeFalsy();",
         ),
-        (r#"expect("a string").not.toBe(false);"#, r#"expect("a string").not.toBeFalsy();"#),
-        (r#"expect("a string").not.toEqual(false);"#, r#"expect("a string").not.toBeFalsy();"#),
+        (
+            r#"expect("a string").not.toBe(false);"#,
+            r#"expect("a string").not.toBeFalsy();"#,
+        ),
+        (
+            r#"expect("a string").not.toEqual(false);"#,
+            r#"expect("a string").not.toBeFalsy();"#,
+        ),
         (
             r#"expectTypeOf("a string").not.toEqual(false);"#,
             r#"expectTypeOf("a string").not.toBeFalsy();"#,
@@ -106,8 +115,18 @@ fn test() {
         .map(|(source, expected)| (source, expected, None, FixKind::Suggestion))
         .collect::<Vec<_>>();
     fix.extend([
-        ("expect(0).toBe(false);", "expect(0).toBe(false);", None, FixKind::Fix),
-        ("expect(0).toBe(false);", "expect(0).toBeFalsy();", None, FixKind::Suggestion),
+        (
+            "expect(0).toBe(false);",
+            "expect(0).toBe(false);",
+            None,
+            FixKind::Fix,
+        ),
+        (
+            "expect(0).toBe(false);",
+            "expect(0).toBeFalsy();",
+            None,
+            FixKind::Suggestion,
+        ),
     ]);
 
     Tester::new(PreferToBeFalsy::NAME, PreferToBeFalsy::PLUGIN, pass, fail)

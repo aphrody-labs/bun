@@ -72,16 +72,34 @@ const KEYBOARD_HANDLER_EXCEPTIONS: &[&str] = &["onKeyUp", "onKeyDown", "onKeyPre
 const LOAD_ERROR_HANDLER_EXCEPTIONS: &[&str] = &["onError", "onLoad"];
 
 fn compact_handlers(handlers: &[&str]) -> Vec<CompactStr> {
-    handlers.iter().map(|handler| CompactStr::new(handler)).collect()
+    handlers
+        .iter()
+        .map(|handler| CompactStr::new(handler))
+        .collect()
 }
 
 fn recommended_handler_exceptions() -> FxHashMap<CompactStr, Vec<CompactStr>> {
     let mut exceptions = FxHashMap::default();
-    exceptions.insert(CompactStr::new("alert"), compact_handlers(KEYBOARD_HANDLER_EXCEPTIONS));
-    exceptions.insert(CompactStr::new("body"), compact_handlers(LOAD_ERROR_HANDLER_EXCEPTIONS));
-    exceptions.insert(CompactStr::new("dialog"), compact_handlers(KEYBOARD_HANDLER_EXCEPTIONS));
-    exceptions.insert(CompactStr::new("iframe"), compact_handlers(LOAD_ERROR_HANDLER_EXCEPTIONS));
-    exceptions.insert(CompactStr::new("img"), compact_handlers(LOAD_ERROR_HANDLER_EXCEPTIONS));
+    exceptions.insert(
+        CompactStr::new("alert"),
+        compact_handlers(KEYBOARD_HANDLER_EXCEPTIONS),
+    );
+    exceptions.insert(
+        CompactStr::new("body"),
+        compact_handlers(LOAD_ERROR_HANDLER_EXCEPTIONS),
+    );
+    exceptions.insert(
+        CompactStr::new("dialog"),
+        compact_handlers(KEYBOARD_HANDLER_EXCEPTIONS),
+    );
+    exceptions.insert(
+        CompactStr::new("iframe"),
+        compact_handlers(LOAD_ERROR_HANDLER_EXCEPTIONS),
+    );
+    exceptions.insert(
+        CompactStr::new("img"),
+        compact_handlers(LOAD_ERROR_HANDLER_EXCEPTIONS),
+    );
     exceptions
 }
 
@@ -205,14 +223,19 @@ impl Rule for NoNoninteractiveElementInteractions {
             return;
         }
 
-        ctx.diagnostic(no_noninteractive_element_interactions_diagnostic(jsx_el.name.span()));
+        ctx.diagnostic(no_noninteractive_element_interactions_diagnostic(
+            jsx_el.name.span(),
+        ));
     }
 }
 
 impl NoNoninteractiveElementInteractions {
     fn has_interactive_handler(&self, jsx_el: &JSXOpeningElement, element_type: &str) -> bool {
-        let ignored_handlers =
-            self.0.handler_exceptions.get(element_type).map_or([].as_slice(), Vec::as_slice);
+        let ignored_handlers = self
+            .0
+            .handler_exceptions
+            .get(element_type)
+            .map_or([].as_slice(), Vec::as_slice);
 
         self.0
             .handlers
@@ -228,7 +251,10 @@ fn has_active_handler(
     handler: &str,
     ignored_handlers: &[CompactStr],
 ) -> bool {
-    if ignored_handlers.iter().any(|ignored| ignored.as_str() == handler) {
+    if ignored_handlers
+        .iter()
+        .any(|ignored| ignored.as_str() == handler)
+    {
         return false;
     }
     let Some(prop) = has_jsx_prop(jsx_el, handler) else {
@@ -254,16 +280,16 @@ fn is_content_editable(jsx_el: &JSXOpeningElement) -> bool {
 }
 
 fn role_value<'b>(jsx_el: &'b JSXOpeningElement<'_>) -> Option<&'b str> {
-    has_jsx_prop_ignore_case(jsx_el, "role").and_then(get_prop_value).and_then(
-        |value| match value {
+    has_jsx_prop_ignore_case(jsx_el, "role")
+        .and_then(get_prop_value)
+        .and_then(|value| match value {
             JSXAttributeValue::StringLiteral(role) => Some(role.value.as_str()),
             JSXAttributeValue::ExpressionContainer(container) => match &container.expression {
                 JSXExpression::StringLiteral(role) => Some(role.value.as_str()),
                 _ => None,
             },
             _ => None,
-        },
-    )
+        })
 }
 
 fn is_interactive_role_for_rule(
@@ -610,33 +636,122 @@ fn test() {
         (r"<img onClick={() => void 0} />", None, None).into(),
         (r"<iframe onClick={() => void 0} />", None, None).into(),
         (r"<label onClick={() => void 0} />", None, None).into(),
-        (r#"<section onClick={() => void 0} aria-label="Aardvark" />"#, None, None).into(),
-        (r#"<section onClick={() => void 0} aria-labelledby="js_1" />"#, None, None).into(),
-        (r#"<div role="listitem" onClick={() => void 0} />"#, None, None).into(),
-        (r#"<div role="article" onClick={() => void 0} />"#, None, None).into(),
-        (r#"<div role="article" onKeyDown={() => void 0} />"#, None, None).into(),
-        (r#"<div role="article" onKeyPress={() => void 0} />"#, None, None).into(),
-        (r#"<div role="article" onKeyUp={() => void 0} />"#, None, None).into(),
-        (r#"<div role={"article"} onClick={() => void 0} />"#, None, None).into(),
-        (r#"<div role="unknown article" onClick={() => void 0} />"#, None, None).into(),
-        (r#"<div contentEditable role="article" onKeyDown={() => void 0} />"#, None, None).into(),
-        (r"<Image onClick={() => void 0} />", None, Some(components_settings())).into(),
-        (r"<main onClick />", None, None).into(),
-        (r"<article contentEditable onClick={() => void 0} />", None, None).into(),
-        (r#"<ul contentEditable="false" onClick={() => void 0} />"#, None, None).into(),
-        (r"<dialog onClick={() => void 0} />", None, None).into(),
-        (r"<main onFocus={() => void 0} />", Some(strict_config()), None).into(),
-        (r#"<div role="article" onBlur={() => void 0} />"#, Some(strict_config()), None).into(),
-        (r#"<div role="article" onContextMenu={() => void 0} />"#, Some(strict_config()), None)
+        (
+            r#"<section onClick={() => void 0} aria-label="Aardvark" />"#,
+            None,
+            None,
+        )
             .into(),
-        (r#"<img onLoad={() => void 0} alt="" />"#, Some(serde_json::json!([{}])), None).into(),
+        (
+            r#"<section onClick={() => void 0} aria-labelledby="js_1" />"#,
+            None,
+            None,
+        )
+            .into(),
+        (
+            r#"<div role="listitem" onClick={() => void 0} />"#,
+            None,
+            None,
+        )
+            .into(),
+        (
+            r#"<div role="article" onClick={() => void 0} />"#,
+            None,
+            None,
+        )
+            .into(),
+        (
+            r#"<div role="article" onKeyDown={() => void 0} />"#,
+            None,
+            None,
+        )
+            .into(),
+        (
+            r#"<div role="article" onKeyPress={() => void 0} />"#,
+            None,
+            None,
+        )
+            .into(),
+        (
+            r#"<div role="article" onKeyUp={() => void 0} />"#,
+            None,
+            None,
+        )
+            .into(),
+        (
+            r#"<div role={"article"} onClick={() => void 0} />"#,
+            None,
+            None,
+        )
+            .into(),
+        (
+            r#"<div role="unknown article" onClick={() => void 0} />"#,
+            None,
+            None,
+        )
+            .into(),
+        (
+            r#"<div contentEditable role="article" onKeyDown={() => void 0} />"#,
+            None,
+            None,
+        )
+            .into(),
+        (
+            r"<Image onClick={() => void 0} />",
+            None,
+            Some(components_settings()),
+        )
+            .into(),
+        (r"<main onClick />", None, None).into(),
+        (
+            r"<article contentEditable onClick={() => void 0} />",
+            None,
+            None,
+        )
+            .into(),
+        (
+            r#"<ul contentEditable="false" onClick={() => void 0} />"#,
+            None,
+            None,
+        )
+            .into(),
+        (r"<dialog onClick={() => void 0} />", None, None).into(),
+        (
+            r"<main onFocus={() => void 0} />",
+            Some(strict_config()),
+            None,
+        )
+            .into(),
+        (
+            r#"<div role="article" onBlur={() => void 0} />"#,
+            Some(strict_config()),
+            None,
+        )
+            .into(),
+        (
+            r#"<div role="article" onContextMenu={() => void 0} />"#,
+            Some(strict_config()),
+            None,
+        )
+            .into(),
+        (
+            r#"<img onLoad={() => void 0} alt="" />"#,
+            Some(serde_json::json!([{}])),
+            None,
+        )
+            .into(),
         (
             r"<main onClick={() => void 0} />",
             Some(serde_json::json!([{ "handlers": ["onClick"] }])),
             None,
         )
             .into(),
-        (r"<dialog onKeyDown={() => void 0} />", Some(strict_config()), None).into(),
+        (
+            r"<dialog onKeyDown={() => void 0} />",
+            Some(strict_config()),
+            None,
+        )
+            .into(),
     ];
 
     for tag in [

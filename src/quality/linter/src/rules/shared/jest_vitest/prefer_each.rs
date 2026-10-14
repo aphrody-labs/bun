@@ -11,14 +11,18 @@ use crate::{
 
 fn use_prefer_each(span: Span, fn_name: &str) -> OxcDiagnostic {
     OxcDiagnostic::warn("Enforce using `each` rather than manual loops")
-        .with_help(format!("Prefer using `{fn_name}.each` rather than a manual loop."))
+        .with_help(format!(
+            "Prefer using `{fn_name}.each` rather than a manual loop."
+        ))
         .with_label(span)
 }
 
 #[inline]
 fn is_in_test(ctx: &LintContext<'_>, id: NodeId) -> bool {
     ctx.nodes().ancestors(id).any(|node| {
-        let AstKind::CallExpression(ancestor_call_expr) = node.kind() else { return false };
+        let AstKind::CallExpression(ancestor_call_expr) = node.kind() else {
+            return false;
+        };
         let Some(ancestor_member_expr) = ancestor_call_expr.callee.as_member_expression() else {
             return false;
         };
@@ -26,7 +30,10 @@ fn is_in_test(ctx: &LintContext<'_>, id: NodeId) -> bool {
             return false;
         };
 
-        matches!(JestFnKind::from(id.name.as_str()), JestFnKind::General(JestGeneralFnKind::Test))
+        matches!(
+            JestFnKind::from(id.name.as_str()),
+            JestFnKind::General(JestGeneralFnKind::Test)
+        )
     })
 }
 
@@ -84,7 +91,9 @@ impl PreferEachConfig {
     }
 
     fn run<'a>(node: &AstNode<'a>, ctx: &LintContext<'a>, skip: &mut FxHashSet<NodeId>) {
-        let AstKind::CallExpression(call_expr) = node.kind() else { return };
+        let AstKind::CallExpression(call_expr) = node.kind() else {
+            return;
+        };
 
         // Walking up to the nearest enclosing loop is much cheaper than
         // `parse_jest_fn_call`, so find it first: only calls sitting directly in a
@@ -102,15 +111,22 @@ impl PreferEachConfig {
                 _ => {}
             }
         }
-        let Some(loop_node) = enclosing_loop else { return };
+        let Some(loop_node) = enclosing_loop else {
+            return;
+        };
 
         if skip.contains(&loop_node.id()) {
             return;
         }
 
-        let Some(jest_fn_call) =
-            parse_jest_fn_call(call_expr, &PossibleJestNode { node, original: None }, ctx)
-        else {
+        let Some(jest_fn_call) = parse_jest_fn_call(
+            call_expr,
+            &PossibleJestNode {
+                node,
+                original: None,
+            },
+            ctx,
+        ) else {
             return;
         };
 
@@ -134,6 +150,9 @@ impl PreferEachConfig {
         };
 
         skip.insert(loop_node.id());
-        ctx.diagnostic(use_prefer_each(Span::new(loop_span.start, body.span().start), fn_name));
+        ctx.diagnostic(use_prefer_each(
+            Span::new(loop_span.start, body.span().start),
+            fn_name,
+        ));
     }
 }

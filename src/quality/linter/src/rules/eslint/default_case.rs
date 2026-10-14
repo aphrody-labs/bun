@@ -146,7 +146,12 @@ impl Rule for DefaultCase {
             return;
         };
 
-        if !has_default_comment(ctx, switch.span, last_case.span, self.comment_pattern.as_ref()) {
+        if !has_default_comment(
+            ctx,
+            switch.span,
+            last_case.span,
+            self.comment_pattern.as_ref(),
+        ) {
             ctx.diagnostic(default_case_diagnostic(switch.span));
         }
     }
@@ -158,16 +163,17 @@ fn has_default_comment(
     last_case_span: Span,
     comment_pattern: Option<&Regex>,
 ) -> bool {
-    ctx.semantic().comments_range(last_case_span.start..switch_span.end).next_back().is_some_and(
-        |comment| {
+    ctx.semantic()
+        .comments_range(last_case_span.start..switch_span.end)
+        .next_back()
+        .is_some_and(|comment| {
             let raw = ctx.source_range(comment.content_span()).trim();
 
             match comment_pattern {
                 Some(re) => re.is_match(raw),
                 None => raw.eq_ignore_ascii_case("no default"),
             }
-        },
-    )
+        })
 }
 
 #[test]
@@ -176,7 +182,10 @@ fn test() {
 
     let pass = vec![
         ("switch (a) { case 1: break; default: break; }", None),
-        ("switch (a) { case 1: break; case 2: default: break; }", None),
+        (
+            "switch (a) { case 1: break; case 2: default: break; }",
+            None,
+        ),
         (
             "switch (a) { case 1: break; default: break;
               //no default

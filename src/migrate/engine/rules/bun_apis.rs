@@ -25,9 +25,9 @@
 
 use std::collections::HashSet;
 
-use crate::util::{Edit, apply_edits, line_offsets, make_finding};
 use crate::registry::{APIS, ApiEntry, BindingKind, ImportGraph, MODULES};
 use crate::types::{Finding, MakeFindingOpts, Severity};
+use crate::util::{Edit, apply_edits, line_offsets, make_finding};
 use once_cell::sync::Lazy;
 use regex::{Captures, Regex};
 

@@ -71,8 +71,11 @@ impl Rule for NoNewBuffer {
             };
 
             // Build arguments string
-            let args_text =
-                new_expr.arguments.iter().map(|arg| ctx.source_range(arg.span())).join(", ");
+            let args_text = new_expr
+                .arguments
+                .iter()
+                .map(|arg| ctx.source_range(arg.span()))
+                .join(", ");
 
             let replacement = format!("Buffer.{method}({args_text})");
             fixer.replace(expr_span, replacement)
@@ -179,9 +182,15 @@ fn test() {
 
     let fix = vec![
         // Numeric argument → Buffer.alloc
-        ("const buffer = new Buffer(10);", "const buffer = Buffer.alloc(10);"),
+        (
+            "const buffer = new Buffer(10);",
+            "const buffer = Buffer.alloc(10);",
+        ),
         // String argument → Buffer.from
-        (r#"const buffer = new Buffer("string");"#, r#"const buffer = Buffer.from("string");"#),
+        (
+            r#"const buffer = new Buffer("string");"#,
+            r#"const buffer = Buffer.from("string");"#,
+        ),
         (
             r#"const buffer = new Buffer("7468697320697320612074c3a97374", "hex")"#,
             r#"const buffer = Buffer.from("7468697320697320612074c3a97374", "hex")"#,
@@ -191,9 +200,15 @@ fn test() {
             "const buffer = new Buffer([0x62, 0x75, 0x66, 0x66, 0x65, 0x72])",
             "const buffer = Buffer.from([0x62, 0x75, 0x66, 0x66, 0x65, 0x72])",
         ),
-        ("const buffer = new Buffer([0x62, bar])", "const buffer = Buffer.from([0x62, bar])"),
+        (
+            "const buffer = new Buffer([0x62, bar])",
+            "const buffer = Buffer.from([0x62, bar])",
+        ),
         // Template literal → Buffer.from
-        ("const buffer = new Buffer(`${unknown}`)", "const buffer = Buffer.from(`${unknown}`)"),
+        (
+            "const buffer = new Buffer(`${unknown}`)",
+            "const buffer = Buffer.from(`${unknown}`)",
+        ),
     ];
 
     Tester::new(NoNewBuffer::NAME, NoNewBuffer::PLUGIN, pass, fail)

@@ -99,7 +99,12 @@ impl InstalledRecord {
         let s = |name: &str| v.get(name).and_then(Value::as_str).unwrap_or("").to_owned();
         let list = |name: &str| -> Vec<String> {
             v.get(name)
-                .map(|a| a.as_array().iter().filter_map(|x| x.as_str().map(str::to_owned)).collect())
+                .map(|a| {
+                    a.as_array()
+                        .iter()
+                        .filter_map(|x| x.as_str().map(str::to_owned))
+                        .collect()
+                })
                 .unwrap_or_default()
         };
         let kind = match v.get("kind").and_then(Value::as_str) {
@@ -137,7 +142,8 @@ impl InstalledDb {
         let mut db = InstalledDb::default();
         if let Some(Value::Object(rows)) = root.get("packages") {
             for (key, v) in rows {
-                db.entries.insert(key.clone(), InstalledRecord::from_value(key, v)?);
+                db.entries
+                    .insert(key.clone(), InstalledRecord::from_value(key, v)?);
             }
         }
         Ok(db)
@@ -151,7 +157,11 @@ impl InstalledDb {
             out.push_str(": ");
             rec.write_json(&mut out);
         }
-        out.push_str(if self.entries.is_empty() { "}\n}\n" } else { "\n  }\n}\n" });
+        out.push_str(if self.entries.is_empty() {
+            "}\n}\n"
+        } else {
+            "\n  }\n}\n"
+        });
         super::fs::write(path, out.as_bytes())
     }
 }

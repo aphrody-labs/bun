@@ -58,7 +58,11 @@ fn test(source_text: &str, expected: bool) {
     assert!(ret.diagnostics.is_empty(), "{source_text}");
 
     let stmt = ret.program.body.first().unwrap();
-    assert_eq!(stmt.may_have_side_effects(&Ctx::default()), expected, "{source_text}");
+    assert_eq!(
+        stmt.may_have_side_effects(&Ctx::default()),
+        expected,
+        "{source_text}"
+    );
 }
 
 #[track_caller]
@@ -71,8 +75,18 @@ fn test_in_function(source_text: &str, expected: bool) {
     let Some(Statement::FunctionDeclaration(stmt)) = &ret.program.body.first() else {
         panic!("should have a function declaration: {source_text}");
     };
-    let stmt = stmt.body.as_ref().expect("should have a body").statements.first().unwrap();
-    assert_eq!(stmt.may_have_side_effects(&Ctx::default()), expected, "{source_text}");
+    let stmt = stmt
+        .body
+        .as_ref()
+        .expect("should have a body")
+        .statements
+        .first()
+        .unwrap();
+    assert_eq!(
+        stmt.may_have_side_effects(&Ctx::default()),
+        expected,
+        "{source_text}"
+    );
 }
 
 #[test]

@@ -35,7 +35,9 @@ impl Derive for DeriveGetSpan {
     fn parse_attr(&self, _attr_name: &str, location: AttrLocation, part: AttrPart) -> Result<()> {
         // No need to check attr name is `span`, because that's the only attribute this derive handles.
         // Ditto location can only be `StructField`.
-        let AttrLocation::StructField(struct_def, field_index) = location else { unreachable!() };
+        let AttrLocation::StructField(struct_def, field_index) = location else {
+            unreachable!()
+        };
 
         if matches!(part, AttrPart::None) {
             struct_def.span.span_field_index = Some(field_index);
@@ -141,9 +143,15 @@ fn derive_type(
             reference,
             schema,
         ),
-        StructOrEnum::Enum(enum_def) => {
-            derive_enum(enum_def, trait_ident, method_ident, self_ty, result_ty, reference, schema)
-        }
+        StructOrEnum::Enum(enum_def) => derive_enum(
+            enum_def,
+            trait_ident,
+            method_ident,
+            self_ty,
+            result_ty,
+            reference,
+            schema,
+        ),
     }
 }
 

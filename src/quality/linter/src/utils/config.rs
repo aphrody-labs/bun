@@ -63,7 +63,9 @@ where
     use serde::de::Error;
 
     let pattern = String::deserialize(deserializer)?;
-    RegexBuilder::new(&pattern).build().map_err(D::Error::custom)
+    RegexBuilder::new(&pattern)
+        .build()
+        .map_err(D::Error::custom)
 }
 
 pub fn deserialize_regex_vec<'de, D>(deserializer: D) -> Result<Vec<Regex>, D::Error>
@@ -86,5 +88,8 @@ where
     use serde::de::Error;
 
     let pattern = String::deserialize(deserializer)?;
-    RegexBuilder::new(&pattern).build().map(Some).map_err(D::Error::custom)
+    RegexBuilder::new(&pattern)
+        .build()
+        .map(Some)
+        .map_err(D::Error::custom)
 }

@@ -87,7 +87,11 @@ struct DerivationCache<'a> {
 
 impl<'a> DerivationCache<'a> {
     fn new() -> Self {
-        DerivationCache { has_changes: false, cache: FxHashMap::default(), previous_cache: None }
+        DerivationCache {
+            has_changes: false,
+            cache: FxHashMap::default(),
+            previous_cache: None,
+        }
     }
 
     fn take_snapshot(&mut self) {
@@ -270,7 +274,9 @@ fn is_mutable_at(
     eval_order: EvaluationOrder,
     identifier_id: IdentifierId,
 ) -> bool {
-    env.identifiers[identifier_id].mutable_range.contains(eval_order)
+    env.identifiers[identifier_id]
+        .mutable_range
+        .contains(eval_order)
 }
 
 pub fn validate_no_derived_computations_in_effects_exp(
@@ -355,7 +361,13 @@ pub fn validate_no_derived_computations_in_effects_exp(
         .collect();
 
     for (_key, effect_func_id, dep_elements) in &effects_cache {
-        validate_effect(*effect_func_id, dep_elements, &mut context, env, &mut errors);
+        validate_effect(
+            *effect_func_id,
+            dep_elements,
+            &mut context,
+            env,
+            &mut errors,
+        );
     }
 
     Ok(errors)
@@ -435,11 +447,18 @@ fn record_instruction_derivations<'a>(
                     (&args[0], &args[1])
             {
                 let effect_function = context.functions.get(&arg0.identifier).copied();
-                let deps = context.candidate_dependencies.get(&arg1.identifier).cloned();
+                let deps = context
+                    .candidate_dependencies
+                    .get(&arg1.identifier)
+                    .cloned();
                 if let (Some(effect_func_id), Some(dep_elements)) = (effect_function, deps) {
-                    context
-                        .effects_cache
-                        .insert(arg0.identifier, EffectMetadata { effect_func_id, dep_elements });
+                    context.effects_cache.insert(
+                        arg0.identifier,
+                        EffectMetadata {
+                            effect_func_id,
+                            dep_elements,
+                        },
+                    );
                 }
             }
 
@@ -465,11 +484,18 @@ fn record_instruction_derivations<'a>(
                     (&args[0], &args[1])
             {
                 let effect_function = context.functions.get(&arg0.identifier).copied();
-                let deps = context.candidate_dependencies.get(&arg1.identifier).cloned();
+                let deps = context
+                    .candidate_dependencies
+                    .get(&arg1.identifier)
+                    .cloned();
                 if let (Some(effect_func_id), Some(dep_elements)) = (effect_function, deps) {
-                    context
-                        .effects_cache
-                        .insert(arg0.identifier, EffectMetadata { effect_func_id, dep_elements });
+                    context.effects_cache.insert(
+                        arg0.identifier,
+                        EffectMetadata {
+                            effect_func_id,
+                            dep_elements,
+                        },
+                    );
                 }
             }
 
@@ -491,13 +517,16 @@ fn record_instruction_derivations<'a>(
             let dep_elements: Vec<DepElement> = elements
                 .iter()
                 .filter_map(|el| match el {
-                    ArrayElement::Place(p) => {
-                        Some(DepElement { identifier: p.identifier, span: p.span })
-                    }
+                    ArrayElement::Place(p) => Some(DepElement {
+                        identifier: p.identifier,
+                        span: p.span,
+                    }),
                     _ => None,
                 })
                 .collect();
-            context.candidate_dependencies.insert(lvalue_id, dep_elements);
+            context
+                .candidate_dependencies
+                .insert(lvalue_id, dep_elements);
         }
         _ => {}
     }
@@ -506,8 +535,11 @@ fn record_instruction_derivations<'a>(
     for (operand_id, operand_span) in each_instruction_operand(instr, env) {
         // Track setState usages
         if context.set_state_loads.contains_key(&operand_id) {
-            let root =
-                get_root_set_state(operand_id, &context.set_state_loads, &mut FxHashSet::default());
+            let root = get_root_set_state(
+                operand_id,
+                &context.set_state_loads,
+                &mut FxHashSet::default(),
+            );
             if let Some(root_id) = root
                 && let Some(usages) = context.set_state_usages.get_mut(&root_id)
             {
@@ -592,7 +624,10 @@ fn each_instruction_operand_with_effect(
 ) -> Vec<OperandWithEffect> {
     canonical_each_instruction_operand(instr, env)
         .into_iter()
-        .map(|place| OperandWithEffect { id: place.identifier, effect: place.effect })
+        .map(|place| OperandWithEffect {
+            id: place.identifier,
+            effect: place.effect,
+        })
         .collect()
 }
 
@@ -675,7 +710,11 @@ fn render_tree<'a>(
     let prefix = format!(
         "{}{}",
         indent,
-        if is_last { "\u{2514}\u{2500}\u{2500} " } else { "\u{251c}\u{2500}\u{2500} " }
+        if is_last {
+            "\u{2514}\u{2500}\u{2500} "
+        } else {
+            "\u{251c}\u{2500}\u{2500} "
+        }
     );
     let child_indent = format!("{}{}", indent, if is_last { "    " } else { "\u{2502}   " });
 
@@ -759,8 +798,11 @@ fn validate_effect<'a>(
 
     // Consider setStates in the effect's dependency array as being part of effectSetStateUsages
     for dep in dependencies {
-        let root =
-            get_root_set_state(dep.identifier, &context.set_state_loads, &mut FxHashSet::default());
+        let root = get_root_set_state(
+            dep.identifier,
+            &context.set_state_loads,
+            &mut FxHashSet::default(),
+        );
         if let Some(root_id) = root {
             let mut set = FxHashSet::default();
             set.insert(dep.span.unwrap_or_default());
@@ -773,8 +815,11 @@ fn validate_effect<'a>(
 
     for (_block_id, block) in &effect_function.body.blocks {
         // Check for return -> cleanup function
-        if let Terminal::Return { value, return_variant: ReturnVariant::Explicit, .. } =
-            &block.terminal
+        if let Terminal::Return {
+            value,
+            return_variant: ReturnVariant::Explicit,
+            ..
+        } = &block.terminal
         {
             let func_id = context.functions.get(&value.identifier).copied();
             cleanup_function_deps = get_fn_local_deps(func_id, env);
@@ -881,10 +926,15 @@ fn validate_effect<'a>(
             &mut FxHashSet::default(),
         );
         if let Some(root_id) = root_set_state_call {
-            let effect_usage_count =
-                effect_set_state_usages.get(&root_id).map(|s| s.len()).unwrap_or(0);
-            let total_usage_count =
-                context.set_state_usages.get(&root_id).map(|s| s.len()).unwrap_or(0);
+            let effect_usage_count = effect_set_state_usages
+                .get(&root_id)
+                .map(|s| s.len())
+                .unwrap_or(0);
+            let total_usage_count = context
+                .set_state_usages
+                .get(&root_id)
+                .map(|s| s.len())
+                .unwrap_or(0);
             if effect_set_state_usages.contains_key(&root_id)
                 && context.set_state_usages.contains_key(&root_id)
                 && effect_usage_count == total_usage_count - 1
@@ -919,7 +969,10 @@ fn validate_effect<'a>(
 
                 // Check cleanup function dependencies
                 let should_skip = if let Some(ref cleanup_deps) = cleanup_function_deps {
-                    derived.source_ids.iter().any(|dep| cleanup_deps.contains(dep))
+                    derived
+                        .source_ids
+                        .iter()
+                        .any(|dep| cleanup_deps.contains(dep))
                 } else {
                     false
                 };
@@ -951,7 +1004,10 @@ fn validate_effect<'a>(
                     trees.join("\n"),
                 );
 
-                errors.push(diagnostics::derived_state_in_effect(description, derived.callee_span));
+                errors.push(diagnostics::derived_state_in_effect(
+                    description,
+                    derived.callee_span,
+                ));
             }
         }
     }
@@ -989,9 +1045,10 @@ pub fn validate_no_derived_computations_in_effects(
                         let deps: Vec<DepElement> = elements
                             .iter()
                             .filter_map(|e| match e {
-                                ArrayElement::Place(p) => {
-                                    Some(DepElement { identifier: p.identifier, span: p.span })
-                                }
+                                ArrayElement::Place(p) => Some(DepElement {
+                                    identifier: p.identifier,
+                                    span: p.span,
+                                }),
                                 _ => None,
                             })
                             .collect();
@@ -1085,7 +1142,9 @@ fn validate_effect_non_exp(
     for ctx in &effect_func.context {
         let ctx_ty = &tys[ids[ctx.identifier].type_];
         if is_set_state_type(ctx_ty)
-            || effect_deps.iter().any(|dep| dep.identifier == ctx.identifier)
+            || effect_deps
+                .iter()
+                .any(|dep| dep.identifier == ctx.identifier)
         {
             continue;
         } else {
@@ -1095,7 +1154,11 @@ fn validate_effect_non_exp(
 
     // Check that all effect deps are actually used in the function
     for dep in effect_deps {
-        if !effect_func.context.iter().any(|c| c.identifier == dep.identifier) {
+        if !effect_func
+            .context
+            .iter()
+            .any(|c| c.identifier == dep.identifier)
+        {
             return Vec::new();
         }
     }
@@ -1218,7 +1281,10 @@ fn validate_effect_non_exp(
     let dependency_description = if dependency_names.is_empty() {
         "the effect's reactive dependencies".to_string()
     } else {
-        let names = dependency_names.iter().map(|name| name.as_str()).collect::<Vec<_>>();
+        let names = dependency_names
+            .iter()
+            .map(|name| name.as_str())
+            .collect::<Vec<_>>();
         format!(
             "the reactive value{} `{}`",
             if names.len() == 1 { "" } else { "s" },
@@ -1228,7 +1294,10 @@ fn validate_effect_non_exp(
     let help = format!(
         "This effect derives state from {dependency_description}, causing an extra render and potentially showing a stale value. Calculate the derived value during render, then remove the redundant state and effect."
     );
-    let dependency_spans = effect_deps.iter().filter_map(|dep| dep.span).collect::<Vec<_>>();
+    let dependency_spans = effect_deps
+        .iter()
+        .filter_map(|dep| dep.span)
+        .collect::<Vec<_>>();
 
     set_state_spans
         .into_iter()
@@ -1253,7 +1322,9 @@ fn validate_effect_non_exp(
 /// for resolving function expression context captures.
 fn non_exp_value_operands(value: &InstructionValue) -> Vec<IdentifierId> {
     match value {
-        InstructionValue::ComputedLoad { object, property, .. } => {
+        InstructionValue::ComputedLoad {
+            object, property, ..
+        } => {
             vec![object.identifier, property.identifier]
         }
         InstructionValue::PropertyLoad { object, .. } => vec![object.identifier],
@@ -1273,7 +1344,12 @@ fn non_exp_value_operands(value: &InstructionValue) -> Vec<IdentifierId> {
             }
             op_ids
         }
-        InstructionValue::MethodCall { receiver, property, args, .. } => {
+        InstructionValue::MethodCall {
+            receiver,
+            property,
+            args,
+            ..
+        } => {
             let mut op_ids = vec![receiver.identifier, property.identifier];
             for a in args {
                 match a {

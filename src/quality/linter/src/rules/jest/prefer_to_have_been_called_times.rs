@@ -97,8 +97,13 @@ fn test() {
         ),
     ];
 
-    Tester::new(PreferToHaveBeenCalledTimes::NAME, PreferToHaveBeenCalledTimes::PLUGIN, pass, fail)
-        .with_jest_plugin(true)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        PreferToHaveBeenCalledTimes::NAME,
+        PreferToHaveBeenCalledTimes::PLUGIN,
+        pass,
+        fail,
+    )
+    .with_jest_plugin(true)
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

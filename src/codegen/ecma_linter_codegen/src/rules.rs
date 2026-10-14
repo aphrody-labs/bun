@@ -33,8 +33,9 @@ pub fn get_all_rules(contents: &str) -> Vec<RuleEntry<'_>> {
 
         // Detect plugin module start: `pub(crate) mod eslint {` or `pub(crate) mod typescript {`
         if line.starts_with("pub(crate) mod ") && line.ends_with(" {") {
-            let module_name =
-                line.strip_prefix("pub(crate) mod ").and_then(|s| s.strip_suffix(" {"));
+            let module_name = line
+                .strip_prefix("pub(crate) mod ")
+                .and_then(|s| s.strip_suffix(" {"));
             current_plugin = module_name;
             continue;
         }
@@ -50,7 +51,9 @@ pub fn get_all_rules(contents: &str) -> Vec<RuleEntry<'_>> {
             && plugin != "shared"
             && line.starts_with("pub mod ")
             && line.ends_with(';')
-            && let Some(rule_name) = line.strip_prefix("pub mod ").and_then(|s| s.strip_suffix(';'))
+            && let Some(rule_name) = line
+                .strip_prefix("pub mod ")
+                .and_then(|s| s.strip_suffix(';'))
         {
             rule_entries.push(RuleEntry {
                 plugin_module_name: plugin,
@@ -72,7 +75,9 @@ pub fn find_rule_source_file(root: &Path, rule: &RuleEntry) -> Option<std::path:
     // A rule path corresponds to:
     // 1) `src/quality/linter/src/rules/<plugin>/<rule>.rs`
     // 2) `src/quality/linter/src/rules/<plugin>/<rule>/mod.rs`
-    let rules_path = root.join("src/quality/linter/src/rules").join(rule.plugin_module_name);
+    let rules_path = root
+        .join("src/quality/linter/src/rules")
+        .join(rule.plugin_module_name);
 
     let direct_path = rules_path.join(format!("{}.rs", rule.rule_module_name));
     if direct_path.exists() {

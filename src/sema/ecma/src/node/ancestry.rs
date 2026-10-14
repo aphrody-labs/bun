@@ -31,7 +31,9 @@ impl Default for AncestryStack<'_> {
     fn default() -> Self {
         // Reserve enough frames for typical AST nesting depth so the stack does not reallocate
         // while traversing. `Stack`'s own default capacity is only 4 for a 16-byte `AstKind`.
-        Self { stack: Stack::with_capacity(64) }
+        Self {
+            stack: Stack::with_capacity(64),
+        }
     }
 }
 
@@ -65,7 +67,9 @@ impl<'a> AncestryStack<'a> {
         let stack = self.stack.as_slice();
         // `Program` is its own parent.
         let parent_index = stack.len().saturating_sub(2);
-        stack.get(parent_index).map_or(NodeId::ROOT, AstKind::node_id)
+        stack
+            .get(parent_index)
+            .map_or(NodeId::ROOT, AstKind::node_id)
     }
 
     /// [`AstKind`] of the node currently being visited (top of the stack).
@@ -121,9 +125,10 @@ impl<'a> AncestryStack<'a> {
         let stack = self.stack.as_slice();
         let end = match from {
             None => stack.len(),
-            Some(node_id) => {
-                stack.iter().rposition(|kind| kind.node_id() == node_id).map_or(0, |i| i + 1)
-            }
+            Some(node_id) => stack
+                .iter()
+                .rposition(|kind| kind.node_id() == node_id)
+                .map_or(0, |i| i + 1),
         };
         stack[..end].iter().rev().copied()
     }
@@ -165,7 +170,10 @@ impl<'a> AncestryStack<'a> {
 #[derive(Clone, Copy)]
 pub enum Ancestry<'a, 'n> {
     /// Read ancestry from the full node store.
-    Nodes { nodes: &'n super::AstNodes<'a>, current_node_id: NodeId },
+    Nodes {
+        nodes: &'n super::AstNodes<'a>,
+        current_node_id: NodeId,
+    },
     /// Read ancestry from the standalone stack.
     Stack(&'n AncestryStack<'a>),
 }
@@ -175,7 +183,10 @@ impl<'a, 'n> Ancestry<'a, 'n> {
     #[inline]
     pub fn current_kind(self) -> AstKind<'a> {
         match self {
-            Ancestry::Nodes { nodes, current_node_id } => nodes.kind(current_node_id),
+            Ancestry::Nodes {
+                nodes,
+                current_node_id,
+            } => nodes.kind(current_node_id),
             Ancestry::Stack(stack) => stack.current_kind(),
         }
     }
@@ -190,7 +201,10 @@ impl<'a, 'n> Ancestry<'a, 'n> {
     #[inline]
     pub fn parent_kind(self) -> AstKind<'a> {
         match self {
-            Ancestry::Nodes { nodes, current_node_id } => nodes.parent_kind(current_node_id),
+            Ancestry::Nodes {
+                nodes,
+                current_node_id,
+            } => nodes.parent_kind(current_node_id),
             Ancestry::Stack(stack) => stack.parent_kind(),
         }
     }
@@ -199,7 +213,10 @@ impl<'a, 'n> Ancestry<'a, 'n> {
     #[inline]
     pub fn parent_node_id(self) -> NodeId {
         match self {
-            Ancestry::Nodes { nodes, current_node_id } => nodes.parent_id(current_node_id),
+            Ancestry::Nodes {
+                nodes,
+                current_node_id,
+            } => nodes.parent_id(current_node_id),
             Ancestry::Stack(stack) => stack.parent_node_id(),
         }
     }
@@ -209,9 +226,10 @@ impl<'a, 'n> Ancestry<'a, 'n> {
     #[inline]
     pub fn ancestor_kinds(self) -> impl Iterator<Item = AstKind<'a>> + Clone + 'n {
         match self {
-            Ancestry::Nodes { nodes, current_node_id } => {
-                itertools::Either::Left(nodes.ancestor_kinds(current_node_id))
-            }
+            Ancestry::Nodes {
+                nodes,
+                current_node_id,
+            } => itertools::Either::Left(nodes.ancestor_kinds(current_node_id)),
             Ancestry::Stack(stack) => itertools::Either::Right(stack.ancestor_kinds()),
         }
     }
@@ -225,7 +243,10 @@ impl<'a, 'n> Ancestry<'a, 'n> {
         from: Option<NodeId>,
     ) -> impl Iterator<Item = AstKind<'a>> + Clone + 'n {
         match self {
-            Ancestry::Nodes { nodes, current_node_id } => {
+            Ancestry::Nodes {
+                nodes,
+                current_node_id,
+            } => {
                 let start = from.unwrap_or(current_node_id);
                 itertools::Either::Left(
                     std::iter::once(nodes.kind(start)).chain(nodes.ancestor_kinds(start)),

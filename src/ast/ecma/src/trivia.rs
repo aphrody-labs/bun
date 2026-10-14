@@ -35,7 +35,11 @@ pub fn comments_range<R>(comments: &[Comment], range: R) -> CommentsRange<'_>
 where
     R: RangeBounds<u32>,
 {
-    CommentsRange::new(comments, range.start_bound().cloned(), range.end_bound().cloned())
+    CommentsRange::new(
+        comments,
+        range.start_bound().cloned(),
+        range.end_bound().cloned(),
+    )
 }
 
 /// Check if there are any comments within a given span
@@ -189,7 +193,10 @@ impl<'c> Iterator for CommentsRange<'c> {
 impl DoubleEndedIterator for CommentsRange<'_> {
     fn next_back(&mut self) -> Option<Self::Item> {
         if self.current_start < self.current_end {
-            for comment in self.comments[self.current_start..self.current_end].iter().rev() {
+            for comment in self.comments[self.current_start..self.current_end]
+                .iter()
+                .rev()
+            {
                 self.current_end = self.current_end.saturating_sub(1);
                 if self.range.contains(&comment.span.start) {
                     return Some(comment);
@@ -218,8 +225,14 @@ mod test {
         .into_boxed_slice();
         let full_len = comments.len();
         assert_eq!(comments_range(&comments, ..).count(), full_len);
-        assert_eq!(comments_range(&comments, 1..).count(), full_len.saturating_sub(1));
-        assert_eq!(comments_range(&comments, ..18).count(), full_len.saturating_sub(1));
+        assert_eq!(
+            comments_range(&comments, 1..).count(),
+            full_len.saturating_sub(1)
+        );
+        assert_eq!(
+            comments_range(&comments, ..18).count(),
+            full_len.saturating_sub(1)
+        );
         assert_eq!(comments_range(&comments, ..=18).count(), full_len);
     }
 

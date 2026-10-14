@@ -36,10 +36,19 @@ pub fn is_test_call_expression(call: &AstNode<CallExpression<'_>>, comments: &Co
 
 /// The compact test call layout joins arguments with spaces, which breaks comment order.
 fn has_comment_around_arguments(call: &CallExpression, comments: &Comments) -> bool {
-    let first = call.type_arguments.as_ref().map_or(call.callee.span().end, |t| t.span.end);
+    let first = call
+        .type_arguments
+        .as_ref()
+        .map_or(call.callee.span().end, |t| t.span.end);
     let starts = iter::once(first).chain(call.arguments.iter().map(|a| a.span().end));
-    let ends = call.arguments.iter().map(|a| a.span().start).chain(iter::once(call.span.end));
-    starts.zip(ends).any(|(start, end)| comments.has_any_comment_in_range(start, end))
+    let ends = call
+        .arguments
+        .iter()
+        .map(|a| a.span().start)
+        .chain(iter::once(call.span.end));
+    starts
+        .zip(ends)
+        .any(|(start, end)| comments.has_any_comment_in_range(start, end))
 }
 
 fn is_test_call_shape(call: &AstNode<CallExpression<'_>>, comments: &Comments) -> bool {
@@ -68,7 +77,9 @@ fn is_test_call_shape(call: &AstNode<CallExpression<'_>>, comments: &Comments) -
             }
 
             if is_unit_test_set_up_callee(callee) {
-                return argument.as_expression().is_some_and(is_angular_test_wrapper_expression);
+                return argument
+                    .as_expression()
+                    .is_some_and(is_angular_test_wrapper_expression);
             }
 
             false
@@ -77,7 +88,10 @@ fn is_test_call_shape(call: &AstNode<CallExpression<'_>>, comments: &Comments) -
         // it("description", ..)
         (Some(first), Some(second), third)
             if arguments.len() <= 3
-                && matches!(first, Argument::StringLiteral(_) | Argument::TemplateLiteral(_))
+                && matches!(
+                    first,
+                    Argument::StringLiteral(_) | Argument::TemplateLiteral(_)
+                )
                 && contains_a_test_pattern(callee) =>
         {
             // it('name', callback, duration)
@@ -85,7 +99,10 @@ fn is_test_call_shape(call: &AstNode<CallExpression<'_>>, comments: &Comments) -
                 return false;
             }
 
-            if second.as_expression().is_some_and(is_angular_test_wrapper_expression) {
+            if second
+                .as_expression()
+                .is_some_and(is_angular_test_wrapper_expression)
+            {
                 return true;
             }
 
@@ -193,7 +210,9 @@ pub fn callee_name_iterator<'b>(expr: &'b Expression<'_>) -> Option<impl Iterato
 /// Implementation (trie-tree) is inspired by the article:
 /// <https://craftinginterpreters.com/scanning-on-demand.html#tries-and-state-machines>
 pub fn contains_a_test_pattern(expr: &Expression<'_>) -> bool {
-    let Some(mut names) = callee_name_iterator(expr) else { return false };
+    let Some(mut names) = callee_name_iterator(expr) else {
+        return false;
+    };
 
     match names.next() {
         Some("it") => match names.next() {

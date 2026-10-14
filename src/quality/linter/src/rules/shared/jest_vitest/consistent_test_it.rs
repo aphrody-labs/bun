@@ -17,7 +17,9 @@ use crate::{
 
 fn consistent_method(preferred_method: &str, other_method: &str, span: Span) -> OxcDiagnostic {
     OxcDiagnostic::warn("Enforce `test` and `it` usage conventions")
-        .with_help(format!("Prefer using {preferred_method:?} instead of {other_method:?}"))
+        .with_help(format!(
+            "Prefer using {preferred_method:?} instead of {other_method:?}"
+        ))
         .with_label(span)
 }
 
@@ -99,7 +101,10 @@ pub struct ConsistentTestItConfig {
 
 impl Default for ConsistentTestItConfig {
     fn default() -> Self {
-        Self { within_describe: TestCaseName::IT, r#fn: TestCaseName::Test }
+        Self {
+            within_describe: TestCaseName::IT,
+            r#fn: TestCaseName::Test,
+        }
     }
 }
 
@@ -142,7 +147,10 @@ impl ConsistentTestItConfig {
     ) {
         let node = possible_jest_node.node;
         let node_span = node.span();
-        while describe_stack.last().is_some_and(|span| !span.contains_inclusive(node_span)) {
+        while describe_stack
+            .last()
+            .is_some_and(|span| !span.contains_inclusive(node_span))
+        {
             describe_stack.pop();
         }
 
@@ -155,12 +163,18 @@ impl ConsistentTestItConfig {
             return;
         };
 
-        if matches!(jest_fn_call.kind, JestFnKind::General(JestGeneralFnKind::Describe)) {
+        if matches!(
+            jest_fn_call.kind,
+            JestFnKind::General(JestGeneralFnKind::Describe)
+        ) {
             describe_stack.push(node_span);
             return;
         }
 
-        let is_test = matches!(jest_fn_call.kind, JestFnKind::General(JestGeneralFnKind::Test));
+        let is_test = matches!(
+            jest_fn_call.kind,
+            JestFnKind::General(JestGeneralFnKind::Test)
+        );
         let is_within_describe = !describe_stack.is_empty();
         let fn_to_str = self.r#fn.as_str();
 
@@ -196,7 +210,11 @@ impl ConsistentTestItConfig {
     }
 
     fn get_opposite_test_case(test_case_name: TestCaseName) -> &'static str {
-        if matches!(test_case_name, TestCaseName::Test) { "it" } else { "test" }
+        if matches!(test_case_name, TestCaseName::Test) {
+            "it"
+        } else {
+            "test"
+        }
     }
 
     fn get_prefer_test_name_and_span<'s>(

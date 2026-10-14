@@ -131,6 +131,11 @@ fn test() {
                   ",
     ];
 
-    Tester::new(RequireThrowsDescription::NAME, RequireThrowsDescription::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        RequireThrowsDescription::NAME,
+        RequireThrowsDescription::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

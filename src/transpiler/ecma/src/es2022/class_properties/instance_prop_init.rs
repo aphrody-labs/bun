@@ -117,7 +117,9 @@ impl<'a> Visit<'a> for InstanceInitializerVisitor<'a, '_> {
 impl<'a> InstanceInitializerVisitor<'a, '_> {
     /// Update parent of scope.
     fn reparent_scope(&mut self, scope_id: ScopeId) {
-        self.ctx.scoping_mut().change_scope_parent_id(scope_id, Some(self.parent_scope_id));
+        self.ctx
+            .scoping_mut()
+            .change_scope_parent_id(scope_id, Some(self.parent_scope_id));
     }
 
     /// Check if symbol referenced by `ident` is shadowed by a binding in constructor's scope.
@@ -126,8 +128,10 @@ impl<'a> InstanceInitializerVisitor<'a, '_> {
         // in `InstanceInitializerVisitor::new` rather than indexing into `ScopeTree::bindings`
         // with same `ScopeId` every time here, but `ScopeTree` doesn't allow that, and we also
         // take a `&mut ScopeTree` in `reparent_scope`, so borrow-checker doesn't allow that.
-        let Some(constructor_symbol_id) =
-            self.ctx.scoping().get_binding(self.constructor_scope_id, ident.name)
+        let Some(constructor_symbol_id) = self
+            .ctx
+            .scoping()
+            .get_binding(self.constructor_scope_id, ident.name)
         else {
             return;
         };
@@ -146,7 +150,9 @@ impl<'a> InstanceInitializerVisitor<'a, '_> {
         }
 
         // Record the symbol clash. Symbol in constructor needs to be renamed.
-        self.clashing_symbols.entry(constructor_symbol_id).or_insert(ident.name);
+        self.clashing_symbols
+            .entry(constructor_symbol_id)
+            .or_insert(ident.name);
     }
 }
 
@@ -168,7 +174,10 @@ struct FastInstanceInitializerVisitor<'a, 'v> {
 
 impl<'a, 'v> FastInstanceInitializerVisitor<'a, 'v> {
     fn new(instance_inits_scope_id: ScopeId, ctx: &'v mut TraverseCtx<'a>) -> Self {
-        Self { parent_scope_id: instance_inits_scope_id, ctx }
+        Self {
+            parent_scope_id: instance_inits_scope_id,
+            ctx,
+        }
     }
 }
 
@@ -225,6 +234,8 @@ impl FastInstanceInitializerVisitor<'_, '_> {
     /// Update parent of scope.
     fn reparent_scope(&mut self, scope_id: &Cell<Option<ScopeId>>) {
         let scope_id = scope_id.get().unwrap();
-        self.ctx.scoping_mut().change_scope_parent_id(scope_id, Some(self.parent_scope_id));
+        self.ctx
+            .scoping_mut()
+            .change_scope_parent_id(scope_id, Some(self.parent_scope_id));
     }
 }

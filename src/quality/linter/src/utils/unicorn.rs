@@ -96,13 +96,17 @@ pub fn is_import_symbol(
         return false;
     };
 
-    import_decl.specifiers.iter().flatten().any(|specifier| match specifier {
-        ImportDeclarationSpecifier::ImportSpecifier(import_specifier) => {
-            import_specifier.local.symbol_id() == symbol_id
-                && import_specifier.imported.name() == imported_name
-        }
-        _ => false,
-    })
+    import_decl
+        .specifiers
+        .iter()
+        .flatten()
+        .any(|specifier| match specifier {
+            ImportDeclarationSpecifier::ImportSpecifier(import_specifier) => {
+                import_specifier.local.symbol_id() == symbol_id
+                    && import_specifier.imported.name() == imported_name
+            }
+            _ => false,
+        })
 }
 
 pub fn is_node_value_not_dom_node(expr: &Expression) -> bool {
@@ -138,7 +142,9 @@ pub fn is_prototype_property(
     property: &str,
     object: Option<&str>,
 ) -> bool {
-    if member_expr.static_property_name().is_none_or(|name| name != property)
+    if member_expr
+        .static_property_name()
+        .is_none_or(|name| name != property)
         || member_expr.optional()
     {
         return false;
@@ -147,7 +153,9 @@ pub fn is_prototype_property(
     // `Object.prototype.method` or `Array.prototype.method`
     if let Some(member_expr_obj) = member_expr.object().as_member_expression()
         && let Expression::Identifier(iden) = member_expr_obj.object()
-        && member_expr_obj.static_property_name().is_some_and(|name| name == "prototype")
+        && member_expr_obj
+            .static_property_name()
+            .is_some_and(|name| name == "prototype")
         && object.is_some_and(|val| val == iden.name)
         && !member_expr.optional()
         && !member_expr_obj.optional()
@@ -268,7 +276,9 @@ pub fn is_same_expression(left: &Expression, right: &Expression, ctx: &LintConte
         }
         (Expression::StringLiteral(string_lit), Expression::TemplateLiteral(template_lit))
         | (Expression::TemplateLiteral(template_lit), Expression::StringLiteral(string_lit)) => {
-            return template_lit.single_quasi().is_some_and(|val| val.as_str() == string_lit.value);
+            return template_lit
+                .single_quasi()
+                .is_some_and(|val| val.as_str() == string_lit.value);
         }
         (Expression::TemplateLiteral(left_str), Expression::TemplateLiteral(right_str)) => {
             return left_str.quasis.content_eq(&right_str.quasis)
@@ -459,11 +469,15 @@ where
         expr = member_expr.object().get_inner_expression();
     }
 
-    let Expression::Identifier(ident) = expr else { return false };
+    let Expression::Identifier(ident) = expr else {
+        return false;
+    };
     path.push(ident.name.as_str());
     let path = path.iter().rev().copied();
 
-    paths.into_iter().any(|expected_path| expected_path.into_iter().eq(path.clone()))
+    paths
+        .into_iter()
+        .any(|expected_path| expected_path.into_iter().eq(path.clone()))
 }
 
 /// Returns the precedence of an expression if it has one.

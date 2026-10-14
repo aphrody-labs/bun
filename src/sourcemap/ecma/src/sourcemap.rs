@@ -102,9 +102,17 @@ impl<'a> SourceMap<'a> {
     pub fn into_owned(self) -> SourceMap<'static> {
         SourceMap {
             file: self.file.map(|c| Cow::Owned(c.into_owned())),
-            names: self.names.into_iter().map(|c| Cow::Owned(c.into_owned())).collect(),
+            names: self
+                .names
+                .into_iter()
+                .map(|c| Cow::Owned(c.into_owned()))
+                .collect(),
             source_root: self.source_root.map(|c| Cow::Owned(c.into_owned())),
-            sources: self.sources.into_iter().map(|c| Cow::Owned(c.into_owned())).collect(),
+            sources: self
+                .sources
+                .into_iter()
+                .map(|c| Cow::Owned(c.into_owned()))
+                .collect(),
             source_contents: self
                 .source_contents
                 .into_iter()
@@ -187,7 +195,10 @@ impl<'a> SourceMap<'a> {
 
     /// Adjust `sources`.
     pub fn set_sources<S: AsRef<str>, I: IntoIterator<Item = S>>(&mut self, sources: I) {
-        self.sources = sources.into_iter().map(|s| Cow::Owned(s.as_ref().to_owned())).collect();
+        self.sources = sources
+            .into_iter()
+            .map(|s| Cow::Owned(s.as_ref().to_owned()))
+            .collect();
     }
 
     pub fn get_sources(&self) -> impl ExactSizeIterator<Item = &str> {
@@ -196,8 +207,10 @@ impl<'a> SourceMap<'a> {
 
     /// Adjust `source_content`.
     pub fn set_source_contents(&mut self, source_contents: Vec<Option<&str>>) {
-        self.source_contents =
-            source_contents.into_iter().map(|v| v.map(|s| Cow::Owned(s.to_owned()))).collect();
+        self.source_contents = source_contents
+            .into_iter()
+            .map(|v| v.map(|s| Cow::Owned(s.to_owned())))
+            .collect();
     }
 
     pub fn get_source_contents(&self) -> impl ExactSizeIterator<Item = Option<&str>> {
@@ -209,7 +222,8 @@ impl<'a> SourceMap<'a> {
     }
 
     pub fn get_source_view_token(&self, index: u32) -> Option<SourceViewToken<'_, 'a>> {
-        self.get_token(index).map(|token| SourceViewToken::new(token, self))
+        self.get_token(index)
+            .map(|token| SourceViewToken::new(token, self))
     }
 
     /// Get raw tokens.
@@ -219,7 +233,9 @@ impl<'a> SourceMap<'a> {
 
     /// Get source view tokens. See [`SourceViewToken`] for more information.
     pub fn get_source_view_tokens(&self) -> impl ExactSizeIterator<Item = SourceViewToken<'_, 'a>> {
-        self.tokens.iter().map(|&token| SourceViewToken::new(token, self))
+        self.tokens
+            .iter()
+            .map(|&token| SourceViewToken::new(token, self))
     }
 
     pub fn get_name(&self, id: u32) -> Option<&str> {
@@ -231,7 +247,9 @@ impl<'a> SourceMap<'a> {
     }
 
     pub fn get_source_content(&self, id: u32) -> Option<&str> {
-        self.source_contents.get(id as usize).and_then(Option::as_deref)
+        self.source_contents
+            .get(id as usize)
+            .and_then(Option::as_deref)
     }
 
     pub fn get_source_and_content(&self, id: u32) -> Option<(&str, &str)> {
@@ -241,7 +259,9 @@ impl<'a> SourceMap<'a> {
     /// Generate a lookup table, it will be used at `lookup_token` or `lookup_source_view_token`.
     pub fn generate_lookup_table(&self) -> Vec<LineLookupTable<'_>> {
         // The dst line/dst col always has increasing order.
-        let Some(last_token) = self.tokens.last() else { return vec![] };
+        let Some(last_token) = self.tokens.last() else {
+            return vec![];
+        };
         let mut table = vec![&self.tokens[..0]; last_token.dst_line as usize + 1];
         let mut start = 0;
         let mut line = 0;
@@ -268,7 +288,10 @@ impl<'a> SourceMap<'a> {
         // so the line component of the key is constant across the slice. Binary searching on
         // `dst_col` alone avoids building and lexicographically comparing a `(dst_line, dst_col)`
         // tuple on every probe — measurably faster on this remapping hot path.
-        greatest_lower_bound(lookup_table.get(line as usize)?, &col, |token| token.dst_col).copied()
+        greatest_lower_bound(lookup_table.get(line as usize)?, &col, |token| {
+            token.dst_col
+        })
+        .copied()
     }
 
     /// Lookup a token by line and column, it will used at remapping. See `SourceViewToken`.
@@ -278,7 +301,8 @@ impl<'a> SourceMap<'a> {
         line: u32,
         col: u32,
     ) -> Option<SourceViewToken<'_, 'a>> {
-        self.lookup_token(lookup_table, line, col).map(|token| SourceViewToken::new(token, self))
+        self.lookup_token(lookup_table, line, col)
+            .map(|token| SourceViewToken::new(token, self))
     }
 
     /// Like [`lookup_token`](Self::lookup_token), but clamps to the line's first token when `col`
@@ -381,25 +405,36 @@ mod tests {
         let sm = SourceMap::from_json_string(input).unwrap();
         let lookup_table = sm.generate_lookup_table();
         assert_eq!(
-            sm.lookup_source_view_token(&lookup_table, 0, 0).unwrap().to_tuple(),
+            sm.lookup_source_view_token(&lookup_table, 0, 0)
+                .unwrap()
+                .to_tuple(),
             (Some("coolstuff.js"), 0, 0, None)
         );
         assert_eq!(
-            sm.lookup_source_view_token(&lookup_table, 0, 3).unwrap().to_tuple(),
+            sm.lookup_source_view_token(&lookup_table, 0, 3)
+                .unwrap()
+                .to_tuple(),
             (Some("coolstuff.js"), 0, 4, Some("x"))
         );
         assert_eq!(
-            sm.lookup_source_view_token(&lookup_table, 0, 24).unwrap().to_tuple(),
+            sm.lookup_source_view_token(&lookup_table, 0, 24)
+                .unwrap()
+                .to_tuple(),
             (Some("coolstuff.js"), 2, 8, None)
         );
 
         // Lines continue out to infinity
         assert_eq!(
-            sm.lookup_source_view_token(&lookup_table, 0, 1000).unwrap().to_tuple(),
+            sm.lookup_source_view_token(&lookup_table, 0, 1000)
+                .unwrap()
+                .to_tuple(),
             (Some("coolstuff.js"), 2, 8, None)
         );
 
-        assert!(sm.lookup_source_view_token(&lookup_table, 1000, 0).is_none());
+        assert!(
+            sm.lookup_source_view_token(&lookup_table, 1000, 0)
+                .is_none()
+        );
         // Plain `lookup_token` (not the source-view wrapper) on the same table.
         assert!(sm.lookup_token(&lookup_table, 0, 0).is_some());
     }
@@ -455,7 +490,10 @@ mod tests {
         let sm =
             SourceMap::from_json_string(r#"{"version":3,"sources":[],"names":[],"mappings":""}"#)
                 .unwrap();
-        assert!(sm.to_data_url().starts_with("data:application/json;charset=utf-8;base64,"));
+        assert!(
+            sm.to_data_url()
+                .starts_with("data:application/json;charset=utf-8;base64,")
+        );
     }
 
     #[test]

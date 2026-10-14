@@ -39,7 +39,10 @@ pub struct NoUselessUndefined {
 
 impl Default for NoUselessUndefined {
     fn default() -> Self {
-        Self { check_arguments: true, check_arrow_function_body: true }
+        Self {
+            check_arguments: true,
+            check_arrow_function_body: true,
+        }
     }
 }
 
@@ -390,7 +393,10 @@ fn test() {
         ("assert.strictEqual(foo, undefined, message)", None),
         ("assert.notStrictEqual(foo, undefined, message)", None),
         ("assert.propertyVal(foo, 'bar', undefined, message)", None),
-        ("assert.notPropertyVal(foo, 'bar', undefined, message)", None),
+        (
+            "assert.notPropertyVal(foo, 'bar', undefined, message)",
+            None,
+        ),
         ("expect(foo).not(undefined)", None),
         ("expect(foo).to.have.property('bar', undefined)", None),
         ("expect(foo).toBe(undefined)", None),
@@ -401,7 +407,10 @@ fn test() {
         ("t.notSame(foo, undefined)", None),
         ("t.strictSame(foo, undefined)", None),
         ("t.strictNotSame(foo, undefined)", None),
-        ("expect(someFunction).toHaveBeenCalledWith(1, 2, undefined);", None),
+        (
+            "expect(someFunction).toHaveBeenCalledWith(1, 2, undefined);",
+            None,
+        ),
         ("set.add(undefined);", None),
         ("map.set(foo, undefined);", None),
         ("array.push(foo, undefined);", None),
@@ -431,7 +440,10 @@ fn test() {
             options_ignore_arguments(),
         ),
         // `checkArrowFunctionBody: false`
-        ("const foo = () => undefined", options_ignore_arrow_function_body()),
+        (
+            "const foo = () => undefined",
+            options_ignore_arrow_function_body(),
+        ),
         ("const x = { a: undefined }", None),
         // https://github.com/zeit/next.js/blob/3af0fe5cf2542237f34d106872d104c3606b1858/packages/next/build/utils.ts#L620
         ("prerenderPaths?.add(entry)", None),
@@ -464,7 +476,10 @@ fn test() {
         ("const foo = (): undefined => {return undefined;}", None),
         ("const foo = (): undefined => undefined;", None),
         ("const foo = (): string => undefined;", None),
-        ("const foo = function (): undefined {return undefined}", None),
+        (
+            "const foo = function (): undefined {return undefined}",
+            None,
+        ),
         ("export function foo(): undefined {return undefined}", None),
         (
             r"
@@ -563,7 +578,10 @@ fn test() {
         ",
             None,
         ),
-        ("function foo(optional?: string, required: string = undefined) {}", None),
+        (
+            "function foo(optional?: string, required: string = undefined) {}",
+            None,
+        ),
         (
             "function getBackLinks(subject: string, limit = 16, cursor?: string, reverse = false, ttl: number | undefined = undefined) {}",
             None,
@@ -655,17 +673,41 @@ fn test() {
     ];
 
     let fix = vec![
-        (r"function foo() {return undefined;}", r"function foo() {return;}", None),
-        ("const foo = () => undefined;", "const foo = () => {};", None),
-        ("const foo = () => {return undefined;};", "const foo = () => {return;};", None),
-        ("function foo() {return       undefined;}", "function foo() {return;}", None),
+        (
+            r"function foo() {return undefined;}",
+            r"function foo() {return;}",
+            None,
+        ),
+        (
+            "const foo = () => undefined;",
+            "const foo = () => {};",
+            None,
+        ),
+        (
+            "const foo = () => {return undefined;};",
+            "const foo = () => {return;};",
+            None,
+        ),
+        (
+            "function foo() {return       undefined;}",
+            "function foo() {return;}",
+            None,
+        ),
         (
             "function foo() {return /* comment */ undefined;}",
             "function foo() {return /* comment */;}",
             None,
         ),
-        ("function* foo() {yield undefined;}", "function* foo() {yield;}", None),
-        ("function* foo() {yield                 undefined;}", "function* foo() {yield;}", None),
+        (
+            "function* foo() {yield undefined;}",
+            "function* foo() {yield;}",
+            None,
+        ),
+        (
+            "function* foo() {yield                 undefined;}",
+            "function* foo() {yield;}",
+            None,
+        ),
         ("let a = undefined;", "let a;", None),
         ("let a = undefined, b = 2;", "let a, b = 2;", None),
         ("var a = undefined;", "var a;", None),
@@ -676,11 +718,23 @@ fn test() {
         ("foo(undefined, undefined,);", "foo();", None),
         ("foo(bar, undefined);", "foo(bar);", None),
         ("foo(bar, undefined, undefined);", "foo(bar);", None),
-        ("foo(undefined, bar, undefined);", "foo(undefined, bar);", None),
+        (
+            "foo(undefined, bar, undefined);",
+            "foo(undefined, bar);",
+            None,
+        ),
         ("foo(bar, undefined,);", "foo(bar,);", None),
-        ("foo(undefined, bar, undefined,);", "foo(undefined, bar,);", None),
+        (
+            "foo(undefined, bar, undefined,);",
+            "foo(undefined, bar,);",
+            None,
+        ),
         ("foo(bar, undefined, undefined,);", "foo(bar,);", None),
-        ("foo(undefined, bar, undefined, undefined,);", "foo(undefined, bar,);", None),
+        (
+            "foo(undefined, bar, undefined, undefined,);",
+            "foo(undefined, bar,);",
+            None,
+        ),
         (
             "foo(undefined, bar, undefined, undefined, undefined, undefined,);",
             "foo(undefined, bar,);",
@@ -688,11 +742,31 @@ fn test() {
         ),
         ("const {foo = undefined} = {};", "const {foo} = {};", None),
         ("const [foo = undefined] = [];", "const [foo] = [];", None),
-        ("function foo(bar = undefined) {}", "function foo(bar) {}", None),
-        ("function foo({bar = undefined}) {}", "function foo({bar}) {}", None),
-        ("function foo({bar = undefined} = {}) {}", "function foo({bar} = {}) {}", None),
-        ("function foo([bar = undefined]) {}", "function foo([bar]) {}", None),
-        ("function foo([bar = undefined] = []) {}", "function foo([bar] = []) {}", None),
+        (
+            "function foo(bar = undefined) {}",
+            "function foo(bar) {}",
+            None,
+        ),
+        (
+            "function foo({bar = undefined}) {}",
+            "function foo({bar}) {}",
+            None,
+        ),
+        (
+            "function foo({bar = undefined} = {}) {}",
+            "function foo({bar} = {}) {}",
+            None,
+        ),
+        (
+            "function foo([bar = undefined]) {}",
+            "function foo([bar]) {}",
+            None,
+        ),
+        (
+            "function foo([bar = undefined] = []) {}",
+            "function foo([bar] = []) {}",
+            None,
+        ),
         (
             "function foo(x: string | undefined = undefined) { }",
             "function foo(x: string | undefined) { }",
@@ -722,9 +796,14 @@ fn test() {
         ),
     ];
 
-    Tester::new(NoUselessUndefined::NAME, NoUselessUndefined::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        NoUselessUndefined::NAME,
+        NoUselessUndefined::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .test_and_snapshot();
 }
 
 #[test]
@@ -732,21 +811,31 @@ fn test_config_array_format() {
     use crate::tester::Tester;
 
     let pass = vec![
-        (r"foo(undefined);", Some(serde_json::json!([{ "checkArguments": false }]))),
+        (
+            r"foo(undefined);",
+            Some(serde_json::json!([{ "checkArguments": false }])),
+        ),
         (
             r"const foo = () => undefined;",
             Some(serde_json::json!([{ "checkArrowFunctionBody": false }])),
         ),
     ];
     let fail = vec![
-        (r"foo(undefined);", Some(serde_json::json!([{ "checkArguments": true }]))),
+        (
+            r"foo(undefined);",
+            Some(serde_json::json!([{ "checkArguments": true }])),
+        ),
         (
             r"const foo = () => undefined;",
             Some(serde_json::json!([{ "checkArrowFunctionBody": true }])),
         ),
     ];
     let fix = vec![
-        (r"foo(undefined);", r"foo();", Some(serde_json::json!([{ "checkArguments": true }]))),
+        (
+            r"foo(undefined);",
+            r"foo();",
+            Some(serde_json::json!([{ "checkArguments": true }])),
+        ),
         (
             r"const foo = () => undefined;",
             r"const foo = () => {};",
@@ -754,9 +843,14 @@ fn test_config_array_format() {
         ),
     ];
 
-    Tester::new(NoUselessUndefined::NAME, NoUselessUndefined::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .test();
+    Tester::new(
+        NoUselessUndefined::NAME,
+        NoUselessUndefined::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .test();
 }
 
 #[test]
@@ -783,9 +877,14 @@ fn test_issue_14368() {
         Some(serde_json::json!([{ "checkArguments": true }])),
     )];
 
-    Tester::new(NoUselessUndefined::NAME, NoUselessUndefined::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .test();
+    Tester::new(
+        NoUselessUndefined::NAME,
+        NoUselessUndefined::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .test();
 }
 
 #[test]
@@ -799,13 +898,28 @@ fn test_trailing_arguments() {
         "call.bind(receiver);",
         "call.bind(receiver, undefined);",
     ];
-    let fail =
-        vec!["call(...values, undefined, undefined);", "call?.(value, undefined, undefined);"];
-    let fix = vec![
-        ("call(...values, undefined, undefined);", "call(...values);", None),
-        ("call?.(value, undefined, undefined);", "call?.(value);", None),
+    let fail = vec![
+        "call(...values, undefined, undefined);",
+        "call?.(value, undefined, undefined);",
     ];
-    Tester::new(NoUselessUndefined::NAME, NoUselessUndefined::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .test();
+    let fix = vec![
+        (
+            "call(...values, undefined, undefined);",
+            "call(...values);",
+            None,
+        ),
+        (
+            "call?.(value, undefined, undefined);",
+            "call?.(value);",
+            None,
+        ),
+    ];
+    Tester::new(
+        NoUselessUndefined::NAME,
+        NoUselessUndefined::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .test();
 }

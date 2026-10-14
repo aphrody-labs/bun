@@ -45,7 +45,8 @@ impl<'a> VisitJs<'a> for KeepVar<'a> {
     fn visit_variable_declaration(&mut self, it: &VariableDeclaration<'a>) {
         if it.kind.is_var() {
             it.bound_names(&mut |ident| {
-                self.vars.push((ident.name, ident.span, ident.symbol_id.get()));
+                self.vars
+                    .push((ident.name, ident.span, ident.symbol_id.get()));
             });
             if it.has_init() {
                 self.all_hoisted = false;
@@ -56,7 +57,10 @@ impl<'a> VisitJs<'a> for KeepVar<'a> {
 
 impl<'a> KeepVar<'a> {
     pub fn new() -> Self {
-        Self { vars: std::vec![], all_hoisted: true }
+        Self {
+            vars: std::vec![],
+            all_hoisted: true,
+        }
     }
 
     pub fn get_variable_declaration(
@@ -85,13 +89,16 @@ impl<'a> KeepVar<'a> {
             builder,
         );
 
-        Some(VariableDeclaration::boxed(SPAN, kind, decls, false, builder))
+        Some(VariableDeclaration::boxed(
+            SPAN, kind, decls, false, builder,
+        ))
     }
 
     pub fn get_variable_declaration_statement(
         self,
         builder: &impl GetAstBuilder<'a>,
     ) -> Option<Statement<'a>> {
-        self.get_variable_declaration(builder).map(Statement::VariableDeclaration)
+        self.get_variable_declaration(builder)
+            .map(Statement::VariableDeclaration)
     }
 }

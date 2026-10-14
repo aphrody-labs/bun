@@ -7,7 +7,9 @@ use crate::{AstNode, context::LintContext, rule::Rule};
 
 fn prefer_code_point_diagnostic(span: Span, good_method: &str, bad_method: &str) -> OxcDiagnostic {
     OxcDiagnostic::warn(format!("Prefer `{good_method}` over `{bad_method}`"))
-        .with_help(format!("Unicode is better supported in `{good_method}` than `{bad_method}`"))
+        .with_help(format!(
+            "Unicode is better supported in `{good_method}` than `{bad_method}`"
+        ))
         .with_label(span)
 }
 
@@ -67,7 +69,9 @@ impl Rule for PreferCodePoint {
                 };
                 if call_expr.optional
                     || call_expr.callee.as_member_expression().and_then(|callee| {
-                        callee.static_property_info().map(|(_, property_name)| property_name)
+                        callee
+                            .static_property_info()
+                            .map(|(_, property_name)| property_name)
                     }) != Some("charCodeAt")
                 {
                     return;
@@ -123,7 +127,12 @@ fn test() {
     ];
 
     let fix = vec![
-        ("string.charCodeAt(index)", "string.codePointAt(index)", None, FixKind::DangerousFix),
+        (
+            "string.charCodeAt(index)",
+            "string.codePointAt(index)",
+            None,
+            FixKind::DangerousFix,
+        ),
         (
             "(( (( String )).fromCharCode( ((code)), ) ))",
             "(( (( String )).fromCodePoint( ((code)), ) ))",
@@ -142,7 +151,12 @@ fn test() {
             None,
             FixKind::DangerousFix,
         ),
-        (r#""🦄".charCodeAt(0)"#, r#""🦄".codePointAt(0)"#, None, FixKind::DangerousFix),
+        (
+            r#""🦄".charCodeAt(0)"#,
+            r#""🦄".codePointAt(0)"#,
+            None,
+            FixKind::DangerousFix,
+        ),
         (
             "String.fromCharCode(0x1f984);",
             "String.fromCodePoint(0x1f984);",

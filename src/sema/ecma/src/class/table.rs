@@ -27,7 +27,13 @@ impl<'a> Element<'a> {
         is_private: bool,
         kind: ElementKind,
     ) -> Self {
-        Self { name, span, is_private, r#static, kind }
+        Self {
+            name,
+            span,
+            is_private,
+            r#static,
+            kind,
+        }
     }
 }
 
@@ -41,7 +47,12 @@ pub struct PrivateIdentifierReference<'a> {
 
 impl<'a> PrivateIdentifierReference<'a> {
     pub fn new(id: NodeId, name: Ident<'a>, span: Span, element_ids: Vec<ElementId>) -> Self {
-        Self { id, name, span, element_ids }
+        Self {
+            id,
+            name,
+            span,
+            element_ids,
+        }
     }
 }
 
@@ -58,7 +69,9 @@ pub struct ClassTable<'a> {
 
 impl<'a> ClassTable<'a> {
     pub fn ancestors(&self, class_id: ClassId) -> impl Iterator<Item = ClassId> + '_ {
-        std::iter::successors(Some(class_id), |class_id| self.parent_ids.get(class_id).copied())
+        std::iter::successors(Some(class_id), |class_id| {
+            self.parent_ids.get(class_id).copied()
+        })
     }
 
     pub fn len(&self) -> usize {
@@ -92,7 +105,10 @@ impl<'a> ClassTable<'a> {
                 element_ids.push(element_id);
 
                 // Property or Accessor only has 1 element
-                if element.kind.intersects(ElementKind::Accessor | ElementKind::Property) {
+                if element
+                    .kind
+                    .intersects(ElementKind::Accessor | ElementKind::Property)
+                {
                     break;
                 }
 
@@ -107,7 +123,9 @@ impl<'a> ClassTable<'a> {
     }
 
     pub fn has_private_definition(&self, class_id: ClassId, name: Ident<'_>) -> bool {
-        self.elements[class_id].iter().any(|p| p.is_private && p.name == name)
+        self.elements[class_id]
+            .iter()
+            .any(|p| p.is_private && p.name == name)
     }
 
     pub fn declare_class(&mut self, parent_id: Option<ClassId>, node_id: NodeId) -> ClassId {

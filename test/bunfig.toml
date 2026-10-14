@@ -3,7 +3,6 @@ preload = "./preload.ts"
 
 [install]
 linker = "isolated"
-# See ../bunfig.toml — CI deletes the install cache between steps, and
-# verdaccio's internal packages have phantom dependencies that the global
-# store's stricter isolation catches.
+# Test dependency setup and fixtures retain project-local entries.
+# Explicit global-store coverage opts in with its own cache and bunfig.
 globalStore = false

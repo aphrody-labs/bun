@@ -15,9 +15,17 @@ pub fn dot_i8_scalar(a: &[i8], b: &[i8]) -> i32 {
     let (cb, rb) = b.as_chunks::<32>();
     let mut sum = 0i32;
     for (x, y) in ca.iter().zip(cb) {
-        sum += x.iter().zip(y).map(|(&p, &q)| i32::from(i16::from(p) * i16::from(q))).sum::<i32>();
+        sum += x
+            .iter()
+            .zip(y)
+            .map(|(&p, &q)| i32::from(i16::from(p) * i16::from(q)))
+            .sum::<i32>();
     }
-    sum + ra.iter().zip(rb).map(|(&p, &q)| i32::from(p) * i32::from(q)).sum::<i32>()
+    sum + ra
+        .iter()
+        .zip(rb)
+        .map(|(&p, &q)| i32::from(p) * i32::from(q))
+        .sum::<i32>()
 }
 
 /// Portable f32 dot product (8 independent lanes so it vectorises without
@@ -165,8 +173,10 @@ mod avx2 {
             let mut s1 = _mm256_setzero_ps();
             while i + 16 <= n {
                 let d0 = _mm256_sub_ps(_mm256_loadu_ps(pa.add(i)), _mm256_loadu_ps(pb.add(i)));
-                let d1 =
-                    _mm256_sub_ps(_mm256_loadu_ps(pa.add(i + 8)), _mm256_loadu_ps(pb.add(i + 8)));
+                let d1 = _mm256_sub_ps(
+                    _mm256_loadu_ps(pa.add(i + 8)),
+                    _mm256_loadu_ps(pb.add(i + 8)),
+                );
                 s0 = _mm256_fmadd_ps(d0, d0, s0);
                 s1 = _mm256_fmadd_ps(d1, d1, s1);
                 i += 16;
@@ -283,8 +293,12 @@ mod tests {
     fn simd_matches_scalar() {
         let mut rng = SplitMix64::new(7);
         for dim in [1usize, 7, 15, 16, 17, 31, 32, 33, 64, 100, 384, 1023] {
-            let a: Vec<i8> = (0..dim).map(|_| (rng.below(256) as i32 - 128) as i8).collect();
-            let b: Vec<i8> = (0..dim).map(|_| (rng.below(256) as i32 - 128) as i8).collect();
+            let a: Vec<i8> = (0..dim)
+                .map(|_| (rng.below(256) as i32 - 128) as i8)
+                .collect();
+            let b: Vec<i8> = (0..dim)
+                .map(|_| (rng.below(256) as i32 - 128) as i8)
+                .collect();
             let naive: i32 = a.iter().zip(&b).map(|(&x, &y)| x as i32 * y as i32).sum();
             assert_eq!(dot_i8_scalar(&a, &b), naive, "dim {dim}");
             assert_eq!(dot_i8(&a, &b), naive, "dim {dim}");
@@ -292,7 +306,11 @@ mod tests {
             let fa: Vec<f32> = (0..dim).map(|_| rng.gaussian()).collect();
             let fb: Vec<f32> = (0..dim).map(|_| rng.gaussian()).collect();
             let nd: f64 = fa.iter().zip(&fb).map(|(&x, &y)| x as f64 * y as f64).sum();
-            let nl: f64 = fa.iter().zip(&fb).map(|(&x, &y)| (x as f64 - y as f64).powi(2)).sum();
+            let nl: f64 = fa
+                .iter()
+                .zip(&fb)
+                .map(|(&x, &y)| (x as f64 - y as f64).powi(2))
+                .sum();
             let tol = 1e-3 * (1.0 + nd.abs());
             assert!((dot_f32(&fa, &fb) as f64 - nd).abs() < tol);
             assert!((dot_f32_scalar(&fa, &fb) as f64 - nd).abs() < tol);

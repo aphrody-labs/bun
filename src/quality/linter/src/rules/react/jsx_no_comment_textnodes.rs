@@ -220,7 +220,10 @@ fn test() {
             None,
         ),
         ("<pre>&#x2F;&#x2F; TODO: Write perfect code</pre>", None),
-        ("<pre>&#x2F;&#42; TODO: Write perfect code &#42;&#x2F;</pre>", None),
+        (
+            "<pre>&#x2F;&#42; TODO: Write perfect code &#42;&#x2F;</pre>",
+            None,
+        ),
         (
             "
 			        <div>
@@ -318,6 +321,11 @@ fn test() {
         ),
     ];
 
-    Tester::new(JsxNoCommentTextnodes::NAME, JsxNoCommentTextnodes::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        JsxNoCommentTextnodes::NAME,
+        JsxNoCommentTextnodes::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

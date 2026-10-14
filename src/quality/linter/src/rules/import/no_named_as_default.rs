@@ -91,7 +91,10 @@ impl Rule for NoNamedAsDefault {
             };
 
             let import_name = import_entry.local_name.name();
-            if !remote_module_record.exported_bindings.contains_key(import_name) {
+            if !remote_module_record
+                .exported_bindings
+                .contains_key(import_name)
+            {
                 continue;
             }
 

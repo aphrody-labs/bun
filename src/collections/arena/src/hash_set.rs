@@ -69,7 +69,10 @@ impl<'alloc, T, S> HashSet<'alloc, T, S> {
     /// Const assertion that `T` is not `Drop`.
     /// Must be referenced in all methods which create a `HashSet`.
     const ASSERT_T_IS_NOT_DROP: () = {
-        assert!(!std::mem::needs_drop::<T>(), "Cannot create a HashSet<T> where T is a Drop type");
+        assert!(
+            !std::mem::needs_drop::<T>(),
+            "Cannot create a HashSet<T> where T is a Drop type"
+        );
     };
 
     /// Creates an empty [`HashSet`] with the given hasher. It will be allocated with the given allocator.

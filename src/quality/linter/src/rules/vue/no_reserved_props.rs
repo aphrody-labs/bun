@@ -25,8 +25,16 @@ use crate::{
 
 /// Reserved attribute names that cannot be used as prop names, by Vue version.
 const RESERVED_VUE3: &[&str] = &["key", "ref"];
-const RESERVED_VUE2: &[&str] =
-    &["key", "ref", "is", "slot", "slot-scope", "slotScope", "class", "style"];
+const RESERVED_VUE2: &[&str] = &[
+    "key",
+    "ref",
+    "is",
+    "slot",
+    "slot-scope",
+    "slotScope",
+    "class",
+    "style",
+];
 
 fn no_reserved_props_diagnostic(prop_name: &str, span: Span) -> OxcDiagnostic {
     OxcDiagnostic::warn(format!(
@@ -95,7 +103,8 @@ declare_oxc_lint!(
     correctness,
     config = NoReservedProps,
     version = "1.69.0",
-    short_description = "Disallow reserved attribute names (e.g. `key`, `ref`) from being used as prop names.",
+    short_description =
+        "Disallow reserved attribute names (e.g. `key`, `ref`) from being used as prop names.",
 );
 
 impl Rule for NoReservedProps {
@@ -131,7 +140,11 @@ impl Rule for NoReservedProps {
 
 impl NoReservedProps {
     fn is_reserved(&self, name: &str) -> bool {
-        let reserved = if self.0.vue_version == 2 { RESERVED_VUE2 } else { RESERVED_VUE3 };
+        let reserved = if self.0.vue_version == 2 {
+            RESERVED_VUE2
+        } else {
+            RESERVED_VUE3
+        };
         reserved.contains(&name)
     }
 
@@ -144,7 +157,9 @@ impl NoReservedProps {
     /// `props: ['ref', `key`]` — array declaration.
     fn check_array_props<'a>(&self, arr: &ArrayExpression<'a>, ctx: &LintContext<'a>) {
         for elem in &arr.elements {
-            let Some(expr) = elem.as_expression() else { continue };
+            let Some(expr) = elem.as_expression() else {
+                continue;
+            };
             let (name, span): (&str, Span) = match expr.get_inner_expression() {
                 Expression::StringLiteral(lit) => (lit.value.as_str(), lit.span),
                 Expression::TemplateLiteral(tpl) => match tpl.single_quasi() {
@@ -160,8 +175,12 @@ impl NoReservedProps {
     /// `props: { ref: String }` — object declaration.
     fn check_object_props<'a>(&self, obj: &ObjectExpression<'a>, ctx: &LintContext<'a>) {
         for prop_kind in &obj.properties {
-            let ObjectPropertyKind::ObjectProperty(p) = prop_kind else { continue };
-            let Some(name) = p.key.static_name() else { continue };
+            let ObjectPropertyKind::ObjectProperty(p) = prop_kind else {
+                continue;
+            };
+            let Some(name) = p.key.static_name() else {
+                continue;
+            };
             self.report(name.as_ref(), p.key.span(), ctx);
         }
     }
@@ -171,7 +190,11 @@ impl NoReservedProps {
         if ctx.frameworks_options() != FrameworkOptions::VueSetup {
             return;
         }
-        if !call.callee.get_identifier_reference().is_some_and(|id| id.name == "defineProps") {
+        if !call
+            .callee
+            .get_identifier_reference()
+            .is_some_and(|id| id.name == "defineProps")
+        {
             return;
         }
 
@@ -201,7 +224,9 @@ impl NoReservedProps {
             TSSignature::TSMethodSignature(method) => &method.key,
             _ => return,
         };
-        let Some(name) = key.static_name() else { return };
+        let Some(name) = key.static_name() else {
+            return;
+        };
         self.report(name.as_ref(), key.span(), ctx);
     }
 }

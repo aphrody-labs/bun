@@ -83,7 +83,10 @@ impl<'a> JSStrBuilder<'a> {
 
     /// Append one JavaScript code point, pairing surrogates at the boundary.
     #[inline]
-    #[expect(clippy::cast_possible_truncation, reason = "lone surrogates fit in `u16`")]
+    #[expect(
+        clippy::cast_possible_truncation,
+        reason = "lone surrogates fit in `u16`"
+    )]
     pub fn push_js_char(&mut self, value: JSChar) {
         if let Some(lead) = self.pending_lead_surrogate
             && value.is_trail_surrogate()
@@ -161,8 +164,12 @@ impl<'a> JSStrBuilder<'a> {
         let mut trimmed = false;
 
         if let Some(lead) = self.pending_lead_surrogate
-            && let [SURROGATE_FIRST_BYTE, second @ (TRAIL_SURROGATE_SECOND_BYTE_MIN..), third, ..] =
-                bytes
+            && let [
+                SURROGATE_FIRST_BYTE,
+                second @ (TRAIL_SURROGATE_SECOND_BYTE_MIN..),
+                third,
+                ..,
+            ] = bytes
         {
             self.append_pair(lead, decode_surrogate(*second, *third));
             self.pending_lead_surrogate = None;
@@ -210,7 +217,11 @@ impl<'a> JSStrBuilder<'a> {
 
     #[inline]
     fn pending_bytes(&self) -> usize {
-        if self.pending_lead_surrogate.is_some() { SURROGATE_BYTE_LEN } else { 0 }
+        if self.pending_lead_surrogate.is_some() {
+            SURROGATE_BYTE_LEN
+        } else {
+            0
+        }
     }
 
     /// Call only after reserving space and deciding the next append cannot pair.
@@ -234,6 +245,7 @@ impl<'a> JSStrBuilder<'a> {
             + ((u32::from(lead) - LEAD_SURROGATE_MIN) << 10)
             + (u32::from(trail) - TRAIL_SURROGATE_MIN);
         let c = char::from_u32(value).unwrap();
-        self.bytes.extend_from_slice_copy(c.encode_utf8(&mut [0; char::MAX_LEN_UTF8]).as_bytes());
+        self.bytes
+            .extend_from_slice_copy(c.encode_utf8(&mut [0; char::MAX_LEN_UTF8]).as_bytes());
     }
 }

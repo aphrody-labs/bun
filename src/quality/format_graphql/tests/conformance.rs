@@ -51,6 +51,8 @@ fn format_graphql(_path: &Path, source_text: &str, spec: &OptionSet) -> Option<S
 
 #[test]
 fn prettier_conformance() {
-    let Some(report) = run_conformance(&CONFIG, format_graphql) else { return };
+    let Some(report) = run_conformance(&CONFIG, format_graphql) else {
+        return;
+    };
     insta::assert_snapshot!("prettier-graphql", report);
 }

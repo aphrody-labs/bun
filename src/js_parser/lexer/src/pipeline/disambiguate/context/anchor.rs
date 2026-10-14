@@ -21,7 +21,12 @@ pub(super) enum Anchor {
     Expr(usize),
     /// The bounded walk already covers this point and continues from where it stopped.
     /// It first leaves the group from open to close that it stopped in, when close is not 0.
-    Continue { semi: u32, brace: u32, open: u32, close: u32 },
+    Continue {
+        semi: u32,
+        brace: u32,
+        open: u32,
+        close: u32,
+    },
 }
 
 /// Is the word at `p` an attribute inside a JSX opening tag? Scans back over attribute names,
@@ -218,7 +223,11 @@ fn anchor_of(tokens: &Tokens, p: usize, e: usize, kw: u8) -> Option<Anchor> {
     if f.kind == tk!(Eof) {
         return None;
     }
-    let f_kw = if f.kind == tk!(Ident) { tokens.ident_kw(f.pos) } else { 0 };
+    let f_kw = if f.kind == tk!(Ident) {
+        tokens.ident_kw(f.pos)
+    } else {
+        0
+    };
     let same_line = !tokens.line_break_between(e, f.pos);
     match kw {
         tk!(KwFunction) => function_anchor(tokens, p, prev, f),
@@ -312,7 +321,11 @@ fn second_follower(tokens: &Tokens, f: usize, ops: &[u8]) -> bool {
 /// Keyword code of the significant word after the word at `f` (0 if none).
 fn second_word(tokens: &Tokens, f: usize) -> u8 {
     let s = tokens.peek(f + 1);
-    if s.kind == tk!(Ident) { tokens.ident_kw(s.pos) } else { 0 }
+    if s.kind == tk!(Ident) {
+        tokens.ident_kw(s.pos)
+    } else {
+        0
+    }
 }
 
 /// After the `}` at `c`: the position of a token that must start a statement or member there

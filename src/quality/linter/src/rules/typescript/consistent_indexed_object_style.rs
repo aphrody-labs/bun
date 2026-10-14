@@ -33,7 +33,9 @@ fn consistent_indexed_object_style_diagnostic(
         ),
     };
 
-    OxcDiagnostic::warn(warning_message).with_help(help_message).with_label(span)
+    OxcDiagnostic::warn(warning_message)
+        .with_help(help_message)
+        .with_label(span)
 }
 
 #[derive(Debug, Clone, Default, Deserialize)]
@@ -391,12 +393,16 @@ impl Rule for ConsistentIndexedObjectStyle {
             AstKind::TSTypeReference(tref)
                 if self.0 == ConsistentIndexedObjectStyleConfig::IndexSignature =>
             {
-                let TSTypeName::IdentifierReference(ide) = &tref.type_name else { return };
+                let TSTypeName::IdentifierReference(ide) = &tref.type_name else {
+                    return;
+                };
                 if ide.name != "Record" {
                     return;
                 }
 
-                let Some(params) = &tref.type_arguments else { return };
+                let Some(params) = &tref.type_arguments else {
+                    return;
+                };
                 if params.params.len() != 2 {
                     return;
                 }
@@ -489,10 +495,11 @@ fn mapped_type_value_references_key(
     ctx: &LintContext,
 ) -> bool {
     let type_annotation_span = type_annotation.span();
-    ctx.symbol_references(mapped.key.symbol_id()).any(|reference| {
-        let reference_span = ctx.nodes().get_node(reference.node_id()).kind().span();
-        type_annotation_span.contains_inclusive(reference_span)
-    })
+    ctx.symbol_references(mapped.key.symbol_id())
+        .any(|reference| {
+            let reference_span = ctx.nodes().get_node(reference.node_id()).kind().span();
+            type_annotation_span.contains_inclusive(reference_span)
+        })
 }
 
 fn is_circular_reference(type_: &TSType, parent_name: &str, ctx: &LintContext) -> bool {
@@ -561,12 +568,14 @@ fn is_circular_reference_impl(
             }
             false
         }
-        TSType::TSUnionType(u) => {
-            u.types.iter().any(|t| is_circular_reference_impl(t, parent_name, ctx, visited))
-        }
-        TSType::TSIntersectionType(i) => {
-            i.types.iter().any(|t| is_circular_reference_impl(t, parent_name, ctx, visited))
-        }
+        TSType::TSUnionType(u) => u
+            .types
+            .iter()
+            .any(|t| is_circular_reference_impl(t, parent_name, ctx, visited)),
+        TSType::TSIntersectionType(i) => i
+            .types
+            .iter()
+            .any(|t| is_circular_reference_impl(t, parent_name, ctx, visited)),
         TSType::TSConditionalType(c) => {
             is_circular_reference_impl(&c.check_type, parent_name, ctx, visited)
                 || is_circular_reference_impl(&c.extends_type, parent_name, ctx, visited)
@@ -864,20 +873,38 @@ fn test() {
                 ",
             None,
         ),
-        ("function foo(arg: { [key: string]: any; bar: string }) {}", None),
-        ("function foo(): { [key: string]: any; bar: string } {}", None),
+        (
+            "function foo(arg: { [key: string]: any; bar: string }) {}",
+            None,
+        ),
+        (
+            "function foo(): { [key: string]: any; bar: string } {}",
+            None,
+        ),
         // ("type Foo = { [key: string] };", None),
         // ("type Foo = { [] };", None),
         // ("interface Foo { [key: string]; }", None),
         // ("interface Foo { []; }", None),
-        ("type Foo = Misc<string, unknown>;", Some(serde_json::json!(["index-signature"]))),
-        ("type Foo = Record;", Some(serde_json::json!(["index-signature"]))),
-        ("type Foo = Record<string>;", Some(serde_json::json!(["index-signature"]))),
+        (
+            "type Foo = Misc<string, unknown>;",
+            Some(serde_json::json!(["index-signature"])),
+        ),
+        (
+            "type Foo = Record;",
+            Some(serde_json::json!(["index-signature"])),
+        ),
+        (
+            "type Foo = Record<string>;",
+            Some(serde_json::json!(["index-signature"])),
+        ),
         (
             "type Foo = Record<string, number, unknown>;",
             Some(serde_json::json!(["index-signature"])),
         ),
-        ("type Foo = { [key: string]: any };", Some(serde_json::json!(["index-signature"]))),
+        (
+            "type Foo = { [key: string]: any };",
+            Some(serde_json::json!(["index-signature"])),
+        ),
         (
             "type Foo = Generic<{ [key: string]: any }>;",
             Some(serde_json::json!(["index-signature"])),
@@ -886,8 +913,14 @@ fn test() {
             "function foo(arg: { [key: string]: any }) {}",
             Some(serde_json::json!(["index-signature"])),
         ),
-        ("function foo(): { [key: string]: any } {}", Some(serde_json::json!(["index-signature"]))),
-        ("type T = A.B;", Some(serde_json::json!(["index-signature"]))),
+        (
+            "function foo(): { [key: string]: any } {}",
+            Some(serde_json::json!(["index-signature"])),
+        ),
+        (
+            "type T = A.B;",
+            Some(serde_json::json!(["index-signature"])),
+        ),
         ("type T = { [key in Foo]: key | number };", None),
         (
             "
@@ -912,8 +945,14 @@ fn test() {
             ",
             None,
         ),
-        ("type Keys = 'A' | 'B'; type Foo = { [K in Keys]: { x: K } };", None),
-        ("type Keys = 'A' | 'B'; type Foo = { [K in Keys]?: { x: K } };", None),
+        (
+            "type Keys = 'A' | 'B'; type Foo = { [K in Keys]: { x: K } };",
+            None,
+        ),
+        (
+            "type Keys = 'A' | 'B'; type Foo = { [K in Keys]?: { x: K } };",
+            None,
+        ),
         (
             "type Keys = 'A' | 'B'; interface Gen<T> { a: T } type Foo = { [K in Keys]: { x: Gen<K> } };",
             None,
@@ -922,7 +961,10 @@ fn test() {
             "type Keys = 'A' | 'B'; interface Gen<T> { a: T } type Foo = Partial<{ [K in Keys]: { x: Gen<K> } }>;",
             None,
         ),
-        ("type Foo<K extends string> = { [P in K as `x_${P}`]: number };", None),
+        (
+            "type Foo<K extends string> = { [P in K as `x_${P}`]: number };",
+            None,
+        ),
     ];
 
     let fail = vec![
@@ -996,16 +1038,37 @@ fn test() {
         ("type Foo = Generic<{ readonly [key: string]: any }>;", None),
         ("function foo(arg: { [key: string]: any }) {}", None),
         ("function foo(): { [key: string]: any } {}", None),
-        ("function foo(arg: { readonly [key: string]: any }) {}", None),
+        (
+            "function foo(arg: { readonly [key: string]: any }) {}",
+            None,
+        ),
         ("function foo(): { readonly [key: string]: any } {}", None),
-        ("type Foo = Record<string, any>;", Some(serde_json::json!(["index-signature"]))),
-        ("type Foo<T> = Record<string, T>;", Some(serde_json::json!(["index-signature"]))),
-        ("type Foo = Record<string /* c */, Bar>;", Some(serde_json::json!(["index-signature"]))),
-        ("type Foo = Record<string, /* c */ Bar>;", Some(serde_json::json!(["index-signature"]))),
-        ("type Foo = Record<string, Bar /* c */>;", Some(serde_json::json!(["index-signature"]))),
+        (
+            "type Foo = Record<string, any>;",
+            Some(serde_json::json!(["index-signature"])),
+        ),
+        (
+            "type Foo<T> = Record<string, T>;",
+            Some(serde_json::json!(["index-signature"])),
+        ),
+        (
+            "type Foo = Record<string /* c */, Bar>;",
+            Some(serde_json::json!(["index-signature"])),
+        ),
+        (
+            "type Foo = Record<string, /* c */ Bar>;",
+            Some(serde_json::json!(["index-signature"])),
+        ),
+        (
+            "type Foo = Record<string, Bar /* c */>;",
+            Some(serde_json::json!(["index-signature"])),
+        ),
         ("type Foo = { [k: string]: A.Foo };", None),
         ("type Foo = { [key: string]: AnotherFoo };", None),
-        ("type Foo = { [key: string]: { [key: string]: Foo } };", None),
+        (
+            "type Foo = { [key: string]: { [key: string]: Foo } };",
+            None,
+        ),
         ("type Foo = { [key: string]: string } | Foo;", None),
         (
             "
@@ -1131,16 +1194,34 @@ fn test() {
                   ",
             None,
         ),
-        ("type Foo = Generic<Record<string, any>>;", Some(serde_json::json!(["index-signature"]))),
-        ("type Foo = Record<string | number, any>;", Some(serde_json::json!(["index-signature"]))),
+        (
+            "type Foo = Generic<Record<string, any>>;",
+            Some(serde_json::json!(["index-signature"])),
+        ),
+        (
+            "type Foo = Record<string | number, any>;",
+            Some(serde_json::json!(["index-signature"])),
+        ),
         (
             "type Foo = Record<Exclude<'a' | 'b' | 'c', 'a'>, any>;",
             Some(serde_json::json!(["index-signature"])),
         ),
-        ("type Foo = Record<number, any>;", Some(serde_json::json!(["index-signature"]))),
-        ("type Foo = Record<symbol, any>;", Some(serde_json::json!(["index-signature"]))),
-        ("function foo(arg: Record<string, any>) {}", Some(serde_json::json!(["index-signature"]))),
-        ("function foo(): Record<string, any> {}", Some(serde_json::json!(["index-signature"]))),
+        (
+            "type Foo = Record<number, any>;",
+            Some(serde_json::json!(["index-signature"])),
+        ),
+        (
+            "type Foo = Record<symbol, any>;",
+            Some(serde_json::json!(["index-signature"])),
+        ),
+        (
+            "function foo(arg: Record<string, any>) {}",
+            Some(serde_json::json!(["index-signature"])),
+        ),
+        (
+            "function foo(): Record<string, any> {}",
+            Some(serde_json::json!(["index-signature"])),
+        ),
         ("type T = { readonly [key in string]: number };", None),
         ("type T = { +readonly [key in string]: number };", None),
         ("type T = { -readonly [key in string]: number };", None),

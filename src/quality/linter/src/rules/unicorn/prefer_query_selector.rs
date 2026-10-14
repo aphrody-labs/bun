@@ -110,7 +110,14 @@ impl Rule for PreferQuerySelector {
                 Expression::StringLiteral(literal) => Some(literal.value.trim()),
                 Expression::TemplateLiteral(literal) => {
                     if literal.expressions.is_empty() {
-                        literal.quasis.first().unwrap().value.cooked.as_deref().map(str::trim)
+                        literal
+                            .quasis
+                            .first()
+                            .unwrap()
+                            .value
+                            .cooked
+                            .as_deref()
+                            .map(str::trim)
                     } else {
                         None
                     }
@@ -134,7 +141,10 @@ impl Rule for PreferQuerySelector {
                             // (`.foo.bar`), not a descendant selector (`.foo .bar`).
                             format!(
                                 ".{}",
-                                literal_value.split_whitespace().collect::<Vec<_>>().join(".")
+                                literal_value
+                                    .split_whitespace()
+                                    .collect::<Vec<_>>()
+                                    .join(".")
                             )
                         }
                         "getElementsByName" => {
@@ -231,21 +241,66 @@ fn test() {
     ];
 
     let fix = vec![
-        ("document.getElementsByTagName('foo');", "document.querySelectorAll('foo');"),
-        ("document.getElementsByClassName(`foo bar`);", "document.querySelectorAll(`.foo.bar`);"),
-        ("document.getElementsByClassName(null);", "document.querySelectorAll(null);"),
-        ("document.getElementsByTagName(`   `);", "document.querySelectorAll(`   `);"),
-        ("document.getElementById(123);", "document.getElementById(123);"),
-        ("document.getElementById(`id`);", "document.querySelector(`#id`);"),
-        ("document.getElementById(obj.id);", "document.getElementById(obj.id);"),
-        ("document.getElementById(getId());", "document.getElementById(getId());"),
-        ("document.getElementById(`${foo}`);", "document.getElementById(`${foo}`);"),
-        ("document.getElementById(searchInputId);", "document.querySelector(`#${searchInputId}`);"),
-        (r#"document.getElementsByName("foo");"#, r#"document.querySelectorAll("[name='foo']");"#),
-        ("document.getElementsByName('foo');", r#"document.querySelectorAll('[name="foo"]');"#),
-        ("document.getElementsByName(`foo`);", "document.querySelectorAll(`[name='foo']`);"),
-        ("document.getElementsByName(null);", "document.querySelectorAll(null);"),
-        (r#"document.getElementsByName("");"#, r#"document.querySelectorAll("");"#),
+        (
+            "document.getElementsByTagName('foo');",
+            "document.querySelectorAll('foo');",
+        ),
+        (
+            "document.getElementsByClassName(`foo bar`);",
+            "document.querySelectorAll(`.foo.bar`);",
+        ),
+        (
+            "document.getElementsByClassName(null);",
+            "document.querySelectorAll(null);",
+        ),
+        (
+            "document.getElementsByTagName(`   `);",
+            "document.querySelectorAll(`   `);",
+        ),
+        (
+            "document.getElementById(123);",
+            "document.getElementById(123);",
+        ),
+        (
+            "document.getElementById(`id`);",
+            "document.querySelector(`#id`);",
+        ),
+        (
+            "document.getElementById(obj.id);",
+            "document.getElementById(obj.id);",
+        ),
+        (
+            "document.getElementById(getId());",
+            "document.getElementById(getId());",
+        ),
+        (
+            "document.getElementById(`${foo}`);",
+            "document.getElementById(`${foo}`);",
+        ),
+        (
+            "document.getElementById(searchInputId);",
+            "document.querySelector(`#${searchInputId}`);",
+        ),
+        (
+            r#"document.getElementsByName("foo");"#,
+            r#"document.querySelectorAll("[name='foo']");"#,
+        ),
+        (
+            "document.getElementsByName('foo');",
+            r#"document.querySelectorAll('[name="foo"]');"#,
+        ),
+        (
+            "document.getElementsByName(`foo`);",
+            "document.querySelectorAll(`[name='foo']`);",
+        ),
+        (
+            "document.getElementsByName(null);",
+            "document.querySelectorAll(null);",
+        ),
+        (
+            r#"document.getElementsByName("");"#,
+            r#"document.querySelectorAll("");"#,
+        ),
         (
             r#"document.getElementsByName("multiple name should be fixable");"#,
             r#"document.querySelectorAll("[name='multiple name should be fixable']");"#,
@@ -255,15 +310,26 @@ fn test() {
             "document.getElementsByClassName(foo + \"bar\");",
             "document.getElementsByClassName(foo + \"bar\");",
         ),
-        ("document.getElementsByClassName(fn());", "document.getElementsByClassName(fn());"),
-        ("document.getElementsByName(`${'foo'}`);", "document.getElementsByName(`${'foo'}`);"),
+        (
+            "document.getElementsByClassName(fn());",
+            "document.getElementsByClassName(fn());",
+        ),
+        (
+            "document.getElementsByName(`${'foo'}`);",
+            "document.getElementsByName(`${'foo'}`);",
+        ),
         (
             r#"document.getElementsByName(foo + "bar");"#,
             r#"document.getElementsByName(foo + "bar");"#,
         ),
     ];
 
-    Tester::new(PreferQuerySelector::NAME, PreferQuerySelector::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        PreferQuerySelector::NAME,
+        PreferQuerySelector::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

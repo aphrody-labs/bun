@@ -23,9 +23,10 @@ use super::FormatWrite;
 /// whose `ExportDeclaration` prints no semicolon of its own (see its `FormatWrite` implementation).
 fn is_for_head_declaration(decl: &AstNode<'_, VariableDeclaration<'_>>) -> bool {
     match decl.parent() {
-        AstNodes::ForStatement(stmt) => {
-            stmt.init.as_ref().is_some_and(|init| init.span() == decl.span())
-        }
+        AstNodes::ForStatement(stmt) => stmt
+            .init
+            .as_ref()
+            .is_some_and(|init| init.span() == decl.span()),
         AstNodes::ForInStatement(stmt) => stmt.left.span() == decl.span(),
         AstNodes::ForOfStatement(stmt) => stmt.left.span() == decl.span(),
         _ => false,
@@ -64,7 +65,14 @@ impl<'a> FormatWrite<'a> for AstNode<'a, VariableDeclaration<'a>> {
                 write!(f, declarations);
             }
         });
-        write!(f, group(&format_args!(self.kind().as_str(), space(), format_declarations)));
+        write!(
+            f,
+            group(&format_args!(
+                self.kind().as_str(),
+                space(),
+                format_declarations
+            ))
+        );
     }
 }
 
@@ -93,7 +101,11 @@ impl<'a> Format<'a, JsFormatContext<'a>> for AstNode<'a, ArenaVec<'a, VariableDe
         // `VariableDeclaration` always has at least one declarator.
         let first_declarator = declarators.next().unwrap();
 
-        if length == 1 && !f.comments().has_comment_before(first_declarator.span().start) {
+        if length == 1
+            && !f
+                .comments()
+                .has_comment_before(first_declarator.span().start)
+        {
             return if first_declarator.init.is_none()
                 && f.comments()
                     .has_comment_in_range(first_declarator.span.end, self.parent().span().end)

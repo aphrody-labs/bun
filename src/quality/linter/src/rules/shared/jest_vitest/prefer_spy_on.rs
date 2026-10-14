@@ -92,9 +92,14 @@ fn check_and_fix<'a>(
     node: &AstNode<'a>,
     ctx: &LintContext<'a>,
 ) {
-    let Some(jest_fn_call) =
-        parse_general_jest_fn_call(call_expr, &PossibleJestNode { node, original: None }, ctx)
-    else {
+    let Some(jest_fn_call) = parse_general_jest_fn_call(
+        call_expr,
+        &PossibleJestNode {
+            node,
+            original: None,
+        },
+        ctx,
+    ) else {
         return;
     };
 
@@ -102,8 +107,10 @@ fn check_and_fix<'a>(
         return;
     };
 
-    let Some(first_fn_member_name) =
-        jest_fn_call.members.first().and_then(KnownMemberExpressionProperty::name)
+    let Some(first_fn_member_name) = jest_fn_call
+        .members
+        .first()
+        .and_then(KnownMemberExpressionProperty::name)
     else {
         return;
     };
@@ -124,7 +131,10 @@ fn check_and_fix<'a>(
 
                 (second.span.start - 1, has_mock_implementation)
             } else {
-                (first_fn_member.span.end + (call_expr.span.end - first_fn_member.span.end), false)
+                (
+                    first_fn_member.span.end + (call_expr.span.end - first_fn_member.span.end),
+                    false,
+                )
             };
             let content = build_code(call_expr, left_assign, has_mock_implementation, fixer);
             fixer.replace(Span::new(assign_expr.span.start, end), content)
@@ -187,7 +197,13 @@ fn get_test_fn_call<'a>(
             "vi.fn" => "vi.spyOn(",
             _ => "jest.spyOn(",
         };
-        return (framework_spy, call_expr.arguments.first().and_then(Argument::as_expression));
+        return (
+            framework_spy,
+            call_expr
+                .arguments
+                .first()
+                .and_then(Argument::as_expression),
+        );
     }
 
     match &call_expr.callee {

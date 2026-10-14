@@ -65,7 +65,12 @@ impl Rule for PreferExpectAssertions {
         let mut covered_describe_ids: Vec<NodeId> = Vec::new();
 
         for jest_node in &possible_jest_nodes {
-            self.check_node(jest_node, &file_expect_prefix, &mut covered_describe_ids, ctx);
+            self.check_node(
+                jest_node,
+                &file_expect_prefix,
+                &mut covered_describe_ids,
+                ctx,
+            );
         }
     }
 }
@@ -537,14 +542,38 @@ fn test() {
                 serde_json::json!([ { "onlyFunctionsWithAsyncKeyword": true, "onlyFunctionsWithExpectInLoop": true, }, ]),
             ),
         ),
-        (r#"test.each()("is fine", () => { expect.assertions(0); })"#, None),
-        (r#"test.each``("is fine", () => { expect.assertions(0); })"#, None),
-        (r#"test.each()("is fine", () => { expect.hasAssertions(); })"#, None),
-        (r#"test.each``("is fine", () => { expect.hasAssertions(); })"#, None),
-        (r#"it.each()("is fine", () => { expect.assertions(0); })"#, None),
-        (r#"it.each``("is fine", () => { expect.assertions(0); })"#, None),
-        (r#"it.each()("is fine", () => { expect.hasAssertions(); })"#, None),
-        (r#"it.each``("is fine", () => { expect.hasAssertions(); })"#, None),
+        (
+            r#"test.each()("is fine", () => { expect.assertions(0); })"#,
+            None,
+        ),
+        (
+            r#"test.each``("is fine", () => { expect.assertions(0); })"#,
+            None,
+        ),
+        (
+            r#"test.each()("is fine", () => { expect.hasAssertions(); })"#,
+            None,
+        ),
+        (
+            r#"test.each``("is fine", () => { expect.hasAssertions(); })"#,
+            None,
+        ),
+        (
+            r#"it.each()("is fine", () => { expect.assertions(0); })"#,
+            None,
+        ),
+        (
+            r#"it.each``("is fine", () => { expect.assertions(0); })"#,
+            None,
+        ),
+        (
+            r#"it.each()("is fine", () => { expect.hasAssertions(); })"#,
+            None,
+        ),
+        (
+            r#"it.each``("is fine", () => { expect.hasAssertions(); })"#,
+            None,
+        ),
         (
             r#"test.each()("is fine", () => {})"#,
             Some(serde_json::json!([{ "onlyFunctionsWithAsyncKeyword": true }])),
@@ -638,7 +667,10 @@ fn test() {
     let fail = vec![
         (r#"it("it1", () => foo())"#, None),
         ("it('resolves', () => expect(staged()).toBe(true));", None),
-        ("it('resolves', async () => expect(await staged()).toBe(true));", None),
+        (
+            "it('resolves', async () => expect(await staged()).toBe(true));",
+            None,
+        ),
         (r#"it("it1", () => {})"#, None),
         (r#"it("it1", () => { foo()})"#, None),
         (
@@ -729,9 +761,18 @@ fn test() {
         (r#"beforeEach(() => expect.hasAssertions("1"))"#, None),
         (r#"afterEach(() => { expect.hasAssertions("1") })"#, None),
         (r#"afterEach(() => expect.hasAssertions("1"))"#, None),
-        (r#"it("it1", function() {expect.hasAssertions("1");})"#, None),
-        (r#"it("it1", function() {expect.hasAssertions("1",);})"#, None),
-        (r#"it("it1", function() {expect.hasAssertions("1", "2");})"#, None),
+        (
+            r#"it("it1", function() {expect.hasAssertions("1");})"#,
+            None,
+        ),
+        (
+            r#"it("it1", function() {expect.hasAssertions("1",);})"#,
+            None,
+        ),
+        (
+            r#"it("it1", function() {expect.hasAssertions("1", "2");})"#,
+            None,
+        ),
         (
             r#"it("it1", function() {
               expect.hasAssertions(() => {
@@ -1599,12 +1640,17 @@ fn test() {
         ),
     ];
 
-    Tester::new(PreferExpectAssertions::NAME, PreferExpectAssertions::PLUGIN, pass, fail)
-        .with_jest_plugin(true)
-        .expect_fix(fix_two_suggestions)
-        .expect_fix(fix_import_reassignment)
-        .expect_fix(fix_multi_statement)
-        .expect_fix(fix_has_assertions_callback_arg)
-        .expect_fix(fix_remove_args)
-        .test_and_snapshot();
+    Tester::new(
+        PreferExpectAssertions::NAME,
+        PreferExpectAssertions::PLUGIN,
+        pass,
+        fail,
+    )
+    .with_jest_plugin(true)
+    .expect_fix(fix_two_suggestions)
+    .expect_fix(fix_import_reassignment)
+    .expect_fix(fix_multi_statement)
+    .expect_fix(fix_has_assertions_callback_arg)
+    .expect_fix(fix_remove_args)
+    .test_and_snapshot();
 }

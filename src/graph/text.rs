@@ -52,7 +52,8 @@ pub(crate) fn replace(value: &str, needle: &str, replacement: &str) -> String {
         }
         return result;
     }
-    let capacity = strings::replacement_size(value.as_bytes(), needle.as_bytes(), replacement.as_bytes());
+    let capacity =
+        strings::replacement_size(value.as_bytes(), needle.as_bytes(), replacement.as_bytes());
     let mut result = String::with_capacity(capacity);
     let mut remainder = value;
     while let Some((before, after)) = split_once(remainder, needle) {
@@ -70,8 +71,14 @@ mod tests {
 
     #[test]
     fn utf8_boundaries_empty_fields_and_search_offsets_are_preserved() {
-        assert_eq!(split("/été/🐍/", "/").collect::<Vec<_>>(), ["", "été", "🐍", ""]);
-        assert_eq!(rsplit("/été/🐍/", "/").collect::<Vec<_>>(), ["", "🐍", "été", ""]);
+        assert_eq!(
+            split("/été/🐍/", "/").collect::<Vec<_>>(),
+            ["", "été", "🐍", ""]
+        );
+        assert_eq!(
+            rsplit("/été/🐍/", "/").collect::<Vec<_>>(),
+            ["", "🐍", "été", ""]
+        );
         assert_eq!(split_once("été::🐍::run", "::"), Some(("été", "🐍::run")));
         assert_eq!(rsplit_once("été::🐍::run", "::"), Some(("été::🐍", "run")));
         assert_eq!(find("été🐍", "🐍"), Some(5));

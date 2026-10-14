@@ -62,7 +62,10 @@ fn test() {
     ];
 
     let fix = vec![
-        ("const thing = 123;\nafterAll(() => {});", "const thing = 123;\n\nafterAll(() => {});"),
+        (
+            "const thing = 123;\nafterAll(() => {});",
+            "const thing = 123;\n\nafterAll(() => {});",
+        ),
         (
             "const thing = 123;\n// This is a comment\nafterAll(() => {});",
             "const thing = 123;\n\n// This is a comment\nafterAll(() => {});",
@@ -71,7 +74,10 @@ fn test() {
             "import { afterAll } from 'vitest';\nafterAll(() => {});",
             "import { afterAll } from 'vitest';\n\nafterAll(() => {});",
         ),
-        ("import './setup';\nafterAll(() => {});", "import './setup';\n\nafterAll(() => {});"),
+        (
+            "import './setup';\nafterAll(() => {});",
+            "import './setup';\n\nafterAll(() => {});",
+        ),
         (
             "const thing = 123;\n/* block comment */\nafterAll(() => {});",
             "const thing = 123;\n\n/* block comment */\nafterAll(() => {});",
@@ -86,8 +92,13 @@ fn test() {
         ),
     ];
 
-    Tester::new(PaddingAroundAfterAllBlocks::NAME, PaddingAroundAfterAllBlocks::PLUGIN, pass, fail)
-        .with_vitest_plugin(true)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        PaddingAroundAfterAllBlocks::NAME,
+        PaddingAroundAfterAllBlocks::PLUGIN,
+        pass,
+        fail,
+    )
+    .with_vitest_plugin(true)
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

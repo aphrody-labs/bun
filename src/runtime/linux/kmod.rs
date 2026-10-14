@@ -68,9 +68,9 @@ pub(crate) fn js_init_module(global: &JSGlobalObject, frame: &CallFrame) -> JsRe
     #[cfg(target_os = "linux")]
     {
         let Some(buffer) = frame.argument(0).as_array_buffer(global) else {
-            return Err(global.throw_invalid_arguments(format_args!(
-                "image must be an ArrayBufferView"
-            )));
+            return Err(
+                global.throw_invalid_arguments(format_args!("image must be an ArrayBufferView"))
+            );
         };
         let image = buffer.slice();
         let params = super::opt_cstr_arg(global, frame, 1)?;

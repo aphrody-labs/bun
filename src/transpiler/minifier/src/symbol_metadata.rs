@@ -13,7 +13,10 @@ pub enum FunctionSummary {
 
 impl FunctionSummary {
     pub fn is_side_effect_free(self) -> bool {
-        matches!(self, Self::SideEffectFree | Self::SideEffectFreeReturnsUndefined)
+        matches!(
+            self,
+            Self::SideEffectFree | Self::SideEffectFreeReturnsUndefined
+        )
     }
 
     pub fn returns_undefined(self) -> bool {

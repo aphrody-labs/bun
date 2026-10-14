@@ -45,7 +45,8 @@ declare_oxc_lint!(
     restriction,
     fix,
     version = "0.0.19",
-    short_description = "Prefer using the `node:` protocol when importing Node.js built-in modules.",
+    short_description =
+        "Prefer using the `node:` protocol when importing Node.js built-in modules.",
 );
 
 impl Rule for PreferNodeProtocol {
@@ -174,15 +175,35 @@ fn test() {
 
     let fix = vec![
         (r#"import fs from "fs";"#, r#"import fs from "node:fs";"#),
-        (r#"import * as fs from "fs";"#, r#"import * as fs from "node:fs";"#),
+        (
+            r#"import * as fs from "fs";"#,
+            r#"import * as fs from "node:fs";"#,
+        ),
         ("import fs from 'fs';", "import fs from 'node:fs';"),
-        ("const fs = require('fs');", "const fs = require('node:fs');"),
-        ("import fs = require('fs');", "import fs = require('node:fs');"),
-        (r#"import "child_process";"#, r#"import "node:child_process";"#),
-        (r#"import fs from "fs/promises";"#, r#"import fs from "node:fs/promises";"#),
+        (
+            "const fs = require('fs');",
+            "const fs = require('node:fs');",
+        ),
+        (
+            "import fs = require('fs');",
+            "import fs = require('node:fs');",
+        ),
+        (
+            r#"import "child_process";"#,
+            r#"import "node:child_process";"#,
+        ),
+        (
+            r#"import fs from "fs/promises";"#,
+            r#"import fs from "node:fs/promises";"#,
+        ),
     ];
 
-    Tester::new(PreferNodeProtocol::NAME, PreferNodeProtocol::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        PreferNodeProtocol::NAME,
+        PreferNodeProtocol::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

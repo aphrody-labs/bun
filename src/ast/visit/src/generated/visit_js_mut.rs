@@ -3157,7 +3157,11 @@ pub mod walk_js_mut {
         visitor.enter_scope(
             {
                 let mut flags = ScopeFlags::TsModuleBlock;
-                if it.body.as_ref().is_some_and(|body| body.has_use_strict_directive()) {
+                if it
+                    .body
+                    .as_ref()
+                    .is_some_and(|body| body.has_use_strict_directive())
+                {
                     flags |= ScopeFlags::StrictMode;
                 }
                 flags

@@ -18,8 +18,10 @@ use crate::{
 };
 
 fn boolean_value_diagnostic(attr: &str, span: Span) -> OxcDiagnostic {
-    OxcDiagnostic::warn(format!("Value must be omitted for boolean attribute {attr:?}"))
-        .with_label(span)
+    OxcDiagnostic::warn(format!(
+        "Value must be omitted for boolean attribute {attr:?}"
+    ))
+    .with_label(span)
 }
 
 fn boolean_value_always_diagnostic(attr: &str, span: Span) -> OxcDiagnostic {
@@ -28,8 +30,10 @@ fn boolean_value_always_diagnostic(attr: &str, span: Span) -> OxcDiagnostic {
 }
 
 fn boolean_value_undefined_false_diagnostic(attr: &str, span: Span) -> OxcDiagnostic {
-    OxcDiagnostic::warn(format!("Value must be omitted for `false` attribute {attr:?}"))
-        .with_label(span)
+    OxcDiagnostic::warn(format!(
+        "Value must be omitted for `false` attribute {attr:?}"
+    ))
+    .with_label(span)
 }
 
 #[derive(Debug, Default, Clone, JsonSchema, Deserialize, Serialize)]
@@ -119,13 +123,19 @@ impl Rule for JsxBooleanValue {
     }
 
     fn run<'a>(&self, node: &AstNode<'a>, ctx: &LintContext<'a>) {
-        let AstKind::JSXOpeningElement(jsx_opening_elem) = node.kind() else { return };
+        let AstKind::JSXOpeningElement(jsx_opening_elem) = node.kind() else {
+            return;
+        };
 
         let JsxBooleanValueConfig(mode, options) = &*self.0;
 
         for attr in &jsx_opening_elem.attributes {
-            let JSXAttributeItem::Attribute(jsx_attr) = attr else { continue };
-            let JSXAttributeName::Identifier(ident) = &jsx_attr.name else { continue };
+            let JSXAttributeItem::Attribute(jsx_attr) = attr else {
+                continue;
+            };
+            let JSXAttributeName::Identifier(ident) = &jsx_attr.name else {
+                continue;
+            };
 
             match get_prop_value(attr) {
                 None if Self::is_always(mode, options, ident.name.as_str()) => {
@@ -206,11 +216,20 @@ fn test() {
 
     let pass = vec![
         ("<App foo />;", Some(serde_json::json!(["never"]))),
-        ("<App foo bar={true} />;", Some(serde_json::json!(["always", { "never": ["foo"] }]))),
+        (
+            "<App foo bar={true} />;",
+            Some(serde_json::json!(["always", { "never": ["foo"] }])),
+        ),
         ("<App foo />;", None),
         ("<App foo={true} />;", Some(serde_json::json!(["always"]))),
-        ("<App foo={true} bar />;", Some(serde_json::json!(["never", { "always": ["foo"] }]))),
-        ("<App />;", Some(serde_json::json!(["never", { "assumeUndefinedIsFalse": true }]))),
+        (
+            "<App foo={true} bar />;",
+            Some(serde_json::json!(["never", { "always": ["foo"] }])),
+        ),
+        (
+            "<App />;",
+            Some(serde_json::json!(["never", { "assumeUndefinedIsFalse": true }])),
+        ),
         (
             "<App foo={false} />;",
             Some(
@@ -228,7 +247,10 @@ fn test() {
         ("<App foo={true} />;", None),
         ("<App foo = {true} />;", None),
         ("<App foo />;", Some(serde_json::json!(["always"]))),
-        ("<App foo bar baz />;", Some(serde_json::json!(["never", { "always": ["foo", "bar"] }]))),
+        (
+            "<App foo bar baz />;",
+            Some(serde_json::json!(["never", { "always": ["foo", "bar"] }])),
+        ),
         (
             "<App foo={false} bak={false} />;",
             Some(serde_json::json!(["never", { "assumeUndefinedIsFalse": true }])),
@@ -264,7 +286,11 @@ fn test() {
                 serde_json::json!(["always", { "assumeUndefinedIsFalse": true, "never": ["baz", "bak"] }]),
             ),
         ),
-        ("<App foo />", "<App foo={true} />", Some(serde_json::json!(["always"]))),
+        (
+            "<App foo />",
+            "<App foo={true} />",
+            Some(serde_json::json!(["always"])),
+        ),
     ];
 
     Tester::new(JsxBooleanValue::NAME, JsxBooleanValue::PLUGIN, pass, fail)

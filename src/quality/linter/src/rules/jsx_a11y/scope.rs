@@ -105,14 +105,24 @@ fn test() {
         (r"<TableHeader scope='row' />", None, Some(settings())),
     ];
 
-    let fail =
-        vec![(r"<div scope />", None, None), (r"<Foo scope='bar' />;", None, Some(settings()))];
+    let fail = vec![
+        (r"<div scope />", None, None),
+        (r"<Foo scope='bar' />;", None, Some(settings())),
+    ];
 
     let fix: Vec<ExpectFixTestCase> = vec![
         (r"<div scope />", r"<div  />", None).into(),
-        (r"<Foo scope='bar' />;", r"<Foo  />;", None, Some(settings())).into(),
+        (
+            r"<Foo scope='bar' />;",
+            r"<Foo  />;",
+            None,
+            Some(settings()),
+        )
+            .into(),
         (r"<h1 scope='bar' />;", r"<h1  />;", None).into(),
     ];
 
-    Tester::new(Scope::NAME, Scope::PLUGIN, pass, fail).expect_fix(fix).test_and_snapshot();
+    Tester::new(Scope::NAME, Scope::PLUGIN, pass, fail)
+        .expect_fix(fix)
+        .test_and_snapshot();
 }

@@ -33,9 +33,21 @@ fn test() {
     use crate::tester::Tester;
 
     let pass = vec![
-        ("test('something', () => Promise.resolve().then(() => expect(1).toBe(2)));", None, None),
-        ("Promise.resolve().then(() => expect(1).toBe(2))", None, None),
-        ("const x = Promise.resolve().then(() => expect(1).toBe(2))", None, None),
+        (
+            "test('something', () => Promise.resolve().then(() => expect(1).toBe(2)));",
+            None,
+            None,
+        ),
+        (
+            "Promise.resolve().then(() => expect(1).toBe(2))",
+            None,
+            None,
+        ),
+        (
+            "const x = Promise.resolve().then(() => expect(1).toBe(2))",
+            None,
+            None,
+        ),
         (r#"it.todo("something")"#, None, None),
         (
             "it('is valid', () => {
@@ -661,7 +673,11 @@ fn test() {
             None,
             None,
         ),
-        (r#"it("it1", () => somePromise.then(() => expect(someThing).toEqual(true)))"#, None, None),
+        (
+            r#"it("it1", () => somePromise.then(() => expect(someThing).toEqual(true)))"#,
+            None,
+            None,
+        ),
         (
             "it('promise test with done', (done) => {
               const promise = getPromise();
@@ -1526,7 +1542,12 @@ fn test() {
          */
     ];
 
-    Tester::new(ValidExpectInPromise::NAME, ValidExpectInPromise::PLUGIN, pass, fail)
-        .with_jest_plugin(true)
-        .test_and_snapshot();
+    Tester::new(
+        ValidExpectInPromise::NAME,
+        ValidExpectInPromise::PLUGIN,
+        pass,
+        fail,
+    )
+    .with_jest_plugin(true)
+    .test_and_snapshot();
 }

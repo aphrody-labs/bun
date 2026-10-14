@@ -42,7 +42,10 @@ impl DetectionInput {
     }
 
     pub fn add_header(&mut self, name: impl AsRef<str>, value: impl Into<String>) {
-        self.headers.entry(name.as_ref().to_ascii_lowercase()).or_default().push(value.into());
+        self.headers
+            .entry(name.as_ref().to_ascii_lowercase())
+            .or_default()
+            .push(value.into());
     }
 
     pub fn header(&self, name: &str) -> Option<&str> {
@@ -108,7 +111,9 @@ pub struct DetectionReport {
 
 impl DetectionReport {
     pub fn in_bucket(&self, bucket: DetectionBucket) -> impl Iterator<Item = &DetectionEvidence> {
-        self.findings.iter().filter(move |finding| finding.bucket == bucket)
+        self.findings
+            .iter()
+            .filter(move |finding| finding.bucket == bucket)
     }
 
     fn push(
@@ -232,7 +237,10 @@ mod tests {
         input.add_header("cf-ray", "two");
         let report = detect_response(&input).unwrap();
         assert_eq!(
-            report.in_bucket(DetectionBucket::Cdn).filter(|f| f.name == "Cloudflare").count(),
+            report
+                .in_bucket(DetectionBucket::Cdn)
+                .filter(|f| f.name == "Cloudflare")
+                .count(),
             1
         );
     }

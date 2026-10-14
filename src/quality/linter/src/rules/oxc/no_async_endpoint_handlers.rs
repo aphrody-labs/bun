@@ -189,21 +189,33 @@ impl Rule for NoAsyncEndpointHandlers {
             .and_then(Value::as_object)
             .and_then(|config| config.get("allowedNames"))
             .and_then(Value::as_array)
-            .map(|names| names.iter().filter_map(Value::as_str).map(CompactStr::from).collect())
+            .map(|names| {
+                names
+                    .iter()
+                    .filter_map(Value::as_str)
+                    .map(CompactStr::from)
+                    .collect()
+            })
             .unwrap_or_default();
         allowed_names.sort_unstable();
         allowed_names.dedup();
 
-        Ok(Self(Box::new(NoAsyncEndpointHandlersConfig { allowed_names })))
+        Ok(Self(Box::new(NoAsyncEndpointHandlersConfig {
+            allowed_names,
+        })))
     }
 
     fn run<'a>(&self, node: &AstNode<'a>, ctx: &LintContext<'a>) {
-        let AstKind::CallExpression(call) = node.kind() else { return };
+        let AstKind::CallExpression(call) = node.kind() else {
+            return;
+        };
         let Some((endpoint, args)) = utils::as_endpoint_registration(call) else {
             return;
         };
-        for arg in
-            args.iter().filter_map(Argument::as_expression).map(Expression::get_inner_expression)
+        for arg in args
+            .iter()
+            .filter_map(Argument::as_expression)
+            .map(Expression::get_inner_expression)
         {
             self.check_endpoint_arg(ctx, endpoint, arg);
         }
@@ -238,8 +250,10 @@ impl NoAsyncEndpointHandlers {
         match arg {
             Expression::Identifier(handler) => {
                 // Unresolved reference? Nothing we can do.
-                let Some(symbol_id) =
-                    ctx.scoping().get_reference(handler.reference_id()).symbol_id()
+                let Some(symbol_id) = ctx
+                    .scoping()
+                    .get_reference(handler.reference_id())
+                    .symbol_id()
                 else {
                     return;
                 };
@@ -345,7 +359,9 @@ impl NoAsyncEndpointHandlers {
     }
 
     fn is_allowed_name(&self, name: &str) -> bool {
-        self.allowed_names.binary_search_by(|allowed| allowed.as_str().cmp(name)).is_ok()
+        self.allowed_names
+            .binary_search_by(|allowed| allowed.as_str().cmp(name))
+            .is_ok()
     }
 }
 
@@ -364,7 +380,10 @@ fn test() {
         ("app.get('/', (err, req, res, next) => {})", None),
         ("app.get('/', (err, req, res) => {})", None),
         ("app.get('/', (req, res) => Promise.resolve())", None),
-        ("app.get('/', (req, res) => new Promise((resolve, reject) => resolve()))", None),
+        (
+            "app.get('/', (req, res) => new Promise((resolve, reject) => resolve()))",
+            None,
+        ),
         ("app.use(middleware)", None),
         ("app.get(middleware)", None),
         (
@@ -434,6 +453,11 @@ fn test() {
         ),
     ];
 
-    Tester::new(NoAsyncEndpointHandlers::NAME, NoAsyncEndpointHandlers::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        NoAsyncEndpointHandlers::NAME,
+        NoAsyncEndpointHandlers::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

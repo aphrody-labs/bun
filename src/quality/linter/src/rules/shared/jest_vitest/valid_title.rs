@@ -154,8 +154,10 @@ impl ValidTitleConfig {
             .map(|v| v.iter().filter_map(|v| v.as_str()).collect())
             .unwrap_or_default();
         let disallowed_words_reg = (!disallowed_words.is_empty()).then(|| {
-            let disallowed_words_pattern =
-                disallowed_words.iter().map(|word| regex::escape(word)).join("|");
+            let disallowed_words_pattern = disallowed_words
+                .iter()
+                .map(|word| regex::escape(word))
+                .join("|");
             Regex::new(&format!(r"(?iu)\b(?:{disallowed_words_pattern})\b"))
                 .expect("escaped disallowed words should form a valid regex")
         });
@@ -213,7 +215,10 @@ impl ValidTitleConfig {
 
         // Handle typecheck settings - skip for describe when enabled (vitest feature)
         if ctx.settings().vitest.typecheck
-            && matches!(jest_fn_call.kind, JestFnKind::General(JestGeneralFnKind::Describe))
+            && matches!(
+                jest_fn_call.kind,
+                JestFnKind::General(JestGeneralFnKind::Describe)
+            )
         {
             return;
         }
@@ -396,7 +401,10 @@ fn compile_matcher_pattern(pattern: MatcherPattern) -> Option<CompiledMatcherAnd
                 Regex::new(&reg_str).ok()?
             };
 
-            let message = pattern.get(1).and_then(serde_json::Value::as_str).map(CompactStr::from);
+            let message = pattern
+                .get(1)
+                .and_then(serde_json::Value::as_str)
+                .map(CompactStr::from);
             Some((regex, message))
         }
     }
@@ -448,10 +456,12 @@ fn validate_title(
     if first_word == un_prefixed_name {
         let inner_span = span.shrink(1);
         let raw_text = ctx.source_range(inner_span);
-        if let Some(unprefixed_raw) =
-            raw_text.strip_prefix(first_word).and_then(|rest| rest.strip_prefix(' '))
-            && let Some(unprefixed_cooked) =
-                title.strip_prefix(first_word).and_then(|rest| rest.strip_prefix(' '))
+        if let Some(unprefixed_raw) = raw_text
+            .strip_prefix(first_word)
+            .and_then(|rest| rest.strip_prefix(' '))
+            && let Some(unprefixed_cooked) = title
+                .strip_prefix(first_word)
+                .and_then(|rest| rest.strip_prefix(' '))
             && can_trim_raw_title(unprefixed_cooked, unprefixed_raw)
         {
             ctx.diagnostic_with_fix(duplicate_prefix_diagnostic(span), |fixer| {

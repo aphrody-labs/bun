@@ -28,7 +28,11 @@ pub(super) fn try_embed_markdown<'a>(
     // Phase 2: Detect and strip common indentation
     let indentation = get_indentation(text);
     let has_indent = !indentation.is_empty();
-    let text = if has_indent { strip_indentation(text, indentation, allocator) } else { text };
+    let text = if has_indent {
+        strip_indentation(text, indentation, allocator)
+    } else {
+        text
+    };
 
     // Phase 3: Get the IR from the dispatcher
     let Some(ir) = dispatch_fragment_ir(f, "markdown", text, Some(&MarkdownInJsTemplate)) else {
@@ -45,9 +49,26 @@ pub(super) fn try_embed_markdown<'a>(
     // https://github.com/prettier/prettier/blob/90983f40dce5e20beea4e5618b5e0426a6a7f4f0/src/language-js/embed/markdown.js#L24-L29
     let content = format_once(|f| f.write_elements(ir));
     if has_indent {
-        write!(f, ["`", indent(&format_args!(soft_line_break(), content)), soft_line_break(), "`"]);
+        write!(
+            f,
+            [
+                "`",
+                indent(&format_args!(soft_line_break(), content)),
+                soft_line_break(),
+                "`"
+            ]
+        );
     } else {
-        write!(f, ["`", literal_line_break(), dedent_to_root(&content), soft_line_break(), "`"]);
+        write!(
+            f,
+            [
+                "`",
+                literal_line_break(),
+                dedent_to_root(&content),
+                soft_line_break(),
+                "`"
+            ]
+        );
     }
 
     true

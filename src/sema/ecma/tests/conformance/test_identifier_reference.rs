@@ -39,11 +39,9 @@ fn node_id_mismatch(
     OxcDiagnostic::error(
         "NodeId mismatch between an IdentifierReference and its corresponding Reference",
     )
-    .with_label(
-        identifier_reference
-            .span
-            .label(format!("This IdentifierReference's NodeId is {identifier_reference_id:?}")),
-    )
+    .with_label(identifier_reference.span.label(format!(
+        "This IdentifierReference's NodeId is {identifier_reference_id:?}"
+    )))
     .with_help(format!(
         "The Reference with id {reference_id:?} has a NodeId of {:?}",
         reference.node_id()

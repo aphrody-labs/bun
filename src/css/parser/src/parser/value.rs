@@ -14,7 +14,9 @@ const PRECEDENCE_PLUS: u8 = 1;
 /// Strip one leading `-vendor-` prefix (`-moz-calc` -> `calc`); returns the
 /// name unchanged when there is none.
 fn unvendored(name: &str) -> &str {
-    name.strip_prefix('-').and_then(|rest| rest.split_once('-')).map_or(name, |(_, base)| base)
+    name.strip_prefix('-')
+        .and_then(|rest| rest.split_once('-'))
+        .map_or(name, |(_, base)| base)
 }
 
 /// dart-sass "special functions" whose contents may be raw text rather than
@@ -57,10 +59,16 @@ impl<'a> Parser<'a> {
                 let end = self.cursor.expect_r_paren()?.1.end;
                 ComponentValue::CalcParenthesized(CalcParenthesized {
                     expr: self.alloc(expr),
-                    span: Span { start: lparen_span.start, end },
+                    span: Span {
+                        start: lparen_span.start,
+                        end,
+                    },
                 })
             } else if matches!(self.syntax, Syntax::Scss | Syntax::Sass)
-                && matches!(&self.cursor.peek()?.token, Token::Minus(..) | Token::Plus(..))
+                && matches!(
+                    &self.cursor.peek()?.token,
+                    Token::Minus(..) | Token::Plus(..)
+                )
                 && {
                     let span = &self.cursor.peek()?.span;
                     self.source.as_bytes().get(span.end) == Some(&b'(')
@@ -80,7 +88,10 @@ impl<'a> Parser<'a> {
                     },
                 };
                 let expr = self.parse_calc_expr_recursively(PRECEDENCE_MULTIPLY, allow_modulo)?;
-                let span = Span { start: op.span.start, end: expr.span().end };
+                let span = Span {
+                    start: op.span.start,
+                    end: expr.span().end,
+                };
                 ComponentValue::SassUnaryExpression(SassUnaryExpression {
                     expr: self.alloc(expr),
                     op,
@@ -120,25 +131,36 @@ impl<'a> Parser<'a> {
                 } else {
                     CalcOperatorKind::Minus
                 },
-                span: Span { start, end: start + 1 },
+                span: Span {
+                    start,
+                    end: start + 1,
+                },
             };
             match self.cursor.peek()? {
-                token @ TokenWithSpan { token: Token::Number(..), span }
-                    if token
-                        .number_raw(self.source)
-                        .is_some_and(|raw| raw.starts_with('+') || raw.starts_with('-'))
-                        && span.start == left_end =>
+                token @ TokenWithSpan {
+                    token: Token::Number(..),
+                    span,
+                } if token
+                    .number_raw(self.source)
+                    .is_some_and(|raw| raw.starts_with('+') || raw.starts_with('-'))
+                    && span.start == left_end =>
                 {
                     let (number, number_span) = self.cursor.expect_number()?;
                     let op = split_op(number.raw, number_span.start);
                     let right = {
-                        let span = Span { start: number_span.start + 1, end: number_span.end };
+                        let span = Span {
+                            start: number_span.start + 1,
+                            end: number_span.end,
+                        };
                         let raw = unsafe { number.raw.get_unchecked(1..number.raw.len()) };
                         Number::try_from((crate::token::Number { raw }, span))
                             .map(ComponentValue::Number)?
                     };
                     let right = self.parse_calc_mul_tail(right, allow_modulo)?;
-                    let span = Span { start: left.span().start, end: right.span().end };
+                    let span = Span {
+                        start: left.span().start,
+                        end: right.span().end,
+                    };
                     left = ComponentValue::Calc(Calc {
                         left: self.alloc(left),
                         op,
@@ -146,11 +168,13 @@ impl<'a> Parser<'a> {
                         span,
                     });
                 }
-                token @ TokenWithSpan { token: Token::Dimension(..), span }
-                    if token
-                        .dimension_value_raw(self.source)
-                        .is_some_and(|raw| raw.starts_with('+') || raw.starts_with('-'))
-                        && span.start == left_end =>
+                token @ TokenWithSpan {
+                    token: Token::Dimension(..),
+                    span,
+                } if token
+                    .dimension_value_raw(self.source)
+                    .is_some_and(|raw| raw.starts_with('+') || raw.starts_with('-'))
+                    && span.start == left_end =>
                 {
                     let (dimension, dimension_span) = self.cursor.expect_dimension()?;
                     let op = split_op(dimension.value.raw, dimension_span.start);
@@ -167,11 +191,17 @@ impl<'a> Parser<'a> {
                                 },
                                 unit: dimension.unit,
                             },
-                            Span { start: dimension_span.start + 1, end: dimension_span.end },
+                            Span {
+                                start: dimension_span.start + 1,
+                                end: dimension_span.end,
+                            },
                         )
                         .map(ComponentValue::Dimension)?;
                     let right = self.parse_calc_mul_tail(right, allow_modulo)?;
-                    let span = Span { start: left.span().start, end: right.span().end };
+                    let span = Span {
+                        start: left.span().start,
+                        end: right.span().end,
+                    };
                     left = ComponentValue::Calc(Calc {
                         left: self.alloc(left),
                         op,
@@ -197,19 +227,27 @@ impl<'a> Parser<'a> {
                 // legacy SassScript `min`/`max` accept it (`allow_modulo`); true
                 // calculations (`calc`, `clamp`, `sin`, ...) reject it, as does CSS.
                 Token::Percent(..) if precedence == PRECEDENCE_MULTIPLY && allow_modulo => {
-                    CalcOperator { kind: CalcOperatorKind::Modulo, span: self.cursor.bump()?.span }
+                    CalcOperator {
+                        kind: CalcOperatorKind::Modulo,
+                        span: self.cursor.bump()?.span,
+                    }
                 }
-                Token::Plus(..) if precedence == PRECEDENCE_PLUS => {
-                    CalcOperator { kind: CalcOperatorKind::Plus, span: self.cursor.bump()?.span }
-                }
-                Token::Minus(..) if precedence == PRECEDENCE_PLUS => {
-                    CalcOperator { kind: CalcOperatorKind::Minus, span: self.cursor.bump()?.span }
-                }
+                Token::Plus(..) if precedence == PRECEDENCE_PLUS => CalcOperator {
+                    kind: CalcOperatorKind::Plus,
+                    span: self.cursor.bump()?.span,
+                },
+                Token::Minus(..) if precedence == PRECEDENCE_PLUS => CalcOperator {
+                    kind: CalcOperatorKind::Minus,
+                    span: self.cursor.bump()?.span,
+                },
                 _ => break,
             };
 
             let right = self.parse_calc_expr_recursively(precedence + 1, allow_modulo)?;
-            let span = Span { start: left.span().start, end: right.span().end };
+            let span = Span {
+                start: left.span().start,
+                end: right.span().end,
+            };
             left = ComponentValue::Calc(Calc {
                 left: self.alloc(left),
                 op: operator,
@@ -236,9 +274,15 @@ impl<'a> Parser<'a> {
                 Token::Percent(..) if allow_modulo => CalcOperatorKind::Modulo,
                 _ => return Ok(left),
             };
-            let op = CalcOperator { kind, span: self.cursor.bump()?.span };
+            let op = CalcOperator {
+                kind,
+                span: self.cursor.bump()?.span,
+            };
             let right = self.parse_calc_expr_recursively(PRECEDENCE_MULTIPLY + 1, allow_modulo)?;
-            let span = Span { start: left.span().start, end: right.span().end };
+            let span = Span {
+                start: left.span().start,
+                end: right.span().end,
+            };
             left = ComponentValue::Calc(Calc {
                 left: self.alloc(left),
                 op,
@@ -259,7 +303,10 @@ impl<'a> Parser<'a> {
                 if unvendored(&ident.name()).eq_ignore_ascii_case("url") {
                     match self.try_parse(Url::parse) {
                         Ok(url) => return Ok(ComponentValue::Url(self.alloc(url))),
-                        Err(Error { kind: ErrorKind::TryParseError, .. }) => {}
+                        Err(Error {
+                            kind: ErrorKind::TryParseError,
+                            ..
+                        }) => {}
                         Err(error) => {
                             // Not a `<url-token>` (quotes, parens, or raw
                             // whitespace inside). Reference compilers accept
@@ -279,7 +326,10 @@ impl<'a> Parser<'a> {
                 let ident = self.parse::<InterpolableIdent>()?;
                 let ident_end = ident.span().end;
                 match self.cursor.peek()? {
-                    TokenWithSpan { token: Token::LParen(..), span } if span.start == ident_end => {
+                    TokenWithSpan {
+                        token: Token::LParen(..),
+                        span,
+                    } if span.start == ident_end => {
                         return match ident {
                             InterpolableIdent::Literal(ident)
                                 if ident.name.eq_ignore_ascii_case("src") =>
@@ -308,26 +358,35 @@ impl<'a> Parser<'a> {
                     // the matching `)` is raw. (An unprefixed `progid:` at the
                     // start of a value takes the whole-value raw path in
                     // `Declaration::parse` instead.)
-                    TokenWithSpan { token: Token::Colon(..), span }
-                        if span.start == ident_end
-                            && matches!(
-                                &ident,
-                                InterpolableIdent::Literal(id)
-                                    if unvendored(id.name).eq_ignore_ascii_case("progid")
-                            ) =>
+                    TokenWithSpan {
+                        token: Token::Colon(..),
+                        span,
+                    } if span.start == ident_end
+                        && matches!(
+                            &ident,
+                            InterpolableIdent::Literal(id)
+                                if unvendored(id.name).eq_ignore_ascii_case("progid")
+                        ) =>
                     {
                         if let InterpolableIdent::Literal(ident) = ident {
-                            return self.parse_progid_function(ident).map(ComponentValue::Function);
+                            return self
+                                .parse_progid_function(ident)
+                                .map(ComponentValue::Function);
                         }
                         unreachable!("guard matched a literal ident");
                     }
-                    TokenWithSpan { token: Token::Dot(..), span }
-                        if matches!(self.syntax, Syntax::Scss | Syntax::Sass)
-                            && span.start == ident_end =>
+                    TokenWithSpan {
+                        token: Token::Dot(..),
+                        span,
+                    } if matches!(self.syntax, Syntax::Scss | Syntax::Sass)
+                        && span.start == ident_end =>
                     {
                         if let InterpolableIdent::Literal(module) = &ident {
-                            let module =
-                                Ident { name: module.name, raw: module.raw, span: module.span };
+                            let module = Ident {
+                                name: module.name,
+                                raw: module.raw,
+                                span: module.span,
+                            };
                             // A namespaced member is `foo.$var` or a glued
                             // call `foo.bar(...)`.
                             let qualified = self.try_parse(|parser| {
@@ -341,7 +400,10 @@ impl<'a> Parser<'a> {
                                     util::assert_no_ws_or_comment(&name.span, &lparen_span)?;
                                     let args = parser.parse_function_args()?;
                                     let (_, Span { end, .. }) = parser.cursor.expect_r_paren()?;
-                                    let span = Span { start: name.span.start, end };
+                                    let span = Span {
+                                        start: name.span.start,
+                                        end,
+                                    };
                                     Ok(ComponentValue::Function(Function {
                                         name: FunctionName::SassQualifiedName(parser.alloc(name)),
                                         args,
@@ -369,30 +431,37 @@ impl<'a> Parser<'a> {
                 match ident {
                     InterpolableIdent::Literal(ident) if ident.raw.eq_ignore_ascii_case("u") => {
                         match self.cursor.peek()? {
-                            TokenWithSpan { token: Token::Plus(..), span }
-                                if span.start == ident_end =>
+                            TokenWithSpan {
+                                token: Token::Plus(..),
+                                span,
+                            } if span.start == ident_end => self
+                                .parse_unicode_range(ident)
+                                .map(ComponentValue::UnicodeRange),
+                            token @ TokenWithSpan {
+                                token: Token::Number(..),
+                                span,
+                            } if token
+                                .number_raw(self.source)
+                                .is_some_and(|raw| raw.starts_with('+'))
+                                && span.start == ident_end =>
                             {
-                                self.parse_unicode_range(ident).map(ComponentValue::UnicodeRange)
+                                self.parse_unicode_range(ident)
+                                    .map(ComponentValue::UnicodeRange)
                             }
-                            token @ TokenWithSpan { token: Token::Number(..), span }
-                                if token
-                                    .number_raw(self.source)
-                                    .is_some_and(|raw| raw.starts_with('+'))
-                                    && span.start == ident_end =>
+                            token @ TokenWithSpan {
+                                token: Token::Dimension(..),
+                                span,
+                            } if token
+                                .dimension_value_raw(self.source)
+                                .is_some_and(|raw| raw.starts_with('+'))
+                                && span.start == ident_end =>
                             {
-                                self.parse_unicode_range(ident).map(ComponentValue::UnicodeRange)
+                                self.parse_unicode_range(ident)
+                                    .map(ComponentValue::UnicodeRange)
                             }
-                            token @ TokenWithSpan { token: Token::Dimension(..), span }
-                                if token
-                                    .dimension_value_raw(self.source)
-                                    .is_some_and(|raw| raw.starts_with('+'))
-                                    && span.start == ident_end =>
-                            {
-                                self.parse_unicode_range(ident).map(ComponentValue::UnicodeRange)
-                            }
-                            _ => Ok(ComponentValue::InterpolableIdent(InterpolableIdent::Literal(
-                                ident,
-                            ))),
+                            _ => Ok(ComponentValue::InterpolableIdent(
+                                InterpolableIdent::Literal(ident),
+                            )),
                         }
                     }
                     _ => Ok(ComponentValue::InterpolableIdent(ident)),
@@ -409,9 +478,10 @@ impl<'a> Parser<'a> {
                     self.parse().map(ComponentValue::HexColor)
                 }
             }
-            Token::Str(..) => {
-                self.parse().map(InterpolableStr::Literal).map(ComponentValue::InterpolableStr)
-            }
+            Token::Str(..) => self
+                .parse()
+                .map(InterpolableStr::Literal)
+                .map(ComponentValue::InterpolableStr),
             Token::LBracket(..) => self.parse().map(ComponentValue::BracketBlock),
             Token::DollarVar(..) if matches!(self.syntax, Syntax::Scss | Syntax::Sass) => {
                 self.parse().map(ComponentValue::SassVariable)
@@ -428,9 +498,10 @@ impl<'a> Parser<'a> {
             Token::HashLBrace(..) if matches!(self.syntax, Syntax::Scss | Syntax::Sass) => {
                 let ident = self.parse_sass_interpolated_ident()?;
                 match self.cursor.peek()? {
-                    TokenWithSpan { token: Token::LParen(..), span }
-                        if span.start == ident.span().end =>
-                    {
+                    TokenWithSpan {
+                        token: Token::LParen(..),
+                        span,
+                    } if span.start == ident.span().end => {
                         self.parse_function(ident).map(ComponentValue::Function)
                     }
                     _ => Ok(ComponentValue::InterpolableIdent(ident)),
@@ -475,12 +546,14 @@ impl<'a> Parser<'a> {
             Token::Dot(..) if matches!(self.syntax, Syntax::Scss | Syntax::Sass) => {
                 let dot = self.cursor.bump()?;
                 match self.cursor.peek()? {
-                    TokenWithSpan { token: Token::Ident(..), span }
-                        if span.start == dot.span.end =>
-                    {
-                        Ok(ComponentValue::TokenWithSpan(dot))
-                    }
-                    _ => Err(Error { kind: ErrorKind::ExpectComponentValue, span: dot.span }),
+                    TokenWithSpan {
+                        token: Token::Ident(..),
+                        span,
+                    } if span.start == dot.span.end => Ok(ComponentValue::TokenWithSpan(dot)),
+                    _ => Err(Error {
+                        kind: ErrorKind::ExpectComponentValue,
+                        span: dot.span,
+                    }),
                 }
             }
             Token::StrTemplate(..) if self.syntax == Syntax::Less => self
@@ -513,7 +586,10 @@ impl<'a> Parser<'a> {
                 let (placeholder, span) = self.cursor.expect_placeholder()?;
                 Ok(ComponentValue::Placeholder((placeholder, span).into()))
             }
-            _ => Err(Error { kind: ErrorKind::ExpectComponentValue, span: token_with_span.span }),
+            _ => Err(Error {
+                kind: ErrorKind::ExpectComponentValue,
+                span: token_with_span.span,
+            }),
         }
     }
 
@@ -523,8 +599,10 @@ impl<'a> Parser<'a> {
         if let InterpolableIdent::Literal(ident) = &ident
             && !ident.name.starts_with("--")
         {
-            self.recoverable_errors
-                .push(Error { kind: ErrorKind::ExpectDashedIdent, span: ident.span });
+            self.recoverable_errors.push(Error {
+                kind: ErrorKind::ExpectDashedIdent,
+                span: ident.span,
+            });
         }
         Ok(ident)
     }
@@ -625,9 +703,10 @@ impl<'a> Parser<'a> {
                     let id_selector = self.parse().map(ComponentValue::IdSelector)?;
                     self.vec1(id_selector)
                 }
-                InterpolableIdent::Literal(Ident { raw: "boolean" | "if", .. })
-                    if self.syntax == Syntax::Less =>
-                {
+                InterpolableIdent::Literal(Ident {
+                    raw: "boolean" | "if",
+                    ..
+                }) if self.syntax == Syntax::Less => {
                     let less_condition = self.parse_less_condition(false)?;
                     let condition = ComponentValue::LessCondition(self.alloc(less_condition));
                     let mut args = self.parse_function_args()?;
@@ -638,8 +717,15 @@ impl<'a> Parser<'a> {
             }
         };
         let end = self.cursor.expect_r_paren()?.1.end;
-        let span = Span { start: name.span().start, end };
-        Ok(Function { name: FunctionName::Ident(name), args, span })
+        let span = Span {
+            start: name.span().start,
+            end,
+        };
+        Ok(Function {
+            name: FunctionName::Ident(name),
+            args,
+            span,
+        })
     }
 
     /// The `calc()`-family argument list: comma-delimited calc expressions,
@@ -652,27 +738,43 @@ impl<'a> Parser<'a> {
         let mut values = self.vec_with_capacity(1);
         loop {
             match self.cursor.peek()? {
-                TokenWithSpan { token: Token::RParen(..), .. } => break,
-                TokenWithSpan { token: Token::Comma(..), .. } => {
+                TokenWithSpan {
+                    token: Token::RParen(..),
+                    ..
+                } => break,
+                TokenWithSpan {
+                    token: Token::Comma(..),
+                    ..
+                } => {
                     values.push(ComponentValue::Delimiter(self.parse()?));
                 }
                 // a spread is SassScript, so only the legacy `min`/`max`
                 // accept it (`clamp(1px 2px 3px...)` errors), and only once
-                TokenWithSpan { token: Token::DotDotDot(..), .. }
-                    if allow_modulo
-                        && matches!(self.syntax, Syntax::Scss | Syntax::Sass)
-                        && !values.is_empty()
-                        && !values
-                            .iter()
-                            .any(|v| matches!(v, ComponentValue::SassArbitraryArgument(..))) =>
+                TokenWithSpan {
+                    token: Token::DotDotDot(..),
+                    ..
+                } if allow_modulo
+                    && matches!(self.syntax, Syntax::Scss | Syntax::Sass)
+                    && !values.is_empty()
+                    && !values
+                        .iter()
+                        .any(|v| matches!(v, ComponentValue::SassArbitraryArgument(..))) =>
                 {
-                    let TokenWithSpan { span: Span { end, .. }, .. } = self.cursor.bump()?;
+                    let TokenWithSpan {
+                        span: Span { end, .. },
+                        ..
+                    } = self.cursor.bump()?;
                     let value = values.pop().unwrap();
-                    let span = Span { start: value.span().start, end };
-                    values.push(ComponentValue::SassArbitraryArgument(SassArbitraryArgument {
-                        value: self.alloc(value),
-                        span,
-                    }));
+                    let span = Span {
+                        start: value.span().start,
+                        end,
+                    };
+                    values.push(ComponentValue::SassArbitraryArgument(
+                        SassArbitraryArgument {
+                            value: self.alloc(value),
+                            span,
+                        },
+                    ));
                 }
                 _ => values.push(self.parse_calc_expr(allow_modulo)?),
             }
@@ -684,7 +786,11 @@ impl<'a> Parser<'a> {
     /// (dart-sass special functions carry raw text: `element(/**/ c)`,
     /// `-c-calc(@#$)`, `url(fn("s"))`), re-parse the contents as raw tokens.
     pub(super) fn parse_function_typed_or_raw(&mut self, name: Ident<'a>) -> PResult<Function<'a>> {
-        let name_copy = Ident { name: name.name, raw: name.raw, span: name.span };
+        let name_copy = Ident {
+            name: name.name,
+            raw: name.raw,
+            span: name.span,
+        };
         match self.try_parse(|p| p.parse_function(InterpolableIdent::Literal(name))) {
             Ok(function) => Ok(function),
             Err(_) => self.parse_raw_function(InterpolableIdent::Literal(name_copy)),
@@ -702,8 +808,15 @@ impl<'a> Parser<'a> {
         let mut args = self.vec_with_capacity(4);
         self.parse_raw_function_args_into(&mut args)?;
         let end = self.cursor.expect_r_paren()?.1.end;
-        let span = Span { start: name.span().start, end };
-        Ok(Function { name: FunctionName::Ident(name), args, span })
+        let span = Span {
+            start: name.span().start,
+            end,
+        };
+        Ok(Function {
+            name: FunctionName::Ident(name),
+            args,
+            span,
+        })
     }
 
     /// IE filter syntax `progid:DXImageTransform.Microsoft.f(...)`, optionally
@@ -740,8 +853,15 @@ impl<'a> Parser<'a> {
         self.cursor.expect_l_paren()?;
         self.parse_raw_function_args_into(&mut args)?;
         let end = self.cursor.expect_r_paren()?.1.end;
-        let span = Span { start: name.span.start, end };
-        Ok(Function { name: FunctionName::Ident(InterpolableIdent::Literal(name)), args, span })
+        let span = Span {
+            start: name.span.start,
+            end,
+        };
+        Ok(Function {
+            name: FunctionName::Ident(InterpolableIdent::Literal(name)),
+            args,
+            span,
+        })
     }
 
     /// Consume function contents as preserved tokens, balancing pairs, until
@@ -808,7 +928,10 @@ impl<'a> Parser<'a> {
                 // reference compilers reject it in function arguments.
                 Token::Unknown(..) if self.syntax != Syntax::Css => {
                     let span = self.cursor.peek()?.span;
-                    return Err(Error { kind: ErrorKind::UnknownToken, span });
+                    return Err(Error {
+                        kind: ErrorKind::UnknownToken,
+                        span,
+                    });
                 }
                 _ => {
                     let value = if let Ok(value) = self.try_parse(ComponentValue::parse) {
@@ -821,13 +944,18 @@ impl<'a> Parser<'a> {
                         if let Some((_, mut span)) = self.cursor.eat_dot_dot_dot()? {
                             span.start = value.span().start;
                             values.push(ComponentValue::SassArbitraryArgument(
-                                SassArbitraryArgument { value: self.alloc(value), span },
+                                SassArbitraryArgument {
+                                    value: self.alloc(value),
+                                    span,
+                                },
                             ));
                         } else if let ComponentValue::SassVariable(sass_var) = value {
                             if let Some((_, colon_span)) = self.cursor.eat_colon()? {
                                 let value = self.parse::<ComponentValue>()?;
-                                let span =
-                                    Span { start: sass_var.span.start, end: value.span().end };
+                                let span = Span {
+                                    start: sass_var.span.start,
+                                    end: value.span().end,
+                                };
                                 values.push(ComponentValue::SassKeywordArgument(
                                     SassKeywordArgument {
                                         name: sass_var,
@@ -857,12 +985,22 @@ impl<'a> Parser<'a> {
         let (_, solidus_span) = self.cursor.expect_solidus()?;
         let denominator = self.parse::<Number>()?;
         if denominator.value <= 0.0 {
-            self.recoverable_errors
-                .push(Error { kind: ErrorKind::InvalidRatioDenominator, span: denominator.span });
+            self.recoverable_errors.push(Error {
+                kind: ErrorKind::InvalidRatioDenominator,
+                span: denominator.span,
+            });
         }
 
-        let span = Span { start: numerator.span.start, end: denominator.span.end };
-        Ok(Ratio { numerator, solidus_span, denominator, span })
+        let span = Span {
+            start: numerator.span.start,
+            end: denominator.span.end,
+        };
+        Ok(Ratio {
+            numerator,
+            solidus_span,
+            denominator,
+            span,
+        })
     }
 
     // The `src()` value function: src( [ <string> ]? <url-modifier>* )
@@ -896,8 +1034,16 @@ impl<'a> Parser<'a> {
         };
         let modifiers = self.parse_url_modifiers()?;
         let end = self.cursor.expect_r_paren()?.1.end;
-        let span = Span { start: name.span.start, end };
-        Ok(Url { name, value, modifiers, span })
+        let span = Span {
+            start: name.span.start,
+            end,
+        };
+        Ok(Url {
+            name,
+            value,
+            modifiers,
+            span,
+        })
     }
 
     // <urange> = u '+' <ident-token> '?'* | u <dimension-token> '?'* | u <number-token> …
@@ -905,12 +1051,16 @@ impl<'a> Parser<'a> {
     fn parse_unicode_range(&mut self, prefix_ident: Ident<'a>) -> PResult<UnicodeRange<'a>> {
         let prefix = prefix_ident.raw.chars().next().unwrap();
         let (span_start, span_end) = match self.cursor.bump()? {
-            TokenWithSpan { token: Token::Plus(..), span: plus_token_span } => {
+            TokenWithSpan {
+                token: Token::Plus(..),
+                span: plus_token_span,
+            } => {
                 let start = plus_token_span.start;
                 let mut end = match self.cursor.tokenizer.bump_without_ws_or_comments()? {
-                    TokenWithSpan { token: Token::Ident(..) | Token::Question(..), span } => {
-                        span.end
-                    }
+                    TokenWithSpan {
+                        token: Token::Ident(..) | Token::Question(..),
+                        span,
+                    } => span.end,
                     TokenWithSpan { token, span } => {
                         return Err(Error {
                             kind: ErrorKind::Unexpected("?", token.symbol()),
@@ -920,7 +1070,10 @@ impl<'a> Parser<'a> {
                 };
                 loop {
                     match self.cursor.peek()? {
-                        TokenWithSpan { token: Token::Question(..), span } if span.start == end => {
+                        TokenWithSpan {
+                            token: Token::Question(..),
+                            span,
+                        } if span.start == end => {
                             end = self.cursor.bump()?.span.end;
                         }
                         _ => break,
@@ -928,12 +1081,18 @@ impl<'a> Parser<'a> {
                 }
                 (start, end)
             }
-            TokenWithSpan { token: Token::Dimension(..), span: dimension_token_span } => {
+            TokenWithSpan {
+                token: Token::Dimension(..),
+                span: dimension_token_span,
+            } => {
                 let start = dimension_token_span.start;
                 let mut end = dimension_token_span.end;
                 loop {
                     match self.cursor.peek()? {
-                        TokenWithSpan { token: Token::Question(..), span } if span.start == end => {
+                        TokenWithSpan {
+                            token: Token::Question(..),
+                            span,
+                        } if span.start == end => {
                             end = self.cursor.bump()?.span.end;
                         }
                         _ => break,
@@ -941,7 +1100,10 @@ impl<'a> Parser<'a> {
                 }
                 (start, end)
             }
-            TokenWithSpan { token: Token::Number(..), span: number_token_span } => {
+            TokenWithSpan {
+                token: Token::Number(..),
+                span: number_token_span,
+            } => {
                 let start = number_token_span.start;
                 let mut end = number_token_span.end;
                 match &self.cursor.peek()?.token {
@@ -949,9 +1111,10 @@ impl<'a> Parser<'a> {
                         end = self.cursor.bump()?.span.end;
                         loop {
                             match self.cursor.peek()? {
-                                TokenWithSpan { token: Token::Question(..), span }
-                                    if span.start == end =>
-                                {
+                                TokenWithSpan {
+                                    token: Token::Question(..),
+                                    span,
+                                } if span.start == end => {
                                     end = self.cursor.bump()?.span.end;
                                 }
                                 _ => break,
@@ -966,40 +1129,89 @@ impl<'a> Parser<'a> {
                 (start, end)
             }
             TokenWithSpan { span, .. } => {
-                return Err(Error { kind: ErrorKind::InvalidUnicodeRange, span });
+                return Err(Error {
+                    kind: ErrorKind::InvalidUnicodeRange,
+                    span,
+                });
             }
         };
 
         let source = self.source.get(span_start + 1..span_end).ok_or(Error {
             kind: ErrorKind::InvalidUnicodeRange,
-            span: Span { start: span_start + 1, end: span_end },
+            span: Span {
+                start: span_start + 1,
+                end: span_end,
+            },
         })?;
-        let span = Span { start: prefix_ident.span.start, end: span_end };
+        let span = Span {
+            start: prefix_ident.span.start,
+            end: span_end,
+        };
         let unicode_range = if let Some((left, right)) = source.split_once('-') {
             if left.len() > 6 || !left.chars().all(|c| c.is_ascii_hexdigit()) {
-                return Err(Error { kind: ErrorKind::InvalidUnicodeRange, span });
+                return Err(Error {
+                    kind: ErrorKind::InvalidUnicodeRange,
+                    span,
+                });
             }
             if right.len() > 6
-                || !right.trim_end_matches('?').chars().all(|c| c.is_ascii_hexdigit())
+                || !right
+                    .trim_end_matches('?')
+                    .chars()
+                    .all(|c| c.is_ascii_hexdigit())
             {
-                return Err(Error { kind: ErrorKind::InvalidUnicodeRange, span });
+                return Err(Error {
+                    kind: ErrorKind::InvalidUnicodeRange,
+                    span,
+                });
             }
-            let start = u32::from_str_radix(left, 16)
-                .map_err(|_| Error { kind: ErrorKind::InvalidUnicodeRange, span })?;
+            let start = u32::from_str_radix(left, 16).map_err(|_| Error {
+                kind: ErrorKind::InvalidUnicodeRange,
+                span,
+            })?;
             let end = u32::from_str_radix(&replace_unicode_range_wildcards(right, 'F'), 16)
-                .map_err(|_| Error { kind: ErrorKind::InvalidUnicodeRange, span })?;
-            UnicodeRange { prefix, start, start_raw: left, end, end_raw: Some(right), span }
+                .map_err(|_| Error {
+                    kind: ErrorKind::InvalidUnicodeRange,
+                    span,
+                })?;
+            UnicodeRange {
+                prefix,
+                start,
+                start_raw: left,
+                end,
+                end_raw: Some(right),
+                span,
+            }
         } else {
             if source.len() > 6
-                || !source.trim_end_matches('?').chars().all(|c| c.is_ascii_hexdigit())
+                || !source
+                    .trim_end_matches('?')
+                    .chars()
+                    .all(|c| c.is_ascii_hexdigit())
             {
-                return Err(Error { kind: ErrorKind::InvalidUnicodeRange, span });
+                return Err(Error {
+                    kind: ErrorKind::InvalidUnicodeRange,
+                    span,
+                });
             }
             let start = u32::from_str_radix(&replace_unicode_range_wildcards(source, '0'), 16)
-                .map_err(|_| Error { kind: ErrorKind::InvalidUnicodeRange, span })?;
+                .map_err(|_| Error {
+                    kind: ErrorKind::InvalidUnicodeRange,
+                    span,
+                })?;
             let end = u32::from_str_radix(&replace_unicode_range_wildcards(source, 'F'), 16)
-                .map_err(|_| Error { kind: ErrorKind::InvalidUnicodeRange, span })?;
-            UnicodeRange { prefix, start, start_raw: source, end, end_raw: None, span }
+                .map_err(|_| Error {
+                    kind: ErrorKind::InvalidUnicodeRange,
+                    span,
+                })?;
+            UnicodeRange {
+                prefix,
+                start,
+                start_raw: source,
+                end,
+                end_raw: None,
+                span,
+            }
         };
         // Value-level checks (end > U+10FFFF, start > end) are deliberately
         // NOT errors: reference compilers pass such ranges through and
@@ -1010,7 +1222,10 @@ impl<'a> Parser<'a> {
 }
 
 fn replace_unicode_range_wildcards(source: &str, replacement: char) -> String {
-    source.chars().map(|c| if c == '?' { replacement } else { c }).collect()
+    source
+        .chars()
+        .map(|c| if c == '?' { replacement } else { c })
+        .collect()
 }
 
 // A `[]`-block of component values (a `<simple-block>` opened by `[`).
@@ -1026,7 +1241,10 @@ impl<'a> Parse<'a> for BracketBlock<'a> {
             }
         }
         let end = input.cursor.expect_r_bracket()?.1.end;
-        Ok(BracketBlock { value, span: Span { start, end } })
+        Ok(BracketBlock {
+            value,
+            span: Span { start, end },
+        })
     }
 }
 
@@ -1077,15 +1295,27 @@ impl<'a> Parse<'a> for Delimiter {
     fn parse(input: &mut Parser<'a>) -> PResult<Self> {
         use crate::tokenizer::token::*;
         match input.cursor.bump()? {
-            TokenWithSpan { token: Token::Solidus(..), span } => {
-                Ok(Delimiter { kind: DelimiterKind::Solidus, span })
-            }
-            TokenWithSpan { token: Token::Comma(..), span } => {
-                Ok(Delimiter { kind: DelimiterKind::Comma, span })
-            }
-            TokenWithSpan { token: Token::Semicolon(..), span } => {
-                Ok(Delimiter { kind: DelimiterKind::Semicolon, span })
-            }
+            TokenWithSpan {
+                token: Token::Solidus(..),
+                span,
+            } => Ok(Delimiter {
+                kind: DelimiterKind::Solidus,
+                span,
+            }),
+            TokenWithSpan {
+                token: Token::Comma(..),
+                span,
+            } => Ok(Delimiter {
+                kind: DelimiterKind::Comma,
+                span,
+            }),
+            TokenWithSpan {
+                token: Token::Semicolon(..),
+                span,
+            } => Ok(Delimiter {
+                kind: DelimiterKind::Semicolon,
+                span,
+            }),
             _ => unreachable!(),
         }
     }
@@ -1106,7 +1336,10 @@ impl<'a> Parse<'a> for Function<'a> {
     fn parse(input: &mut Parser<'a>) -> PResult<Self> {
         let name = input.parse::<FunctionName>()?;
         match input.cursor.peek()? {
-            TokenWithSpan { token: Token::LParen(..), span } => {
+            TokenWithSpan {
+                token: Token::LParen(..),
+                span,
+            } => {
                 util::assert_no_ws_or_comment(name.span(), span)?;
                 match name {
                     FunctionName::Ident(name) => input.parse_function(name),
@@ -1114,14 +1347,18 @@ impl<'a> Parse<'a> for Function<'a> {
                         input.cursor.bump()?;
                         let args = input.parse_function_args()?;
                         let (_, Span { end, .. }) = input.cursor.expect_r_paren()?;
-                        let span = Span { start: name.span().start, end };
+                        let span = Span {
+                            start: name.span().start,
+                            end,
+                        };
                         Ok(Function { name, args, span })
                     }
                 }
             }
-            TokenWithSpan { token, span } => {
-                Err(Error { kind: ErrorKind::Unexpected("(", token.symbol()), span: *span })
-            }
+            TokenWithSpan { token, span } => Err(Error {
+                kind: ErrorKind::Unexpected("(", token.symbol()),
+                span: *span,
+            }),
         }
     }
 }
@@ -1137,12 +1374,17 @@ impl<'a> Parse<'a> for FunctionName<'a> {
                     (Token::Dot(..), Syntax::Scss | Syntax::Sass) => {
                         input.cursor.bump()?;
                         let member = input.parse::<Ident>()?;
-                        let span = Span { start: ident.span.start, end: member.span.end };
-                        Ok(FunctionName::SassQualifiedName(input.alloc(SassQualifiedName {
-                            module: ident,
-                            member: SassModuleMemberName::Ident(member),
-                            span,
-                        })))
+                        let span = Span {
+                            start: ident.span.start,
+                            end: member.span.end,
+                        };
+                        Ok(FunctionName::SassQualifiedName(input.alloc(
+                            SassQualifiedName {
+                                module: ident,
+                                member: SassModuleMemberName::Ident(member),
+                                span,
+                            },
+                        )))
                     }
                     _ => Ok(FunctionName::Ident(InterpolableIdent::Literal(ident))),
                 }
@@ -1155,7 +1397,10 @@ impl<'a> Parse<'a> for FunctionName<'a> {
             }
             _ => {
                 let TokenWithSpan { token, span } = input.cursor.bump()?;
-                Err(Error { kind: ErrorKind::Unexpected("<ident>", token.symbol()), span })
+                Err(Error {
+                    kind: ErrorKind::Unexpected("<ident>", token.symbol()),
+                    span,
+                })
             }
         }
     }
@@ -1166,7 +1411,11 @@ impl<'a> Parse<'a> for HexColor<'a> {
     fn parse(input: &mut Parser<'a>) -> PResult<Self> {
         let (token, span) = input.cursor.expect_hash()?;
         let raw = token.raw;
-        let value = if token.escaped { util::handle_escape_in(raw, input.allocator) } else { raw };
+        let value = if token.escaped {
+            util::handle_escape_in(raw, input.allocator)
+        } else {
+            raw
+        };
         Ok(HexColor { value, raw, span })
     }
 }
@@ -1211,15 +1460,25 @@ impl<'a> Parse<'a> for InterpolableIdent<'a> {
 impl<'a> Parse<'a> for InterpolableStr<'a> {
     fn parse(input: &mut Parser<'a>) -> PResult<Self> {
         match input.cursor.peek()? {
-            TokenWithSpan { token: Token::Str(..), .. } => {
-                input.parse().map(InterpolableStr::Literal)
-            }
-            TokenWithSpan { token: Token::StrTemplate(..), span } => match input.syntax {
+            TokenWithSpan {
+                token: Token::Str(..),
+                ..
+            } => input.parse().map(InterpolableStr::Literal),
+            TokenWithSpan {
+                token: Token::StrTemplate(..),
+                span,
+            } => match input.syntax {
                 Syntax::Scss | Syntax::Sass => input.parse().map(InterpolableStr::SassInterpolated),
                 Syntax::Less => input.parse().map(InterpolableStr::LessInterpolated),
-                Syntax::Css => Err(Error { kind: ErrorKind::UnexpectedTemplateInCss, span: *span }),
+                Syntax::Css => Err(Error {
+                    kind: ErrorKind::UnexpectedTemplateInCss,
+                    span: *span,
+                }),
             },
-            TokenWithSpan { span, .. } => Err(Error { kind: ErrorKind::ExpectString, span: *span }),
+            TokenWithSpan { span, .. } => Err(Error {
+                kind: ErrorKind::ExpectString,
+                span: *span,
+            }),
         }
     }
 }
@@ -1231,8 +1490,15 @@ impl<'a> Parse<'a> for Number<'a> {
         number
             .raw
             .parse()
-            .map_err(|_| Error { kind: ErrorKind::InvalidNumber, span })
-            .map(|value| Self { value, raw: number.raw, span })
+            .map_err(|_| Error {
+                kind: ErrorKind::InvalidNumber,
+                span,
+            })
+            .map(|value| Self {
+                value,
+                raw: number.raw,
+                span,
+            })
     }
 }
 
@@ -1241,7 +1507,14 @@ impl<'a> Parse<'a> for Percentage<'a> {
     fn parse(input: &mut Parser<'a>) -> PResult<Self> {
         let (token, span) = input.cursor.expect_percentage()?;
         Ok(Percentage {
-            value: (token.value, Span { start: span.start, end: span.end - 1 }).try_into()?,
+            value: (
+                token.value,
+                Span {
+                    start: span.start,
+                    end: span.end - 1,
+                },
+            )
+                .try_into()?,
             span,
         })
     }
@@ -1271,20 +1544,29 @@ impl<'a> Parse<'a> for Url<'a> {
             && !base_name.eq_ignore_ascii_case("url-prefix")
             && !base_name.eq_ignore_ascii_case("domain")
         {
-            return Err(Error { kind: ErrorKind::ExpectUrl, span: prefix_span });
+            return Err(Error {
+                kind: ErrorKind::ExpectUrl,
+                span: prefix_span,
+            });
         }
         let prefix_start = prefix_span.start;
         let name = input.ident(prefix, prefix_span);
 
         match input.cursor.peek()? {
-            TokenWithSpan { token: Token::LParen(..), span } if prefix_span.end == span.start => {
+            TokenWithSpan {
+                token: Token::LParen(..),
+                span,
+            } if prefix_span.end == span.start => {
                 input.cursor.bump()?;
             }
             TokenWithSpan { span, .. } => {
                 // The internal marker means "not a url shape at all": callers
                 // discriminate on it (`parse_component_value_atom`) or
                 // concretize it before surfacing (`ImportPrelude`).
-                return Err(Error { kind: ErrorKind::TryParseError, span: *span });
+                return Err(Error {
+                    kind: ErrorKind::TryParseError,
+                    span: *span,
+                });
             }
         }
 
@@ -1292,19 +1574,33 @@ impl<'a> Parse<'a> for Url<'a> {
             let value = input.parse()?;
             let modifiers = input.parse_url_modifiers()?;
             let end = input.cursor.expect_r_paren()?.1.end;
-            let span = Span { start: prefix_start, end };
-            Ok(Url { name, value: Some(UrlValue::Str(value)), modifiers, span })
+            let span = Span {
+                start: prefix_start,
+                end,
+            };
+            Ok(Url {
+                name,
+                value: Some(UrlValue::Str(value)),
+                modifiers,
+                span,
+            })
         } else if let Ok(value) = input.try_parse(UrlRaw::parse) {
             let span = Span {
                 start: prefix_start,
                 end: value.span.end + 1, // `)` is consumed, but span excludes it
             };
-            Ok(Url { name, value: Some(UrlValue::Raw(value)), modifiers: input.vec(), span })
+            Ok(Url {
+                name,
+                value: Some(UrlValue::Raw(value)),
+                modifiers: input.vec(),
+                span,
+            })
         } else {
             match input.syntax {
-                Syntax::Css => {
-                    Err(Error { kind: ErrorKind::InvalidUrl, span: input.cursor.bump()?.span })
-                }
+                Syntax::Css => Err(Error {
+                    kind: ErrorKind::InvalidUrl,
+                    span: input.cursor.bump()?.span,
+                }),
                 Syntax::Scss | Syntax::Sass => {
                     let value = input.parse::<SassInterpolatedUrl>()?;
                     let span = Span {
@@ -1321,8 +1617,16 @@ impl<'a> Parse<'a> for Url<'a> {
                 Syntax::Less => {
                     let value = UrlValue::LessEscapedStr(input.parse()?);
                     let (_, Span { end, .. }) = input.cursor.expect_r_paren()?;
-                    let span = Span { start: prefix_start, end };
-                    Ok(Url { name, value: Some(value), modifiers: input.vec(), span })
+                    let span = Span {
+                        start: prefix_start,
+                        end,
+                    };
+                    Ok(Url {
+                        name,
+                        value: Some(value),
+                        modifiers: input.vec(),
+                        span,
+                    })
                 }
             }
         }
@@ -1334,7 +1638,10 @@ impl<'a> Parse<'a> for UrlModifier<'a> {
     fn parse(input: &mut Parser<'a>) -> PResult<Self> {
         let ident = input.parse::<InterpolableIdent>()?;
         match input.cursor.peek()? {
-            TokenWithSpan { token: Token::LParen(..), span } if ident.span().end == span.start => {
+            TokenWithSpan {
+                token: Token::LParen(..),
+                span,
+            } if ident.span().end == span.start => {
                 input.parse_function(ident).map(UrlModifier::Function)
             }
             _ => Ok(UrlModifier::Ident(ident)),
@@ -1354,7 +1661,11 @@ impl<'a> Parse<'a> for UrlRaw<'a> {
                 } else {
                     url.raw
                 };
-                Ok(UrlRaw { value, raw: url.raw, span })
+                Ok(UrlRaw {
+                    value,
+                    raw: url.raw,
+                    span,
+                })
             }
             None => Err(Error {
                 kind: ErrorKind::Unexpected("<url>", token.token.symbol()),

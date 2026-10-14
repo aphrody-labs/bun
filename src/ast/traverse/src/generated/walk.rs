@@ -53,8 +53,10 @@ unsafe fn walk_program<'a, State, Tr: Traverse<'a, State>>(
     ctx.set_current_hoist_scope_id(current_scope_id);
     let previous_block_scope_id = ctx.current_block_scope_id();
     ctx.set_current_block_scope_id(current_scope_id);
-    let pop_token = ctx
-        .push_stack(Ancestor::ProgramHashbang(ancestor::ProgramWithoutHashbang(node, PhantomData)));
+    let pop_token = ctx.push_stack(Ancestor::ProgramHashbang(ancestor::ProgramWithoutHashbang(
+        node,
+        PhantomData,
+    )));
     if let Some(field) =
         &mut *((node as *mut u8).add(ancestor::OFFSET_PROGRAM_HASHBANG) as *mut Option<Hashbang>)
     {
@@ -1570,8 +1572,10 @@ unsafe fn walk_if_statement<'a, State, Tr: Traverse<'a, State>>(
     ctx: &mut TraverseCtx<'a, State>,
 ) {
     traverser.enter_if_statement(&mut *node, ctx);
-    let pop_token = ctx
-        .push_stack(Ancestor::IfStatementTest(ancestor::IfStatementWithoutTest(node, PhantomData)));
+    let pop_token = ctx.push_stack(Ancestor::IfStatementTest(ancestor::IfStatementWithoutTest(
+        node,
+        PhantomData,
+    )));
     walk_expression(
         traverser,
         (node as *mut u8).add(ancestor::OFFSET_IF_STATEMENT_TEST) as *mut Expression,
@@ -1653,10 +1657,9 @@ unsafe fn walk_for_statement<'a, State, Tr: Traverse<'a, State>>(
         .get()
         .unwrap();
     ctx.set_current_scope_id(current_scope_id);
-    let pop_token = ctx.push_stack(Ancestor::ForStatementInit(ancestor::ForStatementWithoutInit(
-        node,
-        PhantomData,
-    )));
+    let pop_token = ctx.push_stack(Ancestor::ForStatementInit(
+        ancestor::ForStatementWithoutInit(node, PhantomData),
+    ));
     if let Some(field) = &mut *((node as *mut u8).add(ancestor::OFFSET_FOR_STATEMENT_INIT)
         as *mut Option<ForStatementInit>)
     {
@@ -1967,8 +1970,10 @@ unsafe fn walk_switch_case<'a, State, Tr: Traverse<'a, State>>(
     ctx: &mut TraverseCtx<'a, State>,
 ) {
     traverser.enter_switch_case(&mut *node, ctx);
-    let pop_token = ctx
-        .push_stack(Ancestor::SwitchCaseTest(ancestor::SwitchCaseWithoutTest(node, PhantomData)));
+    let pop_token = ctx.push_stack(Ancestor::SwitchCaseTest(ancestor::SwitchCaseWithoutTest(
+        node,
+        PhantomData,
+    )));
     if let Some(field) =
         &mut *((node as *mut u8).add(ancestor::OFFSET_SWITCH_CASE_TEST) as *mut Option<Expression>)
     {
@@ -2069,10 +2074,9 @@ unsafe fn walk_catch_clause<'a, State, Tr: Traverse<'a, State>>(
         .get()
         .unwrap();
     ctx.set_current_scope_id(current_scope_id);
-    let pop_token = ctx.push_stack(Ancestor::CatchClauseParam(ancestor::CatchClauseWithoutParam(
-        node,
-        PhantomData,
-    )));
+    let pop_token = ctx.push_stack(Ancestor::CatchClauseParam(
+        ancestor::CatchClauseWithoutParam(node, PhantomData),
+    ));
     if let Some(field) = &mut *((node as *mut u8).add(ancestor::OFFSET_CATCH_CLAUSE_PARAM)
         as *mut Option<CatchParameter>)
     {
@@ -2280,8 +2284,10 @@ unsafe fn walk_function<'a, State, Tr: Traverse<'a, State>>(
     ctx.set_current_hoist_scope_id(current_scope_id);
     let previous_block_scope_id = ctx.current_block_scope_id();
     ctx.set_current_block_scope_id(current_scope_id);
-    let pop_token =
-        ctx.push_stack(Ancestor::FunctionId(ancestor::FunctionWithoutId(node, PhantomData)));
+    let pop_token = ctx.push_stack(Ancestor::FunctionId(ancestor::FunctionWithoutId(
+        node,
+        PhantomData,
+    )));
     if let Some(field) = &mut *((node as *mut u8).add(ancestor::OFFSET_FUNCTION_ID)
         as *mut Option<BindingIdentifier>)
     {
@@ -2581,8 +2587,10 @@ unsafe fn walk_class<'a, State, Tr: Traverse<'a, State>>(
     ctx: &mut TraverseCtx<'a, State>,
 ) {
     traverser.enter_class(&mut *node, ctx);
-    let pop_token = ctx
-        .push_stack(Ancestor::ClassDecorators(ancestor::ClassWithoutDecorators(node, PhantomData)));
+    let pop_token = ctx.push_stack(Ancestor::ClassDecorators(ancestor::ClassWithoutDecorators(
+        node,
+        PhantomData,
+    )));
     for item in
         &mut *((node as *mut u8).add(ancestor::OFFSET_CLASS_DECORATORS) as *mut ArenaVec<Decorator>)
     {
@@ -2661,8 +2669,10 @@ unsafe fn walk_class_body<'a, State, Tr: Traverse<'a, State>>(
     ctx: &mut TraverseCtx<'a, State>,
 ) {
     traverser.enter_class_body(&mut *node, ctx);
-    let pop_token =
-        ctx.push_stack(Ancestor::ClassBodyBody(ancestor::ClassBodyWithoutBody(node, PhantomData)));
+    let pop_token = ctx.push_stack(Ancestor::ClassBodyBody(ancestor::ClassBodyWithoutBody(
+        node,
+        PhantomData,
+    )));
     for item in &mut *((node as *mut u8).add(ancestor::OFFSET_CLASS_BODY_BODY)
         as *mut ArenaVec<ClassElement>)
     {
@@ -2791,8 +2801,10 @@ unsafe fn walk_static_block<'a, State, Tr: Traverse<'a, State>>(
     ctx.set_current_hoist_scope_id(current_scope_id);
     let previous_block_scope_id = ctx.current_block_scope_id();
     ctx.set_current_block_scope_id(current_scope_id);
-    let pop_token = ctx
-        .push_stack(Ancestor::StaticBlockBody(ancestor::StaticBlockWithoutBody(node, PhantomData)));
+    let pop_token = ctx.push_stack(Ancestor::StaticBlockBody(ancestor::StaticBlockWithoutBody(
+        node,
+        PhantomData,
+    )));
     walk_statements(
         traverser,
         (node as *mut u8).add(ancestor::OFFSET_STATIC_BLOCK_BODY) as *mut ArenaVec<Statement>,
@@ -3720,10 +3732,9 @@ unsafe fn walk_jsx_attribute<'a, State, Tr: Traverse<'a, State>>(
     ctx: &mut TraverseCtx<'a, State>,
 ) {
     traverser.enter_jsx_attribute(&mut *node, ctx);
-    let pop_token = ctx.push_stack(Ancestor::JSXAttributeName(ancestor::JSXAttributeWithoutName(
-        node,
-        PhantomData,
-    )));
+    let pop_token = ctx.push_stack(Ancestor::JSXAttributeName(
+        ancestor::JSXAttributeWithoutName(node, PhantomData),
+    ));
     walk_jsx_attribute_name(
         traverser,
         (node as *mut u8).add(ancestor::OFFSET_JSX_ATTRIBUTE_NAME) as *mut JSXAttributeName,
@@ -3925,8 +3936,10 @@ unsafe fn walk_ts_enum_member<'a, State, Tr: Traverse<'a, State>>(
     ctx: &mut TraverseCtx<'a, State>,
 ) {
     traverser.enter_ts_enum_member(&mut *node, ctx);
-    let pop_token = ctx
-        .push_stack(Ancestor::TSEnumMemberId(ancestor::TSEnumMemberWithoutId(node, PhantomData)));
+    let pop_token = ctx.push_stack(Ancestor::TSEnumMemberId(ancestor::TSEnumMemberWithoutId(
+        node,
+        PhantomData,
+    )));
     walk_ts_enum_member_name(
         traverser,
         (node as *mut u8).add(ancestor::OFFSET_TS_ENUM_MEMBER_ID) as *mut TSEnumMemberName,
@@ -4183,10 +4196,9 @@ unsafe fn walk_ts_union_type<'a, State, Tr: Traverse<'a, State>>(
     ctx: &mut TraverseCtx<'a, State>,
 ) {
     traverser.enter_ts_union_type(&mut *node, ctx);
-    let pop_token = ctx.push_stack(Ancestor::TSUnionTypeTypes(ancestor::TSUnionTypeWithoutTypes(
-        node,
-        PhantomData,
-    )));
+    let pop_token = ctx.push_stack(Ancestor::TSUnionTypeTypes(
+        ancestor::TSUnionTypeWithoutTypes(node, PhantomData),
+    ));
     for item in
         &mut *((node as *mut u8).add(ancestor::OFFSET_TS_UNION_TYPE_TYPES) as *mut ArenaVec<TSType>)
     {
@@ -5536,8 +5548,10 @@ unsafe fn walk_ts_mapped_type<'a, State, Tr: Traverse<'a, State>>(
         .get()
         .unwrap();
     ctx.set_current_scope_id(current_scope_id);
-    let pop_token = ctx
-        .push_stack(Ancestor::TSMappedTypeKey(ancestor::TSMappedTypeWithoutKey(node, PhantomData)));
+    let pop_token = ctx.push_stack(Ancestor::TSMappedTypeKey(ancestor::TSMappedTypeWithoutKey(
+        node,
+        PhantomData,
+    )));
     walk_binding_identifier(
         traverser,
         (node as *mut u8).add(ancestor::OFFSET_TS_MAPPED_TYPE_KEY) as *mut BindingIdentifier,

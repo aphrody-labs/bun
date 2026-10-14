@@ -130,7 +130,10 @@ impl Rule for EmptyTags {
                     continue;
                 }
 
-                ctx.diagnostic(empty_tags_diagnostic(comment.span_trimmed_first_line(), tag_name));
+                ctx.diagnostic(empty_tags_diagnostic(
+                    comment.span_trimmed_first_line(),
+                    tag_name,
+                ));
             }
         }
     }

@@ -70,7 +70,10 @@ impl Rule for NoExtraBind {
         if !is_method_call(call_expr, None, Some(&["bind"]), Some(1), Some(1)) {
             return;
         }
-        if matches!(call_expr.arguments.first(), Some(Argument::SpreadElement(_))) {
+        if matches!(
+            call_expr.arguments.first(),
+            Some(Argument::SpreadElement(_))
+        ) {
             return;
         }
 

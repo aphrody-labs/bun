@@ -31,7 +31,11 @@ use oxc_markdown_parser::{
 };
 
 pub fn fingerprint(source: &str, root: &Root<'_>) -> String {
-    let mut w = Walker { source, out: String::new(), depth: 0 };
+    let mut w = Walker {
+        source,
+        out: String::new(),
+        depth: 0,
+    };
     w.blocks(&root.children);
     w.out
 }
@@ -153,8 +157,11 @@ impl Walker<'_> {
                 self.line(&format!("table {}", align.join("")));
                 self.nested(|w| {
                     for row in &t.children {
-                        let cells: Vec<String> =
-                            row.children.iter().map(|cell| w.inlines(&cell.children)).collect();
+                        let cells: Vec<String> = row
+                            .children
+                            .iter()
+                            .map(|cell| w.inlines(&cell.children))
+                            .collect();
                         w.line(&format!("row {cells:?}"));
                     }
                 });
@@ -242,8 +249,9 @@ impl Walker<'_> {
             }
             Inline::CodeSpan(c) => {
                 // Prettier's massage: `\n` inside inline code is a space (whitespace is content here)
-                let content =
-                    Segment::join(self.source, &c.pieces).cow_replace('\n', " ").into_owned();
+                let content = Segment::join(self.source, &c.pieces)
+                    .cow_replace('\n', " ")
+                    .into_owned();
                 let _ = write!(out, "<code>{content}</code>");
             }
             Inline::Link(l) => {
@@ -298,7 +306,10 @@ impl Walker<'_> {
                     let _ = write!(out, " title={:?}", decode::title(self.source, title));
                 }
             }
-            LinkKind::Reference { kind, label: pieces } => {
+            LinkKind::Reference {
+                kind,
+                label: pieces,
+            } => {
                 let kind = match kind {
                     ReferenceKind::Full => "full",
                     ReferenceKind::Collapsed => "collapsed",

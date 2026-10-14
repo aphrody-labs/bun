@@ -9,7 +9,13 @@ use crate::{
 #[derive(Debug, Default, Clone)]
 pub struct PreferHooksInOrder;
 
-declare_oxc_lint!(PreferHooksInOrder, vitest, style, docs = DOCUMENTATION, version = "0.6.0",);
+declare_oxc_lint!(
+    PreferHooksInOrder,
+    vitest,
+    style,
+    docs = DOCUMENTATION,
+    version = "0.6.0",
+);
 
 impl Rule for PreferHooksInOrder {
     fn run_once(&self, ctx: &LintContext) {
@@ -1075,7 +1081,12 @@ fn test() {
     pass.extend(pass_vitest.into_iter().map(|x| (x, None)));
     fail.extend(fail_vitest.into_iter().map(|x| (x, None)));
 
-    Tester::new(PreferHooksInOrder::NAME, PreferHooksInOrder::PLUGIN, pass, fail)
-        .with_vitest_plugin(true)
-        .test_and_snapshot();
+    Tester::new(
+        PreferHooksInOrder::NAME,
+        PreferHooksInOrder::PLUGIN,
+        pass,
+        fail,
+    )
+    .with_vitest_plugin(true)
+    .test_and_snapshot();
 }

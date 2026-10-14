@@ -51,7 +51,11 @@ impl<'a, 'b> MemberChain<'a, 'b> {
             compute_remaining_groups(chain_members.drain(remaining_members_start_index..), f);
         let head_group = MemberChainGroup::from(chain_members);
 
-        let mut member_chain = Self { head: head_group, tail: tail_groups, root: call_expression };
+        let mut member_chain = Self {
+            head: head_group,
+            tail: tail_groups,
+            root: call_expression,
+        };
 
         // Here we check if the first element of Groups::groups can be moved inside the head.
         // If so, then we extract it and concatenate it together with the head.
@@ -84,8 +88,10 @@ impl<'a, 'b> MemberChain<'a, 'b> {
             return false;
         }
 
-        let has_computed_property =
-            first_group.members().first().is_some_and(ChainMember::is_computed_expression);
+        let has_computed_property = first_group
+            .members()
+            .first()
+            .is_some_and(ChainMember::is_computed_expression);
 
         if self.head.members().len() == 1
             && let ChainMember::Node(node) = self.head.members()[0]
@@ -161,7 +167,10 @@ impl<'a, 'b> MemberChain<'a, 'b> {
     fn last_call_breaks(&self, f: &JsFormatter<'_, 'a>) -> bool {
         let last_group = self.last_group();
 
-        if matches!(last_group.members().last(), Some(ChainMember::CallExpression { .. })) {
+        if matches!(
+            last_group.members().last(),
+            Some(ChainMember::CallExpression { .. })
+        ) {
             last_group.will_break(f)
         } else {
             false
@@ -203,7 +212,8 @@ impl<'a> Format<'a, JsFormatContext<'a>> for MemberChain<'a, '_> {
     fn fmt(&self, f: &mut JsFormatter<'_, 'a>) {
         let has_comment = self.has_comment(f);
         let format_one_line = format_with(|f| {
-            f.join().entries(iter::once(&self.head).chain(self.tail.iter()));
+            f.join()
+                .entries(iter::once(&self.head).chain(self.tail.iter()));
         });
 
         self.inspect_member_chain_groups(f);
@@ -246,7 +256,13 @@ impl<'a> Format<'a, JsFormatContext<'a>> for MemberChain<'a, '_> {
             }
         });
 
-        write!(f, [labelled(LabelId::of(JsLabels::MemberChain), &format_content)]);
+        write!(
+            f,
+            [labelled(
+                LabelId::of(JsLabels::MemberChain),
+                &format_content
+            )]
+        );
     }
 }
 
@@ -308,9 +324,15 @@ fn compute_remaining_groups<'a, 'b>(
     for member in members {
         let span = member.span();
         let has_trailing_comment =
-            f.comments().comments_after(span.end).first().is_some_and(|comment| {
-                f.source_text().bytes_range(span.end, comment.span.start).trim_ascii().is_empty()
-            });
+            f.comments()
+                .comments_after(span.end)
+                .first()
+                .is_some_and(|comment| {
+                    f.source_text()
+                        .bytes_range(span.end, comment.span.start)
+                        .trim_ascii()
+                        .is_empty()
+                });
 
         match member {
             // [0] should be appended at the end of the group instead of the
@@ -361,12 +383,17 @@ fn is_computed_array_member_access(member: &ChainMember<'_, '_>) -> bool {
 
 fn has_arrow_or_function_expression_arg(call: &AstNode<'_, CallExpression<'_>>) -> bool {
     call.as_ref().arguments.iter().any(|argument| {
-        matches!(&argument, Argument::ArrowFunctionExpression(_) | Argument::FunctionExpression(_))
+        matches!(
+            &argument,
+            Argument::ArrowFunctionExpression(_) | Argument::FunctionExpression(_)
+        )
     })
 }
 
 fn has_simple_arguments<'a>(call: &AstNode<'a, CallExpression<'a>>) -> bool {
-    call.arguments().iter().all(|argument| SimpleArgument::new(argument).is_simple())
+    call.arguments()
+        .iter()
+        .all(|argument| SimpleArgument::new(argument).is_simple())
 }
 
 /// In order to detect those cases, we use an heuristic: if the first
@@ -391,7 +418,9 @@ pub fn is_member_call_chain<'a>(
     expression: &AstNode<'a, CallExpression<'a>>,
     f: &JsFormatter<'_, 'a>,
 ) -> bool {
-    MemberChain::from_call_expression(expression, f).tail.is_member_call_chain()
+    MemberChain::from_call_expression(expression, f)
+        .tail
+        .is_member_call_chain()
 }
 
 fn has_short_name(name: &str, tab_width: u8) -> bool {
@@ -423,12 +452,19 @@ fn chain_members_iter<'a, 'b>(
                     *next = Some(callee);
                 }
 
-                ChainMember::CallExpression { expression: expr, position }
+                ChainMember::CallExpression {
+                    expression: expr,
+                    position,
+                }
             };
 
         if is_root {
             is_root = false;
-            return Some(handle_call_expression(CallExpressionPosition::End, root, &mut next));
+            return Some(handle_call_expression(
+                CallExpressionPosition::End,
+                root,
+                &mut next,
+            ));
         }
 
         let expression = next.take()?;

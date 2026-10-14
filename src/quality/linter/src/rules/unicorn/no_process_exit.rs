@@ -78,7 +78,13 @@ fn has_hashbang(ctx: &LintContext) -> bool {
 fn is_inside_process_event_handler(ctx: &LintContext, node: &AstNode) -> bool {
     for parent in ctx.nodes().ancestors(node.id()) {
         if let AstKind::CallExpression(expr) = parent.kind()
-            && is_method_call(expr, Some(&["process"]), Some(&["on", "once"]), Some(1), None)
+            && is_method_call(
+                expr,
+                Some(&["process"]),
+                Some(&["on", "once"]),
+                Some(1),
+                None,
+            )
         {
             return true;
         }
@@ -89,7 +95,10 @@ fn is_inside_process_event_handler(ctx: &LintContext, node: &AstNode) -> bool {
 
 fn is_worker_threads_imported(ctx: &LintContext) -> bool {
     ctx.module_record().import_entries.iter().any(|entry| {
-        matches!(entry.module_request.name(), "worker_threads" | "node:worker_threads")
+        matches!(
+            entry.module_request.name(),
+            "worker_threads" | "node:worker_threads"
+        )
     })
 }
 

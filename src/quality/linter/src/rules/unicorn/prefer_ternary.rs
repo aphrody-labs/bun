@@ -77,8 +77,10 @@ impl Rule for PreferTernary {
             return;
         };
 
-        if matches!(if_statement.test.get_inner_expression(), Expression::ConditionalExpression(_))
-            || is_else_if_branch(node, if_statement, ctx)
+        if matches!(
+            if_statement.test.get_inner_expression(),
+            Expression::ConditionalExpression(_)
+        ) || is_else_if_branch(node, if_statement, ctx)
         {
             return;
         }
@@ -101,7 +103,10 @@ impl Rule for PreferTernary {
         if is_mergeable(
             MergeNode::Body(consequent),
             MergeNode::Body(alternate),
-            MergeOptions { check_throw_statement: true, strict: true },
+            MergeOptions {
+                check_throw_statement: true,
+                strict: true,
+            },
             ctx,
         ) {
             ctx.diagnostic(prefer_ternary_diagnostic(if_statement.span));
@@ -195,9 +200,18 @@ fn is_mergeable<'a>(
             && !is_ternary_option_expression(alternate.argument.as_ref()) =>
         {
             is_mergeable(
-                consequent.argument.as_ref().map_or(MergeNode::Undefined, MergeNode::Expression),
-                alternate.argument.as_ref().map_or(MergeNode::Undefined, MergeNode::Expression),
-                MergeOptions { strict: false, ..options },
+                consequent
+                    .argument
+                    .as_ref()
+                    .map_or(MergeNode::Undefined, MergeNode::Expression),
+                alternate
+                    .argument
+                    .as_ref()
+                    .map_or(MergeNode::Undefined, MergeNode::Expression),
+                MergeOptions {
+                    strict: false,
+                    ..options
+                },
                 ctx,
             )
         }
@@ -209,9 +223,18 @@ fn is_mergeable<'a>(
             && !is_ternary_option_expression(alternate.argument.as_ref()) =>
         {
             is_mergeable(
-                consequent.argument.as_ref().map_or(MergeNode::Undefined, MergeNode::Expression),
-                alternate.argument.as_ref().map_or(MergeNode::Undefined, MergeNode::Expression),
-                MergeOptions { strict: false, ..options },
+                consequent
+                    .argument
+                    .as_ref()
+                    .map_or(MergeNode::Undefined, MergeNode::Expression),
+                alternate
+                    .argument
+                    .as_ref()
+                    .map_or(MergeNode::Undefined, MergeNode::Expression),
+                MergeOptions {
+                    strict: false,
+                    ..options
+                },
                 ctx,
             )
         }
@@ -224,7 +247,10 @@ fn is_mergeable<'a>(
             is_mergeable(
                 MergeNode::Expression(&consequent.argument),
                 MergeNode::Expression(&alternate.argument),
-                MergeOptions { strict: false, ..options },
+                MergeOptions {
+                    strict: false,
+                    ..options
+                },
                 ctx,
             )
         }
@@ -248,7 +274,10 @@ fn is_mergeable<'a>(
             is_mergeable(
                 MergeNode::Expression(&consequent.right),
                 MergeNode::Expression(&alternate.right),
-                MergeOptions { strict: false, ..options },
+                MergeOptions {
+                    strict: false,
+                    ..options
+                },
                 ctx,
             )
         }
@@ -280,7 +309,10 @@ fn is_ternary_option_expression(expression: Option<&Expression<'_>>) -> bool {
 }
 
 fn is_ternary_expression(expression: &Expression<'_>) -> bool {
-    matches!(expression.get_inner_expression(), Expression::ConditionalExpression(_))
+    matches!(
+        expression.get_inner_expression(),
+        Expression::ConditionalExpression(_)
+    )
 }
 
 fn is_same_assignment_target(
@@ -299,9 +331,10 @@ fn is_same_assignment_target(
     if let (Some(left_member), Some(right_member)) =
         (left.as_member_expression(), right.as_member_expression())
     {
-        if let (Some(left_name), Some(right_name)) =
-            (member_static_property_name(left_member), member_static_property_name(right_member))
-        {
+        if let (Some(left_name), Some(right_name)) = (
+            member_static_property_name(left_member),
+            member_static_property_name(right_member),
+        ) {
             return left_name == right_name
                 && is_same_expression(
                     left_member.object().get_inner_expression(),

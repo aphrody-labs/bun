@@ -36,7 +36,9 @@ pub struct PreferStructuredCloneConfig {
 
 impl Default for PreferStructuredCloneConfig {
     fn default() -> Self {
-        Self { functions: vec!["cloneDeep".to_string(), "utils.clone".to_string()] }
+        Self {
+            functions: vec!["cloneDeep".to_string(), "utils.clone".to_string()],
+        }
     }
 }
 
@@ -97,7 +99,13 @@ impl Rule for PreferStructuredClone {
             return;
         }
 
-        if is_method_call(call_expr, Some(&["JSON"]), Some(&["parse"]), Some(1), Some(1)) {
+        if is_method_call(
+            call_expr,
+            Some(&["JSON"]),
+            Some(&["parse"]),
+            Some(1),
+            Some(1),
+        ) {
             let Some(first_argument) = call_expr.arguments[0].as_expression() else {
                 return;
             };
@@ -227,18 +235,53 @@ fn test() {
             "myCustomDeepCloneFunction(foo,)",
             Some(serde_json::json!([{"functions": ["myCustomDeepCloneFunction"]}])),
         ),
-        ("my.cloneDeep(foo,)", Some(serde_json::json!([{"functions": ["my.cloneDeep"]}]))),
+        (
+            "my.cloneDeep(foo,)",
+            Some(serde_json::json!([{"functions": ["my.cloneDeep"]}])),
+        ),
     ];
 
     let fix = vec![
-        ("JSON.parse((JSON.stringify((foo))))", "structuredClone(foo)", None),
-        ("JSON.parse(JSON.stringify(foo))", "structuredClone(foo)", None),
-        ("JSON.parse(JSON.stringify(foo),)", "structuredClone(foo)", None),
-        ("JSON.parse(JSON.stringify(foo,))", "structuredClone(foo)", None),
-        ("JSON.parse(JSON.stringify(foo,),)", "structuredClone(foo)", None),
-        ("JSON.parse( ((JSON.stringify)) (foo))", "structuredClone(foo)", None),
-        ("(( JSON.parse)) (JSON.stringify(foo))", "structuredClone(foo)", None),
-        ("JSON.parse(JSON.stringify( ((foo)) ))", "structuredClone(foo)", None),
+        (
+            "JSON.parse((JSON.stringify((foo))))",
+            "structuredClone(foo)",
+            None,
+        ),
+        (
+            "JSON.parse(JSON.stringify(foo))",
+            "structuredClone(foo)",
+            None,
+        ),
+        (
+            "JSON.parse(JSON.stringify(foo),)",
+            "structuredClone(foo)",
+            None,
+        ),
+        (
+            "JSON.parse(JSON.stringify(foo,))",
+            "structuredClone(foo)",
+            None,
+        ),
+        (
+            "JSON.parse(JSON.stringify(foo,),)",
+            "structuredClone(foo)",
+            None,
+        ),
+        (
+            "JSON.parse( ((JSON.stringify)) (foo))",
+            "structuredClone(foo)",
+            None,
+        ),
+        (
+            "(( JSON.parse)) (JSON.stringify(foo))",
+            "structuredClone(foo)",
+            None,
+        ),
+        (
+            "JSON.parse(JSON.stringify( ((foo)) ))",
+            "structuredClone(foo)",
+            None,
+        ),
         (
             "JSON.parse(JSON.stringify( ((foo.bar['hello'])) ))",
             "structuredClone(foo.bar['hello'])",
@@ -278,7 +321,12 @@ fn test() {
         ),
     ];
 
-    Tester::new(PreferStructuredClone::NAME, PreferStructuredClone::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        PreferStructuredClone::NAME,
+        PreferStructuredClone::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

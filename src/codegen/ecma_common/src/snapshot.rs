@@ -26,7 +26,10 @@ impl Snapshot {
                 .stdout;
             String::from_utf8(output).unwrap().trim().to_string()
         });
-        Self { git_repo_path: git_repo_path.to_path_buf(), sha }
+        Self {
+            git_repo_path: git_repo_path.to_path_buf(),
+            sha,
+        }
     }
 
     /// # Panics

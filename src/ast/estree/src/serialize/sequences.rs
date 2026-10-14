@@ -117,12 +117,19 @@ mod tests {
             }
         }
 
-        let foo = Foo { none: &[], one: &["one"], two: ["two one", "two two"] };
+        let foo = Foo {
+            none: &[],
+            one: &["one"],
+            two: ["two one", "two two"],
+        };
 
         let mut serializer = CompactSerializer::default();
         foo.serialize(&mut serializer);
         let s = serializer.into_string();
-        assert_eq!(&s, r#"{"none":[],"one":["one"],"two":["two one","two two"]}"#);
+        assert_eq!(
+            &s,
+            r#"{"none":[],"one":["one"],"two":["two one","two two"]}"#
+        );
 
         let mut serializer = PrettySerializer::default();
         foo.serialize(&mut serializer);

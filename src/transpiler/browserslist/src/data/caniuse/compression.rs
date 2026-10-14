@@ -23,7 +23,10 @@ pub fn decompress_blob(blob: &[u8]) -> Vec<u8> {
         0,
         TINFL_FLAG_USING_NON_WRAPPING_OUTPUT_BUF,
     );
-    assert!(status == TINFLStatus::Done && written == len, "Failed to decompress data");
+    assert!(
+        status == TINFLStatus::Done && written == len,
+        "Failed to decompress data"
+    );
     data
 }
 
@@ -72,7 +75,10 @@ pub struct LazyData<T> {
 
 impl<T: DeserializeOwned> LazyData<T> {
     pub const fn new(compressed: &'static [u8]) -> Self {
-        Self { compressed, cell: OnceLock::new() }
+        Self {
+            compressed,
+            cell: OnceLock::new(),
+        }
     }
 
     pub fn get(&self) -> &T {
@@ -90,7 +96,10 @@ pub struct LazyBlob {
 
 impl LazyBlob {
     pub const fn new(compressed: &'static [u8]) -> Self {
-        Self { compressed, cell: OnceLock::new() }
+        Self {
+            compressed,
+            cell: OnceLock::new(),
+        }
     }
 
     pub fn get(&self) -> &[u8] {

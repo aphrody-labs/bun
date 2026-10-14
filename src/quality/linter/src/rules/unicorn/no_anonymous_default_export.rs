@@ -81,9 +81,10 @@ impl Rule for NoAnonymousDefaultExport {
                 {
                     Some((function_decl.span, ErrorNodeKind::Function))
                 }
-                _ => {
-                    export_decl.declaration.as_expression().and_then(is_anonymous_class_or_function)
-                }
+                _ => export_decl
+                    .declaration
+                    .as_expression()
+                    .and_then(is_anonymous_class_or_function),
             },
             // CommonJS: module.exports
             AstKind::AssignmentExpression(expr)
@@ -226,6 +227,11 @@ fn test() {
         ("@decorator @decorator(class {}) export default class {}"),
     ];
 
-    Tester::new(NoAnonymousDefaultExport::NAME, NoAnonymousDefaultExport::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        NoAnonymousDefaultExport::NAME,
+        NoAnonymousDefaultExport::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

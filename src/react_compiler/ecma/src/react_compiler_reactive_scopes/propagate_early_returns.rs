@@ -40,7 +40,10 @@ const EARLY_RETURN_SENTINEL: &str = "react.early_return_sentinel";
 /// TS: `propagateEarlyReturns`
 pub fn propagate_early_returns<'a>(func: &mut ReactiveFunction<'a>, env: &mut Environment<'a>) {
     let mut transform = Transform { env };
-    let mut state = State { within_reactive_scope: false, early_return_value: None };
+    let mut state = State {
+        within_reactive_scope: false,
+        early_return_value: None,
+    };
     // The TS version doesn't produce errors from this pass, so we ignore the Result.
     let _ = transform_reactive_function(func, &mut transform, &mut state);
 }
@@ -127,7 +130,11 @@ impl<'a, 'e> ReactiveFunctionTransform<'a> for Transform<'a, 'e> {
                 let identifier_id = create_generated_temporary_place_id(self.env);
                 promote_temporary(self.env, identifier_id);
                 let label = self.env.next_block_id();
-                EarlyReturnInfo { value: identifier_id, span, label }
+                EarlyReturnInfo {
+                    value: identifier_id,
+                    span,
+                    label,
+                }
             };
 
             state.early_return_value = Some(early_return_value.clone());
@@ -198,7 +205,10 @@ fn apply_early_return_to_scope<'a>(
     // Add the early return identifier as a scope declaration
     env.scopes[scope_id].declarations.push((
         early_return.value,
-        ReactiveScopeDeclaration { identifier: early_return.value, scope: scope_id },
+        ReactiveScopeDeclaration {
+            identifier: early_return.value,
+            scope: scope_id,
+        },
     ));
 
     // Create temporary places for the sentinel initialization
@@ -222,7 +232,9 @@ fn apply_early_return_to_scope<'a>(
                     span: None, // GeneratedSource
                 }),
                 value: ReactiveValue::Instruction(InstructionValue::LoadGlobal {
-                    binding: NonLocalBinding::Global { name: Ident::from("Symbol") },
+                    binding: NonLocalBinding::Global {
+                        name: Ident::from("Symbol"),
+                    },
                     span: None,
                 }),
                 span: None,
@@ -327,7 +339,10 @@ fn apply_early_return_to_scope<'a>(
             // Label terminal wrapping the original instructions
             ReactiveStatement::Terminal(ArenaBox::new_in(
                 ReactiveTerminalStatement {
-                    label: Some(ReactiveLabel { id: early_return.label, implicit: false }),
+                    label: Some(ReactiveLabel {
+                        id: early_return.label,
+                        implicit: false,
+                    }),
                     terminal: ReactiveTerminal::Label {
                         block: original_instructions,
                         block_span: None,
@@ -352,6 +367,9 @@ fn create_generated_temporary_place_id(env: &mut Environment) -> IdentifierId {
 
 fn promote_temporary<'a>(env: &mut Environment<'a>, identifier_id: IdentifierId) {
     let decl_id = env.identifiers[identifier_id].declaration_id;
-    env.identifiers[identifier_id].name =
-        Some(IdentifierName::Promoted(format_ident!(env.allocator, "#t{}", decl_id.index())));
+    env.identifiers[identifier_id].name = Some(IdentifierName::Promoted(format_ident!(
+        env.allocator,
+        "#t{}",
+        decl_id.index()
+    )));
 }

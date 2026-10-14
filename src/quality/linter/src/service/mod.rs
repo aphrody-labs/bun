@@ -29,7 +29,11 @@ impl LintServiceOptions {
     where
         T: Into<Box<Path>>,
     {
-        Self { cwd: cwd.into(), tsconfig: None, cross_module: false }
+        Self {
+            cwd: cwd.into(),
+            tsconfig: None,
+            cross_module: false,
+        }
     }
 
     #[inline]
@@ -40,7 +44,11 @@ impl LintServiceOptions {
     {
         let tsconfig = tsconfig.into();
         // Should this be canonicalized?
-        let tsconfig = if tsconfig.is_relative() { self.cwd.join(tsconfig) } else { tsconfig };
+        let tsconfig = if tsconfig.is_relative() {
+            self.cwd.join(tsconfig)
+        } else {
+            tsconfig
+        };
         debug_assert!(tsconfig.is_file());
 
         self.tsconfig = Some(tsconfig);
@@ -79,7 +87,13 @@ impl LintService {
         diff_manager: &Arc<DiffManager>,
         rule_timing_store: Option<&RuleTimingStore>,
     ) {
-        self.runtime.run::<TIMINGS>(file_system, paths, tx_error, diff_manager, rule_timing_store);
+        self.runtime.run::<TIMINGS>(
+            file_system,
+            paths,
+            tx_error,
+            diff_manager,
+            rule_timing_store,
+        );
     }
 
     pub fn set_disable_directives_map(
@@ -103,7 +117,8 @@ impl LintService {
         paths: Vec<Arc<OsStr>>,
         tx_error: &DiagnosticSender,
     ) {
-        self.runtime.collect_parse_diagnostics(file_system, paths, tx_error);
+        self.runtime
+            .collect_parse_diagnostics(file_system, paths, tx_error);
     }
 
     /// For tests
@@ -115,6 +130,7 @@ impl LintService {
         check_syntax_errors: bool,
         tx_error: &DiagnosticSender,
     ) -> Vec<crate::Message> {
-        self.runtime.run_test_source(file_system, paths, check_syntax_errors, tx_error)
+        self.runtime
+            .run_test_source(file_system, paths, check_syntax_errors, tx_error)
     }
 }

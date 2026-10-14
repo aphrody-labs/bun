@@ -120,14 +120,18 @@ fn check_forward_ref_inner<'a>(
         }
         fixed.push_str(", ref)");
 
-        fixer.replace(params.span, fixed).with_message("add `ref` parameter")
+        fixer
+            .replace(params.span, fixed)
+            .with_message("add `ref` parameter")
     };
 
     if can_remove_forward_ref {
         ctx.diagnostics_with_multiple_fixes(
             forward_ref_uses_ref_diagnostic(span),
             (FixKind::Suggestion, |fixer: RuleFixer<'_, 'a>| {
-                fixer.replace_with(call_expr, exp).with_message("remove `forwardRef` wrapper")
+                fixer
+                    .replace_with(call_expr, exp)
+                    .with_message("remove `forwardRef` wrapper")
             }),
             (FixKind::Suggestion, add_ref_parameter_fix),
         );
@@ -236,28 +240,63 @@ fn test() {
 
     let fix: Vec<ExpectFixTestCase> = vec![
         // Arrow functions - two fixes (remove wrapper or add ref)
-        ("forwardRef((a) => {})", ("(a) => {}", "forwardRef((a, ref) => {})")).into(),
-        ("forwardRef(a => {})", ("a => {}", "forwardRef((a, ref) => {})")).into(),
+        (
+            "forwardRef((a) => {})",
+            ("(a) => {}", "forwardRef((a, ref) => {})"),
+        )
+            .into(),
+        (
+            "forwardRef(a => {})",
+            ("a => {}", "forwardRef((a, ref) => {})"),
+        )
+            .into(),
         // Named function expressions - two fixes
         (
             "forwardRef(function Component(a) {})",
-            ("function Component(a) {}", "forwardRef(function Component(a, ref) {})"),
+            (
+                "function Component(a) {}",
+                "forwardRef(function Component(a, ref) {})",
+            ),
         )
             .into(),
         // Anonymous functions in expression context - two fixes
         (
             "const x = forwardRef(function(a) {})",
-            ("const x = function(a) {}", "const x = forwardRef(function(a, ref) {})"),
+            (
+                "const x = function(a) {}",
+                "const x = forwardRef(function(a, ref) {})",
+            ),
         )
             .into(),
         // Anonymous functions in statement context - one fix (add ref only)
-        ("forwardRef(function (a) {})", "forwardRef(function (a, ref) {})").into(),
-        ("forwardRef(function(a,) {})", "forwardRef(function(a, ref) {})").into(),
-        ("forwardRef(function(a, ) {})", "forwardRef(function(a, ref) {})").into(),
-        ("React.forwardRef(function(a) {})", "React.forwardRef(function(a, ref) {})").into(),
+        (
+            "forwardRef(function (a) {})",
+            "forwardRef(function (a, ref) {})",
+        )
+            .into(),
+        (
+            "forwardRef(function(a,) {})",
+            "forwardRef(function(a, ref) {})",
+        )
+            .into(),
+        (
+            "forwardRef(function(a, ) {})",
+            "forwardRef(function(a, ref) {})",
+        )
+            .into(),
+        (
+            "React.forwardRef(function(a) {})",
+            "React.forwardRef(function(a, ref) {})",
+        )
+            .into(),
     ];
 
-    Tester::new(ForwardRefUsesRef::NAME, ForwardRefUsesRef::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        ForwardRefUsesRef::NAME,
+        ForwardRefUsesRef::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

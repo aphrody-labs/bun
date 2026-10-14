@@ -10,15 +10,25 @@ pub struct ParsedCookie {
 
 pub fn parse_cdp_cookie(value: &Value) -> Option<ParsedCookie> {
     let name = value.get("name").and_then(|v| v.as_str())?.to_string();
-    let cookie_value = value.get("value").and_then(|v| v.as_str()).unwrap_or("").to_string();
+    let cookie_value = value
+        .get("value")
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .to_string();
 
-    let url_parsed =
-        value.get("url").and_then(|v| v.as_str()).and_then(|u| url::Url::parse(u).ok());
+    let url_parsed = value
+        .get("url")
+        .and_then(|v| v.as_str())
+        .and_then(|u| url::Url::parse(u).ok());
 
     let explicit_domain = value.get("domain").and_then(|v| v.as_str());
     let domain = explicit_domain
         .map(str::to_string)
-        .or_else(|| url_parsed.as_ref().and_then(|u| u.host_str().map(str::to_string)))
+        .or_else(|| {
+            url_parsed
+                .as_ref()
+                .and_then(|u| u.host_str().map(str::to_string))
+        })
         .unwrap_or_default();
 
     if domain.is_empty() {
@@ -29,13 +39,30 @@ pub fn parse_cdp_cookie(value: &Value) -> Option<ParsedCookie> {
         .get("path")
         .and_then(|v| v.as_str())
         .map(|s| s.to_string())
-        .or_else(|| url_parsed.as_ref().map(|u| bun_browser_net::default_cookie_path(u.path())))
+        .or_else(|| {
+            url_parsed
+                .as_ref()
+                .map(|u| bun_browser_net::default_cookie_path(u.path()))
+        })
         .unwrap_or_else(|| DEFAULT_COOKIE_PATH.to_string());
 
-    let secure = value.get("secure").and_then(|v| v.as_bool()).unwrap_or(false);
-    let http_only = value.get("httpOnly").and_then(|v| v.as_bool()).unwrap_or(false);
-    let same_site = value.get("sameSite").and_then(|v| v.as_str()).unwrap_or("").to_string();
-    let expires = value.get("expires").and_then(|v| v.as_f64()).map(|f| f as i64);
+    let secure = value
+        .get("secure")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
+    let http_only = value
+        .get("httpOnly")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
+    let same_site = value
+        .get("sameSite")
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .to_string();
+    let expires = value
+        .get("expires")
+        .and_then(|v| v.as_f64())
+        .map(|f| f as i64);
 
     Some(ParsedCookie {
         cookie: CookieInfo {
@@ -64,14 +91,20 @@ pub fn parse_delete_cookies_params(params: &Value) -> Option<DeleteCookiesFilter
         return None;
     }
 
-    let url_parsed =
-        params.get("url").and_then(|v| v.as_str()).and_then(|u| url::Url::parse(u).ok());
+    let url_parsed = params
+        .get("url")
+        .and_then(|v| v.as_str())
+        .and_then(|u| url::Url::parse(u).ok());
 
     let domain = params
         .get("domain")
         .and_then(|v| v.as_str())
         .map(|s| s.to_string())
-        .or_else(|| url_parsed.as_ref().and_then(|u| u.host_str().map(|h| h.to_string())))
+        .or_else(|| {
+            url_parsed
+                .as_ref()
+                .and_then(|u| u.host_str().map(|h| h.to_string()))
+        })
         .unwrap_or_default();
 
     let path = params
@@ -133,14 +166,12 @@ mod tests {
 
         let jar = bun_browser_net::CookieJar::new();
         jar.set_cookies_from_cdp_with_scope([(c, parsed.host_only)]);
-        assert!(
-            jar.get_cookie_header(&url::Url::parse("https://api.example.com/v1/item").unwrap())
-                .contains("tok=xyz")
-        );
-        assert!(
-            jar.get_cookie_header(&url::Url::parse("https://sub.api.example.com/v1/item").unwrap())
-                .is_empty()
-        );
+        assert!(jar
+            .get_cookie_header(&url::Url::parse("https://api.example.com/v1/item").unwrap())
+            .contains("tok=xyz"));
+        assert!(jar
+            .get_cookie_header(&url::Url::parse("https://sub.api.example.com/v1/item").unwrap())
+            .is_empty());
     }
 
     #[test]

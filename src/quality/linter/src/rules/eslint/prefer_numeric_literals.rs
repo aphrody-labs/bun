@@ -303,28 +303,68 @@ fn test() {
     ];
 
     let fix = vec![
-        (r#"parseInt("111110111", 2) === 503;"#, "0b111110111 === 503;", None),
+        (
+            r#"parseInt("111110111", 2) === 503;"#,
+            "0b111110111 === 503;",
+            None,
+        ),
         (r#"parseInt("767", 8) === 503;"#, "0o767 === 503;", None),
         (r#"parseInt("1F7", 16) === 255;"#, "0x1F7 === 255;", None),
-        (r#"Number.parseInt("111110111", 2) === 503;"#, "0b111110111 === 503;", None),
-        (r#"Number.parseInt("767", 8) === 503;"#, "0o767 === 503;", None),
-        (r#"Number.parseInt("1F7", 16) === 255;"#, "0x1F7 === 255;", None),
-        ("parseInt(`111110111`, 2) === 503;", "0b111110111 === 503;", None),
+        (
+            r#"Number.parseInt("111110111", 2) === 503;"#,
+            "0b111110111 === 503;",
+            None,
+        ),
+        (
+            r#"Number.parseInt("767", 8) === 503;"#,
+            "0o767 === 503;",
+            None,
+        ),
+        (
+            r#"Number.parseInt("1F7", 16) === 255;"#,
+            "0x1F7 === 255;",
+            None,
+        ),
+        (
+            "parseInt(`111110111`, 2) === 503;",
+            "0b111110111 === 503;",
+            None,
+        ),
         ("parseInt(`767`, 8) === 503;", "0o767 === 503;", None),
         ("parseInt(`1F7`, 16) === 255;", "0x1F7 === 255;", None),
         ("parseInt('11', 2)", "0b11", None),
         ("Number.parseInt('67', 8)", "0o67", None),
         ("5+parseInt('A', 16)", "5+0xA", None),
-        ("function *f(){ yield(Number).parseInt('11', 2) }", "function *f(){ yield 0b11 }", None),
-        ("function *f(){ yield(Number.parseInt)('67', 8) }", "function *f(){ yield 0o67 }", None),
-        ("function *f(){ yield(parseInt)('A', 16) }", "function *f(){ yield 0xA }", None),
-        ("function *f(){ yield Number.parseInt('11', 2) }", "function *f(){ yield 0b11 }", None),
+        (
+            "function *f(){ yield(Number).parseInt('11', 2) }",
+            "function *f(){ yield 0b11 }",
+            None,
+        ),
+        (
+            "function *f(){ yield(Number.parseInt)('67', 8) }",
+            "function *f(){ yield 0o67 }",
+            None,
+        ),
+        (
+            "function *f(){ yield(parseInt)('A', 16) }",
+            "function *f(){ yield 0xA }",
+            None,
+        ),
+        (
+            "function *f(){ yield Number.parseInt('11', 2) }",
+            "function *f(){ yield 0b11 }",
+            None,
+        ),
         (
             "function *f(){ yield/**/Number.parseInt('67', 8) }",
             "function *f(){ yield/**/0o67 }",
             None,
         ),
-        ("function *f(){ yield(parseInt('A', 16)) }", "function *f(){ yield(0xA) }", None),
+        (
+            "function *f(){ yield(parseInt('A', 16)) }",
+            "function *f(){ yield(0xA) }",
+            None,
+        ),
         ("parseInt('11', 2)+5", "0b11+5", None),
         ("Number.parseInt('17', 8)+5", "0o17+5", None),
         ("parseInt('A', 16)+5", "0xA+5", None),
@@ -334,8 +374,16 @@ fn test() {
         ("parseInt('11', 2) in foo", "0b11 in foo", None),
         ("Number.parseInt('17', 8)/**/in foo", "0o17/**/in foo", None),
         ("(parseInt('A', 16))in foo", "(0xA)in foo", None),
-        ("/* comment */Number.parseInt('11', 2);", "/* comment */0b11;", None),
-        ("Number.parseInt('11', 2)/* comment */;", "0b11/* comment */;", None),
+        (
+            "/* comment */Number.parseInt('11', 2);",
+            "/* comment */0b11;",
+            None,
+        ),
+        (
+            "Number.parseInt('11', 2)/* comment */;",
+            "0b11/* comment */;",
+            None,
+        ),
         (
             "parseInt('11', 2)//comment
     ;",
@@ -344,13 +392,34 @@ fn test() {
             None,
         ),
         (r#"parseInt?.("1F7", 16) === 255;"#, "0x1F7 === 255;", None),
-        (r#"Number?.parseInt("1F7", 16) === 255;"#, "0x1F7 === 255;", None),
-        (r#"Number?.parseInt?.("1F7", 16) === 255;"#, "0x1F7 === 255;", None),
-        (r#"(Number?.parseInt)("1F7", 16) === 255;"#, "0x1F7 === 255;", None),
-        (r#"(Number?.parseInt)?.("1F7", 16) === 255;"#, "0x1F7 === 255;", None),
+        (
+            r#"Number?.parseInt("1F7", 16) === 255;"#,
+            "0x1F7 === 255;",
+            None,
+        ),
+        (
+            r#"Number?.parseInt?.("1F7", 16) === 255;"#,
+            "0x1F7 === 255;",
+            None,
+        ),
+        (
+            r#"(Number?.parseInt)("1F7", 16) === 255;"#,
+            "0x1F7 === 255;",
+            None,
+        ),
+        (
+            r#"(Number?.parseInt)?.("1F7", 16) === 255;"#,
+            "0x1F7 === 255;",
+            None,
+        ),
     ];
 
-    Tester::new(PreferNumericLiterals::NAME, PreferNumericLiterals::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        PreferNumericLiterals::NAME,
+        PreferNumericLiterals::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

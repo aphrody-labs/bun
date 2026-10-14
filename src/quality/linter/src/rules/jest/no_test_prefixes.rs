@@ -12,7 +12,14 @@ use crate::{
 #[derive(Debug, Default, Clone)]
 pub struct NoTestPrefixes;
 
-declare_oxc_lint!(NoTestPrefixes, jest, style, fix, docs = DOCUMENTATION, version = "0.0.7",);
+declare_oxc_lint!(
+    NoTestPrefixes,
+    jest,
+    style,
+    fix,
+    docs = DOCUMENTATION,
+    version = "0.0.7",
+);
 
 impl Rule for NoTestPrefixes {
     fn run_on_jest_node<'a, 'c>(
@@ -83,8 +90,14 @@ fn test() {
     ];
 
     let fix = vec![
-        ("xdescribe('foo', () => {})", "describe.skip('foo', () => {})"),
-        ("fdescribe('foo', () => {})", "describe.only('foo', () => {})"),
+        (
+            "xdescribe('foo', () => {})",
+            "describe.skip('foo', () => {})",
+        ),
+        (
+            "fdescribe('foo', () => {})",
+            "describe.only('foo', () => {})",
+        ),
         ("xtest('foo', () => {})", "test.skip('foo', () => {})"),
         // NOTE(@DonIsaac): is this intentional?
         // ("ftest('foo', () => {})", "test.only('foo', () => {})"),

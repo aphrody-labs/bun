@@ -105,9 +105,10 @@ impl Rule for NoInferrableTypes {
                 {
                     return;
                 }
-                if let (Some(init), Some(type_annotation)) =
-                    (&property_definition.value, &property_definition.type_annotation)
-                    && is_inferrable_type(type_annotation, init)
+                if let (Some(init), Some(type_annotation)) = (
+                    &property_definition.value,
+                    &property_definition.type_annotation,
+                ) && is_inferrable_type(type_annotation, init)
                 {
                     let delete_span = get_delete_span(
                         ctx,
@@ -212,7 +213,10 @@ fn is_inferrable_type(type_annotation: &TSTypeAnnotation, init: &Expression) -> 
                 return true;
             }
             if let Expression::CallExpression(call_expr) = init.get_inner_expression() {
-                call_expr.callee.get_identifier_reference().is_some_and(|id| id.name == "Symbol")
+                call_expr
+                    .callee
+                    .get_identifier_reference()
+                    .is_some_and(|id| id.name == "Symbol")
             } else {
                 false
             }
@@ -239,7 +243,10 @@ fn is_chain_call_expression_with_name(init: &Expression, name: &str) -> bool {
     if let Expression::ChainExpression(chain_expr) = init
         && let ChainElement::CallExpression(call_expr) = &chain_expr.expression
     {
-        return call_expr.callee.get_identifier_reference().is_some_and(|id| id.name == name);
+        return call_expr
+            .callee
+            .get_identifier_reference()
+            .is_some_and(|id| id.name == name);
     }
     false
 }
@@ -266,9 +273,10 @@ fn is_init_bigint(init: &Expression) -> bool {
     }
 
     match init {
-        Expression::CallExpression(call_expr) => {
-            call_expr.callee.get_identifier_reference().is_some_and(|id| id.name == "BigInt")
-        }
+        Expression::CallExpression(call_expr) => call_expr
+            .callee
+            .get_identifier_reference()
+            .is_some_and(|id| id.name == "BigInt"),
         Expression::BigIntLiteral(_) => true,
         _ => false,
     }
@@ -282,9 +290,10 @@ fn is_init_boolean(init: &Expression) -> bool {
         Expression::UnaryExpression(unary_expr) => {
             matches!(unary_expr.operator, UnaryOperator::LogicalNot)
         }
-        Expression::CallExpression(call_expr) => {
-            call_expr.callee.get_identifier_reference().is_some_and(|id| id.name == "Boolean")
-        }
+        Expression::CallExpression(call_expr) => call_expr
+            .callee
+            .get_identifier_reference()
+            .is_some_and(|id| id.name == "Boolean"),
         Expression::BooleanLiteral(_) => true,
         _ => false,
     }
@@ -315,9 +324,10 @@ fn is_init_number(init: &Expression) -> bool {
     }
     match init {
         Expression::Identifier(id) => id.name == "Infinity" || id.name == "NaN",
-        Expression::CallExpression(call_expr) => {
-            call_expr.callee.get_identifier_reference().is_some_and(|id| id.name == "Number")
-        }
+        Expression::CallExpression(call_expr) => call_expr
+            .callee
+            .get_identifier_reference()
+            .is_some_and(|id| id.name == "Number"),
         Expression::NumericLiteral(_) => true,
         _ => false,
     }
@@ -327,9 +337,10 @@ fn is_init_string(init: &Expression) -> bool {
         return true;
     }
     match init {
-        Expression::CallExpression(call_expr) => {
-            call_expr.callee.get_identifier_reference().is_some_and(|id| id.name == "String")
-        }
+        Expression::CallExpression(call_expr) => call_expr
+            .callee
+            .get_identifier_reference()
+            .is_some_and(|id| id.name == "String"),
         Expression::StringLiteral(_) | Expression::TemplateLiteral(_) => true,
         _ => false,
     }
@@ -427,7 +438,10 @@ fn test() {
             None,
         ),
         ("const a: any = 5;", None),
-        ("const fn = function (a: any = 5, b: any = true, c: any = 'foo') {};", None),
+        (
+            "const fn = function (a: any = 5, b: any = true, c: any = 'foo') {};",
+            None,
+        ),
         (
             "const fn = (a: number = 5, b: boolean = true, c: string = 'foo') => {};",
             Some(serde_json::json!([{ "ignoreParameters": true }])),
@@ -558,24 +572,72 @@ fn test() {
     let fix = vec![
         ("const a: bigint = 10n;", "const a = 10n;", None),
         ("const a: bigint = -10n;", "const a = -10n;", None),
-        ("const a: bigint = BigInt(10);", "const a = BigInt(10);", None),
-        ("const a: bigint = -BigInt(10);", "const a = -BigInt(10);", None),
-        ("const a: bigint = BigInt?.(10);", "const a = BigInt?.(10);", None),
-        ("const a: bigint = -BigInt?.(10);", "const a = -BigInt?.(10);", None),
+        (
+            "const a: bigint = BigInt(10);",
+            "const a = BigInt(10);",
+            None,
+        ),
+        (
+            "const a: bigint = -BigInt(10);",
+            "const a = -BigInt(10);",
+            None,
+        ),
+        (
+            "const a: bigint = BigInt?.(10);",
+            "const a = BigInt?.(10);",
+            None,
+        ),
+        (
+            "const a: bigint = -BigInt?.(10);",
+            "const a = -BigInt?.(10);",
+            None,
+        ),
         ("const a: boolean = false;", "const a = false;", None),
         ("const a: boolean = true;", "const a = true;", None),
-        ("const a: boolean = Boolean(null);", "const a = Boolean(null);", None),
-        ("const a: boolean = Boolean?.(null);", "const a = Boolean?.(null);", None),
+        (
+            "const a: boolean = Boolean(null);",
+            "const a = Boolean(null);",
+            None,
+        ),
+        (
+            "const a: boolean = Boolean?.(null);",
+            "const a = Boolean?.(null);",
+            None,
+        ),
         ("const a: boolean = !0;", "const a = !0;", None),
         ("const a: number = 10;", "const a = 10;", None),
         ("const a: number = +10;", "const a = +10;", None),
         ("const a: number = -10;", "const a = -10;", None),
-        ("const a: number = Number('1');", "const a = Number('1');", None),
-        ("const a: number = +Number('1');", "const a = +Number('1');", None),
-        ("const a: number = -Number('1');", "const a = -Number('1');", None),
-        ("const a: number = Number?.('1');", "const a = Number?.('1');", None),
-        ("const a: number = +Number?.('1');", "const a = +Number?.('1');", None),
-        ("const a: number = -Number?.('1');", "const a = -Number?.('1');", None),
+        (
+            "const a: number = Number('1');",
+            "const a = Number('1');",
+            None,
+        ),
+        (
+            "const a: number = +Number('1');",
+            "const a = +Number('1');",
+            None,
+        ),
+        (
+            "const a: number = -Number('1');",
+            "const a = -Number('1');",
+            None,
+        ),
+        (
+            "const a: number = Number?.('1');",
+            "const a = Number?.('1');",
+            None,
+        ),
+        (
+            "const a: number = +Number?.('1');",
+            "const a = +Number?.('1');",
+            None,
+        ),
+        (
+            "const a: number = -Number?.('1');",
+            "const a = -Number?.('1');",
+            None,
+        ),
         ("const a: number = Infinity;", "const a = Infinity;", None),
         ("const a: number = +Infinity;", "const a = +Infinity;", None),
         ("const a: number = -Infinity;", "const a = -Infinity;", None),
@@ -584,17 +646,49 @@ fn test() {
         ("const a: number = -NaN;", "const a = -NaN;", None),
         ("const a: null = null;", "const a = null;", None),
         ("const a: RegExp = /a/;", "const a = /a/;", None),
-        ("const a: RegExp = RegExp('a');", "const a = RegExp('a');", None),
-        ("const a: RegExp = RegExp?.('a');", "const a = RegExp?.('a');", None),
-        ("const a: RegExp = new RegExp('a');", "const a = new RegExp('a');", None),
+        (
+            "const a: RegExp = RegExp('a');",
+            "const a = RegExp('a');",
+            None,
+        ),
+        (
+            "const a: RegExp = RegExp?.('a');",
+            "const a = RegExp?.('a');",
+            None,
+        ),
+        (
+            "const a: RegExp = new RegExp('a');",
+            "const a = new RegExp('a');",
+            None,
+        ),
         ("const a: string = 'str';", "const a = 'str';", None),
         ("const a: string = `str`;", "const a = `str`;", None),
         ("const a: string = String(1);", "const a = String(1);", None),
-        ("const a: string = String?.(1);", "const a = String?.(1);", None),
-        ("const a: symbol = Symbol('a');", "const a = Symbol('a');", None),
-        ("const a: symbol = Symbol?.('a');", "const a = Symbol?.('a');", None),
-        ("const a: undefined = undefined;", "const a = undefined;", None),
-        ("const a: undefined = void someValue;", "const a = void someValue;", None),
+        (
+            "const a: string = String?.(1);",
+            "const a = String?.(1);",
+            None,
+        ),
+        (
+            "const a: symbol = Symbol('a');",
+            "const a = Symbol('a');",
+            None,
+        ),
+        (
+            "const a: symbol = Symbol?.('a');",
+            "const a = Symbol?.('a');",
+            None,
+        ),
+        (
+            "const a: undefined = undefined;",
+            "const a = undefined;",
+            None,
+        ),
+        (
+            "const a: undefined = void someValue;",
+            "const a = void someValue;",
+            None,
+        ),
         // (
         //     "const fn = (a?: number = 5) => {};",
         //     "const fn = (a = 5) => {};",
@@ -663,7 +757,12 @@ fn test() {
         ),
     ];
 
-    Tester::new(NoInferrableTypes::NAME, NoInferrableTypes::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        NoInferrableTypes::NAME,
+        NoInferrableTypes::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

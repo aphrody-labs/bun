@@ -11,27 +11,46 @@ use crate::registry::{Entry, valid_id, write_atomic};
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Target {
     Dir(PathBuf),
-    Ssh { dest: String, port: Option<u16>, dir: String },
+    Ssh {
+        dest: String,
+        port: Option<u16>,
+        dir: String,
+    },
 }
 
 /// `ssh://[user@]host[:port]/dir`, `[user@]host:dir`, or a local directory.
 pub fn parse_target(text: &str) -> Result<Target, String> {
     if let Some(rest) = text.strip_prefix("ssh://") {
-        let (authority, dir) = rest.split_once('/').ok_or("ssh:// target needs a directory: ssh://host/dir")?;
+        let (authority, dir) = rest
+            .split_once('/')
+            .ok_or("ssh:// target needs a directory: ssh://host/dir")?;
         let (dest, port) = match authority.rsplit_once(':') {
-            Some((d, p)) => (d, Some(p.parse::<u16>().map_err(|_| format!("bad port {p:?}"))?)),
+            Some((d, p)) => (
+                d,
+                Some(p.parse::<u16>().map_err(|_| format!("bad port {p:?}"))?),
+            ),
             None => (authority, None),
         };
         // `ssh://host//abs/dir` is absolute; `ssh://host/dir` is relative to the remote home.
-        let dir = dir.strip_prefix('/').map_or_else(|| dir.to_string(), |abs| format!("/{abs}"));
+        let dir = dir
+            .strip_prefix('/')
+            .map_or_else(|| dir.to_string(), |abs| format!("/{abs}"));
         check_dest(dest)?;
-        return Ok(Target::Ssh { dest: dest.to_string(), port, dir });
+        return Ok(Target::Ssh {
+            dest: dest.to_string(),
+            port,
+            dir,
+        });
     }
     if let Some((host, dir)) = text.split_once(':') {
         let drive = host.len() == 1 && host.as_bytes()[0].is_ascii_alphabetic();
         if !drive && !host.contains(['/', '\\']) && !dir.is_empty() {
             check_dest(host)?;
-            return Ok(Target::Ssh { dest: host.to_string(), port: None, dir: dir.to_string() });
+            return Ok(Target::Ssh {
+                dest: host.to_string(),
+                port: None,
+                dir: dir.to_string(),
+            });
         }
     }
     Ok(Target::Dir(PathBuf::from(text)))
@@ -40,8 +59,11 @@ pub fn parse_target(text: &str) -> Result<Target, String> {
 fn check_dest(dest: &str) -> Result<(), String> {
     let ok = !dest.is_empty()
         && !dest.starts_with('-')
-        && dest.bytes().all(|b| b.is_ascii_alphanumeric() || matches!(b, b'.' | b'-' | b'_' | b'@' | b'[' | b']' | b':'));
-    ok.then_some(()).ok_or_else(|| format!("invalid ssh destination {dest:?}"))
+        && dest.bytes().all(|b| {
+            b.is_ascii_alphanumeric() || matches!(b, b'.' | b'-' | b'_' | b'@' | b'[' | b']' | b':')
+        });
+    ok.then_some(())
+        .ok_or_else(|| format!("invalid ssh destination {dest:?}"))
 }
 
 fn quote(text: &str) -> String {
@@ -59,7 +81,12 @@ fn remote_path(path: &str) -> String {
     }
 }
 
-fn ssh(dest: &str, port: Option<u16>, command: &str, stdin: Option<&[u8]>) -> Result<Vec<u8>, String> {
+fn ssh(
+    dest: &str,
+    port: Option<u16>,
+    command: &str,
+    stdin: Option<&[u8]>,
+) -> Result<Vec<u8>, String> {
     let program = std::env::var("BUN_HOST_SSH").unwrap_or_else(|_| "ssh".into());
     let mut cmd = Command::new(program);
     cmd.args(["-o", "BatchMode=yes", "-o", "ConnectTimeout=15"]);
@@ -67,7 +94,13 @@ fn ssh(dest: &str, port: Option<u16>, command: &str, stdin: Option<&[u8]>) -> Re
         cmd.args(["-p", &port.to_string()]);
     }
     cmd.arg("--").arg(dest).arg(command);
-    cmd.stdin(if stdin.is_some() { Stdio::piped() } else { Stdio::null() }).stdout(Stdio::piped()).stderr(Stdio::piped());
+    cmd.stdin(if stdin.is_some() {
+        Stdio::piped()
+    } else {
+        Stdio::null()
+    })
+    .stdout(Stdio::piped())
+    .stderr(Stdio::piped());
     let mut child = cmd.spawn().map_err(|e| format!("ssh: {e}"))?;
     if let (Some(data), Some(mut pipe)) = (stdin, child.stdin.take()) {
         pipe.write_all(data).map_err(|e| format!("ssh: {e}"))?;
@@ -82,7 +115,12 @@ fn ssh(dest: &str, port: Option<u16>, command: &str, stdin: Option<&[u8]>) -> Re
 
 /// Drops `entry` as `<id>.json` in the target directory (atomic rename).
 pub fn push(target: &Target, entry: &Entry) -> Result<String, String> {
-    let id = entry.info.get("id").and_then(|v| v.as_str()).filter(|id| valid_id(id)).ok_or("card has no valid id")?;
+    let id = entry
+        .info
+        .get("id")
+        .and_then(|v| v.as_str())
+        .filter(|id| valid_id(id))
+        .ok_or("card has no valid id")?;
     let bytes = serde_json::to_vec_pretty(entry).map_err(|e| e.to_string())?;
     match target {
         Target::Dir(dir) => {
@@ -106,7 +144,8 @@ pub fn pull(target: &Target) -> Result<(Vec<Entry>, Vec<String>), String> {
         Target::Dir(dir) => Ok(crate::registry::read_cards(dir)),
         Target::Ssh { dest, port, dir } => {
             let d = remote_path(dir);
-            let command = format!("for f in {d}/*.json; do [ -f \"$f\" ] && cat \"$f\" && echo; done; true");
+            let command =
+                format!("for f in {d}/*.json; do [ -f \"$f\" ] && cat \"$f\" && echo; done; true");
             let out = ssh(dest, *port, &command, None)?;
             let (mut cards, mut errors) = (Vec::new(), Vec::new());
             for item in serde_json::Deserializer::from_slice(&out).into_iter::<Entry>() {

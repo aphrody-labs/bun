@@ -24,7 +24,10 @@ fn fixed_coordinate_walk_does_not_copy_dom_payloads() {
         HashSet::from([fixed, child]),
         "fixed descendants share viewport coordinates; closed details content does not render"
     );
-    assert!(bytes < 16 * 1024, "fixed-coordinate traversal allocated {bytes} bytes");
+    assert!(
+        bytes < 16 * 1024,
+        "fixed-coordinate traversal allocated {bytes} bytes"
+    );
 }
 
 #[test]

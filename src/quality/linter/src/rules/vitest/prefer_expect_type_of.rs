@@ -92,8 +92,9 @@ impl PreferExpectTypeOf {
             return;
         };
 
-        let Some(Argument::UnaryExpression(typeof_expression)) =
-            expect_call.expect_arguments.and_then(|arguments| arguments.first())
+        let Some(Argument::UnaryExpression(typeof_expression)) = expect_call
+            .expect_arguments
+            .and_then(|arguments| arguments.first())
         else {
             return;
         };
@@ -110,8 +111,9 @@ impl PreferExpectTypeOf {
             return;
         }
 
-        let Some(type_expected) =
-            expect_call.matcher_arguments.and_then(|arguments| arguments.first())
+        let Some(type_expected) = expect_call
+            .matcher_arguments
+            .and_then(|arguments| arguments.first())
         else {
             return;
         };
@@ -120,20 +122,22 @@ impl PreferExpectTypeOf {
             return;
         }
 
-        let modifier_text = expect_call.modifiers().fold(String::new(), |mut acc, modifier| {
-            use std::fmt::Write;
-            match modifier.element {
-                // `.not`
-                MemberExpressionElement::IdentName(_) => {
-                    write!(&mut acc, ".{}", ctx.source_range(modifier.span)).unwrap();
+        let modifier_text = expect_call
+            .modifiers()
+            .fold(String::new(), |mut acc, modifier| {
+                use std::fmt::Write;
+                match modifier.element {
+                    // `.not`
+                    MemberExpressionElement::IdentName(_) => {
+                        write!(&mut acc, ".{}", ctx.source_range(modifier.span)).unwrap();
+                    }
+                    // `["not"]`, `[not]`, `[`not`]`, etc.
+                    MemberExpressionElement::Expression(_) => {
+                        write!(&mut acc, "[{}]", ctx.source_range(modifier.span)).unwrap();
+                    }
                 }
-                // `["not"]`, `[not]`, `[`not`]`, etc.
-                MemberExpressionElement::Expression(_) => {
-                    write!(&mut acc, "[{}]", ctx.source_range(modifier.span)).unwrap();
-                }
-            }
-            acc
-        });
+                acc
+            });
 
         let param = ctx.source_range(GetSpan::span(&typeof_expression.argument));
         let type_text = ctx.source_range(type_expected.span());
@@ -183,26 +187,67 @@ fn test() {
     ];
 
     let fix = vec![
-        (r#"expect(typeof 12).toBe("number")"#, r#"expect(12).toBeTypeOf("number")"#),
-        (r#"expect(typeof "name").toBe("string")"#, r#"expect("name").toBeTypeOf("string")"#),
-        (r#"expect(typeof true).toBe("boolean")"#, r#"expect(true).toBeTypeOf("boolean")"#),
-        (r#"expect(typeof variable).toBe("object")"#, r#"expect(variable).toBeTypeOf("object")"#),
-        (r#"expect(typeof fn).toBe("function")"#, r#"expect(fn).toBeTypeOf("function")"#),
-        (r#"expect(typeof sym).toBe("symbol")"#, r#"expect(sym).toBeTypeOf("symbol")"#),
-        (r#"expect(typeof big).toBe("bigint")"#, r#"expect(big).toBeTypeOf("bigint")"#),
-        (r#"expect(typeof value).toBe("undefined")"#, r#"expect(value).toBeTypeOf("undefined")"#),
-        (r#"expect(typeof value).toEqual("string")"#, r#"expect(value).toBeTypeOf("string")"#),
-        (r#"expect(typeof value).not.toBe("string")"#, r#"expect(value).not.toBeTypeOf("string")"#),
+        (
+            r#"expect(typeof 12).toBe("number")"#,
+            r#"expect(12).toBeTypeOf("number")"#,
+        ),
+        (
+            r#"expect(typeof "name").toBe("string")"#,
+            r#"expect("name").toBeTypeOf("string")"#,
+        ),
+        (
+            r#"expect(typeof true).toBe("boolean")"#,
+            r#"expect(true).toBeTypeOf("boolean")"#,
+        ),
+        (
+            r#"expect(typeof variable).toBe("object")"#,
+            r#"expect(variable).toBeTypeOf("object")"#,
+        ),
+        (
+            r#"expect(typeof fn).toBe("function")"#,
+            r#"expect(fn).toBeTypeOf("function")"#,
+        ),
+        (
+            r#"expect(typeof sym).toBe("symbol")"#,
+            r#"expect(sym).toBeTypeOf("symbol")"#,
+        ),
+        (
+            r#"expect(typeof big).toBe("bigint")"#,
+            r#"expect(big).toBeTypeOf("bigint")"#,
+        ),
+        (
+            r#"expect(typeof value).toBe("undefined")"#,
+            r#"expect(value).toBeTypeOf("undefined")"#,
+        ),
+        (
+            r#"expect(typeof value).toEqual("string")"#,
+            r#"expect(value).toBeTypeOf("string")"#,
+        ),
+        (
+            r#"expect(typeof value).not.toBe("string")"#,
+            r#"expect(value).not.toBeTypeOf("string")"#,
+        ),
         (
             r#"expect(typeof value)["not"].toBe("string")"#,
             r#"expect(value)["not"].toBeTypeOf("string")"#,
         ),
-        (r#"expect(typeof value).toBe("unknown")"#, r#"expect(value).toBeTypeOf("unknown")"#),
-        ("expect(typeof value).toBe(typeName)", "expect(value).toBeTypeOf(typeName)"),
+        (
+            r#"expect(typeof value).toBe("unknown")"#,
+            r#"expect(value).toBeTypeOf("unknown")"#,
+        ),
+        (
+            "expect(typeof value).toBe(typeName)",
+            "expect(value).toBeTypeOf(typeName)",
+        ),
     ];
 
-    Tester::new(PreferExpectTypeOf::NAME, PreferExpectTypeOf::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .with_vitest_plugin(true)
-        .test_and_snapshot();
+    Tester::new(
+        PreferExpectTypeOf::NAME,
+        PreferExpectTypeOf::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .with_vitest_plugin(true)
+    .test_and_snapshot();
 }

@@ -77,8 +77,10 @@ impl NeedsParentheses<'_> for AstNode<'_, IdentifierReference<'_>> {
         // <https://github.com/prettier/prettier/blob/7584432401a47a26943dd7a9ca9a8e032ead7285/src/language-js/parentheses/identifier.js#L84-L107>
         let needs_parens_in_cast_chain = || {
             let mut parent = self.parent();
-            while matches!(parent, AstNodes::TSSatisfiesExpression(_) | AstNodes::TSAsExpression(_))
-            {
+            while matches!(
+                parent,
+                AstNodes::TSSatisfiesExpression(_) | AstNodes::TSAsExpression(_)
+            ) {
                 parent = parent.parent();
             }
 
@@ -133,9 +135,10 @@ impl NeedsParentheses<'_> for AstNode<'_, IdentifierReference<'_>> {
                         AstNodes::BinaryExpression(b) => b.left.span() == child_span,
                         AstNodes::LogicalExpression(l) => l.left.span() == child_span,
                         AstNodes::ConditionalExpression(c) => c.test.span() == child_span,
-                        AstNodes::SequenceExpression(s) => {
-                            s.expressions.first().is_some_and(|e| e.span() == child_span)
-                        }
+                        AstNodes::SequenceExpression(s) => s
+                            .expressions
+                            .first()
+                            .is_some_and(|e| e.span() == child_span),
                         AstNodes::TaggedTemplateExpression(t) => t.tag.span() == child_span,
                         AstNodes::UpdateExpression(u) => {
                             !u.prefix && u.argument.span() == child_span
@@ -410,8 +413,10 @@ impl NeedsParentheses<'_> for AstNode<'_, UnaryExpression<'_>> {
             AstNodes::UnaryExpression(parent_unary) => {
                 let parent_operator = parent_unary.operator();
                 let operator = self.operator();
-                matches!(operator, UnaryOperator::UnaryPlus | UnaryOperator::UnaryNegation)
-                    && parent_operator == operator
+                matches!(
+                    operator,
+                    UnaryOperator::UnaryPlus | UnaryOperator::UnaryNegation
+                ) && parent_operator == operator
             }
             // A user typing `!foo instanceof Bar` probably intended `!(foo instanceof Bar)`,
             // so format to `(!foo) instance Bar` to what is really happening
@@ -491,12 +496,18 @@ fn is_in_for_initializer(expr: &AstNode<'_, BinaryExpression<'_>>) -> bool {
 /// Legacy syntax: `for (var a = 1 in b);`
 /// <https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Errors/Invalid_for-in_initializer>
 fn is_for_in_statement_init<T: GetSpan>(node: &T, parent: &AstNodes<'_>) -> bool {
-    let AstNodes::VariableDeclarator(declarator) = parent else { return false };
-    let Some(init) = &declarator.init else { return false };
+    let AstNodes::VariableDeclarator(declarator) = parent else {
+        return false;
+    };
+    let Some(init) = &declarator.init else {
+        return false;
+    };
     if init.span() != node.span() {
         return false;
     }
-    let AstNodes::VariableDeclaration(decl) = declarator.parent() else { return false };
+    let AstNodes::VariableDeclaration(decl) = declarator.parent() else {
+        return false;
+    };
     // Check that this VariableDeclaration is the LEFT of a ForInStatement,
     // not just anywhere inside it (e.g., not in the body)
     matches!(decl.parent(), AstNodes::ForInStatement(stmt)
@@ -814,8 +825,10 @@ impl NeedsParentheses<'_> for AstNode<'_, YieldExpression<'_>> {
         }
 
         let parent = self.parent();
-        matches!(parent, AstNodes::AwaitExpression(_) | AstNodes::TSTypeAssertion(_))
-            || await_or_yield_needs_parens(self.span(), parent)
+        matches!(
+            parent,
+            AstNodes::AwaitExpression(_) | AstNodes::TSTypeAssertion(_)
+        ) || await_or_yield_needs_parens(self.span(), parent)
     }
 }
 
@@ -1049,7 +1062,12 @@ fn member_chain_callee_needs_parens(e: &Expression) -> bool {
         Expression::TSNonNullExpression(e) => Some(&e.expression),
         _ => None,
     })
-    .any(|object| matches!(object, Expression::CallExpression(_) | Expression::ImportExpression(_)))
+    .any(|object| {
+        matches!(
+            object,
+            Expression::CallExpression(_) | Expression::ImportExpression(_)
+        )
+    })
 }
 
 #[derive(Clone, Copy)]
@@ -1252,7 +1270,9 @@ fn ts_as_or_satisfies_needs_parens(
 
 fn is_class_extends(span: Span, parent: &AstNodes<'_>) -> bool {
     if let AstNodes::Class(c) = parent {
-        return c.heritage().is_some_and(|heritage| heritage.expression().span() == span);
+        return c
+            .heritage()
+            .is_some_and(|heritage| heritage.expression().span() == span);
     }
     false
 }

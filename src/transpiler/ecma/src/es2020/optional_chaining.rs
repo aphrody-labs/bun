@@ -271,7 +271,9 @@ impl<'a> OptionalChaining<'a> {
         expr: &mut Expression<'a>,
         ctx: &TraverseCtx<'a>,
     ) -> Expression<'a> {
-        let Expression::ChainExpression(chain_expr) = expr.take_in(ctx) else { unreachable!() };
+        let Expression::ChainExpression(chain_expr) = expr.take_in(ctx) else {
+            unreachable!()
+        };
         match chain_expr.unbox().expression {
             element @ match_member_expression!(ChainElement) => {
                 Expression::from(element.into_member_expression())
@@ -314,7 +316,9 @@ impl<'a> OptionalChaining<'a> {
         } else {
             // Unfortunately no way to get compiler to see that this branch is provably unreachable.
             // We don't want to inline this function, to keep `enter_expression` as small as possible.
-            let Expression::UnaryExpression(unary_expr) = expr else { unreachable!() };
+            let Expression::UnaryExpression(unary_expr) = expr else {
+                unreachable!()
+            };
             self.transform_chain_expression_impl(true, &mut unary_expr.argument, ctx)
         }
     }
@@ -335,8 +339,9 @@ impl<'a> OptionalChaining<'a> {
         //      ^^^^^^^^^^ After the recursive transformation, the chain_expr will be transformed into
         //                 a pure non-optional expression and it's the last part of the chain expression.
 
-        let left =
-            self.transform_chain_element_recursion(&mut chain_expr, ctx).unwrap_or_else(|| {
+        let left = self
+            .transform_chain_element_recursion(&mut chain_expr, ctx)
+            .unwrap_or_else(|| {
                 unreachable!(
                     "Given chain expression certainly contains at least one optional expression,
                  so it must return a transformed expression"

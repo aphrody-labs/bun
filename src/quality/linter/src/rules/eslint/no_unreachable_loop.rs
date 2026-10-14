@@ -104,7 +104,11 @@ impl Rule for NoUnreachableLoop {
             }
             AstKind::DoWhileStatement(statement) => (LoopType::DoWhile, &statement.body),
             AstKind::ForStatement(statement) => {
-                if statement.test.as_ref().is_some_and(|test| is_static_false(test)) {
+                if statement
+                    .test
+                    .as_ref()
+                    .is_some_and(|test| is_static_false(test))
+                {
                     return;
                 }
                 (LoopType::For, &statement.body)
@@ -446,15 +450,20 @@ fn finalizer_can_complete_without_override(
         }
         seen[current.index()] = true;
 
-        if cfg.basic_block(current).instructions().iter().any(|instruction| {
-            matches!(
-                instruction.kind,
-                InstructionKind::Break(_)
-                    | InstructionKind::Continue(_)
-                    | InstructionKind::Return(_)
-                    | InstructionKind::Throw
-            )
-        }) {
+        if cfg
+            .basic_block(current)
+            .instructions()
+            .iter()
+            .any(|instruction| {
+                matches!(
+                    instruction.kind,
+                    InstructionKind::Break(_)
+                        | InstructionKind::Continue(_)
+                        | InstructionKind::Return(_)
+                        | InstructionKind::Throw
+                )
+            })
+        {
             continue;
         }
 
@@ -567,12 +576,13 @@ impl<'a> MayHaveSideEffectsContext<'a> for NoUnreachableLoopSideEffectsContext<'
 fn is_static_infinite_loop_exit(block_id: BlockNodeId, ctx: &LintContext<'_>) -> bool {
     ctx.cfg()
         .is_infinite_loop_start(block_id, |instruction| match instruction {
-            Instruction { kind: InstructionKind::Condition, node_id: Some(id) } => {
-                match ctx.nodes().kind(*id) {
-                    AstKind::BooleanLiteral(lit) => EvalConstConditionResult::Eval(lit.value),
-                    _ => EvalConstConditionResult::Fail,
-                }
-            }
+            Instruction {
+                kind: InstructionKind::Condition,
+                node_id: Some(id),
+            } => match ctx.nodes().kind(*id) {
+                AstKind::BooleanLiteral(lit) => EvalConstConditionResult::Eval(lit.value),
+                _ => EvalConstConditionResult::Fail,
+            },
             _ => EvalConstConditionResult::NotFound,
         })
         .is_some_and(|(_, loop_end)| loop_end == block_id)
@@ -650,7 +660,11 @@ fn backedge_targets_enclosing_loop(
     }
 
     loop_owner_for_backedge_target(target, ctx).is_some_and(|owner| {
-        owner != loop_id && ctx.nodes().ancestor_ids(loop_id).any(|ancestor| ancestor == owner)
+        owner != loop_id
+            && ctx
+                .nodes()
+                .ancestor_ids(loop_id)
+                .any(|ancestor| ancestor == owner)
     })
 }
 
@@ -677,7 +691,10 @@ fn loop_owner_for_backedge_target(block_id: BlockNodeId, ctx: &LintContext<'_>) 
         }
 
         for edge in graph.edges_directed(current, Direction::Outgoing) {
-            if matches!(edge.weight(), EdgeType::Normal | EdgeType::Jump | EdgeType::Backedge) {
+            if matches!(
+                edge.weight(),
+                EdgeType::Normal | EdgeType::Jump | EdgeType::Backedge
+            ) {
                 stack.push(edge.target());
             }
         }
@@ -687,19 +704,31 @@ fn loop_owner_for_backedge_target(block_id: BlockNodeId, ctx: &LintContext<'_>) 
 }
 
 fn loop_statement_for_block(block_id: BlockNodeId, ctx: &LintContext<'_>) -> Option<NodeId> {
-    ctx.cfg().basic_block(block_id).instructions().iter().find_map(|instruction| {
-        instruction.node_id.filter(|node_id| is_loop(ctx.nodes().kind(*node_id)))
-    })
+    ctx.cfg()
+        .basic_block(block_id)
+        .instructions()
+        .iter()
+        .find_map(|instruction| {
+            instruction
+                .node_id
+                .filter(|node_id| is_loop(ctx.nodes().kind(*node_id)))
+        })
 }
 
 fn is_loop_control_block(block_id: BlockNodeId, loop_id: NodeId, ctx: &LintContext<'_>) -> bool {
-    ctx.cfg().basic_block(block_id).instructions().iter().any(|instruction| {
-        matches!(instruction.kind, InstructionKind::Condition | InstructionKind::Iteration(_))
-            && instruction
+    ctx.cfg()
+        .basic_block(block_id)
+        .instructions()
+        .iter()
+        .any(|instruction| {
+            matches!(
+                instruction.kind,
+                InstructionKind::Condition | InstructionKind::Iteration(_)
+            ) && instruction
                 .node_id
                 .and_then(|node_id| enclosing_loop(node_id, ctx))
                 .is_some_and(|nearest_loop| nearest_loop == loop_id)
-    })
+        })
 }
 
 fn is_synthetic_continuation(
@@ -728,7 +757,10 @@ fn is_synthetic_continuation(
             // finalizer. Without it, the block that resumes the loop after a
             // `try`/`finally` looks like it belongs to nothing.
             .filter(|edge| {
-                matches!(edge.weight(), EdgeType::Normal | EdgeType::Jump | EdgeType::Join)
+                matches!(
+                    edge.weight(),
+                    EdgeType::Normal | EdgeType::Jump | EdgeType::Join
+                )
             })
         {
             let source = edge.source();
@@ -756,15 +788,19 @@ fn is_synthetic_continuation(
 /// through `break`, `continue`, `return` or `throw`. An implicit throw is an
 /// error edge rather than an instruction, so it does not count as abrupt here.
 fn block_completes_normally(block_id: BlockNodeId, ctx: &LintContext<'_>) -> bool {
-    !ctx.cfg().basic_block(block_id).instructions().iter().any(|instruction| {
-        matches!(
-            instruction.kind,
-            InstructionKind::Break(_)
-                | InstructionKind::Continue(_)
-                | InstructionKind::Return(_)
-                | InstructionKind::Throw
-        )
-    })
+    !ctx.cfg()
+        .basic_block(block_id)
+        .instructions()
+        .iter()
+        .any(|instruction| {
+            matches!(
+                instruction.kind,
+                InstructionKind::Break(_)
+                    | InstructionKind::Continue(_)
+                    | InstructionKind::Return(_)
+                    | InstructionKind::Throw
+            )
+        })
 }
 
 fn owns_block(block_id: BlockNodeId, loop_id: NodeId, ctx: &LintContext<'_>) -> bool {
@@ -774,11 +810,18 @@ fn owns_block(block_id: BlockNodeId, loop_id: NodeId, ctx: &LintContext<'_>) -> 
 
 fn is_block_within_loop(block_id: BlockNodeId, loop_id: NodeId, ctx: &LintContext<'_>) -> bool {
     owns_block(block_id, loop_id, ctx)
-        || ctx.cfg().basic_block(block_id).instructions().iter().any(|instruction| {
-            instruction.node_id.is_some_and(|node_id| {
-                ctx.nodes().ancestor_ids(node_id).any(|ancestor| ancestor == loop_id)
+        || ctx
+            .cfg()
+            .basic_block(block_id)
+            .instructions()
+            .iter()
+            .any(|instruction| {
+                instruction.node_id.is_some_and(|node_id| {
+                    ctx.nodes()
+                        .ancestor_ids(node_id)
+                        .any(|ancestor| ancestor == loop_id)
+                })
             })
-        })
 }
 
 fn directly_owns_block(block_id: BlockNodeId, loop_id: NodeId, ctx: &LintContext<'_>) -> bool {
@@ -786,12 +829,16 @@ fn directly_owns_block(block_id: BlockNodeId, loop_id: NodeId, ctx: &LintContext
         return true;
     }
 
-    ctx.cfg().basic_block(block_id).instructions().iter().any(|instruction| {
-        instruction
-            .node_id
-            .and_then(|node_id| enclosing_loop(node_id, ctx))
-            .is_some_and(|nearest_loop| nearest_loop == loop_id)
-    })
+    ctx.cfg()
+        .basic_block(block_id)
+        .instructions()
+        .iter()
+        .any(|instruction| {
+            instruction
+                .node_id
+                .and_then(|node_id| enclosing_loop(node_id, ctx))
+                .is_some_and(|nearest_loop| nearest_loop == loop_id)
+        })
 }
 
 fn empty_backedge_targets_loop(
@@ -839,22 +886,32 @@ fn nested_loop_can_complete_normally(
 }
 
 fn nearest_loop_for_block(block_id: BlockNodeId, ctx: &LintContext<'_>) -> Option<NodeId> {
-    ctx.cfg().basic_block(block_id).instructions().iter().find_map(|instruction| {
-        instruction.node_id.and_then(|node_id| enclosing_loop(node_id, ctx))
-    })
+    ctx.cfg()
+        .basic_block(block_id)
+        .instructions()
+        .iter()
+        .find_map(|instruction| {
+            instruction
+                .node_id
+                .and_then(|node_id| enclosing_loop(node_id, ctx))
+        })
 }
 
 fn enclosing_loop(node_id: NodeId, ctx: &LintContext<'_>) -> Option<NodeId> {
-    ctx.nodes().ancestor_kinds(node_id).find(|ancestor| is_loop(*ancestor)).map(|n| n.node_id())
+    ctx.nodes()
+        .ancestor_kinds(node_id)
+        .find(|ancestor| is_loop(*ancestor))
+        .map(|n| n.node_id())
 }
 
 fn loop_can_complete_normally(kind: AstKind<'_>) -> bool {
     match kind {
         AstKind::WhileStatement(statement) => !is_static_true(&statement.test),
         AstKind::DoWhileStatement(statement) => !is_static_true(&statement.test),
-        AstKind::ForStatement(statement) => {
-            statement.test.as_ref().is_some_and(|test| !is_static_true(test))
-        }
+        AstKind::ForStatement(statement) => statement
+            .test
+            .as_ref()
+            .is_some_and(|test| !is_static_true(test)),
         AstKind::ForInStatement(_) | AstKind::ForOfStatement(_) => true,
         _ => false,
     }
@@ -1186,5 +1243,11 @@ fn test() {
             .into(),
     ]);
 
-    Tester::new(NoUnreachableLoop::NAME, NoUnreachableLoop::PLUGIN, pass, fail).test_and_snapshot();
+    Tester::new(
+        NoUnreachableLoop::NAME,
+        NoUnreachableLoop::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

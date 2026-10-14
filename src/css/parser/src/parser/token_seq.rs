@@ -21,7 +21,10 @@ impl<'a> Parser<'a> {
                 // `^`), and their reference compilers reject it here.
                 Token::Unknown(..) if self.syntax != Syntax::Css => {
                     let span = self.cursor.peek()?.span;
-                    return Err(Error { kind: ErrorKind::UnknownToken, span });
+                    return Err(Error {
+                        kind: ErrorKind::UnknownToken,
+                        span,
+                    });
                 }
                 // An interpolated string (`("min-width:#{$foo}")`) must be
                 // consumed structurally — the tokenizer resumes the string
@@ -40,7 +43,10 @@ impl<'a> Parser<'a> {
             tokens.push(self.cursor.bump()?);
         }
         let span = Span {
-            start: tokens.first().map(|token| token.span.start).unwrap_or(start),
+            start: tokens
+                .first()
+                .map(|token| token.span.start)
+                .unwrap_or(start),
             end: if let Some(last) = tokens.last() {
                 last.span.end
             } else {

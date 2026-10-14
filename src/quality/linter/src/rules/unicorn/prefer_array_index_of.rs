@@ -57,12 +57,19 @@ impl Rule for PreferArrayIndexOf {
             return;
         };
 
-        if !is_method_call(call_expr, None, Some(&["findIndex", "findLastIndex"]), Some(1), Some(1))
-        {
+        if !is_method_call(
+            call_expr,
+            None,
+            Some(&["findIndex", "findLastIndex"]),
+            Some(1),
+            Some(1),
+        ) {
             return;
         }
 
-        let Some(cb) = call_expr.arguments[0].as_expression() else { return };
+        let Some(cb) = call_expr.arguments[0].as_expression() else {
+            return;
+        };
         if !is_simple_compare_callback_function(cb, ctx) {
             return;
         }
@@ -79,18 +86,22 @@ impl Rule for PreferArrayIndexOf {
 
 fn is_simple_compare_callback_function(expr: &Expression, ctx: &LintContext) -> bool {
     fn is_simple_compare(arg: &FormalParameter, expr: &Expression, ctx: &LintContext) -> bool {
-        let Some(ident) = arg.pattern.get_binding_identifier() else { return false };
+        let Some(ident) = arg.pattern.get_binding_identifier() else {
+            return false;
+        };
 
         if let Expression::BinaryExpression(expr) = expr
             && ctx.symbol_references(ident.symbol_id()).count() == 1
             && expr.operator == BinaryOperator::StrictEquality
-            && (expr
-                .left
-                .get_identifier_reference()
-                .and_then(|ident| ctx.scoping().get_reference(ident.reference_id()).symbol_id())
-                == Some(ident.symbol_id())
+            && (expr.left.get_identifier_reference().and_then(|ident| {
+                ctx.scoping()
+                    .get_reference(ident.reference_id())
+                    .symbol_id()
+            }) == Some(ident.symbol_id())
                 || expr.right.get_identifier_reference().and_then(|ident| {
-                    ctx.scoping().get_reference(ident.reference_id()).symbol_id()
+                    ctx.scoping()
+                        .get_reference(ident.reference_id())
+                        .symbol_id()
                 }) == Some(ident.symbol_id()))
         {
             return true;
@@ -104,8 +115,11 @@ fn is_simple_compare_callback_function(expr: &Expression, ctx: &LintContext) -> 
         {
             let query = if arrow_function.is_expression() {
                 arrow_function.get_expression()
-            } else if let Some(Statement::ReturnStatement(ret)) =
-                arrow_function.get_function_body().unwrap().statements.first()
+            } else if let Some(Statement::ReturnStatement(ret)) = arrow_function
+                .get_function_body()
+                .unwrap()
+                .statements
+                .first()
             {
                 ret.argument.as_ref()
             } else {
@@ -117,8 +131,10 @@ fn is_simple_compare_callback_function(expr: &Expression, ctx: &LintContext) -> 
         Expression::FunctionExpression(function)
             if !function.r#async && !function.generator && function.params.items.len() == 1 =>
         {
-            let query = if let Some(Statement::ReturnStatement(ret)) =
-                function.body.as_ref().and_then(|stmts| stmts.statements.first())
+            let query = if let Some(Statement::ReturnStatement(ret)) = function
+                .body
+                .as_ref()
+                .and_then(|stmts| stmts.statements.first())
             {
                 ret.argument.as_ref()
             } else {
@@ -238,6 +254,11 @@ fn test() {
         "function foo() {\n\treturn (bar as string).findLastIndex(x => x === \"foo\");\n}",
     ];
 
-    Tester::new(PreferArrayIndexOf::NAME, PreferArrayIndexOf::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        PreferArrayIndexOf::NAME,
+        PreferArrayIndexOf::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

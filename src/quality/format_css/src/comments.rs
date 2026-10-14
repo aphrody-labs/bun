@@ -62,7 +62,10 @@ pub struct FormatCommentBeforeContent {
 
 impl FormatCommentBeforeContent {
     pub const fn new(comment: CssComment, block_after: BlockCommentAfter) -> Self {
-        Self { comment, block_after }
+        Self {
+            comment,
+            block_after,
+        }
     }
 }
 
@@ -92,7 +95,11 @@ pub struct FormatLineCommentSuffix {
 
 impl FormatLineCommentSuffix {
     pub const fn new(comment: CssComment) -> Self {
-        Self { comment, leading_space: false, expand_parent: false }
+        Self {
+            comment,
+            leading_space: false,
+            expand_parent: false,
+        }
     }
 
     pub const fn with_leading_space(mut self) -> Self {
@@ -116,7 +123,13 @@ impl<'a> Format<'a, CssFormatContext<'a>> for FormatLineCommentSuffix {
             write!(f, maybe_space(leading_space));
             write_comment_text(comment, f);
         });
-        write!(f, [line_suffix(&content), self.expand_parent.then_some(expand_parent())]);
+        write!(
+            f,
+            [
+                line_suffix(&content),
+                self.expand_parent.then_some(expand_parent())
+            ]
+        );
     }
 }
 
@@ -188,12 +201,20 @@ pub fn write_trailing_same_line_comments(
         if comment.inline {
             write!(
                 f,
-                FormatLineCommentSuffix::new(comment).with_leading_space().with_expand_parent()
+                FormatLineCommentSuffix::new(comment)
+                    .with_leading_space()
+                    .with_expand_parent()
             );
             return;
         }
 
-        write!(f, [space(), FormatCommentBeforeContent::new(comment, BlockCommentAfter::None)]);
+        write!(
+            f,
+            [
+                space(),
+                FormatCommentBeforeContent::new(comment, BlockCommentAfter::None)
+            ]
+        );
         prev_end = comment.span.end;
     }
 }

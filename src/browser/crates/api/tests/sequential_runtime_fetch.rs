@@ -74,7 +74,10 @@ async fn run_browser(base: &str) {
             break;
         }
     }
-    assert_eq!(page.evaluate("document.body.getAttribute('data-done')"), serde_json::json!("12"));
+    assert_eq!(
+        page.evaluate("document.body.getAttribute('data-done')"),
+        serde_json::json!("12")
+    );
 }
 
 #[tokio::test(flavor = "current_thread")]

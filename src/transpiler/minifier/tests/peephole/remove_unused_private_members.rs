@@ -14,7 +14,10 @@ fn test_remove_unused_private_fields() {
         "class C { #unused; #used; method() { return this.#used; } } new C();",
         "class C { #used; method() { return this.#used; } } new C();",
     );
-    test("class C { #a = 1; #b = 2; #c = 3; } new C();", "class C { } new C();");
+    test(
+        "class C { #a = 1; #b = 2; #c = 3; } new C();",
+        "class C { } new C();",
+    );
     test(
         "class C { static #unused = 1; static #used = 2; static method() { return C.#used; } }",
         "class C { static #used = 2; static method() { return C.#used; } }",
@@ -33,7 +36,10 @@ fn test_remove_unused_private_methods() {
         "class C { #unusedMethod() { return 1; } #usedMethod() { return 2; } method() { return this.#usedMethod(); } } new C();",
         "class C { #usedMethod() { return 2; } method() { return this.#usedMethod(); } } new C();",
     );
-    test("class C { #a() {} #b() {} #c() {} } new C();", "class C { } new C();");
+    test(
+        "class C { #a() {} #b() {} #c() {} } new C();",
+        "class C { } new C();",
+    );
     test(
         "class C { static #unusedMethod() { return 1; } static #usedMethod() { return 2; } static method() { return C.#usedMethod(); } }",
         "class C { static #usedMethod() { return 2; } static method() { return C.#usedMethod(); } }",

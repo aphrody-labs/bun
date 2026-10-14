@@ -61,8 +61,13 @@ impl<'a> AstroPartialLoader<'a> {
     }
 
     fn is_fence(&self, offset: usize) -> bool {
-        let line_start = self.source_text[..offset].rfind('\n').map_or(0, |index| index + 1);
-        if !self.source_text[line_start..offset].chars().all(char::is_whitespace) {
+        let line_start = self.source_text[..offset]
+            .rfind('\n')
+            .map_or(0, |index| index + 1);
+        if !self.source_text[line_start..offset]
+            .chars()
+            .all(char::is_whitespace)
+        {
             return false;
         }
 
@@ -71,7 +76,9 @@ impl<'a> AstroPartialLoader<'a> {
             .find('\n')
             .map_or(self.source_text.len(), |index| fence_end + index);
 
-        self.source_text[fence_end..line_end].chars().all(char::is_whitespace)
+        self.source_text[fence_end..line_end]
+            .chars()
+            .all(char::is_whitespace)
     }
 
     /// In .astro files, you can add client-side JavaScript by adding one (or more) `<script>` tags.
@@ -319,8 +326,14 @@ mod test {
 
         let sources = parse_astro(source_text);
         assert_eq!(sources.len(), 2);
-        assert_eq!(sources[0].source_text.trim(), r#"console.log("text/javascript");"#);
-        assert_eq!(sources[1].source_text.trim(), r#"console.log("application/ecmascript");"#);
+        assert_eq!(
+            sources[0].source_text.trim(),
+            r#"console.log("text/javascript");"#
+        );
+        assert_eq!(
+            sources[1].source_text.trim(),
+            r#"console.log("application/ecmascript");"#
+        );
     }
 
     #[test]

@@ -14,7 +14,10 @@ pub struct DefaultReporter {
 
 impl Default for DefaultReporter {
     fn default() -> Self {
-        Self { handler: GraphicalReportHandler::new(), diagnostics: Vec::new() }
+        Self {
+            handler: GraphicalReportHandler::new(),
+            diagnostics: Vec::new(),
+        }
     }
 }
 
@@ -30,7 +33,9 @@ impl DiagnosticReporter for DefaultReporter {
 
         // Render all diagnostics (errors only, no warnings)
         for diagnostic in &self.diagnostics {
-            self.handler.render_report(&mut output, diagnostic.as_ref()).unwrap();
+            self.handler
+                .render_report(&mut output, diagnostic.as_ref())
+                .unwrap();
         }
 
         Some(output)

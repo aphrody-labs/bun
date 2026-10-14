@@ -74,7 +74,10 @@ impl<T> SparseStack<T> {
         // `has_values` starts with a single empty entry, which will never be popped off.
         // This means `take_last`, `last_or_init`, and `last_mut_or_init` can all be infallible,
         // as there's always an entry on the stack to read.
-        Self { has_values: NonEmptyStack::new(false), values: Stack::new() }
+        Self {
+            has_values: NonEmptyStack::new(false),
+            values: Stack::new(),
+        }
     }
 
     /// Create new `SparseStack` with pre-allocated capacity.

@@ -22,7 +22,9 @@ impl<'a> IsolatedDeclarations<'a> {
     pub(crate) fn transform_function_to_ts_type(&self, func: &Function<'a>) -> Option<TSType<'a>> {
         let return_type = self.infer_function_return_type(func);
         if return_type.is_none() {
-            self.error(function_must_have_explicit_return_type(get_function_span(func)));
+            self.error(function_must_have_explicit_return_type(get_function_span(
+                func,
+            )));
         }
 
         let params = self.transform_formal_parameters(&func.params, false);
@@ -110,128 +112,131 @@ impl<'a> IsolatedDeclarations<'a> {
         let mut accessor_inferred: Vec<&PropertyKey<'a>> = Vec::new();
 
         let members = ArenaVec::from_iter_in(
-            expr.properties.iter().filter_map(|property| match property {
-                ObjectPropertyKind::ObjectProperty(object) => {
-                    if object.computed && self.report_property_key(&object.key) {
-                        return None;
-                    }
-
-                    if object.shorthand {
-                        self.error(shorthand_property(object.span));
-                        return None;
-                    }
-
-                    let key = &object.key;
-
-                    if !is_const && object.method {
-                        let Expression::FunctionExpression(function) = &object.value else {
-                            unreachable!(
-                                "`object.kind` being `Method` guarantees that it is a function"
-                            );
-                        };
-                        let return_type = self.infer_function_return_type(function);
-                        if return_type.is_none() {
-                            self.error(method_must_have_explicit_return_type(object.key.span()));
+            expr.properties
+                .iter()
+                .filter_map(|property| match property {
+                    ObjectPropertyKind::ObjectProperty(object) => {
+                        if object.computed && self.report_property_key(&object.key) {
+                            return None;
                         }
-                        let params = self.transform_formal_parameters(&function.params, false);
-                        let key = self.transform_property_key(key);
-                        let computed = key
-                            .as_expression()
-                            .is_some_and(|k| !k.is_string_literal() && !k.is_number_literal());
 
-                        return Some(TSSignature::new_ts_method_signature(
-                            object.span,
-                            key,
-                            computed,
-                            false,
-                            TSMethodSignatureKind::Method,
-                            function.type_parameters.clone_in(self.allocator()),
-                            function.this_param.clone_in(self.allocator()),
-                            params,
-                            return_type,
-                            self,
-                        ));
-                    }
+                        if object.shorthand {
+                            self.error(shorthand_property(object.span));
+                            return None;
+                        }
 
-                    let type_annotation = match object.kind {
-                        PropertyKind::Get => {
-                            if accessor_inferred.iter().any(|k| k.content_eq(key)) {
-                                return None;
-                            }
+                        let key = &object.key;
 
+                        if !is_const && object.method {
                             let Expression::FunctionExpression(function) = &object.value else {
                                 unreachable!(
-                                    "`object.kind` being `Get` guarantees that it is a function"
+                                    "`object.kind` being `Method` guarantees that it is a function"
                                 );
                             };
-
-                            let annotation = self.infer_function_return_type(function);
-                            if annotation.is_none() {
-                                accessor_spans.push((key, key.span()));
-                                return None;
+                            let return_type = self.infer_function_return_type(function);
+                            if return_type.is_none() {
+                                self.error(method_must_have_explicit_return_type(
+                                    object.key.span(),
+                                ));
                             }
+                            let params = self.transform_formal_parameters(&function.params, false);
+                            let key = self.transform_property_key(key);
+                            let computed = key
+                                .as_expression()
+                                .is_some_and(|k| !k.is_string_literal() && !k.is_number_literal());
 
-                            accessor_inferred.push(key);
-                            annotation
+                            return Some(TSSignature::new_ts_method_signature(
+                                object.span,
+                                key,
+                                computed,
+                                false,
+                                TSMethodSignatureKind::Method,
+                                function.type_parameters.clone_in(self.allocator()),
+                                function.this_param.clone_in(self.allocator()),
+                                params,
+                                return_type,
+                                self,
+                            ));
                         }
-                        PropertyKind::Set => {
-                            if accessor_inferred.iter().any(|k| k.content_eq(key)) {
-                                return None;
-                            }
 
-                            let Expression::FunctionExpression(function) = &object.value else {
-                                unreachable!(
-                                    "`object.kind` being `Set` guarantees that it is a function"
-                                );
-                            };
-                            let annotation =
-                                function.params.items.first().and_then(|param| {
+                        let type_annotation = match object.kind {
+                            PropertyKind::Get => {
+                                if accessor_inferred.iter().any(|k| k.content_eq(key)) {
+                                    return None;
+                                }
+
+                                let Expression::FunctionExpression(function) = &object.value else {
+                                    unreachable!(
+                                        "`object.kind` being `Get` guarantees that it is a function"
+                                    );
+                                };
+
+                                let annotation = self.infer_function_return_type(function);
+                                if annotation.is_none() {
+                                    accessor_spans.push((key, key.span()));
+                                    return None;
+                                }
+
+                                accessor_inferred.push(key);
+                                annotation
+                            }
+                            PropertyKind::Set => {
+                                if accessor_inferred.iter().any(|k| k.content_eq(key)) {
+                                    return None;
+                                }
+
+                                let Expression::FunctionExpression(function) = &object.value else {
+                                    unreachable!(
+                                        "`object.kind` being `Set` guarantees that it is a function"
+                                    );
+                                };
+                                let annotation = function.params.items.first().and_then(|param| {
                                     param.type_annotation.clone_in(self.allocator())
                                 });
-                            if annotation.is_none() {
-                                accessor_spans.push((key, function.params.span));
-                                return None;
+                                if annotation.is_none() {
+                                    accessor_spans.push((key, function.params.span));
+                                    return None;
+                                }
+
+                                accessor_inferred.push(key);
+                                annotation
                             }
+                            PropertyKind::Init => {
+                                let type_annotation = if is_const {
+                                    self.transform_const_expression_to_ts_type(&object.value)
+                                } else {
+                                    self.infer_type_from_expression(&object.value)
+                                };
 
-                            accessor_inferred.push(key);
-                            annotation
-                        }
-                        PropertyKind::Init => {
-                            let type_annotation = if is_const {
-                                self.transform_const_expression_to_ts_type(&object.value)
-                            } else {
-                                self.infer_type_from_expression(&object.value)
-                            };
+                                if type_annotation.is_none() {
+                                    self.error(inferred_type_of_expression(object.value.span()));
+                                    return None;
+                                }
 
-                            if type_annotation.is_none() {
-                                self.error(inferred_type_of_expression(object.value.span()));
-                                return None;
+                                type_annotation.map(|type_annotation| {
+                                    TSTypeAnnotation::boxed(SPAN, type_annotation, self)
+                                })
                             }
+                        };
 
-                            type_annotation.map(|type_annotation| {
-                                TSTypeAnnotation::boxed(SPAN, type_annotation, self)
-                            })
-                        }
-                    };
-
-                    let key = self.transform_property_key(key);
-                    let property_signature = TSSignature::new_ts_property_signature(
-                        object.span,
-                        key.as_expression()
-                            .is_some_and(|k| !k.is_string_literal() && !k.is_number_literal()),
-                        false,
-                        is_const,
-                        key,
-                        type_annotation,
-                        self,
-                    );
-                    Some(property_signature)
-                }
-                ObjectPropertyKind::SpreadProperty(spread) => {
-                    self.error(object_with_spread_assignments(spread.span));
-                    None
-                }
-            }),
+                        let key = self.transform_property_key(key);
+                        let property_signature = TSSignature::new_ts_property_signature(
+                            object.span,
+                            key.as_expression()
+                                .is_some_and(|k| !k.is_string_literal() && !k.is_number_literal()),
+                            false,
+                            is_const,
+                            key,
+                            type_annotation,
+                            self,
+                        );
+                        Some(property_signature)
+                    }
+                    ObjectPropertyKind::SpreadProperty(spread) => {
+                        self.error(object_with_spread_assignments(spread.span));
+                        None
+                    }
+                }),
             self,
         );
 

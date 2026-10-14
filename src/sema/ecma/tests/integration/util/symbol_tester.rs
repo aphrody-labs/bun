@@ -45,10 +45,15 @@ impl<'a> SymbolTester<'a> {
         semantic: Semantic<'a>,
         target: &str,
     ) -> Self {
-        let decl =
-            semantic.scoping().get_binding(semantic.scoping().root_scope_id(), target.into());
+        let decl = semantic
+            .scoping()
+            .get_binding(semantic.scoping().root_scope_id(), target.into());
         let data = decl.map_or_else(
-            || Err(OxcDiagnostic::error(format!("Could not find declaration for {target}"))),
+            || {
+                Err(OxcDiagnostic::error(format!(
+                    "Could not find declaration for {target}"
+                )))
+            },
             Ok,
         );
 
@@ -72,7 +77,9 @@ impl<'a> SymbolTester<'a> {
             .collect();
 
         let data = match symbols_with_target_name.len() {
-            0 => Err(OxcDiagnostic::error(format!("Could not find declaration for {target}"))),
+            0 => Err(OxcDiagnostic::error(format!(
+                "Could not find declaration for {target}"
+            ))),
             1 => Ok(symbols_with_target_name.pop().unwrap()),
             n if n > 1 => Err(OxcDiagnostic::error(format!(
                 "Couldn't uniquely resolve symbol id for target {target}; {n} symbols with that name are declared in the source."
@@ -90,7 +97,10 @@ impl<'a> SymbolTester<'a> {
 
     /// Get inner resources without consuming `self`
     pub fn inner(&self) -> (Rc<Semantic<'a>>, SymbolId) {
-        (Rc::clone(&self.semantic), *self.test_result.as_ref().unwrap())
+        (
+            Rc::clone(&self.semantic),
+            *self.test_result.as_ref().unwrap(),
+        )
     }
 
     pub(super) fn new_first_binding(
@@ -105,7 +115,9 @@ impl<'a> SymbolTester<'a> {
 
         let data = match symbols_with_target_name {
             Some(symbol_id) => Ok(symbol_id),
-            None => Err(OxcDiagnostic::error(format!("Could not find declaration for {target}"))),
+            None => Err(OxcDiagnostic::error(format!(
+                "Could not find declaration for {target}"
+            ))),
         };
 
         SymbolTester {
@@ -266,12 +278,17 @@ impl<'a> Expect<(Rc<Semantic<'a>>, SymbolId), bool> for SymbolTester<'a> {
     where
         F: FnOnce((Rc<Semantic<'a>>, SymbolId)) -> bool,
     {
-        let Ok(symbol_id) = self.test_result else { return self };
+        let Ok(symbol_id) = self.test_result else {
+            return self;
+        };
         let did_pass = expectation((Rc::clone(&self.semantic), symbol_id));
         if did_pass {
             self
         } else {
-            Self { test_result: Err(OxcDiagnostic::error("Expectation failed")), ..self }
+            Self {
+                test_result: Err(OxcDiagnostic::error("Expectation failed")),
+                ..self
+            }
         }
     }
 }
@@ -281,10 +298,15 @@ impl<'a> Expect<(Rc<Semantic<'a>>, SymbolId), Result<(), &'static str>> for Symb
     where
         F: FnOnce((Rc<Semantic<'a>>, SymbolId)) -> Result<(), &'static str>,
     {
-        let Ok(symbol_id) = self.test_result else { return self };
+        let Ok(symbol_id) = self.test_result else {
+            return self;
+        };
         let did_pass = expectation((Rc::clone(&self.semantic), symbol_id));
         if let Err(e) = did_pass {
-            Self { test_result: Err(OxcDiagnostic::error(e)), ..self }
+            Self {
+                test_result: Err(OxcDiagnostic::error(e)),
+                ..self
+            }
         } else {
             self
         }
@@ -295,15 +317,26 @@ impl<'a> Expect<(Rc<Semantic<'a>>, SymbolId), Result<(), OxcDiagnostic>> for Sym
     where
         F: FnOnce((Rc<Semantic<'a>>, SymbolId)) -> Result<(), OxcDiagnostic>,
     {
-        let Ok(symbol_id) = self.test_result else { return self };
+        let Ok(symbol_id) = self.test_result else {
+            return self;
+        };
         let did_pass = expectation((Rc::clone(&self.semantic), symbol_id));
-        if let Err(e) = did_pass { Self { test_result: Err(e), ..self } } else { self }
+        if let Err(e) = did_pass {
+            Self {
+                test_result: Err(e),
+                ..self
+            }
+        } else {
+            self
+        }
     }
 }
 
 impl<'a> From<SymbolTester<'a>> for Result<(), Error> {
     fn from(val: SymbolTester<'a>) -> Self {
         let source_code = val.parent.source_text.to_string();
-        val.test_result.map(|_| {}).map_err(|e| e.with_source_code(source_code))
+        val.test_result
+            .map(|_| {})
+            .map_err(|e| e.with_source_code(source_code))
     }
 }

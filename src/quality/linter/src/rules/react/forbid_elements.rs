@@ -50,7 +50,9 @@ impl From<ForbidElementsConfig> for ForbidElements {
                 }
             }
         }
-        Self { forbid: Box::new(forbid) }
+        Self {
+            forbid: Box::new(forbid),
+        }
     }
 }
 
@@ -192,7 +194,9 @@ impl ForbidElements {
 // Match /^[A-Z_]/
 // https://github.com/jsx-eslint/eslint-plugin-react/blob/master/lib/rules/forbid-elements.js#L109
 fn is_valid_identifier(str: &str) -> bool {
-    str.chars().next().is_some_and(|c| c.is_uppercase() || c == '_')
+    str.chars()
+        .next()
+        .is_some_and(|c| c.is_uppercase() || c == '_')
 }
 
 // Match /^[a-z][^.]*$/
@@ -208,29 +212,62 @@ fn test() {
     let pass = vec![
         ("<button />", Some(serde_json::json!([]))),
         ("<button />", Some(serde_json::json!([{ "forbid": [] }]))),
-        ("<Button />", Some(serde_json::json!([{ "forbid": ["button"] }]))),
-        ("<Button />", Some(serde_json::json!([{ "forbid": [{ "element": "button" }] }]))),
-        ("React.createElement(button)", Some(serde_json::json!([{ "forbid": ["button"] }]))),
+        (
+            "<Button />",
+            Some(serde_json::json!([{ "forbid": ["button"] }])),
+        ),
+        (
+            "<Button />",
+            Some(serde_json::json!([{ "forbid": [{ "element": "button" }] }])),
+        ),
+        (
+            "React.createElement(button)",
+            Some(serde_json::json!([{ "forbid": ["button"] }])),
+        ),
         (
             r#"NotReact.createElement("button")"#,
             Some(serde_json::json!([{ "forbid": ["button"] }])),
         ),
-        (r#"React.createElement("_thing")"#, Some(serde_json::json!([{ "forbid": ["_thing"] }]))),
-        (r#"React.createElement("Modal")"#, Some(serde_json::json!([{ "forbid": ["Modal"] }]))),
+        (
+            r#"React.createElement("_thing")"#,
+            Some(serde_json::json!([{ "forbid": ["_thing"] }])),
+        ),
+        (
+            r#"React.createElement("Modal")"#,
+            Some(serde_json::json!([{ "forbid": ["Modal"] }])),
+        ),
         (
             r#"React.createElement("dotted.component")"#,
             Some(serde_json::json!([{ "forbid": ["dotted.component"] }])),
         ),
-        ("React.createElement(function() {})", Some(serde_json::json!([{ "forbid": ["button"] }]))),
-        ("React.createElement({})", Some(serde_json::json!([{ "forbid": ["button"] }]))),
-        ("React.createElement(1)", Some(serde_json::json!([{ "forbid": ["button"] }]))),
+        (
+            "React.createElement(function() {})",
+            Some(serde_json::json!([{ "forbid": ["button"] }])),
+        ),
+        (
+            "React.createElement({})",
+            Some(serde_json::json!([{ "forbid": ["button"] }])),
+        ),
+        (
+            "React.createElement(1)",
+            Some(serde_json::json!([{ "forbid": ["button"] }])),
+        ),
         ("React.createElement()", None),
     ];
 
     let fail = vec![
-        ("<button />", Some(serde_json::json!([{ "forbid": ["button"] }]))),
-        ("[<Modal />, <button />]", Some(serde_json::json!([{ "forbid": ["button", "Modal"] }]))),
-        ("<dotted.component />", Some(serde_json::json!([{ "forbid": ["dotted.component"] }]))),
+        (
+            "<button />",
+            Some(serde_json::json!([{ "forbid": ["button"] }])),
+        ),
+        (
+            "[<Modal />, <button />]",
+            Some(serde_json::json!([{ "forbid": ["button", "Modal"] }])),
+        ),
+        (
+            "<dotted.component />",
+            Some(serde_json::json!([{ "forbid": ["dotted.component"] }])),
+        ),
         (
             "<dotted.Component />",
             Some(
@@ -281,7 +318,10 @@ fn test() {
             "React.createElement(dotted.component)",
             Some(serde_json::json!([{ "forbid": ["dotted.component"] }])),
         ),
-        ("React.createElement(_comp)", Some(serde_json::json!([{ "forbid": ["_comp"] }]))),
+        (
+            "React.createElement(_comp)",
+            Some(serde_json::json!([{ "forbid": ["_comp"] }])),
+        ),
         (
             r#"React.createElement("button")"#,
             Some(

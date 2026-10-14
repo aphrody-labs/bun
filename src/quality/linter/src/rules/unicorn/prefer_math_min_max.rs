@@ -69,8 +69,12 @@ impl Rule for PreferMathMinMax {
             return;
         };
 
-        let condition_type =
-            is_min_max(test_expr, &conditional_expr.consequent, &conditional_expr.alternate, ctx);
+        let condition_type = is_min_max(
+            test_expr,
+            &conditional_expr.consequent,
+            &conditional_expr.alternate,
+            ctx,
+        );
 
         if matches!(condition_type, TypeOptions::Unknown) {
             return;
@@ -102,12 +106,17 @@ fn is_min_max(
     ctx: &LintContext,
 ) -> TypeOptions {
     let is_matched = matches!(
-        (condition.left.get_inner_expression(), condition.right.get_inner_expression()),
-        (Expression::NumericLiteral(_) | Expression::UnaryExpression(_), Expression::Identifier(_))
-            | (
-                Expression::Identifier(_),
-                Expression::NumericLiteral(_) | Expression::UnaryExpression(_)
-            )
+        (
+            condition.left.get_inner_expression(),
+            condition.right.get_inner_expression()
+        ),
+        (
+            Expression::NumericLiteral(_) | Expression::UnaryExpression(_),
+            Expression::Identifier(_)
+        ) | (
+            Expression::Identifier(_),
+            Expression::NumericLiteral(_) | Expression::UnaryExpression(_)
+        )
     );
 
     if !condition.operator.is_compare() || !is_matched {
@@ -117,14 +126,20 @@ fn is_min_max(
     if is_same_expression(&condition.left, consequent, ctx)
         && is_same_expression(&condition.right, alternate, ctx)
     {
-        if matches!(condition.operator, BinaryOperator::LessThan | BinaryOperator::LessEqualThan) {
+        if matches!(
+            condition.operator,
+            BinaryOperator::LessThan | BinaryOperator::LessEqualThan
+        ) {
             return TypeOptions::Min;
         }
         return TypeOptions::Max;
     } else if is_same_expression(&condition.left, alternate, ctx)
         && is_same_expression(&condition.right, consequent, ctx)
     {
-        if matches!(condition.operator, BinaryOperator::LessThan | BinaryOperator::LessEqualThan) {
+        if matches!(
+            condition.operator,
+            BinaryOperator::LessThan | BinaryOperator::LessEqualThan
+        ) {
             return TypeOptions::Max;
         }
         return TypeOptions::Min;
@@ -167,19 +182,46 @@ fn test() {
     ];
 
     let fix = vec![
-        (r"const foo = height < 100 ? height : 100;", r"const foo = Math.min(height, 100);"),
-        (r"const foo = height <= -100 ? height : -100;", r"const foo = Math.min(height, -100);"),
+        (
+            r"const foo = height < 100 ? height : 100;",
+            r"const foo = Math.min(height, 100);",
+        ),
+        (
+            r"const foo = height <= -100 ? height : -100;",
+            r"const foo = Math.min(height, -100);",
+        ),
         (
             r"const foo = 150.34 < height ? 150.34 : height;",
             r"const foo = Math.min(150.34, height);",
         ),
-        (r"const foo = -0.34 <= height ? -0.34 : height;", r"const foo = Math.min(-0.34, height);"),
-        (r"const foo = height > 10e3 ? 10e3 : height;", r"const foo = Math.min(10e3, height);"),
-        (r"const foo = height >= -10e3 ? -10e3 : height;", r"const foo = Math.min(-10e3, height);"),
-        (r"const foo = 10e3 > height ? height : 10e3;", r"const foo = Math.min(height, 10e3);"),
-        (r"const foo = 10e3 >= height ? height : 10e3;", r"const foo = Math.min(height, 10e3);"),
-        ("return height > 100 ? height : 100;", "return Math.max(height, 100);"),
-        ("return height >= 50 ? height : 50;", "return Math.max(height, 50);"),
+        (
+            r"const foo = -0.34 <= height ? -0.34 : height;",
+            r"const foo = Math.min(-0.34, height);",
+        ),
+        (
+            r"const foo = height > 10e3 ? 10e3 : height;",
+            r"const foo = Math.min(10e3, height);",
+        ),
+        (
+            r"const foo = height >= -10e3 ? -10e3 : height;",
+            r"const foo = Math.min(-10e3, height);",
+        ),
+        (
+            r"const foo = 10e3 > height ? height : 10e3;",
+            r"const foo = Math.min(height, 10e3);",
+        ),
+        (
+            r"const foo = 10e3 >= height ? height : 10e3;",
+            r"const foo = Math.min(height, 10e3);",
+        ),
+        (
+            "return height > 100 ? height : 100;",
+            "return Math.max(height, 100);",
+        ),
+        (
+            "return height >= 50 ? height : 50;",
+            "return Math.max(height, 50);",
+        ),
         (
             "return (10e3 > height ? 10e3 : height) || 200;",
             "return (Math.max(10e3, height)) || 200;",
@@ -196,10 +238,22 @@ fn test() {
             "return (height <= -0.99 ? -0.99 : height) || -3.99;",
             "return (Math.max(-0.99, height)) || -3.99;",
         ),
-        ("return 10e6 < height ? height : 10e6;", "return Math.max(height, 10e6);"),
-        ("return -10e4 <= height ? height : -10e4;", "return Math.max(height, -10e4);"),
-        ("const foo = typeof x < bar ? typeof x : bar;", "const foo = Math.min(typeof x, bar);"),
-        ("const foo = void x < bar ? void x : bar;", "const foo = Math.min(void x, bar);"),
+        (
+            "return 10e6 < height ? height : 10e6;",
+            "return Math.max(height, 10e6);",
+        ),
+        (
+            "return -10e4 <= height ? height : -10e4;",
+            "return Math.max(height, -10e4);",
+        ),
+        (
+            "const foo = typeof x < bar ? typeof x : bar;",
+            "const foo = Math.min(typeof x, bar);",
+        ),
+        (
+            "const foo = void x < bar ? void x : bar;",
+            "const foo = Math.min(void x, bar);",
+        ),
         (
             "const foo = delete obj.p < bar ? delete obj.p : bar;",
             "const foo = Math.min(delete obj.p, bar);",

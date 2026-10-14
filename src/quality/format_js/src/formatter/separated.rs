@@ -48,7 +48,9 @@ impl<'a, E: Format<'a, JsFormatContext<'a>> + GetSpan> Format<'a, JsFormatContex
         if self.is_last {
             match self.options.trailing_separator {
                 TrailingSeparator::Allowed => {
-                    if_group_breaks(&self.separator).with_group_id(self.options.group_id).fmt(f);
+                    if_group_breaks(&self.separator)
+                        .with_group_id(self.options.group_id)
+                        .fmt(f);
                 }
                 TrailingSeparator::Mandatory => self.separator.fmt(f),
                 TrailingSeparator::Disallowed | TrailingSeparator::Omit => (),
@@ -73,7 +75,12 @@ where
     I: Iterator<Item = E>,
 {
     pub fn new(inner: I, separator: &'static str) -> Self {
-        Self { inner, separator, next: None, options: FormatSeparatedOptions::default() }
+        Self {
+            inner,
+            separator,
+            next: None,
+            options: FormatSeparatedOptions::default(),
+        }
     }
 
     /// Wraps every node inside of a group

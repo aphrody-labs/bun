@@ -14,7 +14,10 @@ pub fn open(tail: &str) -> Option<u8> {
 
 /// Position past the first `<closer>}` sequence in `tail`, if any.
 pub fn close(tail: &str, closer: u8) -> Option<usize> {
-    tail.as_bytes().windows(2).position(|w| w == [closer, b'}']).map(|i| i + 2)
+    tail.as_bytes()
+        .windows(2)
+        .position(|w| w == [closer, b'}'])
+        .map(|i| i + 2)
 }
 
 #[cfg(test)]

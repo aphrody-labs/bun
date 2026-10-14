@@ -63,5 +63,7 @@ pub fn format_content_without_comments_after<'a, T>(
     content.fmt(f);
 
     // Restore the previous comment view limit
-    f.context_mut().comments_mut().restore_view_limit(previous_limit);
+    f.context_mut()
+        .comments_mut()
+        .restore_view_limit(previous_limit);
 }

@@ -9,7 +9,13 @@ use crate::{
 #[derive(Debug, Default, Clone)]
 pub struct NoDuplicateHooks;
 
-declare_oxc_lint!(NoDuplicateHooks, jest, style, docs = DOCUMENTATION, version = "0.4.0",);
+declare_oxc_lint!(
+    NoDuplicateHooks,
+    jest,
+    style,
+    docs = DOCUMENTATION,
+    version = "0.4.0",
+);
 
 impl Rule for NoDuplicateHooks {
     fn run_once(&self, ctx: &LintContext) {

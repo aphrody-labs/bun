@@ -137,7 +137,10 @@ fn test() {
     ];
 
     let fix = vec![
-        ("const foo = (() => (a ? b : c))();", "const foo = (() => { return a ? b : c; })();"),
+        (
+            "const foo = (() => (a ? b : c))();",
+            "const foo = (() => { return a ? b : c; })();",
+        ),
         (
             "const foo = (() => (
                 a ? b : c
@@ -172,7 +175,10 @@ fn test() {
                 a: b,
             }; })();",
         ),
-        ("const foo = (bar => (bar))();", "const foo = (bar => { return bar; })();"),
+        (
+            "const foo = (bar => (bar))();",
+            "const foo = (bar => { return bar; })();",
+        ),
         (
             "(async () => ({
                 bar,
@@ -189,7 +195,10 @@ fn test() {
                 bar: await baz(),
             }; })();",
         ),
-        ("(async () => (( {bar} )))();", "(async () => { return {bar}; })();"),
+        (
+            "(async () => (( {bar} )))();",
+            "(async () => { return {bar}; })();",
+        ),
     ];
 
     Tester::new(NoUnreadableIife::NAME, NoUnreadableIife::PLUGIN, pass, fail)

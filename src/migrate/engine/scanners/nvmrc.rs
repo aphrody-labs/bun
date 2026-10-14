@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::util::make_finding;
 use crate::types::{Finding, MakeFindingOpts, Severity};
+use crate::util::make_finding;
 
 /// `.nvmrc` / `.node-version` : advisory. Bun n'utilise pas ces fichiers.
 pub fn scan_nvmrc(path: &str, content: &str) -> (Vec<Finding>, String) {

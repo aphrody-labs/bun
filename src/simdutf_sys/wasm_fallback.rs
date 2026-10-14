@@ -15,7 +15,10 @@ const OUTPUT_BUFFER_TOO_SMALL: Status = Status(10);
 
 #[inline]
 fn ok(count: usize) -> SIMDUTFResult {
-    SIMDUTFResult { status: Status::SUCCESS, count }
+    SIMDUTFResult {
+        status: Status::SUCCESS,
+        count,
+    }
 }
 #[inline]
 fn err(status: Status, count: usize) -> SIMDUTFResult {
@@ -167,7 +170,11 @@ pub unsafe fn simdutf__convert_utf16le_to_utf8_with_errors(
 }
 /// # Safety
 /// `buf` valid for `len` u16s; `utf8_buffer` large enough for the converted text.
-pub unsafe fn simdutf__convert_valid_utf16le_to_utf8(buf: *const u16, len: usize, utf8_buffer: *mut u8) -> usize {
+pub unsafe fn simdutf__convert_valid_utf16le_to_utf8(
+    buf: *const u16,
+    len: usize,
+    utf8_buffer: *mut u8,
+) -> usize {
     // SAFETY: caller contract.
     let input = unsafe { slice(buf, len) };
     // SAFETY: caller guarantees capacity for the UTF-8 length of `input`.
@@ -197,7 +204,10 @@ pub unsafe fn simdutf__utf8_length_from_utf16le(input: *const u16, length: usize
 }
 /// # Safety
 /// `input` must be valid for `length` u16s.
-pub unsafe fn simdutf__utf8_length_from_utf16le_with_replacement(input: *const u16, length: usize) -> usize {
+pub unsafe fn simdutf__utf8_length_from_utf16le_with_replacement(
+    input: *const u16,
+    length: usize,
+) -> usize {
     // SAFETY: caller contract.
     utf8_len_utf16(unsafe { slice(input, length) }, 3)
 }
@@ -214,7 +224,11 @@ pub unsafe fn simdutf__utf16_length_from_utf8(input: *const u8, length: usize) -
 /// `input` must be valid for `length` bytes.
 pub unsafe fn simdutf__utf8_length_from_latin1(input: *const u8, length: usize) -> usize {
     // SAFETY: caller contract.
-    length + unsafe { slice(input, length) }.iter().filter(|b| !b.is_ascii()).count()
+    length
+        + unsafe { slice(input, length) }
+            .iter()
+            .filter(|b| !b.is_ascii())
+            .count()
 }
 
 const STD: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
@@ -248,7 +262,12 @@ fn base64_len(length: usize, is_urlsafe: bool) -> usize {
 
 /// # Safety
 /// `output` must be valid for `base64_len(length, is_urlsafe)` bytes.
-pub(crate) unsafe fn simdutf__base64_encode(input: *const u8, length: usize, output: *mut u8, is_urlsafe: c_int) -> usize {
+pub(crate) unsafe fn simdutf__base64_encode(
+    input: *const u8,
+    length: usize,
+    output: *mut u8,
+    is_urlsafe: c_int,
+) -> usize {
     let url = is_urlsafe != 0;
     let table = if url { URL } else { STD };
     // SAFETY: caller contract.
@@ -258,7 +277,11 @@ pub(crate) unsafe fn simdutf__base64_encode(input: *const u8, length: usize, out
     let out = unsafe { slice_mut(output, total) };
     let mut n = 0;
     for chunk in input.chunks(3) {
-        let b = [chunk[0], *chunk.get(1).unwrap_or(&0), *chunk.get(2).unwrap_or(&0)];
+        let b = [
+            chunk[0],
+            *chunk.get(1).unwrap_or(&0),
+            *chunk.get(2).unwrap_or(&0),
+        ];
         let quad = [
             table[usize::from(b[0] >> 2)],
             table[usize::from(((b[0] & 0x03) << 4) | (b[1] >> 4))],
@@ -303,7 +326,13 @@ fn flush_quantum(acc: u32, count: usize, out: &mut [u8], n: &mut usize) -> bool 
     true
 }
 
-fn base64_decode(input: &[u8], out: &mut [u8], std: bool, url: bool, lenient: bool) -> SIMDUTFResult {
+fn base64_decode(
+    input: &[u8],
+    out: &mut [u8],
+    std: bool,
+    url: bool,
+    lenient: bool,
+) -> SIMDUTFResult {
     let mut end = input.len();
     while end > 0 && is_base64_space(input[end - 1]) {
         end -= 1;

@@ -173,7 +173,11 @@ pub fn create_super_call<'a>(
         SPAN,
         Expression::new_super(SPAN, ctx),
         None,
-        [Argument::new_spread_element(SPAN, args_binding.create_read_expression(ctx), ctx)],
+        [Argument::new_spread_element(
+            SPAN,
+            args_binding.create_read_expression(ctx),
+            ctx,
+        )],
         false,
         ctx,
     )
@@ -197,7 +201,13 @@ pub fn create_class_constructor<'a, 'c>(
         let args_binding = ctx.generate_uid("args", scope_id, SymbolFlags::FunctionScopedVariable);
         let rest_element =
             BindingRestElement::new(SPAN, args_binding.create_binding_pattern(ctx), ctx);
-        params_rest = Some(FormalParameterRest::boxed(SPAN, [], rest_element, None, ctx));
+        params_rest = Some(FormalParameterRest::boxed(
+            SPAN,
+            [],
+            rest_element,
+            None,
+            ctx,
+        ));
         ArenaVec::from_iter_in(
             iter::once(Statement::new_expression_statement(
                 SPAN,
@@ -211,8 +221,13 @@ pub fn create_class_constructor<'a, 'c>(
         ArenaVec::from_iter_in(stmts_iter, ctx)
     };
 
-    let params =
-        FormalParameters::boxed(SPAN, FormalParameterKind::FormalParameter, [], params_rest, ctx);
+    let params = FormalParameters::boxed(
+        SPAN,
+        FormalParameterKind::FormalParameter,
+        [],
+        params_rest,
+        ctx,
+    );
 
     create_class_constructor_with_params(stmts, params, scope_id, ctx)
 }

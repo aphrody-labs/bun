@@ -129,7 +129,11 @@ impl DragonBallAssetTransport for BunBrowserHttpClient {
             .fetch_resource_with_callbacks(url, request, None)
             .await
             .map_err(|error| error.to_string())?;
-        Ok(AssetResponse { url: response.url, status: response.status, bytes: response.body })
+        Ok(AssetResponse {
+            url: response.url,
+            status: response.status,
+            bytes: response.body,
+        })
     }
 }
 
@@ -150,7 +154,11 @@ pub fn plan_asset_requests(
         .map(|job| DragonBallImageRequest {
             url: job.url.to_string(),
             referrer: job.referrer.to_string(),
-            path: job.path.strip_prefix(&options.output).unwrap_or(&job.path).to_path_buf(),
+            path: job
+                .path
+                .strip_prefix(&options.output)
+                .unwrap_or(&job.path)
+                .to_path_buf(),
         })
         .collect())
 }
@@ -166,8 +174,9 @@ pub async fn acquire_manga_volume<T: crate::CrawlTransport, A: DragonBallAssetTr
     if !(1..=42).contains(&volume) {
         return Err("original manga volume must be between 1 and 42".into());
     }
-    let url =
-        validate_source_url(&format!("https://sushiscan.fr/dragon-ball-volume-{volume}-vf/"))?;
+    let url = validate_source_url(&format!(
+        "https://sushiscan.fr/dragon-ball-volume-{volume}-vf/"
+    ))?;
     let response = pages.fetch(&url).await?;
     validate_source_url(response.url.as_str())?;
     if response.url.host_str() != Some("sushiscan.fr") || response.status != 200 {
@@ -198,9 +207,9 @@ pub async fn acquire_manga_volume<T: crate::CrawlTransport, A: DragonBallAssetTr
     options.quality = 55.0;
     let report = sync_assets_with_transport(assets, &options).await?;
     write_private(
-        &options
-            .output
-            .join(format!("assets/manga/DB/regular/vol{volume}/acquisition-report.json")),
+        &options.output.join(format!(
+            "assets/manga/DB/regular/vol{volume}/acquisition-report.json"
+        )),
         &serde_json::to_vec_pretty(&report).map_err(|error| error.to_string())?,
     )?;
     Ok(report)
@@ -231,7 +240,9 @@ pub async fn probe_assets<T: DragonBallAssetTransport>(
     let mut result = Vec::new();
     for job in jobs.iter().take(options.max_files.min(3)) {
         let now = chrono::Utc::now().timestamp_millis();
-        journal.request_times.retain(|time| now.saturating_sub(*time) < 24 * 60 * 60 * 1000);
+        journal
+            .request_times
+            .retain(|time| now.saturating_sub(*time) < 24 * 60 * 60 * 1000);
         if journal.request_times.len() >= 5000
             || journal
                 .request_times
@@ -247,7 +258,10 @@ pub async fn probe_assets<T: DragonBallAssetTransport>(
             &journal_path,
             &serde_json::to_vec_pretty(&journal).map_err(|error| error.to_string())?,
         )?;
-        let probe = match transport.get(&job.url, &job.referrer, options.max_response_bytes).await {
+        let probe = match transport
+            .get(&job.url, &job.referrer, options.max_response_bytes)
+            .await
+        {
             Ok(response) => {
                 validate_source_url(response.url.as_str())?;
                 let valid = response.bytes.len() <= options.max_response_bytes
@@ -262,7 +276,7 @@ pub async fn probe_assets<T: DragonBallAssetTransport>(
                     bytes: response.bytes.len(),
                     error: None,
                 }
-            },
+            }
             Err(error) => AssetProbe {
                 url: job.url.to_string(),
                 status: None,
@@ -327,12 +341,21 @@ fn jobs(options: &DragonBallAssetOptions) -> Result<(Value, Vec<AssetJob>), Stri
         .and_then(Value::as_array)
         .ok_or("DragonBallCN snapshot has no collections")?
     {
-        let slug =
-            collection.get("slug").and_then(Value::as_str).ok_or("collection has no slug")?;
-        if options.collection.as_deref().is_some_and(|selected| selected != slug) {
+        let slug = collection
+            .get("slug")
+            .and_then(Value::as_str)
+            .ok_or("collection has no slug")?;
+        if options
+            .collection
+            .as_deref()
+            .is_some_and(|selected| selected != slug)
+        {
             continue;
         }
-        if !slug.bytes().all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_')) {
+        if !slug
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_'))
+        {
             return Err("unsafe collection slug".into());
         }
         for (index, book) in collection
@@ -342,11 +365,20 @@ fn jobs(options: &DragonBallAssetOptions) -> Result<(Value, Vec<AssetJob>), Stri
             .iter()
             .enumerate()
         {
-            let did = book.get("did").and_then(Value::as_str).ok_or("volume has no did")?;
-            if options.did.as_deref().is_some_and(|selected| selected != did) {
+            let did = book
+                .get("did")
+                .and_then(Value::as_str)
+                .ok_or("volume has no did")?;
+            if options
+                .did
+                .as_deref()
+                .is_some_and(|selected| selected != did)
+            {
                 continue;
             }
-            if !did.bytes().all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_'))
+            if !did
+                .bytes()
+                .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_'))
             {
                 return Err("unsafe volume identifier".into());
             }
@@ -355,7 +387,10 @@ fn jobs(options: &DragonBallAssetOptions) -> Result<(Value, Vec<AssetJob>), Stri
                     .and_then(Value::as_str)
                     .ok_or("volume has no source fiche")?,
             )?;
-            if let Some(raw) = book.pointer("/couverture/source_url").and_then(Value::as_str) {
+            if let Some(raw) = book
+                .pointer("/couverture/source_url")
+                .and_then(Value::as_str)
+            {
                 let url = validate_source_url(raw)?;
                 let extension = url
                     .path()
@@ -382,9 +417,13 @@ fn jobs(options: &DragonBallAssetOptions) -> Result<(Value, Vec<AssetJob>), Stri
                 && let Some(pages) = inventory.get(did).and_then(Value::as_array)
             {
                 for page in pages {
-                    let Some(raw) = page.get("image_url").and_then(Value::as_str) else { continue };
-                    let n =
-                        page.get("n").and_then(Value::as_u64).ok_or("plate has no page number")?;
+                    let Some(raw) = page.get("image_url").and_then(Value::as_str) else {
+                        continue;
+                    };
+                    let n = page
+                        .get("n")
+                        .and_then(Value::as_u64)
+                        .ok_or("plate has no page number")?;
                     result.push(AssetJob {
                         url: validate_source_url(raw)?,
                         referrer: referrer.clone(),
@@ -443,7 +482,11 @@ fn encode_webp(
     }
     let image = image.to_rgba8();
     let encoder = webp::Encoder::from_rgba(&image, image.width(), image.height());
-    let output = if lossless { encoder.encode_lossless() } else { encoder.encode(quality) };
+    let output = if lossless {
+        encoder.encode_lossless()
+    } else {
+        encoder.encode(quality)
+    };
     Ok(output.to_vec())
 }
 
@@ -506,7 +549,11 @@ pub async fn sync_assets_with_transport<T: DragonBallAssetTransport>(
         let mut acquired = None;
         for _ in 0..3 {
             let response = if let Some(bytes) = &local {
-                AssetResponse { url: job.url.clone(), status: 200, bytes: bytes.clone() }
+                AssetResponse {
+                    url: job.url.clone(),
+                    status: 200,
+                    bytes: bytes.clone(),
+                }
             } else {
                 let now = chrono::Utc::now().timestamp_millis();
                 journal
@@ -530,18 +577,23 @@ pub async fn sync_assets_with_transport<T: DragonBallAssetTransport>(
                     }
                 }
                 last_request = Some(Instant::now());
-                journal.request_times.push(chrono::Utc::now().timestamp_millis());
+                journal
+                    .request_times
+                    .push(chrono::Utc::now().timestamp_millis());
                 report.requests += 1;
                 write_private(
                     &journal_path,
                     &serde_json::to_vec_pretty(&journal).map_err(|error| error.to_string())?,
                 )?;
-                match transport.get(&job.url, &job.referrer, options.max_response_bytes).await {
+                match transport
+                    .get(&job.url, &job.referrer, options.max_response_bytes)
+                    .await
+                {
                     Ok(response) => response,
                     Err(error) => {
                         report.errors.push((job.url.to_string(), error));
                         continue;
-                    },
+                    }
                 }
             };
             validate_source_url(response.url.as_str())?;
@@ -554,9 +606,10 @@ pub async fn sync_assets_with_transport<T: DragonBallAssetTransport>(
                 break;
             }
             if !(200..300).contains(&response.status) {
-                report
-                    .errors
-                    .push((job.url.to_string(), format!("asset HTTP {}", response.status)));
+                report.errors.push((
+                    job.url.to_string(),
+                    format!("asset HTTP {}", response.status),
+                ));
                 continue;
             }
             if response.bytes.len() > options.max_response_bytes {
@@ -611,8 +664,9 @@ pub async fn sync_assets_with_transport<T: DragonBallAssetTransport>(
             report.pending += 1;
         }
         if refusals >= 5 {
-            report.pending +=
-                jobs.len().saturating_sub(report.downloaded + report.reused + report.pending);
+            report.pending += jobs
+                .len()
+                .saturating_sub(report.downloaded + report.reused + report.pending);
             break;
         }
     }
@@ -632,8 +686,11 @@ pub async fn sync_assets_with_transport<T: DragonBallAssetTransport>(
             .ok_or("snapshot lost volumes")?
         {
             let did = book.get("did").and_then(Value::as_str).unwrap_or_default();
-            let plate_directory =
-                options.output.join("assets/dragonballcn/planches").join(&slug).join(did);
+            let plate_directory = options
+                .output
+                .join("assets/dragonballcn/planches")
+                .join(&slug)
+                .join(did);
             let plate_jobs: Vec<_> = jobs
                 .iter()
                 .filter(|job| {
@@ -696,9 +753,17 @@ pub async fn sync_assets_with_transport<T: DragonBallAssetTransport>(
             .into_iter()
             .flatten()
             .flat_map(|collection| {
-                collection.get("ouvrages").and_then(Value::as_array).into_iter().flatten()
+                collection
+                    .get("ouvrages")
+                    .and_then(Value::as_array)
+                    .into_iter()
+                    .flatten()
             })
-            .filter(|book| book.pointer("/couverture/sha256").and_then(Value::as_str).is_some())
+            .filter(|book| {
+                book.pointer("/couverture/sha256")
+                    .and_then(Value::as_str)
+                    .is_some()
+            })
             .count();
         if let Some(totals) = snapshot.get_mut("totaux").and_then(Value::as_object_mut) {
             totals.insert("couvertures".into(), json!(covers));
@@ -711,7 +776,9 @@ pub async fn sync_assets_with_transport<T: DragonBallAssetTransport>(
     }
     report.completed = report.pending == 0 && report.errors.is_empty();
     write_private(
-        &options.output.join("assets/dragonballcn/acquisition-report.json"),
+        &options
+            .output
+            .join("assets/dragonballcn/acquisition-report.json"),
         &serde_json::to_vec_pretty(&report).map_err(|error| error.to_string())?,
     )?;
     Ok(report)
@@ -732,7 +799,11 @@ mod tests {
             _max_bytes: usize,
         ) -> Result<AssetResponse, String> {
             self.calls.set(self.calls.get() + 1);
-            Ok(AssetResponse { url: url.clone(), status: 200, bytes: self.bytes.clone() })
+            Ok(AssetResponse {
+                url: url.clone(),
+                status: 200,
+                bytes: self.bytes.clone(),
+            })
         }
     }
     #[tokio::test]
@@ -744,11 +815,16 @@ mod tests {
         image::DynamicImage::new_rgb8(2, 2)
             .write_to(&mut encoded, image::ImageFormat::Png)
             .unwrap();
-        let fixture = Fixture { bytes: encoded.into_inner(), calls: std::cell::Cell::new(0) };
+        let fixture = Fixture {
+            bytes: encoded.into_inner(),
+            calls: std::cell::Cell::new(0),
+        };
         let mut options = DragonBallAssetOptions::new(output.clone());
         options.delay_ms = 0;
         options.min_free_bytes = 0;
-        let report = sync_assets_with_transport(&fixture, &options).await.unwrap();
+        let report = sync_assets_with_transport(&fixture, &options)
+            .await
+            .unwrap();
         assert!(report.completed);
         assert_eq!(report.downloaded, 1);
         assert_eq!(fixture.calls.get(), 1);
@@ -756,18 +832,25 @@ mod tests {
             image::guess_format(&std::fs::read(&report.files[0].path).unwrap()).unwrap(),
             image::ImageFormat::WebP
         );
-        let report = sync_assets_with_transport(&fixture, &options).await.unwrap();
+        let report = sync_assets_with_transport(&fixture, &options)
+            .await
+            .unwrap();
         assert_eq!(report.reused, 1);
         assert_eq!(fixture.calls.get(), 1);
         std::fs::write(&report.files[0].path, b"corrupt").unwrap();
-        let report = sync_assets_with_transport(&fixture, &options).await.unwrap();
+        let report = sync_assets_with_transport(&fixture, &options)
+            .await
+            .unwrap();
         assert_eq!(report.downloaded, 1);
         assert_eq!(fixture.calls.get(), 2);
         let snapshot: Value = serde_json::from_slice(
             &std::fs::read(output.join("assets/dragonballcn/index.json")).unwrap(),
         )
         .unwrap();
-        assert_eq!(snapshot["collections"][0]["ouvrages"][0]["couverture"]["largeur"], 2);
+        assert_eq!(
+            snapshot["collections"][0]["ouvrages"][0]["couverture"]["largeur"],
+            2
+        );
         assert_eq!(
             snapshot["collections"][0]["ouvrages"][0]["couverture"]["sha256"],
             report.files[0].sha256
@@ -777,8 +860,10 @@ mod tests {
 
     #[tokio::test]
     async fn reserve_filters_and_generic_grayscale_resize_preserve_sources() {
-        let output = std::env::temp_dir()
-            .join(format!("aphrody-dragon-ball-reserve-{}", std::process::id()));
+        let output = std::env::temp_dir().join(format!(
+            "aphrody-dragon-ball-reserve-{}",
+            std::process::id()
+        ));
         write_private(&output.join("assets/dragonballcn/index.json"),br#"{"collections":[{"slug":"edition","ouvrages":[{"did":"0-1","url_fiche":"https://comic.dragonballcn.com/list/gain_1.php?did=0-1","couverture":{"source_url":"https://comic.dragonballcn.com/one.png"}}]}]}"#).unwrap();
         let image = image::DynamicImage::ImageRgb8(image::RgbImage::from_pixel(
             16,
@@ -790,7 +875,10 @@ mod tests {
         let bytes = bytes.into_inner();
         let reserve = output.join("reserve");
         write_private(&reserve.join("edition/0-1.png"), &bytes).unwrap();
-        let fixture = Fixture { bytes: bytes.clone(), calls: std::cell::Cell::new(0) };
+        let fixture = Fixture {
+            bytes: bytes.clone(),
+            calls: std::cell::Cell::new(0),
+        };
         let mut options = DragonBallAssetOptions::new(output.clone());
         options.delay_ms = 0;
         options.min_free_bytes = 0;
@@ -798,7 +886,9 @@ mod tests {
         options.collection = Some("edition".into());
         options.did = Some("0-1".into());
         options.max_files = 0;
-        let report = sync_assets_with_transport(&fixture, &options).await.unwrap();
+        let report = sync_assets_with_transport(&fixture, &options)
+            .await
+            .unwrap();
         assert!(report.completed);
         assert_eq!(fixture.calls.get(), 0);
         assert_eq!(std::fs::read(&report.files[0].source_path).unwrap(), bytes);
@@ -810,7 +900,9 @@ mod tests {
         options.max_files = 1;
         options.grayscale = true;
         options.max_width = Some(8);
-        let report = sync_assets_with_transport(&fixture, &options).await.unwrap();
+        let report = sync_assets_with_transport(&fixture, &options)
+            .await
+            .unwrap();
         assert!(report.completed);
         assert_eq!(report.files[0].width, 8);
         assert_eq!(report.files[0].height, 4);
@@ -825,20 +917,29 @@ mod tests {
 
     #[tokio::test]
     async fn plate_manifest_keeps_legacy_three_digit_names_and_acquired_numbers() {
-        let output = std::env::temp_dir()
-            .join(format!("aphrody-dragon-ball-plate-manifest-{}", std::process::id()));
+        let output = std::env::temp_dir().join(format!(
+            "aphrody-dragon-ball-plate-manifest-{}",
+            std::process::id()
+        ));
         write_private(&output.join("assets/dragonballcn/index.json"),br#"{"collections":[{"slug":"edition","ouvrages":[{"did":"0-1","titre":"Source book","url_fiche":"https://comic.dragonballcn.com/list/gain_1.php?did=0-1","dossier_distant":"db/source","couverture":null}]}]}"#).unwrap();
         write_private(&output.join("data/catalogues/dragonballcn-inventaire.json"),br#"{"0-1":[{"n":1,"fichier":"one.png","image_url":"https://comic.dragonballcn.com/list/db/source/one.png"},{"n":2,"fichier":"two.png","image_url":"https://comic.dragonballcn.com/list/db/source/two.png"}]}"#).unwrap();
         let mut bytes = std::io::Cursor::new(Vec::new());
-        image::DynamicImage::new_rgb8(2, 2).write_to(&mut bytes, image::ImageFormat::Png).unwrap();
-        let fixture = Fixture { bytes: bytes.into_inner(), calls: std::cell::Cell::new(0) };
+        image::DynamicImage::new_rgb8(2, 2)
+            .write_to(&mut bytes, image::ImageFormat::Png)
+            .unwrap();
+        let fixture = Fixture {
+            bytes: bytes.into_inner(),
+            calls: std::cell::Cell::new(0),
+        };
         let mut options = DragonBallAssetOptions::new(output.clone());
         options.plates = true;
         options.delay_ms = 0;
         options.min_free_bytes = 0;
         options.max_files = 1;
         options.reference = Some("editorial-source-reference".into());
-        let report = sync_assets_with_transport(&fixture, &options).await.unwrap();
+        let report = sync_assets_with_transport(&fixture, &options)
+            .await
+            .unwrap();
         assert!(!report.completed);
         assert_eq!(report.pending, 1);
         let directory = output.join("assets/dragonballcn/planches/edition/0-1");
@@ -851,7 +952,9 @@ mod tests {
         assert_eq!(index["dossier_distant"], "db/source");
         assert_eq!(index["completed"], false);
         options.max_files = 2;
-        let report = sync_assets_with_transport(&fixture, &options).await.unwrap();
+        let report = sync_assets_with_transport(&fixture, &options)
+            .await
+            .unwrap();
         assert!(report.completed);
         assert_eq!(report.reused, 1);
         assert_eq!(fixture.calls.get(), 2);

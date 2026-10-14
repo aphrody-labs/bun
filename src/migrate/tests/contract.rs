@@ -58,8 +58,8 @@ fn json_report_deserializes_into_typed_schema() {
     let (stdout, stderr, code) = run_n2b(&[&fixture, "--report=json"]);
     // Exit 0 (no findings) or 1 (findings in check mode) both acceptable.
     assert!(code == 0 || code == 1, "n2b exit {code}, stderr:\n{stderr}");
-    let _report: bun_migrate::schema::N2bReport = serde_json::from_str(&stdout)
-        .unwrap_or_else(|e| {
+    let _report: bun_migrate::schema::N2bReport =
+        serde_json::from_str(&stdout).unwrap_or_else(|e| {
             panic!("JSON did not match schema/v2.json types: {e}\nstdout was: {stdout}")
         });
 }

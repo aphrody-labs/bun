@@ -39,7 +39,11 @@ pub(in crate::parser) struct ParserCursor<'a> {
 impl<'a> ParserCursor<'a> {
     #[inline]
     fn new(tokenizer: Tokenizer<'a>, source: &'a str) -> Self {
-        Self { tokenizer, cached_token: None, source }
+        Self {
+            tokenizer,
+            cached_token: None,
+            source,
+        }
     }
 
     #[inline]
@@ -138,7 +142,9 @@ impl<'a> ParserCursor<'a> {
 
     #[inline]
     fn expect_backtick_code(&mut self) -> PResult<(token::BacktickCode<'a>, Span)> {
-        self.expect_token("<backtick code>", |token, source| token.backtick_code(source))
+        self.expect_token("<backtick code>", |token, source| {
+            token.backtick_code(source)
+        })
     }
 
     #[inline]
@@ -340,7 +346,9 @@ impl<'a> ParserCursor<'a> {
 
     #[inline]
     fn expect_str_template(&mut self) -> PResult<(token::StrTemplate<'a>, Span)> {
-        self.expect_token("<string template>", |token, source| token.str_template(source))
+        self.expect_token("<string template>", |token, source| {
+            token.str_template(source)
+        })
     }
 
     #[inline]
@@ -362,7 +370,10 @@ impl<'a> ParserCursor<'a> {
         if let Some(token) = extract(token) {
             Ok((token, span))
         } else {
-            Err(Error { kind: ErrorKind::Unexpected(expected, token.symbol()), span })
+            Err(Error {
+                kind: ErrorKind::Unexpected(expected, token.symbol()),
+                span,
+            })
         }
     }
 
@@ -385,7 +396,10 @@ impl<'a> ParserCursor<'a> {
             self.tokenizer.scan_ident_sequence(less_name)
         } else {
             let TokenWithSpan { token, span } = self.tokenizer.bump_without_ws_or_comments()?;
-            Err(Error { kind: ErrorKind::Unexpected("<ident>", token.symbol()), span })
+            Err(Error {
+                kind: ErrorKind::Unexpected("<ident>", token.symbol()),
+                span,
+            })
         }
     }
 
@@ -596,14 +610,24 @@ impl<'a> Parser<'a> {
 
     #[inline]
     pub(crate) fn ident(&self, token: token::Ident<'a>, span: crate::Span) -> Ident<'a> {
-        Ident { name: self.ident_name(&token), raw: token.raw, span }
+        Ident {
+            name: self.ident_name(&token),
+            raw: token.raw,
+            span,
+        }
     }
 
     // A `$`-prefixed variable name: '$' <ident>  (Sass variables, Less property
     // accessors, postcss-simple-vars).
     pub(super) fn parse_dollar_var_ident(&mut self) -> PResult<(Ident<'a>, Span)> {
         let (dollar_var, span) = self.cursor.expect_dollar_var()?;
-        let name = self.ident(dollar_var.ident, Span { start: span.start + 1, end: span.end });
+        let name = self.ident(
+            dollar_var.ident,
+            Span {
+                start: span.start + 1,
+                end: span.end,
+            },
+        );
         Ok((name, span))
     }
 
@@ -612,12 +636,23 @@ impl<'a> Parser<'a> {
         token: token::Dimension<'a>,
         span: crate::Span,
     ) -> PResult<Dimension<'a>> {
-        let value_span = crate::Span { start: span.start, end: span.start + token.value.raw.len() };
-        let unit_span = crate::Span { start: span.start + token.value.raw.len(), end: span.end };
+        let value_span = crate::Span {
+            start: span.start,
+            end: span.start + token.value.raw.len(),
+        };
+        let unit_span = crate::Span {
+            start: span.start + token.value.raw.len(),
+            end: span.end,
+        };
         let value = (token.value, value_span).try_into()?;
         let unit = self.ident(token.unit, unit_span);
         let kind = convert::dimension_kind(unit.name);
-        Ok(Dimension { value, unit, kind, span })
+        Ok(Dimension {
+            value,
+            unit,
+            kind,
+            span,
+        })
     }
 
     #[inline]
@@ -626,7 +661,11 @@ impl<'a> Parser<'a> {
         token: token::Ident<'a>,
         span: crate::Span,
     ) -> InterpolableIdentStaticPart<'a> {
-        InterpolableIdentStaticPart { value: self.ident_name(&token), raw: token.raw, span }
+        InterpolableIdentStaticPart {
+            value: self.ident_name(&token),
+            raw: token.raw,
+            span,
+        }
     }
 
     #[inline]
@@ -637,7 +676,11 @@ impl<'a> Parser<'a> {
         } else {
             raw_without_quotes
         };
-        Str { value, raw: token.raw, span }
+        Str {
+            value,
+            raw: token.raw,
+            span,
+        }
     }
 
     #[inline]
@@ -658,7 +701,11 @@ impl<'a> Parser<'a> {
         } else {
             raw_without_quotes
         };
-        InterpolableStrStaticPart { value, raw: token.raw, span }
+        InterpolableStrStaticPart {
+            value,
+            raw: token.raw,
+            span,
+        }
     }
 
     #[inline]
@@ -672,12 +719,20 @@ impl<'a> Parser<'a> {
         } else {
             token.raw
         };
-        InterpolableUrlStaticPart { value, raw: token.raw, span }
+        InterpolableUrlStaticPart {
+            value,
+            raw: token.raw,
+            span,
+        }
     }
 
     #[inline]
     fn ident_name(&self, token: &token::Ident<'a>) -> &'a str {
-        if token.escaped { util::handle_escape_in(token.raw, self.allocator) } else { token.raw }
+        if token.escaped {
+            util::handle_escape_in(token.raw, self.allocator)
+        } else {
+            token.raw
+        }
     }
 
     fn try_parse<R, F: FnOnce(&mut Self) -> PResult<R>>(&mut self, f: F) -> PResult<R> {

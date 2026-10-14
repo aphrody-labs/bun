@@ -207,19 +207,31 @@ impl RuleFix {
     /// Create a new safe fix.
     #[inline]
     pub fn fix(fix: CompositeFix) -> Self {
-        Self { kind: FixKind::Fix, message: None, fix }
+        Self {
+            kind: FixKind::Fix,
+            message: None,
+            fix,
+        }
     }
 
     /// Create a new suggestion
     #[inline]
     pub const fn suggestion(fix: CompositeFix, message: Cow<'static, str>) -> Self {
-        Self { kind: FixKind::Suggestion, message: Some(message), fix }
+        Self {
+            kind: FixKind::Suggestion,
+            message: Some(message),
+            fix,
+        }
     }
 
     /// Create a dangerous fix.
     #[inline]
     pub fn dangerous(fix: CompositeFix) -> Self {
-        Self { kind: FixKind::DangerousFix, message: None, fix }
+        Self {
+            kind: FixKind::DangerousFix,
+            message: None,
+            fix,
+        }
     }
 
     /// Mark this [`RuleFix`] as dangerous.
@@ -335,17 +347,32 @@ impl Default for Fix {
 
 impl Fix {
     pub const fn delete(span: Span) -> Self {
-        Self { content: Cow::Borrowed(""), message: None, span, kind: FixKind::None }
+        Self {
+            content: Cow::Borrowed(""),
+            message: None,
+            span,
+            kind: FixKind::None,
+        }
     }
 
     pub fn new<T: Into<Cow<'static, str>>>(content: T, span: Span) -> Self {
-        Self { content: content.into(), message: None, span, kind: FixKind::None }
+        Self {
+            content: content.into(),
+            message: None,
+            span,
+            kind: FixKind::None,
+        }
     }
 
     /// Creates a [`Fix`] that doesn't change the source code.
     #[inline]
     pub const fn empty() -> Self {
-        Self { content: Cow::Borrowed(""), message: None, span: SPAN, kind: FixKind::None }
+        Self {
+            content: Cow::Borrowed(""),
+            message: None,
+            span: SPAN,
+            kind: FixKind::None,
+        }
     }
 
     #[must_use]
@@ -387,9 +414,11 @@ impl PossibleFixes {
         match self {
             PossibleFixes::None => SPAN,
             PossibleFixes::Single(fix) => fix.span,
-            PossibleFixes::Multiple(fixes) => {
-                fixes.iter().map(|fix| fix.span).reduce(Span::merge).unwrap_or(SPAN)
-            }
+            PossibleFixes::Multiple(fixes) => fixes
+                .iter()
+                .map(|fix| fix.span)
+                .reduce(Span::merge)
+                .unwrap_or(SPAN),
         }
     }
 
@@ -412,11 +441,18 @@ impl PossibleFixes {
     #[cfg(debug_assertions)]
     pub(crate) fn cmp_fix_sequence(&self, other: &Self) -> std::cmp::Ordering {
         fn fix_sort_key(fix: &Fix) -> (&str, Option<&str>, FixKind, Span) {
-            (fix.content.as_ref(), fix.message.as_deref(), fix.kind, fix.span)
+            (
+                fix.content.as_ref(),
+                fix.message.as_deref(),
+                fix.kind,
+                fix.span,
+            )
         }
 
         let cmp_fix_iter = |left: &[Fix], right: &[Fix]| {
-            left.iter().map(fix_sort_key).cmp(right.iter().map(fix_sort_key))
+            left.iter()
+                .map(fix_sort_key)
+                .cmp(right.iter().map(fix_sort_key))
         };
 
         match (self, other) {
@@ -516,9 +552,11 @@ impl GetSpan for CompositeFix {
     fn span(&self) -> Span {
         match self {
             CompositeFix::Single(fix) => fix.span,
-            CompositeFix::Multiple(fixes) => {
-                fixes.iter().map(|fix| fix.span).reduce(Span::merge).unwrap_or(SPAN)
-            }
+            CompositeFix::Multiple(fixes) => fixes
+                .iter()
+                .map(|fix| fix.span)
+                .reduce(Span::merge)
+                .unwrap_or(SPAN),
             CompositeFix::None => SPAN,
         }
     }
@@ -659,7 +697,12 @@ impl CompositeFix {
         let mut merged_fix_kind = FixKind::None;
 
         for fix in fixes {
-            let Fix { content, span, message, kind: fix_kind } = fix;
+            let Fix {
+                content,
+                span,
+                message,
+                kind: fix_kind,
+            } = fix;
             if let Some(message) = message {
                 merged_fix_message.get_or_insert(message);
             }
@@ -712,7 +755,10 @@ impl Display for MergeFixesError {
         match self {
             Self::NegativeRange(span) => write!(f, "Negative range is invalid: {span:?}"),
             Self::Overlap(last_pos, start) => {
-                write!(f, "Fix must not be overlapped, last_pos: {last_pos}, span.start: {start}")
+                write!(
+                    f,
+                    "Fix must not be overlapped, last_pos: {last_pos}, span.start: {start}"
+                )
             }
             Self::InvalidRange(start, end) => write!(f, "Invalid range: {:?}", start..end),
         }
@@ -846,7 +892,10 @@ mod test {
         // [f1, f2].push(f3) == [f1, f2, f3]
         let mut f = multiple();
         f.push(CompositeFix::Single(f3.clone()));
-        assert_eq!(f, CompositeFix::Multiple(vec![f1.clone(), f2.clone(), f3.clone()]));
+        assert_eq!(
+            f,
+            CompositeFix::Multiple(vec![f1.clone(), f2.clone(), f3.clone()])
+        );
 
         // [f1, f2].push([f3, f3]) == [f1, f2, f3, f3]
         let mut f = multiple();
@@ -867,7 +916,11 @@ mod test {
         ];
 
         for (kind, expected) in tests {
-            assert_eq!(kind.emoji(), expected, "Expected {kind:?} to have emoji '{expected}'.");
+            assert_eq!(
+                kind.emoji(),
+                expected,
+                "Expected {kind:?} to have emoji '{expected}'."
+            );
         }
     }
 
@@ -889,7 +942,10 @@ mod test {
             (FixKind::SafeFixOrSuggestion, "safe_fix_or_suggestion"),
             (FixKind::DangerousFix, "dangerous_fix"),
             (FixKind::DangerousSuggestion, "dangerous_suggestion"),
-            (FixKind::DangerousFixOrSuggestion, "dangerous_fix_or_suggestion"),
+            (
+                FixKind::DangerousFixOrSuggestion,
+                "dangerous_fix_or_suggestion",
+            ),
         ];
 
         for (kind, expected) in tests {

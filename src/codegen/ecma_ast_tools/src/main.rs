@@ -185,7 +185,10 @@
 //! [`AttrPart`]: parse::attr::AttrPart
 
 // Prevent lint errors when JS generators are disabled
-#![cfg_attr(not(feature = "generate-js"), allow(dead_code, unused_imports, unused_macros))]
+#![cfg_attr(
+    not(feature = "generate-js"),
+    allow(dead_code, unused_imports, unused_macros)
+)]
 
 use std::fs;
 
@@ -336,13 +339,13 @@ fn main() {
         outputs
     } else {
         // Run in parallel
-        runners.par_iter().map(|runner| runner.run(&schema, &codegen)).reduce(
-            Vec::new,
-            |mut outputs, runner_outputs| {
+        runners
+            .par_iter()
+            .map(|runner| runner.run(&schema, &codegen))
+            .reduce(Vec::new, |mut outputs, runner_outputs| {
                 outputs.extend(runner_outputs);
                 outputs
-            },
-        )
+            })
     };
 
     logln!("All Derives and Generators... Done!");
@@ -361,7 +364,11 @@ fn main() {
     // Skip this step if JS generators are disabled, because not all files are generated.
     if cfg!(feature = "generate-js") {
         log!("Generate CI filter... ");
-        outputs.push(Output::yaml_watch_list(&outputs, crate_paths, codegen.root_path()));
+        outputs.push(Output::yaml_watch_list(
+            &outputs,
+            crate_paths,
+            codegen.root_path(),
+        ));
         log_success!();
     }
 
@@ -402,8 +409,11 @@ fn generate_proc_macro() -> RawOutput {
         }
     };
 
-    Output::Rust { path: output_path(AST_MACROS_CRATE_PATH, "derived_traits.rs"), tokens: output }
-        .into_raw(file!())
+    Output::Rust {
+        path: output_path(AST_MACROS_CRATE_PATH, "derived_traits.rs"),
+        tokens: output,
+    }
+    .into_raw(file!())
 }
 
 /// Update the list of helper attributes for `Ast` derive proc macro in `oxc_ast_macros` crate

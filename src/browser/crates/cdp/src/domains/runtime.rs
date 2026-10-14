@@ -1,6 +1,6 @@
 use bun_browser_browser::{lifecycle::WaitUntil, page::PendingNavigationOutcome};
 use bun_browser_js::runtime::RemoteObjectInfo;
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 
 use crate::dispatch::CdpContext;
 
@@ -36,7 +36,9 @@ pub(crate) fn execution_context_created_event(
 /// the page context. Both handlers now share this guard.
 fn is_valid_binding_name(name: &str) -> bool {
     !name.is_empty()
-        && name.chars().all(|c| c.is_alphanumeric() || c == '_' || c == '$')
+        && name
+            .chars()
+            .all(|c| c.is_alphanumeric() || c == '_' || c == '$')
         && !name.chars().next().unwrap_or('0').is_ascii_digit()
 }
 
@@ -56,7 +58,10 @@ async fn emit_post_eval_nav(
     if server_managed_navigation && page.has_pending_navigation() {
         return Ok(());
     }
-    let navigation = page.process_pending_navigation_outcome().await.map_err(|e| e.to_string())?;
+    let navigation = page
+        .process_pending_navigation_outcome()
+        .await
+        .map_err(|e| e.to_string())?;
     if navigation == PendingNavigationOutcome::None {
         return Ok(());
     }
@@ -107,7 +112,7 @@ pub async fn handle(
                 "embedderHeapUsedSize": 0,
                 "backingStorageSize": stats.external_memory(),
             }))
-        },
+        }
         "enable" => {
             // puppeteer-extra's FrameManager.initialize calls Runtime.enable on
             // the browser-level connection BEFORE any page target exists. Real
@@ -115,8 +120,10 @@ pub async fn handle(
             // a context appears. Returning "No page" here breaks the standard
             // puppeteer connect/newPage flow. If there's no session, succeed
             // silently — the next Target.attachToTarget will set things up.
-            if let Some(page_id) =
-                session_id.as_ref().and_then(|session| ctx.sessions.get(session)).cloned()
+            if let Some(page_id) = session_id
+                .as_ref()
+                .and_then(|session| ctx.sessions.get(session))
+                .cloned()
             {
                 let newly_enabled = session_id
                     .as_ref()
@@ -132,7 +139,7 @@ pub async fn handle(
                 }
             }
             Ok(json!({}))
-        },
+        }
         "disable" => {
             if let Some(session_id) = session_id {
                 let page_id = ctx.sessions.get(session_id).cloned();
@@ -142,23 +149,32 @@ pub async fn handle(
                 }
             }
             Ok(json!({}))
-        },
+        }
         "evaluate" => {
-            let expression =
-                params.get("expression").and_then(|v| v.as_str()).ok_or("expression required")?;
-            let return_by_value =
-                params.get("returnByValue").and_then(|v| v.as_bool()).unwrap_or(false);
+            let expression = params
+                .get("expression")
+                .and_then(|v| v.as_str())
+                .ok_or("expression required")?;
+            let return_by_value = params
+                .get("returnByValue")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
 
             validate_context(params, "contextId", ctx, session_id, "evaluate")?;
 
-            let await_promise =
-                params.get("awaitPromise").and_then(|v| v.as_bool()).unwrap_or(false);
+            let await_promise = params
+                .get("awaitPromise")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
 
             // CDP `timeout` field (milliseconds). Default to Chrome's
             // protocolTimeout (30s) so long evaluations don't pin the V8 lock
             // indefinitely and starve every other CDP command on the same
             // session.
-            let timeout_ms = params.get("timeout").and_then(|v| v.as_u64()).unwrap_or(30_000);
+            let timeout_ms = params
+                .get("timeout")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(30_000);
 
             let page = ctx.get_session_page_mut(session_id).ok_or("No page")?;
             let info = match tokio::time::timeout(
@@ -176,21 +192,25 @@ pub async fn handle(
                 Ok(Err(error)) => return Err(error),
                 Err(_) => {
                     return Err(format!("Runtime.evaluate exceeded {timeout_ms}ms timeout"));
-                },
+                }
             };
             emit_post_eval_nav(ctx, session_id).await?;
 
             Ok(evaluation_reply(&info))
-        },
+        }
         "callFunctionOn" => {
             let function_declaration = params
                 .get("functionDeclaration")
                 .and_then(|v| v.as_str())
                 .unwrap_or("() => undefined");
-            let return_by_value =
-                params.get("returnByValue").and_then(|v| v.as_bool()).unwrap_or(false);
-            let await_promise =
-                params.get("awaitPromise").and_then(|v| v.as_bool()).unwrap_or(false);
+            let return_by_value = params
+                .get("returnByValue")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+            let await_promise = params
+                .get("awaitPromise")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
             let object_id = params.get("objectId").and_then(|v| v.as_str());
             let arguments = params
                 .get("arguments")
@@ -203,13 +223,22 @@ pub async fn handle(
             // callFunctionOn (not `contextId`); a request may omit it when
             // `objectId` is supplied — in that case context validation is a
             // no-op and the default context is used.
-            validate_context(params, "executionContextId", ctx, session_id, "callFunctionOn")?;
+            validate_context(
+                params,
+                "executionContextId",
+                ctx,
+                session_id,
+                "callFunctionOn",
+            )?;
 
             // Keep awaitPromise alive for the same command budget as evaluate.
             // Playwright implements waits with callFunctionOn on some utility
             // paths, so a shorter hidden cap makes the client return before the
             // requested browser timer fires.
-            let timeout_ms = params.get("timeout").and_then(|v| v.as_u64()).unwrap_or(30_000);
+            let timeout_ms = params
+                .get("timeout")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(30_000);
 
             let page = ctx.get_session_page_mut(session_id).ok_or("No page")?;
             let info = match tokio::time::timeout(
@@ -228,13 +257,15 @@ pub async fn handle(
                 Ok(Ok(info)) => info,
                 Ok(Err(error)) => return Err(error),
                 Err(_) => {
-                    return Err(format!("Runtime.callFunctionOn exceeded {timeout_ms}ms timeout"));
-                },
+                    return Err(format!(
+                        "Runtime.callFunctionOn exceeded {timeout_ms}ms timeout"
+                    ));
+                }
             };
             emit_post_eval_nav(ctx, session_id).await?;
 
             Ok(evaluation_reply(&info))
-        },
+        }
         "getProperties" => {
             // Puppeteer's $$() flow:
             //   1. evaluate querySelectorAll → handle for the NodeList
@@ -286,8 +317,10 @@ pub async fn handle(
                         .iter()
                         .map(|p| {
                             let name = p.get("name").and_then(|v| v.as_str()).unwrap_or("");
-                            let prop_type =
-                                p.get("type").and_then(|v| v.as_str()).unwrap_or("undefined");
+                            let prop_type = p
+                                .get("type")
+                                .and_then(|v| v.as_str())
+                                .unwrap_or("undefined");
                             let mut remote = json!({ "type": prop_type });
                             if let Some(child_oid) = p.get("childOid").and_then(|v| v.as_str()) {
                                 remote["type"] = json!("object");
@@ -307,22 +340,22 @@ pub async fn handle(
                                         remote["type"] = json!("object");
                                         remote["subtype"] = json!("null");
                                         remote["value"] = json!(null);
-                                    },
+                                    }
                                     Value::String(s) => {
                                         remote["type"] = json!("string");
                                         remote["value"] = json!(s);
-                                    },
+                                    }
                                     Value::Number(n) => {
                                         remote["type"] = json!("number");
                                         remote["value"] = json!(n);
-                                    },
+                                    }
                                     Value::Bool(b) => {
                                         remote["type"] = json!("boolean");
                                         remote["value"] = json!(b);
-                                    },
+                                    }
                                     _ => {
                                         remote["value"] = val.clone();
-                                    },
+                                    }
                                 }
                             }
                             json!({
@@ -342,7 +375,7 @@ pub async fn handle(
             } else {
                 Ok(json!({ "result": [], "internalProperties": [] }))
             }
-        },
+        }
         "releaseObject" => {
             if let Some(oid) = params.get("objectId").and_then(|v| v.as_str()) {
                 if let Some(page) = ctx.get_session_page_mut(session_id) {
@@ -350,13 +383,13 @@ pub async fn handle(
                 }
             }
             Ok(json!({}))
-        },
+        }
         "releaseObjectGroup" => {
             if let Some(page) = ctx.get_session_page_mut(session_id) {
                 page.release_object_group();
             }
             Ok(json!({}))
-        },
+        }
         "addBinding" => {
             let name = params.get("name").and_then(|v| v.as_str()).unwrap_or("");
             if is_valid_binding_name(name) {
@@ -400,7 +433,7 @@ pub async fn handle(
                 }
             }
             Ok(json!({}))
-        },
+        }
         "removeBinding" => {
             let name = params.get("name").and_then(|v| v.as_str()).unwrap_or("");
             if is_valid_binding_name(name) {
@@ -419,7 +452,7 @@ pub async fn handle(
                 }
             }
             Ok(json!({}))
-        },
+        }
         "runIfWaitingForDebugger" => Ok(json!({})),
         "getExceptionDetails" => Ok(json!({ "exceptionDetails": null })),
         "discardConsoleEntries" => Ok(json!({})),
@@ -439,9 +472,13 @@ fn validate_context(
     method: &str,
 ) -> Result<(), String> {
     let id = params.get(field).and_then(|value| value.as_i64());
-    let unique_id = params.get("uniqueContextId").and_then(|value| value.as_str());
+    let unique_id = params
+        .get("uniqueContextId")
+        .and_then(|value| value.as_str());
     if id.is_some() && unique_id.is_some() {
-        return Err(format!("Runtime.{method} cannot specify both {field} and uniqueContextId"));
+        return Err(format!(
+            "Runtime.{method} cannot specify both {field} and uniqueContextId"
+        ));
     }
     if id.is_none() && unique_id.is_none() {
         return Ok(());
@@ -450,7 +487,9 @@ fn validate_context(
         .and_then(|id| ctx.context_by_id(id))
         .or_else(|| unique_id.and_then(|id| ctx.context_by_unique_id(id)));
     if let Some(record) = record {
-        let owner = session_id.as_ref().and_then(|session| ctx.sessions.get(session));
+        let owner = session_id
+            .as_ref()
+            .and_then(|session| ctx.sessions.get(session));
         if owner == Some(&record.page_id) {
             // This registry currently validates ownership/routing only. A
             // named isolated context still executes in the owning page's
@@ -465,10 +504,15 @@ fn validate_context(
         // next_isolated_context API. Attached sessions require page ownership.
         return Ok(());
     }
-    let identity =
-        id.map(|id| id.to_string()).or_else(|| unique_id.map(str::to_string)).unwrap_or_default();
+    let identity = id
+        .map(|id| id.to_string())
+        .or_else(|| unique_id.map(str::to_string))
+        .unwrap_or_default();
     if record.is_none() || session_id.is_some() {
-        return Err(format!("Cannot find context with specified id: {}", identity));
+        return Err(format!(
+            "Cannot find context with specified id: {}",
+            identity
+        ));
     }
     Ok(())
 }
@@ -541,9 +585,19 @@ mod tests {
         let page_id = ctx.create_page();
         let session = Some("heap-usage".to_string());
         ctx.sessions.insert(session.clone().unwrap(), page_id);
-        let before = handle("getHeapUsage", &json!({}), &mut ctx, &session).await.unwrap();
-        for field in ["usedSize", "totalSize", "embedderHeapUsedSize", "backingStorageSize"] {
-            assert!(before[field].as_u64().is_some(), "missing byte count: {before}");
+        let before = handle("getHeapUsage", &json!({}), &mut ctx, &session)
+            .await
+            .unwrap();
+        for field in [
+            "usedSize",
+            "totalSize",
+            "embedderHeapUsedSize",
+            "backingStorageSize",
+        ] {
+            assert!(
+                before[field].as_u64().is_some(),
+                "missing byte count: {before}"
+            );
         }
         assert!(before["usedSize"].as_u64().unwrap() > 0);
         assert!(before["totalSize"].as_u64().unwrap() >= before["usedSize"].as_u64().unwrap());
@@ -560,14 +614,18 @@ mod tests {
                  = true; }, 0);",
             )
             .unwrap();
-        let after = handle("getHeapUsage", &json!({}), &mut ctx, &session).await.unwrap();
+        let after = handle("getHeapUsage", &json!({}), &mut ctx, &session)
+            .await
+            .unwrap();
         assert!(after["usedSize"].as_u64().unwrap() > before["usedSize"].as_u64().unwrap());
         assert!(
             after["backingStorageSize"].as_u64().unwrap()
                 >= before["backingStorageSize"].as_u64().unwrap() + 8 * 1024 * 1024
         );
         assert_eq!(
-            ctx.get_session_page_mut(&session).unwrap().evaluate("heapTimerRan"),
+            ctx.get_session_page_mut(&session)
+                .unwrap()
+                .evaluate("heapTimerRan"),
             json!(false)
         );
     }
@@ -664,7 +722,10 @@ mod tests {
         assert_eq!(details["exception"]["subtype"], json!("error"));
         assert_eq!(details["exception"]["className"], json!("Error"));
         assert!(
-            details["exception"]["description"].as_str().unwrap_or_default().contains("boom"),
+            details["exception"]["description"]
+                .as_str()
+                .unwrap_or_default()
+                .contains("boom"),
             "the description carries the page message: {details}"
         );
         // Chrome repeats the exception in `result`, so a client that reads
@@ -818,7 +879,9 @@ mod tests {
         .expect("navigate should succeed");
 
         // Canary the injection would flip from 0 to 1.
-        ctx.get_session_page_mut(&session).unwrap().evaluate("globalThis.__pwned = 0");
+        ctx.get_session_page_mut(&session)
+            .unwrap()
+            .evaluate("globalThis.__pwned = 0");
 
         // The generated code is `delete globalThis['{name}']`, which the runtime
         // wraps as `return ( ... )`. A comma-expression payload stays a single
@@ -833,7 +896,10 @@ mod tests {
         .await
         .expect("removeBinding must return Ok regardless of the name");
 
-        let pwned = ctx.get_session_page_mut(&session).unwrap().evaluate("globalThis.__pwned");
+        let pwned = ctx
+            .get_session_page_mut(&session)
+            .unwrap()
+            .evaluate("globalThis.__pwned");
         assert_ne!(
             pwned.as_f64(),
             Some(1.0),

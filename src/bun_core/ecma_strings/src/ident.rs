@@ -93,7 +93,10 @@ impl LenAndHash {
     #[expect(clippy::cast_possible_truncation)]
     #[inline(always)]
     const fn unhashed(len: usize) -> Self {
-        Self { len: len as u32, hash: 0 }
+        Self {
+            len: len as u32,
+            hash: 0,
+        }
     }
 
     #[inline(always)]
@@ -173,7 +176,11 @@ impl<'a> Ident<'a> {
         let ptr = NonNull::from_ref(bytes).cast::<u8>();
         // `ptr` points to a `&str` with lifetime `'a`, of length `bytes.len()`, whose memory is
         // immutable for lifetime `'a`. The stored hash is `0` (unhashed).
-        Self { ptr, len_and_hash: LenAndHash::unhashed(bytes.len()), _marker: PhantomData }
+        Self {
+            ptr,
+            len_and_hash: LenAndHash::unhashed(bytes.len()),
+            _marker: PhantomData,
+        }
     }
 
     /// Create an [`Ident`] from raw components.
@@ -186,7 +193,11 @@ impl<'a> Ident<'a> {
     ///   or `0` for an unhashed `Ident` (see [`Ident::new_unhashed`]).
     #[inline]
     const unsafe fn from_raw(ptr: NonNull<u8>, len: u32, hash: u32) -> Self {
-        Self { ptr, len_and_hash: LenAndHash::new(len, hash), _marker: PhantomData }
+        Self {
+            ptr,
+            len_and_hash: LenAndHash::new(len, hash),
+            _marker: PhantomData,
+        }
     }
 
     /// Get the length of the identifier string.

@@ -10,7 +10,9 @@ use std::sync::Arc;
 use russh::keys::{Algorithm, PrivateKey, PublicKey};
 use russh::server::{Auth, ChannelOpenHandle, Handle, Msg, Session};
 use russh::{Channel, ChannelId, ChannelMsg, MethodKind, MethodSet};
-use russh_sftp::protocol::{Attrs, Data, File, FileAttributes, Handle as SftpHandle, Name, OpenFlags, Status, StatusCode};
+use russh_sftp::protocol::{
+    Attrs, Data, File, FileAttributes, Handle as SftpHandle, Name, OpenFlags, Status, StatusCode,
+};
 use tokio::io::{AsyncReadExt, AsyncSeekExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
 
@@ -30,8 +32,15 @@ pub struct EmbeddedOptions {
 pub fn read_authorized_keys(path: &Path) -> Result<Vec<PublicKey>> {
     let text = std::fs::read_to_string(path)?;
     let mut keys = Vec::new();
-    for line in text.lines().map(str::trim).filter(|l| !l.is_empty() && !l.starts_with('#')) {
-        let start = line.find("ssh-").or_else(|| line.find("ecdsa-")).unwrap_or(0);
+    for line in text
+        .lines()
+        .map(str::trim)
+        .filter(|l| !l.is_empty() && !l.starts_with('#'))
+    {
+        let start = line
+            .find("ssh-")
+            .or_else(|| line.find("ecdsa-"))
+            .unwrap_or(0);
         if let Ok(key) = PublicKey::from_openssh(&line[start..]) {
             keys.push(key);
         }
@@ -58,16 +67,18 @@ fn shell_command(command: Option<&str>) -> tokio::process::Command {
         match command {
             Some(command) => {
                 cmd.raw_arg("/d /s /c \"").raw_arg(command).raw_arg("\"");
-            },
+            }
             None => {
                 cmd.arg("/q");
-            },
+            }
         }
         cmd
     }
     #[cfg(not(windows))]
     {
-        let shell = std::env::var_os("SHELL").filter(|s| !s.is_empty()).unwrap_or_else(|| "/bin/sh".into());
+        let shell = std::env::var_os("SHELL")
+            .filter(|s| !s.is_empty())
+            .unwrap_or_else(|| "/bin/sh".into());
         let mut cmd = tokio::process::Command::new(shell);
         if let Some(command) = command {
             cmd.arg("-c").arg(command);
@@ -87,12 +98,14 @@ async fn run_process(channel: Channel<Msg>, command: Option<String>) {
         Ok(child) => child,
         Err(err) => {
             let mut stderr = write.make_writer_ext(Some(1));
-            let _ = stderr.write_all(format!("bun ssh server: {err}\n").as_bytes()).await;
+            let _ = stderr
+                .write_all(format!("bun ssh server: {err}\n").as_bytes())
+                .await;
             let _ = write.exit_status(127).await;
             let _ = write.eof().await;
             let _ = write.close().await;
             return;
-        },
+        }
     };
     let mut stdin = child.stdin.take();
     let mut stdout = child.stdout.take();
@@ -106,11 +119,11 @@ async fn run_process(channel: Channel<Msg>, command: Option<String>) {
                             stdin = None;
                         }
                     }
-                },
+                }
                 ChannelMsg::Eof | ChannelMsg::Close => {
                     stdin = None;
-                },
-                _ => {},
+                }
+                _ => {}
             }
         }
     });
@@ -129,7 +142,12 @@ async fn run_process(channel: Channel<Msg>, command: Option<String>) {
         let _ = err_writer.flush().await;
     };
     tokio::join!(out_task, err_task);
-    let code = child.wait().await.ok().and_then(|s| s.code()).unwrap_or(255);
+    let code = child
+        .wait()
+        .await
+        .ok()
+        .and_then(|s| s.code())
+        .unwrap_or(255);
     let _ = write.exit_status(u32::try_from(code).unwrap_or(255)).await;
     let _ = write.eof().await;
     let _ = write.close().await;
@@ -140,7 +158,18 @@ impl russh::server::Handler for Connection {
     type Error = russh::Error;
 
     async fn auth_publickey(&mut self, _user: &str, key: &PublicKey) -> Result<Auth, Self::Error> {
-        Ok(if self.shared.authorized.iter().any(|k| k.key_data() == key.key_data()) { Auth::Accept } else { Auth::reject() })
+        Ok(
+            if self
+                .shared
+                .authorized
+                .iter()
+                .any(|k| k.key_data() == key.key_data())
+            {
+                Auth::Accept
+            } else {
+                Auth::reject()
+            },
+        )
     }
 
     async fn auth_password(&mut self, _user: &str, password: &str) -> Result<Auth, Self::Error> {
@@ -150,7 +179,12 @@ impl russh::server::Handler for Connection {
         })
     }
 
-    async fn channel_open_session(&mut self, channel: Channel<Msg>, reply: ChannelOpenHandle, _session: &mut Session) -> Result<(), Self::Error> {
+    async fn channel_open_session(
+        &mut self,
+        channel: Channel<Msg>,
+        reply: ChannelOpenHandle,
+        _session: &mut Session,
+    ) -> Result<(), Self::Error> {
         reply.accept().await;
         self.channels.insert(channel.id(), channel);
         Ok(())
@@ -177,7 +211,7 @@ impl russh::server::Handler for Connection {
                     let mut stream = channel.into_stream();
                     let _ = tokio::io::copy_bidirectional(&mut socket, &mut stream).await;
                 });
-            },
+            }
             Err(_) => reply.reject(russh::ChannelOpenFailure::ConnectFailed).await,
         }
         Ok(())
@@ -197,43 +231,87 @@ impl russh::server::Handler for Connection {
         session.channel_success(channel)
     }
 
-    async fn exec_request(&mut self, channel: ChannelId, data: &[u8], session: &mut Session) -> Result<(), Self::Error> {
-        let Some(chan) = self.channels.remove(&channel) else { return session.channel_failure(channel) };
+    async fn exec_request(
+        &mut self,
+        channel: ChannelId,
+        data: &[u8],
+        session: &mut Session,
+    ) -> Result<(), Self::Error> {
+        let Some(chan) = self.channels.remove(&channel) else {
+            return session.channel_failure(channel);
+        };
         session.channel_success(channel)?;
         let command = String::from_utf8_lossy(data).into_owned();
         tokio::spawn(run_process(chan, Some(command)));
         Ok(())
     }
 
-    async fn shell_request(&mut self, channel: ChannelId, session: &mut Session) -> Result<(), Self::Error> {
-        let Some(chan) = self.channels.remove(&channel) else { return session.channel_failure(channel) };
+    async fn shell_request(
+        &mut self,
+        channel: ChannelId,
+        session: &mut Session,
+    ) -> Result<(), Self::Error> {
+        let Some(chan) = self.channels.remove(&channel) else {
+            return session.channel_failure(channel);
+        };
         session.channel_success(channel)?;
         tokio::spawn(run_process(chan, None));
         Ok(())
     }
 
-    async fn subsystem_request(&mut self, channel: ChannelId, name: &str, session: &mut Session) -> Result<(), Self::Error> {
+    async fn subsystem_request(
+        &mut self,
+        channel: ChannelId,
+        name: &str,
+        session: &mut Session,
+    ) -> Result<(), Self::Error> {
         if name != "sftp" {
             return session.channel_failure(channel);
         }
-        let Some(chan) = self.channels.remove(&channel) else { return session.channel_failure(channel) };
+        let Some(chan) = self.channels.remove(&channel) else {
+            return session.channel_failure(channel);
+        };
         session.channel_success(channel)?;
-        tokio::spawn(russh_sftp::server::run(chan.into_stream(), SftpServer::default()));
+        tokio::spawn(russh_sftp::server::run(
+            chan.into_stream(),
+            SftpServer::default(),
+        ));
         Ok(())
     }
 
-    async fn tcpip_forward(&mut self, address: &str, port: &mut u32, session: &mut Session) -> Result<bool, Self::Error> {
-        let Ok(requested) = u16::try_from(*port) else { return Ok(false) };
-        let bind = if address.is_empty() || address == "localhost" { "127.0.0.1" } else { address };
-        let Ok(listener) = TcpListener::bind((bind, requested)).await else { return Ok(false) };
-        let bound = listener.local_addr().map(|a| u32::from(a.port())).unwrap_or(*port);
+    async fn tcpip_forward(
+        &mut self,
+        address: &str,
+        port: &mut u32,
+        session: &mut Session,
+    ) -> Result<bool, Self::Error> {
+        let Ok(requested) = u16::try_from(*port) else {
+            return Ok(false);
+        };
+        let bind = if address.is_empty() || address == "localhost" {
+            "127.0.0.1"
+        } else {
+            address
+        };
+        let Ok(listener) = TcpListener::bind((bind, requested)).await else {
+            return Ok(false);
+        };
+        let bound = listener
+            .local_addr()
+            .map(|a| u32::from(a.port()))
+            .unwrap_or(*port);
         *port = bound;
         let handle: Handle = session.handle();
         let address = address.to_owned();
         tokio::spawn(async move {
             while let Ok((mut socket, peer)) = listener.accept().await {
                 let Ok(channel) = handle
-                    .channel_open_forwarded_tcpip(address.clone(), bound, peer.ip().to_string(), u32::from(peer.port()))
+                    .channel_open_forwarded_tcpip(
+                        address.clone(),
+                        bound,
+                        peer.ip().to_string(),
+                        u32::from(peer.port()),
+                    )
                     .await
                 else {
                     return;
@@ -256,15 +334,25 @@ impl russh::server::Server for Factory {
     type Handler = Connection;
 
     fn new_client(&mut self, _peer: Option<std::net::SocketAddr>) -> Connection {
-        Connection { shared: self.shared.clone(), channels: HashMap::new() }
+        Connection {
+            shared: self.shared.clone(),
+            channels: HashMap::new(),
+        }
     }
 }
 
 /// Binds the embedded server and returns its port and host public key; `serve` runs it.
-pub async fn bind_embedded(options: EmbeddedOptions) -> Result<(u16, PublicKey, impl std::future::Future<Output = Result<()>>)> {
+pub async fn bind_embedded(
+    options: EmbeddedOptions,
+) -> Result<(
+    u16,
+    PublicKey,
+    impl std::future::Future<Output = Result<()>>,
+)> {
     let host_key = match &options.host_key {
         Some(path) => crate::auth::load_identity(path, true)?,
-        None => PrivateKey::random(&mut rand::rng(), Algorithm::Ed25519).map_err(russh::keys::Error::from)?,
+        None => PrivateKey::random(&mut rand::rng(), Algorithm::Ed25519)
+            .map_err(russh::keys::Error::from)?,
     };
     let public = host_key.public_key().clone();
     let mut methods = vec![MethodKind::PublicKey];
@@ -281,7 +369,10 @@ pub async fn bind_embedded(options: EmbeddedOptions) -> Result<(u16, PublicKey, 
     let listener = TcpListener::bind((options.listen.as_str(), options.port)).await?;
     let port = listener.local_addr()?.port();
     let mut factory = Factory {
-        shared: Shared { authorized: Arc::new(options.authorized_keys), password: Arc::new(options.password) },
+        shared: Shared {
+            authorized: Arc::new(options.authorized_keys),
+            password: Arc::new(options.password),
+        },
     };
     let serve = async move {
         use russh::server::Server as _;
@@ -310,16 +401,29 @@ fn local_path(path: &str) -> PathBuf {
             return PathBuf::from(&path[1..]);
         }
     }
-    if path.is_empty() { PathBuf::from(".") } else { PathBuf::from(path) }
+    if path.is_empty() {
+        PathBuf::from(".")
+    } else {
+        PathBuf::from(path)
+    }
 }
 
 fn remote_path(path: &Path) -> String {
     let text = path.to_string_lossy().replace('\\', "/");
-    if cfg!(windows) && text.as_bytes().get(1) == Some(&b':') { format!("/{text}") } else { text }
+    if cfg!(windows) && text.as_bytes().get(1) == Some(&b':') {
+        format!("/{text}")
+    } else {
+        text
+    }
 }
 
 fn status(id: u32, code: StatusCode, message: &str) -> Status {
-    Status { id, status_code: code, error_message: message.to_owned(), language_tag: "en-US".into() }
+    Status {
+        id,
+        status_code: code,
+        error_message: message.to_owned(),
+        language_tag: "en-US".into(),
+    }
 }
 
 fn io_status(err: &std::io::Error) -> StatusCode {
@@ -346,11 +450,21 @@ impl russh_sftp::server::Handler for SftpServer {
         StatusCode::OpUnsupported
     }
 
-    async fn init(&mut self, _version: u32, _extensions: std::collections::HashMap<String, String>) -> Result<russh_sftp::protocol::Version, Self::Error> {
+    async fn init(
+        &mut self,
+        _version: u32,
+        _extensions: std::collections::HashMap<String, String>,
+    ) -> Result<russh_sftp::protocol::Version, Self::Error> {
         Ok(russh_sftp::protocol::Version::new())
     }
 
-    async fn open(&mut self, id: u32, filename: String, flags: OpenFlags, _attrs: FileAttributes) -> Result<SftpHandle, Self::Error> {
+    async fn open(
+        &mut self,
+        id: u32,
+        filename: String,
+        flags: OpenFlags,
+        _attrs: FileAttributes,
+    ) -> Result<SftpHandle, Self::Error> {
         let mut options = tokio::fs::OpenOptions::new();
         options
             .read(flags.contains(OpenFlags::READ))
@@ -364,8 +478,14 @@ impl russh_sftp::server::Handler for SftpServer {
                 options.create(true);
             }
         }
-        let file = options.open(local_path(&filename)).await.map_err(|e| io_status(&e))?;
-        Ok(SftpHandle { id, handle: self.insert(SftpOpen::File(file)) })
+        let file = options
+            .open(local_path(&filename))
+            .await
+            .map_err(|e| io_status(&e))?;
+        Ok(SftpHandle {
+            id,
+            handle: self.insert(SftpOpen::File(file)),
+        })
     }
 
     async fn close(&mut self, id: u32, handle: String) -> Result<Status, Self::Error> {
@@ -375,9 +495,19 @@ impl russh_sftp::server::Handler for SftpServer {
         Ok(status(id, StatusCode::Ok, ""))
     }
 
-    async fn read(&mut self, id: u32, handle: String, offset: u64, len: u32) -> Result<Data, Self::Error> {
-        let Some(SftpOpen::File(file)) = self.handles.get_mut(&handle) else { return Err(StatusCode::Failure) };
-        file.seek(std::io::SeekFrom::Start(offset)).await.map_err(|e| io_status(&e))?;
+    async fn read(
+        &mut self,
+        id: u32,
+        handle: String,
+        offset: u64,
+        len: u32,
+    ) -> Result<Data, Self::Error> {
+        let Some(SftpOpen::File(file)) = self.handles.get_mut(&handle) else {
+            return Err(StatusCode::Failure);
+        };
+        file.seek(std::io::SeekFrom::Start(offset))
+            .await
+            .map_err(|e| io_status(&e))?;
         let mut data = vec![0u8; len.min(256 * 1024) as usize];
         let n = file.read(&mut data).await.map_err(|e| io_status(&e))?;
         if n == 0 {
@@ -387,50 +517,95 @@ impl russh_sftp::server::Handler for SftpServer {
         Ok(Data { id, data })
     }
 
-    async fn write(&mut self, id: u32, handle: String, offset: u64, data: Vec<u8>) -> Result<Status, Self::Error> {
-        let Some(SftpOpen::File(file)) = self.handles.get_mut(&handle) else { return Err(StatusCode::Failure) };
-        file.seek(std::io::SeekFrom::Start(offset)).await.map_err(|e| io_status(&e))?;
+    async fn write(
+        &mut self,
+        id: u32,
+        handle: String,
+        offset: u64,
+        data: Vec<u8>,
+    ) -> Result<Status, Self::Error> {
+        let Some(SftpOpen::File(file)) = self.handles.get_mut(&handle) else {
+            return Err(StatusCode::Failure);
+        };
+        file.seek(std::io::SeekFrom::Start(offset))
+            .await
+            .map_err(|e| io_status(&e))?;
         file.write_all(&data).await.map_err(|e| io_status(&e))?;
         Ok(status(id, StatusCode::Ok, ""))
     }
 
     async fn lstat(&mut self, id: u32, path: String) -> Result<Attrs, Self::Error> {
-        let meta = tokio::fs::symlink_metadata(local_path(&path)).await.map_err(|e| io_status(&e))?;
-        Ok(Attrs { id, attrs: FileAttributes::from(&meta) })
+        let meta = tokio::fs::symlink_metadata(local_path(&path))
+            .await
+            .map_err(|e| io_status(&e))?;
+        Ok(Attrs {
+            id,
+            attrs: FileAttributes::from(&meta),
+        })
     }
 
     async fn stat(&mut self, id: u32, path: String) -> Result<Attrs, Self::Error> {
-        let meta = tokio::fs::metadata(local_path(&path)).await.map_err(|e| io_status(&e))?;
-        Ok(Attrs { id, attrs: FileAttributes::from(&meta) })
+        let meta = tokio::fs::metadata(local_path(&path))
+            .await
+            .map_err(|e| io_status(&e))?;
+        Ok(Attrs {
+            id,
+            attrs: FileAttributes::from(&meta),
+        })
     }
 
     async fn fstat(&mut self, id: u32, handle: String) -> Result<Attrs, Self::Error> {
-        let Some(SftpOpen::File(file)) = self.handles.get(&handle) else { return Err(StatusCode::Failure) };
+        let Some(SftpOpen::File(file)) = self.handles.get(&handle) else {
+            return Err(StatusCode::Failure);
+        };
         let meta = file.metadata().await.map_err(|e| io_status(&e))?;
-        Ok(Attrs { id, attrs: FileAttributes::from(&meta) })
+        Ok(Attrs {
+            id,
+            attrs: FileAttributes::from(&meta),
+        })
     }
 
-    async fn setstat(&mut self, id: u32, _path: String, _attrs: FileAttributes) -> Result<Status, Self::Error> {
+    async fn setstat(
+        &mut self,
+        id: u32,
+        _path: String,
+        _attrs: FileAttributes,
+    ) -> Result<Status, Self::Error> {
         Ok(status(id, StatusCode::Ok, ""))
     }
 
-    async fn fsetstat(&mut self, id: u32, _handle: String, _attrs: FileAttributes) -> Result<Status, Self::Error> {
+    async fn fsetstat(
+        &mut self,
+        id: u32,
+        _handle: String,
+        _attrs: FileAttributes,
+    ) -> Result<Status, Self::Error> {
         Ok(status(id, StatusCode::Ok, ""))
     }
 
     async fn opendir(&mut self, id: u32, path: String) -> Result<SftpHandle, Self::Error> {
         let mut entries = Vec::new();
-        let mut dir = tokio::fs::read_dir(local_path(&path)).await.map_err(|e| io_status(&e))?;
+        let mut dir = tokio::fs::read_dir(local_path(&path))
+            .await
+            .map_err(|e| io_status(&e))?;
         while let Ok(Some(entry)) = dir.next_entry().await {
             if let Ok(meta) = entry.metadata().await {
-                entries.push(File::new(entry.file_name().to_string_lossy().into_owned(), FileAttributes::from(&meta)));
+                entries.push(File::new(
+                    entry.file_name().to_string_lossy().into_owned(),
+                    FileAttributes::from(&meta),
+                ));
             }
         }
-        Ok(SftpHandle { id, handle: self.insert(SftpOpen::Dir(Some(entries))) })
+        Ok(SftpHandle {
+            id,
+            handle: self.insert(SftpOpen::Dir(Some(entries))),
+        })
     }
 
     async fn readdir(&mut self, id: u32, handle: String) -> Result<Name, Self::Error> {
-        let Some(SftpOpen::Dir(entries)) = self.handles.get_mut(&handle) else { return Err(StatusCode::Failure) };
+        let Some(SftpOpen::Dir(entries)) = self.handles.get_mut(&handle) else {
+            return Err(StatusCode::Failure);
+        };
         match entries.take() {
             Some(files) if !files.is_empty() => Ok(Name { id, files }),
             _ => Err(StatusCode::Eof),
@@ -438,17 +613,28 @@ impl russh_sftp::server::Handler for SftpServer {
     }
 
     async fn remove(&mut self, id: u32, filename: String) -> Result<Status, Self::Error> {
-        tokio::fs::remove_file(local_path(&filename)).await.map_err(|e| io_status(&e))?;
+        tokio::fs::remove_file(local_path(&filename))
+            .await
+            .map_err(|e| io_status(&e))?;
         Ok(status(id, StatusCode::Ok, ""))
     }
 
-    async fn mkdir(&mut self, id: u32, path: String, _attrs: FileAttributes) -> Result<Status, Self::Error> {
-        tokio::fs::create_dir(local_path(&path)).await.map_err(|e| io_status(&e))?;
+    async fn mkdir(
+        &mut self,
+        id: u32,
+        path: String,
+        _attrs: FileAttributes,
+    ) -> Result<Status, Self::Error> {
+        tokio::fs::create_dir(local_path(&path))
+            .await
+            .map_err(|e| io_status(&e))?;
         Ok(status(id, StatusCode::Ok, ""))
     }
 
     async fn rmdir(&mut self, id: u32, path: String) -> Result<Status, Self::Error> {
-        tokio::fs::remove_dir(local_path(&path)).await.map_err(|e| io_status(&e))?;
+        tokio::fs::remove_dir(local_path(&path))
+            .await
+            .map_err(|e| io_status(&e))?;
         Ok(status(id, StatusCode::Ok, ""))
     }
 
@@ -456,11 +642,16 @@ impl russh_sftp::server::Handler for SftpServer {
         let resolved = std::fs::canonicalize(local_path(&path)).map_err(|e| io_status(&e))?;
         let text = resolved.to_string_lossy();
         let text = text.strip_prefix(r"\\?\").unwrap_or(&text);
-        Ok(Name { id, files: vec![File::dummy(remote_path(Path::new(text)))] })
+        Ok(Name {
+            id,
+            files: vec![File::dummy(remote_path(Path::new(text)))],
+        })
     }
 
     async fn rename(&mut self, id: u32, old: String, new: String) -> Result<Status, Self::Error> {
-        tokio::fs::rename(local_path(&old), local_path(&new)).await.map_err(|e| io_status(&e))?;
+        tokio::fs::rename(local_path(&old), local_path(&new))
+            .await
+            .map_err(|e| io_status(&e))?;
         Ok(status(id, StatusCode::Ok, ""))
     }
 }
@@ -475,28 +666,47 @@ fn run(program: &str, args: &[&str]) -> Result<i32> {
 pub fn manage_system(action: &str) -> Result<i32> {
     #[cfg(windows)]
     {
-        let ps = |script: &str| run("powershell.exe", &["-NoProfile", "-NonInteractive", "-Command", script]);
+        let ps = |script: &str| {
+            run(
+                "powershell.exe",
+                &["-NoProfile", "-NonInteractive", "-Command", script],
+            )
+        };
         match action {
-            "status" => ps("Get-WindowsCapability -Online -Name 'OpenSSH.Server*' | Select-Object Name,State; Get-Service sshd -ErrorAction SilentlyContinue | Select-Object Name,Status,StartType"),
+            "status" => ps(
+                "Get-WindowsCapability -Online -Name 'OpenSSH.Server*' | Select-Object Name,State; Get-Service sshd -ErrorAction SilentlyContinue | Select-Object Name,Status,StartType",
+            ),
             "install" => ps("Add-WindowsCapability -Online -Name OpenSSH.Server~~~~0.0.1.0"),
             "start" => ps("Start-Service sshd"),
             "stop" => ps("Stop-Service sshd"),
             "enable" => ps("Set-Service -Name sshd -StartupType Automatic; Start-Service sshd"),
-            other => Err(Error::InvalidInput(format!("unknown server action `{other}`"))),
+            other => Err(Error::InvalidInput(format!(
+                "unknown server action `{other}`"
+            ))),
         }
     }
     #[cfg(not(windows))]
     {
         let systemctl = crate::system::find("systemctl");
-        let service = if Path::new("/lib/systemd/system/ssh.service").exists() || Path::new("/usr/lib/systemd/system/ssh.service").exists() { "ssh" } else { "sshd" };
+        let service = if Path::new("/lib/systemd/system/ssh.service").exists()
+            || Path::new("/usr/lib/systemd/system/ssh.service").exists()
+        {
+            "ssh"
+        } else {
+            "sshd"
+        };
         match (action, systemctl) {
             ("status", Some(_)) => run("systemctl", &["--no-pager", "status", service]),
             ("start" | "stop" | "enable", Some(_)) => {
-                let verb = if action == "enable" { "enable --now" } else { action };
+                let verb = if action == "enable" {
+                    "enable --now"
+                } else {
+                    action
+                };
                 let mut args: Vec<&str> = verb.split(' ').collect();
                 args.push(service);
                 run("systemctl", &args)
-            },
+            }
             ("status" | "start" | "stop" | "enable", None) => {
                 let verb = if action == "enable" { "start" } else { action };
                 if crate::system::find("rc-service").is_some() {
@@ -507,7 +717,7 @@ pub fn manage_system(action: &str) -> Result<i32> {
                 } else {
                     run("service", &[service, verb])
                 }
-            },
+            }
             ("install", _) => {
                 if crate::system::find("apt-get").is_some() {
                     run("apt-get", &["install", "-y", "openssh-server"])
@@ -518,10 +728,14 @@ pub fn manage_system(action: &str) -> Result<i32> {
                 } else if crate::system::find("pacman").is_some() {
                     run("pacman", &["-S", "--noconfirm", "openssh"])
                 } else {
-                    Err(crate::other("no supported package manager (apt-get, apk, dnf, pacman)"))
+                    Err(crate::other(
+                        "no supported package manager (apt-get, apk, dnf, pacman)",
+                    ))
                 }
-            },
-            (other, _) => Err(Error::InvalidInput(format!("unknown server action `{other}`"))),
+            }
+            (other, _) => Err(Error::InvalidInput(format!(
+                "unknown server action `{other}`"
+            ))),
         }
     }
 }

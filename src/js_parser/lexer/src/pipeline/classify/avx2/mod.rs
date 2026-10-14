@@ -24,7 +24,11 @@ pub(super) unsafe fn classify_impl(
 ) {
     // The merged LUT variants differ only in the keyword-initial bits; the
     // selection happens once, outside the loop.
-    let mrg_lo = if ts { MERGED_LUTS.lo_ts } else { MERGED_LUTS.lo };
+    let mrg_lo = if ts {
+        MERGED_LUTS.lo_ts
+    } else {
+        MERGED_LUTS.lo
+    };
     let mut cw: u64 = 0;
     let mut cs: u64 = 0;
     let mut i = 0usize;
@@ -63,10 +67,14 @@ pub(super) unsafe fn classify_impl(
         let v1 = load256(src, i + 32);
         let hn0 = _mm256_and_si256(_mm256_srli_epi16::<4>(v0), v_x0f);
         let hn1 = _mm256_and_si256(_mm256_srli_epi16::<4>(v1), v_x0f);
-        let tb0 =
-            _mm256_and_si256(_mm256_shuffle_epi8(v_wblo, v0), _mm256_shuffle_epi8(v_wbhi, hn0));
-        let tb1 =
-            _mm256_and_si256(_mm256_shuffle_epi8(v_wblo, v1), _mm256_shuffle_epi8(v_wbhi, hn1));
+        let tb0 = _mm256_and_si256(
+            _mm256_shuffle_epi8(v_wblo, v0),
+            _mm256_shuffle_epi8(v_wbhi, hn0),
+        );
+        let tb1 = _mm256_and_si256(
+            _mm256_shuffle_epi8(v_wblo, v1),
+            _mm256_shuffle_epi8(v_wbhi, hn1),
+        );
         let nw0 = _mm256_cmpeq_epi8(_mm256_and_si256(tb0, v_wdpl), v_zero);
         let nw1 = _mm256_cmpeq_epi8(_mm256_and_si256(tb1, v_wdpl), v_zero);
         // Non-ASCII bytes count as identifier chars in `word` and are folded
@@ -83,12 +91,23 @@ pub(super) unsafe fn classify_impl(
         let wsm = ((!mm(nws0)) as u64) | (((!mm(nws1)) as u64) << 32);
         *word.add(b) = wordm;
         *digit.add(b) = (mm(d0) as u64) | ((mm(d1) as u64) << 32);
-        *misc.add(b) = (mm(_mm256_or_si256(_mm256_or_si256(veq(v0, b'#'), veq(v0, b'\\')), na0))
-            as u64)
-            | ((mm(_mm256_or_si256(_mm256_or_si256(veq(v1, b'#'), veq(v1, b'\\')), na1)) as u64)
+        *misc.add(b) = (mm(_mm256_or_si256(
+            _mm256_or_si256(veq(v0, b'#'), veq(v0, b'\\')),
+            na0,
+        )) as u64)
+            | ((mm(_mm256_or_si256(
+                _mm256_or_si256(veq(v1, b'#'), veq(v1, b'\\')),
+                na1,
+            )) as u64)
                 << 32);
-        let t0 = _mm256_and_si256(_mm256_shuffle_epi8(v_mlo, v0), _mm256_shuffle_epi8(v_mhi, hn0));
-        let t1 = _mm256_and_si256(_mm256_shuffle_epi8(v_mlo, v1), _mm256_shuffle_epi8(v_mhi, hn1));
+        let t0 = _mm256_and_si256(
+            _mm256_shuffle_epi8(v_mlo, v0),
+            _mm256_shuffle_epi8(v_mhi, hn0),
+        );
+        let t1 = _mm256_and_si256(
+            _mm256_shuffle_epi8(v_mlo, v1),
+            _mm256_shuffle_epi8(v_mhi, hn1),
+        );
         *dot.add(b) = (mm(t0) as u64) | ((mm(t1) as u64) << 32);
         *kwinit.add(b) = (mm(_mm256_cmpgt_epi8(_mm256_and_si256(t0, v_kwpl), v_zero)) as u64)
             | ((mm(_mm256_cmpgt_epi8(_mm256_and_si256(t1, v_kwpl), v_zero)) as u64) << 32);

@@ -26,7 +26,9 @@ pub struct JsonSafeString<'s>(pub &'s str);
 impl ESTree for JsonSafeString<'_> {
     #[inline(always)]
     fn serialize<S: Serializer>(&self, mut serializer: S) {
-        serializer.buffer_mut().print_strs_array(["\"", self.0, "\""]);
+        serializer
+            .buffer_mut()
+            .print_strs_array(["\"", self.0, "\""]);
     }
 }
 
@@ -471,7 +473,10 @@ mod tests {
 
     #[test]
     fn serialize_string() {
-        let cases = [(String::new(), r#""""#), ("foobar".to_string(), r#""foobar""#)];
+        let cases = [
+            (String::new(), r#""""#),
+            ("foobar".to_string(), r#""foobar""#),
+        ];
 
         for (input, output) in cases {
             let mut serializer = CompactSerializer::default();
@@ -497,11 +502,17 @@ mod tests {
     fn serialize_lone_surrogates_string() {
         let cases = [
             ("\u{FFFD}fffd", "\"\u{FFFD}\""),
-            ("_x_\u{FFFD}fffd_y_\u{FFFD}fffd_z_", "\"_x_\u{FFFD}_y_\u{FFFD}_z_\""),
+            (
+                "_x_\u{FFFD}fffd_y_\u{FFFD}fffd_z_",
+                "\"_x_\u{FFFD}_y_\u{FFFD}_z_\"",
+            ),
             ("\u{FFFD}d834\u{FFFD}d835", r#""\ud834\ud835""#),
             ("_x_\u{FFFD}d834\u{FFFD}d835", r#""_x_\ud834\ud835""#),
             ("\u{FFFD}d834\u{FFFD}d835_y_", r#""\ud834\ud835_y_""#),
-            ("_x_\u{FFFD}d834_y_\u{FFFD}d835_z_", r#""_x_\ud834_y_\ud835_z_""#),
+            (
+                "_x_\u{FFFD}d834_y_\u{FFFD}d835_z_",
+                r#""_x_\ud834_y_\ud835_z_""#,
+            ),
             (
                 "They call me \"Bob\" but I prefer \"Den\u{FFFD}d834\\qnis\", innit?",
                 r#""They call me \"Bob\" but I prefer \"Den\ud834\\qnis\", innit?""#,

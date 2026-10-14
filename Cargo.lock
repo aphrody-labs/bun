@@ -3161,6 +3161,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "bun_format"
+version = "1.4.4"
+dependencies = [
+ "bitflags 2.13.2",
+ "bstr",
+ "bun_ast",
+ "bun_collections",
+ "bun_core",
+ "bun_glob",
+ "bun_highway",
+ "bun_lint",
+ "bun_md",
+ "bun_parsers",
+ "bun_sema",
+ "bun_threading",
+ "rustc-hash 2.1.3",
+ "smallvec",
+]
+
+[[package]]
 name = "bun_format_cli"
 version = "0.72.0"
 dependencies = [
@@ -3201,6 +3221,16 @@ dependencies = [
  "tower-lsp-server",
  "tracing",
  "tracing-subscriber",
+]
+
+[[package]]
+name = "bun_format_conformance"
+version = "1.4.4"
+dependencies = [
+ "bstr",
+ "bun_core",
+ "bun_format",
+ "bun_sys",
 ]
 
 [[package]]
@@ -3662,7 +3692,6 @@ dependencies = [
  "bun_paths",
  "bun_ptr",
  "bun_react_compiler",
- "bun_sema",
  "bun_url",
  "bun_wyhash",
  "bytemuck",
@@ -3894,6 +3923,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "bun_lint"
+version = "1.4.4"
+dependencies = [
+ "bitflags 2.13.2",
+ "bstr",
+ "bun_alloc",
+ "bun_ast",
+ "bun_collections",
+ "bun_core",
+ "bun_glob",
+ "bun_node_path",
+ "bun_parsers",
+ "bun_paths",
+ "bun_sema",
+ "bun_threading",
+ "bun_wyhash",
+ "bun_yarr",
+ "bun_zstd",
+ "rustc-hash 2.1.3",
+ "smallvec",
+]
+
+[[package]]
 name = "bun_lint_cli"
 version = "1.87.0"
 dependencies = [
@@ -3929,6 +3981,163 @@ dependencies = [
  "tower-lsp-server",
  "tracing",
  "tracing-subscriber",
+]
+
+[[package]]
+name = "bun_lint_conformance"
+version = "1.4.4"
+dependencies = [
+ "bstr",
+ "bun_core",
+ "bun_format_conformance",
+ "bun_lint",
+ "bun_sys",
+]
+
+[[package]]
+name = "bun_lint_driver"
+version = "1.4.4"
+dependencies = [
+ "bstr",
+ "bun_ast",
+ "bun_clap",
+ "bun_collections",
+ "bun_core",
+ "bun_format",
+ "bun_glob",
+ "bun_lint",
+ "bun_lint_conformance",
+ "bun_lint_eslint",
+ "bun_lint_graph",
+ "bun_lint_jest",
+ "bun_lint_plugins",
+ "bun_lint_react",
+ "bun_lint_typescript",
+ "bun_lint_unicorn",
+ "bun_md",
+ "bun_paths",
+ "bun_sema",
+ "bun_sema_driver",
+ "bun_sema_parser",
+ "bun_semver",
+ "bun_sys",
+ "bun_threading",
+ "bun_zstd",
+]
+
+[[package]]
+name = "bun_lint_eslint"
+version = "1.4.4"
+dependencies = [
+ "bstr",
+ "bun_core",
+ "bun_glob",
+ "bun_lint",
+ "bun_lint_oxlint",
+ "rustc-hash 2.1.3",
+ "smallvec",
+]
+
+[[package]]
+name = "bun_lint_graph"
+version = "1.4.4"
+dependencies = [
+ "bun_core",
+ "bun_glob",
+ "bun_lint",
+ "bun_sema",
+ "bun_sema_driver",
+ "bun_sema_parser",
+ "bun_threading",
+ "smallvec",
+]
+
+[[package]]
+name = "bun_lint_jest"
+version = "1.4.4"
+dependencies = [
+ "bun_core",
+ "bun_lint",
+ "bun_lint_oxlint",
+ "rustc-hash 2.1.3",
+ "smallvec",
+]
+
+[[package]]
+name = "bun_lint_oxlint"
+version = "1.4.4"
+dependencies = [
+ "bun_core",
+ "bun_glob",
+ "bun_lint",
+ "rustc-hash 2.1.3",
+ "smallvec",
+]
+
+[[package]]
+name = "bun_lint_plugins"
+version = "1.4.4"
+dependencies = [
+ "bstr",
+ "bun_core",
+ "bun_glob",
+ "bun_lint",
+ "bun_lint_oxlint",
+ "bun_semver",
+ "bun_text_diff",
+ "rustc-hash 2.1.3",
+ "smallvec",
+]
+
+[[package]]
+name = "bun_lint_react"
+version = "1.4.4"
+dependencies = [
+ "bstr",
+ "bun_core",
+ "bun_glob",
+ "bun_lint",
+ "bun_lint_oxlint",
+ "bun_lint_react_compiler",
+ "bun_semver",
+ "rustc-hash 2.1.3",
+ "smallvec",
+]
+
+[[package]]
+name = "bun_lint_react_compiler"
+version = "1.4.4"
+dependencies = [
+ "bun_alloc",
+ "bun_ast",
+ "bun_core",
+ "bun_lint",
+ "bun_react_compiler",
+ "rustc-hash 2.1.3",
+]
+
+[[package]]
+name = "bun_lint_typescript"
+version = "1.4.4"
+dependencies = [
+ "bstr",
+ "bun_core",
+ "bun_lint",
+ "bun_lint_eslint",
+ "rustc-hash 2.1.3",
+ "smallvec",
+]
+
+[[package]]
+name = "bun_lint_unicorn"
+version = "1.4.4"
+dependencies = [
+ "bstr",
+ "bun_core",
+ "bun_lint",
+ "bun_lint_oxlint",
+ "rustc-hash 2.1.3",
+ "smallvec",
 ]
 
 [[package]]
@@ -4102,6 +4311,16 @@ dependencies = [
 [[package]]
 name = "bun_no_window"
 version = "1.4.4"
+
+[[package]]
+name = "bun_node_path"
+version = "1.4.4"
+dependencies = [
+ "bun_core",
+ "bun_paths",
+ "bun_sys",
+ "bytemuck",
+]
 
 [[package]]
 name = "bun_opaque"
@@ -4301,6 +4520,7 @@ dependencies = [
  "bun_ast",
  "bun_collections",
  "bun_core",
+ "bun_threading",
  "enumset",
  "rustc-hash 2.1.3",
  "smallvec",
@@ -4434,6 +4654,7 @@ dependencies = [
  "bun_ecma_api",
  "bun_errno",
  "bun_event_loop",
+ "bun_format_conformance",
  "bun_glob",
  "bun_graph",
  "bun_hash",
@@ -4454,6 +4675,7 @@ dependencies = [
  "bun_libarchive",
  "bun_libdeflate_sys",
  "bun_libuv_sys",
+ "bun_lint_driver",
  "bun_linter",
  "bun_lsp",
  "bun_lsquic_sys",
@@ -4461,6 +4683,7 @@ dependencies = [
  "bun_md",
  "bun_migrate",
  "bun_no_window",
+ "bun_node_path",
  "bun_opaque",
  "bun_options_types",
  "bun_output",
@@ -4492,6 +4715,7 @@ dependencies = [
  "bun_sys",
  "bun_sys_jsc",
  "bun_tcc_sys",
+ "bun_text_diff",
  "bun_threading",
  "bun_url",
  "bun_uws",
@@ -4567,6 +4791,7 @@ dependencies = [
  "bun_sema_standalone",
  "bun_threading",
  "bun_wyhash",
+ "bun_zstd",
  "hashbrown 0.15.5",
  "rustc-hash 2.1.3",
  "smallvec",
@@ -4592,12 +4817,25 @@ dependencies = [
  "bstr",
  "bun_ast",
  "bun_core",
- "bun_js_parser",
  "bun_parsers",
  "bun_paths",
  "bun_sema",
+ "bun_sema_parser",
  "bun_sys",
  "bun_threading",
+]
+
+[[package]]
+name = "bun_sema_parser"
+version = "1.4.4"
+dependencies = [
+ "bun_alloc",
+ "bun_ast",
+ "bun_core",
+ "bun_highway",
+ "bun_sema",
+ "bun_threading",
+ "smallvec",
 ]
 
 [[package]]
@@ -4612,6 +4850,7 @@ dependencies = [
  "bun_sema",
  "bun_sema_baselines",
  "bun_sema_driver",
+ "bun_sema_parser",
  "bun_sys",
  "bun_threading",
  "libc",
@@ -4900,6 +5139,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "bun_text_diff"
+version = "1.4.4"
+dependencies = [
+ "bstr",
+ "bun_core",
+ "bun_wyhash",
+]
+
+[[package]]
 name = "bun_threading"
 version = "1.4.4"
 dependencies = [
@@ -5110,6 +5358,10 @@ dependencies = [
  "bun_arena",
  "criterion2",
 ]
+
+[[package]]
+name = "bun_yarr"
+version = "1.4.4"
 
 [[package]]
 name = "bun_zlib"

@@ -32,8 +32,11 @@ pub fn decode_with_label(
     ignore_bom: bool,
 ) -> Option<String> {
     let enc = Encoding::for_label(label.as_bytes())?;
-    let mut dec =
-        if ignore_bom { enc.new_decoder_without_bom_handling() } else { enc.new_decoder() };
+    let mut dec = if ignore_bom {
+        enc.new_decoder_without_bom_handling()
+    } else {
+        enc.new_decoder()
+    };
     // Both decode calls write only into the string's spare capacity and stop
     // with OutputFull when it runs out. Legacy encodings can expand one byte into
     // three UTF-8 bytes, so grow the buffer and continue until the input is
@@ -138,7 +141,7 @@ fn encode_run_pct(out: &mut String, run: &str, enc: &'static Encoding) {
                 out.push_str("%26%23");
                 out.push_str(&(c as u32).to_string());
                 out.push_str("%3B");
-            },
+            }
         }
     }
 }
@@ -203,8 +206,9 @@ pub fn detect_encoding<'a>(
 fn charset_from_content_type(header: &str) -> Option<String> {
     for part in header.split(';') {
         let trimmed = part.trim();
-        if let Some(rest) =
-            trimmed.strip_prefix("charset=").or_else(|| trimmed.strip_prefix("Charset="))
+        if let Some(rest) = trimmed
+            .strip_prefix("charset=")
+            .or_else(|| trimmed.strip_prefix("Charset="))
         {
             // Strip surrounding quotes if present.
             let value = rest.trim_matches(|c: char| c == '"' || c == '\'').trim();
@@ -234,7 +238,11 @@ fn charset_from_content_type(header: &str) -> Option<String> {
 /// not character encoding declarations.
 fn meta_attribute<'a>(tag: &'a str, target: &str) -> Option<&'a str> {
     let mut rest = tag.strip_prefix("<meta")?;
-    if rest.chars().next().is_some_and(|c| !c.is_ascii_whitespace() && !matches!(c, '>' | '/')) {
+    if rest
+        .chars()
+        .next()
+        .is_some_and(|c| !c.is_ascii_whitespace() && !matches!(c, '>' | '/'))
+    {
         return None;
     }
 
@@ -258,7 +266,11 @@ fn meta_attribute<'a>(tag: &'a str, target: &str) -> Option<&'a str> {
         let mut value = "";
         if let Some(after_equals) = rest.strip_prefix('=') {
             let after_equals = after_equals.trim_start();
-            if let Some(quote) = after_equals.chars().next().filter(|c| matches!(c, '"' | '\'')) {
+            if let Some(quote) = after_equals
+                .chars()
+                .next()
+                .filter(|c| matches!(c, '"' | '\''))
+            {
                 let quoted = &after_equals[quote.len_utf8()..];
                 if let Some(end) = quoted.find(quote) {
                     value = &quoted[..end];
@@ -435,7 +447,10 @@ mod tests {
     #[test]
     fn url_encode_query_eucjp_high_bytes() {
         // U+8108 (脈) is EUC-JP CC AE; both bytes are above 0x7E so both encode.
-        assert_eq!(url_encode_query("\u{8108}", "euc-jp", true).unwrap(), "%CC%AE");
+        assert_eq!(
+            url_encode_query("\u{8108}", "euc-jp", true).unwrap(),
+            "%CC%AE"
+        );
     }
 
     #[test]
@@ -450,14 +465,20 @@ mod tests {
     fn url_encode_query_big5_low_trail_byte_is_escaped() {
         // U+4E00 (一) is Big5 A4 40; the 0x40 trail byte is ASCII '@' but must
         // still be percent-encoded because it serializes a non-ASCII char.
-        assert_eq!(url_encode_query("\u{4e00}", "big5", true).unwrap(), "%A4%40");
+        assert_eq!(
+            url_encode_query("\u{4e00}", "big5", true).unwrap(),
+            "%A4%40"
+        );
     }
 
     #[test]
     fn url_encode_query_keeps_ascii_structure() {
         // ASCII delimiters in a real query stay literal (standard query set):
         // only the non-ASCII value is re-encoded to the target charset.
-        assert_eq!(url_encode_query("a=\u{8108}&b=c", "euc-jp", true).unwrap(), "a=%CC%AE&b=c");
+        assert_eq!(
+            url_encode_query("a=\u{8108}&b=c", "euc-jp", true).unwrap(),
+            "a=%CC%AE&b=c"
+        );
     }
 
     #[test]

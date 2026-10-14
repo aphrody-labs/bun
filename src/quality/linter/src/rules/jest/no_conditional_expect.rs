@@ -10,7 +10,13 @@ use crate::{
 #[derive(Debug, Default, Clone)]
 pub struct NoConditionalExpect;
 
-declare_oxc_lint!(NoConditionalExpect, jest, correctness, docs = DOCUMENTATION, version = "0.0.12",);
+declare_oxc_lint!(
+    NoConditionalExpect,
+    jest,
+    correctness,
+    docs = DOCUMENTATION,
+    version = "0.0.12",
+);
 
 impl Rule for NoConditionalExpect {
     fn run_on_jest_node<'a, 'c>(
@@ -755,7 +761,12 @@ fn test() {
         ),
     ];
 
-    Tester::new(NoConditionalExpect::NAME, NoConditionalExpect::PLUGIN, pass, fail)
-        .with_jest_plugin(true)
-        .test_and_snapshot();
+    Tester::new(
+        NoConditionalExpect::NAME,
+        NoConditionalExpect::PLUGIN,
+        pass,
+        fail,
+    )
+    .with_jest_plugin(true)
+    .test_and_snapshot();
 }

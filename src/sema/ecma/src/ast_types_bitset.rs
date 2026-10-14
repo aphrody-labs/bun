@@ -144,7 +144,10 @@ mod tests {
         let bs = AstTypesBitset::new();
         assert!(!bs.has(AstType::Program));
         let other = AstTypesBitset::new();
-        assert!(bs.contains(&other), "Empty bitset should contain empty bitset");
+        assert!(
+            bs.contains(&other),
+            "Empty bitset should contain empty bitset"
+        );
         assert!(!bs.intersects(&other));
     }
 
@@ -182,7 +185,11 @@ mod tests {
 
     #[test]
     fn iter_collects_set_bits_in_order() {
-        let types = [AstType::Program, AstType::AssignmentPattern, AstType::TSTupleType];
+        let types = [
+            AstType::Program,
+            AstType::AssignmentPattern,
+            AstType::TSTupleType,
+        ];
         let bs = AstTypesBitset::from_types(&types);
         let collected: Vec<AstType> = bs.iter().collect();
         assert_eq!(collected, types);

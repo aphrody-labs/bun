@@ -11223,101 +11223,101 @@ impl RuleEnum {
                     ImportConsistentTypeSpecifierStyle::from_configuration(value)?,
                 ))
             }
-            Self::ImportExtensions(_) => {
-                Ok(Self::ImportExtensions(ImportExtensions::from_configuration(value)?))
-            }
+            Self::ImportExtensions(_) => Ok(Self::ImportExtensions(
+                ImportExtensions::from_configuration(value)?,
+            )),
             Self::ImportFirst(_) => Ok(Self::ImportFirst(ImportFirst::from_configuration(value)?)),
-            Self::ImportMaxDependencies(_) => {
-                Ok(Self::ImportMaxDependencies(ImportMaxDependencies::from_configuration(value)?))
-            }
-            Self::ImportNamespace(_) => {
-                Ok(Self::ImportNamespace(ImportNamespace::from_configuration(value)?))
-            }
+            Self::ImportMaxDependencies(_) => Ok(Self::ImportMaxDependencies(
+                ImportMaxDependencies::from_configuration(value)?,
+            )),
+            Self::ImportNamespace(_) => Ok(Self::ImportNamespace(
+                ImportNamespace::from_configuration(value)?,
+            )),
             Self::ImportNewlineAfterImport(_) => Ok(Self::ImportNewlineAfterImport(
                 ImportNewlineAfterImport::from_configuration(value)?,
             )),
-            Self::ImportNoAbsolutePath(_) => {
-                Ok(Self::ImportNoAbsolutePath(ImportNoAbsolutePath::from_configuration(value)?))
-            }
+            Self::ImportNoAbsolutePath(_) => Ok(Self::ImportNoAbsolutePath(
+                ImportNoAbsolutePath::from_configuration(value)?,
+            )),
             Self::ImportNoAnonymousDefaultExport(_) => Ok(Self::ImportNoAnonymousDefaultExport(
                 ImportNoAnonymousDefaultExport::from_configuration(value)?,
             )),
-            Self::ImportNoCommonjs(_) => {
-                Ok(Self::ImportNoCommonjs(ImportNoCommonjs::from_configuration(value)?))
-            }
-            Self::ImportNoCycle(_) => {
-                Ok(Self::ImportNoCycle(ImportNoCycle::from_configuration(value)?))
-            }
-            Self::ImportNoDuplicates(_) => {
-                Ok(Self::ImportNoDuplicates(ImportNoDuplicates::from_configuration(value)?))
-            }
-            Self::ImportNoDynamicRequire(_) => {
-                Ok(Self::ImportNoDynamicRequire(ImportNoDynamicRequire::from_configuration(value)?))
-            }
-            Self::ImportNoNamespace(_) => {
-                Ok(Self::ImportNoNamespace(ImportNoNamespace::from_configuration(value)?))
-            }
-            Self::ImportNoNodejsModules(_) => {
-                Ok(Self::ImportNoNodejsModules(ImportNoNodejsModules::from_configuration(value)?))
-            }
+            Self::ImportNoCommonjs(_) => Ok(Self::ImportNoCommonjs(
+                ImportNoCommonjs::from_configuration(value)?,
+            )),
+            Self::ImportNoCycle(_) => Ok(Self::ImportNoCycle(ImportNoCycle::from_configuration(
+                value,
+            )?)),
+            Self::ImportNoDuplicates(_) => Ok(Self::ImportNoDuplicates(
+                ImportNoDuplicates::from_configuration(value)?,
+            )),
+            Self::ImportNoDynamicRequire(_) => Ok(Self::ImportNoDynamicRequire(
+                ImportNoDynamicRequire::from_configuration(value)?,
+            )),
+            Self::ImportNoNamespace(_) => Ok(Self::ImportNoNamespace(
+                ImportNoNamespace::from_configuration(value)?,
+            )),
+            Self::ImportNoNodejsModules(_) => Ok(Self::ImportNoNodejsModules(
+                ImportNoNodejsModules::from_configuration(value)?,
+            )),
             Self::ImportNoUnassignedImport(_) => Ok(Self::ImportNoUnassignedImport(
                 ImportNoUnassignedImport::from_configuration(value)?,
             )),
             Self::ImportPreferDefaultExport(_) => Ok(Self::ImportPreferDefaultExport(
                 ImportPreferDefaultExport::from_configuration(value)?,
             )),
-            Self::EslintAccessorPairs(_) => {
-                Ok(Self::EslintAccessorPairs(EslintAccessorPairs::from_configuration(value)?))
-            }
+            Self::EslintAccessorPairs(_) => Ok(Self::EslintAccessorPairs(
+                EslintAccessorPairs::from_configuration(value)?,
+            )),
             Self::EslintArrayCallbackReturn(_) => Ok(Self::EslintArrayCallbackReturn(
                 EslintArrayCallbackReturn::from_configuration(value)?,
             )),
-            Self::EslintArrowBodyStyle(_) => {
-                Ok(Self::EslintArrowBodyStyle(EslintArrowBodyStyle::from_configuration(value)?))
-            }
+            Self::EslintArrowBodyStyle(_) => Ok(Self::EslintArrowBodyStyle(
+                EslintArrowBodyStyle::from_configuration(value)?,
+            )),
             Self::EslintCapitalizedComments(_) => Ok(Self::EslintCapitalizedComments(
                 EslintCapitalizedComments::from_configuration(value)?,
             )),
             Self::EslintClassMethodsUseThis(_) => Ok(Self::EslintClassMethodsUseThis(
                 EslintClassMethodsUseThis::from_configuration(value)?,
             )),
-            Self::EslintComplexity(_) => {
-                Ok(Self::EslintComplexity(EslintComplexity::from_configuration(value)?))
-            }
+            Self::EslintComplexity(_) => Ok(Self::EslintComplexity(
+                EslintComplexity::from_configuration(value)?,
+            )),
             Self::EslintCurly(_) => Ok(Self::EslintCurly(EslintCurly::from_configuration(value)?)),
-            Self::EslintDefaultCase(_) => {
-                Ok(Self::EslintDefaultCase(EslintDefaultCase::from_configuration(value)?))
-            }
+            Self::EslintDefaultCase(_) => Ok(Self::EslintDefaultCase(
+                EslintDefaultCase::from_configuration(value)?,
+            )),
             Self::EslintEqeqeq(_) => {
                 Ok(Self::EslintEqeqeq(EslintEqeqeq::from_configuration(value)?))
             }
-            Self::EslintFuncNameMatching(_) => {
-                Ok(Self::EslintFuncNameMatching(EslintFuncNameMatching::from_configuration(value)?))
-            }
-            Self::EslintFuncNames(_) => {
-                Ok(Self::EslintFuncNames(EslintFuncNames::from_configuration(value)?))
-            }
-            Self::EslintFuncStyle(_) => {
-                Ok(Self::EslintFuncStyle(EslintFuncStyle::from_configuration(value)?))
-            }
-            Self::EslintGetterReturn(_) => {
-                Ok(Self::EslintGetterReturn(EslintGetterReturn::from_configuration(value)?))
-            }
+            Self::EslintFuncNameMatching(_) => Ok(Self::EslintFuncNameMatching(
+                EslintFuncNameMatching::from_configuration(value)?,
+            )),
+            Self::EslintFuncNames(_) => Ok(Self::EslintFuncNames(
+                EslintFuncNames::from_configuration(value)?,
+            )),
+            Self::EslintFuncStyle(_) => Ok(Self::EslintFuncStyle(
+                EslintFuncStyle::from_configuration(value)?,
+            )),
+            Self::EslintGetterReturn(_) => Ok(Self::EslintGetterReturn(
+                EslintGetterReturn::from_configuration(value)?,
+            )),
             Self::EslintGroupedAccessorPairs(_) => Ok(Self::EslintGroupedAccessorPairs(
                 EslintGroupedAccessorPairs::from_configuration(value)?,
             )),
-            Self::EslintIdDenylist(_) => {
-                Ok(Self::EslintIdDenylist(EslintIdDenylist::from_configuration(value)?))
-            }
-            Self::EslintIdLength(_) => {
-                Ok(Self::EslintIdLength(EslintIdLength::from_configuration(value)?))
-            }
-            Self::EslintIdMatch(_) => {
-                Ok(Self::EslintIdMatch(EslintIdMatch::from_configuration(value)?))
-            }
-            Self::EslintInitDeclarations(_) => {
-                Ok(Self::EslintInitDeclarations(EslintInitDeclarations::from_configuration(value)?))
-            }
+            Self::EslintIdDenylist(_) => Ok(Self::EslintIdDenylist(
+                EslintIdDenylist::from_configuration(value)?,
+            )),
+            Self::EslintIdLength(_) => Ok(Self::EslintIdLength(
+                EslintIdLength::from_configuration(value)?,
+            )),
+            Self::EslintIdMatch(_) => Ok(Self::EslintIdMatch(EslintIdMatch::from_configuration(
+                value,
+            )?)),
+            Self::EslintInitDeclarations(_) => Ok(Self::EslintInitDeclarations(
+                EslintInitDeclarations::from_configuration(value)?,
+            )),
             Self::EslintLogicalAssignmentOperators(_) => {
                 Ok(Self::EslintLogicalAssignmentOperators(
                     EslintLogicalAssignmentOperators::from_configuration(value)?,
@@ -11326,36 +11326,36 @@ impl RuleEnum {
             Self::EslintMaxClassesPerFile(_) => Ok(Self::EslintMaxClassesPerFile(
                 EslintMaxClassesPerFile::from_configuration(value)?,
             )),
-            Self::EslintMaxDepth(_) => {
-                Ok(Self::EslintMaxDepth(EslintMaxDepth::from_configuration(value)?))
-            }
-            Self::EslintMaxLines(_) => {
-                Ok(Self::EslintMaxLines(EslintMaxLines::from_configuration(value)?))
-            }
+            Self::EslintMaxDepth(_) => Ok(Self::EslintMaxDepth(
+                EslintMaxDepth::from_configuration(value)?,
+            )),
+            Self::EslintMaxLines(_) => Ok(Self::EslintMaxLines(
+                EslintMaxLines::from_configuration(value)?,
+            )),
             Self::EslintMaxLinesPerFunction(_) => Ok(Self::EslintMaxLinesPerFunction(
                 EslintMaxLinesPerFunction::from_configuration(value)?,
             )),
             Self::EslintMaxNestedCallbacks(_) => Ok(Self::EslintMaxNestedCallbacks(
                 EslintMaxNestedCallbacks::from_configuration(value)?,
             )),
-            Self::EslintMaxParams(_) => {
-                Ok(Self::EslintMaxParams(EslintMaxParams::from_configuration(value)?))
-            }
-            Self::EslintMaxStatements(_) => {
-                Ok(Self::EslintMaxStatements(EslintMaxStatements::from_configuration(value)?))
-            }
+            Self::EslintMaxParams(_) => Ok(Self::EslintMaxParams(
+                EslintMaxParams::from_configuration(value)?,
+            )),
+            Self::EslintMaxStatements(_) => Ok(Self::EslintMaxStatements(
+                EslintMaxStatements::from_configuration(value)?,
+            )),
             Self::EslintNewCap(_) => {
                 Ok(Self::EslintNewCap(EslintNewCap::from_configuration(value)?))
             }
-            Self::EslintNoBitwise(_) => {
-                Ok(Self::EslintNoBitwise(EslintNoBitwise::from_configuration(value)?))
-            }
-            Self::EslintNoCondAssign(_) => {
-                Ok(Self::EslintNoCondAssign(EslintNoCondAssign::from_configuration(value)?))
-            }
-            Self::EslintNoConsole(_) => {
-                Ok(Self::EslintNoConsole(EslintNoConsole::from_configuration(value)?))
-            }
+            Self::EslintNoBitwise(_) => Ok(Self::EslintNoBitwise(
+                EslintNoBitwise::from_configuration(value)?,
+            )),
+            Self::EslintNoCondAssign(_) => Ok(Self::EslintNoCondAssign(
+                EslintNoCondAssign::from_configuration(value)?,
+            )),
+            Self::EslintNoConsole(_) => Ok(Self::EslintNoConsole(
+                EslintNoConsole::from_configuration(value)?,
+            )),
             Self::EslintNoConstantBinaryExpression(_) => {
                 Ok(Self::EslintNoConstantBinaryExpression(
                     EslintNoConstantBinaryExpression::from_configuration(value)?,
@@ -11367,77 +11367,77 @@ impl RuleEnum {
             Self::EslintNoDuplicateImports(_) => Ok(Self::EslintNoDuplicateImports(
                 EslintNoDuplicateImports::from_configuration(value)?,
             )),
-            Self::EslintNoElseReturn(_) => {
-                Ok(Self::EslintNoElseReturn(EslintNoElseReturn::from_configuration(value)?))
-            }
-            Self::EslintNoEmpty(_) => {
-                Ok(Self::EslintNoEmpty(EslintNoEmpty::from_configuration(value)?))
-            }
-            Self::EslintNoEmptyFunction(_) => {
-                Ok(Self::EslintNoEmptyFunction(EslintNoEmptyFunction::from_configuration(value)?))
-            }
-            Self::EslintNoEmptyPattern(_) => {
-                Ok(Self::EslintNoEmptyPattern(EslintNoEmptyPattern::from_configuration(value)?))
-            }
+            Self::EslintNoElseReturn(_) => Ok(Self::EslintNoElseReturn(
+                EslintNoElseReturn::from_configuration(value)?,
+            )),
+            Self::EslintNoEmpty(_) => Ok(Self::EslintNoEmpty(EslintNoEmpty::from_configuration(
+                value,
+            )?)),
+            Self::EslintNoEmptyFunction(_) => Ok(Self::EslintNoEmptyFunction(
+                EslintNoEmptyFunction::from_configuration(value)?,
+            )),
+            Self::EslintNoEmptyPattern(_) => Ok(Self::EslintNoEmptyPattern(
+                EslintNoEmptyPattern::from_configuration(value)?,
+            )),
             Self::EslintNoEval(_) => {
                 Ok(Self::EslintNoEval(EslintNoEval::from_configuration(value)?))
             }
-            Self::EslintNoExtendNative(_) => {
-                Ok(Self::EslintNoExtendNative(EslintNoExtendNative::from_configuration(value)?))
-            }
+            Self::EslintNoExtendNative(_) => Ok(Self::EslintNoExtendNative(
+                EslintNoExtendNative::from_configuration(value)?,
+            )),
             Self::EslintNoExtraBooleanCast(_) => Ok(Self::EslintNoExtraBooleanCast(
                 EslintNoExtraBooleanCast::from_configuration(value)?,
             )),
-            Self::EslintNoFallthrough(_) => {
-                Ok(Self::EslintNoFallthrough(EslintNoFallthrough::from_configuration(value)?))
-            }
-            Self::EslintNoGlobalAssign(_) => {
-                Ok(Self::EslintNoGlobalAssign(EslintNoGlobalAssign::from_configuration(value)?))
-            }
+            Self::EslintNoFallthrough(_) => Ok(Self::EslintNoFallthrough(
+                EslintNoFallthrough::from_configuration(value)?,
+            )),
+            Self::EslintNoGlobalAssign(_) => Ok(Self::EslintNoGlobalAssign(
+                EslintNoGlobalAssign::from_configuration(value)?,
+            )),
             Self::EslintNoImplicitCoercion(_) => Ok(Self::EslintNoImplicitCoercion(
                 EslintNoImplicitCoercion::from_configuration(value)?,
             )),
             Self::EslintNoImplicitGlobals(_) => Ok(Self::EslintNoImplicitGlobals(
                 EslintNoImplicitGlobals::from_configuration(value)?,
             )),
-            Self::EslintNoInlineComments(_) => {
-                Ok(Self::EslintNoInlineComments(EslintNoInlineComments::from_configuration(value)?))
-            }
+            Self::EslintNoInlineComments(_) => Ok(Self::EslintNoInlineComments(
+                EslintNoInlineComments::from_configuration(value)?,
+            )),
             Self::EslintNoInnerDeclarations(_) => Ok(Self::EslintNoInnerDeclarations(
                 EslintNoInnerDeclarations::from_configuration(value)?,
             )),
-            Self::EslintNoInvalidRegexp(_) => {
-                Ok(Self::EslintNoInvalidRegexp(EslintNoInvalidRegexp::from_configuration(value)?))
-            }
+            Self::EslintNoInvalidRegexp(_) => Ok(Self::EslintNoInvalidRegexp(
+                EslintNoInvalidRegexp::from_configuration(value)?,
+            )),
             Self::EslintNoIrregularWhitespace(_) => Ok(Self::EslintNoIrregularWhitespace(
                 EslintNoIrregularWhitespace::from_configuration(value)?,
             )),
-            Self::EslintNoLabels(_) => {
-                Ok(Self::EslintNoLabels(EslintNoLabels::from_configuration(value)?))
-            }
-            Self::EslintNoMagicNumbers(_) => {
-                Ok(Self::EslintNoMagicNumbers(EslintNoMagicNumbers::from_configuration(value)?))
-            }
+            Self::EslintNoLabels(_) => Ok(Self::EslintNoLabels(
+                EslintNoLabels::from_configuration(value)?,
+            )),
+            Self::EslintNoMagicNumbers(_) => Ok(Self::EslintNoMagicNumbers(
+                EslintNoMagicNumbers::from_configuration(value)?,
+            )),
             Self::EslintNoMisleadingCharacterClass(_) => {
                 Ok(Self::EslintNoMisleadingCharacterClass(
                     EslintNoMisleadingCharacterClass::from_configuration(value)?,
                 ))
             }
-            Self::EslintNoMultiAssign(_) => {
-                Ok(Self::EslintNoMultiAssign(EslintNoMultiAssign::from_configuration(value)?))
-            }
-            Self::EslintNoParamReassign(_) => {
-                Ok(Self::EslintNoParamReassign(EslintNoParamReassign::from_configuration(value)?))
-            }
-            Self::EslintNoPlusplus(_) => {
-                Ok(Self::EslintNoPlusplus(EslintNoPlusplus::from_configuration(value)?))
-            }
+            Self::EslintNoMultiAssign(_) => Ok(Self::EslintNoMultiAssign(
+                EslintNoMultiAssign::from_configuration(value)?,
+            )),
+            Self::EslintNoParamReassign(_) => Ok(Self::EslintNoParamReassign(
+                EslintNoParamReassign::from_configuration(value)?,
+            )),
+            Self::EslintNoPlusplus(_) => Ok(Self::EslintNoPlusplus(
+                EslintNoPlusplus::from_configuration(value)?,
+            )),
             Self::EslintNoPromiseExecutorReturn(_) => Ok(Self::EslintNoPromiseExecutorReturn(
                 EslintNoPromiseExecutorReturn::from_configuration(value)?,
             )),
-            Self::EslintNoRedeclare(_) => {
-                Ok(Self::EslintNoRedeclare(EslintNoRedeclare::from_configuration(value)?))
-            }
+            Self::EslintNoRedeclare(_) => Ok(Self::EslintNoRedeclare(
+                EslintNoRedeclare::from_configuration(value)?,
+            )),
             Self::EslintNoRestrictedExports(_) => Ok(Self::EslintNoRestrictedExports(
                 EslintNoRestrictedExports::from_configuration(value)?,
             )),
@@ -11450,24 +11450,24 @@ impl RuleEnum {
             Self::EslintNoRestrictedProperties(_) => Ok(Self::EslintNoRestrictedProperties(
                 EslintNoRestrictedProperties::from_configuration(value)?,
             )),
-            Self::EslintNoReturnAssign(_) => {
-                Ok(Self::EslintNoReturnAssign(EslintNoReturnAssign::from_configuration(value)?))
-            }
-            Self::EslintNoSelfAssign(_) => {
-                Ok(Self::EslintNoSelfAssign(EslintNoSelfAssign::from_configuration(value)?))
-            }
-            Self::EslintNoSequences(_) => {
-                Ok(Self::EslintNoSequences(EslintNoSequences::from_configuration(value)?))
-            }
-            Self::EslintNoShadow(_) => {
-                Ok(Self::EslintNoShadow(EslintNoShadow::from_configuration(value)?))
-            }
+            Self::EslintNoReturnAssign(_) => Ok(Self::EslintNoReturnAssign(
+                EslintNoReturnAssign::from_configuration(value)?,
+            )),
+            Self::EslintNoSelfAssign(_) => Ok(Self::EslintNoSelfAssign(
+                EslintNoSelfAssign::from_configuration(value)?,
+            )),
+            Self::EslintNoSequences(_) => Ok(Self::EslintNoSequences(
+                EslintNoSequences::from_configuration(value)?,
+            )),
+            Self::EslintNoShadow(_) => Ok(Self::EslintNoShadow(
+                EslintNoShadow::from_configuration(value)?,
+            )),
             Self::EslintNoShadowRestrictedNames(_) => Ok(Self::EslintNoShadowRestrictedNames(
                 EslintNoShadowRestrictedNames::from_configuration(value)?,
             )),
-            Self::EslintNoUndef(_) => {
-                Ok(Self::EslintNoUndef(EslintNoUndef::from_configuration(value)?))
-            }
+            Self::EslintNoUndef(_) => Ok(Self::EslintNoUndef(EslintNoUndef::from_configuration(
+                value,
+            )?)),
             Self::EslintNoUnderscoreDangle(_) => Ok(Self::EslintNoUnderscoreDangle(
                 EslintNoUnderscoreDangle::from_configuration(value)?,
             )),
@@ -11480,39 +11480,39 @@ impl RuleEnum {
             Self::EslintNoUnreachableLoop(_) => Ok(Self::EslintNoUnreachableLoop(
                 EslintNoUnreachableLoop::from_configuration(value)?,
             )),
-            Self::EslintNoUnsafeNegation(_) => {
-                Ok(Self::EslintNoUnsafeNegation(EslintNoUnsafeNegation::from_configuration(value)?))
-            }
+            Self::EslintNoUnsafeNegation(_) => Ok(Self::EslintNoUnsafeNegation(
+                EslintNoUnsafeNegation::from_configuration(value)?,
+            )),
             Self::EslintNoUnsafeOptionalChaining(_) => Ok(Self::EslintNoUnsafeOptionalChaining(
                 EslintNoUnsafeOptionalChaining::from_configuration(value)?,
             )),
             Self::EslintNoUnusedExpressions(_) => Ok(Self::EslintNoUnusedExpressions(
                 EslintNoUnusedExpressions::from_configuration(value)?,
             )),
-            Self::EslintNoUnusedVars(_) => {
-                Ok(Self::EslintNoUnusedVars(EslintNoUnusedVars::from_configuration(value)?))
-            }
+            Self::EslintNoUnusedVars(_) => Ok(Self::EslintNoUnusedVars(
+                EslintNoUnusedVars::from_configuration(value)?,
+            )),
             Self::EslintNoUseBeforeDefine(_) => Ok(Self::EslintNoUseBeforeDefine(
                 EslintNoUseBeforeDefine::from_configuration(value)?,
             )),
             Self::EslintNoUselessComputedKey(_) => Ok(Self::EslintNoUselessComputedKey(
                 EslintNoUselessComputedKey::from_configuration(value)?,
             )),
-            Self::EslintNoUselessEscape(_) => {
-                Ok(Self::EslintNoUselessEscape(EslintNoUselessEscape::from_configuration(value)?))
-            }
-            Self::EslintNoUselessRename(_) => {
-                Ok(Self::EslintNoUselessRename(EslintNoUselessRename::from_configuration(value)?))
-            }
+            Self::EslintNoUselessEscape(_) => Ok(Self::EslintNoUselessEscape(
+                EslintNoUselessEscape::from_configuration(value)?,
+            )),
+            Self::EslintNoUselessRename(_) => Ok(Self::EslintNoUselessRename(
+                EslintNoUselessRename::from_configuration(value)?,
+            )),
             Self::EslintNoVoid(_) => {
                 Ok(Self::EslintNoVoid(EslintNoVoid::from_configuration(value)?))
             }
             Self::EslintNoWarningComments(_) => Ok(Self::EslintNoWarningComments(
                 EslintNoWarningComments::from_configuration(value)?,
             )),
-            Self::EslintObjectShorthand(_) => {
-                Ok(Self::EslintObjectShorthand(EslintObjectShorthand::from_configuration(value)?))
-            }
+            Self::EslintObjectShorthand(_) => Ok(Self::EslintObjectShorthand(
+                EslintObjectShorthand::from_configuration(value)?,
+            )),
             Self::EslintOneVar(_) => {
                 Ok(Self::EslintOneVar(EslintOneVar::from_configuration(value)?))
             }
@@ -11522,9 +11522,9 @@ impl RuleEnum {
             Self::EslintPreferArrowCallback(_) => Ok(Self::EslintPreferArrowCallback(
                 EslintPreferArrowCallback::from_configuration(value)?,
             )),
-            Self::EslintPreferConst(_) => {
-                Ok(Self::EslintPreferConst(EslintPreferConst::from_configuration(value)?))
-            }
+            Self::EslintPreferConst(_) => Ok(Self::EslintPreferConst(
+                EslintPreferConst::from_configuration(value)?,
+            )),
             Self::EslintPreferDestructuring(_) => Ok(Self::EslintPreferDestructuring(
                 EslintPreferDestructuring::from_configuration(value)?,
             )),
@@ -11540,31 +11540,31 @@ impl RuleEnum {
             Self::EslintRequireUnicodeRegexp(_) => Ok(Self::EslintRequireUnicodeRegexp(
                 EslintRequireUnicodeRegexp::from_configuration(value)?,
             )),
-            Self::EslintSortImports(_) => {
-                Ok(Self::EslintSortImports(EslintSortImports::from_configuration(value)?))
-            }
-            Self::EslintSortKeys(_) => {
-                Ok(Self::EslintSortKeys(EslintSortKeys::from_configuration(value)?))
-            }
-            Self::EslintSortVars(_) => {
-                Ok(Self::EslintSortVars(EslintSortVars::from_configuration(value)?))
-            }
-            Self::EslintUnicodeBom(_) => {
-                Ok(Self::EslintUnicodeBom(EslintUnicodeBom::from_configuration(value)?))
-            }
-            Self::EslintUseIsnan(_) => {
-                Ok(Self::EslintUseIsnan(EslintUseIsnan::from_configuration(value)?))
-            }
-            Self::EslintValidTypeof(_) => {
-                Ok(Self::EslintValidTypeof(EslintValidTypeof::from_configuration(value)?))
-            }
+            Self::EslintSortImports(_) => Ok(Self::EslintSortImports(
+                EslintSortImports::from_configuration(value)?,
+            )),
+            Self::EslintSortKeys(_) => Ok(Self::EslintSortKeys(
+                EslintSortKeys::from_configuration(value)?,
+            )),
+            Self::EslintSortVars(_) => Ok(Self::EslintSortVars(
+                EslintSortVars::from_configuration(value)?,
+            )),
+            Self::EslintUnicodeBom(_) => Ok(Self::EslintUnicodeBom(
+                EslintUnicodeBom::from_configuration(value)?,
+            )),
+            Self::EslintUseIsnan(_) => Ok(Self::EslintUseIsnan(
+                EslintUseIsnan::from_configuration(value)?,
+            )),
+            Self::EslintValidTypeof(_) => Ok(Self::EslintValidTypeof(
+                EslintValidTypeof::from_configuration(value)?,
+            )),
             Self::EslintYoda(_) => Ok(Self::EslintYoda(EslintYoda::from_configuration(value)?)),
-            Self::TypescriptArrayType(_) => {
-                Ok(Self::TypescriptArrayType(TypescriptArrayType::from_configuration(value)?))
-            }
-            Self::TypescriptBanTsComment(_) => {
-                Ok(Self::TypescriptBanTsComment(TypescriptBanTsComment::from_configuration(value)?))
-            }
+            Self::TypescriptArrayType(_) => Ok(Self::TypescriptArrayType(
+                TypescriptArrayType::from_configuration(value)?,
+            )),
+            Self::TypescriptBanTsComment(_) => Ok(Self::TypescriptBanTsComment(
+                TypescriptBanTsComment::from_configuration(value)?,
+            )),
             Self::TypescriptClassLiteralPropertyStyle(_) => {
                 Ok(Self::TypescriptClassLiteralPropertyStyle(
                     TypescriptClassLiteralPropertyStyle::from_configuration(value)?,
@@ -11599,9 +11599,9 @@ impl RuleEnum {
             Self::TypescriptConsistentTypeImports(_) => Ok(Self::TypescriptConsistentTypeImports(
                 TypescriptConsistentTypeImports::from_configuration(value)?,
             )),
-            Self::TypescriptDotNotation(_) => {
-                Ok(Self::TypescriptDotNotation(TypescriptDotNotation::from_configuration(value)?))
-            }
+            Self::TypescriptDotNotation(_) => Ok(Self::TypescriptDotNotation(
+                TypescriptDotNotation::from_configuration(value)?,
+            )),
             Self::TypescriptExplicitFunctionReturnType(_) => {
                 Ok(Self::TypescriptExplicitFunctionReturnType(
                     TypescriptExplicitFunctionReturnType::from_configuration(value)?,
@@ -11628,9 +11628,9 @@ impl RuleEnum {
                     TypescriptNoConfusingVoidExpression::from_configuration(value)?,
                 ))
             }
-            Self::TypescriptNoDeprecated(_) => {
-                Ok(Self::TypescriptNoDeprecated(TypescriptNoDeprecated::from_configuration(value)?))
-            }
+            Self::TypescriptNoDeprecated(_) => Ok(Self::TypescriptNoDeprecated(
+                TypescriptNoDeprecated::from_configuration(value)?,
+            )),
             Self::TypescriptNoDuplicateTypeConstituents(_) => {
                 Ok(Self::TypescriptNoDuplicateTypeConstituents(
                     TypescriptNoDuplicateTypeConstituents::from_configuration(value)?,
@@ -11668,18 +11668,18 @@ impl RuleEnum {
             Self::TypescriptNoMisusedSpread(_) => Ok(Self::TypescriptNoMisusedSpread(
                 TypescriptNoMisusedSpread::from_configuration(value)?,
             )),
-            Self::TypescriptNoNamespace(_) => {
-                Ok(Self::TypescriptNoNamespace(TypescriptNoNamespace::from_configuration(value)?))
-            }
+            Self::TypescriptNoNamespace(_) => Ok(Self::TypescriptNoNamespace(
+                TypescriptNoNamespace::from_configuration(value)?,
+            )),
             Self::TypescriptNoRequireImports(_) => Ok(Self::TypescriptNoRequireImports(
                 TypescriptNoRequireImports::from_configuration(value)?,
             )),
             Self::TypescriptNoRestrictedTypes(_) => Ok(Self::TypescriptNoRestrictedTypes(
                 TypescriptNoRestrictedTypes::from_configuration(value)?,
             )),
-            Self::TypescriptNoThisAlias(_) => {
-                Ok(Self::TypescriptNoThisAlias(TypescriptNoThisAlias::from_configuration(value)?))
-            }
+            Self::TypescriptNoThisAlias(_) => Ok(Self::TypescriptNoThisAlias(
+                TypescriptNoThisAlias::from_configuration(value)?,
+            )),
             Self::TypescriptNoUnnecessaryBooleanLiteralCompare(_) => {
                 Ok(Self::TypescriptNoUnnecessaryBooleanLiteralCompare(
                     TypescriptNoUnnecessaryBooleanLiteralCompare::from_configuration(value)?,
@@ -11751,9 +11751,9 @@ impl RuleEnum {
                     TypescriptRestrictTemplateExpressions::from_configuration(value)?,
                 ))
             }
-            Self::TypescriptReturnAwait(_) => {
-                Ok(Self::TypescriptReturnAwait(TypescriptReturnAwait::from_configuration(value)?))
-            }
+            Self::TypescriptReturnAwait(_) => Ok(Self::TypescriptReturnAwait(
+                TypescriptReturnAwait::from_configuration(value)?,
+            )),
             Self::TypescriptStrictBooleanExpressions(_) => {
                 Ok(Self::TypescriptStrictBooleanExpressions(
                     TypescriptStrictBooleanExpressions::from_configuration(value)?,
@@ -11776,34 +11776,34 @@ impl RuleEnum {
             Self::TypescriptUnifiedSignatures(_) => Ok(Self::TypescriptUnifiedSignatures(
                 TypescriptUnifiedSignatures::from_configuration(value)?,
             )),
-            Self::JestConsistentTestIt(_) => {
-                Ok(Self::JestConsistentTestIt(JestConsistentTestIt::from_configuration(value)?))
-            }
-            Self::JestExpectExpect(_) => {
-                Ok(Self::JestExpectExpect(JestExpectExpect::from_configuration(value)?))
-            }
-            Self::JestMaxExpects(_) => {
-                Ok(Self::JestMaxExpects(JestMaxExpects::from_configuration(value)?))
-            }
-            Self::JestMaxNestedDescribe(_) => {
-                Ok(Self::JestMaxNestedDescribe(JestMaxNestedDescribe::from_configuration(value)?))
-            }
+            Self::JestConsistentTestIt(_) => Ok(Self::JestConsistentTestIt(
+                JestConsistentTestIt::from_configuration(value)?,
+            )),
+            Self::JestExpectExpect(_) => Ok(Self::JestExpectExpect(
+                JestExpectExpect::from_configuration(value)?,
+            )),
+            Self::JestMaxExpects(_) => Ok(Self::JestMaxExpects(
+                JestMaxExpects::from_configuration(value)?,
+            )),
+            Self::JestMaxNestedDescribe(_) => Ok(Self::JestMaxNestedDescribe(
+                JestMaxNestedDescribe::from_configuration(value)?,
+            )),
             Self::JestNoDeprecatedFunctions(_) => Ok(Self::JestNoDeprecatedFunctions(
                 JestNoDeprecatedFunctions::from_configuration(value)?,
             )),
             Self::JestNoHooks(_) => Ok(Self::JestNoHooks(JestNoHooks::from_configuration(value)?)),
-            Self::JestNoLargeSnapshots(_) => {
-                Ok(Self::JestNoLargeSnapshots(JestNoLargeSnapshots::from_configuration(value)?))
-            }
+            Self::JestNoLargeSnapshots(_) => Ok(Self::JestNoLargeSnapshots(
+                JestNoLargeSnapshots::from_configuration(value)?,
+            )),
             Self::JestNoRestrictedJestMethods(_) => Ok(Self::JestNoRestrictedJestMethods(
                 JestNoRestrictedJestMethods::from_configuration(value)?,
             )),
             Self::JestNoRestrictedMatchers(_) => Ok(Self::JestNoRestrictedMatchers(
                 JestNoRestrictedMatchers::from_configuration(value)?,
             )),
-            Self::JestNoStandaloneExpect(_) => {
-                Ok(Self::JestNoStandaloneExpect(JestNoStandaloneExpect::from_configuration(value)?))
-            }
+            Self::JestNoStandaloneExpect(_) => Ok(Self::JestNoStandaloneExpect(
+                JestNoStandaloneExpect::from_configuration(value)?,
+            )),
             Self::JestPreferEndingWithAnExpect(_) => Ok(Self::JestPreferEndingWithAnExpect(
                 JestPreferEndingWithAnExpect::from_configuration(value)?,
             )),
@@ -11816,86 +11816,86 @@ impl RuleEnum {
             Self::JestPreferLowercaseTitle(_) => Ok(Self::JestPreferLowercaseTitle(
                 JestPreferLowercaseTitle::from_configuration(value)?,
             )),
-            Self::JestPreferSnapshotHint(_) => {
-                Ok(Self::JestPreferSnapshotHint(JestPreferSnapshotHint::from_configuration(value)?))
-            }
-            Self::JestRequireHook(_) => {
-                Ok(Self::JestRequireHook(JestRequireHook::from_configuration(value)?))
-            }
+            Self::JestPreferSnapshotHint(_) => Ok(Self::JestPreferSnapshotHint(
+                JestPreferSnapshotHint::from_configuration(value)?,
+            )),
+            Self::JestRequireHook(_) => Ok(Self::JestRequireHook(
+                JestRequireHook::from_configuration(value)?,
+            )),
             Self::JestRequireTopLevelDescribe(_) => Ok(Self::JestRequireTopLevelDescribe(
                 JestRequireTopLevelDescribe::from_configuration(value)?,
             )),
-            Self::JestValidExpect(_) => {
-                Ok(Self::JestValidExpect(JestValidExpect::from_configuration(value)?))
-            }
-            Self::JestValidTitle(_) => {
-                Ok(Self::JestValidTitle(JestValidTitle::from_configuration(value)?))
-            }
-            Self::ReactButtonHasType(_) => {
-                Ok(Self::ReactButtonHasType(ReactButtonHasType::from_configuration(value)?))
-            }
+            Self::JestValidExpect(_) => Ok(Self::JestValidExpect(
+                JestValidExpect::from_configuration(value)?,
+            )),
+            Self::JestValidTitle(_) => Ok(Self::JestValidTitle(
+                JestValidTitle::from_configuration(value)?,
+            )),
+            Self::ReactButtonHasType(_) => Ok(Self::ReactButtonHasType(
+                ReactButtonHasType::from_configuration(value)?,
+            )),
             Self::ReactCheckedRequiresOnchangeOrReadonly(_) => {
                 Ok(Self::ReactCheckedRequiresOnchangeOrReadonly(
                     ReactCheckedRequiresOnchangeOrReadonly::from_configuration(value)?,
                 ))
             }
-            Self::ReactDisplayName(_) => {
-                Ok(Self::ReactDisplayName(ReactDisplayName::from_configuration(value)?))
-            }
-            Self::ReactExhaustiveDeps(_) => {
-                Ok(Self::ReactExhaustiveDeps(ReactExhaustiveDeps::from_configuration(value)?))
-            }
+            Self::ReactDisplayName(_) => Ok(Self::ReactDisplayName(
+                ReactDisplayName::from_configuration(value)?,
+            )),
+            Self::ReactExhaustiveDeps(_) => Ok(Self::ReactExhaustiveDeps(
+                ReactExhaustiveDeps::from_configuration(value)?,
+            )),
             Self::ReactForbidComponentProps(_) => Ok(Self::ReactForbidComponentProps(
                 ReactForbidComponentProps::from_configuration(value)?,
             )),
-            Self::ReactForbidDomProps(_) => {
-                Ok(Self::ReactForbidDomProps(ReactForbidDomProps::from_configuration(value)?))
-            }
-            Self::ReactForbidElements(_) => {
-                Ok(Self::ReactForbidElements(ReactForbidElements::from_configuration(value)?))
-            }
+            Self::ReactForbidDomProps(_) => Ok(Self::ReactForbidDomProps(
+                ReactForbidDomProps::from_configuration(value)?,
+            )),
+            Self::ReactForbidElements(_) => Ok(Self::ReactForbidElements(
+                ReactForbidElements::from_configuration(value)?,
+            )),
             Self::ReactFunctionComponentDefinition(_) => {
                 Ok(Self::ReactFunctionComponentDefinition(
                     ReactFunctionComponentDefinition::from_configuration(value)?,
                 ))
             }
-            Self::ReactHookUseState(_) => {
-                Ok(Self::ReactHookUseState(ReactHookUseState::from_configuration(value)?))
-            }
-            Self::ReactJsxBooleanValue(_) => {
-                Ok(Self::ReactJsxBooleanValue(ReactJsxBooleanValue::from_configuration(value)?))
-            }
+            Self::ReactHookUseState(_) => Ok(Self::ReactHookUseState(
+                ReactHookUseState::from_configuration(value)?,
+            )),
+            Self::ReactJsxBooleanValue(_) => Ok(Self::ReactJsxBooleanValue(
+                ReactJsxBooleanValue::from_configuration(value)?,
+            )),
             Self::ReactJsxCurlyBracePresence(_) => Ok(Self::ReactJsxCurlyBracePresence(
                 ReactJsxCurlyBracePresence::from_configuration(value)?,
             )),
             Self::ReactJsxFilenameExtension(_) => Ok(Self::ReactJsxFilenameExtension(
                 ReactJsxFilenameExtension::from_configuration(value)?,
             )),
-            Self::ReactJsxFragments(_) => {
-                Ok(Self::ReactJsxFragments(ReactJsxFragments::from_configuration(value)?))
-            }
-            Self::ReactJsxHandlerNames(_) => {
-                Ok(Self::ReactJsxHandlerNames(ReactJsxHandlerNames::from_configuration(value)?))
-            }
+            Self::ReactJsxFragments(_) => Ok(Self::ReactJsxFragments(
+                ReactJsxFragments::from_configuration(value)?,
+            )),
+            Self::ReactJsxHandlerNames(_) => Ok(Self::ReactJsxHandlerNames(
+                ReactJsxHandlerNames::from_configuration(value)?,
+            )),
             Self::ReactJsxKey(_) => Ok(Self::ReactJsxKey(ReactJsxKey::from_configuration(value)?)),
-            Self::ReactJsxMaxDepth(_) => {
-                Ok(Self::ReactJsxMaxDepth(ReactJsxMaxDepth::from_configuration(value)?))
-            }
-            Self::ReactJsxNoLiterals(_) => {
-                Ok(Self::ReactJsxNoLiterals(ReactJsxNoLiterals::from_configuration(value)?))
-            }
-            Self::ReactJsxNoScriptUrl(_) => {
-                Ok(Self::ReactJsxNoScriptUrl(ReactJsxNoScriptUrl::from_configuration(value)?))
-            }
-            Self::ReactJsxNoTargetBlank(_) => {
-                Ok(Self::ReactJsxNoTargetBlank(ReactJsxNoTargetBlank::from_configuration(value)?))
-            }
+            Self::ReactJsxMaxDepth(_) => Ok(Self::ReactJsxMaxDepth(
+                ReactJsxMaxDepth::from_configuration(value)?,
+            )),
+            Self::ReactJsxNoLiterals(_) => Ok(Self::ReactJsxNoLiterals(
+                ReactJsxNoLiterals::from_configuration(value)?,
+            )),
+            Self::ReactJsxNoScriptUrl(_) => Ok(Self::ReactJsxNoScriptUrl(
+                ReactJsxNoScriptUrl::from_configuration(value)?,
+            )),
+            Self::ReactJsxNoTargetBlank(_) => Ok(Self::ReactJsxNoTargetBlank(
+                ReactJsxNoTargetBlank::from_configuration(value)?,
+            )),
             Self::ReactJsxNoUselessFragment(_) => Ok(Self::ReactJsxNoUselessFragment(
                 ReactJsxNoUselessFragment::from_configuration(value)?,
             )),
-            Self::ReactJsxPascalCase(_) => {
-                Ok(Self::ReactJsxPascalCase(ReactJsxPascalCase::from_configuration(value)?))
-            }
+            Self::ReactJsxPascalCase(_) => Ok(Self::ReactJsxPascalCase(
+                ReactJsxPascalCase::from_configuration(value)?,
+            )),
             Self::ReactJsxPropsNoSpreading(_) => Ok(Self::ReactJsxPropsNoSpreading(
                 ReactJsxPropsNoSpreading::from_configuration(value)?,
             )),
@@ -11905,18 +11905,18 @@ impl RuleEnum {
             Self::ReactNoDidUpdateSetState(_) => Ok(Self::ReactNoDidUpdateSetState(
                 ReactNoDidUpdateSetState::from_configuration(value)?,
             )),
-            Self::ReactNoMultiComp(_) => {
-                Ok(Self::ReactNoMultiComp(ReactNoMultiComp::from_configuration(value)?))
-            }
-            Self::ReactNoStringRefs(_) => {
-                Ok(Self::ReactNoStringRefs(ReactNoStringRefs::from_configuration(value)?))
-            }
-            Self::ReactNoUnknownProperty(_) => {
-                Ok(Self::ReactNoUnknownProperty(ReactNoUnknownProperty::from_configuration(value)?))
-            }
-            Self::ReactNoUnsafe(_) => {
-                Ok(Self::ReactNoUnsafe(ReactNoUnsafe::from_configuration(value)?))
-            }
+            Self::ReactNoMultiComp(_) => Ok(Self::ReactNoMultiComp(
+                ReactNoMultiComp::from_configuration(value)?,
+            )),
+            Self::ReactNoStringRefs(_) => Ok(Self::ReactNoStringRefs(
+                ReactNoStringRefs::from_configuration(value)?,
+            )),
+            Self::ReactNoUnknownProperty(_) => Ok(Self::ReactNoUnknownProperty(
+                ReactNoUnknownProperty::from_configuration(value)?,
+            )),
+            Self::ReactNoUnsafe(_) => Ok(Self::ReactNoUnsafe(ReactNoUnsafe::from_configuration(
+                value,
+            )?)),
             Self::ReactNoUnstableNestedComponents(_) => Ok(Self::ReactNoUnstableNestedComponents(
                 ReactNoUnstableNestedComponents::from_configuration(value)?,
             )),
@@ -11926,21 +11926,21 @@ impl RuleEnum {
             Self::ReactOnlyExportComponents(_) => Ok(Self::ReactOnlyExportComponents(
                 ReactOnlyExportComponents::from_configuration(value)?,
             )),
-            Self::ReactPreferEs6Class(_) => {
-                Ok(Self::ReactPreferEs6Class(ReactPreferEs6Class::from_configuration(value)?))
-            }
+            Self::ReactPreferEs6Class(_) => Ok(Self::ReactPreferEs6Class(
+                ReactPreferEs6Class::from_configuration(value)?,
+            )),
             Self::ReactPreferFunctionComponent(_) => Ok(Self::ReactPreferFunctionComponent(
                 ReactPreferFunctionComponent::from_configuration(value)?,
             )),
-            Self::ReactSelfClosingComp(_) => {
-                Ok(Self::ReactSelfClosingComp(ReactSelfClosingComp::from_configuration(value)?))
-            }
+            Self::ReactSelfClosingComp(_) => Ok(Self::ReactSelfClosingComp(
+                ReactSelfClosingComp::from_configuration(value)?,
+            )),
             Self::ReactStateInConstructor(_) => Ok(Self::ReactStateInConstructor(
                 ReactStateInConstructor::from_configuration(value)?,
             )),
-            Self::ReactStylePropObject(_) => {
-                Ok(Self::ReactStylePropObject(ReactStylePropObject::from_configuration(value)?))
-            }
+            Self::ReactStylePropObject(_) => Ok(Self::ReactStylePropObject(
+                ReactStylePropObject::from_configuration(value)?,
+            )),
             Self::ReactPerfJsxNoJsxAsProp(_) => Ok(Self::ReactPerfJsxNoJsxAsProp(
                 ReactPerfJsxNoJsxAsProp::from_configuration(value)?,
             )),
@@ -11953,9 +11953,9 @@ impl RuleEnum {
             Self::ReactPerfJsxNoNewObjectAsProp(_) => Ok(Self::ReactPerfJsxNoNewObjectAsProp(
                 ReactPerfJsxNoNewObjectAsProp::from_configuration(value)?,
             )),
-            Self::UnicornCatchErrorName(_) => {
-                Ok(Self::UnicornCatchErrorName(UnicornCatchErrorName::from_configuration(value)?))
-            }
+            Self::UnicornCatchErrorName(_) => Ok(Self::UnicornCatchErrorName(
+                UnicornCatchErrorName::from_configuration(value)?,
+            )),
             Self::UnicornConsistentFunctionScoping(_) => {
                 Ok(Self::UnicornConsistentFunctionScoping(
                     UnicornConsistentFunctionScoping::from_configuration(value)?,
@@ -11967,30 +11967,30 @@ impl RuleEnum {
             Self::UnicornExplicitTimerDelay(_) => Ok(Self::UnicornExplicitTimerDelay(
                 UnicornExplicitTimerDelay::from_configuration(value)?,
             )),
-            Self::UnicornFilenameCase(_) => {
-                Ok(Self::UnicornFilenameCase(UnicornFilenameCase::from_configuration(value)?))
-            }
-            Self::UnicornImportStyle(_) => {
-                Ok(Self::UnicornImportStyle(UnicornImportStyle::from_configuration(value)?))
-            }
-            Self::UnicornMaxNestedCalls(_) => {
-                Ok(Self::UnicornMaxNestedCalls(UnicornMaxNestedCalls::from_configuration(value)?))
-            }
-            Self::UnicornNoArrayReduce(_) => {
-                Ok(Self::UnicornNoArrayReduce(UnicornNoArrayReduce::from_configuration(value)?))
-            }
-            Self::UnicornNoArrayReverse(_) => {
-                Ok(Self::UnicornNoArrayReverse(UnicornNoArrayReverse::from_configuration(value)?))
-            }
-            Self::UnicornNoArraySort(_) => {
-                Ok(Self::UnicornNoArraySort(UnicornNoArraySort::from_configuration(value)?))
-            }
+            Self::UnicornFilenameCase(_) => Ok(Self::UnicornFilenameCase(
+                UnicornFilenameCase::from_configuration(value)?,
+            )),
+            Self::UnicornImportStyle(_) => Ok(Self::UnicornImportStyle(
+                UnicornImportStyle::from_configuration(value)?,
+            )),
+            Self::UnicornMaxNestedCalls(_) => Ok(Self::UnicornMaxNestedCalls(
+                UnicornMaxNestedCalls::from_configuration(value)?,
+            )),
+            Self::UnicornNoArrayReduce(_) => Ok(Self::UnicornNoArrayReduce(
+                UnicornNoArrayReduce::from_configuration(value)?,
+            )),
+            Self::UnicornNoArrayReverse(_) => Ok(Self::UnicornNoArrayReverse(
+                UnicornNoArrayReverse::from_configuration(value)?,
+            )),
+            Self::UnicornNoArraySort(_) => Ok(Self::UnicornNoArraySort(
+                UnicornNoArraySort::from_configuration(value)?,
+            )),
             Self::UnicornNoInstanceofBuiltins(_) => Ok(Self::UnicornNoInstanceofBuiltins(
                 UnicornNoInstanceofBuiltins::from_configuration(value)?,
             )),
-            Self::UnicornNoNull(_) => {
-                Ok(Self::UnicornNoNull(UnicornNoNull::from_configuration(value)?))
-            }
+            Self::UnicornNoNull(_) => Ok(Self::UnicornNoNull(UnicornNoNull::from_configuration(
+                value,
+            )?)),
             Self::UnicornNoTypeofUndefined(_) => Ok(Self::UnicornNoTypeofUndefined(
                 UnicornNoTypeofUndefined::from_configuration(value)?,
             )),
@@ -12005,9 +12005,9 @@ impl RuleEnum {
             Self::UnicornNumericSeparatorsStyle(_) => Ok(Self::UnicornNumericSeparatorsStyle(
                 UnicornNumericSeparatorsStyle::from_configuration(value)?,
             )),
-            Self::UnicornPreferAt(_) => {
-                Ok(Self::UnicornPreferAt(UnicornPreferAt::from_configuration(value)?))
-            }
+            Self::UnicornPreferAt(_) => Ok(Self::UnicornPreferAt(
+                UnicornPreferAt::from_configuration(value)?,
+            )),
             Self::UnicornPreferExportFrom(_) => Ok(Self::UnicornPreferExportFrom(
                 UnicornPreferExportFrom::from_configuration(value)?,
             )),
@@ -12023,9 +12023,9 @@ impl RuleEnum {
             Self::UnicornPreferStructuredClone(_) => Ok(Self::UnicornPreferStructuredClone(
                 UnicornPreferStructuredClone::from_configuration(value)?,
             )),
-            Self::UnicornPreferTernary(_) => {
-                Ok(Self::UnicornPreferTernary(UnicornPreferTernary::from_configuration(value)?))
-            }
+            Self::UnicornPreferTernary(_) => Ok(Self::UnicornPreferTernary(
+                UnicornPreferTernary::from_configuration(value)?,
+            )),
             Self::UnicornRelativeUrlStyle(_) => Ok(Self::UnicornRelativeUrlStyle(
                 UnicornRelativeUrlStyle::from_configuration(value)?,
             )),
@@ -12037,21 +12037,21 @@ impl RuleEnum {
                     UnicornTextEncodingIdentifierCase::from_configuration(value)?,
                 ))
             }
-            Self::JsxA11YAltText(_) => {
-                Ok(Self::JsxA11YAltText(JsxA11YAltText::from_configuration(value)?))
-            }
+            Self::JsxA11YAltText(_) => Ok(Self::JsxA11YAltText(
+                JsxA11YAltText::from_configuration(value)?,
+            )),
             Self::JsxA11YAnchorAmbiguousText(_) => Ok(Self::JsxA11YAnchorAmbiguousText(
                 JsxA11YAnchorAmbiguousText::from_configuration(value)?,
             )),
             Self::JsxA11YAnchorHasContent(_) => Ok(Self::JsxA11YAnchorHasContent(
                 JsxA11YAnchorHasContent::from_configuration(value)?,
             )),
-            Self::JsxA11YAnchorIsValid(_) => {
-                Ok(Self::JsxA11YAnchorIsValid(JsxA11YAnchorIsValid::from_configuration(value)?))
-            }
-            Self::JsxA11YAriaRole(_) => {
-                Ok(Self::JsxA11YAriaRole(JsxA11YAriaRole::from_configuration(value)?))
-            }
+            Self::JsxA11YAnchorIsValid(_) => Ok(Self::JsxA11YAnchorIsValid(
+                JsxA11YAnchorIsValid::from_configuration(value)?,
+            )),
+            Self::JsxA11YAriaRole(_) => Ok(Self::JsxA11YAriaRole(
+                JsxA11YAriaRole::from_configuration(value)?,
+            )),
             Self::JsxA11YAutocompleteValid(_) => Ok(Self::JsxA11YAutocompleteValid(
                 JsxA11YAutocompleteValid::from_configuration(value)?,
             )),
@@ -12063,9 +12063,9 @@ impl RuleEnum {
             Self::JsxA11YHeadingHasContent(_) => Ok(Self::JsxA11YHeadingHasContent(
                 JsxA11YHeadingHasContent::from_configuration(value)?,
             )),
-            Self::JsxA11YImgRedundantAlt(_) => {
-                Ok(Self::JsxA11YImgRedundantAlt(JsxA11YImgRedundantAlt::from_configuration(value)?))
-            }
+            Self::JsxA11YImgRedundantAlt(_) => Ok(Self::JsxA11YImgRedundantAlt(
+                JsxA11YImgRedundantAlt::from_configuration(value)?,
+            )),
             Self::JsxA11YInteractiveSupportsFocus(_) => Ok(Self::JsxA11YInteractiveSupportsFocus(
                 JsxA11YInteractiveSupportsFocus::from_configuration(value)?,
             )),
@@ -12074,15 +12074,15 @@ impl RuleEnum {
                     JsxA11YLabelHasAssociatedControl::from_configuration(value)?,
                 ))
             }
-            Self::JsxA11YMediaHasCaption(_) => {
-                Ok(Self::JsxA11YMediaHasCaption(JsxA11YMediaHasCaption::from_configuration(value)?))
-            }
+            Self::JsxA11YMediaHasCaption(_) => Ok(Self::JsxA11YMediaHasCaption(
+                JsxA11YMediaHasCaption::from_configuration(value)?,
+            )),
             Self::JsxA11YMouseEventsHaveKeyEvents(_) => Ok(Self::JsxA11YMouseEventsHaveKeyEvents(
                 JsxA11YMouseEventsHaveKeyEvents::from_configuration(value)?,
             )),
-            Self::JsxA11YNoAutofocus(_) => {
-                Ok(Self::JsxA11YNoAutofocus(JsxA11YNoAutofocus::from_configuration(value)?))
-            }
+            Self::JsxA11YNoAutofocus(_) => Ok(Self::JsxA11YNoAutofocus(
+                JsxA11YNoAutofocus::from_configuration(value)?,
+            )),
             Self::JsxA11YNoDistractingElements(_) => Ok(Self::JsxA11YNoDistractingElements(
                 JsxA11YNoDistractingElements::from_configuration(value)?,
             )),
@@ -12115,96 +12115,96 @@ impl RuleEnum {
             Self::OxcNoAsyncEndpointHandlers(_) => Ok(Self::OxcNoAsyncEndpointHandlers(
                 OxcNoAsyncEndpointHandlers::from_configuration(value)?,
             )),
-            Self::OxcNoBarrelFile(_) => {
-                Ok(Self::OxcNoBarrelFile(OxcNoBarrelFile::from_configuration(value)?))
-            }
-            Self::OxcNoMapSpread(_) => {
-                Ok(Self::OxcNoMapSpread(OxcNoMapSpread::from_configuration(value)?))
-            }
-            Self::OxcNoOptionalChaining(_) => {
-                Ok(Self::OxcNoOptionalChaining(OxcNoOptionalChaining::from_configuration(value)?))
-            }
+            Self::OxcNoBarrelFile(_) => Ok(Self::OxcNoBarrelFile(
+                OxcNoBarrelFile::from_configuration(value)?,
+            )),
+            Self::OxcNoMapSpread(_) => Ok(Self::OxcNoMapSpread(
+                OxcNoMapSpread::from_configuration(value)?,
+            )),
+            Self::OxcNoOptionalChaining(_) => Ok(Self::OxcNoOptionalChaining(
+                OxcNoOptionalChaining::from_configuration(value)?,
+            )),
             Self::OxcNoRestSpreadProperties(_) => Ok(Self::OxcNoRestSpreadProperties(
                 OxcNoRestSpreadProperties::from_configuration(value)?,
             )),
-            Self::JsdocCheckTagNames(_) => {
-                Ok(Self::JsdocCheckTagNames(JsdocCheckTagNames::from_configuration(value)?))
-            }
-            Self::JsdocEmptyTags(_) => {
-                Ok(Self::JsdocEmptyTags(JsdocEmptyTags::from_configuration(value)?))
-            }
-            Self::JsdocNoBlankBlocks(_) => {
-                Ok(Self::JsdocNoBlankBlocks(JsdocNoBlankBlocks::from_configuration(value)?))
-            }
-            Self::JsdocNoDefaults(_) => {
-                Ok(Self::JsdocNoDefaults(JsdocNoDefaults::from_configuration(value)?))
-            }
-            Self::JsdocRequireParam(_) => {
-                Ok(Self::JsdocRequireParam(JsdocRequireParam::from_configuration(value)?))
-            }
+            Self::JsdocCheckTagNames(_) => Ok(Self::JsdocCheckTagNames(
+                JsdocCheckTagNames::from_configuration(value)?,
+            )),
+            Self::JsdocEmptyTags(_) => Ok(Self::JsdocEmptyTags(
+                JsdocEmptyTags::from_configuration(value)?,
+            )),
+            Self::JsdocNoBlankBlocks(_) => Ok(Self::JsdocNoBlankBlocks(
+                JsdocNoBlankBlocks::from_configuration(value)?,
+            )),
+            Self::JsdocNoDefaults(_) => Ok(Self::JsdocNoDefaults(
+                JsdocNoDefaults::from_configuration(value)?,
+            )),
+            Self::JsdocRequireParam(_) => Ok(Self::JsdocRequireParam(
+                JsdocRequireParam::from_configuration(value)?,
+            )),
             Self::JsdocRequireParamDescription(_) => Ok(Self::JsdocRequireParamDescription(
                 JsdocRequireParamDescription::from_configuration(value)?,
             )),
-            Self::JsdocRequireParamType(_) => {
-                Ok(Self::JsdocRequireParamType(JsdocRequireParamType::from_configuration(value)?))
-            }
-            Self::JsdocRequireReturns(_) => {
-                Ok(Self::JsdocRequireReturns(JsdocRequireReturns::from_configuration(value)?))
-            }
-            Self::JsdocRequireYields(_) => {
-                Ok(Self::JsdocRequireYields(JsdocRequireYields::from_configuration(value)?))
-            }
-            Self::PromiseAlwaysReturn(_) => {
-                Ok(Self::PromiseAlwaysReturn(PromiseAlwaysReturn::from_configuration(value)?))
-            }
-            Self::PromiseCatchOrReturn(_) => {
-                Ok(Self::PromiseCatchOrReturn(PromiseCatchOrReturn::from_configuration(value)?))
-            }
+            Self::JsdocRequireParamType(_) => Ok(Self::JsdocRequireParamType(
+                JsdocRequireParamType::from_configuration(value)?,
+            )),
+            Self::JsdocRequireReturns(_) => Ok(Self::JsdocRequireReturns(
+                JsdocRequireReturns::from_configuration(value)?,
+            )),
+            Self::JsdocRequireYields(_) => Ok(Self::JsdocRequireYields(
+                JsdocRequireYields::from_configuration(value)?,
+            )),
+            Self::PromiseAlwaysReturn(_) => Ok(Self::PromiseAlwaysReturn(
+                PromiseAlwaysReturn::from_configuration(value)?,
+            )),
+            Self::PromiseCatchOrReturn(_) => Ok(Self::PromiseCatchOrReturn(
+                PromiseCatchOrReturn::from_configuration(value)?,
+            )),
             Self::PromiseNoCallbackInPromise(_) => Ok(Self::PromiseNoCallbackInPromise(
                 PromiseNoCallbackInPromise::from_configuration(value)?,
             )),
             Self::PromiseNoPromiseInCallback(_) => Ok(Self::PromiseNoPromiseInCallback(
                 PromiseNoPromiseInCallback::from_configuration(value)?,
             )),
-            Self::PromiseNoReturnWrap(_) => {
-                Ok(Self::PromiseNoReturnWrap(PromiseNoReturnWrap::from_configuration(value)?))
-            }
-            Self::PromiseParamNames(_) => {
-                Ok(Self::PromiseParamNames(PromiseParamNames::from_configuration(value)?))
-            }
+            Self::PromiseNoReturnWrap(_) => Ok(Self::PromiseNoReturnWrap(
+                PromiseNoReturnWrap::from_configuration(value)?,
+            )),
+            Self::PromiseParamNames(_) => Ok(Self::PromiseParamNames(
+                PromiseParamNames::from_configuration(value)?,
+            )),
             Self::PromisePreferAwaitToThen(_) => Ok(Self::PromisePreferAwaitToThen(
                 PromisePreferAwaitToThen::from_configuration(value)?,
             )),
-            Self::PromiseSpecOnly(_) => {
-                Ok(Self::PromiseSpecOnly(PromiseSpecOnly::from_configuration(value)?))
-            }
+            Self::PromiseSpecOnly(_) => Ok(Self::PromiseSpecOnly(
+                PromiseSpecOnly::from_configuration(value)?,
+            )),
             Self::VitestConsistentEachFor(_) => Ok(Self::VitestConsistentEachFor(
                 VitestConsistentEachFor::from_configuration(value)?,
             )),
             Self::VitestConsistentTestFilename(_) => Ok(Self::VitestConsistentTestFilename(
                 VitestConsistentTestFilename::from_configuration(value)?,
             )),
-            Self::VitestConsistentTestIt(_) => {
-                Ok(Self::VitestConsistentTestIt(VitestConsistentTestIt::from_configuration(value)?))
-            }
+            Self::VitestConsistentTestIt(_) => Ok(Self::VitestConsistentTestIt(
+                VitestConsistentTestIt::from_configuration(value)?,
+            )),
             Self::VitestConsistentVitestVi(_) => Ok(Self::VitestConsistentVitestVi(
                 VitestConsistentVitestVi::from_configuration(value)?,
             )),
-            Self::VitestExpectExpect(_) => {
-                Ok(Self::VitestExpectExpect(VitestExpectExpect::from_configuration(value)?))
-            }
-            Self::VitestMaxExpects(_) => {
-                Ok(Self::VitestMaxExpects(VitestMaxExpects::from_configuration(value)?))
-            }
+            Self::VitestExpectExpect(_) => Ok(Self::VitestExpectExpect(
+                VitestExpectExpect::from_configuration(value)?,
+            )),
+            Self::VitestMaxExpects(_) => Ok(Self::VitestMaxExpects(
+                VitestMaxExpects::from_configuration(value)?,
+            )),
             Self::VitestMaxNestedDescribe(_) => Ok(Self::VitestMaxNestedDescribe(
                 VitestMaxNestedDescribe::from_configuration(value)?,
             )),
-            Self::VitestNoHooks(_) => {
-                Ok(Self::VitestNoHooks(VitestNoHooks::from_configuration(value)?))
-            }
-            Self::VitestNoLargeSnapshots(_) => {
-                Ok(Self::VitestNoLargeSnapshots(VitestNoLargeSnapshots::from_configuration(value)?))
-            }
+            Self::VitestNoHooks(_) => Ok(Self::VitestNoHooks(VitestNoHooks::from_configuration(
+                value,
+            )?)),
+            Self::VitestNoLargeSnapshots(_) => Ok(Self::VitestNoLargeSnapshots(
+                VitestNoLargeSnapshots::from_configuration(value)?,
+            )),
             Self::VitestNoRestrictedMatchers(_) => Ok(Self::VitestNoRestrictedMatchers(
                 VitestNoRestrictedMatchers::from_configuration(value)?,
             )),
@@ -12226,40 +12226,40 @@ impl RuleEnum {
             Self::VitestPreferSnapshotHint(_) => Ok(Self::VitestPreferSnapshotHint(
                 VitestPreferSnapshotHint::from_configuration(value)?,
             )),
-            Self::VitestRequireHook(_) => {
-                Ok(Self::VitestRequireHook(VitestRequireHook::from_configuration(value)?))
-            }
+            Self::VitestRequireHook(_) => Ok(Self::VitestRequireHook(
+                VitestRequireHook::from_configuration(value)?,
+            )),
             Self::VitestRequireMockTypeParameters(_) => Ok(Self::VitestRequireMockTypeParameters(
                 VitestRequireMockTypeParameters::from_configuration(value)?,
             )),
             Self::VitestRequireTopLevelDescribe(_) => Ok(Self::VitestRequireTopLevelDescribe(
                 VitestRequireTopLevelDescribe::from_configuration(value)?,
             )),
-            Self::VitestValidExpect(_) => {
-                Ok(Self::VitestValidExpect(VitestValidExpect::from_configuration(value)?))
-            }
-            Self::VitestValidTitle(_) => {
-                Ok(Self::VitestValidTitle(VitestValidTitle::from_configuration(value)?))
-            }
-            Self::NodeCallbackReturn(_) => {
-                Ok(Self::NodeCallbackReturn(NodeCallbackReturn::from_configuration(value)?))
-            }
-            Self::NodeExportsStyle(_) => {
-                Ok(Self::NodeExportsStyle(NodeExportsStyle::from_configuration(value)?))
-            }
-            Self::NodeHandleCallbackErr(_) => {
-                Ok(Self::NodeHandleCallbackErr(NodeHandleCallbackErr::from_configuration(value)?))
-            }
-            Self::NodeNoMixedRequires(_) => {
-                Ok(Self::NodeNoMixedRequires(NodeNoMixedRequires::from_configuration(value)?))
-            }
-            Self::NodeNoProcessEnv(_) => {
-                Ok(Self::NodeNoProcessEnv(NodeNoProcessEnv::from_configuration(value)?))
-            }
+            Self::VitestValidExpect(_) => Ok(Self::VitestValidExpect(
+                VitestValidExpect::from_configuration(value)?,
+            )),
+            Self::VitestValidTitle(_) => Ok(Self::VitestValidTitle(
+                VitestValidTitle::from_configuration(value)?,
+            )),
+            Self::NodeCallbackReturn(_) => Ok(Self::NodeCallbackReturn(
+                NodeCallbackReturn::from_configuration(value)?,
+            )),
+            Self::NodeExportsStyle(_) => Ok(Self::NodeExportsStyle(
+                NodeExportsStyle::from_configuration(value)?,
+            )),
+            Self::NodeHandleCallbackErr(_) => Ok(Self::NodeHandleCallbackErr(
+                NodeHandleCallbackErr::from_configuration(value)?,
+            )),
+            Self::NodeNoMixedRequires(_) => Ok(Self::NodeNoMixedRequires(
+                NodeNoMixedRequires::from_configuration(value)?,
+            )),
+            Self::NodeNoProcessEnv(_) => Ok(Self::NodeNoProcessEnv(
+                NodeNoProcessEnv::from_configuration(value)?,
+            )),
             Self::NodeNoSync(_) => Ok(Self::NodeNoSync(NodeNoSync::from_configuration(value)?)),
-            Self::NodeNoTopLevelAwait(_) => {
-                Ok(Self::NodeNoTopLevelAwait(NodeNoTopLevelAwait::from_configuration(value)?))
-            }
+            Self::NodeNoTopLevelAwait(_) => Ok(Self::NodeNoTopLevelAwait(
+                NodeNoTopLevelAwait::from_configuration(value)?,
+            )),
             Self::VueComponentDefinitionNameCasing(_) => {
                 Ok(Self::VueComponentDefinitionNameCasing(
                     VueComponentDefinitionNameCasing::from_configuration(value)?,
@@ -12275,33 +12275,33 @@ impl RuleEnum {
                 VueDefinePropsDestructuring::from_configuration(value)?,
             )),
             Self::VueMaxProps(_) => Ok(Self::VueMaxProps(VueMaxProps::from_configuration(value)?)),
-            Self::VueNextTickStyle(_) => {
-                Ok(Self::VueNextTickStyle(VueNextTickStyle::from_configuration(value)?))
-            }
+            Self::VueNextTickStyle(_) => Ok(Self::VueNextTickStyle(
+                VueNextTickStyle::from_configuration(value)?,
+            )),
             Self::VueNoAsyncInComputedProperties(_) => Ok(Self::VueNoAsyncInComputedProperties(
                 VueNoAsyncInComputedProperties::from_configuration(value)?,
             )),
             Self::VueNoDeprecatedModelDefinition(_) => Ok(Self::VueNoDeprecatedModelDefinition(
                 VueNoDeprecatedModelDefinition::from_configuration(value)?,
             )),
-            Self::VueNoDupeKeys(_) => {
-                Ok(Self::VueNoDupeKeys(VueNoDupeKeys::from_configuration(value)?))
-            }
+            Self::VueNoDupeKeys(_) => Ok(Self::VueNoDupeKeys(VueNoDupeKeys::from_configuration(
+                value,
+            )?)),
             Self::VueNoReservedComponentNames(_) => Ok(Self::VueNoReservedComponentNames(
                 VueNoReservedComponentNames::from_configuration(value)?,
             )),
-            Self::VueNoReservedKeys(_) => {
-                Ok(Self::VueNoReservedKeys(VueNoReservedKeys::from_configuration(value)?))
-            }
-            Self::VueNoReservedProps(_) => {
-                Ok(Self::VueNoReservedProps(VueNoReservedProps::from_configuration(value)?))
-            }
-            Self::VuePropNameCasing(_) => {
-                Ok(Self::VuePropNameCasing(VuePropNameCasing::from_configuration(value)?))
-            }
-            Self::VueRequireDirectExport(_) => {
-                Ok(Self::VueRequireDirectExport(VueRequireDirectExport::from_configuration(value)?))
-            }
+            Self::VueNoReservedKeys(_) => Ok(Self::VueNoReservedKeys(
+                VueNoReservedKeys::from_configuration(value)?,
+            )),
+            Self::VueNoReservedProps(_) => Ok(Self::VueNoReservedProps(
+                VueNoReservedProps::from_configuration(value)?,
+            )),
+            Self::VuePropNameCasing(_) => Ok(Self::VuePropNameCasing(
+                VuePropNameCasing::from_configuration(value)?,
+            )),
+            Self::VueRequireDirectExport(_) => Ok(Self::VueRequireDirectExport(
+                VueRequireDirectExport::from_configuration(value)?,
+            )),
             Self::VueReturnInComputedProperty(_) => Ok(Self::VueReturnInComputedProperty(
                 VueReturnInComputedProperty::from_configuration(value)?,
             )),
@@ -13229,7 +13229,9 @@ impl RuleEnum {
         timing_stat: Option<&mut RuleTimingStat>,
     ) {
         if TIMINGS {
-            timing_stat.expect("missing rule timing stat").time(|| self.run_dispatch(node, ctx));
+            timing_stat
+                .expect("missing rule timing stat")
+                .time(|| self.run_dispatch(node, ctx));
         } else {
             self.run_dispatch(node, ctx);
         }
@@ -14116,7 +14118,9 @@ impl RuleEnum {
         timing_stat: Option<&mut RuleTimingStat>,
     ) {
         if TIMINGS {
-            timing_stat.expect("missing rule timing stat").time(|| self.run_once_dispatch(ctx));
+            timing_stat
+                .expect("missing rule timing stat")
+                .time(|| self.run_once_dispatch(ctx));
         } else {
             self.run_once_dispatch(ctx);
         }

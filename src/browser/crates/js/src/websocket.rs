@@ -2,27 +2,27 @@
 //! WebSocket transport owned by the page's resource table and HTTP policy.
 use std::{borrow::Cow, cell::RefCell, collections::HashMap, rc::Rc};
 
-use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64};
-use deno_core::{CancelFuture, CancelHandle, JsBuffer, OpState, Resource, op2, v8};
+use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
+use bun_browser_net::{same_site, SameSiteContext};
+use deno_core::{op2, v8, CancelFuture, CancelHandle, JsBuffer, OpState, Resource};
 use deno_error::JsErrorBox;
 use futures_util::{
-    SinkExt, StreamExt,
     stream::{SplitSink, SplitStream},
+    SinkExt, StreamExt,
 };
-use bun_browser_net::{SameSiteContext, same_site};
 use tokio::sync::Mutex;
 use tokio_tungstenite::{
-    WebSocketStream,
     tungstenite::{
-        Message,
         handshake::{client::generate_key, derive_accept_key},
         protocol::{CloseFrame, Role, WebSocketConfig},
+        Message,
     },
+    WebSocketStream,
 };
 
 use crate::ops::{
-    SharedState, cached_request_client, enforce_context_request_policy, realm_state,
-    validate_fetch_url,
+    cached_request_client, enforce_context_request_policy, realm_state, validate_fetch_url,
+    SharedState,
 };
 
 const MAX_SOCKETS: usize = 32;
@@ -57,7 +57,13 @@ pub(crate) fn op_websocket_create(
     scope: &mut v8::PinScope,
     state: &mut OpState,
 ) -> Result<u32, JsErrorBox> {
-    if state.resource_table.names().filter(|(_, name)| name == "webSocket").count() >= MAX_SOCKETS {
+    if state
+        .resource_table
+        .names()
+        .filter(|(_, name)| name == "webSocket")
+        .count()
+        >= MAX_SOCKETS
+    {
         return Err(error("WebSocket connection limit exceeded"));
     }
     let context = realm_state(scope, state);
@@ -81,7 +87,10 @@ pub(crate) async fn op_websocket_connect(
     let (client, jar, document_url, inherited_origin) = {
         let shared = socket.context.borrow();
         let document_url = if shared.url.starts_with("about:") {
-            shared.about_base_url.clone().unwrap_or_else(|| shared.url.clone())
+            shared
+                .about_base_url
+                .clone()
+                .unwrap_or_else(|| shared.url.clone())
         } else {
             shared.url.clone()
         };
@@ -103,20 +112,34 @@ pub(crate) async fn op_websocket_connect(
     }
     let secure = url.scheme() == "wss";
     let initiator = url::Url::parse(&document_url).ok();
-    if !secure && initiator.as_ref().is_some_and(|url| url.scheme() == "https") {
+    if !secure
+        && initiator
+            .as_ref()
+            .is_some_and(|url| url.scheme() == "https")
+    {
         return Err(error("Mixed-content WebSocket blocked"));
     }
     url.set_scheme(if secure { "https" } else { "http" })
         .map_err(|_| error("Invalid WebSocket scheme"))?;
-    validate_fetch_url(&url, client.as_ref().is_some_and(|client| client.allow_private_network))
-        .map_err(error)?;
+    validate_fetch_url(
+        &url,
+        client
+            .as_ref()
+            .is_some_and(|client| client.allow_private_network),
+    )
+    .map_err(error)?;
     if protocols.len() > 16
         || protocols.iter().any(|p| {
             p.is_empty()
                 || p.len() > 256
-                || !p.bytes().all(|b| b.is_ascii_alphanumeric() || b"!#$%&'*+-.^_`|~".contains(&b))
+                || !p
+                    .bytes()
+                    .all(|b| b.is_ascii_alphanumeric() || b"!#$%&'*+-.^_`|~".contains(&b))
         })
-        || protocols.iter().enumerate().any(|(i, p)| protocols[..i].contains(p))
+        || protocols
+            .iter()
+            .enumerate()
+            .any(|(i, p)| protocols[..i].contains(p))
     {
         return Err(error("Invalid WebSocket protocols"));
     }
@@ -138,7 +161,10 @@ pub(crate) async fn op_websocket_connect(
         headers.insert("Sec-WebSocket-Protocol".into(), protocols.join(", "));
     }
     if let Some(jar) = &jar {
-        let context = if initiator.as_ref().is_some_and(|source| same_site(source, &url)) {
+        let context = if initiator
+            .as_ref()
+            .is_some_and(|source| same_site(source, &url))
+        {
             SameSiteContext::SameSite
         } else {
             SameSiteContext::CrossSite
@@ -164,10 +190,16 @@ pub(crate) async fn op_websocket_connect(
     let connect = async {
         let response = request.send().await.map_err(error)?;
         let h = response.headers();
-        let header = |name| h.get(name).and_then(|value| value.to_str().ok()).unwrap_or("");
+        let header = |name| {
+            h.get(name)
+                .and_then(|value| value.to_str().ok())
+                .unwrap_or("")
+        };
         if response.status() != reqwest::StatusCode::SWITCHING_PROTOCOLS
             || !header("upgrade").eq_ignore_ascii_case("websocket")
-            || !header("connection").split(',').any(|v| v.trim().eq_ignore_ascii_case("upgrade"))
+            || !header("connection")
+                .split(',')
+                .any(|v| v.trim().eq_ignore_ascii_case("upgrade"))
             || header("sec-websocket-accept") != derive_accept_key(key.as_bytes())
             || h.contains_key("sec-websocket-extensions")
         {
@@ -191,7 +223,9 @@ pub(crate) async fn op_websocket_connect(
             .max_message_size(Some(MAX_MESSAGE_BYTES))
             .max_frame_size(Some(MAX_MESSAGE_BYTES));
         let (writer, reader) =
-            WebSocketStream::from_raw_socket(upgraded, Role::Client, Some(config)).await.split();
+            WebSocketStream::from_raw_socket(upgraded, Role::Client, Some(config))
+                .await
+                .split();
         *socket.reader.lock().await = Some(reader);
         *socket.writer.lock().await = Some(writer);
         Ok(protocol)
@@ -205,9 +239,17 @@ pub(crate) async fn op_websocket_connect(
 #[derive(serde::Serialize)]
 #[serde(tag = "type", rename_all = "lowercase")]
 pub(crate) enum SocketEvent {
-    Text { text: String },
-    Binary { data: String },
-    Close { code: u16, reason: String, clean: bool },
+    Text {
+        text: String,
+    },
+    Binary {
+        data: String,
+    },
+    Close {
+        code: u16,
+        reason: String,
+        clean: bool,
+    },
 }
 
 #[op2]
@@ -219,15 +261,21 @@ pub(crate) async fn op_websocket_read(
     let socket = resource(&state, rid)?;
     let read = async {
         let mut guard = socket.reader.lock().await;
-        let reader = guard.as_mut().ok_or_else(|| error("WebSocket is not connected"))?;
+        let reader = guard
+            .as_mut()
+            .ok_or_else(|| error("WebSocket is not connected"))?;
         loop {
             match reader.next().await.transpose().map_err(error)? {
                 Some(Message::Text(text)) => {
-                    return Ok(SocketEvent::Text { text: text.to_string() });
-                },
+                    return Ok(SocketEvent::Text {
+                        text: text.to_string(),
+                    });
+                }
                 Some(Message::Binary(data)) => {
-                    return Ok(SocketEvent::Binary { data: BASE64.encode(data) });
-                },
+                    return Ok(SocketEvent::Binary {
+                        data: BASE64.encode(data),
+                    });
+                }
                 Some(Message::Close(frame)) => {
                     if let Some(writer) = socket.writer.lock().await.as_mut() {
                         let _ = writer.flush().await;
@@ -237,24 +285,26 @@ pub(crate) async fn op_websocket_read(
                         reason: frame.map_or_else(String::new, |f| f.reason.to_string()),
                         clean: true,
                     });
-                },
+                }
                 Some(Message::Ping(_)) => {
                     if let Some(writer) = socket.writer.lock().await.as_mut() {
                         writer.flush().await.map_err(error)?;
                     }
-                },
-                Some(_) => {},
+                }
+                Some(_) => {}
                 None => {
                     return Ok(SocketEvent::Close {
                         code: 1006,
                         reason: String::new(),
                         clean: false,
                     });
-                },
+                }
             }
         }
     };
-    read.or_cancel(socket.cancel.clone()).await.map_err(|_| error("WebSocket read cancelled"))?
+    read.or_cancel(socket.cancel.clone())
+        .await
+        .map_err(|_| error("WebSocket read cancelled"))?
 }
 
 #[op2]
@@ -284,7 +334,9 @@ pub(crate) async fn op_websocket_send(
             .await
             .map_err(error)
     };
-    send.or_cancel(socket.cancel.clone()).await.map_err(|_| error("WebSocket send cancelled"))?
+    send.or_cancel(socket.cancel.clone())
+        .await
+        .map_err(|_| error("WebSocket send cancelled"))?
 }
 
 #[op2]
@@ -305,26 +357,38 @@ pub(crate) async fn op_websocket_close(
             .await
             .as_mut()
             .ok_or_else(|| error("WebSocket is not connected"))?
-            .send(Message::Close(Some(CloseFrame { code: code.into(), reason: reason.into() })))
+            .send(Message::Close(Some(CloseFrame {
+                code: code.into(),
+                reason: reason.into(),
+            })))
             .await
             .map_err(error)
     };
-    close.or_cancel(socket.cancel.clone()).await.map_err(|_| error("WebSocket close cancelled"))?
+    close
+        .or_cancel(socket.cancel.clone())
+        .await
+        .map_err(|_| error("WebSocket close cancelled"))?
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::runtime::BunBrowserJsRuntime;
-    use bun_browser_net::{CookieJar, BunBrowserHttpClient};
+    use bun_browser_net::{BunBrowserHttpClient, CookieJar};
     use std::{sync::Arc, time::Duration};
     use tokio::{net::TcpListener, time::timeout};
 
     fn runtime(url: &str, allow_private: bool) -> BunBrowserJsRuntime {
         let jar = Arc::new(CookieJar::new());
-        jar.set_cookie("ws_fixture=synthetic; Path=/; HttpOnly", &url::Url::parse(url).unwrap());
-        let client =
-            Arc::new(BunBrowserHttpClient::with_full_options(jar.clone(), None, allow_private));
+        jar.set_cookie(
+            "ws_fixture=synthetic; Path=/; HttpOnly",
+            &url::Url::parse(url).unwrap(),
+        );
+        let client = Arc::new(BunBrowserHttpClient::with_full_options(
+            jar.clone(),
+            None,
+            allow_private,
+        ));
         let mut runtime = BunBrowserJsRuntime::new();
         runtime.set_dom(bun_browser_dom::parse_html("<html><body></body></html>"));
         runtime.set_url(url);
@@ -347,12 +411,10 @@ mod tests {
                 move |request: &tokio_tungstenite::tungstenite::handshake::server::Request,
                       response| {
                     assert_eq!(request.headers()["origin"], expected_origin);
-                    assert!(
-                        request.headers()["cookie"]
-                            .to_str()
-                            .unwrap()
-                            .contains("ws_fixture=synthetic")
-                    );
+                    assert!(request.headers()["cookie"]
+                        .to_str()
+                        .unwrap()
+                        .contains("ws_fixture=synthetic"));
                     Ok(response)
                 },
             )
@@ -365,7 +427,10 @@ mod tests {
             assert_eq!(binary, Message::Binary(vec![1, 2, 3].into()));
             socket.send(binary).await.unwrap();
             socket
-                .close(Some(CloseFrame { code: 3001.into(), reason: "done".into() }))
+                .close(Some(CloseFrame {
+                    code: 3001.into(),
+                    reason: "done".into(),
+                }))
                 .await
                 .unwrap();
             assert!(matches!(socket.next().await, Some(Ok(Message::Close(_)))));
@@ -392,7 +457,10 @@ mod tests {
                 "close":{"code":3001,"reason":"done","clean":true}
             })
         );
-        timeout(Duration::from_secs(2), server).await.unwrap().unwrap();
+        timeout(Duration::from_secs(2), server)
+            .await
+            .unwrap()
+            .unwrap();
     }
 
     #[tokio::test(flavor = "current_thread")]
@@ -421,8 +489,14 @@ mod tests {
             ))
             .unwrap();
         runtime.run_event_loop_bounded(2_000).await.unwrap();
-        assert_eq!(runtime.evaluate("result").unwrap(), serde_json::json!(["error", 1006]));
-        timeout(Duration::from_secs(2), server).await.unwrap().unwrap();
+        assert_eq!(
+            runtime.evaluate("result").unwrap(),
+            serde_json::json!(["error", 1006])
+        );
+        timeout(Duration::from_secs(2), server)
+            .await
+            .unwrap()
+            .unwrap();
     }
 
     #[tokio::test(flavor = "current_thread")]
@@ -471,7 +545,12 @@ mod tests {
             ))
             .unwrap();
         runtime.run_event_loop_bounded(2_000).await.unwrap();
-        assert_eq!(runtime.evaluate("result").unwrap(), serde_json::json!(["error", 1006]));
-        assert!(timeout(Duration::from_millis(25), listener.accept()).await.is_err());
+        assert_eq!(
+            runtime.evaluate("result").unwrap(),
+            serde_json::json!(["error", 1006])
+        );
+        assert!(timeout(Duration::from_millis(25), listener.accept())
+            .await
+            .is_err());
     }
 }

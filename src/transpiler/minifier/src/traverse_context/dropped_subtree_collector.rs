@@ -52,7 +52,9 @@ impl<'a> Visit<'a> for DroppedSubtreeCollector<'a, '_> {
         // `ast.identifier_reference(...)` or as a `TakeIn` dummy left in place
         // by `take_in`) have no `reference_id` yet. Such nodes carry no
         // semantic state to mark removed, so skip them.
-        let Some(reference_id) = it.reference_id.get() else { return };
+        let Some(reference_id) = it.reference_id.get() else {
+            return;
+        };
         let idx = reference_id.index();
         // References minted mid-pass have indices beyond the bitset's capacity
         // and are treated as live — see `PassChanges::removed_references`.

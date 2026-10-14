@@ -1,4 +1,4 @@
-use bun_browser_dom::{ShadowRootMode, parse_html};
+use bun_browser_dom::{parse_html, ShadowRootMode};
 
 #[path = "support/allocations.rs"]
 mod allocations;
@@ -35,10 +35,21 @@ fn slot_queries_do_not_copy_unrelated_attributes_or_text() {
     });
     assert_eq!(
         result,
-        (true, false, None, Some(named), Some(default), Some(vec![light]), Some(vec![text]))
+        (
+            true,
+            false,
+            None,
+            Some(named),
+            Some(default),
+            Some(vec![light]),
+            Some(vec![text])
+        )
     );
     // Small traversal/result vectors are allowed, copying a 64KiB DOM payload is not.
-    assert!(bytes < 4096, "slot queries allocated {bytes} bytes for a two-slot tree");
+    assert!(
+        bytes < 4096,
+        "slot queries allocated {bytes} bytes for a two-slot tree"
+    );
 }
 
 #[test]

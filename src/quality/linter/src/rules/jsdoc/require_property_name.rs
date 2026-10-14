@@ -164,6 +164,11 @@ fn test() {
         ),
     ];
 
-    Tester::new(RequirePropertyName::NAME, RequirePropertyName::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        RequirePropertyName::NAME,
+        RequirePropertyName::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

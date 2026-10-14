@@ -296,6 +296,11 @@ fn test() {
         ),
     ];
 
-    Tester::new(ImplementsOnClasses::NAME, ImplementsOnClasses::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        ImplementsOnClasses::NAME,
+        ImplementsOnClasses::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

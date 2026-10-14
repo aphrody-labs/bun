@@ -20,12 +20,15 @@ use crate::{
     },
 };
 
-const NATIVE_TYPES: [&str; 7] =
-    ["String", "Number", "Boolean", "Function", "Object", "Array", "Symbol"];
+const NATIVE_TYPES: [&str; 7] = [
+    "String", "Number", "Boolean", "Function", "Object", "Array", "Symbol",
+];
 
 fn require_default_prop_diagnostic(span: Span, prop_name: &str) -> OxcDiagnostic {
-    OxcDiagnostic::warn(format!("Prop '{prop_name}' requires default value to be set."))
-        .with_label(span)
+    OxcDiagnostic::warn(format!(
+        "Prop '{prop_name}' requires default value to be set."
+    ))
+    .with_label(span)
 }
 
 #[derive(Debug, Default, Clone)]
@@ -75,7 +78,8 @@ declare_oxc_lint!(
     vue,
     style,
     version = "1.70.0",
-    short_description = "Requires a default value to be set for props that are not marked as `required`.",
+    short_description =
+        "Requires a default value to be set for props that are not marked as `required`.",
 );
 
 /// Tracks how default values may be supplied for `<script setup>` props, so a
@@ -94,7 +98,9 @@ impl Rule for RequireDefaultProp {
                 if !is_vue_component_options_object_excluding_instance(node, ctx) {
                     return;
                 }
-                let Some(props_prop) = find_property(obj, "props") else { return };
+                let Some(props_prop) = find_property(obj, "props") else {
+                    return;
+                };
                 if let Expression::ObjectExpression(props_obj) =
                     props_prop.value.get_inner_expression()
                 {
@@ -105,7 +111,9 @@ impl Rule for RequireDefaultProp {
                 if ctx.frameworks_options() != FrameworkOptions::VueSetup {
                     return;
                 }
-                let Some(ident) = call.callee.get_identifier_reference() else { return };
+                let Some(ident) = call.callee.get_identifier_reference() else {
+                    return;
+                };
                 match ident.name.as_str() {
                     // A `defineProps` wrapped by `withDefaults` is handled by the
                     // `withDefaults` branch, which also knows the default values.
@@ -129,10 +137,20 @@ fn handle_with_defaults<'a>(
     call: &'a CallExpression<'a>,
     ctx: &LintContext<'a>,
 ) {
-    let Some(first) = call.arguments.first().and_then(|a| a.as_expression()) else { return };
-    let Some(second) = call.arguments.get(1).and_then(|a| a.as_expression()) else { return };
-    let Expression::CallExpression(define_props) = first.get_inner_expression() else { return };
-    if !define_props.callee.get_identifier_reference().is_some_and(|i| i.name == "defineProps") {
+    let Some(first) = call.arguments.first().and_then(|a| a.as_expression()) else {
+        return;
+    };
+    let Some(second) = call.arguments.get(1).and_then(|a| a.as_expression()) else {
+        return;
+    };
+    let Expression::CallExpression(define_props) = first.get_inner_expression() else {
+        return;
+    };
+    if !define_props
+        .callee
+        .get_identifier_reference()
+        .is_some_and(|i| i.name == "defineProps")
+    {
         return;
     }
     let with_defaults = match second.get_inner_expression() {
@@ -171,9 +189,17 @@ fn destructure_context<'a>(
     has_with_defaults: bool,
     with_defaults: Option<&'a ObjectExpression<'a>>,
 ) -> PropsContext<'a> {
-    let mut pc = PropsContext { has_with_defaults, with_defaults, ..PropsContext::default() };
+    let mut pc = PropsContext {
+        has_with_defaults,
+        with_defaults,
+        ..PropsContext::default()
+    };
     let declarator = ctx.nodes().ancestors(node.id()).find_map(|ancestor| {
-        if let AstKind::VariableDeclarator(decl) = ancestor.kind() { Some(decl) } else { None }
+        if let AstKind::VariableDeclarator(decl) = ancestor.kind() {
+            Some(decl)
+        } else {
+            None
+        }
     });
     if let Some(decl) = declarator
         && let BindingPattern::ObjectPattern(pattern) = &decl.id
@@ -197,7 +223,9 @@ fn check_object_props<'a>(
     pc: &PropsContext<'a>,
 ) {
     for prop in &obj.properties {
-        let ObjectPropertyKind::ObjectProperty(prop) = prop else { continue };
+        let ObjectPropertyKind::ObjectProperty(prop) = prop else {
+            continue;
+        };
         if prop.shorthand {
             continue;
         }
@@ -251,7 +279,9 @@ fn check_type_signature<'a>(
     if !optional {
         return;
     }
-    let Some(name) = key.static_name() else { return };
+    let Some(name) = key.static_name() else {
+        return;
+    };
     if is_single_boolean_type(signature) {
         return;
     }
@@ -260,14 +290,22 @@ fn check_type_signature<'a>(
     if !pc.has_with_defaults && pc.destructure.is_none() {
         return;
     }
-    if pc.with_defaults.is_some_and(|defaults| object_has_key(defaults, name.as_ref())) {
-        return;
-    }
-    if pc.destructure.is_some_and(|destructure| has_destructure_default(destructure, name.as_ref()))
+    if pc
+        .with_defaults
+        .is_some_and(|defaults| object_has_key(defaults, name.as_ref()))
     {
         return;
     }
-    ctx.diagnostic(require_default_prop_diagnostic(signature.span(), name.as_ref()));
+    if pc
+        .destructure
+        .is_some_and(|destructure| has_destructure_default(destructure, name.as_ref()))
+    {
+        return;
+    }
+    ctx.diagnostic(require_default_prop_diagnostic(
+        signature.span(),
+        name.as_ref(),
+    ));
 }
 
 /// Mirrors upstream `isWithoutDefaultValue`. The value is already unwrapped of
@@ -304,7 +342,9 @@ fn is_boolean_prop(value: &Expression) -> bool {
     if is_value_node_of_boolean_type(value) {
         return true;
     }
-    let Expression::ObjectExpression(obj) = value else { return false };
+    let Expression::ObjectExpression(obj) = value else {
+        return false;
+    };
     obj.properties.iter().any(|prop| {
         matches!(prop, ObjectPropertyKind::ObjectProperty(prop)
             if matches!(&prop.key, PropertyKey::StaticIdentifier(key) if key.name == "type")
@@ -332,7 +372,9 @@ fn is_value_node_of_boolean_type(value: &Expression) -> bool {
 }
 
 fn is_single_boolean_type(signature: &TSSignature) -> bool {
-    let TSSignature::TSPropertySignature(sig) = signature else { return false };
+    let TSSignature::TSPropertySignature(sig) = signature else {
+        return false;
+    };
     sig.type_annotation
         .as_ref()
         .is_some_and(|annotation| matches!(annotation.type_annotation, TSType::TSBooleanKeyword(_)))
@@ -874,6 +916,11 @@ fn test() {
         ), // { "parser": vueEslintParser, ...languageOptions, "parserOptions": { "parser": require.resolve("@typescript-eslint/parser") } }
     ];
 
-    Tester::new(RequireDefaultProp::NAME, RequireDefaultProp::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        RequireDefaultProp::NAME,
+        RequireDefaultProp::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

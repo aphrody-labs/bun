@@ -63,7 +63,10 @@ impl Rule for NoNamedExport {
                 if specifiers.is_empty() {
                     ctx.diagnostic(no_named_export_diagnostic(named_decl.span));
                 }
-                if specifiers.iter().any(|specifier| specifier.exported.name() != "default") {
+                if specifiers
+                    .iter()
+                    .any(|specifier| specifier.exported.name() != "default")
+                {
                     ctx.diagnostic(no_named_export_diagnostic(named_decl.span));
                 }
             }

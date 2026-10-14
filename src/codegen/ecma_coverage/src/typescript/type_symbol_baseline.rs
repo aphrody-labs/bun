@@ -102,11 +102,14 @@ impl<'a> Visit<'a> for SymbolWalker<'a> {
 impl<'a> SymbolWalker<'a> {
     /// Semantic analysis, present only in `Symbols` mode (built alongside the walker).
     fn sema(&self) -> &Semantic<'a> {
-        self.semantic.expect("symbol resolution requires semantic analysis")
+        self.semantic
+            .expect("symbol resolution requires semantic analysis")
     }
 
     fn resolve(&self, symbol_id: Option<SymbolId>) -> Cow<'static, str> {
-        symbol_id.map_or(Cow::Borrowed(UNRESOLVED), |sid| Cow::Owned(self.format_symbol(sid)))
+        symbol_id.map_or(Cow::Borrowed(UNRESOLVED), |sid| {
+            Cow::Owned(self.format_symbol(sid))
+        })
     }
 
     /// Port of `writeTypeOrSymbol`'s symbol branch: `Symbol(name, Decl(file, line, col), ...)`.
@@ -143,7 +146,11 @@ impl<'a> SymbolWalker<'a> {
     fn write(&mut self, span: Span, symbol: Cow<'static, str>) {
         let line = line_of_position(self.line_starts, span.start);
         let source_text = self.content[span.start as usize..span.end as usize].to_string();
-        self.results.push(TypeWriterResult { line, source_text, symbol });
+        self.results.push(TypeWriterResult {
+            line,
+            source_text,
+            symbol,
+        });
     }
 }
 
@@ -203,7 +210,9 @@ fn iterate_unit(unit_name: &str, content: &str, results: &[TypeWriterResult]) ->
 /// The `tests/cases/...` header path (strips the repository and testdata components).
 fn header_path(path: &Path) -> String {
     let s = path.to_string_lossy();
-    s.strip_prefix("typescript/tsc/testdata/").unwrap_or(&s).to_string()
+    s.strip_prefix("typescript/tsc/testdata/")
+        .unwrap_or(&s)
+        .to_string()
 }
 
 /// Port of `generateBaseline`: walk every unit, emit the `//// [path] ////` header + sections.
@@ -307,7 +316,10 @@ fn run_baseline(files: &[TypeScriptFile], kind: BaselineKind) -> Vec<CoverageRes
             if f.should_fail {
                 return None;
             }
-            let stem = Path::new(&f.path).file_stem()?.to_string_lossy().into_owned();
+            let stem = Path::new(&f.path)
+                .file_stem()?
+                .to_string_lossy()
+                .into_owned();
             let baseline_path = baseline_root(&f.path).join(format!("{stem}.{ext}"));
             // Only score files that ship a baseline of this kind.
             let baseline = std::fs::read_to_string(&baseline_path).ok()?;
@@ -328,7 +340,11 @@ fn run_baseline(files: &[TypeScriptFile], kind: BaselineKind) -> Vec<CoverageRes
                     }
                 }
             };
-            Some(CoverageResult { path: f.path.clone(), should_fail: false, result })
+            Some(CoverageResult {
+                path: f.path.clone(),
+                should_fail: false,
+                result,
+            })
         })
         .collect()
 }

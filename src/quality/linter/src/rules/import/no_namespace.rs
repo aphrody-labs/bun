@@ -97,25 +97,28 @@ impl Rule for NoNamespace {
             return;
         }
 
-        module_record.import_entries.iter().for_each(|entry| match &entry.import_name {
-            ImportImportName::NamespaceObject => {
-                let source = entry.module_request.name();
+        module_record
+            .import_entries
+            .iter()
+            .for_each(|entry| match &entry.import_name {
+                ImportImportName::NamespaceObject => {
+                    let source = entry.module_request.name();
 
-                if self.ignore.is_empty()
-                    || self.ignore.iter().all(|pattern| {
-                        let target = if pattern.contains('/') {
-                            source
-                        } else {
-                            source.rsplit('/').next().unwrap_or(source)
-                        };
-                        !glob_match(pattern.as_str(), target)
-                    })
-                {
-                    ctx.diagnostic(no_namespace_diagnostic(entry.local_name.span));
+                    if self.ignore.is_empty()
+                        || self.ignore.iter().all(|pattern| {
+                            let target = if pattern.contains('/') {
+                                source
+                            } else {
+                                source.rsplit('/').next().unwrap_or(source)
+                            };
+                            !glob_match(pattern.as_str(), target)
+                        })
+                    {
+                        ctx.diagnostic(no_namespace_diagnostic(entry.local_name.span));
+                    }
                 }
-            }
-            ImportImportName::Name(_) | ImportImportName::Default(_) => {}
-        });
+                ImportImportName::Name(_) | ImportImportName::Default(_) => {}
+            });
     }
 }
 

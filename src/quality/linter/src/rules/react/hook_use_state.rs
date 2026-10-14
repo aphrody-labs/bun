@@ -82,7 +82,8 @@ declare_oxc_lint!(
     pending,
     config = HookUseState,
     version = "1.59.0",
-    short_description = "Ensure destructuring and symmetric naming of useState hook value and setter variables.",
+    short_description =
+        "Ensure destructuring and symmetric naming of useState hook value and setter variables.",
 );
 
 impl Rule for HookUseState {
@@ -91,7 +92,9 @@ impl Rule for HookUseState {
     }
 
     fn run<'a>(&self, node: &AstNode<'a>, ctx: &LintContext<'a>) {
-        let AstKind::CallExpression(call) = node.kind() else { return };
+        let AstKind::CallExpression(call) = node.kind() else {
+            return;
+        };
 
         let is_use_state = is_react_function_call(call, "useState");
         if !is_use_state {
@@ -157,7 +160,10 @@ impl Rule for HookUseState {
         };
         let valid_setter_names = get_expected_setter_vars(lowercase_prefix, suffix);
 
-        if valid_setter_names.iter().any(|name| name.as_str() == setter_variable_name) {
+        if valid_setter_names
+            .iter()
+            .any(|name| name.as_str() == setter_variable_name)
+        {
             return;
         }
 
@@ -169,7 +175,11 @@ fn get_expected_setter_vars(first: &str, second: &str) -> [String; 2] {
     let one = {
         let mut s = String::with_capacity("set".len() + first.len() + second.len());
         s.push_str("set");
-        first.chars().take(1).flat_map(char::to_uppercase).for_each(|c| s.push(c));
+        first
+            .chars()
+            .take(1)
+            .flat_map(char::to_uppercase)
+            .for_each(|c| s.push(c));
         first.chars().skip(1).for_each(|c| s.push(c));
         s.push_str(second);
         s
@@ -177,7 +187,10 @@ fn get_expected_setter_vars(first: &str, second: &str) -> [String; 2] {
     let two = {
         let mut s = String::with_capacity("set".len() + first.len() + second.len());
         s.push_str("set");
-        first.chars().flat_map(char::to_uppercase).for_each(|c| s.push(c));
+        first
+            .chars()
+            .flat_map(char::to_uppercase)
+            .for_each(|c| s.push(c));
         s.push_str(second);
         s
     };
@@ -186,7 +199,11 @@ fn get_expected_setter_vars(first: &str, second: &str) -> [String; 2] {
 }
 
 fn split_leading_lowercase(s: &str) -> Option<(&str, &str)> {
-    let split_at = s.chars().take_while(char::is_ascii_lowercase).map(char::len_utf8).sum();
+    let split_at = s
+        .chars()
+        .take_while(char::is_ascii_lowercase)
+        .map(char::len_utf8)
+        .sum();
 
     if split_at == 0 {
         return None;

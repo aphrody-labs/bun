@@ -32,7 +32,10 @@ impl IsTerminated for TryStatement<'_> {
         // present (an exception thrown before the try block's jump lands there).
         self.finalizer.as_ref().is_some_and(|f| f.is_terminated())
             || (self.block.is_terminated()
-                && self.handler.as_ref().is_some_and(|h| h.body.is_terminated()))
+                && self
+                    .handler
+                    .as_ref()
+                    .is_some_and(|h| h.body.is_terminated()))
     }
 }
 

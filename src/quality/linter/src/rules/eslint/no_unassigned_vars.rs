@@ -108,13 +108,17 @@ impl Rule for NoUnassignedVars {
             }
         }
         if has_read {
-            ctx.diagnostic(no_unassigned_vars_diagnostic(ident.span, ident.name.as_str()));
+            ctx.diagnostic(no_unassigned_vars_diagnostic(
+                ident.span,
+                ident.name.as_str(),
+            ));
         }
     }
 
     fn should_run(&self, ctx: &crate::context::ContextHost) -> bool {
         // ignore svelte/vue: their templates can assign a binding, which we can't see.
-        !ctx.file_extension().is_some_and(|ext| ext == "svelte" || ext == "vue")
+        !ctx.file_extension()
+            .is_some_and(|ext| ext == "svelte" || ext == "vue")
     }
 }
 
@@ -203,9 +207,14 @@ fn test_svelte() {
          <input bind:value />",
     ];
 
-    Tester::new(NoUnassignedVars::NAME, NoUnassignedVars::PLUGIN, pass, vec![])
-        .change_rule_path("test.svelte")
-        .test();
+    Tester::new(
+        NoUnassignedVars::NAME,
+        NoUnassignedVars::PLUGIN,
+        pass,
+        vec![],
+    )
+    .change_rule_path("test.svelte")
+    .test();
 }
 
 #[test]
@@ -227,7 +236,12 @@ fn test_vue() {
          <template><button @click=\"count = 1\">go</button></template>",
     ];
 
-    Tester::new(NoUnassignedVars::NAME, NoUnassignedVars::PLUGIN, pass, vec![])
-        .change_rule_path("test.vue")
-        .test();
+    Tester::new(
+        NoUnassignedVars::NAME,
+        NoUnassignedVars::PLUGIN,
+        pass,
+        vec![],
+    )
+    .change_rule_path("test.vue")
+    .test();
 }

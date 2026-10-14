@@ -37,9 +37,15 @@ pub struct ClientHandler {
 impl client::Handler for ClientHandler {
     type Error = russh::Error;
 
-    async fn check_server_key(&mut self, key: &PublicKeyOrCertificate) -> Result<bool, Self::Error> {
+    async fn check_server_key(
+        &mut self,
+        key: &PublicKeyOrCertificate,
+    ) -> Result<bool, Self::Error> {
         let PublicKeyOrCertificate::PublicKey { key, .. } = key else {
-            *self.host_key_error.lock().unwrap_or_else(|e| e.into_inner()) = Some(Error::HostKey {
+            *self
+                .host_key_error
+                .lock()
+                .unwrap_or_else(|e| e.into_inner()) = Some(Error::HostKey {
                 host: self.config.hostname.clone(),
                 reason: "host certificates are not supported by the in-process client".into(),
             });
@@ -48,9 +54,12 @@ impl client::Handler for ClientHandler {
         match known_hosts::verify(&self.config, key) {
             Ok(()) => Ok(true),
             Err(err) => {
-                *self.host_key_error.lock().unwrap_or_else(|e| e.into_inner()) = Some(err);
+                *self
+                    .host_key_error
+                    .lock()
+                    .unwrap_or_else(|e| e.into_inner()) = Some(err);
                 Ok(false)
-            },
+            }
         }
     }
 
@@ -72,7 +81,7 @@ impl client::Handler for ClientHandler {
                     connected_address: connected_address.to_owned(),
                     connected_port,
                 });
-            },
+            }
             None => drop(reply),
         }
         Ok(())
@@ -84,7 +93,10 @@ fn client_config(config: &HostConfig) -> client::Config {
         inactivity_timeout: None,
         keepalive_interval: config.server_alive_interval.map(Duration::from_secs),
         keepalive_max: config.server_alive_count_max.max(1) as usize,
-        preferred: russh::Preferred { kex: Cow::Owned(russh::Preferred::default().kex.to_vec()), ..Default::default() },
+        preferred: russh::Preferred {
+            kex: Cow::Owned(russh::Preferred::default().kex.to_vec()),
+            ..Default::default()
+        },
         ..Default::default()
     }
 }
@@ -107,7 +119,8 @@ impl Session {
 
     pub async fn connect(config: &HostConfig) -> Result<Self> {
         let timeout = config.connect_timeout.unwrap_or(30);
-        match tokio::time::timeout(Duration::from_secs(timeout), Self::connect_inner(config)).await {
+        match tokio::time::timeout(Duration::from_secs(timeout), Self::connect_inner(config)).await
+        {
             Ok(result) => result,
             Err(_) => Err(Error::Timeout(timeout)),
         }
@@ -125,8 +138,14 @@ impl Session {
         let mut jumps = Vec::new();
         let connected = match &config.proxy_jump {
             Some(chain) => {
-                let mut hops: Vec<&str> = chain.split(',').map(str::trim).filter(|h| !h.is_empty()).collect();
-                let last = hops.pop().ok_or_else(|| Error::InvalidInput("empty ProxyJump".into()))?;
+                let mut hops: Vec<&str> = chain
+                    .split(',')
+                    .map(str::trim)
+                    .filter(|h| !h.is_empty())
+                    .collect();
+                let last = hops
+                    .pop()
+                    .ok_or_else(|| Error::InvalidInput("empty ProxyJump".into()))?;
                 let overrides = Overrides {
                     proxy_jump: (!hops.is_empty()).then(|| hops.join(",")),
                     ..Overrides::default()
@@ -135,24 +154,45 @@ impl Session {
                 let jump = Box::pin(Self::connect(&jump_config)).await?;
                 let channel = jump
                     .handle
-                    .channel_open_direct_tcpip(config.hostname.clone(), u32::from(config.port), "127.0.0.1", 0)
+                    .channel_open_direct_tcpip(
+                        config.hostname.clone(),
+                        u32::from(config.port),
+                        "127.0.0.1",
+                        0,
+                    )
                     .await?;
                 jumps.push(jump);
                 client::connect_stream(russh_config, channel.into_stream(), handler).await
-            },
-            None => client::connect(russh_config, (config.hostname.as_str(), config.port), handler).await,
+            }
+            None => {
+                client::connect(
+                    russh_config,
+                    (config.hostname.as_str(), config.port),
+                    handler,
+                )
+                .await
+            }
         };
         let mut handle = match connected {
             Ok(handle) => handle,
             Err(err) => {
-                if let Some(host_error) = host_key_error.lock().unwrap_or_else(|e| e.into_inner()).take() {
+                if let Some(host_error) = host_key_error
+                    .lock()
+                    .unwrap_or_else(|e| e.into_inner())
+                    .take()
+                {
                     return Err(host_error);
                 }
                 return Err(err.into());
-            },
+            }
         };
         crate::auth::authenticate(&mut handle, config).await?;
-        Ok(Self { handle, config: config.clone(), _jumps: jumps, forwarded: Some(forward_rx) })
+        Ok(Self {
+            handle,
+            config: config.clone(),
+            _jumps: jumps,
+            forwarded: Some(forward_rx),
+        })
     }
 
     /// Connections opened by the server for `tcpip_forward` requests. Can be taken once.
@@ -161,17 +201,29 @@ impl Session {
     }
 
     /// Negotiates bounded delta transfer with an explicitly selected remote Bun executable.
-    pub async fn upload_delta(&self, command: &str, source: &std::path::Path) -> Result<crate::delta::TransferSummary> {
+    pub async fn upload_delta(
+        &self,
+        command: &str,
+        source: &std::path::Path,
+    ) -> Result<crate::delta::TransferSummary> {
         let channel = self.handle.channel_open_session().await?;
         channel.exec(true, command).await?;
         let mut stream = channel.into_stream();
         let (mut reader, mut writer) = tokio::io::split(&mut stream);
-        tokio::time::timeout(Duration::from_secs(300), crate::delta::send(&mut reader, &mut writer, source))
-            .await.map_err(|_| crate::Error::Timeout(300))?
+        tokio::time::timeout(
+            Duration::from_secs(300),
+            crate::delta::send(&mut reader, &mut writer, source),
+        )
+        .await
+        .map_err(|_| crate::Error::Timeout(300))?
     }
 
     /// Runs `command` and collects its output (aphrody's `InProcessSshSession::exec`).
-    pub async fn exec_collect(&self, command: &str, stdin: Option<&[u8]>) -> Result<(i32, Vec<u8>, Vec<u8>)> {
+    pub async fn exec_collect(
+        &self,
+        command: &str,
+        stdin: Option<&[u8]>,
+    ) -> Result<(i32, Vec<u8>, Vec<u8>)> {
         let mut channel = self.handle.channel_open_session().await?;
         channel.exec(true, command).await?;
         if let Some(input) = stdin {
@@ -187,7 +239,7 @@ impl Session {
                 ChannelMsg::ExtendedData { data, .. } => stderr.extend_from_slice(&data),
                 ChannelMsg::ExitStatus { exit_status } => code = Some(exit_status as i32),
                 ChannelMsg::ExitSignal { .. } => code = code.or(Some(255)),
-                _ => {},
+                _ => {}
             }
         }
         Ok((code.unwrap_or(255), stdout, stderr))
@@ -195,12 +247,22 @@ impl Session {
 
     /// Runs `command` (or a login shell when `None`) streaming stdin, stdout and stderr.
     /// With `pty`, the local terminal is switched to raw mode and resizes are forwarded.
-    pub async fn run_interactive(&self, command: Option<&str>, pty: bool, forward_stdin: bool) -> Result<i32> {
+    pub async fn run_interactive(
+        &self,
+        command: Option<&str>,
+        pty: bool,
+        forward_stdin: bool,
+    ) -> Result<i32> {
         let channel = self.handle.channel_open_session().await?;
         let _raw = if pty {
             let (cols, rows) = crate::term::size().unwrap_or((80, 24));
-            let term = std::env::var("TERM").ok().filter(|t| !t.is_empty()).unwrap_or_else(|| "xterm-256color".into());
-            channel.request_pty(true, &term, u32::from(cols), u32::from(rows), 0, 0, &[]).await?;
+            let term = std::env::var("TERM")
+                .ok()
+                .filter(|t| !t.is_empty())
+                .unwrap_or_else(|| "xterm-256color".into());
+            channel
+                .request_pty(true, &term, u32::from(cols), u32::from(rows), 0, 0, &[])
+                .await?;
             crate::term::RawMode::enable()
         } else {
             None
@@ -234,7 +296,11 @@ impl Session {
                     let now = crate::term::size();
                     if now != last {
                         if let Some((cols, rows)) = now {
-                            if writer.window_change(u32::from(cols), u32::from(rows), 0, 0).await.is_err() {
+                            if writer
+                                .window_change(u32::from(cols), u32::from(rows), 0, 0)
+                                .await
+                                .is_err()
+                            {
                                 return;
                             }
                         }
@@ -250,10 +316,12 @@ impl Session {
                 ChannelMsg::ExtendedData { data, .. } => crate::write_stderr(&data),
                 ChannelMsg::ExitStatus { exit_status } => code = Some(exit_status as i32),
                 ChannelMsg::ExitSignal { signal_name, .. } => {
-                    crate::write_stderr(format!("remote command killed by signal {signal_name:?}\n").as_bytes());
+                    crate::write_stderr(
+                        format!("remote command killed by signal {signal_name:?}\n").as_bytes(),
+                    );
                     code = code.or(Some(255));
-                },
-                _ => {},
+                }
+                _ => {}
             }
         }
         Ok(code.unwrap_or(255))
@@ -267,7 +335,10 @@ impl Session {
     }
 
     pub async fn close(&self) {
-        let _ = self.handle.disconnect(russh::Disconnect::ByApplication, "", "en").await;
+        let _ = self
+            .handle
+            .disconnect(russh::Disconnect::ByApplication, "", "en")
+            .await;
     }
 }
 
@@ -291,7 +362,11 @@ pub struct SftpTreeNode {
 }
 
 fn join_remote(dir: &str, name: &str) -> String {
-    if dir.ends_with('/') { format!("{dir}{name}") } else { format!("{dir}/{name}") }
+    if dir.ends_with('/') {
+        format!("{dir}{name}")
+    } else {
+        format!("{dir}/{name}")
+    }
 }
 
 /// SFTP operations.
@@ -301,7 +376,12 @@ impl SftpDriver {
     pub async fn stat(sftp: &SftpSession, remote_path: &str) -> Result<SftpFileEntry> {
         let attrs = sftp.metadata(remote_path).await?;
         let mode = attrs.permissions.unwrap_or(0);
-        let name = remote_path.trim_end_matches('/').rsplit('/').next().unwrap_or(remote_path).to_owned();
+        let name = remote_path
+            .trim_end_matches('/')
+            .rsplit('/')
+            .next()
+            .unwrap_or(remote_path)
+            .to_owned();
         Ok(SftpFileEntry {
             name,
             path: remote_path.to_owned(),
@@ -336,18 +416,32 @@ impl SftpDriver {
         Ok(results)
     }
 
-    pub async fn tree(sftp: &SftpSession, remote_path: &str, max_depth: usize) -> Result<SftpTreeNode> {
-        let mut root = SftpTreeNode { entry: Self::stat(sftp, remote_path).await?, children: Vec::new() };
+    pub async fn tree(
+        sftp: &SftpSession,
+        remote_path: &str,
+        max_depth: usize,
+    ) -> Result<SftpTreeNode> {
+        let mut root = SftpTreeNode {
+            entry: Self::stat(sftp, remote_path).await?,
+            children: Vec::new(),
+        };
         if root.entry.is_dir && max_depth > 0 {
             Self::build_tree(sftp, &mut root, max_depth - 1).await?;
         }
         Ok(root)
     }
 
-    async fn build_tree(sftp: &SftpSession, parent: &mut SftpTreeNode, depth_left: usize) -> Result<()> {
+    async fn build_tree(
+        sftp: &SftpSession,
+        parent: &mut SftpTreeNode,
+        depth_left: usize,
+    ) -> Result<()> {
         for entry in Self::read_dir(sftp, &parent.entry.path).await? {
             let is_dir = entry.is_dir;
-            let mut child = SftpTreeNode { entry, children: Vec::new() };
+            let mut child = SftpTreeNode {
+                entry,
+                children: Vec::new(),
+            };
             if is_dir && depth_left > 0 {
                 Box::pin(Self::build_tree(sftp, &mut child, depth_left - 1)).await?;
             }
@@ -365,7 +459,10 @@ impl SftpDriver {
 
     pub async fn write_file(sftp: &SftpSession, remote_path: &str, content: &[u8]) -> Result<()> {
         let mut file = sftp
-            .open_with_flags(remote_path, OpenFlags::CREATE | OpenFlags::TRUNCATE | OpenFlags::WRITE)
+            .open_with_flags(
+                remote_path,
+                OpenFlags::CREATE | OpenFlags::TRUNCATE | OpenFlags::WRITE,
+            )
             .await?;
         file.write_all(content).await?;
         file.shutdown().await?;
@@ -382,7 +479,11 @@ impl SftpDriver {
                 }
                 continue;
             }
-            current = if current.is_empty() || current == "/" { format!("{current}{part}") } else { format!("{current}/{part}") };
+            current = if current.is_empty() || current == "/" {
+                format!("{current}{part}")
+            } else {
+                format!("{current}/{part}")
+            };
             if sftp.metadata(&current).await.is_err() {
                 sftp.create_dir(&current).await?;
             }
@@ -394,10 +495,18 @@ impl SftpDriver {
     /// rsync delta against the remote copy is reported; SFTP has no partial-patch primitive, so
     /// the bytes written are still the whole file (true delta transfer needs `rsync` or a remote
     /// bun, see `crate::rsync`).
-    pub async fn upload_differential(sftp: &SftpSession, local_content: &[u8], remote_path: &str) -> Result<DifferentialSummary> {
+    pub async fn upload_differential(
+        sftp: &SftpSession,
+        local_content: &[u8],
+        remote_path: &str,
+    ) -> Result<DifferentialSummary> {
         if sftp.metadata(remote_path).await.is_ok() {
             let remote_base = Self::read_file(sftp, remote_path).await?;
-            let (_, summary) = rsync::compute_delta_from_buffers(&remote_base, local_content, RsyncOptions::default())?;
+            let (_, summary) = rsync::compute_delta_from_buffers(
+                &remote_base,
+                local_content,
+                RsyncOptions::default(),
+            )?;
             if remote_base != local_content {
                 Self::write_file(sftp, remote_path, local_content).await?;
             }
@@ -420,7 +529,10 @@ struct KeyProbe(Arc<Mutex<Option<russh::keys::PublicKey>>>);
 impl client::Handler for KeyProbe {
     type Error = russh::Error;
 
-    async fn check_server_key(&mut self, key: &PublicKeyOrCertificate) -> Result<bool, Self::Error> {
+    async fn check_server_key(
+        &mut self,
+        key: &PublicKeyOrCertificate,
+    ) -> Result<bool, Self::Error> {
         if let PublicKeyOrCertificate::PublicKey { key, .. } = key {
             *self.0.lock().unwrap_or_else(|e| e.into_inner()) = Some(key.clone());
         }
@@ -432,8 +544,17 @@ impl client::Handler for KeyProbe {
 pub async fn fetch_host_key(config: &HostConfig) -> Result<russh::keys::PublicKey> {
     let slot = Arc::new(Mutex::new(None));
     let timeout = Duration::from_secs(config.connect_timeout.unwrap_or(30));
-    let connect = client::connect(Arc::new(client_config(config)), (config.hostname.as_str(), config.port), KeyProbe(Arc::clone(&slot)));
+    let connect = client::connect(
+        Arc::new(client_config(config)),
+        (config.hostname.as_str(), config.port),
+        KeyProbe(Arc::clone(&slot)),
+    );
     let _ = tokio::time::timeout(timeout, connect).await;
     let key = slot.lock().unwrap_or_else(|e| e.into_inner()).take();
-    key.ok_or_else(|| crate::other(format!("no host key received from {}:{}", config.hostname, config.port)))
+    key.ok_or_else(|| {
+        crate::other(format!(
+            "no host key received from {}:{}",
+            config.hostname, config.port
+        ))
+    })
 }

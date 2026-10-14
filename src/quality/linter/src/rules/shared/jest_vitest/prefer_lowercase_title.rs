@@ -170,7 +170,10 @@ impl PreferLowercaseTitleConfig {
             return;
         }
 
-        if matches!(jest_fn_call.kind, JestFnKind::General(JestGeneralFnKind::Describe)) {
+        if matches!(
+            jest_fn_call.kind,
+            JestFnKind::General(JestGeneralFnKind::Describe)
+        ) {
             if self.ignore_top_level_describe && scopes.scope_flags(node.scope_id()).is_top() {
                 return;
             }
@@ -197,7 +200,10 @@ impl PreferLowercaseTitleConfig {
 
     fn lint_string<'a>(&self, ctx: &LintContext<'a>, literal: &'a str, span: Span) {
         if literal.is_empty()
-            || self.allowed_prefixes.iter().any(|name| literal.starts_with(name.as_str()))
+            || self
+                .allowed_prefixes
+                .iter()
+                .any(|name| literal.starts_with(name.as_str()))
         {
             return;
         }
@@ -225,7 +231,10 @@ impl PreferLowercaseTitleConfig {
         let replacement_len = replacement.len() as u32;
 
         ctx.diagnostic_with_fix(prefer_lowercase_title_diagnostic(literal, span), |fixer| {
-            fixer.replace(Span::sized(span.start + 1, replacement_len), replacement.into_owned())
+            fixer.replace(
+                Span::sized(span.start + 1, replacement_len),
+                replacement.into_owned(),
+            )
         });
     }
 
@@ -246,11 +255,19 @@ impl PreferLowercaseTitleConfig {
         }
 
         if ignore.iter().any(|alias| alias == test_name) {
-            ignores.extend(test_case_name.iter().filter(|alias| alias.ends_with(test_name)));
+            ignores.extend(
+                test_case_name
+                    .iter()
+                    .filter(|alias| alias.ends_with(test_name)),
+            );
         }
 
         if ignore.iter().any(|alias| alias == it_name) {
-            ignores.extend(test_case_name.iter().filter(|alias| alias.ends_with(it_name)));
+            ignores.extend(
+                test_case_name
+                    .iter()
+                    .filter(|alias| alias.ends_with(it_name)),
+            );
         }
 
         ignores

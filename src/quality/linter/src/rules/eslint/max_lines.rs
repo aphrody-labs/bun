@@ -41,7 +41,11 @@ impl std::ops::Deref for MaxLines {
 
 impl Default for MaxLinesConfig {
     fn default() -> Self {
-        Self { max: 300, skip_blank_lines: false, skip_comments: false }
+        Self {
+            max: 300,
+            skip_blank_lines: false,
+            skip_comments: false,
+        }
     }
 }
 
@@ -104,18 +108,29 @@ impl Rule for MaxLines {
         };
 
         let lines_in_file = if self.skip_blank_lines {
-            ctx.source_text().lines().filter(|&line| !line.trim().is_empty()).count()
+            ctx.source_text()
+                .lines()
+                .filter(|&line| !line.trim().is_empty())
+                .count()
         } else {
             // Intentionally counting newline bytes instead of using .lines() for performance (see PR 11242)
             let newlines = ctx.source_text().bytes().filter(|ch| *ch == b'\n').count();
-            if ctx.source_text().ends_with('\n') { newlines } else { newlines + 1 }
+            if ctx.source_text().ends_with('\n') {
+                newlines
+            } else {
+                newlines + 1
+            }
         };
 
         let final_lines = lines_in_file.max(1).saturating_sub(comment_lines) as u32;
         if final_lines > self.max {
             // Point to end of the file for `eslint-disable max-lines` to work.
             let end = ctx.source_text().len().saturating_sub(1) as u32;
-            ctx.diagnostic(max_lines_diagnostic(final_lines, self.max, Span::empty(end)));
+            ctx.diagnostic(max_lines_diagnostic(
+                final_lines,
+                self.max,
+                Span::empty(end),
+            ));
         }
     }
 }
@@ -134,8 +149,14 @@ fn test() {
         ("var xy;\nvar xy;", Some(serde_json::json!([2]))),
         ("var xy;\nvar xy;\n", Some(serde_json::json!([2]))),
         ("var xy;\nvar xy;", Some(serde_json::json!([{ "max": 2 }]))),
-        ("// comment\n", Some(serde_json::json!([{ "max": 0, "skipComments": true }]))),
-        ("foo;\n /* comment */\n", Some(serde_json::json!([{ "max": 1, "skipComments": true }]))),
+        (
+            "// comment\n",
+            Some(serde_json::json!([{ "max": 0, "skipComments": true }])),
+        ),
+        (
+            "foo;\n /* comment */\n",
+            Some(serde_json::json!([{ "max": 1, "skipComments": true }])),
+        ),
         (
             "//a single line comment
 			var xy;
@@ -189,7 +210,10 @@ fn test() {
             "/* a multiline comment\n that goes to many lines*/\nvar xy;\nvar xy;",
             Some(serde_json::json!([2])),
         ),
-        ("//a single line comment\nvar xy;\nvar xy;", Some(serde_json::json!([2]))),
+        (
+            "//a single line comment\nvar xy;\nvar xy;",
+            Some(serde_json::json!([2])),
+        ),
         (
             "var x;
 

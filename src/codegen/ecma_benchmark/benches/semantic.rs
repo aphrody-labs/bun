@@ -21,7 +21,9 @@ fn bench_semantic(criterion: &mut Criterion) {
                 allocator.reset();
 
                 // Create fresh AST for each iteration, as `SemanticBuilder` alters the AST
-                let program = Parser::new(&allocator, source_text, source_type).parse().program;
+                let program = Parser::new(&allocator, source_text, source_type)
+                    .parse()
+                    .program;
                 let program = black_box(program);
 
                 runner.run(|| {

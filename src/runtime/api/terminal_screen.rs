@@ -2,8 +2,8 @@
 
 use bun_core::strings;
 use bun_jsc::{
-    bun_string_jsc, ArrayBuffer, CallFrame, IntegerRange, JSGlobalObject, JSType, JSValue, JsCell,
-    JsResult,
+    ArrayBuffer, CallFrame, IntegerRange, JSGlobalObject, JSType, JSValue, JsCell, JsResult,
+    bun_string_jsc,
 };
 use bun_vt::Screen;
 
@@ -27,7 +27,8 @@ fn codepoint_width(codepoint: u32) -> u8 {
         return 1;
     };
     let mut utf8 = [0u8; 4];
-    let width = strings::visible::width::exclude_ansi_colors::utf8(ch.encode_utf8(&mut utf8).as_bytes());
+    let width =
+        strings::visible::width::exclude_ansi_colors::utf8(ch.encode_utf8(&mut utf8).as_bytes());
     width.min(2) as u8
 }
 
@@ -62,7 +63,9 @@ impl TerminalScreen {
         let mut convert_eol = false;
         if !options.is_undefined_or_null() {
             if !options.is_object() {
-                return Err(global_this.throw_invalid_argument_type_value(b"options", b"object", options));
+                return Err(
+                    global_this.throw_invalid_argument_type_value(b"options", b"object", options)
+                );
             }
             if let Some(v) = options.get(global_this, b"cols")? {
                 cols = validate_dimension(global_this, v, DEFAULT_COLS, b"cols")?;
@@ -82,17 +85,29 @@ impl TerminalScreen {
                     },
                 )? as usize;
             }
-            convert_eol = options.get_boolean_loose(global_this, "convertEol")?.unwrap_or(false);
+            convert_eol = options
+                .get_boolean_loose(global_this, "convertEol")?
+                .unwrap_or(false);
         }
         Ok(Box::new(TerminalScreen {
-            screen: JsCell::new(Screen::new(cols, rows, scrollback, convert_eol, codepoint_width)),
+            screen: JsCell::new(Screen::new(
+                cols,
+                rows,
+                scrollback,
+                convert_eol,
+                codepoint_width,
+            )),
             scrollback,
             convert_eol,
         }))
     }
 
     #[bun_jsc::host_fn(method)]
-    pub(crate) fn write(&self, global_this: &JSGlobalObject, callframe: &CallFrame) -> JsResult<JSValue> {
+    pub(crate) fn write(
+        &self,
+        global_this: &JSGlobalObject,
+        callframe: &CallFrame,
+    ) -> JsResult<JSValue> {
         let [data] = callframe.arguments_as_array::<1>();
         let Some(input) = StringOrBuffer::from_js(global_this, data)? else {
             return Err(global_this.throw_invalid_argument_type_value(
@@ -107,7 +122,11 @@ impl TerminalScreen {
     }
 
     #[bun_jsc::host_fn(method)]
-    pub(crate) fn resize(&self, global_this: &JSGlobalObject, callframe: &CallFrame) -> JsResult<JSValue> {
+    pub(crate) fn resize(
+        &self,
+        global_this: &JSGlobalObject,
+        callframe: &CallFrame,
+    ) -> JsResult<JSValue> {
         let [cols, rows] = callframe.arguments_as_array::<2>();
         let (current_cols, current_rows) = {
             let screen = self.screen.get();
@@ -120,21 +139,36 @@ impl TerminalScreen {
     }
 
     #[bun_jsc::host_fn(method)]
-    pub(crate) fn reset(&self, _global_this: &JSGlobalObject, _callframe: &CallFrame) -> JsResult<JSValue> {
+    pub(crate) fn reset(
+        &self,
+        _global_this: &JSGlobalObject,
+        _callframe: &CallFrame,
+    ) -> JsResult<JSValue> {
         let (cols, rows) = {
             let screen = self.screen.get();
             (screen.cols(), screen.rows())
         };
-        self.screen
-            .set(Screen::new(cols, rows, self.scrollback, self.convert_eol, codepoint_width));
+        self.screen.set(Screen::new(
+            cols,
+            rows,
+            self.scrollback,
+            self.convert_eol,
+            codepoint_width,
+        ));
         Ok(JSValue::UNDEFINED)
     }
 
     #[bun_jsc::host_fn(method)]
-    pub(crate) fn text(&self, global_this: &JSGlobalObject, callframe: &CallFrame) -> JsResult<JSValue> {
+    pub(crate) fn text(
+        &self,
+        global_this: &JSGlobalObject,
+        callframe: &CallFrame,
+    ) -> JsResult<JSValue> {
         let [options] = callframe.arguments_as_array::<1>();
         let include_scrollback = if options.is_object() {
-            options.get_boolean_loose(global_this, "scrollback")?.unwrap_or(false)
+            options
+                .get_boolean_loose(global_this, "scrollback")?
+                .unwrap_or(false)
         } else {
             false
         };
@@ -144,7 +178,11 @@ impl TerminalScreen {
 
     /// Four `u32` per visible cell, row-major: codepoint, fg, bg, flags.
     #[bun_jsc::host_fn(method)]
-    pub(crate) fn cells(&self, global_this: &JSGlobalObject, _callframe: &CallFrame) -> JsResult<JSValue> {
+    pub(crate) fn cells(
+        &self,
+        global_this: &JSGlobalObject,
+        _callframe: &CallFrame,
+    ) -> JsResult<JSValue> {
         let screen = self.screen.get();
         let mut bytes = Vec::with_capacity(screen.cells().len() * 16);
         for cell in screen.cells() {
@@ -152,11 +190,16 @@ impl TerminalScreen {
                 bytes.extend_from_slice(&word.to_ne_bytes());
             }
         }
-        ArrayBuffer::from_owned_bytes(bytes.into_boxed_slice(), JSType::Uint32Array).to_js(global_this)
+        ArrayBuffer::from_owned_bytes(bytes.into_boxed_slice(), JSType::Uint32Array)
+            .to_js(global_this)
     }
 
     #[bun_jsc::host_fn(method)]
-    pub(crate) fn take_replies(&self, global_this: &JSGlobalObject, _callframe: &CallFrame) -> JsResult<JSValue> {
+    pub(crate) fn take_replies(
+        &self,
+        global_this: &JSGlobalObject,
+        _callframe: &CallFrame,
+    ) -> JsResult<JSValue> {
         let replies = self.screen.with_mut(Screen::take_replies);
         bun_string_jsc::owned_utf8_into_js(global_this, replies)
     }

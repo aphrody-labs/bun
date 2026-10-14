@@ -63,7 +63,8 @@ declare_oxc_lint!(
     correctness,
     config = NoUnsafeOptionalChaining,
     version = "0.0.5",
-    short_description = "Disallow use of optional chaining in contexts where the `undefined` value is not allowed.",
+    short_description =
+        "Disallow use of optional chaining in contexts where the `undefined` value is not allowed.",
 );
 
 impl Rule for NoUnsafeOptionalChaining {
@@ -147,7 +148,10 @@ impl NoUnsafeOptionalChaining {
                     current_id = parent_id;
                 }
                 AstKind::SequenceExpression(expr)
-                    if expr.expressions.last().is_some_and(|expr| expr.node_id() == current_id) =>
+                    if expr
+                        .expressions
+                        .last()
+                        .is_some_and(|expr| expr.node_id() == current_id) =>
                 {
                     current_id = parent_id;
                 }
@@ -178,7 +182,10 @@ impl NoUnsafeOptionalChaining {
                     return Some(ErrorType::Usage);
                 }
                 AstKind::AssignmentExpression(expr) if expr.right.node_id() == current_id => {
-                    if matches!(expr.left, match_assignment_target_pattern!(AssignmentTarget)) {
+                    if matches!(
+                        expr.left,
+                        match_assignment_target_pattern!(AssignmentTarget)
+                    ) {
                         return Some(ErrorType::Usage);
                     }
                     if self.disallow_arithmetic_operators && expr.operator.is_arithmetic() {
@@ -225,7 +232,10 @@ impl NoUnsafeOptionalChaining {
                 }
                 AstKind::VariableDeclarator(decl)
                     if decl.id.is_destructuring_pattern()
-                        && decl.init.as_ref().is_some_and(|expr| expr.node_id() == current_id) =>
+                        && decl
+                            .init
+                            .as_ref()
+                            .is_some_and(|expr| expr.node_id() == current_id) =>
                 {
                     return Some(ErrorType::Usage);
                 }
@@ -354,9 +364,17 @@ fn test() {
         ("const b = [...c, ...obj?.foo];", None),
         ("const s = [], t = [...obj?.foo];", None),
         ("const c = () => ([...(obj?.foo)]);", None),
-        ("bar + obj?.foo;", Some(serde_json::json!([{ "disallowArithmeticOperators": true }]))),
+        (
+            "bar + obj?.foo;",
+            Some(serde_json::json!([{ "disallowArithmeticOperators": true }])),
+        ),
     ];
 
-    Tester::new(NoUnsafeOptionalChaining::NAME, NoUnsafeOptionalChaining::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        NoUnsafeOptionalChaining::NAME,
+        NoUnsafeOptionalChaining::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

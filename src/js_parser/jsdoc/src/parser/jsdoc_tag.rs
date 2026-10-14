@@ -40,7 +40,12 @@ pub struct JSDocTag<'a> {
 
 impl<'a> JSDocTag<'a> {
     pub fn new(kind: JSDocTagKindPart<'a>, body_content: &'a str, body_span: Span) -> JSDocTag<'a> {
-        Self { span: kind.span.merge(body_span), kind, body_raw: body_content, body_span }
+        Self {
+            span: kind.span.merge(body_span),
+            kind,
+            body_raw: body_content,
+            body_span,
+        }
     }
 
     /// Use for various simple tags like `@access`, `@deprecated`, ...etc.
@@ -126,8 +131,11 @@ impl<'a> JSDocTag<'a> {
     /// ```
     pub fn type_name_comment(
         &self,
-    ) -> (Option<JSDocTagTypePart<'a>>, Option<JSDocTagTypeNamePart<'a>>, JSDocCommentPart<'a>)
-    {
+    ) -> (
+        Option<JSDocTagTypePart<'a>>,
+        Option<JSDocTagTypeNamePart<'a>>,
+        JSDocCommentPart<'a>,
+    ) {
         let (type_part, name_comment_content, span_start) =
             match utils::find_type_range(self.body_raw) {
                 Some((t_start, t_end)) => {

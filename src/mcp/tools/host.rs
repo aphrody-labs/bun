@@ -7,7 +7,9 @@ use serde_json::Value;
 use crate::registry::{Annotations, Args, Context, Output, Tool, ToolError};
 
 fn call(f: fn(&Value) -> Result<String, String>, args: &Args<'_>) -> Result<Output, ToolError> {
-    f(&Value::Object(args.0.clone())).map(Output::text).map_err(ToolError::Failed)
+    f(&Value::Object(args.0.clone()))
+        .map(Output::text)
+        .map_err(ToolError::Failed)
 }
 
 pub(crate) const TOOLS: &[Tool] = &[

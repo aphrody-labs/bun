@@ -50,7 +50,11 @@ unsafe fn misc_pre_impl<const VUTF8: bool>(
     let mut skip_lo: u64 = 0;
     let mut utf8_bad = false;
     for w in 0..nw {
-        let mut m = if VUTF8 { *misc.add(w) & !skip_lo } else { *misc.add(w) };
+        let mut m = if VUTF8 {
+            *misc.add(w) & !skip_lo
+        } else {
+            *misc.add(w)
+        };
         if VUTF8 {
             skip_lo = 0;
         }

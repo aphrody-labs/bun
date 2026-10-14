@@ -124,15 +124,27 @@ pub static STRUCTS: phf::Map<&'static str, StructDetails> = ::phf::Map {
         ),
         (
             "DebuggerStatement",
-            StructDetails { field_order: Some(&[1, 0]), is_node: true, is_transparent: false },
+            StructDetails {
+                field_order: Some(&[1, 0]),
+                is_node: true,
+                is_transparent: false,
+            },
         ),
         (
             "RegExpPattern",
-            StructDetails { field_order: None, is_node: false, is_transparent: false },
+            StructDetails {
+                field_order: None,
+                is_node: false,
+                is_transparent: false,
+            },
         ),
         (
             "IdentifierName",
-            StructDetails { field_order: Some(&[1, 0, 2]), is_node: true, is_transparent: false },
+            StructDetails {
+                field_order: Some(&[1, 0, 2]),
+                is_node: true,
+                is_transparent: false,
+            },
         ),
         (
             "LabeledStatement",
@@ -160,7 +172,11 @@ pub static STRUCTS: phf::Map<&'static str, StructDetails> = ::phf::Map {
         ),
         (
             "ThisExpression",
-            StructDetails { field_order: Some(&[1, 0]), is_node: true, is_transparent: false },
+            StructDetails {
+                field_order: Some(&[1, 0]),
+                is_node: true,
+                is_transparent: false,
+            },
         ),
         (
             "EcmaScriptModule",
@@ -180,7 +196,11 @@ pub static STRUCTS: phf::Map<&'static str, StructDetails> = ::phf::Map {
         ),
         (
             "ClassHeritage",
-            StructDetails { field_order: None, is_node: false, is_transparent: false },
+            StructDetails {
+                field_order: None,
+                is_node: false,
+                is_transparent: false,
+            },
         ),
         (
             "TSAsExpression",
@@ -192,27 +212,51 @@ pub static STRUCTS: phf::Map<&'static str, StructDetails> = ::phf::Map {
         ),
         (
             "ClassString",
-            StructDetails { field_order: Some(&[0, 2, 1]), is_node: false, is_transparent: false },
+            StructDetails {
+                field_order: Some(&[0, 2, 1]),
+                is_node: false,
+                is_transparent: false,
+            },
         ),
         (
             "FixedSizeAllocatorMetadata",
-            StructDetails { field_order: None, is_node: false, is_transparent: false },
+            StructDetails {
+                field_order: None,
+                is_node: false,
+                is_transparent: false,
+            },
         ),
         (
             "ExpressionStatement",
-            StructDetails { field_order: Some(&[1, 0, 2]), is_node: true, is_transparent: false },
+            StructDetails {
+                field_order: Some(&[1, 0, 2]),
+                is_node: true,
+                is_transparent: false,
+            },
         ),
         (
             "TSOptionalType",
-            StructDetails { field_order: Some(&[1, 0, 2]), is_node: true, is_transparent: false },
+            StructDetails {
+                field_order: Some(&[1, 0, 2]),
+                is_node: true,
+                is_transparent: false,
+            },
         ),
         (
             "TSThisType",
-            StructDetails { field_order: Some(&[1, 0]), is_node: true, is_transparent: false },
+            StructDetails {
+                field_order: Some(&[1, 0]),
+                is_node: true,
+                is_transparent: false,
+            },
         ),
         (
             "Character",
-            StructDetails { field_order: Some(&[0, 2, 1]), is_node: false, is_transparent: false },
+            StructDetails {
+                field_order: Some(&[0, 2, 1]),
+                is_node: false,
+                is_transparent: false,
+            },
         ),
         (
             "TSConditionalType",
@@ -232,11 +276,19 @@ pub static STRUCTS: phf::Map<&'static str, StructDetails> = ::phf::Map {
         ),
         (
             "TSNamespaceExportDeclaration",
-            StructDetails { field_order: Some(&[1, 0, 2]), is_node: true, is_transparent: false },
+            StructDetails {
+                field_order: Some(&[1, 0, 2]),
+                is_node: true,
+                is_transparent: false,
+            },
         ),
         (
             "TSNumberKeyword",
-            StructDetails { field_order: Some(&[1, 0]), is_node: true, is_transparent: false },
+            StructDetails {
+                field_order: Some(&[1, 0]),
+                is_node: true,
+                is_transparent: false,
+            },
         ),
         (
             "TSTypeAliasDeclaration",
@@ -248,20 +300,43 @@ pub static STRUCTS: phf::Map<&'static str, StructDetails> = ::phf::Map {
         ),
         (
             "Decorator",
-            StructDetails { field_order: Some(&[1, 0, 2]), is_node: true, is_transparent: false },
+            StructDetails {
+                field_order: Some(&[1, 0, 2]),
+                is_node: true,
+                is_transparent: false,
+            },
         ),
         (
             "TSBooleanKeyword",
-            StructDetails { field_order: Some(&[1, 0]), is_node: true, is_transparent: false },
+            StructDetails {
+                field_order: Some(&[1, 0]),
+                is_node: true,
+                is_transparent: false,
+            },
         ),
-        ("RegExpFlags", StructDetails { field_order: None, is_node: false, is_transparent: true }),
+        (
+            "RegExpFlags",
+            StructDetails {
+                field_order: None,
+                is_node: false,
+                is_transparent: true,
+            },
+        ),
         (
             "TSTypeParameterInstantiation",
-            StructDetails { field_order: Some(&[1, 0, 2]), is_node: true, is_transparent: false },
+            StructDetails {
+                field_order: Some(&[1, 0, 2]),
+                is_node: true,
+                is_transparent: false,
+            },
         ),
         (
             "TSNullKeyword",
-            StructDetails { field_order: Some(&[1, 0]), is_node: true, is_transparent: false },
+            StructDetails {
+                field_order: Some(&[1, 0]),
+                is_node: true,
+                is_transparent: false,
+            },
         ),
         (
             "JSXNamespacedName",
@@ -273,15 +348,27 @@ pub static STRUCTS: phf::Map<&'static str, StructDetails> = ::phf::Map {
         ),
         (
             "ContinueStatement",
-            StructDetails { field_order: Some(&[1, 0, 2]), is_node: true, is_transparent: false },
+            StructDetails {
+                field_order: Some(&[1, 0, 2]),
+                is_node: true,
+                is_transparent: false,
+            },
         ),
         (
             "SequenceExpression",
-            StructDetails { field_order: Some(&[1, 0, 2]), is_node: true, is_transparent: false },
+            StructDetails {
+                field_order: Some(&[1, 0, 2]),
+                is_node: true,
+                is_transparent: false,
+            },
         ),
         (
             "ClassBody",
-            StructDetails { field_order: Some(&[1, 0, 2]), is_node: true, is_transparent: false },
+            StructDetails {
+                field_order: Some(&[1, 0, 2]),
+                is_node: true,
+                is_transparent: false,
+            },
         ),
         (
             "TSQualifiedName",
@@ -293,9 +380,20 @@ pub static STRUCTS: phf::Map<&'static str, StructDetails> = ::phf::Map {
         ),
         (
             "LabelIdentifier",
-            StructDetails { field_order: Some(&[1, 0, 2]), is_node: true, is_transparent: false },
+            StructDetails {
+                field_order: Some(&[1, 0, 2]),
+                is_node: true,
+                is_transparent: false,
+            },
         ),
-        ("Pattern", StructDetails { field_order: None, is_node: false, is_transparent: false }),
+        (
+            "Pattern",
+            StructDetails {
+                field_order: None,
+                is_node: false,
+                is_transparent: false,
+            },
+        ),
         (
             "UnicodePropertyEscape",
             StructDetails {
@@ -314,7 +412,11 @@ pub static STRUCTS: phf::Map<&'static str, StructDetails> = ::phf::Map {
         ),
         (
             "TSIntersectionType",
-            StructDetails { field_order: Some(&[1, 0, 2]), is_node: true, is_transparent: false },
+            StructDetails {
+                field_order: Some(&[1, 0, 2]),
+                is_node: true,
+                is_transparent: false,
+            },
         ),
         (
             "SwitchStatement",
@@ -326,7 +428,11 @@ pub static STRUCTS: phf::Map<&'static str, StructDetails> = ::phf::Map {
         ),
         (
             "TemplateElementValue",
-            StructDetails { field_order: None, is_node: false, is_transparent: false },
+            StructDetails {
+                field_order: None,
+                is_node: false,
+                is_transparent: false,
+            },
         ),
         (
             "TSClassImplements",
@@ -338,15 +444,27 @@ pub static STRUCTS: phf::Map<&'static str, StructDetails> = ::phf::Map {
         ),
         (
             "ReturnStatement",
-            StructDetails { field_order: Some(&[1, 0, 2]), is_node: true, is_transparent: false },
+            StructDetails {
+                field_order: Some(&[1, 0, 2]),
+                is_node: true,
+                is_transparent: false,
+            },
         ),
         (
             "CharacterClassEscape",
-            StructDetails { field_order: None, is_node: false, is_transparent: false },
+            StructDetails {
+                field_order: None,
+                is_node: false,
+                is_transparent: false,
+            },
         ),
         (
             "TSSymbolKeyword",
-            StructDetails { field_order: Some(&[1, 0]), is_node: true, is_transparent: false },
+            StructDetails {
+                field_order: Some(&[1, 0]),
+                is_node: true,
+                is_transparent: false,
+            },
         ),
         (
             "RegExpLiteral",
@@ -358,15 +476,27 @@ pub static STRUCTS: phf::Map<&'static str, StructDetails> = ::phf::Map {
         ),
         (
             "JSXExpressionContainer",
-            StructDetails { field_order: Some(&[1, 0, 2]), is_node: true, is_transparent: false },
+            StructDetails {
+                field_order: Some(&[1, 0, 2]),
+                is_node: true,
+                is_transparent: false,
+            },
         ),
         (
             "TSInterfaceBody",
-            StructDetails { field_order: Some(&[1, 0, 2]), is_node: true, is_transparent: false },
+            StructDetails {
+                field_order: Some(&[1, 0, 2]),
+                is_node: true,
+                is_transparent: false,
+            },
         ),
         (
             "AssignmentTargetRest",
-            StructDetails { field_order: Some(&[1, 0, 2]), is_node: true, is_transparent: false },
+            StructDetails {
+                field_order: Some(&[1, 0, 2]),
+                is_node: true,
+                is_transparent: false,
+            },
         ),
         (
             "TSImportTypeQualifiedName",
@@ -418,7 +548,11 @@ pub static STRUCTS: phf::Map<&'static str, StructDetails> = ::phf::Map {
         ),
         (
             "IndexedReference",
-            StructDetails { field_order: None, is_node: false, is_transparent: false },
+            StructDetails {
+                field_order: None,
+                is_node: false,
+                is_transparent: false,
+            },
         ),
         (
             "StringLiteral",
@@ -446,7 +580,11 @@ pub static STRUCTS: phf::Map<&'static str, StructDetails> = ::phf::Map {
         ),
         (
             "TSParenthesizedType",
-            StructDetails { field_order: Some(&[1, 0, 2]), is_node: true, is_transparent: false },
+            StructDetails {
+                field_order: Some(&[1, 0, 2]),
+                is_node: true,
+                is_transparent: false,
+            },
         ),
         (
             "Program",
@@ -458,11 +596,19 @@ pub static STRUCTS: phf::Map<&'static str, StructDetails> = ::phf::Map {
         ),
         (
             "BreakStatement",
-            StructDetails { field_order: Some(&[1, 0, 2]), is_node: true, is_transparent: false },
+            StructDetails {
+                field_order: Some(&[1, 0, 2]),
+                is_node: true,
+                is_transparent: false,
+            },
         ),
         (
             "TSTupleType",
-            StructDetails { field_order: Some(&[1, 0, 2]), is_node: true, is_transparent: false },
+            StructDetails {
+                field_order: Some(&[1, 0, 2]),
+                is_node: true,
+                is_transparent: false,
+            },
         ),
         (
             "TSTypeOperator",
@@ -482,13 +628,28 @@ pub static STRUCTS: phf::Map<&'static str, StructDetails> = ::phf::Map {
         ),
         (
             "TSNonNullExpression",
-            StructDetails { field_order: Some(&[1, 0, 2]), is_node: true, is_transparent: false },
+            StructDetails {
+                field_order: Some(&[1, 0, 2]),
+                is_node: true,
+                is_transparent: false,
+            },
         ),
         (
             "TSExportAssignment",
-            StructDetails { field_order: Some(&[1, 0, 2]), is_node: true, is_transparent: false },
+            StructDetails {
+                field_order: Some(&[1, 0, 2]),
+                is_node: true,
+                is_transparent: false,
+            },
         ),
-        ("ReferenceId", StructDetails { field_order: None, is_node: false, is_transparent: true }),
+        (
+            "ReferenceId",
+            StructDetails {
+                field_order: None,
+                is_node: false,
+                is_transparent: true,
+            },
+        ),
         (
             "JSDocNonNullableType",
             StructDetails {
@@ -499,9 +660,20 @@ pub static STRUCTS: phf::Map<&'static str, StructDetails> = ::phf::Map {
         ),
         (
             "NewTarget",
-            StructDetails { field_order: Some(&[1, 0]), is_node: true, is_transparent: false },
+            StructDetails {
+                field_order: Some(&[1, 0]),
+                is_node: true,
+                is_transparent: false,
+            },
         ),
-        ("SourceType", StructDetails { field_order: None, is_node: false, is_transparent: false }),
+        (
+            "SourceType",
+            StructDetails {
+                field_order: None,
+                is_node: false,
+                is_transparent: false,
+            },
+        ),
         (
             "ForStatement",
             StructDetails {
@@ -536,15 +708,27 @@ pub static STRUCTS: phf::Map<&'static str, StructDetails> = ::phf::Map {
         ),
         (
             "StaticExport",
-            StructDetails { field_order: None, is_node: false, is_transparent: false },
+            StructDetails {
+                field_order: None,
+                is_node: false,
+                is_transparent: false,
+            },
         ),
         (
             "NamedReference",
-            StructDetails { field_order: None, is_node: false, is_transparent: false },
+            StructDetails {
+                field_order: None,
+                is_node: false,
+                is_transparent: false,
+            },
         ),
         (
             "ArrayExpression",
-            StructDetails { field_order: Some(&[1, 0, 2]), is_node: true, is_transparent: false },
+            StructDetails {
+                field_order: Some(&[1, 0, 2]),
+                is_node: true,
+                is_transparent: false,
+            },
         ),
         (
             "VariableDeclaration",
@@ -610,7 +794,14 @@ pub static STRUCTS: phf::Map<&'static str, StructDetails> = ::phf::Map {
                 is_transparent: false,
             },
         ),
-        ("I32Dummy", StructDetails { field_order: None, is_node: false, is_transparent: true }),
+        (
+            "I32Dummy",
+            StructDetails {
+                field_order: None,
+                is_node: false,
+                is_transparent: true,
+            },
+        ),
         (
             "FormalParameters",
             StructDetails {
@@ -621,11 +812,19 @@ pub static STRUCTS: phf::Map<&'static str, StructDetails> = ::phf::Map {
         ),
         (
             "TSTypeLiteral",
-            StructDetails { field_order: Some(&[1, 0, 2]), is_node: true, is_transparent: false },
+            StructDetails {
+                field_order: Some(&[1, 0, 2]),
+                is_node: true,
+                is_transparent: false,
+            },
         ),
         (
             "JSXSpreadChild",
-            StructDetails { field_order: Some(&[1, 0, 2]), is_node: true, is_transparent: false },
+            StructDetails {
+                field_order: Some(&[1, 0, 2]),
+                is_node: true,
+                is_transparent: false,
+            },
         ),
         (
             "ImportSpecifier",
@@ -635,7 +834,14 @@ pub static STRUCTS: phf::Map<&'static str, StructDetails> = ::phf::Map {
                 is_transparent: false,
             },
         ),
-        ("Modifiers", StructDetails { field_order: None, is_node: false, is_transparent: false }),
+        (
+            "Modifiers",
+            StructDetails {
+                field_order: None,
+                is_node: false,
+                is_transparent: false,
+            },
+        ),
         (
             "TSTemplateLiteralType",
             StructDetails {
@@ -646,7 +852,11 @@ pub static STRUCTS: phf::Map<&'static str, StructDetails> = ::phf::Map {
         ),
         (
             "TSVoidKeyword",
-            StructDetails { field_order: Some(&[1, 0]), is_node: true, is_transparent: false },
+            StructDetails {
+                field_order: Some(&[1, 0]),
+                is_node: true,
+                is_transparent: false,
+            },
         ),
         (
             "WhileStatement",
@@ -656,18 +866,37 @@ pub static STRUCTS: phf::Map<&'static str, StructDetails> = ::phf::Map {
                 is_transparent: false,
             },
         ),
-        ("Modifier", StructDetails { field_order: None, is_node: false, is_transparent: true }),
+        (
+            "Modifier",
+            StructDetails {
+                field_order: None,
+                is_node: false,
+                is_transparent: true,
+            },
+        ),
         (
             "TSStringKeyword",
-            StructDetails { field_order: Some(&[1, 0]), is_node: true, is_transparent: false },
+            StructDetails {
+                field_order: Some(&[1, 0]),
+                is_node: true,
+                is_transparent: false,
+            },
         ),
         (
             "ChainExpression",
-            StructDetails { field_order: Some(&[1, 0, 2]), is_node: true, is_transparent: false },
+            StructDetails {
+                field_order: Some(&[1, 0, 2]),
+                is_node: true,
+                is_transparent: false,
+            },
         ),
         (
             "ErrorLabel",
-            StructDetails { field_order: Some(&[1, 0]), is_node: false, is_transparent: false },
+            StructDetails {
+                field_order: Some(&[1, 0]),
+                is_node: false,
+                is_transparent: false,
+            },
         ),
         (
             "ForOfStatement",
@@ -679,7 +908,11 @@ pub static STRUCTS: phf::Map<&'static str, StructDetails> = ::phf::Map {
         ),
         (
             "ImportDefaultSpecifier",
-            StructDetails { field_order: Some(&[1, 0, 2]), is_node: true, is_transparent: false },
+            StructDetails {
+                field_order: Some(&[1, 0, 2]),
+                is_node: true,
+                is_transparent: false,
+            },
         ),
         (
             "NewExpression",
@@ -691,7 +924,11 @@ pub static STRUCTS: phf::Map<&'static str, StructDetails> = ::phf::Map {
         ),
         (
             "CommentNewlines",
-            StructDetails { field_order: None, is_node: false, is_transparent: true },
+            StructDetails {
+                field_order: None,
+                is_node: false,
+                is_transparent: true,
+            },
         ),
         (
             "Error",
@@ -703,11 +940,19 @@ pub static STRUCTS: phf::Map<&'static str, StructDetails> = ::phf::Map {
         ),
         (
             "TSUndefinedKeyword",
-            StructDetails { field_order: Some(&[1, 0]), is_node: true, is_transparent: false },
+            StructDetails {
+                field_order: Some(&[1, 0]),
+                is_node: true,
+                is_transparent: false,
+            },
         ),
         (
             "NullLiteral",
-            StructDetails { field_order: Some(&[1, 0]), is_node: true, is_transparent: false },
+            StructDetails {
+                field_order: Some(&[1, 0]),
+                is_node: true,
+                is_transparent: false,
+            },
         ),
         (
             "JSDocNullableType",
@@ -749,10 +994,21 @@ pub static STRUCTS: phf::Map<&'static str, StructDetails> = ::phf::Map {
                 is_transparent: false,
             },
         ),
-        ("ScopeId", StructDetails { field_order: None, is_node: false, is_transparent: true }),
+        (
+            "ScopeId",
+            StructDetails {
+                field_order: None,
+                is_node: false,
+                is_transparent: true,
+            },
+        ),
         (
             "JSXOpeningFragment",
-            StructDetails { field_order: Some(&[1, 0]), is_node: true, is_transparent: false },
+            StructDetails {
+                field_order: Some(&[1, 0]),
+                is_node: true,
+                is_transparent: false,
+            },
         ),
         (
             "TSTypeReference",
@@ -764,7 +1020,11 @@ pub static STRUCTS: phf::Map<&'static str, StructDetails> = ::phf::Map {
         ),
         (
             "JSXSpreadAttribute",
-            StructDetails { field_order: Some(&[1, 0, 2]), is_node: true, is_transparent: false },
+            StructDetails {
+                field_order: Some(&[1, 0, 2]),
+                is_node: true,
+                is_transparent: false,
+            },
         ),
         (
             "NumericLiteral",
@@ -776,7 +1036,11 @@ pub static STRUCTS: phf::Map<&'static str, StructDetails> = ::phf::Map {
         ),
         (
             "TSAnyKeyword",
-            StructDetails { field_order: Some(&[1, 0]), is_node: true, is_transparent: false },
+            StructDetails {
+                field_order: Some(&[1, 0]),
+                is_node: true,
+                is_transparent: false,
+            },
         ),
         (
             "TSTypeQuery",
@@ -796,7 +1060,11 @@ pub static STRUCTS: phf::Map<&'static str, StructDetails> = ::phf::Map {
         ),
         (
             "TSInferType",
-            StructDetails { field_order: Some(&[1, 0, 2]), is_node: true, is_transparent: false },
+            StructDetails {
+                field_order: Some(&[1, 0, 2]),
+                is_node: true,
+                is_transparent: false,
+            },
         ),
         (
             "DoWhileStatement",
@@ -840,7 +1108,11 @@ pub static STRUCTS: phf::Map<&'static str, StructDetails> = ::phf::Map {
         ),
         (
             "TSObjectKeyword",
-            StructDetails { field_order: Some(&[1, 0]), is_node: true, is_transparent: false },
+            StructDetails {
+                field_order: Some(&[1, 0]),
+                is_node: true,
+                is_transparent: false,
+            },
         ),
         (
             "TSTypeParameter",
@@ -860,7 +1132,11 @@ pub static STRUCTS: phf::Map<&'static str, StructDetails> = ::phf::Map {
         ),
         (
             "RawTransferData",
-            StructDetails { field_order: None, is_node: false, is_transparent: false },
+            StructDetails {
+                field_order: None,
+                is_node: false,
+                is_transparent: false,
+            },
         ),
         (
             "ExportSpecifier",
@@ -872,9 +1148,20 @@ pub static STRUCTS: phf::Map<&'static str, StructDetails> = ::phf::Map {
         ),
         (
             "Elision",
-            StructDetails { field_order: Some(&[1, 0]), is_node: true, is_transparent: false },
+            StructDetails {
+                field_order: Some(&[1, 0]),
+                is_node: true,
+                is_transparent: false,
+            },
         ),
-        ("NonMaxU32", StructDetails { field_order: None, is_node: false, is_transparent: true }),
+        (
+            "NonMaxU32",
+            StructDetails {
+                field_order: None,
+                is_node: false,
+                is_transparent: true,
+            },
+        ),
         (
             "RawTransferMetadata",
             StructDetails {
@@ -923,22 +1210,45 @@ pub static STRUCTS: phf::Map<&'static str, StructDetails> = ::phf::Map {
                 is_transparent: false,
             },
         ),
-        ("NodeId", StructDetails { field_order: None, is_node: false, is_transparent: true }),
+        (
+            "NodeId",
+            StructDetails {
+                field_order: None,
+                is_node: false,
+                is_transparent: true,
+            },
+        ),
         (
             "JSXEmptyExpression",
-            StructDetails { field_order: Some(&[1, 0]), is_node: true, is_transparent: false },
+            StructDetails {
+                field_order: Some(&[1, 0]),
+                is_node: true,
+                is_transparent: false,
+            },
         ),
         (
             "Span",
-            StructDetails { field_order: Some(&[1, 2, 0]), is_node: false, is_transparent: false },
+            StructDetails {
+                field_order: Some(&[1, 2, 0]),
+                is_node: false,
+                is_transparent: false,
+            },
         ),
         (
             "TSRestType",
-            StructDetails { field_order: Some(&[1, 0, 2]), is_node: true, is_transparent: false },
+            StructDetails {
+                field_order: Some(&[1, 0, 2]),
+                is_node: true,
+                is_transparent: false,
+            },
         ),
         (
             "Hashbang",
-            StructDetails { field_order: Some(&[1, 0, 2]), is_node: true, is_transparent: false },
+            StructDetails {
+                field_order: Some(&[1, 0, 2]),
+                is_node: true,
+                is_transparent: false,
+            },
         ),
         (
             "JSXText",
@@ -966,7 +1276,11 @@ pub static STRUCTS: phf::Map<&'static str, StructDetails> = ::phf::Map {
         ),
         (
             "TSBigIntKeyword",
-            StructDetails { field_order: Some(&[1, 0]), is_node: true, is_transparent: false },
+            StructDetails {
+                field_order: Some(&[1, 0]),
+                is_node: true,
+                is_transparent: false,
+            },
         ),
         (
             "VariableDeclarator",
@@ -978,11 +1292,19 @@ pub static STRUCTS: phf::Map<&'static str, StructDetails> = ::phf::Map {
         ),
         (
             "LookAroundAssertion",
-            StructDetails { field_order: Some(&[0, 2, 1]), is_node: false, is_transparent: false },
+            StructDetails {
+                field_order: Some(&[0, 2, 1]),
+                is_node: false,
+                is_transparent: false,
+            },
         ),
         (
             "ExportDefaultDeclaration",
-            StructDetails { field_order: Some(&[1, 0, 2]), is_node: true, is_transparent: false },
+            StructDetails {
+                field_order: Some(&[1, 0, 2]),
+                is_node: true,
+                is_transparent: false,
+            },
         ),
         (
             "JSXAttribute",
@@ -994,7 +1316,11 @@ pub static STRUCTS: phf::Map<&'static str, StructDetails> = ::phf::Map {
         ),
         (
             "TSTypeAnnotation",
-            StructDetails { field_order: Some(&[1, 0, 2]), is_node: true, is_transparent: false },
+            StructDetails {
+                field_order: Some(&[1, 0, 2]),
+                is_node: true,
+                is_transparent: false,
+            },
         ),
         (
             "TSThisParameter",
@@ -1062,11 +1388,19 @@ pub static STRUCTS: phf::Map<&'static str, StructDetails> = ::phf::Map {
         ),
         (
             "CapturingGroup",
-            StructDetails { field_order: None, is_node: false, is_transparent: false },
+            StructDetails {
+                field_order: None,
+                is_node: false,
+                is_transparent: false,
+            },
         ),
         (
             "SpreadElement",
-            StructDetails { field_order: Some(&[1, 0, 2]), is_node: true, is_transparent: false },
+            StructDetails {
+                field_order: Some(&[1, 0, 2]),
+                is_node: true,
+                is_transparent: false,
+            },
         ),
         (
             "RawTransferMetadata2",
@@ -1086,13 +1420,28 @@ pub static STRUCTS: phf::Map<&'static str, StructDetails> = ::phf::Map {
         ),
         (
             "CharacterClassRange",
-            StructDetails { field_order: None, is_node: false, is_transparent: false },
+            StructDetails {
+                field_order: None,
+                is_node: false,
+                is_transparent: false,
+            },
         ),
         (
             "DynamicImport",
-            StructDetails { field_order: None, is_node: false, is_transparent: false },
+            StructDetails {
+                field_order: None,
+                is_node: false,
+                is_transparent: false,
+            },
         ),
-        ("SymbolId", StructDetails { field_order: None, is_node: false, is_transparent: true }),
+        (
+            "SymbolId",
+            StructDetails {
+                field_order: None,
+                is_node: false,
+                is_transparent: true,
+            },
+        ),
         (
             "ImportDeclaration",
             StructDetails {
@@ -1101,10 +1450,21 @@ pub static STRUCTS: phf::Map<&'static str, StructDetails> = ::phf::Map {
                 is_transparent: false,
             },
         ),
-        ("IgnoreGroup", StructDetails { field_order: None, is_node: false, is_transparent: false }),
+        (
+            "IgnoreGroup",
+            StructDetails {
+                field_order: None,
+                is_node: false,
+                is_transparent: false,
+            },
+        ),
         (
             "TSLiteralType",
-            StructDetails { field_order: Some(&[1, 0, 2]), is_node: true, is_transparent: false },
+            StructDetails {
+                field_order: Some(&[1, 0, 2]),
+                is_node: true,
+                is_transparent: false,
+            },
         ),
         (
             "V8IntrinsicExpression",
@@ -1114,7 +1474,14 @@ pub static STRUCTS: phf::Map<&'static str, StructDetails> = ::phf::Map {
                 is_transparent: false,
             },
         ),
-        ("Dot", StructDetails { field_order: None, is_node: false, is_transparent: true }),
+        (
+            "Dot",
+            StructDetails {
+                field_order: None,
+                is_node: false,
+                is_transparent: true,
+            },
+        ),
         (
             "ImportExpression",
             StructDetails {
@@ -1123,7 +1490,14 @@ pub static STRUCTS: phf::Map<&'static str, StructDetails> = ::phf::Map {
                 is_transparent: false,
             },
         ),
-        ("RegExp", StructDetails { field_order: None, is_node: false, is_transparent: false }),
+        (
+            "RegExp",
+            StructDetails {
+                field_order: None,
+                is_node: false,
+                is_transparent: false,
+            },
+        ),
         (
             "AssignmentTargetWithDefault",
             StructDetails {
@@ -1166,19 +1540,35 @@ pub static STRUCTS: phf::Map<&'static str, StructDetails> = ::phf::Map {
         ),
         (
             "PrivateIdentifier",
-            StructDetails { field_order: Some(&[1, 0, 2]), is_node: true, is_transparent: false },
+            StructDetails {
+                field_order: Some(&[1, 0, 2]),
+                is_node: true,
+                is_transparent: false,
+            },
         ),
         (
             "ClassStringDisjunction",
-            StructDetails { field_order: Some(&[0, 2, 1]), is_node: false, is_transparent: false },
+            StructDetails {
+                field_order: Some(&[0, 2, 1]),
+                is_node: false,
+                is_transparent: false,
+            },
         ),
         (
             "TSNeverKeyword",
-            StructDetails { field_order: Some(&[1, 0]), is_node: true, is_transparent: false },
+            StructDetails {
+                field_order: Some(&[1, 0]),
+                is_node: true,
+                is_transparent: false,
+            },
         ),
         (
             "BoundaryAssertion",
-            StructDetails { field_order: None, is_node: false, is_transparent: false },
+            StructDetails {
+                field_order: None,
+                is_node: false,
+                is_transparent: false,
+            },
         ),
         (
             "JSXMemberExpression",
@@ -1190,19 +1580,35 @@ pub static STRUCTS: phf::Map<&'static str, StructDetails> = ::phf::Map {
         ),
         (
             "EmptyStatement",
-            StructDetails { field_order: Some(&[1, 0]), is_node: true, is_transparent: false },
+            StructDetails {
+                field_order: Some(&[1, 0]),
+                is_node: true,
+                is_transparent: false,
+            },
         ),
         (
             "BooleanLiteral",
-            StructDetails { field_order: Some(&[1, 0, 2]), is_node: true, is_transparent: false },
+            StructDetails {
+                field_order: Some(&[1, 0, 2]),
+                is_node: true,
+                is_transparent: false,
+            },
         ),
         (
             "StaticImport",
-            StructDetails { field_order: None, is_node: false, is_transparent: false },
+            StructDetails {
+                field_order: None,
+                is_node: false,
+                is_transparent: false,
+            },
         ),
         (
             "ThrowStatement",
-            StructDetails { field_order: Some(&[1, 0, 2]), is_node: true, is_transparent: false },
+            StructDetails {
+                field_order: Some(&[1, 0, 2]),
+                is_node: true,
+                is_transparent: false,
+            },
         ),
         (
             "UpdateExpression",
@@ -1228,7 +1634,14 @@ pub static STRUCTS: phf::Map<&'static str, StructDetails> = ::phf::Map {
                 is_transparent: false,
             },
         ),
-        ("Comment", StructDetails { field_order: None, is_node: false, is_transparent: false }),
+        (
+            "Comment",
+            StructDetails {
+                field_order: None,
+                is_node: false,
+                is_transparent: false,
+            },
+        ),
         (
             "TSEnumMember",
             StructDetails {
@@ -1239,7 +1652,11 @@ pub static STRUCTS: phf::Map<&'static str, StructDetails> = ::phf::Map {
         ),
         (
             "TSTypeParameterDeclaration",
-            StructDetails { field_order: Some(&[1, 0, 2]), is_node: true, is_transparent: false },
+            StructDetails {
+                field_order: Some(&[1, 0, 2]),
+                is_node: true,
+                is_transparent: false,
+            },
         ),
         (
             "TSFunctionType",
@@ -1249,15 +1666,37 @@ pub static STRUCTS: phf::Map<&'static str, StructDetails> = ::phf::Map {
                 is_transparent: false,
             },
         ),
-        ("ImportEntry", StructDetails { field_order: None, is_node: false, is_transparent: false }),
-        ("Disjunction", StructDetails { field_order: None, is_node: false, is_transparent: false }),
+        (
+            "ImportEntry",
+            StructDetails {
+                field_order: None,
+                is_node: false,
+                is_transparent: false,
+            },
+        ),
+        (
+            "Disjunction",
+            StructDetails {
+                field_order: None,
+                is_node: false,
+                is_transparent: false,
+            },
+        ),
         (
             "TSUnionType",
-            StructDetails { field_order: Some(&[1, 0, 2]), is_node: true, is_transparent: false },
+            StructDetails {
+                field_order: Some(&[1, 0, 2]),
+                is_node: true,
+                is_transparent: false,
+            },
         ),
         (
             "JSDocUnknownType",
-            StructDetails { field_order: Some(&[1, 0]), is_node: true, is_transparent: false },
+            StructDetails {
+                field_order: Some(&[1, 0]),
+                is_node: true,
+                is_transparent: false,
+            },
         ),
         (
             "FormalParameterRest",
@@ -1277,15 +1716,27 @@ pub static STRUCTS: phf::Map<&'static str, StructDetails> = ::phf::Map {
         ),
         (
             "TSArrayType",
-            StructDetails { field_order: Some(&[1, 0, 2]), is_node: true, is_transparent: false },
+            StructDetails {
+                field_order: Some(&[1, 0, 2]),
+                is_node: true,
+                is_transparent: false,
+            },
         ),
         (
             "ParenthesizedExpression",
-            StructDetails { field_order: Some(&[1, 0, 2]), is_node: true, is_transparent: false },
+            StructDetails {
+                field_order: Some(&[1, 0, 2]),
+                is_node: true,
+                is_transparent: false,
+            },
         ),
         (
             "ObjectExpression",
-            StructDetails { field_order: Some(&[1, 0, 2]), is_node: true, is_transparent: false },
+            StructDetails {
+                field_order: Some(&[1, 0, 2]),
+                is_node: true,
+                is_transparent: false,
+            },
         ),
         (
             "TSInterfaceHeritage",
@@ -1305,12 +1756,27 @@ pub static STRUCTS: phf::Map<&'static str, StructDetails> = ::phf::Map {
         ),
         (
             "ExportDeclaration",
-            StructDetails { field_order: Some(&[1, 0, 2]), is_node: true, is_transparent: false },
+            StructDetails {
+                field_order: Some(&[1, 0, 2]),
+                is_node: true,
+                is_transparent: false,
+            },
         ),
-        ("Alternative", StructDetails { field_order: None, is_node: false, is_transparent: false }),
+        (
+            "Alternative",
+            StructDetails {
+                field_order: None,
+                is_node: false,
+                is_transparent: false,
+            },
+        ),
         (
             "JSXClosingFragment",
-            StructDetails { field_order: Some(&[1, 0]), is_node: true, is_transparent: false },
+            StructDetails {
+                field_order: Some(&[1, 0]),
+                is_node: true,
+                is_transparent: false,
+            },
         ),
         (
             "TemplateLiteral",
@@ -1330,11 +1796,19 @@ pub static STRUCTS: phf::Map<&'static str, StructDetails> = ::phf::Map {
         ),
         (
             "NameSpan",
-            StructDetails { field_order: Some(&[1, 0]), is_node: false, is_transparent: false },
+            StructDetails {
+                field_order: Some(&[1, 0]),
+                is_node: false,
+                is_transparent: false,
+            },
         ),
         (
             "TSUnknownKeyword",
-            StructDetails { field_order: Some(&[1, 0]), is_node: true, is_transparent: false },
+            StructDetails {
+                field_order: Some(&[1, 0]),
+                is_node: true,
+                is_transparent: false,
+            },
         ),
         (
             "TSMappedType",
@@ -1346,15 +1820,27 @@ pub static STRUCTS: phf::Map<&'static str, StructDetails> = ::phf::Map {
         ),
         (
             "AwaitExpression",
-            StructDetails { field_order: Some(&[1, 0, 2]), is_node: true, is_transparent: false },
+            StructDetails {
+                field_order: Some(&[1, 0, 2]),
+                is_node: true,
+                is_transparent: false,
+            },
         ),
         (
             "BindingRestElement",
-            StructDetails { field_order: Some(&[1, 0, 2]), is_node: true, is_transparent: false },
+            StructDetails {
+                field_order: Some(&[1, 0, 2]),
+                is_node: true,
+                is_transparent: false,
+            },
         ),
         (
             "JSXIdentifier",
-            StructDetails { field_order: Some(&[1, 0, 2]), is_node: true, is_transparent: false },
+            StructDetails {
+                field_order: Some(&[1, 0, 2]),
+                is_node: true,
+                is_transparent: false,
+            },
         ),
         (
             "StaticBlock",
@@ -1366,7 +1852,11 @@ pub static STRUCTS: phf::Map<&'static str, StructDetails> = ::phf::Map {
         ),
         (
             "Super",
-            StructDetails { field_order: Some(&[1, 0]), is_node: true, is_transparent: false },
+            StructDetails {
+                field_order: Some(&[1, 0]),
+                is_node: true,
+                is_transparent: false,
+            },
         ),
         (
             "JSXOpeningElement",
@@ -1458,7 +1948,11 @@ pub static STRUCTS: phf::Map<&'static str, StructDetails> = ::phf::Map {
         ),
         (
             "ImportNamespaceSpecifier",
-            StructDetails { field_order: Some(&[1, 0, 2]), is_node: true, is_transparent: false },
+            StructDetails {
+                field_order: Some(&[1, 0, 2]),
+                is_node: true,
+                is_transparent: false,
+            },
         ),
         (
             "ExportFromDeclaration",
@@ -1478,11 +1972,19 @@ pub static STRUCTS: phf::Map<&'static str, StructDetails> = ::phf::Map {
         ),
         (
             "JSXClosingElement",
-            StructDetails { field_order: Some(&[1, 0, 2]), is_node: true, is_transparent: false },
+            StructDetails {
+                field_order: Some(&[1, 0, 2]),
+                is_node: true,
+                is_transparent: false,
+            },
         ),
         (
             "ImportMeta",
-            StructDetails { field_order: Some(&[1, 0]), is_node: true, is_transparent: false },
+            StructDetails {
+                field_order: Some(&[1, 0]),
+                is_node: true,
+                is_transparent: false,
+            },
         ),
         (
             "AssignmentExpression",
@@ -1494,11 +1996,19 @@ pub static STRUCTS: phf::Map<&'static str, StructDetails> = ::phf::Map {
         ),
         (
             "TSIntrinsicKeyword",
-            StructDetails { field_order: Some(&[1, 0]), is_node: true, is_transparent: false },
+            StructDetails {
+                field_order: Some(&[1, 0]),
+                is_node: true,
+                is_transparent: false,
+            },
         ),
         (
             "TSExternalModuleReference",
-            StructDetails { field_order: Some(&[1, 0, 2]), is_node: true, is_transparent: false },
+            StructDetails {
+                field_order: Some(&[1, 0, 2]),
+                is_node: true,
+                is_transparent: false,
+            },
         ),
     ],
 };

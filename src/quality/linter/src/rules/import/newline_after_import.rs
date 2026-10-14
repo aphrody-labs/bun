@@ -43,7 +43,11 @@ pub struct NewlineAfterImport {
 
 impl Default for NewlineAfterImport {
     fn default() -> Self {
-        Self { count: 1, exact_count: false, consider_comments: false }
+        Self {
+            count: 1,
+            exact_count: false,
+            consider_comments: false,
+        }
     }
 }
 
@@ -237,7 +241,9 @@ impl Rule for NewlineAfterImport {
             }
         };
         let Some(target) = target else { return };
-        let Some(next_stmt) = body.get(target.stmt_index + 1) else { return };
+        let Some(next_stmt) = body.get(target.stmt_index + 1) else {
+            return;
+        };
 
         let next_is_same_kind = match target.kind {
             ImportLikeKind::Import => is_import_statement(next_stmt),
@@ -283,7 +289,11 @@ struct SpacingTarget {
 impl SpacingTarget {
     fn from_import_span(body: &[Statement<'_>], span: Span) -> Option<Self> {
         let stmt_index = find_import_statement_index(body, span)?;
-        Some(Self { stmt_span: span, stmt_index, kind: ImportLikeKind::Import })
+        Some(Self {
+            stmt_span: span,
+            stmt_index,
+            kind: ImportLikeKind::Import,
+        })
     }
 
     fn from_require_call<'a>(
@@ -327,7 +337,15 @@ impl SpacingTarget {
                 count,
             )
         {
-            check_spacing(ctx, source_text, self.stmt_span, comment_start, count, keyword, false);
+            check_spacing(
+                ctx,
+                source_text,
+                self.stmt_span,
+                comment_start,
+                count,
+                keyword,
+                false,
+            );
             return;
         }
 
@@ -335,12 +353,23 @@ impl SpacingTarget {
             return;
         }
 
-        check_spacing(ctx, source_text, self.stmt_span, next_start, count, keyword, exact_count);
+        check_spacing(
+            ctx,
+            source_text,
+            self.stmt_span,
+            next_start,
+            count,
+            keyword,
+            exact_count,
+        );
     }
 }
 
 fn is_import_statement(stmt: &Statement<'_>) -> bool {
-    matches!(stmt, Statement::ImportDeclaration(_) | Statement::TSImportEqualsDeclaration(_))
+    matches!(
+        stmt,
+        Statement::ImportDeclaration(_) | Statement::TSImportEqualsDeclaration(_)
+    )
 }
 
 fn is_static_require_call(call_expr: &CallExpression, ctx: &LintContext<'_>) -> bool {
@@ -348,7 +377,10 @@ fn is_static_require_call(call_expr: &CallExpression, ctx: &LintContext<'_>) -> 
         return false;
     }
 
-    matches!(call_expr.arguments.first(), Some(Argument::StringLiteral(_)))
+    matches!(
+        call_expr.arguments.first(),
+        Some(Argument::StringLiteral(_))
+    )
 }
 
 fn is_top_level_static_require_call(
@@ -395,11 +427,19 @@ struct RequireCallScanner<'a, 'ctx> {
 
 impl<'a, 'ctx> RequireCallScanner<'a, 'ctx> {
     fn new(ctx: &'ctx LintContext<'a>) -> Self {
-        Self { ctx, after: None, found: false }
+        Self {
+            ctx,
+            after: None,
+            found: false,
+        }
     }
 
     fn after(ctx: &'ctx LintContext<'a>, offset: u32) -> Self {
-        Self { ctx, after: Some(offset), found: false }
+        Self {
+            ctx,
+            after: Some(offset),
+            found: false,
+        }
     }
 
     fn has_match(mut self, stmt: &Statement<'a>) -> bool {
@@ -451,7 +491,9 @@ fn find_containing_statement<'a, 'b>(
 
 fn find_statement_index(body: &[Statement<'_>], span: Span) -> Option<usize> {
     let index = body.partition_point(|stmt| stmt.span().end <= span.start);
-    body.get(index).is_some_and(|stmt| stmt.span().contains_inclusive(span)).then_some(index)
+    body.get(index)
+        .is_some_and(|stmt| stmt.span().contains_inclusive(span))
+        .then_some(index)
 }
 
 fn next_statement_start(ctx: &LintContext<'_>, source_text: &str, stmt: &Statement<'_>) -> u32 {
@@ -476,19 +518,22 @@ fn next_statement_start(ctx: &LintContext<'_>, source_text: &str, stmt: &Stateme
 
 fn first_decorator_start(stmt: &Statement<'_>) -> Option<u32> {
     match stmt {
-        Statement::ClassDeclaration(class) => {
-            class.decorators.first().map(|decorator| decorator.span.start)
-        }
+        Statement::ClassDeclaration(class) => class
+            .decorators
+            .first()
+            .map(|decorator| decorator.span.start),
         Statement::ExportDefaultDeclaration(export_default) => match &export_default.declaration {
-            ExportDefaultDeclarationKind::ClassDeclaration(class) => {
-                class.decorators.first().map(|decorator| decorator.span.start)
-            }
+            ExportDefaultDeclarationKind::ClassDeclaration(class) => class
+                .decorators
+                .first()
+                .map(|decorator| decorator.span.start),
             _ => None,
         },
         Statement::ExportDeclaration(export_decl) => match &export_decl.declaration {
-            Declaration::ClassDeclaration(class) => {
-                class.decorators.first().map(|decorator| decorator.span.start)
-            }
+            Declaration::ClassDeclaration(class) => class
+                .decorators
+                .first()
+                .map(|decorator| decorator.span.start),
             _ => None,
         },
         _ => None,
@@ -530,7 +575,10 @@ fn check_spacing(
 fn line_difference(source_text: &str, current: Span, next_start: u32) -> usize {
     let start = current.end as usize;
     let end = next_start as usize;
-    source_text[start..end].bytes().filter(|&byte| byte == b'\n').count()
+    source_text[start..end]
+        .bytes()
+        .filter(|&byte| byte == b'\n')
+        .count()
 }
 
 fn find_comment_start_in_spacing_range(
@@ -562,7 +610,10 @@ var foo = require('foo');",
         ),
         (r"require('foo');", None),
         (r"switch ('foo') { case 'bar': require('baz'); }", None),
-        (r"const x = () => require('baz'), y = () => require('bar');", None),
+        (
+            r"const x = () => require('baz'), y = () => require('bar');",
+            None,
+        ),
         (
             r"const x = () => require('baz'), y = () => require('bar');
 
@@ -1078,7 +1129,10 @@ import foo from 'foo';
 var bar = 42;",
             None,
         ),
-        (r"import path from 'path';import foo from 'foo';var bar = 42;", None),
+        (
+            r"import path from 'path';import foo from 'foo';var bar = 42;",
+            None,
+        ),
         (
             r"import foo from 'foo';
 @SomeDecorator(foo)
@@ -1560,7 +1614,12 @@ var foo = 'bar';",
         ),
     ];
 
-    Tester::new(NewlineAfterImport::NAME, NewlineAfterImport::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        NewlineAfterImport::NAME,
+        NewlineAfterImport::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

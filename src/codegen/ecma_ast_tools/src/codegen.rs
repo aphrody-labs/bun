@@ -62,7 +62,11 @@ impl Codegen {
             }
         }
 
-        Self { root_path, derive_name_to_id, attr_processors }
+        Self {
+            root_path,
+            derive_name_to_id,
+            attr_processors,
+        }
     }
 
     /// Get path to root of repo.
@@ -72,9 +76,12 @@ impl Codegen {
 
     /// Get a [`Derive`] by its name.
     pub fn get_derive_id_by_name(&self, name: &str) -> DeriveId {
-        self.derive_name_to_id.get(name).copied().unwrap_or_else(|| {
-            panic!("Unknown derive trait {name:?}");
-        })
+        self.derive_name_to_id
+            .get(name)
+            .copied()
+            .unwrap_or_else(|| {
+                panic!("Unknown derive trait {name:?}");
+            })
     }
 
     /// Get processor (derive or generator) for an attribute, and legal positions for the attribute
@@ -106,7 +113,11 @@ pub fn get_runners() -> Vec<GeneratorOrDerive> {
     GENERATORS
         .iter()
         .map(|&g| GeneratorOrDerive::Generator(g))
-        .chain(DERIVES.iter().map(|&derive| GeneratorOrDerive::Derive(derive)))
+        .chain(
+            DERIVES
+                .iter()
+                .map(|&derive| GeneratorOrDerive::Derive(derive)),
+        )
         .collect()
 }
 
@@ -141,6 +152,9 @@ impl GeneratorOrDerive {
             }
         };
         let runner_outputs = result.unwrap();
-        runner_outputs.into_iter().map(|output| output.into_raw(runner_path)).collect()
+        runner_outputs
+            .into_iter()
+            .map(|output| output.into_raw(runner_path))
+            .collect()
     }
 }

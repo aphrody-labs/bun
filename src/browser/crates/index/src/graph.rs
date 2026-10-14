@@ -40,7 +40,9 @@ impl PartialOrd for Candidate {
 }
 impl Ord for Candidate {
     fn cmp(&self, other: &Self) -> Ordering {
-        self.dist.total_cmp(&other.dist).then_with(|| self.id.cmp(&other.id))
+        self.dist
+            .total_cmp(&other.dist)
+            .then_with(|| self.id.cmp(&other.id))
     }
 }
 
@@ -147,7 +149,11 @@ impl<'a> AtomicLinks<'a> {
         out.clear();
         if let Some(block) = self.block(slot, level) {
             let cnt = (block[0].load(AtomicOrdering::Relaxed) as usize).min(block.len() - 1);
-            out.extend(block[1..1 + cnt].iter().map(|a| a.load(AtomicOrdering::Relaxed)));
+            out.extend(
+                block[1..1 + cnt]
+                    .iter()
+                    .map(|a| a.load(AtomicOrdering::Relaxed)),
+            );
         }
     }
 
@@ -233,7 +239,12 @@ pub fn search_layer<S: Space, L: LinkView, F: Fn(u32) -> bool>(
     out: &mut Vec<Candidate>,
 ) {
     let ef = ef.max(1);
-    let Scratch { candidates, results, neighbours, .. } = scratch;
+    let Scratch {
+        candidates,
+        results,
+        neighbours,
+        ..
+    } = scratch;
     candidates.clear();
     results.clear();
     let mut lower = f32::INFINITY;
@@ -348,7 +359,7 @@ impl<S: Space> Inserter<'_, S> {
             None => {
                 *guard = Some((slot, level));
                 return;
-            },
+            }
             Some(e) => e,
         };
         // A node that raises the top level keeps the entry lock for its whole
@@ -363,7 +374,10 @@ impl<S: Space> Inserter<'_, S> {
 
         let layout = self.links.layout;
         let q = self.space.slot_query(slot);
-        let mut cur = Candidate { dist: self.space.dist_query(&q, ep), id: ep };
+        let mut cur = Candidate {
+            dist: self.space.dist_query(&q, ep),
+            id: ep,
+        };
         let mut buf = std::mem::take(&mut scratch.neighbours);
         for lc in (level + 1..=max_level).rev() {
             cur = greedy_closest(self.space, &self.links, &q, cur, lc, &mut buf);
@@ -407,14 +421,18 @@ impl<S: Space> Inserter<'_, S> {
                 let _g = self.links.lock(slot);
                 self.links.read_unlocked(slot, lc, &mut ids);
                 if ids.is_empty() {
-                    self.links.write_unlocked(slot, lc, selected.iter().map(|c| c.id));
+                    self.links
+                        .write_unlocked(slot, lc, selected.iter().map(|c| c.id));
                 } else {
                     let mmax = layout.block(lc) - 1;
                     prune.clear();
                     prune.extend(selected.iter().copied());
                     for &id in &ids {
                         if id != slot && !prune.iter().any(|c| c.id == id) {
-                            prune.push(Candidate { dist: self.space.dist_query(&q, id), id });
+                            prune.push(Candidate {
+                                dist: self.space.dist_query(&q, id),
+                                id,
+                            });
                         }
                     }
                     prune.sort_unstable();
@@ -426,7 +444,8 @@ impl<S: Space> Inserter<'_, S> {
                         &mut kept,
                         &mut discarded,
                     );
-                    self.links.write_unlocked(slot, lc, kept.iter().map(|c| c.id));
+                    self.links
+                        .write_unlocked(slot, lc, kept.iter().map(|c| c.id));
                 }
             }
 
@@ -488,11 +507,15 @@ impl<S: Space> Inserter<'_, S> {
         prune.clear();
         let base = self.space.slot_query(node);
         for &id in ids.iter().chain(std::iter::once(&new)) {
-            prune.push(Candidate { dist: self.space.dist_query(&base, id), id });
+            prune.push(Candidate {
+                dist: self.space.dist_query(&base, id),
+                id,
+            });
         }
         prune.sort_unstable();
         select_neighbours(self.space, prune, mmax, self.keep_pruned, kept, discarded);
-        self.links.write_unlocked(node, level, kept.iter().map(|c| c.id));
+        self.links
+            .write_unlocked(node, level, kept.iter().map(|c| c.id));
     }
 }
 

@@ -6,7 +6,10 @@ fn merge_import_and_export() {
         "import { foo }from 'foo'; import { bar } from 'bar'; import {foo2} from 'foo'; export {foo, foo2}",
         "export { foo, foo2 } from 'foo'; import { bar } from 'bar';",
     );
-    test("import { foo } from 'somewhere'; export { foo };", "export { foo } from 'somewhere';");
+    test(
+        "import { foo } from 'somewhere'; export { foo };",
+        "export { foo } from 'somewhere';",
+    );
     test(
         "import { foo as bar } from 'somewhere'; export { bar as baz };",
         "export { foo as baz } from 'somewhere';",
@@ -40,12 +43,18 @@ fn merge_import_and_export() {
         "export { foo as bar, foo as baz } from 'somewhere';",
     );
     test("import {} from 'somewhere';", "import 'somewhere';");
-    test("import {} from 'somewhere'; export {};", "import 'somewhere'; export {};");
+    test(
+        "import {} from 'somewhere'; export {};",
+        "import 'somewhere'; export {};",
+    );
     test(
         "import { foo } from 'somewhere' with { type: 'json' }; export { foo };",
         "export { foo } from 'somewhere' with { type: 'json' };",
     );
-    test("import * as foo from 'somewhere'; export { foo };", "export * as foo from 'somewhere';");
+    test(
+        "import * as foo from 'somewhere'; export { foo };",
+        "export * as foo from 'somewhere';",
+    );
     test(
         "import * as foo from 'somewhere'; export { foo as bar };",
         "export * as bar from 'somewhere';",

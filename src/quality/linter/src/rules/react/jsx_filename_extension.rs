@@ -21,15 +21,20 @@ fn no_jsx_with_filename_extension_diagnostic(
     OxcDiagnostic::warn(format!("JSX not allowed in files with extension '.{ext}'"))
         .with_help(format!(
             "Rename the file to use an allowed extension: {}",
-            allowed_extensions.iter().map(|e| format!(".{e}")).join(", ")
+            allowed_extensions
+                .iter()
+                .map(|e| format!(".{e}"))
+                .join(", ")
         ))
         .with_label(span)
 }
 
 fn extension_only_for_jsx_diagnostic(ext: &str, span: Span) -> OxcDiagnostic {
-    OxcDiagnostic::warn(format!("Only files containing JSX may use the extension '.{ext}'"))
-        .with_help("Rename the file with a good extension.")
-        .with_label(span)
+    OxcDiagnostic::warn(format!(
+        "Only files containing JSX may use the extension '.{ext}'"
+    ))
+    .with_help("Rename the file with a good extension.")
+    .with_label(span)
 }
 
 #[derive(Debug, Default, Clone, JsonSchema, Deserialize, Serialize)]
@@ -183,7 +188,10 @@ impl Rule for JsxFilenameExtension {
                 .iter()
                 .all(|&x| !matches!(x.kind(), AstKind::JSXElement(_) | AstKind::JSXFragment(_)))
             {
-                ctx.diagnostic(extension_only_for_jsx_diagnostic(file_extension, Span::new(0, 0)));
+                ctx.diagnostic(extension_only_for_jsx_diagnostic(
+                    file_extension,
+                    Span::new(0, 0),
+                ));
             }
         }
     }
@@ -255,15 +263,30 @@ fn test() {
             None,
             Some(PathBuf::from("foo.jsx")),
         ),
-        ("module.exports = {}", None, None, Some(PathBuf::from("foo.js"))),
-        ("export const foo = () => 'foo';", None, None, Some(PathBuf::from("foo.js"))),
+        (
+            "module.exports = {}",
+            None,
+            None,
+            Some(PathBuf::from("foo.js")),
+        ),
+        (
+            "export const foo = () => 'foo';",
+            None,
+            None,
+            Some(PathBuf::from("foo.js")),
+        ),
         (
             "module.exports = {}",
             Some(serde_json::json!([{ "allow": "as-needed" }])),
             None,
             Some(PathBuf::from("foo.js")),
         ),
-        ("module.exports = {}", None, None, Some(PathBuf::from("foo.jsx"))),
+        (
+            "module.exports = {}",
+            None,
+            None,
+            Some(PathBuf::from("foo.jsx")),
+        ),
         (
             "module.exports = function MyComponent() { return <div>jsx\n<div />\n</div>; }",
             Some(serde_json::json!([{ "extensions": [".js", ".jsx"] }])),
@@ -456,6 +479,11 @@ fn test() {
         ),
     ];
 
-    Tester::new(JsxFilenameExtension::NAME, JsxFilenameExtension::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        JsxFilenameExtension::NAME,
+        JsxFilenameExtension::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

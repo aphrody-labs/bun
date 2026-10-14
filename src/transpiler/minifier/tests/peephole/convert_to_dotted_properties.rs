@@ -108,7 +108,10 @@ fn test_convert_to_dotted_properties_computed_property_or_field() {
     test("class C {'x' = 0;  ['y'] = 1;}", "class C { x= 0;y= 1;}");
     test("class C {'m'() {} }", "class C {m() {}}");
 
-    test("const o = {'b'() {}, ['c']() {}};", "const o = {b() {}, c(){}};");
+    test(
+        "const o = {'b'() {}, ['c']() {}};",
+        "const o = {b() {}, c(){}};",
+    );
     test("o = {['x']: () => this};", "o = {x: () => this};");
 
     test("const o = {get ['d']() {}};", "const o = {get d() {}};");
@@ -117,7 +120,10 @@ fn test_convert_to_dotted_properties_computed_property_or_field() {
         "class C {'m'() {}  ['n']() {} 'x' = 0;  ['y'] = 1;}",
         "class C {m() {}  n() {} x= 0;y= 1;}",
     );
-    test("const o = { get ['d']() {},  set ['e'](x) {}};", "const o = {get d() {},  set e(x){}};");
+    test(
+        "const o = { get ['d']() {},  set ['e'](x) {}};",
+        "const o = {get d() {},  set e(x){}};",
+    );
     test(
         "const o = {['a']: 1,'b'() {}, ['c']() {},  get ['d']() {},  set ['e'](x) {}};",
         "const o = {a: 1,b() {}, c() {},  get d() {},  set e(x) {}};",
@@ -175,7 +181,10 @@ fn test_convert_to_dotted_properties_computed_property_or_field() {
 
     test_same("const o = {[fn()]: 0}");
     test("const test1 = {[0]:87};", "const test1 = {0:87}");
-    test("const test1 = {['default']:87};", "const test1 = {default:87};");
+    test(
+        "const test1 = {['default']:87};",
+        "const test1 = {default:87};",
+    );
     test_same("class C { ['constructor']() {} }");
     test_same("class C { ['constructor'] = 0 }");
 }
@@ -187,7 +196,10 @@ fn test_convert_to_dotted_properties_computed_property_with_default_value() {
 
 #[test]
 fn test_convert_to_dotted_properties_continue_optional_chaining() {
-    test("const opt1 = window?.a?.['b'];", "const opt1 = window?.a?.b;");
+    test(
+        "const opt1 = window?.a?.['b'];",
+        "const opt1 = window?.a?.b;",
+    );
 
     test("const opt2 = window?.a['b'];", "const opt2 = window?.a.b;");
     test(

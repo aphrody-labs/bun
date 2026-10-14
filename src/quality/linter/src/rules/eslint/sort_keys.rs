@@ -156,7 +156,9 @@ fn is_object_sorted(
                 prev_key = None;
             }
             ObjectPropertyKind::ObjectProperty(obj) => {
-                let Some(key) = obj.key.static_name() else { continue };
+                let Some(key) = obj.key.static_name() else {
+                    continue;
+                };
 
                 if let Some(ref prev) = prev_key {
                     let ordering = compare_keys(prev, &key, options);
@@ -197,7 +199,9 @@ fn compare_keys(a: &str, b: &str, options: &SortKeysOptions) -> Ordering {
     } else if options.case_sensitive {
         a.cmp(b)
     } else {
-        a.bytes().map(|b| b.to_ascii_lowercase()).cmp(b.bytes().map(|b| b.to_ascii_lowercase()))
+        a.bytes()
+            .map(|b| b.to_ascii_lowercase())
+            .cmp(b.bytes().map(|b| b.to_ascii_lowercase()))
     }
 }
 
@@ -250,8 +254,13 @@ fn build_object_fix<'a>(
 ) -> Option<(Span, String)> {
     let props = collect_fixable_properties(object, ctx, sort_order, options)?;
     let indices = sorted_property_indices(&props, sort_order, options);
-    let has_nested_fix = props.iter().any(|prop| prop.text.as_ref() != ctx.source_range(prop.span));
-    let needs_reordering = indices.iter().enumerate().any(|(position, index)| position != *index);
+    let has_nested_fix = props
+        .iter()
+        .any(|prop| prop.text.as_ref() != ctx.source_range(prop.span));
+    let needs_reordering = indices
+        .iter()
+        .enumerate()
+        .any(|(position, index)| position != *index);
 
     if !needs_reordering && !has_nested_fix {
         return None;
@@ -260,7 +269,8 @@ fn build_object_fix<'a>(
     // Derive a canonical inter-property whitespace pattern from the first gap in the source
     let canonical_ws: Cow<'_, str> = if let [first, second, ..] = props.as_slice() {
         let raw = ctx.source_range(Span::new(first.span.end, second.span.start));
-        raw.split_once(',').map_or(Cow::Borrowed(raw), |(b, a)| Cow::Owned(format!("{b}{a}")))
+        raw.split_once(',')
+            .map_or(Cow::Borrowed(raw), |(b, a)| Cow::Owned(format!("{b}{a}")))
     } else {
         Cow::Borrowed(" ")
     };
@@ -285,7 +295,10 @@ fn build_object_fix<'a>(
         sorted_text.push(',');
     }
 
-    Some((Span::new(props[0].span.start, props[props.len() - 1].span.end), sorted_text))
+    Some((
+        Span::new(props[0].span.start, props[props.len() - 1].span.end),
+        sorted_text,
+    ))
 }
 
 fn collect_fixable_properties<'a>(
@@ -312,8 +325,10 @@ fn collect_fixable_properties<'a>(
         .iter()
         .enumerate()
         .map(|(i, prop)| {
-            let trailing_boundary =
-                object.properties.get(i + 1).map_or(object.span.end, |next| next.span().start);
+            let trailing_boundary = object
+                .properties
+                .get(i + 1)
+                .map_or(object.span.end, |next| next.span().start);
             lift_property_span(prop.span(), trailing_boundary, ctx)
         })
         .collect();
@@ -453,8 +468,16 @@ fn natural_compare(a: &str, b: &str, case_sensitive: bool) -> Ordering {
             (Some(_), None) => return Ordering::Greater,
             (None, Some(_)) => return Ordering::Less,
             (Some(a_raw), Some(b_raw)) => {
-                let a_char = if case_sensitive { a_raw } else { a_raw.to_ascii_lowercase() };
-                let b_char = if case_sensitive { b_raw } else { b_raw.to_ascii_lowercase() };
+                let a_char = if case_sensitive {
+                    a_raw
+                } else {
+                    a_raw.to_ascii_lowercase()
+                };
+                let b_char = if case_sensitive {
+                    b_raw
+                } else {
+                    b_raw.to_ascii_lowercase()
+                };
 
                 if a_char == b_char {
                     continue;
@@ -516,48 +539,117 @@ fn test() {
         ("var obj = {[``]:1, '':2}", Some(serde_json::json!([]))), // { "ecmaVersion": 6 },
         ("var obj = {'':1, a:2}", Some(serde_json::json!([]))),
         ("var obj = {[``]:1, a:2}", Some(serde_json::json!([]))), // { "ecmaVersion": 6 },
-        ("var obj = {_:2, a:1, b:3} // default", Some(serde_json::json!([]))),
+        (
+            "var obj = {_:2, a:1, b:3} // default",
+            Some(serde_json::json!([])),
+        ),
         ("var obj = {a:1, b:3, c:2}", Some(serde_json::json!([]))),
         ("var obj = {a:2, b:3, b_:1}", Some(serde_json::json!([]))),
         ("var obj = {C:3, b_:1, c:2}", Some(serde_json::json!([]))),
-        ("var obj = {$:1, A:3, _:2, a:4}", Some(serde_json::json!([]))),
-        ("var obj = {1:1, '11':2, 2:4, A:3}", Some(serde_json::json!([]))),
-        ("var obj = {'#':1, 'Z':2, À:3, è:4}", Some(serde_json::json!([]))),
-        ("var obj = { [/(?<zero>0)/]: 1, '/(?<zero>0)/': 2 }", Some(serde_json::json!([]))), // { "ecmaVersion": 2018 },
+        (
+            "var obj = {$:1, A:3, _:2, a:4}",
+            Some(serde_json::json!([])),
+        ),
+        (
+            "var obj = {1:1, '11':2, 2:4, A:3}",
+            Some(serde_json::json!([])),
+        ),
+        (
+            "var obj = {'#':1, 'Z':2, À:3, è:4}",
+            Some(serde_json::json!([])),
+        ),
+        (
+            "var obj = { [/(?<zero>0)/]: 1, '/(?<zero>0)/': 2 }",
+            Some(serde_json::json!([])),
+        ), // { "ecmaVersion": 2018 },
         // ("var obj = {a:1, b:3, [a + b]: -1, c:2}", Some(serde_json::json!([]))), // { "ecmaVersion": 6 },
-        ("var obj = {'':1, [f()]:2, a:3}", Some(serde_json::json!([]))), // { "ecmaVersion": 6 },
+        (
+            "var obj = {'':1, [f()]:2, a:3}",
+            Some(serde_json::json!([])),
+        ), // { "ecmaVersion": 6 },
         // ("var obj = {a:1, [b++]:2, '':3}", Some(serde_json::json!(["desc"]))), // { "ecmaVersion": 6 },
         ("var obj = {a:1, ...z, b:1}", Some(serde_json::json!([]))), // { "ecmaVersion": 2018 },
         ("var obj = {b:1, ...z, a:1}", Some(serde_json::json!([]))), // { "ecmaVersion": 2018 },
-        ("var obj = {...a, b:1, ...c, d:1}", Some(serde_json::json!([]))), // { "ecmaVersion": 2018 },
-        ("var obj = {...a, b:1, ...d, ...c, e:2, z:5}", Some(serde_json::json!([]))), // { "ecmaVersion": 2018 },
-        ("var obj = {b:1, ...c, ...d, e:2}", Some(serde_json::json!([]))), // { "ecmaVersion": 2018 },
+        (
+            "var obj = {...a, b:1, ...c, d:1}",
+            Some(serde_json::json!([])),
+        ), // { "ecmaVersion": 2018 },
+        (
+            "var obj = {...a, b:1, ...d, ...c, e:2, z:5}",
+            Some(serde_json::json!([])),
+        ), // { "ecmaVersion": 2018 },
+        (
+            "var obj = {b:1, ...c, ...d, e:2}",
+            Some(serde_json::json!([])),
+        ), // { "ecmaVersion": 2018 },
         ("var obj = {a:1, ...z, '':2}", Some(serde_json::json!([]))), // { "ecmaVersion": 2018 },
-        ("var obj = {'':1, ...z, 'a':2}", Some(serde_json::json!(["desc"]))), // { "ecmaVersion": 2018 },
+        (
+            "var obj = {'':1, ...z, 'a':2}",
+            Some(serde_json::json!(["desc"])),
+        ), // { "ecmaVersion": 2018 },
         ("var obj = {...z, a:1, b:1}", Some(serde_json::json!([]))), // { "ecmaVersion": 2018 },
-        ("var obj = {...z, ...c, a:1, b:1}", Some(serde_json::json!([]))), // { "ecmaVersion": 2018 },
+        (
+            "var obj = {...z, ...c, a:1, b:1}",
+            Some(serde_json::json!([])),
+        ), // { "ecmaVersion": 2018 },
         ("var obj = {a:1, b:1, ...z}", Some(serde_json::json!([]))), // { "ecmaVersion": 2018 },
-        ("var obj = {...z, ...x, a:1, ...c, ...d, f:5, e:4}", Some(serde_json::json!(["desc"]))), // { "ecmaVersion": 2018 },
-        ("function fn(...args) { return [...args].length; }", Some(serde_json::json!([]))), // { "ecmaVersion": 2018 },
+        (
+            "var obj = {...z, ...x, a:1, ...c, ...d, f:5, e:4}",
+            Some(serde_json::json!(["desc"])),
+        ), // { "ecmaVersion": 2018 },
+        (
+            "function fn(...args) { return [...args].length; }",
+            Some(serde_json::json!([])),
+        ), // { "ecmaVersion": 2018 },
         (
             "function g() {}; function f(...args) { return g(...args); }",
             Some(serde_json::json!([])),
         ), // { "ecmaVersion": 2018 },
-        ("let {a, b} = {}", Some(serde_json::json!([]))), // { "ecmaVersion": 6 },
-        ("var obj = {a:1, b:{x:1, y:1}, c:1}", Some(serde_json::json!([]))),
-        ("var obj = {_:2, a:1, b:3} // asc", Some(serde_json::json!(["asc"]))),
-        ("var obj = {a:1, b:3, c:2}", Some(serde_json::json!(["asc"]))),
-        ("var obj = {a:2, b:3, b_:1}", Some(serde_json::json!(["asc"]))),
-        ("var obj = {C:3, b_:1, c:2}", Some(serde_json::json!(["asc"]))),
-        ("var obj = {$:1, A:3, _:2, a:4}", Some(serde_json::json!(["asc"]))),
-        ("var obj = {1:1, '11':2, 2:4, A:3}", Some(serde_json::json!(["asc"]))),
-        ("var obj = {'#':1, 'Z':2, À:3, è:4}", Some(serde_json::json!(["asc"]))),
-        ("var obj = {a:1, c:2, b:3}", Some(serde_json::json!(["asc", { "minKeys": 4 }]))),
+        ("let {a, b} = {}", Some(serde_json::json!([]))),            // { "ecmaVersion": 6 },
+        (
+            "var obj = {a:1, b:{x:1, y:1}, c:1}",
+            Some(serde_json::json!([])),
+        ),
+        (
+            "var obj = {_:2, a:1, b:3} // asc",
+            Some(serde_json::json!(["asc"])),
+        ),
+        (
+            "var obj = {a:1, b:3, c:2}",
+            Some(serde_json::json!(["asc"])),
+        ),
+        (
+            "var obj = {a:2, b:3, b_:1}",
+            Some(serde_json::json!(["asc"])),
+        ),
+        (
+            "var obj = {C:3, b_:1, c:2}",
+            Some(serde_json::json!(["asc"])),
+        ),
+        (
+            "var obj = {$:1, A:3, _:2, a:4}",
+            Some(serde_json::json!(["asc"])),
+        ),
+        (
+            "var obj = {1:1, '11':2, 2:4, A:3}",
+            Some(serde_json::json!(["asc"])),
+        ),
+        (
+            "var obj = {'#':1, 'Z':2, À:3, è:4}",
+            Some(serde_json::json!(["asc"])),
+        ),
+        (
+            "var obj = {a:1, c:2, b:3}",
+            Some(serde_json::json!(["asc", { "minKeys": 4 }])),
+        ),
         (
             "var obj = {_:2, a:1, b:3} // asc, insensitive",
             Some(serde_json::json!(["asc", { "caseSensitive": false }])),
         ),
-        ("var obj = {a:1, b:3, c:2}", Some(serde_json::json!(["asc", { "caseSensitive": false }]))),
+        (
+            "var obj = {a:1, b:3, c:2}",
+            Some(serde_json::json!(["asc", { "caseSensitive": false }])),
+        ),
         (
             "var obj = {a:2, b:3, b_:1}",
             Some(serde_json::json!(["asc", { "caseSensitive": false }])),
@@ -590,10 +682,22 @@ fn test() {
             "var obj = {_:2, a:1, b:3} // asc, natural",
             Some(serde_json::json!(["asc", { "natural": true }])),
         ),
-        ("var obj = {a:1, b:3, c:2}", Some(serde_json::json!(["asc", { "natural": true }]))),
-        ("var obj = {a:2, b:3, b_:1}", Some(serde_json::json!(["asc", { "natural": true }]))),
-        ("var obj = {C:3, b_:1, c:2}", Some(serde_json::json!(["asc", { "natural": true }]))),
-        ("var obj = {$:1, _:2, A:3, a:4}", Some(serde_json::json!(["asc", { "natural": true }]))),
+        (
+            "var obj = {a:1, b:3, c:2}",
+            Some(serde_json::json!(["asc", { "natural": true }])),
+        ),
+        (
+            "var obj = {a:2, b:3, b_:1}",
+            Some(serde_json::json!(["asc", { "natural": true }])),
+        ),
+        (
+            "var obj = {C:3, b_:1, c:2}",
+            Some(serde_json::json!(["asc", { "natural": true }])),
+        ),
+        (
+            "var obj = {$:1, _:2, A:3, a:4}",
+            Some(serde_json::json!(["asc", { "natural": true }])),
+        ),
         (
             "var obj = {1:1, 2:4, '11':2, A:3}",
             Some(serde_json::json!(["asc", { "natural": true }])),
@@ -602,7 +706,10 @@ fn test() {
             "var obj = {'#':1, 'Z':2, À:3, è:4}",
             Some(serde_json::json!(["asc", { "natural": true }])),
         ),
-        ("var obj = {'a²': 1, 'b³': 2}", Some(serde_json::json!(["asc", { "natural": true }]))),
+        (
+            "var obj = {'a²': 1, 'b³': 2}",
+            Some(serde_json::json!(["asc", { "natural": true }])),
+        ),
         (
             "var obj = {b_:1, a:2, b:3}",
             Some(serde_json::json!(["asc", { "natural": true, "minKeys": 4 }])),
@@ -645,14 +752,38 @@ fn test() {
                 serde_json::json!(["asc", { "natural": true, "caseSensitive": false, "minKeys": 4 }]),
             ),
         ),
-        ("var obj = {b:3, a:1, _:2} // desc", Some(serde_json::json!(["desc"]))),
-        ("var obj = {c:2, b:3, a:1}", Some(serde_json::json!(["desc"]))),
-        ("var obj = {b_:1, b:3, a:2}", Some(serde_json::json!(["desc"]))),
-        ("var obj = {c:2, b_:1, C:3}", Some(serde_json::json!(["desc"]))),
-        ("var obj = {a:4, _:2, A:3, $:1}", Some(serde_json::json!(["desc"]))),
-        ("var obj = {A:3, 2:4, '11':2, 1:1}", Some(serde_json::json!(["desc"]))),
-        ("var obj = {è:4, À:3, 'Z':2, '#':1}", Some(serde_json::json!(["desc"]))),
-        ("var obj = {a:1, c:2, b:3}", Some(serde_json::json!(["desc", { "minKeys": 4 }]))),
+        (
+            "var obj = {b:3, a:1, _:2} // desc",
+            Some(serde_json::json!(["desc"])),
+        ),
+        (
+            "var obj = {c:2, b:3, a:1}",
+            Some(serde_json::json!(["desc"])),
+        ),
+        (
+            "var obj = {b_:1, b:3, a:2}",
+            Some(serde_json::json!(["desc"])),
+        ),
+        (
+            "var obj = {c:2, b_:1, C:3}",
+            Some(serde_json::json!(["desc"])),
+        ),
+        (
+            "var obj = {a:4, _:2, A:3, $:1}",
+            Some(serde_json::json!(["desc"])),
+        ),
+        (
+            "var obj = {A:3, 2:4, '11':2, 1:1}",
+            Some(serde_json::json!(["desc"])),
+        ),
+        (
+            "var obj = {è:4, À:3, 'Z':2, '#':1}",
+            Some(serde_json::json!(["desc"])),
+        ),
+        (
+            "var obj = {a:1, c:2, b:3}",
+            Some(serde_json::json!(["desc", { "minKeys": 4 }])),
+        ),
         (
             "var obj = {b:3, a:1, _:2} // desc, insensitive",
             Some(serde_json::json!(["desc", { "caseSensitive": false }])),
@@ -693,10 +824,22 @@ fn test() {
             "var obj = {b:3, a:1, _:2} // desc, natural",
             Some(serde_json::json!(["desc", { "natural": true }])),
         ),
-        ("var obj = {c:2, b:3, a:1}", Some(serde_json::json!(["desc", { "natural": true }]))),
-        ("var obj = {b_:1, b:3, a:2}", Some(serde_json::json!(["desc", { "natural": true }]))),
-        ("var obj = {c:2, b_:1, C:3}", Some(serde_json::json!(["desc", { "natural": true }]))),
-        ("var obj = {a:4, A:3, _:2, $:1}", Some(serde_json::json!(["desc", { "natural": true }]))),
+        (
+            "var obj = {c:2, b:3, a:1}",
+            Some(serde_json::json!(["desc", { "natural": true }])),
+        ),
+        (
+            "var obj = {b_:1, b:3, a:2}",
+            Some(serde_json::json!(["desc", { "natural": true }])),
+        ),
+        (
+            "var obj = {c:2, b_:1, C:3}",
+            Some(serde_json::json!(["desc", { "natural": true }])),
+        ),
+        (
+            "var obj = {a:4, A:3, _:2, $:1}",
+            Some(serde_json::json!(["desc", { "natural": true }])),
+        ),
         (
             "var obj = {A:3, '11':2, 2:4, 1:1}",
             Some(serde_json::json!(["desc", { "natural": true }])),
@@ -952,31 +1095,82 @@ fn test() {
         ("var obj = {'#':1, À:3, 'Z':2, è:4}", None),
         ("var obj = { null: 1, [/(?<zero>0)/]: 2 }", None), // { "ecmaVersion": 2018 },
         ("var obj = {...z, c:1, b:1}", Some(serde_json::json!([]))), // { "ecmaVersion": 2018 },
-        ("var obj = {...z, ...c, d:4, b:1, ...y, ...f, e:2, a:1}", Some(serde_json::json!([]))), // { "ecmaVersion": 2018 },
+        (
+            "var obj = {...z, ...c, d:4, b:1, ...y, ...f, e:2, a:1}",
+            Some(serde_json::json!([])),
+        ), // { "ecmaVersion": 2018 },
         ("var obj = {c:1, b:1, ...a}", Some(serde_json::json!([]))), // { "ecmaVersion": 2018 },
-        ("var obj = {...z, ...a, c:1, b:1}", Some(serde_json::json!([]))), // { "ecmaVersion": 2018 },
-        ("var obj = {...z, b:1, a:1, ...d, ...c}", Some(serde_json::json!([]))), // { "ecmaVersion": 2018 },
-        ("var obj = {...z, a:2, b:0, ...x, ...c}", Some(serde_json::json!(["desc"]))), // { "ecmaVersion": 2018 },
-        ("var obj = {...z, a:2, b:0, ...x}", Some(serde_json::json!(["desc"]))), // { "ecmaVersion": 2018 },
-        ("var obj = {...z, '':1, a:2}", Some(serde_json::json!(["desc"]))), // { "ecmaVersion": 2018 },
-        ("var obj = {a:1, [b+c]:2, '':3}", None),                           // { "ecmaVersion": 6 },
-        ("var obj = {'':1, [b+c]:2, a:3}", Some(serde_json::json!(["desc"]))), // { "ecmaVersion": 6 },
-        ("var obj = {b:1, [f()]:2, '':3, a:4}", Some(serde_json::json!(["desc"]))), // { "ecmaVersion": 6 },
+        (
+            "var obj = {...z, ...a, c:1, b:1}",
+            Some(serde_json::json!([])),
+        ), // { "ecmaVersion": 2018 },
+        (
+            "var obj = {...z, b:1, a:1, ...d, ...c}",
+            Some(serde_json::json!([])),
+        ), // { "ecmaVersion": 2018 },
+        (
+            "var obj = {...z, a:2, b:0, ...x, ...c}",
+            Some(serde_json::json!(["desc"])),
+        ), // { "ecmaVersion": 2018 },
+        (
+            "var obj = {...z, a:2, b:0, ...x}",
+            Some(serde_json::json!(["desc"])),
+        ), // { "ecmaVersion": 2018 },
+        (
+            "var obj = {...z, '':1, a:2}",
+            Some(serde_json::json!(["desc"])),
+        ), // { "ecmaVersion": 2018 },
+        ("var obj = {a:1, [b+c]:2, '':3}", None),           // { "ecmaVersion": 6 },
+        (
+            "var obj = {'':1, [b+c]:2, a:3}",
+            Some(serde_json::json!(["desc"])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "var obj = {b:1, [f()]:2, '':3, a:4}",
+            Some(serde_json::json!(["desc"])),
+        ), // { "ecmaVersion": 6 },
         // ("var obj = {a:1, b:3, [a]: -1, c:2}", None), // { "ecmaVersion": 6 },
         ("var obj = {a:1, c:{y:1, x:1}, b:1}", None),
-        ("var obj = {a:1, _:2, b:3} // asc", Some(serde_json::json!(["asc"]))),
-        ("var obj = {a:1, c:2, b:3}", Some(serde_json::json!(["asc"]))),
-        ("var obj = {b_:1, a:2, b:3}", Some(serde_json::json!(["asc"]))),
-        ("var obj = {b_:1, c:2, C:3}", Some(serde_json::json!(["asc"]))),
-        ("var obj = {$:1, _:2, A:3, a:4}", Some(serde_json::json!(["asc"]))),
-        ("var obj = {1:1, 2:4, A:3, '11':2}", Some(serde_json::json!(["asc"]))),
-        ("var obj = {'#':1, À:3, 'Z':2, è:4}", Some(serde_json::json!(["asc"]))),
-        ("var obj = {a:1, _:2, b:3}", Some(serde_json::json!(["asc", { "minKeys": 3 }]))),
+        (
+            "var obj = {a:1, _:2, b:3} // asc",
+            Some(serde_json::json!(["asc"])),
+        ),
+        (
+            "var obj = {a:1, c:2, b:3}",
+            Some(serde_json::json!(["asc"])),
+        ),
+        (
+            "var obj = {b_:1, a:2, b:3}",
+            Some(serde_json::json!(["asc"])),
+        ),
+        (
+            "var obj = {b_:1, c:2, C:3}",
+            Some(serde_json::json!(["asc"])),
+        ),
+        (
+            "var obj = {$:1, _:2, A:3, a:4}",
+            Some(serde_json::json!(["asc"])),
+        ),
+        (
+            "var obj = {1:1, 2:4, A:3, '11':2}",
+            Some(serde_json::json!(["asc"])),
+        ),
+        (
+            "var obj = {'#':1, À:3, 'Z':2, è:4}",
+            Some(serde_json::json!(["asc"])),
+        ),
+        (
+            "var obj = {a:1, _:2, b:3}",
+            Some(serde_json::json!(["asc", { "minKeys": 3 }])),
+        ),
         (
             "var obj = {a:1, _:2, b:3} // asc, insensitive",
             Some(serde_json::json!(["asc", { "caseSensitive": false }])),
         ),
-        ("var obj = {a:1, c:2, b:3}", Some(serde_json::json!(["asc", { "caseSensitive": false }]))),
+        (
+            "var obj = {a:1, c:2, b:3}",
+            Some(serde_json::json!(["asc", { "caseSensitive": false }])),
+        ),
         (
             "var obj = {b_:1, a:2, b:3}",
             Some(serde_json::json!(["asc", { "caseSensitive": false }])),
@@ -1001,10 +1195,22 @@ fn test() {
             "var obj = {a:1, _:2, b:3} // asc, natural",
             Some(serde_json::json!(["asc", { "natural": true }])),
         ),
-        ("var obj = {a:1, c:2, b:3}", Some(serde_json::json!(["asc", { "natural": true }]))),
-        ("var obj = {b_:1, a:2, b:3}", Some(serde_json::json!(["asc", { "natural": true }]))),
-        ("var obj = {b_:1, c:2, C:3}", Some(serde_json::json!(["asc", { "natural": true }]))),
-        ("var obj = {$:1, A:3, _:2, a:4}", Some(serde_json::json!(["asc", { "natural": true }]))),
+        (
+            "var obj = {a:1, c:2, b:3}",
+            Some(serde_json::json!(["asc", { "natural": true }])),
+        ),
+        (
+            "var obj = {b_:1, a:2, b:3}",
+            Some(serde_json::json!(["asc", { "natural": true }])),
+        ),
+        (
+            "var obj = {b_:1, c:2, C:3}",
+            Some(serde_json::json!(["asc", { "natural": true }])),
+        ),
+        (
+            "var obj = {$:1, A:3, _:2, a:4}",
+            Some(serde_json::json!(["asc", { "natural": true }])),
+        ),
         (
             "var obj = {1:1, 2:4, A:3, '11':2}",
             Some(serde_json::json!(["asc", { "natural": true }])),
@@ -1047,16 +1253,46 @@ fn test() {
                 serde_json::json!(["asc", { "natural": true, "caseSensitive": false, "minKeys": 3 }]),
             ),
         ),
-        ("var obj = {'':1, a:'2'} // desc", Some(serde_json::json!(["desc"]))),
-        ("var obj = {[``]:1, a:'2'} // desc", Some(serde_json::json!(["desc"]))), // { "ecmaVersion": 6 },
-        ("var obj = {a:1, _:2, b:3} // desc", Some(serde_json::json!(["desc"]))),
-        ("var obj = {a:1, c:2, b:3}", Some(serde_json::json!(["desc"]))),
-        ("var obj = {b_:1, a:2, b:3}", Some(serde_json::json!(["desc"]))),
-        ("var obj = {b_:1, c:2, C:3}", Some(serde_json::json!(["desc"]))),
-        ("var obj = {$:1, _:2, A:3, a:4}", Some(serde_json::json!(["desc"]))),
-        ("var obj = {1:1, 2:4, A:3, '11':2}", Some(serde_json::json!(["desc"]))),
-        ("var obj = {'#':1, À:3, 'Z':2, è:4}", Some(serde_json::json!(["desc"]))),
-        ("var obj = {a:1, _:2, b:3}", Some(serde_json::json!(["desc", { "minKeys": 3 }]))),
+        (
+            "var obj = {'':1, a:'2'} // desc",
+            Some(serde_json::json!(["desc"])),
+        ),
+        (
+            "var obj = {[``]:1, a:'2'} // desc",
+            Some(serde_json::json!(["desc"])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "var obj = {a:1, _:2, b:3} // desc",
+            Some(serde_json::json!(["desc"])),
+        ),
+        (
+            "var obj = {a:1, c:2, b:3}",
+            Some(serde_json::json!(["desc"])),
+        ),
+        (
+            "var obj = {b_:1, a:2, b:3}",
+            Some(serde_json::json!(["desc"])),
+        ),
+        (
+            "var obj = {b_:1, c:2, C:3}",
+            Some(serde_json::json!(["desc"])),
+        ),
+        (
+            "var obj = {$:1, _:2, A:3, a:4}",
+            Some(serde_json::json!(["desc"])),
+        ),
+        (
+            "var obj = {1:1, 2:4, A:3, '11':2}",
+            Some(serde_json::json!(["desc"])),
+        ),
+        (
+            "var obj = {'#':1, À:3, 'Z':2, è:4}",
+            Some(serde_json::json!(["desc"])),
+        ),
+        (
+            "var obj = {a:1, _:2, b:3}",
+            Some(serde_json::json!(["desc", { "minKeys": 3 }])),
+        ),
         (
             "var obj = {a:1, _:2, b:3} // desc, insensitive",
             Some(serde_json::json!(["desc", { "caseSensitive": false }])),
@@ -1093,10 +1329,22 @@ fn test() {
             "var obj = {a:1, _:2, b:3} // desc, natural",
             Some(serde_json::json!(["desc", { "natural": true }])),
         ),
-        ("var obj = {a:1, c:2, b:3}", Some(serde_json::json!(["desc", { "natural": true }]))),
-        ("var obj = {b_:1, a:2, b:3}", Some(serde_json::json!(["desc", { "natural": true }]))),
-        ("var obj = {b_:1, c:2, C:3}", Some(serde_json::json!(["desc", { "natural": true }]))),
-        ("var obj = {$:1, _:2, A:3, a:4}", Some(serde_json::json!(["desc", { "natural": true }]))),
+        (
+            "var obj = {a:1, c:2, b:3}",
+            Some(serde_json::json!(["desc", { "natural": true }])),
+        ),
+        (
+            "var obj = {b_:1, a:2, b:3}",
+            Some(serde_json::json!(["desc", { "natural": true }])),
+        ),
+        (
+            "var obj = {b_:1, c:2, C:3}",
+            Some(serde_json::json!(["desc", { "natural": true }])),
+        ),
+        (
+            "var obj = {$:1, _:2, A:3, a:4}",
+            Some(serde_json::json!(["desc", { "natural": true }])),
+        ),
         (
             "var obj = {1:1, 2:4, A:3, '11':2}",
             Some(serde_json::json!(["desc", { "natural": true }])),
@@ -1300,15 +1548,27 @@ fn test() {
         // Spreading at the start when one of the keys is the empty string
         ("var obj = {...z, a:1, '':2}", "var obj = {...z, '':2, a:1}"),
         // No fix when a leading spread has a trailing comment
-        ("var obj = {...z, /*c*/ b:1, a:2}", "var obj = {...z, /*c*/ b:1, a:2}"),
+        (
+            "var obj = {...z, /*c*/ b:1, a:2}",
+            "var obj = {...z, /*c*/ b:1, a:2}",
+        ),
         // Spreading multiple times at the start
-        ("var obj = {...z, ...y, b:1, a:2,}", "var obj = {...z, ...y, a:2, b:1,}"),
+        (
+            "var obj = {...z, ...y, b:1, a:2,}",
+            "var obj = {...z, ...y, a:2, b:1,}",
+        ),
         // Spreading at the end
         ("var obj = { b:1, a:2, ...z}", "var obj = { a:2, b:1, ...z}"),
         // Spreading multiple times at the end
-        ("var obj = {b:1, a:2, ...z, ...y}", "var obj = {a:2, b:1, ...z, ...y}"),
+        (
+            "var obj = {b:1, a:2, ...z, ...y}",
+            "var obj = {a:2, b:1, ...z, ...y}",
+        ),
         // Spreading at both the start and end
-        ("var obj = {...z, b:1, a:2, ...y}", "var obj = {...z, a:2, b:1, ...y}"),
+        (
+            "var obj = {...z, b:1, a:2, ...y}",
+            "var obj = {...z, a:2, b:1, ...y}",
+        ),
         // Spreading multiple times at both the start and end
         (
             "var obj = { ...z, ...y, b:1, a:2, ...x, ...w, }",
@@ -1520,7 +1780,10 @@ fn test() {
             "const values = { /* comment */ b: 2, a: 1}",
             "const values = { /* comment */ b: 2, a: 1}",
         ),
-        ("const values = {b: 2, /* comment */ a: 1}", "const values = {b: 2, /* comment */ a: 1}"),
+        (
+            "const values = {b: 2, /* comment */ a: 1}",
+            "const values = {b: 2, /* comment */ a: 1}",
+        ),
         (
             "const values = {b: 2, a: 1 /* comment */ }",
             "const values = {b: 2, a: 1 /* comment */ }",
@@ -1528,5 +1791,7 @@ fn test() {
         // ****************
     ];
 
-    Tester::new(SortKeys::NAME, SortKeys::PLUGIN, pass, fail).expect_fix(fix).test_and_snapshot();
+    Tester::new(SortKeys::NAME, SortKeys::PLUGIN, pass, fail)
+        .expect_fix(fix)
+        .test_and_snapshot();
 }

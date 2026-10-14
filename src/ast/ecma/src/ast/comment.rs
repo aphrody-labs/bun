@@ -230,13 +230,19 @@ impl Comment {
     /// Returns `true` if this is a line comment.
     #[inline]
     pub fn is_line(self) -> bool {
-        matches!(self.kind, CommentKind::Line | CommentKind::HtmlOpen | CommentKind::HtmlClose)
+        matches!(
+            self.kind,
+            CommentKind::Line | CommentKind::HtmlOpen | CommentKind::HtmlClose
+        )
     }
 
     /// Returns `true` if this is a block comment (either single-line or multi-line).
     #[inline]
     pub fn is_block(self) -> bool {
-        matches!(self.kind, CommentKind::SingleLineBlock | CommentKind::MultiLineBlock)
+        matches!(
+            self.kind,
+            CommentKind::SingleLineBlock | CommentKind::MultiLineBlock
+        )
     }
 
     /// Returns `true` if this is a multi-line block comment.
@@ -275,8 +281,10 @@ impl Comment {
     /// Returns `true` if this comment is a JSDoc comment. Implies `is_leading` and `is_block`.
     #[inline]
     pub fn is_jsdoc(self) -> bool {
-        matches!(self.content, CommentContent::Jsdoc | CommentContent::JsdocLegal)
-            && self.is_leading()
+        matches!(
+            self.content,
+            CommentContent::Jsdoc | CommentContent::JsdocLegal
+        ) && self.is_leading()
     }
 
     /// Legal comments
@@ -287,8 +295,10 @@ impl Comment {
     /// <https://esbuild.github.io/api/#legal-comments>
     #[inline]
     pub fn is_legal(self) -> bool {
-        matches!(self.content, CommentContent::Legal | CommentContent::JsdocLegal)
-            && self.is_leading()
+        matches!(
+            self.content,
+            CommentContent::Legal | CommentContent::JsdocLegal
+        ) && self.is_leading()
     }
 
     /// Is `/* @__PURE__*/`.
@@ -330,8 +340,10 @@ impl Comment {
     /// Is coverage ignore comment.
     #[inline]
     pub fn is_coverage_ignore(self) -> bool {
-        matches!(self.content, CommentContent::CoverageIgnore | CommentContent::CoverageIgnoreFile)
-            && self.is_leading()
+        matches!(
+            self.content,
+            CommentContent::CoverageIgnore | CommentContent::CoverageIgnoreFile
+        ) && self.is_leading()
     }
 
     /// Is a file-level coverage ignore comment.
@@ -361,12 +373,14 @@ impl Comment {
     /// Sets the state of `newlines` to include/exclude a newline before the comment.
     #[inline]
     pub fn set_preceded_by_newline(&mut self, preceded_by_newline: bool) {
-        self.newlines.set(CommentNewlines::Leading, preceded_by_newline);
+        self.newlines
+            .set(CommentNewlines::Leading, preceded_by_newline);
     }
 
     /// Sets the state of `newlines` to include/exclude a newline after the comment.
     #[inline]
     pub fn set_followed_by_newline(&mut self, followed_by_newline: bool) {
-        self.newlines.set(CommentNewlines::Trailing, followed_by_newline);
+        self.newlines
+            .set(CommentNewlines::Trailing, followed_by_newline);
     }
 }

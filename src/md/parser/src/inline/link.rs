@@ -47,7 +47,16 @@ impl Tokenizer<'_, '_> {
         if self.t.as_bytes().get(p + 1) == Some(&b'(')
             && let Some((dest, angle_bracketed, title, end)) = scan_inline_suffix(self.t, p + 1)
         {
-            self.make_link(b, PLinkKind::Inline { dest, angle_bracketed, title }, p, end);
+            self.make_link(
+                b,
+                PLinkKind::Inline {
+                    dest,
+                    angle_bracketed,
+                    title,
+                },
+                p,
+                end,
+            );
             return;
         }
 
@@ -62,7 +71,10 @@ impl Tokenizer<'_, '_> {
                 if self.lookup(&inner) {
                     self.make_link(
                         b,
-                        PLinkKind::Reference { kind: ReferenceKind::Collapsed, label: inner },
+                        PLinkKind::Reference {
+                            kind: ReferenceKind::Collapsed,
+                            label: inner,
+                        },
                         p,
                         p + 3,
                     );
@@ -77,7 +89,10 @@ impl Tokenizer<'_, '_> {
             if self.lookup(&label) {
                 self.make_link(
                     b,
-                    PLinkKind::Reference { kind: ReferenceKind::Full, label },
+                    PLinkKind::Reference {
+                        kind: ReferenceKind::Full,
+                        label,
+                    },
                     p,
                     label_close,
                 );
@@ -95,7 +110,10 @@ impl Tokenizer<'_, '_> {
         if self.lookup(&inner) {
             self.make_link(
                 b,
-                PLinkKind::Reference { kind: ReferenceKind::Shortcut, label: inner },
+                PLinkKind::Reference {
+                    kind: ReferenceKind::Shortcut,
+                    label: inner,
+                },
                 p,
                 p + 1,
             );
@@ -120,7 +138,10 @@ impl Tokenizer<'_, '_> {
     /// Definition-map probe;
     /// skips normalization entirely when the document has no definitions.
     fn lookup(&self, label: &Range<usize>) -> bool {
-        !self.refs.is_empty() && self.refs.contains(&label::normalize(&self.t[label.clone()]))
+        !self.refs.is_empty()
+            && self
+                .refs
+                .contains(&label::normalize(&self.t[label.clone()]))
     }
 
     /// The shared failure tail: drop the bracket, keep the `]` as text.

@@ -204,7 +204,10 @@ impl NoThisBeforeSuper {
                             EdgeType::Error(ErrorEdgeKind::Explicit) | EdgeType::Finalize
                         )
                     }) {
-                        (DefinitelyCallsThisBeforeSuper::Maybe(*basic_block_id), false)
+                        (
+                            DefinitelyCallsThisBeforeSuper::Maybe(*basic_block_id),
+                            false,
+                        )
                     // Otherwise we know for sure that super is called in this branch before
                     // reaching a this expression.
                     } else {
@@ -220,7 +223,10 @@ impl NoThisBeforeSuper {
                     (DefinitelyCallsThisBeforeSuper::No, true)
                 // Otherwise we mark it as a `Maybe` so we can analyze error/finalize paths separately.
                 } else {
-                    (DefinitelyCallsThisBeforeSuper::Maybe(*basic_block_id), false)
+                    (
+                        DefinitelyCallsThisBeforeSuper::Maybe(*basic_block_id),
+                        false,
+                    )
                 }
             },
         )
@@ -265,14 +271,19 @@ impl NoThisBeforeSuper {
         match arg {
             Argument::Super(_) | Argument::ThisExpression(_) => true,
             Argument::CallExpression(call_expr) => {
-                matches!(&call_expr.callee, Expression::Super(_) | Expression::ThisExpression(_))
-                    || matches!(&call_expr.callee,
+                matches!(
+                    &call_expr.callee,
+                    Expression::Super(_) | Expression::ThisExpression(_)
+                ) || matches!(&call_expr.callee,
                     Expression::StaticMemberExpression(static_member) if
                     matches!(static_member.object, Expression::Super(_) | Expression::ThisExpression(_)))
                     || Self::contains_this_or_super_in_args(&call_expr.arguments)
             }
             Argument::StaticMemberExpression(call_expr) => {
-                matches!(&call_expr.object, Expression::Super(_) | Expression::ThisExpression(_))
+                matches!(
+                    &call_expr.object,
+                    Expression::Super(_) | Expression::ThisExpression(_)
+                )
             }
             _ => false,
         }
@@ -450,5 +461,11 @@ fn test() {
         }",
     ];
 
-    Tester::new(NoThisBeforeSuper::NAME, NoThisBeforeSuper::PLUGIN, pass, fail).test_and_snapshot();
+    Tester::new(
+        NoThisBeforeSuper::NAME,
+        NoThisBeforeSuper::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

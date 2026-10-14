@@ -98,8 +98,10 @@ pub fn html_block_start(tail: &str, paragraph_open: bool) -> Option<u8> {
     // Tag name (types 1, 6, 7), optionally a closing tag.
     let closing = rest.starts_with('/');
     let name_start = usize::from(closing);
-    let name_len =
-        rest[name_start..].bytes().take_while(|b| b.is_ascii_alphanumeric() || *b == b'-').count();
+    let name_len = rest[name_start..]
+        .bytes()
+        .take_while(|b| b.is_ascii_alphanumeric() || *b == b'-')
+        .count();
     if name_len == 0 {
         return None;
     }
@@ -155,8 +157,11 @@ pub fn html_block_end(tail: &str, kind: u8) -> bool {
                 }
                 // Cap the name scan at 9: the longest raw name (`textarea`) is 8 bytes,
                 // and at 9 the next byte is another letter, so both checks below fail the same way.
-                let name =
-                    bytes[i + 2..].iter().take(9).take_while(|b| b.is_ascii_alphabetic()).count();
+                let name = bytes[i + 2..]
+                    .iter()
+                    .take(9)
+                    .take_while(|b| b.is_ascii_alphabetic())
+                    .count();
                 bytes.get(i + 2 + name) == Some(&b'>')
                     && tag_in(HTML_VERBATIM_TAGS, &tail[i + 2..i + 2 + name])
             })
@@ -187,8 +192,16 @@ mod tests {
         assert_eq!(html_block_start("<div/>", false), Some(6));
         assert_eq!(html_block_start("<div>text", false), Some(6));
         assert_eq!(html_block_start("<x-tag a=\"1\">  ", false), Some(7));
-        assert_eq!(html_block_start("<x-tag a=\"1\">", true), None, "type 7 never interrupts");
-        assert_eq!(html_block_start("<x>y", false), None, "type 7 needs only whitespace after");
+        assert_eq!(
+            html_block_start("<x-tag a=\"1\">", true),
+            None,
+            "type 7 never interrupts"
+        );
+        assert_eq!(
+            html_block_start("<x>y", false),
+            None,
+            "type 7 needs only whitespace after"
+        );
         assert_eq!(html_block_start("<div/ >", false), None);
         assert_eq!(html_block_start("<!1", false), None);
         assert_eq!(html_block_start("<>", false), None);
@@ -214,6 +227,9 @@ mod tests {
         assert!(html_block_end("?>", 3));
         assert!(html_block_end("x>", 4));
         assert!(html_block_end("]]>", 5));
-        assert!(!html_block_end("</div>", 6), "types 6/7 end on blank lines only");
+        assert!(
+            !html_block_end("</div>", 6),
+            "types 6/7 end on blank lines only"
+        );
     }
 }

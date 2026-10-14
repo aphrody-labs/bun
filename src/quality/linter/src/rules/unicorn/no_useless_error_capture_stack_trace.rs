@@ -70,7 +70,13 @@ impl Rule for NoUselessErrorCaptureStackTrace {
             return;
         };
 
-        if !is_method_call(call_expr, Some(&["Error"]), Some(&["captureStackTrace"]), None, None) {
+        if !is_method_call(
+            call_expr,
+            Some(&["Error"]),
+            Some(&["captureStackTrace"]),
+            None,
+            None,
+        ) {
             return;
         }
 
@@ -115,7 +121,10 @@ fn get_span_to_remove(node: &AstNode, ctx: &LintContext) -> Option<Span> {
     };
 
     if let AstKind::ExpressionStatement(expr_stmt) = expr_stmt_node.kind()
-        && matches!(ctx.nodes().parent_kind(expr_stmt_node.id()), AstKind::FunctionBody(_))
+        && matches!(
+            ctx.nodes().parent_kind(expr_stmt_node.id()),
+            AstKind::FunctionBody(_)
+        )
     {
         return Some(expr_stmt.span);
     }
@@ -192,8 +201,10 @@ fn is_referencing_class(
     match expr {
         Expression::Identifier(ident) => {
             if let Some(expected_symbol) = class_id
-                && let Some(symbol_id) =
-                    ctx.scoping().get_reference(ident.reference_id()).symbol_id()
+                && let Some(symbol_id) = ctx
+                    .scoping()
+                    .get_reference(ident.reference_id())
+                    .symbol_id()
             {
                 return symbol_id == expected_symbol;
             }

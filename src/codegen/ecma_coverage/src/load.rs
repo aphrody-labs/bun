@@ -29,7 +29,13 @@ impl TestData {
                 )
             },
         );
-        Self { test262, babel, typescript, misc, acorn_jsx }
+        Self {
+            test262,
+            babel,
+            typescript,
+            misc,
+            acorn_jsx,
+        }
     }
 }
 
@@ -94,7 +100,9 @@ pub fn load_test262(filter: Option<&str>) -> Vec<Test262File> {
         let s = path.to_string_lossy();
         let s = s.cow_replace('\\', "/");
         s.contains("test262/test/staging")
-            || path.extension().is_some_and(|e| e.eq_ignore_ascii_case("md"))
+            || path
+                .extension()
+                .is_some_and(|e| e.eq_ignore_ascii_case("md"))
             || s.contains("_FIXTURE")
             || s.contains("annexB/language/expressions/assignmenttargettype")
     };
@@ -144,56 +152,68 @@ fn load_babel(filter: Option<&str>) -> Vec<BabelFile> {
         ]
         .iter()
         .any(|p| s.strip_suffix("/input.js").is_some_and(|s| s.ends_with(p)));
-        let bad_ext = path.extension().is_none_or(|ext| ext == "json" || ext == "md");
+        let bad_ext = path
+            .extension()
+            .is_none_or(|ext| ext == "json" || ext == "md");
         not_supported || not_interesting || bad_ext
     };
 
-    walk_and_read(Path::new("babel/packages/babel-parser/test/fixtures"), filter, skip_path)
-        .into_par_iter()
-        .filter_map(|(path, code)| {
-            let dir = workspace_root().join(&path);
-            let options = BabelOptions::from_test_path(dir.parent()?);
+    walk_and_read(
+        Path::new("babel/packages/babel-parser/test/fixtures"),
+        filter,
+        skip_path,
+    )
+    .into_par_iter()
+    .filter_map(|(path, code)| {
+        let dir = workspace_root().join(&path);
+        let options = BabelOptions::from_test_path(dir.parent()?);
 
-            // Skip unsupported plugins
-            let not_supported_plugins = [
-                "async-do-expression",
-                "flow",
-                "placeholders",
-                "decorators-legacy",
-                "recordAndTuple",
-            ];
-            let skip = options
-                .plugins
-                .unsupported
-                .iter()
-                .any(|p| not_supported_plugins.contains(&p.as_str()))
-                || options.allow_await_outside_function
-                || options.allow_undeclared_exports
-                || options.allow_new_target_outside_function
-                || options.allow_super_outside_method
-                || options.has_disallow_ambiguous_jsx_like();
-            if skip {
-                return None;
-            }
+        // Skip unsupported plugins
+        let not_supported_plugins = [
+            "async-do-expression",
+            "flow",
+            "placeholders",
+            "decorators-legacy",
+            "recordAndTuple",
+        ];
+        let skip = options
+            .plugins
+            .unsupported
+            .iter()
+            .any(|p| not_supported_plugins.contains(&p.as_str()))
+            || options.allow_await_outside_function
+            || options.allow_undeclared_exports
+            || options.allow_new_target_outside_function
+            || options.allow_super_outside_method
+            || options.has_disallow_ambiguous_jsx_like();
+        if skip {
+            return None;
+        }
 
-            let mut source_type = SourceType::from_path(&path)
-                .ok()?
-                .with_script(true)
-                .with_jsx(options.is_jsx())
-                .with_typescript(options.is_typescript())
-                .with_typescript_definition(options.is_typescript_definition());
-            if options.is_unambiguous() {
-                source_type = source_type.with_unambiguous(true);
-            } else if options.is_module() {
-                source_type = source_type.with_module(true);
-            } else if options.is_commonjs() {
-                source_type = source_type.with_commonjs(true);
-            }
+        let mut source_type = SourceType::from_path(&path)
+            .ok()?
+            .with_script(true)
+            .with_jsx(options.is_jsx())
+            .with_typescript(options.is_typescript())
+            .with_typescript_definition(options.is_typescript_definition());
+        if options.is_unambiguous() {
+            source_type = source_type.with_unambiguous(true);
+        } else if options.is_module() {
+            source_type = source_type.with_module(true);
+        } else if options.is_commonjs() {
+            source_type = source_type.with_commonjs(true);
+        }
 
-            let should_fail = babel::determine_should_fail(&path, &options);
-            Some(BabelFile { path, code, source_type, options, should_fail })
+        let should_fail = babel::determine_should_fail(&path, &options);
+        Some(BabelFile {
+            path,
+            code,
+            source_type,
+            options,
+            should_fail,
         })
-        .collect()
+    })
+    .collect()
 }
 
 fn load_typescript(filter: Option<&str>) -> Vec<TypeScriptFile> {
@@ -203,8 +223,9 @@ fn load_typescript(filter: Option<&str>) -> Vec<TypeScriptFile> {
         let supported = ["conformance"].iter().any(|p| s.contains(p));
         #[cfg(not(any(coverage, coverage_nightly)))]
         let supported = ["conformance", "compiler"].iter().any(|p| s.contains(p));
-        let unsupported =
-            typescript::constants::NOT_SUPPORTED_TEST_PATHS.iter().any(|p| s.contains(p));
+        let unsupported = typescript::constants::NOT_SUPPORTED_TEST_PATHS
+            .iter()
+            .any(|p| s.contains(p));
         !supported || unsupported
     };
 
@@ -239,7 +260,12 @@ fn load_misc(filter: Option<&str>) -> Vec<MiscFile> {
         .filter_map(|(path, code)| {
             let should_fail = path.to_string_lossy().contains("fail");
             let source_type = SourceType::from_path(&path).ok()?;
-            Some(MiscFile { path, code, source_type, should_fail })
+            Some(MiscFile {
+                path,
+                code,
+                source_type,
+                should_fail,
+            })
         })
         .collect();
 
@@ -268,12 +294,22 @@ fn load_misc(filter: Option<&str>) -> Vec<MiscFile> {
 fn load_acorn_jsx(filter: Option<&str>) -> Vec<AcornJsxFile> {
     let skip_path = |path: &Path| path.extension().is_none_or(|ext| ext != "jsx");
 
-    walk_and_read(Path::new("estree-conformance/tests/acorn-jsx"), filter, skip_path)
-        .into_par_iter()
-        .map(|(path, code)| {
-            let should_fail =
-                path.parent().and_then(Path::file_name).is_some_and(|name| name == "fail");
-            AcornJsxFile { path, code, should_fail }
-        })
-        .collect()
+    walk_and_read(
+        Path::new("estree-conformance/tests/acorn-jsx"),
+        filter,
+        skip_path,
+    )
+    .into_par_iter()
+    .map(|(path, code)| {
+        let should_fail = path
+            .parent()
+            .and_then(Path::file_name)
+            .is_some_and(|name| name == "fail");
+        AcornJsxFile {
+            path,
+            code,
+            should_fail,
+        }
+    })
+    .collect()
 }

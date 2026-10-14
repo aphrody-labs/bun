@@ -112,7 +112,14 @@ pub fn parse_files(file_paths: &[String], codegen: &Codegen) -> Schema {
     let meta_skeletons = IndexVec::from_vec(meta_skeletons);
 
     // Convert skeletons into schema
-    parse(type_names, type_skeletons, meta_names, meta_skeletons, files, codegen)
+    parse(
+        type_names,
+        type_skeletons,
+        meta_names,
+        meta_skeletons,
+        files,
+        codegen,
+    )
 }
 
 /// Wrapper to assert a type is safe to send across threads.

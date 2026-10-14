@@ -46,7 +46,9 @@ fn parse(args: &[String]) -> Result<Opts, String> {
     let mut o = Opts::default();
     let mut it = args.iter();
     let num = |flag: &str, v: Option<&String>| -> Result<f64, String> {
-        v.ok_or_else(|| format!("{flag} needs a value"))?.parse::<f64>().map_err(|_| format!("{flag} needs a number"))
+        v.ok_or_else(|| format!("{flag} needs a value"))?
+            .parse::<f64>()
+            .map_err(|_| format!("{flag} needs a number"))
     };
     while let Some(arg) = it.next() {
         let (flag, inline) = match arg.split_once('=') {
@@ -107,7 +109,11 @@ fn summary(info: &schema::HostInfo, now: u64) -> String {
         info.cpu.logical_cores,
         gib(info.memory.available_mib),
         gib(info.memory.total_mib),
-        if gpus.is_empty() { "-".into() } else { gpus.join(", ") },
+        if gpus.is_empty() {
+            "-".into()
+        } else {
+            gpus.join(", ")
+        },
         gib(disk),
         now.saturating_sub(info.collected_at) / 1000,
     )
@@ -135,7 +141,11 @@ fn run(io: &mut Io, args: &[String]) -> Result<(), String> {
             if o.text {
                 outln!(io, "{}", summary(&info, collect::now_ms()));
             } else {
-                outln!(io, "{}", serde_json::to_string_pretty(&info).map_err(|e| e.to_string())?);
+                outln!(
+                    io,
+                    "{}",
+                    serde_json::to_string_pretty(&info).map_err(|e| e.to_string())?
+                );
             }
         }
         "push" => {
@@ -144,33 +154,54 @@ fn run(io: &mut Io, args: &[String]) -> Result<(), String> {
             let secret = secret(&o)?;
             let entry = registry::card(&collect::collect(&id), secret.as_ref());
             let place = transport::push(&target, &entry)?;
-            outln!(io, "pushed {id} -> {place}{}", if entry.sig.is_some() { " (signed)" } else { " (unsigned)" });
+            outln!(
+                io,
+                "pushed {id} -> {place}{}",
+                if entry.sig.is_some() {
+                    " (signed)"
+                } else {
+                    " (unsigned)"
+                }
+            );
         }
         "sync" => {
             let secret = secret(&o)?;
             let loaded = registry::load(&store, secret.as_ref());
             let (mut inventory, mut rejected) = (loaded.inventory, loaded.rejected);
-            inventory.merge(registry::card(&collect::collect(&id), secret.as_ref()), secret.as_ref());
+            inventory.merge(
+                registry::card(&collect::collect(&id), secret.as_ref()),
+                secret.as_ref(),
+            );
             for from in &o.from {
                 let (cards, errors) = transport::pull(&transport::parse_target(from)?)?;
                 rejected.extend(errors);
                 for card in cards {
                     match inventory.merge(card, secret.as_ref()) {
                         Outcome::Rejected(reason) => rejected.push(reason),
-                        Outcome::Added | Outcome::Updated | Outcome::Unchanged | Outcome::Stale => {}
+                        Outcome::Added | Outcome::Updated | Outcome::Unchanged | Outcome::Stale => {
+                        }
                     }
                 }
             }
             registry::save(&store, &mut inventory)?;
             print_rejected(io, &rejected);
-            outln!(io, "{} hosts in {}", inventory.hosts.len(), store.join("inventory.json").display());
+            outln!(
+                io,
+                "{} hosts in {}",
+                inventory.hosts.len(),
+                store.join("inventory.json").display()
+            );
         }
         "list" => {
             let secret = secret(&o)?;
             let loaded = registry::load(&store, secret.as_ref());
             print_rejected(io, &loaded.rejected);
             if o.json {
-                outln!(io, "{}", serde_json::to_string_pretty(&loaded.inventory).map_err(|e| e.to_string())?);
+                outln!(
+                    io,
+                    "{}",
+                    serde_json::to_string_pretty(&loaded.inventory).map_err(|e| e.to_string())?
+                );
             } else {
                 let now = collect::now_ms();
                 for info in loaded.inventory.infos() {
@@ -185,7 +216,11 @@ fn run(io: &mut Io, args: &[String]) -> Result<(), String> {
             let mut query = o.query;
             query.max_age_s.get_or_insert(86_400);
             let hits = registry::find(&loaded.inventory, &query, collect::now_ms());
-            outln!(io, "{}", serde_json::to_string_pretty(&hits).map_err(|e| e.to_string())?);
+            outln!(
+                io,
+                "{}",
+                serde_json::to_string_pretty(&hits).map_err(|e| e.to_string())?
+            );
             if hits.is_empty() {
                 return Err("no host matches".into());
             }
@@ -204,7 +239,10 @@ pub struct Io {
 
 /// Runs `bun host`; returns the exit code.
 pub fn main(args: Vec<OsString>, io: &mut Io) -> i32 {
-    let args: Vec<String> = args.into_iter().map(|a| a.to_string_lossy().into_owned()).collect();
+    let args: Vec<String> = args
+        .into_iter()
+        .map(|a| a.to_string_lossy().into_owned())
+        .collect();
     match run(io, &args) {
         Ok(()) => 0,
         Err(message) => {

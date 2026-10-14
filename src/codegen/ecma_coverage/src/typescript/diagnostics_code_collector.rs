@@ -29,7 +29,10 @@ pub fn save_reviewed_tsc_diagnostics_codes() {
     let codes = collect_diagnostics_codes();
     contents.extend(codes.iter().map(ToString::to_string));
 
-    snapshot.save(&snap_root().join("tsc_diagnostics_codes.snap"), &contents.join("\n"));
+    snapshot.save(
+        &snap_root().join("tsc_diagnostics_codes.snap"),
+        &contents.join("\n"),
+    );
 }
 
 fn collect_diagnostics_codes() -> Vec<u32> {
@@ -44,7 +47,10 @@ fn collect_diagnostics_codes() -> Vec<u32> {
     let mut errors_map: FxHashMap<&str, Vec<&str>> = FxHashMap::default();
     for errors_text_path in &all_errors_text_paths {
         let test_id = errors_text_path_to_test_id(errors_text_path);
-        errors_map.entry(test_id).or_default().push(errors_text_path);
+        errors_map
+            .entry(test_id)
+            .or_default()
+            .push(errors_text_path);
     }
 
     // Now, collect all test files from `testdata/tests/cases/compiler` and
@@ -178,7 +184,9 @@ fn is_target_errors_text_path(errors_text_path: &str) -> bool {
         return true;
     }
 
-    SUPPORTED_VARIANTS.iter().any(|option| errors_text_path.contains(option))
+    SUPPORTED_VARIANTS
+        .iter()
+        .any(|option| errors_text_path.contains(option))
 }
 
 // Extracts error diagnostic codes from the content of `.errors.txt` file.

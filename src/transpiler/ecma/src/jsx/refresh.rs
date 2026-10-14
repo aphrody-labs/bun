@@ -255,7 +255,9 @@ impl<'a> Traverse<'a, TransformState<'a>> for ReactRefresh<'a> {
             // `Function` is always stored in a `Box`, so has a stable memory address.
             _ => func.unstable_address(),
         };
-        ctx.state.statement_injector.insert_after(&address, statement);
+        ctx.state
+            .statement_injector
+            .insert_after(&address, statement);
     }
 
     fn enter_call_expression(
@@ -305,43 +307,48 @@ impl<'a> Traverse<'a, TransformState<'a>> for ReactRefresh<'a> {
             };
 
             if let Some(binding_name) = binding_name {
-                self.non_builtin_hooks_callee.entry(current_scope_id).or_default().push(
-                    ctx.scoping()
-                        .find_binding(
-                            ctx.scoping().scope_parent_id(ctx.current_scope_id()).unwrap(),
-                            binding_name,
-                        )
-                        .map(|symbol_id| {
-                            let mut expr = ctx.create_bound_ident_expr(
-                                SPAN,
+                self.non_builtin_hooks_callee
+                    .entry(current_scope_id)
+                    .or_default()
+                    .push(
+                        ctx.scoping()
+                            .find_binding(
+                                ctx.scoping()
+                                    .scope_parent_id(ctx.current_scope_id())
+                                    .unwrap(),
                                 binding_name,
-                                symbol_id,
-                                ReferenceFlags::Read,
-                            );
+                            )
+                            .map(|symbol_id| {
+                                let mut expr = ctx.create_bound_ident_expr(
+                                    SPAN,
+                                    binding_name,
+                                    symbol_id,
+                                    ReferenceFlags::Read,
+                                );
 
-                            if is_member_expression {
-                                if let Some(middle_property) = middle_property {
-                                    // binding_name.middle_property
+                                if is_member_expression {
+                                    if let Some(middle_property) = middle_property {
+                                        // binding_name.middle_property
+                                        expr = Expression::new_static_member_expression(
+                                            SPAN,
+                                            expr,
+                                            IdentifierName::new(SPAN, middle_property, ctx),
+                                            false,
+                                            ctx,
+                                        );
+                                    }
+                                    // binding_name.hook_name
                                     expr = Expression::new_static_member_expression(
                                         SPAN,
                                         expr,
-                                        IdentifierName::new(SPAN, middle_property, ctx),
+                                        IdentifierName::new(SPAN, hook_name, ctx),
                                         false,
                                         ctx,
                                     );
                                 }
-                                // binding_name.hook_name
-                                expr = Expression::new_static_member_expression(
-                                    SPAN,
-                                    expr,
-                                    IdentifierName::new(SPAN, hook_name, ctx),
-                                    false,
-                                    ctx,
-                                );
-                            }
-                            expr
-                        }),
-                );
+                                expr
+                            }),
+                    );
             }
         }
 
@@ -444,8 +451,10 @@ impl<'a> ReactRefresh<'a> {
         }
 
         if found_call_expression {
-            self.last_signature =
-                Some((binding_identifier.clone(), arguments.clone_in(ctx.allocator())));
+            self.last_signature = Some((
+                binding_identifier.clone(),
+                arguments.clone_in(ctx.allocator()),
+            ));
         }
 
         let span = expr.span();
@@ -510,8 +519,10 @@ impl<'a> ReactRefresh<'a> {
                 if allowed_callee {
                     let callee_span = call_expr.callee.span();
 
-                    let Some(argument_expr) =
-                        call_expr.arguments.first_mut().and_then(|e| e.as_expression_mut())
+                    let Some(argument_expr) = call_expr
+                        .arguments
+                        .first_mut()
+                        .and_then(|e| e.as_expression_mut())
                     else {
                         return false;
                     };
@@ -624,15 +635,22 @@ impl<'a> ReactRefresh<'a> {
             // SAFETY: Base64 encoding only produces ASCII bytes. Even if our assumptions are incorrect,
             // and Base64 bytes do not fill `hashed_key` completely, the remaining bytes are 0, so also ASCII.
             let hashed_key_bytes = unsafe { hashed_key.as_mut_str().as_bytes_mut() };
-            let encoded_bytes = BASE64_STANDARD.encode_slice(hash, hashed_key_bytes).unwrap();
+            let encoded_bytes = BASE64_STANDARD
+                .encode_slice(hash, hashed_key_bytes)
+                .unwrap();
             debug_assert_eq!(encoded_bytes, ENCODED_LEN);
             Str::from(hashed_key)
         };
 
-        let callee_list = self.non_builtin_hooks_callee.remove(&scope_id).unwrap_or_default();
+        let callee_list = self
+            .non_builtin_hooks_callee
+            .remove(&scope_id)
+            .unwrap_or_default();
         let callee_len = callee_list.len();
         let custom_hooks_in_scope = ArenaVec::from_iter_in(
-            callee_list.into_iter().filter_map(|e| e.map(ArrayExpressionElement::from)),
+            callee_list
+                .into_iter()
+                .filter_map(|e| e.map(ArrayExpressionElement::from)),
             ctx,
         );
 
@@ -654,7 +672,11 @@ impl<'a> ReactRefresh<'a> {
                 [],
                 [Statement::new_return_statement(
                     SPAN,
-                    Some(Expression::new_array_expression(SPAN, custom_hooks_in_scope, ctx)),
+                    Some(Expression::new_array_expression(
+                        SPAN,
+                        custom_hooks_in_scope,
+                        ctx,
+                    )),
                     ctx,
                 )],
                 ctx,
@@ -802,7 +824,10 @@ impl<'a> ReactRefresh<'a> {
             return None;
         }
 
-        let declarator = decl.declarations.first_mut().unwrap_or_else(|| unreachable!());
+        let declarator = decl
+            .declarations
+            .first_mut()
+            .unwrap_or_else(|| unreachable!());
         let init = declarator.init.as_mut()?.without_parentheses_mut();
         let id = declarator.id.get_binding_identifier()?;
         let symbol_id = id.symbol_id();
@@ -901,10 +926,15 @@ impl<'a> ReactRefresh<'a> {
         } else {
             // Otherwise just a `const Foo = () => {}` which is a `Statement::VariableDeclaration`
             let var_decl = ctx.ancestor(1);
-            debug_assert!(matches!(var_decl, Ancestor::VariableDeclarationDeclarations(_)));
+            debug_assert!(matches!(
+                var_decl,
+                Ancestor::VariableDeclarationDeclarations(_)
+            ));
             var_decl.address()
         };
-        ctx.state.statement_injector.insert_after(&address, statement);
+        ctx.state
+            .statement_injector
+            .insert_after(&address, statement);
     }
 }
 
@@ -940,7 +970,10 @@ struct UsedInJSXBindingsCollector<'a, 'b> {
 
 impl<'a, 'b> UsedInJSXBindingsCollector<'a, 'b> {
     fn collect(program: &Program<'a>, ctx: &'b TraverseCtx<'a>) -> FxHashSet<SymbolId> {
-        let mut visitor = Self { ctx, bindings: FxHashSet::default() };
+        let mut visitor = Self {
+            ctx,
+            bindings: FxHashSet::default(),
+        };
         visitor.visit_program(program);
         visitor.bindings
     }
@@ -964,8 +997,11 @@ impl<'a> VisitJs<'a> for UsedInJSXBindingsCollector<'a, '_> {
 
         if is_jsx_call
             && let Some(Argument::Identifier(ident)) = it.arguments.first()
-            && let Some(symbol_id) =
-                self.ctx.scoping().get_reference(ident.reference_id()).symbol_id()
+            && let Some(symbol_id) = self
+                .ctx
+                .scoping()
+                .get_reference(ident.reference_id())
+                .symbol_id()
         {
             self.bindings.insert(symbol_id);
         }
@@ -973,8 +1009,11 @@ impl<'a> VisitJs<'a> for UsedInJSXBindingsCollector<'a, '_> {
 
     fn visit_jsx_opening_element(&mut self, it: &JSXOpeningElement<'_>) {
         if let Some(ident) = it.name.get_identifier()
-            && let Some(symbol_id) =
-                self.ctx.scoping().get_reference(ident.reference_id()).symbol_id()
+            && let Some(symbol_id) = self
+                .ctx
+                .scoping()
+                .get_reference(ident.reference_id())
+                .symbol_id()
         {
             self.bindings.insert(symbol_id);
         }

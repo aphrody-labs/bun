@@ -82,7 +82,10 @@ impl Rule for NoCaller {
             && (expr.property.name == "callee" || expr.property.name == "caller")
             && expr.object.is_specific_id("arguments")
         {
-            ctx.diagnostic(no_caller_diagnostic(expr.property.span, &expr.property.name));
+            ctx.diagnostic(no_caller_diagnostic(
+                expr.property.span,
+                &expr.property.name,
+            ));
         }
     }
 }

@@ -159,7 +159,10 @@ impl NoUselessReturn {
                 AstKind::BlockStatement(block) => {
                     let parent_kind = nodes.parent_kind(ancestor_id);
                     if let AstKind::TryStatement(try_stmt) = parent_kind
-                        && try_stmt.finalizer.as_ref().is_some_and(|f| f.span == block.span)
+                        && try_stmt
+                            .finalizer
+                            .as_ref()
+                            .is_some_and(|f| f.span == block.span)
                     {
                         return AncestorAnalysis::NotUseless;
                     }
@@ -226,7 +229,10 @@ impl NoUselessReturn {
 
             let mut path_stopped = false;
             for instr in cfg.basic_block(block_id).instructions() {
-                if instr.node_id.is_some_and(|node_id| Self::is_inside_finalizer(node_id, ctx)) {
+                if instr
+                    .node_id
+                    .is_some_and(|node_id| Self::is_inside_finalizer(node_id, ctx))
+                {
                     if matches!(
                         instr.kind,
                         InstructionKind::Throw
@@ -269,23 +275,27 @@ impl NoUselessReturn {
             }
 
             let is_switch_case_entry_block = Self::is_switch_case_entry_block(cfg, ctx, block_id);
-            stack.extend(graph.edges_directed(block_id, Direction::Outgoing).filter_map(|edge| {
-                let is_continuation_edge = if is_switch_case_entry_block {
-                    matches!(edge.weight(), EdgeType::Jump)
-                } else {
-                    matches!(
-                        edge.weight(),
-                        EdgeType::Normal
-                            | EdgeType::Jump
-                            | EdgeType::Backedge
-                            | EdgeType::Finalize
-                            | EdgeType::Join
-                            | EdgeType::Unreachable
-                    )
-                };
+            stack.extend(
+                graph
+                    .edges_directed(block_id, Direction::Outgoing)
+                    .filter_map(|edge| {
+                        let is_continuation_edge = if is_switch_case_entry_block {
+                            matches!(edge.weight(), EdgeType::Jump)
+                        } else {
+                            matches!(
+                                edge.weight(),
+                                EdgeType::Normal
+                                    | EdgeType::Jump
+                                    | EdgeType::Backedge
+                                    | EdgeType::Finalize
+                                    | EdgeType::Join
+                                    | EdgeType::Unreachable
+                            )
+                        };
 
-                is_continuation_edge.then_some(edge.target())
-            }));
+                        is_continuation_edge.then_some(edge.target())
+                    }),
+            );
         }
 
         false
@@ -297,7 +307,9 @@ impl NoUselessReturn {
         statements: &ArenaVec<'_, oxc_ast::ast::Statement<'_>>,
         span: Span,
     ) -> bool {
-        statements.last().is_some_and(|last| last.span().contains_inclusive(span))
+        statements
+            .last()
+            .is_some_and(|last| last.span().contains_inclusive(span))
     }
 
     fn is_meaningful_statement(node_id: Option<NodeId>, ctx: &LintContext) -> bool {

@@ -11,9 +11,13 @@ use itertools::Itertools;
 use crate::{AstNode, context::LintContext, rule::Rule, utils::has_jsx_prop_ignore_case};
 
 fn role_has_required_aria_props_diagnostic(span: Span, role: &str, props: &str) -> OxcDiagnostic {
-    OxcDiagnostic::warn(format!("`{role}` role is missing required aria props {props}."))
-        .with_help(format!("Add missing aria props {props} to the element with `{role}` role."))
-        .and_label(span)
+    OxcDiagnostic::warn(format!(
+        "`{role}` role is missing required aria props {props}."
+    ))
+    .with_help(format!(
+        "Add missing aria props {props} to the element with `{role}` role."
+    ))
+    .and_label(span)
 }
 
 #[derive(Debug, Default, Clone)]
@@ -45,7 +49,8 @@ declare_oxc_lint!(
     jsx_a11y,
     correctness,
     version = "0.2.0",
-    short_description = "Enforces that elements with ARIA roles must have all required attributes for that role.",
+    short_description =
+        "Enforces that elements with ARIA roles must have all required attributes for that role.",
 );
 
 static ROLE_TO_REQUIRED_ARIA_PROPS: &[(&str, &[&str])] = &[
@@ -132,23 +137,43 @@ fn test() {
             None,
             Some(settings()),
         ),
-        ("<div role='menuitemradio' aria-checked='false' />", None, None),
-        ("<div role='menuitemcheckbox' aria-checked='false' />", None, None),
+        (
+            "<div role='menuitemradio' aria-checked='false' />",
+            None,
+            None,
+        ),
+        (
+            "<div role='menuitemcheckbox' aria-checked='false' />",
+            None,
+            None,
+        ),
         ("<div role='tab' />", None, None),
         ("<div role='meter' aria-valuenow='0' />", None, None),
         ("<div role='switch' aria-checked='false' />", None, None),
-        ("<div role='scrollbar' aria-controls='foo' aria-valuenow='0' />", None, None),
+        (
+            "<div role='scrollbar' aria-controls='foo' aria-valuenow='0' />",
+            None,
+            None,
+        ),
         ("<div role='slider' aria-valuenow='0' />", None, None),
     ];
 
     let fail = vec![
         ("<div role='slider' />", None, None),
         ("<div role='slider' aria-valuemax />", None, None),
-        ("<div role='slider' aria-valuemax aria-valuemin />", None, None),
+        (
+            "<div role='slider' aria-valuemax aria-valuemin />",
+            None,
+            None,
+        ),
         ("<div role='checkbox' />", None, None),
         ("<div role='checkbox' checked />", None, None),
         ("<div role='checkbox' aria-chcked />", None, None), // spellchecker:disable-line
-        ("<span role='checkbox' aria-labelledby='foo' tabindex='0'></span>", None, None),
+        (
+            "<span role='checkbox' aria-labelledby='foo' tabindex='0'></span>",
+            None,
+            None,
+        ),
         ("<div role='combobox' />", None, None),
         ("<div role='combobox' expanded />", None, None),
         ("<div role='combobox' aria-expandd />", None, None),
@@ -165,6 +190,11 @@ fn test() {
         ("<MyComponent role='combobox' />", None, Some(settings())),
     ];
 
-    Tester::new(RoleHasRequiredAriaProps::NAME, RoleHasRequiredAriaProps::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        RoleHasRequiredAriaProps::NAME,
+        RoleHasRequiredAriaProps::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

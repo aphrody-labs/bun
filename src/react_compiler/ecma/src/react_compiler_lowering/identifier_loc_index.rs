@@ -98,16 +98,23 @@ impl IdentifierLocVisitor {
     /// `current_opening_element_span` is set only while walking a JSX
     /// element name, so it doubles as the is-JSX signal.
     fn record_reference(&mut self, ident: &IdentifierReference<'_>) {
-        let Some(reference_id) = ident.reference_id.get() else { return };
-        self.index.refs.entry(reference_id).or_insert(IdentifierLocEntry {
-            span: ident.span,
-            opening_element_span: self.current_opening_element_span,
-            in_type_annotation: self.type_depth > 0,
-        });
+        let Some(reference_id) = ident.reference_id.get() else {
+            return;
+        };
+        self.index
+            .refs
+            .entry(reference_id)
+            .or_insert(IdentifierLocEntry {
+                span: ident.span,
+                opening_element_span: self.current_opening_element_span,
+                in_type_annotation: self.type_depth > 0,
+            });
     }
 
     fn record_declaration(&mut self, ident: &BindingIdentifier<'_>) {
-        let Some(symbol_id) = ident.symbol_id.get() else { return };
+        let Some(symbol_id) = ident.symbol_id.get() else {
+            return;
+        };
         self.index.decl_spans.entry(symbol_id).or_insert(ident.span);
     }
 

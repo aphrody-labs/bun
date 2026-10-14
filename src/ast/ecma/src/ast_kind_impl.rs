@@ -409,7 +409,8 @@ impl<'a> AstKind<'a> {
             Self::VariableDeclaration(_) => "VariableDeclaration".into(),
             Self::VariableDeclarator(v) => format!(
                 "VariableDeclarator({})",
-                v.id.get_identifier_name().map_or(DESTRUCTURE, |name| name.as_str())
+                v.id.get_identifier_name()
+                    .map_or(DESTRUCTURE, |name| name.as_str())
             )
             .into(),
 
@@ -427,7 +428,8 @@ impl<'a> AstKind<'a> {
             Self::RegExpLiteral(r) => format!("RegExpLiteral({})", r.regex).into(),
             Self::TemplateLiteral(t) => format!(
                 "TemplateLiteral({})",
-                t.single_quasi().map_or_else(|| "None".into(), |q| format!("Some({q})"))
+                t.single_quasi()
+                    .map_or_else(|| "None".into(), |q| format!("Some({q})"))
             )
             .into(),
             Self::TemplateElement(_) => "TemplateElement".into(),
@@ -477,9 +479,11 @@ impl<'a> AstKind<'a> {
             Self::ImportExpression(_) => "ImportExpression".into(),
             Self::PrivateInExpression(_) => "PrivateInExpression".into(),
 
-            Self::ObjectProperty(p) => {
-                format!("ObjectProperty({})", p.key.name().as_deref().unwrap_or(COMPUTED)).into()
-            }
+            Self::ObjectProperty(p) => format!(
+                "ObjectProperty({})",
+                p.key.name().as_deref().unwrap_or(COMPUTED)
+            )
+            .into(),
             Self::ArrayAssignmentTarget(_) => "ArrayAssignmentTarget".into(),
             Self::ObjectAssignmentTarget(_) => "ObjectAssignmentTarget".into(),
             Self::AssignmentTargetWithDefault(_) => "AssignmentTargetWithDefault".into(),
@@ -492,7 +496,9 @@ impl<'a> AstKind<'a> {
             Self::FormalParameters(_) => "FormalParameters".into(),
             Self::FormalParameter(p) => format!(
                 "FormalParameter({})",
-                p.pattern.get_identifier_name().map_or(DESTRUCTURE, |name| name.as_str())
+                p.pattern
+                    .get_identifier_name()
+                    .map_or(DESTRUCTURE, |name| name.as_str())
             )
             .into(),
             Self::FormalParameterRest(_) => "FormalParameterRest".into(),
@@ -875,8 +881,11 @@ mod tests {
         let num_kind = AstKind::NumericLiteral(&num_lit);
         assert!(!num_kind.has_argument_with_span(test_span));
 
-        let bool_lit =
-            BooleanLiteral { span: test_span, node_id: Cell::new(NodeId::DUMMY), value: true };
+        let bool_lit = BooleanLiteral {
+            span: test_span,
+            node_id: Cell::new(NodeId::DUMMY),
+            value: true,
+        };
         let bool_kind = AstKind::BooleanLiteral(&bool_lit);
         assert!(!bool_kind.has_argument_with_span(test_span));
     }
@@ -896,8 +905,11 @@ mod tests {
         let num_kind = AstKind::NumericLiteral(&num_lit);
         assert!(!num_kind.is_callee_with_span(test_span));
 
-        let bool_lit =
-            BooleanLiteral { span: test_span, node_id: Cell::new(NodeId::DUMMY), value: true };
+        let bool_lit = BooleanLiteral {
+            span: test_span,
+            node_id: Cell::new(NodeId::DUMMY),
+            value: true,
+        };
         let bool_kind = AstKind::BooleanLiteral(&bool_lit);
         assert!(!bool_kind.is_callee_with_span(test_span));
     }

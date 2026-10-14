@@ -94,7 +94,13 @@ fn bracket_word(src: &[u8], base: usize, n: usize) -> u64 {
 /// closer-to-opener table built once, so it stays exact; None if unbalanced.
 #[inline]
 pub(crate) fn match_delim_back(tokens: &Tokens, from: usize, open: u8, close: u8) -> Option<usize> {
-    let (src, st, kind, n, b) = (tokens.src, tokens.st, tokens.kind, tokens.n, tokens.brackets);
+    let (src, st, kind, n, b) = (
+        tokens.src,
+        tokens.st,
+        tokens.kind,
+        tokens.n,
+        tokens.brackets,
+    );
     let mut depth: i32 = 1;
     let mut steps: u32 = 0;
     let mut w = from >> 6;
@@ -130,7 +136,13 @@ pub(crate) fn match_delim_back(tokens: &Tokens, from: usize, open: u8, close: u8
 
 #[inline(never)]
 fn delim_memo_opener(tokens: &Tokens, from: usize) -> Option<usize> {
-    let (src, st, kind, n, b) = (tokens.src, tokens.st, tokens.kind, tokens.n, tokens.brackets);
+    let (src, st, kind, n, b) = (
+        tokens.src,
+        tokens.st,
+        tokens.kind,
+        tokens.n,
+        tokens.brackets,
+    );
     let mut m = b.pairs.borrow_mut();
     if from >= m.built_to {
         let first = m.built_to >> 6;

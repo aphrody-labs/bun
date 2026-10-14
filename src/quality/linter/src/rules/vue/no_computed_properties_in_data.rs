@@ -76,12 +76,16 @@ declare_oxc_lint!(
 
 impl Rule for NoComputedPropertiesInData {
     fn run<'a>(&self, node: &AstNode<'a>, ctx: &LintContext<'a>) {
-        let AstKind::StaticMemberExpression(member) = node.kind() else { return };
+        let AstKind::StaticMemberExpression(member) = node.kind() else {
+            return;
+        };
         if !is_this_object(&member.object, ctx) {
             return;
         }
 
-        let Some(options) = enclosing_data_options(node, ctx) else { return };
+        let Some(options) = enclosing_data_options(node, ctx) else {
+            return;
+        };
 
         if !collect_computed_names(options).contains(member.property.name.as_str()) {
             return;
@@ -105,17 +109,24 @@ fn enclosing_data_options<'a>(
     let nodes = ctx.nodes();
 
     let function_node = nodes.ancestors(node.id()).find(|ancestor| {
-        matches!(ancestor.kind(), AstKind::Function(_) | AstKind::ArrowFunctionExpression(_))
+        matches!(
+            ancestor.kind(),
+            AstKind::Function(_) | AstKind::ArrowFunctionExpression(_)
+        )
     })?;
 
     let prop_node = nodes.parent_node(function_node.id());
-    let AstKind::ObjectProperty(prop) = prop_node.kind() else { return None };
+    let AstKind::ObjectProperty(prop) = prop_node.kind() else {
+        return None;
+    };
     if !prop.key.is_specific_static_name("data") {
         return None;
     }
 
     let options_node = nodes.parent_node(prop_node.id());
-    let AstKind::ObjectExpression(options) = options_node.kind() else { return None };
+    let AstKind::ObjectExpression(options) = options_node.kind() else {
+        return None;
+    };
     if !is_vue_component_options_object(options_node, ctx) {
         return None;
     }
@@ -256,6 +267,11 @@ fn test() {
         ),
     ];
 
-    Tester::new(NoComputedPropertiesInData::NAME, NoComputedPropertiesInData::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        NoComputedPropertiesInData::NAME,
+        NoComputedPropertiesInData::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

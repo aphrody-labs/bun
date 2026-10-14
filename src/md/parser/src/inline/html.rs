@@ -46,7 +46,11 @@ pub fn scan(t: &str, pos: usize) -> Option<usize> {
         return None;
     }
     i += 1;
-    while bytes.get(i).copied().is_some_and(|c| c.is_ascii_alphanumeric() || c == b'-') {
+    while bytes
+        .get(i)
+        .copied()
+        .is_some_and(|c| c.is_ascii_alphanumeric() || c == b'-')
+    {
         i += 1;
     }
     tag_end(bytes, i, closing, true)
@@ -60,7 +64,11 @@ mod tests {
     fn tags() {
         // Past the name, `syntax::html::tag_end` owns the grammar (and its tests)
         assert_eq!(scan("<a>", 0), Some(3));
-        assert_eq!(scan("</a-b x=1>", 0), None, "closing tags take no attributes");
+        assert_eq!(
+            scan("</a-b x=1>", 0),
+            None,
+            "closing tags take no attributes"
+        );
         assert_eq!(scan("<1>", 0), None);
         assert_eq!(scan("< a>", 0), None);
         assert_eq!(scan("<a", 0), None);

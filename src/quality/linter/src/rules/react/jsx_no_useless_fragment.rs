@@ -183,8 +183,11 @@ fn fix_jsx_fragment<'a>(
     fixer.replace(
         elem.span(),
         trim_like_react(
-            Span::new(elem.opening_fragment.span.end, elem.closing_fragment.span.start)
-                .source_text(ctx.source_text()),
+            Span::new(
+                elem.opening_fragment.span.end,
+                elem.closing_fragment.span.start,
+            )
+            .source_text(ctx.source_text()),
         )
         .to_owned(),
     )
@@ -230,7 +233,11 @@ fn trim_like_react(text: &str) -> &str {
 
     // Apply React-like trimming rules
     let start = if has_leading_newline { leading_end } else { 0 };
-    let end = if has_trailing_newline { trailing_start } else { len };
+    let end = if has_trailing_newline {
+        trailing_start
+    } else {
+        len
+    };
 
     // Handle edge cases
     if start >= end {
@@ -296,8 +303,10 @@ fn jsx_elem_has_key_or_ref_attr(elem: &JSXElement) -> bool {
 fn is_fragment_with_single_expression(children: &ArenaVec<'_, JSXChild<'_>>) -> bool {
     let mut non_padding_children = children.iter().filter(|child| is_padding_spaces(child));
 
-    matches!(non_padding_children.next(), Some(JSXChild::ExpressionContainer(_)))
-        && non_padding_children.next().is_none()
+    matches!(
+        non_padding_children.next(),
+        Some(JSXChild::ExpressionContainer(_))
+    ) && non_padding_children.next().is_none()
 }
 
 fn is_padding_spaces(v: &JSXChild<'_>) -> bool {
@@ -381,9 +390,18 @@ fn test() {
         (r#"<div p={<>{"a"}{"b"}</>} />"#, None),
         (r"<Fragment key={item.id}>{item.value}</Fragment>", None),
         (r"<Fragment ref={fragmentRef}><Heading /></Fragment>", None),
-        (r"<React.Fragment ref={fragmentRef}><Heading /></React.Fragment>", None),
-        (r"<div><Fragment ref={fragmentRef}><Heading /></Fragment></div>", None),
-        (r"<Fragment key={item.id} ref={fragmentRef}><Heading /></Fragment>", None),
+        (
+            r"<React.Fragment ref={fragmentRef}><Heading /></React.Fragment>",
+            None,
+        ),
+        (
+            r"<div><Fragment ref={fragmentRef}><Heading /></Fragment></div>",
+            None,
+        ),
+        (
+            r"<Fragment key={item.id} ref={fragmentRef}><Heading /></Fragment>",
+            None,
+        ),
         (
             r"{items.map(item => <Fragment key={item.id} ref={refs[item.id]}>{item.value}</Fragment>)}",
             None,
@@ -399,7 +417,10 @@ fn test() {
         ",
             Some(json!([{ "allowExpressions": true }])),
         ),
-        (r"{1 && <>{1}</>}", Some(json!([{"allowExpressions": true}]))),
+        (
+            r"{1 && <>{1}</>}",
+            Some(json!([{"allowExpressions": true}])),
+        ),
     ];
 
     let fail = vec![
@@ -490,7 +511,11 @@ fn test() {
         ),
         (r"<Eeee><>foo</></Eeee>", r"<Eeee><>foo</></Eeee>", None),
         (r"<div><>foo</></div>", r"<div>foo</div>", None),
-        (r#"<div><>{"a"}{"b"}</></div>"#, r#"<div>{"a"}{"b"}</div>"#, None),
+        (
+            r#"<div><>{"a"}{"b"}</></div>"#,
+            r#"<div>{"a"}{"b"}</div>"#,
+            None,
+        ),
         (
             r#"
             <section>
@@ -508,7 +533,11 @@ fn test() {
             "#,
             None,
         ),
-        (r#"<div><Fragment>{"a"}{"b"}</Fragment></div>"#, r#"<div>{"a"}{"b"}</div>"#, None),
+        (
+            r#"<div><Fragment>{"a"}{"b"}</Fragment></div>"#,
+            r#"<div>{"a"}{"b"}</div>"#,
+            None,
+        ),
         (
             r"
             <section>
@@ -526,7 +555,11 @@ fn test() {
             </section>",
             None,
         ),
-        (r#"<div>a <>{""}{""}</> a</div>"#, r#"<div>a {""}{""} a</div>"#, None),
+        (
+            r#"<div>a <>{""}{""}</> a</div>"#,
+            r#"<div>a {""}{""} a</div>"#,
+            None,
+        ),
         (
             r"
             const Comp = () => (
@@ -544,10 +577,19 @@ fn test() {
             ",
             None,
         ),
-        (r"<><Foo>{moo}</Foo></>", r"<Foo>{moo}</Foo>", Some(json!([{"allowExpressions": true}]))),
+        (
+            r"<><Foo>{moo}</Foo></>",
+            r"<Foo>{moo}</Foo>",
+            Some(json!([{"allowExpressions": true}])),
+        ),
     ];
 
-    Tester::new(JsxNoUselessFragment::NAME, JsxNoUselessFragment::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        JsxNoUselessFragment::NAME,
+        JsxNoUselessFragment::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

@@ -63,7 +63,13 @@ pub fn normalize_text_for_hash(text: &str) -> String {
 pub(crate) fn tokens(text: &str) -> impl Iterator<Item = String> + '_ {
     text.split(|c: char| !c.is_alphanumeric())
         .filter(|t| !t.is_empty())
-        .map(|t| if !t.chars().any(char::is_uppercase) { t.to_string() } else { t.to_lowercase() })
+        .map(|t| {
+            if !t.chars().any(char::is_uppercase) {
+                t.to_string()
+            } else {
+                t.to_lowercase()
+            }
+        })
 }
 
 /// Calls `f` with the FNV-1a hash of every normalized token, without
@@ -130,8 +136,8 @@ pub fn simhash64(text: &str) -> u64 {
             for &th in &window[3 - count..] {
                 accumulate(&mut acc, fmix64(th));
             }
-        },
-        _ => {},
+        }
+        _ => {}
     }
     let mut fingerprint = 0u64;
     for (bit, &v) in acc.iter().enumerate() {
@@ -205,7 +211,11 @@ mod tests {
         // A short boilerplate crumb left over by a different template.
         let crumb = format!("{ARTICLE} Share this story");
         let c = simhash64(&crumb);
-        assert!(hamming_distance(a, c) <= 3, "distance {}", hamming_distance(a, c));
+        assert!(
+            hamming_distance(a, c) <= 3,
+            "distance {}",
+            hamming_distance(a, c)
+        );
         assert!(is_near_duplicate(a, c, DEFAULT_NEAR_DUPLICATE_BITS));
     }
 
@@ -214,7 +224,11 @@ mod tests {
         let a = simhash64(ARTICLE);
         let edited = ARTICLE.replace("eleven stations", "twelve stations");
         let b = simhash64(&edited);
-        assert!(hamming_distance(a, b) <= 3, "distance {}", hamming_distance(a, b));
+        assert!(
+            hamming_distance(a, b) <= 3,
+            "distance {}",
+            hamming_distance(a, b)
+        );
     }
 
     #[test]

@@ -46,7 +46,10 @@ struct JsxNoScriptUrlComponents(Vec<JsxNoScriptUrlComponent>);
 
 impl JsxNoScriptUrlComponents {
     fn into_map(self) -> FxHashMap<String, Vec<String>> {
-        self.0.into_iter().map(|component| (component.name, component.props)).collect()
+        self.0
+            .into_iter()
+            .map(|component| (component.name, component.props))
+            .collect()
     }
 }
 
@@ -159,11 +162,13 @@ declare_oxc_lint!(
 
 fn is_link_attribute(tag_name: &str, prop_value_literal: String, ctx: &LintContext) -> bool {
     tag_name == "a"
-        || ctx.settings().react.get_link_component_attrs(tag_name).is_some_and(
-            |link_component_attrs| {
+        || ctx
+            .settings()
+            .react
+            .get_link_component_attrs(tag_name)
+            .is_some_and(|link_component_attrs| {
                 link_component_attrs.contains(&CompactStr::from(prop_value_literal))
-            },
-        )
+            })
 }
 
 impl JsxNoScriptUrl {
@@ -174,7 +179,10 @@ impl JsxNoScriptUrl {
         if tag_name == "a" {
             return true;
         }
-        ctx.settings().react.get_link_component_attrs(tag_name).is_some()
+        ctx.settings()
+            .react
+            .get_link_component_attrs(tag_name)
+            .is_some()
     }
 }
 

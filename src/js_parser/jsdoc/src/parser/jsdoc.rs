@@ -18,7 +18,11 @@ impl<'a> JSDoc<'a> {
     /// comment_content: Inside of /**HERE*/, not include `/**` and `*/`
     /// span: `Span` for this JSDoc comment, range for `/**HERE*/`
     pub fn new(comment_content: &'a str, span: Span) -> JSDoc<'a> {
-        Self { raw: comment_content, cached: OnceCell::new(), span }
+        Self {
+            raw: comment_content,
+            cached: OnceCell::new(),
+            span,
+        }
     }
 
     pub fn comment(&self) -> JSDocCommentPart<'a> {
@@ -30,7 +34,8 @@ impl<'a> JSDoc<'a> {
     }
 
     fn parse(&self) -> &ParsedJSDoc<'a> {
-        self.cached.get_or_init(|| parse_jsdoc(self.raw, self.span.start))
+        self.cached
+            .get_or_init(|| parse_jsdoc(self.raw, self.span.start))
     }
 }
 

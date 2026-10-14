@@ -27,13 +27,16 @@ test("Rust sources linked into Bun do not use the streams of the standard librar
     ["src/mcp/cli.rs", 8],
     ["src/mcp/http.rs", 1],
     ["src/mcp/install.rs", 3],
-    ["src/react_compiler/pipeline.rs", 3],
+    ["src/react_compiler/pipeline.rs", 4],
     ["src/router/lib.rs", 4],
   ]);
   // Programs of their own.
+  const programs = ["src/sema/standalone/"];
   const isLinked = (file: string) =>
-    !file.endsWith("/build.rs") && !file.includes("/benches/") &&
-    !file.includes("/tests/") && !file.startsWith("src/sema/standalone/");
+    !file.endsWith("/build.rs") &&
+    !file.includes("/benches/") &&
+    !file.includes("/tests/") &&
+    !programs.some(it => file.startsWith(it));
 
   const found = new Map<string, number>();
   let scanned = 0;

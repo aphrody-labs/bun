@@ -57,7 +57,9 @@ declare_oxc_lint!(
 
 impl Rule for NoArrayMethodThisArgument {
     fn run<'a>(&self, node: &AstNode<'a>, ctx: &LintContext<'a>) {
-        let AstKind::CallExpression(call_expr) = node.kind() else { return };
+        let AstKind::CallExpression(call_expr) = node.kind() else {
+            return;
+        };
 
         check_array_prototype_methods(call_expr, ctx);
         check_array_from(call_expr, ctx);
@@ -84,11 +86,14 @@ fn check_array_prototype_methods(call_expr: &CallExpression, ctx: &LintContext) 
             Some(2),
             Some(2),
         )
+        || call_expr.arguments.first().is_some_and(|arg| {
+            arg.as_expression()
+                .is_none_or(|expr| is_node_not_function(expr))
+        })
         || call_expr
             .arguments
-            .first()
-            .is_some_and(|arg| arg.as_expression().is_none_or(|expr| is_node_not_function(expr)))
-        || call_expr.arguments.get(1).is_some_and(|arg| matches!(arg, Argument::SpreadElement(_)))
+            .get(1)
+            .is_some_and(|arg| matches!(arg, Argument::SpreadElement(_)))
         || does_expr_match_any_path(
             &call_expr.callee,
             IGNORED.iter().map(|path| path.iter().copied()),
@@ -98,13 +103,19 @@ fn check_array_prototype_methods(call_expr: &CallExpression, ctx: &LintContext) 
     }
 
     ctx.diagnostic(no_array_method_this_argument_diagnostic(
-        call_expr.arguments.first().map_or(call_expr.span, GetSpan::span),
+        call_expr
+            .arguments
+            .first()
+            .map_or(call_expr.span, GetSpan::span),
     ));
 }
 
 fn check_array_from(call_expr: &CallExpression, ctx: &LintContext) {
     if call_expr.optional
-        || call_expr.callee.as_member_expression().is_some_and(MemberExpression::optional)
+        || call_expr
+            .callee
+            .as_member_expression()
+            .is_some_and(MemberExpression::optional)
         || !is_method_call(
             call_expr,
             Some(&["Array"]),
@@ -112,18 +123,27 @@ fn check_array_from(call_expr: &CallExpression, ctx: &LintContext) {
             Some(3),
             Some(3),
         )
-        || call_expr.arguments.first().is_some_and(|arg| matches!(arg, Argument::SpreadElement(_)))
-        || call_expr.arguments.get(2).is_some_and(|arg| matches!(arg, Argument::SpreadElement(_)))
         || call_expr
             .arguments
-            .get(1)
-            .is_some_and(|arg| arg.as_expression().is_none_or(|expr| is_node_not_function(expr)))
+            .first()
+            .is_some_and(|arg| matches!(arg, Argument::SpreadElement(_)))
+        || call_expr
+            .arguments
+            .get(2)
+            .is_some_and(|arg| matches!(arg, Argument::SpreadElement(_)))
+        || call_expr.arguments.get(1).is_some_and(|arg| {
+            arg.as_expression()
+                .is_none_or(|expr| is_node_not_function(expr))
+        })
     {
         return;
     }
 
     ctx.diagnostic(no_array_method_this_argument_diagnostic(
-        call_expr.arguments.get(2).map_or(call_expr.span, GetSpan::span),
+        call_expr
+            .arguments
+            .get(2)
+            .map_or(call_expr.span, GetSpan::span),
     ));
 }
 
@@ -311,6 +331,11 @@ fn test() {
         "Array.fromAsync(iterableOrArrayLike, callback.bind(foo), thisArgument)",
     ];
 
-    Tester::new(NoArrayMethodThisArgument::NAME, NoArrayMethodThisArgument::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        NoArrayMethodThisArgument::NAME,
+        NoArrayMethodThisArgument::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

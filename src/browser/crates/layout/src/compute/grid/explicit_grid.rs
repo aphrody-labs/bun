@@ -4,9 +4,9 @@ use super::types::{GridTrack, GridTrackKind, TrackCounts};
 use crate::geometry::AbsoluteAxis;
 use crate::style::{LengthPercentage, RepetitionCount, TrackSizingFunction};
 use crate::style_helpers::TaffyAuto;
+use crate::util::sys::{ceil, floor, Vec};
 use crate::util::MaybeMath;
 use crate::util::ResolveOrZero;
-use crate::util::sys::{Vec, ceil, floor};
 use crate::{GenericGridTemplateComponent, GenericRepetition, GridContainerStyle};
 
 /// The auto-repeat fit strategy to use
@@ -65,15 +65,17 @@ pub(crate) fn compute_explicit_grid_size_in_axis(
         })
         .sum::<u16>();
 
-    let auto_repetition_count: u16 =
-        template.clone().filter(|track_def| track_def.is_auto_repetition()).count() as u16;
+    let auto_repetition_count: u16 = template
+        .clone()
+        .filter(|track_def| track_def.is_auto_repetition())
+        .count() as u16;
     let all_track_defs_have_fixed_component = template.clone().all(|track_def| match track_def {
         GenericGridTemplateComponent::Single(sizing_function) => {
             sizing_function.has_fixed_component()
-        },
-        GenericGridTemplateComponent::Repeat(repeat) => {
-            repeat.tracks().all(|sizing_function| sizing_function.has_fixed_component())
-        },
+        }
+        GenericGridTemplateComponent::Repeat(repeat) => repeat
+            .tracks()
+            .all(|sizing_function| sizing_function.has_fixed_component()),
     });
 
     let template_is_valid = auto_repetition_count == 0
@@ -117,9 +119,16 @@ pub(crate) fn compute_explicit_grid_size_in_axis(
                 parent_size: Option<f32>,
                 calc_resolver: impl Fn(*const (), f32) -> f32,
             ) -> f32 {
-                let max_size = sizing_function.max.definite_value(parent_size, &calc_resolver);
-                let min_size = sizing_function.min.definite_value(parent_size, &calc_resolver);
-                max_size.map(|max| max.maybe_max(min_size)).or(min_size).unwrap()
+                let max_size = sizing_function
+                    .max
+                    .definite_value(parent_size, &calc_resolver);
+                let min_size = sizing_function
+                    .min
+                    .definite_value(parent_size, &calc_resolver);
+                max_size
+                    .map(|max| max.maybe_max(min_size))
+                    .or(min_size)
+                    .unwrap()
             }
 
             let non_repeating_track_used_space: f32 = template
@@ -127,7 +136,7 @@ pub(crate) fn compute_explicit_grid_size_in_axis(
                 .map(|track_def| match track_def {
                     GenericGridTemplateComponent::Single(sizing_function) => {
                         track_definite_value(sizing_function, parent_size, &resolve_calc_value)
-                    },
+                    }
                     GenericGridTemplateComponent::Repeat(repeat) => match repeat.count() {
                         RepetitionCount::Count(count) => {
                             let sum = repeat
@@ -141,7 +150,7 @@ pub(crate) fn compute_explicit_grid_size_in_axis(
                                 })
                                 .sum::<f32>();
                             sum * (count as f32)
-                        },
+                        }
                         RepetitionCount::AutoFit | RepetitionCount::AutoFill => 0.0,
                     },
                 })
@@ -188,13 +197,13 @@ pub(crate) fn compute_explicit_grid_size_in_axis(
                 match auto_fit_strategy {
                     AutoRepeatStrategy::MaxRepetitionsThatDoNotOverflow => {
                         (floor(num_repetition_that_fit) as u16) + 1
-                    },
+                    }
                     AutoRepeatStrategy::MinRepetitionsThatDoOverflow => {
                         (ceil(num_repetition_that_fit) as u16) + 1
-                    },
+                    }
                 }
             }
-        },
+        }
     };
 
     let grid_template_track_count =
@@ -220,12 +229,12 @@ pub(super) fn initialize_grid_tracks(
             track_template = style.grid_template_columns();
             auto_tracks = style.grid_auto_columns();
             gap = style.gap().width;
-        },
+        }
         AbsoluteAxis::Vertical => {
             track_template = style.grid_template_rows();
             auto_tracks = style.grid_auto_rows();
             gap = style.gap().height;
-        },
+        }
     };
 
     // Clear vector (in case this is a re-layout), reserve space for all tracks ahead of time to reduce allocations,
@@ -278,7 +287,7 @@ pub(super) fn initialize_grid_tracks(
                         ));
                         tracks.push(GridTrack::gutter(gap));
                         current_track_index += 1;
-                    },
+                    }
                     GenericGridTemplateComponent::Repeat(repeat) => match repeat.count() {
                         RepetitionCount::Count(count) => {
                             let track_iter = repeat.tracks();
@@ -293,7 +302,7 @@ pub(super) fn initialize_grid_tracks(
                                 tracks.push(GridTrack::gutter(gap));
                                 current_track_index += 1;
                             });
-                        },
+                        }
                         RepetitionCount::AutoFit | RepetitionCount::AutoFill => {
                             let auto_repeated_track_count =
                                 (counts.explicit - non_auto_repeating_track_count) as usize;
@@ -342,7 +351,7 @@ pub(super) fn initialize_grid_tracks(
                                     previous_track.collapse();
                                 }
                             }
-                        },
+                        }
                     },
                 }
             });
@@ -355,10 +364,20 @@ pub(super) fn initialize_grid_tracks(
     // Create positive implicit tracks
     if auto_track_count == 0 {
         let iter = core::iter::repeat(TrackSizingFunction::AUTO);
-        create_implicit_tracks(tracks, counts.positive_implicit + grid_area_tracks, iter, gap)
+        create_implicit_tracks(
+            tracks,
+            counts.positive_implicit + grid_area_tracks,
+            iter,
+            gap,
+        )
     } else {
         let iter = auto_tracks.clone().cycle();
-        create_implicit_tracks(tracks, counts.positive_implicit + grid_area_tracks, iter, gap)
+        create_implicit_tracks(
+            tracks,
+            counts.positive_implicit + grid_area_tracks,
+            iter,
+            gap,
+        )
     }
 
     // Mark first and last grid lines as collapsed
@@ -375,8 +394,10 @@ fn create_implicit_tracks(
 ) {
     for _ in 0..count {
         let track_def = auto_tracks_iter.next().unwrap();
-        tracks
-            .push(GridTrack::new(track_def.min_sizing_function(), track_def.max_sizing_function()));
+        tracks.push(GridTrack::new(
+            track_def.min_sizing_function(),
+            track_def.max_sizing_function(),
+        ));
         tracks.push(GridTrack::gutter(gap));
     }
 }
@@ -422,7 +443,10 @@ mod test {
         use RepetitionCount::AutoFill;
         let grid_style: Style<DefaultCheapStr> = Style {
             display: Display::Grid,
-            size: Size { width: length(120.0), height: length(80.0) },
+            size: Size {
+                width: length(120.0),
+                height: length(80.0),
+            },
             grid_template_columns: vec![repeat(AutoFill, vec![length(40.0)])],
             grid_template_rows: vec![repeat(AutoFill, vec![length(20.0)])],
             ..Default::default()
@@ -453,7 +477,10 @@ mod test {
         use RepetitionCount::AutoFill;
         let grid_style: Style<DefaultCheapStr> = Style {
             display: Display::Grid,
-            size: Size { width: length(140.0), height: length(90.0) },
+            size: Size {
+                width: length(140.0),
+                height: length(90.0),
+            },
             grid_template_columns: vec![repeat(AutoFill, vec![length(40.0)])],
             grid_template_rows: vec![repeat(AutoFill, vec![length(20.0)])],
             ..Default::default()
@@ -484,12 +511,18 @@ mod test {
         use RepetitionCount::AutoFill;
         let grid_style: Style<DefaultCheapStr> = Style {
             display: Display::Grid,
-            min_size: Size { width: length(120.0), height: length(80.0) },
+            min_size: Size {
+                width: length(120.0),
+                height: length(80.0),
+            },
             grid_template_columns: vec![repeat(AutoFill, vec![length(40.0)])],
             grid_template_rows: vec![repeat(AutoFill, vec![length(20.0)])],
             ..Default::default()
         };
-        let inner_container_size = Size { width: Some(120.0), height: Some(80.0) };
+        let inner_container_size = Size {
+            width: Some(120.0),
+            height: Some(80.0),
+        };
         let (auto_col_reps, col_count) = compute_explicit_grid_size_in_axis(
             &grid_style,
             inner_container_size.get_abs(AbsoluteAxis::Horizontal),
@@ -515,12 +548,18 @@ mod test {
         use RepetitionCount::AutoFill;
         let grid_style: Style<DefaultCheapStr> = Style {
             display: Display::Grid,
-            min_size: Size { width: length(140.0), height: length(90.0) },
+            min_size: Size {
+                width: length(140.0),
+                height: length(90.0),
+            },
             grid_template_columns: vec![repeat(AutoFill, vec![length(40.0)])],
             grid_template_rows: vec![repeat(AutoFill, vec![length(20.0)])],
             ..Default::default()
         };
-        let inner_container_size = Size { width: Some(140.0), height: Some(90.0) };
+        let inner_container_size = Size {
+            width: Some(140.0),
+            height: Some(90.0),
+        };
         let (auto_col_reps, col_count) = compute_explicit_grid_size_in_axis(
             &grid_style,
             inner_container_size.get_abs(AbsoluteAxis::Horizontal),
@@ -546,7 +585,10 @@ mod test {
         use RepetitionCount::AutoFill;
         let grid_style: Style<DefaultCheapStr> = Style {
             display: Display::Grid,
-            size: Size { width: length(140.0), height: length(100.0) },
+            size: Size {
+                width: length(140.0),
+                height: length(100.0),
+            },
             grid_template_columns: vec![repeat(AutoFill, vec![length(40.0), length(20.0)])],
             grid_template_rows: vec![repeat(AutoFill, vec![length(20.0), length(10.0)])],
             ..Default::default()
@@ -577,7 +619,10 @@ mod test {
         use RepetitionCount::AutoFill;
         let grid_style: Style<DefaultCheapStr> = Style {
             display: Display::Grid,
-            size: Size { width: length(140.0), height: length(100.0) },
+            size: Size {
+                width: length(140.0),
+                height: length(100.0),
+            },
             grid_template_columns: vec![repeat(AutoFill, vec![length(40.0)])],
             grid_template_rows: vec![repeat(AutoFill, vec![length(20.0)])],
             gap: length(20.0),
@@ -643,7 +688,10 @@ mod test {
         use RepetitionCount::AutoFill;
         let grid_style: Style<DefaultCheapStr> = Style {
             display: Display::Grid,
-            size: Size { width: length(140.0), height: length(100.0) },
+            size: Size {
+                width: length(140.0),
+                height: length(100.0),
+            },
             grid_template_columns: vec![length(20.0), repeat(AutoFill, vec![length(40.0)])],
             grid_template_rows: vec![length(40.0), repeat(AutoFill, vec![length(20.0)])],
             gap: length(20.0),
@@ -675,7 +723,10 @@ mod test {
         use RepetitionCount::AutoFill;
         let grid_style: Style<DefaultCheapStr> = Style {
             display: Display::Grid,
-            size: Size { width: length(120.0), height: length(120.0) },
+            size: Size {
+                width: length(120.0),
+                height: length(120.0),
+            },
             padding: Rect {
                 left: length(10.0),
                 right: length(10.0),
@@ -686,7 +737,10 @@ mod test {
             grid_template_rows: vec![repeat(AutoFill, vec![length(20.0)])],
             ..Default::default()
         };
-        let inner_container_size = Size { width: Some(100.0), height: Some(80.0) };
+        let inner_container_size = Size {
+            width: Some(100.0),
+            height: Some(80.0),
+        };
         let (auto_col_reps, col_count) = compute_explicit_grid_size_in_axis(
             &grid_style,
             inner_container_size.get_abs(AbsoluteAxis::Horizontal),
@@ -755,9 +809,17 @@ mod test {
             // Explicit tracks
             (GridTrackKind::Track, minpx100, maxpx100),
             (GridTrackKind::Gutter, minpx20, maxpx20),
-            (GridTrackKind::Track, minpx100, MaxTrackSizingFunction::from_fr(2.0)), // Note: separate min-max functions
+            (
+                GridTrackKind::Track,
+                minpx100,
+                MaxTrackSizingFunction::from_fr(2.0),
+            ), // Note: separate min-max functions
             (GridTrackKind::Gutter, minpx20, maxpx20),
-            (GridTrackKind::Track, auto(), MaxTrackSizingFunction::from_fr(1.0)), // Note: min sizing function of flex sizing functions is AUTO
+            (
+                GridTrackKind::Track,
+                auto(),
+                MaxTrackSizingFunction::from_fr(1.0),
+            ), // Note: min sizing function of flex sizing functions is AUTO
             (GridTrackKind::Gutter, minpx20, maxpx20),
             // Positive implicit tracks
             (GridTrackKind::Track, auto(), auto()),
@@ -768,12 +830,22 @@ mod test {
             (GridTrackKind::Gutter, minpx0, maxpx0),
         ];
 
-        assert_eq!(tracks.len(), expected.len(), "Number of tracks doesn't match");
+        assert_eq!(
+            tracks.len(),
+            expected.len(),
+            "Number of tracks doesn't match"
+        );
 
         for (idx, (actual, (kind, min, max))) in tracks.into_iter().zip(expected).enumerate() {
             assert_eq!(actual.kind, kind, "Track {idx} (0-based index)");
-            assert_eq!(actual.min_track_sizing_function, min, "Track {idx} (0-based index)");
-            assert_eq!(actual.max_track_sizing_function, max, "Track {idx} (0-based index)");
+            assert_eq!(
+                actual.min_track_sizing_function, min,
+                "Track {idx} (0-based index)"
+            );
+            assert_eq!(
+                actual.max_track_sizing_function, max,
+                "Track {idx} (0-based index)"
+            );
         }
     }
 }

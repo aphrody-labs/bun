@@ -43,7 +43,8 @@ impl Secret {
 
     /// The value of the environment variable `name` (`bun host ... -s NAME`).
     pub fn from_env(name: &str) -> Result<Self, String> {
-        let value = std::env::var(name).map_err(|_| format!("environment variable {name} is not set"))?;
+        let value =
+            std::env::var(name).map_err(|_| format!("environment variable {name} is not set"))?;
         Self::from_bytes(value.as_bytes())
     }
 
@@ -52,9 +53,16 @@ impl Secret {
         #[cfg(unix)]
         {
             use std::os::unix::fs::PermissionsExt;
-            let mode = std::fs::metadata(path).map_err(|e| format!("{}: {e}", path.display()))?.permissions().mode();
+            let mode = std::fs::metadata(path)
+                .map_err(|e| format!("{}: {e}", path.display()))?
+                .permissions()
+                .mode();
             if mode & 0o077 != 0 {
-                return Err(format!("{}: mode {:o} is too open, use 0600", path.display(), mode & 0o777));
+                return Err(format!(
+                    "{}: mode {:o} is too open, use 0600",
+                    path.display(),
+                    mode & 0o777
+                ));
             }
         }
         let bytes = std::fs::read(path).map_err(|e| format!("{}: {e}", path.display()))?;
@@ -93,7 +101,10 @@ fn unhex(text: &str) -> Option<Vec<u8>> {
     if !text.len().is_multiple_of(2) || !text.is_ascii() {
         return None;
     }
-    (0..text.len()).step_by(2).map(|i| u8::from_str_radix(&text[i..i + 2], 16).ok()).collect()
+    (0..text.len())
+        .step_by(2)
+        .map(|i| u8::from_str_radix(&text[i..i + 2], 16).ok())
+        .collect()
 }
 
 /// JSON with object keys sorted: the text that is signed.
@@ -108,7 +119,10 @@ pub fn canonical(value: &Value) -> String {
                 .collect();
             format!("{{{}}}", body.join(","))
         }
-        Value::Array(items) => format!("[{}]", items.iter().map(canonical).collect::<Vec<_>>().join(",")),
+        Value::Array(items) => format!(
+            "[{}]",
+            items.iter().map(canonical).collect::<Vec<_>>().join(",")
+        ),
         other => other.to_string(),
     }
 }
@@ -118,7 +132,9 @@ pub fn valid_id(id: &str) -> bool {
     !id.is_empty()
         && id.len() <= 64
         && !id.starts_with('.')
-        && id.bytes().all(|b| b.is_ascii_alphanumeric() || matches!(b, b'-' | b'_' | b'.'))
+        && id
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'-' | b'_' | b'.'))
 }
 
 /// A signed card for the local machine.
@@ -139,7 +155,11 @@ pub enum Outcome {
 }
 
 fn collected_at(entry: &Entry) -> u64 {
-    entry.info.get("collected_at").and_then(Value::as_u64).unwrap_or(0)
+    entry
+        .info
+        .get("collected_at")
+        .and_then(Value::as_u64)
+        .unwrap_or(0)
 }
 
 fn check(entry: &Entry, secret: Option<&Secret>) -> Result<String, String> {
@@ -150,7 +170,12 @@ fn check(entry: &Entry, secret: Option<&Secret>) -> Result<String, String> {
     if entry.info.get("schema").and_then(Value::as_u64) != Some(u64::from(SCHEMA)) {
         return Err(format!("{id}: unsupported schema"));
     }
-    if entry.info.get("collected_at").and_then(Value::as_u64).is_none() {
+    if entry
+        .info
+        .get("collected_at")
+        .and_then(Value::as_u64)
+        .is_none()
+    {
         return Err(format!("{id}: missing collected_at"));
     }
     if let Some(secret) = secret {
@@ -165,7 +190,11 @@ fn check(entry: &Entry, secret: Option<&Secret>) -> Result<String, String> {
 
 impl Inventory {
     pub fn new() -> Self {
-        Self { schema: SCHEMA, updated_at: 0, hosts: BTreeMap::new() }
+        Self {
+            schema: SCHEMA,
+            updated_at: 0,
+            hosts: BTreeMap::new(),
+        }
     }
 
     pub fn merge(&mut self, entry: Entry, secret: Option<&Secret>) -> Outcome {
@@ -207,7 +236,10 @@ impl Inventory {
     }
 
     pub fn infos(&self) -> Vec<HostInfo> {
-        self.hosts.values().filter_map(|e| serde_json::from_value(e.info.clone()).ok()).collect()
+        self.hosts
+            .values()
+            .filter_map(|e| serde_json::from_value(e.info.clone()).ok())
+            .collect()
     }
 }
 
@@ -216,7 +248,9 @@ pub fn store_dir() -> PathBuf {
     if let Some(dir) = std::env::var_os("BUN_HOST_DIR").filter(|d| !d.is_empty()) {
         return PathBuf::from(dir);
     }
-    let home = std::env::var_os("USERPROFILE").or_else(|| std::env::var_os("HOME")).unwrap_or_default();
+    let home = std::env::var_os("USERPROFILE")
+        .or_else(|| std::env::var_os("HOME"))
+        .unwrap_or_default();
     PathBuf::from(home).join(".bun").join("host")
 }
 
@@ -247,7 +281,10 @@ pub fn read_cards(dir: &Path) -> (Vec<Entry>, Vec<String>) {
         .collect();
     paths.sort();
     for path in paths {
-        match std::fs::read(&path).map_err(|e| e.to_string()).and_then(|b| serde_json::from_slice::<Entry>(&b).map_err(|e| e.to_string())) {
+        match std::fs::read(&path)
+            .map_err(|e| e.to_string())
+            .and_then(|b| serde_json::from_slice::<Entry>(&b).map_err(|e| e.to_string()))
+        {
             Ok(card) => cards.push(card),
             Err(e) => errors.push(format!("{}: {e}", path.display())),
         }
@@ -281,7 +318,10 @@ pub fn load(dir: &Path, secret: Option<&Secret>) -> Loaded {
             rejected.push(reason);
         }
     }
-    Loaded { inventory, rejected }
+    Loaded {
+        inventory,
+        rejected,
+    }
 }
 
 pub fn save(dir: &Path, inventory: &mut Inventory) -> Result<(), String> {
@@ -313,28 +353,47 @@ pub fn find(inventory: &Inventory, query: &Query, now_ms: u64) -> Vec<Value> {
             continue;
         }
         let gpu_ok = |g: &crate::schema::Gpu| {
-            query.gpu.as_ref().is_none_or(|n| g.name.to_ascii_lowercase().contains(&n.to_ascii_lowercase()))
-                && (!query.cuda || g.cuda.is_some())
-                && query.min_vram_free_gb.is_none_or(|min| g.vram_free_mib.is_some_and(|f| f as f64 >= min * GIB))
+            query.gpu.as_ref().is_none_or(|n| {
+                g.name
+                    .to_ascii_lowercase()
+                    .contains(&n.to_ascii_lowercase())
+            }) && (!query.cuda || g.cuda.is_some())
+                && query
+                    .min_vram_free_gb
+                    .is_none_or(|min| g.vram_free_mib.is_some_and(|f| f as f64 >= min * GIB))
         };
         let gpus: Vec<&crate::schema::Gpu> = info.gpus.iter().filter(|g| gpu_ok(g)).collect();
-        if (query.gpu.is_some() || query.cuda || query.min_vram_free_gb.is_some()) && gpus.is_empty() {
+        if (query.gpu.is_some() || query.cuda || query.min_vram_free_gb.is_some())
+            && gpus.is_empty()
+        {
             continue;
         }
-        if query.min_ram_gb.is_some_and(|min| (info.memory.available_mib as f64) < min * GIB) {
+        if query
+            .min_ram_gb
+            .is_some_and(|min| (info.memory.available_mib as f64) < min * GIB)
+        {
             continue;
         }
         let disk_free = info.disks.iter().map(|d| d.free_mib).max().unwrap_or(0);
-        if query.min_disk_free_gb.is_some_and(|min| (disk_free as f64) < min * GIB) {
+        if query
+            .min_disk_free_gb
+            .is_some_and(|min| (disk_free as f64) < min * GIB)
+        {
             continue;
         }
         if let Some(os) = &query.os {
             let os = os.to_ascii_lowercase();
-            if !info.os.family.to_ascii_lowercase().contains(&os) && !info.os.name.to_ascii_lowercase().contains(&os) {
+            if !info.os.family.to_ascii_lowercase().contains(&os)
+                && !info.os.name.to_ascii_lowercase().contains(&os)
+            {
                 continue;
             }
         }
-        let best_vram = gpus.iter().filter_map(|g| g.vram_free_mib).max().unwrap_or(0);
+        let best_vram = gpus
+            .iter()
+            .filter_map(|g| g.vram_free_mib)
+            .max()
+            .unwrap_or(0);
         hits.push((
             best_vram,
             info.memory.available_mib,

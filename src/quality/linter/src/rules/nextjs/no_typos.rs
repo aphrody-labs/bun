@@ -13,9 +13,11 @@ use crate::{
 };
 
 fn no_typos_diagnostic(typo: &str, suggestion: &str, span: Span) -> OxcDiagnostic {
-    OxcDiagnostic::warn(format!("`{typo}` may be a typo. Did you mean `{suggestion}`?"))
-        .with_help(format!("Change `{typo}` to `{suggestion}`"))
-        .with_label(span)
+    OxcDiagnostic::warn(format!(
+        "`{typo}` may be a typo. Did you mean `{suggestion}`?"
+    ))
+    .with_help(format!("Change `{typo}` to `{suggestion}`"))
+    .with_label(span)
 }
 
 #[derive(Debug, Default, Clone)]
@@ -282,5 +284,7 @@ fn test() {
         ),
     ];
 
-    Tester::new(NoTypos::NAME, NoTypos::PLUGIN, pass, fail).expect_fix(fix).test_and_snapshot();
+    Tester::new(NoTypos::NAME, NoTypos::PLUGIN, pass, fail)
+        .expect_fix(fix)
+        .test_and_snapshot();
 }

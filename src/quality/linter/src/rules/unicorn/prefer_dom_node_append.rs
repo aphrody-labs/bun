@@ -129,10 +129,18 @@ fn test() {
             "function foo() { return node.appendChild(child); }",
             "function foo() { return node.append(child); }",
         ),
-        ("const foo = [node.appendChild(child)]", "const foo = [node.append(child)]"),
+        (
+            "const foo = [node.appendChild(child)]",
+            "const foo = [node.append(child)]",
+        ),
     ];
 
-    Tester::new(PreferDomNodeAppend::NAME, PreferDomNodeAppend::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        PreferDomNodeAppend::NAME,
+        PreferDomNodeAppend::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

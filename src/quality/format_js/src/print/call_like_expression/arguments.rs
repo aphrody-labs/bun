@@ -122,7 +122,9 @@ impl<'a> Format<'a, JsFormatContext<'a>> for AstNode<'a, ArenaVec<'a, Argument<'
         // A sole embedded template expands like a last argument (unlike a verbatim one)
         let group_layout = match arguments.as_slice() {
             [argument]
-                if argument.as_expression().and_then(|expr| embed_hug(expr, call, f))
+                if argument
+                    .as_expression()
+                    .and_then(|expr| embed_hug(expr, call, f))
                     == Some(true) =>
             {
                 Some(GroupedCallArgumentLayout::GroupedLastArgument)
@@ -138,11 +140,8 @@ impl<'a> Format<'a, JsFormatContext<'a>> for AstNode<'a, ArenaVec<'a, Argument<'
                 [
                     l_paren_token,
                     soft_block_indent(&format_with(|f| {
-                        f.join_with(soft_line_break_or_space()).entries_with_trailing_separator(
-                            self.iter(),
-                            ",",
-                            trailing_operator,
-                        );
+                        f.join_with(soft_line_break_or_space())
+                            .entries_with_trailing_separator(self.iter(), ",", trailing_operator);
                     })),
                     r_paren_token,
                 ]
@@ -191,7 +190,10 @@ pub fn is_function_composition_args(args: &[Argument<'_>]) -> bool {
     let mut has_seen_function_like = false;
     let is_call_expression_with_arrow_or_function = |call: &CallExpression| {
         call.arguments.iter().any(|arg| {
-            matches!(arg, Argument::FunctionExpression(_) | Argument::ArrowFunctionExpression(_))
+            matches!(
+                arg,
+                Argument::FunctionExpression(_) | Argument::ArrowFunctionExpression(_)
+            )
         })
     };
 
@@ -295,7 +297,9 @@ pub fn arguments_grouped_layout(
     // For exactly 2 arguments, we need to check both grouping strategies.
     // To avoid redundant `can_group_expression_argument` calls, we handle this case specially.
     if args.len() == 2 {
-        let [first, second] = args else { unreachable!("args.len() == 2 guarantees two elements") };
+        let [first, second] = args else {
+            unreachable!("args.len() == 2 guarantees two elements")
+        };
         let second = second.as_expression()?;
 
         // `as_expression()` returns `None` for SpreadElement, which is fine since SpreadElement
@@ -354,7 +358,9 @@ fn should_group_first_argument(
     // - After the first argument (next non-whitespace is not a comma)
     // - End-of-line comments between the first and second argument
     if f.comments().has_comment_before(first_span.start)
-        || !f.source_text().next_non_whitespace_byte_is(first_span.end, b',')
+        || !f
+            .source_text()
+            .next_non_whitespace_byte_is(first_span.end, b',')
         || f.comments()
             .comments_in_range(first_span.end, second.span().start)
             .iter()
@@ -379,12 +385,25 @@ fn should_group_last_argument_impl(
     if let Some(penultimate) = penultimate
         && matches!(
             (penultimate, last),
-            (Expression::ObjectExpression(_), Expression::ObjectExpression(_))
-                | (Expression::ArrayExpression(_), Expression::ArrayExpression(_))
-                | (Expression::TSAsExpression(_), Expression::TSAsExpression(_))
-                | (Expression::TSSatisfiesExpression(_), Expression::TSSatisfiesExpression(_))
-                | (Expression::ArrowFunctionExpression(_), Expression::ArrowFunctionExpression(_))
-                | (Expression::FunctionExpression(_), Expression::FunctionExpression(_))
+            (
+                Expression::ObjectExpression(_),
+                Expression::ObjectExpression(_)
+            ) | (
+                Expression::ArrayExpression(_),
+                Expression::ArrayExpression(_)
+            ) | (Expression::TSAsExpression(_), Expression::TSAsExpression(_))
+                | (
+                    Expression::TSSatisfiesExpression(_),
+                    Expression::TSSatisfiesExpression(_)
+                )
+                | (
+                    Expression::ArrowFunctionExpression(_),
+                    Expression::ArrowFunctionExpression(_)
+                )
+                | (
+                    Expression::FunctionExpression(_),
+                    Expression::FunctionExpression(_)
+                )
         )
     {
         return false;
@@ -395,14 +414,17 @@ fn should_group_last_argument_impl(
     // Don't group if there are comments around the last argument
     let has_comment_before_last = if let Some(penultimate) = penultimate {
         // Check for comments between the penultimate and last argument
-        f.comments().comments_in_range(penultimate.span().end, last_span.start).last().is_some_and(
-            |c| {
+        f.comments()
+            .comments_in_range(penultimate.span().end, last_span.start)
+            .last()
+            .is_some_and(|c| {
                 // Exclude end-of-line comments (treated as previous node's comment)
                 // and comments followed by a comma
                 !c.followed_by_newline()
-                    && !f.source_text().next_non_whitespace_byte_is(c.span.end, b',')
-            },
-        )
+                    && !f
+                        .source_text()
+                        .next_non_whitespace_byte_is(c.span.end, b',')
+            })
     } else {
         f.comments().has_comment_before(last_span.start)
     };
@@ -484,7 +506,11 @@ fn is_simple_ts_type(ty: &TSType<'_>) -> bool {
         TSType::TSTypeReference(generic) => {
             if let Some(type_arguments) = &generic.type_arguments {
                 let argument_list = &type_arguments.params;
-                if argument_list.len() == 1 { &argument_list[0] } else { extracted_array_type }
+                if argument_list.len() == 1 {
+                    &argument_list[0]
+                } else {
+                    extracted_array_type
+                }
             } else {
                 extracted_array_type
             }
@@ -670,8 +696,11 @@ fn write_grouped_arguments<'a>(
                 write!(f, [argument, comma]);
             }));
 
-            let break_type =
-                if is_grouped_argument { &mut grouped_breaks } else { &mut non_grouped_breaks };
+            let break_type = if is_grouped_argument {
+                &mut grouped_breaks
+            } else {
+                &mut non_grouped_breaks
+            };
 
             *break_type = *break_type || interned.as_ref().is_some_and(FormatElement::will_break);
 
@@ -762,7 +791,10 @@ fn write_grouped_arguments<'a>(
                 write!(f, (last_index != 0).then_some(","));
             }))
         } else {
-            f.intern(&FormatGroupedLastArgument { argument, is_only: only_one_argument })
+            f.intern(&FormatGroupedLastArgument {
+                argument,
+                is_only: only_one_argument,
+            })
         }
     }
 
@@ -814,15 +846,14 @@ fn write_grouped_arguments<'a>(
                 [
                     "(",
                     format_once(|f| {
-                        f.join_with(soft_line_break_or_space()).entries(grouped.into_iter().map(
-                            |(element, _)| {
+                        f.join_with(soft_line_break_or_space())
+                            .entries(grouped.into_iter().map(|(element, _)| {
                                 format_once(move |f| {
                                     if let Some(element) = element {
                                         f.write_element(element);
                                     }
                                 })
-                            },
-                        ));
+                            }));
                     }),
                     ")",
                 ]
@@ -1012,7 +1043,10 @@ fn is_commonjs_or_amd_call(
                         let second = iter.next();
                         matches!(
                             (first, second),
-                            (Some(Argument::StringLiteral(_)), Some(Argument::ArrayExpression(_)))
+                            (
+                                Some(Argument::StringLiteral(_)),
+                                Some(Argument::ArrayExpression(_))
+                            )
                         )
                     }
                     _ => false,
@@ -1077,10 +1111,13 @@ fn is_react_hook_with_deps_array(
             }
 
             // Is there a comment that isn't around the callback or deps?
-            !comments.comments_before(arguments.parent().span().end).iter().any(|comment| {
-                !callback.span.contains_inclusive(comment.span)
-                    && !deps.span.contains_inclusive(comment.span)
-            })
+            !comments
+                .comments_before(arguments.parent().span().end)
+                .iter()
+                .any(|comment| {
+                    !callback.span.contains_inclusive(comment.span)
+                        && !deps.span.contains_inclusive(comment.span)
+                })
         }
         _ => false,
     }

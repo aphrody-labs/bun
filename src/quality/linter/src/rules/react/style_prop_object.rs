@@ -85,7 +85,8 @@ declare_oxc_lint!(
     suspicious,
     config = StylePropObjectConfig,
     version = "0.11.0",
-    short_description = "Require that the value of the prop `style` be an object or a variable that is an object.",
+    short_description =
+        "Require that the value of the prop `style` be an object or a variable that is an object.",
 );
 
 fn is_invalid_type(ty: &TSType) -> bool {
@@ -165,17 +166,21 @@ impl Rule for StylePropObject {
                     return;
                 }
 
-                jsx_elem.opening_element.attributes.iter().for_each(|attribute| {
-                    if let JSXAttributeItem::Attribute(attribute) = attribute
-                        && is_invalid_style_attribute(attribute, ctx)
-                    {
-                        let Some(value) = &attribute.value else {
-                            return;
-                        };
+                jsx_elem
+                    .opening_element
+                    .attributes
+                    .iter()
+                    .for_each(|attribute| {
+                        if let JSXAttributeItem::Attribute(attribute) = attribute
+                            && is_invalid_style_attribute(attribute, ctx)
+                        {
+                            let Some(value) = &attribute.value else {
+                                return;
+                            };
 
-                        ctx.diagnostic(style_prop_object_diagnostic(value.span()));
-                    }
-                });
+                            ctx.diagnostic(style_prop_object_diagnostic(value.span()));
+                        }
+                    });
             }
             AstKind::CallExpression(call_expr) => {
                 if !is_create_element_call(call_expr) {

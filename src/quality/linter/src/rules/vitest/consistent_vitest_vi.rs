@@ -178,7 +178,10 @@ impl Rule for ConsistentVitestVi {
             AstKind::CallExpression(call_expr) => {
                 let Some(vitest_fn) = parse_general_jest_fn_call(
                     call_expr,
-                    &PossibleJestNode { node, original: None },
+                    &PossibleJestNode {
+                        node,
+                        original: None,
+                    },
                     ctx,
                 ) else {
                     return;
@@ -218,7 +221,10 @@ fn test() {
         (r#"import { vi } from "vitest";"#, None),
         (r#"import { vi } from "vite-plus/test";"#, None),
         (r#"import { vi } from "@effect/vitest";"#, None),
-        (r#"import { vitest } from "vitest";"#, Some(serde_json::json!([{ "fn": "vitest" }]))),
+        (
+            r#"import { vitest } from "vitest";"#,
+            Some(serde_json::json!([{ "fn": "vitest" }])),
+        ),
         (
             r#"import { vi } from "vitest";
 			vi.stubEnv("NODE_ENV", "production");"#,
@@ -250,7 +256,11 @@ fn test() {
     ];
 
     let fix = vec![
-        (r#"import { vitest } from "vitest";"#, r#"import { vi } from "vitest";"#, None), // WORKING
+        (
+            r#"import { vitest } from "vitest";"#,
+            r#"import { vi } from "vitest";"#,
+            None,
+        ), // WORKING
         (
             r#"import { vitest } from "vite-plus/test";"#,
             r#"import { vi } from "vite-plus/test";"#,
@@ -308,8 +318,13 @@ fn test() {
             Some(serde_json::json!([{ "fn": "vitest" }])),
         ),
     ];
-    Tester::new(ConsistentVitestVi::NAME, ConsistentVitestVi::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .with_vitest_plugin(true)
-        .test_and_snapshot();
+    Tester::new(
+        ConsistentVitestVi::NAME,
+        ConsistentVitestVi::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .with_vitest_plugin(true)
+    .test_and_snapshot();
 }

@@ -124,23 +124,35 @@ impl NoReservedComponentNames {
         if let Some(name_prop) = find_property(obj, "name") {
             self.check_name_expression(name_prop.value.get_inner_expression(), ctx);
         }
-        let Some(components_prop) = find_property(obj, "components") else { return };
+        let Some(components_prop) = find_property(obj, "components") else {
+            return;
+        };
         let Expression::ObjectExpression(components_obj) =
             components_prop.value.get_inner_expression()
         else {
             return;
         };
         for entry in &components_obj.properties {
-            let ObjectPropertyKind::ObjectProperty(prop) = entry else { continue };
-            let Some(name) = prop.key.static_name() else { continue };
+            let ObjectPropertyKind::ObjectProperty(prop) = entry else {
+                continue;
+            };
+            let Some(name) = prop.key.static_name() else {
+                continue;
+            };
             self.report_if_reserved(name.as_ref(), prop.key.span(), ctx);
         }
     }
 
     fn check_define_options<'a>(&self, call: &CallExpression<'a>, ctx: &LintContext<'a>) {
-        let Some(arg) = call.arguments.first().and_then(|a| a.as_expression()) else { return };
-        let Expression::ObjectExpression(obj) = arg.get_inner_expression() else { return };
-        let Some(name_prop) = find_property(obj, "name") else { return };
+        let Some(arg) = call.arguments.first().and_then(|a| a.as_expression()) else {
+            return;
+        };
+        let Expression::ObjectExpression(obj) = arg.get_inner_expression() else {
+            return;
+        };
+        let Some(name_prop) = find_property(obj, "name") else {
+            return;
+        };
         self.check_name_expression(name_prop.value.get_inner_expression(), ctx);
     }
 
@@ -220,12 +232,18 @@ impl NoReservedComponentNames {
 }
 
 fn is_x_dot_component_call(call: &CallExpression<'_>) -> bool {
-    let Some(member) = call.callee.get_member_expr() else { return false };
-    member.static_property_name().is_some_and(|name| name == "component")
+    let Some(member) = call.callee.get_member_expr() else {
+        return false;
+    };
+    member
+        .static_property_name()
+        .is_some_and(|name| name == "component")
 }
 
 fn is_define_options_call(call: &CallExpression<'_>) -> bool {
-    call.callee.get_identifier_reference().is_some_and(|ident| ident.name == "defineOptions")
+    call.callee
+        .get_identifier_reference()
+        .is_some_and(|ident| ident.name == "defineOptions")
 }
 
 fn single_quasi_value<'a>(tpl: &'a TemplateLiteral<'a>) -> Option<&'a str> {
@@ -277,7 +295,12 @@ fn test() {
     use std::path::PathBuf;
 
     let pass = vec![
-        ("<script>export default {}</script>", None, None, Some(PathBuf::from("test.vue"))),
+        (
+            "<script>export default {}</script>",
+            None,
+            None,
+            Some(PathBuf::from("test.vue")),
+        ),
         (
             "<script>export default { ...name }</script>",
             None,
@@ -335,7 +358,12 @@ fn test() {
             Some(PathBuf::from("test.vue")),
         ),
         // .js file is not a Vue SFC so `new Vue({ name: 'foo!bar' })` should be ignored
-        ("new Vue({ name: 'foo!bar' })", None, None, Some(PathBuf::from("test.js"))),
+        (
+            "new Vue({ name: 'foo!bar' })",
+            None,
+            None,
+            Some(PathBuf::from("test.js")),
+        ),
         (
             "<script>Vue.component(`fooBar${foo}`, component)</script>",
             None,
@@ -354,8 +382,18 @@ fn test() {
             None,
             Some(PathBuf::from("test.vue")),
         ),
-        ("fn1(component.data)", None, None, Some(PathBuf::from("test.js"))),
-        ("<script setup>defineOptions({})</script>", None, None, Some(PathBuf::from("test.vue"))),
+        (
+            "fn1(component.data)",
+            None,
+            None,
+            Some(PathBuf::from("test.js")),
+        ),
+        (
+            "<script setup>defineOptions({})</script>",
+            None,
+            None,
+            Some(PathBuf::from("test.vue")),
+        ),
         (
             "<script setup>defineOptions({ ...name })</script>",
             None,
@@ -405,9 +443,19 @@ fn test() {
             Some(PathBuf::from("test.vue")),
         ),
         // pattern 4: Vue.component(`<reserved>`, {}) (TemplateLiteral)
-        ("<script>Vue.component(`div`, {})</script>", None, None, Some(PathBuf::from("test.vue"))),
+        (
+            "<script>Vue.component(`div`, {})</script>",
+            None,
+            None,
+            Some(PathBuf::from("test.vue")),
+        ),
         // pattern 5: app.component(`<reserved>`, {})
-        ("<script>app.component(`div`, {})</script>", None, None, Some(PathBuf::from("test.vue"))),
+        (
+            "<script>app.component(`div`, {})</script>",
+            None,
+            None,
+            Some(PathBuf::from("test.vue")),
+        ),
         // pattern 6: export default { components: { '<reserved>': {} } }
         (
             "<script>export default { components: { 'div': {} } }</script>",
@@ -500,6 +548,11 @@ fn test() {
         ),
     ];
 
-    Tester::new(NoReservedComponentNames::NAME, NoReservedComponentNames::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        NoReservedComponentNames::NAME,
+        NoReservedComponentNames::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

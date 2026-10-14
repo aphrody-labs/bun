@@ -71,13 +71,21 @@ declare_oxc_lint!(
 
 impl Rule for NoThisInSfc {
     fn run<'a>(&self, node: &AstNode<'a>, ctx: &LintContext<'a>) {
-        let AstKind::ThisExpression(this_expr) = node.kind() else { return };
+        let AstKind::ThisExpression(this_expr) = node.kind() else {
+            return;
+        };
 
-        if !ctx.nodes().parent_kind(node.id()).is_member_expression_kind() {
+        if !ctx
+            .nodes()
+            .parent_kind(node.id())
+            .is_member_expression_kind()
+        {
             return;
         }
 
-        let Some(component_node) = get_parent_component(node, ctx) else { return };
+        let Some(component_node) = get_parent_component(node, ctx) else {
+            return;
+        };
 
         if ctx
             .nodes()
@@ -268,10 +276,22 @@ fn test() {
             None,
             None,
         ),
-        ("const Foo = (props) => <span>{props.foo}</span>", None, None),
+        (
+            "const Foo = (props) => <span>{props.foo}</span>",
+            None,
+            None,
+        ),
         ("const Foo = ({ foo }) => <span>{foo}</span>", None, None),
-        ("const Foo = (props) => props.foo ? <span>{props.bar}</span> : null;", None, None),
-        ("const Foo = ({ foo, bar }) => foo ? <span>{bar}</span> : null;", None, None),
+        (
+            "const Foo = (props) => props.foo ? <span>{props.bar}</span> : null;",
+            None,
+            None,
+        ),
+        (
+            "const Foo = ({ foo, bar }) => foo ? <span>{bar}</span> : null;",
+            None,
+            None,
+        ),
         (
             "
                     class Foo {
@@ -490,8 +510,16 @@ fn test() {
             None,
             None,
         ),
-        ("const Foo = (props) => <span>{this.props.foo}</span>", None, None),
-        ("const Foo = (props) => this.props.foo ? <span>{props.bar}</span> : null;", None, None),
+        (
+            "const Foo = (props) => <span>{this.props.foo}</span>",
+            None,
+            None,
+        ),
+        (
+            "const Foo = (props) => this.props.foo ? <span>{props.bar}</span> : null;",
+            None,
+            None,
+        ),
         (
             "
                     function Foo(props) {

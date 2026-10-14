@@ -56,14 +56,18 @@ declare_oxc_lint!(
     promise,
     style,
     version = "0.9.10",
-    short_description = "Prefer `async`/`await` over callback functions for handling asynchronous code.",
+    short_description =
+        "Prefer `async`/`await` over callback functions for handling asynchronous code.",
 );
 
 impl Rule for PreferAwaitToCallbacks {
     fn run<'a>(&self, node: &AstNode<'a>, ctx: &LintContext<'a>) {
         match node.kind() {
             AstKind::CallExpression(expr) => {
-                let callee_name = expr.callee.get_identifier_reference().map(|id| id.name.as_str());
+                let callee_name = expr
+                    .callee
+                    .get_identifier_reference()
+                    .map(|id| id.name.as_str());
                 if matches!(callee_name, Some("callback" | "cb")) {
                     ctx.diagnostic(prefer_await_to_callbacks(expr.span));
                     return;
@@ -141,7 +145,10 @@ impl PreferAwaitToCallbacks {
 
     fn is_inside_yield_or_await(id: NodeId, ctx: &LintContext) -> bool {
         ctx.nodes().ancestors(id).any(|parent| {
-            matches!(parent.kind(), AstKind::AwaitExpression(_) | AstKind::YieldExpression(_))
+            matches!(
+                parent.kind(),
+                AstKind::AwaitExpression(_) | AstKind::YieldExpression(_)
+            )
         })
     }
 
@@ -195,6 +202,11 @@ fn test() {
         "customMap(errors, (err) => err.message)",
     ];
 
-    Tester::new(PreferAwaitToCallbacks::NAME, PreferAwaitToCallbacks::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        PreferAwaitToCallbacks::NAME,
+        PreferAwaitToCallbacks::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

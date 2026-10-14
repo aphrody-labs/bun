@@ -28,7 +28,10 @@ fn codes_jsx(code: &str) -> Vec<DiagCode> {
     let mut buf = code.as_bytes().to_vec();
     let len = buf.len() as u32;
     buf.resize(buf.len() + PAD, 0);
-    let opts = LexOptions { jsx: true, ..Default::default() };
+    let opts = LexOptions {
+        jsx: true,
+        ..Default::default()
+    };
     let (res, _arena) = lex_utf8(&buf, len, opts);
     res.diagnostics().iter().map(|d| d.code).collect()
 }
@@ -37,7 +40,11 @@ fn codes_tsx(code: &str) -> Vec<DiagCode> {
     let mut buf = code.as_bytes().to_vec();
     let len = buf.len() as u32;
     buf.resize(buf.len() + PAD, 0);
-    let opts = LexOptions { jsx: true, ts: true, ..Default::default() };
+    let opts = LexOptions {
+        jsx: true,
+        ts: true,
+        ..Default::default()
+    };
     let (res, _arena) = lex_utf8(&buf, len, opts);
     res.diagnostics().iter().map(|d| d.code).collect()
 }
@@ -74,8 +81,14 @@ fn unterminated_regex() {
 fn unterminated_in_jsx_path() {
     // carve_jsx must detect the same unterminated literals as carve
     assert_eq!(codes_jsx("const x = 'abc"), [DiagCode::UnterminatedString]);
-    assert_eq!(codes_jsx("const x = `abc"), [DiagCode::UnterminatedTemplate]);
-    assert_eq!(codes_jsx("const x = 1 /* abc"), [DiagCode::UnterminatedBlockComment]);
+    assert_eq!(
+        codes_jsx("const x = `abc"),
+        [DiagCode::UnterminatedTemplate]
+    );
+    assert_eq!(
+        codes_jsx("const x = 1 /* abc"),
+        [DiagCode::UnterminatedBlockComment]
+    );
     assert_eq!(codes_jsx("const x = /abc"), [DiagCode::UnterminatedRegexp]);
     assert_eq!(codes_jsx("const el = <div className='x'>hi</div>;"), []);
 }
@@ -140,7 +153,10 @@ fn valid_numbers_never_flagged() {
         "09e1_1",
         "08.1_2e3_4",
     ] {
-        assert!(codes(&format!("x = {n};")).is_empty(), "false positive on valid `{n}`");
+        assert!(
+            codes(&format!("x = {n};")).is_empty(),
+            "false positive on valid `{n}`"
+        );
     }
 }
 
@@ -219,7 +235,10 @@ fn regex_flags() {
 fn unexpected_character() {
     assert_eq!(codes("a\u{1}b"), [DiagCode::UnexpectedCharacter]);
     assert_eq!(codes("x = 1\u{7} 2"), [DiagCode::UnexpectedCharacter]);
-    assert_eq!(codes("\u{1}\u{2}"), [DiagCode::UnexpectedCharacter, DiagCode::UnexpectedCharacter]);
+    assert_eq!(
+        codes("\u{1}\u{2}"),
+        [DiagCode::UnexpectedCharacter, DiagCode::UnexpectedCharacter]
+    );
 }
 
 #[test]
@@ -231,7 +250,10 @@ fn line_terminator_in_string() {
     assert_eq!(codes("x = 'a\\\rb';"), []);
     assert_eq!(codes("x = 'a\\\r\nb';"), []);
     // escaped backslash followed by a raw terminator is invalid
-    assert_eq!(codes("x = 'a\\\\\r\nb';"), [DiagCode::LineTerminatorInString]);
+    assert_eq!(
+        codes("x = 'a\\\\\r\nb';"),
+        [DiagCode::LineTerminatorInString]
+    );
 
     // Span parity: opener through the first unescaped terminator; for CRLF
     // only the CR (the parser consumes one char, then reports).
@@ -276,13 +298,22 @@ fn invalid_unicode_escape_in_string() {
     // escape scanner consumed. (`x = ` puts the `\` at offset 5.)
     let d = diags(r#"x = "\u{110000}";"#); // out of range: span `\u{110000` (excl `}`)
     assert_eq!(d.len(), 1);
-    assert_eq!((d[0].off, d[0].len, d[0].code), (5, 9, DiagCode::InvalidUnicodeEscape));
+    assert_eq!(
+        (d[0].off, d[0].len, d[0].code),
+        (5, 9, DiagCode::InvalidUnicodeEscape)
+    );
     let d = diags(r#"x = "\uZZZZ";"#); // bad hex: span `\u`
-    assert_eq!((d[0].off, d[0].len, d[0].code), (5, 2, DiagCode::InvalidUnicodeEscape));
+    assert_eq!(
+        (d[0].off, d[0].len, d[0].code),
+        (5, 2, DiagCode::InvalidUnicodeEscape)
+    );
     let d = diags(r#"x = "\u1ZZZ";"#); // one leading valid digit: span `\u1`
     assert_eq!((d[0].off, d[0].len), (5, 3));
     let d = diags(r#"x = "\xGG";"#); // bad hex \x: span `\x`
-    assert_eq!((d[0].off, d[0].len, d[0].code), (5, 2, DiagCode::InvalidUnicodeEscape));
+    assert_eq!(
+        (d[0].off, d[0].len, d[0].code),
+        (5, 2, DiagCode::InvalidUnicodeEscape)
+    );
     let d = diags(r#"x = "\x4G";"#); // partial hex: span `\x4`
     assert_eq!((d[0].off, d[0].len), (5, 3));
     let d = diags(r#"x = "\u{}";"#); // empty braces: span `\u{`
@@ -294,7 +325,10 @@ fn invalid_unicode_escape_in_string() {
     let d = diags(r#"x = "\u{1100000}";"#);
     assert_eq!((d[0].off, d[0].len), (5, 9)); // `\u{110000`
     // u32 wrap-around: `\u{100000041}` wraps back into range
-    assert_eq!(codes(r#"x = "\u{100000041}";"#), [DiagCode::InvalidUnicodeEscape]);
+    assert_eq!(
+        codes(r#"x = "\u{100000041}";"#),
+        [DiagCode::InvalidUnicodeEscape]
+    );
     let d = diags(r#"x = "\u{0041ZZZ}";"#); // non-hex break, in-range value
     assert_eq!((d[0].off, d[0].len), (5, 7)); // `\u{0041`
     let d = diags(r#"x = "\u004";"#); // truncated at the closing quote
@@ -325,7 +359,10 @@ fn valid_escapes_never_flagged() {
         r#""😀""#,           // raw multi-byte content, no escapes
         r#""\x41""#,
     ] {
-        assert!(codes(&format!("x = {s};")).is_empty(), "false positive on `{s}`");
+        assert!(
+            codes(&format!("x = {s};")).is_empty(),
+            "false positive on `{s}`"
+        );
     }
     assert_eq!(codes("x = 'a\\\nb';"), []); // LF line continuation
     assert_eq!(codes("x = 'a\\\r\nb';"), []); // CRLF line continuation
@@ -344,7 +381,10 @@ fn template_invalid_escapes_stay_silent() {
 
 #[test]
 fn invalid_unicode_escape_jsx_path() {
-    assert_eq!(codes_jsx(r#"const x = "\uZZZZ";"#), [DiagCode::InvalidUnicodeEscape]);
+    assert_eq!(
+        codes_jsx(r#"const x = "\uZZZZ";"#),
+        [DiagCode::InvalidUnicodeEscape]
+    );
     // JSX attribute strings have no escapes - the value is verbatim source.
     assert_eq!(codes_jsx(r#"const el = <div a="\uZZ">x</div>;"#), []);
 }
@@ -352,7 +392,10 @@ fn invalid_unicode_escape_jsx_path() {
 #[test]
 fn valid_input_emits_nothing() {
     assert_eq!(codes("let x = 'abc';"), []);
-    assert_eq!(codes("const t = `a${b}c`; /* ok */ // ok\nlet r = /x/g;"), []);
+    assert_eq!(
+        codes("const t = `a${b}c`; /* ok */ // ok\nlet r = /x/g;"),
+        []
+    );
     assert_eq!(codes("function f(){ return 1 / 2; }"), []);
 }
 
@@ -362,7 +405,10 @@ fn invalid_unicode_character() {
     // level: U+2E2F vertical tilde, U+180E Mongolian vowel separator, emoji.
     let d = diags("var x\u{2E2F} = 1;");
     assert_eq!(d.len(), 1);
-    assert_eq!((d[0].off, d[0].len, d[0].code), (5, 3, DiagCode::UnexpectedCharacter));
+    assert_eq!(
+        (d[0].off, d[0].len, d[0].code),
+        (5, 3, DiagCode::UnexpectedCharacter)
+    );
     assert_eq!(codes("var \u{180E}x = 1;"), [DiagCode::UnexpectedCharacter]);
     assert_eq!(codes("let a = \u{1F600};"), [DiagCode::UnexpectedCharacter]);
     // A raw U+FFFD at code level is oxc_parser's binary-file error, distinct
@@ -393,7 +439,10 @@ fn diags_bytes(code: &[u8]) -> Vec<Diagnostic> {
     let mut buf = code.to_vec();
     let len = buf.len() as u32;
     buf.resize(buf.len() + PAD, 0);
-    let opts = LexOptions { validate_utf8: true, ..Default::default() };
+    let opts = LexOptions {
+        validate_utf8: true,
+        ..Default::default()
+    };
     let (res, _arena) = lex_utf8(&buf, len, opts);
     res.diagnostics().to_vec()
 }
@@ -403,14 +452,20 @@ fn invalid_utf8() {
     // span = the maximal invalid subpart; one diagnostic per file
     let d = diags_bytes(b"x = \xFF;"); // lone invalid byte
     assert_eq!(d.len(), 1);
-    assert_eq!((d[0].off, d[0].len, d[0].code), (4, 1, DiagCode::InvalidUtf8));
+    assert_eq!(
+        (d[0].off, d[0].len, d[0].code),
+        (4, 1, DiagCode::InvalidUtf8)
+    );
     assert_eq!(diags_bytes(b"x = \xC3;")[0].code, DiagCode::InvalidUtf8); // truncated 2-byte
     assert_eq!(diags_bytes(b"x = \xC3").len(), 1); // truncated at EOF
     assert_eq!(diags_bytes(b"x = \x80;")[0].code, DiagCode::InvalidUtf8); // stray continuation
     // Overlong / surrogate / beyond-U+10FFFF: byte 2 is range-checked per
     // lead, so the invalid subpart is the lead alone.
     let d = diags_bytes(b"x = '\xE0\x80\x80';");
-    assert_eq!((d[0].off, d[0].len, d[0].code), (5, 1, DiagCode::InvalidUtf8));
+    assert_eq!(
+        (d[0].off, d[0].len, d[0].code),
+        (5, 1, DiagCode::InvalidUtf8)
+    );
     let d = diags_bytes(b"x = '\xED\xA0\x80';");
     assert_eq!((d[0].off, d[0].len), (5, 1));
     let d = diags_bytes(b"x = '\xF4\x90\x80\x80';");
@@ -426,7 +481,12 @@ fn invalid_utf8() {
 
 #[test]
 fn valid_utf8_never_flagged() {
-    let codes_v = |s: &str| diags_bytes(s.as_bytes()).iter().map(|d| d.code).collect::<Vec<_>>();
+    let codes_v = |s: &str| {
+        diags_bytes(s.as_bytes())
+            .iter()
+            .map(|d| d.code)
+            .collect::<Vec<_>>()
+    };
     for src in [
         // spellchecker:disable-next-line
         "let caf\u{e9} = 1;",        // 2-byte
@@ -450,10 +510,14 @@ fn utf8_fuzz_against_std() {
     let mut s: u64 = 0x243F_6A88_85A3_08D3;
     for _ in 0..4000 {
         let mut buf = vec![b' ']; // keep offset 0 clear of hashbang/BOM handling
-        s = s.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+        s = s
+            .wrapping_mul(6364136223846793005)
+            .wrapping_add(1442695040888963407);
         let len = 3 + (s >> 59) as usize;
         for _ in 0..len {
-            s = s.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+            s = s
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
             let r = (s >> 33) as u8;
             buf.push(if r & 1 == 0 { 0x40 + (r >> 3) } else { r });
         }
@@ -463,7 +527,11 @@ fn utf8_fuzz_against_std() {
             Ok(_) => assert!(first6.is_none(), "false positive on valid UTF-8 {buf:?}"),
             Err(e) => {
                 let d6 = first6.unwrap_or_else(|| panic!("missed invalid UTF-8 in {buf:?}"));
-                assert_eq!(d6.off as usize, e.valid_up_to(), "offset mismatch on {buf:?}");
+                assert_eq!(
+                    d6.off as usize,
+                    e.valid_up_to(),
+                    "offset mismatch on {buf:?}"
+                );
                 if let Some(l) = e.error_len() {
                     assert_eq!(d6.len as usize, l, "subpart len mismatch on {buf:?}");
                 }
@@ -477,10 +545,16 @@ fn invalid_identifier_escape_bare() {
     // bare `\`: span = the one char after it, backslash excluded
     let d = diags(r"x = \A");
     assert_eq!(d.len(), 1);
-    assert_eq!((d[0].off, d[0].len, d[0].code), (5, 1, DiagCode::InvalidIdentifierEscape));
+    assert_eq!(
+        (d[0].off, d[0].len, d[0].code),
+        (5, 1, DiagCode::InvalidIdentifierEscape)
+    );
     // backslash at EOF: empty span at n
     let d = diags(r"x = \");
-    assert_eq!((d[0].off, d[0].len, d[0].code), (5, 0, DiagCode::InvalidIdentifierEscape));
+    assert_eq!(
+        (d[0].off, d[0].len, d[0].code),
+        (5, 0, DiagCode::InvalidIdentifierEscape)
+    );
     // control bytes keep their own code
     assert_eq!(codes("a\u{1}b"), [DiagCode::UnexpectedCharacter]);
 }
@@ -490,7 +564,10 @@ fn invalid_identifier_escape_payload() {
     // spans start after the backslash, end where the parser scanner stopped
     let d = diags(r"var \uZZ = 1");
     assert_eq!(d.len(), 1);
-    assert_eq!((d[0].off, d[0].len, d[0].code), (5, 1, DiagCode::InvalidIdentifierEscape));
+    assert_eq!(
+        (d[0].off, d[0].len, d[0].code),
+        (5, 1, DiagCode::InvalidIdentifierEscape)
+    );
     let d = diags(r"var \u004 = 1"); // 3 leading valid hex
     assert_eq!((d[0].off, d[0].len), (5, 4));
     let d = diags(r"var \u{} = 1"); // no digits; closing brace NOT consumed
@@ -554,9 +631,15 @@ fn empty_exponent() {
     // `1e` / `1e+`: the marker and sign were consumed but no digits followed
     let d = diags("x = 1e;");
     assert_eq!(d.len(), 1);
-    assert_eq!((d[0].off, d[0].len, d[0].code), (4, 2, DiagCode::InvalidNumericLiteral));
+    assert_eq!(
+        (d[0].off, d[0].len, d[0].code),
+        (4, 2, DiagCode::InvalidNumericLiteral)
+    );
     let d = diags("x = 1e+;");
-    assert_eq!((d[0].off, d[0].len, d[0].code), (4, 3, DiagCode::InvalidNumericLiteral));
+    assert_eq!(
+        (d[0].off, d[0].len, d[0].code),
+        (4, 3, DiagCode::InvalidNumericLiteral)
+    );
     assert_eq!(codes("x = .5e;"), [DiagCode::InvalidNumericLiteral]);
     assert_eq!(codes("x = 0e;"), [DiagCode::InvalidNumericLiteral]);
     assert_eq!(codes("x = 08e;"), [DiagCode::InvalidNumericLiteral]);
@@ -565,8 +648,13 @@ fn empty_exponent() {
     let cs = codes("x = 1en;");
     assert!(cs.contains(&DiagCode::InvalidNumericLiteral));
     assert!(cs.contains(&DiagCode::InvalidBigint));
-    for n in ["1e3", "1E+5", "1e-1", "1.e3", "1e1_0", ".5e2", "0e0", "0xe", "0xEn"] {
-        assert!(codes(&format!("x = {n};")).is_empty(), "false positive on `{n}`");
+    for n in [
+        "1e3", "1E+5", "1e-1", "1.e3", "1e1_0", ".5e2", "0e0", "0xe", "0xEn",
+    ] {
+        assert!(
+            codes(&format!("x = {n};")).is_empty(),
+            "false positive on `{n}`"
+        );
     }
 }
 
@@ -575,7 +663,10 @@ fn unicode_ident_after_number() {
     // same adjacency error as ASCII; span = the identifier-start run
     let d = diags("x = 1π;");
     assert_eq!(d.len(), 1);
-    assert_eq!((d[0].off, d[0].len, d[0].code), (5, 2, DiagCode::InvalidNumericLiteral));
+    assert_eq!(
+        (d[0].off, d[0].len, d[0].code),
+        (5, 2, DiagCode::InvalidNumericLiteral)
+    );
     let d = diags("x = 123abcπ;");
     assert_eq!((d[0].off, d[0].len), (7, 5)); // `abc` + 2-byte pi
     assert_eq!(codes("x = 1.5π;"), [DiagCode::InvalidNumericLiteral]);
@@ -590,9 +681,15 @@ fn escaped_char_not_identifier() {
     // right after the escape (the bridge decodes backward for the message).
     let d = diags(r"var \u0020 = 1");
     assert_eq!(d.len(), 1);
-    assert_eq!((d[0].off, d[0].len, d[0].code), (10, 0, DiagCode::UnexpectedCharacter));
+    assert_eq!(
+        (d[0].off, d[0].len, d[0].code),
+        (10, 0, DiagCode::UnexpectedCharacter)
+    );
     let d = diags(r"var \u{30}x = 1");
-    assert_eq!((d[0].off, d[0].len, d[0].code), (10, 0, DiagCode::UnexpectedCharacter));
+    assert_eq!(
+        (d[0].off, d[0].len, d[0].code),
+        (10, 0, DiagCode::UnexpectedCharacter)
+    );
     // mid-identifier escapes use is_identifier_part: digits fine there,
     assert_eq!(codes(r"let a\u{30}b = 1;"), []);
     // whitespace not
@@ -608,8 +705,14 @@ fn line_separator_in_regexp() {
     // span ends past the whole 3-byte char
     let d = diags("x = /a\u{2028}b/;");
     assert_eq!(d.len(), 1);
-    assert_eq!((d[0].off, d[0].len, d[0].code), (4, 5, DiagCode::LineTerminatorInRegexp));
-    assert_eq!(codes("x = /a\u{2029}b/;"), [DiagCode::LineTerminatorInRegexp]);
+    assert_eq!(
+        (d[0].off, d[0].len, d[0].code),
+        (4, 5, DiagCode::LineTerminatorInRegexp)
+    );
+    assert_eq!(
+        codes("x = /a\u{2029}b/;"),
+        [DiagCode::LineTerminatorInRegexp]
+    );
     let d = diags("x = /a\\\u{2028}b/;"); // escaped LS: still invalid
     assert_eq!(d.len(), 1);
     assert_eq!((d[0].off, d[0].len), (4, 6));
@@ -625,11 +728,17 @@ fn misplaced_hash() {
     // A `#` that opens neither a hashbang nor a private name: the parser
     // consumes the char after `#` and reports on it.
     let d = diags("\n#!/bin/sh");
-    let h = d.iter().find(|x| x.code == DiagCode::UnexpectedCharacter).unwrap();
+    let h = d
+        .iter()
+        .find(|x| x.code == DiagCode::UnexpectedCharacter)
+        .unwrap();
     assert_eq!((h.off, h.len), (2, 1)); // later garbage tokens may add diags
     let d = diags("x = #;");
     assert_eq!(d.len(), 1);
-    assert_eq!((d[0].off, d[0].len, d[0].code), (5, 1, DiagCode::UnexpectedCharacter));
+    assert_eq!(
+        (d[0].off, d[0].len, d[0].code),
+        (5, 1, DiagCode::UnexpectedCharacter)
+    );
     let d = diags("x = #"); // `#` at EOF: empty span at n
     assert_eq!((d[0].off, d[0].len), (5, 0));
     assert_eq!(codes("#!/usr/bin/env node\nlet x = 1;"), []);
@@ -645,7 +754,10 @@ fn template_cooked_invalid_marker() {
         let len = buf.len() as u32;
         buf.resize(buf.len() + PAD, 0);
         let (res, arena) = lex_utf8(&buf, len, LexOptions::default());
-        res.templates(&arena).iter().map(|t| t.cooked_invalid()).collect()
+        res.templates(&arena)
+            .iter()
+            .map(|t| t.cooked_invalid())
+            .collect()
     };
     assert_eq!(get(r"t = `\uZZ`;"), [true]); // bad unicode escape
     assert_eq!(get(r"t = `\xG`;"), [true]); // bad hex escape
@@ -665,8 +777,14 @@ fn template_cooked_invalid_marker() {
 
 #[test]
 fn unterminated_jsx_element() {
-    assert_eq!(codes_tsx("var a = <T>(x: T) => x;"), [DiagCode::UnterminatedJsxElement]);
-    assert_eq!(codes_tsx("f(<T>(x: T) => x);"), [DiagCode::UnterminatedJsxElement]);
+    assert_eq!(
+        codes_tsx("var a = <T>(x: T) => x;"),
+        [DiagCode::UnterminatedJsxElement]
+    );
+    assert_eq!(
+        codes_tsx("f(<T>(x: T) => x);"),
+        [DiagCode::UnterminatedJsxElement]
+    );
 }
 
 #[test]
@@ -689,22 +807,58 @@ fn sorted_codes_tsx(code: &str) -> Vec<DiagCode> {
 
 #[test]
 fn unterminated_jsx() {
-    assert_eq!(codes_tsx("const a = <div>"), [DiagCode::UnterminatedJsxElement]);
-    assert_eq!(codes_tsx("const a = <div>hi"), [DiagCode::UnterminatedJsxElement]);
-    assert_eq!(codes_tsx("const a = <div><b>x</b>"), [DiagCode::UnterminatedJsxElement]);
-    assert_eq!(codes_tsx("const a = <div attr"), [DiagCode::UnterminatedJsxTag]);
+    assert_eq!(
+        codes_tsx("const a = <div>"),
+        [DiagCode::UnterminatedJsxElement]
+    );
+    assert_eq!(
+        codes_tsx("const a = <div>hi"),
+        [DiagCode::UnterminatedJsxElement]
+    );
+    assert_eq!(
+        codes_tsx("const a = <div><b>x</b>"),
+        [DiagCode::UnterminatedJsxElement]
+    );
+    assert_eq!(
+        codes_tsx("const a = <div attr"),
+        [DiagCode::UnterminatedJsxTag]
+    );
     assert_eq!(codes_tsx("const a = <"), []);
-    assert_eq!(codes_tsx("const a = <div>{x"), [DiagCode::UnterminatedJsxContainer]);
-    assert_eq!(codes_tsx("const a = <div>{x}</div"), [DiagCode::UnterminatedJsxTag]);
+    assert_eq!(
+        codes_tsx("const a = <div>{x"),
+        [DiagCode::UnterminatedJsxContainer]
+    );
+    assert_eq!(
+        codes_tsx("const a = <div>{x}</div"),
+        [DiagCode::UnterminatedJsxTag]
+    );
     let mut want = vec![DiagCode::UnterminatedString, DiagCode::UnterminatedJsxTag];
     want.sort_unstable();
     assert_eq!(sorted_codes_tsx("const a = <div attr=\"x"), want);
-    assert_eq!(codes_tsx("const a = <div></span>;"), [DiagCode::JsxClosingTagMismatch]);
-    assert_eq!(codes_tsx("const a = <></div>;"), [DiagCode::JsxClosingTagMismatch]);
-    assert_eq!(codes_tsx("const a = <div></>;"), [DiagCode::JsxClosingTagMismatch]);
-    assert_eq!(codes_tsx("const a = <A.B></A.C>;"), [DiagCode::JsxClosingTagMismatch]);
-    assert_eq!(codes_jsx("const a = <div>{x"), [DiagCode::UnterminatedJsxContainer]);
-    assert_eq!(codes_jsx("const a = <div>{x}"), [DiagCode::UnterminatedJsxElement]);
+    assert_eq!(
+        codes_tsx("const a = <div></span>;"),
+        [DiagCode::JsxClosingTagMismatch]
+    );
+    assert_eq!(
+        codes_tsx("const a = <></div>;"),
+        [DiagCode::JsxClosingTagMismatch]
+    );
+    assert_eq!(
+        codes_tsx("const a = <div></>;"),
+        [DiagCode::JsxClosingTagMismatch]
+    );
+    assert_eq!(
+        codes_tsx("const a = <A.B></A.C>;"),
+        [DiagCode::JsxClosingTagMismatch]
+    );
+    assert_eq!(
+        codes_jsx("const a = <div>{x"),
+        [DiagCode::UnterminatedJsxContainer]
+    );
+    assert_eq!(
+        codes_jsx("const a = <div>{x}"),
+        [DiagCode::UnterminatedJsxElement]
+    );
 }
 
 #[test]
@@ -727,10 +881,22 @@ fn valid_jsx_never_flagged() {
         "const r = f<{ m: <T>(x: `a${T}b`) => Array<T> }>(0);\nconst z = <T>hi</T>;",
         "const r = f<{ m: <T>(x: \"(\") => Array<T> }>(0);\nconst z = <T>hi</T>;",
     ] {
-        assert!(codes_tsx(code).is_empty(), "{code:?}: {:?}", codes_tsx(code));
+        assert!(
+            codes_tsx(code).is_empty(),
+            "{code:?}: {:?}",
+            codes_tsx(code)
+        );
     }
-    for code in ["const a = <div>hi</div>;", "const a = <></>;", "const a = <a b=\"x\ny\"/>;"] {
-        assert!(codes_jsx(code).is_empty(), "{code:?}: {:?}", codes_jsx(code));
+    for code in [
+        "const a = <div>hi</div>;",
+        "const a = <></>;",
+        "const a = <a b=\"x\ny\"/>;",
+    ] {
+        assert!(
+            codes_jsx(code).is_empty(),
+            "{code:?}: {:?}",
+            codes_jsx(code)
+        );
     }
 }
 
@@ -738,7 +904,10 @@ fn diags_jsx(code: &str) -> Vec<Diagnostic> {
     let mut buf = code.as_bytes().to_vec();
     let len = buf.len() as u32;
     buf.resize(buf.len() + PAD, 0);
-    let opts = LexOptions { jsx: true, ..Default::default() };
+    let opts = LexOptions {
+        jsx: true,
+        ..Default::default()
+    };
     let (res, _arena) = lex_utf8(&buf, len, opts);
     res.diagnostics().to_vec()
 }
@@ -747,15 +916,30 @@ fn diags_jsx(code: &str) -> Vec<Diagnostic> {
 fn bare_gt_or_rbrace_in_jsx_text() {
     let d = diags_jsx("let x = <div>></div>;");
     assert_eq!(d.len(), 1, "{d:?}");
-    assert_eq!((d[0].code, d[0].off, d[0].len), (DiagCode::JsxTextInvalidCharacter, 13, 1));
+    assert_eq!(
+        (d[0].code, d[0].off, d[0].len),
+        (DiagCode::JsxTextInvalidCharacter, 13, 1)
+    );
     let d = diags_jsx("let x = <div>}</div>;");
     assert_eq!(d.len(), 1, "{d:?}");
-    assert_eq!((d[0].code, d[0].off, d[0].len), (DiagCode::JsxTextInvalidCharacter, 13, 1));
-    assert_eq!(codes_tsx("let x = <div>a>b</div>;"), [DiagCode::JsxTextInvalidCharacter]);
-    for code in
-        ["let x = <div>{'>'}</div>;", "let x = <div>a &gt; b</div>;", "let x = <div>{x}</div>;"]
-    {
-        assert!(codes_tsx(code).is_empty(), "{code:?}: {:?}", codes_tsx(code));
+    assert_eq!(
+        (d[0].code, d[0].off, d[0].len),
+        (DiagCode::JsxTextInvalidCharacter, 13, 1)
+    );
+    assert_eq!(
+        codes_tsx("let x = <div>a>b</div>;"),
+        [DiagCode::JsxTextInvalidCharacter]
+    );
+    for code in [
+        "let x = <div>{'>'}</div>;",
+        "let x = <div>a &gt; b</div>;",
+        "let x = <div>{x}</div>;",
+    ] {
+        assert!(
+            codes_tsx(code).is_empty(),
+            "{code:?}: {:?}",
+            codes_tsx(code)
+        );
     }
 }
 
@@ -769,24 +953,51 @@ fn jsx_closing_names_compare_across_trivia() {
         "x = <a>t< b>u</ b ></a>;",
         "x = <a--b>t</a--b>;",
     ] {
-        assert!(codes_tsx(code).is_empty(), "{code:?}: {:?}", codes_tsx(code));
+        assert!(
+            codes_tsx(code).is_empty(),
+            "{code:?}: {:?}",
+            codes_tsx(code)
+        );
     }
-    assert_eq!(codes_tsx("x = <A.B>t</A.C>;"), [DiagCode::JsxClosingTagMismatch]);
-    assert_eq!(codes_tsx("x = <a-b>t</a-c>;"), [DiagCode::JsxClosingTagMismatch]);
-    assert_eq!(codes_tsx("x = <A.B>t</A>;"), [DiagCode::JsxClosingTagMismatch]);
+    assert_eq!(
+        codes_tsx("x = <A.B>t</A.C>;"),
+        [DiagCode::JsxClosingTagMismatch]
+    );
+    assert_eq!(
+        codes_tsx("x = <a-b>t</a-c>;"),
+        [DiagCode::JsxClosingTagMismatch]
+    );
+    assert_eq!(
+        codes_tsx("x = <A.B>t</A>;"),
+        [DiagCode::JsxClosingTagMismatch]
+    );
 }
 
 #[test]
 fn id_continue_only_character_cannot_start_an_identifier() {
     let d = diags("\u{203f} = 10;");
     assert_eq!(d.len(), 1, "{d:?}");
-    assert_eq!((d[0].code, d[0].off, d[0].len), (DiagCode::UnexpectedCharacter, 0, 3));
+    assert_eq!(
+        (d[0].code, d[0].off, d[0].len),
+        (DiagCode::UnexpectedCharacter, 0, 3)
+    );
     let d = diags("var \u{200c} = [];");
     assert_eq!(d.len(), 1, "{d:?}");
-    assert_eq!((d[0].code, d[0].off, d[0].len), (DiagCode::UnexpectedCharacter, 4, 3));
+    assert_eq!(
+        (d[0].code, d[0].off, d[0].len),
+        (DiagCode::UnexpectedCharacter, 4, 3)
+    );
     assert_eq!(codes("var \u{200d} = [];"), [DiagCode::UnexpectedCharacter]);
-    assert_eq!(codes("class C { #\u{203f} = 1 }"), [DiagCode::UnexpectedCharacter]);
-    for code in ["a\u{203f} = 10;", "a\u{200c}b = 1;", "var x = \"\u{203f}\";", "x = a.\u{e9};"] {
+    assert_eq!(
+        codes("class C { #\u{203f} = 1 }"),
+        [DiagCode::UnexpectedCharacter]
+    );
+    for code in [
+        "a\u{203f} = 10;",
+        "a\u{200c}b = 1;",
+        "var x = \"\u{203f}\";",
+        "x = a.\u{e9};",
+    ] {
         assert!(codes(code).is_empty(), "{code:?}: {:?}", codes(code));
     }
 }
@@ -796,7 +1007,12 @@ fn legacy_octal_adjacency_diagnostics() {
     assert_eq!(codes("x = 010e5;"), [DiagCode::InvalidNumericLiteral]);
     assert_eq!(codes("x = 010n;"), [DiagCode::InvalidBigint]);
     assert_eq!(codes("x = 08n;"), [DiagCode::InvalidBigint]);
-    for code in ["x = 010.5;", "x = 010.toString();", "x = 08.5;", "x = 09e1;"] {
+    for code in [
+        "x = 010.5;",
+        "x = 010.toString();",
+        "x = 08.5;",
+        "x = 09e1;",
+    ] {
         assert!(codes(code).is_empty(), "{code:?}: {:?}", codes(code));
     }
 }
@@ -815,11 +1031,22 @@ fn nested_jsx_shapes_never_flagged() {
         "interface X { <T>(x: T): U; new <T>(x: T): U; }",
         "x = [function (): T {}\n< y];",
     ] {
-        assert!(codes_tsx(code).is_empty(), "{code:?}: {:?}", codes_tsx(code));
+        assert!(
+            codes_tsx(code).is_empty(),
+            "{code:?}: {:?}",
+            codes_tsx(code)
+        );
     }
-    for code in ["<App foo=<div>bar</div> />;", "x = <a b=<c>{d}</c>>{e}<f/></a>;", "x = <a--b/>;"]
-    {
-        assert!(codes_jsx(code).is_empty(), "{code:?}: {:?}", codes_jsx(code));
+    for code in [
+        "<App foo=<div>bar</div> />;",
+        "x = <a b=<c>{d}</c>>{e}<f/></a>;",
+        "x = <a--b/>;",
+    ] {
+        assert!(
+            codes_jsx(code).is_empty(),
+            "{code:?}: {:?}",
+            codes_jsx(code)
+        );
     }
 }
 
@@ -841,7 +1068,12 @@ fn value_lanes_hold_exactly_one_entry_per_value_token() {
             9,
             0,
         ),
-        ("1n 's' 2n 's' 3n 's' 4n 's' 5n 's' 6n 's' 7n 's' 8n 's' 9n 's'", false, 9, 0),
+        (
+            "1n 's' 2n 's' 3n 's' 4n 's' 5n 's' 6n 's' 7n 's' 8n 's' 9n 's'",
+            false,
+            9,
+            0,
+        ),
         (
             "\\u0061b 0 \\u0061b 0 \\u0061b 0 \\u0061b 0 \\u0061b 0 \\u0061b 0 \\u0061b 0 \\u0061b 0 \\u0061b 0",
             false,
@@ -858,11 +1090,19 @@ fn value_lanes_hold_exactly_one_entry_per_value_token() {
         let mut buf = code.as_bytes().to_vec();
         let len = buf.len() as u32;
         buf.resize(buf.len() + PAD, 0);
-        let opts = LexOptions { ts, ..Default::default() };
+        let opts = LexOptions {
+            ts,
+            ..Default::default()
+        };
         let (res, _arena) = lex_utf8(&buf, len, opts);
         assert_eq!(res.numbers_count, numbers, "numbers lane for {code:?}");
         assert_eq!(res.atoms_count, atoms, "atoms lane for {code:?}");
-        assert_eq!(res.diagnostic_count, 0, "diagnostics for {code:?}: {:?}", res.diagnostics());
+        assert_eq!(
+            res.diagnostic_count,
+            0,
+            "diagnostics for {code:?}: {:?}",
+            res.diagnostics()
+        );
     }
 }
 
@@ -884,7 +1124,10 @@ fn block_comment_star_plus_slash_is_not_a_terminator() {
         buf.resize(buf.len() + PAD, 0);
         let (res, arena) = lex_utf8(&buf, len, LexOptions::default());
         let kinds = res.tok_kinds(&arena);
-        let non_trivia = kinds.iter().filter(|k| !k.is_trivia() && **k != TokenKind::Eof).count();
+        let non_trivia = kinds
+            .iter()
+            .filter(|k| !k.is_trivia() && **k != TokenKind::Eof)
+            .count();
         assert_eq!(non_trivia, tokens, "{code:?}: {kinds:?}");
         assert_eq!(res.diagnostic_count, 0, "{code:?}: {:?}", res.diagnostics());
     }

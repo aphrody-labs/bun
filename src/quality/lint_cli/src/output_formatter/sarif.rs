@@ -202,7 +202,9 @@ impl ArtifactRegistry {
 
         let index = self.artifacts.len();
         self.indices.insert(uri.clone(), index);
-        self.artifacts.push(SarifArtifact { location: SarifArtifactLocation { uri, index: None } });
+        self.artifacts.push(SarifArtifact {
+            location: SarifArtifactLocation { uri, index: None },
+        });
         index
     }
 }
@@ -280,7 +282,10 @@ impl SarifBuilder {
         let index = self.artifacts.get_or_insert(uri.clone());
         Some(SarifLocation {
             physical_location: SarifPhysicalLocation {
-                artifact_location: SarifArtifactLocation { uri, index: Some(index) },
+                artifact_location: SarifArtifactLocation {
+                    uri,
+                    index: Some(index),
+                },
                 region: region_from_positions(&info.start, &info.end),
             },
         })
@@ -294,7 +299,10 @@ impl SarifBuilder {
         message: SarifMessage,
         location: Option<SarifLocation>,
     ) {
-        if location.as_ref().is_some_and(|location| location.physical_location.region.is_some()) {
+        if location
+            .as_ref()
+            .is_some_and(|location| location.physical_location.region.is_some())
+        {
             self.has_text_result_location = true;
         }
 
@@ -328,7 +336,8 @@ impl SarifBuilder {
 
         let index = self.rules.len();
         self.rules.push(synthetic_artifact_rule_descriptor());
-        self.rule_indices.insert(SYNTHETIC_ARTIFACT_RULE_ID.to_string(), index);
+        self.rule_indices
+            .insert(SYNTHETIC_ARTIFACT_RULE_ID.to_string(), index);
         index
     }
 
@@ -340,8 +349,10 @@ impl SarifBuilder {
                 tool_configuration_notifications: self.notifications,
             }]
         });
-        let notifications =
-            has_notifications.then(configuration_notification_descriptor).into_iter().collect();
+        let notifications = has_notifications
+            .then(configuration_notification_descriptor)
+            .into_iter()
+            .collect();
 
         SarifLog {
             version: SARIF_VERSION,
@@ -410,7 +421,9 @@ fn configuration_notification_descriptor() -> SarifReportingDescriptor {
     SarifReportingDescriptor {
         id: CONFIGURATION_NOTIFICATION_ID.to_string(),
         name: Some("oxlint-configuration".to_string()),
-        short_description: Some(sarif_message("Oxlint configuration or execution diagnostic")),
+        short_description: Some(sarif_message(
+            "Oxlint configuration or execution diagnostic",
+        )),
         full_description: Some(sarif_message(
             "An oxlint diagnostic that is not associated with a specific artifact.",
         )),
@@ -562,7 +575,10 @@ mod test {
         assert_eq!(notification["descriptor"]["id"], "OXL0999");
         assert_eq!(notification["descriptor"]["index"], 0);
         assert_eq!(notification["level"], "error");
-        assert_eq!(notification["message"]["text"], "Failed to parse configuration");
+        assert_eq!(
+            notification["message"]["text"],
+            "Failed to parse configuration"
+        );
         assert!(notification.get("locations").is_none());
         assert_eq!(descriptor["id"], "OXL0999");
     }

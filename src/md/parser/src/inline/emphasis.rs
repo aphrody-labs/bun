@@ -76,20 +76,36 @@ impl Tokenizer<'_, '_> {
     /// Resolution inside a bracket label:
     /// micromark's fixed `insideSpan` order (strikethrough, then attention).
     pub(crate) fn process_emphasis(&mut self, bottom: usize) {
-        resolve(&mut self.nodes, &mut self.delims[bottom..], true, &mut self.formed);
+        resolve(
+            &mut self.nodes,
+            &mut self.delims[bottom..],
+            true,
+            &mut self.formed,
+        );
     }
 
     /// End-of-run resolution: the first-used family resolves first.
     pub(crate) fn process_emphasis_final(&mut self) {
         let tilde_first = self.first_delim_tilde.unwrap_or(false);
-        resolve(&mut self.nodes, &mut self.delims, tilde_first, &mut self.formed);
+        resolve(
+            &mut self.nodes,
+            &mut self.delims,
+            tilde_first,
+            &mut self.formed,
+        );
     }
 }
 
 fn resolve(nodes: &mut [PN], delims: &mut [Delim], tilde_first: bool, formed: &mut Vec<Formed>) {
-    let order = if tilde_first { [true, false] } else { [false, true] };
+    let order = if tilde_first {
+        [true, false]
+    } else {
+        [false, true]
+    };
     for tilde_pass in order {
-        if delims.iter().any(|d| d.remaining > 0 && d.can_close && (d.marker == b'~') == tilde_pass)
+        if delims
+            .iter()
+            .any(|d| d.remaining > 0 && d.can_close && (d.marker == b'~') == tilde_pass)
         {
             pass(nodes, delims, tilde_pass, formed);
         }
@@ -112,7 +128,11 @@ fn pass(nodes: &mut [PN], delims: &mut [Delim], tilde_pass: bool, formed: &mut V
             closer += 1;
             continue;
         }
-        let class = (usize::from(c.marker == b'_'), c.remaining % 3, usize::from(c.can_open));
+        let class = (
+            usize::from(c.marker == b'_'),
+            c.remaining % 3,
+            usize::from(c.can_open),
+        );
         let scan_bottom = if tilde_pass {
             tilde_bottom[c.remaining]
         } else {
@@ -172,7 +192,10 @@ fn pass(nodes: &mut [PN], delims: &mut [Delim], tilde_pass: bool, formed: &mut V
         // within the new node's children (micromark's `insideSpan`);
         // the pair's own family between them is dead either way.
         let between = &mut delims[opener + 1..closer];
-        if between.iter().any(|d| d.remaining > 0 && (d.marker == b'~') != tilde_pass) {
+        if between
+            .iter()
+            .any(|d| d.remaining > 0 && (d.marker == b'~') != tilde_pass)
+        {
             for d in between.iter_mut() {
                 if (d.marker == b'~') == tilde_pass {
                     d.remaining = 0;
@@ -233,8 +256,16 @@ pub fn build(nodes: impl IntoIterator<Item = PN>, formed: &mut Vec<Formed>) -> V
     let mut stack: Vec<(Formed, Vec<PN>)> = Vec::new();
     let close = |stack: &mut Vec<(Formed, Vec<PN>)>, out: &mut Vec<PN>| {
         let (pair, children) = stack.pop().expect("a pair is open");
-        let node = PN::Emph { marker: pair.marker, len: pair.len, children, r: pair.r };
-        stack.last_mut().map_or(out, |(_, children)| children).push(node);
+        let node = PN::Emph {
+            marker: pair.marker,
+            len: pair.len,
+            children,
+            r: pair.r,
+        };
+        stack
+            .last_mut()
+            .map_or(out, |(_, children)| children)
+            .push(node);
     };
     for node in nodes {
         let at = node.start();
@@ -248,7 +279,10 @@ pub fn build(nodes: impl IntoIterator<Item = PN>, formed: &mut Vec<Formed>) -> V
         if matches!(&node, PN::Text(r) if r.is_empty()) {
             continue;
         }
-        stack.last_mut().map_or(&mut out, |(_, children)| children).push(node);
+        stack
+            .last_mut()
+            .map_or(&mut out, |(_, children)| children)
+            .push(node);
     }
     debug_assert_eq!(pending.len(), 0, "every pair starts before the last node");
     while !stack.is_empty() {
@@ -280,14 +314,24 @@ impl Run {
     ) -> Self {
         // GFM strikethrough: runs of one (only with `singleTilde`) or two tildes;
         // longer runs never participate (micromark's construct fails on them).
-        let min = if constructs.gfm_strikethrough_single_tilde { 1 } else { 2 };
+        let min = if constructs.gfm_strikethrough_single_tilde {
+            1
+        } else {
+            2
+        };
         let valid = marker != b'~' || (min..=2).contains(&len);
         let (can_open, can_close) = if valid {
             classify(marker, prev, next, constructs.gfm_strikethrough)
         } else {
             (false, false)
         };
-        Self { marker, len, can_open, can_close, valid }
+        Self {
+            marker,
+            len,
+            can_open,
+            can_close,
+            valid,
+        }
     }
 }
 
@@ -310,7 +354,11 @@ pub struct Pair {
 /// A printer that changes a marker or joins lines runs it on what it is about to emit
 /// and compares the result with the tree it prints, before committing to the change.
 pub fn pairs(runs: &[Run], in_link: bool) -> Vec<Pair> {
-    let tilde_first = in_link || runs.iter().find(|r| r.valid).is_some_and(|r| r.marker == b'~');
+    let tilde_first = in_link
+        || runs
+            .iter()
+            .find(|r| r.valid)
+            .is_some_and(|r| r.marker == b'~');
     // Lay the runs out as text nodes with one opaque text node between neighbors
     // (same-marker runs never touch; a pair always has a node between it).
     let mut nodes = Vec::with_capacity(runs.len() * 2);
@@ -373,7 +421,10 @@ pub fn classify(marker: u8, prev: Option<char>, next: Option<char>, tilde: bool)
     let open = after == 0 || (after == 2 && before != 0) || is_marker(next);
     let close = before == 0 || (before == 2 && after != 0) || is_marker(prev);
     if marker == b'_' {
-        (open && (before != 0 || !close), close && (after != 0 || !open))
+        (
+            open && (before != 0 || !close),
+            close && (after != 0 || !open),
+        )
     } else {
         (open, close)
     }
@@ -407,8 +458,16 @@ mod tests {
         assert_eq!(
             pairs(&runs, false),
             vec![
-                Pair { opener: 0, closer: 1, strong: false },
-                Pair { opener: 0, closer: 1, strong: true }
+                Pair {
+                    opener: 0,
+                    closer: 1,
+                    strong: false
+                },
+                Pair {
+                    opener: 0,
+                    closer: 1,
+                    strong: true
+                }
             ]
         );
         // `*a**b*`: the `**` cannot pair (rule of three), the outer pair forms
@@ -417,7 +476,14 @@ mod tests {
             run(b'*', 2, Some('a'), Some('b')),
             run(b'*', 1, Some('b'), None),
         ];
-        assert_eq!(pairs(&runs, false), vec![Pair { opener: 0, closer: 2, strong: false }]);
+        assert_eq!(
+            pairs(&runs, false),
+            vec![Pair {
+                opener: 0,
+                closer: 2,
+                strong: false
+            }]
+        );
         // `**a _**b**_ c**` (micromark): `**a _` strong, then `**_ c**` strong
         let runs = [
             run(b'*', 2, None, Some('a')),
@@ -430,8 +496,16 @@ mod tests {
         assert_eq!(
             pairs(&runs, false),
             vec![
-                Pair { opener: 0, closer: 2, strong: true },
-                Pair { opener: 3, closer: 5, strong: true }
+                Pair {
+                    opener: 0,
+                    closer: 2,
+                    strong: true
+                },
+                Pair {
+                    opener: 3,
+                    closer: 5,
+                    strong: true
+                }
             ]
         );
     }
@@ -445,6 +519,13 @@ mod tests {
             run(b'~', 2, Some('a'), Some('*')),
             run(b'*', 1, Some('~'), None),
         ];
-        assert_eq!(pairs(&runs, true), vec![Pair { opener: 0, closer: 2, strong: false }]);
+        assert_eq!(
+            pairs(&runs, true),
+            vec![Pair {
+                opener: 0,
+                closer: 2,
+                strong: false
+            }]
+        );
     }
 }

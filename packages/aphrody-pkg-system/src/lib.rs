@@ -39,7 +39,7 @@ impl fmt::Display for Error {
             Error::NotFound(s) => write!(f, "{s} was not found"),
             Error::NoMatchingVersion { id, range } => {
                 write!(f, "no version of {id} matches \"{range}\"")
-            },
+            }
         }
     }
 }

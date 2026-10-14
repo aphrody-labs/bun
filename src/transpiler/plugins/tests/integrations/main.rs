@@ -13,7 +13,10 @@ pub fn codegen(source_text: &str, source_type: SourceType) -> String {
     let ret = Parser::new(&allocator, source_text, source_type).parse();
     assert!(ret.diagnostics.is_empty());
     Codegen::new()
-        .with_options(CodegenOptions { single_quote: true, ..CodegenOptions::default() })
+        .with_options(CodegenOptions {
+            single_quote: true,
+            ..CodegenOptions::default()
+        })
         .build(&ret.program)
         .code
 }

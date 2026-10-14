@@ -146,7 +146,11 @@ impl DragonBallPlan {
     pub fn selected_targets(&self, ids: &[String]) -> Result<Vec<&DragonBallTarget>, String> {
         self.validate()?;
         for id in ids {
-            if !self.targets.iter().any(|target| target.enabled && target.id == *id) {
+            if !self
+                .targets
+                .iter()
+                .any(|target| target.enabled && target.id == *id)
+            {
                 return Err(format!("unknown or disabled Dragon Ball source: {id}"));
             }
         }
@@ -166,7 +170,10 @@ impl DragonBallPlan {
                     .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_'))
                 || !ids.insert(&target.id)
             {
-                return Err(format!("invalid or duplicate Dragon Ball target id: {}", target.id));
+                return Err(format!(
+                    "invalid or duplicate Dragon Ball target id: {}",
+                    target.id
+                ));
             }
             if !target.enabled {
                 continue;
@@ -180,7 +187,11 @@ impl DragonBallPlan {
             if target.seeds.is_empty() {
                 return Err(format!("{} has no seeds", target.id));
             }
-            for pattern in target.include_patterns.iter().chain(&target.exclude_patterns) {
+            for pattern in target
+                .include_patterns
+                .iter()
+                .chain(&target.exclude_patterns)
+            {
                 Regex::new(pattern).map_err(|error| format!("{}: {error}", target.id))?;
             }
             for seed in &target.seeds {
@@ -200,7 +211,11 @@ mod tests {
     #[test]
     fn shenron_wiki_redirect_boundary_preserves_public_source_scope() {
         let plan = DragonBallPlan::default();
-        let target = plan.targets.iter().find(|target| target.id == "shenron").unwrap();
+        let target = plan
+            .targets
+            .iter()
+            .find(|target| target.id == "shenron")
+            .unwrap();
         for accepted in [
             "https://dragonballfr.com/wiki",
             "https://dragonballfr.com/wiki/",
@@ -217,7 +232,10 @@ mod tests {
             "https://dragonballfr.com.example.org/wiki",
             "https://user:password@dragonballfr.com/wiki",
         ] {
-            assert!(!target.accepts(&Url::parse(excluded).unwrap()), "{excluded}");
+            assert!(
+                !target.accepts(&Url::parse(excluded).unwrap()),
+                "{excluded}"
+            );
         }
     }
     #[test]
@@ -241,7 +259,9 @@ mod tests {
             "guides",
         ] {
             assert!(
-                plan.targets.iter().any(|target| target.id == id && target.enabled),
+                plan.targets
+                    .iter()
+                    .any(|target| target.id == id && target.enabled),
                 "missing {id}"
             );
         }

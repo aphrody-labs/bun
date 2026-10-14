@@ -36,7 +36,9 @@ pub struct IsolatedDeclarationsOptions {
 
 impl From<IsolatedDeclarationsOptions> for oxc::isolated_declarations::IsolatedDeclarationsOptions {
     fn from(options: IsolatedDeclarationsOptions) -> Self {
-        Self { strip_internal: options.strip_internal.unwrap_or_default() }
+        Self {
+            strip_internal: options.strip_internal.unwrap_or_default(),
+        }
     }
 }
 
@@ -46,7 +48,9 @@ fn isolated_declaration_impl(
     options: Option<IsolatedDeclarationsOptions>,
 ) -> IsolatedDeclarationsResult {
     let source_path = Path::new(filename);
-    let source_type = SourceType::from_path(source_path).unwrap_or_default().with_typescript(true);
+    let source_type = SourceType::from_path(source_path)
+        .unwrap_or_default()
+        .with_typescript(true);
     let allocator = Allocator::default();
     let options = options.unwrap_or_default();
 
@@ -66,14 +70,20 @@ fn isolated_declaration_impl(
     };
     let codegen_ret = Codegen::new()
         .with_options(CodegenOptions {
-            comments: CommentOptions { jsdoc: true, ..CommentOptions::disabled() },
+            comments: CommentOptions {
+                jsdoc: true,
+                ..CommentOptions::disabled()
+            },
             source_map_path,
             ..CodegenOptions::default()
         })
         .build(&transformed_ret.program);
 
-    let diagnostics =
-        ret.diagnostics.into_iter().chain(transformed_ret.diagnostics).collect::<Vec<_>>();
+    let diagnostics = ret
+        .diagnostics
+        .into_iter()
+        .chain(transformed_ret.diagnostics)
+        .collect::<Vec<_>>();
     let errors = OxcError::from_diagnostics(filename, source_text, diagnostics);
 
     IsolatedDeclarationsResult {
@@ -106,7 +116,11 @@ impl Task for IsolatedDeclarationTask {
     type Output = IsolatedDeclarationsResult;
 
     fn compute(&mut self) -> napi::Result<Self::Output> {
-        Ok(isolated_declaration_impl(&self.filename, &self.source_text, self.options.take()))
+        Ok(isolated_declaration_impl(
+            &self.filename,
+            &self.source_text,
+            self.options.take(),
+        ))
     }
 
     fn resolve(&mut self, _: napi::Env, result: Self::Output) -> napi::Result<Self::JsValue> {
@@ -123,5 +137,9 @@ pub fn isolated_declaration(
     source_text: String,
     options: Option<IsolatedDeclarationsOptions>,
 ) -> AsyncTask<IsolatedDeclarationTask> {
-    AsyncTask::new(IsolatedDeclarationTask { filename, source_text, options })
+    AsyncTask::new(IsolatedDeclarationTask {
+        filename,
+        source_text,
+        options,
+    })
 }

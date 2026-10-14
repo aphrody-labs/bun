@@ -33,7 +33,9 @@ where
     let message = if module_name.len() > MAX_MODULE_LEN {
         Cow::Borrowed("Modules should not be imported multiple times in the same file")
     } else {
-        Cow::Owned(format!("Module '{module_name}' is imported more than once in this file"))
+        Cow::Owned(format!(
+            "Module '{module_name}' is imported more than once in this file"
+        ))
     };
     let labels = std::iter::once(first_import.primary_label("It is first imported here"))
         .chain(other_imports.into_iter().map(LabeledSpan::underline));
@@ -136,7 +138,11 @@ impl Rule for NoDuplicates {
                 let grouping_key = if self.consider_query_string {
                     // Include query string from the original source
                     if let Some(query_pos) = source.as_str().find('?') {
-                        format!("{}{}", resolved_absolute_path, &source.as_str()[query_pos..])
+                        format!(
+                            "{}{}",
+                            resolved_absolute_path,
+                            &source.as_str()[query_pos..]
+                        )
                     } else {
                         resolved_absolute_path
                     }
@@ -169,15 +175,19 @@ impl Rule for NoDuplicates {
                     .into_iter()
                     .flat_map(|clause| &clause.with_entries)
                     .map(|attribute| {
-                        (attribute.key.as_arena_str().as_str(), attribute.value.value.as_str())
+                        (
+                            attribute.key.as_arena_str().as_str(),
+                            attribute.value.value.as_str(),
+                        )
                     })
                     .collect::<Vec<_>>();
                 attributes.sort_unstable();
                 attribute_groups.entry(attributes).or_default().push(module);
             }
 
-            for (_, requested_modules) in
-                attribute_groups.into_iter().sorted_by(|(a, _), (b, _)| a.cmp(b))
+            for (_, requested_modules) in attribute_groups
+                .into_iter()
+                .sorted_by(|(a, _), (b, _)| a.cmp(b))
             {
                 // When prefer_inline is false, 0 is value, 1 is type named, 2 is type namespace and 3 is type default
                 // When prefer_inline is true, 0 is value and type named, 2 is type // namespace and 3 is type default
@@ -196,7 +206,10 @@ impl Rule for NoDuplicates {
                         .collect::<Vec<_>>();
                     if import_entries.is_empty() {
                         let key = u8::from(requested_module.is_type && !self.prefer_inline);
-                        import_entries_maps.entry(key).or_default().push(requested_module);
+                        import_entries_maps
+                            .entry(key)
+                            .or_default()
+                            .push(requested_module);
                         if key == 0 {
                             if requested_module.is_type {
                                 key0_type_only_imports.push(requested_module);
@@ -224,7 +237,10 @@ impl Rule for NoDuplicates {
 
                         if flags[key as usize] {
                             flags[key as usize] = false;
-                            import_entries_maps.entry(key).or_default().push(requested_module);
+                            import_entries_maps
+                                .entry(key)
+                                .or_default()
+                                .push(requested_module);
                             if key == 0 {
                                 pushed_to_key0 = true;
                             }
@@ -285,7 +301,9 @@ fn check_duplicates<'a>(
     prefer_inline: bool,
     requested_modules: Option<&Vec<&RequestedModule>>,
 ) {
-    let Some(requested_modules) = requested_modules else { return };
+    let Some(requested_modules) = requested_modules else {
+        return;
+    };
     if requested_modules.len() <= 1 {
         return;
     }
@@ -321,7 +339,9 @@ fn has_namespace(decl: &ImportDeclaration) -> bool {
 
 fn has_named_specifiers(decl: &ImportDeclaration) -> bool {
     decl.specifiers.as_ref().is_some_and(|specifiers| {
-        specifiers.iter().any(|s| matches!(s, ImportDeclarationSpecifier::ImportSpecifier(_)))
+        specifiers
+            .iter()
+            .any(|s| matches!(s, ImportDeclarationSpecifier::ImportSpecifier(_)))
     })
 }
 
@@ -366,12 +386,13 @@ fn has_problematic_comments(ctx: &LintContext, decl: &ImportDeclaration) -> bool
 
     let open_brace = brace_position(ctx, decl, "{");
     let close_brace = brace_position(ctx, decl, "}");
-    comments.iter().filter(|c| c.span.start > span.start && c.span.end < span.end).any(|c| {
-        match (open_brace, close_brace) {
+    comments
+        .iter()
+        .filter(|c| c.span.start > span.start && c.span.end < span.end)
+        .any(|c| match (open_brace, close_brace) {
             (Some(open), Some(close)) => c.span.end <= open || c.span.start >= close,
             _ => true,
-        }
-    })
+        })
 }
 
 fn brace_position(ctx: &LintContext, decl: &ImportDeclaration, brace: &str) -> Option<u32> {
@@ -407,8 +428,11 @@ fn merge_imports_fix<'a>(
         return fixer.noop();
     }
 
-    let default_import_names: Vec<&str> =
-        decls.iter().filter_map(|d| default_import_name(d)).unique().collect();
+    let default_import_names: Vec<&str> = decls
+        .iter()
+        .filter_map(|d| default_import_name(d))
+        .unique()
+        .collect();
     if default_import_names.len() > 1 {
         return fixer.noop();
     }
@@ -425,8 +449,10 @@ fn merge_imports_fix<'a>(
         .filter_map(|decl| {
             let open = brace_position(ctx, decl, "{")?;
             let close = brace_position(ctx, decl, "}")?;
-            let identifiers =
-                ctx.source_range(Span::new(open + 1, close)).split(',').collect::<Vec<_>>();
+            let identifiers = ctx
+                .source_range(Span::new(open + 1, close))
+                .split(',')
+                .collect::<Vec<_>>();
             Some(MergeSpecifier {
                 decl,
                 identifiers,
@@ -457,7 +483,8 @@ fn merge_imports_fix<'a>(
 
     let open_brace = brace_position(ctx, first, "{");
     let close_brace = open_brace.and_then(|open| {
-        ctx.find_next_token_within(open + 1, first.span.end, "}").map(|o| open + 1 + o)
+        ctx.find_next_token_within(open + 1, first.span.end, "}")
+            .map(|o| open + 1 + o)
     });
     let import_keyword_end = first.span.start + u32::try_from("import".len()).unwrap();
 
@@ -493,7 +520,13 @@ fn merge_imports_fix<'a>(
         if let Some(offset) = ctx.find_next_token_within(first.span.start, first.span.end, "type") {
             let type_start = first.span.start + offset;
             let mut type_end = type_start + u32::try_from("type".len()).unwrap();
-            if ctx.semantic().source_text().as_bytes().get(type_end as usize) == Some(&b' ') {
+            if ctx
+                .semantic()
+                .source_text()
+                .as_bytes()
+                .get(type_end as usize)
+                == Some(&b' ')
+            {
                 type_end += 1;
             }
             fixes.push(fixer.delete_range(Span::new(type_start, type_end)));
@@ -524,7 +557,13 @@ fn merge_imports_fix<'a>(
             format!(" {default_name},"),
         ));
         if should_add_specifiers {
-            fixes.push(merge_into_braces(&fixer, ctx, open, close, &specifiers_text));
+            fixes.push(merge_into_braces(
+                &fixer,
+                ctx,
+                open,
+                close,
+                &specifiers_text,
+            ));
         }
     } else if !should_add_default && open_brace.is_none() && should_add_specifiers {
         if first.specifiers.as_ref().is_none_or(|s| s.is_empty()) {
@@ -536,7 +575,13 @@ fn merge_imports_fix<'a>(
             fixes.push(fixer.insert_text_after(first_default, format!(", {{{specifiers_text}}}")));
         }
     } else if !should_add_default && let (Some(open), Some(close)) = (open_brace, close_brace) {
-        fixes.push(merge_into_braces(&fixer, ctx, open, close, &specifiers_text));
+        fixes.push(merge_into_braces(
+            &fixer,
+            ctx,
+            open,
+            close,
+            &specifiers_text,
+        ));
     }
 
     for specifier in &specifiers {
@@ -625,7 +670,10 @@ fn merge_into_braces<'a>(
     } else if trailing_whitespace_len > 0 {
         let trailing = &content[content.len() - trailing_whitespace_len..];
         fixer.replace(
-            Span::new(close - u32::try_from(trailing_whitespace_len).unwrap(), close + 1),
+            Span::new(
+                close - u32::try_from(trailing_whitespace_len).unwrap(),
+                close + 1,
+            ),
             format!("{specifiers_text}{trailing}}}"),
         )
     } else {
@@ -654,9 +702,18 @@ fn test() {
 
     let pass = vec![
         (r#"import "./malformed.js""#, None),
-        (r"import { x } from './foo'; import { y } from './bar'", None),
-        (r#"import foo from "234artaf"; import { shoop } from "234q25ad""#, None),
-        (r"import { x } from './foo'; import type { y } from './foo'", None),
+        (
+            r"import { x } from './foo'; import { y } from './bar'",
+            None,
+        ),
+        (
+            r#"import foo from "234artaf"; import { shoop } from "234q25ad""#,
+            None,
+        ),
+        (
+            r"import { x } from './foo'; import type { y } from './foo'",
+            None,
+        ),
         // #1107: Using different query strings that trigger different webpack loaders.
         // Test camelCase option
         (
@@ -668,13 +725,31 @@ fn test() {
             Some(json!([{ "considerQueryString": true }])),
         ),
         // #1538: It is impossible to import namespace and other in one line, so allow this.
-        (r"import * as ns from './foo'; import { y } from './foo'", None),
-        (r"import { y } from './foo'; import * as ns from './foo'", None),
+        (
+            r"import * as ns from './foo'; import { y } from './foo'",
+            None,
+        ),
+        (
+            r"import { y } from './foo'; import * as ns from './foo'",
+            None,
+        ),
         // TypeScript
-        (r"import type { x } from './foo'; import y from './foo'", None),
-        (r"import type x from './foo'; import type y from './bar'", None),
-        (r"import type {x} from './foo'; import type {y} from './bar'", None),
-        (r"import type x from './foo'; import type {y} from './foo'", None),
+        (
+            r"import type { x } from './foo'; import y from './foo'",
+            None,
+        ),
+        (
+            r"import type x from './foo'; import type y from './bar'",
+            None,
+        ),
+        (
+            r"import type {x} from './foo'; import type {y} from './bar'",
+            None,
+        ),
+        (
+            r"import type x from './foo'; import type {y} from './foo'",
+            None,
+        ),
         (
             r"import type {} from './module';
         import {} from './module2';",
@@ -692,20 +767,56 @@ fn test() {
         }",
             None,
         ),
-        (r"import { type x } from './foo'; import y from './foo'", None),
-        (r"import { type x } from './foo'; import { y } from './foo'", None),
-        (r"import { type x } from './foo'; import type y from 'foo'", None),
-        (r"import { x } from './foo'; export { x } from './foo'", None),
+        (
+            r"import { type x } from './foo'; import y from './foo'",
+            None,
+        ),
+        (
+            r"import { type x } from './foo'; import { y } from './foo'",
+            None,
+        ),
+        (
+            r"import { type x } from './foo'; import type y from 'foo'",
+            None,
+        ),
+        (
+            r"import { x } from './foo'; export { x } from './foo'",
+            None,
+        ),
         // for cases in https://github.com/import-js/eslint-plugin-import/issues/2750
-        (r"import type * as something from './foo'; import type y from './foo';", None),
-        (r"import type * as something from './foo'; import type { y } from './foo';", None),
-        (r"import type y from './foo'; import type * as something from './foo';", None),
-        (r"import type { y } from './foo'; import type * as something from './foo';", None),
+        (
+            r"import type * as something from './foo'; import type y from './foo';",
+            None,
+        ),
+        (
+            r"import type * as something from './foo'; import type { y } from './foo';",
+            None,
+        ),
+        (
+            r"import type y from './foo'; import type * as something from './foo';",
+            None,
+        ),
+        (
+            r"import type { y } from './foo'; import type * as something from './foo';",
+            None,
+        ),
         // type + import
-        (r"import type * as something from './foo'; import y from './foo';", None),
-        (r"import type * as something from './foo'; import { y } from './foo';", None),
-        (r"import y from './foo'; import type * as something from './foo';", None),
-        (r"import { y } from './foo'; import type * as something from './foo';", None),
+        (
+            r"import type * as something from './foo'; import y from './foo';",
+            None,
+        ),
+        (
+            r"import type * as something from './foo'; import { y } from './foo';",
+            None,
+        ),
+        (
+            r"import y from './foo'; import type * as something from './foo';",
+            None,
+        ),
+        (
+            r"import { y } from './foo'; import type * as something from './foo';",
+            None,
+        ),
         // A type-only import is not a duplicate of a bare side-effect import.
         (r"import type { Foo } from './foo'; import './foo';", None),
         (
@@ -717,8 +828,14 @@ fn test() {
             Some(json!([{ "prefer-inline": true }])),
         ),
         (r"import type {} from './foo'; import './foo';", None),
-        (r"import type {} from './foo'; import './foo';", Some(json!([{ "preferInline": true }]))),
-        (r"import { RouterModule, Routes } from '@angular/router';", None),
+        (
+            r"import type {} from './foo'; import './foo';",
+            Some(json!([{ "preferInline": true }])),
+        ),
+        (
+            r"import { RouterModule, Routes } from '@angular/router';",
+            None,
+        ),
         (
             r#"import { compile } from "../src/macro.ts" with { type: "macro" };
 import { compile as compileNoMacro } from "../src/macro.ts";"#,
@@ -740,8 +857,14 @@ import { compile as compileNoMacro } from "../src/macro.ts";"#,
             r"import {x} from './foo' with { type: 'json' }; import {y} from './foo' with { type: 'json', mode: 'one' };",
             None,
         ),
-        (r"import './foo' with { type: 'json' }; import './foo';", None),
-        (r"import * as x from './foo' with { type: 'json' }; import * as y from './foo';", None),
+        (
+            r"import './foo' with { type: 'json' }; import './foo';",
+            None,
+        ),
+        (
+            r"import * as x from './foo' with { type: 'json' }; import * as y from './foo';",
+            None,
+        ),
         (
             r"import './foo'; import type { Foo } from './foo'; import { Bar } from './foo' with { type: 'macro' };",
             Some(json!([{ "prefer-inline": true }])),
@@ -749,13 +872,28 @@ import { compile as compileNoMacro } from "../src/macro.ts";"#,
     ];
 
     let fail = vec![
-        (r"import { x } from './foo'; import { y } from './foo'", None),
-        (r"import {x} from './foo'; import {y} from './foo'; import { z } from './foo'", None),
+        (
+            r"import { x } from './foo'; import { y } from './foo'",
+            None,
+        ),
+        (
+            r"import {x} from './foo'; import {y} from './foo'; import { z } from './foo'",
+            None,
+        ),
         // #1107: Using different query strings without considerQueryString (default false)
         // These should be flagged as duplicates because query strings are ignored by default
-        (r"import x from './bar.js?optionX'; import y from './bar?optionX';", None),
-        (r"import x from './bar?optionX'; import y from './bar?optionY';", None),
-        (r"import x from './bar?optionX'; import y from './bar.js?optionX';", None),
+        (
+            r"import x from './bar.js?optionX'; import y from './bar?optionX';",
+            None,
+        ),
+        (
+            r"import x from './bar?optionX'; import y from './bar?optionY';",
+            None,
+        ),
+        (
+            r"import x from './bar?optionX'; import y from './bar.js?optionX';",
+            None,
+        ),
         // #1107: Using same query strings with considerQueryString: true
         // Same file + same query string = duplicate
         (
@@ -763,8 +901,14 @@ import { compile as compileNoMacro } from "../src/macro.ts";"#,
             Some(json!([{ "considerQueryString": true }])),
         ),
         // #86: duplicate unresolved modules should be flagged
-        (r"import foo from 'non-existent'; import bar from 'non-existent';", None),
-        (r"import type { x } from './foo'; import type { y } from './foo'", None),
+        (
+            r"import foo from 'non-existent'; import bar from 'non-existent';",
+            None,
+        ),
+        (
+            r"import type { x } from './foo'; import type { y } from './foo'",
+            None,
+        ),
         (r"import './foo'; import './foo'", None),
         (
             r"import { x, /* x */ } from './foo'; import {//y
@@ -778,13 +922,19 @@ import { compile as compileNoMacro } from "../src/macro.ts";"#,
             r"import {a,b} from './foo'; import { b, c } from './foo'; import {b,c,d} from './foo'",
             None,
         ),
-        (r"import {a} from './foo'; import { a/*,b*/ } from './foo'", None),
+        (
+            r"import {a} from './foo'; import { a/*,b*/ } from './foo'",
+            None,
+        ),
         (r"import {a} from './foo'; import { a } from './foo'", None),
         (
             r"import {a,b} from './foo'; import { b, c } from './foo'; import {b,c,d} from './foo'",
             None,
         ),
-        (r"import {a} from './foo'; import { a/*,b*/ } from './foo'", None),
+        (
+            r"import {a} from './foo'; import { a/*,b*/ } from './foo'",
+            None,
+        ),
         (
             r"import {x} from './foo'; import {} from './foo'; import {/*c*/} from './foo'; import {y} from './foo'",
             None,
@@ -802,9 +952,18 @@ import { compile as compileNoMacro } from "../src/macro.ts";"#,
         (r"import def from './foo'; import {x} from './foo'", None),
         (r"import {x} from './foo'; import def from './foo'", None),
         (r"import{x} from './foo'; import def from './foo'", None),
-        (r"import {x} from './foo'; import def, {y} from './foo'", None),
-        (r"import * as ns1 from './foo'; import * as ns2 from './foo'", None),
-        (r"import * as ns from './foo'; import {x} from './foo'; import {y} from './foo'", None),
+        (
+            r"import {x} from './foo'; import def, {y} from './foo'",
+            None,
+        ),
+        (
+            r"import * as ns1 from './foo'; import * as ns2 from './foo'",
+            None,
+        ),
+        (
+            r"import * as ns from './foo'; import {x} from './foo'; import {y} from './foo'",
+            None,
+        ),
         (
             r"import {x} from './foo'; import * as ns from './foo'; import {y} from './foo'; import './foo'",
             None,
@@ -930,11 +1089,23 @@ import { compile as compileNoMacro } from "../src/macro.ts";"#,
             None,
         ),
         // TypeScript
-        (r"import type x from './foo'; import type y from './foo'", None),
-        (r"import type x from './foo'; import type x from './foo'", None),
-        (r"import type {x} from './foo'; import type {y} from './foo'", None),
+        (
+            r"import type x from './foo'; import type y from './foo'",
+            None,
+        ),
+        (
+            r"import type x from './foo'; import type x from './foo'",
+            None,
+        ),
+        (
+            r"import type {x} from './foo'; import type {y} from './foo'",
+            None,
+        ),
         // prefer-inline: false (default) - inline type and type imports are in same category
-        (r"import {type x} from './foo'; import type {y} from './foo'", None),
+        (
+            r"import {type x} from './foo'; import type {y} from './foo'",
+            None,
+        ),
         // prefer-inline: true - inline type and type imports are in same category
         (
             r"import {type x} from 'foo'; import type {y} from 'foo'",
@@ -946,15 +1117,24 @@ import { compile as compileNoMacro } from "../src/macro.ts";"#,
             Some(json!([{ "prefer-inline": true }])),
         ),
         // prefer-inline: false (default)
-        (r"import {type x} from 'foo'; import type {y} from 'foo'", None),
+        (
+            r"import {type x} from 'foo'; import type {y} from 'foo'",
+            None,
+        ),
         // prefer-inline: true - both inline type imports
         (
             r"import {type x} from './foo'; import {type y} from './foo'",
             Some(json!([{ "prefer-inline": true }])),
         ),
         // prefer-inline: false (default) - both inline type imports
-        (r"import {type x} from './foo'; import {type y} from './foo'", None),
-        (r"import {AValue, type x, BValue} from './foo'; import {type y} from './foo'", None),
+        (
+            r"import {type x} from './foo'; import {type y} from './foo'",
+            None,
+        ),
+        (
+            r"import {AValue, type x, BValue} from './foo'; import {type y} from './foo'",
+            None,
+        ),
         // #2834 Detect duplicates across type and regular imports with prefer-inline: true
         // Test prefer-inline with camelCase (legacy)
         (
@@ -996,12 +1176,18 @@ import { compile as compileNoMacro } from "../src/macro.ts";"#,
             r"import {x} from './foo' with { type: 'json', mode: 'one' }; import {y} from './foo' with { 'mode': 'one', 'type': 'json' };",
             None,
         ),
-        (r"import {x} from './foo' with {}; import {y} from './foo';", None),
+        (
+            r"import {x} from './foo' with {}; import {y} from './foo';",
+            None,
+        ),
         (
             r"import {x} from './foo' with { type: 'json' }; import {y} from './foo' with { type: 'css' }; import {z} from './foo' with { type: 'json' };",
             None,
         ),
-        (r"import './foo' with { mode: 'one' }; import './foo' with { mode: 'one' };", None),
+        (
+            r"import './foo' with { mode: 'one' }; import './foo' with { mode: 'one' };",
+            None,
+        ),
         (
             r"import * as x from './foo' with { mode: 'one' }; import * as y from './foo' with { mode: 'one' };",
             None,
@@ -1024,7 +1210,11 @@ import { compile as compileNoMacro } from "../src/macro.ts";"#,
             r"import {a,b,c} from 'foo';  ",
             None,
         ),
-        (r"import './foo'; import {x} from './foo'", r"import {x} from './foo'; ", None),
+        (
+            r"import './foo'; import {x} from './foo'",
+            r"import {x} from './foo'; ",
+            None,
+        ),
         (
             r"import def from './foo'; import {x} from './foo'",
             r"import def, {x} from './foo'; ",
@@ -1035,10 +1225,22 @@ import { compile as compileNoMacro } from "../src/macro.ts";"#,
             r"import def, {x} from './foo'; ",
             None,
         ),
-        (r"import './foo'; import def, {x} from './foo'", r"import def, {x} from './foo'; ", None),
-        (r"import './foo'; import def from './foo'", r"import def from './foo'; ", None),
+        (
+            r"import './foo'; import def, {x} from './foo'",
+            r"import def, {x} from './foo'; ",
+            None,
+        ),
+        (
+            r"import './foo'; import def from './foo'",
+            r"import def from './foo'; ",
+            None,
+        ),
         (r"import './foo'; import './foo'", r"import './foo'; ", None),
-        (r"import {x} from './foo'; import {} from './foo'", r"import {x} from './foo'; ", None),
+        (
+            r"import {x} from './foo'; import {} from './foo'",
+            r"import {x} from './foo'; ",
+            None,
+        ),
         (
             r"import type {x} from './foo'; import type {y} from './foo'",
             r"import type {x,y} from './foo'; ",
@@ -1106,7 +1308,11 @@ import type {Bar // comment
             Some(json!([{ "prefer-inline": true }])),
         ),
         // A trailing comma in the first import is preserved when appending specifiers.
-        (r"import {a,} from 'foo'; import {b} from 'foo'", r"import {a,b} from 'foo'; ", None),
+        (
+            r"import {a,} from 'foo'; import {b} from 'foo'",
+            r"import {a,b} from 'foo'; ",
+            None,
+        ),
         // Imports with different query strings must not be merged, even when the rule considers
         // them duplicates for reporting purposes.
         (

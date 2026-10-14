@@ -134,7 +134,10 @@ impl<'a> IsolatedDeclarations<'a> {
                 self.is_declare(),
                 self,
             );
-            Some((Some(variable_statement), Expression::new_identifier(SPAN, name, self)))
+            Some((
+                Some(variable_statement),
+                Expression::new_identifier(SPAN, name, self),
+            ))
         }
     }
 
@@ -142,9 +145,13 @@ impl<'a> IsolatedDeclarations<'a> {
         &self,
         decl: &TSExportAssignment<'a>,
     ) -> Option<(Option<Statement<'a>>, Statement<'a>)> {
-        self.transform_export_expression(decl.span, &decl.expression).map(|(var_decl, expr)| {
-            (var_decl, Statement::new_ts_export_assignment(SPAN, expr, self))
-        })
+        self.transform_export_expression(decl.span, &decl.expression)
+            .map(|(var_decl, expr)| {
+                (
+                    var_decl,
+                    Statement::new_ts_export_assignment(SPAN, expr, self),
+                )
+            })
     }
 
     pub(crate) fn transform_import_declaration(
@@ -202,7 +209,9 @@ impl<'a> IsolatedDeclarations<'a> {
         stmts.iter_mut().for_each(|stmt| {
             if let Statement::ExportDeclaration(_) = stmt {
                 stmt.replace_with(|stmt| {
-                    let Statement::ExportDeclaration(decl) = stmt else { unreachable!() };
+                    let Statement::ExportDeclaration(decl) = stmt else {
+                        unreachable!()
+                    };
                     Statement::from(decl.unbox().declaration)
                 });
             }

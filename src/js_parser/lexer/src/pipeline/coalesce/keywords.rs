@@ -75,7 +75,11 @@ pub(super) unsafe fn kw_match_word(
     pos: usize,
 ) -> TokenKind {
     let len = word_len(word, pos);
-    if ts { kw_match::<true>(src.add(pos), len) } else { kw_match::<false>(src.add(pos), len) }
+    if ts {
+        kw_match::<true>(src.add(pos), len)
+    } else {
+        kw_match::<false>(src.add(pos), len)
+    }
 }
 
 /// Get the length of the word starting at `pos` from the word bitmap, capped at 16 (`kw_match`'s limit).
@@ -109,7 +113,12 @@ mod tests {
             (3, "class", TokenKind::KwClass, false),
             (20, "interface", TokenKind::KwInterface, true),
             (40, "instanceof", TokenKind::KwInstanceof, false),
-            (58, "instanceofabcdefghijklmnopqrstuvwxyz", TokenKind::Ident, false),
+            (
+                58,
+                "instanceofabcdefghijklmnopqrstuvwxyz",
+                TokenKind::Ident,
+                false,
+            ),
             (100, "abcdefghijklmnopq", TokenKind::Ident, false),
             (125, "typeof", TokenKind::KwTypeof, false),
         ];

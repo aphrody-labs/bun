@@ -36,8 +36,11 @@ pub fn assert_scope_instructions_within_scopes<'a>(
 
     // Pass 2: Check instructions against scopes
     let check_visitor = CheckInstructionsAgainstScopesVisitor { env };
-    let mut check_state =
-        CheckState { existing_scopes, active_scopes: FxHashSet::default(), error: None };
+    let mut check_state = CheckState {
+        existing_scopes,
+        active_scopes: FxHashSet::default(),
+        error: None,
+    };
     visit_reactive_function(func, &check_visitor, &mut check_state);
     if let Some(err) = check_state.error {
         return Err(err);

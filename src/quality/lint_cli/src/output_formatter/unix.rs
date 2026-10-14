@@ -27,7 +27,10 @@ impl DiagnosticReporter for UnixReporter {
     fn finish(&mut self, _: &DiagnosticResult) -> Option<String> {
         let total = self.total;
         if total > 0 {
-            return Some(format!("\n{total} problem{}\n", if total > 1 { "s" } else { "" }));
+            return Some(format!(
+                "\n{total} problem{}\n",
+                if total > 1 { "s" } else { "" }
+            ));
         }
 
         None
@@ -45,14 +48,26 @@ impl DiagnosticReporter for UnixReporter {
 
 /// <https://github.com/fregante/eslint-formatters/tree/ae1fd9748596447d1fd09625c33d9e7ba9a3d06d/packages/eslint-formatter-unix>
 fn format_unix(diagnostic: &Error) -> String {
-    let Info { start, end: _, filename, message, severity, rule_id } = Info::new(diagnostic);
+    let Info {
+        start,
+        end: _,
+        filename,
+        message,
+        severity,
+        rule_id,
+    } = Info::new(diagnostic);
     let severity = match severity {
         Severity::Error => "Error",
         _ => "Warning",
     };
-    let rule_id =
-        rule_id.map_or_else(|| Cow::Borrowed(""), |rule_id| Cow::Owned(format!("/{rule_id}")));
-    format!("{filename}:{}:{}: {message} [{severity}{rule_id}]\n", start.line, start.column)
+    let rule_id = rule_id.map_or_else(
+        || Cow::Borrowed(""),
+        |rule_id| Cow::Owned(format!("/{rule_id}")),
+    );
+    format!(
+        "{filename}:{}:{}: {message} [{severity}{rule_id}]\n",
+        start.line, start.column
+    )
 }
 
 #[cfg(test)]
@@ -99,7 +114,10 @@ mod test {
         let result = reporter.render_error(error);
 
         assert!(result.is_some());
-        assert_eq!(result.unwrap(), "file://test.ts:1:1: error message [Warning]\n");
+        assert_eq!(
+            result.unwrap(),
+            "file://test.ts:1:1: error message [Warning]\n"
+        );
     }
 
     /// Regression test: messages containing colons (e.g. parser errors like
@@ -114,6 +132,9 @@ mod test {
         let result = reporter.render_error(error);
 
         assert!(result.is_some());
-        assert_eq!(result.unwrap(), "file://test.js:1:1: Expected `;` but found `:` [Error]\n");
+        assert_eq!(
+            result.unwrap(),
+            "file://test.js:1:1: Expected `;` but found `:` [Error]\n"
+        );
     }
 }

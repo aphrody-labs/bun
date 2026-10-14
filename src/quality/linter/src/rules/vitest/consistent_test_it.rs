@@ -26,7 +26,8 @@ declare_oxc_lint!(
     fix,
     config = ConsistentTestItConfig,
     version = "0.5.3",
-    short_description = "Enforce consistent use of either the `it` or `test` keyword for defining tests.",
+    short_description =
+        "Enforce consistent use of either the `it` or `test` keyword for defining tests.",
 );
 
 impl Rule for ConsistentTestIt {
@@ -77,11 +78,26 @@ fn test() {
             ",
             Some(serde_json::json!([{ "fn": "test" }])),
         ),
-        ("test.skip(\"foo\")", Some(serde_json::json!([{ "fn": "test" }]))),
-        ("test.concurrent(\"foo\")", Some(serde_json::json!([{ "fn": "test" }]))),
-        ("xtest(\"foo\")", Some(serde_json::json!([{ "fn": "test" }]))),
-        ("test.each([])(\"foo\")", Some(serde_json::json!([{ "fn": "test" }]))),
-        ("test.each``(\"foo\")", Some(serde_json::json!([{ "fn": "test" }]))),
+        (
+            "test.skip(\"foo\")",
+            Some(serde_json::json!([{ "fn": "test" }])),
+        ),
+        (
+            "test.concurrent(\"foo\")",
+            Some(serde_json::json!([{ "fn": "test" }])),
+        ),
+        (
+            "xtest(\"foo\")",
+            Some(serde_json::json!([{ "fn": "test" }])),
+        ),
+        (
+            "test.each([])(\"foo\")",
+            Some(serde_json::json!([{ "fn": "test" }])),
+        ),
+        (
+            "test.each``(\"foo\")",
+            Some(serde_json::json!([{ "fn": "test" }])),
+        ),
         (
             "describe(\"suite\", () => { test(\"foo\") })",
             Some(serde_json::json!([{ "fn": "test" }])),
@@ -90,14 +106,23 @@ fn test() {
             "describe(\"suite\", () => { it(\"foo\") })",
             Some(serde_json::json!([{ "fn": "it", "withinDescribe": "it" }])),
         ),
-        ("it(\"foo\")", Some(serde_json::json!([{ "fn": "it", "withinDescribe": "it" }]))),
+        (
+            "it(\"foo\")",
+            Some(serde_json::json!([{ "fn": "it", "withinDescribe": "it" }])),
+        ),
         ("test(\"shows error\", () => {});", None),
-        ("test(\"foo\")", Some(serde_json::json!([{ "withinDescribe": "it" }]))),
+        (
+            "test(\"foo\")",
+            Some(serde_json::json!([{ "withinDescribe": "it" }])),
+        ),
         (
             "describe(\"suite\", () => { it(\"foo\") })",
             Some(serde_json::json!([{ "withinDescribe": "it" }])),
         ),
-        ("test(\"foo\")", Some(serde_json::json!([{ "withinDescribe": "test" }]))),
+        (
+            "test(\"foo\")",
+            Some(serde_json::json!([{ "withinDescribe": "test" }])),
+        ),
         (
             "describe(\"suite\", () => { test(\"foo\") })",
             Some(serde_json::json!([{ "withinDescribe": "test" }])),
@@ -135,9 +160,18 @@ fn test() {
     ];
 
     let fail = vec![
-        ("test(\"shows error\", () => {});", Some(serde_json::json!([{ "fn": "it" }]))),
-        ("test.skip(\"shows error\");", Some(serde_json::json!([{ "fn": "it" }]))),
-        ("test.only('shows error');", Some(serde_json::json!([{ "fn": "it" }]))),
+        (
+            "test(\"shows error\", () => {});",
+            Some(serde_json::json!([{ "fn": "it" }])),
+        ),
+        (
+            "test.skip(\"shows error\");",
+            Some(serde_json::json!([{ "fn": "it" }])),
+        ),
+        (
+            "test.only('shows error');",
+            Some(serde_json::json!([{ "fn": "it" }])),
+        ),
         (
             "describe('foo', () => { it('bar', () => {}); });",
             Some(serde_json::json!([{ "fn": "it", "withinDescribe": "test" }])),
@@ -146,20 +180,35 @@ fn test() {
             "import { test } from \"vitest\"\ntest(\"shows error\", () => {});",
             Some(serde_json::json!([{ "fn": "it" }])),
         ),
-        ("it(\"shows error\", () => {});", Some(serde_json::json!([{ "fn": "test" }]))),
-        ("describe(\"suite\", () => { it(\"foo\") })", Some(serde_json::json!([{ "fn": "test" }]))),
+        (
+            "it(\"shows error\", () => {});",
+            Some(serde_json::json!([{ "fn": "test" }])),
+        ),
+        (
+            "describe(\"suite\", () => { it(\"foo\") })",
+            Some(serde_json::json!([{ "fn": "test" }])),
+        ),
         (
             "describe(\"suite\", () => { test(\"foo\") })",
             Some(serde_json::json!([{ "fn": "it", "withinDescribe": "it" }])),
         ),
-        ("test(\"foo\")", Some(serde_json::json!([{ "fn": "it", "withinDescribe": "it" }]))),
+        (
+            "test(\"foo\")",
+            Some(serde_json::json!([{ "fn": "it", "withinDescribe": "it" }])),
+        ),
         ("describe(\"suite\", () => { test(\"foo\") })", None),
-        ("it(\"foo\")", Some(serde_json::json!([{ "withinDescribe": "it" }]))),
+        (
+            "it(\"foo\")",
+            Some(serde_json::json!([{ "withinDescribe": "it" }])),
+        ),
         (
             "describe(\"suite\", () => { test(\"foo\") })",
             Some(serde_json::json!([{ "withinDescribe": "it" }])),
         ),
-        ("it(\"foo\")", Some(serde_json::json!([{ "withinDescribe": "test" }]))),
+        (
+            "it(\"foo\")",
+            Some(serde_json::json!([{ "withinDescribe": "test" }])),
+        ),
         (
             "import { it } from \"vitest\"\nit(\"foo\")",
             Some(serde_json::json!([{ "withinDescribe": "test" }])),
@@ -188,7 +237,10 @@ fn test() {
         // ("test(\"foo\")", "it(\"foo\")"),
         // ("describe(\"suite\", () => { it(\"foo\") })", "describe(\"suite\", () => { test(\"foo\") })"),
         //
-        ("it(\"shows error\", () => {});", "test(\"shows error\", () => {});"),
+        (
+            "it(\"shows error\", () => {});",
+            "test(\"shows error\", () => {});",
+        ),
         (
             "describe(\"suite\", () => { test(\"foo\") })",
             "describe(\"suite\", () => { it(\"foo\") })",

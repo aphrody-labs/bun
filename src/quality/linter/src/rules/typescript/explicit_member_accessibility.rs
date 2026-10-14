@@ -240,7 +240,10 @@ impl ExplicitMemberAccessibility {
         let method_name = method.key.name().unwrap_or(Cow::Borrowed(""));
 
         if check == AccessibilityLevel::Off
-            || self.ignored_method_names.iter().any(|n| n.as_str() == &*method_name)
+            || self
+                .ignored_method_names
+                .iter()
+                .any(|n| n.as_str() == &*method_name)
         {
             return;
         }
@@ -308,7 +311,10 @@ impl ExplicitMemberAccessibility {
             return;
         }
 
-        let check = self.overrides.parameter_properties.unwrap_or(self.accessibility);
+        let check = self
+            .overrides
+            .parameter_properties
+            .unwrap_or(self.accessibility);
         if check == AccessibilityLevel::Off {
             return;
         }
@@ -412,7 +418,10 @@ fn find_public_spans(ctx: &LintContext<'_>, search_start: u32, search_end: u32) 
 #[expect(clippy::cast_possible_truncation)]
 fn skip_ascii_whitespace(source: &str, start: u32) -> u32 {
     let bytes = &source.as_bytes()[start as usize..];
-    let offset = bytes.iter().position(|byte| !byte.is_ascii_whitespace()).unwrap_or(bytes.len());
+    let offset = bytes
+        .iter()
+        .position(|byte| !byte.is_ascii_whitespace())
+        .unwrap_or(bytes.len());
     start + offset as u32
 }
 
@@ -1367,7 +1376,12 @@ fn test() {
         ),
     ];
 
-    Tester::new(ExplicitMemberAccessibility::NAME, ExplicitMemberAccessibility::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        ExplicitMemberAccessibility::NAME,
+        ExplicitMemberAccessibility::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

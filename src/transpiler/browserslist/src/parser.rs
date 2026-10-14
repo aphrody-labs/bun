@@ -11,17 +11,36 @@ pub enum BaselineKind {
 
 #[derive(Debug, Clone)]
 pub enum QueryAtom<'a> {
-    Last { count: u16, major: bool, name: Option<&'a str> },
+    Last {
+        count: u16,
+        major: bool,
+        name: Option<&'a str>,
+    },
     Unreleased(Option<&'a str>),
     Years(f64),
-    Since { year: i32, month: u32, day: u32 },
-    Percentage { comparator: Comparator, popularity: f32, stats: Stats<'a> },
-    Cover { coverage: f32, stats: Stats<'a> },
+    Since {
+        year: i32,
+        month: u32,
+        day: u32,
+    },
+    Percentage {
+        comparator: Comparator,
+        popularity: f32,
+        stats: Stats<'a>,
+    },
+    Cover {
+        coverage: f32,
+        stats: Stats<'a>,
+    },
     Supports(&'a str, Option<SupportKind>),
     Electron(VersionRange<'a>),
     Node(VersionRange<'a>),
     Browser(&'a str, VersionRange<'a>),
-    Baseline { kind: BaselineKind, downstream: bool, kaios: bool },
+    Baseline {
+        kind: BaselineKind,
+        downstream: bool,
+        kaios: bool,
+    },
     FirefoxESR,
     OperaMini,
     CurrentNode,
@@ -87,7 +106,11 @@ struct Parser<'a> {
 impl<'a> Parser<'a> {
     #[inline]
     fn new(input: &'a str) -> Self {
-        Self { input, bytes: input.as_bytes(), pos: 0 }
+        Self {
+            input,
+            bytes: input.as_bytes(),
+            pos: 0,
+        }
     }
 
     #[inline]
@@ -275,7 +298,11 @@ impl<'a> Parser<'a> {
                 self.pos += 1;
             }
         }
-        if self.pos > start { Some(self.slice(start, self.pos)) } else { None }
+        if self.pos > start {
+            Some(self.slice(start, self.pos))
+        } else {
+            None
+        }
     }
 
     #[inline]
@@ -306,7 +333,11 @@ impl<'a> Parser<'a> {
         if self.pos > start && self.bytes[self.pos - 1] == b'.' {
             self.pos -= 1;
         }
-        if self.pos > start { Some(self.slice(start, self.pos)) } else { None }
+        if self.pos > start {
+            Some(self.slice(start, self.pos))
+        } else {
+            None
+        }
     }
 
     #[inline]
@@ -319,7 +350,11 @@ impl<'a> Parser<'a> {
             }
             self.pos += 1;
         }
-        if self.pos > start { Some(self.slice(start, self.pos)) } else { None }
+        if self.pos > start {
+            Some(self.slice(start, self.pos))
+        } else {
+            None
+        }
     }
 
     /// Parse a feature name for `supports` queries (alphanumeric and `-`).
@@ -333,7 +368,11 @@ impl<'a> Parser<'a> {
             }
             self.pos += 1;
         }
-        if self.pos > start { Some(self.slice(start, self.pos)) } else { None }
+        if self.pos > start {
+            Some(self.slice(start, self.pos))
+        } else {
+            None
+        }
     }
 
     #[inline]
@@ -344,11 +383,19 @@ impl<'a> Parser<'a> {
         match self.peek() {
             b'<' => {
                 self.pos += 1;
-                Some(if self.eat(b'=') { Comparator::LessOrEqual } else { Comparator::Less })
+                Some(if self.eat(b'=') {
+                    Comparator::LessOrEqual
+                } else {
+                    Comparator::Less
+                })
             }
             b'>' => {
                 self.pos += 1;
-                Some(if self.eat(b'=') { Comparator::GreaterOrEqual } else { Comparator::Greater })
+                Some(if self.eat(b'=') {
+                    Comparator::GreaterOrEqual
+                } else {
+                    Comparator::Greater
+                })
             }
             _ => None,
         }
@@ -544,10 +591,22 @@ impl<'a> Parser<'a> {
             self.pos = start;
             return None;
         };
-        let month = if self.eat(b'-') { self.parse_u32() } else { None };
-        let day = if self.eat(b'-') { self.parse_u32() } else { None };
+        let month = if self.eat(b'-') {
+            self.parse_u32()
+        } else {
+            None
+        };
+        let day = if self.eat(b'-') {
+            self.parse_u32()
+        } else {
+            None
+        };
 
-        Some(QueryAtom::Since { year, month: month.unwrap_or(1), day: day.unwrap_or(1) })
+        Some(QueryAtom::Since {
+            year,
+            month: month.unwrap_or(1),
+            day: day.unwrap_or(1),
+        })
     }
 
     fn parse_supports_only(&mut self) -> Option<QueryAtom<'a>> {
@@ -634,7 +693,11 @@ impl<'a> Parser<'a> {
             Stats::Global
         };
 
-        Some(QueryAtom::Percentage { comparator, popularity, stats })
+        Some(QueryAtom::Percentage {
+            comparator,
+            popularity,
+            stats,
+        })
     }
 
     fn parse_electron(&mut self) -> Option<QueryAtom<'a>> {
@@ -663,7 +726,9 @@ impl<'a> Parser<'a> {
         match self.bytes[self.pos + 1] {
             b'i' | b'I' | b'x' | b'X' | b'f' | b'F' => self.parse_firefox_esr(),
             b'u' | b'U' => self.parse_fully_supports(),
-            _ => self.parse_firefox_esr().or_else(|| self.parse_fully_supports()),
+            _ => self
+                .parse_firefox_esr()
+                .or_else(|| self.parse_fully_supports()),
         }
     }
 
@@ -744,7 +809,9 @@ impl<'a> Parser<'a> {
         match self.bytes[self.pos + 1] {
             b'h' | b'H' => self.parse_phantom(),
             b'a' | b'A' => self.parse_partially_supports(),
-            _ => self.parse_phantom().or_else(|| self.parse_partially_supports()),
+            _ => self
+                .parse_phantom()
+                .or_else(|| self.parse_partially_supports()),
         }
     }
 
@@ -906,7 +973,11 @@ impl<'a> Parser<'a> {
                 self.pos = before_kaios;
             }
 
-            Some(QueryAtom::Baseline { kind, downstream, kaios })
+            Some(QueryAtom::Baseline {
+                kind,
+                downstream,
+                kaios,
+            })
         })();
         if result.is_none() {
             self.pos = start;
@@ -926,16 +997,28 @@ impl<'a> Parser<'a> {
             b'<' | b'>' => self.parse_percentage(),
             b'l' => self.parse_last_or_years().or_else(|| self.parse_browser()),
             b'u' => self.parse_unreleased().or_else(|| self.parse_browser()),
-            b's' => self.parse_since_or_supports().or_else(|| self.parse_browser()),
-            b'c' => self.parse_cover_or_current().or_else(|| self.parse_browser()),
+            b's' => self
+                .parse_since_or_supports()
+                .or_else(|| self.parse_browser()),
+            b'c' => self
+                .parse_cover_or_current()
+                .or_else(|| self.parse_browser()),
             b'e' => self.parse_electron().or_else(|| self.parse_browser()),
             b'n' => self.parse_node().or_else(|| self.parse_browser()),
-            b'f' => self.parse_firefox_or_fully().or_else(|| self.parse_browser()),
+            b'f' => self
+                .parse_firefox_or_fully()
+                .or_else(|| self.parse_browser()),
             b'o' => self.parse_operamini().or_else(|| self.parse_browser()),
-            b'm' => self.parse_maintained_node().or_else(|| self.parse_browser()),
-            b'p' => self.parse_phantom_or_partially().or_else(|| self.parse_browser()),
+            b'm' => self
+                .parse_maintained_node()
+                .or_else(|| self.parse_browser()),
+            b'p' => self
+                .parse_phantom_or_partially()
+                .or_else(|| self.parse_browser()),
             b'b' => self.parse_baseline().or_else(|| self.parse_browser()),
-            b'd' => self.parse_defaults_or_dead().or_else(|| self.parse_browser()),
+            b'd' => self
+                .parse_defaults_or_dead()
+                .or_else(|| self.parse_browser()),
             b'a'..=b'z' => self.parse_browser(),
             _ => None,
         }
@@ -988,7 +1071,11 @@ impl<'a> Parser<'a> {
         while !self.is_eof() && !self.at_composition_operator() {
             self.pos += 1;
         }
-        if self.pos > start { Some(QueryAtom::Unknown(self.slice(start, self.pos))) } else { None }
+        if self.pos > start {
+            Some(QueryAtom::Unknown(self.slice(start, self.pos)))
+        } else {
+            None
+        }
     }
 
     fn parse_single_query_atom(&mut self) -> Option<(bool, QueryAtom<'a>, &'a str)> {
@@ -1016,16 +1103,27 @@ pub fn parse_browserslist_query(input: &str) -> Result<Vec<SingleQuery<'_>>, &st
     let mut queries = Vec::with_capacity(4);
 
     let (negated, atom, raw) = parser.parse_single_query_atom().ok_or(input)?;
-    queries.push(SingleQuery { raw, atom, negated, is_and: false });
+    queries.push(SingleQuery {
+        raw,
+        atom,
+        negated,
+        is_and: false,
+    });
 
     while !parser.is_eof() {
         let Some(is_and) = parser.parse_composition_operator() else {
             return Err(parser.slice(parser.pos, parser.bytes.len()));
         };
 
-        let (negated, atom, raw) =
-            parser.parse_single_query_atom().ok_or(parser.slice(parser.pos, parser.bytes.len()))?;
-        queries.push(SingleQuery { raw, atom, negated, is_and });
+        let (negated, atom, raw) = parser
+            .parse_single_query_atom()
+            .ok_or(parser.slice(parser.pos, parser.bytes.len()))?;
+        queries.push(SingleQuery {
+            raw,
+            atom,
+            negated,
+            is_and,
+        });
     }
 
     Ok(queries)
@@ -1113,13 +1211,19 @@ mod tests {
         assert!(matches!(p1.parse_comparator(), Some(Comparator::Less)));
 
         let mut p2 = Parser::new("<=");
-        assert!(matches!(p2.parse_comparator(), Some(Comparator::LessOrEqual)));
+        assert!(matches!(
+            p2.parse_comparator(),
+            Some(Comparator::LessOrEqual)
+        ));
 
         let mut p3 = Parser::new(">");
         assert!(matches!(p3.parse_comparator(), Some(Comparator::Greater)));
 
         let mut p4 = Parser::new(">=");
-        assert!(matches!(p4.parse_comparator(), Some(Comparator::GreaterOrEqual)));
+        assert!(matches!(
+            p4.parse_comparator(),
+            Some(Comparator::GreaterOrEqual)
+        ));
 
         let mut p5 = Parser::new("x");
         assert!(p5.parse_comparator().is_none());
@@ -1213,7 +1317,10 @@ mod tests {
     fn parse_version_range_unbounded() {
         let mut parser = Parser::new(" >= 1.0");
         let result = parser.parse_version_range();
-        assert!(matches!(result, Some(VersionRange::Unbounded(Comparator::GreaterOrEqual, "1.0"))));
+        assert!(matches!(
+            result,
+            Some(VersionRange::Unbounded(Comparator::GreaterOrEqual, "1.0"))
+        ));
     }
 
     #[test]
@@ -1426,7 +1533,14 @@ mod tests {
         // Test "last 2 major versions" where name is "major"
         let mut parser = Parser::new("last 2 major versions");
         let result = parser.parse_last_or_years();
-        assert!(matches!(result, Some(QueryAtom::Last { count: 2, major: true, name: None })));
+        assert!(matches!(
+            result,
+            Some(QueryAtom::Last {
+                count: 2,
+                major: true,
+                name: None
+            })
+        ));
     }
 
     // Test parse_unreleased failure paths
@@ -1903,7 +2017,10 @@ mod tests {
     fn parse_fully_supports_feature_terminated() {
         let mut parser = Parser::new("fully supports flexbox,");
         let result = parser.parse_query_atom();
-        assert!(matches!(result, Some(QueryAtom::Supports("flexbox", Some(SupportKind::Fully)))));
+        assert!(matches!(
+            result,
+            Some(QueryAtom::Supports("flexbox", Some(SupportKind::Fully)))
+        ));
     }
 
     #[test]
@@ -1955,7 +2072,10 @@ mod tests {
 
         assert!(matches!(
             Parser::new("baseline newly available").parse_baseline(),
-            Some(QueryAtom::Baseline { kind: BaselineKind::NewlyAvailable, .. })
+            Some(QueryAtom::Baseline {
+                kind: BaselineKind::NewlyAvailable,
+                ..
+            })
         ));
 
         assert!(matches!(
@@ -1970,13 +2090,20 @@ mod tests {
         assert!(matches!(
             Parser::new("baseline widely available on 2022-07-01").parse_baseline(),
             Some(QueryAtom::Baseline {
-                kind: BaselineKind::WidelyAvailableOnDate { year: 2022, month: 7, day: 1 },
+                kind: BaselineKind::WidelyAvailableOnDate {
+                    year: 2022,
+                    month: 7,
+                    day: 1
+                },
                 ..
             })
         ));
         assert!(matches!(
             Parser::new("baseline newly available on 2022-07-01").parse_baseline(),
-            Some(QueryAtom::Baseline { kind: BaselineKind::NewlyAvailableOnDate, .. })
+            Some(QueryAtom::Baseline {
+                kind: BaselineKind::NewlyAvailableOnDate,
+                ..
+            })
         ));
     }
 

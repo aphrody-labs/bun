@@ -51,12 +51,16 @@ fn no_dynamic_delete_diagnostic(span: Span) -> OxcDiagnostic {
 
 impl Rule for NoDynamicDelete {
     fn run<'a>(&self, node: &AstNode<'a>, ctx: &LintContext<'a>) {
-        let AstKind::UnaryExpression(expr) = node.kind() else { return };
+        let AstKind::UnaryExpression(expr) = node.kind() else {
+            return;
+        };
         if !matches!(expr.operator, UnaryOperator::Delete) {
             return;
         }
 
-        let Expression::ComputedMemberExpression(computed_expr) = &expr.argument else { return };
+        let Expression::ComputedMemberExpression(computed_expr) = &expr.argument else {
+            return;
+        };
         let inner_expression = computed_expr.expression.get_inner_expression();
         if inner_expression.is_string_literal() || inner_expression.is_number_literal() {
             return;

@@ -232,7 +232,10 @@ impl Rule for PreferArrayFind {
 
 fn is_filter_call(call_expr: &CallExpression) -> bool {
     is_method_call(call_expr, None, Some(&["filter"]), Some(1), Some(2))
-        && call_expr.arguments.first().is_some_and(|arg| !matches!(arg, Argument::SpreadElement(_)))
+        && call_expr
+            .arguments
+            .first()
+            .is_some_and(|arg| !matches!(arg, Argument::SpreadElement(_)))
 }
 
 fn is_left_hand_side<'a>(node: &AstNode<'a>, ctx: &LintContext<'a>) -> bool {
@@ -642,12 +645,24 @@ fn test() {
     let _fix = vec![
         ("array.filter(foo)[0]", "array.find(foo)"),
         ("array?.filter(foo)[0]", "array?.find(foo)"),
-        ("array.filter(foo, thisArgument)[0]", "array.find(foo, thisArgument)"),
-        ("array?.filter(foo, thisArgument)[0]", "array?.find(foo, thisArgument)"),
+        (
+            "array.filter(foo, thisArgument)[0]",
+            "array.find(foo, thisArgument)",
+        ),
+        (
+            "array?.filter(foo, thisArgument)[0]",
+            "array?.find(foo, thisArgument)",
+        ),
         ("array.filter(foo).shift()", "array.find(foo)"),
         ("array?.filter(foo).shift()", "array?.find(foo)"),
-        ("array.filter(foo, thisArgument).shift()", "array.find(foo, thisArgument)"),
-        ("array?.filter(foo, thisArgument).shift()", "array?.find(foo, thisArgument)"),
+        (
+            "array.filter(foo, thisArgument).shift()",
+            "array.find(foo, thisArgument)",
+        ),
+        (
+            "array?.filter(foo, thisArgument).shift()",
+            "array?.find(foo, thisArgument)",
+        ),
         (
             "const item = array
                 // comment 1
@@ -668,21 +683,54 @@ fn test() {
                 // comment 4
                 ;",
         ),
-        ("const [foo] = array.filter(bar)", "const foo = array.find(bar)"),
-        ("const [items] = array.filter(bar)", "const items = array.find(bar)"),
+        (
+            "const [foo] = array.filter(bar)",
+            "const foo = array.find(bar)",
+        ),
+        (
+            "const [items] = array.filter(bar)",
+            "const items = array.find(bar)",
+        ),
         (
             "const [foo] = array.filter(bar, thisArgument)",
             "const foo = array.find(bar, thisArgument)",
         ),
-        ("const [{foo}] = array.filter(fn);", "const {foo} = array.find(fn);"),
-        ("const [{foo = bar}] = array.filter(fn);", "const {foo = bar} = array.find(fn);"),
-        ("const [[foo]] = array.filter(fn);", "const [foo] = array.find(fn);"),
-        ("const [[foo = bar]] = array.filter(fn);", "const [foo = bar] = array.find(fn);"),
-        ("const [foo, ] = array.filter(bar)", "const foo = array.find(bar)"),
-        ("var [foo, ] = array.filter(bar)", "var foo = array.find(bar)"),
-        ("let [foo, ] = array.filter(bar)", "let foo = array.find(bar)"),
-        ("let a = 1, [foo, ] = array.filter(bar)", "let a = 1, foo = array.find(bar)"),
-        ("let a = 1, [{foo}] = array.filter(bar)", "let a = 1, {foo} = array.find(bar)"),
+        (
+            "const [{foo}] = array.filter(fn);",
+            "const {foo} = array.find(fn);",
+        ),
+        (
+            "const [{foo = bar}] = array.filter(fn);",
+            "const {foo = bar} = array.find(fn);",
+        ),
+        (
+            "const [[foo]] = array.filter(fn);",
+            "const [foo] = array.find(fn);",
+        ),
+        (
+            "const [[foo = bar]] = array.filter(fn);",
+            "const [foo = bar] = array.find(fn);",
+        ),
+        (
+            "const [foo, ] = array.filter(bar)",
+            "const foo = array.find(bar)",
+        ),
+        (
+            "var [foo, ] = array.filter(bar)",
+            "var foo = array.find(bar)",
+        ),
+        (
+            "let [foo, ] = array.filter(bar)",
+            "let foo = array.find(bar)",
+        ),
+        (
+            "let a = 1, [foo, ] = array.filter(bar)",
+            "let a = 1, foo = array.find(bar)",
+        ),
+        (
+            "let a = 1, [{foo}] = array.filter(bar)",
+            "let a = 1, {foo} = array.find(bar)",
+        ),
         (
             "for (let [i] = array.filter(bar); i< 10; i++) {}",
             "for (let i = array.find(bar); i< 10; i++) {}",
@@ -713,11 +761,20 @@ fn test() {
                 ;",
         ),
         ("[foo] = array.filter(bar)", "foo = array.find(bar)"),
-        ("[foo] = array.filter(bar, thisArgument)", "foo = array.find(bar, thisArgument)"),
-        ("[foo.bar().baz] = array.filter(fn)", "foo.bar().baz = array.find(fn)"),
+        (
+            "[foo] = array.filter(bar, thisArgument)",
+            "foo = array.find(bar, thisArgument)",
+        ),
+        (
+            "[foo.bar().baz] = array.filter(fn)",
+            "foo.bar().baz = array.find(fn)",
+        ),
         ("[{foo}] = array.filter(fn);", "({foo} = array.find(fn));"),
         ("[[foo]] = array.filter(fn);", "[foo] = array.find(fn);"),
-        ("[{foo = baz}] = array.filter(fn);", "({foo = baz} = array.find(fn));"),
+        (
+            "[{foo = baz}] = array.filter(fn);",
+            "({foo = baz} = array.find(fn));",
+        ),
         ("[foo, ] = array.filter(bar)", "foo = array.find(bar)"),
         (
             "for ([i] = array.filter(bar); i< 10; i++) {}",
@@ -739,8 +796,14 @@ fn test() {
             "const foo = array.filter(bar), first = foo[0];",
             "const foo = array.find(bar), first = foo;",
         ),
-        ("var foo = array.filter(bar), first = foo[0];", "var foo = array.find(bar), first = foo;"),
-        ("let foo = array.filter(bar), first = foo[0];", "let foo = array.find(bar), first = foo;"),
+        (
+            "var foo = array.filter(bar), first = foo[0];",
+            "var foo = array.find(bar), first = foo;",
+        ),
+        (
+            "let foo = array.filter(bar), first = foo[0];",
+            "let foo = array.find(bar), first = foo;",
+        ),
         (
             "const foo = array.filter(bar); const [first] = foo;",
             "const foo = array.find(bar); const first = foo;",
@@ -910,7 +973,10 @@ fn test() {
             ));",
         ),
         ("array.filter(foo).pop()", "array.findLast(foo)"),
-        ("array.filter(foo, thisArgument).pop()", "array.findLast(foo, thisArgument)"),
+        (
+            "array.filter(foo, thisArgument).pop()",
+            "array.findLast(foo, thisArgument)",
+        ),
         (
             "const item = array
                 // comment 1
@@ -932,7 +998,10 @@ fn test() {
                 ;",
         ),
         ("array.filter(foo).at(-1)", "array.findLast(foo)"),
-        ("array.filter(foo, thisArgument).at(-1)", "array.findLast(foo, thisArgument)"),
+        (
+            "array.filter(foo, thisArgument).at(-1)",
+            "array.findLast(foo, thisArgument)",
+        ),
         (
             "const item = array
                 // comment 1
@@ -959,8 +1028,14 @@ fn test() {
         ),
         ("array.filter(foo).at(0)", "array.find(foo)"),
         ("array?.filter(foo).at(0)", "array?.find(foo)"),
-        ("array.filter(foo, thisArgument).at(0)", "array.find(foo, thisArgument)"),
-        ("array?.filter(foo, thisArgument).at(0)", "array?.find(foo, thisArgument)"),
+        (
+            "array.filter(foo, thisArgument).at(0)",
+            "array.find(foo, thisArgument)",
+        ),
+        (
+            "array?.filter(foo, thisArgument).at(0)",
+            "array?.find(foo, thisArgument)",
+        ),
         (
             "const item = array
                 // comment 1

@@ -79,7 +79,9 @@ const P5: u64 = 0x27D4_EB2F_1656_67C5;
 
 #[inline(always)]
 fn xxh_round(acc: u64, input: u64) -> u64 {
-    acc.wrapping_add(input.wrapping_mul(P2)).rotate_left(31).wrapping_mul(P1)
+    acc.wrapping_add(input.wrapping_mul(P2))
+        .rotate_left(31)
+        .wrapping_mul(P1)
 }
 
 #[inline(always)]
@@ -236,14 +238,19 @@ fn align8(x: u64) -> u64 {
 }
 
 fn tmp_path(path: &Path) -> PathBuf {
-    let mut name = path.file_name().map(|n| n.to_os_string()).unwrap_or_default();
+    let mut name = path
+        .file_name()
+        .map(|n| n.to_os_string())
+        .unwrap_or_default();
     name.push(format!(".tmp-{}", std::process::id()));
     path.with_file_name(name)
 }
 
 #[cfg(target_endian = "big")]
 pub(crate) fn save(_inner: &Inner, _path: &Path) -> Result<()> {
-    Err(IndexError::Corrupt("big-endian hosts are not supported by the index file format".into()))
+    Err(IndexError::Corrupt(
+        "big-endian hosts are not supported by the index file format".into(),
+    ))
 }
 
 #[cfg(target_endian = "little")]
@@ -356,7 +363,9 @@ fn section<T: Pod>(
     }
     let len = byte_len / size;
     if len != expected_len {
-        return Err(corrupt(format!("section {name} has {len} elements, expected {expected_len}")));
+        return Err(corrupt(format!(
+            "section {name} has {len} elements, expected {expected_len}"
+        )));
     }
     if off < HEADER_LEN || off % 8 != 0 {
         return Err(corrupt(format!("section {name} has an invalid offset")));
@@ -374,7 +383,9 @@ fn section<T: Pod>(
 
 #[cfg(target_endian = "big")]
 pub(crate) fn load(_path: &Path) -> Result<Inner> {
-    Err(IndexError::Corrupt("big-endian hosts are not supported by the index file format".into()))
+    Err(IndexError::Corrupt(
+        "big-endian hosts are not supported by the index file format".into(),
+    ))
 }
 
 #[cfg(target_endian = "little")]
@@ -426,7 +437,9 @@ pub(crate) fn load(path: &Path) -> Result<Inner> {
         build_threads: 0,
     }
     .normalized();
-    params.validate().map_err(|e| corrupt(format!("invalid stored parameters: {e}")))?;
+    params
+        .validate()
+        .map_err(|e| corrupt(format!("invalid stored parameters: {e}")))?;
     let rng_state = read_u64(&bytes[48..]);
     let n = to_usize(read_u64(&bytes[56..]), "slot count")?;
     if n > MAX_SLOTS {
@@ -444,17 +457,27 @@ pub(crate) fn load(path: &Path) -> Result<Inner> {
         *entry = (read_u64(&bytes[base..]), read_u64(&bytes[base + 8..]));
     }
 
-    let layout = Layout { m: params.m, m0: params.m0() };
+    let layout = Layout {
+        m: params.m,
+        m0: params.m0(),
+    };
     let codes_on = params.stores_codes();
     let floats_on = params.stores_float();
-    let n_dim = n.checked_mul(dim).ok_or_else(|| corrupt("vector storage size overflows"))?;
-    let l0_len =
-        n.checked_mul(layout.m0 + 1).ok_or_else(|| corrupt("link storage size overflows"))?;
+    let n_dim = n
+        .checked_mul(dim)
+        .ok_or_else(|| corrupt("vector storage size overflows"))?;
+    let l0_len = n
+        .checked_mul(layout.m0 + 1)
+        .ok_or_else(|| corrupt("link storage size overflows"))?;
 
     let keys: Buf<u64> = section(&map, &table, 0, n, "keys")?;
     let levels: Buf<u8> = section(&map, &table, 1, n, "levels")?;
     let scales: Buf<f32> = section(&map, &table, 2, if codes_on { n } else { 0 }, "scales")?;
-    let norms_len = if codes_on && metric == Metric::L2 { n } else { 0 };
+    let norms_len = if codes_on && metric == Metric::L2 {
+        n
+    } else {
+        0
+    };
     let norms: Buf<f32> = section(&map, &table, 3, norms_len, "norms")?;
     let codes: Buf<i8> = section(&map, &table, 4, if codes_on { n_dim } else { 0 }, "codes")?;
     let floats: Buf<f32> = section(&map, &table, 5, if floats_on { n_dim } else { 0 }, "floats")?;

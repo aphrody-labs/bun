@@ -10,7 +10,14 @@ use crate::{
 #[derive(Debug, Default, Clone)]
 pub struct PreferTodo;
 
-declare_oxc_lint!(PreferTodo, vitest, style, fix, docs = DOCUMENTATION, version = "0.0.16",);
+declare_oxc_lint!(
+    PreferTodo,
+    vitest,
+    style,
+    fix,
+    docs = DOCUMENTATION,
+    version = "0.0.16",
+);
 
 impl Rule for PreferTodo {
     fn run_on_jest_node<'a, 'c>(
@@ -55,9 +62,18 @@ fn tests() {
         ("it('foo', function () {})", None),
         ("it('foo', () => {})", None),
         ("test.skip('i need to write this test', () => {});", None),
-        ("test.skip('i need to write this test', function() {});", None),
-        (r#"test["skip"]('i need to write this test', function() {});"#, None),
-        ("test[`skip`]('i need to write this test', function() {});", None),
+        (
+            "test.skip('i need to write this test', function() {});",
+            None,
+        ),
+        (
+            r#"test["skip"]('i need to write this test', function() {});"#,
+            None,
+        ),
+        (
+            "test[`skip`]('i need to write this test', function() {});",
+            None,
+        ),
     ];
 
     let fix = vec![
@@ -66,10 +82,22 @@ fn tests() {
             "test.todo('i need to write this test');",
             None,
         ),
-        ("test('i need to write this test',);", "test.todo('i need to write this test',);", None),
-        ("test(`i need to write this test`);", "test.todo(`i need to write this test`);", None),
+        (
+            "test('i need to write this test',);",
+            "test.todo('i need to write this test',);",
+            None,
+        ),
+        (
+            "test(`i need to write this test`);",
+            "test.todo(`i need to write this test`);",
+            None,
+        ),
         ("it.skip('foo', function () {})", "it.todo('foo')", None),
-        ("it(`i need to write this test`, () => {})", "it.todo(`i need to write this test`)", None),
+        (
+            "it(`i need to write this test`, () => {})",
+            "it.todo(`i need to write this test`)",
+            None,
+        ),
         ("it('foo', function () {})", "it.todo('foo')", None),
         ("it('foo', () => {})", "it.todo('foo')", None),
         (

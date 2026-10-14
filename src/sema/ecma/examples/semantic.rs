@@ -58,7 +58,9 @@ fn main() -> std::io::Result<()> {
 
     // Compiler-pipeline defaults, plus the full `AstNodes` store since this
     // example reads `semantic.nodes()`.
-    let semantic = SemanticBuilder::new_compiler().with_build_nodes(true).build(&program);
+    let semantic = SemanticBuilder::new_compiler()
+        .with_build_nodes(true)
+        .build(&program);
 
     // Report semantic analysis errors
     if !semantic.diagnostics.is_empty() {
@@ -79,7 +81,10 @@ fn main() -> std::io::Result<()> {
             println!("Symbol: {name}, ID: {symbol_id:?}, Flags: {flags:?}");
             for reference_id in scoping.get_resolved_reference_ids(symbol_id) {
                 let reference = scoping.get_reference(*reference_id);
-                println!("  Reference ID: {reference_id:?}, Flags: {:?}", reference.flags());
+                println!(
+                    "  Reference ID: {reference_id:?}, Flags: {:?}",
+                    reference.flags()
+                );
             }
         }
     }
@@ -93,7 +98,12 @@ fn main() -> std::io::Result<()> {
 
             let reference_spans = semantic.semantic.symbol_references(sym).map(|reference| {
                 (
-                    semantic.semantic.nodes().get_node(reference.node_id()).kind().span(),
+                    semantic
+                        .semantic
+                        .nodes()
+                        .get_node(reference.node_id())
+                        .kind()
+                        .span(),
                     reference.flags(),
                 )
             });

@@ -101,7 +101,10 @@ pub struct LintFileFailure {
 
 impl From<String> for LintFileFailure {
     fn from(message: String) -> Self {
-        Self { message, timings: None }
+        Self {
+            message,
+            timings: None,
+        }
     }
 }
 
@@ -200,7 +203,10 @@ pub fn convert_and_merge_js_fixes(
         // was in middle of a surrogate pair (2 x UTF-16 characters, 1 x 4-byte UTF-8 character).
         if fix.span.start > fix.span.end {
             Err(MergeFixesError::NegativeRange(fix.span))
-        } else if source_text.get(fix.span.start as usize..fix.span.end as usize).is_none() {
+        } else if source_text
+            .get(fix.span.start as usize..fix.span.end as usize)
+            .is_none()
+        {
             // `end..end` matches the error from `CompositeFix::merge_fixes_fallible`
             Err(MergeFixesError::InvalidRange(fix.span.end, fix.span.end))
         } else {
@@ -212,7 +218,11 @@ pub fn convert_and_merge_js_fixes(
 
     // If any `JsFix` had invalid `start` or `end`, we need to produce an error.
     // These are very rare cases, so handle them in a `#[cold]` function.
-    if let Some(span) = invalid_span { create_invalid_offset_error(span) } else { res }
+    if let Some(span) = invalid_span {
+        create_invalid_offset_error(span)
+    } else {
+        res
+    }
 }
 
 /// Convert `JsFix` to `Fix` where either `start` or `end` is out of range of `u32`.
@@ -299,7 +309,13 @@ impl ExternalLinter {
         create_workspace: ExternalLinterCreateWorkspaceCb,
         destroy_workspace: ExternalLinterDestroyWorkspaceCb,
     ) -> Self {
-        Self { load_plugin, setup_rule_configs, lint_file, create_workspace, destroy_workspace }
+        Self {
+            load_plugin,
+            setup_rule_configs,
+            lint_file,
+            create_workspace,
+            destroy_workspace,
+        }
     }
 }
 
@@ -321,7 +337,10 @@ pub struct GlobalsAndEnvs<'c> {
 
 impl<'c> GlobalsAndEnvs<'c> {
     pub fn new(ctx_host: &'c ContextHost<'_>) -> Self {
-        Self { globals: ctx_host.globals(), envs: EnabledEnvs(ctx_host.env()) }
+        Self {
+            globals: ctx_host.globals(),
+            envs: EnabledEnvs(ctx_host.env()),
+        }
     }
 }
 

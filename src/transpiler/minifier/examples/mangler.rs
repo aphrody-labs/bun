@@ -39,7 +39,9 @@ fn main() -> std::io::Result<()> {
     let reserve_exports = args.contains("--reserve-exports");
     let debug = args.contains("--debug");
     let twice = args.contains("--twice");
-    let name = args.free_from_str().unwrap_or_else(|_| "test.js".to_string());
+    let name = args
+        .free_from_str()
+        .unwrap_or_else(|_| "test.js".to_string());
 
     let path = Path::new(&name);
     let source_text = std::fs::read_to_string(path)?;
@@ -47,7 +49,10 @@ fn main() -> std::io::Result<()> {
 
     let options = MangleOptions {
         top_level: None,
-        keep_names: MangleOptionsKeepNames { function: keep_names, class: keep_names },
+        keep_names: MangleOptionsKeepNames {
+            function: keep_names,
+            class: keep_names,
+        },
         reserved: if reserve_exports {
             ["exports", "module"].into_iter().map(Into::into).collect()
         } else {

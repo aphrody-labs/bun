@@ -110,7 +110,11 @@ impl Span {
     ///
     #[inline]
     pub const fn new(start: u32, end: u32) -> Self {
-        Self { start, end, _align: PointerAlign::new() }
+        Self {
+            start,
+            end,
+            _align: PointerAlign::new(),
+        }
     }
 
     /// Create a new empty [`Span`] that starts and ends at an offset position.
@@ -247,7 +251,11 @@ impl Span {
     #[must_use]
     pub fn merge_within(self, other: Self, within: Self) -> Option<Self> {
         let merged = self.merge(other);
-        if within.contains_inclusive(merged) { Some(merged) } else { None }
+        if within.contains_inclusive(merged) {
+            Some(merged)
+        } else {
+            None
+        }
     }
 
     /// Create a [`Span`] that is grown by `offset` on either side.
@@ -269,7 +277,10 @@ impl Span {
     /// [`expand_right`]: Span::expand_right
     #[must_use]
     pub fn expand(self, offset: u32) -> Self {
-        Self::new(self.start.saturating_sub(offset), self.end.saturating_add(offset))
+        Self::new(
+            self.start.saturating_sub(offset),
+            self.end.saturating_add(offset),
+        )
     }
 
     /// Create a [`Span`] that has its start and end positions shrunk by
@@ -595,7 +606,10 @@ impl Hash for Span {
 #[expect(clippy::missing_fields_in_debug)]
 impl Debug for Span {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.debug_struct("Span").field("start", &self.start).field("end", &self.end).finish()
+        f.debug_struct("Span")
+            .field("start", &self.start)
+            .field("end", &self.end)
+            .finish()
     }
 }
 
@@ -710,8 +724,11 @@ mod test {
         // On 64-bit platforms, check hash is equivalent to `u64`
         #[cfg(target_pointer_width = "64")]
         {
-            let u64_equivalent: u64 =
-                if cfg!(target_endian = "little") { 1 + (5 << 32) } else { (1 << 32) + 5 };
+            let u64_equivalent: u64 = if cfg!(target_endian = "little") {
+                1 + (5 << 32)
+            } else {
+                (1 << 32) + 5
+            };
             let u64_hash = hash(u64_equivalent);
             assert_eq!(first_hash, u64_hash);
         }

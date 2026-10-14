@@ -199,7 +199,9 @@ fn format_code_snippet(code: &str) -> String {
 
     let code = if code.contains('\n') {
         // Use 12 space characters after the newline.
-        code.replace('\n', "\n            ").replace('\\', "\\\\").replace('\"', "\\\"")
+        code.replace('\n', "\n            ")
+            .replace('\\', "\\\\")
+            .replace('\"', "\\\"")
     } else {
         code
     };
@@ -242,9 +244,17 @@ fn format_tagged_template_expression(tag_expr: &TaggedTemplateExpression) -> Opt
     // String.raw`foobar\n\t escapedthing`
     // ```
     if tag_expr.tag.is_specific_member_access("String", "raw") {
-        tag_expr.quasi.quasis.first().map(|quasi| format_raw_string_literal(&quasi.value.raw))
+        tag_expr
+            .quasi
+            .quasis
+            .first()
+            .map(|quasi| format_raw_string_literal(&quasi.value.raw))
     } else if tag_expr.tag.is_specific_id("dedent") || tag_expr.tag.is_specific_id("outdent") {
-        tag_expr.quasi.quasis.first().map(|quasi| util::dedent(&quasi.value.raw))
+        tag_expr
+            .quasi
+            .quasis
+            .first()
+            .map(|quasi| util::dedent(&quasi.value.raw))
     } else {
         tag_expr.quasi.single_quasi().map(|quasi| quasi.to_string())
     }
@@ -511,12 +521,14 @@ impl<'a> State<'a> {
 
     fn add_valid_test(&mut self, expr: &'a Expression<'a>) {
         self.valid_tests.push(expr);
-        self.expression_to_group_comment_map.insert(expr.span(), self.get_comment());
+        self.expression_to_group_comment_map
+            .insert(expr.span(), self.get_comment());
     }
 
     fn add_invalid_test(&mut self, expr: &'a Expression<'a>) {
         self.invalid_tests.push(expr);
-        self.expression_to_group_comment_map.insert(expr.span(), self.get_comment());
+        self.expression_to_group_comment_map
+            .insert(expr.span(), self.get_comment());
     }
 }
 
@@ -572,7 +584,9 @@ impl<'a> VisitJs<'a> for State<'a> {
     }
 
     fn visit_object_property(&mut self, prop: &ObjectProperty<'a>) {
-        let PropertyKey::StaticIdentifier(ident) = &prop.key else { return };
+        let PropertyKey::StaticIdentifier(ident) = &prop.key else {
+            return;
+        };
         match ident.name.as_str() {
             "valid" => {
                 if let Expression::ArrayExpression(array_expr) = &prop.value {
@@ -651,11 +665,15 @@ fn find_parser_arguments<'a, 'b>(
     mut expr: &'b Expression<'a>,
 ) -> Option<&'b ArenaVec<'a, Argument<'a>>> {
     loop {
-        let Expression::CallExpression(call_expr) = expr else { return None };
+        let Expression::CallExpression(call_expr) = expr else {
+            return None;
+        };
         let Expression::StaticMemberExpression(static_member_expr) = &call_expr.callee else {
             return None;
         };
-        let StaticMemberExpression { object, property, .. } = &**static_member_expr;
+        let StaticMemberExpression {
+            object, property, ..
+        } = &**static_member_expr;
         if let Expression::Identifier(iden) = object
             && iden.name == "parsers"
             && property.name == "all"
@@ -876,8 +894,9 @@ impl RuleConfigOutput {
                     };
                     let field_name = key.to_case(Case::Snake);
                     let rust_field_name = rust_field_name(&field_name);
-                    let serialized_field_name =
-                        rust_field_name.strip_prefix("r#").unwrap_or(&rust_field_name);
+                    let serialized_field_name = rust_field_name
+                        .strip_prefix("r#")
+                        .unwrap_or(&rust_field_name);
                     if key.to_case(Case::Camel) != *raw_key || serialized_field_name != field_name {
                         let _ = writeln!(output, "    #[serde(rename = \"{raw_key}\")]");
                     }
@@ -913,7 +932,10 @@ impl RuleConfigOutput {
                 let (element_label, element_output) =
                     self.extract_output_inner(element, field_name)?;
                 self.has_hash_map = true;
-                Some((format!("FxHashMap<String, {element_label}>"), element_output))
+                Some((
+                    format!("FxHashMap<String, {element_label}>"),
+                    element_output,
+                ))
             }
             RuleConfigElement::StringLiteral(_)
             | RuleConfigElement::True
@@ -954,7 +976,13 @@ struct RuleConfig<'a> {
 
 impl<'a> RuleConfig<'a> {
     fn new(source_text: &'a str, log_errors: bool) -> Self {
-        Self { elements: vec![], next_element: None, source_text, has_errors: false, log_errors }
+        Self {
+            elements: vec![],
+            next_element: None,
+            source_text,
+            has_errors: false,
+            log_errors,
+        }
     }
 
     fn log_error(&mut self, message: &str) {
@@ -1043,8 +1071,11 @@ impl<'a> RuleConfig<'a> {
             ));
             return None;
         }
-        let non_null_literal =
-            if first_literal.value == "null" { second_literal } else { first_literal };
+        let non_null_literal = if first_literal.value == "null" {
+            second_literal
+        } else {
+            first_literal
+        };
         let nested_element = self.parse_type_string_literal(non_null_literal)?;
         Some(RuleConfigElement::Nullable(Box::new(nested_element)))
     }
@@ -1096,9 +1127,9 @@ impl<'a> RuleConfig<'a> {
             .elements
             .iter()
             .filter_map(|arg| match arg {
-                ArrayExpressionElement::StringLiteral(string_literal) => {
-                    Some(RuleConfigElement::StringLiteral(string_literal.value.into()))
-                }
+                ArrayExpressionElement::StringLiteral(string_literal) => Some(
+                    RuleConfigElement::StringLiteral(string_literal.value.into()),
+                ),
                 ArrayExpressionElement::BooleanLiteral(boolean_literal) => {
                     if boolean_literal.value {
                         Some(RuleConfigElement::True)
@@ -1446,7 +1477,10 @@ fn main() {
     let mut args = std::env::args();
     args.next();
 
-    let rule_name = args.next().expect("expected rule name").to_case(Case::Snake);
+    let rule_name = args
+        .next()
+        .expect("expected rule name")
+        .to_case(Case::Snake);
     let rule_kind = args.next().map_or(RuleKind::ESLint, |kind| {
         RuleKind::try_from(kind.as_str()).expect("Invalid `RuleKind`")
     });
@@ -1557,8 +1591,9 @@ fn main() {
                 let mut fix_codes = vec![];
                 let mut last_comment = String::new();
                 // Check if any case with output has a config
-                let need_config =
-                    cases.iter().any(|case| case.output.is_some() && case.config.is_some());
+                let need_config = cases
+                    .iter()
+                    .any(|case| case.output.is_some() && case.config.is_some());
                 for case in cases {
                     let current_comment = case.group_comment();
                     let mut code = case.code(has_config, has_settings, has_filename);
@@ -1792,7 +1827,10 @@ fn find_test_function_range(content: &str) -> Option<(usize, usize)> {
         if let syn::Item::Fn(item_fn) = item {
             // Check if function is named "test" and has #[test] attribute
             if item_fn.sig.ident == "test" {
-                let has_test_attr = item_fn.attrs.iter().any(|attr| attr.path().is_ident("test"));
+                let has_test_attr = item_fn
+                    .attrs
+                    .iter()
+                    .any(|attr| attr.path().is_ident("test"));
                 if has_test_attr {
                     let span = item_fn.span();
                     let start = span.start();
@@ -1969,16 +2007,19 @@ fn add_rules_entry(ctx: &Context, rule_kind: RuleKind) -> Result<(), Box<dyn std
     let Some(mod_start) = rules.find(&mod_def) else {
         return Err(format!("failed to find '{mod_def}' in {rules_path}").into());
     };
-    let mod_end = &rules[mod_start..]
-        .find('}')
-        .ok_or(format!("failed to find end of '{mod_def}' module in {rules_path}"))?;
+    let mod_end = &rules[mod_start..].find('}').ok_or(format!(
+        "failed to find end of '{mod_def}' module in {rules_path}"
+    ))?;
     let mod_rules = &rules[mod_start..(*mod_end + mod_start)];
 
     // Check if the rule mod def already exists
     let rule_mod_def = format!("pub mod {};", ctx.snake_rule_name);
 
     if mod_rules.contains(&rule_mod_def) {
-        println!("Rule module '{}' already exists in {rules_path}", ctx.snake_rule_name);
+        println!(
+            "Rule module '{}' already exists in {rules_path}",
+            ctx.snake_rule_name
+        );
         return Ok(());
     }
 
@@ -2193,7 +2234,10 @@ mod tests {
     #[test]
     fn test_format_code_snippet_single_quotes() {
         // Single quotes (no double quotes) - treated as regular string
-        assert_eq!(format_code_snippet("const msg = 'hello';"), "\"const msg = 'hello';\"");
+        assert_eq!(
+            format_code_snippet("const msg = 'hello';"),
+            "\"const msg = 'hello';\""
+        );
     }
 
     #[test]

@@ -85,8 +85,12 @@ impl<'a, 'e> ReactiveFunctionTransform<'a> for Transform<'a, 'e> {
                 lvalue: store_lvalue,
                 ..
             }) => {
-                if self.always_invalidating_values.contains(&store_value.identifier) {
-                    self.always_invalidating_values.insert(store_lvalue.place.identifier);
+                if self
+                    .always_invalidating_values
+                    .contains(&store_value.identifier)
+                {
+                    self.always_invalidating_values
+                        .insert(store_lvalue.place.identifier);
                 }
                 if self.unmemoized_values.contains(&store_value.identifier) {
                     self.unmemoized_values.insert(store_lvalue.place.identifier);
@@ -123,8 +127,11 @@ impl<'a, 'e> ReactiveFunctionTransform<'a> for Transform<'a, 'e> {
             if self.unmemoized_values.contains(&dep.identifier) {
                 // This scope depends on an always-invalidating value, prune it
                 // Propagate always-invalidating and unmemoized to declarations/reassignments
-                let decl_ids: Vec<IdentifierId> =
-                    scope_data.declarations.iter().map(|(_, decl)| decl.identifier).collect();
+                let decl_ids: Vec<IdentifierId> = scope_data
+                    .declarations
+                    .iter()
+                    .map(|(_, decl)| decl.identifier)
+                    .collect();
                 let reassign_ids: Vec<IdentifierId> =
                     scope_data.reassignments.iter().copied().collect();
 

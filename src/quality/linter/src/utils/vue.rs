@@ -134,7 +134,10 @@ pub fn check_define_macro_call_expression(
         return None;
     }
 
-    let Some(expression) = call_expr.arguments.first().and_then(|first| first.as_expression())
+    let Some(expression) = call_expr
+        .arguments
+        .first()
+        .and_then(|first| first.as_expression())
     else {
         // `defineEmits();` is valid when `export default { emits: [] }` is defined
         if !has_export_default_equivalent {
@@ -204,7 +207,13 @@ pub fn is_in_vue_component_instance_method(node: &AstNode<'_>, ctx: &LintContext
     let Some(container_name) = container_property_node
         .kind()
         .as_object_property()
-        .and_then(|prop| if prop.computed { None } else { prop.key.static_name() })
+        .and_then(|prop| {
+            if prop.computed {
+                None
+            } else {
+                prop.key.static_name()
+            }
+        })
     else {
         return false;
     };
@@ -247,29 +256,36 @@ pub fn vue_component_options_kind(
         return None;
     };
 
-    ctx.nodes().ancestors(object_node.id()).find_map(|ancestor| match ancestor.kind() {
-        AstKind::ExportDefaultDeclaration(export_default_decl) => {
-            if ctx.file_extension().is_none_or(|ext| ext != "vue") {
-                return None;
+    ctx.nodes()
+        .ancestors(object_node.id())
+        .find_map(|ancestor| match ancestor.kind() {
+            AstKind::ExportDefaultDeclaration(export_default_decl) => {
+                if ctx.file_extension().is_none_or(|ext| ext != "vue") {
+                    return None;
+                }
+                if ctx.frameworks_options() == FrameworkOptions::VueSetup {
+                    return None;
+                }
+                (export_default_decl.declaration.span() == object_expr.span)
+                    .then_some(VueComponentObjectKind::Export)
             }
-            if ctx.frameworks_options() == FrameworkOptions::VueSetup {
-                return None;
+            AstKind::CallExpression(call_expr) => {
+                (is_last_argument_span(call_expr, object_expr.span)
+                    && is_vue_component_options_call(call_expr))
+                .then_some(VueComponentObjectKind::Definition)
             }
-            (export_default_decl.declaration.span() == object_expr.span)
-                .then_some(VueComponentObjectKind::Export)
-        }
-        AstKind::CallExpression(call_expr) => (is_last_argument_span(call_expr, object_expr.span)
-            && is_vue_component_options_call(call_expr))
-        .then_some(VueComponentObjectKind::Definition),
-        AstKind::NewExpression(new_expr) => (new_expr
-            .arguments
-            .first()
-            .and_then(|arg| arg.as_expression())
-            .is_some_and(|expr| expr.span() == object_expr.span)
-            && new_expr.callee.get_identifier_reference().is_some_and(|ident| ident.name == "Vue"))
-        .then_some(VueComponentObjectKind::Instance),
-        _ => None,
-    })
+            AstKind::NewExpression(new_expr) => (new_expr
+                .arguments
+                .first()
+                .and_then(|arg| arg.as_expression())
+                .is_some_and(|expr| expr.span() == object_expr.span)
+                && new_expr
+                    .callee
+                    .get_identifier_reference()
+                    .is_some_and(|ident| ident.name == "Vue"))
+            .then_some(VueComponentObjectKind::Instance),
+            _ => None,
+        })
 }
 
 /// Whether the given `ObjectExpression` is *any* Vue options object — the
@@ -343,8 +359,13 @@ pub fn find_property<'a, 'b>(
     name: &str,
 ) -> Option<&'b ObjectProperty<'a>> {
     obj.properties.iter().find_map(|prop| {
-        let ObjectPropertyKind::ObjectProperty(obj_prop) = prop else { return None };
-        obj_prop.key.is_specific_static_name(name).then_some(obj_prop.as_ref())
+        let ObjectPropertyKind::ObjectProperty(obj_prop) = prop else {
+            return None;
+        };
+        obj_prop
+            .key
+            .is_specific_static_name(name)
+            .then_some(obj_prop.as_ref())
     })
 }
 
@@ -376,7 +397,9 @@ pub fn for_each_define_props_type_signature<'a>(
             }
         }
         TSType::TSTypeReference(type_ref) => {
-            let TSTypeName::IdentifierReference(ident) = &type_ref.type_name else { return };
+            let TSTypeName::IdentifierReference(ident) = &type_ref.type_name else {
+                return;
+            };
             if !ctx.scoping().get_reference(ident.reference_id()).is_type() {
                 return;
             }
@@ -458,7 +481,9 @@ pub fn get_computed_getter_context(
 
         AstKind::ObjectProperty(prop) => {
             let grandparent = nodes.parent_node(parent.id());
-            let AstKind::ObjectExpression(_) = grandparent.kind() else { return None };
+            let AstKind::ObjectExpression(_) = grandparent.kind() else {
+                return None;
+            };
             let great = nodes.parent_node(grandparent.id());
 
             match great.kind() {
@@ -480,7 +505,9 @@ pub fn get_computed_getter_context(
                         && matches!(fn_node.kind(), AstKind::Function(_)) =>
                 {
                     let key_obj_expr = nodes.parent_node(great.id());
-                    let AstKind::ObjectExpression(_) = key_obj_expr.kind() else { return None };
+                    let AstKind::ObjectExpression(_) = key_obj_expr.kind() else {
+                        return None;
+                    };
                     let computed_prop_node = nodes.parent_node(key_obj_expr.id());
                     if let AstKind::ObjectProperty(cp) = computed_prop_node.kind()
                         && cp.key.is_specific_static_name("computed")
@@ -523,10 +550,15 @@ pub fn is_vue_computed_call(call: &CallExpression<'_>, ctx: &LintContext<'_>) ->
         return false;
     };
     ctx.module_record().import_entries.iter().any(|entry| {
-        if !matches!(entry.module_request.name(), "vue" | "@vue/composition-api" | "#imports") {
+        if !matches!(
+            entry.module_request.name(),
+            "vue" | "@vue/composition-api" | "#imports"
+        ) {
             return false;
         }
-        let ImportImportName::Name(name_span) = &entry.import_name else { return false };
+        let ImportImportName::Name(name_span) = &entry.import_name else {
+            return false;
+        };
         if name_span.name() != "computed" {
             return false;
         }

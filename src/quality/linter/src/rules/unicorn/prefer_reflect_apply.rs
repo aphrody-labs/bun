@@ -63,7 +63,8 @@ fn is_apply_signature(first_arg: &Argument, second_arg: &Argument) -> bool {
 }
 
 fn is_static_property_name_equal(expr: &MemberExpression, value: &str) -> bool {
-    expr.static_property_name().is_some_and(|name| name == value)
+    expr.static_property_name()
+        .is_some_and(|name| name == value)
 }
 
 impl Rule for PreferReflectApply {
@@ -153,7 +154,10 @@ fn create_reflect_apply_fix(
     let func = ctx.source_range(func_span);
     let this_arg = ctx.source_range(this_arg_span);
     let args = ctx.source_range(args_span);
-    fixer.replace(call_span, format!("Reflect.apply({func}, {this_arg}, {args})"))
+    fixer.replace(
+        call_span,
+        format!("Reflect.apply({func}, {this_arg}, {args})"),
+    )
 }
 
 #[test]
@@ -193,28 +197,51 @@ fn test() {
 
     let fix = vec![
         ("foo.apply(null, [42]);", "Reflect.apply(foo, null, [42]);"),
-        ("foo.bar.apply(null, [42]);", "Reflect.apply(foo.bar, null, [42]);"),
-        ("Function.prototype.apply.call(foo, null, [42]);", "Reflect.apply(foo, null, [42]);"),
+        (
+            "foo.bar.apply(null, [42]);",
+            "Reflect.apply(foo.bar, null, [42]);",
+        ),
+        (
+            "Function.prototype.apply.call(foo, null, [42]);",
+            "Reflect.apply(foo, null, [42]);",
+        ),
         (
             "Function.prototype.apply.call(foo.bar, null, [42]);",
             "Reflect.apply(foo.bar, null, [42]);",
         ),
-        ("foo.apply(null, arguments);", "Reflect.apply(foo, null, arguments);"),
+        (
+            "foo.apply(null, arguments);",
+            "Reflect.apply(foo, null, arguments);",
+        ),
         (
             "Function.prototype.apply.call(foo, null, arguments);",
             "Reflect.apply(foo, null, arguments);",
         ),
         ("foo.apply(this, [42]);", "Reflect.apply(foo, this, [42]);"),
-        ("Function.prototype.apply.call(foo, this, [42]);", "Reflect.apply(foo, this, [42]);"),
-        ("foo.apply(this, arguments);", "Reflect.apply(foo, this, arguments);"),
+        (
+            "Function.prototype.apply.call(foo, this, [42]);",
+            "Reflect.apply(foo, this, [42]);",
+        ),
+        (
+            "foo.apply(this, arguments);",
+            "Reflect.apply(foo, this, arguments);",
+        ),
         (
             "Function.prototype.apply.call(foo, this, arguments);",
             "Reflect.apply(foo, this, arguments);",
         ),
-        (r#"foo["apply"](null, [42]);"#, "Reflect.apply(foo, null, [42]);"),
+        (
+            r#"foo["apply"](null, [42]);"#,
+            "Reflect.apply(foo, null, [42]);",
+        ),
     ];
 
-    Tester::new(PreferReflectApply::NAME, PreferReflectApply::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        PreferReflectApply::NAME,
+        PreferReflectApply::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

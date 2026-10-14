@@ -15,7 +15,9 @@ use crate::{
 };
 
 fn filename_case_diagnostic(message: String, help_message: String) -> OxcDiagnostic {
-    OxcDiagnostic::warn(message).with_label(Span::default()).with_help(help_message)
+    OxcDiagnostic::warn(message)
+        .with_label(Span::default())
+        .with_help(help_message)
 }
 
 #[derive(Debug, Clone, Default)]
@@ -115,7 +117,12 @@ pub struct FilenameCaseConfigJson {
 
 impl Default for FilenameCaseConfigJson {
     fn default() -> Self {
-        Self { cases: None, case: None, ignore: vec![], multiple_file_extensions: true }
+        Self {
+            cases: None,
+            case: None,
+            ignore: vec![],
+            multiple_file_extensions: true,
+        }
     }
 }
 
@@ -237,7 +244,10 @@ impl CaseCheck {
                 } else {
                     &[Boundary::LowerDigit, Boundary::DigitLower]
                 };
-                Converter::new().remove_boundaries(boundaries).to_case(case).convert(name)
+                Converter::new()
+                    .remove_boundaries(boundaries)
+                    .to_case(case)
+                    .convert(name)
             }
             CaseCheck::Lowercase => name.cow_to_lowercase().into_owned(),
         }
@@ -300,10 +310,26 @@ impl Rule for FilenameCase {
         let trimmed_filename = filename.trim_matches('_');
 
         let cases = [
-            (self.camel_case, CaseCheck::Convert(Case::Camel), "camelCase"),
-            (self.kebab_case, CaseCheck::Convert(Case::Kebab), "kebab-case"),
-            (self.snake_case, CaseCheck::Convert(Case::Snake), "snake_case"),
-            (self.pascal_case, CaseCheck::Convert(Case::Pascal), "PascalCase"),
+            (
+                self.camel_case,
+                CaseCheck::Convert(Case::Camel),
+                "camelCase",
+            ),
+            (
+                self.kebab_case,
+                CaseCheck::Convert(Case::Kebab),
+                "kebab-case",
+            ),
+            (
+                self.snake_case,
+                CaseCheck::Convert(Case::Snake),
+                "snake_case",
+            ),
+            (
+                self.pascal_case,
+                CaseCheck::Convert(Case::Pascal),
+                "PascalCase",
+            ),
             (self.lowercase, CaseCheck::Lowercase, "lowercase"),
             (
                 self.screaming_snake_case,
@@ -697,13 +723,19 @@ fn test() {
         test_case("src/foo/___FOO-BAR.js", "pascalCase"),
         test_cases("src/foo/foo_bar.js", []),
         test_cases("src/foo/foo-bar.js", ["camelCase", "pascalCase"]),
-        test_cases("src/foo/_foo_bar.js", ["camelCase", "pascalCase", "kebabCase"]),
+        test_cases(
+            "src/foo/_foo_bar.js",
+            ["camelCase", "pascalCase", "kebabCase"],
+        ),
         test_cases("src/foo/_FOO-BAR.js", ["snakeCase"]),
         test_cases("src/foo/fooBar.js", ["lowercase", "screamingSnakeCase"]),
         test_case("src/foo/[foo_bar].js", ""),
         test_case("src/foo/$foo_bar.js", ""),
         test_case("src/foo/$fooBar.js", ""),
-        test_cases("src/foo/{foo_bar}.js", ["camelCase", "pascalCase", "kebabCase"]),
+        test_cases(
+            "src/foo/{foo_bar}.js",
+            ["camelCase", "pascalCase", "kebabCase"],
+        ),
         // `ignore` patterns that do not match the filename.
         test_case_with_options(
             "src/foo/FOOBAR.js",
@@ -765,7 +797,12 @@ fn test() {
         ),
         ("", None, None, Some(PathBuf::from("FooBar.tsx"))),
         // should only report once
-        ("<script></script><script setup></script>", None, None, Some(PathBuf::from("FooBar.vue"))),
+        (
+            "<script></script><script setup></script>",
+            None,
+            None,
+            Some(PathBuf::from("FooBar.vue")),
+        ),
     ];
 
     Tester::new(FilenameCase::NAME, FilenameCase::PLUGIN, pass, fail).test_and_snapshot();

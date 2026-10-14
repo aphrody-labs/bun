@@ -7,7 +7,9 @@ use crate::peephole::PeepholeOptimizations;
 
 impl<'a> PeepholeOptimizations {
     pub fn minimize_bitwise_binary_expr(expr: &mut Expression<'a>, ctx: &mut TraverseCtx<'a>) {
-        let Expression::BinaryExpression(bin_expr) = expr else { return };
+        let Expression::BinaryExpression(bin_expr) = expr else {
+            return;
+        };
         if !bin_expr.operator.is_bitwise() {
             return;
         }
@@ -57,7 +59,9 @@ impl<'a> PeepholeOptimizations {
     }
 
     fn is_bitwise_int(expr: &Expression<'a>, ctx: &TraverseCtx<'a>) -> bool {
-        let Expression::BinaryExpression(e) = expr else { return false };
+        let Expression::BinaryExpression(e) = expr else {
+            return false;
+        };
         e.operator != BinaryOperator::ShiftRightZeroFill && e.is_int32_or_uint32(ctx)
     }
 
@@ -65,7 +69,9 @@ impl<'a> PeepholeOptimizations {
         e: Expression<'a>,
         _ctx: &mut TraverseCtx<'a>,
     ) -> Expression<'a> {
-        let Expression::BinaryExpression(e) = e else { unreachable!() };
+        let Expression::BinaryExpression(e) = e else {
+            unreachable!()
+        };
         e.unbox().left
     }
 
@@ -73,7 +79,9 @@ impl<'a> PeepholeOptimizations {
         e: Expression<'a>,
         _ctx: &mut TraverseCtx<'a>,
     ) -> Expression<'a> {
-        let Expression::BinaryExpression(e) = e else { unreachable!() };
+        let Expression::BinaryExpression(e) = e else {
+            unreachable!()
+        };
         e.unbox().right
     }
 }

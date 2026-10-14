@@ -1,7 +1,12 @@
 // Auto-generated code, DO NOT EDIT DIRECTLY!
 // To edit this generated file you have to edit `src/codegen/ecma_ast_tools/src/derives/clone_in.rs`.
 
-#![allow(unused_imports, unused_variables, clippy::default_trait_access, clippy::inline_always)]
+#![allow(
+    unused_imports,
+    unused_variables,
+    clippy::default_trait_access,
+    clippy::inline_always
+)]
 
 use std::cell::Cell;
 
@@ -261,7 +266,9 @@ impl<'new_alloc> CloneIn<'new_alloc> for Dot {
         with_semantic_ids: CloneInSemanticIds,
         allocator: &'new_alloc Allocator,
     ) -> Self::Cloned {
-        Dot { span: CloneIn::clone_in_impl(&self.span, with_semantic_ids, allocator) }
+        Dot {
+            span: CloneIn::clone_in_impl(&self.span, with_semantic_ids, allocator),
+        }
     }
 }
 

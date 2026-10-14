@@ -14,9 +14,9 @@
 
 use std::collections::{HashMap, HashSet};
 
-use crate::util::{Edit, apply_edits, line_offsets, make_finding};
 use crate::registry::{Compat, MODULES, ModuleEntry, PACKAGES};
 use crate::types::{CompatInfo, CompatStatus, Finding, MakeFindingOpts, Severity};
+use crate::util::{Edit, apply_edits, line_offsets, make_finding};
 use once_cell::sync::Lazy;
 
 use crate::rules::imports_ast;

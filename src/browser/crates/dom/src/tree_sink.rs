@@ -1,9 +1,9 @@
 use std::{borrow::Cow, cell::Ref, fmt};
 
 use html5ever::{
-    Attribute as HtmlAttribute, LocalName, Namespace, QualName,
     tendril::StrTendril,
     tree_builder::{ElemName, ElementFlags, NodeOrText, QuirksMode, TreeSink},
+    Attribute as HtmlAttribute, LocalName, Namespace, QualName,
 };
 
 use crate::tree::{Attribute, DomTree, NodeData, NodeId, ShadowRootMode};
@@ -53,7 +53,10 @@ fn is_valid_shadow_host(tree: &DomTree, id: NodeId) -> bool {
         || local.chars().any(|ch| {
             ch.is_ascii_uppercase()
                 || ch == '\0'
-                || matches!(ch, '\u{0009}' | '\u{000A}' | '\u{000C}' | '\u{000D}' | '\u{0020}')
+                || matches!(
+                    ch,
+                    '\u{0009}' | '\u{000A}' | '\u{000C}' | '\u{000D}' | '\u{0020}'
+                )
                 || matches!(ch, '/' | '>')
         })
     {
@@ -134,7 +137,10 @@ impl TreeSink for DomTree {
     ) -> NodeId {
         let converted_attrs: Vec<Attribute> = attrs
             .into_iter()
-            .map(|a| Attribute { name: a.name, value: a.value.to_string() })
+            .map(|a| Attribute {
+                name: a.name,
+                value: a.value.to_string(),
+            })
             .collect();
 
         let id = self.new_node(NodeData::Element {
@@ -147,7 +153,10 @@ impl TreeSink for DomTree {
         if flags.template {
             let template_doc = self.new_node(NodeData::Document);
             self.with_node_mut(id, |node| {
-                if let NodeData::Element { template_contents, .. } = &mut node.data {
+                if let NodeData::Element {
+                    template_contents, ..
+                } = &mut node.data
+                {
                     *template_contents = Some(template_doc);
                 }
             });
@@ -157,7 +166,9 @@ impl TreeSink for DomTree {
     }
 
     fn create_comment(&self, text: StrTendril) -> NodeId {
-        self.new_node(NodeData::Comment { contents: text.to_string() })
+        self.new_node(NodeData::Comment {
+            contents: text.to_string(),
+        })
     }
 
     fn create_pi(&self, target: StrTendril, data: StrTendril) -> NodeId {
@@ -171,10 +182,10 @@ impl TreeSink for DomTree {
         match child {
             NodeOrText::AppendNode(node_id) => {
                 self.append_child(*parent, node_id);
-            },
+            }
             NodeOrText::AppendText(text) => {
                 self.append_text(*parent, &text);
-            },
+            }
         }
     }
 
@@ -184,7 +195,9 @@ impl TreeSink for DomTree {
         prev_element: &NodeId,
         child: NodeOrText<NodeId>,
     ) {
-        let has_parent = self.with_node(*element, |n| n.parent.is_some()).unwrap_or(false);
+        let has_parent = self
+            .with_node(*element, |n| n.parent.is_some())
+            .unwrap_or(false);
         if has_parent {
             self.append_before_sibling(element, child);
         } else {
@@ -209,11 +222,17 @@ impl TreeSink for DomTree {
 
     fn add_attrs_if_missing(&self, target: &NodeId, attrs: Vec<HtmlAttribute>) {
         self.with_node_mut(*target, |node| {
-            if let NodeData::Element { attrs: existing, .. } = &mut node.data {
+            if let NodeData::Element {
+                attrs: existing, ..
+            } = &mut node.data
+            {
                 for attr in attrs {
                     let dominated = existing.iter().any(|a| a.name == attr.name);
                     if !dominated {
-                        existing.push(Attribute { name: attr.name, value: attr.value.to_string() });
+                        existing.push(Attribute {
+                            name: attr.name,
+                            value: attr.value.to_string(),
+                        });
                     }
                 }
             }
@@ -235,7 +254,7 @@ impl TreeSink for DomTree {
         match child {
             NodeOrText::AppendNode(node_id) => {
                 self.insert_before(*sibling, node_id);
-            },
+            }
             NodeOrText::AppendText(text) => {
                 let prev_text_id = {
                     let node = self.get_node(*sibling);
@@ -254,15 +273,19 @@ impl TreeSink for DomTree {
                     return;
                 }
 
-                let text_id = self.new_node(NodeData::Text { contents: text.to_string() });
+                let text_id = self.new_node(NodeData::Text {
+                    contents: text.to_string(),
+                });
                 self.insert_before(*sibling, text_id);
-            },
+            }
         }
     }
 
     fn get_template_contents(&self, target: &NodeId) -> NodeId {
         self.with_node(*target, |n| match &n.data {
-            NodeData::Element { template_contents, .. } => *template_contents,
+            NodeData::Element {
+                template_contents, ..
+            } => *template_contents,
             _ => None,
         })
         .flatten()
@@ -306,7 +329,9 @@ impl TreeSink for DomTree {
         };
         let root = self
             .with_node(*template, |node| match &node.data {
-                NodeData::Element { template_contents, .. } => *template_contents,
+                NodeData::Element {
+                    template_contents, ..
+                } => *template_contents,
                 _ => None,
             })
             .flatten();
@@ -327,9 +352,10 @@ impl TreeSink for DomTree {
 
     fn is_mathml_annotation_xml_integration_point(&self, target: &NodeId) -> bool {
         self.with_node(*target, |n| match &n.data {
-            NodeData::Element { mathml_annotation_xml_integration_point, .. } => {
-                *mathml_annotation_xml_integration_point
-            },
+            NodeData::Element {
+                mathml_annotation_xml_integration_point,
+                ..
+            } => *mathml_annotation_xml_integration_point,
             _ => false,
         })
         .unwrap_or(false)
@@ -337,11 +363,13 @@ impl TreeSink for DomTree {
 }
 
 pub fn parse_html(html: &str) -> DomTree {
-    use html5ever::{ParseOpts, parse_document, tendril::TendrilSink};
+    use html5ever::{parse_document, tendril::TendrilSink, ParseOpts};
 
     let tree = DomTree::new();
     tree.set_allow_declarative_shadow_roots(true);
-    parse_document(tree, ParseOpts::default()).from_utf8().one(html.as_bytes())
+    parse_document(tree, ParseOpts::default())
+        .from_utf8()
+        .one(html.as_bytes())
 }
 
 pub fn parse_fragment(html: &str) -> DomTree {
@@ -356,7 +384,7 @@ pub fn parse_fragment(html: &str) -> DomTree {
 /// top-level `<tr>` and mis-parses select/template fragments. Browsers instead
 /// use the receiver element as the fragment parsing context.
 pub fn parse_fragment_with_context(html: &str, context_name: QualName) -> DomTree {
-    use html5ever::{ParseOpts, parse_fragment, tendril::TendrilSink};
+    use html5ever::{parse_fragment, tendril::TendrilSink, ParseOpts};
     let tree = DomTree::new();
     // BunBrowser's fragment parser backs innerHTML in a scripting-enabled
     // document. html5ever 0.39 makes that context flag explicit; keeping it
@@ -477,14 +505,26 @@ mod tests {
         let open_root = tree.shadow_root(open_host).expect("open root attached");
         let closed_root = tree.shadow_root(closed_host).expect("closed root attached");
 
-        assert_eq!(tree.shadow_root_info(open_root).unwrap().mode, ShadowRootMode::Open);
-        assert_eq!(tree.shadow_root_info(closed_root).unwrap().mode, ShadowRootMode::Closed);
+        assert_eq!(
+            tree.shadow_root_info(open_root).unwrap().mode,
+            ShadowRootMode::Open
+        );
+        assert_eq!(
+            tree.shadow_root_info(closed_root).unwrap().mode,
+            ShadowRootMode::Closed
+        );
         assert_eq!(element_children(&tree, open_host), vec![open_light]);
         assert_eq!(element_children(&tree, closed_host), vec![closed_light]);
         assert!(tree.get_element_by_id("open-template").is_none());
         assert!(tree.get_element_by_id("closed-template").is_none());
-        assert!(tree.query_selector_from(open_root, "#open-content").unwrap().is_some());
-        assert!(tree.query_selector_from(closed_root, "#closed-content").unwrap().is_some());
+        assert!(tree
+            .query_selector_from(open_root, "#open-content")
+            .unwrap()
+            .is_some());
+        assert!(tree
+            .query_selector_from(closed_root, "#closed-content")
+            .unwrap()
+            .is_some());
         assert!(
             tree.get_element_by_id("open-content").is_none()
                 && tree.get_element_by_id("closed-content").is_none(),
@@ -533,7 +573,10 @@ mod tests {
         let second = tree.get_element_by_id("second").unwrap();
         let root = tree.shadow_root(host).unwrap();
 
-        assert_eq!(tree.shadow_root_info(root).unwrap().mode, ShadowRootMode::Open);
+        assert_eq!(
+            tree.shadow_root_info(root).unwrap().mode,
+            ShadowRootMode::Open
+        );
         assert!(tree.query_selector_from(root, "#first").unwrap().is_some());
         assert_eq!(element_children(&tree, host), vec![duplicate, light]);
         assert_eq!(element_children(&tree, duplicate_contents), vec![second]);
@@ -553,17 +596,31 @@ mod tests {
         );
         let outer_host = tree.get_element_by_id("outer-host").unwrap();
         let outer_root = tree.shadow_root(outer_host).unwrap();
-        let inner_host = tree.query_selector_from(outer_root, "#inner-host").unwrap().unwrap();
+        let inner_host = tree
+            .query_selector_from(outer_root, "#inner-host")
+            .unwrap()
+            .unwrap();
         let inner_root = tree.shadow_root(inner_host).unwrap();
 
         assert_eq!(tree.containing_shadow_root(inner_host), Some(outer_root));
-        assert_eq!(tree.shadow_root_info(inner_root).unwrap().mode, ShadowRootMode::Closed);
+        assert_eq!(
+            tree.shadow_root_info(inner_root).unwrap().mode,
+            ShadowRootMode::Closed
+        );
         assert!(
-            tree.query_selector_from(outer_root, "#inner-shadow").unwrap().is_none(),
+            tree.query_selector_from(outer_root, "#inner-shadow")
+                .unwrap()
+                .is_none(),
             "an outer-tree query must not pierce a nested root"
         );
-        assert!(tree.query_selector_from(inner_root, "#inner-shadow").unwrap().is_some());
-        assert!(tree.query_selector_from(outer_root, "#inner-light").unwrap().is_some());
+        assert!(tree
+            .query_selector_from(inner_root, "#inner-shadow")
+            .unwrap()
+            .is_some());
+        assert!(tree
+            .query_selector_from(outer_root, "#inner-light")
+            .unwrap()
+            .is_some());
     }
 
     #[test]
@@ -627,15 +684,24 @@ mod tests {
         });
         tree.append_child(host, template);
         let attrs = vec![HtmlAttribute {
-            name: QualName::new(None, Namespace::default(), LocalName::from("shadowrootmode")),
+            name: QualName::new(
+                None,
+                Namespace::default(),
+                LocalName::from("shadowrootmode"),
+            ),
             value: StrTendril::from("closed"),
         }];
 
         assert!(!TreeSink::allow_declarative_shadow_roots(&tree, &host));
-        assert!(TreeSink::attach_declarative_shadow(&tree, &host, &template, &attrs,));
+        assert!(TreeSink::attach_declarative_shadow(
+            &tree, &host, &template, &attrs,
+        ));
         assert_eq!(tree.shadow_root(host), Some(contents));
         assert!(tree.children(host).is_empty());
         assert_eq!(tree.get_node(template).unwrap().parent, None);
-        assert_eq!(tree.shadow_root_info(contents).unwrap().mode, ShadowRootMode::Closed);
+        assert_eq!(
+            tree.shadow_root_info(contents).unwrap().mode,
+            ShadowRootMode::Closed
+        );
     }
 }

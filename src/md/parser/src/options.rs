@@ -157,11 +157,15 @@ pub struct ParserOptions {
 impl ParserOptions {
     /// Markdown mode (the default): [`Constructs::markdown`].
     pub fn markdown() -> Self {
-        Self { constructs: Constructs::markdown() }
+        Self {
+            constructs: Constructs::markdown(),
+        }
     }
 
     /// MDX mode: [`Constructs::mdx`].
     pub fn mdx() -> Self {
-        Self { constructs: Constructs::mdx() }
+        Self {
+            constructs: Constructs::mdx(),
+        }
     }
 }

@@ -28,8 +28,11 @@ fn spawn_server(html: &'static str) -> String {
             let mut buf = [0u8; 2048];
             let read = s.read(&mut buf).unwrap_or(0);
             let is_pixel = buf[..read].starts_with(b"GET /pixel.png ");
-            let (content_type, body) =
-                if is_pixel { ("image/png", PIXEL_PNG) } else { ("text/html", html.as_bytes()) };
+            let (content_type, body) = if is_pixel {
+                ("image/png", PIXEL_PNG)
+            } else {
+                ("text/html", html.as_bytes())
+            };
             let headers = format!(
                 "HTTP/1.1 200 OK\r\nContent-Type: {content_type}\r\nContent-Length: \
                  {}\r\nConnection: close\r\n\r\n",

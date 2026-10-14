@@ -181,7 +181,12 @@ impl<'a> Traverse<'a, TransformState<'a>> for LegacyDecoratorMetadata<'a> {
         let metadata = if should_transform
             && let Some(constructor) = constructor
             && !(class.decorators.is_empty()
-                && constructor.value.params.items.iter().all(|param| param.decorators.is_empty()))
+                && constructor
+                    .value
+                    .params
+                    .items
+                    .iter()
+                    .all(|param| param.decorators.is_empty()))
         {
             let serialized_type =
                 self.serialize_parameters_types_of_node(&constructor.value.params, ctx);
@@ -207,7 +212,12 @@ impl<'a> Traverse<'a, TransformState<'a>> for LegacyDecoratorMetadata<'a> {
         let is_typescript_syntax = method.value.is_typescript_syntax();
         let is_decorated = !is_typescript_syntax
             && (!method.decorators.is_empty()
-                || method.value.params.items.iter().any(|param| !param.decorators.is_empty()));
+                || method
+                    .value
+                    .params
+                    .items
+                    .iter()
+                    .any(|param| !param.decorators.is_empty()));
 
         let metadata = is_decorated.then(|| {
             // TypeScript only emits `design:returntype` for regular methods,
@@ -215,7 +225,10 @@ impl<'a> Traverse<'a, TransformState<'a>> for LegacyDecoratorMetadata<'a> {
 
             let (design_type, return_type) = if method.kind.is_get() {
                 // For getters, the design type is the return type (or `Object` if untyped)
-                (self.serialize_type_annotation(method.value.return_type.as_ref(), ctx), None)
+                (
+                    self.serialize_type_annotation(method.value.return_type.as_ref(), ctx),
+                    None,
+                )
             } else if method.kind.is_set()
                 && let Some(param) = method.value.params.items.first()
             {
@@ -250,7 +263,8 @@ impl<'a> Traverse<'a, TransformState<'a>> for LegacyDecoratorMetadata<'a> {
         if prop.decorators.is_empty() {
             return;
         }
-        prop.decorators.push(self.create_design_type_metadata(prop.type_annotation.as_ref(), ctx));
+        prop.decorators
+            .push(self.create_design_type_metadata(prop.type_annotation.as_ref(), ctx));
     }
 
     #[inline]
@@ -274,8 +288,10 @@ impl<'a> LegacyDecoratorMetadata<'a> {
         // Optimization:
         // If the enum doesn't have any type references, that implies that no decorators
         // refer to this enum, so there is no need to infer its type.
-        let has_type_reference =
-            ctx.scoping().get_resolved_references(symbol_id).any(Reference::is_type);
+        let has_type_reference = ctx
+            .scoping()
+            .get_resolved_references(symbol_id)
+            .any(Reference::is_type);
         if has_type_reference {
             let enum_type = Self::infer_enum_type(&decl.body.members);
             self.enum_types.insert(symbol_id, enum_type);
@@ -495,7 +511,10 @@ impl<'a> LegacyDecoratorMetadata<'a> {
             return Self::global_object(ctx);
         };
 
-        let symbol_id = ctx.scoping().get_reference(root_ident.reference_id()).symbol_id();
+        let symbol_id = ctx
+            .scoping()
+            .get_reference(root_ident.reference_id())
+            .symbol_id();
 
         // Local enum fast path: classify by member shape and emit the primitive globally.
         if properties.is_empty()
@@ -775,7 +794,10 @@ impl<'a> LegacyDecoratorMetadata<'a> {
         ctx: &mut TraverseCtx<'a>,
     ) -> Expression<'a> {
         let arguments = ArenaVec::from_array_in(
-            [Argument::new_string_literal(SPAN, key, None, ctx), Argument::from(value)],
+            [
+                Argument::new_string_literal(SPAN, key, None, ctx),
+                Argument::from(value),
+            ],
             ctx,
         );
         helper_call_expr(Helper::DecorateMetadata, arguments, ctx)

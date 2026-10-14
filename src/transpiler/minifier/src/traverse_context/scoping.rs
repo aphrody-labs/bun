@@ -78,7 +78,8 @@ impl<'a> TraverseScoping<'a> {
     /// `flags` provided are amended to inherit from parent scope's flags.
     pub fn create_child_scope(&mut self, parent_id: ScopeId, flags: ScopeFlags) -> ScopeId {
         let flags = self.scoping.get_new_scope_flags(flags, parent_id);
-        self.scoping.add_scope(Some(parent_id), NodeId::DUMMY, flags)
+        self.scoping
+            .add_scope(Some(parent_id), NodeId::DUMMY, flags)
     }
 
     /// Create new scope as child of current scope.
@@ -162,7 +163,8 @@ impl<'a> TraverseScoping<'a> {
 
         // Set scopes as children of new scope instead
         for &child_id in child_scope_ids {
-            self.scoping.set_scope_parent_id(child_id, Some(new_scope_id));
+            self.scoping
+                .set_scope_parent_id(child_id, Some(new_scope_id));
         }
 
         new_scope_id
@@ -237,7 +239,9 @@ impl<'a> TraverseScoping<'a> {
         scope_id: ScopeId,
         flags: SymbolFlags,
     ) -> SymbolId {
-        let symbol_id = self.scoping.create_symbol(SPAN, name, flags, scope_id, NodeId::DUMMY);
+        let symbol_id = self
+            .scoping
+            .create_symbol(SPAN, name, flags, scope_id, NodeId::DUMMY);
         self.scoping.add_binding(scope_id, name, symbol_id);
 
         symbol_id
@@ -278,8 +282,9 @@ impl<'a> TraverseScoping<'a> {
     /// See comments on `UidGenerator` for further details.
     pub fn generate_uid_name(&mut self, name: &str, allocator: &'a Allocator) -> Ident<'a> {
         // If `uid_generator` is not already populated, initialize it
-        let uid_generator =
-            self.uid_generator.get_or_insert_with(|| UidGenerator::new(&self.scoping, allocator));
+        let uid_generator = self
+            .uid_generator
+            .get_or_insert_with(|| UidGenerator::new(&self.scoping, allocator));
         // Generate unique name
         uid_generator.create(name)
     }
@@ -305,7 +310,8 @@ impl<'a> TraverseScoping<'a> {
     ) -> ReferenceId {
         let reference = Reference::new(NodeId::DUMMY, self.current_scope_id, flags);
         let reference_id = self.scoping.create_reference(reference);
-        self.scoping.add_root_unresolved_reference(name, reference_id);
+        self.scoping
+            .add_root_unresolved_reference(name, reference_id);
         reference_id
     }
 
@@ -342,9 +348,11 @@ impl<'a> TraverseScoping<'a> {
     pub fn delete_reference(&mut self, reference_id: ReferenceId, name: Ident<'_>) {
         let symbol_id = self.scoping.get_reference(reference_id).symbol_id();
         if let Some(symbol_id) = symbol_id {
-            self.scoping.delete_resolved_reference(symbol_id, reference_id);
+            self.scoping
+                .delete_resolved_reference(symbol_id, reference_id);
         } else {
-            self.scoping.delete_root_unresolved_reference(name, reference_id);
+            self.scoping
+                .delete_root_unresolved_reference(name, reference_id);
         }
     }
 

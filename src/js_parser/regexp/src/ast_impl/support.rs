@@ -85,7 +85,10 @@ fn has_duplicate_named_capture_groups(pattern: &Pattern<'_>) -> bool {
         }
     }
 
-    let mut visitor = DuplicateNamedCaptureGroups { names: FxHashSet::default(), found: false };
+    let mut visitor = DuplicateNamedCaptureGroups {
+        names: FxHashSet::default(),
+        found: false,
+    };
     visitor.visit_pattern(pattern);
     visitor.found
 }
@@ -104,7 +107,10 @@ fn alternative_contains_unsupported(
     alternative: &Alternative,
     unsupported: &RegexUnsupportedPatterns,
 ) -> bool {
-    alternative.body.iter().any(|term| term_contains_unsupported(term, unsupported))
+    alternative
+        .body
+        .iter()
+        .any(|term| term_contains_unsupported(term, unsupported))
 }
 
 fn term_contains_unsupported(term: &Term, unsupported: &RegexUnsupportedPatterns) -> bool {
@@ -176,17 +182,24 @@ mod test {
             unicode_sets: true,
         };
         for flags in ["y", "u", "s", "d", "v"] {
-            assert!(has_unsupported_regular_expression_flags(flags, &unsupported));
+            assert!(has_unsupported_regular_expression_flags(
+                flags,
+                &unsupported
+            ));
         }
     }
 
     #[test]
     fn duplicate_named_capture_groups() {
         let allocator = Allocator::default();
-        let pattern =
-            LiteralParser::new(&allocator, "(?<name>a)|(?<name>b)", None, Options::default())
-                .parse()
-                .unwrap();
+        let pattern = LiteralParser::new(
+            &allocator,
+            "(?<name>a)|(?<name>b)",
+            None,
+            Options::default(),
+        )
+        .parse()
+        .unwrap();
 
         let supported = RegexUnsupportedPatterns {
             named_capture_groups: false,
@@ -195,10 +208,17 @@ mod test {
             look_behind_assertions: false,
             pattern_modifiers: false,
         };
-        assert!(!has_unsupported_regular_expression_pattern(&pattern, &supported));
+        assert!(!has_unsupported_regular_expression_pattern(
+            &pattern, &supported
+        ));
 
-        let unsupported =
-            RegexUnsupportedPatterns { duplicate_named_capture_groups: true, ..supported };
-        assert!(has_unsupported_regular_expression_pattern(&pattern, &unsupported));
+        let unsupported = RegexUnsupportedPatterns {
+            duplicate_named_capture_groups: true,
+            ..supported
+        };
+        assert!(has_unsupported_regular_expression_pattern(
+            &pattern,
+            &unsupported
+        ));
     }
 }

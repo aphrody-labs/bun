@@ -192,7 +192,10 @@ fn readonly_var_unsafe_preceding_call() {
 fn readonly_var_unsafe_preceding_read() {
     // A preceding statement reads the var before its initializer runs;
     // the read must observe `undefined`, not the constant.
-    test_smallest("var y = foo; var foo = 1; log(y);", "var y = foo, foo = 1; log(y);");
+    test_smallest(
+        "var y = foo; var foo = 1; log(y);",
+        "var y = foo, foo = 1; log(y);",
+    );
 
     // Canonical hoisting trap: the name is used directly before its own `var`
     // declaration, so the read sees the hoisted `undefined`. `console.log(a)`
@@ -206,7 +209,10 @@ fn readonly_var_unsafe_preceding_read() {
 fn readonly_var_reassigned() {
     // `foo` has a write reference, so even though `var foo = 1;` is at the top,
     // inlining is unsafe.
-    test_smallest("var foo = 1; foo = 2; log(foo);", "var foo = 1; foo = 2, log(foo);");
+    test_smallest(
+        "var foo = 1; foo = 2; log(foo);",
+        "var foo = 1; foo = 2, log(foo);",
+    );
 }
 
 #[test]
@@ -375,7 +381,10 @@ fn fold_writeonce_falsy_var_in_boolean_context() {
     test_smallest("var h = false; if (h) a(); if (h) b()", "");
     // Read inside a function, past a side-effectful prelude (`g()` runs first):
     // the hoisting gate withholds value-context folding; boolean context is sound.
-    test_smallest("g(); var h = false; function f() { if (h) a() } f()", "g();");
+    test_smallest(
+        "g(); var h = false; function f() { if (h) a() } f()",
+        "g();",
+    );
 
     // Value context must NOT fold (a pre-init read would observe `undefined`).
     test_smallest(
@@ -383,7 +392,10 @@ fn fold_writeonce_falsy_var_in_boolean_context() {
         "g(); var h = !1; function f() { sink(h); } f();",
     );
     // Reassigned => not write-once => not folded.
-    test_smallest("var h = false; h = 1; if (h) a()", "var h = !1; h = 1, h && a();");
+    test_smallest(
+        "var h = false; h = 1; if (h) a()",
+        "var h = !1; h = 1, h && a();",
+    );
 
     // Script mode: a top-level `var` is a global another script can reassign, so
     // an in-module write count of 0 doesn't prove write-once — not folded.
@@ -399,10 +411,18 @@ fn fold_writeonce_falsy_var_in_boolean_context() {
 fn r#const() {
     let options = CompressOptions::smallest();
     test_options("const foo = 1; log(foo)", "log(1)", &options);
-    test_options("export const foo = 1; log(foo)", "export const foo = 1; log(1)", &options);
+    test_options(
+        "export const foo = 1; log(foo)",
+        "export const foo = 1; log(1)",
+        &options,
+    );
 
     test_options("let foo = 1; log(foo)", "log(1)", &options);
-    test_options("export let foo = 1; log(foo)", "export let foo = 1; log(1)", &options);
+    test_options(
+        "export let foo = 1; log(foo)",
+        "export let foo = 1; log(1)",
+        &options,
+    );
 }
 
 // https://github.com/oxc-project/oxc/issues/20282
@@ -470,8 +490,16 @@ fn keep_value_context_read_of_uninitialized_binding() {
 
     // Near-misses: folds that consume the value must keep working without the
     // textual inline — evaluation resolves the read through `SymbolValue`.
-    test_options("let u; export function f() { return u; }", "export function f() {}", &options);
-    test_options("let u; export function f() { if (u) g(); }", "export function f() {}", &options);
+    test_options(
+        "let u; export function f() { return u; }",
+        "export function f() {}",
+        &options,
+    );
+    test_options(
+        "let u; export function f() { if (u) g(); }",
+        "export function f() {}",
+        &options,
+    );
     test_options(
         "let u; export function f() { return u === void 0; }",
         "export function f() { return !0; }",
@@ -489,20 +517,48 @@ fn keep_value_context_read_of_uninitialized_binding() {
 #[test]
 fn small_value() {
     let options = CompressOptions::smallest();
-    test_options("const foo = 999; log(foo), log(foo)", "log(999), log(999)", &options);
-    test_options("const foo = -99; log(foo), log(foo)", "log(-99), log(-99)", &options);
+    test_options(
+        "const foo = 999; log(foo), log(foo)",
+        "log(999), log(999)",
+        &options,
+    );
+    test_options(
+        "const foo = -99; log(foo), log(foo)",
+        "log(-99), log(-99)",
+        &options,
+    );
     test_same_options("const foo = 1000; log(foo), log(foo)", &options);
     test_same_options("const foo = -100; log(foo), log(foo)", &options);
 
     test_same_options("const foo = 0n; log(foo), log(foo)", &options);
 
-    test_options("const foo = 'aaa'; log(foo), log(foo)", "log('aaa'), log('aaa')", &options);
+    test_options(
+        "const foo = 'aaa'; log(foo), log(foo)",
+        "log('aaa'), log('aaa')",
+        &options,
+    );
     test_same_options("const foo = 'aaaa'; log(foo), log(foo)", &options);
 
-    test_options("const foo = true; log(foo), log(foo)", "log(!0), log(!0)", &options);
-    test_options("const foo = false; log(foo), log(foo)", "log(!1), log(!1)", &options);
-    test_options("const foo = undefined; log(foo), log(foo)", "log(void 0), log(void 0)", &options);
-    test_options("const foo = null; log(foo), log(foo)", "log(null), log(null)", &options);
+    test_options(
+        "const foo = true; log(foo), log(foo)",
+        "log(!0), log(!0)",
+        &options,
+    );
+    test_options(
+        "const foo = false; log(foo), log(foo)",
+        "log(!1), log(!1)",
+        &options,
+    );
+    test_options(
+        "const foo = undefined; log(foo), log(foo)",
+        "log(void 0), log(void 0)",
+        &options,
+    );
+    test_options(
+        "const foo = null; log(foo), log(foo)",
+        "log(null), log(null)",
+        &options,
+    );
 
     test_options(
         r#"

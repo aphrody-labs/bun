@@ -75,12 +75,16 @@ impl<'a> Printer<'a> {
     ) -> Self {
         let (indent_char, indent_width) = match options.indent_style() {
             IndentStyle::Tab => (code_buffer::IndentChar::Tab, 1),
-            IndentStyle::Space => {
-                (code_buffer::IndentChar::Space, options.indent_width().value() as usize)
-            }
+            IndentStyle::Space => (
+                code_buffer::IndentChar::Space,
+                options.indent_width().value() as usize,
+            ),
         };
         let buffer = CodeBuffer::with_capacity_and_indent(capacity, indent_char, indent_width);
-        Self { options, state: PrinterState::new(buffer, sorted_tailwind_classes) }
+        Self {
+            options,
+            state: PrinterState::new(buffer, sorted_tailwind_classes),
+        }
     }
 
     /// Prints the passed in element as well as all its content
@@ -105,8 +109,10 @@ impl<'a> Printer<'a> {
     ) -> PrintResult<Printed> {
         let mut stack = PrintCallStack::new(PrintElementArgs::new());
         let mut queue: PrintQueue<'a> = PrintQueue::new(document);
-        let mut indent_stack =
-            PrintIndentStack::new(Indention { level: indent, ..Indention::default() });
+        let mut indent_stack = PrintIndentStack::new(Indention {
+            level: indent,
+            ..Indention::default()
+        });
 
         while let Some(element) = queue.pop() {
             self.print_element(&mut stack, &mut indent_stack, &mut queue, element)?;
@@ -145,7 +151,10 @@ impl<'a> Printer<'a> {
 
             FormatElement::Token { text } => self.print_text(Text::Token(text)),
             FormatElement::Text { text, width } => {
-                self.print_text(Text::Text { text, width: *width });
+                self.print_text(Text::Text {
+                    text,
+                    width: *width,
+                });
             }
             FormatElement::Line(line_mode) => {
                 if args.mode().is_flat() {
@@ -254,7 +263,9 @@ impl<'a> Printer<'a> {
                             self.state.measured_group_fits = true;
 
                             if let Some(id) = group.id() {
-                                self.state.group_modes.insert_print_mode(id, PrintMode::Flat);
+                                self.state
+                                    .group_modes
+                                    .insert_print_mode(id, PrintMode::Flat);
                             }
 
                             // Measure to see if the group fits up on a single line. If that's the case,
@@ -263,7 +274,11 @@ impl<'a> Printer<'a> {
                             let fits = self.fits(queue, stack, indent_stack)?;
                             stack.pop(TagKind::Group)?;
 
-                            if fits { PrintMode::Flat } else { PrintMode::Expanded }
+                            if fits {
+                                PrintMode::Flat
+                            } else {
+                                PrintMode::Expanded
+                            }
                         }
                     }
                 } else {
@@ -343,7 +358,9 @@ impl<'a> Printer<'a> {
 
             FormatElement::Tag(StartLineSuffix) => {
                 indent_stack.push_suffix(indent_stack.indention());
-                self.state.line_suffixes.extend(args, queue.iter_content(TagKind::LineSuffix));
+                self.state
+                    .line_suffixes
+                    .extend(args, queue.iter_content(TagKind::LineSuffix));
             }
             FormatElement::Tag(tag @ (StartLabelled(_) | StartEntry)) => {
                 stack.push(tag.kind(), args);
@@ -495,7 +512,12 @@ impl<'a> Printer<'a> {
 
             // No variant fits, take the last (most expanded) as fallback
             queue.extend_back(most_expanded);
-            self.print_entry(queue, stack, indent_stack, args.with_print_mode(PrintMode::Expanded))
+            self.print_entry(
+                queue,
+                stack,
+                indent_stack,
+                args.with_print_mode(PrintMode::Expanded),
+            )
         }
     }
 
@@ -553,7 +575,10 @@ impl<'a> Printer<'a> {
                 // * A second time when measuring if *next-item*, *separator*, *next-next-item* fit.
                 loop {
                     // Item that fits without a following separator.
-                    if !matches!(measurer.queue.top(), Some(FormatElement::Tag(Tag::StartEntry))) {
+                    if !matches!(
+                        measurer.queue.top(),
+                        Some(FormatElement::Tag(Tag::StartEntry))
+                    ) {
                         break FillPairLayout::Flat;
                     }
 
@@ -565,7 +590,10 @@ impl<'a> Printer<'a> {
                     }
 
                     // Last item/separator pair that both fit
-                    if !matches!(measurer.queue.top(), Some(FormatElement::Tag(Tag::StartEntry))) {
+                    if !matches!(
+                        measurer.queue.top(),
+                        Some(FormatElement::Tag(Tag::StartEntry))
+                    ) {
                         break FillPairLayout::Flat;
                     }
 
@@ -615,7 +643,11 @@ impl<'a> Printer<'a> {
                     let separator_fits = measurer.fill_separator_fits(PrintMode::Expanded)?;
                     measurer.finish();
 
-                    if separator_fits { PrintMode::Flat } else { PrintMode::Expanded }
+                    if separator_fits {
+                        PrintMode::Flat
+                    } else {
+                        PrintMode::Expanded
+                    }
                 }
             };
 
@@ -767,8 +799,10 @@ impl<'a> Printer<'a> {
     /// the space prefixes after it are trailing whitespace too).
     /// Width is the caller's business.
     fn emit_prefix_chain(&mut self, indention: Indention, trim_last: bool) {
-        let node =
-            PrefixNode::get(&self.state.prefix_nodes, indention.prefix.expect("has a prefix"));
+        let node = PrefixNode::get(
+            &self.state.prefix_nodes,
+            indention.prefix.expect("has a prefix"),
+        );
         if trim_last && node.prefix.is_spaces() {
             if node.before.prefix.is_some() {
                 self.emit_prefix_chain(node.before, true);
@@ -780,7 +814,9 @@ impl<'a> Printer<'a> {
         }
         self.emit_level_and_align(node.before);
         let prefix = node.prefix.text();
-        self.state.buffer.print_str(if trim_last { prefix.trim_end() } else { prefix });
+        self.state
+            .buffer
+            .print_str(if trim_last { prefix.trim_end() } else { prefix });
     }
 
     #[inline]
@@ -861,7 +897,9 @@ impl<'a> Printer<'a> {
         if char == '\n' {
             // SAFETY: `line_ending` is one of `\n`, `\r\n` or `\r`, all valid ASCII sequences
             unsafe {
-                self.state.buffer.print_bytes_unchecked(self.options.line_ending.as_bytes());
+                self.state
+                    .buffer
+                    .print_bytes_unchecked(self.options.line_ending.as_bytes());
             }
 
             self.state.line_width = 0;
@@ -964,7 +1002,9 @@ impl GroupModes {
 
     fn get_print_mode(&self, group_id: GroupId) -> Option<PrintMode> {
         let index = u32::from(group_id) as usize;
-        self.0.get(index).and_then(|option| option.as_ref().copied())
+        self.0
+            .get(index)
+            .and_then(|option| option.as_ref().copied())
     }
 
     fn unwrap_print_mode(&self, group_id: GroupId, next_element: &FormatElement) -> PrintMode {
@@ -1035,7 +1075,10 @@ impl Indention {
     /// Increments the level by one.
     fn increment_level(self, indent_style: IndentStyle) -> Self {
         let flushed = self.flush_align(indent_style);
-        Self { level: flushed.level + 1, ..flushed }
+        Self {
+            level: flushed.level + 1,
+            ..flushed
+        }
     }
 
     /// Adds an `align` of `count` spaces to the current indention.
@@ -1055,10 +1098,16 @@ impl Indention {
         nodes: &mut Vec<PrefixNode>,
         indent_style: IndentStyle,
     ) -> Self {
-        nodes.push(PrefixNode { before: self.flush_align(indent_style), prefix });
+        nodes.push(PrefixNode {
+            before: self.flush_align(indent_style),
+            prefix,
+        });
         let id = PrefixId::new(u32::try_from(nodes.len()).expect("prefix count fits u32"))
             .expect("nodes.len() > 0 after push");
-        Self { prefix: Some(id), ..Self::default() }
+        Self {
+            prefix: Some(id),
+            ..Self::default()
+        }
     }
 
     /// Columns this indention occupies.
@@ -1078,7 +1127,10 @@ impl Indention {
         let node = PrefixNode::get(nodes, id);
         let own =
             node.before.level as usize * indent_width.value() as usize + node.before.align as usize;
-        let before = node.before.prefix.map_or(0, |id| Self::chain_width(nodes, id, indent_width));
+        let before = node
+            .before
+            .prefix
+            .map_or(0, |id| Self::chain_width(nodes, id, indent_width));
         before + own + TextWidth::from_text(node.prefix.text(), indent_width).value() as usize
     }
 }
@@ -1218,7 +1270,8 @@ impl<'a, 'print> FitsMeasurer<'a, 'print> {
             return invalid_start_tag(TagKind::Entry, start_entry);
         }
 
-        self.stack.push(TagKind::Fill, self.stack.top().with_print_mode(mode));
+        self.stack
+            .push(TagKind::Fill, self.stack.top().with_print_mode(mode));
         let mut predicate = SingleEntryPredicate::default();
         let fits = self.fits(&mut predicate)?;
 
@@ -1330,7 +1383,10 @@ impl<'a, 'print> FitsMeasurer<'a, 'print> {
                 return Ok(self.fits_text(Text::Token(text)));
             }
             FormatElement::Text { text, width } => {
-                return Ok(self.fits_text(Text::Text { text, width: *width }));
+                return Ok(self.fits_text(Text::Text {
+                    text,
+                    width: *width,
+                }));
             }
 
             FormatElement::LineSuffixBoundary => {
@@ -1392,10 +1448,14 @@ impl<'a, 'print> FitsMeasurer<'a, 'print> {
                     return Ok(Fits::No);
                 }
 
-                let group_mode =
-                    if group.mode().is_flat() { args.mode() } else { PrintMode::Expanded };
+                let group_mode = if group.mode().is_flat() {
+                    args.mode()
+                } else {
+                    PrintMode::Expanded
+                };
 
-                self.stack.push(TagKind::Group, args.with_print_mode(group_mode));
+                self.stack
+                    .push(TagKind::Group, args.with_print_mode(group_mode));
 
                 if let Some(id) = group.id() {
                     self.group_modes_mut().insert_print_mode(id, group_mode);
@@ -1405,9 +1465,10 @@ impl<'a, 'print> FitsMeasurer<'a, 'print> {
             FormatElement::Tag(StartConditionalContent(condition)) => {
                 let group_mode = match condition.group_id {
                     None => args.mode(),
-                    Some(group_id) => {
-                        self.group_modes().get_print_mode(group_id).unwrap_or_else(|| args.mode())
-                    }
+                    Some(group_id) => self
+                        .group_modes()
+                        .get_print_mode(group_id)
+                        .unwrap_or_else(|| args.mode()),
                 };
 
                 if group_mode == condition.mode {
@@ -1418,8 +1479,10 @@ impl<'a, 'print> FitsMeasurer<'a, 'print> {
             }
 
             FormatElement::Tag(StartIndentIfGroupBreaks(id)) => {
-                let group_mode =
-                    self.group_modes().get_print_mode(*id).unwrap_or_else(|| args.mode());
+                let group_mode = self
+                    .group_modes()
+                    .get_print_mode(*id)
+                    .unwrap_or_else(|| args.mode());
 
                 match group_mode {
                     PrintMode::Flat => {
@@ -1481,8 +1544,10 @@ impl<'a, 'print> FitsMeasurer<'a, 'print> {
                 self.stack.pop(tag.kind())?;
             }
             FormatElement::Tag(tag @ EndIndentIfGroupBreaks(group_id)) => {
-                let group_mode =
-                    self.group_modes().get_print_mode(*group_id).unwrap_or_else(|| args.mode());
+                let group_mode = self
+                    .group_modes()
+                    .get_print_mode(*group_id)
+                    .unwrap_or_else(|| args.mode());
                 if group_mode == PrintMode::Expanded {
                     self.indent_stack.pop();
                 }
@@ -1521,8 +1586,10 @@ impl<'a, 'print> FitsMeasurer<'a, 'print> {
 
     fn fits_text(&mut self, text: Text) -> Fits {
         let indent = std::mem::take(&mut self.state.pending_indent);
-        self.state.line_width +=
-            indent.width(&self.printer.state.prefix_nodes, self.options().indent_width());
+        self.state.line_width += indent.width(
+            &self.printer.state.prefix_nodes,
+            self.options().indent_width(),
+        );
 
         if self.state.pending_space {
             self.state.line_width += 1;
@@ -1558,7 +1625,10 @@ impl<'a, 'print> FitsMeasurer<'a, 'print> {
     }
 
     fn finish(self) {
-        self.printer.state.prefix_nodes.truncate(self.prefix_nodes_len);
+        self.printer
+            .state
+            .prefix_nodes
+            .truncate(self.prefix_nodes_len);
         let mut queue = self.queue.finish();
         queue.clear();
         self.printer.state.fits_queue = queue;
@@ -1594,9 +1664,10 @@ impl<'a, 'print> FitsMeasurer<'a, 'print> {
 fn invalid_end_tag<R>(end_tag: TagKind, start_tag: Option<TagKind>) -> PrintResult<R> {
     Err(PrintError::InvalidDocument(match start_tag {
         None => InvalidDocumentError::StartTagMissing { kind: end_tag },
-        Some(kind) => {
-            InvalidDocumentError::StartEndTagMismatch { start_kind: end_tag, end_kind: kind }
-        }
+        Some(kind) => InvalidDocumentError::StartEndTagMismatch {
+            start_kind: end_tag,
+            end_kind: kind,
+        },
     }))
 }
 
@@ -1614,10 +1685,12 @@ fn invalid_start_tag<R>(expected: TagKind, actual: Option<&FormatElement>) -> Pr
         Some(_) => ActualStart::Content,
     };
 
-    Err(PrintError::InvalidDocument(InvalidDocumentError::ExpectedStart {
-        actual: start,
-        expected_start: expected,
-    }))
+    Err(PrintError::InvalidDocument(
+        InvalidDocumentError::ExpectedStart {
+            actual: start,
+            expected_start: expected,
+        },
+    ))
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -1705,15 +1778,19 @@ mod tests {
         write(&mut buffer, Arguments::new(&[Argument::new(root)]));
 
         let elements = buffer.into_vec();
-        Document::new(elements, Vec::default()).print(0, options).expect("Document to be valid")
+        Document::new(elements, Vec::default())
+            .print(0, options)
+            .expect("Document to be valid")
     }
 
     #[test]
     fn exact_line_breaks_are_never_collapsed() {
         let allocator = Allocator::default();
         // Mid-line: the first break ends the line, the rest are blank lines
-        let formatted =
-            format_simple(&allocator, &format_args!(token("a"), exact_line_breaks(3), token("b")));
+        let formatted = format_simple(
+            &allocator,
+            &format_args!(token("a"), exact_line_breaks(3), token("b")),
+        );
         assert_eq!("a\n\n\nb", formatted.as_code());
     }
 
@@ -1724,7 +1801,12 @@ mod tests {
         // (a hard_line_break would print nothing in this state).
         let formatted = format_simple(
             &allocator,
-            &format_args!(token("a"), hard_line_break(), exact_line_breaks(1), token("b")),
+            &format_args!(
+                token("a"),
+                hard_line_break(),
+                exact_line_breaks(1),
+                token("b")
+            ),
         );
         assert_eq!("a\n\nb", formatted.as_code());
     }
@@ -1734,7 +1816,12 @@ mod tests {
         let allocator = Allocator::default();
         let formatted = format_simple(
             &allocator,
-            &format_args!(token("a"), exact_line_breaks(2), exact_line_breaks(2), token("b")),
+            &format_args!(
+                token("a"),
+                exact_line_breaks(2),
+                exact_line_breaks(2),
+                token("b")
+            ),
         );
         // 2 breaks (line ending + 1 blank), then 2 more blanks.
         assert_eq!("a\n\n\n\nb", formatted.as_code());
@@ -1747,7 +1834,10 @@ mod tests {
             &allocator,
             &format_args!(
                 token("> "),
-                prefix_align(&"> ", &format_args!(token("a"), hard_line_break(), token("b"))),
+                prefix_align(
+                    &"> ",
+                    &format_args!(token("a"), hard_line_break(), token("b"))
+                ),
                 hard_line_break(),
                 token("c")
             ),
@@ -1788,7 +1878,13 @@ mod tests {
     fn space_align_stays_spaces_under_tabs() {
         let allocator = Allocator::default();
         let inner = test_format_with(|f| {
-            write!(f, [token("a"), indent(&format_args!(hard_line_break(), token("b")))]);
+            write!(
+                f,
+                [
+                    token("a"),
+                    indent(&format_args!(hard_line_break(), token("b")))
+                ]
+            );
         });
         let quoted = test_format_with(|f| {
             write!(
@@ -1799,8 +1895,10 @@ mod tests {
                 ]
             );
         });
-        let options =
-            PrinterOptions { indent_style: IndentStyle::Tab, ..PrinterOptions::default() };
+        let options = PrinterOptions {
+            indent_style: IndentStyle::Tab,
+            ..PrinterOptions::default()
+        };
 
         // `align` before an `indent` becomes a tab, `space_align` keeps its columns
         let result = format_simple_with_options(
@@ -2024,7 +2122,12 @@ mod tests {
         let allocator = Allocator::default();
         let formatted = format_simple(
             &allocator,
-            &format_args!(token("a"), exact_line_breaks(2), hard_line_break(), token("b")),
+            &format_args!(
+                token("a"),
+                exact_line_breaks(2),
+                hard_line_break(),
+                token("b")
+            ),
         );
         assert_eq!("a\n\nb", formatted.as_code());
     }
@@ -2049,7 +2152,12 @@ mod tests {
         let result = format_simple(
             &allocator,
             &FormatArrayElements {
-                items: vec![&token("\"a\""), &token("\"b\""), &token("\"c\""), &token("\"d\"")],
+                items: vec![
+                    &token("\"a\""),
+                    &token("\"b\""),
+                    &token("\"c\""),
+                    &token("\"d\""),
+                ],
             },
         );
 
@@ -2122,7 +2230,12 @@ a",
         let allocator = Allocator::default();
         let result = format_simple(
             &allocator,
-            &format_args!(token("a"), literal_line_break(), literal_line_break(), token("b")),
+            &format_args!(
+                token("a"),
+                literal_line_break(),
+                literal_line_break(),
+                token("b")
+            ),
         );
 
         // Unlike `hard_line_break`, consecutive literal lines are not collapsed.
@@ -2269,8 +2382,10 @@ a",
         let result = format_simple(&allocator, &content);
         assert_eq!("a\nb\n  c", result.as_code());
 
-        let options =
-            PrinterOptions { indent_style: IndentStyle::Tab, ..PrinterOptions::default() };
+        let options = PrinterOptions {
+            indent_style: IndentStyle::Tab,
+            ..PrinterOptions::default()
+        };
         let result = format_simple_with_options(&allocator, &content, options);
         assert_eq!("a\nb\n\tc", result.as_code());
     }
@@ -2285,7 +2400,12 @@ a",
         let allocator = Allocator::default();
         let result = format_simple(
             &allocator,
-            &format_args!(token("a"), literal_line_break(), hard_line_break(), token("b")),
+            &format_args!(
+                token("a"),
+                literal_line_break(),
+                hard_line_break(),
+                token("b")
+            ),
         );
         assert_eq!("a\nb", result.as_code());
 
@@ -2354,7 +2474,10 @@ a",
         let result = format_simple(
             &allocator,
             &FormatArrayElements {
-                items: vec![&text("`This is a string spanning\ntwo lines`"), &token("\"b\"")],
+                items: vec![
+                    &text("`This is a string spanning\ntwo lines`"),
+                    &token("\"b\""),
+                ],
             },
         );
 
@@ -2371,8 +2494,10 @@ two lines`,
     #[test]
     fn it_breaks_a_group_if_it_contains_a_hard_line_break() {
         let allocator = Allocator::default();
-        let result =
-            format_simple(&allocator, &group(&format_args!(token("a"), block_indent(&token("b")))));
+        let result = format_simple(
+            &allocator,
+            &group(&format_args!(token("a"), block_indent(&token("b")))),
+        );
 
         assert_eq!("a\n  b\n", result.as_code());
     }
@@ -2457,7 +2582,13 @@ two lines`,
         let allocator = Allocator::default();
         let result = format_simple(
             &allocator,
-            &format_args!(token("a"), empty_line(), empty_line(), empty_line(), token("b"),),
+            &format_args!(
+                token("a"),
+                empty_line(),
+                empty_line(),
+                empty_line(),
+                token("b"),
+            ),
         );
 
         assert_eq!("a\n\nb", result.as_code());
@@ -2492,15 +2623,31 @@ two lines`,
         formatter
             .fill()
             // These all fit on the same line together
-            .entry(&soft_line_break_or_space(), &format_args!(token("1"), token(",")))
-            .entry(&soft_line_break_or_space(), &format_args!(token("2"), token(",")))
-            .entry(&soft_line_break_or_space(), &format_args!(token("3"), token(",")))
+            .entry(
+                &soft_line_break_or_space(),
+                &format_args!(token("1"), token(",")),
+            )
+            .entry(
+                &soft_line_break_or_space(),
+                &format_args!(token("2"), token(",")),
+            )
+            .entry(
+                &soft_line_break_or_space(),
+                &format_args!(token("3"), token(",")),
+            )
             // This one fits on a line by itself,
-            .entry(&soft_line_break_or_space(), &format_args!(token("723493294"), token(",")))
+            .entry(
+                &soft_line_break_or_space(),
+                &format_args!(token("723493294"), token(",")),
+            )
             // fits without breaking
             .entry(
                 &soft_line_break_or_space(),
-                &group(&format_args!(token("["), soft_block_indent(&token("5")), token("],"))),
+                &group(&format_args!(
+                    token("["),
+                    soft_block_indent(&token("5")),
+                    token("],")
+                )),
             )
             // this one must be printed in expanded mode to fit
             .entry(
@@ -2524,7 +2671,10 @@ two lines`,
         .print(document.elements())
         .unwrap();
 
-        assert_eq!(printed.as_code(), "1, 2, 3,\n723493294,\n[5],\n[\n\t123456789\n]");
+        assert_eq!(
+            printed.as_code(),
+            "1, 2, 3,\n723493294,\n[5],\n[\n\t123456789\n]"
+        );
     }
 
     #[test]
@@ -2599,7 +2749,13 @@ two lines`,
         let allocator = Allocator::default();
         let content = test_format_with(|f| {
             let group_id = f.state().group_id("watched");
-            write!(f, [group(&token("short")).with_group_id(Some(group_id)), space()]);
+            write!(
+                f,
+                [
+                    group(&token("short")).with_group_id(Some(group_id)),
+                    space()
+                ]
+            );
             write!(
                 f,
                 [group(&format_args!(
@@ -2679,7 +2835,11 @@ two lines`,
                 [best_fitting![
                     format_args!(
                         token("first line"),
-                        group(&format_args!(token(" broken"), hard_line_break(), token("tail")))
+                        group(&format_args!(
+                            token(" broken"),
+                            hard_line_break(),
+                            token("tail")
+                        ))
                     ),
                     format_args!(token("never chosen")),
                 ]]
@@ -2700,7 +2860,10 @@ two lines`,
 
             write!(
                 f,
-                [group(&token("Group with id-2")).with_group_id(Some(id_2)), hard_line_break()]
+                [
+                    group(&token("Group with id-2")).with_group_id(Some(id_2)),
+                    hard_line_break()
+                ]
             );
 
             write!(f,
@@ -2733,8 +2896,10 @@ Group 1 breaks"
     #[test]
     fn break_group_if_partial_string_exceeds_print_width() {
         let allocator = Allocator::default();
-        let options =
-            PrinterOptions { print_width: PrintWidth::new(10), ..PrinterOptions::default() };
+        let options = PrinterOptions {
+            print_width: PrintWidth::new(10),
+            ..PrinterOptions::default()
+        };
 
         let result = format_simple_with_options(
             &allocator,
@@ -2748,7 +2913,10 @@ Group 1 breaks"
             options,
         );
 
-        assert_eq!("(\nThis is a string\n containing a newline\n)", result.as_code());
+        assert_eq!(
+            "(\nThis is a string\n containing a newline\n)",
+            result.as_code()
+        );
     }
 
     struct FormatArrayElements<'a> {

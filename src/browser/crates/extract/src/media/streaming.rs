@@ -37,7 +37,9 @@ pub fn extract_streaming_players(html: &str, page_url: Option<&str>) -> Vec<Stri
 
     // 1. Check standard <iframe> tags
     for id in dom.query_selector_all("iframe[src]").unwrap_or_default() {
-        let src = dom.with_node(id, |node| node.get_attribute("src").map(str::to_owned)).flatten();
+        let src = dom
+            .with_node(id, |node| node.get_attribute("src").map(str::to_owned))
+            .flatten();
         if let Some(src) = src {
             if let Some(resolved) = resolve_link(&src, page_url) {
                 if !players.contains(&resolved) {
@@ -48,7 +50,10 @@ pub fn extract_streaming_players(html: &str, page_url: Option<&str>) -> Vec<Stri
     }
 
     // 2. Check data-src or data-player attributes
-    for id in dom.query_selector_all("[data-src], [data-player], [data-url]").unwrap_or_default() {
+    for id in dom
+        .query_selector_all("[data-src], [data-player], [data-url]")
+        .unwrap_or_default()
+    {
         let candidate = dom
             .with_node(id, |node| {
                 node.get_attribute("data-src")

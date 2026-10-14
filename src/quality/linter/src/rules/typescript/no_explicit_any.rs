@@ -92,8 +92,11 @@ impl Rule for NoExplicitAny {
         }
 
         if self.fix_to_unknown {
-            let replacement =
-                if Self::is_bare_rest_type(node, ctx) { "unknown[]" } else { "unknown" };
+            let replacement = if Self::is_bare_rest_type(node, ctx) {
+                "unknown[]"
+            } else {
+                "unknown"
+            };
             ctx.diagnostic_with_fix(no_explicit_any_diagnostic(any.span), |fixer| {
                 fixer.replace(any.span, replacement)
             });
@@ -110,7 +113,9 @@ impl Rule for NoExplicitAny {
 impl NoExplicitAny {
     fn is_bare_rest_type<'a>(node: &AstNode<'a>, ctx: &LintContext<'a>) -> bool {
         let mut ancestors = ctx.nodes().ancestors(node.id());
-        ancestors.next().is_some_and(|parent| matches!(parent.kind(), AstKind::TSTypeAnnotation(_)))
+        ancestors
+            .next()
+            .is_some_and(|parent| matches!(parent.kind(), AstKind::TSTypeAnnotation(_)))
             && ancestors
                 .next()
                 .is_some_and(|parent| matches!(parent.kind(), AstKind::FormalParameterRest(_)))
@@ -136,10 +141,16 @@ mod tests {
         let pass = vec!["let x: number = 1"];
         let fail = vec!["let x: any = 1"];
         let fix = vec![
-            ("let x: any = 1", "let x: unknown = 1", Some(json!([{ "fixToUnknown": true }]))),
+            (
+                "let x: any = 1",
+                "let x: unknown = 1",
+                Some(json!([{ "fixToUnknown": true }])),
+            ),
             ("let x: any = 1", "let x: any = 1", None),
         ];
-        Tester::new(NoExplicitAny::NAME, NoExplicitAny::PLUGIN, pass, fail).expect_fix(fix).test();
+        Tester::new(NoExplicitAny::NAME, NoExplicitAny::PLUGIN, pass, fail)
+            .expect_fix(fix)
+            .test();
     }
 
     #[test]
@@ -151,7 +162,10 @@ mod tests {
             ("function greet(): string[] {}", None),
             ("function greet(): Array<Array<string>> {}", None),
             ("function greet(): Array<string[]> {}", None),
-            ("function greet(param: Array<string>): Array<string> {}", None),
+            (
+                "function greet(param: Array<string>): Array<string> {}",
+                None,
+            ),
             (
                 "
                 class Greeter {
@@ -575,7 +589,10 @@ mod tests {
             ("function generic(): any {}", None),
             ("function generic(): Array<any>", None),
             ("function generic(): any[] {}", None),
-            ("function generic(param: Array<any>): number { return 1 }", None),
+            (
+                "function generic(param: Array<any>): number { return 1 }",
+                None,
+            ),
             ("function generic(param: any[]): number { return 1 }", None),
             ("function generic(param: Array<any>): Array<any>", None),
             ("function generic(): Array<Array<any>>", None),
@@ -608,7 +625,10 @@ mod tests {
             ("abstract class Foo<T = any> extends Bar<any> {}", None),
             ("function test<T extends Partial<any>>() {}", None),
             ("const test = <T extends Partial<any>>() => {};", None),
-            ("function foo(a: number, ...rest: any[]): void { return; }", None),
+            (
+                "function foo(a: number, ...rest: any[]): void { return; }",
+                None,
+            ),
             ("type Any = any;", None),
             // todo
             // (
@@ -620,7 +640,11 @@ mod tests {
         let fix_options = Some(json!([{ "fixToUnknown": true }]));
         let fixes = vec![
             ("let x: any = 1", "let x: unknown = 1", fix_options.clone()),
-            ("function foo(): any", "function foo(): unknown", fix_options.clone()),
+            (
+                "function foo(): any",
+                "function foo(): unknown",
+                fix_options.clone(),
+            ),
             (
                 "function foo(args: any): void {}",
                 "function foo(args: unknown): void {}",

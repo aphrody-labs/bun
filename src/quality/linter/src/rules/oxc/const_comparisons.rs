@@ -31,10 +31,12 @@ fn redundant_right_hand_side(right_span: Span, left_span: Span, help: String) ->
 }
 
 fn impossible(span: Span, span1: Span, x2: &str, x3: &str, x4: &str) -> OxcDiagnostic {
-    OxcDiagnostic::warn("Unexpected constant comparison").with_help(x4.to_string()).with_labels([
-        span.label(format!("Requires that {x2}")),
-        span1.label(format!("Requires that {x3}")),
-    ])
+    OxcDiagnostic::warn("Unexpected constant comparison")
+        .with_help(x4.to_string())
+        .with_labels([
+            span.label(format!("Requires that {x2}")),
+            span1.label(format!("Requires that {x3}")),
+        ])
 }
 
 fn constant_comparison_diagnostic(
@@ -43,12 +45,17 @@ fn constant_comparison_diagnostic(
     help: String,
     precedence_note: Option<String>,
 ) -> OxcDiagnostic {
-    let diagnostic =
-        OxcDiagnostic::warn(format!("This comparison will always evaluate to {evaluates_to}"))
-            .with_help(help)
-            .with_label(span);
+    let diagnostic = OxcDiagnostic::warn(format!(
+        "This comparison will always evaluate to {evaluates_to}"
+    ))
+    .with_help(help)
+    .with_label(span);
 
-    if let Some(note) = precedence_note { diagnostic.with_note(note) } else { diagnostic }
+    if let Some(note) = precedence_note {
+        diagnostic.with_note(note)
+    } else {
+        diagnostic
+    }
 }
 
 fn identical_expressions_logical_operator(left_span: Span, right_span: Span) -> OxcDiagnostic {
@@ -76,13 +83,21 @@ fn complementary_expressions_logical_operator(
     right_span: Span,
 ) -> OxcDiagnostic {
     let (left_label, right_label) = if always_truthy {
-        ("If this expression evaluates to false", "This expression must evaluate to true")
+        (
+            "If this expression evaluates to false",
+            "This expression must evaluate to true",
+        )
     } else {
-        ("If this expression evaluates to true", "This expression cannot also evaluate to true")
+        (
+            "If this expression evaluates to true",
+            "This expression cannot also evaluate to true",
+        )
     };
 
     OxcDiagnostic::warn("Unexpected constant comparison")
-        .with_help(format!("This logical expression will always evaluate to {always_truthy}"))
+        .with_help(format!(
+            "This logical expression will always evaluate to {always_truthy}"
+        ))
         .with_labels([left_span.label(left_label), right_span.label(right_label)])
 }
 
@@ -184,7 +199,11 @@ impl ConstComparisons {
             // Mostly to simplify the implementation, but it is also covered by `clippy::double_comparisons`
             if matches!(
                 (&left_cmp_op, &right_cmp_op, ordering),
-                (CmpOp::Le | CmpOp::Ge, CmpOp::Le | CmpOp::Ge, Ordering::Equal)
+                (
+                    CmpOp::Le | CmpOp::Ge,
+                    CmpOp::Le | CmpOp::Ge,
+                    Ordering::Equal
+                )
             ) {
                 return;
             }
@@ -253,7 +272,10 @@ impl ConstComparisons {
         logical_expr: &LogicalExpression<'a>,
         ctx: &LintContext<'a>,
     ) {
-        if !matches!(logical_expr.operator, LogicalOperator::And | LogicalOperator::Or) {
+        if !matches!(
+            logical_expr.operator,
+            LogicalOperator::And | LogicalOperator::Or
+        ) {
             return;
         }
 
@@ -293,8 +315,10 @@ impl ConstComparisons {
         }
 
         // if either are `!foo`, check whether it looks like `foo && !foo` or `foo || !foo`
-        match (logical_expr.left.get_inner_expression(), logical_expr.right.get_inner_expression())
-        {
+        match (
+            logical_expr.left.get_inner_expression(),
+            logical_expr.right.get_inner_expression(),
+        ) {
             (Expression::UnaryExpression(negated_expr), other_expr)
             | (other_expr, Expression::UnaryExpression(negated_expr))
                 if negated_expr.operator == UnaryOperator::LogicalNot
@@ -361,7 +385,10 @@ impl ConstComparisons {
             return None;
         };
 
-        if !matches!(logical_expr.operator, LogicalOperator::Or | LogicalOperator::Coalesce) {
+        if !matches!(
+            logical_expr.operator,
+            LogicalOperator::Or | LogicalOperator::Coalesce
+        ) {
             return None;
         }
 
@@ -390,7 +417,10 @@ fn comparison_to_const<'a, 'b>(
     if let Expression::BinaryExpression(bin_expr) = expr
         && let Ok(cmp_op) = CmpOp::try_from(bin_expr.operator)
     {
-        match (&bin_expr.left.get_inner_expression(), &bin_expr.right.get_inner_expression()) {
+        match (
+            &bin_expr.left.get_inner_expression(),
+            &bin_expr.right.get_inner_expression(),
+        ) {
             (Expression::NumericLiteral(lit), _) => {
                 return Some((cmp_op.reverse(), &bin_expr.right, lit, bin_expr.span));
             }

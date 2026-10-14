@@ -113,7 +113,10 @@ struct DefineOptionsChecker<'a, 'b> {
 
 impl<'a> DefineOptionsChecker<'a, '_> {
     fn new<'b>(ctx: &'b LintContext<'a>) -> DefineOptionsChecker<'a, 'b> {
-        DefineOptionsChecker { ctx, call_spans: Vec::new() }
+        DefineOptionsChecker {
+            ctx,
+            call_spans: Vec::new(),
+        }
     }
 
     fn check_call(&mut self, call: &CallExpression<'a>) {
@@ -134,7 +137,9 @@ impl<'a> DefineOptionsChecker<'a, '_> {
                 let ObjectPropertyKind::ObjectProperty(obj_prop) = prop else {
                     continue;
                 };
-                let Some(name) = obj_prop.key.static_name() else { continue };
+                let Some(name) = obj_prop.key.static_name() else {
+                    continue;
+                };
                 for &(prop_name, instead_macro) in DISALLOWED_PROPS {
                     if name == prop_name {
                         self.ctx.diagnostic(disallow_prop_diagnostic(
@@ -175,7 +180,11 @@ struct LocalReferenceChecker<'a, 'b> {
 
 impl<'a> LocalReferenceChecker<'a, '_> {
     fn new<'b>(ctx: &'b LintContext<'a>, options_span: Span) -> LocalReferenceChecker<'a, 'b> {
-        LocalReferenceChecker { ctx, options_span, errors: Vec::new() }
+        LocalReferenceChecker {
+            ctx,
+            options_span,
+            errors: Vec::new(),
+        }
     }
 }
 
@@ -416,6 +425,11 @@ fn test() {
         ),
     ];
 
-    Tester::new(ValidDefineOptions::NAME, ValidDefineOptions::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        ValidDefineOptions::NAME,
+        ValidDefineOptions::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

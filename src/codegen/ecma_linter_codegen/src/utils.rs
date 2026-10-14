@@ -46,7 +46,10 @@ pub fn find_rule_impl_block<'a>(
             _ => None,
         };
         if ident.is_some_and(|id| id == rule_struct_name)
-            && imp.trait_.as_ref().is_some_and(|(path, _)| path.is_ident("Rule"))
+            && imp
+                .trait_
+                .as_ref()
+                .is_some_and(|(path, _)| path.is_ident("Rule"))
         {
             return Some(imp);
         }
@@ -59,7 +62,9 @@ pub fn find_impl_function<'a>(
     func_name: &str,
 ) -> Option<&'a syn::ImplItemFn> {
     for impl_item in &imp.items {
-        let syn::ImplItem::Fn(func) = impl_item else { continue };
+        let syn::ImplItem::Fn(func) = impl_item else {
+            continue;
+        };
         if func.sig.ident == func_name {
             return Some(func);
         }

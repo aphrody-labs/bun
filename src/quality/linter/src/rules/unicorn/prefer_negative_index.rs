@@ -71,14 +71,18 @@ impl Rule for PreferNegativeIndex {
 
         let callee_object_expr = call_expr.callee.to_member_expression().object();
 
-        let Some(name) = call_expr.callee_name() else { return };
+        let Some(name) = call_expr.callee_name() else {
+            return;
+        };
         let is_prototype_call = name == "call";
         let is_prototype_apply = name == "apply";
         let is_prototype =
             callee_object_expr.is_member_expression() && (is_prototype_call || is_prototype_apply);
 
         let Some(callee_name) = (if is_prototype {
-            callee_object_expr.to_member_expression().static_property_name()
+            callee_object_expr
+                .to_member_expression()
+                .static_property_name()
         } else {
             Some(name)
         }) else {
@@ -97,8 +101,10 @@ impl Rule for PreferNegativeIndex {
             | (TypeOptions::Array, "slice" | "at" | "splice" | "toSpliced")
             | (TypeOptions::Literal, "slice" | "at" | "splice" | "subarray" | "toSpliced") => {
                 if is_prototype {
-                    let Some(first_arg) =
-                        call_expr.arguments.first().and_then(Argument::as_expression)
+                    let Some(first_arg) = call_expr
+                        .arguments
+                        .first()
+                        .and_then(Argument::as_expression)
                     else {
                         return;
                     };
@@ -111,7 +117,11 @@ impl Rule for PreferNegativeIndex {
         };
 
         let mut member_exprs: Vec<&StaticMemberExpression> = Vec::new();
-        let range_increment = if matches!(callee_name, "slice" | "subarray") { 2 } else { 1 };
+        let range_increment = if matches!(callee_name, "slice" | "subarray") {
+            2
+        } else {
+            1
+        };
         let arg_range_start = usize::from(is_prototype);
         let arg_range_end = if is_prototype_apply {
             arg_range_start + 1
@@ -191,7 +201,11 @@ fn is_same_node(left: &Expression, right: &Expression, ctx: &LintContext) -> boo
         (
             Expression::ComputedMemberExpression(left_computed_expr),
             Expression::ComputedMemberExpression(right_computed_expr),
-        ) => is_same_node(&left_computed_expr.expression, &right_computed_expr.expression, ctx),
+        ) => is_same_node(
+            &left_computed_expr.expression,
+            &right_computed_expr.expression,
+            ctx,
+        ),
         (Expression::StringLiteral(left_lit), Expression::NumericLiteral(right_lit)) => {
             left_lit.to_string() == right_lit.to_string()
         }
@@ -654,7 +668,12 @@ fn test() {
                                     NOT_SUPPORTED.prototype.splice.apply(foo, [foo.length - 1, foo.length - 2, foo.length - 3]);
                                 ", None)
     ];
-    Tester::new(PreferNegativeIndex::NAME, PreferNegativeIndex::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        PreferNegativeIndex::NAME,
+        PreferNegativeIndex::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

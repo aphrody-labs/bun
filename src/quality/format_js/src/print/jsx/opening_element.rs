@@ -24,7 +24,10 @@ impl<'a> Deref for FormatOpeningElement<'a, '_> {
 
 impl<'a, 'b> FormatOpeningElement<'a, 'b> {
     pub fn new(element: &'b AstNode<'a, JSXOpeningElement<'a>>, is_self_closing: bool) -> Self {
-        Self { element, is_self_closing }
+        Self {
+            element,
+            is_self_closing,
+        }
     }
 
     fn compute_layout(&self, f: &JsFormatter<'_, 'a>) -> OpeningElementLayout {
@@ -37,12 +40,17 @@ impl<'a, 'b> FormatOpeningElement<'a, 'b> {
             .last()
             .is_some_and(|a| comments.has_comment_in_range(a.span().end, self.span.end));
 
-        let type_arguments_or_name_end =
-            self.type_arguments().map_or_else(|| self.name.span().end, |t| t.span.end);
-        let first_attribute_start_or_element_end =
-            self.attributes.first().map_or_else(|| self.span.end, |a| a.span().start);
-        let name_has_comment = comments
-            .has_comment_in_range(type_arguments_or_name_end, first_attribute_start_or_element_end);
+        let type_arguments_or_name_end = self
+            .type_arguments()
+            .map_or_else(|| self.name.span().end, |t| t.span.end);
+        let first_attribute_start_or_element_end = self
+            .attributes
+            .first()
+            .map_or_else(|| self.span.end, |a| a.span().start);
+        let name_has_comment = comments.has_comment_in_range(
+            type_arguments_or_name_end,
+            first_attribute_start_or_element_end,
+        );
 
         if self.is_self_closing && attributes.is_empty() && !name_has_comment {
             OpeningElementLayout::Inline
@@ -53,7 +61,10 @@ impl<'a, 'b> FormatOpeningElement<'a, 'b> {
         {
             OpeningElementLayout::SingleStringAttribute
         } else {
-            OpeningElementLayout::IndentAttributes { name_has_comment, last_attribute_has_comment }
+            OpeningElementLayout::IndentAttributes {
+                name_has_comment,
+                last_attribute_has_comment,
+            }
         }
     }
 }
@@ -80,10 +91,20 @@ impl<'a> Format<'a, JsFormatContext<'a>> for FormatOpeningElement<'a, '_> {
                 write!(f, [format_open, space(), format_close]);
             }
             OpeningElementLayout::SingleStringAttribute => {
-                let attribute_spacing = if self.is_self_closing { Some(space()) } else { None };
+                let attribute_spacing = if self.is_self_closing {
+                    Some(space())
+                } else {
+                    None
+                };
                 write!(
                     f,
-                    [format_open, space(), self.attributes(), attribute_spacing, format_close]
+                    [
+                        format_open,
+                        space(),
+                        self.attributes(),
+                        attribute_spacing,
+                        format_close
+                    ]
                 );
             }
             OpeningElementLayout::IndentAttributes {
@@ -120,7 +141,10 @@ impl<'a> Format<'a, JsFormatContext<'a>> for FormatOpeningElement<'a, '_> {
                 let has_multiline_string_attribute = attributes
                     .iter()
                     .any(|attribute| is_multiline_string_literal_attribute(attribute));
-                write!(f, [group(&format_inner).should_expand(has_multiline_string_attribute)]);
+                write!(
+                    f,
+                    [group(&format_inner).should_expand(has_multiline_string_attribute)]
+                );
             }
         }
     }
@@ -153,7 +177,10 @@ pub enum OpeningElementLayout {
     ///   moreAttributes={withSomeExpression}
     /// ></div>;
     /// ```
-    IndentAttributes { name_has_comment: bool, last_attribute_has_comment: bool },
+    IndentAttributes {
+        name_has_comment: bool,
+        last_attribute_has_comment: bool,
+    },
 }
 
 /// Returns `true` if this is an attribute with a string literal initializer that does not contain any new line characters.

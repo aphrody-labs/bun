@@ -132,7 +132,10 @@ where
         return Regex::new(pattern).map_err(D::Error::custom);
     }
 
-    RegexBuilder::new(&regex_str).unicode(true).build().map_err(D::Error::custom)
+    RegexBuilder::new(&regex_str)
+        .unicode(true)
+        .build()
+        .map_err(D::Error::custom)
 }
 
 impl Rule for ConsistentTestFilename {
@@ -141,16 +144,23 @@ impl Rule for ConsistentTestFilename {
     }
 
     fn run_once(&self, ctx: &LintContext) {
-        let Some(file_path) = ctx.file_path().to_str() else { return };
+        let Some(file_path) = ctx.file_path().to_str() else {
+            return;
+        };
 
-        let Some(file_name) = ctx.file_path().file_name().and_then(OsStr::to_str) else { return };
+        let Some(file_name) = ctx.file_path().file_name().and_then(OsStr::to_str) else {
+            return;
+        };
 
         if !self.all_test_pattern.is_match(file_path) {
             return;
         }
 
         if !self.pattern.is_match(file_path) {
-            ctx.diagnostic(consistent_test_filename_diagnostic(file_name, self.pattern.as_str()));
+            ctx.diagnostic(consistent_test_filename_diagnostic(
+                file_name,
+                self.pattern.as_str(),
+            ));
         }
     }
 }
@@ -188,14 +198,21 @@ fn test() {
         ),
     ];
 
-    Tester::new(ConsistentTestFilename::NAME, ConsistentTestFilename::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        ConsistentTestFilename::NAME,
+        ConsistentTestFilename::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }
 
 #[test]
 fn invalid_patterns_are_rejected() {
-    let configs =
-        [serde_json::json!([{ "allTestPattern": "[" }]), serde_json::json!([{ "pattern": "[" }])];
+    let configs = [
+        serde_json::json!([{ "allTestPattern": "[" }]),
+        serde_json::json!([{ "pattern": "[" }]),
+    ];
 
     for config in configs {
         let error = ConsistentTestFilename::from_configuration(config)

@@ -255,7 +255,9 @@ fn test() {
 			"#,
             None,
             None,
-            Some(PathBuf::from("/Users/user_name/projects/project-name/app/layout.tsx")),
+            Some(PathBuf::from(
+                "/Users/user_name/projects/project-name/app/layout.tsx",
+            )),
         ),
         (
             r#"import Script from "next/script";
@@ -274,7 +276,9 @@ fn test() {
 			"#,
             None,
             None,
-            Some(PathBuf::from("C:\\Users\\username\\projects\\project-name\\app\\layout.tsx")),
+            Some(PathBuf::from(
+                "C:\\Users\\username\\projects\\project-name\\app\\layout.tsx",
+            )),
         ),
         (
             r#"import Script from "next/script";
@@ -293,7 +297,9 @@ fn test() {
 			"#,
             None,
             None,
-            Some(PathBuf::from("/Users/user_name/projects/project-name/src/app/layout.tsx")),
+            Some(PathBuf::from(
+                "/Users/user_name/projects/project-name/src/app/layout.tsx",
+            )),
         ),
         (
             r#"import Script from "next/script";
@@ -372,7 +378,9 @@ fn test() {
 			"#,
             None,
             None,
-            Some(PathBuf::from("/Users/user_name/projects/project-name/pages/layout.tsx")),
+            Some(PathBuf::from(
+                "/Users/user_name/projects/project-name/pages/layout.tsx",
+            )),
         ),
         (
             r#" import Script from "next/script";
@@ -391,7 +399,9 @@ fn test() {
 			"#,
             None,
             None,
-            Some(PathBuf::from("C:\\Users\\username\\projects\\project-name\\pages\\layout.tsx")),
+            Some(PathBuf::from(
+                "C:\\Users\\username\\projects\\project-name\\pages\\layout.tsx",
+            )),
         ),
         (
             r#" import Script from "next/script";
@@ -410,7 +420,9 @@ fn test() {
 			"#,
             None,
             None,
-            Some(PathBuf::from("/Users/user_name/projects/project-name/src/pages/layout.tsx")),
+            Some(PathBuf::from(
+                "/Users/user_name/projects/project-name/src/pages/layout.tsx",
+            )),
         ),
         (
             r#" import Script from "next/script";

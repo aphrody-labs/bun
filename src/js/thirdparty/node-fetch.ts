@@ -197,7 +197,8 @@ async function fetch(
   // Node.js Stream but doesn't implement Symbol.asyncIterator.
   const initBody = init?.body;
   if (initBody && typeof initBody === "object" && !initBody[Symbol.asyncIterator]) {
-    const { Readable, Stream } = require("node:stream");
+    const Readable = require("internal/streams/readable");
+    const { Stream } = require("node:stream");
     if (initBody instanceof Stream || initBody instanceof Readable) {
       const readable = initBody instanceof Readable ? initBody : readableFromOldStyleStream(initBody);
       init = { ...init, body: Readable.toWeb(readable) };

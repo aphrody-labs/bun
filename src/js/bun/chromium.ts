@@ -196,7 +196,12 @@ async function connect(endpoint: string, options: Options = {}, launchDeadline?:
       throw new Error(`CDP discovery failed: HTTP ${response.status}`);
     }
     const version: unknown = await response.json();
-    if (!version || typeof version !== "object" || !("webSocketDebuggerUrl" in version) || typeof version.webSocketDebuggerUrl !== "string")
+    if (
+      !version ||
+      typeof version !== "object" ||
+      !("webSocketDebuggerUrl" in version) ||
+      typeof version.webSocketDebuggerUrl !== "string"
+    )
       throw new TypeError("CDP discovery returned no browser WebSocket endpoint");
     url = endpointURL(version.webSocketDebuggerUrl);
     signal.throwIfAborted();
@@ -526,7 +531,8 @@ async function readProfileJSON(file: string) {
     reader.releaseLock();
   }
   try {
-    return JSON.parse(await new Blob(chunks).text());
+    const NativeBlob = globalThis.Blob as BunBuiltinBlobConstructor;
+    return JSON.parse(await new NativeBlob(chunks).text());
   } catch {
     throw new TypeError("profile metadata is not valid JSON");
   }

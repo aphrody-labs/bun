@@ -30,7 +30,10 @@ pub struct ServerFormatterBuilder {
 
 impl ServerFormatterBuilder {
     pub fn new(js_config_loader: JsConfigLoaderCb, external_services: ExternalServices) -> Self {
-        Self { js_config_loader, external_services }
+        Self {
+            js_config_loader,
+            external_services,
+        }
     }
 
     /// Create a dummy `ServerFormatterBuilder` for testing.
@@ -101,7 +104,10 @@ impl ToolBuilder for ServerFormatterBuilder {
 
     fn build(&self, root_uri: &Uri, options: serde_json::Value) -> ToolBuildResult {
         let (tool, client_messages) = self.build(root_uri, options);
-        ToolBuildResult { tool: Box::new(tool), client_messages }
+        ToolBuildResult {
+            tool: Box::new(tool),
+            client_messages,
+        }
     }
 }
 
@@ -155,8 +161,10 @@ impl Tool for ServerFormatter {
         }
 
         builder.shutdown(root_uri);
-        let ToolBuildResult { tool, client_messages } =
-            builder.build(root_uri, new_options_json.clone());
+        let ToolBuildResult {
+            tool,
+            client_messages,
+        } = builder.build(root_uri, new_options_json.clone());
         let watch_patterns = tool.get_watcher_patterns(new_options_json);
         ToolRestartChanges {
             tool: Some(tool),
@@ -173,7 +181,11 @@ impl Tool for ServerFormatter {
         } else {
             // Watch subdirectories too for nested config support;
             // with `disableNestedConfig`, only the workspace-root config is used
-            let prefix = if options.use_nested_configs() { "**/" } else { "" };
+            let prefix = if options.use_nested_configs() {
+                "**/"
+            } else {
+                ""
+            };
             config_discovery()
                 .config_file_names()
                 .into_iter()
@@ -208,7 +220,11 @@ impl Tool for ServerFormatter {
         );
         *self.state.write().expect("state rwlock poisoned") = Arc::new(new_state);
 
-        ToolRestartChanges { tool: None, watch_patterns: None, client_messages: Vec::new() }
+        ToolRestartChanges {
+            tool: None,
+            watch_patterns: None,
+            client_messages: Vec::new(),
+        }
     }
 
     fn run_format(&self, document: TextDocument) -> Result<Vec<TextEdit>, String> {
@@ -316,7 +332,10 @@ impl ServerFormatter {
             Some(js_config_loader),
         )
         .unwrap_or_else(|err| {
-            warn!("{err}\nFalling back to default config for {}", root_path.display());
+            warn!(
+                "{err}\nFalling back to default config for {}",
+                root_path.display()
+            );
             ConfigScopes::with_default_root(root_path, use_nested_config, Some(js_config_loader))
         });
 
@@ -330,7 +349,10 @@ impl ServerFormatter {
                 vec![]
             });
 
-        FormatterState { scopes, ignore_matchers }
+        FormatterState {
+            scopes,
+            ignore_matchers,
+        }
     }
 
     /// Snapshot the current state.
@@ -359,7 +381,10 @@ impl ServerFormatter {
         };
 
         if resolver.is_path_ignored(path, false) {
-            debug!("File is ignored by config ignorePatterns: {}", path.display());
+            debug!(
+                "File is ignored by config ignorePatterns: {}",
+                path.display()
+            );
             return None;
         }
 
@@ -383,7 +408,9 @@ impl ServerFormatter {
         };
         debug!("strategy = {strategy:?}");
 
-        Some(tokio::task::block_in_place(|| self.source_formatter.format(source_text, strategy)))
+        Some(tokio::task::block_in_place(|| {
+            self.source_formatter.format(source_text, strategy)
+        }))
     }
 
     fn format_file(&self, path: &Path, source_text: &str) -> Option<FormatResult> {
@@ -621,13 +648,19 @@ mod tests {
         // from LF to CRLF
         {
             let (start, end, replacement) = compute_minimal_text_edit(src_lf, src_crlf);
-            assert_eq!((start, end, replacement), (5, src_lf.len() as u32 - 5, "\r\nline2\r\n"));
+            assert_eq!(
+                (start, end, replacement),
+                (5, src_lf.len() as u32 - 5, "\r\nline2\r\n")
+            );
         }
 
         // from CRLF to LF
         {
             let (start, end, replacement) = compute_minimal_text_edit(src_crlf, src_lf);
-            assert_eq!((start, end, replacement), (5, src_crlf.len() as u32 - 5, "\nline2\n"));
+            assert_eq!(
+                (start, end, replacement),
+                (5, src_crlf.len() as u32 - 5, "\nline2\n")
+            );
         }
     }
 }

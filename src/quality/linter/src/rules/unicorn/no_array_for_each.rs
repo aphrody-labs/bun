@@ -30,7 +30,9 @@ fn no_array_for_each_diagnostic(
         }
     };
 
-    OxcDiagnostic::warn("Do not use `Array#forEach`").with_help(help).with_label(span)
+    OxcDiagnostic::warn("Do not use `Array#forEach`")
+        .with_help(help)
+        .with_label(span)
 }
 
 #[derive(Debug, Default, Clone)]
@@ -117,7 +119,10 @@ impl Rule for NoArrayForEach {
                 return;
             };
 
-            ctx.diagnostic(no_array_for_each_diagnostic(span, callback_arguments(call_expr)));
+            ctx.diagnostic(no_array_for_each_diagnostic(
+                span,
+                callback_arguments(call_expr),
+            ));
         }
     }
 }

@@ -49,12 +49,18 @@ declare_oxc_lint!(
 impl Rule for NoObjectConstructor {
     fn run<'a>(&self, node: &AstNode<'a>, ctx: &LintContext<'a>) {
         let (span, callee, arguments, type_parameters) = match node.kind() {
-            AstKind::CallExpression(call_expr) => {
-                (call_expr.span, &call_expr.callee, &call_expr.arguments, &call_expr.type_arguments)
-            }
-            AstKind::NewExpression(new_expr) => {
-                (new_expr.span, &new_expr.callee, &new_expr.arguments, &new_expr.type_arguments)
-            }
+            AstKind::CallExpression(call_expr) => (
+                call_expr.span,
+                &call_expr.callee,
+                &call_expr.arguments,
+                &call_expr.type_arguments,
+            ),
+            AstKind::NewExpression(new_expr) => (
+                new_expr.span,
+                &new_expr.callee,
+                &new_expr.arguments,
+                &new_expr.type_arguments,
+            ),
             _ => return,
         };
 
@@ -82,7 +88,11 @@ fn test() {
         ("new globalThis.Object", None, None),
         ("const createObject = Object => new Object()", None, None),
         ("var Object; new Object;", None, None),
-        ("new Object()", None, Some(serde_json::json!({"globals": {"Object": "off"} }))),
+        (
+            "new Object()",
+            None,
+            Some(serde_json::json!({"globals": {"Object": "off"} })),
+        ),
     ];
 
     let fail = vec![
@@ -262,6 +272,11 @@ fn test() {
         ),
     ];
 
-    Tester::new(NoObjectConstructor::NAME, NoObjectConstructor::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        NoObjectConstructor::NAME,
+        NoObjectConstructor::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

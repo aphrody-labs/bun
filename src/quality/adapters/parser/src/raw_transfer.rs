@@ -139,7 +139,13 @@ pub fn parse_raw(
     source_len: u32,
     options: Option<ParserOptions>,
 ) -> AsyncTask<ResolveTask> {
-    AsyncTask::new(ResolveTask { filename, buffer, source_start, source_len, options })
+    AsyncTask::new(ResolveTask {
+        filename,
+        buffer,
+        source_start,
+        source_len,
+        options,
+    })
 }
 
 pub struct ResolveTask {
@@ -245,8 +251,11 @@ unsafe fn parse_raw_impl(
     // Enclose parsing logic in a scope to make 100% sure no references to within `Allocator`
     // exist after this.
     let options = options.unwrap_or_default();
-    let source_type =
-        get_source_type(filename, options.lang.as_deref(), options.source_type.as_deref());
+    let source_type = get_source_type(
+        filename,
+        options.lang.as_deref(),
+        options.source_type.as_deref(),
+    );
     let is_ts = get_ast_type(source_type, &options) == AstType::TypeScript;
 
     let (data_offset, tokens_offset, tokens_len) = {
@@ -300,7 +309,12 @@ unsafe fn parse_raw_impl(
         #[cfg(feature = "tokens")]
         let (tokens_offset, tokens_len) = if options.tokens == Some(true) {
             let mut tokens = ret.tokens;
-            update_tokens(&mut tokens, &program, &span_converter, ESTreeTokenOptions::new(is_ts));
+            update_tokens(
+                &mut tokens,
+                &program,
+                &span_converter,
+                ESTreeTokenOptions::new(is_ts),
+            );
 
             let tokens_offset = tokens.as_ptr() as u32;
             #[expect(clippy::cast_possible_truncation)]
@@ -329,7 +343,12 @@ unsafe fn parse_raw_impl(
         let module = EcmaScriptModule::from_in(module_record, allocator);
 
         // Write `RawTransferData` to arena, and return pointer to it
-        let data = RawTransferData { program, comments, module, errors };
+        let data = RawTransferData {
+            program,
+            comments,
+            module,
+            errors,
+        };
         let data = allocator.alloc(data);
         let data_offset = ptr::from_ref(data).cast::<u8>() as u32;
 
@@ -341,8 +360,15 @@ unsafe fn parse_raw_impl(
     const RAW_METADATA_OFFSET: usize = ACTIVE_SIZE;
     // SAFETY: `RAW_METADATA_OFFSET` is less than length of `buffer`, and aligned for `RawTransferMetadata`
     unsafe {
-        let metadata_ptr = buffer_ptr.add(RAW_METADATA_OFFSET).cast::<RawTransferMetadata>();
-        debug_assert!(metadata_ptr.addr().get().is_multiple_of(align_of::<RawTransferMetadata>()));
+        let metadata_ptr = buffer_ptr
+            .add(RAW_METADATA_OFFSET)
+            .cast::<RawTransferMetadata>();
+        debug_assert!(
+            metadata_ptr
+                .addr()
+                .get()
+                .is_multiple_of(align_of::<RawTransferMetadata>())
+        );
         metadata_ptr.write(metadata);
     }
 }

@@ -50,7 +50,9 @@ fn test_with_global_variables(
     global_variable_names: &[&'static str],
     expected: bool,
 ) {
-    let ctx = Ctx { global_variable_names: global_variable_names.iter().copied().collect() };
+    let ctx = Ctx {
+        global_variable_names: global_variable_names.iter().copied().collect(),
+    };
     test_with_ctx(source_text, &ctx, expected);
 }
 
@@ -74,7 +76,11 @@ fn test_with_ctx_and_functions_option(
     let Some(Statement::ExpressionStatement(stmt)) = &ret.program.body.first() else {
         panic!("should have a expression statement body: {source_text}");
     };
-    assert_eq!(stmt.expression.is_literal_value(include_functions, ctx), expected, "{source_text}");
+    assert_eq!(
+        stmt.expression.is_literal_value(include_functions, ctx),
+        expected,
+        "{source_text}"
+    );
 }
 
 #[test]

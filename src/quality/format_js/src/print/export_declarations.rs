@@ -49,7 +49,13 @@ fn format_export_keyword_with_class_decorators<'a>(
         if decorators_before_export_start(&class.decorators, span).is_some() {
             write!(
                 f,
-                [class.decorators(), hard_line_break(), format_leading_comments, keyword, space()]
+                [
+                    class.decorators(),
+                    hard_line_break(),
+                    format_leading_comments,
+                    keyword,
+                    space()
+                ]
             );
         } else {
             // `export @decorator class Cls {}`
@@ -83,7 +89,10 @@ fn format_export_specifiers_block<'a>(
 ) {
     let needs_space = f.options().bracket_spacing.value();
     if specifiers.is_empty() {
-        let comments = f.context().comments().comments_before_character(span.start, b'{');
+        let comments = f
+            .context()
+            .comments()
+            .comments_before_character(span.start, b'{');
         let has_line_comment = comments.iter().any(|c| c.is_line());
         // Block comment example:
         // Input:  `export /* comment */ {}`
@@ -104,16 +113,29 @@ fn format_export_specifiers_block<'a>(
                 ]
             );
         }
-        write!(f, [export_kind, "{", format_dangling_comments(span).with_block_indent()]);
+        write!(
+            f,
+            [
+                export_kind,
+                "{",
+                format_dangling_comments(span).with_block_indent()
+            ]
+        );
     } else if specifiers.len() == 1
-        && f.comments().comments_before_character(span.start, b'}').is_empty()
+        && f.comments()
+            .comments_before_character(span.start, b'}')
+            .is_empty()
     {
         let space = maybe_space(needs_space).memoized();
         write!(f, [export_kind, "{", space, specifiers.first(), space]);
     } else {
         write!(
             f,
-            [export_kind, "{", group(&soft_block_indent_with_maybe_space(specifiers, needs_space))]
+            [
+                export_kind,
+                "{",
+                group(&soft_block_indent_with_maybe_space(specifiers, needs_space))
+            ]
         );
     }
     write!(f, "}");
@@ -137,7 +159,10 @@ impl<'a> FormatWrite<'a> for AstNode<'a, ExportDefaultDeclaration<'a>> {
                 self.span.end,
                 false,
             );
-            write!(f, FormatContentWithSemicolon::new(declaration, content_end, self.span.end));
+            write!(
+                f,
+                FormatContentWithSemicolon::new(declaration, content_end, self.span.end)
+            );
         } else {
             write!(f, declaration);
         }
@@ -218,7 +243,9 @@ impl<'a> Format<'a, JsFormatContext<'a>> for AstNode<'a, ArenaVec<'a, ExportSpec
                     format_with(move |f| {
                         // Should add empty line before the specifier if there are comments before it.
                         let specifier_span = specifier.span();
-                        if f.context().comments().has_comment_before(specifier_span.start)
+                        if f.context()
+                            .comments()
+                            .has_comment_before(specifier_span.start)
                             && f.lines_before(specifier_span) > 1
                         {
                             write!(f, [empty_line()]);
@@ -233,7 +260,10 @@ impl<'a> Format<'a, JsFormatContext<'a>> for AstNode<'a, ArenaVec<'a, ExportSpec
 
 impl<'a> FormatWrite<'a> for AstNode<'a, ExportSpecifier<'a>> {
     fn write(&self, f: &mut JsFormatter<'_, 'a>) {
-        let comments = f.context().comments().line_comments_before(self.exported.span().end);
+        let comments = f
+            .context()
+            .comments()
+            .line_comments_before(self.exported.span().end);
         write!(f, [FormatLeadingComments::Comments(comments)]);
 
         write!(f, [self.export_kind()]);

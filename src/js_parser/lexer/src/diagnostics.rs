@@ -305,7 +305,10 @@ impl NumericWalk<'_> {
 /// Re-walk the numeric literal at `off` and reproduce oxc_parser's first
 /// diagnostic for it; `None` when the walk finds nothing wrong.
 fn parser_numeric_first_error(source: &str, off: u32, sev: DiagSeverity) -> Option<OxcDiagnostic> {
-    let mut walk = NumericWalk { src: source, i: off as usize };
+    let mut walk = NumericWalk {
+        src: source,
+        i: off as usize,
+    };
 
     #[expect(
         clippy::cast_possible_truncation,
@@ -463,7 +466,12 @@ mod tests {
     use super::*;
 
     fn d(code: DiagCode, off: u32, len: u32) -> Diagnostic {
-        Diagnostic { off, len, code, severity: DiagSeverity::Error }
+        Diagnostic {
+            off,
+            len,
+            code,
+            severity: DiagSeverity::Error,
+        }
     }
 
     #[test]
@@ -479,7 +487,10 @@ mod tests {
 
         let src = "/a/z";
         let g = to_oxc_diagnostic(&d(DiagCode::InvalidRegexpFlag, 3, 1), src);
-        assert_eq!(g.message.as_ref(), "Unexpected flag z in regular expression literal");
+        assert_eq!(
+            g.message.as_ref(),
+            "Unexpected flag z in regular expression literal"
+        );
         assert_eq!(g.help.as_deref(), Some("The allowed flags are `gimsuydv`"));
     }
 
@@ -506,10 +517,38 @@ mod tests {
         // (source, POD code, POD off, POD len, parser message, parser label)
         type Case = (&'static str, DiagCode, u32, u32, &'static str, (u32, u32));
         let cases: &[Case] = &[
-            ("x = 0b2;", DiagCode::InvalidNumericLiteral, 4, 2, "Invalid Character `2`", (6, 0)),
-            ("0b0_n;", DiagCode::InvalidNumericSeparator, 0, 5, "Invalid Character `n`", (4, 0)),
-            ("1__03;", DiagCode::InvalidNumericSeparator, 0, 5, "Invalid Character `_`", (2, 0)),
-            ("1_000_", DiagCode::InvalidNumericSeparator, 0, 6, "Unexpected end of file", (6, 0)),
+            (
+                "x = 0b2;",
+                DiagCode::InvalidNumericLiteral,
+                4,
+                2,
+                "Invalid Character `2`",
+                (6, 0),
+            ),
+            (
+                "0b0_n;",
+                DiagCode::InvalidNumericSeparator,
+                0,
+                5,
+                "Invalid Character `n`",
+                (4, 0),
+            ),
+            (
+                "1__03;",
+                DiagCode::InvalidNumericSeparator,
+                0,
+                5,
+                "Invalid Character `_`",
+                (2, 0),
+            ),
+            (
+                "1_000_",
+                DiagCode::InvalidNumericSeparator,
+                0,
+                6,
+                "Unexpected end of file",
+                (6, 0),
+            ),
             (
                 "0_0;",
                 DiagCode::InvalidNumericSeparator,
@@ -518,7 +557,14 @@ mod tests {
                 "Invalid characters after number",
                 (1, 1),
             ),
-            ("00n;", DiagCode::InvalidBigint, 0, 3, "Invalid characters after number", (2, 1)),
+            (
+                "00n;",
+                DiagCode::InvalidBigint,
+                0,
+                3,
+                "Invalid characters after number",
+                (2, 1),
+            ),
             (
                 "10._e1;",
                 DiagCode::InvalidNumericSeparator,

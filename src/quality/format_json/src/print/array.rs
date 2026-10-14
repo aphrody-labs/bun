@@ -35,7 +35,12 @@ impl<'a> Format<'a, JsonFormatContext<'a>> for FmtJsonArray<'a, '_> {
         // would produce empty fill/group entries (Elision emits nothing).
         // Group builders assert on empty content, so emit the source slice verbatim
         // which already captures the user's holes.
-        if self.array.elements.iter().all(|el| matches!(el, ArrayExpressionElement::Elision(_))) {
+        if self
+            .array
+            .elements
+            .iter()
+            .all(|el| matches!(el, ArrayExpressionElement::Elision(_)))
+        {
             let inner_start = self.array.span.start + 1;
             let inner_end = self.array.span.end - 1;
             let source = f.context().source_text();
@@ -49,8 +54,10 @@ impl<'a> Format<'a, JsonFormatContext<'a>> for FmtJsonArray<'a, '_> {
         // When the last element is an Elision (e.g. `[1, , 2,,,,]`),
         // the trailing `,` is load-bearing for the hole count.
         // Otherwise (`[1, 2, 3,]`) the trailing comma is just JSON5 syntax that Prettier's `json` parser strips.
-        let trailing_comma =
-            matches!(self.array.elements.last(), Some(ArrayExpressionElement::Elision(_)));
+        let trailing_comma = matches!(
+            self.array.elements.last(),
+            Some(ArrayExpressionElement::Elision(_))
+        );
 
         // Fill packs multiple numeric entries on one line.
         // The trailing `,` lives on the item (mirrors Prettier's `printArrayElementsConcisely`)
@@ -61,8 +68,12 @@ impl<'a> Format<'a, JsonFormatContext<'a>> for FmtJsonArray<'a, '_> {
         // as soon as the array carries any comment, falling back to one element per line.
         // Any comment still pending inside the array span (leading comments were already drained)
         // means a concise layout would miss-place it, so gate it out.
-        let has_inner_comment =
-            f.context().comments().iter_before(self.array.span.end).next().is_some();
+        let has_inner_comment = f
+            .context()
+            .comments()
+            .iter_before(self.array.span.end)
+            .next()
+            .is_some();
         if !has_inner_comment && can_concisely_print(&self.array.elements) {
             let elements = &self.array.elements;
             let source = f.context().source_text();
@@ -113,11 +124,22 @@ impl<'a> Format<'a, JsonFormatContext<'a>> for FmtJsonArray<'a, '_> {
                     }
                 );
             });
-            write!(f, [group(&soft_block_indent(&body)).with_group_id(group_id), "]"]);
+            write!(
+                f,
+                [
+                    group(&soft_block_indent(&body)).with_group_id(group_id),
+                    "]"
+                ]
+            );
             return;
         }
 
-        let spans: Vec<_> = self.array.elements.iter().map(oxc_span::GetSpan::span).collect();
+        let spans: Vec<_> = self
+            .array
+            .elements
+            .iter()
+            .map(oxc_span::GetSpan::span)
+            .collect();
         let elements = format_with(|f| {
             // An elision-forced trailing comma is load-bearing and always literal,
             // so it overrides the variant's group-break separator.
@@ -150,7 +172,13 @@ impl<'a> Format<'a, JsonFormatContext<'a>> for FmtJsonArray<'a, '_> {
         // Matrices and arrays-of-records qualify;
         // `[[1, 2], [3]]` or a single-element wrapper does not.
         let expand = should_force_expand(&self.array.elements);
-        write!(f, [group(&soft_block_indent(&elements)).should_expand(expand), "]"]);
+        write!(
+            f,
+            [
+                group(&soft_block_indent(&elements)).should_expand(expand),
+                "]"
+            ]
+        );
     }
 }
 
@@ -205,7 +233,9 @@ fn can_concisely_print(elements: &[ArrayExpressionElement<'_>]) -> bool {
         return false;
     }
     elements.iter().all(|el| {
-        let Some(expr) = el.as_expression() else { return false };
+        let Some(expr) = el.as_expression() else {
+            return false;
+        };
         match expr {
             Expression::NumericLiteral(_) => true,
             Expression::UnaryExpression(u) if u.operator.is_arithmetic() => {

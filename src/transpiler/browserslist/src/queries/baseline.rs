@@ -23,7 +23,9 @@ pub(super) fn baseline(
         BaselineKind::Year(year) if year <= MAX_BASELINE_YEAR => u64::from(year) * 10_000 + 1_231,
         BaselineKind::Year(_) | BaselineKind::InvalidYear => return Ok(Vec::new()),
         BaselineKind::LegacyYear(year) => {
-            let Some(date) = legacy_year_date(year) else { return Ok(Vec::new()) };
+            let Some(date) = legacy_year_date(year) else {
+                return Ok(Vec::new());
+            };
             date_key(date)
         }
         BaselineKind::NewlyAvailable => {
@@ -45,7 +47,9 @@ pub(super) fn baseline(
             date_key(unix_timestamp_to_date(timestamp))
         }
         BaselineKind::WidelyAvailableOnDate { year, month, day } => {
-            let Ok(year) = i32::try_from(year) else { return Ok(Vec::new()) };
+            let Ok(year) = i32::try_from(year) else {
+                return Ok(Vec::new());
+            };
             let Some(timestamp) = date_to_unix_timestamp(year, month, day)
                 .and_then(|timestamp| add_months_local(timestamp, -30))
             else {
@@ -89,7 +93,10 @@ pub(super) fn baseline(
 }
 
 fn is_core_browser(browser: &str) -> bool {
-    matches!(browser, "and_chr" | "and_ff" | "chrome" | "edge" | "firefox" | "ios_saf" | "safari")
+    matches!(
+        browser,
+        "and_chr" | "and_ff" | "chrome" | "edge" | "firefox" | "ios_saf" | "safari"
+    )
 }
 
 // V8's non-ISO date parser treats one- and two-digit years specially.
@@ -106,5 +113,9 @@ fn legacy_year_date(year: u32) -> Option<CivilDate> {
 }
 
 fn date_key((year, month, day): CivilDate) -> u64 {
-    if year < 0 { 0 } else { year as u64 * 10_000 + u64::from(month * 100 + day) }
+    if year < 0 {
+        0
+    } else {
+        year as u64 * 10_000 + u64::from(month * 100 + day)
+    }
 }

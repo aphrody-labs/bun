@@ -332,7 +332,10 @@ impl<const MIN_ALIGN: usize> Arena<MIN_ALIGN> {
     ) -> Option<NonNull<u8>> {
         #[cfg(debug_assertions)]
         {
-            let footer_ptr = self.current_chunk_footer_ptr.get().expect("Arena has no chunks");
+            let footer_ptr = self
+                .current_chunk_footer_ptr
+                .get()
+                .expect("Arena has no chunks");
             // SAFETY: `footer_ptr` always points to a valid `ChunkFooter`
             let footer = unsafe { footer_ptr.as_ref() };
             assert!(
@@ -385,8 +388,10 @@ impl<const MIN_ALIGN: usize> Arena<MIN_ALIGN> {
         // and `chunk_start_ptr` is within the Container. Therefore `chunk_start_addr >= 4 GiB`.
         // `current_committed_size` is at most `CONTAINER_SIZE` (2 GiB).
         let current_committed_size = container_end_addr - chunk_start_addr;
-        let doubling_start_addr =
-            max(chunk_start_addr - current_committed_size, container_start_addr);
+        let doubling_start_addr = max(
+            chunk_start_addr - current_committed_size,
+            container_start_addr,
+        );
 
         let needed_start_addr = round_down_to(new_ptr.addr().get(), PAGE_SIZE);
 
@@ -437,7 +442,11 @@ pub unsafe fn dealloc_fixed_size_arena_chunk(footer_ptr: NonNull<ChunkFooter>) {
     let (backing_alloc_ptr, layout, is_fixed_size) = {
         // SAFETY: Caller guarantees that `footer_ptr` points to a valid `ChunkFooter`
         let footer = unsafe { footer_ptr.as_ref() };
-        (footer.backing_alloc_ptr, footer.layout, footer.is_fixed_size)
+        (
+            footer.backing_alloc_ptr,
+            footer.layout,
+            footer.is_fixed_size,
+        )
     };
 
     debug_assert!(
@@ -572,9 +581,18 @@ impl Mmap {
         // We discard the pointer either way - see `Mmap` type-level doc comment for why.
         // Returns null on failure.
         let result = unsafe {
-            VirtualAlloc(ptr.as_ptr().cast::<c_void>(), size, MEM_COMMIT, PAGE_READWRITE)
+            VirtualAlloc(
+                ptr.as_ptr().cast::<c_void>(),
+                size,
+                MEM_COMMIT,
+                PAGE_READWRITE,
+            )
         };
-        if result.is_null() { Err(io::Error::last_os_error()) } else { Ok(()) }
+        if result.is_null() {
+            Err(io::Error::last_os_error())
+        } else {
+            Ok(())
+        }
     }
 
     /// Free a reservation made via [`reserve`].
@@ -611,7 +629,11 @@ impl Mmap {
         // SAFETY: Caller guarantees `reservation_ptr` is the start of a live reservation.
         let result =
             unsafe { VirtualFree(reservation_ptr.as_ptr().cast::<c_void>(), 0, MEM_RELEASE) };
-        if result == 0 { Err(io::Error::last_os_error()) } else { Ok(()) }
+        if result == 0 {
+            Err(io::Error::last_os_error())
+        } else {
+            Ok(())
+        }
     }
 }
 
@@ -713,7 +735,10 @@ mod tests {
         arena.alloc_layout(Layout::from_size_align(alloc_size2, 1).unwrap());
         consumed += alloc_size2;
         let capacity_after_grow1 = 2 * FIRST_ALLOCATION_GOAL - OVERHEAD;
-        assert_eq!(arena.start_ptr.get().addr().get(), initial_start_addr - FIRST_ALLOCATION_GOAL);
+        assert_eq!(
+            arena.start_ptr.get().addr().get(),
+            initial_start_addr - FIRST_ALLOCATION_GOAL
+        );
         assert_eq!(data_capacity(&arena), capacity_after_grow1);
         assert_eq!(available(&arena), capacity_after_grow1 - consumed);
 
@@ -765,9 +790,15 @@ mod tests {
         let alloc_size1 = CONTAINER_SIZE / 2;
         arena.alloc_layout(Layout::from_size_align(alloc_size1, 1).unwrap());
         let committed_after_1 = CONTAINER_SIZE / 2 + PAGE_SIZE;
-        assert_eq!(arena.start_ptr.get().addr().get(), container_end_addr - committed_after_1);
+        assert_eq!(
+            arena.start_ptr.get().addr().get(),
+            container_end_addr - committed_after_1
+        );
         assert_eq!(data_capacity(&arena), committed_after_1 - OVERHEAD);
-        assert_eq!(available(&arena), committed_after_1 - OVERHEAD - alloc_size1);
+        assert_eq!(
+            available(&arena),
+            committed_after_1 - OVERHEAD - alloc_size1
+        );
         // Confirm we're past the half-way point so doubling would overshoot
         assert!(committed_after_1 * 2 > CONTAINER_SIZE);
 
@@ -776,9 +807,15 @@ mod tests {
         // Check that committed region is clamped to `CONTAINER_SIZE` maximum.
         let alloc_size2 = 100 * 1024; // 100 KiB - much less than the remaining ~1 GiB
         arena.alloc_layout(Layout::from_size_align(alloc_size2, 1).unwrap());
-        assert_eq!(arena.start_ptr.get().addr().get(), container_end_addr - CONTAINER_SIZE);
+        assert_eq!(
+            arena.start_ptr.get().addr().get(),
+            container_end_addr - CONTAINER_SIZE
+        );
         assert_eq!(data_capacity(&arena), CONTAINER_SIZE - OVERHEAD);
-        assert_eq!(available(&arena), CONTAINER_SIZE - OVERHEAD - alloc_size1 - alloc_size2);
+        assert_eq!(
+            available(&arena),
+            CONTAINER_SIZE - OVERHEAD - alloc_size1 - alloc_size2
+        );
     }
 
     #[test]
@@ -855,7 +892,10 @@ mod tests {
         let start_after_grow = initial_start_addr - FIRST_ALLOCATION_GOAL;
         assert_eq!(arena.start_ptr.get().addr().get(), start_after_grow);
         assert_eq!(data_capacity(&arena), capacity_after_grow);
-        assert_eq!(available(&arena), capacity_after_grow - FIRST_ALLOCATION_GOAL);
+        assert_eq!(
+            available(&arena),
+            capacity_after_grow - FIRST_ALLOCATION_GOAL
+        );
 
         // Reset: cursor returns to the top, but the grown chunk persists
         arena.reset();

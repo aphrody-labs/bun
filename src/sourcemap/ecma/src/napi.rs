@@ -94,7 +94,10 @@ mod tests {
             None,
         );
         let napi: SourceMap = inner.into();
-        assert_eq!(napi.sources_content, Some(vec!["x".to_string(), String::new()]));
+        assert_eq!(
+            napi.sources_content,
+            Some(vec!["x".to_string(), String::new()])
+        );
     }
 
     #[test]

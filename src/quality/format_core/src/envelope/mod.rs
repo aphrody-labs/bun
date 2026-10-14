@@ -60,7 +60,10 @@ fn write_frame<'a, C: FormatContext>(
     body: Option<ArenaVec<'a, FormatElement<'a>>>,
     f: &mut Formatter<'_, 'a, C>,
 ) {
-    write!(f, [text(fm.start_delimiter), fm.explicit_language.map(text)]);
+    write!(
+        f,
+        [text(fm.start_delimiter), fm.explicit_language.map(text)]
+    );
     if let Some(ir) = body {
         write!(f, hard_line_break());
         f.write_elements(ir);

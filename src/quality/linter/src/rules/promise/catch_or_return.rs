@@ -22,7 +22,11 @@ use crate::{
 };
 
 fn format_termination_method(method: &CompactStr, as_call: bool) -> String {
-    if as_call { format!("`{method}()`") } else { format!("`{method}`") }
+    if as_call {
+        format!("`{method}()`")
+    } else {
+        format!("`{method}`")
+    }
 }
 
 fn join_termination_methods(methods: &[CompactStr], as_call: bool) -> String {
@@ -37,8 +41,10 @@ fn join_termination_methods(methods: &[CompactStr], as_call: bool) -> String {
             )
         }
         [methods @ .., last] => {
-            let mut message =
-                methods.iter().map(|method| format_termination_method(method, as_call)).join(", ");
+            let mut message = methods
+                .iter()
+                .map(|method| format_termination_method(method, as_call))
+                .join(", ");
             let _ = write!(message, ", or {}", format_termination_method(last, as_call));
             message
         }
@@ -51,7 +57,10 @@ fn catch_or_return_diagnostic(methods: &[CompactStr], span: Span) -> OxcDiagnost
         [method] => format!("`{method}` or `return`"),
         [first, second] => format!("`{first}`, `{second}`, or `return`"),
         [methods @ .., last] => {
-            let mut message = methods.iter().map(|method| format!("`{method}`")).join(", ");
+            let mut message = methods
+                .iter()
+                .map(|method| format!("`{method}`"))
+                .join(", ");
             let _ = write!(message, ", `{last}`, or `return`");
             message
         }
@@ -198,7 +207,10 @@ impl Rule for CatchOrReturn {
             return;
         }
 
-        ctx.diagnostic(catch_or_return_diagnostic(&self.termination_method, call_expr.span));
+        ctx.diagnostic(catch_or_return_diagnostic(
+            &self.termination_method,
+            call_expr.span,
+        ));
     }
 }
 
@@ -236,13 +248,20 @@ impl CatchOrReturn {
         }
 
         // somePromise.catch()
-        if self.termination_method.iter().any(|method| method == prop_name) {
+        if self
+            .termination_method
+            .iter()
+            .any(|method| method == prop_name)
+        {
             return true;
         }
 
         // somePromise['catch']()
         if prop_name == "catch"
-            && matches!(call_expr.callee.get_inner_expression(), Expression::StringLiteral(_))
+            && matches!(
+                call_expr.callee.get_inner_expression(),
+                Expression::StringLiteral(_)
+            )
         {
             return true;
         }
@@ -305,7 +324,10 @@ fn test() {
     let pass = vec![
         ("frank().then(go).catch(doIt)", None),
         ("frank().then(go).then().then().then().catch(doIt)", None),
-        ("frank().then(go).then().catch(function() { /* why bother */ })", None),
+        (
+            "frank().then(go).then().catch(function() { /* why bother */ })",
+            None,
+        ),
         ("frank.then(go).then(to).catch(jail)", None),
         ("Promise.resolve(frank).catch(jail)", None),
         (r#"Promise.resolve(frank)["catch"](jail)"#, None),
@@ -317,10 +339,16 @@ fn test() {
             None,
         ),
         ("function a() { return frank().then(go) }", None),
-        ("function a() { return frank().then(go).then().then().then() }", None),
+        (
+            "function a() { return frank().then(go).then().then().then() }",
+            None,
+        ),
         ("function a() { return frank().then(go).then()}", None),
         ("function a() { return frank.then(go).then(to) }", None),
-        ("frank().then(go).then(null, doIt)", Some(serde_json::json!([{ "allowThen": true }]))),
+        (
+            "frank().then(go).then(null, doIt)",
+            Some(serde_json::json!([{ "allowThen": true }])),
+        ),
         (
             "frank().then(go).then().then().then().then(null, doIt)",
             Some(serde_json::json!([{ "allowThen": true }])),
@@ -333,9 +361,18 @@ fn test() {
             "frank.then(go).then(to).then(null, jail)",
             Some(serde_json::json!([{ "allowThen": true }])),
         ),
-        ("frank().then(a, b)", Some(serde_json::json!([{ "allowThen": true }]))),
-        ("frank().then(a).then(b).then(null, c)", Some(serde_json::json!([{ "allowThen": true }]))),
-        ("frank().then(a).then(b).then(c, d)", Some(serde_json::json!([{ "allowThen": true }]))),
+        (
+            "frank().then(a, b)",
+            Some(serde_json::json!([{ "allowThen": true }])),
+        ),
+        (
+            "frank().then(a).then(b).then(null, c)",
+            Some(serde_json::json!([{ "allowThen": true }])),
+        ),
+        (
+            "frank().then(a).then(b).then(c, d)",
+            Some(serde_json::json!([{ "allowThen": true }])),
+        ),
         (
             "frank().then(a).then(b).then().then().then(null, doIt)",
             Some(serde_json::json!([{ "allowThen": true }])),
@@ -344,7 +381,10 @@ fn test() {
             "frank().then(a).then(b).then(null, function() { /* why bother */ })",
             Some(serde_json::json!([{ "allowThen": true }])),
         ),
-        ("frank().then(go).then(zam, doIt)", Some(serde_json::json!([{ "allowThen": true }]))),
+        (
+            "frank().then(go).then(zam, doIt)",
+            Some(serde_json::json!([{ "allowThen": true }])),
+        ),
         (
             "frank().then(go).then().then().then().then(wham, doIt)",
             Some(serde_json::json!([{ "allowThen": true }])),
@@ -397,7 +437,10 @@ fn test() {
             "frank().then(go).then().catch(function() { /* why bother */ }).finally(fn)",
             Some(serde_json::json!([{ "allowFinally": true }])),
         ),
-        ("frank().then(goo).done()", Some(serde_json::json!([{ "terminationMethod": "done" }]))),
+        (
+            "frank().then(goo).done()",
+            Some(serde_json::json!([{ "terminationMethod": "done" }])),
+        ),
         (
             "frank().then(go).catch()",
             Some(serde_json::json!([{ "terminationMethod": ["catch", "done"] }])),
@@ -419,17 +462,32 @@ fn test() {
         ("const a = () => Promise.resolve(null)", None),
         ("const b = () => Promise.resolve({ id: '' })", None),
         ("const obj = { method: () => Promise.resolve(null) }", None),
-        ("const obj = { openLinkModalPrompt: () => Promise.resolve(null) }", None),
+        (
+            "const obj = { openLinkModalPrompt: () => Promise.resolve(null) }",
+            None,
+        ),
         ("const arr = [() => Promise.resolve(null)]", None),
         ("foo(() => Promise.resolve(null))", None),
         ("const a = () => { return Promise.resolve(null); }", None),
-        ("function a() { const b = () => Promise.resolve(null); return b; }", None),
+        (
+            "function a() { const b = () => Promise.resolve(null); return b; }",
+            None,
+        ),
     ];
 
     let fail = vec![
-        ("function callPromise(promise, cb) { promise.then(cb) }", None),
-        (r#"fetch("http://www.yahoo.com").then(console.log.bind(console))"#, None),
-        (r#"a.then(function() { return "x"; }).then(function(y) { throw y; })"#, None),
+        (
+            "function callPromise(promise, cb) { promise.then(cb) }",
+            None,
+        ),
+        (
+            r#"fetch("http://www.yahoo.com").then(console.log.bind(console))"#,
+            None,
+        ),
+        (
+            r#"a.then(function() { return "x"; }).then(function(y) { throw y; })"#,
+            None,
+        ),
         ("Promise.resolve(frank)", None),
         ("Promise.all([])", None),
         ("Promise.allSettled([])", None),
@@ -439,10 +497,19 @@ fn test() {
         ("frank().finally(fn)", None),
         ("frank().then(to).finally(fn)", None),
         ("frank().then(go).catch(doIt).finally(fn)", None),
-        ("frank().then(go).then().then().then().catch(doIt).finally(fn)", None),
-        ("frank().then(go).then().catch(function() { /* why bother */ }).finally(fn)", None),
+        (
+            "frank().then(go).then().then().then().catch(doIt).finally(fn)",
+            None,
+        ),
+        (
+            "frank().then(go).then().catch(function() { /* why bother */ }).finally(fn)",
+            None,
+        ),
         ("function a() { frank().then(go) }", None),
-        ("function a() { frank().then(go).then().then().then() }", None),
+        (
+            "function a() { frank().then(go).then().then().then() }",
+            None,
+        ),
         ("function a() { frank().then(go).then()}", None),
         ("function a() { frank.then(go).then(to) }", None),
         (
@@ -453,22 +520,49 @@ fn test() {
             "frank().then(go).catch(doIt).finally(fn).foobar(foo)",
             Some(serde_json::json!([{ "allowFinally": true }])),
         ),
-        ("frank().then(go)", Some(serde_json::json!([{ "terminationMethod": "done" }]))),
-        ("frank().catch(go)", Some(serde_json::json!([{ "terminationMethod": "done" }]))),
-        ("frank().then(go)", Some(serde_json::json!([{ "terminationMethod": ["catch", "done"] }]))),
-        ("frank().then(go)", Some(serde_json::json!([{ "terminationMethod": [] }]))),
+        (
+            "frank().then(go)",
+            Some(serde_json::json!([{ "terminationMethod": "done" }])),
+        ),
+        (
+            "frank().catch(go)",
+            Some(serde_json::json!([{ "terminationMethod": "done" }])),
+        ),
+        (
+            "frank().then(go)",
+            Some(serde_json::json!([{ "terminationMethod": ["catch", "done"] }])),
+        ),
+        (
+            "frank().then(go)",
+            Some(serde_json::json!([{ "terminationMethod": [] }])),
+        ),
         ("frank().catch(go).someOtherMethod()", None),
         ("frank()['catch'](go).someOtherMethod()", None),
         ("frank().then(a).then(b).then(null, c)", None),
-        ("frank().then(a).then(b).then().then().then(null, doIt)", None),
-        ("frank().then(a).then(b).then(null, function() { /* why bother */ })", None),
+        (
+            "frank().then(a).then(b).then().then().then(null, doIt)",
+            None,
+        ),
+        (
+            "frank().then(a).then(b).then(null, function() { /* why bother */ })",
+            None,
+        ),
         ("frank().then(a, b)", None),
         ("frank().then(go).then(zam, doIt)", None),
         ("frank().then(a).then(b).then(c, d)", None),
-        ("frank().then(go).then().then().then().then(wham, doIt)", None),
-        ("frank().then(go).then().then(function() {}, function() { /* why bother */ })", None),
+        (
+            "frank().then(go).then().then().then().then(wham, doIt)",
+            None,
+        ),
+        (
+            "frank().then(go).then().then(function() {}, function() { /* why bother */ })",
+            None,
+        ),
         ("frank.then(go).then(to).then(pewPew, jail)", None),
-        ("frank().then(a, b)", Some(serde_json::json!([{ "allowThenStrict": true }]))),
+        (
+            "frank().then(a, b)",
+            Some(serde_json::json!([{ "allowThenStrict": true }])),
+        ),
         (
             "frank().then(go).then(zam, doIt)",
             Some(serde_json::json!([{ "allowThenStrict": true }])),
@@ -490,7 +584,10 @@ fn test() {
             Some(serde_json::json!([{ "allowThenStrict": true }])),
         ),
         ("const a = () => { Promise.resolve(null); }", None),
-        ("function a() { const b = () => { Promise.resolve(null); }; return b; }", None),
+        (
+            "function a() { const b = () => { Promise.resolve(null); }; return b; }",
+            None,
+        ),
     ];
 
     Tester::new(CatchOrReturn::NAME, CatchOrReturn::PLUGIN, pass, fail)

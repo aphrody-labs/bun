@@ -50,8 +50,7 @@ pub(crate) extern "C" fn Bun__Os__getConstrainedMemory() -> u64 {
 #[cfg(target_os = "linux")]
 #[unsafe(no_mangle)]
 pub(crate) extern "C" fn Bun__Os__getMemoryCapacity(physical: u64) -> u64 {
-    bun_host::collect::cgroup_memory_budget()
-        .map_or(physical, |(ceiling, _)| physical.min(ceiling))
+    bun_host::collect::cgroup_memory_budget().map_or(physical, |(ceiling, _)| physical.min(ceiling))
 }
 
 mod _impl {

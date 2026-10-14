@@ -211,7 +211,9 @@ impl ArrowBodyStyle {
         ctx: &LintContext<'a>,
     ) {
         let ArrowBodyStyle(mode, config) = self;
-        let inner_expr = arrow_func_expr.get_expression().map(Expression::get_inner_expression);
+        let inner_expr = arrow_func_expr
+            .get_expression()
+            .map(Expression::get_inner_expression);
 
         let should_report = *mode == Mode::Always
             || (*mode == Mode::AsNeeded
@@ -222,9 +224,10 @@ impl ArrowBodyStyle {
             return;
         }
 
-        ctx.diagnostic_with_fix(expected_block_diagnostic(arrow_func_expr.body.span()), |fixer| {
-            Self::fix_concise_to_block(arrow_func_expr, fixer, ctx)
-        });
+        ctx.diagnostic_with_fix(
+            expected_block_diagnostic(arrow_func_expr.body.span()),
+            |fixer| Self::fix_concise_to_block(arrow_func_expr, fixer, ctx),
+        );
     }
 
     /// Handle block arrow body: `() => { ... }`
@@ -369,8 +372,14 @@ impl ArrowBodyStyle {
         // existing spacing, while keeping comments like `return/* comment */1` intact.
         let source_text = ctx.source_text().as_bytes();
         let return_end = (return_statement.span.start + 6) as usize;
-        let delete_len =
-            if source_text.get(return_end).is_some_and(u8::is_ascii_whitespace) { 7 } else { 6 };
+        let delete_len = if source_text
+            .get(return_end)
+            .is_some_and(u8::is_ascii_whitespace)
+        {
+            7
+        } else {
+            6
+        };
         fix.push(fixer.delete_range(Span::sized(return_statement.span.start, delete_len)));
         if has_return_semicolon {
             fix.push(fixer.delete_range(Span::sized(return_statement.span.end - 1, 1)));
@@ -508,10 +517,19 @@ fn test() {
         ("var foo = () => { bar(); };", None),
         ("var foo = () => { b = a };", None),
         ("var foo = () => { bar: 1 };", None),
-        ("var foo = () => { return 0; };", Some(serde_json::json!(["always"]))),
-        ("var foo = () => { return bar(); };", Some(serde_json::json!(["always"]))),
+        (
+            "var foo = () => { return 0; };",
+            Some(serde_json::json!(["always"])),
+        ),
+        (
+            "var foo = () => { return bar(); };",
+            Some(serde_json::json!(["always"])),
+        ),
         ("var foo = () => 0;", Some(serde_json::json!(["never"]))),
-        ("var foo = () => ({ foo: 0 });", Some(serde_json::json!(["never"]))),
+        (
+            "var foo = () => ({ foo: 0 });",
+            Some(serde_json::json!(["never"])),
+        ),
         (
             "var foo = () => {};",
             Some(serde_json::json!(["as-needed", { "requireReturnForObjectLiteral": true }])),
@@ -561,35 +579,95 @@ fn test() {
             "for (var foo = () => { return a in b ? bar : () => {} } ;;);",
             Some(serde_json::json!(["as-needed"])),
         ),
-        ("a in b; for (var f = () => { return c };;);", Some(serde_json::json!(["as-needed"]))),
-        ("for (a = b => { return c in d ? e : f } ;;);", Some(serde_json::json!(["as-needed"]))),
-        ("for (var f = () => { return a };;);", Some(serde_json::json!(["as-needed"]))),
-        ("for (var f;f = () => { return a };);", Some(serde_json::json!(["as-needed"]))),
-        ("for (var f = () => { return a in c };;);", Some(serde_json::json!(["as-needed"]))),
-        ("for (var f;f = () => { return a in c };);", Some(serde_json::json!(["as-needed"]))),
-        ("for (;;){var f = () => { return a in c }}", Some(serde_json::json!(["as-needed"]))),
-        ("for (a = b => { return c = d in e } ;;);", Some(serde_json::json!(["as-needed"]))),
-        ("for (var a;;a = b => { return c = d in e } );", Some(serde_json::json!(["as-needed"]))),
-        ("for (let a = (b, c, d) => { return vb && c in d; }; ;);", None),
-        ("for (let a = (b, c, d) => { return v in b && c in d; }; ;);", None),
-        ("function foo(){ for (let a = (b, c, d) => { return v in b && c in d; }; ;); }", None),
-        ("for ( a = (b, c, d) => { return v in b && c in d; }; ;);", None),
+        (
+            "a in b; for (var f = () => { return c };;);",
+            Some(serde_json::json!(["as-needed"])),
+        ),
+        (
+            "for (a = b => { return c in d ? e : f } ;;);",
+            Some(serde_json::json!(["as-needed"])),
+        ),
+        (
+            "for (var f = () => { return a };;);",
+            Some(serde_json::json!(["as-needed"])),
+        ),
+        (
+            "for (var f;f = () => { return a };);",
+            Some(serde_json::json!(["as-needed"])),
+        ),
+        (
+            "for (var f = () => { return a in c };;);",
+            Some(serde_json::json!(["as-needed"])),
+        ),
+        (
+            "for (var f;f = () => { return a in c };);",
+            Some(serde_json::json!(["as-needed"])),
+        ),
+        (
+            "for (;;){var f = () => { return a in c }}",
+            Some(serde_json::json!(["as-needed"])),
+        ),
+        (
+            "for (a = b => { return c = d in e } ;;);",
+            Some(serde_json::json!(["as-needed"])),
+        ),
+        (
+            "for (var a;;a = b => { return c = d in e } );",
+            Some(serde_json::json!(["as-needed"])),
+        ),
+        (
+            "for (let a = (b, c, d) => { return vb && c in d; }; ;);",
+            None,
+        ),
+        (
+            "for (let a = (b, c, d) => { return v in b && c in d; }; ;);",
+            None,
+        ),
+        (
+            "function foo(){ for (let a = (b, c, d) => { return v in b && c in d; }; ;); }",
+            None,
+        ),
+        (
+            "for ( a = (b, c, d) => { return v in b && c in d; }; ;);",
+            None,
+        ),
         ("for ( a = (b) => { return (c in d) }; ;);", None),
         ("for (let a = (b, c, d) => { return vb in dd ; }; ;);", None),
-        ("for (let a = (b, c, d) => { return vb in c in dd ; }; ;);", None),
+        (
+            "for (let a = (b, c, d) => { return vb in c in dd ; }; ;);",
+            None,
+        ),
         ("do{let a = () => {return f in ff}}while(true){}", None),
-        ("do{for (let a = (b, c, d) => { return vb in c in dd ; }; ;);}while(true){}", None),
-        ("scores.map(score => { return x in +(score / maxScore).toFixed(2)});", None),
+        (
+            "do{for (let a = (b, c, d) => { return vb in c in dd ; }; ;);}while(true){}",
+            None,
+        ),
+        (
+            "scores.map(score => { return x in +(score / maxScore).toFixed(2)});",
+            None,
+        ),
         ("const fn = (a, b) => { return a + x in Number(b) };", None),
         ("var foo = () => 0", Some(serde_json::json!(["always"]))),
         ("var foo = () => 0;", Some(serde_json::json!(["always"]))),
         ("var foo = () => ({});", Some(serde_json::json!(["always"]))),
-        ("var foo = () => (  {});", Some(serde_json::json!(["always"]))),
+        (
+            "var foo = () => (  {});",
+            Some(serde_json::json!(["always"])),
+        ),
         ("(() => ({}))", Some(serde_json::json!(["always"]))),
         ("(() => ( {}))", Some(serde_json::json!(["always"]))),
-        ("var foo = () => { return 0; };", Some(serde_json::json!(["as-needed"]))),
-        ("var foo = () => { return 0 };", Some(serde_json::json!(["as-needed"]))),
-        ("var foo = () => { return bar(); };", Some(serde_json::json!(["as-needed"]))),
+        (
+            "var foo = () => { return 0; };",
+            Some(serde_json::json!(["as-needed"])),
+        ),
+        (
+            "var foo = () => { return 0 };",
+            Some(serde_json::json!(["as-needed"])),
+        ),
+        (
+            "var foo = () => { return bar(); };",
+            Some(serde_json::json!(["as-needed"])),
+        ),
         ("var foo = () => {};", Some(serde_json::json!(["never"]))),
         (
             "var foo = () => {
@@ -597,8 +675,14 @@ fn test() {
             };",
             Some(serde_json::json!(["never"])),
         ),
-        ("var foo = () => { return { bar: 0 }; };", Some(serde_json::json!(["as-needed"]))),
-        ("var foo = () => { return ({ bar: 0 }); };", Some(serde_json::json!(["as-needed"]))),
+        (
+            "var foo = () => { return { bar: 0 }; };",
+            Some(serde_json::json!(["as-needed"])),
+        ),
+        (
+            "var foo = () => { return ({ bar: 0 }); };",
+            Some(serde_json::json!(["as-needed"])),
+        ),
         ("var foo = () => { return a, b }", None),
         (
             "var foo = () => { return };",
@@ -612,8 +696,14 @@ fn test() {
             "var foo = () => { return ( /* a */ {ok: true} /* b */ ) };",
             Some(serde_json::json!(["as-needed"])),
         ),
-        ("var foo = () => { return '{' };", Some(serde_json::json!(["as-needed"]))),
-        ("var foo = () => { return { bar: 0 }.bar; };", Some(serde_json::json!(["as-needed"]))),
+        (
+            "var foo = () => { return '{' };",
+            Some(serde_json::json!(["as-needed"])),
+        ),
+        (
+            "var foo = () => { return { bar: 0 }.bar; };",
+            Some(serde_json::json!(["as-needed"])),
+        ),
         (
             "var foo = (retv, name) => {
             retv[name] = true;
@@ -621,7 +711,10 @@ fn test() {
             };",
             Some(serde_json::json!(["never"])),
         ),
-        ("var foo = () => { bar };", Some(serde_json::json!(["never"]))),
+        (
+            "var foo = () => { bar };",
+            Some(serde_json::json!(["never"])),
+        ),
         (
             "var foo = () => { return 0; };",
             Some(serde_json::json!(["as-needed", { "requireReturnForObjectLiteral": true }])),
@@ -638,7 +731,10 @@ fn test() {
             "var foo = () => ({ bar: 0 });",
             Some(serde_json::json!(["as-needed", { "requireReturnForObjectLiteral": true }])),
         ),
-        ("var foo = () => (((((((5)))))));", Some(serde_json::json!(["always"]))),
+        (
+            "var foo = () => (((((((5)))))));",
+            Some(serde_json::json!(["always"])),
+        ),
         (
             "var foo = /* a */ ( /* b */ ) /* c */ => /* d */ { /* e */ return /* f */ 5 /* g */ ; /* h */ } /* i */ ;",
             Some(serde_json::json!(["as-needed"])),
@@ -683,9 +779,18 @@ fn test() {
                         ",
             None,
         ),
-        ("var foo = () => ({foo: 1}).foo();", Some(serde_json::json!(["always"]))),
-        ("var foo = () => ({foo: 1}.foo());", Some(serde_json::json!(["always"]))),
-        ("var foo = () => ( {foo: 1} ).foo();", Some(serde_json::json!(["always"]))),
+        (
+            "var foo = () => ({foo: 1}).foo();",
+            Some(serde_json::json!(["always"])),
+        ),
+        (
+            "var foo = () => ({foo: 1}.foo());",
+            Some(serde_json::json!(["always"])),
+        ),
+        (
+            "var foo = () => ( {foo: 1} ).foo();",
+            Some(serde_json::json!(["always"])),
+        ),
         (
             "
                           var foo = () => ({
@@ -710,15 +815,42 @@ fn test() {
             "const createMarker = (color) => ({ latitude, longitude }, index) => {};",
             Some(serde_json::json!(["always"])),
         ),
-        ("var foo = () => { return {a: 1}.b + c };", Some(serde_json::json!(["as-needed"]))),
-        ("var foo = () => { return {a: 1}.b && c };", Some(serde_json::json!(["as-needed"]))),
-        ("var foo = () => { return {a: 1}.b || c };", Some(serde_json::json!(["as-needed"]))),
-        ("var foo = () => { return {a: 1}.b ? c : d };", Some(serde_json::json!(["as-needed"]))),
-        ("var foo = () => { return {a: 1}.b + c && d };", Some(serde_json::json!(["as-needed"]))),
-        ("var foo = () => { return {a: 1}.b.c + d };", Some(serde_json::json!(["as-needed"]))),
-        ("var foo = () => { return {a: 1}.b() + c };", Some(serde_json::json!(["as-needed"]))),
-        (r#"var foo = () => { "use strict"; return 0; };"#, Some(serde_json::json!(["never"]))),
-        (r#"var foo = () => { "use strict"; };"#, Some(serde_json::json!(["never"]))),
+        (
+            "var foo = () => { return {a: 1}.b + c };",
+            Some(serde_json::json!(["as-needed"])),
+        ),
+        (
+            "var foo = () => { return {a: 1}.b && c };",
+            Some(serde_json::json!(["as-needed"])),
+        ),
+        (
+            "var foo = () => { return {a: 1}.b || c };",
+            Some(serde_json::json!(["as-needed"])),
+        ),
+        (
+            "var foo = () => { return {a: 1}.b ? c : d };",
+            Some(serde_json::json!(["as-needed"])),
+        ),
+        (
+            "var foo = () => { return {a: 1}.b + c && d };",
+            Some(serde_json::json!(["as-needed"])),
+        ),
+        (
+            "var foo = () => { return {a: 1}.b.c + d };",
+            Some(serde_json::json!(["as-needed"])),
+        ),
+        (
+            "var foo = () => { return {a: 1}.b() + c };",
+            Some(serde_json::json!(["as-needed"])),
+        ),
+        (
+            r#"var foo = () => { "use strict"; return 0; };"#,
+            Some(serde_json::json!(["never"])),
+        ),
+        (
+            r#"var foo = () => { "use strict"; };"#,
+            Some(serde_json::json!(["never"])),
+        ),
     ];
 
     let fix = vec![
@@ -792,7 +924,11 @@ fn test() {
             "for ( a = (b, c, d) => ( v in b && c in d ); ;);",
             None,
         ),
-        ("for ( a = (b) => { return (c in d) }; ;);", "for ( a = (b) =>  (c in d) ; ;);", None),
+        (
+            "for ( a = (b) => { return (c in d) }; ;);",
+            "for ( a = (b) =>  (c in d) ; ;);",
+            None,
+        ),
         (
             "for (let a = (b, c, d) => { return vb in dd ; }; ;);",
             "for (let a = (b, c, d) => ( vb in dd  ); ;);",
@@ -823,8 +959,16 @@ fn test() {
             "const fn = (a, b) =>  a + x in Number(b) ;",
             None,
         ),
-        ("var foo = () => 0", "var foo = () => {return 0}", Some(serde_json::json!(["always"]))),
-        ("var foo = () => 0;", "var foo = () => {return 0};", Some(serde_json::json!(["always"]))),
+        (
+            "var foo = () => 0",
+            "var foo = () => {return 0}",
+            Some(serde_json::json!(["always"])),
+        ),
+        (
+            "var foo = () => 0;",
+            "var foo = () => {return 0};",
+            Some(serde_json::json!(["always"])),
+        ),
         (
             "var foo = () => ({});",
             "var foo = () => {return {}};",
@@ -835,8 +979,16 @@ fn test() {
             "var foo = () => {return {}};",
             Some(serde_json::json!(["always"])),
         ),
-        ("(() => ({}))", "(() => {return {}})", Some(serde_json::json!(["always"]))),
-        ("(() => ( {}))", "(() => {return {}})", Some(serde_json::json!(["always"]))),
+        (
+            "(() => ({}))",
+            "(() => {return {}})",
+            Some(serde_json::json!(["always"])),
+        ),
+        (
+            "(() => ( {}))",
+            "(() => {return {}})",
+            Some(serde_json::json!(["always"])),
+        ),
         (
             "var foo = () => { return 0; };",
             "var foo = () =>  0 ;",
@@ -871,7 +1023,11 @@ fn test() {
             "var foo = () =>  ({ bar: 0 }) ;",
             Some(serde_json::json!(["as-needed"])),
         ),
-        ("var foo = () => { return a, b }", "var foo = () => ( a, b )", None),
+        (
+            "var foo = () => { return a, b }",
+            "var foo = () => ( a, b )",
+            None,
+        ),
         (
             "var foo = () => { return ( /* a */ {ok: true} /* b */ ) };",
             "var foo = () =>  ( /* a */ {ok: true} /* b */ ) ;",

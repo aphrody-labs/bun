@@ -32,7 +32,9 @@ pub fn decode(data: &[u8]) -> Result<Vec<u8>> {
     while at < data.len() && out.len() < total {
         let len = le32(data, at)?;
         at += 4;
-        let block = data.get(at..at + len).ok_or_else(|| bad("truncated block"))?;
+        let block = data
+            .get(at..at + len)
+            .ok_or_else(|| bad("truncated block"))?;
         at += len;
         let deflated = block.strip_prefix(b"CK").ok_or_else(|| bad("missing CK"))?;
         let dict_start = out.len().saturating_sub(WINDOW);
@@ -65,7 +67,9 @@ fn inflate_block(input: &[u8], dict: &[u8], out: &mut Vec<u8>, total: usize) -> 
     });
     if !dict.is_empty() {
         // SAFETY: stream initialized; `dict` is readable for its length.
-        let rc = unsafe { bun_zlib::inflateSetDictionary(&raw mut strm, dict.as_ptr(), dict.len() as _) };
+        let rc = unsafe {
+            bun_zlib::inflateSetDictionary(&raw mut strm, dict.as_ptr(), dict.len() as _)
+        };
         if rc != ReturnCode::Ok {
             return Err(bad("dictionary"));
         }

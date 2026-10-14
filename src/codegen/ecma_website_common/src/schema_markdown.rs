@@ -89,7 +89,12 @@ impl Renderer {
         handlebars
             .register_template_string("section", SECTION)
             .expect("Failed to register section template.");
-        Self { handlebars, root_schema, with_title: true, property_filters: Vec::new() }
+        Self {
+            handlebars,
+            root_schema,
+            with_title: true,
+            property_filters: Vec::new(),
+        }
     }
 
     pub fn with_title(&mut self, with_title: bool) {
@@ -114,7 +119,11 @@ impl Renderer {
         }
 
         // without title, search for the markdown h1 and remove it.
-        result.lines().filter(|line| !line.starts_with("# ")).collect::<Vec<_>>().join("\n")
+        result
+            .lines()
+            .filter(|line| !line.starts_with("# "))
+            .collect::<Vec<_>>()
+            .join("\n")
     }
 
     fn get_schema_object(schema: &Schema) -> &SchemaObject {
@@ -326,8 +335,11 @@ impl Renderer {
                         }
                     } else {
                         // This is a primitive type
-                        primitive_types
-                            .push(serde_json::to_string(instance_type).unwrap().replace('"', ""));
+                        primitive_types.push(
+                            serde_json::to_string(instance_type)
+                                .unwrap()
+                                .replace('"', ""),
+                        );
                     }
                 }
             }
@@ -346,8 +358,11 @@ impl Renderer {
                 type_parts.extend(primitive_types);
                 let type_parts = type_parts.into_iter().unique().collect::<Vec<_>>();
 
-                let union_type =
-                    if type_parts.is_empty() { None } else { Some(type_parts.join(" | ")) };
+                let union_type = if type_parts.is_empty() {
+                    None
+                } else {
+                    Some(type_parts.join(" | "))
+                };
 
                 // Render properties from the first object schema
                 let sections = if let Some(first_object) = object_schemas.first() {
@@ -460,7 +475,10 @@ impl Renderer {
                             .as_ref()
                             .and_then(|m| m.description.clone())
                             .or_else(|| {
-                                ref_schema.metadata.as_ref().and_then(|m| m.description.clone())
+                                ref_schema
+                                    .metadata
+                                    .as_ref()
+                                    .and_then(|m| m.description.clone())
                             })
                             .unwrap_or_default(),
                         sections,
@@ -533,7 +551,12 @@ impl Renderer {
                 .metadata
                 .as_ref()
                 .and_then(|m| m.description.clone())
-                .or_else(|| ref_schema.metadata.as_ref().and_then(|m| m.description.clone()))
+                .or_else(|| {
+                    ref_schema
+                        .metadata
+                        .as_ref()
+                        .and_then(|m| m.description.clone())
+                })
                 .unwrap_or_default(),
             sections,
         }
@@ -580,7 +603,9 @@ fn sanitize(s: &mut String) {
 
     while let Some(start) = s[cursor..].find(marker) {
         let start = cursor + start + marker.len();
-        let Some(end) = s[start..].find("```") else { break };
+        let Some(end) = s[start..].find("```") else {
+            break;
+        };
         let end = start + end;
         let json_str = &s[start..end];
 
@@ -622,14 +647,20 @@ fn as_primitive_array(schema: &SchemaObject) -> Option<&SchemaObject> {
 /// `Some(schema)`.
 fn as_primitive(schema: &SchemaObject) -> Option<&SchemaObject> {
     // null intentionally omitted
-    const PRIMITIVE_TYPES: [InstanceType; 4] =
-        [InstanceType::Boolean, InstanceType::Integer, InstanceType::Number, InstanceType::String];
+    const PRIMITIVE_TYPES: [InstanceType; 4] = [
+        InstanceType::Boolean,
+        InstanceType::Integer,
+        InstanceType::Number,
+        InstanceType::String,
+    ];
 
     let is_primitive = !schema.is_ref()
         && PRIMITIVE_TYPES.iter().any(|t| {
             // schema.has_type(*t)
             schema.instance_type.as_ref().is_some_and(|ty| {
-                let SingleOrVec::Single(single) = ty else { return false };
+                let SingleOrVec::Single(single) = ty else {
+                    return false;
+                };
                 single.as_ref() == t
             })
         });

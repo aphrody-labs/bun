@@ -47,12 +47,14 @@ pub fn normalize_page_url(
         Err(ParseError::RelativeUrlWithoutBase) => {
             let base = base.ok_or(UrlNormalizationError::MissingBase)?;
             base.join(reference)?
-        },
+        }
         Err(error) => return Err(error.into()),
     };
 
     if !matches!(url.scheme(), "http" | "https") {
-        return Err(UrlNormalizationError::UnsupportedScheme(url.scheme().to_owned()));
+        return Err(UrlNormalizationError::UnsupportedScheme(
+            url.scheme().to_owned(),
+        ));
     }
     if !url.username().is_empty() || url.password().is_some() {
         return Err(UrlNormalizationError::UserInformation);
@@ -89,18 +91,19 @@ pub struct PageMetadata {
 pub fn extract_metadata(html: &str, base_url: Option<&Url>) -> PageMetadata {
     let arena = dom::Arena::from_html(html);
     let metadata = meta::collect(&arena);
-    let title =
-        metadata.title_tag.clone().or_else(|| metadata.get("og:title").map(str::to_owned)).or_else(
-            || {
-                arena.nodes.iter().enumerate().find_map(|(index, node)| {
-                    if node.kind == dom::Kind::Element && node.tag == dom::Tag::H(1) {
-                        clean_text(arena.raw_text(index as u32))
-                    } else {
-                        None
-                    }
-                })
-            },
-        );
+    let title = metadata
+        .title_tag
+        .clone()
+        .or_else(|| metadata.get("og:title").map(str::to_owned))
+        .or_else(|| {
+            arena.nodes.iter().enumerate().find_map(|(index, node)| {
+                if node.kind == dom::Kind::Element && node.tag == dom::Tag::H(1) {
+                    clean_text(arena.raw_text(index as u32))
+                } else {
+                    None
+                }
+            })
+        });
     let description = metadata
         .get("description")
         .or_else(|| metadata.get("og:description"))
@@ -111,7 +114,11 @@ pub fn extract_metadata(html: &str, base_url: Option<&Url>) -> PageMetadata {
             normalize_page_url(&href, base_url, UrlNormalizationOptions::default()).ok()
         });
 
-    PageMetadata { title, description, canonical_url }
+    PageMetadata {
+        title,
+        description,
+        canonical_url,
+    }
 }
 
 fn clean_text(value: String) -> Option<String> {
@@ -141,7 +148,10 @@ mod tests {
         let url = normalize_page_url(
             " ../api/v2/?utm_source=docs#intro ",
             Some(&base),
-            UrlNormalizationOptions { drop_query: true, trim_trailing_slash: true },
+            UrlNormalizationOptions {
+                drop_query: true,
+                trim_trailing_slash: true,
+            },
         )
         .unwrap();
 
@@ -175,7 +185,11 @@ mod tests {
             Err(UrlNormalizationError::UserInformation)
         ));
         assert!(matches!(
-            normalize_page_url("javascript:alert(1)", None, UrlNormalizationOptions::default()),
+            normalize_page_url(
+                "javascript:alert(1)",
+                None,
+                UrlNormalizationOptions::default()
+            ),
             Err(UrlNormalizationError::UnsupportedScheme(_))
         ));
     }
@@ -193,8 +207,14 @@ mod tests {
         );
 
         assert_eq!(metadata.title.as_deref(), Some("Example item"));
-        assert_eq!(metadata.description.as_deref(), Some("A useful & concise description"));
-        assert_eq!(metadata.canonical_url.unwrap().as_str(), "https://example.com/item?sku=4");
+        assert_eq!(
+            metadata.description.as_deref(),
+            Some("A useful & concise description")
+        );
+        assert_eq!(
+            metadata.canonical_url.unwrap().as_str(),
+            "https://example.com/item?sku=4"
+        );
     }
 
     #[test]

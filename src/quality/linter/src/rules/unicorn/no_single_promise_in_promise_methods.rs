@@ -325,19 +325,43 @@ fn test() {
     ];
 
     let fix = vec![
-        ("Promise.race([null]).then()", "Promise.resolve(null).then()", None),
+        (
+            "Promise.race([null]).then()",
+            "Promise.resolve(null).then()",
+            None,
+        ),
         // Promise.all returns an array, so we preserve the array structure
         // when the result is used, but avoid creating an unread array when
         // `await Promise.all([x])` is used as an expression statement.
         ("await Promise.all([x]);", "await x;", None),
-        ("await Promise.all([x as Promise<number>]);", "await x as Promise<number>;", None),
-        ("while(true) { await Promise.all([x]); }", "while(true) { await x; }", None),
+        (
+            "await Promise.all([x as Promise<number>]);",
+            "await x as Promise<number>;",
+            None,
+        ),
+        (
+            "while(true) { await Promise.all([x]); }",
+            "while(true) { await x; }",
+            None,
+        ),
         // Promise.any and Promise.race return a single value, not an array
         ("await Promise.any([x]);", "await x;", None),
         ("await Promise.race([x]);", "await x;", None),
-        ("const foo = await Promise.all([x])", "const foo = await Promise.all([x])", None),
-        ("const [foo] = await Promise.all([x])", "const [foo] = await Promise.all([x])", None),
-        ("let foo; foo = await Promise.all([x])", "let foo; foo = await Promise.all([x])", None),
+        (
+            "const foo = await Promise.all([x])",
+            "const foo = await Promise.all([x])",
+            None,
+        ),
+        (
+            "const [foo] = await Promise.all([x])",
+            "const [foo] = await Promise.all([x])",
+            None,
+        ),
+        (
+            "let foo; foo = await Promise.all([x])",
+            "let foo; foo = await Promise.all([x])",
+            None,
+        ),
         (
             "function foo () { return Promise.all([x]); }",
             "function foo () { return Promise.all([x]); }",
@@ -348,8 +372,16 @@ fn test() {
             "async function foo () { return await Promise.all([x]); }",
             None,
         ),
-        ("const foo = () => Promise.race([x])", "const foo = () => Promise.resolve(x)", None),
-        ("foo = await Promise.race([x])", "foo = await Promise.race([x])", None),
+        (
+            "const foo = () => Promise.race([x])",
+            "const foo = () => Promise.resolve(x)",
+            None,
+        ),
+        (
+            "foo = await Promise.race([x])",
+            "foo = await Promise.race([x])",
+            None,
+        ),
         (
             "Promise.all(['one']).then((result) => result[0]);",
             "Promise.all(['one']).then((result) => result[0]);",

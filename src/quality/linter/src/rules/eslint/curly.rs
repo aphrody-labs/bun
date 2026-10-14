@@ -10,8 +10,9 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 fn curly_diagnostic(span: Span, keyword: &str, expected: bool) -> OxcDiagnostic {
-    let condition_if_needed =
-        matches!(keyword, "if" | "while" | "for").then_some(" condition").unwrap_or("");
+    let condition_if_needed = matches!(keyword, "if" | "while" | "for")
+        .then_some(" condition")
+        .unwrap_or("");
     let prefix = if expected { "Expected" } else { "Unexpected" };
     let message = format!("{prefix} {{ after '{keyword}'{condition_if_needed}.");
 
@@ -294,8 +295,9 @@ impl Rule for Curly {
 impl<'a> Curly {
     fn run_for_if_statement(&self, stmt: &'a IfStatement<'a>, ctx: &LintContext<'a>) {
         let branches = get_if_branches_from_statement(stmt, &self.0, ctx);
-        let does_any_branch_need_braces =
-            branches.iter().any(|b| b.should_have_braces.unwrap_or(b.has_braces));
+        let does_any_branch_need_braces = branches
+            .iter()
+            .any(|b| b.should_have_braces.unwrap_or(b.has_braces));
 
         for branch in &branches {
             let should_have_braces = if self.1.is_some() {
@@ -364,7 +366,10 @@ fn get_if_else_keyword(is_else: bool) -> &'static str {
 
 fn is_else_if(node: &AstNode, stmt: &IfStatement, ctx: &LintContext) -> bool {
     if let AstKind::IfStatement(parent_if) = ctx.nodes().parent_kind(node.id())
-        && parent_if.alternate.as_ref().is_some_and(|alt| alt.span() == stmt.span)
+        && parent_if
+            .alternate
+            .as_ref()
+            .is_some_and(|alt| alt.span() == stmt.span)
     {
         return true;
     }
@@ -405,8 +410,10 @@ fn should_have_braces<'a>(
             let stmt = block.body.first();
             let body_start = body.span().start;
             let stmt_start = stmt.map_or(body_start, |s| s.span().start);
-            let has_comment =
-                ctx.comments_range(body_start..stmt_start.saturating_sub(1)).next().is_some();
+            let has_comment = ctx
+                .comments_range(body_start..stmt_start.saturating_sub(1))
+                .next()
+                .is_some();
 
             Some(stmt.is_none_or(|s| !is_one_liner(s, ctx) || has_comment))
         }
@@ -454,9 +461,10 @@ fn report_if_needed<'a>(
         return;
     }
 
-    ctx.diagnostic_with_fix(curly_diagnostic(body.span(), keyword, should_have_braces), |fixer| {
-        apply_rule_fix(&fixer, body, should_have_braces, keyword == "do", ctx)
-    });
+    ctx.diagnostic_with_fix(
+        curly_diagnostic(body.span(), keyword, should_have_braces),
+        |fixer| apply_rule_fix(&fixer, body, should_have_braces, keyword == "do", ctx),
+    );
 }
 
 #[expect(clippy::cast_possible_truncation)]
@@ -474,11 +482,14 @@ fn is_collapsed_one_liner(stmt: &Statement, ctx: &LintContext) -> bool {
     let stmt_start = span.start as usize;
 
     let before_stmt = &src[..stmt_start];
-    let prev_token_end =
-        before_stmt.bytes().rposition(|b| !b.is_ascii_whitespace()).map_or(0, |pos| pos + 1);
+    let prev_token_end = before_stmt
+        .bytes()
+        .rposition(|b| !b.is_ascii_whitespace())
+        .map_or(0, |pos| pos + 1);
 
-    let end_offset =
-        span.end.saturating_sub((node_string.len() as u32).saturating_sub(trimmed_len));
+    let end_offset = span
+        .end
+        .saturating_sub((node_string.len() as u32).saturating_sub(trimmed_len));
     let text_to_check = &src[prev_token_end..end_offset as usize];
 
     !text_to_check.contains('\n')
@@ -530,7 +541,10 @@ fn get_next_char_offset(span: Span, ctx: &LintContext) -> Option<u32> {
         return Some(span.end + 2);
     }
 
-    src[start..].chars().next().map(|c| span.end + c.len_utf8() as u32)
+    src[start..]
+        .chars()
+        .next()
+        .map(|c| span.end + c.len_utf8() as u32)
 }
 
 fn is_followed_by_else_keyword(node: &Statement, ctx: &LintContext) -> bool {
@@ -556,9 +570,10 @@ fn is_followed_by_else_keyword(node: &Statement, ctx: &LintContext) -> bool {
 
 fn has_unsafe_if(node: &Statement) -> bool {
     match node {
-        Statement::IfStatement(if_stmt) => {
-            if_stmt.alternate.as_ref().is_none_or(|alt| has_unsafe_if(alt))
-        }
+        Statement::IfStatement(if_stmt) => if_stmt
+            .alternate
+            .as_ref()
+            .is_none_or(|alt| has_unsafe_if(alt)),
         Statement::ForStatement(for_stmt) => has_unsafe_if(&for_stmt.body),
         Statement::ForInStatement(for_in_stmt) => has_unsafe_if(&for_in_stmt.body),
         Statement::ForOfStatement(for_of_stmt) => has_unsafe_if(&for_of_stmt.body),
@@ -584,12 +599,18 @@ fn test() {
         ("for (;foo;) bar()", Some(serde_json::json!(["multi"]))),
         ("if (foo) bar()", Some(serde_json::json!(["multi"]))),
         ("if (a) { b; c; }", Some(serde_json::json!(["multi"]))),
-        ("for (var foo in bar) console.log(foo)", Some(serde_json::json!(["multi"]))),
+        (
+            "for (var foo in bar) console.log(foo)",
+            Some(serde_json::json!(["multi"])),
+        ),
         (
             "for (var foo in bar) { console.log(1); console.log(2) }",
             Some(serde_json::json!(["multi"])),
         ),
-        ("for (var foo of bar) console.log(foo)", Some(serde_json::json!(["multi"]))), // { "ecmaVersion": 6 },
+        (
+            "for (var foo of bar) console.log(foo)",
+            Some(serde_json::json!(["multi"])),
+        ), // { "ecmaVersion": 6 },
         (
             "for (var foo of bar) { console.log(1); console.log(2) }",
             Some(serde_json::json!(["multi"])),
@@ -600,7 +621,10 @@ fn test() {
 			",
             Some(serde_json::json!(["multi-line"])),
         ),
-        ("if (foo) bar(); else baz()", Some(serde_json::json!(["multi-line"]))),
+        (
+            "if (foo) bar(); else baz()",
+            Some(serde_json::json!(["multi-line"])),
+        ),
         (
             "if (foo) bar();
 			 else baz()",
@@ -612,9 +636,18 @@ fn test() {
 			 else baz()",
             Some(serde_json::json!(["multi-line"])),
         ),
-        ("do baz(); while (foo)", Some(serde_json::json!(["multi-line"]))),
-        ("if (foo) { bar() }", Some(serde_json::json!(["multi-line"]))),
-        ("for (var foo in bar) console.log(foo)", Some(serde_json::json!(["multi-line"]))),
+        (
+            "do baz(); while (foo)",
+            Some(serde_json::json!(["multi-line"])),
+        ),
+        (
+            "if (foo) { bar() }",
+            Some(serde_json::json!(["multi-line"])),
+        ),
+        (
+            "for (var foo in bar) console.log(foo)",
+            Some(serde_json::json!(["multi-line"])),
+        ),
         (
             "for (var foo in bar) {
 			 console.log(1);
@@ -622,7 +655,10 @@ fn test() {
 			 }",
             Some(serde_json::json!(["multi-line"])),
         ),
-        ("for (var foo of bar) console.log(foo)", Some(serde_json::json!(["multi-line"]))), // { "ecmaVersion": 6 },
+        (
+            "for (var foo of bar) console.log(foo)",
+            Some(serde_json::json!(["multi-line"])),
+        ), // { "ecmaVersion": 6 },
         (
             "for (var foo of bar) {
 			 console.log(1);
@@ -721,11 +757,26 @@ fn test() {
 			 }",
             Some(serde_json::json!(["multi-or-nest"])),
         ), // { "ecmaVersion": 6 },
-        ("if (foo) { const bar = 'baz'; }", Some(serde_json::json!(["multi"]))), // { "ecmaVersion": 6 },
-        ("while (foo) { let bar = 'baz'; }", Some(serde_json::json!(["multi"]))), // { "ecmaVersion": 6 },
-        ("for(;;) { function foo() {} }", Some(serde_json::json!(["multi"]))),
-        ("for (foo in bar) { class Baz {} }", Some(serde_json::json!(["multi"]))), // { "ecmaVersion": 6 },
-        ("if (foo) { let bar; } else { baz(); }", Some(serde_json::json!(["multi", "consistent"]))), // { "ecmaVersion": 6 },
+        (
+            "if (foo) { const bar = 'baz'; }",
+            Some(serde_json::json!(["multi"])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "while (foo) { let bar = 'baz'; }",
+            Some(serde_json::json!(["multi"])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "for(;;) { function foo() {} }",
+            Some(serde_json::json!(["multi"])),
+        ),
+        (
+            "for (foo in bar) { class Baz {} }",
+            Some(serde_json::json!(["multi"])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "if (foo) { let bar; } else { baz(); }",
+            Some(serde_json::json!(["multi", "consistent"])),
+        ), // { "ecmaVersion": 6 },
         (
             "if (foo) { bar(); } else { const baz = 'quux'; }",
             Some(serde_json::json!(["multi", "consistent"])),
@@ -861,14 +912,26 @@ fn test() {
             "if (a) { if (b) console.log(1); else if (c) console.log(2) } else console.log(3)",
             Some(serde_json::json!(["multi"])),
         ),
-        ("if (true) { while(false) if (true); } else;", Some(serde_json::json!(["multi"]))),
-        ("if (true) { label: if (false); } else;", Some(serde_json::json!(["multi"]))),
-        ("if (true) { with(0) if (false); } else;", Some(serde_json::json!(["multi"]))),
+        (
+            "if (true) { while(false) if (true); } else;",
+            Some(serde_json::json!(["multi"])),
+        ),
+        (
+            "if (true) { label: if (false); } else;",
+            Some(serde_json::json!(["multi"])),
+        ),
+        (
+            "if (true) { with(0) if (false); } else;",
+            Some(serde_json::json!(["multi"])),
+        ),
         (
             "if (true) { while(a) if(b) while(c) if (d); else; } else;",
             Some(serde_json::json!(["multi"])),
         ),
-        ("if (true) foo(); else { bar(); baz(); }", Some(serde_json::json!(["multi"]))),
+        (
+            "if (true) foo(); else { bar(); baz(); }",
+            Some(serde_json::json!(["multi"])),
+        ),
         (
             "if (true) { foo(); } else { bar(); baz(); }",
             Some(serde_json::json!(["multi", "consistent"])),
@@ -890,8 +953,14 @@ fn test() {
             "if (x) for (var i in x) { if (i > 0) console.log(i); } else console.log('whoops');",
             Some(serde_json::json!(["multi"])),
         ),
-        ("if (a) { if (b) foo(); } else bar();", Some(serde_json::json!(["multi"]))),
-        ("if (a) { if (b) foo(); } else bar();", Some(serde_json::json!(["multi-or-nest"]))),
+        (
+            "if (a) { if (b) foo(); } else bar();",
+            Some(serde_json::json!(["multi"])),
+        ),
+        (
+            "if (a) { if (b) foo(); } else bar();",
+            Some(serde_json::json!(["multi-or-nest"])),
+        ),
         (
             "if (a) { if (b) foo(); } else { bar(); }",
             Some(serde_json::json!(["multi", "consistent"])),
@@ -911,7 +980,10 @@ fn test() {
             }",
             Some(serde_json::json!(["multi-or-nest", "consistent"])),
         ),
-        ("if (a) { if (b) { foo(); bar(); } } else baz();", Some(serde_json::json!(["multi"]))),
+        (
+            "if (a) { if (b) { foo(); bar(); } } else baz();",
+            Some(serde_json::json!(["multi"])),
+        ),
         (
             "if (a) foo(); else if (b) { if (c) bar(); } else baz();",
             Some(serde_json::json!(["multi"])),
@@ -924,9 +996,18 @@ fn test() {
             "if (a) if (b) foo(); else { if (c) bar(); } else baz();",
             Some(serde_json::json!(["multi"])),
         ),
-        ("if (a) { lbl:if (b) foo(); } else bar();", Some(serde_json::json!(["multi"]))),
-        ("if (a) { lbl1:lbl2:if (b) foo(); } else bar();", Some(serde_json::json!(["multi"]))),
-        ("if (a) { for (;;) if (b) foo(); } else bar();", Some(serde_json::json!(["multi"]))),
+        (
+            "if (a) { lbl:if (b) foo(); } else bar();",
+            Some(serde_json::json!(["multi"])),
+        ),
+        (
+            "if (a) { lbl1:lbl2:if (b) foo(); } else bar();",
+            Some(serde_json::json!(["multi"])),
+        ),
+        (
+            "if (a) { for (;;) if (b) foo(); } else bar();",
+            Some(serde_json::json!(["multi"])),
+        ),
         (
             "if (a) { for (key in obj) if (b) foo(); } else bar();",
             Some(serde_json::json!(["multi"])),
@@ -935,8 +1016,14 @@ fn test() {
             "if (a) { for (elem of arr) if (b) foo(); } else bar();",
             Some(serde_json::json!(["multi"])),
         ), // { "ecmaVersion": 2015 },
-        ("if (a) { with (obj) if (b) foo(); } else bar();", Some(serde_json::json!(["multi"]))),
-        ("if (a) { while (cond) if (b) foo(); } else bar();", Some(serde_json::json!(["multi"]))),
+        (
+            "if (a) { with (obj) if (b) foo(); } else bar();",
+            Some(serde_json::json!(["multi"])),
+        ),
+        (
+            "if (a) { while (cond) if (b) foo(); } else bar();",
+            Some(serde_json::json!(["multi"])),
+        ),
         (
             "if (a) { while (cond) for (;;) for (key in obj) if (b) foo(); } else bar();",
             Some(serde_json::json!(["multi"])),
@@ -965,27 +1052,69 @@ fn test() {
             "const isIterable = (obj: any): obj is Iterable<IgnoreRule> => {\r\n    if (obj === null) return false;\r\n    else if (typeof obj === 'string') return false;\r\n    else return typeof value[Symbol.iterator] === 'function';\r\n};\r\n",
             Some(serde_json::json!(["multi-line"])),
         ),
-        ("if (foo) /* comment */ bar()", Some(serde_json::json!(["multi-line"]))),
-        ("while (foo) /* comment */ bar()", Some(serde_json::json!(["multi-line"]))),
-        ("for (;;) /* comment */ bar()", Some(serde_json::json!(["multi-line"]))),
-        ("if (foo) /* 日本語コメント */ bar()", Some(serde_json::json!(["multi-line"]))),
-        ("if (foo) /* émojis: 🎉🚀 */ bar()", Some(serde_json::json!(["multi-line"]))),
-        ("if (foo) /* special: @#$%^&*() */ bar()", Some(serde_json::json!(["multi-line"]))),
+        (
+            "if (foo) /* comment */ bar()",
+            Some(serde_json::json!(["multi-line"])),
+        ),
+        (
+            "while (foo) /* comment */ bar()",
+            Some(serde_json::json!(["multi-line"])),
+        ),
+        (
+            "for (;;) /* comment */ bar()",
+            Some(serde_json::json!(["multi-line"])),
+        ),
+        (
+            "if (foo) /* 日本語コメント */ bar()",
+            Some(serde_json::json!(["multi-line"])),
+        ),
+        (
+            "if (foo) /* émojis: 🎉🚀 */ bar()",
+            Some(serde_json::json!(["multi-line"])),
+        ),
+        (
+            "if (foo) /* special: @#$%^&*() */ bar()",
+            Some(serde_json::json!(["multi-line"])),
+        ),
         ("if (foo)\t\tbar()", Some(serde_json::json!(["multi-line"]))),
-        ("if (foo)   \t   bar()", Some(serde_json::json!(["multi-line"]))),
-        ("if (foo) /* { */ bar()", Some(serde_json::json!(["multi-line"]))),
-        ("if (foo) /* } */ bar()", Some(serde_json::json!(["multi-line"]))),
-        ("if (foo) /* { } */ bar()", Some(serde_json::json!(["multi-line"]))),
-        ("if (foo) /* {{ nested }} */ bar()", Some(serde_json::json!(["multi-line"]))),
-        ("while (foo) /* [brackets] */ bar()", Some(serde_json::json!(["multi-line"]))),
-        ("for (;;) /* (parens) { braces } */ bar()", Some(serde_json::json!(["multi-line"]))),
+        (
+            "if (foo)   \t   bar()",
+            Some(serde_json::json!(["multi-line"])),
+        ),
+        (
+            "if (foo) /* { */ bar()",
+            Some(serde_json::json!(["multi-line"])),
+        ),
+        (
+            "if (foo) /* } */ bar()",
+            Some(serde_json::json!(["multi-line"])),
+        ),
+        (
+            "if (foo) /* { } */ bar()",
+            Some(serde_json::json!(["multi-line"])),
+        ),
+        (
+            "if (foo) /* {{ nested }} */ bar()",
+            Some(serde_json::json!(["multi-line"])),
+        ),
+        (
+            "while (foo) /* [brackets] */ bar()",
+            Some(serde_json::json!(["multi-line"])),
+        ),
+        (
+            "for (;;) /* (parens) { braces } */ bar()",
+            Some(serde_json::json!(["multi-line"])),
+        ),
         // Test cases for trailing comments on previous line - should NOT trigger curly error
         // Issue #13352: false positive when one-liner conditionals have trailing comments
         (
             "if (isLexicalRichText(rt)) text = extractTextFromLexicalJSON(rt.root); // Lexical\nelse text = extractTextFromDraftJS(rt); // DraftJS",
             Some(serde_json::json!(["multi-line"])),
         ),
-        ("if (foo) bar(); // comment\nelse baz();", Some(serde_json::json!(["multi-line"]))),
+        (
+            "if (foo) bar(); // comment\nelse baz();",
+            Some(serde_json::json!(["multi-line"])),
+        ),
         (
             "if (foo) bar(); // comment on if\nelse if (bar) baz(); // comment on else if\nelse qux();",
             Some(serde_json::json!(["multi-line"])),
@@ -1032,7 +1161,10 @@ fn test() {
 			 console.log(foo)",
             None,
         ), // { "ecmaVersion": 6 },
-        ("for (var foo of bar) {console.log(foo)}", Some(serde_json::json!(["multi"]))), // { "ecmaVersion": 6 },
+        (
+            "for (var foo of bar) {console.log(foo)}",
+            Some(serde_json::json!(["multi"])),
+        ), // { "ecmaVersion": 6 },
         ("do{foo();} while(bar);", Some(serde_json::json!(["multi"]))), // { "ecmaVersion": 6 },
         ("for (;foo;) { bar() }", Some(serde_json::json!(["multi"]))),
         (
@@ -1041,15 +1173,27 @@ fn test() {
             None,
         ),
         ("if (foo) { bar() }", Some(serde_json::json!(["multi"]))),
-        ("if (foo) if (bar) { baz() }", Some(serde_json::json!(["multi"]))),
+        (
+            "if (foo) if (bar) { baz() }",
+            Some(serde_json::json!(["multi"])),
+        ),
         (
             "if (foo) if (bar) baz(); else if (quux) { quuux(); }",
             Some(serde_json::json!(["multi"])),
         ),
         ("while (foo) { bar() }", Some(serde_json::json!(["multi"]))),
-        ("if (foo) baz(); else { bar() }", Some(serde_json::json!(["multi"]))),
-        ("if (foo) if (bar); else { baz() }", Some(serde_json::json!(["multi"]))),
-        ("if (true) { if (false) console.log(1) }", Some(serde_json::json!(["multi"]))),
+        (
+            "if (foo) baz(); else { bar() }",
+            Some(serde_json::json!(["multi"])),
+        ),
+        (
+            "if (foo) if (bar); else { baz() }",
+            Some(serde_json::json!(["multi"])),
+        ),
+        (
+            "if (true) { if (false) console.log(1) }",
+            Some(serde_json::json!(["multi"])),
+        ),
         (
             "if (a) { if (b) console.log(1); else console.log(2) } else console.log(3)",
             Some(serde_json::json!(["multi"])),
@@ -1068,8 +1212,14 @@ fn test() {
 			}",
             Some(serde_json::json!(["multi"])),
         ),
-        ("for (var foo in bar) { console.log(foo) }", Some(serde_json::json!(["multi"]))),
-        ("for (var foo of bar) { console.log(foo) }", Some(serde_json::json!(["multi"]))), // { "ecmaVersion": 6 },
+        (
+            "for (var foo in bar) { console.log(foo) }",
+            Some(serde_json::json!(["multi"])),
+        ),
+        (
+            "for (var foo of bar) { console.log(foo) }",
+            Some(serde_json::json!(["multi"])),
+        ), // { "ecmaVersion": 6 },
         (
             "if (foo)
 			 baz()",
@@ -1104,7 +1254,10 @@ fn test() {
 			 while (bar)",
             Some(serde_json::json!(["multi-line"])),
         ),
-        ("for (var foo in bar) {console.log(foo)}", Some(serde_json::json!(["multi"]))),
+        (
+            "for (var foo in bar) {console.log(foo)}",
+            Some(serde_json::json!(["multi"])),
+        ),
         (
             "for (var foo in bar)
 			 console.log(foo)",
@@ -1150,8 +1303,14 @@ fn test() {
 			 }",
             Some(serde_json::json!(["multi-or-nest"])),
         ),
-        ("if (foo) { var bar = 'baz'; }", Some(serde_json::json!(["multi"]))),
-        ("if (foo) { let bar; } else baz();", Some(serde_json::json!(["multi", "consistent"]))), // { "ecmaVersion": 6 },
+        (
+            "if (foo) { var bar = 'baz'; }",
+            Some(serde_json::json!(["multi"])),
+        ),
+        (
+            "if (foo) { let bar; } else baz();",
+            Some(serde_json::json!(["multi", "consistent"])),
+        ), // { "ecmaVersion": 6 },
         (
             "if (foo) bar(); else { const baz = 'quux' }",
             Some(serde_json::json!(["multi", "consistent"])),
@@ -1211,7 +1370,10 @@ fn test() {
 			 else bar();",
             Some(serde_json::json!(["multi", "consistent"])),
         ),
-        ("if (true) foo(); else { baz(); }", Some(serde_json::json!(["multi", "consistent"]))),
+        (
+            "if (true) foo(); else { baz(); }",
+            Some(serde_json::json!(["multi", "consistent"])),
+        ),
         (
             "if (true) foo(); else if (true) faa(); else { bar(); baz(); }",
             Some(serde_json::json!(["multi", "consistent"])),
@@ -1234,9 +1396,15 @@ fn test() {
             Some(serde_json::json!(["multi"])),
         ),
         ("for (;;) { foo(); }", Some(serde_json::json!(["multi"]))),
-        ("do{[1, 2, 3].map(bar);} while (bar)", Some(serde_json::json!(["multi"]))),
+        (
+            "do{[1, 2, 3].map(bar);} while (bar)",
+            Some(serde_json::json!(["multi"])),
+        ),
         ("if (foo) {bar()} baz()", Some(serde_json::json!(["multi"]))),
-        ("do {foo();} while (bar)", Some(serde_json::json!(["multi"]))),
+        (
+            "do {foo();} while (bar)",
+            Some(serde_json::json!(["multi"])),
+        ),
         (
             "if (foo) { bar }
 			++baz;",
@@ -1272,10 +1440,22 @@ fn test() {
 			Baz();",
             Some(serde_json::json!(["multi"])),
         ),
-        ("if (foo) { while (bar) {} } else {}", Some(serde_json::json!(["multi"]))),
-        ("if (foo) { var foo = () => {} } else {}", Some(serde_json::json!(["multi"]))), // { "ecmaVersion": 6 },
-        ("if (foo) { var foo = function() {} } else {}", Some(serde_json::json!(["multi"]))),
-        ("if (foo) { var foo = function*() {} } else {}", Some(serde_json::json!(["multi"]))), // { "ecmaVersion": 6 },
+        (
+            "if (foo) { while (bar) {} } else {}",
+            Some(serde_json::json!(["multi"])),
+        ),
+        (
+            "if (foo) { var foo = () => {} } else {}",
+            Some(serde_json::json!(["multi"])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "if (foo) { var foo = function() {} } else {}",
+            Some(serde_json::json!(["multi"])),
+        ),
+        (
+            "if (foo) { var foo = function*() {} } else {}",
+            Some(serde_json::json!(["multi"])),
+        ), // { "ecmaVersion": 6 },
         (
             "if (true)
 			foo()
@@ -1340,17 +1520,38 @@ fn test() {
 			} while (foo)",
             Some(serde_json::json!(["multi-or-nest"])),
         ),
-        ("if (a) { if (b) foo(); }", Some(serde_json::json!(["multi"]))),
-        ("if (a) { if (b) foo(); else bar(); }", Some(serde_json::json!(["multi"]))),
-        ("if (a) { if (b) foo(); else bar(); } baz();", Some(serde_json::json!(["multi"]))),
-        ("if (a) { while (cond) if (b) foo(); }", Some(serde_json::json!(["multi"]))),
-        ("if (a) while (cond) { if (b) foo(); }", Some(serde_json::json!(["multi"]))),
-        ("if (a) while (cond) { if (b) foo(); else bar(); }", Some(serde_json::json!(["multi"]))),
+        (
+            "if (a) { if (b) foo(); }",
+            Some(serde_json::json!(["multi"])),
+        ),
+        (
+            "if (a) { if (b) foo(); else bar(); }",
+            Some(serde_json::json!(["multi"])),
+        ),
+        (
+            "if (a) { if (b) foo(); else bar(); } baz();",
+            Some(serde_json::json!(["multi"])),
+        ),
+        (
+            "if (a) { while (cond) if (b) foo(); }",
+            Some(serde_json::json!(["multi"])),
+        ),
+        (
+            "if (a) while (cond) { if (b) foo(); }",
+            Some(serde_json::json!(["multi"])),
+        ),
+        (
+            "if (a) while (cond) { if (b) foo(); else bar(); }",
+            Some(serde_json::json!(["multi"])),
+        ),
         (
             "if (a) { while (cond) { if (b) foo(); } bar(); baz() } else quux();",
             Some(serde_json::json!(["multi"])),
         ),
-        ("if (a) { if (b) foo(); } bar();", Some(serde_json::json!(["multi"]))),
+        (
+            "if (a) { if (b) foo(); } bar();",
+            Some(serde_json::json!(["multi"])),
+        ),
         (
             "if(a) { if (b) foo(); } if (c) bar(); else baz();",
             Some(serde_json::json!(["multi-or-nest"])),
@@ -1363,9 +1564,18 @@ fn test() {
             "if (a) do { if (b) foo(); } while (cond); else bar();",
             Some(serde_json::json!(["multi"])),
         ),
-        ("if (a) { if (b) foo(); else bar(); } else baz();", Some(serde_json::json!(["multi"]))),
-        ("if (a) while (cond) { bar(); } else baz();", Some(serde_json::json!(["multi"]))),
-        ("if (a) { for (;;); } else bar();", Some(serde_json::json!(["multi"]))),
+        (
+            "if (a) { if (b) foo(); else bar(); } else baz();",
+            Some(serde_json::json!(["multi"])),
+        ),
+        (
+            "if (a) while (cond) { bar(); } else baz();",
+            Some(serde_json::json!(["multi"])),
+        ),
+        (
+            "if (a) { for (;;); } else bar();",
+            Some(serde_json::json!(["multi"])),
+        ),
         (
             "if (a) { while (cond) if (b) foo() } else bar();",
             Some(serde_json::json!(["multi", "consistent"])),
@@ -1382,7 +1592,10 @@ fn test() {
 			 bar();",
             None,
         ),
-        ("if (a) { while (cond) if (b) foo() } ", Some(serde_json::json!(["multi", "consistent"]))),
+        (
+            "if (a) { while (cond) if (b) foo() } ",
+            Some(serde_json::json!(["multi", "consistent"])),
+        ),
         (
             "if(a) { if (b) foo(); } if (c) bar(); else if(foo){bar();}",
             Some(serde_json::json!(["multi-or-nest"])),
@@ -1443,7 +1656,11 @@ fn test() {
 			 {bar()}",
             None,
         ),
-        ("if (foo) { bar() } else baz()", "if (foo) { bar() } else {baz()}", None),
+        (
+            "if (foo) { bar() } else baz()",
+            "if (foo) { bar() } else {baz()}",
+            None,
+        ),
         (
             "if (foo) { bar() } else if (faa) baz()",
             "if (foo) { bar() } else if (faa) {baz()}",
@@ -1466,8 +1683,16 @@ fn test() {
             None,
         ),
         ("for (;foo;) bar()", "for (;foo;) {bar()}", None),
-        ("for (var foo in bar) console.log(foo)", "for (var foo in bar) {console.log(foo)}", None),
-        ("for (var foo of bar) console.log(foo)", "for (var foo of bar) {console.log(foo)}", None),
+        (
+            "for (var foo in bar) console.log(foo)",
+            "for (var foo in bar) {console.log(foo)}",
+            None,
+        ),
+        (
+            "for (var foo of bar) console.log(foo)",
+            "for (var foo of bar) {console.log(foo)}",
+            None,
+        ),
         (
             "for (var foo of bar)
 			 console.log(foo)",
@@ -1475,7 +1700,11 @@ fn test() {
 			 {console.log(foo)}",
             None,
         ),
-        ("for (a;;) console.log(foo)", "for (a;;) {console.log(foo)}", None),
+        (
+            "for (a;;) console.log(foo)",
+            "for (a;;) {console.log(foo)}",
+            None,
+        ),
         (
             "for (a;;)
 			 console.log(foo)",
@@ -1488,8 +1717,16 @@ fn test() {
             "for (var foo of bar) console.log(foo)",
             Some(serde_json::json!(["multi"])),
         ),
-        ("do{foo();} while(bar);", "do foo(); while(bar);", Some(serde_json::json!(["multi"]))),
-        ("for (;foo;) { bar() }", "for (;foo;)  bar() ", Some(serde_json::json!(["multi"]))),
+        (
+            "do{foo();} while(bar);",
+            "do foo(); while(bar);",
+            Some(serde_json::json!(["multi"])),
+        ),
+        (
+            "for (;foo;) { bar() }",
+            "for (;foo;)  bar() ",
+            Some(serde_json::json!(["multi"])),
+        ),
         (
             "for (;foo;)
 			 bar()",
@@ -1497,7 +1734,11 @@ fn test() {
 			 {bar()}",
             None,
         ),
-        ("if (foo) { bar() }", "if (foo)  bar() ", Some(serde_json::json!(["multi"]))),
+        (
+            "if (foo) { bar() }",
+            "if (foo)  bar() ",
+            Some(serde_json::json!(["multi"])),
+        ),
         (
             "if (foo) if (bar) { baz() }",
             "if (foo) if (bar)  baz() ",
@@ -1508,7 +1749,11 @@ fn test() {
             "if (foo) if (bar) baz(); else if (quux)  quuux(); ",
             Some(serde_json::json!(["multi"])),
         ),
-        ("while (foo) { bar() }", "while (foo)  bar() ", Some(serde_json::json!(["multi"]))),
+        (
+            "while (foo) { bar() }",
+            "while (foo)  bar() ",
+            Some(serde_json::json!(["multi"])),
+        ),
         (
             "if (foo) baz(); else { bar() }",
             "if (foo) baz(); else  bar() ",
@@ -1572,7 +1817,11 @@ fn test() {
 			 baz)}",
             Some(serde_json::json!(["multi-line"])),
         ),
-        ("do foo(); while (bar)", "do {foo();} while (bar)", Some(serde_json::json!(["all"]))),
+        (
+            "do foo(); while (bar)",
+            "do {foo();} while (bar)",
+            Some(serde_json::json!(["all"])),
+        ),
         (
             "do
 			 foo();
@@ -1766,7 +2015,11 @@ fn test() {
             "if (true) if (true) {foo();} else { bar(); baz(); }",
             Some(serde_json::json!(["multi", "consistent"])),
         ),
-        ("do{foo();} while (bar)", "do foo(); while (bar)", Some(serde_json::json!(["multi"]))),
+        (
+            "do{foo();} while (bar)",
+            "do foo(); while (bar)",
+            Some(serde_json::json!(["multi"])),
+        ),
         (
             "do
 			{foo();} while (bar)",
@@ -1774,7 +2027,11 @@ fn test() {
 			 foo(); while (bar)",
             Some(serde_json::json!(["multi"])),
         ),
-        ("while (bar) { foo(); }", "while (bar)  foo(); ", Some(serde_json::json!(["multi"]))),
+        (
+            "while (bar) { foo(); }",
+            "while (bar)  foo(); ",
+            Some(serde_json::json!(["multi"])),
+        ),
         (
             "while (bar)
 			{
@@ -1783,13 +2040,21 @@ fn test() {
 			 foo(); ",
             Some(serde_json::json!(["multi"])),
         ),
-        ("for (;;) { foo(); }", "for (;;)  foo(); ", Some(serde_json::json!(["multi"]))),
+        (
+            "for (;;) { foo(); }",
+            "for (;;)  foo(); ",
+            Some(serde_json::json!(["multi"])),
+        ),
         (
             "do{[1, 2, 3].map(bar);} while (bar)",
             "do [1, 2, 3].map(bar); while (bar)",
             Some(serde_json::json!(["multi"])),
         ),
-        ("do {foo();} while (bar)", "do  foo(); while (bar)", Some(serde_json::json!(["multi"]))),
+        (
+            "do {foo();} while (bar)",
+            "do  foo(); while (bar)",
+            Some(serde_json::json!(["multi"])),
+        ),
         (
             "if (foo) { bar; }
 			++baz;",
@@ -1910,7 +2175,11 @@ fn test() {
 			 while (foo)",
             Some(serde_json::json!(["multi-or-nest"])),
         ),
-        ("if (a) { if (b) foo(); }", "if (a)  if (b) foo(); ", Some(serde_json::json!(["multi"]))),
+        (
+            "if (a) { if (b) foo(); }",
+            "if (a)  if (b) foo(); ",
+            Some(serde_json::json!(["multi"])),
+        ),
         (
             "if (a) { if (b) foo(); else bar(); }",
             "if (a)  if (b) foo(); else bar(); ",
@@ -2079,8 +2348,18 @@ fn test() {
             None,
         ),
         ("if(I){if(t)s}þ", "if(I){if(t){s}}þ", None),
-        ("if (foo) {while(bar){}}", "if (foo) while(bar){}", Some(serde_json::json!(["multi"]))),
-        ("if (foo) {if(bar){}}", "if (foo) if(bar){}", Some(serde_json::json!(["multi"]))),
+        (
+            "if (foo) {while(bar){}}",
+            "if (foo) while(bar){}",
+            Some(serde_json::json!(["multi"])),
+        ),
+        (
+            "if (foo) {if(bar){}}",
+            "if (foo) if(bar){}",
+            Some(serde_json::json!(["multi"])),
+        ),
     ];
-    Tester::new(Curly::NAME, Curly::PLUGIN, pass, fail).expect_fix(fix).test_and_snapshot();
+    Tester::new(Curly::NAME, Curly::PLUGIN, pass, fail)
+        .expect_fix(fix)
+        .test_and_snapshot();
 }

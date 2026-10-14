@@ -24,6 +24,8 @@ pub enum Tag {
     InstallCommand,
     InstallCompletionsCommand,
     LinkCommand,
+    LintCommand,
+    FormatCommand,
     PackageManagerCommand,
     RemoveCommand,
     RunCommand,
@@ -70,6 +72,8 @@ impl Tag {
             Tag::InstallCommand => b'i',
             Tag::InstallCompletionsCommand => b'C',
             Tag::LinkCommand => b'l',
+            Tag::LintCommand => b'L',
+            Tag::FormatCommand => b'f',
             Tag::PackageManagerCommand => b'P',
             Tag::RemoveCommand => b'R',
             Tag::RunCommand => b'r',
@@ -157,6 +161,8 @@ impl Tag {
         Self::InstallCommand,
         Self::InstallCompletionsCommand,
         Self::LinkCommand,
+        Self::LintCommand,
+        Self::FormatCommand,
         Self::PackageManagerCommand,
         Self::RemoveCommand,
         Self::RunCommand,
@@ -220,6 +226,8 @@ pub static LOADS_CONFIG: TagTable<bool> = TagTable({
     let mut a = [false; Tag::COUNT];
     a[Tag::BuildCommand as usize] = true;
     a[Tag::TestCommand as usize] = true;
+    a[Tag::LintCommand as usize] = true;
+    a[Tag::FormatCommand as usize] = true;
     a[Tag::InstallCommand as usize] = true;
     a[Tag::AddCommand as usize] = true;
     a[Tag::RemoveCommand as usize] = true;
@@ -244,6 +252,8 @@ pub static ALWAYS_LOADS_CONFIG: TagTable<bool> = TagTable({
     let mut a = [false; Tag::COUNT];
     a[Tag::BuildCommand as usize] = true;
     a[Tag::TestCommand as usize] = true;
+    a[Tag::LintCommand as usize] = true;
+    a[Tag::FormatCommand as usize] = true;
     a[Tag::InstallCommand as usize] = true;
     a[Tag::AddCommand as usize] = true;
     a[Tag::RemoveCommand as usize] = true;
@@ -269,6 +279,8 @@ pub static USES_GLOBAL_OPTIONS: TagTable<bool> = TagTable({
     a[Tag::PruneCommand as usize] = false;
     a[Tag::BunxCommand as usize] = false;
     a[Tag::CheckCommand as usize] = false;
+    a[Tag::LintCommand as usize] = false;
+    a[Tag::FormatCommand as usize] = false;
     a[Tag::CreateCommand as usize] = false;
     a[Tag::InfoCommand as usize] = false;
     a[Tag::InstallCommand as usize] = false;

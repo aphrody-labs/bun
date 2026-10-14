@@ -235,7 +235,9 @@ impl<'a> MappingItem<'a> {
 
     /// The value's content node, when both the value and its content exist.
     pub fn value_content(&self) -> Option<&Node<'a>> {
-        self.value.as_ref().and_then(|value| value.content.as_deref())
+        self.value
+            .as_ref()
+            .and_then(|value| value.content.as_deref())
     }
 }
 

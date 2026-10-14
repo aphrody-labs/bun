@@ -28,7 +28,10 @@ pub(crate) struct PageMeta {
 
 impl PageMeta {
     pub(crate) fn get(&self, key: &str) -> Option<&str> {
-        self.metas.iter().find(|(k, v)| k == key && !v.trim().is_empty()).map(|(_, v)| v.trim())
+        self.metas
+            .iter()
+            .find(|(k, v)| k == key && !v.trim().is_empty())
+            .map(|(_, v)| v.trim())
     }
 
     pub(crate) fn first_of(&self, keys: &[&str]) -> Option<String> {
@@ -39,7 +42,8 @@ impl PageMeta {
 /// Returns `true` when the space-separated token list contains `token`
 /// (ASCII case-insensitive).
 pub(crate) fn has_token(list: &str, token: &str) -> bool {
-    list.split_ascii_whitespace().any(|t| t.eq_ignore_ascii_case(token))
+    list.split_ascii_whitespace()
+        .any(|t| t.eq_ignore_ascii_case(token))
 }
 
 pub(crate) fn collect(arena: &Arena) -> PageMeta {
@@ -59,7 +63,7 @@ pub(crate) fn collect(arena: &Arena) -> PageMeta {
                         .or_else(|| arena.attr(i, "xml:lang", |v| v.trim().to_string()))
                         .filter(|v| !v.is_empty());
                 }
-            },
+            }
             Tag::Title => {
                 if meta.title_tag.is_none() && !is_inside_svg(arena, i) {
                     let t = collapse_ws(&arena.raw_text(i));
@@ -67,12 +71,12 @@ pub(crate) fn collect(arena: &Arena) -> PageMeta {
                         meta.title_tag = Some(t);
                     }
                 }
-            },
+            }
             Tag::Base => {
                 if meta.base_href.is_none() {
                     meta.base_href = arena.attr_string(i, "href");
                 }
-            },
+            }
             Tag::Meta => {
                 arena.tree.with_node(n.source, |node| {
                     let content = node
@@ -83,25 +87,32 @@ pub(crate) fn collect(arena: &Arena) -> PageMeta {
                     for key_attr in ["property", "name", "itemprop", "http-equiv"] {
                         if let Some(k) = node.get_attribute(key_attr) {
                             for key in k.split_ascii_whitespace() {
-                                meta.metas.push((key.to_ascii_lowercase(), content.to_string()));
+                                meta.metas
+                                    .push((key.to_ascii_lowercase(), content.to_string()));
                             }
                         }
                     }
                 });
-            },
+            }
             Tag::Link => {
                 arena.tree.with_node(n.source, |node| {
-                    let Some(rel) = node.get_attribute("rel") else { return };
-                    let Some(href) = node.get_attribute("href") else { return };
+                    let Some(rel) = node.get_attribute("rel") else {
+                        return;
+                    };
+                    let Some(href) = node.get_attribute("href") else {
+                        return;
+                    };
                     if has_token(rel, "canonical") {
                         meta.canonical_links.push(href.to_string());
                     }
                 });
-            },
+            }
             Tag::Script => {
                 let is_ld = arena
                     .attr(i, "type", |t| {
-                        t.trim().to_ascii_lowercase().starts_with("application/ld+json")
+                        t.trim()
+                            .to_ascii_lowercase()
+                            .starts_with("application/ld+json")
                     })
                     .unwrap_or(false);
                 if is_ld && ld_values.len() < 32 {
@@ -110,15 +121,17 @@ pub(crate) fn collect(arena: &Arena) -> PageMeta {
                         ld_values.push(v);
                     }
                 }
-            },
+            }
             Tag::A => {
                 if meta.author_links.len() < 8
-                    && arena.attr(i, "rel", |r| has_token(r, "author")).unwrap_or(false)
+                    && arena
+                        .attr(i, "rel", |r| has_token(r, "author"))
+                        .unwrap_or(false)
                 {
                     meta.author_links.push(i);
                 }
-            },
-            _ => {},
+            }
+            _ => {}
         }
     }
 
@@ -165,7 +178,10 @@ fn parse_json_ld(raw: &str) -> Option<Value> {
         return Some(v);
     }
     // Some sites emit raw control characters (e.g. newlines) inside strings.
-    let cleaned: String = s.chars().map(|c| if c.is_control() { ' ' } else { c }).collect();
+    let cleaned: String = s
+        .chars()
+        .map(|c| if c.is_control() { ' ' } else { c })
+        .collect();
     serde_json::from_str::<Value>(&cleaned).ok()
 }
 
@@ -194,7 +210,11 @@ const ARTICLE_TYPES: &[&str] = &[
 
 fn type_matches(v: &Value) -> bool {
     let check = |s: &str| {
-        let s = s.rsplit(['/', ':']).next().unwrap_or(s).to_ascii_lowercase();
+        let s = s
+            .rsplit(['/', ':'])
+            .next()
+            .unwrap_or(s)
+            .to_ascii_lowercase();
         ARTICLE_TYPES.contains(&s.as_str())
     };
     match v.get("@type") {
@@ -209,11 +229,11 @@ fn string_of(v: &Value) -> Option<String> {
         Value::String(s) => {
             let s = collapse_ws(s);
             (!s.is_empty()).then_some(s)
-        },
+        }
         Value::Array(a) => {
             let names: Vec<String> = a.iter().filter_map(string_of).take(5).collect();
             (!names.is_empty()).then(|| names.join(", "))
-        },
+        }
         Value::Object(o) => o.get("name").and_then(string_of),
         _ => None,
     }
@@ -229,7 +249,7 @@ fn walk_json_ld(v: &Value, out: &mut JsonLd, depth: usize, budget: &mut usize) {
             for x in a {
                 walk_json_ld(x, out, depth + 1, budget);
             }
-        },
+        }
         Value::Object(o) => {
             if type_matches(v) {
                 if out.date_published.is_none() {
@@ -243,7 +263,10 @@ fn walk_json_ld(v: &Value, out: &mut JsonLd, depth: usize, budget: &mut usize) {
                     out.headline = o.get("headline").and_then(string_of);
                 }
                 if out.author.is_none() {
-                    out.author = o.get("author").or_else(|| o.get("creator")).and_then(string_of);
+                    out.author = o
+                        .get("author")
+                        .or_else(|| o.get("creator"))
+                        .and_then(string_of);
                 }
                 if out.publisher.is_none() {
                     out.publisher = o.get("publisher").and_then(string_of);
@@ -266,7 +289,7 @@ fn walk_json_ld(v: &Value, out: &mut JsonLd, depth: usize, budget: &mut usize) {
                     walk_json_ld(x, out, depth + 1, budget);
                 }
             }
-        },
-        _ => {},
+        }
+        _ => {}
     }
 }

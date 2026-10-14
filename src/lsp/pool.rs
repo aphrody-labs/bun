@@ -29,7 +29,10 @@ impl Group {
     }
 
     fn idle_for(&self) -> Duration {
-        self.backends().map(|it| it.idle_for()).min().unwrap_or_default()
+        self.backends()
+            .map(|it| it.idle_for())
+            .min()
+            .unwrap_or_default()
     }
 
     fn stop(&self) {
@@ -56,7 +59,9 @@ pub struct Pool {
 }
 
 fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
-    mutex.lock().unwrap_or_else(std::sync::PoisonError::into_inner)
+    mutex
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
 }
 
 /// `InitializeParams` of a client that reads answers rather than shows them.
@@ -88,17 +93,24 @@ pub fn default_initialize_params() -> Value {
 
 /// Answers what a server asks a client that has no user interface.
 pub fn answer_server_request(backend: &Arc<Backend>, incoming: Incoming) {
-    let Incoming::Request { id, method, params } = incoming else { return };
+    let Incoming::Request { id, method, params } = incoming else {
+        return;
+    };
     let result = match method.as_str() {
         "workspace/configuration" => {
-            let count = params.get("items").and_then(Value::as_array).map_or(0, Vec::len);
+            let count = params
+                .get("items")
+                .and_then(Value::as_array)
+                .map_or(0, Vec::len);
             Value::Array(vec![Value::Null; count])
         }
         "workspace/workspaceFolders" => {
             let uri = path_to_uri(&backend.root);
             json!([{ "uri": uri, "name": backend.root.display().to_string() }])
         }
-        "workspace/applyEdit" => json!({ "applied": false, "failureReason": "bun lsp applies edits itself" }),
+        "workspace/applyEdit" => {
+            json!({ "applied": false, "failureReason": "bun lsp applies edits itself" })
+        }
         "window/showDocument" => json!({ "success": false }),
         "window/workDoneProgress/create"
         | "client/registerCapability"
@@ -109,7 +121,11 @@ pub fn answer_server_request(backend: &Arc<Backend>, incoming: Incoming) {
         | "workspace/inlayHint/refresh"
         | "workspace/codeLens/refresh" => Value::Null,
         _ => {
-            backend.respond(&protocol::error_response(id, code::METHOD_NOT_FOUND, &format!("{method} is not supported")));
+            backend.respond(&protocol::error_response(
+                id,
+                code::METHOD_NOT_FOUND,
+                &format!("{method} is not supported"),
+            ));
             return;
         }
     };
@@ -118,7 +134,12 @@ pub fn answer_server_request(backend: &Arc<Backend>, incoming: Incoming) {
 
 impl Pool {
     pub fn new(options: Options, params: Value, handler: Handler) -> Pool {
-        Pool { options, params, handler, slots: Mutex::new(HashMap::new()) }
+        Pool {
+            options,
+            params,
+            handler,
+            slots: Mutex::new(HashMap::new()),
+        }
     }
 
     pub fn options(&self) -> &Options {
@@ -129,7 +150,11 @@ impl Pool {
     pub fn get(&self, language: Language, root: &Path) -> Result<Group, String> {
         let slot = {
             let mut slots = lock(&self.slots);
-            Arc::clone(slots.entry((language, path_key(root))).or_insert_with(|| Arc::new(Mutex::new(Slot::Empty))))
+            Arc::clone(
+                slots
+                    .entry((language, path_key(root)))
+                    .or_insert_with(|| Arc::new(Mutex::new(Slot::Empty))),
+            )
         };
         let mut slot = lock(&slot);
         match &*slot {
@@ -153,7 +178,9 @@ impl Pool {
 
     /// The running group of `language` for `root`, without starting it.
     pub fn running_group(&self, language: Language, root: &Path) -> Option<Group> {
-        let slot = lock(&self.slots).get(&(language, path_key(root))).cloned()?;
+        let slot = lock(&self.slots)
+            .get(&(language, path_key(root)))
+            .cloned()?;
         let slot = slot.try_lock().ok()?;
         match &*slot {
             Slot::Running(group) if group.primary.is_alive() => Some(group.clone()),
@@ -165,15 +192,40 @@ impl Pool {
         let servers = language::discover(language, root, &self.options);
         let Some(command) = servers.primary else {
             let missing = servers.missing.unwrap_or_default();
-            return Err(format!("no {} language server found: install {missing}", language.name()));
+            return Err(format!(
+                "no {} language server found: install {missing}",
+                language.name()
+            ));
         };
         let timeout = self.options.timeout.max(Duration::from_secs(30));
-        let primary = Backend::start(language, root, command, &self.params, Arc::clone(&self.handler), timeout)?;
+        let primary = Backend::start(
+            language,
+            root,
+            command,
+            &self.params,
+            Arc::clone(&self.handler),
+            timeout,
+        )?;
         // Best effort: the primary answers everything that a secondary would add to.
         let secondary = (servers.secondary.into_iter())
-            .filter_map(|command| Backend::start(language, root, command, &self.params, Arc::clone(&self.handler), timeout).ok())
+            .filter_map(|command| {
+                Backend::start(
+                    language,
+                    root,
+                    command,
+                    &self.params,
+                    Arc::clone(&self.handler),
+                    timeout,
+                )
+                .ok()
+            })
             .collect();
-        Ok(Group { language, root: root.to_path_buf(), primary, secondary })
+        Ok(Group {
+            language,
+            root: root.to_path_buf(),
+            primary,
+            secondary,
+        })
     }
 
     /// Every running group.
@@ -191,7 +243,9 @@ impl Pool {
     /// Stops the least recently used groups until another fits under `Options::max_servers`.
     fn make_room(&self, language: Language, root: &Path) {
         let mut running = self.running();
-        running.retain(|group| !(group.language == language && path_key(&group.root) == path_key(root)));
+        running.retain(|group| {
+            !(group.language == language && path_key(&group.root) == path_key(root))
+        });
         let count: usize = running.iter().map(|group| group.backends().count()).sum();
         if count < self.options.max_servers {
             return;
@@ -223,7 +277,8 @@ impl Pool {
     }
 
     pub fn shutdown(&self) {
-        let slots: Vec<Arc<Mutex<Slot>>> = lock(&self.slots).drain().map(|(_, slot)| slot).collect();
+        let slots: Vec<Arc<Mutex<Slot>>> =
+            lock(&self.slots).drain().map(|(_, slot)| slot).collect();
         let groups: Vec<Group> = slots
             .iter()
             .filter_map(|slot| match &*lock(slot) {

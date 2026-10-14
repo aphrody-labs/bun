@@ -74,7 +74,7 @@ Two modes via `cfg.webkit`:
   the per-profile build dir, not shared vendor/WebKit/WebKitBuild/icu/
   like the old cmake — avoids debug/release mixing.
 
-- `WEBKIT_VERSION` = `"0c06faadf65bf8e8c8ad3a5a8aca83e1e9ed653f"`: WebKit commit — determines prebuilt download URL + what to checkout for local mode. Override via `--webkit-version=<hash>` to test a branch. From https://github.com/oven-sh/WebKit releases.
+- `WEBKIT_VERSION` = `"3d3257150c40a1aabdc5f8b48d5b33d0413674cb"`: WebKit commit — determines prebuilt download URL + what to checkout for local mode. Override via `--webkit-version=<hash>` to test a branch. From https://github.com/oven-sh/WebKit releases.
 - `WEBKIT_UPSTREAM_REPO` = `"oven-sh/WebKit"`: Upstream prebuilt releases; the default source.
 - `WEBKIT_APHRODY_REPO` = `"aphrody-labs/WebKit"`: The Aphrody fork (same lanes, archive names and contents; built by its `aphrody-prebuilts.yml`).
 - `APHRODY_WEBKIT_PREBUILTS`: Archives published as the release `autobuild-<sha>` on aphrody-labs/WebKit, per WebKit sha. The default source for an archive is the Aphrody fork once it is listed here, oven-sh otherwise. Add the names after the `aphrody-prebuilts` run published them (PLAN-ALPINE-BUN.md, chantier P). `BUN_WEBKIT_REPO` overrides this (see `webkitPrebuiltRepo`).
@@ -176,7 +176,7 @@ Usage: bun lsp [--stdio]
        bun lsp query <kind> <file>[:<line>[:<column>]] [<text>] [options]
        bun lsp warm|status|stop|servers|compdb [<dir>]
 
-One language server for TypeScript/JavaScript, Python, Rust and C/C++: it starts tsgo,
+One language server for TypeScript/JavaScript, Python, Rust, C/C++ and C#: it starts tsgo,
 ty/basedpyright/ruff, rust-analyzer and clangd as files of their language need them, and adds
 the code graph of the workspace: calls, and links across Rust, C++, Zig and TypeScript (C ABI
 names, $newRustFunction and kin, .classes.ts members).
@@ -209,7 +209,7 @@ Options:
   --timeout <ms>     How long servers may take (default 30000, BUN_LSP_TIMEOUT_MS)
   --apply            rename, fix: write the edits
   --no-daemon        Answer in this process, without a daemon
-  --lang <a,b>       warm: only these languages (typescript, python, rust, cpp)
+  --lang <a,b>       warm: only these languages (typescript, python, rust, cpp, csharp)
 
 Environment: BUN_LSP_<LANGUAGE>="<command> <args>" picks a server; BUN_LSP_OFFLINE=1 never
 downloads one; BUN_LSP_TS_DIAGNOSTICS=server takes TypeScript diagnostics from the server

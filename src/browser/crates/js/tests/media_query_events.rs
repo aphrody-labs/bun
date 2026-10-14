@@ -24,17 +24,26 @@ async fn media_query_list_delivers_changes_and_honors_listener_lifecycle() {
     )
     .unwrap();
     rt.set_viewport(1000.0, 700.0);
-    assert_eq!(rt.evaluate("[q.matches, events.length]").unwrap(), json!([false, 0]));
+    assert_eq!(
+        rt.evaluate("[q.matches, events.length]").unwrap(),
+        json!([false, 0])
+    );
     rt.run_event_loop_bounded(30).await.unwrap();
-    rt.evaluate("(() => { q.removeListener(legacy); q.onchange = null; })()").unwrap();
+    rt.evaluate("(() => { q.removeListener(legacy); q.onchange = null; })()")
+        .unwrap();
     rt.set_viewport(1280.0, 720.0);
     rt.run_event_loop_bounded(30).await.unwrap();
     assert_eq!(
         rt.evaluate("events").unwrap(),
-        json!([["legacy", false, true], ["once", false], ["property", false]])
+        json!([
+            ["legacy", false, true],
+            ["once", false],
+            ["property", false]
+        ])
     );
     assert_eq!(
-        rt.evaluate("[q instanceof MediaQueryList, q instanceof EventTarget, q.matches]").unwrap(),
+        rt.evaluate("[q instanceof MediaQueryList, q instanceof EventTarget, q.matches]")
+            .unwrap(),
         json!([true, true, true])
     );
     assert_eq!(

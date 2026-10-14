@@ -53,7 +53,10 @@ pub trait SliceIter<'slice, T>: ExactSizeIterator + AsRef<[T]> + Sealed {
     /// Panics if iterator does not contain at least `count` more items.
     #[inline]
     fn advance(&mut self, count: usize) {
-        assert!(self.len() >= count, "Iterator does not have `count` items remaining");
+        assert!(
+            self.len() >= count,
+            "Iterator does not have `count` items remaining"
+        );
         // SAFETY: Just checked iterator contains at least `count` more items
         unsafe { self.advance_unchecked(count) };
     }

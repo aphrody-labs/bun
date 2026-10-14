@@ -47,7 +47,9 @@ pub enum FixedContentKind {
 impl RulesCustomization {
     fn get_severity_for_rule(&self, code: &OxcCode) -> Option<RuleCustomizationSeverity> {
         let lookup = get_full_rule_name(code)?;
-        self.rules.get(lookup.as_ref()).and_then(|customization| customization.severity.clone())
+        self.rules
+            .get(lookup.as_ref())
+            .and_then(|customization| customization.severity.clone())
     }
 }
 
@@ -185,10 +187,16 @@ pub fn message_to_lsp_diagnostic(
     let code_action = if fixed_content.is_empty() {
         None
     } else {
-        Some(LinterCodeAction { range, fixed_content })
+        Some(LinterCodeAction {
+            range,
+            fixed_content,
+        })
     };
 
-    Some(DiagnosticReport { diagnostic, code_action })
+    Some(DiagnosticReport {
+        diagnostic,
+        code_action,
+    })
 }
 
 fn fix_to_fixed_content(fix: Fix, source_text: &str, fix_kind: FixedContentKind) -> FixedContent {
@@ -224,7 +232,10 @@ pub fn generate_inverted_diagnostics(
             continue;
         };
         let related_information = Some(vec![DiagnosticRelatedInformation {
-            location: Location { uri: uri.clone(), range: d.diagnostic.range },
+            location: Location {
+                uri: uri.clone(),
+                range: d.diagnostic.range,
+            },
             message: "original diagnostic".to_string(),
         }]);
         for r in related_info {
@@ -288,7 +299,8 @@ pub fn create_unused_directives_report(
             RuleCommentType::Single(rules) => {
                 for rule in rules {
                     reports.push(build_unused_disable_diagnostic_report(
-                        rule.directive_prefix.unused_disable_rule_message(&rule.rule_name),
+                        rule.directive_prefix
+                            .unused_disable_rule_message(&rule.rule_name),
                         rule.name_span,
                         severity,
                         source_text,

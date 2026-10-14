@@ -57,11 +57,13 @@ impl<'a> PeepholeOptimizations {
             return false;
         }
 
-        ctx.scoping().get_resolved_references(symbol_id).all(|reference| {
-            ctx.scoping()
-                .scope_ancestors(reference.scope_id())
-                .any(|scope_id| scope_id == function_scope_id)
-        })
+        ctx.scoping()
+            .get_resolved_references(symbol_id)
+            .all(|reference| {
+                ctx.scoping()
+                    .scope_ancestors(reference.scope_id())
+                    .any(|scope_id| scope_id == function_scope_id)
+            })
     }
 
     /// Keep an unused declarator when dropping its class initializer would
@@ -80,7 +82,10 @@ impl<'a> PeepholeOptimizations {
         let Expression::ClassExpression(class) = init else {
             return false;
         };
-        matches!(Self::classify_class_removability(class, ctx), ClassRemovability::Keep)
+        matches!(
+            Self::classify_class_removability(class, ctx),
+            ClassRemovability::Keep
+        )
     }
 
     fn is_sync_iterator_expr(expr: &Expression<'a>, ctx: &TraverseCtx<'a>) -> bool {
@@ -126,7 +131,10 @@ impl<'a> PeepholeOptimizations {
             }
             BindingPattern::ArrayPattern(ident) => {
                 ident.is_empty()
-                    && decl.init.as_ref().is_some_and(|expr| Self::is_sync_iterator_expr(expr, ctx))
+                    && decl
+                        .init
+                        .as_ref()
+                        .is_some_and(|expr| Self::is_sync_iterator_expr(expr, ctx))
             }
             BindingPattern::ObjectPattern(ident) => {
                 ident.is_empty()
@@ -158,7 +166,9 @@ impl<'a> PeepholeOptimizations {
         mut stmt: Statement<'a>,
         ctx: &TraverseCtx<'a>,
     ) -> Option<Statement<'a>> {
-        let Statement::VariableDeclaration(var_decl) = &mut stmt else { return Some(stmt) };
+        let Statement::VariableDeclaration(var_decl) = &mut stmt else {
+            return Some(stmt);
+        };
         if !Self::can_remove_unused_declarators(ctx) {
             return Some(stmt);
         }
@@ -178,12 +188,16 @@ impl<'a> PeepholeOptimizations {
     }
 
     pub fn remove_unused_function_declaration(stmt: &mut Statement<'a>, ctx: &mut TraverseCtx<'a>) {
-        let Statement::FunctionDeclaration(f) = stmt else { return };
+        let Statement::FunctionDeclaration(f) = stmt else {
+            return;
+        };
         if ctx.options().unused == CompressOptionsUnused::Keep {
             return;
         }
         let Some(id) = &f.id else { return };
-        let Some(symbol_id) = id.symbol_id.get() else { return };
+        let Some(symbol_id) = id.symbol_id.get() else {
+            return;
+        };
         if Self::is_script_root_scope(ctx) || ctx.current_scope_flags().contains_direct_eval() {
             return;
         }
@@ -195,12 +209,16 @@ impl<'a> PeepholeOptimizations {
     }
 
     pub fn remove_unused_class_declaration(stmt: &mut Statement<'a>, ctx: &mut TraverseCtx<'a>) {
-        let Statement::ClassDeclaration(c) = stmt else { return };
+        let Statement::ClassDeclaration(c) = stmt else {
+            return;
+        };
         if ctx.options().unused == CompressOptionsUnused::Keep {
             return;
         }
         let Some(id) = &c.id else { return };
-        let Some(symbol_id) = id.symbol_id.get() else { return };
+        let Some(symbol_id) = id.symbol_id.get() else {
+            return;
+        };
         if Self::is_script_root_scope(ctx) || ctx.current_scope_flags().contains_direct_eval() {
             return;
         }
@@ -249,12 +267,17 @@ impl<'a> PeepholeOptimizations {
     /// import 'b'
     /// ```
     pub fn remove_unused_import_specifiers(stmt: &mut Statement<'a>, ctx: &mut TraverseCtx<'a>) {
-        let Statement::ImportDeclaration(import_decl) = stmt else { return };
+        let Statement::ImportDeclaration(import_decl) = stmt else {
+            return;
+        };
 
         // `import {} from 'x'` -> `import 'x'`
         if import_decl.phase.is_none()
             && import_decl.import_kind.is_value()
-            && import_decl.specifiers.as_ref().is_some_and(|specifiers| specifiers.is_empty())
+            && import_decl
+                .specifiers
+                .as_ref()
+                .is_some_and(|specifiers| specifiers.is_empty())
         {
             import_decl.specifiers = None;
             ctx.notice_change();
@@ -271,12 +294,22 @@ impl<'a> PeepholeOptimizations {
             return;
         }
 
-        debug_assert!(!ctx.source_type().is_script(), "imports are not allowed in script mode");
+        debug_assert!(
+            !ctx.source_type().is_script(),
+            "imports are not allowed in script mode"
+        );
 
         if let Some(phase) = import_decl.phase {
             let (ImportPhase::Defer | ImportPhase::Source) = phase;
             if ctx.scoping().symbol_is_unused(
-                import_decl.specifiers.as_ref().unwrap().first().unwrap().local().symbol_id(),
+                import_decl
+                    .specifiers
+                    .as_ref()
+                    .unwrap()
+                    .first()
+                    .unwrap()
+                    .local()
+                    .symbol_id(),
             ) {
                 let new_stmt = Statement::new_empty_statement(import_decl.span, ctx);
                 ctx.replace_statement(stmt, new_stmt);

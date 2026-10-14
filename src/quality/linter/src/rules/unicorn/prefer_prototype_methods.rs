@@ -12,8 +12,10 @@ use crate::{
 };
 
 fn known_method(span: Span, obj_name: &str, method_name: &str) -> OxcDiagnostic {
-    OxcDiagnostic::warn(format!("Prefer using `{obj_name}.prototype.{method_name}`."))
-        .with_label(span)
+    OxcDiagnostic::warn(format!(
+        "Prefer using `{obj_name}.prototype.{method_name}`."
+    ))
+    .with_label(span)
 }
 
 fn unknown_method(span: Span, obj_name: &str) -> OxcDiagnostic {
@@ -54,7 +56,8 @@ declare_oxc_lint!(
     pedantic,
     fix,
     version = "0.0.21",
-    short_description = "This rule prefers borrowing methods from the prototype instead of the instance.",
+    short_description =
+        "This rule prefers borrowing methods from the prototype instead of the instance.",
 );
 
 impl Rule for PreferPrototypeMethods {
@@ -76,14 +79,26 @@ impl Rule for PreferPrototypeMethods {
 
         // `Reflect.apply([].foo, …)`
         // `Reflect.apply({}.foo, …)`
-        if is_method_call(call_expr, Some(&["Reflect"]), Some(&["apply"]), Some(1), None) {
+        if is_method_call(
+            call_expr,
+            Some(&["Reflect"]),
+            Some(&["apply"]),
+            Some(1),
+            None,
+        ) {
             if let Some(argument_expr) = call_expr.arguments[0].as_expression() {
                 method_expr = Some(argument_expr.without_parentheses());
             }
         }
         // `[].foo.{apply,bind,call}(…)`
         // `({}).foo.{apply,bind,call}(…)`
-        else if is_method_call(call_expr, None, Some(&["apply", "bind", "call"]), None, None) {
+        else if is_method_call(
+            call_expr,
+            None,
+            Some(&["apply", "bind", "call"]),
+            None,
+            None,
+        ) {
             method_expr = call_expr
                 .callee
                 .get_member_expr()
@@ -216,8 +231,14 @@ fn test() {
             "const foo = [].push.apply(bar, elements);",
             "const foo = Array.prototype.push.apply(bar, elements);",
         ),
-        ("const foo = [].slice.call(bar);", "const foo = Array.prototype.slice.call(bar);"),
-        ("const foo = {}.toString.call(bar);", "const foo = Object.prototype.toString.call(bar);"),
+        (
+            "const foo = [].slice.call(bar);",
+            "const foo = Array.prototype.slice.call(bar);",
+        ),
+        (
+            "const foo = {}.toString.call(bar);",
+            "const foo = Object.prototype.toString.call(bar);",
+        ),
         (
             r#"const foo = {}.hasOwnProperty.call(bar, "property");"#,
             r#"const foo = Object.prototype.hasOwnProperty.call(bar, "property");"#,
@@ -226,9 +247,18 @@ fn test() {
             r#"const foo = {}.propertyIsEnumerable.call(bar, "property");"#,
             r#"const foo = Object.prototype.propertyIsEnumerable.call(bar, "property");"#,
         ),
-        ("[].forEach.call(foo, () => {})", "Array.prototype.forEach.call(foo, () => {})"),
-        ("const push = [].push.bind(foo)", "const push = Array.prototype.push.bind(foo)"),
-        ("const foo = [][method].call(foo)", "const foo = Array.prototype[method].call(foo)"),
+        (
+            "[].forEach.call(foo, () => {})",
+            "Array.prototype.forEach.call(foo, () => {})",
+        ),
+        (
+            "const push = [].push.bind(foo)",
+            "const push = Array.prototype.push.bind(foo)",
+        ),
+        (
+            "const foo = [][method].call(foo)",
+            "const foo = Array.prototype[method].call(foo)",
+        ),
         (
             r#"const method = "realMethodName";const foo = [][method].call(foo)"#,
             r#"const method = "realMethodName";const foo = Array.prototype[method].call(foo)"#,
@@ -237,7 +267,10 @@ fn test() {
             "const array = Reflect.apply([].slice, foo, [])",
             "const array = Reflect.apply(Array.prototype.slice, foo, [])",
         ),
-        ("Reflect.apply([].bar, baz, [])", "Reflect.apply(Array.prototype.bar, baz, [])"),
+        (
+            "Reflect.apply([].bar, baz, [])",
+            "Reflect.apply(Array.prototype.bar, baz, [])",
+        ),
         (
             "const foo = ({}).toString.call(bar);",
             "const foo = (Object.prototype).toString.call(bar);",
@@ -274,12 +307,26 @@ fn test() {
             r#"Reflect.apply({}[Symbol("symbol description")], baz, [])"#,
             r#"Reflect.apply(Object.prototype[Symbol("symbol description")], baz, [])"#,
         ),
-        ("[][Symbol.iterator].call(foo)", "Array.prototype[Symbol.iterator].call(foo)"),
-        ("const foo = [].at.call(bar)", "const foo = Array.prototype.at.call(bar)"),
-        ("const foo = [].findLast.call(bar)", "const foo = Array.prototype.findLast.call(bar)"),
+        (
+            "[][Symbol.iterator].call(foo)",
+            "Array.prototype[Symbol.iterator].call(foo)",
+        ),
+        (
+            "const foo = [].at.call(bar)",
+            "const foo = Array.prototype.at.call(bar)",
+        ),
+        (
+            "const foo = [].findLast.call(bar)",
+            "const foo = Array.prototype.findLast.call(bar)",
+        ),
     ];
 
-    Tester::new(PreferPrototypeMethods::NAME, PreferPrototypeMethods::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        PreferPrototypeMethods::NAME,
+        PreferPrototypeMethods::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

@@ -132,10 +132,16 @@ pub fn merge_consecutive_blocks<'a>(
             let instr = Instruction {
                 id: eval_order,
                 lvalue,
-                value: InstructionValue::LoadLocal { place: operand, span: GENERATED_SOURCE },
+                value: InstructionValue::LoadLocal {
+                    place: operand,
+                    span: GENERATED_SOURCE,
+                },
                 span: GENERATED_SOURCE,
                 effects: Some(ArenaVec::from_array_in(
-                    [AliasingEffect::Alias { from: operand, into: lvalue }],
+                    [AliasingEffect::Alias {
+                        from: operand,
+                        into: lvalue,
+                    }],
                     &alloc,
                 )),
             };
@@ -163,7 +169,11 @@ pub fn merge_consecutive_blocks<'a>(
                 .iter()
                 .filter_map(|(pred_id, operand)| {
                     let mapped = merged.get(*pred_id);
-                    if mapped != *pred_id { Some((*pred_id, mapped, *operand)) } else { None }
+                    if mapped != *pred_id {
+                        Some((*pred_id, mapped, *operand))
+                    } else {
+                        None
+                    }
                 })
                 .collect();
             for (old_id, new_id, operand) in updates {
@@ -190,7 +200,9 @@ struct MergedBlocks {
 
 impl MergedBlocks {
     fn new() -> Self {
-        Self { map: FxHashMap::default() }
+        Self {
+            map: FxHashMap::default(),
+        }
     }
 
     /// Record that `block` was merged into `into`.

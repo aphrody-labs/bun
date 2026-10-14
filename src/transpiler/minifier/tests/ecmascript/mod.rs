@@ -19,6 +19,10 @@ struct GlobalReferenceInformation {
 
 impl<'a> GlobalContext<'a> for GlobalReferenceInformation {
     fn is_global_reference(&self, ident: &IdentifierReference<'a>) -> bool {
-        if ident.name == "undefined" { !self.is_undefined_shadowed } else { false }
+        if ident.name == "undefined" {
+            !self.is_undefined_shadowed
+        } else {
+            false
+        }
     }
 }

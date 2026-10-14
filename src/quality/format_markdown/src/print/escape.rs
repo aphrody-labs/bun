@@ -28,8 +28,11 @@ pub fn print_delimited_word<'a>(
     if !word.contains(['*', '_']) {
         return Cow::Borrowed(word);
     }
-    let text: Cow<'a, str> =
-        if escape_leading { Cow::Owned(format!("\\{word}")) } else { Cow::Borrowed(word) };
+    let text: Cow<'a, str> = if escape_leading {
+        Cow::Owned(format!("\\{word}"))
+    } else {
+        Cow::Borrowed(word)
+    };
     escape_delimiter_runs(text, autolink_stretch, prev, next)
 }
 

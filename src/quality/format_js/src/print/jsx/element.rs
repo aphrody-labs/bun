@@ -60,7 +60,9 @@ impl<'a> AnyJsxTagWithChildren<'a, '_> {
                 // conditional expression's end (which includes the closing paren).
                 f.context().comments().comments_before(conditional.span.end)
             } else {
-                f.context().comments().end_of_line_comments_after(self.span().end)
+                f.context()
+                    .comments()
+                    .end_of_line_comments_after(self.span().end)
             }
         } else if matches!(
             self.parent(),
@@ -71,7 +73,9 @@ impl<'a> AnyJsxTagWithChildren<'a, '_> {
             // The default `get_trailing_comments` logic uses the next sibling's `span.start` as boundary,
             // which can incorrectly pull in the next interpolation's leading comment
             // when consecutive `${...}` chunks are present.
-            f.context().comments().comments_before_character(self.span().end, b'}')
+            f.context()
+                .comments()
+                .comments_before_character(self.span().end, b'}')
         } else {
             // Fall back to default trailing comments behavior
             return match self {
@@ -87,7 +91,10 @@ impl<'a> AnyJsxTagWithChildren<'a, '_> {
     pub fn get_wrap_state(&self) -> WrapState {
         let parent = self.parent();
         // Call site has ensures that only non-nested JSX elements are passed.
-        debug_assert!(!matches!(parent, AstNodes::JSXElement(_) | AstNodes::JSXFragment(_)));
+        debug_assert!(!matches!(
+            parent,
+            AstNodes::JSXElement(_) | AstNodes::JSXFragment(_)
+        ));
 
         match parent {
             AstNodes::ArrayExpression(_)
@@ -165,12 +172,18 @@ impl<'a> Format<'a, JsFormatContext<'a>> for AnyJsxTagWithChildren<'a, '_> {
 
                     match format_children {
                         FormatChildrenResult::SingleChild(child) => {
-                            write!(f, group(&format_args!(format_opening, child, format_closing)));
+                            write!(
+                                f,
+                                group(&format_args!(format_opening, child, format_closing))
+                            );
                         }
                         FormatChildrenResult::ForceMultiline(multiline) => {
                             write!(f, [format_opening, multiline, format_closing]);
                         }
-                        FormatChildrenResult::BestFitting { flat_children, expanded_children } => {
+                        FormatChildrenResult::BestFitting {
+                            flat_children,
+                            expanded_children,
+                        } => {
                             let format_closing = format_closing.memoized();
                             write!(
                                 f,
@@ -186,7 +199,10 @@ impl<'a> Format<'a, JsFormatContext<'a>> for AnyJsxTagWithChildren<'a, '_> {
         });
 
         // It's a nested JSX element or fragment, no need for parenthesis or wrapping.
-        if matches!(self.parent(), AstNodes::JSXElement(_) | AstNodes::JSXFragment(_)) {
+        if matches!(
+            self.parent(),
+            AstNodes::JSXElement(_) | AstNodes::JSXFragment(_)
+        ) {
             return write!(f, [format_tag]);
         }
 

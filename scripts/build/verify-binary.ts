@@ -648,7 +648,7 @@ function* chunkedRun(
   inputs: string[],
   marker?: string,
 ): Generator<{ stdout: string; stderr: string }> {
-  for (let start = 0; start < inputs.length; ) {
+  for (let start = 0; start < inputs.length;) {
     let end = start;
     let length = 0;
     do {

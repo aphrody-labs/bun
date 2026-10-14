@@ -302,7 +302,10 @@ impl TokenKind {
     #[inline]
     #[must_use]
     pub const unsafe fn from_u8_unchecked(byte: u8) -> Self {
-        debug_assert!(Self::from_u8(byte).is_some(), "not a declared TokenKind discriminant");
+        debug_assert!(
+            Self::from_u8(byte).is_some(),
+            "not a declared TokenKind discriminant"
+        );
         // SAFETY: the caller guarantees `byte` is a declared discriminant, and
         // `TokenKind` is `#[repr(u8)]`, so it shares `u8`'s layout.
         unsafe { mem::transmute::<u8, Self>(byte) }
@@ -460,7 +463,11 @@ pub const fn newline(s: u32) -> bool {
 #[inline]
 pub const fn pack_start(offset: u32, newline_before: bool) -> u32 {
     debug_assert!(offset <= OFFSET_MASK);
-    if newline_before { offset | NEWLINE_BEFORE_MASK } else { offset }
+    if newline_before {
+        offset | NEWLINE_BEFORE_MASK
+    } else {
+        offset
+    }
 }
 
 #[repr(C)]
@@ -470,7 +477,10 @@ pub struct StringSpan {
     pub end_and_flags: u32,
 }
 
-#[expect(clippy::inline_always, reason = "cook-path hot: spans are packed per string/template")]
+#[expect(
+    clippy::inline_always,
+    reason = "cook-path hot: spans are packed per string/template"
+)]
 impl StringSpan {
     pub const LONE_SURROGATES_MASK: u32 = 0x8000_0000;
     pub const END_MASK: u32 = 0x7FFF_FFFF;
@@ -485,14 +495,24 @@ impl StringSpan {
     #[must_use]
     pub const fn new(start: u32, end: u32, lone_surrogates: bool) -> Self {
         debug_assert!(end <= Self::END_MASK);
-        let end_and_flags = if lone_surrogates { end | Self::LONE_SURROGATES_MASK } else { end };
-        Self { start, end_and_flags }
+        let end_and_flags = if lone_surrogates {
+            end | Self::LONE_SURROGATES_MASK
+        } else {
+            end
+        };
+        Self {
+            start,
+            end_and_flags,
+        }
     }
 
     #[inline(always)]
     #[must_use]
     pub const fn with_cooked_invalid(self) -> Self {
-        Self { start: self.start | Self::COOKED_INVALID_MASK, end_and_flags: self.end_and_flags }
+        Self {
+            start: self.start | Self::COOKED_INVALID_MASK,
+            end_and_flags: self.end_and_flags,
+        }
     }
 
     #[inline(always)]
@@ -529,7 +549,12 @@ mod tests {
     #[test]
     fn from_u8_round_trips_every_variant() {
         for &kind in TokenKind::VARIANTS {
-            assert_eq!(TokenKind::from_u8(kind as u8), Some(kind), "{}", kind.name());
+            assert_eq!(
+                TokenKind::from_u8(kind as u8),
+                Some(kind),
+                "{}",
+                kind.name()
+            );
         }
     }
 
@@ -542,7 +567,10 @@ mod tests {
                     assert_eq!(kind as u8, byte);
                     assert!(declared.contains(&byte));
                 }
-                None => assert!(!declared.contains(&byte), "byte {byte} is declared but unmapped"),
+                None => assert!(
+                    !declared.contains(&byte),
+                    "byte {byte} is declared but unmapped"
+                ),
             }
         }
     }
@@ -604,7 +632,11 @@ mod tests {
             let n = bytes.len();
             bytes.extend_from_slice(&[0u8; PAD]);
             for (jsx, ts) in [(false, false), (true, false), (false, true), (true, true)] {
-                let opts = LexOptions { jsx, ts, ..Default::default() };
+                let opts = LexOptions {
+                    jsx,
+                    ts,
+                    ..Default::default()
+                };
                 let mut lexer = Lexer::new();
                 lexer.lex(&bytes, n, opts);
                 for kind in lexer.kinds() {

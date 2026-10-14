@@ -24,12 +24,18 @@ impl Display for Disjunction<'_> {
 impl Display for Alternative<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         fn as_character<'a>(term: &'a Term) -> Option<&'a Character> {
-            if let Term::Character(ch) = term { Some(ch) } else { None }
+            if let Term::Character(ch) = term {
+                Some(ch)
+            } else {
+                None
+            }
         }
 
         write_join_with(f, "", &self.body, |iter| {
             let next = iter.next()?;
-            let Some(next) = as_character(next) else { return Some(Cow::Owned(next.to_string())) };
+            let Some(next) = as_character(next) else {
+                return Some(Cow::Owned(next.to_string()));
+            };
 
             let peek = iter.peek().and_then(|it| as_character(it));
             let (result, eat) = character_to_string(next, peek);
@@ -173,7 +179,11 @@ impl Display for UnicodePropertyEscape<'_> {
 impl Display for CharacterClass<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         fn as_character<'a>(content: &'a CharacterClassContents) -> Option<&'a Character> {
-            if let CharacterClassContents::Character(ch) = content { Some(ch) } else { None }
+            if let CharacterClassContents::Character(ch) = content {
+                Some(ch)
+            } else {
+                None
+            }
         }
 
         f.write_str("[")?;
@@ -299,10 +309,16 @@ impl Display for NamedReference<'_> {
 fn character_to_string(
     this: &Character,
     peek: Option<&Character>,
-) -> (/* result */ Cow<'static, str>, /* true of peek should be consumed */ bool) {
+) -> (
+    /* result */ Cow<'static, str>,
+    /* true of peek should be consumed */ bool,
+) {
     let cp = this.value;
 
-    if matches!(this.kind, CharacterKind::Symbol | CharacterKind::UnicodeEscape) {
+    if matches!(
+        this.kind,
+        CharacterKind::Symbol | CharacterKind::UnicodeEscape
+    ) {
         // Trail only
         if is_trail_surrogate(cp) {
             return (Cow::Owned(format!(r"\u{cp:X}")), false);
@@ -473,7 +489,10 @@ mod test {
         (r"/\d/ug", Some(r"/\d/ug")),
         (r"/\cY/", None),
         // we capitalize hex unicodes.
-        (r"/\n\cM\0\x41\u{1f600}\./u", Some(r"/\n\cM\0\x41\u{1F600}\./u")),
+        (
+            r"/\n\cM\0\x41\u{1f600}\./u",
+            Some(r"/\n\cM\0\x41\u{1F600}\./u"),
+        ),
         (r"/\u02c1/u", Some(r"/\u02C1/u")),
         (r"/c]/", None),
         // Octal tests from: <https://github.com/tc39/test262/blob/d62fa93c8f9ce5e687c0bbaa5d2b59670ab2ff60/test/annexB/language/literals/regexp/legacy-octal-escape.js>

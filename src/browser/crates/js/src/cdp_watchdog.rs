@@ -15,8 +15,8 @@
 use std::{
     collections::HashMap,
     sync::{
-        Arc, Condvar, Mutex, OnceLock,
         atomic::{AtomicBool, Ordering},
+        Arc, Condvar, Mutex, OnceLock,
     },
     time::{Duration, Instant},
 };
@@ -39,7 +39,10 @@ static SHARED: OnceLock<Arc<Shared>> = OnceLock::new();
 
 fn shared() -> &'static Arc<Shared> {
     SHARED.get_or_init(|| {
-        let s = Arc::new(Shared { state: Mutex::new((HashMap::new(), 0)), cv: Condvar::new() });
+        let s = Arc::new(Shared {
+            state: Mutex::new((HashMap::new(), 0)),
+            cv: Condvar::new(),
+        });
         let worker = s.clone();
         std::thread::Builder::new()
             .name("cdp-watchdog".into())
@@ -56,8 +59,12 @@ fn watchdog_loop(s: Arc<Shared>) {
         // Terminate every slot that has overrun its deadline. The dispatcher's
         // `disarm` will observe `fired` and clear the V8 termination flag before
         // that isolate runs its next command.
-        let expired: Vec<u64> =
-            guard.0.iter().filter(|(_, slot)| slot.deadline <= now).map(|(gen, _)| *gen).collect();
+        let expired: Vec<u64> = guard
+            .0
+            .iter()
+            .filter(|(_, slot)| slot.deadline <= now)
+            .map(|(gen, _)| *gen)
+            .collect();
         for gen in expired {
             if let Some(slot) = guard.0.remove(&gen) {
                 slot.fired.store(true, Ordering::SeqCst);
@@ -67,7 +74,11 @@ fn watchdog_loop(s: Arc<Shared>) {
         // Sleep until the nearest remaining deadline, or until arm/disarm wakes
         // us. The worker holds the lock until it waits, so a notify cannot be
         // lost into the void.
-        let next = guard.0.values().map(|slot| slot.deadline.saturating_duration_since(now)).min();
+        let next = guard
+            .0
+            .values()
+            .map(|slot| slot.deadline.saturating_duration_since(now))
+            .min();
         guard = match next {
             None => s.cv.wait(guard).unwrap(),
             Some(dur) => s.cv.wait_timeout(guard, dur).unwrap().0,
@@ -90,7 +101,14 @@ pub fn arm(handle: IsolateHandle, budget: Duration) -> Armed {
     guard.1 += 1;
     let gen = guard.1;
     let fired = Arc::new(AtomicBool::new(false));
-    guard.0.insert(gen, Slot { deadline: Instant::now() + budget, handle, fired: fired.clone() });
+    guard.0.insert(
+        gen,
+        Slot {
+            deadline: Instant::now() + budget,
+            handle,
+            fired: fired.clone(),
+        },
+    );
     s.cv.notify_one();
     Armed { gen, fired }
 }

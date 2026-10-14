@@ -93,7 +93,11 @@ impl<'data, I: Idx, T: Send> ParallelDrainRange<usize> for &'data mut IndexVec<I
     type Iter = Drain<'data, T>;
 
     fn par_drain<R: RangeBounds<usize>>(self, range: R) -> Self::Iter {
-        Drain { orig_len: self.len(), range: simplify_range(range, self.len()), vec: &mut self.raw }
+        Drain {
+            orig_len: self.len(),
+            range: simplify_range(range, self.len()),
+            vec: &mut self.raw,
+        }
     }
 }
 
@@ -222,7 +226,9 @@ impl<'data, T: 'data + Send> Producer for DrainProducer<'data, T> {
     fn into_iter(mut self) -> Self::IntoIter {
         // replace the slice so we don't drop it twice
         let slice = mem::take(&mut self.slice);
-        SliceDrain { iter: slice.iter_mut() }
+        SliceDrain {
+            iter: slice.iter_mut(),
+        }
     }
 
     fn split_at(mut self, index: usize) -> (Self, Self) {

@@ -11,7 +11,10 @@ pub(super) struct Punct1 {
 impl Punct1 {
     const fn new(c: char, kind: TokenKind) -> Self {
         assert!(c.is_ascii());
-        Self { byte: c as u8, kind }
+        Self {
+            byte: c as u8,
+            kind,
+        }
     }
 }
 

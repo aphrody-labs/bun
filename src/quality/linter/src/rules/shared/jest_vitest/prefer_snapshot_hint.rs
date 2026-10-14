@@ -268,8 +268,13 @@ impl SnapshotHintMode {
                 continue;
             };
 
-            if !first_arg.as_expression().is_some_and(Expression::is_string_literal) {
-                ctx.diagnostic(snapshot_hint_must_be_string_diagnostic(expect_call_expr.span));
+            if !first_arg
+                .as_expression()
+                .is_some_and(Expression::is_string_literal)
+            {
+                ctx.diagnostic(snapshot_hint_must_be_string_diagnostic(
+                    expect_call_expr.span,
+                ));
             }
         }
     }
@@ -280,7 +285,10 @@ fn is_test_node(ancestor_call_expr: &CallExpression<'_>) -> bool {
         return false;
     };
 
-    matches!(JestFnKind::from(id), JestFnKind::General(JestGeneralFnKind::Test))
+    matches!(
+        JestFnKind::from(id),
+        JestFnKind::General(JestGeneralFnKind::Test)
+    )
 }
 
 fn get_scope_owner(node_id: NodeId, ctx: &LintContext<'_>) -> NodeId {

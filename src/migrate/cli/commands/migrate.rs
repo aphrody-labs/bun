@@ -28,8 +28,8 @@
 /// Sinon `BackupGuard` restaure les fichiers si `bun install` échoue.
 use std::path::{Path, PathBuf};
 
-use anyhow::{Context, Result};
 use crate::{pnpm, types::FileFix};
+use anyhow::{Context, Result};
 use serde::Serialize;
 
 use crate::cli::subprocess::bun::{self, BackupGuard};

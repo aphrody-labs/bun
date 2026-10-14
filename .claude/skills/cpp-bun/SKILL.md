@@ -161,7 +161,7 @@ Usage: bun lsp [--stdio]
        bun lsp query <kind> <file>[:<line>[:<column>]] [<text>] [options]
        bun lsp warm|status|stop|servers|compdb [<dir>]
 
-One language server for TypeScript/JavaScript, Python, Rust and C/C++: it starts tsgo,
+One language server for TypeScript/JavaScript, Python, Rust, C/C++ and C#: it starts tsgo,
 ty/basedpyright/ruff, rust-analyzer and clangd as files of their language need them, and adds
 the code graph of the workspace: calls, and links across Rust, C++, Zig and TypeScript (C ABI
 names, $newRustFunction and kin, .classes.ts members).
@@ -194,7 +194,7 @@ Options:
   --timeout <ms>     How long servers may take (default 30000, BUN_LSP_TIMEOUT_MS)
   --apply            rename, fix: write the edits
   --no-daemon        Answer in this process, without a daemon
-  --lang <a,b>       warm: only these languages (typescript, python, rust, cpp)
+  --lang <a,b>       warm: only these languages (typescript, python, rust, cpp, csharp)
 
 Environment: BUN_LSP_<LANGUAGE>="<command> <args>" picks a server; BUN_LSP_OFFLINE=1 never
 downloads one; BUN_LSP_TS_DIAGNOSTICS=server takes TypeScript diagnostics from the server

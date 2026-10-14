@@ -101,8 +101,11 @@ fn parse_impl<'a>(
 
 fn parse_with_return(filename: &str, source_text: &str, options: &ParserOptions) -> ParseResult {
     let allocator = Allocator::default();
-    let source_type =
-        get_source_type(filename, options.lang.as_deref(), options.source_type.as_deref());
+    let source_type = get_source_type(
+        filename,
+        options.lang.as_deref(),
+        options.source_type.as_deref(),
+    );
     let ast_type = get_ast_type(source_type, options);
     let ranges = options.range.unwrap_or(false);
     let ret = parse_impl(&allocator, source_type, source_text, options);
@@ -144,7 +147,12 @@ fn parse_with_return(filename: &str, source_text: &str, options: &ParserOptions)
 
     let module = EcmaScriptModule::from(&module_record);
 
-    ParseResult { program_and_fixes, module, comments, errors }
+    ParseResult {
+        program_and_fixes,
+        module,
+        comments,
+        errors,
+    }
 }
 
 /// Parse JS/TS source synchronously on current thread.
@@ -179,7 +187,11 @@ impl Task for ResolveTask {
 
     fn compute(&mut self) -> napi::Result<Self::Output> {
         let source_text = mem::take(&mut self.source_text);
-        Ok(parse_with_return(&self.filename, &source_text, &self.options))
+        Ok(parse_with_return(
+            &self.filename,
+            &source_text,
+            &self.options,
+        ))
     }
 
     fn resolve(&mut self, _: napi::Env, result: Self::Output) -> napi::Result<Self::JsValue> {
@@ -205,5 +217,9 @@ pub fn parse(
     options: Option<ParserOptions>,
 ) -> AsyncTask<ResolveTask> {
     let options = options.unwrap_or_default();
-    AsyncTask::new(ResolveTask { filename, source_text, options })
+    AsyncTask::new(ResolveTask {
+        filename,
+        source_text,
+        options,
+    })
 }

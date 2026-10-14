@@ -43,12 +43,24 @@ impl File {
             ("src/quality/format_js/", "oxc_formatter", false),
             ("src/quality/format_core/", "oxc_formatter_core", false),
             ("src/quality/format_css/", "oxc_formatter_css", false),
-            ("src/quality/format_graphql/", "oxc_formatter_graphql", false),
+            (
+                "src/quality/format_graphql/",
+                "oxc_formatter_graphql",
+                false,
+            ),
             ("src/quality/format_json/", "oxc_formatter_json", false),
-            ("src/quality/format_markdown/", "oxc_formatter_markdown", false),
+            (
+                "src/quality/format_markdown/",
+                "oxc_formatter_markdown",
+                false,
+            ),
             ("src/quality/format_tests/", "oxc_formatter_tests", false),
             ("src/quality/format_yaml/", "oxc_formatter_yaml", false),
-            ("src/transpiler/declarations/", "oxc_isolated_declarations", false),
+            (
+                "src/transpiler/declarations/",
+                "oxc_isolated_declarations",
+                false,
+            ),
             ("src/js_parser/jsdoc/", "oxc_jsdoc", false),
             ("src/lsp/quality/", "oxc_language_server", false),
             ("src/js_parser/lexer/", "oxc_lexer", false),
@@ -76,22 +88,52 @@ impl File {
             ("src/quality/adapters/relay/", "napi/transform-relay", true),
             ("src/codegen/ecma_ast_tools/", "oxc_ast_tools", false),
             ("src/codegen/ecma_benchmark/", "oxc_benchmark", false),
-            ("src/codegen/ecma_codegen_conformance/", "oxc_codegen_conformance", false),
+            (
+                "src/codegen/ecma_codegen_conformance/",
+                "oxc_codegen_conformance",
+                false,
+            ),
             ("src/codegen/ecma_common/", "oxc_tasks_common", false),
             ("src/codegen/ecma_compat_data/", "oxc_compat_data", false),
             ("src/codegen/ecma_coverage/", "oxc_coverage", false),
-            ("src/codegen/ecma_linter_codegen/", "oxc_linter_codegen", false),
+            (
+                "src/codegen/ecma_linter_codegen/",
+                "oxc_linter_codegen",
+                false,
+            ),
             ("src/codegen/ecma_minsize/", "oxc_minsize", false),
             ("src/codegen/ecma_rulegen/", "rulegen", false),
-            ("src/codegen/ecma_track_linter_timings/", "oxc_track_linter_timings", false),
-            ("src/codegen/ecma_track_memory_allocations/", "oxc_track_memory_allocations", false),
-            ("src/codegen/ecma_transform_checker/", "oxc_tasks_transform_checker", false),
-            ("src/codegen/ecma_transform_conformance/", "oxc_transform_conformance", false),
+            (
+                "src/codegen/ecma_track_linter_timings/",
+                "oxc_track_linter_timings",
+                false,
+            ),
+            (
+                "src/codegen/ecma_track_memory_allocations/",
+                "oxc_track_memory_allocations",
+                false,
+            ),
+            (
+                "src/codegen/ecma_transform_checker/",
+                "oxc_tasks_transform_checker",
+                false,
+            ),
+            (
+                "src/codegen/ecma_transform_conformance/",
+                "oxc_transform_conformance",
+                false,
+            ),
             ("src/codegen/ecma_website_common/", "website_common", false),
-            ("src/codegen/ecma_website_formatter/", "website_formatter", false),
+            (
+                "src/codegen/ecma_website_formatter/",
+                "website_formatter",
+                false,
+            ),
             ("src/codegen/ecma_website_linter/", "website_linter", false),
-        ].into_iter().find(|(owner, _, _)| path.starts_with(*owner))
-            .unwrap_or_else(|| panic!("Unknown Bun source owner: {path}"));
+        ]
+        .into_iter()
+        .find(|(owner, _, _)| path.starts_with(*owner))
+        .unwrap_or_else(|| panic!("Unknown Bun source owner: {path}"));
         let mut parts = path.strip_prefix(owner).unwrap().split('/');
         let krate = krate.to_owned();
         assert_eq!(parts.next(), Some("src"));
@@ -101,7 +143,12 @@ impl File {
             import_path.clear();
         }
 
-        Self { krate, owner_path: owner.trim_end_matches('/'), is_napi, import_path }
+        Self {
+            krate,
+            owner_path: owner.trim_end_matches('/'),
+            is_napi,
+            import_path,
+        }
     }
 
     /// Get name of crate this [`File`] is in.
@@ -132,19 +179,43 @@ mod test {
             .unwrap();
         assert!(root.join("Cargo.toml").is_file());
         for (source, owner, legacy) in [
-            ("src/ast/ecma/src/ast/js.rs", "src/ast/ecma", "crates/oxc_ast"),
+            (
+                "src/ast/ecma/src/ast/js.rs",
+                "src/ast/ecma",
+                "crates/oxc_ast",
+            ),
             ("src/ast/span/src/lib.rs", "src/ast/span", "crates/oxc_span"),
-            ("src/ast/syntax/src/lib.rs", "src/ast/syntax", "crates/oxc_syntax"),
-            ("src/quality/adapters/parser/src/lib.rs", "src/quality/adapters/parser", "napi/parser"),
-            ("src/js_parser/regexp/src/lib.rs", "src/js_parser/regexp", "crates/oxc_regular_expression"),
+            (
+                "src/ast/syntax/src/lib.rs",
+                "src/ast/syntax",
+                "crates/oxc_syntax",
+            ),
+            (
+                "src/quality/adapters/parser/src/lib.rs",
+                "src/quality/adapters/parser",
+                "napi/parser",
+            ),
+            (
+                "src/js_parser/regexp/src/lib.rs",
+                "src/js_parser/regexp",
+                "crates/oxc_regular_expression",
+            ),
         ] {
             let file = File::new(source);
             assert_eq!(file.krate_path(), owner);
             assert!(root.join(source).is_file(), "missing input {source}");
-            assert!(std::fs::read_dir(root.join(owner).join("src")).unwrap().next().is_some());
+            assert!(
+                std::fs::read_dir(root.join(owner).join("src"))
+                    .unwrap()
+                    .next()
+                    .is_some()
+            );
             assert!(!root.join(legacy).exists(), "legacy output owner {legacy}");
             for name in ["derive_clone_in.rs", "assert_layouts.rs"] {
-                assert_eq!(crate::output::output_path(file.krate_path(), name), format!("{owner}/src/generated/{name}"));
+                assert_eq!(
+                    crate::output::output_path(file.krate_path(), name),
+                    format!("{owner}/src/generated/{name}")
+                );
             }
         }
     }
@@ -153,10 +224,25 @@ mod test {
     fn test_file_new() {
         let cases = [
             ("src/ast/ecma/src/ast/js.rs", "oxc_ast", "::ast::js", false),
-            ("src/ast/span/src/source_type/mod.rs", "oxc_span", "::source_type", false),
+            (
+                "src/ast/span/src/source_type/mod.rs",
+                "oxc_span",
+                "::source_type",
+                false,
+            ),
             ("src/ast/syntax/src/lib.rs", "oxc_syntax", "", false),
-            ("src/quality/adapters/parser/src/blah.rs", "napi/parser", "::blah", true),
-            ("src/quality/adapters/parser/src/lib.rs", "napi/parser", "", true),
+            (
+                "src/quality/adapters/parser/src/blah.rs",
+                "napi/parser",
+                "::blah",
+                true,
+            ),
+            (
+                "src/quality/adapters/parser/src/lib.rs",
+                "napi/parser",
+                "",
+                true,
+            ),
         ];
 
         for (file_path, krate, import_path, is_napi) in cases {

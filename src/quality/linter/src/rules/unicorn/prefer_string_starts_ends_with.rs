@@ -56,7 +56,8 @@ declare_oxc_lint!(
     correctness,
     fix,
     version = "0.0.18",
-    short_description = "Prefer `String#startsWith()` and `String#endsWith()` over `RegExp#test()`.",
+    short_description =
+        "Prefer `String#startsWith()` and `String#endsWith()` over `RegExp#test()`.",
 );
 
 impl Rule for PreferStringStartsEndsWith {
@@ -109,16 +110,26 @@ fn do_fix<'a>(
     err_kind: ErrorKind,
     call_expr: &CallExpression<'a>,
 ) -> RuleFix {
-    let Some(target_span) = can_replace(call_expr) else { return fixer.noop() };
-    let (argument, method) = match err_kind {
-        ErrorKind::StartsWith(arg) => {
-            (arg.into_iter().map(std::char::from_u32).collect::<Option<String>>(), "startsWith")
-        }
-        ErrorKind::EndsWith(arg) => {
-            (arg.into_iter().map(std::char::from_u32).collect::<Option<String>>(), "endsWith")
-        }
+    let Some(target_span) = can_replace(call_expr) else {
+        return fixer.noop();
     };
-    let Some(argument) = argument else { return fixer.noop() };
+    let (argument, method) = match err_kind {
+        ErrorKind::StartsWith(arg) => (
+            arg.into_iter()
+                .map(std::char::from_u32)
+                .collect::<Option<String>>(),
+            "startsWith",
+        ),
+        ErrorKind::EndsWith(arg) => (
+            arg.into_iter()
+                .map(std::char::from_u32)
+                .collect::<Option<String>>(),
+            "endsWith",
+        ),
+    };
+    let Some(argument) = argument else {
+        return fixer.noop();
+    };
     let mut content = fixer.codegen();
     content.print_str(&format!(r"{}.{}(", fixer.source_range(target_span), method));
     content.print_string(&argument);
@@ -152,14 +163,21 @@ enum ErrorKind {
 fn check_regex(regexp_lit: &RegExpLiteral) -> Option<ErrorKind> {
     let pattern_text = regexp_lit.regex.pattern.text.as_str();
     if regexp_lit.regex.flags.intersects(RegExpFlags::M)
-        || (regexp_lit.regex.flags.intersects(RegExpFlags::I | RegExpFlags::M)
+        || (regexp_lit
+            .regex
+            .flags
+            .intersects(RegExpFlags::I | RegExpFlags::M)
             && is_useless_case_sensitive_regex_flag(pattern_text))
     {
         return None;
     }
 
-    let alternatives =
-        regexp_lit.regex.pattern.pattern.as_ref().map(|pattern| &pattern.body.body)?;
+    let alternatives = regexp_lit
+        .regex
+        .pattern
+        .pattern
+        .as_ref()
+        .map(|pattern| &pattern.body.body)?;
     // Must not be something with multiple alternatives like `/^a|b/`
     if alternatives.len() > 1 {
         return None;
@@ -172,7 +190,13 @@ fn check_regex(regexp_lit: &RegExpLiteral) -> Option<ErrorKind> {
         return pattern_terms
             .iter()
             .skip(1)
-            .map(|t| if let Term::Character(c) = t { Some(c.value) } else { None })
+            .map(|t| {
+                if let Term::Character(c) = t {
+                    Some(c.value)
+                } else {
+                    None
+                }
+            })
             .collect::<Option<Vec<_>>>()
             .map(ErrorKind::StartsWith);
     }
@@ -183,7 +207,13 @@ fn check_regex(regexp_lit: &RegExpLiteral) -> Option<ErrorKind> {
         return pattern_terms
             .iter()
             .take(pattern_terms.len() - 1)
-            .map(|t| if let Term::Character(c) = t { Some(c.value) } else { None })
+            .map(|t| {
+                if let Term::Character(c) = t {
+                    Some(c.value)
+                } else {
+                    None
+                }
+            })
             .collect::<Option<Vec<_>>>()
             .map(ErrorKind::EndsWith);
     }
@@ -305,14 +335,22 @@ fn test() {
         ("/^'/.test('foo')", r"'foo'.startsWith('\'')"),
         (r#"/^"/.test('foo')"#, r#"'foo'.startsWith('"')"#),
         // should not get fixed
-        ("/^foo/.test(new String('bar'))", "/^foo/.test(new String('bar'))"),
+        (
+            "/^foo/.test(new String('bar'))",
+            "/^foo/.test(new String('bar'))",
+        ),
         ("/^foo/.test(x as string)", "/^foo/.test(x as string)"),
         ("/^foo/.test(5)", "/^foo/.test(5)"),
         ("/^foo/.test(x?.y)", "/^foo/.test(x?.y)"),
         ("/^foo/.test(x + y)", "/^foo/.test(x + y)"),
     ];
 
-    Tester::new(PreferStringStartsEndsWith::NAME, PreferStringStartsEndsWith::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        PreferStringStartsEndsWith::NAME,
+        PreferStringStartsEndsWith::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

@@ -15,7 +15,12 @@ pub(super) enum Jump {
     /// `comma` and the last `}` boundary at `brace` (0: none) before the query: the walk resumes
     /// at the nearest one its frame kind allows. A brace boundary is the token after a `}` that
     /// must start a statement or member, so the frame is reset as a `;` would.
-    Sep { at: u32, semi: u32, comma: u32, brace: u32 },
+    Sep {
+        at: u32,
+        semi: u32,
+        comma: u32,
+        brace: u32,
+    },
 }
 
 impl Jump {
@@ -122,9 +127,18 @@ impl Walk {
         let frames = std::mem::take(&mut self.frames);
         let jumps = std::mem::take(&mut self.jumps);
         let gts = std::mem::take(&mut self.gts);
-        *self = Walk { frames, jumps, gts, ..Walk::default() };
+        *self = Walk {
+            frames,
+            jumps,
+            gts,
+            ..Walk::default()
+        };
         self.frames.clear();
-        self.frames.push(Frame { kind: FrameKind::Root, is_async: module, ..Frame::default() });
+        self.frames.push(Frame {
+            kind: FrameKind::Root,
+            is_async: module,
+            ..Frame::default()
+        });
     }
 
     #[inline]
@@ -143,7 +157,11 @@ impl Walk {
     }
 
     pub(super) fn push(&mut self, kind: FrameKind) -> &mut Frame {
-        self.frames.push(Frame { kind, at: self.last_start as u32, ..Frame::default() });
+        self.frames.push(Frame {
+            kind,
+            at: self.last_start as u32,
+            ..Frame::default()
+        });
         self.frames.last_mut().unwrap()
     }
 
@@ -163,7 +181,11 @@ impl Walk {
     }
 
     pub(super) fn pop(&mut self) -> Frame {
-        if self.frames.len() > 1 { self.frames.pop().unwrap() } else { *self.top() }
+        if self.frames.len() > 1 {
+            self.frames.pop().unwrap()
+        } else {
+            *self.top()
+        }
     }
 
     /// A closer with no frame to close: past here a bounded walk guesses.
@@ -191,17 +213,29 @@ impl Walk {
     /// Statement register of the innermost statement holder (S_NONE inside expression frames).
     pub(super) fn stmt_reg(&self) -> u8 {
         let i = self.stmt_frame();
-        if self.frames[i].kind.is_stmt_holder() { self.frames[i].reg } else { S_NONE }
+        if self.frames[i].kind.is_stmt_holder() {
+            self.frames[i].reg
+        } else {
+            S_NONE
+        }
     }
 
     pub(super) fn top_declarator(&self) -> u8 {
         let f = self.top();
-        if f.kind.is_stmt_holder() { f.state } else { D_NONE }
+        if f.kind.is_stmt_holder() {
+            f.state
+        } else {
+            D_NONE
+        }
     }
 
     pub(super) fn top_reg(&self) -> u8 {
         let f = self.top();
-        if f.kind.is_stmt_holder() { f.reg } else { S_NONE }
+        if f.kind.is_stmt_holder() {
+            f.reg
+        } else {
+            S_NONE
+        }
     }
 
     pub(super) fn set_stmt_reg(&mut self, v: u8) {
@@ -359,12 +393,24 @@ impl Walk {
                         0
                     }
                 }
-                Jump::Sep { semi, comma, brace, .. } => {
-                    let semi = if semi != 0 && self.sep_allowed(b';') { semi as usize } else { 0 };
-                    let comma =
-                        if comma != 0 && self.sep_allowed(b',') { comma as usize } else { 0 };
-                    let brace =
-                        if brace != 0 && self.sep_allowed(b'}') { brace as usize } else { 0 };
+                Jump::Sep {
+                    semi, comma, brace, ..
+                } => {
+                    let semi = if semi != 0 && self.sep_allowed(b';') {
+                        semi as usize
+                    } else {
+                        0
+                    };
+                    let comma = if comma != 0 && self.sep_allowed(b',') {
+                        comma as usize
+                    } else {
+                        0
+                    };
+                    let brace = if brace != 0 && self.sep_allowed(b'}') {
+                        brace as usize
+                    } else {
+                        0
+                    };
                     let to = semi.max(comma).max(brace);
                     if to == brace && to > pos && to <= limit {
                         self.resume_member();
@@ -384,8 +430,16 @@ impl Walk {
     /// `brace` (0: none) before `limit` that its innermost bracket frame allows.
     pub(super) fn resume(&mut self, semi: usize, brace: usize, limit: usize) {
         let k = self.frames[self.stmt_frame()].kind;
-        let semi = if semi != 0 && Self::sep_allowed_in(k, b';') { semi } else { 0 };
-        let brace = if brace != 0 && Self::sep_allowed_in(k, b'}') { brace } else { 0 };
+        let semi = if semi != 0 && Self::sep_allowed_in(k, b';') {
+            semi
+        } else {
+            0
+        };
+        let brace = if brace != 0 && Self::sep_allowed_in(k, b'}') {
+            brace
+        } else {
+            0
+        };
         let to = semi.max(brace);
         if to <= self.walked_to || to > limit {
             return;
@@ -426,7 +480,10 @@ impl Walk {
         }
         if sep == b';' {
             k.is_stmt_holder()
-                || matches!(k, FrameKind::ClassBody | FrameKind::TypeLit | FrameKind::Head)
+                || matches!(
+                    k,
+                    FrameKind::ClassBody | FrameKind::TypeLit | FrameKind::Head
+                )
         } else {
             matches!(
                 k,
@@ -465,7 +522,11 @@ impl Walk {
             if r.atom && matches!(r.state, R_INLINE | R_STMT) {
                 // Parameter annotations (`(a: T` then `/`) are never followed by a regex; only
                 // statement-level regions matter.
-                let below = if i > 0 { self.frames[i - 1].kind } else { FrameKind::Root };
+                let below = if i > 0 {
+                    self.frames[i - 1].kind
+                } else {
+                    FrameKind::Root
+                };
                 if !matches!(
                     below,
                     FrameKind::Params
@@ -486,7 +547,11 @@ impl Walk {
         if self.top_declarator() == D_BOUND {
             return After::EndsDecl;
         }
-        if self.operand_allowed() { After::Operand } else { After::Value }
+        if self.operand_allowed() {
+            After::Operand
+        } else {
+            After::Value
+        }
     }
 
     /// Is yield or await a keyword here? A bounded walk that cannot tell loses its footing.
@@ -496,7 +561,12 @@ impl Walk {
             self.seed_lost = true;
         }
         let s = &self.frames[i];
-        !s.field_init() && if generator { s.is_generator } else { s.is_async }
+        !s.field_init()
+            && if generator {
+                s.is_generator
+            } else {
+                s.is_async
+            }
     }
 
     pub(super) fn site(&self) -> Site {

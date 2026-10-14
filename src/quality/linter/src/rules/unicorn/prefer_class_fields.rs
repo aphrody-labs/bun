@@ -114,8 +114,10 @@ impl Rule for PreferClassFields {
         };
 
         // Find first non-empty statement in constructor
-        let first_statement =
-            body.statements.iter().find(|stmt| !matches!(stmt, Statement::EmptyStatement(_)));
+        let first_statement = body
+            .statements
+            .iter()
+            .find(|stmt| !matches!(stmt, Statement::EmptyStatement(_)));
 
         let Some(Statement::ExpressionStatement(expr_stmt)) = first_statement else {
             return;
@@ -186,15 +188,20 @@ impl Rule for PreferClassFields {
                 let mut codegen = fixer.codegen();
                 codegen.print_str(" = ");
                 codegen.print_expression(&assign.right);
-                let insert_span =
-                    prop.type_annotation.as_ref().map_or(prop.key.span(), |ty| ty.span);
+                let insert_span = prop
+                    .type_annotation
+                    .as_ref()
+                    .map_or(prop.key.span(), |ty| ty.span);
                 fix.push(fixer.insert_text_after_range(insert_span, codegen.into_source_text()));
             } else {
                 let indent =
-                    ctx.source_range(constructor.span).lines().next().map_or("\t", |line| {
-                        let leading_whitespace = line.len() - line.trim_start().len();
-                        &line[..leading_whitespace]
-                    });
+                    ctx.source_range(constructor.span)
+                        .lines()
+                        .next()
+                        .map_or("\t", |line| {
+                            let leading_whitespace = line.len() - line.trim_start().len();
+                            &line[..leading_whitespace]
+                        });
 
                 let mut codegen = fixer.codegen();
                 codegen.print_str(indent);
@@ -405,7 +412,12 @@ fn test() {
         ),
     ];
 
-    Tester::new(PreferClassFields::NAME, PreferClassFields::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        PreferClassFields::NAME,
+        PreferClassFields::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

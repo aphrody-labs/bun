@@ -92,24 +92,43 @@ fn test() {
         ("foo.void()", None),
         ("foo.void = bar", None),
         ("delete foo;", None),
-        ("void 0", Some(serde_json::json!([{ "allowAsStatement": true }]))),
-        ("void(0)", Some(serde_json::json!([{ "allowAsStatement": true }]))),
-        ("(void 0)", Some(serde_json::json!([{ "allowAsStatement": true }]))),
+        (
+            "void 0",
+            Some(serde_json::json!([{ "allowAsStatement": true }])),
+        ),
+        (
+            "void(0)",
+            Some(serde_json::json!([{ "allowAsStatement": true }])),
+        ),
+        (
+            "(void 0)",
+            Some(serde_json::json!([{ "allowAsStatement": true }])),
+        ),
     ];
 
     let fail = vec![
         ("void 0", None),
         ("void 0", Some(serde_json::json!([{}]))),
-        ("void 0", Some(serde_json::json!([{ "allowAsStatement": false }]))),
+        (
+            "void 0",
+            Some(serde_json::json!([{ "allowAsStatement": false }])),
+        ),
         ("void(0)", None),
         ("var foo = void 0", None),
-        ("var foo = void 0", Some(serde_json::json!([{ "allowAsStatement": true }]))),
+        (
+            "var foo = void 0",
+            Some(serde_json::json!([{ "allowAsStatement": true }])),
+        ),
     ];
 
     let fix = vec![
         ("void 0", "undefined", None),
         ("void 0", "undefined", Some(serde_json::json!([{}]))),
-        ("void 0", "undefined", Some(serde_json::json!([{ "allowAsStatement": false }]))),
+        (
+            "void 0",
+            "undefined",
+            Some(serde_json::json!([{ "allowAsStatement": false }])),
+        ),
         ("void(0)", "undefined", None),
         ("var foo = void 0", "var foo = undefined", None),
         (
@@ -119,5 +138,7 @@ fn test() {
         ),
     ];
 
-    Tester::new(NoVoid::NAME, NoVoid::PLUGIN, pass, fail).expect_fix(fix).test_and_snapshot();
+    Tester::new(NoVoid::NAME, NoVoid::PLUGIN, pass, fail)
+        .expect_fix(fix)
+        .test_and_snapshot();
 }

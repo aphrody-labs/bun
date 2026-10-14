@@ -39,13 +39,20 @@ impl AsyncKind {
 }
 
 fn unexpected_in_property(span: Span, kind: AsyncKind, key: &str) -> OxcDiagnostic {
-    OxcDiagnostic::warn(format!("Unexpected {} in \"{}\" computed property.", kind.as_str(), key))
-        .with_label(span)
+    OxcDiagnostic::warn(format!(
+        "Unexpected {} in \"{}\" computed property.",
+        kind.as_str(),
+        key
+    ))
+    .with_label(span)
 }
 
 fn unexpected_in_function(span: Span, kind: AsyncKind) -> OxcDiagnostic {
-    OxcDiagnostic::warn(format!("Unexpected {} in computed function.", kind.as_str()))
-        .with_label(span)
+    OxcDiagnostic::warn(format!(
+        "Unexpected {} in computed function.",
+        kind.as_str()
+    ))
+    .with_label(span)
 }
 
 #[derive(Debug, Default, Clone, Serialize, Deserialize, JsonSchema)]
@@ -188,10 +195,22 @@ fn report(span: Span, ctx_kind: &ComputedContext, kind: AsyncKind, ctx: &LintCon
 }
 
 const PROMISE_FUNCTIONS: &[&str] = &["then", "catch", "finally"];
-const PROMISE_METHODS: &[&str] =
-    &["all", "allSettled", "any", "race", "reject", "resolve", "try", "withResolvers"];
-const TIMED_FUNCTIONS: &[&str] =
-    &["setTimeout", "setInterval", "setImmediate", "requestAnimationFrame"];
+const PROMISE_METHODS: &[&str] = &[
+    "all",
+    "allSettled",
+    "any",
+    "race",
+    "reject",
+    "resolve",
+    "try",
+    "withResolvers",
+];
+const TIMED_FUNCTIONS: &[&str] = &[
+    "setTimeout",
+    "setInterval",
+    "setImmediate",
+    "requestAnimationFrame",
+];
 
 /// Static-member call info extracted from a `CallExpression.callee`, transparently
 /// unwrapping parentheses and an optional outer `ChainExpression`. Only static
@@ -216,7 +235,9 @@ fn is_promise_method_call(
     call: &CallExpression<'_>,
     ignored_object_names: &FxHashSet<String>,
 ) -> bool {
-    let Some((name, object)) = callee_static_member(&call.callee) else { return false };
+    let Some((name, object)) = callee_static_member(&call.callee) else {
+        return false;
+    };
 
     let is_promise_static = PROMISE_METHODS.contains(&name)
         && matches!(object.get_inner_expression(), Expression::Identifier(id) if id.name == "Promise");
@@ -253,7 +274,9 @@ fn is_timed_function_call(call: &CallExpression<'_>) -> bool {
 }
 
 fn is_next_tick_call(call: &CallExpression<'_>, ctx: &LintContext<'_>) -> bool {
-    let Some((name, object)) = callee_static_member(&call.callee) else { return false };
+    let Some((name, object)) = callee_static_member(&call.callee) else {
+        return false;
+    };
     if name == "$nextTick" && is_this_object(object, ctx) {
         return true;
     }
@@ -1407,6 +1430,11 @@ fn test() {
         ), // languageOptions,
     ];
 
-    Tester::new(NoAsyncInComputedProperties::NAME, NoAsyncInComputedProperties::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        NoAsyncInComputedProperties::NAME,
+        NoAsyncInComputedProperties::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

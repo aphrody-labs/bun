@@ -192,7 +192,11 @@ fn check_character(
     let span = character.span;
     let escape_char = char_text.chars().nth(1).unwrap();
     let escapes = if character_class.is_some() {
-        if unicode_sets { REGEX_CLASSSET_CHARACTER_ESCAPES } else { REGEX_GENERAL_ESCAPES }
+        if unicode_sets {
+            REGEX_CLASSSET_CHARACTER_ESCAPES
+        } else {
+            REGEX_GENERAL_ESCAPES
+        }
     } else {
         REGEX_NON_CHARCLASS_ESCAPES
     };
@@ -526,55 +530,202 @@ fn test() {
         // multi-byte characters earlier in the source must not shift the lookaround
         ("const s = \"⚓💥⚓\";\n/[\\&&]/v", None),
         ("const s = \"⚓💥⚓\";\n/[&\\&]/v", None),
-        ("var foo = /\\#/;", Some(serde_json::json!([{ "allowRegexCharacters": ["#"] }]))),
-        ("var foo = /\\;/;", Some(serde_json::json!([{ "allowRegexCharacters": [";"] }]))),
-        ("var foo = /\\#\\;/;", Some(serde_json::json!([{ "allowRegexCharacters": ["#", ";"] }]))),
-        (r"var foo = /[ab\-]/", Some(serde_json::json!([{ "allowRegexCharacters": ["-"] }]))),
-        (r"var foo = /[\-ab]/", Some(serde_json::json!([{ "allowRegexCharacters": ["-"] }]))),
-        (r"var foo = /[ab\?]/", Some(serde_json::json!([{ "allowRegexCharacters": ["?"] }]))),
-        (r"var foo = /[ab\.]/", Some(serde_json::json!([{ "allowRegexCharacters": ["."] }]))),
-        (r"var foo = /[a\|b]/", Some(serde_json::json!([{ "allowRegexCharacters": ["|"] }]))),
-        (r"var foo = /\-/", Some(serde_json::json!([{ "allowRegexCharacters": ["-"] }]))),
-        (r"var foo = /[\-]/", Some(serde_json::json!([{ "allowRegexCharacters": ["-"] }]))),
-        (r"var foo = /[ab\$]/", Some(serde_json::json!([{ "allowRegexCharacters": ["$"] }]))),
-        (r"var foo = /[\(paren]/", Some(serde_json::json!([{ "allowRegexCharacters": ["("] }]))),
-        (r"var foo = /[\[]/", Some(serde_json::json!([{ "allowRegexCharacters": ["["] }]))),
-        (r"var foo = /[\/]/", Some(serde_json::json!([{ "allowRegexCharacters": ["/"] }]))),
-        (r"var foo = /[\B]/", Some(serde_json::json!([{ "allowRegexCharacters": ["B"] }]))),
-        (r"var foo = /[a][\-b]/", Some(serde_json::json!([{ "allowRegexCharacters": ["-"] }]))),
-        (r"var foo = /\-[]/", Some(serde_json::json!([{ "allowRegexCharacters": ["-"] }]))),
-        (r"var foo = /[a\^]/", Some(serde_json::json!([{ "allowRegexCharacters": ["^"] }]))),
-        (r"/[^\^]/", Some(serde_json::json!([{ "allowRegexCharacters": ["^"] }]))),
-        (r"/[^\^]/u", Some(serde_json::json!([{ "allowRegexCharacters": ["^"] }]))), // { "ecmaVersion": 2015 },
-        (r"/[\$]/v", Some(serde_json::json!([{ "allowRegexCharacters": ["$"] }]))), // { "ecmaVersion": 2024 },
-        (r"/[\&\&]/v", Some(serde_json::json!([{ "allowRegexCharacters": ["&"] }]))), // { "ecmaVersion": 2024 },
-        (r"/[\!!]/v", Some(serde_json::json!([{ "allowRegexCharacters": ["!"] }]))), // { "ecmaVersion": 2024 },
-        (r"/[\##]/v", Some(serde_json::json!([{ "allowRegexCharacters": ["#"] }]))), // { "ecmaVersion": 2024 },
-        (r"/[\%%]/v", Some(serde_json::json!([{ "allowRegexCharacters": ["%"] }]))), // { "ecmaVersion": 2024 },
-        (r"/[\*\*]/v", Some(serde_json::json!([{ "allowRegexCharacters": ["*"] }]))), // { "ecmaVersion": 2024 },
-        (r"/[\+\+]/v", Some(serde_json::json!([{ "allowRegexCharacters": ["+"] }]))), // { "ecmaVersion": 2024 },
-        (r"/[\,,]/v", Some(serde_json::json!([{ "allowRegexCharacters": [","] }]))), // { "ecmaVersion": 2024 },
-        (r"/[\..]/v", Some(serde_json::json!([{ "allowRegexCharacters": ["."] }]))), // { "ecmaVersion": 2024 },
-        (r"/[\:\:]/v", Some(serde_json::json!([{ "allowRegexCharacters": [":"] }]))), // { "ecmaVersion": 2024 },
-        (r"/[\;\;]/v", Some(serde_json::json!([{ "allowRegexCharacters": [";"] }]))), // { "ecmaVersion": 2024 },
-        (r"/[\<\<]/v", Some(serde_json::json!([{ "allowRegexCharacters": ["<"] }]))), // { "ecmaVersion": 2024 },
-        (r"/[\=\=]/v", Some(serde_json::json!([{ "allowRegexCharacters": ["="] }]))), // { "ecmaVersion": 2024 },
-        (r"/[\>\>]/v", Some(serde_json::json!([{ "allowRegexCharacters": [">"] }]))), // { "ecmaVersion": 2024 },
-        (r"/[\?\?]/v", Some(serde_json::json!([{ "allowRegexCharacters": ["?"] }]))), // { "ecmaVersion": 2024 },
-        (r"/[\@\@]/v", Some(serde_json::json!([{ "allowRegexCharacters": ["@"] }]))), // { "ecmaVersion": 2024 },
-        ("/[\\``]/v", Some(serde_json::json!([{ "allowRegexCharacters": ["`"] }]))), // { "ecmaVersion": 2024 },
-        (r"/[\~\~]/v", Some(serde_json::json!([{ "allowRegexCharacters": ["~"] }]))), // { "ecmaVersion": 2024 },
-        (r"/[^\^\^]/v", Some(serde_json::json!([{ "allowRegexCharacters": ["^"] }]))), // { "ecmaVersion": 2024 },
-        (r"/[_\^\^]/v", Some(serde_json::json!([{ "allowRegexCharacters": ["^"] }]))), // { "ecmaVersion": 2024 },
-        (r"/[\&\&&\&]/v", Some(serde_json::json!([{ "allowRegexCharacters": ["&"] }]))), // { "ecmaVersion": 2024 },
-        (r"/[\p{ASCII}--\.]/v", Some(serde_json::json!([{ "allowRegexCharacters": ["."] }]))), // { "ecmaVersion": 2024 },
-        (r"/[\p{ASCII}&&\.]/v", Some(serde_json::json!([{ "allowRegexCharacters": ["."] }]))), // { "ecmaVersion": 2024 },
-        (r"/[\.--[.&]]/v", Some(serde_json::json!([{ "allowRegexCharacters": ["."] }]))), // { "ecmaVersion": 2024 },
-        (r"/[\.&&[.&]]/v", Some(serde_json::json!([{ "allowRegexCharacters": ["."] }]))), // { "ecmaVersion": 2024 },
-        (r"/[\.--\.--\.]/v", Some(serde_json::json!([{ "allowRegexCharacters": ["."] }]))), // { "ecmaVersion": 2024 },
-        (r"/[\.&&\.&&\.]/v", Some(serde_json::json!([{ "allowRegexCharacters": ["."] }]))), // { "ecmaVersion": 2024 },
-        (r"/[[\.&]--[\.&]]/v", Some(serde_json::json!([{ "allowRegexCharacters": ["."] }]))), // { "ecmaVersion": 2024 },
-        (r"/[[\.&]&&[\.&]]/v", Some(serde_json::json!([{ "allowRegexCharacters": ["."] }]))), // { "ecmaVersion": 2024 }
+        (
+            "var foo = /\\#/;",
+            Some(serde_json::json!([{ "allowRegexCharacters": ["#"] }])),
+        ),
+        (
+            "var foo = /\\;/;",
+            Some(serde_json::json!([{ "allowRegexCharacters": [";"] }])),
+        ),
+        (
+            "var foo = /\\#\\;/;",
+            Some(serde_json::json!([{ "allowRegexCharacters": ["#", ";"] }])),
+        ),
+        (
+            r"var foo = /[ab\-]/",
+            Some(serde_json::json!([{ "allowRegexCharacters": ["-"] }])),
+        ),
+        (
+            r"var foo = /[\-ab]/",
+            Some(serde_json::json!([{ "allowRegexCharacters": ["-"] }])),
+        ),
+        (
+            r"var foo = /[ab\?]/",
+            Some(serde_json::json!([{ "allowRegexCharacters": ["?"] }])),
+        ),
+        (
+            r"var foo = /[ab\.]/",
+            Some(serde_json::json!([{ "allowRegexCharacters": ["."] }])),
+        ),
+        (
+            r"var foo = /[a\|b]/",
+            Some(serde_json::json!([{ "allowRegexCharacters": ["|"] }])),
+        ),
+        (
+            r"var foo = /\-/",
+            Some(serde_json::json!([{ "allowRegexCharacters": ["-"] }])),
+        ),
+        (
+            r"var foo = /[\-]/",
+            Some(serde_json::json!([{ "allowRegexCharacters": ["-"] }])),
+        ),
+        (
+            r"var foo = /[ab\$]/",
+            Some(serde_json::json!([{ "allowRegexCharacters": ["$"] }])),
+        ),
+        (
+            r"var foo = /[\(paren]/",
+            Some(serde_json::json!([{ "allowRegexCharacters": ["("] }])),
+        ),
+        (
+            r"var foo = /[\[]/",
+            Some(serde_json::json!([{ "allowRegexCharacters": ["["] }])),
+        ),
+        (
+            r"var foo = /[\/]/",
+            Some(serde_json::json!([{ "allowRegexCharacters": ["/"] }])),
+        ),
+        (
+            r"var foo = /[\B]/",
+            Some(serde_json::json!([{ "allowRegexCharacters": ["B"] }])),
+        ),
+        (
+            r"var foo = /[a][\-b]/",
+            Some(serde_json::json!([{ "allowRegexCharacters": ["-"] }])),
+        ),
+        (
+            r"var foo = /\-[]/",
+            Some(serde_json::json!([{ "allowRegexCharacters": ["-"] }])),
+        ),
+        (
+            r"var foo = /[a\^]/",
+            Some(serde_json::json!([{ "allowRegexCharacters": ["^"] }])),
+        ),
+        (
+            r"/[^\^]/",
+            Some(serde_json::json!([{ "allowRegexCharacters": ["^"] }])),
+        ),
+        (
+            r"/[^\^]/u",
+            Some(serde_json::json!([{ "allowRegexCharacters": ["^"] }])),
+        ), // { "ecmaVersion": 2015 },
+        (
+            r"/[\$]/v",
+            Some(serde_json::json!([{ "allowRegexCharacters": ["$"] }])),
+        ), // { "ecmaVersion": 2024 },
+        (
+            r"/[\&\&]/v",
+            Some(serde_json::json!([{ "allowRegexCharacters": ["&"] }])),
+        ), // { "ecmaVersion": 2024 },
+        (
+            r"/[\!!]/v",
+            Some(serde_json::json!([{ "allowRegexCharacters": ["!"] }])),
+        ), // { "ecmaVersion": 2024 },
+        (
+            r"/[\##]/v",
+            Some(serde_json::json!([{ "allowRegexCharacters": ["#"] }])),
+        ), // { "ecmaVersion": 2024 },
+        (
+            r"/[\%%]/v",
+            Some(serde_json::json!([{ "allowRegexCharacters": ["%"] }])),
+        ), // { "ecmaVersion": 2024 },
+        (
+            r"/[\*\*]/v",
+            Some(serde_json::json!([{ "allowRegexCharacters": ["*"] }])),
+        ), // { "ecmaVersion": 2024 },
+        (
+            r"/[\+\+]/v",
+            Some(serde_json::json!([{ "allowRegexCharacters": ["+"] }])),
+        ), // { "ecmaVersion": 2024 },
+        (
+            r"/[\,,]/v",
+            Some(serde_json::json!([{ "allowRegexCharacters": [","] }])),
+        ), // { "ecmaVersion": 2024 },
+        (
+            r"/[\..]/v",
+            Some(serde_json::json!([{ "allowRegexCharacters": ["."] }])),
+        ), // { "ecmaVersion": 2024 },
+        (
+            r"/[\:\:]/v",
+            Some(serde_json::json!([{ "allowRegexCharacters": [":"] }])),
+        ), // { "ecmaVersion": 2024 },
+        (
+            r"/[\;\;]/v",
+            Some(serde_json::json!([{ "allowRegexCharacters": [";"] }])),
+        ), // { "ecmaVersion": 2024 },
+        (
+            r"/[\<\<]/v",
+            Some(serde_json::json!([{ "allowRegexCharacters": ["<"] }])),
+        ), // { "ecmaVersion": 2024 },
+        (
+            r"/[\=\=]/v",
+            Some(serde_json::json!([{ "allowRegexCharacters": ["="] }])),
+        ), // { "ecmaVersion": 2024 },
+        (
+            r"/[\>\>]/v",
+            Some(serde_json::json!([{ "allowRegexCharacters": [">"] }])),
+        ), // { "ecmaVersion": 2024 },
+        (
+            r"/[\?\?]/v",
+            Some(serde_json::json!([{ "allowRegexCharacters": ["?"] }])),
+        ), // { "ecmaVersion": 2024 },
+        (
+            r"/[\@\@]/v",
+            Some(serde_json::json!([{ "allowRegexCharacters": ["@"] }])),
+        ), // { "ecmaVersion": 2024 },
+        (
+            "/[\\``]/v",
+            Some(serde_json::json!([{ "allowRegexCharacters": ["`"] }])),
+        ), // { "ecmaVersion": 2024 },
+        (
+            r"/[\~\~]/v",
+            Some(serde_json::json!([{ "allowRegexCharacters": ["~"] }])),
+        ), // { "ecmaVersion": 2024 },
+        (
+            r"/[^\^\^]/v",
+            Some(serde_json::json!([{ "allowRegexCharacters": ["^"] }])),
+        ), // { "ecmaVersion": 2024 },
+        (
+            r"/[_\^\^]/v",
+            Some(serde_json::json!([{ "allowRegexCharacters": ["^"] }])),
+        ), // { "ecmaVersion": 2024 },
+        (
+            r"/[\&\&&\&]/v",
+            Some(serde_json::json!([{ "allowRegexCharacters": ["&"] }])),
+        ), // { "ecmaVersion": 2024 },
+        (
+            r"/[\p{ASCII}--\.]/v",
+            Some(serde_json::json!([{ "allowRegexCharacters": ["."] }])),
+        ), // { "ecmaVersion": 2024 },
+        (
+            r"/[\p{ASCII}&&\.]/v",
+            Some(serde_json::json!([{ "allowRegexCharacters": ["."] }])),
+        ), // { "ecmaVersion": 2024 },
+        (
+            r"/[\.--[.&]]/v",
+            Some(serde_json::json!([{ "allowRegexCharacters": ["."] }])),
+        ), // { "ecmaVersion": 2024 },
+        (
+            r"/[\.&&[.&]]/v",
+            Some(serde_json::json!([{ "allowRegexCharacters": ["."] }])),
+        ), // { "ecmaVersion": 2024 },
+        (
+            r"/[\.--\.--\.]/v",
+            Some(serde_json::json!([{ "allowRegexCharacters": ["."] }])),
+        ), // { "ecmaVersion": 2024 },
+        (
+            r"/[\.&&\.&&\.]/v",
+            Some(serde_json::json!([{ "allowRegexCharacters": ["."] }])),
+        ), // { "ecmaVersion": 2024 },
+        (
+            r"/[[\.&]--[\.&]]/v",
+            Some(serde_json::json!([{ "allowRegexCharacters": ["."] }])),
+        ), // { "ecmaVersion": 2024 },
+        (
+            r"/[[\.&]&&[\.&]]/v",
+            Some(serde_json::json!([{ "allowRegexCharacters": ["."] }])),
+        ), // { "ecmaVersion": 2024 }
     ];
 
     let fail = vec![
@@ -640,7 +791,10 @@ fn test() {
 			and useless \\escape`",
             None,
         ), // { "ecmaVersion": 6 },
-        ("`template literal with mixed linebreaks \r\r\n\n\\and useless escape`", None), // { "ecmaVersion": 6 },
+        (
+            "`template literal with mixed linebreaks \r\r\n\n\\and useless escape`",
+            None,
+        ), // { "ecmaVersion": 6 },
         (
             "`template literal with mixed linebreaks in line continuations \\\n\\\r\\\r\n\\and useless escape`",
             None,
@@ -686,10 +840,22 @@ fn test() {
         (r"/[\.&&\.&&\.]/v", None),    // { "ecmaVersion": 2024 },
         (r"/[[\.&]--[\.&]]/v", None),  // { "ecmaVersion": 2024 },
         (r"/[[\.&]&&[\.&]]/v", None),  // { "ecmaVersion": 2024 },
-        (r#"var foo = "\#/";"#, Some(serde_json::json!([{ "allowRegexCharacters": ["#"] }]))),
-        ("var foo = /\\#\\@/;", Some(serde_json::json!([{ "allowRegexCharacters": ["#"] }]))),
-        (r"var foo = /[a\@b]/", Some(serde_json::json!([{ "allowRegexCharacters": ["#"] }]))),
-        (r"/[\@\@]/v", Some(serde_json::json!([{ "allowRegexCharacters": ["#"] }]))), // { "ecmaVersion": 2024 }
+        (
+            r#"var foo = "\#/";"#,
+            Some(serde_json::json!([{ "allowRegexCharacters": ["#"] }])),
+        ),
+        (
+            "var foo = /\\#\\@/;",
+            Some(serde_json::json!([{ "allowRegexCharacters": ["#"] }])),
+        ),
+        (
+            r"var foo = /[a\@b]/",
+            Some(serde_json::json!([{ "allowRegexCharacters": ["#"] }])),
+        ),
+        (
+            r"/[\@\@]/v",
+            Some(serde_json::json!([{ "allowRegexCharacters": ["#"] }])),
+        ), // { "ecmaVersion": 2024 }
     ];
 
     let fix = vec![
@@ -700,7 +866,11 @@ fn test() {
         ("var foo = \"\\a\"", "var foo = \"a\"", None),
         ("var foo = \"\\B\";", "var foo = \"B\";", None),
         ("var foo = \"\\@\";", "var foo = \"@\";", None),
-        ("var foo = \"foo \\a bar\";", "var foo = \"foo a bar\";", None),
+        (
+            "var foo = \"foo \\a bar\";",
+            "var foo = \"foo a bar\";",
+            None,
+        ),
         ("var foo = '\\\"';", "var foo = '\"';", None),
         ("var foo = '\\#';", "var foo = '#';", None),
         ("var foo = '\\$';", "var foo = '$';", None),
@@ -712,15 +882,27 @@ fn test() {
         ("var foo = `\\'`;", "var foo = `'`;", None),
         ("var foo = `\\#`;", "var foo = `#`;", None),
         ("var foo = '\\`foo\\`';", "var foo = '`foo`';", None),
-        ("var foo = `\\\"${foo}\\\"`;", "var foo = `\"${foo}\"`;", None),
+        (
+            "var foo = `\\\"${foo}\\\"`;",
+            "var foo = `\"${foo}\"`;",
+            None,
+        ),
         ("var foo = `\\'${foo}\\'`;", "var foo = `'${foo}'`;", None),
         ("var foo = `\\#${foo}`;", "var foo = `#${foo}`;", None),
         ("let foo = '\\ ';", "let foo = ' ';", None),
         ("let foo = /\\ /;", "let foo = / /;", None),
-        ("var foo = `\\$\\{{${foo}`;", "var foo = `$\\{{${foo}`;", None),
+        (
+            "var foo = `\\$\\{{${foo}`;",
+            "var foo = `$\\{{${foo}`;",
+            None,
+        ),
         (r#""use\ strict";"#, r#""use strict";"#, None),
         // spellchecker:off
-        (r#"({ foo() { "foo"; "bar"; "ba\z" } })"#, r#"({ foo() { "foo"; "bar"; "baz" } })"#, None), // { "ecmaVersion": 6 }
+        (
+            r#"({ foo() { "foo"; "bar"; "ba\z" } })"#,
+            r#"({ foo() { "foo"; "bar"; "baz" } })"#,
+            None,
+        ), // { "ecmaVersion": 6 }
         // spellchecker:on
         // Carets
         (r"/[^\^]/", r"/[^^]/", None),

@@ -238,7 +238,10 @@ impl<'a> FormatSession<'a> {
     /// Children dispatched from the returned session share the new scope.
     #[must_use]
     pub fn with_new_tailwind_scope(&self) -> Self {
-        Self { tailwind_classes: Rc::default(), ..self.clone() }
+        Self {
+            tailwind_classes: Rc::default(),
+            ..self.clone()
+        }
     }
 
     /// Registers a pre-sort class string in the current scope,
@@ -265,7 +268,11 @@ impl<'a> FormatSession<'a> {
                 let len = classes.len();
                 let sorted = sort(classes);
                 // `TailwindClass(index)` stays valid only if the sorter keeps one entry per class, in order
-                debug_assert_eq!(sorted.len(), len, "TailwindSorter must keep one entry per class");
+                debug_assert_eq!(
+                    sorted.len(),
+                    len,
+                    "TailwindSorter must keep one entry per class"
+                );
                 sorted
             }
             _ => classes,
@@ -299,7 +306,10 @@ mod tests {
         let allocator = Allocator::default();
         let session = FormatSession::new(&allocator, InputKind::PhysicalFile);
 
-        assert!(matches!(session.dispatch(request()), Ok(DispatchResponse::PreserveOriginal)));
+        assert!(matches!(
+            session.dispatch(request()),
+            Ok(DispatchResponse::PreserveOriginal)
+        ));
     }
 
     #[test]
@@ -314,14 +324,29 @@ mod tests {
         let session = FormatSession::with_services(
             &allocator,
             InputKind::PhysicalFile,
-            SessionServices { dispatcher: Some(dispatcher), ..SessionServices::default() },
+            SessionServices {
+                dispatcher: Some(dispatcher),
+                ..SessionServices::default()
+            },
         );
 
-        let bom_request = DispatchRequest { text: "\u{feff}a: 1", ..request() };
-        assert!(matches!(session.dispatch(bom_request), Ok(DispatchResponse::PreserveOriginal)));
+        let bom_request = DispatchRequest {
+            text: "\u{feff}a: 1",
+            ..request()
+        };
+        assert!(matches!(
+            session.dispatch(bom_request),
+            Ok(DispatchResponse::PreserveOriginal)
+        ));
         // A non-leading U+FEFF is ordinary content and formats normally
-        let inner_request = DispatchRequest { text: "a: \u{feff}1", ..request() };
-        assert!(matches!(session.dispatch(inner_request), Ok(DispatchResponse::Formatted(_))));
+        let inner_request = DispatchRequest {
+            text: "a: \u{feff}1",
+            ..request()
+        };
+        assert!(matches!(
+            session.dispatch(inner_request),
+            Ok(DispatchResponse::Formatted(_))
+        ));
     }
 
     #[test]
@@ -336,10 +361,16 @@ mod tests {
         let mut session = FormatSession::with_services(
             &allocator,
             InputKind::PhysicalFile,
-            SessionServices { dispatcher: Some(dispatcher), ..SessionServices::default() },
+            SessionServices {
+                dispatcher: Some(dispatcher),
+                ..SessionServices::default()
+            },
         );
 
-        assert!(matches!(session.dispatch(request()), Ok(DispatchResponse::Formatted(_))));
+        assert!(matches!(
+            session.dispatch(request()),
+            Ok(DispatchResponse::Formatted(_))
+        ));
         for _ in 0..MAX_DISPATCH_DEPTH {
             session = session.derive_child(InputKind::Fragment);
         }
@@ -353,7 +384,10 @@ mod tests {
         let session = FormatSession::with_services(
             &allocator,
             InputKind::PhysicalFile,
-            SessionServices { dispatcher: Some(dispatcher), ..SessionServices::default() },
+            SessionServices {
+                dispatcher: Some(dispatcher),
+                ..SessionServices::default()
+            },
         );
 
         assert_eq!(session.dispatch(request()).err().as_deref(), Some("boom"));
@@ -369,7 +403,10 @@ mod tests {
         assert_eq!(child.dispatch_depth, 1);
         // Ids stay unique across the boundary; independent builders would
         // both hand out the same first id.
-        assert_ne!(parent.group_id_builder().group_id("a"), child.group_id_builder().group_id("b"));
+        assert_ne!(
+            parent.group_id_builder().group_id("a"),
+            child.group_id_builder().group_id("b")
+        );
     }
 
     #[test]
@@ -382,13 +419,19 @@ mod tests {
 
         // Ids stay unique across the two states;
         // independent builders would both hand out the same first id.
-        assert_ne!(parent_state.group_id("parent"), child_state.group_id("child"));
+        assert_ne!(
+            parent_state.group_id("parent"),
+            child_state.group_id("child")
+        );
     }
 
     /// Reverses the words of each class string, so a sorted class is distinguishable from an unsorted one.
     fn reversing_sorter() -> TailwindSorter {
         Arc::new(|classes: Vec<String>| {
-            classes.iter().map(|c| c.split(' ').rev().collect::<Vec<_>>().join(" ")).collect()
+            classes
+                .iter()
+                .map(|c| c.split(' ').rev().collect::<Vec<_>>().join(" "))
+                .collect()
         })
     }
 
@@ -404,7 +447,10 @@ mod tests {
                 [FormatElement::Interned(Interned::new(inner))],
                 &ctx.allocator(),
             );
-            Ok(DispatchResponse::Formatted(DispatchPayload { doc, child_context: None }))
+            Ok(DispatchResponse::Formatted(DispatchPayload {
+                doc,
+                child_context: None,
+            }))
         });
         let session = FormatSession::with_services(
             &allocator,
@@ -422,7 +468,10 @@ mod tests {
             panic!("expected a formatted child");
         };
         let mut elements = ArenaVec::from_array_in(
-            [FormatElement::TailwindClass(parent_index), FormatElement::Space],
+            [
+                FormatElement::TailwindClass(parent_index),
+                FormatElement::Space,
+            ],
             &&allocator,
         );
         elements.extend(payload.doc);

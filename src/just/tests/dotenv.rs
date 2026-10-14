@@ -449,7 +449,10 @@ fn fifo() {
 
   let fifo = test.tempdir.path().join(".env");
 
-  let status = bun_no_window::command("mkfifo").arg(&fifo).status().unwrap();
+  let status = bun_no_window::command("mkfifo")
+    .arg(&fifo)
+    .status()
+    .unwrap();
 
   assert!(status.success());
 

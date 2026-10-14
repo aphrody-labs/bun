@@ -46,15 +46,23 @@ fn test() {
     ];
 
     let fix = vec![
-        ("const thing = 123;\nafterAll(() => {});", "const thing = 123;\n\nafterAll(() => {});"),
+        (
+            "const thing = 123;\nafterAll(() => {});",
+            "const thing = 123;\n\nafterAll(() => {});",
+        ),
         (
             "const thing = 123;\n/* one */\n/* two */\nafterAll(() => {});",
             "const thing = 123;\n\n/* one */\n/* two */\nafterAll(() => {});",
         ),
     ];
 
-    Tester::new(PaddingAroundAfterAllBlocks::NAME, PaddingAroundAfterAllBlocks::PLUGIN, pass, fail)
-        .with_jest_plugin(true)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        PaddingAroundAfterAllBlocks::NAME,
+        PaddingAroundAfterAllBlocks::PLUGIN,
+        pass,
+        fail,
+    )
+    .with_jest_plugin(true)
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

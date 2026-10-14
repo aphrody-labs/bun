@@ -29,7 +29,11 @@ pub(super) fn abstract_equality_comparison<'a>(
                     oxc_span::SPAN,
                     num,
                     None,
-                    if num.fract() == 0.0 { NumberBase::Decimal } else { NumberBase::Float },
+                    if num.fract() == 0.0 {
+                        NumberBase::Decimal
+                    } else {
+                        NumberBase::Float
+                    },
                     ctx,
                 );
                 return abstract_equality_comparison(ctx, left_expr, &number_literal_expr);
@@ -45,7 +49,11 @@ pub(super) fn abstract_equality_comparison<'a>(
                     oxc_span::SPAN,
                     num,
                     None,
-                    if num.fract() == 0.0 { NumberBase::Decimal } else { NumberBase::Float },
+                    if num.fract() == 0.0 {
+                        NumberBase::Decimal
+                    } else {
+                        NumberBase::Float
+                    },
                     ctx,
                 );
                 return abstract_equality_comparison(ctx, &number_literal_expr, right_expr);
@@ -61,14 +69,19 @@ pub(super) fn abstract_equality_comparison<'a>(
             }
         }
 
-        if matches!(left, ValueType::String | ValueType::Number | ValueType::BigInt)
-            && matches!(right, ValueType::Object)
+        if matches!(
+            left,
+            ValueType::String | ValueType::Number | ValueType::BigInt
+        ) && matches!(right, ValueType::Object)
         {
             return None;
         }
 
         if matches!(left, ValueType::Object)
-            && matches!(right, ValueType::String | ValueType::Number | ValueType::BigInt)
+            && matches!(
+                right,
+                ValueType::String | ValueType::Number | ValueType::BigInt
+            )
         {
             return None;
         }

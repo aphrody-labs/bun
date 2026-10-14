@@ -23,7 +23,10 @@ struct Rewrites {
 
 impl Rewrites {
     fn new(num_identifiers: usize) -> Self {
-        Self { map: IndexVec::from_vec(vec![None; num_identifiers]), len: 0 }
+        Self {
+            map: IndexVec::from_vec(vec![None; num_identifiers]),
+            len: 0,
+        }
     }
 
     fn insert(&mut self, key: IdentifierId, value: IdentifierId) {
@@ -115,8 +118,14 @@ fn eliminate_redundant_phi_impl(
             });
 
             // Rewrite instructions
-            let instruction_ids: Vec<InstructionId> =
-                ir.blocks.get(&block_id).unwrap().instructions.iter().copied().collect();
+            let instruction_ids: Vec<InstructionId> = ir
+                .blocks
+                .get(&block_id)
+                .unwrap()
+                .instructions
+                .iter()
+                .copied()
+                .collect();
 
             for instr_id in &instruction_ids {
                 let instr_idx = instr_id.index();

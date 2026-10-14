@@ -29,8 +29,11 @@ pub fn compute_import_metadata<'a>(
     });
 
     // Pre-compute normalized source for case-insensitive comparison
-    let normalized_source =
-        if options.ignore_case { source.cow_to_lowercase() } else { Cow::Borrowed(source) };
+    let normalized_source = if options.ignore_case {
+        source.cow_to_lowercase()
+    } else {
+        Cow::Borrowed(source)
+    };
 
     // Determine if this import should be ignored (not moved between groups)
     // - If `sort_side_effects: true`, never ignore
@@ -217,7 +220,11 @@ fn to_path_kind(source: &str, options: &SortImportsOptions) -> ImportPathKind {
     }
 
     // Check if source matches any internal pattern
-    if options.internal_pattern.iter().any(|p| source.starts_with(p.as_str())) {
+    if options
+        .internal_pattern
+        .iter()
+        .any(|p| source.starts_with(p.as_str()))
+    {
         return ImportPathKind::Internal;
     }
 

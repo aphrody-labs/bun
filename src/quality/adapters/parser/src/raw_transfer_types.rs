@@ -1,4 +1,7 @@
-#![cfg_attr(not(all(target_pointer_width = "64", target_endian = "little")), expect(dead_code))]
+#![cfg_attr(
+    not(all(target_pointer_width = "64", target_endian = "little")),
+    expect(dead_code)
+)]
 
 use std::sync::Arc;
 
@@ -49,7 +52,14 @@ pub struct RawTransferMetadata {
 
 impl RawTransferMetadata {
     pub fn new(data_offset: u32, is_ts: bool, tokens_offset: u32, tokens_len: u32) -> Self {
-        Self { data_offset, is_ts, is_jsx: false, has_bom: false, tokens_offset, tokens_len }
+        Self {
+            data_offset,
+            is_ts,
+            is_jsx: false,
+            has_bom: false,
+            tokens_offset,
+            tokens_len,
+        }
     }
 }
 
@@ -93,19 +103,30 @@ impl<'a> Error<'a> {
         allocator: &'a Allocator,
     ) -> Self {
         let labels = ArenaVec::from_iter_in(
-            diagnostic.labels.iter().map(|label| ErrorLabel::from_in(label, allocator)),
+            diagnostic
+                .labels
+                .iter()
+                .map(|label| ErrorLabel::from_in(label, allocator)),
             &allocator,
         );
 
         let severity = ErrorSeverity::from(diagnostic.severity);
         let message = Str::from_in(diagnostic.message.as_ref(), allocator);
-        let help_message =
-            diagnostic.help.as_ref().map(|help| Str::from_in(help.as_ref(), allocator));
+        let help_message = diagnostic
+            .help
+            .as_ref()
+            .map(|help| Str::from_in(help.as_ref(), allocator));
         let rendered = diagnostic.render_with_source_code(Arc::clone(named_source));
         let codeframe = Str::from_in(rendered.as_str(), allocator);
 
         #[expect(clippy::inconsistent_struct_constructor)] // `#[ast]` macro re-orders struct fields
-        Self { severity, message, labels, help_message, codeframe }
+        Self {
+            severity,
+            message,
+            labels,
+            help_message,
+            codeframe,
+        }
     }
 }
 
@@ -140,7 +161,9 @@ pub struct ErrorLabel<'a> {
 impl<'a> FromIn<'a, &LabeledSpan> for ErrorLabel<'a> {
     fn from_in(label: &LabeledSpan, allocator: &'a Allocator) -> Self {
         Self {
-            message: label.label().map(|message| Str::from_in(message, allocator)),
+            message: label
+                .label()
+                .map(|message| Str::from_in(message, allocator)),
             span: Span::sized(label.offset(), label.len()),
         }
     }
@@ -203,22 +226,28 @@ pub struct StaticExport<'a> {
 impl<'a> FromIn<'a, ModuleRecord<'a>> for EcmaScriptModule<'a> {
     fn from_in(record: ModuleRecord<'a>, allocator: &'a Allocator) -> Self {
         let static_imports =
-            record.requested_modules.iter().flat_map(|(name, requested_modules)| {
-                requested_modules.iter().filter(|m| m.is_import).map(|m| {
-                    let entries = record
-                        .import_entries
-                        .iter()
-                        .filter(|e| e.statement_span == m.statement_span)
-                        .cloned();
-                    let entries = ArenaVec::from_iter_in(entries, &allocator);
+            record
+                .requested_modules
+                .iter()
+                .flat_map(|(name, requested_modules)| {
+                    requested_modules.iter().filter(|m| m.is_import).map(|m| {
+                        let entries = record
+                            .import_entries
+                            .iter()
+                            .filter(|e| e.statement_span == m.statement_span)
+                            .cloned();
+                        let entries = ArenaVec::from_iter_in(entries, &allocator);
 
-                    StaticImport {
-                        span: m.statement_span,
-                        module_request: NameSpan { name: *name, span: m.span },
-                        entries,
-                    }
-                })
-            });
+                        StaticImport {
+                            span: m.statement_span,
+                            module_request: NameSpan {
+                                name: *name,
+                                span: m.span,
+                            },
+                            entries,
+                        }
+                    })
+                });
         let mut static_imports = ArenaVec::from_iter_in(static_imports, &allocator);
         static_imports.sort_unstable_by_key(|e| e.span.start);
 
@@ -227,12 +256,15 @@ impl<'a> FromIn<'a, ModuleRecord<'a>> for EcmaScriptModule<'a> {
             .iter()
             .chain(&record.indirect_export_entries)
             .chain(&record.star_export_entries)
-            .fold(FxHashMap::<Span, ArenaVec<'a, ExportEntry>>::default(), |mut acc, e| {
-                acc.entry(e.statement_span)
-                    .or_insert_with(|| ArenaVec::new_in(&allocator))
-                    .push(e.clone());
-                acc
-            })
+            .fold(
+                FxHashMap::<Span, ArenaVec<'a, ExportEntry>>::default(),
+                |mut acc, e| {
+                    acc.entry(e.statement_span)
+                        .or_insert_with(|| ArenaVec::new_in(&allocator))
+                        .push(e.clone());
+                    acc
+                },
+            )
             .into_iter()
             .map(|(span, entries)| StaticExport { span, entries });
         let mut static_exports = ArenaVec::from_iter_in(static_exports, &allocator);

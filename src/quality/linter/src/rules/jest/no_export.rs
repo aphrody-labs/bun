@@ -97,9 +97,24 @@ fn test() {
         ),
         ("window.location = 'valid'", None, None, None),
         ("module.somethingElse = 'foo';", None, None, None),
-        ("export const myThing = 'valid'", None, None, Some(PathBuf::from("foo.test.js"))),
-        ("export const myThing = 'valid'", None, None, Some(PathBuf::from("foo.js"))),
-        ("export default function () {}", None, None, Some(PathBuf::from("foo.js"))),
+        (
+            "export const myThing = 'valid'",
+            None,
+            None,
+            Some(PathBuf::from("foo.test.js")),
+        ),
+        (
+            "export const myThing = 'valid'",
+            None,
+            None,
+            Some(PathBuf::from("foo.js")),
+        ),
+        (
+            "export default function () {}",
+            None,
+            None,
+            Some(PathBuf::from("foo.js")),
+        ),
         ("module.exports = function(){}", None, None, None),
         ("module.exports.myThing = 'valid';", None, None, None),
     ];

@@ -45,10 +45,16 @@ fn word_spacing_rejects_invalid_and_unsupported_lengths() {
             Some(3.0),
             "{value}"
         );
-        assert!(!bun_browser_render::style::supports_declaration("word-spacing", value), "{value}");
+        assert!(
+            !bun_browser_render::style::supports_declaration("word-spacing", value),
+            "{value}"
+        );
     }
     for value in ["normal", "0", "-3px", ".75em", "2rem"] {
-        assert!(bun_browser_render::style::supports_declaration("word-spacing", value), "{value}");
+        assert!(
+            bun_browser_render::style::supports_declaration("word-spacing", value),
+            "{value}"
+        );
     }
 }
 
@@ -86,7 +92,10 @@ fn word_spacing_resolves_before_inheritance_and_preserves_cascade() {
             Some(spacing),
             "{id}"
         );
-        assert!((width(id) - width("normal") - 2.0 * spacing).abs() <= 1.0, "{id}");
+        assert!(
+            (width(id) - width("normal") - 2.0 * spacing).abs() <= 1.0,
+            "{id}"
+        );
     }
 }
 
@@ -152,8 +161,22 @@ fn word_spacing_handles_whitespace_nested_spans_and_generated_content() {
     );
     let layout = layout_dom(&tree, (1000.0, 300.0));
     let id = tree.get_element_by_id("spaced").unwrap();
-    assert_eq!(layout.styles[&id].before_pseudo.as_ref().unwrap().word_spacing, Some(30.0));
-    assert_eq!(layout.styles[&id].after_pseudo.as_ref().unwrap().word_spacing, Some(0.0));
+    assert_eq!(
+        layout.styles[&id]
+            .before_pseudo
+            .as_ref()
+            .unwrap()
+            .word_spacing,
+        Some(30.0)
+    );
+    assert_eq!(
+        layout.styles[&id]
+            .after_pseudo
+            .as_ref()
+            .unwrap()
+            .word_spacing,
+        Some(0.0)
+    );
     let normal = layout.rects[&tree.get_element_by_id("normal").unwrap()].width;
     assert!((layout.rects[&id].width - normal - 60.0).abs() <= 1.0);
 }
@@ -234,7 +257,10 @@ fn mixed_content_shaped_runs_retain_inline_owner_geometry() {
         ));
         let layout = layout_dom(&tree, (200.0, 200.0));
         let owner = tree.get_element_by_id("owner").unwrap();
-        let rect = layout.rects.get(&owner).expect("shaped inline owner has geometry");
+        let rect = layout
+            .rects
+            .get(&owner)
+            .expect("shaped inline owner has geometry");
         assert!(
             rect.x.abs() < 0.01
                 && (52.0..=57.0).contains(&rect.y)
@@ -242,7 +268,10 @@ fn mixed_content_shaped_runs_retain_inline_owner_geometry() {
                 && (18.0..=26.0).contains(&rect.height),
             "inline following a 24px line and 30px block: {rect:?}"
         );
-        let pieces = layout.inline_fragments.get(&owner).expect("canonical inline fragments");
+        let pieces = layout
+            .inline_fragments
+            .get(&owner)
+            .expect("canonical inline fragments");
         assert!(!pieces.is_empty());
         for piece in pieces {
             assert!(
@@ -261,7 +290,10 @@ fn mixed_content_shaped_runs_retain_inline_owner_geometry() {
             "preserving inline ownership must not add a line or change block flow"
         );
         if let Some(nested) = tree.get_element_by_id("nested") {
-            let nested = layout.rects.get(&nested).expect("nested inline owner has geometry");
+            let nested = layout
+                .rects
+                .get(&nested)
+                .expect("nested inline owner has geometry");
             assert!(
                 (20.0..=28.0).contains(&nested.x)
                     && (20.0..=28.0).contains(&nested.width)
@@ -302,7 +334,11 @@ fn hn_shaped_table_lays_out_without_site_hardcoding() {
     let layout = layout_dom(&tree, (1000.0, 1000.0));
 
     // Every element got a rect; the tree isn't just being dropped.
-    assert!(layout.rects.len() > 10, "expected many laid-out elements, got {}", layout.rects.len());
+    assert!(
+        layout.rects.len() > 10,
+        "expected many laid-out elements, got {}",
+        layout.rects.len()
+    );
 
     // "Hacker News" (a bold link in the top bar) sits above the first
     // headline row ("Exapunks (2018)"): normal top-to-bottom flow, not a
@@ -383,7 +419,10 @@ fn table_width_uses_local_space_and_keeps_width_hints_shrinkable() {
     let preferred = rect("preferred");
     let wide = rect("preferred-wide");
     let narrow = rect("preferred-narrow");
-    assert!((preferred.width - 200.0).abs() < 0.01, "preferred table: {preferred:?}");
+    assert!(
+        (preferred.width - 200.0).abs() < 0.01,
+        "preferred table: {preferred:?}"
+    );
     assert!(
         wide.width > 160.0
             && wide.width < 175.0
@@ -416,9 +455,10 @@ fn table_rowspans_are_clipped_to_the_originating_row_group() {
     let layout = layout_dom(&tree, (400.0, 1000.0));
     let rect = |id| layout.rects[&tree.get_element_by_id(id).unwrap()];
 
-    for (table_id, span_id, next_id) in
-        [("zero", "zero-span", "zero-next"), ("oversized", "oversized-span", "oversized-next")]
-    {
+    for (table_id, span_id, next_id) in [
+        ("zero", "zero-span", "zero-next"),
+        ("oversized", "oversized-span", "oversized-next"),
+    ] {
         let table = rect(table_id);
         let spanning = rect(span_id);
         let next_group = rect(next_id);
@@ -449,7 +489,11 @@ fn relative_units_resolve_against_viewport_and_font_size() {
     assert!(
         hit,
         "expected a 500x160 box from 50vw/10em, rects: {:?}",
-        layout.rects.values().map(|r| (r.width, r.height)).collect::<Vec<_>>()
+        layout
+            .rects
+            .values()
+            .map(|r| (r.width, r.height))
+            .collect::<Vec<_>>()
     );
 }
 
@@ -506,7 +550,11 @@ fn percentage_padding_top_reserves_aspect_ratio_box() {
     assert!(
         hit,
         "expected a ~1000x562 aspect-ratio box from padding-top:56.25%, rects: {:?}",
-        layout.rects.values().map(|r| (r.width, r.height)).collect::<Vec<_>>()
+        layout
+            .rects
+            .values()
+            .map(|r| (r.width, r.height))
+            .collect::<Vec<_>>()
     );
 }
 
@@ -535,12 +583,18 @@ fn percentage_padding_uses_final_flex_containing_block_width() {
     let second = rect("second");
     let second_sizer = rect("second-sizer");
 
-    assert!((first.width - 500.0).abs() < 0.01, "first flex item: {first:?}");
+    assert!(
+        (first.width - 500.0).abs() < 0.01,
+        "first flex item: {first:?}"
+    );
     assert!(
         (first_sizer.height - 275.0).abs() < 0.01,
         "55% padding must use the final 500px containing block: {first_sizer:?}"
     );
-    assert!((second.width - 450.0).abs() < 0.01, "second flex item: {second:?}");
+    assert!(
+        (second.width - 450.0).abs() < 0.01,
+        "second flex item: {second:?}"
+    );
     assert!(
         (second_sizer.height - 480.15).abs() < 0.51,
         "106.7% padding must use the final 450px containing block: {second_sizer:?}"
@@ -558,7 +612,9 @@ fn percentage_padding_uses_final_flex_containing_block_width() {
 
 #[test]
 fn final_flex_main_size_drives_auto_cross_size_through_aspect_ratio() {
-    let tree = parse_html(include_str!("../render-repros/flex-post-ratio-cross-size.html"));
+    let tree = parse_html(include_str!(
+        "../render-repros/flex-post-ratio-cross-size.html"
+    ));
     let layout = layout_dom(&tree, (1080.0, 1000.0));
     let rect = |id| layout.rects[&tree.get_element_by_id(id).unwrap()];
 
@@ -568,7 +624,10 @@ fn final_flex_main_size_drives_auto_cross_size_through_aspect_ratio() {
     let copy = rect("copy");
     let after = rect("after");
 
-    assert!((media.width - 520.0).abs() < 0.01, "flexed media width: {media:?}");
+    assert!(
+        (media.width - 520.0).abs() < 0.01,
+        "flexed media width: {media:?}"
+    );
     assert!(
         (media.height - 520.0 / 1.72).abs() < 0.51,
         "auto cross-size must use the final 520px main size: {media:?}"
@@ -662,8 +721,9 @@ fn scrolled_ratio_sized_flex_clip_keeps_absolute_visual_visible() {
         <div id="spacer"></div><div id="row"><div id="media"><div id="visual"></div></div><div id="copy"></div></div><div id="tail"></div>
         "#,
     );
-    let pixmap = bun_browser_render::paint_dom_scrolled(&tree, (1080.0, 400.0), None, (0.0, 8300.0))
-        .expect("scrolled ratio fixture paints");
+    let pixmap =
+        bun_browser_render::paint_dom_scrolled(&tree, (1080.0, 400.0), None, (0.0, 8300.0))
+            .expect("scrolled ratio fixture paints");
     let visual = pixmap.pixel(260, 100).expect("visual center pixel");
     let clip_tail = pixmap.pixel(260, 299).expect("clip tail pixel");
 
@@ -696,8 +756,14 @@ fn mixed_percentage_padding_shorthand_preserves_fixed_sides_and_content_origin()
     let ink = layout.rects[&tree.get_element_by_id("ink").unwrap()];
     let padding = layout.styles[&mixed_id].padding;
 
-    assert!((mixed.width - 500.0).abs() < 0.01, "border-box width: {mixed:?}");
-    assert!((mixed.height - 85.0).abs() < 0.01, "mixed padding height: {mixed:?}");
+    assert!(
+        (mixed.width - 500.0).abs() < 0.01,
+        "border-box width: {mixed:?}"
+    );
+    assert!(
+        (mixed.height - 85.0).abs() < 0.01,
+        "mixed padding height: {mixed:?}"
+    );
     assert!(
         (padding.top - 50.0).abs() < 0.01
             && (padding.right - 20.0).abs() < 0.01
@@ -761,25 +827,50 @@ fn inset_absolute_uses_nearest_positioned_ancestor() {
     let cb = layout.rects[&tree.get_element_by_id("cb").expect("containing block")];
     let abs = layout.rects[&tree.get_element_by_id("abs").expect("absolute child")];
     let abs_end = layout.rects[&tree.get_element_by_id("abs-end").expect("end-inset child")];
-    let abs_percent =
-        layout.rects[&tree.get_element_by_id("abs-percent").expect("percent-inset child")];
+    let abs_percent = layout.rects[&tree
+        .get_element_by_id("abs-percent")
+        .expect("percent-inset child")];
     let fixed = layout.rects[&tree.get_element_by_id("fixed").expect("fixed child")];
 
     // Absolute insets are measured from the positioned ancestor's padding
     // edge, not from the intervening static wrapper.
-    assert!((abs.x - cb.x - 25.0).abs() < 1.0, "wrong absolute x: cb={cb:?} abs={abs:?}");
-    assert!((abs.y - cb.y - 35.0).abs() < 1.0, "wrong absolute y: cb={cb:?} abs={abs:?}");
+    assert!(
+        (abs.x - cb.x - 25.0).abs() < 1.0,
+        "wrong absolute x: cb={cb:?} abs={abs:?}"
+    );
+    assert!(
+        (abs.y - cb.y - 35.0).abs() < 1.0,
+        "wrong absolute y: cb={cb:?} abs={abs:?}"
+    );
     assert_eq!(
         layout.styles[&tree.get_element_by_id("abs").unwrap()].display,
         bun_browser_render::Display::Block,
         "positioned inline should be blockified"
     );
-    assert!((abs_end.x - 350.0).abs() < 1.0, "wrong right-inset x: {abs_end:?}");
-    assert!((abs_end.y - 200.0).abs() < 1.0, "wrong bottom-inset y: {abs_end:?}");
-    assert!((abs_percent.x - 260.0).abs() < 1.0, "wrong percent-inset x: {abs_percent:?}");
-    assert!((abs_percent.y - 160.0).abs() < 1.0, "wrong percent-inset y: {abs_percent:?}");
-    assert!((fixed.x - 520.0).abs() < 1.0, "fixed box did not use viewport x: {fixed:?}");
-    assert!((fixed.y - 40.0).abs() < 1.0, "fixed box did not use viewport y: {fixed:?}");
+    assert!(
+        (abs_end.x - 350.0).abs() < 1.0,
+        "wrong right-inset x: {abs_end:?}"
+    );
+    assert!(
+        (abs_end.y - 200.0).abs() < 1.0,
+        "wrong bottom-inset y: {abs_end:?}"
+    );
+    assert!(
+        (abs_percent.x - 260.0).abs() < 1.0,
+        "wrong percent-inset x: {abs_percent:?}"
+    );
+    assert!(
+        (abs_percent.y - 160.0).abs() < 1.0,
+        "wrong percent-inset y: {abs_percent:?}"
+    );
+    assert!(
+        (fixed.x - 520.0).abs() < 1.0,
+        "fixed box did not use viewport x: {fixed:?}"
+    );
+    assert!(
+        (fixed.y - 40.0).abs() < 1.0,
+        "fixed box did not use viewport y: {fixed:?}"
+    );
 }
 
 #[test]
@@ -807,7 +898,9 @@ fn inset_absolute_fills_positioned_inline_flex_ancestor() {
 
 #[test]
 fn absolute_auto_axes_preserve_static_position_after_reparenting() {
-    let tree = parse_html(include_str!("../render-repros/absolute-static-position.html"));
+    let tree = parse_html(include_str!(
+        "../render-repros/absolute-static-position.html"
+    ));
     let layout = layout_dom(&tree, (900.0, 1000.0));
     let rect = |id| layout.rects[&tree.get_element_by_id(id).unwrap()];
     let static_inline = rect("top-static-inline");
@@ -1028,7 +1121,9 @@ fn transforms_establish_absolute_and_fixed_containing_blocks() {
 
 #[test]
 fn modern_effects_establish_containing_blocks_independently() {
-    let tree = parse_html(include_str!("../render-repros/modern-containing-block-triggers.html"));
+    let tree = parse_html(include_str!(
+        "../render-repros/modern-containing-block-triggers.html"
+    ));
     let layout = layout_dom(&tree, (900.0, 700.0));
     let cases = [
         ("filter-cb", "filter-badge"),
@@ -1218,7 +1313,10 @@ fn percentage_flex_overlay_uses_auto_width_parent_content_box() {
     let body = layout.rects[&tree.get_element_by_id("body").unwrap()];
     let sidebar = layout.rects[&tree.get_element_by_id("sidebar").unwrap()];
     assert!((document.x - 16.0).abs() < 0.01, "document: {document:?}");
-    assert!((document.width - 1248.0).abs() < 0.01, "document: {document:?}");
+    assert!(
+        (document.width - 1248.0).abs() < 0.01,
+        "document: {document:?}"
+    );
     assert!((main.x - 16.0).abs() < 0.01, "main: {main:?}");
     assert!((body.x - 336.0).abs() < 0.01, "body: {body:?}");
     assert!((sidebar.x - 16.0).abs() < 0.01, "sidebar: {sidebar:?}");
@@ -1227,7 +1325,9 @@ fn percentage_flex_overlay_uses_auto_width_parent_content_box() {
 
 #[test]
 fn native_float_band_matches_bootstrap_clearfix_geometry() {
-    let tree = parse_html(include_str!("../render-repros/bootstrap-float-clearfix.html"));
+    let tree = parse_html(include_str!(
+        "../render-repros/bootstrap-float-clearfix.html"
+    ));
     let layout = layout_dom(&tree, (900.0, 1000.0));
     let rect = |selector| {
         let id = tree.query_selector(selector).unwrap().unwrap();
@@ -1293,7 +1393,10 @@ fn native_percentage_float_uses_padded_containing_block_content_width() {
             && (float.height - 40.0).abs() < 0.01,
         "float: {float:?}"
     );
-    assert!((clear.x - 20.0).abs() < 0.01 && (clear.y - 60.0).abs() < 0.01, "clear: {clear:?}");
+    assert!(
+        (clear.x - 20.0).abs() < 0.01 && (clear.y - 60.0).abs() < 0.01,
+        "clear: {clear:?}"
+    );
 }
 
 #[test]
@@ -1421,7 +1524,10 @@ fn float_flow_zone_preserves_blocks_inline_runs_and_clearance() {
         (float.x - 650.0).abs() < 0.01 && (float.height - 400.0).abs() < 0.01,
         "float: {float:?}"
     );
-    assert!((intro.x - 0.0).abs() < 0.01 && (intro.width - 650.0).abs() < 0.01, "intro: {intro:?}");
+    assert!(
+        (intro.x - 0.0).abs() < 0.01 && (intro.width - 650.0).abs() < 0.01,
+        "intro: {intro:?}"
+    );
     assert!(
         (release.y - 100.0).abs() < 0.01 && (release.width - 650.0).abs() < 0.01,
         "release: {release:?}"
@@ -1441,7 +1547,9 @@ fn float_flow_zone_preserves_blocks_inline_runs_and_clearance() {
         "cleared: {cleared:?}"
     );
     assert!(
-        !layout.rects.contains_key(&tree.get_element_by_id("mobile-duplicate").unwrap()),
+        !layout
+            .rects
+            .contains_key(&tree.get_element_by_id("mobile-duplicate").unwrap()),
         "display:none duplicate generated a box"
     );
 }
@@ -1719,7 +1827,10 @@ fn min_height_floor_keeps_a_full_width_float_at_block_start() {
             && (float.height - 600.0).abs() < 0.01,
         "float: {float:?}"
     );
-    assert!((following.y - 600.0).abs() < 0.01, "following: {following:?}");
+    assert!(
+        (following.y - 600.0).abs() < 0.01,
+        "following: {following:?}"
+    );
 }
 
 #[test]
@@ -1872,7 +1983,9 @@ fn text_alignment_does_not_shrink_block_children_or_wrap_inline_block_rows() {
         "text-align must not shrink-wrap an auto-width block child: {row:?}"
     );
     assert!(
-        items.windows(2).all(|pair| (pair[0].y - pair[1].y).abs() < 0.01),
+        items
+            .windows(2)
+            .all(|pair| (pair[0].y - pair[1].y).abs() < 0.01),
         "inline-block items should share one line when the block has room: {items:?}"
     );
     assert!(
@@ -1995,8 +2108,14 @@ fn absolute_inline_svg_keeps_percentage_width_and_view_box_ratio() {
     );
     let layout = layout_dom(&tree, (1000.0, 600.0));
     let art = layout.rects[&tree.get_element_by_id("art").unwrap()];
-    assert!((art.x - 640.0).abs() < 0.01, "percentage width must anchor from the right: {art:?}");
-    assert!((art.width - 160.0).abs() < 0.01, "percentage width: {art:?}");
+    assert!(
+        (art.x - 640.0).abs() < 0.01,
+        "percentage width must anchor from the right: {art:?}"
+    );
+    assert!(
+        (art.width - 160.0).abs() < 0.01,
+        "percentage width: {art:?}"
+    );
     assert!((art.height - 160.0).abs() < 0.01, "viewBox ratio: {art:?}");
 }
 
@@ -2088,7 +2207,9 @@ fn grid_item_intrinsic_height_keeps_negative_collapsed_margin() {
 
 #[test]
 fn inline_block_flex_items_keep_block_inner_flow() {
-    let tree = parse_html(include_str!("../render-repros/inline-block-flex-items.html"));
+    let tree = parse_html(include_str!(
+        "../render-repros/inline-block-flex-items.html"
+    ));
     let layout = layout_dom(&tree, (900.0, 1000.0));
     let rect = |id| layout.rects[&tree.get_element_by_id(id).unwrap()];
     let brand = rect("brand");
@@ -2130,8 +2251,9 @@ fn inline_block_flex_items_keep_block_inner_flow() {
 
 #[test]
 fn percentage_height_under_indefinite_parent_uses_content_height() {
-    let tree =
-        parse_html(include_str!("../render-repros/percentage-height-indefinite-parent.html"));
+    let tree = parse_html(include_str!(
+        "../render-repros/percentage-height-indefinite-parent.html"
+    ));
     let layout = layout_dom(&tree, (900.0, 1000.0));
     for id in ["wrapper", "stack", "editor", "pre", "code"] {
         let rect = layout.rects[&tree.get_element_by_id(id).unwrap()];
@@ -2536,8 +2658,14 @@ fn nested_is_descendant_utility_blockifies_matching_lines() {
     let layout = layout_dom(&tree, (500.0, 200.0));
     let one = tree.get_element_by_id("one").unwrap();
     let two = tree.get_element_by_id("two").unwrap();
-    assert_eq!(layout.styles[&one].display, bun_browser_render::Display::Block);
-    assert_eq!(layout.styles[&two].display, bun_browser_render::Display::Block);
+    assert_eq!(
+        layout.styles[&one].display,
+        bun_browser_render::Display::Block
+    );
+    assert_eq!(
+        layout.styles[&two].display,
+        bun_browser_render::Display::Block
+    );
     assert!(layout.rects[&two].y > layout.rects[&one].y);
     assert_eq!(layout.rects[&one].width, layout.rects[&two].width);
 }
@@ -2723,7 +2851,9 @@ fn grid_column_auto_span_shorthand_places_six_cards_in_two_rows() {
     let layout = layout_dom(&tree, (1440.0, 900.0));
     let cards: Vec<_> = (1..=6)
         .map(|index| {
-            let id = tree.get_element_by_id(&format!("card-{index}")).expect("card exists");
+            let id = tree
+                .get_element_by_id(&format!("card-{index}"))
+                .expect("card exists");
             layout.rects[&id]
         })
         .collect();
@@ -2768,9 +2898,18 @@ fn length_line_height_computes_before_inheritance() {
     let parent = tree.get_element_by_id("parent").unwrap();
     let child = tree.get_element_by_id("child").unwrap();
     let ratio = tree.get_element_by_id("ratio").unwrap();
-    assert_eq!(layout.styles[&parent].line_height, Some(bun_browser_render::LineHeight::Px(80.0)));
-    assert_eq!(layout.styles[&child].line_height, Some(bun_browser_render::LineHeight::Px(80.0)));
-    assert_eq!(layout.styles[&ratio].line_height, Some(bun_browser_render::LineHeight::Ratio(2.0)));
+    assert_eq!(
+        layout.styles[&parent].line_height,
+        Some(bun_browser_render::LineHeight::Px(80.0))
+    );
+    assert_eq!(
+        layout.styles[&child].line_height,
+        Some(bun_browser_render::LineHeight::Px(80.0))
+    );
+    assert_eq!(
+        layout.styles[&ratio].line_height,
+        Some(bun_browser_render::LineHeight::Ratio(2.0))
+    );
 }
 
 #[test]
@@ -2786,7 +2925,11 @@ fn font_weight_computes_numerically_through_inheritance() {
         "#,
     );
     let layout = layout_dom(&tree, (900.0, 1000.0));
-    let weight = |id| layout.styles[&tree.get_element_by_id(id).unwrap()].font_weight.as_deref();
+    let weight = |id| {
+        layout.styles[&tree.get_element_by_id(id).unwrap()]
+            .font_weight
+            .as_deref()
+    };
     assert_eq!(weight("medium"), Some("500"));
     assert_eq!(weight("inherited"), Some("500"));
     assert_eq!(weight("normal"), Some("400"));
@@ -2815,7 +2958,11 @@ fn heading_font_weight_css_wide_keywords_override_the_ua_bold_rule() {
         "#,
     );
     let layout = layout_dom(&tree, (900.0, 1000.0));
-    let weight = |id| layout.styles[&tree.get_element_by_id(id).unwrap()].font_weight.as_deref();
+    let weight = |id| {
+        layout.styles[&tree.get_element_by_id(id).unwrap()]
+            .font_weight
+            .as_deref()
+    };
     assert_eq!(weight("ua"), Some("700"));
     assert_eq!(weight("inherited"), Some("500"));
     assert_eq!(weight("unset"), Some("500"));
@@ -2842,7 +2989,10 @@ fn contextual_right_inset_uses_root_font_tokens() {
     );
     let layout = layout_dom(&tree, (900.0, 1000.0));
     let search = tree.get_element_by_id("search").unwrap();
-    assert_eq!(layout.styles[&search].inset[1], Some(bun_browser_render::Dimension::Px(56.0)));
+    assert_eq!(
+        layout.styles[&search].inset[1],
+        Some(bun_browser_render::Dimension::Px(56.0))
+    );
     let rect = layout.rects[&search];
     assert!(
         (rect.x - 744.0).abs() < 0.01,
@@ -3345,14 +3495,20 @@ fn light_dark_uses_the_final_inherited_color_scheme_across_the_cascade() {
     assert_eq!(dark_style.color, Some([0xee, 0xee, 0xee, 0xff]));
     assert_eq!(dark_style.border_color, Some([0x33, 0x33, 0x33, 0xff]));
     assert_eq!(
-        dark_style.before_pseudo.as_deref().and_then(|pseudo| pseudo.background_color),
+        dark_style
+            .before_pseudo
+            .as_deref()
+            .and_then(|pseudo| pseudo.background_color),
         Some([0x00, 0x00, 0xff, 0xff]),
         "pseudo must use its host's inherited dark scheme"
     );
 
     let child_style = &layout.styles[&child];
     assert!(child_style.color_scheme_dark);
-    let (_, stops) = child_style.background_gradient.as_ref().expect("dark gradient");
+    let (_, stops) = child_style
+        .background_gradient
+        .as_ref()
+        .expect("dark gradient");
     assert_eq!(stops[0].0, [0x10, 0x10, 0x10, 0xff]);
     assert_eq!(stops[1].0, [0x20, 0x20, 0x20, 0xff]);
 
@@ -3573,7 +3729,10 @@ fn authored_percentage_max_width_still_clamps_an_oversized_image() {
     let rect = layout.rects[&image];
 
     assert!((rect.width - 1280.0).abs() < 0.01, "{rect:?}");
-    assert!((rect.height - (1280.0 * 692.0 / 3008.0)).abs() < 1.0, "{rect:?}");
+    assert!(
+        (rect.height - (1280.0 * 692.0 / 3008.0)).abs() < 1.0,
+        "{rect:?}"
+    );
 }
 
 /// Chromium 150 applies CSS Sizing's compressible replaced-element rule when
@@ -3687,8 +3846,16 @@ fn functional_percentage_max_replaced_items_shrink_in_a_flex_row() {
 
     for (index, expected) in expected_widths.into_iter().enumerate() {
         let expected = expected.round();
-        assert_eq!(columns[index].width, expected, "column {index}: {:?}", columns[index]);
-        assert_eq!(images[index].width, expected, "image {index}: {:?}", images[index]);
+        assert_eq!(
+            columns[index].width, expected,
+            "column {index}: {:?}",
+            columns[index]
+        );
+        assert_eq!(
+            images[index].width, expected,
+            "image {index}: {:?}",
+            images[index]
+        );
     }
 }
 
@@ -3789,7 +3956,12 @@ fn cyclic_percentage_flex_row_keeps_its_intrinsic_content_width() {
     let layout = layout_dom(&tree, (1000.0, 400.0));
     let rect = |id| layout.rects[&tree.get_element_by_id(id).unwrap()];
 
-    assert_eq!(rect("week").width, 336.0, "percentage row: {:?}", rect("week"));
+    assert_eq!(
+        rect("week").width,
+        336.0,
+        "percentage row: {:?}",
+        rect("week")
+    );
     assert_eq!(
         rect("month").width,
         384.0,
@@ -3831,14 +4003,21 @@ fn bare_and_functional_cyclic_image_percentages_use_the_final_flex_width() {
     );
     let bare_image = tree.get_element_by_id("bare-image").unwrap();
     let functional_image = tree.get_element_by_id("functional-image").unwrap();
-    let intrinsic =
-        HashMap::from([(bare_image, (500.0, 500.0)), (functional_image, (500.0, 500.0))]);
+    let intrinsic = HashMap::from([
+        (bare_image, (500.0, 500.0)),
+        (functional_image, (500.0, 500.0)),
+    ]);
     let layout = layout_dom_with_images(&tree, (1280.0, 720.0), &intrinsic);
     let rect = |id| layout.rects[&tree.get_element_by_id(id).unwrap()];
 
     for (prefix, wrap_id, link_id, image_id) in [
         ("bare", "bare-wrap", "bare-link", "bare-image"),
-        ("functional", "functional-wrap", "functional-link", "functional-image"),
+        (
+            "functional",
+            "functional-wrap",
+            "functional-link",
+            "functional-image",
+        ),
     ] {
         let wrap = rect(wrap_id);
         let link = rect(link_id);
@@ -3876,7 +4055,10 @@ fn percentage_max_replaced_items_keep_natural_max_content_size() {
     let first = layout.rects[&first];
     let second = layout.rects[&second];
 
-    assert!((first.width - 303.0).abs() < 0.01 && (first.height - 255.0).abs() < 0.01, "{first:?}");
+    assert!(
+        (first.width - 303.0).abs() < 0.01 && (first.height - 255.0).abs() < 0.01,
+        "{first:?}"
+    );
     assert!(
         (second.width - 500.0).abs() < 0.01 && (second.height - 250.0).abs() < 0.01,
         "{second:?}"
@@ -3920,8 +4102,14 @@ fn negative_letter_spacing_changes_intrinsic_line_breaks() {
 
     assert_eq!(layout.styles[&tight_id].letter_spacing, Some(-1.8000001));
     assert_eq!(layout.styles[&reset_id].letter_spacing, Some(0.0));
-    assert_eq!(tight.height, 80.0, "negative tracking must shape to two lines: {tight:?}");
-    assert_eq!(reset.height, 120.0, "`normal` must reset inherited tracking: {reset:?}");
+    assert_eq!(
+        tight.height, 80.0,
+        "negative tracking must shape to two lines: {tight:?}"
+    );
+    assert_eq!(
+        reset.height, 120.0,
+        "`normal` must reset inherited tracking: {reset:?}"
+    );
 }
 
 #[test]
@@ -3943,10 +4131,22 @@ fn text_indent_is_inherited_and_initial_resets_to_zero() {
     let layout = layout_dom(&tree, (500.0, 300.0));
     let style = |id| &layout.styles[&tree.get_element_by_id(id).unwrap()];
 
-    assert_eq!(style("parent").text_indent, Some(bun_browser_render::Dimension::Px(40.0)));
-    assert_eq!(style("inherited").text_indent, Some(bun_browser_render::Dimension::Px(40.0)));
-    assert_eq!(style("initial").text_indent, Some(bun_browser_render::Dimension::Px(0.0)));
-    assert_eq!(style("unset").text_indent, Some(bun_browser_render::Dimension::Px(40.0)));
+    assert_eq!(
+        style("parent").text_indent,
+        Some(bun_browser_render::Dimension::Px(40.0))
+    );
+    assert_eq!(
+        style("inherited").text_indent,
+        Some(bun_browser_render::Dimension::Px(40.0))
+    );
+    assert_eq!(
+        style("initial").text_indent,
+        Some(bun_browser_render::Dimension::Px(0.0))
+    );
+    assert_eq!(
+        style("unset").text_indent,
+        Some(bun_browser_render::Dimension::Px(40.0))
+    );
 }
 
 /// Modern utility frameworks emit logical insets for full-width fixed bars
@@ -4046,7 +4246,10 @@ fn css_counters_resolve_generated_line_numbers_in_tree_order() {
     for (id, expected) in [("line-one", "1"), ("line-two", "2"), ("line-three", "3")] {
         let style = &layout.styles[&tree.get_element_by_id(id).unwrap()];
         assert_eq!(
-            style.before_pseudo.as_ref().and_then(|pseudo| pseudo.before_content.as_deref()),
+            style
+                .before_pseudo
+                .as_ref()
+                .and_then(|pseudo| pseudo.before_content.as_deref()),
             Some(expected),
             "{id}"
         );
@@ -4071,7 +4274,11 @@ fn nested_counter_scopes_feed_counters_function_and_expire_at_parent() {
         "#,
     );
     let layout = layout_dom(&tree, (400.0, 200.0));
-    let generated = |id| layout.styles[&tree.get_element_by_id(id).unwrap()].before_content.clone();
+    let generated = |id| {
+        layout.styles[&tree.get_element_by_id(id).unwrap()]
+            .before_content
+            .clone()
+    };
 
     assert_eq!(generated("outer-one").as_deref(), Some("1 "));
     assert_eq!(generated("inner-one").as_deref(), Some("1.1 "));
@@ -4155,7 +4362,10 @@ fn positioned_counter_inside_nested_inline_code_uses_the_code_gutter() {
             })
             .count()
     };
-    assert!(red_ink(12..36) > 4, "line counters must paint in the positioned code gutter");
+    assert!(
+        red_ink(12..36) > 4,
+        "line counters must paint in the positioned code gutter"
+    );
     assert_eq!(
         red_ink(45..72),
         0,
@@ -4517,9 +4727,15 @@ fn display_inherit_transitively_preserves_contents_and_block_display() {
         native_inherit.internal_flex_container,
         "inherited table-cell display must reconstruct its internal cell-content wrapper"
     );
-    assert_eq!(native_inherit.min_width, bun_browser_render::Dimension::Px(50.0));
+    assert_eq!(
+        native_inherit.min_width,
+        bun_browser_render::Dimension::Px(50.0)
+    );
     assert!(native_inherit_reversed.internal_flex_container);
-    assert_eq!(native_inherit_reversed.min_width, bun_browser_render::Dimension::Px(50.0));
+    assert_eq!(
+        native_inherit_reversed.min_width,
+        bun_browser_render::Dimension::Px(50.0)
+    );
 }
 
 #[cfg(feature = "paint")]
@@ -4541,7 +4757,10 @@ fn closed_details_content_does_not_paint() {
     let pixmap =
         bun_browser_render::paint_dom(&tree, (40.0, 40.0), None).expect("details fixture paints");
     let summary = pixmap.pixel(5, 5).expect("summary pixel");
-    assert!(summary.green() > 240 && summary.red() < 20, "the first summary must paint");
+    assert!(
+        summary.green() > 240 && summary.red() < 20,
+        "the first summary must paint"
+    );
     let hidden = pixmap.pixel(5, 25).expect("closed content pixel");
     assert!(
         hidden.red() > 240 && hidden.green() > 240 && hidden.blue() > 240,
@@ -4600,8 +4819,10 @@ fn grid_replaced_normal_and_explicit_stretch_match_browser_geometry() {
         "conflicting-min-inline",
         "conflicting-min-block",
     ];
-    let intrinsic: HashMap<_, _> =
-        ids.iter().map(|name| (tree.get_element_by_id(name).unwrap(), (100.0, 50.0))).collect();
+    let intrinsic: HashMap<_, _> = ids
+        .iter()
+        .map(|name| (tree.get_element_by_id(name).unwrap(), (100.0, 50.0)))
+        .collect();
     let layout = layout_dom_with_images(&tree, (800.0, 3000.0), &intrinsic);
     let rect = |name| layout.rects[&tree.get_element_by_id(name).unwrap()];
     let size = |name| {
@@ -4656,9 +4877,10 @@ fn nested_grid_input_contributes_intrinsic_height_without_preventing_stretch() {
         "#,
     );
     let layout = layout_dom(&tree, (800.0, 600.0));
-    for (input, editor, height) in
-        [("auto-input", "auto-editor", 22.0), ("short-input", "short-editor", 12.0)]
-    {
+    for (input, editor, height) in [
+        ("auto-input", "auto-editor", 22.0),
+        ("short-input", "short-editor", 12.0),
+    ] {
         let input_rect = layout.rects[&tree.get_element_by_id(input).unwrap()];
         let editor_rect = layout.rects[&tree.get_element_by_id(editor).unwrap()];
         assert_eq!(input_rect.height, height, "{input}");
@@ -4726,7 +4948,10 @@ fn grid_replaced_classification_keeps_controls_stretched_and_media_natural() {
     let auto_button_grid = layout.rects[&tree.get_element_by_id("auto-button-grid").unwrap()];
     assert!(auto_button.width > 20.0 && auto_button.width < 30.0);
     assert_eq!(auto_button.height, 300.0);
-    assert_eq!(auto_button.x + auto_button.width, auto_button_grid.x + auto_button_grid.width);
+    assert_eq!(
+        auto_button.x + auto_button.width,
+        auto_button_grid.x + auto_button_grid.width
+    );
 }
 
 #[test]
@@ -4779,7 +5004,11 @@ fn inherited_font_shorthand_overrides_native_control_typography() {
         let node = tree.get_element_by_id(name).unwrap();
         let style = &layout.styles[&node];
         assert_eq!(style.font_size, Some(20.0), "{name}");
-        assert_eq!(style.line_height, Some(bun_browser_render::LineHeight::Px(30.0)), "{name}");
+        assert_eq!(
+            style.line_height,
+            Some(bun_browser_render::LineHeight::Px(30.0)),
+            "{name}"
+        );
         assert_eq!(style.font_weight.as_deref(), Some("700"), "{name}");
         assert_eq!(style.font_family.as_deref(), Some("arial"), "{name}");
         assert_eq!(layout.rects[&node].height, 30.0, "{name}");
@@ -4850,7 +5079,7 @@ fn deeply_nested_wrappers_cascade_without_stack_overflow() {
 
 #[test]
 fn float_ending_at_rounded_segment_boundary_does_not_panic() {
-    use taffy::{Clear, FloatDirection, Size, compute::FloatContext};
+    use taffy::{compute::FloatContext, Clear, FloatDirection, Size};
 
     fn place(
         context: &mut FloatContext,
@@ -4858,7 +5087,10 @@ fn float_ending_at_rounded_segment_boundary_does_not_panic() {
         direction: FloatDirection,
     ) -> taffy::Point<f32> {
         context.place_floated_box(
-            Size { width: 100.0, height },
+            Size {
+                width: 100.0,
+                height,
+            },
             1859.0,
             [0.0, 0.0],
             direction,
@@ -4871,5 +5103,8 @@ fn float_ending_at_rounded_segment_boundary_does_not_panic() {
     place(&mut context, 421.3333, FloatDirection::Left);
     place(&mut context, 400.3333, FloatDirection::Right);
 
-    assert_eq!(place(&mut context, 400.3333, FloatDirection::Left).y, 1859.0);
+    assert_eq!(
+        place(&mut context, 400.3333, FloatDirection::Left).y,
+        1859.0
+    );
 }

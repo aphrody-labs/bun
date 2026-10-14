@@ -75,7 +75,9 @@ pub fn get_source_type(
         Some("js") => SourceType::unambiguous(),
         Some("jsx") => SourceType::unambiguous().with_jsx(true),
         Some("ts") => SourceType::unambiguous().with_typescript(true),
-        Some("tsx") => SourceType::unambiguous().with_typescript(true).with_jsx(true),
+        Some("tsx") => SourceType::unambiguous()
+            .with_typescript(true)
+            .with_jsx(true),
         Some("dts") => SourceType::d_ts(),
         _ => SourceType::from_path(filename).unwrap_or_default(),
     };

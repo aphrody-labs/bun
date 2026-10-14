@@ -95,7 +95,9 @@ pub fn write_trailing_same_line_comment(
     upper: u32,
     f: &mut GraphqlFormatter<'_, '_>,
 ) {
-    let Some(span) = f.context().comments().peek() else { return };
+    let Some(span) = f.context().comments().peek() else {
+        return;
+    };
     if span.end > upper {
         return;
     }
@@ -118,7 +120,9 @@ pub fn write_trailing_same_line_comment(
 /// `line_suffix` defers the comment to the next printed break, so any token
 /// written on the same line before that break would jump in front of the comment.
 pub fn write_adjacent_trailing_comment(prev_end: u32, f: &mut GraphqlFormatter<'_, '_>) {
-    let Some(span) = f.context().comments().peek() else { return };
+    let Some(span) = f.context().comments().peek() else {
+        return;
+    };
     let source = f.context().source_text();
     if span.start < prev_end
         || !source.all_bytes_match(prev_end, span.start, |b| b == b' ' || b == b'\t')
@@ -156,7 +160,9 @@ fn is_own_line(source: SourceText<'_>, position: u32) -> bool {
 ///
 /// Returns whether a comment was claimed (deferred to this line's end as a `line_suffix`).
 fn claim_trailing_comment_before(upper: u32, f: &mut GraphqlFormatter<'_, '_>) -> bool {
-    let Some(span) = f.context().comments().peek() else { return false };
+    let Some(span) = f.context().comments().peek() else {
+        return false;
+    };
     if span.end > upper || is_own_line(f.context().source_text(), span.start) {
         return false;
     }
@@ -245,7 +251,10 @@ fn is_suppression_comment(source: SourceText<'_>, span: Span) -> bool {
 /// Returns `true` if any pending comment up to `before` is a suppression marker.
 pub fn is_suppressed_before(f: &GraphqlFormatter<'_, '_>, before: u32) -> bool {
     let source = f.context().source_text();
-    f.context().comments().iter_before(before).any(|c| is_suppression_comment(source, c))
+    f.context()
+        .comments()
+        .iter_before(before)
+        .any(|c| is_suppression_comment(source, c))
 }
 
 /// Emits a node's leading comments, then the node's source verbatim,

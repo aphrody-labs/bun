@@ -170,12 +170,14 @@ fn gt_run_region_must_scan_as_a_type_list() {
 
 #[test]
 fn lt_lt_openers_close_with_a_split_gt_run() {
-    for code in
-        ["let e: Map<<T>(x: T) => T, Set<U>> = null!;", "const r = f<<T>(x: T) => Array<T>>(0);"]
-    {
+    for code in [
+        "let e: Map<<T>(x: T) => T, Set<U>> = null!;",
+        "const r = f<<T>(x: T) => Array<T>>(0);",
+    ] {
         let ks = kinds_of(code, ScriptTS);
         assert!(
-            !ks.iter().any(|k| matches!(k, TokenKind::LShift | TokenKind::RShift)),
+            !ks.iter()
+                .any(|k| matches!(k, TokenKind::LShift | TokenKind::RShift)),
             "{code:?}: {ks:?}"
         );
     }
@@ -228,7 +230,10 @@ fn gt_run_head_context_covers_heritage_members_and_spreads() {
     ] {
         gt_run_fused(code);
     }
-    let ks = kinds_of("f(x => { const a: A<B<C>>[] = []; }, { a: b<c<d>>[0] });", ScriptTS);
+    let ks = kinds_of(
+        "f(x => { const a: A<B<C>>[] = []; }, { a: b<c<d>>[0] });",
+        ScriptTS,
+    );
     assert_eq!(ks.iter().filter(|k| is_fused_gt(**k)).count(), 1, "{ks:?}");
 }
 
@@ -383,14 +388,29 @@ fn gt_run_third_tier_head_contexts() {
         gt_run_fused(code);
     }
     let ts = |code: &str| kinds_of(code, ScriptTS);
-    for code in ["x = y satisfies T<string, React.FC>>>this.baz;", "x = y as Foo<Bar>>>z;"] {
+    for code in [
+        "x = y satisfies T<string, React.FC>>>this.baz;",
+        "x = y as Foo<Bar>>>z;",
+    ] {
         let ks = ts(code);
-        assert_eq!(ks.iter().filter(|k| **k == TokenKind::RShift).count(), 1, "{code:?}: {ks:?}");
+        assert_eq!(
+            ks.iter().filter(|k| **k == TokenKind::RShift).count(),
+            1,
+            "{code:?}: {ks:?}"
+        );
         assert!(!ks.contains(&TokenKind::URShift), "{code:?}: {ks:?}");
     }
     let ks = ts("x = y as Foo<Bar<T>>>>z;");
-    assert_eq!(ks.iter().filter(|k| **k == TokenKind::RShift).count(), 1, "{ks:?}");
-    assert_eq!(ks.iter().filter(|k| **k == TokenKind::Gt).count(), 2, "{ks:?}");
+    assert_eq!(
+        ks.iter().filter(|k| **k == TokenKind::RShift).count(),
+        1,
+        "{ks:?}"
+    );
+    assert_eq!(
+        ks.iter().filter(|k| **k == TokenKind::Gt).count(),
+        2,
+        "{ks:?}"
+    );
 }
 
 #[test]
@@ -421,7 +441,11 @@ fn this_heads_and_value_braces_before_a_run() {
         gt_run_fused(code);
     }
     let ks = kinds_of("x = a >>ete<this<1n, Map>>(arr);", ScriptTS);
-    assert_eq!(ks.iter().filter(|k| **k == TokenKind::RShift).count(), 2, "{ks:?}");
+    assert_eq!(
+        ks.iter().filter(|k| **k == TokenKind::RShift).count(),
+        2,
+        "{ks:?}"
+    );
     for code in [
         "let Foo: -1\n\n<React.FC<undefined, this>>a;",
         "let x: -1 | -2\n<Map<P>>baz;",
@@ -464,11 +488,17 @@ fn tsx_generic_function_type_in_type_position() {
     let tsx = |code: &str| kinds_of(code, ScriptTSX);
     let type_params = |code: &str| {
         let ks = tsx(code);
-        assert!(!ks.contains(&TokenKind::JsxLt), "{code:?} must not open JSX: {ks:?}");
+        assert!(
+            !ks.contains(&TokenKind::JsxLt),
+            "{code:?} must not open JSX: {ks:?}"
+        );
     };
     let jsx = |code: &str| {
         let ks = tsx(code);
-        assert!(ks.contains(&TokenKind::JsxLt), "{code:?} must open JSX: {ks:?}");
+        assert!(
+            ks.contains(&TokenKind::JsxLt),
+            "{code:?} must open JSX: {ks:?}"
+        );
     };
 
     type_params("let a: <T>(x: T) => T = null!;");
@@ -520,9 +550,15 @@ fn tsx_generic_function_type_in_type_position() {
     type_params("function f<T>(cb: <U>(x: U) => U) {}");
 
     let ks = tsx("f(a << b, c);");
-    assert!(!ks.contains(&TokenKind::JsxLt), "shift must not open JSX: {ks:?}");
+    assert!(
+        !ks.contains(&TokenKind::JsxLt),
+        "shift must not open JSX: {ks:?}"
+    );
     let ks = tsx("x <<= 1;");
-    assert!(!ks.contains(&TokenKind::JsxLt), "shift-assign must not open JSX: {ks:?}");
+    assert!(
+        !ks.contains(&TokenKind::JsxLt),
+        "shift-assign must not open JSX: {ks:?}"
+    );
     let ks = tsx("let v = a < b > (c);");
     assert!(!ks.contains(&TokenKind::JsxLt), "comparison chain: {ks:?}");
 }
@@ -534,10 +570,16 @@ fn jsx_candidate_scans_stay_bounded() {
     assert!(!ks.contains(&TokenKind::JsxLt), "type position: {ks:?}");
     let far = format!("let a = <T>(x){}</T>;", " ".repeat(70 * 1024));
     let ks = tsx(&far);
-    assert!(ks.contains(&TokenKind::JsxLt), "no arrow after the parameters: JSX");
+    assert!(
+        ks.contains(&TokenKind::JsxLt),
+        "no arrow after the parameters: JSX"
+    );
     let many = "const r = f<{ m: <T>(x: T) => T }>(0);\n".repeat(5000);
     let ks = tsx(&many);
-    assert!(!ks.contains(&TokenKind::JsxLt), "every site is a function type: {ks:?}");
+    assert!(
+        !ks.contains(&TokenKind::JsxLt),
+        "every site is a function type: {ks:?}"
+    );
 }
 
 /// `JSXText` is `SourceCharacter but not one of {, <, > or }`, so a `}`
@@ -557,17 +599,27 @@ fn bare_brace_in_children_rules_out_jsx() {
     // The other half of the pair: children are `(hi)`, which is text, so
     // this stays JSX.
     let ks = tsx("const r = f<{ m: <T>(hi)</T> }.m > (0);");
-    assert!(ks.contains(&TokenKind::JsxLt), "clean children stay JSX: {ks:?}");
+    assert!(
+        ks.contains(&TokenKind::JsxLt),
+        "clean children stay JSX: {ks:?}"
+    );
     // A `{` container may legitimately contain `}` inside a string, so the
     // scan stops there and leaves the answer to the probe.
     let ks = tsx("const a = <div>{\"}\"}</div>;");
-    assert!(ks.contains(&TokenKind::JsxLt), "container braces are not text: {ks:?}");
+    assert!(
+        ks.contains(&TokenKind::JsxLt),
+        "container braces are not text: {ks:?}"
+    );
 }
 
 #[test]
 fn tsx_generic_function_type_is_decided_by_its_arrow() {
-    let jsx_count =
-        |code: &str| kinds_of(code, ScriptTSX).iter().filter(|k| **k == TokenKind::JsxLt).count();
+    let jsx_count = |code: &str| {
+        kinds_of(code, ScriptTSX)
+            .iter()
+            .filter(|k| **k == TokenKind::JsxLt)
+            .count()
+    };
     let tail = "\nconst z = <T>hi</T>;";
     for head in [
         "const r = f<{ m: <T>(x: T) => Array<T> }>(0);",
@@ -616,11 +668,17 @@ fn tsx_generic_arrow_in_expression_position_is_diagnosed() {
             "{code:?} must be diagnosed: {codes:?}"
         );
         let ks = kinds_of(code, ScriptTSX);
-        assert!(!ks.contains(&TokenKind::JsxLt), "{code:?} lexes as type parameters: {ks:?}");
+        assert!(
+            !ks.contains(&TokenKind::JsxLt),
+            "{code:?} lexes as type parameters: {ks:?}"
+        );
     };
     let silent = |code: &str| {
         let codes = diag_codes_of(code, ScriptTSX);
-        assert!(!codes.contains(&DiagCode::UnterminatedJsxElement), "{code:?} is valid: {codes:?}");
+        assert!(
+            !codes.contains(&DiagCode::UnterminatedJsxElement),
+            "{code:?} is valid: {codes:?}"
+        );
     };
     for code in [
         "var a = <T>(x: T) => x;",
@@ -666,10 +724,22 @@ fn tsx_function_expression_type_parameters_after_star_or_async() {
             "const h = async function* <T>() {};",
             "const IDENT = async function * < IDENT > ( ) { } ;",
         ),
-        ("z = async function <T>() {};", "IDENT = async function < IDENT > ( ) { } ;"),
-        ("x = function <T>() {};", "IDENT = function < IDENT > ( ) { } ;"),
-        ("x = function* f<T>() {};", "IDENT = function * IDENT < IDENT > ( ) { } ;"),
-        ("f(function* <T>(x: T) {});", "IDENT ( function * < IDENT > ( IDENT : IDENT ) { } ) ;"),
+        (
+            "z = async function <T>() {};",
+            "IDENT = async function < IDENT > ( ) { } ;",
+        ),
+        (
+            "x = function <T>() {};",
+            "IDENT = function < IDENT > ( ) { } ;",
+        ),
+        (
+            "x = function* f<T>() {};",
+            "IDENT = function * IDENT < IDENT > ( ) { } ;",
+        ),
+        (
+            "f(function* <T>(x: T) {});",
+            "IDENT ( function * < IDENT > ( IDENT : IDENT ) { } ) ;",
+        ),
         (
             "x = function* <T>() { yield <T>(a)</T>; };",
             "IDENT = function * < IDENT > ( ) { yield JSX_LT IDENT > JSX_TEXT JSX_LT / IDENT JSX_TAG_END ; } ;",
@@ -686,12 +756,18 @@ fn tsx_function_expression_type_parameters_after_star_or_async() {
 #[test]
 fn tsx_call_and_construct_signatures_are_type_parameters() {
     for (code, want) in [
-        ("type X = { <T>(x: T): U; }", "type IDENT = { < IDENT > ( IDENT : IDENT ) : IDENT ; }"),
+        (
+            "type X = { <T>(x: T): U; }",
+            "type IDENT = { < IDENT > ( IDENT : IDENT ) : IDENT ; }",
+        ),
         (
             "interface X { <T>(x: T): U; new <T>(x: T): U; m<T>(x: T): U; }",
             "interface IDENT { < IDENT > ( IDENT : IDENT ) : IDENT ; new < IDENT > ( IDENT : IDENT ) : IDENT ; IDENT < IDENT > ( IDENT : IDENT ) : IDENT ; }",
         ),
-        ("let x: { <T>(x: T): U };", "let IDENT : { < IDENT > ( IDENT : IDENT ) : IDENT } ;"),
+        (
+            "let x: { <T>(x: T): U };",
+            "let IDENT : { < IDENT > ( IDENT : IDENT ) : IDENT } ;",
+        ),
         (
             "type X = { a: T, <U>(x: U): V }",
             "type IDENT = { IDENT : IDENT , < IDENT > ( IDENT : IDENT ) : IDENT }",
@@ -757,8 +833,14 @@ fn tsx_call_and_construct_signatures_are_type_parameters() {
         "if (x)\n<T>(y)</T>",
     ] {
         let ks = kinds_of(code, ScriptTSX);
-        assert!(ks.contains(&TokenKind::JsxLt), "{code:?} must open JSX: {ks:?}");
-        assert!(!ks.contains(&TokenKind::Lt), "{code:?} must open JSX: {ks:?}");
+        assert!(
+            ks.contains(&TokenKind::JsxLt),
+            "{code:?} must open JSX: {ks:?}"
+        );
+        assert!(
+            !ks.contains(&TokenKind::Lt),
+            "{code:?} must open JSX: {ks:?}"
+        );
     }
 }
 
@@ -773,7 +855,10 @@ fn keyword_named_generic_members() {
             "class C { m() {} return<T>(x: T) {} }",
             "class IDENT { IDENT ( ) { } return < IDENT > ( IDENT : IDENT ) { } }",
         ),
-        ("x = { typeof<T>(x: T) {} };", "IDENT = { typeof < IDENT > ( IDENT : IDENT ) { } } ;"),
+        (
+            "x = { typeof<T>(x: T) {} };",
+            "IDENT = { typeof < IDENT > ( IDENT : IDENT ) { } } ;",
+        ),
         (
             "type X = { void<T>(x: T): U };",
             "type IDENT = { void < IDENT > ( IDENT : IDENT ) : IDENT } ;",
@@ -787,7 +872,10 @@ fn keyword_named_generic_members() {
         "if (a) { void <T>(x)</T> }",
     ] {
         let ks = kinds_of(code, ScriptTSX);
-        assert!(ks.contains(&TokenKind::JsxLt), "{code:?} must open JSX: {ks:?}");
+        assert!(
+            ks.contains(&TokenKind::JsxLt),
+            "{code:?} must open JSX: {ks:?}"
+        );
     }
 }
 
@@ -1019,13 +1107,25 @@ fn tsx_type_parameter_list_signals_cross_trivia() {
     // an `extends` attribute followed by a comment still marks a tag.
     let tsx = |code: &str| kinds_of(code, ScriptTSX);
     for (code, plain) in [
-        ("x = <T //c\nextends U>(a: T) => a;", "x = <T extends U>(a: T) => a;"),
-        ("x = <T /*c*/ extends U>(a: T) => a;", "x = <T extends U>(a: T) => a;"),
-        ("x = <T /*\n*/ extends U>(a: T) => a;", "x = <T extends U>(a: T) => a;"),
+        (
+            "x = <T //c\nextends U>(a: T) => a;",
+            "x = <T extends U>(a: T) => a;",
+        ),
+        (
+            "x = <T /*c*/ extends U>(a: T) => a;",
+            "x = <T extends U>(a: T) => a;",
+        ),
+        (
+            "x = <T /*\n*/ extends U>(a: T) => a;",
+            "x = <T extends U>(a: T) => a;",
+        ),
         ("x = <T //c\n,>(a: T) => a;", "x = <T,>(a: T) => a;"),
         ("x = <T /*c*/,>(a: T) => a;", "x = <T,>(a: T) => a;"),
         ("x = <T //c\n= U,>(a: T) => a;", "x = <T = U,>(a: T) => a;"),
-        ("x = <const /*c*/ T extends U>(a: T) => a;", "x = <const T extends U>(a: T) => a;"),
+        (
+            "x = <const /*c*/ T extends U>(a: T) => a;",
+            "x = <const T extends U>(a: T) => a;",
+        ),
         ("x = <T extends /*c*/ />;", "x = <T extends />;"),
         ("x = <T extends //c\n />;", "x = <T extends />;"),
     ] {
@@ -1042,7 +1142,10 @@ fn tsx_const_followed_by_a_line_break_is_a_jsx_tag_name() {
         "x = <const\nT extends U>hi</const>;",
         "x = <const /*\n*/ extends U>hi</const>;",
     ] {
-        assert!(kinds_of(code, ScriptTSX).contains(&TokenKind::JsxLt), "{code:?}");
+        assert!(
+            kinds_of(code, ScriptTSX).contains(&TokenKind::JsxLt),
+            "{code:?}"
+        );
         assert!(diag_codes_of(code, ScriptTSX).is_empty(), "{code:?}");
     }
 }
@@ -1162,7 +1265,11 @@ fn jsx_element_type_arguments_with_deeply_nested_template_types() {
     let code = format!("x = <Foo<{deep}> />;");
     assert!(diag_codes_of(&code, ScriptTSX).is_empty(), "{code}");
     let ks = kinds_of(&code, ScriptTSX);
-    assert_eq!(ks.iter().filter(|k| **k == TokenKind::JsxLt).count(), 1, "{ks:?}");
+    assert_eq!(
+        ks.iter().filter(|k| **k == TokenKind::JsxLt).count(),
+        1,
+        "{ks:?}"
+    );
     assert!(ks.contains(&TokenKind::JsxTagEnd), "{ks:?}");
 }
 
@@ -1175,7 +1282,9 @@ fn tsx_template_type_with_deeply_nested_substitutions_in_expression_type_argumen
 
 #[test]
 fn no_function_type_after_a_type_operator_or_a_name_on_the_line_before() {
-    for word in ["keyof", "readonly", "unique", "infer", "abstract", "asserts", "is", "as"] {
+    for word in [
+        "keyof", "readonly", "unique", "infer", "abstract", "asserts", "is", "as",
+    ] {
         gt_run_fused(&format!("f<{word}\n<T>>(x);"));
     }
     gt_run_split("f<abstract<T>>(x);");

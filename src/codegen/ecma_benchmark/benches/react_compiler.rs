@@ -31,12 +31,17 @@ fn bench_react_compiler(criterion: &mut Criterion) {
 
                 runner.run(|| {
                     let result = {
-                        let semantic =
-                            SemanticBuilder::new().with_build_nodes(true).build(&program).semantic;
+                        let semantic = SemanticBuilder::new()
+                            .with_build_nodes(true)
+                            .build(&program)
+                            .semantic;
                         compile(&program, &semantic, &allocator, options.clone())
                     };
                     match result {
-                        CompileResult::Success { output, diagnostics } => {
+                        CompileResult::Success {
+                            output,
+                            diagnostics,
+                        } => {
                             if let Some(output) = output {
                                 output.transform(&mut program);
                             }

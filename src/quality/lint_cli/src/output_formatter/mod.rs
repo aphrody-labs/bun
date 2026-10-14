@@ -90,7 +90,11 @@ pub struct RuleTimings {
 impl LintCommandInfo {
     fn get_execution_time(start_time: &Duration) -> String {
         let ms = start_time.as_millis();
-        if ms < 1000 { format!("{ms}ms") } else { format!("{:.1}s", start_time.as_secs_f64()) }
+        if ms < 1000 {
+            format!("{ms}ms")
+        } else {
+            format!("{:.1}s", start_time.as_secs_f64())
+        }
     }
 
     pub(super) fn format_execution_summary(&self) -> String {
@@ -155,7 +159,9 @@ pub struct OutputFormatter {
 
 impl OutputFormatter {
     pub fn new(format: OutputFormat) -> Self {
-        Self { internal: Self::get_internal_formatter(format) }
+        Self {
+            internal: Self::get_internal_formatter(format),
+        }
     }
 
     fn get_internal_formatter(format: OutputFormat) -> Box<dyn InternalFormatter> {
@@ -199,8 +205,16 @@ mod test {
 
     #[test]
     fn test_output_formatter_diagnostic_formats() {
-        let mut formats: Vec<&str> =
-            vec!["checkstyle", "default", "github", "junit", "agent", "stylish", "unix", "sarif"];
+        let mut formats: Vec<&str> = vec![
+            "checkstyle",
+            "default",
+            "github",
+            "junit",
+            "agent",
+            "stylish",
+            "unix",
+            "sarif",
+        ];
 
         // disabled for windows
         // json will output the offset which will be different for windows
@@ -217,14 +231,24 @@ mod test {
         for fmt in &formats {
             let args_vec = [format!("--format={fmt}"), "test.js".to_string()];
             let args_ref: Vec<&str> = args_vec.iter().map(std::string::String::as_str).collect();
-            Tester::new().with_cwd(TEST_CWD.into()).test_and_snapshot(&args_ref);
+            Tester::new()
+                .with_cwd(TEST_CWD.into())
+                .test_and_snapshot(&args_ref);
         }
     }
 
     #[test]
     fn test_output_formatter_diagnostic_formats_success() {
-        let mut formats: Vec<&str> =
-            vec!["checkstyle", "default", "github", "junit", "agent", "stylish", "unix", "sarif"];
+        let mut formats: Vec<&str> = vec![
+            "checkstyle",
+            "default",
+            "github",
+            "junit",
+            "agent",
+            "stylish",
+            "unix",
+            "sarif",
+        ];
 
         // disabled for windows
         // json will output the offset which will be different for windows
@@ -241,7 +265,9 @@ mod test {
         for fmt in &formats {
             let args_vec = [format!("--format={fmt}"), "ok.js".to_string()];
             let args_ref: Vec<&str> = args_vec.iter().map(std::string::String::as_str).collect();
-            Tester::new().with_cwd(TEST_CWD.into()).test_and_snapshot(&args_ref);
+            Tester::new()
+                .with_cwd(TEST_CWD.into())
+                .test_and_snapshot(&args_ref);
         }
     }
 
@@ -250,8 +276,16 @@ mod test {
     // were being truncated to just the character after the first colon.
     #[test]
     fn test_output_formatter_diagnostic_formats_with_parser_error() {
-        let mut formats: Vec<&str> =
-            vec!["checkstyle", "default", "github", "junit", "agent", "stylish", "unix", "sarif"];
+        let mut formats: Vec<&str> = vec![
+            "checkstyle",
+            "default",
+            "github",
+            "junit",
+            "agent",
+            "stylish",
+            "unix",
+            "sarif",
+        ];
 
         // disabled for windows
         // json will output the offset which will be different for windows
@@ -268,15 +302,25 @@ mod test {
         for fmt in &formats {
             let args_vec = [format!("--format={fmt}"), "parser-error.js".to_string()];
             let args_ref: Vec<&str> = args_vec.iter().map(std::string::String::as_str).collect();
-            Tester::new().with_cwd(TEST_CWD.into()).test_and_snapshot(&args_ref);
+            Tester::new()
+                .with_cwd(TEST_CWD.into())
+                .test_and_snapshot(&args_ref);
         }
     }
 
     // Test that each of the formatters can output the disable directive violations.
     #[test]
     fn test_output_formatter_diagnostic_formats_with_disable_directive() {
-        let mut formats: Vec<&str> =
-            vec!["checkstyle", "default", "github", "junit", "agent", "stylish", "unix", "sarif"];
+        let mut formats: Vec<&str> = vec![
+            "checkstyle",
+            "default",
+            "github",
+            "junit",
+            "agent",
+            "stylish",
+            "unix",
+            "sarif",
+        ];
 
         // disabled for windows
         // json will output the offset which will be different for windows
@@ -297,7 +341,9 @@ mod test {
                 "disable-directive.js".to_string(),
             ];
             let args_ref: Vec<&str> = args_vec.iter().map(std::string::String::as_str).collect();
-            Tester::new().with_cwd(TEST_CWD.into()).test_and_snapshot(&args_ref);
+            Tester::new()
+                .with_cwd(TEST_CWD.into())
+                .test_and_snapshot(&args_ref);
         }
     }
 }

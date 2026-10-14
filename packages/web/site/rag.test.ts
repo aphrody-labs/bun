@@ -12,6 +12,25 @@ const snapshot = {
   repository: "aphrody-labs/bun",
   counts: {},
 };
+
+test("external cancellation settles retrieval when a read-only database ignores its signal", async () => {
+  const started = Promise.withResolvers<void>();
+  let queries = 0;
+  const sql: SiteQuery = {
+    query() {
+      queries++;
+      started.resolve();
+      return new Promise(() => {});
+    },
+  };
+  const controller = new AbortController();
+  const task = buildBunRag(sql, { query: "Bun.Video" }, controller.signal);
+  await started.promise;
+  const reason = new Error("cancel source retrieval");
+  controller.abort(reason);
+  await expect(task).rejects.toBe(reason);
+  expect(queries).toBe(1);
+});
 function document(name: string, score = 1): SiteDocumentHit {
   return {
     path: "docs/" + name + ".mdx",

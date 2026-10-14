@@ -136,19 +136,31 @@ pub struct CompressOptionsKeepNames {
 
 impl CompressOptionsKeepNames {
     pub fn all_false() -> Self {
-        Self { function: false, class: false }
+        Self {
+            function: false,
+            class: false,
+        }
     }
 
     pub fn all_true() -> Self {
-        Self { function: true, class: true }
+        Self {
+            function: true,
+            class: true,
+        }
     }
 
     pub fn function_only() -> Self {
-        Self { function: true, class: false }
+        Self {
+            function: true,
+            class: false,
+        }
     }
 
     pub fn class_only() -> Self {
-        Self { function: false, class: true }
+        Self {
+            function: false,
+            class: true,
+        }
     }
 }
 

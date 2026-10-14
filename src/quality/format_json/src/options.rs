@@ -91,7 +91,11 @@ impl JsonFormatOptions {
             return b'"';
         }
 
-        let (preferred, alternate) = if is_single_quote { (b'\'', b'"') } else { (b'"', b'\'') };
+        let (preferred, alternate) = if is_single_quote {
+            (b'\'', b'"')
+        } else {
+            (b'"', b'\'')
+        };
         // Count every occurrence (escaped ones included, matching `getPreferredQuote`).
         let (mut preferred_count, mut alternate_count) = (0u32, 0u32);
         for byte in inner.bytes() {
@@ -102,7 +106,11 @@ impl JsonFormatOptions {
             }
         }
 
-        if preferred_count > alternate_count { alternate } else { preferred }
+        if preferred_count > alternate_count {
+            alternate
+        } else {
+            preferred
+        }
     }
 }
 

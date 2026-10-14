@@ -343,7 +343,11 @@ impl<'a> ClassProperties<'a> {
         };
 
         let arguments = ArenaVec::from_array_in(
-            [Argument::from(assignee), Argument::from(key), Argument::from(value)],
+            [
+                Argument::from(assignee),
+                Argument::from(key),
+                Argument::from(value),
+            ],
             ctx,
         );
         helper_call_expr(Helper::DefineProperty, arguments, ctx)
@@ -360,7 +364,9 @@ impl<'a> ClassProperties<'a> {
     ) -> Expression<'a> {
         // `Object.defineProperty`
         let object_name = static_ident!("Object");
-        let object_symbol_id = ctx.scoping().find_binding(ctx.current_scope_id(), object_name);
+        let object_symbol_id = ctx
+            .scoping()
+            .find_binding(ctx.current_scope_id(), object_name);
         let object =
             ctx.create_ident_expr(SPAN, object_name, object_symbol_id, ReferenceFlags::Read);
         let property = IdentifierName::new(SPAN, "defineProperty", ctx);

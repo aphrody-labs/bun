@@ -17,7 +17,11 @@ const DOUBLE_QUOTE_ALTERNATIVES: [&str; 4] = ["&quot;", "&ldquo;", "&#34;", "&rd
 const SINGLE_QUOTE_ALTERNATIVES: [&str; 4] = ["&apos;", "&lsquo;", "&#39;", "&rsquo;"];
 
 fn no_unescaped_entities_diagnostic(span: Span, unescaped: char) -> OxcDiagnostic {
-    let escaped = if unescaped == '"' { ESCAPED_DOUBLE_QUOTE } else { ESCAPED_SINGLE_QUOTE };
+    let escaped = if unescaped == '"' {
+        ESCAPED_DOUBLE_QUOTE
+    } else {
+        ESCAPED_SINGLE_QUOTE
+    };
     OxcDiagnostic::warn(format!("`{unescaped}` can be escaped with {escaped}")).with_label(span)
 }
 
@@ -73,7 +77,9 @@ impl Rule for NoUnescapedEntities {
                 ctx.diagnostic_with_suggestions(
                     no_unescaped_entities_diagnostic(span, byte as char),
                     alternatives.map(|alt| {
-                        fixer.replace(span, alt).with_message(format!("Replace with `{alt}`"))
+                        fixer
+                            .replace(span, alt)
+                            .with_message(format!("Replace with `{alt}`"))
                     }),
                 );
             }
@@ -264,7 +270,12 @@ fn test() {
         ),
     ];
 
-    Tester::new(NoUnescapedEntities::NAME, NoUnescapedEntities::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        NoUnescapedEntities::NAME,
+        NoUnescapedEntities::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

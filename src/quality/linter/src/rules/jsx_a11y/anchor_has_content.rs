@@ -84,7 +84,8 @@ declare_oxc_lint!(
     config = AnchorHasContentConfig,
     conditional_suggestion,
     version = "0.0.18",
-    short_description = "Enforce that anchors have content and that the content is accessible to screen readers.",
+    short_description =
+        "Enforce that anchors have content and that the content is accessible to screen readers.",
 );
 
 impl Rule for AnchorHasContent {
@@ -96,7 +97,12 @@ impl Rule for AnchorHasContent {
         if let AstKind::JSXElement(jsx_el) = node.kind() {
             let name = get_element_type(ctx, &jsx_el.opening_element);
 
-            if name == "a" || self.components.iter().any(|component| component == name.as_ref()) {
+            if name == "a"
+                || self
+                    .components
+                    .iter()
+                    .any(|component| component == name.as_ref())
+            {
                 if is_hidden_from_screen_reader(ctx, &jsx_el.opening_element) {
                     return;
                 }
@@ -187,7 +193,11 @@ fn test() {
         (r"<a><Bar /></a>", None, None),
         (r"<a>{foo}</a>", None, None),
         (r"<a>{foo.bar}</a>", None, None),
-        (r#"<a dangerouslySetInnerHTML={{ __html: "foo" }} />"#, None, None),
+        (
+            r#"<a dangerouslySetInnerHTML={{ __html: "foo" }} />"#,
+            None,
+            None,
+        ),
         (r"<a children={children} />", None, None),
         (
             r#"<Button render={<a href="https://www.test.com" target="_blank" rel="noreferrer" />} nativeButton={false}>CTA Text</Button>"#,
@@ -200,11 +210,27 @@ fn test() {
         (r"<UI.Button render={<a />}>Home</UI.Button>", None, None),
         (r"<ui.Button render={<a />}>Home</ui.Button>", None, None),
         (r"<Button render={<a />} />", None, None),
-        (r"<Button render={<Anchor />}>Home</Button>", Some(components()), None),
+        (
+            r"<Button render={<Anchor />}>Home</Button>",
+            Some(components()),
+            None,
+        ),
         (r"<Link />", None, None),
-        (r"<Anchor>Anchor Content!</Anchor>", Some(components()), None),
-        (r"<Anchor><TextWrapper /></Anchor>", Some(components()), None),
-        (r#"<Anchor dangerouslySetInnerHTML={{ __html: "foo" }} />"#, Some(components()), None),
+        (
+            r"<Anchor>Anchor Content!</Anchor>",
+            Some(components()),
+            None,
+        ),
+        (
+            r"<Anchor><TextWrapper /></Anchor>",
+            Some(components()),
+            None,
+        ),
+        (
+            r#"<Anchor dangerouslySetInnerHTML={{ __html: "foo" }} />"#,
+            Some(components()),
+            None,
+        ),
         (r"<Anchor title='foo' />", Some(components()), None),
         (r"<Anchor aria-label='foo' />", Some(components()), None),
         (
@@ -222,7 +248,11 @@ fn test() {
         (r"<a aria-hidden>Foo</a>", None, None),
         (r#"<a aria-hidden="true">Foo</a>"#, None, None),
         (r"<a hidden>Foo</a>", None, None),
-        (r"<a aria-hidden><span aria-hidden>Foo</span></a>", None, None),
+        (
+            r"<a aria-hidden><span aria-hidden>Foo</span></a>",
+            None,
+            None,
+        ),
         (r#"<a hidden="true">Foo</a>"#, None, None),
         (r#"<a hidden="">Foo</a>"#, None, None),
         // TODO: should these be failing?
@@ -248,7 +278,11 @@ fn test() {
         (r"<a>{undefined}</a>", None, None),
         (r"<a>{null}</a>", None, None),
         (r"<Anchor />", Some(components()), None),
-        (r"<Anchor><TextWrapper aria-hidden /></Anchor>", Some(components()), None),
+        (
+            r"<Anchor><TextWrapper aria-hidden /></Anchor>",
+            Some(components()),
+            None,
+        ),
         (
             r"<Link />",
             None,
@@ -260,8 +294,14 @@ fn test() {
 
     let fix = vec![
         (r"<a><Bar aria-hidden /></a>", "<a><Bar  /></a>"),
-        (r"<a><Bar aria-hidden>Can't see me</Bar></a>", r"<a><Bar >Can't see me</Bar></a>"),
-        (r"<a><Bar aria-hidden={true}>Can't see me</Bar></a>", r"<a><Bar >Can't see me</Bar></a>"),
+        (
+            r"<a><Bar aria-hidden>Can't see me</Bar></a>",
+            r"<a><Bar >Can't see me</Bar></a>",
+        ),
+        (
+            r"<a><Bar aria-hidden={true}>Can't see me</Bar></a>",
+            r"<a><Bar >Can't see me</Bar></a>",
+        ),
         (
             r#"<a><Bar aria-hidden="true">Can't see me</Bar></a>"#,
             r"<a><Bar >Can't see me</Bar></a>",

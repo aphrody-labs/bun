@@ -17,9 +17,9 @@ use core::sync::atomic::{AtomicPtr, AtomicUsize, Ordering};
 use std::io::Write as _;
 use std::time::Instant;
 
-use crate::{Mutex, terminal};
 #[cfg(windows)]
 use crate::windows_sys as windows;
+use crate::{Mutex, terminal};
 
 // `HANDLE` is an opaque kernel handle (kernel32 validates and returns 0/FALSE
 // on a non-console handle); every out-param is `&mut T` to a `#[repr(C)]` POD,

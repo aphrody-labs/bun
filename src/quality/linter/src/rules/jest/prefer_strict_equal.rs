@@ -84,8 +84,13 @@ fn test() {
         ),
     ]);
 
-    Tester::new(PreferStrictEqual::NAME, PreferStrictEqual::PLUGIN, pass, fail)
-        .with_jest_plugin(true)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        PreferStrictEqual::NAME,
+        PreferStrictEqual::PLUGIN,
+        pass,
+        fail,
+    )
+    .with_jest_plugin(true)
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

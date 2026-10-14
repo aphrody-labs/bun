@@ -178,7 +178,8 @@ declare_oxc_lint!(
     fix,
     config = NoImplicitCoercionConfig,
     version = "1.33.0",
-    short_description = "Disallow shorthand type conversions using operators like `!!`, unary `+`, and `\"\" +`.",
+    short_description =
+        "Disallow shorthand type conversions using operators like `!!`, unary `+`, and `\"\" +`.",
 );
 
 impl Rule for NoImplicitCoercion {
@@ -391,7 +392,10 @@ fn is_already_numeric(expr: &Expression) -> bool {
         }
         // Unary +/- already return numbers
         Expression::UnaryExpression(unary) => {
-            matches!(unary.operator, UnaryOperator::UnaryPlus | UnaryOperator::UnaryNegation)
+            matches!(
+                unary.operator,
+                UnaryOperator::UnaryPlus | UnaryOperator::UnaryNegation
+            )
         }
         _ => false,
     }
@@ -435,7 +439,10 @@ fn is_indexof_call(expr: &Expression) -> bool {
 
 /// Checks if a TemplateLiteral node is part of a TaggedTemplateExpression
 fn is_tagged_template(ctx: &LintContext, node: &AstNode) -> bool {
-    matches!(ctx.nodes().parent_kind(node.id()), AstKind::TaggedTemplateExpression(_))
+    matches!(
+        ctx.nodes().parent_kind(node.id()),
+        AstKind::TaggedTemplateExpression(_)
+    )
 }
 
 /// Checks if a BinaryExpression is nested inside another arithmetic BinaryExpression
@@ -503,7 +510,10 @@ fn test() {
         ("1234 * parseInt(foo) * 1 * Number(bar)", None),
         ("1234 * parseFloat(foo) * 1 * parseInt(bar)", None),
         ("1234 * parseFloat(foo) * 1 * Number(bar)", None),
-        ("(- -1234) * (parseFloat(foo) - 0) * (Number(bar) - 0)", None),
+        (
+            "(- -1234) * (parseFloat(foo) - 0) * (Number(bar) - 0)",
+            None,
+        ),
         ("1234*foo*1", None),
         ("1234*1*foo", None),
         ("1234*bar*1*foo", None),
@@ -516,25 +526,55 @@ fn test() {
         ("foo + 'bar'", None),
         ("foo + `${bar}`", None),
         ("!!foo", Some(serde_json::json!([{ "boolean": false }]))),
-        ("~foo.indexOf(1)", Some(serde_json::json!([{ "boolean": false }]))),
-        ("~foo.lastIndexOf(1)", Some(serde_json::json!([{ "boolean": false }]))),
+        (
+            "~foo.indexOf(1)",
+            Some(serde_json::json!([{ "boolean": false }])),
+        ),
+        (
+            "~foo.lastIndexOf(1)",
+            Some(serde_json::json!([{ "boolean": false }])),
+        ),
         ("+foo", Some(serde_json::json!([{ "number": false }]))),
         ("-(-foo)", Some(serde_json::json!([{ "number": false }]))),
         ("foo - 0", Some(serde_json::json!([{ "number": false }]))),
         ("1*foo", Some(serde_json::json!([{ "number": false }]))),
         (r#"""+foo"#, Some(serde_json::json!([{ "string": false }]))),
-        (r#"foo += """#, Some(serde_json::json!([{ "string": false }]))),
-        ("var a = !!foo", Some(serde_json::json!([{ "boolean": true, "allow": ["!!"] }]))),
-        ("var a = ~foo.indexOf(1)", Some(serde_json::json!([{ "boolean": true, "allow": ["~"] }]))),
+        (
+            r#"foo += """#,
+            Some(serde_json::json!([{ "string": false }])),
+        ),
+        (
+            "var a = !!foo",
+            Some(serde_json::json!([{ "boolean": true, "allow": ["!!"] }])),
+        ),
+        (
+            "var a = ~foo.indexOf(1)",
+            Some(serde_json::json!([{ "boolean": true, "allow": ["~"] }])),
+        ),
         (
             "var a = ~foo.lastIndexOf(1)",
             Some(serde_json::json!([{ "boolean": true, "allow": ["~"] }])),
         ),
-        ("var a = ~foo", Some(serde_json::json!([{ "boolean": true }]))),
-        ("var a = 1 * foo", Some(serde_json::json!([{ "boolean": true, "allow": ["*"] }]))),
-        ("- -foo", Some(serde_json::json!([{ "number": true, "allow": ["- -"] }]))),
-        ("foo - 0", Some(serde_json::json!([{ "number": true, "allow": ["-"] }]))),
-        ("var a = +foo", Some(serde_json::json!([{ "boolean": true, "allow": ["+"] }]))),
+        (
+            "var a = ~foo",
+            Some(serde_json::json!([{ "boolean": true }])),
+        ),
+        (
+            "var a = 1 * foo",
+            Some(serde_json::json!([{ "boolean": true, "allow": ["*"] }])),
+        ),
+        (
+            "- -foo",
+            Some(serde_json::json!([{ "number": true, "allow": ["- -"] }])),
+        ),
+        (
+            "foo - 0",
+            Some(serde_json::json!([{ "number": true, "allow": ["-"] }])),
+        ),
+        (
+            "var a = +foo",
+            Some(serde_json::json!([{ "boolean": true, "allow": ["+"] }])),
+        ),
         (
             r#"var a = "" + foo"#,
             Some(serde_json::json!([{ "boolean": true, "string": true, "allow": ["+"] }])),
@@ -547,12 +587,30 @@ fn test() {
         ("`${foo}` + ''", None),
         ("foo += 'bar'", None),
         ("foo += `${bar}`", None),
-        ("`a${foo}`", Some(serde_json::json!([{ "disallowTemplateShorthand": true }]))),
-        ("`${foo}b`", Some(serde_json::json!([{ "disallowTemplateShorthand": true }]))),
-        ("` ${foo}`", Some(serde_json::json!([{ "disallowTemplateShorthand": true }]))),
-        ("`${foo} `", Some(serde_json::json!([{ "disallowTemplateShorthand": true }]))),
-        (r"`\n${foo}`", Some(serde_json::json!([{ "disallowTemplateShorthand": true }]))),
-        (r"`${foo}\t`", Some(serde_json::json!([{ "disallowTemplateShorthand": true }]))),
+        (
+            "`a${foo}`",
+            Some(serde_json::json!([{ "disallowTemplateShorthand": true }])),
+        ),
+        (
+            "`${foo}b`",
+            Some(serde_json::json!([{ "disallowTemplateShorthand": true }])),
+        ),
+        (
+            "` ${foo}`",
+            Some(serde_json::json!([{ "disallowTemplateShorthand": true }])),
+        ),
+        (
+            "`${foo} `",
+            Some(serde_json::json!([{ "disallowTemplateShorthand": true }])),
+        ),
+        (
+            r"`\n${foo}`",
+            Some(serde_json::json!([{ "disallowTemplateShorthand": true }])),
+        ),
+        (
+            r"`${foo}\t`",
+            Some(serde_json::json!([{ "disallowTemplateShorthand": true }])),
+        ),
         (
             r"`\\
 			${foo}`",
@@ -563,19 +621,37 @@ fn test() {
 			`",
             Some(serde_json::json!([{ "disallowTemplateShorthand": true }])),
         ),
-        ("`${foo}${bar}`", Some(serde_json::json!([{ "disallowTemplateShorthand": true }]))),
-        ("tag`${foo}`", Some(serde_json::json!([{ "disallowTemplateShorthand": true }]))),
+        (
+            "`${foo}${bar}`",
+            Some(serde_json::json!([{ "disallowTemplateShorthand": true }])),
+        ),
+        (
+            "tag`${foo}`",
+            Some(serde_json::json!([{ "disallowTemplateShorthand": true }])),
+        ),
         ("`${foo}`", None),
         ("`${foo}`", Some(serde_json::json!([{}]))),
-        ("`${foo}`", Some(serde_json::json!([{ "disallowTemplateShorthand": false }]))),
+        (
+            "`${foo}`",
+            Some(serde_json::json!([{ "disallowTemplateShorthand": false }])),
+        ),
         ("+42", None),
         ("'' + String(foo)", None),
         ("String(foo) + ''", None),
         ("`` + String(foo)", None),
         ("String(foo) + ``", None),
-        ("`${'foo'}`", Some(serde_json::json!([{ "disallowTemplateShorthand": true }]))),
-        ("`${`foo`}`", Some(serde_json::json!([{ "disallowTemplateShorthand": true }]))),
-        ("`${String(foo)}`", Some(serde_json::json!([{ "disallowTemplateShorthand": true }]))),
+        (
+            "`${'foo'}`",
+            Some(serde_json::json!([{ "disallowTemplateShorthand": true }])),
+        ),
+        (
+            "`${`foo`}`",
+            Some(serde_json::json!([{ "disallowTemplateShorthand": true }])),
+        ),
+        (
+            "`${String(foo)}`",
+            Some(serde_json::json!([{ "disallowTemplateShorthand": true }])),
+        ),
         ("console.log(Math.PI * 1/4)", None),
         ("a * 1 / 2", None),
         ("a * 1 / b", None),
@@ -605,19 +681,40 @@ fn test() {
         ("``+foo.bar", None),
         (r#"foo.bar+"""#, None),
         ("foo.bar+``", None),
-        ("`${foo}`", Some(serde_json::json!([{ "disallowTemplateShorthand": true }]))),
-        ("`\\\n${foo}`", Some(serde_json::json!([{ "disallowTemplateShorthand": true }]))),
+        (
+            "`${foo}`",
+            Some(serde_json::json!([{ "disallowTemplateShorthand": true }])),
+        ),
+        (
+            "`\\\n${foo}`",
+            Some(serde_json::json!([{ "disallowTemplateShorthand": true }])),
+        ),
         (r#"foo += """#, None),
         ("foo += ``", None),
-        ("var a = !!foo", Some(serde_json::json!([{ "boolean": true, "allow": ["~"] }]))),
+        (
+            "var a = !!foo",
+            Some(serde_json::json!([{ "boolean": true, "allow": ["~"] }])),
+        ),
         (
             "var a = ~foo.indexOf(1)",
             Some(serde_json::json!([{ "boolean": true, "allow": ["!!"] }])),
         ),
-        ("var a = 1 * foo", Some(serde_json::json!([{ "boolean": true, "allow": ["+"] }]))),
-        ("var a = +foo", Some(serde_json::json!([{ "boolean": true, "allow": ["*"] }]))),
-        (r#"var a = "" + foo"#, Some(serde_json::json!([{ "boolean": true, "allow": ["*"] }]))),
-        ("var a = `` + foo", Some(serde_json::json!([{ "boolean": true, "allow": ["*"] }]))),
+        (
+            "var a = 1 * foo",
+            Some(serde_json::json!([{ "boolean": true, "allow": ["+"] }])),
+        ),
+        (
+            "var a = +foo",
+            Some(serde_json::json!([{ "boolean": true, "allow": ["*"] }])),
+        ),
+        (
+            r#"var a = "" + foo"#,
+            Some(serde_json::json!([{ "boolean": true, "allow": ["*"] }])),
+        ),
+        (
+            "var a = `` + foo",
+            Some(serde_json::json!([{ "boolean": true, "allow": ["*"] }])),
+        ),
         ("typeof+foo", None),
         ("typeof +foo", None),
         ("let x ='' + 1n;", None),
@@ -643,7 +740,12 @@ fn test() {
             Some(serde_json::json!([{ "disallowTemplateShorthand": true }])),
         ),
     ];
-    Tester::new(NoImplicitCoercion::NAME, NoImplicitCoercion::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        NoImplicitCoercion::NAME,
+        NoImplicitCoercion::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

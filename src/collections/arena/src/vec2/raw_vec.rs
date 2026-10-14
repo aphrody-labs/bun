@@ -84,7 +84,12 @@ impl<'a, T, A: Alloc> RawVec<'a, T, A> {
     #[inline(always)]
     pub fn new_in(alloc: &'a A) -> Self {
         // `cap: 0` means "unallocated". zero-sized types are ignored.
-        RawVec { ptr: NonNull::dangling(), alloc, cap: 0, len: 0 }
+        RawVec {
+            ptr: NonNull::dangling(),
+            alloc,
+            cap: 0,
+            len: 0,
+        }
     }
 
     /// Like `with_capacity` but parameterized over the choice of
@@ -98,7 +103,9 @@ impl<'a, T, A: Alloc> RawVec<'a, T, A> {
         unsafe {
             let elem_size = size_of::<T>();
 
-            let alloc_size = cap.checked_mul(elem_size).unwrap_or_else(|| capacity_overflow());
+            let alloc_size = cap
+                .checked_mul(elem_size)
+                .unwrap_or_else(|| capacity_overflow());
             alloc_guard(alloc_size).unwrap_or_else(|_| capacity_overflow());
 
             // handles ZSTs and `cap = 0` alike
@@ -114,7 +121,12 @@ impl<'a, T, A: Alloc> RawVec<'a, T, A> {
             // cannot exceed `u32::MAX`.
             #[expect(clippy::cast_possible_truncation)]
             let cap = cap as u32;
-            RawVec { ptr, alloc, cap, len: 0 }
+            RawVec {
+                ptr,
+                alloc,
+                cap,
+                len: 0,
+            }
         }
     }
 
@@ -138,7 +150,12 @@ impl<'a, T, A: Alloc> RawVec<'a, T, A> {
         #[expect(clippy::cast_possible_truncation)]
         let cap = cap as u32;
 
-        RawVec { ptr, len, cap, alloc }
+        RawVec {
+            ptr,
+            len,
+            cap,
+            alloc,
+        }
     }
 
     /// Gets a raw pointer to the start of the allocation.
@@ -192,7 +209,11 @@ impl<'a, T, A: Alloc> RawVec<'a, T, A> {
     /// This will always be `usize::MAX` if `T` is zero-sized.
     #[inline(always)]
     pub fn capacity_usize(&self) -> usize {
-        if size_of::<T>() == 0 { !0 } else { self.cap as usize }
+        if size_of::<T>() == 0 {
+            !0
+        } else {
+            self.cap as usize
+        }
     }
 
     /// Get a shared reference to the allocator backing this `RawVec`.
@@ -650,8 +671,10 @@ impl<'a, T, A: Alloc> RawVec<'a, T, A> {
                 let align = align_of::<T>();
                 let old_layout = Layout::from_size_align_unchecked(old_size, align);
                 let new_layout = Layout::from_size_align_unchecked(new_size, align);
-                self.ptr =
-                    self.alloc.shrink(self.ptr.cast::<u8>(), old_layout, new_layout).cast::<T>();
+                self.ptr = self
+                    .alloc
+                    .shrink(self.ptr.cast::<u8>(), old_layout, new_layout)
+                    .cast::<T>();
             }
             self.cap = amount;
         }
@@ -703,8 +726,9 @@ impl<T, A: Alloc> RawVec<'_, T, A> {
 
             // `len as usize` is safe because `len` is `u32`, so it must be
             // less than `usize::MAX`.
-            let new_cap =
-                (len as usize).checked_add(additional).ok_or(AllocError::CapacityOverflow)?;
+            let new_cap = (len as usize)
+                .checked_add(additional)
+                .ok_or(AllocError::CapacityOverflow)?;
             let new_layout =
                 Layout::array::<T>(new_cap).map_err(|_| AllocError::CapacityOverflow)?;
 
@@ -732,8 +756,9 @@ impl<T, A: Alloc> RawVec<'_, T, A> {
             // Nothing we can really do about these checks, sadly.
             // `len as usize` is safe because `len` is `u32`, so it must be
             // less than `usize::MAX`.
-            let required_cap =
-                (len as usize).checked_add(additional).ok_or(AllocError::CapacityOverflow)?;
+            let required_cap = (len as usize)
+                .checked_add(additional)
+                .ok_or(AllocError::CapacityOverflow)?;
 
             // This guarantees exponential growth. The doubling cannot overflow
             // because `cap <= isize::MAX` and the type of `cap` is `u32`.

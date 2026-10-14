@@ -97,22 +97,30 @@ impl Diagnostics {
 
     /// `true` if any diagnostic has [error](Severity::Error) severity.
     pub fn has_errors(&self) -> bool {
-        self.0.iter().any(|diagnostic| diagnostic.severity == Severity::Error)
+        self.0
+            .iter()
+            .any(|diagnostic| diagnostic.severity == Severity::Error)
     }
 
     /// `true` if any diagnostic has [warning](Severity::Warning) severity.
     pub fn has_warnings(&self) -> bool {
-        self.0.iter().any(|diagnostic| diagnostic.severity == Severity::Warning)
+        self.0
+            .iter()
+            .any(|diagnostic| diagnostic.severity == Severity::Warning)
     }
 
     /// Iterate over the [error](Severity::Error)-severity diagnostics.
     pub fn errors(&self) -> impl Iterator<Item = &OxcDiagnostic> {
-        self.0.iter().filter(|diagnostic| diagnostic.severity == Severity::Error)
+        self.0
+            .iter()
+            .filter(|diagnostic| diagnostic.severity == Severity::Error)
     }
 
     /// Iterate over the [warning](Severity::Warning)-severity diagnostics.
     pub fn warnings(&self) -> impl Iterator<Item = &OxcDiagnostic> {
-        self.0.iter().filter(|diagnostic| diagnostic.severity == Severity::Warning)
+        self.0
+            .iter()
+            .filter(|diagnostic| diagnostic.severity == Severity::Warning)
     }
 
     pub fn into_vec(self) -> Vec<OxcDiagnostic> {
@@ -280,7 +288,9 @@ impl Diagnostic for OxcDiagnostic {
     ///
     /// Note that codes may be scoped, which will be rendered as `scope(code)`.
     fn code(&self) -> Option<Cow<'_, str>> {
-        self.code.is_some().then(|| Cow::Owned(self.code.to_string()))
+        self.code
+            .is_some()
+            .then(|| Cow::Owned(self.code.to_string()))
     }
 
     /// A URL that provides more information about the problem that occurred.
@@ -336,7 +346,8 @@ impl OxcDiagnostic {
         scope: T,
         number: U,
     ) -> Self {
-        self.with_error_code_scope(scope).with_error_code_num(number)
+        self.with_error_code_scope(scope)
+            .with_error_code_num(number)
     }
 
     /// Add an error code scope to this diagnostic.
@@ -344,9 +355,16 @@ impl OxcDiagnostic {
     /// Use [`OxcDiagnostic::with_error_code`] to set both the scope and number at once.
     #[inline]
     pub fn with_error_code_scope<T: Into<Cow<'static, str>>>(mut self, code_scope: T) -> Self {
-        self.inner.code.scope.get_or_insert_with(|| code_scope.into());
+        self.inner
+            .code
+            .scope
+            .get_or_insert_with(|| code_scope.into());
         debug_assert!(
-            self.inner.code.scope.as_ref().is_some_and(|s| !s.is_empty()),
+            self.inner
+                .code
+                .scope
+                .as_ref()
+                .is_some_and(|s| !s.is_empty()),
             "Error code scopes cannot be empty"
         );
 
@@ -358,9 +376,16 @@ impl OxcDiagnostic {
     /// Use [`OxcDiagnostic::with_error_code`] to set both the scope and number at once.
     #[inline]
     pub fn with_error_code_num<T: Into<Cow<'static, str>>>(mut self, code_num: T) -> Self {
-        self.inner.code.number.get_or_insert_with(|| code_num.into());
+        self.inner
+            .code
+            .number
+            .get_or_insert_with(|| code_num.into());
         debug_assert!(
-            self.inner.code.number.as_ref().is_some_and(|n| !n.is_empty()),
+            self.inner
+                .code
+                .number
+                .as_ref()
+                .is_some_and(|n| !n.is_empty()),
             "Error code numbers cannot be empty"
         );
 
@@ -480,12 +505,18 @@ impl OxcDiagnostic {
     ///
     /// You should use a [`NamedSource`] if you have a file name as well as the source code.
     pub fn with_source_code<T: SourceCode + 'static>(self, source_code: T) -> Error {
-        Box::new(DiagnosticWithSource { diagnostic: self, source_code })
+        Box::new(DiagnosticWithSource {
+            diagnostic: self,
+            source_code,
+        })
     }
 
     /// Attach source code and render using Oxc's deterministic non-interactive style.
     pub fn render_with_source_code<T: SourceCode>(self, source_code: T) -> String {
-        render(&DiagnosticWithSource { diagnostic: self, source_code })
+        render(&DiagnosticWithSource {
+            diagnostic: self,
+            source_code,
+        })
     }
 
     /// Consumes the diagnostic and returns the inner owned data.

@@ -263,11 +263,14 @@ impl Rule for RulesOfHooks {
         // disable this rule in vue/nuxt and svelte(kit) files
         // react hook can be build in only `.ts` files,
         // but `useX` functions are popular and can be false positive in other frameworks
-        !ctx.file_extension().is_some_and(|ext| ext == "vue" || ext == "svelte")
+        !ctx.file_extension()
+            .is_some_and(|ext| ext == "vue" || ext == "svelte")
     }
 
     fn run<'a>(&self, node: &AstNode<'a>, ctx: &LintContext<'a>) {
-        let AstKind::CallExpression(call) = node.kind() else { return };
+        let AstKind::CallExpression(call) = node.kind() else {
+            return;
+        };
 
         if !is_react_hook(&call.callee) {
             return;
@@ -276,8 +279,9 @@ impl Rule for RulesOfHooks {
         let cfg = ctx.cfg();
 
         let span = call.span;
-        let hook_name =
-            call.callee_name().expect("We identify hooks using their names so it should be named.");
+        let hook_name = call
+            .callee_name()
+            .expect("We identify hooks using their names so it should be named.");
 
         let nodes = ctx.nodes();
 
@@ -365,7 +369,10 @@ impl Rule for RulesOfHooks {
             }
             // Hooks can't be called from async function.
             AstKind::Function(Function {
-                id: Some(_), span: async_span, r#async: true, ..
+                id: Some(_),
+                span: async_span,
+                r#async: true,
+                ..
             })
             | AstKind::ArrowFunctionExpression(ArrowFunctionExpression {
                 span: async_span,
@@ -453,26 +460,28 @@ impl Rule for RulesOfHooks {
 }
 
 fn class_component_span(ctx: &LintContext<'_>, node_id: NodeId) -> Option<Span> {
-    ctx.nodes().ancestors(node_id).find_map(|node| match node.kind() {
-        AstKind::Class(class) => {
-            if let Some(id) = &class.id {
-                Some(id.span)
-            } else {
-                let search_start = class
-                    .decorators
-                    .last()
-                    .map_or(class.span.start, |decorator| decorator.span.end);
-                let offset =
-                    ctx.find_next_token_within(search_start, class.body.span.start, "class")?;
-                let start = search_start + offset;
-                Some(Span::sized(
-                    start,
-                    u32::try_from("class".len()).expect("keyword length should fit in u32"),
-                ))
+    ctx.nodes()
+        .ancestors(node_id)
+        .find_map(|node| match node.kind() {
+            AstKind::Class(class) => {
+                if let Some(id) = &class.id {
+                    Some(id.span)
+                } else {
+                    let search_start = class
+                        .decorators
+                        .last()
+                        .map_or(class.span.start, |decorator| decorator.span.end);
+                    let offset =
+                        ctx.find_next_token_within(search_start, class.body.span.start, "class")?;
+                    let start = search_start + offset;
+                    Some(Span::sized(
+                        start,
+                        u32::try_from("class".len()).expect("keyword length should fit in u32"),
+                    ))
+                }
             }
-        }
-        _ => None,
-    })
+            _ => None,
+        })
 }
 
 #[expect(clippy::cast_possible_truncation)]
@@ -544,7 +553,10 @@ fn conditional_context(
                     "When this condition is false, this Hook is skipped."
                 };
 
-                diagnostics::ConditionalContext { span: test_span, label }
+                diagnostics::ConditionalContext {
+                    span: test_span,
+                    label,
+                }
             }
             AstKind::ConditionalExpression(expr) => {
                 let test_span = expr.test.span();
@@ -581,8 +593,10 @@ fn conditional_context(
                 let case_span = if let Some(test) = &case.test {
                     test.span()
                 } else {
-                    let header_end =
-                        case.consequent.first().map_or(case.span.end, |stmt| stmt.span().start);
+                    let header_end = case
+                        .consequent
+                        .first()
+                        .map_or(case.span.end, |stmt| stmt.span().start);
                     let default_start = case.span.start
                         + ctx.find_next_token_within(case.span.start, header_end, "default")?;
                     Span::sized(default_start, "default".len() as u32)
@@ -690,7 +704,10 @@ fn statement_has_throw_before_hook(
     hook_span: Span,
 ) -> bool {
     statement_node_id.is_some_and(|node_id| {
-        let mut visitor = MayThrowBeforeHook { hook_span, found: false };
+        let mut visitor = MayThrowBeforeHook {
+            hook_span,
+            found: false,
+        };
         visitor.visit_ast_kind(nodes.get_node(node_id).kind());
         visitor.found
     })
@@ -768,7 +785,9 @@ impl<'a> VisitJs<'a> for MayThrowBeforeHook {
 }
 
 fn parent_func<'a>(nodes: &'a AstNodes<'a>, node: &AstNode) -> Option<&'a AstNode<'a>> {
-    nodes.ancestors(node.id()).find(|node| node.kind().is_function_like())
+    nodes
+        .ancestors(node.id())
+        .find(|node| node.kind().is_function_like())
 }
 
 fn is_inside_try_catch(
@@ -779,7 +798,12 @@ fn is_inside_try_catch(
     nodes
         .ancestors(hook_node_id)
         .take_while(|node| node.id() != function_node_id)
-        .any(|node| matches!(node.kind(), AstKind::TryStatement(_) | AstKind::CatchClause(_)))
+        .any(|node| {
+            matches!(
+                node.kind(),
+                AstKind::TryStatement(_) | AstKind::CatchClause(_)
+            )
+        })
 }
 
 fn check_use_effect_event_usage(
@@ -808,8 +832,13 @@ fn check_use_effect_event_usage(
 }
 
 fn additional_effect_hooks(ctx: &LintContext<'_>) -> Option<Regex> {
-    let pattern =
-        ctx.settings().json.as_ref()?.get("react-hooks")?.get("additionalEffectHooks")?.as_str()?;
+    let pattern = ctx
+        .settings()
+        .json
+        .as_ref()?
+        .get("react-hooks")?
+        .get("additionalEffectHooks")?
+        .as_str()?;
     Regex::new(pattern).ok()
 }
 
@@ -841,12 +870,14 @@ fn is_inside_effect_or_effect_event_call(
     node_id: NodeId,
     additional_effect_hooks: Option<&Regex>,
 ) -> bool {
-    nodes.ancestors(node_id).any(|ancestor| match ancestor.kind() {
-        AstKind::CallExpression(call) => {
-            is_effect_or_effect_event_call(call, additional_effect_hooks)
-        }
-        _ => false,
-    })
+    nodes
+        .ancestors(node_id)
+        .any(|ancestor| match ancestor.kind() {
+            AstKind::CallExpression(call) => {
+                is_effect_or_effect_event_call(call, additional_effect_hooks)
+            }
+            _ => false,
+        })
 }
 
 fn is_effect_or_effect_event_call(
@@ -864,10 +895,12 @@ fn is_effect_or_effect_event_call(
 }
 
 fn is_reference_call_callee(nodes: &AstNodes<'_>, node_id: NodeId, span: Span) -> bool {
-    nodes.ancestors(node_id).any(|ancestor| match ancestor.kind() {
-        AstKind::CallExpression(call) => call.callee.span() == span,
-        _ => false,
-    })
+    nodes
+        .ancestors(node_id)
+        .any(|ancestor| match ancestor.kind() {
+            AstKind::CallExpression(call) => call.callee.span() == span,
+            _ => false,
+        })
 }
 
 /// Checks if the `node_id` is a callback argument (including constructor and JSX render props),
@@ -913,9 +946,9 @@ fn is_somewhere_inside_component_or_hook(nodes: &AstNodes, node_id: NodeId) -> b
 fn is_directly_inside_component_or_hook(nodes: &AstNodes, node_id: NodeId) -> bool {
     let node = nodes.get_node(node_id);
     let directly_named = match node.kind() {
-        AstKind::Function(func) => {
-            func.name().is_some_and(|name| is_react_component_or_hook_name(name.as_str()))
-        }
+        AstKind::Function(func) => func
+            .name()
+            .is_some_and(|name| is_react_component_or_hook_name(name.as_str())),
         AstKind::ArrowFunctionExpression(_) => get_declaration_identifier(nodes, node_id)
             .is_some_and(|name| is_react_component_or_hook_name(&name)),
         _ => unreachable!(),
@@ -941,20 +974,24 @@ fn get_declaration_identifier<'a>(
         }
         AstKind::Function(_) | AstKind::ArrowFunctionExpression(_) => {
             match nodes.parent_kind(node_id) {
-                AstKind::VariableDeclarator(decl) => {
-                    decl.id.get_identifier_name().map(|id| Cow::Borrowed(id.as_str()))
-                }
+                AstKind::VariableDeclarator(decl) => decl
+                    .id
+                    .get_identifier_name()
+                    .map(|id| Cow::Borrowed(id.as_str())),
                 // useHook = () => {};
                 AstKind::AssignmentExpression(expr)
                     if matches!(expr.operator, AssignmentOperator::Assign) =>
                 {
-                    expr.left.get_identifier_name().map(std::convert::Into::into)
+                    expr.left
+                        .get_identifier_name()
+                        .map(std::convert::Into::into)
                 }
                 // const {useHook = () => {}} = {};
                 // ({useHook = () => {}} = {});
-                AstKind::AssignmentPattern(patt) => {
-                    patt.left.get_identifier_name().map(|id| Cow::Borrowed(id.as_str()))
-                }
+                AstKind::AssignmentPattern(patt) => patt
+                    .left
+                    .get_identifier_name()
+                    .map(|id| Cow::Borrowed(id.as_str())),
                 // { useHook: () => {} }
                 // { useHook() {} }
                 AstKind::ObjectProperty(prop) => prop.key.name(),
@@ -970,7 +1007,8 @@ fn get_declaration_identifier<'a>(
 fn is_memo_or_forward_ref_callback(nodes: &AstNodes, node_id: NodeId) -> bool {
     nodes.ancestors(node_id).any(|node| {
         if let AstKind::CallExpression(call) = node.kind() {
-            call.callee_name().is_some_and(|name| matches!(name, "forwardRef" | "memo"))
+            call.callee_name()
+                .is_some_and(|name| matches!(name, "forwardRef" | "memo"))
         } else {
             false
         }

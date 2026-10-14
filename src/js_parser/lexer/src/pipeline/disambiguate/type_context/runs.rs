@@ -33,8 +33,14 @@ pub(crate) fn gt_run_split(tokens: &Tokens, walks: &mut Walks, p: usize, run: us
     while g < run && tokens.src[p + g] == b'>' {
         g += 1;
     }
-    let quick = if walks.run_rules() { run_shortcut(tokens, p, g) } else { None };
-    quick.unwrap_or_else(|| context::angles_before(tokens, walks, p)).min(g)
+    let quick = if walks.run_rules() {
+        run_shortcut(tokens, p, g)
+    } else {
+        None
+    };
+    quick
+        .unwrap_or_else(|| context::angles_before(tokens, walks, p))
+        .min(g)
 }
 
 /// The lists a `>` run of `run` bytes at `pos` closes, when its context cannot matter: the run
@@ -96,9 +102,17 @@ fn run_shortcut(tokens: &Tokens, pos: usize, run: usize) -> Option<usize> {
         q = tokens.prev_sig(p);
     }
     if found == 0 {
-        return if bounded || q.is_none() { Some(0) } else { None };
+        return if bounded || q.is_none() {
+            Some(0)
+        } else {
+            None
+        };
     }
-    if list_in_any_context(tokens, lt) { Some(found) } else { None }
+    if list_in_any_context(tokens, lt) {
+        Some(found)
+    } else {
+        None
+    }
 }
 
 /// Does the `<` at `lt` open a list whatever the context? Three shapes leave no expression

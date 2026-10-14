@@ -29,6 +29,8 @@ pub(crate) use bun_jsc::ResolveMessage;
 // ─── compiling submodules (api/ dir) ─────────────────────────────────────────
 #[path = "api/Archive.rs"]
 pub(crate) mod archive;
+#[path = "api/BrowserRealm.rs"]
+pub(crate) mod browser_realm;
 #[path = "api/BunObject.rs"]
 pub(crate) mod bun_object;
 #[path = "api/crash_handler_jsc.rs"]
@@ -43,18 +45,12 @@ pub(crate) mod csrf_jsc;
 pub(crate) mod filesystem_router;
 #[path = "api/glob.rs"]
 pub(crate) mod glob;
-#[path = "api/terminal_screen.rs"]
-pub(crate) mod terminal_screen;
-#[path = "api/rio.rs"]
-pub(crate) mod rio;
 #[path = "api/HashObject.rs"]
 pub(crate) mod hash_object;
-#[path = "api/html_rewriter.rs"]
-pub(crate) mod html_rewriter;
 #[path = "api/HTMLObject.rs"]
 pub(crate) mod html_object;
-#[path = "api/BrowserRealm.rs"]
-pub(crate) mod browser_realm;
+#[path = "api/html_rewriter.rs"]
+pub(crate) mod html_rewriter;
 #[path = "api/js_bundle_completion_task.rs"]
 pub(crate) mod js_bundle_completion_task;
 #[path = "api/JSBundler.rs"]
@@ -71,8 +67,12 @@ pub(crate) mod markdown_object;
 pub(crate) mod native_promise_context;
 #[path = "api/output_file_jsc.rs"]
 pub(crate) mod output_file_jsc;
+#[path = "api/rio.rs"]
+pub(crate) mod rio;
 #[path = "api/standalone_graph_jsc.rs"]
 pub(crate) mod standalone_graph_jsc;
+#[path = "api/terminal_screen.rs"]
+pub(crate) mod terminal_screen;
 #[path = "api/TOMLObject.rs"]
 pub(crate) mod toml_object;
 #[path = "api/UnsafeObject.rs"]

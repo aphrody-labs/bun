@@ -119,8 +119,11 @@ impl JsdocFormatter<'_, '_> {
     /// Push raw code lines with continuation indent, optionally preserving original indentation.
     fn push_raw_code_lines(&mut self, code: &str, indent: &str) {
         for line in code.lines() {
-            let content =
-                if self.options.keep_unparsable_example_indent { line } else { line.trim() };
+            let content = if self.options.keep_unparsable_example_indent {
+                line
+            } else {
+                line.trim()
+            };
             if content.is_empty() {
                 self.content_lines.push_empty();
             } else {
@@ -340,7 +343,10 @@ impl JsdocFormatter<'_, '_> {
         if let Some(np) = &name_part {
             let name_raw = np.raw();
             if is_type_optional && !name_raw.starts_with('[') {
-                name_str = self.session.allocator().alloc_concat_strs_array(["[", name_raw, "]"]);
+                name_str = self
+                    .session
+                    .allocator()
+                    .alloc_concat_strs_array(["[", name_raw, "]"]);
             } else if name_raw.starts_with('[') && name_raw.ends_with(']') {
                 if let Some(eq_pos) = name_raw.find('=') {
                     let name_part_inner = &name_raw[1..eq_pos];
@@ -411,7 +417,9 @@ impl JsdocFormatter<'_, '_> {
             }
             if !desc_raw.is_empty() {
                 let indent = self.continuation_indent();
-                let indent_width = self.wrap_width.saturating_sub(self.continuation_indent_width());
+                let indent_width = self
+                    .wrap_width
+                    .saturating_sub(self.continuation_indent_width());
                 let desc = format_description_mdast(
                     desc_raw,
                     indent_width,
@@ -459,7 +467,9 @@ impl JsdocFormatter<'_, '_> {
             self.content_lines.push(tag_line);
             self.content_lines.push_empty();
             let indent = self.continuation_indent();
-            let indent_width = self.wrap_width.saturating_sub(self.continuation_indent_width());
+            let indent_width = self
+                .wrap_width
+                .saturating_sub(self.continuation_indent_width());
             let desc = format_description_mdast(
                 desc_raw,
                 indent_width,
@@ -487,7 +497,9 @@ impl JsdocFormatter<'_, '_> {
             self.content_lines.push(tag_line);
             self.content_lines.push_empty();
             let indent = self.continuation_indent();
-            let indent_width = self.wrap_width.saturating_sub(self.continuation_indent_width());
+            let indent_width = self
+                .wrap_width
+                .saturating_sub(self.continuation_indent_width());
             let mut desc = format_description_mdast(
                 desc_raw,
                 indent_width,
@@ -546,7 +558,11 @@ impl JsdocFormatter<'_, '_> {
         // When first_text is non-empty, the base indent is 0 (inline with tag),
         // so continuation line indentation is preserved relative to that.
         let remaining_desc = if let Some(rest) = rest_of_desc {
-            let base = if first_text_line.is_empty() { usize::MAX } else { 0 };
+            let base = if first_text_line.is_empty() {
+                usize::MAX
+            } else {
+                0
+            };
             dedent_lines(rest, base)
         } else {
             String::new()
@@ -601,7 +617,9 @@ impl JsdocFormatter<'_, '_> {
             // This matches upstream's approach of passing the entire description through
             // formatDescription with a tagStringLength parameter that controls first-line offset.
             let indent = self.continuation_indent();
-            let indent_width = self.wrap_width.saturating_sub(self.continuation_indent_width());
+            let indent_width = self
+                .wrap_width
+                .saturating_sub(self.continuation_indent_width());
 
             // When description is just a dash with text on the next line
             // (e.g., @param {Type} name -\n  description), output the tag + dash
@@ -793,8 +811,11 @@ impl JsdocFormatter<'_, '_> {
             return;
         }
 
-        let desc_text: Cow<'_, str> =
-            if should_capitalize { capitalize_first(desc_text) } else { Cow::Borrowed(desc_text) };
+        let desc_text: Cow<'_, str> = if should_capitalize {
+            capitalize_first(desc_text)
+        } else {
+            Cow::Borrowed(desc_text)
+        };
 
         // When the type is multi-line, push each type line, then handle the
         // description. Single-token descriptions (no spaces) are kept inline
@@ -811,8 +832,10 @@ impl JsdocFormatter<'_, '_> {
                 // Append single-token description to the last line of the tag
                 let mut lines: Vec<&str> = tag_line.split('\n').collect();
                 if let Some(last) = lines.last_mut() {
-                    let combined =
-                        self.session.allocator().alloc_concat_strs_array([last, " ", &desc_text]);
+                    let combined = self
+                        .session
+                        .allocator()
+                        .alloc_concat_strs_array([last, " ", &desc_text]);
                     for line in &lines[..lines.len() - 1] {
                         self.content_lines.push(*line);
                     }
@@ -820,7 +843,9 @@ impl JsdocFormatter<'_, '_> {
                 }
             } else {
                 let indent = self.continuation_indent();
-                let indent_width = self.wrap_width.saturating_sub(self.continuation_indent_width());
+                let indent_width = self
+                    .wrap_width
+                    .saturating_sub(self.continuation_indent_width());
                 let mut lines_iter = tag_line.split('\n');
                 if let Some(first) = lines_iter.next() {
                     self.content_lines.push(first);
@@ -870,10 +895,15 @@ impl JsdocFormatter<'_, '_> {
         } else {
             // Pass description through wrap_text with tag_string_length offset
             let indent = self.continuation_indent();
-            let indent_width = self.wrap_width.saturating_sub(self.continuation_indent_width());
+            let indent_width = self
+                .wrap_width
+                .saturating_sub(self.continuation_indent_width());
             let tag_str_len = prefix_len.saturating_sub(self.continuation_indent_width());
 
-            let first_word_w = desc_text_no_dash.split_whitespace().next().map_or(0, str_width);
+            let first_word_w = desc_text_no_dash
+                .split_whitespace()
+                .next()
+                .map_or(0, str_width);
             if prefix_len + first_word_w > self.wrap_width {
                 self.content_lines.push(tag_line);
                 let desc = format_description_mdast(
@@ -1036,7 +1066,9 @@ impl JsdocFormatter<'_, '_> {
                 self.push_indented_desc("", desc);
             } else {
                 let indent = self.continuation_indent();
-                let indent_width = self.wrap_width.saturating_sub(self.continuation_indent_width());
+                let indent_width = self
+                    .wrap_width
+                    .saturating_sub(self.continuation_indent_width());
                 let mut desc = format_description_mdast(
                     &desc_text,
                     indent_width,
@@ -1059,7 +1091,9 @@ impl JsdocFormatter<'_, '_> {
         if matches!(normalized_kind, "remarks" | "privateRemarks") {
             self.content_lines.push(tag_line);
             let indent = self.continuation_indent();
-            let indent_width = self.wrap_width.saturating_sub(self.continuation_indent_width());
+            let indent_width = self
+                .wrap_width
+                .saturating_sub(self.continuation_indent_width());
             let desc = format_description_mdast(
                 &desc_text,
                 indent_width,
@@ -1088,8 +1122,9 @@ impl JsdocFormatter<'_, '_> {
                     s.push(' ');
                     s.push_str(name_part);
                     let indent = self.continuation_indent();
-                    let indent_width =
-                        self.wrap_width.saturating_sub(self.continuation_indent_width());
+                    let indent_width = self
+                        .wrap_width
+                        .saturating_sub(self.continuation_indent_width());
                     let desc = format_description_mdast(
                         desc_part,
                         indent_width,
@@ -1177,8 +1212,9 @@ impl JsdocFormatter<'_, '_> {
                     // Tags like @deprecated that skip capitalization but still
                     // wrap at printWidth.
                     let indent = self.continuation_indent();
-                    let indent_width =
-                        self.wrap_width.saturating_sub(self.continuation_indent_width());
+                    let indent_width = self
+                        .wrap_width
+                        .saturating_sub(self.continuation_indent_width());
                     let tag_str_len = prefix_len.saturating_sub(self.continuation_indent_width());
                     let desc = format_description_mdast(
                         raw_ws_desc,
@@ -1214,7 +1250,9 @@ impl JsdocFormatter<'_, '_> {
         } else {
             // Pass description through wrap_text with tag_string_length offset
             let indent = self.continuation_indent();
-            let indent_width = self.wrap_width.saturating_sub(self.continuation_indent_width());
+            let indent_width = self
+                .wrap_width
+                .saturating_sub(self.continuation_indent_width());
             let tag_str_len = prefix_len.saturating_sub(self.continuation_indent_width());
 
             let first_word_w = desc_text.split_whitespace().next().map_or(0, str_width);

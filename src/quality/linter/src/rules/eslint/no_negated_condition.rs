@@ -75,7 +75,12 @@ fn test() {
         ("a !== b ? c : d", "a === b ? d : c"),
     ];
 
-    Tester::new(NoNegatedCondition::NAME, NoNegatedCondition::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        NoNegatedCondition::NAME,
+        NoNegatedCondition::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

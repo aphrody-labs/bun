@@ -27,10 +27,15 @@ fn main() -> Result<(), String> {
     let mut args = Arguments::from_env();
     // Show diff between original and formatted code
     let show_diff = args.contains("--diff");
-    let print_width = args.opt_value_from_str::<&'static str, u16>("--print-width").unwrap_or(None);
-    let prose_wrap =
-        args.opt_value_from_str::<&'static str, String>("--prose-wrap").unwrap_or(None);
-    let name = args.free_from_str().unwrap_or_else(|_| "test.md".to_string());
+    let print_width = args
+        .opt_value_from_str::<&'static str, u16>("--print-width")
+        .unwrap_or(None);
+    let prose_wrap = args
+        .opt_value_from_str::<&'static str, String>("--prose-wrap")
+        .unwrap_or(None);
+    let name = args
+        .free_from_str()
+        .unwrap_or_else(|_| "test.md".to_string());
 
     let source_text = fs::read_to_string(&name).map_err(|_| format!("Missing '{name}'"))?;
 
@@ -43,7 +48,11 @@ fn main() -> Result<(), String> {
         Some("never") => ProseWrap::Never,
         _ => ProseWrap::Preserve,
     };
-    let options = MarkdownFormatOptions { line_width, prose_wrap, ..Default::default() };
+    let options = MarkdownFormatOptions {
+        line_width,
+        prose_wrap,
+        ..Default::default()
+    };
 
     let allocator = Allocator::new();
     let formatted = match oxc_formatter_markdown::format(&allocator, &source_text, options) {

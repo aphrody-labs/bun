@@ -45,11 +45,17 @@ impl<'a> Format<'a, JsonFormatContext<'a>> for FmtJsonStringifyValue<'a, '_> {
             Expression::UnaryExpression(unary) => match unary.operator {
                 // `JSON.parse` rejects a leading `+`, so Prettier drops it.
                 UnaryOperator::UnaryPlus => {
-                    Self { expression: &unary.argument }.fmt(f);
+                    Self {
+                        expression: &unary.argument,
+                    }
+                    .fmt(f);
                 }
                 UnaryOperator::UnaryNegation => {
                     write!(f, "-");
-                    Self { expression: &unary.argument }.fmt(f);
+                    Self {
+                        expression: &unary.argument,
+                    }
+                    .fmt(f);
                 }
                 _ => write!(f, FormatInvalidJson(unary.span)),
             },
@@ -67,7 +73,10 @@ impl<'a> Format<'a, JsonFormatContext<'a>> for FmtJsonStringifyValue<'a, '_> {
 }
 
 fn write_number<'a>(lit: &NumericLiteral<'a>, f: &mut JsonFormatter<'_, 'a>) {
-    let raw = lit.raw.as_ref().unwrap_or_else(|| unreachable!("parser always sets `raw`"));
+    let raw = lit
+        .raw
+        .as_ref()
+        .unwrap_or_else(|| unreachable!("parser always sets `raw`"));
     write!(f, text(raw.as_str()));
 }
 
@@ -126,14 +135,19 @@ fn write_object<'a>(object: &ObjectExpression<'a>, f: &mut JsonFormatter<'_, 'a>
         return;
     }
 
-    write_hard_broken_entries(f, object.properties.len(), |i, f| match &object.properties[i] {
-        ObjectPropertyKind::ObjectProperty(prop) => {
-            write_object_key(&prop.key, f);
-            write!(f, [":", space()]);
-            FmtJsonStringifyValue { expression: &prop.value }.fmt(f);
-        }
-        ObjectPropertyKind::SpreadProperty(spread) => {
-            write!(f, FormatInvalidJson(spread.span));
+    write_hard_broken_entries(f, object.properties.len(), |i, f| {
+        match &object.properties[i] {
+            ObjectPropertyKind::ObjectProperty(prop) => {
+                write_object_key(&prop.key, f);
+                write!(f, [":", space()]);
+                FmtJsonStringifyValue {
+                    expression: &prop.value,
+                }
+                .fmt(f);
+            }
+            ObjectPropertyKind::SpreadProperty(spread) => {
+                write!(f, FormatInvalidJson(spread.span));
+            }
         }
     });
     write!(f, "}");
@@ -152,7 +166,10 @@ fn write_object_key<'a>(key: &PropertyKey<'a>, f: &mut JsonFormatter<'_, 'a>) {
             write_quoted_str(f, b'"', ident.name.as_str());
         }
         PropertyKey::NumericLiteral(lit) => {
-            let raw = lit.raw.as_ref().unwrap_or_else(|| unreachable!("parser always sets `raw`"));
+            let raw = lit
+                .raw
+                .as_ref()
+                .unwrap_or_else(|| unreachable!("parser always sets `raw`"));
             let raw = raw.as_str();
             if number_string_round_trips(raw) {
                 write_quoted_str(f, b'"', raw);
@@ -192,7 +209,11 @@ fn write_template<'a>(template: &TemplateLiteral<'a>, f: &mut JsonFormatter<'_, 
 fn json_stringify_escape(content: &str, lone_surrogates: bool) -> Cow<'_, str> {
     const HEX: &[u8; 16] = b"0123456789abcdef";
 
-    if !lone_surrogates && !content.bytes().any(|b| matches!(b, b'"' | b'\\') || b < 0x20) {
+    if !lone_surrogates
+        && !content
+            .bytes()
+            .any(|b| matches!(b, b'"' | b'\\') || b < 0x20)
+    {
         return Cow::Borrowed(content);
     }
 
@@ -278,10 +299,19 @@ mod tests {
     fn stringify_escape() {
         assert_eq!(json_stringify_escape("plain", false), "plain");
         assert_eq!(json_stringify_escape("a\"b\\c", false), "a\\\"b\\\\c");
-        assert_eq!(json_stringify_escape("\u{8}\u{c}\n\r\t", false), "\\b\\f\\n\\r\\t");
-        assert_eq!(json_stringify_escape("\0\u{1}\u{1f}", false), "\\u0000\\u0001\\u001f");
+        assert_eq!(
+            json_stringify_escape("\u{8}\u{c}\n\r\t", false),
+            "\\b\\f\\n\\r\\t"
+        );
+        assert_eq!(
+            json_stringify_escape("\0\u{1}\u{1f}", false),
+            "\\u0000\\u0001\\u001f"
+        );
         // U+2028 / U+2029 are NOT escaped by `JSON.stringify`
-        assert_eq!(json_stringify_escape("\u{2028}\u{2029}", false), "\u{2028}\u{2029}");
+        assert_eq!(
+            json_stringify_escape("\u{2028}\u{2029}", false),
+            "\u{2028}\u{2029}"
+        );
         // Lone surrogate `\u{FFFD}XXXX` encoding; `\u{FFFD}fffd` is a literal U+FFFD
         assert_eq!(json_stringify_escape("a\u{FFFD}d800b", true), "a\\ud800b");
         assert_eq!(json_stringify_escape("a\u{FFFD}fffdb", true), "a\u{FFFD}b");

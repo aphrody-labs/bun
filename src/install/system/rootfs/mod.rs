@@ -100,7 +100,8 @@ impl IdCache {
             let mut out = Vec::new();
             for line in strings::split(&text, b"\n") {
                 let mut fields = strings::split(line, b":");
-                let (Some(name), Some(_), Some(id)) = (fields.next(), fields.next(), fields.next()) else {
+                let (Some(name), Some(_), Some(id)) = (fields.next(), fields.next(), fields.next())
+                else {
                     continue;
                 };
                 if let Some(id) = parse_u32(id) {
@@ -109,7 +110,10 @@ impl IdCache {
             }
             out
         };
-        IdCache { users: parse(b"etc/passwd"), groups: parse(b"etc/group") }
+        IdCache {
+            users: parse(b"etc/passwd"),
+            groups: parse(b"etc/group"),
+        }
     }
 
     /// `(uid, gid)` for a tar entry: names first, numeric ids as fallback.
@@ -121,9 +125,14 @@ impl IdCache {
             if name == b"root" {
                 return 0;
             }
-            list.iter().find(|(n, _)| n.as_slice() == name).map_or(fallback, |(_, id)| *id)
+            list.iter()
+                .find(|(n, _)| n.as_slice() == name)
+                .map_or(fallback, |(_, id)| *id)
         };
-        (find(&self.users, uname, uid), find(&self.groups, gname, gid))
+        (
+            find(&self.users, uname, uid),
+            find(&self.groups, gname, gid),
+        )
     }
 }
 

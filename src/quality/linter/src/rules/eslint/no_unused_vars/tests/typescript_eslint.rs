@@ -1486,7 +1486,10 @@ fn test() {
     ];
 
     let fail = vec![
-        ("import { ClassDecoratorFactory } from 'decorators'; export class Foo {}", None),
+        (
+            "import { ClassDecoratorFactory } from 'decorators'; export class Foo {}",
+            None,
+        ),
         (
             "import { Foo, Bar } from 'foo';
         function baz<Foo>(): Foo {}

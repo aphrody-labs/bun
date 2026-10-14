@@ -214,7 +214,13 @@ pub(super) unsafe fn lanes_post(
         let mut mask = (_mm256_movemask_epi8(h0) as u32 as u64)
             | ((_mm256_movemask_epi8(h1) as u32 as u64) << 32);
         while mask != 0 {
-            emit_value(src, out_kinds, out_spans, i + mask.trailing_zeros() as usize, lanes);
+            emit_value(
+                src,
+                out_kinds,
+                out_spans,
+                i + mask.trailing_zeros() as usize,
+                lanes,
+            );
             mask &= mask - 1;
         }
         i += 64;
@@ -232,7 +238,13 @@ pub(super) unsafe fn lanes_post(
         }
         inv_dirty |= invm != 0;
         while mask != 0 {
-            emit_value(src, out_kinds, out_spans, i + mask.trailing_zeros() as usize, lanes);
+            emit_value(
+                src,
+                out_kinds,
+                out_spans,
+                i + mask.trailing_zeros() as usize,
+                lanes,
+            );
             mask &= mask - 1;
         }
         i += 32;

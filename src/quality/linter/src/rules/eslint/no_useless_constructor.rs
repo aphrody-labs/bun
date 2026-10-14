@@ -102,7 +102,8 @@ declare_oxc_lint!(
     suspicious,
     suggestion,
     version = "0.4.4",
-    short_description = "Disallow constructors that can be safely removed without changing how the class works.",
+    short_description =
+        "Disallow constructors that can be safely removed without changing how the class works.",
 );
 
 impl Rule for NoUselessConstructor {
@@ -117,8 +118,14 @@ impl Rule for NoUselessConstructor {
             return;
         };
 
-        let class = ctx.nodes().ancestors(node.id()).find_map(|parent| parent.kind().as_class());
-        debug_assert!(class.is_some(), "Found a constructor outside of a class definition");
+        let class = ctx
+            .nodes()
+            .ancestors(node.id())
+            .find_map(|parent| parent.kind().as_class());
+        debug_assert!(
+            class.is_some(),
+            "Found a constructor outside of a class definition"
+        );
         let Some(class) = class else {
             return;
         };
@@ -189,7 +196,10 @@ fn lint_redundant_super_call<'a>(
 }
 
 fn has_parameter_property_or_decorator(params: &FormalParameters) -> bool {
-    params.items.iter().any(|param| param.has_modifier() || !param.decorators.is_empty())
+    params
+        .items
+        .iter()
+        .any(|param| param.has_modifier() || !param.decorators.is_empty())
 }
 
 /// Check if a function body only contains a single `super()` call. Ignores directives.
@@ -199,16 +209,26 @@ fn is_single_super_call<'a, 'f>(body: &'f FunctionBody<'a>) -> Option<&'f CallEx
     if body.statements.len() != 1 {
         return None;
     }
-    let Statement::ExpressionStatement(expr) = &body.statements[0] else { return None };
-    let Expression::CallExpression(call) = &expr.expression else { return None };
+    let Statement::ExpressionStatement(expr) = &body.statements[0] else {
+        return None;
+    };
+    let Expression::CallExpression(call) = &expr.expression else {
+        return None;
+    };
 
-    if call.callee.is_super() { Some(call) } else { None }
+    if call.callee.is_super() {
+        Some(call)
+    } else {
+        None
+    }
 }
 
 /// Returns `false` if any parameter is an array/object unpacking binding or has
 /// a default value (initializer).
 fn is_only_simple_params(params: &FormalParameters) -> bool {
-    params.iter_bindings().all(BindingPattern::is_binding_identifier)
+    params
+        .iter_bindings()
+        .all(BindingPattern::is_binding_identifier)
         && params.items.iter().all(|param| param.initializer.is_none())
 }
 
@@ -237,7 +257,9 @@ fn is_passing_through<'a>(
     }
     if let Some(rest) = &constructor_params.rest {
         let all_but_last = super_args.iter().take(super_args.len() - 1);
-        let Some(last_arg) = super_args.iter().next_back() else { return false };
+        let Some(last_arg) = super_args.iter().next_back() else {
+            return false;
+        };
         constructor_params
             .items
             .iter()
@@ -646,7 +668,12 @@ fn test() {
     let pass = [pass, pass_typescript].concat();
     let fail = [fail, fail_typescript].concat();
 
-    Tester::new(NoUselessConstructor::NAME, NoUselessConstructor::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        NoUselessConstructor::NAME,
+        NoUselessConstructor::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

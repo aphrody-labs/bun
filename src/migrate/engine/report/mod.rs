@@ -15,10 +15,8 @@
 use crate::ai::{
     Context, SCHEMA_URL, SCHEMA_VERSION, byte_offset, category, confidence, context_lines, docs_url,
 };
+use crate::types::{CompatInfo, CompatStatus, FileFix, Finding, Mode, RunOptions, Severity};
 use crate::util::line_offsets;
-use crate::types::{
-    CompatInfo, CompatStatus, FileFix, Finding, Mode, RunOptions, Severity,
-};
 use colored::Colorize;
 use serde::Serialize;
 use serde_json::{Value, json};

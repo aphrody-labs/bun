@@ -50,6 +50,7 @@ import {
   writePublicCache,
 } from "../../scripts/aphrody/sync-public-upstream.ts";
 import { sync } from "../../scripts/aphrody/sync-upstream.ts";
+import { prepareUpstreamSource } from "../../scripts/aphrody/sync-upstream-source.ts";
 
 test("public snapshot reconstruction truncates stale trailing rows", async () => {
   using directory = tempDir("public-snapshot-rebuild", {});
@@ -331,7 +332,8 @@ test("delivery scheduler overlaps independent light commands and waits for DAG p
     hostname: "127.0.0.1",
     async fetch(request) {
       const id = new URL(request.url).pathname.slice(1);
-      if (!["first", "second"].includes(id) || requests.has(id)) return new Response("unexpected step", { status: 400 });
+      if (!["first", "second"].includes(id) || requests.has(id))
+        return new Response("unexpected step", { status: 400 });
       requests.add(id);
       if (requests.size === 2) release();
       await barrier;
@@ -604,7 +606,7 @@ describe("scope rewrite", () => {
 });
 
 function git(cwd: string, ...args: string[]) {
-  const proc = Bun.spawnSync(["git", ...args], { cwd, stdout: "pipe", stderr: "pipe" });
+  const proc = Bun.spawnSync(["git", "-c", "core.fsmonitor=false", ...args], { cwd, stdout: "pipe", stderr: "pipe" });
   if (proc.exitCode !== 0) throw new Error(`git ${args.join(" ")}: ${proc.stderr.toString()}`);
   return proc.stdout.toString().trim();
 }
@@ -739,6 +741,97 @@ describe("monorepo delivery", () => {
 });
 
 describe("sync-upstream", () => {
+  test("dry run inventories additions and deletions while preserving local edits and the index", async () => {
+    const { dir, root } = forkRepo("aphrody-sync-dry-dirty");
+    using _ = dir;
+    git(root, "checkout", "--quiet", "upstream");
+    writeFileSync(join(root, "new.ts"), "export const value = 2;\n");
+    git(root, "rm", "--quiet", README);
+    git(root, "add", "new.ts");
+    git(root, "commit", "--quiet", "-m", "upstream files");
+    git(root, "checkout", "--quiet", "main");
+    writeFileSync(join(root, README), "local work\n");
+    git(root, "add", README);
+    const before = {
+      head: git(root, "rev-parse", "HEAD"),
+      status: git(root, "status", "--porcelain"),
+      index: git(root, "write-tree"),
+    };
+    expect(await sync({ ...options(root), dryRun: true })).toMatchObject({
+      status: "dry-run",
+      behind: 1,
+      conflicts: [],
+      added: ["new.ts"],
+      deleted: [README],
+      collisions: [README],
+    });
+    expect({
+      head: git(root, "rev-parse", "HEAD"),
+      status: git(root, "status", "--porcelain"),
+      index: git(root, "write-tree"),
+    }).toEqual(before);
+    expect(readFileSync(join(root, README), "utf8")).toBe("local work\n");
+  });
+
+  test("a dirty upstream collision refuses before updating source or index", async () => {
+    const { dir, root } = forkRepo("aphrody-sync-dirty-collision");
+    using _ = dir;
+    git(root, "checkout", "--quiet", "upstream");
+    writeFileSync(join(root, README), "upstream content\n");
+    git(root, "commit", "--quiet", "-am", "upstream content");
+    git(root, "checkout", "--quiet", "main");
+    writeFileSync(join(root, README), "unfinished local content\n");
+    const before = git(root, "rev-parse", "HEAD");
+    expect(await sync(options(root))).toEqual({ status: "collisions", behind: 1, collisions: [README] });
+    expect(git(root, "rev-parse", "HEAD")).toBe(before);
+    expect(git(root, "diff", "--cached", "--name-only")).toBe("");
+    expect(readFileSync(join(root, README), "utf8")).toBe("unfinished local content\n");
+  });
+
+  test("sync commits upstream while leaving unrelated dirty work uncommitted", async () => {
+    const { dir, root } = forkRepo("aphrody-sync-unrelated-dirty");
+    using _ = dir;
+    writeFileSync(join(root, "local.ts"), "original\n");
+    git(root, "add", "local.ts");
+    git(root, "commit", "--quiet", "-m", "fork local source");
+    git(root, "checkout", "--quiet", "upstream");
+    writeFileSync(join(root, README), "upstream content\n");
+    git(root, "commit", "--quiet", "-am", "upstream content");
+    git(root, "checkout", "--quiet", "main");
+    writeFileSync(join(root, "local.ts"), "concurrent content\n");
+    expect(await sync(options(root))).toMatchObject({ status: "merged", behind: 1 });
+    expect(readFileSync(join(root, "local.ts"), "utf8")).toBe("concurrent content\n");
+    expect(git(root, "show", "HEAD:local.ts")).toBe("original");
+    expect(git(root, "status", "--porcelain")).toBe("M local.ts");
+    expect(git(root, "log", "-1", "--format=%P").split(" ")).toHaveLength(2);
+  });
+
+  test("source preview resolves a sibling and rejects dirty or foreign clones without fetching", async () => {
+    const { dir, root } = forkRepo("aphrody-sync-source-preview");
+    using _ = dir;
+    const source = join(root, "..", `${root.split(/[\\/]/).at(-1)}-upstream`);
+    using parent = tempDir("aphrody-upstream-source", { "source/README.md": "source\n" });
+    const checkout = join(String(parent), "source");
+    git(checkout, "init", "--quiet", "--initial-branch=main");
+    git(checkout, "config", "user.email", "test@example.com");
+    git(checkout, "config", "user.name", "test");
+    git(checkout, "add", "README.md");
+    git(checkout, "commit", "--quiet", "-m", "source");
+    git(checkout, "remote", "add", "origin", "https://github.com/oven-sh/bun.git");
+    expect(await prepareUpstreamSource({ root, checkout, dryRun: true })).toMatchObject({
+      status: "dry-run",
+      created: false,
+      updated: false,
+      commit: git(checkout, "rev-parse", "HEAD"),
+    });
+    writeFileSync(join(checkout, "README.md"), "pending source change\n");
+    await expect(prepareUpstreamSource({ root, checkout, dryRun: true })).rejects.toThrow("local changes");
+    expect(readFileSync(join(checkout, "README.md"), "utf8")).toBe("pending source change\n");
+    git(checkout, "remote", "set-url", "origin", "https://github.com/foreign/bun.git");
+    await expect(prepareUpstreamSource({ root, checkout, dryRun: true })).rejects.toThrow("origin");
+    await expect(prepareUpstreamSource({ root, checkout: root, dryRun: true })).rejects.toThrow("overlap");
+    expect((await prepareUpstreamSource({ root, checkout: source, dryRun: true })).created).toBe(false);
+  });
   test("public export follows server cursors and rejects foreign pagination links", () => {
     expect(
       nextPage(

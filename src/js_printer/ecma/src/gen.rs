@@ -403,7 +403,9 @@ fn expr_starts_with_let(expr: &Expression) -> bool {
 /// `let[...]` is emitted as `(let)[...]` (the computed member wraps a bare `let`
 /// object), so it no longer starts with `let`.
 fn computed_object_starts_with_let(m: &ComputedMemberExpression) -> bool {
-    !m.object.get_identifier_reference().is_some_and(|r| r.name == "let")
+    !m.object
+        .get_identifier_reference()
+        .is_some_and(|r| r.name == "let")
         && expr_starts_with_let(&m.object)
 }
 
@@ -429,7 +431,8 @@ impl Gen for ForOfStatement<'_> {
         p.print_space_before_identifier();
         p.print_str("of");
         p.print_soft_space();
-        self.right.print_expr(p, Precedence::Comma, Context::empty());
+        self.right
+            .print_expr(p, Precedence::Comma, Context::empty());
         p.print_ascii_byte(b')');
         p.print_body(&self.body, ctx);
     }
@@ -813,7 +816,11 @@ impl Gen for Function<'_> {
 impl Gen for FunctionBody<'_> {
     fn r#gen(&self, p: &mut Codegen, ctx: Context) {
         let span_end = self.span.end;
-        let comments_at_end = if span_end > 0 { p.get_comments(span_end - 1) } else { None };
+        let comments_at_end = if span_end > 0 {
+            p.get_comments(span_end - 1)
+        } else {
+            None
+        };
         let single_line = if self.is_empty() {
             !p.has_orphan_comments_before(self.span.end)
                 && comments_at_end
@@ -1287,7 +1294,8 @@ impl Gen for ExportDefaultDeclarationKind<'_> {
             }
             _ => {
                 p.start_of_default_export = p.code_len();
-                self.to_expression().print_expr(p, Precedence::Comma, Context::empty());
+                self.to_expression()
+                    .print_expr(p, Precedence::Comma, Context::empty());
                 p.print_semicolon_after_statement();
             }
         }
@@ -1547,22 +1555,34 @@ impl GenExpr for MemberExpression<'_> {
 impl GenExpr for ComputedMemberExpression<'_> {
     fn gen_expr(&self, p: &mut Codegen, _precedence: Precedence, ctx: Context) {
         // `(let[0] = 100);` -> `(let)[0] = 100`;
-        let wrap = self.object.get_identifier_reference().is_some_and(|r| r.name == "let");
+        let wrap = self
+            .object
+            .get_identifier_reference()
+            .is_some_and(|r| r.name == "let");
         p.wrap(wrap, |p| {
-            self.object.print_expr(p, Precedence::Postfix, ctx.intersection(Context::FORBID_CALL));
+            self.object.print_expr(
+                p,
+                Precedence::Postfix,
+                ctx.intersection(Context::FORBID_CALL),
+            );
         });
         if self.optional {
             p.print_str("?.");
         }
         p.print_ascii_byte(b'[');
-        self.expression.print_expr(p, Precedence::Lowest, Context::empty());
+        self.expression
+            .print_expr(p, Precedence::Lowest, Context::empty());
         p.print_ascii_byte(b']');
     }
 }
 
 impl GenExpr for StaticMemberExpression<'_> {
     fn gen_expr(&self, p: &mut Codegen, _precedence: Precedence, ctx: Context) {
-        self.object.print_expr(p, Precedence::Postfix, ctx.intersection(Context::FORBID_CALL));
+        self.object.print_expr(
+            p,
+            Precedence::Postfix,
+            ctx.intersection(Context::FORBID_CALL),
+        );
         if self.optional {
             p.print_ascii_byte(b'?');
         } else if p.need_space_before_dot == p.code_len() {
@@ -1576,7 +1596,11 @@ impl GenExpr for StaticMemberExpression<'_> {
 
 impl GenExpr for PrivateFieldExpression<'_> {
     fn gen_expr(&self, p: &mut Codegen, _precedence: Precedence, ctx: Context) {
-        self.object.print_expr(p, Precedence::Postfix, ctx.intersection(Context::FORBID_CALL));
+        self.object.print_expr(
+            p,
+            Precedence::Postfix,
+            ctx.intersection(Context::FORBID_CALL),
+        );
         if self.optional {
             p.print_ascii_byte(b'?');
         }
@@ -1605,7 +1629,8 @@ impl GenExpr for CallExpression<'_> {
             } else if is_statement {
                 p.start_of_stmt = p.code_len();
             }
-            self.callee.print_expr(p, Precedence::Postfix, Context::empty());
+            self.callee
+                .print_expr(p, Precedence::Postfix, Context::empty());
             if self.optional {
                 p.print_str("?.");
             }
@@ -1625,7 +1650,9 @@ impl Gen for Argument<'_> {
     fn r#gen(&self, p: &mut Codegen, ctx: Context) {
         match self {
             Self::SpreadElement(elem) => elem.print(p, ctx),
-            _ => self.to_expression().print_expr(p, Precedence::Comma, Context::empty()),
+            _ => self
+                .to_expression()
+                .print_expr(p, Precedence::Comma, Context::empty()),
         }
     }
 }
@@ -1635,7 +1662,9 @@ impl Gen for ArrayExpressionElement<'_> {
         match self {
             Self::SpreadElement(elem) => elem.print(p, ctx),
             Self::Elision(_span) => {}
-            _ => self.to_expression().print_expr(p, Precedence::Comma, Context::empty()),
+            _ => self
+                .to_expression()
+                .print_expr(p, Precedence::Comma, Context::empty()),
         }
     }
 }
@@ -1644,7 +1673,8 @@ impl Gen for SpreadElement<'_> {
     fn r#gen(&self, p: &mut Codegen, _ctx: Context) {
         p.add_source_mapping(self.span);
         p.print_ellipsis();
-        self.argument.print_expr(p, Precedence::Comma, Context::empty());
+        self.argument
+            .print_expr(p, Precedence::Comma, Context::empty());
     }
 }
 
@@ -1833,7 +1863,8 @@ impl Gen for ObjectProperty<'_> {
         }
 
         p.print_leading_comments_before_expression(&self.value);
-        self.value.print_expr(p, Precedence::Comma, Context::empty());
+        self.value
+            .print_expr(p, Precedence::Comma, Context::empty());
     }
 }
 
@@ -1843,7 +1874,9 @@ impl Gen for PropertyKey<'_> {
             Self::StaticIdentifier(ident) => ident.print(p, ctx),
             Self::PrivateIdentifier(ident) => ident.print(p, ctx),
             Self::StringLiteral(s) => p.print_string_literal(s, /* allow_backtick */ false),
-            _ => self.to_expression().print_expr(p, Precedence::Comma, Context::empty()),
+            _ => self
+                .to_expression()
+                .print_expr(p, Precedence::Comma, Context::empty()),
         }
     }
 }
@@ -1912,7 +1945,11 @@ impl GenExpr for ArrowFunctionExpression<'_> {
 impl GenExpr for YieldExpression<'_> {
     fn gen_expr(&self, p: &mut Codegen, precedence: Precedence, ctx: Context) {
         let wrap = precedence >= Precedence::Assign;
-        let argument_ctx = if wrap { Context::empty() } else { ctx & Context::FORBID_IN };
+        let argument_ctx = if wrap {
+            Context::empty()
+        } else {
+            ctx & Context::FORBID_IN
+        };
         p.wrap(wrap, |p| {
             p.print_space_before_identifier();
             p.add_source_mapping(self.span);
@@ -2008,7 +2045,8 @@ impl GenExpr for PrivateInExpression<'_> {
             p.add_source_mapping(self.span);
             self.left.print(p, ctx);
             p.print_str(" in ");
-            self.right.print_expr(p, Precedence::Compare, Context::FORBID_IN);
+            self.right
+                .print_expr(p, Precedence::Compare, Context::FORBID_IN);
         });
     }
 }
@@ -2051,19 +2089,22 @@ impl GenExpr for ConditionalExpression<'_> {
             } else {
                 Precedence::Conditional
             };
-            self.test.print_expr(p, test_precedence, ctx & Context::FORBID_IN);
+            self.test
+                .print_expr(p, test_precedence, ctx & Context::FORBID_IN);
             p.print_soft_space();
             p.print_ascii_byte(b'?');
             p.print_soft_space();
             // Annotation-gated (see the helper's doc): `if/else` bodies get
             // merged into consequents on mutated ASTs.
             p.print_annotation_comments_before_expression(&self.consequent);
-            self.consequent.print_expr(p, Precedence::Yield, Context::empty());
+            self.consequent
+                .print_expr(p, Precedence::Yield, Context::empty());
             p.print_soft_space();
             p.print_colon();
             p.print_soft_space();
             p.print_leading_comments_before_expression(&self.alternate);
-            self.alternate.print_expr(p, Precedence::Yield, ctx & Context::FORBID_IN);
+            self.alternate
+                .print_expr(p, Precedence::Yield, ctx & Context::FORBID_IN);
         });
     }
 }
@@ -2104,7 +2145,8 @@ impl Gen for AssignmentTarget<'_> {
                     Self::TSTypeAssertion(_) => Precedence::Prefix,
                     _ => Precedence::Comma,
                 };
-                self.to_simple_assignment_target().print_expr(p, precedence, Context::empty());
+                self.to_simple_assignment_target()
+                    .print_expr(p, precedence, Context::empty());
             }
             match_assignment_target_pattern!(Self) => {
                 self.to_assignment_target_pattern().print(p, ctx);
@@ -2235,8 +2277,10 @@ impl Gen for AssignmentTargetPropertyProperty<'_> {
                 PropertyKey::StaticIdentifier(ident) => Some(&ident.name),
                 _ => None,
             };
-            let value_name =
-                self.binding.identifier().map(|id| p.get_identifier_reference_name(id));
+            let value_name = self
+                .binding
+                .identifier()
+                .map(|id| p.get_identifier_reference_name(id));
             match (key_name, value_name) {
                 (Some(key_name), Some(value_name)) => key_name == value_name,
                 _ => false,
@@ -2265,7 +2309,8 @@ impl Gen for AssignmentTargetPropertyProperty<'_> {
                     if self.computed {
                         p.print_ascii_byte(b'[');
                     }
-                    key.to_expression().print_expr(p, Precedence::Comma, Context::empty());
+                    key.to_expression()
+                        .print_expr(p, Precedence::Comma, Context::empty());
                     if self.computed {
                         p.print_ascii_byte(b']');
                     }
@@ -2289,7 +2334,11 @@ impl Gen for AssignmentTargetRest<'_> {
 impl GenExpr for SequenceExpression<'_> {
     fn gen_expr(&self, p: &mut Codegen, precedence: Precedence, ctx: Context) {
         p.wrap(precedence >= self.precedence(), |p| {
-            p.print_expressions(&self.expressions, Precedence::Lowest, ctx.and_forbid_call(false));
+            p.print_expressions(
+                &self.expressions,
+                Precedence::Lowest,
+                ctx.and_forbid_call(false),
+            );
         });
     }
 }
@@ -2327,7 +2376,8 @@ impl GenExpr for ImportExpression<'_> {
                 p.print_soft_newline();
                 p.print_indent();
             }
-            self.source.print_expr(p, Precedence::Comma, Context::empty());
+            self.source
+                .print_expr(p, Precedence::Comma, Context::empty());
             if let Some(options) = &self.options {
                 p.print_comma();
                 if has_comment {
@@ -2378,7 +2428,11 @@ impl GenExpr for TaggedTemplateExpression<'_> {
     fn gen_expr(&self, p: &mut Codegen, _precedence: Precedence, ctx: Context) {
         p.add_source_mapping(self.span);
         // Propagate `FORBID_CALL` to the tag so a `new` callee like `f()` wraps.
-        self.tag.print_expr(p, Precedence::Postfix, ctx.intersection(Context::FORBID_CALL));
+        self.tag.print_expr(
+            p,
+            Precedence::Postfix,
+            ctx.intersection(Context::FORBID_CALL),
+        );
         if let Some(type_parameters) = &self.type_arguments {
             type_parameters.print(p, ctx);
         }
@@ -2410,8 +2464,11 @@ impl GenExpr for ChainExpression<'_> {
     fn gen_expr(&self, p: &mut Codegen, precedence: Precedence, ctx: Context) {
         let wrap = precedence >= Precedence::Postfix || ctx.intersects(Context::FORBID_CALL);
         // Once wrapped, the inner element is in a fresh grouping; don't wrap again.
-        let (precedence, ctx) =
-            if wrap { (Precedence::Lowest, Context::empty()) } else { (precedence, ctx) };
+        let (precedence, ctx) = if wrap {
+            (Precedence::Lowest, Context::empty())
+        } else {
+            (precedence, ctx)
+        };
         p.wrap(wrap, |p| match &self.expression {
             ChainElement::CallExpression(expr) => expr.print_expr(p, precedence, ctx),
             ChainElement::TSNonNullExpression(expr) => expr.print_expr(p, precedence, ctx),
@@ -2437,7 +2494,8 @@ impl GenExpr for NewExpression<'_> {
             p.add_source_mapping(self.span);
             p.print_str("new");
             p.print_soft_space();
-            self.callee.print_expr(p, Precedence::New, Context::FORBID_CALL);
+            self.callee
+                .print_expr(p, Precedence::New, Context::FORBID_CALL);
             if let Some(type_parameters) = &self.type_arguments {
                 type_parameters.print(p, ctx);
             }
@@ -2456,7 +2514,8 @@ impl GenExpr for TSAsExpression<'_> {
         let wrap = precedence >= Precedence::Compare;
 
         p.wrap(wrap, |p| {
-            self.expression.print_expr(p, Precedence::Exponentiation, ctx);
+            self.expression
+                .print_expr(p, Precedence::Exponentiation, ctx);
             p.print_soft_space();
             p.print_space_before_identifier();
             p.print_str("as");
@@ -2475,7 +2534,8 @@ impl GenExpr for TSSatisfiesExpression<'_> {
         let wrap = precedence >= Precedence::Compare;
 
         p.wrap(wrap, |p| {
-            self.expression.print_expr(p, Precedence::Exponentiation, ctx);
+            self.expression
+                .print_expr(p, Precedence::Exponentiation, ctx);
             p.print_soft_space();
             p.print_space_before_identifier();
             p.print_str("satisfies");
@@ -2532,7 +2592,8 @@ impl GenExpr for TSTypeAssertion<'_> {
             p.print_ascii_byte(b'>');
             // The operand is a `UnaryExpression`, so print it like a unary argument
             // (`<T>-x`, not `<T>(-x)`) while still wrapping looser operands.
-            self.expression.print_expr(p, Precedence::Exponentiation, ctx);
+            self.expression
+                .print_expr(p, Precedence::Exponentiation, ctx);
         });
     }
 }
@@ -2580,7 +2641,9 @@ impl Gen for Class<'_> {
                 p.print_soft_space();
                 p.print_space_before_identifier();
                 p.print_str("extends ");
-                heritage.expression.print_expr(p, Precedence::Postfix, Context::empty());
+                heritage
+                    .expression
+                    .print_expr(p, Precedence::Postfix, Context::empty());
                 if let Some(super_type_parameters) = &heritage.type_arguments {
                     super_type_parameters.print(p, ctx);
                 }
@@ -2760,7 +2823,8 @@ impl Gen for JSXSpreadAttribute<'_> {
             p.print_indent();
         }
         p.print_str("...");
-        self.argument.print_expr(p, Precedence::Comma, Context::empty());
+        self.argument
+            .print_expr(p, Precedence::Comma, Context::empty());
         p.add_source_mapping_end(self.span);
         p.print_ascii_byte(b'}');
     }
@@ -3084,12 +3148,18 @@ impl Gen for PrivateIdentifier<'_> {
     fn r#gen(&self, p: &mut Codegen, _ctx: Context) {
         let mangled = p.private_member_mappings.as_ref().and_then(|mappings| {
             p.current_class_ids()
-                .find_map(|class_id| mappings.get(class_id).and_then(|m| m.get(self.name.as_str())))
+                .find_map(|class_id| {
+                    mappings
+                        .get(class_id)
+                        .and_then(|m| m.get(self.name.as_str()))
+                })
                 .cloned()
         });
         // Name the mapping after what is printed, not after what the AST holds, so a mangled name
         // is recorded as a rename and an unmangled one as no rename at all
-        let name = mangled.as_ref().map_or(self.name.as_str(), |mangled| mangled.as_str());
+        let name = mangled
+            .as_ref()
+            .map_or(self.name.as_str(), |mangled| mangled.as_str());
 
         p.add_source_mapping_for_private_name(self.span, name);
         p.print_ascii_byte(b'#');
@@ -3205,7 +3275,8 @@ impl Gen for AssignmentPattern<'_> {
         p.print_soft_space();
         p.print_equal();
         p.print_soft_space();
-        self.right.print_expr(p, Precedence::Comma, Context::empty());
+        self.right
+            .print_expr(p, Precedence::Comma, Context::empty());
     }
 }
 
@@ -3231,7 +3302,8 @@ impl Gen for Decorator<'_> {
         p.print_ascii_byte(b'@');
         let wrap = need_wrap(&self.expression);
         p.wrap(wrap, |p| {
-            self.expression.print_expr(p, Precedence::Lowest, Context::empty());
+            self.expression
+                .print_expr(p, Precedence::Lowest, Context::empty());
         });
     }
 }
@@ -3330,9 +3402,12 @@ impl Gen for TSType<'_> {
 
 impl Gen for TSArrayType<'_> {
     fn r#gen(&self, p: &mut Codegen, ctx: Context) {
-        p.wrap(parenthesize_check_type_of_postfix_type(&self.element_type), |p| {
-            self.element_type.print(p, ctx);
-        });
+        p.wrap(
+            parenthesize_check_type_of_postfix_type(&self.element_type),
+            |p| {
+                self.element_type.print(p, ctx);
+            },
+        );
         p.print_str("[]");
     }
 }
@@ -3439,7 +3514,10 @@ fn type_starts_with_non_identifier(ty: &TSType) -> bool {
                 || type_starts_with_non_identifier(&arr.element_type)
         }
         TSType::TSLiteralType(lit) => {
-            matches!(&lit.literal, TSLiteral::TemplateLiteral(_) | TSLiteral::StringLiteral(_))
+            matches!(
+                &lit.literal,
+                TSLiteral::TemplateLiteral(_) | TSLiteral::StringLiteral(_)
+            )
         }
         TSType::TSUnionType(u) => u.types.first().is_some_and(type_starts_with_non_identifier),
         TSType::TSIntersectionType(i) => {
@@ -3503,9 +3581,12 @@ impl Gen for TSInferType<'_> {
 
 impl Gen for TSIndexedAccessType<'_> {
     fn r#gen(&self, p: &mut Codegen, ctx: Context) {
-        p.wrap(parenthesize_check_type_of_postfix_type(&self.object_type), |p| {
-            self.object_type.print(p, ctx);
-        });
+        p.wrap(
+            parenthesize_check_type_of_postfix_type(&self.object_type),
+            |p| {
+                self.object_type.print(p, ctx);
+            },
+        );
         p.print_ascii_byte(b'[');
         self.index_type.print(p, ctx);
         p.print_ascii_byte(b']');
@@ -3982,9 +4063,12 @@ impl Gen for TSTupleElement<'_> {
         match self {
             match_ts_type!(TSTupleElement) => self.to_ts_type().print(p, ctx),
             TSTupleElement::TSOptionalType(ts_type) => {
-                p.wrap(parenthesize_check_type_of_postfix_type(&ts_type.type_annotation), |p| {
-                    ts_type.type_annotation.print(p, ctx);
-                });
+                p.wrap(
+                    parenthesize_check_type_of_postfix_type(&ts_type.type_annotation),
+                    |p| {
+                        ts_type.type_annotation.print(p, ctx);
+                    },
+                );
                 p.print_ascii_byte(b'?');
             }
             TSTupleElement::TSRestType(ts_type) => {
@@ -4099,12 +4183,14 @@ fn is_leftmost_intrinsic_reference(ty: &TSType) -> bool {
         }
         TSType::TSArrayType(array) => is_leftmost_intrinsic_reference(&array.element_type),
         TSType::TSIndexedAccessType(access) => is_leftmost_intrinsic_reference(&access.object_type),
-        TSType::TSUnionType(union) => {
-            union.types.first().is_some_and(is_leftmost_intrinsic_reference)
-        }
-        TSType::TSIntersectionType(intersection) => {
-            intersection.types.first().is_some_and(is_leftmost_intrinsic_reference)
-        }
+        TSType::TSUnionType(union) => union
+            .types
+            .first()
+            .is_some_and(is_leftmost_intrinsic_reference),
+        TSType::TSIntersectionType(intersection) => intersection
+            .types
+            .first()
+            .is_some_and(is_leftmost_intrinsic_reference),
         TSType::TSConditionalType(conditional) => {
             is_leftmost_intrinsic_reference(&conditional.check_type)
         }

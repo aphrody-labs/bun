@@ -17,7 +17,10 @@
 /// so the remainder is BOM-free by construction and a doubled BOM comes back out as one BOM.
 /// (Prettier strips only `charAt(0)` and lets its parsers swallow the rest; the observable output is the same.)
 pub fn split_bom(source: &str) -> (bool, &str) {
-    (source.starts_with('\u{feff}'), source.trim_start_matches('\u{feff}'))
+    (
+        source.starts_with('\u{feff}'),
+        source.trim_start_matches('\u{feff}'),
+    )
 }
 
 #[cfg(test)]

@@ -18,8 +18,8 @@
 //!
 //! Refs : https://turborepo.com/docs/reference/configuration
 
-use crate::util::make_finding;
 use crate::types::{Finding, MakeFindingOpts, Severity};
+use crate::util::make_finding;
 use serde_json::Value;
 
 pub fn scan_turbo_json(path: &str, content: &str) -> (Vec<Finding>, String) {

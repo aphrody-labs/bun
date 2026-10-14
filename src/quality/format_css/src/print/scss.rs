@@ -42,13 +42,21 @@ pub(super) fn write_sass_variable_declaration<'a>(
     statement::write_colon_run(name_span.end, to_span(&decl.colon_span).end, f);
     write!(f, space());
 
-    let ctx = ValueContext { decl_prop: Some("$"), map_break: true, ..ValueContext::default() };
+    let ctx = ValueContext {
+        decl_prop: Some("$"),
+        map_break: true,
+        ..ValueContext::default()
+    };
     // Comments between the colon and the value keep their line:
     // a same-line `//` stays on the colon's (`$x: // c`), an own-line one stays own-line,
     // and the value then continues one level under the name.
     // A hard-broken comma list indents itself and claims an own-line lead inside that indent.
     let value_start = to_span(decl.value.span()).start;
-    let inline_lead = f.context().comments().iter_before(value_start).any(|c| c.inline);
+    let inline_lead = f
+        .context()
+        .comments()
+        .iter_before(value_start)
+        .any(|c| c.inline);
     let own_line_lead = f
         .context()
         .comments()
@@ -92,7 +100,10 @@ pub(super) fn is_single_item_list(list: &SassList<'_>) -> bool {
 
 /// Start offset of the source comma after element `i` (for [`value::write_group_comma`]).
 pub(super) fn list_comma_start(list: &SassList<'_>, i: usize) -> Option<u32> {
-    list.comma_spans.as_ref().and_then(|s| s.get(i)).map(|sp| to_span(sp).start)
+    list.comma_spans
+        .as_ref()
+        .and_then(|s| s.get(i))
+        .map(|sp| to_span(sp).start)
 }
 
 /// Whether [`write_top_level_value`] prints `value` one comma entry per line:
@@ -141,9 +152,11 @@ pub(super) fn write_top_level_value<'a>(
     f: &mut CssFormatter<'_, 'a>,
 ) {
     let (elements, comma_spans, keep_trailing_comma) = match value {
-        ComponentValue::SassList(list) => {
-            (&list.elements, list.comma_spans.as_ref(), is_single_item_list(list))
-        }
+        ComponentValue::SassList(list) => (
+            &list.elements,
+            list.comma_spans.as_ref(),
+            is_single_item_list(list),
+        ),
         ComponentValue::LessList(list) => (&list.elements, list.comma_spans.as_ref(), false),
         _ => {
             value::write_component_value(value, ctx, f);
@@ -152,7 +165,10 @@ pub(super) fn write_top_level_value<'a>(
     };
     // `paren_break` only applies to a paren group that IS the whole value,
     // not to parens nested inside lists.
-    let ctx = ValueContext { paren_break: false, ..ctx };
+    let ctx = ValueContext {
+        paren_break: false,
+        ..ctx
+    };
     if let Some(comma_spans) = comma_spans {
         // Each element paired with the comma that follows it (see `write_value_groups`)
         let groups: Vec<(&[ComponentValue<'a>], Option<u32>)> = elements
@@ -192,7 +208,10 @@ pub(super) fn write_top_level_list_element<'a>(
 /// A paren-delimited map/list value or key: hugs the colon and carries
 /// its own break layout (Prettier's `value-paren_group` checks).
 fn is_paren_block(value: &ComponentValue<'_>) -> bool {
-    matches!(value, ComponentValue::SassMap(_) | ComponentValue::SassParenthesizedExpression(_))
+    matches!(
+        value,
+        ComponentValue::SassMap(_) | ComponentValue::SassParenthesizedExpression(_)
+    )
 }
 
 /// `(key: value, ...)`: SCSS maps in map-item positions always break,
@@ -220,7 +239,10 @@ pub(super) fn write_sass_map<'a>(
                 if i > 0 && !tail[i - 1].inline {
                     write!(f, space());
                 }
-                write!(f, FormatCommentBeforeContent::new(comment, BlockCommentAfter::None));
+                write!(
+                    f,
+                    FormatCommentBeforeContent::new(comment, BlockCommentAfter::None)
+                );
             }
         });
         write!(
@@ -315,10 +337,18 @@ pub(super) fn write_sass_map<'a>(
                     write!(f, empty_line());
                 }
             }
-            let key_ctx =
-                ValueContext { map_key: true, paren_break: false, map_break: false, ..ctx };
-            let val_ctx =
-                ValueContext { map_key: false, paren_break: true, map_break: true, ..ctx };
+            let key_ctx = ValueContext {
+                map_key: true,
+                paren_break: false,
+                map_break: false,
+                ..ctx
+            };
+            let val_ctx = ValueContext {
+                map_key: false,
+                paren_break: true,
+                map_break: true,
+                ..ctx
+            };
             // Nested maps / paren lists hug the colon (`key: (`);
             // the pair never breaks after the colon (Prettier dedents these).
             let value_is_block = is_paren_block(&item.value);
@@ -333,8 +363,11 @@ pub(super) fn write_sass_map<'a>(
                 let fits = !value_is_block
                     && u32::from(f.options().indent_width.value()) + comment_width + 2 + item_width
                         <= u32::from(f.options().line_width.value());
-                let block_after =
-                    if fits { BlockCommentAfter::Space } else { BlockCommentAfter::HardLine };
+                let block_after = if fits {
+                    BlockCommentAfter::Space
+                } else {
+                    BlockCommentAfter::HardLine
+                };
                 write!(f, FormatCommentBeforeContent::new(comment, block_after));
             }
             let key_is_block = is_paren_block(&item.key);
@@ -393,13 +426,18 @@ pub(super) fn write_sass_map<'a>(
         // The comment goes to its own line only when BOTH a comma is printed
         // and the source comma preceded the comment (true next-slot comment).
         if let Some(last) = map.items.last() {
-            let source_comma_start =
-                map.comma_spans.get(map.items.len() - 1).map_or(u32::MAX, |sp| to_span(sp).start);
+            let source_comma_start = map
+                .comma_spans
+                .get(map.items.len() - 1)
+                .map_or(u32::MAX, |sp| to_span(sp).start);
             // Only inside function/include arguments does the comment move
             // to the next slot; `$map:` declarations keep it attached.
             let next_slot = trailing
                 && ctx.in_args
-                && f.context().comments().peek().is_some_and(|c| c.span.start > source_comma_start);
+                && f.context()
+                    .comments()
+                    .peek()
+                    .is_some_and(|c| c.span.start > source_comma_start);
             if !next_slot {
                 value::flush_same_line_comments(to_span(last.span()).end, r_paren, f);
             }
@@ -410,7 +448,13 @@ pub(super) fn write_sass_map<'a>(
         // a next-slot comment (above) is same-line in source but still starts a line here,
         // and consecutive own-line block comments glue.
         let mut after_inline = false;
-        for (i, &comment) in f.context().comments().take_before(r_paren).iter().enumerate() {
+        for (i, &comment) in f
+            .context()
+            .comments()
+            .take_before(r_paren)
+            .iter()
+            .enumerate()
+        {
             // A `//` already ended its line
             if !after_inline {
                 if i == 0 || comment.inline {
@@ -419,7 +463,10 @@ pub(super) fn write_sass_map<'a>(
                     write!(f, " ");
                 }
             }
-            write!(f, FormatCommentBeforeContent::new(comment, BlockCommentAfter::None));
+            write!(
+                f,
+                FormatCommentBeforeContent::new(comment, BlockCommentAfter::None)
+            );
             after_inline = comment.inline;
         }
     });
@@ -469,8 +516,11 @@ pub(super) fn write_sass_each<'a>(each: &SassEach<'a>, f: &mut CssFormatter<'_, 
         }
         expr => (std::slice::from_ref(expr), None),
     };
-    let expr_comma_start =
-        move |i: usize| expr_comma_spans.and_then(|s| s.get(i)).map(|sp| to_span(sp).start);
+    let expr_comma_start = move |i: usize| {
+        expr_comma_spans
+            .and_then(|s| s.get(i))
+            .map(|sp| to_span(sp).start)
+    };
 
     let body = format_with(move |f: &mut CssFormatter<'_, 'a>| {
         let mut filler = f.fill();
@@ -569,8 +619,12 @@ pub(super) fn write_sass_function<'a>(function: &SassFunction<'a>, f: &mut CssFo
 }
 
 fn write_sass_parameters<'a>(parameters: &SassParameters<'a>, f: &mut CssFormatter<'_, 'a>) {
-    let comma_start =
-        |i: usize| parameters.comma_spans.get(i).map(|sp: &oxc_css_parser::Span| to_span(sp).start);
+    let comma_start = |i: usize| {
+        parameters
+            .comma_spans
+            .get(i)
+            .map(|sp: &oxc_css_parser::Span| to_span(sp).start)
+    };
     let r_paren = to_span(&parameters.span).end.saturating_sub(1);
     let body = format_with(move |f: &mut CssFormatter<'_, 'a>| {
         write!(f, soft_line_break());
@@ -616,8 +670,9 @@ pub(super) fn write_sass_include<'a>(include: &SassInclude<'a>, f: &mut CssForma
         let comma_spans = &arguments.comma_spans;
         let r_paren = to_span(&arguments.span).end.saturating_sub(1);
         // Same first-argument gate as `write_function` (which see), over typed args
-        let first_arg_is_kw =
-            args.first().is_some_and(|a| matches!(a, ComponentValue::SassKeywordArgument(_)));
+        let first_arg_is_kw = args
+            .first()
+            .is_some_and(|a| matches!(a, ComponentValue::SassKeywordArgument(_)));
         let body = format_with(move |f: &mut CssFormatter<'_, 'a>| {
             let source = f.context().source_text();
             write!(f, soft_line_break());
@@ -673,11 +728,18 @@ pub(super) fn write_sass_include<'a>(include: &SassInclude<'a>, f: &mut CssForma
 pub(super) fn write_sass_if_at_rule<'a>(if_rule: &SassIfAtRule<'a>, f: &mut CssFormatter<'_, 'a>) {
     write!(f, ["@if", space()]);
     write_control_condition(&if_rule.if_clause.condition, f);
-    write_block_after(to_span(if_rule.if_clause.condition.span()).end, &if_rule.if_clause.block, f);
+    write_block_after(
+        to_span(if_rule.if_clause.condition.span()).end,
+        &if_rule.if_clause.block,
+        f,
+    );
     for (clause, else_span) in if_rule.else_if_clauses.iter().zip(&if_rule.else_spans) {
         write_else_join(to_span(else_span).start, f);
         // `if` is a value word in postcss, so the condition may break after it
-        if matches!(clause.condition, ComponentValue::SassParenthesizedExpression(_)) {
+        if matches!(
+            clause.condition,
+            ComponentValue::SassParenthesizedExpression(_)
+        ) {
             write!(f, ["if", space()]);
             write_control_condition(&clause.condition, f);
         } else {
@@ -687,7 +749,10 @@ pub(super) fn write_sass_if_at_rule<'a>(if_rule: &SassIfAtRule<'a>, f: &mut CssF
     }
     if let Some(else_block) = &if_rule.else_clause {
         let block_start = to_span(&else_block.span).start;
-        let else_span = if_rule.else_spans.last().map_or(Span::empty(block_start), to_span);
+        let else_span = if_rule
+            .else_spans
+            .last()
+            .map_or(Span::empty(block_start), to_span);
         write_else_join(else_span.start, f);
         write_block_after(else_span.end, else_block, f);
     }
@@ -713,7 +778,10 @@ fn write_else_join(else_start: u32, f: &mut CssFormatter<'_, '_>) {
         } else {
             write!(f, space());
         }
-        write!(f, FormatCommentBeforeContent::new(comment, BlockCommentAfter::None));
+        write!(
+            f,
+            FormatCommentBeforeContent::new(comment, BlockCommentAfter::None)
+        );
     }
     if between.is_empty() {
         write!(f, [space(), "@else", space()]);
@@ -978,8 +1046,11 @@ fn write_sass_module_config<'a>(config: &SassModuleConfig<'a>, f: &mut CssFormat
             write!(f, [text(source.text_for(&span)), ":", space()]);
             // No first-argument gate here (cf. `write_function`):
             // config items are structurally always `$var: value` pairs, so the gate holds by construction.
-            let item_ctx =
-                ValueContext { paren_break: true, map_break: true, ..ValueContext::default() };
+            let item_ctx = ValueContext {
+                paren_break: true,
+                map_break: true,
+                ..ValueContext::default()
+            };
             write_top_level_list_element(&item.value, item_ctx, f);
             for flag in &item.flags {
                 let span = to_span(flag.span());
@@ -996,7 +1067,10 @@ fn write_sass_module_config<'a>(config: &SassModuleConfig<'a>, f: &mut CssFormat
                     write_same_line_trailing_comments(bound, f).unwrap_or(item_span.end);
                 for &comment in f.context().comments().take_before(bound) {
                     comments::write_gap(source.bytes_range(prev_end, comment.span.start), f);
-                    write!(f, FormatCommentBeforeContent::new(comment, BlockCommentAfter::None));
+                    write!(
+                        f,
+                        FormatCommentBeforeContent::new(comment, BlockCommentAfter::None)
+                    );
                     prev_end = comment.span.end;
                 }
             }
@@ -1026,9 +1100,18 @@ fn write_same_line_trailing_comments(
         }
         f.context().comments().take_before(comment.span.end);
         if comment.inline {
-            write!(f, FormatLineCommentSuffix::new(comment).with_leading_space());
+            write!(
+                f,
+                FormatLineCommentSuffix::new(comment).with_leading_space()
+            );
         } else {
-            write!(f, [space(), FormatCommentBeforeContent::new(comment, BlockCommentAfter::None)]);
+            write!(
+                f,
+                [
+                    space(),
+                    FormatCommentBeforeContent::new(comment, BlockCommentAfter::None)
+                ]
+            );
         }
         last_end = Some(comment.span.end);
     }

@@ -10,7 +10,14 @@ use crate::{
 #[derive(Debug, Default, Clone)]
 pub struct PreferCalledWith;
 
-declare_oxc_lint!(PreferCalledWith, vitest, style, fix, docs = DOCUMENTATION, version = "0.2.5",);
+declare_oxc_lint!(
+    PreferCalledWith,
+    vitest,
+    style,
+    fix,
+    docs = DOCUMENTATION,
+    version = "0.2.5",
+);
 
 impl Rule for PreferCalledWith {
     fn run_on_jest_node<'a, 'c>(
@@ -49,9 +56,21 @@ fn test() {
     ];
 
     let mut fix = vec![
-        ("expect(fn).toBeCalled();", "expect(fn).toBeCalledWith();", None),
-        ("expect(fn).resolves.toBeCalled();", "expect(fn).resolves.toBeCalledWith();", None),
-        ("expect(fn).toHaveBeenCalled();", "expect(fn).toHaveBeenCalledWith();", None),
+        (
+            "expect(fn).toBeCalled();",
+            "expect(fn).toBeCalledWith();",
+            None,
+        ),
+        (
+            "expect(fn).resolves.toBeCalled();",
+            "expect(fn).resolves.toBeCalledWith();",
+            None,
+        ),
+        (
+            "expect(fn).toHaveBeenCalled();",
+            "expect(fn).toHaveBeenCalledWith();",
+            None,
+        ),
     ];
 
     let vitest_pass = vec![
@@ -77,9 +96,21 @@ fn test() {
     ];
 
     let vitest_fix = vec![
-        ("expect(fn).toBeCalled();", "expect(fn).toBeCalledWith();", None),
-        ("expect(fn).resolves.toBeCalled();", "expect(fn).resolves.toBeCalledWith();", None),
-        ("expect(fn).toHaveBeenCalled();", "expect(fn).toHaveBeenCalledWith();", None),
+        (
+            "expect(fn).toBeCalled();",
+            "expect(fn).toBeCalledWith();",
+            None,
+        ),
+        (
+            "expect(fn).resolves.toBeCalled();",
+            "expect(fn).resolves.toBeCalledWith();",
+            None,
+        ),
+        (
+            "expect(fn).toHaveBeenCalled();",
+            "expect(fn).toHaveBeenCalledWith();",
+            None,
+        ),
     ];
 
     pass.extend(vitest_pass);

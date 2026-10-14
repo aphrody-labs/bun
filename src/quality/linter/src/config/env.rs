@@ -82,7 +82,9 @@ impl OxlintEnv {
 
     pub fn iter(&self) -> impl Iterator<Item = &str> + '_ {
         // Filter out false values
-        self.0.iter().filter_map(|(k, v)| (*v).then_some(k.as_str()))
+        self.0
+            .iter()
+            .filter_map(|(k, v)| (*v).then_some(k.as_str()))
     }
 
     pub(crate) fn override_envs(&self, envs_to_override: &mut OxlintEnv) {

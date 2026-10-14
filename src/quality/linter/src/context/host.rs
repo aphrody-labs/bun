@@ -189,7 +189,9 @@ pub struct ContextHost<'a> {
 
 impl std::fmt::Debug for ContextHost<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("ContextHost").field("file_path", &self.file_path).finish_non_exhaustive()
+        f.debug_struct("ContextHost")
+            .field("file_path", &self.file_path)
+            .finish_non_exhaustive()
     }
 }
 
@@ -211,7 +213,9 @@ impl<'a> ContextHost<'a> {
         );
 
         let file_path = file_path.as_ref().to_path_buf().into_boxed_path();
-        let file_extension = file_path.extension().map(|ext| ext.to_owned().into_boxed_os_str());
+        let file_extension = file_path
+            .extension()
+            .map(|ext| ext.to_owned().into_boxed_os_str());
 
         Self {
             sub_hosts,
@@ -392,7 +396,9 @@ impl<'a> ContextHost<'a> {
                 RuleCommentType::All => {
                     self.push_diagnostic(Message::new(
                         OxcDiagnostic::error(
-                            unused_disable_comment.directive_prefix.unused_disable_message(),
+                            unused_disable_comment
+                                .directive_prefix
+                                .unused_disable_message(),
                         )
                         .with_label(span)
                         .with_severity(rule_severity),
@@ -406,7 +412,8 @@ impl<'a> ContextHost<'a> {
                 RuleCommentType::Single(rules_vec) => {
                     for rule in rules_vec {
                         let rule_message = Cow::<str>::Owned(
-                            rule.directive_prefix.unused_disable_rule_message(&rule.rule_name),
+                            rule.directive_prefix
+                                .unused_disable_rule_message(&rule.rule_name),
                         );
 
                         let fix = rule.create_fix(source_text, span).with_message(fix_message);
@@ -442,7 +449,9 @@ impl<'a> ContextHost<'a> {
                 .into_iter()
                 .map(|(message, span)| {
                     Message::new(
-                        OxcDiagnostic::error(message).with_label(span).with_severity(rule_severity),
+                        OxcDiagnostic::error(message)
+                            .with_label(span)
+                            .with_severity(rule_severity),
                         // TODO: fixer
                         // copy the structure of disable directives
                         PossibleFixes::None,
@@ -472,7 +481,10 @@ impl<'a> ContextHost<'a> {
             "into_disable_directives expects at most one sub host, but found {}",
             self.sub_hosts.len()
         );
-        self.sub_hosts.into_iter().next().map(|sub_host| sub_host.disable_directives)
+        self.sub_hosts
+            .into_iter()
+            .next()
+            .map(|sub_host| sub_host.disable_directives)
     }
 
     #[cfg(debug_assertions)]
@@ -544,9 +556,11 @@ impl<'a> ContextHost<'a> {
     #[cfg(test)]
     fn sniff_for_frameworks(mut self) -> Self {
         if self.plugins().has_test() {
-            self.frameworks.set(FrameworkFlags::Vitest, self.plugins().has_vitest());
+            self.frameworks
+                .set(FrameworkFlags::Vitest, self.plugins().has_vitest());
 
-            self.frameworks.set(FrameworkFlags::Jest, self.plugins().has_jest());
+            self.frameworks
+                .set(FrameworkFlags::Jest, self.plugins().has_jest());
         }
 
         self

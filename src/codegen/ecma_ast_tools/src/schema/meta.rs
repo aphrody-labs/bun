@@ -22,7 +22,12 @@ pub struct MetaType {
 impl MetaType {
     /// Create new [`MetaType`].
     pub fn new(id: MetaId, name: String, file_id: FileId) -> Self {
-        Self { id, name, file_id, estree: ESTreeMeta::default() }
+        Self {
+            id,
+            name,
+            file_id,
+            estree: ESTreeMeta::default(),
+        }
     }
 
     /// Get meta type name.

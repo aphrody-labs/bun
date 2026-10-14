@@ -42,7 +42,8 @@ declare_oxc_lint!(
     style,
     suggestion,
     version = "0.0.15",
-    short_description = "This rule finds ternary expressions that can be simplified to a logical operator.",
+    short_description =
+        "This rule finds ternary expressions that can be simplified to a logical operator.",
 );
 
 impl Rule for PreferLogicalOperatorOverTernary {
@@ -52,7 +53,11 @@ impl Rule for PreferLogicalOperatorOverTernary {
         };
 
         // `foo ? foo : bar` -> `foo || bar`
-        if is_same_node(&conditional_expression.test, &conditional_expression.consequent, ctx) {
+        if is_same_node(
+            &conditional_expression.test,
+            &conditional_expression.consequent,
+            ctx,
+        ) {
             let test_expr = preferred_test_expr(
                 &conditional_expression.test,
                 &conditional_expression.consequent,
@@ -75,7 +80,11 @@ impl Rule for PreferLogicalOperatorOverTernary {
         // `!bar ? foo : bar` -> `bar || foo`
         if let Expression::UnaryExpression(unary_expression) = &conditional_expression.test
             && unary_expression.operator == UnaryOperator::LogicalNot
-            && is_same_node(&unary_expression.argument, &conditional_expression.alternate, ctx)
+            && is_same_node(
+                &unary_expression.argument,
+                &conditional_expression.alternate,
+                ctx,
+            )
         {
             let alternate_expr = preferred_alternate_expr(
                 &conditional_expression.test,

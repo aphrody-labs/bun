@@ -60,8 +60,12 @@ impl GroupMatcher {
         predefined_groups.sort_by(|a, b| a.0.cmp(&b.0));
 
         let has_catch_all_group_for = |selector: ImportSelector| {
-            predefined_groups.iter().any(|(group, _)| group.is_plain_selector(selector))
-                || used_custom_groups.iter().any(|(group, _)| group.is_plain_selector(selector))
+            predefined_groups
+                .iter()
+                .any(|(group, _)| group.is_plain_selector(selector))
+                || used_custom_groups
+                    .iter()
+                    .any(|(group, _)| group.is_plain_selector(selector))
         };
         let regroup_side_effect = has_catch_all_group_for(ImportSelector::SideEffect);
         let regroup_side_effect_style = has_catch_all_group_for(ImportSelector::SideEffectStyle);
@@ -83,10 +87,13 @@ impl GroupMatcher {
                         .element_name_pattern
                         .iter()
                         .any(|pattern| fast_glob::glob_match(pattern, import_metadata.source));
-                let selector_matches =
-                    custom_group.selector.is_none_or(|s| import_metadata.selectors.contains(&s));
-                let modifiers_match =
-                    custom_group.modifiers.iter().all(|m| import_metadata.modifiers.contains(m));
+                let selector_matches = custom_group
+                    .selector
+                    .is_none_or(|s| import_metadata.selectors.contains(&s));
+                let modifiers_match = custom_group
+                    .modifiers
+                    .iter()
+                    .all(|m| import_metadata.modifiers.contains(m));
 
                 // These are AND logic
                 name_matches && selector_matches && modifiers_match

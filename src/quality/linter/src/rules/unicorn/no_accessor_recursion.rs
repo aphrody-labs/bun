@@ -16,11 +16,13 @@ fn no_accessor_recursion_diagnostic(span: Span, kind: &str) -> OxcDiagnostic {
         "setters" => "set",
         _ => "get",
     };
-    OxcDiagnostic::warn(format!("Disallow recursive access to `this` within {kind}."))
-        .with_help(format!(
-            "Remove this property access, or remove `{method_kind}` from the method"
-        ))
-        .with_label(span)
+    OxcDiagnostic::warn(format!(
+        "Disallow recursive access to `this` within {kind}."
+    ))
+    .with_help(format!(
+        "Remove this property access, or remove `{method_kind}` from the method"
+    ))
+    .with_label(span)
 }
 
 #[derive(Debug, Default, Clone)]
@@ -281,7 +283,10 @@ fn is_property_or_method_def<'a>(parent: &'a AstNode<'a>) -> bool {
         }
         AstKind::MethodDefinition(method_def) => {
             !method_def.computed
-                && matches!(method_def.kind, MethodDefinitionKind::Get | MethodDefinitionKind::Set)
+                && matches!(
+                    method_def.kind,
+                    MethodDefinitionKind::Get | MethodDefinitionKind::Set
+                )
         }
         _ => false,
     }
@@ -302,7 +307,11 @@ fn get_nearest_function<'a>(node: &AstNode, ctx: &'a LintContext) -> Option<&'a 
             }
         }
     }
-    if matches!(parent.kind(), AstKind::Function(_)) { Some(parent) } else { None }
+    if matches!(parent.kind(), AstKind::Function(_)) {
+        Some(parent)
+    } else {
+        None
+    }
 }
 
 fn get_property_or_method_def_name<'a>(parent: &'a AstNode<'a>) -> Option<String> {
@@ -630,6 +639,11 @@ fn test() {
         ",
     ];
 
-    Tester::new(NoAccessorRecursion::NAME, NoAccessorRecursion::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        NoAccessorRecursion::NAME,
+        NoAccessorRecursion::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

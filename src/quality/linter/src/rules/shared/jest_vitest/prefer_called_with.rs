@@ -61,7 +61,9 @@ pub fn run_on_jest_node<'a, 'c>(
         return;
     };
 
-    let has_not_modifier = jest_fn_call.modifiers().any(|modifier| modifier.is_name_equal("not"));
+    let has_not_modifier = jest_fn_call
+        .modifiers()
+        .any(|modifier| modifier.is_name_equal("not"));
 
     if has_not_modifier {
         return;

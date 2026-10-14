@@ -174,7 +174,10 @@ fn test() {
         (r"const Foo = (props) => <Item x={props.x} />", None),
         (r"const Foo = ({ x = 5 }) => <Item x={x} />", None),
         (r"const x = {}; const Foo = () => <Bar x={x} />", None),
-        (r"const DEFAULT_X = {}; const Foo = ({ x = DEFAULT_X }) => <Bar x={x} />", None),
+        (
+            r"const DEFAULT_X = {}; const Foo = ({ x = DEFAULT_X }) => <Bar x={x} />",
+            None,
+        ),
         (
             r"
         import { FC, useMemo } from 'react';
@@ -200,34 +203,81 @@ fn test() {
         ),
         // new arr, not an obj
         (r"const Foo = () => <Item arr={[]} />", None),
-        (r"const Foo = () => <div style={{}} />", Some(json!([{ "nativeAllowList": "all" }]))),
-        (r"const Foo = () => <div style={{}} />", Some(json!([{ "nativeAllowList": ["style"] }]))),
+        (
+            r"const Foo = () => <div style={{}} />",
+            Some(json!([{ "nativeAllowList": "all" }])),
+        ),
+        (
+            r"const Foo = () => <div style={{}} />",
+            Some(json!([{ "nativeAllowList": ["style"] }])),
+        ),
     ];
 
     let fail = vec![
         (r"const Foo = () => <Item config={{}} />", None),
-        (r"const Foo = () => <Item config={Object.create(null)} />", None),
-        (r"const Foo = ({ x }) => <Item config={Object.assign({}, x)} />", None),
+        (
+            r"const Foo = () => <Item config={Object.create(null)} />",
+            None,
+        ),
+        (
+            r"const Foo = ({ x }) => <Item config={Object.assign({}, x)} />",
+            None,
+        ),
         (r"const Foo = () => (<Item config={new Object()} />)", None),
         (r"const Foo = () => (<Item config={Object()} />)", None),
-        (r"const Foo = () => (<div style={{display: 'none'}} />)", None),
-        (r"const Foo = () => (<Item config={this.props.config || {}} />)", None),
-        (r"const Foo = () => (<Item config={this.props.config ? this.props.config : {}} />)", None),
+        (
+            r"const Foo = () => (<div style={{display: 'none'}} />)",
+            None,
+        ),
+        (
+            r"const Foo = () => (<Item config={this.props.config || {}} />)",
+            None,
+        ),
+        (
+            r"const Foo = () => (<Item config={this.props.config ? this.props.config : {}} />)",
+            None,
+        ),
         (
             r"const Foo = () => (<Item config={this.props.config || (this.props.default ? this.props.default : {})} />)",
             None,
         ),
-        (r"const Foo = () => { const x = {}; return <Bar x={x} /> }", None),
+        (
+            r"const Foo = () => { const x = {}; return <Bar x={x} /> }",
+            None,
+        ),
         (r"const Foo = ({ x = {} }) => <Item x={x} />", None),
-        (r"const Foo = () => { const x: Foo = {}; return <Bar x={x} /> }", None),
-        (r"const Foo = () => { const x: Foo = {} as Foo; return <Bar x={x} /> }", None),
-        (r"const Foo = () => { const x: Foo = {} satisfies Foo; return <Bar x={x} /> }", None),
-        (r"const Foo = () => { const x: Foo = {} as const; return <Bar x={x} /> }", None),
-        (r"const Foo = () => <div config={{}} />", Some(json!([{ "nativeAllowList": ["style"] }]))),
+        (
+            r"const Foo = () => { const x: Foo = {}; return <Bar x={x} /> }",
+            None,
+        ),
+        (
+            r"const Foo = () => { const x: Foo = {} as Foo; return <Bar x={x} /> }",
+            None,
+        ),
+        (
+            r"const Foo = () => { const x: Foo = {} satisfies Foo; return <Bar x={x} /> }",
+            None,
+        ),
+        (
+            r"const Foo = () => { const x: Foo = {} as const; return <Bar x={x} /> }",
+            None,
+        ),
+        (
+            r"const Foo = () => <div config={{}} />",
+            Some(json!([{ "nativeAllowList": ["style"] }])),
+        ),
         // components are never exempt, even with `"all"`
-        (r"const Foo = () => <Item style={{}} />", Some(json!([{ "nativeAllowList": "all" }]))),
+        (
+            r"const Foo = () => <Item style={{}} />",
+            Some(json!([{ "nativeAllowList": "all" }])),
+        ),
     ];
 
-    Tester::new(JsxNoNewObjectAsProp::NAME, JsxNoNewObjectAsProp::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        JsxNoNewObjectAsProp::NAME,
+        JsxNoNewObjectAsProp::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

@@ -101,9 +101,15 @@ fn check_array_flat_map_case<'a>(call_expr: &CallExpression<'a>, ctx: &LintConte
     let return_param_name = first_argument
         .get_expression()
         .and_then(|expression| {
-            expression.get_identifier_reference().map(|ident| ident.name.as_str())
+            expression
+                .get_identifier_reference()
+                .map(|ident| ident.name.as_str())
         })
-        .or_else(|| first_argument.get_function_body().and_then(get_return_identifier_name));
+        .or_else(|| {
+            first_argument
+                .get_function_body()
+                .and_then(get_return_identifier_name)
+        });
     let Some(return_param_name) = return_param_name else {
         return;
     };
@@ -155,7 +161,9 @@ fn const_variable_initializer_kind(
     ctx: &LintContext,
 ) -> Option<ConstInitKind> {
     let symbol_id = get_symbol_id_of_variable(ident, ctx)?;
-    let node = ctx.nodes().get_node(ctx.scoping().symbol_declaration(symbol_id));
+    let node = ctx
+        .nodes()
+        .get_node(ctx.scoping().symbol_declaration(symbol_id));
     let AstKind::VariableDeclarator(declarator) = node.kind() else {
         return None;
     };
@@ -223,7 +231,10 @@ fn check_array_reduce_case<'a>(call_expr: &CallExpression<'a>, ctx: &LintContext
     }
 
     let Some((first_parameter, second_parameter)) = ({
-        match (&first_argument.params.items[0].pattern, &first_argument.params.items[1].pattern) {
+        match (
+            &first_argument.params.items[0].pattern,
+            &first_argument.params.items[1].pattern,
+        ) {
             (
                 BindingPattern::BindingIdentifier(first_param),
                 BindingPattern::BindingIdentifier(second_param),
@@ -235,7 +246,9 @@ fn check_array_reduce_case<'a>(call_expr: &CallExpression<'a>, ctx: &LintContext
         return;
     };
 
-    let Some(expression) = first_argument.get_expression() else { return };
+    let Some(expression) = first_argument.get_expression() else {
+        return;
+    };
 
     // `array.reduce((a, b) => a.concat(b), [])`
     if let Expression::CallExpression(concat_call_expr) = expression
@@ -340,7 +353,10 @@ fn check_array_concat_case<'a>(call_expr: &CallExpression<'a>, ctx: &LintContext
     // reported.
     if let Expression::ArrayExpression(array_expr) = member_expr.object() {
         if !array_expr.elements.is_empty()
-            || !matches!(call_expr.arguments.first(), Some(Argument::SpreadElement(_)))
+            || !matches!(
+                call_expr.arguments.first(),
+                Some(Argument::SpreadElement(_))
+            )
         {
             return;
         }
@@ -374,7 +390,11 @@ fn check_array_prototype_concat_case<'a>(call_expr: &CallExpression<'a>, ctx: &L
             && is_prototype_property(member_expr_obj, "concat", Some("Array"))
             && let Some(first_argument) = call_expr.arguments[0].as_expression()
             && is_empty_array_expression(first_argument)
-            && (if is_call_call { is_spread_second_argument } else { !is_spread_second_argument })
+            && (if is_call_call {
+                is_spread_second_argument
+            } else {
+                !is_spread_second_argument
+            })
         {
             if is_apply_call
                 && let Some(Argument::Identifier(array)) = call_expr.arguments.get(1)
@@ -649,10 +669,30 @@ fn test() {
     ];
 
     let fix = vec![
-        ("array.flatMap(x => x)", "array.flat()", None, FixKind::SafeFix),
-        ("array.reduce((a, b) => a.concat(b), [])", "array.flat()", None, FixKind::SafeFix),
-        ("array.reduce((a, b) => [...a, ...b], [])", "array.flat()", None, FixKind::SafeFix),
-        ("Foo.bar.flatMap(x => x)", "Foo.bar.flat()", None, FixKind::SafeFix),
+        (
+            "array.flatMap(x => x)",
+            "array.flat()",
+            None,
+            FixKind::SafeFix,
+        ),
+        (
+            "array.reduce((a, b) => a.concat(b), [])",
+            "array.flat()",
+            None,
+            FixKind::SafeFix,
+        ),
+        (
+            "array.reduce((a, b) => [...a, ...b], [])",
+            "array.flat()",
+            None,
+            FixKind::SafeFix,
+        ),
+        (
+            "Foo.bar.flatMap(x => x)",
+            "Foo.bar.flat()",
+            None,
+            FixKind::SafeFix,
+        ),
         (
             "const values = getValues(); values.flatMap(x => x);",
             "const values = getValues(); values.flat();",
@@ -687,8 +727,18 @@ fn test() {
             None,
             FixKind::SafeFix,
         ),
-        ("/**/[].concat.apply([], array)", "/**/array.flat()", None, FixKind::DangerousFix),
-        ("Array.prototype.concat.apply([], array)", "array.flat()", None, FixKind::DangerousFix),
+        (
+            "/**/[].concat.apply([], array)",
+            "/**/array.flat()",
+            None,
+            FixKind::DangerousFix,
+        ),
+        (
+            "Array.prototype.concat.apply([], array)",
+            "array.flat()",
+            None,
+            FixKind::DangerousFix,
+        ),
     ];
 
     Tester::new(PreferArrayFlat::NAME, PreferArrayFlat::PLUGIN, pass, fail)

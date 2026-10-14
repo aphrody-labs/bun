@@ -21,7 +21,10 @@ pub fn codegen(source_text: &str, source_type: SourceType) -> String {
     let ret = Parser::new(&allocator, source_text, source_type).parse();
     assert!(ret.diagnostics.is_empty());
     Codegen::new()
-        .with_options(CodegenOptions { single_quote: true, ..CodegenOptions::default() })
+        .with_options(CodegenOptions {
+            single_quote: true,
+            ..CodegenOptions::default()
+        })
         .build(&ret.program)
         .code
 }
@@ -38,14 +41,20 @@ pub(crate) fn test_with_source_type(
     let allocator = Allocator::default();
     let ret = Parser::new(&allocator, source_text, source_type).parse();
     let mut program = ret.program;
-    let scoping = SemanticBuilder::new().build(&program).semantic.into_scoping();
+    let scoping = SemanticBuilder::new()
+        .build(&program)
+        .semantic
+        .into_scoping();
     let ret = Transformer::new(&allocator, Path::new(""), options)
         .build_with_scoping(scoping, &mut program);
     if !ret.diagnostics.is_empty() {
         return Err(ret.diagnostics);
     }
     let code = Codegen::new()
-        .with_options(CodegenOptions { single_quote: true, ..CodegenOptions::default() })
+        .with_options(CodegenOptions {
+            single_quote: true,
+            ..CodegenOptions::default()
+        })
         .build(&program)
         .code;
     Ok(code)

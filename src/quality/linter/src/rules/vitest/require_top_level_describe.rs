@@ -35,7 +35,10 @@ fn test() {
 
     let pass = vec![
         ("it.each()", None),
-        ("describe(\"test suite\", () => { test(\"my test\") });", None),
+        (
+            "describe(\"test suite\", () => { test(\"my test\") });",
+            None,
+        ),
         ("describe(\"test suite\", () => { it(\"my test\") });", None),
         (
             "
@@ -47,9 +50,18 @@ fn test() {
             ",
             None,
         ),
-        ("describe(\"test suite\", () => { beforeAll(\"my beforeAll\") });", None),
-        ("describe(\"test suite\", () => { afterEach(\"my afterEach\") });", None),
-        ("describe(\"test suite\", () => { afterAll(\"my afterAll\") });", None),
+        (
+            "describe(\"test suite\", () => { beforeAll(\"my beforeAll\") });",
+            None,
+        ),
+        (
+            "describe(\"test suite\", () => { afterEach(\"my afterEach\") });",
+            None,
+        ),
+        (
+            "describe(\"test suite\", () => { afterAll(\"my afterAll\") });",
+            None,
+        ),
         (
             "
                 describe(\"test suite\", () => {
@@ -106,7 +118,10 @@ fn test() {
             None,
         ),
         ("vi.doMock(\"my-module\")", None),
-        ("describe(\"test suite\", () => { test(\"my test\") });", None),
+        (
+            "describe(\"test suite\", () => { test(\"my test\") });",
+            None,
+        ),
         ("foo()", None),
         (
             "describe.each([1, true])(\"trues\", value => { it(\"an it\", () => expect(value).toBe(true) ); });",
@@ -232,7 +247,12 @@ fn test() {
         ),
     ];
 
-    Tester::new(RequireTopLevelDescribe::NAME, RequireTopLevelDescribe::PLUGIN, pass, fail)
-        .with_vitest_plugin(true)
-        .test_and_snapshot();
+    Tester::new(
+        RequireTopLevelDescribe::NAME,
+        RequireTopLevelDescribe::PLUGIN,
+        pass,
+        fail,
+    )
+    .with_vitest_plugin(true)
+    .test_and_snapshot();
 }

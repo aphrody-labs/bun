@@ -184,5 +184,11 @@ fn test() {
         r#"<div role="searchbox" />"#,
         r#"<div role="spinbutton" />"#,
     ];
-    Tester::new(PreferTagOverRole::NAME, PreferTagOverRole::PLUGIN, pass, fail).test_and_snapshot();
+    Tester::new(
+        PreferTagOverRole::NAME,
+        PreferTagOverRole::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

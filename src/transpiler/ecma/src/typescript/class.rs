@@ -208,8 +208,10 @@ impl<'a> TypeScript<'a> {
             let super_call_position = Self::get_super_call_position(constructor_body_statements);
 
             // Insert the assignments after the `super()` call
-            constructor_body_statements
-                .splice(super_call_position..super_call_position, property_assignments);
+            constructor_body_statements.splice(
+                super_call_position..super_call_position,
+                property_assignments,
+            );
 
             // Insert the static block after the constructor if there is a constructor
             if let Some(element) = computed_key_assignment_static_block {
@@ -269,7 +271,9 @@ impl<'a> TypeScript<'a> {
     /// the same class (matching TypeScript's dedup). Only static-identifier instance fields
     /// count — static, private, computed, and `declare`-only fields don't suppress the new field.
     pub(super) fn add_parameter_property_fields(class: &mut Class<'a>, ctx: &TraverseCtx<'a>) {
-        let Some(params) = Self::find_constructor_params(class) else { return };
+        let Some(params) = Self::find_constructor_params(class) else {
+            return;
+        };
 
         // Bail before allocating when there are no parameter properties to emit.
         // Parameter properties are TS-specific and uncommon, so most classes hit this path.
@@ -537,7 +541,10 @@ impl<'a> TypeScript<'a> {
                 Expression::new_sequence_expression(
                     SPAN,
                     ArenaVec::from_iter_in(
-                        assignments.split_off(0).into_iter().chain(std::iter::once(original_key)),
+                        assignments
+                            .split_off(0)
+                            .into_iter()
+                            .chain(std::iter::once(original_key)),
                         ctx,
                     ),
                     ctx,

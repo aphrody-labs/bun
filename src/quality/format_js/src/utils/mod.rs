@@ -60,7 +60,10 @@ pub fn export_default_declaration_span(export: &ExportDefaultDeclaration<'_>) ->
 /// First-decorator start when the decorators precede the `export` keyword;
 /// `None` for `export @dec class C {}` (decorators inside the export span).
 pub fn decorators_before_export_start(decorators: &[Decorator<'_>], span: Span) -> Option<u32> {
-    decorators.first().map(|decorator| decorator.span.start).filter(|start| *start < span.start)
+    decorators
+        .first()
+        .map(|decorator| decorator.span.start)
+        .filter(|start| *start < span.start)
 }
 
 fn span_with_decorators_before_export(decorators: &[Decorator<'_>], span: Span) -> Span {

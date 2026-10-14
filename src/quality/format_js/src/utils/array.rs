@@ -43,11 +43,13 @@ pub fn write_array_node<'a, 'b, N>(
                         // TODO: improve the `ArrayPattern` AST to simplify this logic.
                         // Since `ArrayPattern` doesn't have a elision node, so that we have to find the comma position
                         // by looking through the source text.
-                        let next_span =
-                            array_iter.peek().map_or(SPAN, |e| e.1.map_or(SPAN, GetSpan::span));
+                        let next_span = array_iter
+                            .peek()
+                            .map_or(SPAN, |e| e.1.map_or(SPAN, GetSpan::span));
 
-                        let comma_position =
-                            source_text.bytes_to(next_span.start).position(|c| c == b',');
+                        let comma_position = source_text
+                            .bytes_to(next_span.start)
+                            .position(|c| c == b',');
 
                         // comma span
                         #[expect(clippy::cast_possible_truncation)]

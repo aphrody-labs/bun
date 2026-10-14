@@ -53,7 +53,8 @@ declare_oxc_lint!(
     perf,
     fix_suggestion,
     version = "0.0.14",
-    short_description = "Prefer a single `.flatMap()` over `.map().flat()` or `.filter().flatMap()`.",
+    short_description =
+        "Prefer a single `.flatMap()` over `.map().flat()` or `.filter().flatMap()`.",
 );
 
 // skip React.Children because we are only looking at `StaticMemberExpression.property` and not its object
@@ -116,20 +117,23 @@ impl Rule for PreferArrayFlatMap {
             }
         }
 
-        ctx.diagnostic_with_fix(prefer_array_flat_map_diagnostic(flat_call_expr.span), |fixer| {
-            let mut fix = fixer.new_fix_with_capacity(2);
-            // delete flat
-            let delete_start = member_expr.object().span().end;
-            let delete_end = flat_call_expr.span().end;
-            let delete_span = Span::new(delete_start, delete_end);
-            fix.push(Fix::delete(delete_span));
-            // replace map with flatMap
-            let replace_end = call_expr.callee.span().end;
-            let replace_start = replace_end - 3;
-            let replace_span = Span::new(replace_start, replace_end);
-            fix.push(Fix::new("flatMap", replace_span));
-            fix.with_message("Replace `.map().flat()` with `.flatMap()`")
-        });
+        ctx.diagnostic_with_fix(
+            prefer_array_flat_map_diagnostic(flat_call_expr.span),
+            |fixer| {
+                let mut fix = fixer.new_fix_with_capacity(2);
+                // delete flat
+                let delete_start = member_expr.object().span().end;
+                let delete_end = flat_call_expr.span().end;
+                let delete_span = Span::new(delete_start, delete_end);
+                fix.push(Fix::delete(delete_span));
+                // replace map with flatMap
+                let replace_end = call_expr.callee.span().end;
+                let replace_start = replace_end - 3;
+                let replace_span = Span::new(replace_start, replace_end);
+                fix.push(Fix::new("flatMap", replace_span));
+                fix.with_message("Replace `.map().flat()` with `.flatMap()`")
+            },
+        );
     }
 }
 
@@ -245,12 +249,16 @@ fn simple_callback<'a>(argument: &'a Argument<'a>) -> Option<(&'a str, &'a Expre
     {
         return None;
     }
-    let [parameter] = callback.params.items.as_slice() else { return None };
+    let [parameter] = callback.params.items.as_slice() else {
+        return None;
+    };
     if parameter.optional || parameter.type_annotation.is_some() || parameter.initializer.is_some()
     {
         return None;
     }
-    let BindingPattern::BindingIdentifier(identifier) = &parameter.pattern else { return None };
+    let BindingPattern::BindingIdentifier(identifier) = &parameter.pattern else {
+        return None;
+    };
     Some((identifier.name.as_str(), callback.get_expression()?))
 }
 
@@ -438,14 +446,26 @@ fn test() {
             "const bar = [[1],[2],[3]].map(i => [i]).flat(1,)",
             "const bar = [[1],[2],[3]].flatMap(i => [i])",
         ),
-        ("const bar = [1,2,3].map(i => [i]).flat()", "const bar = [1,2,3].flatMap(i => [i])"),
-        ("const bar = [1,2,3].map((i) => [i]).flat()", "const bar = [1,2,3].flatMap((i) => [i])"),
+        (
+            "const bar = [1,2,3].map(i => [i]).flat()",
+            "const bar = [1,2,3].flatMap(i => [i])",
+        ),
+        (
+            "const bar = [1,2,3].map((i) => [i]).flat()",
+            "const bar = [1,2,3].flatMap((i) => [i])",
+        ),
         (
             "const bar = [1,2,3].map((i) => { return [i]; }).flat()",
             "const bar = [1,2,3].flatMap((i) => { return [i]; })",
         ),
-        ("const bar = [1,2,3].map(foo).flat()", "const bar = [1,2,3].flatMap(foo)"),
-        ("const bar = foo.map(i => [i]).flat()", "const bar = foo.flatMap(i => [i])"),
+        (
+            "const bar = [1,2,3].map(foo).flat()",
+            "const bar = [1,2,3].flatMap(foo)",
+        ),
+        (
+            "const bar = foo.map(i => [i]).flat()",
+            "const bar = foo.flatMap(i => [i])",
+        ),
         (
             "const bar = { map: () => {} }.map(i => [i]).flat()",
             "const bar = { map: () => {} }.flatMap(i => [i])",
@@ -466,7 +486,10 @@ fn test() {
             "let bar = [1,2,3] . map( x => y ) . flat () // 🤪",
             "let bar = [1,2,3] . flatMap( x => y ) // 🤪",
         ),
-        ("const bar = [1,2,3].map(i => [i]).flat(1);", "const bar = [1,2,3].flatMap(i => [i]);"),
+        (
+            "const bar = [1,2,3].map(i => [i]).flat(1);",
+            "const bar = [1,2,3].flatMap(i => [i]);",
+        ),
     ];
 
     let suggestions = vec![
@@ -550,12 +573,17 @@ fn test() {
         ),
     ];
 
-    Tester::new(PreferArrayFlatMap::NAME, PreferArrayFlatMap::PLUGIN, pass, fail)
-        .expect_fix(
-            fix.into_iter()
-                .map(ExpectFixTestCase::from)
-                .chain(suggestions.into_iter().map(ExpectFixTestCase::from))
-                .collect::<Vec<_>>(),
-        )
-        .test_and_snapshot();
+    Tester::new(
+        PreferArrayFlatMap::NAME,
+        PreferArrayFlatMap::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(
+        fix.into_iter()
+            .map(ExpectFixTestCase::from)
+            .chain(suggestions.into_iter().map(ExpectFixTestCase::from))
+            .collect::<Vec<_>>(),
+    )
+    .test_and_snapshot();
 }

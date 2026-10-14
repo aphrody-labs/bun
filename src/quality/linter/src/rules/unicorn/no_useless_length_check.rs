@@ -82,12 +82,20 @@ fn is_useless_check<'a>(
     };
     let some_condition = ConditionDTO {
         property_name: "some",
-        binary_operators: vec![BinaryOperator::StrictInequality, BinaryOperator::GreaterThan],
+        binary_operators: vec![
+            BinaryOperator::StrictInequality,
+            BinaryOperator::GreaterThan,
+        ],
     };
 
     let mut array_name: &str = "";
-    let active_condition =
-        { if operator == LogicalOperator::Or { every_condition } else { some_condition } };
+    let active_condition = {
+        if operator == LogicalOperator::Or {
+            every_condition
+        } else {
+            some_condition
+        }
+    };
     let mut binary_expression_span: Option<Span> = None;
     let mut call_expression_span: Option<Span> = None;
 
@@ -102,8 +110,13 @@ fn is_useless_check<'a>(
                 && expr.right.is_specific_raw_number_literal("0")
         }
         Expression::CallExpression(expr) => {
-            array_name =
-                expr.callee.get_member_expr()?.object().get_identifier_reference()?.name.as_str();
+            array_name = expr
+                .callee
+                .get_member_expr()?
+                .object()
+                .get_identifier_reference()?
+                .name
+                .as_str();
             let property_name = expr.callee.get_member_expr()?.static_property_name()?;
             call_expression_span = Some(expr.span);
 
@@ -130,9 +143,14 @@ fn is_useless_check<'a>(
                 && ident_name == array_name
         }
         Expression::CallExpression(expr) => {
-            let is_same_name =
-                expr.callee.get_member_expr()?.object().get_identifier_reference()?.name.as_str()
-                    == array_name;
+            let is_same_name = expr
+                .callee
+                .get_member_expr()?
+                .object()
+                .get_identifier_reference()?
+                .name
+                .as_str()
+                == array_name;
 
             if call_expression_span.is_some() {
                 return None;
@@ -348,6 +366,11 @@ fn test() {
             }",
     ];
 
-    Tester::new(NoUselessLengthCheck::NAME, NoUselessLengthCheck::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        NoUselessLengthCheck::NAME,
+        NoUselessLengthCheck::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

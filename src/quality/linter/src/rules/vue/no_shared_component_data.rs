@@ -62,18 +62,24 @@ declare_oxc_lint!(
     correctness,
     pending,
     version = "1.67.0",
-    short_description = "Enforce that the `data` property of a Vue component definition is a function.",
+    short_description =
+        "Enforce that the `data` property of a Vue component definition is a function.",
 );
 
 impl Rule for NoSharedComponentData {
     fn run<'a>(&self, node: &AstNode<'a>, ctx: &LintContext<'a>) {
-        let AstKind::ObjectProperty(prop) = node.kind() else { return };
+        let AstKind::ObjectProperty(prop) = node.kind() else {
+            return;
+        };
 
         if !prop.key.is_specific_static_name("data") {
             return;
         }
 
-        if !matches!(prop.value.get_inner_expression(), Expression::ObjectExpression(_)) {
+        if !matches!(
+            prop.value.get_inner_expression(),
+            Expression::ObjectExpression(_)
+        ) {
             return;
         }
 
@@ -360,6 +366,11 @@ fn test() {
         ),
     ];
 
-    Tester::new(NoSharedComponentData::NAME, NoSharedComponentData::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        NoSharedComponentData::NAME,
+        NoSharedComponentData::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

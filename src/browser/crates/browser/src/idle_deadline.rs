@@ -40,7 +40,7 @@ mod macos {
     use std::{
         ffi::c_void,
         future::Future,
-        panic::{AssertUnwindSafe, catch_unwind},
+        panic::{catch_unwind, AssertUnwindSafe},
         pin::Pin,
         ptr::NonNull,
         task::{Context, Poll},
@@ -101,9 +101,10 @@ mod macos {
     }
 
     fn arm(source: NonNull<c_void>, deadline: Instant) {
-        let nanos =
-            deadline.saturating_duration_since(Instant::now()).as_nanos().min(i64::MAX as u128)
-                as i64;
+        let nanos = deadline
+            .saturating_duration_since(Instant::now())
+            .as_nanos()
+            .min(i64::MAX as u128) as i64;
         // SAFETY: the caller owns a live source or runs its event handler.
         // This is a one-shot uptime timer; no periodic wake remains armed.
         unsafe {
@@ -172,7 +173,11 @@ mod macos {
                 ))?
             };
             let (sender, receiver) = oneshot::channel();
-            let callback = Box::new(Callback { source, deadline, sender: Some(sender) });
+            let callback = Box::new(Callback {
+                source,
+                deadline,
+                sender: Some(sender),
+            });
             #[cfg(test)]
             LIVE_CALLBACKS.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
             unsafe {
@@ -182,7 +187,10 @@ mod macos {
                 arm(source, deadline);
                 dispatch_resume(source.as_ptr());
             }
-            Some(Self { source, receiver: Some(receiver) })
+            Some(Self {
+                source,
+                receiver: Some(receiver),
+            })
         }
 
         pub(super) fn poll(&mut self, cx: &mut Context<'_>) -> bool {
@@ -215,8 +223,8 @@ mod macos {
     mod tests {
         use std::{
             sync::{
-                Arc,
                 atomic::{AtomicUsize, Ordering},
+                Arc,
             },
             task::{Wake, Waker},
             time::Duration,
@@ -240,11 +248,13 @@ mod macos {
             let mut wake = PreciseWake::new(deadline).unwrap();
             tokio::time::timeout(
                 Duration::from_secs(2),
-                std::future::poll_fn(
-                    |cx| {
-                        if wake.poll(cx) { Poll::Ready(()) } else { Poll::Pending }
-                    },
-                ),
+                std::future::poll_fn(|cx| {
+                    if wake.poll(cx) {
+                        Poll::Ready(())
+                    } else {
+                        Poll::Pending
+                    }
+                }),
             )
             .await
             .expect("dispatch timer must notify independently of the fallback");
@@ -384,10 +394,15 @@ mod tests {
             }),
         )
         .await;
-        assert!(polled, "an expired deadline must still poll page activity first");
+        assert!(
+            polled,
+            "an expired deadline must still poll page activity first"
+        );
         let (sender, mut receiver) = tokio::sync::oneshot::channel::<()>();
         wait_for_activity(Instant::now(), true, &mut receiver).await;
-        sender.send(()).expect("cancelling the wait must not consume unrelated work");
+        sender
+            .send(())
+            .expect("cancelling the wait must not consume unrelated work");
         receiver.await.unwrap();
     }
 }

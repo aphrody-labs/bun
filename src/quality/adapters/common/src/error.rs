@@ -34,7 +34,10 @@ impl OxcError {
             return vec![];
         }
         let source = Arc::new(NamedSource::new(filename, source_text.to_string()));
-        diagnostics.into_iter().map(|e| Self::from_diagnostic(&source, e)).collect()
+        diagnostics
+            .into_iter()
+            .map(|e| Self::from_diagnostic(&source, e))
+            .collect()
     }
 
     pub fn from_diagnostic(
@@ -49,7 +52,11 @@ impl OxcError {
 
 impl From<&OxcDiagnostic> for OxcError {
     fn from(diagnostic: &OxcDiagnostic) -> Self {
-        let labels = diagnostic.labels.iter().map(ErrorLabel::from).collect::<Vec<_>>();
+        let labels = diagnostic
+            .labels
+            .iter()
+            .map(ErrorLabel::from)
+            .collect::<Vec<_>>();
         Self {
             severity: Severity::from(diagnostic.severity),
             message: diagnostic.message.to_string(),

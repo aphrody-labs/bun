@@ -139,7 +139,9 @@ impl<'a> TraverseAncestry<'a> {
     /// # SAFETY
     /// This method must not be public outside this crate, or consumer could break safety invariants.
     pub(super) fn new() -> Self {
-        Self { stack: NonEmptyStack::with_capacity(INITIAL_STACK_CAPACITY, Ancestor::None) }
+        Self {
+            stack: NonEmptyStack::with_capacity(INITIAL_STACK_CAPACITY, Ancestor::None),
+        }
     }
 
     /// Push item onto ancestry stack.

@@ -150,12 +150,18 @@ fn are_matching_operators(op1: AssignmentOperator, op2: BinaryOperator) -> bool 
         (op1, op2),
         (AssignmentOperator::Addition, BinaryOperator::Addition)
             | (AssignmentOperator::Subtraction, BinaryOperator::Subtraction)
-            | (AssignmentOperator::Multiplication, BinaryOperator::Multiplication)
+            | (
+                AssignmentOperator::Multiplication,
+                BinaryOperator::Multiplication
+            )
             | (AssignmentOperator::Division, BinaryOperator::Division)
             | (AssignmentOperator::Remainder, BinaryOperator::Remainder)
             | (AssignmentOperator::ShiftLeft, BinaryOperator::ShiftLeft)
             | (AssignmentOperator::ShiftRight, BinaryOperator::ShiftRight)
-            | (AssignmentOperator::ShiftRightZeroFill, BinaryOperator::ShiftRightZeroFill)
+            | (
+                AssignmentOperator::ShiftRightZeroFill,
+                BinaryOperator::ShiftRightZeroFill
+            )
             | (AssignmentOperator::BitwiseOR, BinaryOperator::BitwiseOR)
             | (AssignmentOperator::BitwiseXOR, BinaryOperator::BitwiseXOR)
             | (AssignmentOperator::BitwiseAnd, BinaryOperator::BitwiseAnd)
@@ -242,10 +248,19 @@ fn test() {
         ("a &= a & 1;", "a &= 1;", None),
         ("a *= a * a;", "a *= a;", None),
         ("a *= a * (a as number);", "a *= (a as number);", None),
-        ("a *= (a as string) * (a as number);", "a *= (a as number);", None),
+        (
+            "a *= (a as string) * (a as number);",
+            "a *= (a as number);",
+            None,
+        ),
     ];
 
-    Tester::new(MisrefactoredAssignOp::NAME, MisrefactoredAssignOp::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        MisrefactoredAssignOp::NAME,
+        MisrefactoredAssignOp::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

@@ -34,8 +34,15 @@ pub(super) const MERGED_LUTS: MergedLuts = {
     let mut mrg_hi = [0; 16];
     let mut mrg_lo_ts = [0; 16];
 
-    const ROWS: [(u8, u8, u8); 7] =
-        [(6, 0, 0), (7, 1, 0), (2, 2, 1), (3, 3, 1), (5, 4, 1), (7, 5, 1), (2, 7, 2)];
+    const ROWS: [(u8, u8, u8); 7] = [
+        (6, 0, 0),
+        (7, 1, 0),
+        (2, 2, 1),
+        (3, 3, 1),
+        (5, 4, 1),
+        (7, 5, 1),
+        (2, 7, 2),
+    ];
 
     let mut i = 0;
     while i < ROWS.len() {
@@ -65,7 +72,11 @@ pub(super) const MERGED_LUTS: MergedLuts = {
         i += 1;
     }
 
-    MergedLuts { lo: mrg_lo, hi: mrg_hi, lo_ts: mrg_lo_ts }
+    MergedLuts {
+        lo: mrg_lo,
+        hi: mrg_hi,
+        lo_ts: mrg_lo_ts,
+    }
 };
 
 /// Nibble lookup tables which classify bytes as identifier chars or whitespace.
@@ -88,7 +99,16 @@ pub(super) const WORD_LUTS: WordLuts = {
     let mut wb_lo = [0; 16];
     let mut wb_hi = [0; 16];
 
-    const BROWS: [(u8, u8); 8] = [(2, 0), (3, 1), (4, 2), (5, 3), (6, 4), (7, 5), (0, 6), (2, 7)];
+    const BROWS: [(u8, u8); 8] = [
+        (2, 0),
+        (3, 1),
+        (4, 2),
+        (5, 3),
+        (6, 4),
+        (7, 5),
+        (0, 6),
+        (2, 7),
+    ];
 
     let mut i = 0;
     while i < BROWS.len() {
@@ -118,7 +138,10 @@ pub(super) const WORD_LUTS: WordLuts = {
         i += 1;
     }
 
-    WordLuts { lo: wb_lo, hi: wb_hi }
+    WordLuts {
+        lo: wb_lo,
+        hi: wb_hi,
+    }
 };
 
 #[cfg(test)]
@@ -132,7 +155,11 @@ mod tests {
         for c in 0..256usize {
             let cb = c as u8;
 
-            let t = if c < 0x80 { MERGED_LUTS.lo[c & 15] & MERGED_LUTS.hi[c >> 4] } else { 0 };
+            let t = if c < 0x80 {
+                MERGED_LUTS.lo[c & 15] & MERGED_LUTS.hi[c >> 4]
+            } else {
+                0
+            };
             let kw = (t & 0x03) != 0;
             let opp = (t & 0x3C) != 0;
             let dt = (t & 0x80) != 0;
@@ -141,8 +168,11 @@ mod tests {
                 "MERGED_LUTS.lo / hi wrong at byte {c:#04x}"
             );
 
-            let ts_t =
-                if c < 0x80 { MERGED_LUTS.lo_ts[c & 15] & MERGED_LUTS.hi[c >> 4] } else { 0 };
+            let ts_t = if c < 0x80 {
+                MERGED_LUTS.lo_ts[c & 15] & MERGED_LUTS.hi[c >> 4]
+            } else {
+                0
+            };
             let ts_kw = (ts_t & 0x03) != 0;
             let ts_opp = (ts_t & 0x3C) != 0;
             let ts_dt = (ts_t & 0x80) != 0;
@@ -158,7 +188,11 @@ mod tests {
         for c in 0..256usize {
             let cb = c as u8;
 
-            let tb = if c < 0x80 { WORD_LUTS.lo[c & 15] & WORD_LUTS.hi[c >> 4] } else { 0 };
+            let tb = if c < 0x80 {
+                WORD_LUTS.lo[c & 15] & WORD_LUTS.hi[c >> 4]
+            } else {
+                0
+            };
             let wd = (c >= 0x80) || (tb & 0x3F) != 0;
             let ws = (tb & 0xC0) != 0;
             let dg = (tb & 0x02) != 0;

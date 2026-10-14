@@ -98,8 +98,11 @@ fn check_no_freezing_known_mutable_functions(
                         function_spans.insert(instr.lvalue.identifier, span);
                     }
                     if let Some(ref aliasing_effects) = inner_function.aliasing_effects {
-                        let context_ids: FxHashSet<IdentifierId> =
-                            inner_function.context.iter().map(|place| place.identifier).collect();
+                        let context_ids: FxHashSet<IdentifierId> = inner_function
+                            .context
+                            .iter()
+                            .map(|place| place.identifier)
+                            .collect();
 
                         'effects: for effect in aliasing_effects {
                             match effect {
@@ -200,7 +203,10 @@ fn check_operand_for_freeze_violation(
 
         diagnostics.push(diagnostics::known_mutable_function(
             &variable_name,
-            function_spans.get(&operand.identifier).copied().or(operand.span),
+            function_spans
+                .get(&operand.identifier)
+                .copied()
+                .or(operand.span),
             mutation_info.value_span,
         ));
     }

@@ -118,7 +118,9 @@ impl<'a> IsolatedDeclarations<'a> {
         match expr {
             match_member_expression!(Expression) => {
                 let expr = expr.to_member_expression();
-                let Expression::Identifier(ident) = expr.object() else { return None };
+                let Expression::Identifier(ident) = expr.object() else {
+                    return None;
+                };
                 if ident.name == enum_name {
                     let property = expr.static_property_name()?;
                     prev_members.get(property).cloned()
@@ -201,7 +203,9 @@ impl<'a> IsolatedDeclarations<'a> {
                 ConstantValue::Number(v) => v.to_js_string(),
             };
 
-            return Some(ConstantValue::String(format!("{left_string}{right_string}")));
+            return Some(ConstantValue::String(format!(
+                "{left_string}{right_string}"
+            )));
         }
 
         let left = match left {
@@ -224,15 +228,15 @@ impl<'a> IsolatedDeclarations<'a> {
             BinaryOperator::ShiftLeft => Some(ConstantValue::Number(f64::from(
                 left.to_int_32().wrapping_shl(right.to_uint_32()),
             ))),
-            BinaryOperator::BitwiseXOR => {
-                Some(ConstantValue::Number(f64::from(left.to_int_32() ^ right.to_int_32())))
-            }
-            BinaryOperator::BitwiseOR => {
-                Some(ConstantValue::Number(f64::from(left.to_int_32() | right.to_int_32())))
-            }
-            BinaryOperator::BitwiseAnd => {
-                Some(ConstantValue::Number(f64::from(left.to_int_32() & right.to_int_32())))
-            }
+            BinaryOperator::BitwiseXOR => Some(ConstantValue::Number(f64::from(
+                left.to_int_32() ^ right.to_int_32(),
+            ))),
+            BinaryOperator::BitwiseOR => Some(ConstantValue::Number(f64::from(
+                left.to_int_32() | right.to_int_32(),
+            ))),
+            BinaryOperator::BitwiseAnd => Some(ConstantValue::Number(f64::from(
+                left.to_int_32() & right.to_int_32(),
+            ))),
             BinaryOperator::Multiplication => Some(ConstantValue::Number(left * right)),
             BinaryOperator::Division => Some(ConstantValue::Number(left / right)),
             BinaryOperator::Addition => Some(ConstantValue::Number(left + right)),

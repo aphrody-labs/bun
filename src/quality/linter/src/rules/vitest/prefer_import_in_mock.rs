@@ -16,7 +16,9 @@ fn prefer_import_in_mock_diagnostic(span: Span, path: &str) -> OxcDiagnostic {
         "Dynamic import improves the type information and IntelliSense. Substitute `{path}` with `import('{path}')`"
     );
 
-    OxcDiagnostic::warn("Mocked modules must be dynamic imported.").with_help(help).with_label(span)
+    OxcDiagnostic::warn("Mocked modules must be dynamic imported.")
+        .with_help(help)
+        .with_label(span)
 }
 
 #[derive(Debug, Default, Clone)]
@@ -144,20 +146,35 @@ fn test() {
     let pass = vec![
         (r#"vi.mock(import("foo"))"#, None),
         (r#"vi.mock(import("node:fs/promises"))"#, None),
-        (r#"vi.mock(import("./foo.js"), () => ({ Foo: vi.fn() }))"#, None),
+        (
+            r#"vi.mock(import("./foo.js"), () => ({ Foo: vi.fn() }))"#,
+            None,
+        ),
         (r#"vi.mock(import("./foo.js"), { spy: true });"#, None),
         (r#"vi.doMock(import("foo"))"#, None),
         (r#"vi.doMock(import("node:fs/promises"))"#, None),
-        (r#"vi.doMock(import("./foo.js"), () => ({ Foo: vi.fn() }))"#, None),
+        (
+            r#"vi.doMock(import("./foo.js"), () => ({ Foo: vi.fn() }))"#,
+            None,
+        ),
         (r#"vi.mock(import("foo"))"#, None),
         (r#"vi.mock(import("node:fs/promises"))"#, None),
-        (r#"vi.mock(import("./foo.js"), () => ({ Foo: vi.fn() }))"#, None),
+        (
+            r#"vi.mock(import("./foo.js"), () => ({ Foo: vi.fn() }))"#,
+            None,
+        ),
         (r#"vi.mock(import("./foo.js"), { spy: true });"#, None),
     ];
 
     let fail = vec![
-        ("vi.mock('foo', () => {})", Some(serde_json::json!([ { "fixable": false, }, ]))),
-        (r#"vi.mock("node:fs/promises")"#, Some(serde_json::json!([ { "fixable": false, }, ]))),
+        (
+            "vi.mock('foo', () => {})",
+            Some(serde_json::json!([ { "fixable": false, }, ])),
+        ),
+        (
+            r#"vi.mock("node:fs/promises")"#,
+            Some(serde_json::json!([ { "fixable": false, }, ])),
+        ),
         (
             r#"vi.mock("./foo.js", () => ({ Foo: vi.fn() }))"#,
             Some(serde_json::json!([ { "fixable": false, }, ])),
@@ -169,8 +186,14 @@ fn test() {
                   ",
             Some(serde_json::json!([ { "fixable": false, }, ])),
         ),
-        ("vi.doMock('foo', () => {})", Some(serde_json::json!([ { "fixable": false, }, ]))),
-        (r#"vi.doMock("node:fs/promises")"#, Some(serde_json::json!([ { "fixable": false, }, ]))),
+        (
+            "vi.doMock('foo', () => {})",
+            Some(serde_json::json!([ { "fixable": false, }, ])),
+        ),
+        (
+            r#"vi.doMock("node:fs/promises")"#,
+            Some(serde_json::json!([ { "fixable": false, }, ])),
+        ),
         (
             r#"vi.doMock("./foo.js", () => ({ Foo: vi.fn() }))"#,
             Some(serde_json::json!([ { "fixable": false, }, ])),
@@ -195,8 +218,14 @@ fn test() {
     ];
 
     let fix = vec![
-        ("vi.mock('foo', () => {})", "vi.mock(import('foo'), () => {})"),
-        (r#"vi.mock("node:fs/promises")"#, "vi.mock(import('node:fs/promises'))"),
+        (
+            "vi.mock('foo', () => {})",
+            "vi.mock(import('foo'), () => {})",
+        ),
+        (
+            r#"vi.mock("node:fs/promises")"#,
+            "vi.mock(import('node:fs/promises'))",
+        ),
         (
             r#"vi.mock("./foo.js", () => ({ Foo: vi.fn() }))"#,
             "vi.mock(import('./foo.js'), () => ({ Foo: vi.fn() }))",
@@ -211,8 +240,14 @@ fn test() {
                     renamedVi.mock(import('./foo.js'), () => ({ Foo: vi.fn() }))
                   ",
         ),
-        ("vi.doMock('foo', () => {})", "vi.doMock(import('foo'), () => {})"),
-        (r#"vi.doMock("node:fs/promises")"#, "vi.doMock(import('node:fs/promises'))"),
+        (
+            "vi.doMock('foo', () => {})",
+            "vi.doMock(import('foo'), () => {})",
+        ),
+        (
+            r#"vi.doMock("node:fs/promises")"#,
+            "vi.doMock(import('node:fs/promises'))",
+        ),
         (
             r#"vi.doMock("./foo.js", () => ({ Foo: vi.fn() }))"#,
             "vi.doMock(import('./foo.js'), () => ({ Foo: vi.fn() }))",
@@ -229,8 +264,13 @@ fn test() {
         ),
     ];
 
-    Tester::new(PreferImportInMock::NAME, PreferImportInMock::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .with_vitest_plugin(true)
-        .test_and_snapshot();
+    Tester::new(
+        PreferImportInMock::NAME,
+        PreferImportInMock::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .with_vitest_plugin(true)
+    .test_and_snapshot();
 }

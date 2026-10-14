@@ -17,8 +17,10 @@ use crate::{
 };
 
 fn unexpected_side_effect_in_property(span: Span, key: &str) -> OxcDiagnostic {
-    OxcDiagnostic::warn(format!("Unexpected side effect in \"{key}\" computed property."))
-        .with_label(span)
+    OxcDiagnostic::warn(format!(
+        "Unexpected side effect in \"{key}\" computed property."
+    ))
+    .with_label(span)
 }
 
 fn unexpected_side_effect_in_function(span: Span) -> OxcDiagnostic {
@@ -136,25 +138,34 @@ impl Rule for NoSideEffectsInComputedProperties {
 ///   identifiers (including `this` aliases) are checked as setup variables with
 ///   the walk starting at the identifier — so `foo.reverse()` IS a mutation.
 fn check_mutation<'a>(node: &AstNode<'a>, object: &Expression<'a>, ctx: &LintContext<'a>) {
-    if !matches!(object, Expression::ThisExpression(_) | Expression::Identifier(_)) {
+    if !matches!(
+        object,
+        Expression::ThisExpression(_) | Expression::Identifier(_)
+    ) {
         return;
     }
 
     // The seeded walk finds a superset of the unseeded one — use it as a cheap gate
     // before resolving the computed context.
-    let Some(mutation_span) = find_mutation_span(node, ctx, true) else { return };
+    let Some(mutation_span) = find_mutation_span(node, ctx, true) else {
+        return;
+    };
 
     match find_computed_context(node, ctx) {
         Some(ComputedContext::OptionsApi(key)) => {
             if !is_this_object(object, ctx) {
                 return;
             }
-            let Some(mutation_span) = find_mutation_span(node, ctx, false) else { return };
+            let Some(mutation_span) = find_mutation_span(node, ctx, false) else {
+                return;
+            };
             let key = key.as_deref().unwrap_or("Unknown");
             ctx.diagnostic(unexpected_side_effect_in_property(mutation_span, key));
         }
         Some(ComputedContext::CompositionApi(getter_fn_span)) => {
-            let Expression::Identifier(ident) = object else { return };
+            let Expression::Identifier(ident) = object else {
+                return;
+            };
             if !is_setup_variable(ident, getter_fn_span, ctx) {
                 return;
             }
@@ -164,8 +175,17 @@ fn check_mutation<'a>(node: &AstNode<'a>, object: &Expression<'a>, ctx: &LintCon
     }
 }
 
-const MUTATING_METHODS: &[&str] =
-    &["push", "pop", "shift", "unshift", "reverse", "splice", "sort", "copyWithin", "fill"];
+const MUTATING_METHODS: &[&str] = &[
+    "push",
+    "pop",
+    "shift",
+    "unshift",
+    "reverse",
+    "splice",
+    "sort",
+    "copyWithin",
+    "fill",
+];
 
 /// Starting from `start_node` (a member expression where object = this/ident),
 /// walk up through parent nodes and detect if the member chain is being mutated.
@@ -254,14 +274,18 @@ fn find_mutation_span<'a>(
 /// Return true if `call` is `Object.assign(...)` and `first_arg_span` is the span of its
 /// first argument (i.e., the thing being mutated).
 fn is_object_assign_first_arg(call: &CallExpression<'_>, first_arg_span: Span) -> bool {
-    let Some(first_arg) = call.arguments.first() else { return false };
+    let Some(first_arg) = call.arguments.first() else {
+        return false;
+    };
     if first_arg.span() != first_arg_span {
         return false;
     }
     let Expression::StaticMemberExpression(callee) = call.callee.get_inner_expression() else {
         return false;
     };
-    let Expression::Identifier(obj) = callee.object.get_inner_expression() else { return false };
+    let Expression::Identifier(obj) = callee.object.get_inner_expression() else {
+        return false;
+    };
     obj.name == "Object" && callee.property.name == "assign"
 }
 
@@ -323,12 +347,16 @@ fn is_inside_setup_function(node: &AstNode<'_>, ctx: &LintContext<'_>) -> bool {
             return false;
         }
         let parent = ctx.nodes().parent_node(ancestor.id());
-        let AstKind::ObjectProperty(prop) = parent.kind() else { return false };
+        let AstKind::ObjectProperty(prop) = parent.kind() else {
+            return false;
+        };
         if !prop.key.is_specific_static_name("setup") {
             return false;
         }
         let grandparent = ctx.nodes().parent_node(parent.id());
-        let AstKind::ObjectExpression(_) = grandparent.kind() else { return false };
+        let AstKind::ObjectExpression(_) = grandparent.kind() else {
+            return false;
+        };
         is_vue_component_options_object(grandparent, ctx)
     })
 }

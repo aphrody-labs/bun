@@ -67,7 +67,10 @@ impl Rule for UninvokedArrayCallback {
                     MemberExpressionKind::Static(expr) => expr.property.span,
                     MemberExpressionKind::PrivateField(expr) => expr.field.span,
                 };
-                ctx.diagnostic(uninvoked_array_callback_diagnostic(property_span, new_expr.span));
+                ctx.diagnostic(uninvoked_array_callback_diagnostic(
+                    property_span,
+                    new_expr.span,
+                ));
             }
         }
     }
@@ -81,9 +84,18 @@ fn test() {
         ("const list = new Array(5).fill().map(_ => {})", None),
         ("const list = new Array(5).flat()", None),
         ("const list = new Array(5).concat()", None),
-        ("const list = new Array('x').forEach((x) => console.log(x))", None),
-        ("const list = new Array(1, 2).forEach((x) => console.log(x))", None),
-        ("const list = new Array(...[1, 2, 3]).forEach((x) => console.log(x))", None),
+        (
+            "const list = new Array('x').forEach((x) => console.log(x))",
+            None,
+        ),
+        (
+            "const list = new Array(1, 2).forEach((x) => console.log(x))",
+            None,
+        ),
+        (
+            "const list = new Array(...[1, 2, 3]).forEach((x) => console.log(x))",
+            None,
+        ),
     ];
 
     let fail = vec![
@@ -92,6 +104,11 @@ fn test() {
         ("const list = new Array(5)['every'](function(_) {})", None),
     ];
 
-    Tester::new(UninvokedArrayCallback::NAME, UninvokedArrayCallback::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        UninvokedArrayCallback::NAME,
+        UninvokedArrayCallback::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

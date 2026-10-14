@@ -16,8 +16,14 @@ pub struct Error {
 #[derive(Clone, Debug)]
 #[cfg_attr(feature = "serialize", derive(Serialize))]
 pub enum ErrorKind {
-    Unexpected(/* expected */ &'static str, /* actual */ &'static str),
-    ExpectOneOf(/* expected */ Vec<&'static str>, /* actual */ &'static str),
+    Unexpected(
+        /* expected */ &'static str,
+        /* actual */ &'static str,
+    ),
+    ExpectOneOf(
+        /* expected */ Vec<&'static str>,
+        /* actual */ &'static str,
+    ),
 
     UnknownToken,
     InvalidNumber,
@@ -124,7 +130,10 @@ impl Display for ErrorKind {
                         .map(|token| format!("`{token}`"))
                         .collect::<Vec<_>>()
                         .join(", ");
-                    write!(f, "expect one of {joined} or `{last}`, but found `{actual}`",)
+                    write!(
+                        f,
+                        "expect one of {joined} or `{last}`, but found `{actual}`",
+                    )
                 } else {
                     panic!("the number of expected tokens must be at least 2")
                 }
@@ -214,19 +223,28 @@ impl Display for ErrorKind {
                 write!(f, "unicode range start value can't greater than end value")
             }
             Self::UnexpectedNthMatcher => {
-                write!(f, "elements matcher is allowed in `:nth-child` and `:nth-last-child` only")
+                write!(
+                    f,
+                    "elements matcher is allowed in `:nth-child` and `:nth-last-child` only"
+                )
             }
             Self::InvalidSassFlagName(flag) => write!(f, "invalid Sass flag name `{flag}`"),
             Self::UnexpectedSassFlag(flag) => write!(f, "Sass flag `!{flag}` is disallowed"),
             Self::DuplicatedSassFlag(flag) => write!(f, "duplicated Sass flag `!{flag}`"),
             Self::LessGuardOnMultipleComplexSelectors => {
-                write!(f, "Less guards are only allowed on a single complex selector")
+                write!(
+                    f,
+                    "Less guards are only allowed on a single complex selector"
+                )
             }
             Self::UnexpectedLessMixinCall => write!(f, "Less mixin call is disallowed"),
             Self::UnexpectedSimpleBlock => write!(f, "simple block is disallowed"),
             Self::TopLevelDeclaration => write!(f, "declaration at top level is disallowed"),
             Self::BlockInDeclarationValue => {
-                write!(f, "a top-level `{{}}` block is disallowed in a declaration value")
+                write!(
+                    f,
+                    "a top-level `{{}}` block is disallowed in a declaration value"
+                )
             }
 
             Self::EofInBlock => write!(f, "unclosed block before end of file"),

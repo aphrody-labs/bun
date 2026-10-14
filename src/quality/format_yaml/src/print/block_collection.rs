@@ -88,7 +88,14 @@ pub fn write_mapping<'a>(
     for item in &mapping.children {
         let start = item.span.start;
         if let Some(prev_end) = prev_end {
-            finish_previous_item(item_column, align_width, prev_end, prev_tail, Some(start), f);
+            finish_previous_item(
+                item_column,
+                align_width,
+                prev_end,
+                prev_tail,
+                Some(start),
+                f,
+            );
         }
         let value_node = item.value_content();
         let last_block = value_node.and_then(last_descendant_block_scalar);
@@ -144,11 +151,17 @@ pub fn write_sequence<'a>(sequence: &'a Sequence<'a>, f: &mut YamlFormatter<'_, 
                 f,
             );
         }
-        let last_block = item.content.as_deref().and_then(last_descendant_block_scalar);
+        let last_block = item
+            .content
+            .as_deref()
+            .and_then(last_descendant_block_scalar);
         prev_end = Some(item_gap_anchor(last_block, item.span.end, f));
         // Never `ValueIsBlockScalar` here: see its doc on [`ItemTail`]
-        prev_tail =
-            if last_block.is_some() { ItemTail::EndsInBlockScalar } else { ItemTail::Plain };
+        prev_tail = if last_block.is_some() {
+            ItemTail::EndsInBlockScalar
+        } else {
+            ItemTail::Plain
+        };
 
         if is_suppressed_last_before(f, item.span.start) {
             write_suppressed_node(to_span(item.span), f);
@@ -164,7 +177,10 @@ pub fn write_sequence<'a>(sequence: &'a Sequence<'a>, f: &mut YamlFormatter<'_, 
             write!(f, "-");
         }
         if let Some(node) = &item.content {
-            write!(f, align(SEQ_CONTENT_ALIGN, &format_with(|f| write_node(node, f))));
+            write!(
+                f,
+                align(SEQ_CONTENT_ALIGN, &format_with(|f| write_node(node, f)))
+            );
         }
     }
     if let Some(prev_end) = prev_end {

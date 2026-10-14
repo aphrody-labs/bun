@@ -157,7 +157,11 @@ impl GetterReturn {
                     return true;
                 }
             }
-            AstKind::ObjectProperty(ObjectProperty { kind, key: prop_key, .. }) => {
+            AstKind::ObjectProperty(ObjectProperty {
+                kind,
+                key: prop_key,
+                ..
+            }) => {
                 if matches!(kind, PropertyKind::Get) {
                     return true;
                 }
@@ -252,8 +256,11 @@ impl GetterReturn {
                             }
                         }
                         DfsEvent::Discover(basic_block_id, _) => {
-                            let return_instruction =
-                                cfg.basic_block(basic_block_id).instructions().iter().find(|it| {
+                            let return_instruction = cfg
+                                .basic_block(basic_block_id)
+                                .instructions()
+                                .iter()
+                                .find(|it| {
                                     match it.kind {
                                         // Throws are classified as returning.
                                         InstructionKind::Return(_) | InstructionKind::Throw => true,
@@ -280,15 +287,18 @@ impl GetterReturn {
                             // continue walking this branch, as we haven't seen anything
                             // that will signify to us that this path of the program will
                             // definitely return or throw.
-                            if graph.edges_directed(basic_block_id, Direction::Outgoing).any(|e| {
-                                matches!(
-                                    e.weight(),
-                                    EdgeType::Jump
-                                        | EdgeType::Normal
-                                        | EdgeType::Backedge
-                                        | EdgeType::Error(ErrorEdgeKind::Explicit)
-                                )
-                            }) {
+                            if graph
+                                .edges_directed(basic_block_id, Direction::Outgoing)
+                                .any(|e| {
+                                    matches!(
+                                        e.weight(),
+                                        EdgeType::Jump
+                                            | EdgeType::Normal
+                                            | EdgeType::Backedge
+                                            | EdgeType::Error(ErrorEdgeKind::Explicit)
+                                    )
+                                })
+                            {
                                 Control::Continue
                             } else if does_return {
                                 Control::Prune
@@ -425,9 +435,15 @@ fn test() {
         ("var foo = { get bar() {} };", None),
         ("var foo = { get\n bar () {} };", None),
         ("var foo = { get bar(){if(baz) {return true;}} };", None),
-        ("var foo = { get bar() { ~function () {return true;}} };", None),
+        (
+            "var foo = { get bar() { ~function () {return true;}} };",
+            None,
+        ),
         ("var foo = { get bar() { return; } };", None),
-        ("var foo = { get bar() {} };", Some(serde_json::json!([{ "allowImplicit": true }]))),
+        (
+            "var foo = { get bar() {} };",
+            Some(serde_json::json!([{ "allowImplicit": true }])),
+        ),
         (
             "var foo = { get bar() {if (baz) {return;}} };",
             Some(serde_json::json!([{ "allowImplicit": true }])),
@@ -435,22 +451,40 @@ fn test() {
         ("class foo { get bar(){} }", None),
         ("var foo = class {\n  static get\nbar(){} }", None),
         ("class foo { get bar(){ if (baz) { return true; }}}", None),
-        ("class foo { get bar(){ ~function () { return true; }()}}", None),
-        ("class foo { get bar(){} }", Some(serde_json::json!([{ "allowImplicit": true }]))),
+        (
+            "class foo { get bar(){ ~function () { return true; }()}}",
+            None,
+        ),
+        (
+            "class foo { get bar(){} }",
+            Some(serde_json::json!([{ "allowImplicit": true }])),
+        ),
         (
             "class foo { get bar(){if (baz) {return true;} } }",
             Some(serde_json::json!([{ "allowImplicit": true }])),
         ),
-        ("Object.defineProperty(foo, 'bar', { get: function (){}});", None),
-        ("Object.defineProperty(foo, 'bar', { get: function getfoo (){}});", None),
+        (
+            "Object.defineProperty(foo, 'bar', { get: function (){}});",
+            None,
+        ),
+        (
+            "Object.defineProperty(foo, 'bar', { get: function getfoo (){}});",
+            None,
+        ),
         ("Object.defineProperty(foo, 'bar', { get(){} });", None),
         ("Object.defineProperty(foo, 'bar', { get: () => {}});", None),
-        ("Object.defineProperty(foo, \"bar\", { get: function (){if(bar) {return true;}}});", None),
+        (
+            "Object.defineProperty(foo, \"bar\", { get: function (){if(bar) {return true;}}});",
+            None,
+        ),
         (
             "Object.defineProperty(foo, \"bar\", { get: function (){ ~function () { return true; }()}});",
             None,
         ),
-        ("Reflect.defineProperty(foo, 'bar', { get: function (){}});", None),
+        (
+            "Reflect.defineProperty(foo, 'bar', { get: function (){}});",
+            None,
+        ),
         ("Object.create(foo, { bar: { get: function() {} } })", None),
         ("Object.create(foo, { bar: { get() {} } })", None),
         ("Object.create(foo, { bar: { get: () => {} } })", None),
@@ -478,8 +512,14 @@ fn test() {
             "Reflect.defineProperty(foo, \"bar\", { get: function (){}});",
             Some(serde_json::json!([{ "allowImplicit": true }])),
         ),
-        ("Object?.defineProperty(foo, 'bar', { get: function (){} });", None),
-        ("(Object?.defineProperty)(foo, 'bar', { get: function (){} });", None),
+        (
+            "Object?.defineProperty(foo, 'bar', { get: function (){} });",
+            None,
+        ),
+        (
+            "(Object?.defineProperty)(foo, 'bar', { get: function (){} });",
+            None,
+        ),
         (
             "Object?.defineProperty(foo, 'bar', { get: function (){} });",
             Some(serde_json::json!([{ "allowImplicit": true }])),
@@ -492,8 +532,14 @@ fn test() {
             "(Object?.create)(foo, { bar: { get: function (){} } });",
             Some(serde_json::json!([{ "allowImplicit": true }])),
         ),
-        ("var foo = { get bar() { try { return a(); } catch {} } };", None),
-        ("var foo = { get bar() { try { return a(); } catch {  } finally {  } } };", None),
+        (
+            "var foo = { get bar() { try { return a(); } catch {} } };",
+            None,
+        ),
+        (
+            "var foo = { get bar() { try { return a(); } catch {  } finally {  } } };",
+            None,
+        ),
         (
             "
         var foo = {

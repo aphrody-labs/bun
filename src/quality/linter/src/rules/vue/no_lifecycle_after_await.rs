@@ -185,7 +185,12 @@ impl<'a> LifecycleAfterAwaitVisitor<'a> {
         scoping: &'a Scoping,
         symbol_to_import_entry: FxHashMap<SymbolId, &'a ImportEntry>,
     ) -> Self {
-        Self { found: false, errors: Vec::new(), scoping, symbol_to_import_entry }
+        Self {
+            found: false,
+            errors: Vec::new(),
+            scoping,
+            symbol_to_import_entry,
+        }
     }
 }
 
@@ -207,7 +212,11 @@ impl<'a> VisitJs<'a> for LifecycleAfterAwaitVisitor<'a> {
             return;
         }
 
-        let Some(ident) = call_expr.callee.get_inner_expression().get_identifier_reference() else {
+        let Some(ident) = call_expr
+            .callee
+            .get_inner_expression()
+            .get_identifier_reference()
+        else {
             walk_js::walk_call_expression(self, call_expr);
             return;
         };
@@ -221,7 +230,8 @@ impl<'a> VisitJs<'a> for LifecycleAfterAwaitVisitor<'a> {
         if let Some(import_entry) = self.symbol_to_import_entry.get(&symbol_id)
             && let ImportImportName::Name(name_span) = &import_entry.import_name
         {
-            self.errors.push((call_expr.span, name_span.name().to_string()));
+            self.errors
+                .push((call_expr.span, name_span.name().to_string()));
         }
         walk_js::walk_call_expression(self, call_expr);
     }
@@ -603,6 +613,11 @@ fn test() {
                   ", None, None, Some(PathBuf::from("test.vue"))),
     ];
 
-    Tester::new(NoLifecycleAfterAwait::NAME, NoLifecycleAfterAwait::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        NoLifecycleAfterAwait::NAME,
+        NoLifecycleAfterAwait::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

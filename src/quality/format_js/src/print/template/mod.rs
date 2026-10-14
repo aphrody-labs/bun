@@ -54,7 +54,13 @@ impl<'a> FormatWrite<'a> for AstNode<'a, TaggedTemplateExpression<'a>> {
         // printing ``foo /* c */`x`;``.
         // Unlike the no-newline form which attaches to the quasi, so formatting is not idempotent.
         if let Some(type_arguments) = self.type_arguments() {
-            write!(f, [self.tag(), FormatNodeWithoutTrailingComments(type_arguments)]);
+            write!(
+                f,
+                [
+                    self.tag(),
+                    FormatNodeWithoutTrailingComments(type_arguments)
+                ]
+            );
         } else {
             write!(f, [FormatNodeWithoutTrailingComments(self.tag())]);
         }
@@ -265,7 +271,8 @@ impl<'a> Format<'a, JsFormatContext<'a>> for TemplateLike<'a, '_> {
             if let Some(ctx) = tailwind_ctx {
                 let is_first = i == 0;
                 let is_last = i == quasis_len - 1;
-                f.context_mut().push_tailwind_context(ctx.with_quasi_position(is_first, is_last));
+                f.context_mut()
+                    .push_tailwind_context(ctx.with_quasi_position(is_first, is_last));
             }
 
             write!(f, *quasi);
@@ -287,14 +294,20 @@ impl<'a> Format<'a, JsFormatContext<'a>> for TemplateLike<'a, '_> {
                 }
                 // When Tailwind collapses newlines, treat as if there's no newline
                 let after_new_line = !tailwind_collapses_newlines && quasi_text.ends_with('\n');
-                let options = FormatTemplateExpressionOptions { indention, after_new_line };
+                let options = FormatTemplateExpressionOptions {
+                    indention,
+                    after_new_line,
+                };
 
                 // If in Tailwind context, push template expression context with quasi whitespace info
                 if let Some(ctx) = tailwind_ctx {
                     let quasi_before_has_trailing_ws =
                         quasi_text.ends_with(|c: char| c.is_ascii_whitespace());
                     let quasi_after_has_leading_ws = quasis.get(i + 1).is_some_and(|q| {
-                        q.value.raw.as_str().starts_with(|c: char| c.is_ascii_whitespace())
+                        q.value
+                            .raw
+                            .as_str()
+                            .starts_with(|c: char| c.is_ascii_whitespace())
                     });
 
                     f.context_mut().push_tailwind_context(
@@ -361,7 +374,10 @@ impl<'a, 'b> FormatTemplateExpression<'a, 'b> {
         expression: &'b TemplateExpression<'a, 'b>,
         options: FormatTemplateExpressionOptions,
     ) -> Self {
-        Self { expression, options }
+        Self {
+            expression,
+            options,
+        }
     }
 }
 
@@ -375,8 +391,11 @@ impl<'a> Format<'a, JsFormatContext<'a>> for FormatTemplateExpression<'a, '_> {
         // Special handling for array expressions - force flat mode
         let format_expression = format_once(|f| match self.expression {
             TemplateExpression::Expression(e) => {
-                let has_leading_comments =
-                    !f.context().comments().comments_before(e.span().start).is_empty();
+                let has_leading_comments = !f
+                    .context()
+                    .comments()
+                    .comments_before(e.span().start)
+                    .is_empty();
                 // Detect trailing-comment existence BEFORE formatting.
                 // JSX may consume its trailing comments during `e.fmt(f)` (inside its `WrapOnBreak` parens),
                 // so checking afterward would miss them and skip the indent at the template level.
@@ -403,8 +422,10 @@ impl<'a> Format<'a, JsFormatContext<'a>> for FormatTemplateExpression<'a, '_> {
                 }
                 // Print the skipped (non-JSX) or unclaimed (JSX) comments before the closing `}`.
                 // Scan from the expression's END, its own source may contain `}`.
-                let trailing_comments =
-                    f.context().comments().comments_before_character(e.span().end, b'}');
+                let trailing_comments = f
+                    .context()
+                    .comments()
+                    .comments_before_character(e.span().end, b'}');
                 FormatTrailingComments::Comments(trailing_comments).fmt(f);
             }
             TemplateExpression::TSType(t) => write!(f, t),
@@ -416,10 +437,16 @@ impl<'a> Format<'a, JsFormatContext<'a>> for FormatTemplateExpression<'a, '_> {
         let layout = if self.expression.has_new_line_in_range(f) {
             TemplateElementLayout::Fit
         } else {
-            let will_break = interned_expression.as_ref().is_some_and(FormatElement::will_break);
+            let will_break = interned_expression
+                .as_ref()
+                .is_some_and(FormatElement::will_break);
 
             // Make sure the expression won't break to prevent reformat issue
-            if will_break { TemplateElementLayout::Fit } else { TemplateElementLayout::SingleLine }
+            if will_break {
+                TemplateElementLayout::Fit
+            } else {
+                TemplateElementLayout::SingleLine
+            }
         };
 
         // We don't need to calculate indentation here as it's already tracked in options
@@ -453,7 +480,9 @@ impl<'a> Format<'a, JsFormatContext<'a>> for FormatTemplateExpression<'a, '_> {
                     Some(element) if indent => {
                         write!(
                             f,
-                            [soft_block_indent(&format_with(|f| f.write_element(element.clone())))]
+                            [soft_block_indent(&format_with(
+                                |f| f.write_element(element.clone())
+                            ))]
                         );
                     }
                     Some(element) => f.write_element(element.clone()),
@@ -467,12 +496,25 @@ impl<'a> Format<'a, JsFormatContext<'a>> for FormatTemplateExpression<'a, '_> {
                 // Apply dedent_to_root for expressions after newlines
                 write!(f, [dedent_to_root(&format_inner)]);
             } else {
-                write_with_indention(&format_inner, options.indention, f.options().indent_width, f);
+                write_with_indention(
+                    &format_inner,
+                    options.indention,
+                    f.options().indent_width,
+                    f,
+                );
             }
         });
 
         // Wrap in ${...} with group
-        write!(f, [group(&format_args!("${", format_indented, line_suffix_boundary(), "}"))]);
+        write!(
+            f,
+            [group(&format_args!(
+                "${",
+                format_indented,
+                line_suffix_boundary(),
+                "}"
+            ))]
+        );
     }
 }
 
@@ -549,7 +591,11 @@ impl<'a> EachTemplateColumn<'a> {
     fn new(text: &'a str, will_break: bool) -> Self {
         let width = text.width();
 
-        Self { text, width, will_break }
+        Self {
+            text,
+            width,
+            will_break,
+        }
     }
 }
 
@@ -600,7 +646,9 @@ impl<'a> EachTemplateTableBuilder<'a> {
             let mut row_column_width_iter = self.current_row.column_widths.iter();
 
             for table_column_width in table_column_width_iter {
-                let Some(row_column_width) = row_column_width_iter.next() else { break };
+                let Some(row_column_width) = row_column_width_iter.next() else {
+                    break;
+                };
                 *table_column_width = cmp::max(*table_column_width, *row_column_width);
             }
 
@@ -645,7 +693,10 @@ struct EachTemplateCurrentRow {
 
 impl EachTemplateCurrentRow {
     fn new() -> Self {
-        Self { column_widths: Vec::new(), has_line_break_column: false }
+        Self {
+            column_widths: Vec::new(),
+            has_line_break_column: false,
+        }
     }
 
     fn reset(&mut self) {
@@ -712,19 +763,26 @@ impl<'a> EachTemplateTable<'a> {
             let mut recording = buffer.start_recording();
             write!(
                 recording,
-                [FormatTemplateExpression::new(&TemplateExpression::Expression(expr), options)]
+                [FormatTemplateExpression::new(
+                    &TemplateExpression::Expression(expr),
+                    options
+                )]
             );
 
             recording.stop();
 
             // TODO: The printed text IS the output, not just a width measurement,
             // so a `TailwindClass` inside `expr` (e.g. JSX `className` under `sortTailwindcss`) prints UNSORTED.
-            let root =
-                Document::new(vec_buffer.into_vec(), f.session().unsorted_tailwind_classes());
+            let root = Document::new(
+                vec_buffer.into_vec(),
+                f.session().unsorted_tailwind_classes(),
+            );
 
             let print_options = f.options().as_print_options();
             // TODO: if `unwrap()` panics here, it's a internal error
-            let printed = root.print(expr.span().size() as usize, print_options).unwrap();
+            let printed = root
+                .print(expr.span().size() as usize, print_options)
+                .unwrap();
             let text = f.allocator().alloc_str(&printed.into_code());
             let will_break = text.contains('\n');
 
@@ -811,6 +869,14 @@ impl<'a> Format<'a, JsFormatContext<'a>> for EachTemplateTable<'a> {
             }
         });
 
-        write!(f, ["`", indent(&format_args!(table_content)), hard_line_break(), "`"]);
+        write!(
+            f,
+            [
+                "`",
+                indent(&format_args!(table_content)),
+                hard_line_break(),
+                "`"
+            ]
+        );
     }
 }

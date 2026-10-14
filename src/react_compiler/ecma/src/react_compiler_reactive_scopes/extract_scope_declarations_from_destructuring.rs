@@ -159,7 +159,10 @@ impl<'a, 'e> ReactiveFunctionTransform<'a> for Transform<'a, 'e> {
                         id: instruction.id,
                         lvalue: None,
                         value: ReactiveValue::Instruction(InstructionValue::StoreLocal {
-                            lvalue: LValue { kind: InstructionKind::Reassign, place: original },
+                            lvalue: LValue {
+                                kind: InstructionKind::Reassign,
+                                place: original,
+                            },
                             value: temporary,
                             span: destr_span,
                         }),
@@ -185,8 +188,9 @@ impl<'a, 'e> ReactiveFunctionTransform<'a> for Transform<'a, 'e> {
         if let Some(extras) = extra_instructions {
             // Clone the original instruction and build the replacement list
             let mut all_instructions = Vec::new();
-            all_instructions
-                .push(ReactiveStatement::Instruction(instruction.clone_in(self.env.allocator)));
+            all_instructions.push(ReactiveStatement::Instruction(
+                instruction.clone_in(self.env.allocator),
+            ));
             for extra in extras {
                 all_instructions.push(ReactiveStatement::Instruction(extra));
             }

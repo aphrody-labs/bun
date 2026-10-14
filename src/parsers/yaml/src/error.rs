@@ -17,7 +17,10 @@ impl Error {
     /// An error pointing at a single byte offset.
     #[expect(clippy::cast_possible_truncation)] // sources are bounded to u32
     pub(crate) fn point(kind: ErrorKind, at: usize) -> Self {
-        Self { kind, span: Span::new(at as u32, at as u32 + 1) }
+        Self {
+            kind,
+            span: Span::new(at as u32, at as u32 + 1),
+        }
     }
 }
 

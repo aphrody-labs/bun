@@ -53,7 +53,9 @@ fn provision() -> Result<(), String> {
     // spares a separate (gitignore-managed) lockfile, and the handle doubles as the
     // single source of the pinned version.
     let pkg_json = File::open(PACKAGE_JSON).map_err(|e| format!("open {PACKAGE_JSON}: {e}"))?;
-    pkg_json.lock().map_err(|e| format!("lock {PACKAGE_JSON}: {e}"))?;
+    pkg_json
+        .lock()
+        .map_err(|e| format!("lock {PACKAGE_JSON}: {e}"))?;
     let version = prettier_version(&pkg_json)?;
 
     if fs::read_to_string(&stamp).is_ok_and(|s| s.trim() == version) {
@@ -67,13 +69,21 @@ fn provision() -> Result<(), String> {
     let read_err = |e| format!("read {}: {e}", root.display());
     for entry in fs::read_dir(root).map_err(read_err)? {
         let path = entry.map_err(read_err)?.path();
-        if path.is_dir() { fs::remove_dir_all(&path) } else { fs::remove_file(&path) }
-            .map_err(|e| format!("remove {}: {e}", path.display()))?;
+        if path.is_dir() {
+            fs::remove_dir_all(&path)
+        } else {
+            fs::remove_file(&path)
+        }
+        .map_err(|e| format!("remove {}: {e}", path.display()))?;
     }
 
     let tarball = std::env::temp_dir().join(format!("oxc-prettier-{version}.tar.gz"));
     let url = format!("https://codeload.github.com/prettier/prettier/tar.gz/refs/tags/{version}");
-    run("curl", &["-fsSL", "-o", &tarball.to_string_lossy(), &url], root)?;
+    run(
+        "curl",
+        &["-fsSL", "-o", &tarball.to_string_lossy(), &url],
+        root,
+    )?;
     // Extract only what the conformance tests read; drop the `prettier-<version>/` prefix.
     run(
         "tar",
@@ -100,7 +110,9 @@ fn prettier_version(pkg_json: &File) -> Result<String, String> {
         .ok_or_else(|| format!("no dependencies.prettier in {PACKAGE_JSON}"))?;
     // The tarball URL needs an exact tag; a semver range would mean the pin is gone.
     if !version.chars().next().is_some_and(|c| c.is_ascii_digit()) {
-        return Err(format!("dependencies.prettier must be an exact version, got {version}"));
+        return Err(format!(
+            "dependencies.prettier must be an exact version, got {version}"
+        ));
     }
     Ok(version.to_string())
 }

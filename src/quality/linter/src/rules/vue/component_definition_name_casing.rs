@@ -120,7 +120,9 @@ impl ComponentDefinitionNameCasing {
         // `Vue.component('Name', ...)` / `app.component('Name', ...)` /
         // `(Vue as VueConstructor<Vue>).component('Name', ...)`
         if let Some(member_expr) = call.callee.get_inner_expression().as_member_expression()
-            && member_expr.static_property_name().is_some_and(|prop_name| prop_name == "component")
+            && member_expr
+                .static_property_name()
+                .is_some_and(|prop_name| prop_name == "component")
             && call.arguments.len() == 2
             && let Some(first_arg) = call.arguments.first()
             && let Some(first_expr) = first_arg.as_expression()
@@ -130,7 +132,9 @@ impl ComponentDefinitionNameCasing {
     }
 
     fn check_options_object<'a>(&self, node: &AstNode<'a>, ctx: &LintContext<'a>) {
-        let AstKind::ObjectExpression(obj) = node.kind() else { return };
+        let AstKind::ObjectExpression(obj) = node.kind() else {
+            return;
+        };
         if !is_vue_component_options_object(node, ctx) {
             return;
         }
@@ -138,13 +142,17 @@ impl ComponentDefinitionNameCasing {
     }
 
     fn check_name_property<'a>(&self, obj: &ObjectExpression<'a>, ctx: &LintContext<'a>) {
-        let Some(prop) = find_property(obj, "name") else { return };
+        let Some(prop) = find_property(obj, "name") else {
+            return;
+        };
         self.check_name_node(&prop.value, ctx);
     }
 
     fn check_name_node(&self, expr: &Expression<'_>, ctx: &LintContext<'_>) {
         let inner = expr.get_inner_expression();
-        let Some((value, inner_span)) = extract_convertible(inner) else { return };
+        let Some((value, inner_span)) = extract_convertible(inner) else {
+            return;
+        };
 
         let case_type = self.0;
         if check_case(&value, case_type) {
@@ -204,7 +212,11 @@ fn exact_convert(s: &str, case_type: CaseType) -> Option<String> {
         CaseType::PascalCase => vue_casing::pascal_case(s),
         CaseType::KebabCase => vue_casing::kebab_case(s),
     };
-    if check_case(&converted, case_type) { Some(converted) } else { None }
+    if check_case(&converted, case_type) {
+        Some(converted)
+    } else {
+        None
+    }
 }
 
 #[test]
@@ -265,7 +277,12 @@ fn test() {
             None,
             vue(),
         ),
-        ("<script>Vue.component('FooBar', {})</script>", None, None, vue()),
+        (
+            "<script>Vue.component('FooBar', {})</script>",
+            None,
+            None,
+            vue(),
+        ),
         (
             "<script>Vue.component('FooBar', {})</script>",
             Some(serde_json::json!(["PascalCase"])),
@@ -284,7 +301,12 @@ fn test() {
             None,
             vue(),
         ),
-        ("<script>Vue.component('FooBar', component)</script>", None, None, vue()),
+        (
+            "<script>Vue.component('FooBar', component)</script>",
+            None,
+            None,
+            vue(),
+        ),
         (
             "<script>Vue.component('FooBar', component)</script>",
             Some(serde_json::json!(["PascalCase"])),
@@ -326,10 +348,25 @@ fn test() {
         ),
         // https://github.com/vuejs/eslint-plugin-vue/issues/1018
         ("fn1(component.data)", None, None, js()),
-        ("<script setup> defineOptions({}) </script>", None, None, vue()),
-        ("<script> defineOptions({name: 'foo-bar'}) </script>", None, None, vue()),
+        (
+            "<script setup> defineOptions({}) </script>",
+            None,
+            None,
+            vue(),
+        ),
+        (
+            "<script> defineOptions({name: 'foo-bar'}) </script>",
+            None,
+            None,
+            vue(),
+        ),
         ("defineOptions({name: 'foo-bar'})", None, None, js()),
-        ("<template>{{ Vue.component('foo-bar', {}) }}</template>", None, None, vue()),
+        (
+            "<template>{{ Vue.component('foo-bar', {}) }}</template>",
+            None,
+            None,
+            vue(),
+        ),
         (
             "<script setup> defineOptions({name: 'FooBar'}) </script>",
             Some(serde_json::json!(["PascalCase"])),
@@ -415,17 +452,42 @@ fn test() {
             None,
             vue(),
         ),
-        ("<script>Vue.component('foo-bar', component)</script>", None, None, vue()),
-        ("<script>app.component('foo-bar', component)</script>", None, None, vue()),
+        (
+            "<script>Vue.component('foo-bar', component)</script>",
+            None,
+            None,
+            vue(),
+        ),
+        (
+            "<script>app.component('foo-bar', component)</script>",
+            None,
+            None,
+            vue(),
+        ),
         (
             "<script lang=\"ts\">(Vue as VueConstructor<Vue>).component('foo-bar', component)</script>",
             None,
             None,
             vue(),
         ),
-        ("<script>Vue.component('foo-bar', {})</script>", None, None, vue()),
-        ("<script>app.component('foo-bar', {})</script>", None, None, vue()),
-        ("Vue.component('foo_bar', {})", Some(serde_json::json!(["PascalCase"])), None, js()),
+        (
+            "<script>Vue.component('foo-bar', {})</script>",
+            None,
+            None,
+            vue(),
+        ),
+        (
+            "<script>app.component('foo-bar', {})</script>",
+            None,
+            None,
+            vue(),
+        ),
+        (
+            "Vue.component('foo_bar', {})",
+            Some(serde_json::json!(["PascalCase"])),
+            None,
+            js(),
+        ),
         (
             "<script>Vue.component('foo_bar', {})</script>",
             Some(serde_json::json!(["kebab-case"])),
@@ -438,7 +500,12 @@ fn test() {
             None,
             vue(),
         ),
-        ("<script>Vue.component('foo-é', {})</script>", None, None, vue()),
+        (
+            "<script>Vue.component('foo-é', {})</script>",
+            None,
+            None,
+            vue(),
+        ),
         (
             "<script>Vue.component('$Foo', {})</script>",
             Some(serde_json::json!(["kebab-case"])),

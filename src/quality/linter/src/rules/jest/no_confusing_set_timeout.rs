@@ -104,10 +104,12 @@ impl Rule for NoConfusingSetTimeout {
 
         let possible_nodes = collect_possible_jest_call_node(ctx);
         let id_to_jest_node_map =
-            possible_nodes.iter().fold(FxHashMap::default(), |mut acc, cur| {
-                acc.insert(cur.node.id(), cur);
-                acc
-            });
+            possible_nodes
+                .iter()
+                .fold(FxHashMap::default(), |mut acc, cur| {
+                    acc.insert(cur.node.id(), cur);
+                    acc
+                });
 
         for reference_id_list in scopes.root_unresolved_references_ids() {
             handle_jest_set_time_out(
@@ -217,8 +219,10 @@ fn is_jest_fn_call<'a>(
     loop {
         let parent = ctx.nodes().parent_node(id);
         let parent_kind = parent.kind();
-        if matches!(parent_kind, AstKind::CallExpression(_) | AstKind::TaggedTemplateExpression(_))
-            || parent_kind.is_member_expression_kind()
+        if matches!(
+            parent_kind,
+            AstKind::CallExpression(_) | AstKind::TaggedTemplateExpression(_)
+        ) || parent_kind.is_member_expression_kind()
         {
             id = parent.id();
         } else {
@@ -502,7 +506,12 @@ fn test() {
         ),
     ];
 
-    Tester::new(NoConfusingSetTimeout::NAME, NoConfusingSetTimeout::PLUGIN, pass, fail)
-        .with_jest_plugin(true)
-        .test_and_snapshot();
+    Tester::new(
+        NoConfusingSetTimeout::NAME,
+        NoConfusingSetTimeout::PLUGIN,
+        pass,
+        fail,
+    )
+    .with_jest_plugin(true)
+    .test_and_snapshot();
 }

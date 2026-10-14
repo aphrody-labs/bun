@@ -176,7 +176,8 @@ declare_oxc_lint!(
     fix = conditional_fix_dangerous,
     config = Eqeqeq,
     version = "0.0.3",
-    short_description = "Requires the use of the `===` and `!==` operators, disallowing the use of `==` and `!=`.",
+    short_description =
+        "Requires the use of the `===` and `!==` operators, disallowing the use of `==` and `!=`.",
 );
 
 impl Eqeqeq {
@@ -189,7 +190,11 @@ impl Eqeqeq {
         // There are some uncontrolled cases to auto fix.
         // In ESLint, `null >= null` will be auto fixed to `null > null` which is also wrong.
         // So I just report it.
-        ctx.diagnostic(eqeqeq_diagnostic(operator, truncated_operator, binary_expr.span));
+        ctx.diagnostic(eqeqeq_diagnostic(
+            operator,
+            truncated_operator,
+            binary_expr.span,
+        ));
     }
 }
 
@@ -207,7 +212,10 @@ impl Rule for Eqeqeq {
         let is_null_comparison = is_null_check(binary_expr);
         let must_enforce_null = matches!(options.null, NullType::Always);
 
-        if !matches!(binary_expr.operator, BinaryOperator::Equality | BinaryOperator::Inequality) {
+        if !matches!(
+            binary_expr.operator,
+            BinaryOperator::Equality | BinaryOperator::Inequality
+        ) {
             if is_null_comparison {
                 self.report_inverse_null_comparison(binary_expr, ctx);
             }
@@ -307,7 +315,10 @@ fn are_literals_and_same_type(left: &Expression, right: &Expression) -> bool {
             | (Expression::NumericLiteral(_), Expression::NumericLiteral(_))
             | (Expression::BigIntLiteral(_), Expression::BigIntLiteral(_))
             | (Expression::RegExpLiteral(_), Expression::RegExpLiteral(_))
-            | (Expression::TemplateLiteral(_), Expression::TemplateLiteral(_))
+            | (
+                Expression::TemplateLiteral(_),
+                Expression::TemplateLiteral(_)
+            )
     )
 }
 
@@ -329,7 +340,10 @@ fn test() {
         ("foo == null", Some(json!(["smart"]))),
         ("foo === null", None),
         // Always use === or !== with `null`
-        ("null === null", Some(json!(["always", { "null": "always" }]))),
+        (
+            "null === null",
+            Some(json!(["always", { "null": "always" }])),
+        ),
         // Never use === or !== with `null`
         ("null == null", Some(json!(["always", { "null": "never" }]))),
         // Do not apply this rule to `null`.
@@ -343,21 +357,57 @@ fn test() {
         // We intentionally do not support this option because it is deprecated in ESLint.
         // ("null == a", Some(serde_json::json!(["allow-null"]))),
         // ("a == null", Some(serde_json::json!(["allow-null"]))),
-        ("a == null", Some(serde_json::json!(["always", { "null": "ignore" }]))),
-        ("a != null", Some(serde_json::json!(["always", { "null": "ignore" }]))),
-        ("a !== null", Some(serde_json::json!(["always", { "null": "ignore" }]))),
-        ("a === null", Some(serde_json::json!(["always", { "null": "always" }]))),
-        ("a !== null", Some(serde_json::json!(["always", { "null": "always" }]))),
-        ("null !== null", Some(serde_json::json!(["always", { "null": "always" }]))),
-        ("a == null", Some(serde_json::json!(["always", { "null": "never" }]))),
-        ("a != null", Some(serde_json::json!(["always", { "null": "never" }]))),
-        ("null != null", Some(serde_json::json!(["always", { "null": "never" }]))),
-        ("foo === /abc/u", Some(serde_json::json!(["always", { "null": "never" }]))), // { "ecmaVersion": 2015 },
-        ("foo === 1n", Some(serde_json::json!(["always", { "null": "never" }]))), // { "ecmaVersion": 2020 }
+        (
+            "a == null",
+            Some(serde_json::json!(["always", { "null": "ignore" }])),
+        ),
+        (
+            "a != null",
+            Some(serde_json::json!(["always", { "null": "ignore" }])),
+        ),
+        (
+            "a !== null",
+            Some(serde_json::json!(["always", { "null": "ignore" }])),
+        ),
+        (
+            "a === null",
+            Some(serde_json::json!(["always", { "null": "always" }])),
+        ),
+        (
+            "a !== null",
+            Some(serde_json::json!(["always", { "null": "always" }])),
+        ),
+        (
+            "null !== null",
+            Some(serde_json::json!(["always", { "null": "always" }])),
+        ),
+        (
+            "a == null",
+            Some(serde_json::json!(["always", { "null": "never" }])),
+        ),
+        (
+            "a != null",
+            Some(serde_json::json!(["always", { "null": "never" }])),
+        ),
+        (
+            "null != null",
+            Some(serde_json::json!(["always", { "null": "never" }])),
+        ),
+        (
+            "foo === /abc/u",
+            Some(serde_json::json!(["always", { "null": "never" }])),
+        ), // { "ecmaVersion": 2015 },
+        (
+            "foo === 1n",
+            Some(serde_json::json!(["always", { "null": "never" }])),
+        ), // { "ecmaVersion": 2020 }
         // Originally for issue: <https://github.com/oxc-project/oxc/issues/8773>
         // We previously allowed exclusion of the first value, but that
         // causes difficulties in validation, so let's not.
-        ("href != null", Some(json!(["always", { "null": "ignore" }]))),
+        (
+            "href != null",
+            Some(json!(["always", { "null": "ignore" }])),
+        ),
     ];
 
     let fail = vec![
@@ -372,7 +422,10 @@ fn test() {
         ("foo == true", None),
         ("bananas != 1", None),
         ("value == undefined", None),
-        ("null == null", Some(json!(["always", { "null": "always" }]))),
+        (
+            "null == null",
+            Some(json!(["always", { "null": "always" }])),
+        ),
     ];
 
     let fix = vec![
@@ -384,5 +437,7 @@ fn test() {
         ("a == b", "a === b", None),
     ];
 
-    Tester::new(Eqeqeq::NAME, Eqeqeq::PLUGIN, pass, fail).expect_fix(fix).test_and_snapshot();
+    Tester::new(Eqeqeq::NAME, Eqeqeq::PLUGIN, pass, fail)
+        .expect_fix(fix)
+        .test_and_snapshot();
 }

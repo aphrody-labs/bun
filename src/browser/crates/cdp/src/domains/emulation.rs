@@ -1,4 +1,4 @@
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 
 use crate::dispatch::CdpContext;
 
@@ -19,7 +19,10 @@ fn metric_dimension(params: &Value, name: &str) -> Result<u32, String> {
 }
 
 fn optional_metric_dimension(params: &Value, name: &str) -> Result<Option<u32>, String> {
-    params.get(name).map(|_| metric_dimension(params, name)).transpose()
+    params
+        .get(name)
+        .map(|_| metric_dimension(params, name))
+        .transpose()
 }
 
 fn default_background_color(params: &Value) -> Result<Option<[u8; 4]>, String> {
@@ -43,7 +46,7 @@ fn default_background_color(params: &Value) -> Result<Option<[u8; 4]>, String> {
     };
     if !alpha.is_finite() {
         return Err(
-            "Emulation.setDefaultBackgroundColorOverride color.a must be finite".to_string()
+            "Emulation.setDefaultBackgroundColorOverride color.a must be finite".to_string(),
         );
     }
     Ok(Some([
@@ -77,7 +80,7 @@ pub async fn handle(
                     .set_reduced_motion(value == "reduce");
             }
             Ok(json!({}))
-        },
+        }
         "setDeviceMetricsOverride" => {
             let width = metric_dimension(params, "width")?;
             let height = metric_dimension(params, "height")?;
@@ -86,9 +89,11 @@ pub async fn handle(
                 .and_then(Value::as_f64)
                 .ok_or("Emulation.setDeviceMetricsOverride requires deviceScaleFactor")?;
             if !device_scale_factor.is_finite() || device_scale_factor < 0.0 {
-                return Err("Emulation.setDeviceMetricsOverride requires a non-negative finite \
+                return Err(
+                    "Emulation.setDeviceMetricsOverride requires a non-negative finite \
                             deviceScaleFactor"
-                    .to_string());
+                        .to_string(),
+                );
             }
             let mobile = params
                 .get("mobile")
@@ -103,10 +108,12 @@ pub async fn handle(
                     if screen_width > 0 && screen_height > 0 =>
                 {
                     Some((screen_width as f32, screen_height as f32))
-                },
+                }
                 _ => None,
             };
-            let page = ctx.get_session_page_mut(session_id).ok_or("No page for session")?;
+            let page = ctx
+                .get_session_page_mut(session_id)
+                .ok_or("No page for session")?;
             page.apply_device_metrics_override(
                 (width > 0).then_some(width as f32),
                 (height > 0).then_some(height as f32),
@@ -115,30 +122,38 @@ pub async fn handle(
                 mobile,
             );
             Ok(json!({}))
-        },
+        }
         "clearDeviceMetricsOverride" => {
-            let page = ctx.get_session_page_mut(session_id).ok_or("No page for session")?;
+            let page = ctx
+                .get_session_page_mut(session_id)
+                .ok_or("No page for session")?;
             page.clear_device_metrics_override();
             Ok(json!({}))
-        },
+        }
         "setDefaultBackgroundColorOverride" => {
             let color = default_background_color(params)?;
-            let page = ctx.get_session_page_mut(session_id).ok_or("No page for session")?;
+            let page = ctx
+                .get_session_page_mut(session_id)
+                .ok_or("No page for session")?;
             page.set_default_background_color_override(color);
             Ok(json!({}))
-        },
+        }
         "setUserAgentOverride" => {
             let user_agent = params
                 .get("userAgent")
                 .and_then(Value::as_str)
                 .ok_or("Emulation.setUserAgentOverride requires userAgent")?;
             let accept_language = params.get("acceptLanguage").and_then(Value::as_str);
-            let http_client =
-                ctx.get_session_page(session_id).ok_or("No page for session")?.http_client.clone();
+            let http_client = ctx
+                .get_session_page(session_id)
+                .ok_or("No page for session")?
+                .http_client
+                .clone();
             if !user_agent.is_empty() {
                 http_client.set_user_agent(user_agent).await;
-                if let Some(js) =
-                    ctx.get_session_page_mut(session_id).and_then(|page| page.js.as_mut())
+                if let Some(js) = ctx
+                    .get_session_page_mut(session_id)
+                    .and_then(|page| page.js.as_mut())
                 {
                     js.set_user_agent(user_agent);
                 }
@@ -147,16 +162,18 @@ pub async fn handle(
                 http_client.set_accept_language(accept_language).await;
             }
             Ok(json!({}))
-        },
+        }
         "setLocaleOverride" => {
             let locale = params
                 .get("locale")
                 .and_then(Value::as_str)
                 .ok_or("Emulation.setLocaleOverride requires locale")?;
-            let page = ctx.get_session_page_mut(session_id).ok_or("No page for session")?;
+            let page = ctx
+                .get_session_page_mut(session_id)
+                .ok_or("No page for session")?;
             page.set_locale_override((!locale.is_empty()).then(|| locale.to_string()));
             Ok(json!({}))
-        },
+        }
         // Touch emulation does not affect layout yet, but acknowledging it is
         // compatible with clients that pair it with a metrics override.
         "setTouchEmulationEnabled" => Ok(json!({})),
@@ -191,7 +208,9 @@ mod tests {
         .await
         .expect("metrics override");
 
-        let page = ctx.get_session_page_mut(&session_id).expect("page for session");
+        let page = ctx
+            .get_session_page_mut(&session_id)
+            .expect("page for session");
         assert_eq!(page.viewport, (1024.0, 768.0));
         assert_eq!(page.device_scale_factor, 2.0);
         assert_eq!(
@@ -219,11 +238,20 @@ mod tests {
         )
         .await
         .expect("accept-language override");
-        handle("setLocaleOverride", &json!({"locale": "de-DE"}), &mut ctx, &session_id)
-            .await
-            .expect("locale override");
+        handle(
+            "setLocaleOverride",
+            &json!({"locale": "de-DE"}),
+            &mut ctx,
+            &session_id,
+        )
+        .await
+        .expect("locale override");
 
-        let http_client = ctx.get_session_page(&session_id).unwrap().http_client.clone();
+        let http_client = ctx
+            .get_session_page(&session_id)
+            .unwrap()
+            .http_client
+            .clone();
         assert_eq!(http_client.accept_language.read().await.as_str(), "de-DE");
         assert_eq!(
             ctx.get_session_page_mut(&session_id)
@@ -271,7 +299,9 @@ mod tests {
                 "mobile": false
             }),
         ] {
-            handle("setDeviceMetricsOverride", &params, &mut ctx, &session_id).await.unwrap();
+            handle("setDeviceMetricsOverride", &params, &mut ctx, &session_id)
+                .await
+                .unwrap();
         }
 
         let page = ctx.get_session_page_mut(&session_id).unwrap();
@@ -296,7 +326,9 @@ mod tests {
             json!({"width": -1, "height": 768, "deviceScaleFactor": 1, "mobile": false}),
         ] {
             assert!(
-                handle("setDeviceMetricsOverride", &params, &mut ctx, &session_id).await.is_err(),
+                handle("setDeviceMetricsOverride", &params, &mut ctx, &session_id)
+                    .await
+                    .is_err(),
                 "must reject {params}"
             );
         }
@@ -359,7 +391,12 @@ mod tests {
         )
         .await
         .unwrap();
-        assert_eq!(ctx.get_session_page(&session_id).unwrap().device_scale_factor, 3.0);
+        assert_eq!(
+            ctx.get_session_page(&session_id)
+                .unwrap()
+                .device_scale_factor,
+            3.0
+        );
 
         handle(
             "setDeviceMetricsOverride",
@@ -378,7 +415,14 @@ mod tests {
         assert_eq!(page.viewport, (1111.0, 333.0));
         assert_eq!(page.device_scale_factor, 1.5);
 
-        handle("clearDeviceMetricsOverride", &json!({}), &mut ctx, &session_id).await.unwrap();
+        handle(
+            "clearDeviceMetricsOverride",
+            &json!({}),
+            &mut ctx,
+            &session_id,
+        )
+        .await
+        .unwrap();
         let page = ctx.get_session_page_mut(&session_id).unwrap();
         assert_eq!(page.viewport, (1111.0, 777.0));
         assert_eq!(page.device_scale_factor, 1.5);
@@ -400,7 +444,14 @@ mod tests {
         page.set_viewport((901.0, 607.0));
         page.set_device_scale_factor(1.25);
 
-        handle("clearDeviceMetricsOverride", &json!({}), &mut ctx, &session_id).await.unwrap();
+        handle(
+            "clearDeviceMetricsOverride",
+            &json!({}),
+            &mut ctx,
+            &session_id,
+        )
+        .await
+        .unwrap();
 
         let page = ctx.get_session_page(&session_id).unwrap();
         assert_eq!(page.viewport, (901.0, 607.0));
@@ -429,7 +480,9 @@ mod tests {
                 "screenWidth": 1000
             }),
         ] {
-            handle("setDeviceMetricsOverride", &params, &mut ctx, &session_id).await.unwrap();
+            handle("setDeviceMetricsOverride", &params, &mut ctx, &session_id)
+                .await
+                .unwrap();
         }
 
         let page = ctx.get_session_page_mut(&session_id).unwrap();
@@ -456,7 +509,9 @@ mod tests {
             json!({"width": 800, "height": 600, "deviceScaleFactor": 1, "mobile": false, "screenWidth": 10_000_001}),
         ] {
             assert!(
-                handle("setDeviceMetricsOverride", &params, &mut ctx, &session_id).await.is_err(),
+                handle("setDeviceMetricsOverride", &params, &mut ctx, &session_id)
+                    .await
+                    .is_err(),
                 "must reject {params}"
             );
         }
@@ -497,7 +552,10 @@ mod tests {
             json!({"color": {"r": 1.5, "g": 2, "b": 3}}),
             json!({"color": {"r": 1, "g": 2, "b": 3, "a": "opaque"}}),
         ] {
-            assert!(default_background_color(&params).is_err(), "must reject {params}");
+            assert!(
+                default_background_color(&params).is_err(),
+                "must reject {params}"
+            );
         }
     }
 }

@@ -38,13 +38,21 @@ impl AsciiFields for str {
     fn ascii_lines(&self) -> impl Iterator<Item = &str> {
         let empty = self.is_empty();
         let terminated = self.ends_with('\n');
-        let mut lines = self.strip_suffix('\n').unwrap_or(self).split_ascii("\n").peekable();
+        let mut lines = self
+            .strip_suffix('\n')
+            .unwrap_or(self)
+            .split_ascii("\n")
+            .peekable();
         std::iter::from_fn(move || {
-            if empty { return None; }
+            if empty {
+                return None;
+            }
             let line = lines.next()?;
             Some(if terminated || lines.peek().is_some() {
                 line.strip_suffix('\r').unwrap_or(line)
-            } else { line })
+            } else {
+                line
+            })
         })
     }
 }

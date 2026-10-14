@@ -131,7 +131,8 @@ fn is_context_provider(jsx_opening_elem: &JSXOpeningElement, ctx: &LintContext<'
         name @ (oxc_ast::ast::JSXElementName::Identifier(_)
         | oxc_ast::ast::JSXElementName::IdentifierReference(_)) => {
             // Check if this identifier refers to a context created with createContext()
-            name.get_identifier().is_some_and(|ident| is_react_context(ident, ctx))
+            name.get_identifier()
+                .is_some_and(|ident| is_react_context(ident, ctx))
         }
         _ => false,
     }
@@ -261,9 +262,10 @@ fn is_constructed_expression(expr: &Expression, ctx: &LintContext) -> bool {
             is_constructed_expression(&unary_expr.argument, ctx)
         }
 
-        Expression::SequenceExpression(seq_expr) => {
-            seq_expr.expressions.iter().any(|e| is_constructed_expression(e, ctx))
-        }
+        Expression::SequenceExpression(seq_expr) => seq_expr
+            .expressions
+            .iter()
+            .any(|e| is_constructed_expression(e, ctx)),
 
         Expression::Identifier(ident) => is_identifier_a_constructed_value(ident, ctx),
 

@@ -91,7 +91,10 @@ impl Rule for NoTitleInDocumentHead {
             return;
         };
 
-        for reference in ctx.semantic().symbol_references(default_import.local.symbol_id()) {
+        for reference in ctx
+            .semantic()
+            .symbol_references(default_import.local.symbol_id())
+        {
             let parent_node = ctx.nodes().parent_node(reference.node_id());
             let AstKind::JSXOpeningElement(jsx_opening_element) = parent_node.kind() else {
                 continue;
@@ -163,6 +166,11 @@ fn test() {
 			      }"#,
     ];
 
-    Tester::new(NoTitleInDocumentHead::NAME, NoTitleInDocumentHead::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        NoTitleInDocumentHead::NAME,
+        NoTitleInDocumentHead::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

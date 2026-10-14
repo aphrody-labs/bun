@@ -124,7 +124,11 @@ impl<'a> MinifierState<'a> {
     ) -> Self {
         let symbols = SymbolState::new(source_type, &options, scoping, allocator);
         Self {
-            config: CompressionConfig { source_type, options, mode },
+            config: CompressionConfig {
+                source_type,
+                options,
+                mode,
+            },
             symbols,
             private_member_usage: PrivateMemberUsageStack::new(),
             body_frames: NonEmptyStack::new(BodyFrame {
@@ -198,7 +202,9 @@ pub struct PrivateMemberUsageStack<'a> {
 
 impl<'a> PrivateMemberUsageStack<'a> {
     pub fn new() -> Self {
-        Self { stack: NonEmptyStack::new(IdentHashSet::default()) }
+        Self {
+            stack: NonEmptyStack::new(IdentHashSet::default()),
+        }
     }
 
     /// Whether all class scopes have been exited.

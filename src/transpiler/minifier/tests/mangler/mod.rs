@@ -15,7 +15,11 @@ fn mangle_with_source_type(
 ) -> String {
     let allocator = Allocator::default();
     let ret = Parser::new(&allocator, source_text, source_type).parse();
-    assert!(ret.diagnostics.is_empty(), "Parser errors: {:?}", ret.diagnostics);
+    assert!(
+        ret.diagnostics.is_empty(),
+        "Parser errors: {:?}",
+        ret.diagnostics
+    );
     let program = ret.program;
     let mangler_return = Mangler::new().with_options(options.clone()).build(&program);
     Codegen::new()
@@ -26,7 +30,11 @@ fn mangle_with_source_type(
 }
 
 fn mangle(source_text: &str, options: &MangleOptions) -> String {
-    mangle_with_source_type(source_text, options, SourceType::mjs().with_unambiguous(true))
+    mangle_with_source_type(
+        source_text,
+        options,
+        SourceType::mjs().with_unambiguous(true),
+    )
 }
 
 fn mangle_script(source_text: &str, options: &MangleOptions) -> String {
@@ -39,7 +47,11 @@ fn test(source_text: &str, expected: &str, options: &MangleOptions) {
         let allocator = Allocator::default();
         let source_type = SourceType::mjs().with_unambiguous(true);
         let ret = Parser::new(&allocator, expected, source_type).parse();
-        assert!(ret.diagnostics.is_empty(), "Parser errors: {:?}", ret.diagnostics);
+        assert!(
+            ret.diagnostics.is_empty(),
+            "Parser errors: {:?}",
+            ret.diagnostics
+        );
         Codegen::new().build(&ret.program).code
     };
     assert_eq!(
@@ -55,7 +67,10 @@ fn direct_eval() {
     // Symbols in scopes with direct eval should NOT be mangled
     let source_text = "function foo() { let NO_MANGLE; eval('') }";
     let mangled = mangle(source_text, &options);
-    assert_eq!(mangled, "function foo() {\n\tlet NO_MANGLE;\n\teval(\"\");\n}\n");
+    assert_eq!(
+        mangled,
+        "function foo() {\n\tlet NO_MANGLE;\n\teval(\"\");\n}\n"
+    );
 
     // Nested direct eval: parent scope also should not mangle
     let source_text = "function foo() { let NO_MANGLE; function bar() { eval('') } }";
@@ -92,7 +107,10 @@ fn direct_eval() {
     test(
         r#"var e = () => {}; var foo = (bar) => e(bar); var pt = (() => { eval("") })();"#,
         r#"var e = () => {}; var foo = (t) => e(t); var pt = (() => { eval(""); })();"#,
-        &MangleOptions { top_level: Some(true), ..MangleOptions::default() },
+        &MangleOptions {
+            top_level: Some(true),
+            ..MangleOptions::default()
+        },
     );
 
     test(
@@ -171,7 +189,10 @@ fn mangler() {
         w
     });
     top_level_cases.into_iter().fold(&mut snapshot, |w, case| {
-        let options = MangleOptions { top_level: Some(true), ..MangleOptions::default() };
+        let options = MangleOptions {
+            top_level: Some(true),
+            ..MangleOptions::default()
+        };
         write!(w, "{case}\n{}\n", mangle(case, &options)).unwrap();
         w
     });
@@ -387,7 +408,10 @@ fn reserved_names() {
 
 #[test]
 fn non_mangleable_symbols_do_not_consume_slots() {
-    let options = MangleOptions { debug: true, ..MangleOptions::default() };
+    let options = MangleOptions {
+        debug: true,
+        ..MangleOptions::default()
+    };
 
     test(
         "var A, B; { use(A); let x; } { use(B); let y; }",

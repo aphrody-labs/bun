@@ -12,7 +12,9 @@ use crate::lsp::server_linter::{ServerLinter, ServerLinterBuilder};
 
 /// Given a file path relative to the crate root directory, return the absolute path of the file.
 pub fn get_file_path(relative_file_path: &str) -> PathBuf {
-    std::env::current_dir().expect("could not get current dir").join(relative_file_path)
+    std::env::current_dir()
+        .expect("could not get current dir")
+        .join(relative_file_path)
 }
 
 /// Given a file path relative to the crate root directory, return the URI of the file.
@@ -41,7 +43,9 @@ fn get_snapshot_from_diagnostic_result(diagnostic_result: &[(Uri, Vec<Diagnostic
 
 fn get_snapshot_safe_uri(uri: &Uri) -> String {
     let mut safe_uri = uri.to_string();
-    let start = safe_uri.find("file://").expect("file:// protocol not found in URI");
+    let start = safe_uri
+        .find("file://")
+        .expect("file:// protocol not found in URI");
     let end = safe_uri.find("oxlint").expect("oxlint not found in URI");
     safe_uri.replace_range(start + "file://".len()..end + "oxlint".len(), "<variable>");
     safe_uri
@@ -66,14 +70,21 @@ fn get_snapshot_from_diagnostic(diagnostic: &Diagnostic) -> String {
                 .enumerate()
                 .map(|(i, info)| {
                     let mut result = String::new();
-                    write!(result, "related_information[{}].message: {:?}", i, info.message)
-                        .unwrap();
+                    write!(
+                        result,
+                        "related_information[{}].message: {:?}",
+                        i, info.message
+                    )
+                    .unwrap();
                     // replace everything between `file://` and `oxc_language_server` with `<variable>`, to avoid
                     // the absolute path causing snapshot test failures in different environments
                     let location = get_snapshot_safe_uri(&info.location.uri);
 
-                    write!(result, "\nrelated_information[{i}].location.uri: {location:?}")
-                        .unwrap();
+                    write!(
+                        result,
+                        "\nrelated_information[{i}].location.uri: {location:?}"
+                    )
+                    .unwrap();
                     write!(
                         result,
                         "\nrelated_information[{}].location.range: {:?}",
@@ -139,7 +150,10 @@ fn get_snapshot_from_code_action_or_command(action_or_command: &CodeActionRespon
     match action_or_command {
         CodeActionResponse::Command(command) => format!("Command: {command:#?}"),
         CodeActionResponse::CodeAction(code_action) => {
-            format!("CodeAction: \n{}", get_snapshot_for_code_action(code_action))
+            format!(
+                "CodeAction: \n{}",
+                get_snapshot_for_code_action(code_action)
+            )
         }
     }
 }
@@ -168,10 +182,10 @@ fn get_snapshot_from_report(report: &FileResult) -> String {
             .map(get_snapshot_from_code_action_or_command)
             .collect::<Vec<_>>()
             .join("\n"),
-        report
-            .fix_all_action
-            .as_ref()
-            .map_or_else(|| "None".to_string(), get_snapshot_from_code_action_or_command)
+        report.fix_all_action.as_ref().map_or_else(
+            || "None".to_string(),
+            get_snapshot_from_code_action_or_command
+        )
     )
 }
 
@@ -189,18 +203,24 @@ struct FileResult {
 
 impl Tester<'_> {
     pub fn new(relative_root_dir: &'static str, options: serde_json::Value) -> Self {
-        Self { relative_root_dir, options }
+        Self {
+            relative_root_dir,
+            options,
+        }
     }
 
     pub fn create_linter(&self) -> ServerLinter {
-        let (linter, _client_message) = ServerLinterBuilder::default()
-            .build(&Self::get_root_uri(self.relative_root_dir), self.options.clone());
+        let (linter, _client_message) = ServerLinterBuilder::default().build(
+            &Self::get_root_uri(self.relative_root_dir),
+            self.options.clone(),
+        );
         linter
     }
 
     pub fn get_root_uri(relative_root_dir: &str) -> Uri {
-        let absolute_path =
-            std::env::current_dir().expect("could not get current dir").join(relative_root_dir);
+        let absolute_path = std::env::current_dir()
+            .expect("could not get current dir")
+            .join(relative_root_dir);
 
         file_path_to_uri(absolute_path).expect("could not convert current dir to uri")
     }
@@ -212,7 +232,10 @@ impl Tester<'_> {
     }
 
     pub fn get_file_uri(&self, relative_file_path: &str) -> Uri {
-        get_file_uri(&format!("{}/{}", self.relative_root_dir, relative_file_path))
+        get_file_uri(&format!(
+            "{}/{}",
+            self.relative_root_dir, relative_file_path
+        ))
     }
 
     pub fn test_and_snapshot_multiple_file(&self, relative_file_paths: &[&str]) {
@@ -272,7 +295,8 @@ impl Tester<'_> {
     }
 
     pub fn get_watcher_patterns(&self) -> Vec<String> {
-        self.create_linter().get_watcher_patterns(self.options.clone())
+        self.create_linter()
+            .get_watcher_patterns(self.options.clone())
     }
 
     pub fn handle_configuration_change(

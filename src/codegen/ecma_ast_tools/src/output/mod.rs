@@ -83,7 +83,10 @@ impl Output {
             }
             Self::Raw { path, code } => (path, code),
         };
-        RawOutput { path, content: code.into_bytes() }
+        RawOutput {
+            path,
+            content: code.into_bytes(),
+        }
     }
 }
 

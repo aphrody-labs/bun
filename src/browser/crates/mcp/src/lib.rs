@@ -10,11 +10,11 @@ use std::{collections::HashMap, sync::Arc};
 
 use anyhow::Result;
 #[cfg(feature = "render")]
-use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64};
+use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
 use bun_browser_browser::{BrowserContext, Page};
 use bun_browser_dom::NodeId;
 use serde::Serialize;
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 
 /// Cap on text returned to the agent unless the caller passes a larger
 /// `max_chars`. Agents waste context on multi-KB raw page dumps; this
@@ -40,7 +40,12 @@ struct RpcError {
 
 impl RpcResponse {
     fn ok(id: Value, result: Value) -> Self {
-        RpcResponse { jsonrpc: "2.0", id, result: Some(result), error: None }
+        RpcResponse {
+            jsonrpc: "2.0",
+            id,
+            result: Some(result),
+            error: None,
+        }
     }
 
     fn err(id: Value, code: i32, message: impl Into<String>) -> Self {
@@ -48,7 +53,10 @@ impl RpcResponse {
             jsonrpc: "2.0",
             id,
             result: None,
-            error: Some(RpcError { code, message: message.into() }),
+            error: Some(RpcError {
+                code,
+                message: message.into(),
+            }),
         }
     }
 }
@@ -80,13 +88,8 @@ impl BrowserState {
         // the MCP path silently ignored the flag and persisted nothing, cookies
         // included.
         let storage_dir = std::env::var_os("OBSCURA_STORAGE_DIR").map(std::path::PathBuf::from);
-        let context = BrowserContext::with_storage_full(
-            "mcp".to_string(),
-            proxy,
-            stealth,
-            None,
-            storage_dir,
-        );
+        let context =
+            BrowserContext::with_storage_full("mcp".to_string(), proxy, stealth, None, storage_dir);
         BrowserState {
             tabs: std::collections::BTreeMap::new(),
             active_tab: None,
@@ -163,8 +166,10 @@ impl BrowserState {
     async fn advance_active_page_tasks(&mut self) -> Result<bool, String> {
         let page = self.page_mut();
         let reached_idle = page.run_autonomous_event_loop_turn().await?;
-        let navigated =
-            page.process_pending_navigation().await.map_err(|error| error.to_string())?;
+        let navigated = page
+            .process_pending_navigation()
+            .await
+            .map_err(|error| error.to_string())?;
         if navigated {
             self.interactive_refs.clear();
         }
@@ -758,7 +763,9 @@ fn optional_number(args: &Value, name: &str) -> Result<Option<f32>, String> {
     let Some(value) = args.get(name) else {
         return Ok(None);
     };
-    let value = value.as_f64().ok_or_else(|| format!("'{name}' must be a number"))?;
+    let value = value
+        .as_f64()
+        .ok_or_else(|| format!("'{name}' must be a number"))?;
     if !value.is_finite() || value < f64::from(f32::MIN) || value > f64::from(f32::MAX) {
         return Err(format!("'{name}' must be a finite number"));
     }
@@ -770,7 +777,10 @@ fn optional_bool(args: &Value, name: &str) -> Result<Option<bool>, String> {
     let Some(value) = args.get(name) else {
         return Ok(None);
     };
-    value.as_bool().map(Some).ok_or_else(|| format!("'{name}' must be a boolean"))
+    value
+        .as_bool()
+        .map(Some)
+        .ok_or_else(|| format!("'{name}' must be a boolean"))
 }
 
 #[cfg(feature = "render")]
@@ -786,7 +796,7 @@ fn validate_screenshot_viewport(viewport: (f32, f32)) -> Result<(), String> {
         || height > MAX_DIMENSION
     {
         return Err(
-            "screenshot dimensions must be finite, positive, and at most 32768 CSS pixels".into()
+            "screenshot dimensions must be finite, positive, and at most 32768 CSS pixels".into(),
         );
     }
     if f64::from(width.ceil()) * f64::from(height.ceil()) > MAX_PIXELS {
@@ -807,7 +817,9 @@ async fn tool_screenshot(args: &Value, state: &mut BrowserState) -> Result<Value
 
     let page = state.page_mut();
     let _ = page.prepare_screenshot_resources(1_000).await;
-    let png = page.screenshot(viewport).ok_or("the current page has no renderable viewport")?;
+    let png = page
+        .screenshot(viewport)
+        .ok_or("the current page has no renderable viewport")?;
     Ok(json!({
         "type": "image",
         "data": BASE64.encode(png),
@@ -862,7 +874,9 @@ async fn tool_pdf(args: &Value, state: &mut BrowserState) -> Result<Value, Strin
 
     let page = state.page_mut();
     let _ = page.prepare_screenshot_resources(1_000).await;
-    let pdf = page.raster_pdf(options).map_err(|error| error.to_string())?;
+    let pdf = page
+        .raster_pdf(options)
+        .map_err(|error| error.to_string())?;
     Ok(json!({
         "type": "resource",
         "resource": {
@@ -900,11 +914,20 @@ fn truncate(text: &str, max_chars: usize) -> String {
 }
 
 async fn tool_navigate(args: &Value, state: &mut BrowserState) -> Result<String, String> {
-    let url = args.get("url").and_then(Value::as_str).ok_or("Missing url parameter")?;
-    if url::Url::parse(url).ok().is_some_and(|parsed| parsed.scheme() == "file") {
+    let url = args
+        .get("url")
+        .and_then(Value::as_str)
+        .ok_or("Missing url parameter")?;
+    if url::Url::parse(url)
+        .ok()
+        .is_some_and(|parsed| parsed.scheme() == "file")
+    {
         return Err("file:// navigation is disabled for MCP".to_string());
     }
-    let wait_until = args.get("waitUntil").and_then(Value::as_str).unwrap_or("load");
+    let wait_until = args
+        .get("waitUntil")
+        .and_then(Value::as_str)
+        .unwrap_or("load");
 
     let condition = bun_browser_browser::lifecycle::WaitUntil::from_str(wait_until);
     let ua = state.user_agent.clone();
@@ -962,7 +985,9 @@ fn tool_snapshot(args: &Value, state: &mut BrowserState) -> Result<String, Strin
     };
 
     let body = truncate(body_text.trim(), max_chars);
-    Ok(format!("URL: {url}\nTitle: {title}\n\n{body}{refs_summary}"))
+    Ok(format!(
+        "URL: {url}\nTitle: {title}\n\n{body}{refs_summary}"
+    ))
 }
 
 async fn tool_click(args: &Value, state: &mut BrowserState) -> Result<String, String> {
@@ -992,7 +1017,10 @@ async fn tool_click(args: &Value, state: &mut BrowserState) -> Result<String, St
 
 async fn tool_fill(args: &Value, state: &mut BrowserState) -> Result<String, String> {
     let selector = resolve_target(args, state)?;
-    let value = args.get("value").and_then(Value::as_str).ok_or("Missing value parameter")?;
+    let value = args
+        .get("value")
+        .and_then(Value::as_str)
+        .ok_or("Missing value parameter")?;
 
     let js = format!(
         r#"(function(){{
@@ -1018,7 +1046,10 @@ async fn tool_fill(args: &Value, state: &mut BrowserState) -> Result<String, Str
 
 async fn tool_type(args: &Value, state: &mut BrowserState) -> Result<String, String> {
     let selector = resolve_target(args, state)?;
-    let text = args.get("text").and_then(Value::as_str).ok_or("Missing text parameter")?;
+    let text = args
+        .get("text")
+        .and_then(Value::as_str)
+        .ok_or("Missing text parameter")?;
 
     let js = format!(
         r#"(function(){{
@@ -1042,11 +1073,17 @@ async fn tool_type(args: &Value, state: &mut BrowserState) -> Result<String, Str
 }
 
 async fn tool_press_key(args: &Value, state: &mut BrowserState) -> Result<String, String> {
-    let key = args.get("key").and_then(Value::as_str).ok_or("Missing key parameter")?;
+    let key = args
+        .get("key")
+        .and_then(Value::as_str)
+        .ok_or("Missing key parameter")?;
     let selector = args.get("selector").and_then(Value::as_str);
 
     let target = match selector {
-        Some(sel) => format!("document.querySelector({})", serde_json::to_string(sel).unwrap()),
+        Some(sel) => format!(
+            "document.querySelector({})",
+            serde_json::to_string(sel).unwrap()
+        ),
         None => "document".to_string(),
     };
 
@@ -1068,9 +1105,14 @@ async fn tool_press_key(args: &Value, state: &mut BrowserState) -> Result<String
 }
 
 fn tool_select_option(args: &Value, state: &mut BrowserState) -> Result<String, String> {
-    let selector =
-        args.get("selector").and_then(Value::as_str).ok_or("Missing selector parameter")?;
-    let value = args.get("value").and_then(Value::as_str).ok_or("Missing value parameter")?;
+    let selector = args
+        .get("selector")
+        .and_then(Value::as_str)
+        .ok_or("Missing selector parameter")?;
+    let value = args
+        .get("value")
+        .and_then(Value::as_str)
+        .ok_or("Missing value parameter")?;
 
     let js = format!(
         r#"(function(){{
@@ -1155,9 +1197,14 @@ async fn settle_expression_promise(
                 Some("pending") => last = slot.get("value").cloned(),
                 Some("sync") => return slot.get("value").cloned(),
                 Some("done") => return slot.get("value").cloned(),
-                Some("failed") => return Some(Value::String(
-                    slot.get("error").and_then(Value::as_str).unwrap_or("rejected").to_string(),
-                )),
+                Some("failed") => {
+                    return Some(Value::String(
+                        slot.get("error")
+                            .and_then(Value::as_str)
+                            .unwrap_or("rejected")
+                            .to_string(),
+                    ))
+                }
                 _ => {}
             }
         }
@@ -1177,9 +1224,14 @@ async fn settle_expression_promise(
 }
 
 async fn tool_evaluate(args: &Value, state: &mut BrowserState) -> Result<String, String> {
-    let expression =
-        args.get("expression").and_then(Value::as_str).ok_or("Missing expression parameter")?;
-    let timeout_ms = args.get("timeoutMs").and_then(Value::as_u64).unwrap_or(5_000);
+    let expression = args
+        .get("expression")
+        .and_then(Value::as_str)
+        .ok_or("Missing expression parameter")?;
+    let timeout_ms = args
+        .get("timeoutMs")
+        .and_then(Value::as_u64)
+        .unwrap_or(5_000);
 
     let result = match settle_expression_promise(
         state,
@@ -1207,11 +1259,20 @@ async fn tool_evaluate(args: &Value, state: &mut BrowserState) -> Result<String,
 /// `browser_evaluate` plus a sleep, which costs a round trip per iteration and
 /// is where flaky automation comes from.
 async fn tool_wait_for_function(args: &Value, state: &mut BrowserState) -> Result<String, String> {
-    let expression = args.get("function").or_else(|| args.get("expression"))
+    let expression = args
+        .get("function")
+        .or_else(|| args.get("expression"))
         .and_then(Value::as_str)
         .ok_or("Missing function parameter")?;
-    let timeout_ms = args.get("timeout").and_then(Value::as_u64).unwrap_or(30_000);
-    let poll_ms = args.get("pollIntervalMs").and_then(Value::as_u64).unwrap_or(100).max(10);
+    let timeout_ms = args
+        .get("timeout")
+        .and_then(Value::as_u64)
+        .unwrap_or(30_000);
+    let poll_ms = args
+        .get("pollIntervalMs")
+        .and_then(Value::as_u64)
+        .unwrap_or(100)
+        .max(10);
 
     let deadline = tokio::time::Instant::now() + tokio::time::Duration::from_millis(timeout_ms);
     let mut attempts: u64 = 0;
@@ -1237,8 +1298,10 @@ async fn tool_wait_for_function(args: &Value, state: &mut BrowserState) -> Resul
 }
 
 async fn tool_wait_for(args: &Value, state: &mut BrowserState) -> Result<String, String> {
-    let selector =
-        args.get("selector").and_then(Value::as_str).ok_or("Missing selector parameter")?;
+    let selector = args
+        .get("selector")
+        .and_then(Value::as_str)
+        .ok_or("Missing selector parameter")?;
     let timeout_secs = args.get("timeout").and_then(Value::as_f64).unwrap_or(30.0) as u64;
 
     let deadline = tokio::time::Instant::now() + tokio::time::Duration::from_secs(timeout_secs);
@@ -1265,8 +1328,8 @@ async fn tool_wait_for(args: &Value, state: &mut BrowserState) -> Result<String,
         match tokio::time::timeout(tick, state.advance_active_page_tasks()).await {
             Ok(result) => {
                 result?;
-            },
-            Err(_) => {},
+            }
+            Err(_) => {}
         }
         if tick_ms < 200 {
             tick_ms = (tick_ms * 2).min(200);
@@ -1332,7 +1395,9 @@ fn tool_markdown(args: &Value, state: &mut BrowserState) -> Result<String, Strin
         .unwrap_or(DEFAULT_TEXT_LIMIT);
     let page = state.page_mut();
     // Canonical converter (bun_browser_extract) over the live, script-mutated DOM.
-    let html = page.with_dom(|tree| tree.inner_html(tree.document())).unwrap_or_default();
+    let html = page
+        .with_dom(|tree| tree.inner_html(tree.document()))
+        .unwrap_or_default();
     let url = page.url_string();
     let md = bun_browser_extract::html_to_markdown(&html, Some(url.as_str()));
     Ok(truncate(&md, max_chars))
@@ -1342,7 +1407,10 @@ fn tool_markdown(args: &Value, state: &mut BrowserState) -> Result<String, Strin
 /// the agent can grep / split without round-tripping to a JSON parser.
 fn tool_links(args: &Value, state: &mut BrowserState) -> Result<String, String> {
     let limit = args.get("limit").and_then(Value::as_u64).unwrap_or(100) as usize;
-    let internal_only = args.get("internal_only").and_then(Value::as_bool).unwrap_or(false);
+    let internal_only = args
+        .get("internal_only")
+        .and_then(Value::as_bool)
+        .unwrap_or(false);
     let page = state.page_mut();
     let base_origin = url::Url::parse(&page.url_string())
         .ok()
@@ -1381,7 +1449,11 @@ fn tool_links(args: &Value, state: &mut BrowserState) -> Result<String, String> 
         .take(limit)
         .map(|item| item.to_string())
         .collect();
-    if lines.is_empty() { Ok("No links found.".to_string()) } else { Ok(lines.join("\n")) }
+    if lines.is_empty() {
+        Ok("No links found.".to_string())
+    } else {
+        Ok(lines.join("\n"))
+    }
 }
 
 /// List every interactable element with a stable ref ID, the kind of
@@ -1434,7 +1506,11 @@ fn tool_interactive_elements(args: &Value, state: &mut BrowserState) -> Result<S
             } else {
                 tag.to_string()
             };
-            let detail = if !name.is_empty() { format!(" name={name:?}") } else { String::new() };
+            let detail = if !name.is_empty() {
+                format!(" name={name:?}")
+            } else {
+                String::new()
+            };
             format!("ref={r:<5} {kind:<22} {label:?}{detail}")
         })
         .collect();
@@ -1463,7 +1539,11 @@ fn rebuild_interactive_refs(state: &mut BrowserState) -> Result<(), String> {
     let val = page.evaluate(tag_js);
     let refs: Vec<String> = val
         .as_array()
-        .map(|arr| arr.iter().filter_map(|v| v.as_str().map(String::from)).collect())
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|v| v.as_str().map(String::from))
+                .collect()
+        })
         .unwrap_or_default();
     // Map ref -> nid via a second pass so ref_to_selector can sanity-check.
     for r in refs {
@@ -1491,7 +1571,9 @@ async fn tool_back(state: &mut BrowserState) -> Result<String, String> {
     page.set_history_index(prev_idx);
     let condition = bun_browser_browser::lifecycle::WaitUntil::DomContentLoaded;
     let stash = (page.history.clone(), page.history_index);
-    page.navigate_with_wait(&url, condition).await.map_err(|e| e.to_string())?;
+    page.navigate_with_wait(&url, condition)
+        .await
+        .map_err(|e| e.to_string())?;
     let page = state.page_mut();
     page.history = stash.0;
     page.history_index = stash.1;
@@ -1509,7 +1591,9 @@ async fn tool_forward(state: &mut BrowserState) -> Result<String, String> {
     page.set_history_index(next_idx);
     let condition = bun_browser_browser::lifecycle::WaitUntil::DomContentLoaded;
     let stash = (page.history.clone(), page.history_index);
-    page.navigate_with_wait(&url, condition).await.map_err(|e| e.to_string())?;
+    page.navigate_with_wait(&url, condition)
+        .await
+        .map_err(|e| e.to_string())?;
     let page = state.page_mut();
     page.history = stash.0;
     page.history_index = stash.1;
@@ -1523,7 +1607,11 @@ async fn tool_reload(state: &mut BrowserState) -> Result<String, String> {
         return Err("Nothing to reload.".to_string());
     }
     let condition = bun_browser_browser::lifecycle::WaitUntil::DomContentLoaded;
-    state.page_mut().navigate_with_wait(&url, condition).await.map_err(|e| e.to_string())?;
+    state
+        .page_mut()
+        .navigate_with_wait(&url, condition)
+        .await
+        .map_err(|e| e.to_string())?;
     state.interactive_refs.clear();
     Ok(format!("Reloaded {url}"))
 }
@@ -1546,16 +1634,32 @@ fn tool_get_cookies(args: &Value, state: &BrowserState) -> Result<String, String
             .unwrap_or_default()
         })
         .collect();
-    if lines.is_empty() { Ok("No cookies.".to_string()) } else { Ok(lines.join("\n")) }
+    if lines.is_empty() {
+        Ok("No cookies.".to_string())
+    } else {
+        Ok(lines.join("\n"))
+    }
 }
 
 fn tool_set_cookie(args: &Value, state: &BrowserState) -> Result<String, String> {
-    let name = args.get("name").and_then(Value::as_str).ok_or("Missing name parameter")?;
-    let value = args.get("value").and_then(Value::as_str).ok_or("Missing value parameter")?;
-    let domain = args.get("domain").and_then(Value::as_str).ok_or("Missing domain parameter")?;
+    let name = args
+        .get("name")
+        .and_then(Value::as_str)
+        .ok_or("Missing name parameter")?;
+    let value = args
+        .get("value")
+        .and_then(Value::as_str)
+        .ok_or("Missing value parameter")?;
+    let domain = args
+        .get("domain")
+        .and_then(Value::as_str)
+        .ok_or("Missing domain parameter")?;
     let path = args.get("path").and_then(Value::as_str).unwrap_or("/");
     let secure = args.get("secure").and_then(Value::as_bool).unwrap_or(false);
-    let http_only = args.get("http_only").and_then(Value::as_bool).unwrap_or(false);
+    let http_only = args
+        .get("http_only")
+        .and_then(Value::as_bool)
+        .unwrap_or(false);
     let cookie = bun_browser_net::CookieInfo {
         name: name.to_string(),
         value: value.to_string(),
@@ -1576,7 +1680,10 @@ fn tool_clear_cookies(state: &BrowserState) -> Result<String, String> {
 }
 
 async fn tool_wait_for_text(args: &Value, state: &mut BrowserState) -> Result<String, String> {
-    let needle = args.get("text").and_then(Value::as_str).ok_or("Missing text parameter")?;
+    let needle = args
+        .get("text")
+        .and_then(Value::as_str)
+        .ok_or("Missing text parameter")?;
     let timeout_secs = args.get("timeout").and_then(Value::as_f64).unwrap_or(30.0) as u64;
     let deadline = tokio::time::Instant::now() + tokio::time::Duration::from_secs(timeout_secs);
     let escaped = serde_json::to_string(needle).unwrap_or_else(|_| "\"\"".to_string());
@@ -1601,8 +1708,8 @@ async fn tool_wait_for_text(args: &Value, state: &mut BrowserState) -> Result<St
         match tokio::time::timeout(tick, state.advance_active_page_tasks()).await {
             Ok(result) => {
                 result?;
-            },
-            Err(_) => {},
+            }
+            Err(_) => {}
         }
         if tick_ms < 200 {
             tick_ms = (tick_ms * 2).min(200);
@@ -1680,8 +1787,11 @@ fn tool_detect_forms(state: &mut BrowserState) -> Result<String, String> {
 /// 'select' picks an option by value or visible text. Optional
 /// `submit_ref`/`submit_selector` clicks after filling.
 fn tool_fill_form(args: &Value, state: &mut BrowserState) -> Result<String, String> {
-    let fields =
-        args.get("fields").and_then(Value::as_array).ok_or("Missing fields array")?.clone();
+    let fields = args
+        .get("fields")
+        .and_then(Value::as_array)
+        .ok_or("Missing fields array")?
+        .clone();
     let mut filled = 0u32;
     let mut errors = Vec::new();
     for field in fields {
@@ -1692,7 +1802,7 @@ fn tool_fill_form(args: &Value, state: &mut BrowserState) -> Result<String, Stri
             Err(e) => {
                 errors.push(e);
                 continue;
-            },
+            }
         };
         let js = match kind {
             "check" => format!(
@@ -1788,7 +1898,10 @@ fn tool_fill_form(args: &Value, state: &mut BrowserState) -> Result<String, Stri
     if errors.is_empty() {
         Ok(format!("Filled {filled} fields."))
     } else {
-        Ok(format!("Filled {filled} fields. Errors: {}", errors.join("; ")))
+        Ok(format!(
+            "Filled {filled} fields. Errors: {}",
+            errors.join("; ")
+        ))
     }
 }
 
@@ -1796,7 +1909,10 @@ fn tool_fill_form(args: &Value, state: &mut BrowserState) -> Result<String, Stri
 /// element into view. Used to trigger infinite-scroll loaders or to
 /// reach off-viewport content. Returns the new scroll position.
 fn tool_scroll(args: &Value, state: &mut BrowserState) -> Result<String, String> {
-    let direction = args.get("direction").and_then(Value::as_str).unwrap_or("down");
+    let direction = args
+        .get("direction")
+        .and_then(Value::as_str)
+        .unwrap_or("down");
     let amount = args.get("amount").and_then(Value::as_f64);
 
     // Element scroll-into-view path
@@ -1815,7 +1931,10 @@ fn tool_scroll(args: &Value, state: &mut BrowserState) -> Result<String, String>
         if res.as_str() == Some("error:not found") {
             return Err(format!("Element not found: {selector}"));
         }
-        return Ok(format!("Scrolled element into view. {}", res.as_str().unwrap_or("")));
+        return Ok(format!(
+            "Scrolled element into view. {}",
+            res.as_str().unwrap_or("")
+        ));
     }
 
     // Page-level scroll. Also dispatch a 'scroll' event so infinite-
@@ -1844,13 +1963,18 @@ fn tool_scroll(args: &Value, state: &mut BrowserState) -> Result<String, String>
     let res = state.page_mut().evaluate(&js);
     // A scroll can reveal new DOM (infinite scroll); invalidate refs.
     state.interactive_refs.clear();
-    Ok(format!("Scrolled {direction}. {}", res.as_str().unwrap_or("")))
+    Ok(format!(
+        "Scrolled {direction}. {}",
+        res.as_str().unwrap_or("")
+    ))
 }
 
 fn tool_get_attribute(args: &Value, state: &mut BrowserState) -> Result<String, String> {
     let selector = resolve_target(args, state)?;
-    let attr =
-        args.get("attribute").and_then(Value::as_str).ok_or("Missing attribute parameter")?;
+    let attr = args
+        .get("attribute")
+        .and_then(Value::as_str)
+        .ok_or("Missing attribute parameter")?;
     let js = format!(
         r#"(function(){{
         var el = document.querySelector({sel});
@@ -1870,8 +1994,10 @@ fn tool_get_attribute(args: &Value, state: &mut BrowserState) -> Result<String, 
 }
 
 fn tool_count(args: &Value, state: &mut BrowserState) -> Result<String, String> {
-    let selector =
-        args.get("selector").and_then(Value::as_str).ok_or("Missing selector parameter")?;
+    let selector = args
+        .get("selector")
+        .and_then(Value::as_str)
+        .ok_or("Missing selector parameter")?;
     let js = format!(
         "document.querySelectorAll({sel}).length",
         sel = serde_json::to_string(selector).unwrap()
@@ -1879,7 +2005,10 @@ fn tool_count(args: &Value, state: &mut BrowserState) -> Result<String, String> 
     let res = state.page_mut().evaluate(&js);
     // V8 numbers come back as f64 even when they are integer-valued; as_u64
     // returns None for f64 in serde_json, so coerce via f64.
-    let n = res.as_u64().or_else(|| res.as_f64().map(|f| f as u64)).unwrap_or(0);
+    let n = res
+        .as_u64()
+        .or_else(|| res.as_f64().map(|f| f as u64))
+        .unwrap_or(0);
     Ok(n.to_string())
 }
 
@@ -1888,8 +2017,11 @@ fn tool_count(args: &Value, state: &mut BrowserState) -> Result<String, String> 
 /// of text. Suffix field name with `[]` to return an array (queries all
 /// matching elements rather than the first).
 fn tool_extract(args: &Value, state: &mut BrowserState) -> Result<String, String> {
-    let schema =
-        args.get("schema").and_then(Value::as_object).ok_or("Missing schema object")?.clone();
+    let schema = args
+        .get("schema")
+        .and_then(Value::as_object)
+        .ok_or("Missing schema object")?
+        .clone();
     let schema_json = serde_json::to_string(&schema).unwrap();
     let js = format!(
         r#"(function(){{
@@ -1939,10 +2071,16 @@ async fn tool_tab_new(args: &Value, state: &mut BrowserState) -> Result<String, 
         if let Some(ref ua) = ua {
             page.http_client.set_user_agent(ua).await;
         }
-        page.navigate_with_wait(u, bun_browser_browser::lifecycle::WaitUntil::DomContentLoaded)
-            .await
-            .map_err(|e| e.to_string())?;
-        Ok(format!("Opened {id} and navigated to {}", page.url_string()))
+        page.navigate_with_wait(
+            u,
+            bun_browser_browser::lifecycle::WaitUntil::DomContentLoaded,
+        )
+        .await
+        .map_err(|e| e.to_string())?;
+        Ok(format!(
+            "Opened {id} and navigated to {}",
+            page.url_string()
+        ))
     } else {
         Ok(format!("Opened {id} (about:blank)."))
     }
@@ -1956,7 +2094,11 @@ fn tool_tab_list(state: &BrowserState) -> Result<String, String> {
         .tabs
         .iter()
         .map(|(id, page)| {
-            let active = if Some(id) == state.active_tab.as_ref() { "*" } else { " " };
+            let active = if Some(id) == state.active_tab.as_ref() {
+                "*"
+            } else {
+                " "
+            };
             let url = page.url_string();
             let title = page.title.replace('\n', " ");
             format!("{active} {id}  {url}  \"{title}\"")
@@ -1966,7 +2108,10 @@ fn tool_tab_list(state: &BrowserState) -> Result<String, String> {
 }
 
 fn tool_tab_switch(args: &Value, state: &mut BrowserState) -> Result<String, String> {
-    let tab_id = args.get("tab_id").and_then(Value::as_str).ok_or("Missing tab_id parameter")?;
+    let tab_id = args
+        .get("tab_id")
+        .and_then(Value::as_str)
+        .ok_or("Missing tab_id parameter")?;
     if !state.tabs.contains_key(tab_id) {
         return Err(format!("No such tab: {tab_id}"));
     }
@@ -2041,7 +2186,7 @@ fn extract_text(dom: &bun_browser_dom::DomTree, node_id: bun_browser_dom::NodeId
                 result.push('\n');
                 pending_space = false;
                 continue;
-            },
+            }
             Work::Visit(id) => id,
         };
 
@@ -2058,7 +2203,7 @@ fn extract_text(dom: &bun_browser_dom::DomTree, node_id: bun_browser_dom::NodeId
         match &node.data {
             NodeData::Text { contents } => {
                 append_text_segment(&mut result, &mut pending_space, contents);
-            },
+            }
             NodeData::Element { name, .. } => {
                 let tag = name.local.as_ref();
                 if matches!(tag, "script" | "style" | "noscript") {
@@ -2101,12 +2246,12 @@ fn extract_text(dom: &bun_browser_dom::DomTree, node_id: bun_browser_dom::NodeId
                 for child in dom.children(id).into_iter().rev() {
                     stack.push(Work::Visit(child));
                 }
-            },
+            }
             _ => {
                 for child in dom.children(id).into_iter().rev() {
                     stack.push(Work::Visit(child));
                 }
-            },
+            }
         }
     }
 
@@ -2119,10 +2264,19 @@ fn extract_text(dom: &bun_browser_dom::DomTree, node_id: bun_browser_dom::NodeId
 /// of surrounding context so the agent can locate the section without
 /// pulling the whole page into its window.
 fn tool_search(args: &Value, state: &mut BrowserState) -> Result<String, String> {
-    let query = args.get("query").and_then(Value::as_str).ok_or("Missing query parameter")?;
-    let case_sensitive = args.get("case_sensitive").and_then(Value::as_bool).unwrap_or(false);
+    let query = args
+        .get("query")
+        .and_then(Value::as_str)
+        .ok_or("Missing query parameter")?;
+    let case_sensitive = args
+        .get("case_sensitive")
+        .and_then(Value::as_bool)
+        .unwrap_or(false);
     let limit = args.get("limit").and_then(Value::as_u64).unwrap_or(10) as usize;
-    let context = args.get("context_chars").and_then(Value::as_u64).unwrap_or(80) as usize;
+    let context = args
+        .get("context_chars")
+        .and_then(Value::as_u64)
+        .unwrap_or(80) as usize;
 
     let page = state.page_mut();
     let body = page
@@ -2142,7 +2296,10 @@ fn tool_search(args: &Value, state: &mut BrowserState) -> Result<String, String>
         Ok(format!(
             "{} match(es). {}",
             out.len(),
-            out.iter().map(|v| v.to_string()).collect::<Vec<_>>().join("\n")
+            out.iter()
+                .map(|v| v.to_string())
+                .collect::<Vec<_>>()
+                .join("\n")
         ))
     }
 }
@@ -2179,7 +2336,11 @@ fn search_body(
         map.push(body.len());
         (hs, Some(map))
     };
-    let needle = if case_sensitive { query.to_string() } else { query.to_lowercase() };
+    let needle = if case_sensitive {
+        query.to_string()
+    } else {
+        query.to_lowercase()
+    };
     let to_body = |hs_off: usize| -> usize {
         match &offset_map {
             Some(map) => map.get(hs_off).copied().unwrap_or(body.len()),
@@ -2257,7 +2418,11 @@ fn tool_storage_state(state: &mut BrowserState) -> Result<String, String> {
     } else {
         Value::Null
     };
-    let origins = if storage.is_object() { vec![storage] } else { vec![] };
+    let origins = if storage.is_object() {
+        vec![storage]
+    } else {
+        vec![]
+    };
     let out = json!({ "cookies": cookies, "origins": origins });
     serde_json::to_string_pretty(&out).map_err(|e| e.to_string())
 }
@@ -2274,10 +2439,18 @@ fn tool_set_storage_state(args: &Value, state: &mut BrowserState) -> Result<Stri
                     name: c.get("name")?.as_str()?.to_string(),
                     value: c.get("value")?.as_str()?.to_string(),
                     domain: c.get("domain")?.as_str()?.to_string(),
-                    path: c.get("path").and_then(Value::as_str).unwrap_or("/").to_string(),
+                    path: c
+                        .get("path")
+                        .and_then(Value::as_str)
+                        .unwrap_or("/")
+                        .to_string(),
                     secure: c.get("secure").and_then(Value::as_bool).unwrap_or(false),
                     http_only: c.get("http_only").and_then(Value::as_bool).unwrap_or(false),
-                    same_site: c.get("same_site").and_then(Value::as_str).unwrap_or("").to_string(),
+                    same_site: c
+                        .get("same_site")
+                        .and_then(Value::as_str)
+                        .unwrap_or("")
+                        .to_string(),
                     expires: c.get("expires").and_then(Value::as_i64),
                 })
             })
@@ -2349,8 +2522,14 @@ mod tests {
             wrapped.contains("globalThis.__bun_browser_mcp_expression || (globalThis.__bun_browser_mcp_expression = {})"),
             "the slot must be created on demand: {wrapped}"
         );
-        assert!(wrapped.contains("slot.state = 'sync'"), "sync results must be recorded: {wrapped}");
-        assert!(wrapped.contains("typeof value.then === 'function'"), "thenables must be awaited: {wrapped}");
+        assert!(
+            wrapped.contains("slot.state = 'sync'"),
+            "sync results must be recorded: {wrapped}"
+        );
+        assert!(
+            wrapped.contains("typeof value.then === 'function'"),
+            "thenables must be awaited: {wrapped}"
+        );
     }
 
     // #1015: case-folding can change byte length (Turkish "İ" -> "i̇"), so a
@@ -2368,7 +2547,11 @@ mod tests {
             "offset must be the byte position of the match in the original body"
         );
         assert!(
-            results[0]["snippet"].as_str().unwrap().to_lowercase().contains("hava"),
+            results[0]["snippet"]
+                .as_str()
+                .unwrap()
+                .to_lowercase()
+                .contains("hava"),
             "snippet must contain the match, got {}",
             results[0]["snippet"]
         );
@@ -2391,10 +2574,15 @@ mod tests {
             .iter()
             .find(|tool| tool["name"] == "browser_snapshot")
             .expect("browser_snapshot tool");
-        assert_eq!(snapshot["inputSchema"]["properties"]["max_chars"]["type"], "number");
+        assert_eq!(
+            snapshot["inputSchema"]["properties"]["max_chars"]["type"],
+            "number"
+        );
         for tool in tools {
             assert!(
-                tool["inputSchema"]["properties"].get("properties").is_none(),
+                tool["inputSchema"]["properties"]
+                    .get("properties")
+                    .is_none(),
                 "{} has a nested duplicate properties object",
                 tool["name"]
             );
@@ -2405,11 +2593,9 @@ mod tests {
     #[test]
     fn render_tools_are_not_advertised_without_render_feature() {
         let tools = listed_tools();
-        assert!(
-            tools.iter().all(|tool| {
-                tool["name"] != "browser_screenshot" && tool["name"] != "browser_pdf"
-            })
-        );
+        assert!(tools
+            .iter()
+            .all(|tool| { tool["name"] != "browser_screenshot" && tool["name"] != "browser_pdf" }));
     }
 
     #[tokio::test]
@@ -2425,10 +2611,12 @@ mod tests {
         assert!(local_error.contains("is not allowed"));
         assert!(local_error.contains("--allow-private-network"));
         assert!(local_error.contains("OBSCURA_ALLOW_PRIVATE_NETWORK=1"));
-        let metadata_error =
-            tool_navigate(&json!({"url":"http://169.254.169.254/latest/meta-data/"}), &mut state)
-                .await
-                .unwrap_err();
+        let metadata_error = tool_navigate(
+            &json!({"url":"http://169.254.169.254/latest/meta-data/"}),
+            &mut state,
+        )
+        .await
+        .unwrap_err();
         assert!(metadata_error.contains("is not allowed"));
         assert!(!metadata_error.contains("--allow-private-network"));
     }
@@ -2458,10 +2646,14 @@ mod tests {
     // context by planting a file:// link for the agent to click.
     #[tokio::test(flavor = "current_thread")]
     async fn mcp_click_cannot_follow_a_link_into_file_scheme() {
-        let path =
-            std::env::temp_dir().join(format!("bun_browser_mcp-file-link-{}.html", std::process::id()));
+        let path = std::env::temp_dir().join(format!(
+            "bun_browser_mcp-file-link-{}.html",
+            std::process::id()
+        ));
         std::fs::write(&path, "<p>local-secret</p>").expect("write fixture");
-        let file_url = url::Url::from_file_path(&path).expect("file url").to_string();
+        let file_url = url::Url::from_file_path(&path)
+            .expect("file url")
+            .to_string();
 
         let mut state = BrowserState::new(None, None, false);
         state
@@ -2507,7 +2699,9 @@ mod tests {
             assert_eq!(tool["inputSchema"]["type"], "object");
             assert_eq!(tool["inputSchema"]["additionalProperties"], false);
             assert!(tool["inputSchema"]["properties"].is_object());
-            assert!(tool["inputSchema"]["properties"].get("properties").is_none());
+            assert!(tool["inputSchema"]["properties"]
+                .get("properties")
+                .is_none());
         }
     }
 
@@ -2536,8 +2730,9 @@ mod tests {
         let image = &screenshot["content"][0];
         assert_eq!(image["type"], "image");
         assert_eq!(image["mimeType"], "image/png");
-        let png =
-            BASE64.decode(image["data"].as_str().expect("PNG base64")).expect("valid PNG base64");
+        let png = BASE64
+            .decode(image["data"].as_str().expect("PNG base64"))
+            .expect("valid PNG base64");
         assert!(png.starts_with(b"\x89PNG\r\n\x1a\n"));
 
         let pdf = handle_tool_call(
@@ -2585,7 +2780,11 @@ mod tests {
                             mcp-console-click');setTimeout(()=>{console.error('mcp-console-async'\
                             );document.body.id='done'},25)}</script>";
         let mut state = BrowserState::new(None, None, false);
-        state.page_mut().navigate(PAGE).await.expect("console test page should navigate");
+        state
+            .page_mut()
+            .navigate(PAGE)
+            .await
+            .expect("console test page should navigate");
 
         let inline = tool_console_messages(&mut state).expect("console tool should succeed");
         assert!(
@@ -2658,13 +2857,15 @@ mod tests {
         std::env::set_var("OBSCURA_ALLOW_PRIVATE_NETWORK", "1");
         let (base, requests) = spawn_form_recording_server();
         let mut state = BrowserState::new(None, None, false);
-        state.page_mut().navigate(&base).await.expect("form page should navigate");
-        assert!(
-            requests
-                .recv_timeout(std::time::Duration::from_secs(2))
-                .expect("the form page itself must be fetched")
-                .starts_with("GET /"),
-        );
+        state
+            .page_mut()
+            .navigate(&base)
+            .await
+            .expect("form page should navigate");
+        assert!(requests
+            .recv_timeout(std::time::Duration::from_secs(2))
+            .expect("the form page itself must be fetched")
+            .starts_with("GET /"),);
 
         tool_fill(&json!({ "selector": "#q", "value": "hello" }), &mut state)
             .await
@@ -2691,7 +2892,11 @@ mod tests {
         std::env::set_var("OBSCURA_ALLOW_PRIVATE_NETWORK", "1");
         let (base, requests) = spawn_form_recording_server();
         let mut state = BrowserState::new(None, None, false);
-        state.page_mut().navigate(&base).await.expect("test page should navigate");
+        state
+            .page_mut()
+            .navigate(&base)
+            .await
+            .expect("test page should navigate");
         requests
             .recv_timeout(std::time::Duration::from_secs(2))
             .expect("the test page itself must be fetched");
@@ -2701,9 +2906,12 @@ mod tests {
         state.page_mut().evaluate(&format!(
             "fetch({fetch_url}).then(() => document.body.id = 'fetch-complete')"
         ));
-        tool_wait_for(&json!({ "selector": "#fetch-complete", "timeout": 2 }), &mut state)
-            .await
-            .expect("script fetch should complete");
+        tool_wait_for(
+            &json!({ "selector": "#fetch-complete", "timeout": 2 }),
+            &mut state,
+        )
+        .await
+        .expect("script fetch should complete");
         let request = requests
             .recv_timeout(std::time::Duration::from_secs(2))
             .expect("the script fetch must reach the server");
@@ -2756,12 +2964,18 @@ mod tests {
             })()"#,
         );
 
-        tool_fill(&json!({ "selector": "#field", "value": "filled" }), &mut state)
-            .await
-            .expect("browser_fill should succeed");
-        tool_type(&json!({ "selector": "#field", "text": "-typed" }), &mut state)
-            .await
-            .expect("browser_type should succeed");
+        tool_fill(
+            &json!({ "selector": "#field", "value": "filled" }),
+            &mut state,
+        )
+        .await
+        .expect("browser_fill should succeed");
+        tool_type(
+            &json!({ "selector": "#field", "text": "-typed" }),
+            &mut state,
+        )
+        .await
+        .expect("browser_type should succeed");
         tool_fill_form(
             &json!({
                 "fields": [{ "selector": "#field", "value": "form-filled" }]

@@ -42,8 +42,11 @@ fn parse_import_tag(comment_text: &str) -> Option<ImportInfo> {
         let default_part = specifier[..brace_start].trim().trim_end_matches(',').trim();
         let named_part = &specifier[brace_start + 1..brace_end];
 
-        let default_import =
-            if default_part.is_empty() { None } else { Some(default_part.to_string()) };
+        let default_import = if default_part.is_empty() {
+            None
+        } else {
+            Some(default_part.to_string())
+        };
 
         let named_imports: Vec<String> = named_part
             .split(',')
@@ -61,7 +64,11 @@ fn parse_import_tag(comment_text: &str) -> Option<ImportInfo> {
         (Some(name), Vec::new())
     };
 
-    Some(ImportInfo { default_import, named_imports, module_path: module_path.to_string() })
+    Some(ImportInfo {
+        default_import,
+        named_imports,
+        module_path: module_path.to_string(),
+    })
 }
 
 /// Case-insensitive ASCII string comparison (no allocation).
@@ -96,7 +103,10 @@ fn merge_and_sort_imports(imports: Vec<ImportInfo>) -> Vec<ImportInfo> {
     let mut groups: Vec<ImportInfo> = Vec::new();
 
     for import in imports {
-        if let Some(existing) = groups.iter_mut().find(|g| g.module_path == import.module_path) {
+        if let Some(existing) = groups
+            .iter_mut()
+            .find(|g| g.module_path == import.module_path)
+        {
             // Merge: take last default import, combine named imports
             if import.default_import.is_some() {
                 existing.default_import = import.default_import;
@@ -104,8 +114,10 @@ fn merge_and_sort_imports(imports: Vec<ImportInfo>) -> Vec<ImportInfo> {
             for named in import.named_imports {
                 // Deduplicate by original import name
                 let key = import_specifier_sort_key(&named);
-                let already_exists =
-                    existing.named_imports.iter().any(|n| import_specifier_sort_key(n) == key);
+                let already_exists = existing
+                    .named_imports
+                    .iter()
+                    .any(|n| import_specifier_sort_key(n) == key);
                 if !already_exists {
                     existing.named_imports.push(named);
                 }

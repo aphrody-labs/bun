@@ -49,10 +49,17 @@ pub(crate) fn rewrite(args: &mut Vec<Vec<u8>>) -> bool {
 pub(crate) const POWERSHELL_HOSTS: [&[u8]; 2] = [b"pwsh", b"powershell"];
 
 /// Arguments put between the PowerShell host and the script path.
-pub(crate) const POWERSHELL_ARGS: [&[u8]; 5] = [b"-NoLogo", b"-NoProfile", b"-ExecutionPolicy", b"Bypass", b"-File"];
+pub(crate) const POWERSHELL_ARGS: [&[u8]; 5] = [
+    b"-NoLogo",
+    b"-NoProfile",
+    b"-ExecutionPolicy",
+    b"Bypass",
+    b"-File",
+];
 
 pub(crate) fn is_powershell_script(path: &[u8]) -> bool {
-    path.len() > 4 && strings::eql_case_insensitive_asciii_check_length(&path[path.len() - 4..], b".ps1")
+    path.len() > 4
+        && strings::eql_case_insensitive_asciii_check_length(&path[path.len() - 4..], b".ps1")
 }
 
 fn word(arg: &[u8]) -> &[u8] {
@@ -93,8 +100,14 @@ mod tests {
 
     #[test]
     fn rewrites() {
-        assert_eq!(run(&["DIR", "/s", "/a:h", "/b", "src"]).unwrap(), ["ls", "-R", "-a", "src"]);
-        assert_eq!(run(&["copy", "/y", "a", "/tmp/b"]).unwrap(), ["cp", "a", "/tmp/b"]);
+        assert_eq!(
+            run(&["DIR", "/s", "/a:h", "/b", "src"]).unwrap(),
+            ["ls", "-R", "-a", "src"]
+        );
+        assert_eq!(
+            run(&["copy", "/y", "a", "/tmp/b"]).unwrap(),
+            ["cp", "a", "/tmp/b"]
+        );
         assert_eq!(run(&["del", "/q", "/f", "x"]).unwrap(), ["rm", "-f", "x"]);
         assert_eq!(run(&["set", "A=1"]).unwrap(), ["export", "A=1"]);
         assert_eq!(run(&["where", "bun"]).unwrap(), ["which", "bun"]);

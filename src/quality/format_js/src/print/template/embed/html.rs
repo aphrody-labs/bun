@@ -148,7 +148,10 @@ pub(super) fn format_html_doc<'a>(
     for expr in expressions {
         let te = TemplateExpression::Expression(expr);
         let element = f
-            .intern(&FormatTemplateExpression::new(&te, FormatTemplateExpressionOptions::default()))
+            .intern(&FormatTemplateExpression::new(
+                &te,
+                FormatTemplateExpressionOptions::default(),
+            ))
             .expect("a template expression always emits non-empty IR");
         formatted_expressions.push(element);
     }
@@ -183,7 +186,10 @@ pub(super) fn format_html_doc<'a>(
         }
         // No placeholder to substitute; push the escaped text if escaping changed it
         let Some(text) = escaped else { return false };
-        out.push(FormatElement::Text { text, width: TextWidth::from_text(text, indent_width) });
+        out.push(FormatElement::Text {
+            text,
+            width: TextWidth::from_text(text, indent_width),
+        });
         true
     });
     let format_content = format_once(move |f: &mut JsFormatter<'_, 'a>| f.write_elements(ir));
@@ -249,9 +255,27 @@ fn write_html_template<'a>(
         let leading = if has_leading_ws { " " } else { "" };
         let trailing = if has_trailing_ws { " " } else { "" };
         if has_multiple_root_elements {
-            write!(f, [group(&format_args!("`", leading, indent(&group(content)), trailing, "`"))]);
+            write!(
+                f,
+                [group(&format_args!(
+                    "`",
+                    leading,
+                    indent(&group(content)),
+                    trailing,
+                    "`"
+                ))]
+            );
         } else {
-            write!(f, [group(&format_args!("`", leading, group(content), trailing, "`"))]);
+            write!(
+                f,
+                [group(&format_args!(
+                    "`",
+                    leading,
+                    group(content),
+                    trailing,
+                    "`"
+                ))]
+            );
         }
     }
 }
@@ -280,7 +304,9 @@ fn placeholders_are_sequential(ir: &[FormatElement<'_>], next: &mut usize) -> bo
             FormatElement::BestFitting(best_fitting) => {
                 let start = *next;
                 let mut variants = best_fitting.variants().iter();
-                let Some(first) = variants.next() else { return false };
+                let Some(first) = variants.next() else {
+                    return false;
+                };
                 if !placeholders_are_sequential(first, next) {
                     return false;
                 }
@@ -312,7 +338,10 @@ mod tests {
     use super::placeholders_are_sequential;
 
     fn text(text: &'static str) -> FormatElement<'static> {
-        FormatElement::Text { text, width: TextWidth::from_text(text, IndentWidth::default()) }
+        FormatElement::Text {
+            text,
+            width: TextWidth::from_text(text, IndentWidth::default()),
+        }
     }
 
     fn best_fitting<'a>(

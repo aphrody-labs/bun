@@ -15,27 +15,67 @@ impl Engine<'_> {
         let ir = match leaf {
             Leaf::Paragraph { segments, .. } => {
                 let rest = self.finish_paragraph(segments);
-                let (Some(first), Some(last)) = (rest.first(), rest.last()) else { return };
+                let (Some(first), Some(last)) = (rest.first(), rest.last()) else {
+                    return;
+                };
                 Ir::Paragraph {
                     span: Span::new(first.seg.span.start, last.seg.span.end),
                     segments: rest,
                 }
             }
-            Leaf::IndentedCode { lines, start, end, .. } => {
-                Ir::Code { fenced: None, lines, span: Span::new(start, end) }
-            }
-            Leaf::FencedCode { fence: b'$', info, lines, start, end, .. } => {
-                Ir::MathBlock { meta: info, lines, span: Span::new(start, end) }
-            }
-            Leaf::FencedCode { fence, info, lines, start, end, .. } => {
-                Ir::Code { fenced: Some((fence, info)), lines, span: Span::new(start, end) }
-            }
-            Leaf::Html { kind, lines, trailing_newline, start, end } => {
-                Ir::Html { kind, lines, trailing_newline, span: Span::new(start, end) }
-            }
-            Leaf::Table { align, rows, start, end } => {
-                Ir::Table { align, rows, span: Span::new(start, end) }
-            }
+            Leaf::IndentedCode {
+                lines, start, end, ..
+            } => Ir::Code {
+                fenced: None,
+                lines,
+                span: Span::new(start, end),
+            },
+            Leaf::FencedCode {
+                fence: b'$',
+                info,
+                lines,
+                start,
+                end,
+                ..
+            } => Ir::MathBlock {
+                meta: info,
+                lines,
+                span: Span::new(start, end),
+            },
+            Leaf::FencedCode {
+                fence,
+                info,
+                lines,
+                start,
+                end,
+                ..
+            } => Ir::Code {
+                fenced: Some((fence, info)),
+                lines,
+                span: Span::new(start, end),
+            },
+            Leaf::Html {
+                kind,
+                lines,
+                trailing_newline,
+                start,
+                end,
+            } => Ir::Html {
+                kind,
+                lines,
+                trailing_newline,
+                span: Span::new(start, end),
+            },
+            Leaf::Table {
+                align,
+                rows,
+                start,
+                end,
+            } => Ir::Table {
+                align,
+                rows,
+                span: Span::new(start, end),
+            },
         };
         self.attach(ir);
     }
@@ -46,7 +86,8 @@ impl Engine<'_> {
         for def in defs {
             if let Ir::Definition { label, .. } = &def {
                 let text = Segment::join(self.source, label);
-                self.refs.push(crate::syntax::label::normalize(&text).into_owned());
+                self.refs
+                    .push(crate::syntax::label::normalize(&text).into_owned());
             }
             self.attach(def);
         }
@@ -89,22 +130,51 @@ impl Engine<'_> {
     pub(super) fn close_container(&mut self) {
         debug_assert!(self.leaf.is_none());
         match self.stack.pop().expect("close_container on empty stack") {
-            OpenContainer::Quote { children, start, end } => {
-                self.attach(Ir::Quote { children, span: Span::new(start, end) });
+            OpenContainer::Quote {
+                children,
+                start,
+                end,
+            } => {
+                self.attach(Ir::Quote {
+                    children,
+                    span: Span::new(start, end),
+                });
             }
-            OpenContainer::List { items, ordered, marker, start } => {
+            OpenContainer::List {
+                items,
+                ordered,
+                marker,
+                start,
+            } => {
                 // Items arrive in source order; the last one ends the list
                 let end = items.last().map_or(start, |item| item.span.end);
-                self.attach(Ir::List { ordered, marker, items, span: Span::new(start, end) });
+                self.attach(Ir::List {
+                    ordered,
+                    marker,
+                    items,
+                    span: Span::new(start, end),
+                });
             }
-            OpenContainer::Footnote { children, label, start, end, .. } => {
+            OpenContainer::Footnote {
+                children,
+                label,
+                start,
+                end,
+                ..
+            } => {
                 self.attach(Ir::FootnoteDefinition {
                     label,
                     children,
                     span: Span::new(start, end),
                 });
             }
-            OpenContainer::Directive { children, opening, closing, end, .. } => {
+            OpenContainer::Directive {
+                children,
+                opening,
+                closing,
+                end,
+                ..
+            } => {
                 self.attach(Ir::ContainerDirective {
                     opening,
                     closing,
@@ -112,11 +182,23 @@ impl Engine<'_> {
                     span: Span::new(opening.start, end),
                 });
             }
-            OpenContainer::Item { children, marker, padding, start, end, .. } => {
+            OpenContainer::Item {
+                children,
+                marker,
+                padding,
+                start,
+                end,
+                ..
+            } => {
                 let Some(OpenContainer::List { items, .. }) = self.stack.last_mut() else {
                     unreachable!("list items always sit in a list");
                 };
-                items.push(IrItem { marker, padding, children, span: Span::new(start, end) });
+                items.push(IrItem {
+                    marker,
+                    padding,
+                    children,
+                    span: Span::new(start, end),
+                });
             }
         }
     }
@@ -126,10 +208,18 @@ impl Engine<'_> {
         let end = ir.span().end;
         let children = match self.stack.last_mut() {
             Some(
-                OpenContainer::Quote { children, end: e, .. }
-                | OpenContainer::Item { children, end: e, .. }
-                | OpenContainer::Footnote { children, end: e, .. }
-                | OpenContainer::Directive { children, end: e, .. },
+                OpenContainer::Quote {
+                    children, end: e, ..
+                }
+                | OpenContainer::Item {
+                    children, end: e, ..
+                }
+                | OpenContainer::Footnote {
+                    children, end: e, ..
+                }
+                | OpenContainer::Directive {
+                    children, end: e, ..
+                },
             ) => {
                 *e = (*e).max(end);
                 children
@@ -142,7 +232,11 @@ impl Engine<'_> {
             None => &mut self.root,
         };
         // Siblings are attached in source order
-        debug_assert!(children.last().is_none_or(|prev| prev.span().end <= ir.span().start));
+        debug_assert!(
+            children
+                .last()
+                .is_none_or(|prev| prev.span().end <= ir.span().start)
+        );
         children.push(ir);
     }
 }

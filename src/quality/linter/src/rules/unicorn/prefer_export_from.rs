@@ -27,8 +27,10 @@ use crate::{
 };
 
 fn prefer_export_from_diagnostic(import_span: Span, export_span: Span) -> OxcDiagnostic {
-    OxcDiagnostic::warn("Prefer re-exporting directly from the source module.")
-        .with_labels([import_span.label("Imported here."), export_span.label("Re-exported here.")])
+    OxcDiagnostic::warn("Prefer re-exporting directly from the source module.").with_labels([
+        import_span.label("Imported here."),
+        export_span.label("Re-exported here."),
+    ])
 }
 
 #[derive(Debug, Clone, JsonSchema, Deserialize)]
@@ -41,7 +43,9 @@ pub struct PreferExportFrom {
 
 impl Default for PreferExportFrom {
     fn default() -> Self {
-        Self { check_used_variables: true }
+        Self {
+            check_used_variables: true,
+        }
     }
 }
 
@@ -277,17 +281,19 @@ impl PreferExportFrom {
         ctx: &LintContext<'_>,
         symbol_to_specifier: &FxIndexMap<SymbolId, SpecifierSpec<'_>>,
     ) -> bool {
-        symbol_to_specifier.iter().any(|(symbol_id, specifier_spec)| {
-            ctx.symbol_references(*symbol_id).any(|reference| {
-                let ref_node = ctx.nodes().get_node(reference.node_id());
-                let parent_node = ctx.nodes().parent_node(ref_node.id());
-                Self::is_ignored_usage_when_not_checking_used_variables(
-                    ctx,
-                    parent_node,
-                    specifier_spec,
-                )
+        symbol_to_specifier
+            .iter()
+            .any(|(symbol_id, specifier_spec)| {
+                ctx.symbol_references(*symbol_id).any(|reference| {
+                    let ref_node = ctx.nodes().get_node(reference.node_id());
+                    let parent_node = ctx.nodes().parent_node(ref_node.id());
+                    Self::is_ignored_usage_when_not_checking_used_variables(
+                        ctx,
+                        parent_node,
+                        specifier_spec,
+                    )
+                })
             })
-        })
     }
 
     fn is_ignored_usage_when_not_checking_used_variables(
@@ -638,8 +644,9 @@ impl PreferExportFrom {
             _ => &[],
         };
 
-        let import_index =
-            statements.iter().position(|statement| statement.span() == target_node.span());
+        let import_index = statements
+            .iter()
+            .position(|statement| statement.span() == target_node.span());
 
         let delete_import_start = target_node.span().end;
         let delete_import_end = if let Some(index) = import_index {
@@ -673,8 +680,10 @@ impl PreferExportFrom {
             return;
         }
 
-        let mut parent_nodes: Vec<&AstNode> =
-            violations.iter().map(|v| ctx.nodes().get_node(v.export_node_id)).collect();
+        let mut parent_nodes: Vec<&AstNode> = violations
+            .iter()
+            .map(|v| ctx.nodes().get_node(v.export_node_id))
+            .collect();
         parent_nodes.sort_unstable_by_key(|node| node.span().start);
 
         let replace_export_spans: Vec<Span> = parent_nodes
@@ -686,12 +695,15 @@ impl PreferExportFrom {
         let start = parent_nodes.first().unwrap().span().start;
         let delete_span = Span::new(start, end);
 
-        let re_export_source_text =
-            re_export_decl.map(|decl| ctx.source_range(decl.span())).unwrap_or_default();
+        let re_export_source_text = re_export_decl
+            .map(|decl| ctx.source_range(decl.span()))
+            .unwrap_or_default();
 
         let joined_names = format_export_names(violations);
-        let exported_specifiers: FxHashSet<SymbolId> =
-            violations.iter().map(|violation| violation.symbol_id).collect();
+        let exported_specifiers: FxHashSet<SymbolId> = violations
+            .iter()
+            .map(|violation| violation.symbol_id)
+            .collect();
 
         for violation in violations {
             let specifier_node = ctx.nodes().get_node(violation.import_specifier_id);
@@ -714,11 +726,19 @@ impl PreferExportFrom {
                             symbol_to_specifier,
                             import_decl,
                             re_export_decl,
-                            if is_namespace { "" } else { re_export_source_text },
+                            if is_namespace {
+                                ""
+                            } else {
+                                re_export_source_text
+                            },
                             replace_span,
                             &replace_export_spans,
                             delete_span,
-                            if is_namespace { &violation.export_name } else { &joined_names },
+                            if is_namespace {
+                                &violation.export_name
+                            } else {
+                                &joined_names
+                            },
                             &export_format,
                             is_namespace,
                         )
@@ -776,8 +796,11 @@ impl PreferExportFrom {
         is_typescript_type: bool,
         with_clause: Option<&str>,
     ) -> String {
-        let formatted_name =
-            if is_typescript_type { format!("type {name}") } else { name.to_string() };
+        let formatted_name = if is_typescript_type {
+            format!("type {name}")
+        } else {
+            name.to_string()
+        };
 
         let mut result = format!("export {formatted_name} from '{source}'");
 
@@ -1022,7 +1045,11 @@ impl PreferExportFrom {
         if result_parts.is_empty() {
             String::new()
         } else {
-            let import_kind = if import_decl.import_kind.is_type() { " type" } else { "" };
+            let import_kind = if import_decl.import_kind.is_type() {
+                " type"
+            } else {
+                ""
+            };
             let with_clause = import_decl
                 .with_clause
                 .as_ref()
@@ -1030,7 +1057,10 @@ impl PreferExportFrom {
                 .unwrap_or_default();
             let source = ctx.source_range(import_decl.source.span);
 
-            format!("import{import_kind} {} from {source}{with_clause};\n", result_parts.join(", "))
+            format!(
+                "import{import_kind} {} from {source}{with_clause};\n",
+                result_parts.join(", ")
+            )
         }
     }
 
@@ -1119,7 +1149,9 @@ fn has_matching_type_alias<'a>(
     if !import_decl.import_kind.is_value() {
         return false;
     }
-    let Some(specifiers) = &import_decl.specifiers else { return false };
+    let Some(specifiers) = &import_decl.specifiers else {
+        return false;
+    };
 
     let scoping = ctx.scoping();
     let root_scope_id = scoping.root_scope_id();
@@ -1192,7 +1224,10 @@ fn is_matching_export_kind(
     }
 
     import_decl.import_kind.is_type()
-        && export_decl.specifiers.iter().all(|s| s.export_kind.is_type())
+        && export_decl
+            .specifiers
+            .iter()
+            .all(|s| s.export_kind.is_type())
 }
 
 fn has_matching_with_clause(

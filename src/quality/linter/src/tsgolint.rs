@@ -187,8 +187,9 @@ impl TsGoLintState {
 
             // Process stdout stream in a separate thread to send diagnostics as they arrive
             let stdout_handler = std::thread::spawn(move || -> Result<TsGoLintOutput, String> {
-                let disable_directives_map =
-                    disable_directives_map.lock().expect("disable_directives_map mutex poisoned");
+                let disable_directives_map = disable_directives_map
+                    .lock()
+                    .expect("disable_directives_map mutex poisoned");
 
                 let mut diagnostic_handler =
                     DiagnosticHandler::new(self.cwd.clone(), self.silent, should_fix, error_sender);
@@ -289,7 +290,10 @@ impl TsGoLintState {
 
         match handler.join() {
             Ok(Ok(output)) => {
-                let TsGoLintOutput { messages_requiring_fixes, timings } = output;
+                let TsGoLintOutput {
+                    messages_requiring_fixes,
+                    timings,
+                } = output;
                 if let Some(rule_timing_store) = rule_timing_store {
                     rule_timing_store.merge(timings.into_iter().map(|timing| RuleTimingRecord {
                         source: RuleTimingSource::TypeAware,
@@ -301,9 +305,13 @@ impl TsGoLintState {
                 }
 
                 for (path, source_text, messages) in messages_requiring_fixes {
-                    let source_type = SourceType::from_path(&path)
-                        .ok()
-                        .map(|st| if st.is_javascript() { st.with_jsx(true) } else { st });
+                    let source_type = SourceType::from_path(&path).ok().map(|st| {
+                        if st.is_javascript() {
+                            st.with_jsx(true)
+                        } else {
+                            st
+                        }
+                    });
                     let fix_result = Fixer::new(&source_text, messages, source_type).fix();
 
                     if fix_result.fixed
@@ -323,8 +331,11 @@ impl TsGoLintState {
                     if fix_result.messages.is_empty() {
                         diff_manager.collect_empty_file(path.as_path(), &cwd);
                     } else {
-                        let source_for_diagnostics: &str =
-                            if fix_result.fixed { &fix_result.fixed_code } else { &source_text };
+                        let source_for_diagnostics: &str = if fix_result.fixed {
+                            &fix_result.fixed_code
+                        } else {
+                            &source_text
+                        };
 
                         let filtered_messages: Vec<OxcDiagnostic> = if diff_manager.skip() {
                             fix_result.messages.into_iter().map(Into::into).collect()
@@ -346,7 +357,9 @@ impl TsGoLintState {
                             source_for_diagnostics,
                             filtered_messages,
                         );
-                        sender_for_fixes.send(diagnostics).expect("Failed to send diagnostics");
+                        sender_for_fixes
+                            .send(diagnostics)
+                            .expect("Failed to send diagnostics");
                     }
                 }
                 Ok(())
@@ -449,8 +462,10 @@ impl TsGoLintState {
             self.json_input(paths, Some(source_overrides.clone()), &mut resolved_configs);
 
         //  Get the file name of the first path for internal diagnostic filtering
-        let path_file_name =
-            Path::new(paths[0].as_ref()).file_name().unwrap_or_default().to_os_string();
+        let path_file_name = Path::new(paths[0].as_ref())
+            .file_name()
+            .unwrap_or_default()
+            .to_os_string();
 
         let mut child = self.spawn_tsgolint(&json_input)?;
         let stdout = child.stdout.take().expect("Failed to open tsgolint stdout");
@@ -584,7 +599,10 @@ impl TsGoLintState {
                 configs: if file_paths.is_empty() {
                     vec![]
                 } else {
-                    vec![Config { file_paths, rules: vec![] }]
+                    vec![Config {
+                        file_paths,
+                        rules: vec![],
+                    }]
                 },
                 source_overrides,
                 report_syntactic: self.type_check,
@@ -612,7 +630,10 @@ impl TsGoLintState {
                                 Some(Ok(config)) => Some(config),
                                 Some(Err(_)) | None => None,
                             };
-                            Some(Rule { name: rule_name, options })
+                            Some(Rule {
+                                name: rule_name,
+                                options,
+                            })
                         } else {
                             None
                         }
@@ -694,7 +715,10 @@ impl Ord for Rule {
                 // If names are equal, compare by serialized options
                 // Serialize to canonical JSON string for comparison
                 let self_options = self.options.as_ref().map(|v| serde_json::to_string(v).ok());
-                let other_options = other.options.as_ref().map(|v| serde_json::to_string(v).ok());
+                let other_options = other
+                    .options
+                    .as_ref()
+                    .map(|v| serde_json::to_string(v).ok());
                 self_options.cmp(&other_options)
             }
             other_ordering => other_ordering,
@@ -728,7 +752,9 @@ impl<'de> Deserialize<'de> for DiagnosticKind {
         match value {
             0 => Ok(DiagnosticKind::Rule),
             1 => Ok(DiagnosticKind::Internal),
-            _ => Err(serde::de::Error::custom(format!("Invalid DiagnosticKind value: {value}"))),
+            _ => Err(serde::de::Error::custom(format!(
+                "Invalid DiagnosticKind value: {value}"
+            ))),
         }
     }
 }
@@ -817,7 +843,10 @@ impl From<TsGoLintDiagnostic> for OxcDiagnostic {
 impl From<TsGoLintRuleDiagnostic> for OxcDiagnostic {
     fn from(val: TsGoLintRuleDiagnostic) -> Self {
         let mut d = OxcDiagnostic::warn(val.message.description)
-            .with_url(format!("{}/{}/{}.html", WEBSITE_BASE_RULES_URL, "typescript", val.rule))
+            .with_url(format!(
+                "{}/{}/{}.html",
+                WEBSITE_BASE_RULES_URL, "typescript", val.rule
+            ))
             .with_error_code("typescript", val.rule);
         if let Some(help) = val.message.help {
             d = d.with_help(help);
@@ -874,21 +903,23 @@ impl Message {
             Some(CompositeFix::merge_fixes(fix_vec, source_text))
         };
 
-        let suggestions = mem::take(&mut val.suggestions).into_iter().map(|suggestion| {
-            let fix_vec = suggestion
-                .fixes
-                .into_iter()
-                .map(|fix| crate::fixer::Fix {
-                    content: Cow::Owned(fix.text),
-                    span: Span::new(fix.range.pos, fix.range.end),
-                    message: None,
-                    kind: FixKind::Suggestion,
-                })
-                .collect();
+        let suggestions = mem::take(&mut val.suggestions)
+            .into_iter()
+            .map(|suggestion| {
+                let fix_vec = suggestion
+                    .fixes
+                    .into_iter()
+                    .map(|fix| crate::fixer::Fix {
+                        content: Cow::Owned(fix.text),
+                        span: Span::new(fix.range.pos, fix.range.end),
+                        message: None,
+                        kind: FixKind::Suggestion,
+                    })
+                    .collect();
 
-            CompositeFix::merge_fixes(fix_vec, source_text)
-                .with_message(suggestion.message.description)
-        });
+                CompositeFix::merge_fixes(fix_vec, source_text)
+                    .with_message(suggestion.message.description)
+            });
 
         let possible_fixes = PossibleFixes::from_iter(iter::chain(fix, suggestions));
 
@@ -968,7 +999,10 @@ struct TsGoLintMessageStream {
 
 impl TsGoLintMessageStream {
     fn new(stdout: std::process::ChildStdout) -> TsGoLintMessageStream {
-        TsGoLintMessageStream { stdout, buffer: Vec::with_capacity(8192) }
+        TsGoLintMessageStream {
+            stdout,
+            buffer: Vec::with_capacity(8192),
+        }
     }
 }
 
@@ -1105,8 +1139,11 @@ impl DiagnosticHandler {
             // Collect for later fix application
             let mut message =
                 Message::from_tsgo_lint_diagnostic(diagnostic, self.get_source_text(&path));
-            message.error.severity =
-                if severity == AllowWarnDeny::Deny { Severity::Error } else { Severity::Warning };
+            message.error.severity = if severity == AllowWarnDeny::Deny {
+                Severity::Error
+            } else {
+                Severity::Warning
+            };
 
             let entry = self.messages_requiring_fixes.entry(path).or_default();
 
@@ -1136,7 +1173,9 @@ impl DiagnosticHandler {
             vec![oxc_diagnostic.into()]
         };
 
-        self.error_sender.send(diagnostics).expect("Failed to send diagnostics");
+        self.error_sender
+            .send(diagnostics)
+            .expect("Failed to send diagnostics");
     }
 
     fn send_diagnostic(
@@ -1157,7 +1196,9 @@ impl DiagnosticHandler {
             &source_text,
             vec![oxc_diagnostic],
         );
-        self.error_sender.send(diagnostics).expect("Failed to send diagnostics");
+        self.error_sender
+            .send(diagnostics)
+            .expect("Failed to send diagnostics");
     }
 
     /// Consume the handler and return collected messages requiring fixes.
@@ -1166,7 +1207,13 @@ impl DiagnosticHandler {
         diff_manager: &Arc<DiffManager>,
         paths: Vec<PathBuf>,
     ) -> Vec<(PathBuf, String, Vec<Message>)> {
-        let Self { messages_requiring_fixes, mut source_text_cache, should_fix, silent, .. } = self;
+        let Self {
+            messages_requiring_fixes,
+            mut source_text_cache,
+            should_fix,
+            silent,
+            ..
+        } = self;
 
         if !diff_manager.skip() {
             for path in paths {
@@ -1210,7 +1257,9 @@ impl DiagnosticHandler {
                         source_text.as_str(),
                         filtered_messages,
                     );
-                    self.error_sender.send(diagnostics).expect("Failed to send diagnostics");
+                    self.error_sender
+                        .send(diagnostics)
+                        .expect("Failed to send diagnostics");
                 } else if !messages_requiring_fixes.contains_key(&path) {
                     diff_manager.collect_empty_file(path.as_path(), self.cwd.as_path());
                 }
@@ -1242,16 +1291,23 @@ fn should_skip_diagnostic(
         tsgolint_diagnostic
             .labeled_ranges
             .first()
-            .map_or(tsgolint_diagnostic.span, |range| Span::new(range.range.pos, range.range.end))
+            .map_or(tsgolint_diagnostic.span, |range| {
+                Span::new(range.range.pos, range.range.end)
+            })
     } else {
         tsgolint_diagnostic.span
     };
 
     if let Some(directives) = disable_directives_map.get(path) {
         directives.contains(&tsgolint_diagnostic.rule, span)
-            || directives.contains(&format!("typescript-eslint/{}", tsgolint_diagnostic.rule), span)
-            || directives
-                .contains(&format!("@typescript-eslint/{}", tsgolint_diagnostic.rule), span)
+            || directives.contains(
+                &format!("typescript-eslint/{}", tsgolint_diagnostic.rule),
+                span,
+            )
+            || directives.contains(
+                &format!("@typescript-eslint/{}", tsgolint_diagnostic.rule),
+                span,
+            )
     } else {
         debug_assert!(
             false,
@@ -1293,7 +1349,9 @@ fn parse_single_message(
             let error_payload = serde_json::from_str::<TsGoLintErrorPayload>(&payload_str)
                 .map_err(TsGoLintMessageParseError::InvalidErrorPayload)?;
 
-            Ok(TsGoLintMessage::Error(TsGoLintError { error: error_payload.error }))
+            Ok(TsGoLintMessage::Error(TsGoLintError {
+                error: error_payload.error,
+            }))
         }
         MessageType::Diagnostic => {
             let diagnostic_payload =
@@ -1325,7 +1383,9 @@ fn parse_single_message(
                 DiagnosticKind::Internal => {
                     TsGoLintDiagnostic::Internal(TsGoLintInternalDiagnostic {
                         message: diagnostic_payload.message,
-                        span: diagnostic_payload.range.map(|range| Span::new(range.pos, range.end)),
+                        span: diagnostic_payload
+                            .range
+                            .map(|range| Span::new(range.pos, range.end)),
                         file_path: diagnostic_payload.file_path.map(PathBuf::from),
                     })
                 }
@@ -1443,7 +1503,10 @@ mod test {
         assert_eq!(message.span, Span::new(0, 10));
         assert_eq!(
             message.error.code,
-            OxcCode { scope: Some("typescript".into()), number: Some("some_rule".into()) }
+            OxcCode {
+                scope: Some("typescript".into()),
+                number: Some("some_rule".into())
+            }
         );
         assert!(!message.error.labels.is_empty());
         assert_eq!(message.error.labels.len(), 1);
@@ -1463,8 +1526,14 @@ mod test {
                 help: None,
             },
             fixes: vec![
-                Fix { text: "fixed".into(), range: Range { pos: 0, end: 5 } },
-                Fix { text: "hello".into(), range: Range { pos: 5, end: 10 } },
+                Fix {
+                    text: "fixed".into(),
+                    range: Range { pos: 0, end: 5 },
+                },
+                Fix {
+                    text: "hello".into(),
+                    range: Range { pos: 5, end: 10 },
+                },
             ],
             suggestions: vec![],
             labeled_ranges: vec![],
@@ -1503,7 +1572,10 @@ mod test {
                         description: "Suggestion 1".into(),
                         help: None,
                     },
-                    fixes: vec![Fix { text: "hello".into(), range: Range { pos: 0, end: 5 } }],
+                    fixes: vec![Fix {
+                        text: "hello".into(),
+                        range: Range { pos: 0, end: 5 },
+                    }],
                 },
                 Suggestion {
                     message: RuleMessage {
@@ -1512,8 +1584,14 @@ mod test {
                         help: None,
                     },
                     fixes: vec![
-                        Fix { text: "hello".into(), range: Range { pos: 0, end: 5 } },
-                        Fix { text: "world".into(), range: Range { pos: 5, end: 10 } },
+                        Fix {
+                            text: "hello".into(),
+                            range: Range { pos: 0, end: 5 },
+                        },
+                        Fix {
+                            text: "world".into(),
+                            range: Range { pos: 5, end: 10 },
+                        },
                     ],
                 },
             ],
@@ -1552,14 +1630,20 @@ mod test {
                 description: "Some description".into(),
                 help: None,
             },
-            fixes: vec![Fix { text: "fixed".into(), range: Range { pos: 0, end: 5 } }],
+            fixes: vec![Fix {
+                text: "fixed".into(),
+                range: Range { pos: 0, end: 5 },
+            }],
             suggestions: vec![Suggestion {
                 message: RuleMessage {
                     id: "some_id".into(),
                     description: "Suggestion 1".into(),
                     help: None,
                 },
-                fixes: vec![Fix { text: "Suggestion 1".into(), range: Range { pos: 0, end: 5 } }],
+                fixes: vec![Fix {
+                    text: "Suggestion 1".into(),
+                    range: Range { pos: 0, end: 5 },
+                }],
             }],
             labeled_ranges: vec![],
             file_path: "some/file/path".into(),
@@ -1600,8 +1684,14 @@ mod test {
             fixes: vec![],
             suggestions: vec![],
             labeled_ranges: vec![
-                LabeledRange { label: "Label 1".into(), range: Range { pos: 0, end: 5 } },
-                LabeledRange { label: "Label 2".into(), range: Range { pos: 5, end: 10 } },
+                LabeledRange {
+                    label: "Label 1".into(),
+                    range: Range { pos: 0, end: 5 },
+                },
+                LabeledRange {
+                    label: "Label 2".into(),
+                    range: Range { pos: 5, end: 10 },
+                },
             ],
             file_path: "some/file/path".into(),
         };
@@ -1738,7 +1828,10 @@ mod test {
         let payload = payload.as_bytes();
 
         let mut bytes = Vec::new();
-        let payload_len: u32 = payload.len().try_into().expect("payload length should fit in u32");
+        let payload_len: u32 = payload
+            .len()
+            .try_into()
+            .expect("payload length should fit in u32");
         bytes.extend_from_slice(&payload_len.to_le_bytes());
         bytes.push(2);
         bytes.extend_from_slice(payload);
@@ -1771,7 +1864,10 @@ mod test {
             options: Some(serde_json::json!({"ignoreVoid": false})),
         };
 
-        let rule3 = Rule { name: "no-floating-promises".to_string(), options: None };
+        let rule3 = Rule {
+            name: "no-floating-promises".to_string(),
+            options: None,
+        };
 
         // Insert into BTreeSet
         let mut rules = BTreeSet::new();
@@ -1780,12 +1876,25 @@ mod test {
         rules.insert(rule3.clone());
 
         // All three distinct rules should be preserved
-        assert_eq!(rules.len(), 3, "BTreeSet should preserve all rules with different options");
+        assert_eq!(
+            rules.len(),
+            3,
+            "BTreeSet should preserve all rules with different options"
+        );
 
         // Verify all rules are present
-        assert!(rules.contains(&rule1), "Rule with ignoreVoid: true should be present");
-        assert!(rules.contains(&rule2), "Rule with ignoreVoid: false should be present");
-        assert!(rules.contains(&rule3), "Rule with no options should be present");
+        assert!(
+            rules.contains(&rule1),
+            "Rule with ignoreVoid: true should be present"
+        );
+        assert!(
+            rules.contains(&rule2),
+            "Rule with ignoreVoid: false should be present"
+        );
+        assert!(
+            rules.contains(&rule3),
+            "Rule with no options should be present"
+        );
     }
 
     #[test]
@@ -1808,6 +1917,10 @@ mod test {
         rules.insert(rule2);
 
         // Identical rules should be deduplicated
-        assert_eq!(rules.len(), 1, "BTreeSet should deduplicate identical rules");
+        assert_eq!(
+            rules.len(),
+            1,
+            "BTreeSet should deduplicate identical rules"
+        );
     }
 }

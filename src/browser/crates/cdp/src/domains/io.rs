@@ -1,7 +1,7 @@
 use std::collections::{HashMap, VecDeque};
 
 use base64::Engine as _;
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 
 use crate::dispatch::CdpContext;
 
@@ -12,7 +12,10 @@ const DEFAULT_CHUNK: usize = 1 << 20; // 1 MiB
 const MAX_READ_CHUNK: usize = 4 << 20; // 4 MiB
 
 fn io_stream_max_entries() -> usize {
-    std::env::var("OBSCURA_IO_STREAM_MAX_ENTRIES").ok().and_then(|v| v.parse().ok()).unwrap_or(32)
+    std::env::var("OBSCURA_IO_STREAM_MAX_ENTRIES")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(32)
 }
 
 fn io_stream_max_bytes() -> usize {
@@ -88,7 +91,10 @@ impl IoStreamStore {
         }
 
         let handle = format!("stream-{}", self.counter);
-        self.counter = self.counter.checked_add(1).ok_or("IO stream handle space exhausted")?;
+        self.counter = self
+            .counter
+            .checked_add(1)
+            .ok_or("IO stream handle space exhausted")?;
         self.total_bytes = self
             .total_bytes
             .checked_add(bytes.len())
@@ -134,8 +140,10 @@ impl IoStreamStore {
 pub async fn handle(method: &str, params: &Value, ctx: &mut CdpContext) -> Result<Value, String> {
     match method {
         "read" => {
-            let handle =
-                params.get("handle").and_then(|v| v.as_str()).ok_or("IO.read requires handle")?;
+            let handle = params
+                .get("handle")
+                .and_then(|v| v.as_str())
+                .ok_or("IO.read requires handle")?;
             let size = params
                 .get("size")
                 .map(|value| {
@@ -164,13 +172,15 @@ pub async fn handle(method: &str, params: &Value, ctx: &mut CdpContext) -> Resul
                 .ok_or_else(|| format!("IO.read: unknown handle {handle}"))?;
 
             Ok(json!({ "data": data, "eof": eof, "base64Encoded": true }))
-        },
+        }
         "close" => {
-            let handle =
-                params.get("handle").and_then(|v| v.as_str()).ok_or("IO.close requires handle")?;
+            let handle = params
+                .get("handle")
+                .and_then(|v| v.as_str())
+                .ok_or("IO.close requires handle")?;
             ctx.io_streams.remove(handle);
             Ok(json!({}))
-        },
+        }
         _ => Err(format!("Unknown IO method: {}", method)),
     }
 }
@@ -237,7 +247,10 @@ mod tests {
         let _h2 = store.insert(vec![2]).unwrap();
         let h3 = store.insert(vec![3]).unwrap(); // 4th entry, cap 3 -> h0 evicted
 
-        assert!(store.read(&h0, None, 10).is_none(), "oldest stream should be evicted");
+        assert!(
+            store.read(&h0, None, 10).is_none(),
+            "oldest stream should be evicted"
+        );
         assert!(store.read(&h1, None, 10).is_some());
         assert!(store.read(&h3, None, 10).is_some());
     }

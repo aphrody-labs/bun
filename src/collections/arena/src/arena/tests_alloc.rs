@@ -41,7 +41,10 @@ impl<const MIN_ALIGN: usize> TestArena<MIN_ALIGN> {
             cursor.is_multiple_of(MIN_ALIGN),
             "cursor {cursor:#x} must be a multiple of MIN_ALIGN ({MIN_ALIGN})"
         );
-        assert!(cursor >= start, "cursor {cursor:#x} must be >= start {start:#x}");
+        assert!(
+            cursor >= start,
+            "cursor {cursor:#x} must be >= start {start:#x}"
+        );
 
         let capacity = cursor - start;
         let chunk_align = cmp::max(MIN_ALIGN, CHUNK_ALIGN);
@@ -57,10 +60,15 @@ impl<const MIN_ALIGN: usize> TestArena<MIN_ALIGN> {
             cursor_ptr: Cell::new(cursor_ptr),
             current_chunk_footer_ptr: Cell::new(Some(cursor_ptr.cast::<ChunkFooter>())),
             start_ptr: Cell::new(start_ptr),
-            #[cfg(all(feature = "track_allocations", not(feature = "disable_track_allocations")))]
+            #[cfg(all(
+                feature = "track_allocations",
+                not(feature = "disable_track_allocations")
+            ))]
             stats: crate::tracking::AllocationStats::default(),
         };
-        Self { inner: ManuallyDrop::new(arena) }
+        Self {
+            inner: ManuallyDrop::new(arena),
+        }
     }
 
     fn try_alloc_layout_fast(&self, layout: Layout) -> Option<NonNull<u8>> {

@@ -155,8 +155,9 @@ impl Rule for LabelHasAssociatedControl {
             };
         }
 
-        if let Some(label_components) =
-            options.get("labelComponents").and_then(serde_json::Value::as_array)
+        if let Some(label_components) = options
+            .get("labelComponents")
+            .and_then(serde_json::Value::as_array)
             && let Some(mut components) = label_components
                 .iter()
                 .map(serde_json::Value::as_str)
@@ -166,8 +167,9 @@ impl Rule for LabelHasAssociatedControl {
             config.label_components.append(&mut components);
         }
 
-        if let Some(label_attributes) =
-            options.get("labelAttributes").and_then(serde_json::Value::as_array)
+        if let Some(label_attributes) = options
+            .get("labelAttributes")
+            .and_then(serde_json::Value::as_array)
             && let Some(mut attributes) = label_attributes
                 .iter()
                 .map(serde_json::Value::as_str)
@@ -177,8 +179,9 @@ impl Rule for LabelHasAssociatedControl {
             config.label_attributes.append(&mut attributes);
         }
 
-        if let Some(control_components) =
-            options.get("controlComponents").and_then(serde_json::Value::as_array)
+        if let Some(control_components) = options
+            .get("controlComponents")
+            .and_then(serde_json::Value::as_array)
         {
             config.control_components = control_components
                 .iter()
@@ -203,18 +206,23 @@ impl Rule for LabelHasAssociatedControl {
 
         let element_type = get_element_type(ctx, &element.opening_element);
 
-        if self.label_components.binary_search(&element_type.into()).is_err() {
+        if self
+            .label_components
+            .binary_search(&element_type.into())
+            .is_err()
+        {
             return;
         }
 
         // Upstream validates the first present alias, even when its value is falsy.
-        let html_for_attribute = if let Some(attributes) =
-            ctx.settings().jsx_a11y.attributes.get("for")
-        {
-            attributes.iter().find_map(|attr| has_jsx_prop(&element.opening_element, attr.as_str()))
-        } else {
-            has_jsx_prop(&element.opening_element, "htmlFor")
-        };
+        let html_for_attribute =
+            if let Some(attributes) = ctx.settings().jsx_a11y.attributes.get("for") {
+                attributes
+                    .iter()
+                    .find_map(|attr| has_jsx_prop(&element.opening_element, attr.as_str()))
+            } else {
+                has_jsx_prop(&element.opening_element, "htmlFor")
+            };
         let has_html_for = html_for_attribute
             .and_then(JSXAttributeItem::as_attribute)
             .is_some_and(|attr| has_attribute_value(attr.value.as_ref(), false));
@@ -251,7 +259,9 @@ impl Rule for LabelHasAssociatedControl {
             }
         }
 
-        ctx.diagnostic(label_has_associated_control_diagnostic(element.opening_element.span));
+        ctx.diagnostic(label_has_associated_control_diagnostic(
+            element.opening_element.span,
+        ));
     }
 }
 
@@ -279,14 +289,20 @@ impl LabelHasAssociatedControl {
     }
 
     fn has_labelling_prop(&self, element: &JSXElement<'_>) -> bool {
-        element.opening_element.attributes.iter().any(|attribute| match attribute {
-            JSXAttributeItem::Attribute(attr) => {
-                let attr_name = get_jsx_attribute_name(&attr.name);
-                self.label_attributes.binary_search(&attr_name.into()).is_ok()
-                    && has_attribute_value(attr.value.as_ref(), true)
-            }
-            JSXAttributeItem::SpreadAttribute(_) => true,
-        })
+        element
+            .opening_element
+            .attributes
+            .iter()
+            .any(|attribute| match attribute {
+                JSXAttributeItem::Attribute(attr) => {
+                    let attr_name = get_jsx_attribute_name(&attr.name);
+                    self.label_attributes
+                        .binary_search(&attr_name.into())
+                        .is_ok()
+                        && has_attribute_value(attr.value.as_ref(), true)
+                }
+                JSXAttributeItem::SpreadAttribute(_) => true,
+            })
     }
 
     fn has_nested_control<'a>(&self, root: &JSXElement<'a>, ctx: &LintContext<'a>) -> bool {
@@ -680,8 +696,16 @@ fn test() {
             Some(serde_json::json!([{ "assert": "nesting", "depth": 5 }])),
             None,
         ),
-        ("<label>foo<meter /></label>", Some(serde_json::json!([{ "assert": "nesting" }])), None),
-        ("<label>foo<output /></label>", Some(serde_json::json!([{ "assert": "nesting" }])), None),
+        (
+            "<label>foo<meter /></label>",
+            Some(serde_json::json!([{ "assert": "nesting" }])),
+            None,
+        ),
+        (
+            "<label>foo<output /></label>",
+            Some(serde_json::json!([{ "assert": "nesting" }])),
+            None,
+        ),
         (
             "<label>foo<progress /></label>",
             Some(serde_json::json!([{ "assert": "nesting" }])),
@@ -787,10 +811,26 @@ fn test() {
             Some(serde_json::json!([{ "assert": "either", "depth": 5 }])),
             None,
         ),
-        ("<label>foo<meter /></label>", Some(serde_json::json!([{ "assert": "either" }])), None),
-        ("<label>foo<output /></label>", Some(serde_json::json!([{ "assert": "either" }])), None),
-        ("<label>foo<progress /></label>", Some(serde_json::json!([{ "assert": "either" }])), None),
-        ("<label>foo<textarea /></label>", Some(serde_json::json!([{ "assert": "either" }])), None),
+        (
+            "<label>foo<meter /></label>",
+            Some(serde_json::json!([{ "assert": "either" }])),
+            None,
+        ),
+        (
+            "<label>foo<output /></label>",
+            Some(serde_json::json!([{ "assert": "either" }])),
+            None,
+        ),
+        (
+            "<label>foo<progress /></label>",
+            Some(serde_json::json!([{ "assert": "either" }])),
+            None,
+        ),
+        (
+            "<label>foo<textarea /></label>",
+            Some(serde_json::json!([{ "assert": "either" }])),
+            None,
+        ),
         (
             "<label><span>A label<CustomInput /></span></label>",
             Some(serde_json::json!([{ "assert": "either", "controlComponents": ["CustomInput"] }])),
@@ -1032,7 +1072,11 @@ fn test() {
             None,
         ),
         // Issue: <https://github.com/oxc-project/oxc/issues/7849>
-        ("<FilesContext.Provider value={{ addAlert, cwdInfo }} />", None, None),
+        (
+            "<FilesContext.Provider value={{ addAlert, cwdInfo }} />",
+            None,
+            None,
+        ),
         // Issue: <https://github.com/oxc-project/oxc/issues/11644>
         (
             r#"<label>
@@ -1769,19 +1813,43 @@ fn test() {
             (r#"<label aria-label="Name" htmlFor="name" />"#, None, None),
             (r"<label aria-label={label} htmlFor={id} />", None, None),
             (r#"<label aria-label htmlFor="name" />"#, None, None),
-            (r#"<label htmlFor="name"><span aria-label /></label>"#, None, None),
-            (r#"<label htmlFor="name"><span {...props} /></label>"#, None, None),
+            (
+                r#"<label htmlFor="name"><span aria-label /></label>"#,
+                None,
+                None,
+            ),
+            (
+                r#"<label htmlFor="name"><span {...props} /></label>"#,
+                None,
+                None,
+            ),
             (r#"<label {...props} htmlFor="name" />"#, None, None),
             (r#"<label htmlFor="">Name<input /></label>"#, None, None),
             (r#"<label aria-label="">Name<input /></label>"#, None, None),
             (r#"<label htmlFor=" ">Name</label>"#, None, None),
             (r"<label htmlFor>Name</label>", None, None),
-            (r#"<label aria-label={`Name`} htmlFor="name" />"#, None, None),
-            (r#"<label aria-label={`${label}`} htmlFor="name" />"#, None, None),
+            (
+                r#"<label aria-label={`Name`} htmlFor="name" />"#,
+                None,
+                None,
+            ),
+            (
+                r#"<label aria-label={`${label}`} htmlFor="name" />"#,
+                None,
+                None,
+            ),
             (r#"<label aria-label={1n} htmlFor="name" />"#, None, None),
             (r"<label htmlFor={1n}>Name</label>", None, None),
-            (r#"<label aria-label={"\u0085"} htmlFor="name" />"#, None, None),
-            (r#"<label htmlFor="name"><span aria-label={"\u0085"} /></label>"#, None, None),
+            (
+                r#"<label aria-label={"\u0085"} htmlFor="name" />"#,
+                None,
+                None,
+            ),
+            (
+                r#"<label htmlFor="name"><span aria-label={"\u0085"} /></label>"#,
+                None,
+                None,
+            ),
             (r#"<label htmlFor={"\uFEFF"}>Name</label>"#, None, None),
         ]);
         fail.extend(vec![
@@ -1796,10 +1864,26 @@ fn test() {
             (r#"<label aria-label={false} htmlFor="name" />"#, None, None),
             (r#"<label aria-label={0} htmlFor="name" />"#, None, None),
             (r#"<label aria-label={0n} htmlFor="name" />"#, None, None),
-            (r#"<label aria-label={"\uFEFF"} htmlFor="name" />"#, None, None),
-            (r#"<label htmlFor="name"><span aria-label={"\uFEFF"} /></label>"#, None, None),
-            (r#"<label aria-label={undefined} htmlFor="name" />"#, None, None),
-            (r#"<label htmlFor="name"><span aria-label={""} /></label>"#, None, None),
+            (
+                r#"<label aria-label={"\uFEFF"} htmlFor="name" />"#,
+                None,
+                None,
+            ),
+            (
+                r#"<label htmlFor="name"><span aria-label={"\uFEFF"} /></label>"#,
+                None,
+                None,
+            ),
+            (
+                r#"<label aria-label={undefined} htmlFor="name" />"#,
+                None,
+                None,
+            ),
+            (
+                r#"<label htmlFor="name"><span aria-label={""} /></label>"#,
+                None,
+                None,
+            ),
             (r#"<label htmlFor="">Name</label>"#, None, None),
             (r#"<label htmlFor={""}>Name</label>"#, None, None),
             (r"<label htmlFor={null}>Name</label>", None, None),
@@ -1894,10 +1978,26 @@ fn test() {
         }}}));
         pass.extend(vec![
             (r#"<label for="name">Name</label>"#, None, settings.clone()),
-            (r#"<label htmlFor="name" for="">Name</label>"#, None, settings.clone()),
-            (r#"<label for="" htmlFor="name">Name</label>"#, None, settings.clone()),
-            (r#"<label htmlFor={id} for="name">Name</label>"#, None, settings.clone()),
-            (r#"<label htmlFor="" for="name">Name<input /></label>"#, None, settings.clone()),
+            (
+                r#"<label htmlFor="name" for="">Name</label>"#,
+                None,
+                settings.clone(),
+            ),
+            (
+                r#"<label for="" htmlFor="name">Name</label>"#,
+                None,
+                settings.clone(),
+            ),
+            (
+                r#"<label htmlFor={id} for="name">Name</label>"#,
+                None,
+                settings.clone(),
+            ),
+            (
+                r#"<label htmlFor="" for="name">Name<input /></label>"#,
+                None,
+                settings.clone(),
+            ),
             (
                 r#"<label htmlFor="" for="name">Name</label>"#,
                 None,
@@ -1907,10 +2007,26 @@ fn test() {
             ),
         ]);
         fail.extend(vec![
-            (r#"<label htmlFor="" for="name">Name</label>"#, None, settings.clone()),
-            (r#"<label for="name" htmlFor="">Name</label>"#, None, settings.clone()),
-            (r#"<label htmlFor={null} for="name">Name</label>"#, None, settings.clone()),
-            (r#"<label htmlFor={false} for="name">Name</label>"#, None, settings.clone()),
+            (
+                r#"<label htmlFor="" for="name">Name</label>"#,
+                None,
+                settings.clone(),
+            ),
+            (
+                r#"<label for="name" htmlFor="">Name</label>"#,
+                None,
+                settings.clone(),
+            ),
+            (
+                r#"<label htmlFor={null} for="name">Name</label>"#,
+                None,
+                settings.clone(),
+            ),
+            (
+                r#"<label htmlFor={false} for="name">Name</label>"#,
+                None,
+                settings.clone(),
+            ),
             (
                 r#"<label htmlFor="" for="name">Name<input /></label>"#,
                 Some(serde_json::json!([{ "assert": "both" }])),
@@ -1919,6 +2035,11 @@ fn test() {
         ]);
     }
 
-    Tester::new(LabelHasAssociatedControl::NAME, LabelHasAssociatedControl::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        LabelHasAssociatedControl::NAME,
+        LabelHasAssociatedControl::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

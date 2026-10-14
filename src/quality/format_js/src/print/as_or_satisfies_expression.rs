@@ -53,12 +53,16 @@ fn format_as_or_satisfies_expression<'a>(
         // Riding line comment flushes behind the operator, everything else normalizes to the type side.
         // Within those slots, comments keep their source side and their line-start side,
         // the head-body comment policy applied to the operator gap (see DIVERGENCES.md#binary-cast-own-line-comment).
-        let comments = f.context().comments().comments_in_range(expression_end, type_start);
+        let comments = f
+            .context()
+            .comments()
+            .comments_in_range(expression_end, type_start);
         // A suppression comment must stay visible to the type it targets:
         // leave the whole gap to the type's leading pass instead of consuming it
         // (the break decision below still applies, keeping own-line ones own-line)
-        let has_suppression_comment =
-            comments.iter().any(|c| f.context().comments().is_suppression_comment(c));
+        let has_suppression_comment = comments
+            .iter()
+            .any(|c| f.context().comments().is_suppression_comment(c));
         let before_operator_count = if comments.is_empty() {
             0
         } else {
@@ -101,7 +105,9 @@ fn format_as_or_satisfies_expression<'a>(
             c.followed_by_newline() && (c.preceded_by_newline() || c.is_multiline_block())
         };
         let type_on_own_line = comments[..pre_glued_count].iter().any(|c| c.is_line())
-            || after_operator_comments[..glued_count].iter().any(|c| c.is_line())
+            || after_operator_comments[..glued_count]
+                .iter()
+                .any(|c| c.is_line())
             || (!is_union
                 && (pre_moved.iter().any(promoted)
                     || after_operator_comments[glued_count..].iter().any(promoted)));
@@ -110,15 +116,28 @@ fn format_as_or_satisfies_expression<'a>(
         // the expression must not claim the after-operator comments (it would pull them backward across the operator)
         write!(f, [FormatNodeWithoutTrailingComments(expression)]);
         if !has_suppression_comment {
-            write!(f, [FormatTrailingComments::Comments(&comments[..pre_glued_count])]);
+            write!(
+                f,
+                [FormatTrailingComments::Comments(
+                    &comments[..pre_glued_count]
+                )]
+            );
         }
         write!(f, [space(), token(operation)]);
         if !has_suppression_comment {
-            write!(f, [FormatTrailingComments::Comments(&after_operator_comments[..glued_count])]);
+            write!(
+                f,
+                [FormatTrailingComments::Comments(
+                    &after_operator_comments[..glued_count]
+                )]
+            );
         }
         if type_on_own_line {
             // The hard break also flushes a glued riding line comment
-            write!(f, [indent(&format_args!(hard_line_break(), type_annotation))]);
+            write!(
+                f,
+                [indent(&format_args!(hard_line_break(), type_annotation))]
+            );
         } else {
             write!(f, [space(), type_annotation]);
         }

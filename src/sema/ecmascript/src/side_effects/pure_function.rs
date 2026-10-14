@@ -22,7 +22,9 @@ pub fn is_pure_function(callee: &Expression, pure_functions: &[String]) -> bool 
     let Some(path_parts) = extract_callee_path(callee) else {
         return false;
     };
-    pure_functions.iter().any(|pure_fn| is_path_match(&path_parts, pure_fn))
+    pure_functions
+        .iter()
+        .any(|pure_fn| is_path_match(&path_parts, pure_fn))
 }
 
 /// Extract the path parts from a callee expression.
@@ -100,5 +102,8 @@ fn is_path_match(path_parts: &[&str], pure_fn: &str) -> bool {
     if pure_parts_count > path_parts.len() {
         return false;
     }
-    pure_fn.split('.').zip(path_parts.iter().rev()).all(|(a, b)| a == *b)
+    pure_fn
+        .split('.')
+        .zip(path_parts.iter().rev())
+        .all(|(a, b)| a == *b)
 }

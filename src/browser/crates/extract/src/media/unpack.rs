@@ -29,7 +29,12 @@ fn packer_call(source: &str) -> Option<(String, usize, usize, Vec<String>)> {
     let payload = caps.get(2)?.as_str().to_string();
     let radix = caps.get(4)?.as_str().parse().ok()?;
     let count = caps.get(5)?.as_str().parse().ok()?;
-    let dictionary = caps.get(7)?.as_str().split('|').map(str::to_string).collect();
+    let dictionary = caps
+        .get(7)?
+        .as_str()
+        .split('|')
+        .map(str::to_string)
+        .collect();
     Some((payload, radix, count, dictionary))
 }
 
@@ -68,13 +73,19 @@ pub fn unpack_packer(source: &str) -> String {
         .replace("\\\\", "\\")
         .replace("\\n", "\n");
     for index in (0..count).rev() {
-        let Some(word) = dictionary.get(index) else { continue };
+        let Some(word) = dictionary.get(index) else {
+            continue;
+        };
         if word.is_empty() {
             continue;
         }
         let token = base_encode(index, radix);
-        let Ok(regex) = Regex::new(&format!(r"\b{}\b", regex::escape(&token))) else { continue };
-        payload = regex.replace_all(&payload, regex::NoExpand(word)).into_owned();
+        let Ok(regex) = Regex::new(&format!(r"\b{}\b", regex::escape(&token))) else {
+            continue;
+        };
+        payload = regex
+            .replace_all(&payload, regex::NoExpand(word))
+            .into_owned();
     }
     payload
 }
@@ -89,7 +100,9 @@ pub fn decode_base64_payloads(source: &str) -> Vec<String> {
             let raw = caps.get(1)?.as_str();
             let bytes = base64::engine::general_purpose::STANDARD.decode(raw).ok()?;
             let text = String::from_utf8(bytes).ok()?;
-            text.bytes().all(|b| matches!(b, 9 | 10 | 13 | 32..=126)).then_some(text)
+            text.bytes()
+                .all(|b| matches!(b, 9 | 10 | 13 | 32..=126))
+                .then_some(text)
         })
         .collect()
 }
@@ -104,7 +117,11 @@ pub fn unescape_urls(source: &str) -> String {
 }
 
 pub fn peel_layers(source: &str, max_depth: usize) -> Vec<SourceLayer> {
-    let mut layers = vec![SourceLayer { text: source.to_string(), depth: 0, via: SourceVia::Raw }];
+    let mut layers = vec![SourceLayer {
+        text: source.to_string(),
+        depth: 0,
+        via: SourceVia::Raw,
+    }];
     let mut seen = HashSet::from([source.to_string()]);
     let mut current = source.to_string();
     for depth in 1..=max_depth.min(4) {
@@ -112,7 +129,11 @@ pub fn peel_layers(source: &str, max_depth: usize) -> Vec<SourceLayer> {
         if unpacked == current || !seen.insert(unpacked.clone()) {
             break;
         }
-        layers.push(SourceLayer { text: unpacked.clone(), depth, via: SourceVia::Packer });
+        layers.push(SourceLayer {
+            text: unpacked.clone(),
+            depth,
+            via: SourceVia::Packer,
+        });
         current = unpacked;
     }
     for layer in layers.clone() {
@@ -137,7 +158,10 @@ mod tests {
     fn unpacks_without_evaluation() {
         let packed = r#"eval(function(p,a,c,k,e,d){return p}('0.1({2:"3"})',4,4,'jwplayer|setup|file|https://c.test/a.m3u8'.split('|')))"#;
         assert!(is_packed(packed));
-        assert_eq!(unpack_packer(packed), r#"jwplayer.setup({file:"https://c.test/a.m3u8"})"#);
+        assert_eq!(
+            unpack_packer(packed),
+            r#"jwplayer.setup({file:"https://c.test/a.m3u8"})"#
+        );
         assert_eq!(peel_layers(packed, 4)[1].via, SourceVia::Packer);
     }
 
@@ -147,6 +171,9 @@ mod tests {
             decode_base64_payloads("atob('aHR0cHM6Ly9jLnRlc3QvYS5tM3U4')"),
             ["https://c.test/a.m3u8"]
         );
-        assert_eq!(unescape_urls(r"https:\/\/c.test\/a.m3u8"), "https://c.test/a.m3u8");
+        assert_eq!(
+            unescape_urls(r"https:\/\/c.test\/a.m3u8"),
+            "https://c.test/a.m3u8"
+        );
     }
 }

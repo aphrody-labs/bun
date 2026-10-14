@@ -65,8 +65,11 @@ impl CssFormatOptions {
     /// start from the configured preference (`singleQuote`) and flip to the alternate
     /// when that reduces escapes (i.e. when the preferred quote occurs more often in `inner` than the alternate).
     pub fn preferred_quote(&self, inner: &str) -> u8 {
-        let (preferred, alternate) =
-            if self.single_quote.value() { (b'\'', b'"') } else { (b'"', b'\'') };
+        let (preferred, alternate) = if self.single_quote.value() {
+            (b'\'', b'"')
+        } else {
+            (b'"', b'\'')
+        };
         // Count every occurrence (escaped ones included, matching `getPreferredQuote`).
         let (mut preferred_count, mut alternate_count) = (0u32, 0u32);
         for byte in inner.bytes() {
@@ -77,7 +80,11 @@ impl CssFormatOptions {
             }
         }
 
-        if preferred_count > alternate_count { alternate } else { preferred }
+        if preferred_count > alternate_count {
+            alternate
+        } else {
+            preferred
+        }
     }
 }
 

@@ -25,8 +25,9 @@ pub(super) fn capturing_group_name<'a>(
         return None;
     }
 
-    let mut name =
-        raw.contains('\\').then(|| ArenaStringBuilder::with_capacity_in(raw.len(), allocator));
+    let mut name = raw
+        .contains('\\')
+        .then(|| ArenaStringBuilder::with_capacity_in(raw.len(), allocator));
     let mut index = 0;
     while index < units.len() {
         let (mut value, mut next) = decode_code_point(units, index)?;

@@ -70,8 +70,10 @@ declare_oxc_lint!(
 impl Rule for JsxPropsNoSpreadMulti {
     fn run<'a>(&self, node: &AstNode<'a>, ctx: &LintContext<'a>) {
         if let AstKind::JSXOpeningElement(jsx_opening_el) = node.kind() {
-            let spread_attrs =
-                jsx_opening_el.attributes.iter().filter_map(JSXAttributeItem::as_spread);
+            let spread_attrs = jsx_opening_el
+                .attributes
+                .iter()
+                .filter_map(JSXAttributeItem::as_spread);
 
             let mut identifier_names: FxHashMap<Str, Span> = FxHashMap::default();
             let mut member_expressions = Vec::new();
@@ -130,7 +132,9 @@ impl Rule for JsxPropsNoSpreadMulti {
                                 member_prop_name,
                             ),
                             |fixer| {
-                                fixer.delete_range(*left_span).with_message(REMOVE_DUPLICATE_SPREAD)
+                                fixer
+                                    .delete_range(*left_span)
+                                    .with_message(REMOVE_DUPLICATE_SPREAD)
                             },
                         );
                     }
@@ -192,13 +196,30 @@ fn test() {
     ];
     let fix = vec![
         ("<App {...props} {...props} />", "<App  {...props} />"),
-        ("<App {...props.foo} {...props.foo} />", "<App  {...props.foo} />"),
-        ("<App {...(props.foo.baz)} {...(props.foo.baz)} />", "<App  {...(props.foo.baz)} />"),
-        (r#"<div {...props} a="a" {...props} />"#, r#"<div  a="a" {...props} />"#),
-        ("<div {...props} {...props} {...props} />", "<div   {...props} />"),
+        (
+            "<App {...props.foo} {...props.foo} />",
+            "<App  {...props.foo} />",
+        ),
+        (
+            "<App {...(props.foo.baz)} {...(props.foo.baz)} />",
+            "<App  {...(props.foo.baz)} />",
+        ),
+        (
+            r#"<div {...props} a="a" {...props} />"#,
+            r#"<div  a="a" {...props} />"#,
+        ),
+        (
+            "<div {...props} {...props} {...props} />",
+            "<div   {...props} />",
+        ),
     ];
 
-    Tester::new(JsxPropsNoSpreadMulti::NAME, JsxPropsNoSpreadMulti::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        JsxPropsNoSpreadMulti::NAME,
+        JsxPropsNoSpreadMulti::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

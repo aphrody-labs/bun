@@ -35,7 +35,13 @@ impl DiagnosticReporter for AgentReporter {
 }
 
 fn format_agent(diagnostic: &Error) -> String {
-    let Info { start, filename, message: info_message, rule_id, .. } = Info::new(diagnostic);
+    let Info {
+        start,
+        filename,
+        message: info_message,
+        rule_id,
+        ..
+    } = Info::new(diagnostic);
     let filename = if filename.is_empty() {
         diagnostic
             .source_code()
@@ -51,15 +57,21 @@ fn format_agent(diagnostic: &Error) -> String {
     };
     let rule = rule_id.map_or_else(String::new, |rule_id| format!(" {rule_id}"));
     // `Info` only fills in the message when the diagnostic has a resolvable label.
-    let rendered_message =
-        if info_message.is_empty() { diagnostic.to_string() } else { info_message };
+    let rendered_message = if info_message.is_empty() {
+        diagnostic.to_string()
+    } else {
+        info_message
+    };
     let message = compact_message(&rendered_message);
     let help = diagnostic
         .help()
         .map(|help| format!(" help: {}", compact_message(&help)))
         .unwrap_or_default();
-    let location =
-        if start.line == 0 { String::new() } else { format!(":{}:{}", start.line, start.column) };
+    let location = if start.line == 0 {
+        String::new()
+    } else {
+        format!(":{}:{}", start.line, start.column)
+    };
 
     format!("{filename}{location}: {severity}{rule}: {message}{help}\n")
 }
@@ -140,13 +152,20 @@ mod test {
             "\nleading newline",
             "unicode \u{2192} \u{2716} ok",
         ] {
-            assert_eq!(compact_message(input), collapse(input), "mismatch for {input:?}");
+            assert_eq!(
+                compact_message(input),
+                collapse(input),
+                "mismatch for {input:?}"
+            );
         }
     }
 
     #[test]
     fn compact_message_borrows_only_when_already_compact() {
-        assert!(matches!(compact_message("already compact"), Cow::Borrowed(_)));
+        assert!(matches!(
+            compact_message("already compact"),
+            Cow::Borrowed(_)
+        ));
         assert!(matches!(compact_message("double  space"), Cow::Owned(_)));
         assert!(matches!(compact_message("trailing "), Cow::Owned(_)));
     }
@@ -177,7 +196,10 @@ mod test {
 
         let result = reporter.render_error(error);
 
-        assert_eq!(result.unwrap(), "file://test.js:1:1: error: Expected `;` but found `:`\n");
+        assert_eq!(
+            result.unwrap(),
+            "file://test.js:1:1: error: Expected `;` but found `:`\n"
+        );
     }
 
     #[test]
@@ -188,6 +210,9 @@ mod test {
 
         let result = reporter.render_error(error);
 
-        assert_eq!(result.unwrap(), "config.json: error: Failed to parse configuration\n");
+        assert_eq!(
+            result.unwrap(),
+            "config.json: error: Failed to parse configuration\n"
+        );
     }
 }

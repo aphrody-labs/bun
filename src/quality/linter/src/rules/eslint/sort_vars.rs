@@ -107,7 +107,9 @@ impl SortVars {
         declarations: &'a [VariableDeclarator<'a>],
         ctx: &LintContext<'a>,
     ) {
-        if self.get_sortable_name(previous).cmp(&self.get_sortable_name(current))
+        if self
+            .get_sortable_name(previous)
+            .cmp(&self.get_sortable_name(current))
             != Ordering::Greater
         {
             return;
@@ -145,7 +147,9 @@ impl SortVars {
             return None;
         }
 
-        let current_index = declarations.iter().position(|decl| std::ptr::eq(decl, current))?;
+        let current_index = declarations
+            .iter()
+            .position(|decl| std::ptr::eq(decl, current))?;
 
         let mut start_index = current_index;
         while start_index > 0 && is_fixable_declarator(&declarations[start_index - 1]) {
@@ -153,7 +157,10 @@ impl SortVars {
         }
 
         let mut end_index = current_index;
-        while declarations.get(end_index + 1).is_some_and(is_fixable_declarator) {
+        while declarations
+            .get(end_index + 1)
+            .is_some_and(is_fixable_declarator)
+        {
             end_index += 1;
         }
 
@@ -162,7 +169,9 @@ impl SortVars {
         }
 
         let declarations = &declarations[start_index..=end_index];
-        let replace_span = declarations[0].span.merge(declarations[declarations.len() - 1].span);
+        let replace_span = declarations[0]
+            .span
+            .merge(declarations[declarations.len() - 1].span);
 
         // `var b, /* keep with a? */ a` is ambiguous; leave it for the user.
         if ctx.has_comments_between(replace_span) {
@@ -217,18 +226,45 @@ fn test() {
         ("var _a, a", None),
         ("var A, a", None),
         ("var A, b", None),
-        ("var a, A;", Some(serde_json::json!([{ "ignoreCase": true }]))),
-        ("var A, a;", Some(serde_json::json!([{ "ignoreCase": true }]))),
-        ("var a, B, c;", Some(serde_json::json!([{ "ignoreCase": true }]))),
-        ("var A, b, C;", Some(serde_json::json!([{ "ignoreCase": true }]))),
-        ("var {a, b, c} = x;", Some(serde_json::json!([{ "ignoreCase": true }]))), // { "ecmaVersion": 6 },
-        ("var {A, b, C} = x;", Some(serde_json::json!([{ "ignoreCase": true }]))), // { "ecmaVersion": 6 },
+        (
+            "var a, A;",
+            Some(serde_json::json!([{ "ignoreCase": true }])),
+        ),
+        (
+            "var A, a;",
+            Some(serde_json::json!([{ "ignoreCase": true }])),
+        ),
+        (
+            "var a, B, c;",
+            Some(serde_json::json!([{ "ignoreCase": true }])),
+        ),
+        (
+            "var A, b, C;",
+            Some(serde_json::json!([{ "ignoreCase": true }])),
+        ),
+        (
+            "var {a, b, c} = x;",
+            Some(serde_json::json!([{ "ignoreCase": true }])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "var {A, b, C} = x;",
+            Some(serde_json::json!([{ "ignoreCase": true }])),
+        ), // { "ecmaVersion": 6 },
         ("var test = [1,2,3];", None), // { "ecmaVersion": 6 },
         ("var {a,b} = [1,2];", None),  // { "ecmaVersion": 6 },
-        ("var [a, B, c] = [1, 2, 3];", Some(serde_json::json!([{ "ignoreCase": true }]))), // { "ecmaVersion": 6 },
-        ("var [A, B, c] = [1, 2, 3];", Some(serde_json::json!([{ "ignoreCase": true }]))), // { "ecmaVersion": 6 },
-        ("var [A, b, C] = [1, 2, 3];", Some(serde_json::json!([{ "ignoreCase": true }]))), // { "ecmaVersion": 6 },
-        ("let {a, b, c} = x;", None),         // { "ecmaVersion": 6 },
+        (
+            "var [a, B, c] = [1, 2, 3];",
+            Some(serde_json::json!([{ "ignoreCase": true }])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "var [A, B, c] = [1, 2, 3];",
+            Some(serde_json::json!([{ "ignoreCase": true }])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "var [A, b, C] = [1, 2, 3];",
+            Some(serde_json::json!([{ "ignoreCase": true }])),
+        ), // { "ecmaVersion": 6 },
+        ("let {a, b, c} = x;", None),  // { "ecmaVersion": 6 },
         ("let [a, b, c] = [1, 2, 3];", None), // { "ecmaVersion": 6 },
         (
             r#"const {a, b, c} = {a: 1, b: true, c: "Moo"};"#,
@@ -242,17 +278,20 @@ fn test() {
             r#"const [c, a, b] = [1, true, "Moo"];"#,
             Some(serde_json::json!([{ "ignoreCase": true }])),
         ), // { "ecmaVersion": 6 },
-        ("var {a, x: {b, c}} = {};", None),   // { "ecmaVersion": 6 },
-        ("var {c, x: {a, c}} = {};", None),   // { "ecmaVersion": 6 },
-        ("var {a, x: [b, c]} = {};", None),   // { "ecmaVersion": 6 },
-        ("var [a, {b, c}] = {};", None),      // { "ecmaVersion": 6 },
+        ("var {a, x: {b, c}} = {};", None), // { "ecmaVersion": 6 },
+        ("var {c, x: {a, c}} = {};", None), // { "ecmaVersion": 6 },
+        ("var {a, x: [b, c]} = {};", None), // { "ecmaVersion": 6 },
+        ("var [a, {b, c}] = {};", None), // { "ecmaVersion": 6 },
         ("var [a, {x: {b, c}}] = {};", None), // { "ecmaVersion": 6 },
-        ("var a = 42, {b, c } = {};", None),  // { "ecmaVersion": 6 },
-        ("var b = 42, {a, c } = {};", None),  // { "ecmaVersion": 6 },
+        ("var a = 42, {b, c } = {};", None), // { "ecmaVersion": 6 },
+        ("var b = 42, {a, c } = {};", None), // { "ecmaVersion": 6 },
         ("var [b, {x: {a, c}}] = {};", None), // { "ecmaVersion": 6 },
-        ("var [b, d, a, c] = {};", None),     // { "ecmaVersion": 6 },
-        ("var e, [a, c, d] = {};", None),     // { "ecmaVersion": 6 },
-        ("var a, [E, c, D] = [];", Some(serde_json::json!([{ "ignoreCase": true }]))), // { "ecmaVersion": 6 },
+        ("var [b, d, a, c] = {};", None), // { "ecmaVersion": 6 },
+        ("var e, [a, c, d] = {};", None), // { "ecmaVersion": 6 },
+        (
+            "var a, [E, c, D] = [];",
+            Some(serde_json::json!([{ "ignoreCase": true }])),
+        ), // { "ecmaVersion": 6 },
         ("var a, f, [e, c, d] = [1,2,3];", None), // { "ecmaVersion": 6 },
         (
             "export default class {
@@ -266,7 +305,10 @@ fn test() {
 			}",
             None,
         ), // { "ecmaVersion": 6, "sourceType": "module" },
-        ("var {} = 1, a", Some(serde_json::json!([{ "ignoreCase": true }]))), // { "ecmaVersion": 6 }
+        (
+            "var {} = 1, a",
+            Some(serde_json::json!([{ "ignoreCase": true }])),
+        ), // { "ecmaVersion": 6 }
     ];
 
     let fail = vec![
@@ -285,11 +327,26 @@ fn test() {
         ("var a, A;", None),
         ("var a, B;", None),
         ("var a, B, c;", None),
-        ("var B, a;", Some(serde_json::json!([{ "ignoreCase": true }]))),
-        ("var B, A, c;", Some(serde_json::json!([{ "ignoreCase": true }]))),
-        ("var d, a, [b, c] = {};", Some(serde_json::json!([{ "ignoreCase": true }]))), // { "ecmaVersion": 6 },
-        ("var d, a, [b, {x: {c, e}}] = {};", Some(serde_json::json!([{ "ignoreCase": true }]))), // { "ecmaVersion": 6 },
-        ("var {} = 1, b, a", Some(serde_json::json!([{ "ignoreCase": true }]))), // { "ecmaVersion": 6 },
+        (
+            "var B, a;",
+            Some(serde_json::json!([{ "ignoreCase": true }])),
+        ),
+        (
+            "var B, A, c;",
+            Some(serde_json::json!([{ "ignoreCase": true }])),
+        ),
+        (
+            "var d, a, [b, c] = {};",
+            Some(serde_json::json!([{ "ignoreCase": true }])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "var d, a, [b, {x: {c, e}}] = {};",
+            Some(serde_json::json!([{ "ignoreCase": true }])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "var {} = 1, b, a",
+            Some(serde_json::json!([{ "ignoreCase": true }])),
+        ), // { "ecmaVersion": 6 },
         ("var b=10, a=f();", None),
         ("var b=10, a=b;", None),
         ("var b = 0, a = `${b}`;", None),  // { "ecmaVersion": 6 },
@@ -312,8 +369,16 @@ fn test() {
         ("var a, A;", "var A, a;", None),
         ("var a, B;", "var B, a;", None),
         ("var a, B, c;", "var B, a, c;", None),
-        ("var B, a;", "var a, B;", Some(serde_json::json!([{ "ignoreCase": true }]))),
-        ("var B, A, c;", "var A, B, c;", Some(serde_json::json!([{ "ignoreCase": true }]))),
+        (
+            "var B, a;",
+            "var a, B;",
+            Some(serde_json::json!([{ "ignoreCase": true }])),
+        ),
+        (
+            "var B, A, c;",
+            "var A, B, c;",
+            Some(serde_json::json!([{ "ignoreCase": true }])),
+        ),
         (
             "var d, a, [b, c] = {};",
             "var a, d, [b, c] = {};",
@@ -324,10 +389,16 @@ fn test() {
             "var a, d, [b, {x: {c, e}}] = {};",
             Some(serde_json::json!([{ "ignoreCase": true }])),
         ),
-        ("var {} = 1, b, a", "var {} = 1, a, b", Some(serde_json::json!([{ "ignoreCase": true }]))),
+        (
+            "var {} = 1, b, a",
+            "var {} = 1, a, b",
+            Some(serde_json::json!([{ "ignoreCase": true }])),
+        ),
         ("var b = f(), c, d, a;", "var b = f(), a, c, d;", None),
         ("var b, /* comment */ a", "var b, /* comment */ a", None),
     ];
 
-    Tester::new(SortVars::NAME, SortVars::PLUGIN, pass, fail).expect_fix(fix).test_and_snapshot();
+    Tester::new(SortVars::NAME, SortVars::PLUGIN, pass, fail)
+        .expect_fix(fix)
+        .test_and_snapshot();
 }

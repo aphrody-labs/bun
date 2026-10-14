@@ -149,7 +149,12 @@ pub struct AddRequest {
 impl AddRequest {
     #[must_use]
     pub fn seed(url: impl Into<String>) -> Self {
-        Self { url: url.into(), depth: 0, priority: false, boost: 0.0 }
+        Self {
+            url: url.into(),
+            depth: 0,
+            priority: false,
+            boost: 0.0,
+        }
     }
 }
 
@@ -197,7 +202,10 @@ impl Frontier {
         db.busy_timeout(std::time::Duration::from_secs(5))?;
         db.execute_batch(SCHEMA)?;
         migrate_schema(&db)?;
-        let mut frontier = Self { db, options: normalize_options(options) };
+        let mut frontier = Self {
+            db,
+            options: normalize_options(options),
+        };
         frontier.recover_stale(now_ms)?;
         Ok(frontier)
     }
@@ -206,7 +214,10 @@ impl Frontier {
         let db = Connection::open_in_memory()?;
         db.execute_batch(SCHEMA)?;
         migrate_schema(&db)?;
-        Ok(Self { db, options: normalize_options(options) })
+        Ok(Self {
+            db,
+            options: normalize_options(options),
+        })
     }
 
     pub fn enqueue(&mut self, request: AddRequest, now_ms: i64) -> rusqlite::Result<bool> {
@@ -269,8 +280,11 @@ impl Frontier {
             let host = url.host_str().unwrap_or_default().to_owned();
             let family = family_key(&url);
             let depth = i64::from(request.depth);
-            let relevance =
-                self.options.goal.as_deref().map_or(0.0, |goal| anchor_relevance(goal, None, &url));
+            let relevance = self
+                .options
+                .goal
+                .as_deref()
+                .map_or(0.0, |goal| anchor_relevance(goal, None, &url));
             let base_score = frontier_score(1.0, relevance, request.depth, request.boost, 0);
             prepared.push((
                 url,
@@ -282,7 +296,9 @@ impl Frontier {
                 request.boost,
             ));
         }
-        let tx = self.db.transaction_with_behavior(TransactionBehavior::Immediate)?;
+        let tx = self
+            .db
+            .transaction_with_behavior(TransactionBehavior::Immediate)?;
         let mut count = 0;
         for (url, host, family, depth, priority, base_score, boost) in prepared {
             let family_done: u32 = tx.query_row(
@@ -318,11 +334,14 @@ impl Frontier {
         if unique.is_empty() {
             return Ok(0);
         }
-        let tx = self.db.transaction_with_behavior(TransactionBehavior::Immediate)?;
-        let cash: f64 =
-            tx.query_row("SELECT opic_cash FROM requests WHERE id=?1", [parent.id], |row| {
-                row.get(0)
-            })?;
+        let tx = self
+            .db
+            .transaction_with_behavior(TransactionBehavior::Immediate)?;
+        let cash: f64 = tx.query_row(
+            "SELECT opic_cash FROM requests WHERE id=?1",
+            [parent.id],
+            |row| row.get(0),
+        )?;
         let share = cash / unique.len() as f64;
         let mut inserted = 0;
         for (key, (url, anchor)) in unique {
@@ -376,7 +395,9 @@ impl Frontier {
     pub fn lease_next(&mut self, now_ms: i64) -> rusqlite::Result<Option<Lease>> {
         self.recover_stale(now_ms)?;
         self.promote_due_revisits(now_ms)?;
-        let tx = self.db.transaction_with_behavior(TransactionBehavior::Immediate)?;
+        let tx = self
+            .db
+            .transaction_with_behavior(TransactionBehavior::Immediate)?;
         let candidate = {
             let mut statement = tx.prepare(
                 "SELECT r.id,r.url,r.host,r.depth,r.retries FROM requests r
@@ -386,15 +407,18 @@ impl Frontier {
                  ORDER BY r.priority DESC,r.score DESC,r.id ASC LIMIT 1",
             )?;
             statement
-                .query_row(params![self.options.max_in_flight_per_host, now_ms], |row| {
-                    Ok((
-                        row.get::<_, i64>(0)?,
-                        row.get::<_, String>(1)?,
-                        row.get::<_, String>(2)?,
-                        row.get::<_, u32>(3)?,
-                        row.get::<_, u32>(4)?,
-                    ))
-                })
+                .query_row(
+                    params![self.options.max_in_flight_per_host, now_ms],
+                    |row| {
+                        Ok((
+                            row.get::<_, i64>(0)?,
+                            row.get::<_, String>(1)?,
+                            row.get::<_, String>(2)?,
+                            row.get::<_, u32>(3)?,
+                            row.get::<_, u32>(4)?,
+                        ))
+                    },
+                )
                 .optional()?
         };
         let Some((id, raw_url, host, depth, retries)) = candidate else {
@@ -419,7 +443,12 @@ impl Frontier {
         tx.commit()?;
         let url = Url::parse(&raw_url)
             .map_err(|error| rusqlite::Error::InvalidParameterName(error.to_string()))?;
-        Ok(Some(Lease { id, url, depth, retries }))
+        Ok(Some(Lease {
+            id,
+            url,
+            depth,
+            retries,
+        }))
     }
 
     pub fn mark_done(
@@ -428,7 +457,9 @@ impl Frontier {
         page: &PageRecord,
         now_ms: i64,
     ) -> rusqlite::Result<StoredPage> {
-        let tx = self.db.transaction_with_behavior(TransactionBehavior::Immediate)?;
+        let tx = self
+            .db
+            .transaction_with_behavior(TransactionBehavior::Immediate)?;
         let info = tx.query_row(
             "SELECT state,family,content_hash,fetch_count,change_count,first_fetched_at,opic_cash+opic_history
              FROM requests WHERE id=?1",
@@ -446,17 +477,25 @@ impl Frontier {
             importance,
         )) = info
         else {
-            return Err(rusqlite::Error::InvalidParameterName("lease is not locked".into()));
+            return Err(rusqlite::Error::InvalidParameterName(
+                "lease is not locked".into(),
+            ));
         };
         if state != "locked" {
-            return Err(rusqlite::Error::InvalidParameterName("lease is not locked".into()));
+            return Err(rusqlite::Error::InvalidParameterName(
+                "lease is not locked".into(),
+            ));
         }
         let exact: bool = tx.query_row(
             "SELECT EXISTS(SELECT 1 FROM pages WHERE content_hash=?1 AND url<>?2)",
             params![page.content_hash, lease.url.as_str()],
             |r| r.get(0),
         )?;
-        let mut status = if exact { StoredPage::ExactDuplicate } else { StoredPage::New };
+        let mut status = if exact {
+            StoredPage::ExactDuplicate
+        } else {
+            StoredPage::New
+        };
         if status == StoredPage::New && page.simhash != 0 {
             let bands = simhash_bands(page.simhash);
             // At most three changed bits guarantee one equal 16-bit band.
@@ -495,7 +534,9 @@ impl Frontier {
                 ],
             )?;
         }
-        let changed = prior_hash.as_deref().is_some_and(|old| old != page.content_hash);
+        let changed = prior_hash
+            .as_deref()
+            .is_some_and(|old| old != page.content_hash);
         let history = ChangeHistory {
             fetch_count: prior_fetches.saturating_add(1),
             change_count: prior_changes + u32::from(changed),
@@ -542,7 +583,9 @@ impl Frontier {
     }
 
     pub fn mark_failed(&mut self, lease: &Lease, error: &str) -> rusqlite::Result<RequestState> {
-        let tx = self.db.transaction_with_behavior(TransactionBehavior::Immediate)?;
+        let tx = self
+            .db
+            .transaction_with_behavior(TransactionBehavior::Immediate)?;
         let retries: Option<u32> = tx
             .query_row(
                 "SELECT retries FROM requests WHERE id=?1 AND state='locked'",
@@ -557,7 +600,11 @@ impl Frontier {
         } else {
             RequestState::Failed
         };
-        let label = if state == RequestState::Pending { "pending" } else { "failed" };
+        let label = if state == RequestState::Pending {
+            "pending"
+        } else {
+            "failed"
+        };
         tx.execute("UPDATE requests SET state=?2,retries=retries+1,locked_at=NULL,last_error=?3 WHERE id=?1", params![lease.id, label, error])?;
         tx.execute(
             "UPDATE hosts SET in_flight=MAX(0,in_flight-1) WHERE host=?1",
@@ -568,13 +615,17 @@ impl Frontier {
     }
 
     pub fn mark_rejected(&mut self, lease: &Lease, reason: &str) -> rusqlite::Result<()> {
-        let tx = self.db.transaction_with_behavior(TransactionBehavior::Immediate)?;
+        let tx = self
+            .db
+            .transaction_with_behavior(TransactionBehavior::Immediate)?;
         let updated = tx.execute(
             "UPDATE requests SET state='failed',locked_at=NULL,last_error=?2 WHERE id=?1 AND state='locked'",
             params![lease.id, reason],
         )?;
         if updated == 0 {
-            return Err(rusqlite::Error::InvalidParameterName("lease is not locked".into()));
+            return Err(rusqlite::Error::InvalidParameterName(
+                "lease is not locked".into(),
+            ));
         }
         tx.execute(
             "UPDATE hosts SET in_flight=MAX(0,in_flight-1) WHERE host=?1",
@@ -585,7 +636,9 @@ impl Frontier {
 
     pub fn recover_stale(&mut self, now_ms: i64) -> rusqlite::Result<usize> {
         let cutoff = now_ms.saturating_sub(self.options.lock_timeout_ms.max(0));
-        let tx = self.db.transaction_with_behavior(TransactionBehavior::Immediate)?;
+        let tx = self
+            .db
+            .transaction_with_behavior(TransactionBehavior::Immediate)?;
         let count = tx.execute("UPDATE requests SET state='pending',locked_at=NULL WHERE state='locked' AND locked_at<=?1", [cutoff])?;
         if count > 0 {
             tx.execute("UPDATE hosts SET in_flight=(SELECT COUNT(*) FROM requests WHERE requests.host=hosts.host AND requests.state='locked')", [])?;
@@ -598,7 +651,9 @@ impl Frontier {
         if !self.options.enable_revisits {
             return Ok(0);
         }
-        let tx = self.db.transaction_with_behavior(TransactionBehavior::Immediate)?;
+        let tx = self
+            .db
+            .transaction_with_behavior(TransactionBehavior::Immediate)?;
         let due = {
             let mut statement = tx.prepare(
                 "SELECT id,change_rate,last_fetched_at,base_score FROM requests
@@ -633,9 +688,11 @@ impl Frontier {
     }
 
     pub fn next_revisit_at(&self) -> rusqlite::Result<Option<i64>> {
-        self.db.query_row("SELECT MIN(next_fetch_at) FROM requests WHERE state='done'", [], |row| {
-            row.get(0)
-        })
+        self.db.query_row(
+            "SELECT MIN(next_fetch_at) FROM requests WHERE state='done'",
+            [],
+            |row| row.get(0),
+        )
     }
 
     pub fn stats(&self) -> rusqlite::Result<FrontierStats> {
@@ -665,19 +722,30 @@ impl Frontier {
 
     pub fn page(&self, url: &str) -> rusqlite::Result<Option<(String, String)>> {
         self.db
-            .query_row("SELECT title,markdown FROM pages WHERE url=?1", [url], |r| {
-                Ok((r.get(0)?, r.get(1)?))
-            })
+            .query_row(
+                "SELECT title,markdown FROM pages WHERE url=?1",
+                [url],
+                |r| Ok((r.get(0)?, r.get(1)?)),
+            )
             .optional()
     }
 
-    pub fn undiscovered_seed_urls(&self, scope: &str, limit: usize) -> rusqlite::Result<Vec<String>> {
+    pub fn undiscovered_seed_urls(
+        &self,
+        scope: &str,
+        limit: usize,
+    ) -> rusqlite::Result<Vec<String>> {
         let mut statement = self.db.prepare("SELECT MIN(url) FROM requests WHERE NOT EXISTS (SELECT 1 FROM sitemap_discovered_hosts AS seen WHERE seen.scope=?1 AND seen.host=requests.host) GROUP BY host LIMIT ?2")?;
-        statement.query_map(params![scope, limit.min(1024) as i64], |row| row.get(0))?.collect()
+        statement
+            .query_map(params![scope, limit.min(1024) as i64], |row| row.get(0))?
+            .collect()
     }
 
     pub fn mark_sitemap_host_discovered(&self, scope: &str, host: &str) -> rusqlite::Result<()> {
-        self.db.execute("INSERT OR IGNORE INTO sitemap_discovered_hosts VALUES (?1,?2)", params![scope,host])?;
+        self.db.execute(
+            "INSERT OR IGNORE INTO sitemap_discovered_hosts VALUES (?1,?2)",
+            params![scope, host],
+        )?;
         Ok(())
     }
 
@@ -686,44 +754,84 @@ impl Frontier {
     }
 
     pub fn enqueue_sitemap(&self, url: &Url) -> rusqlite::Result<()> {
-        if !matches!(url.scheme(), "http" | "https") || !url.username().is_empty() || url.password().is_some() {
-            return Err(rusqlite::Error::InvalidParameterName("Invalid sitemap URL".into()));
+        if !matches!(url.scheme(), "http" | "https")
+            || !url.username().is_empty()
+            || url.password().is_some()
+        {
+            return Err(rusqlite::Error::InvalidParameterName(
+                "Invalid sitemap URL".into(),
+            ));
         }
-        self.db.execute("INSERT OR IGNORE INTO sitemap_jobs(url,host) VALUES (?1,?2)", params![url.as_str(),url.host_str().unwrap_or_default()])?;
+        self.db.execute(
+            "INSERT OR IGNORE INTO sitemap_jobs(url,host) VALUES (?1,?2)",
+            params![url.as_str(), url.host_str().unwrap_or_default()],
+        )?;
         Ok(())
     }
 
-    pub fn pending_sitemaps(&self, allowed: &HashSet<String>, limit: usize) -> rusqlite::Result<Vec<(String, usize, Option<String>)>> {
+    pub fn pending_sitemaps(
+        &self,
+        allowed: &HashSet<String>,
+        limit: usize,
+    ) -> rusqlite::Result<Vec<(String, usize, Option<String>)>> {
         let (filter, mut values) = sitemap_host_filter(allowed);
         let limit_parameter = values.len() + 1;
         values.push(rusqlite::types::Value::Integer(limit.min(100) as i64));
         let mut statement = self.db.prepare(&format!("SELECT url,entry_offset,body_hash FROM sitemap_jobs WHERE complete=0 AND ({filter}) ORDER BY rowid LIMIT ?{limit_parameter}"))?;
-        statement.query_map(rusqlite::params_from_iter(values), |row| Ok((row.get(0)?, sqlite_usize(row, 1)?, row.get(2)?)))?.collect()
+        statement
+            .query_map(rusqlite::params_from_iter(values), |row| {
+                Ok((row.get(0)?, sqlite_usize(row, 1)?, row.get(2)?))
+            })?
+            .collect()
     }
 
-    pub fn sitemap_job(&self, url: &Url) -> rusqlite::Result<Option<(usize, bool, Option<String>)>> {
-        self.db.query_row("SELECT entry_offset,complete,body_hash FROM sitemap_jobs WHERE url=?1", [url.as_str()], |row| Ok((sqlite_usize(row, 0)?, row.get(1)?, row.get(2)?))).optional()
+    pub fn sitemap_job(
+        &self,
+        url: &Url,
+    ) -> rusqlite::Result<Option<(usize, bool, Option<String>)>> {
+        self.db
+            .query_row(
+                "SELECT entry_offset,complete,body_hash FROM sitemap_jobs WHERE url=?1",
+                [url.as_str()],
+                |row| Ok((sqlite_usize(row, 0)?, row.get(1)?, row.get(2)?)),
+            )
+            .optional()
     }
 
-    pub fn advance_sitemap(&self, url: &Url, next_offset: Option<usize>, body_hash: &str) -> rusqlite::Result<()> {
-        let offset = i64::try_from(next_offset.unwrap_or(0)).map_err(|error| rusqlite::Error::ToSqlConversionFailure(Box::new(error)))?;
+    pub fn advance_sitemap(
+        &self,
+        url: &Url,
+        next_offset: Option<usize>,
+        body_hash: &str,
+    ) -> rusqlite::Result<()> {
+        let offset = i64::try_from(next_offset.unwrap_or(0))
+            .map_err(|error| rusqlite::Error::ToSqlConversionFailure(Box::new(error)))?;
         self.db.execute("UPDATE sitemap_jobs SET entry_offset=CASE WHEN body_hash=?4 THEN MAX(entry_offset,?2) ELSE ?2 END,complete=CASE WHEN body_hash=?4 THEN MAX(complete,?3) ELSE ?3 END,body_hash=?4 WHERE url=?1", params![url.as_str(), offset, next_offset.is_none(), body_hash])?;
         Ok(())
     }
 
     pub fn reset_sitemap(&self, url: &Url) -> rusqlite::Result<()> {
-        self.db.execute("UPDATE sitemap_jobs SET entry_offset=0,complete=0,body_hash=NULL WHERE url=?1", [url.as_str()])?;
+        self.db.execute(
+            "UPDATE sitemap_jobs SET entry_offset=0,complete=0,body_hash=NULL WHERE url=?1",
+            [url.as_str()],
+        )?;
         Ok(())
     }
 
     pub fn sitemap_pending_count(&self, allowed: &HashSet<String>) -> rusqlite::Result<usize> {
         let (filter, values) = sitemap_host_filter(allowed);
-        self.db.query_row(&format!("SELECT COUNT(*) FROM sitemap_jobs WHERE complete=0 AND ({filter})"), rusqlite::params_from_iter(values), |row| sqlite_usize(row, 0))
+        self.db.query_row(
+            &format!("SELECT COUNT(*) FROM sitemap_jobs WHERE complete=0 AND ({filter})"),
+            rusqlite::params_from_iter(values),
+            |row| sqlite_usize(row, 0),
+        )
     }
 
     pub fn known_urls(&self) -> rusqlite::Result<HashSet<String>> {
         let mut statement = self.db.prepare("SELECT url FROM requests")?;
-        statement.query_map([], |r| r.get::<_, String>(0))?.collect()
+        statement
+            .query_map([], |r| r.get::<_, String>(0))?
+            .collect()
     }
 }
 
@@ -736,9 +844,17 @@ pub struct PageRecord {
 }
 
 fn sitemap_host_filter(allowed: &HashSet<String>) -> (String, Vec<rusqlite::types::Value>) {
-    if allowed.is_empty() { return ("1".into(), Vec::new()); }
-    let values: Vec<_> = allowed.iter().cloned().map(rusqlite::types::Value::Text).collect();
-    let clauses: Vec<_> = (1..=values.len()).map(|index| format!("host=?{index} OR substr(host,-length(?{index})-1)='.'||?{index}")).collect();
+    if allowed.is_empty() {
+        return ("1".into(), Vec::new());
+    }
+    let values: Vec<_> = allowed
+        .iter()
+        .cloned()
+        .map(rusqlite::types::Value::Text)
+        .collect();
+    let clauses: Vec<_> = (1..=values.len())
+        .map(|index| format!("host=?{index} OR substr(host,-length(?{index})-1)='.'||?{index}"))
+        .collect();
     (clauses.join(" OR "), values)
 }
 
@@ -749,7 +865,12 @@ fn family_key(url: &Url) -> String {
 }
 
 fn simhash_bands(value: u64) -> [u16; 4] {
-    [value as u16, (value >> 16) as u16, (value >> 32) as u16, (value >> 48) as u16]
+    [
+        value as u16,
+        (value >> 16) as u16,
+        (value >> 32) as u16,
+        (value >> 48) as u16,
+    ]
 }
 
 fn normalize_options(mut options: FrontierOptions) -> FrontierOptions {
@@ -758,8 +879,10 @@ fn normalize_options(mut options: FrontierOptions) -> FrontierOptions {
     options.lock_timeout_ms = options.lock_timeout_ms.max(1);
     options.near_duplicate_bits = options.near_duplicate_bits.min(64);
     options.revisit_policy.min_interval_ms = options.revisit_policy.min_interval_ms.max(1);
-    options.revisit_policy.max_interval_ms =
-        options.revisit_policy.max_interval_ms.max(options.revisit_policy.min_interval_ms);
+    options.revisit_policy.max_interval_ms = options
+        .revisit_policy
+        .max_interval_ms
+        .max(options.revisit_policy.min_interval_ms);
     if !options.revisit_policy.prior_interval_ms.is_finite()
         || options.revisit_policy.prior_interval_ms <= 0.0
     {
@@ -800,11 +923,14 @@ fn migrate_schema(db: &Connection) -> rusqlite::Result<()> {
         ),
     ] {
         let mut statement = db.prepare(&format!("PRAGMA table_info({table})"))?;
-        let names: HashSet<String> =
-            statement.query_map([], |row| row.get(1))?.collect::<rusqlite::Result<_>>()?;
+        let names: HashSet<String> = statement
+            .query_map([], |row| row.get(1))?
+            .collect::<rusqlite::Result<_>>()?;
         for (name, definition) in columns {
             if !names.contains(*name) {
-                db.execute_batch(&format!("ALTER TABLE {table} ADD COLUMN {name} {definition}"))?;
+                db.execute_batch(&format!(
+                    "ALTER TABLE {table} ADD COLUMN {name} {definition}"
+                ))?;
                 if table == "pages" && name.starts_with("band") {
                     added_bands = true;
                 }
@@ -814,7 +940,9 @@ fn migrate_schema(db: &Connection) -> rusqlite::Result<()> {
     if added_bands {
         let mut statement = db.prepare("SELECT url,simhash FROM pages")?;
         let pages = statement
-            .query_map([], |row| Ok((row.get::<_, String>(0)?, row.get::<_, i64>(1)?)))?
+            .query_map([], |row| {
+                Ok((row.get::<_, String>(0)?, row.get::<_, i64>(1)?))
+            })?
             .collect::<rusqlite::Result<Vec<_>>>()?;
         for (url, hash) in pages {
             let bands = simhash_bands(hash as u64);
@@ -839,26 +967,65 @@ mod tests {
     #[test]
     fn sitemap_host_discovery_resumes_beyond_32_and_filters_pending_jobs_in_sql() {
         let mut frontier = Frontier::memory(FrontierOptions::default()).unwrap();
-        for index in 0..65 { frontier.enqueue(AddRequest::seed(format!("https://h{index:03}.example.test/")), 0).unwrap(); }
-        for expected in [32, 32, 1] {
-            let urls = frontier.undiscovered_seed_urls("fixture-scope", 32).unwrap();
-            assert_eq!(urls.len(), expected);
-            for raw in urls { let url = Url::parse(&raw).unwrap(); frontier.mark_sitemap_host_discovered("fixture-scope", url.host_str().unwrap()).unwrap(); }
+        for index in 0..65 {
+            frontier
+                .enqueue(
+                    AddRequest::seed(format!("https://h{index:03}.example.test/")),
+                    0,
+                )
+                .unwrap();
         }
-        assert_eq!(frontier.sitemap_hosts_pending_count("fixture-scope").unwrap(), 0);
-        assert_eq!(frontier.sitemap_hosts_pending_count("other-scope").unwrap(), 65);
-        for index in 0..120 { frontier.enqueue_sitemap(&Url::parse(&format!("https://other.test/{index}.xml")).unwrap()).unwrap(); }
-        frontier.enqueue_sitemap(&Url::parse("https://sub.example.test/sitemap.xml").unwrap()).unwrap();
+        for expected in [32, 32, 1] {
+            let urls = frontier
+                .undiscovered_seed_urls("fixture-scope", 32)
+                .unwrap();
+            assert_eq!(urls.len(), expected);
+            for raw in urls {
+                let url = Url::parse(&raw).unwrap();
+                frontier
+                    .mark_sitemap_host_discovered("fixture-scope", url.host_str().unwrap())
+                    .unwrap();
+            }
+        }
+        assert_eq!(
+            frontier
+                .sitemap_hosts_pending_count("fixture-scope")
+                .unwrap(),
+            0
+        );
+        assert_eq!(
+            frontier.sitemap_hosts_pending_count("other-scope").unwrap(),
+            65
+        );
+        for index in 0..120 {
+            frontier
+                .enqueue_sitemap(&Url::parse(&format!("https://other.test/{index}.xml")).unwrap())
+                .unwrap();
+        }
+        frontier
+            .enqueue_sitemap(&Url::parse("https://sub.example.test/sitemap.xml").unwrap())
+            .unwrap();
         let allowed = HashSet::from(["example.test".into()]);
-        assert_eq!(frontier.pending_sitemaps(&allowed, 1).unwrap()[0].0, "https://sub.example.test/sitemap.xml");
+        assert_eq!(
+            frontier.pending_sitemaps(&allowed, 1).unwrap()[0].0,
+            "https://sub.example.test/sitemap.xml"
+        );
         assert_eq!(frontier.sitemap_pending_count(&allowed).unwrap(), 1);
     }
 
     #[test]
     fn normalized_url_dedup_and_priority_order() {
         let mut frontier = Frontier::memory(FrontierOptions::default()).unwrap();
-        assert!(frontier.enqueue(AddRequest::seed("https://Example.test/a#one"), 0).unwrap());
-        assert!(!frontier.enqueue(AddRequest::seed("https://example.test/a#two"), 0).unwrap());
+        assert!(
+            frontier
+                .enqueue(AddRequest::seed("https://Example.test/a#one"), 0)
+                .unwrap()
+        );
+        assert!(
+            !frontier
+                .enqueue(AddRequest::seed("https://example.test/a#two"), 0)
+                .unwrap()
+        );
         assert!(
             frontier
                 .enqueue(
@@ -886,7 +1053,9 @@ mod tests {
         })
         .unwrap();
         for path in ["a", "b"] {
-            frontier.enqueue(AddRequest::seed(format!("https://example.test/{path}")), 0).unwrap();
+            frontier
+                .enqueue(AddRequest::seed(format!("https://example.test/{path}")), 0)
+                .unwrap();
         }
         let first = frontier.lease_next(100).unwrap().unwrap();
         assert!(frontier.lease_next(100).unwrap().is_none());
@@ -903,15 +1072,23 @@ mod tests {
             ..FrontierOptions::default()
         })
         .unwrap();
-        frontier.enqueue(AddRequest::seed("https://example.test/"), 0).unwrap();
+        frontier
+            .enqueue(AddRequest::seed("https://example.test/"), 0)
+            .unwrap();
         let first = frontier.lease_next(1).unwrap().unwrap();
         assert_eq!(frontier.recover_stale(102).unwrap(), 1);
         let second = frontier.lease_next(102).unwrap().unwrap();
         assert_eq!(first.id, second.id);
-        assert_eq!(frontier.mark_failed(&second, "first error").unwrap(), RequestState::Pending);
+        assert_eq!(
+            frontier.mark_failed(&second, "first error").unwrap(),
+            RequestState::Pending
+        );
         let third = frontier.lease_next(103).unwrap().unwrap();
         assert_eq!(third.retries, 1);
-        assert_eq!(frontier.mark_failed(&third, "second error").unwrap(), RequestState::Failed);
+        assert_eq!(
+            frontier.mark_failed(&third, "second error").unwrap(),
+            RequestState::Failed
+        );
         assert_eq!(frontier.stats().unwrap().failed, 1);
     }
 
@@ -919,7 +1096,9 @@ mod tests {
     fn exact_and_near_content_duplicates_are_not_indexed_twice() {
         let mut frontier = Frontier::memory(FrontierOptions::default()).unwrap();
         for path in ["a", "b", "c"] {
-            frontier.enqueue(AddRequest::seed(format!("https://example.test/{path}")), 0).unwrap();
+            frontier
+                .enqueue(AddRequest::seed(format!("https://example.test/{path}")), 0)
+                .unwrap();
         }
         let page = PageRecord {
             title: "One".into(),
@@ -928,13 +1107,26 @@ mod tests {
             simhash: 0b1010,
         };
         let first = frontier.lease_next(1).unwrap().unwrap();
-        assert_eq!(frontier.mark_done(&first, &page, 1).unwrap(), StoredPage::New);
+        assert_eq!(
+            frontier.mark_done(&first, &page, 1).unwrap(),
+            StoredPage::New
+        );
         let second = frontier.lease_next(2).unwrap().unwrap();
-        assert_eq!(frontier.mark_done(&second, &page, 2).unwrap(), StoredPage::ExactDuplicate);
+        assert_eq!(
+            frontier.mark_done(&second, &page, 2).unwrap(),
+            StoredPage::ExactDuplicate
+        );
         assert!(frontier.page(second.url.as_str()).unwrap().is_none());
         let third = frontier.lease_next(3).unwrap().unwrap();
-        let near = PageRecord { content_hash: "hash-2".into(), simhash: 0b1011, ..page };
-        assert_eq!(frontier.mark_done(&third, &near, 3).unwrap(), StoredPage::NearDuplicate);
+        let near = PageRecord {
+            content_hash: "hash-2".into(),
+            simhash: 0b1011,
+            ..page
+        };
+        assert_eq!(
+            frontier.mark_done(&third, &near, 3).unwrap(),
+            StoredPage::NearDuplicate
+        );
         assert_eq!(frontier.stats().unwrap().done, 3);
     }
 
@@ -945,7 +1137,9 @@ mod tests {
             ..FrontierOptions::default()
         })
         .unwrap();
-        frontier.enqueue(AddRequest::seed("https://example.test/"), 0).unwrap();
+        frontier
+            .enqueue(AddRequest::seed("https://example.test/"), 0)
+            .unwrap();
         frontier
             .enqueue(
                 AddRequest {
@@ -964,7 +1158,10 @@ mod tests {
                 .enqueue_children(
                     &parent,
                     [
-                        (Url::parse("https://example.test/existing").unwrap(), "old".into()),
+                        (
+                            Url::parse("https://example.test/existing").unwrap(),
+                            "old".into()
+                        ),
                         (
                             Url::parse("https://example.test/rust-crawler").unwrap(),
                             "Rust crawler guide".into()
@@ -999,15 +1196,20 @@ mod tests {
 
     #[test]
     fn completed_page_is_revisited_at_due_time() {
-        let policy =
-            RevisitPolicy { min_interval_ms: 10, max_interval_ms: 10, ..RevisitPolicy::default() };
+        let policy = RevisitPolicy {
+            min_interval_ms: 10,
+            max_interval_ms: 10,
+            ..RevisitPolicy::default()
+        };
         let mut frontier = Frontier::memory(FrontierOptions {
             enable_revisits: true,
             revisit_policy: policy,
             ..FrontierOptions::default()
         })
         .unwrap();
-        frontier.enqueue(AddRequest::seed("https://example.test/"), 0).unwrap();
+        frontier
+            .enqueue(AddRequest::seed("https://example.test/"), 0)
+            .unwrap();
         let first = frontier.lease_next(1).unwrap().unwrap();
         let page = PageRecord {
             title: "Test".into(),
@@ -1020,7 +1222,10 @@ mod tests {
         assert!(frontier.lease_next(10).unwrap().is_none());
         let second = frontier.lease_next(11).unwrap().unwrap();
         assert_eq!(second.id, first.id);
-        assert_eq!(frontier.mark_done(&second, &page, 11).unwrap(), StoredPage::New);
+        assert_eq!(
+            frontier.mark_done(&second, &page, 11).unwrap(),
+            StoredPage::New
+        );
         let counters: (u32, u32) = frontier
             .db
             .query_row(
@@ -1041,7 +1246,9 @@ mod tests {
             INSERT INTO pages VALUES('https://example.test/','One','Body','hash',4660,1);").unwrap();
         migrate_schema(&db).unwrap();
         let bands: (u16, u16) = db
-            .query_row("SELECT band0,band1 FROM pages", [], |row| Ok((row.get(0)?, row.get(1)?)))
+            .query_row("SELECT band0,band1 FROM pages", [], |row| {
+                Ok((row.get(0)?, row.get(1)?))
+            })
             .unwrap();
         assert_eq!(bands, (0x1234, 0));
     }
@@ -1053,11 +1260,17 @@ mod tests {
         frontier.enqueue_sitemap(&url).unwrap();
         frontier.advance_sitemap(&url, Some(20), "one").unwrap();
         frontier.advance_sitemap(&url, Some(10), "one").unwrap();
-        assert_eq!(frontier.sitemap_job(&url).unwrap().unwrap(), (20, false, Some("one".into())));
+        assert_eq!(
+            frontier.sitemap_job(&url).unwrap().unwrap(),
+            (20, false, Some("one".into()))
+        );
         frontier.advance_sitemap(&url, None, "one").unwrap();
         frontier.advance_sitemap(&url, Some(10), "one").unwrap();
         assert!(frontier.sitemap_job(&url).unwrap().unwrap().1);
         frontier.advance_sitemap(&url, Some(3), "two").unwrap();
-        assert_eq!(frontier.sitemap_job(&url).unwrap().unwrap(), (3, false, Some("two".into())));
+        assert_eq!(
+            frontier.sitemap_job(&url).unwrap().unwrap(),
+            (3, false, Some("two".into()))
+        );
     }
 }

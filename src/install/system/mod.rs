@@ -130,7 +130,11 @@ pub fn parse_spec(spec: &[u8]) -> Option<Spec> {
     Some(Spec {
         source,
         id: id.to_owned(),
-        range: if range.is_empty() { "*".to_owned() } else { range.to_owned() },
+        range: if range.is_empty() {
+            "*".to_owned()
+        } else {
+            range.to_owned()
+        },
     })
 }
 
@@ -142,7 +146,11 @@ pub fn parse_entry(key: &[u8], range: &[u8]) -> Option<Spec> {
     Some(Spec {
         source,
         id: id.to_owned(),
-        range: if range.is_empty() { "*".to_owned() } else { range.to_owned() },
+        range: if range.is_empty() {
+            "*".to_owned()
+        } else {
+            range.to_owned()
+        },
     })
 }
 
@@ -172,7 +180,9 @@ pub enum Error {
     Parse(String),
     #[error("{0}")]
     Unsupported(String),
-    #[error("{0} needs administrator rights; rerun from an elevated shell or set BUN_SYSTEM_ELEVATE=1")]
+    #[error(
+        "{0} needs administrator rights; rerun from an elevated shell or set BUN_SYSTEM_ELEVATE=1"
+    )]
     NeedsElevation(String),
     #[error("{0}")]
     Io(String),
@@ -205,13 +215,13 @@ pub struct Options {
 
 impl Options {
     pub fn from_env(env: &bun_dotenv::Loader) -> Options {
-        let get = |name: &[u8]| -> Option<String> {
-            env.get(name)
-                .filter(|v| !v.is_empty())
-                .map(lossy)
-        };
+        let get =
+            |name: &[u8]| -> Option<String> { env.get(name).filter(|v| !v.is_empty()).map(lossy) };
         Options {
-            root: env.get(b"BUN_SYSTEM_ROOT").filter(|v| !v.is_empty()).map(<[u8]>::to_vec),
+            root: env
+                .get(b"BUN_SYSTEM_ROOT")
+                .filter(|v| !v.is_empty())
+                .map(<[u8]>::to_vec),
             elevate: matches!(env.get(b"BUN_SYSTEM_ELEVATE"), Some(b"1" | b"true")),
             arch: get(b"BUN_SYSTEM_ARCH"),
             scope: get(b"BUN_SYSTEM_SCOPE"),
@@ -280,10 +290,7 @@ impl<'a> Ctx<'a> {
     }
 
     pub fn env_var(&self, name: &[u8]) -> Option<String> {
-        self.env
-            .get(name)
-            .filter(|v| !v.is_empty())
-            .map(lossy)
+        self.env.get(name).filter(|v| !v.is_empty()).map(lossy)
     }
 
     /// HTTP GET honoring proxies/TLS settings from the environment.
@@ -415,7 +422,9 @@ pub fn source_for(kind: SourceKind) -> Option<Box<dyn Source>> {
 
 pub fn source_or_err(kind: SourceKind) -> Result<Box<dyn Source>> {
     source_for(kind).ok_or_else(|| {
-        Error::Unsupported(format!("the \"{kind}\" system source is not implemented yet"))
+        Error::Unsupported(format!(
+            "the \"{kind}\" system source is not implemented yet"
+        ))
     })
 }
 
@@ -509,15 +518,20 @@ pub fn install_lock(ctx: &Ctx<'_>, lock: &SystemLock, root: &InstallRoot) -> Res
             }
         }
         let Some(source) = get_source(&mut sources, entry.source) else {
-            summary
-                .skipped
-                .push((key.clone(), format!("the \"{}\" source is not implemented yet", entry.source)));
+            summary.skipped.push((
+                key.clone(),
+                format!("the \"{}\" source is not implemented yet", entry.source),
+            ));
             continue;
         };
         if !source.host_can_install(ctx) {
-            summary
-                .skipped
-                .push((key.clone(), format!("{} packages cannot be installed on this platform", entry.source)));
+            summary.skipped.push((
+                key.clone(),
+                format!(
+                    "{} packages cannot be installed on this platform",
+                    entry.source
+                ),
+            ));
             continue;
         }
         if let Some(prev) = db.entries.remove(key) {
@@ -649,9 +663,8 @@ pub mod fs {
         if dir.is_empty() {
             return Ok(());
         }
-        bun_sys::mkdir_recursive(dir).map_err(|e| {
-            Error::Io(format!("mkdir {}: {}", super::lossy(dir), e))
-        })
+        bun_sys::mkdir_recursive(dir)
+            .map_err(|e| Error::Io(format!("mkdir {}: {}", super::lossy(dir), e)))
     }
 
     /// Writes `data` to `path`, creating parent directories.

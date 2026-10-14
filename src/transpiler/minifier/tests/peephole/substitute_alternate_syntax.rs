@@ -15,14 +15,23 @@ fn test_fold_return_result() {
     test("function f(){return a,void 0;}", "function f(){a;}");
     test("function f(){b;return a,void 0;}", "function f(){b,a;}");
     test("function f(){b,c;return a,void 0;}", "function f(){b,c,a;}");
-    test("function f(){if(a()){return undefined;}}", "function f(){a()}");
+    test(
+        "function f(){if(a()){return undefined;}}",
+        "function f(){a()}",
+    );
     test_same("function a(undefined) { return undefined; }");
     test_same("function f(){return foo()}");
 
     // `return undefined` has a different semantic in async generator function.
     test("function foo() { return undefined }", "function foo() { }");
-    test("function* foo() { return undefined }", "function* foo() { }");
-    test("async function foo() { return undefined }", "async function foo() { }");
+    test(
+        "function* foo() { return undefined }",
+        "function* foo() { }",
+    );
+    test(
+        "async function foo() { return undefined }",
+        "async function foo() { }",
+    );
     test_same("async function* foo() { return void 0 }");
     test_same("class Foo { async * foo() { return void 0 } }");
     test(
@@ -216,9 +225,18 @@ fn test_fold_literal_array_constructors() {
     test("x = Array(...foo, bar, baz)", "x = [...foo, bar, baz]");
     test("x = new Array(3, ...[])", "x = [,,,]");
     test("x = Array(3, ...[])", "x = [,,,]");
-    test("x = new Array('a', 1, 2, 'bc', 3, {}, 'abc')", "x = ['a', 1, 2, 'bc', 3, {}, 'abc']");
-    test("x = Array('a', 1, 2, 'bc', 3, {}, 'abc')", "x = ['a', 1, 2, 'bc', 3, {}, 'abc']");
-    test("x = new Array(Array(1, '2', 3, '4'))", "x = [[1, '2', 3, '4']]");
+    test(
+        "x = new Array('a', 1, 2, 'bc', 3, {}, 'abc')",
+        "x = ['a', 1, 2, 'bc', 3, {}, 'abc']",
+    );
+    test(
+        "x = Array('a', 1, 2, 'bc', 3, {}, 'abc')",
+        "x = ['a', 1, 2, 'bc', 3, {}, 'abc']",
+    );
+    test(
+        "x = new Array(Array(1, '2', 3, '4'))",
+        "x = [[1, '2', 3, '4']]",
+    );
     test("x = Array(Array(1, '2', 3, '4'))", "x = [[1, '2', 3, '4']]");
     test(
         "x = new Array(Object(), Array(\"abc\", Object(), Array(Array())))",
@@ -233,19 +251,49 @@ fn test_fold_literal_array_constructors() {
 #[test]
 fn test_fold_new_expressions() {
     test("let _ = new Error()", "let _ = /* @__PURE__ */ Error()");
-    test("let _ = new Error('a')", "let _ = /* @__PURE__ */ Error('a')");
-    test("let _ = new Error('a', { cause: b })", "let _ = Error('a', { cause: b })");
+    test(
+        "let _ = new Error('a')",
+        "let _ = /* @__PURE__ */ Error('a')",
+    );
+    test(
+        "let _ = new Error('a', { cause: b })",
+        "let _ = Error('a', { cause: b })",
+    );
     test_same("var Error; new Error()");
-    test("let _ = new EvalError()", "let _ = /* @__PURE__ */ EvalError()");
-    test("let _ = new RangeError()", "let _ = /* @__PURE__ */ RangeError()");
-    test("let _ = new ReferenceError()", "let _ = /* @__PURE__ */ ReferenceError()");
-    test("let _ = new SyntaxError()", "let _ = /* @__PURE__ */ SyntaxError()");
-    test("let _ = new TypeError()", "let _ = /* @__PURE__ */ TypeError()");
-    test("let _ = new URIError()", "let _ = /* @__PURE__ */ URIError()");
-    test("let _ = new AggregateError('a')", "let _ = /* @__PURE__ */ AggregateError('a')");
+    test(
+        "let _ = new EvalError()",
+        "let _ = /* @__PURE__ */ EvalError()",
+    );
+    test(
+        "let _ = new RangeError()",
+        "let _ = /* @__PURE__ */ RangeError()",
+    );
+    test(
+        "let _ = new ReferenceError()",
+        "let _ = /* @__PURE__ */ ReferenceError()",
+    );
+    test(
+        "let _ = new SyntaxError()",
+        "let _ = /* @__PURE__ */ SyntaxError()",
+    );
+    test(
+        "let _ = new TypeError()",
+        "let _ = /* @__PURE__ */ TypeError()",
+    );
+    test(
+        "let _ = new URIError()",
+        "let _ = /* @__PURE__ */ URIError()",
+    );
+    test(
+        "let _ = new AggregateError('a')",
+        "let _ = /* @__PURE__ */ AggregateError('a')",
+    );
 
     test("new Function()", "Function()");
-    test("new Function('a', 'b', 'console.log(a, b)')", "Function('a', 'b', 'console.log(a, b)')");
+    test(
+        "new Function('a', 'b', 'console.log(a, b)')",
+        "Function('a', 'b', 'console.log(a, b)')",
+    );
     test_same("var Function; new Function()");
 
     // RegExp is validated using the regex parser to determine if it's pure.
@@ -255,7 +303,10 @@ fn test_fold_new_expressions() {
     test("new RegExp('a')", ""); // Valid: simple pattern
     test("new RegExp(0)", "RegExp(0)"); // Can't validate non-string literal
     test("new RegExp(null)", "RegExp(null)"); // Can't validate non-string literal
-    test("x = new RegExp('a', 'g')", "x = /* @__PURE__ */ RegExp('a', 'g')"); // Valid pattern, marked as pure
+    test(
+        "x = new RegExp('a', 'g')",
+        "x = /* @__PURE__ */ RegExp('a', 'g')",
+    ); // Valid pattern, marked as pure
     test_same("new RegExp(foo)"); // Can't validate variable
     // RegExp literal is always valid
     test("new RegExp(/foo/)", "");
@@ -300,7 +351,10 @@ fn test_string_array_splitting() {
                 "var x=/* @__PURE__ */'{expected_partial}{}'.split('{delimiter}')",
                 format!("{delimiter}1").repeat(REPEAT)
             );
-            test(&format!("var x=[{source_text_partial}{additional_args}]"), expected);
+            test(
+                &format!("var x=[{source_text_partial}{additional_args}]"),
+                expected,
+            );
         };
     let test_same_with_longer_args = |source_text_partial: &str| {
         test_same(&format!("var x=[{source_text_partial}{additional_args}]"));
@@ -324,7 +378,10 @@ fn test_string_array_splitting() {
     test_options(
         &format!("var x=['1','2','3','4','5','6'{additional_args}]"),
         "",
-        &CompressOptions { unused: CompressOptionsUnused::Remove, ..default_options() },
+        &CompressOptions {
+            unused: CompressOptionsUnused::Remove,
+            ..default_options()
+        },
     );
 }
 
@@ -353,7 +410,10 @@ fn test_bind_to_call() {
 
     test("((function(){}).bind())(a)", "((function(){}))(a)");
     test("((function(){}).bind(a))(b)", "((function(){})).call(a,b)");
-    test("((function(){}).bind(a,b))(c)", "((function(){})).call(a,b,c)");
+    test(
+        "((function(){}).bind(a,b))(c)",
+        "((function(){})).call(a,b,c)",
+    );
 
     // Without using type information we don't know "f" is a function.
     test_same("(f.bind())()");
@@ -409,12 +469,21 @@ fn test_rotate_associative_operators() {
     test_same("function f(a, b, c) { return a % (b % c) }");
     test_same("function f(a, b, c) { return a ** (b ** c) }");
 
-    test("function f(a, b, c) { return a * (b % c) }", "function f(a, b, c) { return b % c * a }");
+    test(
+        "function f(a, b, c) { return a * (b % c) }",
+        "function f(a, b, c) { return b % c * a }",
+    );
     test_same("function f(a, b, c) { return a() * (b % c) }"); // a may update b / c
     test_same("function f(a, b, c) { return a * (b() % c) }"); // b may update b / c
     test_same("function f(a, b, c) { return a * (b % c()) }"); // c may update b / c
-    test("function f(a, b, c) { return a * (b / c) }", "function f(a, b, c) { return b / c * a }");
-    test("function f(a, b, c) { return a * (b * c) }", "function f(a, b, c) { return b * c * a }");
+    test(
+        "function f(a, b, c) { return a * (b / c) }",
+        "function f(a, b, c) { return b / c * a }",
+    );
+    test(
+        "function f(a, b, c) { return a * (b * c) }",
+        "function f(a, b, c) { return b * c * a }",
+    );
 
     test_same("function f(a, b, c, d) { return a * b * (c / d) }");
     test_same("function f(a, b, c, d) { return (a + b) * (c % d) }");
@@ -429,8 +498,14 @@ fn nullish_coalesce() {
 
 #[test]
 fn test_fold_arrow_function_return() {
-    test("const foo = () => { return 'baz' }", "const foo = () => 'baz'");
-    test("const foo = () => { foo.foo; return 'baz' }", "const foo = () => (foo.foo, 'baz')");
+    test(
+        "const foo = () => { return 'baz' }",
+        "const foo = () => 'baz'",
+    );
+    test(
+        "const foo = () => { foo.foo; return 'baz' }",
+        "const foo = () => (foo.foo, 'baz')",
+    );
 }
 
 #[test]
@@ -477,15 +552,30 @@ fn test_fold_is_typeof_equals_undefined_resolved() {
         "v = typeof x !== 'undefined'; function foo() { var x }",
         "v = typeof x < 'u'; function foo() { var x }",
     );
-    test("v = typeof x !== 'undefined'; { var x }", "v = x !== void 0; var x;");
-    test("v = typeof x !== 'undefined'; { let x }", "v = typeof x < 'u'; { let x }");
-    test("v = typeof x !== 'undefined'; var x", "v = x !== void 0; var x");
+    test(
+        "v = typeof x !== 'undefined'; { var x }",
+        "v = x !== void 0; var x;",
+    );
+    test(
+        "v = typeof x !== 'undefined'; { let x }",
+        "v = typeof x < 'u'; { let x }",
+    );
+    test(
+        "v = typeof x !== 'undefined'; var x",
+        "v = x !== void 0; var x",
+    );
     // input and output both errors with same TDZ error
-    test("v = typeof x !== 'undefined'; let x", "v = x !== void 0; let x");
+    test(
+        "v = typeof x !== 'undefined'; let x",
+        "v = x !== void 0; let x",
+    );
 
     test("v = typeof x.y === 'undefined'", "v = x.y === void 0");
     test("v = typeof x.y !== 'undefined'", "v = x.y !== void 0");
-    test("v = typeof (x + '') === 'undefined'", "v = x + '' === void 0");
+    test(
+        "v = typeof (x + '') === 'undefined'",
+        "v = x + '' === void 0",
+    );
 
     test("var x; v = typeof x !== 'undefined'", "var x; v = !1");
     test("var x; v = typeof x === 'undefined'", "var x; v = !0");
@@ -575,7 +665,10 @@ fn test_fold_is_object_and_not_null() {
     test_same("v = function(foo, bar) { return typeof foo == 'object' && bar !== null }");
     test_same("v = function(foo) { return typeof foo == 'string' && foo !== null }");
 
-    test("var foo; v = typeof foo === 'object' && foo !== null", "var foo; v = !1");
+    test(
+        "var foo; v = typeof foo === 'object' && foo !== null",
+        "var foo; v = !1",
+    );
 }
 
 #[test]
@@ -621,7 +714,10 @@ fn test_remove_unary_plus() {
     test("v = +d / 1000", "v = d / 1000");
     test("v = 1000 * +d", "v = 1000 * d");
     test("v = +d * 1000", "v = d * 1000");
-    test("v = 2 - +this._x.call(null, node.data)", "v = 2 - this._x.call(null, node.data)");
+    test(
+        "v = 2 - +this._x.call(null, node.data)",
+        "v = 2 - this._x.call(null, node.data)",
+    );
 
     test("v = 5 | +b", "v = 5 | b");
     test("v = +b | 5", "v = b | 5");
@@ -658,8 +754,14 @@ fn test_remove_unary_plus_evaluation_order() {
     test("v = +xs - 1", "v = xs - 1");
     test("v = +xs * 1e3", "v = xs * 1e3");
     test("v = +xs - (2 * 3)", "v = xs - 6");
-    test("function f(x, a) { return +a - +!!x }", "function f(x, a) { return a - +!!x }");
-    test("function f(x, a) { return +a * +(x > 1) }", "function f(x, a) { return a * +(x > 1) }");
+    test(
+        "function f(x, a) { return +a - +!!x }",
+        "function f(x, a) { return a - +!!x }",
+    );
+    test(
+        "function f(x, a) { return +a * +(x > 1) }",
+        "function f(x, a) { return a * +(x > 1) }",
+    );
 
     // The left operand is evaluated first either way.
     test("v = (xs.push(1), 0) - +xs", "v = (xs.push(1), 0 - xs)");
@@ -714,9 +816,18 @@ fn test_property_key() {
     test("v = ({ ['__proto__']() {} })", "v = ({ __proto__() {} })");
     test("({ ['__proto__']: _ } = {})", "({ __proto__: _ } = {})");
     test("class C { ['__proto__'] = 0 }", "class C { __proto__ = 0 }");
-    test("class C { ['__proto__']() {} }", "class C { __proto__() {} }");
-    test("class C { accessor ['__proto__'] = 0 }", "class C { accessor __proto__ = 0 }");
-    test("class C { static ['__proto__'] = 0 }", "class C { static __proto__ = 0 }");
+    test(
+        "class C { ['__proto__']() {} }",
+        "class C { __proto__() {} }",
+    );
+    test(
+        "class C { accessor ['__proto__'] = 0 }",
+        "class C { accessor __proto__ = 0 }",
+    );
+    test(
+        "class C { static ['__proto__'] = 0 }",
+        "class C { static __proto__ = 0 }",
+    );
     test(
         "class C { static accessor ['__proto__'] = 0 }",
         "class C { static accessor __proto__ = 0 }",
@@ -735,24 +846,39 @@ fn test_property_key() {
     test_same("class C { static ['prototype']() {} }"); // class C { static prototype() {} } is an early error
     test_same("class C { static ['prototype'] = 0 }"); // class C { prototype = 0 } is an early error
     test_same("class C { static accessor ['prototype'] = 0 }"); // class C { accessor prototype = 0 } is an early error
-    test("class C { ['prototype']() {} }", "class C { prototype() {} }");
+    test(
+        "class C { ['prototype']() {} }",
+        "class C { prototype() {} }",
+    );
     test("class C { 'prototype'() {} }", "class C { prototype() {} }");
     test("class C { ['prototype'] = 0 }", "class C { prototype = 0 }");
     test("class C { 'prototype' = 0 }", "class C { prototype = 0 }");
-    test("class C { accessor ['prototype'] = 0 }", "class C { accessor prototype = 0 }");
+    test(
+        "class C { accessor ['prototype'] = 0 }",
+        "class C { accessor prototype = 0 }",
+    );
     test_same("class C { ['constructor'] = 0 }"); // class C { constructor = 0 } is an early error
     test_same("class C { accessor ['constructor'] = 0 }"); // class C { accessor constructor = 0 } is an early error
     test_same("class C { static ['constructor'] = 0 }"); // class C { static constructor = 0 } is an early error
     test_same("class C { static accessor ['constructor'] = 0 }"); // class C { static accessor constructor = 0 } is an early error
     test_same("class C { ['constructor']() {} }"); // computed `constructor` is not treated as a constructor
-    test("class C { 'constructor'() {} }", "class C { constructor() {} }");
+    test(
+        "class C { 'constructor'() {} }",
+        "class C { constructor() {} }",
+    );
     test_same("class C { *['constructor']() {} }"); // class C { *constructor() {} } is an early error
     test_same("class C { async ['constructor']() {} }"); // class C { async constructor() {} } is an early error
     test_same("class C { async *['constructor']() {} }"); // class C { async *constructor() {} } is an early error
     test_same("class C { get ['constructor']() {} }"); // class C { get constructor() {} } is an early error
     test_same("class C { set ['constructor'](v) {} }"); // class C { set constructor(v) {} } is an early error
-    test("class C { static ['constructor']() {} }", "class C { static constructor() {} }");
-    test("class C { static 'constructor'() {} }", "class C { static constructor() {} }");
+    test(
+        "class C { static ['constructor']() {} }",
+        "class C { static constructor() {} }",
+    );
+    test(
+        "class C { static 'constructor'() {} }",
+        "class C { static constructor() {} }",
+    );
     test_same("class C { ['#constructor'] = 0 }"); // class C { #constructor = 0 } is an early error
     test_same("class C { accessor ['#constructor'] = 0 }"); // class C { accessor #constructor = 0 } is an early error
     test_same("class C { ['#constructor']() {} }"); // class C { #constructor() {} } is an early error
@@ -820,7 +946,10 @@ fn test_fold_string_constructor() {
     // Don't fold the existence check to preserve behavior
     test_same("var a = String?.('hello')");
 
-    test("var s = Symbol(), a = String(s);", "var a = String(Symbol());");
+    test(
+        "var s = Symbol(), a = String(s);",
+        "var a = String(Symbol());",
+    );
 
     test_same("var a = String('hello', bar());");
     test_same("var a = String({valueOf: function() { return 1; }});");
@@ -864,7 +993,10 @@ fn optional_catch_binding() {
     // var doesn't hoist out of functions, so the catch param can be removed.
     // The side-effect-free IIFE itself is then dropped; the empty `catch`
     // still proves the param was safely removed.
-    test("try { foo } catch(e) { (function() { var e = 2 })() }", "try { foo } catch {}");
+    test(
+        "try { foo } catch(e) { (function() { var e = 2 })() }",
+        "try { foo } catch {}",
+    );
     test(
         "try { foo } catch(e) { function f() { var e = 2 } }",
         "try { foo } catch { function f() { var e = 2 } }",
@@ -909,8 +1041,10 @@ fn test_remove_name_from_expressions() {
     };
     test_same_options("var a = function f() {}", &options);
 
-    let options =
-        CompressOptions { keep_names: CompressOptionsKeepNames::class_only(), ..default_options() };
+    let options = CompressOptions {
+        keep_names: CompressOptionsKeepNames::class_only(),
+        ..default_options()
+    };
     test_same_options("var a = class C {}", &options);
 }
 
@@ -1102,16 +1236,37 @@ fn test_flatten_array_spread_elements() {
     test("var y = [1, , ...[2, 3]]", "var y = [1, , 2, 3]");
     test_same("var y = [...x]");
     test_same("var y = [1, ...x, 2]");
-    test("var x = [1, 2]; var y = [3, 4, ...x]", "var y = [3, 4, 1, 2]");
-    test("var x = [1, 2]; var y = [0, ...x, ...x]", "var x = [1, 2], y = [0, ...x, ...x]");
-    test("var x = [1, ...[2, 3]]; var y = [4, ...x]", "var y = [4, 1, 2, 3]");
-    test("var x = [1, , 3]; var y = [0, ...x]", "var y = [0, 1, void 0, 3]");
+    test(
+        "var x = [1, 2]; var y = [3, 4, ...x]",
+        "var y = [3, 4, 1, 2]",
+    );
+    test(
+        "var x = [1, 2]; var y = [0, ...x, ...x]",
+        "var x = [1, 2], y = [0, ...x, ...x]",
+    );
+    test(
+        "var x = [1, ...[2, 3]]; var y = [4, ...x]",
+        "var y = [4, 1, 2, 3]",
+    );
+    test(
+        "var x = [1, , 3]; var y = [0, ...x]",
+        "var y = [0, 1, void 0, 3]",
+    );
     test("var x = []; var y = [1, ...x, 2]", "var y = [1, 2]");
     test("var x = [1, 2]; var y = [0, , ...x]", "var y = [0, , 1, 2]");
-    test("var x = [1, 2]; var y = [0, ...x, 3]", "var y = [0, 1, 2, 3]");
-    test("var x=[30,40];var y = [10,...[],20,...x,50];", "var y = [10,20,30,40,50]");
+    test(
+        "var x = [1, 2]; var y = [0, ...x, 3]",
+        "var y = [0, 1, 2, 3]",
+    );
+    test(
+        "var x=[30,40];var y = [10,...[],20,...x,50];",
+        "var y = [10,20,30,40,50]",
+    );
     test_same("var y = [0, ...[1, , , 3]]");
-    test("var y = [...[1, , ,], ...[, 2], , 2];", "var y = [...[1, , , ], void 0, 2, , 2];");
+    test(
+        "var y = [...[1, , ,], ...[, 2], , 2];",
+        "var y = [...[1, , , ], void 0, 2, , 2];",
+    );
 }
 
 #[test]
@@ -1127,12 +1282,27 @@ fn test_fold_sequence_expression() {
     test("~(a(), b)", "a(), ~b");
     test("-(a(), b, c)", "a(), b, -c");
 
-    test("function* a() { yield (c(1), 2) }", "function* a() { c(1), yield 2 }");
-    test("function* a() { b(yield (c(1), 2)) }", "function* a() { b((c(1), yield 2)) }");
-    test("function* a() { yield (c(1), d(2), 3) }", "function* a() { c(1), d(2), yield 3 }");
+    test(
+        "function* a() { yield (c(1), 2) }",
+        "function* a() { c(1), yield 2 }",
+    );
+    test(
+        "function* a() { b(yield (c(1), 2)) }",
+        "function* a() { b((c(1), yield 2)) }",
+    );
+    test(
+        "function* a() { yield (c(1), d(2), 3) }",
+        "function* a() { c(1), d(2), yield 3 }",
+    );
 
-    test("async function a() { await (c(1), 2) }", "async function a() { c(1), await 2 }");
-    test("async function a() { b(await (c(1), 2)) }", "async function a() { b((c(1), await 2)) }");
+    test(
+        "async function a() { await (c(1), 2) }",
+        "async function a() { c(1), await 2 }",
+    );
+    test(
+        "async function a() { b(await (c(1), 2)) }",
+        "async function a() { b((c(1), await 2)) }",
+    );
     test(
         "async function a() { await (c(1), d(2), 3) }",
         "async function a() { c(1), d(2), await 3 }",
@@ -1142,11 +1312,26 @@ fn test_fold_sequence_expression() {
 #[test]
 fn test_substitute_yield_expression() {
     test("function* a() { yield 2 }", "function* a() { yield 2; }");
-    test("function* a() { yield void 0; }", "function* a() { yield; }");
-    test("function* a() { yield undefined; }", "function* a() { yield; }");
-    test("function* a() { yield fn(); }", "function* a() { yield fn(); }");
+    test(
+        "function* a() { yield void 0; }",
+        "function* a() { yield; }",
+    );
+    test(
+        "function* a() { yield undefined; }",
+        "function* a() { yield; }",
+    );
+    test(
+        "function* a() { yield fn(); }",
+        "function* a() { yield fn(); }",
+    );
     test_same("function* a() { yield* void 0; }");
-    test("function* a() { yield* undefined; }", "function* a() { yield* void 0; }");
-    test("function* a() { yield* fn(); }", "function* a() { yield* fn(); }");
+    test(
+        "function* a() { yield* undefined; }",
+        "function* a() { yield* void 0; }",
+    );
+    test(
+        "function* a() { yield* fn(); }",
+        "function* a() { yield* fn(); }",
+    );
     test_same("function* a(undefined) { yield undefined; }");
 }

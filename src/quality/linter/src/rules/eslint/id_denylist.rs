@@ -319,77 +319,151 @@ fn test() {
     let pass = vec![
         (r#"foo = "bar""#, Some(serde_json::json!(["bar"]))),
         (r#"bar = "bar""#, Some(serde_json::json!(["foo"]))),
-        (r#"foo = "bar""#, Some(serde_json::json!(["f", "fo", "fooo", "bar"]))),
+        (
+            r#"foo = "bar""#,
+            Some(serde_json::json!(["f", "fo", "fooo", "bar"])),
+        ),
         ("function foo(){}", Some(serde_json::json!(["bar"]))),
         ("foo()", Some(serde_json::json!(["f", "fo", "fooo", "bar"]))),
-        ("import { foo as bar } from 'mod'", Some(serde_json::json!(["foo"]))), // { "ecmaVersion": 6, "sourceType": "module" },
-        ("export { foo as bar } from 'mod'", Some(serde_json::json!(["foo"]))), // { "ecmaVersion": 6, "sourceType": "module" },
-        ("foo.bar()", Some(serde_json::json!(["f", "fo", "fooo", "b", "ba", "baz"]))),
+        (
+            "import { foo as bar } from 'mod'",
+            Some(serde_json::json!(["foo"])),
+        ), // { "ecmaVersion": 6, "sourceType": "module" },
+        (
+            "export { foo as bar } from 'mod'",
+            Some(serde_json::json!(["foo"])),
+        ), // { "ecmaVersion": 6, "sourceType": "module" },
+        (
+            "foo.bar()",
+            Some(serde_json::json!(["f", "fo", "fooo", "b", "ba", "baz"])),
+        ),
         (
             "var foo = bar.baz;",
-            Some(serde_json::json!(["f", "fo", "fooo", "b", "ba", "barr", "bazz"])),
+            Some(serde_json::json!([
+                "f", "fo", "fooo", "b", "ba", "barr", "bazz"
+            ])),
         ),
         (
             "var foo = bar.baz.bing;",
-            Some(serde_json::json!(["f", "fo", "fooo", "b", "ba", "barr", "bazz", "bingg"])),
+            Some(serde_json::json!([
+                "f", "fo", "fooo", "b", "ba", "barr", "bazz", "bingg"
+            ])),
         ),
         (
             "foo.bar.baz = bing.bong.bash;",
-            Some(serde_json::json!(["f", "fo", "fooo", "b", "ba", "barr", "bazz", "bingg"])),
+            Some(serde_json::json!([
+                "f", "fo", "fooo", "b", "ba", "barr", "bazz", "bingg"
+            ])),
         ),
         (
             "if (foo.bar) {}",
-            Some(serde_json::json!(["f", "fo", "fooo", "b", "ba", "barr", "bazz", "bingg"])),
+            Some(serde_json::json!([
+                "f", "fo", "fooo", "b", "ba", "barr", "bazz", "bingg"
+            ])),
         ),
         (
             "var obj = { key: foo.bar };",
-            Some(serde_json::json!(["f", "fo", "fooo", "b", "ba", "barr", "bazz", "bingg"])),
+            Some(serde_json::json!([
+                "f", "fo", "fooo", "b", "ba", "barr", "bazz", "bingg"
+            ])),
         ),
         ("const {foo: bar} = baz", Some(serde_json::json!(["foo"]))), // { "ecmaVersion": 6 },
-        ("const {foo: {bar: baz}} = qux", Some(serde_json::json!(["foo", "bar"]))), // { "ecmaVersion": 6 },
-        ("function foo({ bar: baz }) {}", Some(serde_json::json!(["bar"]))), // { "ecmaVersion": 6 },
-        ("function foo({ bar: {baz: qux} }) {}", Some(serde_json::json!(["bar", "baz"]))), // { "ecmaVersion": 6 },
-        ("function foo({baz} = obj.qux) {}", Some(serde_json::json!(["qux"]))), // { "ecmaVersion": 6 },
-        ("function foo({ foo: {baz} = obj.qux }) {}", Some(serde_json::json!(["qux"]))), // { "ecmaVersion": 6 },
-        ("({a: bar = obj.baz});", Some(serde_json::json!(["baz"]))), // { "ecmaVersion": 6 },
-        ("({foo: {a: bar = obj.baz}} = qux);", Some(serde_json::json!(["baz"]))), // { "ecmaVersion": 6 },
+        (
+            "const {foo: {bar: baz}} = qux",
+            Some(serde_json::json!(["foo", "bar"])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "function foo({ bar: baz }) {}",
+            Some(serde_json::json!(["bar"])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "function foo({ bar: {baz: qux} }) {}",
+            Some(serde_json::json!(["bar", "baz"])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "function foo({baz} = obj.qux) {}",
+            Some(serde_json::json!(["qux"])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "function foo({ foo: {baz} = obj.qux }) {}",
+            Some(serde_json::json!(["qux"])),
+        ), // { "ecmaVersion": 6 },
+        ("({a: bar = obj.baz});", Some(serde_json::json!(["baz"]))),  // { "ecmaVersion": 6 },
+        (
+            "({foo: {a: bar = obj.baz}} = qux);",
+            Some(serde_json::json!(["baz"])),
+        ), // { "ecmaVersion": 6 },
         (
             "var arr = [foo.bar];",
-            Some(serde_json::json!(["f", "fo", "fooo", "b", "ba", "barr", "bazz", "bingg"])),
+            Some(serde_json::json!([
+                "f", "fo", "fooo", "b", "ba", "barr", "bazz", "bingg"
+            ])),
         ),
         (
             "[foo.bar]",
-            Some(serde_json::json!(["f", "fo", "fooo", "b", "ba", "barr", "bazz", "bingg"])),
+            Some(serde_json::json!([
+                "f", "fo", "fooo", "b", "ba", "barr", "bazz", "bingg"
+            ])),
         ),
         (
             "[foo.bar.nesting]",
-            Some(serde_json::json!(["f", "fo", "fooo", "b", "ba", "barr", "bazz", "bingg"])),
+            Some(serde_json::json!([
+                "f", "fo", "fooo", "b", "ba", "barr", "bazz", "bingg"
+            ])),
         ),
         (
             "if (foo.bar === bar.baz) { [foo.bar] }",
-            Some(serde_json::json!(["f", "fo", "fooo", "b", "ba", "barr", "bazz", "bingg"])),
+            Some(serde_json::json!([
+                "f", "fo", "fooo", "b", "ba", "barr", "bazz", "bingg"
+            ])),
         ),
         (
             "var myArray = new Array(); var myDate = new Date();",
-            Some(serde_json::json!(["array", "date", "mydate", "myarray", "new", "var"])),
+            Some(serde_json::json!([
+                "array", "date", "mydate", "myarray", "new", "var"
+            ])),
         ),
         ("foo()", Some(serde_json::json!(["foo"]))),
         ("foo.bar()", Some(serde_json::json!(["bar"]))),
         ("foo.bar", Some(serde_json::json!(["bar"]))),
-        ("({foo: obj.bar.bar.bar.baz} = {});", Some(serde_json::json!(["foo", "bar"]))), // { "ecmaVersion": 6 },
-        ("({[obj.bar]: a = baz} = qux);", Some(serde_json::json!(["bar"]))), // { "ecmaVersion": 6 },
+        (
+            "({foo: obj.bar.bar.bar.baz} = {});",
+            Some(serde_json::json!(["foo", "bar"])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "({[obj.bar]: a = baz} = qux);",
+            Some(serde_json::json!(["bar"])),
+        ), // { "ecmaVersion": 6 },
         ("Number.parseInt()", Some(serde_json::json!(["Number"]))),
         ("x = Number.NaN;", Some(serde_json::json!(["Number"]))),
-        ("var foo = undefined;", Some(serde_json::json!(["undefined"]))),
-        ("if (foo === undefined);", Some(serde_json::json!(["undefined"]))),
-        ("obj[undefined] = 5;", Some(serde_json::json!(["undefined"]))),
-        ("class C { camelCase; #camelCase; #camelCase2() {} }", Some(serde_json::json!(["foo"]))), // { "ecmaVersion": 2022 },
+        (
+            "var foo = undefined;",
+            Some(serde_json::json!(["undefined"])),
+        ),
+        (
+            "if (foo === undefined);",
+            Some(serde_json::json!(["undefined"])),
+        ),
+        (
+            "obj[undefined] = 5;",
+            Some(serde_json::json!(["undefined"])),
+        ),
+        (
+            "class C { camelCase; #camelCase; #camelCase2() {} }",
+            Some(serde_json::json!(["foo"])),
+        ), // { "ecmaVersion": 2022 },
         (
             "class C { snake_case; #snake_case; #snake_case2() {} }",
             Some(serde_json::json!(["foo"])),
         ), // { "ecmaVersion": 2022 },
-        ("import foo from 'foo.json' with { type: 'json' }", Some(serde_json::json!(["type"]))), // { "ecmaVersion": 2025, "sourceType": "module" },
-        ("export * from 'foo.json' with { type: 'json' }", Some(serde_json::json!(["type"]))), // { "ecmaVersion": 2025, "sourceType": "module" },
+        (
+            "import foo from 'foo.json' with { type: 'json' }",
+            Some(serde_json::json!(["type"])),
+        ), // { "ecmaVersion": 2025, "sourceType": "module" },
+        (
+            "export * from 'foo.json' with { type: 'json' }",
+            Some(serde_json::json!(["type"])),
+        ), // { "ecmaVersion": 2025, "sourceType": "module" },
         (
             "export { default } from 'foo.json' with { type: 'json' }",
             Some(serde_json::json!(["type"])),
@@ -398,8 +472,14 @@ fn test() {
             "import('foo.json', { with: { type: 'json' } })",
             Some(serde_json::json!(["with", "type"])),
         ), // { "ecmaVersion": 2025 },
-        ("import('foo.json', { 'with': { type: 'json' } })", Some(serde_json::json!(["type"]))), // { "ecmaVersion": 2025 },
-        ("import('foo.json', { with: { type } })", Some(serde_json::json!(["type"]))), // { "ecmaVersion": 2025 }
+        (
+            "import('foo.json', { 'with': { type: 'json' } })",
+            Some(serde_json::json!(["type"])),
+        ), // { "ecmaVersion": 2025 },
+        (
+            "import('foo.json', { with: { type } })",
+            Some(serde_json::json!(["type"])),
+        ), // { "ecmaVersion": 2025 }
     ];
 
     let mut pass = pass.into_iter().map(TestCase::from).collect::<Vec<_>>();
@@ -434,84 +514,211 @@ fn test() {
     let fail = vec![
         (r#"foo = "bar""#, Some(serde_json::json!(["foo"]))),
         (r#"bar = "bar""#, Some(serde_json::json!(["bar"]))),
-        (r#"foo = "bar""#, Some(serde_json::json!(["f", "fo", "foo", "bar"]))),
-        ("function foo(){}", Some(serde_json::json!(["f", "fo", "foo", "bar"]))),
+        (
+            r#"foo = "bar""#,
+            Some(serde_json::json!(["f", "fo", "foo", "bar"])),
+        ),
+        (
+            "function foo(){}",
+            Some(serde_json::json!(["f", "fo", "foo", "bar"])),
+        ),
         ("import foo from 'mod'", Some(serde_json::json!(["foo"]))), // { "ecmaVersion": 6, "sourceType": "module" },
-        ("import * as foo from 'mod'", Some(serde_json::json!(["foo"]))), // { "ecmaVersion": 6, "sourceType": "module" },
-        ("export * as foo from 'mod'", Some(serde_json::json!(["foo"]))), // { "ecmaVersion": 2020, "sourceType": "module" },
-        ("import { foo } from 'mod'", Some(serde_json::json!(["foo"]))), // { "ecmaVersion": 6, "sourceType": "module" },
-        ("import { foo as bar } from 'mod'", Some(serde_json::json!(["bar"]))), // { "ecmaVersion": 6, "sourceType": "module" },
-        ("import { foo as bar } from 'mod'", Some(serde_json::json!(["foo", "bar"]))), // { "ecmaVersion": 6, "sourceType": "module" },
-        ("import { foo as foo } from 'mod'", Some(serde_json::json!(["foo"]))), // { "ecmaVersion": 6, "sourceType": "module" },
-        ("import { foo, foo as bar } from 'mod'", Some(serde_json::json!(["foo"]))), // { "ecmaVersion": 6, "sourceType": "module" },
-        ("import { foo as bar, foo } from 'mod'", Some(serde_json::json!(["foo"]))), // { "ecmaVersion": 6, "sourceType": "module" },
-        ("import foo, { foo as bar } from 'mod'", Some(serde_json::json!(["foo"]))), // { "ecmaVersion": 6, "sourceType": "module" },
-        ("var foo; export { foo as bar };", Some(serde_json::json!(["bar"]))), // { "ecmaVersion": 6, "sourceType": "module" },
+        (
+            "import * as foo from 'mod'",
+            Some(serde_json::json!(["foo"])),
+        ), // { "ecmaVersion": 6, "sourceType": "module" },
+        (
+            "export * as foo from 'mod'",
+            Some(serde_json::json!(["foo"])),
+        ), // { "ecmaVersion": 2020, "sourceType": "module" },
+        (
+            "import { foo } from 'mod'",
+            Some(serde_json::json!(["foo"])),
+        ), // { "ecmaVersion": 6, "sourceType": "module" },
+        (
+            "import { foo as bar } from 'mod'",
+            Some(serde_json::json!(["bar"])),
+        ), // { "ecmaVersion": 6, "sourceType": "module" },
+        (
+            "import { foo as bar } from 'mod'",
+            Some(serde_json::json!(["foo", "bar"])),
+        ), // { "ecmaVersion": 6, "sourceType": "module" },
+        (
+            "import { foo as foo } from 'mod'",
+            Some(serde_json::json!(["foo"])),
+        ), // { "ecmaVersion": 6, "sourceType": "module" },
+        (
+            "import { foo, foo as bar } from 'mod'",
+            Some(serde_json::json!(["foo"])),
+        ), // { "ecmaVersion": 6, "sourceType": "module" },
+        (
+            "import { foo as bar, foo } from 'mod'",
+            Some(serde_json::json!(["foo"])),
+        ), // { "ecmaVersion": 6, "sourceType": "module" },
+        (
+            "import foo, { foo as bar } from 'mod'",
+            Some(serde_json::json!(["foo"])),
+        ), // { "ecmaVersion": 6, "sourceType": "module" },
+        (
+            "var foo; export { foo as bar };",
+            Some(serde_json::json!(["bar"])),
+        ), // { "ecmaVersion": 6, "sourceType": "module" },
         ("var foo; export { foo };", Some(serde_json::json!(["foo"]))), // { "ecmaVersion": 6, "sourceType": "module" },
-        ("var foo; export { foo as bar };", Some(serde_json::json!(["foo"]))), // { "ecmaVersion": 6, "sourceType": "module" },
-        ("var foo; export { foo as foo };", Some(serde_json::json!(["foo"]))), // { "ecmaVersion": 6, "sourceType": "module" },
-        ("var foo; export { foo as bar };", Some(serde_json::json!(["foo", "bar"]))), // { "ecmaVersion": 6, "sourceType": "module" },
-        ("export { foo } from 'mod'", Some(serde_json::json!(["foo"]))), // { "ecmaVersion": 6, "sourceType": "module" },
-        ("export { foo as bar } from 'mod'", Some(serde_json::json!(["bar"]))), // { "ecmaVersion": 6, "sourceType": "module" },
-        ("export { foo as bar } from 'mod'", Some(serde_json::json!(["foo", "bar"]))), // { "ecmaVersion": 6, "sourceType": "module" },
-        ("export { foo as foo } from 'mod'", Some(serde_json::json!(["foo"]))), // { "ecmaVersion": 6, "sourceType": "module" },
-        ("export { foo, foo as bar } from 'mod'", Some(serde_json::json!(["foo"]))), // { "ecmaVersion": 6, "sourceType": "module" },
-        ("export { foo as bar, foo } from 'mod'", Some(serde_json::json!(["foo"]))), // { "ecmaVersion": 6, "sourceType": "module" },
-        ("foo.bar()", Some(serde_json::json!(["f", "fo", "foo", "b", "ba", "baz"]))),
+        (
+            "var foo; export { foo as bar };",
+            Some(serde_json::json!(["foo"])),
+        ), // { "ecmaVersion": 6, "sourceType": "module" },
+        (
+            "var foo; export { foo as foo };",
+            Some(serde_json::json!(["foo"])),
+        ), // { "ecmaVersion": 6, "sourceType": "module" },
+        (
+            "var foo; export { foo as bar };",
+            Some(serde_json::json!(["foo", "bar"])),
+        ), // { "ecmaVersion": 6, "sourceType": "module" },
+        (
+            "export { foo } from 'mod'",
+            Some(serde_json::json!(["foo"])),
+        ), // { "ecmaVersion": 6, "sourceType": "module" },
+        (
+            "export { foo as bar } from 'mod'",
+            Some(serde_json::json!(["bar"])),
+        ), // { "ecmaVersion": 6, "sourceType": "module" },
+        (
+            "export { foo as bar } from 'mod'",
+            Some(serde_json::json!(["foo", "bar"])),
+        ), // { "ecmaVersion": 6, "sourceType": "module" },
+        (
+            "export { foo as foo } from 'mod'",
+            Some(serde_json::json!(["foo"])),
+        ), // { "ecmaVersion": 6, "sourceType": "module" },
+        (
+            "export { foo, foo as bar } from 'mod'",
+            Some(serde_json::json!(["foo"])),
+        ), // { "ecmaVersion": 6, "sourceType": "module" },
+        (
+            "export { foo as bar, foo } from 'mod'",
+            Some(serde_json::json!(["foo"])),
+        ), // { "ecmaVersion": 6, "sourceType": "module" },
+        (
+            "foo.bar()",
+            Some(serde_json::json!(["f", "fo", "foo", "b", "ba", "baz"])),
+        ),
         ("foo[bar] = baz;", Some(serde_json::json!(["bar"]))),
         ("baz = foo[bar];", Some(serde_json::json!(["bar"]))),
         (
             "var foo = bar.baz;",
-            Some(serde_json::json!(["f", "fo", "foo", "b", "ba", "barr", "bazz"])),
+            Some(serde_json::json!([
+                "f", "fo", "foo", "b", "ba", "barr", "bazz"
+            ])),
         ),
         (
             "var foo = bar.baz;",
-            Some(serde_json::json!(["f", "fo", "fooo", "b", "ba", "bar", "bazz"])),
+            Some(serde_json::json!([
+                "f", "fo", "fooo", "b", "ba", "bar", "bazz"
+            ])),
         ),
         (
             "if (foo.bar) {}",
-            Some(serde_json::json!(["f", "fo", "foo", "b", "ba", "barr", "bazz", "bingg"])),
+            Some(serde_json::json!([
+                "f", "fo", "foo", "b", "ba", "barr", "bazz", "bingg"
+            ])),
         ),
-        ("var obj = { key: foo.bar };", Some(serde_json::json!(["obj"]))),
-        ("var obj = { key: foo.bar };", Some(serde_json::json!(["key"]))),
-        ("var obj = { key: foo.bar };", Some(serde_json::json!(["foo"]))),
+        (
+            "var obj = { key: foo.bar };",
+            Some(serde_json::json!(["obj"])),
+        ),
+        (
+            "var obj = { key: foo.bar };",
+            Some(serde_json::json!(["key"])),
+        ),
+        (
+            "var obj = { key: foo.bar };",
+            Some(serde_json::json!(["foo"])),
+        ),
         ("var arr = [foo.bar];", Some(serde_json::json!(["arr"]))),
         ("var arr = [foo.bar];", Some(serde_json::json!(["foo"]))),
         (
             "[foo.bar]",
-            Some(serde_json::json!(["f", "fo", "foo", "b", "ba", "barr", "bazz", "bingg"])),
+            Some(serde_json::json!([
+                "f", "fo", "foo", "b", "ba", "barr", "bazz", "bingg"
+            ])),
         ),
         (
             "if (foo.bar === bar.baz) { [bing.baz] }",
-            Some(serde_json::json!(["f", "fo", "foo", "b", "ba", "barr", "bazz", "bingg"])),
+            Some(serde_json::json!([
+                "f", "fo", "foo", "b", "ba", "barr", "bazz", "bingg"
+            ])),
         ),
         (
             "if (foo.bar === bar.baz) { [foo.bar] }",
-            Some(serde_json::json!(["f", "fo", "fooo", "b", "ba", "bar", "bazz", "bingg"])),
+            Some(serde_json::json!([
+                "f", "fo", "fooo", "b", "ba", "bar", "bazz", "bingg"
+            ])),
         ),
         (
             "var myArray = new Array(); var myDate = new Date();",
-            Some(serde_json::json!(["array", "date", "myDate", "myarray", "new", "var"])),
+            Some(serde_json::json!([
+                "array", "date", "myDate", "myarray", "new", "var"
+            ])),
         ),
         (
             "var myArray = new Array(); var myDate = new Date();",
-            Some(serde_json::json!(["array", "date", "mydate", "myArray", "new", "var"])),
+            Some(serde_json::json!([
+                "array", "date", "mydate", "myArray", "new", "var"
+            ])),
         ),
         ("foo.bar = 1", Some(serde_json::json!(["bar"]))),
         ("foo.bar.baz = 1", Some(serde_json::json!(["bar", "baz"]))),
         ("const {foo} = baz", Some(serde_json::json!(["foo"]))), // { "ecmaVersion": 6 },
-        ("const {foo: bar} = baz", Some(serde_json::json!(["foo", "bar"]))), // { "ecmaVersion": 6 },
-        ("const {[foo]: bar} = baz", Some(serde_json::json!(["foo", "bar"]))), // { "ecmaVersion": 6 },
-        ("const {foo: {bar: baz}} = qux", Some(serde_json::json!(["foo", "bar", "baz"]))), // { "ecmaVersion": 6 },
-        ("const {foo: {[bar]: baz}} = qux", Some(serde_json::json!(["foo", "bar", "baz"]))), // { "ecmaVersion": 6 },
-        ("const {[foo]: {[bar]: baz}} = qux", Some(serde_json::json!(["foo", "bar", "baz"]))), // { "ecmaVersion": 6 },
-        ("function foo({ bar: baz }) {}", Some(serde_json::json!(["bar", "baz"]))), // { "ecmaVersion": 6 },
-        ("function foo({ bar: {baz: qux} }) {}", Some(serde_json::json!(["bar", "baz", "qux"]))), // { "ecmaVersion": 6 },
-        ("({foo: obj.bar} = baz);", Some(serde_json::json!(["foo", "bar"]))), // { "ecmaVersion": 6 },
-        ("({foo: obj.bar.bar.bar.baz} = {});", Some(serde_json::json!(["foo", "bar", "baz"]))), // { "ecmaVersion": 6 },
-        ("({[foo]: obj.bar} = baz);", Some(serde_json::json!(["foo", "bar"]))), // { "ecmaVersion": 6 },
-        ("({foo: { a: obj.bar }} = baz);", Some(serde_json::json!(["bar"]))), // { "ecmaVersion": 6 },
-        ("({a: obj.bar = baz} = qux);", Some(serde_json::json!(["bar"]))), // { "ecmaVersion": 6 },
+        (
+            "const {foo: bar} = baz",
+            Some(serde_json::json!(["foo", "bar"])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "const {[foo]: bar} = baz",
+            Some(serde_json::json!(["foo", "bar"])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "const {foo: {bar: baz}} = qux",
+            Some(serde_json::json!(["foo", "bar", "baz"])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "const {foo: {[bar]: baz}} = qux",
+            Some(serde_json::json!(["foo", "bar", "baz"])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "const {[foo]: {[bar]: baz}} = qux",
+            Some(serde_json::json!(["foo", "bar", "baz"])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "function foo({ bar: baz }) {}",
+            Some(serde_json::json!(["bar", "baz"])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "function foo({ bar: {baz: qux} }) {}",
+            Some(serde_json::json!(["bar", "baz", "qux"])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "({foo: obj.bar} = baz);",
+            Some(serde_json::json!(["foo", "bar"])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "({foo: obj.bar.bar.bar.baz} = {});",
+            Some(serde_json::json!(["foo", "bar", "baz"])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "({[foo]: obj.bar} = baz);",
+            Some(serde_json::json!(["foo", "bar"])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "({foo: { a: obj.bar }} = baz);",
+            Some(serde_json::json!(["bar"])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "({a: obj.bar = baz} = qux);",
+            Some(serde_json::json!(["bar"])),
+        ), // { "ecmaVersion": 6 },
         (
             "({a: obj.bar.bar.baz = obj.qux} = obj.qux);",
             Some(serde_json::json!(["a", "bar", "baz", "qux"])),
@@ -520,30 +727,84 @@ fn test() {
             "({a: obj[bar] = obj.qux} = obj.qux);",
             Some(serde_json::json!(["a", "bar", "baz", "qux"])),
         ), // { "ecmaVersion": 6 },
-        ("({a: [obj.bar] = baz} = qux);", Some(serde_json::json!(["bar"]))), // { "ecmaVersion": 6 },
-        ("({foo: { a: obj.bar = baz}} = qux);", Some(serde_json::json!(["bar"]))), // { "ecmaVersion": 6 },
-        ("({foo: { [a]: obj.bar }} = baz);", Some(serde_json::json!(["bar"]))), // { "ecmaVersion": 6 },
+        (
+            "({a: [obj.bar] = baz} = qux);",
+            Some(serde_json::json!(["bar"])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "({foo: { a: obj.bar = baz}} = qux);",
+            Some(serde_json::json!(["bar"])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "({foo: { [a]: obj.bar }} = baz);",
+            Some(serde_json::json!(["bar"])),
+        ), // { "ecmaVersion": 6 },
         ("({...obj.bar} = baz);", Some(serde_json::json!(["bar"]))), // { "ecmaVersion": 9 },
-        ("([obj.bar] = baz);", Some(serde_json::json!(["bar"]))),    // { "ecmaVersion": 6 },
-        ("const [bar] = baz;", Some(serde_json::json!(["bar"]))),    // { "ecmaVersion": 6 },
+        ("([obj.bar] = baz);", Some(serde_json::json!(["bar"]))), // { "ecmaVersion": 6 },
+        ("const [bar] = baz;", Some(serde_json::json!(["bar"]))), // { "ecmaVersion": 6 },
         ("foo.undefined = 1;", Some(serde_json::json!(["undefined"]))),
-        ("var foo = { undefined: 1 };", Some(serde_json::json!(["undefined"]))),
-        ("var foo = { undefined: undefined };", Some(serde_json::json!(["undefined"]))),
-        ("var foo = { Number() {} };", Some(serde_json::json!(["Number"]))), // { "ecmaVersion": 6 },
-        ("class Foo { Number() {} }", Some(serde_json::json!(["Number"]))), // { "ecmaVersion": 6 },
-        ("myGlobal: while(foo) { break myGlobal; } ", Some(serde_json::json!(["myGlobal"]))), // { "globals": { "myGlobal": "readonly" }, },
-        ("const foo = 1; bar = foo;", Some(serde_json::json!(["foo"]))), // { "ecmaVersion": 6 },
-        ("let foo; foo = bar;", Some(serde_json::json!(["foo"]))),       // { "ecmaVersion": 6 },
+        (
+            "var foo = { undefined: 1 };",
+            Some(serde_json::json!(["undefined"])),
+        ),
+        (
+            "var foo = { undefined: undefined };",
+            Some(serde_json::json!(["undefined"])),
+        ),
+        (
+            "var foo = { Number() {} };",
+            Some(serde_json::json!(["Number"])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "class Foo { Number() {} }",
+            Some(serde_json::json!(["Number"])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "myGlobal: while(foo) { break myGlobal; } ",
+            Some(serde_json::json!(["myGlobal"])),
+        ), // { "globals": { "myGlobal": "readonly" }, },
+        (
+            "const foo = 1; bar = foo;",
+            Some(serde_json::json!(["foo"])),
+        ), // { "ecmaVersion": 6 },
+        ("let foo; foo = bar;", Some(serde_json::json!(["foo"]))), // { "ecmaVersion": 6 },
         ("bar = foo; var foo;", Some(serde_json::json!(["foo"]))),
-        ("function foo() {} var bar = foo;", Some(serde_json::json!(["foo"]))),
-        ("class Foo {} var bar = Foo;", Some(serde_json::json!(["Foo"]))), // { "ecmaVersion": 6 },
-        ("let undefined; undefined = 1;", Some(serde_json::json!(["undefined"]))), // { "ecmaVersion": 6 },
-        ("foo = undefined; var undefined;", Some(serde_json::json!(["undefined"]))),
-        ("function undefined(){} x = undefined;", Some(serde_json::json!(["undefined"]))),
-        ("class Number {} x = Number.NaN;", Some(serde_json::json!(["Number"]))), // { "ecmaVersion": 6 },
-        ("if (foo) { let undefined; bar = undefined; }", Some(serde_json::json!(["undefined"]))), // { "ecmaVersion": 6 },
-        ("function foo(Number) { var x = Number.NaN; }", Some(serde_json::json!(["Number"]))),
-        ("function foo() { var myGlobal; x = myGlobal; }", Some(serde_json::json!(["myGlobal"]))), // { "globals": { "myGlobal": "readonly" }, },
+        (
+            "function foo() {} var bar = foo;",
+            Some(serde_json::json!(["foo"])),
+        ),
+        (
+            "class Foo {} var bar = Foo;",
+            Some(serde_json::json!(["Foo"])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "let undefined; undefined = 1;",
+            Some(serde_json::json!(["undefined"])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "foo = undefined; var undefined;",
+            Some(serde_json::json!(["undefined"])),
+        ),
+        (
+            "function undefined(){} x = undefined;",
+            Some(serde_json::json!(["undefined"])),
+        ),
+        (
+            "class Number {} x = Number.NaN;",
+            Some(serde_json::json!(["Number"])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "if (foo) { let undefined; bar = undefined; }",
+            Some(serde_json::json!(["undefined"])),
+        ), // { "ecmaVersion": 6 },
+        (
+            "function foo(Number) { var x = Number.NaN; }",
+            Some(serde_json::json!(["Number"])),
+        ),
+        (
+            "function foo() { var myGlobal; x = myGlobal; }",
+            Some(serde_json::json!(["myGlobal"])),
+        ), // { "globals": { "myGlobal": "readonly" }, },
         (
             "function foo(bar) { return Number.parseInt(bar); } const Number = 1;",
             Some(serde_json::json!(["Number"])),
@@ -552,8 +813,14 @@ fn test() {
             "import Number from 'myNumber'; const foo = Number.parseInt(bar);",
             Some(serde_json::json!(["Number"])),
         ), // { "ecmaVersion": 6, "sourceType": "module" },
-        ("var foo = function undefined() {};", Some(serde_json::json!(["undefined"]))),
-        ("var foo = { undefined }", Some(serde_json::json!(["undefined"]))), // { "ecmaVersion": 6 },
+        (
+            "var foo = function undefined() {};",
+            Some(serde_json::json!(["undefined"])),
+        ),
+        (
+            "var foo = { undefined }",
+            Some(serde_json::json!(["undefined"])),
+        ), // { "ecmaVersion": 6 },
         (
             "class C { camelCase; #camelCase; #camelCase2() {} }",
             Some(serde_json::json!(["camelCase"])),
@@ -562,8 +829,14 @@ fn test() {
             "class C { snake_case; #snake_case() {}; #snake_case2() {} }",
             Some(serde_json::json!(["snake_case"])),
         ), // { "ecmaVersion": 2022 },
-        ("import('foo.json', { with: { [type]: 'json' } })", Some(serde_json::json!(["type"]))), // { "ecmaVersion": 2025 },
-        ("import('foo.json', { with: { type: json } })", Some(serde_json::json!(["json"]))), // { "ecmaVersion": 2025 }
+        (
+            "import('foo.json', { with: { [type]: 'json' } })",
+            Some(serde_json::json!(["type"])),
+        ), // { "ecmaVersion": 2025 },
+        (
+            "import('foo.json', { with: { type: json } })",
+            Some(serde_json::json!(["json"])),
+        ), // { "ecmaVersion": 2025 }
     ];
 
     let mut fail = fail.into_iter().map(TestCase::from).collect::<Vec<_>>();

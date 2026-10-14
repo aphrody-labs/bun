@@ -118,8 +118,10 @@ pub fn discover_configs_in_tree(
         .build_parallel();
 
     let (sender, receiver) = mpsc::channel::<Vec<DiscoveredConfigFile>>();
-    let mut builder =
-        ConfigWalkBuilder { sender, base_config_path: base_config_path.to_path_buf() };
+    let mut builder = ConfigWalkBuilder {
+        sender,
+        base_config_path: base_config_path.to_path_buf(),
+    };
     walker.visit(&mut builder);
     drop(builder);
 
@@ -306,8 +308,10 @@ impl<'a> ConfigLoader<'a> {
 
     /// Load a single config from a file path
     fn load(path: &Path) -> Result<Oxlintrc, ConfigLoadError> {
-        Oxlintrc::from_file(path)
-            .map_err(|error| ConfigLoadError::Parse { path: path.to_path_buf(), error })
+        Oxlintrc::from_file(path).map_err(|error| ConfigLoadError::Parse {
+            path: path.to_path_buf(),
+            error,
+        })
     }
 
     pub fn load_js_configs(
@@ -320,23 +324,30 @@ impl<'a> ConfigLoader<'a> {
 
         #[cfg(not(feature = "napi"))]
         {
-            return Err(vec![ConfigLoadError::JsConfigFileFoundButJsRuntimeNotAvailable]);
+            return Err(vec![
+                ConfigLoadError::JsConfigFileFoundButJsRuntimeNotAvailable,
+            ]);
         }
 
         #[cfg(feature = "napi")]
         {
             let Some(js_config_loader) = self.js_config_loader else {
-                return Err(vec![ConfigLoadError::JsConfigFileFoundButJsRuntimeNotAvailable]);
+                return Err(vec![
+                    ConfigLoadError::JsConfigFileFoundButJsRuntimeNotAvailable,
+                ]);
             };
 
-            let paths_as_strings: Vec<String> =
-                paths.iter().map(|p| p.to_string_lossy().to_string()).collect();
+            let paths_as_strings: Vec<String> = paths
+                .iter()
+                .map(|p| p.to_string_lossy().to_string())
+                .collect();
 
             match js_config_loader(paths_as_strings) {
                 Ok(results) => Ok(results),
-                Err(diagnostics) => {
-                    Err(diagnostics.into_iter().map(ConfigLoadError::Diagnostic).collect())
-                }
+                Err(diagnostics) => Err(diagnostics
+                    .into_iter()
+                    .map(ConfigLoadError::Diagnostic)
+                    .collect()),
             }
         }
     }
@@ -418,25 +429,27 @@ impl<'a> ConfigLoader<'a> {
             if !is_root_config {
                 let options = &config.options;
                 if options.type_aware.is_some() {
-                    errors
-                        .push(ConfigLoadError::Diagnostic(nested_type_aware_not_supported(&path)));
+                    errors.push(ConfigLoadError::Diagnostic(
+                        nested_type_aware_not_supported(&path),
+                    ));
                     continue;
                 }
                 if options.type_check.is_some() {
-                    errors
-                        .push(ConfigLoadError::Diagnostic(nested_type_check_not_supported(&path)));
+                    errors.push(ConfigLoadError::Diagnostic(
+                        nested_type_check_not_supported(&path),
+                    ));
                     continue;
                 }
                 if options.deny_warnings.is_some() {
-                    errors.push(ConfigLoadError::Diagnostic(nested_deny_warnings_not_supported(
-                        &path,
-                    )));
+                    errors.push(ConfigLoadError::Diagnostic(
+                        nested_deny_warnings_not_supported(&path),
+                    ));
                     continue;
                 }
                 if options.max_warnings.is_some() {
-                    errors.push(ConfigLoadError::Diagnostic(nested_max_warnings_not_supported(
-                        &path,
-                    )));
+                    errors.push(ConfigLoadError::Diagnostic(
+                        nested_max_warnings_not_supported(&path),
+                    ));
                     continue;
                 }
                 if options.report_unused_disable_directives.is_some() {
@@ -462,7 +475,10 @@ impl<'a> ConfigLoader<'a> {
             ) {
                 Ok(builder) => builder,
                 Err(e) => {
-                    errors.push(ConfigLoadError::Build { path, error: e.to_string() });
+                    errors.push(ConfigLoadError::Build {
+                        path,
+                        error: e.to_string(),
+                    });
                     continue;
                 }
             };
@@ -472,8 +488,10 @@ impl<'a> ConfigLoader<'a> {
             match builder
                 .with_filters(self.filters)
                 .build(self.external_plugin_store)
-                .map_err(|e| ConfigLoadError::Build { path: path.clone(), error: e.to_string() })
-            {
+                .map_err(|e| ConfigLoadError::Build {
+                    path: path.clone(),
+                    error: e.to_string(),
+                }) {
                 Ok(config) => built_configs.push(LoadedConfig {
                     dir,
                     config,
@@ -505,8 +523,9 @@ impl<'a> ConfigLoader<'a> {
         discovery: &ConfigDiscovery,
         dir: &Path,
     ) -> Result<Option<Oxlintrc>, OxcDiagnostic> {
-        let config_file =
-            discovery.find_unique_config_by_readdir(dir, true).map_err(OxcDiagnostic::from)?;
+        let config_file = discovery
+            .find_unique_config_by_readdir(dir, true)
+            .map_err(OxcDiagnostic::from)?;
 
         match config_file {
             Some(DiscoveredConfigFile::Json(path) | DiscoveredConfigFile::Jsonc(path)) => {
@@ -600,7 +619,9 @@ impl<'a> ConfigLoader<'a> {
                         ConfigLoadError::Build { error, .. } => Err(OxcDiagnostic::error(error)),
                     }
                 } else {
-                    Err(OxcDiagnostic::error("Failed to load JavaScript/TypeScript config."))
+                    Err(OxcDiagnostic::error(
+                        "Failed to load JavaScript/TypeScript config.",
+                    ))
                 }
             }
         }
@@ -642,8 +663,10 @@ impl<'a> ConfigLoader<'a> {
         }
 
         // Discover config files by walking up from each file's directory
-        let config_paths: Vec<_> =
-            paths.iter().map(|p| Path::new(p.as_ref()).to_path_buf()).collect();
+        let config_paths: Vec<_> = paths
+            .iter()
+            .map(|p| Path::new(p.as_ref()).to_path_buf())
+            .collect();
         let (discovered_configs, conflicts) =
             discover_configs_in_ancestors(&config_paths, &oxlintrc.path);
 
@@ -663,7 +686,11 @@ impl<'a> ConfigLoader<'a> {
         let mut nested_ignore_patterns = Vec::with_capacity(configs.len());
         let nested_configs = build_nested_configs(configs, &mut nested_ignore_patterns, None);
 
-        Ok(LoadedConfigs { root: oxlintrc, nested: nested_configs, nested_ignore_patterns })
+        Ok(LoadedConfigs {
+            root: oxlintrc,
+            nested: nested_configs,
+            nested_ignore_patterns,
+        })
     }
 }
 
@@ -788,7 +815,10 @@ mod test {
         if let Some(config_dir) = path.parent() {
             config.set_config_dir(config_dir);
         }
-        JsConfigResult { path, config: Some(config) }
+        JsConfigResult {
+            path,
+            config: Some(config),
+        }
     }
 
     #[cfg(feature = "napi")]
@@ -801,7 +831,10 @@ mod test {
         if let Some(config_dir) = path.parent() {
             config.set_config_dir(config_dir);
         }
-        JsConfigResult { path, config: Some(config) }
+        JsConfigResult {
+            path,
+            config: Some(config),
+        }
     }
 
     #[test]
@@ -813,17 +846,26 @@ mod test {
         // Test case 1: Invalid path that should fail
         let invalid_config = PathBuf::from("child/../../fixtures/cli/linter/eslintrc.json");
         let result = loader.load_root_config(&cwd, Some(&invalid_config));
-        assert!(result.is_err(), "Expected config lookup to fail with invalid path");
+        assert!(
+            result.is_err(),
+            "Expected config lookup to fail with invalid path"
+        );
 
         // Test case 2: Valid path that should pass
         let valid_config = PathBuf::from("fixtures/cli/linter/eslintrc.json");
         let result = loader.load_root_config(&cwd, Some(&valid_config));
-        assert!(result.is_ok(), "Expected config lookup to succeed with valid path");
+        assert!(
+            result.is_ok(),
+            "Expected config lookup to succeed with valid path"
+        );
 
         // Test case 3: Valid path using parent directory (..) syntax that should pass
         let valid_parent_config = PathBuf::from("fixtures/cli/linter/../linter/eslintrc.json");
         let result = loader.load_root_config(&cwd, Some(&valid_parent_config));
-        assert!(result.is_ok(), "Expected config lookup to succeed with parent directory syntax");
+        assert!(
+            result.is_ok(),
+            "Expected config lookup to succeed with parent directory syntax"
+        );
 
         // Verify the resolved path is normalized, without `.`/`..` components
         if let Ok(config) = result {
@@ -842,7 +884,10 @@ mod test {
         let nested_dir = cwd.join("src/quality/lint_cli/fixtures/cli/ancestor_search/apps/app1");
         if nested_dir.exists() {
             let result = loader.load_root_config(&nested_dir, None);
-            assert!(result.is_ok(), "Expected ancestor search to find config or return default");
+            assert!(
+                result.is_ok(),
+                "Expected ancestor search to find config or return default"
+            );
 
             // Verify the config was actually found (not just default)
             if let Ok(config) = result {
@@ -859,13 +904,19 @@ mod test {
         let valid_config =
             PathBuf::from("fixtures/cli/ancestor_search_explicit_config/.oxlintrc.json");
         let result = loader.load_root_config(&cwd, Some(&valid_config));
-        assert!(result.is_ok(), "Expected config lookup to succeed with explicit path");
+        assert!(
+            result.is_ok(),
+            "Expected config lookup to succeed with explicit path"
+        );
 
         // Test case 3: When no config exists in any ancestor, should return default
         let temp_dir = std::env::temp_dir().join("oxc_test_no_config");
         std::fs::create_dir_all(&temp_dir).expect("Failed to create temporary test directory");
         let result = loader.load_root_config(&temp_dir, None);
-        assert!(result.is_ok(), "Expected default config when no config found");
+        assert!(
+            result.is_ok(),
+            "Expected default config when no config found"
+        );
         std::fs::remove_dir_all(&temp_dir).expect("Failed to cleanup temporary test directory");
     }
 
@@ -1049,7 +1100,10 @@ mod test {
         )
         .unwrap_err();
 
-        assert_eq!(err.to_string(), "Rule 'no-console-typo' not found in plugin 'eslint'");
+        assert_eq!(
+            err.to_string(),
+            "Rule 'no-console-typo' not found in plugin 'eslint'"
+        );
     }
 
     #[cfg(feature = "napi")]
@@ -1124,7 +1178,10 @@ mod test {
                     let path = PathBuf::from(path);
                     let mut config = make_js_config(path.clone(), None, None).config.unwrap();
                     config.options.deny_warnings = Some(true);
-                    JsConfigResult { path, config: Some(config) }
+                    JsConfigResult {
+                        path,
+                        config: Some(config),
+                    }
                 })
                 .collect())
         });
@@ -1161,7 +1218,10 @@ mod test {
                         )
                         .unwrap(),
                     ];
-                    JsConfigResult { path, config: Some(config) }
+                    JsConfigResult {
+                        path,
+                        config: Some(config),
+                    }
                 })
                 .collect())
         });
@@ -1198,7 +1258,10 @@ mod test {
                         )
                         .unwrap(),
                     ];
-                    JsConfigResult { path, config: Some(config) }
+                    JsConfigResult {
+                        path,
+                        config: Some(config),
+                    }
                 })
                 .collect())
         });
@@ -1245,14 +1308,20 @@ mod test {
     fn test_jsonc_config_discovery() {
         let root_dir = tempfile::tempdir().unwrap();
         // Create only a .oxlintrc.jsonc file
-        std::fs::write(root_dir.path().join(".oxlintrc.jsonc"), r#"{ /* comment */ "rules": {} }"#)
-            .unwrap();
+        std::fs::write(
+            root_dir.path().join(".oxlintrc.jsonc"),
+            r#"{ /* comment */ "rules": {} }"#,
+        )
+        .unwrap();
 
         let mut external_plugin_store = ExternalPluginStore::new(false);
         let loader = ConfigLoader::new(None, &mut external_plugin_store, &[], None);
 
         let result = loader.load_root_config(root_dir.path(), None);
-        assert!(result.is_ok(), "Expected .oxlintrc.jsonc to be discovered and loaded");
+        assert!(
+            result.is_ok(),
+            "Expected .oxlintrc.jsonc to be discovered and loaded"
+        );
         let config = result.unwrap();
         assert!(
             config.path.to_string_lossy().ends_with(".oxlintrc.jsonc"),
@@ -1266,8 +1335,11 @@ mod test {
         let root_dir = tempfile::tempdir().unwrap();
         // Create both .oxlintrc.json and .oxlintrc.jsonc
         std::fs::write(root_dir.path().join(".oxlintrc.json"), r#"{ "rules": {} }"#).unwrap();
-        std::fs::write(root_dir.path().join(".oxlintrc.jsonc"), r#"{ /* comment */ "rules": {} }"#)
-            .unwrap();
+        std::fs::write(
+            root_dir.path().join(".oxlintrc.jsonc"),
+            r#"{ /* comment */ "rules": {} }"#,
+        )
+        .unwrap();
 
         let mut external_plugin_store = ExternalPluginStore::new(false);
         let loader = ConfigLoader::new(None, &mut external_plugin_store, &[], None);
@@ -1283,27 +1355,44 @@ mod test {
     fn test_json_and_ts_conflict() {
         let root_dir = tempfile::tempdir().unwrap();
         std::fs::write(root_dir.path().join(".oxlintrc.json"), r#"{ "rules": {} }"#).unwrap();
-        std::fs::write(root_dir.path().join("oxlint.config.ts"), "export default {};").unwrap();
+        std::fs::write(
+            root_dir.path().join("oxlint.config.ts"),
+            "export default {};",
+        )
+        .unwrap();
 
         let mut external_plugin_store = ExternalPluginStore::new(false);
         let loader = ConfigLoader::new(None, &mut external_plugin_store, &[], None);
 
         let result = loader.load_root_config(root_dir.path(), None);
-        assert!(result.is_err(), "Expected an error when both JSON and TS configs exist");
+        assert!(
+            result.is_err(),
+            "Expected an error when both JSON and TS configs exist"
+        );
     }
 
     #[test]
     fn test_jsonc_and_ts_conflict() {
         let root_dir = tempfile::tempdir().unwrap();
-        std::fs::write(root_dir.path().join(".oxlintrc.jsonc"), r#"{ /* comment */ "rules": {} }"#)
-            .unwrap();
-        std::fs::write(root_dir.path().join("oxlint.config.ts"), "export default {};").unwrap();
+        std::fs::write(
+            root_dir.path().join(".oxlintrc.jsonc"),
+            r#"{ /* comment */ "rules": {} }"#,
+        )
+        .unwrap();
+        std::fs::write(
+            root_dir.path().join("oxlint.config.ts"),
+            "export default {};",
+        )
+        .unwrap();
 
         let mut external_plugin_store = ExternalPluginStore::new(false);
         let loader = ConfigLoader::new(None, &mut external_plugin_store, &[], None);
 
         let result = loader.load_root_config(root_dir.path(), None);
-        assert!(result.is_err(), "Expected an error when both JSONC and TS configs exist");
+        assert!(
+            result.is_err(),
+            "Expected an error when both JSONC and TS configs exist"
+        );
     }
 
     #[test]
@@ -1325,11 +1414,16 @@ mod test {
         std::fs::create_dir_all(&nested_dir).unwrap();
         std::fs::write(nested_dir.join(".oxlintrc.json"), r#"{ "rules": {} }"#).unwrap();
 
-        let discovered: Vec<_> =
-            discover_configs_in_tree(root_dir.path(), &base_config).into_iter().collect();
+        let discovered: Vec<_> = discover_configs_in_tree(root_dir.path(), &base_config)
+            .into_iter()
+            .collect();
 
         // Should find the nested config but NOT the one inside node_modules
-        assert_eq!(discovered.len(), 1, "Expected only 1 config (not the node_modules one)");
+        assert_eq!(
+            discovered.len(),
+            1,
+            "Expected only 1 config (not the node_modules one)"
+        );
         let path = match &discovered[0] {
             DiscoveredConfigFile::Json(p) => p.clone(),
             _ => panic!("Expected Json config"),
@@ -1357,10 +1451,15 @@ mod test {
         std::fs::create_dir_all(&nested_dir).unwrap();
         std::fs::write(nested_dir.join(".oxlintrc.json"), r#"{ "rules": {} }"#).unwrap();
 
-        let discovered: Vec<_> =
-            discover_configs_in_tree(root_dir.path(), &base_config).into_iter().collect();
+        let discovered: Vec<_> = discover_configs_in_tree(root_dir.path(), &base_config)
+            .into_iter()
+            .collect();
 
-        assert_eq!(discovered.len(), 1, "Expected only 1 config (not the .git one)");
+        assert_eq!(
+            discovered.len(),
+            1,
+            "Expected only 1 config (not the .git one)"
+        );
         let path = match &discovered[0] {
             DiscoveredConfigFile::Json(p) => p.clone(),
             _ => panic!("Expected Json config"),

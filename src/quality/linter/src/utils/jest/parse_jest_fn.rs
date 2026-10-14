@@ -74,10 +74,12 @@ pub fn parse_jest_fn_call<'a>(
         grandparent_kind: None,
     };
     let mut chain = get_node_chain(&params);
-    let all_member_expr_except_last =
-        chain.iter().rev().skip(1).all(|member| {
-            matches!(member.parent_kind, Some(KnownMemberExpressionParentKind::Member))
-        });
+    let all_member_expr_except_last = chain.iter().rev().skip(1).all(|member| {
+        matches!(
+            member.parent_kind,
+            Some(KnownMemberExpressionParentKind::Member)
+        )
+    });
 
     if let Some(last) = chain.last() {
         // If we're an `each()`, ensure we're the outer CallExpression (i.e `.each()()`)
@@ -126,8 +128,10 @@ pub fn parse_jest_fn_call<'a>(
             return None;
         }
 
-        if matches!(kind, JestFnKind::General(JestGeneralFnKind::Jest | JestGeneralFnKind::Vitest))
-        {
+        if matches!(
+            kind,
+            JestFnKind::General(JestGeneralFnKind::Jest | JestGeneralFnKind::Vitest)
+        ) {
             return parse_jest_jest_fn_call(members, name, resolved.local);
         }
 
@@ -144,7 +148,11 @@ pub fn parse_jest_fn_call<'a>(
         let is_vitest = ctx.frameworks().is_vitest();
         if is_jest || is_vitest {
             let mut call_chains = Vec::from([Cow::Borrowed(name)]);
-            call_chains.extend(members.iter().filter_map(KnownMemberExpressionProperty::name));
+            call_chains.extend(
+                members
+                    .iter()
+                    .filter_map(KnownMemberExpressionProperty::name),
+            );
 
             match (is_jest, is_vitest) {
                 (true, true) => {
@@ -189,7 +197,15 @@ fn parse_jest_expect_fn_call<'a>(
     options: ExpectFnCallOptions<'a, '_>,
     is_type_of: bool,
 ) -> Option<ParsedJestFnCall<'a>> {
-    let ExpectFnCallOptions { call_expr, members, name, local, head, node, ctx } = options;
+    let ExpectFnCallOptions {
+        call_expr,
+        members,
+        name,
+        local,
+        head,
+        node,
+        ctx,
+    } = options;
     let (modifiers, matcher, mut expect_error) = match find_modifiers_and_matcher(&members) {
         Ok((modifier, matcher)) => (modifier, matcher, None),
         Err(e) => (vec![], None, Some(e)),
@@ -212,7 +228,11 @@ fn parse_jest_expect_fn_call<'a>(
         }
     }
 
-    let kind = if is_type_of { JestFnKind::ExpectTypeOf } else { JestFnKind::Expect };
+    let kind = if is_type_of {
+        JestFnKind::ExpectTypeOf
+    } else {
+        JestFnKind::Expect
+    };
     let expect_arguments = head.parent.and_then(|parent| {
         if let Expression::CallExpression(parent) = parent {
             return Some(&parent.arguments);
@@ -220,8 +240,9 @@ fn parse_jest_expect_fn_call<'a>(
         None
     });
 
-    let matcher_arguments =
-        matcher.and_then(|matcher| members.get(matcher)).map(|_| &call_expr.arguments);
+    let matcher_arguments = matcher
+        .and_then(|matcher| members.get(matcher))
+        .map(|_| &call_expr.arguments);
 
     let parsed_expect_fn = ParsedExpectFnCall {
         kind,
@@ -272,9 +293,13 @@ fn find_modifiers_and_matcher(
     for (index, member) in members.iter().enumerate() {
         // check if the member is being called, which means it is the matcher
         // (and also the end of the entire "expect" call chain)
-        if matches!(member.parent_kind, Some(KnownMemberExpressionParentKind::Member))
-            && matches!(member.grandparent_kind, Some(KnownMemberExpressionParentKind::Call))
-        {
+        if matches!(
+            member.parent_kind,
+            Some(KnownMemberExpressionParentKind::Member)
+        ) && matches!(
+            member.grandparent_kind,
+            Some(KnownMemberExpressionParentKind::Call)
+        ) {
             let matcher = Some(index);
             return Ok((modifiers, matcher));
         }
@@ -338,8 +363,11 @@ fn parse_jest_jest_fn_call<'a>(
         return None;
     }
 
-    let kind =
-        if lowercase_name == "jest" { JestGeneralFnKind::Jest } else { JestGeneralFnKind::Vitest };
+    let kind = if lowercase_name == "jest" {
+        JestGeneralFnKind::Jest
+    } else {
+        JestGeneralFnKind::Vitest
+    };
 
     Some(ParsedJestFnCall::GeneralJest(ParsedGeneralJestFnCall {
         kind: JestFnKind::General(kind),
@@ -390,7 +418,10 @@ fn resolve_to_jest_fn<'a>(
     original: Option<&'a str>,
 ) -> Option<ResolvedJestFn<'a>> {
     let ident = resolve_first_ident(&call_expr.callee)?;
-    Some(ResolvedJestFn { local: ident.name.as_str(), original })
+    Some(ResolvedJestFn {
+        local: ident.name.as_str(),
+        original,
+    })
 }
 
 fn resolve_first_ident<'a>(expr: &'a Expression<'a>) -> Option<&'a IdentifierReference<'a>> {
@@ -467,7 +498,9 @@ impl<'a> ParsedExpectFnCall<'a> {
 
     /// The modifiers (`.not`, `.resolves`, `.rejects`) in the chain, in source order.
     pub fn modifiers(&self) -> impl Iterator<Item = &KnownMemberExpressionProperty<'a>> {
-        self.modifier_indices.iter().filter_map(|i| self.members.get(*i))
+        self.modifier_indices
+            .iter()
+            .filter_map(|i| self.members.get(*i))
     }
 }
 
@@ -501,7 +534,10 @@ impl<'a> KnownMemberExpressionProperty<'a> {
                     Some(Cow::Borrowed(string_literal.value.as_str()))
                 }
                 Expression::TemplateLiteral(template_literal) => Some(Cow::Borrowed(
-                    template_literal.single_quasi().expect("get string content").as_str(),
+                    template_literal
+                        .single_quasi()
+                        .expect("get string content")
+                        .as_str(),
                 )),
                 _ => None,
             },
@@ -578,7 +614,12 @@ fn recurse_extend_node_chain<'a>(
     params: &NodeChainParams<'a>,
     chain: &mut Vec<KnownMemberExpressionProperty<'a>>,
 ) {
-    let NodeChainParams { expr, parent, parent_kind, grandparent_kind } = params;
+    let NodeChainParams {
+        expr,
+        parent,
+        parent_kind,
+        grandparent_kind,
+    } = params;
 
     match expr {
         match_member_expression!(Expression) => {

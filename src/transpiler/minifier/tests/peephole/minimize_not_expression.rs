@@ -25,13 +25,28 @@ fn minimize_duplicate_nots() {
 #[test]
 fn minimize_nots_with_de_morgan_comparison_chains() {
     // Jump bodies keep the `if` a statement, so the `!(...)` used to survive to the output.
-    test("if (!(a == b || c == d)) throw x;", "if (a != b && c != d) throw x;");
-    test("if (!(a === b || c === d)) throw x;", "if (a !== b && c !== d) throw x;");
+    test(
+        "if (!(a == b || c == d)) throw x;",
+        "if (a != b && c != d) throw x;",
+    );
+    test(
+        "if (!(a === b || c === d)) throw x;",
+        "if (a !== b && c !== d) throw x;",
+    );
     // `&&` dual.
-    test("if (!(a == b && c == d)) throw x;", "if (a != b || c != d) throw x;");
+    test(
+        "if (!(a == b && c == d)) throw x;",
+        "if (a != b || c != d) throw x;",
+    );
     // typeof
-    test("if (!(typeof a < 'u' && !b)) throw x;", "if (typeof a > 'u' || b) throw x;");
-    test("if (!(typeof a != 'undefined' && !b)) throw x;", "if (typeof a > 'u' || b) throw x;");
+    test(
+        "if (!(typeof a < 'u' && !b)) throw x;",
+        "if (typeof a > 'u' || b) throw x;",
+    );
+    test(
+        "if (!(typeof a != 'undefined' && !b)) throw x;",
+        "if (typeof a > 'u' || b) throw x;",
+    );
     // The fold is involutive, so the `if (!x) return` collapse (which negates
     // the test again) still reaches its old output.
     test(
@@ -39,13 +54,28 @@ fn minimize_nots_with_de_morgan_comparison_chains() {
         "function f() { (a === b || c === d) && g(); }",
     );
     // Loop rotation consumes the `!` of a folded chain losslessly as well.
-    test("while (e) { if (!(a == b || c == d)) break; }", "for (; e && (a == b || c == d);) ;");
+    test(
+        "while (e) { if (!(a == b || c == d)) break; }",
+        "for (; e && (a == b || c == d);) ;",
+    );
     // Loop tests.
-    test("while (!(a == b || c == d)) g();", "for (; a != b && c != d;) g();");
-    test("do g(); while (!(a == b && c == d));", "do g(); while (a != b || c != d);");
-    test("for (; !(a == b || c == d);) g();", "for (; a != b && c != d;) g();");
+    test(
+        "while (!(a == b || c == d)) g();",
+        "for (; a != b && c != d;) g();",
+    );
+    test(
+        "do g(); while (!(a == b && c == d));",
+        "do g(); while (a != b || c != d);",
+    );
+    test(
+        "for (; !(a == b || c == d);) g();",
+        "for (; a != b && c != d;) g();",
+    );
     // Longer chains and nesting that loses parentheses after inversion.
-    test("if (!(a == b || c == d || e == f)) throw x;", "if (a != b && c != d && e != f) throw x;");
+    test(
+        "if (!(a == b || c == d || e == f)) throw x;",
+        "if (a != b && c != d && e != f) throw x;",
+    );
     test(
         "if (!((a == b || c == d) && e == f)) throw x;",
         "if (a != b && c != d || e != f) throw x;",
@@ -67,11 +97,17 @@ fn minimize_nots_with_de_morgan_negative_cases() {
     test_same("if (!(a == b && c == d || e == f)) throw x;");
     // Existing shapes that consume the `!` for free must not regress.
     test("var v = !!(a == b || c == d);", "var v = a == b || c == d;");
-    test("if (!(a == b && c == d)) x(); else y();", "a != b || c != d ? x() : y();");
+    test(
+        "if (!(a == b && c == d)) x(); else y();",
+        "a != b || c != d ? x() : y();",
+    );
     // mixed unary-not leaves in both boolean and value contexts.
     test("if (!(!a || b)) x();", "a && !b && x();");
     test_same("var v = !(!a || b);");
-    test("if (!(a == b || !c && d == e)) x();", "a == b || !c && d == e || x();");
+    test(
+        "if (!(a == b || !c && d == e)) x();",
+        "a == b || !c && d == e || x();",
+    );
     // parenthesis-size guard.
     test_same("if (!(a == b || fn1())) throw x;");
     test_same("if (!(a == b && fn1())) throw x;");
@@ -79,8 +115,14 @@ fn minimize_nots_with_de_morgan_negative_cases() {
     test("var v = !!(a && !b);", "var v = !(!a || b);");
     test_same("if (!(a < b || !c)) throw x;");
     test_same("if (!(a in b || c == d)) throw x;");
-    test("if (!(a === b && (a ?? b))) throw x;", "if (!(a === b && (a ?? b))) throw x;");
-    test("if (!(a === b && !a)) throw x;", "if (a !== b || a) throw x;");
+    test(
+        "if (!(a === b && (a ?? b))) throw x;",
+        "if (!(a === b && (a ?? b))) throw x;",
+    );
+    test(
+        "if (!(a === b && !a)) throw x;",
+        "if (a !== b || a) throw x;",
+    );
 }
 
 #[test]
@@ -95,7 +137,10 @@ fn minimize_nots_with_binary_expressions() {
     test("!!delete x.y", "delete x.y");
     test("!!!delete x.y", "delete x.y");
     test("!!!!delete x.y", "delete x.y");
-    test("var k = !!(foo instanceof bar)", "var k = foo instanceof bar");
+    test(
+        "var k = !!(foo instanceof bar)",
+        "var k = foo instanceof bar",
+    );
     test("!(a === 1 ? void 0 : a.b)", "a !== 1 && a.b;");
     test("!(a, b)", "a, b");
     test("var v = !(typeof x < 'u')", "var v = typeof x > 'u';");

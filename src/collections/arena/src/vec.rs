@@ -58,8 +58,10 @@ unsafe impl<T: Sync> Sync for Vec<'_, T> {}
 impl<'alloc, T> Vec<'alloc, T> {
     /// Const assertion that `T` is not `Drop`.
     /// Must be referenced in all methods which create a `Vec`.
-    const ASSERT_T_IS_NOT_DROP: () =
-        assert!(!std::mem::needs_drop::<T>(), "Cannot create a Vec<T> where T is a Drop type");
+    const ASSERT_T_IS_NOT_DROP: () = assert!(
+        !std::mem::needs_drop::<T>(),
+        "Cannot create a Vec<T> where T is a Drop type"
+    );
 
     /// Constructs a new, empty `Vec<T>`.
     ///
@@ -133,7 +135,10 @@ impl<'alloc, T> Vec<'alloc, T> {
     pub fn with_capacity_in(capacity: usize, allocator: &impl GetAllocator<'alloc>) -> Self {
         const { Self::ASSERT_T_IS_NOT_DROP };
 
-        Self(InnerVec::with_capacity_in(capacity, allocator.allocator().arena()))
+        Self(InnerVec::with_capacity_in(
+            capacity,
+            allocator.allocator().arena(),
+        ))
     }
 
     /// Create a new [`Vec`] whose elements are taken from an iterator and

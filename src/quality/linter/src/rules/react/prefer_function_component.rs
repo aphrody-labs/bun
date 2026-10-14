@@ -39,7 +39,10 @@ pub struct PreferFunctionComponent {
 
 impl Default for PreferFunctionComponent {
     fn default() -> Self {
-        Self { allow_error_boundary: true, allow_jsx_utility_class: false }
+        Self {
+            allow_error_boundary: true,
+            allow_jsx_utility_class: false,
+        }
     }
 }
 
@@ -150,9 +153,10 @@ fn is_error_boundary(class: &Class) -> bool {
 fn class_body_contains_jsx(class: &Class) -> bool {
     class.body.body.iter().any(|element| match element {
         ClassElement::MethodDefinition(method) => function_contains_jsx(&method.value),
-        ClassElement::PropertyDefinition(prop) => {
-            prop.value.as_ref().is_some_and(|v| expression_contains_jsx(v))
-        }
+        ClassElement::PropertyDefinition(prop) => prop
+            .value
+            .as_ref()
+            .is_some_and(|v| expression_contains_jsx(v)),
         _ => false,
     })
 }
@@ -984,6 +988,11 @@ fn test() {
         ),
     ];
 
-    Tester::new(PreferFunctionComponent::NAME, PreferFunctionComponent::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        PreferFunctionComponent::NAME,
+        PreferFunctionComponent::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

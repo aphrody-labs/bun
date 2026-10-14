@@ -66,7 +66,9 @@ impl GraphicalReportHandler {
             let source = diagnostic.source_code();
             match source {
                 Some(source)
-                    if scanner.as_ref().is_some_and(|scanner| scanner.is_for(source.data())) => {}
+                    if scanner
+                        .as_ref()
+                        .is_some_and(|scanner| scanner.is_for(source.data())) => {}
                 Some(source) => scanner = Some(SpanScanner::new(source.data(), 1, 1)),
                 None => scanner = None,
             }
@@ -92,7 +94,9 @@ impl GraphicalReportHandler {
             let source = diagnostic.source_code();
             match source {
                 Some(source)
-                    if scanner.as_ref().is_some_and(|scanner| scanner.is_for(source.data())) => {}
+                    if scanner
+                        .as_ref()
+                        .is_some_and(|scanner| scanner.is_for(source.data())) => {}
                 Some(source) => scanner = Some(SpanScanner::new(source.data(), 1, 1)),
                 None => scanner = None,
             }
@@ -148,14 +152,22 @@ impl GraphicalReportHandler {
                 write!(title, "{code}: {diagnostic}")?;
             }
             (_, _, Some(code)) => {
-                write!(title, "{}", format_args!("{code}: {diagnostic}").style(severity_style))?;
+                write!(
+                    title,
+                    "{}",
+                    format_args!("{code}: {diagnostic}").style(severity_style)
+                )?;
             }
             _ if severity_style.is_plain() => write!(title, "{diagnostic}")?,
             _ => write!(title, "{}", diagnostic.style(severity_style))?,
         }
         let title = title.as_str();
         if !title.contains('\n')
-            && severity_icon.len().saturating_add(title.len()).saturating_add(3) <= width
+            && severity_icon
+                .len()
+                .saturating_add(title.len())
+                .saturating_add(3)
+                <= width
         {
             f.write_str("  ")?;
             if severity_style.is_plain() {
@@ -168,7 +180,10 @@ impl GraphicalReportHandler {
         } else {
             // No-color themes can bypass owo-colors' formatting machinery entirely.
             let (initial_indent, rest_indent) = if severity_style.is_plain() {
-                (format!("  {severity_icon} "), format!("  {} ", self.theme.characters.vbar))
+                (
+                    format!("  {severity_icon} "),
+                    format!("  {} ", self.theme.characters.vbar),
+                )
             } else {
                 (
                     format!("  {} ", severity_icon.style(severity_style)),
@@ -259,7 +274,9 @@ impl GraphicalReportHandler {
         // including for ANSI escape sequences. Avoid both width scans when
         // even that conservative bound fits.
         opts.initial_indent.len().saturating_add(text.len()) <= opts.width || {
-            let available = opts.width.saturating_sub(Self::display_width(opts.initial_indent));
+            let available = opts
+                .width
+                .saturating_sub(Self::display_width(opts.initial_indent));
             Self::display_width(text) <= available
         }
     }
@@ -326,8 +343,10 @@ mod tests {
 
     #[test]
     fn batch_render_matches_individual_reports() {
-        let source =
-            Arc::new(NamedSource::new("input.ts", "first();\nsecond();\nthird();\nfourth();\n"));
+        let source = Arc::new(NamedSource::new(
+            "input.ts",
+            "first();\nsecond();\nthird();\nfourth();\n",
+        ));
         let other_source = Arc::new(NamedSource::new("other.ts", "alpha();\nbeta();\n"));
         let diagnostics: Vec<Error> = vec![
             OxcDiagnostic::warn("later")
@@ -348,14 +367,18 @@ mod tests {
 
         let mut expected = String::new();
         for diagnostic in &diagnostics {
-            handler.render_report(&mut expected, diagnostic.as_ref()).unwrap();
+            handler
+                .render_report(&mut expected, diagnostic.as_ref())
+                .unwrap();
         }
 
         let mut actual = String::new();
         handler
             .render_reports(
                 &mut actual,
-                diagnostics.iter().map(|diagnostic| diagnostic.as_ref() as &dyn Diagnostic),
+                diagnostics
+                    .iter()
+                    .map(|diagnostic| diagnostic.as_ref() as &dyn Diagnostic),
             )
             .unwrap();
 

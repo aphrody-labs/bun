@@ -44,7 +44,10 @@ pub unsafe fn find2(src: *const u8, n: usize, mut i: usize, a: u8, b: u8) -> usi
 pub unsafe fn find3(src: *const u8, n: usize, mut i: usize, a: u8, b: u8, c: u8) -> usize {
     while i + 32 <= n {
         let v = load256(src, i);
-        let m = mm(_mm256_or_si256(_mm256_or_si256(veq(v, a), veq(v, b)), veq(v, c)));
+        let m = mm(_mm256_or_si256(
+            _mm256_or_si256(veq(v, a), veq(v, b)),
+            veq(v, c),
+        ));
         if m != 0 {
             return i + m.trailing_zeros() as usize;
         }
@@ -133,7 +136,14 @@ pub fn bracket_bits(src: &[u8], base: usize) -> u64 {
         // guarantees.
         let v = unsafe { load256(block.as_ptr(), half * 32) };
         let m = unsafe {
-            vor!(veq(v, b'('), veq(v, b')'), veq(v, b'['), veq(v, b']'), veq(v, b'{'), veq(v, b'}'))
+            vor!(
+                veq(v, b'('),
+                veq(v, b')'),
+                veq(v, b'['),
+                veq(v, b']'),
+                veq(v, b'{'),
+                veq(v, b'}')
+            )
         };
         out |= u64::from(mm(m)) << (half * 32);
     }

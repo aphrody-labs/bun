@@ -185,18 +185,29 @@ fn test() {
         ("const a = (await b())[2]", "const a = (await b())[2]"),
         ("const [a] = (await b())[1]", "const [a] = (await b())[1]"),
         ("let b, a = (await f()).a", "let b, {a} = await f()"),
-        ("const a = (/** comments */await b())[1]", "const [, a] = /** comments */await b()"),
+        (
+            "const a = (/** comments */await b())[1]",
+            "const [, a] = /** comments */await b()",
+        ),
         (
             "const a = (/** comments */await b() /** comments */)[1]",
             "const [, a] = /** comments */await b() /** comments */",
         ),
-        ("const foo: Type = (await promise)[0]", "const foo: Type = (await promise)[0]"),
+        (
+            "const foo: Type = (await promise)[0]",
+            "const foo: Type = (await promise)[0]",
+        ),
         ("const a = (await b())?.a", "const a = (await b())?.a"),
         ("const a = (await b())?.[0]", "const a = (await b())?.[0]"),
     ];
 
-    Tester::new(NoAwaitExpressionMember::NAME, NoAwaitExpressionMember::PLUGIN, pass, fail)
-        .change_rule_path_extension("mts")
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        NoAwaitExpressionMember::NAME,
+        NoAwaitExpressionMember::PLUGIN,
+        pass,
+        fail,
+    )
+    .change_rule_path_extension("mts")
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

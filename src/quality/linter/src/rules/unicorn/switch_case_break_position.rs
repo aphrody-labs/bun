@@ -48,7 +48,8 @@ declare_oxc_lint!(
     style,
     pending,
     version = "1.59.0",
-    short_description = "Enforce consistent `break`/`return`/`continue`/`throw` position in `case` clauses.",
+    short_description =
+        "Enforce consistent `break`/`return`/`continue`/`throw` position in `case` clauses.",
 );
 
 impl Rule for SwitchCaseBreakPosition {
@@ -76,7 +77,10 @@ impl Rule for SwitchCaseBreakPosition {
             return;
         }
 
-        ctx.diagnostic(switch_case_break_position_diagnostic(last_statement.span(), keyword));
+        ctx.diagnostic(switch_case_break_position_diagnostic(
+            last_statement.span(),
+            keyword,
+        ));
     }
 }
 
@@ -339,6 +343,11 @@ fn test() {
         ),
     ];
 
-    Tester::new(SwitchCaseBreakPosition::NAME, SwitchCaseBreakPosition::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        SwitchCaseBreakPosition::NAME,
+        SwitchCaseBreakPosition::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

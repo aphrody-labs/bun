@@ -87,7 +87,11 @@ impl<'a> SveltePartialLoader<'a> {
 
             // NOTE: loader checked that source_text.len() is less than u32::MAX
             #[expect(clippy::cast_possible_truncation)]
-            return Some(JavaScriptSource::partial(source_text, source_type, js_start as u32));
+            return Some(JavaScriptSource::partial(
+                source_text,
+                source_type,
+                js_start as u32,
+            ));
         }
     }
 
@@ -100,7 +104,10 @@ impl<'a> SveltePartialLoader<'a> {
 
     fn is_module_script(content: &str) -> bool {
         find_attribute(content, "module").is_some()
-            || matches!(find_attribute(content, "context"), Some(AttributeValue::Value("module")))
+            || matches!(
+                find_attribute(content, "context"),
+                Some(AttributeValue::Value("module"))
+            )
     }
 }
 

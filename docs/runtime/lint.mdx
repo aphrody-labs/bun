@@ -43,6 +43,20 @@ bun lint --fix
 bun lint --format=json > lint.json
 ```
 
+In Oxlint mode with no target files, JSON and XML reporters emit a valid empty document and
+put the no-files notice on standard error. Unix output keeps that notice on
+standard output. The no-target error exits with code `1`, including with
+`--silent`; silencing findings does not hide this failure.
+
+## Native type information
+
+`--type-aware` or `options.typeAware = true` enables rules such as
+`typescript/no-floating-promises` through Bun's native type owner. With an
+Oxlint configuration, those rules are skipped when type-aware linting is off.
+`--type-check` or `options.typeCheck = true` additionally reports TypeScript
+errors and requires type-aware linting. Neither option selects an external
+checker or linter backend.
+
 ## Configure
 
 `bun lint` reads `.oxlintrc.json` the same way oxlint does. See the [oxlint configuration reference](https://oxc.rs/docs/guide/usage/linter/config) for rules, plugins and overrides.

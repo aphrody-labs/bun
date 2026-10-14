@@ -84,7 +84,9 @@ pub struct AsyncGeneratorFunctions<'a> {
 
 impl AsyncGeneratorFunctions<'_> {
     pub fn new() -> Self {
-        Self { executor: AsyncGeneratorExecutor::new(Helper::WrapAsyncGenerator) }
+        Self {
+            executor: AsyncGeneratorExecutor::new(Helper::WrapAsyncGenerator),
+        }
     }
 }
 
@@ -144,7 +146,9 @@ impl<'a> Traverse<'a, TransformState<'a>> for AsyncGeneratorFunctions<'a> {
             && !function.is_typescript_syntax()
         {
             let new_statement = self.executor.transform_function_declaration(function, ctx);
-            ctx.state.statement_injector.insert_after(stmt, new_statement);
+            ctx.state
+                .statement_injector
+                .insert_after(stmt, new_statement);
         }
     }
 
@@ -154,7 +158,8 @@ impl<'a> Traverse<'a, TransformState<'a>> for AsyncGeneratorFunctions<'a> {
             && !func.is_typescript_syntax()
             && AsyncGeneratorExecutor::is_class_method_like_ancestor(ctx.parent())
         {
-            self.executor.transform_function_for_method_definition(func, ctx);
+            self.executor
+                .transform_function_for_method_definition(func, ctx);
         }
     }
 }
@@ -210,7 +215,12 @@ impl<'a> AsyncGeneratorFunctions<'a> {
         let arguments = ArenaVec::from_value_in(Argument::from(argument), ctx);
         argument = helper_call_expr(Helper::AwaitAsyncGenerator, arguments, ctx);
 
-        Some(Expression::new_yield_expression(SPAN, false, Some(argument), ctx))
+        Some(Expression::new_yield_expression(
+            SPAN,
+            false,
+            Some(argument),
+            ctx,
+        ))
     }
 
     /// Check whether `await` is inside an async generator function.

@@ -43,7 +43,11 @@ pub fn key_needs_temp_var(key: &Expression, ctx: &TraverseCtx) -> bool {
         // TODO(improve-on-babel): That case is rare.
         // Test for it in first pass over class elements, and avoid temp vars where possible.
         Expression::Identifier(ident) => {
-            match ctx.scoping().get_reference(ident.reference_id()).symbol_id() {
+            match ctx
+                .scoping()
+                .get_reference(ident.reference_id())
+                .symbol_id()
+            {
                 Some(symbol_id) => ctx.scoping().symbol_is_mutated(symbol_id),
                 None => true,
             }
@@ -60,13 +64,18 @@ pub fn key_needs_temp_var(key: &Expression, ctx: &TraverseCtx) -> bool {
 pub fn create_computed_key_temp_var<'a>(
     key: Expression<'a>,
     ctx: &mut TraverseCtx<'a>,
-) -> (/* assignment */ Expression<'a>, /* identifier */ Expression<'a>) {
+) -> (
+    /* assignment */ Expression<'a>,
+    /* identifier */ Expression<'a>,
+) {
     let outer_scope_id = ctx.current_block_scope_id();
     // TODO: Handle if is a class expression defined in a function's params.
     let binding =
         ctx.generate_uid_based_on_node(&key, outer_scope_id, SymbolFlags::BlockScopedVariable);
 
-    ctx.state.var_declarations.insert_let(&binding, None, &ctx.ast);
+    ctx.state
+        .var_declarations
+        .insert_let(&binding, None, &ctx.ast);
 
     let assignment = create_assignment(&binding, key, SPAN, ctx);
     let ident = binding.create_read_expression(ctx);

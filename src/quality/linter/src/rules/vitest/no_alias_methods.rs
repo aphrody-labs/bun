@@ -106,9 +106,21 @@ fn test() {
     ];
 
     let mut fix = vec![
-        ("expect(a).toBeCalled()", "expect(a).toHaveBeenCalled()", None),
-        ("expect(a).not['toThrowError']()", "expect(a).not['toThrow']()", None),
-        ("expect(a).not[`toThrowError`]()", "expect(a).not[`toThrow`]()", None),
+        (
+            "expect(a).toBeCalled()",
+            "expect(a).toHaveBeenCalled()",
+            None,
+        ),
+        (
+            "expect(a).not['toThrowError']()",
+            "expect(a).not['toThrow']()",
+            None,
+        ),
+        (
+            "expect(a).not[`toThrowError`]()",
+            "expect(a).not[`toThrow`]()",
+            None,
+        ),
     ];
 
     let pass_vitest = vec![
@@ -134,9 +146,21 @@ fn test() {
     ];
 
     let fix_vitest = vec![
-        ("expect(a).toBeCalled()", "expect(a).toHaveBeenCalled()", None),
-        ("expect(a).toBeCalledTimes()", "expect(a).toHaveBeenCalledTimes()", None),
-        ("expect(a).not['toThrowError']()", "expect(a).not['toThrow']()", None),
+        (
+            "expect(a).toBeCalled()",
+            "expect(a).toHaveBeenCalled()",
+            None,
+        ),
+        (
+            "expect(a).toBeCalledTimes()",
+            "expect(a).toHaveBeenCalledTimes()",
+            None,
+        ),
+        (
+            "expect(a).not['toThrowError']()",
+            "expect(a).not['toThrow']()",
+            None,
+        ),
     ];
 
     pass.extend(pass_vitest.into_iter().map(|x| (x, None)));

@@ -118,10 +118,20 @@ impl Display for AttrLocation<'_> {
                 f.write_str(enum_def.name())
             }
             AttrLocation::StructField(struct_def, field_index) => {
-                write!(f, "{}::{}", struct_def.name(), struct_def.fields[*field_index].name())
+                write!(
+                    f,
+                    "{}::{}",
+                    struct_def.name(),
+                    struct_def.fields[*field_index].name()
+                )
             }
             AttrLocation::EnumVariant(enum_def, variant_index) => {
-                write!(f, "{}::{}", enum_def.name(), enum_def.variants[*variant_index].name())
+                write!(
+                    f,
+                    "{}::{}",
+                    enum_def.name(),
+                    enum_def.variants[*variant_index].name()
+                )
             }
             AttrLocation::Meta(meta) => f.write_str(meta.name()),
         }
@@ -172,17 +182,29 @@ pub enum AttrPartListElement {
 impl AttrPartListElement {
     /// Unwrap this [`AttrPartListElement`] if it is an [`AttrPartListElement::Tag`].
     pub fn try_into_tag(self) -> Result<String> {
-        if let Self::Tag(name) = self { Ok(name) } else { Err(()) }
+        if let Self::Tag(name) = self {
+            Ok(name)
+        } else {
+            Err(())
+        }
     }
 
     /// Unwrap this [`AttrPartListElement`] if it is an [`AttrPartListElement::String`].
     pub fn try_into_string(self) -> Result<(String, String)> {
-        if let Self::String(name, value) = self { Ok((name, value)) } else { Err(()) }
+        if let Self::String(name, value) = self {
+            Ok((name, value))
+        } else {
+            Err(())
+        }
     }
 
     /// Unwrap this [`AttrPartListElement`] if it is an [`AttrPartListElement::List`].
     #[expect(dead_code)]
     pub fn try_into_list(self) -> Result<(String, Vec<AttrPartListElement>)> {
-        if let Self::List(name, elements) = self { Ok((name, elements)) } else { Err(()) }
+        if let Self::List(name, elements) = self {
+            Ok((name, elements))
+        } else {
+            Err(())
+        }
     }
 }

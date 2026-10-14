@@ -5,13 +5,20 @@ use bun_lsp::{Options, Query, QueryKind};
 
 use crate::registry::{Annotations, Args, Context, Output, Tool, ToolError};
 
-fn ask(ctx: &Context, args: &Args<'_>, kind: QueryKind, position: bool) -> Result<Output, ToolError> {
+fn ask(
+    ctx: &Context,
+    args: &Args<'_>,
+    kind: QueryKind,
+    position: bool,
+) -> Result<Output, ToolError> {
     let file = ctx.cwd.join(args.str("file")?);
     let mut query = if position {
         let line = args.uint("line", 0, u64::from(u32::MAX)) as u32;
         let column = args.uint("column", 0, u64::from(u32::MAX)) as u32;
         if line == 0 || column == 0 {
-            return Err(ToolError::InvalidArgs("`line` and `column` are 1-based and required".into()));
+            return Err(ToolError::InvalidArgs(
+                "`line` and `column` are 1-based and required".into(),
+            ));
         }
         Query::at(kind, file, line, column)
     } else {
@@ -22,7 +29,10 @@ fn ask(ctx: &Context, args: &Args<'_>, kind: QueryKind, position: bool) -> Resul
         .or_else(|| args.opt_str("query"))
         .map(str::to_owned);
     query.apply = args.bool("apply", false);
-    query.limit = args.get("limit").and_then(serde_json::Value::as_u64).map(|l| l.clamp(1, 1000) as usize);
+    query.limit = args
+        .get("limit")
+        .and_then(serde_json::Value::as_u64)
+        .map(|l| l.clamp(1, 1000) as usize);
     if let Some(ms) = args.get("timeout_ms").and_then(serde_json::Value::as_u64) {
         query.timeout_ms = Some(ms.clamp(100, 120_000));
     }
@@ -59,7 +69,14 @@ const POSITION: &str = r#""file":{"type":"string","description":"File path, rela
 
 macro_rules! schema {
     ($extra:literal, $required:literal) => {
-        const_format::concatcp!(r#"{"type":"object","properties":{"#, POSITION, $extra, r#"},"required":"#, $required, "}")
+        const_format::concatcp!(
+            r#"{"type":"object","properties":{"#,
+            POSITION,
+            $extra,
+            r#"},"required":"#,
+            $required,
+            "}"
+        )
     };
 }
 
@@ -93,7 +110,10 @@ pub(crate) const TOOLS: &[Tool] = &[
     Tool {
         name: "lsp_hover",
         title: "Hover",
-        description: const_format::concatcp!("Type and documentation of the symbol at a position.", NOTE),
+        description: const_format::concatcp!(
+            "Type and documentation of the symbol at a position.",
+            NOTE
+        ),
         input_schema: schema!("", r#"["file","line","column"]"#),
         annotations: Annotations::READ_ONLY,
         call: hover,

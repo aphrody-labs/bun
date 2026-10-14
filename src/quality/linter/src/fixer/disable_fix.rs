@@ -30,10 +30,17 @@ impl Message {
             return;
         }
 
-        let Some(rule_name) = oxc_code_short_canonical_name(&self.error.code) else { return };
+        let Some(rule_name) = oxc_code_short_canonical_name(&self.error.code) else {
+            return;
+        };
 
         self.fixes.extend_fix(vec![
-            disable_for_this_line(&rule_name, self.span.start, section_offset, section_source_text),
+            disable_for_this_line(
+                &rule_name,
+                self.span.start,
+                section_offset,
+                section_source_text,
+            ),
             disable_for_this_section(&rule_name, section_offset, section_source_text),
         ]);
     }
@@ -90,7 +97,10 @@ fn disable_for_this_line(
         // make sure that end is at least start to avoid panic
         let end = end.max(start);
         let slice = &bytes[start..end];
-        let whitespace_len = slice.iter().take_while(|c| matches!(c, b' ' | b'\t')).count();
+        let whitespace_len = slice
+            .iter()
+            .take_while(|c| matches!(c, b' ' | b'\t'))
+            .count();
         &slice[..whitespace_len]
     };
     let whitespace_string = String::from_utf8_lossy(whitespace_range);
@@ -197,7 +207,9 @@ fn get_inline_disable_line_comment_end(error_offset: u32, bytes: &[u8]) -> Optio
         line_end += 1;
     }
 
-    let comment_start = bytes[error_offset..line_end].windows(2).position(|w| w == b"//")?;
+    let comment_start = bytes[error_offset..line_end]
+        .windows(2)
+        .position(|w| w == b"//")?;
     let comment_offset = error_offset + comment_start;
 
     get_disable_comment_end_at_comment_start(comment_offset, DisableDirective::Line, bytes)
@@ -550,7 +562,10 @@ mod tests {
         let source = "\t  \tconsole.log('hello');";
         let fix = super::disable_for_this_line("no-console", 12, 0, source);
 
-        assert_eq!(fix.content, "\t  \t// oxlint-disable-next-line no-console\n");
+        assert_eq!(
+            fix.content,
+            "\t  \t// oxlint-disable-next-line no-console\n"
+        );
         assert_eq!(fix.span, Span::empty(0));
     }
 
@@ -577,7 +592,10 @@ mod tests {
         let source = "function test() {\n\t  \t  console.log('hello');\n}";
         let fix = super::disable_for_this_line("no-console", 33, 0, source);
 
-        assert_eq!(fix.content, "\t  \t  // oxlint-disable-next-line no-console\n");
+        assert_eq!(
+            fix.content,
+            "\t  \t  // oxlint-disable-next-line no-console\n"
+        );
         assert_eq!(fix.span, Span::empty(18));
     }
 
@@ -604,7 +622,10 @@ mod tests {
         let source = "if (true) {\n\t\tif (nested) {\n\t\t\tconsole.log('deep');\n\t\t}\n}";
         let fix = super::disable_for_this_line("no-console", 40, 0, source);
 
-        assert_eq!(fix.content, "\t\t\t// oxlint-disable-next-line no-console\n");
+        assert_eq!(
+            fix.content,
+            "\t\t\t// oxlint-disable-next-line no-console\n"
+        );
         assert_eq!(fix.span, Span::empty(28));
     }
 

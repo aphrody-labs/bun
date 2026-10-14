@@ -83,12 +83,20 @@ pub struct ConfigDiscovery {
 impl ConfigDiscovery {
     /// Config discovery for oxlint: `.oxlintrc.json(c)` and `oxlint.config.(m)ts`.
     pub fn oxlint() -> Self {
-        Self { entries: OXLINT_CONFIG_FILE_NAMES, first_wins: false, nested_configs: true }
+        Self {
+            entries: OXLINT_CONFIG_FILE_NAMES,
+            first_wins: false,
+            nested_configs: true,
+        }
     }
 
     /// Config discovery for oxfmt: `.oxfmtrc.json(c)` and `oxfmt.config.(m)ts`.
     pub fn oxfmt() -> Self {
-        Self { entries: OXFMT_CONFIG_FILE_NAMES, first_wins: false, nested_configs: true }
+        Self {
+            entries: OXFMT_CONFIG_FILE_NAMES,
+            first_wins: false,
+            nested_configs: true,
+        }
     }
 
     /// Config discovery for Vite+ mode, which only looks for `vite.config.*`.
@@ -97,7 +105,11 @@ impl ConfigDiscovery {
     /// so multiple files are resolved the same way instead of being a conflict.
     /// Vite+ also uses a single config per project, so nested configs are not discovered.
     pub fn vite_plus() -> Self {
-        Self { entries: VITE_PLUS_CONFIG_FILE_NAMES, first_wins: true, nested_configs: false }
+        Self {
+            entries: VITE_PLUS_CONFIG_FILE_NAMES,
+            first_wins: true,
+            nested_configs: false,
+        }
     }
 
     /// Callers combine this with their own `--disable-nested-config` style options.
@@ -138,13 +150,17 @@ impl ConfigDiscovery {
         // `(priority, config)` so Vite+ mode can pick the first entry in `entries` order.
         let mut matches = Vec::new();
         for entry in entries.flatten() {
-            let Some(priority) = self.priority(&entry.file_name()) else { continue };
+            let Some(priority) = self.priority(&entry.file_name()) else {
+                continue;
+            };
 
             // NOTE: `Path::is_file()` follows symlinks; `FileType::is_file()` does not.
             let is_match = if follow_symlinks {
                 entry.path().is_file()
             } else {
-                let Ok(file_type) = entry.file_type() else { continue };
+                let Ok(file_type) = entry.file_type() else {
+                    continue;
+                };
                 #[expect(clippy::filetype_is_file)]
                 file_type.is_file()
             };
@@ -217,7 +233,10 @@ impl ConfigConflict {
         if config_names.len() == 2 {
             format!("Both {config_list} found in {}.", self.dir.display())
         } else {
-            format!("Multiple config files found in {}: {config_list}.", self.dir.display())
+            format!(
+                "Multiple config files found in {}: {config_list}.",
+                self.dir.display()
+            )
         }
     }
 
@@ -225,7 +244,10 @@ impl ConfigConflict {
         self.configs
             .iter()
             .filter_map(|config| {
-                config.path().file_name().map(|name| name.to_string_lossy().into_owned())
+                config
+                    .path()
+                    .file_name()
+                    .map(|name| name.to_string_lossy().into_owned())
             })
             .collect()
     }
@@ -239,8 +261,10 @@ impl From<ConfigConflict> for OxcDiagnostic {
         let note = if config_names.is_empty() {
             "Only one config file is allowed per directory.".to_string()
         } else {
-            let backticked_names =
-                config_names.iter().map(|name| format!("`{name}`")).collect::<Vec<_>>();
+            let backticked_names = config_names
+                .iter()
+                .map(|name| format!("`{name}`"))
+                .collect::<Vec<_>>();
             let config_list = if backticked_names.len() == 2 {
                 format!("{} and {}", backticked_names[0], backticked_names[1])
             } else {
@@ -259,7 +283,10 @@ impl From<ConfigConflict> for OxcDiagnostic {
 fn format_conflicting_config_names(config_names: &[String]) -> String {
     debug_assert!(config_names.len() > 1);
 
-    let quoted_names = config_names.iter().map(|name| format!("'{name}'")).collect::<Vec<_>>();
+    let quoted_names = config_names
+        .iter()
+        .map(|name| format!("'{name}'"))
+        .collect::<Vec<_>>();
     if quoted_names.len() == 2 {
         return format!("{} and {}", quoted_names[0], quoted_names[1]);
     }
@@ -299,7 +326,10 @@ mod test {
     fn readdir_returns_none_for_empty_dir() {
         let temp_dir = tempfile::tempdir().unwrap();
         assert!(
-            discovery().find_unique_config_by_readdir(temp_dir.path(), false).unwrap().is_none()
+            discovery()
+                .find_unique_config_by_readdir(temp_dir.path(), false)
+                .unwrap()
+                .is_none()
         );
     }
 
@@ -308,7 +338,12 @@ mod test {
         // Pointing at a path that doesn't exist mimics the "read_dir fails" case
         // without relying on platform-specific permission setups.
         let missing = std::path::PathBuf::from("/this/path/does/not/exist/__readdir_test__");
-        assert!(discovery().find_unique_config_by_readdir(&missing, false).unwrap().is_none());
+        assert!(
+            discovery()
+                .find_unique_config_by_readdir(&missing, false)
+                .unwrap()
+                .is_none()
+        );
     }
 
     #[test]
@@ -318,7 +353,10 @@ mod test {
         fs::write(temp_dir.path().join("package.json"), "").unwrap();
 
         assert!(
-            discovery().find_unique_config_by_readdir(temp_dir.path(), false).unwrap().is_none()
+            discovery()
+                .find_unique_config_by_readdir(temp_dir.path(), false)
+                .unwrap()
+                .is_none()
         );
     }
 
@@ -328,7 +366,9 @@ mod test {
         let cfg_path = temp_dir.path().join(JSON);
         fs::write(&cfg_path, "{}").unwrap();
 
-        let found = discovery().find_unique_config_by_readdir(temp_dir.path(), false).unwrap();
+        let found = discovery()
+            .find_unique_config_by_readdir(temp_dir.path(), false)
+            .unwrap();
         assert!(matches!(found, Some(DiscoveredConfigFile::Json(p)) if p == cfg_path));
     }
 
@@ -338,7 +378,9 @@ mod test {
         let cfg_path = temp_dir.path().join("oxlint.config.mts");
         fs::write(&cfg_path, "export default {};").unwrap();
 
-        let found = discovery().find_unique_config_by_readdir(temp_dir.path(), false).unwrap();
+        let found = discovery()
+            .find_unique_config_by_readdir(temp_dir.path(), false)
+            .unwrap();
         assert!(matches!(found, Some(DiscoveredConfigFile::Js(p)) if p == cfg_path));
     }
 
@@ -349,7 +391,11 @@ mod test {
             fs::write(temp_dir.path().join(name), "export default {};").unwrap();
         }
 
-        assert!(discovery().find_unique_config_by_readdir(temp_dir.path(), false).is_err());
+        assert!(
+            discovery()
+                .find_unique_config_by_readdir(temp_dir.path(), false)
+                .is_err()
+        );
     }
 
     #[test]
@@ -358,7 +404,11 @@ mod test {
         fs::write(temp_dir.path().join(JSON), "{}").unwrap();
         fs::write(temp_dir.path().join(".oxlintrc.jsonc"), "{}").unwrap();
 
-        assert!(discovery().find_unique_config_by_readdir(temp_dir.path(), false).is_err());
+        assert!(
+            discovery()
+                .find_unique_config_by_readdir(temp_dir.path(), false)
+                .is_err()
+        );
     }
 
     #[test]
@@ -369,7 +419,10 @@ mod test {
         fs::create_dir(temp_dir.path().join(JSON)).unwrap();
 
         assert!(
-            discovery().find_unique_config_by_readdir(temp_dir.path(), false).unwrap().is_none()
+            discovery()
+                .find_unique_config_by_readdir(temp_dir.path(), false)
+                .unwrap()
+                .is_none()
         );
     }
 
@@ -380,7 +433,9 @@ mod test {
         fs::write(temp_dir.path().join(JSON), "{}").unwrap();
         fs::write(temp_dir.path().join("vite.config.ts"), "").unwrap();
 
-        let found = vite_discovery().find_unique_config_by_readdir(temp_dir.path(), false).unwrap();
+        let found = vite_discovery()
+            .find_unique_config_by_readdir(temp_dir.path(), false)
+            .unwrap();
         assert!(
             matches!(found, Some(DiscoveredConfigFile::Vite(p)) if p.file_name().unwrap() == "vite.config.ts")
         );
@@ -392,7 +447,9 @@ mod test {
         fs::write(temp_dir.path().join("vite.config.ts"), "").unwrap();
         fs::write(temp_dir.path().join("vite.config.mjs"), "").unwrap();
 
-        let found = vite_discovery().find_unique_config_by_readdir(temp_dir.path(), false).unwrap();
+        let found = vite_discovery()
+            .find_unique_config_by_readdir(temp_dir.path(), false)
+            .unwrap();
         assert!(
             matches!(found, Some(DiscoveredConfigFile::Vite(p)) if p.file_name().unwrap() == "vite.config.mjs")
         );
@@ -415,11 +472,16 @@ mod test {
 
         // follow_symlinks=false: symlinked configs are ignored.
         assert!(
-            discovery().find_unique_config_by_readdir(temp_dir.path(), false).unwrap().is_none()
+            discovery()
+                .find_unique_config_by_readdir(temp_dir.path(), false)
+                .unwrap()
+                .is_none()
         );
 
         // follow_symlinks=true: the symlink resolves to a file and matches.
-        let found = discovery().find_unique_config_by_readdir(temp_dir.path(), true).unwrap();
+        let found = discovery()
+            .find_unique_config_by_readdir(temp_dir.path(), true)
+            .unwrap();
         assert!(matches!(found, Some(DiscoveredConfigFile::Json(p)) if p == link));
     }
 
@@ -434,7 +496,10 @@ mod test {
         symlink("/nonexistent/target", temp_dir.path().join(JSON)).unwrap();
 
         assert!(
-            discovery().find_unique_config_by_readdir(temp_dir.path(), true).unwrap().is_none()
+            discovery()
+                .find_unique_config_by_readdir(temp_dir.path(), true)
+                .unwrap()
+                .is_none()
         );
     }
 }

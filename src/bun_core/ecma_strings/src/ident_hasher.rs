@@ -162,9 +162,15 @@ mod test {
     #[test]
     fn hash_nonzero_for_all_lengths() {
         // Every non-empty string should produce a non-zero hash
-        for s in
-            &[b"x" as &[u8], b"ab", b"abc", b"abcd", b"hello", b"useState", b"longIdentifierName"]
-        {
+        for s in &[
+            b"x" as &[u8],
+            b"ab",
+            b"abc",
+            b"abcd",
+            b"hello",
+            b"useState",
+            b"longIdentifierName",
+        ] {
             assert_ne!(
                 ident_hash(s),
                 0,
@@ -189,9 +195,15 @@ mod test {
     #[test]
     fn hash_four_byte_no_zero_collision() {
         // The old hash had all 4-byte strings colliding to 0. Verify that's fixed.
-        let keywords = [b"null", b"void", b"this", b"that", b"true", b"else", b"case", b"from"];
+        let keywords = [
+            b"null", b"void", b"this", b"that", b"true", b"else", b"case", b"from",
+        ];
         for kw in &keywords {
-            assert_ne!(ident_hash(*kw), 0, "4-byte keyword {kw:?} should not hash to 0");
+            assert_ne!(
+                ident_hash(*kw),
+                0,
+                "4-byte keyword {kw:?} should not hash to 0"
+            );
         }
         // Also verify they're all distinct
         for (i, a) in keywords.iter().enumerate() {
@@ -303,7 +315,12 @@ mod test {
             hasher.write_u64(packed);
             let ident_hash_val = hasher.finish();
 
-            assert_eq!(str_hash, ident_hash_val, "hash mismatch for {s:?} (len={})", s.len());
+            assert_eq!(
+                str_hash,
+                ident_hash_val,
+                "hash mismatch for {s:?} (len={})",
+                s.len()
+            );
         }
     }
 

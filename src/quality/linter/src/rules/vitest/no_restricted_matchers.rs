@@ -53,21 +53,57 @@ fn test() {
         ("expect(a).toThrow()", None),
         ("expect(a).rejects;", None),
         ("expect(a);", None),
-        ("expect(a).resolves", Some(serde_json::json!([{ "not": null }]))),
-        ("expect(a).toBe(b)", Some(serde_json::json!([{ "not.toBe": null }]))),
-        ("expect(a).toBeUndefined(b)", Some(serde_json::json!([{ "toBe": null }]))),
-        ("expect(a)[\"toBe\"](b)", Some(serde_json::json!([{ "not.toBe": null }]))),
-        ("expect(a).resolves.not.toBe(b)", Some(serde_json::json!([{ "not": null }]))),
-        ("expect(a).resolves.not.toBe(b)", Some(serde_json::json!([{ "not.toBe": null }]))),
-        ("import { expect } from 'vitest'; expect(a).toHaveBeenCalled()", None),
+        (
+            "expect(a).resolves",
+            Some(serde_json::json!([{ "not": null }])),
+        ),
+        (
+            "expect(a).toBe(b)",
+            Some(serde_json::json!([{ "not.toBe": null }])),
+        ),
+        (
+            "expect(a).toBeUndefined(b)",
+            Some(serde_json::json!([{ "toBe": null }])),
+        ),
+        (
+            "expect(a)[\"toBe\"](b)",
+            Some(serde_json::json!([{ "not.toBe": null }])),
+        ),
+        (
+            "expect(a).resolves.not.toBe(b)",
+            Some(serde_json::json!([{ "not": null }])),
+        ),
+        (
+            "expect(a).resolves.not.toBe(b)",
+            Some(serde_json::json!([{ "not.toBe": null }])),
+        ),
+        (
+            "import { expect } from 'vitest'; expect(a).toHaveBeenCalled()",
+            None,
+        ),
     ];
 
     let fail = vec![
-        ("expect(a).not.toBe(b)", Some(serde_json::json!([{ "not": null }]))),
-        ("expect(a).resolves.toBe(b)", Some(serde_json::json!([{ "resolves": null }]))),
-        ("expect(a).resolves.not.toBe(b)", Some(serde_json::json!([{ "resolves": null }]))),
-        ("expect(a).resolves.not.toBe(b)", Some(serde_json::json!([{ "resolves.not": null }]))),
-        ("expect(a).not.toBe(b)", Some(serde_json::json!([{ "not.toBe": null }]))),
+        (
+            "expect(a).not.toBe(b)",
+            Some(serde_json::json!([{ "not": null }])),
+        ),
+        (
+            "expect(a).resolves.toBe(b)",
+            Some(serde_json::json!([{ "resolves": null }])),
+        ),
+        (
+            "expect(a).resolves.not.toBe(b)",
+            Some(serde_json::json!([{ "resolves": null }])),
+        ),
+        (
+            "expect(a).resolves.not.toBe(b)",
+            Some(serde_json::json!([{ "resolves.not": null }])),
+        ),
+        (
+            "expect(a).not.toBe(b)",
+            Some(serde_json::json!([{ "not.toBe": null }])),
+        ),
         (
             "expect(a).resolves.not.toBe(b)",
             Some(serde_json::json!([{ "resolves.not.toBe": null }])),
@@ -100,6 +136,11 @@ fn test() {
         ),
     ];
 
-    Tester::new(NoRestrictedMatchers::NAME, NoRestrictedMatchers::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        NoRestrictedMatchers::NAME,
+        NoRestrictedMatchers::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

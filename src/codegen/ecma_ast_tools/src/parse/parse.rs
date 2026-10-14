@@ -127,7 +127,13 @@ impl<'c> Parser<'c> {
             .map(|(type_id, type_name)| (type_name, TypeId::from_usize(type_id)))
             .collect();
 
-        Schema { types, type_names, metas, meta_names, files: self.files }
+        Schema {
+            types,
+            type_names,
+            metas,
+            meta_names,
+            files: self.files,
+        }
     }
 
     /// Set container IDs on type defs.
@@ -221,7 +227,11 @@ impl<'c> Parser<'c> {
         }
 
         for (inherited_id, inheritor_id) in pairs {
-            types[inherited_id].as_enum_mut().unwrap().inherited_by.push(inheritor_id);
+            types[inherited_id]
+                .as_enum_mut()
+                .unwrap()
+                .inherited_by
+                .push(inheritor_id);
         }
     }
 
@@ -326,7 +336,13 @@ impl<'c> Parser<'c> {
 
     /// Parse [`StructSkeleton`] to yield a [`TypeDef`].
     fn parse_struct(&mut self, type_id: TypeId, skeleton: StructSkeleton) -> TypeDef {
-        let StructSkeleton { name, file_id, is_foreign, item, .. } = skeleton;
+        let StructSkeleton {
+            name,
+            file_id,
+            is_foreign,
+            item,
+            ..
+        } = skeleton;
         let has_lifetime = check_generics(&item.generics, &name);
         let fields = self.parse_fields(&item.fields);
         let visibility = convert_visibility(&item.vis);
@@ -369,7 +385,9 @@ impl<'c> Parser<'c> {
                 if !matches!(attr.style, AttrStyle::Outer) {
                     continue;
                 }
-                let Some(attr_ident) = attr.path().get_ident() else { continue };
+                let Some(attr_ident) = attr.path().get_ident() else {
+                    continue;
+                };
                 let attr_name = ident_name(attr_ident);
 
                 if let Some((processor, positions)) = self.codegen.attr_processor(&attr_name) {
@@ -404,7 +422,13 @@ impl<'c> Parser<'c> {
 
     /// Parse [`EnumSkeleton`] to yield a [`TypeDef`].
     fn parse_enum(&mut self, type_id: TypeId, skeleton: EnumSkeleton) -> TypeDef {
-        let EnumSkeleton { name, file_id, is_foreign, item, .. } = skeleton;
+        let EnumSkeleton {
+            name,
+            file_id,
+            is_foreign,
+            item,
+            ..
+        } = skeleton;
         let has_lifetime = check_generics(&item.generics, &name);
 
         // Split variants into the enum's own variants and `INHERIT` markers.
@@ -469,7 +493,9 @@ impl<'c> Parser<'c> {
                 if !matches!(attr.style, AttrStyle::Outer) {
                     continue;
                 }
-                let Some(attr_ident) = attr.path().get_ident() else { continue };
+                let Some(attr_ident) = attr.path().get_ident() else {
+                    continue;
+                };
                 let attr_name = ident_name(attr_ident);
 
                 if let Some((processor, positions)) = self.codegen.attr_processor(&attr_name) {
@@ -508,7 +534,11 @@ impl<'c> Parser<'c> {
     ///
     /// [`Vec<FieldDef>`]: FieldDef
     fn parse_fields(&mut self, fields: &Fields) -> Vec<FieldDef> {
-        fields.iter().enumerate().map(|(index, field)| self.parse_field(field, index)).collect()
+        fields
+            .iter()
+            .enumerate()
+            .map(|(index, field)| self.parse_field(field, index))
+            .collect()
     }
 
     /// Parse struct field to [`FieldDef`].
@@ -553,7 +583,10 @@ impl<'c> Parser<'c> {
             );
             let field = variant.fields.iter().next().unwrap();
             let type_id = self.parse_type_name(&field.ty).unwrap_or_else(|| {
-                panic!("Cannot parse type reference: {}", field.ty.to_token_stream())
+                panic!(
+                    "Cannot parse type reference: {}",
+                    field.ty.to_token_stream()
+                )
             });
             Some(type_id)
         };
@@ -562,7 +595,10 @@ impl<'c> Parser<'c> {
             let Some((_, discriminant)) = variant.discriminant.as_ref() else {
                 panic!("All enum variants must have explicit discriminants: {name}");
             };
-            let Expr::Lit(ExprLit { lit: Lit::Int(lit), .. }) = discriminant else {
+            let Expr::Lit(ExprLit {
+                lit: Lit::Int(lit), ..
+            }) = discriminant
+            else {
                 panic!("Invalid enum discriminant {discriminant:?} on {name}");
             };
             let Ok(discriminant) = lit.base10_parse() else {
@@ -611,18 +647,24 @@ impl<'c> Parser<'c> {
         wrapper_name: &str,
         arg: &GenericArgument,
     ) -> Option<TypeId> {
-        let GenericArgument::Type(ty) = arg else { return None };
+        let GenericArgument::Type(ty) = arg else {
+            return None;
+        };
 
         let inner_type_id = self.parse_type_name(ty)?;
 
         let type_id = match wrapper_name {
-            "Option" => self.options.get(&inner_type_id).copied().unwrap_or_else(|| {
-                let name = format!("Option<{}>", self.type_name(inner_type_id));
-                let type_def = TypeDef::Option(OptionDef::new(name, inner_type_id));
-                let type_id = self.create_new_type(type_def);
-                self.options.insert(inner_type_id, type_id);
-                type_id
-            }),
+            "Option" => self
+                .options
+                .get(&inner_type_id)
+                .copied()
+                .unwrap_or_else(|| {
+                    let name = format!("Option<{}>", self.type_name(inner_type_id));
+                    let type_def = TypeDef::Option(OptionDef::new(name, inner_type_id));
+                    let type_id = self.create_new_type(type_def);
+                    self.options.insert(inner_type_id, type_id);
+                    type_id
+                }),
             "Box" | "ArenaBox" => self.boxes.get(&inner_type_id).copied().unwrap_or_else(|| {
                 let name = format!("Box<{}>", self.type_name(inner_type_id));
                 let type_def = TypeDef::Box(BoxDef::new(name, inner_type_id));
@@ -644,14 +686,21 @@ impl<'c> Parser<'c> {
                 self.cells.insert(inner_type_id, type_id);
                 type_id
             }),
-            "NonNull" => self.non_nulls.get(&inner_type_id).copied().unwrap_or_else(|| {
-                let name = format!("NonNull<{}>", self.type_name(inner_type_id));
-                let type_def =
-                    TypeDef::Pointer(PointerDef::new(name, inner_type_id, PointerKind::NonNull));
-                let type_id = self.create_new_type(type_def);
-                self.non_nulls.insert(inner_type_id, type_id);
-                type_id
-            }),
+            "NonNull" => self
+                .non_nulls
+                .get(&inner_type_id)
+                .copied()
+                .unwrap_or_else(|| {
+                    let name = format!("NonNull<{}>", self.type_name(inner_type_id));
+                    let type_def = TypeDef::Pointer(PointerDef::new(
+                        name,
+                        inner_type_id,
+                        PointerKind::NonNull,
+                    ));
+                    let type_id = self.create_new_type(type_def);
+                    self.non_nulls.insert(inner_type_id, type_id);
+                    type_id
+                }),
             _ => return None,
         };
         Some(type_id)
@@ -661,7 +710,9 @@ impl<'c> Parser<'c> {
         if type_ref.mutability.is_some() {
             return None;
         }
-        let Type::Path(type_path) = &*type_ref.elem else { return None };
+        let Type::Path(type_path) = &*type_ref.elem else {
+            return None;
+        };
         let segment = type_path_segment(type_path)?;
         if segment.ident != "str" || segment.arguments != PathArguments::None {
             return None;
@@ -678,7 +729,9 @@ impl<'c> Parser<'c> {
             if !matches!(attr.style, AttrStyle::Outer) {
                 continue;
             }
-            let Some(attr_ident) = attr.path().get_ident() else { continue };
+            let Some(attr_ident) = attr.path().get_ident() else {
+                continue;
+            };
             let attr_name = ident_name(attr_ident);
 
             if attr_name == "ast" {
@@ -766,7 +819,10 @@ impl<'c> Parser<'c> {
             Meta::NameValue(_) => Err(()),
         };
         let Ok(parts) = parts else {
-            panic!("Unable to parse `#[ast]` attribute on `{}` type", type_def.name());
+            panic!(
+                "Unable to parse `#[ast]` attribute on `{}` type",
+                type_def.name()
+            );
         };
 
         for meta in &parts {
@@ -804,7 +860,10 @@ impl<'c> Parser<'c> {
                     type_def.name()
                 );
             } else {
-                panic!("Unknown attribute `#[ast({attr_name})]` on `{}` type", type_def.name());
+                panic!(
+                    "Unknown attribute `#[ast({attr_name})]` on `{}` type",
+                    type_def.name()
+                );
             }
         }
     }
@@ -873,7 +932,9 @@ impl<'c> Parser<'c> {
             if !matches!(attr.style, AttrStyle::Outer) {
                 continue;
             }
-            let Some(attr_ident) = attr.path().get_ident() else { continue };
+            let Some(attr_ident) = attr.path().get_ident() else {
+                continue;
+            };
             let attr_name = ident_name(attr_ident);
             if attr_name == "ast_meta" {
                 continue;
@@ -894,7 +955,10 @@ impl<'c> Parser<'c> {
 
             let location = AttrLocation::Meta(&mut meta_type);
             let result = process_attr(processor, &attr_name, location, &attr.meta);
-            assert!(result.is_ok(), "Invalid use of `#[{attr_name}]` on `{type_name}` meta type");
+            assert!(
+                result.is_ok(),
+                "Invalid use of `#[{attr_name}]` on `{type_name}` meta type"
+            );
         }
 
         meta_type
@@ -947,8 +1011,11 @@ fn inherit_marker_enum_name(variant: &Variant) -> String {
     let Type::Path(type_path) = &field.ty else {
         panic!("`INHERIT` marker field must be a path type: `INHERIT(SomeEnum<'a>)`");
     };
-    let segment =
-        type_path.path.segments.last().expect("`INHERIT` marker field type has empty path");
+    let segment = type_path
+        .path
+        .segments
+        .last()
+        .expect("`INHERIT` marker field type has empty path");
     ident_name(&segment.ident)
 }
 
@@ -1020,8 +1087,9 @@ fn process_attr(
 }
 
 fn parse_attr_part_list(meta_list: &MetaList) -> Result<Vec<AttrPartListElement>> {
-    let metas =
-        meta_list.parse_args_with(Punctuated::<Meta, Comma>::parse_terminated).map_err(|_| ())?;
+    let metas = meta_list
+        .parse_args_with(Punctuated::<Meta, Comma>::parse_terminated)
+        .map_err(|_| ())?;
     let list_elements = metas
         .into_iter()
         .map(|meta| match meta {
@@ -1054,7 +1122,10 @@ fn parse_attr_part_list(meta_list: &MetaList) -> Result<Vec<AttrPartListElement>
 /// If the `Expr` is a string literal, get the value of the string.
 /// Otherwise print the `Expr` as a string.
 pub fn convert_expr_to_string(expr: &Expr) -> String {
-    if let Expr::Lit(ExprLit { lit: Lit::Str(s), .. }) = expr {
+    if let Expr::Lit(ExprLit {
+        lit: Lit::Str(s), ..
+    }) = expr
+    {
         s.value()
     } else {
         expr.to_token_stream().to_string()
@@ -1084,7 +1155,9 @@ fn check_attr_is_derived(
     type_name: &str,
     attr_name: &str,
 ) {
-    let AttrProcessor::Derive(derive_id) = processor else { return };
+    let AttrProcessor::Derive(derive_id) = processor else {
+        return;
+    };
     if generated_derives.has(derive_id) {
         return;
     }

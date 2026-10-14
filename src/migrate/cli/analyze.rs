@@ -26,12 +26,12 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use anyhow::{Context, Result};
 use crate::{
     audit::{self, Hit, ItemState},
     run,
     types::{Mode, Report, RunOptions, Severity},
 };
+use anyhow::{Context, Result};
 use colored::Colorize;
 use serde::Serialize;
 use serde_json::json;

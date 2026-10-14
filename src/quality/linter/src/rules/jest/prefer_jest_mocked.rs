@@ -61,13 +61,17 @@ declare_oxc_lint!(
     style,
     conditional_fix,
     version = "0.5.0",
-    short_description = "Prefer the `jest.mocked()` helper over type assertions for typing mocked functions.",
+    short_description =
+        "Prefer the `jest.mocked()` helper over type assertions for typing mocked functions.",
 );
 
 impl Rule for PreferJestMocked {
     fn run<'a>(&self, node: &AstNode<'a>, ctx: &LintContext<'a>) {
         if let AstKind::TSAsExpression(ts_expr) = node.kind() {
-            if !matches!(ctx.nodes().parent_kind(node.id()), AstKind::TSAsExpression(_)) {
+            if !matches!(
+                ctx.nodes().parent_kind(node.id()),
+                AstKind::TSAsExpression(_)
+            ) {
                 Self::check_ts_as_expression(node, ts_expr, ctx);
             }
         } else if let AstKind::TSTypeAssertion(assert_type) = node.kind() {
@@ -173,7 +177,12 @@ fn test() {
         ("mockFn.mockReturnValue(1);", None, None, None),
         ("arr[0]();", None, None, None),
         ("obj.foo.mockReturnValue(1);", None, None, None),
-        ("jest.spyOn(obj, 'foo').mockReturnValue(1);", None, None, None),
+        (
+            "jest.spyOn(obj, 'foo').mockReturnValue(1);",
+            None,
+            None,
+            None,
+        ),
         ("(foo as Mock.jest).mockReturnValue(1);", None, None, None),
         (
             "
@@ -207,27 +216,72 @@ fn test() {
             None,
             Some(PathBuf::from("/prefer-jest-mocked.ts")),
         ),
-        ("(foo as jest.Mock).mockImplementation(1);", None, None, None),
-        ("(foo as unknown as jest.Mock).mockReturnValue(1);", None, None, None),
+        (
+            "(foo as jest.Mock).mockImplementation(1);",
+            None,
+            None,
+            None,
+        ),
+        (
+            "(foo as unknown as jest.Mock).mockReturnValue(1);",
+            None,
+            None,
+            None,
+        ),
         (
             "(<jest.Mock>foo as unknown).mockReturnValue(1);",
             None,
             None,
             Some(PathBuf::from("/prefer-jest-mocked.ts")),
         ),
-        ("(Obj.foo as jest.Mock).mockReturnValue(1);", None, None, None),
-        ("([].foo as jest.Mock).mockReturnValue(1);", None, None, None),
-        ("(foo as jest.MockedFunction).mockReturnValue(1);", None, None, None),
-        ("(foo as jest.MockedFunction).mockImplementation(1);", None, None, None),
-        ("(foo as unknown as jest.MockedFunction).mockReturnValue(1);", None, None, None),
-        ("(Obj.foo as jest.MockedFunction).mockReturnValue(1);", None, None, None),
+        (
+            "(Obj.foo as jest.Mock).mockReturnValue(1);",
+            None,
+            None,
+            None,
+        ),
+        (
+            "([].foo as jest.Mock).mockReturnValue(1);",
+            None,
+            None,
+            None,
+        ),
+        (
+            "(foo as jest.MockedFunction).mockReturnValue(1);",
+            None,
+            None,
+            None,
+        ),
+        (
+            "(foo as jest.MockedFunction).mockImplementation(1);",
+            None,
+            None,
+            None,
+        ),
+        (
+            "(foo as unknown as jest.MockedFunction).mockReturnValue(1);",
+            None,
+            None,
+            None,
+        ),
+        (
+            "(Obj.foo as jest.MockedFunction).mockReturnValue(1);",
+            None,
+            None,
+            None,
+        ),
         (
             "(new Array(0).fill(null).foo as jest.MockedFunction).mockReturnValue(1);",
             None,
             None,
             None,
         ),
-        ("(jest.fn(() => foo) as jest.MockedFunction).mockReturnValue(1);", None, None, None),
+        (
+            "(jest.fn(() => foo) as jest.MockedFunction).mockReturnValue(1);",
+            None,
+            None,
+            None,
+        ),
         (
             "const mockedUseFocused = useFocused as jest.MockedFunction<typeof useFocused>;",
             None,
@@ -249,8 +303,18 @@ fn test() {
             None,
             None,
         ),
-        ("(foo as jest.MockedObject<{method: () => void}>)", None, None, None),
-        ("(Obj['foo'] as jest.MockedFunction).mockReturnValue(1);", None, None, None),
+        (
+            "(foo as jest.MockedObject<{method: () => void}>)",
+            None,
+            None,
+            None,
+        ),
+        (
+            "(Obj['foo'] as jest.MockedFunction).mockReturnValue(1);",
+            None,
+            None,
+            None,
+        ),
         (
             "
                 (
@@ -269,7 +333,10 @@ fn test() {
     ];
 
     let fix = vec![
-        ("(foo as jest.Mock).mockReturnValue(1);", "(jest.mocked(foo)).mockReturnValue(1);"),
+        (
+            "(foo as jest.Mock).mockReturnValue(1);",
+            "(jest.mocked(foo)).mockReturnValue(1);",
+        ),
         (
             "(foo as unknown as string as unknown as jest.Mock).mockReturnValue(1);",
             "(jest.mocked(foo)).mockReturnValue(1);",
@@ -284,7 +351,10 @@ fn test() {
         //     "(<jest.Mock>foo).mockReturnValue(1);",
         //     "(jest.mocked(foo)).mockReturnValue(1);",
         // ),
-        ("(foo as jest.Mock).mockImplementation(1);", "(jest.mocked(foo)).mockImplementation(1);"),
+        (
+            "(foo as jest.Mock).mockImplementation(1);",
+            "(jest.mocked(foo)).mockImplementation(1);",
+        ),
         (
             "(foo as unknown as jest.Mock).mockReturnValue(1);",
             "(jest.mocked(foo)).mockReturnValue(1);",
@@ -299,7 +369,10 @@ fn test() {
             "(Obj.foo as jest.Mock).mockReturnValue(1);",
             "(jest.mocked(Obj.foo)).mockReturnValue(1);",
         ),
-        ("([].foo as jest.Mock).mockReturnValue(1);", "(jest.mocked([].foo)).mockReturnValue(1);"),
+        (
+            "([].foo as jest.Mock).mockReturnValue(1);",
+            "(jest.mocked([].foo)).mockReturnValue(1);",
+        ),
         (
             "(foo as jest.MockedFunction).mockReturnValue(1);",
             "(jest.mocked(foo)).mockReturnValue(1);",
@@ -342,7 +415,10 @@ fn test() {
                 (jest.mocked(foo))
             ",
         ),
-        ("(foo as jest.MockedObject<{method: () => void}>)", "(jest.mocked(foo))"),
+        (
+            "(foo as jest.MockedObject<{method: () => void}>)",
+            "(jest.mocked(foo))",
+        ),
         (
             "(Obj['foo'] as jest.MockedFunction).mockReturnValue(1);",
             "(jest.mocked(Obj['foo'])).mockReturnValue(1);",
@@ -369,7 +445,10 @@ fn test() {
         ),
         // we can't fix this case, as fixing it would result in a syntax error
         // (we'd be attempting attempting to assign `jest.fn()` to invalid left-hand side)
-        ("(foo as jest.Mock) = jest.fn();", "(foo as jest.Mock) = jest.fn();"),
+        (
+            "(foo as jest.Mock) = jest.fn();",
+            "(foo as jest.Mock) = jest.fn();",
+        ),
     ];
 
     Tester::new(PreferJestMocked::NAME, PreferJestMocked::PLUGIN, pass, fail)

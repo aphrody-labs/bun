@@ -16,9 +16,11 @@ use crate::{
 };
 
 fn require_module_attributes_diagnostic(span: Span, import_type: &str) -> OxcDiagnostic {
-    OxcDiagnostic::warn(format!("{import_type} with empty attribute list is not allowed."))
-        .with_label(span)
-        .with_help("Remove the unused import attribute.")
+    OxcDiagnostic::warn(format!(
+        "{import_type} with empty attribute list is not allowed."
+    ))
+    .with_label(span)
+    .with_help("Remove the unused import attribute.")
 }
 
 #[derive(Debug, Default, Clone)]
@@ -70,7 +72,9 @@ impl Rule for RequireModuleAttributes {
     fn run<'a>(&self, node: &AstNode<'a>, ctx: &LintContext<'a>) {
         match node.kind() {
             AstKind::ImportExpression(import_expr) => {
-                let Some(options) = &import_expr.options else { return };
+                let Some(options) = &import_expr.options else {
+                    return;
+                };
 
                 let Expression::ObjectExpression(obj_expr) = options.get_inner_expression() else {
                     return;
@@ -179,9 +183,10 @@ fn fix_empty_with_property(
     properties: &ArenaVec<'_, oxc_ast::ast::ObjectPropertyKind<'_>>,
 ) -> RuleFix {
     // Find the position of the empty_with_prop in properties
-    let prop_index = properties
-        .iter()
-        .position(|p| p.as_property().is_some_and(|prop| prop.span() == empty_with_prop.span()));
+    let prop_index = properties.iter().position(|p| {
+        p.as_property()
+            .is_some_and(|prop| prop.span() == empty_with_prop.span())
+    });
 
     let Some(idx) = prop_index else {
         return fixer.noop();
@@ -189,7 +194,10 @@ fn fix_empty_with_property(
 
     if idx == 0 {
         let next_prop = &properties[1];
-        fixer.delete_range(Span::new(empty_with_prop.span.start, next_prop.span().start))
+        fixer.delete_range(Span::new(
+            empty_with_prop.span.start,
+            next_prop.span().start,
+        ))
     } else {
         let prev_prop = &properties[idx - 1];
         fixer.delete_range(Span::new(prev_prop.span().end, empty_with_prop.span.end))
@@ -238,8 +246,14 @@ fn test() {
 
     let fix = vec![
         (r#"import "foo" with {}"#, r#"import "foo""#),
-        (r#"import foo from "foo" with {}"#, r#"import foo from "foo""#),
-        (r#"export {foo} from "foo" with {}"#, r#"export {foo} from "foo""#),
+        (
+            r#"import foo from "foo" with {}"#,
+            r#"import foo from "foo""#,
+        ),
+        (
+            r#"export {foo} from "foo" with {}"#,
+            r#"export {foo} from "foo""#,
+        ),
         (r#"export * from "foo" with {}"#, r#"export * from "foo""#),
         (r#"export * from "foo"with{}"#, r#"export * from "foo""#),
         (
@@ -281,7 +295,12 @@ fn test() {
         (r#"import("foo", {with: (({}))})"#, r#"import("foo")"#),
     ];
 
-    Tester::new(RequireModuleAttributes::NAME, RequireModuleAttributes::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        RequireModuleAttributes::NAME,
+        RequireModuleAttributes::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

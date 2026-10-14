@@ -161,7 +161,10 @@ mod tests {
             assert!(probe(&on, tail, para_open).is_some(), "{tail}");
             assert!(probe(&off, tail, para_open).is_none(), "{tail}");
         }
-        assert!(matches!(probe(&off, "> q", false), Some(Start::Quote)), "core stays on");
+        assert!(
+            matches!(probe(&off, "> q", false), Some(Start::Quote)),
+            "core stays on"
+        );
     }
 
     /// A delimiter row exists only relative to an open paragraph.

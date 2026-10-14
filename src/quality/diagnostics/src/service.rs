@@ -64,7 +64,16 @@ impl DiagnosticService {
     /// provided [`DiagnosticReporter`].
     pub fn new(reporter: Box<dyn DiagnosticReporter>) -> (Self, DiagnosticSender) {
         let (sender, receiver) = mpsc::channel();
-        (Self { reporter, quiet: false, silent: false, max_warnings: None, receiver }, sender)
+        (
+            Self {
+                reporter,
+                quiet: false,
+                silent: false,
+                max_warnings: None,
+                receiver,
+            },
+            sender,
+        )
     }
 
     /// Set to `true` to only report errors and ignore warnings.
@@ -106,7 +115,8 @@ impl DiagnosticService {
     /// Check if the max warning threshold, as set by
     /// [`with_max_warnings`](DiagnosticService::with_max_warnings), has been exceeded.
     fn max_warnings_exceeded(&self, warnings_count: usize) -> bool {
-        self.max_warnings.is_some_and(|max_warnings| warnings_count > max_warnings)
+        self.max_warnings
+            .is_some_and(|max_warnings| warnings_count > max_warnings)
     }
 
     /// Attach the source code and path to diagnostics, converting them into [`Error`]s.
@@ -121,13 +131,19 @@ impl DiagnosticService {
             std::env::var("TERMINAL_EMULATOR").is_ok_and(|x| x.eq("JetBrains-JediTerm"));
 
         let path_ref = path.as_ref();
-        let path_display = if is_jetbrains { from_file_path(path_ref) } else { None }
-            .unwrap_or_else(|| {
-                let relative_path =
-                    path_ref.strip_prefix(cwd).unwrap_or(path_ref).to_string_lossy();
-                let normalized_path = relative_path.cow_replace('\\', "/");
-                normalized_path.to_string()
-            });
+        let path_display = if is_jetbrains {
+            from_file_path(path_ref)
+        } else {
+            None
+        }
+        .unwrap_or_else(|| {
+            let relative_path = path_ref
+                .strip_prefix(cwd)
+                .unwrap_or(path_ref)
+                .to_string_lossy();
+            let normalized_path = relative_path.cow_replace('\\', "/");
+            normalized_path.to_string()
+        });
 
         let source = Arc::new(NamedSource::new(path_display, source_text.to_owned()));
         diagnostics
@@ -195,12 +211,13 @@ impl DiagnosticService {
                     },
                 );
             } else {
-                self.reporter.render_errors(diagnostics_to_render, &mut |rendered| {
-                    writer
-                        .write_all(rendered.as_bytes())
-                        .or_else(Self::check_for_writer_error)
-                        .unwrap();
-                });
+                self.reporter
+                    .render_errors(diagnostics_to_render, &mut |rendered| {
+                        writer
+                            .write_all(rendered.as_bytes())
+                            .or_else(Self::check_for_writer_error)
+                            .unwrap();
+                    });
             }
 
             if is_minified {
@@ -230,7 +247,10 @@ impl DiagnosticService {
                 .unwrap();
         }
 
-        writer.flush().or_else(Self::check_for_writer_error).unwrap();
+        writer
+            .flush()
+            .or_else(Self::check_for_writer_error)
+            .unwrap();
 
         result
     }
@@ -288,7 +308,10 @@ fn from_file_path<A: AsRef<Path>>(path: A) -> Option<String> {
                 drive.as_os_str().to_string_lossy().cow_replace('\\', "/"),
                 // Skip encoding ":" in the drive "C:/".
                 percent_encoding::utf8_percent_encode(
-                    &components.collect::<PathBuf>().to_string_lossy().cow_replace('\\', "/"),
+                    &components
+                        .collect::<PathBuf>()
+                        .to_string_lossy()
+                        .cow_replace('\\', "/"),
                     &ASCII_SET
                 )
             ))
@@ -296,7 +319,10 @@ fn from_file_path<A: AsRef<Path>>(path: A) -> Option<String> {
             Some(format!(
                 "file:///{}",
                 percent_encoding::utf8_percent_encode(
-                    &components.collect::<PathBuf>().to_string_lossy().cow_replace('\\', "/"),
+                    &components
+                        .collect::<PathBuf>()
+                        .to_string_lossy()
+                        .cow_replace('\\', "/"),
                     &ASCII_SET
                 )
             ))
@@ -317,7 +343,10 @@ fn strict_canonicalize<P: AsRef<Path>>(path: P) -> std::io::Result<PathBuf> {
     use std::io;
 
     fn impl_(path: &Path) -> std::io::Result<PathBuf> {
-        let head = path.components().next().ok_or(io::Error::other("empty path"))?;
+        let head = path
+            .components()
+            .next()
+            .ok_or(io::Error::other("empty path"))?;
         let disk_;
         let head = if let std::path::Component::Prefix(prefix) = head {
             if let std::path::Prefix::VerbatimDisk(disk) = prefix.kind() {
@@ -332,7 +361,9 @@ fn strict_canonicalize<P: AsRef<Path>>(path: P) -> std::io::Result<PathBuf> {
         } else {
             head
         };
-        Ok(std::iter::once(head).chain(path.components().skip(1)).collect())
+        Ok(std::iter::once(head)
+            .chain(path.components().skip(1))
+            .collect())
     }
 
     let canon = std::fs::canonicalize(path)?;
@@ -448,9 +479,12 @@ mod tests {
                 }
             }
         }
-        let (mut service, sender) =
-            DiagnosticService::new(Box::new(LongLineReporter { fallback_enabled: false }));
-        sender.send(vec![OxcDiagnostic::warn("original diagnostic").into()]).unwrap();
+        let (mut service, sender) = DiagnosticService::new(Box::new(LongLineReporter {
+            fallback_enabled: false,
+        }));
+        sender
+            .send(vec![OxcDiagnostic::warn("original diagnostic").into()])
+            .unwrap();
         drop(sender);
 
         let mut output = Vec::new();
@@ -469,8 +503,11 @@ mod tests {
 
         fn render_errors(&mut self, errors: Vec<Error>, emit: &mut dyn FnMut(&str)) {
             self.0.lock().unwrap().push(errors.len());
-            let output =
-                errors.into_iter().map(|error| error.to_string()).collect::<Vec<_>>().join(",");
+            let output = errors
+                .into_iter()
+                .map(|error| error.to_string())
+                .collect::<Vec<_>>()
+                .join(",");
             emit(&output);
         }
 

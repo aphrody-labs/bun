@@ -38,7 +38,9 @@ pub struct NoUnneededTernary {
 
 impl Default for NoUnneededTernary {
     fn default() -> Self {
-        Self { default_assignment: true }
+        Self {
+            default_assignment: true,
+        }
     }
 }
 
@@ -159,7 +161,10 @@ impl Rule for NoUnneededTernary {
             });
         } else if let (Some(test), Some(cons)) = (
             (&expr.test.get_inner_expression().get_identifier_reference()),
-            (&expr.consequent.get_inner_expression().get_identifier_reference()),
+            (&expr
+                .consequent
+                .get_inner_expression()
+                .get_identifier_reference()),
         ) && !self.default_assignment
             && test.name == cons.name
         {
@@ -219,9 +224,18 @@ fn test() {
         ("f(x ? x : 1);", None),
         ("foo ? foo : bar;", None),
         ("var a = foo ? 'Yes' : foo;", None),
-        ("var a = foo ? 'Yes' : foo;", Some(serde_json::json!([{ "defaultAssignment": false }]))),
-        ("var a = foo ? bar : foo;", Some(serde_json::json!([{ "defaultAssignment": false }]))),
-        ("foo ? bar : foo;", Some(serde_json::json!([{ "defaultAssignment": false }]))),
+        (
+            "var a = foo ? 'Yes' : foo;",
+            Some(serde_json::json!([{ "defaultAssignment": false }])),
+        ),
+        (
+            "var a = foo ? bar : foo;",
+            Some(serde_json::json!([{ "defaultAssignment": false }])),
+        ),
+        (
+            "foo ? bar : foo;",
+            Some(serde_json::json!([{ "defaultAssignment": false }])),
+        ),
     ];
 
     let fail = vec![
@@ -255,27 +269,63 @@ fn test() {
             "function* fn() { foo ? foo : yield bar }",
             Some(serde_json::json!([{ "defaultAssignment": false }])),
         ), // { "ecmaVersion": 6 },
-        ("var a = foo ? foo : 'No';", Some(serde_json::json!([{ "defaultAssignment": false }]))),
+        (
+            "var a = foo ? foo : 'No';",
+            Some(serde_json::json!([{ "defaultAssignment": false }])),
+        ),
         (
             "var a = ((foo)) ? (((((foo))))) : ((((((((((((((bar))))))))))))));",
             Some(serde_json::json!([{ "defaultAssignment": false }])),
         ),
-        ("var a = b ? b : c => c;", Some(serde_json::json!([{ "defaultAssignment": false }]))), // { "ecmaVersion": 2015 },
-        ("var a = b ? b : c = 0;", Some(serde_json::json!([{ "defaultAssignment": false }]))), // { "ecmaVersion": 2015 },
-        ("var a = b ? b : (c => c);", Some(serde_json::json!([{ "defaultAssignment": false }]))), // { "ecmaVersion": 2015 },
-        ("var a = b ? b : (c = 0);", Some(serde_json::json!([{ "defaultAssignment": false }]))), // { "ecmaVersion": 2015 },
-        ("var a = b ? b : (c) => (c);", Some(serde_json::json!([{ "defaultAssignment": false }]))), // { "ecmaVersion": 2015 },
+        (
+            "var a = b ? b : c => c;",
+            Some(serde_json::json!([{ "defaultAssignment": false }])),
+        ), // { "ecmaVersion": 2015 },
+        (
+            "var a = b ? b : c = 0;",
+            Some(serde_json::json!([{ "defaultAssignment": false }])),
+        ), // { "ecmaVersion": 2015 },
+        (
+            "var a = b ? b : (c => c);",
+            Some(serde_json::json!([{ "defaultAssignment": false }])),
+        ), // { "ecmaVersion": 2015 },
+        (
+            "var a = b ? b : (c = 0);",
+            Some(serde_json::json!([{ "defaultAssignment": false }])),
+        ), // { "ecmaVersion": 2015 },
+        (
+            "var a = b ? b : (c) => (c);",
+            Some(serde_json::json!([{ "defaultAssignment": false }])),
+        ), // { "ecmaVersion": 2015 },
         (
             "var a = b ? b : c, d; // this is ((b ? b : c), (d))",
             Some(serde_json::json!([{ "defaultAssignment": false }])),
         ), // { "ecmaVersion": 2015 },
-        ("var a = b ? b : (c, d);", Some(serde_json::json!([{ "defaultAssignment": false }]))), // { "ecmaVersion": 2015 },
-        ("f(x ? x : 1);", Some(serde_json::json!([{ "defaultAssignment": false }]))),
-        ("x ? x : 1;", Some(serde_json::json!([{ "defaultAssignment": false }]))),
-        ("var a = foo ? foo : bar;", Some(serde_json::json!([{ "defaultAssignment": false }]))),
-        ("var a = foo ? foo : a ?? b;", Some(serde_json::json!([{ "defaultAssignment": false }]))), // { "ecmaVersion": 2020 },
+        (
+            "var a = b ? b : (c, d);",
+            Some(serde_json::json!([{ "defaultAssignment": false }])),
+        ), // { "ecmaVersion": 2015 },
+        (
+            "f(x ? x : 1);",
+            Some(serde_json::json!([{ "defaultAssignment": false }])),
+        ),
+        (
+            "x ? x : 1;",
+            Some(serde_json::json!([{ "defaultAssignment": false }])),
+        ),
+        (
+            "var a = foo ? foo : bar;",
+            Some(serde_json::json!([{ "defaultAssignment": false }])),
+        ),
+        (
+            "var a = foo ? foo : a ?? b;",
+            Some(serde_json::json!([{ "defaultAssignment": false }])),
+        ), // { "ecmaVersion": 2020 },
         ("foo as any ? false : true", None), // {                "parser": require(parser("typescript-parsers/unneeded-ternary-1")),                "ecmaVersion": 6            },
-        ("foo ? foo : bar as any", Some(serde_json::json!([{ "defaultAssignment": false }]))), // {                "parser": require(parser("typescript-parsers/unneeded-ternary-2")),                "ecmaVersion": 6            }
+        (
+            "foo ? foo : bar as any",
+            Some(serde_json::json!([{ "defaultAssignment": false }])),
+        ), // {                "parser": require(parser("typescript-parsers/unneeded-ternary-2")),                "ecmaVersion": 6            }
     ];
 
     let fix = vec![
@@ -286,10 +336,22 @@ fn test() {
         ("var a = x != 1 ? false : true;", "var a = x == 1;", None),
         ("var a = foo() ? false : true;", "var a = !foo();", None),
         ("var a = !foo() ? false : true;", "var a = !!foo();", None),
-        ("var a = foo + bar ? false : true;", "var a = !(foo + bar);", None),
-        ("var a = x instanceof foo ? false : true;", "var a = !(x instanceof foo);", None),
+        (
+            "var a = foo + bar ? false : true;",
+            "var a = !(foo + bar);",
+            None,
+        ),
+        (
+            "var a = x instanceof foo ? false : true;",
+            "var a = !(x instanceof foo);",
+            None,
+        ),
         ("var a = foo ? false : false;", "var a = false;", None),
-        ("var a = x instanceof foo ? true : false;", "var a = x instanceof foo;", None),
+        (
+            "var a = x instanceof foo ? true : false;",
+            "var a = x instanceof foo;",
+            None,
+        ),
         ("var a = !foo ? true : false;", "var a = !foo;", None),
         (
             "var result = value ? value : canSet ? 'unset' : 'can not set'",
@@ -351,8 +413,16 @@ fn test() {
             "var a = b || (c, d);",
             Some(serde_json::json!([{ "defaultAssignment": false }])),
         ),
-        ("f(x ? x : 1);", "f(x || 1);", Some(serde_json::json!([{ "defaultAssignment": false }]))),
-        ("x ? x : 1;", "x || 1;", Some(serde_json::json!([{ "defaultAssignment": false }]))),
+        (
+            "f(x ? x : 1);",
+            "f(x || 1);",
+            Some(serde_json::json!([{ "defaultAssignment": false }])),
+        ),
+        (
+            "x ? x : 1;",
+            "x || 1;",
+            Some(serde_json::json!([{ "defaultAssignment": false }])),
+        ),
         (
             "var a = foo ? foo : bar;",
             "var a = foo || bar;",
@@ -374,10 +444,19 @@ fn test() {
             "a || (b ?? 2)",
             Some(serde_json::json!([{ "defaultAssignment": false }])),
         ),
-        ("let a = {} satisfies User ? true : false", "let a = !!({} satisfies User)", None),
+        (
+            "let a = {} satisfies User ? true : false",
+            "let a = !!({} satisfies User)",
+            None,
+        ),
     ];
 
-    Tester::new(NoUnneededTernary::NAME, NoUnneededTernary::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        NoUnneededTernary::NAME,
+        NoUnneededTernary::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

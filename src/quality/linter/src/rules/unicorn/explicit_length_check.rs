@@ -219,7 +219,10 @@ impl ExplicitLengthCheck {
         };
         let parent = ctx.nodes().parent_kind(node.id());
         let need_paren = matches!(kind, AstKind::UnaryExpression(_))
-            && matches!(parent, AstKind::UnaryExpression(_) | AstKind::AwaitExpression(_));
+            && matches!(
+                parent,
+                AstKind::UnaryExpression(_) | AstKind::AwaitExpression(_)
+            );
 
         // Pre-compute source text to avoid repeated calls
         let source_text = static_member_expr.span.source_text(ctx.source_text());
@@ -242,7 +245,9 @@ impl ExplicitLengthCheck {
         let help = if auto_fix {
             None
         } else {
-            Some(format!("Replace `.{property}` with `.{property} {check_code}`."))
+            Some(format!(
+                "Replace `.{property}` with `.{property} {check_code}`."
+            ))
         };
         let diagnostic = if is_zero_length_check {
             zero(span, property.as_str(), check_code, help)
@@ -264,7 +269,9 @@ impl Rule for ExplicitLengthCheck {
 
     fn run<'a>(&self, node: &AstNode<'a>, ctx: &LintContext<'a>) {
         if let AstKind::StaticMemberExpression(static_member_expr) = node.kind() {
-            let StaticMemberExpression { object, property, .. } = static_member_expr;
+            let StaticMemberExpression {
+                object, property, ..
+            } = static_member_expr;
             if property.name != "length" && property.name != "size" {
                 return;
             }
@@ -282,7 +289,13 @@ impl Rule for ExplicitLengthCheck {
                 if is_negative {
                     is_zero_length_check = !is_zero_length_check;
                 }
-                self.report(ctx, ancestor, is_zero_length_check, static_member_expr, true);
+                self.report(
+                    ctx,
+                    ancestor,
+                    is_zero_length_check,
+                    static_member_expr,
+                    true,
+                );
             } else {
                 let (ancestor, is_negative) = get_boolean_ancestor(node, ctx);
                 if is_boolean_node(ancestor, ctx) {
@@ -290,10 +303,11 @@ impl Rule for ExplicitLengthCheck {
                     return;
                 }
                 match ctx.nodes().parent_kind(node.id()) {
-                    AstKind::LogicalExpression(LogicalExpression { operator, right, .. })
-                        if *operator == LogicalOperator::And
-                            || (*operator == LogicalOperator::Or
-                                && !matches!(right, Expression::NumericLiteral(_))) =>
+                    AstKind::LogicalExpression(LogicalExpression {
+                        operator, right, ..
+                    }) if *operator == LogicalOperator::And
+                        || (*operator == LogicalOperator::Or
+                            && !matches!(right, Expression::NumericLiteral(_))) =>
                     {
                         self.report(ctx, ancestor, is_negative, static_member_expr, false);
                     }
@@ -327,8 +341,14 @@ fn test() {
         ("if (foo.length ?? bar) {}", None),
         // Checking 'non-zero'
         ("if (foo.length > 0) {}", None),
-        ("if (foo.length > 0) {}", Some(serde_json::json!([{"non-zero": "greater-than"}]))),
-        ("if (foo.length !== 0) {}", Some(serde_json::json!([{"non-zero": "not-equal"}]))),
+        (
+            "if (foo.length > 0) {}",
+            Some(serde_json::json!([{"non-zero": "greater-than"}])),
+        ),
+        (
+            "if (foo.length !== 0) {}",
+            Some(serde_json::json!([{"non-zero": "not-equal"}])),
+        ),
         // Checking "non-zero"
         ("if (foo.length === 0) {}", None),
         // `ConditionalExpression`
@@ -351,7 +371,10 @@ fn test() {
         ("const x = foo.length || 2", None),
         // need getStaticValue
         // ("const A_NUMBER = 2; const x = foo.length || A_NUMBER", None),
-        ("class A { a(){ if(this.length); while(!this.size || foo);}}", None),
+        (
+            "class A { a(){ if(this.length); while(!this.size || foo);}}",
+            None,
+        ),
         // Use of .size but not in conditional "test" position
         (
             "const totalCount = tests.reduce((count, test) => count + (test.enabled ? test.maxSize : test.size), 0)",
@@ -368,8 +391,14 @@ fn test() {
         ("bar(!foo.length || foo.length)", None),
         // need getStaticValue
         // (r#"const NON_NUMBER = "2"; const x = foo.length || NON_NUMBER"#, None),
-        ("const x = foo.length || bar()", Some(serde_json::json!([{"non-zero": "not-equal"}]))),
-        ("const x = foo.length || bar()", Some(serde_json::json!([{"non-zero": "greater-than"}]))),
+        (
+            "const x = foo.length || bar()",
+            Some(serde_json::json!([{"non-zero": "not-equal"}])),
+        ),
+        (
+            "const x = foo.length || bar()",
+            Some(serde_json::json!([{"non-zero": "greater-than"}])),
+        ),
         ("() => foo.length && bar()", None),
         ("alert(foo.length && bar())", None),
         // Use of .size in conditional "test" position
@@ -424,7 +453,12 @@ fn test() {
         ("for(const a of!foo.length);", "for(const a of foo.length === 0);", None),
         ("for(const a in!foo.length);", "for(const a in foo.length === 0);", None),
     ];
-    Tester::new(ExplicitLengthCheck::NAME, ExplicitLengthCheck::PLUGIN, pass, fail)
-        .expect_fix(fixes)
-        .test_and_snapshot();
+    Tester::new(
+        ExplicitLengthCheck::NAME,
+        ExplicitLengthCheck::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fixes)
+    .test_and_snapshot();
 }

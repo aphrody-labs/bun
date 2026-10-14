@@ -113,7 +113,10 @@ fn filter_and_process_jest_result<'a>(
     let result = parse_general_jest_fn_call(call_expr, possible_jest_node, ctx)?;
     let kind = result.kind;
     // we only need check `describe` or `test` block
-    if !matches!(kind, JestFnKind::General(JestGeneralFnKind::Describe | JestGeneralFnKind::Test)) {
+    if !matches!(
+        kind,
+        JestFnKind::General(JestGeneralFnKind::Describe | JestGeneralFnKind::Test)
+    ) {
         return None;
     }
 

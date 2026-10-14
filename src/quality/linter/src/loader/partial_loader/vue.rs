@@ -65,7 +65,9 @@ impl<'a> VuePartialLoader<'a> {
         let lang = Self::extract_lang_attribute(content);
         let is_setup = content.contains("setup"); // check if "setup" is present, does not check if its inside an attribute
 
-        let Ok(mut source_type) = SourceType::from_extension(lang) else { return None };
+        let Ok(mut source_type) = SourceType::from_extension(lang) else {
+            return None;
+        };
         // Vue script blocks are ESM modules - upgrade unambiguous to module
         if source_type.is_unambiguous() {
             source_type = source_type.with_module(true);
@@ -89,7 +91,11 @@ impl<'a> VuePartialLoader<'a> {
         Some(JavaScriptSource::partial_with_framework_options(
             source_text,
             source_type,
-            if is_setup { FrameworkOptions::VueSetup } else { FrameworkOptions::Default },
+            if is_setup {
+                FrameworkOptions::VueSetup
+            } else {
+                FrameworkOptions::Default
+            },
             js_start as u32,
         ))
     }
@@ -97,7 +103,9 @@ impl<'a> VuePartialLoader<'a> {
     fn extract_lang_attribute(content: &str) -> &str {
         let content = content.trim();
 
-        let Some(lang_index) = content.find("lang") else { return "mjs" };
+        let Some(lang_index) = content.find("lang") else {
+            return "mjs";
+        };
 
         // Move past "lang"
         let mut rest = content[lang_index + 4..].trim_start();
@@ -323,9 +331,18 @@ mod test {
         // Unambiguous source types are upgraded to module for Vue scripts
         let cases: [(&str, Option<(bool, bool, bool)>); 8] = [
             ("<script>debugger</script>", Some((false, false, true))), // mjs -> module
-            ("<script lang = 'tsx' >debugger</script>", Some((true, true, true))), // tsx -> unambiguous -> module
-            (r#"<script lang = "cjs" >debugger</script>"#, Some((false, false, false))), // cjs -> script (not upgraded)
-            ("<script lang=tsx>debugger</script>", Some((true, true, true))), // tsx -> unambiguous -> module
+            (
+                "<script lang = 'tsx' >debugger</script>",
+                Some((true, true, true)),
+            ), // tsx -> unambiguous -> module
+            (
+                r#"<script lang = "cjs" >debugger</script>"#,
+                Some((false, false, false)),
+            ), // cjs -> script (not upgraded)
+            (
+                "<script lang=tsx>debugger</script>",
+                Some((true, true, true)),
+            ), // tsx -> unambiguous -> module
             ("<script lang = 'xxx'>debugger</script>", None),
             (r#"<script lang = "xxx">debugger</script>"#, None),
             ("<script lang='xxx'>debugger</script>", None),
@@ -337,9 +354,17 @@ mod test {
             if let Some((is_ts, is_jsx, is_module)) = expected {
                 assert_eq!(sources.len(), 1, "Expected 1 source for: {source_text}");
                 let st = sources[0].source_type;
-                assert_eq!(st.is_typescript(), is_ts, "is_typescript mismatch for: {source_text}");
+                assert_eq!(
+                    st.is_typescript(),
+                    is_ts,
+                    "is_typescript mismatch for: {source_text}"
+                );
                 assert_eq!(st.is_jsx(), is_jsx, "is_jsx mismatch for: {source_text}");
-                assert_eq!(st.is_module(), is_module, "is_module mismatch for: {source_text}");
+                assert_eq!(
+                    st.is_module(),
+                    is_module,
+                    "is_module mismatch for: {source_text}"
+                );
             } else {
                 assert_eq!(sources.len(), 0, "Expected 0 sources for: {source_text}");
             }

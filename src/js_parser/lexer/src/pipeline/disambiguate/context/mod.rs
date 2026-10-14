@@ -140,5 +140,9 @@ pub(super) fn after_scoped(tokens: &Tokens, walks: &mut Walks, pos: usize) -> Af
     let w = walks.full_to(tokens, pos);
     // A query inside the token just processed (the tail of a fused operator run such as `>>>`)
     // is answered by the state after it.
-    if w.walked_to > pos { w.classify_after() } else { w.after_token(tokens, pos) }
+    if w.walked_to > pos {
+        w.classify_after()
+    } else {
+        w.after_token(tokens, pos)
+    }
 }

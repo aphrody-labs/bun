@@ -101,8 +101,11 @@ impl<'de> Deserialize<'de> for OxlintSettings {
         let well_known_settings =
             WellKnownOxlintSettings::deserialize(&raw_value).map_err(serde::de::Error::custom)?;
 
-        let arbitrary_settings =
-            if let serde_json::Value::Object(json) = raw_value { Some(json) } else { None };
+        let arbitrary_settings = if let serde_json::Value::Object(json) = raw_value {
+            Some(json)
+        } else {
+            None
+        };
 
         Ok(OxlintSettings {
             json: arbitrary_settings,
@@ -221,14 +224,23 @@ mod test {
         .unwrap();
 
         assert_eq!(settings.jsx_a11y.polymorphic_prop_name, Some("role".into()));
-        assert_eq!(settings.jsx_a11y.components.get("Link"), Some(&"Anchor".into()));
+        assert_eq!(
+            settings.jsx_a11y.components.get("Link"),
+            Some(&"Anchor".into())
+        );
         assert!(settings.next.get_root_dirs().contains(&"app".to_string()));
         assert_eq!(
-            settings.react.get_form_component_attrs("CustomForm").unwrap(),
+            settings
+                .react
+                .get_form_component_attrs("CustomForm")
+                .unwrap(),
             as_attrs::<CompactStr, _>(vec![])
         );
         assert_eq!(
-            settings.react.get_form_component_attrs("SimpleForm").unwrap(),
+            settings
+                .react
+                .get_form_component_attrs("SimpleForm")
+                .unwrap(),
             as_attrs(["endpoint"])
         );
         assert_eq!(

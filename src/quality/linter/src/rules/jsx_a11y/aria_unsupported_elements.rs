@@ -40,7 +40,8 @@ declare_oxc_lint!(
     correctness,
     fix,
     version = "0.1.1",
-    short_description = "Enforces that reserved DOM elements do not contain ARIA roles, states, or properties.",
+    short_description =
+        "Enforces that reserved DOM elements do not contain ARIA roles, states, or properties.",
 );
 
 #[derive(Debug, Default, Clone)]
@@ -360,17 +361,35 @@ fn test() {
         (r"<track role {...props} />", None),
         (r#"<base aria-hidden aria-role="none" {...props} />"#, None),
         (r#"<col aria-hidden aria-role="none" {...props} />"#, None),
-        (r#"<colgroup aria-hidden aria-role="none" {...props} />"#, None),
+        (
+            r#"<colgroup aria-hidden aria-role="none" {...props} />"#,
+            None,
+        ),
         (r#"<head aria-hidden aria-role="none" {...props} />"#, None),
         (r#"<html aria-hidden aria-role="none" {...props} />"#, None),
         (r#"<link aria-hidden aria-role="none" {...props} />"#, None),
         (r#"<meta aria-hidden aria-role="none" {...props} />"#, None),
-        (r#"<noembed aria-hidden aria-role="none" {...props} />"#, None),
-        (r#"<noscript aria-hidden aria-role="none" {...props} />"#, None),
+        (
+            r#"<noembed aria-hidden aria-role="none" {...props} />"#,
+            None,
+        ),
+        (
+            r#"<noscript aria-hidden aria-role="none" {...props} />"#,
+            None,
+        ),
         (r#"<param aria-hidden aria-role="none" {...props} />"#, None),
-        (r#"<picture aria-hidden aria-role="none" {...props} />"#, None),
-        (r#"<script aria-hidden aria-role="none" {...props} />"#, None),
-        (r#"<source aria-hidden aria-role="none" {...props} />"#, None),
+        (
+            r#"<picture aria-hidden aria-role="none" {...props} />"#,
+            None,
+        ),
+        (
+            r#"<script aria-hidden aria-role="none" {...props} />"#,
+            None,
+        ),
+        (
+            r#"<source aria-hidden aria-role="none" {...props} />"#,
+            None,
+        ),
         (r#"<style aria-hidden aria-role="none" {...props} />"#, None),
         (r#"<title aria-hidden aria-role="none" {...props} />"#, None),
         (r#"<track aria-hidden aria-role="none" {...props} />"#, None),
@@ -384,7 +403,12 @@ fn test() {
         ),
     ];
 
-    Tester::new(AriaUnsupportedElements::NAME, AriaUnsupportedElements::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        AriaUnsupportedElements::NAME,
+        AriaUnsupportedElements::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

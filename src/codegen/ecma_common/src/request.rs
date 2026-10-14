@@ -15,8 +15,14 @@ const TLS_PROVIDER: TlsProvider = TlsProvider::Rustls;
 /// detect proxy from environment variable in following order:
 /// HTTPS_PROXY | https_proxy | HTTP_PROXY | http_proxy | ALL_PROXY | all_proxy
 fn detect_proxy() -> Option<Proxy> {
-    for env in ["HTTPS_PROXY", "https_proxy", "HTTP_PROXY", "http_proxy", "ALL_PROXY", "all_proxy"]
-    {
+    for env in [
+        "HTTPS_PROXY",
+        "https_proxy",
+        "HTTP_PROXY",
+        "http_proxy",
+        "ALL_PROXY",
+        "all_proxy",
+    ] {
         if let Ok(env) = std::env::var(env)
             && let Ok(proxy) = Proxy::new(&env)
         {
@@ -28,8 +34,9 @@ fn detect_proxy() -> Option<Proxy> {
 
 /// build a agent with proxy automatically detected
 pub fn agent() -> Agent {
-    let mut config =
-        Agent::config_builder().proxy(detect_proxy()).timeout_global(Some(Duration::from_secs(10)));
+    let mut config = Agent::config_builder()
+        .proxy(detect_proxy())
+        .timeout_global(Some(Duration::from_secs(10)));
     if let Some(tls_config) = tls_config_from_env() {
         config = config.tls_config(tls_config);
     }
@@ -58,7 +65,11 @@ fn tls_config_from_env() -> Option<TlsConfig> {
             _ => None,
         })
         .collect::<Vec<_>>();
-    assert!(!certificates.is_empty(), "SSL_CERT_FILE {} contains no certificates", path.display());
+    assert!(
+        !certificates.is_empty(),
+        "SSL_CERT_FILE {} contains no certificates",
+        path.display()
+    );
     Some(
         TlsConfig::builder()
             .provider(TLS_PROVIDER)
@@ -73,6 +84,8 @@ fn tls_config_from_env() -> Option<TlsConfig> {
 /// timeout — the server bounds its own per-request work, but on a loaded
 /// machine requests can queue well past `agent()`'s 10 second global timeout.
 pub fn local_agent() -> Agent {
-    let config = Agent::config_builder().timeout_global(Some(Duration::from_mins(1))).build();
+    let config = Agent::config_builder()
+        .timeout_global(Some(Duration::from_mins(1)))
+        .build();
     Agent::new_with_config(config)
 }

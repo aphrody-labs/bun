@@ -796,9 +796,23 @@ mod tests {
     fn test_get_var_name_double_first_part_fills_name() {
         // First part already fills `name` to `MAX_LEN`, so the second part is ignored
         // (early return at top of closure).
-        test_double!("abcdefghijklmnopqrst", "xyz", "abcdefghijklmnopqrst", 20, 3, 20);
+        test_double!(
+            "abcdefghijklmnopqrst",
+            "xyz",
+            "abcdefghijklmnopqrst",
+            20,
+            3,
+            20
+        );
         // First part exceeds `MAX_LEN`, gets truncated to 20, second part ignored.
-        test_double!("abcdefghijklmnopqrstu", "xyz", "abcdefghijklmnopqrst", 21, 3, 20);
+        test_double!(
+            "abcdefghijklmnopqrstu",
+            "xyz",
+            "abcdefghijklmnopqrst",
+            21,
+            3,
+            20
+        );
     }
 
     #[test]
@@ -807,22 +821,57 @@ mod tests {
         // First part is 19 bytes, pushing `$` brings `name` to exactly `MAX_LEN` (20).
         // The second part is then truncated to zero bytes (`cut_at == 0`), leaving a
         // trailing `$`. This previously tripped a `debug_assert!(cut_at > 0)`.
-        test_double!("abcdefghijklmnopqrs", "x", "abcdefghijklmnopqrs$", 19, 1, 20);
+        test_double!(
+            "abcdefghijklmnopqrs",
+            "x",
+            "abcdefghijklmnopqrs$",
+            19,
+            1,
+            20
+        );
         // Same, but second part starts with a multi-byte char - exercises the cold
         // `cut` path with `cut_at == 0` (must not underflow when indexing back).
-        test_double!("abcdefghijklmnopqrs", "β", "abcdefghijklmnopqrs$", 19, 2, 20);
+        test_double!(
+            "abcdefghijklmnopqrs",
+            "β",
+            "abcdefghijklmnopqrs$",
+            19,
+            2,
+            20
+        );
         // First part is 19 bytes of mixed ASCII + multi-byte UTF-8.
         test_double!("xαβγδεζηθι", "y", "xαβγδεζηθι$", 19, 1, 20);
     }
 
     #[test]
     fn test_get_var_name_double_truncates_second_part_ascii() {
-        test_double!("foobar", "abcdefghijklmnopqrstuvwxyz", "foobar$abcdefghijklm", 6, 26, 20);
-        test_double!("ab", "cdefghijklmnopqrstuvwxyz", "ab$cdefghijklmnopqrs", 2, 24, 20);
+        test_double!(
+            "foobar",
+            "abcdefghijklmnopqrstuvwxyz",
+            "foobar$abcdefghijklm",
+            6,
+            26,
+            20
+        );
+        test_double!(
+            "ab",
+            "cdefghijklmnopqrstuvwxyz",
+            "ab$cdefghijklmnopqrs",
+            2,
+            24,
+            20
+        );
         // Second part fits exactly to `MAX_LEN` after the `$` - no truncation.
         test_double!("abcdefghijklmnopqr", "z", "abcdefghijklmnopqr$z", 18, 1, 20);
         // `cut_at == 1`: only the first byte of the second part survives.
-        test_double!("abcdefghijklmnopqr", "yz", "abcdefghijklmnopqr$y", 18, 2, 20);
+        test_double!(
+            "abcdefghijklmnopqr",
+            "yz",
+            "abcdefghijklmnopqr$y",
+            18,
+            2,
+            20
+        );
     }
 
     #[test]

@@ -34,6 +34,51 @@ function bunRunWithoutTrim(file: string, env?: Record<string, string>) {
 }
 
 describe.concurrent(".env file is loaded", () => {
+  test.each(["0", "1"])("dotenv load notices honor BUN_DEBUG_QUIET_LOGS=%s", async quiet => {
+    using dir = tempDir("dotenv-quiet-logs", {
+      "bunfig.toml": 'logLevel = "debug"\n',
+      ".env": "DOTENV_QUIET_REGRESSION=loaded\n",
+      "index.ts": "console.log(process.env.DOTENV_QUIET_REGRESSION);",
+    });
+    await using child = Bun.spawn([bunExe(), "index.ts"], {
+      cwd: String(dir),
+      // Disable only syscall traces, so global logging still permits the dotenv notice.
+      env: {
+        ...bunEnv,
+        BUN_DEBUG_SYS: "0",
+        BUN_DEBUG_ALL: undefined,
+        BUN_DEBUG_QUIET_LOGS: quiet,
+        DOTENV_QUIET_REGRESSION: undefined,
+      },
+      stdout: "pipe",
+      stderr: "pipe",
+      timeout: 10_000,
+    });
+    const [stdout, stderr, code] = await Promise.all([child.stdout.text(), child.stderr.text(), child.exited]);
+    expect(stdout).toBe("loaded\n");
+    expect(code).toBe(0);
+    if (quiet === "1") expect(stderr).toBe("");
+    else expect(stderr).toContain('".env"');
+  });
+
+  test("quiet dotenv load notices preserve runtime diagnostics", async () => {
+    using dir = tempDir("dotenv-quiet-diagnostics", {
+      ".env": "DOTENV_QUIET_REGRESSION=loaded\n",
+      "index.ts": "console.log(process.env.DOTENV_QUIET_REGRESSION); console.error('runtime diagnostic');",
+    });
+    await using child = Bun.spawn([bunExe(), "index.ts"], {
+      cwd: String(dir),
+      env: { ...bunEnv, BUN_DEBUG_QUIET_LOGS: "1", DOTENV_QUIET_REGRESSION: undefined },
+      stdout: "pipe",
+      stderr: "pipe",
+      timeout: 10_000,
+    });
+    const [stdout, stderr, code] = await Promise.all([child.stdout.text(), child.stderr.text(), child.exited]);
+    expect(stdout).toBe("loaded\n");
+    expect(stderr).toBe("runtime diagnostic\n");
+    expect(code).toBe(0);
+  });
+
   test(".env", async () => {
     using dir = tempDir("dotenv", {
       ".env": "FOO=bar\n",
@@ -826,11 +871,12 @@ describe.concurrent("--env-file that is not a regular file", () => {
       "console.log(Object.entries(process.env).flatMap(([k, v]) => k.startsWith('BUNTEST_') ? [`${k}=${v}`] : []).sort().join(','));",
   };
 
-  async function run(cwd: string, cmd: string[], env: Record<string, string | undefined> = {}) {
+  async function run(cwd: string, cmd: string[], env: Record<string, string | undefined> = {}, timeout = 4_000) {
     await using proc = Bun.spawn({
       cmd,
       cwd,
       env: { ...bunEnv, NODE_ENV: undefined, ...env },
+      timeout,
       stdin: "ignore",
       stdout: "pipe",
       stderr: "pipe",
@@ -932,11 +978,13 @@ describe.concurrent("--env-file that is not a regular file", () => {
   // A compiled executable replaces the worker's env options with the standalone
   // graph's flags after the worker copied them from the parent. The worker must
   // still leave `.env` alone when `--env-file` came from BUN_OPTIONS.
-  test("a worker in a compiled executable", async () => {
-    const buntestVars = `Object.entries(process.env).flatMap(([k, v]) => k.startsWith("BUNTEST_") ? [k + "=" + v] : []).sort().join(",")`;
-    using dir = tempDir("dotenv-arg-compile-worker", {
-      ...files,
-      "index.js": `
+  test(
+    "a worker in a compiled executable",
+    async () => {
+      const buntestVars = `Object.entries(process.env).flatMap(([k, v]) => k.startsWith("BUNTEST_") ? [k + "=" + v] : []).sort().join(",")`;
+      using dir = tempDir("dotenv-arg-compile-worker", {
+        ...files,
+        "index.js": `
         const worker = new Worker(new URL("./worker.js", import.meta.url));
         worker.onmessage = ({ data }) => {
           console.log("worker " + data);
@@ -944,26 +992,26 @@ describe.concurrent("--env-file that is not a regular file", () => {
         };
         console.log("main " + ${buntestVars});
       `,
-      "worker.js": `postMessage(${buntestVars});`,
-    });
+        "worker.js": `postMessage(${buntestVars});`,
+      });
 
-    const build = await run(String(dir), [
-      bunExe(),
-      "build",
-      "--compile",
-      "./index.js",
-      "./worker.js",
-      "--outfile",
-      "app",
-    ]);
-    expect(build.stderr).not.toContain("error:");
-    expect(build.exitCode).toBe(0);
+      const build = await run(
+        String(dir),
+        [bunExe(), "build", "--compile", "./index.js", "./worker.js", "--outfile", "app"],
+        {},
+        15_000,
+      );
+      expect(build.stderr).not.toContain("error:");
+      expect(build.exitCode).toBe(0);
 
-    const exe = path.join(String(dir), isWindows ? "app.exe" : "app");
-    const app = await run(String(dir), [exe], { BUN_OPTIONS: "--env-file=.env.a" });
-    expect(app.stdout).toBe("main BUNTEST_A=1\nworker BUNTEST_A=1");
-    expect(app.exitCode).toBe(0);
-  });
+      const exe = path.join(String(dir), isWindows ? "app.exe" : "app");
+      const app = await run(String(dir), [exe], { BUN_OPTIONS: "--env-file=.env.a" });
+      expect(app.stdout).toBe("main BUNTEST_A=1\nworker BUNTEST_A=1");
+      expect(app.exitCode).toBe(0);
+      // Measured Windows debug compile plus worker launch: 11 s; both children have shorter deadlines.
+    },
+    isWindows || isDebug || isASAN ? 25_000 : 5_000,
+  );
 });
 
 describe.concurrent(".env with a UTF-8 BOM", () => {

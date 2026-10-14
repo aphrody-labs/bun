@@ -49,9 +49,10 @@ impl<'a> MayHaveSideEffects<'a> for Expression<'a> {
             }
             Expression::SequenceExpression(e) => e.may_have_side_effects(ctx),
             Expression::BinaryExpression(e) => e.may_have_side_effects(ctx),
-            Expression::ObjectExpression(object_expr) => {
-                object_expr.properties.iter().any(|property| property.may_have_side_effects(ctx))
-            }
+            Expression::ObjectExpression(object_expr) => object_expr
+                .properties
+                .iter()
+                .any(|property| property.may_have_side_effects(ctx)),
             Expression::ArrayExpression(e) => e.may_have_side_effects(ctx),
             Expression::ClassExpression(e) => e.may_have_side_effects(ctx),
             Expression::PrivateInExpression(e) => {
@@ -179,7 +180,11 @@ impl<'a> MayHaveSideEffects<'a> for BinaryExpression<'a> {
                 let right = self.right.to_primitive(ctx);
                 if left.is_string() == Some(true) || right.is_string() == Some(true) {
                     // If either side is a string, ToString is called for both sides.
-                    let other_side = if left.is_string() == Some(true) { right } else { left };
+                    let other_side = if left.is_string() == Some(true) {
+                        right
+                    } else {
+                        left
+                    };
                     // ToString() for Symbols throws an error.
                     return other_side.is_symbol() != Some(false)
                         || self.left.may_have_side_effects(ctx)
@@ -271,7 +276,9 @@ impl<'a> MayHaveSideEffects<'a> for LogicalExpression<'a> {
 
 impl<'a> MayHaveSideEffects<'a> for ArrayExpression<'a> {
     fn may_have_side_effects(&self, ctx: &impl MayHaveSideEffectsContext<'a>) -> bool {
-        self.elements.iter().any(|element| element.may_have_side_effects(ctx))
+        self.elements
+            .iter()
+            .any(|element| element.may_have_side_effects(ctx))
     }
 }
 
@@ -359,37 +366,51 @@ impl<'a> MayHaveSideEffects<'a> for Class<'a> {
         // To allow classes with a super class to be removed, we ignore this side effect.
         if self.heritage_expression().is_some_and(|sup| {
             // `(class C extends (() => {}))` is TypeError.
-            matches!(sup.without_parentheses(), Expression::ArrowFunctionExpression(_))
-                || sup.may_have_side_effects(ctx)
+            matches!(
+                sup.without_parentheses(),
+                Expression::ArrowFunctionExpression(_)
+            ) || sup.may_have_side_effects(ctx)
         }) {
             return true;
         }
 
-        self.body.body.iter().any(|element| element.may_have_side_effects(ctx))
+        self.body
+            .body
+            .iter()
+            .any(|element| element.may_have_side_effects(ctx))
     }
 }
 
 impl<'a> MayHaveSideEffects<'a> for ClassElement<'a> {
     fn may_have_side_effects(&self, ctx: &impl MayHaveSideEffectsContext<'a>) -> bool {
         match self {
-            ClassElement::StaticBlock(block) => {
-                block.body.iter().any(|stmt| stmt.may_have_side_effects(ctx))
-            }
+            ClassElement::StaticBlock(block) => block
+                .body
+                .iter()
+                .any(|stmt| stmt.may_have_side_effects(ctx)),
             ClassElement::MethodDefinition(e) => {
                 !e.decorators.is_empty()
                     || e.key.may_have_side_effects(ctx)
-                    || e.value.params.items.iter().any(|item| !item.decorators.is_empty())
+                    || e.value
+                        .params
+                        .items
+                        .iter()
+                        .any(|item| !item.decorators.is_empty())
             }
             ClassElement::PropertyDefinition(e) => {
                 !e.decorators.is_empty()
                     || e.key.may_have_side_effects(ctx)
                     || (e.r#static
-                        && e.value.as_ref().is_some_and(|v| v.may_have_side_effects(ctx)))
+                        && e.value
+                            .as_ref()
+                            .is_some_and(|v| v.may_have_side_effects(ctx)))
             }
             ClassElement::AccessorProperty(e) => {
                 !e.decorators.is_empty()
                     || e.key.may_have_side_effects(ctx)
-                    || e.value.as_ref().is_some_and(|init| init.may_have_side_effects(ctx))
+                    || e.value
+                        .as_ref()
+                        .is_some_and(|init| init.may_have_side_effects(ctx))
             }
             ClassElement::TSIndexSignature(_) => false,
         }
@@ -443,9 +464,11 @@ impl<'a> MayHaveSideEffects<'a> for ComputedMemberExpression<'a> {
                 if b.is_negative() {
                     return true;
                 }
-                !b.to_big_int(ctx).and_then(ToIntegerIndex::to_integer_index).is_some_and(|b| {
-                    !integer_index_property_access_may_have_side_effects(&self.object, b, ctx)
-                })
+                !b.to_big_int(ctx)
+                    .and_then(ToIntegerIndex::to_integer_index)
+                    .is_some_and(|b| {
+                        !integer_index_property_access_may_have_side_effects(&self.object, b, ctx)
+                    })
             }
             _ => {
                 // Non-literal keys (e.g. `obj[expr]`) may trigger toString/valueOf on the key,
@@ -553,13 +576,19 @@ fn iife_call_may_have_side_effects<'a>(
     let (params, body_may_have_side_effects) = match &call.callee {
         Expression::FunctionExpression(f) if !f.r#async && !f.generator => {
             let body = f.body.as_deref()?;
-            (&f.params, body.statements.iter().any(|stmt| stmt.may_have_side_effects(ctx)))
+            (
+                &f.params,
+                body.statements
+                    .iter()
+                    .any(|stmt| stmt.may_have_side_effects(ctx)),
+            )
         }
         Expression::ArrowFunctionExpression(f) if !f.r#async => {
             let body_may_have_side_effects = match &f.body {
-                ArrowFunctionBody::FunctionBody(b) => {
-                    b.statements.iter().any(|stmt| stmt.may_have_side_effects(ctx))
-                }
+                ArrowFunctionBody::FunctionBody(b) => b
+                    .statements
+                    .iter()
+                    .any(|stmt| stmt.may_have_side_effects(ctx)),
                 match_expression!(ArrowFunctionBody) => {
                     f.get_expression().unwrap().may_have_side_effects(ctx)
                 }
@@ -576,8 +605,16 @@ fn iife_call_may_have_side_effects<'a>(
         .items
         .iter()
         .all(|item| item.pattern.is_binding_identifier() && item.initializer.is_none())
-        && params.rest.as_ref().is_none_or(|r| r.rest.argument.is_binding_identifier());
-    if !params_simple || call.arguments.iter().any(|arg| arg.may_have_side_effects(ctx)) {
+        && params
+            .rest
+            .as_ref()
+            .is_none_or(|r| r.rest.argument.is_binding_identifier());
+    if !params_simple
+        || call
+            .arguments
+            .iter()
+            .any(|arg| arg.may_have_side_effects(ctx))
+    {
         return Some(true);
     }
 
@@ -651,9 +688,10 @@ impl<'a> MayHaveSideEffects<'a> for CallExpression<'a> {
         }
 
         let (object, name) = match &self.callee {
-            Expression::StaticMemberExpression(member) if !member.optional => {
-                (member.object.get_identifier_reference(), member.property.name.as_str())
-            }
+            Expression::StaticMemberExpression(member) if !member.optional => (
+                member.object.get_identifier_reference(),
+                member.property.name.as_str(),
+            ),
             Expression::ComputedMemberExpression(member) if !member.optional => {
                 match &member.expression {
                     Expression::StringLiteral(s) => {
@@ -689,10 +727,10 @@ impl<'a> MayHaveSideEffects<'a> for CallExpression<'a> {
             // `cp` is an integer in `[0, 0x10FFFF]`.
             if object == "String"
                 && name == "fromCodePoint"
-                && self
-                    .arguments
-                    .iter()
-                    .any(|arg| arg.as_expression().is_some_and(is_invalid_code_point_literal))
+                && self.arguments.iter().any(|arg| {
+                    arg.as_expression()
+                        .is_some_and(is_invalid_code_point_literal)
+                })
             {
                 return true;
             }
@@ -802,7 +840,10 @@ fn any_arg_throws_to_number<'a>(
     args: &[Argument<'a>],
     ctx: &impl MayHaveSideEffectsContext<'a>,
 ) -> bool {
-    args.iter().any(|arg| arg.as_expression().is_some_and(|e| e.value_type(ctx).is_bigint()))
+    args.iter().any(|arg| {
+        arg.as_expression()
+            .is_some_and(|e| e.value_type(ctx).is_bigint())
+    })
 }
 
 /// Whether `expr` is a numeric literal (optionally negated) that is not a valid Unicode
@@ -840,7 +881,8 @@ fn new_expr_first_arg_may_be_symbol<'a>(
         return true;
     }
     expr.arguments.first().is_some_and(|arg| {
-        arg.as_expression().is_none_or(|e| e.to_primitive(ctx).is_symbol() != Some(false))
+        arg.as_expression()
+            .is_none_or(|e| e.to_primitive(ctx).is_symbol() != Some(false))
     })
 }
 
@@ -858,7 +900,8 @@ fn new_expr_first_arg_may_be_symbol_or_bigint<'a>(
         return true;
     }
     expr.arguments.first().is_some_and(|arg| {
-        arg.as_expression().is_none_or(|e| e.to_primitive(ctx).is_symbol_or_bigint() != Some(false))
+        arg.as_expression()
+            .is_none_or(|e| e.to_primitive(ctx).is_symbol_or_bigint() != Some(false))
     })
 }
 
@@ -951,9 +994,9 @@ impl<'a> MayHaveSideEffects<'a> for AssignmentTarget<'a> {
     /// The sideeffect of `PutValue(<AssignmentTarget>)` is not considered here.
     fn may_have_side_effects(&self, ctx: &impl MayHaveSideEffectsContext<'a>) -> bool {
         match self {
-            match_simple_assignment_target!(AssignmentTarget) => {
-                self.to_simple_assignment_target().may_have_side_effects(ctx)
-            }
+            match_simple_assignment_target!(AssignmentTarget) => self
+                .to_simple_assignment_target()
+                .may_have_side_effects(ctx),
             match_assignment_target_pattern!(AssignmentTarget) => true,
         }
     }
@@ -1125,6 +1168,8 @@ impl<'a> MayHaveSideEffects<'a> for UpdateExpression<'a> {
 
 impl<'a> MayHaveSideEffects<'a> for SequenceExpression<'a> {
     fn may_have_side_effects(&self, ctx: &impl MayHaveSideEffectsContext<'a>) -> bool {
-        self.expressions.iter().any(|e| e.may_have_side_effects(ctx))
+        self.expressions
+            .iter()
+            .any(|e| e.may_have_side_effects(ctx))
     }
 }

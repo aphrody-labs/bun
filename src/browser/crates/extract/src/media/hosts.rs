@@ -18,25 +18,56 @@ const HOSTS: &[(&[&str], &str, bool, bool)] = &[
     (&["oneupload"], "oneupload", false, false),
     (&["sendvid"], "sendvid", false, false),
     (&["movearnpre"], "movearnpre", false, false),
-    (&["streamhide", "guccihide", "haghalaz"], "streamhide", false, false),
+    (
+        &["streamhide", "guccihide", "haghalaz"],
+        "streamhide",
+        false,
+        false,
+    ),
     (&["vk.com", "vkvideo"], "vk", false, false),
     (&["myvi."], "myvi", false, false),
-    (&["anime-sama.fr", "anime-sama.to"], "anime-sama", false, false),
-    (&["weneverbeenfree", "filemoon", "kerapoxy", "moon"], "filemoon", false, false),
-    (&["streamtape", "strtape", "tapecontent", "streamadblock"], "streamtape", false, false),
-    (&["dood", "d000d", "dooood", "ds2play"], "doodstream", false, false),
+    (
+        &["anime-sama.fr", "anime-sama.to"],
+        "anime-sama",
+        false,
+        false,
+    ),
+    (
+        &["weneverbeenfree", "filemoon", "kerapoxy", "moon"],
+        "filemoon",
+        false,
+        false,
+    ),
+    (
+        &["streamtape", "strtape", "tapecontent", "streamadblock"],
+        "streamtape",
+        false,
+        false,
+    ),
+    (
+        &["dood", "d000d", "dooood", "ds2play"],
+        "doodstream",
+        false,
+        false,
+    ),
     (&["mp4upload"], "mp4upload", false, false),
     (&["yourupload"], "yourupload", false, false),
     (&["voe.sx", "voe"], "voe", false, true),
     (&["mail.ru"], "mailru", false, true),
-    (&["youtube.com", "youtu.be", "youtube-nocookie"], "youtube", true, false),
+    (
+        &["youtube.com", "youtu.be", "youtube-nocookie"],
+        "youtube",
+        true,
+        false,
+    ),
     (&["dailymotion"], "dailymotion", true, false),
     (&["vimeo.com"], "vimeo", true, false),
 ];
 
 pub fn host_traits(embed_url: &str) -> HostTraits {
-    let host =
-        Url::parse(embed_url).ok().and_then(|url| url.host_str().map(str::to_ascii_lowercase));
+    let host = Url::parse(embed_url)
+        .ok()
+        .and_then(|url| url.host_str().map(str::to_ascii_lowercase));
     if let Some(host) = &host {
         for (aliases, name, proprietary, obfuscated) in HOSTS {
             if aliases.iter().any(|alias| host.contains(alias)) {
@@ -94,7 +125,9 @@ pub fn playback_headers(embed_url: &str, user_agent: Option<&str>) -> BTreeMap<S
 pub fn expiry_from_url(url: &str) -> Option<u64> {
     let url = Url::parse(url).ok()?;
     for key in ["expires", "expire", "exp", "e", "t", "validto"] {
-        let Some((_, raw)) = url.query_pairs().find(|(name, _)| name == key) else { continue };
+        let Some((_, raw)) = url.query_pairs().find(|(name, _)| name == key) else {
+            continue;
+        };
         if !(9..=14).contains(&raw.len()) || !raw.bytes().all(|byte| byte.is_ascii_digit()) {
             continue;
         }
@@ -118,11 +151,17 @@ mod tests {
         assert_eq!(host_from_url("https://video.sibnet.ru/e"), "sibnet");
         assert_eq!(host_from_url("https://www.other.test/e"), "other.test");
         assert!(host_traits("https://youtube.com/embed/x").proprietary);
-        assert_eq!(normalize_embed_url("https://vidmoly.to/e"), "https://vidmoly.biz/e");
+        assert_eq!(
+            normalize_embed_url("https://vidmoly.to/e"),
+            "https://vidmoly.biz/e"
+        );
         assert_eq!(
             playback_headers("https://video.sibnet.ru/e", None)["Referer"],
             "https://video.sibnet.ru/"
         );
-        assert_eq!(expiry_from_url("https://x.test/v.mp4?exp=1800000000"), Some(1_800_000_000_000));
+        assert_eq!(
+            expiry_from_url("https://x.test/v.mp4?exp=1800000000"),
+            Some(1_800_000_000_000)
+        );
     }
 }

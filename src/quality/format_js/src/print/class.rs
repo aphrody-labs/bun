@@ -79,7 +79,10 @@ impl<'a> Format<'a, JsFormatContext<'a>> for AstNode<'a, ArenaVec<'a, ClassEleme
 }
 
 impl<'a> Format<'a, JsFormatContext<'a>>
-    for (&AstNode<'a, ClassElement<'a>>, Option<&AstNode<'a, ClassElement<'a>>>)
+    for (
+        &AstNode<'a, ClassElement<'a>>,
+        Option<&AstNode<'a, ClassElement<'a>>>,
+    )
 {
     fn fmt(&self, f: &mut JsFormatter<'_, 'a>) {
         FormatClassElementWithSemicolon::new(self.0, self.1).fmt(f);
@@ -151,11 +154,23 @@ impl<'a> FormatWrite<'a> for AstNode<'a, MethodDefinition<'a>> {
             if let Some(trailing_comments) =
                 trailing_comments_to_move_behind_semicolon(f, content_end, node_end)
             {
-                write!(f, [OptionalSemicolon, FormatTrailingComments::Comments(trailing_comments)]);
+                write!(
+                    f,
+                    [
+                        OptionalSemicolon,
+                        FormatTrailingComments::Comments(trailing_comments)
+                    ]
+                );
                 return;
             }
         }
-        write!(f, [FormatTrailingComments::Comments(comments), OptionalSemicolon]);
+        write!(
+            f,
+            [
+                FormatTrailingComments::Comments(comments),
+                OptionalSemicolon
+            ]
+        );
     }
 }
 
@@ -215,7 +230,13 @@ impl<'a> FormatWrite<'a> for AstNode<'a, TSIndexSignature<'a>> {
 
 impl<'a> FormatWrite<'a> for AstNode<'a, TSIndexSignatureName<'a>> {
     fn write(&self, f: &mut JsFormatter<'_, 'a>) {
-        write!(f, [text_without_whitespace(self.name().as_str()), self.type_annotation()]);
+        write!(
+            f,
+            [
+                text_without_whitespace(self.name().as_str()),
+                self.type_annotation()
+            ]
+        );
     }
 }
 
@@ -341,7 +362,10 @@ impl<'a> Format<'a, JsFormatContext<'a>> for FormatClass<'a, '_> {
             // The logic here ensures these comments are formatted as trailing comments
             // after the class name, maintaining their position before the extends clause.
             if let Some(super_class) = &super_class {
-                let comments = f.context().comments().comments_before(super_class.span().start);
+                let comments = f
+                    .context()
+                    .comments()
+                    .comments_before(super_class.span().start);
                 if comments.iter().any(|c| c.preceded_by_newline()) {
                     indent(&FormatTrailingComments::Comments(comments)).fmt(f);
                 }
@@ -421,8 +445,10 @@ impl<'a> Format<'a, JsFormatContext<'a>> for FormatClass<'a, '_> {
             }
 
             if !implements.is_empty() {
-                let leading_comments =
-                    f.context().comments().comments_before(implements[0].span().start);
+                let leading_comments = f
+                    .context()
+                    .comments()
+                    .comments_before(implements[0].span().start);
 
                 if usize::from(super_class.is_some()) + implements.len() > 1 {
                     write!(
@@ -461,10 +487,16 @@ impl<'a> Format<'a, JsFormatContext<'a>> for FormatClass<'a, '_> {
             let indented = format_with(|f| write!(f, [head, indent(&format_heritage_clauses)]));
 
             let heritage_id = f.group_id("heritageGroup");
-            write!(f, [group(&indented).with_group_id(Some(heritage_id)), space()]);
+            write!(
+                f,
+                [group(&indented).with_group_id(Some(heritage_id)), space()]
+            );
 
             if !body.body.is_empty() {
-                write!(f, [if_group_breaks(&hard_line_break()).with_group_id(Some(heritage_id))]);
+                write!(
+                    f,
+                    [if_group_breaks(&hard_line_break()).with_group_id(Some(heritage_id))]
+                );
             }
         } else {
             write!(f, [head, format_heritage_clauses, space()]);
@@ -473,7 +505,14 @@ impl<'a> Format<'a, JsFormatContext<'a>> for FormatClass<'a, '_> {
         write_head_body_separator(self.body.span.start, f);
 
         if body.body.is_empty() {
-            write!(f, ["{", format_dangling_comments(self.span).with_block_indent(), "}"]);
+            write!(
+                f,
+                [
+                    "{",
+                    format_dangling_comments(self.span).with_block_indent(),
+                    "}"
+                ]
+            );
         } else {
             body.fmt(f);
         }
@@ -517,8 +556,9 @@ fn should_group<'a>(class: &AstNode<'a, Class<'a>>, f: &JsFormatter<'_, 'a>) -> 
     let id_span = class.id.as_ref().map(GetSpan::span);
     let type_parameters_span = class.type_parameters.as_ref().map(|t| t.span);
     let super_class_span = heritage.map(|heritage| heritage.expression.span());
-    let super_type_arguments_span =
-        heritage.and_then(|heritage| heritage.type_arguments.as_deref()).map(GetSpan::span);
+    let super_type_arguments_span = heritage
+        .and_then(|heritage| heritage.type_arguments.as_deref())
+        .map(GetSpan::span);
     let implements_span = class.implements.first().map(GetSpan::span);
 
     let spans = [
@@ -555,11 +595,18 @@ impl<'a, 'b> FormatClassElementWithSemicolon<'a, 'b> {
         element: &'b AstNode<'a, ClassElement<'a>>,
         next_element: Option<&'b AstNode<'a, ClassElement<'a>>>,
     ) -> Self {
-        Self { element, next_element }
+        Self {
+            element,
+            next_element,
+        }
     }
 
     fn needs_semicolon(&self) -> bool {
-        let Self { element, next_element, .. } = self;
+        let Self {
+            element,
+            next_element,
+            ..
+        } = self;
 
         if let ClassElement::PropertyDefinition(def) = element.as_ref()
             && def.value.is_none()
@@ -569,7 +616,9 @@ impl<'a, 'b> FormatClassElementWithSemicolon<'a, 'b> {
             return true;
         }
 
-        let Some(next_element) = next_element else { return false };
+        let Some(next_element) = next_element else {
+            return false;
+        };
 
         match next_element.as_ref() {
             // When the name starts with the generator token or `[`
@@ -638,7 +687,9 @@ impl<'a> Format<'a, JsFormatContext<'a>> for FormatClassElementWithSemicolon<'a,
 
         // A suppressed element prints its content verbatim and its terminator stays the formatter's,
         // like a statement (`write_suppressed_statement`); the element's own `fmt` would print the `;` as content.
-        let suppressed = f.comments().is_node_suppressed(span, || self.content_end(f));
+        let suppressed = f
+            .comments()
+            .is_node_suppressed(span, || self.content_end(f));
         if !suppressed && !needs_semi {
             return write!(f, element);
         }
@@ -676,13 +727,20 @@ impl<'a> Format<'a, JsFormatContext<'a>> for FormatClassElementWithSemicolon<'a,
                 trailing_comments_to_move_behind_semicolon(f, content_end, node_end)
             {
                 format_content_without_comments_after(element, content_end, f);
-                write!(f, [";", FormatTrailingComments::Comments(trailing_comments)]);
+                write!(
+                    f,
+                    [";", FormatTrailingComments::Comments(trailing_comments)]
+                );
             } else {
                 write!(f, [FormatNodeWithoutTrailingComments(element), ";"]);
             }
         }
-        format_trailing_comments(element.parent().span(), span, element.following_span_start())
-            .fmt(f);
+        format_trailing_comments(
+            element.parent().span(),
+            span,
+            element.following_span_start(),
+        )
+        .fmt(f);
     }
 }
 
@@ -698,7 +756,9 @@ pub fn format_grouped_parameters_with_return_type_for_method<'a>(
 
     group(&format_with(|f| {
         let format_parameters = params.memoized();
-        let format_return_type = return_type.map(FormatNodeWithoutTrailingComments).memoized();
+        let format_return_type = return_type
+            .map(FormatNodeWithoutTrailingComments)
+            .memoized();
 
         // Inspect early, in case the `return_type` is formatted before `parameters`
         // in `should_group_function_parameters`.
@@ -715,7 +775,10 @@ pub fn format_grouped_parameters_with_return_type_for_method<'a>(
             );
 
         if should_group_parameters {
-            write!(f, [group(&format_parameters).should_expand(should_break_parameters)]);
+            write!(
+                f,
+                [group(&format_parameters).should_expand(should_break_parameters)]
+            );
         } else {
             write!(f, [format_parameters]);
         }

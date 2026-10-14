@@ -107,13 +107,19 @@ impl NoUnusedVars {
             }
         }
 
-        scoping.root_unresolved_references().get(new_name).is_some_and(|reference_ids| {
-            reference_ids.iter().any(|&reference_id| {
-                let reference = scoping.get_reference(reference_id);
-                Self::is_scope_descendant_or_same(scoping, reference.scope_id(), renamed_scope_id)
-                    && Self::reference_can_be_captured(symbol, reference)
+        scoping
+            .root_unresolved_references()
+            .get(new_name)
+            .is_some_and(|reference_ids| {
+                reference_ids.iter().any(|&reference_id| {
+                    let reference = scoping.get_reference(reference_id);
+                    Self::is_scope_descendant_or_same(
+                        scoping,
+                        reference.scope_id(),
+                        renamed_scope_id,
+                    ) && Self::reference_can_be_captured(symbol, reference)
+                })
             })
-        })
     }
 
     /// Returns whether `reference` is in a namespace that could be rebound by
@@ -140,13 +146,15 @@ impl NoUnusedVars {
 
         let nodes = symbol.nodes();
         let reference_span = nodes.kind(reference.node_id()).span();
-        nodes.ancestors(reference.node_id()).any(|node| match node.kind() {
-            AstKind::TSTypeQuery(_) => true,
-            AstKind::TSPropertySignature(signature) => {
-                signature.computed && signature.key.span().contains_inclusive(reference_span)
-            }
-            _ => false,
-        })
+        nodes
+            .ancestors(reference.node_id())
+            .any(|node| match node.kind() {
+                AstKind::TSTypeQuery(_) => true,
+                AstKind::TSPropertySignature(signature) => {
+                    signature.computed && signature.key.span().contains_inclusive(reference_span)
+                }
+                _ => false,
+            })
     }
 
     fn is_scope_descendant_or_same(

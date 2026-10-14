@@ -74,7 +74,8 @@ declare_oxc_lint!(
     correctness,
     config = MediaHasCaptionConfig,
     version = "0.1.1",
-    short_description = "Checks if `<audio>` and `<video>` elements have a `<track>` element for captions.",
+    short_description =
+        "Checks if `<audio>` and `<video>` elements have a `<track>` element for captions.",
 );
 
 impl Rule for MediaHasCaption {
@@ -89,17 +90,29 @@ impl Rule for MediaHasCaption {
 
                 if let Some(audio) = rule_config.get("audio").and_then(Value::as_array) {
                     config.audio.extend(
-                        audio.iter().filter_map(Value::as_str).map(String::from).map(Into::into),
+                        audio
+                            .iter()
+                            .filter_map(Value::as_str)
+                            .map(String::from)
+                            .map(Into::into),
                     );
                 }
                 if let Some(video) = rule_config.get("video").and_then(Value::as_array) {
                     config.video.extend(
-                        video.iter().filter_map(Value::as_str).map(String::from).map(Into::into),
+                        video
+                            .iter()
+                            .filter_map(Value::as_str)
+                            .map(String::from)
+                            .map(Into::into),
                     );
                 }
                 if let Some(track) = rule_config.get("track").and_then(Value::as_array) {
                     config.track.extend(
-                        track.iter().filter_map(Value::as_str).map(String::from).map(Into::into),
+                        track
+                            .iter()
+                            .filter_map(Value::as_str)
+                            .map(String::from)
+                            .map(Into::into),
                     );
                 }
                 break;
@@ -125,9 +138,13 @@ impl Rule for MediaHasCaption {
         }
 
         let muted = jsx_el.attributes.iter().any(|attr_item| {
-            let JSXAttributeItem::Attribute(attr) = attr_item else { return false };
+            let JSXAttributeItem::Attribute(attr) = attr_item else {
+                return false;
+            };
 
-            let JSXAttributeName::Identifier(iden) = &attr.name else { return false };
+            let JSXAttributeName::Identifier(iden) = &attr.name else {
+                return false;
+            };
 
             if iden.name == "muted" {
                 return match &attr.value {
@@ -159,7 +176,9 @@ impl Rule for MediaHasCaption {
 
                 self.0.track.contains(&child_name)
                     && child_el.opening_element.attributes.iter().any(|attr| {
-                        let JSXAttributeItem::Attribute(attr) = attr else { return false };
+                        let JSXAttributeItem::Attribute(attr) = attr else {
+                            return false;
+                        };
                         let JSXAttributeName::Identifier(iden) = &attr.name else {
                             return false;
                         };
@@ -208,34 +227,94 @@ fn test() {
         (r"<MyDiv />;", None, None),
         (r"<audio><track kind='captions' /></audio>", None, None),
         (r"<audio><track kind='Captions' /></audio>", None, None),
-        (r"<audio><track kind='Captions' /><track kind='subtitles' /></audio>", None, None),
+        (
+            r"<audio><track kind='Captions' /><track kind='subtitles' /></audio>",
+            None,
+            None,
+        ),
         (r"<video><track kind='captions' /></video>", None, None),
         (r"<video><track kind='Captions' /></video>", None, None),
-        (r"<video><track kind='Captions' /><track kind='subtitles' /></video>", None, None),
+        (
+            r"<video><track kind='Captions' /><track kind='subtitles' /></video>",
+            None,
+            None,
+        ),
         (r"<audio muted={true}></audio>", None, None),
         (r"<video muted={true}></video>", None, None),
         (r"<video muted></video>", None, None),
-        (r"<Audio><track kind='captions' /></Audio>", Some(config()), None),
-        (r"<audio><Track kind='captions' /></audio>", Some(config()), None),
-        (r"<Video><track kind='captions' /></Video>", Some(config()), None),
-        (r"<video><Track kind='captions' /></video>", Some(config()), None),
-        (r"<Audio><Track kind='captions' /></Audio>", Some(config()), None),
-        (r"<Video><Track kind='captions' /></Video>", Some(config()), None),
+        (
+            r"<Audio><track kind='captions' /></Audio>",
+            Some(config()),
+            None,
+        ),
+        (
+            r"<audio><Track kind='captions' /></audio>",
+            Some(config()),
+            None,
+        ),
+        (
+            r"<Video><track kind='captions' /></Video>",
+            Some(config()),
+            None,
+        ),
+        (
+            r"<video><Track kind='captions' /></video>",
+            Some(config()),
+            None,
+        ),
+        (
+            r"<Audio><Track kind='captions' /></Audio>",
+            Some(config()),
+            None,
+        ),
+        (
+            r"<Video><Track kind='captions' /></Video>",
+            Some(config()),
+            None,
+        ),
         (r"<Video muted></Video>", Some(config()), None),
         (r"<Video muted={true}></Video>", Some(config()), None),
         (r"<Audio muted></Audio>", Some(config()), None),
         (r"<Audio muted={true}></Audio>", Some(config()), None),
-        (r"<Audio><track kind='captions' /></Audio>", None, Some(settings())),
-        (r"<audio><Track kind='captions' /></audio>", None, Some(settings())),
-        (r"<Video><track kind='captions' /></Video>", None, Some(settings())),
-        (r"<video><Track kind='captions' /></video>", None, Some(settings())),
-        (r"<Audio><Track kind='captions' /></Audio>", None, Some(settings())),
-        (r"<Video><Track kind='captions' /></Video>", None, Some(settings())),
+        (
+            r"<Audio><track kind='captions' /></Audio>",
+            None,
+            Some(settings()),
+        ),
+        (
+            r"<audio><Track kind='captions' /></audio>",
+            None,
+            Some(settings()),
+        ),
+        (
+            r"<Video><track kind='captions' /></Video>",
+            None,
+            Some(settings()),
+        ),
+        (
+            r"<video><Track kind='captions' /></video>",
+            None,
+            Some(settings()),
+        ),
+        (
+            r"<Audio><Track kind='captions' /></Audio>",
+            None,
+            Some(settings()),
+        ),
+        (
+            r"<Video><Track kind='captions' /></Video>",
+            None,
+            Some(settings()),
+        ),
         (r"<Video muted></Video>", None, Some(settings())),
         (r"<Video muted={true}></Video>", None, Some(settings())),
         (r"<Audio muted></Audio>", None, Some(settings())),
         (r"<Audio muted={true}></Audio>", None, Some(settings())),
-        (r"<Box as='audio' muted={true}></Box>", None, Some(settings())),
+        (
+            r"<Box as='audio' muted={true}></Box>",
+            None,
+            Some(settings()),
+        ),
     ];
 
     let fail = vec![
@@ -257,11 +336,31 @@ fn test() {
         (r"<Video />", None, Some(settings())),
         (r"<audio><Track /></audio>", Some(config()), None),
         (r"<video><Track /></video>", Some(config()), None),
-        (r"<Audio><Track kind='subtitles' /></Audio>", Some(config()), None),
-        (r"<Video><Track kind='subtitles' /></Video>", Some(config()), None),
-        (r"<Audio><Track kind='subtitles' /></Audio>", None, Some(settings())),
-        (r"<Video><Track kind='subtitles' /></Video>", None, Some(settings())),
-        (r"<Box as='audio'><Track kind='subtitles' /></Box>", None, Some(settings())),
+        (
+            r"<Audio><Track kind='subtitles' /></Audio>",
+            Some(config()),
+            None,
+        ),
+        (
+            r"<Video><Track kind='subtitles' /></Video>",
+            Some(config()),
+            None,
+        ),
+        (
+            r"<Audio><Track kind='subtitles' /></Audio>",
+            None,
+            Some(settings()),
+        ),
+        (
+            r"<Video><Track kind='subtitles' /></Video>",
+            None,
+            Some(settings()),
+        ),
+        (
+            r"<Box as='audio'><Track kind='subtitles' /></Box>",
+            None,
+            Some(settings()),
+        ),
         (r#"<audio src="talk.mp3" controls />"#, None, None),
         (r#"<video src="movie.mp4" controls />"#, None, None),
     ];

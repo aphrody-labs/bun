@@ -121,11 +121,26 @@ fn test() {
         (r#"import("foo")"#, Some(json!([{ "esmodule": true }]))),
         ("import(`foo`)", Some(json!([{ "esmodule": true }]))),
         (r#"import("./foo")"#, Some(json!([{ "esmodule": true }]))),
-        (r#"import("@scope/foo")"#, Some(json!([{ "esmodule": true }]))),
-        (r#"var foo = import("foo")"#, Some(json!([{ "esmodule": true }]))),
-        ("var foo = import(`foo`)", Some(json!([{ "esmodule": true }]))),
-        (r#"var foo = import("./foo")"#, Some(json!([{ "esmodule": true }]))),
-        (r#"var foo = import("@scope/foo")"#, Some(json!([{ "esmodule": true }]))),
+        (
+            r#"import("@scope/foo")"#,
+            Some(json!([{ "esmodule": true }])),
+        ),
+        (
+            r#"var foo = import("foo")"#,
+            Some(json!([{ "esmodule": true }])),
+        ),
+        (
+            "var foo = import(`foo`)",
+            Some(json!([{ "esmodule": true }])),
+        ),
+        (
+            r#"var foo = import("./foo")"#,
+            Some(json!([{ "esmodule": true }])),
+        ),
+        (
+            r#"var foo = import("@scope/foo")"#,
+            Some(json!([{ "esmodule": true }])),
+        ),
     ];
 
     let fail = vec![
@@ -135,8 +150,14 @@ fn test() {
         ("require(name())", None),
         ("require(`foo${x}`)", None),
         ("var foo = require(`foo${x}`)", None),
-        (r#"require(name + "foo", "bar")"#, Some(json!([{ "esmodule": true }]))),
-        (r#"import(".." + "name")"#, Some(json!([{ "esmodule": true }]))),
+        (
+            r#"require(name + "foo", "bar")"#,
+            Some(json!([{ "esmodule": true }])),
+        ),
+        (
+            r#"import(".." + "name")"#,
+            Some(json!([{ "esmodule": true }])),
+        ),
         ("import(`../${name}`)", Some(json!([{ "esmodule": true }]))),
         ("import(name)", Some(json!([{ "esmodule": true }]))),
         ("import(name())", Some(json!([{ "esmodule": true }]))),

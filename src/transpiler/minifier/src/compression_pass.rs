@@ -43,7 +43,9 @@ fn refresh_direct_eval_flags(scoping: &mut Scoping, direct_eval_scopes: &FxHashS
     }
 
     for index in 0..scoping.scopes_len() {
-        scoping.scope_flags_mut(ScopeId::from_usize(index)).remove(ScopeFlags::DirectEval);
+        scoping
+            .scope_flags_mut(ScopeId::from_usize(index))
+            .remove(ScopeFlags::DirectEval);
     }
 
     for &scope_id in direct_eval_scopes {
@@ -75,7 +77,9 @@ fn debug_assert_no_over_prune(program: &Program<'_>, removed_references: &BitSet
     }
     impl<'a> Visit<'a> for OverPruneCheck<'_, '_> {
         fn visit_identifier_reference(&mut self, it: &IdentifierReference<'a>) {
-            let Some(reference_id) = it.reference_id.get() else { return };
+            let Some(reference_id) = it.reference_id.get() else {
+                return;
+            };
             let idx = reference_id.index();
             // `contains` is false past capacity — the capacity guard
             // (see `PassChanges::removed_references`).
@@ -266,7 +270,11 @@ fn finish_pass<'a>(
     force_liveness_analysis: bool,
 ) -> bool {
     let liveness_inputs_changed = flush_pass_changes(program, ctx);
-    symbol_liveness::analyze(program, ctx, force_liveness_analysis || liveness_inputs_changed)
+    symbol_liveness::analyze(
+        program,
+        ctx,
+        force_liveness_analysis || liveness_inputs_changed,
+    )
 }
 
 /// Finish Normalize's semantic journal before the unconditional first
@@ -301,7 +309,9 @@ pub fn run_peephole_pass<'a>(
     );
     debug_assert_pass_changes_clean(ctx);
 
-    PassOutcome { needs_another_pass: revisit_requested || newly_dead }
+    PassOutcome {
+        needs_another_pass: revisit_requested || newly_dead,
+    }
 }
 
 #[inline]
@@ -320,7 +330,10 @@ struct LiveDirectEvalCollector<'s> {
 
 impl<'s> LiveDirectEvalCollector<'s> {
     fn new(scoping: &'s Scoping) -> Self {
-        Self { scoping, scopes: FxHashSet::default() }
+        Self {
+            scoping,
+            scopes: FxHashSet::default(),
+        }
     }
 }
 

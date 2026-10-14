@@ -108,8 +108,9 @@ impl PreferToBe {
             return;
         };
 
-        let has_not_modifier =
-            jest_expect_fn_call.modifiers().any(|modifier| modifier.is_name_equal("not"));
+        let has_not_modifier = jest_expect_fn_call
+            .modifiers()
+            .any(|modifier| modifier.is_name_equal("not"));
 
         if has_not_modifier {
             if matcher.is_name_equal("toBeUndefined") {
@@ -137,15 +138,21 @@ impl PreferToBe {
             return;
         }
 
-        let Some(arg_expr) = jest_expect_fn_call.args.first().and_then(Argument::as_expression)
+        let Some(arg_expr) = jest_expect_fn_call
+            .args
+            .first()
+            .and_then(Argument::as_expression)
         else {
             return;
         };
         let first_matcher_arg = arg_expr.get_inner_expression();
 
         if first_matcher_arg.is_undefined() {
-            let kind =
-                if has_not_modifier { PreferToBeKind::Defined } else { PreferToBeKind::Undefined };
+            let kind = if has_not_modifier {
+                PreferToBeKind::Defined
+            } else {
+                PreferToBeKind::Undefined
+            };
             Self::check_and_fix(&kind, call_expr, matcher, &jest_expect_fn_call, ctx);
             return;
         }
@@ -228,8 +235,10 @@ impl PreferToBe {
         span_start: u32,
     ) -> (u32, String) {
         if let Some(not_modifier) = not_modifier {
-            let not_is_computed =
-                matches!(not_modifier.parent, Some(Expression::ComputedMemberExpression(_)));
+            let not_is_computed = matches!(
+                not_modifier.parent,
+                Some(Expression::ComputedMemberExpression(_))
+            );
 
             if not_is_computed {
                 // ["not"]["toBe"](value) -> ["not"]["toBeMatcher"]()
@@ -242,14 +251,21 @@ impl PreferToBe {
                 (start, suggestion)
             } else if is_cmp_mem_expr {
                 // .not["toBe"](value) -> .not["toBeMatcher"]()
-                (not_modifier.span.start, format!("not[\"{matcher_name}\"]()"))
+                (
+                    not_modifier.span.start,
+                    format!("not[\"{matcher_name}\"]()"),
+                )
             } else {
                 // .not.toBe(value) -> .not.toBeMatcher()
                 (not_modifier.span.start, format!("not.{matcher_name}()"))
             }
         } else {
             // No "not" modifier
-            let start = if is_cmp_mem_expr { span_start - 1 } else { span_start };
+            let start = if is_cmp_mem_expr {
+                span_start - 1
+            } else {
+                span_start
+            };
             let suggestion = if is_cmp_mem_expr {
                 format!("[\"{matcher_name}\"]()")
             } else {
@@ -277,8 +293,9 @@ impl PreferToBe {
             _ => return,
         };
 
-        let maybe_not_modifier =
-            jest_expect_fn_call.modifiers().find(|modifier| modifier.is_name_equal("not"));
+        let maybe_not_modifier = jest_expect_fn_call
+            .modifiers()
+            .find(|modifier| modifier.is_name_equal("not"));
 
         if kind == &PreferToBeKind::Undefined {
             let replacement_span = if let Some(not_modifier) = maybe_not_modifier {
@@ -287,8 +304,11 @@ impl PreferToBe {
                 Span::new(span.start, end)
             };
             let source_text = ctx.source_range(replacement_span);
-            let new_matcher =
-                if is_cmp_mem_expr { "[\"toBeUndefined\"]()" } else { "toBeUndefined()" };
+            let new_matcher = if is_cmp_mem_expr {
+                "[\"toBeUndefined\"]()"
+            } else {
+                "toBeUndefined()"
+            };
 
             ctx.diagnostic_with_fix(
                 use_to_be_undefined(source_text, new_matcher, replacement_span),
@@ -302,7 +322,11 @@ impl PreferToBe {
             };
             let replacement_span = Span::new(start, end);
             let source_text = ctx.source_range(replacement_span);
-            let new_matcher = if is_cmp_mem_expr { "[\"toBeDefined\"]()" } else { "toBeDefined()" };
+            let new_matcher = if is_cmp_mem_expr {
+                "[\"toBeDefined\"]()"
+            } else {
+                "toBeDefined()"
+            };
 
             ctx.diagnostic_with_fix(
                 use_to_be_defined(source_text, new_matcher, replacement_span),

@@ -153,7 +153,10 @@ impl Options {
     }
 
     fn newlines(&self, count: usize) -> impl Iterator<Item = &'static str> {
-        std::iter::repeat_n(self.newline(), usize::min(count, self.allowed_blank_lines + 1))
+        std::iter::repeat_n(
+            self.newline(),
+            usize::min(count, self.allowed_blank_lines + 1),
+        )
     }
 
     const fn should_align_comments(&self, comment_count: usize) -> bool {
@@ -236,7 +239,11 @@ struct FormattedEntry<'a> {
 impl FormattedEntry<'_> {
     fn cleaned_key(&self) -> &Vec<String> {
         self.cleaned_key.get_or_init(|| {
-            self.key.replace(['\'', '"'], "").split('.').map(ToOwned::to_owned).collect()
+            self.key
+                .replace(['\'', '"'], "")
+                .split('.')
+                .map(ToOwned::to_owned)
+                .collect()
         })
     }
 }
@@ -572,7 +579,11 @@ fn add_entries(
         } else {
             0..usize::MAX
         },
-        if options.compact_entries { 3..usize::MAX } else { 1..usize::MAX },
+        if options.compact_entries {
+            3..usize::MAX
+        } else {
+            1..usize::MAX
+        },
         &rows,
         options.newline(),
         " ",
@@ -617,7 +628,13 @@ fn format_entry<'a>(
         }
     }
 
-    FormattedEntry { syntax: node, key, cleaned_key: OnceCell::new(), value, comment }
+    FormattedEntry {
+        syntax: node,
+        key,
+        cleaned_key: OnceCell::new(),
+        value,
+        comment,
+    }
 }
 
 fn format_key(
@@ -934,7 +951,12 @@ fn format_array(
                     }
                 }
                 BRACKET_END => {
-                    add_values(&mut value_group, &mut commas_group, formatted, &inner_context);
+                    add_values(
+                        &mut value_group,
+                        &mut commas_group,
+                        formatted,
+                        &inner_context,
+                    );
 
                     if multiline {
                         if !formatted.ends_with('\n') {
@@ -966,7 +988,12 @@ fn format_array(
                     }
 
                     if newline_count > 1 {
-                        add_values(&mut value_group, &mut commas_group, formatted, &inner_context);
+                        add_values(
+                            &mut value_group,
+                            &mut commas_group,
+                            formatted,
+                            &inner_context,
+                        );
                         skip_newlines = 0;
                     }
 
@@ -992,7 +1019,12 @@ fn format_array(
                         continue;
                     }
 
-                    if add_values(&mut value_group, &mut commas_group, formatted, &inner_context) {
+                    if add_values(
+                        &mut value_group,
+                        &mut commas_group,
+                        formatted,
+                        &inner_context,
+                    ) {
                         *formatted += options.newline();
                         skip_newlines = 0;
                     }
@@ -1069,7 +1101,10 @@ fn format_rows<R, S>(
     S: AsRef<str>,
 {
     // We currently don't support vertical alignment of complex data.
-    let can_align = rows.iter().flat_map(|r| r.as_ref().iter()).all(|s| !s.as_ref().contains('\n'));
+    let can_align = rows
+        .iter()
+        .flat_map(|r| r.as_ref().iter())
+        .all(|s| !s.as_ref().contains('\n'));
 
     let diff_widths = |range: Range<usize>, row: &R| -> usize {
         let mut max_width = 0_usize;
@@ -1082,12 +1117,17 @@ fn format_rows<R, S>(
 
             max_width = cmp::max(
                 max_width,
-                row.as_ref()[range].iter().map(|s| s.as_ref().chars().count()).sum(),
+                row.as_ref()[range]
+                    .iter()
+                    .map(|s| s.as_ref().chars().count())
+                    .sum(),
             );
         }
 
-        let row_width =
-            row.as_ref()[range].iter().map(|s| s.as_ref().chars().count()).sum::<usize>();
+        let row_width = row.as_ref()[range]
+            .iter()
+            .map(|s| s.as_ref().chars().count())
+            .sum::<usize>();
 
         max_width - row_width
     };

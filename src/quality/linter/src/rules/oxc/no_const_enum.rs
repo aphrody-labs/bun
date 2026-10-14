@@ -87,9 +87,21 @@ fn test() {
     let fix = vec![
         // the `enum` inside the comment is not the keyword; deleting up to the real
         // one would swallow the comment, so no fix is offered
-        ("const /* enum */ enum Color { Red }", "const /* enum */ enum Color { Red }", None),
-        ("const enum Color { Red, Green, Blue }", "enum Color { Red, Green, Blue }", None),
-        ("const   enum Color { Red, Green, Blue }", "enum Color { Red, Green, Blue }", None),
+        (
+            "const /* enum */ enum Color { Red }",
+            "const /* enum */ enum Color { Red }",
+            None,
+        ),
+        (
+            "const enum Color { Red, Green, Blue }",
+            "enum Color { Red, Green, Blue }",
+            None,
+        ),
+        (
+            "const   enum Color { Red, Green, Blue }",
+            "enum Color { Red, Green, Blue }",
+            None,
+        ),
     ];
 
     Tester::new(NoConstEnum::NAME, NoConstEnum::PLUGIN, pass, fail)

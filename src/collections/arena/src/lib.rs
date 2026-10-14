@@ -46,7 +46,11 @@ mod bitset;
 mod boxed;
 mod clone_in;
 mod convert;
-#[cfg(all(feature = "fixed_size", target_pointer_width = "64", target_endian = "little"))]
+#[cfg(all(
+    feature = "fixed_size",
+    target_pointer_width = "64",
+    target_endian = "little"
+))]
 mod fixed_size;
 #[cfg(feature = "from_raw_parts")]
 mod from_raw_parts;
@@ -57,7 +61,10 @@ mod pool;
 mod replace_with;
 mod string_builder;
 mod take_in;
-#[cfg(all(feature = "track_allocations", not(feature = "disable_track_allocations")))]
+#[cfg(all(
+    feature = "track_allocations",
+    not(feature = "disable_track_allocations")
+))]
 mod tracking;
 mod vec;
 mod vec2;
@@ -88,7 +95,11 @@ pub use vec::{Vec, Vec as ArenaVec};
 // Fixed size allocators are only supported on 64-bit little-endian platforms at present.
 //
 // Note: Importing the `fixed_size_constants` module would cause a compilation error on 32-bit systems.
-#[cfg(all(feature = "fixed_size", target_pointer_width = "64", target_endian = "little"))]
+#[cfg(all(
+    feature = "fixed_size",
+    target_pointer_width = "64",
+    target_endian = "little"
+))]
 mod generated {
     #[cfg(debug_assertions)]
     mod assert_layouts;

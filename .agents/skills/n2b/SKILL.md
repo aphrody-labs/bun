@@ -36,7 +36,7 @@ bun n2b --report=json > n2b.json
 bun n2b --report=jsonl
 ```
 
-`bun lint` runs Bun's embedded lint engine. Run `bun n2b` directly when you need migration findings; each command uses its native implementation without installing or launching an external backend. Package scripts may expose the native commands but must not replace them with wrappers; `bunx` remains for unrelated packages.
+`bun n2b` runs the embedded migration engine directly. Its reports remain separate from `bun lint` diagnostics.
 
 ### Migrate a project
 
@@ -51,9 +51,9 @@ bun migrate
 
 `bun migrate` is the same as `bun n2b migrate`.
 
-### How n2b is installed
+### Embedded engine
 
-n2b and its rule registry are linked into the `bun` binary. Scans and reports run in process without installing a package or launching a migration backend. Project migration can run `bun install` when applying dependency changes.
+n2b and its rule registry are linked into the `bun` binary. Scans and reports run in process without installing a package or launching a migration backend. `BUN_N2B` does not select another implementation. `--external-backend` is unsupported; after `--`, it is a literal scan path. Project migration can run `bun install` when applying dependency changes.
 
 `bun n2b --help` lists every n2b command and flag.
 

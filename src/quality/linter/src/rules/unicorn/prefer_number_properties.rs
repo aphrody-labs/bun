@@ -17,9 +17,11 @@ use crate::{
 };
 
 fn prefer_number_properties_diagnostic(span: Span, method_name: &str) -> OxcDiagnostic {
-    OxcDiagnostic::warn(format!("Use `Number.{method_name}` instead of the global `{method_name}`"))
-        .with_help(format!("Replace it with `Number.{method_name}`"))
-        .with_label(span)
+    OxcDiagnostic::warn(format!(
+        "Use `Number.{method_name}` instead of the global `{method_name}`"
+    ))
+    .with_help(format!("Replace it with `Number.{method_name}`"))
+    .with_label(span)
 }
 
 #[derive(Debug, Default, Clone, Deserialize)]
@@ -45,7 +47,10 @@ pub struct PreferNumberPropertiesConfig {
 
 impl Default for PreferNumberPropertiesConfig {
     fn default() -> Self {
-        Self { check_infinity: false, check_nan: true }
+        Self {
+            check_infinity: false,
+            check_nan: true,
+        }
     }
 }
 
@@ -175,7 +180,14 @@ impl Rule for PreferNumberProperties {
     fn run_once(&self, ctx: &LintContext) {
         let unresolved = ctx.scoping().root_unresolved_references();
         let names: &[&str] = if self.check_nan && self.check_infinity {
-            &["NaN", "Infinity", "isNaN", "isFinite", "parseFloat", "parseInt"]
+            &[
+                "NaN",
+                "Infinity",
+                "isNaN",
+                "isFinite",
+                "parseFloat",
+                "parseInt",
+            ]
         } else if self.check_nan {
             &["NaN", "isNaN", "isFinite", "parseFloat", "parseInt"]
         } else if self.check_infinity {
@@ -195,15 +207,20 @@ impl Rule for PreferNumberProperties {
                     continue;
                 };
                 // Skip identifiers that are call callees — handled in `run` on CallExpression.
-                if matches!(ctx.nodes().parent_kind(node.id()), AstKind::CallExpression(_))
-                    && matches!(name, "isNaN" | "isFinite" | "parseFloat" | "parseInt")
+                if matches!(
+                    ctx.nodes().parent_kind(node.id()),
+                    AstKind::CallExpression(_)
+                ) && matches!(name, "isNaN" | "isFinite" | "parseFloat" | "parseInt")
                 {
                     continue;
                 }
                 let is_method_shorthand =
                     matches!(name, "isNaN" | "isFinite" | "parseFloat" | "parseInt");
                 if is_method_shorthand
-                    && !matches!(ctx.nodes().parent_kind(node.id()), AstKind::ObjectProperty(_))
+                    && !matches!(
+                        ctx.nodes().parent_kind(node.id()),
+                        AstKind::ObjectProperty(_)
+                    )
                 {
                     continue;
                 }
@@ -261,7 +278,11 @@ fn find_ancestor_unary<'a>(
     ctx: &LintContext<'a>,
 ) -> Option<&'a UnaryExpression<'a>> {
     ctx.nodes().ancestor_kinds(node.id()).find_map(|ancestor| {
-        if let AstKind::UnaryExpression(unary_expr) = ancestor { Some(unary_expr) } else { None }
+        if let AstKind::UnaryExpression(unary_expr) = ancestor {
+            Some(unary_expr)
+        } else {
+            None
+        }
     })
 }
 
@@ -294,8 +315,14 @@ fn test() {
         (r#"Number.parseFloat("10.5");"#, None),
         ("Number.isNaN(10);", None),
         ("Number.isFinite(10);", None),
-        (r#"const parseInt = function() {}; parseInt("10", 2);"#, None),
-        (r#"const parseFloat = function() {}; parseFloat("10.5");"#, None),
+        (
+            r#"const parseInt = function() {}; parseInt("10", 2);"#,
+            None,
+        ),
+        (
+            r#"const parseFloat = function() {}; parseFloat("10.5");"#,
+            None,
+        ),
         ("const isNaN = function() {}; isNaN(10);", None),
         ("const isFinite = function() {}; isFinite(10);", None),
         (r#"const {parseInt} = Number; parseInt("10", 2);"#, None),
@@ -426,7 +453,10 @@ function inner() {
 }",
             None,
         ),
-        ("declare function NaN(s: string, radix?: number): number;", None),
+        (
+            "declare function NaN(s: string, radix?: number): number;",
+            None,
+        ),
         ("class Foo {NaN = 1}", None),
         ("const foo = ++Infinity;", None),
         ("const foo = --Infinity;", None),
@@ -454,8 +484,14 @@ function inner() {
         ("const {foo = NaN} = {};", None),
         ("const foo = NaN.toString();", None),
         ("class Foo3 {[NaN] = 1}", None),
-        ("const foo = Infinity;", Some(json!([{"checkInfinity":true}]))),
-        ("const foo = -Infinity;", Some(json!([{"checkInfinity":true}]))),
+        (
+            "const foo = Infinity;",
+            Some(json!([{"checkInfinity":true}])),
+        ),
+        (
+            "const foo = -Infinity;",
+            Some(json!([{"checkInfinity":true}])),
+        ),
         ("class Foo2 {[NaN] = 1}", None),
         ("class Foo {[NaN] = 1}", None),
         ("const foo = {[NaN]: 1}", None),
@@ -463,24 +499,78 @@ function inner() {
         ("foo[NaN] = 1;", None),
         ("class A {[NaN](){}}", None),
         ("foo = {[NaN]: 1}", None),
-        ("if (Number.isNaN(Infinity)) {}", Some(json!([{"checkInfinity":true}]))),
-        ("if (Object.is(foo, Infinity)) {}", Some(json!([{"checkInfinity":true}]))),
-        ("const foo = bar[Infinity];", Some(json!([{"checkInfinity":true}]))),
-        ("const foo = {Infinity};", Some(json!([{"checkInfinity":true}]))),
-        ("const foo = {Infinity: Infinity};", Some(json!([{"checkInfinity":true}]))),
-        ("const foo = {[Infinity]: -Infinity};", Some(json!([{"checkInfinity":true}]))),
-        ("const foo = {[-Infinity]: Infinity};", Some(json!([{"checkInfinity":true}]))),
-        ("const foo = {Infinity: -Infinity};", Some(json!([{"checkInfinity":true}]))),
-        ("const {foo = Infinity} = {};", Some(json!([{"checkInfinity":true}]))),
-        ("const {foo = -Infinity} = {};", Some(json!([{"checkInfinity":true}]))),
-        ("const foo = Infinity.toString();", Some(json!([{"checkInfinity":true}]))),
-        ("const foo = -Infinity.toString();", Some(json!([{"checkInfinity":true}]))),
-        ("const foo = (-Infinity).toString();", Some(json!([{"checkInfinity":true}]))),
-        ("const foo = +Infinity;", Some(json!([{"checkInfinity":true}]))),
-        ("const foo = +-Infinity;", Some(json!([{"checkInfinity":true}]))),
-        ("const foo = -(-Infinity);", Some(json!([{"checkInfinity":true}]))),
-        ("const foo = 1 - Infinity;", Some(json!([{"checkInfinity":true}]))),
-        ("const foo = 1 - -Infinity;", Some(json!([{"checkInfinity":true}]))),
+        (
+            "if (Number.isNaN(Infinity)) {}",
+            Some(json!([{"checkInfinity":true}])),
+        ),
+        (
+            "if (Object.is(foo, Infinity)) {}",
+            Some(json!([{"checkInfinity":true}])),
+        ),
+        (
+            "const foo = bar[Infinity];",
+            Some(json!([{"checkInfinity":true}])),
+        ),
+        (
+            "const foo = {Infinity};",
+            Some(json!([{"checkInfinity":true}])),
+        ),
+        (
+            "const foo = {Infinity: Infinity};",
+            Some(json!([{"checkInfinity":true}])),
+        ),
+        (
+            "const foo = {[Infinity]: -Infinity};",
+            Some(json!([{"checkInfinity":true}])),
+        ),
+        (
+            "const foo = {[-Infinity]: Infinity};",
+            Some(json!([{"checkInfinity":true}])),
+        ),
+        (
+            "const foo = {Infinity: -Infinity};",
+            Some(json!([{"checkInfinity":true}])),
+        ),
+        (
+            "const {foo = Infinity} = {};",
+            Some(json!([{"checkInfinity":true}])),
+        ),
+        (
+            "const {foo = -Infinity} = {};",
+            Some(json!([{"checkInfinity":true}])),
+        ),
+        (
+            "const foo = Infinity.toString();",
+            Some(json!([{"checkInfinity":true}])),
+        ),
+        (
+            "const foo = -Infinity.toString();",
+            Some(json!([{"checkInfinity":true}])),
+        ),
+        (
+            "const foo = (-Infinity).toString();",
+            Some(json!([{"checkInfinity":true}])),
+        ),
+        (
+            "const foo = +Infinity;",
+            Some(json!([{"checkInfinity":true}])),
+        ),
+        (
+            "const foo = +-Infinity;",
+            Some(json!([{"checkInfinity":true}])),
+        ),
+        (
+            "const foo = -(-Infinity);",
+            Some(json!([{"checkInfinity":true}])),
+        ),
+        (
+            "const foo = 1 - Infinity;",
+            Some(json!([{"checkInfinity":true}])),
+        ),
+        (
+            "const foo = 1 - -Infinity;",
+            Some(json!([{"checkInfinity":true}])),
+        ),
         (
             r"const isPositiveZero = value => value === 0 && 1 / value === Infinity;",
             Some(json!([{"checkInfinity":true}])),
@@ -495,7 +585,10 @@ function inner() {
         ("function foo({a = NaN}) {}", None),
         ("function foo({[NaN]: a = NaN}) {}", None),
         ("function foo([a = NaN]) {}", None),
-        ("function foo() {return-Infinity}", Some(json!([{"checkInfinity":true}]))),
+        (
+            "function foo() {return-Infinity}",
+            Some(json!([{"checkInfinity":true}])),
+        ),
         ("globalThis.isNaN(foo);", None),
         ("global.isNaN(foo);", None),
         ("window.isNaN(foo);", None),
@@ -505,7 +598,10 @@ function inner() {
         ("window.parseFloat(foo);", None),
         ("self.parseFloat(foo);", None),
         ("globalThis.NaN", None),
-        ("-globalThis.Infinity", Some(json!([{"checkInfinity":true}]))),
+        (
+            "-globalThis.Infinity",
+            Some(json!([{"checkInfinity":true}])),
+        ),
         (
             r"const options = {
             normalize: parseFloat,
@@ -530,16 +626,52 @@ function inner() {
             None::<serde_json::Value>,
         ),
         ("const foo = NaN;", "const foo = Number.NaN;", None),
-        ("if (Number.isNaN(NaN)) {}", "if (Number.isNaN(Number.NaN)) {}", None),
-        ("if (Object.is(foo, NaN)) {}", "if (Object.is(foo, Number.NaN)) {}", None),
-        ("const foo = bar[NaN];", "const foo = bar[Number.NaN];", None),
+        (
+            "if (Number.isNaN(NaN)) {}",
+            "if (Number.isNaN(Number.NaN)) {}",
+            None,
+        ),
+        (
+            "if (Object.is(foo, NaN)) {}",
+            "if (Object.is(foo, Number.NaN)) {}",
+            None,
+        ),
+        (
+            "const foo = bar[NaN];",
+            "const foo = bar[Number.NaN];",
+            None,
+        ),
         ("const foo = {NaN};", "const foo = {NaN: Number.NaN};", None),
-        ("const foo = {NaN: NaN};", "const foo = {NaN: Number.NaN};", None),
-        ("const {foo = NaN} = {};", "const {foo = Number.NaN} = {};", None),
-        ("const foo = NaN.toString();", "const foo = Number.NaN.toString();", None),
-        ("class Foo3 {[NaN] = 1}", "class Foo3 {[Number.NaN] = 1}", None),
-        ("class Foo2 {[NaN] = 1}", "class Foo2 {[Number.NaN] = 1}", None),
-        ("class Foo {[NaN] = 1}", "class Foo {[Number.NaN] = 1}", None),
+        (
+            "const foo = {NaN: NaN};",
+            "const foo = {NaN: Number.NaN};",
+            None,
+        ),
+        (
+            "const {foo = NaN} = {};",
+            "const {foo = Number.NaN} = {};",
+            None,
+        ),
+        (
+            "const foo = NaN.toString();",
+            "const foo = Number.NaN.toString();",
+            None,
+        ),
+        (
+            "class Foo3 {[NaN] = 1}",
+            "class Foo3 {[Number.NaN] = 1}",
+            None,
+        ),
+        (
+            "class Foo2 {[NaN] = 1}",
+            "class Foo2 {[Number.NaN] = 1}",
+            None,
+        ),
+        (
+            "class Foo {[NaN] = 1}",
+            "class Foo {[Number.NaN] = 1}",
+            None,
+        ),
         (
             "const foo = Infinity;",
             "const foo = Number.POSITIVE_INFINITY;",
@@ -575,10 +707,19 @@ function inner() {
             "let a = +(Number.POSITIVE_INFINITY)",
             Some(json!([{"checkInfinity":true}])),
         ),
-        (r#"parseInt("111", 8)"#, r#"Number.parseInt("111", 8)"#, None),
+        (
+            r#"parseInt("111", 8)"#,
+            r#"Number.parseInt("111", 8)"#,
+            None,
+        ),
     ];
 
-    Tester::new(PreferNumberProperties::NAME, PreferNumberProperties::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        PreferNumberProperties::NAME,
+        PreferNumberProperties::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

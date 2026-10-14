@@ -32,7 +32,10 @@ pub fn prefer_to_be_simply_bool<'a>(
     if !is_equality_matcher(matcher) || vitest_expect_fn_call.args.is_empty() {
         return;
     }
-    let Some(arg_expr) = vitest_expect_fn_call.args.first().and_then(Argument::as_expression)
+    let Some(arg_expr) = vitest_expect_fn_call
+        .args
+        .first()
+        .and_then(Argument::as_expression)
     else {
         return;
     };
@@ -151,14 +154,26 @@ fn test() {
 
     let fix = vec![
         ("expect(false).toBe(true);", "expect(false).toBeTruthy();"),
-        ("expectTypeOf(false).toBe(true);", "expectTypeOf(false).toBeTruthy();"),
-        ("expect(wasSuccessful).toEqual(true);", "expect(wasSuccessful).toBeTruthy();"),
+        (
+            "expectTypeOf(false).toBe(true);",
+            "expectTypeOf(false).toBeTruthy();",
+        ),
+        (
+            "expect(wasSuccessful).toEqual(true);",
+            "expect(wasSuccessful).toBeTruthy();",
+        ),
         (
             "expect(fs.existsSync('/path/to/file')).toStrictEqual(true);",
             "expect(fs.existsSync('/path/to/file')).toBeTruthy();",
         ),
-        (r#"expect("a string").not.toBe(true);"#, r#"expect("a string").not.toBeTruthy();"#),
-        (r#"expect("a string").not.toEqual(true);"#, r#"expect("a string").not.toBeTruthy();"#),
+        (
+            r#"expect("a string").not.toBe(true);"#,
+            r#"expect("a string").not.toBeTruthy();"#,
+        ),
+        (
+            r#"expect("a string").not.toEqual(true);"#,
+            r#"expect("a string").not.toBeTruthy();"#,
+        ),
         (
             r#"expectTypeOf("a string").not.toStrictEqual(true);"#,
             r#"expectTypeOf("a string").not.toBeTruthy();"#,
@@ -170,8 +185,18 @@ fn test() {
         .map(|(source, expected)| (source, expected, None, FixKind::Suggestion))
         .collect::<Vec<_>>();
     fix.extend([
-        ("expect(1).toBe(true);", "expect(1).toBe(true);", None, FixKind::Fix),
-        ("expect(1).toBe(true);", "expect(1).toBeTruthy();", None, FixKind::Suggestion),
+        (
+            "expect(1).toBe(true);",
+            "expect(1).toBe(true);",
+            None,
+            FixKind::Fix,
+        ),
+        (
+            "expect(1).toBe(true);",
+            "expect(1).toBeTruthy();",
+            None,
+            FixKind::Suggestion,
+        ),
     ]);
 
     Tester::new(PreferToBeTruthy::NAME, PreferToBeTruthy::PLUGIN, pass, fail)

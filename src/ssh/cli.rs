@@ -61,7 +61,8 @@ impl Conn {
 
     /// The system `ssh` to drive, or `None` for the in-process client.
     fn system_ssh(&self) -> Option<PathBuf> {
-        let env_native = std::env::var("BUN_SSH_BACKEND").is_ok_and(|v| v.eq_ignore_ascii_case("native"));
+        let env_native =
+            std::env::var("BUN_SSH_BACKEND").is_ok_and(|v| v.eq_ignore_ascii_case("native"));
         if self.native || (env_native && !self.system) {
             return None;
         }
@@ -70,7 +71,11 @@ impl Conn {
 }
 
 #[derive(Parser, Debug)]
-#[command(name = "bun ssh", disable_help_subcommand = true, about = "SSH client, transfers, forwards and server")]
+#[command(
+    name = "bun ssh",
+    disable_help_subcommand = true,
+    about = "SSH client, transfers, forwards and server"
+)]
 struct Cli {
     #[command(subcommand)]
     command: Cmd,
@@ -194,7 +199,21 @@ enum Cmd {
 }
 
 const SUBCOMMANDS: &[&str] = &[
-    "exec", "shell", "cp", "sftp", "forward", "config", "keys", "keygen", "known-hosts", "server", "doctor", "delta-receive", "help", "--help", "-h",
+    "exec",
+    "shell",
+    "cp",
+    "sftp",
+    "forward",
+    "config",
+    "keys",
+    "keygen",
+    "known-hosts",
+    "server",
+    "doctor",
+    "delta-receive",
+    "help",
+    "--help",
+    "-h",
 ];
 
 /// Entry point. `args` excludes the program name and `ssh`.
@@ -212,43 +231,72 @@ pub fn main(args: Vec<OsString>, prog: &str) -> i32 {
         Ok(cli) => cli,
         Err(err) => {
             let text = err.render().ansi().to_string();
-            if err.use_stderr() { write_stderr(text.as_bytes()) } else { write_stdout(text.as_bytes()) }
+            if err.use_stderr() {
+                write_stderr(text.as_bytes())
+            } else {
+                write_stdout(text.as_bytes())
+            }
             return err.exit_code();
-        },
+        }
     };
     match run(cli.command) {
         Ok(code) => code,
         Err(err) => {
             write_stderr(format!("bun ssh: {err}\n").as_bytes());
             255
-        },
+        }
     }
 }
 
 /// `bun ssh <ssh args>`: hands the arguments to the system ssh untouched, or runs an exec/shell
 /// with the in-process client when none is installed.
 fn ssh_compat(args: Vec<OsString>) -> i32 {
-    if let Some(ssh) = (!std::env::var("BUN_SSH_BACKEND").is_ok_and(|v| v.eq_ignore_ascii_case("native"))).then(|| system::find("ssh")).flatten() {
+    if let Some(ssh) = (!std::env::var("BUN_SSH_BACKEND")
+        .is_ok_and(|v| v.eq_ignore_ascii_case("native")))
+    .then(|| system::find("ssh"))
+    .flatten()
+    {
         let mut command = Command::new(ssh);
         command.args(multiplex_args()).args(args);
         return status_code(command);
     }
-    let strings: Vec<String> = args.iter().map(|a| a.to_string_lossy().into_owned()).collect();
-    let mut conn = Conn { native: true, ..Conn::default() };
+    let strings: Vec<String> = args
+        .iter()
+        .map(|a| a.to_string_lossy().into_owned())
+        .collect();
+    let mut conn = Conn {
+        native: true,
+        ..Conn::default()
+    };
     let mut rest = strings.iter();
     let mut destination = None;
     while let Some(arg) = rest.next() {
-        let mut value = || rest.next().cloned().ok_or_else(|| Error::InvalidInput(format!("{arg} needs a value")));
+        let mut value = || {
+            rest.next()
+                .cloned()
+                .ok_or_else(|| Error::InvalidInput(format!("{arg} needs a value")))
+        };
         let result: Result<()> = (|| {
             match arg.as_str() {
-                "-p" => conn.port = Some(value()?.parse().map_err(|_| Error::InvalidInput("invalid port".into()))?),
+                "-p" => {
+                    conn.port = Some(
+                        value()?
+                            .parse()
+                            .map_err(|_| Error::InvalidInput("invalid port".into()))?,
+                    )
+                }
                 "-i" => conn.identity.push(PathBuf::from(value()?)),
                 "-l" => conn.login = Some(value()?),
                 "-o" => conn.option.push(value()?),
                 "-J" => conn.jump = Some(value()?),
                 "-F" => conn.config = Some(PathBuf::from(value()?)),
-                "-t" | "-T" | "-q" | "-n" | "-4" | "-6" | "-A" | "-a" | "-x" | "-X" | "-C" | "-v" => {},
-                other if other.starts_with('-') => return Err(Error::InvalidInput(format!("option {other} needs the system ssh"))),
+                "-t" | "-T" | "-q" | "-n" | "-4" | "-6" | "-A" | "-a" | "-x" | "-X" | "-C"
+                | "-v" => {}
+                other if other.starts_with('-') => {
+                    return Err(Error::InvalidInput(format!(
+                        "option {other} needs the system ssh"
+                    )));
+                }
                 other => destination = Some(other.to_owned()),
             }
             Ok(())
@@ -269,24 +317,36 @@ fn ssh_compat(args: Vec<OsString>) -> i32 {
     let cmd = if command.is_empty() {
         Cmd::Shell { conn, destination }
     } else {
-        Cmd::Exec { conn, json: false, no_stdin: false, tty: false, destination, command }
+        Cmd::Exec {
+            conn,
+            json: false,
+            no_stdin: false,
+            tty: false,
+            destination,
+            command,
+        }
     };
     match run(cmd) {
         Ok(code) => code,
         Err(err) => {
             write_stderr(format!("bun ssh: {err}\n").as_bytes());
             255
-        },
+        }
     }
 }
 
 /// Connection sharing for the system ssh on Unix (Windows OpenSSH has no ControlMaster).
 fn multiplex_args() -> Vec<String> {
-    let Some(ssh) = system::find("ssh") else { return Vec::new() };
-    if !system::supports_control_master(&ssh) || std::env::var_os("BUN_SSH_NO_MULTIPLEX").is_some() {
+    let Some(ssh) = system::find("ssh") else {
+        return Vec::new();
+    };
+    if !system::supports_control_master(&ssh) || std::env::var_os("BUN_SSH_NO_MULTIPLEX").is_some()
+    {
         return Vec::new();
     }
-    let Ok(dir) = crate::state_dir() else { return Vec::new() };
+    let Ok(dir) = crate::state_dir() else {
+        return Vec::new();
+    };
     vec![
         "-o".into(),
         "ControlMaster=auto".into(),
@@ -303,12 +363,20 @@ fn status_code(mut command: Command) -> i32 {
         Err(err) => {
             write_stderr(format!("bun ssh: {err}\n").as_bytes());
             255
-        },
+        }
     }
 }
 
 fn shell_quote(arg: &str) -> String {
-    if !arg.is_empty() && arg.bytes().all(|b| b.is_ascii_alphanumeric() || matches!(b, b'-' | b'_' | b'.' | b'/' | b'=' | b':' | b',' | b'@' | b'%' | b'+')) {
+    if !arg.is_empty()
+        && arg.bytes().all(|b| {
+            b.is_ascii_alphanumeric()
+                || matches!(
+                    b,
+                    b'-' | b'_' | b'.' | b'/' | b'=' | b':' | b',' | b'@' | b'%' | b'+'
+                )
+        })
+    {
         arg.to_owned()
     } else {
         format!("'{}'", arg.replace('\'', r"'\''"))
@@ -316,7 +384,15 @@ fn shell_quote(arg: &str) -> String {
 }
 
 fn remote_command(words: &[String]) -> String {
-    if words.len() == 1 { words[0].clone() } else { words.iter().map(|w| shell_quote(w)).collect::<Vec<_>>().join(" ") }
+    if words.len() == 1 {
+        words[0].clone()
+    } else {
+        words
+            .iter()
+            .map(|w| shell_quote(w))
+            .collect::<Vec<_>>()
+            .join(" ")
+    }
 }
 
 fn resolve(conn: &Conn, destination: &str) -> Result<HostConfig> {
@@ -332,7 +408,9 @@ fn connect(conn: &Conn, destination: &str) -> Result<(tokio::runtime::Runtime, S
 
 fn system_ssh_command(ssh: &Path, conn: &Conn) -> Result<Command> {
     let mut command = Command::new(ssh);
-    command.args(multiplex_args()).args(conn.overrides()?.openssh_args("-p"));
+    command
+        .args(multiplex_args())
+        .args(conn.overrides()?.openssh_args("-p"));
     Ok(command)
 }
 
@@ -343,7 +421,10 @@ fn json(value: &serde_json::Value) {
 /// A `host:path` operand of `cp`. A single-letter prefix is a Windows drive.
 fn split_remote(spec: &str) -> Option<(&str, &str)> {
     let (host, path) = spec.split_once(':')?;
-    if host.is_empty() || host.contains(['/', '\\']) || (host.len() == 1 && host.as_bytes()[0].is_ascii_alphabetic()) {
+    if host.is_empty()
+        || host.contains(['/', '\\'])
+        || (host.len() == 1 && host.as_bytes()[0].is_ascii_alphabetic())
+    {
         return None;
     }
     Some((host, if path.is_empty() { "." } else { path }))
@@ -351,7 +432,14 @@ fn split_remote(spec: &str) -> Option<(&str, &str)> {
 
 fn run(command: Cmd) -> Result<i32> {
     match command {
-        Cmd::Exec { conn, json: as_json, no_stdin, tty, destination, command } => {
+        Cmd::Exec {
+            conn,
+            json: as_json,
+            no_stdin,
+            tty,
+            destination,
+            command,
+        } => {
             let remote = remote_command(&command);
             if !as_json {
                 if let Some(ssh) = conn.system_ssh() {
@@ -359,13 +447,17 @@ fn run(command: Cmd) -> Result<i32> {
                     if no_stdin {
                         cmd.arg("-n");
                     }
-                    cmd.arg(if tty { "-t" } else { "-T" }).arg("--").arg(&destination).arg(&remote);
+                    cmd.arg(if tty { "-t" } else { "-T" })
+                        .arg("--")
+                        .arg(&destination)
+                        .arg(&remote);
                     return Ok(status_code(cmd));
                 }
             }
             let (runtime, session) = connect(&conn, &destination)?;
             let code = if as_json {
-                let (code, stdout, stderr) = runtime.block_on(session.exec_collect(&remote, None))?;
+                let (code, stdout, stderr) =
+                    runtime.block_on(session.exec_collect(&remote, None))?;
                 json(&serde_json::json!({
                     "code": code,
                     "stdout": String::from_utf8_lossy(&stdout),
@@ -377,7 +469,7 @@ fn run(command: Cmd) -> Result<i32> {
             };
             runtime.block_on(session.close());
             Ok(code)
-        },
+        }
         Cmd::Shell { conn, destination } => {
             if let Some(ssh) = conn.system_ssh() {
                 let mut cmd = system_ssh_command(&ssh, &conn)?;
@@ -388,21 +480,46 @@ fn run(command: Cmd) -> Result<i32> {
             let code = runtime.block_on(session.run_interactive(None, true, true))?;
             runtime.block_on(session.close());
             Ok(code)
-        },
-        Cmd::Cp { conn, recursive, delta, remote_bun, source, target } => {
-            if let Some(remote_bun) = remote_bun { return copy_delta(&conn, recursive, &source, &target, &remote_bun); }
+        }
+        Cmd::Cp {
+            conn,
+            recursive,
+            delta,
+            remote_bun,
+            source,
+            target,
+        } => {
+            if let Some(remote_bun) = remote_bun {
+                return copy_delta(&conn, recursive, &source, &target, &remote_bun);
+            }
             copy(&conn, recursive, delta, &source, &target)
-        },
+        }
         Cmd::DeltaReceive { target } => {
             let runtime = crate::runtime()?;
-            let result = runtime.block_on(crate::delta::receive(&mut tokio::io::stdin(), &mut tokio::io::stdout(), &target));
+            let result = runtime.block_on(crate::delta::receive(
+                &mut tokio::io::stdin(),
+                &mut tokio::io::stdout(),
+                &target,
+            ));
             // Tokio stdin uses an uncancellable blocking read; this dedicated CLI process must still exit on its protocol deadline.
             runtime.shutdown_timeout(std::time::Duration::from_secs(1));
             result?;
             Ok(0)
-        },
-        Cmd::Sftp { conn, op, destination, path, extra } => sftp(&conn, &op, &destination, &path, extra.as_deref()),
-        Cmd::Forward { conn, local, remote, dynamic, destination } => forward(&conn, &local, &remote, &dynamic, &destination),
+        }
+        Cmd::Sftp {
+            conn,
+            op,
+            destination,
+            path,
+            extra,
+        } => sftp(&conn, &op, &destination, &path, extra.as_deref()),
+        Cmd::Forward {
+            conn,
+            local,
+            remote,
+            dynamic,
+            destination,
+        } => forward(&conn, &local, &remote, &dynamic, &destination),
         Cmd::Config { conn, destination } => {
             let config = resolve(&conn, &destination)?;
             json(&serde_json::json!({
@@ -419,29 +536,53 @@ fn run(command: Cmd) -> Result<i32> {
                 "batchMode": config.batch_mode,
             }));
             Ok(0)
-        },
+        }
         Cmd::Keys { op, file } => {
             let runtime = crate::runtime()?;
             let value = match (op.as_str(), file) {
-                ("list", _) => serde_json::to_value(runtime.block_on(crate::keys::agent_identities(None))?),
-                ("add", Some(file)) => serde_json::to_value(runtime.block_on(crate::keys::agent_add(&file, None))?),
-                ("fingerprint", Some(file)) => serde_json::to_value(crate::keys::fingerprint(&file)?),
-                _ => return Err(Error::InvalidInput("usage: bun ssh keys list | add <file> | fingerprint <file>".into())),
+                ("list", _) => {
+                    serde_json::to_value(runtime.block_on(crate::keys::agent_identities(None))?)
+                }
+                ("add", Some(file)) => {
+                    serde_json::to_value(runtime.block_on(crate::keys::agent_add(&file, None))?)
+                }
+                ("fingerprint", Some(file)) => {
+                    serde_json::to_value(crate::keys::fingerprint(&file)?)
+                }
+                _ => {
+                    return Err(Error::InvalidInput(
+                        "usage: bun ssh keys list | add <file> | fingerprint <file>".into(),
+                    ));
+                }
             };
             json(&value.map_err(|e| crate::other(e.to_string()))?);
             Ok(0)
-        },
-        Cmd::Keygen { kind, bits, comment, file } => {
+        }
+        Cmd::Keygen {
+            kind,
+            bits,
+            comment,
+            file,
+        } => {
             let passphrase = std::env::var("BUN_SSH_NEW_PASSPHRASE").ok();
             let info = crate::keys::generate(&file, &kind, bits, &comment, passphrase.as_deref())?;
             json(&serde_json::to_value(info).map_err(|e| crate::other(e.to_string()))?);
             Ok(0)
-        },
-        Cmd::KnownHosts { conn, op, destination } => {
+        }
+        Cmd::KnownHosts {
+            conn,
+            op,
+            destination,
+        } => {
             let config = resolve(&conn, &destination)?;
             let runtime = crate::runtime()?;
             let key = runtime.block_on(crate::native::fetch_host_key(&config))?;
-            let verdict = crate::known_hosts::check(&config.hostname, config.port, &key, &config.known_hosts_files)?;
+            let verdict = crate::known_hosts::check(
+                &config.hostname,
+                config.port,
+                &key,
+                &config.known_hosts_files,
+            )?;
             let state = match &verdict {
                 crate::known_hosts::Verdict::Known => "known",
                 crate::known_hosts::Verdict::Unknown => "unknown",
@@ -449,12 +590,19 @@ fn run(command: Cmd) -> Result<i32> {
             };
             let added = match (op.as_str(), &verdict) {
                 ("add", crate::known_hosts::Verdict::Unknown) => {
-                    let file = config.known_hosts_files.first().ok_or_else(|| crate::other("no known_hosts file"))?;
+                    let file = config
+                        .known_hosts_files
+                        .first()
+                        .ok_or_else(|| crate::other("no known_hosts file"))?;
                     crate::known_hosts::learn(&config.hostname, config.port, &key, file)?;
                     true
-                },
+                }
                 ("add" | "check", _) => false,
-                _ => return Err(Error::InvalidInput("usage: bun ssh known-hosts check|add <destination>".into())),
+                _ => {
+                    return Err(Error::InvalidInput(
+                        "usage: bun ssh known-hosts check|add <destination>".into(),
+                    ));
+                }
             };
             json(&serde_json::json!({
                 "host": config.hostname,
@@ -465,8 +613,16 @@ fn run(command: Cmd) -> Result<i32> {
                 "added": added,
             }));
             Ok(if state == "changed" { 1 } else { 0 })
-        },
-        Cmd::Server { action, embedded, listen, port, authorized_keys, password_env, host_key } => {
+        }
+        Cmd::Server {
+            action,
+            embedded,
+            listen,
+            port,
+            authorized_keys,
+            password_env,
+            host_key,
+        } => {
             if !embedded {
                 return crate::server::manage_system(action.as_deref().unwrap_or("status"));
             }
@@ -474,13 +630,23 @@ fn run(command: Cmd) -> Result<i32> {
                 Some(path) => crate::server::read_authorized_keys(path)?,
                 None => Vec::new(),
             };
-            let password = password_env.and_then(|name| std::env::var(name).ok()).filter(|p| !p.is_empty());
+            let password = password_env
+                .and_then(|name| std::env::var(name).ok())
+                .filter(|p| !p.is_empty());
             if authorized.is_empty() && password.is_none() {
-                return Err(Error::InvalidInput("the embedded server needs --authorized-keys or --password-env".into()));
+                return Err(Error::InvalidInput(
+                    "the embedded server needs --authorized-keys or --password-env".into(),
+                ));
             }
             let runtime = crate::runtime()?;
             runtime.block_on(async {
-                let options = crate::server::EmbeddedOptions { listen, port, authorized_keys: authorized, password, host_key };
+                let options = crate::server::EmbeddedOptions {
+                    listen,
+                    port,
+                    authorized_keys: authorized,
+                    password,
+                    host_key,
+                };
                 let (port, key, serve) = crate::server::bind_embedded(options).await?;
                 json(&serde_json::json!({
                     "port": port,
@@ -490,7 +656,7 @@ fn run(command: Cmd) -> Result<i32> {
                 serve.await
             })?;
             Ok(0)
-        },
+        }
         Cmd::Doctor => {
             let tool = |name: &str, flag: &str| match system::find(name) {
                 Some(path) => serde_json::json!({
@@ -513,36 +679,73 @@ fn run(command: Cmd) -> Result<i32> {
                 "backend": if system::find("ssh").is_some() { "system" } else { "native" },
             }));
             Ok(0)
-        },
+        }
     }
 }
 
-fn copy_delta(conn: &Conn, recursive: bool, source: &str, target: &str, remote_bun: &str) -> Result<i32> {
-    if recursive { return Err(Error::InvalidInput("native delta currently transfers one regular file; select each destination explicitly".into())); }
-    if !remote_bun.starts_with('/') || remote_bun.contains(['\0', '\n', '\r']) {
-        return Err(Error::InvalidInput("remote Bun must be an absolute executable path on a POSIX SSH peer".into()));
+fn copy_delta(
+    conn: &Conn,
+    recursive: bool,
+    source: &str,
+    target: &str,
+    remote_bun: &str,
+) -> Result<i32> {
+    if recursive {
+        return Err(Error::InvalidInput(
+            "native delta currently transfers one regular file; select each destination explicitly"
+                .into(),
+        ));
     }
-    if split_remote(source).is_some() { return Err(Error::InvalidInput("native delta currently uploads local files only".into())); }
-    let (host, path) = split_remote(target).ok_or_else(|| Error::InvalidInput("native delta requires host:/absolute/target".into()))?;
-    if !path.starts_with('/') || path.contains(['\0', '\n', '\r']) { return Err(Error::InvalidInput("native delta target must be an absolute remote path".into())); }
-    if std::fs::symlink_metadata(source)?.file_type().is_symlink() { return Err(Error::InvalidInput("native delta source cannot be a symbolic link".into())); }
+    if !remote_bun.starts_with('/') || remote_bun.contains(['\0', '\n', '\r']) {
+        return Err(Error::InvalidInput(
+            "remote Bun must be an absolute executable path on a POSIX SSH peer".into(),
+        ));
+    }
+    if split_remote(source).is_some() {
+        return Err(Error::InvalidInput(
+            "native delta currently uploads local files only".into(),
+        ));
+    }
+    let (host, path) = split_remote(target)
+        .ok_or_else(|| Error::InvalidInput("native delta requires host:/absolute/target".into()))?;
+    if !path.starts_with('/') || path.contains(['\0', '\n', '\r']) {
+        return Err(Error::InvalidInput(
+            "native delta target must be an absolute remote path".into(),
+        ));
+    }
+    if std::fs::symlink_metadata(source)?.file_type().is_symlink() {
+        return Err(Error::InvalidInput(
+            "native delta source cannot be a symbolic link".into(),
+        ));
+    }
     let source = std::fs::canonicalize(source)?;
-    let command = format!("{} ssh delta-receive -- {}", shell_quote(remote_bun), shell_quote(path));
+    let command = format!(
+        "{} ssh delta-receive -- {}",
+        shell_quote(remote_bun),
+        shell_quote(path)
+    );
     let (runtime, session) = connect(conn, host)?;
     let result = runtime.block_on(session.upload_delta(&command, &source));
     runtime.block_on(session.close());
     let report = result?;
-    json(&serde_json::to_value(report).map_err(|_| Error::InvalidInput("delta report encoding failed".into()))?);
+    json(
+        &serde_json::to_value(report)
+            .map_err(|_| Error::InvalidInput("delta report encoding failed".into()))?,
+    );
     Ok(0)
 }
 
 fn copy(conn: &Conn, recursive: bool, delta: bool, source: &str, target: &str) -> Result<i32> {
     let (src_remote, dst_remote) = (split_remote(source), split_remote(target));
     if src_remote.is_some() && dst_remote.is_some() {
-        return Err(Error::InvalidInput("copying between two remote hosts is not supported".into()));
+        return Err(Error::InvalidInput(
+            "copying between two remote hosts is not supported".into(),
+        ));
     }
     if src_remote.is_none() && dst_remote.is_none() {
-        return Err(Error::InvalidInput("one of source or target must be host:path".into()));
+        return Err(Error::InvalidInput(
+            "one of source or target must be host:path".into(),
+        ));
     }
     if let Some(ssh) = conn.system_ssh() {
         let overrides = conn.overrides()?;
@@ -552,16 +755,28 @@ fn copy(conn: &Conn, recursive: bool, delta: bool, source: &str, target: &str) -
                 transport.extend(multiplex_args());
                 transport.extend(overrides.openssh_args("-p"));
                 let mut cmd = Command::new(rsync);
-                cmd.arg(if recursive { "-az" } else { "-z" }).arg("-e").arg(transport.iter().map(|a| shell_quote(a)).collect::<Vec<_>>().join(" "));
+                cmd.arg(if recursive { "-az" } else { "-z" }).arg("-e").arg(
+                    transport
+                        .iter()
+                        .map(|a| shell_quote(a))
+                        .collect::<Vec<_>>()
+                        .join(" "),
+                );
                 cmd.arg(source).arg(target);
                 return Ok(status_code(cmd));
             }
         }
         if let Some(scp) = system::find("scp") {
-            if delta { return Err(Error::InvalidInput("true delta requires system rsync or an explicit --remote-bun executable".into())); }
+            if delta {
+                return Err(Error::InvalidInput(
+                    "true delta requires system rsync or an explicit --remote-bun executable"
+                        .into(),
+                ));
+            }
             let mut cmd = Command::new(scp);
             cmd.arg("-S").arg(ssh);
-            cmd.args(multiplex_args()).args(overrides.openssh_args("-P"));
+            cmd.args(multiplex_args())
+                .args(overrides.openssh_args("-P"));
             if recursive {
                 cmd.arg("-r");
             }
@@ -569,7 +784,11 @@ fn copy(conn: &Conn, recursive: bool, delta: bool, source: &str, target: &str) -
             return Ok(status_code(cmd));
         }
     }
-    if delta { return Err(Error::InvalidInput("native delta requires an explicit --remote-bun executable".into())); }
+    if delta {
+        return Err(Error::InvalidInput(
+            "native delta requires an explicit --remote-bun executable".into(),
+        ));
+    }
     let (host, remote_path, local, upload) = match (src_remote, dst_remote) {
         (Some((host, path)), None) => (host, path, target, false),
         (None, Some((host, path))) => (host, path, source, true),
@@ -588,14 +807,30 @@ fn copy(conn: &Conn, recursive: bool, delta: bool, source: &str, target: &str) -
     result.map(|()| 0)
 }
 
-async fn upload_path(sftp: &russh_sftp::client::SftpSession, local: &Path, remote: &str, recursive: bool, delta: bool) -> Result<()> {
+async fn upload_path(
+    sftp: &russh_sftp::client::SftpSession,
+    local: &Path,
+    remote: &str,
+    recursive: bool,
+    delta: bool,
+) -> Result<()> {
     let meta = std::fs::metadata(local)?;
     let remote_is_dir = SftpDriver::stat(sftp, remote).await.is_ok_and(|e| e.is_dir);
-    let name = local.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
-    let destination = if remote_is_dir { format!("{}/{name}", remote.trim_end_matches('/')) } else { remote.to_owned() };
+    let name = local
+        .file_name()
+        .map(|n| n.to_string_lossy().into_owned())
+        .unwrap_or_default();
+    let destination = if remote_is_dir {
+        format!("{}/{name}", remote.trim_end_matches('/'))
+    } else {
+        remote.to_owned()
+    };
     if meta.is_dir() {
         if !recursive {
-            return Err(Error::InvalidInput(format!("{} is a directory (use -r)", local.display())));
+            return Err(Error::InvalidInput(format!(
+                "{} is a directory (use -r)",
+                local.display()
+            )));
         }
         SftpDriver::mkdir_all(sftp, &destination).await?;
         for entry in std::fs::read_dir(local)? {
@@ -613,16 +848,33 @@ async fn upload_path(sftp: &russh_sftp::client::SftpSession, local: &Path, remot
     Ok(())
 }
 
-async fn download_path(sftp: &russh_sftp::client::SftpSession, remote: &str, local: &Path, recursive: bool) -> Result<()> {
+async fn download_path(
+    sftp: &russh_sftp::client::SftpSession,
+    remote: &str,
+    local: &Path,
+    recursive: bool,
+) -> Result<()> {
     let entry = SftpDriver::stat(sftp, remote).await?;
-    let destination = if local.is_dir() { local.join(&entry.name) } else { local.to_path_buf() };
+    let destination = if local.is_dir() {
+        local.join(&entry.name)
+    } else {
+        local.to_path_buf()
+    };
     if entry.is_dir {
         if !recursive {
-            return Err(Error::InvalidInput(format!("{remote} is a directory (use -r)")));
+            return Err(Error::InvalidInput(format!(
+                "{remote} is a directory (use -r)"
+            )));
         }
         std::fs::create_dir_all(&destination)?;
         for child in SftpDriver::read_dir(sftp, remote).await? {
-            Box::pin(download_path(sftp, &child.path, &destination.join(&child.name), true)).await?;
+            Box::pin(download_path(
+                sftp,
+                &child.path,
+                &destination.join(&child.name),
+                true,
+            ))
+            .await?;
         }
         return Ok(());
     }
@@ -641,30 +893,36 @@ fn sftp(conn: &Conn, op: &str, destination: &str, path: &str, extra: Option<&str
             "tree" => {
                 let depth = extra.and_then(|d| d.parse().ok()).unwrap_or(3);
                 Some(to_json(&SftpDriver::tree(&sftp, path, depth).await?))
-            },
+            }
             "cat" => {
                 write_stdout(&SftpDriver::read_file(&sftp, path).await?);
                 None
-            },
+            }
             "get" => {
-                let local = extra.ok_or_else(|| Error::InvalidInput("get needs a local path".into()))?;
+                let local =
+                    extra.ok_or_else(|| Error::InvalidInput("get needs a local path".into()))?;
                 std::fs::write(local, SftpDriver::read_file(&sftp, path).await?)?;
                 None
-            },
+            }
             "put" => {
-                let local = extra.ok_or_else(|| Error::InvalidInput("put needs a local path".into()))?;
+                let local =
+                    extra.ok_or_else(|| Error::InvalidInput("put needs a local path".into()))?;
                 SftpDriver::write_file(&sftp, path, &std::fs::read(local)?).await?;
                 None
-            },
+            }
             "rm" => {
                 sftp.remove_file(path).await?;
                 None
-            },
+            }
             "mkdir" => {
                 SftpDriver::mkdir_all(&sftp, path).await?;
                 None
-            },
-            other => return Err(Error::InvalidInput(format!("unknown sftp operation `{other}`"))),
+            }
+            other => {
+                return Err(Error::InvalidInput(format!(
+                    "unknown sftp operation `{other}`"
+                )));
+            }
         })
     });
     runtime.block_on(session.close());
@@ -685,9 +943,17 @@ mod erased {
     }
 }
 
-fn forward(conn: &Conn, local: &[String], remote: &[String], dynamic: &[String], destination: &str) -> Result<i32> {
+fn forward(
+    conn: &Conn,
+    local: &[String],
+    remote: &[String],
+    dynamic: &[String],
+    destination: &str,
+) -> Result<i32> {
     if local.is_empty() && remote.is_empty() && dynamic.is_empty() {
-        return Err(Error::InvalidInput("give at least one of -L, -R, -D".into()));
+        return Err(Error::InvalidInput(
+            "give at least one of -L, -R, -D".into(),
+        ));
     }
     if let Some(ssh) = conn.system_ssh() {
         let mut cmd = system_ssh_command(&ssh, conn)?;
@@ -712,19 +978,32 @@ fn forward(conn: &Conn, local: &[String], remote: &[String], dynamic: &[String],
             let spec = crate::forward::Spec::parse(spec, false)?;
             let session = Session::connect(&config).await?;
             tasks.spawn(async move {
-                crate::forward::remote(session, &spec, |port| json(&serde_json::json!({ "remote": port }))).await
+                crate::forward::remote(session, &spec, |port| {
+                    json(&serde_json::json!({ "remote": port }))
+                })
+                .await
             });
         }
         let session = std::sync::Arc::new(Session::connect(&config).await?);
         for spec in local {
             let spec = crate::forward::Spec::parse(spec, false)?;
             let session = std::sync::Arc::clone(&session);
-            tasks.spawn(async move { crate::forward::local(session, &spec, |port| json(&serde_json::json!({ "local": port }))).await });
+            tasks.spawn(async move {
+                crate::forward::local(session, &spec, |port| {
+                    json(&serde_json::json!({ "local": port }))
+                })
+                .await
+            });
         }
         for spec in dynamic {
             let spec = crate::forward::Spec::parse(spec, true)?;
             let session = std::sync::Arc::clone(&session);
-            tasks.spawn(async move { crate::forward::dynamic(session, &spec, |port| json(&serde_json::json!({ "dynamic": port }))).await });
+            tasks.spawn(async move {
+                crate::forward::dynamic(session, &spec, |port| {
+                    json(&serde_json::json!({ "dynamic": port }))
+                })
+                .await
+            });
         }
         while let Some(result) = tasks.join_next().await {
             result.map_err(|e| crate::other(e.to_string()))??;
@@ -745,6 +1024,9 @@ mod tests {
         assert_eq!(split_remote(r"C:\Users\x"), None);
         assert_eq!(split_remote("./a:b"), None);
         assert_eq!(shell_quote("a b"), "'a b'");
-        assert_eq!(remote_command(&["echo".into(), "it's".into()]), r"echo 'it'\''s'");
+        assert_eq!(
+            remote_command(&["echo".into(), "it's".into()]),
+            r"echo 'it'\''s'"
+        );
     }
 }

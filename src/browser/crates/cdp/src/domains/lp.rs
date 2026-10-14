@@ -1,5 +1,5 @@
 use bun_browser_browser::HTML_TO_MARKDOWN_JS;
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 
 use crate::dispatch::CdpContext;
 
@@ -15,7 +15,7 @@ pub async fn handle(
             let result = page.evaluate(HTML_TO_MARKDOWN_JS);
             let markdown = result.as_str().unwrap_or("").to_string();
             Ok(json!({ "markdown": markdown }))
-        },
+        }
         _ => Err(format!("Unknown LP method: {}", method)),
     }
 }

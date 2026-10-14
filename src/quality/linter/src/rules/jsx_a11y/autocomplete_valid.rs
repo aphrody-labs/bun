@@ -20,9 +20,13 @@ use crate::{
 };
 
 fn autocomplete_valid_diagnostic(span: Span, autocomplete: &str) -> OxcDiagnostic {
-    OxcDiagnostic::warn(format!("`{autocomplete}` is not a valid value for `autocomplete`."))
-        .with_help(format!("Change `{autocomplete}` to a valid value for `autocomplete`."))
-        .with_label(span)
+    OxcDiagnostic::warn(format!(
+        "`{autocomplete}` is not a valid value for `autocomplete`."
+    ))
+    .with_help(format!(
+        "Change `{autocomplete}` to a valid value for `autocomplete`."
+    ))
+    .with_label(span)
 }
 
 #[derive(Debug, Default, Clone, Deserialize)]
@@ -45,7 +49,9 @@ impl Deref for AutocompleteValid {
 
 impl Default for AutocompleteValidConfig {
     fn default() -> Self {
-        Self { input_components: FxHashSet::from_iter([CompactStr::new("input")]) }
+        Self {
+            input_components: FxHashSet::from_iter([CompactStr::new("input")]),
+        }
     }
 }
 
@@ -210,12 +216,28 @@ fn test() {
         // ("<input type='text' autocomplete='section-blue shipping street-address' />;", None, None),
         // ("<input type='text' autocomplete='section-somewhere shipping work email' />;", None, None),
         ("<input type='text' autocomplete />;", None, None),
-        ("<input type='text' autocomplete={autocompl} />;", None, None),
-        ("<input type='text' autocomplete={autocompl || 'name'} />;", None, None),
-        ("<input type='text' autocomplete={autocompl || 'foo'} />;", None, None),
+        (
+            "<input type='text' autocomplete={autocompl} />;",
+            None,
+            None,
+        ),
+        (
+            "<input type='text' autocomplete={autocompl || 'name'} />;",
+            None,
+            None,
+        ),
+        (
+            "<input type='text' autocomplete={autocompl || 'foo'} />;",
+            None,
+            None,
+        ),
         ("<Foo autocomplete='bar'></Foo>;", None, None),
         // ("<input type={isEmail ? 'email' : 'text'} autocomplete='none' />;", None, None),
-        ("<Input type='text' autocomplete='name' />", None, Some(settings())),
+        (
+            "<Input type='text' autocomplete='name' />",
+            None,
+            Some(settings()),
+        ),
         ("<Input type='text' autocomplete='baz' />", None, None),
         ("<input type='date' autocomplete='email' />;", None, None),
         ("<input type='number' autocomplete='url' />;", None, None),
@@ -229,16 +251,34 @@ fn test() {
 
     let fail = vec![
         ("<input type='text' autocomplete='foo' />;", None, None),
-        ("<input type='text' autocomplete='name invalid' />;", None, None),
-        ("<input type='text' autocomplete='invalid name' />;", None, None),
+        (
+            "<input type='text' autocomplete='name invalid' />;",
+            None,
+            None,
+        ),
+        (
+            "<input type='text' autocomplete='invalid name' />;",
+            None,
+            None,
+        ),
         ("<input type='text' autocomplete='home url' />;", None, None),
         (
             "<Bar autocomplete='baz'></Bar>;",
             Some(serde_json::json!([{ "inputComponents": ["Bar"] }])),
             None,
         ),
-        ("<Input type='text' autocomplete='baz' />;", None, Some(settings())),
+        (
+            "<Input type='text' autocomplete='baz' />;",
+            None,
+            Some(settings()),
+        ),
     ];
 
-    Tester::new(AutocompleteValid::NAME, AutocompleteValid::PLUGIN, pass, fail).test_and_snapshot();
+    Tester::new(
+        AutocompleteValid::NAME,
+        AutocompleteValid::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

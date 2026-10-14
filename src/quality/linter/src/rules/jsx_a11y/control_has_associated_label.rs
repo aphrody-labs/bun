@@ -38,8 +38,9 @@ pub struct ControlHasAssociatedLabel(Box<ControlHasAssociatedLabelConfig>);
 /// Elements that are always ignored (cannot reliably determine label source).
 const ALWAYS_IGNORE_ELEMENTS: [&str; 1] = ["link"];
 
-const DEFAULT_IGNORE_ELEMENTS: [&str; 7] =
-    ["audio", "canvas", "embed", "input", "textarea", "tr", "video"];
+const DEFAULT_IGNORE_ELEMENTS: [&str; 7] = [
+    "audio", "canvas", "embed", "input", "textarea", "tr", "video",
+];
 
 const DEFAULT_IGNORE_ROLES: [&str; 10] = [
     "grid",
@@ -99,8 +100,14 @@ impl Default for ControlHasAssociatedLabelConfig {
             depth: 2,
             label_attributes: vec![],
             control_components: vec![],
-            ignore_elements: DEFAULT_IGNORE_ELEMENTS.into_iter().map(CompactStr::from).collect(),
-            ignore_roles: DEFAULT_IGNORE_ROLES.into_iter().map(CompactStr::from).collect(),
+            ignore_elements: DEFAULT_IGNORE_ELEMENTS
+                .into_iter()
+                .map(CompactStr::from)
+                .collect(),
+            ignore_roles: DEFAULT_IGNORE_ROLES
+                .into_iter()
+                .map(CompactStr::from)
+                .collect(),
         }
     }
 }
@@ -158,7 +165,10 @@ impl Rule for ControlHasAssociatedLabel {
         let element_type = get_element_type(ctx, &element.opening_element);
 
         if ALWAYS_IGNORE_ELEMENTS.contains(&element_type.as_ref())
-            || self.ignore_elements.iter().any(|e| e.as_str() == element_type.as_ref())
+            || self
+                .ignore_elements
+                .iter()
+                .any(|e| e.as_str() == element_type.as_ref())
         {
             return;
         }
@@ -178,8 +188,10 @@ impl Rule for ControlHasAssociatedLabel {
         let is_dom_element = HTML_TAG.contains(element_type.as_ref());
         let is_interactive_el = is_interactive_element(&element_type, &element.opening_element);
         let is_interactive_role_el = role.is_some_and(is_interactive_role);
-        let is_control_component =
-            self.control_components.iter().any(|c| c.as_str() == element_type.as_ref());
+        let is_control_component = self
+            .control_components
+            .iter()
+            .any(|c| c.as_str() == element_type.as_ref());
 
         if !(is_interactive_el || is_dom_element && is_interactive_role_el || is_control_component)
         {
@@ -187,7 +199,9 @@ impl Rule for ControlHasAssociatedLabel {
         }
 
         if !self.may_have_accessible_label(element, ctx) {
-            ctx.diagnostic(control_has_associated_label_diagnostic(element.opening_element.span));
+            ctx.diagnostic(control_has_associated_label_diagnostic(
+                element.opening_element.span,
+            ));
         }
     }
 }
@@ -219,7 +233,10 @@ impl ControlHasAssociatedLabel {
             JSXAttributeItem::Attribute(attr) => {
                 let attr_name = get_jsx_attribute_name(&attr.name);
                 let is_labelling = labelling_props.iter().any(|p| *p == attr_name.as_ref())
-                    || self.label_attributes.iter().any(|p| p.as_str() == attr_name.as_ref());
+                    || self
+                        .label_attributes
+                        .iter()
+                        .any(|p| p.as_str() == attr_name.as_ref());
                 if !is_labelling {
                     return false;
                 }
@@ -256,7 +273,10 @@ impl ControlHasAssociatedLabel {
                 if element.children.is_empty() {
                     let name = get_element_type(ctx, &element.opening_element);
                     if is_react_component_name(&name)
-                        && !self.control_components.iter().any(|c| c.as_str() == name.as_ref())
+                        && !self
+                            .control_components
+                            .iter()
+                            .any(|c| c.as_str() == name.as_ref())
                     {
                         return true;
                     }
@@ -1999,9 +2019,14 @@ fn test_recommended() {
         ),
     ];
 
-    Tester::new(ControlHasAssociatedLabel::NAME, ControlHasAssociatedLabel::PLUGIN, pass, fail)
-        .with_snapshot_suffix("recommended")
-        .test_and_snapshot();
+    Tester::new(
+        ControlHasAssociatedLabel::NAME,
+        ControlHasAssociatedLabel::PLUGIN,
+        pass,
+        fail,
+    )
+    .with_snapshot_suffix("recommended")
+    .test_and_snapshot();
 }
 
 #[test]
@@ -3720,9 +3745,14 @@ fn test_strict() {
         ),
     ];
 
-    Tester::new(ControlHasAssociatedLabel::NAME, ControlHasAssociatedLabel::PLUGIN, pass, fail)
-        .with_snapshot_suffix("strict")
-        .test_and_snapshot();
+    Tester::new(
+        ControlHasAssociatedLabel::NAME,
+        ControlHasAssociatedLabel::PLUGIN,
+        pass,
+        fail,
+    )
+    .with_snapshot_suffix("strict")
+    .test_and_snapshot();
 }
 
 #[test]
@@ -3760,7 +3790,12 @@ fn test_no_config() {
         (r#"<div role="button" />"#, None, None),
     ];
 
-    Tester::new(ControlHasAssociatedLabel::NAME, ControlHasAssociatedLabel::PLUGIN, pass, fail)
-        .with_snapshot_suffix("no_config")
-        .test_and_snapshot();
+    Tester::new(
+        ControlHasAssociatedLabel::NAME,
+        ControlHasAssociatedLabel::PLUGIN,
+        pass,
+        fail,
+    )
+    .with_snapshot_suffix("no_config")
+    .test_and_snapshot();
 }

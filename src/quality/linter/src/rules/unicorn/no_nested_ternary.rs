@@ -58,16 +58,16 @@ impl Rule for NoNestedTernary {
             return;
         };
 
-        if matches!(&cond_expr.test.get_inner_expression(), Expression::ConditionalExpression(_))
-            || matches!(
-                &cond_expr.consequent.get_inner_expression(),
-                Expression::ConditionalExpression(_)
-            )
-            || matches!(
-                &cond_expr.alternate.get_inner_expression(),
-                Expression::ConditionalExpression(_)
-            )
-        {
+        if matches!(
+            &cond_expr.test.get_inner_expression(),
+            Expression::ConditionalExpression(_)
+        ) || matches!(
+            &cond_expr.consequent.get_inner_expression(),
+            Expression::ConditionalExpression(_)
+        ) || matches!(
+            &cond_expr.alternate.get_inner_expression(),
+            Expression::ConditionalExpression(_)
+        ) {
             return;
         }
 
@@ -163,8 +163,14 @@ fn test() {
             "const foo = i > 5 ? true : i < 100 ? true : false;",
             "const foo = i > 5 ? true : (i < 100 ? true : false);",
         ),
-        ("foo ? bar : baz === qux ? quxx : foobar;", "foo ? bar : (baz === qux ? quxx : foobar);"),
-        ("foo ? baz === qux ? quxx : foobar : bar;", "foo ? (baz === qux ? quxx : foobar) : bar;"),
+        (
+            "foo ? bar : baz === qux ? quxx : foobar;",
+            "foo ? bar : (baz === qux ? quxx : foobar);",
+        ),
+        (
+            "foo ? baz === qux ? quxx : foobar : bar;",
+            "foo ? (baz === qux ? quxx : foobar) : bar;",
+        ),
     ];
 
     Tester::new(NoNestedTernary::NAME, NoNestedTernary::PLUGIN, pass, fail)

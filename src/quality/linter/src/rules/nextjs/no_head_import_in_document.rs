@@ -95,8 +95,10 @@ impl Rule for NoHeadImportInDocument {
     fn should_run(&self, ctx: &ContextHost) -> bool {
         let full_file_path = ctx.file_path();
 
-        if let Some(file_name) =
-            full_file_path.file_name().as_ref().and_then(|file_name| file_name.to_str())
+        if let Some(file_name) = full_file_path
+            .file_name()
+            .as_ref()
+            .and_then(|file_name| file_name.to_str())
         {
             // check `_document.*` case
             if file_name.starts_with("_document.") {
@@ -295,6 +297,11 @@ fn test() {
         ),
     ];
 
-    Tester::new(NoHeadImportInDocument::NAME, NoHeadImportInDocument::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        NoHeadImportInDocument::NAME,
+        NoHeadImportInDocument::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

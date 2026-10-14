@@ -10,7 +10,14 @@ use crate::{
 #[derive(Debug, Default, Clone)]
 pub struct PreferToHaveLength;
 
-declare_oxc_lint!(PreferToHaveLength, vitest, style, fix, docs = DOCUMENTATION, version = "0.2.13",);
+declare_oxc_lint!(
+    PreferToHaveLength,
+    vitest,
+    style,
+    fix,
+    docs = DOCUMENTATION,
+    version = "0.2.13",
+);
 
 impl Rule for PreferToHaveLength {
     fn run_on_jest_node<'a, 'c>(
@@ -64,8 +71,16 @@ fn tests() {
     ];
 
     let fix = vec![
-        ("expect(files[\"length\"]).not.toBe(1);", "expect(files).not.toHaveLength(1);", None),
-        (r#"expect(files["length"]).toBe(1,);"#, "expect(files).toHaveLength(1,);", None),
+        (
+            "expect(files[\"length\"]).not.toBe(1);",
+            "expect(files).not.toHaveLength(1);",
+            None,
+        ),
+        (
+            r#"expect(files["length"]).toBe(1,);"#,
+            "expect(files).toHaveLength(1,);",
+            None,
+        ),
         (
             "expect(files[\"length\"])[\"resolves\"].toBe(1,);",
             "expect(files)[\"resolves\"].toHaveLength(1,);",
@@ -76,8 +91,16 @@ fn tests() {
             "expect(files)[\"not\"].toHaveLength(1);",
             None,
         ),
-        ("expect(files[\"length\"])[\"toBe\"](1);", "expect(files).toHaveLength(1);", None),
-        ("expect(files[\"length\"]).not[\"toBe\"](1);", "expect(files).not.toHaveLength(1);", None),
+        (
+            "expect(files[\"length\"])[\"toBe\"](1);",
+            "expect(files).toHaveLength(1);",
+            None,
+        ),
+        (
+            "expect(files[\"length\"]).not[\"toBe\"](1);",
+            "expect(files).not.toHaveLength(1);",
+            None,
+        ),
         (
             "expect(files[\"length\"])[\"not\"][\"toBe\"](1);",
             "expect(files)[\"not\"].toHaveLength(1);",
@@ -85,11 +108,31 @@ fn tests() {
         ),
         // the `(` inside the comment is not the start of the matcher arguments; the
         // replaced range would swallow the comment, so no fix is offered
-        ("expect(files.length).toBe/* ( */(1);", "expect(files.length).toBe/* ( */(1);", None),
-        ("expect(files.length).toBe(1);", "expect(files).toHaveLength(1);", None),
-        ("expect(files.length).toEqual(1);", "expect(files).toHaveLength(1);", None),
-        ("expect(files.length).toStrictEqual(1);", "expect(files).toHaveLength(1);", None),
-        ("expect(files.length).not.toStrictEqual(1);", "expect(files).not.toHaveLength(1);", None),
+        (
+            "expect(files.length).toBe/* ( */(1);",
+            "expect(files.length).toBe/* ( */(1);",
+            None,
+        ),
+        (
+            "expect(files.length).toBe(1);",
+            "expect(files).toHaveLength(1);",
+            None,
+        ),
+        (
+            "expect(files.length).toEqual(1);",
+            "expect(files).toHaveLength(1);",
+            None,
+        ),
+        (
+            "expect(files.length).toStrictEqual(1);",
+            "expect(files).toHaveLength(1);",
+            None,
+        ),
+        (
+            "expect(files.length).not.toStrictEqual(1);",
+            "expect(files).not.toHaveLength(1);",
+            None,
+        ),
         (
             "expect((meta.get('pages') as YArray<unknown>).length).toBe((originalMeta.get('pages') as YArray<unknown>).length);",
             "expect((meta.get('pages') as YArray<unknown>)).toHaveLength((originalMeta.get('pages') as YArray<unknown>).length);",
@@ -106,8 +149,13 @@ fn tests() {
         ),
     ];
 
-    Tester::new(PreferToHaveLength::NAME, PreferToHaveLength::PLUGIN, pass, fail)
-        .with_vitest_plugin(true)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        PreferToHaveLength::NAME,
+        PreferToHaveLength::PLUGIN,
+        pass,
+        fail,
+    )
+    .with_vitest_plugin(true)
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

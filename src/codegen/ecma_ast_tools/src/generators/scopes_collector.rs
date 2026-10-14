@@ -78,7 +78,10 @@ impl<'s> ScopesCalculator<'s> {
             iter::repeat_n(CalculationState::NotCalculated, schema.types.len()).collect::<Vec<_>>(),
         );
 
-        Self { calculation_states, schema }
+        Self {
+            calculation_states,
+            schema,
+        }
     }
 
     /// Calculate whether all types contain a scope or not.
@@ -517,8 +520,11 @@ fn generate_visit_method_for_enum(enum_def: &EnumDef, schema: &Schema) -> Option
             }
         };
         // `#[inline]` if there are `INLINE_LIMIT` or less match arms
-        let maybe_inline_attr =
-            if match_arm_count <= INLINE_LIMIT { quote!( #[inline] ) } else { quote!() };
+        let maybe_inline_attr = if match_arm_count <= INLINE_LIMIT {
+            quote!( #[inline] )
+        } else {
+            quote!()
+        };
         (body, maybe_inline_attr)
     } else {
         // No variant contains a scope

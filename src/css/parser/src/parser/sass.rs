@@ -159,9 +159,16 @@ impl<'a> Parser<'a> {
         } else {
             debug_assert_ne!(separator, ListSeparatorKind::Unknown);
 
-            let span = Span { start: single_value.span().start, end };
+            let span = Span {
+                start: single_value.span().start,
+                end,
+            };
             elements.insert(0, single_value);
-            Ok(ComponentValue::SassList(SassList { elements, comma_spans, span }))
+            Ok(ComponentValue::SassList(SassList {
+                elements,
+                comma_spans,
+                span,
+            }))
         }
     }
 
@@ -192,11 +199,13 @@ impl<'a> Parser<'a> {
         loop {
             if PRECEDENCE_PLUS >= min_precedence {
                 match self.cursor.peek()? {
-                    token @ TokenWithSpan { token: Token::Number(..), span }
-                        if token.number_raw(self.source).is_some_and(|raw| {
-                            raw.starts_with('+')
-                                || raw.starts_with('-') && span.start == left.span().end
-                        }) =>
+                    token @ TokenWithSpan {
+                        token: Token::Number(..),
+                        span,
+                    } if token.number_raw(self.source).is_some_and(|raw| {
+                        raw.starts_with('+')
+                            || raw.starts_with('-') && span.start == left.span().end
+                    }) =>
                     {
                         let (number, number_span) = self.cursor.expect_number()?;
                         let op = SassBinaryOperator {
@@ -205,14 +214,26 @@ impl<'a> Parser<'a> {
                             } else {
                                 SassBinaryOperatorKind::Minus
                             },
-                            span: Span { start: number_span.start, end: number_span.start + 1 },
+                            span: Span {
+                                start: number_span.start,
+                                end: number_span.start + 1,
+                            },
                         };
-                        let span = Span { start: left.span().start, end: number_span.end };
+                        let span = Span {
+                            start: left.span().start,
+                            end: number_span.end,
+                        };
                         let right = {
-                            let span = Span { start: number_span.start + 1, end: number_span.end };
+                            let span = Span {
+                                start: number_span.start + 1,
+                                end: number_span.end,
+                            };
                             let raw = unsafe { number.raw.get_unchecked(1..number.raw.len()) };
                             raw.parse()
-                                .map_err(|_| Error { kind: ErrorKind::InvalidNumber, span })
+                                .map_err(|_| Error {
+                                    kind: ErrorKind::InvalidNumber,
+                                    span,
+                                })
                                 .map(|value| ComponentValue::Number(Number { value, raw, span }))?
                         };
                         left = ComponentValue::SassBinaryExpression(SassBinaryExpression {
@@ -223,11 +244,13 @@ impl<'a> Parser<'a> {
                         });
                         continue;
                     }
-                    token @ TokenWithSpan { token: Token::Dimension(..), span }
-                        if token.dimension_value_raw(self.source).is_some_and(|raw| {
-                            raw.starts_with('+')
-                                || raw.starts_with('-') && span.start == left.span().end
-                        }) =>
+                    token @ TokenWithSpan {
+                        token: Token::Dimension(..),
+                        span,
+                    } if token.dimension_value_raw(self.source).is_some_and(|raw| {
+                        raw.starts_with('+')
+                            || raw.starts_with('-') && span.start == left.span().end
+                    }) =>
                     {
                         let (dimension, dimension_span) = self.cursor.expect_dimension()?;
                         let op = SassBinaryOperator {
@@ -241,7 +264,10 @@ impl<'a> Parser<'a> {
                                 end: dimension_span.start + 1,
                             },
                         };
-                        let span = Span { start: left.span().start, end: dimension_span.end };
+                        let span = Span {
+                            start: left.span().start,
+                            end: dimension_span.end,
+                        };
                         let right = {
                             self.dimension(
                                 crate::token::Dimension {
@@ -255,7 +281,10 @@ impl<'a> Parser<'a> {
                                     },
                                     unit: dimension.unit,
                                 },
-                                Span { start: dimension_span.start + 1, end: dimension_span.end },
+                                Span {
+                                    start: dimension_span.start + 1,
+                                    end: dimension_span.end,
+                                },
                             )
                             .map(ComponentValue::Dimension)?
                         };
@@ -272,29 +301,30 @@ impl<'a> Parser<'a> {
             }
 
             let (operator, precedence) = match self.cursor.peek()? {
-                TokenWithSpan { token: Token::Asterisk(..), .. }
-                    if PRECEDENCE_MULTIPLY >= min_precedence =>
-                {
-                    (
-                        SassBinaryOperator {
-                            kind: SassBinaryOperatorKind::Multiply,
-                            span: self.cursor.bump()?.span,
-                        },
-                        PRECEDENCE_MULTIPLY,
-                    )
-                }
-                TokenWithSpan { token: Token::Solidus(..), .. }
-                    if PRECEDENCE_MULTIPLY >= min_precedence
-                        && (self.state.sass_ctx & SASS_CTX_ALLOW_DIV != 0
-                            || matches!(
-                                left,
-                                ComponentValue::SassParenthesizedExpression(..)
-                                    | ComponentValue::SassBinaryExpression(..)
-                                    | ComponentValue::SassUnaryExpression(..)
-                                    | ComponentValue::SassVariable(..)
-                                    | ComponentValue::Function(..)
-                                    | ComponentValue::SassQualifiedName(..)
-                            )) =>
+                TokenWithSpan {
+                    token: Token::Asterisk(..),
+                    ..
+                } if PRECEDENCE_MULTIPLY >= min_precedence => (
+                    SassBinaryOperator {
+                        kind: SassBinaryOperatorKind::Multiply,
+                        span: self.cursor.bump()?.span,
+                    },
+                    PRECEDENCE_MULTIPLY,
+                ),
+                TokenWithSpan {
+                    token: Token::Solidus(..),
+                    ..
+                } if PRECEDENCE_MULTIPLY >= min_precedence
+                    && (self.state.sass_ctx & SASS_CTX_ALLOW_DIV != 0
+                        || matches!(
+                            left,
+                            ComponentValue::SassParenthesizedExpression(..)
+                                | ComponentValue::SassBinaryExpression(..)
+                                | ComponentValue::SassUnaryExpression(..)
+                                | ComponentValue::SassVariable(..)
+                                | ComponentValue::Function(..)
+                                | ComponentValue::SassQualifiedName(..)
+                        )) =>
                 {
                     (
                         SassBinaryOperator {
@@ -304,9 +334,10 @@ impl<'a> Parser<'a> {
                         PRECEDENCE_MULTIPLY,
                     )
                 }
-                TokenWithSpan { token: Token::Percent(..), .. }
-                    if PRECEDENCE_MULTIPLY >= min_precedence =>
-                {
+                TokenWithSpan {
+                    token: Token::Percent(..),
+                    ..
+                } if PRECEDENCE_MULTIPLY >= min_precedence => {
                     // `b: c %` — a bare `%` is a plain value token in Sass, so
                     // only take it as the modulo operator when a right operand
                     // actually follows.
@@ -321,7 +352,10 @@ impl<'a> Parser<'a> {
                     });
                     match modulo {
                         Ok((op_span, right)) => {
-                            let span = Span { start: left.span().start, end: right.span().end };
+                            let span = Span {
+                                start: left.span().start,
+                                end: right.span().end,
+                            };
                             left = ComponentValue::SassBinaryExpression(SassBinaryExpression {
                                 left: self.alloc(left),
                                 op: SassBinaryOperator {
@@ -336,98 +370,90 @@ impl<'a> Parser<'a> {
                         Err(_) => break,
                     }
                 }
-                TokenWithSpan { token: Token::Plus(..), .. }
-                    if PRECEDENCE_PLUS >= min_precedence =>
-                {
-                    (
-                        SassBinaryOperator {
-                            kind: SassBinaryOperatorKind::Plus,
-                            span: self.cursor.bump()?.span,
-                        },
-                        PRECEDENCE_PLUS,
-                    )
-                }
-                TokenWithSpan { token: Token::Minus(..), .. }
-                    if PRECEDENCE_PLUS >= min_precedence =>
-                {
-                    (
-                        SassBinaryOperator {
-                            kind: SassBinaryOperatorKind::Minus,
-                            span: self.cursor.bump()?.span,
-                        },
-                        PRECEDENCE_PLUS,
-                    )
-                }
-                TokenWithSpan { token: Token::GreaterThan(..), .. }
-                    if allow_comparison && PRECEDENCE_RELATIONAL >= min_precedence =>
-                {
-                    (
-                        SassBinaryOperator {
-                            kind: SassBinaryOperatorKind::GreaterThan,
-                            span: self.cursor.bump()?.span,
-                        },
-                        PRECEDENCE_RELATIONAL,
-                    )
-                }
-                TokenWithSpan { token: Token::GreaterThanEqual(..), .. }
-                    if allow_comparison && PRECEDENCE_RELATIONAL >= min_precedence =>
-                {
-                    (
-                        SassBinaryOperator {
-                            kind: SassBinaryOperatorKind::GreaterThanOrEqual,
-                            span: self.cursor.bump()?.span,
-                        },
-                        PRECEDENCE_RELATIONAL,
-                    )
-                }
-                TokenWithSpan { token: Token::LessThan(..), .. }
-                    if allow_comparison && PRECEDENCE_RELATIONAL >= min_precedence =>
-                {
-                    (
-                        SassBinaryOperator {
-                            kind: SassBinaryOperatorKind::LessThan,
-                            span: self.cursor.bump()?.span,
-                        },
-                        PRECEDENCE_RELATIONAL,
-                    )
-                }
-                TokenWithSpan { token: Token::LessThanEqual(..), .. }
-                    if allow_comparison && PRECEDENCE_RELATIONAL >= min_precedence =>
-                {
-                    (
-                        SassBinaryOperator {
-                            kind: SassBinaryOperatorKind::LessThanOrEqual,
-                            span: self.cursor.bump()?.span,
-                        },
-                        PRECEDENCE_RELATIONAL,
-                    )
-                }
-                TokenWithSpan { token: Token::EqualEqual(..), .. }
-                    if PRECEDENCE_EQUALITY >= min_precedence =>
-                {
-                    (
-                        SassBinaryOperator {
-                            kind: SassBinaryOperatorKind::EqualsEquals,
-                            span: self.cursor.bump()?.span,
-                        },
-                        PRECEDENCE_EQUALITY,
-                    )
-                }
-                TokenWithSpan { token: Token::ExclamationEqual(..), .. }
-                    if PRECEDENCE_EQUALITY >= min_precedence =>
-                {
-                    (
-                        SassBinaryOperator {
-                            kind: SassBinaryOperatorKind::ExclamationEquals,
-                            span: self.cursor.bump()?.span,
-                        },
-                        PRECEDENCE_EQUALITY,
-                    )
-                }
-                token @ TokenWithSpan { token: Token::Ident(..), .. }
-                    if token.is_ident_raw(self.source, "and")
-                        && PRECEDENCE_AND >= min_precedence =>
-                {
+                TokenWithSpan {
+                    token: Token::Plus(..),
+                    ..
+                } if PRECEDENCE_PLUS >= min_precedence => (
+                    SassBinaryOperator {
+                        kind: SassBinaryOperatorKind::Plus,
+                        span: self.cursor.bump()?.span,
+                    },
+                    PRECEDENCE_PLUS,
+                ),
+                TokenWithSpan {
+                    token: Token::Minus(..),
+                    ..
+                } if PRECEDENCE_PLUS >= min_precedence => (
+                    SassBinaryOperator {
+                        kind: SassBinaryOperatorKind::Minus,
+                        span: self.cursor.bump()?.span,
+                    },
+                    PRECEDENCE_PLUS,
+                ),
+                TokenWithSpan {
+                    token: Token::GreaterThan(..),
+                    ..
+                } if allow_comparison && PRECEDENCE_RELATIONAL >= min_precedence => (
+                    SassBinaryOperator {
+                        kind: SassBinaryOperatorKind::GreaterThan,
+                        span: self.cursor.bump()?.span,
+                    },
+                    PRECEDENCE_RELATIONAL,
+                ),
+                TokenWithSpan {
+                    token: Token::GreaterThanEqual(..),
+                    ..
+                } if allow_comparison && PRECEDENCE_RELATIONAL >= min_precedence => (
+                    SassBinaryOperator {
+                        kind: SassBinaryOperatorKind::GreaterThanOrEqual,
+                        span: self.cursor.bump()?.span,
+                    },
+                    PRECEDENCE_RELATIONAL,
+                ),
+                TokenWithSpan {
+                    token: Token::LessThan(..),
+                    ..
+                } if allow_comparison && PRECEDENCE_RELATIONAL >= min_precedence => (
+                    SassBinaryOperator {
+                        kind: SassBinaryOperatorKind::LessThan,
+                        span: self.cursor.bump()?.span,
+                    },
+                    PRECEDENCE_RELATIONAL,
+                ),
+                TokenWithSpan {
+                    token: Token::LessThanEqual(..),
+                    ..
+                } if allow_comparison && PRECEDENCE_RELATIONAL >= min_precedence => (
+                    SassBinaryOperator {
+                        kind: SassBinaryOperatorKind::LessThanOrEqual,
+                        span: self.cursor.bump()?.span,
+                    },
+                    PRECEDENCE_RELATIONAL,
+                ),
+                TokenWithSpan {
+                    token: Token::EqualEqual(..),
+                    ..
+                } if PRECEDENCE_EQUALITY >= min_precedence => (
+                    SassBinaryOperator {
+                        kind: SassBinaryOperatorKind::EqualsEquals,
+                        span: self.cursor.bump()?.span,
+                    },
+                    PRECEDENCE_EQUALITY,
+                ),
+                TokenWithSpan {
+                    token: Token::ExclamationEqual(..),
+                    ..
+                } if PRECEDENCE_EQUALITY >= min_precedence => (
+                    SassBinaryOperator {
+                        kind: SassBinaryOperatorKind::ExclamationEquals,
+                        span: self.cursor.bump()?.span,
+                    },
+                    PRECEDENCE_EQUALITY,
+                ),
+                token @ TokenWithSpan {
+                    token: Token::Ident(..),
+                    ..
+                } if token.is_ident_raw(self.source, "and") && PRECEDENCE_AND >= min_precedence => {
                     (
                         SassBinaryOperator {
                             kind: SassBinaryOperatorKind::And,
@@ -436,17 +462,16 @@ impl<'a> Parser<'a> {
                         PRECEDENCE_AND,
                     )
                 }
-                token @ TokenWithSpan { token: Token::Ident(..), .. }
-                    if token.is_ident_raw(self.source, "or") && PRECEDENCE_OR >= min_precedence =>
-                {
-                    (
-                        SassBinaryOperator {
-                            kind: SassBinaryOperatorKind::Or,
-                            span: self.cursor.bump()?.span,
-                        },
-                        PRECEDENCE_OR,
-                    )
-                }
+                token @ TokenWithSpan {
+                    token: Token::Ident(..),
+                    ..
+                } if token.is_ident_raw(self.source, "or") && PRECEDENCE_OR >= min_precedence => (
+                    SassBinaryOperator {
+                        kind: SassBinaryOperatorKind::Or,
+                        span: self.cursor.bump()?.span,
+                    },
+                    PRECEDENCE_OR,
+                ),
                 _ => break,
             };
 
@@ -456,10 +481,16 @@ impl<'a> Parser<'a> {
                 self.parse_sass_bin_expr_with_min_precedence(precedence + 1, allow_comparison)?;
             // delimiter can't be calculated
             if let ComponentValue::Delimiter(Delimiter { span, .. }) = right {
-                return Err(Error { kind: ErrorKind::ExpectSassExpression, span });
+                return Err(Error {
+                    kind: ErrorKind::ExpectSassExpression,
+                    span,
+                });
             }
 
-            let span = Span { start: left.span().start, end: right.span().end };
+            let span = Span {
+                start: left.span().start,
+                end: right.span().end,
+            };
             left = ComponentValue::SassBinaryExpression(SassBinaryExpression {
                 left: self.alloc(left),
                 op: operator,
@@ -493,7 +524,10 @@ impl<'a> Parser<'a> {
 
             flags.push(SassFlag {
                 keyword,
-                span: Span { start: exclamation_span.start, end: keyword_span.end },
+                span: Span {
+                    start: exclamation_span.start,
+                    end: keyword_span.end,
+                },
             });
         }
 
@@ -506,7 +540,10 @@ impl<'a> Parser<'a> {
         debug_assert!(matches!(self.syntax, Syntax::Scss | Syntax::Sass));
 
         let (first, Span { start, mut end }) = match self.cursor.peek()? {
-            TokenWithSpan { token: Token::Ident(..), .. } => {
+            TokenWithSpan {
+                token: Token::Ident(..),
+                ..
+            } => {
                 let (ident, ident_span) = self.cursor.expect_ident()?;
                 (
                     SassInterpolatedIdentElement::Static(
@@ -515,9 +552,10 @@ impl<'a> Parser<'a> {
                     ident_span,
                 )
             }
-            TokenWithSpan { token: Token::HashLBrace(..), .. } => {
-                self.parse_sass_interpolated_ident_expr()?
-            }
+            TokenWithSpan {
+                token: Token::HashLBrace(..),
+                ..
+            } => self.parse_sass_interpolated_ident_expr()?,
             TokenWithSpan { token, span } => {
                 return Err(Error {
                     kind: ErrorKind::ExpectOneOf(vec!["<ident>", "#{"], token.symbol()),
@@ -578,7 +616,10 @@ impl<'a> Parser<'a> {
         let start = self.cursor.expect_hash_l_brace()?.1.start;
         let expr = self.parse_maybe_sass_list(/* allow_comma */ true)?;
         let end = self.cursor.expect_r_brace()?.1.end;
-        Ok((SassInterpolatedIdentElement::Expression(expr), Span { start, end }))
+        Ok((
+            SassInterpolatedIdentElement::Expression(expr),
+            Span { start, end },
+        ))
     }
 
     // Call arguments for @include / function calls:
@@ -586,31 +627,47 @@ impl<'a> Parser<'a> {
     // https://sass-lang.com/documentation/at-rules/mixin#passing-arguments
     pub(super) fn parse_sass_invocation_args(
         &mut self,
-    ) -> PResult<(oxc_allocator::Vec<'a, ComponentValue<'a>>, oxc_allocator::Vec<'a, Span>)> {
+    ) -> PResult<(
+        oxc_allocator::Vec<'a, ComponentValue<'a>>,
+        oxc_allocator::Vec<'a, Span>,
+    )> {
         debug_assert!(matches!(self.syntax, Syntax::Scss | Syntax::Sass));
 
         let mut values = self.vec_with_capacity(4);
         let mut comma_spans = self.vec();
-        while !matches!(self.cursor.peek()?.token, Token::RParen(..) | Token::Eof(..)) {
+        while !matches!(
+            self.cursor.peek()?.token,
+            Token::RParen(..) | Token::Eof(..)
+        ) {
             match self.cursor.peek()?.token {
                 Token::Comma(..) => {
                     let TokenWithSpan { span, .. } = self.cursor.bump()?;
-                    self.recoverable_errors
-                        .push(Error { kind: ErrorKind::ExpectComponentValue, span });
+                    self.recoverable_errors.push(Error {
+                        kind: ErrorKind::ExpectComponentValue,
+                        span,
+                    });
                     continue;
                 }
                 _ => {
                     let value = self.parse_maybe_sass_list(/* allow_comma */ false)?;
                     if let Some((_, span)) = self.cursor.eat_dot_dot_dot()? {
-                        let span = Span { start: value.span().start, end: span.end };
-                        values.push(ComponentValue::SassArbitraryArgument(SassArbitraryArgument {
-                            value: self.alloc(value),
-                            span,
-                        }));
+                        let span = Span {
+                            start: value.span().start,
+                            end: span.end,
+                        };
+                        values.push(ComponentValue::SassArbitraryArgument(
+                            SassArbitraryArgument {
+                                value: self.alloc(value),
+                                span,
+                            },
+                        ));
                     } else if let ComponentValue::SassVariable(sass_var) = value {
                         if let Some((_, colon_span)) = self.cursor.eat_colon()? {
                             let value = self.parse_maybe_sass_list(/* allow_comma */ false)?;
-                            let span = Span { start: sass_var.span.start, end: value.span().end };
+                            let span = Span {
+                                start: sass_var.span.start,
+                                end: value.span().end,
+                            };
                             values.push(ComponentValue::SassKeywordArgument(SassKeywordArgument {
                                 name: sass_var,
                                 colon_span,
@@ -625,7 +682,10 @@ impl<'a> Parser<'a> {
                     }
                 }
             }
-            if !matches!(self.cursor.peek()?.token, Token::RParen(..) | Token::Eof(..)) {
+            if !matches!(
+                self.cursor.peek()?.token,
+                Token::RParen(..) | Token::Eof(..)
+            ) {
                 comma_spans.push(self.cursor.expect_comma()?.1);
             }
         }
@@ -640,8 +700,14 @@ impl<'a> Parser<'a> {
         &mut self,
         allow_overridable: bool,
     ) -> PResult<Option<SassModuleConfig<'a>>> {
-        if self.cursor.peek()?.is_ident_name_eq_ignore_ascii_case(self.source, "with") {
-            let TokenWithSpan { span: with_span, .. } = self.cursor.bump()?;
+        if self
+            .cursor
+            .peek()?
+            .is_ident_name_eq_ignore_ascii_case(self.source, "with")
+        {
+            let TokenWithSpan {
+                span: with_span, ..
+            } = self.cursor.bump()?;
             let start = with_span.start;
             let end;
             self.eat_sass_line_continuation()?;
@@ -699,8 +765,17 @@ impl<'a> Parser<'a> {
             (self.vec(), value.span().end)
         };
 
-        let span = Span { start: variable.span.start, end };
-        Ok(SassModuleConfigItem { variable, colon_span, value, flags, span })
+        let span = Span {
+            start: variable.span.start,
+            end,
+        };
+        Ok(SassModuleConfigItem {
+            variable,
+            colon_span,
+            value,
+            flags,
+            span,
+        })
     }
 
     /// This method will consume `)` token.
@@ -723,15 +798,25 @@ impl<'a> Parser<'a> {
             match token_with_span.token {
                 Token::Comma(..) => {
                     let span = name.span;
-                    parameters.push(SassParameter { name, default_value: None, span });
+                    parameters.push(SassParameter {
+                        name,
+                        default_value: None,
+                        span,
+                    });
                     comma_spans.push(token_with_span.span);
                     continue;
                 }
                 Token::Colon(..) => {
                     let value = self.parse_maybe_sass_list(/* allow_comma */ false)?;
                     let end = value.span().end;
-                    let default_value_span = Span { start: token_with_span.span.start, end };
-                    let span = Span { start: name.span.start, end };
+                    let default_value_span = Span {
+                        start: token_with_span.span.start,
+                        end,
+                    };
+                    let span = Span {
+                        start: name.span.start,
+                        end,
+                    };
                     parameters.push(SassParameter {
                         name,
                         default_value: Some(SassParameterDefaultValue {
@@ -743,7 +828,10 @@ impl<'a> Parser<'a> {
                     });
                 }
                 Token::DotDotDot(..) => {
-                    let span = Span { start: name.span().start, end: token_with_span.span.end };
+                    let span = Span {
+                        start: name.span().start,
+                        end: token_with_span.span.end,
+                    };
                     arbitrary_parameter = Some(SassArbitraryParameter { name, span });
                     if let Some((_, comma_span)) = self.cursor.eat_comma()? {
                         comma_spans.push(comma_span);
@@ -753,7 +841,11 @@ impl<'a> Parser<'a> {
                 }
                 Token::RParen(..) => {
                     let span = name.span;
-                    parameters.push(SassParameter { name, default_value: None, span });
+                    parameters.push(SassParameter {
+                        name,
+                        default_value: None,
+                        span,
+                    });
                     end = token_with_span.span.end;
                     break;
                 }
@@ -795,8 +887,15 @@ impl<'a> Parser<'a> {
         let expr_span = member.span();
         util::assert_no_ws_or_comment(&dot_span, expr_span)?;
 
-        let span = Span { start: module.span.start, end: expr_span.end };
-        Ok(SassQualifiedName { module, member, span })
+        let span = Span {
+            start: module.span.start,
+            end: expr_span.end,
+        };
+        Ok(SassQualifiedName {
+            module,
+            member,
+            span,
+        })
     }
 
     // <unary-expression> = [ '+' | '-' | not ]? <value>
@@ -808,11 +907,17 @@ impl<'a> Parser<'a> {
             return Ok(ComponentValue::TokenWithSpan(self.cursor.bump()?));
         }
         let op = match self.cursor.peek()? {
-            TokenWithSpan { token: Token::Plus(..), .. } => SassUnaryOperator {
+            TokenWithSpan {
+                token: Token::Plus(..),
+                ..
+            } => SassUnaryOperator {
                 kind: SassUnaryOperatorKind::Plus,
                 span: self.cursor.bump()?.span,
             },
-            TokenWithSpan { token: Token::Minus(..), .. } => SassUnaryOperator {
+            TokenWithSpan {
+                token: Token::Minus(..),
+                ..
+            } => SassUnaryOperator {
                 kind: SassUnaryOperatorKind::Minus,
                 span: self.cursor.bump()?.span,
             },
@@ -826,7 +931,10 @@ impl<'a> Parser<'a> {
         // `$a: not` may continue on the next line
         self.eat_sass_line_continuation()?;
         let expr = self.parse_sass_unary_expression()?;
-        let span = Span { start: op.span.start, end: expr.span().end };
+        let span = Span {
+            start: op.span.start,
+            end: expr.span().end,
+        };
         Ok(ComponentValue::SassUnaryExpression(SassUnaryExpression {
             expr: self.alloc(expr),
             op,
@@ -860,11 +968,20 @@ impl<'a> Parse<'a> for SassAtRootQuery<'a> {
             let (token, span) = input.cursor.expect_ident()?;
             let ident_name = token.name();
             if ident_name.eq_ignore_ascii_case("with") {
-                SassAtRootQueryModifier { kind: SassAtRootQueryModifierKind::With, span }
+                SassAtRootQueryModifier {
+                    kind: SassAtRootQueryModifierKind::With,
+                    span,
+                }
             } else if ident_name.eq_ignore_ascii_case("without") {
-                SassAtRootQueryModifier { kind: SassAtRootQueryModifierKind::Without, span }
+                SassAtRootQueryModifier {
+                    kind: SassAtRootQueryModifierKind::Without,
+                    span,
+                }
             } else {
-                return Err(Error { kind: ErrorKind::ExpectSassAtRootWithOrWithout, span });
+                return Err(Error {
+                    kind: ErrorKind::ExpectSassAtRootWithOrWithout,
+                    span,
+                });
             }
         };
         let colon_span = input.cursor.expect_colon()?.1;
@@ -883,7 +1000,12 @@ impl<'a> Parse<'a> for SassAtRootQuery<'a> {
         }
         let end = input.cursor.expect_r_paren()?.1.end;
 
-        Ok(SassAtRootQuery { modifier, colon_span, rules, span: Span { start, end } })
+        Ok(SassAtRootQuery {
+            modifier,
+            colon_span,
+            rules,
+            span: Span { start, end },
+        })
     }
 }
 
@@ -893,8 +1015,15 @@ impl<'a> Parse<'a> for SassConditionalClause<'a> {
         input.eat_sass_line_continuation()?;
         let condition = input.parse::<ComponentValue>()?;
         let block = input.parse::<SimpleBlock>()?;
-        let span = Span { start: condition.span().start, end: block.span.end };
-        Ok(SassConditionalClause { condition, block, span })
+        let span = Span {
+            start: condition.span().start,
+            end: block.span.end,
+        };
+        Ok(SassConditionalClause {
+            condition,
+            block,
+            span,
+        })
     }
 }
 
@@ -906,7 +1035,11 @@ impl<'a> Parse<'a> for SassContent<'a> {
         let (_, Span { start, .. }) = input.cursor.expect_l_paren()?;
         let (args, comma_spans) = input.parse_sass_invocation_args()?;
         let (_, Span { end, .. }) = input.cursor.expect_r_paren()?;
-        Ok(SassContent { args, comma_spans, span: Span { start, end } })
+        Ok(SassContent {
+            args,
+            comma_spans,
+            span: Span { start, end },
+        })
     }
 }
 
@@ -926,7 +1059,9 @@ impl<'a> Parse<'a> for SassEach<'a> {
         loop {
             // the comma may sit on a continuation line (`@each $a\n  , $b in ...`)
             input.eat_sass_line_continuation()?;
-            let Some((_, comma_span)) = input.cursor.eat_comma()? else { break };
+            let Some((_, comma_span)) = input.cursor.eat_comma()? else {
+                break;
+            };
             comma_spans.push(comma_span);
             input.eat_sass_line_continuation()?;
             bindings.push(input.parse()?);
@@ -936,13 +1071,25 @@ impl<'a> Parse<'a> for SassEach<'a> {
         input.eat_sass_line_continuation()?;
         let (keyword_in, keyword_in_span) = input.cursor.expect_ident()?;
         if keyword_in.name() != "in" {
-            return Err(Error { kind: ErrorKind::ExpectSassKeyword("in"), span: keyword_in_span });
+            return Err(Error {
+                kind: ErrorKind::ExpectSassKeyword("in"),
+                span: keyword_in_span,
+            });
         }
 
         input.eat_sass_line_continuation()?;
         let expr = input.parse_maybe_sass_list(/* allow_comma */ true)?;
-        let span = Span { start, end: expr.span().end };
-        Ok(SassEach { bindings, comma_spans, in_span: keyword_in_span, expr, span })
+        let span = Span {
+            start,
+            end: expr.span().end,
+        };
+        Ok(SassEach {
+            bindings,
+            comma_spans,
+            in_span: keyword_in_span,
+            expr,
+            span,
+        })
     }
 }
 
@@ -960,8 +1107,14 @@ impl<'a> Parse<'a> for SassExtend<'a> {
             let (keyword, keyword_span) = input.cursor.expect_ident_without_ws_or_comments()?;
             if keyword.name().eq_ignore_ascii_case("optional") {
                 end = keyword_span.end;
-                let span = Span { start: exclamation_span.start, end: keyword_span.end };
-                Some(SassFlag { keyword: input.ident(keyword, keyword_span), span })
+                let span = Span {
+                    start: exclamation_span.start,
+                    end: keyword_span.end,
+                };
+                Some(SassFlag {
+                    keyword: input.ident(keyword, keyword_span),
+                    span,
+                })
             } else {
                 input.recoverable_errors.push(Error {
                     kind: ErrorKind::ExpectSassKeyword("optional"),
@@ -973,7 +1126,11 @@ impl<'a> Parse<'a> for SassExtend<'a> {
             None
         };
 
-        Ok(SassExtend { selectors, optional, span: Span { start, end } })
+        Ok(SassExtend {
+            selectors,
+            optional,
+            span: Span { start, end },
+        })
     }
 }
 
@@ -1003,8 +1160,18 @@ impl<'a> Parse<'a> for SassFor<'a> {
         input.eat_sass_line_continuation()?;
         let end = input.parse::<ComponentValue>()?;
 
-        let span = Span { start: binding.span.start, end: end.span().end };
-        Ok(SassFor { binding, from_span: keyword_from_span, start, end, boundary, span })
+        let span = Span {
+            start: binding.span.start,
+            end: end.span().end,
+        };
+        Ok(SassFor {
+            binding,
+            from_span: keyword_from_span,
+            start,
+            end,
+            boundary,
+            span,
+        })
     }
 }
 
@@ -1013,9 +1180,18 @@ impl<'a> Parse<'a> for SassForBoundary {
     fn parse(input: &mut Parser<'a>) -> PResult<Self> {
         let (keyword, span) = input.cursor.expect_ident()?;
         match &*keyword.name() {
-            "to" => Ok(SassForBoundary { kind: SassForBoundaryKind::Exclusive, span }),
-            "through" => Ok(SassForBoundary { kind: SassForBoundaryKind::Inclusive, span }),
-            _ => Err(Error { kind: ErrorKind::ExpectSassKeyword("to"), span }),
+            "to" => Ok(SassForBoundary {
+                kind: SassForBoundaryKind::Exclusive,
+                span,
+            }),
+            "through" => Ok(SassForBoundary {
+                kind: SassForBoundaryKind::Inclusive,
+                span,
+            }),
+            _ => Err(Error {
+                kind: ErrorKind::ExpectSassKeyword("to"),
+                span,
+            }),
         }
     }
 }
@@ -1031,14 +1207,24 @@ impl<'a> Parse<'a> for SassForward<'a> {
         let path = input.parse::<InterpolableStr>()?;
         let mut span = *path.span();
 
-        let prefix = if input.cursor.peek()?.is_ident_name_eq_ignore_ascii_case(input.source, "as")
+        let prefix = if input
+            .cursor
+            .peek()?
+            .is_ident_name_eq_ignore_ascii_case(input.source, "as")
         {
             let TokenWithSpan { span: as_span, .. } = input.cursor.bump()?;
             input.eat_sass_line_continuation()?;
             let name = input.parse()?;
             let (_, Span { end, .. }) = input.cursor.expect_asterisk_without_ws_or_comments()?;
-            let span = Span { start: as_span.start, end };
-            Some(SassForwardPrefix { as_span, name, span })
+            let span = Span {
+                start: as_span.start,
+                end,
+            };
+            Some(SassForwardPrefix {
+                as_span,
+                name,
+                span,
+            })
         } else {
             None
         };
@@ -1072,7 +1258,10 @@ impl<'a> Parse<'a> for SassForward<'a> {
                     },
                     members,
                     comma_spans,
-                    span: Span { start, end: input.cursor.tokenizer.current_offset() },
+                    span: Span {
+                        start,
+                        end: input.cursor.tokenizer.current_offset(),
+                    },
                 })
             } else if name.eq_ignore_ascii_case("show") {
                 let keyword_span = input.cursor.bump()?.span;
@@ -1099,7 +1288,10 @@ impl<'a> Parse<'a> for SassForward<'a> {
                     },
                     members,
                     comma_spans,
-                    span: Span { start, end: input.cursor.tokenizer.current_offset() },
+                    span: Span {
+                        start,
+                        end: input.cursor.tokenizer.current_offset(),
+                    },
                 })
             } else {
                 None
@@ -1113,7 +1305,13 @@ impl<'a> Parse<'a> for SassForward<'a> {
             span.end = config.span.end;
         }
 
-        Ok(SassForward { path, prefix, visibility, config, span })
+        Ok(SassForward {
+            path,
+            prefix,
+            visibility,
+            config,
+            span,
+        })
     }
 }
 
@@ -1131,8 +1329,15 @@ impl<'a> Parse<'a> for SassFunction<'a> {
         input.eat_sass_line_continuation()?;
         let parameters = input.parse::<SassParameters>()?;
 
-        let span = Span { start, end: parameters.span.end };
-        Ok(SassFunction { name, parameters, span })
+        let span = Span {
+            start,
+            end: parameters.span.end,
+        };
+        Ok(SassFunction {
+            name,
+            parameters,
+            span,
+        })
     }
 }
 
@@ -1167,13 +1372,19 @@ impl<'a> Parse<'a> for SassIfAtRule<'a> {
                             "elseif" => false,
                             _ => {
                                 let span = p.cursor.peek()?.span;
-                                return Err(Error { kind: ErrorKind::TryParseError, span });
+                                return Err(Error {
+                                    kind: ErrorKind::TryParseError,
+                                    span,
+                                });
                             }
                         }
                     }
                     _ => {
                         let span = p.cursor.peek()?.span;
-                        return Err(Error { kind: ErrorKind::TryParseError, span });
+                        return Err(Error {
+                            kind: ErrorKind::TryParseError,
+                            span,
+                        });
                     }
                 };
                 Ok((p.cursor.bump()?.span, is_else))
@@ -1183,7 +1394,9 @@ impl<'a> Parse<'a> for SassIfAtRule<'a> {
             } else {
                 else_keyword(input)
             };
-            let Ok((else_span, is_else)) = else_keyword else { break };
+            let Ok((else_span, is_else)) = else_keyword else {
+                break;
+            };
             else_spans.push(else_span);
             if is_else {
                 input.eat_sass_line_continuation()?;
@@ -1199,16 +1412,29 @@ impl<'a> Parse<'a> for SassIfAtRule<'a> {
             }
         }
 
-        debug_assert_eq!(else_spans.len(), else_if_clauses.len() + else_clause.iter().count());
+        debug_assert_eq!(
+            else_spans.len(),
+            else_if_clauses.len() + else_clause.iter().count()
+        );
         let span = Span {
             start,
             end: else_clause
                 .as_ref()
                 .map(|else_clause| else_clause.span.end)
-                .or_else(|| else_if_clauses.last().map(|else_if_clause| else_if_clause.span.end))
+                .or_else(|| {
+                    else_if_clauses
+                        .last()
+                        .map(|else_if_clause| else_if_clause.span.end)
+                })
                 .unwrap_or(if_clause.span.end),
         };
-        Ok(SassIfAtRule { if_clause, else_if_clauses, else_clause, else_spans, span })
+        Ok(SassIfAtRule {
+            if_clause,
+            else_if_clauses,
+            else_clause,
+            else_spans,
+            span,
+        })
     }
 }
 
@@ -1228,10 +1454,18 @@ impl<'a> Parse<'a> for SassImportPrelude<'a> {
         }
         debug_assert_eq!(comma_spans.len() + 1, paths.len());
 
-        if let Some(Str { span: Span { end, .. }, .. }) = paths.last() {
+        if let Some(Str {
+            span: Span { end, .. },
+            ..
+        }) = paths.last()
+        {
             span.end = *end;
         }
-        Ok(SassImportPrelude { paths, comma_spans, span })
+        Ok(SassImportPrelude {
+            paths,
+            comma_spans,
+            span,
+        })
     }
 }
 
@@ -1254,16 +1488,24 @@ impl<'a> Parse<'a> for SassInclude<'a> {
             None
         };
 
-        let content_block_params =
-            if input.cursor.peek()?.is_ident_name_eq_ignore_ascii_case(input.source, "using") {
-                let content_block_params = input.parse::<SassIncludeContentBlockParams>()?;
-                span.end = content_block_params.span.end;
-                Some(content_block_params)
-            } else {
-                None
-            };
+        let content_block_params = if input
+            .cursor
+            .peek()?
+            .is_ident_name_eq_ignore_ascii_case(input.source, "using")
+        {
+            let content_block_params = input.parse::<SassIncludeContentBlockParams>()?;
+            span.end = content_block_params.span.end;
+            Some(content_block_params)
+        } else {
+            None
+        };
 
-        Ok(SassInclude { name, arguments, content_block_params, span })
+        Ok(SassInclude {
+            name,
+            arguments,
+            content_block_params,
+            span,
+        })
     }
 }
 
@@ -1273,7 +1515,11 @@ impl<'a> Parse<'a> for SassIncludeArgs<'a> {
         let (_, Span { start, .. }) = input.cursor.expect_l_paren()?;
         let (args, comma_spans) = input.parse_sass_invocation_args()?;
         let (_, Span { end, .. }) = input.cursor.expect_r_paren()?;
-        Ok(SassIncludeArgs { args, comma_spans, span: Span { start, end } })
+        Ok(SassIncludeArgs {
+            args,
+            comma_spans,
+            span: Span { start, end },
+        })
     }
 }
 
@@ -1285,10 +1531,20 @@ impl<'a> Parse<'a> for SassIncludeContentBlockParams<'a> {
             let using_span = token.span;
             input.eat_sass_line_continuation()?;
             let params = input.parse::<SassParameters>()?;
-            let span = Span { start: using_span.start, end: params.span.end };
-            Ok(SassIncludeContentBlockParams { using_span, params, span })
+            let span = Span {
+                start: using_span.start,
+                end: params.span.end,
+            };
+            Ok(SassIncludeContentBlockParams {
+                using_span,
+                params,
+                span,
+            })
         } else {
-            Err(Error { kind: ErrorKind::ExpectSassKeyword("using"), span: token.span })
+            Err(Error {
+                kind: ErrorKind::ExpectSassKeyword("using"),
+                span: token.span,
+            })
         }
     }
 }
@@ -1390,7 +1646,10 @@ impl<'a> Parse<'a> for SassList<'a> {
             Ok(list)
         } else {
             let TokenWithSpan { token, span } = input.cursor.bump()?;
-            Err(Error { kind: ErrorKind::Unexpected(",", token.symbol()), span })
+            Err(Error {
+                kind: ErrorKind::Unexpected(",", token.symbol()),
+                span,
+            })
         }
     }
 }
@@ -1427,7 +1686,11 @@ impl<'a> Parse<'a> for SassMap<'a> {
         debug_assert!(items.len() - comma_spans.len() <= 1);
 
         let end = input.cursor.expect_r_paren()?.1.end;
-        Ok(SassMap { items, comma_spans, span: Span { start, end } })
+        Ok(SassMap {
+            items,
+            comma_spans,
+            span: Span { start, end },
+        })
     }
 }
 
@@ -1437,8 +1700,16 @@ impl<'a> Parse<'a> for SassMapItem<'a> {
         let key = input.parse_maybe_sass_list(/* allow_comma */ false)?;
         let (_, colon_span) = input.cursor.expect_colon()?;
         let value = input.parse_maybe_sass_list(/* allow_comma */ false)?;
-        let span = Span { start: key.span().start, end: value.span().end };
-        Ok(SassMapItem { key, colon_span, value, span })
+        let span = Span {
+            start: key.span().start,
+            end: value.span().end,
+        };
+        Ok(SassMapItem {
+            key,
+            colon_span,
+            value,
+            span,
+        })
     }
 }
 
@@ -1462,7 +1733,11 @@ impl<'a> Parse<'a> for SassMixin<'a> {
             None
         };
 
-        Ok(SassMixin { name, parameters, span: Span { start, end } })
+        Ok(SassMixin {
+            name,
+            parameters,
+            span: Span { start, end },
+        })
     }
 }
 
@@ -1471,7 +1746,12 @@ impl<'a> Parse<'a> for SassParameters<'a> {
     fn parse(input: &mut Parser<'a>) -> PResult<Self> {
         let (_, Span { start, .. }) = input.cursor.expect_l_paren()?;
         let (params, arbitrary_param, comma_spans, end) = input.parse_sass_params()?;
-        Ok(SassParameters { params, arbitrary_param, comma_spans, span: Span { start, end } })
+        Ok(SassParameters {
+            params,
+            arbitrary_param,
+            comma_spans,
+            span: Span { start, end },
+        })
     }
 }
 
@@ -1499,7 +1779,10 @@ impl<'a> Parse<'a> for SassParenthesizedExpression<'a> {
             .parse_maybe_sass_list(/* allow_comma */ true)?;
         let expr = input.alloc(expr);
         let end = input.cursor.expect_r_paren()?.1.end;
-        Ok(SassParenthesizedExpression { expr, span: Span { start, end } })
+        Ok(SassParenthesizedExpression {
+            expr,
+            span: Span { start, end },
+        })
     }
 }
 
@@ -1512,7 +1795,10 @@ impl<'a> Parse<'a> for SassPlaceholderSelector<'a> {
         let name = input.parse::<InterpolableIdent>()?;
         let name_span = name.span();
         util::assert_no_ws_or_comment(&percent_span, name_span)?;
-        let span = Span { start: percent_span.start, end: name_span.end };
+        let span = Span {
+            start: percent_span.start,
+            end: name_span.end,
+        };
         Ok(SassPlaceholderSelector { name, span })
     }
 }
@@ -1526,21 +1812,29 @@ impl<'a> Parse<'a> for SassUse<'a> {
         let path = input.parse::<InterpolableStr>()?;
         let mut span = *path.span();
 
-        let namespace =
-            if input.cursor.peek()?.is_ident_name_eq_ignore_ascii_case(input.source, "as") {
-                let namespace = input.parse::<SassUseNamespace>()?;
-                span.end = namespace.span.end;
-                Some(namespace)
-            } else {
-                None
-            };
+        let namespace = if input
+            .cursor
+            .peek()?
+            .is_ident_name_eq_ignore_ascii_case(input.source, "as")
+        {
+            let namespace = input.parse::<SassUseNamespace>()?;
+            span.end = namespace.span.end;
+            Some(namespace)
+        } else {
+            None
+        };
 
         let config = input.parse_sass_module_config(/* allow_overridable */ false)?;
         if let Some(config) = &config {
             span.end = config.span.end;
         }
 
-        Ok(SassUse { path, namespace, config, span })
+        Ok(SassUse {
+            path,
+            namespace,
+            config,
+            span,
+        })
     }
 }
 
@@ -1551,12 +1845,21 @@ impl<'a> Parse<'a> for SassUseNamespace<'a> {
         let as_span = if token.is_ident_name_eq_ignore_ascii_case(input.source, "as") {
             input.cursor.bump()?.span
         } else {
-            return Err(Error { kind: ErrorKind::ExpectSassKeyword("as"), span: token.span });
+            return Err(Error {
+                kind: ErrorKind::ExpectSassKeyword("as"),
+                span: token.span,
+            });
         };
         input.eat_sass_line_continuation()?;
         match input.cursor.bump()? {
-            TokenWithSpan { token: Token::Asterisk(..), span: asterisk_span } => {
-                let span = Span { start: as_span.start, end: asterisk_span.end };
+            TokenWithSpan {
+                token: Token::Asterisk(..),
+                span: asterisk_span,
+            } => {
+                let span = Span {
+                    start: as_span.start,
+                    end: asterisk_span.end,
+                };
                 Ok(SassUseNamespace {
                     as_span,
                     kind: SassUseNamespaceKind::Unnamed(SassUnnamedNamespace {
@@ -1565,18 +1868,25 @@ impl<'a> Parse<'a> for SassUseNamespace<'a> {
                     span,
                 })
             }
-            token @ TokenWithSpan { token: Token::Ident(..), span: ident_span } => {
+            token @ TokenWithSpan {
+                token: Token::Ident(..),
+                span: ident_span,
+            } => {
                 let ident = token.ident(input.source).unwrap();
-                let span = Span { start: as_span.start, end: ident_span.end };
+                let span = Span {
+                    start: as_span.start,
+                    end: ident_span.end,
+                };
                 Ok(SassUseNamespace {
                     as_span,
                     kind: SassUseNamespaceKind::Named(input.ident(ident, ident_span)),
                     span,
                 })
             }
-            TokenWithSpan { span, .. } => {
-                Err(Error { kind: ErrorKind::ExpectSassUseNamespace, span })
-            }
+            TokenWithSpan { span, .. } => Err(Error {
+                kind: ErrorKind::ExpectSassUseNamespace,
+                span,
+            }),
         }
     }
 }
@@ -1604,7 +1914,9 @@ impl<'a> Parse<'a> for SassVariableDeclaration<'a> {
         let namespace = if let Some((ident_token, span)) = input.cursor.eat_ident()? {
             let (_, dot_span) = input.cursor.expect_dot()?;
             util::assert_no_ws_or_comment(&span, &dot_span)?;
-            let TokenWithSpan { span: next_span, .. } = input.cursor.peek()?;
+            let TokenWithSpan {
+                span: next_span, ..
+            } = input.cursor.peek()?;
             util::assert_no_ws_or_comment(&dot_span, next_span)?;
             Some(input.ident(ident_token, span))
         } else {
@@ -1633,12 +1945,20 @@ impl<'a> Parse<'a> for SassVariableDeclaration<'a> {
         };
 
         if namespace.is_some() && flags.iter().any(|flag| flag.keyword.name == "global") {
-            input
-                .recoverable_errors
-                .push(Error { kind: ErrorKind::UnexpectedSassFlag("global"), span });
+            input.recoverable_errors.push(Error {
+                kind: ErrorKind::UnexpectedSassFlag("global"),
+                span,
+            });
         }
 
-        Ok(SassVariableDeclaration { namespace, name, colon_span, value, flags, span })
+        Ok(SassVariableDeclaration {
+            namespace,
+            name,
+            colon_span,
+            value,
+            flags,
+            span,
+        })
     }
 }
 
@@ -1654,7 +1974,15 @@ impl<'a> Parse<'a> for UnknownSassAtRule<'a> {
         util::assert_no_ws_or_comment(&at_span, name_span)?;
 
         let (prelude, block, end) = input.parse_unknown_at_rule()?;
-        let span = Span { start: at_span.start, end: end.unwrap_or(name_span.end) };
-        Ok(UnknownSassAtRule { name, prelude, block, span })
+        let span = Span {
+            start: at_span.start,
+            end: end.unwrap_or(name_span.end),
+        };
+        Ok(UnknownSassAtRule {
+            name,
+            prelude,
+            block,
+            span,
+        })
     }
 }

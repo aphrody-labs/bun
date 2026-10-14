@@ -19,9 +19,13 @@ fn transform(path: &Path, source_text: &str) -> String {
         parser_ret.diagnostics
     );
 
-    let id_ret =
-        IsolatedDeclarations::new(&allocator, IsolatedDeclarationsOptions { strip_internal: true })
-            .build(&parser_ret.program);
+    let id_ret = IsolatedDeclarations::new(
+        &allocator,
+        IsolatedDeclarationsOptions {
+            strip_internal: true,
+        },
+    )
+    .build(&parser_ret.program);
     let code = Codegen::new().build(&id_ret.program).code;
 
     let mut snapshot =
@@ -31,7 +35,11 @@ fn transform(path: &Path, source_text: &str) -> String {
         let error_messages = id_ret
             .diagnostics
             .iter()
-            .map(|diagnostic| diagnostic.clone().render_with_source_code(Arc::clone(&source)))
+            .map(|diagnostic| {
+                diagnostic
+                    .clone()
+                    .render_with_source_code(Arc::clone(&source))
+            })
             .fold(String::new(), |output, error| output + &error);
 
         write!(

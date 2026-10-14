@@ -107,7 +107,11 @@ pub fn generate_ancestor(schema: &Schema) -> TokenStream {
             }
 
             // Lifetimes for Without struct
-            let lifetimes = if has_lifetime { quote!(<'a, 't>) } else { quote!(<'t>) };
+            let lifetimes = if has_lifetime {
+                quote!(<'a, 't>)
+            } else {
+                quote!(<'t>)
+            };
 
             without_structs.extend(quote! {
                 ///@@line_break
@@ -154,8 +158,9 @@ pub fn generate_ancestor(schema: &Schema) -> TokenStream {
                 && enum_def.visit.has_visitor()
             {
                 let enum_name = enum_def.name().to_string();
-                if let Some(entry) =
-                    variant_names_for_enums.iter_mut().find(|(name, _)| name == &enum_name)
+                if let Some(entry) = variant_names_for_enums
+                    .iter_mut()
+                    .find(|(name, _)| name == &enum_name)
                 {
                     entry.1.push(variant_name.clone());
                 } else {

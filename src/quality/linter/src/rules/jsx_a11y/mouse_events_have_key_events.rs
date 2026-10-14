@@ -26,9 +26,11 @@ fn miss_on_focus(span: Span, attr_name: &str) -> OxcDiagnostic {
 }
 
 fn miss_on_blur(span: Span, attr_name: &str) -> OxcDiagnostic {
-    OxcDiagnostic::warn(format!("`{attr_name}` must be accompanied by `onBlur` for accessibility."))
-        .with_help("Try to add `onBlur`.")
-        .with_label(span)
+    OxcDiagnostic::warn(format!(
+        "`{attr_name}` must be accompanied by `onBlur` for accessibility."
+    ))
+    .with_help("Try to add `onBlur`.")
+    .with_label(span)
 }
 
 #[derive(Debug, Default, Clone, Deserialize)]
@@ -151,17 +153,41 @@ fn test() {
     }]));
 
     let pass = vec![
-        ("<div onMouseOver={() => void 0} onFocus={() => void 0} />;", None),
-        ("<div onMouseOver={() => void 0} onFocus={() => void 0} {...props} />;", None),
-        ("<div onMouseOver={handleMouseOver} onFocus={handleFocus} />;", None),
-        ("<div onMouseOver={handleMouseOver} onFocus={handleFocus} {...props} />;", None),
+        (
+            "<div onMouseOver={() => void 0} onFocus={() => void 0} />;",
+            None,
+        ),
+        (
+            "<div onMouseOver={() => void 0} onFocus={() => void 0} {...props} />;",
+            None,
+        ),
+        (
+            "<div onMouseOver={handleMouseOver} onFocus={handleFocus} />;",
+            None,
+        ),
+        (
+            "<div onMouseOver={handleMouseOver} onFocus={handleFocus} {...props} />;",
+            None,
+        ),
         ("<div />;", None),
         ("<div onBlur={() => {}} />", None),
         ("<div onFocus={() => {}} />", None),
-        ("<div onMouseOut={() => void 0} onBlur={() => void 0} />", None),
-        ("<div onMouseOut={() => void 0} onBlur={() => void 0} {...props} />", None),
-        ("<div onMouseOut={handleMouseOut} onBlur={handleOnBlur} />", None),
-        ("<div onMouseOut={handleMouseOut} onBlur={handleOnBlur} {...props} />", None),
+        (
+            "<div onMouseOut={() => void 0} onBlur={() => void 0} />",
+            None,
+        ),
+        (
+            "<div onMouseOut={() => void 0} onBlur={() => void 0} {...props} />",
+            None,
+        ),
+        (
+            "<div onMouseOut={handleMouseOut} onBlur={handleOnBlur} />",
+            None,
+        ),
+        (
+            "<div onMouseOut={handleMouseOut} onBlur={handleOnBlur} {...props} />",
+            None,
+        ),
         ("<MyElement />", None),
         ("<MyElement onMouseOver={() => {}} />", None),
         ("<MyElement onMouseOut={() => {}} />", None),
@@ -210,7 +236,10 @@ fn test() {
         ("<div onMouseOut />", None),
         ("<div onMouseOver={handler} onFocus={handler} />", None),
         ("<div onMouseOut={handler} onBlur={handler} />", None),
-        ("<div onMouseOver={null} onMouseEnter={handler} onFocus={handler} />", configured.clone()),
+        (
+            "<div onMouseOver={null} onMouseEnter={handler} onFocus={handler} />",
+            configured.clone(),
+        ),
         (
             "<div onMouseOut={undefined} onMouseLeave={handler} onBlur={handler} />",
             configured.clone(),
@@ -221,7 +250,10 @@ fn test() {
     let fail = vec![
         ("<div onMouseOver={() => void 0} />;", None),
         ("<div onMouseOut={() => void 0} />", None),
-        ("<div onMouseOver={() => void 0} onFocus={undefined} />;", None),
+        (
+            "<div onMouseOver={() => void 0} onFocus={undefined} />;",
+            None,
+        ),
         ("<div onMouseOut={() => void 0} onBlur={undefined} />", None),
         ("<div onMouseOver={() => void 0} {...props} />", None),
         ("<div onMouseOut={() => void 0} {...props} />", None),
@@ -259,12 +291,29 @@ fn test() {
         ("<div onMouseOut={handler} onBlur={undefined} />", None),
         ("<div onMouseOver={handler} onFocus />", None),
         ("<div onMouseOut={handler} onBlur />", None),
-        ("<div onMouseOver={null} onMouseEnter={handler} />", configured.clone()),
-        ("<div onMouseOut={undefined} onMouseLeave={handler} />", configured.clone()),
-        ("<div onMouseOver={null} onMouseEnter={handler} onFocus={null} />", configured.clone()),
-        ("<div onMouseOut={undefined} onMouseLeave={handler} onBlur={null} />", configured),
+        (
+            "<div onMouseOver={null} onMouseEnter={handler} />",
+            configured.clone(),
+        ),
+        (
+            "<div onMouseOut={undefined} onMouseLeave={handler} />",
+            configured.clone(),
+        ),
+        (
+            "<div onMouseOver={null} onMouseEnter={handler} onFocus={null} />",
+            configured.clone(),
+        ),
+        (
+            "<div onMouseOut={undefined} onMouseLeave={handler} onBlur={null} />",
+            configured,
+        ),
     ];
 
-    Tester::new(MouseEventsHaveKeyEvents::NAME, MouseEventsHaveKeyEvents::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        MouseEventsHaveKeyEvents::NAME,
+        MouseEventsHaveKeyEvents::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

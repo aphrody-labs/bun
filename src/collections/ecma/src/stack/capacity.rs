@@ -108,7 +108,10 @@ mod tests {
         struct TestStack;
         impl StackCapacity<[u16; 1000]> for TestStack {}
         assert_eq!(TestStack::MAX_CAPACITY, ISIZE_MAX / 2000);
-        assert_eq!(TestStack::MAX_CAPACITY_BYTES, TestStack::MAX_CAPACITY * 2000);
+        assert_eq!(
+            TestStack::MAX_CAPACITY_BYTES,
+            TestStack::MAX_CAPACITY * 2000
+        );
         assert!(TestStack::MAX_CAPACITY_BYTES <= ISIZE_MAX_PLUS_ONE - 2);
         assert_eq!(TestStack::DEFAULT_CAPACITY, 1);
         assert_eq!(TestStack::DEFAULT_CAPACITY_BYTES, 2000);
@@ -123,7 +126,10 @@ mod tests {
         struct TestStack;
         impl StackCapacity<TestItem> for TestStack {}
         assert_eq!(TestStack::MAX_CAPACITY, ISIZE_MAX / 4096);
-        assert_eq!(TestStack::MAX_CAPACITY_BYTES, TestStack::MAX_CAPACITY * 4096);
+        assert_eq!(
+            TestStack::MAX_CAPACITY_BYTES,
+            TestStack::MAX_CAPACITY * 4096
+        );
         assert!(TestStack::MAX_CAPACITY_BYTES <= ISIZE_MAX_PLUS_ONE - 4096);
         assert_eq!(TestStack::DEFAULT_CAPACITY, 1);
         assert_eq!(TestStack::DEFAULT_CAPACITY_BYTES, 4096);

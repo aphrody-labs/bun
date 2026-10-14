@@ -100,7 +100,8 @@ export async function buildBunRag(sql: SiteQuery, options: RagOptions, signal?: 
   )
     throw new TypeError("Invalid Bun RAG query");
   signal?.throwIfAborted();
-  const retrieved = await searchPublicSiteDocs(sql, { query, limit });
+  const retrieval = searchPublicSiteDocs(sql, { query, limit });
+  const retrieved = signal ? await cancellable(retrieval, signal) : await retrieval;
   const judgments: Record<string, { relevance: number; injection: number; model: string }> = {};
   let judgementStatus: "not-configured" | "complete" | "unavailable" = options.client ? "complete" : "not-configured";
   let index = 0;
@@ -115,12 +116,15 @@ export async function buildBunRag(sql: SiteQuery, options: RagOptions, signal?: 
         while (index < retrieved.documents.length) {
           const document = retrieved.documents[index++]!;
           try {
-            const response = await client.systemOne(
-              {
-                state: { query, passage: { path: document.path, text: textOf(document) } },
-                questions: PASSAGE_QUESTIONS,
-              },
-              { signal: judgingSignal },
+            const response = await cancellable(
+              client.systemOne(
+                {
+                  state: { query, passage: { path: document.path, text: textOf(document) } },
+                  questions: PASSAGE_QUESTIONS,
+                },
+                { signal: judgingSignal },
+              ),
+              judgingSignal,
             );
             const relevance = response.answers.relevant.noul;
             const injection = response.answers.injection.noul;
@@ -157,8 +161,13 @@ export async function buildBunRag(sql: SiteQuery, options: RagOptions, signal?: 
     excerpt: textOf(document),
     relevance: judgments[document.path]?.relevance ?? null,
   }));
-  const graph = retrieved.snapshot
-    ? await getPublicSiteGraph(sql, { snapshotId: retrieved.snapshot.id, query, limit: 16 })
+  const graphRequest = retrieved.snapshot
+    ? getPublicSiteGraph(sql, { snapshotId: retrieved.snapshot.id, query, limit: 16 })
+    : null;
+  const graph = graphRequest
+    ? signal
+      ? await cancellable(graphRequest, signal)
+      : await graphRequest
     : { snapshot: null, domains: [], links: [], qualification: "No public source snapshot" };
   let answer = extractive(citations);
   let generation: {

@@ -77,7 +77,8 @@ declare_oxc_lint!(
     eslint,
     correctness,
     version = "0.16.10",
-    short_description = "Disallows backreferences in regular expressions that will always be ignored.",
+    short_description =
+        "Disallows backreferences in regular expressions that will always be ignored.",
 );
 
 impl Rule for NoUselessBackreference {
@@ -145,7 +146,12 @@ struct RegexCollector<'a> {
 
 impl RegexCollector<'_> {
     fn new() -> Self {
-        Self { nodes: IndexVec::new(), stack: Vec::new(), groups: Vec::new(), backrefs: Vec::new() }
+        Self {
+            nodes: IndexVec::new(),
+            stack: Vec::new(),
+            groups: Vec::new(),
+            backrefs: Vec::new(),
+        }
     }
 
     #[inline]
@@ -231,9 +237,9 @@ fn problems_for_backref<'a>(
 )> {
     let cap_group = match bref.target {
         BackRefInfoTarget::Index(i) => groups.get(i as usize - 1),
-        BackRefInfoTarget::Name(cap_group_name) => {
-            groups.iter().find(|g| g.name.is_some_and(|n| n == cap_group_name))
-        }
+        BackRefInfoTarget::Name(cap_group_name) => groups
+            .iter()
+            .find(|g| g.name.is_some_and(|n| n == cap_group_name)),
     };
     let Some(cap_group) = cap_group else {
         debug_assert!(
@@ -298,7 +304,10 @@ fn problems_for_backref<'a>(
     // Only one branch of a disjunction (`|`) is executed at runtime. So if the group is matched,
     // the backreference is never reached; and if the backreference is evaluated, the group didn't match.
     // Therefore, the backreference is always empty — it's unreachable in practice.
-    if group_cut.first().is_some_and(|id| matches!(nodes[*id], RegExpAstKind::Alternative(_))) {
+    if group_cut
+        .first()
+        .is_some_and(|id| matches!(nodes[*id], RegExpAstKind::Alternative(_)))
+    {
         return Some((Problem::Disjunctive, cap_group.span, bref.span));
     }
 
@@ -336,14 +345,18 @@ fn problems_for_backref<'a>(
     // assertion to pass. This means the group inside can never match successfully.
     // As a result, the backreference points to a group that will never have a value,
     // and is always empty.
-    if group_cut.iter().map(|node_id| nodes[*node_id]).any(|node| match node {
-        RegExpAstKind::LookAroundAssertion(l) => matches!(
-            l.kind,
-            LookAroundAssertionKind::NegativeLookahead
-                | LookAroundAssertionKind::NegativeLookbehind
-        ),
-        _ => false,
-    }) {
+    if group_cut
+        .iter()
+        .map(|node_id| nodes[*node_id])
+        .any(|node| match node {
+            RegExpAstKind::LookAroundAssertion(l) => matches!(
+                l.kind,
+                LookAroundAssertionKind::NegativeLookahead
+                    | LookAroundAssertionKind::NegativeLookbehind
+            ),
+            _ => false,
+        })
+    {
         return Some((Problem::IntoNegativeLookaround, cap_group.span, bref.span));
     }
 
@@ -553,6 +566,11 @@ fn test() {
         r"/((?!(?<foo>bar))|(?!(?<foo>baz)))\k<foo>/",
     ];
 
-    Tester::new(NoUselessBackreference::NAME, NoUselessBackreference::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        NoUselessBackreference::NAME,
+        NoUselessBackreference::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

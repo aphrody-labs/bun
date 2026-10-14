@@ -227,7 +227,10 @@ fn test() {
         // ",
         //     Some(serde_json::json!([{ "additionalTestBlockFunctions": ["theoretically"] }])),
         // ),
-        (r#"it("should fail", () => { somePromise.then(() => {}); });"#, None),
+        (
+            r#"it("should fail", () => { somePromise.then(() => {}); });"#,
+            None,
+        ),
         (
             "test(\"should fail\", () => { foo(true).toBe(true); })",
             Some(serde_json::json!([{ "assertFunctionNames": ["expect"] }])),
@@ -248,7 +251,10 @@ fn test() {
             "test('should fail with implicit defaults', () => request.post().send().expect(457));",
             None,
         ),
-        (r#"it("should fail with implicit defaults",() => expectSaga(mySaga).returns());"#, None),
+        (
+            r#"it("should fail with implicit defaults",() => expectSaga(mySaga).returns());"#,
+            None,
+        ),
         (
             "test('should fail', () => tester.request(123));",
             Some(serde_json::json!([{ "assertFunctionNames": ["request.*"] }])),

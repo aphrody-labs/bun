@@ -159,7 +159,9 @@ impl<'s, 'a> ScopeResolver<'s, 'a> {
                 _ => span.start,
             };
             if span.end > scope_start {
-                resolver.scopes_by_start.push((scope_start, span.end, depth, scope_id));
+                resolver
+                    .scopes_by_start
+                    .push((scope_start, span.end, depth, scope_id));
             }
 
             if resolver.scope_kind(scope_id) != ScopeKind::Function {
@@ -203,7 +205,9 @@ impl<'s, 'a> ScopeResolver<'s, 'a> {
     /// Resolve an identifier reference to the symbol it refers to.
     /// `None` means global/unresolved.
     pub fn resolve_reference(&self, ident: &IdentifierReference) -> Option<SymbolId> {
-        self.scoping().get_reference(ident.reference_id.get()?).symbol_id()
+        self.scoping()
+            .get_reference(ident.reference_id.get()?)
+            .symbol_id()
     }
 
     /// Resolve a binding identifier to its symbol, but only when this
@@ -264,7 +268,9 @@ impl<'s, 'a> ScopeResolver<'s, 'a> {
         // Check the declaration node first — FormalParameter and CatchParameter
         // need to be detected before the FunctionScopedVariable flag check, because
         // OXC marks function parameters and catch parameters with FunctionScopedVariable.
-        let decl_node = self.nodes.get_node(self.scoping.symbol_declaration(symbol_id));
+        let decl_node = self
+            .nodes
+            .get_node(self.scoping.symbol_declaration(symbol_id));
         match decl_node.kind() {
             AstKind::FormalParameter(_) => return BindingKind::Param,
             AstKind::FormalParameterRest(_) => return BindingKind::Param,
@@ -326,7 +332,11 @@ impl<'s, 'a> ScopeResolver<'s, 'a> {
 
     /// The kind of the symbol's declaration AST node.
     pub fn decl_kind(&self, symbol_id: SymbolId) -> DeclKind {
-        match self.nodes.get_node(self.scoping.symbol_declaration(symbol_id)).kind() {
+        match self
+            .nodes
+            .get_node(self.scoping.symbol_declaration(symbol_id))
+            .kind()
+        {
             AstKind::BindingIdentifier(_) => DeclKind::BindingIdentifier,
             AstKind::VariableDeclarator(_) => DeclKind::VariableDeclarator,
             AstKind::Function(f) => {
@@ -361,13 +371,17 @@ impl<'s, 'a> ScopeResolver<'s, 'a> {
     /// redeclared symbols). `None` for declaration kinds the old conversion
     /// did not map (e.g. interfaces).
     pub fn declaration_ident(&self, symbol_id: SymbolId) -> Option<&'s BindingIdentifier<'s>> {
-        let decl_node = self.nodes.get_node(self.scoping.symbol_declaration(symbol_id));
+        let decl_node = self
+            .nodes
+            .get_node(self.scoping.symbol_declaration(symbol_id));
         find_binding_identifier(decl_node.kind(), self.symbol_name(symbol_id))
     }
 
     /// For import bindings: the source module and import details.
     pub fn import_data(&self, symbol_id: SymbolId) -> Option<ImportBindingData<'a>> {
-        let decl_node = self.nodes.get_node(self.scoping.symbol_declaration(symbol_id));
+        let decl_node = self
+            .nodes
+            .get_node(self.scoping.symbol_declaration(symbol_id));
         match decl_node.kind() {
             AstKind::ImportDefaultSpecifier(_) => {
                 let import_decl = self.find_import_declaration(decl_node.id())?;
@@ -561,7 +575,9 @@ impl<'s, 'a> ScopeResolver<'s, 'a> {
 
     /// Whether `name` is referenced as a global (unresolved reference) anywhere in the file.
     pub fn has_unresolved_reference(&self, name: &str) -> bool {
-        self.scoping().root_unresolved_references().contains_key(name)
+        self.scoping()
+            .root_unresolved_references()
+            .contains_key(name)
     }
 
     /// Bindings declared directly in a scope.
@@ -633,15 +649,19 @@ impl<'s, 'a> ScopeResolver<'s, 'a> {
         &self,
         node_id: NodeId,
     ) -> impl Iterator<Item = ScopeId> + '_ {
-        self.nodes.ancestor_kinds(node_id).filter_map(|kind| match kind {
-            AstKind::Function(func) => func.scope_id.get(),
-            AstKind::ArrowFunctionExpression(arrow) => arrow.scope_id.get(),
-            AstKind::ObjectProperty(prop) if is_object_method_property(prop) => match &prop.value {
-                oxc_ast::ast::Expression::FunctionExpression(func) => func.scope_id.get(),
+        self.nodes
+            .ancestor_kinds(node_id)
+            .filter_map(|kind| match kind {
+                AstKind::Function(func) => func.scope_id.get(),
+                AstKind::ArrowFunctionExpression(arrow) => arrow.scope_id.get(),
+                AstKind::ObjectProperty(prop) if is_object_method_property(prop) => {
+                    match &prop.value {
+                        oxc_ast::ast::Expression::FunctionExpression(func) => func.scope_id.get(),
+                        _ => None,
+                    }
+                }
                 _ => None,
-            },
-            _ => None,
-        })
+            })
     }
 
     /// Find a binding by name within the descendants of a given scope
@@ -700,9 +720,10 @@ fn find_binding_identifier<'a>(kind: AstKind<'a>, name: &str) -> Option<&'a Bind
         AstKind::ImportSpecifier(spec) => Some(&spec.local),
         AstKind::ImportDefaultSpecifier(spec) => Some(&spec.local),
         AstKind::ImportNamespaceSpecifier(spec) => Some(&spec.local),
-        AstKind::CatchClause(catch) => {
-            catch.param.as_ref().and_then(|p| find_identifier_in_pattern(&p.pattern, name))
-        }
+        AstKind::CatchClause(catch) => catch
+            .param
+            .as_ref()
+            .and_then(|p| find_identifier_in_pattern(&p.pattern, name)),
         AstKind::CatchParameter(param) => find_identifier_in_pattern(&param.pattern, name),
         AstKind::TSTypeAliasDeclaration(decl) => {
             (decl.id.name.as_str() == name).then_some(&decl.id)
@@ -727,7 +748,9 @@ fn find_identifier_in_pattern<'a>(
             .iter()
             .find_map(|prop| find_identifier_in_pattern(&prop.value, name))
             .or_else(|| {
-                obj.rest.as_ref().and_then(|rest| find_identifier_in_pattern(&rest.argument, name))
+                obj.rest
+                    .as_ref()
+                    .and_then(|rest| find_identifier_in_pattern(&rest.argument, name))
             }),
         BindingPattern::ArrayPattern(arr) => arr
             .elements
@@ -735,7 +758,9 @@ fn find_identifier_in_pattern<'a>(
             .flatten()
             .find_map(|element| find_identifier_in_pattern(element, name))
             .or_else(|| {
-                arr.rest.as_ref().and_then(|rest| find_identifier_in_pattern(&rest.argument, name))
+                arr.rest
+                    .as_ref()
+                    .and_then(|rest| find_identifier_in_pattern(&rest.argument, name))
             }),
         BindingPattern::AssignmentPattern(assign) => find_identifier_in_pattern(&assign.left, name),
     }

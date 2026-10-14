@@ -32,7 +32,10 @@ pub struct OrderedMap<K, V> {
 
 impl<K, V> Default for OrderedMap<K, V> {
     fn default() -> Self {
-        Self { entries: Vec::new(), index: FxHashMap::default() }
+        Self {
+            entries: Vec::new(),
+            index: FxHashMap::default(),
+        }
     }
 }
 
@@ -136,7 +139,9 @@ impl<K: Copy + Eq + Hash, V> OrderedMap<K, V> {
 
 impl<K: fmt::Debug, V: fmt::Debug> fmt::Debug for OrderedMap<K, V> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_map().entries(self.entries.iter().map(|(k, v)| (k, v))).finish()
+        f.debug_map()
+            .entries(self.entries.iter().map(|(k, v)| (k, v)))
+            .finish()
     }
 }
 
@@ -150,7 +155,10 @@ pub struct OrderedSet<K> {
 
 impl<K> Default for OrderedSet<K> {
     fn default() -> Self {
-        Self { entries: Vec::new(), index: FxHashMap::default() }
+        Self {
+            entries: Vec::new(),
+            index: FxHashMap::default(),
+        }
     }
 }
 
@@ -298,7 +306,10 @@ pub struct ArenaOrderedMap<'a, K, V> {
 
 impl<'a, K: Copy + Eq + Hash, V> ArenaOrderedMap<'a, K, V> {
     pub fn new_in(allocator: &'a Allocator) -> Self {
-        Self { entries: ArenaVec::new_in(&allocator), index: ArenaHashMap::new_in(allocator) }
+        Self {
+            entries: ArenaVec::new_in(&allocator),
+            index: ArenaHashMap::new_in(allocator),
+        }
     }
 
     pub fn with_capacity_in(capacity: usize, allocator: &'a Allocator) -> Self {
@@ -401,7 +412,9 @@ impl<'a, K: Copy + Eq + Hash, V> ArenaOrderedMap<'a, K, V> {
 
 impl<K: fmt::Debug, V: fmt::Debug> fmt::Debug for ArenaOrderedMap<'_, K, V> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_map().entries(self.entries.iter().map(|(k, v)| (k, v))).finish()
+        f.debug_map()
+            .entries(self.entries.iter().map(|(k, v)| (k, v)))
+            .finish()
     }
 }
 
@@ -424,7 +437,8 @@ impl<'a, 'i, K, V> IntoIterator for &'i mut ArenaOrderedMap<'a, K, V> {
 impl<K: Copy + Eq + Hash, V> std::ops::Index<&K> for ArenaOrderedMap<'_, K, V> {
     type Output = V;
     fn index(&self, key: &K) -> &V {
-        self.get(key).expect("ArenaOrderedMap: no entry found for key")
+        self.get(key)
+            .expect("ArenaOrderedMap: no entry found for key")
     }
 }
 
@@ -436,7 +450,9 @@ where
     type Cloned = ArenaOrderedMap<'a, K, V>;
     fn clone_in_impl(&self, sem: CloneInSemanticIds, alloc: &'a Allocator) -> Self {
         let entries = ArenaVec::from_iter_in(
-            self.entries.iter().map(|(k, v)| (*k, v.clone_in_impl(sem, alloc))),
+            self.entries
+                .iter()
+                .map(|(k, v)| (*k, v.clone_in_impl(sem, alloc))),
             &alloc,
         );
         // Rebuild the index from the cloned entries (keys are `Copy`, so no
@@ -458,7 +474,10 @@ pub struct ArenaOrderedSet<'a, K> {
 
 impl<'a, K: Copy + Eq + Hash> ArenaOrderedSet<'a, K> {
     pub fn new_in(allocator: &'a Allocator) -> Self {
-        Self { entries: ArenaVec::new_in(&allocator), index: ArenaHashMap::new_in(allocator) }
+        Self {
+            entries: ArenaVec::new_in(&allocator),
+            index: ArenaHashMap::new_in(allocator),
+        }
     }
 
     pub fn with_capacity_in(capacity: usize, allocator: &'a Allocator) -> Self {

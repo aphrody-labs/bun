@@ -92,12 +92,14 @@ impl Rule for RequireParamDescription {
     fn run<'a>(&self, node: &AstNode<'a>, ctx: &LintContext<'a>) {
         // Collected targets from `FormalParameters`
         let params_to_check = match node.kind() {
-            AstKind::Function(func) if !func.is_typescript_syntax() => {
-                collect_params(&func.params, self.0.set_default_destructured_root_description)
-            }
-            AstKind::ArrowFunctionExpression(arrow_func) => {
-                collect_params(&arrow_func.params, self.0.set_default_destructured_root_description)
-            }
+            AstKind::Function(func) if !func.is_typescript_syntax() => collect_params(
+                &func.params,
+                self.0.set_default_destructured_root_description,
+            ),
+            AstKind::ArrowFunctionExpression(arrow_func) => collect_params(
+                &arrow_func.params,
+                self.0.set_default_destructured_root_description,
+            ),
             // If not a function, skip
             _ => return,
         };
@@ -295,7 +297,11 @@ fn test() {
                 serde_json::json!({ "settings": {        "jsdoc": {          "tagNamePreference": {            "param": "arg",          },        },      } }),
             ),
         ),
-        ("/** @param input.userId */\nfunction quux (input) {}", None, None),
+        (
+            "/** @param input.userId */\nfunction quux (input) {}",
+            None,
+            None,
+        ),
         (
             "/** @param input.userId User ID.\n * @param options */\nfunction quux (input, {flag}) {}",
             Some(serde_json::json!([{ "setDefaultDestructuredRootDescription": true }])),
@@ -343,6 +349,11 @@ fn test() {
         ),
     ];
 
-    Tester::new(RequireParamDescription::NAME, RequireParamDescription::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        RequireParamDescription::NAME,
+        RequireParamDescription::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

@@ -13,9 +13,11 @@ use oxc_syntax::node::NodeId;
 use crate::{AstNode, context::LintContext, rule::Rule};
 
 fn prefer_default_parameters_diagnostic(span: Span, name: &str) -> OxcDiagnostic {
-    OxcDiagnostic::warn(format!("Prefer default parameters over reassignment for '{name}'."))
-        .with_help("Replace the reassignment with a default parameter.")
-        .with_label(span)
+    OxcDiagnostic::warn(format!(
+        "Prefer default parameters over reassignment for '{name}'."
+    ))
+    .with_help("Replace the reassignment with a default parameter.")
+    .with_label(span)
 }
 
 #[derive(Debug, Default, Clone)]
@@ -169,7 +171,10 @@ fn check_expression<'a>(
         return;
     };
 
-    if !matches!(logical_expr.operator, LogicalOperator::Or | LogicalOperator::Coalesce) {
+    if !matches!(
+        logical_expr.operator,
+        LogicalOperator::Or | LogicalOperator::Coalesce
+    ) {
         return;
     }
 
@@ -228,7 +233,10 @@ fn check_parameter_default<'a>(
     };
 
     let Some((param_index, param)) = params.items.iter().enumerate().find(|(_, p)| {
-        p.pattern.get_binding_identifier().map(|ident| ident.name.as_str()) == Some(param_name)
+        p.pattern
+            .get_binding_identifier()
+            .map(|ident| ident.name.as_str())
+            == Some(param_name)
     }) else {
         return;
     };
@@ -292,7 +300,10 @@ fn check_parameter_default<'a>(
                 Span::new(binding_ident.span.start, param.span.end),
             )
         } else {
-            (format!("{new_param_name} = {default_value_text}"), binding_ident.span)
+            (
+                format!("{new_param_name} = {default_value_text}"),
+                binding_ident.span,
+            )
         };
 
     if is_arrow_function
@@ -367,7 +378,10 @@ fn find_enclosing_function<'a>(
     let function_body_id = current.id();
 
     current = ctx.nodes().parent_node(current.id());
-    if matches!(current.kind(), AstKind::Function(_) | AstKind::ArrowFunctionExpression(_)) {
+    if matches!(
+        current.kind(),
+        AstKind::Function(_) | AstKind::ArrowFunctionExpression(_)
+    ) {
         Some((current.id(), function_body_id))
     } else {
         None
@@ -481,7 +495,9 @@ fn check_no_extra_references<'a>(
         return false;
     };
 
-    ctx.semantic().reference_span(ctx.scoping().get_reference(*reference_id)) == param_ident_span
+    ctx.semantic()
+        .reference_span(ctx.scoping().get_reference(*reference_id))
+        == param_ident_span
 }
 
 fn check_no_extra_references_assignment<'a>(
@@ -524,7 +540,9 @@ fn check_logical_assignment_is_first_reference<'a>(
         return false;
     };
 
-    ctx.semantic().reference_span(ctx.scoping().get_reference(*reference_id)) == param_ident_span
+    ctx.semantic()
+        .reference_span(ctx.scoping().get_reference(*reference_id))
+        == param_ident_span
 }
 
 #[test]
@@ -988,8 +1006,14 @@ fn test() {
     def(foo) { }
 }",
         ),
-        (r"function abc(foo) { foo = foo || 'bar'; }", r"function abc(foo = 'bar') { }"),
-        (r"function abc(foo) { foo = foo || 'bar';}", r"function abc(foo = 'bar') { }"),
+        (
+            r"function abc(foo) { foo = foo || 'bar'; }",
+            r"function abc(foo = 'bar') { }",
+        ),
+        (
+            r"function abc(foo) { foo = foo || 'bar';}",
+            r"function abc(foo = 'bar') { }",
+        ),
         (
             r"const abc = function(foo) { foo = foo || 'bar';}",
             r"const abc = function(foo = 'bar') { }",
@@ -1162,7 +1186,12 @@ bar(); baz();
         ),
     ];
 
-    Tester::new(PreferDefaultParameters::NAME, PreferDefaultParameters::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        PreferDefaultParameters::NAME,
+        PreferDefaultParameters::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

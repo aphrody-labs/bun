@@ -38,7 +38,11 @@ pub fn check_unresolved_exports(program: &Program<'_>, ctx: &SemanticBuilder<'_>
                 {
                     let names = available_names.get_or_insert_with(|| {
                         let root_scope_id = ctx.scoping.root_scope_id();
-                        ctx.scoping.get_bindings(root_scope_id).keys().map(Ident::as_str).collect()
+                        ctx.scoping
+                            .get_bindings(root_scope_id)
+                            .keys()
+                            .map(Ident::as_str)
+                            .collect()
                     });
                     let suggestion =
                         best_match(&ident.name, names.iter().copied(), SUGGESTION_THRESHOLD);
@@ -89,8 +93,9 @@ pub fn check_duplicate_class_elements(ctx: &SemanticBuilder<'_>) {
             FxHashMap::with_capacity_and_hasher(elements.len(), FxBuildHasher);
         for (element_id, element) in elements.iter_enumerated() {
             // Public and private names belong to separate namespaces.
-            let previous =
-                defined_elements.entry((&element.name, element.is_private)).or_insert([None; 2]);
+            let previous = defined_elements
+                .entry((&element.name, element.is_private))
+                .or_insert([None; 2]);
             let prev_element_id = if element.is_private {
                 // Keep setters separate so a valid getter/setter pair cannot hide a
                 // repeated accessor.
@@ -178,7 +183,11 @@ pub fn check_identifier(name: &str, span: Span, ctx: &SemanticBuilder<'_>) {
                 ));
             }
             // It is a Syntax Error if ClassStaticBlockStatementList Contains await is true.
-            else if ctx.scoping.scope_flags(ctx.current_scope_id).is_class_static_block() {
+            else if ctx
+                .scoping
+                .scope_flags(ctx.current_scope_id)
+                .is_class_static_block()
+            {
                 ctx.error(diagnostics::class_static_block_await(span));
             }
         }
@@ -188,14 +197,17 @@ pub fn check_identifier(name: &str, span: Span, ctx: &SemanticBuilder<'_>) {
                 return;
             }
             // It is a Syntax Error if this phrase is contained in strict mode code and the StringValue of IdentifierName is: "implements", "interface", "let", "package", "private", "protected", "public", "static", or "yield".
-            let context =
-                if ctx.ancestry().ancestor_kinds().any(|kind| matches!(kind, AstKind::Class(_))) {
-                    diagnostics::ReservedKeywordContext::Class
-                } else if ctx.source_type.is_module() {
-                    diagnostics::ReservedKeywordContext::Module
-                } else {
-                    diagnostics::ReservedKeywordContext::StrictMode
-                };
+            let context = if ctx
+                .ancestry()
+                .ancestor_kinds()
+                .any(|kind| matches!(kind, AstKind::Class(_)))
+            {
+                diagnostics::ReservedKeywordContext::Class
+            } else if ctx.source_type.is_module() {
+                diagnostics::ReservedKeywordContext::Module
+            } else {
+                diagnostics::ReservedKeywordContext::StrictMode
+            };
             ctx.error(diagnostics::reserved_keyword(name, span, context));
         }
         _ => {}
@@ -205,7 +217,11 @@ pub fn check_identifier(name: &str, span: Span, ctx: &SemanticBuilder<'_>) {
 fn unexpected_identifier_assign_context(
     ctx: &SemanticBuilder<'_>,
 ) -> diagnostics::UnexpectedIdentifierAssignContext {
-    if ctx.ancestry().ancestor_kinds().any(|kind| matches!(kind, AstKind::Class(_))) {
+    if ctx
+        .ancestry()
+        .ancestor_kinds()
+        .any(|kind| matches!(kind, AstKind::Class(_)))
+    {
         diagnostics::UnexpectedIdentifierAssignContext::Class
     } else if ctx.source_type.is_module() {
         diagnostics::UnexpectedIdentifierAssignContext::Module
@@ -374,10 +390,21 @@ pub fn check_private_identifier_outside_class(
 fn check_private_identifier(ctx: &SemanticBuilder<'_>) {
     if let Some(class_id) = ctx.class_table_builder.current_class_id {
         let mut available_names: Option<Vec<&str>> = None;
-        for reference in ctx.class_table_builder.classes.iter_private_identifiers(class_id) {
-            if !ctx.class_table_builder.classes.ancestors(class_id).any(|class_id| {
-                ctx.class_table_builder.classes.has_private_definition(class_id, reference.name)
-            }) {
+        for reference in ctx
+            .class_table_builder
+            .classes
+            .iter_private_identifiers(class_id)
+        {
+            if !ctx
+                .class_table_builder
+                .classes
+                .ancestors(class_id)
+                .any(|class_id| {
+                    ctx.class_table_builder
+                        .classes
+                        .has_private_definition(class_id, reference.name)
+                })
+            {
                 let names = available_names.get_or_insert_with(|| {
                     let mut names = Vec::new();
                     for ancestor_class_id in ctx.class_table_builder.classes.ancestors(class_id) {
@@ -534,7 +561,9 @@ pub fn check_variable_declaration(decl: &VariableDeclaration, ctx: &SemanticBuil
         && ctx.source_type.is_script()
         && ctx.current_scope_flags().contains(ScopeFlags::Top)
     {
-        ctx.error(diagnostics::using_declaration_not_allowed_in_script(decl.span));
+        ctx.error(diagnostics::using_declaration_not_allowed_in_script(
+            decl.span,
+        ));
     }
     if decl.kind.is_await() && is_in_class_static_block(ctx) {
         ctx.error(diagnostics::class_static_block_await_using(decl.span));
@@ -610,7 +639,9 @@ pub fn check_variable_declarator_redeclaration(
 
     decl.id.bound_names(&mut |ident| {
         let redeclarations = ctx.scoping.symbol_redeclarations(ident.symbol_id());
-        let Some(rd) = redeclarations.iter().nth_back(1) else { return };
+        let Some(rd) = redeclarations.iter().nth_back(1) else {
+            return;
+        };
 
         // `{ function f() {}; var f; }` is invalid in both strict and non-strict mode.
         // In module mode at the top level, `function f() {}; var f;` is also invalid.
@@ -691,7 +722,9 @@ fn check_redeclared_function(
     }
 
     let current_scope_flags = ctx.current_scope_flags();
-    if prev.flags.intersects(SymbolFlags::FunctionScopedVariable | SymbolFlags::Function)
+    if prev
+        .flags
+        .intersects(SymbolFlags::FunctionScopedVariable | SymbolFlags::Function)
         && (current_scope_flags.is_function()
             || current_scope_flags.is_class_static_block()
             || (!ctx.source_type.is_module() && current_scope_flags.is_top()))
@@ -885,7 +918,9 @@ pub fn check_for_statement_left(
     is_for_in: bool,
     ctx: &SemanticBuilder<'_>,
 ) {
-    let ForStatementLeft::VariableDeclaration(decl) = left else { return };
+    let ForStatementLeft::VariableDeclaration(decl) = left else {
+        return;
+    };
 
     // The parser checks initialized lexical declarations and multiple declarations. The
     // remaining cases depend on strict mode or the binding form.
@@ -921,7 +956,10 @@ pub fn check_class(class: &Class, ctx: &SemanticBuilder<'_>) {
 
     if class.is_declaration()
         && class.id.is_none()
-        && !matches!(ctx.ancestry().parent_kind(), AstKind::ExportDefaultDeclaration(_))
+        && !matches!(
+            ctx.ancestry().parent_kind(),
+            AstKind::ExportDefaultDeclaration(_)
+        )
     {
         let start = class.span.start;
         ctx.error(diagnostics::require_class_name(Span::sized(start, 5)));
@@ -935,7 +973,10 @@ pub fn check_class(class: &Class, ctx: &SemanticBuilder<'_>) {
             // is declaration
             def.value.body.as_ref()?;
             if def.kind == MethodDefinitionKind::Constructor {
-                return def.key.prop_name().map_or(Some(def.span), |(_, node)| Some(node));
+                return def
+                    .key
+                    .prop_name()
+                    .map_or(Some(def.span), |(_, node)| Some(node));
             }
         }
         None
@@ -1083,8 +1124,12 @@ pub fn check_super(sup: &Super, ctx: &SemanticBuilder<'_>) {
                 previous_scope_id = Some(scope_id);
 
                 // We're now in the parent class
-                let parent_class_id =
-                    ctx.class_table_builder.classes.parent_ids.get(&class_id).copied();
+                let parent_class_id = ctx
+                    .class_table_builder
+                    .classes
+                    .parent_ids
+                    .get(&class_id)
+                    .copied();
                 (class_scope_id, class_id) = get_class_details(parent_class_id, ctx);
 
                 continue 'scopes;
@@ -1177,8 +1222,11 @@ pub fn check_super(sup: &Super, ctx: &SemanticBuilder<'_>) {
                         }
 
                         let class_node_id = ctx.class_table_builder.classes.get_node_id(class_id);
-                        let class =
-                            ctx.ancestry().find_kind_by_node_id(class_node_id).as_class().unwrap();
+                        let class = ctx
+                            .ancestry()
+                            .find_kind_by_node_id(class_node_id)
+                            .as_class()
+                            .unwrap();
                         if class.heritage.is_none() {
                             ctx.error(diagnostics::super_without_derived_class(
                                 sup.span, class.span,
@@ -1212,7 +1260,11 @@ fn get_class_details(
         return (None, ClassId::new(0)); // Dummy class ID
     };
     let node_id = ctx.class_table_builder.classes.get_node_id(class_id);
-    let class = ctx.ancestry().find_kind_by_node_id(node_id).as_class().unwrap();
+    let class = ctx
+        .ancestry()
+        .find_kind_by_node_id(node_id)
+        .as_class()
+        .unwrap();
     let scope_id = class.scope_id();
     (Some(scope_id), class_id)
 }

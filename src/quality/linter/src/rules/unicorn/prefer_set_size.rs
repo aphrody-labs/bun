@@ -51,7 +51,8 @@ declare_oxc_lint!(
     correctness,
     fix,
     version = "0.0.19",
-    short_description = "Prefer `Set#size` over `Set#length` when the `Set` is converted to an array.",
+    short_description =
+        "Prefer `Set#size` over `Set#length` when the `Set` is converted to an array.",
 );
 
 impl Rule for PreferSetSize {
@@ -75,8 +76,12 @@ impl Rule for PreferSetSize {
             return;
         }
 
-        if ctx.comments_range(conversion_span.start..conversion_span.end).count()
-            > ctx.comments_range(maybe_set.span().start..maybe_set.span().end).count()
+        if ctx
+            .comments_range(conversion_span.start..conversion_span.end)
+            .count()
+            > ctx
+                .comments_range(maybe_set.span().start..maybe_set.span().end)
+                .count()
         {
             ctx.diagnostic(prefer_set_size_diagnostic(span));
             return;
@@ -128,7 +133,13 @@ fn is_array_from_call(call_expr: &CallExpression) -> bool {
         return false;
     }
 
-    is_method_call(call_expr, Some(&["Array"]), Some(&["from"]), Some(1), Some(1))
+    is_method_call(
+        call_expr,
+        Some(&["Array"]),
+        Some(&["from"]),
+        Some(1),
+        Some(1),
+    )
 }
 
 fn is_set<'a>(maybe_set: &Expression<'a>, ctx: &LintContext<'a>) -> bool {
@@ -227,17 +238,35 @@ fn test() {
     let fix = vec![
         (r"[...new Set(array)].length", r"new Set(array).size"),
         (r"[...new Set(array),].length", r"new Set(array).size"),
-        (r"[...(( new Set(array) ))].length", r"(( new Set(array) )).size"),
-        (r"[...(( new Set(array as foo) ))].length", r"(( new Set(array as foo) )).size"),
-        (r"[...(( new Set(array) as foo ))].length", r"(( new Set(array) as foo )).size"),
+        (
+            r"[...(( new Set(array) ))].length",
+            r"(( new Set(array) )).size",
+        ),
+        (
+            r"[...(( new Set(array as foo) ))].length",
+            r"(( new Set(array as foo) )).size",
+        ),
+        (
+            r"[...(( new Set(array) as foo ))].length",
+            r"(( new Set(array) as foo )).size",
+        ),
         (
             r"[...(( new Set(array) as foo )     )     ]    .length;",
             r"(( new Set(array) as foo )     )    .size;",
         ),
         (r"Array.from(new Set(array)).length", r"new Set(array).size"),
-        (r"Array.from((( new Set(array) ))).length", r"(( new Set(array) )).size"),
-        (r"(( Array.from(new Set(array)) )).length", r"(( new Set(array) )).size"),
-        (r"Array.from(new /* comment */ Set(array)).length", r"new /* comment */ Set(array).size"),
+        (
+            r"Array.from((( new Set(array) ))).length",
+            r"(( new Set(array) )).size",
+        ),
+        (
+            r"(( Array.from(new Set(array)) )).length",
+            r"(( new Set(array) )).size",
+        ),
+        (
+            r"Array.from(new /* comment */ Set(array)).length",
+            r"new /* comment */ Set(array).size",
+        ),
         (
             r"const foo = new Set([]);
                 console.log(Array.from(foo).length);",

@@ -14,8 +14,10 @@ use crate::{
 };
 
 fn spec_only(prop_name: &str, member_span: Span) -> OxcDiagnostic {
-    OxcDiagnostic::warn(format!("Avoid using non-standard `Promise.{prop_name}` method."))
-        .with_label(member_span)
+    OxcDiagnostic::warn(format!(
+        "Avoid using non-standard `Promise.{prop_name}` method."
+    ))
+    .with_label(member_span)
 }
 
 #[derive(Debug, Default, Clone, Deserialize)]
@@ -103,7 +105,10 @@ fn test() {
         ("Promise.resolve()", None),
         ("Promise.reject()", None),
         ("Promise.all()", None),
-        ("Promise.all()", Some(serde_json::json!([{ "allowedMethods": [] }]))),
+        (
+            "Promise.all()",
+            Some(serde_json::json!([{ "allowedMethods": [] }])),
+        ),
         ("Promise.race()", None),
         ("Promise.try()", None),
         ("Promise.withResolvers()", None),
@@ -118,7 +123,10 @@ fn test() {
 
     let fail = vec![
         ("Promise.done()", None),
-        ("Promise.done()", Some(serde_json::json!([{ "allowedMethods": [] }]))),
+        (
+            "Promise.done()",
+            Some(serde_json::json!([{ "allowedMethods": [] }])),
+        ),
         ("Promise.something()", None),
         ("new Promise.done()", None),
         (

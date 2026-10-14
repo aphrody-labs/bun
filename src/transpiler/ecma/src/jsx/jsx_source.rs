@@ -51,7 +51,10 @@ pub struct JsxSource<'a> {
 
 impl JsxSource<'_> {
     pub fn new() -> Self {
-        Self { filename_var: None, source_rope: None }
+        Self {
+            filename_var: None,
+            source_rope: None,
+        }
     }
 }
 
@@ -79,8 +82,9 @@ impl<'a> JsxSource<'a> {
     ///
     /// This matches Babel's output.
     pub fn get_line_column(&mut self, offset: u32, ctx: &TraverseCtx<'a>) -> (u32, u32) {
-        let source_rope =
-            self.source_rope.get_or_insert_with(|| Rope::from_str(ctx.state.source_text));
+        let source_rope = self
+            .source_rope
+            .get_or_insert_with(|| Rope::from_str(ctx.state.source_text));
         let (line, column) = get_line_column(source_rope, offset, ctx.state.source_text);
         // line and column are zero-indexed, but we want 1-indexed
         (line + 1, column + 1)

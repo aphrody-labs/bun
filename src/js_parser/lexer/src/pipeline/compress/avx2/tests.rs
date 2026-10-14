@@ -11,7 +11,11 @@ fn compress_blocks_matches_scalar_reference() {
     let all_pairs: Vec<u64> = (0..65536u64)
         .collect::<Vec<_>>()
         .chunks(4)
-        .map(|c| c.iter().enumerate().fold(0u64, |w, (i, v)| w | (v << (16 * i))))
+        .map(|c| {
+            c.iter()
+                .enumerate()
+                .fold(0u64, |w, (i, v)| w | (v << (16 * i)))
+        })
         .collect();
     cases.push(all_pairs);
     let mut s = 0x9e37_79b9_7f4a_7c15u64;

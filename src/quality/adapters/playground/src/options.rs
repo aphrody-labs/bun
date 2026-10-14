@@ -100,7 +100,12 @@ pub struct OxcCodegenOptions {
 
 impl Default for OxcCodegenOptions {
     fn default() -> Self {
-        Self { normal: true, jsdoc: true, annotation: true, legal: true }
+        Self {
+            normal: true,
+            jsdoc: true,
+            annotation: true,
+            legal: true,
+        }
     }
 }
 

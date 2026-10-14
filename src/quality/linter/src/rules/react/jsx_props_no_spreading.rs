@@ -379,6 +379,11 @@ fn test() {
         ),
     ];
 
-    Tester::new(JsxPropsNoSpreading::NAME, JsxPropsNoSpreading::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        JsxPropsNoSpreading::NAME,
+        JsxPropsNoSpreading::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

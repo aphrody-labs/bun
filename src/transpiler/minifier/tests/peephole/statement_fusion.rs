@@ -27,7 +27,10 @@ fn fold_block_into_if() {
 fn fold_block_return() {
     test("a;b;c;return x", "return a,b,c,x");
     test("a;b;c;return x+y", "return a,b,c,x+y");
-    test("a();b();c();return x();a();b();c()", "return a(),b(),c(),x()");
+    test(
+        "a();b();c();return x();a();b();c()",
+        "return a(),b(),c(),x()",
+    );
 }
 
 #[test]
@@ -40,7 +43,10 @@ fn fold_block_throw() {
 #[test]
 fn fold_switch() {
     test("a;b;c;switch(x){}", "a,b,c,x");
-    test("a;b;c;switch(x){case a:b();case b:c()}", "switch(a,b,c,x){case a:b();case b:c()}");
+    test(
+        "a;b;c;switch(x){case a:b();case b:c()}",
+        "switch(a,b,c,x){case a:b();case b:c()}",
+    );
 }
 
 #[test]
@@ -55,7 +61,10 @@ fn fuse_into_for_in2() {
     test_same("a();for(var x = b() in y);");
     test("a = 1; for(var x = 2 in y);", "for(var x = 2 in a = 1, y);");
     // this can be compressed because b() runs after a()
-    test("a(); for (var { x = b() } in y);", "for (var { x = b() } in a(), y);");
+    test(
+        "a(); for (var { x = b() } in y);",
+        "for (var { x = b() } in a(), y);",
+    );
 }
 
 #[test]
@@ -95,7 +104,10 @@ fn fuse_into_block() {
 
 #[test]
 fn fuse_into_switch_cases() {
-    test("switch (_) { case _: a; return b }", "switch (_) { case _: return a, b }");
+    test(
+        "switch (_) { case _: a; return b }",
+        "switch (_) { case _: return a, b }",
+    );
 }
 
 #[test]
@@ -118,7 +130,10 @@ fn no_fuse_into_block() {
     test("a; { b; const a = 1; }", "a; { b; let a = 1; }");
     test_same("a; { b; class a {} }");
     test_same("a; { b; function a() {} }");
-    test("a; { b; const otherVariable = 1; }", "a; { b; let otherVariable = 1; }");
+    test(
+        "a; { b; const otherVariable = 1; }",
+        "a; { b; let otherVariable = 1; }",
+    );
 
     // test(
     // "function f(a) { if (COND) { a; { b; let otherVariable = 1; } } }",

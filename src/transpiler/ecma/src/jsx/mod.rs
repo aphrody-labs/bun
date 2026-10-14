@@ -50,7 +50,11 @@ impl<'a> Jsx<'a> {
         }
         let refresh = options.refresh.take();
         let JsxOptions {
-            jsx_plugin, display_name_plugin, jsx_self_plugin, jsx_source_plugin, ..
+            jsx_plugin,
+            display_name_plugin,
+            jsx_self_plugin,
+            jsx_source_plugin,
+            ..
         } = options;
         Self {
             implementation: JsxImpl::new(options, object_rest_spread_options, ast, source_type),
@@ -107,10 +111,14 @@ impl<'a> Traverse<'a, TransformState<'a>> for Jsx<'a> {
     ) {
         if !self.enable_jsx_plugin {
             if self.self_plugin && JsxSelf::can_add_self_attribute(ctx) {
-                self.implementation.jsx_self.enter_jsx_opening_element(elem, ctx);
+                self.implementation
+                    .jsx_self
+                    .enter_jsx_opening_element(elem, ctx);
             }
             if self.source_plugin {
-                self.implementation.jsx_source.enter_jsx_opening_element(elem, ctx);
+                self.implementation
+                    .jsx_source
+                    .enter_jsx_opening_element(elem, ctx);
             }
         }
     }

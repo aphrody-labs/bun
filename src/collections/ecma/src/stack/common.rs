@@ -110,7 +110,10 @@ pub trait StackCommon<T>: StackCapacity<T> {
         // Drop contents. Next line copied from `std`'s `Vec`.
         // SAFETY: Caller guarantees stack contains `len` initialized entries, starting at `start`.
         unsafe {
-            ptr::drop_in_place(ptr::slice_from_raw_parts_mut(self.start().as_ptr(), self.len()));
+            ptr::drop_in_place(ptr::slice_from_raw_parts_mut(
+                self.start().as_ptr(),
+                self.len(),
+            ));
         }
     }
 
@@ -226,13 +229,20 @@ unsafe fn grow(
     old_start: NonNull<u8>,
     old_layout: Layout,
     max_capacity_bytes: usize,
-) -> (/* start */ NonNull<u8>, /* end */ NonNull<u8>, /* current */ NonNull<u8>) {
+) -> (
+    /* start */ NonNull<u8>,
+    /* end */ NonNull<u8>,
+    /* current */ NonNull<u8>,
+) {
     // Get new capacity.
     // Capacity in bytes cannot be larger than `isize::MAX`, so `* 2` cannot overflow.
     let old_capacity_bytes = old_layout.size();
     let mut new_capacity_bytes = old_capacity_bytes * 2;
     if new_capacity_bytes > max_capacity_bytes {
-        assert!(old_capacity_bytes < max_capacity_bytes, "Cannot grow beyond `Self::MAX_CAPACITY`");
+        assert!(
+            old_capacity_bytes < max_capacity_bytes,
+            "Cannot grow beyond `Self::MAX_CAPACITY`"
+        );
         new_capacity_bytes = max_capacity_bytes;
     }
     debug_assert!(new_capacity_bytes > old_capacity_bytes);

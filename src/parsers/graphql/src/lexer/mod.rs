@@ -168,7 +168,11 @@ impl<'a> Cursor<'a> {
         // every other token starts with a clean slate.
         debug_assert!(self.err.is_none());
 
-        let mut token = Token { kind: TokenKind::Eof, data: "", index: self.index() };
+        let mut token = Token {
+            kind: TokenKind::Eof,
+            data: "",
+            index: self.index(),
+        };
 
         let Some(c) = self.bump() else {
             cold_path();
@@ -285,7 +289,11 @@ impl<'a> Cursor<'a> {
             }
         }
         let data = self.current_str();
-        Err(Error::with_loc("Unterminated spread operator", data.to_string(), token.index))
+        Err(Error::with_loc(
+            "Unterminated spread operator",
+            data.to_string(),
+            token.index,
+        ))
     }
 
     fn lex_string_start(&mut self, mut token: Token<'a>) -> Result<Token<'a>, Error> {
@@ -323,7 +331,11 @@ impl<'a> Cursor<'a> {
 
             if memchr::memchr2(b'\n', b'\r', &self.bytes[self.next..stop]).is_some() {
                 cold_path();
-                self.add_err(Error::with_loc("unexpected line terminator", String::new(), 0));
+                self.add_err(Error::with_loc(
+                    "unexpected line terminator",
+                    String::new(),
+                    0,
+                ));
             }
 
             // Consume through the stop byte.
@@ -390,7 +402,11 @@ impl<'a> Cursor<'a> {
             } else if !is_escaped_char(c) {
                 cold_path();
                 let c = self.char_for_error(c);
-                self.add_err(Error::with_loc("unexpected escaped character", c.to_string(), 0));
+                self.add_err(Error::with_loc(
+                    "unexpected escaped character",
+                    c.to_string(),
+                    0,
+                ));
             }
         }
     }
@@ -634,11 +650,19 @@ impl<'a> Cursor<'a> {
         // Any pending in-string error is superseded by the unterminated error
         // (it was never observable: only the EOF token can follow a drain).
         self.err = None;
-        Err(Error::with_loc("unterminated string value", self.drain().to_string(), token.index))
+        Err(Error::with_loc(
+            "unterminated string value",
+            self.drain().to_string(),
+            token.index,
+        ))
     }
 
     fn char_for_error(&mut self, c: u8) -> char {
-        if c.is_ascii() { char::from(c) } else { self.consume_current_char() }
+        if c.is_ascii() {
+            char::from(c)
+        } else {
+            self.consume_current_char()
+        }
     }
 
     #[inline]

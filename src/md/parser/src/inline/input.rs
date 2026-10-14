@@ -53,12 +53,16 @@ impl Input {
     }
 
     fn line_of(&self, joined: usize) -> usize {
-        self.lines.partition_point(|line| line.joined <= joined).saturating_sub(1)
+        self.lines
+            .partition_point(|line| line.joined <= joined)
+            .saturating_sub(1)
     }
 
     /// Joined offset of line `i`'s separator (or the text's end).
     fn line_end(&self, i: usize) -> usize {
-        self.lines.get(i + 1).map_or(self.text.len(), |next| next.joined - 1)
+        self.lines
+            .get(i + 1)
+            .map_or(self.text.len(), |next| next.joined - 1)
     }
 
     /// Source offset of a joined byte; a separator `\n` maps to the next line's start,
@@ -122,7 +126,10 @@ impl Input {
         let content = line.joined + usize::from(line.padding);
         let padding = content.saturating_sub(start).min(end - start);
         let source = self.offset(start + padding);
-        Segment::new(Span::new(source, source + (end - start - padding) as u32), padding as u8)
+        Segment::new(
+            Span::new(source, source + (end - start - padding) as u32),
+            padding as u8,
+        )
     }
 }
 
@@ -131,7 +138,10 @@ mod tests {
     use super::*;
 
     fn seg(start: u32, end: u32, padding: u8) -> IrSeg {
-        IrSeg { seg: Segment::new(Span::new(start, end), padding), lazy: false }
+        IrSeg {
+            seg: Segment::new(Span::new(start, end), padding),
+            lazy: false,
+        }
     }
 
     /// `> ab\n>\tcd\n`: the `>\t` prefix leaves 2 virtual spaces of padding before `cd`.
@@ -161,7 +171,10 @@ mod tests {
         let input = sample();
         assert_eq!(
             input.pieces(0..7),
-            vec![Segment::new(Span::new(2, 4), 0), Segment::new(Span::new(7, 9), 2)]
+            vec![
+                Segment::new(Span::new(2, 4), 0),
+                Segment::new(Span::new(7, 9), 2)
+            ]
         );
         // A range starting inside the padding keeps only the remaining padding
         assert_eq!(input.pieces(4..7), vec![Segment::new(Span::new(7, 9), 1)]);
@@ -170,11 +183,17 @@ mod tests {
         // one starting at the separator, an empty piece before it (`[\nfoo\n]` labels)
         assert_eq!(
             input.pieces(0..3),
-            vec![Segment::new(Span::new(2, 4), 0), Segment::new(Span::empty(7), 0)]
+            vec![
+                Segment::new(Span::new(2, 4), 0),
+                Segment::new(Span::empty(7), 0)
+            ]
         );
         assert_eq!(
             input.pieces(2..7),
-            vec![Segment::new(Span::empty(7), 0), Segment::new(Span::new(7, 9), 2)]
+            vec![
+                Segment::new(Span::empty(7), 0),
+                Segment::new(Span::new(7, 9), 2)
+            ]
         );
     }
 }

@@ -56,7 +56,8 @@ declare_oxc_lint!(
     restriction,
     config = PreferLiteralEnumMember,
     version = "0.3.2",
-    short_description = "Explicit enum values must only be literal values (string, number, boolean, etc.).",
+    short_description =
+        "Explicit enum values must only be literal values (string, number, boolean, etc.).",
 );
 
 impl Rule for PreferLiteralEnumMember {
@@ -456,6 +457,11 @@ fn test() {
         ),
     ];
 
-    Tester::new(PreferLiteralEnumMember::NAME, PreferLiteralEnumMember::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        PreferLiteralEnumMember::NAME,
+        PreferLiteralEnumMember::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

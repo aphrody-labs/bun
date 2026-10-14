@@ -82,6 +82,11 @@ function Component({columns, data}) {
 ",
     ];
 
-    Tester::new(IncompatibleLibrary::NAME, IncompatibleLibrary::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        IncompatibleLibrary::NAME,
+        IncompatibleLibrary::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

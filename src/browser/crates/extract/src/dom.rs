@@ -381,7 +381,11 @@ fn find_ci(hay: &[u8], from: usize, needle: &[u8]) -> Option<usize> {
 enum ScanEvent {
     /// A start or end tag that affects nesting; `depth` is the depth before
     /// a start tag / after an end tag.
-    Tag { start: usize, end: usize, depth: usize },
+    Tag {
+        start: usize,
+        end: usize,
+        depth: usize,
+    },
     /// A byte range that carries no readable content and can be removed
     /// before parsing (comments, scripts except JSON-LD, styles, inline SVG).
     Strip { start: usize, end: usize },
@@ -417,7 +421,10 @@ pub(crate) fn find_any(hay: &[u8], from: usize, needles: &[u8]) -> Option<usize>
         }
         i += 8;
     }
-    hay.get(i..)?.iter().position(|c| needles.contains(c)).map(|p| i + p)
+    hay.get(i..)?
+        .iter()
+        .position(|c| needles.contains(c))
+        .map(|p| i + p)
 }
 
 fn tag_end(b: &[u8], from: usize) -> usize {
@@ -491,7 +498,11 @@ fn scan(html: &str, on_event: &mut dyn FnMut(ScanEvent)) -> usize {
         }
         if is_end {
             depth = depth.saturating_sub(1);
-            on_event(ScanEvent::Tag { start: i, end, depth });
+            on_event(ScanEvent::Tag {
+                start: i,
+                end,
+                depth,
+            });
             i = end;
             continue;
         }
@@ -500,13 +511,20 @@ fn scan(html: &str, on_event: &mut dyn FnMut(ScanEvent)) -> usize {
             b"svg" if !self_closing => {
                 if let Some(close) = find_ci(b, end, b"</svg") {
                     let close_end = tag_end(b, close + 5);
-                    on_event(ScanEvent::Strip { start: i, end: close_end });
+                    on_event(ScanEvent::Strip {
+                        start: i,
+                        end: close_end,
+                    });
                     i = close_end;
                     continue;
                 }
-            },
+            }
             b"script" | b"style" => {
-                let close_pat: &[u8] = if name == b"script" { b"</script" } else { b"</style" };
+                let close_pat: &[u8] = if name == b"script" {
+                    b"</script"
+                } else {
+                    b"</style"
+                };
                 let close = find_ci(b, end, close_pat);
                 let tag_lower = b[i..end].to_ascii_lowercase();
                 let is_json_ld = name == b"script" && tag_lower.windows(7).any(|w| w == b"ld+json");
@@ -517,15 +535,22 @@ fn scan(html: &str, on_event: &mut dyn FnMut(ScanEvent)) -> usize {
                 if let Some(c) = close {
                     if !is_json_ld && !escaped {
                         let close_end = tag_end(b, c + close_pat.len());
-                        on_event(ScanEvent::Strip { start: i, end: close_end });
+                        on_event(ScanEvent::Strip {
+                            start: i,
+                            end: close_end,
+                        });
                         i = close_end;
                         continue;
                     }
                 }
-            },
-            _ => {},
+            }
+            _ => {}
         }
-        on_event(ScanEvent::Tag { start: i, end, depth });
+        on_event(ScanEvent::Tag {
+            start: i,
+            end,
+            depth,
+        });
         depth += 1;
         max_depth = max_depth.max(depth);
         if is_raw_text(name) {
@@ -603,13 +628,13 @@ impl Arena {
                 match &n.data {
                     NodeData::Element { name, .. } => {
                         (Kind::Element, Tag::from_name(name.local.as_ref()))
-                    },
+                    }
                     NodeData::Text { contents } => {
                         text_start = text.len() as u32;
                         tlen = contents.len() as u32;
                         text.push_str(contents);
                         (Kind::Text, Tag::Other)
-                    },
+                    }
                     _ => (Kind::Other, Tag::Other),
                 }
             });
@@ -650,7 +675,13 @@ impl Arena {
             }
         }
 
-        let mut arena = Arena { tree, nodes, text, body: NONE, html: NONE };
+        let mut arena = Arena {
+            tree,
+            nodes,
+            text,
+            body: NONE,
+            html: NONE,
+        };
         for (i, n) in arena.nodes.iter().enumerate() {
             if n.tag == Tag::Html && arena.html == NONE {
                 arena.html = i as u32;
@@ -682,7 +713,9 @@ impl Arena {
         if n.kind != Kind::Element {
             return None;
         }
-        self.tree.with_node(n.source, |node| node.get_attribute(name).map(f)).flatten()
+        self.tree
+            .with_node(n.source, |node| node.get_attribute(name).map(f))
+            .flatten()
     }
 
     pub(crate) fn attr_string(&self, i: u32, name: &str) -> Option<String> {
@@ -691,7 +724,10 @@ impl Arena {
 
     /// Iterates over the arena indices of the children of `i`.
     pub(crate) fn children(&self, i: u32) -> ChildIter<'_> {
-        ChildIter { arena: self, cur: self.nodes[i as usize].first_child }
+        ChildIter {
+            arena: self,
+            cur: self.nodes[i as usize].first_child,
+        }
     }
 
     /// End (exclusive) of the pre-order index range covered by the subtree of `i`.

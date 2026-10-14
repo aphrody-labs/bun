@@ -129,15 +129,24 @@ fn test() {
 
     let pass = vec![
         (r"<Item callback={this.props.jsx} />", None),
-        (r"const Foo = () => <Item callback={this.props.jsx} />", None),
+        (
+            r"const Foo = () => <Item callback={this.props.jsx} />",
+            None,
+        ),
         (r"<Item jsx={<SubItem />} />", None),
         (r"<Item jsx={this.props.jsx || <SubItem />} />", None),
-        (r"<Item jsx={this.props.jsx ? this.props.jsx : <SubItem />} />", None),
+        (
+            r"<Item jsx={this.props.jsx ? this.props.jsx : <SubItem />} />",
+            None,
+        ),
         (
             r"<Item jsx={this.props.jsx || (this.props.component ? this.props.component : <SubItem />)} />",
             None,
         ),
-        (r"const Icon = <svg />; const Foo = () => (<IconButton icon={Icon} />)", None),
+        (
+            r"const Icon = <svg />; const Foo = () => (<IconButton icon={Icon} />)",
+            None,
+        ),
         (
             r"const Foo = () => <div jsx={<SubItem />} />",
             Some(json!([{ "nativeAllowList": "all" }])),
@@ -150,13 +159,22 @@ fn test() {
 
     let fail = vec![
         (r"const Foo = () => (<Item jsx={<SubItem />} />)", None),
-        (r"const Foo = () => (<Item jsx={this.props.jsx || <SubItem />} />)", None),
-        (r"const Foo = () => (<Item jsx={this.props.jsx ? this.props.jsx : <SubItem />} />)", None),
+        (
+            r"const Foo = () => (<Item jsx={this.props.jsx || <SubItem />} />)",
+            None,
+        ),
+        (
+            r"const Foo = () => (<Item jsx={this.props.jsx ? this.props.jsx : <SubItem />} />)",
+            None,
+        ),
         (
             r"const Foo = () => (<Item jsx={this.props.jsx || (this.props.component ? this.props.component : <SubItem />)} />)",
             None,
         ),
-        (r"const Foo = () => { const Icon = <svg />; return (<IconButton icon={Icon} />) }", None),
+        (
+            r"const Foo = () => { const Icon = <svg />; return (<IconButton icon={Icon} />) }",
+            None,
+        ),
         (
             r"const Foo = () => <div jsx={<SubItem />} />",
             Some(json!([{ "nativeAllowList": ["icon"] }])),

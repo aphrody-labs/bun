@@ -87,7 +87,8 @@ impl Codegen<'_> {
             // back to the canonical literal for the dropped ones.
             if comment.is_pure() || comment.is_no_side_effects() {
                 if comment.is_leading() && self.options.print_annotation_comment() {
-                    self.annotation_comments.insert(comment.attached_to, *comment);
+                    self.annotation_comments
+                        .insert(comment.attached_to, *comment);
                 }
                 continue;
             }
@@ -107,7 +108,10 @@ impl Codegen<'_> {
                 {
                     self.orphan_comment_keys.insert(idx, comment.attached_to);
                 }
-                self.comments.entry(comment.attached_to).or_default().push(*comment);
+                self.comments
+                    .entry(comment.attached_to)
+                    .or_default()
+                    .push(*comment);
             }
         }
     }
@@ -203,7 +207,9 @@ impl Codegen<'_> {
             return;
         }
         if self.comments.get(&start).is_some_and(|comments| {
-            comments.iter().any(|comment| comment.is_property_key_annotation())
+            comments
+                .iter()
+                .any(|comment| comment.is_property_key_annotation())
         }) {
             self.print_leading_comments_anchored_to_self(start);
         }
@@ -287,7 +293,9 @@ impl Codegen<'_> {
         let mut orphans: Vec<Comment> = Vec::new();
         let comments = &mut self.comments;
         for k in self.orphan_comment_keys.drain(..idx) {
-            let Some(entry) = comments.get_mut(&k) else { continue };
+            let Some(entry) = comments.get_mut(&k) else {
+                continue;
+            };
             debug_assert!(entry.iter().any(|c| preserve_when_orphaned(*c)));
             entry.retain(|comment| {
                 if preserve_when_orphaned(*comment) {
@@ -319,7 +327,11 @@ impl Codegen<'_> {
             return false;
         }
         // Find and remove the first key in the range.
-        let key = self.comments.keys().find(|&&k| k > start && k < end).copied();
+        let key = self
+            .comments
+            .keys()
+            .find(|&&k| k > start && k < end)
+            .copied();
         if let Some(key) = key {
             let comments = self.comments.remove(&key).unwrap();
             self.print_comments(&comments);
@@ -332,7 +344,9 @@ impl Codegen<'_> {
         if self.comments.is_empty() {
             return false;
         }
-        let Some(comments) = self.comments.remove(&start) else { return false };
+        let Some(comments) = self.comments.remove(&start) else {
+            return false;
+        };
 
         for comment in &comments {
             self.print_hard_newline();

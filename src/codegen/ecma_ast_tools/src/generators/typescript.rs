@@ -53,7 +53,13 @@ fn generate_ts_type_defs(schema: &Schema, codegen: &Codegen) -> String {
     let mut ast_node_names: Vec<String> = vec![];
     for type_def in schema.structs_and_enums() {
         if type_def.generates_derive(estree_derive_id) {
-            generate_ts_type_def(type_def, &mut code, &mut ast_node_names, program_type_id, schema);
+            generate_ts_type_def(
+                type_def,
+                &mut code,
+                &mut ast_node_names,
+                program_type_id,
+                schema,
+            );
         }
     }
 
@@ -61,7 +67,10 @@ fn generate_ts_type_defs(schema: &Schema, codegen: &Codegen) -> String {
     // `ParamPattern` is a union type of other `add_ts_def`ed types.
     // TODO: Should not be hard-coded here.
     let ast_node_union = ast_node_names.join(" | ");
-    write_it!(code, "export type Node = {ast_node_union} | ParamPattern;\n\n");
+    write_it!(
+        code,
+        "export type Node = {ast_node_union} | ParamPattern;\n\n"
+    );
 
     code
 }
@@ -142,7 +151,11 @@ fn generate_ts_type_def_for_struct(
     let mut extends = vec![];
 
     if should_add_type_field_to_struct(struct_def) {
-        let type_name = struct_def.estree.rename.as_deref().unwrap_or_else(|| struct_def.name());
+        let type_name = struct_def
+            .estree
+            .rename
+            .as_deref()
+            .unwrap_or_else(|| struct_def.name());
         write_it!(fields_str, "\n\ttype: '{type_name}';");
     }
 
@@ -176,16 +189,29 @@ fn generate_ts_type_def_for_struct(
     }
 
     if !struct_def.estree.no_type {
-        let parent_type = if struct_def.id == program_type_id { "null" } else { "Node" };
-        write_it!(fields_str, "\n\tparent/* IF !LINTER */?/* END IF */: {parent_type};");
+        let parent_type = if struct_def.id == program_type_id {
+            "null"
+        } else {
+            "Node"
+        };
+        write_it!(
+            fields_str,
+            "\n\tparent/* IF !LINTER */?/* END IF */: {parent_type};"
+        );
     }
 
     let ts_def = if extends.is_empty() {
         format!("export interface {type_name} {{{fields_str}\n}}")
     } else if output_as_type {
-        format!("export type {type_name} = ({{{fields_str}\n}}) & {};", extends.join(" & "))
+        format!(
+            "export type {type_name} = ({{{fields_str}\n}}) & {};",
+            extends.join(" & ")
+        )
     } else {
-        format!("export interface {type_name} extends {} {{{fields_str}\n}}", extends.join(", "))
+        format!(
+            "export interface {type_name} extends {} {{{fields_str}\n}}",
+            extends.join(", ")
+        )
     };
     Some(ts_def)
 }
@@ -301,8 +327,15 @@ fn generate_ts_type_def_for_struct_field_impl<'s>(
     }
 
     let field_camel_name = get_struct_field_name(field);
-    let question_mark = if field.estree.is_js || field.estree.is_ts { "?" } else { "" };
-    write_it!(fields_str, "\n\t{field_camel_name}{question_mark}: {field_type_name};");
+    let question_mark = if field.estree.is_js || field.estree.is_ts {
+        "?"
+    } else {
+        ""
+    };
+    write_it!(
+        fields_str,
+        "\n\t{field_camel_name}{question_mark}: {field_type_name};"
+    );
 }
 
 /// Generate Typescript type definition for an extra struct field
@@ -317,7 +350,11 @@ fn generate_ts_type_def_for_added_struct_field(
     let Some(ts_type) = converter.estree.ts_type.as_deref() else {
         panic!("No `ts_type` provided for ESTree converter `{converter_name}`");
     };
-    let question_mark = if converter.estree.is_js || converter.estree.is_ts { "?" } else { "" };
+    let question_mark = if converter.estree.is_js || converter.estree.is_ts {
+        "?"
+    } else {
+        ""
+    };
     write_it!(fields_str, "\n\t{field_name}{question_mark}: {ts_type};");
 }
 
@@ -399,10 +436,16 @@ fn ts_type_name<'s>(type_def: &'s TypeDef, schema: &'s Schema) -> Cow<'s, str> {
             name => name,
         }),
         TypeDef::Option(option_def) => {
-            format_cow!("{} | null", ts_type_name(option_def.inner_type(schema), schema))
+            format_cow!(
+                "{} | null",
+                ts_type_name(option_def.inner_type(schema), schema)
+            )
         }
         TypeDef::Vec(vec_def) => {
-            format_cow!("Array<{}>", ts_type_name(vec_def.inner_type(schema), schema))
+            format_cow!(
+                "Array<{}>",
+                ts_type_name(vec_def.inner_type(schema), schema)
+            )
         }
         TypeDef::Box(box_def) => ts_type_name(box_def.inner_type(schema), schema),
         TypeDef::Cell(cell_def) => ts_type_name(cell_def.inner_type(schema), schema),
@@ -442,7 +485,11 @@ fn should_add_type_field_to_struct(struct_def: &StructDef) -> bool {
         false
     } else {
         !struct_def.fields.iter().any(|field| {
-            let field_name = field.estree.rename.as_deref().unwrap_or_else(|| field.name());
+            let field_name = field
+                .estree
+                .rename
+                .as_deref()
+                .unwrap_or_else(|| field.name());
             field_name == "type"
         })
     }
@@ -452,8 +499,10 @@ fn should_add_type_field_to_struct(struct_def: &StructDef) -> bool {
 ///
 /// If no fields, or more than 1 unskipped field, returns `None`.
 fn get_single_field<'s>(struct_def: &'s StructDef, schema: &Schema) -> Option<&'s FieldDef> {
-    let mut fields_which_are_not_skipped =
-        struct_def.fields.iter().filter(|field| !should_skip_field(field, schema));
+    let mut fields_which_are_not_skipped = struct_def
+        .fields
+        .iter()
+        .filter(|field| !should_skip_field(field, schema));
 
     if let Some(field) = fields_which_are_not_skipped.next()
         && fields_which_are_not_skipped.next().is_none()
@@ -489,8 +538,11 @@ fn amend_oxlint_types(code: &str) -> String {
     // Replace `hashbang` field in `Program` with `comments` and `tokens` fields
     let old_len = code.len();
     #[expect(clippy::disallowed_methods, reason = "always results in replacement")]
-    let code =
-        code.replacen("hashbang: Hashbang | null;", "comments: Comment[]; tokens: Token[];", 1);
+    let code = code.replacen(
+        "hashbang: Hashbang | null;",
+        "comments: Comment[]; tokens: Token[];",
+        1,
+    );
     assert_ne!(code.len(), old_len); // Check replacement was made
 
     // Make `parent` fields non-optional

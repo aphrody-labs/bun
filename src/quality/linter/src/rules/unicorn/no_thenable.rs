@@ -168,9 +168,12 @@ fn check_call_expression(expr: &CallExpression, ctx: &LintContext) {
             && !matches!(expr.arguments[0], Argument::SpreadElement(_))
             && match expr.callee.as_member_expression() {
                 Some(me) => {
-                    me.object().get_identifier_reference().is_some_and(|ident_ref| {
-                        ident_ref.name == "Reflect" || ident_ref.name == "Object"
-                    }) && me.static_property_name() == Some("defineProperty")
+                    me.object()
+                        .get_identifier_reference()
+                        .is_some_and(|ident_ref| {
+                            ident_ref.name == "Reflect" || ident_ref.name == "Object"
+                        })
+                        && me.static_property_name() == Some("defineProperty")
                         && !me.optional()
                 }
                 _ => false,
@@ -253,27 +256,34 @@ fn check_expression(expr: &Expression, ctx: &LintContext<'_>) -> Option<oxc_span
                 None
             }
         }
-        Expression::TemplateLiteral(lit) => {
-            lit.single_quasi().and_then(|quasi| if quasi == "then" { Some(lit.span) } else { None })
-        }
+        Expression::TemplateLiteral(lit) => lit.single_quasi().and_then(|quasi| {
+            if quasi == "then" {
+                Some(lit.span)
+            } else {
+                None
+            }
+        }),
         Expression::Identifier(ident) => {
             let symbols = ctx.scoping();
             let reference_id = ident.reference_id();
-            symbols.get_reference(reference_id).symbol_id().and_then(|symbol_id| {
-                let decl = ctx.nodes().get_node(symbols.symbol_declaration(symbol_id));
-                let var_decl = decl.kind().as_variable_declarator()?;
+            symbols
+                .get_reference(reference_id)
+                .symbol_id()
+                .and_then(|symbol_id| {
+                    let decl = ctx.nodes().get_node(symbols.symbol_declaration(symbol_id));
+                    let var_decl = decl.kind().as_variable_declarator()?;
 
-                match &var_decl.init {
-                    Some(Expression::StringLiteral(lit)) => {
-                        if lit.value == "then" {
-                            Some(lit.span)
-                        } else {
-                            None
+                    match &var_decl.init {
+                        Some(Expression::StringLiteral(lit)) => {
+                            if lit.value == "then" {
+                                Some(lit.span)
+                            } else {
+                                None
+                            }
                         }
+                        _ => None,
                     }
-                    _ => None,
-                }
-            })
+                })
         }
         _ => None,
     }

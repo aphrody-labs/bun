@@ -40,7 +40,10 @@ fn format_junit(diagnostics: &[Error]) -> String {
 
     let mut grouped: FxHashMap<&str, Vec<usize>> = FxHashMap::default();
     for (index, info) in infos.iter().enumerate() {
-        grouped.entry(info.filename.as_str()).or_default().push(index);
+        grouped
+            .entry(info.filename.as_str())
+            .or_default()
+            .push(index);
     }
 
     let mut filenames: Vec<&str> = grouped.keys().copied().collect();
@@ -57,7 +60,12 @@ fn format_junit(diagnostics: &[Error]) -> String {
         let mut warning = 0;
 
         for &index in indices {
-            let Info { message, start, rule_id, .. } = &infos[index];
+            let Info {
+                message,
+                start,
+                rule_id,
+                ..
+            } = &infos[index];
             let rule = rule_id.as_deref().unwrap_or("");
 
             let severity = if diagnostics[index].severity() == Some(Severity::Error) {

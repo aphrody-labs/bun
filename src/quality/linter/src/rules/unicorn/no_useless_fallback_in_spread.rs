@@ -50,7 +50,10 @@ impl Rule for NoUselessFallbackInSpread {
             return;
         };
 
-        if !matches!(logical_expression.operator, LogicalOperator::Or | LogicalOperator::Coalesce) {
+        if !matches!(
+            logical_expression.operator,
+            LogicalOperator::Or | LogicalOperator::Coalesce
+        ) {
             return;
         }
 
@@ -161,17 +164,46 @@ fn test() {
     ];
 
     let fix = vec![
-        (r"const object = {...(foo || {})}", r"const object = {...foo}"),
-        (r"const object = {...(foo?.bar || {})}", r"const object = {...foo?.bar}"),
-        (r"const object = {...(foo() || {})}", r"const object = {...foo()}"),
-        (r"const object = {...(foo?.bar() || {})}", r"const object = {...foo?.bar()}"),
-        (r"const object = {...((foo && {}) || {})}", "const object = {...(foo && {})}"),
-        (r"const object = {...(0 || {})}", r"const object = {...(0 || {})}"),
-        (r"const object = {...(NaN || {})}", r"const object = {...(NaN || {})}"),
-        (r"const object = {...(Infinity || {})}", r"const object = {...(Infinity || {})}"),
+        (
+            r"const object = {...(foo || {})}",
+            r"const object = {...foo}",
+        ),
+        (
+            r"const object = {...(foo?.bar || {})}",
+            r"const object = {...foo?.bar}",
+        ),
+        (
+            r"const object = {...(foo() || {})}",
+            r"const object = {...foo()}",
+        ),
+        (
+            r"const object = {...(foo?.bar() || {})}",
+            r"const object = {...foo?.bar()}",
+        ),
+        (
+            r"const object = {...((foo && {}) || {})}",
+            "const object = {...(foo && {})}",
+        ),
+        (
+            r"const object = {...(0 || {})}",
+            r"const object = {...(0 || {})}",
+        ),
+        (
+            r"const object = {...(NaN || {})}",
+            r"const object = {...(NaN || {})}",
+        ),
+        (
+            r"const object = {...(Infinity || {})}",
+            r"const object = {...(Infinity || {})}",
+        ),
     ];
 
-    Tester::new(NoUselessFallbackInSpread::NAME, NoUselessFallbackInSpread::PLUGIN, pass, fail)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        NoUselessFallbackInSpread::NAME,
+        NoUselessFallbackInSpread::PLUGIN,
+        pass,
+        fail,
+    )
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

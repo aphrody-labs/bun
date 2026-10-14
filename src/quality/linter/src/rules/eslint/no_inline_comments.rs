@@ -178,7 +178,9 @@ fn get_comment_context(source_text: &str, comment_span: Span) -> (&str, &str) {
     let line_start = source_text[..start].rfind('\n').map_or(0, |i| i + 1);
 
     // Find the end of the line containing the comment end
-    let line_end = source_text[end..].find('\n').map_or(source_text.len(), |i| end + i);
+    let line_end = source_text[end..]
+        .find('\n')
+        .map_or(source_text.len(), |i| end + i);
 
     // Get content before the comment on its starting line
     let preamble = source_text[line_start..start].trim();
@@ -214,7 +216,9 @@ fn is_jsx_expression_comment(
     }
 
     // Check if the comment is inside a JSXEmptyExpression using pre-collected spans
-    jsx_empty_expr_spans.iter().any(|expr_span| expr_span.contains_inclusive(comment_span))
+    jsx_empty_expr_spans
+        .iter()
+        .any(|expr_span| expr_span.contains_inclusive(comment_span))
 }
 
 #[test]

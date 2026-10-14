@@ -415,8 +415,13 @@ fn test() {
         ),
     ];
 
-    Tester::new(NoUntypedMockFactory::NAME, NoUntypedMockFactory::PLUGIN, pass, fail)
-        .with_jest_plugin(true)
-        .expect_fix(fix)
-        .test_and_snapshot();
+    Tester::new(
+        NoUntypedMockFactory::NAME,
+        NoUntypedMockFactory::PLUGIN,
+        pass,
+        fail,
+    )
+    .with_jest_plugin(true)
+    .expect_fix(fix)
+    .test_and_snapshot();
 }

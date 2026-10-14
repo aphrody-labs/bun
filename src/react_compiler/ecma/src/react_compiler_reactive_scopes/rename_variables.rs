@@ -167,8 +167,11 @@ impl<'a, 'e> ReactiveFunctionVisitor<'a> for Visitor<'a, 'e> {
     /// TS: `visitScope(scope, state) { for (const [_, decl] of scope.scope.declarations) state.visit(decl.identifier); this.traverseScope(scope, state) }`
     fn visit_scope(&self, scope: &ReactiveScopeBlock<'a>, state: &mut Scopes<'a>) {
         let scope_data = &self.env.scopes[scope.scope];
-        let decl_ids: Vec<IdentifierId> =
-            scope_data.declarations.iter().map(|(_, d)| d.identifier).collect();
+        let decl_ids: Vec<IdentifierId> = scope_data
+            .declarations
+            .iter()
+            .map(|(_, d)| d.identifier)
+            .collect();
         for id in decl_ids {
             state.visit_identifier(id, self.env);
         }
@@ -295,13 +298,22 @@ fn collect_globals_value<'a>(
                 _ => {}
             }
         }
-        ReactiveValue::SequenceExpression { instructions, value: inner, .. } => {
+        ReactiveValue::SequenceExpression {
+            instructions,
+            value: inner,
+            ..
+        } => {
             for instr in instructions {
                 collect_globals_value(&instr.value, globals, env);
             }
             collect_globals_value(inner, globals, env);
         }
-        ReactiveValue::ConditionalExpression { test, consequent, alternate, .. } => {
+        ReactiveValue::ConditionalExpression {
+            test,
+            consequent,
+            alternate,
+            ..
+        } => {
             collect_globals_value(test, globals, env);
             collect_globals_value(consequent, globals, env);
             collect_globals_value(alternate, globals, env);
@@ -352,7 +364,13 @@ fn collect_globals_terminal<'a>(
     match &stmt.terminal {
         ReactiveTerminal::Break { .. } | ReactiveTerminal::Continue { .. } => {}
         ReactiveTerminal::Return { .. } | ReactiveTerminal::Throw { .. } => {}
-        ReactiveTerminal::For { init, test, update, loop_block, .. } => {
+        ReactiveTerminal::For {
+            init,
+            test,
+            update,
+            loop_block,
+            ..
+        } => {
             collect_globals_value(init, globals, env);
             collect_globals_value(test, globals, env);
             collect_globals_block(loop_block, globals, env);
@@ -360,24 +378,39 @@ fn collect_globals_terminal<'a>(
                 collect_globals_value(update, globals, env);
             }
         }
-        ReactiveTerminal::ForOf { init, test, loop_block, .. } => {
+        ReactiveTerminal::ForOf {
+            init,
+            test,
+            loop_block,
+            ..
+        } => {
             collect_globals_value(init, globals, env);
             collect_globals_value(test, globals, env);
             collect_globals_block(loop_block, globals, env);
         }
-        ReactiveTerminal::ForIn { init, loop_block, .. } => {
+        ReactiveTerminal::ForIn {
+            init, loop_block, ..
+        } => {
             collect_globals_value(init, globals, env);
             collect_globals_block(loop_block, globals, env);
         }
-        ReactiveTerminal::DoWhile { loop_block, test, .. } => {
+        ReactiveTerminal::DoWhile {
+            loop_block, test, ..
+        } => {
             collect_globals_block(loop_block, globals, env);
             collect_globals_value(test, globals, env);
         }
-        ReactiveTerminal::While { test, loop_block, .. } => {
+        ReactiveTerminal::While {
+            test, loop_block, ..
+        } => {
             collect_globals_value(test, globals, env);
             collect_globals_block(loop_block, globals, env);
         }
-        ReactiveTerminal::If { consequent, alternate, .. } => {
+        ReactiveTerminal::If {
+            consequent,
+            alternate,
+            ..
+        } => {
             collect_globals_block(consequent, globals, env);
             if let Some(alt) = alternate {
                 collect_globals_block(alt, globals, env);

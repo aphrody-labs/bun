@@ -63,8 +63,14 @@ fn test() {
     let fail = vec![
         ("jest.fn()", Some(serde_json::json!([{ "fn": null }]))),
         ("jest[\"fn\"]()", Some(serde_json::json!([{ "fn": null }]))),
-        ("jest.mock()", Some(serde_json::json!([{ "mock": "Do not use mocks" }]))),
-        ("jest[\"mock\"]()", Some(serde_json::json!([{ "mock": "Do not use mocks" }]))),
+        (
+            "jest.mock()",
+            Some(serde_json::json!([{ "mock": "Do not use mocks" }])),
+        ),
+        (
+            "jest[\"mock\"]()",
+            Some(serde_json::json!([{ "mock": "Do not use mocks" }])),
+        ),
         (
             "
                 import { jest } from '@jest/globals';
@@ -74,6 +80,11 @@ fn test() {
         ),
     ];
 
-    Tester::new(NoRestrictedJestMethods::NAME, NoRestrictedJestMethods::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        NoRestrictedJestMethods::NAME,
+        NoRestrictedJestMethods::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

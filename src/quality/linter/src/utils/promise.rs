@@ -9,8 +9,16 @@ use oxc_semantic::SymbolId;
 use crate::context::LintContext;
 
 // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise
-pub const PROMISE_STATIC_METHODS: [&str; 8] =
-    ["all", "allSettled", "any", "race", "reject", "resolve", "try", "withResolvers"];
+pub const PROMISE_STATIC_METHODS: [&str; 8] = [
+    "all",
+    "allSettled",
+    "any",
+    "race",
+    "reject",
+    "resolve",
+    "try",
+    "withResolvers",
+];
 
 pub fn is_promise(call_expr: &CallExpression) -> Option<String> {
     let member_expr = call_expr.callee.get_member_expr()?;
@@ -47,7 +55,11 @@ pub fn is_promise_with_context<'a>(
     let member_expr = call_expr.callee.get_member_expr()?;
     let mut visited = FxHashSet::<SymbolId>::default();
     if matches!(
-        classify_receiver(member_expr.object().get_inner_expression(), ctx, &mut visited),
+        classify_receiver(
+            member_expr.object().get_inner_expression(),
+            ctx,
+            &mut visited
+        ),
         ReceiverKind::NotPromise
     ) {
         return None;
@@ -100,7 +112,11 @@ fn classify_identifier_receiver<'a>(
     ctx: &LintContext<'a>,
     visited: &mut FxHashSet<SymbolId>,
 ) -> ReceiverKind {
-    let Some(symbol_id) = ctx.scoping().get_reference(ident.reference_id()).symbol_id() else {
+    let Some(symbol_id) = ctx
+        .scoping()
+        .get_reference(ident.reference_id())
+        .symbol_id()
+    else {
         return ReceiverKind::Unknown;
     };
 
@@ -108,12 +124,16 @@ fn classify_identifier_receiver<'a>(
         return ReceiverKind::Unknown;
     }
 
-    let declaration = ctx.nodes().get_node(ctx.scoping().symbol_declaration(symbol_id));
+    let declaration = ctx
+        .nodes()
+        .get_node(ctx.scoping().symbol_declaration(symbol_id));
     match declaration.kind() {
         AstKind::VariableDeclarator(var_decl) => var_decl
             .init
             .as_ref()
-            .map_or(ReceiverKind::Unknown, |init| classify_receiver(init, ctx, visited)),
+            .map_or(ReceiverKind::Unknown, |init| {
+                classify_receiver(init, ctx, visited)
+            }),
         _ => ReceiverKind::Unknown,
     }
 }
@@ -126,7 +146,9 @@ pub fn get_promise_constructor_inline_executor<'a>(
     new_expr: &'a NewExpression<'a>,
 ) -> Option<&'a Expression<'a>> {
     if is_promise_constructor(new_expr) && new_expr.arguments.len() == 1 {
-        return new_expr.arguments[0].as_expression().filter(|expr| expr.is_function());
+        return new_expr.arguments[0]
+            .as_expression()
+            .filter(|expr| expr.is_function());
     }
 
     None

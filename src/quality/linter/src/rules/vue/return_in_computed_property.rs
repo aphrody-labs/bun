@@ -28,7 +28,9 @@ struct ReturnInComputedPropertyConfig {
 
 impl Default for ReturnInComputedPropertyConfig {
     fn default() -> Self {
-        Self { treat_undefined_as_unspecified: true }
+        Self {
+            treat_undefined_as_unspecified: true,
+        }
     }
 }
 
@@ -511,6 +513,11 @@ fn test() {
         ),
     ];
 
-    Tester::new(ReturnInComputedProperty::NAME, ReturnInComputedProperty::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        ReturnInComputedProperty::NAME,
+        ReturnInComputedProperty::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

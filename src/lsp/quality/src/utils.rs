@@ -29,12 +29,18 @@ mod tests {
 
     #[test]
     fn test_normalize_user_config_path_to_watch_pattern() {
-        assert_eq!(normalize_user_config_path_to_watch_pattern("./oxlintrc.json"), "oxlintrc.json");
+        assert_eq!(
+            normalize_user_config_path_to_watch_pattern("./oxlintrc.json"),
+            "oxlintrc.json"
+        );
         assert_eq!(
             normalize_user_config_path_to_watch_pattern(".\\oxlintrc.json"),
             "oxlintrc.json"
         );
-        assert_eq!(normalize_user_config_path_to_watch_pattern("oxlintrc.json"), "oxlintrc.json");
+        assert_eq!(
+            normalize_user_config_path_to_watch_pattern("oxlintrc.json"),
+            "oxlintrc.json"
+        );
         assert_eq!(
             normalize_user_config_path_to_watch_pattern("/home/oxlintrc.json"),
             "/home/oxlintrc.json"

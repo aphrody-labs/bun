@@ -36,7 +36,11 @@ impl FoundStatus {
 
     #[inline]
     pub const fn found(is_found: bool) -> Self {
-        if is_found { Self::NotIgnored } else { Self::NotFound }
+        if is_found {
+            Self::NotIgnored
+        } else {
+            Self::NotFound
+        }
     }
 
     /// Mark a target as ignored if it's found.
@@ -398,14 +402,19 @@ impl NoUnusedVars {
         target: &Symbol<'_, 'a>,
         assignment: &AssignmentTargetMaybeDefault<'a>,
     ) -> FoundStatus {
-        assignment.as_assignment_target().map_or(FoundStatus::NotFound, |assignment| {
-            self.search_assignment_target(target, assignment)
-        })
+        assignment
+            .as_assignment_target()
+            .map_or(FoundStatus::NotFound, |assignment| {
+                self.search_assignment_target(target, assignment)
+            })
     }
 
     #[inline]
     fn is_ignored_spread_neighbor(&self, has_rest: bool) -> Ignored {
-        Ignored::new(self.ignore_rest_siblings && has_rest, IgnoreReason::RestSibling)
+        Ignored::new(
+            self.ignore_rest_siblings && has_rest,
+            IgnoreReason::RestSibling,
+        )
     }
 
     // =========================================================================
@@ -486,14 +495,20 @@ mod test {
         ]))
         .unwrap();
 
-        assert_eq!(rule.is_ignored_var("_x"), Ignored::from_reason(IgnoreReason::NamePattern));
+        assert_eq!(
+            rule.is_ignored_var("_x"),
+            Ignored::from_reason(IgnoreReason::NamePattern)
+        );
         assert_eq!(
             rule.is_ignored_var(&Str::from("_x")),
             Ignored::from_reason(IgnoreReason::NamePattern)
         );
         assert_eq!(rule.is_ignored_var("notIgnored"), Ignored::not_ignored());
 
-        assert_eq!(rule.is_ignored_arg("ignored"), Ignored::from_reason(IgnoreReason::NamePattern));
+        assert_eq!(
+            rule.is_ignored_arg("ignored"),
+            Ignored::from_reason(IgnoreReason::NamePattern)
+        );
         assert_eq!(
             rule.is_ignored_arg("alsoIgnored"),
             Ignored::from_reason(IgnoreReason::NamePattern)
@@ -525,7 +540,10 @@ mod test {
             rule.is_ignored_array_destructured(&Str::from("_x")),
             Ignored::from_reason(IgnoreReason::NamePattern)
         );
-        assert_eq!(rule.is_ignored_array_destructured("notIgnored"), Ignored::not_ignored());
+        assert_eq!(
+            rule.is_ignored_array_destructured("notIgnored"),
+            Ignored::not_ignored()
+        );
     }
 
     #[test]
@@ -537,7 +555,10 @@ mod test {
             }
         ]))
         .unwrap();
-        assert_eq!(rule.is_ignored_catch_err("_"), Ignored::from_reason(IgnoreReason::NamePattern));
+        assert_eq!(
+            rule.is_ignored_catch_err("_"),
+            Ignored::from_reason(IgnoreReason::NamePattern)
+        );
         assert_eq!(
             rule.is_ignored_catch_err("_err"),
             Ignored::from_reason(IgnoreReason::NamePattern)

@@ -18,13 +18,24 @@ impl<'a> PeepholeOptimizations {
         expr: &mut MemberExpression<'a>,
         ctx: &mut TraverseCtx<'a>,
     ) {
-        let MemberExpression::ComputedMemberExpression(e) = expr else { return };
-        let Expression::StringLiteral(s) = &e.expression else { return };
+        let MemberExpression::ComputedMemberExpression(e) = expr else {
+            return;
+        };
+        let Expression::StringLiteral(s) = &e.expression else {
+            return;
+        };
         if is_identifier_name_patched(&s.value) {
             let property = IdentifierName::new(s.span, s.value, ctx);
             expr.replace_with(|expr| {
-                let MemberExpression::ComputedMemberExpression(e) = expr else { unreachable!() };
-                let ComputedMemberExpression { span, object, optional, .. } = e.unbox();
+                let MemberExpression::ComputedMemberExpression(e) = expr else {
+                    unreachable!()
+                };
+                let ComputedMemberExpression {
+                    span,
+                    object,
+                    optional,
+                    ..
+                } = e.unbox();
                 MemberExpression::new_static_member_expression(
                     span, object, property, optional, ctx,
                 )

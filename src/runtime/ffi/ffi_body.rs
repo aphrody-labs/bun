@@ -956,7 +956,11 @@ fn compile_diagnostics_to_js(
         let entry = JSValue::create_empty_object(global, 4);
         match parse_diagnostic(text) {
             Some(d) => {
-                entry.put(global, "file", bun_string_jsc::create_utf8_for_js(global, d.file)?);
+                entry.put(
+                    global,
+                    "file",
+                    bun_string_jsc::create_utf8_for_js(global, d.file)?,
+                );
                 entry.put(global, "line", JSValue::js_number(f64::from(d.line)));
                 entry.put(
                     global,
@@ -970,7 +974,11 @@ fn compile_diagnostics_to_js(
                 );
             }
             None => {
-                entry.put(global, "message", bun_string_jsc::create_utf8_for_js(global, text)?);
+                entry.put(
+                    global,
+                    "message",
+                    bun_string_jsc::create_utf8_for_js(global, text)?,
+                );
             }
         }
         array.put_index(global, u32::try_from(i).expect("int cast"), entry)?;
@@ -1244,11 +1252,9 @@ impl FFI {
             object.get_own(global_this, &bun_core::String::borrow_utf8(b"code"))?
         {
             if !code_value.is_string() {
-                return Err(global_this.throw_invalid_argument_type_value(
-                    b"code",
-                    b"string",
-                    code_value,
-                ));
+                return Err(
+                    global_this.throw_invalid_argument_type_value(b"code", b"string", code_value)
+                );
             }
             compile_c.source =
                 Source::Code(code_value.to_bun_string(global_this)?.to_owned_slice_z());
@@ -1276,8 +1282,10 @@ impl FFI {
                         let _ = writeln!(&mut combined, "{}", BStr::new(deferred_error));
                     }
 
-                    let error = global_this.create_error_instance(format_args!("{}", BStr::new(&combined)));
-                    let diagnostics = compile_diagnostics_to_js(global_this, &compile_c.deferred_errors)?;
+                    let error =
+                        global_this.create_error_instance(format_args!("{}", BStr::new(&combined)));
+                    let diagnostics =
+                        compile_diagnostics_to_js(global_this, &compile_c.deferred_errors)?;
                     error.put(global_this, "errors", diagnostics);
                     return Err(global_this.throw_value(error));
                 }
@@ -2957,13 +2965,19 @@ mod atomics {
             ("atomic_thread_fence", thread_fence as *const c_void),
             ("atomic_signal_fence", signal_fence as *const c_void),
             ("__atomic_is_lock_free", is_lock_free as *const c_void),
-            ("atomic_flag_test_and_set", flag_test_and_set as *const c_void),
+            (
+                "atomic_flag_test_and_set",
+                flag_test_and_set as *const c_void,
+            ),
             (
                 "atomic_flag_test_and_set_explicit",
                 flag_test_and_set_explicit as *const c_void,
             ),
             ("atomic_flag_clear", flag_clear as *const c_void),
-            ("atomic_flag_clear_explicit", flag_clear_explicit as *const c_void),
+            (
+                "atomic_flag_clear_explicit",
+                flag_clear_explicit as *const c_void,
+            ),
         ]);
     }
 }

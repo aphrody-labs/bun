@@ -44,7 +44,9 @@ fn main() {
     let targets: Option<String> = args.opt_value_from_str("--targets").unwrap_or(None);
     let target: Option<String> = args.opt_value_from_str("--target").unwrap_or(None);
     let inline_sourcemap = args.contains("--inline-sourcemap");
-    let name = args.free_from_str().unwrap_or_else(|_| "test.js".to_string());
+    let name = args
+        .free_from_str()
+        .unwrap_or_else(|_| "test.js".to_string());
 
     let path = Path::new(&name);
     let source_text =
@@ -126,7 +128,9 @@ fn codegen(program: &Program<'_>, path: &Path, inline_sourcemap: bool) -> String
     let CodegenReturn { code, map, .. } = Codegen::new().with_options(options).build(program);
 
     if inline_sourcemap {
-        let sourcemap_url = map.expect("inline sourcemap should be generated").to_data_url();
+        let sourcemap_url = map
+            .expect("inline sourcemap should be generated")
+            .to_data_url();
         format!("{code}//# sourceMappingURL={sourcemap_url}\n")
     } else {
         code

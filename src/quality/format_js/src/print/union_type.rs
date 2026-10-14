@@ -69,7 +69,8 @@ impl<'a> FormatWrite<'a> for AstNode<'a, TSUnionType<'a>> {
             //   'VALUE';
             // ```
             let has_comment_after_pipe = is_single_plain_member
-                && f.comments().has_leading_own_line_comment(self.types[0].span().start);
+                && f.comments()
+                    .has_leading_own_line_comment(self.types[0].span().start);
 
             let has_alias_level_own_line_comments =
                 is_alias_level && (has_comment_before_pipe || has_comment_after_pipe);
@@ -95,12 +96,26 @@ impl<'a> FormatWrite<'a> for AstNode<'a, TSUnionType<'a>> {
         // A suppression comment there covers the member (`= | /* c */ A`);
         // one before the union never reaches here (the generated `fmt` printed the union verbatim).
         let (leading_comments, suppressed_node_span) = if is_alias_level && is_single_plain_member {
-            let comments = f.context().comments().comments_before(self.types[0].span().start);
-            let is_suppressed =
-                comments.iter().any(|comment| f.comments().is_suppression_comment(comment));
-            (comments, if is_suppressed { self.types[0].span() } else { Span::default() })
+            let comments = f
+                .context()
+                .comments()
+                .comments_before(self.types[0].span().start);
+            let is_suppressed = comments
+                .iter()
+                .any(|comment| f.comments().is_suppression_comment(comment));
+            (
+                comments,
+                if is_suppressed {
+                    self.types[0].span()
+                } else {
+                    Span::default()
+                },
+            )
         } else {
-            (f.context().comments().comments_before(self.span().start), Span::default())
+            (
+                f.context().comments().comments_before(self.span().start),
+                Span::default(),
+            )
         };
         let mut union_type_at_top = self;
         while let AstNodes::TSUnionType(parent) = union_type_at_top.parent()
@@ -187,12 +202,14 @@ impl<'a> FormatWrite<'a> for AstNode<'a, TSUnionType<'a>> {
                 // The cast site leaves the after-operator comments to this printer
                 // and breaks + indents itself only for a riding line comment before the operator
                 // (`as_or_satisfies_expression.rs`), printed by now.
-                AstNodes::TSAsExpression(cast) => {
-                    f.comments().printed_line_comment_after(cast.expression.span().end).is_none()
-                }
-                AstNodes::TSSatisfiesExpression(cast) => {
-                    f.comments().printed_line_comment_after(cast.expression.span().end).is_none()
-                }
+                AstNodes::TSAsExpression(cast) => f
+                    .comments()
+                    .printed_line_comment_after(cast.expression.span().end)
+                    .is_none(),
+                AstNodes::TSSatisfiesExpression(cast) => f
+                    .comments()
+                    .printed_line_comment_after(cast.expression.span().end)
+                    .is_none(),
                 AstNodes::TSTypeAssertion(_)
                 | AstNodes::TSTupleType(_)
                 | AstNodes::TSTypeParameterInstantiation(_) => false,
@@ -253,8 +270,10 @@ impl<'a> FormatWrite<'a> for AstNode<'a, TSUnionType<'a>> {
         let format_inner_content = format_with(|f| {
             let only_type = union_type_at_top.types.len() == 1;
             let has_own_line_comment = comment_info.has_own_line_comment
-                || (matches!(union_type_at_top.parent(), AstNodes::TSTypeAliasDeclaration(_))
-                    && comment_info.has_line_ending_trailing_non_jsdoc_block_comment);
+                || (matches!(
+                    union_type_at_top.parent(),
+                    AstNodes::TSTypeAliasDeclaration(_)
+                ) && comment_info.has_line_ending_trailing_non_jsdoc_block_comment);
             // An own-line leading comment breaks BEFORE itself and stays above the first member
             // ```ts
             // type A =
@@ -383,7 +402,8 @@ fn format_union_types<'a>(
     while let Some(element) = node_iter.next() {
         let element_span = element.span();
         if suppressed_node_span == element_span
-            || f.comments().has_trailing_suppression_comment(element_span.end)
+            || f.comments()
+                .has_trailing_suppression_comment(element_span.end)
         {
             write_suppressed_expression(
                 element_span,
@@ -398,14 +418,18 @@ fn format_union_types<'a>(
         }
 
         if let Some(next_node_span) = node_iter.peek().map(GetSpan::span) {
-            let comments_before_separator =
-                f.context().comments().comments_before_character(element_span.end, b'|');
+            let comments_before_separator = f
+                .context()
+                .comments()
+                .comments_before_character(element_span.end, b'|');
 
             // The next member's suppression comment: own-line before its `|` (hoisted below) or after it.
             // Not this member's same-line trailing run (`| A // prettier-ignore`), which is A's;
             // both views start at the same cursor, so the run is the leading slice of the next member's comments.
-            let same_line_trailing_count =
-                comments_before_separator.iter().take_while(|c| !c.preceded_by_newline()).count();
+            let same_line_trailing_count = comments_before_separator
+                .iter()
+                .take_while(|c| !c.preceded_by_newline())
+                .count();
             let comments = f.context().comments();
             if comments
                 .comments_before_iter(next_node_span.start)
@@ -440,7 +464,9 @@ fn format_union_types<'a>(
             // The asymmetry is an attachment artifact on Prettier's side:
             // only its trailing-comment printer preserves the empty line (`printTrailingComment`),
             // and this comment attaches as trailing there, leading in binary-like chains.
-            if f.comments().has_leading_own_line_comment(next_node_span.start) {
+            if f.comments()
+                .has_leading_own_line_comment(next_node_span.start)
+            {
                 let comments = f.context().comments().comments_before(next_node_span.start);
                 FormatTrailingComments::Comments(comments).fmt(f);
             }
@@ -462,7 +488,10 @@ fn format_union_types<'a>(
             // )[]; // comment 3
             //```
             // TODO: We may need to tweak `AstNode<'a, ArenaVec<'a, T>>` iterator as some of Vec's last elements should have the following span.
-            let comments = f.context().comments().end_of_line_comments_after(element_span.end);
+            let comments = f
+                .context()
+                .comments()
+                .end_of_line_comments_after(element_span.end);
             write!(f, FormatTrailingComments::Comments(comments));
         }
 

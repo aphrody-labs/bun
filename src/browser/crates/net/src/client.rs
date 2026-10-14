@@ -2,23 +2,23 @@ use std::{
     collections::{HashMap, VecDeque},
     net::{IpAddr, SocketAddr},
     sync::{
-        Arc, OnceLock,
         atomic::{AtomicBool, AtomicU32, Ordering},
+        Arc, OnceLock,
     },
     time::{Duration, Instant},
 };
 
 use reqwest::{
-    Client, Method,
     dns::{Addrs, Name, Resolve, Resolving},
     header::{HeaderMap, HeaderName, HeaderValue, USER_AGENT},
     redirect::Policy,
+    Client, Method,
 };
-use tokio::sync::{RwLock, watch};
+use tokio::sync::{watch, RwLock};
 use url::Url;
 
 use crate::{
-    cookies::{CookieJar, SameSiteContext, same_site},
+    cookies::{same_site, CookieJar, SameSiteContext},
     interceptor::{InterceptAction, RequestInterceptor},
 };
 
@@ -31,10 +31,10 @@ fn configured_root_paths() -> Vec<std::path::PathBuf> {
         match std::fs::read_dir(directory) {
             Ok(entries) => {
                 paths.extend(entries.filter_map(|entry| entry.ok().map(|entry| entry.path())));
-            },
+            }
             Err(error) => {
                 tracing::warn!(%error, "failed to read SSL_CERT_DIR");
-            },
+            }
         }
     }
     paths.sort();
@@ -117,7 +117,9 @@ impl Response {
     }
 
     pub fn is_html(&self) -> bool {
-        self.content_type().map(|ct| ct.contains("text/html")).unwrap_or(false)
+        self.content_type()
+            .map(|ct| ct.contains("text/html"))
+            .unwrap_or(false)
     }
 }
 
@@ -228,7 +230,7 @@ impl PartialEq for ResourceRequest {
                 (None, None) => true,
                 (Some(a), Some(b)) => {
                     Arc::ptr_eq(a, b) || a.load(Ordering::Relaxed) == b.load(Ordering::Relaxed)
-                },
+                }
                 _ => false,
             }
     }
@@ -266,7 +268,7 @@ impl ResourceRequest {
             | ResourceType::Other => RequestCredentials::Include,
             ResourceType::Font | ResourceType::Xhr | ResourceType::Fetch => {
                 RequestCredentials::SameOrigin
-            },
+            }
         };
         Self {
             resource_type,
@@ -329,7 +331,7 @@ impl ResourceRequest {
             ResourceType::Document => {
                 "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/\
                  apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7"
-            },
+            }
             ResourceType::Stylesheet => "text/css,*/*;q=0.1",
             // AVIF is intentionally omitted until bun_browser's decoder can paint
             // it. Advertising a format and then discarding the selected body
@@ -362,7 +364,9 @@ pub(crate) struct InFlightGuard {
 impl InFlightGuard {
     pub(crate) fn new(counter: &Arc<AtomicU32>) -> Self {
         counter.fetch_add(1, Ordering::AcqRel);
-        Self { counter: counter.clone() }
+        Self {
+            counter: counter.clone(),
+        }
     }
 }
 
@@ -373,7 +377,10 @@ impl Drop for InFlightGuard {
 }
 
 pub(crate) fn same_origin(request: &ResourceRequest, target: &Url) -> bool {
-    request.initiator.as_ref().is_some_and(|initiator| initiator.origin() == target.origin())
+    request
+        .initiator
+        .as_ref()
+        .is_some_and(|initiator| initiator.origin() == target.origin())
 }
 
 pub(crate) fn cors_required(request: &ResourceRequest, target: &Url) -> bool {
@@ -400,7 +407,10 @@ pub(crate) fn serialized_request_origin(
 
 pub(crate) fn redirect_taints_origin(request: &ResourceRequest, current: &Url, next: &Url) -> bool {
     current.origin() != next.origin()
-        && request.initiator.as_ref().is_none_or(|initiator| initiator.origin() != current.origin())
+        && request
+            .initiator
+            .as_ref()
+            .is_none_or(|initiator| initiator.origin() != current.origin())
 }
 
 pub(crate) fn validate_request_mode(
@@ -408,7 +418,10 @@ pub(crate) fn validate_request_mode(
     target: &Url,
 ) -> Result<(), BunBrowserNetError> {
     if request.mode == RequestMode::SameOrigin && !same_origin(request, target) {
-        return Err(BunBrowserNetError::Cors(format!("same-origin request blocked for {}", target)));
+        return Err(BunBrowserNetError::Cors(format!(
+            "same-origin request blocked for {}",
+            target
+        )));
     }
     Ok(())
 }
@@ -449,7 +462,10 @@ pub(crate) fn validate_cors_response(
 }
 
 pub(crate) fn response_too_large(url: &Url, limit: usize) -> BunBrowserNetError {
-    BunBrowserNetError::ResponseTooLarge { url: url.to_string(), limit }
+    BunBrowserNetError::ResponseTooLarge {
+        url: url.to_string(),
+        limit,
+    }
 }
 
 pub(crate) fn request_fetch_site(request: &ResourceRequest, target: &Url) -> &'static str {
@@ -526,7 +542,8 @@ impl CallbackRegistry {
     }
 
     fn next_id(&self) -> u64 {
-        self.id_counter.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+        self.id_counter
+            .fetch_add(1, std::sync::atomic::Ordering::Relaxed)
     }
 
     /// Register a request callback; the returned id detaches it via
@@ -558,7 +575,7 @@ impl CallbackRegistry {
                 let before = v.len();
                 v.retain(|(cid, _)| *cid != id);
                 v.len() != before
-            },
+            }
             Err(_) => false,
         }
     }
@@ -570,7 +587,7 @@ impl CallbackRegistry {
                 let before = v.len();
                 v.retain(|(cid, _)| *cid != id);
                 v.len() != before
-            },
+            }
             Err(_) => false,
         }
     }
@@ -625,12 +642,18 @@ pub struct SsrfGuardResolver {
 
 impl SsrfGuardResolver {
     pub fn new(allow_private: bool) -> Self {
-        Self { allow_private, honor_environment: true }
+        Self {
+            allow_private,
+            honor_environment: true,
+        }
     }
 
     /// An embedder can require context-only permissions without inheriting a CLI opt-in.
     pub fn with_environment_policy(allow_private: bool, honor_environment: bool) -> Self {
-        Self { allow_private, honor_environment }
+        Self {
+            allow_private,
+            honor_environment,
+        }
     }
 }
 
@@ -659,7 +682,10 @@ impl Resolve for SsrfGuardResolver {
     }
 }
 
-pub(crate) fn validate_url(url: &Url, allow_private_network: bool) -> Result<(), BunBrowserNetError> {
+pub(crate) fn validate_url(
+    url: &Url,
+    allow_private_network: bool,
+) -> Result<(), BunBrowserNetError> {
     validate_url_with_environment(url, allow_private_network, true)
 }
 
@@ -691,7 +717,7 @@ fn validate_url_with_environment(
                         ip
                     )));
                 }
-            },
+            }
             url::Host::Ipv6(ip) => {
                 if is_forbidden_ip(IpAddr::V6(ip)) {
                     return Err(BunBrowserNetError::Network(format!(
@@ -699,7 +725,7 @@ fn validate_url_with_environment(
                         ip
                     )));
                 }
-            },
+            }
             // Octal, hex, decimal and overlong IPv4 spellings ("0x7f000001",
             // "0177.0.0.1", "2130706433") never reach this arm: for the http
             // and https schemes the url crate normalizes them to Host::Ipv4,
@@ -717,7 +743,7 @@ fn validate_url_with_environment(
                         domain
                     )));
                 }
-            },
+            }
         }
     }
 
@@ -728,8 +754,9 @@ pub(crate) async fn fetch_file_url(
     url: &Url,
     max_response_bytes: usize,
 ) -> Result<Response, BunBrowserNetError> {
-    let path =
-        url.to_file_path().map_err(|_| BunBrowserNetError::Network("Invalid file URL".to_string()))?;
+    let path = url
+        .to_file_path()
+        .map_err(|_| BunBrowserNetError::Network("Invalid file URL".to_string()))?;
     if let Ok(metadata) = tokio::fs::metadata(&path).await {
         if metadata.len() > max_response_bytes as u64 {
             return Err(response_too_large(url, max_response_bytes));
@@ -760,7 +787,13 @@ pub(crate) async fn fetch_file_url(
         headers.insert("content-type".to_string(), ct.to_string());
     }
 
-    Ok(Response { url: url.clone(), status: 200, headers, body, redirected_from: Vec::new() })
+    Ok(Response {
+        url: url.clone(),
+        status: 200,
+        headers,
+        body,
+        redirected_from: Vec::new(),
+    })
 }
 
 fn response_header_value<'a>(
@@ -773,12 +806,14 @@ fn response_header_value<'a>(
         return Ok(None);
     };
     if values.next().is_some() {
-        return Err(BunBrowserNetError::Cors(format!("{} returned multiple {} headers", url, name)));
+        return Err(BunBrowserNetError::Cors(format!(
+            "{} returned multiple {} headers",
+            url, name
+        )));
     }
-    first
-        .to_str()
-        .map(Some)
-        .map_err(|_| BunBrowserNetError::Cors(format!("{} returned an invalid {} header", url, name)))
+    first.to_str().map(Some).map_err(|_| {
+        BunBrowserNetError::Cors(format!("{} returned an invalid {} header", url, name))
+    })
 }
 
 fn validate_reqwest_cors_response(
@@ -793,7 +828,13 @@ fn validate_reqwest_cors_response(
     let allow_origin = response_header_value(headers, "access-control-allow-origin", target)?;
     let allow_credentials =
         response_header_value(headers, "access-control-allow-credentials", target)?;
-    validate_cors_response(request, target, serialized_origin, allow_origin, allow_credentials)
+    validate_cors_response(
+        request,
+        target,
+        serialized_origin,
+        allow_origin,
+        allow_credentials,
+    )
 }
 
 fn reject_oversized_content_length(
@@ -807,7 +848,11 @@ fn reject_oversized_content_length(
     let Ok(value) = value.to_str() else {
         return Ok(());
     };
-    if value.trim().parse::<u64>().is_ok_and(|length| length > limit as u64) {
+    if value
+        .trim()
+        .parse::<u64>()
+        .is_ok_and(|length| length > limit as u64)
+    {
         return Err(response_too_large(url, limit));
     }
     Ok(())
@@ -966,8 +1011,13 @@ impl ResourceCache {
         }
         self.body_bytes = self.body_bytes.saturating_add(response_bytes);
         self.insertion_order.push_back(key.clone());
-        self.entries
-            .insert(key, ResourceCacheEntry { response, expires_at: Instant::now() + lifetime });
+        self.entries.insert(
+            key,
+            ResourceCacheEntry {
+                response,
+                expires_at: Instant::now() + lifetime,
+            },
+        );
     }
 }
 
@@ -992,7 +1042,9 @@ fn response_cache_lifetime(response: &Response) -> Option<Duration> {
             max_age = value.trim_matches('"').parse::<u64>().ok();
         }
     }
-    max_age.filter(|seconds| *seconds > 0).map(Duration::from_secs)
+    max_age
+        .filter(|seconds| *seconds > 0)
+        .map(Duration::from_secs)
 }
 
 /// Derive the sec-ch-ua and sec-ch-ua-platform client-hint header values from a
@@ -1008,10 +1060,19 @@ fn chrome_client_hints(ua: &str) -> (String, String) {
         .unwrap_or(145);
     const GREASE_CHARS: [char; 11] = [' ', '(', ':', '-', '.', '/', ')', ';', '=', '?', '_'];
     const GREASE_VER: [&str; 3] = ["8", "99", "24"];
-    const PERMS: [[usize; 3]; 6] =
-        [[0, 1, 2], [0, 2, 1], [1, 0, 2], [1, 2, 0], [2, 0, 1], [2, 1, 0]];
-    let grease_brand =
-        format!("Not{}A{}Brand", GREASE_CHARS[major % 11], GREASE_CHARS[(major + 1) % 11]);
+    const PERMS: [[usize; 3]; 6] = [
+        [0, 1, 2],
+        [0, 2, 1],
+        [1, 0, 2],
+        [1, 2, 0],
+        [2, 0, 1],
+        [2, 1, 0],
+    ];
+    let grease_brand = format!(
+        "Not{}A{}Brand",
+        GREASE_CHARS[major % 11],
+        GREASE_CHARS[(major + 1) % 11]
+    );
     let brands = [
         (grease_brand, GREASE_VER[major % 3].to_string()),
         ("Chromium".to_string(), major.to_string()),
@@ -1092,17 +1153,17 @@ impl BunBrowserHttpClient {
             .get_or_init(|| async {
                 crate::ensure_rustls_crypto_provider();
                 let mut builder = Client::builder()
-                .redirect(Policy::none())
-                .timeout(self.timeout)
-                .danger_accept_invalid_certs(false)
-                // Read a folded header line (obs-fold) as browsers do instead of
-                // failing the response.
-                .http1_allow_obsolete_multiline_headers_in_responses(true)
-                // SSRF guard: reject hostnames that resolve to a private/loopback IP.
-                .dns_resolver(Arc::new(SsrfGuardResolver::with_environment_policy(
-                    self.allow_private_network,
-                    self.honor_private_network_environment,
-                )));
+                    .redirect(Policy::none())
+                    .timeout(self.timeout)
+                    .danger_accept_invalid_certs(false)
+                    // Read a folded header line (obs-fold) as browsers do instead of
+                    // failing the response.
+                    .http1_allow_obsolete_multiline_headers_in_responses(true)
+                    // SSRF guard: reject hostnames that resolve to a private/loopback IP.
+                    .dns_resolver(Arc::new(SsrfGuardResolver::with_environment_policy(
+                        self.allow_private_network,
+                        self.honor_private_network_environment,
+                    )));
                 // An inherited proxy can resolve the target itself and bypass our DNS guard.
                 // Strict native contexts inherit neither private-network opt-ins nor proxy routing.
                 // An explicit configured proxy is still applied below for its owner.
@@ -1180,7 +1241,13 @@ impl BunBrowserHttpClient {
             );
         }
         let body = read_reqwest_body_limited(response, url, 64 * 1024 * 1024, None).await?;
-        Ok(Response { url: url.clone(), status, headers, body, redirected_from: Vec::new() })
+        Ok(Response {
+            url: url.clone(),
+            status,
+            headers,
+            body,
+            redirected_from: Vec::new(),
+        })
     }
 
     pub async fn fetch(&self, url: &Url) -> Result<Response, BunBrowserNetError> {
@@ -1197,7 +1264,9 @@ impl BunBrowserHttpClient {
         let truncated = Arc::new(AtomicBool::new(false));
         let mut request = ResourceRequest::navigation().with_max_response_bytes(max_bytes);
         request.body_preview = Some(truncated.clone());
-        let response = self.fetch_resource_with_callbacks(url, request, None).await?;
+        let response = self
+            .fetch_resource_with_callbacks(url, request, None)
+            .await?;
         Ok((response, truncated.load(Ordering::Relaxed)))
     }
 
@@ -1209,11 +1278,13 @@ impl BunBrowserHttpClient {
         url: &Url,
         callbacks: Option<&CallbackRegistry>,
     ) -> Result<Response, BunBrowserNetError> {
-        self.fetch_with_method(Method::GET, url, None, callbacks).await
+        self.fetch_with_method(Method::GET, url, None, callbacks)
+            .await
     }
 
     pub async fn post_form(&self, url: &Url, body: &str) -> Result<Response, BunBrowserNetError> {
-        self.fetch_with_method(Method::POST, url, Some(body.as_bytes().to_vec()), None).await
+        self.fetch_with_method(Method::POST, url, Some(body.as_bytes().to_vec()), None)
+            .await
     }
 
     /// `post_form` variant of `fetch_with_callbacks`.
@@ -1223,7 +1294,8 @@ impl BunBrowserHttpClient {
         body: &str,
         callbacks: Option<&CallbackRegistry>,
     ) -> Result<Response, BunBrowserNetError> {
-        self.fetch_with_method(Method::POST, url, Some(body.as_bytes().to_vec()), callbacks).await
+        self.fetch_with_method(Method::POST, url, Some(body.as_bytes().to_vec()), callbacks)
+            .await
     }
 
     pub async fn fetch_with_method(
@@ -1253,7 +1325,8 @@ impl BunBrowserHttpClient {
         request: ResourceRequest,
         callbacks: Option<&CallbackRegistry>,
     ) -> Result<Response, BunBrowserNetError> {
-        self.fetch_with_profile(Method::GET, url, None, callbacks, request).await
+        self.fetch_with_profile(Method::GET, url, None, callbacks, request)
+            .await
     }
 
     async fn resource_cache_key(
@@ -1318,8 +1391,9 @@ impl BunBrowserHttpClient {
         callbacks: Option<&CallbackRegistry>,
         request: ResourceRequest,
     ) -> Result<Response, BunBrowserNetError> {
-        let Some(cache_key) =
-            self.resource_cache_key(&initial_method, url, &initial_body, &request).await
+        let Some(cache_key) = self
+            .resource_cache_key(&initial_method, url, &initial_body, &request)
+            .await
         else {
             return self
                 .fetch_with_profile_uncached(initial_method, url, initial_body, callbacks, request)
@@ -1343,16 +1417,19 @@ impl BunBrowserHttpClient {
                 Acquisition::Follower(sender.subscribe())
             } else {
                 let (sender, _receiver) = watch::channel(None);
-                loader.shared_fetches.insert(cache_key.clone(), sender.clone());
+                loader
+                    .shared_fetches
+                    .insert(cache_key.clone(), sender.clone());
                 Acquisition::Leader(sender)
             }
         };
 
         match acquisition {
             Acquisition::Cached(response) => {
-                self.fire_logical_resource_callbacks(callbacks, url, &request, &response).await;
+                self.fire_logical_resource_callbacks(callbacks, url, &request, &response)
+                    .await;
                 Ok(response)
-            },
+            }
             Acquisition::Follower(mut receiver) => loop {
                 let outcome = { receiver.borrow().clone() };
                 if let Some(outcome) = outcome {
@@ -1363,7 +1440,7 @@ impl BunBrowserHttpClient {
                             )
                             .await;
                             Ok(response)
-                        },
+                        }
                         SharedFetchOutcome::RetryUncoalesced => {
                             self.fetch_with_profile_uncached(
                                 initial_method,
@@ -1373,7 +1450,7 @@ impl BunBrowserHttpClient {
                                 request,
                             )
                             .await
-                        },
+                        }
                     };
                 }
                 if receiver.changed().await.is_err() {
@@ -1416,14 +1493,14 @@ impl BunBrowserHttpClient {
                                 lifetime,
                             );
                             SharedFetchOutcome::Cacheable(response.clone())
-                        },
+                        }
                         None => SharedFetchOutcome::RetryUncoalesced,
                     },
                     Err(_) => SharedFetchOutcome::RetryUncoalesced,
                 };
                 leader.finish(shared_outcome);
                 result
-            },
+            }
         }
     }
 
@@ -1504,17 +1581,17 @@ impl BunBrowserHttpClient {
 
             if let Some(interceptor) = self.interceptor.read().await.as_ref() {
                 match interceptor.intercept(&request_info).await {
-                    InterceptAction::Continue => {},
+                    InterceptAction::Continue => {}
                     InterceptAction::Block => {
                         return Err(BunBrowserNetError::Blocked(current_url.to_string()));
-                    },
+                    }
                     InterceptAction::Fulfill(response) => {
                         return Ok(response);
-                    },
+                    }
                     InterceptAction::ModifyHeaders(headers) => {
                         let mut extra = self.extra_headers.write().await;
                         extra.extend(headers);
-                    },
+                    }
                 }
             }
 
@@ -1564,7 +1641,10 @@ impl BunBrowserHttpClient {
                     )
                 }),
             );
-            headers.insert(reqwest::header::ACCEPT, HeaderValue::from_static(request.accept()));
+            headers.insert(
+                reqwest::header::ACCEPT,
+                HeaderValue::from_static(request.accept()),
+            );
             headers.insert(
                 HeaderName::from_static("sec-fetch-site"),
                 HeaderValue::from_static(request_fetch_site(&request, &current_url)),
@@ -1618,7 +1698,7 @@ impl BunBrowserHttpClient {
                 match HeaderValue::from_str(&cookie_header) {
                     Ok(val) => {
                         headers.insert(reqwest::header::COOKIE, val);
-                    },
+                    }
                     Err(_) => {
                         let filtered: String = cookie_header
                             .split("; ")
@@ -1635,14 +1715,15 @@ impl BunBrowserHttpClient {
                             cookie_header.len(),
                             filtered.len(),
                         );
-                    },
+                    }
                 }
             }
 
             for (k, v) in self.extra_headers.read().await.iter() {
-                if let (Ok(name), Ok(val)) =
-                    (HeaderName::from_bytes(k.as_bytes()), HeaderValue::from_str(v))
-                {
+                if let (Ok(name), Ok(val)) = (
+                    HeaderName::from_bytes(k.as_bytes()),
+                    HeaderValue::from_str(v),
+                ) {
                     headers.insert(name, val);
                 }
             }
@@ -1664,8 +1745,10 @@ impl BunBrowserHttpClient {
 
             if let Some(ref b) = body {
                 if method == Method::POST {
-                    req_builder = req_builder
-                        .header(reqwest::header::CONTENT_TYPE, "application/x-www-form-urlencoded");
+                    req_builder = req_builder.header(
+                        reqwest::header::CONTENT_TYPE,
+                        "application/x-www-form-urlencoded",
+                    );
                 }
                 req_builder = req_builder.body(b.clone());
             }
@@ -1762,7 +1845,9 @@ impl BunBrowserHttpClient {
             return Ok(response);
         }
 
-        Err(BunBrowserNetError::TooManyRedirects(current_url.to_string()))
+        Err(BunBrowserNetError::TooManyRedirects(
+            current_url.to_string(),
+        ))
     }
 
     pub async fn set_user_agent(&self, ua: &str) {
@@ -1832,8 +1917,8 @@ pub enum BunBrowserNetError {
 #[cfg(test)]
 mod resource_cache_tests {
     use super::{
-        RESOURCE_CACHE_MAX_ENTRIES, RequestCredentials, RequestMode, ResourceCache,
-        ResourceCacheKey, ResourceType, Response,
+        RequestCredentials, RequestMode, ResourceCache, ResourceCacheKey, ResourceType, Response,
+        RESOURCE_CACHE_MAX_ENTRIES,
     };
     use std::collections::HashMap;
     use std::time::{Duration, Instant};
@@ -1911,9 +1996,9 @@ pub(crate) mod ssrf_tests {
         client.honor_private_network_environment = false;
         let loopback = url::Url::parse("http://127.0.0.1/").unwrap();
         assert!(client.validate_context_url(&loopback).is_err());
-        assert!(
-            client.validate_context_url(&url::Url::parse("https://example.test/").unwrap()).is_ok()
-        );
+        assert!(client
+            .validate_context_url(&url::Url::parse("https://example.test/").unwrap())
+            .is_ok());
         client.allow_private_network = true;
         assert!(client.validate_context_url(&loopback).is_ok());
         let resolver = super::SsrfGuardResolver::with_environment_policy(false, false);
@@ -1928,7 +2013,10 @@ pub(crate) mod ssrf_tests {
         client.honor_private_network_environment = false;
         client.allow_private_network = true;
         let file = Url::parse("file:///__yolo_nonexistent_browser_permission_fixture__").unwrap();
-        assert!(matches!(client.fetch(&file).await, Err(BunBrowserNetError::Blocked(_))));
+        assert!(matches!(
+            client.fetch(&file).await,
+            Err(BunBrowserNetError::Blocked(_))
+        ));
         for value in ["data:text/plain,fixture", "ftp://example.test/"] {
             assert!(matches!(
                 client.validate_context_url(&Url::parse(value).unwrap()),
@@ -1952,8 +2040,8 @@ pub(crate) mod ssrf_tests {
         net::IpAddr,
         str::FromStr,
         sync::{
-            Arc,
             atomic::{AtomicUsize, Ordering},
+            Arc,
         },
         time::Duration,
     };
@@ -1962,9 +2050,9 @@ pub(crate) mod ssrf_tests {
     use url::Url;
 
     use super::{
-        CallbackRegistry, BunBrowserHttpClient, BunBrowserNetError, RequestCredentials, RequestMode,
-        ResourceRequest, ResourceType, SsrfGuardResolver, is_forbidden_ip, merge_response_header,
-        request_fetch_site, request_referrer, validate_url,
+        is_forbidden_ip, merge_response_header, request_fetch_site, request_referrer, validate_url,
+        BunBrowserHttpClient, BunBrowserNetError, CallbackRegistry, RequestCredentials,
+        RequestMode, ResourceRequest, ResourceType, SsrfGuardResolver,
     };
     use crate::cookies::CookieJar;
 
@@ -2074,7 +2162,13 @@ pub(crate) mod ssrf_tests {
         // IANA marks these specific protocol anycast addresses and these
         // special-purpose /24s globally reachable. Blocking them would be a
         // network compatibility regression, not an SSRF hardening win.
-        for s in ["192.0.0.9", "192.0.0.10", "192.31.196.1", "192.52.193.1", "192.175.48.1"] {
+        for s in [
+            "192.0.0.9",
+            "192.0.0.10",
+            "192.31.196.1",
+            "192.52.193.1",
+            "192.175.48.1",
+        ] {
             assert!(!is_forbidden_ip(ip(s)), "{s} should be allowed");
         }
     }
@@ -2262,7 +2356,10 @@ pub(crate) mod ssrf_tests {
                 let _ = stream.shutdown().await;
             }
         });
-        (Url::parse(&format!("http://{address}/resource")).unwrap(), request_rx)
+        (
+            Url::parse(&format!("http://{address}/resource")).unwrap(),
+            request_rx,
+        )
     }
 
     pub(crate) async fn assert_explicit_api_transport(stealth: bool) {
@@ -2278,7 +2375,11 @@ pub(crate) mod ssrf_tests {
         #[cfg(feature = "stealth")]
         let native = crate::StealthHttpClient::with_proxy(jar, None, true);
         for method in ["GET", "POST", "PUT", "DELETE"] {
-            let body: &[u8] = if method == "GET" { b"" } else { b"{\"item\":42}" };
+            let body: &[u8] = if method == "GET" {
+                b""
+            } else {
+                b"{\"item\":42}"
+            };
             let headers = HashMap::from([
                 ("cookie".into(), "sid=fixture-cookie".into()),
                 ("x-ut-sid".into(), "fixture-session".into()),
@@ -2288,18 +2389,27 @@ pub(crate) mod ssrf_tests {
             let response = if stealth {
                 #[cfg(feature = "stealth")]
                 {
-                    native.send_single(method, &target, &headers, body, false, false).await.unwrap()
+                    native
+                        .send_single(method, &target, &headers, body, false, false)
+                        .await
+                        .unwrap()
                 }
                 #[cfg(not(feature = "stealth"))]
                 {
                     panic!("stealth fixture requires the stealth feature")
                 }
             } else {
-                plain.send_single(method, &target, &headers, body).await.unwrap()
+                plain
+                    .send_single(method, &target, &headers, body)
+                    .await
+                    .unwrap()
             };
             assert_eq!(response.status, if method == "DELETE" { 302 } else { 200 });
             if method == "DELETE" {
-                assert_eq!(response.header("location"), Some("https://example.org/login"));
+                assert_eq!(
+                    response.header("location"),
+                    Some("https://example.org/login")
+                );
             }
             let request = received.recv().await.unwrap();
             let lower = request.to_ascii_lowercase();
@@ -2339,9 +2449,12 @@ pub(crate) mod ssrf_tests {
     async fn navigation_accepts_a_folded_response_header() {
         let folded = "Content-Security-Policy: default-src 'self'\n  https://a.example\n  https://b.example\r\n";
         let (target, _rx) = http_fixture(vec![ok_response(folded, "folded")]).await;
-        let client = BunBrowserHttpClient::with_full_options(Arc::new(CookieJar::new()), None, true);
-        let response =
-            client.fetch(&target).await.expect("a folded header must not fail the response");
+        let client =
+            BunBrowserHttpClient::with_full_options(Arc::new(CookieJar::new()), None, true);
+        let response = client
+            .fetch(&target)
+            .await
+            .expect("a folded header must not fail the response");
         assert_eq!(response.body, b"folded");
     }
 
@@ -2353,15 +2466,26 @@ pub(crate) mod ssrf_tests {
         let mut pass: Vec<String> = (0..20).map(|_| redirect_to_self()).collect();
         pass.push(ok_response("", "arrived"));
         let (target, _rx) = http_fixture(pass).await;
-        let client = BunBrowserHttpClient::with_full_options(Arc::new(CookieJar::new()), None, true);
-        let response = client.fetch(&target).await.expect("the 20th redirect must be followed");
+        let client =
+            BunBrowserHttpClient::with_full_options(Arc::new(CookieJar::new()), None, true);
+        let response = client
+            .fetch(&target)
+            .await
+            .expect("the 20th redirect must be followed");
         assert_eq!(response.body, b"arrived");
 
         let fail: Vec<String> = (0..21).map(|_| redirect_to_self()).collect();
         let (target, _rx) = http_fixture(fail).await;
-        let client = BunBrowserHttpClient::with_full_options(Arc::new(CookieJar::new()), None, true);
-        let err = client.fetch(&target).await.expect_err("the 21st redirect must be too many");
-        assert!(matches!(err, BunBrowserNetError::TooManyRedirects(_)), "got {err:?}");
+        let client =
+            BunBrowserHttpClient::with_full_options(Arc::new(CookieJar::new()), None, true);
+        let err = client
+            .fetch(&target)
+            .await
+            .expect_err("the 21st redirect must be too many");
+        assert!(
+            matches!(err, BunBrowserNetError::TooManyRedirects(_)),
+            "got {err:?}"
+        );
     }
 
     #[tokio::test]
@@ -2417,7 +2541,10 @@ pub(crate) mod ssrf_tests {
 
         // Garbage stays on the default rather than panicking.
         std::env::set_var("OBSCURA_FETCH_MAX_BODY_BYTES", "not-a-number");
-        assert_eq!(ResourceRequest::module_script(&u, &u).max_response_bytes, 32 * 1024 * 1024,);
+        assert_eq!(
+            ResourceRequest::module_script(&u, &u).max_response_bytes,
+            32 * 1024 * 1024,
+        );
         std::env::remove_var("OBSCURA_FETCH_MAX_BODY_BYTES");
     }
 
@@ -2472,10 +2599,15 @@ pub(crate) mod ssrf_tests {
         request.mode = RequestMode::Cors;
         request.credentials = RequestCredentials::Include;
 
-        let error =
-            client.fetch_resource_with_callbacks(&target, request.clone(), None).await.unwrap_err();
+        let error = client
+            .fetch_resource_with_callbacks(&target, request.clone(), None)
+            .await
+            .unwrap_err();
         assert!(matches!(error, BunBrowserNetError::Cors(_)));
-        client.fetch_resource_with_callbacks(&target, request, None).await.unwrap();
+        client
+            .fetch_resource_with_callbacks(&target, request, None)
+            .await
+            .unwrap();
 
         let first = received.recv().await.unwrap().to_ascii_lowercase();
         let second = received.recv().await.unwrap().to_ascii_lowercase();
@@ -2510,7 +2642,8 @@ pub(crate) mod ssrf_tests {
     #[tokio::test]
     async fn accept_language_override_reaches_the_wire() {
         let (target, mut received) = http_fixture(vec![ok_response("", "ok")]).await;
-        let client = BunBrowserHttpClient::with_full_options(Arc::new(CookieJar::new()), None, true);
+        let client =
+            BunBrowserHttpClient::with_full_options(Arc::new(CookieJar::new()), None, true);
         client.set_accept_language("de-DE,de;q=0.9").await;
 
         client.fetch(&target).await.unwrap();
@@ -2530,7 +2663,8 @@ pub(crate) mod ssrf_tests {
         let chunked = "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\nConnection: \
                        close\r\n\r\n4\r\nabcd\r\n4\r\nefgh\r\n0\r\n\r\n";
         let (target, _) = http_fixture(vec![advertised.to_string(), chunked.to_string()]).await;
-        let client = BunBrowserHttpClient::with_full_options(Arc::new(CookieJar::new()), None, true);
+        let client =
+            BunBrowserHttpClient::with_full_options(Arc::new(CookieJar::new()), None, true);
         let initiator = target.clone();
         let request = ResourceRequest::subresource(ResourceType::Image, &initiator)
             .with_max_response_bytes(6);
@@ -2540,7 +2674,10 @@ pub(crate) mod ssrf_tests {
                 .fetch_resource_with_callbacks(&target, request.clone(), None)
                 .await
                 .unwrap_err();
-            assert!(matches!(error, BunBrowserNetError::ResponseTooLarge { limit: 6, .. }));
+            assert!(matches!(
+                error,
+                BunBrowserNetError::ResponseTooLarge { limit: 6, .. }
+            ));
             assert_eq!(client.active_requests(), 0);
         }
     }
@@ -2551,10 +2688,15 @@ pub(crate) mod ssrf_tests {
         let chunked = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nTransfer-Encoding: chunked\r\nConnection: close\r\n\r\n4\r\nabcd\r\n4\r\nefgh\r\n0\r\n\r\n";
         let exact = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 6\r\nConnection: close\r\n\r\nabcdef";
         let binary = "HTTP/1.1 200 OK\r\nContent-Type: image/png\r\nContent-Length: 8\r\nConnection: close\r\n\r\nabcdefgh";
-        let (target, _) =
-            http_fixture(vec![advertised.into(), chunked.into(), exact.into(), binary.into()])
-                .await;
-        let client = BunBrowserHttpClient::with_full_options(Arc::new(CookieJar::new()), None, true);
+        let (target, _) = http_fixture(vec![
+            advertised.into(),
+            chunked.into(),
+            exact.into(),
+            binary.into(),
+        ])
+        .await;
+        let client =
+            BunBrowserHttpClient::with_full_options(Arc::new(CookieJar::new()), None, true);
         for _ in 0..2 {
             let (response, truncated) = client.fetch_text_preview(&target, 6).await.unwrap();
             assert_eq!(response.body, b"abcdef");
@@ -2584,11 +2726,14 @@ pub(crate) mod ssrf_tests {
             let _ = started_tx.send(());
             tokio::time::sleep(std::time::Duration::from_secs(30)).await;
         });
-        (Url::parse(&format!("http://{address}/hang")).unwrap(), started_rx)
+        (
+            Url::parse(&format!("http://{address}/hang")).unwrap(),
+            started_rx,
+        )
     }
 
-    async fn cancelled_shared_fetch_fixture()
-    -> (Url, tokio::sync::oneshot::Receiver<()>, Arc<AtomicUsize>) {
+    async fn cancelled_shared_fetch_fixture(
+    ) -> (Url, tokio::sync::oneshot::Receiver<()>, Arc<AtomicUsize>) {
         use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
@@ -2627,14 +2772,21 @@ pub(crate) mod ssrf_tests {
             }
             drop(first_stream);
         });
-        (Url::parse(&format!("http://{address}/shared.js")).unwrap(), started_rx, requests)
+        (
+            Url::parse(&format!("http://{address}/shared.js")).unwrap(),
+            started_rx,
+            requests,
+        )
     }
 
     #[tokio::test]
     async fn cancellation_returns_active_requests_to_zero() {
         let (target, started) = hanging_fixture().await;
-        let client =
-            Arc::new(BunBrowserHttpClient::with_full_options(Arc::new(CookieJar::new()), None, true));
+        let client = Arc::new(BunBrowserHttpClient::with_full_options(
+            Arc::new(CookieJar::new()),
+            None,
+            true,
+        ));
         let task = tokio::spawn({
             let client = client.clone();
             async move { client.fetch(&target).await }
@@ -2651,14 +2803,21 @@ pub(crate) mod ssrf_tests {
         let (target, started, network_requests) = cancelled_shared_fetch_fixture().await;
         let initiator = target.join("/page.html").unwrap();
         let request = ResourceRequest::subresource(ResourceType::Script, &initiator);
-        let client =
-            Arc::new(BunBrowserHttpClient::with_full_options(Arc::new(CookieJar::new()), None, true));
+        let client = Arc::new(BunBrowserHttpClient::with_full_options(
+            Arc::new(CookieJar::new()),
+            None,
+            true,
+        ));
 
         let leader = tokio::spawn({
             let client = client.clone();
             let target = target.clone();
             let request = request.clone();
-            async move { client.fetch_resource_with_callbacks(&target, request, None).await }
+            async move {
+                client
+                    .fetch_resource_with_callbacks(&target, request, None)
+                    .await
+            }
         });
         started.await.unwrap();
 
@@ -2666,7 +2825,11 @@ pub(crate) mod ssrf_tests {
             let client = client.clone();
             let target = target.clone();
             let request = request.clone();
-            async move { client.fetch_resource_with_callbacks(&target, request, None).await }
+            async move {
+                client
+                    .fetch_resource_with_callbacks(&target, request, None)
+                    .await
+            }
         });
         tokio::time::timeout(Duration::from_secs(2), async {
             loop {
@@ -2699,8 +2862,14 @@ pub(crate) mod ssrf_tests {
         // The follower intentionally retried without populating the cache.
         // A subsequent request must be able to install a fresh leader, and
         // its successful response is then reusable.
-        client.fetch_resource_with_callbacks(&target, request.clone(), None).await.unwrap();
-        client.fetch_resource_with_callbacks(&target, request, None).await.unwrap();
+        client
+            .fetch_resource_with_callbacks(&target, request.clone(), None)
+            .await
+            .unwrap();
+        client
+            .fetch_resource_with_callbacks(&target, request, None)
+            .await
+            .unwrap();
         assert_eq!(network_requests.load(Ordering::SeqCst), 3);
     }
 
@@ -2721,7 +2890,8 @@ pub(crate) mod ssrf_tests {
         let redirect = "HTTP/1.1 302 Found\r\nLocation: /final\r\nContent-Length: \
                         0\r\nConnection: close\r\n\r\n";
         let (target, _) = http_fixture(vec![redirect.to_string(), ok_response("", "done")]).await;
-        let client = BunBrowserHttpClient::with_full_options(Arc::new(CookieJar::new()), None, true);
+        let client =
+            BunBrowserHttpClient::with_full_options(Arc::new(CookieJar::new()), None, true);
         let callbacks = CallbackRegistry::new();
         let requests = Arc::new(AtomicUsize::new(0));
         let responses = Arc::new(AtomicUsize::new(0));
@@ -2734,7 +2904,10 @@ pub(crate) mod ssrf_tests {
             response_count.fetch_add(1, Ordering::SeqCst);
         }));
 
-        client.fetch_with_callbacks(&target, Some(&callbacks)).await.unwrap();
+        client
+            .fetch_with_callbacks(&target, Some(&callbacks))
+            .await
+            .unwrap();
         assert_eq!(requests.load(Ordering::SeqCst), 1);
         assert_eq!(responses.load(Ordering::SeqCst), 1);
     }
@@ -2769,7 +2942,10 @@ pub(crate) mod ssrf_tests {
                 });
             }
         });
-        (Url::parse(&format!("http://{address}/shared.js")).unwrap(), requests)
+        (
+            Url::parse(&format!("http://{address}/shared.js")).unwrap(),
+            requests,
+        )
     }
 
     #[tokio::test]
@@ -2780,8 +2956,11 @@ pub(crate) mod ssrf_tests {
         )
         .await;
         let initiator = url.join("/page.html").unwrap();
-        let client =
-            Arc::new(BunBrowserHttpClient::with_full_options(Arc::new(CookieJar::new()), None, true));
+        let client = Arc::new(BunBrowserHttpClient::with_full_options(
+            Arc::new(CookieJar::new()),
+            None,
+            true,
+        ));
         let callbacks = Arc::new(CallbackRegistry::new());
         let callback_requests = Arc::new(AtomicUsize::new(0));
         let callback_responses = Arc::new(AtomicUsize::new(0));
@@ -2801,7 +2980,10 @@ pub(crate) mod ssrf_tests {
             let url = url.clone();
             let request = ResourceRequest::subresource(ResourceType::Script, &initiator);
             fetches.spawn(async move {
-                client.fetch_resource_with_callbacks(&url, request, Some(&callbacks)).await.unwrap()
+                client
+                    .fetch_resource_with_callbacks(&url, request, Some(&callbacks))
+                    .await
+                    .unwrap()
             });
         }
         let mut responses = Vec::new();
@@ -2821,8 +3003,11 @@ pub(crate) mod ssrf_tests {
         let (url, network_requests) =
             cacheable_resource_fixture(200, "Cache-Control: public, max-age=3600\r\n").await;
         let initiator = url.join("/app.js").unwrap();
-        let client =
-            Arc::new(BunBrowserHttpClient::with_full_options(Arc::new(CookieJar::new()), None, true));
+        let client = Arc::new(BunBrowserHttpClient::with_full_options(
+            Arc::new(CookieJar::new()),
+            None,
+            true,
+        ));
 
         let mut fetches = tokio::task::JoinSet::new();
         for _ in 0..16 {
@@ -2830,7 +3015,10 @@ pub(crate) mod ssrf_tests {
             let url = url.clone();
             let request = ResourceRequest::module_script(&initiator, &initiator);
             fetches.spawn(async move {
-                client.fetch_resource_with_callbacks(&url, request, None).await.unwrap()
+                client
+                    .fetch_resource_with_callbacks(&url, request, None)
+                    .await
+                    .unwrap()
             });
         }
         let mut responses = Vec::new();
@@ -2848,8 +3036,11 @@ pub(crate) mod ssrf_tests {
         let (url, network_requests) =
             cacheable_resource_fixture(200, "Cache-Control: public, max-age=3600\r\n").await;
         let initiator = url.join("/page.html").unwrap();
-        let client =
-            Arc::new(BunBrowserHttpClient::with_full_options(Arc::new(CookieJar::new()), None, true));
+        let client = Arc::new(BunBrowserHttpClient::with_full_options(
+            Arc::new(CookieJar::new()),
+            None,
+            true,
+        ));
 
         let mut fetches = tokio::task::JoinSet::new();
         for index in 0..24 {
@@ -2857,7 +3048,10 @@ pub(crate) mod ssrf_tests {
             let url = url.join(&format!("/distinct/{index}.js")).unwrap();
             let request = ResourceRequest::subresource(ResourceType::Script, &initiator);
             fetches.spawn(async move {
-                client.fetch_resource_with_callbacks(&url, request, None).await.unwrap()
+                client
+                    .fetch_resource_with_callbacks(&url, request, None)
+                    .await
+                    .unwrap()
             });
         }
         let mut responses = Vec::new();
@@ -2881,8 +3075,14 @@ pub(crate) mod ssrf_tests {
             let client =
                 BunBrowserHttpClient::with_full_options(Arc::new(CookieJar::new()), None, true);
             let request = ResourceRequest::subresource(ResourceType::Script, &initiator);
-            client.fetch_resource_with_callbacks(&url, request.clone(), None).await.unwrap();
-            client.fetch_resource_with_callbacks(&url, request, None).await.unwrap();
+            client
+                .fetch_resource_with_callbacks(&url, request.clone(), None)
+                .await
+                .unwrap();
+            client
+                .fetch_resource_with_callbacks(&url, request, None)
+                .await
+                .unwrap();
             assert_eq!(
                 network_requests.load(Ordering::SeqCst),
                 2,
@@ -2893,19 +3093,35 @@ pub(crate) mod ssrf_tests {
 
     #[tokio::test]
     async fn authorization_and_cookie_bearing_requests_bypass_resource_cache() {
-        for header in [("Authorization", "Bearer secret"), ("Cookie", "session=secret")] {
+        for header in [
+            ("Authorization", "Bearer secret"),
+            ("Cookie", "session=secret"),
+        ] {
             let (url, network_requests) =
                 cacheable_resource_fixture(200, "Cache-Control: public, max-age=3600\r\n").await;
             let initiator = url.join("/page.html").unwrap();
             let client =
                 BunBrowserHttpClient::with_full_options(Arc::new(CookieJar::new()), None, true);
             client
-                .set_extra_headers(HashMap::from([(header.0.to_string(), header.1.to_string())]))
+                .set_extra_headers(HashMap::from([(
+                    header.0.to_string(),
+                    header.1.to_string(),
+                )]))
                 .await;
             let request = ResourceRequest::subresource(ResourceType::Script, &initiator);
-            client.fetch_resource_with_callbacks(&url, request.clone(), None).await.unwrap();
-            client.fetch_resource_with_callbacks(&url, request, None).await.unwrap();
-            assert_eq!(network_requests.load(Ordering::SeqCst), 2, "header={header:?}");
+            client
+                .fetch_resource_with_callbacks(&url, request.clone(), None)
+                .await
+                .unwrap();
+            client
+                .fetch_resource_with_callbacks(&url, request, None)
+                .await
+                .unwrap();
+            assert_eq!(
+                network_requests.load(Ordering::SeqCst),
+                2,
+                "header={header:?}"
+            );
         }
     }
 
@@ -2926,7 +3142,7 @@ pub(crate) mod ssrf_tests {
         // by only failing on an actual SSRF rejection, not a lookup failure.
         let r = SsrfGuardResolver::new(false);
         match r.resolve(Name::from_str("example.com").unwrap()).await {
-            Ok(_) => {},
+            Ok(_) => {}
             Err(e) => assert!(
                 !e.to_string().contains("SSRF blocked"),
                 "example.com wrongly SSRF-blocked: {e}"
@@ -2954,8 +3170,9 @@ pub(crate) mod ssrf_tests {
         let ca_issuer = rcgen::Issuer::from_params(&ca_params, &ca_key);
         let leaf_cert = leaf_params.signed_by(&leaf_key, &ca_issuer).unwrap();
 
-        let certs =
-            vec![tokio_rustls::rustls::pki_types::CertificateDer::from(leaf_cert.der().to_vec())];
+        let certs = vec![tokio_rustls::rustls::pki_types::CertificateDer::from(
+            leaf_cert.der().to_vec(),
+        )];
         let key = tokio_rustls::rustls::pki_types::PrivateKeyDer::Pkcs8(
             tokio_rustls::rustls::pki_types::PrivatePkcs8KeyDer::from(leaf_key.serialize_der()),
         );
@@ -3008,9 +3225,13 @@ pub(crate) mod ssrf_tests {
         std::fs::write(ca_file.path(), ca_pem).unwrap();
         std::env::set_var("SSL_CERT_FILE", ca_file.path());
 
-        let client = BunBrowserHttpClient::with_full_options(Arc::new(CookieJar::new()), None, true);
+        let client =
+            BunBrowserHttpClient::with_full_options(Arc::new(CookieJar::new()), None, true);
         let url = Url::parse(&format!("https://127.0.0.1:{port}/")).unwrap();
-        let resp = client.fetch(&url).await.expect("private CA in SSL_CERT_FILE must be trusted");
+        let resp = client
+            .fetch(&url)
+            .await
+            .expect("private CA in SSL_CERT_FILE must be trusted");
         assert_eq!(resp.status, 200);
         assert_eq!(resp.text(), "private ca ok");
     }
@@ -3026,9 +3247,13 @@ pub(crate) mod ssrf_tests {
         std::fs::write(ca_dir.path().join("private-ca.pem"), ca_pem).unwrap();
         std::env::set_var("SSL_CERT_DIR", ca_dir.path());
 
-        let client = BunBrowserHttpClient::with_full_options(Arc::new(CookieJar::new()), None, true);
+        let client =
+            BunBrowserHttpClient::with_full_options(Arc::new(CookieJar::new()), None, true);
         let url = Url::parse(&format!("https://127.0.0.1:{port}/")).unwrap();
-        let resp = client.fetch(&url).await.expect("private CA in SSL_CERT_DIR must be trusted");
+        let resp = client
+            .fetch(&url)
+            .await
+            .expect("private CA in SSL_CERT_DIR must be trusted");
         assert_eq!(resp.status, 200);
         assert_eq!(resp.text(), "private ca ok");
     }
@@ -3038,9 +3263,13 @@ pub(crate) mod ssrf_tests {
         // The same fixture that the SSL_CERT_FILE test trusts must fail here. The
         // listener is reachable (same setup), so an Err can only be TLS.
         let (port, _ca_pem) = https_fixture_with_private_ca().await;
-        let client = BunBrowserHttpClient::with_full_options(Arc::new(CookieJar::new()), None, true);
+        let client =
+            BunBrowserHttpClient::with_full_options(Arc::new(CookieJar::new()), None, true);
         let url = Url::parse(&format!("https://127.0.0.1:{port}/")).unwrap();
-        let error = client.fetch(&url).await.expect_err("unknown CA must be rejected");
+        let error = client
+            .fetch(&url)
+            .await
+            .expect_err("unknown CA must be rejected");
         // The message must carry the TLS cause, not only "error sending request".
         let message = error.to_string();
         assert!(message.contains("invalid peer certificate"), "{message}");
@@ -3067,7 +3296,10 @@ pub(crate) mod ssrf_tests {
         // The middle layer already quotes the leaf, so the leaf is not repeated.
         let middle = Layer("tls: certificate expired", Some(Box::new(leaf)));
         let top = Layer("error sending request", Some(Box::new(middle)));
-        assert_eq!(super::error_chain(&top), "error sending request: tls: certificate expired");
+        assert_eq!(
+            super::error_chain(&top),
+            "error sending request: tls: certificate expired"
+        );
         assert_eq!(super::error_chain(&Layer("alone", None)), "alone");
     }
 }
@@ -3085,11 +3317,20 @@ mod cert_env_tests {
         // store and break all HTTPS.
         assert!(!custom_cert_store_requested(Some(OsStr::new("")), None));
         assert!(!custom_cert_store_requested(None, Some(OsStr::new(""))));
-        assert!(!custom_cert_store_requested(Some(OsStr::new("")), Some(OsStr::new(""))));
+        assert!(!custom_cert_store_requested(
+            Some(OsStr::new("")),
+            Some(OsStr::new(""))
+        ));
         // Genuinely unset: no custom store.
         assert!(!custom_cert_store_requested(None, None));
         // Set and non-empty: build the custom store (behavior unchanged).
-        assert!(custom_cert_store_requested(Some(OsStr::new("/etc/corp/ca.pem")), None));
-        assert!(custom_cert_store_requested(None, Some(OsStr::new("/etc/ssl/certs"))));
+        assert!(custom_cert_store_requested(
+            Some(OsStr::new("/etc/corp/ca.pem")),
+            None
+        ));
+        assert!(custom_cert_store_requested(
+            None,
+            Some(OsStr::new("/etc/ssl/certs"))
+        ));
     }
 }

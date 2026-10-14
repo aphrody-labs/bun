@@ -39,7 +39,11 @@ impl fmt::Display for Error {
 
 impl error::Error for Error {
     fn source(&self) -> Option<&(dyn error::Error + 'static)> {
-        if let Self::BadJson(err) = self { Some(err) } else { None }
+        if let Self::BadJson(err) = self {
+            Some(err)
+        } else {
+            None
+        }
     }
 }
 
@@ -76,7 +80,11 @@ mod tests {
             Error::VlqOverflow.to_string(),
             "The input encoded a number that didn't fit into i64"
         );
-        assert!(Error::BadJson(bad_json_error()).to_string().starts_with("JSON parsing error:"));
+        assert!(
+            Error::BadJson(bad_json_error())
+                .to_string()
+                .starts_with("JSON parsing error:")
+        );
         assert_eq!(
             Error::BadSegmentSize(7).to_string(),
             "Mapping segment had an unsupported size of 7"

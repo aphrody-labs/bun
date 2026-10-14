@@ -40,7 +40,14 @@ impl DiagnosticReporter for GithubReporter {
 }
 
 fn format_github(diagnostic: &Error) -> String {
-    let Info { start, end, filename, message, severity, rule_id } = Info::new(diagnostic);
+    let Info {
+        start,
+        end,
+        filename,
+        message,
+        severity,
+        rule_id,
+    } = Info::new(diagnostic);
     let severity = match severity {
         Severity::Error => "error",
         Severity::Warning | Severity::Advice => "warning",
@@ -147,7 +154,10 @@ mod test {
             rule_timings: None,
         });
 
-        assert_eq!(result.unwrap(), "Finished in 1.0s on 5 files using 12 threads.\n");
+        assert_eq!(
+            result.unwrap(),
+            "Finished in 1.0s on 5 files using 12 threads.\n"
+        );
     }
 
     #[test]
@@ -212,7 +222,10 @@ mod test {
         let result = reporter.render_error(error.into());
 
         assert!(result.is_some());
-        assert_eq!(result.as_ref().unwrap(), "::warning title=scope(rule)::warning message\n");
+        assert_eq!(
+            result.as_ref().unwrap(),
+            "::warning title=scope(rule)::warning message\n"
+        );
     }
 
     #[test]
@@ -226,7 +239,10 @@ mod test {
         let result = reporter.render_error(error.into());
 
         assert!(result.is_some());
-        assert_eq!(result.as_ref().unwrap(), "::error title=scope(rule)::error message\n");
+        assert_eq!(
+            result.as_ref().unwrap(),
+            "::error title=scope(rule)::error message\n"
+        );
     }
 
     #[test]

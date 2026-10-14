@@ -14,7 +14,10 @@ pub enum InvalidDocumentError {
     /// ...
     /// EndGroup
     /// ```
-    StartEndTagMismatch { start_kind: TagKind, end_kind: TagKind },
+    StartEndTagMismatch {
+        start_kind: TagKind,
+        end_kind: TagKind,
+    },
 
     /// End tag without a corresponding start tag.
     ///
@@ -28,7 +31,10 @@ pub enum InvalidDocumentError {
     /// * at the end of the document
     /// * at another start tag
     /// * at an end tag
-    ExpectedStart { expected_start: TagKind, actual: ActualStart },
+    ExpectedStart {
+        expected_start: TagKind,
+        actual: ActualStart,
+    },
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -49,13 +55,22 @@ pub enum ActualStart {
 impl std::fmt::Display for InvalidDocumentError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            InvalidDocumentError::StartEndTagMismatch { start_kind, end_kind } => {
-                std::write!(f, "Expected end tag of kind {start_kind:?} but found {end_kind:?}.")
+            InvalidDocumentError::StartEndTagMismatch {
+                start_kind,
+                end_kind,
+            } => {
+                std::write!(
+                    f,
+                    "Expected end tag of kind {start_kind:?} but found {end_kind:?}."
+                )
             }
             InvalidDocumentError::StartTagMissing { kind } => {
                 std::write!(f, "End tag of kind {kind:?} without matching start tag.")
             }
-            InvalidDocumentError::ExpectedStart { expected_start, actual } => match actual {
+            InvalidDocumentError::ExpectedStart {
+                expected_start,
+                actual,
+            } => match actual {
                 ActualStart::EndOfDocument => {
                     std::write!(
                         f,

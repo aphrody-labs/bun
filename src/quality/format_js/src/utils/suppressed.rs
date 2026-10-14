@@ -40,7 +40,10 @@ pub fn write_suppressed_expression(
         // ) & C;
         // ```
         let run = write_comments_before_closing_paren(f, span.end);
-        if run.and_then(<[_]>::last).is_some_and(|comment| comment.is_line()) {
+        if run
+            .and_then(<[_]>::last)
+            .is_some_and(|comment| comment.is_line())
+        {
             write!(f, [hard_line_break()]);
         }
         write!(f, ")");
@@ -61,7 +64,10 @@ pub fn write_suppressed_content(
         return false;
     };
     FormatSuppressedNode(Span::new(span.start, content_end)).fmt(f);
-    let comments = f.context().comments().end_of_line_comments_after(content_end);
+    let comments = f
+        .context()
+        .comments()
+        .end_of_line_comments_after(content_end);
     FormatTrailingComments::Comments(comments).fmt(f);
     true
 }
@@ -77,6 +83,8 @@ impl<'a> Format<'a, JsFormatContext<'a>> for FormatSuppressedNode {
         write!(f, [text(arena_cow_str(&normalized, f))]);
 
         // The suppressed node contains comments that should be marked as printed.
-        f.context_mut().comments_mut().skip_comments_before(self.0.end);
+        f.context_mut()
+            .comments_mut()
+            .skip_comments_before(self.0.end);
     }
 }

@@ -43,7 +43,11 @@ pub fn has_console_window() -> bool {
 /// `CREATE_NO_WINDOW` when this process has no console window, else `0`.
 #[cfg(windows)]
 pub fn creation_flags() -> u32 {
-    if has_console_window() { 0 } else { CREATE_NO_WINDOW }
+    if has_console_window() {
+        0
+    } else {
+        CREATE_NO_WINDOW
+    }
 }
 
 /// `dwCreationFlags` bits that keep a child from opening a console window:
@@ -106,7 +110,10 @@ mod command {
 
         #[test]
         fn flags_follow_the_console() {
-            assert_eq!(crate::creation_flags() == 0, crate::has_console_window() || !cfg!(windows));
+            assert_eq!(
+                crate::creation_flags() == 0,
+                crate::has_console_window() || !cfg!(windows)
+            );
         }
     }
 }

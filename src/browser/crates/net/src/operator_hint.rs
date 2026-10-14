@@ -1,6 +1,7 @@
 use std::net::{IpAddr, Ipv6Addr};
 
-const PRIVATE_NETWORK_HINT: &str = "Local/private network access is blocked by the SSRF guard. For your own local services, \
+const PRIVATE_NETWORK_HINT: &str =
+    "Local/private network access is blocked by the SSRF guard. For your own local services, \
      start BunBrowser with --allow-private-network or set OBSCURA_ALLOW_PRIVATE_NETWORK=1.";
 
 /// Hint for an operator-facing error, not a policy change. CLI and stdio MCP
@@ -38,7 +39,7 @@ pub fn private_network_error_hint(mut error: &str) -> Option<&'static str> {
                         .to_ipv4_mapped()
                         .or_else(|| ip.to_ipv4())
                         .is_some_and(|v4| v4.is_loopback() || v4.is_private()))
-        },
+        }
     };
     local.then_some(PRIVATE_NETWORK_HINT)
 }

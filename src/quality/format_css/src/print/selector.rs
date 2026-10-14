@@ -29,14 +29,18 @@ use crate::{
 /// by walking the first selector's leading pseudo-class instead of scanning raw source,
 /// so leading whitespace or `:Import` casing don't fool the check.
 pub(super) fn is_icss_selector(list: &SelectorList<'_>) -> bool {
-    let Some(first) = list.selectors.first() else { return false };
+    let Some(first) = list.selectors.first() else {
+        return false;
+    };
     let Some(ComplexSelectorChild::CompoundSelector(compound)) = first.children.first() else {
         return false;
     };
     let Some(SimpleSelector::PseudoClass(pseudo)) = compound.children.first() else {
         return false;
     };
-    let InterpolableIdent::Literal(ident) = &pseudo.name else { return false };
+    let InterpolableIdent::Literal(ident) = &pseudo.name else {
+        return false;
+    };
     matches!(ident.name, "import" | "export")
 }
 
@@ -74,7 +78,9 @@ pub(super) fn write_selector_list<'a>(
     let placeholder_idx = if f.context().template_placeholders() {
         let source = f.context().source_text();
         list.selectors.iter().position(|complex| {
-            source.text_for(&to_span(complex.span())).contains(TEMPLATE_PLACEHOLDER_PREFIX)
+            source
+                .text_for(&to_span(complex.span()))
+                .contains(TEMPLATE_PLACEHOLDER_PREFIX)
         })
     } else {
         None
@@ -113,7 +119,10 @@ pub(super) fn write_selector_list<'a>(
             // Comments on their own line between selectors
             let start = to_span(complex.span()).start;
             for &comment in f.context().comments().take_before(start) {
-                write!(f, FormatCommentBeforeContent::new(comment, BlockCommentAfter::HardLine));
+                write!(
+                    f,
+                    FormatCommentBeforeContent::new(comment, BlockCommentAfter::HardLine)
+                );
             }
             if placeholder_idx == Some(i) {
                 let source = f.context().source_text();
@@ -313,8 +322,10 @@ pub(super) fn write_interpolable_ident<'a>(
 fn write_text_with_placeholders<'a>(mut rest: &'a str, f: &mut CssFormatter<'_, 'a>) {
     while let Some(start) = rest.find(TEMPLATE_PLACEHOLDER_PREFIX) {
         let after_prefix = &rest[start + TEMPLATE_PLACEHOLDER_PREFIX.len()..];
-        let digits_end =
-            after_prefix.bytes().position(|b| !b.is_ascii_digit()).unwrap_or(after_prefix.len());
+        let digits_end = after_prefix
+            .bytes()
+            .position(|b| !b.is_ascii_digit())
+            .unwrap_or(after_prefix.len());
         if digits_end > 0
             && let Some(tail) = after_prefix[digits_end..].strip_prefix(TEMPLATE_PLACEHOLDER_SUFFIX)
             && let Ok(index) = after_prefix[..digits_end].parse::<u32>()
@@ -530,7 +541,9 @@ fn write_nth<'a>(nth: &Nth<'a>, f: &mut CssFormatter<'_, 'a>) {
         if let Some(selector) = &matcher.selector {
             // The `of` keyword as written, then the selector list
             let keyword_end = to_span(selector.span()).start;
-            let keyword = source.slice_range(matcher_span.start, keyword_end).trim_ascii_end();
+            let keyword = source
+                .slice_range(matcher_span.start, keyword_end)
+                .trim_ascii_end();
             write!(f, [text(keyword), " "]);
             write_selector_list_inline(selector, f);
         } else {

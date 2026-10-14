@@ -6,7 +6,8 @@ use crate::{node_type_set::NodeTypeSet, utils::astkind_variant_from_path};
 /// We read the source file to avoid hardcoding the list here and ensure this will stay updated.
 pub fn get_regex_node_kinds() -> Option<NodeTypeSet> {
     // Read crates/oxc_linter/src/utils/regex.rs and extract all variants in `run_on_regex_node` function
-    let regex_utils_path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../src/quality/linter/src/utils/regex.rs");
+    let regex_utils_path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../../src/quality/linter/src/utils/regex.rs");
     let content = std::fs::read_to_string(regex_utils_path).ok()?;
     let syntax = syn::parse_file(&content).ok()?;
     let mut node_type_set = NodeTypeSet::new();

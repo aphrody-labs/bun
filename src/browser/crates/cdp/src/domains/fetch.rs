@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 
 use crate::dispatch::CdpContext;
 
@@ -67,7 +67,9 @@ pub async fn handle(
                 .map(|arr| {
                     arr.iter()
                         .filter_map(|p| {
-                            p.get("urlPattern").and_then(|v| v.as_str()).map(|s| s.to_string())
+                            p.get("urlPattern")
+                                .and_then(|v| v.as_str())
+                                .map(|s| s.to_string())
                         })
                         .collect::<Vec<_>>()
                 })
@@ -86,7 +88,7 @@ pub async fn handle(
 
             tracing::info!("Fetch interception enabled");
             Ok(json!({}))
-        },
+        }
         "disable" => {
             ctx.fetch_intercept.enabled = false;
             ctx.fetch_intercept.patterns.clear();
@@ -104,15 +106,23 @@ pub async fn handle(
                 });
             }
             Ok(json!({}))
-        },
+        }
         "continueRequest" => {
-            let request_id =
-                params.get("requestId").and_then(|v| v.as_str()).ok_or("requestId required")?;
+            let request_id = params
+                .get("requestId")
+                .and_then(|v| v.as_str())
+                .ok_or("requestId required")?;
 
             if let Some(paused) = ctx.fetch_intercept.paused.remove(request_id) {
                 let _ = paused.resolver.send(FetchResolution::Continue {
-                    url: params.get("url").and_then(|v| v.as_str()).map(|s| s.to_string()),
-                    method: params.get("method").and_then(|v| v.as_str()).map(|s| s.to_string()),
+                    url: params
+                        .get("url")
+                        .and_then(|v| v.as_str())
+                        .map(|s| s.to_string()),
+                    method: params
+                        .get("method")
+                        .and_then(|v| v.as_str())
+                        .map(|s| s.to_string()),
                     // Honor client header overrides (route.continue({ headers }))
                     // — parity with server.rs handle_fetch_resolution (#919).
                     headers: crate::server::parse_cdp_headers(params),
@@ -123,12 +133,17 @@ pub async fn handle(
                 });
             }
             Ok(json!({}))
-        },
+        }
         "fulfillRequest" => {
-            let request_id =
-                params.get("requestId").and_then(|v| v.as_str()).ok_or("requestId required")?;
+            let request_id = params
+                .get("requestId")
+                .and_then(|v| v.as_str())
+                .ok_or("requestId required")?;
 
-            let status = params.get("responseCode").and_then(|v| v.as_u64()).unwrap_or(200) as u16;
+            let status = params
+                .get("responseCode")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(200) as u16;
             let headers: HashMap<String, String> = params
                 .get("responseHeaders")
                 .and_then(|v| v.as_array())
@@ -157,19 +172,24 @@ pub async fn handle(
                 });
             }
             Ok(json!({}))
-        },
+        }
         "failRequest" => {
-            let request_id =
-                params.get("requestId").and_then(|v| v.as_str()).ok_or("requestId required")?;
+            let request_id = params
+                .get("requestId")
+                .and_then(|v| v.as_str())
+                .ok_or("requestId required")?;
 
-            let reason =
-                params.get("errorReason").and_then(|v| v.as_str()).unwrap_or("Failed").to_string();
+            let reason = params
+                .get("errorReason")
+                .and_then(|v| v.as_str())
+                .unwrap_or("Failed")
+                .to_string();
 
             if let Some(paused) = ctx.fetch_intercept.paused.remove(request_id) {
                 let _ = paused.resolver.send(FetchResolution::Fail { reason });
             }
             Ok(json!({}))
-        },
+        }
         "getResponseBody" => Ok(json!({ "body": "", "base64Encoded": false })),
         "takeResponseBodyAsStream" => {
             // Hand the client a streaming handle for a large response body so it
@@ -187,7 +207,11 @@ pub async fn handle(
                 let page = ctx.get_session_page_mut(session_id).ok_or("No page")?;
                 page.take_response_body_raw(request_id)
             }
-            .or_else(|| ctx.pages.iter_mut().find_map(|p| p.take_response_body_raw(request_id)))
+            .or_else(|| {
+                ctx.pages
+                    .iter_mut()
+                    .find_map(|p| p.take_response_body_raw(request_id))
+            })
             .ok_or_else(|| {
                 format!("Fetch.takeResponseBodyAsStream: no cached body for {request_id}")
             })?;
@@ -197,7 +221,7 @@ pub async fn handle(
                 .insert(bytes)
                 .map_err(|error| format!("Fetch.takeResponseBodyAsStream: {error}"))?;
             Ok(json!({ "stream": handle }))
-        },
+        }
         _ => Err(format!("Unknown Fetch method: {}", method)),
     }
 }
@@ -247,8 +271,12 @@ mod tests {
             FetchResolution::Continue { headers, .. } => {
                 let mut expected = HashMap::new();
                 expected.insert("X-Test".to_string(), "42".to_string());
-                assert_eq!(headers, Some(expected), "continue must forward header overrides");
-            },
+                assert_eq!(
+                    headers,
+                    Some(expected),
+                    "continue must forward header overrides"
+                );
+            }
             _ => panic!("expected FetchResolution::Continue"),
         }
     }
@@ -271,7 +299,7 @@ mod tests {
         match rx.await.expect("resolver should fire") {
             FetchResolution::Fulfill { body, .. } => {
                 assert_eq!(body, "Hello", "fulfill body must be base64-decoded");
-            },
+            }
             _ => panic!("expected FetchResolution::Fulfill"),
         }
     }

@@ -78,7 +78,12 @@ impl CompilerInterface for Driver {
     }
 
     fn after_parse(&mut self, parser_return: &mut ParserReturn) -> ControlFlow<()> {
-        let ParserReturn { program, fatal_error, diagnostics, .. } = parser_return;
+        let ParserReturn {
+            program,
+            fatal_error,
+            diagnostics,
+            ..
+        } = parser_return;
         self.fatal_error = *fatal_error;
         self.source_type = Some(program.source_type);
         self.check_ast_nodes(program);
@@ -86,7 +91,8 @@ impl CompilerInterface for Driver {
             return ControlFlow::Break(());
         }
         if (diagnostics.is_empty() || !*fatal_error) && program.source_type.is_unambiguous() {
-            self.errors.push(OxcDiagnostic::error("SourceType must not be unambiguous."));
+            self.errors
+                .push(OxcDiagnostic::error("SourceType must not be unambiguous."));
         }
         // Make sure serialization doesn't crash; also for code coverage.
         program.to_estree_json_with_fixes(true, false);
@@ -177,7 +183,11 @@ struct CheckASTNodes<'a> {
 
 impl<'a> CheckASTNodes<'a> {
     fn new(driver: &'a mut Driver, source_text: &'a str) -> Self {
-        Self { driver, source_text, allocator: Allocator::default() }
+        Self {
+            driver,
+            source_text,
+            allocator: Allocator::default(),
+        }
     }
 
     fn check(&mut self, program: &Program<'a>) {

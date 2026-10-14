@@ -9,7 +9,8 @@ use super::{Error, Result};
 pub fn get(env: &bun_dotenv::Loader, url: &str) -> Result<Vec<u8>> {
     let parsed = URL::parse(url.as_bytes());
     let proxy = env.get_http_proxy_for(&parsed);
-    let mut body = MutableString::init(16 * 1024).map_err(|_| Error::Io("out of memory".to_owned()))?;
+    let mut body =
+        MutableString::init(16 * 1024).map_err(|_| Error::Io("out of memory".to_owned()))?;
     let mut req = AsyncHTTP::init_sync(
         http::Method::GET,
         parsed,

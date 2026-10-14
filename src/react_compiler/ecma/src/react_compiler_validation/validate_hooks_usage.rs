@@ -75,7 +75,11 @@ fn ident_is_hook_name(
     identifiers: &IndexSlice<IdentifierId, [Identifier]>,
 ) -> bool {
     let ident = &identifiers[identifier_id];
-    if let Some(ref name) = ident.name { is_hook_name(name.value()) } else { false }
+    if let Some(ref name) = ident.name {
+        is_hook_name(name.value())
+    } else {
+        false
+    }
 }
 
 fn get_hook_kind_for_id<'a>(
@@ -266,7 +270,9 @@ pub fn validate_hooks_usage(
                     value_kinds[lvalue_id] = Some(join_kinds(lvalue_kind, kind));
                     value_origins[lvalue_id] = object.span.or(value_origins[object.identifier]);
                 }
-                InstructionValue::PropertyLoad { object, property, .. } => {
+                InstructionValue::PropertyLoad {
+                    object, property, ..
+                } => {
                     let object_kind = get_kind_for_place(object, &value_kinds, &env.identifiers);
                     let is_hook_property = match property {
                         PropertyLiteral::String(s) => is_hook_name(s),
@@ -298,8 +304,11 @@ pub fn validate_hooks_usage(
                         }
                     };
                     value_kinds[lvalue_id] = Some(kind);
-                    value_origins[lvalue_id] =
-                        instr.lvalue.span.or(object.span).or(value_origins[object.identifier]);
+                    value_origins[lvalue_id] = instr
+                        .lvalue
+                        .span
+                        .or(object.span)
+                        .or(value_origins[object.identifier]);
                 }
                 InstructionValue::CallExpression { callee, args, .. } => {
                     validate_hook_call(
@@ -319,7 +328,12 @@ pub fn validate_hooks_usage(
                         visit_place(place, &value_kinds, &mut errors_by_span, env)?;
                     }
                 }
-                InstructionValue::MethodCall { receiver, property, args, .. } => {
+                InstructionValue::MethodCall {
+                    receiver,
+                    property,
+                    args,
+                    ..
+                } => {
                     validate_hook_call(
                         property,
                         unconditional_blocks.contains(&block.id),

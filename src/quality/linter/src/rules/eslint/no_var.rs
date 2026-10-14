@@ -65,8 +65,9 @@ impl Rule for NoVar {
             }
 
             let is_written_to = dec.declarations.iter().any(|v| is_written_to(&v.id, ctx));
-            let var_offset =
-                ctx.find_next_token_within(dec.span.start, dec.span.end, "var").unwrap();
+            let var_offset = ctx
+                .find_next_token_within(dec.span.start, dec.span.end, "var")
+                .unwrap();
             let var_start = dec.span.start + var_offset;
             let var_keyword_span = Span::sized(var_start, 3);
             ctx.diagnostic_with_fix(no_var_diagnostic(var_keyword_span), |fixer| {
@@ -125,7 +126,11 @@ fn is_written_to(binding_pat: &BindingPattern, ctx: &LintContext) -> bool {
             .symbol_references(binding_ident.symbol_id())
             .any(oxc_semantic::Reference::is_write),
         BindingPattern::ObjectPattern(object_pat) => {
-            if object_pat.properties.iter().any(|prop| is_written_to(&prop.value, ctx)) {
+            if object_pat
+                .properties
+                .iter()
+                .any(|prop| is_written_to(&prop.value, ctx))
+            {
                 return true;
             }
 
@@ -136,10 +141,13 @@ fn is_written_to(binding_pat: &BindingPattern, ctx: &LintContext) -> bool {
             }
         }
         BindingPattern::AssignmentPattern(_) => true,
-        BindingPattern::ArrayPattern(array_pat) => array_pat
-            .elements
-            .iter()
-            .any(|elem| if let Some(elem) = elem { is_written_to(elem, ctx) } else { false }),
+        BindingPattern::ArrayPattern(array_pat) => array_pat.elements.iter().any(|elem| {
+            if let Some(elem) = elem {
+                is_written_to(elem, ctx)
+            } else {
+                false
+            }
+        }),
     }
 }
 
@@ -152,7 +160,10 @@ fn test() {
         ("const JOE = 'schmoe';", None),
         ("declare module 'testModule' { var x: string; }", None),
         ("declare namespace MyNamespace { var y: number; }", None),
-        ("declare global { var __TEST_DECLARE_GLOBAL__: boolean | undefined; }", None),
+        (
+            "declare global { var __TEST_DECLARE_GLOBAL__: boolean | undefined; }",
+            None,
+        ),
     ];
 
     let fail = vec![
@@ -173,7 +184,10 @@ fn test() {
         ("for (var a of list) {} a;", None),
         ("switch (a) { case 0: var b = 1 }", None),
         ("for (var a of b) { arr.push(() => a); }", None),
-        ("for (let a of b) { var c; console.log(c); c = 'hello'; }", None),
+        (
+            "for (let a of b) { var c; console.log(c); c = 'hello'; }",
+            None,
+        ),
         ("var a = a", None),
         ("var {a = a} = {}", None),
         ("var {a = b, b} = {}", None),
@@ -201,7 +215,10 @@ fn test() {
         ("var bar = foo; var foo = function () { foo(); };", None),
         ("var { foo = foo } = function () { foo(); };", None),
         ("var { bar = foo, foo } = function () { foo(); };", None),
-        ("var bar = function () { foo(); }; var foo = function() {};", None),
+        (
+            "var bar = function () { foo(); }; var foo = function() {};",
+            None,
+        ),
     ];
 
     let fix = vec![
@@ -223,5 +240,7 @@ fn test() {
         ("declare var foo: 2;", "declare let foo: 2;"),
     ];
 
-    Tester::new(NoVar::NAME, NoVar::PLUGIN, pass, fail).expect_fix(fix).test_and_snapshot();
+    Tester::new(NoVar::NAME, NoVar::PLUGIN, pass, fail)
+        .expect_fix(fix)
+        .test_and_snapshot();
 }

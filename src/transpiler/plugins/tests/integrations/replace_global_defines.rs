@@ -16,7 +16,10 @@ pub fn test(source_text: &str, expected: &str, config: &ReplaceGlobalDefinesConf
     let ret = Parser::new(&allocator, source_text, source_type).parse();
     assert!(ret.diagnostics.is_empty());
     let mut program = ret.program;
-    let mut scoping = SemanticBuilder::new().build(&program).semantic.into_scoping();
+    let mut scoping = SemanticBuilder::new()
+        .build(&program)
+        .semantic
+        .into_scoping();
     let ret = ReplaceGlobalDefines::new(&allocator, config.clone()).build(scoping, &mut program);
     assert_eq!(ret.changed, source_text != expected);
     // Mirror the pipeline in crates/oxc/src/compiler.rs: it treats scoping as
@@ -24,7 +27,10 @@ pub fn test(source_text: &str, expected: &str, config: &ReplaceGlobalDefinesConf
     // ret.changed`) and rebuilds it before DCE. Reuse RGD's scoping only on
     // the unchanged path.
     scoping = if ret.changed {
-        SemanticBuilder::new().build(&program).semantic.into_scoping()
+        SemanticBuilder::new()
+            .build(&program)
+            .semantic
+            .into_scoping()
     } else {
         ret.scoping
     };
@@ -36,7 +42,10 @@ pub fn test(source_text: &str, expected: &str, config: &ReplaceGlobalDefinesConf
         CompressOptions::smallest(),
     );
     let result = Codegen::new()
-        .with_options(CodegenOptions { single_quote: true, ..CodegenOptions::default() })
+        .with_options(CodegenOptions {
+            single_quote: true,
+            ..CodegenOptions::default()
+        })
         .build(&program)
         .code;
     let expected = codegen(expected, source_type);
@@ -50,12 +59,18 @@ fn test_define_only(source_text: &str, expected: &str, config: &ReplaceGlobalDef
     let ret = Parser::new(&allocator, source_text, source_type).parse();
     assert!(ret.diagnostics.is_empty());
     let mut program = ret.program;
-    let scoping = SemanticBuilder::new().build(&program).semantic.into_scoping();
+    let scoping = SemanticBuilder::new()
+        .build(&program)
+        .semantic
+        .into_scoping();
     let ret = ReplaceGlobalDefines::new(&allocator, config.clone()).build(scoping, &mut program);
     assert_eq!(ret.changed, source_text != expected);
     AssertAst.visit_program(&program);
     let result = Codegen::new()
-        .with_options(CodegenOptions { single_quote: true, ..CodegenOptions::default() })
+        .with_options(CodegenOptions {
+            single_quote: true,
+            ..CodegenOptions::default()
+        })
         .build(&program)
         .code;
     let expected = codegen(expected, source_type);
@@ -87,11 +102,20 @@ fn simple() {
 
 #[test]
 fn shadowed() {
-    let config =
-        config(&[("undefined", "text"), ("NaN", "'text'"), ("process.env.NODE_ENV", "'test'")]);
-    test_same("(function (undefined) { foo(typeof undefined) })()", &config);
+    let config = config(&[
+        ("undefined", "text"),
+        ("NaN", "'text'"),
+        ("process.env.NODE_ENV", "'test'"),
+    ]);
+    test_same(
+        "(function (undefined) { foo(typeof undefined) })()",
+        &config,
+    );
     test_same("(function (NaN) { foo(typeof NaN) })()", &config);
-    test_same("(function (process) { foo(process.env.NODE_ENV) })()", &config);
+    test_same(
+        "(function (process) { foo(process.env.NODE_ENV) })()",
+        &config,
+    );
 }
 
 #[test]
@@ -108,7 +132,11 @@ fn typeof_define() {
         "foo('undefined', 'undefined', 'object', 'object', 'object', 'object', 'object', 'object', 'object')",
         &config,
     );
-    test("if (typeof window === 'undefined') server(); else client();", "server()", &config);
+    test(
+        "if (typeof window === 'undefined') server(); else client();",
+        "server()",
+        &config,
+    );
     test(
         "if (typeof window !== 'undefined') import('./client'); else import('./server');",
         "import('./server')",
@@ -129,7 +157,10 @@ fn typeof_define_in_default_parameter_is_not_shadowed_by_function_body_var() {
 
 #[test]
 fn typeof_define_is_exact() {
-    let config = config(&[("typeof window", "'undefined'"), ("typeof process.env", "'object'")]);
+    let config = config(&[
+        ("typeof window", "'undefined'"),
+        ("typeof process.env", "'object'"),
+    ]);
 
     test_same("foo(typeof window.document)", &config);
     test_same("foo(typeof process)", &config);
@@ -138,8 +169,10 @@ fn typeof_define_is_exact() {
 
 #[test]
 fn typeof_define_is_scope_aware() {
-    let config =
-        config(&[("typeof window", "'undefined'"), ("typeof window.document", "'object'")]);
+    let config = config(&[
+        ("typeof window", "'undefined'"),
+        ("typeof window.document", "'object'"),
+    ]);
 
     test_define_only(
         "foo(typeof window, typeof window.document); function f(window) { foo(typeof window, typeof window.document) }",
@@ -151,7 +184,11 @@ fn typeof_define_is_scope_aware() {
         "const window = {}; foo(typeof window)",
         &config,
     );
-    test_define_only("foo(typeof window); var window", "foo(typeof window); var window", &config);
+    test_define_only(
+        "foo(typeof window); var window",
+        "foo(typeof window); var window",
+        &config,
+    );
     test_define_only(
         "try {} catch (window) { foo(typeof window) }",
         "try {} catch (window) { foo(typeof window) }",
@@ -179,7 +216,11 @@ fn typeof_define_this_expr() {
     let config = config(&[("typeof this", "'object'")]);
 
     test_define_only("foo(typeof this)", "foo('object')", &config);
-    test_define_only("(() => foo(typeof this))()", "(() => foo('object'))()", &config);
+    test_define_only(
+        "(() => foo(typeof this))()",
+        "(() => foo('object'))()",
+        &config,
+    );
     test_define_only(
         "function f() { foo(typeof this); (() => foo(typeof this))() }",
         "function f() { foo(typeof this); (() => foo(typeof this))() }",
@@ -200,20 +241,35 @@ fn typeof_define_this_expr() {
 #[test]
 fn typeof_define_takes_precedence_over_identifier_define() {
     let config = config(&[("window", "globalThis"), ("typeof window", "'undefined'")]);
-    test_define_only("foo(window, typeof window)", "foo(globalThis, 'undefined')", &config);
+    test_define_only(
+        "foo(window, typeof window)",
+        "foo(globalThis, 'undefined')",
+        &config,
+    );
 }
 
 #[test]
 fn invalid_typeof_define_key() {
-    for key in ["typeof ", "typeof  window", "typeof window.*", "typeof window[0]"] {
-        assert!(ReplaceGlobalDefinesConfig::new(&[(key, "'undefined'")]).is_err(), "{key}");
+    for key in [
+        "typeof ",
+        "typeof  window",
+        "typeof window.*",
+        "typeof window[0]",
+    ] {
+        assert!(
+            ReplaceGlobalDefinesConfig::new(&[(key, "'undefined'")]).is_err(),
+            "{key}"
+        );
     }
 }
 
 #[test]
 fn invalid_define_value() {
     for value in ["console.log foo", "1 2", "foo;"] {
-        assert!(ReplaceGlobalDefinesConfig::new(&[("foo", value)]).is_err(), "{value}");
+        assert!(
+            ReplaceGlobalDefinesConfig::new(&[("foo", value)]).is_err(),
+            "{value}"
+        );
     }
 }
 
@@ -222,7 +278,11 @@ fn dot() {
     let config = config(&[("process.env.NODE_ENV", "production")]);
     test("foo(process.env.NODE_ENV)", "foo(production)", &config);
     test("foo(process.env)", "foo(process.env)", &config);
-    test("foo(process.env.foo.bar)", "foo(process.env.foo.bar)", &config);
+    test(
+        "foo(process.env.foo.bar)",
+        "foo(process.env.foo.bar)",
+        &config,
+    );
     test("foo(process)", "foo(process)", &config);
 
     // computed member expression
@@ -232,26 +292,64 @@ fn dot() {
 #[test]
 fn dot_with_partial_overlap() {
     let config = config(&[("import.meta.foo.bar", "1")]);
-    test("console.log(import.meta.bar)", "console.log(import.meta.bar)", &config);
-    test("console.log(import.meta.foo)", "console.log(import.meta.foo)", &config);
-    test("console.log(import.meta.foo.bar)", "console.log(1)", &config);
+    test(
+        "console.log(import.meta.bar)",
+        "console.log(import.meta.bar)",
+        &config,
+    );
+    test(
+        "console.log(import.meta.foo)",
+        "console.log(import.meta.foo)",
+        &config,
+    );
+    test(
+        "console.log(import.meta.foo.bar)",
+        "console.log(1)",
+        &config,
+    );
 }
 
 #[test]
 fn dot_with_overlap() {
-    let config =
-        config(&[("import.meta.env.FOO", "import.meta.env.BAR"), ("import.meta.env", "__foo__")]);
+    let config = config(&[
+        ("import.meta.env.FOO", "import.meta.env.BAR"),
+        ("import.meta.env", "__foo__"),
+    ]);
     test("const _ = import.meta.env", "__foo__", &config);
-    test("const _ = import.meta.env.FOO", "import.meta.env.BAR", &config);
-    test("const _ = import.meta.env.NODE_ENV", "__foo__.NODE_ENV", &config);
+    test(
+        "const _ = import.meta.env.FOO",
+        "import.meta.env.BAR",
+        &config,
+    );
+    test(
+        "const _ = import.meta.env.NODE_ENV",
+        "__foo__.NODE_ENV",
+        &config,
+    );
 
     test("_ = import.meta.env", "_ = __foo__", &config);
-    test("_ = import.meta.env.FOO", "_ = import.meta.env.BAR", &config);
-    test("_ = import.meta.env.NODE_ENV", "_ = __foo__.NODE_ENV", &config);
+    test(
+        "_ = import.meta.env.FOO",
+        "_ = import.meta.env.BAR",
+        &config,
+    );
+    test(
+        "_ = import.meta.env.NODE_ENV",
+        "_ = __foo__.NODE_ENV",
+        &config,
+    );
 
     test("import.meta.env = 0", "__foo__ = 0", &config);
-    test("import.meta.env.NODE_ENV = 0", "__foo__.NODE_ENV = 0", &config);
-    test("import.meta.env.FOO = 0", "import.meta.env.BAR = 0", &config);
+    test(
+        "import.meta.env.NODE_ENV = 0",
+        "__foo__.NODE_ENV = 0",
+        &config,
+    );
+    test(
+        "import.meta.env.FOO = 0",
+        "import.meta.env.BAR = 0",
+        &config,
+    );
 }
 
 #[test]
@@ -272,7 +370,11 @@ fn dot_nested() {
     let config = config(&[("process", "production")]);
     test("foo.process.NODE_ENV", "foo.process.NODE_ENV", &config);
     // computed member expression
-    test("foo['process'].NODE_ENV", "foo['process'].NODE_ENV", &config);
+    test(
+        "foo['process'].NODE_ENV",
+        "foo['process'].NODE_ENV",
+        &config,
+    );
 }
 
 #[test]
@@ -291,17 +393,32 @@ fn dot_with_postfix_mixed() {
         ("import.meta", "1"),
     ]);
     test("foo(import.meta.env.result)", "foo(void 0)", &config);
-    test("foo(import.meta.env.result.many.nested)", "foo((void 0).many.nested)", &config);
+    test(
+        "foo(import.meta.env.result.many.nested)",
+        "foo((void 0).many.nested)",
+        &config,
+    );
     test("foo(import.meta.env)", "foo(env)", &config);
-    test("foo(import.meta.somethingelse)", "foo(metaProperty)", &config);
-    test("foo(import.meta.somethingelse.nested.one)", "foo(metaProperty.nested.one)", &config);
+    test(
+        "foo(import.meta.somethingelse)",
+        "foo(metaProperty)",
+        &config,
+    );
+    test(
+        "foo(import.meta.somethingelse.nested.one)",
+        "foo(metaProperty.nested.one)",
+        &config,
+    );
     test("foo(import.meta)", "foo(1)", &config);
 }
 
 #[test]
 fn meta_property_not_new_target() {
     // An `import.meta.*` define must not match the distinct `new.target` expression.
-    let config = config(&[("import.meta.env", "__foo__"), ("import.meta.env.*", "undefined")]);
+    let config = config(&[
+        ("import.meta.env", "__foo__"),
+        ("import.meta.env.*", "undefined"),
+    ]);
     test(
         "export function f() { return new.target.env; }",
         "export function f() { return new.target.env; }",
@@ -430,7 +547,11 @@ fn optional_chain() {
 #[test]
 fn dot_define_with_destruct() {
     let c = config(&[("process.env.NODE_ENV", "{'a': 1, b: 2, c: true, d: {a: b}}")]);
-    test("const {a, c} = process.env.NODE_ENV", "const { a, c } = {\n\t'a': 1,\n\tc: true};", &c);
+    test(
+        "const {a, c} = process.env.NODE_ENV",
+        "const { a, c } = {\n\t'a': 1,\n\tc: true};",
+        &c,
+    );
     // bailout
     test(
         "const {[any]: alias} = process.env.NODE_ENV",
@@ -440,8 +561,15 @@ fn dot_define_with_destruct() {
 
     // should filterout unused key even rhs objectExpr has SpreadElement
 
-    let c = config(&[("process.env.NODE_ENV", "{'a': 1, b: 2, c: true, ...unknown}")]);
-    test("const {a} = process.env.NODE_ENV", "const { a } = {\n\t'a': 1,\n\t...unknown\n};\n", &c);
+    let c = config(&[(
+        "process.env.NODE_ENV",
+        "{'a': 1, b: 2, c: true, ...unknown}",
+    )]);
+    test(
+        "const {a} = process.env.NODE_ENV",
+        "const { a } = {\n\t'a': 1,\n\t...unknown\n};\n",
+        &c,
+    );
 }
 
 #[test]
@@ -497,10 +625,17 @@ fn this_expr_nested_functions() {
     test_same("export function foo() { return () => this.foo }", &config);
 
     // Nested arrows without enclosing function: `this` captures module-level `this`, SHOULD be replaced.
-    test("export const f = () => () => this.foo", "export const f = () => () => 2;\n", &config);
+    test(
+        "export const f = () => () => this.foo",
+        "export const f = () => () => 2;\n",
+        &config,
+    );
 
     // Arrow inside regular function inside arrow: innermost `this` is function's `this`.
-    test_same("export const outer = () => function() { return () => this.foo }", &config);
+    test_same(
+        "export const outer = () => function() { return () => this.foo }",
+        &config,
+    );
 }
 
 #[test]
@@ -516,8 +651,12 @@ fn dot_define_with_destruct_nested() {
 
 #[test]
 fn assignment_target() {
-    let config =
-        config(&[("d", "ident"), ("e.f", "ident"), ("g", "dot.chain"), ("h.i", "dot.chain")]);
+    let config = config(&[
+        ("d", "ident"),
+        ("e.f", "ident"),
+        ("g", "dot.chain"),
+        ("h.i", "dot.chain"),
+    ]);
 
     test(
         r"
@@ -544,7 +683,11 @@ fn replace_with_undefined() {
 #[test]
 fn declare_const() {
     let config = config(&[("IS_PROD", "true")]);
-    test("declare const IS_PROD: boolean; if (IS_PROD) {} foo(IS_PROD)", "foo(true)", &config);
+    test(
+        "declare const IS_PROD: boolean; if (IS_PROD) {} foo(IS_PROD)",
+        "foo(true)",
+        &config,
+    );
 }
 
 #[test]
@@ -607,7 +750,10 @@ log(__MEMBER__);
     let allocator = Allocator::default();
     let ret = Parser::new(&allocator, source_text, source_type).parse();
     let mut program = ret.program;
-    let scoping = SemanticBuilder::new().build(&program).semantic.into_scoping();
+    let scoping = SemanticBuilder::new()
+        .build(&program)
+        .semantic
+        .into_scoping();
     let _ = ReplaceGlobalDefines::new(&allocator, c).build(scoping, &mut program);
     let result = Codegen::new()
         .with_options(CodegenOptions {
@@ -666,23 +812,36 @@ fn test_define_then_transform_impl(
     let mut program = ret.program;
 
     // Step 1: Run define plugin first (like the playground does)
-    let scoping = SemanticBuilder::new().build(&program).semantic.into_scoping();
+    let scoping = SemanticBuilder::new()
+        .build(&program)
+        .semantic
+        .into_scoping();
     let _ret =
         ReplaceGlobalDefines::new(&allocator, define_config.clone()).build(scoping, &mut program);
 
     // Step 2: Rebuild semantic for transformer
-    let scoping =
-        SemanticBuilder::new().with_excess_capacity(2.0).build(&program).semantic.into_scoping();
+    let scoping = SemanticBuilder::new()
+        .with_excess_capacity(2.0)
+        .build(&program)
+        .semantic
+        .into_scoping();
 
     // Step 3: Run transformer with ES2019 target (lowers optional chaining)
     let options = TransformOptions::from_target("es2019").unwrap();
-    let filename = if source_type.is_typescript() { "test.ts" } else { "test.mjs" };
+    let filename = if source_type.is_typescript() {
+        "test.ts"
+    } else {
+        "test.mjs"
+    };
     let ret = Transformer::new(&allocator, Path::new(filename), &options)
         .build_with_scoping(scoping, &mut program);
     assert!(ret.diagnostics.is_empty());
 
     let result = Codegen::new()
-        .with_options(CodegenOptions { single_quote: true, ..CodegenOptions::default() })
+        .with_options(CodegenOptions {
+            single_quote: true,
+            ..CodegenOptions::default()
+        })
         .build(&program)
         .code;
     let expected = codegen(expected, source_type);

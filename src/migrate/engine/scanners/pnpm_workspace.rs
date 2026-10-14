@@ -18,8 +18,8 @@
 // d'installation dans bunfig.toml `[install]`. `n2b --migrate` fait la
 // conversion (voir `crate::pnpm`).
 use crate::pnpm::{PnpmConfig, parse_workspace_yaml, unsupported_override};
-use crate::util::make_finding;
 use crate::types::{Finding, MakeFindingOpts, Severity};
+use crate::util::make_finding;
 
 pub struct PnpmWorkspaceInfo {
     pub packages: Vec<String>,

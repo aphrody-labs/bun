@@ -46,7 +46,8 @@ declare_oxc_lint!(
     nextjs,
     correctness,
     version = "0.2.0",
-    short_description = "Enforces the presence of `rel=\"preconnect\"` when using Google Fonts via `<link>` tags.",
+    short_description =
+        "Enforces the presence of `rel=\"preconnect\"` when using Google Fonts via `<link>` tags.",
 );
 
 impl Rule for GoogleFontPreconnect {
@@ -77,7 +78,9 @@ impl Rule for GoogleFontPreconnect {
             });
 
         if href_prop_value.starts_with("https://fonts.gstatic.com") && preconnect_missing {
-            ctx.diagnostic(google_font_preconnect_diagnostic(jsx_opening_element_name.span));
+            ctx.diagnostic(google_font_preconnect_diagnostic(
+                jsx_opening_element_name.span,
+            ));
         }
     }
 }
@@ -120,6 +123,11 @@ fn test() {
 			    "#,
     ];
 
-    Tester::new(GoogleFontPreconnect::NAME, GoogleFontPreconnect::PLUGIN, pass, fail)
-        .test_and_snapshot();
+    Tester::new(
+        GoogleFontPreconnect::NAME,
+        GoogleFontPreconnect::PLUGIN,
+        pass,
+        fail,
+    )
+    .test_and_snapshot();
 }

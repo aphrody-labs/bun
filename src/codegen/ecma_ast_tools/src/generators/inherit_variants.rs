@@ -48,7 +48,10 @@ define_generator!(InheritVariantsGenerator);
 
 impl Generator for InheritVariantsGenerator {
     fn generate_many(&self, schema: &Schema, _codegen: &Codegen) -> Vec<Output> {
-        vec![generate_inherit_variants(schema), generate_enum_details(schema)]
+        vec![
+            generate_inherit_variants(schema),
+            generate_enum_details(schema),
+        ]
     }
 }
 
@@ -73,7 +76,10 @@ fn generate_inherit_variants(schema: &Schema) -> Output {
         #match_macros
     };
 
-    Output::Rust { path: output_path(AST_CRATE_PATH, "inherit_variants.rs"), tokens: output }
+    Output::Rust {
+        path: output_path(AST_CRATE_PATH, "inherit_variants.rs"),
+        tokens: output,
+    }
 }
 
 /// Generate `enums.rs` in `oxc_ast_macros`.
@@ -100,8 +106,10 @@ fn generate_enum_details(schema: &Schema) -> Output {
     // Generate `ENUMS` `phf::Map`
     let map = generate_phf_map(schema.enums().map(|enum_def| {
         let is_fieldless = enum_def.is_fieldless();
-        let inherit_indexes =
-            enum_def.inherits.iter().map(|inherited_id| number_lit(indexes[inherited_id]));
+        let inherit_indexes = enum_def
+            .inherits
+            .iter()
+            .map(|inherited_id| number_lit(indexes[inherited_id]));
         let details = quote! {
             EnumDetails { is_fieldless: #is_fieldless, inherits: &[#(#inherit_indexes),*] }
         };
@@ -109,8 +117,9 @@ fn generate_enum_details(schema: &Schema) -> Output {
     }));
 
     // Generate `INHERITED_ENUMS` array elements - one `InheritedEnum` per inheritable enum, in index order
-    let inherited_enums =
-        inheritable_enums.iter().map(|enum_def| generate_inherited_enum(enum_def, schema));
+    let inherited_enums = inheritable_enums
+        .iter()
+        .map(|enum_def| generate_inherited_enum(enum_def, schema));
     let count = number_lit(u64::try_from(inheritable_enums.len()).unwrap());
 
     let code = quote! {
@@ -130,7 +139,10 @@ fn generate_enum_details(schema: &Schema) -> Output {
         pub static INHERITED_ENUMS: [InheritedEnum; #count] = [ #(#inherited_enums),* ];
     };
 
-    Output::Rust { path: output_path(AST_MACROS_CRATE_PATH, "enums.rs"), tokens: code }
+    Output::Rust {
+        path: output_path(AST_MACROS_CRATE_PATH, "enums.rs"),
+        tokens: code,
+    }
 }
 
 /// Generate an `InheritedEnum` describing an inheritable enum's (flattened) variants. e.g.:
@@ -157,8 +169,9 @@ fn generate_inherited_enum(enum_def: &EnumDef, schema: &Schema) -> TokenStream {
         let name = variant.name();
         let discriminant = number_lit(variant.discriminant);
 
-        let field_type =
-            variant.field_type(schema).expect("Inheritable enum variants must have a field");
+        let field_type = variant
+            .field_type(schema)
+            .expect("Inheritable enum variants must have a field");
         // Variants are either `Box<'a, Inner>` or a named type (`Inner` / `Inner<'a>`) directly
         let (inner_type, is_boxed) = match field_type.as_box() {
             Some(box_def) => (box_def.inner_type(schema), true),
@@ -196,7 +209,9 @@ fn generate_inherited_enum(enum_def: &EnumDef, schema: &Schema) -> TokenStream {
 /// Generate conversion methods and trait impls for all enums which inherit from other enums.
 fn generate_impls(schema: &Schema) -> TokenStream {
     let impls = schema.enums().flat_map(|enum_def| {
-        enum_def.all_inherits(schema).map(|child| generate_conversions(enum_def, child, schema))
+        enum_def
+            .all_inherits(schema)
+            .map(|child| generate_conversions(enum_def, child, schema))
     });
 
     quote! ( #(#impls)* )
@@ -237,7 +252,10 @@ fn generate_match_macro(enum_def: &EnumDef, schema: &Schema) -> TokenStream {
     let doc = format!(" Macro for matching [`{}`]'s variants.", enum_def.name());
     let mut inherited = enum_def.all_inherits(schema).map(EnumDef::name).peekable();
     let inherited_doc = inherited.peek().is_some().then(|| {
-        let line = format!(" Includes variants inherited from [`{}`].", inherited.join("`], [`"));
+        let line = format!(
+            " Includes variants inherited from [`{}`].",
+            inherited.join("`], [`")
+        );
         quote! {
             ///
             #[doc = #line]
@@ -269,7 +287,10 @@ fn generate_conversions(parent: &EnumDef, child: &EnumDef, schema: &Schema) -> T
     let child_snake = child.snake_name();
 
     // The shared variants are all of `child`'s variants (including those `child` itself inherits)
-    let variant_idents = child.all_variants(schema).map(VariantDef::ident).collect::<Vec<_>>();
+    let variant_idents = child
+        .all_variants(schema)
+        .map(VariantDef::ident)
+        .collect::<Vec<_>>();
 
     let is_fn = format_ident!("is_{child_snake}");
     let into_fn = format_ident!("into_{child_snake}");

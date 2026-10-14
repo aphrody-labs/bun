@@ -71,18 +71,29 @@ declare_oxc_lint!(
 
 impl Rule for NoUselessCall {
     fn run<'a>(&self, node: &AstNode<'a>, ctx: &LintContext<'a>) {
-        let AstKind::CallExpression(call_expr) = node.kind() else { return };
+        let AstKind::CallExpression(call_expr) = node.kind() else {
+            return;
+        };
 
-        let Some(callee) = classify_callee(&call_expr.callee) else { return };
+        let Some(callee) = classify_callee(&call_expr.callee) else {
+            return;
+        };
         if !callee.kind.has_valid_arguments(call_expr) {
             return;
         }
 
-        let Some(first_arg) = call_expr.arguments.first() else { return };
-        let Some(this_arg) = first_arg.as_expression() else { return };
+        let Some(first_arg) = call_expr.arguments.first() else {
+            return;
+        };
+        let Some(this_arg) = first_arg.as_expression() else {
+            return;
+        };
 
         if validate_this_argument(this_arg, callee.applied) {
-            ctx.diagnostic(no_useless_call_diagnostic(callee.kind.name(), call_expr.span));
+            ctx.diagnostic(no_useless_call_diagnostic(
+                callee.kind.name(),
+                call_expr.span,
+            ));
         }
     }
 }
@@ -132,7 +143,10 @@ impl CallOrApply {
 fn classify_callee<'a>(callee: &'a Expression<'a>) -> Option<ClassifiedCallee<'a>> {
     if let Expression::StaticMemberExpression(member_expr) = callee {
         let kind = CallOrApply::from_name(member_expr.property.name.as_str())?;
-        return Some(ClassifiedCallee { kind, applied: member_expr.object.without_parentheses() });
+        return Some(ClassifiedCallee {
+            kind,
+            applied: member_expr.object.without_parentheses(),
+        });
     }
 
     let callee = as_member_expression_without_chain_expression(callee.without_parentheses())?;
@@ -141,7 +155,10 @@ fn classify_callee<'a>(callee: &'a Expression<'a>) -> Option<ClassifiedCallee<'a
     }
 
     let kind = CallOrApply::from_name(callee.static_property_name()?)?;
-    Some(ClassifiedCallee { kind, applied: callee.object().without_parentheses() })
+    Some(ClassifiedCallee {
+        kind,
+        applied: callee.object().without_parentheses(),
+    })
 }
 
 fn validate_this_argument(this_arg: &Expression, applied: &Expression) -> bool {

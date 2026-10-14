@@ -60,9 +60,11 @@ jobs:
           bun run codegen:string-maps 2>&1 | sed 's/^/[string-maps] /'
           echo "::endgroup::"
 
-          # Use Bun's native formatter directly; no package-manager wrapper or external formatter.
-          echo "::group::Bun fmt"
-          (bun fmt --write --ignore-pattern '**/*fixture*.*' scripts packages src/js test 2>&1 | sed 's/^/[bun-fmt] /') &
+          # Start bun fmt in background with prefixed output. What it formats is in bunfig.toml.
+          # The plugin is built into Bun. It's only on here: on save, it would remove an import
+          # that the next edit is about to use.
+          echo "::group::bun fmt"
+          (bun fmt --plugin=prettier-plugin-organize-imports 2>&1 | sed 's/^/[bun fmt] /') &
           BUN_FMT_PID=$!
 
           # Start clang-format installation and formatting in background with prefixed output

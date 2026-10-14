@@ -65,7 +65,9 @@ pub struct ModuleImportsStore<'a> {
 impl<'a> ModuleImportsStore<'a> {
     /// Create new `ModuleImportsStore`.
     pub fn new() -> Self {
-        Self { imports: IndexMap::default() }
+        Self {
+            imports: IndexMap::default(),
+        }
     }
 
     /// Add default `import` or `require` to top of program.
@@ -94,7 +96,11 @@ impl<'a> ModuleImportsStore<'a> {
         local: BoundIdentifier<'a>,
         front: bool,
     ) {
-        self.add_import(source, Import::Named(NamedImport { imported, local }), front);
+        self.add_import(
+            source,
+            Import::Named(NamedImport { imported, local }),
+            front,
+        );
     }
 
     /// Returns `true` if no imports have been scheduled for insertion.
@@ -187,7 +193,9 @@ impl<'a> ModuleImportsStore<'a> {
             let arg = Argument::new_string_literal(SPAN, source, None, ctx);
             [arg]
         };
-        let Some(Import::Default(local)) = names.into_iter().next() else { unreachable!() };
+        let Some(Import::Default(local)) = names.into_iter().next() else {
+            unreachable!()
+        };
         let id = local.create_binding_pattern(ctx);
         let var_kind = VariableDeclarationKind::Var;
         let decl = {

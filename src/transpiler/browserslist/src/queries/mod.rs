@@ -107,9 +107,11 @@ pub type QueryResult = Result<Vec<Distrib>, Error>;
 
 pub fn query(atom: QueryAtom, opts: &Opts) -> QueryResult {
     match atom {
-        QueryAtom::Last { count, major, name: Some(name) }
-            if name.eq_ignore_ascii_case("electron") =>
-        {
+        QueryAtom::Last {
+            count,
+            major,
+            name: Some(name),
+        } if name.eq_ignore_ascii_case("electron") => {
             let count = usize::from(count);
             if major {
                 last_n_electron_major::last_n_electron_major(count)
@@ -117,7 +119,11 @@ pub fn query(atom: QueryAtom, opts: &Opts) -> QueryResult {
                 last_n_electron::last_n_electron(count)
             }
         }
-        QueryAtom::Last { count, major, name: Some(name) } if name.eq_ignore_ascii_case("node") => {
+        QueryAtom::Last {
+            count,
+            major,
+            name: Some(name),
+        } if name.eq_ignore_ascii_case("node") => {
             let count = usize::from(count);
             if major {
                 last_n_node_major::last_n_node_major(count)
@@ -125,7 +131,11 @@ pub fn query(atom: QueryAtom, opts: &Opts) -> QueryResult {
                 last_n_node::last_n_node(count)
             }
         }
-        QueryAtom::Last { count, major, name: Some(name) } => {
+        QueryAtom::Last {
+            count,
+            major,
+            name: Some(name),
+        } => {
             let count = usize::from(count);
             if major {
                 last_n_x_major_browsers::last_n_x_major_browsers(count, name, opts)
@@ -133,7 +143,11 @@ pub fn query(atom: QueryAtom, opts: &Opts) -> QueryResult {
                 last_n_x_browsers::last_n_x_browsers(count, name, opts)
             }
         }
-        QueryAtom::Last { count, major, name: None } => {
+        QueryAtom::Last {
+            count,
+            major,
+            name: None,
+        } => {
             let count = usize::from(count);
             if major {
                 last_n_major_browsers::last_n_major_browsers(count, opts)
@@ -150,16 +164,24 @@ pub fn query(atom: QueryAtom, opts: &Opts) -> QueryResult {
         QueryAtom::Unreleased(None) => unreleased_browsers::unreleased_browsers(opts),
         QueryAtom::Years(count) => years::years(count, opts),
         QueryAtom::Since { year, month, day } => since::since(year, month, day, opts),
-        QueryAtom::Percentage { comparator, popularity, stats: Stats::Global } => {
-            percentage::percentage(comparator, popularity)
-        }
-        QueryAtom::Percentage { comparator, popularity, stats: Stats::Region(region) } => {
-            percentage_by_region::percentage_by_region(comparator, popularity, region)
-        }
-        QueryAtom::Cover { coverage, stats: Stats::Global } => cover::cover(coverage),
-        QueryAtom::Cover { coverage, stats: Stats::Region(region) } => {
-            cover_by_region::cover_by_region(coverage, region)
-        }
+        QueryAtom::Percentage {
+            comparator,
+            popularity,
+            stats: Stats::Global,
+        } => percentage::percentage(comparator, popularity),
+        QueryAtom::Percentage {
+            comparator,
+            popularity,
+            stats: Stats::Region(region),
+        } => percentage_by_region::percentage_by_region(comparator, popularity, region),
+        QueryAtom::Cover {
+            coverage,
+            stats: Stats::Global,
+        } => cover::cover(coverage),
+        QueryAtom::Cover {
+            coverage,
+            stats: Stats::Region(region),
+        } => cover_by_region::cover_by_region(coverage, region),
         QueryAtom::Supports(name, kind) => supports::supports(name, kind, opts),
         QueryAtom::Electron(VersionRange::Bounded(from, to)) => {
             electron_bounded_range::electron_bounded_range(from, to)
@@ -188,9 +210,11 @@ pub fn query(atom: QueryAtom, opts: &Opts) -> QueryResult {
         QueryAtom::Browser(name, VersionRange::Accurate(version)) => {
             browser_accurate::browser_accurate(name, version, opts)
         }
-        QueryAtom::Baseline { kind, downstream, kaios } => {
-            baseline::baseline(kind, downstream, kaios, opts)
-        }
+        QueryAtom::Baseline {
+            kind,
+            downstream,
+            kaios,
+        } => baseline::baseline(kind, downstream, kaios, opts),
         QueryAtom::FirefoxESR => firefox_esr::firefox_esr(),
         QueryAtom::OperaMini => op_mini::op_mini(),
         QueryAtom::CurrentNode => current_node::current_node(),
@@ -240,7 +264,12 @@ pub fn count_filter_versions(name: &str, mobile_to_desktop: bool, count: usize) 
 pub fn find_minimum_major(stat: &caniuse::BrowserStat, count: usize) -> usize {
     let mut seen = 0usize;
     let mut last_major = None;
-    for version in stat.version_list.iter().rev().filter(|v| v.release_date().is_some()) {
+    for version in stat
+        .version_list
+        .iter()
+        .rev()
+        .filter(|v| v.release_date().is_some())
+    {
         let major = version.version().split('.').next().unwrap();
         if last_major != Some(major) {
             seen += 1;

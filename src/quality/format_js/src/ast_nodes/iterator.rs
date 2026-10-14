@@ -179,7 +179,10 @@ impl_ast_node_vec!(Directive<'a>, has_following_span_in_the_last_item);
 // the last item and the rest element (e.g., `[a, /** @type {string[]} */ ...rest]`).
 impl_ast_node_vec!(FormalParameter<'a>, has_following_span_in_the_last_item);
 impl_ast_node_vec!(BindingProperty<'a>, has_following_span_in_the_last_item);
-impl_ast_node_vec!(AssignmentTargetProperty<'a>, has_following_span_in_the_last_item);
+impl_ast_node_vec!(
+    AssignmentTargetProperty<'a>,
+    has_following_span_in_the_last_item
+);
 // A `None` element is an elision hole with no span of its own
 impl_ast_node_vec!(
     Option<BindingPattern<'a>>,

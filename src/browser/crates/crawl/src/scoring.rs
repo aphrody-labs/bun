@@ -16,7 +16,10 @@ fn stem(term: &str) -> String {
     if let Some(root) = term.strip_suffix("ies") {
         return format!("{root}y");
     }
-    if ["ss", "us", "is"].iter().any(|suffix| term.ends_with(suffix)) {
+    if ["ss", "us", "is"]
+        .iter()
+        .any(|suffix| term.ends_with(suffix))
+    {
         return term.to_owned();
     }
     for suffix in ["ches", "shes", "xes", "zes", "sses"] {

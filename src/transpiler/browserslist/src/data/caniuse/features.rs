@@ -6,8 +6,9 @@ use super::{
 use crate::data::decode_browser_name;
 pub use crate::generated::caniuse_feature_matching::get_feature_stat;
 
-static FEATURES: LazyBlob =
-    LazyBlob::new(include_bytes!("../../generated/caniuse_feature_matching.bin.deflate"));
+static FEATURES: LazyBlob = LazyBlob::new(include_bytes!(
+    "../../generated/caniuse_feature_matching.bin.deflate"
+));
 
 pub struct FeatureSet {
     yes: Vec</* version */ &'static str>,
@@ -95,5 +96,8 @@ fn read_versions(
             j -= 1;
         }
     }
-    indices.into_iter().map(|i| table[i as usize].as_str()).collect()
+    indices
+        .into_iter()
+        .map(|i| table[i as usize].as_str())
+        .collect()
 }

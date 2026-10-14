@@ -227,12 +227,17 @@ impl<'a, 'e> ReactiveFunctionTransform<'a> for PruneVisitor<'a, 'e> {
         let scope_data = &mut self.env.scopes[scope_id];
 
         // Remove non-reactive dependencies
-        scope_data.dependencies.retain(|dep| state.contains(&dep.identifier));
+        scope_data
+            .dependencies
+            .retain(|dep| state.contains(&dep.identifier));
 
         // If any deps remain, mark all declarations and reassignments as reactive
         if !scope_data.dependencies.is_empty() {
-            let decl_ids: Vec<IdentifierId> =
-                scope_data.declarations.iter().map(|(_, decl)| decl.identifier).collect();
+            let decl_ids: Vec<IdentifierId> = scope_data
+                .declarations
+                .iter()
+                .map(|(_, decl)| decl.identifier)
+                .collect();
             for id in decl_ids {
                 state.insert(id);
             }

@@ -106,10 +106,15 @@ fn outline_jsx_impl<'a>(
 
             match &instr.value {
                 InstructionValue::LoadGlobal { .. } => {
-                    actions.push(InstrAction::LoadGlobal { lvalue_id, instr_idx: iid.index() });
+                    actions.push(InstrAction::LoadGlobal {
+                        lvalue_id,
+                        instr_idx: iid.index(),
+                    });
                 }
                 InstructionValue::FunctionExpression { lowered_func, .. } => {
-                    actions.push(InstrAction::FunctionExpr { func_id: lowered_func.func });
+                    actions.push(InstrAction::FunctionExpr {
+                        func_id: lowered_func.func,
+                    });
                 }
                 InstructionValue::JsxExpression { children, .. } => {
                     let child_ids = children
@@ -132,16 +137,26 @@ fn outline_jsx_impl<'a>(
         // Second pass: process actions
         for action in actions {
             match action {
-                InstrAction::LoadGlobal { lvalue_id, instr_idx } => {
+                InstrAction::LoadGlobal {
+                    lvalue_id,
+                    instr_idx,
+                } => {
                     globals.insert(lvalue_id, instr_idx);
                 }
                 InstrAction::FunctionExpr { func_id } => {
-                    let mut inner_func =
-                        replace(&mut env.functions[func_id], placeholder_function(env.allocator));
+                    let mut inner_func = replace(
+                        &mut env.functions[func_id],
+                        placeholder_function(env.allocator),
+                    );
                     outline_jsx_impl(&mut inner_func, env, outlined_fns);
                     env.functions[func_id] = inner_func;
                 }
-                InstrAction::JsxExpr { lvalue_id, instr_idx, eval_order, child_ids } => {
+                InstrAction::JsxExpr {
+                    lvalue_id,
+                    instr_idx,
+                    eval_order,
+                    child_ids,
+                } => {
                     if !children_ids.contains(&lvalue_id) {
                         process_and_outline_jsx(
                             func,
@@ -154,7 +169,11 @@ fn outline_jsx_impl<'a>(
                         jsx_group.clear();
                         children_ids.clear();
                     }
-                    jsx_group.push(JsxInstrInfo { instr_idx, lvalue_id, eval_order });
+                    jsx_group.push(JsxInstrInfo {
+                        instr_idx,
+                        lvalue_id,
+                        eval_order,
+                    });
                     for child_id in child_ids {
                         children_ids.insert(child_id);
                     }
@@ -244,7 +263,10 @@ fn process_jsx_group<'a>(
     let mut outlined_fn = outlined_fn;
     outlined_fn.id = Some(outlined_tag);
 
-    Some(OutlinedResult { instrs: new_instrs, func: outlined_fn })
+    Some(OutlinedResult {
+        instrs: new_instrs,
+        func: outlined_fn,
+    })
 }
 
 fn collect_props<'a>(
@@ -272,11 +294,18 @@ fn collect_props<'a>(
 
     for info in jsx_group {
         let instr = &func.instructions[info.instr_idx];
-        if let InstructionValue::JsxExpression { props, children, .. } = &instr.value {
+        if let InstructionValue::JsxExpression {
+            props, children, ..
+        } = &instr.value
+        {
             for attr in props {
                 match attr {
                     JsxAttribute::SpreadAttribute { .. } => return None,
-                    JsxAttribute::Attribute { name, name_span, place } => {
+                    JsxAttribute::Attribute {
+                        name,
+                        name_span,
+                        place,
+                    } => {
                         let new_name = generate_name(*name);
                         attributes.push(OutlinedJsxAttribute {
                             original_name: *name,
@@ -342,11 +371,18 @@ fn emit_outlined_jsx<'a>(
     let load_id = env.next_identifier_id();
     // Promote it as a JSX tag temporary
     let decl_id = env.identifiers[load_id].declaration_id;
-    env.identifiers[load_id].name =
-        Some(IdentifierName::Promoted(format_ident!(env.allocator, "#T{}", decl_id.index())));
+    env.identifiers[load_id].name = Some(IdentifierName::Promoted(format_ident!(
+        env.allocator,
+        "#T{}",
+        decl_id.index()
+    )));
 
-    let load_place =
-        Place { identifier: load_id, effect: Effect::Unknown, reactive: false, span: None };
+    let load_place = Place {
+        identifier: load_id,
+        effect: Effect::Unknown,
+        reactive: false,
+        span: None,
+    };
 
     let load_jsx = Instruction {
         id: EvaluationOrder::UNSET,
@@ -394,10 +430,17 @@ fn emit_outlined_fn<'a>(
     // Create props parameter
     let props_obj_id = env.next_identifier_id();
     let decl_id = env.identifiers[props_obj_id].declaration_id;
-    env.identifiers[props_obj_id].name =
-        Some(IdentifierName::Promoted(format_ident!(env.allocator, "#t{}", decl_id.index())));
-    let props_obj =
-        Place { identifier: props_obj_id, effect: Effect::Unknown, reactive: false, span: None };
+    env.identifiers[props_obj_id].name = Some(IdentifierName::Promoted(format_ident!(
+        env.allocator,
+        "#t{}",
+        decl_id.index()
+    )));
+    let props_obj = Place {
+        identifier: props_obj_id,
+        effect: Effect::Unknown,
+        reactive: false,
+        span: None,
+    };
 
     // Create destructure instruction
     let destructure_instr = emit_destructure_props(env, &props_obj, &old_to_new_props);
@@ -428,8 +471,12 @@ fn emit_outlined_fn<'a>(
 
     // Create return place
     let returns_id = env.next_identifier_id();
-    let returns_place =
-        Place { identifier: returns_id, effect: Effect::Unknown, reactive: false, span: None };
+    let returns_place = Place {
+        identifier: returns_id,
+        effect: Effect::Unknown,
+        reactive: false,
+        span: None,
+    };
 
     let block = BasicBlock {
         kind: BlockKind::Block,
@@ -459,7 +506,10 @@ fn emit_outlined_fn<'a>(
         params: ArenaVec::from_array_in([ParamPattern::Place(props_obj)], &env.allocator),
         returns: returns_place,
         context: ArenaVec::new_in(&env.allocator),
-        body: HIR { entry: BlockId::ENTRY, blocks },
+        body: HIR {
+            entry: BlockId::ENTRY,
+            blocks,
+        },
         instructions: instr_table,
         generator: false,
         is_async: false,
@@ -480,7 +530,10 @@ fn emit_load_globals<'a>(
     let mut instructions = Vec::new();
     for info in jsx_group {
         let instr = &func.instructions[info.instr_idx];
-        if let InstructionValue::JsxExpression { tag: JsxTag::Place(tag_place), .. } = &instr.value
+        if let InstructionValue::JsxExpression {
+            tag: JsxTag::Place(tag_place),
+            ..
+        } = &instr.value
         {
             let global_instr_idx = globals.get(&tag_place.identifier)?;
             instructions.push(func.instructions[*global_instr_idx].clone_in(alloc));
@@ -588,8 +641,12 @@ fn create_old_to_new_props_mapping<'a>(
         let new_id = env.next_identifier_id();
         env.identifiers[new_id].name = Some(IdentifierName::Named(old_prop.new_name));
 
-        let new_place =
-            Place { identifier: new_id, effect: Effect::Unknown, reactive: false, span: None };
+        let new_place = Place {
+            identifier: new_id,
+            effect: Effect::Unknown,
+            reactive: false,
+            span: None,
+        };
 
         old_to_new.insert(
             old_prop.place.identifier,
@@ -613,22 +670,32 @@ fn emit_destructure_props<'a>(
     let mut properties = ArenaVec::new_in(&env.allocator);
     for prop in old_to_new_props.values() {
         properties.push(ObjectPropertyOrSpread::Property(ObjectProperty {
-            key: ObjectPropertyKey::String { name: prop.new_name, span: None },
+            key: ObjectPropertyKey::String {
+                name: prop.new_name,
+                span: None,
+            },
             property_type: ObjectPropertyType::Property,
             place: prop.place,
         }));
     }
 
     let lvalue_id = env.next_identifier_id();
-    let lvalue =
-        Place { identifier: lvalue_id, effect: Effect::Unknown, reactive: false, span: None };
+    let lvalue = Place {
+        identifier: lvalue_id,
+        effect: Effect::Unknown,
+        reactive: false,
+        span: None,
+    };
 
     Instruction {
         id: EvaluationOrder::UNSET,
         lvalue,
         value: InstructionValue::Destructure {
             lvalue: LValuePattern {
-                pattern: Pattern::Object(ObjectPattern { properties, span: None }),
+                pattern: Pattern::Object(ObjectPattern {
+                    properties,
+                    span: None,
+                }),
                 kind: InstructionKind::Let,
             },
             value: *props_obj,

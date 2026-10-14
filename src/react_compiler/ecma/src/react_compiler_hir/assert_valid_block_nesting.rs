@@ -68,7 +68,10 @@ pub fn assert_valid_block_nesting(
         .into_iter()
         .map(|scope_id| {
             let range = env.scopes[scope_id].range;
-            BlockRange { start: range.start, end: range.end }
+            BlockRange {
+                start: range.start,
+                end: range.end,
+            }
         })
         .collect();
 
@@ -87,7 +90,10 @@ pub fn assert_valid_block_nesting(
             || fallthrough.terminal.evaluation_order(),
             |instr_id| func.instructions[instr_id.index()].id,
         );
-        ranges.push(BlockRange { start: block.terminal.evaluation_order(), end });
+        ranges.push(BlockRange {
+            start: block.terminal.evaluation_order(),
+            end,
+        });
     }
 
     assert_valid_ranges(ranges)
@@ -184,7 +190,13 @@ mod tests {
     fn rejects_partially_overlapping_ranges() {
         let diagnostic = assert_valid_ranges(vec![range(1, 5), range(3, 7)]).unwrap_err();
 
-        assert_eq!(diagnostic.message, "Invalid nesting in program blocks or scopes");
-        assert_eq!(diagnostic.help.as_deref(), Some("Items overlap but are not nested: 1:5(3:7)"));
+        assert_eq!(
+            diagnostic.message,
+            "Invalid nesting in program blocks or scopes"
+        );
+        assert_eq!(
+            diagnostic.help.as_deref(),
+            Some("Items overlap but are not nested: 1:5(3:7)")
+        );
     }
 }

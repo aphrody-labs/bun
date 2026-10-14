@@ -9,8 +9,81 @@ import { emitGeneratorRule, resolveJsToolchain } from "../../scripts/build/confi
 import { Ninja } from "../../scripts/build/ninja.ts";
 import { quote } from "../../scripts/build/shell.ts";
 import { join } from "node:path";
+import { existsSync, linkSync, statSync, unlinkSync, writeFileSync } from "node:fs";
+import { builtRuntimeEnvironment, runtimePathEnvironment, withBuildDirectoryLock } from "../../scripts/build.ts";
 
 const buildScript = join(import.meta.dirname, "..", "..", "scripts", "build.ts");
+
+test("build directory stays locked until the runtime child finishes", async () => {
+  using dir = tempDir("build-runtime-lock", {});
+  const lock = join(String(dir), ".build.lock");
+  const result = await withBuildDirectoryLock(String(dir), async () => {
+    await using child = Bun.spawn(
+      [bunExe(), "-e", "console.log(require('node:fs').existsSync(Bun.argv.at(-1)))", lock],
+      { stdout: "pipe", stderr: "pipe", timeout: 10_000 },
+    );
+    const [stdout, stderr, code] = await Promise.all([child.stdout.text(), child.stderr.text(), child.exited]);
+    expect(stdout.trim(), stderr).toBe("true");
+    expect(code).toBe(0);
+    expect(existsSync(lock)).toBe(true);
+    return "runtime completed";
+  });
+  expect(result).toBe("runtime completed");
+  expect(existsSync(lock)).toBe(false);
+});
+
+test("build lock is released on configure errors and early returns", async () => {
+  using dir = tempDir("build-runtime-lock-errors", {});
+  const lock = join(String(dir), ".build.lock");
+  await expect(
+    withBuildDirectoryLock(String(dir), () => {
+      throw new Error("configure failed");
+    }),
+  ).rejects.toThrow("configure failed");
+  expect(existsSync(lock)).toBe(false);
+  expect(await withBuildDirectoryLock(String(dir), () => "configure only")).toBe("configure only");
+  expect(existsSync(lock)).toBe(false);
+});
+
+test("runtime PATH preserves Windows casing and all inherited toolchain entries", () => {
+  const inherited = { Path: "C:\\MSVC;C:\\SDK", PATH: "C:\\LLVM", INCLUDE: "headers", LIB: "libraries" };
+  const env = runtimePathEnvironment("C:\\build\\runtime", inherited, true);
+  expect(env).toEqual({ Path: "C:\\build\\runtime;C:\\MSVC;C:\\SDK;C:\\LLVM", INCLUDE: "headers", LIB: "libraries" });
+  expect(inherited.Path).toBe("C:\\MSVC;C:\\SDK");
+  expect(inherited.PATH).toBe("C:\\LLVM");
+  expect(runtimePathEnvironment("/build/runtime", { PATH: "/tools", Path: "/case-sensitive" }, false)).toEqual({
+    PATH: "/build/runtime:/tools",
+    Path: "/case-sensitive",
+  });
+});
+
+test("runtime child resolves bun to the exact built executable and refreshes replaced links", async () => {
+  using dir = tempDir("built-runtime-alias", {});
+  const exe = join(String(dir), isWindows ? "bun-debug.exe" : "bun-debug");
+  linkSync(bunExe(), exe);
+  const alias = join(String(dir), ".runtime-bin", isWindows ? "bun.exe" : "bun");
+  const env = builtRuntimeEnvironment(exe, bunEnv);
+  expect(statSync(alias).ino).toBe(statSync(exe).ino);
+  await using proc = Bun.spawn(
+    ["bun", "-e", "console.log(JSON.stringify({revision:Bun.revision,exe:process.execPath}))"],
+    {
+      env,
+      stdout: "pipe",
+      stderr: "pipe",
+      timeout: 10_000,
+    },
+  );
+  const [stdout, stderr, code] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+  expect(code).toBe(0);
+  const runtime = JSON.parse(stdout);
+  expect(runtime.revision, stderr).toBe(Bun.revision);
+  expect(runtime.exe.replaceAll("\\", "/")).toBe(alias.replaceAll("\\", "/"));
+  unlinkSync(exe);
+  writeFileSync(exe, "the next linked executable");
+  builtRuntimeEnvironment(exe, bunEnv);
+  expect(statSync(alias).ino).toBe(statSync(exe).ino);
+  expect(await Bun.file(alias).text()).toBe("the next linked executable");
+});
 
 test("the owner factory reuses its executing Bun and rejects npm", () => {
   const toolchain = resolveJsToolchain();

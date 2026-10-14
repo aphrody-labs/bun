@@ -178,7 +178,9 @@ impl TokenWithSpanData {
 
     #[inline]
     pub fn bad_str<'s>(&self, source: &'s str) -> Option<BadStr<'s>> {
-        matches!(self.token, TokenData::BadStr(..)).then(|| BadStr { raw: self.raw(source) })
+        matches!(self.token, TokenData::BadStr(..)).then(|| BadStr {
+            raw: self.raw(source),
+        })
     }
 
     #[inline]
@@ -209,8 +211,9 @@ impl TokenWithSpanData {
 
     #[inline]
     pub fn backtick_code<'s>(&self, source: &'s str) -> Option<BacktickCode<'s>> {
-        matches!(self.token, TokenData::BacktickCode(..))
-            .then(|| BacktickCode { raw: self.raw(source) })
+        matches!(self.token, TokenData::BacktickCode(..)).then(|| BacktickCode {
+            raw: self.raw(source),
+        })
     }
 
     #[inline]
@@ -219,7 +222,9 @@ impl TokenWithSpanData {
             TokenData::Dimension(meta) => {
                 let number_end = meta.number_end as usize;
                 Some(Dimension {
-                    value: Number { raw: &source[self.span.start..number_end] },
+                    value: Number {
+                        raw: &source[self.span.start..number_end],
+                    },
                     unit: Ident {
                         raw: &source[number_end..self.span.end],
                         escaped: meta.unit_escaped,
@@ -284,7 +289,10 @@ impl TokenWithSpanData {
     #[inline]
     pub fn ident<'s>(&self, source: &'s str) -> Option<Ident<'s>> {
         match self.token {
-            TokenData::Ident(meta) => Some(Ident { raw: self.raw(source), escaped: meta.escaped }),
+            TokenData::Ident(meta) => Some(Ident {
+                raw: self.raw(source),
+                escaped: meta.escaped,
+            }),
             _ => None,
         }
     }
@@ -301,17 +309,21 @@ impl TokenWithSpanData {
 
     #[inline]
     pub fn is_ident_raw_starts_with(&self, source: &str, prefix: &str) -> bool {
-        self.ident_raw(source).is_some_and(|raw| raw.starts_with(prefix))
+        self.ident_raw(source)
+            .is_some_and(|raw| raw.starts_with(prefix))
     }
 
     #[inline]
     pub fn is_ident_name_eq_ignore_ascii_case(&self, source: &str, expected: &str) -> bool {
-        self.ident(source).is_some_and(|ident| ident.name().eq_ignore_ascii_case(expected))
+        self.ident(source)
+            .is_some_and(|ident| ident.name().eq_ignore_ascii_case(expected))
     }
 
     #[inline]
     pub fn number<'s>(&self, source: &'s str) -> Option<Number<'s>> {
-        matches!(self.token, TokenData::Number(..)).then(|| Number { raw: self.raw(source) })
+        matches!(self.token, TokenData::Number(..)).then(|| Number {
+            raw: self.raw(source),
+        })
     }
 
     #[inline]
@@ -322,7 +334,9 @@ impl TokenWithSpanData {
     #[inline]
     pub fn percentage<'s>(&self, source: &'s str) -> Option<Percentage<'s>> {
         matches!(self.token, TokenData::Percentage(..)).then(|| Percentage {
-            value: Number { raw: &source[self.span.start..self.span.end - 1] },
+            value: Number {
+                raw: &source[self.span.start..self.span.end - 1],
+            },
         })
     }
 
@@ -340,7 +354,10 @@ impl TokenWithSpanData {
     #[inline]
     pub fn str<'s>(&self, source: &'s str) -> Option<Str<'s>> {
         match self.token {
-            TokenData::Str(meta) => Some(Str { raw: self.raw(source), escaped: meta.escaped }),
+            TokenData::Str(meta) => Some(Str {
+                raw: self.raw(source),
+                escaped: meta.escaped,
+            }),
             _ => None,
         }
     }
@@ -361,9 +378,10 @@ impl TokenWithSpanData {
     #[inline]
     pub fn url_raw<'s>(&self, source: &'s str) -> Option<UrlRaw<'s>> {
         match self.token {
-            TokenData::UrlRaw(meta) => {
-                Some(UrlRaw { raw: self.raw(source), escaped: meta.escaped })
-            }
+            TokenData::UrlRaw(meta) => Some(UrlRaw {
+                raw: self.raw(source),
+                escaped: meta.escaped,
+            }),
             _ => None,
         }
     }
@@ -371,9 +389,11 @@ impl TokenWithSpanData {
     #[inline]
     pub fn url_template<'s>(&self, source: &'s str) -> Option<UrlTemplate<'s>> {
         match self.token {
-            TokenData::UrlTemplate(meta) => {
-                Some(UrlTemplate { raw: self.raw(source), escaped: meta.escaped, tail: meta.tail })
-            }
+            TokenData::UrlTemplate(meta) => Some(UrlTemplate {
+                raw: self.raw(source),
+                escaped: meta.escaped,
+                tail: meta.tail,
+            }),
             _ => None,
         }
     }

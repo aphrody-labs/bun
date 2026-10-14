@@ -37,7 +37,9 @@ fn new_cap_diagnostic(span: Span, cap: &GetCapResult) -> OxcDiagnostic {
         "Use the new operator when calling this function, or add it to the exceptions list if it should not be called with new."
     };
 
-    OxcDiagnostic::warn(msg).with_help(help).with_label(span.label(label))
+    OxcDiagnostic::warn(msg)
+        .with_help(help)
+        .with_label(span.label(label))
 }
 
 #[derive(Debug, Default, Clone, Deserialize)]
@@ -92,7 +94,10 @@ const CAPS_ALLOWED: [&str; 11] = [
 ];
 
 fn caps_allowed_vec() -> Vec<CompactStr> {
-    CAPS_ALLOWED.iter().map(|x| CompactStr::new(x)).collect::<Vec<CompactStr>>()
+    CAPS_ALLOWED
+        .iter()
+        .map(|x| CompactStr::new(x))
+        .collect::<Vec<CompactStr>>()
 }
 
 declare_oxc_lint!(
@@ -470,7 +475,10 @@ impl Rule for NewCap {
                 let allowed = is_cap_allowed_expression(
                     short_name,
                     name,
-                    self.cap_is_new_exceptions.iter().map(CompactStr::as_str).chain(CAPS_ALLOWED),
+                    self.cap_is_new_exceptions
+                        .iter()
+                        .map(CompactStr::as_str)
+                        .chain(CAPS_ALLOWED),
                     self.cap_is_new_exception_pattern.as_ref(),
                 ) || (!self.properties && short_name != name.as_str());
 
@@ -674,33 +682,66 @@ fn test() {
         ("var x = BigInt('1n')", None),
         ("var x = _();", None),
         ("var x = $();", None),
-        ("var x = Foo(42)", Some(serde_json::json!([{ "capIsNew": false }]))),
-        ("var x = bar.Foo(42)", Some(serde_json::json!([{ "capIsNew": false }]))),
-        ("var x = Foo.bar(42)", Some(serde_json::json!([{ "capIsNew": false }]))),
+        (
+            "var x = Foo(42)",
+            Some(serde_json::json!([{ "capIsNew": false }])),
+        ),
+        (
+            "var x = bar.Foo(42)",
+            Some(serde_json::json!([{ "capIsNew": false }])),
+        ),
+        (
+            "var x = Foo.bar(42)",
+            Some(serde_json::json!([{ "capIsNew": false }])),
+        ),
         ("var x = bar[Foo](42)", None),
-        ("var x = bar['Foo'](42)", Some(serde_json::json!([{ "capIsNew": false }]))),
+        (
+            "var x = bar['Foo'](42)",
+            Some(serde_json::json!([{ "capIsNew": false }])),
+        ),
         ("var x = Foo.bar(42)", None),
-        ("var x = new foo(42)", Some(serde_json::json!([{ "newIsCap": false }]))),
+        (
+            "var x = new foo(42)",
+            Some(serde_json::json!([{ "newIsCap": false }])),
+        ),
         ("var o = { 1: function() {} }; o[1]();", None),
         ("var o = { 1: function() {} }; new o[1]();", None),
         (
             "var x = Foo(42);",
             Some(serde_json::json!([{ "capIsNew": true, "capIsNewExceptions": ["Foo"] }])),
         ),
-        ("var x = Foo(42);", Some(serde_json::json!([{ "capIsNewExceptionPattern": "^Foo" }]))),
+        (
+            "var x = Foo(42);",
+            Some(serde_json::json!([{ "capIsNewExceptionPattern": "^Foo" }])),
+        ),
         (
             "var x = new foo(42);",
             Some(serde_json::json!([{ "newIsCap": true, "newIsCapExceptions": ["foo"] }])),
         ),
-        ("var x = new foo(42);", Some(serde_json::json!([{ "newIsCapExceptionPattern": "^foo" }]))),
-        ("var x = Object(42);", Some(serde_json::json!([{ "capIsNewExceptions": ["Foo"] }]))),
-        ("var x = Foo.Bar(42);", Some(serde_json::json!([{ "capIsNewExceptions": ["Bar"] }]))),
-        ("var x = Foo.Bar(42);", Some(serde_json::json!([{ "capIsNewExceptions": ["Foo.Bar"] }]))),
+        (
+            "var x = new foo(42);",
+            Some(serde_json::json!([{ "newIsCapExceptionPattern": "^foo" }])),
+        ),
+        (
+            "var x = Object(42);",
+            Some(serde_json::json!([{ "capIsNewExceptions": ["Foo"] }])),
+        ),
+        (
+            "var x = Foo.Bar(42);",
+            Some(serde_json::json!([{ "capIsNewExceptions": ["Bar"] }])),
+        ),
+        (
+            "var x = Foo.Bar(42);",
+            Some(serde_json::json!([{ "capIsNewExceptions": ["Foo.Bar"] }])),
+        ),
         (
             "var x = Foo.Bar(42);",
             Some(serde_json::json!([{ "capIsNewExceptionPattern": "^Foo\\.." }])),
         ),
-        ("var x = new foo.bar(42);", Some(serde_json::json!([{ "newIsCapExceptions": ["bar"] }]))),
+        (
+            "var x = new foo.bar(42);",
+            Some(serde_json::json!([{ "newIsCapExceptions": ["bar"] }])),
+        ),
         (
             "var x = new foo.bar(42);",
             Some(serde_json::json!([{ "newIsCapExceptions": ["foo.bar"] }])),
@@ -709,8 +750,14 @@ fn test() {
             "var x = new foo.bar(42);",
             Some(serde_json::json!([{ "newIsCapExceptionPattern": "^foo\\.." }])),
         ),
-        ("var x = new foo.bar(42);", Some(serde_json::json!([{ "properties": false }]))),
-        ("var x = Foo.bar(42);", Some(serde_json::json!([{ "properties": false }]))),
+        (
+            "var x = new foo.bar(42);",
+            Some(serde_json::json!([{ "properties": false }])),
+        ),
+        (
+            "var x = Foo.bar(42);",
+            Some(serde_json::json!([{ "properties": false }])),
+        ),
         (
             "var x = foo.Bar(42);",
             Some(serde_json::json!([{ "capIsNew": false, "properties": false }])),
@@ -718,10 +765,16 @@ fn test() {
         ("foo?.bar();", None),       // { "ecmaVersion": 2020 },
         ("(foo?.bar)();", None),     // { "ecmaVersion": 2020 },
         ("new (foo?.Bar)();", None), // { "ecmaVersion": 2020 },
-        ("(foo?.Bar)();", Some(serde_json::json!([{ "properties": false }]))), // { "ecmaVersion": 2020 },
-        ("new (foo?.bar)();", Some(serde_json::json!([{ "properties": false }]))), // { "ecmaVersion": 2020 },
-        ("Date?.UTC();", None),   // { "ecmaVersion": 2020 },
-        ("(Date?.UTC)();", None), // { "ecmaVersion": 2020 }
+        (
+            "(foo?.Bar)();",
+            Some(serde_json::json!([{ "properties": false }])),
+        ), // { "ecmaVersion": 2020 },
+        (
+            "new (foo?.bar)();",
+            Some(serde_json::json!([{ "properties": false }])),
+        ), // { "ecmaVersion": 2020 },
+        ("Date?.UTC();", None),      // { "ecmaVersion": 2020 },
+        ("(Date?.UTC)();", None),    // { "ecmaVersion": 2020 }
         (r#"expect(1)[""](1);"#, None),
         (
             "let tz = Intl.DateTimeFormat().resolvedOptions().timezone()",
@@ -734,7 +787,10 @@ fn test() {
             }])),
         ),
         // Template literal property names use their raw text.
-        (r"services.registry[`\u0043reateDocumentForCurrentSession`]();", None),
+        (
+            r"services.registry[`\u0043reateDocumentForCurrentSession`]();",
+            None,
+        ),
     ];
 
     let fail = vec![
@@ -767,12 +823,18 @@ fn test() {
         // 	Foo`]();",
         //     None,
         // ), // { "ecmaVersion": 6 },
-        ("var x = Foo.Bar(42);", Some(serde_json::json!([{ "capIsNewExceptions": ["Foo"] }]))),
+        (
+            "var x = Foo.Bar(42);",
+            Some(serde_json::json!([{ "capIsNewExceptions": ["Foo"] }])),
+        ),
         (
             "var x = Bar.Foo(42);",
             Some(serde_json::json!([{ "capIsNewExceptionPattern": "^Foo\\.." }])),
         ),
-        ("var x = new foo.bar(42);", Some(serde_json::json!([{ "newIsCapExceptions": ["foo"] }]))),
+        (
+            "var x = new foo.bar(42);",
+            Some(serde_json::json!([{ "newIsCapExceptions": ["foo"] }])),
+        ),
         (
             "var x = new bar.foo(42);",
             Some(serde_json::json!([{ "newIsCapExceptionPattern": "^foo\\.." }])),
@@ -786,7 +848,10 @@ fn test() {
                 "capIsNewExceptions": ["other.CreateDocumentForCurrentSession"]
             }])),
         ),
-        (r#"(services.registry?.["\u0043reateDocumentForCurrentSession"])();"#, None),
+        (
+            r#"(services.registry?.["\u0043reateDocumentForCurrentSession"])();"#,
+            None,
+        ),
     ];
 
     Tester::new(NewCap::NAME, NewCap::PLUGIN, pass, fail).test_and_snapshot();

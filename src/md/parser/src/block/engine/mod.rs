@@ -120,7 +120,10 @@ impl<'s> Engine<'s> {
         }
 
         // 4b. Non-verbatim leaf continuations.
-        if matches!(self.continue_leaf(&mut cur, content_end), Continuation::Consumed) {
+        if matches!(
+            self.continue_leaf(&mut cur, content_end),
+            Continuation::Consumed
+        ) {
             return;
         }
 
@@ -152,7 +155,14 @@ impl<'s> Engine<'s> {
     /// Returns whether the line was consumed.
     fn continue_verbatim_leaf(&mut self, mut cur: Cursor<'s>, content_end: u32) -> bool {
         match &mut self.leaf {
-            Some(Leaf::FencedCode { fence, len, indent, lines, end, .. }) => {
+            Some(Leaf::FencedCode {
+                fence,
+                len,
+                indent,
+                lines,
+                end,
+                ..
+            }) => {
                 let save = cur;
                 cur.skip_indent_up_to(3);
                 if cur.partial == 0 && scan::fence_close(cur.tail(), *fence, *len) {
@@ -167,7 +177,12 @@ impl<'s> Engine<'s> {
                 }
                 true
             }
-            Some(Leaf::Html { kind: kind @ 1..=5, lines, end, .. }) => {
+            Some(Leaf::Html {
+                kind: kind @ 1..=5,
+                lines,
+                end,
+                ..
+            }) => {
                 let kind = *kind;
                 lines.push(cur.segment(content_end));
                 *end = content_end;
@@ -205,10 +220,14 @@ impl<'s> Engine<'s> {
         // The line belongs to the innermost blockquote whose `>` it carries
         // (micromark's blockquote position covers it; the blank table alone would make
         // a `>` line at the end of a list item look like a gap after the item).
-        if let Some(end) = self.stack[..matched].iter_mut().rev().find_map(|c| match c {
-            OpenContainer::Quote { end, .. } => Some(end),
-            _ => None,
-        }) {
+        if let Some(end) = self.stack[..matched]
+            .iter_mut()
+            .rev()
+            .find_map(|c| match c {
+                OpenContainer::Quote { end, .. } => Some(end),
+                _ => None,
+            })
+        {
             *end = (*end).max(content_end);
         }
         let blank = Span::new(cur.offset(), content_end);
@@ -247,11 +266,15 @@ impl<'s> Engine<'s> {
         {
             start = None;
         }
-        let directive_between =
-            self.stack[matched..].iter().any(|c| matches!(c, OpenContainer::Directive { .. }));
+        let directive_between = self.stack[matched..]
+            .iter()
+            .any(|c| matches!(c, OpenContainer::Directive { .. }));
         if !directive_between && let Some(Leaf::Paragraph { segments, .. }) = &mut self.leaf {
             if start.is_none() {
-                segments.push(IrSeg { seg: cur.segment(content_end), lazy: true });
+                segments.push(IrSeg {
+                    seg: cur.segment(content_end),
+                    lazy: true,
+                });
                 return true;
             }
             // micromark quirk: on a lazy line a complete type 7 tag interrupts the paragraph after all
@@ -286,7 +309,11 @@ impl<'s> Engine<'s> {
     /// HTML types 6–7 end at their last content line either way.
     fn hand_back_line_ending(&mut self, opens_container: bool) {
         match &mut self.leaf {
-            Some(Leaf::Html { kind: 1..=5, trailing_newline, .. }) if opens_container => {
+            Some(Leaf::Html {
+                kind: 1..=5,
+                trailing_newline,
+                ..
+            }) if opens_container => {
                 *trailing_newline = true;
             }
             Some(Leaf::FencedCode { lines, end, .. }) if !opens_container => {
@@ -305,8 +332,15 @@ impl<'s> Engine<'s> {
     /// Types 6–7 end at the last content line.
     fn mark_html_eof(&mut self, has_line_ending: bool) {
         if has_line_ending
-            && !self.stack.iter().any(|c| matches!(c, OpenContainer::Quote { .. }))
-            && let Some(Leaf::Html { kind: 1..=5, trailing_newline, .. }) = &mut self.leaf
+            && !self
+                .stack
+                .iter()
+                .any(|c| matches!(c, OpenContainer::Quote { .. }))
+            && let Some(Leaf::Html {
+                kind: 1..=5,
+                trailing_newline,
+                ..
+            }) = &mut self.leaf
         {
             *trailing_newline = true;
         }
@@ -318,12 +352,22 @@ impl<'s> Engine<'s> {
     /// A leaf that refuses the line closes here.
     fn continue_leaf(&mut self, cur: &mut Cursor<'s>, content_end: u32) -> Continuation {
         match &mut self.leaf {
-            Some(Leaf::Html { kind: 6 | 7, lines, end, .. }) => {
+            Some(Leaf::Html {
+                kind: 6 | 7,
+                lines,
+                end,
+                ..
+            }) => {
                 lines.push(cur.segment(content_end));
                 *end = content_end;
                 Continuation::Consumed
             }
-            Some(Leaf::IndentedCode { lines, pending, end, .. }) if cur.indent_cols() >= 4 => {
+            Some(Leaf::IndentedCode {
+                lines,
+                pending,
+                end,
+                ..
+            }) if cur.indent_cols() >= 4 => {
                 cur.advance_cols(4);
                 lines.append(pending);
                 lines.push(cur.segment(content_end));
@@ -356,16 +400,29 @@ impl<'s> Engine<'s> {
     /// text rendering strips it in the inline phase, but code spans crossing the line ending must see it.
     /// A new paragraph starts at its first content byte.
     fn paragraph_text(&mut self, cur: Cursor<'s>, content_end: u32, deep: bool) {
-        if let Some(Leaf::Paragraph { segments, last_deep }) = &mut self.leaf {
-            segments.push(IrSeg { seg: cur.segment(content_end), lazy: false });
+        if let Some(Leaf::Paragraph {
+            segments,
+            last_deep,
+        }) = &mut self.leaf
+        {
+            segments.push(IrSeg {
+                seg: cur.segment(content_end),
+                lazy: false,
+            });
             *last_deep = deep;
         } else {
             debug_assert!(self.leaf.is_none());
             self.close_list_top();
             let mut cur = cur;
             cur.skip_all_ws();
-            let seg = IrSeg { seg: cur.segment(content_end), lazy: false };
-            self.leaf = Some(Leaf::Paragraph { segments: vec![seg], last_deep: deep });
+            let seg = IrSeg {
+                seg: cur.segment(content_end),
+                lazy: false,
+            };
+            self.leaf = Some(Leaf::Paragraph {
+                segments: vec![seg],
+                last_deep: deep,
+            });
         }
     }
 
@@ -411,7 +468,11 @@ impl<'s> Engine<'s> {
                         false
                     }
                 }
-                OpenContainer::Directive { fence_len, content_indent, .. } => {
+                OpenContainer::Directive {
+                    fence_len,
+                    content_indent,
+                    ..
+                } => {
                     // Measure the indent once; probe the close on a copy
                     let avail = cur.indent_cols();
                     let mut probe = *cur;
@@ -458,6 +519,10 @@ fn next_line_start(source: &str, content_end: u32) -> Option<u32> {
     if i >= bytes.len() {
         return None;
     }
-    let next = i + if bytes[i] == b'\r' && bytes.get(i + 1) == Some(&b'\n') { 2 } else { 1 };
+    let next = i + if bytes[i] == b'\r' && bytes.get(i + 1) == Some(&b'\n') {
+        2
+    } else {
+        1
+    };
     (next < bytes.len()).then_some(next as u32)
 }

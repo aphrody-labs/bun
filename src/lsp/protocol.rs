@@ -17,7 +17,10 @@ pub fn read_message(reader: &mut impl BufRead) -> io::Result<Option<Value>> {
         if reader.read_line(&mut line)? == 0 {
             return match length {
                 None => Ok(None),
-                Some(_) => Err(io::Error::new(io::ErrorKind::UnexpectedEof, "LSP header cut short")),
+                Some(_) => Err(io::Error::new(
+                    io::ErrorKind::UnexpectedEof,
+                    "LSP header cut short",
+                )),
             };
         }
         let header = line.trim_end_matches(['\r', '\n']);
@@ -31,12 +34,17 @@ pub fn read_message(reader: &mut impl BufRead) -> io::Result<Option<Value>> {
             && name.trim().eq_ignore_ascii_case("content-length")
         {
             let parsed = value.trim().parse::<usize>().map_err(|_| {
-                io::Error::new(io::ErrorKind::InvalidData, format!("invalid Content-Length {:?}", value.trim()))
+                io::Error::new(
+                    io::ErrorKind::InvalidData,
+                    format!("invalid Content-Length {:?}", value.trim()),
+                )
             })?;
             if parsed > MAX_MESSAGE_BYTES {
                 return Err(io::Error::new(
                     io::ErrorKind::InvalidData,
-                    format!("LSP message of {parsed} bytes exceeds the {MAX_MESSAGE_BYTES} byte limit"),
+                    format!(
+                        "LSP message of {parsed} bytes exceeds the {MAX_MESSAGE_BYTES} byte limit"
+                    ),
                 ));
             }
             length = Some(parsed);
@@ -44,9 +52,12 @@ pub fn read_message(reader: &mut impl BufRead) -> io::Result<Option<Value>> {
     }
     let mut body = vec![0u8; length.unwrap_or(0)];
     reader.read_exact(&mut body)?;
-    serde_json::from_slice(&body)
-        .map(Some)
-        .map_err(|err| io::Error::new(io::ErrorKind::InvalidData, format!("invalid LSP JSON: {err}")))
+    serde_json::from_slice(&body).map(Some).map_err(|err| {
+        io::Error::new(
+            io::ErrorKind::InvalidData,
+            format!("invalid LSP JSON: {err}"),
+        )
+    })
 }
 
 /// Writes one framed message and flushes.
@@ -75,7 +86,9 @@ pub fn path_to_uri(path: &Path) -> String {
     }
     for byte in slashed.bytes() {
         match byte {
-            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'.' | b'_' | b'~' | b'/' | b':' => uri.push(byte as char),
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'.' | b'_' | b'~' | b'/' | b':' => {
+                uri.push(byte as char)
+            }
             _ => uri.push_str(&format!("%{byte:02X}")),
         }
     }
@@ -96,7 +109,8 @@ pub fn uri_to_path(uri: &str) -> Option<PathBuf> {
     while at < bytes.len() {
         if bytes[at] == b'%'
             && let [high, low, ..] = bytes[at + 1..]
-            && let (Some(high), Some(low)) = ((high as char).to_digit(16), (low as char).to_digit(16))
+            && let (Some(high), Some(low)) =
+                ((high as char).to_digit(16), (low as char).to_digit(16))
         {
             decoded.push((high * 16 + low) as u8);
             at += 3;
@@ -112,7 +126,11 @@ pub fn uri_to_path(uri: &str) -> Option<PathBuf> {
             _ => path,
         };
         let local = local.replace('/', "\\");
-        Some(PathBuf::from(if host.is_empty() { local } else { format!("\\\\{host}{local}") }))
+        Some(PathBuf::from(if host.is_empty() {
+            local
+        } else {
+            format!("\\\\{host}{local}")
+        }))
     } else {
         Some(PathBuf::from(path))
     }
@@ -141,7 +159,10 @@ pub fn line_of(text: &str, line: u32) -> &str {
 
 /// UTF-16 offset of the 0-based character column `column` of `line`.
 pub fn utf16_column(line: &str, column: u32) -> u32 {
-    line.chars().take(column as usize).map(|c| c.len_utf16() as u32).sum()
+    line.chars()
+        .take(column as usize)
+        .map(|c| c.len_utf16() as u32)
+        .sum()
 }
 
 /// 0-based character column of the UTF-16 offset `utf16` of `line`.
@@ -159,15 +180,29 @@ pub fn char_column(line: &str, utf16: u32) -> u32 {
 }
 
 fn object<const N: usize>(fields: [(&str, Value); N]) -> Value {
-    Value::Object(fields.into_iter().map(|(name, value)| (name.to_owned(), value)).collect())
+    Value::Object(
+        fields
+            .into_iter()
+            .map(|(name, value)| (name.to_owned(), value))
+            .collect(),
+    )
 }
 
 pub fn request(id: i64, method: &str, params: Value) -> Value {
-    object([("jsonrpc", "2.0".into()), ("id", id.into()), ("method", method.into()), ("params", params)])
+    object([
+        ("jsonrpc", "2.0".into()),
+        ("id", id.into()),
+        ("method", method.into()),
+        ("params", params),
+    ])
 }
 
 pub fn notification(method: &str, params: Value) -> Value {
-    object([("jsonrpc", "2.0".into()), ("method", method.into()), ("params", params)])
+    object([
+        ("jsonrpc", "2.0".into()),
+        ("method", method.into()),
+        ("params", params),
+    ])
 }
 
 pub fn response(id: Value, result: Value) -> Value {
@@ -196,13 +231,20 @@ mod tests {
         let mut buffer = Vec::new();
         write_message(&mut buffer, &serde_json::json!({ "a": "é" })).unwrap();
         let mut reader = io::BufReader::new(&buffer[..]);
-        assert_eq!(read_message(&mut reader).unwrap(), Some(serde_json::json!({ "a": "é" })));
+        assert_eq!(
+            read_message(&mut reader).unwrap(),
+            Some(serde_json::json!({ "a": "é" }))
+        );
         assert_eq!(read_message(&mut reader).unwrap(), None);
     }
 
     #[test]
     fn uris_round_trip() {
-        let path = if cfg!(windows) { PathBuf::from(r"C:\a b\c#.ts") } else { PathBuf::from("/a b/c#.ts") };
+        let path = if cfg!(windows) {
+            PathBuf::from(r"C:\a b\c#.ts")
+        } else {
+            PathBuf::from("/a b/c#.ts")
+        };
         let uri = path_to_uri(&path);
         assert!(uri.starts_with("file:///"), "{uri}");
         assert!(uri.contains("a%20b/c%23.ts"), "{uri}");

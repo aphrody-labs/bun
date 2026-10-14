@@ -26,7 +26,9 @@ pub struct NoSequences {
 
 impl Default for NoSequences {
     fn default() -> Self {
-        Self { allow_in_parentheses: true }
+        Self {
+            allow_in_parentheses: true,
+        }
     }
 }
 
@@ -197,19 +199,28 @@ fn test() {
         ("for (i = 1, j = 2;; i++, j++);", None),
         ("foo(a, (b, c), d);", None),
         ("do {} while ((doSomething(), !!test));", None),
-        ("for ((doSomething(), somethingElse()); (doSomething(), !!test); );", None),
+        (
+            "for ((doSomething(), somethingElse()); (doSomething(), !!test); );",
+            None,
+        ),
         ("if ((doSomething(), !!test));", None),
         ("switch ((doSomething(), val)) {}", None),
         ("while ((doSomething(), !!test));", None),
         ("with ((doSomething(), val)) {}", None),
         ("a => ((doSomething(), a))", None),
         ("var foo = (1, 2);", Some(serde_json::json!([{}]))),
-        ("var foo = (1, 2);", Some(serde_json::json!([{ "allowInParentheses": true }]))),
+        (
+            "var foo = (1, 2);",
+            Some(serde_json::json!([{ "allowInParentheses": true }])),
+        ),
         (
             "for ((i = 0, j = 0); test; );",
             Some(serde_json::json!([{ "allowInParentheses": false }])),
         ),
-        ("for (; test; (i++, j++));", Some(serde_json::json!([{ "allowInParentheses": false }]))),
+        (
+            "for (; test; (i++, j++));",
+            Some(serde_json::json!([{ "allowInParentheses": false }])),
+        ),
         ("const foo = () => { return ((bar = 123), 10) }", None),
         ("const foo = () => (((bar = 123), 10));", None),
     ];
@@ -227,9 +238,18 @@ fn test() {
         ("(1), 2", None),
         ("((1)) , (2)", None),
         ("while((1) , 2);", None),
-        ("var foo = (1, 2);", Some(serde_json::json!([{ "allowInParentheses": false }]))),
-        (r#"(0,eval)("foo()");"#, Some(serde_json::json!([{ "allowInParentheses": false }]))),
-        ("foo(a, (b, c), d);", Some(serde_json::json!([{ "allowInParentheses": false }]))),
+        (
+            "var foo = (1, 2);",
+            Some(serde_json::json!([{ "allowInParentheses": false }])),
+        ),
+        (
+            r#"(0,eval)("foo()");"#,
+            Some(serde_json::json!([{ "allowInParentheses": false }])),
+        ),
+        (
+            "foo(a, (b, c), d);",
+            Some(serde_json::json!([{ "allowInParentheses": false }])),
+        ),
         (
             "do {} while ((doSomething(), !!test));",
             Some(serde_json::json!([{ "allowInParentheses": false }])),
@@ -254,7 +274,10 @@ fn test() {
             "with ((doSomething(), val)) {}",
             Some(serde_json::json!([{ "allowInParentheses": false }])),
         ),
-        ("a => ((doSomething(), a))", Some(serde_json::json!([{ "allowInParentheses": false }]))), // { "ecmaVersion": 6 }
+        (
+            "a => ((doSomething(), a))",
+            Some(serde_json::json!([{ "allowInParentheses": false }])),
+        ), // { "ecmaVersion": 6 }
     ];
 
     Tester::new(NoSequences::NAME, NoSequences::PLUGIN, pass, fail).test_and_snapshot();

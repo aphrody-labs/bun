@@ -131,8 +131,12 @@ pub fn format_to_ir<'a>(
     let allocator = session.allocator();
     let program = parse(allocator, allocator.alloc_str(source_text), source_type)?;
     let node = AstNode::new(program, AstNodes::Dummy(), allocator);
-    let mut context =
-        JsFormatContext::new(program.source_text, program.source_type, &program.comments, options);
+    let mut context = JsFormatContext::new(
+        program.source_text,
+        program.source_type,
+        &program.comments,
+        options,
+    );
 
     // Special cases for js-in-xxx:
     // - Single JSX in Markdown code block: omit the semicolon
@@ -178,7 +182,10 @@ pub fn format_fragment<'a>(
     // NOTE: Since this options is just the preferred quote (not a forced),
     // this may not be enough for all cases.
     // But it seems fine for almost all cases, so leave it for now.
-    let options = JsFormatOptions { quote_style: QuoteStyle::Single, ..options };
+    let options = JsFormatOptions {
+        quote_style: QuoteStyle::Single,
+        ..options
+    };
 
     // A js-in-xxx fragment never owns file envelopes (BOM / front matter)
     // and never dispatches embedded languages of its own.
@@ -213,7 +220,9 @@ pub fn format_fragment<'a>(
                 ));
             };
             let Some(type_params) = decl.type_parameters.as_deref() else {
-                return Err(OxcDiagnostic::error("Expected type parameters in wrapped fragment"));
+                return Err(OxcDiagnostic::error(
+                    "Expected type parameters in wrapped fragment",
+                ));
             };
             let node = AstNode::new(type_params, AstNodes::Dummy(), allocator);
             let content = FormatTypeParameters::new(&node);
@@ -282,8 +291,11 @@ pub fn parse_for_format<'a>(
     source_type: SourceType,
 ) -> ParserReturn<'a> {
     // Always enable JSX for JavaScript source types (no syntax conflict)
-    let source_type =
-        if source_type.is_javascript() { source_type.with_jsx(true) } else { source_type };
+    let source_type = if source_type.is_javascript() {
+        source_type.with_jsx(true)
+    } else {
+        source_type
+    };
 
     let options = ParseOptions {
         parse_regular_expression: false, // the formatter doesn't need regexes parsed
@@ -294,7 +306,9 @@ pub fn parse_for_format<'a>(
         // analysis on this AST, and semantic requires hashed `Ident`s.
         enable_ident_hashes: cfg!(feature = "detect_code_removal"),
     };
-    Parser::new(allocator, source_text, source_type).with_options(options).parse()
+    Parser::new(allocator, source_text, source_type)
+        .with_options(options)
+        .parse()
 }
 
 /// Parse `source_text` and promote the `Program` to the arena lifetime.
