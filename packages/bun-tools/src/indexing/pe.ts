@@ -3,6 +3,8 @@ import { lstat, readdir, realpath } from "node:fs/promises";
 import { basename, extname, join, relative } from "node:path";
 import { absolutePath, positiveInteger, prepareDatabase, within } from "./common";
 
+const PE_EXTENSIONS = new Set([".cpl", ".dll", ".efi", ".exe", ".mui", ".ocx", ".scr", ".sys"]);
+
 export interface PeImport {
   module: string;
   delay?: boolean;
@@ -62,12 +64,20 @@ export async function scanPe(options: PeScanOptions): Promise<PeScanResult> {
   while (directories.length) {
     options.signal?.throwIfAborted();
     const directory = directories.pop()!;
-    const info = await lstat(directory);
+    let info;
+    let canonical;
+    try {
+      info = await lstat(directory);
+      canonical = await realpath(directory);
+    } catch (error) {
+      result.errors.push({ path: directory, message: String(error) });
+      result.complete = false;
+      continue;
+    }
     if (info.isSymbolicLink()) {
       result.skippedLinks++;
       continue;
     }
-    const canonical = await realpath(directory);
     if (!within(root, canonical) || visited.has(canonical)) {
       result.skippedLinks++;
       continue;
@@ -94,7 +104,7 @@ export async function scanPe(options: PeScanOptions): Promise<PeScanResult> {
         directories.push(candidate);
         continue;
       }
-      if (!entry.isFile() || ![".exe", ".dll"].includes(extname(entry.name).toLowerCase())) continue;
+      if (!entry.isFile() || !PE_EXTENSIONS.has(extname(entry.name).toLowerCase())) continue;
       if (++candidates > maxFiles) throw new RangeError("PE scan exceeds maxFiles");
       try {
         const stat = await lstat(candidate);

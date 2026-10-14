@@ -259,6 +259,14 @@ change.nextUsn; // pass back in to continue reading
 
 const all = vol.enumerateMft(4 << 20); // every record, bounded by one read buffer size
 all.find(r => r.fileName === "autoexec.bat");
+
+let next = 0n;
+do {
+  const page = vol.enumerateMftPage(next, 4 << 20); // bounded memory for multi-million-entry volumes
+  consume(page.records);
+  next = page.next;
+  if (page.complete) break;
+} while (true);
 ```
 
 `record` and `parent` are NTFS file reference numbers: the low 48 bits are the stable MFT record number, the high 16 bits are a reuse sequence. `FSCTL_ENUM_USN_DATA` does not return the reserved metadata files (record numbers 0-15, including the volume root); their attributes are still readable through ordinary path APIs. Opening a volume handle needs an elevated process.

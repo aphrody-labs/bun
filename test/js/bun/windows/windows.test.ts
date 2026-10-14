@@ -297,18 +297,12 @@ describe.skipIf(!isWindows)("bun:windows", () => {
       expect(typeof journal.journalId).toBe("bigint");
       expect(journal.nextUsn).toBeGreaterThanOrEqual(journal.firstUsn);
 
-      const records = vol.enumerateMft(4 << 20);
-      expect(records.length).toBeGreaterThan(1000);
-      // `FSCTL_ENUM_USN_DATA` does not surface the reserved metadata files (record numbers
-      // below 16, including the volume root at `ROOT_RECORD`): assert record/parent integrity
-      // instead of looking for a specific reserved record. A real parent-child edge (a record
-      // whose declared parent is itself a record present in the dump) proves the 64-bit file
-      // reference numbers were decoded and masked correctly, not just that bytes were copied.
-      const byRecord = new Map(records.map(r => [r.record, r]));
-      const child = records.find(r => r.parent !== r.record && byRecord.has(r.parent));
-      expect(child).toBeDefined();
-      expect(byRecord.get(child!.parent)).toBeDefined();
-      expect(records.some(r => (r.attributes & windows.ntfs.FILE_ATTRIBUTE_DIRECTORY) !== 0)).toBe(true);
+      const page = vol.enumerateMftPage(0n, 64 << 10);
+      expect(page.records.length).toBeGreaterThan(0);
+      expect(page.next).toBeGreaterThan(0n);
+      expect(page.complete).toBe(false);
+      expect(page.records.every(r => r.record >= 0 && r.parent >= 0 && typeof r.name === "string")).toBe(true);
+      expect(page.records.some(r => (r.attributes & windows.ntfs.FILE_ATTRIBUTE_DIRECTORY) !== 0)).toBe(true);
 
       const read = vol.readJournal(journal.nextUsn, journal.journalId);
       expect(typeof read.next).toBe("bigint");

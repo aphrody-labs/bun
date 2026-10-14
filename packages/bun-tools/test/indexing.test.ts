@@ -238,6 +238,35 @@ function fakeVolume() {
   };
 }
 
+test("NTFS baseline consumes bounded native MFT pages", async () => {
+  using directory = tempDir("paged-ntfs", {});
+  const dbPath = join(String(directory), "index.sqlite");
+  const starts: bigint[] = [];
+  const volume: NtfsVolumeReader = {
+    queryJournal: () => ({ journalId: 1n, nextUsn: 10n, lowestValidUsn: 0n }),
+    enumerateMft: () => {
+      throw new Error("legacy full-volume allocation used");
+    },
+    enumerateMftPage: start => {
+      const cursor = BigInt(start ?? 0);
+      starts.push(cursor);
+      return cursor === 0n
+        ? {
+            records: [{ record: 20, parent: 5, attributes: 0, name: "paged.dll" }],
+            next: 21n,
+            complete: false,
+          }
+        : { records: [], next: cursor, complete: true };
+    },
+    readJournal: () => ({ next: 10n, records: [] }),
+    close: () => {},
+  };
+  expect(await indexNtfs({ dbPath, drive: "C", createVolume: () => volume })).toMatchObject({ entries: 1 });
+  expect(starts).toEqual([0n, 21n]);
+  using db = new Database(dbPath);
+  expect(db.query("SELECT name FROM ntfs_entries").get()).toEqual({ name: "paged.dll" });
+});
+
 test("NTFS replacement removes vanished baseline entries and commits rename/checkpoint atomically", async () => {
   using directory = tempDir("generic-ntfs", {});
   const dbPath = join(String(directory), "index.sqlite");
@@ -323,6 +352,19 @@ test("PE scan budgets report incomplete results and persistence refuses them", a
   expect(scan.artifacts).toHaveLength(0);
   await expect(persistPe({ dbPath: join(String(directory), "index.sqlite"), scan })).rejects.toThrow("incomplete");
   expect(await Bun.file(join(String(directory), "index.sqlite")).exists()).toBe(false);
+});
+
+test("PE scan includes Windows drivers and control-panel binaries recursively", async () => {
+  using directory = tempDir("windows-pe-kinds", {
+    "System32/driver.sys": "driver",
+    "System32/panel.cpl": "panel",
+    "System32/plain.txt": "text",
+  });
+  const scan = await scanPe({ root: String(directory), parse: () => ({ imports: [] }) });
+  expect(scan.artifacts.map(item => item.relativePath.replaceAll("\\", "/")).sort()).toEqual([
+    "System32/driver.sys",
+    "System32/panel.cpl",
+  ]);
 });
 
 test("PE imports preserve ambiguity and normalize API-set hosts", () => {

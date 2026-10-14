@@ -281,6 +281,81 @@ pub(crate) fn mft_enumerate(id: u32, buffer_bytes: usize) -> WinResult<String> {
     })
 }
 
+/// Enumerates one `FSCTL_ENUM_USN_DATA` page from `start_record`. This bounds native and JS
+/// memory independently of the number of files on the volume; callers keep passing `next`
+/// until `complete` is true.
+pub(crate) fn mft_enumerate_page(
+    id: u32,
+    start_record: u64,
+    buffer_bytes: usize,
+) -> WinResult<String> {
+    with_volume(id, |h| {
+        let mut out = vec![0u8; buffer_bytes.max(4096)];
+        let mut input = [0u8; 24];
+        input[0..8].copy_from_slice(&start_record.to_le_bytes());
+        input[16..24].copy_from_slice(&0x7fff_ffff_ffff_ffffi64.to_le_bytes());
+        let bytes = match ioctl(
+            h,
+            FSCTL_ENUM_USN_DATA,
+            &input,
+            &mut out,
+            "FSCTL_ENUM_USN_DATA",
+        ) {
+            Ok(n) => n as usize,
+            Err(e) if e.code == ERROR_HANDLE_EOF => 0,
+            Err(e) => return Err(e),
+        };
+        let complete = bytes <= 8;
+        let next = if complete {
+            start_record
+        } else {
+            u64::from_le_bytes(out[0..8].try_into().unwrap())
+        };
+        let mut json = Json::new();
+        json.begin_object()
+            .field_str("next", &next.to_string())
+            .field_bool("complete", complete)
+            .key("records")
+            .begin_array();
+        let mut off = 8usize;
+        while off + 60 <= bytes {
+            let len = u32::from_le_bytes(out[off..off + 4].try_into().unwrap()) as usize;
+            let major = u16::from_le_bytes(out[off + 4..off + 6].try_into().unwrap());
+            if len < 60 || off + len > bytes || major != 2 {
+                break;
+            }
+            let record =
+                u64::from_le_bytes(out[off + 8..off + 16].try_into().unwrap()) & RECORD_MASK;
+            let parent =
+                u64::from_le_bytes(out[off + 16..off + 24].try_into().unwrap()) & RECORD_MASK;
+            let attributes = u32::from_le_bytes(out[off + 52..off + 56].try_into().unwrap());
+            let name_len = u16::from_le_bytes(out[off + 56..off + 58].try_into().unwrap()) as usize;
+            let name_off =
+                off + u16::from_le_bytes(out[off + 58..off + 60].try_into().unwrap()) as usize;
+            let name = if name_off + name_len <= bytes {
+                let units: Vec<u16> = out[name_off..name_off + name_len]
+                    .as_chunks::<2>()
+                    .0
+                    .iter()
+                    .map(|c| u16::from_le_bytes([c[0], c[1]]))
+                    .collect();
+                String::from_utf16_lossy(&units)
+            } else {
+                String::new()
+            };
+            json.begin_array()
+                .num(record as f64)
+                .num(parent as f64)
+                .num(attributes as f64)
+                .str(&name)
+                .end_array();
+            off += len;
+        }
+        json.end_array().end_object();
+        Ok(json.finish())
+    })
+}
+
 /// One decoded `USN_RECORD_V2`/`V3`.
 struct UsnRecord {
     major: u16,

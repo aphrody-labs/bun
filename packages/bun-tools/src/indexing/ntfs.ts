@@ -24,6 +24,10 @@ export interface JournalEntry {
 export interface NtfsVolumeReader {
   queryJournal(): JournalState;
   enumerateMft(bufferBytes?: number): MftEntry[];
+  enumerateMftPage?(
+    startRecord?: number | bigint,
+    bufferBytes?: number,
+  ): { records: MftEntry[]; next: bigint; complete: boolean };
   readJournal(startUsn: bigint, journalId: bigint, bufferBytes?: number): { records: JournalEntry[]; next: bigint };
   close(): void;
 }
@@ -82,31 +86,46 @@ export async function indexNtfs(options: NtfsIndexOptions) {
       const code = (error as { winError?: number }).winError;
       if (code !== 1178 && code !== 1179) throw error;
     }
-    const entries = volume.enumerateMft(bufferBytes);
-    if (entries.length > maxEntries) throw new RangeError("MFT baseline exceeds maxEntries");
-    const after = before ? volume.queryJournal() : undefined;
-    if (before && after && (before.journalId !== after.journalId || before.nextUsn < after.lowestValidUsn))
-      throw new Error("USN journal changed or expired during enumeration; baseline was not replaced");
     db = new Database(options.dbPath, { create: true, strict: true });
     schema(db);
     const volumeId = `${options.drive.replace(/:$/, "").toUpperCase()}:`;
     const put = db.query("INSERT INTO ntfs_entries VALUES(?,?,?,?,?,?) ON CONFLICT DO NOTHING");
     const edge = db.query("INSERT INTO ntfs_entry_edges VALUES(?,?,?) ON CONFLICT DO NOTHING");
+    let entryCount = 0;
     db.transaction(() => {
       db!.query("DELETE FROM ntfs_entries WHERE volume_id=?").run(volumeId);
       db!.query("DELETE FROM ntfs_entry_edges WHERE volume_id=?").run(volumeId);
       db!.query("DELETE FROM ntfs_journal_events WHERE volume_id=?").run(volumeId);
-      for (const entry of entries) {
-        put.run(
-          volumeId,
-          entry.record,
-          entry.parent,
-          entry.attributes >>> 0,
-          entry.name,
-          entry.attributes & 16 ? 1 : 0,
-        );
-        edge.run(volumeId, entry.parent, entry.record);
+      const write = (entries: MftEntry[]) => {
+        if (entryCount + entries.length > maxEntries) throw new RangeError("MFT baseline exceeds maxEntries");
+        for (const entry of entries) {
+          put.run(
+            volumeId,
+            entry.record,
+            entry.parent,
+            entry.attributes >>> 0,
+            entry.name,
+            entry.attributes & 16 ? 1 : 0,
+          );
+          edge.run(volumeId, entry.parent, entry.record);
+        }
+        entryCount += entries.length;
+      };
+      if (volume.enumerateMftPage) {
+        let next = 0n;
+        while (true) {
+          const page = volume.enumerateMftPage(next, bufferBytes);
+          write(page.records);
+          if (page.complete) break;
+          if (page.next <= next) throw new Error("MFT reader did not advance");
+          next = page.next;
+        }
+      } else {
+        write(volume.enumerateMft(bufferBytes));
       }
+      const after = before ? volume.queryJournal() : undefined;
+      if (before && after && (before.journalId !== after.journalId || before.nextUsn < after.lowestValidUsn))
+        throw new Error("USN journal changed or expired during enumeration; baseline was not replaced");
       db!
         .query(`INSERT INTO ntfs_volumes VALUES(?,?,?,?,?,?) ON CONFLICT(volume_id) DO UPDATE SET
         journal_id=excluded.journal_id,next_usn=excluded.next_usn,scan_status=excluded.scan_status,
@@ -116,13 +135,13 @@ export async function indexNtfs(options: NtfsIndexOptions) {
           before ? String(before.journalId) : null,
           before ? String(before.nextUsn) : null,
           "complete",
-          entries.length,
+          entryCount,
           new Date().toISOString(),
         );
     }).immediate();
     return {
       volume: volumeId,
-      entries: entries.length,
+      entries: entryCount,
       journalId: before ? String(before.journalId) : null,
       checkpointUsn: before ? String(before.nextUsn) : null,
     };

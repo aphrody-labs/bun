@@ -47,6 +47,11 @@ Le chemin rapide de ce lot ajoute seulement l’énumération des volumes, une c
 
 ## Repointer Aphrody en T2
 
+Statut 2026-10-14 : l’adaptateur `packages/os/winclean/src/bun-windows.ts` route directement
+registre, services, presse-papiers, disques, version système et mémoire vers `bun:windows` quand
+le client utilise le runtime local. Un endpoint explicite et les outils produit non couverts restent
+sur le kernel Aphrody. Les schémas WinClean publics sont conservés par l’adaptateur.
+
 Dans le checkout Aphrody (sans modifier les fichiers de ce lot) :
 
 1. Ajouter un adaptateur TypeScript dans `packages/os/winclean/src/` qui importe `bun:windows` et traduit les résultats/erreurs en schéma actuel des tools MCP.

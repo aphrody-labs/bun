@@ -616,6 +616,10 @@ declare module "bun:windows" {
     createJournal(options?: { maximumSize?: number | bigint; allocationDelta?: number | bigint }): void;
     queryOrCreateJournal(): NtfsJournal;
     enumerateMft(bufferBytes?: number): NtfsMftRecord[];
+    enumerateMftPage(
+      startRecord?: number | bigint,
+      bufferBytes?: number,
+    ): { records: NtfsMftRecord[]; next: bigint; complete: boolean };
     readJournal(
       startUsn: number | bigint,
       journalId: number | bigint,

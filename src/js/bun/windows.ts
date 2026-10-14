@@ -61,6 +61,7 @@ const ntfsVolumeCloseNative = $newRustFunction("windows/host.rs", "jsNtfsVolumeC
 const ntfsJournalQueryNative = $newRustFunction("windows/host.rs", "jsNtfsJournalQuery", 1);
 const ntfsJournalCreateNative = $newRustFunction("windows/host.rs", "jsNtfsJournalCreate", 3);
 const ntfsMftEnumerateNative = $newRustFunction("windows/host.rs", "jsNtfsMftEnumerate", 2);
+const ntfsMftEnumeratePageNative = $newRustFunction("windows/host.rs", "jsNtfsMftEnumeratePage", 3);
 const ntfsJournalReadNative = $newRustFunction("windows/host.rs", "jsNtfsJournalRead", 4);
 const wintrustCatalogFileNative = $newRustFunction("windows/host.rs", "jsWintrustCatalogFile", 1);
 const wintrustReleaseCatalogContextsNative = $newRustFunction("windows/host.rs", "jsWintrustReleaseCatalogContexts", 0);
@@ -818,6 +819,17 @@ class NtfsVolume {
       out[i] = { record, parent, attributes, name };
     }
     return out;
+  }
+
+  /** Enumerates one bounded MFT page. Pass `next` back until `complete` is true. */
+  enumerateMftPage(startRecord = 0n, bufferBytes = 4 << 20) {
+    validateInteger(bufferBytes, "bufferBytes", 4096, MAX_UINT32);
+    const raw = JSON.parse(ntfsMftEnumeratePageNative(this.#handle(), BigInt(startRecord).toString(), bufferBytes));
+    return {
+      records: raw.records.map(([record, parent, attributes, name]) => ({ record, parent, attributes, name })),
+      next: BigInt(raw.next),
+      complete: raw.complete,
+    };
   }
 
   /**

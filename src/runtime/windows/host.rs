@@ -548,6 +548,15 @@ win_host_fn! {
 }
 
 win_host_fn! {
+    /// `ntfsMftEnumeratePage(id, startRecord, bufferBytes)` → one bounded MFT page.
+    js_ntfs_mft_enumerate_page(global, frame) {
+        let start = u64_str_arg(global, frame, 1, "startRecord")?;
+        let bytes = u32_arg(frame, 2) as usize;
+        string(global, &check(global, sys::ntfs::mft_enumerate_page(u32_arg(frame, 0), start, bytes))?)
+    }
+}
+
+win_host_fn! {
     /// `ntfsJournalRead(id, startUsn, journalId, bufferBytes)` → JSON `{ records, next }`.
     js_ntfs_journal_read(global, frame) {
         let start_usn = i64_str_arg(global, frame, 1, "startUsn")?;
