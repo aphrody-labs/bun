@@ -36,7 +36,7 @@ try {
 }
 ```
 
-Obscura's `launch({ executable?, timeout?, signal?, workers? })` selects a dynamically assigned loopback port, accepts one to 64 workers (one worker on Windows until process-tree shutdown is qualified) and returns `{ endpoint, connection, process, close }`. It does not enable unsafe file access. `await close()` terminates the owned process. `findExecutable()` returns an installed `aphrody-web` path or `null`.
+Obscura's `launch({ executable?, timeout?, signal?, workers? })` selects a dynamically assigned loopback port, currently accepts exactly one browser worker on every platform, and returns `{ endpoint, connection, process, close }`. It does not enable unsafe file access. `await close()` terminates the owned process. `findExecutable()` returns the discovered owner Chrome/Chromium executable or `null`.
 
 The custom DOM backend under `src/browser` uses `deno_core` and V8. Its integration and qualification are tracked in [the browser plan](../../src/browser/PLAN.md). It is separate from the default shared Chromium route and does not establish Blink or JSC parity.
 
