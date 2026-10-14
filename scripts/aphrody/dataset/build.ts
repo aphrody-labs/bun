@@ -4,7 +4,7 @@
 //   bun scripts/aphrody/dataset/build.ts [--out build/dataset] [--typecheck] [--bun <binary>]
 //
 // Sources: docs/**/*.mdx code blocks, @example blocks and function signatures of packages/bun-types/*.d.ts,
-// short tests of test/js/bun, the n2b registry (packages/bun-n2b/.../registry/*.toml) and the curated
+// short tests of test/js/bun, the n2b registry (src/n2b/registry/registry/*.toml) and the curated
 // Node → Bun pairs of packages/bun-agent-plugin/src/native.ts, REVIEW.md rules, and `bun <command> --help` of the release build when present.
 // Every snippet must transpile (Bun.Transpiler); --typecheck runs tsc against packages/bun-types and records the
 // result per entry. Deterministic: same checkout, same bytes (no timestamps; entries sorted by id).
@@ -259,14 +259,14 @@ export function fromDts(rel: string, text: string): Draft[] {
         if (!doc[k]!.startsWith("@example")) continue;
         let caption = doc[k]!.slice(8).trim();
         let f = k + 1;
-        for (; f < doc.length && !/^```/.test(doc[f]!); f++) {
+        for (; f < doc.length && !doc[f]!.startsWith("```"); f++) {
           if (doc[f]!.startsWith("@")) break;
           if (doc[f]!.trim()) caption = `${caption} ${doc[f]!.trim()}`.trim();
         }
-        if (f >= doc.length || !/^```/.test(doc[f]!)) continue;
+        if (f >= doc.length || !doc[f]!.startsWith("```")) continue;
         const lang = LANGS[doc[f]!.slice(3).trim().split(/\s/)[0]!.toLowerCase() || "ts"] ?? "ts";
         const body: string[] = [];
-        for (f++; f < doc.length && !/^```/.test(doc[f]!); f++) body.push(doc[f]!);
+        for (f++; f < doc.length && !doc[f]!.startsWith("```"); f++) body.push(doc[f]!);
         const code = body.join("\n").trim();
         if (code.length < 20) continue;
         const what = caption ? `${plain(caption)} — ${qual}` : qual;
@@ -655,7 +655,7 @@ export function collect(opts: BuildOptions): { drafts: Draft[]; help?: string } 
   const cwd = process.cwd();
   process.chdir(root);
   try {
-    drafts.push(...fromN2b(join(root, "packages", "bun-n2b", "crates", "n2b-registry", "registry")));
+    drafts.push(...fromN2b(join(root, "src", "n2b", "registry", "registry")));
   } finally {
     process.chdir(cwd);
   }
@@ -670,7 +670,7 @@ export function collect(opts: BuildOptions): { drafts: Draft[]; help?: string } 
       if (r.exitCode === 0) drafts.push(...fromHelp(cmd, r.stdout.toString()));
     }
   }
-  return { drafts, help };
+  return { drafts, ...(help === undefined ? {} : { help }) };
 }
 
 export function count<T>(items: T[], key: (t: T) => string[]): Record<string, number> {
@@ -719,13 +719,73 @@ if (import.meta.main) {
     const i = args.indexOf(name);
     return i >= 0 ? args[i + 1] : undefined;
   };
+  if (args.includes("--help")) {
+    console.log(
+      "bun scripts/aphrody/dataset/build.ts [--out <directory>] [--typecheck] [--bun <binary>]\n" +
+        "bun scripts/aphrody/dataset/build.ts --complete-source --sources <public-pins.json> --out <protected-directory> [--graph-snapshots <published-scopes.json>]\n" +
+        "Public sources: [{repository: oven-sh/bun|aphrody-labs/bun,root,revision: exact40hex}].\n" +
+        "Graphs: [{db,artifact,scope:{repositoryId,snapshotId,domain,source:graph:bun:...,profile:bun,revision}}].\n" +
+        "Source blobs and graph rows retain separate coverage; exporting does not train a model.",
+    );
+    process.exit(0);
+  }
+  if (args.includes("--complete-source")) {
+    const pinsPath = opt("--sources"),
+      output = opt("--out");
+    if (!pinsPath || !output) throw new Error("Complete source export requires --sources and protected --out");
+    const file = Bun.file(pinsPath);
+    if (file.size > 65536) throw new Error("Public source pins exceed byte limit");
+    const pins: unknown = await file.json();
+    if (!Array.isArray(pins)) throw new Error("Public source pins must be an array");
+    const { exportPublicSources, exportGraphSnapshot } = await import("./source.ts");
+    const sourceManifest = await exportPublicSources({ sources: pins, out: output });
+    const graphsPath = opt("--graph-snapshots");
+    const graphs = [];
+    if (graphsPath) {
+      const graphFile = Bun.file(graphsPath);
+      if (graphFile.size > 1048576) throw new Error("Graph scopes exceed byte limit");
+      const snapshots: unknown = await graphFile.json();
+      if (!Array.isArray(snapshots) || snapshots.length > 4096) throw new Error("Graph scopes must be a bounded array");
+      const { Database } = await import("bun:sqlite");
+      for (const snapshot of snapshots) {
+        const db = new Database(snapshot.db, { readonly: true });
+        try {
+          graphs.push(await exportGraphSnapshot(db, snapshot.scope, snapshot.artifact, output));
+        } finally {
+          db.close();
+        }
+      }
+      await Bun.write(
+        join(output, "graph-manifest.json"),
+        JSON.stringify({ schema: "bun.graph-dataset/1", graphs, trained: false }, null, 2) + "\n",
+      );
+    }
+    console.log(
+      JSON.stringify({
+        sourceBlobsComplete: sourceManifest.sourceBlobsComplete,
+        gitlinksComplete: sourceManifest.gitlinksComplete,
+        graphSnapshotsExported: graphs.length,
+        graphComplete: false,
+        trained: false,
+        files: sourceManifest.files,
+        shards: sourceManifest.shards.length,
+      }),
+    );
+    process.exit(0);
+  }
   const root = join(import.meta.dir, "..", "..", "..");
   const out = opt("--out") ?? join(root, "build", "dataset");
   const exe = process.platform === "win32" ? ".exe" : "";
   const bun = opt("--bun") ?? [join(root, "build", "release", `bun${exe}`)].find(p => existsSync(p));
   const version = JSON.parse(readFileSync(join(root, "package.json"), "utf8")).version as string;
   const commit = git(root, ["rev-parse", "HEAD"]);
-  const { jsonl, manifest } = build({ root, version, commit, bun, typecheck: args.includes("--typecheck") });
+  const { jsonl, manifest } = build({
+    root,
+    version,
+    commit,
+    ...(bun ? { bun } : {}),
+    typecheck: args.includes("--typecheck"),
+  });
   mkdirSync(out, { recursive: true });
   writeFileSync(join(out, `${DATASET}.jsonl`), jsonl);
   writeFileSync(join(out, "manifest.json"), JSON.stringify(manifest, null, 2) + "\n");
