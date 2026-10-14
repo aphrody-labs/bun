@@ -55,7 +55,7 @@ async function main(args: string[]) {
     }
     return;
   }
-  if (command !== "build" || !(component in sources)) {
+  if (command !== "build" || !component || !(component in sources)) {
     throw new Error("usage: bun scripts/aphrody/windows-suite.ts status | build <powershell|roslyn|terminal|vcpkg> [--dry-run]");
   }
   const name = component as WindowsSource;
@@ -64,7 +64,20 @@ async function main(args: string[]) {
     console.log(JSON.stringify({ component: name, cwd: sources[name], cmd }));
     return;
   }
-  const proc = Bun.spawn({ cmd, cwd: sources[name], stdin: "inherit", stdout: "inherit", stderr: "inherit" });
+  const env = { ...process.env };
+  if (name === "roslyn") {
+    const dotnet = (await import("bun:dotnet")).default;
+    const report = dotnet.info(sources.roslyn);
+    const requested = report.sdk?.requested;
+    const install = report.installs.find(candidate => requested && candidate.sdks.includes(requested));
+    if (install?.muxer) {
+      env.DOTNET_ROOT = install.root;
+      env.DOTNET_HOST_PATH = install.muxer;
+      env.PATH = `${install.root};${env.PATH ?? ""}`;
+    }
+    env.DOTNET_CLI_TELEMETRY_OPTOUT = "1";
+  }
+  const proc = Bun.spawn({ cmd, cwd: sources[name], env, stdin: "inherit", stdout: "inherit", stderr: "inherit" });
   process.exitCode = await proc.exited;
 }
 

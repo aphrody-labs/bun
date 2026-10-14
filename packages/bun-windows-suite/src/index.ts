@@ -34,3 +34,12 @@ export function sourceCheckouts(root = new URL("../../../", import.meta.url)): R
     fluentui: new URL("vendor/fluentui/", root),
   };
 }
+
+export {
+  buildJevTriageRequest,
+  JEV_MODEL,
+  triageWindowsFinding,
+  WINDOWS_FINDING_QUESTIONS,
+  type JevTriageResult,
+  type WindowsFinding,
+} from "./jev-triage";
