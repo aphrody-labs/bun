@@ -79,22 +79,15 @@ playback, DRM ou la livraison d'un nouveau runtime Linux.
 
 ## VPS et DBFR
 
-Les quatre HEAD Bun observés avant la rupture SSH sont déjà ancêtres de main
-Windows : `dfde053a3045`, `42a7772e0d94`, `10b0e43511c8`, `572d43f7de54`.
-Le checkout DBFR observé est `/home/ubuntu/src/bun`. VPS expose aussi
-`/home/ubuntu/src/bun` et `/home/ubuntu/build/workspaces/bun`.
+Les constats de disponibilité de cette qualification étaient ponctuels et ne
+décrivent plus l'accès courant. Le 14 octobre 2026, les alias SSH `vps` et
+`dbfr` répondent de nouveau. `glab` 1.123.0 y est installé et authentifié comme
+`aphrody-dev` via GNOME Keyring, sans jeton dans la configuration en clair.
 
-La connexion mesh ne répond plus sur les deux hôtes ; les clients
-`bun ssh --native` et `bun ssh --system` expirent. Le point d'entrée public
-VPS configuré répond mais refuse la clé pour l'utilisateur configuré.
-Aucun redémarrage Aphrody, changement de credential ou contournement des
-permissions d'hôte n'a été effectué.
-
-En conséquence, l'état dirty distant et les références fraîches restent
-non qualifiés. Aucun commit, merge, pull ni déploiement distant n'est revendiqué.
-Les runtimes Linux observés sont encore `dfde053a3045` : `Bun.Image` et
-`Bun.Archive` présents, `Bun.Video` et `Image.rgba` absents. L'espace observé
-était d'environ 111,6 Gio sur VPS et 22,5 Gio sur DBFR.
+Cette correction ne requalifie pas les anciens runtimes Linux, checkouts,
+capacités disque ou déploiements. Ces propriétés doivent toujours être sondées
+à nouveau avant toute opération distante. L'état GitLab courant est consigné
+dans [la qualification dédiée](gitlab-mirror-host-auth-2026-10-14.md).
 
 ## Bun Video et données livrables
 

@@ -3,6 +3,18 @@
 Bun is a Rust runtime and toolkit with JavaScriptCore C++ bindings, a bundler,
 test runner and package manager.
 
+## Git hosting and qualified hosts
+
+- GitHub `aphrody-labs/bun` remains the source of truth. Its private GitLab pull
+  mirror is `https://gitlab.com/aphrody-labs/bun`; do not push divergent history
+  to the mirror or treat it as a second source of truth.
+- Native `glab` 1.123.0 is installed on `vps` and `dbfr`. Both hosts authenticate
+  as `aphrody-dev` through their operating-system keyring and use SSH for Git.
+  Never copy tokens into repositories, shell profiles, command arguments or
+  plaintext CLI configuration.
+- `vps` and `dbfr` were reachable through their SSH aliases on 2026-10-14.
+  Reachability remains a live fact: verify it before each remote operation.
+
 ## Authorization and scope
 
 - No human in the loop: carry the current request through discovery, implementation,

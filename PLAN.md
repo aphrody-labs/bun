@@ -1,5 +1,16 @@
 # Plan — aphrody-labs/bun, noyau d'Aphrody
 
+## GitLab mirror and host authentication — 2026-10-14
+
+GitHub remains authoritative. The private GitLab project
+`aphrody-labs/bun` is an enabled pull mirror; its completed initial import and
+`main` commit match GitHub at `c7336fa6db314a633ab06b12b2d9f6a0f4157977`.
+Native `glab` 1.123.0 is installed on `vps` and `dbfr`; both authenticate as
+`aphrody-dev` with SSH Git transport and credentials held only in GNOME Keyring.
+Historical claims that these SSH aliases are unreachable are superseded by the
+fresh 2026-10-14 probes. See
+[the session qualification](docs/project/gitlab-mirror-host-auth-2026-10-14.md).
+
 ## Axum and Leptos source exploration — 2026-10-14
 
 Complete MIT-licensed snapshots from aphrody-labs/axum at
