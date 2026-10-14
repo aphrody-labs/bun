@@ -18,9 +18,13 @@ git -C "$checkout" fetch -q "$site_remote" "refs/heads/main:refs/remotes/$site_r
 site_source=$(git -C "$checkout" rev-parse "refs/remotes/$site_remote/main^{commit}")
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
-git -C "$checkout" archive "$site_source" packages/web/site packages/web/cloudflare packages/bun-cloudflare packages/bun-agent-plugin packages/bun-types scripts/aphrody src/agent_tools src/codegen/generate-agent-tools.ts .claude/skills package.json | tar -x -C "$work"
-[ -d "$checkout/node_modules" ] || { echo "dépendances Bun du site absentes" >&2; exit 1; }
-ln -s "$checkout/node_modules" "$work/node_modules"
+git -C "$checkout" archive "$site_source" packages/web/site packages/web/cloudflare packages/web/src/domains.ts packages/bun-cloudflare packages/bun-plugin-neon packages/bun-agent-plugin packages/bun-types scripts/aphrody src/agent_tools src/codegen/generate-agent-tools.ts .claude/skills package.json bun.lock | tar -x -C "$work"
+bun "$work/packages/web/site/jit-source.ts" "$checkout" "$site_source" "$work"
+timeout 300 bun install --cwd "$work" --filter @aphrody/web --production --frozen-lockfile --ignore-scripts --no-progress --network-concurrency=4
+[ -d "$checkout/packages/bun-cloudflare/node_modules" ] || { echo "dépendances Cloudflare du propriétaire absentes" >&2; exit 1; }
+cmp "$checkout/packages/bun-cloudflare/bun.lock" "$work/packages/bun-cloudflare/bun.lock" || { echo "lock Cloudflare propriétaire différent" >&2; exit 1; }
+ln -s "$checkout/packages/bun-cloudflare/node_modules" "$work/packages/bun-cloudflare/node_modules"
+bun "$work/packages/web/site/jit-source.ts" "$checkout" "$site_source" "$work" --verify-cloudflare
 GH_TOKEN=${GH_TOKEN:-$(gh auth token)}
 export GH_TOKEN
 bun "$work/packages/web/site/sync.ts" "$@" --source "$site_source"
