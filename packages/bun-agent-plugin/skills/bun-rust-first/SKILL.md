@@ -17,14 +17,14 @@ diffs concurrents. Résoudre le checkout et les outils depuis le contexte couran
 Vérifier le runtime avec `bun agent-plugin doctor --json` ; si son lanceur embarqué
 est cassé, utiliser `bun scripts/aphrody/agent-plugin.ts doctor --json` dans Bun.
 Consigner executable, version, revision et provenance ; un numéro upstream ne
-prouve pas qu'une fonctionnalité existe dans le fork.
+prouve pas qu'une fonctionnalité existe dans Bun OS.
 
 Pour chaque API envisagée, lire documentation et types du checkout, trouver son
 implémentation par graph/LSP et exécuter une petite preuve comportementale sur le
 binaire cible. Utiliser `aphrody home` pour le contexte et `aphrody graph` pour
 les propriétaires ; ne synchroniser aucune session brute ni donnée protégée.
 Documenter le résultat : disponible, absent, expérimental ou non vérifié.
-Ne jamais inventer une signature, attribuer une API upstream au fork sans preuve,
+Ne jamais inventer une signature, attribuer une API upstream à Bun OS sans preuve,
 ou présenter Bun comme encore implémenté en Zig dans ce dépôt Rust.
 
 Lire [les références datées](references/current-bun.md) pour sélectionner les

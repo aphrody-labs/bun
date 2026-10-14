@@ -1,4 +1,4 @@
-# Références vérifiées le 13 octobre 2026
+# Sources consultées le 14 octobre 2026
 
 ## Réécriture Rust
 
@@ -11,7 +11,7 @@ Des stubs compilables ne remplacent pas une implémentation. Les tests stress
 nécessitent des limites de ressources. Ses dizaines d'agents et worktrees sont
 un récit historique, pas une prescription pour ce dépôt partagé.
 
-## Bun 1.4.3 : candidats à vérifier dans le fork
+## Bun 1.4.3 : candidats à vérifier dans Bun OS
 
 Source : [Bun v1.4.3](https://bun.com/blog/bun-v1.4.3), 10 octobre 2026.
 
