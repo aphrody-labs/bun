@@ -1,6 +1,7 @@
 // Gabarit HTML, feuille de style et script du site aphrody.com. Couleurs : rôles --md-sys-color-* de m3-tokens.css et
 // police Google Sans Flex d'aphrody-fonts.css, servis par cdn.aphrody.com (brand.ts, scripts/aphrody/brand-sync.ts).
 import { BRAND } from "./brand.ts";
+import { WEBMCP_SCRIPT } from "./webmcp.ts";
 import { escapeHtml } from "./mdx.ts";
 
 export type NavLink = { label: string; href: string; active?: boolean };
@@ -42,6 +43,7 @@ export function shell(s: Shell): string {
       : "";
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light dark">
 <title>${escapeHtml(s.title)}</title>
 ${s.description ? `<meta name="description" content="${escapeHtml(s.description)}">` : ""}
 <link rel="canonical" href="${escapeHtml(canonical)}">
@@ -221,3 +223,5 @@ export function docsSearchScript() {
     "})();"
   );
 }
+
+export const PUBLIC_WEBMCP_JS = WEBMCP_SCRIPT;

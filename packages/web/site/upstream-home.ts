@@ -6,6 +6,7 @@ import { rewriteCapturedLinks } from "../../../scripts/aphrody/site-mirror/mirro
 import { HOME_THEME_BOOTSTRAP, HOME_THEME_SCRIPT, homeThemeCss, parseBunHomeTheme } from "./home-theme";
 import { escapeHtml } from "./mdx";
 import { MATERIAL_SYMBOLS_CSS } from "./icons";
+import { WEBMCP_SCRIPT } from "./webmcp";
 
 const sha = (value: Uint8Array | string) => new Bun.CryptoHasher("sha256").update(value).digest("hex");
 const commit = /^[a-f0-9]{40}$/;
@@ -550,9 +551,9 @@ export async function buildUpstreamHome(options: UpstreamHomeOptions) {
   const graph = options.graph
     ? {
         source: options.graph.source,
-        snapshotId: options.graph.snapshotId,
-        nodes: options.graph.nodes,
-        edges: options.graph.edges,
+        ...(options.graph.snapshotId !== undefined ? { snapshotId: options.graph.snapshotId } : {}),
+        ...(options.graph.nodes !== undefined ? { nodes: options.graph.nodes } : {}),
+        ...(options.graph.edges !== undefined ? { edges: options.graph.edges } : {}),
         truncated: options.graph.truncated === true,
       }
     : undefined;
@@ -629,7 +630,7 @@ export async function buildUpstreamHome(options: UpstreamHomeOptions) {
   assets.push({ path: "icon.svg", bytes: icon, sha256: sha(icon) });
   const theme = parseBunHomeTheme(stylesheet),
     css = homeThemeCss(theme) + HOME_UI_CSS,
-    script = HOME_THEME_SCRIPT + HOME_SEARCH_SCRIPT;
+    script = HOME_THEME_SCRIPT + HOME_SEARCH_SCRIPT + WEBMCP_SCRIPT;
   const add = (kind: string, body: string) => {
     const sha256 = sha(body),
       path = `_assets/aphrody-home-${kind}-${sha256.slice(0, 16)}.${kind === "style" ? "css" : "js"}`;
@@ -643,7 +644,7 @@ export async function buildUpstreamHome(options: UpstreamHomeOptions) {
     source: options.source,
     origin: origin.origin,
     facts,
-    graph,
+    ...(graph ? { graph } : {}),
     cssPath,
     scriptPath,
     bootstrapPath,

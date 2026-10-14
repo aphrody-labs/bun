@@ -6,7 +6,9 @@
 import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
-import { catalogInputs, lspExtensions, mcpTools } from "./catalog.ts";
+import { catalogInputs, lspExtensions, mcpDecisionTools, mcpTools } from "./catalog.ts";
+import { yoloIdentity } from "./identity.ts";
+import { contextCatalog } from "./decision.ts";
 import { NATIVE_SKILL, RULES as NATIVE_RULES, nativeHookData, nativeSkill } from "./native.ts";
 import { forbiddenIn, sanitizeText } from "./sanitize.ts";
 import {
@@ -495,11 +497,32 @@ export function generate(options: GenerateOptions): Files {
       return `- \`${s.name}\`: ${(fm.description ?? "").replace(/\s+/g, " ")}`;
     })
     .join("\n");
-  const instructions = `# Bun (Aphrody runtime)\n\n${rules}\n\n${toolsDoc}\n\n## Skills\n\n${skillIndex}\n`;
+  const instructions = `# Bun (Aphrody runtime)\n\n${rules}\n\n${toolsDoc}\n\n## Decision identity\n\nYolo is Bun\'s typed decision layer. Read yolo/system-prompt.md for its public identity and yolo/context-catalog.json for source-derived resource references. A selection proposes a resource; it does not execute or authorize a tool.\n\n## Skills\n\n${skillIndex}\n`;
   const context = [rules, "## Bun-native code", NATIVE_RULES.map(r => `- ${r}`).join("\n")].join("\n\n");
 
   // Content shared by every target, before the version stamp.
   const common: Files = new Map();
+  const identity = yoloIdentity({
+    version,
+    rules,
+    nativeRules: NATIVE_RULES,
+    tools,
+    skills,
+    catalogSources: catalogInputs(root).map(path => relative(root, path).replace(/\\/g, "/")),
+  });
+  for (const [path, content] of identity) common.set(`yolo/${path}`, content);
+  const compactContext = json(
+    contextCatalog(
+      mcpDecisionTools(root).filter(tool => !experimentalTools.has(tool.name)),
+      skills.map(skill => ({
+        name: skill.name,
+        description: frontMatter(String(skill.files.get("SKILL.md"))).description ?? "",
+        source: skill.source,
+        text: String(skill.files.get("SKILL.md")),
+      })),
+    ),
+  );
+  common.set("yolo/context-catalog.json", compactContext);
   for (const s of skills) for (const [rel, content] of s.files) common.set(`skills/${s.name}/${rel}`, content);
   for (const h of HOOKS) common.set(`hooks/${h}`, text(join(pkg, "src", "hooks", h)));
   common.set("hooks/context.md", context.trimEnd() + "\n");
@@ -530,6 +553,8 @@ export function generate(options: GenerateOptions): Files {
   const meta = json({ name: PLUGIN, version: pluginVersion, bunVersion: version, hash });
 
   const files: Files = new Map();
+  for (const [path, content] of identity) files.set(`yolo/${path}`, content);
+  files.set("yolo/context-catalog.json", compactContext);
   files.set("meta.json", meta);
   files.set("skills.json", json(skills.map(s => s.name)));
   files.set("AGENTS.md", instructions);

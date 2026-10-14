@@ -19,7 +19,7 @@ import { dirname, join, relative, resolve } from "node:path";
 import { SITE_ROOT_FILES } from "./brand.ts";
 import type { SiteData } from "./collect.ts";
 import { HIGHLIGHT_CSS, highlightHtml } from "./highlight.ts";
-import { CSS, JS, shell, type NavLink, type Shell } from "./layout.ts";
+import { CSS, JS, PUBLIC_WEBMCP_JS, shell, type NavLink, type Shell } from "./layout.ts";
 import { APHRODY_DOMAINS } from "../src/domains.ts";
 import {
   absolutizeMarkdownLinks,
@@ -185,7 +185,10 @@ async function fetchReleases(repo: string): Promise<Release[]> {
         x.ok ? x.text() : "",
       );
       const map = parseSums(text);
-      for (const a of release.assets) a.sha256 = map.get(a.name);
+      for (const a of release.assets) {
+        const value = map.get(a.name);
+        if (value !== undefined) a.sha256 = value;
+      }
     }
     releases.push(release);
   }
@@ -395,7 +398,7 @@ async function prepareHome(o: BuildOptions) {
     source: o.commit,
     origin: o.origin,
     facts,
-    graph: graph?.fact,
+    ...(graph ? { graph: graph.fact } : {}),
   });
   const provenance = {
     ...home.provenance,
@@ -614,9 +617,8 @@ ${g.description ? `<p class="lead">${escapeHtml(g.description)}</p>` : ""}
         description: g.description,
         body,
         tabs: topTabs(g.tab),
-        toc: g.path === "/" ? undefined : extractToc(html),
+        ...(g.path === "/" ? { bodyClass: "home" } : { toc: extractToc(html) }),
         alternateMarkdown: mdUrl,
-        bodyClass: g.path === "/" ? "home" : undefined,
       }),
     );
     write(generatedFile(g.path, ".md"), generatedMarkdown(g));
@@ -851,7 +853,7 @@ ${runtimeInstallCommands(o.origin)}
       .join("\n")}\n</urlset>\n`,
   );
   write(join(o.out, "assets", "site.css"), CSS + HIGHLIGHT_CSS);
-  write(join(o.out, "assets", "site.js"), JS);
+  write(join(o.out, "assets", "site.js"), JS + PUBLIC_WEBMCP_JS);
   write(
     join(o.out, "site.json"),
     JSON.stringify(
@@ -1235,11 +1237,11 @@ if (import.meta.main) {
     origin: option("--origin", "https://aphrody.app")!.replace(/\/$/, ""),
     commit,
     repo,
-    perf: option("--perf"),
-    perfRun: option("--perf-run"),
+    ...(option("--perf") ? { perf: option("--perf")! } : {}),
+    ...(option("--perf-run") ? { perfRun: option("--perf-run")! } : {}),
     releases,
     data: dataFile ? (JSON.parse(readFileSync(dataFile, "utf8")) as SiteData) : null,
-    home: parseHomeBuildOptions(args),
+    ...(parseHomeBuildOptions(args) ? { home: parseHomeBuildOptions(args)! } : {}),
   });
   const size = walk(resolve(out)).reduce((n, f) => n + statSync(f).size, 0);
   console.log(
