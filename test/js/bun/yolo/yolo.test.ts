@@ -173,6 +173,65 @@ describe("bun:yolo native decisions", () => {
     expect(await decide({ state: null, questions }, { provider })).toEqual({ allowed: true });
   });
 
+  test("native model validation rejects blank overrides before provider I/O and blank responses", async () => {
+    const request = { state: null, questions: { a: noul() } };
+    for (const run of [inspect, decide]) {
+      let calls = 0;
+      const provider = code(() => {
+        calls++;
+        return response({ a: { type: "noul", noul: 1 } });
+      });
+      for (const model of ["", " \t\r\n", "\u2003\ufeff", "é".repeat(129)]) {
+        await expect(run({ ...request, model }, { provider })).rejects.toThrow("model");
+      }
+      expect(calls).toBe(0);
+      for (const model of ["", " \t\r\n", "\u2003\ufeff", "é".repeat(129)]) {
+        await expect(
+          run(request, { provider: code(() => ({ ...response({ a: { type: "noul", noul: 1 } }), model })) }),
+        ).rejects.toThrow("model");
+      }
+      const model = "é".repeat(128);
+      const result = await run(
+        { ...request, model },
+        {
+          provider: code(normalized => {
+            expect(normalized.model).toBe(model);
+            return { ...response({ a: { type: "noul", noul: 1 } }), model };
+          }),
+        },
+      );
+      expect(run === inspect ? (result as any).model : (result as any).a).toBe(run === inspect ? model : true);
+    }
+  });
+
+  test("caller cancellation during provider response serialization rejects both result paths", async () => {
+    for (const run of [inspect, decide]) {
+      const controller = new AbortController();
+      const reason = new Error("cancelled during response serialization");
+      let calls = 0;
+      let serializations = 0;
+      const task = run(
+        { state: null, questions: { a: noul() } },
+        {
+          signal: controller.signal,
+          provider: code(() => {
+            calls++;
+            return {
+              toJSON() {
+                serializations++;
+                controller.abort(reason);
+                return response({ a: { type: "noul", noul: 1 } });
+              },
+            };
+          }),
+        },
+      );
+      await expect(task).rejects.toBe(reason);
+      expect(calls).toBe(1);
+      expect(serializations).toBe(1);
+    }
+  });
+
   test("invalid arguments and request descriptors reject before provider I/O", async () => {
     let calls = 0;
     const provider = code(() => {

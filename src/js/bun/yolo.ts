@@ -143,7 +143,9 @@ async function operation<const Q extends Questions>(
       signal,
     );
     signal.throwIfAborted();
-    return __nativeYolo(action, json(response), descriptor);
+    const input = json(response);
+    signal.throwIfAborted();
+    return __nativeYolo(action, input, descriptor);
   } finally {
     nativeClearTimeout(timer);
   }

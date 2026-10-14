@@ -69,6 +69,46 @@ fn invalid_entries_unknown_fields_and_prototype_names_are_rejected() {
 }
 
 #[test]
+fn model_names_share_nonblank_utf8_bounds_for_typed_and_raw_validation() {
+    for model in [
+        "".to_owned(),
+        " \t\r\n".to_owned(),
+        "\u{2003}\u{feff}".to_owned(),
+        "é".repeat(129),
+    ] {
+        let mut raw_request = request();
+        raw_request["model"] = json!(model);
+        assert!(protocol::request(&raw_request).is_err(), "{model:?}");
+        let typed_request: Request = serde_json::from_value(raw_request).unwrap();
+        assert!(check_request(&typed_request).is_err(), "{model:?}");
+
+        let raw_request = request();
+        let mut raw_response = response();
+        raw_response["model"] = json!(model);
+        assert!(
+            protocol::response(&raw_response, &raw_request).is_err(),
+            "{model:?}"
+        );
+        let typed_request: Request = serde_json::from_value(raw_request).unwrap();
+        let typed_response: Response = serde_json::from_value(raw_response).unwrap();
+        assert!(
+            check_response(&typed_request, &typed_response).is_err(),
+            "{model:?}"
+        );
+    }
+
+    let model = "é".repeat(128);
+    let mut raw_request = request();
+    raw_request["model"] = json!(model);
+    let mut raw_response = response();
+    raw_response["model"] = json!(model);
+    protocol::response(&raw_response, &raw_request).unwrap();
+    let typed_request: Request = serde_json::from_value(raw_request).unwrap();
+    let typed_response: Response = serde_json::from_value(raw_response).unwrap();
+    check_response(&typed_request, &typed_response).unwrap();
+}
+
+#[test]
 fn answer_distributions_legends_and_safe_usage_counts_are_checked() {
     let request = request();
     for response in [

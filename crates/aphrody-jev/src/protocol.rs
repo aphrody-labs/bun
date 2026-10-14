@@ -28,6 +28,21 @@ fn string<'a>(value: &'a Value, name: &str) -> Result<&'a str> {
         .ok_or_else(|| format!("Yolo {name} must be a nonempty string"))
 }
 
+fn model_name(value: &Value, name: &str) -> Result<()> {
+    let value = string(value, name)?;
+    if value
+        .chars()
+        .all(|character| character.is_whitespace() || character == '\u{feff}')
+    {
+        return Err(format!("Yolo {name} must be a nonempty string"));
+    }
+    if value.len() > 256 {
+        let name = if name == "model" { "model name" } else { name };
+        return Err(format!("Yolo {name} exceeds 256 bytes"));
+    }
+    Ok(())
+}
+
 fn number(value: &Value, name: &str, max: f64) -> Result<f64> {
     value
         .as_f64()
@@ -121,9 +136,7 @@ pub fn request(value: &Value) -> Result<()> {
         question(value)?;
     }
     if let Some(model) = fields.get("model") {
-        if string(model, "model")?.len() > 256 {
-            return Err("Yolo model name exceeds 256 bytes".into());
-        }
+        model_name(model, "model")?;
     }
     if fields
         .keys()
@@ -215,15 +228,10 @@ fn answer_validated(value: &Value, question: &Value) -> Result<()> {
 pub fn response(value: &Value, request_value: &Value) -> Result<()> {
     request(request_value)?;
     let fields = object(value, "response")?;
-    if string(
+    model_name(
         fields.get("model").unwrap_or(&Value::Null),
         "response model",
-    )?
-    .len()
-        > 256
-    {
-        return Err("Yolo response model exceeds 256 bytes".into());
-    }
+    )?;
     let usage = fields
         .get("usage")
         .ok_or("Yolo response requires usage, or null when unknown")?;

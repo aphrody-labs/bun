@@ -56,6 +56,8 @@ The caller supplies the provider explicitly. A deterministic `code` fixture demo
 
 `inspect(request, options)` returns the validated `{ model, answers, usage }` response. `systemOne` aliases `inspect`. `value(answer, question, threshold?)` validates one answer and returns its primitive.
 
+Request and response model names must contain a non-whitespace character and fit within 256 UTF-8 bytes. Rust validates request overrides before provider I/O, using the same model bounds as response validation.
+
 ## Application-owned providers
 
 An application supplies a `Provider` that owns its transport, credentials and model lifetime. `code(evaluate)` adapts a synchronous or asynchronous callback to this contract. The callback returns the raw named response; Rust still validates the request, answer distributions and primitive conversion. Keep provider configuration in protected server-side stores and inject only the qualified transport needed by the application.
