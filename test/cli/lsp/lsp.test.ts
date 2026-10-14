@@ -200,7 +200,7 @@ test("bun lsp servers --json names a server or what to install, for each languag
   using dir = tempDir("lsp-servers", { "package.json": "{}" });
   const { stdout, exitCode } = await run(["servers", "--json"], String(dir));
   const languages = JSON.parse(stdout);
-  expect(languages.map((it: any) => it.language)).toEqual(["typescript", "python", "rust", "cpp"]);
+  expect(languages.map((it: any) => it.language)).toEqual(["typescript", "python", "rust", "cpp", "csharp"]);
   for (const language of languages) expect(language.servers.length > 0 || language.missing).toBeTruthy();
   expect(exitCode).toBe(0);
 });

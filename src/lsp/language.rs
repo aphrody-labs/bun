@@ -19,10 +19,18 @@ pub enum Language {
     Rust,
     /// C, C++, Objective-C and Objective-C++, through clangd.
     Cpp,
+    /// C# through Microsoft's open-source Roslyn language server.
+    CSharp,
 }
 
 impl Language {
-    pub const ALL: [Language; 4] = [Language::TypeScript, Language::Python, Language::Rust, Language::Cpp];
+    pub const ALL: [Language; 5] = [
+        Language::TypeScript,
+        Language::Python,
+        Language::Rust,
+        Language::Cpp,
+        Language::CSharp,
+    ];
 
     /// The language of a file, by its extension.
     pub fn of_path(path: &Path) -> Option<Language> {
@@ -31,9 +39,9 @@ impl Language {
             "ts" | "tsx" | "mts" | "cts" | "js" | "jsx" | "mjs" | "cjs" => Language::TypeScript,
             "py" | "pyi" => Language::Python,
             "rs" => Language::Rust,
-            "c" | "h" | "cc" | "cpp" | "cxx" | "c++" | "hpp" | "hh" | "hxx" | "h++" | "ipp" | "inl" | "m" | "mm" => {
-                Language::Cpp
-            }
+            "c" | "h" | "cc" | "cpp" | "cxx" | "c++" | "hpp" | "hh" | "hxx" | "h++" | "ipp"
+            | "inl" | "m" | "mm" => Language::Cpp,
+            "cs" => Language::CSharp,
             _ => return None,
         })
     }
@@ -44,6 +52,7 @@ impl Language {
             Language::Python => "python",
             Language::Rust => "rust",
             Language::Cpp => "cpp",
+            Language::CSharp => "csharp",
         }
     }
 
@@ -53,13 +62,18 @@ impl Language {
             "python" | "py" => Language::Python,
             "rust" | "rs" => Language::Rust,
             "cpp" | "c++" | "c" | "clangd" => Language::Cpp,
+            "csharp" | "c#" | "cs" | "roslyn" => Language::CSharp,
             _ => return None,
         })
     }
 
     /// `TextDocumentItem.languageId` of `path`.
     pub fn language_id(path: &Path) -> &'static str {
-        let extension = path.extension().and_then(|it| it.to_str()).unwrap_or("").to_ascii_lowercase();
+        let extension = path
+            .extension()
+            .and_then(|it| it.to_str())
+            .unwrap_or("")
+            .to_ascii_lowercase();
         match extension.as_str() {
             "ts" | "mts" | "cts" => "typescript",
             "tsx" => "typescriptreact",
@@ -70,6 +84,7 @@ impl Language {
             "c" => "c",
             "m" => "objective-c",
             "mm" => "objective-cpp",
+            "cs" => "csharp",
             _ => "cpp",
         }
     }
@@ -88,8 +103,28 @@ impl Language {
             ],
             Language::Rust => &["Cargo.toml"],
             Language::Cpp => &["compile_commands.json", "compile_flags.txt", ".clangd"],
+            Language::CSharp => &["global.json"],
         }
     }
+}
+
+fn has_project_marker(language: Language, dir: &Path) -> bool {
+    if language
+        .markers()
+        .iter()
+        .any(|marker| dir.join(marker).is_file())
+    {
+        return true;
+    }
+    language == Language::CSharp
+        && std::fs::read_dir(dir).is_ok_and(|entries| {
+            entries.flatten().any(|entry| {
+                matches!(
+                    entry.path().extension().and_then(|it| it.to_str()),
+                    Some("sln" | "slnx" | "csproj")
+                )
+            })
+        })
 }
 
 fn is_repository(dir: &Path) -> bool {
@@ -100,7 +135,8 @@ fn parent_dir(file: &Path) -> PathBuf {
     if file.is_dir() {
         return file.to_path_buf();
     }
-    file.parent().map_or_else(|| file.to_path_buf(), Path::to_path_buf)
+    file.parent()
+        .map_or_else(|| file.to_path_buf(), Path::to_path_buf)
 }
 
 /// The root of the project of `language` that `file` belongs to.
@@ -109,26 +145,30 @@ pub fn project_root(language: Language, file: &Path) -> PathBuf {
     if language == Language::Rust {
         return cargo_root(&start).unwrap_or(start);
     }
-    for marker in language.markers() {
-        for dir in start.ancestors() {
-            if dir.join(marker).is_file() {
-                return dir.to_path_buf();
-            }
-            if is_repository(dir) {
-                break;
-            }
+    for dir in start.ancestors() {
+        if has_project_marker(language, dir) {
+            return dir.to_path_buf();
+        }
+        if is_repository(dir) {
+            break;
         }
     }
     // A C++ project without a compilation database: the repository, whose build directories
     // `compilation_database` looks in.
-    start.ancestors().find(|dir| is_repository(dir)).map_or_else(|| start.clone(), Path::to_path_buf)
+    start
+        .ancestors()
+        .find(|dir| is_repository(dir))
+        .map_or_else(|| start.clone(), Path::to_path_buf)
 }
 
 /// The Cargo workspace of the nearest `Cargo.toml`, else that package.
 fn cargo_root(start: &Path) -> Option<PathBuf> {
-    let package = start.ancestors().find(|dir| dir.join("Cargo.toml").is_file())?;
+    let package = start
+        .ancestors()
+        .find(|dir| dir.join("Cargo.toml").is_file())?;
     let workspace = package.ancestors().find(|dir| {
-        std::fs::read_to_string(dir.join("Cargo.toml")).is_ok_and(|text| text.contains("[workspace]"))
+        std::fs::read_to_string(dir.join("Cargo.toml"))
+            .is_ok_and(|text| text.contains("[workspace]"))
     });
     Some(workspace.unwrap_or(package).to_path_buf())
 }
@@ -151,7 +191,7 @@ pub fn languages_in(root: &Path) -> Vec<Language> {
         .into_iter()
         .filter(|language| match language {
             Language::Cpp => compilation_database(root).is_some(),
-            _ => language.markers().iter().any(|marker| root.join(marker).is_file()),
+            _ => has_project_marker(*language, root),
         })
         .collect()
 }
@@ -204,13 +244,19 @@ pub struct Servers {
 pub fn which(name: &str, dirs: &[PathBuf]) -> Option<PathBuf> {
     let extensions: Vec<String> = if cfg!(windows) {
         let pathext = std::env::var("PATHEXT").unwrap_or_else(|_| ".EXE;.CMD;.BAT".into());
-        let mut list: Vec<String> = pathext.split(';').filter(|it| !it.is_empty()).map(str::to_ascii_lowercase).collect();
+        let mut list: Vec<String> = pathext
+            .split(';')
+            .filter(|it| !it.is_empty())
+            .map(str::to_ascii_lowercase)
+            .collect();
         list.insert(0, ".exe".into());
         list
     } else {
         vec![String::new()]
     };
-    let path_dirs = std::env::var_os("PATH").map(|path| std::env::split_paths(&path).collect::<Vec<_>>()).unwrap_or_default();
+    let path_dirs = std::env::var_os("PATH")
+        .map(|path| std::env::split_paths(&path).collect::<Vec<_>>())
+        .unwrap_or_default();
     for dir in dirs.iter().chain(path_dirs.iter()) {
         for extension in &extensions {
             let candidate = dir.join(format!("{name}{extension}"));
@@ -224,23 +270,34 @@ pub fn which(name: &str, dirs: &[PathBuf]) -> Option<PathBuf> {
 
 /// `node_modules/.bin` of `root` and of its ancestors.
 fn node_bins(root: &Path) -> Vec<PathBuf> {
-    root.ancestors().map(|dir| dir.join("node_modules").join(".bin")).filter(|dir| dir.is_dir()).collect()
+    root.ancestors()
+        .map(|dir| dir.join("node_modules").join(".bin"))
+        .filter(|dir| dir.is_dir())
+        .collect()
 }
 
 /// `.venv` executables of `root` and of its ancestors.
 fn venv_bins(root: &Path) -> Vec<PathBuf> {
     let bin = if cfg!(windows) { "Scripts" } else { "bin" };
-    root.ancestors().map(|dir| dir.join(".venv").join(bin)).filter(|dir| dir.is_dir()).collect()
+    root.ancestors()
+        .map(|dir| dir.join(".venv").join(bin))
+        .filter(|dir| dir.is_dir())
+        .collect()
 }
 
 /// `BUN_LSP_<LANGUAGE>`: a JSON array, or words separated by spaces.
 fn from_env(language: Language) -> Option<ServerCommand> {
     let name = format!("BUN_LSP_{}", language.name().to_ascii_uppercase());
-    let value = std::env::var(&name).ok().filter(|it| !it.trim().is_empty())?;
+    let value = std::env::var(&name)
+        .ok()
+        .filter(|it| !it.trim().is_empty())?;
     let words = crate::command_words(&value)?;
     let (program, args) = words.split_first()?;
     let program = which(program, &[]).unwrap_or_else(|| PathBuf::from(program));
-    let label = program.file_stem().map_or_else(|| "custom".to_owned(), |it| it.to_string_lossy().into_owned());
+    let label = program.file_stem().map_or_else(
+        || "custom".to_owned(),
+        |it| it.to_string_lossy().into_owned(),
+    );
     let mut command = ServerCommand::new(&label, program, &[]);
     command.args = args.to_vec();
     Some(command)
@@ -254,42 +311,115 @@ pub fn discover(language: Language, root: &Path, options: &Options) -> Servers {
         Language::Python => python(root, options, primary),
         Language::Rust => rust(options, primary),
         Language::Cpp => cpp(root, options, primary),
+        Language::CSharp => csharp(primary),
+    }
+}
+
+fn roslyn_dirs() -> Vec<PathBuf> {
+    let Some(home) = std::env::var_os(if cfg!(windows) { "USERPROFILE" } else { "HOME" }) else {
+        return Vec::new();
+    };
+    let home = PathBuf::from(home);
+    let mut dirs = Vec::new();
+    for extensions in [
+        home.join(".vscode").join("extensions"),
+        home.join(".vscode-insiders").join("extensions"),
+        home.join(".cursor").join("extensions"),
+    ] {
+        let Ok(entries) = std::fs::read_dir(extensions) else {
+            continue;
+        };
+        for entry in entries.flatten() {
+            if entry
+                .file_name()
+                .to_string_lossy()
+                .starts_with("ms-dotnettools.csharp-")
+            {
+                dirs.push(entry.path().join(".roslyn"));
+            }
+        }
+    }
+    dirs
+}
+
+fn csharp(primary: Option<ServerCommand>) -> Servers {
+    let dirs = roslyn_dirs();
+    let primary = primary.or_else(|| {
+        [
+            "roslyn-language-server",
+            "Microsoft.CodeAnalysis.LanguageServer",
+        ]
+        .into_iter()
+        .find_map(|name| which(name, &dirs))
+        .map(|program| ServerCommand::new("roslyn", program, &["--stdio"]))
+    });
+    let missing = primary.is_none().then(|| {
+        "Roslyn (Microsoft.CodeAnalysis.LanguageServer) or BUN_LSP_CSHARP".to_owned()
+    });
+    Servers {
+        primary,
+        secondary: Vec::new(),
+        missing,
     }
 }
 
 fn typescript(root: &Path, options: &Options, primary: Option<ServerCommand>) -> Servers {
     let bins = node_bins(root);
     let primary = primary
-        .or_else(|| which("tsgo", &bins).map(|program| ServerCommand::new("tsgo", program, &["--lsp", "--stdio"])))
         .or_else(|| {
-            which("typescript-language-server", &bins)
-                .map(|program| ServerCommand::new("typescript-language-server", program, &["--stdio"]))
+            which("tsgo", &bins)
+                .map(|program| ServerCommand::new("tsgo", program, &["--lsp", "--stdio"]))
+        })
+        .or_else(|| {
+            which("typescript-language-server", &bins).map(|program| {
+                ServerCommand::new("typescript-language-server", program, &["--stdio"])
+            })
         })
         .or_else(|| {
             let bun = options.bun.clone().filter(|_| !options.offline)?;
-            let args = ["x", "--package", "@typescript/native-preview", "tsgo", "--lsp", "--stdio"];
+            let args = [
+                "x",
+                "--package",
+                "@typescript/native-preview",
+                "tsgo",
+                "--lsp",
+                "--stdio",
+            ];
             Some(ServerCommand::new("tsgo", bun, &args))
         });
-    let missing = primary.is_none().then(|| "tsgo (@typescript/native-preview) or typescript-language-server".to_owned());
-    Servers { primary, secondary: Vec::new(), missing }
+    let missing = primary
+        .is_none()
+        .then(|| "tsgo (@typescript/native-preview) or typescript-language-server".to_owned());
+    Servers {
+        primary,
+        secondary: Vec::new(),
+        missing,
+    }
 }
 
 fn python(root: &Path, options: &Options, primary: Option<ServerCommand>) -> Servers {
     let bins = venv_bins(root);
     let ruff = which("ruff", &bins).map(|program| ServerCommand::new("ruff", program, &["server"]));
     let primary = primary
-        .or_else(|| which("ty", &bins).map(|program| ServerCommand::new("ty", program, &["server"])))
+        .or_else(|| {
+            which("ty", &bins).map(|program| ServerCommand::new("ty", program, &["server"]))
+        })
         .or_else(|| {
             which("basedpyright-langserver", &bins)
                 .map(|program| ServerCommand::new("basedpyright", program, &["--stdio"]))
         })
         .or_else(|| {
-            which("pyright-langserver", &bins).map(|program| ServerCommand::new("pyright", program, &["--stdio"]))
+            which("pyright-langserver", &bins)
+                .map(|program| ServerCommand::new("pyright", program, &["--stdio"]))
         })
         .or_else(|| {
             // The `uv` built into Bun installs `ty` in its tool cache the first time.
             let bun = options.bun.clone().filter(|_| !options.offline)?;
-            Some(ServerCommand::new("ty", bun, &["uv", "tool", "run", "ty", "server"]))
+            Some(ServerCommand::new(
+                "ty",
+                bun,
+                &["uv", "tool", "run", "ty", "server"],
+            ))
         });
     let (primary, secondary) = match (primary, ruff) {
         (Some(primary), Some(mut ruff)) => {
@@ -298,8 +428,14 @@ fn python(root: &Path, options: &Options, primary: Option<ServerCommand>) -> Ser
         }
         (primary, ruff) => (primary.or(ruff), Vec::new()),
     };
-    let missing = primary.is_none().then(|| "ty, basedpyright-langserver, pyright-langserver or ruff".to_owned());
-    Servers { primary, secondary, missing }
+    let missing = primary
+        .is_none()
+        .then(|| "ty, basedpyright-langserver, pyright-langserver or ruff".to_owned());
+    Servers {
+        primary,
+        secondary,
+        missing,
+    }
 }
 
 fn rust(options: &Options, primary: Option<ServerCommand>) -> Servers {
@@ -314,8 +450,14 @@ fn rust(options: &Options, primary: Option<ServerCommand>) -> Servers {
         }));
         Some(command)
     });
-    let missing = primary.is_none().then(|| "rust-analyzer (rustup component add rust-analyzer)".to_owned());
-    Servers { primary, secondary: Vec::new(), missing }
+    let missing = primary
+        .is_none()
+        .then(|| "rust-analyzer (rustup component add rust-analyzer)".to_owned());
+    Servers {
+        primary,
+        secondary: Vec::new(),
+        missing,
+    }
 }
 
 fn llvm_dirs() -> Vec<PathBuf> {
@@ -338,15 +480,25 @@ fn cpp(root: &Path, options: &Options, primary: Option<ServerCommand>) -> Server
     let primary = primary
         .or_else(|| {
             // `PATH` first: the `LLVM/bin` directories are where installers put it when it is not.
-            which("clangd", &[]).or_else(|| which("clangd", &llvm_dirs())).map(|program| ServerCommand::new("clangd", program, &[]))
+            which("clangd", &[])
+                .or_else(|| which("clangd", &llvm_dirs()))
+                .map(|program| ServerCommand::new("clangd", program, &[]))
         })
         .or_else(|| {
             // npm's `clangd` is a placeholder; PyPI's carries the LLVM release binaries.
             let bun = options.bun.clone().filter(|_| !options.offline)?;
-            Some(ServerCommand::new("clangd", bun, &["uv", "tool", "run", "clangd"]))
+            Some(ServerCommand::new(
+                "clangd",
+                bun,
+                &["uv", "tool", "run", "clangd"],
+            ))
         });
     let Some(mut primary) = primary else {
-        return Servers { primary: None, secondary: Vec::new(), missing: Some("clangd".to_owned()) };
+        return Servers {
+            primary: None,
+            secondary: Vec::new(),
+            missing: Some("clangd".to_owned()),
+        };
     };
     if !found {
         primary.args.extend([
@@ -360,14 +512,22 @@ fn cpp(root: &Path, options: &Options, primary: Option<ServerCommand>) -> Server
         if cfg!(target_os = "linux") {
             primary.args.push("--malloc-trim".to_owned());
         }
-        if let Some(database) = compilation_database(root).or_else(|| generate_compilation_database(root, options)) {
-            primary.args.push(format!("--compile-commands-dir={}", database.display()));
+        if let Some(database) =
+            compilation_database(root).or_else(|| generate_compilation_database(root, options))
+        {
+            primary
+                .args
+                .push(format!("--compile-commands-dir={}", database.display()));
         }
         if cfg!(windows) && std::env::var_os("INCLUDE").is_none() {
             primary.env = msvc_environment(options).to_vec();
         }
     }
-    Servers { primary: Some(primary), secondary: Vec::new(), missing: None }
+    Servers {
+        primary: Some(primary),
+        secondary: Vec::new(),
+        missing: None,
+    }
 }
 
 /// Directories that may hold the `compile_commands.json` of `root`, in order of preference.
@@ -387,7 +547,12 @@ fn build_dirs(root: &Path) -> Vec<PathBuf> {
             .map(|entry| entry.path())
             .filter(|path| path.is_dir())
             .collect();
-        children.sort_by_key(|path| (path.file_name().is_none_or(|name| name != "debug"), path.clone()));
+        children.sort_by_key(|path| {
+            (
+                path.file_name().is_none_or(|name| name != "debug"),
+                path.clone(),
+            )
+        });
         dirs.extend(children);
     }
     dirs
@@ -395,7 +560,9 @@ fn build_dirs(root: &Path) -> Vec<PathBuf> {
 
 /// The directory of the `compile_commands.json` of `root`.
 pub fn compilation_database(root: &Path) -> Option<PathBuf> {
-    build_dirs(root).into_iter().find(|dir| dir.join("compile_commands.json").is_file())
+    build_dirs(root)
+        .into_iter()
+        .find(|dir| dir.join("compile_commands.json").is_file())
 }
 
 /// The compile rules of a `build.ninja`: `ninja -t compdb` lists the commands of those only, not
@@ -407,8 +574,10 @@ fn compile_rules(build_ninja: &str) -> Vec<String> {
         .map(str::trim)
         .filter(|rule| {
             let rule = rule.to_ascii_lowercase();
-            matches!(rule.as_str(), "c" | "cc" | "cxx" | "cpp" | "objc" | "objcxx")
-                || rule.ends_with("_cc")
+            matches!(
+                rule.as_str(),
+                "c" | "cc" | "cxx" | "cpp" | "objc" | "objcxx"
+            ) || rule.ends_with("_cc")
                 || rule.ends_with("_cxx")
                 || rule.starts_with("c_compiler")
                 || rule.starts_with("cxx_compiler")
@@ -424,17 +593,31 @@ fn compile_rules(build_ninja: &str) -> Vec<String> {
 /// Linux kernel's `scripts/clang-tools/gen_compile_commands.py` after a build. Returns the
 /// directory of the file.
 pub fn generate_compilation_database(root: &Path, options: &Options) -> Option<PathBuf> {
-    if let Some(dir) = build_dirs(root).into_iter().find(|dir| dir.join("build.ninja").is_file()) {
+    if let Some(dir) = build_dirs(root)
+        .into_iter()
+        .find(|dir| dir.join("build.ninja").is_file())
+    {
         let ninja = which("ninja", &[])?;
-        let rules = std::fs::read_to_string(dir.join("build.ninja")).map(|text| compile_rules(&text)).unwrap_or_default();
-        let output = Command::new(ninja).arg("-C").arg(&dir).args(["-t", "compdb"]).args(&rules).output().ok()?;
+        let rules = std::fs::read_to_string(dir.join("build.ninja"))
+            .map(|text| compile_rules(&text))
+            .unwrap_or_default();
+        let output = Command::new(ninja)
+            .arg("-C")
+            .arg(&dir)
+            .args(["-t", "compdb"])
+            .args(&rules)
+            .output()
+            .ok()?;
         if output.status.success() && output.stdout.len() > 2 {
             std::fs::write(dir.join("compile_commands.json"), &output.stdout).ok()?;
             return Some(dir);
         }
         return None;
     }
-    let script = root.join("scripts").join("clang-tools").join("gen_compile_commands.py");
+    let script = root
+        .join("scripts")
+        .join("clang-tools")
+        .join("gen_compile_commands.py");
     if !script.is_file() {
         return None;
     }
@@ -447,7 +630,15 @@ pub fn generate_compilation_database(root: &Path, options: &Options) -> Option<P
             command
         }
     };
-    let status = command.arg(&script).arg("-d").arg(root).arg("-o").arg(&output).current_dir(root).status().ok()?;
+    let status = command
+        .arg(&script)
+        .arg("-d")
+        .arg(root)
+        .arg("-o")
+        .arg(&output)
+        .current_dir(root)
+        .status()
+        .ok()?;
     (status.success() && output.is_file()).then(|| root.to_path_buf())
 }
 
@@ -455,13 +646,25 @@ pub fn generate_compilation_database(root: &Path, options: &Options) -> Option<P
 fn msvc_environment(options: &Options) -> &'static [(String, String)] {
     static ENVIRONMENT: OnceLock<Vec<(String, String)>> = OnceLock::new();
     ENVIRONMENT.get_or_init(|| {
-        let Some(bun) = options.bun.as_ref() else { return Vec::new() };
-        let Ok(output) = Command::new(bun).args(["msvc", "env", "--format", "json"]).output() else {
+        let Some(bun) = options.bun.as_ref() else {
             return Vec::new();
         };
-        let Ok(Value::Object(vars)) = serde_json::from_slice::<Value>(&output.stdout) else { return Vec::new() };
+        let Ok(output) = Command::new(bun)
+            .args(["msvc", "env", "--format", "json"])
+            .output()
+        else {
+            return Vec::new();
+        };
+        let Ok(Value::Object(vars)) = serde_json::from_slice::<Value>(&output.stdout) else {
+            return Vec::new();
+        };
         vars.into_iter()
-            .filter(|(name, _)| matches!(name.to_ascii_uppercase().as_str(), "INCLUDE" | "EXTERNAL_INCLUDE" | "LIB" | "LIBPATH"))
+            .filter(|(name, _)| {
+                matches!(
+                    name.to_ascii_uppercase().as_str(),
+                    "INCLUDE" | "EXTERNAL_INCLUDE" | "LIB" | "LIBPATH"
+                )
+            })
             .filter_map(|(name, value)| Some((name, value.as_str()?.to_owned())))
             .collect()
     })
@@ -473,23 +676,36 @@ mod tests {
 
     #[test]
     fn routes_by_extension() {
-        assert_eq!(Language::of_path(Path::new("a/b.TSX")), Some(Language::TypeScript));
-        assert_eq!(Language::of_path(Path::new("a.pyi")), Some(Language::Python));
+        assert_eq!(
+            Language::of_path(Path::new("a/b.TSX")),
+            Some(Language::TypeScript)
+        );
+        assert_eq!(
+            Language::of_path(Path::new("a.pyi")),
+            Some(Language::Python)
+        );
         assert_eq!(Language::of_path(Path::new("lib.rs")), Some(Language::Rust));
         assert_eq!(Language::of_path(Path::new("x.mm")), Some(Language::Cpp));
         assert_eq!(Language::of_path(Path::new("x.hpp")), Some(Language::Cpp));
+        assert_eq!(
+            Language::of_path(Path::new("Program.cs")),
+            Some(Language::CSharp)
+        );
+        assert_eq!(Language::language_id(Path::new("Program.cs")), "csharp");
         assert_eq!(Language::of_path(Path::new("README.md")), None);
     }
 
     #[test]
     fn keeps_compile_rules() {
-        let rules = compile_rules("rule cxx
+        let rules = compile_rules(
+            "rule cxx
   command = x
 rule link
 rule cc
 rule dep_host_cc
 rule CXX_COMPILER__bun_Debug
-");
+",
+        );
         assert_eq!(rules, ["cxx", "cc", "CXX_COMPILER__bun_Debug"]);
     }
 
@@ -498,12 +714,23 @@ rule CXX_COMPILER__bun_Debug
         let base = std::env::temp_dir().join(format!("bun-lsp-roots-{}", std::process::id()));
         let nested = base.join("pkg").join("src");
         std::fs::create_dir_all(&nested).unwrap();
-        std::fs::write(base.join("Cargo.toml"), "[workspace]\nmembers = [\"pkg\"]\n").unwrap();
-        std::fs::write(base.join("pkg").join("Cargo.toml"), "[package]\nname = \"pkg\"\n").unwrap();
+        std::fs::write(
+            base.join("Cargo.toml"),
+            "[workspace]\nmembers = [\"pkg\"]\n",
+        )
+        .unwrap();
+        std::fs::write(
+            base.join("pkg").join("Cargo.toml"),
+            "[package]\nname = \"pkg\"\n",
+        )
+        .unwrap();
         std::fs::write(base.join("pkg").join("tsconfig.json"), "{}").unwrap();
         let file = nested.join("lib.rs");
         assert_eq!(project_root(Language::Rust, &file), base);
-        assert_eq!(project_root(Language::TypeScript, &nested.join("a.ts")), base.join("pkg"));
+        assert_eq!(
+            project_root(Language::TypeScript, &nested.join("a.ts")),
+            base.join("pkg")
+        );
         std::fs::remove_dir_all(&base).unwrap();
     }
 }

@@ -22,7 +22,7 @@ Usage: bun lsp [--stdio]
        bun lsp query <kind> <file>[:<line>[:<column>]] [<text>] [options]
        bun lsp warm|status|stop|servers|compdb [<dir>]
 
-One language server for TypeScript/JavaScript, Python, Rust and C/C++: it starts tsgo,
+One language server for TypeScript/JavaScript, Python, Rust, C/C++ and C#: it starts tsgo,
 ty/basedpyright/ruff, rust-analyzer and clangd as files of their language need them, and adds
 the code graph of the workspace: calls, and links across Rust, C++, Zig and TypeScript (C ABI
 names, $newRustFunction and kin, .classes.ts members).
@@ -55,7 +55,7 @@ Options:
   --timeout <ms>     How long servers may take (default 30000, BUN_LSP_TIMEOUT_MS)
   --apply            rename, fix: write the edits
   --no-daemon        Answer in this process, without a daemon
-  --lang <a,b>       warm: only these languages (typescript, python, rust, cpp)
+  --lang <a,b>       warm: only these languages (typescript, python, rust, cpp, csharp)
 
 Environment: BUN_LSP_<LANGUAGE>=\"<command> <args>\" picks a server; BUN_LSP_OFFLINE=1 never
 downloads one; BUN_LSP_TS_DIAGNOSTICS=server takes TypeScript diagnostics from the server
@@ -111,21 +111,39 @@ fn parse_flags(args: &[String]) -> Result<Flags, String> {
             Some((name, value)) if name.starts_with("--") => (name, Some(value.to_owned())),
             _ => (arg.as_str(), None),
         };
-        let mut value = |name: &str| inline.clone().or_else(|| args.next().cloned()).ok_or_else(|| format!("{name} needs a value"));
+        let mut value = |name: &str| {
+            inline
+                .clone()
+                .or_else(|| args.next().cloned())
+                .ok_or_else(|| format!("{name} needs a value"))
+        };
         match name {
             "--json" => flags.json = true,
             "--apply" => flags.apply = true,
             "--no-daemon" => flags.no_daemon = true,
             "--warm" => flags.warm = true,
-            "--limit" => flags.limit = Some(value(name)?.parse().map_err(|_| "--limit needs a number")?),
-            "--timeout" => flags.timeout = Some(value(name)?.parse().map_err(|_| "--timeout needs milliseconds")?),
+            "--limit" => {
+                flags.limit = Some(value(name)?.parse().map_err(|_| "--limit needs a number")?)
+            }
+            "--timeout" => {
+                flags.timeout = Some(
+                    value(name)?
+                        .parse()
+                        .map_err(|_| "--timeout needs milliseconds")?,
+                )
+            }
             "--root" => flags.root = Some(PathBuf::from(value(name)?)),
             "--lang" | "--languages" => {
                 for name in value(name)?.split(',').filter(|it| !it.is_empty()) {
-                    flags.languages.push(Language::from_name(name).ok_or_else(|| format!("unknown language {name:?}"))?);
+                    flags.languages.push(
+                        Language::from_name(name)
+                            .ok_or_else(|| format!("unknown language {name:?}"))?,
+                    );
                 }
             }
-            _ if name.starts_with("--") && name.len() > 2 => return Err(format!("unknown option {name}")),
+            _ if name.starts_with("--") && name.len() > 2 => {
+                return Err(format!("unknown option {name}"));
+            }
             _ => flags.positional.push(arg.clone()),
         }
     }
@@ -145,11 +163,17 @@ fn print_json(io: &mut Io, value: &impl serde::Serialize) {
 
 fn query_command(io: &mut Io, flags: &Flags, options: &Options) -> i32 {
     let [kind, location, rest @ ..] = flags.positional.as_slice() else {
-        let _ = writeln!(io.error, "usage: bun lsp query <kind> <file>[:<line>[:<column>]] [<text>]");
+        let _ = writeln!(
+            io.error,
+            "usage: bun lsp query <kind> <file>[:<line>[:<column>]] [<text>]"
+        );
         return 2;
     };
     let Some(kind) = QueryKind::parse(kind) else {
-        let _ = writeln!(io.error, "error: unknown query {kind:?}: diagnostics, definition, references, hover, symbols, workspace-symbols, rename, context, callers, callees, fix");
+        let _ = writeln!(
+            io.error,
+            "error: unknown query {kind:?}: diagnostics, definition, references, hover, symbols, workspace-symbols, rename, context, callers, callees, fix"
+        );
         return 2;
     };
     let (file, line, column) = split_location(location);
@@ -204,10 +228,19 @@ fn warm_command(io: &mut Io, flags: &Flags, options: &Options) -> i32 {
                 let language = warmed["language"].as_str().unwrap_or("");
                 match warmed.get("error").and_then(Value::as_str) {
                     Some(error) => drop(writeln!(io.output, "{language}: {error}")),
-                    None => drop(writeln!(io.output, "{language}: {}", warmed["servers"].as_str().unwrap_or(""))),
+                    None => drop(writeln!(
+                        io.output,
+                        "{language}: {}",
+                        warmed["servers"].as_str().unwrap_or("")
+                    )),
                 }
             }
-            let _ = writeln!(io.output, "warm in {} ms: {}", started.elapsed().as_millis(), root.display());
+            let _ = writeln!(
+                io.output,
+                "warm in {} ms: {}",
+                started.elapsed().as_millis(),
+                root.display()
+            );
             0
         }
         Err(message) => {
@@ -222,7 +255,11 @@ fn status_command(io: &mut Io, flags: &Flags, options: &Options, stop: bool) -> 
     let request = json!({ "op": if stop { "stop" } else { "status" } });
     match client::send(&root, &request, options, false) {
         Ok(response) if stop => {
-            let _ = writeln!(io.output, "stopped the bun lsp daemon of {}", root.display());
+            let _ = writeln!(
+                io.output,
+                "stopped the bun lsp daemon of {}",
+                root.display()
+            );
             drop(response);
             0
         }
@@ -279,12 +316,26 @@ fn servers_command(io: &mut Io, flags: &Flags, options: &Options) -> i32 {
     for language in Language::ALL {
         let project = language::project_root(language, &root.join("_"));
         let servers = language::discover(language, &project, options);
-        let commands: Vec<String> = servers.primary.iter().chain(servers.secondary.iter()).map(|it| it.command_line()).collect();
+        let commands: Vec<String> = servers
+            .primary
+            .iter()
+            .chain(servers.secondary.iter())
+            .map(|it| it.command_line())
+            .collect();
         report.push(json!({ "language": language, "root": project, "servers": commands, "missing": servers.missing }));
         if !flags.json {
             match &servers.missing {
-                Some(missing) => drop(writeln!(io.output, "{}: none (install {missing})", language.name())),
-                None => drop(writeln!(io.output, "{}: {}", language.name(), commands.join(" + "))),
+                Some(missing) => drop(writeln!(
+                    io.output,
+                    "{}: none (install {missing})",
+                    language.name()
+                )),
+                None => drop(writeln!(
+                    io.output,
+                    "{}: {}",
+                    language.name(),
+                    commands.join(" + ")
+                )),
             }
         }
     }
@@ -295,11 +346,18 @@ fn servers_command(io: &mut Io, flags: &Flags, options: &Options) -> i32 {
 }
 
 fn compdb_command(io: &mut Io, flags: &Flags, options: &Options) -> i32 {
-    let dir = flags.positional.first().map_or_else(|| PathBuf::from("."), PathBuf::from);
+    let dir = flags
+        .positional
+        .first()
+        .map_or_else(|| PathBuf::from("."), PathBuf::from);
     let dir = std::path::absolute(&dir).unwrap_or(dir);
     match language::generate_compilation_database(&dir, options) {
         Some(written) => {
-            let _ = writeln!(io.output, "{}", written.join("compile_commands.json").display());
+            let _ = writeln!(
+                io.output,
+                "{}",
+                written.join("compile_commands.json").display()
+            );
             0
         }
         None => {
@@ -316,7 +374,11 @@ fn compdb_command(io: &mut Io, flags: &Flags, options: &Options) -> i32 {
 /// Runs `bun lsp <args>`. Returns the exit code.
 pub fn main(args: &[String], mut io: Io, options: Options) -> i32 {
     let (command, rest) = match args.split_first() {
-        Some((command, rest)) if !command.starts_with("--") || command == "--help" || command == "-h" => (command.as_str(), rest),
+        Some((command, rest))
+            if !command.starts_with("--") || command == "--help" || command == "-h" =>
+        {
+            (command.as_str(), rest)
+        }
         _ => ("", args),
     };
     if matches!(command, "" | "serve") {
@@ -341,7 +403,10 @@ pub fn main(args: &[String], mut io: Io, options: Options) -> i32 {
         "servers" => servers_command(&mut io, &flags, &options),
         "compdb" => compdb_command(&mut io, &flags, &options),
         "daemon" => {
-            let root = flags.root.clone().unwrap_or_else(|| workspace_of(flags.positional.first()));
+            let root = flags
+                .root
+                .clone()
+                .unwrap_or_else(|| workspace_of(flags.positional.first()));
             daemon::serve(&root, options, flags.warm)
         }
         "help" | "--help" | "-h" => {
@@ -361,16 +426,37 @@ mod tests {
 
     #[test]
     fn splits_locations() {
-        assert_eq!(split_location("a.ts:3:7"), (PathBuf::from("a.ts"), Some(3), Some(7)));
-        assert_eq!(split_location("a.ts:3"), (PathBuf::from("a.ts"), Some(3), None));
+        assert_eq!(
+            split_location("a.ts:3:7"),
+            (PathBuf::from("a.ts"), Some(3), Some(7))
+        );
+        assert_eq!(
+            split_location("a.ts:3"),
+            (PathBuf::from("a.ts"), Some(3), None)
+        );
         assert_eq!(split_location("a.ts"), (PathBuf::from("a.ts"), None, None));
-        assert_eq!(split_location(r"C:\x\a.ts:3:7"), (PathBuf::from(r"C:\x\a.ts"), Some(3), Some(7)));
-        assert_eq!(split_location(r"C:\x\a.ts"), (PathBuf::from(r"C:\x\a.ts"), None, None));
+        assert_eq!(
+            split_location(r"C:\x\a.ts:3:7"),
+            (PathBuf::from(r"C:\x\a.ts"), Some(3), Some(7))
+        );
+        assert_eq!(
+            split_location(r"C:\x\a.ts"),
+            (PathBuf::from(r"C:\x\a.ts"), None, None)
+        );
     }
 
     #[test]
     fn parses_flags() {
-        let args: Vec<String> = ["hover", "a.ts:1:2", "--json", "--limit=5", "--lang", "python,rust"].map(String::from).to_vec();
+        let args: Vec<String> = [
+            "hover",
+            "a.ts:1:2",
+            "--json",
+            "--limit=5",
+            "--lang",
+            "python,rust",
+        ]
+        .map(String::from)
+        .to_vec();
         let flags = parse_flags(&args).unwrap();
         assert!(flags.json);
         assert_eq!(flags.limit, Some(5));

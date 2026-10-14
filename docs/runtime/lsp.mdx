@@ -1,6 +1,6 @@
 ---
 title: "Language server"
-description: "One language server for TypeScript, JavaScript, Python, Rust, C and C++ with bun lsp"
+description: "One language server for TypeScript, JavaScript, Python, Rust, C, C++ and C# with bun lsp"
 ---
 
 `bun lsp` is a language server for editors and a command line for agents and scripts. It speaks the Language Server Protocol and passes each request to the server of the document's language. It starts that server the first time a file of that language needs it.
@@ -11,6 +11,7 @@ description: "One language server for TypeScript, JavaScript, Python, Rust, C an
 | Python                  | `ty`, else `basedpyright`, else `pyright`, else `ty` through [`bun uv`](/runtime/buv)                   | the server, plus `ruff server` if it is installed   |
 | Rust                    | `rust-analyzer`                                                                                         | the server                                          |
 | C, C++, Objective-C     | `clangd`, else `clangd` from PyPI through `bun uv`                                                      | the server                                          |
+| C#                      | Microsoft `roslyn-language-server` (`Microsoft.CodeAnalysis.LanguageServer`)                            | the server                                          |
 
 `bun lsp` finds servers in `node_modules/.bin`, in the `.venv` of the project, and on `PATH`.
 
@@ -29,7 +30,7 @@ Configure `bun lsp` as the language server of every language it handles. It read
 ```lua Neovim icon="file-code"
 vim.lsp.config("bun", {
   cmd = { "bun", "lsp" },
-  filetypes = { "typescript", "javascript", "typescriptreact", "python", "rust", "c", "cpp" },
+  filetypes = { "typescript", "javascript", "typescriptreact", "python", "rust", "c", "cpp", "cs" },
   root_markers = { ".git" },
 })
 vim.lsp.enable("bun")
@@ -87,6 +88,10 @@ bun lsp compdb          # write compile_commands.json now
 
 `clangd` keeps its background index next to `compile_commands.json`, in `.cache/clangd`, so it survives restarts. `bun lsp` starts it with `--background-index`, `--limit-results=100`, `-j` set to half the CPU cores (at most 4), and `--pch-storage=disk`. On Windows, when `INCLUDE` is not set, it gives `clangd` the MSVC and Windows SDK environment from [`bun msvc env`](/runtime/msvc) so that `clang-cl` command lines find their headers.
 
+## C#
+
+`bun lsp` routes `.cs` files to Microsoft's open-source Roslyn language server. It first uses `BUN_LSP_CSHARP`, then an executable named `roslyn-language-server` or `Microsoft.CodeAnalysis.LanguageServer` on `PATH`. On Windows it also discovers the Roslyn server shipped by the official VS Code C# extension under `.vscode/extensions/ms-dotnettools.csharp-*/.roslyn`. Project roots are selected from `global.json`, `.sln`, `.slnx` and `.csproj` files.
+
 ## Configuration
 
 | Environment variable       | Description                                                                                       |
@@ -95,6 +100,7 @@ bun lsp compdb          # write compile_commands.json now
 | `BUN_LSP_PYTHON`           | The Python server command                                                                         |
 | `BUN_LSP_RUST`             | The Rust server command                                                                           |
 | `BUN_LSP_CPP`              | The C and C++ server command. Its arguments replace those that `bun lsp` adds                     |
+| `BUN_LSP_CSHARP`           | The C# Roslyn server command, for example `"Microsoft.CodeAnalysis.LanguageServer --stdio"`       |
 | `BUN_LSP_TS_DIAGNOSTICS`   | `server` to take TypeScript diagnostics from the server instead of `bun check`                    |
 | `BUN_LSP_OFFLINE`          | `1` to never download a server with `bun x` or `bun uv`                                           |
 | `BUN_LSP_LIMIT`            | The most items in an answer, and `clangd --limit-results`. Defaults to `100`                      |

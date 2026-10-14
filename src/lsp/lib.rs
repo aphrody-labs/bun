@@ -1,5 +1,5 @@
 //! `bun lsp`: one Language Server Protocol endpoint for TypeScript/JavaScript, Python, Rust and
-//! C/C++, in front of the servers of those languages.
+//! C/C++ and C#, in front of the servers of those languages.
 //!
 //! - TypeScript and JavaScript: `tsgo` (typescript-go), else `typescript-language-server`, else
 //!   `bun x @typescript/native-preview`. Diagnostics come from Bun's own checker (`bun check`, the
@@ -30,18 +30,18 @@
 // alone it links and runs its tests without Bun's C++ objects, like `bun_vfs`.
 #![allow(clippy::disallowed_methods, clippy::disallowed_types)]
 
+pub mod ai;
 pub mod backend;
 pub mod cli;
 pub mod client;
-pub mod ai;
 pub mod daemon;
 #[cfg(feature = "graph")]
 pub mod graph;
 #[cfg(not(feature = "graph"))]
 #[path = "graph_off.rs"]
 pub mod graph;
-pub mod links;
 pub mod language;
+pub mod links;
 pub mod pool;
 pub mod protocol;
 pub mod proxy;
@@ -58,7 +58,12 @@ pub use service::{Answer, Item, Query, QueryKind, Service};
 /// depend on the checker.
 pub trait NativeChecker: Send + Sync {
     /// Type checks `files` in the project of `root`. `texts` are read in place of the disk.
-    fn check(&self, root: &Path, files: &[PathBuf], texts: &[(PathBuf, String)]) -> Result<Vec<NativeDiagnostic>, String>;
+    fn check(
+        &self,
+        root: &Path,
+        files: &[PathBuf],
+        texts: &[(PathBuf, String)],
+    ) -> Result<Vec<NativeDiagnostic>, String>;
 }
 
 /// A diagnostic of a [`NativeChecker`]. Lines are 0-based and columns count UTF-16 code units, as
@@ -131,13 +136,18 @@ impl Options {
     /// The defaults, overridden by the `BUN_LSP_*` environment variables.
     pub fn from_env() -> Options {
         let cores = std::thread::available_parallelism().map_or(2, usize::from);
-        let flag = |name: &str| std::env::var(name).is_ok_and(|it| matches!(it.as_str(), "1" | "true" | "yes"));
-        let millis = |name: &str, default: u64| Duration::from_millis(env_number(name).unwrap_or(default).max(1));
+        let flag = |name: &str| {
+            std::env::var(name).is_ok_and(|it| matches!(it.as_str(), "1" | "true" | "yes"))
+        };
+        let millis = |name: &str, default: u64| {
+            Duration::from_millis(env_number(name).unwrap_or(default).max(1))
+        };
         Options {
             bun: std::env::current_exe().ok(),
             offline: flag("BUN_LSP_OFFLINE"),
             limit: env_number("BUN_LSP_LIMIT").map_or(100, |it| it.clamp(1, 100_000) as usize),
-            jobs: env_number("BUN_LSP_JOBS").map_or_else(|| (cores / 2).clamp(1, 4), |it| it.clamp(1, 256) as usize),
+            jobs: env_number("BUN_LSP_JOBS")
+                .map_or_else(|| (cores / 2).clamp(1, 4), |it| it.clamp(1, 256) as usize),
             max_servers: env_number("BUN_LSP_MAX_SERVERS").map_or(6, |it| it.clamp(1, 64) as usize),
             server_idle: millis("BUN_LSP_SERVER_IDLE_MS", 15 * 60 * 1000),
             daemon_idle: millis("BUN_LSP_IDLE_MS", 30 * 60 * 1000),
@@ -147,9 +157,13 @@ impl Options {
                 _ => TypeScriptDiagnostics::Native,
             },
             native: None,
-            graph: !std::env::var("BUN_LSP_GRAPH").is_ok_and(|it| matches!(it.as_str(), "0" | "false" | "no")),
-            graph_files: env_number("BUN_LSP_GRAPH_FILES").map_or(20_000, |it| it.clamp(1, 1_000_000) as usize),
-            ai: std::env::var("BUN_LSP_AI").ok().and_then(|it| command_words(&it)),
+            graph: !std::env::var("BUN_LSP_GRAPH")
+                .is_ok_and(|it| matches!(it.as_str(), "0" | "false" | "no")),
+            graph_files: env_number("BUN_LSP_GRAPH_FILES")
+                .map_or(20_000, |it| it.clamp(1, 1_000_000) as usize),
+            ai: std::env::var("BUN_LSP_AI")
+                .ok()
+                .and_then(|it| command_words(&it)),
         }
     }
 
