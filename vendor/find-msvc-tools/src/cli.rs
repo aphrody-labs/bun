@@ -26,6 +26,8 @@ Commands:
   env [--format <f>]          The vcvarsall environment: json (default), pwsh, cmd, sh, github
   which <tool>...             Path of cl, link, lib, dumpbin, rc, midl, mt, clang-cl, cmake, ninja, ...
   exec [--] <tool> [args...]  Run a tool with the computed environment
+  vcpkg [args...]             Run the pinned/native vcpkg with the MSVC environment, target triplet,
+                              CMake toolchain and Bun binary cache
   sync [--check] [--force]    Cache env.json/env.cmd/env.ps1/env.sh, rewritten when an instance,
                               toolset or SDK changes; prints the cache directory
   setup [--dry-run]           Install or complete the C++ tools, the SDK and the requested toolset
@@ -82,7 +84,7 @@ fn parse(args: Vec<OsString>) -> Result<Args, String> {
     let mut iter = args.into_iter();
     while let Some(arg) = iter.next() {
         // `exec` and `which`: the first positional and everything after it are the command.
-        if parsed.command == "exec" && !parsed.rest.is_empty() {
+        if matches!(parsed.command.as_str(), "exec" | "vcpkg") && !parsed.rest.is_empty() {
             parsed.rest.push(arg);
             continue;
         }
@@ -188,6 +190,7 @@ pub fn main_with(args: Vec<OsString>, self_args: &[&str], fetch: &dyn crate::cro
         "env" => with_toolchain(&args, |t| env(t, args.format.as_deref().unwrap_or("json"))),
         "which" => with_toolchain(&args, |t| which(t, &args.rest)),
         "exec" => with_toolchain(&args, |t| exec(t, &args.rest)),
+        "vcpkg" => with_toolchain(&args, |t| vcpkg(t, &args.rest)),
         "sync" => sync_command(&args),
         "setup" | "install" => setup_command(&args),
         "msi" => msi_command(&args, self_args),
@@ -500,6 +503,62 @@ fn exec(toolchain: &Toolchain, rest: &[OsString]) -> i32 {
     match std::process::Command::new(&program).args(args).envs(toolchain.env()).status() {
         Ok(status) => status.code().unwrap_or(1),
         Err(e) => fail(&format!("{}: {e}", PathBuf::from(&program).display())),
+    }
+}
+
+fn vcpkg_root() -> Option<PathBuf> {
+    if let Some(root) = std::env::var_os("VCPKG_ROOT").map(PathBuf::from) {
+        if root.is_dir() {
+            return Some(root);
+        }
+    }
+    let cwd = std::env::current_dir().ok()?;
+    cwd.ancestors()
+        .map(|dir| dir.join("vendor").join("vcpkg"))
+        .find(|dir| dir.is_dir())
+}
+
+fn vcpkg(toolchain: &Toolchain, rest: &[OsString]) -> i32 {
+    let Some(root) = vcpkg_root() else {
+        return fail("vcpkg was not found; initialize vendor/vcpkg or set VCPKG_ROOT");
+    };
+    let program = root.join(if cfg!(windows) { "vcpkg.exe" } else { "vcpkg" });
+    if !program.is_file() {
+        return fail(&format!(
+            "{} is missing; bootstrap the pinned vendor/vcpkg checkout first",
+            program.display()
+        ));
+    }
+    let triplet = match toolchain.arch {
+        "x64" => "x64-windows",
+        "x86" => "x86-windows",
+        "arm64" | "arm64ec" => "arm64-windows",
+        "arm" => "arm-windows",
+        other => return fail(&format!("vcpkg has no Bun triplet mapping for {other}")),
+    };
+    let cache = std::env::var_os("LOCALAPPDATA")
+        .map(PathBuf::from)
+        .unwrap_or_else(std::env::temp_dir)
+        .join("bun")
+        .join("vcpkg")
+        .join("archives");
+    if let Err(error) = std::fs::create_dir_all(&cache) {
+        return fail(&format!("could not create {}: {error}", cache.display()));
+    }
+    let binary_sources = format!("clear;files,{},readwrite", cache.display());
+    let toolchain_file = root.join("scripts").join("buildsystems").join("vcpkg.cmake");
+    match std::process::Command::new(&program)
+        .args(rest)
+        .envs(toolchain.env())
+        .env("VCPKG_ROOT", &root)
+        .env("VCPKG_DEFAULT_TRIPLET", triplet)
+        .env("VCPKG_DEFAULT_HOST_TRIPLET", triplet)
+        .env("VCPKG_BINARY_SOURCES", binary_sources)
+        .env("CMAKE_TOOLCHAIN_FILE", toolchain_file)
+        .status()
+    {
+        Ok(status) => status.code().unwrap_or(1),
+        Err(error) => fail(&format!("{}: {error}", program.display())),
     }
 }
 

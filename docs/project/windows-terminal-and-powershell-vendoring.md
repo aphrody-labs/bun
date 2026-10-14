@@ -1,25 +1,17 @@
-# Windows Terminal and PowerShell source snapshots
+# Windows source submodules
 
-This repository vendors source snapshots of the Aphrody forks for Windows
-terminal and PowerShell work:
+The independently owned Microsoft sources are pinned Git submodules of their Aphrody forks:
 
-- `vendor/terminal` is the Aphrody fork of `microsoft/terminal`, pinned at
-  `f8b3cf09a114209be960a98a18a184d997f72a11`. Its upstream license is MIT and
-  remains in `vendor/terminal/LICENSE`.
-- `vendor/powershell` is the Aphrody fork of `PowerShell/PowerShell`, pinned at
-  `5d871eb5e02cbcc8ecb03fce4b24d7f48bf97c26`. Its upstream license is MIT and
-  remains in `vendor/powershell/LICENSE.txt`.
+| Path | Fork | Upstream | Pin | Aphrody commits over upstream |
+| --- | --- | --- | --- | ---: |
+| `vendor/powershell` | `aphrody-labs/PowerShell` | `PowerShell/PowerShell` | `cf5765391c7c78914d5316f0b8105fa652456cc4` | 0 |
+| `vendor/windows-terminal` | `aphrody-labs/terminal` | `microsoft/terminal` | `2304e801074b546b4544f5cd697e98b0e4c94359` | 13 |
+| `vendor/vcpkg` | `aphrody-labs/vcpkg` | `microsoft/vcpkg` | `e664453ac3e6a07c62c92bedeb562effe662a44b` | 2 |
+| `vendor/roslyn` | `aphrody-labs/roslyn` | `dotnet/roslyn` | `c8b2c7a7e2c29fb031f39008e6258a8706dbf6b1` | 0 |
+| `vendor/fluentui` | `aphrody-labs/fluentui` | `microsoft/fluentui` | `a2ebcfa86f7df5930fb4c75a4dde5b81c6d24860` | 1 |
 
-These imports are source snapshots, not linked Bun components. Windows
-Terminal and PowerShell still build and run as separate applications. Bun's
-`bunsh` is an experimental shell with a different language and incomplete
-PowerShell compatibility; its current Windows tests do not establish a full
-replacement. Rio is another separate terminal application. Vendoring alone
-does not replace the terminal provider, PowerShell, Explorer, login shell,
-services, or file associations, and no such Windows setting is changed here.
+The pins were compared with the upstream default branches on 2026-10-14. PowerShell fast-forwarded to upstream. Windows Terminal and vcpkg merged upstream while retaining their Aphrody histories. Roslyn was forked at the current upstream head. Fluent UI was already current with its Bun migration patch.
 
-Review the upstream diff, dependencies, licenses, and native Windows build and
-test requirements before updating these snapshots or wiring them into a Bun
-distribution. Keep each component's license and notices with its source. Do
-not claim integration, replacement, compatibility, or Windows qualification
-until those behaviors pass their own gates.
+These are source/build inputs, not linked Bun components. PowerShell and Windows Terminal remain separate applications; Roslyn remains a separate LSP process; vcpkg remains a separate native dependency tool. The opt-in distribution boundary is `@aphrody/bun-windows-suite`, and builds route through `scripts/aphrody/windows-suite.ts`.
+
+Vendoring does not by itself prove shell or terminal compatibility. PowerShell behavior, ConPTY/VT behavior, Windows Terminal builds and each optional payload retain separate gates.

@@ -7,3 +7,15 @@
 [submodule "vendor/fluentui"]
 	path = vendor/fluentui
 	url = https://github.com/aphrody-labs/fluentui.git
+[submodule "vendor/vcpkg"]
+	path = vendor/vcpkg
+	url = https://github.com/aphrody-labs/vcpkg.git
+[submodule "vendor/powershell"]
+	path = vendor/powershell
+	url = https://github.com/aphrody-labs/PowerShell.git
+[submodule "vendor/windows-terminal"]
+	path = vendor/windows-terminal
+	url = https://github.com/aphrody-labs/terminal.git
+[submodule "vendor/roslyn"]
+	path = vendor/roslyn
+	url = https://github.com/aphrody-labs/roslyn.git

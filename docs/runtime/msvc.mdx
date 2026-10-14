@@ -18,6 +18,7 @@ bun msvc info --toolset 14.44    # everything as JSON, for the 14.44 toolset
 bun msvc which cl clang-cl       # C:\...\VC\Tools\MSVC\14.44.35207\bin\Hostx64\x64\cl.exe
 bun msvc env --format pwsh       # the vcvarsall environment
 bun msvc exec -- cl /nologo main.c
+bun msvc vcpkg install --triplet x64-windows
 bun msvc sync                    # caches env.json, env.cmd, env.ps1, env.sh until the toolchain changes
 bun msvc setup --dry-run         # what the Visual Studio Installer (or winget) would run
 bun msvc msi                     # orphaned MSI products that make the installer fail (1714, 1612)
@@ -31,6 +32,7 @@ bun msvc msi                     # orphaned MSI products that make the installer
 | `env [--format <f>]`       | `json` (default, also `--json`), `pwsh`, `cmd`, `sh` (MSYS2/Git Bash, `PATH` in `/c/...` form), `github`                |
 | `which <tool>...`          | Absolute path of `cl`, `link`, `lib`, `dumpbin`, `ml64`, `rc`, `midl`, `mt`, `signtool`, `clang-cl`, `cmake`, `ninja`, ... |
 | `exec [--] <tool> [args]`  | Runs the tool with the computed environment and exits with its exit code                                                 |
+| `vcpkg [args...]`           | Runs the pinned `vendor/vcpkg` checkout with MSVC, the target triplet, CMake toolchain and Bun binary cache              |
 | `sync [--check] [--force]` | Writes the environment cache and prints its directory. `--check` exits with `1` when the cache is missing or stale       |
 | `setup`                    | Installs or completes the C++ tools, the Windows SDK and the requested toolset                                           |
 | `msi [--fix]`              | Lists the Visual Studio and Windows SDK MSI products whose cached package is gone, and removes their registration        |
@@ -70,6 +72,18 @@ In GitHub Actions, `--format github` appends to `$GITHUB_ENV`:
 ```yaml
 - run: bun msvc env --arch x64 --format github >> $env:GITHUB_ENV
 ```
+
+### vcpkg
+
+`bun msvc vcpkg` resolves the same MSVC/SDK environment as `exec`, then runs the pinned `vendor/vcpkg` checkout (or `VCPKG_ROOT`). It maps the selected Bun target to the matching Windows triplet, exports `CMAKE_TOOLCHAIN_FILE`, and reuses `%LOCALAPPDATA%\bun\vcpkg\archives` as a read/write binary cache. Bootstrap the checked-out vcpkg executable once before the first command.
+
+```sh terminal icon="terminal"
+vendor\vcpkg\bootstrap-vcpkg.bat -disableMetrics
+bun msvc vcpkg install --triplet x64-windows
+bun msvc vcpkg install --x-manifest-root .
+```
+
+The environment is also suitable for Rust crates whose build scripts use `vcpkg`: `VCPKG_ROOT`, `VCPKG_DEFAULT_TRIPLET`, `VCPKG_DEFAULT_HOST_TRIPLET` and the selected MSVC variables are present in the vcpkg process and its children.
 
 ### `sync`
 
