@@ -6,8 +6,13 @@ const root = new URL("../..", import.meta.url).pathname.replace(/^\/(.:)/, "$1")
 const apply = process.argv.includes("--apply");
 const clean = process.argv.includes("--clean");
 
-async function run(label: string, args: string[]) {
-  const proc = Bun.spawn(args, { cwd: root, stdout: "inherit", stderr: "inherit", env: process.env });
+async function run(label: string, args: string[], quiet = false) {
+  const proc = Bun.spawn(args, {
+    cwd: root,
+    stdout: quiet ? "ignore" : "inherit",
+    stderr: "inherit",
+    env: process.env,
+  });
   const code = await proc.exited;
   if (code !== 0) throw new Error(`${label} failed with exit ${code}`);
 }
@@ -20,15 +25,19 @@ if (apply) {
   await run("Cargo crate update", ["bun", "scripts/build/rust/cargo-serial.ts", "--msvc", "update", "--workspace"]);
 } else {
   await run("Bun lock verification", ["bun", "install", "--frozen-lockfile"]);
-  await run("Cargo lock verification", [
-    "bun",
-    "scripts/build/rust/cargo-serial.ts",
-    "--msvc",
-    "metadata",
-    "--locked",
-    "--no-deps",
-    "--format-version=1",
-  ]);
+  await run(
+    "Cargo lock verification",
+    [
+      "bun",
+      "scripts/build/rust/cargo-serial.ts",
+      "--msvc",
+      "metadata",
+      "--locked",
+      "--no-deps",
+      "--format-version=1",
+    ],
+    true,
+  );
 }
 
 if (clean) {
