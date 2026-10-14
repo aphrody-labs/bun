@@ -1,5 +1,8 @@
 <Project>
   <PropertyGroup>
+    <!-- NativeAOT's host/target guard reads OS from the process environment. Some native
+         launchers omit that legacy variable, so derive the Windows host from MSBuild itself. -->
+    <OS Condition="'$(OS)' == '' AND $([MSBuild]::IsOsPlatform('Windows'))">Windows_NT</OS>
     <IsDotNet10SdkAvailable Condition="$([MSBuild]::VersionGreaterThanOrEquals('$(MSBuildVersion)', '17.15'))">true</IsDotNet10SdkAvailable>
     <AotTargetFramework Condition="'$(IsDotNet10SdkAvailable)' != 'true'">net9.0</AotTargetFramework>
     <AotTargetFramework Condition="'$(IsDotNet10SdkAvailable)' == 'true'">net10.0</AotTargetFramework>

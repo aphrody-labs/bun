@@ -86,6 +86,10 @@ describe.skipIf(!packed)("CLR hosted in Bun (run `bun run build` first)", () => 
     Interop = loadAssembly(assembly).Interop;
   }, 120_000);
 
+  test("loads an assembly through Bun's native default load context", () => {
+    expect(loadNativeAssembly(assembly)).toBeUndefined();
+  });
+
   test("static methods", () => {
     expect(Interop.Calc.Add(20, 22)).toBe(42);
   });
