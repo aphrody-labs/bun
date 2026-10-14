@@ -20,6 +20,12 @@
  * @category Windows
  */
 declare module "bun:winrt" {
+  /** A WinRT asynchronous operation projected as a Promise with its native IAsyncInfo cancellation. */
+  interface WinRTPromise<T> extends Promise<T> {
+    /** Requests cancellation through `IAsyncInfo.Cancel`; completion still settles this Promise. */
+    cancel(): void;
+  }
+
   /** A wrapped WinRT interface pointer; its reference is released when the wrapper is collected. */
   interface WinRTObject {
     readonly ptr: number;

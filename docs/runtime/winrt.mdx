@@ -40,11 +40,13 @@ A failing `HRESULT` throws an error with code `ERR_WINRT_HRESULT`. Objects relea
 
 ## Async operations
 
-Methods that return `IAsyncAction` or `IAsyncOperation<T>` return a Promise. Windows calls the completion handler on a thread pool thread. The handler is a native COM object, so the result is read on the JavaScript thread.
+Methods that return `IAsyncAction`, `IAsyncOperation<T>`, or a runtime class whose default interface is one of those async interfaces return a Promise. Windows calls the completion handler on a thread pool thread. The handler is a native COM object, so the result is read on the JavaScript thread. The Promise also has a `cancel()` method that requests cancellation through the operation's `IAsyncInfo` interface; it still settles only when WinRT reports completion.
 
 ```ts
 const { StorageFolder } = winrt.namespace("Windows.Storage");
-const folder = await StorageFolder.GetFolderFromPathAsync("C:\Windows");
+const operation = StorageFolder.GetFolderFromPathAsync("C:\\Windows");
+// operation.cancel(); // optional: asks the native WinRT operation to cancel
+const folder = await operation;
 for (const file of await folder.GetFilesAsyncOverloadDefaultOptionsStartAndCount()) {
   console.log(file.Name);
 }

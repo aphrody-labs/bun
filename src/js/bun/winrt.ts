@@ -50,6 +50,15 @@ function check(hr, what) {
 }
 
 function guid(text) {
+  if (
+    typeof text !== "string" ||
+    !/^\{?[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\}?$/i.test(text)
+  ) {
+    throw new TypeError(`invalid WinRT GUID: ${text}`);
+  }
+  if ((text.startsWith("{") && !text.endsWith("}")) || (!text.startsWith("{") && text.endsWith("}"))) {
+    throw new TypeError(`invalid WinRT GUID: ${text}`);
+  }
   const hex = text.replace(/[{}-]/g, "");
   const bytes = new Uint8Array(16);
   const view = new DataView(bytes.buffer);
@@ -126,6 +135,13 @@ function readOut(view, kind, type) {
     case "object": {
       const object = Number(view.getBigUint64(0, true));
       if (!object) return null;
+      if (kind === "class" && typeof type === "string") {
+        ensureType(type);
+        const defaultInterface = registry.classes.get(type)?.defaultInterface;
+        if (ASYNC[Array.isArray(defaultInterface) ? defaultInterface[0] : defaultInterface]) {
+          return asyncPromise(object, defaultInterface);
+        }
+      }
       if (ASYNC[Array.isArray(type) ? type[0] : type]) return asyncPromise(object, type);
       if (Array.isArray(type) && (type[0] === "IVector" || type[0] === "IVectorView") && type.length === 2) {
         const interfaceName = vectorInterface(type[1], type[0] === "IVectorView");
@@ -366,6 +382,7 @@ const ASYNC = {
 };
 const ASYNC_CANCELED = 2;
 const ASYNC_ERROR = 3;
+const IID_IASYNCINFO = "00000036-0000-0000-c000-000000000046";
 
 function asyncPromise(object, type) {
   const generic = Array.isArray(type);
@@ -375,6 +392,17 @@ function asyncPromise(object, type) {
   const { promise, resolve, reject } = Promise.withResolvers();
   const win32 = require("internal/win32");
   let settled = false;
+  Object.defineProperty(promise, "cancel", {
+    value() {
+      if (settled) return;
+      const info = queryInterface(object, IID_IASYNCINFO);
+      try {
+        check(vfunc(info, 9, [])(info), "IAsyncInfo.Cancel");
+      } finally {
+        vfunc(info, 2, [])(info);
+      }
+    },
+  });
   const handler = win32.com.delegate(
     handlerIid,
     (_info, status) => {

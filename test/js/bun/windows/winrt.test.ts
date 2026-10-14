@@ -19,6 +19,13 @@ test("WinRT metadata projects enum and interface identities without OS activatio
   expect(Object.isFrozen(projection.interfaces)).toBe(true);
 });
 
+test("validates WinRT GUIDs before crossing the ABI", () => {
+  expect(winrt.guid("00112233-4455-6677-8899-aabbccddeeff")).toHaveLength(16);
+  expect(winrt.guid("{00112233-4455-6677-8899-AABBCCDDEEFF}")).toHaveLength(16);
+  expect(() => winrt.guid("00112233-4455-6677-8899-aabbccddeezz")).toThrow(TypeError);
+  expect(() => winrt.guid("{00112233-4455-6677-8899-aabbccddeeff")).toThrow(TypeError);
+});
+
 describe.skipIf(!isWindows)("bun:winrt", () => {
   test.each(["uninitialized", "mta", "sta"] as const)(
     "toast releases its WinRT apartment after invalid XML (%s)",
@@ -93,7 +100,10 @@ describe.skipIf(!isWindows)("bun:winrt", () => {
   test("IAsyncOperation and IAsyncAction resolve as Promises, IVectorView is iterable", async () => {
     using dir = tempDir("bun-winrt", { "a.txt": "a", "b.txt": "b" });
     const { StorageFolder } = winrt.namespace("Windows.Storage");
-    const folder = await StorageFolder.GetFolderFromPathAsync(String(dir));
+    const operation = StorageFolder.GetFolderFromPathAsync(String(dir));
+    expect(typeof operation.cancel).toBe("function");
+    const folder = await operation;
+    expect(operation.cancel()).toBeUndefined();
     expect(folder.Path.toLowerCase()).toBe(String(dir).toLowerCase());
 
     const files = await folder.GetFilesAsyncOverloadDefaultOptionsStartAndCount();
@@ -101,6 +111,15 @@ describe.skipIf(!isWindows)("bun:winrt", () => {
     expect([...files].map((file) => file.Name).sort()).toEqual(["a.txt", "b.txt"]);
 
     const file = await folder.GetFileAsync("a.txt");
+    const stream = await file.OpenReadAsync();
+    const { DataReader } = winrt.namespace("Windows.Storage.Streams");
+    const input = stream.as("Windows.Storage.Streams.IRandomAccessStream").GetInputStreamAt(0n);
+    const reader = DataReader.CreateDataReader(input);
+    const load = reader.LoadAsync(1);
+    expect(typeof load.cancel).toBe("function");
+    expect(await load).toBe(1);
+    reader.Close();
+
     expect(await file.DeleteAsyncOverloadDefaultOptions()).toBeUndefined();
     expect(existsSync(join(String(dir), "a.txt"))).toBe(false);
 
