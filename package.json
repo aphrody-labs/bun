@@ -4,6 +4,7 @@
   "private": true,
   "repository": "github:aphrody-labs/bun",
   "workspaces": [
+    "./packages/bun-runtime-sdk",
     "./packages/bun-google",
     "./packages/bun-google/aphrody/packages/google",
     "./packages/bun-tauri",
@@ -113,6 +114,7 @@
     "media:stage": "bun scripts/aphrody/media-stage.ts"
   },
   "devDependencies": {
+    "@aphrody/bun-runtime-sdk": "workspace:*",
     "@lezer/common": "1.5.2",
     "@lezer/cpp": "1.1.6",
     "@types/react": "18.3.31",

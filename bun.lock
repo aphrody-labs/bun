@@ -5,6 +5,7 @@
     "": {
       "name": "bun",
       "devDependencies": {
+        "@aphrody/bun-runtime-sdk": "workspace:*",
         "@lezer/common": "1.5.2",
         "@lezer/cpp": "1.1.6",
         "@types/react": "18.3.31",
@@ -130,6 +131,10 @@
       "optionalPeers": [
         "postcss",
       ],
+    },
+    "packages/bun-runtime-sdk": {
+      "name": "@aphrody/bun-runtime-sdk",
+      "version": "1.4.6",
     },
     "packages/bun-tauri": {
       "name": "@aphrody/tauri",
@@ -301,6 +306,8 @@
     "@aphrody/bun-plugin-neon": ["@aphrody/bun-plugin-neon@workspace:packages/bun-plugin-neon"],
 
     "@aphrody/bun-plugin-tailwind": ["@aphrody/bun-plugin-tailwind@workspace:packages/bun-plugin-tailwind"],
+
+    "@aphrody/bun-runtime-sdk": ["@aphrody/bun-runtime-sdk@workspace:packages/bun-runtime-sdk"],
 
     "@aphrody/bun-types": ["@aphrody/bun-types@workspace:packages/bun-types"],
 
