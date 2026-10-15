@@ -1,6 +1,6 @@
 import { mkdir } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
-import { sharpNativePlugin } from "./sharp-native-plugin";
+import { resolveNativeCompositionTarget, sharpNativePlugin } from "./sharp-native-plugin";
 import { hyperframesRuntimeAssetsPlugin } from "./runtime-assets-plugin";
 import { remotionSourcePlugin } from "../../remotion/.aphrody/standalone-build";
 import { moduleManifest } from "../../scripts/modules";
@@ -18,7 +18,9 @@ export async function prepareHyperframesStandalone(): Promise<void> {
   ];
   for (const script of generators) {
     const process = Bun.spawn([Bun.which("bun") ?? "bun", join("scripts", script)], {
-      cwd: join(hyperframesRoot, "core"), stdout: "inherit", stderr: "inherit",
+      cwd: join(hyperframesRoot, "core"),
+      stdout: "inherit",
+      stderr: "inherit",
     });
     const code = await process.exited;
     if (code !== 0) throw new Error(`Hyperframes core ${script} failed with exit ${code}`);
@@ -36,7 +38,11 @@ export async function hyperframesStandaloneConfig(options: {
   return {
     entrypoints: [options.entrypoint ?? hyperframesCliEntry],
     target: "bun",
-    compile: { ...(options.target ? { target: options.target } : {}), outfile: resolve(options.outfile), executablePath: process.execPath },
+    compile: {
+      ...(options.target ? { target: options.target } : {}),
+      outfile: resolve(options.outfile),
+      executablePath: process.execPath,
+    },
     define: {
       __CLI_VERSION__: JSON.stringify(manifest.version),
       __PRODUCER_VERSION__: JSON.stringify(manifest.version),
@@ -55,24 +61,46 @@ export async function buildHyperframesStandalone(options: {
   target?: StandaloneTarget;
   entrypoint?: string;
 }): Promise<void> {
-  if (options.target && !options.target.startsWith("bun-windows-x64")) {
-    throw new Error("This standalone Sharp packaging is qualified only for Windows x64 targets");
+  const target = resolveNativeCompositionTarget();
+  if (
+    options.target &&
+    options.target.replace(/-(?:baseline|modern)$/, "") !== target.compileTarget
+  ) {
+    throw new Error("Standalone composition assets must match the native compiler host ABI");
   }
   await prepareHyperframesStandalone();
   const bootstrap = join(dirname(resolve(options.outfile)), "hyperframes-standalone-entry.ts");
-  await Bun.write(bootstrap, `import {join} from "node:path";
+  await Bun.write(
+    bootstrap,
+    `import {join} from "node:path";
 if(!process.env.HYPERFRAMES_FFMPEG_PATH || !process.env.HYPERFRAMES_FFPROBE_PATH){
-  const {dir}=await import("@remotion/compositor-win32-x64-msvc");
-  process.env.HYPERFRAMES_FFMPEG_PATH ??=join(dir,"ffmpeg.exe");
-  process.env.HYPERFRAMES_FFPROBE_PATH ??=join(dir,"ffprobe.exe");
+  const {dir}=await import(${JSON.stringify(target.compositorPackage)});
+  process.env.HYPERFRAMES_FFMPEG_PATH ??=join(dir,${JSON.stringify("ffmpeg" + target.executableSuffix)});
+  process.env.HYPERFRAMES_FFPROBE_PATH ??=join(dir,${JSON.stringify("ffprobe" + target.executableSuffix)});
 }
 await import(${JSON.stringify(options.entrypoint ?? hyperframesCliEntry)});
-`);
+`,
+  );
   const config = await hyperframesStandaloneConfig({ ...options, entrypoint: bootstrap });
-  const result = await Bun.build({ ...config, plugins: [await remotionSourcePlugin(), await sharpNativePlugin(), hyperframesRuntimeAssetsPlugin()] });
-  if (!result.success) throw new AggregateError(result.logs, "Complete Hyperframes CLI compilation failed");
-  if (!(await Bun.file(resolve(options.outfile)).exists())) throw new Error("Compiler did not write the requested executable");
-  console.log(JSON.stringify({ outfile: resolve(options.outfile), runtime: Bun.version, entrypoint: options.entrypoint ?? hyperframesCliEntry }));
+  const result = await Bun.build({
+    ...config,
+    plugins: [
+      await remotionSourcePlugin(),
+      await sharpNativePlugin(),
+      hyperframesRuntimeAssetsPlugin(),
+    ],
+  });
+  if (!result.success)
+    throw new AggregateError(result.logs, "Complete Hyperframes CLI compilation failed");
+  if (!(await Bun.file(resolve(options.outfile)).exists()))
+    throw new Error("Compiler did not write the requested executable");
+  console.log(
+    JSON.stringify({
+      outfile: resolve(options.outfile),
+      runtime: Bun.version,
+      entrypoint: options.entrypoint ?? hyperframesCliEntry,
+    }),
+  );
 }
 
 if (import.meta.main) {

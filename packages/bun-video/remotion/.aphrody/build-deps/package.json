@@ -38,6 +38,10 @@
     "onnxruntime-node": "1.24.3"
   },
   "optionalDependencies": {
+    "@remotion/compositor-linux-x64-gnu": "4.0.534",
+    "@remotion/compositor-linux-x64-musl": "4.0.534",
+    "@remotion/compositor-linux-arm64-gnu": "4.0.534",
+    "@remotion/compositor-linux-arm64-musl": "4.0.534",
     "@remotion/compositor-win32-x64-msvc": "4.0.534"
   }
 }

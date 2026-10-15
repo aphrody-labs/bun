@@ -3,6 +3,7 @@ import { join, resolve } from "node:path";
 import type { BunPlugin } from "bun";
 import { remotionModuleAssetsPlugin } from "./module-assets";
 import { familyModules, moduleManifest } from "../../scripts/modules";
+import { resolveNativeCompositionTarget } from "../../hyperframes/aphrody/sharp-native-plugin";
 
 export const remotionRoot = resolve(import.meta.dir, "..");
 
@@ -10,10 +11,8 @@ export const remotionRoot = resolve(import.meta.dir, "..");
 export async function remotionSourcePlugin(): Promise<BunPlugin> {
   const renderer = await moduleManifest(remotionRoot, "renderer");
   if (!renderer) throw new Error("The absorbed Remotion renderer manifest is absent");
-  const compositorName =
-    process.platform === "win32" && process.arch === "x64"
-      ? "@remotion/compositor-win32-x64-msvc"
-      : null;
+  const target = resolveNativeCompositionTarget();
+  const compositorName = target.compositorPackage;
   let compositorRoot = process.env.BUN_VIDEO_COMPOSITOR_DIR ?? null;
   if (compositorName && !compositorRoot) {
     try {
@@ -80,14 +79,15 @@ export async function remotionSourcePlugin(): Promise<BunPlugin> {
             "Install the pinned optional compositor package or set BUN_VIDEO_COMPOSITOR_DIR before compilation",
           );
         }
-        const files = readdirSync(compositorRoot).filter((name) => /\.(exe|dll)$/.test(name));
-        if (
-          !files.includes("remotion.exe") ||
-          !files.includes("ffmpeg.exe") ||
-          !files.includes("ffprobe.exe")
-        ) {
+        const executables = ["remotion", "ffmpeg", "ffprobe"].map(
+          name => name + target.executableSuffix,
+        );
+        const files = readdirSync(compositorRoot).filter(
+          name => executables.includes(name) || /\.(exe|dll|so(?:\.\d+)*)$/.test(name),
+        );
+        if (executables.some(name => !files.includes(name))) {
           throw new Error(
-            "The compositor asset directory must contain remotion.exe, ffmpeg.exe and ffprobe.exe",
+            "The compositor asset directory must contain its native remotion, ffmpeg and ffprobe executables",
           );
         }
         const imports = files
@@ -99,7 +99,7 @@ export async function remotionSourcePlugin(): Promise<BunPlugin> {
         const writes = files
           .map(
             (name, index) =>
-              `writeFileSync(join(dir, ${JSON.stringify(name)}), readFileSync(asset${index}));`,
+              `writeFileSync(join(dir, ${JSON.stringify(name)}), readFileSync(asset${index}), {mode:${executables.includes(name) ? "0o700" : "0o600"}});`,
           )
           .join("\n");
         return {
