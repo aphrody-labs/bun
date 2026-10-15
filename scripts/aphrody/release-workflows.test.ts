@@ -154,3 +154,42 @@ test("runtime candidates keep native target selection and mandatory qualificatio
   ])
     expect(steps.find(step => step.name === name)!.if).toContain("needs.plan.outputs.component == 'media'");
 });
+
+test("main runtime delivery derives stable version guards from source and artifact identities", async () => {
+  const jobs = (await workflow("aphrody-main-runtime")).jobs;
+  const build = jobs.build!.steps!.find(step => step.name === "Build exact main runtime")!.run!;
+  const publish = jobs.publish!.steps!.find(step => step.name === "Verify, publish and expose checksums")!.run!;
+  expect(build).toContain('Bun.file("package.json")');
+  expect(publish).toContain('expected_version="$(./bun-linux-x64 --version)"');
+  for (const run of [build, publish]) {
+    expect(run).not.toContain("1.4.4+");
+    expect(run).toContain('"${BASH_REMATCH[1]}" != "$expected_version"');
+    expect(run).toContain('suffix="${BASH_REMATCH[2]}"');
+    expect(run).toContain('case "$GITHUB_SHA" in "$suffix"*)');
+    expect(run).toContain("[a-f0-9]{7,40}");
+  }
+});
+
+test("main runtime updater accepts stable version changes while preserving source and format bounds", async () => {
+  const owner = await Bun.file(new URL("./deploy/sync-main-runtime.ts", import.meta.url)).text();
+  const expression = /^const revisionSuffix = (.+);$/m.exec(owner)?.[1];
+  expect(expression).toBeString();
+  const suffix = new Function("revision", "return (" + expression + ");") as (revision: string) => string;
+  const source = "a".repeat(40);
+  for (const version of ["1.4.4", "1.4.5", "1.5.0"])
+    for (const length of [7, 12, 40])
+      expect(suffix(version + "+" + source.slice(0, length))).toBe(source.slice(0, length));
+  for (const revision of [
+    "1.4.5",
+    "1.4.5+",
+    "1.4.5+abc",
+    "1.4.5+" + source + "a",
+    "1.4.5-debug+aaaaaaaa",
+    "1.4.5-canary.1+aaaaaaaa",
+    "1.4.5+ABCDEF12",
+  ])
+    expect(suffix(revision)).toBe("");
+  expect(source.startsWith(suffix("1.4.5+bbbbbbbb"))).toBe(false);
+  expect(owner).toContain("!release.target_commitish.startsWith(revisionSuffix)");
+  expect(owner).toContain("probe.exitCode !== 0 || !revisionSuffix");
+});

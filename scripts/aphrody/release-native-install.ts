@@ -99,7 +99,7 @@ export async function qualifyNativeInstall(input: {
         env: { ...env, PATH: `${join(installedRoot, "bin")}${delimiter}${process.env.PATH ?? ""}` },
       }),
     );
-    assertMediaRuntimeIdentity(pathResult, input.source, input.target);
+    assertMediaRuntimeIdentity(pathResult, input.source, input.target, input.version);
     if (
       (windows ? resolve(pathResult.path).toLowerCase() : resolve(pathResult.path)) !==
       (windows ? resolve(installed).toLowerCase() : resolve(installed))
@@ -115,7 +115,7 @@ export async function qualifyNativeInstall(input: {
     const identity = JSON.parse(
       await input.run("native-update-identity", [installed, "--no-env-file", "-e", probe], { cwd: installedRoot, env }),
     );
-    assertMediaRuntimeIdentity(identity, input.source, input.target);
+    assertMediaRuntimeIdentity(identity, input.source, input.target, input.version);
     const after = await stat(installed);
     if (before.ino !== 0 && before.ino === after.ino)
       throw new Error("Native local updater retained the original installation file");
@@ -205,7 +205,7 @@ export async function qualifyNativeWinget(input: {
         "console.log(JSON.stringify({version:Bun.version,revision:Bun.revision,platform:process.platform,arch:process.arch}))",
       ]),
     );
-    assertMediaRuntimeIdentity(identity, input.source, input.target);
+    assertMediaRuntimeIdentity(identity, input.source, input.target, input.version);
   } finally {
     try {
       if (attempted)

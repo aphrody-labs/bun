@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import { tempDir } from "../../test/harness";
+import runtimeManifest from "../../package.json";
 import {
   assertMediaRuntimeIdentity,
   assertMediaStableVersion,
@@ -15,18 +16,27 @@ import {
 
 test("media runtime identity rejects canaries, foreign targets and changed source", () => {
   const source = "a".repeat(40);
-  const identity = { version: "1.4.4", revision: source, platform: "win32", arch: "x64" };
+  const version = runtimeManifest.version;
+  const identity = { version, revision: source, platform: "win32", arch: "x64" };
   assertMediaRuntimeIdentity(identity, source);
   for (const changed of [
-    { version: "1.4.4-canary.1" },
+    { version: `${version}-canary.1` },
+    { version: "0.0.0" },
     { revision: "b".repeat(40) },
     { platform: "linux" },
     { arch: "arm64" },
   ])
     expect(() => assertMediaRuntimeIdentity({ ...identity, ...changed }, source)).toThrow("exact source revision");
   expect(() => assertMediaRuntimeIdentity(identity, "main")).toThrow("exact source revision");
-  assertMediaStableVersion("1.4.4\n");
-  expect(() => assertMediaStableVersion("1.4.4-canary.1\n")).toThrow("stable 1.4.4");
+  assertMediaStableVersion(`${version}\n`);
+  expect(() => assertMediaStableVersion(`${version}-canary.1\n`)).toThrow(`stable ${version}`);
+  expect(() => assertMediaStableVersion("0.0.0\n")).toThrow(`stable ${version}`);
+  const prior = { ...identity, version: "1.4.4" };
+  assertMediaRuntimeIdentity(prior, source, "windows-x64", "1.4.4");
+  expect(() => assertMediaRuntimeIdentity(identity, source, "windows-x64", "0.0.0")).toThrow("exact source revision");
+  expect(() => assertMediaRuntimeIdentity(identity, source, "windows-x64", `${version}-canary.1`)).toThrow(
+    "exact source revision",
+  );
 });
 
 test("release inventory rejects protected stores and escaping archive names", () => {
@@ -249,7 +259,11 @@ test("native identity, SDK directory and extension names cover every release ABI
     ["windows-aarch64", "windows-arm64", "win32", "arm64"],
   ] as const) {
     expect(mediaReleaseTarget(name!).sdkTarget).toBe(sdk);
-    assertMediaRuntimeIdentity({ version: "1.4.4", revision: source, platform: platform!, arch: arch! }, source, name);
+    assertMediaRuntimeIdentity(
+      { version: runtimeManifest.version, revision: source, platform: platform!, arch: arch! },
+      source,
+      name,
+    );
   }
 });
 

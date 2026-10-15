@@ -9,6 +9,7 @@ import { mediaSDKHostTarget } from "../../packages/bun-video/src/sdk-platform";
 import { verifyArtifactAsync } from "../../packages/bun-runtime-sdk/src/artifact";
 import type { HostPlatform, HostArch } from "../../packages/bun-runtime-sdk/src/target";
 import { readNginxReleaseArtifact } from "./release-native-nginx";
+import runtimeManifest from "../../package.json";
 
 export interface MediaReleaseInput {
   target?: string;
@@ -152,24 +153,31 @@ export async function planMediaRelease(input: MediaReleasePlanInput) {
   };
 }
 
-const version = "1.4.4";
+const version = runtimeManifest.version;
 const triplet = "bun-windows-x64-full";
 const maximumFileBytes = 2 * 1024 * 1024 * 1024;
 
 export function assertMediaStableVersion(output: string) {
-  if (output.trim() !== version) throw new Error("Media release requires the stable 1.4.4 embedded version");
+  if (!/^\d+\.\d+\.\d+$/.test(version) || output.trim() !== version)
+    throw new Error(`Media release requires the stable ${version} embedded version`);
 }
 
-export function assertMediaRuntimeIdentity(identity: MediaRuntimeIdentity, source: string, targetName = "windows-x64") {
+export function assertMediaRuntimeIdentity(
+  identity: MediaRuntimeIdentity,
+  source: string,
+  targetName = "windows-x64",
+  expectedVersion = version,
+) {
   const target = mediaReleaseTarget(targetName);
   if (
     !/^[a-f0-9]{40}$/.test(source) ||
-    identity.version !== version ||
+    !/^\d+\.\d+\.\d+$/.test(expectedVersion) ||
+    identity.version !== expectedVersion ||
     identity.revision !== source ||
     identity.platform !== target.platform ||
     identity.arch !== target.runtimeArch
   )
-    throw new Error(`Media release needs native ${targetName} Bun 1.4.4 at the exact source revision`);
+    throw new Error(`Media release needs native ${targetName} Bun ${expectedVersion} at the exact source revision`);
 }
 
 export function assertPublicMediaPath(path: string) {

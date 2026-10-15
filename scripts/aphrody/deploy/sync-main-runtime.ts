@@ -58,7 +58,7 @@ await Bun.write(temporary, bytes);
 if (process.platform !== "win32") chmodSync(temporary, 0o755);
 const probe = Bun.spawnSync([temporary, "--revision"], { stdout: "pipe", stderr: "pipe", windowsHide: true });
 const revision = probe.stdout.toString().trim();
-const revisionSuffix = revision.startsWith("1.4.4+") ? revision.slice("1.4.4+".length) : "";
+const revisionSuffix = /^\d+\.\d+\.\d+\+([a-f0-9]{7,40})$/.exec(revision)?.[1] ?? "";
 if (probe.exitCode !== 0 || !revisionSuffix || !release.target_commitish.startsWith(revisionSuffix)) {
   rmSync(temporary, { force: true });
   throw new Error("Downloaded runtime source identity differs");

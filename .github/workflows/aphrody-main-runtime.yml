@@ -76,7 +76,11 @@ jobs:
           bun scripts/build.ts --profile=release --lto=off --canary=off -j2
           "${{ matrix.executable }}" --version
           revision="$("${{ matrix.executable }}" --revision)"
-          suffix="${revision#1.4.4+}"
+          expected_version="$(bun -e 'console.log((await Bun.file("package.json").json()).version)')"
+          if [[ ! "$revision" =~ ^([0-9]+\.[0-9]+\.[0-9]+)\+([a-f0-9]{7,40})$ ]] || [ "${BASH_REMATCH[1]}" != "$expected_version" ]; then
+            echo "runtime version or revision format differs: $revision"; exit 1
+          fi
+          suffix="${BASH_REMATCH[2]}"
           case "$GITHUB_SHA" in "$suffix"*) ;; *) echo "revision differs: $revision"; exit 1;; esac
           mkdir -p "$RUNNER_TEMP/main-runtime"
           cp "${{ matrix.executable }}" "$RUNNER_TEMP/main-runtime/${{ matrix.asset }}"
@@ -106,7 +110,11 @@ jobs:
           cd dist
           chmod +x bun-linux-x64
           revision="$(./bun-linux-x64 --revision)"
-          suffix="${revision#1.4.4+}"
+          expected_version="$(./bun-linux-x64 --version)"
+          if [[ ! "$revision" =~ ^([0-9]+\.[0-9]+\.[0-9]+)\+([a-f0-9]{7,40})$ ]] || [ "${BASH_REMATCH[1]}" != "$expected_version" ]; then
+            echo "runtime version or revision format differs: $revision"; exit 1
+          fi
+          suffix="${BASH_REMATCH[2]}"
           case "$GITHUB_SHA" in "$suffix"*) ;; *) echo "revision differs: $revision"; exit 1;; esac
           sha256sum bun-linux-x64 bun-windows-x64.exe > SHA256SUMS.txt
           gh release create "$TAG" -R "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \

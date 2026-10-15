@@ -549,7 +549,7 @@ async function packageNativeRuntime(
       "console.log(JSON.stringify({version:Bun.version,revision:Bun.revision,platform:process.platform,arch:process.arch,sourceUrl:process.release.sourceUrl}))",
     ]),
   );
-  assertMediaRuntimeIdentity(stagedIdentity, input.source, input.target);
+  assertMediaRuntimeIdentity(stagedIdentity, input.source, input.target, input.version);
   if (!Bun.deepEquals(stagedIdentity, provenance)) throw new Error("Staged runtime provenance changed");
   const presence = await gate("runtime-features", [
     runtime,
@@ -693,7 +693,7 @@ export async function prepareNativeRuntimeCore(
       ])
     ).stdout,
   );
-  assertMediaRuntimeIdentity(identity, input.source, input.target);
+  assertMediaRuntimeIdentity(identity, input.source, input.target, input.version);
   return { artifact, runtime, identity, buildDir };
 }
 
