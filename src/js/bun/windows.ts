@@ -1087,11 +1087,11 @@ function themeGet() {
   const system = readDword(PERSONALIZE, "SystemUsesLightTheme");
   const colorPrevalence = readDword(PERSONALIZE, "ColorPrevalence");
   const palette = { __proto__: null };
-  const raw = registryGet(ACCENT, "AccentPalette");
-  if (raw !== null && raw.value instanceof Uint8Array && raw.value.length >= 28) {
+  const bytes = registryGet(ACCENT, "AccentPalette")?.value;
+  if (bytes instanceof Uint8Array && bytes.length >= 28) {
     for (let i = 0; i < accentNames.length; i++) {
       const o = i * 4;
-      palette[accentNames[i]] = hexColor(raw.value[o], raw.value[o + 1], raw.value[o + 2]);
+      palette[accentNames[i]] = hexColor(bytes[o], bytes[o + 1], bytes[o + 2]);
     }
   }
   let accent = palette.accent;
