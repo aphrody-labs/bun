@@ -51,6 +51,12 @@ import {
 import { checkNativeMsvcToolset, ensureWindowsSysroot } from "./winsysroot.ts";
 import { checkWorkarounds } from "./workarounds.ts";
 
+export function resolveEsbuildPath(repoRoot: string, hostOS: OS): string {
+  return hostOS === "windows"
+    ? resolve(repoRoot, "node_modules", "esbuild", "bin", "esbuild")
+    : resolve(repoRoot, "node_modules", ".bin", "esbuild");
+}
+
 /** The JavaScript tools: what the code generators run with, and all that `mode: "codegen"` looks for. */
 export function resolveJsToolchain(packageManager: PackageManager = "bun"): JsToolchain {
   if (process.versions.bun === undefined || packageManager !== "bun") {
@@ -67,8 +73,8 @@ export function resolveJsToolchain(packageManager: PackageManager = "bun"): JsTo
   // If not present, the first codegen build will fail with a clear error
   // (and the build itself runs the install first via the root install
   // stamp, so this path will exist by the time esbuild rules fire).
-  const windowsBin = "esbuild.exe";
-  const esbuild = resolve(repoRoot, "node_modules", ".bin", host.os === "windows" ? windowsBin : "esbuild");
+  // Windows bin shims can fail to remap after changing cwd; Bun runs the package CLI directly.
+  const esbuild = resolveEsbuildPath(repoRoot, host.os);
 
   const bun = findBun(host.os);
   const q = (p: string) => quote(p, host.os === "windows");

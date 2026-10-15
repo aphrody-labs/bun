@@ -73,7 +73,7 @@ function readPackageDeps(pkgDir: string): string[] {
   } catch (cause) {
     throw new BuildError(`Could not parse package.json`, { file: pkgPath, cause });
   }
-  const deps = { ...(pkg.dependencies ?? {}), ...(pkg.devDependencies ?? {}) };
+  const deps = { ...pkg.dependencies, ...pkg.devDependencies };
   const nodeModules = resolve(pkgDir, "node_modules");
   return Object.keys(deps).map(name => resolve(nodeModules, name));
 }
@@ -144,7 +144,7 @@ export function registerCodegenRules(n: Ninja, cfg: CodegenFields): void {
   // esbuild invocations. No restat — esbuild always touches outputs.
   // No pool — esbuild is fast and single-threaded per bundle.
   n.rule("esbuild", {
-    command: hostWin ? `cmd /c "cd /d $cwd && ${esbuild} $args"` : `cd $cwd && ${esbuild} $args`,
+    command: hostWin ? `cmd /c "cd /d $cwd && ${bun} --no-env-file ${esbuild} $args"` : `cd $cwd && ${esbuild} $args`,
     description: "esbuild $desc",
   });
 

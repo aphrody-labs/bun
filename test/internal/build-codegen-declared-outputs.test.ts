@@ -19,13 +19,14 @@
  * so its step is checked against those.
  */
 import { describe, expect, test } from "bun:test";
-import { bunExe, bunRun, tempDir } from "harness";
+import { bunEnv, bunExe, bunRun, tempDir } from "harness";
 import { readdirSync, writeFileSync } from "node:fs";
 import { isAbsolute, resolve } from "node:path";
 
 import { emitBindgen, emitBindgenV2, registerCodegenRules, type CodegenOutputs } from "../../scripts/build/codegen.ts";
 import { registerDirStamps } from "../../scripts/build/compile.ts";
 import { resolveConfig, type Config, type Toolchain } from "../../scripts/build/config.ts";
+import { resolveEsbuildPath } from "../../scripts/build/configure.ts";
 import { Ninja } from "../../scripts/build/ninja.ts";
 import { quote } from "../../scripts/build/shell.ts";
 import type { Sources } from "../../scripts/glob-sources.ts";
@@ -176,6 +177,55 @@ const probeFiles = ["GeneratedProbeEnum.cpp", "GeneratedProbeEnum.h", "Generated
 // tested; a debug build takes a few seconds to load one, more than the 5s
 // default allows for.
 const generatorTimeout = 60_000;
+
+test.each(["windows", "linux", "darwin"] as const)("%s esbuild codegen uses its host CLI contract", hostOS => {
+  using dir = tempDir("build-codegen-esbuild-path", {});
+  const { cfg } = configure(String(dir));
+  const cwd = resolve(String(dir), "source checkout");
+  const esbuild = resolveEsbuildPath(cwd, hostOS);
+  const bun = resolve(String(dir), "qualified bun", "bun.exe");
+  const n = new Ninja({ buildDir: cfg.buildDir });
+  const hostConfig = { ...cfg, cwd, host: { ...cfg.host, os: hostOS }, bun, esbuild };
+  registerDirStamps(n, hostConfig);
+  registerCodegenRules(n, hostConfig);
+  const windows = hostOS === "windows";
+  expect(esbuild).toBe(
+    windows
+      ? resolve(cwd, "node_modules", "esbuild", "bin", "esbuild")
+      : resolve(cwd, "node_modules", ".bin", "esbuild"),
+  );
+  const command = windows
+    ? `cmd /c "cd /d $cwd && ${quote(bun, true)} --no-env-file ${quote(esbuild, true)} $args"`
+    : `cd $cwd && ${quote(esbuild, false)} $args`;
+  expect(n.toString()).toContain(`rule esbuild\n  command = ${command}\n`);
+});
+
+test(
+  "esbuild package CLI bundles from outside the repository without a bin shim",
+  async () => {
+    using dir = tempDir("build-codegen-esbuild-cli", { "entry.ts": "export const answer: number = 6 * 7;\n" });
+    const cli = resolveEsbuildPath(resolve(import.meta.dirname, "../.."), "windows");
+    const output = resolve(String(dir), "bundle.mjs");
+    await using child = Bun.spawn(
+      [
+        bunExe(),
+        "--no-env-file",
+        cli,
+        "entry.ts",
+        `--outfile=${output}`,
+        "--bundle",
+        "--platform=node",
+        "--format=esm",
+      ],
+      { cwd: String(dir), env: bunEnv, stdout: "pipe", stderr: "pipe" },
+    );
+    const [stdout, stderr, code] = await Promise.all([child.stdout.text(), child.stderr.text(), child.exited]);
+    expect((await import(output)).answer, stderr).toBe(42);
+    expect(stdout).toBe("");
+    expect(code, stderr).toBe(0);
+  },
+  generatorTimeout,
+);
 
 describe("emitBindgenV2", () => {
   test(
