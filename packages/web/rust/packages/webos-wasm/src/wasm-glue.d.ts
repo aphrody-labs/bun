@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
-// Shape of the wasm-bindgen output of crates/web/webos-wasm (`--target web`), built by
-// scripts/build/rust/wasm-package.ts. `#webos-wasm-glue` maps to the generated wasm/aphrody_webos_wasm.js.
+// Shape of the wasm-bindgen output of ../../crates/webos-wasm (`--target web`), built by
+// this package's build:wasm script. `#webos-wasm-glue` maps to wasm/aphrody_webos_wasm.js.
 declare module "#webos-wasm-glue" {
   export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembly.Module;
   export type InitOptions = { module_or_path?: InitInput | Promise<InitInput> };
