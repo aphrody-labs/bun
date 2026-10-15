@@ -57,7 +57,7 @@ const OTHERS: &[clap::Param<clap::Help>] = &[
     clap::param!("--timing           Print load and check times"),
     clap::param!("--cwd <path>       Set the working directory"),
     clap::param!("-h, --help         Print this help menu"),
-    // Nothing is ever emitted. `--noEmit` is a compiler option like any other, which the driver sets last.
+    // Ordinary checks never emit; explicit declaration-only commands can write declarations.
     clap::param!("--no-emit"),
     clap::param!("<POS>..."),
 ];
@@ -293,8 +293,33 @@ fn run_quietly(
     provided: Provided,
     then: impl FnOnce(Report) -> Report,
 ) -> Report {
-    let request = request(cwd, project, paths, compiler_options, threads, progress);
-    bun_sema_driver::check_provided_then(&request, with_pages(cwd, provided), then)
+    let mut request = request(cwd, project, paths, compiler_options, threads, progress);
+    let errors = bun_threading::Guarded::new(Vec::new());
+    let emit = |path: &[u8], bytes: &[u8]| {
+        let native = bun_sema_driver::host::to_native(path);
+        let result = bun_sys::File::make_open(
+            native,
+            bun_sys::O::WRONLY | bun_sys::O::CREAT | bun_sys::O::TRUNC,
+            0o664,
+        )
+        .and_then(|file| file.write_all(bytes));
+        if let Err(error) = result {
+            errors
+                .lock()
+                .push(bun_sema_driver::declaration_write_error(path, error.name()));
+        }
+    };
+    if matches!(paths, Paths::Arguments(_))
+        && bun_sema_driver::tristate(compiler_options, b"emitDeclarationOnly") == Some(true)
+    {
+        request.declaration_file_emitted = Some(&emit);
+    }
+    bun_sema_driver::check_provided_then(&request, with_pages(cwd, provided), |mut report| {
+        report
+            .diagnostics
+            .extend(std::mem::take(&mut *errors.lock()));
+        then(report)
+    })
 }
 
 /// `provided`, with `Provided::scripts_of_page`.

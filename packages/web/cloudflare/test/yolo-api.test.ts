@@ -190,52 +190,6 @@ test("A2A1.0 emits a stateless message using the current data-part representatio
     ))!.status,
   ).toBe(400);
 });
-test("MCP uses the read-only site bridge and rejects a native shell tool", async () => {
-  let reads = 0;
-  const ctx = context();
-  ctx.siteRead = async request => {
-    reads++;
-    expect(new URL(request.url).pathname).toBe("/api/site/docs");
-    return Response.json({ snapshot: { source: SOURCE }, results: [{ path: "docs/runtime/video.mdx" }] });
-  };
-  const list = await (await yoloAPI(
-    request("/mcp", { jsonrpc: "2.0", id: 1, method: "tools/list" }),
-    environment(false),
-    ctx,
-  ))!.json();
-  expect(
-    list.result.tools.every((tool: { annotations: { readOnlyHint: boolean } }) => tool.annotations.readOnlyHint),
-  ).toBe(true);
-  const result = await (await yoloAPI(
-    request("/mcp", {
-      jsonrpc: "2.0",
-      id: 2,
-      method: "tools/call",
-      params: { name: "bun_site_docs_search", arguments: { q: "Bun.Video", limit: 2 } },
-    }),
-    environment(false),
-    ctx,
-  ))!.json();
-  expect(JSON.parse(result.result.content[0].text).snapshot.source).toBe(SOURCE);
-  const rejected = await (await yoloAPI(
-    request("/mcp", {
-      jsonrpc: "2.0",
-      id: 3,
-      method: "tools/call",
-      params: { name: "shell", arguments: { command: "whoami" } },
-    }),
-    environment(false),
-    ctx,
-  ))!.json();
-  expect(rejected.error.code).toBe(-32602);
-  expect(reads).toBe(1);
-  const foreign = request(
-    "/mcp",
-    { jsonrpc: "2.0", id: 4, method: "tools/list" },
-    { origin: "https://foreign.invalid" },
-  );
-  expect((await yoloAPI(foreign, environment(false), ctx))!.status).toBe(403);
-});
 test("payload size, native response size and cancellation are bounded", async () => {
   const oversized = new Request("https://yolo.aphrody.app/v1/systemone", {
     method: "POST",

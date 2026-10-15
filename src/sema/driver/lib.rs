@@ -825,23 +825,33 @@ fn overriding_options(request: &Request, is_build: bool) -> Vec<(Vec<u8>, Json)>
         Json::String(path) => Json::String(host::from_argument(&cwd, path)),
         other => other.clone(),
     };
-    request
-        .compiler_options
-        .iter()
-        .map(|CompilerOption(name, value)| {
-            let value = match value {
-                _ if !bun_sema::config_options::is_file_path(name) => value.clone(),
-                Json::Array(paths) => Json::Array(paths.iter().map(absolute).collect()),
-                path => absolute(path),
-            };
-            (name.clone(), value)
-        })
-        // Who refuses a broken configuration asks what `tsc -p` says about it, output paths too (5011, 5055).
-        .chain(
-            (!is_build && !request.build && !request.plan_options.refuses_broken_configurations)
-                .then(|| (b"noEmit".to_vec(), Json::Bool(true))),
-        )
-        .collect()
+    (request.declaration_file_emitted.is_some()
+        && tristate(request.compiler_options, b"emitDeclarationOnly") == Some(true))
+    .then(|| (b"noEmit".to_vec(), Json::Bool(false)))
+    .into_iter()
+    .chain(
+        request
+            .compiler_options
+            .iter()
+            .map(|CompilerOption(name, value)| {
+                let value = match value {
+                    _ if !bun_sema::config_options::is_file_path(name) => value.clone(),
+                    Json::Array(paths) => Json::Array(paths.iter().map(absolute).collect()),
+                    path => absolute(path),
+                };
+                (name.clone(), value)
+            }),
+    )
+    // Who refuses a broken configuration asks what `tsc -p` says about it, output paths too (5011, 5055).
+    .chain(
+        (!is_build
+            && !request.build
+            && !request.plan_options.refuses_broken_configurations
+            && !(request.declaration_file_emitted.is_some()
+                && tristate(request.compiler_options, b"emitDeclarationOnly") == Some(true)))
+        .then(|| (b"noEmit".to_vec(), Json::Bool(true))),
+    )
+    .collect()
 }
 
 /// The `node_modules/typescript` that is nearest to the configuration file at `config`.
@@ -1221,6 +1231,11 @@ fn default_compiler_options() -> Json {
 
 fn global(code: u32, args: &[impl AsRef<[u8]>]) -> Diagnostic {
     new_compiler_diagnostic(code, args.iter().map(|arg| arg.as_ref().into()).collect())
+}
+
+/// A declaration output could not be written by the command-line host.
+pub fn declaration_write_error(path: &[u8], reason: &[u8]) -> Diagnostic {
+    global(5033, &[path, reason])
 }
 
 /// `NewCompilerDiagnostic`
@@ -3170,9 +3185,6 @@ fn check_with_references(
             let mut emitted = emitted[index].lock();
             for (source, written) in std::mem::take(&mut checked.declaration_files) {
                 let path = declaration_file_path(index, &source);
-                if let Some(declaration_file_emitted) = request.declaration_file_emitted {
-                    declaration_file_emitted(&path, &written);
-                }
                 emitted.push((path_of(path), Arc::new(written)));
             }
             let no_text = Arc::new(Vec::new());
@@ -3645,6 +3657,10 @@ fn check_named_files(
     let written = std::mem::take(&mut project.raw_compiler_options);
     let is_true = |name: &[u8]| written.contains(&(name.to_vec(), Json::Bool(true)));
     project.options.drops_unreferenced = !request.retains_everything;
+    project.options.writes_declaration_files |= request.declaration_file_emitted.is_some()
+        && project.options.emit_declaration_only
+        && project.options.emits_declarations
+        && !project.options.no_emit;
     let before = host.times();
     host.spent(Phase::Discover, started.elapsed());
     // Declared before everything that is allocated in it, so it is dropped last.
@@ -4457,6 +4473,19 @@ fn check_named_files(
     sort_and_deduplicate(&mut report.diagnostics);
     report.check_time = checking.elapsed();
     report.declaration_files = std::mem::take(&mut *declaration_files.lock());
+    if let Some(emitted) = request.declaration_file_emitted
+        && !(program.files.options.no_emit_on_error && !report.diagnostics.is_empty())
+    {
+        for (source, written) in &report.declaration_files {
+            let path = declaration_emit_output_file_path(
+                &program.files.options,
+                source,
+                program.files.common_source_directory,
+                program.files.is_case_sensitive,
+            );
+            emitted(&path, written);
+        }
+    }
     if let Some(checked) = request.checked {
         checked(program);
     }
