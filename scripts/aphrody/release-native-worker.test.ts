@@ -1,8 +1,15 @@
 import { expect, test } from "bun:test";
 import { join } from "node:path";
 import { tempDir } from "../../test/harness";
-import { nativeCapacity, nativeOwnerPrerequisites, nativeWorkerInput, nativeLinuxCPUs } from "./release-native-worker";
-import { nativeFullReleasePlan } from "./release-matrix";
+import {
+  nativeCapacity,
+  nativeOwnerPrerequisites,
+  nativeWorkerInput,
+  nativeLinuxCPUs,
+  nativeAvailableMemory,
+  nativeRuntimeBuildFlags,
+} from "./release-native-worker";
+import { nativeFullReleasePlan, runtimeReleaseMatrix } from "./release-matrix";
 import { qualifyNativeWinget } from "./release-native-install";
 import { nativeNginxRecipe } from "./release-native-nginx";
 import { mediaSDKPlan } from "../../packages/bun-video/src/sdk";
@@ -84,4 +91,73 @@ test("Winget fixture cannot modify the local workstation through the native CI h
     }),
   ).rejects.toThrow();
   expect(called).toBe(false);
+});
+
+test("full native producer forwards every supported optional owner including vector index", () => {
+  const targets = runtimeReleaseMatrix(["linux-x64"]);
+  const full = targets.find(target => target.flavor === "full")!;
+  const flags = nativeRuntimeBuildFlags(full, "/qualified/sysroot");
+  for (const flag of [
+    "--coreutils=on",
+    "--video-native=on",
+    "--curl-native=on",
+    "--browser-crawl=on",
+    "--browser-index=on",
+    "--lto=on",
+    "--linux-sysroot=/qualified/sysroot",
+    "--link-threads=2",
+    "-j2",
+  ])
+    expect(flags).toContain(flag);
+  expect(() => nativeRuntimeBuildFlags(targets.find(target => target.flavor === "perf")!)).toThrow(
+    "full runtime profile",
+  );
+});
+
+const GiB = 1024 ** 3;
+const memoryFixture = (files: Record<string, string>) => async (path: string) => files[path];
+test("Linux available RAM includes reclaimable cache without inventing a host budget", async () => {
+  expect(
+    await nativeAvailableMemory("linux", GiB, memoryFixture({ "/proc/meminfo": "MemAvailable: 12582912 kB\n" })),
+  ).toBe(12 * GiB);
+  expect(await nativeAvailableMemory("linux", GiB, memoryFixture({}))).toBe(GiB);
+  expect(
+    await nativeAvailableMemory("darwin", GiB, async () => {
+      throw Error("Linux proc must not be read");
+    }),
+  ).toBe(GiB);
+});
+
+test("cgroup v2 constrains reclaimable memory by leaf and every mounted ancestor", async () => {
+  const files = {
+    "/proc/meminfo": "MemAvailable: 12582912 kB\n",
+    "/proc/self/cgroup": "0::/parent/job\n",
+    "/proc/self/mountinfo": "1 0 0:1 / /sys/fs/cgroup rw - cgroup2 cgroup rw\n",
+    "/sys/fs/cgroup/parent/job/memory.max": "max\n",
+    "/sys/fs/cgroup/parent/job/memory.current": String(GiB),
+    "/sys/fs/cgroup/parent/memory.max": String(8 * GiB),
+    "/sys/fs/cgroup/parent/memory.current": String(3 * GiB),
+  };
+  expect(await nativeAvailableMemory("linux", GiB, memoryFixture(files))).toBe(5 * GiB);
+  expect(() => nativeCapacity({ freeDisk: 24 * GiB, freeMemory: 5 * GiB, cpus: 2 })).toThrow("capacity insufficient");
+  files["/sys/fs/cgroup/parent/job/memory.max"] = String(2 * GiB);
+  expect(await nativeAvailableMemory("linux", GiB, memoryFixture(files))).toBe(GiB);
+  files["/sys/fs/cgroup/parent/job/memory.max"] = "max\n";
+  files["/sys/fs/cgroup/parent/memory.current"] = String(9 * GiB);
+  expect(await nativeAvailableMemory("linux", GiB, memoryFixture(files))).toBe(0);
+  files["/sys/fs/cgroup/parent/memory.current"] = "invalid";
+  await expect(nativeAvailableMemory("linux", GiB, memoryFixture(files))).rejects.toThrow("Invalid cgroup");
+});
+
+test("cgroup v1 and subtree mounts use actual process membership", async () => {
+  const files = {
+    "/proc/meminfo": "MemAvailable: 12582912 kB\n",
+    "/proc/self/cgroup": "2:cpu,cpuacct:/other\n3:memory:/parent/job\n",
+    "/proc/self/mountinfo": "1 0 0:1 /parent /sys/fs/cgroup/memory rw - cgroup cgroup rw,memory\n",
+    "/sys/fs/cgroup/memory/job/memory.limit_in_bytes": String(10 * GiB),
+    "/sys/fs/cgroup/memory/job/memory.usage_in_bytes": String(3 * GiB),
+    "/sys/fs/cgroup/memory/memory.limit_in_bytes": String(12 * GiB),
+    "/sys/fs/cgroup/memory/memory.usage_in_bytes": String(8 * GiB),
+  };
+  expect(await nativeAvailableMemory("linux", GiB, memoryFixture(files))).toBe(4 * GiB);
 });

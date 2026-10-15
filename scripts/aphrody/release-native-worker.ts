@@ -1,6 +1,6 @@
 import { chmod, mkdir, statfs } from "node:fs/promises";
 import { freemem } from "node:os";
-import { dirname, isAbsolute, join, relative, resolve } from "node:path";
+import { dirname, isAbsolute, join, relative, resolve, posix } from "node:path";
 import { pins, locations } from "../build/ci-images/spec";
 import {
   downloadMediaSDK,
@@ -72,6 +72,88 @@ export function nativeWorkerInput(args: string[], sourceRoot = root): WorkerInpu
   return { target, source, version, output: resolve(output), root: resolve(sourceRoot) };
 }
 
+type MemoryReader = (path: string) => Promise<string | undefined>;
+async function readMemoryFile(path: string): Promise<string | undefined> {
+  try {
+    const text = await Bun.file(path).slice(0, 65_537).text();
+    if (text.length > 65_536) throw new Error("Memory observation exceeds limit");
+    return text;
+  } catch (error) {
+    if ((error as { code?: string }).code === "ENOENT") return undefined;
+    throw error;
+  }
+}
+
+/** Reclaimable Linux cache is available; ancestor cgroup budgets still constrain it. */
+export async function nativeAvailableMemory(
+  platform: string = process.platform,
+  fallback = freemem(),
+  read: MemoryReader = readMemoryFile,
+): Promise<number> {
+  if (!Number.isFinite(fallback) || fallback < 0) throw new Error("Invalid free memory observation");
+  if (platform !== "linux") return fallback;
+  const meminfo = await read("/proc/meminfo");
+  const available = meminfo?.match(/^MemAvailable:\s+(\d+)\s+kB$/m);
+  let budget = available ? Number(available[1]) * 1024 : fallback;
+  if (!Number.isSafeInteger(budget) || budget < 0) throw new Error("Invalid available memory observation");
+  const membership = await read("/proc/self/cgroup");
+  const mounts = await read("/proc/self/mountinfo");
+  if (!membership || !mounts) return budget;
+  const unescape = (value: string) =>
+    value.replace(/\\([0-7]{3})/g, (_, code: string) => String.fromCharCode(Number.parseInt(code, 8)));
+  for (const line of mounts.trim().split("\n")) {
+    const [left, right] = line.split(" - ");
+    const fields = left?.split(" ");
+    const kind = right?.split(" ")[0];
+    if (!fields || fields.length < 5 || (kind !== "cgroup2" && kind !== "cgroup")) continue;
+    const unified = kind === "cgroup2";
+    const member = membership
+      .split("\n")
+      .map(value => value.split(":"))
+      .find(parts => (unified ? parts[0] === "0" && parts[1] === "" : parts[1]?.split(",").includes("memory")));
+    if (!member?.[2] || (!unified && !right?.split(" ")[2]?.split(",").includes("memory"))) continue;
+    const mountRoot = unescape(fields[3]!);
+    const mountPoint = posix.resolve(unescape(fields[4]!));
+    const subpath = posix.relative(mountRoot, unescape(member[2]));
+    if (subpath.startsWith("..") || posix.isAbsolute(subpath)) continue;
+    let directory = posix.resolve(mountPoint, subpath);
+    while (true) {
+      // Parent limits constrain the same process even when its leaf has no limit.
+      // eslint-disable-next-line no-await-in-loop
+      const [limit, current] = await Promise.all([
+        read(posix.join(directory, unified ? "memory.max" : "memory.limit_in_bytes")),
+        read(posix.join(directory, unified ? "memory.current" : "memory.usage_in_bytes")),
+      ]);
+      if (limit !== undefined && limit.trim() !== "max") {
+        if (!/^\d+$/.test(limit.trim()) || !current || !/^\d+$/.test(current.trim()))
+          throw new Error("Invalid cgroup memory observation");
+        const remaining = BigInt(limit.trim()) - BigInt(current.trim());
+        budget = Math.min(budget, remaining <= 0n ? 0 : Number(remaining));
+      }
+      if (directory === mountPoint) break;
+      directory = posix.dirname(directory);
+    }
+  }
+  return budget;
+}
+
+export function nativeRuntimeBuildFlags(target: Parameters<typeof runtimeFlavorArgs>[0], sysroot?: string): string[] {
+  if (target.flavor !== "full") throw new Error("Native producer requires the full runtime profile");
+  return [
+    ...runtimeFlavorArgs(target),
+    "--ci=on",
+    "--buildkite=off",
+    "--canary=off",
+    "--video-native=on",
+    "--curl-native=on",
+    "--browser-crawl=on",
+    "--browser-index=on",
+    "--link-threads=2",
+    "-j2",
+    ...(sysroot ? [`--linux-sysroot=${sysroot}`] : []),
+  ];
+}
+
 export function nativeCapacity(input: { freeDisk: number; freeMemory: number; cpus: number }) {
   const required = { disk: 20 * GiB, memory: 6 * GiB, cpus: 2 };
   if (
@@ -81,7 +163,7 @@ export function nativeCapacity(input: { freeDisk: number; freeMemory: number; cp
     input.cpus < required.cpus
   )
     throw new Error(
-      `Native capacity insufficient: require ${required.disk / GiB} GiB free disk, 6 GiB free RAM and 2 native CPUs`,
+      `Native capacity insufficient: require ${required.disk / GiB} GiB free disk, 6 GiB available RAM and 2 native CPUs`,
     );
   return { ...input, required, maxJobs: 2 };
 }
@@ -206,7 +288,7 @@ async function preflight(input: WorkerInput) {
   const disk = await statfs(input.output);
   const capacity = nativeCapacity({
     freeDisk: disk.bavail * disk.bsize,
-    freeMemory: freemem(),
+    freeMemory: await nativeAvailableMemory(),
     cpus: navigator.hardwareConcurrency,
   });
   const missing = nativeOwnerPrerequisites(input.target);
@@ -319,18 +401,7 @@ async function produce(input: WorkerInput) {
       : undefined;
   if (sysroot && !(await Bun.file(join(sysroot, "usr/include/stdio.h")).exists()))
     throw new Error(`Pinned target sysroot missing: ${sysroot}; scripts/build/ci-images/spec.ts owns its provisioning`);
-  const buildFlags = [
-    ...runtimeFlavorArgs(target),
-    "--ci=on",
-    "--buildkite=off",
-    "--canary=off",
-    "--video-native=on",
-    "--curl-native=on",
-    "--browser-crawl=on",
-    "--link-threads=2",
-    "-j2",
-    ...(sysroot ? [`--linux-sysroot=${sysroot}`] : []),
-  ];
+  const buildFlags = nativeRuntimeBuildFlags(target, sysroot);
   // bun bd owns its build lock; its build is intentionally not terminated by a command timeout.
   await command(
     [process.execPath, "--no-env-file", "bd", ...buildFlags, "--target=bun-profile"],
