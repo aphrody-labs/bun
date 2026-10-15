@@ -325,6 +325,10 @@ class Element {
     pattern.as("Microsoft.UI.Xaml.Automation.Provider.IInvokeProvider").Invoke();
   }
 
+  static invoke(element: Element, method: string, args: unknown[]) {
+    return element.#invokeMethod(method, args);
+  }
+
   #invokeMethod(method: string, args: unknown[]) {
     return this.#app.fromWinRT(this.#invoke(method, args));
   }
@@ -513,7 +517,7 @@ class Application {
     if (this.#options.resources !== false) {
       const resources = this.load(`<ResourceDictionary/>`);
       const controls = this.load(`<XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls"/>`);
-      resources.get("MergedDictionaries").call("Append", controls);
+      Element.invoke(resources.get("MergedDictionaries"), "Append", [controls]);
       application.put_Resources(resources.winrt.as("Microsoft.UI.Xaml.IResourceDictionary"));
     }
     if (typeof this.#options.resources === "string" || Array.isArray(this.#options.resources))
@@ -546,7 +550,7 @@ class Application {
     if (!(resources instanceof Element))
       throw new TypeError("bun:winui: application resources are disabled");
     const merged = resources.get("MergedDictionaries");
-    for (const source of dictionaries) merged.call("Append", this.load(source));
+    for (const source of dictionaries) Element.invoke(merged, "Append", [this.load(source)]);
     return this;
   }
 
