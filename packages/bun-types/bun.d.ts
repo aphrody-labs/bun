@@ -9632,6 +9632,38 @@ declare module "bun" {
     static readonly available: boolean;
     /** Runs off the JS thread. Checkpoints survive cancellation; store must be absolute. */
     static run(options: CrawlOptions): Promise<CrawlReport>;
+    /** Native Dragon Ball owner; requires browser_crawl. Rendering is not provided. */
+    static run(options: DragonBallCrawlOptions): Promise<DragonBallCrawlReport>;
+  }
+
+  export interface DragonBallCrawlOptions {
+    action: "dragon-ball";
+    operation: "plan" | "status" | "crawl";
+    /** Absolute private campaign output directory. */
+    store: string;
+    /** Absolute reviewed Dragon Ball configuration; robots must be respected. */
+    config: string;
+    sources?: readonly string[];
+    maxRequests?: number;
+    timeout?: number;
+    allowPrivate?: boolean;
+    signal?: AbortSignal;
+  }
+
+  export interface DragonBallCrawlReport {
+    owner: "bun_browser_crawl";
+    action: "dragon-ball";
+    operation: "plan" | "status" | "crawl";
+    output: string;
+    pages: number;
+    documents: number;
+    /** Absent for a plan, which does not execute or qualify collection. */
+    complete?: boolean;
+    pending?: number;
+    locked?: number;
+    failed?: number;
+    targets: { id: string; completed?: boolean; pending?: number; locked?: number; failed?: number; documents?: number; frontierPresent?: boolean }[];
+    errors?: [url: string, message: string][] | null;
   }
 
   export interface CrawlOptions {
@@ -9672,6 +9704,28 @@ declare module "bun" {
     frontier?: { pending: number; done: number };
   }
 
+  /** Persistent native vector index. Operations are synchronous; use a Worker for bulk workloads. */
+  export class VectorIndex {
+    static readonly available: boolean;
+    /** Opens an existing matching index, or creates an empty index bound to an absolute path. */
+    constructor(path: string, options: { dimensions: number; metric?: "l2" | "cosine" });
+    readonly count: number;
+    readonly dimensions: number;
+    /** Inserts or replaces an unsigned 64-bit key. Numeric keys are rejected to prevent truncation. */
+    add(key: bigint, vector: Float32Array | readonly number[]): void;
+    /** Scores are negative squared L2 distance (default), or cosine similarity; higher is better. */
+    search(vector: Float32Array | readonly number[], k: number, options?: {
+      /** Restricts eligible hits before top-k selection; an empty set returns no hits. */
+      allowedKeys?: BigUint64Array | readonly bigint[];
+      ef?: number;
+    }): { key: bigint; score: number }[];
+    remove(key: bigint): boolean;
+    /** Atomically persists to the constructor path, including an empty index. */
+    save(): void;
+    /** Releases mapped resources. Idempotent; never saves implicitly. */
+    close(): void;
+  }
+
   export class Curl {
     static readonly available: boolean;
     static capabilities(): { available: boolean; version?: string | null; tls?: string | null; protocols: string[]; features?: number };
@@ -9688,7 +9742,7 @@ declare module "bun" {
     static request(url: string, options?: {
       method?: string;
       headers?: string[];
-      body?: string;
+      body?: string | ArrayBufferView | ArrayBuffer;
       timeout?: number;
       maxBytes?: number;
       followRedirects?: boolean;

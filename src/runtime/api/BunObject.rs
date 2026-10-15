@@ -302,6 +302,7 @@ pub(crate) mod bun_object {
         BunObject_lazyPropCb_Video => super::get_video_constructor,
         BunObject_lazyPropCb_Curl => super::get_curl_constructor,
         BunObject_lazyPropCb_Crawl => super::get_crawl_constructor,
+        BunObject_lazyPropCb_VectorIndex => super::get_vector_index_constructor,
         BunObject_lazyPropCb_MD4 => Crypto::MD4::getter,
         BunObject_lazyPropCb_MD5 => Crypto::MD5::getter,
         BunObject_lazyPropCb_SHA1 => Crypto::SHA1::getter,
@@ -1770,6 +1771,10 @@ fn get_curl_constructor(global_this: &JSGlobalObject, _: &JSObject) -> JSValue {
 
 fn get_crawl_constructor(global_this: &JSGlobalObject, _: &JSObject) -> JSValue {
     jsc::codegen::js::get_constructor::<crate::crawl::Crawl>(global_this)
+}
+
+fn get_vector_index_constructor(global_this: &JSGlobalObject, _: &JSObject) -> JSValue {
+    jsc::codegen::js::get_constructor::<crate::vector_index::VectorIndex>(global_this)
 }
 
 fn get_s3_client_constructor(global_this: &JSGlobalObject, _: &JSObject) -> JSValue {

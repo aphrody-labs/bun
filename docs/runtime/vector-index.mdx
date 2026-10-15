@@ -1,0 +1,50 @@
+---
+name: Vector index
+description: Persistent native vector search with exact unsigned 64-bit keys and filtered nearest neighbors
+---
+
+`Bun.VectorIndex` exposes Bun's existing native vector index. It requires the
+optional `browser_index` provider, enabled in a checkout with
+`bun bd --browser-index=on`. Check `Bun.VectorIndex.available` before opening it.
+
+```ts
+if (!Bun.VectorIndex.available) throw new Error("Vector index provider unavailable");
+
+const index = new Bun.VectorIndex("/absolute/private/search.index", {
+  dimensions: 3,
+  metric: "l2",
+});
+try {
+  index.add(1n, new Float32Array([1, 0, 0]));
+  index.add(2n, [0, 1, 0]);
+  const hits = index.search([1, 0, 0], 5, { allowedKeys: [1n] });
+  // [{ key: 1n, score: 0 }]
+  index.save();
+} finally {
+  index.close();
+}
+```
+
+The constructor opens an existing native index or creates an in-memory index
+with that persistence path. Reopening requires the stored dimensions and metric
+to match. `save()` writes the native persistent format atomically. `close()` is
+idempotent and does not save implicitly.
+
+Keys are `bigint` values in `0n..18446744073709551615n`. Numeric keys are rejected;
+search results retain the full unsigned 64-bit value. Adding an existing key
+updates its vector. Vectors must contain exactly `dimensions` finite elements.
+`remove(key)` returns whether a live key was removed. `count` and `dimensions`
+describe the open index.
+
+`search(vector, k, { allowedKeys, ef })` applies the allowed key set before
+selecting neighbors. Omitting the set searches all live keys; an empty set returns
+no hits. It also accepts a `BigUint64Array`. The optional `ef` controls the native
+search breadth.
+
+Scores are larger for closer matches. L2 returns negative squared distance;
+cosine uses the native cosine metric. L2 is the default. Operations are
+synchronous; use an application-owned Worker for large ingestion batches.
+
+The index stores supplied embeddings. The application owns the model, dimensions,
+preprocessing, row identity mapping and generation manifest. Publish the document
+store and vector index as one verified generation before switching readers.

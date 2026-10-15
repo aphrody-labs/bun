@@ -14,6 +14,7 @@
     macro(Video) \
     macro(Curl) \
     macro(Crawl) \
+    macro(VectorIndex) \
     macro(JSON5) \
     macro(JSONC) \
     macro(MD4) \
