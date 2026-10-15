@@ -32,7 +32,9 @@ export function isAphrodyRuntime(revision: string, sourceUrl?: string, commit?: 
   const parsed = /^v?(\d+\.\d+\.\d+)(?:-canary\.\d+)?(?:-debug)?(?:\+([a-f0-9]{7,40})| \(([a-f0-9]{7,40})\))$/.exec(
     revision,
   );
-  if (!parsed || !commit || !/^[a-f0-9]{40}$/.test(commit) || !commit.startsWith(parsed[2] ?? parsed[3])) return false;
+  const reportedCommit = parsed?.[2] ?? parsed?.[3];
+  if (!parsed || !reportedCommit || !commit || !/^[a-f0-9]{40}$/.test(commit) || !commit.startsWith(reportedCommit))
+    return false;
   const release =
     /^https:\/\/github\.com\/aphrody-labs\/bun\/releases\/download\/bun-v(\d+\.\d+\.\d+)(?:-debug)?\/bun-[a-z0-9]+(?:-[a-z0-9]+)*\.zip$/.exec(
       sourceUrl ?? "",

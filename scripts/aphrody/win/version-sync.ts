@@ -134,6 +134,10 @@ export function releaseChanges(read: (path: string) => string, version: string, 
   });
 }
 
+export function sourceVersionPlan(root: string, version = DEFAULT_VERSION): Change[] {
+  return sourceChanges(path => readFileSync(join(root, path), "utf8"), version);
+}
+
 export function applyChanges(root: string, changes: Change[]): void {
   // Check every input before writing any file: concurrent edits invalidate the plan.
   for (const change of changes) {
@@ -248,22 +252,7 @@ if (import.meta.main) {
     if (realpathSync(git(root, ["rev-parse", "--show-toplevel"]).trim()) !== root)
       throw new Error("--root must be the checkout root");
     const read = (path: string) => readFileSync(join(root, path), "utf8");
-    const manifestPaths = git(root, ["ls-files", "-z", "--", "package.json", "packages/**/package.json"])
-      .split("\0")
-      .filter(Boolean)
-      .filter(path => {
-        const manifest = JSON.parse(read(path));
-        const name = manifest.name;
-        return (
-          path === "package.json" ||
-          path === "packages/bun-agent-plugin/package.json" ||
-          (Boolean(OWNED_PRIVATE_MANIFESTS[path]) &&
-            OWNED_PRIVATE_MANIFESTS[path] === name &&
-            manifest.private === true) ||
-          (typeof name === "string" && name.startsWith("@aphrody/"))
-        );
-      });
-    const changes = sourceChanges(read, values.version, manifestPaths);
+    const changes = sourceVersionPlan(root, values.version);
     if (values["release-tag"]) {
       const tag = values["release-tag"];
       const release = JSON.parse(gh(["api", `repos/aphrody-labs/bun/releases/tags/${encodeURIComponent(tag)}`]));

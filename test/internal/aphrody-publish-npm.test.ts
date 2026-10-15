@@ -12,9 +12,71 @@ import {
   exportTrackedPackage,
   verifyPreparedPackage,
   assertPublicationSources,
+  assertLatestVersionDoesNotRegress,
 } from "../../scripts/aphrody/publish-npm.ts";
 import { tempDir } from "harness";
 import { join } from "node:path";
+import { mkdirSync } from "node:fs";
+
+test("publication cannot downgrade independent Windows or SDK latest identities", () => {
+  expect(nextVersion("1.4.10", ["1.4.10"])).toEqual({ next: "1.4.10-aphrody.1", previous: "1.4.10" });
+  expect(() => assertLatestVersionDoesNotRegress("1.4.4", "71.0.30-preview")).toThrow("latest backwards");
+  expect(() => assertLatestVersionDoesNotRegress("1.4.10-aphrody.1", "1.4.10")).toThrow("latest backwards");
+  expect(() => assertLatestVersionDoesNotRegress("1.4.11", "1.4.10")).not.toThrow();
+  expect(() => assertLatestVersionDoesNotRegress("71.0.30-preview", "71.0.30-preview")).not.toThrow();
+  expect(() => assertLatestVersionDoesNotRegress("1.4.4")).not.toThrow();
+});
+
+test("portable facade archives preserve exports and import without activating native payloads", async () => {
+  using directory = tempDir("portable-facade-consumer", {});
+  const root = String(directory);
+  const checkout = join(import.meta.dir, "../..");
+  const revision = Bun.spawnSync(["git", "rev-parse", "HEAD"], { cwd: checkout }).stdout.toString().trim();
+  const command = async (args: string[], cwd = root) => {
+    const child = Bun.spawn(args, { cwd, stdout: "pipe", stderr: "pipe" });
+    const [stdout, stderr, code] = await Promise.all([child.stdout.text(), child.stderr.text(), child.exited]);
+    if (code !== 0) throw new Error(`Archive command failed: ${stderr}`);
+    return stdout;
+  };
+  for (const dir of ["bun-supervisor", "bun-tools", "bun-tauri"]) {
+    const consumerRoot = join(root, dir);
+    mkdirSync(consumerRoot);
+    const sourceRoot = join(root, dir + "-source");
+    await command([
+      process.execPath,
+      "-e",
+      `import{exportTrackedPackage}from${JSON.stringify(join(checkout, "scripts/aphrody/publish-npm.ts"))};await exportTrackedPackage(${JSON.stringify(checkout)},${JSON.stringify(revision)},${JSON.stringify(`packages/${dir}`)},${JSON.stringify(sourceRoot)});`,
+    ]);
+    const archive = join(root, `${dir}.tgz`);
+    await command([process.execPath, "pm", "pack", "--ignore-scripts", "--filename", archive], sourceRoot);
+    const names = (await command(["tar", "-tzf", archive])).trim().split("\n");
+    expect(
+      names.every(name =>
+        /^package\/(?:package\.json|LICENSE[^/]*|README\.md|NOTICE|src\/|js\/|systemd\/|crates\/tauri-plugin-aphrody\/iife\/)/.test(
+          name,
+        ),
+      ),
+    ).toBe(true);
+    expect(names.some(name => /(?:\.env|cookies|\.sqlite|\.node$|\.dll$|\.so$)/i.test(name))).toBe(false);
+    await command(["tar", "-xzf", archive, "-C", consumerRoot]);
+    const manifest = await Bun.file(join(consumerRoot, "package/package.json")).json();
+    expect(manifest.name).toBe(
+      dir === "bun-supervisor" ? "@aphrody/supervisor" : dir === "bun-tauri" ? "@aphrody/tauri" : "@aphrody/bun-tools",
+    );
+    if (dir === "bun-tauri") {
+      expect(names).toContain("package/crates/tauri-plugin-aphrody/iife/aphrody.js");
+      expect(names).toContain("package/js/plugins/mcp-bridge.ts");
+      const facade = await import(join(consumerRoot, "package/js/index.ts"));
+      const server = await import(join(consumerRoot, "package/js/server.ts"));
+      expect(typeof facade.core.invoke).toBe("function");
+      expect(typeof facade.bunInfo).toBe("function");
+      expect(typeof server.serveForTauri).toBe("function");
+    } else {
+      const facade = await import(join(consumerRoot, "package/src/index.ts"));
+      expect(typeof (dir === "bun-supervisor" ? facade.Supervisor : facade.toolAssetPin)).toBe("function");
+    }
+  }
+}, 20000);
 
 test("publication exports immutable tracked blobs and excludes ignored protected files", async () => {
   using directory = tempDir("publication-git-source", {
@@ -211,6 +273,28 @@ describe("publishManifest", () => {
     ["bun-types", "1.4.3-aphrody.2"],
     ["bun-inspector-protocol", "0.0.2-aphrody.1"],
   ]);
+
+  test("portable supervisor and tools retain their declared public package identities", () => {
+    expect(npmName(spec("bun-supervisor"))).toBe("@aphrody/supervisor");
+    expect(npmName(spec("bun-tools"))).toBe("@aphrody/bun-tools");
+    for (const dir of ["bun-supervisor", "bun-tools"]) {
+      expect(spec(dir).requiresBuild).toBeUndefined();
+      expect(spec(dir).platform).toBeUndefined();
+    }
+    const out = publishManifest(
+      { name: "consumer", dependencies: { "@aphrody/supervisor": "workspace:*" } },
+      spec("bun-tools"),
+      "1.4.4",
+      new Map([["bun-supervisor", "1.4.4"]]),
+    );
+    expect(out.dependencies).toEqual({ "@aphrody/supervisor": "1.4.4" });
+  });
+
+  test("Tauri publication exposes the existing JavaScript facade under its declared alias", () => {
+    expect(npmName(spec("bun-tauri"))).toBe("@aphrody/tauri");
+    expect(spec("bun-tauri").requiresBuild).toBeUndefined();
+    expect(spec("bun-tauri").platform).toBeUndefined();
+  });
 
   test("pins fork dependencies whatever their spelling, keeps registry ones", () => {
     const out = publishManifest(

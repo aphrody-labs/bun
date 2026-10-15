@@ -340,6 +340,9 @@ export const PACKAGES: PackageSpec[] = [
   { dir: "bun-plugin-neon" },
   { dir: "bun-plugin-supabase" },
   { dir: "bun-runtime-sdk" },
+  { dir: "bun-supervisor", name: "supervisor" },
+  { dir: "bun-tools" },
+  { dir: "bun-tauri", name: "tauri" },
   { dir: "bun-nginx", bunVersion: true },
   // REST services and explicit credential adapters over the qualified bun:google builtin.
   { dir: "bun-google", bunVersion: true },
@@ -393,13 +396,15 @@ export function rewriteSiblingImports(code: string): string {
 export function nextVersion(base: string, published: Iterable<string>): { next: string; previous: string | undefined } {
   const re = new RegExp(`^${base.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}-aphrody\\.(\\d+)$`);
   let max = 0;
+  let stableExists = false;
   for (const v of published) {
+    if (v === base) stableExists = true;
     const m = re.exec(v);
     if (m) max = Math.max(max, Number(m[1]));
   }
   return {
     next: `${base}-aphrody.${max + 1}`,
-    previous: max ? `${base}-aphrody.${max}` : undefined,
+    previous: max ? `${base}-aphrody.${max}` : stableExists ? base : undefined,
   };
 }
 
@@ -419,6 +424,11 @@ export function nextStableVersion(
     next: `${major}.${minor}.${latest < patch ? patch : latest + 1}`,
     previous: latest < patch ? undefined : `${major}.${minor}.${latest}`,
   };
+}
+
+export function assertLatestVersionDoesNotRegress(version: string, latest?: string): void {
+  if (latest && Bun.semver.order(version, latest) < 0)
+    throw new Error(`Refusing to move npm latest backwards from ${latest} to ${version}`);
 }
 
 function forkName(dep: string): string | undefined {
@@ -765,6 +775,8 @@ export async function publishAll(opts: {
     if (opts.stable && next !== base) {
       throw new Error(`${name}@${base} already exists with different content; runtime versions are immutable`);
     }
+
+    assertLatestVersionDoesNotRegress(next, doc?.["dist-tags"]?.latest);
 
     resolved.set(spec.dir, next);
     console.log(`${opts.dryRun ? "~" : "+"} ${name}@${next} (${files.size} files) ${tgz}`);

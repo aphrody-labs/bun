@@ -3,6 +3,18 @@ import { bunEnv, bunExe, tempDir } from "harness";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { stage } from "../../scripts/aphrody/publish-crates.ts";
+import { cargoPublishAdapter } from "../../scripts/aphrody/monorepo-delivery.ts";
+
+test("crate catalogue recognizes the registered sibling DOM owner without widening publication", () => {
+  expect(cargoPublishAdapter("src/browser/crates/ssrf/Cargo.toml", "bun_browser_ssrf")).toBe("publish-crates");
+  expect(cargoPublishAdapter("src/browser/crates/dom/Cargo.toml", "bun_browser_dom")).toBe("publish-crates");
+  expect(cargoPublishAdapter("packages/bun-google/crates/boq/Cargo.toml", "aphrody-boq")).toBe("publish-crates");
+  expect(cargoPublishAdapter("crates/aphrody-jev/Cargo.toml", "aphrody-jev")).toBe("publish-crates");
+  expect(cargoPublishAdapter("crates/unregistered/Cargo.toml", "aphrody-jev")).toBeNull();
+  expect(cargoPublishAdapter("src/browser/crates/unregistered/Cargo.toml", "bun_browser_dom")).toBeNull();
+  expect(cargoPublishAdapter("src/browser/crates/ssrf/Cargo.toml", "bun_browser_dom")).toBeNull();
+  expect(cargoPublishAdapter("src/browser/crates/dom/Cargo.toml", "unregistered")).toBeNull();
+});
 
 test("internal owners cannot be selected for crate publication", async () => {
   for (const owner of ["src/migrate", "packages/bun-n2b", "packages/bun-oxc"]) {

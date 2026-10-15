@@ -120,9 +120,11 @@ export async function inventory(source: PublicSource, signal?: AbortSignal) {
 class Bytes {
   private pending: Uint8Array = new Uint8Array(0);
   private offset = 0;
-  constructor(private readonly reader: {
-    read(): Promise<{ done: true; value?: Uint8Array } | { done?: false; value: Uint8Array }>;
-  }) {}
+  constructor(
+    private readonly reader: {
+      read(): Promise<{ done: true; value?: Uint8Array | undefined } | { done?: false; value: Uint8Array }>;
+    },
+  ) {}
   async take(maximum: number): Promise<Uint8Array> {
     if (this.offset === this.pending.length) {
       const next = await this.reader.read();

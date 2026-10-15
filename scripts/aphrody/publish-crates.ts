@@ -62,10 +62,15 @@ export const CRATES: Crate[] = [
 // Fork-only crates, published under their own names from their owning Cargo workspace
 // (no staging: nothing upstream to keep mergeable). Listed in
 // dependency order.
-export const WORKSPACES: { dir: string; crates: string[] }[] = [
+export const WORKSPACES: { dir: string; crates: string[]; manifests?: Record<string, string> }[] = [
   // Both inherit the root workspace; selecting these packages avoids engine builds.
-  { dir: "src/browser/crates/ssrf", crates: ["bun_browser_ssrf", "bun_browser_dom"] },
+  {
+    dir: "src/browser/crates/ssrf",
+    crates: ["bun_browser_ssrf", "bun_browser_dom"],
+    manifests: { bun_browser_dom: "src/browser/crates/dom/Cargo.toml" },
+  },
   { dir: "packages/bun-google/crates/boq", crates: ["aphrody-boq"] },
+  { dir: "crates/aphrody-jev", crates: ["aphrody-jev"] },
 ];
 
 const renamed = new Map(CRATES.map(c => [c.upstream, c]));

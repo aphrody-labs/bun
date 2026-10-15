@@ -63,7 +63,18 @@ jobs:
           DRY_RUN: ${{ inputs.dry-run && '--dry-run' || '' }}
           ONLY: ${{ inputs.only }}
         run: |
-          echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
+          auth_config=$(mktemp "$RUNNER_TEMP/aphrody-npmrc.XXXXXX")
+          cleanup_auth() {
+            if [ -L "$HOME/.npmrc" ] && [ "$(readlink "$HOME/.npmrc")" = "$auth_config" ]; then
+              rm -- "$HOME/.npmrc"
+            fi
+            rm -- "$auth_config"
+          }
+          trap cleanup_auth EXIT
+          chmod 600 "$auth_config"
+          printf '%s\n' '//registry.npmjs.org/:_authToken=${NPM_TOKEN}' > "$auth_config"
+          test ! -e "$HOME/.npmrc" && test ! -L "$HOME/.npmrc"
+          ln -s "$auth_config" "$HOME/.npmrc"
           stable=""; case "$GITHUB_REF_NAME" in bun-v*) stable="--stable";; esac
           bun scripts/aphrody/publish-npm.ts $DRY_RUN $stable ${ONLY:+--only "$ONLY"} --out "$RUNNER_TEMP/aphrody-npm"
           # A first publish of a new name leaves an npm 0.0.0-stage placeholder; deprecate it.

@@ -302,7 +302,10 @@ export async function runDeliveryJob(root: string, id: string) {
 
 export function cargoPublishAdapter(manifest: string, name: string): string | null {
   if (CRATES.some(crate => `${crate.dir}/Cargo.toml` === manifest)) return "publish-crates";
-  return WORKSPACES.some(workspace => manifest.startsWith(`${workspace.dir}/`) && workspace.crates.includes(name))
+  return WORKSPACES.some(
+    workspace =>
+      workspace.crates.includes(name) && manifest === (workspace.manifests?.[name] ?? `${workspace.dir}/Cargo.toml`),
+  )
     ? "publish-crates"
     : null;
 }
@@ -567,7 +570,7 @@ export async function executeDeliveryPlan(
         cwd: resolve(root, step.directory),
         stdout: "inherit",
         stderr: "inherit",
-        signal: options.signal,
+        ...(options.signal ? { signal: options.signal } : {}),
         env: {
           ...process.env,
           CARGO_BUILD_JOBS: String(step.execution!.cpu),

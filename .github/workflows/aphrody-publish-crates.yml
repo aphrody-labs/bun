@@ -17,7 +17,7 @@ on:
         type: boolean
         default: false
       only:
-        description: "Comma-separated subset: sdk, src/browser/crates/ssrf, packages/bun-google/crates/boq (empty: all)"
+        description: "Subset: sdk, src/browser/crates/ssrf, packages/bun-google/crates/boq, crates/aphrody-jev (empty: all)"
         type: string
         default: ""
       qualification-tag:
