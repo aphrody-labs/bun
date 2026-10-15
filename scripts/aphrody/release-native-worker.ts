@@ -10,27 +10,50 @@ import {
   type MediaSDKTarget,
 } from "../../packages/bun-video/src/sdk";
 import { mediaSDKHostTarget } from "../../packages/bun-video/src/sdk-platform";
-import { assertMediaRuntimeIdentity, mediaReleaseTarget, packageMediaRelease } from "./media-release";
-import { nativeFullReleasePlan, runtimeFlavorArgs } from "./release-matrix";
+import {
+  archiveMediaReleaseFiles,
+  assertMediaRuntimeIdentity,
+  mediaReleaseTarget,
+  packageMediaRelease,
+} from "./media-release";
+import {
+  fullNativeRuntimeFeatures,
+  nativeFullReleasePlan,
+  runtimeFlavorArgs,
+  runtimeFlavorManifest,
+} from "./release-matrix";
+import { materializeMediaSources } from "./media-sdk-source";
+import { downloadWithRetry } from "../build/download";
 import { qualifyMediaSDKClosure } from "./media-sdk-factory";
 import {
+  bootstrapNativeMediaInputs,
   prepareNativeMedia,
   qualifyNativeMediaAVIO,
   readNativeMediaInputs,
   type NativeMediaInputs,
 } from "./media-sdk-producer";
 import { qualifyNativeInstall, qualifyNativeWinget } from "./release-native-install";
-import type { NativePlatformQualification } from "./release-aggregation";
+import {
+  aggregateRuntimeFullRelease,
+  runtimeFullAsset,
+  runtimeFullComponents,
+  type NativeRuntimeFullReceipt,
+  type NativePlatformQualification,
+} from "./release-aggregation";
+import { stageMediaBundle } from "./media-stage";
 import { nativeNginxRecipe, readNginxReleaseArtifact, type NginxReleaseManifest } from "./release-native-nginx";
 import { qualifyMediaELFs } from "./media-sdk-abi";
 import { mediaBuildTarget } from "./media-sdk-build";
+import { strippedELFVerificationSpec } from "../build/verify-binary";
 import { buildGNUX64RuntimeSDK, runtimeSDKCargoArgs } from "./runtime-sdk-build";
 
 type WorkerInput = { target: string; source: string; version: string; output: string; root: string };
 const root = resolve(import.meta.dir, "../..");
 const GiB = 1024 ** 3;
 
-export function nativeLinuxCPUs(status: string): string {
+export function nativeLinuxCPUs(status: string, count = 2): string {
+  if (!Number.isSafeInteger(count) || count < 1 || count > 1024)
+    throw new Error("Native Linux CPU allocation is invalid");
   const ranges = status.match(/^Cpus_allowed_list:\s*([0-9,-]+)$/m)?.[1];
   const cpus: number[] = [];
   for (const range of (ranges ?? "").split(",")) {
@@ -45,10 +68,13 @@ export function nativeLinuxCPUs(status: string): string {
       last > 1_048_576
     )
       throw new Error("Native Linux CPU allocation is invalid");
-    for (let cpu = first; cpu <= last && cpus.length < 2; cpu++) cpus.push(cpu);
-    if (cpus.length === 2) break;
+    for (let cpu = first; cpu <= last && cpus.length < count; cpu++) {
+      if (cpus.includes(cpu)) throw new Error("Native Linux CPU allocation overlaps");
+      cpus.push(cpu);
+    }
+    if (cpus.length === count) break;
   }
-  if (cpus.length !== 2) throw new Error("Native Linux producer requires two allocated CPUs");
+  if (cpus.length !== count) throw new Error(`Native Linux producer requires ${count} allocated CPUs`);
   return cpus.join(",");
 }
 
@@ -185,11 +211,6 @@ export function nativeRuntimeBuildFlags(
     "--ci=on",
     "--buildkite=off",
     "--canary=off",
-    "--video-native=on",
-    "--curl-native=on",
-    "--browser-crawl=on",
-    "--browser-index=on",
-    "--google-search=on",
     `--link-threads=${linkThreads}`,
     `-j${jobs}`,
     ...(sysroot ? [`--linux-sysroot=${sysroot}`] : []),
@@ -219,16 +240,22 @@ export function nativeCapacity(
   return { ...input, required, maxJobs: resources.jobs, linkThreads: resources.linkThreads };
 }
 
-export function nativeOwnerPrerequisites(target: string, plans?: MediaSDKDescriptor[]) {
+export function nativeOwnerPrerequisites(
+  target: string,
+  plans?: MediaSDKDescriptor[],
+  component: "media" | "runtime" = "media",
+) {
   const selected = mediaReleaseTarget(target);
   const descriptors =
     plans ??
     (["ffmpeg", "mpv"] as const).map(component => mediaSDKPlan(component, selected.sdkTarget as MediaSDKTarget));
   const missing: string[] = [];
-  try {
-    nativeNginxRecipe(target);
-  } catch (error) {
-    missing.push((error as Error).message);
+  if (component === "media") {
+    try {
+      nativeNginxRecipe(target);
+    } catch (error) {
+      missing.push((error as Error).message);
+    }
   }
   for (const [index, plan] of descriptors.entries())
     if (
@@ -241,17 +268,17 @@ export function nativeOwnerPrerequisites(target: string, plans?: MediaSDKDescrip
         `scripts/aphrody/media-sdk-factory.ts: pinned ${index === 0 ? "ffmpeg" : "mpv"} SDK recipe or archive absent for ${selected.sdkTarget}`,
       );
   // The existing native asset plugins deliberately reject these platforms.
-  if (target !== "windows-x64")
+  if (component === "media" && target !== "windows-x64")
     missing.push("packages/bun-video native Sharp/Remotion library owner currently qualifies Windows x64 only");
   return missing;
 }
 
-function workerEnvironment() {
+function workerEnvironment(resources: NativeRuntimeResources = { jobs: 2, linkThreads: 2 }) {
   return {
     ...process.env,
-    CARGO_BUILD_JOBS: "2",
+    CARGO_BUILD_JOBS: String(resources.jobs),
     BUN_MEDIA_JOBS: "2",
-    OMP_NUM_THREADS: "2",
+    OMP_NUM_THREADS: String(resources.jobs),
     RUSTC_WRAPPER: undefined,
     CARGO_BUILD_RUSTC_WRAPPER: undefined,
     TYPESAFE_API_KEY: undefined,
@@ -262,25 +289,32 @@ function workerEnvironment() {
   };
 }
 
-async function command(
+export async function command(
   argv: string[],
   cwd: string,
   log: string,
   options: {
     timeout?: number;
     env?: Record<string, string | undefined>;
+    resources?: NativeRuntimeResources;
   } = {},
 ) {
   const ownerCommand = argv[0];
+  const resources = options.resources ?? { jobs: 2, linkThreads: 2 };
   if (process.platform === "linux") {
     const taskset = Bun.which("taskset");
     if (!taskset) throw new Error("Native Linux CPU affinity owner is missing: util-linux taskset");
-    argv = [taskset, "-c", nativeLinuxCPUs(await Bun.file("/proc/self/status").text()), ...argv];
+    argv = [
+      taskset,
+      "-c",
+      nativeLinuxCPUs(await Bun.file("/proc/self/status").text(), Math.max(resources.jobs, resources.linkThreads)),
+      ...argv,
+    ];
   }
   const file = Bun.file(log).writer();
   const child = Bun.spawn(argv, {
     cwd,
-    env: { ...workerEnvironment(), ...options.env },
+    env: { ...workerEnvironment(resources), ...options.env },
     stdin: "ignore",
     stdout: "pipe",
     stderr: "pipe",
@@ -329,7 +363,7 @@ async function sourceIdentity(input: WorkerInput, diagnostics: string) {
     throw new Error("Native producer version differs from committed package.json");
 }
 
-async function preflight(input: WorkerInput) {
+async function preflight(input: WorkerInput, component: "media" | "runtime" = "media") {
   const target = mediaReleaseTarget(input.target);
   const diagnostics = join(input.output, "diagnostics");
   await mkdir(diagnostics, { recursive: true });
@@ -345,9 +379,10 @@ async function preflight(input: WorkerInput) {
     },
     nativeRuntimeResources(),
   );
-  const missing = nativeOwnerPrerequisites(input.target);
+  const missing = nativeOwnerPrerequisites(input.target, undefined, component);
   const observation = {
     schema: 1,
+    component,
     source: input.source,
     target: input.target,
     version: input.version,
@@ -404,20 +439,268 @@ async function requireAVIO(prefix: string, input: WorkerInput) {
       throw new Error(`Native AVIO sidecar owner absent from pinned complete SDK: ${path}`);
 }
 
-async function produce(input: WorkerInput) {
-  const diagnostics = await preflight(input);
-  const target = mediaReleaseTarget(input.target);
-  const resources = nativeRuntimeResources();
-  if (target.abi === "musl" && !mediaSDKHostTarget().endsWith("-musl")) {
-    if (resources.jobs !== 2 || resources.linkThreads !== 2)
-      throw Error("Explicit runtime budget requires a native runner; musl container retains its two-CPU allocation");
-    return produceMusl(input, diagnostics);
+export function nativeRuntimeRegressionPlan(runtime: string) {
+  return {
+    command: [
+      runtime,
+      "--no-env-file",
+      "test",
+      "--max-concurrency=2",
+      "./test/js/bun/vector-index.test.ts",
+      "./test/js/bun/curl-aws-sigv4.test.ts",
+      "./test/internal/browser-cli.test.ts",
+      "./test/cli/search.test.ts",
+      "./test/js/bun/yolo/yolo.test.ts",
+      "./test/cli/vpn/vpn.test.ts",
+      "./test/cli/check/declarations.test.ts",
+      "./packages/bun-agent-plugin/src/input-files.test.ts",
+    ],
+    env: { BUN_TEST_REQUIRE_SEARCH: "1", BUN_TEST_REQUIRE_VECTOR_INDEX: "1", BUN_TEST_REQUIRE_CURL: "1" },
+    qualityCommand: [
+      runtime,
+      "--no-env-file",
+      "test",
+      "./test/cli/lint/toolchain.test.ts",
+      "--test-name-pattern",
+      "tracked.*aphrody",
+    ],
+  };
+}
+
+export function nativeRuntimeArtifactPlan(buildDir: string, targetName: string, component: "runtime" | "media") {
+  const target = mediaReleaseTarget(targetName);
+  const stripped = component === "runtime" && (target.os === "windows" || target.abi === "gnu");
+  return {
+    buildTarget: stripped ? "bun" : "bun-profile",
+    executable: join(buildDir, (stripped ? "bun" : "bun-profile") + (target.os === "windows" ? ".exe" : "")),
+    profile: join(buildDir, "bun-profile" + (target.os === "windows" ? ".exe" : "")),
+    profileSpec: join(buildDir, "bun-profile.verify.json"),
+    strippedELF: stripped && target.os === "linux",
+  };
+}
+
+export async function assertRuntimeArtifactAbsent(products: string, asset: string) {
+  if (!isAbsolute(products) || !/^bun-[a-z0-9-]+-runtime-full$/.test(asset))
+    throw new Error("Invalid immutable runtime output");
+  for (const name of [asset, `${asset}.zip`, `${asset}.qualification.json`]) {
+    try {
+      await lstat(join(products, name));
+    } catch (error) {
+      if ((error as { code?: string }).code === "ENOENT") continue;
+      throw error;
+    }
+    throw new Error("Immutable runtime artifact already exists");
   }
-  if (mediaSDKHostTarget() !== target.sdkTarget) throw new Error("Native producer ABI differs from requested target");
+}
+
+async function packageNativeRuntime(
+  input: WorkerInput,
+  runtime: string,
+  prefix: string,
+  diagnostics: string,
+  provenance: NativeRuntimeFullReceipt["provenance"],
+) {
+  const target = mediaReleaseTarget(input.target),
+    asset = runtimeFullAsset(input.target);
+  const products = join(input.output, "products");
+  await mkdir(products, { recursive: true });
+  await assertRuntimeArtifactAbsent(products, asset);
+  const directory = join(products, asset);
+  await mkdir(directory);
+  const runtimeName = target.os === "windows" ? "bun.exe" : "bun";
+  const builtRuntime = runtime;
+  const expectedRuntimeHash = await hashSDKFile(builtRuntime);
+  runtime = join(directory, runtimeName);
+  await Bun.write(runtime, Bun.file(builtRuntime));
+  if ((await hashSDKFile(runtime)) !== expectedRuntimeHash) throw new Error("Runtime changed while staging");
+  if (target.os !== "windows") await chmod(runtime, 0o755);
+  await Bun.write(join(directory, "LICENSE.md"), Bun.file(join(input.root, "LICENSE.md")));
+  await stageMediaBundle(directory, { apply: true, prefix, target: target.sdkTarget });
+  await Bun.write(
+    join(directory, "release-flavor.json"),
+    JSON.stringify(runtimeFlavorManifest(target, input.source), null, 2) + "\n",
+  );
+  const gates: NativeRuntimeFullReceipt["gates"] = [];
+  const gate = async (
+    id: string,
+    argv: string[],
+    options: { cwd?: string; env?: Record<string, string | undefined> } = {},
+  ) => {
+    const log = `${asset}-${id}.log`;
+    const result = await command(argv, options.cwd ?? input.root, join(products, log), {
+      timeout: 300_000,
+      env: { ...options.env, BUN_TEST_BOOTSTRAP_RELEASE_PATH: runtime, BUN_EXECUTABLE: runtime },
+    });
+    if (argv.includes("test") && (!/\b[1-9]\d* pass\b/.test(result.stderr) || !/\b0 fail\b/.test(result.stderr)))
+      throw new Error(`Runtime test gate executed no passing tests: ${id}`);
+    gates.push({ id, passed: true, log, sha256: await hashSDKFile(join(products, log)) });
+    return id === "native-update" ? result.stdout + result.stderr : result.stdout;
+  };
+  for (const id of ["runtime-closure"]) {
+    const log = `${asset}-${id}.log`;
+    await Bun.write(join(products, log), Bun.file(join(diagnostics, `${id}.log`)));
+    gates.push({ id, passed: true, log, sha256: await hashSDKFile(join(products, log)) });
+  }
+  const stagedIdentity = JSON.parse(
+    await gate("runtime-identity", [
+      runtime,
+      "--no-env-file",
+      "-e",
+      "console.log(JSON.stringify({version:Bun.version,revision:Bun.revision,platform:process.platform,arch:process.arch,sourceUrl:process.release.sourceUrl}))",
+    ]),
+  );
+  assertMediaRuntimeIdentity(stagedIdentity, input.source, input.target);
+  if (!Bun.deepEquals(stagedIdentity, provenance)) throw new Error("Staged runtime provenance changed");
+  const presence = await gate("runtime-features", [
+    runtime,
+    "--no-env-file",
+    "-e",
+    "if(!Bun.Curl?.available||!Bun.Crawl?.available||!Bun.VectorIndex?.available||!Bun.Video?.available)throw Error('Required native runtime provider unavailable');console.log('native providers available')",
+  ]);
+  if (presence.trim() !== "native providers available") throw new Error("Runtime provider gate did not execute");
+  const applet = await gate("runtime-coreutils", [
+    runtime,
+    "--no-env-file",
+    "-e",
+    'const first="native applet"+String.fromCharCode(10);const r=Bun.spawnSync({cmd:[process.execPath,"-n","1"],argv0:"head",stdin:new TextEncoder().encode(first+"second"+String.fromCharCode(10)),stdout:"pipe",stderr:"pipe"});if(r.exitCode!==0||r.stdout.toString()!==first||r.stderr.length)throw Error("Native coreutils unavailable");console.log("native coreutils available")',
+  ]);
+  if (applet.trim() !== "native coreutils available") throw new Error("Runtime coreutils gate did not execute");
+  const regressions = nativeRuntimeRegressionPlan(runtime);
+  await gate("runtime-feature-regressions", regressions.command, { env: regressions.env });
+  await gate("runtime-quality-guards", regressions.qualityCommand);
+  await gate("runtime-regressions", [
+    runtime,
+    "--no-env-file",
+    "test",
+    "--max-concurrency=2",
+    "./test/js/bun/image/image.test.ts",
+    "./test/js/bun/video/test.ts",
+    "./test/js/bun/yolo/yolo.test.ts",
+    "./test/js/bun/sqlite/sqlite.test.js",
+  ]);
+  const files: NativeRuntimeFullReceipt["files"] = {};
+  for await (const member of new Bun.Glob("**/*").scan({ cwd: directory, onlyFiles: true, dot: true })) {
+    files[member] = {
+      bytes: Bun.file(join(directory, member)).size,
+      sha256: await hashSDKFile(join(directory, member)),
+      mode: target.os === "windows" ? 0o644 : (await stat(join(directory, member))).mode & 0o777,
+    };
+  }
+  const sdk = (["ffmpeg", "mpv"] as const).map(component =>
+    mediaSDKPlan(component, target.sdkTarget as MediaSDKTarget),
+  );
+  const manifest: Omit<NativeRuntimeFullReceipt, "archive" | "gates"> = {
+    schema: 1,
+    kind: "bun-runtime-full-release",
+    source: input.source,
+    version: input.version,
+    target: input.target,
+    triplet: target.triplet,
+    native: true,
+    passed: true,
+    execution: "native",
+    platform: process.platform,
+    arch: process.arch,
+    provenance,
+    compiledFeatures: fullNativeRuntimeFeatures,
+    components: runtimeFullComponents,
+    allComponentsQualified: false,
+    runtimeSHA256: files[runtimeName]!.sha256,
+    sdkSources: { ffmpeg: sdk[0]!.sourceRevision!, mpv: sdk[1]!.sourceRevision! },
+    files,
+  };
+  await Bun.write(join(directory, "bun-runtime-full-release.json"), JSON.stringify(manifest, null, 2) + "\n");
+  const archive = join(products, `${asset}.zip`);
+  await archiveMediaReleaseFiles(directory, archive, [...Object.keys(files), "bun-runtime-full-release.json"], {
+    triplet: target.triplet,
+    runtime: { executable: runtime, source: input.source, version: input.version, target: input.target },
+    modes: Object.fromEntries(Object.entries(files).map(([name, file]) => [name, file.mode ?? 0o644])),
+  });
+  const scratch = join(input.output, "runtime-install-qualification");
+  await mkdir(scratch);
+  const install = { ...input, scratch, runtime, archive, run: gate };
+  await qualifyNativeInstall(install);
+  if (target.os === "windows") await qualifyNativeWinget(install);
+  await sourceIdentity(input, diagnostics);
+  const receipt: NativeRuntimeFullReceipt = {
+    ...manifest,
+    gates,
+    archive: { name: `${asset}.zip`, bytes: Bun.file(archive).size, sha256: await hashSDKFile(archive) },
+  };
+  await Bun.write(join(products, `${asset}.qualification.json`), JSON.stringify(receipt, null, 2) + "\n");
+  const qualified = await aggregateRuntimeFullRelease(products, input.source, input.version, [input.target]);
+  await Bun.write(join(products, "runtime-full-qualification.json"), JSON.stringify(qualified, null, 2) + "\n");
+}
+
+/** Shared core build owner; SDK packaging runs only after this candidate exists. */
+export async function prepareNativeRuntimeCore(
+  input: WorkerInput,
+  diagnostics: string,
+  component: "media" | "runtime" = "media",
+) {
+  const target = mediaReleaseTarget(input.target);
+  if (mediaSDKHostTarget() !== target.sdkTarget) throw new Error("Native core requires its actual target host ABI");
+  const resources = nativeRuntimeResources();
   const logicalBuildDir = join(input.root, "build/release");
   const buildDir = await nativeRuntimeBuildDirectory(input.root);
-  const run = async (id: string, argv: string[], timeout = 120_000, cwd = input.root) =>
-    command(argv, cwd, join(diagnostics, `${id}.log`), { timeout });
+  const sysroot =
+    target.os === "linux"
+      ? (target.abi === "musl" ? locations.muslSysroot : locations.glibcSysroot)[target.arch]
+      : undefined;
+  const run = async (id: string, argv: string[]) =>
+    command(argv, input.root, join(diagnostics, id + ".log"), { timeout: 120_000 });
+  if ((await nativeRuntimeBuildDirectory(input.root)) !== buildDir)
+    throw Error("Native runtime build directory changed");
+  const buildFlags = nativeRuntimeBuildFlags(target, sysroot, {
+    ...resources,
+    ...(buildDir !== logicalBuildDir ? { buildDir } : {}),
+  });
+  await Bun.write(
+    join(diagnostics, "runtime-build-layout.json"),
+    JSON.stringify(
+      {
+        schema: 1,
+        source: input.source,
+        sourceRoot: input.root,
+        logicalBuildDir,
+        physicalBuildDir: buildDir,
+        resources,
+        buildFlags,
+      },
+      null,
+      2,
+    ) + "\n",
+  );
+  const artifact = nativeRuntimeArtifactPlan(buildDir, input.target, component);
+  // bun bd owns its build lock; its build is intentionally not terminated by a command timeout.
+  await command(
+    [process.execPath, "--no-env-file", "bd", ...buildFlags, `--target=${artifact.buildTarget}`],
+    input.root,
+    join(diagnostics, "runtime-build.log"),
+    {
+      resources,
+      env: { GIT_SHA: input.source, CARGO_BUILD_JOBS: String(resources.jobs), OMP_NUM_THREADS: String(resources.jobs) },
+    },
+  );
+  const runtime = artifact.executable;
+  const identity = JSON.parse(
+    (
+      await run("runtime-identity", [
+        runtime,
+        "--no-env-file",
+        "-e",
+        "console.log(JSON.stringify({version:Bun.version,revision:Bun.revision,platform:process.platform,arch:process.arch,sourceUrl:process.release.sourceUrl}))",
+      ])
+    ).stdout,
+  );
+  assertMediaRuntimeIdentity(identity, input.source, input.target);
+  return { artifact, runtime, identity, buildDir };
+}
+
+async function prepareNativeRuntimeToolchain(input: WorkerInput, diagnostics: string) {
+  const target = mediaReleaseTarget(input.target);
+  const run = async (id: string, argv: string[], timeout = 120_000) =>
+    command(argv, input.root, join(diagnostics, id + ".log"), { timeout });
   await run(
     "setup",
     [
@@ -450,6 +733,22 @@ async function produce(input: WorkerInput) {
   process.env.BUN_TOOLCHAIN_LLVM = dirname(dirname(toolchain.cc));
   const rust = (await run("rust-pin", ["rustup", "show", "active-toolchain"])).stdout;
   if (!rust.startsWith(pins.rust.channel)) throw new Error("Rust toolchain differs from committed pin");
+  return toolchain;
+}
+
+async function produce(input: WorkerInput, component: "media" | "runtime" = "media") {
+  const diagnostics = await preflight(input, component);
+  const target = mediaReleaseTarget(input.target);
+  const resources = nativeRuntimeResources();
+  if (target.abi === "musl" && !mediaSDKHostTarget().endsWith("-musl")) {
+    if (resources.jobs !== 2 || resources.linkThreads !== 2)
+      throw Error("Explicit runtime budget requires a native runner; musl container retains its two-CPU allocation");
+    return produceMusl(input, diagnostics, component);
+  }
+  if (mediaSDKHostTarget() !== target.sdkTarget) throw new Error("Native producer ABI differs from requested target");
+  const run = async (id: string, argv: string[], timeout = 120_000, cwd = input.root) =>
+    command(argv, cwd, join(diagnostics, `${id}.log`), { timeout });
+  const toolchain = await prepareNativeRuntimeToolchain(input, diagnostics);
   const prefix = await sdkPrefix(input, diagnostics);
   await requireAVIO(prefix, input);
   if (!(await Bun.file(join(diagnostics, "avio-qualification.json")).exists()))
@@ -462,50 +761,8 @@ async function produce(input: WorkerInput) {
       : undefined;
   if (sysroot && !(await Bun.file(join(sysroot, "usr/include/stdio.h")).exists()))
     throw new Error(`Pinned target sysroot missing: ${sysroot}; scripts/build/ci-images/spec.ts owns its provisioning`);
-  if ((await nativeRuntimeBuildDirectory(input.root)) !== buildDir)
-    throw Error("Native runtime build directory changed");
-  const buildFlags = nativeRuntimeBuildFlags(target, sysroot, {
-    ...resources,
-    ...(buildDir !== logicalBuildDir ? { buildDir } : {}),
-  });
-  await Bun.write(
-    join(diagnostics, "runtime-build-layout.json"),
-    JSON.stringify(
-      {
-        schema: 1,
-        source: input.source,
-        sourceRoot: input.root,
-        logicalBuildDir,
-        physicalBuildDir: buildDir,
-        resources,
-        buildFlags,
-      },
-      null,
-      2,
-    ) + "\n",
-  );
-  // bun bd owns its build lock; its build is intentionally not terminated by a command timeout.
-  await command(
-    [process.execPath, "--no-env-file", "bd", ...buildFlags, "--target=bun-profile"],
-    input.root,
-    join(diagnostics, "runtime-build.log"),
-    {
-      env: { GIT_SHA: input.source, CARGO_BUILD_JOBS: String(resources.jobs), OMP_NUM_THREADS: String(resources.jobs) },
-    },
-  );
-  const runtime = join(buildDir, target.os === "windows" ? "bun-profile.exe" : "bun-profile");
-  const identity = JSON.parse(
-    (
-      await run("runtime-identity", [
-        runtime,
-        "--no-env-file",
-        "-e",
-        "console.log(JSON.stringify({version:Bun.version,revision:Bun.revision,platform:process.platform,arch:process.arch}))",
-      ])
-    ).stdout,
-  );
-  assertMediaRuntimeIdentity(identity, input.source, input.target);
-  const spec = `${runtime}.verify.json`;
+  const { artifact, runtime, identity } = await prepareNativeRuntimeCore(input, diagnostics, component);
+  let spec = artifact.profileSpec;
   const expectations = await Bun.file(spec).json();
   for (const name of ["readobj", "nm", "objdump", "cxxfilt"]) {
     const tool = expectations.tools?.[name];
@@ -516,7 +773,24 @@ async function produce(input: WorkerInput) {
     (expectations.expect?.maxSymbolVersions?.GLIBC !== "2.17" || expectations.expect?.neededLibs?.exact !== true)
   )
     throw new Error("GNU executable contract must enforce GLIBC <= 2.17 and exact closure");
-  await run("runtime-closure", [process.execPath, "--no-env-file", "scripts/build/verify-binary.ts", "binary", spec]);
+  if (artifact.strippedELF) {
+    const subject = strippedELFVerificationSpec(spec, runtime);
+    spec = join(diagnostics, "runtime-stripped.verify.json");
+    await Bun.write(spec, JSON.stringify(subject, null, 2) + "\n");
+  } else if (runtime !== artifact.profile) {
+    if ((await hashSDKFile(runtime)) !== (await hashSDKFile(artifact.profile)))
+      throw new Error("Canonical Windows runtime copy differs from its profile");
+    spec = join(diagnostics, "runtime-copy.verify.json");
+    await Bun.write(spec, JSON.stringify({ ...expectations, exe: runtime, name: "bun" }, null, 2) + "\n");
+  }
+  await run("runtime-closure", [
+    process.execPath,
+    "--no-env-file",
+    "scripts/build/verify-binary.ts",
+    artifact.strippedELF ? "stripped-elf" : "binary",
+    spec,
+  ]);
+  if (component === "runtime") return packageNativeRuntime(input, runtime, prefix, diagnostics, identity);
   const sdkRoot = join(input.root, "packages/bun-runtime-sdk");
   let runtimeSDKArtifact: string;
   if (target.sdkTarget === "linux-x64") {
@@ -835,7 +1109,7 @@ async function produce(input: WorkerInput) {
   await Bun.write(join(products, `${target.triplet}.platform-gates.json`), JSON.stringify(receipt, null, 2) + "\n");
 }
 
-async function produceMusl(input: WorkerInput, diagnostics: string) {
+async function produceMusl(input: WorkerInput, diagnostics: string, component: "media" | "runtime" = "media") {
   const allocation = nativeFullReleasePlan(input.source).targets.find(target => target.target === input.target)!;
   const bootstrap = allocation.bootstrap;
   const response = await fetch(bootstrap.url, { signal: AbortSignal.timeout(120_000) });
@@ -856,7 +1130,7 @@ async function produceMusl(input: WorkerInput, diagnostics: string) {
     "apk add --no-cache bash git curl unzip tar xz build-base cmake pkgconf linux-headers sudo util-linux",
     `git config --global --add safe.directory '${input.root.replaceAll("'", "'\\''")}'`,
     `"$BUN_BOOTSTRAP" -e 'if(process.arch!==${JSON.stringify(allocation.arch)}||Bun.revision!==${JSON.stringify(bootstrap.source)}||Bun.version!==${JSON.stringify(bootstrap.tag.replace("aphrody-v", ""))})throw new Error("Native musl bootstrap identity differs")'`,
-    'exec "$BUN_BOOTSTRAP" --no-env-file scripts/aphrody/release-native-worker.ts produce "$NATIVE_TARGET" "$NATIVE_SOURCE" "$NATIVE_VERSION" "$NATIVE_OUTPUT"',
+    `exec "$BUN_BOOTSTRAP" --no-env-file scripts/aphrody/release-native-worker.ts ${component === "runtime" ? "produce-runtime" : "produce"} "$NATIVE_TARGET" "$NATIVE_SOURCE" "$NATIVE_VERSION" "$NATIVE_OUTPUT"`,
   ].join("\n");
   await command(
     [
@@ -890,12 +1164,188 @@ async function produceMusl(input: WorkerInput, diagnostics: string) {
   );
 }
 
+/** This proves executed native capabilities, rather than accepting API names as qualification. */
+export const nativeBootstrapProbe = `
+import {dlopen, ptr} from 'bun:ffi';
+const bytes=await new Bun.Archive({'probe.txt':'native-sdk-bootstrap'}, {format:'zip',mtime:0}).bytes();
+if(bytes[0]!==0x50||bytes[1]!==0x4b||bytes[2]!==3||bytes[3]!==4)throw Error('Candidate ZIP writer is unavailable');
+const files=await new Bun.Archive(bytes).files();
+if(files.size!==1||await files.get('probe.txt')?.text()!=='native-sdk-bootstrap')throw Error('Candidate ZIP readback differs');
+let ffi;
+if(process.platform==='win32'){
+  ffi=dlopen('kernel32.dll',{GetCurrentProcessId:{args:[],returns:'u32'}});
+  try{if(ffi.symbols.GetCurrentProcessId()!==process.pid)throw Error('Native FFI process identity differs');}finally{ffi.close();}
+}else{
+  ffi=dlopen(process.platform==='darwin'?'/usr/lib/libSystem.B.dylib':'libc.so.6',{strlen:{args:['ptr'],returns:'usize'}});
+  const text=Buffer.from('native-ffi\\0');
+  try{if(Number(ffi.symbols.strlen(ptr(text)))!==10)throw Error('Native FFI readback differs');}finally{ffi.close();}
+}
+console.log(JSON.stringify({zip:true,ffi:true,revision:Bun.revision,platform:process.platform,arch:process.arch}));
+`;
+
+export async function qualifyNativeBootstrapCandidate(
+  input: {
+    runtime: string;
+    sha256: string;
+    source: string;
+    target: string;
+    root: string;
+    diagnostics: string;
+  },
+  run: typeof command = command,
+) {
+  if (
+    !isAbsolute(input.runtime) ||
+    !/^[a-f0-9]{64}$/.test(input.sha256) ||
+    (await hashSDKFile(input.runtime)) !== input.sha256
+  )
+    throw new Error("Native bootstrap candidate differs from its immutable pin");
+  const target = mediaReleaseTarget(input.target);
+  const result = await run(
+    [input.runtime, "--no-env-file", "-e", nativeBootstrapProbe],
+    input.root,
+    join(input.diagnostics, "bootstrap-capabilities.log"),
+    { timeout: 120_000 },
+  );
+  const observed = JSON.parse(result.stdout);
+  if (
+    observed.zip !== true ||
+    observed.ffi !== true ||
+    observed.revision !== input.source ||
+    observed.platform !== target.platform ||
+    observed.arch !== target.runtimeArch ||
+    (await hashSDKFile(input.runtime)) !== input.sha256
+  )
+    throw new Error("Native bootstrap capability readback differs from the source candidate");
+  const receipt = {
+    schema: 1,
+    source: input.source,
+    target: input.target,
+    runtimeSHA256: input.sha256,
+    zip: true,
+    ffi: true,
+    nativeReleaseQualified: false,
+  };
+  await Bun.write(join(input.diagnostics, "bootstrap-capabilities.json"), JSON.stringify(receipt, null, 2) + "\n");
+  return receipt;
+}
+
+export function nativeMediaSourceArchivePin(env: Record<string, string | undefined>) {
+  const url = new URL(env.BUN_MEDIA_SOURCE_ARCHIVE_URL ?? "https://invalid.invalid/");
+  const sha256 = env.BUN_MEDIA_SOURCE_ARCHIVE_SHA256 ?? "";
+  const bytes = Number(env.BUN_MEDIA_SOURCE_ARCHIVE_BYTES);
+  if (
+    url.protocol !== "https:" ||
+    url.username ||
+    url.password ||
+    url.search ||
+    url.hash ||
+    !(
+      (url.origin === "https://bun-lib.aphrody.app" && url.pathname.startsWith("/media/sources/")) ||
+      (url.origin === "https://github.com" && url.pathname.startsWith("/aphrody-labs/bun/releases/download/"))
+    ) ||
+    !/^[a-f0-9]{64}$/.test(sha256) ||
+    !Number.isSafeInteger(bytes) ||
+    bytes < 1 ||
+    bytes > 512 * 1024 ** 2
+  )
+    throw new Error("Media bootstrap requires an owned source archive URL and exact SHA256/byte pins");
+  return { url: url.href, sha256, bytes };
+}
+
+async function bootstrapWorkerMedia(input: WorkerInput) {
+  const target = mediaReleaseTarget(input.target);
+  if (mediaSDKHostTarget() !== target.sdkTarget) throw new Error("SDK bootstrap must execute on its native target ABI");
+  const diagnostics = join(input.output, "diagnostics");
+  await mkdir(diagnostics, { recursive: true });
+  await sourceIdentity(input, diagnostics);
+  const preparation = await Bun.file(join(diagnostics, "core-preparation.json")).json();
+  const runtime = await realpath(process.execPath);
+  if (
+    preparation.source !== input.source ||
+    preparation.target !== input.target ||
+    preparation.nativeReleaseQualified !== false ||
+    (await realpath(preparation.runtime)) !== runtime ||
+    (await hashSDKFile(runtime)) !== preparation.runtimeSHA256 ||
+    preparation.buildDir !== (await nativeRuntimeBuildDirectory(input.root))
+  )
+    throw new Error("SDK bootstrap is not running under its pinned source candidate");
+  await qualifyNativeBootstrapCandidate({
+    runtime,
+    sha256: preparation.runtimeSHA256,
+    source: input.source,
+    target: input.target,
+    root: input.root,
+    diagnostics,
+  });
+  await prepareNativeRuntimeToolchain(input, diagnostics);
+  const pin = nativeMediaSourceArchivePin(process.env);
+  const archive = join(input.output, "media-sources.tar.gz");
+  await downloadWithRetry(pin.url, archive, "native-media-sources", undefined, undefined, pin);
+  const snapshot = await materializeMediaSources({
+    ...pin,
+    archive,
+    output: join(input.output, "media-source-snapshot"),
+  });
+  process.env.BUN_MEDIA_VULKAN_HEADERS = snapshot.include;
+  process.env.BUN_MEDIA_VULKAN_LICENSE = snapshot.notice;
+  const result = await bootstrapNativeMediaInputs({
+    root: input.root,
+    sources: snapshot.sources,
+    output: join(input.output, "media-bootstrap"),
+    target: target.sdkTarget as MediaSDKTarget,
+    zlibBuild: preparation.buildDir,
+  });
+  if ((await hashSDKFile(runtime)) !== preparation.runtimeSHA256)
+    throw new Error("Candidate changed during SDK bootstrap");
+  await sourceIdentity(input, diagnostics);
+  const receipt = {
+    ...result,
+    source: input.source,
+    target: input.target,
+    runtimeSHA256: preparation.runtimeSHA256,
+    sourceArchiveSHA256: pin.sha256,
+    sourceCatalogueSHA256: snapshot.catalogueSHA256,
+    vulkanHeaders: snapshot.include,
+    vulkanLicense: snapshot.notice,
+    nativeReleaseQualified: false,
+  };
+  await Bun.write(join(diagnostics, "media-bootstrap.json"), JSON.stringify(receipt, null, 2) + "\n");
+  return receipt;
+}
+
 if (import.meta.main) {
   const [action, ...args] = Bun.argv.slice(2);
   const input = nativeWorkerInput(args);
   try {
-    if (action === "preflight") await preflight(input);
-    else if (action === "prepare-media") {
+    if (action === "preflight" || action === "preflight-runtime")
+      await preflight(input, action === "preflight-runtime" ? "runtime" : "media");
+    else if (action === "bootstrap-media") await bootstrapWorkerMedia(input);
+    else if (action === "prepare-core") {
+      const diagnostics = join(input.output, "diagnostics");
+      await mkdir(diagnostics, { recursive: true });
+      await sourceIdentity(input, diagnostics);
+      await prepareNativeRuntimeToolchain(input, diagnostics);
+      await command(
+        [process.execPath, "--no-env-file", "scripts/aphrody/curl-source.ts"],
+        input.root,
+        join(diagnostics, "curl-source.log"),
+        { timeout: 300_000 },
+      );
+      const result = await prepareNativeRuntimeCore(input, diagnostics);
+      await Bun.write(
+        join(diagnostics, "core-preparation.json"),
+        JSON.stringify({
+          schema: 1,
+          source: input.source,
+          target: input.target,
+          runtime: result.runtime,
+          runtimeSHA256: await hashSDKFile(result.runtime),
+          buildDir: result.buildDir,
+          nativeReleaseQualified: false,
+        }) + "\n",
+      );
+    } else if (action === "prepare-media") {
       const diagnostics = join(input.output, "diagnostics");
       await mkdir(diagnostics, { recursive: true });
       await sourceIdentity(input, diagnostics);
@@ -915,10 +1365,11 @@ if (import.meta.main) {
           2,
         ) + "\n",
       );
-    } else if (action === "produce") await produce(input);
+    } else if (action === "produce" || action === "produce-runtime")
+      await produce(input, action === "produce-runtime" ? "runtime" : "media");
     else
       throw new Error(
-        "Usage: release-native-worker.ts preflight|prepare-media|produce <target> <source-SHA> <version> <absolute-output>",
+        "Usage: release-native-worker.ts preflight|preflight-runtime|prepare-core|bootstrap-media|prepare-media|produce|produce-runtime <target> <source-SHA> <version> <absolute-output>",
       );
   } catch (error) {
     const diagnostics = join(input.output, "diagnostics");

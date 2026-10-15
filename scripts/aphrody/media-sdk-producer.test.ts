@@ -3,12 +3,162 @@ import { join } from "node:path";
 import { tempDir } from "../../test/harness";
 import { hashSDKFile, mediaSDKPlan } from "../../packages/bun-video/src/sdk";
 import {
+  bootstrapNativeMediaInputs,
+  nativeMediaBootstrapPlan,
   assertNativeMediaTests,
   existingMediaQualification,
   nativeMediaInputs,
   readNativeMediaInputs,
   verifyNativeMediaPrefix,
 } from "./media-sdk-producer";
+import { mkdir } from "node:fs/promises";
+
+test("native media bootstrap plans reuse canonical owners without asserting native qualification", () => {
+  using directory = tempDir("media-bootstrap-plan", {});
+  const root = String(directory);
+  const input = {
+    root: join(root, "repo"),
+    sources: join(root, "sources"),
+    output: join(root, "pool"),
+    zlibBuild: join(root, "build"),
+    target: "linux-x64" as const,
+  };
+  const plan = nativeMediaBootstrapPlan(input);
+  expect(plan.components.ffmpeg.kind).toBe("source");
+  if (plan.components.ffmpeg.kind !== "source" || plan.components.mpv.kind !== "source")
+    throw new Error("Expected canonical source recipes");
+  expect(plan.components.ffmpeg.input.dependencies["zlib-ng"]).toBe(join(input.output, "zlib/prefix"));
+  expect(plan.components.mpv.input.dependencies.ffmpeg).toBe(join(input.output, "ffmpeg/prefix"));
+  expect(plan.avio?.input.component).toBe("avio");
+  expect(JSON.stringify(plan)).not.toContain("sourceClean");
+  expect(() => nativeMediaBootstrapPlan({ ...input, output: join(input.root, "new") })).toThrow("overlaps");
+  expect(() => nativeMediaBootstrapPlan({ ...input, output: join(input.root, "..private") })).toThrow("overlaps");
+  expect(() => nativeMediaBootstrapPlan({ ...input, output: root })).toThrow("overlaps");
+});
+
+test("bootstrap capacity and host guards precede all source or compiler work", async () => {
+  using directory = tempDir("media-bootstrap-host-capacity", {});
+  const root = String(directory);
+  const input = {
+    root: join(root, "repo"),
+    sources: join(root, "sources"),
+    output: join(root, "pool"),
+    zlibBuild: join(root, "build"),
+    target: "linux-x64" as const,
+  };
+  let sourceCalls = 0;
+  const sources = async () => {
+    sourceCalls++;
+    return [];
+  };
+  await expect(bootstrapNativeMediaInputs(input, { hostTarget: () => "windows-x64", sources })).rejects.toThrow(
+    "actual target host ABI",
+  );
+  await expect(
+    bootstrapNativeMediaInputs(input, {
+      hostTarget: () => "linux-x64",
+      sources,
+      capacity: async () => {
+        throw new Error("insufficient pool space");
+      },
+    }),
+  ).rejects.toThrow("insufficient pool space");
+  expect(sourceCalls).toBe(0);
+  expect(await Bun.file(join(input.output, "native-media-inputs.json")).exists()).toBe(false);
+});
+
+test("bootstrap rejects unverified source owners before zlib qualification or native builds", async () => {
+  using directory = tempDir("media-bootstrap-refuse-source", {});
+  const root = String(directory),
+    output = join(root, "pool");
+  let calls = 0;
+  await expect(
+    bootstrapNativeMediaInputs(
+      {
+        root: join(root, "repo"),
+        sources: join(root, "sources"),
+        output,
+        zlibBuild: join(root, "build"),
+        target: "linux-x64",
+      },
+      {
+        hostTarget: () => "linux-x64",
+        capacity: async () => {},
+        sources: async () => {
+          throw new Error("source pin differs");
+        },
+        zlib: async () => {
+          calls++;
+          throw new Error("must not execute");
+        },
+        prepare: async () => {
+          calls++;
+          throw new Error("must not execute");
+        },
+      },
+    ),
+  ).rejects.toThrow("source pin differs");
+  expect(calls).toBe(0);
+  expect(await Bun.file(join(output, "native-media-inputs.json")).exists()).toBe(false);
+});
+
+test("bootstrap saves measured SDK archives and preserves the canonical AVIO recipe", async () => {
+  using directory = tempDir("media-bootstrap-handoff", {});
+  const root = String(directory),
+    output = join(root, "pool");
+  const calls: string[] = [];
+  const result = await bootstrapNativeMediaInputs(
+    {
+      root: join(root, "repo"),
+      sources: join(root, "sources"),
+      output,
+      zlibBuild: join(root, "build"),
+      target: "linux-x64",
+    },
+    {
+      hostTarget: () => "linux-x64",
+      capacity: async () => {},
+      sources: async () => {
+        calls.push("sources");
+        return [];
+      },
+      zlib: async (_build, path) => {
+        calls.push("zlib");
+        return { prefix: join(path, "prefix"), sourceReceiptSHA256: "a".repeat(64) };
+      },
+      prepare: async (_inputs, _root, prepared) => {
+        calls.push("native gates");
+        for (const component of ["ffmpeg", "mpv"] as const) {
+          const pack = join(prepared, `sdk-${component}-pack`);
+          await mkdir(pack);
+          const filename = `${component}-${mediaSDKPlan(component, "linux-x64").version}-linux-x64-sdk.zip`;
+          const archive = join(pack, filename);
+          await Bun.write(archive, `${component}: hermetic qualified-owner port\n`);
+          await Bun.write(
+            join(pack, "distribution.json"),
+            JSON.stringify({
+              asset: {
+                url: `https://bun-lib.aphrody.app/media/${filename}`,
+                sha256: await hashSDKFile(archive),
+                bytes: Bun.file(archive).size,
+              },
+            }),
+          );
+        }
+        return join(prepared, "media-prefix");
+      },
+    },
+  );
+  expect(calls).toEqual(["sources", "zlib", "native gates"]);
+  const manifest = await readNativeMediaInputs(result.inputPath, result.inputSHA256, "linux-x64");
+  expect(manifest.components.ffmpeg.kind).toBe("archive");
+  expect(manifest.components.mpv.kind).toBe("archive");
+  const buildInput = await readNativeMediaInputs(result.buildInputPath, result.buildInputSHA256, "linux-x64");
+  expect(manifest.avio).toEqual(buildInput.avio);
+  expect(manifest.avio?.input.component).toBe("avio");
+  expect(manifest.avio?.input.output).toBe(join(output, "avio"));
+  expect(result.buildInputSHA256).toBe(await hashSDKFile(result.buildInputPath));
+});
 
 test("local input pins survive empty publication inventories without attesting any provider", () => {
   using directory = tempDir("media-producer-inputs", {});

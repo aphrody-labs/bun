@@ -9,7 +9,7 @@ import {
 } from "../../packages/bun-video/src/sdk";
 import { mediaSDKHostTarget } from "../../packages/bun-video/src/sdk-platform";
 import { targetFor, type HostArch, type HostPlatform } from "../../packages/bun-runtime-sdk/src/target";
-import { mediaSDKTool, mediaSourceTree, verifyMediaSourceOwner } from "./media-sdk-source";
+import { mediaSDKTool, mediaSourceTree, verifyMediaSourceOwner, verifyMediaVulkanOwner } from "./media-sdk-source";
 import { validateNativeSDKGate, type NativeSDKGate } from "./native-sdk-factory";
 
 export type MediaBuildComponent = MediaSDKComponent | "avio";
@@ -577,28 +577,11 @@ export async function verifyMediaBuildInputs(input: MediaBuildInput) {
     const vulkan = Bun.env.BUN_MEDIA_VULKAN_HEADERS;
     if (!vulkan || !isAbsolute(vulkan) || !(await Bun.file(join(vulkan, "vulkan/vulkan.h")).exists()))
       throw new Error("Media dependency requires the existing pinned Vulkan header owner");
-    const { mediaSourceTree } = await import("./media-sdk-source");
-    const tree = await mediaSourceTree(vulkan);
-    if (tree.sourceTreeSHA256 !== "4425ad64534df71ce409291dbb5239ca600a7dcdbc9bc879abf6474ee6c57ade")
-      throw new Error("Vulkan header content differs from the recorded source owner");
-    dependencies["source:vulkan-headers"] = {
-      ...tree,
-      version: "libvulkan-dev=1.4.341.0-1",
-      hardwareQualification: false,
-    };
     const notice = Bun.env.BUN_MEDIA_VULKAN_LICENSE;
-    if (
-      !notice ||
-      !isAbsolute(notice) ||
-      !(await Bun.file(notice).exists()) ||
-      !Bun.file(notice).size ||
-      Bun.file(notice).size > 1024 * 1024
-    )
-      throw new Error("Pinned Vulkan headers require their existing license notice owner");
-    const noticeSHA256 = await hashSDKFile(notice);
-    if (noticeSHA256 !== "c579213e28f67944a7e407816b8a8e1d2d2406b3d820e420aa923807c450dc07")
-      throw new Error("Vulkan license notice differs from the recorded source owner");
-    dependencies["source:vulkan-license"] = { sha256: noticeSHA256, bytes: Bun.file(notice).size };
+    if (!notice) throw new Error("Pinned Vulkan headers require their existing license notice owner");
+    const qualified = await verifyMediaVulkanOwner(vulkan, notice);
+    dependencies["source:vulkan-headers"] = qualified.headers;
+    dependencies["source:vulkan-license"] = qualified.license;
     plan.env.CFLAGS = `${plan.env.CFLAGS ?? ""} ${process.platform === "win32" ? "/I" : "-I"}${vulkan}`.trim();
     plan.env.CXXFLAGS = plan.env.CFLAGS;
   }

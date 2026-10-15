@@ -1,6 +1,6 @@
 import { chmod, mkdir, realpath, statfs } from "node:fs/promises";
 import { freemem } from "node:os";
-import { dirname, isAbsolute, join, relative } from "node:path";
+import { basename, dirname, isAbsolute, join, relative } from "node:path";
 import {
   extractMediaSDKArchive,
   hashSDKFile,
@@ -11,7 +11,13 @@ import {
 } from "../../packages/bun-video/src/sdk";
 import { mediaSDKHostTarget } from "../../packages/bun-video/src/sdk-platform";
 import { assertPublicMediaPath } from "./media-release";
-import { mediaBuildPlan, runMediaBuild, validateMediaDependencyReceipt, type MediaBuildInput } from "./media-sdk-build";
+import {
+  mediaBuildPlan,
+  runMediaBuild,
+  validateMediaDependencyReceipt,
+  type MediaBuildInput,
+  type MediaBuildComponent,
+} from "./media-sdk-build";
 import { packageBuiltMediaSDK, qualifyMediaSDKClosure } from "./media-sdk-factory";
 import { verifyMediaSourceOwner } from "./media-sdk-source";
 
@@ -24,6 +30,150 @@ export interface NativeMediaInputs {
   target: MediaSDKTarget;
   components: Record<MediaSDKComponent, LocalSDK>;
   avio?: { input: MediaBuildInput };
+}
+
+export interface NativeMediaBootstrapInput {
+  root: string;
+  sources: string;
+  output: string;
+  target: MediaSDKTarget;
+  zlibBuild: string;
+}
+
+/** Source recipes remain plans until the existing owners execute their native gates. */
+export function nativeMediaBootstrapPlan(input: NativeMediaBootstrapInput): NativeMediaInputs {
+  if (![input.root, input.sources, input.output, input.zlibBuild].every(isAbsolute))
+    throw new TypeError("Native media bootstrap owners must be absolute");
+  for (const source of [input.root, input.sources, input.zlibBuild]) {
+    const overlaps = (left: string, right: string) => {
+      const local = relative(left, right);
+      return !local || (local !== ".." && !local.startsWith("../") && !local.startsWith("..\\") && !isAbsolute(local));
+    };
+    if (overlaps(source, input.output) || overlaps(input.output, source))
+      throw new Error("Native media bootstrap output overlaps an existing source or build owner");
+  }
+  const recipe = (component: MediaBuildComponent): MediaBuildInput => ({
+    root: input.root,
+    sources: input.sources,
+    output: join(input.output, component),
+    prefix: join(input.output, component, "prefix"),
+    component,
+    target: input.target,
+    dependencies:
+      component === "ffmpeg"
+        ? { "zlib-ng": join(input.output, "zlib", "prefix") }
+        : { ffmpeg: join(input.output, "ffmpeg", "prefix") },
+  });
+  const plan: NativeMediaInputs = {
+    schema: 1,
+    target: input.target,
+    components: {
+      ffmpeg: { kind: "source", input: recipe("ffmpeg"), build: true },
+      mpv: { kind: "source", input: recipe("mpv"), build: true },
+    },
+    avio: { input: recipe("avio") },
+  };
+  return nativeMediaInputs(plan, input.target);
+}
+
+interface NativeMediaBootstrapPorts {
+  hostTarget?: typeof mediaSDKHostTarget;
+  capacity?: (parent: string) => Promise<void>;
+  sources?: (input: NativeMediaBootstrapInput) => Promise<unknown>;
+  zlib?: (
+    build: string,
+    output: string,
+    target: MediaSDKTarget,
+  ) => Promise<{ prefix: string; sourceReceiptSHA256: string }>;
+  prepare?: typeof prepareNativeMedia;
+}
+
+/** Executes existing source, SDK and native consumer owners; never accepts qualification assertions. */
+export async function bootstrapNativeMediaInputs(
+  input: NativeMediaBootstrapInput,
+  ports: NativeMediaBootstrapPorts = {},
+) {
+  const plan = nativeMediaBootstrapPlan(input);
+  if ((ports.hostTarget ?? mediaSDKHostTarget)() !== input.target)
+    throw new Error("Native media bootstrap requires the actual target host ABI");
+  await (
+    ports.capacity ??
+    (async parent => {
+      const disk = await statfs(parent);
+      if (disk.bavail * disk.bsize < 20 * 1024 ** 3 || freemem() < 6 * 1024 ** 3)
+        throw new Error("Native media bootstrap requires 20 GiB free disk and 6 GiB free RAM");
+    })
+  )(dirname(input.output));
+  const sources = await (
+    ports.sources ??
+    (async value => {
+      const owners = await Promise.all(
+        (["ffmpeg", "mpv", "libplacebo", "fast_float", "freetype", "fribidi", "harfbuzz", "libass"] as const).map(
+          name =>
+            verifyMediaSourceOwner(
+              name,
+              name === "fast_float" ? join(value.sources, "libplacebo/3rdparty/fast_float") : join(value.sources, name),
+            ),
+        ),
+      );
+      return owners;
+    })
+  )(input);
+  await mkdir(input.output, { recursive: false, mode: 0o700 });
+  const diagnostics = join(input.output, "diagnostics");
+  await mkdir(diagnostics, { recursive: false, mode: 0o700 });
+  await Bun.write(join(diagnostics, "sources.json"), JSON.stringify(sources, null, 2) + "\n");
+  const zlib = await (
+    ports.zlib ??
+    (async (build, output, target) => {
+      const { qualifyZlibNativeSDK } = await import("./native-sdk-factory");
+      return qualifyZlibNativeSDK(build, output, target, input.root);
+    })
+  )(input.zlibBuild, join(input.output, "zlib"), input.target);
+  if (zlib.prefix !== join(input.output, "zlib", "prefix") || !digest(zlib.sourceReceiptSHA256))
+    throw new Error("Canonical zlib owner returned a foreign or unpinned prefix");
+  const buildInputPath = join(input.output, "native-media-build-inputs.json");
+  await Bun.write(buildInputPath, JSON.stringify(plan, null, 2) + "\n");
+  const buildInputSHA256 = await hashSDKFile(buildInputPath);
+  const prepared = join(input.output, "prepared");
+  await mkdir(prepared, { recursive: false, mode: 0o700 });
+  const prefix = await (ports.prepare ?? prepareNativeMedia)(plan, input.root, prepared, diagnostics);
+  if ((await hashSDKFile(buildInputPath)) !== buildInputSHA256)
+    throw new Error("Native media build input changed during qualification");
+  const components = {} as NativeMediaInputs["components"];
+  for (const component of ["ffmpeg", "mpv"] as const) {
+    const owner = join(prepared, `sdk-${component}-pack`);
+    const distribution = await Bun.file(join(owner, "distribution.json")).json();
+    const expected = `${component}-${mediaSDKPlan(component, input.target).version}-${input.target}-sdk.zip`;
+    const url = new URL(distribution.asset.url);
+    if (url.origin !== "https://bun-lib.aphrody.app" || url.pathname !== `/media/${expected}`)
+      throw new Error("Qualified media archive distribution differs from its canonical owner");
+    const path = join(owner, basename(url.pathname));
+    if (
+      !digest(distribution.asset.sha256) ||
+      Bun.file(path).size !== distribution.asset.bytes ||
+      (await hashSDKFile(path)) !== distribution.asset.sha256
+    )
+      throw new Error("Qualified media archive differs from its producer receipt");
+    components[component] = {
+      kind: "archive",
+      path,
+      sha256: distribution.asset.sha256,
+      bytes: distribution.asset.bytes,
+    };
+  }
+  const qualified = nativeMediaInputs({ schema: 1, target: input.target, components, avio: plan.avio }, input.target);
+  const inputPath = join(input.output, "native-media-inputs.json");
+  await Bun.write(inputPath, JSON.stringify(qualified, null, 2) + "\n");
+  return {
+    schema: 1 as const,
+    inputPath,
+    inputSHA256: await hashSDKFile(inputPath),
+    buildInputPath,
+    buildInputSHA256,
+    prefix,
+    zlibSourceReceiptSHA256: zlib.sourceReceiptSHA256,
+  };
 }
 const digest = (value: unknown): value is string => typeof value === "string" && /^[a-f0-9]{64}$/.test(value);
 

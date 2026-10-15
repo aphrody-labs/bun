@@ -19,6 +19,11 @@ on:
         description: "Factory targets, comma separated (empty: complete matrix)"
         type: string
         default: ""
+      component:
+        description: "Media requires all components; runtime is a separate candidate only"
+        type: choice
+        options: ["media", "runtime"]
+        default: "media"
       publish:
         description: "Publish an existing factory draft after verification"
         type: boolean
@@ -50,6 +55,8 @@ jobs:
       version: ${{ steps.plan.outputs.version }}
       tag: ${{ steps.plan.outputs.tag }}
       native-matrix: ${{ steps.plan.outputs.native-matrix }}
+      component: ${{ steps.plan.outputs.component }}
+      native-targets: ${{ steps.plan.outputs.native-targets }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -65,6 +72,9 @@ jobs:
         env:
           INPUT_VERSION: ${{ inputs.version }}
           INPUT_TARGETS: ${{ inputs.targets }}
+          INPUT_COMPONENT: ${{ inputs.component || 'media' }}
+          INPUT_CHANNEL: ${{ inputs.release-channel || 'candidate' }}
+          INPUT_PUBLISH_NPM: ${{ inputs.publish-npm }}
         run: |
           bun -e '
             const runtime = await import("./scripts/aphrody/publish-runtime.ts");
@@ -72,13 +82,20 @@ jobs:
             const version = process.env.INPUT_VERSION ? runtime.versionFromTag(process.env.INPUT_VERSION) : runtime.readBaseVersion();
             if (version !== runtime.readBaseVersion()) throw new Error("Factory version must match committed package.json");
             const targets = (process.env.INPUT_TARGETS || "").split(",").map(s => s.trim()).filter(Boolean);
+            const component = process.env.INPUT_COMPONENT;
+            if (!["media", "runtime"].includes(component)) throw new Error("Unknown release component");
+            if (component === "runtime" && (process.env.INPUT_CHANNEL !== "candidate" || process.env.INPUT_PUBLISH_NPM === "true")) throw new Error("Runtime component supports candidate artifacts only, without npm publication");
             const plan = factory.vpsRuntimeReleasePlan(process.env.GITHUB_SHA, targets);
             await Bun.write("factory-plan.json", JSON.stringify(plan, null, 2) + "\n");
             const native = factory.nativeFullReleasePlan(process.env.GITHUB_SHA);
+            if (component === "runtime" && targets.length) {
+              if (new Set(targets).size !== targets.length || targets.some(t => !native.targets.some(n => n.target === t))) throw new Error("Unknown or duplicate native target");
+              native.targets = native.targets.filter(t => targets.includes(t.target));
+            }
             await Bun.write("native-full-plan.json", JSON.stringify(native, null, 2) + "\n");
             const tag = process.env.GITHUB_REF_TYPE === "tag" ? process.env.GITHUB_REF_NAME : runtime.releaseTag(version);
             if (runtime.versionFromTag(tag) !== version) throw new Error("Release tag version differs from source");
-            require("node:fs").appendFileSync(process.env.GITHUB_OUTPUT, `version=${version}\ntag=${tag}\nnative-matrix=${JSON.stringify({include:native.targets})}\n`);
+            require("node:fs").appendFileSync(process.env.GITHUB_OUTPUT, `version=${version}\ntag=${tag}\ncomponent=${component}\nnative-targets=${native.targets.map(t => t.target).join(" ")}\nnative-matrix=${JSON.stringify({include:native.targets})}\n`);
           '
       - uses: actions/upload-artifact@v6
         with:
@@ -127,14 +144,60 @@ jobs:
           secret-access-key: ${{ secrets.R2_SECRET_ACCESS_KEY }}
       - name: Resolve committed workspace dependencies
         run: bun install --frozen-lockfile --ignore-scripts
+      - name: Build the exact Windows core before SDK packaging
+        if: startsWith(matrix.target, 'windows-')
+        env:
+          BUN_NATIVE_SDK_MODE: source
+          BUN_MEDIA_SOURCE_ARCHIVE_URL: ${{ vars.BUN_MEDIA_SOURCE_ARCHIVE_URL }}
+          BUN_MEDIA_SOURCE_ARCHIVE_SHA256: ${{ vars.BUN_MEDIA_SOURCE_ARCHIVE_SHA256 }}
+          BUN_MEDIA_SOURCE_ARCHIVE_BYTES: ${{ vars.BUN_MEDIA_SOURCE_ARCHIVE_BYTES }}
+        run: |
+          bun --no-env-file -e 'const {nativeMediaSourceArchivePin}=await import("./scripts/aphrody/release-native-worker.ts");nativeMediaSourceArchivePin(process.env);'
+          bun scripts/aphrody/release-native-worker.ts prepare-core "$TARGET" "$GITHUB_SHA" "$VERSION" "$RUNNER_TEMP/native-full"
+      - name: Qualify candidate ZIP and FFI, then bootstrap native Windows SDKs
+        if: startsWith(matrix.target, 'windows-')
+        env:
+          BUN_NATIVE_SDK_MODE: source
+          BUN_MEDIA_SOURCE_ARCHIVE_URL: ${{ vars.BUN_MEDIA_SOURCE_ARCHIVE_URL }}
+          BUN_MEDIA_SOURCE_ARCHIVE_SHA256: ${{ vars.BUN_MEDIA_SOURCE_ARCHIVE_SHA256 }}
+          BUN_MEDIA_SOURCE_ARCHIVE_BYTES: ${{ vars.BUN_MEDIA_SOURCE_ARCHIVE_BYTES }}
+        run: |
+          bun --no-env-file -e '
+            const {join}=await import("node:path");
+            const output=join(process.env.RUNNER_TEMP,"native-full");
+            const core=await Bun.file(join(output,"diagnostics/core-preparation.json")).json();
+            const child=Bun.spawn([core.runtime,"--no-env-file","scripts/aphrody/release-native-worker.ts","bootstrap-media",process.env.TARGET,process.env.GITHUB_SHA,process.env.VERSION,output],{stdin:"ignore",stdout:"inherit",stderr:"inherit"});
+            const status=await child.exited;if(status!==0)process.exit(status);
+            const receipt=await Bun.file(join(output,"diagnostics/media-bootstrap.json")).json();
+            const values={BUN_NATIVE_RUNTIME_CANDIDATE:core.runtime,BUN_MEDIA_SDK_INPUTS:receipt.inputPath,BUN_MEDIA_SDK_INPUTS_SHA256:receipt.inputSHA256,BUN_MEDIA_VULKAN_HEADERS:receipt.vulkanHeaders,BUN_MEDIA_VULKAN_LICENSE:receipt.vulkanLicense};
+            for(const value of Object.values(values))if(typeof value!=="string"||/[\r\n\0]/.test(value))throw Error("Unsafe SDK environment receipt");
+            const file=Bun.file(process.env.GITHUB_ENV);
+            await Bun.write(file,await file.text()+Object.entries(values).map(([key,value])=>`${key}=${value}\n`).join(""));
+          '
       - name: Native capacity, source and owner prerequisites
-        run: bun scripts/aphrody/release-native-worker.ts preflight "$TARGET" "$GITHUB_SHA" "$VERSION" "$RUNNER_TEMP/native-full"
+        if: needs.plan.outputs.component == 'media'
+        run: >-
+          "${BUN_NATIVE_RUNTIME_CANDIDATE:-bun}" scripts/aphrody/release-native-worker.ts preflight "$TARGET" "$GITHUB_SHA" "$VERSION" "$RUNNER_TEMP/native-full"
       - name: Build SDK, runtime and sidecars, then execute exact native gates
-        run: bun scripts/aphrody/release-native-worker.ts produce "$TARGET" "$GITHUB_SHA" "$VERSION" "$RUNNER_TEMP/native-full"
+        if: needs.plan.outputs.component == 'media'
+        run: >-
+          "${BUN_NATIVE_RUNTIME_CANDIDATE:-bun}" scripts/aphrody/release-native-worker.ts produce "$TARGET" "$GITHUB_SHA" "$VERSION" "$RUNNER_TEMP/native-full"
+      - name: Native runtime component prerequisites
+        if: needs.plan.outputs.component == 'runtime'
+        run: >-
+          "${BUN_NATIVE_RUNTIME_CANDIDATE:-bun}" scripts/aphrody/release-native-worker.ts preflight-runtime "$TARGET" "$GITHUB_SHA" "$VERSION" "$RUNNER_TEMP/native-full"
+      - name: Produce the separately qualified native runtime candidate
+        if: needs.plan.outputs.component == 'runtime'
+        run: >-
+          "${BUN_NATIVE_RUNTIME_CANDIDATE:-bun}" scripts/aphrody/release-native-worker.ts produce-runtime "$TARGET" "$GITHUB_SHA" "$VERSION" "$RUNNER_TEMP/native-full"
       - uses: actions/upload-artifact@v6
         with:
           name: native-full-${{ matrix.target }}-${{ github.sha }}
-          path: ${{ runner.temp }}/native-full/products/*
+          path: |
+            ${{ runner.temp }}/native-full/products/*.zip
+            ${{ runner.temp }}/native-full/products/*-full.qualification.json
+            ${{ runner.temp }}/native-full/products/*.platform-gates.json
+            ${{ runner.temp }}/native-full/products/*.log
           if-no-files-found: error
       - name: Preserve failed capacity or owner diagnostics
         if: failure()
@@ -168,10 +231,18 @@ jobs:
           path: ${{ runner.temp }}/full-qualification
           merge-multiple: true
       - name: Verify all eight exact-source native full products
+        if: needs.plan.outputs.component == 'media'
         run: bun scripts/aphrody/release-aggregation.ts aggregate "$RUNNER_TEMP/full-qualification" "$GITHUB_SHA" "$VERSION" "$RELEASE_CHANNEL"
+      - name: Verify selected exact-source runtime candidates
+        if: needs.plan.outputs.component == 'runtime'
+        env:
+          NATIVE_TARGETS: ${{ needs.plan.outputs.native-targets }}
+        run: |
+          read -r -a targets <<< "$NATIVE_TARGETS"
+          bun scripts/aphrody/release-aggregation.ts aggregate-runtime "$RUNNER_TEMP/full-qualification" "$GITHUB_SHA" "$VERSION" candidate "${targets[@]}"
       - uses: actions/upload-artifact@v6
         with:
-          name: media-full-qualification-${{ github.sha }}
+          name: ${{ needs.plan.outputs.component }}-full-qualification-${{ github.sha }}
           path: ${{ runner.temp }}/full-qualification/*
           if-no-files-found: error
 
@@ -209,18 +280,44 @@ jobs:
             kind="$(jq -r .object.type tag.json)"; revision="$(jq -r .object.sha tag.json)"
           done
           [ "$kind" = commit ] && [ "$revision" = "$GITHUB_SHA" ]
-          gh release download "$TAG" -R "$GITHUB_REPOSITORY" -D dist
+          if [ "${{ needs.plan.outputs.component }}" = media ]; then
+            gh release download "$TAG" -R "$GITHUB_REPOSITORY" -D dist
+          fi
       - uses: actions/download-artifact@v6
         with:
-          name: media-full-qualification-${{ github.sha }}
+          name: ${{ needs.plan.outputs.component }}-full-qualification-${{ github.sha }}
           path: ${{ runner.temp }}/full-aggregate
       - name: Verify exact source, checksums, gates and native platform receipts
+        if: needs.plan.outputs.component == 'media'
         run: |
           bun scripts/aphrody/release-aggregation.ts verify "$GITHUB_WORKSPACE/dist" "$GITHUB_SHA" "$VERSION" "$RELEASE_CHANNEL" "$RUNNER_TEMP/full-aggregate/media-full-qualification.json"
           bun -e '
             const { verifyFactoryRelease } = await import("./scripts/aphrody/release-factory.ts");
             const targets = (process.env.INPUT_TARGETS || "").split(",").map(s => s.trim()).filter(Boolean);
             await verifyFactoryRelease("dist", process.env.GITHUB_SHA, process.env.VERSION, process.env.RELEASE_CHANNEL, targets);
+          '
+      - name: Verify and upload immutable runtime candidate assets
+        if: needs.plan.outputs.component == 'runtime'
+        env:
+          NATIVE_TARGETS: ${{ needs.plan.outputs.native-targets }}
+        run: |
+          test "$RELEASE_CHANNEL" = candidate
+          read -r -a targets <<< "$NATIVE_TARGETS"
+          bun scripts/aphrody/release-aggregation.ts verify-runtime "$RUNNER_TEMP/full-aggregate" "$GITHUB_SHA" "$VERSION" candidate "${targets[@]}"
+          gh release view "$TAG" -R "$GITHUB_REPOSITORY" --json assets > existing-assets.json
+          bun -e '
+            const root = process.env.RUNNER_TEMP + "/full-aggregate";
+            const receipt = await Bun.file(root + "/runtime-full-qualification.json").json();
+            const names = ["runtime-full-qualification.json", ...Object.keys(receipt.assets)];
+            const existing = new Set((await Bun.file("existing-assets.json").json()).assets.map(a => a.name));
+            if (names.some(n => existing.has(n))) throw new Error("Immutable runtime asset already exists");
+            await Bun.write("runtime-upload.json", JSON.stringify(names));
+          '
+          bun -e '
+            const names = await Bun.file("runtime-upload.json").json();
+            const paths = names.map(n => process.env.RUNNER_TEMP + "/full-aggregate/" + n);
+            const child = Bun.spawn(["gh", "release", "upload", process.env.TAG, "-R", process.env.GITHUB_REPOSITORY, ...paths], {stdout:"inherit",stderr:"inherit"});
+            if (await child.exited !== 0) throw new Error("Runtime candidate upload failed; inspect existing assets before retry");
           '
       - name: Publish qualified draft
         run: |
@@ -230,11 +327,12 @@ jobs:
             gh release edit "$TAG" -R "$GITHUB_REPOSITORY" --draft=false --prerelease=false --latest=true
           fi
       - name: Publish npm from verified factory assets
-        if: inputs.publish-npm && inputs.release-channel == 'stable'
+        if: needs.plan.outputs.component == 'media' && inputs.publish-npm && inputs.release-channel == 'stable'
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: bun scripts/aphrody/publish-runtime.ts publish --version "$VERSION" --assets dist --out "$RUNNER_TEMP/npm"
       - name: Mirror the published release to R2 (dist.aphrody.app)
+        if: needs.plan.outputs.component == 'media'
         env:
           R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
           R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
