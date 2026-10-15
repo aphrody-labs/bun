@@ -24,6 +24,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync } 
 import { homedir, tmpdir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
 import { findWorkspaceRoot } from "./workspace-paths.ts";
+import { WINFW_SOURCE_ARCHIVES, winfwSourceFetchCommands } from "../build/deps/winfw.ts";
 
 const REPO = process.env.APHRODY_BUN_REPO ?? "aphrody-labs/bun";
 const windows = process.platform === "win32";
@@ -64,7 +65,7 @@ export function parseOptions(argv: string[]): Options {
     check: false,
   };
   for (let i = 0; i < argv.length; i++) {
-    const a = argv[i];
+    const a = argv[i]!;
     const value = () => {
       const v = a.includes("=") ? a.slice(a.indexOf("=") + 1) : argv[++i];
       if (v === undefined) throw new Error(`${a} needs a value`);
@@ -85,7 +86,7 @@ export function parseOptions(argv: string[]): Options {
     else if (a === "--help" || a === "-h") {
       console.log(
         readFileSync(import.meta.path, "utf8")
-          .split("\n\n")[0]
+          .split("\n\n")[0]!
           .replace(/^\/\/ ?/gm, ""),
       );
       process.exit(0);
@@ -115,7 +116,7 @@ async function exec(cmd: string[], opts: { cwd?: string; env?: Record<string, st
   if (dryRun) return;
   log(`$ ${line}`);
   const proc = Bun.spawn(cmd, {
-    cwd: opts.cwd,
+    ...(opts.cwd === undefined ? {} : { cwd: opts.cwd }),
     env: { ...process.env, ...opts.env },
     stdio: ["inherit", "inherit", "inherit"],
   });
@@ -126,7 +127,11 @@ async function exec(cmd: string[], opts: { cwd?: string; env?: Record<string, st
 /** Runs a command and returns its stdout, or undefined when it fails or does not exist. */
 function capture(cmd: string[], cwd?: string): string | undefined {
   try {
-    const r = Bun.spawnSync(cmd, { cwd, stdio: ["ignore", "pipe", "pipe"], env: process.env });
+    const r = Bun.spawnSync(cmd, {
+      ...(cwd === undefined ? {} : { cwd }),
+      stdio: ["ignore", "pipe", "pipe"],
+      env: process.env,
+    });
     return r.exitCode === 0 ? r.stdout.toString().trim() : undefined;
   } catch {
     return undefined;
@@ -201,7 +206,7 @@ async function download(url: string, sha256: string): Promise<string> {
 
 // ─── Host ───────────────────────────────────────────────────────────────────
 
-type Distro = { id: string; like: string[]; codename?: string };
+type Distro = { id: string; like: string[]; codename?: string | undefined };
 
 function linuxDistro(): Distro | undefined {
   if (!linux) return undefined;
@@ -620,7 +625,7 @@ function rustupStep(): Step {
       const url = `https://static.rust-lang.org/rustup/dist/${triple}/${exe}`;
       const res = await fetch(`${url}.sha256`);
       if (!res.ok) throw new Error(`${url}.sha256: HTTP ${res.status}`);
-      const sha = (await res.text()).trim().split(/\s+/)[0];
+      const sha = (await res.text()).trim().split(/\s+/)[0]!;
       const init = await download(url, sha);
       if (!windows && !dryRun) Bun.spawnSync(["chmod", "+x", init]);
       await exec([init, "-y", "--profile", "minimal", "--default-toolchain", "none"]);
@@ -713,6 +718,18 @@ function bunInstallStep(checkout: string): Step {
   };
 }
 
+export function vendorPreparationCommands(
+  checkout: string,
+  bun: string,
+  platform = process.platform,
+  sourceCache = join(cacheDir, "tarballs"),
+): string[][] {
+  return [
+    ...(platform === "win32" ? winfwSourceFetchCommands(checkout, bun, sourceCache) : []),
+    [bun, "scripts/build.ts", "--profile=debug", "--configure-only"],
+  ];
+}
+
 function vendorStep(checkout: string): Step {
   return {
     id: "vendor",
@@ -720,7 +737,8 @@ function vendorStep(checkout: string): Step {
     check: () => undefined,
     async run() {
       const bun = bunExe();
-      await exec([bun, "scripts/build.ts", "--profile=debug", "--configure-only"], { cwd: checkout });
+      // WinFw reads its vcxproj source lists during configure, before any Ninja preBuild edge can run.
+      for (const command of vendorPreparationCommands(checkout, bun)) await exec(command, { cwd: checkout });
       let targets: string[] = [];
       if (!dryRun) {
         const out = capture([bun, "scripts/build.ts", "--profile=debug", "-t", "targets", "all"], checkout) ?? "";
@@ -728,7 +746,7 @@ function vendorStep(checkout: string): Step {
           ...new Set(
             out
               .split("\n")
-              .map(l => l.split(":")[0].trim())
+              .map(l => l.split(":")[0]!.trim())
               .filter(t => /^clone-[\w.-]+$/.test(t)),
           ),
         ];
@@ -937,6 +955,14 @@ export async function collectDependencies(checkout: string): Promise<Dependency[
   for (const dir of ["vendor/find-msvc-tools", "vendor/windows-rs"]) {
     if (existsSync(join(checkout, dir))) add({ repo: dir, kind: "in-tree", ref: "checkout", usedBy: ["build"] });
   }
+  for (const source of WINFW_SOURCE_ARCHIVES) {
+    add({
+      repo: source.repo,
+      kind: "github-archive",
+      ref: source.commit,
+      usedBy: ["setup (Windows)", "scripts/build/deps/winfw.ts"],
+    });
+  }
 
   // Cargo git dependencies outside the root workspace (its Cargo.lock has none).
   const gitDeps = new Map<string, Dependency>();
@@ -1063,8 +1089,9 @@ async function depsCommand(o: Options, checkout: string) {
   }
   const known = new Map((previous?.dependencies ?? []).map(d => [d.repo, d.visibility]));
   for (const d of fresh) {
-    d.visibility = (await visibilityOf(d.repo)) ?? known.get(d.repo);
-    if (d.visibility === undefined) delete d.visibility;
+    const visibility = (await visibilityOf(d.repo)) ?? known.get(d.repo);
+    if (visibility === undefined) delete d.visibility;
+    else d.visibility = visibility;
   }
   const inventory: Inventory = { comment: INVENTORY_COMMENT, dependencies: fresh };
   if (o.write) {

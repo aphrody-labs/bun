@@ -2,6 +2,38 @@ import { readFileSync } from "node:fs";
 import { dirname, relative, resolve } from "node:path";
 import type { Dependency } from "../source.ts";
 
+// Gitlinks in mullvadvpn-app@493198790be1ec34b5cc3cfbfb50d02197264463 are absent from GitHub archives.
+export const WINFW_SOURCE_ARCHIVES = [
+  {
+    name: "mullvad-libwfp",
+    repo: "mullvad/libwfp",
+    commit: "94415c7a85ea0ef728dedc6778457395185d8925",
+    path: "windows/libwfp",
+    patches: ["winfw-libwfp.patch"],
+  },
+  {
+    name: "mullvad-windows-libraries",
+    repo: "mullvad/windows-libraries",
+    commit: "0267555ea4a8ae6bcfd59930ce454b8614510875",
+    path: "windows/windows-libraries",
+    patches: [],
+  },
+] as const;
+
+export function winfwSourceFetchCommands(checkout: string, runtime: string, cache: string): string[][] {
+  return WINFW_SOURCE_ARCHIVES.map(source => [
+    runtime,
+    resolve(import.meta.dir, "../fetch-cli.ts"),
+    "dep",
+    source.name,
+    source.repo,
+    source.commit,
+    resolve(checkout, "vendor/mullvad", source.path),
+    cache,
+    ...source.patches.map(patch => resolve(import.meta.dir, patch)),
+  ]);
+}
+
 export const WINFW_SYSTEM_LIBRARIES = [
   "fwpuclnt.lib",
   "rpcrt4.lib",

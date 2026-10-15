@@ -240,6 +240,20 @@
       "internal": false
     },
     {
+      "repo": "mullvad/libwfp",
+      "kind": "github-archive",
+      "ref": "94415c7a85ea0ef728dedc6778457395185d8925",
+      "usedBy": ["setup (Windows)", "scripts/build/deps/winfw.ts"],
+      "internal": false
+    },
+    {
+      "repo": "mullvad/windows-libraries",
+      "kind": "github-archive",
+      "ref": "0267555ea4a8ae6bcfd59930ce454b8614510875",
+      "usedBy": ["setup (Windows)", "scripts/build/deps/winfw.ts"],
+      "internal": false
+    },
+    {
       "repo": "pop-os/libcosmic",
       "kind": "cargo-git",
       "ref": "default branch",
