@@ -1,5 +1,56 @@
 # Plan — aphrody-labs/bun, noyau d'Aphrody
 
+## Fork stability and MCP — 2026-10-15
+
+- MCP: the plugin launched `~/.bun/bin/bun-1.4.4 mcp`; the versioned argv0 was not
+  recognized, so `mcp` fell through to script lookup. Runtime fix (versioned
+  argv0 dispatch) in the B-mcp lane; installer now writes the stable `bun` link
+  and `doctor` probes `initialize` (f3b338600e). Claude/Codex plugin caches
+  keep the old command until refreshed.
+- MCP protocol: 2025-11-25 added as latest legacy revision. Next, per the
+  2026-07-28 spec: `server/discover`, per-request `_meta` version and
+  `UnsupportedProtocolVersionError`, while keeping `initialize` for legacy
+  clients. Then `outputSchema`/`structuredContent` for JSON-shaped tools
+  (graph, deps, host) and a cached skills scan.
+- CI: setup-bun falls back across recent releases (c7aa65fb6f) because
+  `aphrody.3`/`.4` x64 need GLIBC 2.43. Root fix: build release x64 against a
+  glibc baseline (sysroot or older builder image) and add a release gate that
+  checks the max `GLIBC_` symbol version. `release-native-worker.ts` already
+  enforces GLIBC <= 2.17 via `binary-expectations.ts`; the GitHub release
+  marked Latest (`aphrody-v1.4.3-aphrody.4`, 2026-10-09) was published outside
+  that worker and breaks the install script on older distros. Action for the
+  release owner: republish x64 through the worker, or move Latest back to `.2`. Open: Windows long paths in
+  `docs/chromium/sources`, LLVM 23 on runners, Alpine apk repository.
+
+## LSP header bounds — 2026-10-15
+
+The active C-lsp lot now bounds aggregate inbound framing headers to 8 KiB,
+including unknown headers and leading blank lines. Reads stop after one byte
+past the limit, including a header line without a terminator. The body limit
+remains 64 MiB. Four protocol unit tests pass with locked, single-job Cargo
+qualification; the new boundary test covers the exact limit, one byte over,
+unterminated headers and repeated blank lines. A CLI regression checks rejection
+before initialize dispatch. The installed-runtime control cannot qualify this
+regression because the installed binary lacks the lsp command. Changed-runtime CLI qualification
+(`bun bd -j1 test test/cli/lsp/lsp.test.ts`) first stopped in oxfmt because its
+core module was omitted by the global core-dump ignore rule. Thirty byte-exact
+files were recovered from the pinned OXC snapshot in Bun commit 691df1fe5e
+(source b25696441c80fd580c35d671797f1940c642a624), and a targeted ignore exception
+retains them. The restored oxfmt and changed LSP crates compile in the native
+factory. A subsequent bun_quality failure exposed its missing load_native
+configuration adapter; that adapter is restored with explicit JavaScript-config
+rejection when no executor exists, plus JSON/JS configuration unit tests. These
+two adapted configuration files now differ from the pinned snapshot. The next
+changed-runtime gate is running; full linkage and CLI qualification remain open.
+Thirteen agent-tools generation tests pass (102 assertions). The local agent
+plugin dist was stale, has been regenerated, and generate --check now verifies
+all 740 files; native MCP
+migration coverage remains unqualified. The global scope gate passes unchanged
+after a diagnostic scan completed (83 seconds, with threads waiting on disk
+reads); earlier cold scans exceeded its selection deadline. These lots are not
+delivered or complete.
+Existing unrelated checkout changes are preserved.
+
 ## Site, graph and structured Jev publication — 2026-10-14
 
 The current owner request adds frequent source-pinned site, documentation, plugin

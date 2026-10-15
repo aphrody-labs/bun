@@ -1,4 +1,7 @@
 {
+  "terminal.integrated.env.linux": {
+    "PATH": "${userHome}/.bun/bin:${userHome}/.local/bin:${userHome}/.cargo/bin:/usr/lib/llvm-23/bin:${workspaceFolder}/node_modules/.bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+  },
   // Editor
   "editor.tabSize": 2,
   "editor.insertSpaces": true,

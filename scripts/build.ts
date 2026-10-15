@@ -623,6 +623,7 @@ const configFlags: {
   videoNative: "boolean",
   curlNative: "boolean",
   browserCrawl: "boolean",
+  browserIndex: "boolean",
   unifiedSources: "boolean",
   archiveDeps: "boolean",
   timeTrace: "boolean",

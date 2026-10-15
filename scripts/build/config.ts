@@ -170,6 +170,7 @@ export interface Config {
   videoNative: boolean;
   curlNative: boolean;
   browserCrawl: boolean;
+  browserIndex: boolean;
   /** Bundle small .cpp files into unified TUs (WebKit-style). See unified.ts. */
   unifiedSources: boolean;
   /**
@@ -403,6 +404,7 @@ export interface PartialConfig {
   videoNative?: boolean;
   curlNative?: boolean;
   browserCrawl?: boolean;
+  browserIndex?: boolean;
   unifiedSources?: boolean;
   archiveDeps?: boolean;
   timeTrace?: boolean;
@@ -1438,6 +1440,7 @@ export function resolveConfig(partial: PartialConfig, toolchain: Toolchain): Con
     videoNative: partial.videoNative ?? true,
     curlNative: partial.curlNative ?? false,
     browserCrawl: partial.browserCrawl ?? false,
+    browserIndex: partial.browserIndex ?? false,
     unifiedSources: partial.unifiedSources ?? true,
     archiveDeps: (partial.curlNative ?? false) || (partial.archiveDeps ?? false),
     timeTrace: partial.timeTrace ?? false,
@@ -1831,6 +1834,7 @@ export function formatConfig(cfg: Config, exe: string): string {
   if (cfg.videoNative) features.push("video-native");
   if (cfg.curlNative) features.push("curl-native");
   if (cfg.browserCrawl) features.push("browser-crawl");
+  if (cfg.browserIndex) features.push("browser-index");
   if (!cfg.canary) features.push("canary:off");
   if (cfg.versionTag) features.push(`version-tag:${cfg.versionTag}`);
   // Non-default modes — show so you notice when a build is unusual.

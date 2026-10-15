@@ -224,6 +224,7 @@ Heap-*.json.*
 isolate-*.log
 core
 core.[0-9]*
+!src/quality/format_cli/src/core/
 !src/migrate/
 !src/migrate/engine/github/
 !src/migrate/tests/fixtures/node-project/package-lock.json
