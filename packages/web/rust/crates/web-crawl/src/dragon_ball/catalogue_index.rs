@@ -18,6 +18,32 @@ pub(super) const EXPORTS: &[&str] = &[
     "catalog/assets/index.json",
 ];
 
+#[derive(Default)]
+struct MangaVolumeAssets {
+    asset_count: u64,
+    total_bytes: u64,
+    numbered_webp_count: u64,
+    image_numbers: BTreeSet<u64>,
+}
+
+fn manga_volume_asset(path: &str) -> Option<(String, u64, Option<u64>)> {
+    let mut parts = path.split('/');
+    if !parts.next()?.is_empty() || parts.next()? != "assets" || parts.next()? != "manga" {
+        return None;
+    }
+    let series = parts.next()?;
+    let folder = parts.next()?;
+    let filename = parts.next()?;
+    if parts.next().is_some() || series.is_empty() {
+        return None;
+    }
+    let volume = folder.strip_prefix("vol")?.parse::<u64>().ok()?;
+    let image_number = filename
+        .strip_suffix(".webp")
+        .and_then(|number| number.parse::<u64>().ok());
+    Some((series.to_owned(), volume, image_number))
+}
+
 /// Keep the catalogue records separate from captured page bodies at the same URL.
 /// URL validation is supplied by the Web owner, including its source deny-set.
 pub(super) fn read_catalogue(
@@ -33,7 +59,7 @@ pub(super) fn read_catalogue(
     let base = match schema {
         Some("shenron-manga-cdn/v1") => {
             "https://cdn.dragonballfr.com/publications/manga-catalogue/index.json"
-        },
+        }
         Some("shenron-public-cdn/v1") => "https://cdn.dragonballfr.com/catalog/assets/index.json",
         Some("aphrody-dragonballcn-snapshot/v1") => "https://comic.dragonballcn.com/",
         Some(other) => return Err(format!("unsupported catalogue schema: {other}")),
@@ -65,12 +91,21 @@ pub(super) fn read_catalogue(
                 .and_then(Value::as_str)
                 .unwrap_or(fallback);
             validate(source)?;
-            let title = ["title", "titre_tome", "libelle", "name", "titre", "title_ja"]
-                .into_iter()
-                .find_map(|field| {
-                    row.get(field).and_then(Value::as_str).filter(|title| !title.trim().is_empty())
-                })
-                .unwrap_or(kind);
+            let title = [
+                "title",
+                "titre_tome",
+                "libelle",
+                "name",
+                "titre",
+                "title_ja",
+            ]
+            .into_iter()
+            .find_map(|field| {
+                row.get(field)
+                    .and_then(Value::as_str)
+                    .filter(|title| !title.trim().is_empty())
+            })
+            .unwrap_or(kind);
             // A fixed projection excludes unrecognized/private fields from exported snapshots.
             let mut fields = serde_json::Map::new();
             for field in [
@@ -135,6 +170,21 @@ pub(super) fn read_catalogue(
                 "totalFolders",
                 "files",
                 "folders",
+                "inventoryScope",
+                "assetCount",
+                "numberedWebpImageCount",
+                "firstImageNumber",
+                "lastImageNumber",
+                "numberedImageSequenceContiguousFromOne",
+                "assetAvailabilityVerified",
+                "fullEditionPaginationVerified",
+                "rightsVerified",
+                "editionMatchVerified",
+                "languageVerified",
+                "contentIdentityVerified",
+                "readerEligible",
+                "canonical_eligible",
+                "notice",
             ] {
                 if let Some(value) = row.get(field).filter(|value| !value.is_null()) {
                     fields.insert(field.into(), value.clone());
@@ -178,14 +228,18 @@ pub(super) fn read_catalogue(
         let mut count = 0_u64;
         let mut seen_pages = BTreeSet::new();
         let mut seen_assets = BTreeSet::new();
+        let mut manga_volume_assets: BTreeMap<(String, u64), MangaVolumeAssets> = BTreeMap::new();
         for descriptor in pages {
-            let url =
-                descriptor.get("url").and_then(Value::as_str).ok_or("file page has no URL")?;
+            let url = descriptor
+                .get("url")
+                .and_then(Value::as_str)
+                .ok_or("file page has no URL")?;
             if !seen_pages.insert(url) {
                 return Err("duplicate catalogue file page".into());
             }
-            let suffix =
-                url.strip_prefix(&prefix).ok_or("file page is outside the catalogue revision")?;
+            let suffix = url
+                .strip_prefix(&prefix)
+                .ok_or("file page is outside the catalogue revision")?;
             if !suffix.starts_with("page-")
                 || !suffix.ends_with(".json")
                 || suffix.contains(['/', '\\', '%'])
@@ -221,7 +275,10 @@ pub(super) fn read_catalogue(
                 return Err("catalogue file page count mismatch".into());
             }
             for row in rows {
-                let asset = row.get("path").and_then(Value::as_str).ok_or("asset has no path")?;
+                let asset = row
+                    .get("path")
+                    .and_then(Value::as_str)
+                    .ok_or("asset has no path")?;
                 if !seen_assets.insert(asset.to_owned()) {
                     return Err("duplicate catalogue asset path".into());
                 }
@@ -234,25 +291,79 @@ pub(super) fn read_catalogue(
                 }
                 let url = format!("https://cdn.dragonballfr.com{asset}");
                 add("asset", "metadata".into(), row, &url)?;
+                if let Some((series, volume, image_number)) = manga_volume_asset(asset) {
+                    let group = manga_volume_assets.entry((series, volume)).or_default();
+                    group.asset_count += 1;
+                    group.total_bytes += row.get("size").and_then(Value::as_u64).unwrap_or(0);
+                    if let Some(image_number) = image_number {
+                        group.numbered_webp_count += 1;
+                        group.image_numbers.insert(image_number);
+                    }
+                }
                 count += 1;
             }
         }
         if value.get("totalFiles").and_then(Value::as_u64) != Some(count) {
             return Err("catalogue total file count mismatch".into());
         }
+        for ((series, volume), group) in manga_volume_assets {
+            let sequence_contiguous = !group.image_numbers.is_empty()
+                && group.image_numbers.len() as u64 == group.numbered_webp_count
+                && group
+                    .image_numbers
+                    .iter()
+                    .copied()
+                    .eq(1..=group.numbered_webp_count);
+            let first_image_number = group.image_numbers.first().copied();
+            let last_image_number = group.image_numbers.last().copied();
+            let row = serde_json::json!({
+                "title": format!("Manga asset inventory candidate: {series} volume {volume}"),
+                "series": series,
+                "volume_number": volume,
+                "sourceUrl": format!("https://cdn.dragonballfr.com/assets/manga/{series}/vol{volume}/"),
+                "inventoryScope": "public-cdn-path-metadata-only",
+                "assetCount": group.asset_count,
+                "totalBytes": group.total_bytes,
+                "numberedWebpImageCount": group.numbered_webp_count,
+                "firstImageNumber": first_image_number,
+                "lastImageNumber": last_image_number,
+                "numberedImageSequenceContiguousFromOne": sequence_contiguous,
+                "assetAvailabilityVerified": false,
+                "fullEditionPaginationVerified": false,
+                "rightsVerified": false,
+                "editionMatchVerified": false,
+                "languageVerified": false,
+                "contentIdentityVerified": false,
+                "readerEligible": false,
+                "canonical_eligible": false,
+                "notice": "Inventory metadata does not verify HTTP availability, image rights, exact edition, or full-reader pagination.",
+            });
+            add(
+                "manga-volume-asset-summary",
+                format!("{series}-{volume}"),
+                &row,
+                &format!("https://cdn.dragonballfr.com/assets/manga/{series}/vol{volume}/"),
+            )?;
+        }
     } else if let Some(collections) = value.get("collections").and_then(Value::as_array) {
         for collection in collections {
-            let slug =
-                collection.get("slug").and_then(Value::as_str).ok_or("collection has no slug")?;
-            let source =
-                collection.get("url").and_then(Value::as_str).ok_or("collection has no URL")?;
+            let slug = collection
+                .get("slug")
+                .and_then(Value::as_str)
+                .ok_or("collection has no slug")?;
+            let source = collection
+                .get("url")
+                .and_then(Value::as_str)
+                .ok_or("collection has no URL")?;
             for book in collection
                 .get("ouvrages")
                 .and_then(Value::as_array)
                 .ok_or("collection has no ouvrages")?
             {
-                let did =
-                    book.get("did").and_then(Value::as_str).ok_or("publication has no did")?;
+                let did = book
+                    .get("did")
+                    .and_then(Value::as_str)
+                    .ok_or("publication has no did")?;
                 let mut book = book.clone();
                 book.as_object_mut()
                     .ok_or("publication must be an object")?
@@ -285,8 +396,10 @@ pub(super) fn read_catalogue(
             recognized = true;
             for row in rows {
                 if let Some(url) = row.get("url").and_then(Value::as_str) {
-                    let identity =
-                        row.get("id").map(Value::to_string).unwrap_or_else(|| url.into());
+                    let identity = row
+                        .get("id")
+                        .map(Value::to_string)
+                        .unwrap_or_else(|| url.into());
                     add("article", identity, row, url)?;
                     continue;
                 }
@@ -301,8 +414,10 @@ pub(super) fn read_catalogue(
                     )?;
                     continue;
                 }
-                let series =
-                    row.get("series").and_then(Value::as_str).ok_or("episode has no series")?;
+                let series = row
+                    .get("series")
+                    .and_then(Value::as_str)
+                    .ok_or("episode has no series")?;
                 let number = row
                     .get("episodeNumber")
                     .or_else(|| row.get("episode_number"))
@@ -319,7 +434,12 @@ pub(super) fn read_catalogue(
             recognized = true;
             for asset in assets {
                 let url = asset.as_str().ok_or("asset reference must be a URL")?;
-                add("asset-reference", "reference".into(), &serde_json::json!({"url":url}), url)?;
+                add(
+                    "asset-reference",
+                    "reference".into(),
+                    &serde_json::json!({"url":url}),
+                    url,
+                )?;
             }
         }
         if !recognized {
@@ -336,7 +456,10 @@ mod tests {
         let directory = std::env::temp_dir().join(format!(
             "dragon-ball-catalogue-{}-{}",
             std::process::id(),
-            std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos()
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
         ));
         std::fs::create_dir(&directory).unwrap();
         let path = directory.join("catalogue.json");
@@ -398,7 +521,8 @@ mod tests {
                 "readerExtent": "preview",
                 "url": "https://dragonballfr.com/api/manga/volume/147"
             }]
-        })).unwrap();
+        }))
+        .unwrap();
         let text = records.values().cloned().collect::<String>();
         for term in [
             "fullEditionPaginationVerified",
@@ -430,7 +554,10 @@ mod tests {
             std::env::temp_dir().join(format!("dragon-ball-cdn-{}", std::process::id()));
         std::fs::create_dir_all(directory.join("revisions").join(&revision).join("files")).unwrap();
         let page = serde_json::json!({"revision":revision,"path":null,"entries":[{"path":"/assets/goku.webp","mime":"image/webp","size":12,"sha256":"image-hash"}]}).to_string();
-        let page_path = directory.join("revisions").join(&revision).join("files/page-000000.json");
+        let page_path = directory
+            .join("revisions")
+            .join(&revision)
+            .join("files/page-000000.json");
         std::fs::write(&page_path, &page).unwrap();
         let index = directory.join("index.json");
         std::fs::write(&index, serde_json::json!({"schema":"shenron-public-cdn/v1","revision":revision,"totalFiles":1,"files":{"pages":[{"url":format!("/catalog/assets/revisions/{revision}/files/page-000000.json"),"count":1,"sha256":page.len().to_string()}]}}).to_string()).unwrap();
@@ -445,7 +572,10 @@ mod tests {
         let original_index = std::fs::read_to_string(&index).unwrap();
         let mut duplicate: Value = serde_json::from_str(&original_index).unwrap();
         let descriptor = duplicate["files"]["pages"][0].clone();
-        duplicate["files"]["pages"].as_array_mut().unwrap().push(descriptor);
+        duplicate["files"]["pages"]
+            .as_array_mut()
+            .unwrap()
+            .push(descriptor);
         duplicate["totalFiles"] = Value::from(2);
         std::fs::write(&index, duplicate.to_string()).unwrap();
         assert!(
@@ -455,7 +585,10 @@ mod tests {
         );
         let mut duplicate_page: Value = serde_json::from_str(&page).unwrap();
         let asset = duplicate_page["entries"][0].clone();
-        duplicate_page["entries"].as_array_mut().unwrap().push(asset);
+        duplicate_page["entries"]
+            .as_array_mut()
+            .unwrap()
+            .push(asset);
         let duplicate_page = duplicate_page.to_string();
         let mut duplicate: Value = serde_json::from_str(&original_index).unwrap();
         duplicate["files"]["pages"][0]["count"] = Value::from(2);
@@ -470,13 +603,87 @@ mod tests {
         );
         std::fs::write(&index, original_index).unwrap();
         std::fs::write(&page_path, format!("{page} ")).unwrap();
-        assert!(read_catalogue(&index, |_| Ok(()), digest).unwrap_err().contains("checksum"));
+        assert!(
+            read_catalogue(&index, |_| Ok(()), digest)
+                .unwrap_err()
+                .contains("checksum")
+        );
         std::fs::remove_file(&page_path).unwrap();
         assert!(
             read_catalogue(&index, |_| Ok(()), digest)
                 .unwrap_err()
                 .contains("local catalogue page")
         );
+        std::fs::remove_dir_all(directory).unwrap();
+    }
+    #[test]
+    fn public_cdn_groups_numbered_manga_paths_without_qualifying_reader_completeness() {
+        let revision = "b".repeat(64);
+        let directory =
+            std::env::temp_dir().join(format!("dragon-ball-cdn-groups-{}", std::process::id()));
+        std::fs::create_dir_all(directory.join("revisions").join(&revision).join("files")).unwrap();
+        let entries = serde_json::json!([
+            {"path":"/assets/manga/ARALE/vol1/001.webp","mime":"image/webp","size":11},
+            {"path":"/assets/manga/ARALE/vol1/002.webp","mime":"image/webp","size":12},
+            {"path":"/assets/manga/ARALE/vol1/004.webp","mime":"image/webp","size":13},
+            {"path":"/assets/manga/ARALE/vol1/cover.webp","mime":"image/webp","size":14},
+            {"path":"/assets/manga/ARALE/vol2/001.webp","mime":"image/webp","size":8},
+            {"path":"/assets/manga/ARALE/vol2/002.webp","mime":"image/webp","size":9}
+        ]);
+        let page =
+            serde_json::json!({"revision":revision,"path":null,"entries":entries}).to_string();
+        let page_path = directory
+            .join("revisions")
+            .join(&revision)
+            .join("files/page-000000.json");
+        std::fs::write(&page_path, &page).unwrap();
+        let index = directory.join("index.json");
+        std::fs::write(
+            &index,
+            serde_json::json!({
+                "schema":"shenron-public-cdn/v1",
+                "revision":revision,
+                "totalFiles":6,
+                "files":{"pages":[{
+                    "url":format!("/catalog/assets/revisions/{revision}/files/page-000000.json"),
+                    "count":6,
+                    "sha256":page.len().to_string()
+                }]}
+            })
+            .to_string(),
+        )
+        .unwrap();
+
+        let documents =
+            read_catalogue(&index, |_| Ok(()), |bytes| bytes.len().to_string()).unwrap();
+        assert_eq!(documents.len(), 9);
+        let summaries = documents
+            .values()
+            .filter(|text| text.contains("Category: manga-volume-asset-summary"))
+            .collect::<Vec<_>>();
+        assert_eq!(summaries.len(), 2);
+        let volume_one = summaries
+            .iter()
+            .find(|text| text.contains("ARALE volume 1"))
+            .unwrap();
+        for term in [
+            "\"assetCount\": 4",
+            "\"totalBytes\": 50",
+            "\"numberedWebpImageCount\": 3",
+            "\"numberedImageSequenceContiguousFromOne\": false",
+            "\"fullEditionPaginationVerified\": false",
+            "\"rightsVerified\": false",
+            "\"editionMatchVerified\": false",
+            "\"languageVerified\": false",
+            "\"readerEligible\": false",
+        ] {
+            assert!(volume_one.contains(term), "{term}");
+        }
+        let volume_two = summaries
+            .iter()
+            .find(|text| text.contains("ARALE volume 2"))
+            .unwrap();
+        assert!(volume_two.contains("\"numberedImageSequenceContiguousFromOne\": true"));
         std::fs::remove_dir_all(directory).unwrap();
     }
 }
