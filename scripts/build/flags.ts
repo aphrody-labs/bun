@@ -1734,10 +1734,16 @@ export function linkDepends(cfg: Config): string[] {
  * these (leaves [LOAD #2 [R]]), GNU strip does. If size matters and
  * llvm-strip's output is larger, swap to /usr/bin/strip for this step.
  */
+const baseStripArguments = ["--strip-debug", "--discard-all", "--strip-all"];
+export const gnuELFUnwindSections = [".eh_frame", ".eh_frame_hdr", ".gcc_except_table"];
+export function gnuELFStripArguments(): string[] {
+  return [...baseStripArguments, ...gnuELFUnwindSections.flatMap(name => ["-R", name])];
+}
+
 export const stripFlags: Flag[] = [
   {
-    // Core strip: symbols + debug info + local symbols.
-    flag: ["--strip-all", "--strip-debug", "--discard-all"],
+    // GNU strip's later --strip-debug overrides --strip-all; keep --strip-all last.
+    flag: [...baseStripArguments],
     desc: "Remove symbols, debug info, local symbols",
   },
   {
@@ -1761,7 +1767,7 @@ export const stripFlags: Flag[] = [
     // pointers. Saves ~962 KB of R-segment (.eh_frame 806 KB +
     // .eh_frame_hdr 142 KB + .gcc_except_table 13 KB) that otherwise gets
     // dragged into RSS via 64 KB fault-around on adjacent .rodata reads.
-    flag: ["-R", ".eh_frame", "-R", ".eh_frame_hdr", "-R", ".gcc_except_table"],
+    flag: gnuELFUnwindSections.flatMap(name => ["-R", name]),
     when: c => c.linux && c.abi === "gnu" && c.release,
     desc: "Remove unwind sections (GNU strip required — llvm-strip leaves [LOAD #2 [R]])",
   },

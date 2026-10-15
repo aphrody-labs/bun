@@ -16,7 +16,7 @@ for (const [name, job, publication] of [
   ["aphrody-publish-web-inspector", "publish", "Build and publish"],
   ["bun-video-release", "release", "Publish npm next"],
 ] as const) {
-  test(`${name} cannot publish before the exact-source eight-full verifier succeeds`, async () => {
+  test(`${name} preserves the exact-source eight-full verifier for native publication`, async () => {
     const steps = (await workflow(name)).jobs[job]!.steps!;
     const gate = steps.findIndex(step => step.run?.includes("release-aggregation.ts download-verify"));
     const publish = steps.findIndex(step => step.name === publication);
@@ -25,7 +25,23 @@ for (const [name, job, publication] of [
     expect(steps[gate]!.run).toContain('"$GITHUB_SHA"');
     expect(steps[gate]!.run).toContain('"$version"');
     expect(steps[publish]!.if ?? "").not.toContain("always()");
-    if (name !== "bun-video-release") expect(steps[gate]!.if).toBe("inputs.dry-run != true");
+    if (name !== "bun-video-release")
+      expect(steps[gate]!.if).toBe(
+        name === "aphrody-publish-crates"
+          ? "inputs.dry-run != true && inputs.only != 'crates/aphrody-jev'"
+          : name === "aphrody-publish-npm"
+            ? "inputs.dry-run != true && steps.qualification.outputs.kind != 'portable-source'"
+            : "inputs.dry-run != true",
+      );
+    if (name === "aphrody-publish-npm") {
+      const portable = steps.findIndex(step => step.run?.includes("release-portable-npm.ts qualify"));
+      expect(portable).toBeGreaterThanOrEqual(0);
+      expect(portable).toBeLessThan(publish);
+      expect(steps[portable]!.if).toBe(
+        "inputs.dry-run != true && steps.qualification.outputs.kind == 'portable-source'",
+      );
+      expect(steps[publish]!.run).toContain("--portable-qualification");
+    }
     for (const step of steps) expect(step.if ?? "").not.toContain("secrets.");
   });
 }
@@ -95,4 +111,46 @@ test("video publication uses Windows x64, registry types and the exact qualified
   const r2 = steps.find(step => step.name === "Upload artifact to Cloudflare R2")!;
   expect(r2.run).toContain("steps.qualified.outputs.archive");
   expect(r2.run).not.toContain("*.tgz");
+});
+
+test("runtime candidates keep native target selection and mandatory qualification separate from full media", async () => {
+  const jobs = (await workflow("aphrody-release")).jobs;
+  const plan = jobs.plan!.steps!.find(step => step.run?.includes("nativeFullReleasePlan"))!.run!;
+  expect(plan).toContain('component === "runtime"');
+  expect(plan).toContain('process.env.INPUT_CHANNEL !== "candidate"');
+  expect(plan).toContain('process.env.INPUT_PUBLISH_NPM === "true"');
+  expect(plan).toContain("new Set(targets).size !== targets.length");
+  expect(plan).toContain("!native.targets.some(n => n.target === t)");
+  expect(plan).toContain("native.targets.filter(t => targets.includes(t.target))");
+  const native = jobs["native-full"]!.steps!;
+  for (const action of ["preflight-runtime", "produce-runtime"]) {
+    const step = native.find(step => step.run?.includes(`release-native-worker.ts ${action}`))!;
+    expect(step.if).toBe("needs.plan.outputs.component == 'runtime'");
+    expect(step.run).toContain('"$GITHUB_SHA"');
+  }
+  for (const action of ["preflight", "produce"]) {
+    const step = native.find(step => step.run?.includes(`release-native-worker.ts ${action} `))!;
+    expect(step.if).toBe("needs.plan.outputs.component == 'media'");
+  }
+  const aggregate = jobs.aggregate!.steps!.find(step => step.run?.includes(" aggregate-runtime "))!;
+  expect(aggregate.if).toBe("needs.plan.outputs.component == 'runtime'");
+  expect(aggregate.run).toContain('candidate "${targets[@]}"');
+  const steps = jobs.publish!.steps!;
+  const upload = steps.findIndex(step => step.name === "Verify and upload immutable runtime candidate assets");
+  const publish = steps.findIndex(step => step.name === "Publish qualified draft");
+  expect(upload).toBeGreaterThanOrEqual(0);
+  expect(publish).toBeGreaterThan(upload);
+  expect(steps[upload]!.if).toBe("needs.plan.outputs.component == 'runtime'");
+  const script = steps[upload]!.run!;
+  expect(script.indexOf(" verify-runtime ")).toBeLessThan(script.indexOf('"upload"'));
+  expect(script).toContain('test "$RELEASE_CHANNEL" = candidate');
+  expect(script).toContain("names.some(n => existing.has(n))");
+  expect(script).not.toContain("--clobber");
+  expect(script).toContain("Object.keys(receipt.assets)");
+  for (const name of [
+    "Verify exact source, checksums, gates and native platform receipts",
+    "Mirror the published release to R2 (dist.aphrody.app)",
+    "Publish npm from verified factory assets",
+  ])
+    expect(steps.find(step => step.name === name)!.if).toContain("needs.plan.outputs.component == 'media'");
 });

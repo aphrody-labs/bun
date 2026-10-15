@@ -1,4 +1,4 @@
-import { chmod, mkdir, realpath, readdir, rm, stat } from "node:fs/promises";
+import { chmod, mkdir, realpath, readdir, rm, stat, lstat, link } from "node:fs/promises";
 import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { hashSDKFile } from "../../packages/bun-video/src/sdk";
 import { mp4 } from "../../test/js/bun/video/fixture";
@@ -356,12 +356,16 @@ export async function archiveMediaReleaseFiles(
   directory: string,
   output: string,
   members: string[],
-  options: { triplet?: string; modes?: Record<string, number> } = {},
+  options: {
+    triplet?: string;
+    modes?: Record<string, number>;
+    runtime?: { executable: string; source: string; version: string; target: string };
+  } = {},
 ) {
   if (![directory, output].every(isAbsolute)) throw new Error("Media archive paths must be absolute");
   if (!members.length || new Set(members).size !== members.length)
     throw new Error("Media archive inventory is empty or duplicated");
-  const entries: Record<string, Bun.ArchiveEntry> = {};
+  const entries: { name: string; path: string; sha256: string; bytes: number; mode: number }[] = [];
   const archiveTriplet = options.triplet ?? triplet;
   assertPublicMediaPath(archiveTriplet);
   const canonicalDirectory = await realpath(directory);
@@ -379,13 +383,125 @@ export async function archiveMediaReleaseFiles(
     bytes += file.size;
     if (members.length > 100_000 || bytes > 2 * maximumFileBytes)
       throw new Error("Media archive exceeds its expanded file budget");
-    entries[`${archiveTriplet}/${member}`] = {
-      data: await file.bytes(),
-      mode: options.modes?.[member] ?? 0o644,
-      mtime: 0,
+    const mode = options.modes?.[member] ?? 0o644;
+    if (!Number.isInteger(mode) || mode < 0 || mode > 0o777 || !(await lstat(path)).isFile())
+      throw new Error("Archive inputs must be regular files with safe permissions");
+    entries.push({
+      name: archiveTriplet + "/" + member,
+      path,
+      sha256: await hashSDKFile(path),
+      bytes: file.size,
+      mode,
+    });
+  }
+  if (
+    await lstat(output).then(
+      () => true,
+      (error: NodeJS.ErrnoException) => {
+        if (error.code === "ENOENT") return false;
+        throw error;
+      },
+    )
+  )
+    throw new Error("Immutable archive destination already exists");
+  const runtime = options.runtime;
+  let identity: { source: string; version: string; platform: string; arch: string } | undefined;
+  if (runtime) {
+    const target = mediaReleaseTarget(runtime.target);
+    if (
+      !isAbsolute(runtime.executable) ||
+      !/^[a-f0-9]{40}$/.test(runtime.source) ||
+      !runtime.version ||
+      target.triplet !== archiveTriplet
+    )
+      throw new Error("Archive writer requires explicit native source and target identity");
+    identity = {
+      source: runtime.source,
+      version: runtime.version,
+      platform: target.platform,
+      arch: target.runtimeArch,
     };
   }
-  await Bun.write(output, await new Bun.Archive(entries, { format: "zip", mtime: 0 }).blob());
+  const temporary = output + ".stage-" + crypto.randomUUID();
+  const payload = JSON.stringify({ output: temporary, entries, identity });
+  if (Buffer.byteLength(payload) > 64 * 1024 ** 2) throw new Error("Archive input manifest exceeds its bound");
+  const script =
+    "const p=await Bun.stdin.json();if(p.identity&&(Bun.revision!==p.identity.source||Bun.version!==p.identity.version||process.platform!==p.identity.platform||process.arch!==p.identity.arch))throw Error('Archive writer runtime identity differs');const entries={};for(const e of p.entries){const data=await Bun.file(e.path).bytes();if(data.length!==e.bytes||new Bun.CryptoHasher('sha256').update(data).digest('hex')!==e.sha256)throw Error('Archive source changed');entries[e.name]={data,mode:e.mode,mtime:0};}const bytes=await new Bun.Archive(entries,{format:'zip',mtime:0}).bytes();if(bytes.length<4||new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength).getUint32(0,true)!==0x04034b50)throw Error('Native ZIP writer unavailable');await Bun.write(p.output,bytes);console.log(JSON.stringify({bytes:bytes.length,sha256:new Bun.CryptoHasher('sha256').update(bytes).digest('hex')}));";
+  const child = Bun.spawn([runtime?.executable ?? process.execPath, "--no-env-file", "-e", script], {
+    stdin: new Blob([payload]),
+    stdout: "pipe",
+    stderr: "pipe",
+    env: {
+      ...(runtime ? isolatedMediaEnvironment(directory, directory, runtime.target) : process.env),
+      BUN_RUNTIME_TRANSPILER_CACHE_PATH: "0",
+      BUN_DEBUG_QUIET_LOGS: "1",
+    },
+  });
+  const capture = async (stream: ReadableStream<Uint8Array>) => {
+    const reader = stream.getReader();
+    let text = "",
+      size = 0,
+      overflow = false;
+    try {
+      for (;;) {
+        const part = await reader.read();
+        if (part.done) break;
+        size += part.value.length;
+        if (size <= 16384) text += new TextDecoder().decode(part.value);
+        else overflow = true;
+      }
+    } finally {
+      reader.releaseLock();
+    }
+    return { text, overflow };
+  };
+  const timer = setTimeout(() => child.kill(), 300000);
+  try {
+    const [stdout, stderr, status] = await Promise.all([capture(child.stdout), capture(child.stderr), child.exited]);
+    if (status !== 0 || stdout.overflow || stderr.overflow || stderr.text)
+      throw new Error("Native ZIP encoding failed: " + stderr.text.slice(0, 4096));
+    const report = JSON.parse(stdout.text),
+      file = Bun.file(temporary);
+    if (
+      file.size > 2 * maximumFileBytes ||
+      file.size !== report.bytes ||
+      (await hashSDKFile(temporary)) !== report.sha256
+    )
+      throw new Error("Native ZIP output identity differs");
+    const archive = await file.bytes();
+    if (
+      archive.length < 4 ||
+      new DataView(archive.buffer, archive.byteOffset, archive.byteLength).getUint32(0, true) !== 0x04034b50
+    )
+      throw new Error("Native ZIP output is not a ZIP archive");
+    const members = await new Bun.Archive(archive).files();
+    if (members.size !== entries.length) throw new Error("Native ZIP member inventory differs");
+    for (const entry of entries) {
+      const member = members.get(entry.name);
+      if (
+        !member ||
+        member.size !== entry.bytes ||
+        new Bun.CryptoHasher("sha256").update(await member.bytes()).digest("hex") !== entry.sha256 ||
+        (await hashSDKFile(entry.path)) !== entry.sha256
+      )
+        throw new Error("Native ZIP member or source changed");
+    }
+    if (
+      await lstat(output).then(
+        () => true,
+        (error: NodeJS.ErrnoException) => {
+          if (error.code === "ENOENT") return false;
+          throw error;
+        },
+      )
+    )
+      throw new Error("Immutable archive destination appeared during encoding");
+    await link(temporary, output);
+  } finally {
+    clearTimeout(timer);
+    child.kill();
+    await rm(temporary, { force: true });
+  }
 }
 
 export async function packageMediaRelease(input: MediaReleaseInput) {
@@ -623,6 +739,7 @@ export async function packageMediaRelease(input: MediaReleaseInput) {
   await archiveMediaReleaseFiles(directory, archive, [...Object.keys(files), "bun-media-release.json"], {
     triplet: target.triplet,
     modes,
+    runtime: { executable: input.runtime, source: input.source, version: manifest.version, target: target.target },
   });
   for (const [member, identity] of Object.entries(files))
     if ((await hashSDKFile(join(directory, member))) !== identity.sha256)

@@ -1,7 +1,7 @@
 import { mkdir, readdir, realpath } from "node:fs/promises";
 import { basename, isAbsolute, join, relative } from "node:path";
 import { assertPublicMediaPath, mediaReleaseTarget } from "./media-release";
-import { fullIntegrationPolicy, runtimeReleaseMatrix } from "./release-matrix";
+import { fullIntegrationPolicy, fullNativeRuntimeFeatures, runtimeReleaseMatrix } from "./release-matrix";
 import mediaSDKManifest from "../../packages/bun-video/src/sdk-manifest.json";
 import { targetFor } from "../../packages/bun-runtime-sdk/src/target";
 import { nginxReleaseManifest, nginxModuleQualification, nginxClosureQualification } from "./release-native-nginx";
@@ -110,8 +110,239 @@ function requiredGates(gates: Gate[], required: readonly string[]) {
   }
 }
 
+export const runtimeFullGates = [
+  "runtime-identity",
+  "runtime-features",
+  "runtime-coreutils",
+  "runtime-feature-regressions",
+  "runtime-quality-guards",
+  "runtime-regressions",
+  "runtime-closure",
+  "native-install",
+  "native-path",
+  "native-update",
+] as const;
+
+/** Runtime qualification never substitutes for the separately qualified full media bundle. */
+export const runtimeFullComponents = {
+  runtime: { required: true, status: "qualified" },
+  nativeMedia: { required: true, status: "qualified" },
+  nginx: { required: false, status: "separate-artifact", owner: "scripts/aphrody/release-native-nginx.ts" },
+  videoStandalone: { required: false, status: "separate-artifact", owner: "packages/bun-video/scripts/build.ts" },
+  runtimeSDK: { required: false, status: "separate-artifact", owner: "scripts/aphrody/runtime-sdk-build.ts" },
+} as const;
+
+export type NativeRuntimeFullReceipt = {
+  schema: 1;
+  kind: "bun-runtime-full-release";
+  source: string;
+  version: string;
+  target: string;
+  triplet: string;
+  native: true;
+  passed: true;
+  execution: "native";
+  platform: string;
+  arch: string;
+  provenance: { version: string; revision: string; platform: string; arch: string; sourceUrl: string };
+  compiledFeatures: typeof fullNativeRuntimeFeatures;
+  components: typeof runtimeFullComponents;
+  allComponentsQualified: false;
+  runtimeSHA256: string;
+  sdkSources: { ffmpeg: string; mpv: string };
+  files: Record<string, FileIdentity>;
+  gates: Gate[];
+  archive: FileIdentity & { name: string };
+};
+
+export function runtimeFullAsset(target: string) {
+  const full = fullTargets.find(value => value.target === target);
+  if (!full) throw new Error("Unknown native runtime target");
+  return `${full.sourceTriplet}-runtime-full`;
+}
+
+/** Explicit targets permit a qualified native subset without claiming the eight-platform matrix. */
+export async function aggregateRuntimeFullRelease(
+  directory: string,
+  source: string,
+  version: string,
+  targets: string[] = fullTargets.map(target => target.target),
+  channel = "candidate",
+) {
+  if (!sourceSHA.test(source) || !/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(version))
+    throw new Error("Runtime release requires immutable source and version");
+  if (!["candidate", "stable"].includes(channel) || !isAbsolute(directory))
+    throw new Error("Invalid runtime release channel or directory");
+  if (!targets.length || targets.length > fullTargets.length || new Set(targets).size !== targets.length)
+    throw new Error("Runtime release targets are empty or duplicated");
+  const root = await realpath(directory);
+  const assets: Record<string, string> = Object.create(null);
+  const platforms = [];
+  const read = async (name: string, maximum = maximumJSONBytes) => {
+    assertPublicMediaPath(name);
+    if (basename(name) !== name) throw new Error("Runtime inputs must be flat owned assets");
+    const path = await realpath(join(root, name));
+    if (relative(root, path) !== name) throw new Error("Runtime input escaped its directory");
+    const file = Bun.file(path);
+    if (!file.size || file.size > maximum) throw new Error("Runtime input missing or exceeds bound");
+    const bytes = await file.bytes();
+    assets[name] = hash(bytes);
+    return bytes;
+  };
+  for (const name of targets.toSorted()) {
+    const asset = runtimeFullAsset(name);
+    const full = fullTargets.find(target => target.target === name)!;
+    const target = mediaReleaseTarget(name);
+    const receiptName = `${asset}.qualification.json`;
+    const receipt: NativeRuntimeFullReceipt = JSON.parse(
+      new TextDecoder("utf-8", { fatal: true }).decode(await read(receiptName)),
+    );
+    if (
+      receipt.schema !== 1 ||
+      receipt.kind !== "bun-runtime-full-release" ||
+      receipt.source !== source ||
+      receipt.version !== version ||
+      receipt.target !== name ||
+      receipt.triplet !== full.triplet ||
+      receipt.native !== true ||
+      receipt.passed !== true ||
+      receipt.execution !== "native" ||
+      receipt.platform !== target.platform ||
+      receipt.arch !== target.runtimeArch ||
+      receipt.allComponentsQualified !== false
+    )
+      throw new Error(`Native runtime identity differs: ${name}`);
+    if (
+      !Bun.deepEquals(receipt.compiledFeatures, fullNativeRuntimeFeatures) ||
+      !Bun.deepEquals(receipt.components, runtimeFullComponents)
+    )
+      throw new Error(`Mandatory runtime feature or component qualification differs: ${name}`);
+    const sdk = mediaSDKManifest.targets[target.sdkTarget as keyof typeof mediaSDKManifest.targets];
+    if (receipt.sdkSources?.ffmpeg !== sdk.ffmpeg.sourceRevision || receipt.sdkSources?.mpv !== sdk.mpv.sourceRevision)
+      throw new Error("Native runtime media source pins differ");
+    const provenance = receipt.provenance;
+    let sourceURL: URL;
+    try {
+      sourceURL = new URL(provenance.sourceUrl);
+    } catch {
+      throw new Error("Runtime source provenance is invalid");
+    }
+    const parts = sourceURL.pathname.split("/");
+    if (
+      provenance.version !== version ||
+      provenance.revision !== source ||
+      provenance.platform !== target.platform ||
+      provenance.arch !== target.runtimeArch ||
+      sourceURL.origin !== "https://github.com" ||
+      sourceURL.search ||
+      sourceURL.hash ||
+      parts.length !== 7 ||
+      parts.slice(1, 5).join("/") !== "aphrody-labs/bun/releases/download" ||
+      ![`bun-v${version}`, `aphrody-v${version}`].includes(parts[5]!) ||
+      ![`${full.sourceTriplet}.zip`, `${full.triplet}.zip`, `${asset}.zip`].includes(parts[6]!)
+    )
+      throw new Error(`Runtime source provenance differs: ${name}`);
+    requiredGates(receipt.gates, [
+      ...runtimeFullGates,
+      ...(target.os === "windows" ? ["winget-manifest", "winget-install"] : []),
+    ]);
+    for (const gate of receipt.gates) {
+      if (gate.log !== `${asset}-${gate.id}.log` || hash(await read(gate.log)) !== gate.sha256)
+        throw new Error(`Runtime gate log differs: ${name}/${gate.id}`);
+    }
+    if (receipt.archive?.name !== `${asset}.zip` || !sha256.test(receipt.archive.sha256))
+      throw new Error("Runtime archive identity is invalid");
+    const archive = await read(receipt.archive.name, maximumArchiveBytes);
+    if (archive.byteLength !== receipt.archive.bytes || hash(archive) !== receipt.archive.sha256)
+      throw new Error(`Runtime archive checksum differs: ${name}`);
+    const members = await new Bun.Archive(archive).files();
+    if (!receipt.files || Object.keys(receipt.files).length + 1 !== members.size || members.size > 10_000)
+      throw new Error("Runtime archive inventory differs");
+    const inner = members.get(`${full.triplet}/bun-runtime-full-release.json`);
+    // Install/update gates exercise these exact bytes, so their evidence stays outside the archive.
+    const { archive: _archive, gates: _gates, ...manifest } = receipt;
+    if (!inner || inner.size > maximumJSONBytes || !Bun.deepEquals(await inner.json(), manifest))
+      throw new Error("Embedded runtime qualification differs");
+    let expanded = 0;
+    for (const [member, file] of members) {
+      assertPublicMediaPath(member);
+      if (!member.startsWith(`${full.triplet}/`) || (expanded += file.size) > 2 * maximumArchiveBytes)
+        throw new Error("Runtime archive escaped its target or expanded bound");
+      const relative = member.slice(full.triplet.length + 1);
+      if (relative === "bun-runtime-full-release.json") continue;
+      const expected = receipt.files[relative];
+      if (
+        !expected ||
+        !sha256.test(expected.sha256) ||
+        expected.bytes !== file.size ||
+        hash(await file.arrayBuffer()) !== expected.sha256
+      )
+        throw new Error(`Runtime member checksum differs: ${name}`);
+    }
+    const runtime = target.os === "windows" ? "bun.exe" : "bun";
+    if (!sha256.test(receipt.runtimeSHA256) || receipt.files[runtime]?.sha256 !== receipt.runtimeSHA256)
+      throw new Error("Runtime executable checksum binding differs");
+    const mediaFile = members.get(`${full.triplet}/bun-media.json`);
+    if (!mediaFile || mediaFile.size > maximumJSONBytes) throw new Error("Native runtime media inventory absent");
+    const media = await mediaFile.json();
+    if (
+      media.schemaVersion !== 2 ||
+      media.target !== target.sdkTarget ||
+      !Array.isArray(media.files) ||
+      !media.files.length
+    )
+      throw new Error("Native runtime media inventory differs");
+    for (const member of media.files) {
+      assertPublicMediaPath(member.name);
+      const expected = receipt.files[member.name];
+      if (
+        !member.name.startsWith("lib/media/") ||
+        !expected ||
+        expected.sha256 !== member.sha256 ||
+        expected.bytes !== member.bytes
+      )
+        throw new Error("Native runtime media member binding differs");
+    }
+    platforms.push({ target: name, archive: receipt.archive, receiptSHA256: assets[receiptName]! });
+  }
+  return {
+    schema: 1 as const,
+    kind: "bun-runtime-full-qualification" as const,
+    source,
+    version,
+    channel,
+    native: true as const,
+    passed: true as const,
+    allComponentsQualified: false as const,
+    completePlatformMatrix: targets.length === fullTargets.length,
+    targets: targets.toSorted(),
+    assets,
+    platforms,
+  };
+}
+
+export async function verifyRuntimeFullRelease(
+  directory: string,
+  source: string,
+  version: string,
+  targets?: string[],
+  channel = "candidate",
+) {
+  const current = await aggregateRuntimeFullRelease(directory, source, version, targets, channel);
+  const file = Bun.file(join(directory, "runtime-full-qualification.json"));
+  if (!file.size || file.size > maximumJSONBytes || !Bun.deepEquals(await file.json(), current))
+    throw new Error("Recorded runtime qualification differs from current artifacts");
+  return current;
+}
+
 /** Verify the eight full archives and their native evidence without extracting archive members. */
-export async function aggregateFullRelease(directory: string, source: string, version: string, channel = "candidate") {
+async function validateMediaTargets(
+  directory: string,
+  source: string,
+  version: string,
+  channel: string,
+  selected: typeof fullTargets,
+) {
   identity(source, version, channel);
   if (!isAbsolute(directory)) throw new Error("Qualification directory must be absolute");
   const root = await realpath(directory);
@@ -129,7 +360,7 @@ export async function aggregateFullRelease(directory: string, source: string, ve
     assets[name] = hash(bytes);
     return bytes;
   };
-  for (const full of fullTargets) {
+  for (const full of selected) {
     const target = mediaReleaseTarget(full.target);
     const receiptBytes = await read(`${full.triplet}.qualification.json`);
     const receipt: MediaReceipt = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(receiptBytes));
@@ -292,15 +523,33 @@ export async function aggregateFullRelease(directory: string, source: string, ve
   }
   return {
     schema: 1,
-    kind: "bun-media-full-qualification",
+    kind: "bun-media-target-qualification" as const,
     source,
     version,
     native: true,
     passed: true,
-    targets: fullTargets.map(target => target.target),
+    targets: selected.map(target => target.target),
     assets,
     platforms,
+  };
+}
+
+export async function aggregateFullRelease(directory: string, source: string, version: string, channel = "candidate") {
+  const result = await validateMediaTargets(directory, source, version, channel, fullTargets);
+  return {
+    ...result,
+    schema: 1 as const,
+    native: true as const,
+    passed: true as const,
+    kind: "bun-media-full-qualification" as const,
   } satisfies FullReleaseQualification;
+}
+
+/** A host install validates one complete target, without claiming the eight-platform release. */
+export async function validateNativeMediaTarget(directory: string, source: string, version: string, target: string) {
+  const selected = fullTargets.filter(item => item.target === target);
+  if (selected.length !== 1) throw new Error("Unknown native media install target");
+  return validateMediaTargets(directory, source, version, "candidate", selected);
 }
 
 export async function verifyFullRelease(
@@ -380,6 +629,36 @@ export async function downloadFullRelease(
 if (import.meta.main) {
   const args = Bun.argv.slice(2);
   const action = args.shift();
+  if (action === "aggregate-runtime" || action === "verify-runtime") {
+    const [directory, source, version, channel = "candidate", ...targets] = args;
+    if (!directory || !source || !version)
+      throw new Error(
+        "Usage: release-aggregation.ts aggregate-runtime|verify-runtime <directory> <source-SHA> <version> [candidate|stable] [target ...]",
+      );
+    const selected = targets.length ? targets : undefined;
+    const receipt =
+      action === "verify-runtime"
+        ? await verifyRuntimeFullRelease(directory, source, version, selected, channel)
+        : await aggregateRuntimeFullRelease(directory, source, version, selected, channel);
+    if (action === "aggregate-runtime") {
+      const file = Bun.file(join(directory, "runtime-full-qualification.json"));
+      if (await file.exists()) {
+        if (file.size > maximumJSONBytes || !Bun.deepEquals(await file.json(), receipt))
+          throw new Error("Immutable runtime qualification already exists with different contents");
+      } else await Bun.write(file, JSON.stringify(receipt, null, 2) + "\n");
+    }
+    console.log(
+      JSON.stringify({
+        source,
+        targets: receipt.targets,
+        native: true,
+        passed: true,
+        completePlatformMatrix: receipt.completePlatformMatrix,
+        allComponentsQualified: false,
+      }),
+    );
+    process.exit(0);
+  }
   const tag = action === "download-verify" ? args.shift() : undefined;
   const [directory, source, version, channel = "candidate", recordedFile] = args;
   if (!directory || !source || !version || !["aggregate", "verify", "download-verify"].includes(action ?? ""))

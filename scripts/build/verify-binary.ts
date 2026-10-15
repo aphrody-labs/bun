@@ -7,6 +7,9 @@
  *       configure wrote into <spec.json> (see binary-expectations.ts):
  *       exported symbols, dynamic libraries + symbol-version ceilings,
  *       forbidden imports, static initializers, hardening bits, debug info.
+ *   verify-binary.ts stripped-elf <spec.json>
+ *       Verify the authenticated original profile, prove unchanged allocated
+ *       sections, then check the stripped GNU ELF subject with profile symbols.
  *
  *   verify-binary.ts duplicates <nm> <rspfile> <report>
  *       Every object and archive on bun's link line, scanned for a symbol
@@ -23,18 +26,198 @@
  */
 
 import { spawnSync } from "node:child_process";
-import { closeSync, openSync, readFileSync, readSync, rmSync, statSync, writeFileSync } from "node:fs";
+import {
+  closeSync,
+  mkdtempSync,
+  openSync,
+  readFileSync,
+  readSync,
+  realpathSync,
+  rmSync,
+  statfsSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, isAbsolute, join } from "node:path";
 import { type BinaryExpectations, symbolList, versionScriptGlobals } from "./binary-expectations.ts";
 import { BuildError, assert } from "./error.ts";
+import { gnuELFStripArguments, gnuELFUnwindSections } from "./flags.ts";
 
 export interface VerifySpec {
   /** Display name (`bun-profile`). */
   name: string;
   exe: string;
-  tools: { nm: string; readobj: string; objdump: string; cxxfilt: string };
+  tools: { nm: string; readobj: string; objdump: string; cxxfilt: string; strip?: string };
   expect: BinaryExpectations;
+}
+
+export interface StrippedELFSpec extends VerifySpec {
+  profileCompanion: {
+    spec: string;
+    specSHA256: string;
+    exeSHA256: string;
+    strippedSHA256: string;
+    strip: { exe: string; sha256: string; args: string[] };
+  };
+}
+
+function rangeSHA256(path: string, offset = 0, length = statSync(path).size): string {
+  const size = statSync(path).size;
+  assert(
+    Number.isSafeInteger(offset) &&
+      Number.isSafeInteger(length) &&
+      offset >= 0 &&
+      length >= 0 &&
+      offset + length <= size &&
+      size <= 8 * 1024 ** 3,
+    "Invalid bounded binary range",
+  );
+  const hash = new Bun.CryptoHasher("sha256"),
+    fd = openSync(path, "r"),
+    buffer = Buffer.alloc(1024 ** 2);
+  try {
+    for (let read = 0; read < length;) {
+      const count = readSync(fd, buffer, 0, Math.min(buffer.length, length - read), offset + read);
+      assert(count > 0, "Binary changed while hashing");
+      hash.update(buffer.subarray(0, count));
+      read += count;
+    }
+    return hash.digest("hex");
+  } finally {
+    closeSync(fd);
+  }
+}
+
+/** A stripped subject keeps the full profile contract and authenticates its symbol companion. */
+export function strippedELFVerificationSpec(profileSpec: string, exe: string): StrippedELFSpec {
+  const profile = JSON.parse(readFileSync(profileSpec, "utf8")) as VerifySpec;
+  assert(
+    profile.expect.format === "elf" &&
+      profile.expect.maxSymbolVersions?.GLIBC === "2.17" &&
+      profile.expect.debugInfo?.symtab === true &&
+      profile.expect.debugInfo.debugSections === true,
+    "Stripped verification requires the canonical GNU ELF profile contract",
+  );
+  assert(profile.exe !== exe, "Stripped verification needs a separate subject");
+  assert(
+    profile.tools.strip && isAbsolute(profile.tools.strip),
+    "Canonical profile specification must name its configured strip tool",
+  );
+  const strip = realpathSync(profile.tools.strip);
+  return {
+    ...profile,
+    name: "bun",
+    exe,
+    expect: { ...profile.expect, debugInfo: { symtab: false, debugSections: false, compressed: false } },
+    profileCompanion: {
+      spec: profileSpec,
+      specSHA256: rangeSHA256(profileSpec),
+      exeSHA256: rangeSHA256(profile.exe),
+      strippedSHA256: rangeSHA256(exe),
+      strip: { exe: strip, sha256: rangeSHA256(strip), args: gnuELFStripArguments() },
+    },
+  };
+}
+
+/** Compare every retained loadable section before using profile symbols for initializer names. */
+export function proveStrippedELFImage(
+  profile: string,
+  stripped: string,
+  readobj: string,
+  strip: StrippedELFSpec["profileCompanion"]["strip"],
+): void {
+  assert(
+    isAbsolute(strip.exe) &&
+      realpathSync(strip.exe) === strip.exe &&
+      rangeSHA256(strip.exe) === strip.sha256 &&
+      JSON.stringify(strip.args) === JSON.stringify(gnuELFStripArguments()),
+    "Canonical strip tool or arguments changed",
+  );
+  const profileHash = rangeSHA256(profile),
+    subjectHash = rangeSHA256(stripped);
+  const originalHeader = readAt(profile, 0, 64),
+    strippedHeader = readAt(stripped, 0, 64);
+  assert(
+    originalHeader.subarray(0, 32).equals(strippedHeader.subarray(0, 32)) &&
+      originalHeader.subarray(48, 52).equals(strippedHeader.subarray(48, 52)),
+    "Stripped ELF architecture or entry point changed",
+  );
+  const removed = new Set(gnuELFUnwindSections);
+  const sections = (path: string) => {
+    const header = readAt(path, 0, 64);
+    assert(
+      header.subarray(0, 7).equals(Buffer.from([0x7f, 0x45, 0x4c, 0x46, 2, 1, 1])) &&
+        header.readUInt16LE(16) === 2 &&
+        [62, 183].includes(header.readUInt16LE(18)),
+      "Stripped companion requires a supported little-endian ELF64 executable",
+    );
+    const result = new Map<string, { address: string; type: string; flags: string[]; size: number; sha256: string }>();
+    for (const section of blocks(run(readobj, ["--sections", path]), "Section")) {
+      const flags = flagNames(section, "Flags").sort();
+      if (!flags.includes("SHF_ALLOC")) continue;
+      const rawName = field(section, "Name"),
+        marker = rawName?.lastIndexOf(" (") ?? -1;
+      const name = marker >= 0 && rawName?.endsWith(")") ? rawName.slice(0, marker) : rawName,
+        type = field(section, "Type"),
+        address = field(section, "Address");
+      const size = Number(field(section, "Size")),
+        offset = Number(field(section, "Offset"));
+      assert(
+        name && type && address && !result.has(name) && Number.isSafeInteger(size) && size >= 0,
+        "Invalid or duplicate allocated ELF section",
+      );
+      result.set(name, {
+        address: BigInt(address).toString(),
+        type,
+        flags,
+        size,
+        sha256: type.startsWith("SHT_NOBITS") ? "zero-fill" : rangeSHA256(path, offset, size),
+      });
+    }
+    assert(result.has(".text"), "ELF executable has no allocated code");
+    return result;
+  };
+  const original = sections(profile),
+    actual = sections(stripped);
+  for (const [name, section] of original) {
+    const found = actual.get(name);
+    if (!found) {
+      assert(removed.has(name), `Stripped binary removed a retained section: ${name}`);
+      continue;
+    }
+    assert(JSON.stringify(found) === JSON.stringify(section), `Stripped binary changed allocated section: ${name}`);
+  }
+  for (const name of actual.keys()) assert(original.has(name), `Stripped binary added allocated section: ${name}`);
+  const disk = statfsSync(dirname(stripped));
+  assert(
+    disk.bavail * disk.bsize >= Math.max(statSync(profile).size, statSync(stripped).size) + 64 * 1024 ** 2,
+    "Insufficient space for bounded canonical strip proof",
+  );
+  const temporary = mkdtempSync(join(dirname(stripped), ".strip-proof-"));
+  try {
+    const expected = join(temporary, "bun");
+    const result = spawnSync(strip.exe, [...strip.args, profile, "-o", expected], {
+      encoding: "utf8",
+      timeout: 120_000,
+      maxBuffer: 1024 ** 2,
+    });
+    assert(!result.error && result.status === 0 && result.signal === null, "Canonical strip reproduction failed");
+    assert(
+      statSync(expected).size <= statSync(profile).size &&
+        rangeSHA256(expected) === subjectHash &&
+        statSync(expected).size === statSync(stripped).size,
+      "Stripped loader image differs from canonical strip output",
+    );
+    assert(
+      rangeSHA256(profile) === profileHash &&
+        rangeSHA256(stripped) === subjectHash &&
+        rangeSHA256(strip.exe) === strip.sha256,
+      "Canonical strip inputs or subject changed during proof",
+    );
+  } finally {
+    rmSync(temporary, { recursive: true, force: true });
+  }
 }
 
 // ───────────────────────────────────────────────────────────────────────────
@@ -258,7 +441,7 @@ function readAt(path: string, offset: number, length: number): Buffer {
 // ELF
 // ───────────────────────────────────────────────────────────────────────────
 
-function verifyElf(spec: VerifySpec): void {
+function verifyElf(spec: VerifySpec, initializerSymbols = spec.exe): void {
   const { nm, readobj } = spec.tools;
   const { exe, expect } = spec;
   const info = run(readobj, [
@@ -385,7 +568,7 @@ function verifyElf(spec: VerifySpec): void {
         }
         ptrs = ptrs.map((p, i) => addends.get(addr + BigInt(8 * i)) ?? p);
       }
-      const syms = symbolTable(nm, exe);
+      const syms = symbolTable(nm, initializerSymbols);
       const allowed = globToRegExp(expect.staticInitializers);
       for (const p of ptrs) {
         const name = syms.lookup(p) ?? `0x${p.toString(16)}`;
@@ -823,7 +1006,7 @@ function verifyDuplicates(nm: string, objdump: string | undefined, rspfile: stri
     ["-A", "-S", "-m", "--extern-only", "--defined-only", "--no-demangle"],
     inputs,
   )) {
-    errors.push(...toolErrors(stderr).filter(e => !/no symbols$/.test(e)));
+    errors.push(...toolErrors(stderr).filter(e => !e.endsWith("no symbols")));
     for (const line of out.split("\n")) {
       // Darwin form: `<obj>: <value> (<segment>,<section>) [weak] [private] external [<attrs>] <name>`
       const d = line.match(
@@ -904,11 +1087,33 @@ function main(argv: string[]): number {
 
 function scan(argv: string[]): number {
   const [mode, ...args] = argv;
-  if (mode === "binary") {
+  if (mode === "binary" || mode === "stripped-elf") {
     const [specPath] = args;
     assert(specPath !== undefined, "binary: missing <spec.json>");
     const spec = JSON.parse(readFileSync(specPath, "utf8")) as VerifySpec;
-    if (spec.expect.format === "elf") verifyElf(spec);
+    let symbols = spec.exe;
+    if (mode === "stripped-elf") {
+      const subject = spec as StrippedELFSpec;
+      assert(subject.profileCompanion !== undefined, "Stripped profile binding missing");
+      const binding = subject.profileCompanion;
+      const expected = strippedELFVerificationSpec(binding.spec, spec.exe);
+      assert(
+        JSON.stringify(subject) === JSON.stringify(expected),
+        "Stripped verification specification or binary binding changed",
+      );
+      const profile = JSON.parse(readFileSync(binding.spec, "utf8")) as VerifySpec;
+      assert(scan(["binary", binding.spec]) === 0, "Canonical profile verification failed");
+      results.length = 0;
+      proveStrippedELFImage(profile.exe, subject.exe, subject.tools.readobj, binding.strip);
+      assert(
+        rangeSHA256(profile.exe) === binding.exeSHA256 &&
+          rangeSHA256(subject.exe) === binding.strippedSHA256 &&
+          rangeSHA256(binding.spec) === binding.specSHA256,
+        "Stripped companion changed during verification",
+      );
+      symbols = profile.exe;
+    }
+    if (spec.expect.format === "elf") verifyElf(spec, symbols);
     else if (spec.expect.format === "macho") verifyMachO(spec);
     else verifyPE(spec);
     if (spec.expect.maxFileSize !== undefined) {
@@ -917,6 +1122,16 @@ function scan(argv: string[]): number {
         "size",
         `${size} bytes`,
         size > spec.expect.maxFileSize ? [`${size} bytes, expected at most ${spec.expect.maxFileSize}`] : [],
+      );
+    }
+    if (mode === "stripped-elf") {
+      const binding = (spec as StrippedELFSpec).profileCompanion;
+      const profile = JSON.parse(readFileSync(binding.spec, "utf8")) as VerifySpec;
+      assert(
+        rangeSHA256(profile.exe) === binding.exeSHA256 &&
+          rangeSHA256(spec.exe) === binding.strippedSHA256 &&
+          rangeSHA256(binding.spec) === binding.specSHA256,
+        "Stripped companion changed during its checks",
       );
     }
     let failed = 0;
@@ -946,7 +1161,9 @@ function scan(argv: string[]): number {
     );
     return verifyDuplicates(nm, objdump, rspfile, reportPath);
   }
-  console.error("usage: verify-binary.ts binary <spec.json> | duplicates <nm> <rspfile> <report> [objdump]");
+  console.error(
+    "usage: verify-binary.ts binary|stripped-elf <spec.json> | duplicates <nm> <rspfile> <report> [objdump]",
+  );
   return 2;
 }
 

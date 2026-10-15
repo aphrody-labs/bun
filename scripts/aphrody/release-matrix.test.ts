@@ -20,6 +20,8 @@ test("eight full native allocations bind public bootstraps without claiming qual
     expect(target.command).toContain("-j2");
     expect(target.command).toContain("--coreutils=on");
     expect(target.command).toContain("--video-native=on");
+    for (const flag of ["curl-native", "browser-crawl", "browser-index", "google-search"])
+      expect(target.command.filter(value => value === `--${flag}=on`)).toHaveLength(1);
     expect(target.requires.join(" ")).toContain("native");
   }
   expect(() => nativeFullReleasePlan("main")).toThrow("exact source revision");
@@ -50,6 +52,14 @@ test("matrix validates targets, duplicates and immutable source provenance", () 
   const manifest = runtimeFlavorManifest(target, "a".repeat(40));
   expect(manifest.performanceQualified).toBe(false);
   expect(manifest.compiledFeatures.coreutils).toBe(true);
+  expect(manifest.compiledFeatures).toEqual({
+    coreutils: true,
+    videoNative: true,
+    curlNative: true,
+    browserCrawl: true,
+    browserIndex: true,
+    googleSearch: true,
+  });
   expect(manifest.asset).toBe("bun-windows-x64-full.zip");
   expect(manifest.completeIntegrationQualified).toBe(false);
   expect(fullIntegrationPolicy.pendingOwners.map(owner => owner.id)).toContain("browser-render-stealth");
@@ -88,6 +98,7 @@ test("VPS release plan keeps execution with the serialized Infra resource owner"
     ).toBe(true);
   }
   expect(plan.wasm.runtimeQualified).toBe(false);
+  if (!plan.mullvadSidecar) throw new Error("Linux full release plan must include its Mullvad sidecar");
   expect(plan.mullvadSidecar.target).toBe("x86_64-unknown-linux-gnu");
   expect(plan.mullvadSidecar.workingDirectory).toBe(`${plan.source}/vendor/mullvad`);
   expect(plan.mullvadSidecar.lock).toBe("/home/ubuntu/build/locks/heavy.lock");

@@ -204,6 +204,7 @@ test("ZIP assembly includes existing BunFile payload bytes", async () => {
   using directory = tempDir("media-release-zip", { "bun.exe": "fixture PE payload" });
   const output = join(String(directory), "media.zip");
   await archiveMediaReleaseFiles(String(directory), output, ["bun.exe"]);
+  expect(new DataView((await Bun.file(output).bytes()).buffer).getUint32(0, true)).toBe(0x04034b50);
   const entries = await new Bun.Archive(await Bun.file(output).bytes()).files();
   expect([...entries.keys()]).toEqual(["bun-windows-x64-full/bun.exe"]);
   expect(await entries.get("bun-windows-x64-full/bun.exe")!.text()).toBe("fixture PE payload");
@@ -213,6 +214,26 @@ test("ZIP assembly includes existing BunFile payload bytes", async () => {
   await expect(archiveMediaReleaseFiles(String(directory), output, ["bun.exe", "bun.exe"])).rejects.toThrow(
     "empty or duplicated",
   );
+});
+
+test("ZIP assembly preserves immutable destinations before starting a writer", async () => {
+  using directory = tempDir("media-release-immutable", { "bun.exe": "runtime", "media.zip": "existing archive" });
+  const output = join(String(directory), "media.zip");
+  await expect(archiveMediaReleaseFiles(String(directory), output, ["bun.exe"])).rejects.toThrow(
+    "Immutable archive destination already exists",
+  );
+  expect(await Bun.file(output).text()).toBe("existing archive");
+});
+
+test("ZIP assembly rejects a writer from a different source before encoding", async () => {
+  using directory = tempDir("media-release-writer-identity", { "bun.exe": "runtime" });
+  const output = join(String(directory), "media.zip");
+  await expect(
+    archiveMediaReleaseFiles(String(directory), output, ["bun.exe"], {
+      runtime: { executable: process.execPath, source: "a".repeat(40), version: Bun.version, target: "windows-x64" },
+    }),
+  ).rejects.toThrow("Archive writer runtime identity differs");
+  expect(await Bun.file(output).exists()).toBe(false);
 });
 
 test("native identity, SDK directory and extension names cover every release ABI", () => {
@@ -226,7 +247,7 @@ test("native identity, SDK directory and extension names cover every release ABI
     ["darwin-aarch64", "darwin-arm64", "darwin", "arm64"],
     ["windows-x64", "windows-x64", "win32", "x64"],
     ["windows-aarch64", "windows-arm64", "win32", "arm64"],
-  ]) {
+  ] as const) {
     expect(mediaReleaseTarget(name!).sdkTarget).toBe(sdk);
     assertMediaRuntimeIdentity({ version: "1.4.4", revision: source, platform: platform!, arch: arch! }, source, name);
   }

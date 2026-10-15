@@ -2,8 +2,19 @@ import { expect, test } from "bun:test";
 import { join } from "node:path";
 import { unlink } from "node:fs/promises";
 import { tempDir } from "../../test/harness";
-import { aggregateFullRelease, fullMediaGates, fullPlatformGates, verifyFullRelease } from "./release-aggregation";
-import { runtimeReleaseMatrix } from "./release-matrix";
+import {
+  aggregateFullRelease,
+  validateNativeMediaTarget,
+  fullMediaGates,
+  fullPlatformGates,
+  verifyFullRelease,
+  aggregateRuntimeFullRelease,
+  verifyRuntimeFullRelease,
+  runtimeFullAsset,
+  runtimeFullGates,
+  runtimeFullComponents,
+} from "./release-aggregation";
+import { fullNativeRuntimeFeatures, runtimeReleaseMatrix } from "./release-matrix";
 import { mediaReleaseTarget } from "./media-release";
 import sdkManifest from "../../packages/bun-video/src/sdk-manifest.json";
 
@@ -11,6 +22,134 @@ const source = "a".repeat(40);
 const version = "1.4.4";
 const hash = (value: string | Uint8Array | ArrayBuffer) => new Bun.CryptoHasher("sha256").update(value).digest("hex");
 const targets = runtimeReleaseMatrix().filter(target => target.flavor === "full");
+
+async function runtimeFixture(root: string, mutate?: (receipt: Record<string, any>) => void, name = "linux-x64") {
+  const full = targets.find(target => target.target === name)!;
+  const target = mediaReleaseTarget(name);
+  const asset = runtimeFullAsset(name);
+  const runtime = target.os === "windows" ? "bun.exe" : "bun";
+  const mediaMember = `lib/media/ffmpeg/${target.sdkTarget}/bin/ffmpeg`;
+  const payload: Record<string, string> = {
+    [runtime]: "validator native runtime",
+    [mediaMember]: "validator native media",
+  };
+  payload["bun-media.json"] = JSON.stringify({
+    schemaVersion: 2,
+    target: target.sdkTarget,
+    files: [{ name: mediaMember, bytes: payload[mediaMember]!.length, sha256: hash(payload[mediaMember]!) }],
+  });
+  const files = Object.fromEntries(
+    Object.entries(payload).map(([name, body]) => [name, { bytes: body.length, sha256: hash(body) }]),
+  );
+  const ids = [...runtimeFullGates, ...(target.os === "windows" ? ["winget-manifest", "winget-install"] : [])];
+  const gates = [];
+  for (const id of ids) {
+    const log = `${asset}-${id}.log`,
+      body = `validator ${id}`;
+    await Bun.write(join(root, log), body);
+    gates.push({ id, passed: true, log, sha256: hash(body) });
+  }
+  const sdk = sdkManifest.targets[target.sdkTarget as keyof typeof sdkManifest.targets];
+  const receipt = JSON.parse(
+    JSON.stringify({
+      schema: 1,
+      kind: "bun-runtime-full-release",
+      source,
+      version,
+      target: name,
+      triplet: full.triplet,
+      native: true,
+      passed: true,
+      execution: "native",
+      platform: target.platform,
+      arch: target.runtimeArch,
+      provenance: {
+        version,
+        revision: source,
+        platform: target.platform,
+        arch: target.runtimeArch,
+        sourceUrl: `https://github.com/aphrody-labs/bun/releases/download/bun-v${version}/${full.triplet}.zip`,
+      },
+      compiledFeatures: fullNativeRuntimeFeatures,
+      components: runtimeFullComponents,
+      allComponentsQualified: false,
+      sdkSources: { ffmpeg: sdk.ffmpeg.sourceRevision, mpv: sdk.mpv.sourceRevision },
+      runtimeSHA256: files[runtime]!.sha256,
+      files,
+      gates,
+    }),
+  );
+  mutate?.(receipt);
+  const { gates: _gates, ...manifest } = receipt;
+  payload["bun-runtime-full-release.json"] = JSON.stringify(manifest);
+  const archive = await new Bun.Archive(
+    Object.fromEntries(Object.entries(payload).map(([path, body]) => [`${full.triplet}/${path}`, body])),
+    { format: "zip" },
+  ).bytes();
+  receipt.archive = { name: `${asset}.zip`, bytes: archive.byteLength, sha256: hash(archive) };
+  await Bun.write(join(root, receipt.archive.name), archive);
+  await Bun.write(join(root, `${asset}.qualification.json`), JSON.stringify(receipt));
+  return receipt;
+}
+
+test("runtime-only qualification binds a native subset without claiming full media or eight platforms", async () => {
+  using directory = tempDir("runtime-full-qualification", {});
+  const root = String(directory);
+  await runtimeFixture(root);
+  const receipt = await aggregateRuntimeFullRelease(root, source, version, ["linux-x64"]);
+  expect(receipt.kind).toBe("bun-runtime-full-qualification");
+  expect(receipt.allComponentsQualified).toBe(false);
+  expect(receipt.completePlatformMatrix).toBe(false);
+  expect(receipt.platforms[0]!.archive.name).toBe("bun-linux-x64-runtime-full.zip");
+  await Bun.write(join(root, "runtime-full-qualification.json"), JSON.stringify(receipt));
+  expect(await verifyRuntimeFullRelease(root, source, version, ["linux-x64"])).toEqual(receipt);
+  await expect(aggregateFullRelease(root, source, version)).rejects.toThrow();
+  await Bun.write(join(root, "bun-linux-x64-runtime-full-runtime-features.log"), "changed evidence");
+  await expect(verifyRuntimeFullRelease(root, source, version, ["linux-x64"])).rejects.toThrow("gate log differs");
+});
+
+for (const mutation of [
+  "feature",
+  "required-component",
+  "source",
+  "target",
+  "provenance",
+  "gate",
+  "sdk-source",
+  "member",
+] as const) {
+  test(`runtime qualification rejects forged ${mutation} evidence even with matching archive hashes`, async () => {
+    using directory = tempDir(`runtime-full-${mutation}`, {});
+    const root = String(directory);
+    await runtimeFixture(root, receipt => {
+      if (mutation === "feature") delete receipt.compiledFeatures.googleSearch;
+      if (mutation === "required-component") receipt.components.runtime.status = "unsupported";
+      if (mutation === "source") receipt.source = "b".repeat(40);
+      if (mutation === "target") receipt.target = "linux-aarch64";
+      if (mutation === "provenance") receipt.provenance.sourceUrl = "https://example.org/unqualified.zip";
+      if (mutation === "gate")
+        receipt.gates = receipt.gates.filter((gate: { id: string }) => gate.id !== "runtime-features");
+      if (mutation === "sdk-source") receipt.sdkSources.ffmpeg = "c".repeat(40);
+      if (mutation === "member") receipt.files.bun.sha256 = "d".repeat(64);
+    });
+    await expect(aggregateRuntimeFullRelease(root, source, version, ["linux-x64"])).rejects.toThrow();
+  });
+}
+
+test("runtime aggregation rejects duplicate targets and modified archive bytes", async () => {
+  using directory = tempDir("runtime-full-archive", {});
+  const root = String(directory);
+  const receipt = await runtimeFixture(root);
+  await expect(aggregateRuntimeFullRelease(root, source, version, ["linux-x64", "linux-x64"])).rejects.toThrow(
+    "duplicated",
+  );
+  await expect(aggregateRuntimeFullRelease(root, source, version, ["foreign"])).rejects.toThrow("Unknown");
+  await Bun.write(join(root, receipt.archive.name), "changed bytes");
+  await expect(aggregateRuntimeFullRelease(root, source, version, ["linux-x64"])).rejects.toThrow(
+    "archive checksum differs",
+  );
+});
+
 async function fixture(run: (root: string) => Promise<void>) {
   using directory = tempDir("full-release-qualification", {});
   const root = String(directory);
@@ -133,7 +272,7 @@ async function fixture(run: (root: string) => Promise<void>) {
     const gates = fullMediaGates.map(id => {
       const log = `qualification/${id}.log`;
       add(log, `validator media evidence ${id}`);
-      return { id, passed: true, log, sha256: files[log].sha256 };
+      return { id, passed: true, log, sha256: files[log]!.sha256 };
     });
     const receipt = {
       schema: 1,
@@ -144,8 +283,8 @@ async function fixture(run: (root: string) => Promise<void>) {
       triplet: full.triplet,
       native: true,
       passed: true,
-      runtimeSHA256: files[runtime].sha256,
-      executableSHA256: files[executable].sha256,
+      runtimeSHA256: files[runtime]!.sha256,
+      executableSHA256: files[executable]!.sha256,
       files,
       gates,
       sdk: [
@@ -191,8 +330,8 @@ async function fixture(run: (root: string) => Promise<void>) {
         arch: target.runtimeArch,
         execution: "native",
         archiveSHA256: hash(archive),
-        runtimeSHA256: files[runtime].sha256,
-        executableSHA256: files[executable].sha256,
+        runtimeSHA256: files[runtime]!.sha256,
+        executableSHA256: files[executable]!.sha256,
         sdkSources: { ffmpeg: pins.ffmpeg.sourceRevision, mpv: pins.mpv.sourceRevision },
         gates: platformGates,
       }),
@@ -217,7 +356,7 @@ test("aggregate verifies eight exact full products and every archived/evidence b
 test("missing platform, wrong source and tampered ZIP cannot qualify a release", async () => {
   await fixture(async root => {
     await expect(aggregateFullRelease(root, "b".repeat(40), version)).rejects.toThrow("identity differs");
-    const archive = join(root, `${targets[0].triplet}.zip`);
+    const archive = join(root, `${targets[0]!.triplet}.zip`);
     await Bun.write(archive, "altered archive");
     await expect(aggregateFullRelease(root, source, version)).rejects.toThrow("archive checksum differs");
   });
@@ -255,7 +394,7 @@ for (const mutation of [
 
 test("native install/update log tampering blocks publication and stable guards remain active", async () => {
   await fixture(async root => {
-    await Bun.write(join(root, `${targets[0].triplet}-native-update.log`), "different evidence");
+    await Bun.write(join(root, `${targets[0]!.triplet}-native-update.log`), "different evidence");
     await expect(aggregateFullRelease(root, source, version)).rejects.toThrow("platform log differs");
     await expect(aggregateFullRelease(root, source, version, "stable")).rejects.toThrow(
       "Stable integration qualification is pending",
@@ -266,6 +405,7 @@ test("native install/update log tampering blocks publication and stable guards r
 test("rehashing a changed outer archive cannot hide an altered archived native binary", async () => {
   await fixture(async root => {
     const full = targets[0];
+    if (!full) throw new Error("Native release fixture requires at least one target");
     const archivePath = join(root, `${full.triplet}.zip`);
     const entries = await new Bun.Archive(await Bun.file(archivePath).bytes()).files();
     const payload: Record<string, Uint8Array> = {};
@@ -382,3 +522,18 @@ for (const mutation of [
     });
   });
 }
+
+test("per-target media installation evidence cannot replace the eight-platform release", async () => {
+  await fixture(async root => {
+    const first = targets[0];
+    if (!first) throw new Error("Missing native media fixture target");
+    const proof = await validateNativeMediaTarget(root, source, version, first.target);
+    expect(proof.kind).toBe("bun-media-target-qualification");
+    expect(proof.targets).toEqual([first.target]);
+    const other = targets.find(target => target.target !== first.target);
+    if (!other) throw new Error("Missing second native media fixture target");
+    await unlink(join(root, other.triplet + ".qualification.json"));
+    expect((await validateNativeMediaTarget(root, source, version, first.target)).targets).toEqual([first.target]);
+    await expect(aggregateFullRelease(root, source, version)).rejects.toThrow();
+  });
+});

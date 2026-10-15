@@ -10,7 +10,10 @@
 //   bun scripts/aphrody/publish-crates.ts --publish        publish every version not yet on crates.io
 //   options: --out <dir> (staging dir), --toolchain <name> (default stable), --skip-tests,
 //            --only sdk (default: all)
+// Portable CI publication requires --only crates/aphrody-jev and
+// --portable-qualification <directory> from release-portable-crate.ts.
 
+import { isPortableCrateSelection, verifyPortableCrate, verifyPortablePackageOutput } from "./release-portable-crate";
 import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -184,12 +187,16 @@ async function published(name: string, version: string): Promise<boolean> {
   return true;
 }
 
-function cargo(cwd: string, toolchain: string, args: string[]) {
+function cargo(cwd: string, toolchain: string, args: string[], targetDirectory?: string) {
   console.log(`$ cargo +${toolchain} ${args.join(" ")}`);
   const r = Bun.spawnSync(["cargo", `+${toolchain}`, ...args], {
     cwd,
     stdio: ["inherit", "inherit", "inherit"],
-    env: { ...process.env, RUSTUP_TOOLCHAIN: toolchain },
+    env: {
+      ...process.env,
+      RUSTUP_TOOLCHAIN: toolchain,
+      ...(targetDirectory ? { CARGO_TARGET_DIR: targetDirectory } : {}),
+    },
   });
   if (r.exitCode !== 0) throw new Error(`cargo ${args.join(" ")} failed (exit ${r.exitCode})`);
 }
@@ -209,6 +216,19 @@ async function main() {
   const targets = ["sdk", ...WORKSPACES.map(workspace => workspace.dir)];
   const unknown = only?.filter(key => !targets.includes(key));
   if (unknown?.length) throw new Error(`Unknown crate publication target: ${unknown.join(", ")}`);
+  const qualificationOutput = opt("--portable-qualification");
+  const qualificationSource = process.env.GITHUB_SHA;
+  if (publish && isPortableCrateSelection(opt("--only")) && !qualificationOutput)
+    throw new Error("Portable publication requires exact-source qualification evidence");
+  if (
+    qualificationOutput &&
+    (!isPortableCrateSelection(opt("--only")) || toolchain !== "stable" || skipTests || !qualificationSource)
+  )
+    throw new Error("Portable qualification requires exact JeV selection, stable toolchain, tests and CI source SHA");
+  const qualification = qualificationOutput
+    ? { output: resolve(qualificationOutput), source: qualificationSource! }
+    : undefined;
+  if (qualification) await verifyPortableCrate(ROOT, qualification.output, qualification.source);
   const selected = (key: string) => !only || only.includes(key);
 
   if (selected("sdk")) {
@@ -222,7 +242,7 @@ async function main() {
     for (const c of CRATES) cargo(out, toolchain, ["package", "--list", "--allow-dirty", "-p", c.name]);
     cargo(out, toolchain, ["check", "--workspace", "--all-targets"]);
     if (!skipTests) cargo(out, toolchain, ["test", "--workspace", "--lib"]);
-    publishPending(out, toolchain, pending, publish);
+    await publishPending(out, toolchain, pending, publish);
   }
 
   for (const ws of WORKSPACES) {
@@ -236,11 +256,18 @@ async function main() {
       if (await published(name, version)) console.log(`skip ${name}@${version}: already on crates.io`);
       else pending.push({ name, version });
     }
-    for (const name of ws.crates) cargo(dir, toolchain, ["package", "--list", "--allow-dirty", "-p", name]);
+    const portableTarget = qualification && join(qualification.output, "cargo");
+    for (const name of ws.crates)
+      cargo(
+        dir,
+        toolchain,
+        ["package", "--list", ...(qualification ? ["--locked"] : ["--allow-dirty"]), "-p", name],
+        portableTarget,
+      );
     const sel = ws.crates.flatMap(name => ["-p", name]);
-    cargo(dir, toolchain, ["check", "--all-targets", ...sel]);
-    if (!skipTests) cargo(dir, toolchain, ["test", ...sel]);
-    publishPending(dir, toolchain, pending, publish);
+    cargo(dir, toolchain, ["check", "--all-targets", ...(qualification ? ["--locked"] : []), ...sel], portableTarget);
+    if (!skipTests) cargo(dir, toolchain, ["test", ...(qualification ? ["--locked"] : []), ...sel], portableTarget);
+    await publishPending(dir, toolchain, pending, publish, qualification);
   }
 }
 
@@ -255,20 +282,32 @@ function workspaceVersions(dir: string, toolchain: string): Map<string, string> 
   return new Map(meta.packages.map(p => [p.name, p.version]));
 }
 
-function publishPending(
+async function publishPending(
   cwd: string,
   toolchain: string,
   pending: { name: string; version: string }[],
   publish: boolean,
+  qualification?: { output: string; source: string },
 ) {
   if (pending.length === 0) {
     console.log(`nothing to publish in ${cwd}`);
     return;
   }
   const sel = pending.flatMap(c => ["-p", c.name]);
-  cargo(cwd, toolchain, ["publish", "--allow-dirty", "--dry-run", ...sel]);
+  const target = qualification && join(qualification.output, "cargo");
+  cargo(
+    cwd,
+    toolchain,
+    ["publish", ...(qualification ? ["--locked"] : ["--allow-dirty"]), "--dry-run", ...sel],
+    target,
+  );
+  if (qualification) {
+    await verifyPortableCrate(ROOT, qualification.output, qualification.source);
+    await verifyPortablePackageOutput(qualification.output);
+  }
   if (!publish) return;
-  cargo(cwd, toolchain, ["publish", "--allow-dirty", ...sel]);
+  cargo(cwd, toolchain, ["publish", ...(qualification ? ["--locked"] : ["--allow-dirty"]), ...sel], target);
+  if (qualification) await verifyPortablePackageOutput(qualification.output);
   for (const c of pending) console.log(`published https://crates.io/crates/${c.name}/${c.version}`);
 }
 

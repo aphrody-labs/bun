@@ -46,8 +46,24 @@ jobs:
           bun-version: latest
       - name: Install Rust stable
         run: rustup toolchain install stable --profile minimal
+      - name: Qualify the exact portable Rust crate selection
+        if: inputs.only == 'crates/aphrody-jev'
+        run: bun scripts/aphrody/release-portable-crate.ts qualify "$RUNNER_TEMP/portable-crate" "$GITHUB_SHA"
+      - name: Verify portable source and package evidence before publication
+        if: inputs.only == 'crates/aphrody-jev'
+        run: bun scripts/aphrody/release-portable-crate.ts verify "$RUNNER_TEMP/portable-crate" "$GITHUB_SHA"
+      - name: Preserve portable qualification evidence
+        if: always() && inputs.only == 'crates/aphrody-jev'
+        uses: actions/upload-artifact@v6
+        with:
+          name: portable-aphrody-jev-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/portable-crate/*.json
+            ${{ runner.temp }}/portable-crate/*.crate
+            ${{ runner.temp }}/portable-crate/*.log
+          if-no-files-found: error
       - name: Verify eight native full release receipts before publication
-        if: inputs.dry-run != true
+        if: inputs.dry-run != true && inputs.only != 'crates/aphrody-jev'
         env:
           GH_TOKEN: ${{ secrets.APHRODY_SYNC_TOKEN || github.token }}
           QUALIFICATION_TAG: ${{ inputs.qualification-tag || github.ref_name }}
@@ -62,5 +78,6 @@ jobs:
         run: |
           args=(--out "$RUNNER_TEMP/aphrody-crates")
           if [ -n "$ONLY" ]; then args+=(--only "$ONLY"); fi
+          if [ "$ONLY" = crates/aphrody-jev ]; then args+=(--portable-qualification "$RUNNER_TEMP/portable-crate"); fi
           if [ "${{ inputs.dry-run }}" != "true" ]; then args+=(--publish); fi
           bun scripts/aphrody/publish-crates.ts "${args[@]}"

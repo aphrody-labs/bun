@@ -12,9 +12,22 @@ export type RuntimeReleaseTarget = ReleaseTarget & {
   coreutils: boolean;
 };
 
+export const fullNativeRuntimeFeatures = {
+  coreutils: true,
+  videoNative: true,
+  curlNative: true,
+  browserCrawl: true,
+  browserIndex: true,
+  googleSearch: true,
+} as const;
+
+const fullNativeRuntimeFlags = Object.keys(fullNativeRuntimeFeatures).map(
+  name => `--${name.replace(/[A-Z]/g, letter => `-${letter.toLowerCase()}`)}=on`,
+);
+
 /** This list is explicit: diagnostic and host-authority flags are not release features. */
 export const fullIntegrationPolicy = {
-  buildSelections: { coreutils: true, lto: true },
+  buildSelections: { ...fullNativeRuntimeFeatures, lto: true },
   alwaysLinkedOwners: ["native-html-css"],
   optionalLinkedOwners: ["native-coreutils"],
   pendingOwners: [
@@ -70,7 +83,7 @@ export function runtimeReleaseMatrix(targets: string[] = []): RuntimeReleaseTarg
 export function runtimeFlavorArgs(target: RuntimeReleaseTarget, lto = true, versionTag?: string): string[] {
   return [
     ...buildArgs(target, { lto, ...(versionTag !== undefined ? { versionTag } : {}) }),
-    `--coreutils=${target.coreutils ? "on" : "off"}`,
+    ...(target.flavor === "full" ? fullNativeRuntimeFlags : ["--coreutils=off"]),
   ];
 }
 
@@ -111,7 +124,7 @@ export function nativeFullReleasePlan(revision: string) {
           bootstrap,
           controlBootstrap:
             bootstraps.bootstraps[target.target.replace(/-musl$/, "") as keyof typeof bootstraps.bootstraps],
-          command: ["bun", "bd", ...runtimeFlavorArgs(target), "--video-native=on", "-j2"],
+          command: ["bun", "bd", ...runtimeFlavorArgs(target), "-j2"],
           assemblyOwner: "scripts/aphrody/media-release.ts",
           sdkOwner: "scripts/aphrody/media-sdk-factory.ts",
           qualificationOwner: "scripts/aphrody/release-aggregation.ts",
@@ -137,7 +150,7 @@ export function runtimeFlavorManifest(target: RuntimeReleaseTarget, revision: st
     flavor: target.flavor,
     target: target.target,
     asset: `${target.triplet}.zip`,
-    compiledFeatures: { coreutils: target.coreutils },
+    compiledFeatures: target.flavor === "full" ? fullNativeRuntimeFeatures : { coreutils: false },
     ...(target.flavor === "full"
       ? { integrationPolicy: fullIntegrationPolicy, completeIntegrationQualified: false }
       : {}),

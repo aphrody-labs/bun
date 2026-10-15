@@ -12,11 +12,36 @@ import {
   nativeRuntimeBuildFlags,
   nativeRuntimeBuildDirectory,
   nativeRuntimeResources,
+  command,
+  nativeRuntimeRegressionPlan,
+  assertRuntimeArtifactAbsent,
+  nativeRuntimeArtifactPlan,
 } from "./release-native-worker";
 import { nativeFullReleasePlan, runtimeReleaseMatrix } from "./release-matrix";
 import { qualifyNativeWinget } from "./release-native-install";
 import { nativeNginxRecipe } from "./release-native-nginx";
 import { mediaSDKPlan } from "../../packages/bun-video/src/sdk";
+
+test("runtime component qualifies the canonical stripped subject while full media retains profile output", () => {
+  const directory = resolve("build/release");
+  const linux = nativeRuntimeArtifactPlan(directory, "linux-x64", "runtime");
+  expect(linux).toEqual({
+    buildTarget: "bun",
+    executable: join(directory, "bun"),
+    profile: join(directory, "bun-profile"),
+    profileSpec: join(directory, "bun-profile.verify.json"),
+    strippedELF: true,
+  });
+  const media = nativeRuntimeArtifactPlan(directory, "linux-x64", "media");
+  expect(media.buildTarget).toBe("bun-profile");
+  expect(media.executable).toBe(media.profile);
+  expect(media.strippedELF).toBe(false);
+  const windows = nativeRuntimeArtifactPlan(directory, "windows-x64", "runtime");
+  expect(windows.buildTarget).toBe("bun");
+  expect(windows.executable).toBe(join(directory, "bun.exe"));
+  expect(windows.profileSpec).toBe(join(directory, "bun-profile.verify.json"));
+  expect(windows.strippedELF).toBe(false);
+});
 
 test("native capacity rejects small hosted machines instead of qualifying from their labels", () => {
   const GiB = 1024 ** 3;
@@ -29,9 +54,39 @@ test("native capacity rejects small hosted machines instead of qualifying from t
 test("Linux affinity honors assigned CPU IDs rather than assuming the host starts at CPU zero", () => {
   expect(nativeLinuxCPUs("Cpus_allowed_list:\t128-131\n")).toBe("128,129");
   expect(nativeLinuxCPUs("Cpus_allowed_list:\t3,7-9\n")).toBe("3,7");
+  expect(nativeLinuxCPUs("Cpus_allowed_list:\t128-139\n", 12)).toBe("128,129,130,131,132,133,134,135,136,137,138,139");
+  expect(nativeLinuxCPUs("Cpus_allowed_list:\t3,7-9\n", 4)).toBe("3,7,8,9");
+  expect(() => nativeLinuxCPUs("Cpus_allowed_list:\t128-139\n", 13)).toThrow("13 allocated CPUs");
+  for (const count of [0, -1, 1.5, 1025, NaN])
+    expect(() => nativeLinuxCPUs("Cpus_allowed_list:\t0-31\n", count)).toThrow();
+  expect(() => nativeLinuxCPUs("Cpus_allowed_list:\t3,3-5\n", 4)).toThrow("overlaps");
   for (const mask of ["", "Cpus_allowed_list:\t0\n", "Cpus_allowed_list:\t9-3\n"])
     expect(() => nativeLinuxCPUs(mask)).toThrow();
 });
+
+test.skipIf(process.platform !== "linux")(
+  "native command uses its explicit affinity and worker environment together",
+  async () => {
+    using directory = tempDir("native-command-resources", {});
+    const status = await Bun.file("/proc/self/status").text();
+    const probe = `console.log(JSON.stringify({cpus:(await Bun.file('/proc/self/status').text()).match(/^Cpus_allowed_list:\\s*(.+)$/m)[1],cargo:process.env.CARGO_BUILD_JOBS,omp:process.env.OMP_NUM_THREADS,media:process.env.BUN_MEDIA_JOBS}))`;
+    for (const resources of [undefined, { jobs: 1, linkThreads: 1 }]) {
+      const { stdout } = await command(
+        [process.execPath, "--no-env-file", "-e", probe],
+        String(directory),
+        join(String(directory), resources ? "explicit.log" : "default.log"),
+        { timeout: 5000, ...(resources ? { resources } : {}) },
+      );
+      const result = JSON.parse(stdout);
+      const expected = nativeLinuxCPUs(status, resources ? 1 : 2);
+      expect(nativeLinuxCPUs(`Cpus_allowed_list:\t${result.cpus}\n`, resources ? 1 : 2)).toBe(expected);
+      expect(() => nativeLinuxCPUs(`Cpus_allowed_list:\t${result.cpus}\n`, resources ? 2 : 3)).toThrow();
+      expect(result.cargo).toBe(resources ? "1" : "2");
+      expect(result.omp).toBe(resources ? "1" : "2");
+      expect(result.media).toBe("2");
+    }
+  },
+);
 
 test("native worker rejects moving refs, foreign targets and products inside the checkout", () => {
   using directory = tempDir("native-worker-input", {});
@@ -74,6 +129,55 @@ test("a missing source recipe cannot be substituted by an unqualified target lab
   const missing = nativeOwnerPrerequisites("linux-x64", plans);
   expect(missing.some(cause => cause.includes("pinned ffmpeg SDK recipe or archive absent"))).toBe(true);
   expect(missing.some(cause => cause.includes("pinned mpv SDK recipe or archive absent"))).toBe(true);
+});
+
+test("runtime-only production retains native media prerequisites without claiming optional component qualification", () => {
+  for (const allocation of nativeFullReleasePlan("a".repeat(40)).targets)
+    expect(nativeOwnerPrerequisites(allocation.target, undefined, "runtime")).toEqual([]);
+  const plans = (["ffmpeg", "mpv"] as const).map(component => mediaSDKPlan(component, "linux-x64"));
+  delete plans[0]!.buildRecipe;
+  expect(nativeOwnerPrerequisites("linux-x64", plans, "runtime").join(" ")).toContain("pinned ffmpeg SDK");
+  expect(nativeOwnerPrerequisites("linux-x64").join(" ")).toContain("Sharp/Remotion");
+});
+
+test("runtime fixture plan requires native search, curl and vector providers instead of passing feature-off skips", () => {
+  const plan = nativeRuntimeRegressionPlan("/qualified/bun");
+  expect(plan.command[0]).toBe("/qualified/bun");
+  for (const fixture of [
+    "search.test.ts",
+    "vector-index.test.ts",
+    "curl-aws-sigv4.test.ts",
+    "browser-cli.test.ts",
+    "yolo.test.ts",
+    "vpn.test.ts",
+    "declarations.test.ts",
+    "input-files.test.ts",
+  ])
+    expect(plan.command.some(value => value.endsWith(fixture))).toBe(true);
+  expect(plan.env).toEqual({
+    BUN_TEST_REQUIRE_SEARCH: "1",
+    BUN_TEST_REQUIRE_VECTOR_INDEX: "1",
+    BUN_TEST_REQUIRE_CURL: "1",
+  });
+  expect(plan.qualityCommand).toEqual([
+    "/qualified/bun",
+    "--no-env-file",
+    "test",
+    "./test/cli/lint/toolchain.test.ts",
+    "--test-name-pattern",
+    "tracked.*aphrody",
+  ]);
+});
+
+test("immutable runtime output rejects previous bytes before a producer can replace them", async () => {
+  using directory = tempDir("runtime-output-collision", {});
+  const asset = "bun-linux-x64-runtime-full";
+  await assertRuntimeArtifactAbsent(String(directory), asset);
+  const archive = join(String(directory), `${asset}.zip`);
+  await Bun.write(archive, "previous qualified bytes");
+  await expect(assertRuntimeArtifactAbsent(String(directory), asset)).rejects.toThrow("already exists");
+  expect(await Bun.file(archive).text()).toBe("previous qualified bytes");
+  await expect(assertRuntimeArtifactAbsent(String(directory), "../escape")).rejects.toThrow("Invalid");
 });
 
 test("Winget fixture cannot modify the local workstation through the native CI helper", async () => {
