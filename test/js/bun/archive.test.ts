@@ -96,7 +96,9 @@ describe("Bun.Archive", () => {
         framed.set(bytes, 7);
         const path = join(String(dir), "framed.archive");
         await Bun.write(path, framed);
-        const input = Bun.file(path).slice(3).slice(4, 4 + bytes.length);
+        const input = Bun.file(path)
+          .slice(3)
+          .slice(4, 4 + bytes.length);
         const archive = new Bun.Archive(input);
         expect(await archive.bytes()).toEqual(bytes);
         expect(await (await archive.blob()).bytes()).toEqual(bytes);
@@ -123,7 +125,10 @@ describe("Bun.Archive", () => {
       await Bun.write(path, "prefix-content-suffix");
       const input = Bun.file(path).slice(7, 14);
       for (const format of ["tar", "zip"] as const) {
-        const archive = new Bun.Archive({ "direct.txt": input, "descriptor.txt": { data: input, mode: 0o600, mtime: 0 } }, { format, mtime: 0 });
+        const archive = new Bun.Archive(
+          { "direct.txt": input, "descriptor.txt": { data: input, mode: 0o600, mtime: 0 } },
+          { format, mtime: 0 },
+        );
         const files = await archive.files();
         expect(await files.get("direct.txt")!.text()).toBe("content");
         expect(await files.get("descriptor.txt")!.text()).toBe("content");
@@ -140,7 +145,11 @@ describe("Bun.Archive", () => {
       await Bun.write(path, bytes);
       const fd = openSync(path, "r");
       let archive: Bun.Archive;
-      try { archive = new Bun.Archive(Bun.file(fd)); } finally { closeSync(fd); }
+      try {
+        archive = new Bun.Archive(Bun.file(fd));
+      } finally {
+        closeSync(fd);
+      }
       expect(await archive.bytes()).toEqual(bytes);
       expect(await (await archive.files()).get("entry.txt")!.text()).toBe("retained descriptor");
       const output = join(String(dir), "copied.tar");
@@ -2110,7 +2119,7 @@ describe("Bun.Archive", () => {
       const octal = (start: number, length: number) =>
         parseInt(buf.toString("latin1", start, start + length).replace(/[\0 ]/g, ""), 8);
       const headers: { name: string; mode: number; mtime: number }[] = [];
-      for (let offset = 0; offset + 512 <= buf.length && buf[offset] !== 0; ) {
+      for (let offset = 0; offset + 512 <= buf.length && buf[offset] !== 0;) {
         const size = octal(offset + 124, 12);
         headers.push({
           name: buf.toString("utf8", offset, offset + 100).replace(/\0.*$/s, ""),
@@ -2214,7 +2223,9 @@ describe("Bun.Archive", () => {
       const fallback = "fallback.txt";
       const name = "données/日本語.txt";
       const original = Buffer.from(await new Bun.Archive({ [fallback]: "unicode-extra" }, { format: "zip" }).bytes());
-      const end = original.length - 22;
+      // The native writer may pad its output after the ZIP end record.
+      const end = original.lastIndexOf(Buffer.from([0x50, 0x4b, 0x05, 0x06]));
+      expect(end).toBeGreaterThanOrEqual(0);
       expect(original.readUInt32LE(end)).toBe(0x06054b50);
       const central = original.readUInt32LE(end + 16);
       expect(original.readUInt32LE(central)).toBe(0x02014b50);
