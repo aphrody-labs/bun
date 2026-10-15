@@ -7,16 +7,18 @@ import { startConnectProxy } from "../src/connect-proxy.ts";
 import { eventRecordId, startSystemStream } from "../src/system-stream.ts";
 import { startTaskService } from "../src/task-service.ts";
 import { runTool } from "../src/process.ts";
+import { join } from "node:path";
 
 test("librclone retains one initialized Go library across RPC calls", async () => {
   using files = tempDir("librclone-retained", { "fixture-library": "controlled fake library" });
   const moduleUrl = new URL("../src/rclone.ts", import.meta.url).href;
-  await using child = Bun.spawn({
-    cmd: [
-      bunExe(),
-      "-e",
-      `
-      import { mock } from "bun:test";
+  const fixture = join(String(files), "retained.test.ts");
+  const result = join(String(files), "result.json");
+  await Bun.write(
+    fixture,
+    `
+    import { mock, test } from "bun:test";
+    test("retains the initialized library", async () => {
       const counts = { load: 0, initialize: 0, free: 0, finalize: 0, unload: 0 };
       mock.module("bun:ffi", () => ({
         FFIType: { void: 0, cstring: 1, ptr: 2 }, ptr: () => 1,
@@ -30,23 +32,27 @@ test("librclone retains one initialized Go library across RPC calls", async () =
       }));
       const { rcloneRpc } = await import(${JSON.stringify(moduleUrl)});
       const results = await Promise.all([rcloneRpc("core/version"), rcloneRpc("core/version")]);
-      console.log(JSON.stringify({ counts, results }));
+      await Bun.write(${JSON.stringify(result)}, JSON.stringify({ counts, results }));
+    });
     `,
-    ],
+  );
+  await using child = Bun.spawn({
+    cmd: [bunExe(), "test", fixture],
     env: { ...bunEnv, APHRODY_LIBRCLONE: `${files}/fixture-library` },
     stdout: "pipe",
     stderr: "pipe",
   });
-  const [stdout, stderr, code] = await Promise.all([child.stdout.text(), child.stderr.text(), child.exited]);
-  expect(JSON.parse(stdout)).toEqual({
+  const [, stderr, code] = await Promise.all([child.stdout.text(), child.stderr.text(), child.exited]);
+  expect(stderr).toContain("1 pass");
+  expect(stderr).toContain("0 fail");
+  expect(code).toBe(0);
+  expect(await Bun.file(result).json()).toEqual({
     counts: { load: 1, initialize: 1, free: 2, finalize: 0, unload: 0 },
     results: [
       { status: 200, output: { ok: true } },
       { status: 200, output: { ok: true } },
     ],
   });
-  expect(stderr).toBe("");
-  expect(code).toBe(0);
 });
 
 test("periodic metadata service serializes tasks and awaits cancellation on stop", async () => {
