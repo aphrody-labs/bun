@@ -8,7 +8,6 @@ license.workspace = true
 authors.workspace = true
 repository.workspace = true
 homepage.workspace = true
-readme = "README.md"
 publish = false
 keywords = ["oxc", "javascript", "typescript", "minifier", "bun"]
 categories = ["development-tools", "parser-implementations", "web-programming"]

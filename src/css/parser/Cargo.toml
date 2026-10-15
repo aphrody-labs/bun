@@ -12,7 +12,6 @@ autoexamples = false
 autotests = false
 autobenches = false
 description = "Parser for CSS, SCSS, Sass, and Less."
-readme = "README.md"
 license = "MIT"
 repository.workspace = true
 publish = false
@@ -55,3 +54,5 @@ version = "1.0"
 [package.metadata.bun.upstream]
 package = "oxc-css-parser"
 repository = "https://github.com/oxc-project/oxc-css-parser"
+
+[lints]

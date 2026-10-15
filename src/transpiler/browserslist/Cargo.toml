@@ -12,7 +12,6 @@ autoexamples = false
 autotests = false
 autobenches = false
 description = "Rust-ported Browserslist for Oxc."
-readme = "README.md"
 keywords = ["javascript", "web"]
 categories = ["config", "web-programming"]
 license = "MIT"
@@ -102,7 +101,7 @@ priority = -1
 [lints.rust]
 absolute_paths_not_starting_with_crate = "warn"
 non_ascii_idents = "warn"
-unit-bindings = "warn"
+unit_bindings = "warn"
 unsafe_code = "warn"
 
 [package.metadata.bun.upstream]

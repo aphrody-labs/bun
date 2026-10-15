@@ -13,7 +13,6 @@ autoexamples = false
 autotests = false
 autobenches = false
 description = "Basic sourcemap handling for Rust"
-readme = "README.md"
 keywords = ["javascript", "sourcemap", "sourcemaps"]
 categories = []
 license = "BSD-3-Clause"
@@ -103,7 +102,7 @@ priority = -1
 [lints.rust]
 absolute_paths_not_starting_with_crate = "warn"
 non_ascii_idents = "warn"
-unit-bindings = "warn"
+unit_bindings = "warn"
 
 [lints.rust.unexpected_cfgs]
 level = "warn"

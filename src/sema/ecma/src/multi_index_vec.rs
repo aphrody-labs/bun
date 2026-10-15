@@ -289,6 +289,7 @@ macro_rules! multi_index_vec {
                         for i in 0..len {
                             // SAFETY: `i < len <= cap`, so the pointer is within the allocation.
                             // Each element is only dropped once.
+                            #[allow(dropping_copy_types)]
                             unsafe {
                                 ::core::ptr::drop_in_place(self.$fname.as_ptr().add(i));
                             }
