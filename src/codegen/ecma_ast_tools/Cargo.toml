@@ -103,7 +103,7 @@ level = "warn"
 priority = -1
 
 [[bin]]
-name = "oxc_ast_tools"
+name = "oxc-ast-tools"
 test = true
 doctest = false
 path = "src/main.rs"

@@ -111,7 +111,7 @@ name = "oxc_coverage"
 path = "src/lib.rs"
 
 [[bin]]
-name = "oxc_coverage"
+name = "oxc-coverage"
 test = false
 doctest = false
 path = "src/main.rs"

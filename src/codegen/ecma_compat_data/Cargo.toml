@@ -109,7 +109,7 @@ name = "oxc_compat_data"
 path = "src/lib.rs"
 
 [[bin]]
-name = "oxc_compat_data"
+name = "oxc-compat-data"
 test = false
 path = "src/main.rs"
 

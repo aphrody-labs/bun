@@ -13,7 +13,6 @@ autotests = false
 autobenches = false
 description = "ESM / CJS module resolution"
 homepage.workspace = true
-readme = "README.md"
 keywords = ["node", "resolve", "cjs", "esm", "enhanced-resolve"]
 categories = ["development-tools"]
 license = "MIT"

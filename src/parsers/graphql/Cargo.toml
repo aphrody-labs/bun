@@ -12,7 +12,6 @@ autotests = false
 autobenches = false
 description = "Spec-compliant GraphQL parser."
 documentation = "https://docs.rs/oxc-graphql-parser"
-readme = "README.md"
 keywords = ["graphql", "parser", "graphql-tooling", "oxc"]
 categories = ["compilers", "development-tools", "parser-implementations", "parsing", "web-programming"]
 license = "MIT OR Apache-2.0"
@@ -48,6 +47,8 @@ version = "0.6.0"
 [dev-dependencies.criterion2]
 version = "3"
 default-features = false
+
+[lints]
 
 [package.metadata.bun.upstream]
 package = "oxc-graphql-parser"

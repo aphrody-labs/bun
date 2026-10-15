@@ -111,7 +111,7 @@ name = "oxc_transform_conformance"
 path = "src/lib.rs"
 
 [[bin]]
-name = "oxc_transform_conformance"
+name = "oxc-transform-conformance"
 test = false
 doctest = false
 path = "src/main.rs"

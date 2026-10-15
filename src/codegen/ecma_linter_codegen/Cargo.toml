@@ -103,7 +103,7 @@ level = "warn"
 priority = -1
 
 [[bin]]
-name = "oxc_linter_codegen"
+name = "oxc-linter-codegen"
 test = false
 doctest = false
 path = "src/main.rs"

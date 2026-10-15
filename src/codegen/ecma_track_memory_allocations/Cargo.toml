@@ -108,7 +108,7 @@ name = "oxc_track_memory_allocations"
 path = "src/lib.rs"
 
 [[bin]]
-name = "oxc_track_memory_allocations"
+name = "oxc-track-memory-allocations"
 test = false
 doctest = false
 path = "src/main.rs"

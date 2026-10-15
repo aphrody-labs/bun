@@ -108,7 +108,7 @@ name = "oxc_track_linter_timings"
 path = "src/lib.rs"
 
 [[bin]]
-name = "oxc_track_linter_timings"
+name = "oxc-track-linter-timings"
 test = false
 doctest = false
 path = "src/main.rs"

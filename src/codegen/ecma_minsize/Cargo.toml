@@ -108,7 +108,7 @@ name = "oxc_minsize"
 path = "src/lib.rs"
 
 [[bin]]
-name = "oxc_minsize"
+name = "oxc-minsize"
 test = false
 doctest = false
 path = "src/main.rs"

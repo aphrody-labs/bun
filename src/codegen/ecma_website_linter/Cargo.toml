@@ -106,7 +106,7 @@ level = "warn"
 priority = -1
 
 [[bin]]
-name = "website_linter"
+name = "website-linter"
 doctest = false
 path = "src/main.rs"
 
