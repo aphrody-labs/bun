@@ -209,37 +209,65 @@ impl Curl {
         } else {
             None
         };
-        let options: serde_json::Value = if options.is_undefined_or_null() {
-            serde_json::json!({})
-        } else {
-            if !options.is_object() {
-                return Err(
-                    global.throw_invalid_arguments(format_args!("Curl options must be an object"))
-                );
-            }
-            let json = options.json_stringify(global, 0)?;
-            let json = json.to_utf8();
-            serde_json::from_slice(json.slice())
-                .map_err(|_| global.throw_invalid_arguments(format_args!("Invalid Curl options")))?
-        };
         let invalid =
             || global.throw_invalid_arguments(format_args!("Invalid or unsupported Curl option"));
-        let object = options.as_object().ok_or_else(invalid)?;
-        if object.keys().any(|key| {
-            ![
-                "method",
-                "headers",
-                "body",
-                "timeout",
-                "maxBytes",
-                "followRedirects",
-                "maxRedirects",
-                "signal",
-                "options",
-            ]
-            .contains(&key.as_str())
-        }) {
-            return Err(invalid());
+        let mut object = serde_json::Map::new();
+        let mut body = None;
+        if !options.is_undefined_or_null() {
+            if !options.is_object() {
+                return Err(invalid());
+            }
+            let keys = options.keys(global)?;
+            let _keys_hold = jsc::Strong::create(keys, global);
+            let length = keys.get_length(global)?;
+            if length > 16 {
+                return Err(invalid());
+            }
+            for index in 0..length {
+                let key = keys.get_index(global, index as u32)?;
+                let name = key.to_bun_string(global)?;
+                let name = name.to_utf8();
+                let name = std::str::from_utf8(name.slice()).map_err(|_| invalid())?;
+                if ![
+                    "method", "headers", "body", "timeout", "maxBytes", "followRedirects",
+                    "maxRedirects", "signal", "options",
+                ]
+                .contains(&name)
+                {
+                    return Err(invalid());
+                }
+                // The signal getter was already evaluated above. Snapshot every other getter once.
+                if name == "signal" {
+                    continue;
+                }
+                let Some(value) = options.get_own_by_value(global, key)? else {
+                    continue;
+                };
+                if value.is_undefined() {
+                    continue;
+                }
+                let _value_hold = jsc::Strong::create(value, global);
+                if name == "body" {
+                    body = Some(if value.is_string() {
+                        value.to_bun_string(global)?.to_utf8().slice().to_vec()
+                    } else if let Some(buffer) = value.as_array_buffer(global) {
+                        if buffer.is_detached() {
+                            return Err(invalid());
+                        }
+                        // No borrowed backing store crosses getters, GC or the worker boundary.
+                        buffer.slice().to_vec()
+                    } else {
+                        return Err(invalid());
+                    });
+                } else {
+                    let json = value.json_stringify(global, 0)?;
+                    let json = json.to_utf8();
+                    object.insert(
+                        name.to_owned(),
+                        serde_json::from_slice(json.slice()).map_err(|_| invalid())?,
+                    );
+                }
+            }
         }
         let number = |key: &str, default: u64| -> JsResult<u64> {
             object
@@ -249,15 +277,6 @@ impl Curl {
         let method = object
             .get("method")
             .map(|value| value.as_str().map(str::to_owned).ok_or_else(invalid))
-            .transpose()?;
-        let body = object
-            .get("body")
-            .map(|value| {
-                value
-                    .as_str()
-                    .map(|value| value.as_bytes().to_vec())
-                    .ok_or_else(invalid)
-            })
             .transpose()?;
         let headers = object
             .get("headers")
