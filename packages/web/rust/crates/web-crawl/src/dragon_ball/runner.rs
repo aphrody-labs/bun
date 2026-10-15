@@ -1066,7 +1066,7 @@ mod tests {
             force: false,
         };
         let report = run_dragon_ball(&plan, &options, &fixture).await.unwrap();
-        assert_eq!(report.documents, 1);
+        assert_eq!(report.documents, 3);
         assert_eq!(report.network_requests, 1);
         let document: DragonBallDocument = serde_json::from_str(
             std::fs::read_to_string(output.join("shenron-documents.jsonl"))
@@ -1090,9 +1090,22 @@ mod tests {
         }));
         assert!(!document.payload.body_markdown.contains("cdn.example.org"));
         let report = run_dragon_ball(&plan, &options, &Fixture(HashMap::new())).await.unwrap();
-        assert_eq!(report.documents, 1);
+        assert_eq!(report.documents, 3);
         assert_eq!(report.network_requests, 0);
-        assert_eq!(materialize_documents(&output).unwrap(), 1);
+        let indexed = std::fs::read_dir(output.join("documents"))
+            .unwrap()
+            .map(|entry| std::fs::read_to_string(entry.unwrap().path()).unwrap())
+            .collect::<Vec<_>>();
+        assert_eq!(
+            indexed.iter().filter(|text| text.contains("Category: asset-reference")).count(),
+            2
+        );
+        assert!(
+            indexed
+                .iter()
+                .any(|text| text.contains("Akira Toriyama") && text.contains("Source evidence"))
+        );
+        assert_eq!(materialize_documents(&output).unwrap(), 3);
         std::fs::remove_dir_all(output).unwrap();
     }
     #[tokio::test]

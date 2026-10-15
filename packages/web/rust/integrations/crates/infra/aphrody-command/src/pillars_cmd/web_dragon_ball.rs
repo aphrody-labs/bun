@@ -97,6 +97,15 @@ pub(crate) struct CorpusArgs {
 }
 
 #[derive(Debug, Args)]
+pub(crate) struct IndexArgs {
+    #[command(flatten)]
+    corpus: CorpusArgs,
+    /// Local public Shenron/CDN or bibliographic catalogue JSON (repeatable; no network)
+    #[arg(long = "catalogue", alias = "catalog")]
+    catalogues: Vec<PathBuf>,
+}
+
+#[derive(Debug, Args)]
 pub(crate) struct CampaignArgs {
     #[command(flatten)]
     corpus: CorpusArgs,
@@ -185,7 +194,7 @@ pub(crate) enum DragonBallAction {
         index: bool,
     },
     /// Index existing campaign exports without any network collection
-    Index(CorpusArgs),
+    Index(IndexArgs),
     /// Download campaign covers (and optional plates) into the protected asset store
     Assets(AssetArgs),
     /// Resolve asset requests without collection or writes
@@ -264,15 +273,19 @@ fn campaign(
     Ok((plan, options))
 }
 
-async fn index_existing(args: &CorpusArgs) -> miette::Result<Value> {
+async fn index_existing(args: &CorpusArgs, catalogues: &[PathBuf]) -> miette::Result<Value> {
     let layout = layout(args)?;
     let output = output(args, &layout);
+    if !output.is_dir() && !catalogues.is_empty() {
+        super::crawl_index::private_directory(&output)?;
+    }
     if !output.is_dir() {
         return Err(miette!("campaign output directory does not exist"));
     }
     let _lock = super::crawl_index::job_lock(&output)?;
-    let written = aphrody_web_crawl::dragon_ball::materialize_documents(&output)
-        .map_err(|error| miette!("Dragon Ball export materialization failed: {error}"))?;
+    let written =
+        aphrody_web_crawl::dragon_ball::materialize_documents_with_catalogues(&output, catalogues)
+            .map_err(|error| miette!("Dragon Ball export materialization failed: {error}"))?;
     let documents = output.join("documents");
     if !documents.is_dir() {
         return Err(miette!("campaign has no indexable documents"));
@@ -291,7 +304,9 @@ async fn index_existing(args: &CorpusArgs) -> miette::Result<Value> {
     if !report.errors.is_empty() {
         return Err(miette!("Dragon Ball indexing reported errors"));
     }
-    Ok(json!({"profile": args.profile, "output": output, "materialized": written, "index": report}))
+    Ok(
+        json!({"profile": args.profile, "output": output, "materialized": written, "catalogues": catalogues, "index": report}),
+    )
 }
 
 enum AssetMode {
@@ -412,7 +427,7 @@ pub(super) async fn run(action: DragonBallAction) -> miette::Result<Value> {
                 "reports": reports}),
             )
         }
-        DragonBallAction::Index(args) => index_existing(&args).await,
+        DragonBallAction::Index(args) => index_existing(&args.corpus, &args.catalogues).await,
         DragonBallAction::Crawl {
             campaign: args,
             index,
@@ -446,7 +461,7 @@ pub(super) async fn run(action: DragonBallAction) -> miette::Result<Value> {
             };
             let mut value = json!({"profile": args.corpus.profile, "campaign": report});
             if index {
-                value["index"] = index_existing(&args.corpus).await?;
+                value["index"] = index_existing(&args.corpus, &[]).await?;
             }
             Ok(value)
         }
@@ -515,7 +530,7 @@ mod tests {
                 state: Some(state.path().to_path_buf()),
                 json: true,
             };
-            let report = index_existing(&args).await.unwrap();
+            let report = index_existing(&args, &[]).await.unwrap();
             assert_eq!(report["materialized"], 1);
             assert_eq!(report["index"]["indexed"], 1);
         }
@@ -529,5 +544,28 @@ mod tests {
         let aphrody =
             HomeLayout::in_state(state.path(), &HomeScope::Profile("aphrody".into())).unwrap();
         assert!(!aphrody.db_path.exists());
+    }
+    #[tokio::test]
+    async fn explicit_catalogue_can_seed_an_empty_campaign_in_its_isolated_profile() {
+        let state = tempfile::tempdir().unwrap();
+        let catalogue = state.path().join("manga.json");
+        std::fs::write(&catalogue, json!({"schema":"shenron-manga-cdn/v1","volumes":[{"id":1,"title":"CatalogueFixtureGohan","isbn":"fixture-isbn"}],"chapters":[]}).to_string()).unwrap();
+        let args = CorpusArgs {
+            output: Some(state.path().join("new-campaign")),
+            profile: "shenron".into(),
+            state: Some(state.path().to_path_buf()),
+            json: true,
+        };
+        let report = index_existing(&args, &[catalogue]).await.unwrap();
+        assert_eq!(report["materialized"], 1);
+        assert_eq!(report["index"]["indexed"], 1);
+        let layout =
+            HomeLayout::in_state(state.path(), &HomeScope::Profile("shenron".into())).unwrap();
+        let db = aphrody_rag::home::HomeDb::open_read_only(&layout.db_path).unwrap();
+        assert!(
+            !aphrody_rag::home::unified_search(&db, "CatalogueFixtureGohan", &Default::default())
+                .unwrap()
+                .is_empty()
+        );
     }
 }

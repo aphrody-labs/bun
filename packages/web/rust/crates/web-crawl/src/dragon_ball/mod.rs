@@ -4,6 +4,7 @@
 //! Domain records retain their provenance and never imply editorial approval.
 
 mod assets;
+mod catalogue_index;
 mod consolidation;
 mod documents;
 mod runner;
@@ -22,7 +23,10 @@ pub use assets::{
     probe_assets, sync_assets, sync_assets_with_transport,
 };
 pub use consolidation::{ConsolidatedDragonBallReport, consolidate_bxc};
-pub use documents::{DragonBallDocument, export_bxc, materialize_documents, project_document};
+pub use documents::{
+    DragonBallDocument, export_bxc, materialize_documents, materialize_documents_with_catalogues,
+    project_document,
+};
 pub use runner::{DragonBallRunOptions, DragonBallRunReport, run_dragon_ball};
 pub use sources::{DragonBallPlan, DragonBallTarget, source_registry, validate_source_url};
 

@@ -103,6 +103,47 @@ le reçu ; OCR, retrait de promotions et insertion éditoriale restent chez Shen
 
 ## Propriétaires qui restent distincts
 
+### Index hors ligne et nouveaux catalogues Shenron
+
+`aphrody web dragon-ball index` conserve les corps JSONL et indexe aussi leurs
+métadonnées : langue, catégorie, date, auteurs, dialogue, médias et provenance.
+Les exports connus du dossier de campagne sont reconnus automatiquement :
+`shenron-catalogue.json`, `shenron_catalogue.json`, `toei-episodes.json`,
+`jump-stats.json`, `db_official_news.json`, `dragonballcn.json`,
+`data/catalogues/dragonballcn.json`,
+`publications/manga-catalogue/index.json` et `catalog/assets/index.json`.
+
+L'option répétable `--catalogue <fichier>` (alias `--catalog`) sélectionne des
+snapshots locaux supplémentaires. Exemple :
+
+```sh
+aphrody web dragon-ball index --output "$CAMPAIGN" --profile shenron \
+  --catalogue "$SHENRON_PUBLIC/publications/manga-catalogue/index.json" \
+  --catalogue "$SHENRON_PUBLIC/catalog/assets/index.json"
+```
+
+Le schéma `shenron-manga-cdn/v1` produit un document par tome et chapitre,
+avec ISBN, titres, séries, nombres de pages, références et empreintes. Le schéma
+`shenron-public-cdn/v1` produit un inventaire et un document par asset. Ses pages
+`revisions/<révision>/files/page-*.json` doivent être présentes près de l'index,
+dans l'arborescence publiée : leur SHA-256, révision et dénombrement sont vérifiés.
+Une page absente ou altérée fait échouer l'indexation avant l'écriture des documents.
+Les objets manga et les images restent des références ; aucun réseau, OCR ou
+téléchargement implicite n'est lancé.
+
+Les notices bibliographiques et les empreintes du catalogue sont conservées.
+Les documents de catalogue ont une identité distincte des pages capturées à la
+même URL. Des exports contradictoires pour la même identité sont refusés.
+Les documents déjà présents ne sont pas supprimés par cette matérialisation.
+
+Les propriétaires existants restent la chaîne d'exécution :
+`aphrody-command` pour les arguments et le verrou de campagne,
+`aphrody-web-crawl` pour la projection hors ligne,
+`aphrody-web-extract` et le DOM Bun pour les captures,
+`aphrody-rag` pour l'indexation et le profil isolé. Aucune nouvelle dépendance n'est ajoutée.
+
+### Frontières éditoriales
+
 Les mutations PostgreSQL/SQLite éditoriales, les dictionnaires factuels d’ISBN,
 les arbitrages canoniques et les gels OCR/traduction appartiennent à Shenron.
 Les recherches Google et les moteurs de découverte appartiennent au

@@ -389,6 +389,15 @@ pub fn export_bxc(databases: &[PathBuf], output: &Path) -> Result<usize, String>
 
 /// Materialize existing JSONL projections for the native RAG owner, offline.
 pub fn materialize_documents(output: &Path) -> Result<usize, String> {
+    materialize_documents_with_catalogues(output, &[])
+}
+
+/// Index campaign exports and explicitly selected, local public catalogues offline.
+/// All records are validated before any document is written.
+pub fn materialize_documents_with_catalogues(
+    output: &Path,
+    catalogues: &[PathBuf],
+) -> Result<usize, String> {
     let mut files = Vec::new();
     let corpus = output.join("corpus");
     if output.is_dir() {
@@ -437,7 +446,61 @@ pub fn materialize_documents(output: &Path) -> Result<usize, String> {
                 .or_else(|| value.get("payload").and_then(|payload| payload.get("title_raw")))
                 .and_then(Value::as_str)
                 .unwrap_or(url);
-            documents.insert(url.to_owned(), format!("# {title}\n\nSource: {url}\n\n{markdown}\n"));
+            let mut metadata = serde_json::Map::new();
+            for field in [
+                "lang",
+                "kind",
+                "category",
+                "source_domain",
+                "timestamp_utc",
+                "raw_checksum",
+                "provenance",
+                "canonical_eligible",
+            ] {
+                if let Some(field_value) = value.get(field) {
+                    metadata.insert(field.into(), field_value.clone());
+                }
+            }
+            if let Some(payload) = value.get("payload") {
+                for field in [
+                    "publication_date",
+                    "authors_or_entities",
+                    "structured_fields",
+                    "embedded_media",
+                ] {
+                    if let Some(field_value) = payload.get(field) {
+                        metadata.insert(field.into(), field_value.clone());
+                    }
+                }
+            }
+            let metadata =
+                serde_json::to_string_pretty(&metadata).map_err(|error| error.to_string())?;
+            documents.insert(
+                url.to_owned(),
+                format!("# {title}\n\nSource: {url}\n\n{markdown}\n\nMetadata: {metadata}\n"),
+            );
+        }
+    }
+    let mut catalogues = catalogues.to_vec();
+    catalogues.extend(
+        super::catalogue_index::EXPORTS
+            .iter()
+            .map(|name| output.join(name))
+            .filter(|path| path.is_file()),
+    );
+    catalogues.sort();
+    catalogues.dedup();
+    for catalogue in catalogues {
+        for (key, text) in super::catalogue_index::read_catalogue(
+            &catalogue,
+            |url| validate_source_url(url).map(|_| ()),
+            super::sha256_bytes,
+        )? {
+            if let Some(existing) = documents.insert(key, text.clone())
+                && existing != text
+            {
+                return Err("conflicting catalogue exports".into());
+            }
         }
     }
     for (url, markdown) in &documents {
@@ -483,5 +546,35 @@ mod tests {
         assert!(output.contains("new"));
         assert!(!output.contains("\"body_markdown\":\"old\""));
         std::fs::remove_dir_all(dir).unwrap();
+    }
+    #[test]
+    fn offline_catalogues_extend_bodies_and_preserve_structured_metadata() {
+        let directory =
+            std::env::temp_dir().join(format!("dragon-ball-materialize-{}", std::process::id()));
+        std::fs::create_dir_all(&directory).unwrap();
+        let source = "https://dragonballfr.com/wiki/episodes/1";
+        let record = serde_json::json!({"canonical_url":source,"category":"shenron_community","payload":{"title_raw":"Goku","body_markdown":"Saiyan arrival","structured_fields":{"series_identifier":"dragon_ball_z","episode_or_chapter_number":1},"embedded_media":[{"url":"https://cdn.dragonballfr.com/goku.webp","type":"image"}]}});
+        std::fs::write(directory.join("export.jsonl"), format!("{record}\n")).unwrap();
+        let catalogue = directory.join("public-catalogue.json");
+        std::fs::write(&catalogue, serde_json::json!({"episodes":[{"id":1,"title":"Goku","url":source,"synopsis":"Gohan"}]}).to_string()).unwrap();
+        assert_eq!(
+            materialize_documents_with_catalogues(&directory, std::slice::from_ref(&catalogue))
+                .unwrap(),
+            2
+        );
+        let document = std::fs::read_to_string(
+            directory.join("documents").join(format!("{}.md", sha256(source))),
+        )
+        .unwrap();
+        assert!(document.contains("Saiyan arrival"));
+        assert!(document.contains("dragon_ball_z"));
+        assert!(document.contains("goku.webp"));
+        assert_eq!(materialize_documents_with_catalogues(&directory, &[catalogue]).unwrap(), 2);
+        let invalid = directory.join("bad.json");
+        std::fs::write(&invalid, "{\"schema\":\"unknown/v2\"}").unwrap();
+        let before = std::fs::read_dir(directory.join("documents")).unwrap().count();
+        assert!(materialize_documents_with_catalogues(&directory, &[invalid]).is_err());
+        assert_eq!(std::fs::read_dir(directory.join("documents")).unwrap().count(), before);
+        std::fs::remove_dir_all(directory).unwrap();
     }
 }
