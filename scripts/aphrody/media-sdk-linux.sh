@@ -6,6 +6,8 @@ target=$1 component=$2 sources=$3 owner=$4
 ffmpeg=${5:-}
 llvm=${BUN_MEDIA_LLVM_BIN:-/usr/lib/llvm-23/bin}
 lock=${BUN_MEDIA_HEAVY_LOCK:?Set the existing host heavy.lock path}
+jobs=${BUN_MEDIA_JOBS:-2}
+[[ $jobs =~ ^[1-9][0-9]{0,3}$ ]] && ((jobs <= 1024)) || { echo 'BUN_MEDIA_JOBS must be an integer from 1 through 1024' >&2; exit 2; }
 for path in "$sources" "$owner" "$llvm" "$lock"; do
   [[ $path =~ ^/[A-Za-z0-9_./+-]+$ ]] || exit 2
 done
@@ -22,11 +24,13 @@ gcc=("$sysroot/usr/lib/gcc/$machine-linux-$abi/"*)
 [[ ${#gcc[@]} == 1 && -d ${gcc[0]} ]]
 exec 9>"$lock"
 flock -n 9 || exit 75
+available_cpus=$(bun --no-env-file -e 'console.log((await import("node:os")).availableParallelism())')
+[[ $available_cpus =~ ^[1-9][0-9]*$ ]] && ((jobs <= available_cpus)) || { echo 'Media jobs exceed the executing host available CPUs' >&2; exit 2; }
 prefix=$owner/prefix
 mkdir -p "$prefix"
 printf '%s\n' build-in-progress > "$owner/build-status.txt"
 unset CPATH C_INCLUDE_PATH CPLUS_INCLUDE_PATH LIBRARY_PATH LD_LIBRARY_PATH LD_PRELOAD PKG_CONFIG_SYSROOT_DIR
-export PKG_CONFIG_PATH='' OMP_NUM_THREADS=2
+export PKG_CONFIG_PATH='' BUN_MEDIA_JOBS=$jobs CARGO_BUILD_JOBS=$jobs OMP_NUM_THREADS=$jobs
 export PKG_CONFIG_LIBDIR=$prefix/lib/pkgconfig
 flags=(--target="$machine-linux-$abi" --sysroot="$sysroot" --gcc-install-dir="${gcc[0]}")
 link=(-fuse-ld=lld -static-libgcc '-Wl,--gc-sections')
@@ -74,7 +78,7 @@ if [[ $component == ffmpeg ]]; then
     --extra-libs="$zlib_libs -latomic" --enable-zlib \
     --disable-autodetect --enable-shared --disable-static --disable-doc --disable-debug --disable-ffplay \
     --disable-checkasm --disable-gpl --disable-nonfree
-  timeout 7200 make -j2
+  timeout 7200 make -j"$jobs"
   timeout 180 make install
   mkdir -p "$prefix/share/licenses/ffmpeg"
   cp "$sources/ffmpeg/"{COPYING.LGPLv2.1,COPYING.LGPLv3,LICENSE.md} "$prefix/share/licenses/ffmpeg/"
@@ -117,7 +121,7 @@ EOF
     timeout 300 meson setup "$owner/build-$dependency" "$sources/$dependency" --cross-file "$owner/cross.ini" \
       --prefix="$prefix" --libdir=lib --buildtype=release --wrap-mode=nodownload \
       -Ddefault_library=shared -Dauto_features=disabled "$@"
-    timeout 2400 meson compile -C "$owner/build-$dependency" -j2
+    timeout 2400 meson compile -C "$owner/build-$dependency" -j"$jobs"
     timeout 180 meson install -C "$owner/build-$dependency"
   }
   build_meson freetype -Dharfbuzz=disabled -Dzlib=internal

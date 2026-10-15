@@ -83,7 +83,7 @@ test.skipIf(process.platform !== "linux")(
       expect(() => nativeLinuxCPUs(`Cpus_allowed_list:\t${result.cpus}\n`, resources ? 2 : 3)).toThrow();
       expect(result.cargo).toBe(resources ? "1" : "2");
       expect(result.omp).toBe(resources ? "1" : "2");
-      expect(result.media).toBe("2");
+      expect(result.media).toBe(resources ? "1" : "2");
     }
   },
 );

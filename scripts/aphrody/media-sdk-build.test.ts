@@ -1,10 +1,11 @@
 import { expect, test } from "bun:test";
 import { mkdir, mkdtemp, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { availableParallelism, tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import catalogue from "../../packages/bun-video/src/sdk-manifest.json";
 import {
   mediaBuildPlan,
+  mediaBuildJobs,
   mediaBuildTarget,
   mediaGNUCompatibilityRustFlags,
   validateMediaDependencyReceipt,
@@ -16,6 +17,75 @@ import { mediaSourceTree } from "./media-sdk-source";
 const root = resolve(import.meta.dir, "../..");
 const digest = "a".repeat(64);
 const targets = Object.keys(catalogue.targets) as Array<keyof typeof catalogue.targets>;
+
+test("explicit media jobs reach every recipe while native affinity still bounds execution", () => {
+  expect(mediaBuildJobs("2", 2)).toBe(2);
+  expect(mediaBuildJobs("12", 12)).toBe(12);
+  expect(() => mediaBuildJobs("12", 6)).toThrow("available CPUs");
+  expect(() => mediaBuildJobs("2", NaN)).toThrow("available CPUs");
+  for (const invalid of ["0", "1025", "12.5", "", " 12", "-2"])
+    expect(() => mediaBuildJobs(invalid)).toThrow("1 through 1024");
+  const previous = Bun.env.BUN_MEDIA_JOBS;
+  try {
+    delete Bun.env.BUN_MEDIA_JOBS;
+    expect(mediaBuildPlan(input("linux-x64", "ffmpeg")).maxJobs).toBe(2);
+    Bun.env.BUN_MEDIA_JOBS = "12";
+    for (const target of targets) {
+      for (const component of ["ffmpeg", "mpv", "avio"] as const) {
+        const plan = mediaBuildPlan(input(target, component));
+        expect(plan.maxJobs).toBe(12);
+        expect(plan.env.BUN_MEDIA_JOBS).toBe("12");
+        expect(plan.env.CARGO_BUILD_JOBS).toBe("12");
+        expect(plan.env.OMP_NUM_THREADS).toBe("12");
+        if (component === "avio") {
+          const argv = plan.commands.find(step => step.argv.includes("--jobs"))!.argv;
+          expect(argv[argv.indexOf("--jobs") + 1]).toBe("12");
+        } else if (!target.startsWith("linux")) expect(plan.commands.flatMap(step => step.argv)).toContain("-j12");
+      }
+    }
+  } finally {
+    if (previous === undefined) delete Bun.env.BUN_MEDIA_JOBS;
+    else Bun.env.BUN_MEDIA_JOBS = previous;
+  }
+});
+
+test.skipIf(process.platform !== "linux" || availableParallelism() >= 1024)(
+  "Linux media owner refuses excess native jobs before running any compiler",
+  async () => {
+    const fixture = await mkdtemp(join(tmpdir(), "media-job-admission-"));
+    try {
+      const sysroot = join(fixture, "sysroot");
+      await mkdir(join(sysroot, "usr/lib/gcc/x86_64-linux-gnu/13"), { recursive: true });
+      const output = join(fixture, "output");
+      await mkdir(output);
+      const child = Bun.spawn(
+        ["bash", join(root, "scripts/aphrody/media-sdk-linux.sh"), "linux-x64", "ffmpeg", fixture, output],
+        {
+          env: {
+            ...process.env,
+            BUN_MEDIA_JOBS: String(availableParallelism() + 1),
+            BUN_MEDIA_HEAVY_LOCK: join(fixture, "heavy.lock"),
+            BUN_MEDIA_SYSROOT: sysroot,
+            BUN_MEDIA_LLVM_BIN: fixture,
+          },
+          stdout: "pipe",
+          stderr: "pipe",
+        },
+      );
+      const [stdout, stderr, code] = await Promise.all([
+        new Response(child.stdout).text(),
+        new Response(child.stderr).text(),
+        child.exited,
+      ]);
+      expect(stdout).toBe("");
+      expect(stderr).toContain("available CPUs");
+      expect(code).toBe(2);
+      expect(await Bun.file(join(output, "build-status.txt")).exists()).toBe(false);
+    } finally {
+      await rm(fixture, { recursive: true, force: true });
+    }
+  },
+);
 
 test("AVIO and runtime SDK share bounded canonical GNU wrapper link arguments", () => {
   const object = join(root, "build/bun-glibc-compat.o"),
@@ -61,7 +131,7 @@ test("eight source recipes select exact native triples and never attest provider
     expect(avio.missing).toContain(`Qualified ${target} ffmpeg SDK prefix`);
     for (const component of ["ffmpeg", "mpv"] as const) {
       const plan = mediaBuildPlan(input(target, component));
-      expect(plan.maxJobs).toBe(2);
+      expect(plan.maxJobs).toBe(mediaBuildJobs());
       expect(plan.commands.every(command => command.timeout > 0 && command.timeout <= 10_800_000)).toBe(true);
       if (target.startsWith("linux"))
         expect(plan.commands[0]!.argv).toContain(join(root, "scripts/aphrody/media-sdk-linux.sh"));

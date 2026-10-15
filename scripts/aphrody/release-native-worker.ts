@@ -277,7 +277,7 @@ function workerEnvironment(resources: NativeRuntimeResources = { jobs: 2, linkTh
   return {
     ...process.env,
     CARGO_BUILD_JOBS: String(resources.jobs),
-    BUN_MEDIA_JOBS: "2",
+    BUN_MEDIA_JOBS: String(resources.jobs),
     OMP_NUM_THREADS: String(resources.jobs),
     RUSTC_WRAPPER: undefined,
     CARGO_BUILD_RUSTC_WRAPPER: undefined,

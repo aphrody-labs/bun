@@ -1,6 +1,7 @@
 import { chmod, mkdir, realpath, readdir } from "node:fs/promises";
 import { delimiter, dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { closeSync, openSync, existsSync } from "node:fs";
+import { availableParallelism } from "node:os";
 import {
   hashSDKFile,
   mediaSDKPlan,
@@ -29,6 +30,16 @@ export interface MediaBuildCommand {
   argv: string[];
   cwd: string;
   timeout: number;
+}
+
+/** Plans stay portable; executing recipes additionally admit the native host's affinity. */
+export function mediaBuildJobs(requested = Bun.env.BUN_MEDIA_JOBS ?? "2", cpus?: number): number {
+  if (!/^[1-9][0-9]{0,3}$/.test(requested) || Number(requested) > 1024)
+    throw new Error("BUN_MEDIA_JOBS must be an integer from 1 through 1024");
+  const jobs = Number(requested);
+  if (cpus !== undefined && (!Number.isSafeInteger(cpus) || cpus < 1 || jobs > cpus))
+    throw new Error("Media jobs exceed the executing host's available CPUs");
+  return jobs;
 }
 
 export function mediaGNUCompatibilityRustFlags(object: string, wraps: readonly string[]) {
@@ -81,6 +92,7 @@ export function mediaBuildTarget(target: MediaSDKTarget) {
 
 /** Pure executable recipes; a plan never attests a native provider or starts a build. */
 export function mediaBuildPlan(input: MediaBuildInput) {
+  const jobs = mediaBuildJobs();
   const { component, root, sources, output, prefix, target } = input;
   if (![root, sources, output, prefix, ...Object.values(input.dependencies)].every(isAbsolute))
     throw new TypeError("Media build owners and outputs must be absolute");
@@ -121,7 +133,12 @@ export function mediaBuildPlan(input: MediaBuildInput) {
   if (windows && sameHostPlatform && (!isAbsolute(bash) || /(?:^|[\\/])(?:System32|SysWOW64)[\\/]/i.test(bash)))
     throw new Error("Windows media recipes require the native Git/MSYS Bash owner; WSL launchers are refused");
   const meson = [process.execPath, "uv", "tool", "run", "--from", "meson", "--with", "jinja2", "meson"];
-  const env: Record<string, string> = { CARGO_BUILD_JOBS: "2", OMP_NUM_THREADS: "2", PKG_CONFIG_PATH: "" };
+  const env: Record<string, string> = {
+    BUN_MEDIA_JOBS: String(jobs),
+    CARGO_BUILD_JOBS: String(jobs),
+    OMP_NUM_THREADS: String(jobs),
+    PKG_CONFIG_PATH: "",
+  };
   if (component === "avio") {
     const ffmpeg = input.dependencies.ffmpeg ?? "<qualified-ffmpeg-prefix>";
     env.FFMPEG_DIR = ffmpeg;
@@ -183,7 +200,7 @@ export function mediaBuildPlan(input: MediaBuildInput) {
         "--offline",
         "--release",
         "--jobs",
-        "2",
+        String(jobs),
         "--target",
         selected.rust,
         "--manifest-path",
@@ -252,7 +269,7 @@ export function mediaBuildPlan(input: MediaBuildInput) {
       300_000,
     );
     for (const args of [
-      [make, "-j2"],
+      [make, `-j${jobs}`],
       [make, "install", "V=1"],
     ])
       command(
@@ -334,7 +351,7 @@ export function mediaBuildPlan(input: MediaBuildInput) {
         root,
         300_000,
       );
-      command(native([...meson, "compile", "-C", directory, "-j2"]), root, 2_400_000);
+      command(native([...meson, "compile", "-C", directory, `-j${jobs}`]), root, 2_400_000);
       command(native([...meson, "install", "-C", directory]), root, 180_000);
     }
     command(
@@ -359,7 +376,7 @@ export function mediaBuildPlan(input: MediaBuildInput) {
       root,
       300_000,
     );
-    command(native([...meson, "compile", "-C", build, "-j2"]), root, 2_400_000);
+    command(native([...meson, "compile", "-C", build, `-j${jobs}`]), root, 2_400_000);
     command(native([...meson, "install", "-C", build]), root, 180_000);
   }
   return {
@@ -376,7 +393,7 @@ export function mediaBuildPlan(input: MediaBuildInput) {
     missing,
     commands,
     qualification: "recipe-only; source, ABI, closure, native AVIO/CLI and license gates required",
-    maxJobs: 2,
+    maxJobs: jobs,
     sidecarFeatures: component === "avio" ? ["filmcraft", "libav", "mpv"] : [],
     hardwareQualification: false,
   };
@@ -630,6 +647,7 @@ export async function verifyMediaBuildInputs(input: MediaBuildInput) {
 }
 
 export async function runMediaBuild(input: MediaBuildInput, configureOnly = false) {
+  mediaBuildJobs(undefined, availableParallelism());
   const verified = await verifyMediaBuildInputs(input),
     { plan } = verified;
   if (configureOnly && plan.selected.platform === "linux")
@@ -667,6 +685,7 @@ export async function runMediaBuild(input: MediaBuildInput, configureOnly = fals
     }
     for (const [index, step] of plan.commands.entries()) {
       if (configureOnly && index > 0) break;
+      mediaBuildJobs(plan.env.BUN_MEDIA_JOBS, availableParallelism());
       if (input.component === "avio") {
         const files = verified.source!.files as Record<string, { sha256: string }>;
         for (const [name, expected] of Object.entries(files))
