@@ -10,7 +10,6 @@ pub struct Container<'a> {
     pub serde_attrs: serde_derive_internals::attr::Container,
     pub data: Data<'a>,
     pub generics: syn::Generics,
-    pub original: &'a syn::DeriveInput,
     pub attrs: Attrs,
 }
 
@@ -52,7 +51,7 @@ impl<'a> Container<'a> {
         self.serde_attrs.name().deserialize_name()
     }
 
-    pub fn transparent_field(&'a self) -> Option<&'a Field> {
+    pub fn transparent_field(&'a self) -> Option<&'a Field<'a>> {
         if self.serde_attrs.transparent() {
             if let Data::Struct(_, fields) = &self.data {
                 return Some(&fields[0]);
