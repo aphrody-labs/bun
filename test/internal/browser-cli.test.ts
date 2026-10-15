@@ -62,7 +62,7 @@ test("native Crawl commits bounded CDX pages and honors pre-aborted jobs", async
   expect(requests).toBe(1);
 });
 
-test("native Crawl independent queries share an index without serializing HTTP", async () => {
+test.each([0, 1, 2, 3])("native Crawl independent queries share an index without serializing HTTP [%d]", async () => {
   if (!Bun.Crawl.available) return;
   using dir = tempDir("native-crawl-parallel", {});
   const both = Promise.withResolvers<void>();
@@ -91,6 +91,16 @@ test("native Crawl independent queries share an index without serializing HTTP",
   );
   expect(requests).toBe(2);
   expect(reports.map(report => report.inserted)).toEqual([1, 1]);
+  expect(reports.every(report => report.complete)).toBe(true);
+  const repeated = await Bun.Crawl.run({
+    action: "archive-cdx",
+    store,
+    seed: "https://example.test/one",
+    endpoint: new URL("/cdx", server.url).href,
+    allowPrivate: true,
+  });
+  expect(repeated).toMatchObject({ pages: 0, inserted: 0, complete: true });
+  expect(requests).toBe(2);
 });
 
 test("native Crawl cancels an in-flight page without committing its checkpoint", async () => {

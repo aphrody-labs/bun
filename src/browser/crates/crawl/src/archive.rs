@@ -47,11 +47,27 @@ fn endpoint(raw: &str) -> Result<Url, String> {
 }
 
 fn initialize(db: &Connection) -> Result<(), String> {
-    db.busy_timeout(std::time::Duration::from_secs(5))
+    let timeout = std::time::Duration::from_secs(5);
+    let started = std::time::Instant::now();
+    let journal_mode = loop {
+        db.busy_timeout(timeout.saturating_sub(started.elapsed()))
+            .map_err(|error| error.to_string())?;
+        match db.execute_batch("PRAGMA journal_mode=WAL;") {
+            Err(error)
+                if error.sqlite_error_code() == Some(rusqlite::ErrorCode::DatabaseBusy)
+                    && started.elapsed() < timeout =>
+            {
+                // A WAL promotion can bypass the busy handler to release its read lock.
+                std::thread::yield_now();
+            }
+            result => break result,
+        }
+    };
+    db.busy_timeout(timeout)
         .map_err(|error| error.to_string())?;
+    journal_mode.map_err(|error| error.to_string())?;
     db.execute_batch(
-        "PRAGMA journal_mode=WAL;
-      CREATE TABLE IF NOT EXISTS archive_captures(
+        "CREATE TABLE IF NOT EXISTS archive_captures(
       query_key TEXT NOT NULL, urlkey TEXT NOT NULL, timestamp TEXT NOT NULL,
       original TEXT NOT NULL, mimetype TEXT NOT NULL, statuscode TEXT NOT NULL,
       digest TEXT NOT NULL, length TEXT NOT NULL,
@@ -422,6 +438,103 @@ mod tests {
     use crate::FetchResult;
     use std::cell::RefCell;
 
+    #[test]
+    fn independent_processes_initialize_a_cold_archive() {
+        use std::io::{BufRead, Read, Write};
+        use std::process::{Command, Stdio};
+
+        const CHILD_DATABASE: &str = "BUN_CRAWL_ARCHIVE_INITIALIZE_TEST_DATABASE";
+        if let Some(path) = std::env::var_os(CHILD_DATABASE) {
+            let db = Connection::open(path).unwrap();
+            println!("archive-initialize-ready");
+            std::io::stdout().flush().unwrap();
+            std::io::stdin().read_exact(&mut [0]).unwrap();
+            initialize(&db).unwrap();
+            let mode: String = db
+                .query_row("PRAGMA journal_mode", [], |row| row.get(0))
+                .unwrap();
+            assert_eq!(mode, "wal");
+            let timeout: i64 = db
+                .query_row("PRAGMA busy_timeout", [], |row| row.get(0))
+                .unwrap();
+            assert_eq!(timeout, 5000);
+            return;
+        }
+
+        struct Fixture(std::path::PathBuf);
+        impl Drop for Fixture {
+            fn drop(&mut self) {
+                let _ = std::fs::remove_dir_all(&self.0);
+            }
+        }
+        struct Child(std::process::Child);
+        impl Drop for Child {
+            fn drop(&mut self) {
+                let _ = self.0.kill();
+                let _ = self.0.wait();
+            }
+        }
+        let fixture = Fixture(std::env::temp_dir().join(format!(
+            "bun-crawl-archive-initialize-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        )));
+        std::fs::create_dir_all(&fixture.0).unwrap();
+        for round in 0..8 {
+            let path = fixture.0.join(format!("{round}.sqlite"));
+            let mut children: Vec<_> = (0..4)
+                .map(|_| {
+                    let mut child = Child(
+                        Command::new(std::env::current_exe().unwrap())
+                            .args([
+                                "--exact",
+                                "archive::tests::independent_processes_initialize_a_cold_archive",
+                                "--nocapture",
+                            ])
+                            .env(CHILD_DATABASE, &path)
+                            .stdin(Stdio::piped())
+                            .stdout(Stdio::piped())
+                            .spawn()
+                            .unwrap(),
+                    );
+                    let mut output = std::io::BufReader::new(child.0.stdout.take().unwrap());
+                    loop {
+                        let mut line = String::new();
+                        assert_ne!(
+                            output.read_line(&mut line).unwrap(),
+                            0,
+                            "child exited before the initialization barrier"
+                        );
+                        if line.trim() == "archive-initialize-ready" {
+                            break;
+                        }
+                    }
+                    (child, output)
+                })
+                .collect();
+            for (child, _) in &mut children {
+                child.0.stdin.take().unwrap().write_all(&[1]).unwrap();
+            }
+            for (mut child, mut output) in children {
+                let mut log = String::new();
+                output.read_to_string(&mut log).unwrap();
+                assert!(child.0.wait().unwrap().success(), "{log}");
+            }
+            let db = Connection::open(path).unwrap();
+            let tables: i64 = db
+                .query_row(
+                    "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name LIKE 'archive_%'",
+                    [],
+                    |row| row.get(0),
+                )
+                .unwrap();
+            assert_eq!(tables, 4);
+        }
+    }
+
     struct Fixture {
         replies: RefCell<Vec<String>>,
         calls: RefCell<Vec<Url>>,
@@ -580,10 +693,8 @@ mod tests {
         );
         assert_eq!(
             db.query_row("SELECT COUNT(*) FROM archive_checkpoints", [], |row| row
-                .get::<_, i64>(
-                0
-            ))
-            .unwrap(),
+                .get::<_, i64>(0))
+                .unwrap(),
             0
         );
     }
@@ -693,10 +804,8 @@ mod tests {
         );
         assert_eq!(
             db.query_row("SELECT COUNT(*) FROM archive_checkpoints", [], |row| row
-                .get::<_, i64>(
-                0
-            ))
-            .unwrap(),
+                .get::<_, i64>(0))
+                .unwrap(),
             2
         );
     }

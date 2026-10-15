@@ -56,9 +56,12 @@ test runner and package manager.
 - The existing Bun checkout is `/home/ubuntu/src/bun`; do not resurrect the
   absent `/home/ubuntu/builds/bun-os-factory/sources/bun` checkout. The factory
   policy lives in `tools/config/fusion-factory.json` and uses pooled directories.
-- Run `aphrody infra ssh exec` from `/home/ubuntu` so its relative `var/runs`
-  receipts use the root filesystem instead of the source filesystem. Plan
-  before apply and verify the host through the native Infra catalog each time.
+- Run `aphrody infra ssh exec` from `/home/ubuntu` with
+  `APHRODY_INFRA_ROOT=/home/ubuntu` so `var/runs` receipts use the root
+  filesystem. Changing the working directory alone does not relocate receipts.
+  This root override is qualified for SSH execution; do not apply it globally
+  to unrelated Infra commands. Plan before apply and verify the host through
+  the native Infra catalog each time.
 - Host budgets are independent: `dbfr` has 6 CPUs and about 11.40 GiB RAM and
   serves production. Never apply the VPS's 45.93 GiB budget to it.
 - Use the Aphrody Bun fork for JavaScript, TypeScript and Python tooling.
