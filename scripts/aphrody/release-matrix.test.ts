@@ -7,6 +7,7 @@ import {
   runtimeReleaseMatrix,
   vpsRuntimeReleasePlan,
   nativeFullReleasePlan,
+  windowsRuntimeReleasePlan,
 } from "./release-matrix.ts";
 
 test("eight full native allocations bind public bootstraps without claiming qualification", () => {
@@ -141,4 +142,8 @@ test("VPS resource budgets share the factory config without changing generic nat
   expect(native.parallelHeavyJobsPerHost).toBe(1);
   expect(native.targets.find(target => target.target === "windows-x64")!.command).toContain("-j2");
   expect(native.targets.every(target => !target.command.includes("-j12"))).toBe(true);
+  const windows = windowsRuntimeReleasePlan("a".repeat(40), ["windows-x64"]);
+  expect(windows.maxJobs).toBe(2);
+  expect(windows.parallelHeavyJobs).toBe(1);
+  expect(windows.steps.every(step => step.command.includes("-j2") && !step.command.includes("-j12"))).toBe(true);
 });
