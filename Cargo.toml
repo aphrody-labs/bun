@@ -245,7 +245,7 @@ members = [
 # heavy dev-dependencies (criterion, html5ever) never enter `Cargo.lock`.
 # `packages/bun-cosmic` is the libcosmic window helper of `bun:cosmic`: its own
 # workspace and lockfile, because libcosmic is a git dependency.
-exclude = ["vendor", "packages/bun-cosmic", "packages/bun-dotnet-native", "packages/bun-re", "packages/bun-native-plugin-rs", "packages/bun-video/native", "src/rio"]
+exclude = ["packages/bun-google/aphrody", "vendor", "packages/bun-cosmic", "packages/bun-dotnet-native", "packages/bun-re", "packages/bun-native-plugin-rs", "packages/bun-video/native", "src/rio"]
 
 [workspace.package]
 "repository" = "https://github.com/aphrody-labs/bun"
@@ -482,6 +482,7 @@ new_ret_no_self = "allow"
 map_identity = "allow"
 
 [workspace.dependencies]
+aphrody-google = { path = "packages/bun-google/aphrody/crates/google", version = "1.4.4", default-features = false, features = ["search"] }
 "bun_migrate" = { "path" = "src/migrate" }
 "bun_just" = { "path" = "src/just" }
 "bun_ecma_api" = { "path" = "src/transpiler/ecma_api" }

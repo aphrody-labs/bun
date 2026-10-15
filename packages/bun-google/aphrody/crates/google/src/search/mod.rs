@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //! Shared native Google Search API.
 
+pub mod cli;
 mod discovery;
 mod network;
 mod request;

@@ -46,12 +46,12 @@ regex = { version = "=1.13.1", features = [] }
 reqwest = { version = "=0.13.5", features = ["rustls-no-provider", "json", "stream", "form", "query", "charset", "http2", "system-proxy", "blocking", "cookies", "gzip", "brotli", "deflate", "socks", "multipart"], default-features = false }
 rusqlite = { version = "=0.40.2", features = ["bundled"] }
 rustls = { version = "=0.23.45", default-features = false, features = ["ring", "std", "tls12"] }
-serde = { version = "=1.0.229", features = ["derive", "std"], default-features = false }
+serde = { version = "1.0.228", features = ["derive", "std"], default-features = false }
 serde_json = { version = "=1.0.151" }
 sha2 = { version = "=0.11.0" }
 tempfile = { version = "=3.27.0" }
 thiserror = { version = "=2.0.21" }
-tokio = { version = "=1.53.1", features = ["process", "rt-multi-thread", "macros", "time", "signal", "sync", "fs", "io-util", "full"] }
+tokio = { version = "1.53.1", features = ["process", "rt-multi-thread", "macros", "time", "signal", "sync", "fs", "io-util", "full"] }
 tonic = { version = "=0.14.6", features = [] }
 tonic-prost = { version = "=0.14.6", features = [] }
 tonic-prost-build = { version = "=0.14.6", features = [] }

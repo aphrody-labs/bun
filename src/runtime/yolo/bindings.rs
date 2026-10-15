@@ -38,17 +38,14 @@ pub(crate) fn js_yolo(global: &JSGlobalObject, frame: &CallFrame) -> JsResult<JS
             }
             b"selections" => {
                 let descriptor = parse_descriptor(&descriptor)?;
-                let request: aphrody_jev::Request =
-                    serde_json::from_value(descriptor["request"].clone())
-                        .map_err(|error| error.to_string())?;
-                let response: aphrody_jev::Response =
-                    serde_json::from_value(value).map_err(|error| error.to_string())?;
+                let request = descriptor
+                    .get("request")
+                    .ok_or("Yolo descriptor requires request")?;
                 let threshold = descriptor["minimumConfidence"]
                     .as_f64()
                     .ok_or("Confidence threshold must be a number")?;
-                let selected = aphrody_jev::confident_choices(&request, &response, threshold)
-                    .map_err(|error| error.to_string())?;
-                serde_json::to_value(selected).map_err(|error| error.to_string())
+                aphrody_jev::protocol::choice_selections(&value, request, threshold)
+                    .map(Value::Object)
             }
             b"response" | b"values" => {
                 let descriptor = parse_descriptor(&descriptor)?;

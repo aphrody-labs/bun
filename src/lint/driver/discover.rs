@@ -572,8 +572,16 @@ pub(crate) fn find_files(
     // Before any configuration is looked for.
     for pattern in patterns {
         let path = paths::resolve(cwd, &paths::from_native(pattern));
-        if fs::is_protected_quality_path(&path) {
-            return Err(Fatal([b"protected or parent-traversing quality path: ".as_slice(), &path].concat()));
+        if fs::is_protected_quality_path(&path)
+            && !crate::git::permits_protected_source(loader.environment(), &path)
+        {
+            return Err(Fatal(
+                [
+                    b"protected or parent-traversing quality path: ".as_slice(),
+                    &path,
+                ]
+                .concat(),
+            ));
         }
         match fs::kind(&path) {
             Some(fs::Kind::File) => loader.name(paths::dirname(&path)),
@@ -586,7 +594,10 @@ pub(crate) fn find_files(
         let pattern = paths::from_native(pattern);
         let path = paths::resolve(cwd, &pattern);
         if matches!(fs::link_kind_and_size(&path), Some((fs::LinkKind::Link, _)))
-            && matches!(loader.for_directory(paths::dirname(&path))?.flavor, Flavor::BuiltIn | Flavor::Oxlint)
+            && matches!(
+                loader.for_directory(paths::dirname(&path))?.flavor,
+                Flavor::BuiltIn | Flavor::Oxlint
+            )
         {
             continue;
         }

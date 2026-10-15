@@ -41,6 +41,62 @@ pub(crate) fn is_protected_quality_path(path: &[u8]) -> bool {
         .any(is_protected_quality_component)
 }
 
+/// Only explicit source files can qualify for the tracked `.aphrody` exception.
+pub(crate) fn tracked_quality_source(cwd: &[u8], path: &[u8]) -> Option<(Vec<u8>, Vec<u8>)> {
+    // A home store stays private even when the home directory is a Git work tree.
+    for name in [&b"HOME"[..], b"USERPROFILE"] {
+        if let Some(home) = bun_core::getenv_z(&bun_core::ZBox::from_bytes(name))
+            .and_then(|home| real_path(&paths::from_native(home)))
+            && paths::inside(&paths::join(&home, b".aphrody"), path).is_some()
+        {
+            return None;
+        }
+    }
+    if real_path(path)?.as_slice() != path
+        || !matches!(link_kind_and_size(path), Some((LinkKind::File, _)))
+    {
+        return None;
+    }
+    let root = repository(cwd)?;
+    if is_protected_quality_path(&root) || paths::inside(&root, path).is_none() {
+        return None;
+    }
+    let relative = paths::relative(&root, path);
+    let components: Vec<_> = relative.split(|byte| *byte == b'/').collect();
+    if !components.contains(&&b".aphrody"[..])
+        || components.iter().any(|name| {
+            (is_protected_quality_component(name) && *name != b".aphrody")
+                || matches!(*name, b"private" | b"profiles" | b"..")
+        })
+    {
+        return None;
+    }
+    let extension = path.rsplit(|byte| *byte == b'.').next()?;
+    if ![
+        &b"ts"[..],
+        b"tsx",
+        b"mts",
+        b"cts",
+        b"js",
+        b"jsx",
+        b"mjs",
+        b"cjs",
+        b"rs",
+        b"json",
+        b"jsonc",
+        b"toml",
+        b"yaml",
+        b"yml",
+        b"md",
+        b"css",
+    ]
+    .contains(&extension)
+    {
+        return None;
+    }
+    Some((root, relative))
+}
+
 /// `ENOENT: No such file or directory`
 pub(crate) fn describe(error: &bun_sys::Error) -> Vec<u8> {
     [error.name(), b": ", error.msg().unwrap_or(b"unknown error")].concat()
@@ -168,7 +224,10 @@ pub(crate) fn read_stdin_with_limit(limit: usize) -> bun_sys::Result<Vec<u8>> {
             return Ok(all);
         }
         if read > limit.saturating_sub(all.len()) {
-            return Err(bun_sys::Error::from_code(bun_sys::E::EFBIG, bun_sys::Tag::read));
+            return Err(bun_sys::Error::from_code(
+                bun_sys::E::EFBIG,
+                bun_sys::Tag::read,
+            ));
         }
         all.extend_from_slice(&buffer[..read]);
     }

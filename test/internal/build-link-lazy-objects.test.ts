@@ -22,12 +22,12 @@ const macosNative: Target = { windows: false, darwin: true, crossTarget: undefin
 const macosCross: Target = { ...macosNative, crossTarget: "arm64-apple-macosx13.0" };
 
 /** The link edge `link()` emits for `target`, and the group file it wrote (undefined when there is none). */
-function emitLink(target: Target, buildDir: string) {
+function emitLink(target: Target, buildDir: string, binaryDir = buildDir) {
   const cfg = { buildDir, cwd: buildDir, host: { os: "linux" }, cxx: "/fake/clang++", ld: "/fake/ld.lld", ...target };
   const n = new Ninja({ buildDir });
   n.rule("link", { command: "clang++ @$out.rsp $lazy $driverflags $ldflags -o $out" });
   n.rule("mkdir_stamp", { command: "mkdir -p $dir && touch $out" });
-  link(n, cfg as Config, "bun", ["obj/bun.o"], {
+  const output = link(n, cfg as Config, join(binaryDir, "bun"), ["obj/bun.o"], {
     libs: [join(buildDir, "cache", "libWTF.a")],
     lazyObjects: [join(buildDir, "obj", "dep", "used.o"), join(buildDir, "obj", "dep", "unused.o")],
     flags: [],
@@ -40,12 +40,13 @@ function emitLink(target: Target, buildDir: string) {
   const [explicit, implicit = ""] = lines[at]!.slice(lines[at]!.indexOf(": link ") + 7)
     .split(" || ")[0]!
     .split(" | ");
-  const groupFile = join(buildDir, `bun${target.exeSuffix}.lazy.rsp`);
+  const groupFile = join(binaryDir, `bun${target.exeSuffix}.lazy.rsp`);
   let group: string | undefined;
   try {
     group = readFileSync(groupFile, "utf8");
   } catch {}
   return {
+    output,
     explicit: explicit!.split(" "),
     implicit: implicit.split(" "),
     lazy:
@@ -56,6 +57,20 @@ function emitLink(target: Target, buildDir: string) {
     group,
   };
 }
+
+test("relocating only the executable preserves every explicit and lazy native input", () => {
+  using build = tempDir("build-link-inputs", {});
+  using output = tempDir("build-link-output", {});
+  const original = emitLink(linux, String(build));
+  const relocated = emitLink(linux, String(build), String(output));
+  expect(relocated.output).toBe(join(String(output), "bun"));
+  expect(relocated.explicit).toEqual(original.explicit);
+  expect(relocated.implicit.filter(path => !path.endsWith(".lazy.rsp"))).toEqual(
+    original.implicit.filter(path => !path.endsWith(".lazy.rsp")),
+  );
+  expect(relocated.group).toBe(original.group);
+  expect(relocated.group).toContain("--start-lib");
+});
 
 describe.each([
   ["ELF", linux],

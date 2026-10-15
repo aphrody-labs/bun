@@ -723,7 +723,7 @@ pub(crate) fn expand(
     for written in patterns {
         let pattern = paths::from_native(written);
         let path = paths::resolve(&cwd, &pattern);
-        if fs::is_protected_quality_path(&path) {
+        if fs::is_protected_quality_path(&path) && !configs.permits_protected_source(&path) {
             return Err(Fatal(
                 [
                     b"protected or parent-traversing quality path: ".as_slice(),
@@ -904,7 +904,7 @@ pub(crate) fn expand_as_oxfmt(
             }
         }
         let path = paths::resolve(&cwd, normalized);
-        if fs::is_protected_quality_path(&path) {
+        if fs::is_protected_quality_path(&path) && !configs.permits_protected_source(&path) {
             return Err(Fatal(
                 [
                     b"protected or parent-traversing quality path: ".as_slice(),

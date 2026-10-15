@@ -334,7 +334,7 @@ function normalizeLf(s: string): string {
  * GIT_CEILING_DIRECTORIES: vendor/<dep> sits inside the bun checkout, and a
  * discovered parent repo makes git apply print "Skipped patch" and exit 0.
  */
-function applyPatch(dest: string, patchPath: string, patchBody: string): void {
+export function applyPatch(dest: string, patchPath: string, patchBody: string): void {
   const result = spawnSync("git", ["apply", "--ignore-whitespace", "--ignore-space-change", "--no-index", "-"], {
     cwd: dest,
     env: { ...process.env, GIT_CEILING_DIRECTORIES: dirname(dest) },

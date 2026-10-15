@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //! Confidence-gated candidate selection shared by backend consumers.
 
-use crate::{Answer, Decision, JevError, Request, Response, check_request, check_response};
+use crate::{Answer, Decision, JevError, Request, Response};
 
 /// Format backend evidence and raw answers for agent and MCP consumers.
 ///
@@ -63,17 +63,19 @@ pub fn confident_choices<'a>(
     minimum_confidence: f64,
 ) -> Result<std::collections::BTreeMap<&'a str, Option<&'a str>>, JevError> {
     validate_confidence_threshold(minimum_confidence)?;
-    check_request(request)?;
-    check_response(request, response)?;
+    let request_value = crate::validate::value(request)?;
+    crate::protocol::request(&request_value).map_err(JevError::InvalidRequest)?;
+    let response_value = crate::validate::value(response)?;
+    let selected =
+        crate::protocol::choice_selections(&response_value, &request_value, minimum_confidence)
+            .map_err(JevError::Format)?;
     Ok(response
         .answers
         .iter()
         .filter_map(|(name, answer)| match answer {
-            Answer::Choice {
-                choice, confidence, ..
-            } => Some((
+            Answer::Choice { choice, .. } => Some((
                 name.as_str(),
-                (*confidence >= minimum_confidence).then_some(choice.as_str()),
+                (!selected[name].is_null()).then_some(choice.as_str()),
             )),
             _ => None,
         })
@@ -94,13 +96,9 @@ pub fn confident_choice<'a>(
     name: &str,
     minimum_confidence: f64,
 ) -> Result<Option<&'a str>, JevError> {
-    validate_confidence_threshold(minimum_confidence)?;
-    check_request(request)?;
-    check_response(request, response)?;
+    let selected = confident_choices(request, response, minimum_confidence)?;
     match response.answers.get(name) {
-        Some(Answer::Choice {
-            choice, confidence, ..
-        }) => Ok((*confidence >= minimum_confidence).then_some(choice.as_str())),
+        Some(Answer::Choice { .. }) => Ok(selected.get(name).copied().flatten()),
         Some(_) => Err(JevError::InvalidRequest(format!(
             "`{name}` is not a Choice question"
         ))),

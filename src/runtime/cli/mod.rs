@@ -322,6 +322,8 @@ pub(crate) mod docker_command;
 pub(crate) mod dotnet_command;
 #[path = "host_command.rs"]
 pub(crate) mod host_command;
+#[path = "search_command.rs"]
+pub(crate) mod search_command;
 #[path = "lsp_command.rs"]
 pub(crate) mod lsp_command;
 #[path = "mcp_command.rs"]
@@ -697,6 +699,7 @@ pub(crate) mod help_command {
   <b><magenta>fmt<r>                            Format with Bun's native formatter
   <b><magenta>rename<r>    <d>--from a --to b<r>      Rename identifiers and paths across a git repository
   <b><magenta>docs<r>      <d>[query]<r>              Search the Bun documentation
+  <b><magenta>search<r>    <d>[query]<r>              Native authenticated Google Search
   <b><magenta>video<r>     <d>metadata | frame<r>     Native video metadata, frames, audio, GIF and remux
   <b><magenta>n2b<r>       <d>scan | fix | migrate<r> Migrate a Node.js project to Bun
   <b><magenta>just<r>      <d>[recipe]<r> Run justfile recipes
@@ -1466,6 +1469,9 @@ pub(crate) mod command {
         if let Some(code) = crate::curl::cli::dispatch() {
             bun_core::Global::exit(u32::try_from(code).unwrap_or(2));
         }
+        if let Some(code) = super::search_command::dispatch() {
+            bun_core::Global::exit(u32::try_from(code).unwrap_or(2));
+        }
         super::tools_command::dispatch();
 
         // Fast path: `bun -v` / `bun --version` / `bun --revision`, the
@@ -2006,7 +2012,7 @@ pub(crate) mod command {
 
     const DEFAULT_COMPLETIONS_LIST: &[&[u8]] = &[
         b"build", b"install", b"add", b"run", b"update", b"link", b"unlink", b"remove", b"create",
-        b"bun", b"upgrade", b"discord", b"test", b"pm", b"x", b"repl", b"info", b"video",
+        b"bun", b"upgrade", b"discord", b"test", b"pm", b"x", b"repl", b"info", b"video", b"search",
     ];
 
     // DEFAULT_COMPLETIONS_LIST ++ extras; hand-rolled join (small, fixed).
@@ -2024,6 +2030,7 @@ pub(crate) mod command {
         b"upgrade",
         b"discord",
         b"video",
+        b"search",
         b"test",
         b"pm",
         b"x",

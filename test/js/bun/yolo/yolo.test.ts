@@ -104,27 +104,35 @@ describe("bun:yolo native decisions", () => {
     }
   });
 
-  test("the full request byte budget survives internal descriptor envelopes", async () => {
-    const request = { state: "", questions: { route: choice("Pick", { a: "A", b: "B" }) } };
-    request.state = "a".repeat(1048576 - Buffer.byteLength(JSON.stringify(request)));
-    const raw = response({ route: { type: "choice", choice: "a", confidence: 1, probabilities: { a: 1, b: 0 } } });
-    let calls = 0;
-    const provider = code(() => {
-      calls++;
-      return raw;
-    });
-    expect(await decide(request, { provider })).toEqual({ route: "a" });
-    const inspected = await inspect(request, { provider });
-    expect(inspected).toEqual(raw);
-    expect(selections(request, inspected, 0.8)).toEqual({ route: "a" });
-    expect(calls).toBe(2);
-    request.state += "a";
-    await expect(inspect(request, { provider })).rejects.toThrow("1048576");
-    expect(() => selections(request, inspected, 0.8)).toThrow("1048576");
-    expect(calls).toBe(2);
-    const question = noul("a".repeat(1048576 - Buffer.byteLength(JSON.stringify(noul("")))));
-    expect(value({ type: "noul", noul: 1 }, question)).toBe(true);
-  });
+  test.each([undefined, "fixture"])(
+    "the full request byte budget survives internal descriptor envelopes (%s)",
+    async model => {
+      const request = {
+        state: "",
+        questions: { route: choice("Pick", { a: "A", b: "B" }) },
+        ...(model === undefined ? {} : { model }),
+      };
+      const padding = 1048576 - Buffer.byteLength(JSON.stringify(request));
+      request.state = "é".repeat(Math.floor(padding / 2)) + "a".repeat(padding % 2);
+      const raw = response({ route: { type: "choice", choice: "a", confidence: 1, probabilities: { a: 1, b: 0 } } });
+      let calls = 0;
+      const provider = code(() => {
+        calls++;
+        return raw;
+      });
+      expect(await decide(request, { provider })).toEqual({ route: "a" });
+      const inspected = await inspect(request, { provider });
+      expect(inspected).toEqual(raw);
+      expect(selections(request, inspected, 0.8)).toEqual({ route: "a" });
+      expect(calls).toBe(2);
+      request.state += "a";
+      await expect(inspect(request, { provider })).rejects.toThrow("1048576");
+      expect(() => selections(request, inspected, 0.8)).toThrow("1048576");
+      expect(calls).toBe(2);
+      const question = noul("a".repeat(1048576 - Buffer.byteLength(JSON.stringify(noul("")))));
+      expect(value({ type: "noul", noul: 1 }, question)).toBe(true);
+    },
+  );
 
   test("local adapters share context ownership until completion after timeout", async () => {
     const started = Promise.withResolvers<void>();

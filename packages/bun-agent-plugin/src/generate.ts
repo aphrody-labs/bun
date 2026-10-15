@@ -236,15 +236,16 @@ function harnessExports(root: string): string[] {
 
 type DocPage = { group: string; page: string; title: string; description: string };
 
-function docPages(root: string): DocPage[] {
+function docPageFile(root: string, page: string): string | undefined {
+  return ["mdx", "md"].map(ext => join(root, "docs", `${page.replace(/^\//, "")}.${ext}`)).find(existsSync);
+}
+
+function visitDocPages(root: string, consume: (page: string, group: string) => void): void {
   const config = maybe(join(root, "docs", "docs.json"));
-  if (!config) return [];
-  const out: DocPage[] = [];
+  if (!config) return;
   const visit = (node: any, group: string) => {
     if (typeof node === "string") {
-      const file = ["mdx", "md"].map(ext => join(root, "docs", `${node.replace(/^\//, "")}.${ext}`)).find(existsSync);
-      const fm = file ? frontMatter(text(file)) : {};
-      out.push({ group, page: node, title: fm.title ?? node, description: fm.description ?? "" });
+      consume(node, group);
       return;
     }
     if (Array.isArray(node)) return node.forEach(n => visit(n, group));
@@ -254,6 +255,15 @@ function docPages(root: string): DocPage[] {
     }
   };
   visit(JSON.parse(config).navigation, "");
+}
+
+function docPages(root: string): DocPage[] {
+  const out: DocPage[] = [];
+  visitDocPages(root, (page, group) => {
+    const file = docPageFile(root, page);
+    const fm = file ? frontMatter(text(file)) : {};
+    out.push({ group, page, title: fm.title ?? page, description: fm.description ?? "" });
+  });
   return out;
 }
 
@@ -812,7 +822,10 @@ export function inputFiles(root: string, pkg = join(root, "packages", "bun-agent
     "src/runtime/cli/mod.rs",
   ])
     add(join(root, f));
-  for (const f of walk(join(root, "docs"))) if (/\.mdx?$/.test(f)) add(join(root, "docs", f));
+  visitDocPages(root, page => {
+    const file = docPageFile(root, page);
+    if (file) add(file);
+  });
   for (const f of catalogInputs(root)) add(f);
   return [...out].sort();
 }

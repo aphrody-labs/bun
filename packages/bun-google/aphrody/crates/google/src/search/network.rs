@@ -12,6 +12,7 @@ use std::{
 };
 
 use regex::Regex;
+#[cfg(feature = "search-cache")]
 use rusqlite::{Connection, params};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -27,10 +28,23 @@ static HTTP: LazyLock<reqwest::Client> = LazyLock::new(|| {
     let _ = rustls::crypto::ring::default_provider().install_default();
     reqwest::Client::builder()
         .timeout(TIMEOUT)
-        .redirect(reqwest::redirect::Policy::limited(10))
+        .redirect(search_redirect_policy())
         .build()
         .expect("static search HTTP client")
 });
+
+fn search_redirect_policy() -> reqwest::redirect::Policy {
+    reqwest::redirect::Policy::custom(|attempt| {
+        if attempt.previous().len() >= 10
+            || attempt.url().scheme() != "https"
+            || !attempt.url().host_str().is_some_and(is_google_domain)
+        {
+            attempt.error("Google search redirect refused")
+        } else {
+            attempt.follow()
+        }
+    })
+}
 
 pub(super) async fn public_json(url: Url) -> Result<Value, String> {
     let mut response = HTTP
@@ -73,10 +87,10 @@ pub(super) async fn discovery_html(url: &Url, options: &SearchOptions) -> Result
         match response {
             Ok(html) if !is_blocked_serp_html(&html) && html.len() <= 8 * 1024 * 1024 => {
                 return Ok(html);
-            },
+            }
             Ok(_) => {
                 failures.push("blocked, empty or oversized Google discovery response".to_owned())
-            },
+            }
             Err(error) => failures.push(error),
         }
     }
@@ -115,6 +129,8 @@ pub struct SearchOptions {
     pub cookie_path: Option<PathBuf>,
     /// Never load account cookies, including from the default Aphrody store.
     pub anonymous: bool,
+    /// Require an existing account cookie jar; never downgrade a private CLI request to anonymous.
+    pub require_authenticated: bool,
     pub transport: SearchTransport,
 }
 
@@ -132,6 +148,7 @@ impl Default for SearchOptions {
             cache_ttl_ms: None,
             cookie_path: None,
             anonymous: false,
+            require_authenticated: false,
             transport: SearchTransport::Auto,
         }
     }
@@ -277,9 +294,16 @@ fn parse_cookies(payload: &str) -> Vec<SearchCookie> {
                     name,
                     value,
                     domain,
-                    path: item.get("path").and_then(Value::as_str).unwrap_or("/").to_owned(),
+                    path: item
+                        .get("path")
+                        .and_then(Value::as_str)
+                        .unwrap_or("/")
+                        .to_owned(),
                     secure: item.get("secure").and_then(Value::as_bool).unwrap_or(false),
-                    host_only: item.get("hostOnly").and_then(Value::as_bool).unwrap_or(false),
+                    host_only: item
+                        .get("hostOnly")
+                        .and_then(Value::as_bool)
+                        .unwrap_or(false),
                 })
             })
             .collect();
@@ -295,7 +319,11 @@ fn parse_cookies(payload: &str) -> Vec<SearchCookie> {
             if columns.len() < 7 {
                 return None;
             }
-            if columns[4].parse::<u64>().ok().is_some_and(|expiry| expiry > 0 && expiry < now) {
+            if columns[4]
+                .parse::<u64>()
+                .ok()
+                .is_some_and(|expiry| expiry > 0 && expiry < now)
+            {
                 return None;
             }
             Some(SearchCookie {
@@ -311,12 +339,21 @@ fn parse_cookies(payload: &str) -> Vec<SearchCookie> {
 }
 
 fn now_seconds() -> u64 {
-    SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_secs()
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs()
 }
 
+#[cfg(any(feature = "search-cache", test))]
 fn now_milliseconds() -> i64 {
-    i64::try_from(SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_millis())
-        .unwrap_or(i64::MAX)
+    i64::try_from(
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_millis(),
+    )
+    .unwrap_or(i64::MAX)
 }
 
 fn load_cookies(path: Option<&PathBuf>) -> Vec<SearchCookie> {
@@ -330,7 +367,11 @@ fn resolve_cookie_path(explicit: Option<&PathBuf>, configured: Option<PathBuf>) 
 }
 
 fn search_cookies(options: &SearchOptions) -> Vec<SearchCookie> {
-    if options.anonymous { Vec::new() } else { load_cookies(options.cookie_path.as_ref()) }
+    if options.anonymous {
+        Vec::new()
+    } else {
+        load_cookies(options.cookie_path.as_ref())
+    }
 }
 
 fn cookie_header(url: &Url, cookies: &[SearchCookie], domain: &str) -> String {
@@ -340,8 +381,11 @@ fn cookie_header(url: &Url, cookies: &[SearchCookie], domain: &str) -> String {
     for cookie in cookies {
         let cookie_domain = cookie.domain.trim_start_matches('.');
         let original_google = matches!(cookie_domain, "google.com");
-        let cookie_domain =
-            if original_google && domain != "google.com" { domain } else { cookie_domain };
+        let cookie_domain = if original_google && domain != "google.com" {
+            domain
+        } else {
+            cookie_domain
+        };
         if (host == cookie_domain
             || (!cookie.host_only && host.ends_with(&format!(".{cookie_domain}"))))
             && path.starts_with(&cookie.path)
@@ -413,9 +457,24 @@ async fn native_fetch(url: &Url, cookies: &[SearchCookie], domain: &str) -> Resu
         .header("upgrade-insecure-requests", "1")
         .header("cookie", cookie_header(url, cookies, domain))
         .send().await.map_err(|error| error.to_string())?;
-    response.text().await.map_err(|error| error.to_string())
+    let mut response = response
+        .error_for_status()
+        .map_err(|_| "Google search HTTP request failed".to_owned())?;
+    let mut bytes = Vec::new();
+    while let Some(chunk) = response
+        .chunk()
+        .await
+        .map_err(|_| "Google search body failed".to_owned())?
+    {
+        if bytes.len().saturating_add(chunk.len()) > 8 * 1024 * 1024 {
+            return Err("Google search response exceeds 8 MiB".into());
+        }
+        bytes.extend_from_slice(&chunk);
+    }
+    String::from_utf8(bytes).map_err(|_| "Google search response is not UTF-8".to_owned())
 }
 
+#[cfg(feature = "browser-search")]
 async fn browser_fetch(
     url: &Url,
     cookies: &[SearchCookie],
@@ -468,7 +527,10 @@ async fn browser_fetch(
                             "CONSENT=YES+cb.{}-00-p0.en+FX+001; Path=/",
                             chrono::Utc::now().format("%Y%m%d")
                         );
-                        browser.cookies().set(&consent, &url).map_err(|error| error.to_string())?;
+                        browser
+                            .cookies()
+                            .set(&consent, &url)
+                            .map_err(|error| error.to_string())?;
                     }
                     if !cookies.iter().any(|cookie| cookie.name == "SOCS") {
                         browser
@@ -476,7 +538,10 @@ async fn browser_fetch(
                             .set(&format!("SOCS={SOCS}; Path=/"), &url)
                             .map_err(|error| error.to_string())?;
                     }
-                    let mut page = browser.new_page().await.map_err(|error| error.to_string())?;
+                    let mut page = browser
+                        .new_page()
+                        .await
+                        .map_err(|error| error.to_string())?;
                     tokio::time::timeout(TIMEOUT, page.goto(&url))
                         .await
                         .map_err(|_| "browser navigation timed out".to_owned())?
@@ -491,6 +556,15 @@ async fn browser_fetch(
         .await
         .map_err(|_| "browser fetch timed out".to_owned())?
         .map_err(|_| "browser worker ended".to_owned())?
+}
+
+#[cfg(not(feature = "browser-search"))]
+async fn browser_fetch(
+    _url: &Url,
+    _cookies: &[SearchCookie],
+    _domain: &str,
+) -> Result<String, String> {
+    Err("Google browser transport is unavailable in this build".into())
 }
 
 /// Fetch `url` over the configured transports and return the first parse that
@@ -527,20 +601,27 @@ async fn fetch_serp(
                     html.len(),
                     html.matches("<h3").count(),
                 );
-            },
+            }
             Ok(_) => {
-                last_error =
-                    format!("transport {} returned blocked/empty response", transport.as_str())
-            },
+                last_error = format!(
+                    "transport {} returned blocked/empty response",
+                    transport.as_str()
+                )
+            }
             Err(error) => last_error = error,
         }
     }
     Err(format!(
         "google search: all transports failed ({}): {last_error}",
-        transports.iter().map(|transport| transport.as_str()).collect::<Vec<_>>().join(", ")
+        transports
+            .iter()
+            .map(|transport| transport.as_str())
+            .collect::<Vec<_>>()
+            .join(", ")
     ))
 }
 
+#[cfg(feature = "search-cache")]
 fn cache_path() -> Option<PathBuf> {
     std::env::var_os("APHRODY_CACHE_FILE")
         .filter(|path| !path.is_empty())
@@ -555,6 +636,7 @@ fn cache_path() -> Option<PathBuf> {
         })
 }
 
+#[cfg(feature = "search-cache")]
 fn cache_connection() -> Result<Connection, String> {
     let path = cache_path().ok_or_else(|| "cannot resolve Aphrody cache path".to_owned())?;
     if let Some(parent) = path.parent() {
@@ -563,19 +645,25 @@ fn cache_connection() -> Result<Connection, String> {
     let connection = Connection::open(path).map_err(|error| error.to_string())?;
     connection.execute_batch("PRAGMA journal_mode=WAL; CREATE TABLE IF NOT EXISTS cache (key TEXT PRIMARY KEY, payload BLOB NOT NULL, is_json INTEGER NOT NULL DEFAULT 0, created_at INTEGER NOT NULL, expires_at INTEGER NOT NULL, compression INTEGER NOT NULL DEFAULT 0); CREATE INDEX IF NOT EXISTS idx_cache_expires ON cache(expires_at);")
         .map_err(|error| error.to_string())?;
-    let _ = connection
-        .execute("ALTER TABLE cache ADD COLUMN compression INTEGER NOT NULL DEFAULT 0", []);
+    let _ = connection.execute(
+        "ALTER TABLE cache ADD COLUMN compression INTEGER NOT NULL DEFAULT 0",
+        [],
+    );
     Ok(connection)
 }
 
+#[cfg(feature = "search-cache")]
 fn cache_get(key: &str) -> Option<RichSearchResult> {
     let connection = cache_connection().ok()?;
     let now = now_milliseconds();
     let mut statement = connection.prepare("SELECT payload FROM cache WHERE key=?1 AND expires_at>?2 AND is_json=1 AND compression=0").ok()?;
-    let payload: Vec<u8> = statement.query_row(params![key, now], |row| row.get(0)).ok()?;
+    let payload: Vec<u8> = statement
+        .query_row(params![key, now], |row| row.get(0))
+        .ok()?;
     serde_json::from_slice(&payload).ok()
 }
 
+#[cfg(feature = "search-cache")]
 fn cache_set(key: &str, value: &RichSearchResult, ttl_ms: u64) -> Result<(), String> {
     let connection = cache_connection()?;
     let now = now_milliseconds();
@@ -602,7 +690,9 @@ where
     T: Send + 'static,
     F: FnOnce() -> T + Send + 'static,
 {
-    tokio::task::spawn_blocking(job).await.map_err(|error| error.to_string())
+    tokio::task::spawn_blocking(job)
+        .await
+        .map_err(|error| error.to_string())
 }
 
 /// Fetch and parse a Google SERP with authenticated cookies when available.
@@ -613,8 +703,18 @@ pub async fn search_rich(query: &str, options: &SearchOptions) -> Result<RichSea
         blocking(move || search_cookies(&options)).await?
     };
     let authenticated = !cookies.is_empty();
+    if options.require_authenticated && !authenticated {
+        return Err("Google search authentication is unavailable".into());
+    }
+    #[cfg(not(feature = "search-cache"))]
+    if options.cache_ttl_ms.is_some_and(|ttl| ttl > 0) {
+        return Err("Google search cache is unavailable in this build".into());
+    }
+    #[cfg(feature = "search-cache")]
     let cache_key = format!("serp-rich:anonymous-v2:{url}");
+    #[cfg(feature = "search-cache")]
     let cache_anonymous = !authenticated && options.cache_ttl_ms.is_some_and(|ttl| ttl > 0);
+    #[cfg(feature = "search-cache")]
     if cache_anonymous {
         let key = cache_key.clone();
         // A failed lookup is a cache miss, never a failed search.
@@ -636,8 +736,13 @@ pub async fn search_rich(query: &str, options: &SearchOptions) -> Result<RichSea
             }
         }
     }
-    let result =
-        RichSearchResult { content, served_from_cache: false, profile_used, authenticated };
+    let result = RichSearchResult {
+        content,
+        served_from_cache: false,
+        profile_used,
+        authenticated,
+    };
+    #[cfg(feature = "search-cache")]
     if cache_anonymous
         && !result.content.organic.is_empty()
         && let Some(ttl) = options.cache_ttl_ms
@@ -663,12 +768,21 @@ mod tests {
         };
         let url = search_url("rust & bun", &options).unwrap();
         assert_eq!(url.host_str(), Some("www.google.fr"));
-        assert!(url.query_pairs().any(|(key, value)| key == "q" && value == "rust & bun"));
-        assert!(url.query_pairs().any(|(key, value)| key == "udm" && value == "14"));
+        assert!(
+            url.query_pairs()
+                .any(|(key, value)| key == "q" && value == "rust & bun")
+        );
+        assert!(
+            url.query_pairs()
+                .any(|(key, value)| key == "udm" && value == "14")
+        );
         assert!(
             search_url(
                 "x",
-                &SearchOptions { domain: "evil.example".to_owned(), ..Default::default() }
+                &SearchOptions {
+                    domain: "evil.example".to_owned(),
+                    ..Default::default()
+                }
             )
             .is_err()
         );
@@ -686,8 +800,15 @@ mod tests {
         ] {
             assert!(is_google_domain(domain), "expected Google domain: {domain}");
         }
-        for domain in ["google.com.attacker.invalid", "evilgoogle.com", "example.org"] {
-            assert!(!is_google_domain(domain), "unexpected Google domain: {domain}");
+        for domain in [
+            "google.com.attacker.invalid",
+            "evilgoogle.com",
+            "example.org",
+        ] {
+            assert!(
+                !is_google_domain(domain),
+                "unexpected Google domain: {domain}"
+            );
         }
     }
 
@@ -709,8 +830,12 @@ mod tests {
         assert!(header.contains("SID=token"));
         assert!(header.contains("CONSENT="));
         assert!(header.contains("SOCS="));
-        assert!(is_blocked_serp_html("<title>Before you continue to Google</title>"));
-        assert!(!is_blocked_serp_html("<div id='rso'><div class='MjjYud'></div></div>"));
+        assert!(is_blocked_serp_html(
+            "<title>Before you continue to Google</title>"
+        ));
+        assert!(!is_blocked_serp_html(
+            "<div id='rso'><div class='MjjYud'></div></div>"
+        ));
         let js_shell = format!(
             "<title>Google Search</title><noscript><a href='/httpservice/retry/enablejs'>enable JS</a></noscript>{}",
             "x".repeat(3000),
@@ -730,10 +855,20 @@ mod tests {
             std::process::id(),
             now_milliseconds(),
         ));
-        std::fs::write(&path, r#"[{"name":"SID","value":"test","domain":".google.com"}]"#).unwrap();
-        let options = SearchOptions { cookie_path: Some(path.clone()), ..Default::default() };
+        std::fs::write(
+            &path,
+            r#"[{"name":"SID","value":"test","domain":".google.com"}]"#,
+        )
+        .unwrap();
+        let options = SearchOptions {
+            cookie_path: Some(path.clone()),
+            ..Default::default()
+        };
         assert_eq!(search_cookies(&options).len(), 1);
-        let anonymous = SearchOptions { anonymous: true, ..options };
+        let anonymous = SearchOptions {
+            anonymous: true,
+            ..options
+        };
         assert!(search_cookies(&anonymous).is_empty());
         std::fs::remove_file(path).unwrap();
     }
@@ -742,8 +877,14 @@ mod tests {
     fn explicit_cookie_path_precedes_environment_default() {
         let explicit = PathBuf::from("/private/explicit.json");
         let configured = PathBuf::from("/private/google.json");
-        assert_eq!(resolve_cookie_path(Some(&explicit), Some(configured.clone())), Some(explicit));
-        assert_eq!(resolve_cookie_path(None, Some(configured.clone())), Some(configured));
+        assert_eq!(
+            resolve_cookie_path(Some(&explicit), Some(configured.clone())),
+            Some(explicit)
+        );
+        assert_eq!(
+            resolve_cookie_path(None, Some(configured.clone())),
+            Some(configured)
+        );
         assert_eq!(resolve_cookie_path(None, None), None);
     }
 
@@ -785,11 +926,14 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "search-cache")]
     fn cache_round_trips_source_response_without_network() {
         let connection = Connection::open_in_memory().unwrap();
         connection.execute_batch("CREATE TABLE cache (key TEXT PRIMARY KEY, payload BLOB NOT NULL, is_json INTEGER NOT NULL, created_at INTEGER NOT NULL, expires_at INTEGER NOT NULL, compression INTEGER NOT NULL);").unwrap();
-        let content =
-            parse_serp("<div class='g'><a href='https://example.org'><h3>A</h3></a></div>", "a");
+        let content = parse_serp(
+            "<div class='g'><a href='https://example.org'><h3>A</h3></a></div>",
+            "a",
+        );
         let result = RichSearchResult {
             content,
             served_from_cache: false,
@@ -804,18 +948,62 @@ mod tests {
             )
             .unwrap();
         let decoded: Vec<u8> = connection
-            .query_row("SELECT payload FROM cache WHERE key=?1", params!["key"], |row| row.get(0))
+            .query_row(
+                "SELECT payload FROM cache WHERE key=?1",
+                params!["key"],
+                |row| row.get(0),
+            )
             .unwrap();
-        assert_eq!(serde_json::from_slice::<RichSearchResult>(&decoded).unwrap(), result);
+        assert_eq!(
+            serde_json::from_slice::<RichSearchResult>(&decoded).unwrap(),
+            result
+        );
     }
 
     #[tokio::test]
     #[ignore = "requires live Google Search access"]
     async fn live_search_never_reports_empty_organic_as_success() {
-        let options = SearchOptions { anonymous: true, num: Some(3), ..Default::default() };
+        let options = SearchOptions {
+            anonymous: true,
+            num: Some(3),
+            ..Default::default()
+        };
         match search_rich("rust language", &options).await {
             Ok(result) => assert!(!result.content.organic.is_empty()),
             Err(error) => eprintln!("Google Search unavailable: {error}"),
         }
+    }
+}
+
+#[cfg(test)]
+mod redirect_tests {
+    use super::*;
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+
+    #[tokio::test]
+    async fn forbidden_redirect_is_refused_before_destination_network_activity() {
+        let source = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let forbidden = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let destination = format!("http://{}/private", forbidden.local_addr().unwrap());
+        let url = format!("http://{}/search", source.local_addr().unwrap());
+        let serve = tokio::spawn(async move {
+            let (mut socket, _) = source.accept().await.unwrap();
+            let mut input = [0u8; 4096];
+            socket.read(&mut input).await.unwrap();
+            socket.write_all(format!("HTTP/1.1 302 Found\r\nLocation: {destination}\r\nContent-Length: 0\r\nConnection: close\r\n\r\n").as_bytes()).await.unwrap();
+        });
+        let _ = rustls::crypto::ring::default_provider().install_default();
+        let client = reqwest::Client::builder()
+            .no_proxy()
+            .redirect(search_redirect_policy())
+            .build()
+            .unwrap();
+        assert!(client.get(url).send().await.is_err());
+        serve.await.unwrap();
+        assert!(
+            tokio::time::timeout(Duration::from_millis(25), forbidden.accept())
+                .await
+                .is_err()
+        );
     }
 }

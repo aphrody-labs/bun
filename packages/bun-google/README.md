@@ -66,6 +66,52 @@ and [Gemini generateContent](https://ai.google.dev/api/generate-content) referen
 
 ## Commands and source catalog
 
+### Native `bun search`
+
+The optional runtime feature `--google-search=on` registers `bun search` directly
+with the existing Rust request, cookie, HTTP and SERP owners. Enable it before
+the execution arguments when building the checkout:
+
+```sh
+bun bd --google-search=on search --help
+bun bd --google-search=on search --json --num 3 --timeout-ms 10000 -- "site:example.org evidence"
+bun bd --google-search=on search --anonymous --json --num 3 -- "public evidence"
+```
+
+Without this feature, help remains available and a search exits with an explicit
+provider-unavailable error. Source implementation and fixture coverage do not
+qualify an installed binary; run the changed-binary tests and authenticate only
+with the qualified release.
+
+The default command requires account cookies from
+`~/.aphrody/google-cookies.json`. An explicit absolute
+`APHRODY_GOOGLE_COOKIES_JSON` environment path selects a different protected jar.
+Keep the jar private to its owner (mode `0600` on Unix); cookie values are never
+command arguments or output. The command does not import browser profiles,
+perform login or fall back to anonymous search when credentials are unavailable.
+`--anonymous` disables account-cookie reads explicitly.
+
+Flags are `--json`, `--rich`, `--anonymous`, `--num 1..20`, `--start 0..1000`,
+`--hl <language>`, `--gl <country>`, `--domain <google-host>`,
+`--safe active|off` and `--timeout-ms 1..120000`. The default deadline is 30 seconds
+and the default result limit is 10. `--domain` selects the Google search host;
+use a `site:` query to constrain discovered sources. Put `--` before the query
+to stop option parsing. The transport is native fetch, with an 8 MiB response
+cap and a bounded redirect chain restricted to Google HTTPS destinations.
+There is no browser or external CLI fallback.
+
+JSON output contains `query`, `authenticated`, `transport`, `servedFromCache`
+and `organic` rows (`position`, `title`, `url`, `snippet`), with optional
+`totalResults` and `correctedQuery`. `--rich` adds structured SERP evidence.
+Success exits `0`; invalid requests, unavailable credentials, blocked requests,
+transport failures and elapsed deadlines exit `2` with a redacted error on
+stderr. They produce no successful JSON response. SIGINT cancels the request
+and exits `130`. Callers should also bound subprocess output and cancellation.
+
+This authenticated CLI is separate from the public search SDK below. Public
+site requests must retain their anonymous policy and must never inherit its
+private jar or retry a public search with account cookies.
+
 The `./search` subpath exports `createGooglePublicSearch`. This bounded anonymous
 adapter calls the existing `aphrody web search` Rust SERP owner with `--no-auth`,
 `--safe`, fixed google.com and `--transport fetch`. It never falls back to a

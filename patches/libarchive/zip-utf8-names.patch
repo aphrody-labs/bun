@@ -13,3 +13,36 @@
  #if HAVE_NL_LANGINFO
  		} else if (strcmp(nl_langinfo(CODESET), "UTF-8") == 0) {
  			zip->entry_flags |= ZIP_ENTRY_FLAG_UTF8_NAME;
+--- a/libarchive/archive_read_support_format_zip.c
++++ b/libarchive/archive_read_support_format_zip.c
+@@ -1011,8 +1011,13 @@
+ 
+ 			if (archive_entry_copy_pathname_l(entry,
+ 			    p + offset, datasize, zip->sconv_utf8) != 0) {
+-				/* Ignore the error, and fallback to the path
+-				 * name from the main field. */
++#ifndef _WIN32
++				/* BUN PATCH: retain UTF-8 bytes when the C locale
++				 * cannot represent the Unicode path. */
++				if (errno != ENOMEM)
++					archive_entry_copy_pathname_l(entry,
++					    p + offset, datasize, NULL);
++#endif
+ #ifdef DEBUG
+ 				fprintf(stderr, "Failed to read the ZIP "
+ 				    "0x7075 extra field path.\n");
+@@ -1191,6 +1196,14 @@
+ 
+ 	if (archive_entry_copy_pathname_l(entry,
+ 	    h, filename_length, sconv) != 0) {
++#ifndef _WIN32
++		/* BUN PATCH: preserve flagged UTF-8 names in the C locale,
++		 * as the symlink reader already does. */
++		if (errno != ENOMEM && sconv == zip->sconv_utf8 &&
++		    (zip_entry->zip_flags & ZIP_UTF8_NAME))
++			archive_entry_copy_pathname_l(entry, h,
++			    filename_length, NULL);
++#endif
+ 		if (errno == ENOMEM) {
+ 			archive_set_error(&a->archive, ENOMEM,
+ 			    "Can't allocate memory for Pathname");

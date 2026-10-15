@@ -292,6 +292,7 @@ export function cargoBuildInvocation(cfg: Config): CargoInvocation {
     cfg.curlNative && "curl_native",
     cfg.browserCrawl && "browser_crawl",
     cfg.browserIndex && "browser_index",
+    cfg.googleSearch && "google_search",
   ].filter(Boolean);
   if (features.length) args.push("--features", features.join(","));
   // std is compiled from source (cargoBuildStdArg) in every build: the link is bun's own and takes each crate's rlib

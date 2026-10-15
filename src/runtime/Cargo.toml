@@ -14,6 +14,7 @@ path = "lib.rs"
 workspace = true
 
 [dependencies]
+aphrody-google = { workspace = true, optional = true }
 aphrody-jev.workspace = true
 bun_video_native = { package = "bun-video-native", path = "../../packages/bun-video/native", optional = true, default-features = false }
 bun_browser_dom.workspace = true
@@ -159,5 +160,6 @@ video_native = ["dep:bun_video_native", "bun_video_native/filmcraft"]
 curl_native = []
 browser_crawl = ["dep:bun_browser_crawl"]
 browser_index = ["dep:bun_browser_index"]
+google_search = ["dep:aphrody-google"]
 # uutils applets (src/coreutils, ~10 MB): `bun` run as `head`, `sort`, ... and Bun Shell's fallback.
 coreutils = ["dep:bun_coreutils"]

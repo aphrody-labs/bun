@@ -2192,6 +2192,70 @@ describe("Bun.Archive", () => {
       expect(await files.get("héllo.txt")!.text()).toBe("unicode");
     });
 
+    test("UTF-8 zip names survive glob filtering and extraction", async () => {
+      using dir = tempDir("archive-zip-unicode", {});
+      const bytes = await new Bun.Archive(
+        { "données/日本語.txt": "nihon", "données/café.txt": "cafe", "excluded.txt": "excluded" },
+        { format: "zip" },
+      ).bytes();
+      expect(Buffer.from(bytes).subarray(0, 4)).toEqual(Buffer.from([0x50, 0x4b, 0x03, 0x04]));
+      const archive = new Bun.Archive(bytes);
+      const files = await archive.files("données/*.txt");
+      expect([...files.keys()].sort()).toEqual(["données/café.txt", "données/日本語.txt"]);
+      expect(await files.get("données/日本語.txt")!.text()).toBe("nihon");
+      expect(await files.get("données/café.txt")!.text()).toBe("cafe");
+      expect(await archive.extract(String(dir), { glob: "données/日本語.txt" })).toBe(1);
+      expect(await Bun.file(join(String(dir), "données", "日本語.txt")).text()).toBe("nihon");
+      expect(existsSync(join(String(dir), "données", "café.txt"))).toBe(false);
+      expect(existsSync(join(String(dir), "excluded.txt"))).toBe(false);
+    });
+
+    test("Unicode ZIP extra fields preserve names and reject a mismatched filename CRC", async () => {
+      const fallback = "fallback.txt";
+      const name = "données/日本語.txt";
+      const original = Buffer.from(await new Bun.Archive({ [fallback]: "unicode-extra" }, { format: "zip" }).bytes());
+      const end = original.length - 22;
+      expect(original.readUInt32LE(end)).toBe(0x06054b50);
+      const central = original.readUInt32LE(end + 16);
+      expect(original.readUInt32LE(central)).toBe(0x02014b50);
+      expect(original.readUInt16LE(6) & 0x800).toBe(0);
+      const localExtraEnd = 30 + original.readUInt16LE(26) + original.readUInt16LE(28);
+      const centralExtraEnd = central + 46 + original.readUInt16LE(central + 28) + original.readUInt16LE(central + 30);
+      const extra = Buffer.alloc(9 + Buffer.byteLength(name));
+      extra.writeUInt16LE(0x7075, 0);
+      extra.writeUInt16LE(extra.length - 4, 2);
+      extra[4] = 1;
+      extra.writeUInt32LE(Bun.hash.crc32(fallback), 5);
+      extra.write(name, 9);
+      const withExtra = (field: Buffer) => {
+        const bytes = Buffer.concat([
+          original.subarray(0, localExtraEnd),
+          field,
+          original.subarray(localExtraEnd, centralExtraEnd),
+          field,
+          original.subarray(centralExtraEnd),
+        ]);
+        const shiftedCentral = central + field.length;
+        const shiftedEnd = end + field.length * 2;
+        bytes.writeUInt16LE(original.readUInt16LE(28) + field.length, 28);
+        bytes.writeUInt16LE(original.readUInt16LE(central + 30) + field.length, shiftedCentral + 30);
+        bytes.writeUInt32LE(original.readUInt32LE(end + 12) + field.length, shiftedEnd + 12);
+        bytes.writeUInt32LE(shiftedCentral, shiftedEnd + 16);
+        return bytes;
+      };
+      const files = await new Bun.Archive(withExtra(extra)).files();
+      expect([...files.keys()]).toEqual([name]);
+      expect(await files.get(name)!.text()).toBe("unicode-extra");
+      using dir = tempDir("archive-zip-unicode-extra", {});
+      expect(await new Bun.Archive(withExtra(extra)).extract(String(dir))).toBe(1);
+      expect(await Bun.file(join(String(dir), name)).text()).toBe("unicode-extra");
+      const mismatched = Buffer.from(extra);
+      mismatched[5] ^= 1;
+      const ignored = await new Bun.Archive(withExtra(mismatched)).files();
+      expect([...ignored.keys()]).toEqual([fallback]);
+      expect(await ignored.get(fallback)!.text()).toBe("unicode-extra");
+    });
+
     test("extract writes the files of a zip with their modes", async () => {
       using dir = tempDir("archive-zip-extract", {});
       const zip = join(String(dir), "app.zip");

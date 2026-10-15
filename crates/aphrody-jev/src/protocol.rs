@@ -263,6 +263,32 @@ pub fn threshold(value: &Value) -> Result<f64> {
     number(value, "threshold", 1.0)
 }
 
+/// Select Choice answers without adding defaults to the caller's request.
+pub fn choice_selections(
+    value: &Value,
+    request_value: &Value,
+    minimum_confidence: f64,
+) -> Result<Map<String, Value>> {
+    let minimum = threshold(&Value::from(minimum_confidence))?;
+    response(value, request_value)?;
+    object(&value["answers"], "answers")?
+        .iter()
+        .filter(|(_, answer)| answer["type"] == "choice")
+        .map(|(name, answer)| {
+            let confidence = number(&answer["confidence"], "confidence", 1.0)?;
+            let choice = string(&answer["choice"], "choice")?;
+            Ok((
+                name.clone(),
+                if confidence >= minimum {
+                    Value::String(choice.to_owned())
+                } else {
+                    Value::Null
+                },
+            ))
+        })
+        .collect()
+}
+
 /// Extract a primitive from an answer validated against its question.
 pub fn primitive(answer: &Value, threshold_value: f64) -> Result<Value> {
     let threshold = threshold(&Value::from(threshold_value))?;

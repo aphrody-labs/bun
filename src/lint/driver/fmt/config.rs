@@ -1013,6 +1013,9 @@ pub(crate) struct Configs<'c> {
 }
 
 impl<'c> Configs<'c> {
+    pub(crate) fn permits_protected_source(&self, path: &[u8]) -> bool {
+        crate::git::permits_protected_source(self.environment, path)
+    }
     pub(crate) fn new(options: &'c Options, environment: &'c Environment<'c>) -> Configs<'c> {
         Configs::with(Cow::Borrowed(options), environment, false)
     }

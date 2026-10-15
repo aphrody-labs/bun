@@ -1,7 +1,7 @@
 // `bun lint`, `bun fmt`, `bun n2b`, `bun migrate`, `bun wasm` and `bun build --target=wasm`
 // Native quality and migration dispatch directly; wasm and templates use the JS entry script.
 import { describe, expect, test } from "bun:test";
-import { bunEnv, bunExe, tempDir } from "harness";
+import { bunEnv, bunExe, isASAN, isDebug, tempDir } from "harness";
 import { symlinkSync } from "node:fs";
 import { join } from "node:path";
 
@@ -13,6 +13,7 @@ const env = {
   YOLO_HOME: undefined,
   BUN_CREATE_APHRODY_DIR: undefined,
 };
+const cliTestTimeout = isDebug || isASAN ? 30_000 : 5_000;
 
 const formatSummary = (written: number, unchanged: number) =>
   expect.stringMatching(
@@ -38,6 +39,128 @@ async function run(args: string[], cwd?: string, extraEnv: Record<string, string
 }
 
 describe("embedded quality backend", () => {
+  test.each([
+    ["fmt", "native", 2],
+    ["lint", "eslint", 2],
+    ["lint", "oxlint", 1],
+  ] as const)(
+    "%s (%s config) permits only explicit tracked regular .aphrody source",
+    async (command, flavor, refusalCode) => {
+      const source = command === "fmt" ? "export const value={a:1};" : "let a = 1;\nexport { a };\n";
+      const fixed = command === "fmt" ? "export const value = { a: 1 };\n" : "const a = 1;\nexport { a };\n";
+      using dir = tempDir("native-quality-tracked-source", {
+        "public.ts": source,
+        ".aphrody/tracked.ts": source,
+        ".aphrody/literal[1].ts": source,
+        ".aphrody/untracked.ts": source,
+        ".aphrody/secrets/tracked.ts": source,
+        ".aphrody/profiles/tracked.ts": source,
+      });
+      const cwd = String(dir);
+      if (command === "lint") {
+        const rules = { "prefer-const": "error" };
+        // JSON flat configs retain ESLint's fatal status; object configs retain oxlint's.
+        const config = flavor === "eslint" ? [{ files: ["**/*.ts"], rules }] : { rules };
+        await Bun.write(join(cwd, "lint.json"), JSON.stringify(config));
+      }
+      const git = (...args: string[]) => {
+        const result = Bun.spawnSync(["git", ...args], { cwd, stdout: "pipe", stderr: "pipe" });
+        if (result.exitCode !== 0) throw new Error(result.stderr.toString());
+      };
+      git("init", "--quiet");
+      git(
+        "--literal-pathspecs",
+        "add",
+        ".aphrody/tracked.ts",
+        ".aphrody/literal[1].ts",
+        ".aphrody/secrets/tracked.ts",
+        ".aphrody/profiles/tracked.ts",
+      );
+      const flags = command === "fmt" ? ["--write"] : ["--fix", "--config", "lint.json"];
+      // Tracking a source must not make recursive traversal read a private store.
+      const recursive = await run([command, ...flags, "."], cwd);
+      expect(recursive.exitCode, recursive.stderr).toBe(0);
+      expect(await Bun.file(join(cwd, "public.ts")).text()).toBe(fixed);
+      for (const path of [
+        ".aphrody/tracked.ts",
+        ".aphrody/literal[1].ts",
+        ".aphrody/untracked.ts",
+        ".aphrody/secrets/tracked.ts",
+        ".aphrody/profiles/tracked.ts",
+      ])
+        expect(await Bun.file(join(cwd, path)).text()).toBe(source);
+      const accepted = await run([command, ...flags, ".aphrody/tracked.ts"], cwd);
+      expect(accepted.exitCode).toBe(0);
+      expect(accepted.stderr).not.toContain("protected");
+      expect(await Bun.file(join(cwd, ".aphrody/tracked.ts")).text()).toBe(fixed);
+      expect((await run([command, ...flags, ".aphrody/literal[1].ts"], cwd)).exitCode).toBe(0);
+      const privateHome = await run([command, ...flags, ".aphrody/tracked.ts"], cwd, {
+        HOME: cwd,
+        USERPROFILE: cwd,
+      });
+      expect(privateHome.exitCode, privateHome.stderr + privateHome.stdout).toBe(refusalCode);
+      expect(flavor === "oxlint" ? privateHome.stdout : privateHome.stderr).toContain(
+        "protected or parent-traversing quality path",
+      );
+      expect(flavor === "oxlint" ? privateHome.stderr : privateHome.stdout).toBe("");
+      expect(await Bun.file(join(cwd, ".aphrody/tracked.ts")).text()).toBe(fixed);
+      for (const path of [".aphrody/untracked.ts", ".aphrody/secrets/tracked.ts", ".aphrody/profiles/tracked.ts"]) {
+        const rejected = await run([command, ...flags, path], cwd);
+        expect(rejected.exitCode).toBe(refusalCode);
+        expect(flavor === "oxlint" ? rejected.stdout : rejected.stderr).toContain(
+          "protected or parent-traversing quality path",
+        );
+        expect(flavor === "oxlint" ? rejected.stderr : rejected.stdout).toBe("");
+        expect(await Bun.file(join(cwd, path)).text()).toBe(source);
+      }
+      git("rm", "--force", "--cached", ".aphrody/tracked.ts");
+      expect((await run([command, ...flags, ".aphrody/tracked.ts"], cwd)).exitCode).toBe(refusalCode);
+    },
+    cliTestTimeout,
+  );
+
+  test("a tracked source in a private .aphrody repository remains protected", async () => {
+    using dir = tempDir("native-quality-private-repository", {
+      ".aphrody/private-repo/fixture.ts": "export const value={a:1};",
+    });
+    const cwd = join(String(dir), ".aphrody/private-repo");
+    for (const args of [
+      ["init", "--quiet"],
+      ["add", "fixture.ts"],
+    ]) {
+      const git = Bun.spawnSync(["git", ...args], { cwd, stdout: "pipe", stderr: "pipe" });
+      expect(git.exitCode).toBe(0);
+    }
+    for (const command of ["fmt", "lint"]) {
+      const result = await run([command, command === "fmt" ? "--write" : "--fix", "fixture.ts"], cwd);
+      expect(result.exitCode).toBe(2);
+      expect(result.stderr).toContain("protected or parent-traversing quality path");
+    }
+    expect(await Bun.file(join(cwd, "fixture.ts")).text()).toBe("export const value={a:1};");
+  });
+
+  test.skipIf(process.platform === "win32")("tracked .aphrody symlinks cannot grant source access", async () => {
+    using dir = tempDir("native-quality-source-symlink", {
+      "outside.ts": "export const value={a:1};",
+      ".aphrody/kept.ts": "export const value = 1;\n",
+    });
+    const cwd = String(dir);
+    symlinkSync(join(cwd, "outside.ts"), join(cwd, ".aphrody/link.ts"));
+    for (const args of [
+      ["init", "--quiet"],
+      ["add", ".aphrody/link.ts"],
+    ]) {
+      const git = Bun.spawnSync(["git", ...args], { cwd, stdout: "pipe", stderr: "pipe" });
+      expect(git.exitCode).toBe(0);
+    }
+    for (const command of ["fmt", "lint"]) {
+      const result = await run([command, command === "fmt" ? "--write" : "--fix", ".aphrody/link.ts"], cwd);
+      expect(result.exitCode).toBe(2);
+      expect(result.stderr).toContain("protected or parent-traversing quality path");
+    }
+    expect(await Bun.file(join(cwd, "outside.ts")).text()).toBe("export const value={a:1};");
+  });
+
   test("fmt reports an invalid file and still writes subsequent valid sources", async () => {
     using dir = tempDir("native-fmt-aggregate-errors", {
       "a-invalid.ts": "export const = ;",
@@ -593,60 +716,68 @@ describe("bun n2b / bun migrate", () => {
     expect(result.exitCode).toBe(2);
   });
 
-  test.concurrent("migrate aliases plan the same changes without writing or installing", async () => {
-    const manifest = JSON.stringify({ name: "fixture", private: true, scripts: { start: "node app.js" } });
-    using dir = tempDir("native-n2b-migrate", { "package.json": manifest, "app.js": "console.log('hello');\n" });
-    const migrate = await run(["migrate", "--dry-run", "--report=json", "--agent"], String(dir));
-    const n2b = await run(["n2b", "--agent", "--report", "json", "migrate", "--dry-run", "."], String(dir));
-    const direct = await run(["n2b", "--migrate", "--dry-run", "--report=json", "--agent"], String(dir));
-    const report = JSON.parse(migrate.stdout);
-    expect(report.migration_plan.dry_run).toBe(true);
-    expect(report.migration_plan.steps).toEqual(
-      expect.arrayContaining([expect.objectContaining({ action: "run", detail: "bun install" })]),
-    );
-    const expected = {
-      ...report,
-      report_card: { ...report.report_card, timestamp: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/) },
-    };
-    expect(JSON.parse(n2b.stdout)).toEqual(expected);
-    expect(JSON.parse(direct.stdout)).toEqual(expected);
-    expect([migrate.stderr, n2b.stderr, direct.stderr]).toEqual([dryRunLog, dryRunLog, dryRunLog]);
-    expect([migrate.exitCode, n2b.exitCode, direct.exitCode]).toEqual([0, 0, 0]);
-    expect(await Bun.file(join(String(dir), "package.json")).text()).toBe(manifest);
-    expect(await Bun.file(join(String(dir), "bun.lock")).exists()).toBe(false);
-    expect(await Bun.file(join(String(dir), ".n2b/state.json")).exists()).toBe(false);
-  });
+  test.concurrent(
+    "migrate aliases plan the same changes without writing or installing",
+    async () => {
+      const manifest = JSON.stringify({ name: "fixture", private: true, scripts: { start: "node app.js" } });
+      using dir = tempDir("native-n2b-migrate", { "package.json": manifest, "app.js": "console.log('hello');\n" });
+      const migrate = await run(["migrate", "--dry-run", "--report=json", "--agent"], String(dir));
+      const n2b = await run(["n2b", "--agent", "--report", "json", "migrate", "--dry-run", "."], String(dir));
+      const direct = await run(["n2b", "--migrate", "--dry-run", "--report=json", "--agent"], String(dir));
+      const report = JSON.parse(migrate.stdout);
+      expect(report.migration_plan.dry_run).toBe(true);
+      expect(report.migration_plan.steps).toEqual(
+        expect.arrayContaining([expect.objectContaining({ action: "run", detail: "bun install" })]),
+      );
+      const expected = {
+        ...report,
+        report_card: { ...report.report_card, timestamp: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/) },
+      };
+      expect(JSON.parse(n2b.stdout)).toEqual(expected);
+      expect(JSON.parse(direct.stdout)).toEqual(expected);
+      expect([migrate.stderr, n2b.stderr, direct.stderr]).toEqual([dryRunLog, dryRunLog, dryRunLog]);
+      expect([migrate.exitCode, n2b.exitCode, direct.exitCode]).toEqual([0, 0, 0]);
+      expect(await Bun.file(join(String(dir), "package.json")).text()).toBe(manifest);
+      expect(await Bun.file(join(String(dir), "bun.lock")).exists()).toBe(false);
+      expect(await Bun.file(join(String(dir), ".n2b/state.json")).exists()).toBe(false);
+    },
+    cliTestTimeout,
+  );
 
-  test.concurrent("keeps option values and paths after -- out of migration alias parsing", async () => {
-    using dir = tempDir("native-n2b-literal-migrate", {
-      "migrate/app.js": "#!/usr/bin/env node\n",
-      "--external-backend/app.js": "#!/usr/bin/env node\n",
-    });
-    const result = await run(["n2b", "--report", "json", "--agent", "--ignore", "migrate", "."], String(dir));
-    expect(JSON.parse(result.stdout).mode).toBe("check");
-    const literal = await run(["n2b", "--report=json", "--agent", "--", "migrate"], String(dir));
-    const report = JSON.parse(literal.stdout);
-    expect(report.mode).toBe("check");
-    expect(report.root.replaceAll("\\", "/")).toEndWith("/migrate");
-    expect(report.files.find((file: any) => file.path === "app.js").findings).toEqual(
-      expect.arrayContaining([expect.objectContaining({ rule_id: "shebang/node" })]),
-    );
-    expect(literal.stderr).toBe("");
-    expect(literal.exitCode).toBe(1);
-    const backendPath = await run(["n2b", "--report=json", "--agent", "--", "--external-backend"], String(dir));
-    const backendReport = JSON.parse(backendPath.stdout);
-    expect(backendReport.root.replaceAll("\\", "/")).toEndWith("/--external-backend");
-    expect(backendReport.files.find((file: any) => file.path === "app.js").findings).toEqual(
-      expect.arrayContaining([expect.objectContaining({ rule_id: "shebang/node" })]),
-    );
-    expect(backendPath.stderr).toBe("");
-    expect(backendPath.exitCode).toBe(1);
-    // A leading delimiter also makes --dry-run an operand; losing it would select migration.
-    const leading = await run(["n2b", "--", "migrate", "--dry-run"], String(dir));
-    expect(leading.stdout).toBe("");
-    expect(leading.stderr).toContain("--dry-run");
-    expect(leading.exitCode).toBe(2);
-  });
+  test.concurrent(
+    "keeps option values and paths after -- out of migration alias parsing",
+    async () => {
+      using dir = tempDir("native-n2b-literal-migrate", {
+        "migrate/app.js": "#!/usr/bin/env node\n",
+        "--external-backend/app.js": "#!/usr/bin/env node\n",
+      });
+      const result = await run(["n2b", "--report", "json", "--agent", "--ignore", "migrate", "."], String(dir));
+      expect(JSON.parse(result.stdout).mode).toBe("check");
+      const literal = await run(["n2b", "--report=json", "--agent", "--", "migrate"], String(dir));
+      const report = JSON.parse(literal.stdout);
+      expect(report.mode).toBe("check");
+      expect(report.root.replaceAll("\\", "/")).toEndWith("/migrate");
+      expect(report.files.find((file: any) => file.path === "app.js").findings).toEqual(
+        expect.arrayContaining([expect.objectContaining({ rule_id: "shebang/node" })]),
+      );
+      expect(literal.stderr).toBe("");
+      expect(literal.exitCode).toBe(1);
+      const backendPath = await run(["n2b", "--report=json", "--agent", "--", "--external-backend"], String(dir));
+      const backendReport = JSON.parse(backendPath.stdout);
+      expect(backendReport.root.replaceAll("\\", "/")).toEndWith("/--external-backend");
+      expect(backendReport.files.find((file: any) => file.path === "app.js").findings).toEqual(
+        expect.arrayContaining([expect.objectContaining({ rule_id: "shebang/node" })]),
+      );
+      expect(backendPath.stderr).toBe("");
+      expect(backendPath.exitCode).toBe(1);
+      // A leading delimiter also makes --dry-run an operand; losing it would select migration.
+      const leading = await run(["n2b", "--", "migrate", "--dry-run"], String(dir));
+      expect(leading.stdout).toBe("");
+      expect(leading.stderr).toContain("--dry-run");
+      expect(leading.exitCode).toBe(2);
+    },
+    cliTestTimeout,
+  );
 
   test.concurrent("global option values named n2b cannot replace the parsed command", async () => {
     using dir = tempDir("n2b-global-command-value", {

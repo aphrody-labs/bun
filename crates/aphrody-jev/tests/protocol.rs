@@ -23,6 +23,35 @@ fn response() -> Value {
 }
 
 #[test]
+fn confidence_selection_preserves_the_full_raw_request_budget_with_optional_model() {
+    for explicit_model in [false, true] {
+        let mut request = request();
+        request["state"] = json!("");
+        if explicit_model {
+            request["model"] = json!("fixture");
+        }
+        let padding = protocol::MAX_JSON_BYTES - serde_json::to_vec(&request).unwrap().len();
+        request["state"] = json!("é".repeat(padding / 2) + &"a".repeat(padding % 2));
+        let wire = serde_json::to_vec(&request).unwrap();
+        assert_eq!(wire.len(), protocol::MAX_JSON_BYTES);
+        let parsed = protocol::parse(&wire).unwrap();
+        assert_eq!(
+            protocol::choice_selections(&response(), &parsed, 0.9).unwrap(),
+            serde_json::from_value::<serde_json::Map<String, Value>>(json!({"route": "read"}))
+                .unwrap()
+        );
+        assert_eq!(
+            protocol::choice_selections(&response(), &parsed, 0.95).unwrap()["route"],
+            Value::Null
+        );
+        assert_eq!(parsed, request);
+        let mut oversized = wire;
+        oversized.push(b' ');
+        assert!(protocol::parse(&oversized).is_err());
+    }
+}
+
+#[test]
 fn structured_entries_optional_instructions_and_unknown_usage_share_typed_and_raw_validation() {
     let raw_request = request();
     let raw_response = response();

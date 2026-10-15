@@ -2,6 +2,9 @@
 //!
 //! The upstream management interface owns its local IPC protocol and DTOs.
 
+#[cfg(not(target_os = "android"))]
+mod cli_input;
+
 pub use mullvad_management_interface::Error;
 pub use mullvad_types::states::TunnelState;
 pub type EmbeddedDaemon = mullvad_daemon::Daemon;
@@ -51,6 +54,11 @@ impl VpnClient {
         self.0.get_tunnel_state().await
     }
 
+    /// Authenticate through the configured management IPC without exposing the account.
+    pub async fn login_account(&mut self, account: String) -> Result<(), Error> {
+        self.0.login_account(account).await
+    }
+
     /// Ask the Mullvad daemon to connect using its current settings.
     pub async fn connect_tunnel(&mut self) -> Result<bool, Error> {
         self.0.connect_tunnel().await
@@ -72,14 +80,14 @@ pub fn cli(_args: &[String]) -> i32 {
 /// Bun's single VPN CLI, backed by the same native daemon IPC client.
 #[cfg(not(target_os = "android"))]
 pub fn cli(args: &[String]) -> i32 {
-    let Some(command) = args.first().map(String::as_str) else {
-        eprintln!("usage: bun vpn <daemon|status|connect|disconnect>");
-        return 2;
+    use cli_input::Command;
+    let command = match cli_input::command(args) {
+        Ok(command) => command,
+        Err(usage) => {
+            eprintln!("{usage}");
+            return 2;
+        }
     };
-    if args.len() != 1 || !matches!(command, "daemon" | "status" | "connect" | "disconnect") {
-        eprintln!("usage: bun vpn <daemon|status|connect|disconnect>");
-        return 2;
-    }
     let runtime = match tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()
@@ -90,7 +98,7 @@ pub fn cli(args: &[String]) -> i32 {
             return 1;
         }
     };
-    if command == "daemon" {
+    if command == Command::Daemon {
         return match runtime.block_on(run_embedded_daemon()) {
             Ok(()) => 0,
             Err(error) => {
@@ -99,15 +107,36 @@ pub fn cli(args: &[String]) -> i32 {
             }
         };
     }
+    if command == Command::Login {
+        let account = match cli_input::read_account(std::io::stdin().lock()) {
+            Ok(account) => account,
+            Err(error) => {
+                eprintln!("bun vpn: {error}");
+                return 2;
+            }
+        };
+        return match runtime
+            .block_on(async move { VpnClient::connect().await?.login_account(account).await })
+        {
+            Ok(()) => {
+                println!("account login completed");
+                0
+            }
+            Err(_) => {
+                eprintln!("bun vpn: account login failed");
+                1
+            }
+        };
+    }
     match runtime.block_on(async move {
         let mut client = VpnClient::connect().await?;
         match command {
-            "status" => client.state().await.map(|state| format!("{state:?}")),
-            "connect" => client
+            Command::Status => client.state().await.map(|state| format!("{state:?}")),
+            Command::Connect => client
                 .connect_tunnel()
                 .await
                 .map(|changed| format!("connect requested: {changed}")),
-            "disconnect" => client
+            Command::Disconnect => client
                 .disconnect_tunnel()
                 .await
                 .map(|changed| format!("disconnect requested: {changed}")),

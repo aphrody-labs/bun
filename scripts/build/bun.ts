@@ -217,12 +217,7 @@ export function emitBun(n: Ninja, cfg: Config, sources: Sources): BunOutput {
       ...windowsToolchainRustSources(cfg),
       ...dotnetHostRustSources(cfg),
     ],
-    vendorStamps: [
-      ...lolhtmlDep.outputs,
-      ...rustArgon2Dep.outputs,
-      ...uutilsDep.outputs,
-      ...uvDep.outputs,
-    ],
+    vendorStamps: [...lolhtmlDep.outputs, ...rustArgon2Dep.outputs, ...uutilsDep.outputs, ...uvDep.outputs],
     shimValidations: emitShimVerify(n, cfg),
   });
 
@@ -465,7 +460,7 @@ export function emitBun(n: Ninja, cfg: Config, sources: Sources): BunOutput {
     const nativeLink = cfg.windows ? `/clang:-Wl,@${rust.nativeLink}` : `@${rust.nativeLink}`;
     (cfg.windows ? driverFlags : ldflags).push(quote(nativeLink, cfg.host.os === "windows"));
   }
-  const exe = link(n, cfg, exeName, linkObjects, {
+  const exe = link(n, cfg, resolve(cfg.binaryDir, exeName), linkObjects, {
     libs: depLibs,
     lazyObjects: depLink.lazy,
     flags: ldflags,
@@ -555,6 +550,7 @@ export function emitPostLink(
   // `bun` (which would collide with the phony). When strip runs, `ninja
   // bun` builds the stripped file; no phony needed.
   if (strippedExe === undefined) n.phony("bun", [exe]);
+  else if (cfg.binaryDir !== cfg.buildDir) n.phony("bun", [strippedExe]);
 
   // Run `<exe> --revision`. If it exits non-zero or crashes, something
   // broke at load time (missing symbol, static initializer blowup, ABI
@@ -595,10 +591,12 @@ function duplicateSymbolsStamp(cfg: Config, exeName: string): string | undefined
     : undefined;
 }
 
-function binaryVerifyTools(cfg: Config): { nm: string; readobj: string; objdump: string; cxxfilt: string } | undefined {
+function binaryVerifyTools(
+  cfg: Config,
+): { nm: string; readobj: string; objdump: string; cxxfilt: string; strip: string } | undefined {
   const { nm, readobj, objdump, cxxfilt } = cfg;
   return nm !== undefined && readobj !== undefined && objdump !== undefined && cxxfilt !== undefined
-    ? { nm, readobj, objdump, cxxfilt }
+    ? { nm, readobj, objdump, cxxfilt, strip: cfg.strip }
     : undefined;
 }
 
@@ -788,7 +786,7 @@ function emitSmokeTest(n: Ninja, cfg: Config, exe: string, exeName: string, stri
  * The profile binary keeps its symbols for profiling/debugging release crashes.
  */
 function emitStrip(n: Ninja, cfg: Config, inputExe: string, stripflags: string[]): string {
-  const out = resolve(cfg.buildDir, "bun" + cfg.exeSuffix);
+  const out = resolve(cfg.binaryDir, "bun" + cfg.exeSuffix);
 
   // Windows: strip equivalent is handled at link time (/OPT:REF etc), no
   // separate strip binary. Unlock at copy time: processes may start while linking.
@@ -844,7 +842,7 @@ function emitDsymutil(n: Ninja, cfg: Config, inputExe: string, exeName: string, 
   assert(cfg.darwin, "dsymutil is darwin-only");
   assert(cfg.dsymutil !== undefined, "dsymutil not found in toolchain");
 
-  const out = resolve(cfg.buildDir, `${exeName}.dSYM`);
+  const out = resolve(cfg.binaryDir, `${exeName}.dSYM`);
 
   // --flat: single-file .dSYM (not a bundle directory). Simpler to upload
   //   as a CI artifact.

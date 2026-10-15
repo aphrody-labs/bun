@@ -49,6 +49,52 @@ pub enum NotRun {
     Failed(Vec<u8>),
 }
 
+/// A tracked regular source file is safe to name explicitly; stores remain pruned during searches.
+pub(crate) fn permits_protected_source(environment: &Environment<'_>, path: &[u8]) -> bool {
+    let Some((root, relative)) = fs::tracked_quality_source(&environment.cwd, path) else {
+        return false;
+    };
+    let args: &[&[u8]] = &[
+        b"--no-optional-locks",
+        b"--literal-pathspecs",
+        b"ls-files",
+        b"--stage",
+        b"--error-unmatch",
+        b"-z",
+        b"--",
+        &relative,
+    ];
+    let Ok(finished) = (environment.run_git)(&Command {
+        args,
+        input: b"",
+        cwd: &root,
+    }) else {
+        return false;
+    };
+    if !finished.is_ok {
+        return false;
+    }
+    let Some(entry) = finished.stdout.strip_suffix(b"\0") else {
+        return false;
+    };
+    let Some(tab) = entry.iter().position(|byte| *byte == b'\t') else {
+        return false;
+    };
+    let (metadata, name) = entry.split_at(tab);
+    let Some(object) = metadata
+        .strip_prefix(b"100644 ")
+        .or_else(|| metadata.strip_prefix(b"100755 "))
+    else {
+        return false;
+    };
+    let Some(object) = object.strip_suffix(b" 0") else {
+        return false;
+    };
+    name.get(1..) == Some(relative.as_slice())
+        && matches!(object.len(), 40 | 64)
+        && object.iter().all(u8::is_ascii_hexdigit)
+}
+
 /// `git diff` that prints NUL-terminated paths relative to the repository root, whatever the user's git config says.
 const DIFF: [&[u8]; 10] = [
     b"--no-optional-locks",

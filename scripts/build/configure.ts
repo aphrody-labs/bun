@@ -54,12 +54,9 @@ import { checkWorkarounds } from "./workarounds.ts";
 /** The JavaScript tools: what the code generators run with, and all that `mode: "codegen"` looks for. */
 export function resolveJsToolchain(packageManager: PackageManager = "bun"): JsToolchain {
   if (process.versions.bun === undefined || packageManager !== "bun") {
-    throw new BuildError(
-      "The owner factory requires the Aphrody Bun fork and Bun package manager",
-      {
-        hint: "Run the build with the qualified fork using bun bd.",
-      },
-    );
+    throw new BuildError("The owner factory requires the Aphrody Bun fork and Bun package manager", {
+      hint: "Run the build with the qualified fork using bun bd.",
+    });
   }
   const host = detectHost();
   // esbuild path is relative to REPO ROOT, not process.cwd() — when
@@ -71,12 +68,7 @@ export function resolveJsToolchain(packageManager: PackageManager = "bun"): JsTo
   // (and the build itself runs the install first via the root install
   // stamp, so this path will exist by the time esbuild rules fire).
   const windowsBin = "esbuild.exe";
-  const esbuild = resolve(
-    repoRoot,
-    "node_modules",
-    ".bin",
-    host.os === "windows" ? windowsBin : "esbuild",
-  );
+  const esbuild = resolve(repoRoot, "node_modules", ".bin", host.os === "windows" ? windowsBin : "esbuild");
 
   const bun = findBun(host.os);
   const q = (p: string) => quote(p, host.os === "windows");
@@ -99,8 +91,7 @@ export function resolveToolchain(targetOs?: OS, packageManager: PackageManager =
 
   // cmake — required for nested dep builds.
   const cmake = findSystemTool("cmake", { required: true, hint: "Install cmake (>= 3.24)" });
-  if (cmake === undefined)
-    throw new BuildError("unreachable: findSystemTool required=true returned undefined");
+  if (cmake === undefined) throw new BuildError("unreachable: findSystemTool required=true returned undefined");
 
   // cargo — required for lolhtml. Not found → build will fail at that dep
   // with a clear "install rust" hint. We don't hard-fail here because
@@ -155,12 +146,12 @@ function configureInputs(cwd: string): string[] {
   const excluded = new Set(["ci.ts", "stream.ts", "npm-ci.ts"]);
 
   const scripts = globSync("*.ts", { cwd: buildDir })
-    .filter((f) => !excluded.has(f))
-    .map((f) => resolve(buildDir, f));
-  const deps = globSync("deps/*.ts", { cwd: buildDir }).map((f) => resolve(buildDir, f));
+    .filter(f => !excluded.has(f))
+    .map(f => resolve(buildDir, f));
+  const deps = globSync("deps/*.ts", { cwd: buildDir }).map(f => resolve(buildDir, f));
   // rust/: units.ts/emit.ts/plan.ts shape the per-crate edges and manifests at configure time (run.ts is build-time
   // only, but one glob keeps the rule simple).
-  const rust = globSync("rust/*.ts", { cwd: buildDir }).map((f) => resolve(buildDir, f));
+  const rust = globSync("rust/*.ts", { cwd: buildDir }).map(f => resolve(buildDir, f));
 
   // Versions the build uses (LLVM, Node.js, the sysroots) are written here.
   const pins = resolve(buildDir, "ci-images", "spec.ts");
@@ -206,11 +197,7 @@ export interface ConfigureInput {
  * profiles.ts. Edits to a profile therefore take effect on the next
  * `ninja` in an existing build dir without `rm -rf`.
  */
-export function emitGeneratorRule(
-  n: Ninja,
-  cfg: Config | CodegenConfig,
-  input: ConfigureInput,
-): void {
+export function emitGeneratorRule(n: Ninja, cfg: Config | CodegenConfig, input: ConfigureInput): void {
   const configFile = resolve(cfg.buildDir, "configure.json");
   const buildScript = resolve(cfg.cwd, "scripts", "build.ts");
 
@@ -486,6 +473,7 @@ async function generate<N extends string | undefined>(
   // emitBun writes configure-time files into the build dir (dep `headers`,
   // the Windows .rc); it exists before anything is emitted.
   mkdirSync(cfg.buildDir, { recursive: true });
+  mkdirSync(cfg.binaryDir, { recursive: true });
   const output = emitBun(n, cfg, sources);
   mark("emitBun");
   emitGeneratorRule(n, cfg, input);
@@ -518,10 +506,7 @@ async function generate<N extends string | undefined>(
   // (linkDepends lists it). Never clobber an existing one — that would throw
   // away the file CI just inherited.
   if (usesOrderFile(cfg) && !existsSync(orderFilePath(cfg))) {
-    writeIfChanged(
-      orderFilePath(cfg),
-      "# no order file yet — an empty file is a no-op for the linker\n",
-    );
+    writeIfChanged(orderFilePath(cfg), "# no order file yet — an empty file is a no-op for the linker\n");
   }
   mark("orderFile");
 

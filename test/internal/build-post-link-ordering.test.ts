@@ -18,7 +18,7 @@ import { join, resolve } from "node:path";
 import { binaryChecksWarnOnly, emitPostLink } from "../../scripts/build/bun.ts";
 import { shimExpectations } from "../../scripts/build/binary-expectations.ts";
 import { resolveConfig, type Config, type PartialConfig, type Toolchain } from "../../scripts/build/config.ts";
-import { Ninja } from "../../scripts/build/ninja.ts";
+import { Ninja, readManifest } from "../../scripts/build/ninja.ts";
 
 test("Windows launcher console detection keeps the freestanding binary contract", () => {
   const contract = shimExpectations();
@@ -79,6 +79,59 @@ function hostConfig(partial: PartialConfig, buildDir: string): Config {
     mockToolchain({ jsRuntime: join(buildDir, "bun") }),
   );
 }
+
+test("runtime output relocation preserves intermediate paths and debug validation stamps", () => {
+  using build = tempDir("build-binary-dir", {});
+  using output = tempDir("build-binary-output", {});
+  const original = hostConfig({ buildType: "Debug" }, String(build));
+  const cfg = hostConfig({ buildType: "Debug", binaryDir: String(output) }, String(build));
+  expect(cfg.buildDir).toBe(original.buildDir);
+  expect(cfg.codegenDir).toBe(original.codegenDir);
+  expect(cfg.cacheDir).toBe(original.cacheDir);
+  expect(original.binaryDir).toBe(original.buildDir);
+  expect({ ...cfg, binaryDir: original.binaryDir }).toEqual(original);
+  const relativeOutput = hostConfig({ buildType: "Debug", binaryDir: "build/runtime-output" }, String(build));
+  expect(relativeOutput.binaryDir).toBe(resolve(relativeOutput.cwd, "build/runtime-output"));
+  const n = new Ninja({ buildDir: cfg.buildDir });
+  const exe = join(cfg.binaryDir, "bun-debug" + cfg.exeSuffix);
+  const post = emitPostLink(n, cfg, exe, "bun-debug", [], []);
+  expect(post).toEqual({ strippedExe: undefined, dsym: undefined });
+  const graph = n.toString();
+  expect(graph).toContain(n.rel(exe));
+  const smoke = readManifest(graph).edges.filter(edge => edge.rule === "smoke_test");
+  expect(smoke.map(({ outputs, inputs }) => ({ outputs, inputs }))).toEqual([
+    { outputs: ["bun-debug.smoke-test-passed"], inputs: [n.rel(exe)] },
+  ]);
+});
+
+test("release strip stays beside its relocated runtime", () => {
+  using build = tempDir("build-binary-strip", {});
+  using output = tempDir("build-binary-strip-output", {});
+  const cfg = hostConfig({ buildType: "Release", binaryDir: String(output) }, String(build));
+  const n = new Ninja({ buildDir: cfg.buildDir });
+  const exe = join(cfg.binaryDir, "bun-profile" + cfg.exeSuffix);
+  const post = emitPostLink(n, cfg, exe, "bun-profile", [], []);
+  expect(post.strippedExe).toBe(join(cfg.binaryDir, "bun" + cfg.exeSuffix));
+  expect(n.toString()).toContain(n.rel(post.strippedExe!));
+  expect(buildEdge(n.toString(), "phony")).toBe(`build bun: phony ${n.rel(post.strippedExe!)}`);
+});
+
+test("Buildkite refuses relocating binaries outside its existing archive owner", () => {
+  using build = tempDir("build-binary-ci", {});
+  expect(() => hostConfig({ buildkite: true, binaryDir: join(String(build), "elsewhere") }, String(build))).toThrow(
+    "binaryDir relocation is not supported by Buildkite packaging",
+  );
+  const previous = process.env.BUILDKITE;
+  process.env.BUILDKITE = "true";
+  try {
+    expect(() => hostConfig({ buildkite: false, binaryDir: join(String(build), "elsewhere") }, String(build))).toThrow(
+      "binaryDir relocation is not supported by Buildkite packaging",
+    );
+  } finally {
+    if (previous === undefined) delete process.env.BUILDKITE;
+    else process.env.BUILDKITE = previous;
+  }
+});
 
 /** Find one build-edge line in the generated ninja text (continuations unwrapped). */
 /**
@@ -196,5 +249,21 @@ describe("emitPostLink ninja ordering", () => {
     expect(buildEdge(out, "phony")).toBe(
       "build check: phony bun-profile bun-profile.binary-verified bun-profile.duplicate-symbols-checked",
     );
+  });
+
+  test.skipIf(isMacOS)("darwin symbols follow relocated binaries while validation remains in the build tree", () => {
+    using build = tempDir("build-relocated-dsym", {});
+    using output = tempDir("build-relocated-dsym-output", {});
+    const cfg = resolveConfig(
+      { os: "darwin", arch: "aarch64", buildType: "Release", buildDir: String(build), binaryDir: String(output) },
+      mockToolchain(),
+    );
+    const n = new Ninja({ buildDir: cfg.buildDir });
+    const exe = join(cfg.binaryDir, "bun-profile");
+    const post = emitPostLink(n, cfg, exe, "bun-profile", [], []);
+    expect(post.dsym).toBe(join(cfg.binaryDir, "bun-profile.dSYM"));
+    expect(post.strippedExe).toBe(join(cfg.binaryDir, "bun"));
+    expect(buildEdge(n.toString(), "dsymutil")).toContain(n.rel(post.strippedExe!));
+    expect(n.toString()).toContain("bun-profile.binary-verified");
   });
 });

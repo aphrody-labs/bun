@@ -624,6 +624,7 @@ const configFlags: {
   curlNative: "boolean",
   browserCrawl: "boolean",
   browserIndex: "boolean",
+  googleSearch: "boolean",
   unifiedSources: "boolean",
   archiveDeps: "boolean",
   timeTrace: "boolean",
@@ -633,6 +634,7 @@ const configFlags: {
   localDeps: "string",
   packageManager: "string",
   buildDir: "string",
+  binaryDir: "string",
   cacheDir: "string",
   linkThreads: "number",
   androidNdk: "string",
@@ -834,7 +836,7 @@ Options:
                                   vendored dep from a local checkout),
                                   package-manager (bun|npm, installs the
                                   package.json files the build needs),
-                                  buildDir, mode (full|codegen),
+                                  buildDir, binaryDir, mode (full|codegen),
                                   unifiedSources, timeTrace, os, arch, abi,
                                   winsysroot (Windows cross-compile SDK root)
   --target=<name>         Build a specific ninja target (repeatable)

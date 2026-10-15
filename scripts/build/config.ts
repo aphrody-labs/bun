@@ -7,15 +7,7 @@
  */
 
 import { execSync } from "node:child_process";
-import {
-  existsSync,
-  mkdirSync,
-  readdirSync,
-  readFileSync,
-  realpathSync,
-  symlinkSync,
-  writeFileSync,
-} from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, symlinkSync, writeFileSync } from "node:fs";
 import { homedir, arch as hostArch, platform as hostPlatform } from "node:os";
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import { locations, pins } from "./ci-images/spec.ts";
@@ -171,6 +163,7 @@ export interface Config {
   curlNative: boolean;
   browserCrawl: boolean;
   browserIndex: boolean;
+  googleSearch: boolean;
   /** Bundle small .cpp files into unified TUs (WebKit-style). See unified.ts. */
   unifiedSources: boolean;
   /**
@@ -212,6 +205,8 @@ export interface Config {
   cwd: string;
   /** Build output directory, e.g. /path/to/bun/build/debug/. */
   buildDir: string;
+  /** Final runtime binaries; intermediate files stay in buildDir. */
+  binaryDir: string;
   /** Generated code output, e.g. buildDir/codegen/. */
   codegenDir: string;
   /**
@@ -405,6 +400,7 @@ export interface PartialConfig {
   curlNative?: boolean;
   browserCrawl?: boolean;
   browserIndex?: boolean;
+  googleSearch?: boolean;
   unifiedSources?: boolean;
   archiveDeps?: boolean;
   timeTrace?: boolean;
@@ -420,6 +416,7 @@ export interface PartialConfig {
   /** `bun` (default) or `npm`. See `Config.packageManager`. */
   packageManager?: PackageManager;
   buildDir?: string;
+  binaryDir?: string;
   cacheDir?: string;
   linkThreads?: number;
   /** Override NDK location (default: $ANDROID_NDK_ROOT etc). Only used when abi=android. */
@@ -655,8 +652,7 @@ export function detectWindowsSysroot(): string | undefined {
   // winsysroot-style mode writes "include" (winsysroot.ts adds the
   // title-case alias the LLVM toolchain needs at configure time).
   const looksValid = (p: string) =>
-    existsSync(join(p, "Windows Kits", "10", "Include")) ||
-    existsSync(join(p, "Windows Kits", "10", "include"));
+    existsSync(join(p, "Windows Kits", "10", "Include")) || existsSync(join(p, "Windows Kits", "10", "include"));
   const env = process.env.WINDOWS_SYSROOT;
   if (env && looksValid(env)) return env;
   for (const p of [locations.windowsSysroot, "/opt/xwin"]) {
@@ -736,10 +732,7 @@ function linkNdkRuntimesIntoClang(cc: string, ndk: string, host: Host, triple: s
   // the flat dir but libunwind in the per-arch subdir.
   const flatDir = join(resourceDir, "lib", "linux");
   const links = {
-    [join(targetDir, "libclang_rt.builtins.a")]: join(
-      ndkRtLinux,
-      `libclang_rt.builtins-${arch}-android.a`,
-    ),
+    [join(targetDir, "libclang_rt.builtins.a")]: join(ndkRtLinux, `libclang_rt.builtins-${arch}-android.a`),
     [join(targetDir, "libunwind.a")]: join(ndkRtLinux, arch, "libunwind.a"),
     [join(flatDir, `libclang_rt.builtins-${arch}-android.a`)]: join(
       ndkRtLinux,
@@ -747,7 +740,7 @@ function linkNdkRuntimesIntoClang(cc: string, ndk: string, host: Host, triple: s
     ),
     [join(flatDir, arch, "libunwind.a")]: join(ndkRtLinux, arch, "libunwind.a"),
   };
-  if (Object.keys(links).every((dst) => existsSync(dst))) return;
+  if (Object.keys(links).every(dst => existsSync(dst))) return;
   try {
     mkdirSync(targetDir, { recursive: true });
     mkdirSync(join(flatDir, arch), { recursive: true });
@@ -783,9 +776,7 @@ function linkNdkRuntimesIntoClang(cc: string, ndk: string, host: Host, triple: s
  */
 export function sharedCacheDir(cwd: string): string {
   if (process.env.BUN_BUILD_CACHE_DIR) return resolve(cwd, process.env.BUN_BUILD_CACHE_DIR);
-  const bunInstall = process.env.BUN_INSTALL
-    ? resolve(cwd, process.env.BUN_INSTALL)
-    : join(homedir(), ".bun");
+  const bunInstall = process.env.BUN_INSTALL ? resolve(cwd, process.env.BUN_INSTALL) : join(homedir(), ".bun");
   return resolve(bunInstall, "build-cache");
 }
 
@@ -809,8 +800,7 @@ function resolveBase(partial: PartialConfig, host: Host, os: OS, arch: Arch, js:
   // ─── Build type ───
   const buildType = partial.buildType ?? "Debug";
   const debug = buildType === "Debug";
-  const release =
-    buildType === "Release" || buildType === "RelWithDebInfo" || buildType === "MinSizeRel";
+  const release = buildType === "Release" || buildType === "RelWithDebInfo" || buildType === "MinSizeRel";
 
   // ─── Environment ───
   // Explicit (not auto-detected from env) — matches CMake's optionx(CI DEFAULT OFF).
@@ -834,11 +824,7 @@ function resolveBase(partial: PartialConfig, host: Host, os: OS, arch: Arch, js:
   // Windows cross: force off. The host clang doesn't ship the windows
   // clang_rt.asan runtime libs, so the link would fail.
   const asan =
-    abi === "android" ||
-    abi === "musl" ||
-    freebsd ||
-    darwinCross ||
-    (windows && host.os !== "windows")
+    abi === "android" || abi === "musl" || freebsd || darwinCross || (windows && host.os !== "windows")
       ? false
       : (partial.asan ?? asanDefault);
 
@@ -867,6 +853,11 @@ function resolveBase(partial: PartialConfig, host: Host, os: OS, arch: Arch, js:
         ? partial.buildDir
         : resolve(cwd, partial.buildDir)
       : resolve(cwd, "build", defaultBuildDirName);
+  const binaryDir = partial.binaryDir === undefined ? buildDir : resolve(cwd, partial.binaryDir);
+  assert(
+    (!buildkite && process.env.BUILDKITE !== "true") || binaryDir === buildDir,
+    "binaryDir relocation is not supported by Buildkite packaging",
+  );
   const codegenDir = resolve(buildDir, "codegen");
   const typesDir = resolve(cwd, "build", "types");
   // Local builds share one cache across checkouts and profiles so
@@ -886,22 +877,16 @@ function resolveBase(partial: PartialConfig, host: Host, os: OS, arch: Arch, js:
   if (packageManager !== "bun" && packageManager !== "npm") {
     throw new BuildError(`Unknown packageManager: ${packageManager}`, { hint: "Use bun or npm" });
   }
-  assert(
-    packageManager === "bun" || js.npm !== undefined,
-    "packageManager=npm needs toolchain.npm",
-  );
+  assert(packageManager === "bun" || js.npm !== undefined, "packageManager=npm needs toolchain.npm");
 
   // ─── What build_options.rs is generated from (buildOptionsRs.ts) ───
   const canary = partial.canary ?? true;
   const canaryRevision = canary ? "1" : "0";
   const versionTag = partial.versionTag ?? "";
   if (versionTag !== "" && !/^[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*$/.test(versionTag)) {
-    throw new BuildError(
-      `--version-tag must be semver prerelease identifiers, got ${JSON.stringify(versionTag)}`,
-      {
-        hint: "e.g. --version-tag=aphrody.2",
-      },
-    );
+    throw new BuildError(`--version-tag must be semver prerelease identifiers, got ${JSON.stringify(versionTag)}`, {
+      hint: "e.g. --version-tag=aphrody.2",
+    });
   }
   const fuzzilli = partial.fuzzilli ?? false;
   const pkgJsonPath = resolve(cwd, "package.json");
@@ -938,6 +923,7 @@ function resolveBase(partial: PartialConfig, host: Host, os: OS, arch: Arch, js:
     assertions,
     cwd,
     buildDir,
+    binaryDir,
     codegenDir,
     typesDir,
     cacheDir,
@@ -958,6 +944,7 @@ export type CodegenFields = Pick<
   | "debug"
   | "cwd"
   | "buildDir"
+  | "binaryDir"
   | "codegenDir"
   | "typesDir"
   | "cacheDir"
@@ -976,10 +963,7 @@ export type CodegenFields = Pick<
 /** What `mode: "codegen"` resolves: {@link CodegenFields}, with none of the native tools looked for. */
 export type CodegenConfig = CodegenFields & { mode: "codegen" };
 
-export function resolveCodegenConfig(
-  partial: PartialConfig,
-  toolchain: JsToolchain,
-): CodegenConfig {
+export function resolveCodegenConfig(partial: PartialConfig, toolchain: JsToolchain): CodegenConfig {
   const host = detectHost();
   const os = partial.os ?? host.os;
   const arch = partial.arch ?? host.arch;
@@ -1000,10 +984,7 @@ export function resolveCodegenConfig(
 }
 
 export function resolveConfig(partial: PartialConfig, toolchain: Toolchain): Config {
-  assert(
-    partial.mode !== "codegen",
-    "mode=codegen resolves a CodegenConfig: resolveCodegenConfig()",
-  );
+  assert(partial.mode !== "codegen", "mode=codegen resolves a CodegenConfig: resolveCodegenConfig()");
   const linkThreads = partial.linkThreads;
   if (linkThreads !== undefined && (!Number.isSafeInteger(linkThreads) || linkThreads <= 0)) {
     throw new BuildError("linkThreads must be a positive integer");
@@ -1017,8 +998,7 @@ export function resolveConfig(partial: PartialConfig, toolchain: Toolchain): Con
   // in project() to set CMAKE_SYSTEM_PROCESSOR. The found clang's default
   // target is what we actually build for. Cross-compiles from a unix host
   // skip this (the host clang-cl's default arch is just the host's).
-  const compilerArch =
-    os === "windows" && host.os === "windows" ? clangTargetArch(toolchain.cc) : undefined;
+  const compilerArch = os === "windows" && host.os === "windows" ? clangTargetArch(toolchain.cc) : undefined;
   const arch = partial.arch ?? compilerArch ?? host.arch;
   const {
     abi,
@@ -1036,6 +1016,7 @@ export function resolveConfig(partial: PartialConfig, toolchain: Toolchain): Con
     assertions,
     cwd,
     buildDir,
+    binaryDir,
     codegenDir,
     typesDir,
     cacheDir,
@@ -1136,9 +1117,7 @@ export function resolveConfig(partial: PartialConfig, toolchain: Toolchain): Con
   let aphrodyLibc: string | undefined;
   if (aphrodyLibcArg !== undefined && aphrodyLibcArg !== "" && aphrodyLibcArg !== "off") {
     if (!linux || abi !== "musl") {
-      throw new BuildError(
-        `--aphrody-libc only applies to linux-musl builds (target abi: ${abi ?? "none"})`,
-      );
+      throw new BuildError(`--aphrody-libc only applies to linux-musl builds (target abi: ${abi ?? "none"})`);
     }
     aphrodyLibc = isAbsolute(aphrodyLibcArg) ? aphrodyLibcArg : resolve(cwd, aphrodyLibcArg);
     if (!existsSync(aphrodyLibc)) {
@@ -1163,16 +1142,10 @@ export function resolveConfig(partial: PartialConfig, toolchain: Toolchain): Con
   const vendorDir = resolve(cwd, "vendor");
 
   // ─── Validation ───
-  assert(
-    !baseline || x64,
-    "baseline=true requires arch=x64 (baseline disables AVX which is x64-only)",
-  );
+  assert(!baseline || x64, "baseline=true requires arch=x64 (baseline disables AVX which is x64-only)");
   assert(!valgrind || linux, "valgrind=true requires os=linux");
   assert(!(asan && valgrind), "Cannot enable both asan and valgrind simultaneously");
-  assert(
-    os !== "linux" || abi !== undefined,
-    "Linux builds require an abi (gnu, musl, or android)",
-  );
+  assert(os !== "linux" || abi !== undefined, "Linux builds require an abi (gnu, musl, or android)");
 
   // ─── Cross-compilation (Android) ───
   // We keep using the host's clang (same version everywhere) and pass
@@ -1259,12 +1232,9 @@ export function resolveConfig(partial: PartialConfig, toolchain: Toolchain): Con
         crossTarget = `${llvmArch}-alpine-linux-musl`;
         if (sysroot === undefined) {
           const p = locations.muslSysroot[arch];
-          throw new BuildError(
-            `--os=linux --arch=${arch} --abi=musl requires a musl sysroot when cross-compiling`,
-            {
-              hint: `Set LINUX_MUSL_SYSROOT or provision ${p} (see the muslSysroot tool of scripts/build/ci-images/spec.ts).`,
-            },
-          );
+          throw new BuildError(`--os=linux --arch=${arch} --abi=musl requires a musl sysroot when cross-compiling`, {
+            hint: `Set LINUX_MUSL_SYSROOT or provision ${p} (see the muslSysroot tool of scripts/build/ci-images/spec.ts).`,
+          });
         }
       }
     } else {
@@ -1278,12 +1248,9 @@ export function resolveConfig(partial: PartialConfig, toolchain: Toolchain): Con
         crossTarget = `${llvmArch}-linux-gnu`;
         if (sysroot === undefined) {
           const p = locations.glibcSysroot[arch];
-          throw new BuildError(
-            `--os=linux --arch=${arch} --abi=gnu cross-compile requires a glibc sysroot`,
-            {
-              hint: `Set LINUX_GLIBC_SYSROOT or provision ${p} (see the glibcSysroot tool of scripts/build/ci-images/spec.ts).`,
-            },
-          );
+          throw new BuildError(`--os=linux --arch=${arch} --abi=gnu cross-compile requires a glibc sysroot`, {
+            hint: `Set LINUX_GLIBC_SYSROOT or provision ${p} (see the glibcSysroot tool of scripts/build/ci-images/spec.ts).`,
+          });
         }
       }
     }
@@ -1312,24 +1279,18 @@ export function resolveConfig(partial: PartialConfig, toolchain: Toolchain): Con
         // provisioning.
         winsysroot = resolve(cacheDir, "winsysroot");
       } else {
-        throw new BuildError(
-          "--os=windows requires a Windows sysroot (MSVC CRT + Windows SDK) when cross-compiling",
-          {
-            hint:
-              "Set WINDOWS_SYSROOT or pass --winsysroot=<path>. Create one with xwin (https://github.com/Jake-Shadle/xwin):\n" +
-              "  cargo install xwin  (or download a release binary)\n" +
-              `  xwin --accept-license --arch x86_64,aarch64 --sdk-version ${pins.windowsSysroot.sdk} --crt-version ${pins.windowsSysroot.crt} splat --use-winsysroot-style --preserve-ms-arch-notation --include-debug-libs --output ${locations.windowsSysroot}`,
-          },
-        );
+        throw new BuildError("--os=windows requires a Windows sysroot (MSVC CRT + Windows SDK) when cross-compiling", {
+          hint:
+            "Set WINDOWS_SYSROOT or pass --winsysroot=<path>. Create one with xwin (https://github.com/Jake-Shadle/xwin):\n" +
+            "  cargo install xwin  (or download a release binary)\n" +
+            `  xwin --accept-license --arch x86_64,aarch64 --sdk-version ${pins.windowsSysroot.sdk} --crt-version ${pins.windowsSysroot.crt} splat --use-winsysroot-style --preserve-ms-arch-notation --include-debug-libs --output ${locations.windowsSysroot}`,
+        });
       }
     }
     if (partial.webkit === "local") {
-      throw new BuildError(
-        "Cross-compiling for Windows requires the prebuilt WebKit (webkit=local needs msbuild)",
-        {
-          hint: "Drop --webkit=local or build on a Windows host.",
-        },
-      );
+      throw new BuildError("Cross-compiling for Windows requires the prebuilt WebKit (webkit=local needs msbuild)", {
+        hint: "Drop --webkit=local or build on a Windows host.",
+      });
     }
     const llvmArch = arch === "x64" ? "x86_64" : "aarch64";
     crossTarget = `${llvmArch}-pc-windows-msvc`;
@@ -1351,8 +1312,7 @@ export function resolveConfig(partial: PartialConfig, toolchain: Toolchain): Con
   let osxSysroot: string | undefined;
   if (darwin && host.os === "darwin") {
     ({ osxDeploymentTarget, osxSysroot } = detectMacosSdk(ci));
-    if (partial.osxDeploymentTarget !== undefined)
-      osxDeploymentTarget = partial.osxDeploymentTarget;
+    if (partial.osxDeploymentTarget !== undefined) osxDeploymentTarget = partial.osxDeploymentTarget;
   }
 
   // ─── Cross-compilation (macOS from a non-darwin host) ───
@@ -1372,12 +1332,9 @@ export function resolveConfig(partial: PartialConfig, toolchain: Toolchain): Con
       });
     }
     if (toolchain.llvmStrip === undefined) {
-      throw new BuildError(
-        "Cross-compiling for macOS requires llvm-strip (GNU strip can't read Mach-O)",
-        {
-          hint: "Install llvm for the same version as clang: apt install llvm-23 (or equivalent).",
-        },
-      );
+      throw new BuildError("Cross-compiling for macOS requires llvm-strip (GNU strip can't read Mach-O)", {
+        hint: "Install llvm for the same version as clang: apt install llvm-23 (or equivalent).",
+      });
     }
     if (toolchain.clangResourceDir === undefined) {
       throw new BuildError("Cross-compiling for macOS requires clang's resource directory", {
@@ -1408,8 +1365,7 @@ export function resolveConfig(partial: PartialConfig, toolchain: Toolchain): Con
     x64,
     arm64,
     host,
-    canRunOnHost:
-      os === host.os && arch === host.arch && (!linux || abi === (detectLinuxAbi() ?? abi)),
+    canRunOnHost: os === host.os && arch === host.arch && (!linux || abi === (detectLinuxAbi() ?? abi)),
     exeSuffix,
     objSuffix,
     libPrefix,
@@ -1441,6 +1397,7 @@ export function resolveConfig(partial: PartialConfig, toolchain: Toolchain): Con
     curlNative: partial.curlNative ?? false,
     browserCrawl: partial.browserCrawl ?? false,
     browserIndex: partial.browserIndex ?? false,
+    googleSearch: partial.googleSearch ?? false,
     unifiedSources: partial.unifiedSources ?? true,
     archiveDeps: (partial.curlNative ?? false) || (partial.archiveDeps ?? false),
     timeTrace: partial.timeTrace ?? false,
@@ -1451,6 +1408,7 @@ export function resolveConfig(partial: PartialConfig, toolchain: Toolchain): Con
     packageManager,
     cwd,
     buildDir,
+    binaryDir,
     codegenDir,
     typesDir,
     cacheDir,
@@ -1541,9 +1499,7 @@ function detectMacosSdk(ci: boolean): { osxDeploymentTarget: string; osxSysroot:
   // environment discovery.
   let devDir: string;
   try {
-    devDir = (
-      process.env.DEVELOPER_DIR ?? execSync("xcode-select -p", { encoding: "utf8" })
-    ).trim();
+    devDir = (process.env.DEVELOPER_DIR ?? execSync("xcode-select -p", { encoding: "utf8" })).trim();
   } catch (cause) {
     throw new BuildError("xcode-select failed — command line tools not installed?", {
       hint: "Run: xcode-select --install",
@@ -1560,10 +1516,7 @@ function detectMacosSdk(ci: boolean): { osxDeploymentTarget: string; osxSysroot:
   // what ends up in build.ninja — so swapping SDKs doesn't cause a
   // spurious full rebuild). But follow the link to PARSE the version
   // from the real basename (e.g. MacOSX14.2.sdk → "14").
-  const candidates = [
-    `${devDir}/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk`,
-    `${devDir}/SDKs/MacOSX.sdk`,
-  ];
+  const candidates = [`${devDir}/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk`, `${devDir}/SDKs/MacOSX.sdk`];
 
   let osxSysroot: string | undefined;
   let sdkVersionFromPath: string | undefined;
@@ -1754,12 +1707,7 @@ function getGitRevision(cwd: string, pinDir: string | undefined): string {
  * Compute build directory name based on config.
  * Matches the pattern used by package.json scripts.
  */
-function computeBuildDirName(c: {
-  debug: boolean;
-  release: boolean;
-  asan: boolean;
-  assertions: boolean;
-}): string {
+function computeBuildDirName(c: { debug: boolean; release: boolean; asan: boolean; assertions: boolean }): string {
   if (c.debug) return "debug";
   if (c.asan) return "release-asan";
   if (c.assertions) return "release-assertions";
@@ -1835,6 +1783,7 @@ export function formatConfig(cfg: Config, exe: string): string {
   if (cfg.curlNative) features.push("curl-native");
   if (cfg.browserCrawl) features.push("browser-crawl");
   if (cfg.browserIndex) features.push("browser-index");
+  if (cfg.googleSearch) features.push("google-search");
   if (!cfg.canary) features.push("canary:off");
   if (cfg.versionTag) features.push(`version-tag:${cfg.versionTag}`);
   // Non-default modes — show so you notice when a build is unusual.
@@ -1850,11 +1799,8 @@ export function formatConfig(cfg: Config, exe: string): string {
       : cfg.webkitVersion;
     features.push(`webkit-version:${/^[0-9a-f]{40}$/.test(v) ? v.slice(0, 10) : v}`);
   }
-  if (cfg.nodejsVersion !== versionDefaults.nodejsVersion)
-    features.push(`nodejs:${cfg.nodejsVersion}`);
-  lines.push(
-    `  ${label("features")} ${features.length > 0 ? c.cyan(features.join(", ")) : c.dim("(none)")}`,
-  );
+  if (cfg.nodejsVersion !== versionDefaults.nodejsVersion) features.push(`nodejs:${cfg.nodejsVersion}`);
+  lines.push(`  ${label("features")} ${features.length > 0 ? c.cyan(features.join(", ")) : c.dim("(none)")}`);
   return lines.join("\n");
 }
 
