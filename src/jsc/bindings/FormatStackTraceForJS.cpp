@@ -369,6 +369,9 @@ WTF::String formatStackTrace(
     // re-derived from `frame`; only the remap output is read from pass 1.
     for (size_t i = 0; i < framesCount; i++) {
         StackFrame& frame = stackTrace.at(i);
+        // Private host functions (N-API callbacks) are left out, as in V8.
+        if (!frame.codeBlock() && Zig::isImplementationVisibilityPrivate(frame))
+            continue;
         ZigStackFrame& remappedFrame = remappedFrames[i];
         unsigned int flags = static_cast<unsigned int>(FunctionNameFlags::AddNewKeyword);
 
