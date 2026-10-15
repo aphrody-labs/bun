@@ -23,6 +23,37 @@ function request(body: unknown, origin?: string) {
   });
 }
 
+test("disabled inference does not require private provider secrets for public MCP deployment", async () => {
+  const config = await Bun.file(new URL("../wrangler.jsonc", import.meta.url)).text();
+  expect(config).toContain('"YOLO_ENABLED": "false"');
+  const required = JSON.parse(
+    /"secrets":\s*\{\s*"required":\s*(\[[^\]]*\])/.exec(config.replace(/\/\/[^\n]*/g, ""))![1]!,
+  );
+  expect(required).toEqual(["APP_SECRET", "NEON_DATABASE_URL", "TYPESAFE_API_KEY"]);
+  const missingCredentials = Object.defineProperties(
+    {},
+    Object.getOwnPropertyDescriptors(environment),
+  ) as typeof environment;
+  Reflect.deleteProperty(missingCredentials, "YOLO_API_TOKEN");
+  Reflect.deleteProperty(missingCredentials, "YOLO_ORIGIN_TOKEN");
+  const context: YoloAPIContext = {
+    authorized: async () => {
+      throw new Error("Public reads must not require private credentials");
+    },
+    originFetch: async () => {
+      throw new Error("Public reads must not invoke a native origin");
+    },
+    siteRead: async () => Response.json({ source }),
+  };
+  const response = await yoloAPI(request({ jsonrpc: "2.0", id: 1, method: "tools/list" }), missingCredentials, context);
+  expect(response?.status).toBe(200);
+  const listed = JSON.parse(await response!.text());
+  expect(listed.result.tools).toHaveLength(4);
+  expect(
+    listed.result.tools.every((tool: { annotations: { readOnlyHint: boolean } }) => tool.annotations.readOnlyHint),
+  ).toBe(true);
+});
+
 test("public MCP exposes only source reads with inference disabled and no private authorization", async () => {
   let reads = 0;
   const context: YoloAPIContext = {

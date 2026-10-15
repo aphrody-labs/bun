@@ -69,7 +69,8 @@
     "YOLO_MODEL": "clef-flash",
   },
   "secrets": {
-    "required": ["APP_SECRET", "NEON_DATABASE_URL", "TYPESAFE_API_KEY", "YOLO_API_TOKEN", "YOLO_ORIGIN_TOKEN"],
+    // Inference credentials are checked by the enabled provider; public source reads do not use them.
+    "required": ["APP_SECRET", "NEON_DATABASE_URL", "TYPESAFE_API_KEY"],
   },
   "r2_buckets": [{ "binding": "APHRODY", "bucket_name": "aphrody-assets" }],
   "d1_databases": [{ "binding": "DB", "database_name": "aphrody-app", "migrations_dir": "migrations" }],
