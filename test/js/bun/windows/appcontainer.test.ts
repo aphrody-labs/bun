@@ -339,7 +339,10 @@ main().then(
       // AppContainer children to the package's AC\Temp.
       expect(r.tempRewritten).toBe(true);
       expect(r.spawnPiped).toBe(true);
-      expect(r.realpath).toEqual({ sync: "EPERM", native: "EPERM" });
+      // realpath.native is uv_fs_realpath, as in Node: GetFinalPathNameByHandleW(VOLUME_NAME_DOS)
+      // is denied to lowboxed tokens on earlier Windows builds and allowed on build 28000.
+      expect(r.realpath.sync).toBe("EPERM");
+      expect(r.realpath.native).toBeOneOf(["EPERM", "OK"]);
       // Namespace denial vs name collision both surface as ERROR_ACCESS_DENIED;
       // stock uv_pipe_bind2 maps that to EADDRINUSE. Tighten to EACCES once
       // the disambiguation probe lands on the libuv side.
