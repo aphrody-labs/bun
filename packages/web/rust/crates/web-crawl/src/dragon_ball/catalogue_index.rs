@@ -43,6 +43,13 @@ pub(super) fn read_catalogue(
         "schema": schema,
         "revision": value.get("revision"),
         "observedAt": value.get("observedAt").or_else(|| value.get("releve_le")),
+        "scope": value.get("scope"),
+        "totals": value.get("totals"),
+        "assetAvailabilityVerified": value.get("assetAvailabilityVerified"),
+        "fullEditionPaginationVerified": value.get("fullEditionPaginationVerified"),
+        "complete": value.get("complete"),
+        "previewVolumeIds": value.get("previewVolumeIds"),
+        "missingOrPartialReaderVolumeIds": value.get("missingOrPartialReaderVolumeIds"),
         "assetInventorySha256": value.get("assetInventorySha256"),
         "inventorySha256": value.get("inventorySha256"),
         "notice": value.get("avertissement"),
@@ -115,6 +122,9 @@ pub(super) fn read_catalogue(
                 "planches",
                 "volume_id",
                 "page_count",
+                "listedPages",
+                "hasListedPages",
+                "readerExtent",
                 "cover",
                 "couverture",
                 "previewPages",
@@ -367,6 +377,40 @@ mod tests {
         let records = fixture(serde_json::json!({"collections":[{"slug":"original","url":"https://comic.dragonballcn.com/books","ouvrages":[{"did":"1","libelle":"Dragon Ball 1","isbn":"123","planches":192}]}]})).unwrap();
         assert!(records.values().next().unwrap().contains("192"));
         assert_eq!(fixture(serde_json::json!([{"series":"dragonz","episodeNumber":1,"title":"Gohan","synopsis":"Saiyan arrival"}])).unwrap().len(), 1);
+    }
+    #[test]
+    fn manga_coverage_keeps_reader_extent_page_counts_and_incomplete_pagination_evidence() {
+        let records = fixture(serde_json::json!({
+            "scope": "visible-catalogue-and-declared-page-references",
+            "assetAvailabilityVerified": false,
+            "fullEditionPaginationVerified": false,
+            "complete": false,
+            "totals": {"volumes": 329, "volumesWithListedPages": 222, "listedPages": 53304},
+            "previewVolumeIds": [147, 620, 619],
+            "missingOrPartialReaderVolumeIds": [147, 620, 619, 740],
+            "volumes": [{
+                "id": 147,
+                "series": "DBS",
+                "number": 24,
+                "chapters": 1,
+                "listedPages": 32,
+                "hasListedPages": true,
+                "readerExtent": "preview",
+                "url": "https://dragonballfr.com/api/manga/volume/147"
+            }]
+        })).unwrap();
+        let text = records.values().cloned().collect::<String>();
+        for term in [
+            "fullEditionPaginationVerified",
+            "\"complete\":false",
+            "\"listedPages\": 32",
+            "\"hasListedPages\": true",
+            "\"readerExtent\": \"preview\"",
+            "\"volumesWithListedPages\":222",
+            "\"missingOrPartialReaderVolumeIds\":[147,620,619,740]",
+        ] {
+            assert!(text.contains(term), "{term}");
+        }
     }
     #[test]
     fn invalid_schemas_urls_and_conflicting_ids_fail() {
