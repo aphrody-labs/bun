@@ -1,5 +1,18 @@
 # @aphrody/bun-runtime-sdk
 
+## Bun-native typed decisions
+
+`@aphrody/bun-runtime-sdk/yolo` reexports the default and named exports of
+`bun:yolo`. It requires a Bun runtime that provides that built-in module; it
+adds no inference, transport, validation or compatibility fallback. Keep the
+import on the server and pass an application-owned provider. Installing this
+package does not add the native module to an older runtime.
+
+The package also includes `python/ctypes/bun_yolo.py`, its sibling
+`yolo_runtime.py` and the private `yolo_worker.ts`. Running that bridge requires
+a separately verified ABI 1.6 runtime artifact and a Bun executable qualified
+for `bun:yolo`; package availability alone does not qualify native inference.
+
 ## Eight native targets and libc identity
 
 `targetFor(platform, arch, abi)` maps the release matrix without loading a native

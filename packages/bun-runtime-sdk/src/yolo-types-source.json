@@ -1,0 +1,6 @@
+{
+  "schema": "bun-runtime-sdk-yolo-types/v1",
+  "source": "packages/bun-types/yolo.d.ts",
+  "sourceSha256": "1201bd1851acb43103b517dec1d4199dc702e1394416ab16d4e8331db984ea98",
+  "declarationSha256": "e13720af6420aa9b99777acc35518953de6b0c723c59cc5c537758b75fbca1f6"
+}

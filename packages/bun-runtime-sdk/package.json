@@ -1,6 +1,6 @@
 {
   "name": "@aphrody/bun-runtime-sdk",
-  "version": "1.4.6",
+  "version": "1.4.10",
   "description": "SDK of the buv native runtime: versioned buv C ABI with compatible yolo exports and Bun, .NET and Python bindings",
   "license": "MIT AND Apache-2.0",
   "repository": {
@@ -14,7 +14,10 @@
     "runtime.d.ts",
     "docs/core-native-source-receipt.json",
     "README.md",
-    "LICENSE-APACHE"
+    "LICENSE-APACHE",
+    "python/ctypes/bun_yolo.py",
+    "python/ctypes/yolo_runtime.py",
+    "python/ctypes/yolo_worker.ts"
   ],
   "type": "module",
   "main": "./src/index.ts",
@@ -39,7 +42,11 @@
     "./python": "./src/python.ts",
     "./dotnet": "./src/dotnet.ts",
     "./desktop-artifact": "./src/desktop-artifact.ts",
-    "./src/*": "./src/*"
+    "./src/*": "./src/*",
+    "./yolo": {
+      "types": "./src/yolo-types.d.ts",
+      "default": "./src/yolo.ts"
+    }
   },
   "publishConfig": {
     "access": "public"
@@ -51,7 +58,8 @@
     "test:dotnet": "dotnet test dotnet/YoloRuntime.slnx",
     "typecheck": "bun check -p tsconfig.json --noEmit",
     "stage": "bun scripts/stage.ts",
-    "test:python": "YOLO_RUNTIME_HOME=target/artifact uv run --no-project --with pytest pytest python/ctypes"
+    "test:python": "YOLO_RUNTIME_HOME=target/artifact uv run --no-project --with pytest pytest python/ctypes",
+    "prepack": "bun scripts/generate-yolo-types.ts"
   },
   "dependencies": {},
   "engines": {
