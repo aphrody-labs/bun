@@ -319,7 +319,7 @@ function derivedSkills(root: string, fiches: Fiche[], repo: Skill[]): Skill[] {
     const owner = DERIVED_SKILLS.find(d => d.fiches.some(r => r.test(f.name)))!;
     groups.get(owner.name)!.push(f);
   }
-  const claude = maybe(join(root, "AGENTS.md")) ?? text(join(root, "CLAUDE.md"));
+  const claude = sanitizeText(maybe(join(root, "AGENTS.md")) ?? text(join(root, "CLAUDE.md")), { drop: false });
   const rules = agentRules(root);
   const out: Skill[] = [];
   const make = (name: string, description: string, body: string[], extra: [string, string][] = []) => {
