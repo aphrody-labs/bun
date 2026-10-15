@@ -470,9 +470,10 @@ export function nativeRuntimeRegressionPlan(runtime: string) {
 export function nativeRuntimeArtifactPlan(buildDir: string, targetName: string, component: "runtime" | "media") {
   const target = mediaReleaseTarget(targetName);
   const stripped = component === "runtime" && (target.os === "windows" || target.abi === "gnu");
+  const executable = (stripped ? "bun" : "bun-profile") + (target.os === "windows" ? ".exe" : "");
   return {
-    buildTarget: stripped ? "bun" : "bun-profile",
-    executable: join(buildDir, (stripped ? "bun" : "bun-profile") + (target.os === "windows" ? ".exe" : "")),
+    buildTarget: executable,
+    executable: join(buildDir, executable),
     profile: join(buildDir, "bun-profile" + (target.os === "windows" ? ".exe" : "")),
     profileSpec: join(buildDir, "bun-profile.verify.json"),
     strippedELF: stripped && target.os === "linux",

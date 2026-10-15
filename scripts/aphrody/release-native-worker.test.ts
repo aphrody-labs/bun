@@ -37,11 +37,42 @@ test("runtime component qualifies the canonical stripped subject while full medi
   expect(media.executable).toBe(media.profile);
   expect(media.strippedELF).toBe(false);
   const windows = nativeRuntimeArtifactPlan(directory, "windows-x64", "runtime");
-  expect(windows.buildTarget).toBe("bun");
+  expect(windows.buildTarget).toBe("bun.exe");
   expect(windows.executable).toBe(join(directory, "bun.exe"));
   expect(windows.profileSpec).toBe(join(directory, "bun-profile.verify.json"));
   expect(windows.strippedELF).toBe(false);
 });
+
+test.each(["windows-x64", "windows-aarch64"])(
+  "%s core and runtime request their actual Ninja executable outputs",
+  target => {
+    const directory = resolve("build/release");
+    for (const component of ["media", "runtime"] as const) {
+      const plan = nativeRuntimeArtifactPlan(directory, target, component);
+      const executable = component === "runtime" ? "bun.exe" : "bun-profile.exe";
+      expect(plan.buildTarget).toBe(executable);
+      expect(plan.executable).toBe(join(directory, plan.buildTarget));
+      expect(plan.profile).toBe(join(directory, "bun-profile.exe"));
+      expect(plan.profileSpec).toBe(join(directory, "bun-profile.verify.json"));
+      expect(plan.strippedELF).toBe(false);
+    }
+  },
+);
+
+test.each(["linux-x64", "linux-aarch64", "linux-x64-musl", "linux-aarch64-musl"])(
+  "%s keeps its existing profile and stripped Ninja outputs",
+  target => {
+    const directory = resolve("build/release");
+    for (const component of ["media", "runtime"] as const) {
+      const stripped = component === "runtime" && !target.endsWith("-musl");
+      const plan = nativeRuntimeArtifactPlan(directory, target, component);
+      expect(plan.buildTarget).toBe(stripped ? "bun" : "bun-profile");
+      expect(plan.executable).toBe(join(directory, plan.buildTarget));
+      expect(plan.profile).toBe(join(directory, "bun-profile"));
+      expect(plan.strippedELF).toBe(stripped);
+    }
+  },
+);
 
 test("native capacity rejects small hosted machines instead of qualifying from their labels", () => {
   const GiB = 1024 ** 3;
