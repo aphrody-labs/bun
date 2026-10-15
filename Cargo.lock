@@ -1439,7 +1439,7 @@ dependencies = [
  "const_format",
  "enum-map",
  "enumset",
- "strum 0.26.3",
+ "strum 0.28.0",
  "thiserror 2.0.21",
 ]
 
@@ -1459,7 +1459,7 @@ dependencies = [
  "bun_core",
  "bun_simdutf_sys",
  "bun_wyhash",
- "strum 0.26.3",
+ "strum 0.28.0",
  "thiserror 2.0.21",
 ]
 
@@ -1826,7 +1826,7 @@ dependencies = [
  "enum-map",
  "lol_html",
  "scopeguard",
- "strum 0.26.3",
+ "strum 0.28.0",
  "thiserror 2.0.21",
 ]
 
@@ -1877,7 +1877,7 @@ dependencies = [
  "bun_libuv_sys",
  "bun_opaque",
  "libc",
- "strum 0.26.3",
+ "strum 0.28.0",
 ]
 
 [[package]]
@@ -1887,7 +1887,7 @@ dependencies = [
  "bstr",
  "bun_clap_macros",
  "bun_core",
- "strum 0.26.3",
+ "strum 0.28.0",
  "thiserror 2.0.21",
 ]
 
@@ -1937,7 +1937,7 @@ dependencies = [
  "const_format",
  "itoa",
  "libc",
- "strum 0.26.3",
+ "strum 0.28.0",
  "thiserror 2.0.21",
 ]
 
@@ -2079,7 +2079,7 @@ dependencies = [
  "bun_boringssl_sys",
  "bun_core",
  "bun_sha_hmac",
- "strum 0.26.3",
+ "strum 0.28.0",
 ]
 
 [[package]]
@@ -2099,7 +2099,7 @@ dependencies = [
  "bun_ptr",
  "bun_wyhash",
  "scopeguard",
- "strum 0.26.3",
+ "strum 0.28.0",
  "thiserror 2.0.21",
 ]
 
@@ -2156,7 +2156,7 @@ dependencies = [
  "bun_windows_sys",
  "bun_wyhash",
  "libc",
- "strum 0.26.3",
+ "strum 0.28.0",
 ]
 
 [[package]]
@@ -3106,7 +3106,7 @@ dependencies = [
  "bun_libuv_sys",
  "bun_windows_sys",
  "enum-map",
- "strum 0.26.3",
+ "strum 0.28.0",
 ]
 
 [[package]]
@@ -3145,7 +3145,7 @@ dependencies = [
  "bun_sys",
  "bun_threading",
  "bun_uws",
- "strum 0.26.3",
+ "strum 0.28.0",
 ]
 
 [[package]]
@@ -3157,7 +3157,7 @@ dependencies = [
  "bun_sha_hmac",
  "bun_sys",
  "bytemuck",
- "strum 0.26.3",
+ "strum 0.28.0",
  "thiserror 2.0.21",
 ]
 
@@ -3391,7 +3391,7 @@ dependencies = [
  "bun_core",
  "bun_paths",
  "bun_sys",
- "strum 0.26.3",
+ "strum 0.28.0",
 ]
 
 [[package]]
@@ -3482,7 +3482,7 @@ dependencies = [
  "bun_zlib",
  "bun_zstd",
  "scopeguard",
- "strum 0.26.3",
+ "strum 0.28.0",
  "thiserror 2.0.21",
 ]
 
@@ -3510,7 +3510,7 @@ dependencies = [
  "bun_uws",
  "bun_uws_sys",
  "bun_zlib",
- "strum 0.26.3",
+ "strum 0.28.0",
  "thiserror 2.0.21",
 ]
 
@@ -3525,7 +3525,7 @@ dependencies = [
  "bun_url",
  "bytemuck",
  "enumset",
- "strum 0.26.3",
+ "strum 0.28.0",
 ]
 
 [[package]]
@@ -3544,7 +3544,7 @@ dependencies = [
  "bun_js_parser",
  "bun_parsers",
  "bun_url",
- "strum 0.26.3",
+ "strum 0.28.0",
 ]
 
 [[package]]
@@ -3605,7 +3605,7 @@ dependencies = [
  "libc",
  "lzma-rust2",
  "scopeguard",
- "strum 0.26.3",
+ "strum 0.28.0",
  "thiserror 2.0.21",
 ]
 
@@ -3639,7 +3639,7 @@ dependencies = [
  "bun_core",
  "bun_semver",
  "bun_wyhash",
- "strum 0.26.3",
+ "strum 0.28.0",
 ]
 
 [[package]]
@@ -3660,7 +3660,7 @@ dependencies = [
  "enumset",
  "libc",
  "scopeguard",
- "strum 0.26.3",
+ "strum 0.28.0",
  "thiserror 2.0.21",
 ]
 
@@ -3689,7 +3689,7 @@ dependencies = [
  "regex",
  "scopeguard",
  "smallvec",
- "strum 0.26.3",
+ "strum 0.28.0",
  "thiserror 2.0.21",
 ]
 
@@ -3710,7 +3710,7 @@ dependencies = [
  "bun_parsers",
  "bun_ptr",
  "bun_resolver",
- "strum 0.26.3",
+ "strum 0.28.0",
  "thiserror 2.0.21",
 ]
 
@@ -3785,7 +3785,7 @@ dependencies = [
  "bytemuck",
  "libc",
  "scopeguard",
- "strum 0.26.3",
+ "strum 0.28.0",
  "thiserror 2.0.21",
 ]
 
@@ -3908,7 +3908,7 @@ dependencies = [
  "bun_windows_sys",
  "bun_wyhash",
  "libc",
- "strum 0.26.3",
+ "strum 0.28.0",
 ]
 
 [[package]]
@@ -4249,7 +4249,7 @@ dependencies = [
  "bun_sys",
  "bun_url",
  "scopeguard",
- "strum 0.26.3",
+ "strum 0.28.0",
 ]
 
 [[package]]
@@ -4333,7 +4333,7 @@ dependencies = [
  "bun_wyhash",
  "const_format",
  "enum-map",
- "strum 0.26.3",
+ "strum 0.28.0",
  "thiserror 2.0.21",
 ]
 
@@ -4364,7 +4364,7 @@ dependencies = [
  "criterion",
  "quick-xml 0.38.4",
  "roxmltree 0.20.0",
- "strum 0.26.3",
+ "strum 0.28.0",
  "thiserror 2.0.21",
  "xml-rs",
 ]
@@ -4383,7 +4383,7 @@ dependencies = [
  "bun_sys",
  "bun_which",
  "scopeguard",
- "strum 0.26.3",
+ "strum 0.28.0",
  "thiserror 2.0.21",
 ]
 
@@ -4408,7 +4408,7 @@ dependencies = [
  "bun_simdutf_sys",
  "const_format",
  "libc",
- "strum 0.26.3",
+ "strum 0.28.0",
  "thiserror 2.0.21",
 ]
 
@@ -4426,7 +4426,7 @@ version = "1.4.4"
 dependencies = [
  "bstr",
  "bun_core",
- "strum 0.26.3",
+ "strum 0.28.0",
 ]
 
 [[package]]
@@ -4537,7 +4537,7 @@ dependencies = [
  "bun_ast",
  "bun_collections",
  "bun_core",
- "strum 0.26.3",
+ "strum 0.28.0",
 ]
 
 [[package]]
@@ -4577,7 +4577,7 @@ dependencies = [
  "enumset",
  "libc",
  "scopeguard",
- "strum 0.26.3",
+ "strum 0.28.0",
  "thiserror 2.0.21",
 ]
 
@@ -4599,7 +4599,7 @@ dependencies = [
  "bun_url",
  "bun_wyhash",
  "scopeguard",
- "strum 0.26.3",
+ "strum 0.28.0",
  "thiserror 2.0.21",
 ]
 
@@ -4737,7 +4737,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sha3 0.10.9",
- "strum 0.26.3",
+ "strum 0.28.0",
  "thiserror 2.0.21",
  "tokio",
  "uv",
@@ -4757,7 +4757,7 @@ dependencies = [
  "bun_picohttp",
  "bun_ptr",
  "bun_sha_hmac",
- "strum 0.26.3",
+ "strum 0.28.0",
  "thiserror 2.0.21",
 ]
 
@@ -4886,7 +4886,7 @@ dependencies = [
  "bun_core",
  "libc",
  "smallvec",
- "strum 0.26.3",
+ "strum 0.28.0",
  "thiserror 2.0.21",
 ]
 
@@ -4981,7 +4981,7 @@ dependencies = [
  "bun_windows_sys",
  "enumset",
  "libc",
- "strum 0.26.3",
+ "strum 0.28.0",
  "thiserror 2.0.21",
 ]
 
@@ -4999,7 +4999,7 @@ dependencies = [
  "bun_sha_hmac",
  "bun_sys",
  "scopeguard",
- "strum 0.26.3",
+ "strum 0.28.0",
  "thiserror 2.0.21",
 ]
 
@@ -5025,7 +5025,7 @@ dependencies = [
  "bun_sql",
  "bun_uws",
  "scopeguard",
- "strum 0.26.3",
+ "strum 0.28.0",
  "thiserror 2.0.21",
 ]
 
@@ -5078,7 +5078,7 @@ dependencies = [
  "const_format",
  "libc",
  "scopeguard",
- "strum 0.26.3",
+ "strum 0.28.0",
  "thiserror 2.0.21",
 ]
 
@@ -5102,7 +5102,7 @@ dependencies = [
  "libc",
  "rustix 0.38.44",
  "scopeguard",
- "strum 0.26.3",
+ "strum 0.28.0",
  "thiserror 2.0.21",
 ]
 
@@ -5124,7 +5124,7 @@ dependencies = [
  "bun_opaque",
  "bun_ptr",
  "scopeguard",
- "strum 0.26.3",
+ "strum 0.28.0",
  "thiserror 2.0.21",
 ]
 
@@ -5149,7 +5149,7 @@ dependencies = [
  "bun_sys",
  "libc",
  "scopeguard",
- "strum 0.26.3",
+ "strum 0.28.0",
  "thiserror 2.0.21",
 ]
 
@@ -5201,7 +5201,7 @@ dependencies = [
  "bun_core",
  "bun_jsc_macros",
  "bun_uws_sys",
- "strum 0.26.3",
+ "strum 0.28.0",
 ]
 
 [[package]]
@@ -5221,7 +5221,7 @@ dependencies = [
  "bun_ptr",
  "bun_windows_sys",
  "libc",
- "strum 0.26.3",
+ "strum 0.28.0",
  "thiserror 2.0.21",
 ]
 
@@ -5231,7 +5231,7 @@ version = "1.4.4"
 dependencies = [
  "bstr",
  "bun_core",
- "strum 0.26.3",
+ "strum 0.28.0",
 ]
 
 [[package]]
@@ -5294,7 +5294,7 @@ dependencies = [
  "bun_wyhash",
  "libc",
  "scopeguard",
- "strum 0.26.3",
+ "strum 0.28.0",
  "thiserror 2.0.21",
 ]
 
@@ -5361,7 +5361,7 @@ dependencies = [
  "bun_collections",
  "bun_core",
  "bun_zlib_sys",
- "strum 0.26.3",
+ "strum 0.28.0",
 ]
 
 [[package]]
@@ -5377,7 +5377,7 @@ version = "1.4.4"
 dependencies = [
  "bun_core",
  "bun_opaque",
- "strum 0.26.3",
+ "strum 0.28.0",
 ]
 
 [[package]]
@@ -16005,15 +16005,6 @@ checksum = "7da8b5736845d9f2fcb837ea5d9e2628564b3b043a70948a3f0b778838c5fb4f"
 
 [[package]]
 name = "strum"
-version = "0.26.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8fec0f0aef304996cf250b31b5a10dee7980c85da9d759361292b8bca5a18f06"
-dependencies = [
- "strum_macros 0.26.4",
-]
-
-[[package]]
-name = "strum"
 version = "0.27.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "af23d6f6c1a224baef9d3f61e287d2761385a5b88fdab4eb4c6f11aeb54c4bcf"
@@ -16028,19 +16019,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9628de9b8791db39ceda2b119bbe13134770b56c138ec1d3af810d045c04f9bd"
 dependencies = [
  "strum_macros 0.28.0",
-]
-
-[[package]]
-name = "strum_macros"
-version = "0.26.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4c6bee85a5a24955dc440386795aa378cd9cf82acd5f764469152d2270e581be"
-dependencies = [
- "heck 0.5.0",
- "proc-macro2",
- "quote",
- "rustversion",
- "syn 2.0.119",
 ]
 
 [[package]]
