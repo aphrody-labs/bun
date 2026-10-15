@@ -1,7 +1,8 @@
 import { expect, test } from "bun:test";
 import { join, resolve } from "node:path";
 import { bunEnv, bunExe, tempDir } from "harness";
-import { cargoNapiArtifact, napiBuildPlan, platformOf } from "../../scripts/aphrody/build-napi.ts";
+import { cargoNapiArtifact, napiBuildJobs, napiBuildPlan, platformOf } from "../../scripts/aphrody/build-napi.ts";
+import factory from "../../tools/config/fusion-factory.json";
 
 const addon = resolve(import.meta.dir, "../../packages/bun-oxc/crates/napi/Cargo.toml");
 const artifact = (filename: string, overrides: Record<string, unknown> = {}) => ({
@@ -99,6 +100,16 @@ test("addon builds select the root workspace through the native serialized wrapp
   expect(debug.manifest).toBe(join(root, "packages/bun-n2b/crates/napi/Cargo.toml"));
 });
 
+test("explicit addon jobs preserve generic defaults and reject native oversubscription", () => {
+  expect(napiBuildJobs(undefined, 12)).toBe(1);
+  expect(napiBuildJobs(12, 12)).toBe(12);
+  const plan = napiBuildPlan(resolve("packages/bun-oxc"), "bun-plugin-oxc-napi", { jobs: 12 }, "linux", "fixture-bun");
+  expect(plan.argv.slice(plan.argv.indexOf("--jobs"), plan.argv.indexOf("--jobs") + 2)).toEqual(["--jobs", "12"]);
+  for (const jobs of [0, -1, 1.5, NaN, Infinity, 1025])
+    expect(() => napiBuildJobs(jobs, 1024)).toThrow("integer from 1 to 1024");
+  expect(() => napiBuildJobs(12, 6)).toThrow("exceed available CPUs");
+});
+
 test("native publication plans use the root-workspace helper and preserve artifact contracts", async () => {
   const workflow = Bun.YAML.parse(
     await Bun.file(new URL("../../.github/workflows/aphrody-publish-native.yml", import.meta.url)).text(),
@@ -117,6 +128,7 @@ test("native publication plans use the root-workspace helper and preserve artifa
   };
   using directory = tempDir("native-publication-plan", {
     "scripts/aphrody/publish-native.ts": `export const matrix = () => (${JSON.stringify({ include: [fixture] })});`,
+    "tools/config/fusion-factory.json": JSON.stringify(factory),
   });
   await using child = Bun.spawn([bunExe(), "-e", script!], {
     cwd: String(directory),
@@ -128,31 +140,41 @@ test("native publication plans use the root-workspace helper and preserve artifa
   const [stdout, stderr, code] = await Promise.all([child.stdout.text(), child.stderr.text(), child.exited]);
   expect({ stdout, stderr, code }).toEqual({ stdout: "", stderr: "", code: 0 });
   const plan = await Bun.file(join(String(directory), "native-factory-plan.json")).json();
-  const output = "/home/ubuntu/builds/bun-os-factory/artifacts/native/oxc/linux-x64-gnu";
+  const output = `${factory.artifactRoot}/native/oxc/linux-x64-gnu`;
   expect(plan.steps).toEqual([
     {
       id: "oxc",
       key: fixture.key,
       triple: fixture.triple,
       asset: fixture.file,
-      directory: "/home/ubuntu/builds/bun-browser-fusion",
+      directory: factory.workspaceRoot,
       command: [
         "bun",
         "/home/ubuntu/src/aphrody/packages/infra/workspace/src/build-factory-cleanup.ts",
-        "/home/ubuntu/builds/bun-browser-fusion/tools/config/fusion-factory.json",
+        `${factory.workspaceRoot}/tools/config/fusion-factory.json`,
         "env",
         `CARGO_TARGET_DIR=${output}`,
+        `CARGO_BUILD_JOBS=${factory.rust.maxJobs}`,
         "bun",
         "scripts/aphrody/build-napi.ts",
         fixture.dir,
         "--target",
         fixture.triple,
+        "--jobs",
+        String(factory.rust.maxJobs),
         "--out",
         output,
       ],
     },
   ]);
-  expect(plan.maxJobs).toBe(2);
+  expect(plan.source).toBe(factory.workspaceRoot);
+  expect(plan.lock).toBe(factory.lockPath);
+  expect(plan.cacheRoot).toBe(factory.cacheRoot);
+  expect(plan.transientRoot).toBe(factory.cleanup.transientRoot);
+  expect(plan.maxJobs).toBe(factory.rust.maxJobs);
+  expect(plan.reserveDiskGiB).toBe(factory.resources.reserveDiskGiB);
+  expect(plan.reserveMemoryGiB).toBe(factory.resources.reserveMemoryGiB);
+  expect(plan.memoryPerJobGiB).toBe(factory.resources.memoryPerJobGiB);
   expect(plan.parallelHeavyJobs).toBe(1);
   expect(
     workflow.jobs.publish.steps.some(

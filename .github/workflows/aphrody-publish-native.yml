@@ -59,17 +59,21 @@ jobs:
         run: |
           bun -e '
             const { matrix } = await import("./scripts/aphrody/publish-native.ts");
+            const { default: factory } = await import("./tools/config/fusion-factory.json");
             const only = process.env.ONLY.split(",").map(x => x.trim());
             const wanted = (process.env.PLATFORMS || "").split(",").map(x => x.trim()).filter(Boolean);
             const all = matrix().include;
             if (only.some(id => !all.some(t => t.id === id)) || wanted.some(key => !all.some(t => t.key === key))) throw new Error("Unknown factory target");
             const selected = all.filter(t => only.includes(t.id) && (!wanted.length || wanted.includes(t.key)));
             if (!selected.length) throw new Error("No native factory targets selected");
-            const source = "/home/ubuntu/builds/bun-browser-fusion";
+            const source = factory.workspaceRoot;
             const owner = "/home/ubuntu/src/aphrody/packages/infra/workspace/src/build-factory-cleanup.ts";
-            const steps = selected.map(t => ({ id:t.id, key:t.key, triple:t.triple, asset:t.file, directory:source,
-              command:["bun",owner,source+"/tools/config/fusion-factory.json","env","CARGO_TARGET_DIR=/home/ubuntu/builds/bun-os-factory/artifacts/native/"+t.id+"/"+t.key,"bun","scripts/aphrody/build-napi.ts",t.dir,"--target",t.triple,"--out","/home/ubuntu/builds/bun-os-factory/artifacts/native/"+t.id+"/"+t.key] }));
-            await Bun.write("native-factory-plan.json",JSON.stringify({schema:1,revision:process.env.GITHUB_SHA,host:"vps",maxJobs:2,parallelHeavyJobs:1,reserveDiskGiB:8,reserveMemoryGiB:2,requires:["clean source at revision","qualified target toolchain","Cargo check/test/strict Clippy","native addon smoke per platform","hashed package manifests and receipts"],steps},null,2));
+            const steps = selected.map(t => {
+              const output = factory.artifactRoot+"/native/"+t.id+"/"+t.key;
+              return { id:t.id, key:t.key, triple:t.triple, asset:t.file, directory:source,
+                command:["bun",owner,source+"/tools/config/fusion-factory.json","env","CARGO_TARGET_DIR="+output,"CARGO_BUILD_JOBS="+factory.rust.maxJobs,"bun","scripts/aphrody/build-napi.ts",t.dir,"--target",t.triple,"--jobs",String(factory.rust.maxJobs),"--out",output] };
+            });
+            await Bun.write("native-factory-plan.json",JSON.stringify({schema:1,revision:process.env.GITHUB_SHA,host:"vps",source,lock:factory.lockPath,cacheRoot:factory.cacheRoot,transientRoot:factory.cleanup.transientRoot,maxJobs:factory.rust.maxJobs,parallelHeavyJobs:1,reserveDiskGiB:factory.resources.reserveDiskGiB,reserveMemoryGiB:factory.resources.reserveMemoryGiB,memoryPerJobGiB:factory.resources.memoryPerJobGiB,requires:["clean source at revision","qualified target toolchain","Cargo check/test/strict Clippy","native addon smoke per platform","hashed package manifests and receipts"],steps},null,2));
           '
       - uses: actions/upload-artifact@v6
         with:

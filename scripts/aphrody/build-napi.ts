@@ -3,13 +3,14 @@
 // `<napi.name>.<platform>.node`, the file the package's loader and the
 // per-platform npm packages (scripts/aphrody/publish-native.ts) look for.
 //
-//   bun scripts/aphrody/build-napi.ts <package-dir> [--target <rust-triple>] [--debug] [--out <dir>]
+//   bun scripts/aphrody/build-napi.ts <package-dir> [--target <rust-triple>] [--debug] [--out <dir>] [--jobs <count>]
 //
 // The package.json of <package-dir> declares `"napi": { "name": "...", "crate": "..." }`.
 
 import { existsSync } from "node:fs";
 import { copyFile, mkdir } from "node:fs/promises";
 import { join, resolve } from "node:path";
+import { availableParallelism } from "node:os";
 
 const ROOT = resolve(import.meta.dir, "../..");
 
@@ -59,15 +60,24 @@ export async function napiConfig(dir: string): Promise<NapiConfig> {
   return pkg.napi;
 }
 
+export function napiBuildJobs(jobs = 1, available = 1024): number {
+  if (!Number.isSafeInteger(jobs) || jobs < 1 || jobs > 1024)
+    throw new Error("Native addon jobs must be an integer from 1 to 1024");
+  if (!Number.isSafeInteger(available) || available < 1 || jobs > available)
+    throw new Error("Native addon jobs exceed available CPUs");
+  return jobs;
+}
+
 /** Root workspace build; Cargo's JSON output owns the target directory and actual library name. */
 export function napiBuildPlan(
   dir: string,
   crate: string,
-  opts: { target?: string; debug?: boolean } = {},
+  opts: { target?: string; debug?: boolean; jobs?: number } = {},
   platform = process.platform,
   bun = process.execPath,
 ) {
   const profile = opts.debug ? "dev" : "release";
+  const jobs = napiBuildJobs(opts.jobs);
   return {
     cwd: ROOT,
     manifest: join(resolve(dir), "crates/napi/Cargo.toml"),
@@ -83,7 +93,7 @@ export function napiBuildPlan(
       crate,
       "--lib",
       "--jobs",
-      "1",
+      String(jobs),
       "--message-format=json-render-diagnostics",
       "--config",
       `profile.${profile}.panic="unwind"`,
@@ -135,13 +145,14 @@ export function cargoNapiArtifact(output: string, manifest: string, triple: stri
 /** Builds the addon and returns the path of the copied `.node` file. */
 export async function buildNapi(
   dir: string,
-  opts: { target?: string; debug?: boolean; out?: string } = {},
+  opts: { target?: string; debug?: boolean; out?: string; jobs?: number } = {},
 ): Promise<string> {
+  const jobs = napiBuildJobs(opts.jobs, availableParallelism());
   const pkgDir = resolve(dir);
   const { name, crate } = await napiConfig(pkgDir);
   const triple = opts.target ?? (await hostTriple());
   const platform = platformOf(triple);
-  const plan = napiBuildPlan(pkgDir, crate, opts);
+  const plan = napiBuildPlan(pkgDir, crate, { ...opts, jobs });
   if (!existsSync(plan.manifest)) throw new Error(`addon manifest missing: ${plan.manifest}`);
   console.log(`$ ${plan.argv.join(" ")}  (${plan.cwd})`);
   await using child = Bun.spawn(plan.argv, {
@@ -172,7 +183,18 @@ if (import.meta.main) {
     const i = argv.indexOf(flag);
     return i >= 0 ? argv[i + 1] : undefined;
   };
-  const dir = argv.find((a, i) => !a.startsWith("--") && !["--target", "--out"].includes(argv[i - 1]));
-  if (!dir) throw new Error("usage: build-napi.ts <package-dir> [--target <triple>] [--debug] [--out <dir>]");
-  await buildNapi(resolve(ROOT, dir), { target: opt("--target"), debug: argv.includes("--debug"), out: opt("--out") });
+  const dir = argv.find((a, i) => !a.startsWith("--") && !["--target", "--out", "--jobs"].includes(argv[i - 1] ?? ""));
+  const jobArgument = opt("--jobs");
+  if (argv.includes("--jobs") && (!jobArgument || !/^[1-9]\d{0,3}$/.test(jobArgument)))
+    throw new Error("--jobs requires a positive integer from 1 to 1024");
+  if (!dir)
+    throw new Error("usage: build-napi.ts <package-dir> [--target <triple>] [--debug] [--out <dir>] [--jobs <count>]");
+  const target = opt("--target");
+  const out = opt("--out");
+  await buildNapi(resolve(ROOT, dir), {
+    debug: argv.includes("--debug"),
+    ...(target === undefined ? {} : { target }),
+    ...(out === undefined ? {} : { out }),
+    ...(jobArgument === undefined ? {} : { jobs: napiBuildJobs(Number(jobArgument)) }),
+  });
 }
