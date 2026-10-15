@@ -14,12 +14,152 @@ import Yolo, {
   value,
 } from "bun:yolo";
 import type { Request } from "bun:yolo";
+import { bunEnv, bunExe } from "harness";
 
 function response(answers: Record<string, unknown>) {
   return { model: "fixture", answers, usage: { input_tokens: 8, output_tokens: 0 } };
 }
 
 describe("bun:yolo native decisions", () => {
+  test("synchronous provider cancellation consumes every pending rejection", async () => {
+    const child = Bun.spawn({
+      cmd: [
+        bunExe(),
+        "-e",
+        `
+        import { inspect, noul, code } from "bun:yolo";
+        let cancelled = 0;
+        for (const wrap of [code, systemOne => ({ systemOne })]) {
+          for (const rejects of [false, true]) {
+            const controller = new AbortController();
+            const reason = new Error("fixture cancellation");
+            const result = await inspect({ state: null, questions: { a: noul() } }, {
+              signal: controller.signal,
+              provider: wrap(() => {
+                controller.abort(reason);
+                return rejects
+                  ? Promise.reject(new Error("fixture provider rejection"))
+                  : Promise.resolve({ model: "fixture", answers: { a: { type: "noul", noul: 1 } }, usage: null });
+              }),
+            }).catch(error => error === reason);
+            if (result === true) cancelled++;
+          }
+        }
+        console.log(JSON.stringify({ cancelled }));
+      `,
+      ],
+      env: bunEnv,
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    const [stdout, stderr, exitCode] = await Promise.all([
+      new Response(child.stdout).text(),
+      new Response(child.stderr).text(),
+      child.exited,
+    ]);
+    expect(JSON.parse(stdout)).toEqual({ cancelled: 4 });
+    expect(stderr).toBe("");
+    expect(exitCode).toBe(0);
+  });
+
+  test("deadline includes synchronous provider work and JSON serialization", async () => {
+    function block() {
+      const until = performance.now() + 15;
+      while (performance.now() < until) {}
+    }
+    for (const run of [inspect, decide]) {
+      for (const stage of ["request", "provider", "response"]) {
+        let calls = 0;
+        const request = { state: null, questions: { a: noul() } };
+        await expect(
+          run(
+            stage === "request"
+              ? ({
+                  toJSON() {
+                    block();
+                    return request;
+                  },
+                } as any)
+              : request,
+            {
+              timeout: 5,
+              provider: code(() => {
+                calls++;
+                if (stage === "provider") block();
+                const result = response({ a: { type: "noul", noul: 1 } });
+                return stage === "response"
+                  ? {
+                      toJSON() {
+                        block();
+                        return result;
+                      },
+                    }
+                  : result;
+              }),
+            },
+          ),
+        ).rejects.toMatchObject({ name: "TimeoutError" });
+        expect(calls).toBe(stage === "request" ? 0 : 1);
+      }
+    }
+  });
+
+  test("the full request byte budget survives internal descriptor envelopes", async () => {
+    const request = { state: "", questions: { route: choice("Pick", { a: "A", b: "B" }) } };
+    request.state = "a".repeat(1048576 - Buffer.byteLength(JSON.stringify(request)));
+    const raw = response({ route: { type: "choice", choice: "a", confidence: 1, probabilities: { a: 1, b: 0 } } });
+    let calls = 0;
+    const provider = code(() => {
+      calls++;
+      return raw;
+    });
+    expect(await decide(request, { provider })).toEqual({ route: "a" });
+    const inspected = await inspect(request, { provider });
+    expect(inspected).toEqual(raw);
+    expect(selections(request, inspected, 0.8)).toEqual({ route: "a" });
+    expect(calls).toBe(2);
+    request.state += "a";
+    await expect(inspect(request, { provider })).rejects.toThrow("1048576");
+    expect(() => selections(request, inspected, 0.8)).toThrow("1048576");
+    expect(calls).toBe(2);
+    const question = noul("a".repeat(1048576 - Buffer.byteLength(JSON.stringify(noul("")))));
+    expect(value({ type: "noul", noul: 1 }, question)).toBe(true);
+  });
+
+  test("local adapters share context ownership until completion after timeout", async () => {
+    const started = Promise.withResolvers<void>();
+    const completion = Promise.withResolvers<string>();
+    let calls = 0;
+    const context = {
+      complete() {
+        calls++;
+        started.resolve();
+        return completion.promise;
+      },
+    };
+    const first = local({ context, model: "fixture" });
+    const second = local({ context, model: "fixture" });
+    const request = { state: null, questions: { a: noul() } };
+    const pending = expect(inspect(request, { provider: first, timeout: 20 })).rejects.toMatchObject({
+      name: "TimeoutError",
+    });
+    try {
+      await started.promise;
+      await expect(inspect(request, { provider: second, timeout: 100 })).rejects.toThrow("active request");
+      await pending;
+      await expect(inspect(request, { provider: second, timeout: 100 })).rejects.toThrow("active request");
+      expect(calls).toBe(1);
+    } finally {
+      completion.resolve('{"a":{"type":"noul","noul":1}}');
+      await pending;
+    }
+    // Join complete() and the adapter's finally before reusing the context.
+    await completion.promise;
+    await Promise.resolve();
+    expect(await decide(request, { provider: second })).toEqual({ a: true });
+    expect(calls).toBe(2);
+  });
+
   test("native confidence permits equality, abstains below it and retains the raw response", async () => {
     const request = {
       state: null,
@@ -388,6 +528,70 @@ describe("bun:yolo native decisions", () => {
     });
     expect(await decide({ state: null, questions: { a: noul() } }, { provider, maxRetries: 3 })).toEqual({ a: false });
     expect(calls).toBe(1);
+  });
+
+  test("remote rejects oversized, invalid UTF-8 and malformed streamed responses", async () => {
+    const previousKey = process.env.TYPESAFE_API_KEY;
+    process.env.TYPESAFE_API_KEY = "yolo-local-fixture";
+    let mode = "oversized";
+    let calls = 0;
+    const server = Bun.serve({
+      port: 0,
+      fetch() {
+        calls++;
+        if (mode === "unauthorized") return new Response("fixture-private-provider-body", { status: 401 });
+        return new Response(
+          new ReadableStream({
+            start(controller) {
+              if (mode === "oversized") {
+                controller.enqueue(new Uint8Array(524288).fill(32));
+                controller.enqueue(new Uint8Array(524289).fill(32));
+              } else if (mode === "utf8") {
+                controller.enqueue(new Uint8Array([123, 34, 195]));
+              } else {
+                controller.enqueue(new TextEncoder().encode("not JSON"));
+              }
+              controller.close();
+            },
+          }),
+        );
+      },
+    });
+    try {
+      const provider = remote({ baseURL: server.url.origin });
+      const request = { state: null, questions: { a: noul() } };
+      await expect(inspect(request, { provider })).rejects.toThrow("1048576");
+      mode = "utf8";
+      await expect(inspect(request, { provider })).rejects.toThrow();
+      mode = "json";
+      await expect(inspect(request, { provider })).rejects.toBeInstanceOf(SyntaxError);
+      mode = "unauthorized";
+      await expect(inspect(request, { provider, maxRetries: 3 })).rejects.toThrow("status 401");
+      expect(calls).toBe(4);
+    } finally {
+      server.stop(true);
+      if (previousKey === undefined) delete process.env.TYPESAFE_API_KEY;
+      else process.env.TYPESAFE_API_KEY = previousKey;
+    }
+  });
+
+  test("local context is reusable after generation and JSON failures", async () => {
+    const failure = new Error("fixture generation failed");
+    let mode = "throw";
+    const context = {
+      async complete() {
+        if (mode === "throw") throw failure;
+        if (mode === "json") return "not JSON";
+        return '{"a":{"type":"noul","noul":1}}';
+      },
+    };
+    const provider = local({ context, model: "fixture" });
+    const request = { state: null, questions: { a: noul() } };
+    await expect(inspect(request, { provider })).rejects.toBe(failure);
+    mode = "json";
+    await expect(inspect(request, { provider })).rejects.toBeInstanceOf(SyntaxError);
+    mode = "success";
+    expect(await decide(request, { provider })).toEqual({ a: true });
   });
 
   test("local owner adapter rejects text and unknown answers and reports unknown usage", async () => {

@@ -51,6 +51,7 @@ void [unknown, boxed, sdk];
 const transportOptions: RemoteOptions = { client: sdk, model: "application-model" };
 expectTypeOf(remote(transportOptions)).toEqualTypeOf<Provider>();
 expectTypeOf(Yolo.remote).toEqualTypeOf<typeof remote>();
+expectTypeOf(Yolo.ask).toEqualTypeOf<typeof import("bun:yolo").ask>();
 if (result.allowed) {
   expectTypeOf(result.route).toEqualTypeOf<"docs" | "graph" | "none">();
 } else {

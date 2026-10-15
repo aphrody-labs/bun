@@ -1,6 +1,18 @@
 use bun_jsc::{CallFrame, JSGlobalObject, JSValue, JsResult, StringJsc as _};
 use serde_json::Value;
 
+const MAX_DESCRIPTOR_BYTES: usize = aphrody_jev::protocol::MAX_JSON_BYTES + 64;
+
+fn parse_descriptor(input: &[u8]) -> Result<Value, String> {
+    // Internal wrappers add a request or question key and a bounded threshold.
+    if input.len() > MAX_DESCRIPTOR_BYTES {
+        return Err(format!(
+            "Yolo descriptor exceeds {MAX_DESCRIPTOR_BYTES} bytes"
+        ));
+    }
+    serde_json::from_slice(input).map_err(|error| format!("Yolo JSON: {error}"))
+}
+
 pub(crate) fn js_yolo(global: &JSGlobalObject, frame: &CallFrame) -> JsResult<JSValue> {
     let action = frame.argument(0).to_utf8(global)?;
     let input = frame.argument(1).to_utf8(global)?;
@@ -25,7 +37,7 @@ pub(crate) fn js_yolo(global: &JSGlobalObject, frame: &CallFrame) -> JsResult<JS
                 Ok(value)
             }
             b"selections" => {
-                let descriptor = super::parse(&descriptor)?;
+                let descriptor = parse_descriptor(&descriptor)?;
                 let request: aphrody_jev::Request =
                     serde_json::from_value(descriptor["request"].clone())
                         .map_err(|error| error.to_string())?;
@@ -39,7 +51,7 @@ pub(crate) fn js_yolo(global: &JSGlobalObject, frame: &CallFrame) -> JsResult<JS
                 serde_json::to_value(selected).map_err(|error| error.to_string())
             }
             b"response" | b"values" => {
-                let descriptor = super::parse(&descriptor)?;
+                let descriptor = parse_descriptor(&descriptor)?;
                 let request = descriptor
                     .get("request")
                     .ok_or("Yolo descriptor requires request")?;
@@ -60,7 +72,7 @@ pub(crate) fn js_yolo(global: &JSGlobalObject, frame: &CallFrame) -> JsResult<JS
                 Ok(Value::Object(values))
             }
             b"primitive" => {
-                let descriptor = super::parse(&descriptor)?;
+                let descriptor = parse_descriptor(&descriptor)?;
                 let question = descriptor
                     .get("question")
                     .ok_or("Yolo descriptor requires question")?;

@@ -4,7 +4,7 @@ const PROTOCOL = "bun.yolo/1";
 const MAX_BYTES = 1024 * 1024;
 type YoloAPI = Pick<
   typeof import("bun:yolo"),
-  "inspect" | "decide" | "value" | "jev" | "code" | "confidenceThreshold" | "selections"
+  "inspect" | "decide" | "value" | "remote" | "code" | "confidenceThreshold" | "selections"
 >;
 type Envelope = {
   protocol: typeof PROTOCOL;
@@ -14,7 +14,7 @@ type Envelope = {
   question?: import("bun:yolo").Question;
   options?: Pick<import("bun:yolo").Options, "timeout" | "maxRetries" | "threshold">;
   minimumConfidence?: number;
-  provider?: { kind: "jev"; baseURL?: string; model?: string } | { kind: "code"; response: unknown };
+  provider?: { kind: "remote" | "jev"; baseURL?: string; model?: string } | { kind: "code"; response: unknown };
 };
 
 export async function applyYoloEnvelope(input: unknown, api?: YoloAPI) {
@@ -30,8 +30,9 @@ export async function applyYoloEnvelope(input: unknown, api?: YoloAPI) {
     return owner.value(envelope.answer!, envelope.question!, envelope.options?.threshold);
   const options: import("bun:yolo").Options = envelope.options ?? {};
   if (envelope.provider) {
-    if (envelope.provider.kind === "jev")
-      options.provider = owner.jev({ baseURL: envelope.provider.baseURL, model: envelope.provider.model });
+    // Older Python clients use "jev" on the wire for the same native remote provider.
+    if (envelope.provider.kind === "remote" || envelope.provider.kind === "jev")
+      options.provider = owner.remote({ baseURL: envelope.provider.baseURL, model: envelope.provider.model });
     else if (envelope.provider.kind === "code") {
       const response = envelope.provider.response;
       options.provider = owner.code(() => response);

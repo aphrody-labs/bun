@@ -17,7 +17,7 @@ test("stdio envelope delegates descriptors, providers and primitive conversion w
       calls.push(args);
       return false;
     },
-    jev: (options: unknown) => ({ systemOne: async () => options }),
+    remote: (options: unknown) => ({ systemOne: async () => options }),
     code: (evaluate: (...args: any[]) => unknown) => ({ systemOne: async (...args: any[]) => evaluate(...args) }),
   } as unknown as Parameters<typeof applyYoloEnvelope>[1];
   const request = {
@@ -97,7 +97,7 @@ test("abstention validates confidence before provider and keeps inspected answer
       if (value === -1) throw new RangeError("native fixture rejection");
       return value;
     },
-    jev: () => {
+    remote: () => {
       events.push("provider");
       return {};
     },
@@ -126,6 +126,94 @@ test("abstention validates confidence before provider and keeps inspected answer
   );
   expect(events).toEqual(["threshold"]);
 });
+
+test.skipIf(!process.env.BUN_YOLO_NATIVE_GATE)(
+  "remote and legacy jev envelopes use the real native HTTP provider and answer validator",
+  async () => {
+    const request = {
+      state: { source: "synthetic SDK transport fixture" },
+      questions: {
+        flag: { type: "noul", instructions: "Is the fixture supported?" },
+        route: { type: "choice", instructions: "Which source?", criteria: { docs: "Docs", graph: "Graph" } },
+        amount: { type: "score", instructions: "Support?", criteria: ["None", "Some", "Complete"] },
+      },
+    };
+    const response = {
+      model: "sdk-http-fixture",
+      answers: {
+        flag: { type: "noul", noul: 0.8 },
+        route: { type: "choice", choice: "docs", confidence: 0.7, probabilities: { docs: 0.7, graph: 0.3 } },
+        amount: {
+          type: "score",
+          score: 1.25,
+          confidence: 0.8,
+          legend: { "0": "None", "1": "Some", "2": "Complete" },
+          probabilities: { "0": 0.1, "1": 0.55, "2": 0.35 },
+        },
+      },
+      usage: { input_tokens: 12, output_tokens: 3 },
+    };
+    const requests: { pathname: string; method: string; authorization: string | null; body: unknown }[] = [];
+    let invalidAnswer = false;
+    const server = Bun.serve({
+      hostname: "127.0.0.1",
+      port: 0,
+      async fetch(incoming) {
+        requests.push({
+          pathname: new URL(incoming.url).pathname,
+          method: incoming.method,
+          authorization: incoming.headers.get("authorization"),
+          body: await incoming.json(),
+        });
+        return Response.json(
+          invalidAnswer ? { ...response, answers: { ...response.answers, flag: { type: "noul", noul: 2 } } } : response,
+        );
+      },
+    });
+    const oldKey = process.env.TYPESAFE_API_KEY;
+    process.env.TYPESAFE_API_KEY = "sdk-loopback-fixture";
+    try {
+      for (const kind of ["remote", "jev"] as const) {
+        const envelope = {
+          protocol,
+          operation: "decide",
+          request,
+          options: { timeout: 1000, maxRetries: 0, threshold: 0.9 },
+          provider: { kind, baseURL: new URL("/bridge", server.url).href, model: "sdk-http-fixture" },
+        };
+        expect(await applyYoloEnvelope(envelope)).toEqual({ flag: false, route: "docs", amount: 1.25 });
+        expect(await applyYoloEnvelope({ ...envelope, operation: "inspect", minimumConfidence: 0.8 })).toEqual({
+          ...response,
+          selections: { route: null },
+        });
+      }
+      expect(requests).toHaveLength(4);
+      for (const incoming of requests) {
+        expect(incoming).toEqual({
+          pathname: "/bridge/v1/systemone",
+          method: "POST",
+          authorization: "Bearer sdk-loopback-fixture",
+          body: { ...request, model: "sdk-http-fixture" },
+        });
+      }
+      invalidAnswer = true;
+      await expect(
+        applyYoloEnvelope({
+          protocol,
+          operation: "decide",
+          request,
+          options: { timeout: 1000, maxRetries: 0 },
+          provider: { kind: "remote", baseURL: server.url.href, model: "sdk-http-fixture" },
+        }),
+      ).rejects.toThrow();
+      expect(requests).toHaveLength(5);
+    } finally {
+      server.stop(true);
+      if (oldKey === undefined) delete process.env.TYPESAFE_API_KEY;
+      else process.env.TYPESAFE_API_KEY = oldKey;
+    }
+  },
+);
 
 test.skipIf(!process.env.BUN_YOLO_NATIVE_GATE)(
   "native Yolo owns all three primitives and rejects invalid provider answers",
@@ -177,9 +265,9 @@ test.skipIf(!process.env.BUN_YOLO_NATIVE_GATE)(
         { ...envelope, operation: "inspect", minimumConfidence: -1, provider: { kind: "jev" } },
         {
           ...api,
-          jev: options => {
+          remote: options => {
             providers++;
-            return api.jev(options);
+            return api.remote(options);
           },
         },
       ),

@@ -43,8 +43,9 @@ This confidence minimum is distinct from the strict Noul probability threshold.
 
 ## Providers and boundaries
 
-Supply an application-owned `Provider` explicitly. Its private transport and
-model configuration stay with that application's owner. The client does not
+Supply an application-owned `Provider`, or use the default `remote()` provider
+with server-side `TYPESAFE_API_KEY` configuration. Private transport and
+model configuration stay with the application owner. The client does not
 become the validator. `code` adapts deterministic or asynchronous callbacks
 through the same native validation; `local` borrows a caller-owned `bun-llama`
 context without downloading weights. Local outputs are model judgments;

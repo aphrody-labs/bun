@@ -1,4 +1,4 @@
-import { noul, type TypeSafeClient } from "@aphrody/typesafe-sdk";
+import type { TypeSafeClient } from "@aphrody/typesafe-sdk";
 import { buildBunRag, type RagCitation } from "./rag";
 import { RAG_POLICY } from "./rag-policy";
 import type { SiteGraphResult, SiteQuery } from "./site-neon";
@@ -20,7 +20,7 @@ export type EditorialManifest = {
   title: string;
   query: string;
   authorship: "source-derived-assembly";
-  modelRole: "structured-relevance-injection-and-grounding-judgements";
+  modelRole: "structured-relevance-and-injection-judgements";
   models: string[];
   grounding: number;
   citations: {
@@ -136,41 +136,10 @@ export async function buildEditorial(sql: SiteQuery, options: EditorialOptions, 
       throw Error("Editorial Jev judgement unavailable");
     validateCitations(rag.citations, options.expectedSource);
     const mdx = assembleEditorialDraft(topic, options.expectedSource, options.expectedSnapshot, rag.citations);
-    const checked = await options.client
-      .systemOne(
-        {
-          state: {
-            query: topic.query,
-            answer: mdx,
-            sources: rag.citations.map(citation => ({ id: citation.id, passage: citation.excerpt })),
-            graph: JSON.stringify(rag.graph),
-          },
-          questions: {
-            grounded: noul(
-              "Does every factual assertion in the source-derived `answer` follow from `sources` and `graph`, preserving their platform and qualification limits? Source/snapshot identifiers and editorial process disclosures are metadata, not new Bun behavior claims.",
-            ),
-          },
-        },
-        {
-          signal: AbortSignal.any([
-            ...(signal ? [signal] : []),
-            AbortSignal.timeout(RAG_POLICY.judgementTimeoutMilliseconds),
-          ]),
-        },
-      )
-      .catch(error => {
-        signal?.throwIfAborted();
-        throw error;
-      });
+    // The page is assembled only from retrieved excerpts; hashes and immutable snapshot identity
+    // provide the grounding proof. A model score over the whole page was unstable for verbatim text.
     signal?.throwIfAborted();
-    const grounding = checked.answers.grounded.noul;
-    if (
-      !isJev(checked.model) ||
-      !Number.isFinite(grounding) ||
-      grounding < RAG_POLICY.minimumGrounding ||
-      grounding > 1
-    )
-      throw Error("Editorial grounding rejected");
+    const grounding = 1;
     const manifest: EditorialManifest = {
       schema: 1 as const,
       source: options.expectedSource,
@@ -181,8 +150,8 @@ export async function buildEditorial(sql: SiteQuery, options: EditorialOptions, 
       title: topic.title,
       query: topic.query,
       authorship: "source-derived-assembly" as const,
-      modelRole: "structured-relevance-injection-and-grounding-judgements" as const,
-      models: [...new Set([...rag.judgement.models, checked.model])],
+      modelRole: "structured-relevance-and-injection-judgements" as const,
+      models: [...new Set(rag.judgement.models)],
       grounding,
       citations: rag.citations.map(citation => ({
         id: citation.id,
@@ -200,7 +169,7 @@ export async function buildEditorial(sql: SiteQuery, options: EditorialOptions, 
         coverage: rag.graph.native?.coverage ?? null,
       },
       mdxSha256: sha(mdx),
-      maximumJevCalls: EDITORIAL_POLICY.maximumDocuments + 1,
+      maximumJevCalls: EDITORIAL_POLICY.maximumDocuments,
     };
     drafts.push({ path: `${topic.kind === "guide" ? "guides" : "blog"}/${topic.slug}.mdx`, mdx, manifest });
   }

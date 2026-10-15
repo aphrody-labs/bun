@@ -71,7 +71,7 @@ declare module "bun:yolo" {
     /** Default: native remote HTTP provider. No model or weights are downloaded. */
     provider?: Provider;
     signal?: AbortSignal;
-    /** Total operation deadline, including retries. Integer 1..120000; default 10000 ms. */
+    /** Total deadline, including serialization and retries. Sync work rejects after returning past the deadline. Integer 1..120000; default 10000 ms. */
     timeout?: number;
     /** Additional attempts, integer 0..3; default 0. Forwarded to SDK clients. */
     maxRetries?: number;
@@ -120,7 +120,7 @@ declare module "bun:yolo" {
     ): Promise<string>;
   }
   export interface LocalOptions {
-    /** Existing bun-llama context; caller owns its lifetime and the protected model path. */
+    /** Existing bun-llama context; caller owns its lifetime. Adapters share one active call per context until complete() settles, including after cancellation. */
     context: LocalContext;
     model: string;
     /** Generated token bound, integer 1..4096; default 1024. */
@@ -129,6 +129,7 @@ declare module "bun:yolo" {
   /** Strict JSON output, validated by Rust. Local probabilities are model outputs, not calibrated remote scores. */
   export function local(options: LocalOptions): Provider;
   export const Yolo: typeof ask & {
+    readonly ask: typeof ask;
     readonly decide: typeof decide;
     readonly inspect: typeof inspect;
     readonly systemOne: typeof inspect;

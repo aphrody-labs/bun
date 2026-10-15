@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use obscura_dom::parse_html;
 use obscura_render::layout_dom;
 
-#[path = "../../obscura-dom/tests/support/allocations.rs"]
+#[path = "support/allocations.rs"]
 mod allocations;
 
 #[test]

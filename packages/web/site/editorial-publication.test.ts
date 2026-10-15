@@ -33,9 +33,9 @@ function publicationFixture() {
       language: "fr",
       ...topic,
       authorship: "source-derived-assembly",
-      modelRole: "structured-relevance-injection-and-grounding-judgements",
+      modelRole: "structured-relevance-and-injection-judgements",
       models: ["Jev-fixture"],
-      grounding: 0.98,
+      grounding: 1,
       citations: [
         {
           id: citation.id,
@@ -48,7 +48,7 @@ function publicationFixture() {
       ],
       graph: { snapshot, sha256: "e".repeat(64), domains: 1, links: 1, coverage: null },
       mdxSha256: hash(mdx),
-      maximumJevCalls: 4,
+      maximumJevCalls: 3,
     };
     return { path: `${kind === "guide" ? "guides" : "blog"}/${topic.slug}.mdx`, mdx, manifest };
   });
@@ -58,7 +58,7 @@ function publicationFixture() {
     snapshot,
     authorship: "source-derived-assembly",
     drafts: drafts.map(({ path, manifest }) => ({ path, manifest })),
-    calls: 4,
+    calls: 3,
     validator: "bun:yolo",
     qualified: true,
   };
@@ -170,7 +170,7 @@ test("hash tampering, rehashed executable MDX and mismatched sidecars are refuse
   for (const mode of ["hash", "injection", "sidecar"]) {
     const fixture = publicationFixture(),
       draft = fixture.drafts[0]!;
-    if (mode === "sidecar") fixture.files[draft.path + ".json"] = JSON.stringify({ ...draft.manifest, grounding: 1 });
+    if (mode === "sidecar") fixture.files[draft.path + ".json"] = JSON.stringify({ ...draft.manifest, grounding: 0.5 });
     else {
       fixture.files[draft.path] += "\n<script>runUntrusted()</script>\n";
       if (mode === "injection") {

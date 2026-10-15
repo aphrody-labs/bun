@@ -49,7 +49,7 @@ export async function loadEditorialDirectory(directory: string, expectedSource: 
     receipt.authorship !== "source-derived-assembly" ||
     !Number.isInteger(receipt.calls) ||
     receipt.calls < 1 ||
-    receipt.calls > EDITORIAL_POLICY.maximumTopics * (EDITORIAL_POLICY.maximumDocuments + 1) ||
+    receipt.calls > EDITORIAL_POLICY.maximumTopics * EDITORIAL_POLICY.maximumDocuments ||
     !Array.isArray(receipt.drafts) ||
     !receipt.drafts.length ||
     receipt.drafts.length > EDITORIAL_POLICY.maximumTopics
@@ -68,15 +68,13 @@ export async function loadEditorialDirectory(directory: string, expectedSource: 
       manifest.snapshot !== receipt.snapshot ||
       manifest.language !== "fr" ||
       manifest.authorship !== "source-derived-assembly" ||
-      manifest.modelRole !== "structured-relevance-injection-and-grounding-judgements" ||
+      manifest.modelRole !== "structured-relevance-and-injection-judgements" ||
       manifest.kind !== (draft.path.startsWith("guides/") ? "guide" : "blog") ||
       draft.path !== `${manifest.kind === "guide" ? "guides" : "blog"}/${manifest.slug}.mdx` ||
       !Array.isArray(manifest.models) ||
       !manifest.models.length ||
       manifest.models.some(model => typeof model !== "string" || !/^jev(?:-|$)/i.test(model)) ||
-      !Number.isFinite(manifest.grounding) ||
-      manifest.grounding < RAG_POLICY.minimumGrounding ||
-      manifest.grounding > 1 ||
+      manifest.grounding !== 1 ||
       !/^[a-f0-9]{64}$/.test(manifest.mdxSha256) ||
       manifest.graph?.snapshot !== receipt.snapshot ||
       !/^[a-f0-9]{64}$/.test(manifest.graph.sha256) ||
@@ -145,7 +143,7 @@ export async function loadEditorialDirectory(directory: string, expectedSource: 
       title: manifest.title,
       query: manifest.query,
       authorship: "source-derived-assembly",
-      modelRole: "structured-relevance-injection-and-grounding-judgements",
+      modelRole: "structured-relevance-and-injection-judgements",
       models: [...manifest.models],
       grounding: manifest.grounding,
       citations: manifest.citations.map(({ id, path, url, sha256, excerptSha256, relevance }) => ({
@@ -173,7 +171,7 @@ export async function loadEditorialDirectory(directory: string, expectedSource: 
               },
       },
       mdxSha256: manifest.mdxSha256,
-      maximumJevCalls: EDITORIAL_POLICY.maximumDocuments + 1,
+      maximumJevCalls: EDITORIAL_POLICY.maximumDocuments,
     };
     const parsed = parseFrontmatter(mdx);
     pages.push({

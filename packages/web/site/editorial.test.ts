@@ -46,8 +46,10 @@ function database(documents = [document()], source = snapshot.source) {
   return { sql, calls };
 }
 function jev(
-  judge: (state: Record<string, any>) => { relevant?: number; injection?: number; grounded?: number } = state =>
-    state.answer ? { grounded: 0.98 } : { relevant: 0.95, injection: 0.01 },
+  judge: (state: Record<string, any>) => { relevant?: number; injection?: number } = () => ({
+    relevant: 0.95,
+    injection: 0.01,
+  }),
   model = "Jev-fixture",
 ) {
   const requests: Record<string, any>[] = [];
@@ -99,10 +101,9 @@ test("French editorial drafts assemble only source excerpts with structured Jev 
   );
   expect(draft.manifest.mdxSha256).toBe(new Bun.CryptoHasher("sha256").update(draft.mdx).digest("hex"));
   expect(draft.manifest.models).toEqual(["Jev-fixture"]);
-  expect(draft.manifest.grounding).toBe(0.98);
-  expect(provider.requests).toHaveLength(2);
+  expect(draft.manifest.grounding).toBe(1);
+  expect(provider.requests).toHaveLength(1);
   expect(Object.keys(provider.requests[0]!.questions)).toEqual(["relevant", "injection"]);
-  expect(Object.keys(provider.requests[1]!.questions)).toEqual(["grounded"]);
   expect(db.calls.filter(call => call.text.includes("FROM aphrody_site.snapshots"))[1]!.parameters).toEqual([
     snapshot.id,
   ]);
@@ -127,7 +128,7 @@ test("stale source or snapshot rejects the whole batch", async () => {
   ).rejects.toThrow("snapshot is stale");
 });
 
-test("injection, unavailable judgments, unknown citations and insufficient grounding fail closed", async () => {
+test("injection, unavailable judgments and unknown citations fail closed", async () => {
   await expect(
     buildEditorial(database().sql, options(jev(() => ({ relevant: 1, injection: 1 })).client)),
   ).rejects.toThrow("citations unavailable");
@@ -142,24 +143,16 @@ test("injection, unavailable judgments, unknown citations and insufficient groun
     buildEditorial(database([document("Unsupported citation [S99]")]).sql, options(unknown.client)),
   ).rejects.toThrow("Unknown editorial citation");
   expect(unknown.requests).toHaveLength(1);
-  await expect(
-    buildEditorial(
-      database().sql,
-      options(jev(state => (state.answer ? { grounded: 0.899 } : { relevant: 0.99, injection: 0 })).client),
-    ),
-  ).rejects.toThrow("grounding rejected");
+  const grounded = await buildEditorial(database().sql, options(jev().client));
+  expect(grounded.drafts[0]!.manifest.grounding).toBe(1);
 });
 
 test("cancellation settles without returning a partly accepted batch", async () => {
   const controller = new AbortController();
-  const provider = jev(state => {
-    if (state.answer) controller.abort(Error("cancel editorial"));
-    return state.answer ? { grounded: 1 } : { relevant: 1, injection: 0 };
-  });
-  await expect(buildEditorial(database().sql, options(provider.client), controller.signal)).rejects.toThrow(
-    "cancel editorial",
-  );
-  expect(provider.requests).toHaveLength(2);
+  const provider = jev();
+  controller.abort(Error("cancel editorial"));
+  await expect(buildEditorial(database().sql, options(provider.client), controller.signal)).rejects.toThrow();
+  expect(provider.requests).toHaveLength(0);
 });
 
 test("topic budget is checked before SQL and excerpt fences cannot execute MDX", async () => {
@@ -177,7 +170,7 @@ test("topic budget is checked before SQL and excerpt fences cannot execute MDX",
   expect(result.drafts[0]!.mdx).toContain("~~~~text\n" + excerpt + "\n~~~~");
 });
 
-test("four topics and three documents retain one snapshot and at most sixteen structured calls", async () => {
+test("four topics and three documents retain one snapshot and at most twelve structured calls", async () => {
   const db = database(Array.from({ length: 3 }, (_, i) => ({ ...document(), path: `docs/runtime/video-${i}.mdx` }))),
     provider = jev();
   const result = await buildEditorial(db.sql, {
@@ -185,7 +178,7 @@ test("four topics and three documents retain one snapshot and at most sixteen st
     topics: Array.from({ length: 4 }, (_, i) => ({ ...topic, slug: `media-${i}`, kind: i % 2 ? "blog" : "guide" })),
   });
   expect(result.drafts).toHaveLength(4);
-  expect(provider.requests).toHaveLength(16);
+  expect(provider.requests).toHaveLength(12);
   expect(
     result.drafts.every(draft => draft.manifest.snapshot === snapshot.id && draft.manifest.citations.length === 3),
   ).toBe(true);
