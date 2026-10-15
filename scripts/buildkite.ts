@@ -725,6 +725,13 @@ function endGroup(): void {
   console.log();
 }
 
+export function formatEnvironmentVariableNames(environment: NodeJS.ProcessEnv): string {
+  return Object.keys(environment)
+    .sort()
+    .map(name => JSON.stringify(name))
+    .join("\n");
+}
+
 export function printEnvironment(): void {
   startGroup("Machine", () => {
     console.log("Operating System:", getOs());
@@ -752,10 +759,8 @@ export function printEnvironment(): void {
   });
 
   if (isCI) {
-    startGroup("Environment", () => {
-      for (const [key, value] of Object.entries(process.env).sort()) {
-        console.log(`${key}:`, value);
-      }
+    startGroup("Environment variable names (values omitted)", () => {
+      console.log(formatEnvironmentVariableNames(process.env));
     });
 
     const show = (title: string, shells: string[], ...scripts: string[]) =>
