@@ -1671,8 +1671,10 @@ pub(crate) enum Deliver {
 // `Deliver::deinit` is just `Strong::Drop` on the `WriteDest` arm — handled
 // automatically.
 
-// Payloads are consumed only by the `video_native` executor.
-#[cfg_attr(not(feature = "video_native"), allow(dead_code))]
+#[cfg_attr(
+    not(feature = "video_native"),
+    expect(dead_code, reason = "payloads are consumed only by the video_native executor")
+)]
 pub(crate) enum VideoOperation {
     Metadata,
     Frame(f64),
