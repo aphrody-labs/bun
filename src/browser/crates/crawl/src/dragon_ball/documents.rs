@@ -58,6 +58,93 @@ pub struct DragonBallDocument {
     pub canonical_eligible: bool,
 }
 
+#[derive(Debug, Serialize)]
+pub struct CaptureReprojection {
+    pub document_uid: String,
+    pub capture_sha256: String,
+    pub document_sha256: String,
+    pub skipped_media: usize,
+}
+
+#[derive(Debug, Serialize)]
+pub struct ReprojectionReport {
+    pub schema: &'static str,
+    pub output: PathBuf,
+    pub export_sha256: String,
+    pub documents: usize,
+    pub skipped_media: usize,
+    pub sources: Vec<CaptureReprojection>,
+}
+
+/// Replay retained captures through the canonical projector into a new immutable export.
+/// Any change beyond media references fails closed; source captures are read-only.
+pub fn reproject_captures(captures: &Path, output: &Path) -> Result<ReprojectionReport, String> {
+    use std::io::Write;
+    use sha2::{Digest, Sha256};
+    #[derive(Deserialize)]
+    struct Capture { raw_html: String, document: DragonBallDocument }
+    if !captures.is_absolute() || !output.is_absolute() { return Err("Reprojection requires absolute paths".into()); }
+    let source_root = std::fs::canonicalize(captures).map_err(|error| error.to_string())?;
+    if std::fs::symlink_metadata(captures).map_err(|error| error.to_string())?.file_type().is_symlink() { return Err("Capture root must not be a symlink".into()); }
+    let parent = std::fs::canonicalize(output.parent().ok_or("Export parent required")?).map_err(|error| error.to_string())?;
+    if parent.starts_with(&source_root) { return Err("Replay export must be outside retained captures".into()); }
+    let mut directories = vec![(source_root,0)];
+    let mut files = Vec::new();
+    while let Some((directory, depth)) = directories.pop() {
+        for entry in std::fs::read_dir(directory).map_err(|error| error.to_string())? {
+            let entry = entry.map_err(|error| error.to_string())?;
+            let kind = entry.file_type().map_err(|error| error.to_string())?;
+            if kind.is_symlink() { return Err("Capture replay forbids symlinks".into()); }
+            if kind.is_dir() {
+                if depth >= 2 { return Err("Capture replay directory depth exceeds bound".into()); }
+                directories.push((entry.path(),depth+1));
+            } else if entry.path().extension().is_some_and(|value| value == "json") {
+                files.push(entry.path());
+                if files.len() > 100000 { return Err("Capture replay document budget exceeded".into()); }
+            }
+        }
+    }
+    files.sort();
+    if files.is_empty() { return Err("No retained captures to replay".into()); }
+    let mut options = std::fs::OpenOptions::new();
+    options.write(true).create_new(true);
+    #[cfg(unix)] { use std::os::unix::fs::OpenOptionsExt; options.mode(0o600); }
+    let mut file = options.open(output).map_err(|error| error.to_string())?;
+    let result = (|| {
+        let mut hasher = Sha256::new();
+        let mut sources = Vec::new();
+        let mut skipped_media = 0;
+        let mut identities = HashSet::new();
+        for path in files {
+            let metadata = std::fs::symlink_metadata(&path).map_err(|error| error.to_string())?;
+            if !metadata.is_file() || metadata.len() > 4 * 1024 * 1024 { return Err("Invalid bounded retained capture".into()); }
+            let bytes = std::fs::read(path).map_err(|error| error.to_string())?;
+            let capture: Capture = serde_json::from_slice(&bytes).map_err(|error| error.to_string())?;
+            let old = capture.document;
+            let url = validate_source_url(&old.canonical_url)?;
+            let new = project_document(&url,old.http_status,&capture.raw_html,&old.payload.body_markdown,&old.provenance,&old.timestamp_utc)?;
+            let mut expected = old.clone(); expected.payload.embedded_media = new.payload.embedded_media.clone();
+            if serde_json::to_value(&expected).map_err(|error| error.to_string())? != serde_json::to_value(&new).map_err(|error| error.to_string())? { return Err("Replay changed protected document fields".into()); }
+            if !identities.insert(new.document_uid.clone()) { return Err("Duplicate retained document identity".into()); }
+            let rejected = old.payload.embedded_media.iter().filter(|media| !new.payload.embedded_media.iter().any(|current| current.url == media.url)).count();
+            skipped_media += rejected;
+            let mut line = serde_json::to_vec(&new).map_err(|error| error.to_string())?;
+            sources.push(CaptureReprojection { document_uid:new.document_uid,capture_sha256:super::sha256_bytes(&bytes),document_sha256:super::sha256_bytes(&line),skipped_media:rejected });
+            line.push(b'\n'); file.write_all(&line).map_err(|error| error.to_string())?; hasher.update(&line);
+        }
+        file.sync_all().map_err(|error| error.to_string())?;
+        let mut export_sha256 = String::with_capacity(64);
+        for byte in hasher.finalize() {
+            use std::fmt::Write as _;
+            write!(&mut export_sha256,"{byte:02x}").map_err(|error| error.to_string())?;
+        }
+        Ok(ReprojectionReport { schema:"bun-dragon-ball-capture-reprojection/v1",output:output.into(),export_sha256,documents:sources.len(),skipped_media,sources })
+    })();
+    drop(file);
+    if result.is_err() { let _ = std::fs::remove_file(output); }
+    result
+}
+
 pub(crate) fn category(url: &Url) -> &'static str {
     let host = url.host_str().unwrap_or_default();
     match host {
@@ -105,7 +192,7 @@ fn embedded_media(html: &str, markdown: &str, base: &Url) -> Vec<EmbeddedMedia> 
     let mut add = |raw: &str, explicit: Option<&str>, caption: Option<String>| {
         let raw = raw.trim_end_matches([')', ',', '.', ';']);
         let Ok(url) = base.join(raw) else { return };
-        if validate_source_url(url.as_str()).is_err() {
+        if url.scheme() != "https" || validate_source_url(url.as_str()).is_err() {
             return;
         }
         let Some(kind) = media_kind(&url).or(explicit) else {
@@ -502,6 +589,66 @@ pub fn materialize_documents(output: &Path) -> Result<usize, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn projected_media_require_https_without_rewriting_retained_source() {
+        let url = Url::parse("https://example.test/article/").unwrap();
+        let html = r#"<img src="http://cdn.example.test/insecure.jpg">
+            <img src="/image.webp" srcset="http://cdn.example.test/insecure-large.jpg 2x, //cdn.example.test/secure.webp 3x">
+            <video src="https://cdn.example.test/clip.mp4" poster="http://cdn.example.test/poster.jpg"></video>
+            <audio src="https://user:pass@cdn.example.test/track.mp3"></audio>
+            <meta property="og:image" content="http://cdn.example.test/social.jpg">
+            <link rel="image_src" href="http://cdn.example.test/linked.jpg">
+            <img src="data:image/png;base64,AAAA">
+            <img src="https://dragonball.fandom.com/image.png">"#;
+        let markdown = "Original source references http://cdn.example.test/plain.png and https://cdn.example.test/audio.ogg";
+        let metadata = serde_json::json!({"title":"Article", "source":"fixture"});
+        let document = project_document(&url, 200, html, markdown, &metadata, "2026-10-15T00:00:00Z").unwrap();
+        let urls: HashSet<_> = document.payload.embedded_media.iter().map(|media| media.url.as_str()).collect();
+        assert_eq!(urls, HashSet::from([
+            "https://example.test/image.webp",
+            "https://cdn.example.test/secure.webp",
+            "https://cdn.example.test/clip.mp4",
+            "https://cdn.example.test/audio.ogg",
+        ]));
+        assert_eq!(document.payload.body_markdown, markdown);
+        assert_eq!(document.raw_checksum, sha256(markdown));
+        assert_eq!(document.provenance, metadata);
+    }
+    #[test]
+    fn capture_reprojection_seals_new_export_and_preserves_original_evidence() {
+        let root = std::env::temp_dir().join(format!("bun-reproject-{}-{}",std::process::id(),std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos()));
+        std::fs::create_dir(&root).unwrap();
+        struct Cleanup(PathBuf);
+        impl Drop for Cleanup { fn drop(&mut self) { let _ = std::fs::remove_dir_all(&self.0); } }
+        let _cleanup = Cleanup(root.clone());
+        let captures = root.join("captures"); std::fs::create_dir(&captures).unwrap();
+        let html = "<img src='http://cdn.example.test/legacy.jpg'><img src='/secure.webp'>";
+        let markdown = "Retained original source body";
+        let mut old = project_document(&Url::parse("https://example.test/article").unwrap(),200,html,markdown,&serde_json::json!({"title":"Fixture"}),"2026-10-15T00:00:00Z").unwrap();
+        old.payload.embedded_media.push(EmbeddedMedia { url:"http://cdn.example.test/legacy.jpg".into(),kind:"image".into(),caption:None });
+        let capture = serde_json::to_vec(&serde_json::json!({"raw_html":html,"document":old})).unwrap();
+        let path = captures.join("fixture.json"); std::fs::write(&path,&capture).unwrap();
+        let output = root.join("reprojection-v1.jsonl");
+        let report = reproject_captures(&captures,&output).unwrap();
+        assert_eq!(report.documents,1);
+        assert_eq!(report.skipped_media,1);
+        assert_eq!(report.sources[0].capture_sha256,super::super::sha256_bytes(&capture));
+        assert_eq!(std::fs::read(&path).unwrap(),capture);
+        let export = std::fs::read(&output).unwrap();
+        assert_eq!(report.export_sha256,super::super::sha256_bytes(&export));
+        let replay: DragonBallDocument = serde_json::from_slice(&export).unwrap();
+        assert_eq!(replay.payload.body_markdown,old.payload.body_markdown);
+        assert_eq!(replay.raw_checksum,old.raw_checksum);
+        assert_eq!(replay.provenance,old.provenance);
+        assert_eq!(replay.payload.embedded_media.len(),1);
+        assert!(reproject_captures(&captures,&output).is_err());
+        assert_eq!(std::fs::read(&output).unwrap(),export);
+        old.raw_checksum = "invalid".into();
+        std::fs::write(&path,serde_json::to_vec(&serde_json::json!({"raw_html":html,"document":old})).unwrap()).unwrap();
+        let refused = root.join("refused.jsonl");
+        assert!(reproject_captures(&captures,&refused).is_err());
+        assert!(!refused.exists());
+    }
     #[test]
     fn historical_export_contract_keeps_media_fields_sha256_and_no_promotion() {
         let url = Url::parse("https://lineup.toei-anim.co.jp/ja/tv/dragonz/episode/12/").unwrap();

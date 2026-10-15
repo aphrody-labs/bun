@@ -46,6 +46,24 @@ pub struct TargetReport {
     pub errors: Vec<(String, String)>,
 }
 
+#[derive(Serialize, Deserialize)]
+pub(crate) struct TargetSnapshot {
+    pub schema: String,
+    pub policy_sha256: String,
+    pub report: TargetReport,
+}
+
+pub(crate) fn target_policy_sha256(plan: &DragonBallPlan, target: &DragonBallTarget, max_depth: Option<u32>, with_gallery: bool) -> Result<String, String> {
+    let policy = serde_json::to_string(&(plan.respect_robots, &plan.user_agent, &plan.defaults, target, max_depth, with_gallery))
+        .map_err(|error| error.to_string())?;
+    Ok(sha256(&policy))
+}
+
+fn write_target_snapshot(plan: &DragonBallPlan, target: &DragonBallTarget, options: &DragonBallRunOptions, report: &TargetReport) -> Result<(), String> {
+    let snapshot = TargetSnapshot { schema: "bun-dragon-ball-target-status/v1".into(), policy_sha256: target_policy_sha256(plan, target, options.max_depth, options.with_gallery)?, report: report.clone() };
+    write_private(&options.output.join("target-status").join(format!("{}.json", target.id)), &serde_json::to_vec(&snapshot).map_err(|error| error.to_string())?)
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct DragonBallRunReport {
     pub schema: String,
@@ -468,6 +486,7 @@ pub async fn run_dragon_ball<T: CrawlTransport>(
                 corpus.as_bytes(),
             )?;
             report.errors.extend(target_report.errors.clone());
+            write_target_snapshot(plan, original, options, &target_report)?;
             report.targets.push(target_report);
             all_captures.extend(captures);
             continue;
@@ -628,6 +647,7 @@ pub async fn run_dragon_ball<T: CrawlTransport>(
         }
         write_private(&corpus_path, corpus.as_bytes())?;
         report.errors.extend(target_report.errors.clone());
+        write_target_snapshot(plan, original, options, &target_report)?;
         report.targets.push(target_report);
         all_captures.extend(captures);
         report.network_requests = budget.requests.get();
