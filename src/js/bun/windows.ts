@@ -1064,6 +1064,105 @@ const families = new Proxy(Object.freeze({ __proto__: null }), {
   },
 });
 
+// theme
+
+const PERSONALIZE = "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize";
+const ACCENT = "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Accent";
+
+function hexColor(r, g, b) {
+  return "#" + ((1 << 24) | (r << 16) | (g << 8) | b).toString(16).slice(1);
+}
+
+function readDword(path, name) {
+  const entry = registryGet(path, name);
+  return entry !== null && typeof entry.value === "number" ? entry.value : undefined;
+}
+
+// AccentPalette is 8 RGBA entries, lightest to darkest; index 3 is SystemAccentColor.
+const accentNames = ["light3", "light2", "light1", "accent", "dark1", "dark2", "dark3"];
+
+function themeGet() {
+  ensureSupported();
+  const apps = readDword(PERSONALIZE, "AppsUseLightTheme");
+  const system = readDword(PERSONALIZE, "SystemUsesLightTheme");
+  const colorPrevalence = readDword(PERSONALIZE, "ColorPrevalence");
+  const palette = { __proto__: null };
+  const raw = registryGet(ACCENT, "AccentPalette");
+  if (raw !== null && raw.value instanceof Uint8Array && raw.value.length >= 28) {
+    for (let i = 0; i < accentNames.length; i++) {
+      const o = i * 4;
+      palette[accentNames[i]] = hexColor(raw.value[o], raw.value[o + 1], raw.value[o + 2]);
+    }
+  }
+  let accent = palette.accent;
+  if (accent === undefined) {
+    // DWM stores AccentColor as 0xAABBGGRR.
+    const abgr = readDword("HKCU\\Software\\Microsoft\\Windows\\DWM", "AccentColor");
+    if (abgr !== undefined) accent = hexColor(abgr & 0xff, (abgr >>> 8) & 0xff, (abgr >>> 16) & 0xff);
+  }
+  return {
+    mode: apps === 0 ? "dark" : "light",
+    systemMode: system === 0 ? "dark" : "light",
+    accent: accent ?? null,
+    palette,
+    accentOnTaskbar: colorPrevalence === 1,
+  };
+}
+
+function themeWatch(callback, { interval = 1000 } = {}) {
+  ensureSupported();
+  if (typeof callback !== "function") throw $ERR_INVALID_ARG_TYPE("callback", "function", callback);
+  validateInteger(interval, "interval", 50);
+  let last = JSON.stringify(themeGet());
+  const timer = setInterval(() => {
+    const current = themeGet();
+    const json = JSON.stringify(current);
+    if (json !== last) {
+      last = json;
+      callback(current);
+    }
+  }, interval);
+  timer.unref();
+  return () => clearInterval(timer);
+}
+
+const backdropTypes = { auto: 0, none: 1, mica: 2, acrylic: 3, tabbed: 4 };
+let dwmapi;
+
+// DWMWA_USE_IMMERSIVE_DARK_MODE = 20, DWMWA_SYSTEMBACKDROP_TYPE = 38 (Windows 11 22H2+).
+function themeApplyWindow(hwnd, options = {}) {
+  ensureSupported();
+  validateObject(options, "options");
+  const handle = typeof hwnd === "bigint" ? hwnd : typeof hwnd === "number" ? BigInt(hwnd) : undefined;
+  if (handle === undefined || handle === 0n) throw $ERR_INVALID_ARG_TYPE("hwnd", ["bigint", "number"], hwnd);
+  const { backdrop, dark } = options;
+  if (backdrop !== undefined) validateOneOf(backdrop, "options.backdrop", Object.keys(backdropTypes));
+  if (dark !== undefined) validateBoolean(dark, "options.dark");
+  dwmapi ??= require("bun:ffi").dlopen("dwmapi.dll", {
+    DwmSetWindowAttribute: { args: ["u64", "u32", "ptr", "u32"], returns: "i32" },
+  }).symbols;
+  const cell = new Int32Array(1);
+  const set = (attribute, value) => {
+    cell[0] = value;
+    const hr = dwmapi.DwmSetWindowAttribute(handle, attribute, cell, 4);
+    if (hr !== 0) {
+      const error = new Error(`DwmSetWindowAttribute(${attribute}) failed: 0x${(hr >>> 0).toString(16)}`);
+      error.code = "ERR_BUN_WINDOWS_HRESULT";
+      error.hresult = hr >>> 0;
+      throw error;
+    }
+  };
+  if (dark !== undefined) set(20, dark ? 1 : 0);
+  if (backdrop !== undefined) set(38, backdropTypes[backdrop]);
+}
+
+const theme = Object.freeze({
+  get: themeGet,
+  watch: themeWatch,
+  applyWindow: themeApplyWindow,
+  backdropTypes: Object.freeze({ ...backdropTypes }),
+});
+
 export default {
   isSupported,
   version,
@@ -1071,6 +1170,7 @@ export default {
   systemInfo,
   isElevated,
   registry,
+  theme,
   services,
   eventLog,
   clipboard,

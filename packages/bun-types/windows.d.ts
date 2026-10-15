@@ -166,6 +166,31 @@ declare module "bun:windows" {
     dependencies: string[];
   }
 
+  /** Windows color mode, accent color and window materials. */
+  namespace theme {
+    interface Theme {
+      /** App color mode chosen in Settings > Personalization > Colors. */
+      mode: "light" | "dark";
+      /** Color mode of the shell (taskbar, Start). */
+      systemMode: "light" | "dark";
+      /** `SystemAccentColor` as `#rrggbb`, or `null` when unset. */
+      accent: string | null;
+      /** Accent shades `light3`..`dark3` as `#rrggbb`, matching the XAML `SystemAccentColor*` resources. */
+      palette: Partial<Record<"light3" | "light2" | "light1" | "accent" | "dark1" | "dark2" | "dark3", string>>;
+      /** Whether the accent is shown on Start and the taskbar. */
+      accentOnTaskbar: boolean;
+    }
+    type Backdrop = "auto" | "none" | "mica" | "acrylic" | "tabbed";
+    /** Reads the current theme from the user's personalization settings. */
+    function get(): Theme;
+    /** Calls `callback` when the theme changes. Returns a function that stops watching. */
+    function watch(callback: (theme: Theme) => void, options?: { interval?: number }): () => void;
+    /** Sets the system backdrop (Windows 11 22H2+) and dark title bar of a top-level window. */
+    function applyWindow(hwnd: bigint | number, options: { backdrop?: Backdrop; dark?: boolean }): void;
+    /** `DWM_SYSTEMBACKDROP_TYPE` values. */
+    const backdropTypes: Readonly<Record<Backdrop, number>>;
+  }
+
   /** Service Control Manager. Starting and stopping services usually needs an elevated process. */
   namespace services {
     /** Every Win32 service, or every driver with `drivers: true`. */

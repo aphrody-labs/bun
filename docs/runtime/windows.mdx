@@ -79,6 +79,25 @@ registry.deleteKey("HKCU\\Software\\MyApp", { recursive: true }); // true
 
 ---
 
+## Theme
+
+`theme` reads the color mode and accent color from the user's personalization settings and applies Windows 11 materials to a window.
+
+```ts
+const { theme } = windows;
+
+theme.get(); // { mode: "dark", systemMode: "dark", accent: "#0078d4", palette: { light3, ..., dark3 }, accentOnTaskbar: false }
+
+const stop = theme.watch(t => console.log("accent is now", t.accent));
+stop();
+
+theme.applyWindow(hwnd, { backdrop: "mica", dark: true }); // DwmSetWindowAttribute
+```
+
+Use `accent` as the seed of an M3 theme or the `SystemAccentColor` of a `bun:winui` window. `backdrop` accepts `auto`, `none`, `mica`, `acrylic` and `tabbed`; a failing call throws with `code: "ERR_BUN_WINDOWS_HRESULT"`.
+
+---
+
 ## Services
 
 ```ts
